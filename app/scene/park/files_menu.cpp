@@ -6,8 +6,8 @@
 #include "parkfile/structure_file.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
-#include "ui/screens/about_window.hpp"
-#include "ui/screens/file_dialog.hpp"
+#include "ui/screens/dialogs/about.hpp"
+#include "ui/screens/dialogs/files.hpp"
 #include "ui/widgets/question_box.hpp"
 
 #include <algorithm>
@@ -47,13 +47,13 @@ namespace rct3::scene::park
                 root.raise(*shown);
                 return;
             }
-            ui::screens::AddOnPacks packs;
+            ui::screens::dialogs::AddOnPacks packs;
             for (std::size_t i = 0; i < kPackFiles.size(); ++i)
             {
                 if (front.assets.install && front.assets.install->find(kPackFiles.at(i)))
                     packs.push_back(static_cast<int>(i));
             }
-            root.add<ui::screens::GameInfoBox>(std::string(kAboutName), skins::about_window_style(front.assets.palette), *front.assets.strings, packs, park.seed);
+            root.add<ui::screens::dialogs::GameInfoBox>(std::string(kAboutName), skins::about_window_style(front.assets.palette), *front.assets.strings, packs, park.seed);
         }
 
         void open_options(ParkScene& park, FrontEndScene& front)
@@ -61,19 +61,19 @@ namespace rct3::scene::park
             if (!park.options)
             {
                 // What the front end's window offers, its keys and screen size as they are now.
-                ui::screens::OptionsChoices choices = front.live->front->options().choices();
+                ui::screens::options::OptionsChoices choices = front.live->front->options().choices();
                 choices.language_locked = true;
-                park.options = std::make_unique<ui::screens::OptionsSession>(*park.desktop, skins::options_dialog_style(front.assets.palette), *front.assets.strings, front.live->options, std::move(choices));
+                park.options = std::make_unique<ui::screens::options::OptionsSession>(*park.desktop, skins::options_dialog_style(front.assets.palette), *front.assets.strings, front.live->options, std::move(choices));
             }
             park.options->open();
         }
 
-        std::optional<ui::screens::FileDialog&> file_dialog(const ParkScene& park)
+        std::optional<ui::screens::dialogs::FileDialog&> file_dialog(const ParkScene& park)
         {
-            return park.desktop->root().find_as<ui::screens::FileDialog>(kFilesName);
+            return park.desktop->root().find_as<ui::screens::dialogs::FileDialog>(kFilesName);
         }
 
-        void open_files(ParkScene& park, const FrontEndScene& front, ui::screens::FileDialogMode mode)
+        void open_files(ParkScene& park, const FrontEndScene& front, ui::screens::dialogs::FileDialogMode mode)
         {
             ui::Widget& root = park.desktop->root();
             if (auto shown = file_dialog(park))
@@ -88,20 +88,20 @@ namespace rct3::scene::park
             park.saves.data = front.saves.data;
             park.saves.game_saves = front.saves.game_saves;
             ++park.file_windows_opened;
-            auto& dialog = root.add<ui::screens::FileDialog>(std::string(kFilesName), skins::file_dialog_style(front.assets.palette), *front.assets.strings, mode, front.assets.fonts.language == ui::kDefaultLanguage);
+            auto& dialog = root.add<ui::screens::dialogs::FileDialog>(std::string(kFilesName), skins::file_dialog_style(front.assets.palette), *front.assets.strings, mode, front.assets.fonts.language == ui::kDefaultLanguage);
             dialog.set_file_name(park.file.stem() == kBlankLandscape ? std::u16string(kNewSandbox) : park.file.filename().u16string());
         }
 
-        std::optional<ui::screens::FileDialog&> structure_dialog(const ParkScene& park)
+        std::optional<ui::screens::dialogs::FileDialog&> structure_dialog(const ParkScene& park)
         {
-            return park.desktop->root().find_as<ui::screens::FileDialog>(kStructureFilesName);
+            return park.desktop->root().find_as<ui::screens::dialogs::FileDialog>(kStructureFilesName);
         }
 
         /// The window that saves the structure picked out, or lists the structures to place one, in place of
         /// another such window.
         /// shortcut: the window shows a structure's file name only, without a picture or its size; give the
         /// rows those once structure files carry a picture.
-        void open_structure_files(ParkScene& park, const FrontEndScene& front, ui::screens::FileDialogMode mode)
+        void open_structure_files(ParkScene& park, const FrontEndScene& front, ui::screens::dialogs::FileDialogMode mode)
         {
             ui::Widget& root = park.desktop->root();
             if (auto shown = structure_dialog(park))
@@ -109,7 +109,7 @@ namespace rct3::scene::park
             park.structures.browser.data = front.saves.data;
             park.structures.browser.game_saves = front.saves.game_saves;
             ++park.structures.windows_opened;
-            auto& dialog = root.add<ui::screens::FileDialog>(std::string(kStructureFilesName), skins::file_dialog_style(front.assets.palette), *front.assets.strings, mode, front.assets.fonts.language == ui::kDefaultLanguage);
+            auto& dialog = root.add<ui::screens::dialogs::FileDialog>(std::string(kStructureFilesName), skins::file_dialog_style(front.assets.palette), *front.assets.strings, mode, front.assets.fonts.language == ui::kDefaultLanguage);
             dialog.set_file_name(kStructureName);
         }
 
@@ -126,15 +126,15 @@ namespace rct3::scene::park
                 return parkfile::write_structure_file(s);
             }))
             (void)start_structure_placing(park, *picked, front.assets);
-        for (const ui::screens::ToolItem item : std::exchange(park.window_requests, { }))
+        for (const ui::screens::park_view::ToolItem item : std::exchange(park.window_requests, { }))
         {
-            if (item == ui::screens::ToolItem::About)
+            if (item == ui::screens::park_view::ToolItem::About)
                 open_about(park, front);
-            else if (item == ui::screens::ToolItem::Options)
+            else if (item == ui::screens::park_view::ToolItem::Options)
                 open_options(park, front);
-            else if (item == ui::screens::ToolItem::Save)
-                open_files(park, front, ui::screens::FileDialogMode::Save);
-            else if (item == ui::screens::ToolItem::Load && !park.desktop->root().find(kLoadQuestionName))
+            else if (item == ui::screens::park_view::ToolItem::Save)
+                open_files(park, front, ui::screens::dialogs::FileDialogMode::Save);
+            else if (item == ui::screens::park_view::ToolItem::Load && !park.desktop->root().find(kLoadQuestionName))
             {
                 // Loading drops the park as it is, so it asks first whether to save it.
                 const ui::StringTable& strings = *front.assets.strings;
@@ -148,7 +148,7 @@ namespace rct3::scene::park
         // Yes opens the save window, no the load window, and cancel neither.
         if (auto question = park.desktop->root().find_as<ui::widgets::QuestionBox>(kLoadQuestionName))
             if (const auto answer = question->take_answer(); answer && *answer < 2)
-                open_files(park, front, *answer == 0 ? ui::screens::FileDialogMode::Save : ui::screens::FileDialogMode::Load);
+                open_files(park, front, *answer == 0 ? ui::screens::dialogs::FileDialogMode::Save : ui::screens::dialogs::FileDialogMode::Load);
         if (auto picked = update_save_browser(device, park.saves, file_dialog(park), park.file_windows_opened, park.game, [&park](const std::filesystem::path& path) {
                 // Saved again, it is offered under this name.
                 park.file = path;
@@ -187,7 +187,7 @@ namespace rct3::scene::park
         r.game = park.game;
         if (park.options)
         {
-            ui::screens::OptionsChoices& shared = front.live->front->options().choices();
+            ui::screens::options::OptionsChoices& shared = front.live->front->options().choices();
             r.screen_size = park.options->take_screen_size();
             if (r.screen_size)
                 shared.screen_size = r.screen_size;

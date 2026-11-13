@@ -19,7 +19,7 @@
 #include "scene/save_browser.hpp"
 #include "scene/track_building.hpp"
 #include "ui/key_map.hpp"
-#include "ui/screens/file_dialog.hpp"
+#include "ui/screens/dialogs/files.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -69,7 +69,7 @@ namespace rct3::scene
         rct3::park::path::SolidTiles solids;
         std::size_t solids_of = static_cast<std::size_t>(-1);
         // The windows that save and load them
-        std::optional<ui::screens::FileDialogMode> asked; ///< A window to open, until the owner opens it
+        std::optional<ui::screens::dialogs::FileDialogMode> asked; ///< A window to open, until the owner opens it
         SaveBrowser browser;
         std::size_t windows_opened = 0;
     };

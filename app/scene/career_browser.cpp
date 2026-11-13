@@ -119,12 +119,12 @@ namespace rct3::scene
                 import_prf(path, folder, strings);
         }
 
-        ui::screens::CareerRow row_of(const career::Career& c)
+        ui::screens::career::CareerRow row_of(const career::Career& c)
         {
             return { strings::to_utf16(c.name), career::score(c), 0 };
         }
 
-        void list(render::Device& device, CareerBrowser& browser, ui::screens::CareerDialog& dialog, int pack, const ui::StringTable& strings)
+        void list(render::Device& device, CareerBrowser& browser, ui::screens::career::CareerDialog& dialog, int pack, const ui::StringTable& strings)
         {
             free_pictures(device, browser);
             browser.ids = ui::career_scenario_ids(strings, pack);
@@ -132,7 +132,7 @@ namespace rct3::scene
             browser.careers = browser.folder.empty() ? std::vector<career::CareerEntry> { } : career::list_careers(browser.folder, pack, problems);
             for (const auto& problem : problems)
                 logging::logger("ui").warning("careers: {}", problem.message);
-            std::vector<ui::screens::CareerRow> rows;
+            std::vector<ui::screens::career::CareerRow> rows;
             for (auto& entry : browser.careers)
             {
                 career::fit(entry.data.career, browser.ids);
@@ -149,7 +149,7 @@ namespace rct3::scene
         }
 
         /// The picture of the last game of the career's current scenario, if it has one.
-        void read_picture(render::Device& device, CareerBrowser& browser, ui::screens::CareerDialog& dialog)
+        void read_picture(render::Device& device, CareerBrowser& browser, ui::screens::career::CareerDialog& dialog)
         {
             if (browser.next_picture >= browser.careers.size())
                 return;
@@ -169,7 +169,7 @@ namespace rct3::scene
             if (!texture)
                 return;
             browser.pictures.push_back(*texture);
-            ui::screens::CareerRow row = row_of(c);
+            ui::screens::career::CareerRow row = row_of(c);
             row.picture = ui::texture_id(*texture);
             dialog.set_career(index, std::move(row));
         }
@@ -191,17 +191,17 @@ namespace rct3::scene
         {
             browser.playing = std::move(entry);
             const career::Career& c = browser.playing->data.career;
-            std::vector<ui::screens::CareerBoardScenario> scenarios;
+            std::vector<ui::screens::career::CareerBoardScenario> scenarios;
             for (std::size_t i = 0; i < c.scenarios.size(); ++i)
             {
-                ui::screens::CareerBoardScenario s;
+                ui::screens::career::CareerBoardScenario s;
                 s.info = ui::career_scenario(strings, c.pack, i, c.scenarios[i].id);
                 s.status = c.scenarios[i].status;
                 s.lock = career::lock(c, i);
                 s.can_resume = can_resume(*browser.playing, i);
                 scenarios.push_back(std::move(s));
             }
-            const ui::screens::CareerBoard& map = front.open_career_board(std::move(scenarios), c.current);
+            const ui::screens::career::CareerBoard& map = front.open_career_board(std::move(scenarios), c.current);
             browser.map_opened = front.career_boards_opened();
             if (map.size() > 0)
                 browser.slideshow = ui::career_scenario(strings, c.pack, map.picked(), c.scenarios[map.picked()].id).slideshow;
@@ -244,7 +244,7 @@ namespace rct3::scene
             browser.played = true;
         }
 
-        void carry_out_map(CareerBrowser& browser, ui::screens::front::FrontEnd& front, ui::screens::CareerBoard& map, const ui::StringTable& strings, const config::game::GameInstall& install)
+        void carry_out_map(CareerBrowser& browser, ui::screens::front::FrontEnd& front, ui::screens::career::CareerBoard& map, const ui::StringTable& strings, const config::game::GameInstall& install)
         {
             career::CareerEntry& entry = *browser.playing;
             career::Career& c = entry.data.career;
@@ -270,7 +270,7 @@ namespace rct3::scene
             }
         }
 
-        void carry_out(CareerBrowser& browser, ui::screens::CareerDialog& dialog, ui::screens::front::FrontEnd& front, int pack, const ui::StringTable& strings)
+        void carry_out(CareerBrowser& browser, ui::screens::career::CareerDialog& dialog, ui::screens::front::FrontEnd& front, int pack, const ui::StringTable& strings)
         {
             const auto log = logging::logger("ui");
             if (const auto rename = dialog.take_rename(); rename && rename->first < browser.careers.size())

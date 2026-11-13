@@ -8,6 +8,9 @@
 using namespace rct3;
 using namespace rct3::ui;
 using namespace rct3::ui::screens;
+using namespace rct3::ui::screens::dialogs;
+using namespace rct3::ui::screens::tutorial;
+using namespace rct3::ui::screens::career;
 using namespace rct3::ui::screens::front;
 
 namespace
@@ -155,7 +158,7 @@ TEST_CASE("the career map stands in for the front screen, and going back shows t
     f.press(f.front.screen().button(FrontMenu::Campaigns, 0));
     REQUIRE(f.front.career_dialog());
     std::vector<CareerBoardScenario> scenarios(3);
-    scenarios[0].status = career::ScenarioStatus::Open;
+    scenarios[0].status = rct3::career::ScenarioStatus::Open;
     f.front.open_career_board(std::move(scenarios), 0);
     CHECK(!f.front.career_dialog());
     REQUIRE(f.front.career_board());

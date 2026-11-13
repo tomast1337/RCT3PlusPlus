@@ -34,7 +34,7 @@ namespace rct3::scene
         std::optional<std::filesystem::path> options_file; ///< Without it the options are not kept
         std::optional<config::UserData> data;              ///< Where the saves and careers are; without it there are none
         std::optional<std::filesystem::path> game_saves;   ///< The original game's folder of the player's games, if found
-        std::vector<ui::screens::ScreenSize> screen_sizes;
+        std::vector<ui::screens::options::ScreenSize> screen_sizes;
         std::optional<std::size_t> screen_size;
         std::vector<int> anti_aliasing_levels;              ///< Samples per pixel the device offers above 1
         ui::KeyMap keys;                                    ///< In use, for the options window to change

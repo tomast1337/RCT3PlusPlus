@@ -20,13 +20,13 @@
 #include "config/user_data.hpp"
 #include "core/maybe.hpp"
 #include "ui/desktop.hpp"
-#include "ui/screens/career_board.hpp"
-#include "ui/screens/career_dialog.hpp"
-#include "ui/screens/file_dialog.hpp"
+#include "ui/screens/career/map.hpp"
+#include "ui/screens/career/picker.hpp"
+#include "ui/screens/dialogs/files.hpp"
 #include "ui/screens/front/screen.hpp"
-#include "ui/screens/options_dialog.hpp"
-#include "ui/screens/options_session.hpp"
-#include "ui/screens/tutorial_picker.hpp"
+#include "ui/screens/options/dialog.hpp"
+#include "ui/screens/options/session.hpp"
+#include "ui/screens/tutorial/picker.hpp"
 #include "ui/widgets/question_box.hpp"
 
 #include <array>
@@ -39,22 +39,22 @@ namespace rct3::ui::screens::front
 
     struct FrontEndStyle
     {
-        OptionsDialogStyle options;
+        options::OptionsDialogStyle options;
         widgets::QuestionBoxStyle question;
-        FileDialogStyle files;
-        CareerDialogStyle careers;
-        CareerBoardStyle map;
-        TutorialPickerStyle tutorials;
+        dialogs::FileDialogStyle files;
+        career::CareerDialogStyle careers;
+        career::CareerBoardStyle map;
+        tutorial::TutorialPickerStyle tutorials;
         bool round = false; ///< The front screen laid out at one scale, for a backdrop drawn in code; sets the map's and tutorials' too
     };
 
     struct FrontEndSetup
     {
         std::array<bool, kExpansionCount> expansions { };
-        OptionsChoices choices;    ///< For the options window; its language is the one in use
-        bool open_options = false; ///< Start with the options window open, e.g. after a language change
-        bool settled = false;      ///< Start without the front screen's opening animation
-        bool twelve_hour = true;   ///< Times with am and pm, as the game shows them in English
+        options::OptionsChoices choices; ///< For the options window; its language is the one in use
+        bool open_options = false;       ///< Start with the options window open, e.g. after a language change
+        bool settled = false;            ///< Start without the front screen's opening animation
+        bool twelve_hour = true;         ///< Times with am and pm, as the game shows them in English
     };
 
     class FrontEnd
@@ -69,14 +69,14 @@ namespace rct3::ui::screens::front
         {
             return *screen_;
         }
-        [[nodiscard]] std::optional<OptionsDialog&> options_window() const;
+        [[nodiscard]] std::optional<options::OptionsDialog&> options_window() const;
         /// The options window and what it offers, e.g. for a park to open its own with the same choices.
-        [[nodiscard]] OptionsSession& options()
+        [[nodiscard]] options::OptionsSession& options()
         {
             return options_;
         }
         /// The window loading a game, while it is open.
-        [[nodiscard]] std::optional<FileDialog&> file_dialog() const;
+        [[nodiscard]] std::optional<dialogs::FileDialog&> file_dialog() const;
         /// Opens the window loading a game from `folder`, for `action`.
         void open_files(FrontAction action, config::UserFolder folder);
         /// The folder the window loading a game shows.
@@ -90,7 +90,7 @@ namespace rct3::ui::screens::front
             return file_action_;
         }
         /// The window picking a career, while it is open.
-        [[nodiscard]] std::optional<CareerDialog&> career_dialog() const;
+        [[nodiscard]] std::optional<career::CareerDialog&> career_dialog() const;
         /// The game whose careers it shows: 0 the original, then each expansion.
         [[nodiscard]] int career_pack() const
         {
@@ -103,16 +103,16 @@ namespace rct3::ui::screens::front
         }
         /// Shows the career map of `scenarios` in place of the front screen, `picked` first, and closes the
         /// window picking a career.
-        CareerBoard& open_career_board(std::vector<CareerBoardScenario> scenarios, std::size_t picked);
+        career::CareerBoard& open_career_board(std::vector<career::CareerBoardScenario> scenarios, std::size_t picked);
         /// The career map, while it is shown.
-        [[nodiscard]] std::optional<CareerBoard&> career_board() const;
+        [[nodiscard]] std::optional<career::CareerBoard&> career_board() const;
         /// Counts the career maps opened, so the owner tells a new one from the last.
         [[nodiscard]] std::size_t career_boards_opened() const
         {
             return career_boards_opened_;
         }
         /// The tutorials shown over the screen, while they are.
-        [[nodiscard]] std::optional<TutorialPicker&> tutorial_picker() const;
+        [[nodiscard]] std::optional<tutorial::TutorialPicker&> tutorial_picker() const;
         /// The game whose tutorials they are: 0 the original, then each expansion.
         [[nodiscard]] int tutorial_pack() const
         {
@@ -145,7 +145,7 @@ namespace rct3::ui::screens::front
         /// Menu choices the front end cannot carry out, oldest first.
         [[nodiscard]] std::optional<FrontRequest> take_unhandled();
 
-        static constexpr std::string_view kOptionsName = OptionsSession::kName;
+        static constexpr std::string_view kOptionsName = options::OptionsSession::kName;
         static constexpr std::string_view kQuestionName = "quit";
         static constexpr std::string_view kFilesName = "load_game";
         static constexpr std::string_view kCareersName = "careers";
@@ -162,7 +162,7 @@ namespace rct3::ui::screens::front
         FrontEndStyle style_;
         const StringTable& strings_;
         FrontEndSetup setup_;
-        OptionsSession options_;
+        options::OptionsSession options_;
         FrontScreen* screen_ = nullptr;
         widgets::QuestionBox* question_ = nullptr; // Only closes when take_answer() closes it
         config::UserFolder file_folder_ = config::UserFolder::Parks;

@@ -8,7 +8,7 @@
 #include "save/model/people.hpp"
 #include "simulation/components.hpp"
 #include "ui/interface_assets.hpp"
-#include "ui/screens/info_panel.hpp"
+#include "ui/screens/info/panel.hpp"
 
 #include <cstddef>
 #include <optional>
@@ -33,7 +33,7 @@ namespace rct3::scene::park
 
     /// Writes a change the player made on a person's page into the save. Returns whether the page is to be
     /// shown again for its new look.
-    [[nodiscard]] bool change_person(ParkScene& scene, std::size_t shown, const ui::screens::InfoChange& change);
+    [[nodiscard]] bool change_person(ParkScene& scene, std::size_t shown, const ui::screens::info::InfoChange& change);
 
     /// Paints the clothes of pot `pot` of the person shown as `shown` in colour `colour`.
     void paint_person(ParkScene& scene, std::size_t shown, std::size_t pot, std::size_t colour);

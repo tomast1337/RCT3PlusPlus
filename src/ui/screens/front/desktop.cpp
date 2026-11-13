@@ -37,7 +37,7 @@ namespace rct3::ui::screens::front
             open_options();
     }
 
-    std::optional<OptionsDialog&> FrontEnd::options_window() const
+    std::optional<options::OptionsDialog&> FrontEnd::options_window() const
     {
         return options_.window();
     }
@@ -47,9 +47,9 @@ namespace rct3::ui::screens::front
         options_.open();
     }
 
-    std::optional<FileDialog&> FrontEnd::file_dialog() const
+    std::optional<dialogs::FileDialog&> FrontEnd::file_dialog() const
     {
-        return desktop_.root().find_as<FileDialog>(kFilesName);
+        return desktop_.root().find_as<dialogs::FileDialog>(kFilesName);
     }
 
     void FrontEnd::open_files(FrontAction action, config::UserFolder folder)
@@ -66,12 +66,12 @@ namespace rct3::ui::screens::front
         file_folder_ = folder;
         file_action_ = action;
         ++file_dialogs_opened_;
-        desktop_.root().add<FileDialog>(std::string(kFilesName), style_.files, strings_, FileDialogMode::Load, setup_.twelve_hour);
+        desktop_.root().add<dialogs::FileDialog>(std::string(kFilesName), style_.files, strings_, dialogs::FileDialogMode::Load, setup_.twelve_hour);
     }
 
-    std::optional<CareerDialog&> FrontEnd::career_dialog() const
+    std::optional<career::CareerDialog&> FrontEnd::career_dialog() const
     {
-        return desktop_.root().find_as<CareerDialog>(kCareersName);
+        return desktop_.root().find_as<career::CareerDialog>(kCareersName);
     }
 
     void FrontEnd::open_careers(int pack)
@@ -87,10 +87,10 @@ namespace rct3::ui::screens::front
         }
         career_pack_ = pack;
         ++career_dialogs_opened_;
-        desktop_.root().add<CareerDialog>(std::string(kCareersName), style_.careers, strings_);
+        desktop_.root().add<career::CareerDialog>(std::string(kCareersName), style_.careers, strings_);
     }
 
-    CareerBoard& FrontEnd::open_career_board(std::vector<CareerBoardScenario> scenarios, std::size_t picked)
+    career::CareerBoard& FrontEnd::open_career_board(std::vector<career::CareerBoardScenario> scenarios, std::size_t picked)
     {
         if (auto dialog = career_dialog())
             desktop_.root().remove(*dialog);
@@ -98,20 +98,20 @@ namespace rct3::ui::screens::front
             desktop_.root().remove(*old);
         screen_->visible = false;
         ++career_boards_opened_;
-        auto& map = desktop_.root().add<CareerBoard>(std::string(kCareerBoardName), style_.map, strings_, std::move(scenarios), picked);
+        auto& map = desktop_.root().add<career::CareerBoard>(std::string(kCareerBoardName), style_.map, strings_, std::move(scenarios), picked);
         // Under the windows already open, as the front screen was.
         desktop_.root().lower(map);
         return map;
     }
 
-    std::optional<CareerBoard&> FrontEnd::career_board() const
+    std::optional<career::CareerBoard&> FrontEnd::career_board() const
     {
-        return desktop_.root().find_as<CareerBoard>(kCareerBoardName);
+        return desktop_.root().find_as<career::CareerBoard>(kCareerBoardName);
     }
 
-    std::optional<TutorialPicker&> FrontEnd::tutorial_picker() const
+    std::optional<tutorial::TutorialPicker&> FrontEnd::tutorial_picker() const
     {
-        return desktop_.root().find_as<TutorialPicker>(kTutorialsName);
+        return desktop_.root().find_as<tutorial::TutorialPicker>(kTutorialsName);
     }
 
     void FrontEnd::open_tutorials(int pack)
@@ -124,7 +124,7 @@ namespace rct3::ui::screens::front
         }
         tutorial_pack_ = pack;
         ++tutorial_pickers_opened_;
-        auto& menu = desktop_.root().add<TutorialPicker>(std::string(kTutorialsName), style_.tutorials, strings_, tutorials(strings_, pack, setup_.expansions));
+        auto& menu = desktop_.root().add<tutorial::TutorialPicker>(std::string(kTutorialsName), style_.tutorials, strings_, tutorials(strings_, pack, setup_.expansions));
         // Part of the screen, under any window open over it.
         desktop_.root().lower(menu);
         desktop_.root().lower(*screen_);

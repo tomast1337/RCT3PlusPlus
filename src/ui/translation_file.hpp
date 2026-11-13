@@ -11,7 +11,7 @@
 //
 // gives "Rct3pp_UsualKeys" and "Rct3pp_Command_Copy". Keys we add start with kOwnKeyPrefix, so they never
 // meet the game's. A string may hold placeholders filled in when shown (see string_format.hpp). The game's
-// copyright lines and credits are not here; they are read from the install (see about_window.hpp).
+// copyright lines and credits are not here; they are read from the install (see ui/screens/dialogs/about.hpp).
 #pragma once
 
 #include "ui/string_table.hpp"

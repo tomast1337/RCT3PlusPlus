@@ -185,7 +185,7 @@ namespace rct3::scene::park
         if (scene.shown == ref)
         {
             scene.shown.reset();
-            if (auto info = scene.desktop->root().find_as<ui::screens::InfoPanel>(kInfoName))
+            if (auto info = scene.desktop->root().find_as<ui::screens::info::InfoPanel>(kInfoName))
                 info->hide();
         }
         logging::logger("park").info("demolished {}, {} back", base->name, back);

@@ -16,51 +16,51 @@ namespace rct3::scene::park
         /// follow the park.
         constexpr float kRefresh = 1;
 
-        std::string window_name(ui::screens::ManagementTopic topic)
+        std::string window_name(ui::screens::management::ManagementTopic topic)
         {
-            return std::string(ui::screens::management_layout(topic).title);
+            return std::string(ui::screens::management::management_layout(topic).title);
         }
 
-        std::optional<ui::screens::ManagementWindow&> find_window(const ui::Desktop& desktop, ui::screens::ManagementTopic topic)
+        std::optional<ui::screens::management::ManagementWindow&> find_window(const ui::Desktop& desktop, ui::screens::management::ManagementTopic topic)
         {
-            return core::maybe(dynamic_cast<ui::screens::ManagementWindow*>(core::as_pointer(desktop.root().find(window_name(topic)))));
+            return core::maybe(dynamic_cast<ui::screens::management::ManagementWindow*>(core::as_pointer(desktop.root().find(window_name(topic)))));
         }
 
         /// The staff window, which keeps a list of its own rather than tabs of pages.
-        std::optional<ui::screens::StaffRoster&> find_roster(const ui::Desktop& desktop)
+        std::optional<ui::screens::management::StaffRoster&> find_roster(const ui::Desktop& desktop)
         {
-            return core::maybe(dynamic_cast<ui::screens::StaffRoster*>(core::as_pointer(desktop.root().find(window_name(ui::screens::ManagementTopic::Staff)))));
+            return core::maybe(dynamic_cast<ui::screens::management::StaffRoster*>(core::as_pointer(desktop.root().find(window_name(ui::screens::management::ManagementTopic::Staff)))));
         }
 
         /// The research item of the row picked on the research window's list of what may come next.
-        std::optional<std::uint64_t> research_pick(const ui::screens::ManagementWindow& window, const ui::screens::ManagementFacts& facts)
+        std::optional<std::uint64_t> research_pick(const ui::screens::management::ManagementWindow& window, const ui::screens::management::ManagementFacts& facts)
         {
             const auto row = window.picked_row();
-            if (!row || facts.park == nullptr || window.tab() != ui::screens::kComingTab)
+            if (!row || facts.park == nullptr || window.tab() != ui::screens::management::kComingTab)
                 return std::nullopt;
-            const std::size_t at = ui::screens::management_row(*row).index;
+            const std::size_t at = ui::screens::management::management_row(*row).index;
             return at < facts.park->content.entries.size() ? std::optional(facts.park->content.entries[at].id) : std::nullopt;
         }
 
-        void show(ui::screens::ManagementWindow& window, ui::screens::ManagementTopic topic, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::InfoUnits& units)
+        void show(ui::screens::management::ManagementWindow& window, ui::screens::management::ManagementTopic topic, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::info::InfoUnits& units)
         {
-            ui::screens::ManagementFacts shown = facts;
-            if (topic == ui::screens::ManagementTopic::Research)
+            ui::screens::management::ManagementFacts shown = facts;
+            if (topic == ui::screens::management::ManagementTopic::Research)
                 shown.research_pick = research_pick(window, facts);
-            if (topic == ui::screens::ManagementTopic::Finances)
-                shown.ledger_line = static_cast<std::size_t>(std::max(0, window.control_value(ui::screens::kLedgerLineControl).value_or(0)));
-            window.show_page(ui::screens::management_page(topic, window.tab(), shown, strings, units));
+            if (topic == ui::screens::management::ManagementTopic::Finances)
+                shown.ledger_line = static_cast<std::size_t>(std::max(0, window.control_value(ui::screens::management::kLedgerLineControl).value_or(0)));
+            window.show_page(ui::screens::management::management_page(topic, window.tab(), shown, strings, units));
         }
     } // namespace
 
-    void toggle_management_window(ui::Desktop& desktop, ui::screens::ManagementTopic topic, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::InfoUnits& units)
+    void toggle_management_window(ui::Desktop& desktop, ui::screens::management::ManagementTopic topic, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::info::InfoUnits& units)
     {
         if (auto open = find_window(desktop, topic))
         {
             open->close();
             return;
         }
-        if (auto open = find_roster(desktop); open && topic == ui::screens::ManagementTopic::Staff)
+        if (auto open = find_roster(desktop); open && topic == ui::screens::management::ManagementTopic::Staff)
         {
             open->close();
             return;
@@ -68,7 +68,7 @@ namespace rct3::scene::park
         open_management_window(desktop, topic, 0, facts, strings, palette, units);
     }
 
-    void open_management_window(ui::Desktop& desktop, ui::screens::ManagementTopic topic, std::size_t tab, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::InfoUnits& units)
+    void open_management_window(ui::Desktop& desktop, ui::screens::management::ManagementTopic topic, std::size_t tab, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::info::InfoUnits& units)
     {
         if (auto open = find_window(desktop, topic))
         {
@@ -76,18 +76,18 @@ namespace rct3::scene::park
             show(*open, topic, facts, strings, units);
             return;
         }
-        const ui::screens::ManagementLayout layout = ui::screens::management_layout(topic);
-        if (topic == ui::screens::ManagementTopic::Staff)
+        const ui::screens::management::ManagementLayout layout = ui::screens::management::management_layout(topic);
+        if (topic == ui::screens::management::ManagementTopic::Staff)
         {
             if (find_roster(desktop))
                 return;
-            auto& roster = desktop.root().add<ui::screens::StaffRoster>(window_name(topic), ui::game_skins::staff_roster_style(palette), strings, layout.width, layout.height);
+            auto& roster = desktop.root().add<ui::screens::management::StaffRoster>(window_name(topic), ui::game_skins::staff_roster_style(palette), strings, layout.width, layout.height);
             roster.title = strings.get(layout.title);
             roster.icon = layout.icon;
             roster.show(facts, strings, units);
             return;
         }
-        auto& window = desktop.root().add<ui::screens::ManagementWindow>(window_name(topic), ui::game_skins::management_window_style(palette), layout.width, layout.height, ui::screens::management_tabs(topic, strings, units), tab);
+        auto& window = desktop.root().add<ui::screens::management::ManagementWindow>(window_name(topic), ui::game_skins::management_window_style(palette), layout.width, layout.height, ui::screens::management::management_tabs(topic, strings, units), tab);
         window.title = strings.get(layout.title);
         window.icon = layout.icon;
         show(window, topic, facts, strings, units);
@@ -95,78 +95,78 @@ namespace rct3::scene::park
 
     bool management_window_open(const ui::Desktop& desktop)
     {
-        for (std::size_t t = 0; t < ui::screens::kManagementTopicCount; ++t)
+        for (std::size_t t = 0; t < ui::screens::management::kManagementTopicCount; ++t)
         {
-            if (find_window(desktop, static_cast<ui::screens::ManagementTopic>(t)))
+            if (find_window(desktop, static_cast<ui::screens::management::ManagementTopic>(t)))
                 return true;
         }
         return find_roster(desktop).has_value();
     }
 
-    ManagementAsks update_management_windows(ui::Desktop& desktop, const ui::screens::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::InfoUnits& units)
+    ManagementAsks update_management_windows(ui::Desktop& desktop, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::info::InfoUnits& units)
     {
         ManagementAsks asks;
-        for (std::size_t t = 0; t < ui::screens::kManagementTopicCount; ++t)
+        for (std::size_t t = 0; t < ui::screens::management::kManagementTopicCount; ++t)
         {
-            const auto topic = static_cast<ui::screens::ManagementTopic>(t);
+            const auto topic = static_cast<ui::screens::management::ManagementTopic>(t);
             auto window = find_window(desktop, topic);
             if (!window || window->closing())
                 continue;
             const bool picked = window->take_tab().has_value();
             // The research window's focus button names the cost of the row picked.
-            if (picked || window->page_age() >= kRefresh || (topic == ui::screens::ManagementTopic::Research && window->picked_row_changed()))
+            if (picked || window->page_age() >= kRefresh || (topic == ui::screens::management::ManagementTopic::Research && window->picked_row_changed()))
                 show(*window, topic, facts, strings, units);
-            const bool park_page = topic == ui::screens::ManagementTopic::ParkOperations && window->tab() == 0;
+            const bool park_page = topic == ui::screens::management::ManagementTopic::ParkOperations && window->tab() == 0;
             const auto button = window->take_button();
             if (button && park_page)
             {
-                asks.replace_broken = *button == ui::screens::kReplaceBrokenButton;
-                asks.centre_entrance = *button == ui::screens::kCentreEntranceButton;
-                asks.buy_land = *button == ui::screens::kBuyLandButton;
-                asks.buy_rights = *button == ui::screens::kBuyRightsButton;
+                asks.replace_broken = *button == ui::screens::management::kReplaceBrokenButton;
+                asks.centre_entrance = *button == ui::screens::management::kCentreEntranceButton;
+                asks.buy_land = *button == ui::screens::management::kBuyLandButton;
+                asks.buy_rights = *button == ui::screens::management::kBuyRightsButton;
             }
-            if (button && topic == ui::screens::ManagementTopic::Finances && window->tab() == 0 && (*button == ui::screens::kBorrowButton || *button == ui::screens::kRepayButton))
-                asks.borrow = *button == ui::screens::kBorrowButton;
-            if (button && topic == ui::screens::ManagementTopic::Finances && ui::screens::finance_page(window->tab(), units.original_finances) == ui::screens::FinancePage::Ledger)
-                asks.export_ledger = *button == ui::screens::kExportLedgerButton;
+            if (button && topic == ui::screens::management::ManagementTopic::Finances && window->tab() == 0 && (*button == ui::screens::management::kBorrowButton || *button == ui::screens::management::kRepayButton))
+                asks.borrow = *button == ui::screens::management::kBorrowButton;
+            if (button && topic == ui::screens::management::ManagementTopic::Finances && ui::screens::management::finance_page(window->tab(), units.original_finances) == ui::screens::management::FinancePage::Ledger)
+                asks.export_ledger = *button == ui::screens::management::kExportLedgerButton;
             const auto choice = window->take_choice();
-            if (choice && park_page && choice->first == ui::screens::kOpenCloseParkButton)
+            if (choice && park_page && choice->first == ui::screens::management::kOpenCloseParkButton)
                 asks.park_open = choice->second == 0;
-            if (choice && topic == ui::screens::ManagementTopic::Attractions && choice->first == ui::screens::kOpenCloseAllButton && choice->second < ui::screens::kOpenCloseAllStates.size())
+            if (choice && topic == ui::screens::management::ManagementTopic::Attractions && choice->first == ui::screens::management::kOpenCloseAllButton && choice->second < ui::screens::management::kOpenCloseAllStates.size())
             {
-                asks.state_all = ui::screens::kOpenCloseAllStates[choice->second];
-                for (const ui::widgets::TableRow& r : ui::screens::management_page(topic, window->tab(), facts, strings, units).rows)
-                    asks.listed.push_back(ui::screens::management_row(r.id));
+                asks.state_all = ui::screens::management::kOpenCloseAllStates[choice->second];
+                for (const ui::widgets::TableRow& r : ui::screens::management::management_page(topic, window->tab(), facts, strings, units).rows)
+                    asks.listed.push_back(ui::screens::management::management_row(r.id));
             }
-            if (button && topic == ui::screens::ManagementTopic::Research && window->tab() == ui::screens::kComingTab)
+            if (button && topic == ui::screens::management::ManagementTopic::Research && window->tab() == ui::screens::management::kComingTab)
             {
-                if (*button == ui::screens::kFocusButton)
+                if (*button == ui::screens::management::kFocusButton)
                 {
                     if (const auto pick = research_pick(*window, facts))
                         asks.research_focus.emplace(*pick);
                 }
-                else if (*button == ui::screens::kUnfocusButton)
+                else if (*button == ui::screens::management::kUnfocusButton)
                     asks.research_focus.emplace(std::nullopt);
             }
             const auto change = window->take_change();
             // The ledger's line picked shows at once; the loan once it has moved, on the next update.
-            const ui::screens::FinancePage finance = ui::screens::finance_page(window->tab(), units.original_finances);
-            if (change && topic == ui::screens::ManagementTopic::Finances && finance == ui::screens::FinancePage::Ledger)
+            const ui::screens::management::FinancePage finance = ui::screens::management::finance_page(window->tab(), units.original_finances);
+            if (change && topic == ui::screens::management::ManagementTopic::Finances && finance == ui::screens::management::FinancePage::Ledger)
                 show(*window, topic, facts, strings, units);
-            if (change && topic == ui::screens::ManagementTopic::Finances && finance == ui::screens::FinancePage::Loan && change->id == ui::screens::kLoanControl)
+            if (change && topic == ui::screens::management::ManagementTopic::Finances && finance == ui::screens::management::FinancePage::Loan && change->id == ui::screens::management::kLoanControl)
             {
                 asks.loan = change->value;
                 window->age_page();
             }
-            if (change && topic == ui::screens::ManagementTopic::Research)
+            if (change && topic == ui::screens::management::ManagementTopic::Research)
             {
-                if (change->id == ui::screens::kResearchBudgetControl)
+                if (change->id == ui::screens::management::kResearchBudgetControl)
                     asks.research_budget = change->value;
-                else if (change->id >= ui::screens::kFirstPriorityControl)
-                    asks.research_priority = std::pair(static_cast<std::size_t>(change->id - ui::screens::kFirstPriorityControl), static_cast<float>(change->value) / 100);
+                else if (change->id >= ui::screens::management::kFirstPriorityControl)
+                    asks.research_priority = std::pair(static_cast<std::size_t>(change->id - ui::screens::management::kFirstPriorityControl), static_cast<float>(change->value) / 100);
             }
             if (const auto row = window->take_row())
-                asks.row = ui::screens::management_row(*row);
+                asks.row = ui::screens::management::management_row(*row);
         }
         if (auto roster = find_roster(desktop); roster && !roster->closing())
         {

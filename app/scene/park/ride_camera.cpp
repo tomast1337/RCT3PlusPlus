@@ -7,7 +7,7 @@
 #include "simulation/rides.hpp"
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
-#include "ui/screens/attraction_info.hpp"
+#include "ui/screens/info/attraction.hpp"
 
 #include <algorithm>
 #include <format>
@@ -70,7 +70,7 @@ namespace rct3::scene::park
                     child->visible = false;
                     scene.hidden_for_ride.emplace_back(child->name());
                 }
-            root.add<ui::screens::RideCameraPanel>(std::string(kRideCameraName), skins::ride_camera_panel_style(assets.palette), *assets.strings);
+            root.add<ui::screens::park_view::RideCameraPanel>(std::string(kRideCameraName), skins::ride_camera_panel_style(assets.palette), *assets.strings);
             scene.paused_for_ride = scene.park.speed.paused;
             scene.park.speed.paused = false;
         }
@@ -111,11 +111,11 @@ namespace rct3::scene::park
             scene.riding_fixed = fixed;
             const ui::StringTable& strings = *assets.strings;
             constexpr std::array<std::string_view, 2> kNames { "RidecamGUI_TypePeep", "RidecamGUI_TypeStatic" };
-            std::u16string info = ui::screens::attraction_name(scene.rides.rides[ride].base, strings);
+            std::u16string info = ui::screens::info::attraction_name(scene.rides.rides[ride].base, strings);
             info += u"  " + std::u16string(strings.get(kNames[fixed])) + u" " + strings::to_utf16(std::format("{}", at + 1));
             const bool other = flat_views(scene, ride, !fixed) > 0;
-            const std::optional<std::size_t> next = other ? std::optional<std::size_t>(fixed ? ui::screens::kFlatSeatType : ui::screens::kFlatFixedType) : std::nullopt;
-            if (auto panel = scene.desktop->root().find_as<ui::screens::RideCameraPanel>(kRideCameraName))
+            const std::optional<std::size_t> next = other ? std::optional<std::size_t>(fixed ? ui::screens::park_view::kFlatSeatType : ui::screens::park_view::kFlatFixedType) : std::nullopt;
+            if (auto panel = scene.desktop->root().find_as<ui::screens::park_view::RideCameraPanel>(kRideCameraName))
                 panel->show(std::move(info), flat_views(scene, ride, fixed) > 1, flat_rides(scene).size() > 1, strings.get("RidecamGUI_Ride"), next, other ? strings.get(kNames[!fixed]) : std::u16string_view { });
         }
 
@@ -140,14 +140,14 @@ namespace rct3::scene::park
             for (std::size_t c = 0; c < car; ++c)
                 place += scene.car_spots[c].ride == spot.ride && scene.car_spots[c].train == spot.train ? 1 : 0;
             const ui::StringTable& strings = *assets.strings;
-            std::u16string info = ui::screens::attraction_name(scene.rides.rides[spot.ride].base, strings);
+            std::u16string info = ui::screens::info::attraction_name(scene.rides.rides[spot.ride].base, strings);
             info += u"  " + std::u16string(strings.get("RidecamGUI_Train")) + u" " + strings::to_utf16(std::format("{}", spot.train + 1));
             info += u"  " + std::u16string(strings.get("RidecamGUI_Car")) + u" " + strings::to_utf16(std::format("{}", place));
             constexpr std::array<std::string_view, 3> kEyeNames { "RidecamGUI_TypeNose", "RidecamGUI_TypeFront", "RidecamGUI_TypeRear" };
             info += u"  " + std::u16string(strings.get(kEyeNames[std::to_underlying(eye)]));
             const auto cameras = std::ranges::count_if(ride_seats(scene, spot.ride, eye), [&](std::size_t seat) { return scene.car_spots[seat].train == spot.train; });
             const std::optional<rct3::park::object::RideEye> next = next_eye(scene, car, eye);
-            if (auto panel = root.find_as<ui::screens::RideCameraPanel>(kRideCameraName))
+            if (auto panel = root.find_as<ui::screens::park_view::RideCameraPanel>(kRideCameraName))
                 panel->show(std::move(info), cameras > 1, train_stops(scene, eye).size() > 1, strings.get("RidecamGUI_Train"), next.transform([](rct3::park::object::RideEye e) { return std::size_t { std::to_underlying(e) }; }), next ? strings.get(kEyeNames[std::to_underlying(*next)]) : std::u16string_view { });
         }
 
@@ -180,8 +180,8 @@ namespace rct3::scene::park
         const save::model::Person* saved = p.staff ? (p.saved < scene.people.staff.size() ? &scene.people.staff[p.saved].person : nullptr) : (p.saved < scene.people.guests.size() ? &scene.people.guests[p.saved].person : nullptr);
         const ui::StringTable& strings = *assets.strings;
         constexpr std::array<std::string_view, 2> kNames { "RidecamGUI_TypePeep", "RidecamGUI_TypeStatic" };
-        if (auto panel = scene.desktop->root().find_as<ui::screens::RideCameraPanel>(kRideCameraName))
-            panel->show(saved != nullptr ? strings::to_utf16(saved->name) : std::u16string { }, false, scene.shown_people.size() > 1, { }, behind ? ui::screens::kFlatSeatType : ui::screens::kFlatFixedType, strings.get(kNames[!behind]));
+        if (auto panel = scene.desktop->root().find_as<ui::screens::park_view::RideCameraPanel>(kRideCameraName))
+            panel->show(saved != nullptr ? strings::to_utf16(saved->name) : std::u16string { }, false, scene.shown_people.size() > 1, { }, behind ? ui::screens::park_view::kFlatSeatType : ui::screens::park_view::kFlatFixedType, strings.get(kNames[!behind]));
     }
 
     void ride_cam(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride)
@@ -202,9 +202,9 @@ namespace rct3::scene::park
             }
     }
 
-    void ride_action(ParkScene& scene, const ui::InterfaceAssets& assets, ui::screens::RideCameraAction action)
+    void ride_action(ParkScene& scene, const ui::InterfaceAssets& assets, ui::screens::park_view::RideCameraAction action)
     {
-        using enum ui::screens::RideCameraAction;
+        using enum ui::screens::park_view::RideCameraAction;
         if (action == Leave)
         {
             stop_riding(scene);

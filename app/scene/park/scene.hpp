@@ -80,14 +80,14 @@
 #include "ui/interface_assets.hpp"
 #include "ui/key_map.hpp"
 #include "ui/park_cursor.hpp"
-#include "ui/screens/attraction_info.hpp"
-#include "ui/screens/management_pages.hpp"
-#include "ui/screens/options_session.hpp"
-#include "ui/screens/park_bar.hpp"
-#include "ui/screens/party_info.hpp"
-#include "ui/screens/person_info.hpp"
-#include "ui/screens/scenery_info.hpp"
-#include "ui/screens/tool_menus.hpp"
+#include "ui/screens/info/attraction.hpp"
+#include "ui/screens/info/party.hpp"
+#include "ui/screens/info/person.hpp"
+#include "ui/screens/info/scenery.hpp"
+#include "ui/screens/management/pages.hpp"
+#include "ui/screens/options/session.hpp"
+#include "ui/screens/park_view/tool_menus.hpp"
+#include "ui/screens/park_view/top_bar.hpp"
 #include "ui/ui_textures.hpp"
 
 #include <array>
@@ -594,7 +594,7 @@ namespace rct3::scene::park
         std::vector<std::size_t> readying;
         /// Of tracked rides whose window has shown or built them, by ride: how many cars their trains may have.
         /// Their trains can be changed while they are not open.
-        std::map<std::size_t, ui::screens::TrainLimits> train_limits;
+        std::map<std::size_t, ui::screens::info::TrainLimits> train_limits;
         /// Of the same rides: the trains their kind's file offers, by name, the first theirs at first.
         std::map<std::size_t, std::vector<std::string>> train_choices;
         /// The object each simulated flat ride stands as, the one with seats, by its place in `objects`.
@@ -647,12 +647,12 @@ namespace rct3::scene::park
         /// What guests carry from stalls, by its carried item's symbol (as `Burger:cid`).
         std::map<std::string, CarriedLook, std::less<>> carried_looks;
         std::vector<ShownPerson> shown_people;
-        std::vector<ui::screens::StaffLook> staff_looks; ///< Of each worker, for the staff window; filled each frame
-        std::vector<Outfit> wardrobe;                    ///< What guests coming in at the gate wear
-        std::unordered_set<entt::entity> known_guests;   ///< The simulated guests the shown people were made for
-        std::size_t costumes_given = 0;                  ///< To entertainers hired, each the next costume in turn
-        random::RandomState looks;                       ///< For the colours of people's clothes left to pick
-        rct3::park::object::ObjectLevels people_levels;  ///< Of each shown person, as the still people's mesh holds them
+        std::vector<ui::screens::management::StaffLook> staff_looks; ///< Of each worker, for the staff window; filled each frame
+        std::vector<Outfit> wardrobe;                                ///< What guests coming in at the gate wear
+        std::unordered_set<entt::entity> known_guests;               ///< The simulated guests the shown people were made for
+        std::size_t costumes_given = 0;                              ///< To entertainers hired, each the next costume in turn
+        random::RandomState looks;                                   ///< For the colours of people's clothes left to pick
+        rct3::park::object::ObjectLevels people_levels;              ///< Of each shown person, as the still people's mesh holds them
         rct3::park::object::ObjectMesh still_people;
         rct3::park::object::ObjectMesh moving_people; ///< The people in motion in view, as last posed
         float since_people_levels = kObjectRebuildInterval;
@@ -672,20 +672,20 @@ namespace rct3::scene::park
         std::vector<glm::mat4> rider_places; ///< By piece of `riders`: its car's place, put each frame
         float since_riders = 0;
         ui::UiTextures people_textures;
-        DrawnAnimals drawn_animals;                                             ///< The saved zoo animals, drawn with their models
-        rct3::park::AttractionObjects attractions;                              ///< Which attraction each object belongs to, for clicks
-        std::optional<rct3::park::AttractionRef> shown;                         ///< The attraction the info panel tells about
-        std::vector<ui::screens::AttractionTab> shown_tabs;                     ///< Its tabs in the panel's order
-        ui::screens::AttractionTab info_tab = ui::screens::AttractionTab::View; ///< The tab last opened, opened again next time
+        DrawnAnimals drawn_animals;                                                         ///< The saved zoo animals, drawn with their models
+        rct3::park::AttractionObjects attractions;                                          ///< Which attraction each object belongs to, for clicks
+        std::optional<rct3::park::AttractionRef> shown;                                     ///< The attraction the info panel tells about
+        std::vector<ui::screens::info::AttractionTab> shown_tabs;                           ///< Its tabs in the panel's order
+        ui::screens::info::AttractionTab info_tab = ui::screens::info::AttractionTab::View; ///< The tab last opened, opened again next time
         /// Tracked rides and the rest each keep the tab last opened, as in the game: this is the other one's, swapped
         /// with info_tab when the panel goes from one to the other.
-        ui::screens::AttractionTab other_info_tab = ui::screens::AttractionTab::View;
+        ui::screens::info::AttractionTab other_info_tab = ui::screens::info::AttractionTab::View;
         bool info_tracked = false;         ///< Whether info_tab is the tracked rides' one
         std::size_t info_section = 0;      ///< Of the open tab's page
         std::vector<std::u16string> tunes; ///< The install's music, by name, for rides to play
         rct3::park::CarriedKinds carried;  ///< What stalls sell and its extras, read with the park's people
         bool carried_read = false;         ///< Whether their pictures are read, once a stall's window first opens
-        /// The tune each ride plays, by ride id, as ui::screens::AttractionFacts::tune; none for no music.
+        /// The tune each ride plays, by ride id, as ui::screens::info::AttractionFacts::tune; none for no music.
         /// shortcut: rides keep their tune only while the park is open and play nothing; save it and play it once
         /// ride music is read from and written to saves.
         std::unordered_map<std::uint32_t, std::size_t> ride_tunes;
@@ -693,7 +693,7 @@ namespace rct3::scene::park
         /// shortcut: kept only while the park is open and the trains run as before; save it and lower the
         /// trains' losses once friction is part of the train model.
         std::unordered_set<std::uint32_t> low_friction;
-        /// Which series each ride's graph shows, by ride id, as ui::screens::AttractionFacts::graph_series; speed alone
+        /// Which series each ride's graph shows, by ride id, as ui::screens::info::AttractionFacts::graph_series; speed alone
         /// for those not listed. shortcut: not saved with the park; keep it with the ride once saves carry it.
         std::unordered_map<std::uint32_t, std::uint8_t> graph_series;
         float since_info_page = 0;                 ///< Seconds since a live page was shown again
@@ -722,52 +722,52 @@ namespace rct3::scene::park
         {
             return riding || riding_flat || riding_person;
         }
-        std::optional<std::size_t> doors_requested;                          ///< A tracked ride whose circuit closed, to place its doors next
-        std::optional<rct3::park::AttractionRef> info_requested;             ///< Asked by a script or a finished building, opened as a click on it does
-        std::string refusal;                                                 ///< String key: why the shown attraction was not opened, tested or edited
-        std::optional<std::size_t> shown_person;                             ///< Of shown_people, the one the info panel tells about instead
-        std::vector<ui::screens::PersonTab> person_tabs;                     ///< Their tabs in the panel's order
-        ui::screens::PersonTab person_tab = ui::screens::PersonTab::General; ///< The tab last opened on a person
-        std::vector<std::size_t> shown_party;                                ///< Of shown_people, the party the info panel tells about instead, its leader first
-        ui::screens::PartyTab party_tab = ui::screens::PartyTab::Members;    ///< The tab last opened on a party
-        bool painting_patrol = false;                                        ///< Strokes on the ground paint the shown staff member's patrol area
-        int patrol_brush = 0;                                                ///< Of ui::screens::kPatrolBrushes
-        std::optional<bool> patrol_stroke;                                   ///< While a stroke goes on: whether it adds tiles, or takes them away
-        std::optional<HeldPerson> holding;                                   ///< The person the player has picked up
-        std::vector<save::model::BinState> bins;                             ///< Of the litter bins among the objects
-        std::vector<save::model::SignState> signs;                           ///< Of the signs among the objects
-        std::optional<std::size_t> shown_prop;                               ///< Of objects, the prop the info panel tells about instead
-        std::vector<ui::screens::SceneryTab> prop_tabs;                      ///< Its tabs in the panel's order
-        std::optional<ui::screens::SceneryTab> prop_tab;                     ///< Its open tab; none while only its name shows
-        bool show_people = true;                                             ///< Switched in the view menu
-        bool show_scenery = true;                                            ///< Objects and rides, switched in the view menu
-        bool see_through_ground = false;                                     ///< Likewise the ground drawn faded
-        bool show_grid = false;                                              ///< Likewise the tile grid over the ground
-        bool show_contours = false;                                          ///< Likewise contours over the ground
-        bool show_supports = true;                                           ///< Likewise the supports under paths and track
-        bool show_path_heights = false;                                      ///< Likewise a label of its height over each path
-        bool show_ride_heights = false;                                      ///< Likewise over each piece of track
-        bool show_money = true;                                              ///< Likewise amounts floating up where money is spent or paid back
-        bool show_guest_payments = false;                                    ///< Likewise where guests pay for rides and stalls
-        std::vector<FloatingMoney> money;                                    ///< The amounts floating up now
-        std::unordered_map<entt::entity, std::int64_t> income_seen;          ///< Of each attraction's takings, what has floated up
-        ViewLines grid_lines;                                                ///< The tile grid over the ground, while the view menu shows it
-        ViewLines contour_lines;                                             ///< Likewise the contours
-        ViewLines delete_marks;                                              ///< The tiles the area delete tool marked
-        ViewLines enclosure_marks;                                           ///< The tiles the enclosure tool marks
-        ViewLines pool_marks;                                                ///< The squares the pool tool marks
-        ViewLines land_marks;                                                ///< What the land tool out would work on
-        rct3::park::ParkCamera view_camera;                                  ///< Of the info panel's round view, turning slowly round the attraction
-        render::TextureHandle view_target;                                   ///< The round view is drawn into
-        std::uint32_t view_pixels = 0;                                       ///< Across the view's target
-        std::vector<PhotoShot> photos;                                       ///< Taken in the park, waiting to be drawn, one a frame
-        render::TextureHandle photo_target;                                  ///< A photo is drawn into
-        std::optional<std::string> photo_reading;                            ///< The file name start of the photo read from the target this frame, for the app to save
-        std::optional<ui::Point> press;                                      ///< Where the left button went down over the park, until it is let go
-        std::vector<glm::vec3> stroke;                                       ///< The pool water under the pointer while pressed: world x, z and scene.clock
-        std::optional<ui::Point> right_press;                                ///< Likewise the right button
-        render::SceneLight light;                                            ///< What the day clock shows, for this frame
-        int shadows = 0;                                                     ///< The Shadows option: none, static (drawn now and then), dynamic
+        std::optional<std::size_t> doors_requested;                                      ///< A tracked ride whose circuit closed, to place its doors next
+        std::optional<rct3::park::AttractionRef> info_requested;                         ///< Asked by a script or a finished building, opened as a click on it does
+        std::string refusal;                                                             ///< String key: why the shown attraction was not opened, tested or edited
+        std::optional<std::size_t> shown_person;                                         ///< Of shown_people, the one the info panel tells about instead
+        std::vector<ui::screens::info::PersonTab> person_tabs;                           ///< Their tabs in the panel's order
+        ui::screens::info::PersonTab person_tab = ui::screens::info::PersonTab::General; ///< The tab last opened on a person
+        std::vector<std::size_t> shown_party;                                            ///< Of shown_people, the party the info panel tells about instead, its leader first
+        ui::screens::info::PartyTab party_tab = ui::screens::info::PartyTab::Members;    ///< The tab last opened on a party
+        bool painting_patrol = false;                                                    ///< Strokes on the ground paint the shown staff member's patrol area
+        int patrol_brush = 0;                                                            ///< Of ui::screens::info::kPatrolBrushes
+        std::optional<bool> patrol_stroke;                                               ///< While a stroke goes on: whether it adds tiles, or takes them away
+        std::optional<HeldPerson> holding;                                               ///< The person the player has picked up
+        std::vector<save::model::BinState> bins;                                         ///< Of the litter bins among the objects
+        std::vector<save::model::SignState> signs;                                       ///< Of the signs among the objects
+        std::optional<std::size_t> shown_prop;                                           ///< Of objects, the prop the info panel tells about instead
+        std::vector<ui::screens::info::SceneryTab> prop_tabs;                            ///< Its tabs in the panel's order
+        std::optional<ui::screens::info::SceneryTab> prop_tab;                           ///< Its open tab; none while only its name shows
+        bool show_people = true;                                                         ///< Switched in the view menu
+        bool show_scenery = true;                                                        ///< Objects and rides, switched in the view menu
+        bool see_through_ground = false;                                                 ///< Likewise the ground drawn faded
+        bool show_grid = false;                                                          ///< Likewise the tile grid over the ground
+        bool show_contours = false;                                                      ///< Likewise contours over the ground
+        bool show_supports = true;                                                       ///< Likewise the supports under paths and track
+        bool show_path_heights = false;                                                  ///< Likewise a label of its height over each path
+        bool show_ride_heights = false;                                                  ///< Likewise over each piece of track
+        bool show_money = true;                                                          ///< Likewise amounts floating up where money is spent or paid back
+        bool show_guest_payments = false;                                                ///< Likewise where guests pay for rides and stalls
+        std::vector<FloatingMoney> money;                                                ///< The amounts floating up now
+        std::unordered_map<entt::entity, std::int64_t> income_seen;                      ///< Of each attraction's takings, what has floated up
+        ViewLines grid_lines;                                                            ///< The tile grid over the ground, while the view menu shows it
+        ViewLines contour_lines;                                                         ///< Likewise the contours
+        ViewLines delete_marks;                                                          ///< The tiles the area delete tool marked
+        ViewLines enclosure_marks;                                                       ///< The tiles the enclosure tool marks
+        ViewLines pool_marks;                                                            ///< The squares the pool tool marks
+        ViewLines land_marks;                                                            ///< What the land tool out would work on
+        rct3::park::ParkCamera view_camera;                                              ///< Of the info panel's round view, turning slowly round the attraction
+        render::TextureHandle view_target;                                               ///< The round view is drawn into
+        std::uint32_t view_pixels = 0;                                                   ///< Across the view's target
+        std::vector<PhotoShot> photos;                                                   ///< Taken in the park, waiting to be drawn, one a frame
+        render::TextureHandle photo_target;                                              ///< A photo is drawn into
+        std::optional<std::string> photo_reading;                                        ///< The file name start of the photo read from the target this frame, for the app to save
+        std::optional<ui::Point> press;                                                  ///< Where the left button went down over the park, until it is let go
+        std::vector<glm::vec3> stroke;                                                   ///< The pool water under the pointer while pressed: world x, z and scene.clock
+        std::optional<ui::Point> right_press;                                            ///< Likewise the right button
+        render::SceneLight light;                                                        ///< What the day clock shows, for this frame
+        int shadows = 0;                                                                 ///< The Shadows option: none, static (drawn now and then), dynamic
         /// The shadow drawn at the sun's last kept direction, and the one before it, which fades out as the sun
         /// goes on towards its next step (rct3::park::sun_step_share).
         std::array<ShadowDrawing, 2> shadow_drawings;
@@ -798,13 +798,13 @@ namespace rct3::scene::park
         std::uint32_t built = 0;                                        ///< Things put down so far, each heard as a thump (scene/park/sounds.hpp)
         std::uint32_t levels_won = 0;                                   ///< Levels of the scenario won while playing, each heard as a fanfare (scene/park/sounds.hpp)
         std::optional<std::size_t> pool_complex_asked;                  ///< Of the pools' rooms, one whose complex the player was asked to sell
-        std::optional<ui::screens::SceneryTab> room_tab;                ///< Last open in a changing room's window
+        std::optional<ui::screens::info::SceneryTab> room_tab;          ///< Last open in a changing room's window
         std::vector<rct3::park::AttractionRef> demolish_asked;          ///< Waiting on the question whether to pull them down
         std::vector<std::string> prizes;                                ///< Text keys told one box at a time, oldest first: prizes won, deletes refused
         bool info_shown = false;                                        ///< The info panel showed last frame, to tell it opening
-        std::optional<ui::screens::ParkTool> menu_shown;                ///< The tool row's menu open last frame, to tell one opening
-        std::vector<ui::screens::ToolItem> window_requests;             ///< Files menu items that open a window the owner opens (scene/park/files_menu.hpp)
-        std::unique_ptr<ui::screens::OptionsSession> options;           ///< The options window over the park, once opened
+        std::optional<ui::screens::park_view::ParkTool> menu_shown;     ///< The tool row's menu open last frame, to tell one opening
+        std::vector<ui::screens::park_view::ToolItem> window_requests;  ///< Files menu items that open a window the owner opens (scene/park/files_menu.hpp)
+        std::unique_ptr<ui::screens::options::OptionsSession> options;  ///< The options window over the park, once opened
         std::filesystem::path file;                                     ///< The park file loaded, whose name saving offers
         std::vector<std::byte> base;                                    ///< The original park file the park started from, kept for saving
         std::size_t own_objects = 0;                                    ///< `objects` from the file; those after it were made on loading or built since

@@ -21,7 +21,7 @@
 #include "simulation/import_park.hpp"
 #include "simulation/park/messages.hpp"
 #include "ui/game_style.hpp"
-#include "ui/screens/land_panel.hpp"
+#include "ui/screens/build/land.hpp"
 
 #include <algorithm>
 #include <array>
@@ -49,9 +49,9 @@ namespace rct3::scene
         constexpr float kInFront = 0.01f; ///< Back along the pointer's ray from the ground it meets, in world units
 
         /// A tab's tools by their pictures, `usable` the first of them that work so far.
-        ui::screens::LandTab tab_of(const ui::StringTable& strings, std::string_view icon, int slot, std::initializer_list<std::string_view> tools, std::size_t usable)
+        ui::screens::build::LandTab tab_of(const ui::StringTable& strings, std::string_view icon, int slot, std::initializer_list<std::string_view> tools, std::size_t usable)
         {
-            ui::screens::LandTab t { std::string(icon), std::u16string(strings.get(std::format("{}Help", icon))), slot, { } };
+            ui::screens::build::LandTab t { std::string(icon), std::u16string(strings.get(std::format("{}Help", icon))), slot, { } };
             for (const std::string_view tool : tools)
                 t.tools.push_back({ std::string(tool), std::u16string(strings.get(std::format("{}Help", tool))), t.tools.size() < usable });
             return t;
@@ -730,9 +730,9 @@ namespace rct3::scene
             }
         }
 
-        std::optional<ui::screens::LandPanel&> panel_of(const park::ParkScene& scene)
+        std::optional<ui::screens::build::LandPanel&> panel_of(const park::ParkScene& scene)
         {
-            return scene.desktop->root().find_as<ui::screens::LandPanel>(kPanelName);
+            return scene.desktop->root().find_as<ui::screens::build::LandPanel>(kPanelName);
         }
 
         /// The panel with the tabs of the tool out: shaping's, or painting's with the surfaces read.
@@ -742,12 +742,12 @@ namespace rct3::scene
             const ui::StringTable& strings = *assets.strings;
             auto panel = panel_of(scene);
             if (!panel)
-                panel = scene.desktop->root().add<ui::screens::LandPanel>(std::string(kPanelName), ui::game_skins::land_panel_style(assets.palette), strings);
-            std::vector<ui::screens::LandTab> tabs;
-            ui::screens::LandPick chosen;
+                panel = scene.desktop->root().add<ui::screens::build::LandPanel>(std::string(kPanelName), ui::game_skins::land_panel_style(assets.palette), strings);
+            std::vector<ui::screens::build::LandTab> tabs;
+            ui::screens::build::LandPick chosen;
             if (l.tool == LandTools::Tool::Buy)
             {
-                ui::screens::LandTab buying { "ParkInfoIcon_BuyLand", std::u16string(strings.get("Park_BuyLandHelp")), 2, { } };
+                ui::screens::build::LandTab buying { "ParkInfoIcon_BuyLand", std::u16string(strings.get("Park_BuyLandHelp")), 2, { } };
                 buying.tools.push_back({ "ParkInfoIcon_BuyLand", std::u16string(strings.get("Park_BuyLandHelp")), true });
                 buying.tools.push_back({ "ParkInfoIcon_BuyConstructionRites", std::u16string(strings.get("Park_BuyConstructionRitesHelp")), true });
                 tabs.push_back(std::move(buying));
@@ -755,24 +755,24 @@ namespace rct3::scene
             }
             else if (l.tool == LandTools::Tool::Paint)
             {
-                ui::screens::LandTab base { "Land_Brush_Paint_Base", std::u16string(strings.get("Land_Brush_Paint_BaseHelp")), 4, { } };
+                ui::screens::build::LandTab base { "Land_Brush_Paint_Base", std::u16string(strings.get("Land_Brush_Paint_BaseHelp")), 4, { } };
                 for (const rct3::park::ground::GroundSurface& s : l.surfaces)
                     base.tools.push_back({ s.icon, std::u16string(strings.get(s.help)), true });
                 tabs.push_back(std::move(base));
-                ui::screens::LandTab cliff { "Land_Brush_Paint_Cliff", std::u16string(strings.get("Land_Brush_Paint_CliffHelp")), 5, { } };
+                ui::screens::build::LandTab cliff { "Land_Brush_Paint_Cliff", std::u16string(strings.get("Land_Brush_Paint_CliffHelp")), 5, { } };
                 for (const rct3::park::ground::GroundSurface& s : l.cliffs)
                     cliff.tools.push_back({ s.icon, std::u16string(strings.get(s.help)), true });
                 tabs.push_back(std::move(cliff));
-                chosen = l.cliff ? ui::screens::LandPick { kCliffTab, *l.cliff } : ui::screens::LandPick { 0, l.surface };
+                chosen = l.cliff ? ui::screens::build::LandPick { kCliffTab, *l.cliff } : ui::screens::build::LandPick { 0, l.surface };
             }
             else
             {
                 tabs.push_back(tab_of(strings, "Land_Vertex", 2, { "Land_Vertex_Neighbour", "Land_Vertex_Neighbour2", "Land_Vertex_Freeform", "Land_Vertex_Freeform2", "Land_Vertex_Quantised1", "Land_Vertex_Quantised2" }, kTileShapings.size() * 2));
                 tabs.push_back(tab_of(strings, "Land_Brush_Height_Smooth", 3, { "Land_Brush_Height_Smooth_Average", "Land_Brush_Height_Smooth_FlatMove", "Land_Brush_Height_Smooth_Flat", "Land_Brush_Height_Smooth_Flat1", "Land_Brush_Height_Smooth_Round", "Land_Brush_Height_Smooth_Square" }, kSmoothTools.size()));
-                ui::screens::LandTab brushes = tab_of(strings, "Land_Brush_Height_Raise", 4, { "Land_Brush_Height_Raise_Ridge", "Land_Brush_Height_Raise_Mountain", "Land_Brush_Height_Raise_Mesa", "Land_Brush_Height_Raise_Hill", "Land_Brush_Height_Lower_Canyon", "Land_Brush_Height_Lower_Ditch", "Land_Brush_Height_Lower_Crater" }, kShapeBrushes.size());
+                ui::screens::build::LandTab brushes = tab_of(strings, "Land_Brush_Height_Raise", 4, { "Land_Brush_Height_Raise_Ridge", "Land_Brush_Height_Raise_Mountain", "Land_Brush_Height_Raise_Mesa", "Land_Brush_Height_Raise_Hill", "Land_Brush_Height_Lower_Canyon", "Land_Brush_Height_Lower_Ditch", "Land_Brush_Height_Lower_Crater" }, kShapeBrushes.size());
                 brushes.help = std::u16string(strings.get("Rct3pp_LandShapeHelp"));
                 tabs.push_back(std::move(brushes));
-                ui::screens::LandTab mode = tab_of(strings, "Land_Brush_Height_Mode", 1, { "Land_Brush_Height_Mode_Spray", "Land_Brush_Height_Mode_Drag" }, 2);
+                ui::screens::build::LandTab mode = tab_of(strings, "Land_Brush_Height_Mode", 1, { "Land_Brush_Height_Mode_Spray", "Land_Brush_Height_Mode_Drag" }, 2);
                 mode.setting = true;
                 mode.on = l.spray ? 0 : 1;
                 mode.number = "Land_Brush_Height_Mode_SpraySpeed";

@@ -6,8 +6,8 @@
 
 #include "park/attraction_objects.hpp"
 #include "save/model/rides.hpp"
-#include "ui/screens/attraction_info.hpp"
-#include "ui/screens/info_panel.hpp"
+#include "ui/screens/info/attraction.hpp"
+#include "ui/screens/info/panel.hpp"
 #include "ui/string_table.hpp"
 
 #include <cstddef>
@@ -27,9 +27,9 @@ namespace rct3::scene::park
     /// its menu is empty; nothing when it can.
     [[nodiscard]] std::optional<std::string> state_refusal(const ParkScene& scene, rct3::park::AttractionRef ref, save::model::AttractionState state);
     /// The states the open-or-close tab of `ref` offers, in the order its choices fan out.
-    [[nodiscard]] std::vector<ui::screens::StateChoice> state_choices(const ParkScene& scene, rct3::park::AttractionRef ref);
+    [[nodiscard]] std::vector<ui::screens::info::StateChoice> state_choices(const ParkScene& scene, rct3::park::AttractionRef ref);
     /// Those choices as the tab fans them: each greyed, with why as its help, when `state_refusal` refuses it.
-    [[nodiscard]] std::vector<ui::screens::InfoChoice> state_fan(const ParkScene& scene, rct3::park::AttractionRef ref, const ui::StringTable& strings);
+    [[nodiscard]] std::vector<ui::screens::info::InfoChoice> state_fan(const ParkScene& scene, rct3::park::AttractionRef ref, const ui::StringTable& strings);
 
     /// Puts ride `ride` in `state` when its track and doors let it; otherwise leaves it and gives the string
     /// key of why not.

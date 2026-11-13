@@ -30,8 +30,8 @@
 #include "simulation/vip.hpp"
 #include "strings/unicode.hpp"
 #include "ui/key_combo.hpp"
-#include "ui/screens/attraction_info.hpp"
-#include "ui/screens/management_pages.hpp"
+#include "ui/screens/info/attraction.hpp"
+#include "ui/screens/management/pages.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
@@ -329,7 +329,7 @@ namespace rct3::scene
             Json next = Json::array();
             if (scene.research_items)
             {
-                for (const simulation::ResearchItem& i : simulation::research_preview(r, *scene.research_items, ui::screens::kComingPerArea))
+                for (const simulation::ResearchItem& i : simulation::research_preview(r, *scene.research_items, ui::screens::management::kComingPerArea))
                     next.push_back(symbol(i.id));
             }
             return { { "budget", r.budget }, { "spent", r.spent }, { "current", r.current ? symbol(*r.current) : Json(nullptr) }, { "invented", std::move(invented) }, { "inventedAt", r.invented_at }, { "focus", r.focus ? symbol(*r.focus) : Json(nullptr) }, { "next", std::move(next) }, { "left", scene.research_items ? Json(scene.research_items->size()) : Json(nullptr) }, { "priorities", r.priorities } };
@@ -1190,7 +1190,7 @@ namespace rct3::scene
             if (!park.shown || park.shown->kind != rct3::park::AttractionRef::Kind::Ride || park.shown->index >= park.rides.rides.size())
                 return nullptr;
             const save::model::Ride& ride = park.rides.rides[park.shown->index];
-            for (const ui::screens::AttractionTabInfo& t : ui::screens::attraction_tabs(ui::screens::attraction_kind(ride), ride.base.state))
+            for (const ui::screens::info::AttractionTabInfo& t : ui::screens::info::attraction_tabs(ui::screens::info::attraction_kind(ride), ride.base.state))
             {
                 if (t.tab == park.info_tab)
                     return Json { { "ride", park.shown->index }, { "tab", t.help } };

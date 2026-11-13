@@ -10,7 +10,8 @@
 //   ./nob fuzz [TARGET] [--seconds N]
 //   ./nob tidy [FILE...]                          writes the compile database, then runs clang-tidy over FILEs, or
 //                                                 over src, tools and fuzz
-//   ./nob format [--check]                        clang-format our sources (never third_party/)
+//   ./nob format [--check]                        clang-format our sources (never third_party/), Prettier the
+//                                                 scripts (needs npx)
 //   ./nob fetch                                   downloads optional assets (the fallback font) into downloads/
 //
 // The audio module (src/audio/, vendored miniaudio) is compiled into the tests and the tools that use it
@@ -625,8 +626,9 @@ namespace
         return true;
     }
 
-    // Formats our own sources with clang-format using the style in .clang-format. With `check` it only reports
-    // files that would change. Vendored code in third_party/ is never touched. CLANGFORMAT overrides the binary.
+    // Formats our own sources with clang-format using the style in .clang-format, and the scripts with Prettier.
+    // With `check` it only reports files that would change. Vendored code in third_party/ is never touched.
+    // CLANGFORMAT overrides the clang-format binary.
     bool run_format(bool check)
     {
         std::vector<fs::path> files;
@@ -651,7 +653,20 @@ namespace
             cmd << "-i";
         for (const auto& f : files)
             cmd << f.string();
-        return run(cmd);
+        bool ok = run(cmd);
+
+        // The scripts and their prelude go through Prettier (.prettierrc.json), fetched by npx at the pinned
+        // version: formatting differs between releases. Without npx they are skipped, as tsc is optional too.
+        Cmd probe;
+        probe << "npx" << "--version";
+        if (!run(probe))
+        {
+            log(Level::Warn, "scripts not formatted: Prettier needs npx on PATH (Node.js)");
+            return ok;
+        }
+        Cmd prettier;
+        prettier << "npx" << "--yes" << "prettier@3.9.10" << (check ? "--check" : "--write") << "scripts" << "assets/scripting";
+        return run(prettier) && ok;
     }
 
     // Runs clang-tidy over `files`, or over all our library, tool and fuzz sources when none are given, using the

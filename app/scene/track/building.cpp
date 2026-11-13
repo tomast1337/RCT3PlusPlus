@@ -308,7 +308,7 @@ namespace rct3::scene::track
                         v.piece.replace(at, kNameMark.size(), ui::screens::info::attraction_name(scene.rides.rides.at(*b.ride).base, *assets.strings));
                 }
                 // The price the piece's scenery item stores, in hundredths as the park's money is.
-                v.cost = std::u16string(assets.strings->get(kCostLabel)) + u" " + ui::money_text(ui::currency(*assets.strings, currency), shape.record.cost);
+                v.cost = std::u16string(assets.strings->get(kCostLabel)) + u" " + ui::money_text(ui::currency(*assets.strings, currency), units::Money { shape.record.cost });
                 // The settings the piece is built with. A brake's or block brake's speed is stored in whole m/s and
                 // shown in tenths of the player's unit, a step a metre a second; the ride's for its kind until set.
                 // shortcut: nothing holds a train for the time or turns the cars yet, upgrade with holding brakes
@@ -628,7 +628,7 @@ namespace rct3::scene::track
         const std::vector<save::model::TrackPiece> design = std::exchange(b.design, { });
         const std::vector<TrackBuilding::DesignDoor> doors = std::exchange(b.design_doors, { });
         const std::optional<save::model::Ride> settings = std::exchange(b.design_ride, std::nullopt);
-        const std::int64_t cash = scene.park.cash.value_or(0);
+        const units::Money cash = scene.park.cash.value_or(units::Money { });
         // shortcut: a design's pieces are not checked against each other, as it was built whole in the game and
         // our rule refuses some of its pieces that pass close; check them too once the rule matches the game's.
         rct3::park::path::SolidTiles standing;
@@ -717,7 +717,7 @@ namespace rct3::scene::track
         if (!design.empty())
         {
             use_split(scene, b, split);
-            logging::logger("park").info("design laid with {} of {} pieces for {}, mode {}, lift {} m/s", ride.track->pieces.size(), design.size(), cash - scene.park.cash.value_or(0), std::to_underlying(ride.mode), ride.options.lift_speed);
+            logging::logger("park").info("design laid with {} of {} pieces for {}, mode {}, lift {} m/s", ride.track->pieces.size(), design.size(), (cash - scene.park.cash.value_or(units::Money { })).value, std::to_underlying(ride.mode), ride.options.lift_speed);
             // Named and playing as its panel says; then, as a flat ride set down, on to its window and its doors,
             // the entrance first, where the design brought none. A ride in a pool has none to place.
             if (b.design_title.find_first_not_of(u' ') != std::u16string::npos)
@@ -1063,7 +1063,7 @@ namespace rct3::scene::track
             for (const save::model::TrackPiece& p : b.design)
                 if (const auto shape = c != nullptr ? rct3::park::track::shape_named(*c, p.symbol) : std::nullopt)
                     price += shape->record.cost;
-            design->show_view_text(ui::money_text(ui::currency(*assets.strings, currency), price));
+            design->show_view_text(ui::money_text(ui::currency(*assets.strings, currency), units::Money { price }));
         }
         else if (design && design->showing())
         {
@@ -1367,7 +1367,7 @@ namespace rct3::scene::track
                 b.preview_item = alone.symbol;
             }
             scene.placing.preview_camera = rct3::park::framed(rct3::park::object::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
-            price = ui::money_text(ui::currency(*assets.strings, currency), c->pieces[b.picked->index].record.cost);
+            price = ui::money_text(ui::currency(*assets.strings, currency), units::Money { c->pieces[b.picked->index].record.cost });
         }
         else
         {

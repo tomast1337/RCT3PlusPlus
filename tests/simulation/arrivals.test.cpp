@@ -10,6 +10,7 @@
 #include <utility>
 
 using namespace rct3::simulation;
+namespace units = rct3::units;
 
 TEST_CASE("the park has room for guests on its working rides and in its pools")
 {
@@ -36,7 +37,7 @@ TEST_CASE("cheaper rides make a higher entrance fee fair")
     Sandbox park;
     park.path({ 0, 0 }, { 3, 0 });
     const auto ride = park.flat_ride("Spinner", { 1, 0 }, 300, { .excitement = 0.8f });
-    const std::int64_t dear = fair_entrance_fee(park.world());
+    const units::Money dear = fair_entrance_fee(park.world());
     park.world().registry.get<Attraction>(ride).price.value = 0;
     CHECK(fair_entrance_fee(park.world()) > dear);
 }
@@ -44,14 +45,14 @@ TEST_CASE("cheaper rides make a higher entrance fee fair")
 TEST_CASE("a well rated park with room draws more guests; a full or overpriced one fewer")
 {
     const Draw plain { };
-    CHECK(drawn(plain, 0, 100, 0) == doctest::Approx(1));
-    CHECK(drawn({ .rating = 0.9f }, 0, 100, 0) > 1);
-    CHECK(drawn({ .rating = 0.2f }, 0, 100, 0) < drawn({ .rating = 0.4f }, 0, 100, 0));
-    CHECK(drawn({ .rating = 0.2f }, 0, 100, 0) > 0); // A few still come to a park nobody rates
-    CHECK(drawn(plain, 100, 100, 0) < 1);
-    const double fair = drawn({ .entrance_fee = 1000 }, 0, 100, 1000);
-    CHECK(drawn({ .entrance_fee = 1500 }, 0, 100, 1000) < fair);
-    CHECK(drawn({ .entrance_fee = 2500 }, 0, 100, 1000) < drawn({ .entrance_fee = 1500 }, 0, 100, 1000));
+    CHECK(drawn(plain, 0, 100, units::Money { 0 }) == doctest::Approx(1));
+    CHECK(drawn({ .rating = 0.9f }, 0, 100, units::Money { 0 }) > 1);
+    CHECK(drawn({ .rating = 0.2f }, 0, 100, units::Money { 0 }) < drawn({ .rating = 0.4f }, 0, 100, units::Money { 0 }));
+    CHECK(drawn({ .rating = 0.2f }, 0, 100, units::Money { 0 }) > 0); // A few still come to a park nobody rates
+    CHECK(drawn(plain, 100, 100, units::Money { 0 }) < 1);
+    const double fair = drawn({ .entrance_fee = units::Money { 1000 } }, 0, 100, units::Money { 1000 });
+    CHECK(drawn({ .entrance_fee = units::Money { 1500 } }, 0, 100, units::Money { 1000 }) < fair);
+    CHECK(drawn({ .entrance_fee = units::Money { 2500 } }, 0, 100, units::Money { 1000 }) < drawn({ .entrance_fee = units::Money { 1500 } }, 0, 100, units::Money { 1000 }));
 }
 
 TEST_CASE("a park with room for many guests draws them in faster")

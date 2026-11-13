@@ -9,6 +9,7 @@
 
 using namespace rct3;
 using namespace rct3::simulation;
+namespace units = rct3::units;
 
 namespace
 {
@@ -33,8 +34,8 @@ namespace
 TEST_CASE("research starts where the park file left it")
 {
     const Research r = start_research({ .current_item = 12, .previous_item = 9, .money_spent_on_current = 668, .monthly_budget = 20000, .priorities = { 0.5f, 1.0f }, .time_since_last_spend = 6.0f });
-    CHECK(r.budget == 20000);
-    CHECK(r.spent == 668);
+    CHECK(r.budget == units::Money { 20000 });
+    CHECK(r.spent == units::Money { 668 });
     CHECK(r.current == 12);
     CHECK(r.previous == 9);
     CHECK(r.priorities.size() == 2);
@@ -70,10 +71,10 @@ TEST_CASE("the items to research are the attractions made available and not yet 
     REQUIRE(items.size() == 2);
     CHECK(items[0].id == 1);
     CHECK(items[0].area == ResearchArea::Coasters);
-    CHECK(items[0].cost == kTuning.research.tracked_ride_cost.value);
+    CHECK(items[0].cost == kTuning.research.tracked_ride_cost);
     CHECK(items[1].id == 3);
     CHECK(items[1].area == ResearchArea::Shops);
-    CHECK(items[1].cost == kTuning.research.shop_cost.value);
+    CHECK(items[1].cost == kTuning.research.shop_cost);
 }
 
 TEST_CASE("researchable scenery and path styles join research, scenery costing by its price")
@@ -114,12 +115,12 @@ TEST_CASE("researchable scenery and path styles join research, scenery costing b
     REQUIRE(items.size() == 4);
     CHECK(items[0].id == 1);
     CHECK(items[0].area == ResearchArea::Scenery);
-    CHECK(items[0].cost == std::llround(1500 * t.scenery_cost_per_price));
+    CHECK(items[0].cost == units::Money { std::llround(1500 * t.scenery_cost_per_price) });
     CHECK(items[1].id == 2);
-    CHECK(items[1].cost == t.scenery_cost_cap.value);
+    CHECK(items[1].cost == t.scenery_cost_cap);
     CHECK(items[2].id == 4);
     CHECK(items[2].area == ResearchArea::Paths);
-    CHECK(items[2].cost == t.other_cost.value);
+    CHECK(items[2].cost == t.other_cost);
     CHECK(items[3].id == 6);
     CHECK(items[3].area == ResearchArea::Paths);
 }
@@ -127,31 +128,31 @@ TEST_CASE("researchable scenery and path styles join research, scenery costing b
 TEST_CASE("the budget is paid in parts and booked as research spending")
 {
     Lab lab;
-    lab.park.cash = 100000;
+    lab.park.cash = units::Money { 100000 };
     lab.pass(6); // Too soon for a part
-    CHECK(lab.park.cash == 100000);
+    CHECK(lab.park.cash == units::Money { 100000 });
     CHECK_FALSE(lab.research.current);
     lab.pass(6); // A thirtieth of the month has gone
-    CHECK(lab.park.cash == 100000 - 667);
+    CHECK(lab.park.cash == units::Money { 100000 - 667 });
     CHECK(lab.money.ledger[0].research == 667);
-    CHECK(lab.research.spent == 667);
+    CHECK(lab.research.spent == units::Money { 667 });
     CHECK(lab.research.current.has_value());
     // A whole month comes to the budget.
     for (int part = 1; part < 30; ++part)
         lab.pass(12);
-    CHECK(std::abs(*lab.park.cash - (100000 - 20000)) <= 667);
+    CHECK(std::abs(lab.park.cash->value - (100000 - 20000)) <= 667);
 }
 
 TEST_CASE("an item whose cost is covered is invented and the rest carries over")
 {
     Lab lab;
-    lab.park.cash = 100000;
+    lab.park.cash = units::Money { 100000 };
     lab.research.current = 1;
     lab.pass(kMonth); // 20000 against a cost of 16000
     CHECK(lab.research.invented == std::vector<std::uint64_t> { 1 });
     CHECK(lab.research.previous == 1);
     CHECK(lab.research.current == 2);
-    CHECK(lab.research.spent == 4000);
+    CHECK(lab.research.spent == units::Money { 4000 });
     REQUIRE(lab.items.size() == 1);
     CHECK(lab.items[0].id == 2);
     lab.pass(kMonth); // 24000 against 10000: the last item, with nothing to carry the rest to
@@ -167,15 +168,15 @@ TEST_CASE("an item whose cost is covered is invented and the rest carries over")
 TEST_CASE("a park that cannot pay a part makes no progress")
 {
     Lab lab;
-    lab.park.cash = 100;
+    lab.park.cash = units::Money { 100 };
     lab.pass(12);
-    CHECK(lab.park.cash == 100);
-    CHECK(lab.research.spent == 0);
+    CHECK(lab.park.cash == units::Money { 100 });
+    CHECK(lab.research.spent == units::Money { 0 });
     CHECK(lab.money.ledger.empty());
     CHECK(lab.park.messages.list.empty()); // Said nowhere: it happens thirty times a month
-    lab.park.cash = 1000;
+    lab.park.cash = units::Money { 1000 };
     lab.pass(12);
-    CHECK(lab.research.spent == 667); // The part missed is not owed
+    CHECK(lab.research.spent == units::Money { 667 }); // The part missed is not owed
 }
 
 TEST_CASE("a park whose money never runs out researches for free")
@@ -191,10 +192,10 @@ TEST_CASE("a park whose money never runs out researches for free")
 TEST_CASE("no budget, no research")
 {
     Lab lab;
-    lab.park.cash = 100000;
-    lab.research.budget = 0;
+    lab.park.cash = units::Money { 100000 };
+    lab.research.budget = units::Money { 0 };
     lab.pass(kMonth);
-    CHECK(lab.park.cash == 100000);
+    CHECK(lab.park.cash == units::Money { 100000 });
     CHECK(lab.research.invented.empty());
     CHECK(lab.research.since_part == 0);
 }
@@ -202,14 +203,14 @@ TEST_CASE("no budget, no research")
 TEST_CASE("a boost counts with the next part paid")
 {
     Lab lab;
-    lab.park.cash = 100000;
+    lab.park.cash = units::Money { 100000 };
     lab.research.current = 2;
-    lab.research.boost = 9500;
+    lab.research.boost = units::Money { 9500 };
     lab.pass(12); // 667 paid, 10167 counted against 10000
-    CHECK(lab.park.cash == 100000 - 667);
-    CHECK(lab.research.boost == 0);
+    CHECK(lab.park.cash == units::Money { 100000 - 667 });
+    CHECK(lab.research.boost == units::Money { 0 });
     CHECK(lab.research.invented == std::vector<std::uint64_t> { 2 });
-    CHECK(lab.research.spent == 167);
+    CHECK(lab.research.spent == units::Money { 167 });
 }
 
 TEST_CASE("the next item is drawn from the areas the player cares for")
@@ -267,19 +268,19 @@ TEST_CASE("the progress of the current item and the months the budget takes to f
     CHECK(p->done == doctest::Approx(0.25));
     CHECK(p->months == 1); // 180.00 left at 200.00 a month
 
-    r.budget = 5000;
+    r.budget = units::Money { 5000 };
     CHECK(research_progress(r, items)->months == 4); // 180.00 at 50.00: three months and a bit
 
     SUBCASE("a boost waiting counts as spent")
     {
-        r.boost = 18000;
+        r.boost = units::Money { 18000 };
         p = research_progress(r, items);
         CHECK(p->done == doctest::Approx(1));
         CHECK(p->months == 1);
     }
     SUBCASE("no budget, no estimate")
     {
-        r.budget = 0;
+        r.budget = units::Money { 0 };
         CHECK(research_progress(r, items)->months == std::nullopt);
     }
     SUBCASE("nothing under way")
@@ -304,50 +305,50 @@ TEST_CASE("an invention keeps the calendar's time it was made at")
 TEST_CASE("a focused item is worked on at once, costs more, and what it replaced is taken up again")
 {
     Lab lab;
-    lab.park.cash = 100000;
+    lab.park.cash = units::Money { 100000 };
     lab.research.current = 1;
-    lab.research.spent = 4000;
+    lab.research.spent = units::Money { 4000 };
     CHECK_FALSE(focus_research(lab.research, 99, lab.items));
     CHECK(lab.research.current == 1);
     REQUIRE(focus_research(lab.research, 2, lab.items));
     CHECK(lab.research.current == 2);
     CHECK(lab.research.focus == 2);
-    CHECK(lab.research.spent == 0);
-    CHECK(research_cost(lab.items[1], lab.research.focus == lab.items[1].id) == 15000); // 100.00 half as much again
-    CHECK(research_cost(lab.items[0], lab.research.focus == lab.items[0].id) == 16000);
+    CHECK(lab.research.spent == units::Money { 0 });
+    CHECK(research_cost(lab.items[1], lab.research.focus == lab.items[1].id) == units::Money { 15000 }); // 100.00 half as much again
+    CHECK(research_cost(lab.items[0], lab.research.focus == lab.items[0].id) == units::Money { 16000 });
     lab.pass(kMonth); // 20000 against 15000
     CHECK(lab.research.invented == std::vector<std::uint64_t> { 2 });
     CHECK_FALSE(lab.research.focus);
     CHECK(lab.research.current == 1);
-    CHECK(lab.research.spent == 4000 + 5000); // What it had, and what was left over
+    CHECK(lab.research.spent == units::Money { 4000 + 5000 }); // What it had, and what was left over
     CHECK(lab.research.set_aside.empty());
 }
 
 TEST_CASE("an ended focus gives way to what it set aside, keeping what was spent on both")
 {
     Lab lab;
-    lab.park.cash = 100000;
+    lab.park.cash = units::Money { 100000 };
     lab.research.current = 1;
-    lab.research.spent = 4000;
+    lab.research.spent = units::Money { 4000 };
     REQUIRE(focus_research(lab.research, 2, lab.items));
-    lab.research.spent = 3000;
+    lab.research.spent = units::Money { 3000 };
     REQUIRE(focus_research(lab.research, std::nullopt, lab.items));
     CHECK_FALSE(lab.research.focus);
     lab.pass(12); // 667
     CHECK(lab.research.current == 1);
-    CHECK(lab.research.spent == 4000 + 667);
+    CHECK(lab.research.spent == units::Money { 4000 + 667 });
     REQUIRE(focus_research(lab.research, 2, lab.items));
-    CHECK(lab.research.spent == 3000);
+    CHECK(lab.research.spent == units::Money { 3000 });
 
     SUBCASE("with nothing set aside the item goes on at its usual cost")
     {
         Lab plain;
         plain.research.current = 2;
         REQUIRE(focus_research(plain.research, 2, plain.items));
-        CHECK(research_cost(plain.items[1], plain.research.focus == plain.items[1].id) == 15000);
+        CHECK(research_cost(plain.items[1], plain.research.focus == plain.items[1].id) == units::Money { 15000 });
         REQUIRE(focus_research(plain.research, std::nullopt, plain.items));
         CHECK(plain.research.current == 2);
-        CHECK(research_cost(plain.items[1], plain.research.focus == plain.items[1].id) == 10000);
+        CHECK(research_cost(plain.items[1], plain.research.focus == plain.items[1].id) == units::Money { 10000 });
     }
 }
 

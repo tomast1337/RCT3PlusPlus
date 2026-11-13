@@ -139,7 +139,7 @@ namespace rct3::ui::screens::park_view
         {
             if (*last_month_profit != 0)
                 v.money_rose = *last_month_profit > 0;
-            v.money_help = std::u16string(strings.get(kLastMonthProfit)) + u" " + money_text(units.currency, *last_month_profit);
+            v.money_help = std::u16string(strings.get(kLastMonthProfit)) + u" " + money_text(units.currency, units::Money { *last_month_profit });
         }
         v.guests = ascii(std::to_string(state.guests));
         v.rating = state.rating;

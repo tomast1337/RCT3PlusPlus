@@ -24,8 +24,8 @@ namespace rct3::simulation::park
             if (park->has_finance)
             {
                 if (!park->finance.unlimited())
-                    s.cash = park->finance.cash;
-                s.loan = park->finance.loan;
+                    s.cash = units::Money { park->finance.cash };
+                s.loan = { park->finance.loan };
             }
             if (park->has_park)
             {

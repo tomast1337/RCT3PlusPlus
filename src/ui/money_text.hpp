@@ -10,6 +10,7 @@
 #pragma once
 
 #include "ui/string_table.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <string>
@@ -27,7 +28,6 @@ namespace rct3::ui
     /// The currency at `index` in the game's list, from its strings.
     [[nodiscard]] Currency currency(const StringTable& strings, int index);
 
-    /// `amount` in hundredths of the unit.
-    [[nodiscard]] std::u16string money_text(const Currency& currency, std::int64_t amount);
+    [[nodiscard]] std::u16string money_text(const Currency& currency, units::Money amount);
 
 } // namespace rct3::ui

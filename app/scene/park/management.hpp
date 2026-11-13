@@ -10,6 +10,7 @@
 #include "ui/screens/management/pages.hpp"
 #include "ui/screens/management/staff_roster.hpp"
 #include "ui/screens/park_view/tool_menus.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -40,12 +41,12 @@ namespace rct3::scene::park
         bool buy_rights = false;                                   ///< Or building rights (ui::screens::management::kBuyRightsButton)
         std::optional<bool> borrow;                                ///< Borrow a step of loan, or repay one (ui::screens::management::kBorrowButton, kRepayButton)
         bool export_ledger = false;                                ///< Write the ledger out (ui::screens::management::kExportLedgerButton)
-        std::optional<std::int64_t> loan;                          ///< Borrow or repay towards this loan (ui::screens::management::kLoanControl)
+        std::optional<units::Money> loan;                          ///< Borrow or repay towards this loan (ui::screens::management::kLoanControl)
         /// Put every attraction in `listed` in this state (ui::screens::management::kOpenCloseAllButton)
         std::optional<save::model::AttractionState> state_all;
         std::vector<ui::screens::management::ManagementRow> listed;
         ui::screens::management::RosterAsks staff;   ///< Of the staff window
-        std::optional<std::int64_t> research_budget; ///< A month, in hundredths (ui::screens::management::kResearchBudgetControl)
+        std::optional<units::Money> research_budget; ///< A month (ui::screens::management::kResearchBudgetControl)
         /// A research area's priority, from 0 to 1 (ui::screens::management::kFirstPriorityControl)
         std::optional<std::pair<std::size_t, float>> research_priority;
         /// Focus research on this item, or end the focus when it holds none (ui::screens::management::kFocusButton, kUnfocusButton)

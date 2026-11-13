@@ -10,6 +10,7 @@
 
 using namespace rct3;
 using namespace rct3::ui;
+namespace units = rct3::units;
 using namespace rct3::ui::widgets;
 using namespace rct3::ui::screens;
 using namespace rct3::ui::screens::park_view;
@@ -22,7 +23,7 @@ namespace
 
     std::u16string money(std::int64_t amount)
     {
-        return money_text(kUnits.currency, amount);
+        return money_text(kUnits.currency, units::Money { amount });
     }
 
     /// The value of the line labelled `label`, or nothing.
@@ -109,8 +110,8 @@ TEST_CASE("the finances show the running cash and the ledger a month a column, t
     park.finance.loan = 20000;
     park.finance.ledger = { { .shop_sales = -1500 }, { .shop_sales = 700 } }; // Money in, then out
     simulation::park::ParkState state;
-    state.cash = 42000;
-    state.loan = 20000;
+    state.cash = units::Money { 42000 };
+    state.loan = units::Money { 20000 };
     state.date.month = 0;
     const ManagementPage page = management_page(ManagementTopic::Finances, 0, { .park = &park, .state = &state }, s, kUnits);
     CHECK(value_of(page, u"Cash:") == money(42000));
@@ -230,15 +231,15 @@ TEST_CASE("the loan tab sets the loan with a bar and reckons the cash ahead from
     park.finance.ledger[1].staff_wages = 15'000;
     park.finance.ledger[1].loan_interest = 5'000;
     simulation::park::ParkState state;
-    state.cash = 100'000;
-    state.loan = 300'000;
+    state.cash = units::Money { 100'000 };
+    state.loan = units::Money { 300'000 };
     const ManagementPage page = management_page(ManagementTopic::Finances, 3, { .park = &park, .state = &state }, s, kUnits);
     REQUIRE(page.controls.size() == 1);
     CHECK(page.controls[0].id == kLoanControl);
     CHECK(page.controls[0].kind == InfoControlKind::Bar);
     CHECK(page.controls[0].value == 300'000);
     CHECK(page.controls[0].maximum == 1'000'000);
-    CHECK(page.controls[0].step == simulation::park::kLoanStep);
+    CHECK(page.controls[0].step == simulation::park::kLoanStep.value);
     CHECK(page.controls[0].enabled);
     const auto value = [&](std::string_view key) {
         const auto found = std::ranges::find(page.lines, std::string(key), &InfoLine::name);
@@ -250,12 +251,12 @@ TEST_CASE("the loan tab sets the loan with a bar and reckons the cash ahead from
     CHECK(value("Rct3pp_Loan_In6") == money(100'000 + 6 * 75'000));
     // A month's interest on the loan now comes off each month.
     park.finance.interest_rate_percent = 10;
-    const std::int64_t weekly = simulation::park::weekly_interest(300'000, 10);
-    CHECK(weekly > 0);
+    const units::Money weekly = simulation::park::weekly_interest(units::Money { 300'000 }, 10);
+    CHECK(weekly > units::Money { });
     const ManagementPage charged = management_page(ManagementTopic::Finances, 3, { .park = &park, .state = &state }, s, kUnits);
     const auto in2 = std::ranges::find(charged.lines, std::string("Rct3pp_Loan_In2"), &InfoLine::name);
     REQUIRE(in2 != charged.lines.end());
-    CHECK(in2->value == money(100'000 + 2 * (75'000 - 4 * weekly)));
+    CHECK(in2->value == money(100'000 + 2 * (75'000 - 4 * weekly.value)));
     // Without a full month behind it, nothing to go on.
     park.finance.ledger.resize(1);
     const ManagementPage early = management_page(ManagementTopic::Finances, 3, { .park = &park, .state = &state }, s, kUnits);
@@ -270,7 +271,7 @@ TEST_CASE("the loan buttons borrow and repay, each greyed out at its limit")
     save::model::ParkModel park;
     park.has_finance = true;
     park.finance.max_loan = 300'000;
-    simulation::park::ParkState state { .cash = 50'000, .loan = 0 };
+    simulation::park::ParkState state { .cash = units::Money { 50'000 }, .loan = units::Money { 0 } };
     const auto enabled = [&] {
         const ManagementPage page = management_page(ManagementTopic::Finances, 0, { .park = &park, .state = &state }, s, kUnits);
         REQUIRE(page.buttons.size() == 2);
@@ -279,13 +280,13 @@ TEST_CASE("the loan buttons borrow and repay, each greyed out at its limit")
         return std::pair { page.buttons[kBorrowButton].enabled, page.buttons[kRepayButton].enabled };
     };
     CHECK(enabled() == std::pair { true, false }); // No loan to repay
-    state.loan = 300'000;
-    state.cash = 350'000;
+    state.loan = units::Money { 300'000 };
+    state.cash = units::Money { 350'000 };
     CHECK(enabled() == std::pair { false, true }); // At the maximum
-    state.cash = 10'000;
+    state.cash = units::Money { 10'000 };
     CHECK(enabled() == std::pair { false, false }); // Not the cash to repay a step
     state.cash.reset();
-    state.loan = 0;
+    state.loan = units::Money { 0 };
     CHECK(enabled() == std::pair { false, false }); // Money never runs out
     CHECK(std::ranges::none_of(management_page(ManagementTopic::Finances, 0, { }, s, kUnits).buttons, &ManagementButton::enabled));
 }
@@ -560,11 +561,11 @@ TEST_CASE("the finances show what the park and the company are worth now")
     park.finance.park_value = { .samples = { 1 } };
     save::model::RideModel rides;
     simulation::park::ParkState state;
-    state.cash = 42000;
-    state.loan = 20000;
+    state.cash = units::Money { 42000 };
+    state.loan = units::Money { 20000 };
     state.guests = 3;
-    const std::int64_t worth = simulation::park::park_value(3, rides);
+    const units::Money worth = simulation::park::park_value(3, rides);
     const ManagementPage page = management_page(ManagementTopic::Finances, 0, { .park = &park, .state = &state, .rides = &rides }, s, kUnits);
-    CHECK(value_of(page, u"Park value:") == money(worth));
-    CHECK(value_of(page, u"Company value:") == money(42000 - 20000 + worth));
+    CHECK(value_of(page, u"Park value:") == money(worth.value));
+    CHECK(value_of(page, u"Company value:") == money(42000 - 20000 + worth.value));
 }

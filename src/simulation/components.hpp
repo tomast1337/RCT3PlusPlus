@@ -532,8 +532,8 @@ namespace rct3::simulation
     /// open rides' and facilities' running costs. Whoever shows the park keeps the loan and its yearly rate up to date.
     struct Charges
     {
-        std::int64_t loan = 0; ///< Hundredths
-        float rate = 0;        ///< Yearly, in percent
+        units::Money loan { };
+        float rate = 0; ///< Yearly, in percent
         units::Money interest { };
         units::Money running { };
         units::Seconds week { }; ///< Into the week, charged as it ends

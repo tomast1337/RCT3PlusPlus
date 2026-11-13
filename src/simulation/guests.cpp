@@ -1472,7 +1472,7 @@ namespace rct3::simulation
         return static_cast<std::uint32_t>(std::lround(room * kTuning.arrivals.room_to_spare.value));
     }
 
-    std::int64_t fair_entrance_fee(const SimWorld& world)
+    units::Money fair_entrance_fee(const SimWorld& world)
     {
         const entt::registry& r = world.registry;
         std::int64_t over = 0;
@@ -1485,10 +1485,10 @@ namespace rct3::simulation
                 worth /= 2;
             over += std::max<std::int64_t>(0, std::lround(worth) - at.price.value);
         }
-        return std::llround(static_cast<double>(over) * kTuning.arrivals.fair_fee.value);
+        return { std::llround(static_cast<double>(over) * kTuning.arrivals.fair_fee.value) };
     }
 
-    double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, std::int64_t fair_fee)
+    double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, units::Money fair_fee)
     {
         // Against the plain rate: an unknown park's share, rising in step with the rating to all of it at the plain
         // rating and on past it, up to the famous rating.
@@ -1497,9 +1497,9 @@ namespace rct3::simulation
         double rate = a.unknown_draw.value + (1 - a.unknown_draw.value) * known / (a.plain_rating.value - a.unknown_rating.value);
         if (guests >= ideal)
             rate *= kTuning.arrivals.crowded.value;
-        if (draw.entrance_fee.value > fair_fee)
+        if (draw.entrance_fee > fair_fee)
             rate *= kTuning.arrivals.overpriced.value;
-        if (draw.entrance_fee.value > 2 * fair_fee)
+        if (draw.entrance_fee > fair_fee + fair_fee)
             rate *= kTuning.arrivals.overpriced.value;
         return rate;
     }

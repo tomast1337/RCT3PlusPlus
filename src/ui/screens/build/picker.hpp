@@ -34,6 +34,7 @@
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/scroll_area.hpp"
 #include "ui/widgets/window.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -138,7 +139,7 @@ namespace rct3::ui::screens::build
         // shortcut: the list is not scrolled to the row; scroll it once lists grow long enough to hide it.
         void show_item(std::size_t item);
         /// What the park can pay; items dearer are shaded. None: money never runs out.
-        std::optional<std::int64_t> cash;
+        std::optional<units::Money> cash;
         /// A line under the grid, e.g. to say what the window leaves out.
         std::u16string note;
         /// The kinds and themes whose filters are off, by name, and the packs whose filters are on. The owner

@@ -62,7 +62,7 @@ namespace rct3::simulation
             case 2: // Worst value
                 return !had({ 3 }) && f.fee_charged && f.entrance_fee > f.fair_fee;
             case 3: // Best value
-                return !had({ 2, 7 }) && f.fee_charged && f.fair_fee >= 100 && static_cast<float>(f.entrance_fee + 10) < static_cast<float>(f.fair_fee) * 0.5f;
+                return !had({ 2, 7 }) && f.fee_charged && f.fair_fee >= units::Money { 100 } && static_cast<float>(f.entrance_fee.value + 10) < static_cast<float>(f.fair_fee.value) * 0.5f;
             case 4: // Best food
                 return !had({ 5 }) && share(4) <= 0.25f && f.food_stalls >= 7 && f.food_kinds >= 4 && f.stalls * 128 >= f.guests;
             case 5: // Worst food

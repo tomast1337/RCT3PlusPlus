@@ -86,12 +86,12 @@ namespace rct3::scene::park
         if (going.empty())
             return std::nullopt;
         // Deleting the park cannot pay for asks in a box, as the original does, rather than the park message.
-        if (cost > 0 && scene.park.cash && *scene.park.cash < cost)
+        if (cost > 0 && scene.park.cash && *scene.park.cash < units::Money { cost })
         {
             scene.prizes.emplace_back(kNoMoney);
             return std::nullopt;
         }
-        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
+        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, simulation::park::LedgerLine::Landscaping, false))
             return std::nullopt;
         const save::model::PlacedObject& first = scene.objects[going.front()];
         if (floated)
@@ -180,7 +180,7 @@ namespace rct3::scene::park
             scene.ride_entities[ref.index] = entt::null;
         base->state = save::model::AttractionState::Closed;
         base->demolished = true;
-        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, false);
+        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { -back }, simulation::park::LedgerLine::RideConstruction, false);
         if (at)
             float_money(scene, *at, back);
         if (scene.shown == ref)

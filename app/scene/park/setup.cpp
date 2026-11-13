@@ -1618,7 +1618,7 @@ namespace rct3::scene::park
                 scene.week_began = { .intake = -p.week_intake, .income = -p.week_income, .cash = p.week_cash };
             }
             else
-                scene.week_began.cash = scene.park.cash.value_or(0);
+                scene.week_began.cash = scene.park.cash.value_or(units::Money { }).value;
             // Research goes on from where the save left it, with what it has invented since the original park.
             scene.research = saved && saved->research ? *saved->research : simulation::start_research(scene.park_model.research);
             for (save::model::AssetRequirement& e : scene.park_model.content.entries)

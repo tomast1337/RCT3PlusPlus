@@ -60,9 +60,9 @@ namespace rct3::simulation
     struct Replacement
     {
         std::uint32_t items = 0;
-        std::int64_t cost = 0; ///< Hundredths
+        units::Money cost { };
     };
-    [[nodiscard]] Replacement replacement(const SimWorld& world, const std::function<std::int64_t(std::uint64_t object)>& price);
+    [[nodiscard]] Replacement replacement(const SimWorld& world, const std::function<units::Money(std::uint64_t object)>& price);
 
     /// Puts every broken path item back new at once. The player pays the whole price of each (replacement), the
     /// quick and dear way; a handyman mends one for nothing, given time.

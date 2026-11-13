@@ -13,6 +13,7 @@
 
 using namespace rct3;
 using namespace rct3::simulation;
+namespace units = rct3::units;
 using namespace rct3::simulation::park;
 
 TEST_CASE("a park whose money never runs out books nothing")
@@ -20,7 +21,7 @@ TEST_CASE("a park whose money never runs out books nothing")
     ParkState park;
     save::model::Finance money;
     std::optional<std::int64_t> kept;
-    CHECK(book(park, money, kept, 5000, LedgerLine::StaffTraining, false));
+    CHECK(book(park, money, kept, units::Money { 5000 }, LedgerLine::StaffTraining, false));
     CHECK_FALSE(park.cash.has_value());
     CHECK(money.ledger.empty());
 }
@@ -28,62 +29,62 @@ TEST_CASE("a park whose money never runs out books nothing")
 TEST_CASE("a spend the park cannot afford is refused and changes nothing")
 {
     ParkState park;
-    park.cash = 4000;
+    park.cash = units::Money { 4000 };
     save::model::Finance money;
     std::optional<std::int64_t> kept;
-    CHECK_FALSE(book(park, money, kept, 5000, LedgerLine::StaffTraining, false));
-    CHECK(park.cash == 4000);
+    CHECK_FALSE(book(park, money, kept, units::Money { 5000 }, LedgerLine::StaffTraining, false));
+    CHECK(park.cash == units::Money { 4000 });
     CHECK(money.ledger.empty());
-    CHECK(book(park, money, kept, 4000, LedgerLine::StaffTraining, false));
-    CHECK(park.cash == 0);
+    CHECK(book(park, money, kept, units::Money { 4000 }, LedgerLine::StaffTraining, false));
+    CHECK(park.cash == units::Money { 0 });
     CHECK(money.ledger[0].staff_training == 4000);
 }
 
 TEST_CASE("a refused spend tells the player, once in a while however often it is tried")
 {
     ParkState park;
-    park.cash = 100;
+    park.cash = units::Money { 100 };
     save::model::Finance money;
     std::optional<std::int64_t> kept;
     const auto told = [&] { return std::ranges::count(park.messages.list, kCannotPayKey, &ParkMessage::text_key); };
     for (int i = 0; i < 10; ++i)
-        CHECK_FALSE(book(park, money, kept, 300, LedgerLine::Landscaping, false));
+        CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, false));
     CHECK(told() == 1);
     age(park.messages, kCannotPayGap / 2);
-    CHECK_FALSE(book(park, money, kept, 300, LedgerLine::Landscaping, false));
+    CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, false));
     CHECK(told() == 1);
     age(park.messages, kCannotPayGap);
-    CHECK_FALSE(book(park, money, kept, 300, LedgerLine::Landscaping, false));
+    CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, false));
     CHECK(told() == 2);
     // Forced or paid for, nothing is said.
-    CHECK(book(park, money, kept, 300, LedgerLine::StaffWages, true));
+    CHECK(book(park, money, kept, units::Money { 300 }, LedgerLine::StaffWages, true));
     age(park.messages, kCannotPayGap);
-    CHECK(book(park, money, kept, -50, LedgerLine::RideTickets, false));
+    CHECK(book(park, money, kept, units::Money { -50 }, LedgerLine::RideTickets, false));
     CHECK(told() == 2);
 }
 
 TEST_CASE("a forced spend may take the cash below nought")
 {
     ParkState park;
-    park.cash = 100;
+    park.cash = units::Money { 100 };
     save::model::Finance money;
     std::optional<std::int64_t> kept;
-    CHECK(book(park, money, kept, 300, LedgerLine::StaffWages, true));
-    CHECK(park.cash == -200);
+    CHECK(book(park, money, kept, units::Money { 300 }, LedgerLine::StaffWages, true));
+    CHECK(park.cash == units::Money { -200 });
     CHECK(money.ledger[0].staff_wages == 300);
 }
 
 TEST_CASE("money coming in adds to the cash and books negative")
 {
     ParkState park;
-    park.cash = -200;
+    park.cash = units::Money { -200 };
     save::model::Finance money;
     std::optional<std::int64_t> kept;
-    CHECK(book(park, money, kept, -250, LedgerLine::RideTickets, false));
-    CHECK(park.cash == 50);
+    CHECK(book(park, money, kept, units::Money { -250 }, LedgerLine::RideTickets, false));
+    CHECK(park.cash == units::Money { 50 });
     CHECK(money.ledger[0].ride_tickets == -250);
     // A line only some parks have starts when first booked.
-    CHECK(book(park, money, kept, -30, LedgerLine::PoolTickets, false));
+    CHECK(book(park, money, kept, units::Money { -30 }, LedgerLine::PoolTickets, false));
     CHECK(money.ledger[0].pool_tickets == -30);
 }
 
@@ -127,42 +128,42 @@ TEST_CASE("a park whose file kept no ledger starts one at its first booking")
 
 TEST_CASE("the loan moves a step at a time between nought and the maximum, cash and loan together")
 {
-    ParkState park { .cash = 50'000, .loan = 0 };
-    CHECK_FALSE(change_loan(park, 250'000, false)); // Nothing to repay
-    CHECK(change_loan(park, 250'000, true));
-    CHECK(park.cash == 150'000);
+    ParkState park { .cash = units::Money { 50'000 }, .loan = units::Money { 0 } };
+    CHECK_FALSE(change_loan(park, units::Money { 250'000 }, false)); // Nothing to repay
+    CHECK(change_loan(park, units::Money { 250'000 }, true));
+    CHECK(park.cash == units::Money { 150'000 });
     CHECK(park.loan == kLoanStep);
-    CHECK(change_loan(park, 250'000, true));
-    CHECK(change_loan(park, 250'000, true)); // The last step is cut short at the maximum
-    CHECK(park.loan == 250'000);
-    CHECK(park.cash == 300'000);
-    CHECK(loan_step(park, 250'000, true) == 0);
-    CHECK_FALSE(change_loan(park, 250'000, true));
-    CHECK(park.loan == 250'000);
-    CHECK(change_loan(park, 250'000, false));
-    CHECK(park.loan == 150'000);
-    CHECK(park.cash == 200'000);
+    CHECK(change_loan(park, units::Money { 250'000 }, true));
+    CHECK(change_loan(park, units::Money { 250'000 }, true)); // The last step is cut short at the maximum
+    CHECK(park.loan == units::Money { 250'000 });
+    CHECK(park.cash == units::Money { 300'000 });
+    CHECK(loan_step(park, units::Money { 250'000 }, true) == units::Money { 0 });
+    CHECK_FALSE(change_loan(park, units::Money { 250'000 }, true));
+    CHECK(park.loan == units::Money { 250'000 });
+    CHECK(change_loan(park, units::Money { 250'000 }, false));
+    CHECK(park.loan == units::Money { 150'000 });
+    CHECK(park.cash == units::Money { 200'000 });
 }
 
 TEST_CASE("repaying the loan needs the cash in hand")
 {
-    ParkState park { .cash = kLoanStep - 1, .loan = 300'000 };
-    CHECK(loan_step(park, 500'000, false) == 0);
-    CHECK_FALSE(change_loan(park, 500'000, false));
-    CHECK(park.cash == kLoanStep - 1);
-    CHECK(park.loan == 300'000);
-    park.loan = 40'000; // Less than a step left: only that is repaid
-    CHECK(change_loan(park, 500'000, false));
-    CHECK(park.loan == 0);
-    CHECK(park.cash == kLoanStep - 1 - 40'000);
+    ParkState park { .cash = kLoanStep - units::Money { 1 }, .loan = units::Money { 300'000 } };
+    CHECK(loan_step(park, units::Money { 500'000 }, false) == units::Money { 0 });
+    CHECK_FALSE(change_loan(park, units::Money { 500'000 }, false));
+    CHECK(park.cash == kLoanStep - units::Money { 1 });
+    CHECK(park.loan == units::Money { 300'000 });
+    park.loan = units::Money { 40'000 }; // Less than a step left: only that is repaid
+    CHECK(change_loan(park, units::Money { 500'000 }, false));
+    CHECK(park.loan == units::Money { 0 });
+    CHECK(park.cash == kLoanStep - units::Money { 1 + 40'000 });
 }
 
 TEST_CASE("a park whose money never runs out has no loan to change")
 {
     ParkState park { .loan = 0 };
-    CHECK(loan_step(park, 500'000, true) == 0);
-    CHECK_FALSE(change_loan(park, 500'000, true));
-    CHECK(park.loan == 0);
+    CHECK(loan_step(park, units::Money { 500'000 }, true) == units::Money { 0 });
+    CHECK_FALSE(change_loan(park, units::Money { 500'000 }, true));
+    CHECK(park.loan == units::Money { 0 });
 }
 
 TEST_CASE("a park is worth its guests and its open rides by their excitement")
@@ -176,12 +177,12 @@ TEST_CASE("a park is worth its guests and its open rides by their excitement")
     save::model::RideModel rides;
     const auto guest = kTuning.park_value.per_guest.value;
     const auto point = kTuning.park_value.per_excitement.value;
-    CHECK(park_value(10, rides) == 10 * guest);
+    CHECK(park_value(10, rides) == units::Money { 10 * guest });
     rides.rides.push_back(ride(save::model::RideKind::Tracked, save::model::AttractionState::Open, 2));
-    CHECK(park_value(10, rides) == 10 * guest + 4 * point);
+    CHECK(park_value(10, rides) == units::Money { 10 * guest + 4 * point });
     // Twice as exciting, four times the worth.
     rides.rides.push_back(ride(save::model::RideKind::Flat, save::model::AttractionState::Open, 4));
-    CHECK(park_value(0, rides) == 20 * point);
+    CHECK(park_value(0, rides) == units::Money { 20 * point });
     // Closed, untested, pulled down, and facilities: nothing.
     rides.rides.push_back(ride(save::model::RideKind::Tracked, save::model::AttractionState::Closed, 5));
     rides.rides.push_back(ride(save::model::RideKind::Special, save::model::AttractionState::Open, 5));
@@ -189,7 +190,7 @@ TEST_CASE("a park is worth its guests and its open rides by their excitement")
     rides.rides.back().assessment.valid = false;
     rides.rides.push_back(ride(save::model::RideKind::Flat, save::model::AttractionState::Open, 5));
     rides.rides.back().base.demolished = true;
-    CHECK(park_value(0, rides) == 20 * point);
+    CHECK(park_value(0, rides) == units::Money { 20 * point });
 }
 
 namespace
@@ -199,18 +200,18 @@ namespace
 
 TEST_CASE("a loan is charged a week's interest as each week ends, and no loan none")
 {
-    CHECK(weekly_interest(1'000'000, 6) == std::llround(1'000'000 * 0.06 / kTuning.charges.interest_weeks));
-    CHECK(weekly_interest(0, 6) == 0);
+    CHECK(weekly_interest(units::Money { 1'000'000 }, 6) == units::Money { std::llround(1'000'000 * 0.06 / kTuning.charges.interest_weeks) });
+    CHECK(weekly_interest(units::Money { 0 }, 6) == units::Money { 0 });
     Sandbox park;
     auto& charges = park.world().registry.ctx().emplace<Charges>(Charges { .loan = 1'000'000, .rate = 6 });
     park.run_seconds(kWeek * 0.9f);
     CHECK(charges.interest.value == 0);
     park.run_seconds(kWeek * 0.2f);
-    CHECK(charges.interest.value == weekly_interest(1'000'000, 6));
+    CHECK(charges.interest == weekly_interest(units::Money { 1'000'000 }, 6));
     CHECK(charges.interest.value > 0);
-    charges.loan = 0;
+    charges.loan = units::Money { 0 };
     park.run_seconds(kWeek);
-    CHECK(charges.interest.value == weekly_interest(1'000'000, 6));
+    CHECK(charges.interest == weekly_interest(units::Money { 1'000'000 }, 6));
 }
 
 TEST_CASE("an open ride costs its running cost each week; a closed ride nothing")
@@ -252,11 +253,11 @@ TEST_CASE("an open facility costs its running cost each week; a closed one and a
 
 TEST_CASE("a ride built here costs a share of its build cost to run")
 {
-    CHECK(running_cost(0, true) == 0);
-    CHECK(running_cost(1'000'000, true) == std::llround(1'000'000 * kTuning.charges.tracked_running_share));
-    CHECK(running_cost(1'000'000, false) == std::llround(1'000'000 * kTuning.charges.flat_running_share));
-    CHECK(running_cost(1'000'000, false) > 0);
-    CHECK(running_cost(2'000'000, true) == 2 * running_cost(1'000'000, true));
+    CHECK(running_cost(units::Money { 0 }, true) == units::Money { 0 });
+    CHECK(running_cost(units::Money { 1'000'000 }, true) == units::Money { std::llround(1'000'000 * kTuning.charges.tracked_running_share) });
+    CHECK(running_cost(units::Money { 1'000'000 }, false) == units::Money { std::llround(1'000'000 * kTuning.charges.flat_running_share) });
+    CHECK(running_cost(units::Money { 1'000'000 }, false) > units::Money { 0 });
+    CHECK(running_cost(units::Money { 2'000'000 }, true) == units::Money { 2 * running_cost(units::Money { 1'000'000 }, true).value });
 }
 
 TEST_CASE("a park whose money never runs out pays no interest or running costs")
@@ -264,7 +265,7 @@ TEST_CASE("a park whose money never runs out pays no interest or running costs")
     ParkState park;
     save::model::Finance money;
     std::optional<std::int64_t> kept;
-    CHECK(book(park, money, kept, weekly_interest(1'000'000, 6), LedgerLine::LoanInterest, true));
-    CHECK(book(park, money, kept, 500, LedgerLine::RideRunningCosts, true));
+    CHECK(book(park, money, kept, weekly_interest(units::Money { 1'000'000 }, 6), LedgerLine::LoanInterest, true));
+    CHECK(book(park, money, kept, units::Money { 500 }, LedgerLine::RideRunningCosts, true));
     CHECK(money.ledger.empty());
 }

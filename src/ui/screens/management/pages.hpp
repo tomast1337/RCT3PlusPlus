@@ -87,7 +87,7 @@ namespace rct3::ui::screens::management
         const save::model::PeopleModel* people = nullptr;
         const save::model::RideModel* rides = nullptr;
         std::uint32_t broken_items = 0;                     ///< Path items vandals have broken
-        std::int64_t replace_cost = 0;                      ///< To replace them all at once, hundredths
+        units::Money replace_cost { };                      ///< To replace them all at once
         std::span<const simulation::GoalReading> goals { }; ///< By place in the park's goals, as last checked
         bool animal_houses = false;                         ///< Whether the park has any, which keepers are hired to
         std::span<const StaffLook> staff_looks { };         ///< By place in the park's staff; may be short

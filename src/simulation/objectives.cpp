@@ -129,7 +129,7 @@ namespace rct3::simulation
         switch (c.kind)
         {
             case save::model::ConditionKind::ParkValue:
-                return compare(f.park_value);
+                return compare(f.park_value.value);
             case save::model::ConditionKind::ParkGuests:
                 return compare(f.guests);
             case save::model::ConditionKind::ParkRating:
@@ -143,7 +143,7 @@ namespace rct3::simulation
             case save::model::ConditionKind::Dung:
                 return compare(f.dung);
             case save::model::ConditionKind::RepayLoan:
-                return { f.loan, f.loan == 0 };
+                return { f.loan.value, f.loan == units::Money { } };
             case save::model::ConditionKind::Coaster:
             {
                 if (!c.coaster)
@@ -322,7 +322,7 @@ namespace rct3::simulation
         {
             case 1:
             case 2:
-                park::book(park, finance, kept, -(id == 1 ? p.large_cash.value : p.small_cash.value), park::LedgerLine::PrizeMoney, true);
+                park::book(park, finance, kept, -(id == 1 ? p.large_cash : p.small_cash), park::LedgerLine::PrizeMoney, true);
                 break;
             case 4:
                 park.rating_bonus += p.rating_bonus.value;
@@ -343,7 +343,7 @@ namespace rct3::simulation
                 }
                 break;
             case 9:
-                research.boost += p.research_boost.value;
+                research.boost += p.research_boost;
                 break;
             default:
                 // A coaster design prize only tells the player: saved designs held back for a scenario's level open once

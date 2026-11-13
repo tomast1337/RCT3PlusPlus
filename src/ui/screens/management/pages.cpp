@@ -154,14 +154,14 @@ namespace rct3::ui::screens::management
             return ascii(std::format("{} %", std::lround(value * 100)));
         }
 
-        std::u16string money(const info::InfoUnits& units, std::int64_t amount)
+        std::u16string money(const info::InfoUnits& units, units::Money amount)
         {
             return money_text(units.currency, amount);
         }
 
         std::u16string optional_money(const info::InfoUnits& units, std::optional<float> amount)
         {
-            return amount ? money(units, std::llround(*amount)) : std::u16string(kDash);
+            return amount ? money(units, { std::llround(*amount) }) : std::u16string(kDash);
         }
 
         /// The weeks gone of a park's series, oldest first: its newest sample is the week still running.
@@ -211,7 +211,7 @@ namespace rct3::ui::screens::management
             // Money reads in whole units at least, so a series of nought or a few cents is not on a scale of one.
             if (money_values)
                 full = std::max(full, 100.0f);
-            const auto words = [&](float v) { return money_values ? money(units, std::llround(v)) : whole(std::lround(v)); };
+            const auto words = [&](float v) { return money_values ? money(units, units::Money { std::llround(v) }) : whole(std::lround(v)); };
             std::vector<std::u16string> axis;
             for (const float v : widgets::axis_values(full, centred))
                 axis.push_back(words(v));
@@ -256,7 +256,7 @@ namespace rct3::ui::screens::management
                 status = text(strings, m->park.flags.has(save::model::ParkFlag::Open) ? "AttractionStatusOpen" : "AttractionStatusClosed");
             page.lines.push_back({ text(strings, "AttractionListDialogParameterStatus"), status, false, "AttractionListDialogParameterStatus" });
             const bool finance = f.park != nullptr && f.park->has_finance;
-            page.lines.push_back({ text(strings, "FinancialSummary_EntranceFee"), finance ? money(units, f.park->finance.entrance_fee) : std::u16string(kDash), false, "FinancialSummary_EntranceFee" });
+            page.lines.push_back({ text(strings, "FinancialSummary_EntranceFee"), finance ? money(units, units::Money { f.park->finance.entrance_fee }) : std::u16string(kDash), false, "FinancialSummary_EntranceFee" });
             page.lines.push_back({ text(strings, "Park_OpeningTime"), m != nullptr ? clock_text(m->park.opening_minutes, false) : std::u16string(kDash), false, "Park_OpeningTime" });
             page.lines.push_back({ text(strings, "Park_ClosingTime"), m != nullptr ? clock_text(m->park.closing_minutes, false) : std::u16string(kDash), false, "Park_ClosingTime" });
             page.lines.push_back({ text(strings, "ObjectiveCondition_ParkGuests"), f.state != nullptr ? whole(f.state->guests) : std::u16string(kDash), false, "ObjectiveCondition_ParkGuests" });
@@ -394,23 +394,23 @@ namespace rct3::ui::screens::management
             if (f.state != nullptr)
                 cash = f.state->cash ? money(units, *f.state->cash) : text(strings, "FinancialSummary_MoneyOperates");
             else if (m != nullptr)
-                cash = m->unlimited() ? text(strings, "FinancialSummary_MoneyOperates") : money(units, m->cash);
+                cash = m->unlimited() ? text(strings, "FinancialSummary_MoneyOperates") : money(units, units::Money { m->cash });
             line("FinancialSummary_Cash", cash);
-            line("FinancialSummary_Loan", f.state != nullptr ? money(units, f.state->loan) : m != nullptr ? money(units, m->loan) : std::u16string(kDash));
-            line("FinancialSummary_MaxLoan", m != nullptr ? money(units, m->max_loan) : std::u16string(kDash));
+            line("FinancialSummary_Loan", f.state != nullptr ? money(units, f.state->loan) : m != nullptr ? money(units, units::Money { m->loan }) : std::u16string(kDash));
+            line("FinancialSummary_MaxLoan", m != nullptr ? money(units, units::Money { m->max_loan }) : std::u16string(kDash));
             std::u16string interest(kDash);
             if (m != nullptr)
                 interest = ascii(std::format("{:.1f} % ", m->interest_rate_percent)) + text(strings, "FinancialSummary_PercentPerYear");
             line("Money_LoanInterest", interest);
-            line("FinancialSummary_EntranceFee", m != nullptr ? money(units, m->entrance_fee) : std::u16string(kDash));
+            line("FinancialSummary_EntranceFee", m != nullptr ? money(units, units::Money { m->entrance_fee }) : std::u16string(kDash));
             // While the park runs, what it and the company are worth now; otherwise as saved.
             std::u16string value(kDash);
             std::u16string company(kDash);
             if (f.state != nullptr && f.rides != nullptr)
             {
-                const std::int64_t worth = simulation::park::park_value(f.state->guests, *f.rides);
+                const units::Money worth = simulation::park::park_value(f.state->guests, *f.rides);
                 value = money(units, worth);
-                company = money(units, f.state->cash.value_or(0) - f.state->loan + worth);
+                company = money(units, f.state->cash.value_or(units::Money { }) - f.state->loan + worth);
             }
             else if (m != nullptr)
             {
@@ -420,7 +420,7 @@ namespace rct3::ui::screens::management
             line("FinancialSummary_ParkValue", value);
             line("FinancialSummary_CompanyValue", company);
             const auto loan_button = [&](std::string_view key, std::string_view help, bool borrow) {
-                const bool movable = f.state != nullptr && m != nullptr && simulation::park::loan_step(*f.state, m->max_loan, borrow) > 0;
+                const bool movable = f.state != nullptr && m != nullptr && simulation::park::loan_step(*f.state, { m->max_loan }, borrow) > units::Money { };
                 page.buttons.push_back({ { }, text(strings, key), text(strings, help), movable, { }, std::string(key) });
             };
             loan_button("Rct3pp_Borrow", "Rct3pp_BorrowHelp", true);
@@ -453,7 +453,7 @@ namespace rct3::ui::screens::management
                     any = any || value.has_value();
                     // The park keeps money coming in as negative and money going out as positive; shown the
                     // other way round, as a statement reads.
-                    out.cells.push_back(value ? money(units, -*value) : std::u16string(kDash));
+                    out.cells.push_back(value ? money(units, units::Money { -*value }) : std::u16string(kDash));
                     out.keys.emplace_back(std::nullopt);
                 }
                 if (any)
@@ -492,7 +492,7 @@ namespace rct3::ui::screens::management
                     (v < 0 ? in : out) += std::abs(v);
                 }
                 const std::optional<std::int64_t> line = ledger_value(period, kLedger[pick]);
-                page.rows.push_back({ { ledger_month(strings, now, p), money(units, in), money(units, out), money(units, in - out), line ? money(units, -*line) : std::u16string(kDash) }, { -static_cast<double>(p), static_cast<double>(in), static_cast<double>(out), static_cast<double>(in - out), line ? std::optional(static_cast<double>(-*line)) : std::nullopt }, p });
+                page.rows.push_back({ { ledger_month(strings, now, p), money(units, units::Money { in }), money(units, units::Money { out }), money(units, units::Money { in - out }), line ? money(units, units::Money { -*line }) : std::u16string(kDash) }, { -static_cast<double>(p), static_cast<double>(in), static_cast<double>(out), static_cast<double>(in - out), line ? std::optional(static_cast<double>(-*line)) : std::nullopt }, p });
             }
         }
 
@@ -506,20 +506,20 @@ namespace rct3::ui::screens::management
                 return;
             }
             constexpr auto kWeeksPerMonth = static_cast<std::int64_t>(save::model::GameClock::kUnitsPerMonth / save::model::GameClock::kUnitsPerWeek);
-            const std::int64_t loan = f.state->loan;
-            const std::int64_t weekly = simulation::park::weekly_interest(loan, m->interest_rate_percent);
+            const units::Money loan = f.state->loan;
+            const units::Money weekly = simulation::park::weekly_interest(loan, m->interest_rate_percent);
             line("FinancialSummary_Loan", money(units, loan));
-            line("FinancialSummary_MaxLoan", money(units, m->max_loan));
+            line("FinancialSummary_MaxLoan", money(units, { m->max_loan }));
             line("Money_LoanInterest", ascii(std::format("{:.1f} % ", m->interest_rate_percent)) + text(strings, "FinancialSummary_PercentPerYear"));
             line("Rct3pp_Loan_WeeklyInterest", money(units, weekly));
-            line("Rct3pp_Loan_MonthlyInterest", money(units, kWeeksPerMonth * weekly));
+            line("Rct3pp_Loan_MonthlyInterest", money(units, { kWeeksPerMonth * weekly.value }));
             // The cash ahead: last month's profit as if it had paid no interest, less a month of it on this loan.
             // shortcut: one month's profit stands for every month ahead; average the months kept if it swings.
-            const std::optional<std::int64_t> month = m->ledger.size() > 1 && f.state->cash ? std::optional(-m->ledger[1].raw_sum() + m->ledger[1].loan_interest - kWeeksPerMonth * weekly) : std::nullopt;
+            const std::optional<std::int64_t> month = m->ledger.size() > 1 && f.state->cash ? std::optional(-m->ledger[1].raw_sum() + m->ledger[1].loan_interest - kWeeksPerMonth * weekly.value) : std::nullopt;
             for (const auto& [key, months] : { std::pair { "Rct3pp_Loan_In1", 1 }, { "Rct3pp_Loan_In2", 2 }, { "Rct3pp_Loan_In3", 3 }, { "Rct3pp_Loan_In6", 6 } })
-                line(key, month ? money(units, *f.state->cash + months * *month) : std::u16string(kDash));
+                line(key, month ? money(units, *f.state->cash + units::Money { months * *month }) : std::u16string(kDash));
             const bool movable = f.state->cash.has_value() && m->max_loan > 0;
-            page.controls.push_back({ .id = kLoanControl, .name = "FinancialSummary_Loan", .kind = info::InfoControlKind::Bar, .label = text(strings, "FinancialSummary_Loan"), .value = static_cast<int>(loan), .maximum = static_cast<int>(m->max_loan), .step = static_cast<int>(simulation::park::kLoanStep), .shown = money(units, loan), .enabled = movable, .help = text(strings, "Rct3pp_Loan_BarHelp") });
+            page.controls.push_back({ .id = kLoanControl, .name = "FinancialSummary_Loan", .kind = info::InfoControlKind::Bar, .label = text(strings, "FinancialSummary_Loan"), .value = static_cast<int>(loan.value), .maximum = static_cast<int>(m->max_loan), .step = static_cast<int>(simulation::park::kLoanStep.value), .shown = money(units, loan), .enabled = movable, .help = text(strings, "Rct3pp_Loan_BarHelp") });
             page.note = text(strings, "Rct3pp_Loan_Note");
         }
 
@@ -546,7 +546,7 @@ namespace rct3::ui::screens::management
                 const AttractionTakings now = f.takings ? f.takings(a.id) : AttractionTakings { };
                 const std::int64_t guests = a.total_guests + now.customers;
                 const std::int64_t profit = a.total_profit + now.income;
-                page.rows.push_back({ { info::attraction_name(a, strings), whole(guests), money(units, a.running_cost), money(units, profit) }, { std::nullopt, static_cast<double>(guests), static_cast<double>(a.running_cost), static_cast<double>(profit) }, management_row_id(ref) });
+                page.rows.push_back({ { info::attraction_name(a, strings), whole(guests), money(units, units::Money { a.running_cost }), money(units, units::Money { profit }) }, { std::nullopt, static_cast<double>(guests), static_cast<double>(a.running_cost), static_cast<double>(profit) }, management_row_id(ref) });
             };
             for (std::size_t i = 0; i < f.rides->rides.size(); ++i)
                 add(f.rides->rides[i].base, { ManagementRow::Kind::Ride, i });
@@ -601,7 +601,7 @@ namespace rct3::ui::screens::management
             {
                 const save::model::Guest& g = f.people->guests[i];
                 const info::PersonFacts facts = guest_facts(f, g);
-                page.rows.push_back({ { info::person_name(facts, strings), info::person_doing(facts, strings), share(g.mood_now.happiness), money(units, g.cash.current) }, { std::nullopt, std::nullopt, g.mood_now.happiness, static_cast<double>(g.cash.current) }, management_row_id({ ManagementRow::Kind::Guest, i }), mood_icon(happiness_mood(g.mood_now.happiness)) });
+                page.rows.push_back({ { info::person_name(facts, strings), info::person_doing(facts, strings), share(g.mood_now.happiness), money(units, units::Money { g.cash.current }) }, { std::nullopt, std::nullopt, g.mood_now.happiness, static_cast<double>(g.cash.current) }, management_row_id({ ManagementRow::Kind::Guest, i }), mood_icon(happiness_mood(g.mood_now.happiness)) });
             }
         }
 
@@ -750,7 +750,7 @@ namespace rct3::ui::screens::management
             const auto others = [&](widgets::TableRow& row, const save::model::AttractionCommon& a) {
                 row.cells.push_back(whole(a.total_guests));
                 row.keys.emplace_back(static_cast<double>(a.total_guests));
-                row.cells.push_back(money(units, a.total_profit));
+                row.cells.push_back(money(units, units::Money { a.total_profit }));
                 row.keys.emplace_back(static_cast<double>(a.total_profit));
             };
             for (std::size_t i = 0; i < f.rides->rides.size(); ++i)
@@ -809,7 +809,7 @@ namespace rct3::ui::screens::management
                 case save::model::ConditionKind::PoolIncome:
                 case save::model::ConditionKind::AnimalSalesProfit:
                 case save::model::ConditionKind::GalleryIncome:
-                    return money(units, v);
+                    return money(units, units::Money { v });
                 case save::model::ConditionKind::Coaster:
                 case save::model::ConditionKind::ParkGuests:
                 case save::model::ConditionKind::ParkRating:
@@ -958,7 +958,7 @@ namespace rct3::ui::screens::management
                 };
                 const std::vector<simulation::ResearchItem> coming = f.research_left ? simulation::research_preview(r, *f.research_left, kComingPerArea) : std::vector<simulation::ResearchItem> { };
                 for (const simulation::ResearchItem& i : coming)
-                    page.rows.push_back({ { name(i.id), text(strings, kResearchAreas.at(static_cast<std::size_t>(i.area))), money(units, i.cost) }, { std::nullopt, static_cast<double>(i.area), static_cast<double>(i.cost) }, row_id(i.id) });
+                    page.rows.push_back({ { name(i.id), text(strings, kResearchAreas.at(static_cast<std::size_t>(i.area))), money(units, i.cost) }, { std::nullopt, static_cast<double>(i.area), static_cast<double>(i.cost.value) }, row_id(i.id) });
                 const auto picked = std::ranges::find(coming, f.research_pick, [](const simulation::ResearchItem& i) { return std::optional(i.id); });
                 std::u16string focus = text(strings, kFocus);
                 if (const auto at = focus.find(u"%AMOUNT%"); at != std::u16string::npos)
@@ -970,7 +970,7 @@ namespace rct3::ui::screens::management
                 return;
             }
 
-            page.controls.push_back({ .id = kResearchBudgetControl, .name = "Research_Label_Budget", .kind = info::InfoControlKind::Number, .label = text(strings, "Research_Label_Budget"), .value = static_cast<int>(std::clamp<std::int64_t>(r.budget, 0, kMostResearchBudget)), .maximum = kMostResearchBudget, .step = kResearchBudgetStep, .shown = money(units, r.budget), .help = text(strings, "Research_TT_AdjustBudget") });
+            page.controls.push_back({ .id = kResearchBudgetControl, .name = "Research_Label_Budget", .kind = info::InfoControlKind::Number, .label = text(strings, "Research_Label_Budget"), .value = static_cast<int>(std::clamp<std::int64_t>(r.budget.value, 0, kMostResearchBudget)), .maximum = kMostResearchBudget, .step = kResearchBudgetStep, .shown = money(units, r.budget), .help = text(strings, "Research_TT_AdjustBudget") });
             page.controls.push_back({ .id = -1, .name = "Research_Label_TechTree", .kind = info::InfoControlKind::Words, .label = text(strings, "Research_Label_TechTree") });
             // The areas the park keeps a priority for, and any other that has something left to invent.
             for (std::size_t i = 0; i < kResearchAreas.size(); ++i)
@@ -1011,7 +1011,7 @@ namespace rct3::ui::screens::management
                 if (name.empty())
                     name = strings::to_utf16(c.name_key);
                 // The time fields' unit is not known yet.
-                page.rows.push_back({ { name, std::u16string(kDash), std::u16string(kDash), money(units, c.prize_cash) }, { std::nullopt, std::nullopt, std::nullopt, static_cast<double>(c.prize_cash) }, management_row_id({ ManagementRow::Kind::None, i }) });
+                page.rows.push_back({ { name, std::u16string(kDash), std::u16string(kDash), money(units, units::Money { c.prize_cash }) }, { std::nullopt, std::nullopt, std::nullopt, static_cast<double>(c.prize_cash) }, management_row_id({ ManagementRow::Kind::None, i }) });
             }
         }
     } // namespace

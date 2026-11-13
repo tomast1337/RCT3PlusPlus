@@ -268,7 +268,7 @@ namespace rct3::scene
         t.cost = 0;
         for (const save::model::PlacedObject& o : t.placed)
             t.cost += price_of(scene, o.symbol);
-        const bool affordable = !scene.park.cash || *scene.park.cash >= t.cost;
+        const bool affordable = !scene.park.cash || *scene.park.cash >= units::Money { t.cost };
         if (!moved && problem == t.problem && affordable == t.affordable && !t.ghost_mesh.vertices.empty())
             return;
         t.problem = problem;
@@ -287,7 +287,7 @@ namespace rct3::scene
             return true; // Its drags mark; a click picks nothing
         if (t.tool != StructureTools::Tool::Place || !t.structure)
             return false;
-        if (t.placed.empty() || t.problem != rct3::park::StructureProblem::None || !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, t.cost, simulation::park::LedgerLine::Landscaping, false))
+        if (t.placed.empty() || t.problem != rct3::park::StructureProblem::None || !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { t.cost }, simulation::park::LedgerLine::Landscaping, false))
             return true;
         wait_for_build(scene);
         ++scene.built;

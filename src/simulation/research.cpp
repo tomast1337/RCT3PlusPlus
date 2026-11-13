@@ -22,7 +22,7 @@ namespace rct3::simulation
             if (research.current == id)
                 return;
             if (research.current)
-                research.set_aside.push_back({ .id = *research.current, .spent = std::exchange(research.spent, 0) });
+                research.set_aside.push_back({ .id = *research.current, .spent = std::exchange(research.spent, { }) });
             research.current = id;
             if (const auto kept = std::ranges::find(research.set_aside, id, &SetAside::id); kept != research.set_aside.end())
             {
@@ -35,8 +35,8 @@ namespace rct3::simulation
     Research start_research(const save::model::ResearchState& saved)
     {
         return {
-            .budget = std::max(saved.monthly_budget, 0),
-            .spent = std::max(saved.money_spent_on_current, 0),
+            .budget = { std::max(saved.monthly_budget, 0) },
+            .spent = { std::max(saved.money_spent_on_current, 0) },
             .current = saved.current_item,
             .previous = saved.previous_item,
             .priorities = saved.priorities,
@@ -60,14 +60,14 @@ namespace rct3::simulation
                 const bool queue = e.kind == AssetKind::QueueType;
                 const auto style = std::ranges::find_if(paths, [&](const rct3::park::path::PathStyle& s) { return s.queue == queue && strings::equals_ignoring_case(s.name, e.symbol); });
                 if (style != paths.end() && !style->names_category)
-                    items.push_back({ .id = e.id, .area = ResearchArea::Paths, .cost = t.other_cost.value });
+                    items.push_back({ .id = e.id, .area = ResearchArea::Paths, .cost = t.other_cost });
                 continue;
             }
             if (e.kind == AssetKind::Scenery)
             {
                 const auto item = std::ranges::find_if(catalogue, [&](const rct3::park::BuildItem& i) { return i.kind == BuildKind::Scenery && strings::equals_ignoring_case(i.symbol, e.symbol) && strings::equals_ignoring_case(i.overlay, e.overlay_stem); });
                 if (item != catalogue.end() && rct3::park::researchable(*item))
-                    items.push_back({ .id = e.id, .area = ResearchArea::Scenery, .cost = std::min<std::int64_t>(std::llround(item->price * t.scenery_cost_per_price), t.scenery_cost_cap.value) });
+                    items.push_back({ .id = e.id, .area = ResearchArea::Scenery, .cost = { std::min<std::int64_t>(std::llround(item->price * t.scenery_cost_per_price), t.scenery_cost_cap.value) } });
                 continue;
             }
             if (e.kind != AssetKind::Attraction || e.hidden)
@@ -116,7 +116,7 @@ namespace rct3::simulation
                     break;
             }
             const units::Money cost = item->kind == BuildKind::TrackedRide ? t.tracked_ride_cost : item->kind == BuildKind::FlatRide ? t.flat_ride_cost : item->kind == BuildKind::Shop ? t.shop_cost : t.other_cost;
-            items.push_back({ .id = e.id, .area = area, .cost = cost.value });
+            items.push_back({ .id = e.id, .area = area, .cost = cost });
         }
         return items;
     }
@@ -124,7 +124,7 @@ namespace rct3::simulation
     void step_research(Research& research, float units, std::vector<ResearchItem>& items, park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, random::RandomState& dice)
     {
         constexpr float kMonth = save::model::GameClock::kUnitsPerMonth;
-        if (research.budget <= 0 || !(units > 0))
+        if (research.budget <= units::Money { } || !(units > 0))
             return;
         research.since_part = std::min(research.since_part + units, kMonth);
         if (research.since_part < kMonth / static_cast<float>(kTuning.research.parts_per_month))
@@ -186,16 +186,16 @@ namespace rct3::simulation
             research.since_part = 0;
             return;
         }
-        const auto amount = static_cast<std::int64_t>(std::llround(static_cast<double>(research.budget) * research.since_part / kMonth));
+        const units::Money amount { std::llround(static_cast<double>(research.budget.value) * research.since_part / kMonth) };
         if (park.cash && *park.cash < amount)
         {
             // The part is skipped, not owed: research stands still until the park can pay again.
             research.since_part = 0;
             return;
         }
-        research.since_part = std::max(research.since_part - static_cast<float>(static_cast<double>(amount) * kMonth / static_cast<double>(research.budget)), 0.0f);
+        research.since_part = std::max(research.since_part - static_cast<float>(static_cast<double>(amount.value) * kMonth / static_cast<double>(research.budget.value)), 0.0f);
         park::book(park, finance, kept, amount, park::LedgerLine::Research, false);
-        research.spent += amount + std::exchange(research.boost, 0);
+        research.spent += amount + std::exchange(research.boost, { });
         while (item != items.end() && research.spent >= research_cost(*item, research.focus == item->id))
         {
             research.spent -= research_cost(*item, research.focus == item->id);
@@ -208,9 +208,9 @@ namespace rct3::simulation
         }
     }
 
-    std::int64_t research_cost(const ResearchItem& item, bool focused)
+    units::Money research_cost(const ResearchItem& item, bool focused)
     {
-        return focused ? std::llround(static_cast<double>(item.cost) * kTuning.research.focus_cost) : item.cost;
+        return focused ? units::Money { std::llround(static_cast<double>(item.cost.value) * kTuning.research.focus_cost) } : item.cost;
     }
 
     bool focus_research(Research& research, std::optional<std::uint64_t> id, std::span<const ResearchItem> items)
@@ -256,13 +256,14 @@ namespace rct3::simulation
         const auto item = std::ranges::find(items, research.current, [](const ResearchItem& i) { return std::optional(i.id); });
         if (item == items.end())
             return std::nullopt;
-        const std::int64_t got = research.spent + research.boost;
-        const std::int64_t cost = research_cost(*item, research.focus == item->id);
-        const std::int64_t left = std::max<std::int64_t>(cost - got, 0);
+        const units::Money got = research.spent + research.boost;
+        const units::Money cost = research_cost(*item, research.focus == item->id);
+        const std::int64_t left = std::max(cost - got, units::Money { }).value;
+        const std::int64_t budget = research.budget.value;
         return ResearchProgress {
             .id = item->id,
-            .done = cost > 0 ? std::clamp(static_cast<float>(got) / static_cast<float>(cost), 0.0f, 1.0f) : 1.0f,
-            .months = research.budget > 0 ? std::optional(std::max<std::int64_t>((left + research.budget - 1) / research.budget, 1)) : std::nullopt,
+            .done = cost > units::Money { } ? std::clamp(static_cast<float>(got.value) / static_cast<float>(cost.value), 0.0f, 1.0f) : 1.0f,
+            .months = budget > 0 ? std::optional(std::max<std::int64_t>((left + budget - 1) / budget, 1)) : std::nullopt,
         };
     }
 

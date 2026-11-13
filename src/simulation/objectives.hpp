@@ -14,6 +14,7 @@
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "simulation/park/messages.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -50,10 +51,10 @@ namespace rct3::simulation
     /// How the park stands, in the units the goals' targets are kept in.
     struct ParkFigures
     {
-        std::int64_t park_value = 0; ///< Hundredths of the currency unit
-        std::int32_t guests = 0;     ///< In the park now
-        std::int32_t rating = 0;     ///< 0 to 1000
-        std::int64_t loan = 0;       ///< Hundredths
+        units::Money park_value { };
+        std::int32_t guests = 0; ///< In the park now
+        std::int32_t rating = 0; ///< 0 to 1000
+        units::Money loan { };
         /// Last month's ledger period, for the goals on ride income (its ride tickets) and shop profit (shop
         /// and food sales less their stock); all nought before a month has ended.
         save::model::LedgerPeriod last_month { };

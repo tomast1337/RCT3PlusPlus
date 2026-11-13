@@ -62,11 +62,35 @@ namespace rct3::units
         double value = 1;
     };
 
-    /// Money, in hundredths of the currency unit.
+    /// Money, in hundredths of the currency unit. Sums of money add, take away and compare as they are; scaling one
+    /// goes through `.value`, so each place picks its own rounding.
     struct Money
     {
         static constexpr bool kUnit = true;
         std::int64_t value = 0;
+        friend constexpr auto operator<=>(Money, Money) noexcept = default;
+        friend constexpr Money operator+(Money a, Money b) noexcept
+        {
+            return { a.value + b.value };
+        }
+        friend constexpr Money operator-(Money a, Money b) noexcept
+        {
+            return { a.value - b.value };
+        }
+        constexpr Money operator-() const noexcept
+        {
+            return { -value };
+        }
+        constexpr Money& operator+=(Money b) noexcept
+        {
+            value += b.value;
+            return *this;
+        }
+        constexpr Money& operator-=(Money b) noexcept
+        {
+            value -= b.value;
+            return *this;
+        }
     };
 
     /// Air temperature, degrees Celsius.

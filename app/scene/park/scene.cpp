@@ -169,11 +169,11 @@ namespace rct3::scene::park
         }
 
         /// What putting a broken path item back new costs: the price of the object it stands as.
-        std::int64_t replace_price(const ParkScene& scene, std::uint64_t object)
+        units::Money replace_price(const ParkScene& scene, std::uint64_t object)
         {
             const auto o = std::ranges::find(scene.objects, object, &save::model::PlacedObject::id);
             const auto model = o != scene.objects.end() ? scene.models.find(rct3::park::object::model_ref(*o)) : scene.models.end();
-            return model != scene.models.end() ? model->second.price : 0;
+            return { model != scene.models.end() ? model->second.price : 0 };
         }
 
         /// The build lists' item that the park's content entry `id` names, by its place in them; none before they
@@ -1114,7 +1114,7 @@ namespace rct3::scene::park
                     for (const auto [e, visitor] : scene.sim.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>).each())
                         ++ages[static_cast<std::size_t>(visitor.age)];
                     const auto [intake, income] = week_totals(scene);
-                    const std::int64_t cash = scene.park.cash.value_or(0);
+                    const std::int64_t cash = scene.park.cash.value_or(units::Money { }).value;
                     auto& began = scene.week_began;
                     simulation::park::close_week(
                         scene.park_model,
@@ -1125,10 +1125,10 @@ namespace rct3::scene::park
                             .teenagers = ages[static_cast<std::size_t>(simulation::AgeGroup::Teen)],
                             .children = ages[static_cast<std::size_t>(simulation::AgeGroup::Child)],
                             .intake = static_cast<std::int32_t>(intake - began.intake),
-                            .cash_less_loan = cash - scene.park.loan,
+                            .cash_less_loan = cash - scene.park.loan.value,
                             .income = income - began.income,
                             .profit = cash - began.cash,
-                            .park_value = simulation::park::park_value(scene.park.guests, scene.rides),
+                            .park_value = simulation::park::park_value(scene.park.guests, scene.rides).value,
                         });
                     began = { .intake = intake, .income = income, .cash = cash };
                 }
@@ -1228,7 +1228,7 @@ namespace rct3::scene::park
                     {
                         const auto slot = static_cast<std::size_t>(kind);
                         if (slot < scene.park_model.awards.prize_money.size())
-                            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -scene.park_model.awards.prize_money[slot], simulation::park::LedgerLine::PrizeMoney, true);
+                            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { -scene.park_model.awards.prize_money[slot] }, simulation::park::LedgerLine::PrizeMoney, true);
                         simulation::park::post(scene.park.messages, { .text_key = std::string(simulation::award_message(kind)), .award = kind });
                     }
                 }
@@ -1253,7 +1253,7 @@ namespace rct3::scene::park
                 (void)simulation::park::ledger_month(money, scene.ledger_month, scene.park.date);
                 const save::model::LedgerPeriod last_month = money.ledger.size() > 1 ? money.ledger[1] : save::model::LedgerPeriod { };
                 const simulation::ParkFigures figures {
-                    .park_value = simulation::park::park_value(scene.park.guests, scene.rides),
+                    .park_value = simulation::park::park_value(scene.park.guests, scene.rides).value,
                     .guests = scene.park.guests,
                     .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
                     .loan = scene.park.loan,
@@ -1641,7 +1641,7 @@ namespace rct3::scene::park
                 // Staff are paid from the park's cash, and the player hears of rides breaking down and being fixed.
                 if (const auto* payroll = scene.sim.registry.ctx().find<simulation::Payroll>())
                 {
-                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, payroll->paid.value - scene.wages_seen, simulation::park::LedgerLine::StaffWages, true);
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { payroll->paid.value - scene.wages_seen }, simulation::park::LedgerLine::StaffWages, true);
                     scene.wages_seen = payroll->paid.value;
                 }
                 // So are pools' cleaning fluids and stalls' stock, and what guests pay for rides, shops and entry
@@ -1651,7 +1651,7 @@ namespace rct3::scene::park
                 const auto* receipts = scene.sim.registry.ctx().find<simulation::Receipts>();
                 for (std::size_t line = 0; line < simulation::park::kLedgerLines; ++line)
                     if (const std::int64_t cost = (supplies ? supplies->paid[line].value - scene.supplies_seen.paid[line].value : 0) - (receipts ? receipts->paid[line].value - scene.receipts_seen.paid[line].value : 0); cost != 0)
-                        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, static_cast<simulation::park::LedgerLine>(line), true);
+                        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, static_cast<simulation::park::LedgerLine>(line), true);
                 if (supplies)
                     scene.supplies_seen = *supplies;
                 if (receipts)
@@ -1661,8 +1661,8 @@ namespace rct3::scene::park
                     auto& charges = scene.sim.registry.ctx().emplace<simulation::Charges>();
                     charges.loan = scene.park.loan;
                     charges.rate = scene.park_model.finance.interest_rate_percent;
-                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.interest.value, 0), simulation::park::LedgerLine::LoanInterest, true);
-                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.running.value, 0), simulation::park::LedgerLine::RideRunningCosts, true);
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.interest, { }), simulation::park::LedgerLine::LoanInterest, true);
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.running, { }), simulation::park::LedgerLine::RideRunningCosts, true);
                 }
                 // The staff's mood into the saved staff, for their windows to show.
                 for (const ShownPerson& p : scene.shown_people)
@@ -2278,12 +2278,12 @@ namespace rct3::scene::park
         if (asks.buy_land || asks.buy_rights)
             buy_land_tool(scene, asks.buy_rights ? rct3::park::LandBuy::Rights : rct3::park::LandBuy::Land, assets);
         if (asks.borrow)
-            simulation::park::change_loan(scene.park, scene.park_model.finance.max_loan, *asks.borrow);
+            simulation::park::change_loan(scene.park, { scene.park_model.finance.max_loan }, *asks.borrow);
         // A step at a time, as the buttons do, until the loan reaches the bar's or can move no more.
         if (asks.loan)
         {
             const bool borrow = *asks.loan > scene.park.loan;
-            while (*asks.loan != scene.park.loan && (*asks.loan > scene.park.loan) == borrow && simulation::park::change_loan(scene.park, scene.park_model.finance.max_loan, borrow))
+            while (*asks.loan != scene.park.loan && (*asks.loan > scene.park.loan) == borrow && simulation::park::change_loan(scene.park, { scene.park_model.finance.max_loan }, borrow))
             {
             }
         }

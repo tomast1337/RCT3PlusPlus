@@ -22,6 +22,7 @@
 #include "random/generator.hpp"
 #include "save/model/park.hpp"
 #include "simulation/park/state.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -62,22 +63,22 @@ namespace rct3::simulation
     {
         std::uint64_t id = 0; ///< Of its entry in the park's content (save::model::AssetRequirement::id)
         ResearchArea area = ResearchArea::OtherRides;
-        std::int64_t cost = 0; ///< Hundredths
+        units::Money cost { };
     };
 
     /// An item research was taken off for a focus, with what had been spent on it.
     struct SetAside
     {
         std::uint64_t id = 0; ///< ResearchItem::id
-        std::int64_t spent = 0;
+        units::Money spent { };
     };
 
     /// How far the park's research has got.
     struct Research
     {
-        std::int64_t budget = 0;                   ///< Hundredths a month; nought when the park does no research
-        std::int64_t spent = 0;                    ///< Hundredths counted towards the current item
-        std::int64_t boost = 0;                    ///< Hundredths a prize gave, counted with the next part paid
+        units::Money budget { };                   ///< A month; nought when the park does no research
+        units::Money spent { };                    ///< Counted towards the current item
+        units::Money boost { };                    ///< What a prize gave, counted with the next part paid
         std::optional<std::uint64_t> current { };  ///< The item being worked on (ResearchItem::id)
         std::optional<std::uint64_t> previous { }; ///< The item invented last
         std::vector<float> priorities { };         ///< A weight for each ResearchArea, in order; areas past its end weigh 1
@@ -110,7 +111,7 @@ namespace rct3::simulation
     void step_research(Research& research, float units, std::vector<ResearchItem>& items, park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, random::RandomState& dice);
 
     /// What `item` costs to invent: its cost, more when research is `focused` on it.
-    [[nodiscard]] std::int64_t research_cost(const ResearchItem& item, bool focused);
+    [[nodiscard]] units::Money research_cost(const ResearchItem& item, bool focused);
 
     /// Focuses research on the item `id` of `items`, at once and at a higher cost, setting aside the item worked
     /// on with what was spent on it; with no `id`, ends the focus and takes up again the item worked on when it

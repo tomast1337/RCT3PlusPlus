@@ -96,7 +96,7 @@ TEST_CASE("the goals on money read last month's ledger: ride tickets, and shop a
 TEST_CASE("prizes pay out, their cash booked as prize money")
 {
     simulation::park::ParkState park;
-    park.cash = 0;
+    park.cash = units::Money { 0 };
     park.rating = 0.99f;
     save::model::Finance finance { .max_loan = 1000, .interest_rate_percent = 8 };
     save::model::TerrainGrid land { .width = 2, .height = 1, .cells = { { .flags = std::to_underlying(save::model::TileFlag::HeldBack) }, { } } };
@@ -104,8 +104,8 @@ TEST_CASE("prizes pay out, their cash booked as prize money")
     simulation::Research research;
     simulation::give_prize(park, finance, kept, land, research, 1);
     simulation::give_prize(park, finance, kept, land, research, 2);
-    CHECK(park.cash > 0);
-    CHECK(finance.ledger[0].prize_money == -*park.cash); // Income, below nought
+    CHECK(park.cash > units::Money { 0 });
+    CHECK(finance.ledger[0].prize_money == -park.cash->value); // Income, below nought
     simulation::give_prize(park, finance, kept, land, research, 4);
     CHECK(park.rating == 1.0f);
     simulation::give_prize(park, finance, kept, land, research, 5);
@@ -134,7 +134,7 @@ TEST_CASE("a park whose money never runs out gets nothing from a cash prize")
 TEST_CASE("the research prize is free progress at the next part of the budget paid")
 {
     simulation::park::ParkState park;
-    park.cash = 100000;
+    park.cash = units::Money { 100000 };
     save::model::Finance finance;
     save::model::TerrainGrid land;
     std::optional<std::int64_t> kept;
@@ -142,11 +142,11 @@ TEST_CASE("the research prize is free progress at the next part of the budget pa
     std::vector<simulation::ResearchItem> items { { .id = 1, .cost = 100000 } };
     random::RandomState dice = random::seeded(random::Seed { 1 });
     simulation::give_prize(park, finance, kept, land, research, 9);
-    CHECK(research.boost == simulation::kTuning.prizes.research_boost.value);
+    CHECK(research.boost == simulation::kTuning.prizes.research_boost);
     simulation::step_research(research, save::model::GameClock::kUnitsPerMonth / 30, items, park, finance, kept, dice);
-    CHECK(research.boost == 0);
-    CHECK(research.spent == 1000 + simulation::kTuning.prizes.research_boost.value);
-    CHECK(park.cash == 100000 - 1000); // The boost itself costs nothing
+    CHECK(research.boost == units::Money { 0 });
+    CHECK(research.spent == units::Money { 1000 + simulation::kTuning.prizes.research_boost.value });
+    CHECK(park.cash == units::Money { 100000 - 1000 }); // The boost itself costs nothing
 }
 
 TEST_CASE("a dated goal warns a month and a week before, is judged on its date, and a miss moves it a year on")

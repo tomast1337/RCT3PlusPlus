@@ -21,8 +21,8 @@ TEST_CASE("a park starts from what its save holds")
     world.weather->temperature = 19.5f;
 
     const simulation::park::ParkState s = simulation::park::park_state(&park, world);
-    CHECK(s.cash == 123456);
-    CHECK(s.loan == 5000);
+    CHECK(s.cash == units::Money { 123456 });
+    CHECK(s.loan == units::Money { 5000 });
     CHECK(s.guests == 42);
     REQUIRE(s.rating);
     CHECK(*s.rating == doctest::Approx(0.25f));

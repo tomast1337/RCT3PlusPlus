@@ -161,7 +161,7 @@ namespace rct3::scene::park
             const glm::vec2 ndc = glm::vec2(clip) / clip.w;
             if (std::abs(ndc.x) > 1 || std::abs(ndc.y) > 1)
                 return;
-            shown.push_back({ { (ndc.x + 1) / 2 * size.x, (1 - ndc.y) / 2 * size.y }, ui::money_text(currency, std::abs(m.amount)), m.amount > 0, m.age });
+            shown.push_back({ { (ndc.x + 1) / 2 * size.x, (1 - ndc.y) / 2 * size.y }, ui::money_text(currency, units::Money { std::abs(m.amount) }), m.amount > 0, m.age });
         };
         if (scene.show_money)
             for (const FloatingMoney& m : scene.money)

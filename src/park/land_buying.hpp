@@ -6,6 +6,7 @@
 #pragma once
 
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -24,13 +25,13 @@ namespace rct3::park
 
     struct LandBought
     {
-        std::int64_t spent = 0;     ///< Hundredths
+        units::Money spent { };
         std::size_t tiles = 0;      ///< Bought
         bool short_of_cash = false; ///< A tile on sale was left for want of money
     };
 
-    /// Buys every tile of `tiles` inside `grid` that is on sale as `what`, at `price` hundredths each, while
+    /// Buys every tile of `tiles` inside `grid` that is on sale as `what`, at `price` each, while
     /// `cash` lasts (none: money never runs out).
-    LandBought buy_land(save::model::TerrainGrid& grid, std::span<const save::model::Tile> tiles, LandBuy what, std::int32_t price, std::optional<std::int64_t> cash);
+    LandBought buy_land(save::model::TerrainGrid& grid, std::span<const save::model::Tile> tiles, LandBuy what, units::Money price, std::optional<units::Money> cash);
 
 } // namespace rct3::park

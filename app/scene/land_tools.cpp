@@ -628,7 +628,7 @@ namespace rct3::scene
                 l.upper_tile = tile;
                 return;
             }
-            const auto fall = rct3::park::make_waterfall(scene.grid, bodies, *std::exchange(l.upper_lake, std::nullopt), index, l.upper_tile);
+            const auto fall = rct3::park::make_waterfall(scene.grid, bodies, *std::exchange(l.upper_lake, std::nullopt), index, l.upper_tile, tile);
             if (!fall)
                 return say(scene, fall.error());
             // The spillway is cut where nothing holds the ground; the higher lake spreads into it.

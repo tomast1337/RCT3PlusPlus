@@ -58,6 +58,7 @@
 #include "scene/park/view.hpp"
 #include "scene/park/water.hpp"
 #include "scene/pool_tools.hpp"
+#include "scene/track/trains.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
@@ -950,7 +951,7 @@ namespace rct3::scene::park
                             scene.ride_seatings[e] = static_cast<std::uint8_t>(*seating);
                     for (const auto kind : simulation::ride_kinds(scene.rides, [&](std::string_view path) { return install.find(path); }))
                         scene.ride_groups.push_back(kind ? simulation::ride_group(*kind) : simulation::RideGroup::Other);
-                    simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world.water.bodies, boat_obstacles(scene));
+                    simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world.water.bodies, track::boat_obstacles(scene));
                     // Each kind of boat handles as its train sets it.
                     for (std::size_t k = 0; k < scene.cars.size(); ++k)
                         if (const std::size_t ride = scene.car_spots[k].ride; ride < scene.ride_entities.size() && scene.ride_entities[ride] != entt::null)

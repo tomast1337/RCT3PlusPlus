@@ -9,6 +9,7 @@
 #include "park/tile_shaping.hpp"
 #include "parkfile/saved_park.hpp"
 #include "parkfile/structure_file.hpp"
+#include "scene/ghosts.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/view.hpp"

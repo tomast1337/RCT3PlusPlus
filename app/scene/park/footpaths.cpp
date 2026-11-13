@@ -20,9 +20,11 @@
 #include "park/surrounding_land.hpp"
 #include "park/track/ground.hpp"
 #include "profiling/profiler.hpp"
+#include "scene/ghosts.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
 #include "scene/park/view.hpp"
+#include "scene/track/trains.hpp"
 #include "simulation/import_park.hpp"
 #include "ui/extra_skins.hpp"
 #include "ui/money_text.hpp"
@@ -947,7 +949,7 @@ namespace rct3::scene::park
             (void)simulation::relink_attractions(scene.sim, scene.rides);
             simulation::import_pools(scene.sim, scene.pools, scene.scenery_pool_extras);
             // Boats keep out from under the paths laid low over their water.
-            simulation::boat_water(scene.sim, scene.grid, scene.footpaths.water.bodies, boat_obstacles(scene));
+            simulation::boat_water(scene.sim, scene.grid, scene.footpaths.water.bodies, track::boat_obstacles(scene));
         }
 
         /// Lays the paths of the stroke just ended.

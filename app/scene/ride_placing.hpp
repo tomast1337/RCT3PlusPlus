@@ -34,7 +34,7 @@
 #include "park/path/clearance.hpp"
 #include "park/ride/placement.hpp"
 #include "render/device.hpp"
-#include "scene/track_building.hpp"
+#include "scene/objects.hpp"
 #include "ui/key_map.hpp"
 #include "ui/widget.hpp"
 

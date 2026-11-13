@@ -8,11 +8,13 @@
 #include "park/pools/pools.hpp"
 #include "park/tile_shaping.hpp"
 #include "profiling/profiler.hpp"
+#include "scene/ghosts.hpp"
+#include "scene/objects.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/view.hpp"
 #include "scene/ride_placing.hpp"
-#include "scene/track_building.hpp"
+#include "scene/track/building.hpp"
 #include "simulation/park/messages.hpp"
 #include "ui/extra_skins.hpp"
 #include "ui/game_style.hpp"
@@ -868,7 +870,7 @@ namespace rct3::scene
         // Pool rides' platforms show steps down the sides the paving now meets, or no longer does.
         for (std::size_t ride = 0; ride < scene.rides.rides.size() && ride < scene.track_rules.size(); ++ride)
             if (scene.track_rules[ride].pool_ride && !scene.rides.rides[ride].base.demolished)
-                update_platforms(scene, ride, assets);
+                track::update_platforms(scene, ride, assets);
         objects_changed(scene);
         std::vector<save::model::PoolWater>& water = scene.footpaths.pools;
         water.resize(scene.saved_pool_water);

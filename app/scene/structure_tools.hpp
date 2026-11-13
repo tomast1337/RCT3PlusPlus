@@ -16,8 +16,8 @@
 #include "park/path/clearance.hpp"
 #include "park/structure_placement.hpp"
 #include "save/model/structure.hpp"
+#include "scene/objects.hpp"
 #include "scene/save_browser.hpp"
-#include "scene/track_building.hpp"
 #include "ui/key_map.hpp"
 #include "ui/screens/dialogs/files.hpp"
 

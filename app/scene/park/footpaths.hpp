@@ -47,7 +47,7 @@
 #include "park/terrain_mesh.hpp"
 #include "render/device.hpp"
 #include "save/model/world.hpp"
-#include "scene/track_building.hpp"
+#include "scene/objects.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/screens/build/paths.hpp"
 

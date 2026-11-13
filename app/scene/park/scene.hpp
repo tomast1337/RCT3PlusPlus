@@ -62,7 +62,7 @@
 #include "scene/ride_placing.hpp"
 #include "scene/save_browser.hpp"
 #include "scene/structure_tools.hpp"
-#include "scene/track_building.hpp"
+#include "scene/track/building.hpp"
 #include "scene/zoo_animals.hpp"
 #include "simulation/boat.hpp"
 #include "simulation/components.hpp"
@@ -819,7 +819,7 @@ namespace rct3::scene::park
         std::optional<std::filesystem::path> park_to_load;              ///< Picked in the load window, until taken
         ParkMap map;                                                    ///< The map window's pictures and what they show
         ParkFootpaths footpaths;                                        ///< The path panel's styles and the paths laid with it
-        TrackBuilding building;                                         ///< The construction panel's ride and the piece it would build
+        track::TrackBuilding building;                                  ///< The construction panel's ride and the piece it would build
         EnclosureTool enclosing;                                        ///< The enclosure list's fence tool out, or an animal
         PoolTool pooling;                                               ///< The pool list's tool out
         DeleteTools deleting;                                           ///< The delete menu's tool out

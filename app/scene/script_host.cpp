@@ -896,7 +896,7 @@ namespace rct3::scene
             return found->kind == rct3::park::BuildKind::TrackedRide || start_ride_placing(park, *found);
         });
         engine_.define("build.construction", [this](const Json&) -> Json {
-            const TrackBuilding& b = park_of(park_).building;
+            const track::TrackBuilding& b = park_of(park_).building;
             if (!b.ride)
                 return nullptr;
             const auto c = b.catalogues.find(b.overlay);
@@ -908,7 +908,7 @@ namespace rct3::scene
                      { "offered", b.candidates.size() },
                      { "piece", named ? Json(c->second.pieces[b.picked->index].record.name) : Json(nullptr) },
                      { "ghost", b.ghost.has_value() },
-                     { "arrows", !track_arrows(park_of(park_)).vertices.empty() },
+                     { "arrows", !track::track_arrows(park_of(park_)).vertices.empty() },
                      { "ghostAt", b.ghost ? Json { { "col", b.ghost->object.col }, { "row", b.ghost->object.row }, { "height", b.ghost->object.base_height.value_or(0) } } : Json(nullptr) },
                      { "clashes", b.clashes },
                      { "unowned", b.unowned },

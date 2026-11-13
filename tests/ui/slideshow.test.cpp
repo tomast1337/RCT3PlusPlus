@@ -7,6 +7,7 @@
 #include <fstream>
 
 using namespace rct3::ui;
+namespace units = rct3::units;
 namespace fs = std::filesystem;
 
 namespace
@@ -27,20 +28,20 @@ TEST_CASE("each picture fades in over the last, then stays")
     CHECK(s.under == 0);
     CHECK(s.over == 1);
     CHECK(s.over_alpha == 0);
-    show.update(0.5f);
+    show.update(units::Seconds { 0.5f });
     CHECK(show.shown().over_alpha == doctest::Approx(0.5f));
-    show.update(2);
+    show.update(units::Seconds { 2 });
     CHECK(show.shown().over_alpha == 1);
-    show.update(1.5f); // Four seconds in: the next one starts
+    show.update(units::Seconds { 1.5f }); // Four seconds in: the next one starts
     s = show.shown();
     CHECK(s.under == 1);
     CHECK(s.over == 2);
     CHECK(s.over_alpha == doctest::Approx(0));
-    show.update(8); // Two more pictures, round to the first
+    show.update(units::Seconds { 8 }); // Two more pictures, round to the first
     s = show.shown();
     CHECK(s.under == 0);
     CHECK(s.over == 1);
-    show.update(4);
+    show.update(units::Seconds { 4 });
     CHECK(show.shown().over == 2);
 }
 
@@ -49,11 +50,11 @@ TEST_CASE("one picture fades in over itself, and none shows nothing")
     Slideshow one(names({ "a.jpg" }));
     CHECK(one.shown().under == 0);
     CHECK(one.shown().over == 0);
-    one.update(10);
+    one.update(units::Seconds { 10 });
     CHECK(one.shown().over == 0);
 
     Slideshow none;
-    none.update(10);
+    none.update(units::Seconds { 10 });
     CHECK_FALSE(none.shown().under);
     CHECK_FALSE(none.shown().over);
 }
@@ -61,7 +62,7 @@ TEST_CASE("one picture fades in over itself, and none shows nothing")
 TEST_CASE("a new list starts at its beginning")
 {
     Slideshow show(names({ "a.jpg", "b.jpg", "c.jpg" }));
-    show.update(4.5f);
+    show.update(units::Seconds { 4.5f });
     show.set_pictures(names({ "x.jpg", "y.jpg" }));
     const auto s = show.shown();
     CHECK(s.under == 0);

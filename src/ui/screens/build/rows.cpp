@@ -351,7 +351,7 @@ namespace rct3::ui::screens::build
                     break;
             }
             if (item.price > 0)
-                row.price = money_text(currency, item.price);
+                row.price = money_text(currency, units::Money { item.price });
             row.cost = item.price;
             row.style = item.style;
             row.addon = item.addon;

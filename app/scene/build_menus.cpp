@@ -145,7 +145,7 @@ namespace rct3::scene
         return root.find(kListName).has_value();
     }
 
-    std::optional<rct3::park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash)
+    std::optional<rct3::park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<units::Money> cash)
     {
         if (menus.asked)
         {

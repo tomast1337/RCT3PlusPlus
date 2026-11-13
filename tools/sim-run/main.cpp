@@ -375,8 +375,8 @@ int main(int argc, char** argv)
         sky = simulation::Weather { .sunny = weather == "hot", .temperature = weather == "hot" ? 35.0f : 2.0f };
     out.info("weather: {}{}{}, {:.0f} degrees; {:.1f} guests an hour come in", sky.rain ? "rain" : "dry", sky.storm ? " (storm)" : "", sky.sunny ? ", sunny" : "", static_cast<double>(sky.temperature.value), simulation::arrivals_per_second(sky) * 3600);
     const std::uint32_t ideal = simulation::ideal_guests(world);
-    const std::int64_t fair = simulation::fair_entrance_fee(world);
-    out.info("room for {:d} guests; entrance fee {:d} against {:d} fair; arrivals x{:.2f} with the park empty", ideal, static_cast<long long>(fee), static_cast<long long>(fair), simulation::drawn(draw, 0, ideal, fair));
+    const units::Money fair = simulation::fair_entrance_fee(world);
+    out.info("room for {:d} guests; entrance fee {:d} against {:d} fair; arrivals x{:.2f} with the park empty", ideal, static_cast<long long>(fee), static_cast<long long>(fair.value), simulation::drawn(draw, 0, ideal, fair));
     const auto broken_rides = std::ranges::count_if(world.registry.view<const simulation::Upkeep>(), [&](entt::entity e) { return world.registry.get<simulation::Upkeep>(e).broken; });
     out.info("breakdowns going on, by kind:{}", breakdown_kinds(world.registry).c_str());
     out.info("litter {:d}  path items {:d}  rides broken down {:d}  staff on the paths {:d} of {:d}", litter, items, broken_rides, static_cast<std::size_t>(std::ranges::count_if(staff, [](entt::entity e) { return e != entt::null; })), staff.size());
@@ -721,7 +721,7 @@ int main(int argc, char** argv)
             const std::int64_t running = charges ? charges->running.value : 0;
             const std::string paid = std::format("guests paid {:.2f} ({}), {:d} parties turned away; supplies {:.2f} ({}); wages {:.2f}; loan interest {:.2f}; rides' running costs {:.2f}", static_cast<double>(in) / 100, received, turnstile ? turnstile->turned_away : 0, static_cast<double>(stock) / 100, bought, static_cast<double>(wages) / 100, static_cast<double>(interest) / 100, static_cast<double>(running) / 100);
             if (state.cash)
-                out.info("money: park cash {:.2f} to {:.2f}; {}", static_cast<double>(*state.cash) / 100, static_cast<double>(*state.cash + in - stock - wages - interest - running) / 100, paid);
+                out.info("money: park cash {:.2f} to {:.2f}; {}", static_cast<double>(state.cash->value) / 100, static_cast<double>(state.cash->value + in - stock - wages - interest - running) / 100, paid);
             else
                 out.info("money: unlimited; {}", paid);
         }

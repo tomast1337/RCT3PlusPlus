@@ -31,7 +31,7 @@ namespace
         o.height_adjust = 0.5f;
         o.colours = { 1, 2, 3 };
         park.rides.stalls.emplace_back();
-        park.progress.cash = 123456;
+        park.progress.cash = units::Money { 123456 };
         park.progress.date.year = 2;
         park.progress.forecast = save::model::WeatherType::Unknown;
         park.progress.day_time = 0.25f;
@@ -63,7 +63,7 @@ TEST_CASE("a saved park reads back as written")
     CHECK(read->objects.at(0).height_adjust == 0.5f);
     CHECK(read->objects.at(0).colours == std::array<std::int32_t, 3> { 1, 2, 3 });
     CHECK(read->rides.stalls.size() == 1);
-    CHECK(read->progress.cash == 123456);
+    CHECK(read->progress.cash == units::Money { 123456 });
     CHECK(read->progress.date.year == 2);
     CHECK(read->progress.day_time == 0.25f);
     CHECK(read->progress.max_loan == 400'000);
@@ -108,9 +108,9 @@ TEST_CASE("a saved park reads back as written")
     const auto research = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
     REQUIRE(research);
     REQUIRE(research->research);
-    CHECK(research->research->budget == 20000);
-    CHECK(research->research->spent == 667);
-    CHECK(research->research->boost == 50000);
+    CHECK(research->research->budget == units::Money { 20000 });
+    CHECK(research->research->spent == units::Money { 667 });
+    CHECK(research->research->boost == units::Money { 50000 });
     CHECK(research->research->current == 12);
     CHECK(research->research->previous == 9);
     CHECK(research->research->priorities == std::vector<float> { 0.5f, 1.0f });
@@ -119,7 +119,7 @@ TEST_CASE("a saved park reads back as written")
     CHECK(research->research->invented_at == std::vector<float> { 1234.5f });
     CHECK(research->research->focus == 12);
     REQUIRE(research->research->set_aside.size() == 1);
-    CHECK(research->research->set_aside[0].spent == 400);
+    CHECK(research->research->set_aside[0].spent == units::Money { 400 });
 
     hidden.broken_items = { 42, 43 };
     const auto broken = parkfile::read_saved_park(parkfile::write_saved_park(hidden));

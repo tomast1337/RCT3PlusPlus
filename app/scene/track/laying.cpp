@@ -220,7 +220,7 @@ namespace rct3::scene::track
         /// nought), on the ride and on the attraction the park runs for it.
         void add_running_cost(park::ParkScene& scene, save::model::Ride& ride, std::int64_t cost)
         {
-            ride.base.running_cost = std::max<std::int64_t>(ride.base.running_cost + simulation::park::running_cost(cost, true), 0);
+            ride.base.running_cost = std::max<std::int64_t>(ride.base.running_cost + simulation::park::running_cost(units::Money { cost }, true).value, 0);
             for (const auto [e, a] : scene.sim.registry.view<simulation::Attraction>().each())
                 if (a.saved == ride.base.id)
                     a.running_cost.value = ride.base.running_cost;
@@ -235,7 +235,7 @@ namespace rct3::scene::track
                 return;
             add_running_cost(scene, ride, -shape->record.cost);
             const std::int64_t back = rct3::park::demolish_refund(shape->record.cost, (ride.base.flags & save::model::AttractionCommon::kNeverOpened) == 0);
-            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, false);
+            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { -back }, simulation::park::LedgerLine::RideConstruction, false);
             park::float_money(scene, rct3::park::track::start_of(object, *shape, piece.reversed, scene.grid).position, back);
         }
 
@@ -699,7 +699,7 @@ namespace rct3::scene::track
             object.colours = { (*b.colours)[0], (*b.colours)[1], (*b.colours)[2] };
         }
         const rct3::park::track::PieceShape& shape = c->pieces[b.picked->index];
-        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, shape.record.cost, simulation::park::LedgerLine::RideConstruction, forced))
+        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { shape.record.cost }, simulation::park::LedgerLine::RideConstruction, forced))
             return;
         add_running_cost(scene, ride, shape.record.cost);
         ++scene.built;
@@ -880,7 +880,7 @@ namespace rct3::scene::track
         std::int64_t cost = 0;
         for (const rct3::park::track::LaidPlacement& p : way)
             cost += c->pieces[p.piece.index].record.cost;
-        if (scene.park.cash && *scene.park.cash < cost)
+        if (scene.park.cash && *scene.park.cash < units::Money { cost })
         {
             b.complaint = "RideAutoCompleteNotEnoughCash";
             return;

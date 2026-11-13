@@ -577,7 +577,7 @@ namespace rct3::scene
                 p.absolute = spot->raised;
                 const save::model::PlacedObject o = *ghost_object(p);
                 p.problem = !rct3::park::object::on_owned_land(o, squares, scene.grid) ? rct3::park::ride::SiteProblem::NotOwned : spot->refused || rct3::park::path::furniture_taken(scene.objects, scene.models, o, positioning) ? rct3::park::ride::SiteProblem::Blocked : rct3::park::ride::SiteProblem::None;
-                p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
+                p.affordable = !scene.park.cash || *scene.park.cash >= units::Money { p.item->price };
                 show_ghost();
                 return;
             }
@@ -636,7 +636,7 @@ namespace rct3::scene
                     p.problem = problem();
                 }
             }
-            p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
+            p.affordable = !scene.park.cash || *scene.park.cash >= units::Money { p.item->price };
             show_ghost();
             return;
         }
@@ -653,7 +653,7 @@ namespace rct3::scene
                 p.problem = rct3::park::ride::ground_problem(*p.site, scene.grid);
             else if (p.problem == rct3::park::ride::SiteProblem::None && p.site->height < p.ground && !buried())
                 p.problem = rct3::park::ride::SiteProblem::IntoGround;
-            p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
+            p.affordable = !scene.park.cash || *scene.park.cash >= units::Money { p.item->price };
             show_ghost();
             return;
         }
@@ -695,7 +695,7 @@ namespace rct3::scene
             p.levelling_cost = rct3::park::ground::cuts_cost(p.levelling, scene.grid);
             if (p.problem == rct3::park::ride::SiteProblem::None && p.levelling.footprint.empty())
                 p.problem = rct3::park::ride::ground_problem(*p.site, scene.grid);
-            p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price + p.levelling_cost;
+            p.affordable = !scene.park.cash || *scene.park.cash >= units::Money { p.item->price + p.levelling_cost };
         }
         else
         {
@@ -782,7 +782,7 @@ namespace rct3::scene
         // levelling with it (see below); doors are free.
         const bool levels = p.site->height == p.ground;
         const std::int64_t price = p.step == RidePlacing::Step::Scenery ? p.item->price : p.step == RidePlacing::Step::Ride ? p.item->price + (levels ? p.levelling_cost : 0) : 0;
-        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, price, p.step == RidePlacing::Step::Scenery ? simulation::park::LedgerLine::Landscaping : simulation::park::LedgerLine::RideConstruction, false))
+        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { price }, p.step == RidePlacing::Step::Scenery ? simulation::park::LedgerLine::Landscaping : simulation::park::LedgerLine::RideConstruction, false))
             return true;
         wait_for_build(scene);
         ++scene.built;
@@ -933,7 +933,7 @@ namespace rct3::scene
             ride.base.placement = object;
             ride.base.spot = save::model::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turn.value) };
             ride.base.facing = static_cast<std::uint8_t>(p.site->turn.value);
-            ride.base.running_cost = simulation::park::running_cost(p.item->price, false);
+            ride.base.running_cost = simulation::park::running_cost(units::Money { p.item->price }, false).value;
             park::float_money(scene, site_point(scene, *p.site), -price);
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
             take_fence(scene, assets, ride, *p.item);

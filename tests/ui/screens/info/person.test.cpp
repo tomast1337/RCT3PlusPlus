@@ -8,6 +8,7 @@
 
 using namespace rct3;
 using namespace rct3::ui;
+namespace units = rct3::units;
 using namespace rct3::ui::screens;
 using namespace rct3::ui::screens::info;
 
@@ -158,8 +159,8 @@ TEST_CASE("a guest's pages tell their rides, what they carry, how they feel and 
     CHECK(line(stats, u"Glad:")->half);
 
     const InfoPage cash = person_page(PersonTab::Cash, guest(p), s, units);
-    CHECK(value(cash, u"Purse:") == money_text(units.currency, 1250));
-    CHECK(value(cash, u"Food") == money_text(units.currency, 0));
+    CHECK(value(cash, u"Purse:") == money_text(units.currency, units::Money { 1250 }));
+    CHECK(value(cash, u"Food") == money_text(units.currency, units::Money { 0 }));
 }
 
 TEST_CASE("a guest without a favourite says so, and a member of staff shows their work")
@@ -201,11 +202,11 @@ TEST_CASE("a worker's statistics show when they were hired, their mood, warnings
     CHECK(mood->value_icon == "Staff_MoodSadIcon");
     CHECK(value(stats, u"Told off:") == u"2");
     REQUIRE(stats.controls.size() == 1); // The training is bought on the Details tab
-    CHECK(stats.controls[0].shown == money_text(units.currency, 250));
+    CHECK(stats.controls[0].shown == money_text(units.currency, units::Money { 250 }));
     const InfoPage general = person_page(PersonTab::General, f, s, units);
     const auto train = std::ranges::find(general.controls, person_control(PersonControl::Train), &InfoControl::id);
     REQUIRE(train != general.controls.end());
-    CHECK(train->help.ends_with(u"Costs " + money_text(units.currency, 5000) + u"."));
+    CHECK(train->help.ends_with(u"Costs " + money_text(units.currency, units::Money { 5000 }) + u"."));
     CHECK(train->icon == "Staff_Training0IconLarge");
 }
 

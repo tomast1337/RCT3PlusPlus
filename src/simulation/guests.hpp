@@ -252,13 +252,13 @@ namespace rct3::simulation
     /// pool water, and the room of rides not simulated (RoomElsewhere).
     [[nodiscard]] std::uint32_t ideal_guests(const SimWorld& world);
 
-    /// The entrance fee guests think fair, in hundredths: what the open rides are worth to them over what they
+    /// The entrance fee guests think fair: what the open rides are worth to them over what they
     /// charge.
-    [[nodiscard]] std::int64_t fair_entrance_fee(const SimWorld& world);
+    [[nodiscard]] units::Money fair_entrance_fee(const SimWorld& world);
 
     /// How many guests come in against a plain park, from the park's rating, how crowded it is (`guests`
     /// against `ideal`) and its entrance fee against `fair_fee`.
-    [[nodiscard]] double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, std::int64_t fair_fee);
+    [[nodiscard]] double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, units::Money fair_fee);
 
     /// Gives guest `guest` what it needs to walk, standing on path node `at` with nothing to do. Its dice are
     /// seeded from the world's seed and its id, so the same park always plays out the same way.

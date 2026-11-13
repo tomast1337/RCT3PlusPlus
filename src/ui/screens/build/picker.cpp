@@ -228,7 +228,7 @@ namespace rct3::ui::screens::build
             b.icon = (b.on ? (object ? style_.object_filter : style_.style_filter) : (object ? style_.object_filter_off : style_.style_filter_off)) + key.name;
         }
         for (BuildPickerRow* row : rows_)
-            row->dear = cash && !row->row().locked && row->row().cost > *cash;
+            row->dear = cash && !row->row().locked && units::Money { row->row().cost } > *cash;
         for (BuildPickerRow* row : rows_)
         {
             if (!row->take_click() || row->row().locked)

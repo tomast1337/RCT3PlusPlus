@@ -307,7 +307,7 @@ namespace rct3::scene
         engine_.define("park.cash", [this](const Json&) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
-            return park_->park.cash ? Json(*park_->park.cash) : Json(nullptr);
+            return park_->park.cash ? Json(park_->park.cash->value) : Json(nullptr);
         });
         engine_.define("park.ledger", [this](const Json&) -> Json {
             if (park_ == nullptr)
@@ -333,7 +333,7 @@ namespace rct3::scene
                 for (const simulation::ResearchItem& i : simulation::research_preview(r, *scene.research_items, ui::screens::management::kComingPerArea))
                     next.push_back(symbol(i.id));
             }
-            return { { "budget", r.budget }, { "spent", r.spent }, { "current", r.current ? symbol(*r.current) : Json(nullptr) }, { "invented", std::move(invented) }, { "inventedAt", r.invented_at }, { "focus", r.focus ? symbol(*r.focus) : Json(nullptr) }, { "next", std::move(next) }, { "left", scene.research_items ? Json(scene.research_items->size()) : Json(nullptr) }, { "priorities", r.priorities } };
+            return { { "budget", r.budget.value }, { "spent", r.spent.value }, { "current", r.current ? symbol(*r.current) : Json(nullptr) }, { "invented", std::move(invented) }, { "inventedAt", r.invented_at }, { "focus", r.focus ? symbol(*r.focus) : Json(nullptr) }, { "next", std::move(next) }, { "left", scene.research_items ? Json(scene.research_items->size()) : Json(nullptr) }, { "priorities", r.priorities } };
         });
         engine_.define("park.focusResearch", [this](const Json& a) -> Json {
             if (a.size() != 1 || !(a[0].is_string() || a[0].is_null()))
@@ -353,7 +353,7 @@ namespace rct3::scene
             if (a.empty() || a.size() > 2 || !a[0].is_number_integer() || a[0].get<std::int64_t>() < 0 || (a.size() == 2 && !a[1].is_array()))
                 throw std::invalid_argument("park.setResearch takes a monthly budget in hundredths and optional priorities");
             simulation::Research& r = park_of(park_).research;
-            r.budget = a[0].get<std::int64_t>();
+            r.budget = units::Money { a[0].get<std::int64_t>() };
             if (a.size() == 2)
                 r.priorities = a[1].get<std::vector<float>>();
             return Json(nullptr);
@@ -371,14 +371,14 @@ namespace rct3::scene
         engine_.define("park.loan", [this](const Json&) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
-            return Json(park_->park.loan);
+            return Json(park_->park.loan.value);
         });
         engine_.define("park.setCash", [this](const Json& a) -> Json {
             if (park_ == nullptr || !park_->park.cash)
                 throw std::runtime_error("no park with money is open");
             if (a.size() != 1 || !a[0].is_number_integer())
                 throw std::invalid_argument("park.setCash takes hundredths of the currency");
-            park_->park.cash = a[0].get<std::int64_t>();
+            park_->park.cash = units::Money { a[0].get<std::int64_t>() };
             return Json(nullptr);
         });
         engine_.define("park.setTime", [this](const Json& a) -> Json {

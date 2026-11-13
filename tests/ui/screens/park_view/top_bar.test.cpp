@@ -8,6 +8,7 @@
 
 using namespace rct3;
 using namespace rct3::ui;
+namespace units = rct3::units;
 using namespace rct3::ui::screens;
 using namespace rct3::ui::screens::park_view;
 
@@ -101,7 +102,7 @@ TEST_CASE("the bar's values are written from the park's state")
     strings.add("Year", u"Year");
     strings.add("Cash_Unlimited", u"no limit");
     simulation::park::ParkState state;
-    state.cash = -150075;
+    state.cash = units::Money { -150075 };
     state.guests = 312;
     state.rating = 0.5f;
     state.temperature = 30.2f;

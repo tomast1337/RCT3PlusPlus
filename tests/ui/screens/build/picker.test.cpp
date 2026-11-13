@@ -10,6 +10,7 @@
 #include <vector>
 
 using namespace rct3::ui;
+namespace units = rct3::units;
 using namespace rct3::ui::widgets;
 using namespace rct3::ui::screens;
 using namespace rct3::ui::screens::build;
@@ -155,7 +156,7 @@ TEST_CASE("items dearer than the cash are marked; none when money never runs out
     dear.cost = 5000;
     Fixture f({ cheap, dear });
     CHECK_FALSE(f.picker->rows()[1]->dear);
-    f.picker->cash = 1000;
+    f.picker->cash = units::Money { 1000 };
     f.step();
     CHECK_FALSE(f.picker->rows()[0]->dear);
     CHECK(f.picker->rows()[1]->dear);

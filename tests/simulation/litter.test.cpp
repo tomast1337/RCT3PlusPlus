@@ -12,6 +12,7 @@
 #include <vector>
 
 using namespace rct3::simulation;
+namespace units = rct3::units;
 
 namespace
 {
@@ -155,12 +156,12 @@ TEST_CASE("a handyman told to leave broken things does, and still sweeps; replac
     CHECK(std::ranges::all_of(benches, [&](entt::entity b) { return r.get<PathItem>(b).broken; }));
     CHECK(r.get<Staff>(handyman).mended == 0);
 
-    const Replacement due = replacement(park.world(), [](std::uint64_t object) { return static_cast<std::int64_t>(object) * 100; });
+    const Replacement due = replacement(park.world(), [](std::uint64_t object) { return units::Money { static_cast<std::int64_t>(object) * 100 }; });
     CHECK(due.items == 3);
-    CHECK(due.cost == 600);
+    CHECK(due.cost == units::Money { 600 });
     replace_broken(park.world());
     CHECK(std::ranges::none_of(benches, [&](entt::entity b) { return r.get<PathItem>(b).broken; }));
-    CHECK(replacement(park.world(), [](std::uint64_t) { return 1; }).items == 0);
+    CHECK(replacement(park.world(), [](std::uint64_t) { return units::Money { 1 }; }).items == 0);
 }
 
 TEST_CASE("a dirty path spoils the mood of the guests on it")

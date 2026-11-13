@@ -155,13 +155,13 @@ namespace rct3::scene::park
                 show(*window, topic, facts, strings, units);
             if (change && topic == ui::screens::management::ManagementTopic::Finances && finance == ui::screens::management::FinancePage::Loan && change->id == ui::screens::management::kLoanControl)
             {
-                asks.loan = change->value;
+                asks.loan = units::Money { change->value };
                 window->age_page();
             }
             if (change && topic == ui::screens::management::ManagementTopic::Research)
             {
                 if (change->id == ui::screens::management::kResearchBudgetControl)
-                    asks.research_budget = change->value;
+                    asks.research_budget = units::Money { change->value };
                 else if (change->id >= ui::screens::management::kFirstPriorityControl)
                     asks.research_priority = std::pair(static_cast<std::size_t>(change->id - ui::screens::management::kFirstPriorityControl), static_cast<float>(change->value) / 100);
             }

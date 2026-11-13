@@ -9,6 +9,7 @@
 
 using namespace rct3;
 using namespace rct3::ui;
+namespace units = rct3::units;
 using namespace rct3::ui::widgets;
 using namespace rct3::ui::screens;
 using namespace rct3::ui::screens::info;
@@ -141,7 +142,7 @@ TEST_CASE("pages are written from the attraction's state")
     const InfoPage money = attraction_page(AttractionTab::Finances, f, s, units);
     const auto profit = std::ranges::find(money.lines, std::u16string(u"Profit"), &InfoLine::label);
     REQUIRE(profit != money.lines.end());
-    CHECK(profit->value == money_text(units.currency, 1234));
+    CHECK(profit->value == money_text(units.currency, units::Money { 1234 }));
 
     InfoPage tests = attraction_page(AttractionTab::Tests, f, s, units);
     CHECK(tests.lines.empty());

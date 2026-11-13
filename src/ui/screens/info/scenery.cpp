@@ -150,7 +150,7 @@ namespace rct3::ui::screens::info
             const std::u16string complex = pool.name.empty() ? std::u16string(strings.get(kPoolDefaultName)) : pool.name;
             page.title = complex;
             const auto text = [&](std::string_view key) { return std::u16string(strings.get(key)); };
-            const auto money = [&](std::int64_t amount) { return money_text(pool.currency, amount); };
+            const auto money = [&](std::int64_t amount) { return money_text(pool.currency, units::Money { amount }); };
             const auto line = [&](std::string_view key, std::u16string value) { page.lines.push_back({ text(key), std::move(value), false, std::string(key) }); };
             const auto button = [&](int id, std::string_view icon, std::string_view help, bool beside, bool enabled = true) { page.controls.push_back({ .id = id, .name = std::string(icon), .kind = InfoControlKind::Button, .icon = std::string(icon), .enabled = enabled, .beside = beside, .help = text(help) }); };
             const auto choice = [&](int id, std::string_view key, std::span<const std::string_view> items, int value, bool beside = false) {

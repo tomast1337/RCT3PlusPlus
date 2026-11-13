@@ -43,18 +43,18 @@ namespace rct3::simulation::park
             post(park.messages, { .text_key = std::string(kCannotPayKey) });
     }
 
-    bool book(ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, std::int64_t cost, LedgerLine line, bool forced)
+    bool book(ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, units::Money cost, LedgerLine line, bool forced)
     {
         if (!park.cash)
             return true;
-        if (!forced && cost > 0 && *park.cash < cost)
+        if (!forced && cost > units::Money { } && *park.cash < cost)
         {
             cannot_pay(park);
             return false;
         }
         *park.cash -= cost;
         save::model::LedgerPeriod& p = ledger_month(finance, kept, park.date);
-        const auto c = static_cast<std::int32_t>(cost);
+        const auto c = static_cast<std::int32_t>(cost.value); // The ledger keeps 32-bit counters, as the park file does
         switch (line)
         {
             case LedgerLine::FoodDrinkSales:
@@ -124,43 +124,43 @@ namespace rct3::simulation::park
         return true;
     }
 
-    std::int64_t loan_step(const ParkState& park, std::int64_t max_loan, bool borrow)
+    units::Money loan_step(const ParkState& park, units::Money max_loan, bool borrow)
     {
         if (!park.cash)
-            return 0;
+            return { };
         if (borrow)
-            return std::clamp<std::int64_t>(max_loan - park.loan, 0, kLoanStep);
-        const std::int64_t step = std::clamp<std::int64_t>(park.loan, 0, kLoanStep);
-        return *park.cash >= step ? step : 0;
+            return std::clamp(max_loan - park.loan, units::Money { }, kLoanStep);
+        const units::Money step = std::clamp(park.loan, units::Money { }, kLoanStep);
+        return *park.cash >= step ? step : units::Money { };
     }
 
-    bool change_loan(ParkState& park, std::int64_t max_loan, bool borrow)
+    bool change_loan(ParkState& park, units::Money max_loan, bool borrow)
     {
-        const std::int64_t step = loan_step(park, max_loan, borrow);
-        if (step == 0)
+        const units::Money step = loan_step(park, max_loan, borrow);
+        if (step == units::Money { })
             return false;
         *park.cash += borrow ? step : -step;
         park.loan += borrow ? step : -step;
         return true;
     }
 
-    std::int64_t park_value(std::int32_t guests, const save::model::RideModel& rides)
+    units::Money park_value(std::int32_t guests, const save::model::RideModel& rides)
     {
         float worth = 0;
         for (const save::model::Ride& ride : rides.rides)
             if (ride.kind != save::model::RideKind::Special && !ride.base.demolished && ride.base.state == save::model::AttractionState::Open && ride.assessment.valid)
                 worth += ride.assessment.excitement * ride.assessment.excitement;
-        return std::max(guests, 0) * kTuning.park_value.per_guest.value + std::llround(worth * static_cast<float>(kTuning.park_value.per_excitement.value));
+        return { std::max(guests, 0) * kTuning.park_value.per_guest.value + std::llround(worth * static_cast<float>(kTuning.park_value.per_excitement.value)) };
     }
 
-    std::int64_t weekly_interest(std::int64_t loan, float rate_percent)
+    units::Money weekly_interest(units::Money loan, float rate_percent)
     {
-        return std::llround(static_cast<double>(loan) * static_cast<double>(rate_percent) / 100 / kTuning.charges.interest_weeks);
+        return { std::llround(static_cast<double>(loan.value) * static_cast<double>(rate_percent) / 100 / kTuning.charges.interest_weeks) };
     }
 
-    std::int64_t running_cost(std::int64_t build_cost, bool tracked)
+    units::Money running_cost(units::Money build_cost, bool tracked)
     {
-        return std::llround(static_cast<double>(build_cost) * (tracked ? kTuning.charges.tracked_running_share : kTuning.charges.flat_running_share));
+        return { std::llround(static_cast<double>(build_cost.value) * (tracked ? kTuning.charges.tracked_running_share : kTuning.charges.flat_running_share)) };
     }
 
     void step_charges(SimWorld& world)
@@ -170,11 +170,11 @@ namespace rct3::simulation::park
         auto& charges = r.ctx().emplace<Charges>();
         for (charges.week.value += kTickSeconds; charges.week.value >= kSecondsPerWeek; charges.week.value -= kSecondsPerWeek)
         {
-            charges.interest.value += weekly_interest(charges.loan, charges.rate);
+            charges.interest += weekly_interest(charges.loan, charges.rate);
             // One broken down is shut to guests but still open to the player, and goes on costing.
             for (const auto [e, a] : r.view<const Attraction>().each())
                 if (const auto* upkeep = r.try_get<Upkeep>(e); a.open || (upkeep != nullptr && upkeep->broken))
-                    charges.running.value += a.running_cost.value;
+                    charges.running += a.running_cost;
         }
     }
 

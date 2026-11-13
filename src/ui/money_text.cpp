@@ -40,8 +40,9 @@ namespace rct3::ui
         return { part(strings, index, kBefore), part(strings, index, kAfter), part(strings, index, kDecimal) };
     }
 
-    std::u16string money_text(const Currency& currency, std::int64_t amount)
+    std::u16string money_text(const Currency& currency, units::Money money)
     {
+        const std::int64_t amount = money.value;
         const bool negative = amount < 0;
         // The magnitude without overflow, even for the smallest value.
         const std::uint64_t magnitude = negative ? 0 - static_cast<std::uint64_t>(amount) : static_cast<std::uint64_t>(amount);

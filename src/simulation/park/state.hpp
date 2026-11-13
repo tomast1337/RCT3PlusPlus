@@ -12,6 +12,7 @@
 #include "simulation/game_speed.hpp"
 #include "simulation/park/messages.hpp"
 #include "simulation/park/rating.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -25,8 +26,8 @@ namespace rct3::simulation::park
 {
     struct ParkState
     {
-        std::optional<std::int64_t> cash;        ///< Hundredths of the currency unit; none when money never runs out
-        std::int64_t loan = 0;                   ///< Hundredths of the currency unit
+        std::optional<units::Money> cash; ///< None when money never runs out
+        units::Money loan { };
         std::int32_t guests = 0;                 ///< In the park now
         std::optional<float> rating;             ///< 0 to 1; none before the park has one
         std::optional<RatingParts> rating_parts; ///< How the rating was made up; none until a week has been rated

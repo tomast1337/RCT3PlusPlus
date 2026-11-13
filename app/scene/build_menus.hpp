@@ -80,6 +80,6 @@ namespace rct3::scene
 
     /// Each frame: keeps what the open list changed and shades its items dearer than `cash`; returns the item
     /// picked in it, if one was.
-    [[nodiscard]] std::optional<rct3::park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<std::int64_t> cash);
+    [[nodiscard]] std::optional<rct3::park::BuildItem> update_build_menus(BuildMenus& menus, ui::Widget& root, std::optional<units::Money> cash);
 
 } // namespace rct3::scene

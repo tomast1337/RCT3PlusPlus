@@ -6,7 +6,7 @@
 namespace rct3::park
 {
 
-    LandBought buy_land(save::model::TerrainGrid& grid, std::span<const save::model::Tile> tiles, LandBuy what, std::int32_t price, std::optional<std::int64_t> cash)
+    LandBought buy_land(save::model::TerrainGrid& grid, std::span<const save::model::Tile> tiles, LandBuy what, units::Money price, std::optional<units::Money> cash)
     {
         const save::model::Ownership on_sale = what == LandBuy::Land ? save::model::Ownership::ForSale : save::model::Ownership::ForSaleRights;
         LandBought out;

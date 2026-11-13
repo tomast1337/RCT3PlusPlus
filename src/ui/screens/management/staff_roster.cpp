@@ -307,7 +307,7 @@ namespace rct3::ui::screens::management
         r.discipline = &add_icon(p, "Discipline", { }, "Staff_DisciplineColumnIcon", top_right(kIcon + 4, y, kIcon, kIcon), text(strings, "StaffWindow_DisciplineSackHelp"));
         r.train = &add_icon(p, "Train", { }, std::format("Staff_Training{}Icon", std::clamp(l.training, 0, simulation::staff::kMostTraining)), top_right(2, y, kIcon, kIcon), text(strings, "StaffWindow_TrainHelp"));
         y += style_.line_height;
-        add_label(p, "Wage", money_text(units_.currency, l.wage), top_left(x, y, 60, style_.line_height), style_.text_colour).tooltip = text(strings, "StaffWindow_WageColumnHelp");
+        add_label(p, "Wage", money_text(units_.currency, units::Money { l.wage }), top_left(x, y, 60, style_.line_height), style_.text_colour).tooltip = text(strings, "StaffWindow_WageColumnHelp");
         r.wage_up = &add_icon(p, "WageUp", "SpinnerUp", { }, top_left(x + 64, y + 2, 20, 8), text(strings, "StaffWindow_WageColumnHelp"));
         r.wage_down = &add_icon(p, "WageDown", "SpinnerDown", { }, top_left(x + 64, y + 10, 20, 8), text(strings, "StaffWindow_WageColumnHelp"));
         r.wage_up->enabled = l.wage_level < simulation::staff::kMostWageLevel;
@@ -428,7 +428,7 @@ namespace rct3::ui::screens::management
                 else
                 {
                     std::u16string ask = text(strings, "StaffWindow_TrainingText1");
-                    const std::u16string amount = money_text(units_.currency, r.line.training_cost);
+                    const std::u16string amount = money_text(units_.currency, units::Money { r.line.training_cost });
                     if (const std::size_t at = ask.find(u"%AMOUNT%"); at != std::u16string::npos)
                         ask.replace(at, 8, amount);
                     say(ask + u" " + text(strings, "StaffWindow_TrainingText2"), true);

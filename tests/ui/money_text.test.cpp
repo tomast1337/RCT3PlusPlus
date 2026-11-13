@@ -5,6 +5,7 @@
 #include <limits>
 
 using namespace rct3::ui;
+namespace units = rct3::units;
 
 TEST_CASE("a currency is read from its strings")
 {
@@ -22,28 +23,28 @@ TEST_CASE("a currency is read from its strings")
 TEST_CASE("money is written with its hundredths and grouped by threes")
 {
     const Currency c { u"#", u"", u"." };
-    CHECK(money_text(c, 0) == u"#0.00");
-    CHECK(money_text(c, 7) == u"#0.07");
-    CHECK(money_text(c, 12345) == u"#123.45");
-    CHECK(money_text(c, 123456789) == u"#1,234,567.89");
-    CHECK(money_text(c, -100050) == u"-#1,000.50");
+    CHECK(money_text(c, units::Money { 0 }) == u"#0.00");
+    CHECK(money_text(c, units::Money { 7 }) == u"#0.07");
+    CHECK(money_text(c, units::Money { 12345 }) == u"#123.45");
+    CHECK(money_text(c, units::Money { 123456789 }) == u"#1,234,567.89");
+    CHECK(money_text(c, units::Money { -100050 }) == u"-#1,000.50");
 }
 
 TEST_CASE("a comma before the hundredths leaves the whole part ungrouped")
 {
     const Currency c { u"", u" Q", u"," };
-    CHECK(money_text(c, 123456789) == u"1234567,89 Q");
+    CHECK(money_text(c, units::Money { 123456789 }) == u"1234567,89 Q");
 }
 
 TEST_CASE("a currency without hundredths writes the stored number whole")
 {
     const Currency c { u"@", u"", u"" };
-    CHECK(money_text(c, 1234567) == u"@1,234,567");
-    CHECK(money_text(c, -5) == u"-@5");
+    CHECK(money_text(c, units::Money { 1234567 }) == u"@1,234,567");
+    CHECK(money_text(c, units::Money { -5 }) == u"-@5");
 }
 
 TEST_CASE("the smallest amount is written without overflow")
 {
     const Currency c { u"", u"", u"" };
-    CHECK(money_text(c, std::numeric_limits<std::int64_t>::min()) == u"-9,223,372,036,854,775,808");
+    CHECK(money_text(c, units::Money { std::numeric_limits<std::int64_t>::min() }) == u"-9,223,372,036,854,775,808");
 }

@@ -42,7 +42,7 @@ TEST_CASE("an award had lately keeps its opposite away")
     CHECK_FALSE(simulation::award_earned(2, dear, 1u << 3, dice));
     CHECK_FALSE(simulation::award_earned(3, dear, 0, dice));
     simulation::AwardFigures cheap = dear;
-    cheap.entrance_fee = 500;
+    cheap.entrance_fee = units::Money { 500 };
     CHECK(simulation::award_earned(3, cheap, 0, dice)); // Best value
     CHECK(simulation::award_is_fine(2));
     CHECK_FALSE(simulation::award_is_fine(3));

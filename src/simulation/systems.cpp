@@ -472,7 +472,7 @@ namespace rct3::simulation
         }
     } // namespace
 
-    Replacement replacement(const SimWorld& world, const std::function<std::int64_t(std::uint64_t object)>& price)
+    Replacement replacement(const SimWorld& world, const std::function<units::Money(std::uint64_t object)>& price)
     {
         Replacement out;
         for (const auto [e, item] : world.registry.view<const PathItem>().each())

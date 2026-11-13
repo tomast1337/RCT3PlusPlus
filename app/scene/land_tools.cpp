@@ -63,7 +63,7 @@ namespace rct3::scene
         /// is paid.
         bool pay(park::ParkScene& scene, std::int32_t cost, save::model::Tile tile)
         {
-            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, simulation::park::LedgerLine::Landscaping, false))
                 return false;
             LandTools& l = scene.land;
             if (!l.cost_at)
@@ -442,7 +442,7 @@ namespace rct3::scene
             const auto shaped = [&](save::model::TerrainGrid& g) { return rct3::park::ground::shape_ground(g, l.before, *l.shape, l.middle, reach, l.along, amount, l.passes); };
             auto trial = try_shape(scene, scene.grid, shaped);
             // Short of cash, the stroke goes as far as the cash pays for: what it moves grows evenly with it.
-            if (const float can = l.paid_for + static_cast<float>(std::max<std::int64_t>(scene.park.cash.value_or(0) - 1, 0)) / rct3::park::ground::kShapeCost; trial && scene.park.cash && trial->second > can)
+            if (const float can = l.paid_for + static_cast<float>(std::max<std::int64_t>(scene.park.cash.value_or(units::Money { }).value - 1, 0)) / rct3::park::ground::kShapeCost; trial && scene.park.cash && trial->second > can)
             {
                 simulation::park::cannot_pay(scene.park);
                 amount *= can / trial->second;
@@ -697,7 +697,7 @@ namespace rct3::scene
                 return;
             l.tile = tile;
             const save::model::Finance& prices = scene.park_model.finance;
-            const std::int32_t price = l.buying == rct3::park::LandBuy::Land ? prices.land_buy_cost : prices.rights_buy_cost;
+            const units::Money price { l.buying == rct3::park::LandBuy::Land ? prices.land_buy_cost : prices.rights_buy_cost };
             const rct3::park::LandBought bought = rct3::park::buy_land(scene.grid, rct3::park::ground::brush_tiles(tile, rct3::park::ground::brush_across(l.brush, scene.grid.tile_size_x), scene.grid.width, scene.grid.height), l.buying, price, scene.park.cash);
             if (bought.short_of_cash)
                 simulation::park::cannot_pay(scene.park);
@@ -705,7 +705,7 @@ namespace rct3::scene
                 return;
             // buy_land took no more than the cash could pay for.
             simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, bought.spent, simulation::park::LedgerLine::LandPurchase, false);
-            park::float_money(scene, park::tile_point(scene.grid, tile), -bought.spent);
+            park::float_money(scene, park::tile_point(scene.grid, tile), -bought.spent.value);
             land_owned_changed(scene, assets);
         }
 

@@ -261,10 +261,10 @@ namespace rct3::ui::screens::info
             // The projections are the game's own reckoning per hour, which the save does not keep.
             // Income, cost and profit, then the total apart under them.
             add(page, strings, "AttractionFinancesDialogLabel_Income", missing());
-            add(page, strings, "AttractionFinancesDialogLabel_RunningCost", money_text(units.currency, f.common->running_cost));
+            add(page, strings, "AttractionFinancesDialogLabel_RunningCost", money_text(units.currency, units::Money { f.common->running_cost }));
             add(page, strings, "AttractionFinancesDialogLabel_Profit", missing());
             page.lines.push_back({ });
-            add(page, strings, "AttractionFinancesDialogLabel_TotalProfit", money_text(units.currency, f.common->total_profit));
+            add(page, strings, "AttractionFinancesDialogLabel_TotalProfit", money_text(units.currency, units::Money { f.common->total_profit }));
             if (f.ride == nullptr)
                 return;
             const bool ride = f.ride->kind != save::model::RideKind::Special;
@@ -768,7 +768,7 @@ namespace rct3::ui::screens::info
                     if (k->paintable)
                         l.paints = { item.colours[0] };
                 }
-                l.help = filled(filled(text(strings, "StallItemLine_Profit"), u"%NAME%", l.name), u"%PROFIT%", cost ? money_text(units.currency, item.price - *cost) : missing());
+                l.help = filled(filled(text(strings, "StallItemLine_Profit"), u"%NAME%", l.name), u"%PROFIT%", cost ? money_text(units.currency, units::Money { item.price - *cost }) : missing());
                 m.lines.push_back(std::move(l));
             }
             page.menu = std::move(m);
@@ -890,7 +890,7 @@ namespace rct3::ui::screens::info
     {
         InfoPage page;
         add(page, strings, "AttractionResultsDialogLabel_SpaceRequired", ascii(std::format("{} x {}", design.width, design.length)));
-        add(page, strings, "AttractionResultsDialogLabel_Cost", money_text(units.currency, design.cost));
+        add(page, strings, "AttractionResultsDialogLabel_Cost", money_text(units.currency, units::Money { design.cost }));
         if (design.assessment.valid)
         {
             add(page, strings, "AttractionResultsDialogLabel_Excitement", rating(design.assessment.excitement, strings));

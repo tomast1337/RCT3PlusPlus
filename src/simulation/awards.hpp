@@ -12,6 +12,7 @@
 #include "save/model/park.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <map>
@@ -39,11 +40,11 @@ namespace rct3::simulation
     struct AwardFigures
     {
         std::int32_t guests = 0;
-        std::int32_t rating = 0;       ///< 0 to 1000
-        bool money = false;            ///< The park counts its money
-        bool fee_charged = false;      ///< And the player sets the entrance fee
-        std::int64_t entrance_fee = 0; ///< Hundredths
-        std::int64_t fair_fee = 0;     ///< What guests think the park is worth getting in, in hundredths
+        std::int32_t rating = 0;  ///< 0 to 1000
+        bool money = false;       ///< The park counts its money
+        bool fee_charged = false; ///< And the player sets the entrance fee
+        units::Money entrance_fee { };
+        units::Money fair_fee { }; ///< What guests think the park is worth getting in
         /// By kind of thought (as ThoughtKind numbers them): how many guests have had it lately.
         std::map<std::int32_t, std::int32_t> thoughts { };
         std::int32_t old_litter = 0; ///< Pieces lying about long

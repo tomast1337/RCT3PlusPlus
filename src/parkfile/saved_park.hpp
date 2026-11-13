@@ -58,6 +58,7 @@
 #include "simulation/sim_world.hpp"
 #include "simulation/staff/patrol.hpp"
 #include "simulation/swimming.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -75,8 +76,8 @@ namespace rct3::parkfile
     /// Where the park's money and calendar stand.
     struct SavedProgress
     {
-        std::optional<std::int64_t> cash; ///< Hundredths; none when money never runs out
-        std::int64_t loan = 0;
+        std::optional<units::Money> cash; ///< None when money never runs out
+        units::Money loan { };
         std::optional<float> rating;
         std::optional<simulation::park::RatingParts> rating_parts;
         float time = 0;

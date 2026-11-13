@@ -45,7 +45,6 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
     const across = c.poolSides.map((s) => ({ col: s.col + kSteps[s.side][0], row: s.row + kSteps[s.side][1] }));
     await ui.click("design_placing/close");
     await frames(5);
-    const rides_tab = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
     if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(rides_tab);
     await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
     await ui.click("tools/Rides/Obj_Pools");

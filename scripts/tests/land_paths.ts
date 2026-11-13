@@ -59,7 +59,8 @@ await ui.click("tools/Land/Land");
 await ui.click("tools/Land/Land_Brush_Height");
 await until(() => ui.find("land_panel/Land_Vertex") !== undefined, 60, "the land panel's tile tab");
 await frames(10); // Let the panel finish opening
-if (!ui.find("land_panel/body/Land_Vertex_Neighbour")) await ui.click("land_panel/Land_Vertex"); // The panel may open on the tile tab already
+// The panel may open on the tile tab already
+if (!ui.find("land_panel/body/Land_Vertex_Neighbour")) await ui.click("land_panel/Land_Vertex");
 await until(() => ui.find("land_panel/body/Land_Vertex_Neighbour") !== undefined, 60, "the tile tools");
 await ui.click("land_panel/body/Land_Vertex_Neighbour");
 

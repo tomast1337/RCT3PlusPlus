@@ -44,7 +44,8 @@ let worst_change = 0;
 let closest = Infinity;
 let off_water = 0;
 let moving = 0;
-const strokes = new Map<string, { frames: number; turned: number }>(); // By stroke: frames rowed, radians turned meanwhile
+// By stroke: frames rowed, radians turned meanwhile
+const strokes = new Map<string, { frames: number; turned: number }>();
 const last = hires.map(({ i }) => cars(i));
 const last_step: ({ x: number; z: number } | undefined)[][] = hires.map(({ i }) => cars(i).map(() => undefined));
 for (let n = 0; n < kFrames; ++n) {

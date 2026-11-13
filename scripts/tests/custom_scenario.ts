@@ -3,6 +3,8 @@
 // Starts a custom scenario from the first scenario to start from, as the Custom Scenario menu's New does, and
 // saves it: the save goes with the custom scenarios. Needs a park in the data folder's new_scenarios/, which
 // `./nob script` puts there.
+//
+//   ./nob script scripts/tests/custom_scenario.ts -- --no-audio
 
 export {};
 

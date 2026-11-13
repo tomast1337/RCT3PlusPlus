@@ -162,7 +162,8 @@ pointer.move(0.5, 0.5);
 pointer.wheel(2);
 await frames(10);
 after = camera.view();
-expect(!near(after.pitch, before.pitch) && near(after.distance, before.distance, 1), "advanced 0: the wheel to tilt"); // The last zoom may still be rolling in
+// The last zoom may still be rolling in
+expect(!near(after.pitch, before.pitch) && near(after.distance, before.distance, 1), "advanced 0: the wheel to tilt");
 await drag(["right", "left"], [0.2, 0]);
 expect(dist(camera.view().target, after.target) > 0.5, "advanced 0: right and left to slide");
 

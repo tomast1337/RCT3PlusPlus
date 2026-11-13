@@ -13,6 +13,7 @@
 
 #include "park/boundary_fence.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -46,16 +47,16 @@ namespace rct3::park
     /// Takes the tiles from `a` to `b` that `removable` allows out of their enclosures.
     void unenclose(save::model::EnclosureMap& map, save::model::Tile a, save::model::Tile b, std::function_ref<bool(save::model::Tile)> removable);
 
-    /// What a kind of fence costs, a length at a time, in hundredths of the money unit.
+    /// What a kind of fence costs, a length at a time.
     struct FencePrice
     {
-        std::int64_t build = 0;
-        std::int64_t refund = 0; ///< Paid back as a length comes down; negative
+        units::Money build { };
+        units::Money refund { }; ///< Paid back as a length comes down; negative
     };
 
     /// What going from enclosures `before` to `after` costs: the price of every length of fence put up, and
     /// the refund of every length taken down.
-    [[nodiscard]] std::int64_t fence_cost(const save::model::EnclosureMap& before, const save::model::EnclosureMap& after, std::function_ref<FencePrice(std::string_view fence)> price);
+    [[nodiscard]] units::Money fence_cost(const save::model::EnclosureMap& before, const save::model::EnclosureMap& after, std::function_ref<FencePrice(std::string_view fence)> price);
 
     /// The enclosure all `span` tiles from `corner` are in; -1 when they are not all in the same one.
     [[nodiscard]] std::int32_t enclosure_under(const save::model::EnclosureMap& map, save::model::Tile corner, std::array<std::int32_t, 2> span) noexcept;

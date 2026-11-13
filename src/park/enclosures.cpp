@@ -241,9 +241,9 @@ namespace rct3::park
         regroup(map);
     }
 
-    std::int64_t fence_cost(const save::model::EnclosureMap& before, const save::model::EnclosureMap& after, std::function_ref<FencePrice(std::string_view fence)> price)
+    units::Money fence_cost(const save::model::EnclosureMap& before, const save::model::EnclosureMap& after, std::function_ref<FencePrice(std::string_view fence)> price)
     {
-        std::int64_t cost = 0;
+        units::Money cost { };
         for (std::int32_t row = 0; row < std::max(before.rows, after.rows); ++row)
         {
             for (std::int32_t col = 0; col < std::max(before.cols, after.cols); ++col)

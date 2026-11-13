@@ -330,7 +330,7 @@ namespace rct3::scene
                             .col = tile->col,
                             .row = tile->row,
                             .side = side,
-                            .refund = loaded ? scene.models.at(rct3::park::object::model_key(model)).removal_cost : 0,
+                            .refund = units::Money { loaded ? scene.models.at(rct3::park::object::model_key(model)).removal_cost : 0 },
                             .fit = fit,
                         });
                     ++scene.built;

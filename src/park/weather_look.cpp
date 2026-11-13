@@ -62,20 +62,26 @@ namespace rct3::park
         look.gloom = toward(look.gloom, aim.gloom, kEase * seconds);
         look.flash = std::max(look.flash - kFlashFade * seconds, 0.0f);
 
-        if (look.flicker >= 0 && (look.flicker -= seconds) < 0)
+        if (look.flicker && (look.flicker->value -= seconds) < 0)
+        {
             look.flash = std::max(look.flash, kFlickerBrightness);
+            look.flicker.reset();
+        }
         // Strokes come only once the storm has darkened the sky.
-        if (aim.lightning && look.gloom >= aim.gloom * 0.9f && (look.to_flash -= seconds) <= 0)
+        if (aim.lightning && look.gloom >= aim.gloom * 0.9f && (look.to_flash.value -= seconds) <= 0)
         {
             look.flash = 1;
-            look.flicker = between(dice, 0.08f, 0.2f);
-            look.to_thunder = between(dice, 0.4f, 3.0f); // Farther strokes are heard later
-            look.to_flash = between(dice, kFewestStrokeSeconds, kMostStrokeSeconds);
+            look.flicker = units::Seconds { between(dice, 0.08f, 0.2f) };
+            look.to_thunder = units::Seconds { between(dice, 0.4f, 3.0f) }; // Farther strokes are heard later
+            look.to_flash = { between(dice, kFewestStrokeSeconds, kMostStrokeSeconds) };
         }
         else if (!aim.lightning)
-            look.to_flash = kFewestStrokeSeconds / 2; // The first stroke soon after a storm sets in
-        if (look.to_thunder >= 0 && (look.to_thunder -= seconds) < 0)
+            look.to_flash = { kFewestStrokeSeconds / 2 }; // The first stroke soon after a storm sets in
+        if (look.to_thunder && (look.to_thunder->value -= seconds) < 0)
+        {
+            look.to_thunder.reset();
             return true;
+        }
         return false;
     }
 

@@ -735,7 +735,7 @@ namespace rct3::scene::park
                     const float length = simulation::kTuning.surroundings.glancing.value;
                     const float into = std::clamp(length - glance->left.value + scene.sim_time, 0.0f, length);
                     const float turn = std::remainder(std::atan2(seen->x - at.position.x, seen->z - at.position.z) - at.heading.value, glm::two_pi<float>());
-                    pose.head_turn = std::clamp(turn, -kNeckTurn, kNeckTurn) * std::sin(glm::pi<float>() * into / length);
+                    pose.head_turn = { std::clamp(turn, -kNeckTurn, kNeckTurn) * std::sin(glm::pi<float>() * into / length) };
                 }
         }
         return pose;

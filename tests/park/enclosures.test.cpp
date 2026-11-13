@@ -38,7 +38,7 @@ namespace
 
     FencePrice wood(std::string_view)
     {
-        return { .build = 500, .refund = -400 };
+        return { .build = units::Money { 500 }, .refund = units::Money { -400 } };
     }
 
 } // namespace
@@ -115,7 +115,7 @@ TEST_CASE("enclosures: touching areas join only when they have the same fence")
     CHECK(enclose(map, g, { 4, 0 }, { 4, 1 }, "Chain", any) == 1);
     CHECK(map.fences == std::vector<std::string> { "Wood", "Chain" });
     // A fence each along the side they share: 12 lengths round the wood one, 6 round the chain one.
-    CHECK(fence_cost({ }, map, [](std::string_view) { return FencePrice { .build = 1 }; }) == 18);
+    CHECK(fence_cost({ }, map, [](std::string_view) { return FencePrice { .build = units::Money { 1 } }; }).value == 18);
     // Corner to corner is apart.
     CHECK(enclose(map, g, { 5, 2 }, { 5, 2 }, "Chain", any) == 2);
 }
@@ -152,15 +152,15 @@ TEST_CASE("enclosures: fence put up is paid for, fence taken down paid back")
     save::model::EnclosureMap none;
     save::model::EnclosureMap map;
     (void)enclose(map, g, { 0, 0 }, { 1, 1 }, "Wood", any);
-    CHECK(fence_cost(none, map, wood) == 8 * 500);
+    CHECK(fence_cost(none, map, wood).value == 8 * 500);
     // Joining: four lengths more, the two lengths between come down.
     save::model::EnclosureMap bigger = map;
     (void)enclose(bigger, g, { 2, 0 }, { 2, 1 }, "Wood", any);
-    CHECK(fence_cost(map, bigger, wood) == 4 * 500 - 2 * 400);
+    CHECK(fence_cost(map, bigger, wood).value == 4 * 500 - 2 * 400);
     // Taking out a corner tile: its two lengths come down, two go up round the gap.
     save::model::EnclosureMap smaller = map;
     unenclose(smaller, { 0, 0 }, { 0, 0 }, any);
-    CHECK(fence_cost(map, smaller, wood) == 2 * 500 - 2 * 400);
+    CHECK(fence_cost(map, smaller, wood).value == 2 * 500 - 2 * 400);
 }
 
 TEST_CASE("enclosures: an animal house fits only wholly inside one enclosure")

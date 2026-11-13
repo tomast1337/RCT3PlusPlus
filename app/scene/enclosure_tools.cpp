@@ -52,7 +52,7 @@ namespace rct3::scene
             if (items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
                 for (const rct3::park::BuildItem& i : items.get())
                     if (i.kind == rct3::park::BuildKind::EnclosureFence && i.symbol == fence)
-                        return { .build = i.price, .refund = i.refund };
+                        return { .build = units::Money { i.price }, .refund = units::Money { i.refund } };
             return { };
         }
 
@@ -123,7 +123,7 @@ namespace rct3::scene
             else
                 (void)rct3::park::enclose(map, scene.grid, *t.corner, *t.other, t.item->symbol, free);
             const auto price = [&](std::string_view fence) { return fence_price(scene, fence); };
-            const std::int64_t cost = rct3::park::fence_cost(scene.enclosures, map, price);
+            const std::int64_t cost = rct3::park::fence_cost(scene.enclosures, map, price).value;
             return t.marked.emplace(park::EnclosureTool::Marked { .area = area, .enclosures = std::move(map), .cost = cost });
         }
 

@@ -702,8 +702,8 @@ TEST_CASE("pools: an extra fits where its square offers all it takes and no othe
 TEST_CASE("pools: extras go with their square, refunded")
 {
     PoolMap map = ringed(1, 1);
-    map.extras.push_back({ .col = 0, .row = 0, .refund = -30, .fit = { .paved_middle = true } });
-    map.extras.push_back({ .col = 2, .row = 2, .refund = -40, .fit = { .paved_middle = true } });
+    map.extras.push_back({ .col = 0, .row = 0, .refund = units::Money { -30 }, .fit = { .paved_middle = true } });
+    map.extras.push_back({ .col = 2, .row = 2, .refund = units::Money { -40 }, .fit = { .paved_middle = true } });
     CHECK(take_up_pool(map, kPrices, { 0, 0 }, { 0, 0 }) == -60 - 2 * 5 - 30);
     REQUIRE(map.extras.size() == 1);
     PoolSquare water { .col = 2, .row = 2, .kind = PoolKind::Water, .surface = 4, .depth = 2 };

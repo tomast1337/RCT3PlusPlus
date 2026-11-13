@@ -143,7 +143,7 @@ namespace rct3::parkfile
         float heading = 0;
         std::optional<simulation::staff::Patrol> patrol { };
         std::uint32_t mended = 0;    ///< Broken path items mended
-        float think = 0;             ///< Seconds to their next thought
+        units::Seconds think { };    ///< To their next thought
         std::uint32_t miserable = 0; ///< Thoughts in a row had while miserable, towards quitting
     };
 
@@ -168,7 +168,7 @@ namespace rct3::parkfile
         simulation::KeeperJob job = simulation::KeeperJob::Idle;
         glm::vec3 goal { 0.0f };
         std::int32_t target = -1; ///< Of SavedAnimals::dung while clearing, ::animals while catching, ::houses while filling; -1 none
-        float busy = 0;           ///< Seconds
+        units::Seconds busy { };
     };
 
     /// An animal, standing where it stood.

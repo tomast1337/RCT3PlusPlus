@@ -18,12 +18,12 @@ namespace rct3::simulation
         constexpr const AnimalRates& kRates = kAnimalRates;
 
         /// Takes `pose` towards `goal` at `pace` for `dt`, over the ground; true once there.
-        bool walk_towards(Pose& pose, glm::vec3 goal, float pace, units::Seconds dt, const AnimalGround& ground)
+        bool walk_towards(Pose& pose, glm::vec3 goal, units::Pace pace, units::Seconds dt, const AnimalGround& ground)
         {
             const glm::vec2 from { pose.position.x, pose.position.z };
             const glm::vec2 to { goal.x, goal.z };
             const float left = glm::distance(from, to);
-            const float step = pace * dt.value;
+            const float step = pace.value * dt.value;
             const glm::vec2 at = left <= step ? to : from + (to - from) * (step / left);
             if (left > 0)
                 pose.heading.value = std::atan2(to.x - from.x, to.y - from.y);

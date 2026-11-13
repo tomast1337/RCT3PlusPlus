@@ -302,7 +302,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     CHECK(people.staff[0].patrol->zone == 7);
     // How far they are towards quitting, their next thought and what they mended.
     CHECK(people.staff[0].mended == 5);
-    CHECK(people.staff[0].think == 12.5f);
+    CHECK(people.staff[0].think.value == 12.5f);
     CHECK(people.staff[0].miserable == 3);
 
     SimWorld loaded;

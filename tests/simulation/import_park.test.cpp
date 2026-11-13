@@ -341,8 +341,8 @@ TEST_CASE("a tracked ride leaves the station as its saved operating settings say
     o.max_wait = -1;
     const simulation::Departure d = simulation::departure_of(o);
     CHECK(d.wait_for == simulation::LoadWait::ThreeQuarters);
-    CHECK(d.min_wait == 10);
-    CHECK(d.max_wait == -1);
+    CHECK(d.min_wait->value == 10);
+    CHECK_FALSE(d.max_wait);
     o.wait_for_load = 9;
     CHECK(simulation::departure_of(o).wait_for == simulation::LoadWait::Any);
 }

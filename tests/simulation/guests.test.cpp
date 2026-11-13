@@ -999,15 +999,15 @@ TEST_CASE("a party stops now and then to stand in a ring facing in, then walks o
 
 TEST_CASE("a train leaves when its wait is over and its load is in, or after its longest wait whatever its load")
 {
-    const Departure half { .wait_for = LoadWait::Half, .min_wait = 10, .max_wait = 60 };
-    CHECK_FALSE(departs(half, 8, 8, 5));                                // Full, but not yet waited its least
-    CHECK(departs(half, 4, 8, 10));                                     // Half full, waited enough
-    CHECK_FALSE(departs(half, 3, 8, 30));                               // Not half full
-    CHECK(departs(half, 0, 8, 60));                                     // Its longest wait: leaves empty
-    CHECK(departs(half, 3, 7, 10));                                     // Half of 7 seats is 3, the odd seat left over
-    CHECK(departs({ .wait_for = LoadWait::Quarter }, 1, 3, 0));         // A quarter of 3 seats is none, so one rider
-    CHECK_FALSE(departs({ .min_wait = 20, .max_wait = 10 }, 0, 8, 15)); // Its least wait comes first
-    CHECK_FALSE(departs({ }, 0, 8, 1000));                              // Any load waits for someone, with no longest wait
+    const Departure half { .wait_for = LoadWait::Half, .min_wait = units::Seconds { 10 }, .max_wait = units::Seconds { 60 } };
+    CHECK_FALSE(departs(half, 8, 8, 5));                                                                      // Full, but not yet waited its least
+    CHECK(departs(half, 4, 8, 10));                                                                           // Half full, waited enough
+    CHECK_FALSE(departs(half, 3, 8, 30));                                                                     // Not half full
+    CHECK(departs(half, 0, 8, 60));                                                                           // Its longest wait: leaves empty
+    CHECK(departs(half, 3, 7, 10));                                                                           // Half of 7 seats is 3, the odd seat left over
+    CHECK(departs({ .wait_for = LoadWait::Quarter }, 1, 3, 0));                                               // A quarter of 3 seats is none, so one rider
+    CHECK_FALSE(departs({ .min_wait = units::Seconds { 20 }, .max_wait = units::Seconds { 10 } }, 0, 8, 15)); // Its least wait comes first
+    CHECK_FALSE(departs({ }, 0, 8, 1000));                                                                    // Any load waits for someone, with no longest wait
     CHECK(departs({ }, 1, 8, 0));
 }
 
@@ -1046,7 +1046,7 @@ TEST_CASE("a ride waiting for a full load sends a full train when the queue is l
         train.kinds = { Stretch::Plain, Stretch::Plain };
         train.fixed_speed = 5;
         r.emplace<Trains>(ride, Trains { { train }, { { } } });
-        r.emplace<Departure>(ride, Departure { .wait_for = LoadWait::Full, .max_wait = 30 });
+        r.emplace<Departure>(ride, Departure { .wait_for = LoadWait::Full, .max_wait = units::Seconds { 30 } });
         for (int i = 0; i < guests; ++i)
             r.get<Errand>(park.guest({ 4, 0 }, { .cash = 1000 })) = { ErrandKind::Heading, ride, 0 };
         return ride;

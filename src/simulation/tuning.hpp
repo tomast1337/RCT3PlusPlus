@@ -311,10 +311,10 @@ namespace rct3::simulation::tuning
         units::Seconds sweep { 2 }; ///< A piece of litter
         units::Seconds empty { 4 }; ///< A bin
         units::Seconds mend { 8 };
-        units::Seconds water { 6 };     ///< A flower bed
-        units::Share empty_at { 0.5f }; ///< Of a bin's room filled before a handyman empties it
-        units::Seconds dry { 1200 };    ///< A full flower bed's water lasts
-        float garden_reach = 60;        ///< Metres, as the crow flies, a handyman goes to water a dry flower bed
+        units::Seconds water { 6 };          ///< A flower bed
+        units::Share empty_at { 0.5f };      ///< Of a bin's room filled before a handyman empties it
+        units::Seconds dry { 1200 };         ///< A full flower bed's water lasts
+        units::Distance garden_reach { 60 }; ///< As the crow flies, a handyman goes to water a dry flower bed
     };
 
     /// Ride wear, mechanics and flow. To tune against saved rides' reliability and downtime.

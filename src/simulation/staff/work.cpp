@@ -572,7 +572,7 @@ namespace rct3::simulation::staff
                                  mine = b;
                          if (mine == entt::null)
                          {
-                             float best = kTuning.handymen.garden_reach;
+                             float best = kTuning.handymen.garden_reach.value;
                              for (const auto [b, bed] : beds.each())
                                  if (bed.water <= 0 && bed.handyman == entt::null && bed.node < paths.nodes().size() && !paths.nodes()[bed.node].removed && (patrol == nullptr || patrol->covers(paths.nodes()[bed.node].tile)))
                                      if (const float d = glm::distance(paths.centre(bed.node), paths.centre(at)); d <= best)

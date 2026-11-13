@@ -119,10 +119,10 @@ namespace rct3::simulation
     struct Departure
     {
         LoadWait wait_for = LoadWait::Any;
-        std::int32_t min_wait = -1;    ///< Seconds it waits before it looks at its load; -1 none
-        std::int32_t max_wait = -1;    ///< Seconds after which it leaves whatever its load, even empty; -1 none
-        bool leave_on_arrival = false; ///< Leaves, after its least wait, once the next train is held up behind it
-        bool sync = false;             ///< Waits, ready, to leave with the trains at the stations beside it that do the same
+        std::optional<units::Seconds> min_wait { }; ///< It waits before it looks at its load; none: it looks at once
+        std::optional<units::Seconds> max_wait { }; ///< After which it leaves whatever its load, even empty; none: it waits for its load
+        bool leave_on_arrival = false;              ///< Leaves, after its least wait, once the next train is held up behind it
+        bool sync = false;                          ///< Waits, ready, to leave with the trains at the stations beside it that do the same
     };
 
     /// The rides with a station on a tile beside one of this ride's, on the same level.

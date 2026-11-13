@@ -90,14 +90,14 @@ TEST_CASE("a ride's departure settings are kept, and a load the format does not 
 {
     SimWorld world;
     const auto ride = world.registry.create();
-    world.registry.emplace<simulation::Departure>(ride, simulation::Departure { .wait_for = simulation::LoadWait::Half, .min_wait = 10, .max_wait = -1 });
+    world.registry.emplace<simulation::Departure>(ride, simulation::Departure { .wait_for = simulation::LoadWait::Half, .min_wait = units::Seconds { 10 } });
     auto bytes = parkfile::write_park_file(world);
     const auto read = parkfile::read_park_file(bytes);
     REQUIRE_MESSAGE(read, read.error());
     const auto& d = read->registry.get<simulation::Departure>(ride);
     CHECK(d.wait_for == simulation::LoadWait::Half);
-    CHECK(d.min_wait == 10);
-    CHECK(d.max_wait == -1);
+    CHECK(d.min_wait->value == 10);
+    CHECK_FALSE(d.max_wait);
     CHECK(parkfile::write_park_file(*read) == bytes);
     // The load is the byte after the record's entity, 9 from the end.
     bytes[bytes.size() - 9] = std::byte { 5 };

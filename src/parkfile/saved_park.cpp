@@ -245,7 +245,7 @@ namespace rct3::parkfile
             if (paged)
                 staff::take_saved_work(staff, people.model.staff[static_cast<std::size_t>(w.look)]);
             staff.mended = w.mended;
-            staff.think = units::Seconds { w.think };
+            staff.think = w.think;
             staff.miserable = w.miserable;
             r.emplace<Staff>(e, staff);
             r.emplace<Pose>(e, w.position, w.heading, w.position, w.heading);
@@ -299,7 +299,7 @@ namespace rct3::parkfile
             saved.job = duty.job;
             saved.goal = duty.goal;
             saved.target = target != at.end() ? target->second : -1;
-            saved.busy = duty.busy.value;
+            saved.busy = duty.busy;
         }
         return out;
     }

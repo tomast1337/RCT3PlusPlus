@@ -149,8 +149,10 @@ namespace rct3::parkfile
             static void write(Writer& w, const simulation::Departure& d)
             {
                 w.number(std::to_underlying(d.wait_for));
-                w.number(d.min_wait);
-                w.number(d.max_wait);
+                // The file keeps a wait as whole seconds, -1 for none.
+                const auto whole = [](std::optional<units::Seconds> s) { return s ? static_cast<std::int32_t>(s->value) : std::int32_t { -1 }; };
+                w.number(whole(d.min_wait));
+                w.number(whole(d.max_wait));
             }
             static std::expected<simulation::Departure, std::string> read(Reader& r)
             {
@@ -158,8 +160,12 @@ namespace rct3::parkfile
                 if (wait_for > std::to_underlying(simulation::LoadWait::Any))
                     return std::unexpected(std::format("unknown load to wait for {}", wait_for));
                 simulation::Departure d { .wait_for = static_cast<simulation::LoadWait>(wait_for) };
-                d.min_wait = r.number<std::int32_t>();
-                d.max_wait = r.number<std::int32_t>();
+                const auto wait = [&r] {
+                    const auto n = r.number<std::int32_t>();
+                    return n >= 0 ? std::optional(units::Seconds { static_cast<float>(n) }) : std::nullopt;
+                };
+                d.min_wait = wait();
+                d.max_wait = wait();
                 return d;
             }
         };

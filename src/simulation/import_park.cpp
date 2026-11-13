@@ -1770,7 +1770,8 @@ namespace rct3::simulation
     Departure departure_of(const save::model::OperatingOptions& options)
     {
         const bool listed = options.wait_for_load >= 0 && options.wait_for_load <= static_cast<std::int32_t>(LoadWait::Any);
-        return { .wait_for = listed ? static_cast<LoadWait>(options.wait_for_load) : LoadWait::Any, .min_wait = std::max(options.min_wait, -1), .max_wait = std::max(options.max_wait, -1), .leave_on_arrival = options.leave_if_other_train_enters_station, .sync = options.sync_trains };
+        const auto wait_of = [](std::int32_t seconds) { return seconds >= 0 ? std::optional(units::Seconds { static_cast<float>(seconds) }) : std::nullopt; };
+        return { .wait_for = listed ? static_cast<LoadWait>(options.wait_for_load) : LoadWait::Any, .min_wait = wait_of(options.min_wait), .max_wait = wait_of(options.max_wait), .leave_on_arrival = options.leave_if_other_train_enters_station, .sync = options.sync_trains };
     }
 
     std::size_t board_saved_riders(SimWorld& world, const save::model::PeopleModel& people, std::span<const entt::entity> guests, const save::model::RideModel& saved, std::span<const entt::entity> rides)

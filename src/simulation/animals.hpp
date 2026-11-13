@@ -122,8 +122,8 @@ namespace rct3::simulation
     struct AnimalRates
     {
         units::Seconds crated { 8 };      ///< In the crate before it opens
-        float animal_pace = 1.4f;         ///< World units a second an animal walks
-        float keeper_pace = 1.8f;         ///< And a keeper
+        units::Pace animal_pace { 1.4f }; ///< An animal walks at
+        units::Pace keeper_pace { 1.8f }; ///< And a keeper
         units::Seconds idle { 6 };        ///< Longest anybody stands about between strolls
         units::Seconds hungry { 400 };    ///< From fed to starving
         units::Seconds thirsty { 300 };   ///< From watered to parched

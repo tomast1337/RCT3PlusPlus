@@ -116,9 +116,9 @@ namespace rct3::simulation
 
     bool departs(const Departure& departure, std::size_t riders, std::size_t capacity, float waited)
     {
-        if (departure.min_wait >= 0 && waited < static_cast<float>(departure.min_wait))
+        if (departure.min_wait && waited < departure.min_wait->value)
             return false;
-        if (departure.max_wait >= 0 && waited >= static_cast<float>(departure.max_wait))
+        if (departure.max_wait && waited >= departure.max_wait->value)
             return true;
         // Quarters of the seats it waits for, the odd seat left over; any load is one rider.
         const auto quarters = 4 - static_cast<std::size_t>(departure.wait_for);
@@ -847,7 +847,7 @@ namespace rct3::simulation
             // and another is held up behind it (within a centimetre: positions far round a long track lose that much
             // to rounding).
             const auto* leaving = r.try_get<Departure>(e);
-            if (fleet != nullptr && standing[0] && leaving != nullptr && leaving->leave_on_arrival && ride.loading.value >= static_cast<float>(leaving->min_wait) && !fleet->trains[*standing[0]].running && !upkeep.broken && std::ranges::none_of(fleet->riders[*standing[0]], on_their_way))
+            if (fleet != nullptr && standing[0] && leaving != nullptr && leaving->leave_on_arrival && (!leaving->min_wait || ride.loading.value >= leaving->min_wait->value) && !fleet->trains[*standing[0]].running && !upkeep.broken && std::ranges::none_of(fleet->riders[*standing[0]], on_their_way))
             {
                 for (std::size_t t = 0; t < fleet->trains.size(); ++t)
                     if (t != *standing[0] && fleet->trains[t].running && room_ahead(fleet->trains, t) < 0.01f)

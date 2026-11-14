@@ -42,6 +42,7 @@
 // The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once
 
+#include "core/none_as_minus_one.hpp"
 #include "park/camera.hpp"
 #include "park/pools/pools.hpp"
 #include "save/model/park.hpp"
@@ -116,7 +117,7 @@ namespace rct3::parkfile
 
     struct SavedGuest
     {
-        std::int32_t look = -1; ///< Place in SavedPeople::model.guests of the guest drawn for them; -1 none
+        core::NoneAsMinusOne<std::int32_t> look { }; ///< Place in SavedPeople::model.guests of the guest drawn for them
         simulation::Visitor visitor;
         glm::vec3 position { 0.0f };
         float heading = 0;
@@ -124,7 +125,7 @@ namespace rct3::parkfile
         simulation::Mood mood;
         std::int64_t cash = 0;
         std::optional<simulation::Taste> taste { };
-        std::int32_t party = -1; ///< Guests with the same number go round together; -1 alone
+        core::NoneAsMinusOne<std::int32_t> party { }; ///< Guests with the same number go round together; none alone
         bool leader = false;
         std::optional<SavedSwim> swim { };              ///< In a pool
         std::optional<simulation::Outside> outside { }; ///< On the way between a spawn point and the gate
@@ -133,7 +134,7 @@ namespace rct3::parkfile
     /// A member of staff at work.
     struct SavedWorker
     {
-        std::int32_t look = -1; ///< Place in SavedPeople::model.staff; -1 none
+        core::NoneAsMinusOne<std::int32_t> look { }; ///< Place in SavedPeople::model.staff
         simulation::StaffRole role = simulation::StaffRole::Other;
         std::int64_t wage = 0;
         std::int32_t wage_level = 2;
@@ -162,14 +163,14 @@ namespace rct3::parkfile
         save::model::ObjectiveSet objectives { };
     };
 
-    /// An animal house, and which of SavedPeople::staff keeps it; -1 for none, with the job they are at.
+    /// An animal house, and which of SavedPeople::staff keeps it, if any, with the job they are at.
     struct SavedAnimalHouse
     {
         simulation::AnimalHouse house { };
-        std::int32_t keeper = -1;
+        core::NoneAsMinusOne<std::int32_t> keeper { };
         simulation::KeeperJob job = simulation::KeeperJob::Idle;
         glm::vec3 goal { 0.0f };
-        std::int32_t target = -1; ///< Of SavedAnimals::dung while clearing, ::animals while catching, ::houses while filling; -1 none
+        core::NoneAsMinusOne<std::int32_t> target { }; ///< Of SavedAnimals::dung while clearing, ::animals while catching, ::houses while filling
         units::Seconds busy { };
     };
 

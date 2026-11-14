@@ -906,8 +906,8 @@ namespace rct3::scene::park
                         std::vector<entt::entity> out(count, entt::null);
                         for (std::size_t i = 0; i < placed.size() && i < records.size(); ++i)
                         {
-                            if (const std::int32_t look = records[i].look; look >= 0 && std::cmp_less(look, count))
-                                out[static_cast<std::size_t>(look)] = placed[i];
+                            if (const auto look = records[i].look; look && std::cmp_less(*look, count))
+                                out[static_cast<std::size_t>(*look)] = placed[i];
                         }
                         return out;
                     };

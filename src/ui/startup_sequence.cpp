@@ -11,7 +11,7 @@ namespace rct3::ui
     {
         std::vector<StartupStep> steps;
         if (options.simplified_chinese)
-            steps.push_back({ "SChinese_WarningScreen", kStartupWarningSeconds, false });
+            steps.push_back({ "SChinese_WarningScreen", kStartupWarning, false });
         steps.push_back({ "AtariLogo" }); // The publisher's, in early releases only
         steps.push_back({ "FrontierLogo" });
         steps.push_back({ "RCT3Logo" });
@@ -27,7 +27,7 @@ namespace rct3::ui
     {
     }
 
-    void StartupSequence::update(float seconds, bool skip)
+    void StartupSequence::update(units::Seconds elapsed, bool skip)
     {
         if (finished())
             return;
@@ -37,11 +37,11 @@ namespace rct3::ui
             return;
         }
         // A long frame may finish a step and run into the next one.
-        float left = seconds;
+        units::Seconds left = elapsed;
         while (!finished())
         {
-            const float until_fade_out = steps_[step_].seconds - elapsed_;
-            const float until_next = until_fade_out + kStartupFadeSeconds;
+            const units::Seconds until_fade_out = steps_[step_].shown - elapsed_;
+            const units::Seconds until_next = until_fade_out + kStartupFade;
             if (left < until_next)
             {
                 elapsed_ += left;
@@ -49,7 +49,7 @@ namespace rct3::ui
             }
             left -= until_next;
             ++step_;
-            elapsed_ = 0;
+            elapsed_ = { };
         }
     }
 
@@ -57,8 +57,8 @@ namespace rct3::ui
     {
         if (finished())
             return std::nullopt;
-        const float fade_in = std::min(elapsed_ / kStartupFadeSeconds, 1.0f);
-        const float fade_out = 1.0f - std::max(elapsed_ - steps_[step_].seconds, 0.0f) / kStartupFadeSeconds;
+        const float fade_in = std::min(elapsed_.value / kStartupFade.value, 1.0f);
+        const float fade_out = 1.0f - std::max((elapsed_ - steps_[step_].shown).value, 0.0f) / kStartupFade.value;
         return StartupFrame { steps_[step_].image, std::clamp(std::min(fade_in, fade_out), 0.0f, 1.0f), elapsed_ };
     }
 

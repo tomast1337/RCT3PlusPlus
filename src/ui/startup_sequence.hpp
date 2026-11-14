@@ -6,6 +6,8 @@
 // whole sequence at once, without a fade.
 #pragma once
 
+#include "units/units.hpp"
+
 #include <cstddef>
 #include <optional>
 #include <string>
@@ -15,14 +17,14 @@
 namespace rct3::ui
 {
 
-    inline constexpr float kStartupFadeSeconds = 1;
-    inline constexpr float kStartupLogoSeconds = 4;
-    inline constexpr float kStartupWarningSeconds = 6;
+    inline constexpr units::Seconds kStartupFade { 1 };
+    inline constexpr units::Seconds kStartupLogo { 4 };
+    inline constexpr units::Seconds kStartupWarning { 6 };
 
     struct StartupStep
     {
-        std::string image; ///< Texture name in the banner overlay
-        float seconds = kStartupLogoSeconds;
+        std::string image;                   ///< Texture name in the banner overlay
+        units::Seconds shown = kStartupLogo; ///< Up in full, from the start of its fade in to the start of its fade out
         bool skippable = true;
     };
 
@@ -40,8 +42,8 @@ namespace rct3::ui
     struct StartupFrame
     {
         std::string_view image;
-        float opacity = 0; ///< 0 transparent .. 1 opaque
-        float time = 0;    ///< Seconds since the step started fading in
+        float opacity = 0;   ///< 0 transparent .. 1 opaque
+        units::Seconds time; ///< Since the step started fading in
     };
 
     class StartupSequence
@@ -49,8 +51,8 @@ namespace rct3::ui
     public:
         explicit StartupSequence(std::vector<StartupStep> steps);
 
-        /// Advances by `seconds`. `skip` is true on frames where the player pressed something.
-        void update(float seconds, bool skip);
+        /// Advances by `elapsed`. `skip` is true on frames where the player pressed something.
+        void update(units::Seconds elapsed, bool skip);
 
         [[nodiscard]] bool finished() const
         {
@@ -62,7 +64,7 @@ namespace rct3::ui
     private:
         std::vector<StartupStep> steps_;
         std::size_t step_ = 0;
-        float elapsed_ = 0; ///< Since the current step started fading in; past `seconds` it is fading out
+        units::Seconds elapsed_; ///< Since the current step started fading in; past `shown` it is fading out
     };
 
 } // namespace rct3::ui

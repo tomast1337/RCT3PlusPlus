@@ -120,7 +120,8 @@ namespace rct3::config::game
         Refraction,
         WaterDroplets,
         LaserOcclusion,
-        ParticleBudget, ///< At most this many particles alive at once, nearest effects first; 0 none
+        ParticleBudget,  ///< At most this many particles alive at once, nearest effects first; 0 none
+        WaterfallDetail, ///< 0 low, 1 medium, 2 high, 3 ultra (park::WaterfallDetail)
 
         Count_, ///< Number of options; not an option
     };

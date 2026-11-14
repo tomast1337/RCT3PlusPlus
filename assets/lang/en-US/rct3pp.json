@@ -65,6 +65,12 @@
         "LightShaftsHelp": "Sunlight shows in the air as a soft haze, cut into rays by the shadows of trees, rides and buildings.",
         "SurfaceDetailRelief": "Grain",
         "SurfaceDetailGrain": "Grain and relief",
+        "WaterfallDetail": "Waterfall detail",
+        "WaterfallDetailHelp": "How much of a waterfall's water is drawn. Low is streaked water and foam; Medium adds mist under tall falls, rings in the foam and shadows; High adds thicker mist, tears in the falling water and the falls in the lakes' reflections; Ultra adds splashing droplets, ripples round the foam, the scene seen through the tears and shadows in the mist.",
+        "WaterfallDetailLow": "Low",
+        "WaterfallDetailMedium": "Medium",
+        "WaterfallDetailHigh": "High",
+        "WaterfallDetailUltra": "Ultra",
         "DetailBlendBandHelp": "How long the stretch is over which scenery blends from one level of detail to the next as the camera moves. All the way down, scenery switches at once.",
         "AllItemsShown": "All shown: the park does not say which are available",
         "BuildPicker": {

@@ -252,7 +252,8 @@ namespace rct3::scene
                 return true;
             });
             // A stall serves from the path on the tile it faces.
-            std::erase_if(p.unjoined_stalls, [&](std::size_t i) {
+            std::erase_if(p.unjoined_stalls, [&](save::model::StallIndex stall) {
+                const std::size_t i = stall.value;
                 if (i >= scene.rides.stalls.size() || scene.rides.stalls[i].base.demolished)
                     return true;
                 save::model::RideModel one;
@@ -843,7 +844,7 @@ namespace rct3::scene
             }
             if (p.item->stall)
             {
-                p.placed = { rct3::park::AttractionRef::Kind::Stall, scene.rides.stalls.size() };
+                p.placed = rct3::park::AttractionRef::of(save::model::StallIndex { scene.rides.stalls.size() });
                 const std::uint64_t object = add_object(scene, *o);
                 park::animate_scenery(device, scene, scene.objects.size() - 1);
                 save::model::Stall& stall = scene.rides.stalls.emplace_back();
@@ -867,7 +868,7 @@ namespace rct3::scene
                 rct3::park::ride::offer_extras(stall, scene.carried.items);
                 park::float_money(scene, site_point(scene, *p.site), -price);
                 logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
-                p.unjoined_stalls.push_back(p.placed.index);
+                p.unjoined_stalls.push_back(p.placed.stall());
                 // One stall a pick: the tool goes away and the stall's window opens, as in the game.
                 scene.info_requested = p.placed;
                 stop_ride_placing(scene);

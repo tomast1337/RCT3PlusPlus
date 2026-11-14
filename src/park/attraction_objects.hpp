@@ -36,6 +36,15 @@ namespace rct3::park
         {
             return save::model::RideIndex { index };
         }
+        [[nodiscard]] static constexpr AttractionRef of(save::model::StallIndex stall) noexcept
+        {
+            return { Kind::Stall, stall.value };
+        }
+        /// Its place among the stalls, for a Kind::Stall.
+        [[nodiscard]] constexpr save::model::StallIndex stall() const noexcept
+        {
+            return save::model::StallIndex { index };
+        }
 
         friend bool operator==(const AttractionRef&, const AttractionRef&) = default;
     };

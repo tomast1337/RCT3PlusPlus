@@ -109,7 +109,7 @@ namespace rct3::scene
         rct3::park::ground::GroundHolds holds;                                             ///< What keeps the ground still, worked out with the solids
         std::optional<std::size_t> solids_of;                                              ///< The scene's object count when worked out
         std::vector<save::model::RideIndex> unjoined;                                      ///< Rides placed here that the simulation does not run yet
-        std::vector<std::size_t> unjoined_stalls;                                          ///< The same of the stalls placed here
+        std::vector<save::model::StallIndex> unjoined_stalls;                              ///< The same of the stalls placed here
         std::vector<std::pair<save::model::RideIndex, std::uint32_t>> unjoined_facilities; ///< The same of the facilities placed here, with their kinds
         /// Every show trick the game names, read from its main file when the first show ride is placed.
         std::optional<std::vector<std::string>> trick_names;

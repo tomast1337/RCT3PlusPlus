@@ -926,7 +926,7 @@ namespace rct3::scene::park
                     if (f.ride != nullptr)
                         scene.refusal = change_ride_state(scene, scene.shown->ride(), state).value_or("");
                     else
-                        scene.refusal = change_stall_state(scene, scene.shown->index, state).value_or("");
+                        scene.refusal = change_stall_state(scene, scene.shown->stall(), state).value_or("");
                     open_info(scene, *info, *scene.shown, assets, options);
                 }
             }

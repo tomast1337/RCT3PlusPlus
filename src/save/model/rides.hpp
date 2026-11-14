@@ -554,6 +554,8 @@ namespace rct3::save::model
 
     /// A ride's place in RideModel::rides.
     using RideIndex = core::Id<struct RideIndexTag>;
+    /// A stall's place in RideModel::stalls.
+    using StallIndex = core::Id<struct StallIndexTag>;
 
     /// A trick the performers of a show ride know.
     struct ShowTrick

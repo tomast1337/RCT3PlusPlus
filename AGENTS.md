@@ -137,3 +137,7 @@ behaviour identical: `sim-run` output must not change.
   Several flags go in a struct built with designated initializers (`{ .down = held, .shift = shift }`). A bool
   that is plainly the value being set (`set_open(bool open)`) or passed straight from a variable of that name
   stays.
+- Named results: a function that returns two or more things, or a member that keeps them, uses a small struct
+  with named fields (`struct NearestRoute { std::size_t target { }; std::vector<NodeId> walk { }; };`), not
+  `std::pair` or `std::tuple`, so callers read `route->walk`, not `route->second`. A pair stays inside one
+  function, and where a library wants one (`std::map` entries, keys built from several values).

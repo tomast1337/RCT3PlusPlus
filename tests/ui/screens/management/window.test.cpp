@@ -140,7 +140,7 @@ TEST_CASE("a button with choices fans them out and reports the one picked, not i
     REQUIRE(no != nullptr);
     no->click();
     f.desktop.update({ });
-    CHECK(f.window->take_choice() == std::optional(std::pair<std::size_t, std::size_t>(0, 1)));
+    CHECK(f.window->take_choice() == std::optional(ManagementWindow::ButtonChoice { 0, 1 }));
     CHECK_FALSE(f.window->find("content/page/lines/No"));
 }
 

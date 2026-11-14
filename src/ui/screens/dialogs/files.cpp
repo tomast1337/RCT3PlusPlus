@@ -373,7 +373,7 @@ namespace rct3::ui::screens::dialogs
         return std::exchange(delete_out_, std::nullopt);
     }
 
-    std::optional<std::pair<std::u16string, std::u16string>> FileDialog::take_rename()
+    std::optional<FileDialog::Rename> FileDialog::take_rename()
     {
         return std::exchange(rename_out_, std::nullopt);
     }
@@ -442,7 +442,7 @@ namespace rct3::ui::screens::dialogs
                 break;
             case Asking::Rename:
                 if (yes)
-                    rename_out_ = { pending_, pending_new_ };
+                    rename_out_ = Rename { pending_, pending_new_ };
                 else if (renaming_ && *renaming_ < rows_.size())
                     rows_[*renaming_]->box->text = shown_file_name(files_[*renaming_]);
                 break;

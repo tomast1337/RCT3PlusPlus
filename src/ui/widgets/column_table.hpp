@@ -73,8 +73,14 @@ namespace rct3::ui::widgets
         std::optional<std::size_t> sorted_by; ///< Marked in its heading
         bool descending = false;
 
-        /// The left and right edges of each column, from the table's left edge.
-        [[nodiscard]] std::vector<std::pair<float, float>> column_edges() const;
+        /// Where a column starts and ends, from the table's left edge.
+        struct ColumnEdges
+        {
+            float left { };
+            float right { };
+        };
+        /// Of each column.
+        [[nodiscard]] std::vector<ColumnEdges> column_edges() const;
 
         [[nodiscard]] std::optional<std::size_t> selected() const
         {

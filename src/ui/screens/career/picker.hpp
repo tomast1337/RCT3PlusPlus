@@ -105,7 +105,13 @@ namespace rct3::ui::screens::career
         [[nodiscard]] std::optional<std::size_t> take_load();
         [[nodiscard]] bool take_new();
         [[nodiscard]] std::optional<std::size_t> take_delete();
-        [[nodiscard]] std::optional<std::pair<std::size_t, std::u16string>> take_rename();
+        struct Rename
+        {
+            std::size_t career { }; ///< By its row
+            std::u16string name { };
+            friend bool operator==(const Rename&, const Rename&) = default;
+        };
+        [[nodiscard]] std::optional<Rename> take_rename();
 
         // For tests and owners that drive the window.
         [[nodiscard]] widgets::Button& new_button() const
@@ -159,7 +165,7 @@ namespace rct3::ui::screens::career
         std::optional<std::size_t> load_out_;
         bool new_out_ = false;
         std::optional<std::size_t> delete_out_;
-        std::optional<std::pair<std::size_t, std::u16string>> rename_out_;
+        std::optional<Rename> rename_out_;
         std::size_t made_ = 0; // Rows made, so each has its own name
         units::Seconds since_click_;
         std::optional<std::size_t> last_clicked_;

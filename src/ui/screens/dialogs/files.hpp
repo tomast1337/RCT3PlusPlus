@@ -136,7 +136,12 @@ namespace rct3::ui::screens::dialogs
 
         [[nodiscard]] std::optional<std::u16string> take_open();
         [[nodiscard]] std::optional<std::u16string> take_delete();
-        [[nodiscard]] std::optional<std::pair<std::u16string, std::u16string>> take_rename();
+        struct Rename
+        {
+            std::u16string from { };
+            std::u16string to { };
+        };
+        [[nodiscard]] std::optional<Rename> take_rename();
         /// The last rename did not happen: says so and puts the old name back.
         void rename_failed();
 
@@ -225,7 +230,7 @@ namespace rct3::ui::screens::dialogs
         std::optional<std::size_t> renaming_; // Row whose name a rename changes
         std::optional<std::u16string> open_out_;
         std::optional<std::u16string> delete_out_;
-        std::optional<std::pair<std::u16string, std::u16string>> rename_out_;
+        std::optional<Rename> rename_out_;
         std::optional<units::Seconds> since_complete_; // Since every file was read; none while reading
         units::Seconds since_click_;
         std::optional<std::size_t> last_clicked_;

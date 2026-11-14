@@ -97,9 +97,9 @@ TEST_CASE("the shared column takes what the fixed ones leave")
     const auto edges = f.table.column_edges();
     REQUIRE(edges.size() == 3);
     // 110 wide less the 10 unit bar leaves 100: 40 for the name.
-    CHECK(edges[0].second == doctest::Approx(40));
-    CHECK(edges[1].first == doctest::Approx(40));
-    CHECK(edges[2].second == doctest::Approx(100));
+    CHECK(edges[0].right == doctest::Approx(40));
+    CHECK(edges[1].left == doctest::Approx(40));
+    CHECK(edges[2].right == doctest::Approx(100));
 }
 
 TEST_CASE("pressing a heading asks to sort by it, unless it cannot sort")

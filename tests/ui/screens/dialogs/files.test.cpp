@@ -178,8 +178,8 @@ TEST_CASE("renaming in a row asks first, and a failed rename puts the name back"
     f.answer(true);
     const auto rename = f.dialog->take_rename();
     REQUIRE(rename);
-    CHECK(rename->first == u"First.dat");
-    CHECK(rename->second == u"Renamed.dat");
+    CHECK(rename->from == u"First.dat");
+    CHECK(rename->to == u"Renamed.dat");
     f.dialog->rename_failed();
     CHECK(box.text == u"First");
     REQUIRE(f.dialog->question());

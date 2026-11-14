@@ -356,7 +356,7 @@ namespace rct3::ui::screens::management
         const auto selected = picked_row();
         table_->columns = shown.columns;
         table_->rows = shown.rows;
-        page_sort_ = shown.sort ? std::optional(std::pair(*shown.sort, shown.sort_descending)) : std::nullopt;
+        page_sort_ = shown.sort ? std::optional(ColumnSort { *shown.sort, shown.sort_descending }) : std::nullopt;
         sort_rows();
         table_->select(std::nullopt);
         if (selected)
@@ -477,14 +477,14 @@ namespace rct3::ui::screens::management
     void ManagementWindow::sort_rows()
     {
         const auto sort = tab_ < sorts_.size() && sorts_[tab_] ? sorts_[tab_] : page_sort_;
-        if (!sort || sort->first >= table_->columns.size())
+        if (!sort || sort->column >= table_->columns.size())
         {
             table_->sorted_by.reset();
             return;
         }
-        widgets::sort_table_rows(table_->rows, sort->first, sort->second);
-        table_->sorted_by = sort->first;
-        table_->descending = sort->second;
+        widgets::sort_table_rows(table_->rows, sort->column, sort->highest_first);
+        table_->sorted_by = sort->column;
+        table_->descending = sort->highest_first;
     }
 
     void ManagementWindow::update(const UpdateContext& context)
@@ -553,7 +553,7 @@ namespace rct3::ui::screens::management
         {
             if (choices_[j]->take_click() && choosing_)
             {
-                choice_now_ = std::pair(*choosing_, j);
+                choice_now_ = ButtonChoice { *choosing_, j };
                 close_choices();
                 break;
             }
@@ -573,7 +573,7 @@ namespace rct3::ui::screens::management
         {
             const auto now = table_->sorted_by;
             const bool flip = now == column;
-            const std::pair<std::size_t, bool> sort { *column, flip ? !table_->descending : false };
+            const ColumnSort sort { *column, flip ? !table_->descending : false };
             if (tab_ < sorts_.size())
                 sorts_[tab_] = sort;
             const auto selected = table_->selected() ? std::optional(table_->rows.at(*table_->selected()).id) : std::nullopt;

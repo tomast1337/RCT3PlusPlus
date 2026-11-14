@@ -52,7 +52,7 @@ namespace rct3::ui::widgets
         return { head.x0, head.y1, r.x1 - bar_->style().thickness - style.padding.x1, r.y1 - style.padding.y1 };
     }
 
-    std::vector<std::pair<float, float>> ColumnTable::column_edges() const
+    std::vector<ColumnTable::ColumnEdges> ColumnTable::column_edges() const
     {
         const float width = rows_box().width();
         float fixed = 0;
@@ -63,7 +63,7 @@ namespace rct3::ui::widgets
             shared += c.width <= 0 ? 1 : 0;
         }
         const float share = shared > 0 ? std::max(0.0f, width - fixed) / static_cast<float>(shared) : 0;
-        std::vector<std::pair<float, float>> edges;
+        std::vector<ColumnEdges> edges;
         float x = 0;
         for (const TableColumn& c : columns)
         {
@@ -98,7 +98,7 @@ namespace rct3::ui::widgets
         const auto edges = column_edges();
         for (std::size_t i = 0; i < edges.size(); ++i)
         {
-            if (p.x >= box.x0 + edges[i].first && p.x < box.x0 + edges[i].second)
+            if (p.x >= box.x0 + edges[i].left && p.x < box.x0 + edges[i].right)
                 return i;
         }
         return std::nullopt;
@@ -172,7 +172,7 @@ namespace rct3::ui::widgets
         const auto heading_font = context.fonts.get(style.heading_font);
         const auto font = context.fonts.get(style.font);
         const auto edges = column_edges();
-        const auto cell = [&](const Rect& row, std::size_t c) { return Rect { row.x0 + edges[c].first + style.cell_indent, row.y0, row.x0 + edges[c].second - style.cell_indent, row.y1 }; };
+        const auto cell = [&](const Rect& row, std::size_t c) { return Rect { row.x0 + edges[c].left + style.cell_indent, row.y0, row.x0 + edges[c].right - style.cell_indent, row.y1 }; };
 
         const Rect head = headings_box();
         context.list.fill(head, style.heading_colour);

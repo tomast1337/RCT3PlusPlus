@@ -970,9 +970,9 @@ namespace rct3::scene::track
         }
         const rct3::park::AttractionRef ref { .kind = rct3::park::AttractionRef::Kind::Ride, .index = *b.ride };
         const std::vector<ui::screens::info::StateChoice> states = park::state_choices(scene, ref);
-        if (const auto choice = placing->take_choice(); choice && choice->first == State && choice->second < states.size())
+        if (const auto choice = placing->take_choice(); choice && choice->tab == State && choice->choice < states.size())
         {
-            scene.refusal = park::change_ride_state(scene, *b.ride, states[choice->second].state).value_or("");
+            scene.refusal = park::change_ride_state(scene, *b.ride, states[choice->choice].state).value_or("");
             b.tabs_for.reset();
         }
         // A design in hand has its own round panel, as a flat ride being placed has, in this order: turning it, with

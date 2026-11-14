@@ -106,8 +106,8 @@ TEST_CASE("load takes the picked career, by button or a double click, with its n
     f.tick();
     const auto rename = f.dialog->take_rename();
     REQUIRE(rename);
-    CHECK(rename->first == 0);
-    CHECK(rename->second == u"Renamed");
+    CHECK(rename->career == 0);
+    CHECK(rename->name == u"Renamed");
     CHECK(f.dialog->take_load() == 0);
 
     f.dialog->click_row(1);
@@ -133,7 +133,7 @@ TEST_CASE("renaming on Enter; an empty name puts the old one back")
     box.text = u"Mine";
     box.on_key({ Key::Enter });
     f.tick();
-    CHECK(f.dialog->take_rename() == std::pair<std::size_t, std::u16string> { 0, u"Mine" });
+    CHECK(f.dialog->take_rename() == CareerDialog::Rename { 0, u"Mine" });
 }
 
 TEST_CASE("delete asks, then takes the row out and leaves nothing picked")

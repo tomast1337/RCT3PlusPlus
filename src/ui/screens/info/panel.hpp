@@ -346,8 +346,14 @@ namespace rct3::ui::screens::info
         {
             return std::exchange(action_now_, std::nullopt);
         }
-        /// The choice the player made since the last call, as the tab and the choice's index.
-        [[nodiscard]] std::optional<std::pair<std::size_t, std::size_t>> take_choice()
+        /// A choice picked on one of the tabs.
+        struct TabChoice
+        {
+            std::size_t tab { };
+            std::size_t choice { }; ///< Among the tab's own
+        };
+        /// The choice the player made since the last call.
+        [[nodiscard]] std::optional<TabChoice> take_choice()
         {
             return std::exchange(choice_now_, std::nullopt);
         }
@@ -495,7 +501,7 @@ namespace rct3::ui::screens::info
         StallMenu* menu_ = nullptr;
         std::optional<units::Seconds> since_view_press_; ///< Since the first press of a pair on the round view
         bool view_double_ = false;
-        std::optional<std::pair<std::size_t, std::size_t>> choice_now_;
+        std::optional<TabChoice> choice_now_;
         std::vector<widgets::Button*> sections_;
         widgets::Dropdown* section_list_ = nullptr; ///< When the page picks its sections from a list
         /// A line of the page with a value, whose value lines up with the others clear of the widest label.

@@ -49,6 +49,9 @@ namespace rct3::ovl
             d.launch_min = r->real(0x108);
             d.launch_max = r->real(0x10C);
             d.platform = r->text(0x38);
+            d.lift_car = r->text(0x24);
+            d.lift_car_up = r->real(0x28);
+            d.lift_car_down = r->real(0x2C);
             constexpr std::uint32_t kMostTrains = 64; // Our own bound against a stray count
             const std::uint32_t list = r->u32(0x0C);
             for (std::uint32_t i = 0; i < std::min(r->u32(0x08), kMostTrains) && list != 0; ++i)

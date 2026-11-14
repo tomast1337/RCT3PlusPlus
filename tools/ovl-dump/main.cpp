@@ -619,7 +619,11 @@ namespace
                     for (const std::string_view train : d->trains)
                         out.info("    train {}", train);
                 if (const auto& d = r.operating)
+                {
                     out.info("    platform {}", d->platform);
+                    if (!d->lift_car.empty())
+                        out.info("    lift car {} up {:g} down {:g}", d->lift_car, d->lift_car_up, d->lift_car_down);
+                }
                 std::string listed = std::format("    pieces {}:", r.pieces.size());
                 for (const std::string_view piece : r.pieces)
                     listed += std::format(" {}", piece);

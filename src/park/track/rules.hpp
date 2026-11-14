@@ -8,6 +8,7 @@
 #include "park/track/course.hpp"
 #include "park/track/pieces.hpp"
 #include "save/model/rides.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -78,6 +79,14 @@ namespace rct3::park::track
         /// The pieces it may build, by name. Its track overlay can hold more, for other kinds that share it, as
         /// inverted pieces beside an upright coaster's. Empty: all of the overlay's.
         std::vector<std::string> pieces;
+        /// The car of a kind with lift towers, which carries a train up each on a length of track of its own.
+        struct LiftCar
+        {
+            std::string train { }; ///< Its "rit" train
+            units::Pace up { };    ///< It climbs at
+            units::Pace down { };  ///< It comes back down at
+        };
+        std::optional<LiftCar> lift_car { };
     };
 
     /// Whether `rules` let the ride build `piece`.

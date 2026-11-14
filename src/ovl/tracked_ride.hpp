@@ -35,6 +35,11 @@ namespace rct3::ovl
         std::vector<std::string_view> trains;
         /// The station platform type, string at 0x38: an overlay of that name in a folder of tracks/Platforms.
         std::string_view platform;
+        /// The "rit" train of the ride's lift car, which carries a train up a lift tower, string at 0x24; empty for
+        /// a ride without one.
+        std::string_view lift_car;
+        float lift_car_up = 0;   ///< At 0x28: how fast the lift car climbs its tower
+        float lift_car_down = 0; ///< At 0x2C: how fast it comes back down, below 0 as it goes down
     };
 
     /// Which piece a piece pattern entry takes, and where. Kinds: 0 any piece of the group `name`

@@ -127,6 +127,8 @@ TEST_CASE("tracked rides give their operating defaults, 0x50 bytes further in in
         word(0xFC, 123400);
         real(0x108, 5);
         real(0x10C, 25);
+        real(0x28, 3);
+        real(0x2C, -6);
         const auto overlay = make_record_overlay(version, pool, "Ride:trr", bytes, { });
         const auto items = read_tracked_rides(overlay, overlay.common());
         REQUIRE(items[0].ride.has_value());
@@ -146,6 +148,9 @@ TEST_CASE("tracked rides give their operating defaults, 0x50 bytes further in in
         CHECK(d.cost == 123400);
         CHECK(d.launch_min == 5);
         CHECK(d.launch_max == 25);
+        CHECK(d.lift_car.empty());
+        CHECK(d.lift_car_up == 3);
+        CHECK(d.lift_car_down == -6);
     }
 }
 

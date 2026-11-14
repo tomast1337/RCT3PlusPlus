@@ -1091,6 +1091,12 @@ namespace rct3::park::object
             if (low <= high)
                 model.car_fit = CarFit { .length = high - low, .front_wheels = 0, .rear_wheels = high - low, .on_track = { 0, 0, (low + high) / 2 }, .link_front = 0, .link_rear = high - low, .link_height = 0, .link = true };
         }
+        if (const ovl::Spline *left = spline_in(*train_file->second, std::format("{}L_spline", train)), *right = spline_in(*train_file->second, std::format("{}R_spline", train)); left != nullptr && right != nullptr)
+            if (const auto line = track::middle_line(*left, *right))
+            {
+                model.carried = line->path;
+                model.carried_ups = line->ups;
+            }
         const std::optional<glm::mat4> front = bone_of(car->visual, "camerafront");
         model.ride_eyes = { bone_of(car->visual, "nosecamera").or_else([&] { return front; }), front, bone_of(car->visual, "camerarear") };
         model.ride_look = found->camera;

@@ -614,8 +614,8 @@ namespace rct3::simulation
                 // A station given doors since takes the stop nearest them.
                 for (std::size_t k = 1; k < ride->stations.size(); ++k)
                     if (std::ranges::none_of(cycle->stops, [&](const Stop& stop) { return stop.saved == k; }))
-                        if (const auto near = nearest_platform(world.paths, ride->stations[k], cycle->stops, &Stop::platform); near && cycle->stops[*near].saved == Stop::kNone)
-                            cycle->stops[*near].saved = k;
+                        if (const auto near = nearest_platform(world.paths, ride->stations[k], cycle->stops, &Stop::platform); near && !cycle->stops[*near].saved)
+                            cycle->stops[*near].saved.emplace(k);
                 // The way in changes only while no one queues on it; the way out at once, so riders already
                 // aboard leave by a path laid to the exit while the ride is busy.
                 const auto relink = [&](const save::model::Station& station, NodeId& entrance, std::vector<NodeId>& line, NodeId& exit, bool queued) {
@@ -635,8 +635,8 @@ namespace rct3::simulation
                     }
                 };
                 for (Stop& stop : cycle->stops)
-                    if (stop.saved < ride->stations.size())
-                        relink(ride->stations[stop.saved], stop.entrance, stop.line, stop.exit, !stop.queue.empty());
+                    if (stop.saved && *stop.saved < ride->stations.size())
+                        relink(ride->stations[*stop.saved], stop.entrance, stop.line, stop.exit, !stop.queue.empty());
                 relink(ride->stations.front(), attraction.entrance, cycle->line, cycle->exit, !cycle->queue.empty());
                 continue;
             }
@@ -1489,7 +1489,7 @@ namespace rct3::simulation
                     // A station no path reaches yet is stopped at empty till one does (relink_attractions).
                     for (std::size_t k = 1; k < ride.stations.size(); ++k)
                         if (const auto run = nearest_platform(world.paths, ride.stations[k], others, [](const auto& o) -> const auto& { return o.second.platform; }))
-                            if (Stop& stop = others[*run].second; stop.saved == Stop::kNone)
+                            if (Stop& stop = others[*run].second; !stop.saved)
                             {
                                 stop.saved = k;
                                 if (auto station = ride_links(world.paths, ride.stations[k]))

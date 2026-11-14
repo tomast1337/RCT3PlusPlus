@@ -1195,7 +1195,7 @@ TEST_CASE("on a ride with two stations, riders get on at either and off at the o
     const auto& paths = park.world().paths;
     const NodeId far_in = *paths.find({ 8, 0, 0 });
     const NodeId far_out = *paths.find({ 7, 0, 0 });
-    r.get<CycleRide>(ride).stops.push_back({ .entrance = far_in, .exit = far_out, .saved = 1 });
+    r.get<CycleRide>(ride).stops.push_back({ .entrance = far_in, .exit = far_out, .saved = std::optional<std::size_t> { 1 } });
     Coaster track;
     track.distance = { 0, 100 };
     track.height = { 0, 0 };
@@ -1231,7 +1231,7 @@ TEST_CASE("on a ride whose first station has no way to the paths, riders get off
     const auto& paths = park.world().paths;
     const NodeId far_in = *paths.find({ 8, 0, 0 });
     const NodeId far_out = *paths.find({ 7, 0, 0 });
-    r.get<CycleRide>(ride).stops.push_back({ .entrance = far_in, .exit = far_out, .saved = 1 });
+    r.get<CycleRide>(ride).stops.push_back({ .entrance = far_in, .exit = far_out, .saved = std::optional<std::size_t> { 1 } });
     Coaster track;
     track.distance = { 0, 100 };
     track.height = { 0, 0 };
@@ -1262,7 +1262,7 @@ TEST_CASE("a guest going far rides from one station of a ride to another when th
     const auto ride = park.flat_ride("Railway", { 1, 0 }, 100, { .capacity = 4, .cycle_seconds = 30, .exit = glm::ivec2 { 2, 0 } });
     auto& r = park.world().registry;
     const auto& paths = park.world().paths;
-    r.get<CycleRide>(ride).stops.push_back({ .entrance = *paths.find({ 38, 0, 0 }), .exit = *paths.find({ 39, 0, 0 }), .saved = 1 });
+    r.get<CycleRide>(ride).stops.push_back({ .entrance = *paths.find({ 38, 0, 0 }), .exit = *paths.find({ 39, 0, 0 }), .saved = std::optional<std::size_t> { 1 } });
     Coaster track;
     track.distance = { 0, 100 };
     track.height = { 0, 0 };

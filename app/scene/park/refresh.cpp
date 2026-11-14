@@ -79,13 +79,12 @@ namespace rct3::scene::park
         /// How far away scenery moving on its own is seen to move; beyond, it keeps its pose.
         constexpr float kPropMoveDistance = 200.0f;
 
-        constexpr std::size_t kNoCar = static_cast<std::size_t>(-1);
-
-        /// Where rider carrier `k` (see ParkScene::rider_cars) stands now.
-        glm::mat4 carrier_place(const ParkScene& scene, std::size_t k)
+        /// Where rider carrier `carrier` (see ParkScene::rider_cars) stands now.
+        glm::mat4 carrier_place(const ParkScene& scene, std::optional<std::size_t> carrier)
         {
-            if (k == kNoCar)
+            if (!carrier)
                 return glm::mat4(1.0f);
+            std::size_t k = *carrier;
             if (k < scene.car_places.size())
             {
                 const auto arm = std::ranges::find(scene.arm_cars, k, &ParkScene::ArmCar::car);
@@ -95,13 +94,20 @@ namespace rct3::scene::park
             return k < scene.seat_carriers.size() ? scene.seat_carriers[k] : glm::mat4(1.0f);
         }
 
+        /// Where a guest sits while riding.
+        struct Seat
+        {
+            std::optional<std::size_t> carrier; ///< As ParkScene::rider_cars
+            glm::mat4 place;                    ///< In the carrier's own space, or in the park with no carrier
+        };
+
         /// Where simulated guest `guest` sits while riding: the car, by its place in `cars`, and the seat in
         /// the car's own space that their place among the riders comes to, counting the train's seats front
-        /// to back. On a ride without cars the car is kNoCar and the seat is in the park, on the ride as it is
-        /// drawn. Nothing when not riding, or when the ride has no seat for them.
+        /// to back. On a ride without cars there is no carrier and the seat is in the park, on the ride as it
+        /// is drawn. Nothing when not riding, or when the ride has no seat for them.
         /// shortcut: flat rides are drawn standing still, so their riders sit still too, upgrade when the
         /// rides' motions are played.
-        std::optional<std::pair<std::size_t, glm::mat4>> seat_of(const ParkScene& scene, entt::entity guest)
+        std::optional<Seat> seat_of(const ParkScene& scene, entt::entity guest)
         {
             const auto& r = scene.sim.registry;
             const auto* walking = r.try_get<simulation::Errand>(guest); // None once gone home
@@ -128,8 +134,8 @@ namespace rct3::scene::park
                     return std::nullopt;
                 // On a ride its bones move, the seat's bone carries the seat.
                 if (const auto boned = std::ranges::find(scene.boned_rides, object->second, &ParkScene::BonedRide::object); boned != scene.boned_rides.end() && seat < boned->seats)
-                    return std::pair { scene.cars.size() + boned->first_seat + seat, model->second.seat_places[seat] };
-                return std::pair { kNoCar, rct3::park::object::placed_transform(o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[seat] };
+                    return Seat { scene.cars.size() + boned->first_seat + seat, model->second.seat_places[seat] };
+                return Seat { std::nullopt, rct3::park::object::placed_transform(o, &model->second, scene.grid, scene.fitted) * model->second.seat_places[seat] };
             }
             const auto cars = scene.ride_cars.find(errand.target);
             if (cars == scene.ride_cars.end())
@@ -141,7 +147,7 @@ namespace rct3::scene::park
                 const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[car]));
                 const std::size_t seats = model != scene.models.end() ? model->second.seat_places.size() : 0;
                 if (seat < seats)
-                    return std::pair { car, model->second.seat_places[seat] };
+                    return Seat { car, model->second.seat_places[seat] };
                 seat -= seats;
             }
             return std::nullopt;
@@ -151,7 +157,7 @@ namespace rct3::scene::park
         std::optional<glm::mat4> seat_place(const ParkScene& scene, entt::entity guest)
         {
             if (const auto seat = seat_of(scene, guest))
-                return seat->first == kNoCar ? seat->second : carrier_place(scene, seat->first) * seat->second;
+                return seat->carrier ? carrier_place(scene, seat->carrier) * seat->place : seat->place;
             return std::nullopt;
         }
 
@@ -206,7 +212,7 @@ namespace rct3::scene::park
         /// space; place_cars moves them with their cars. Riders drawn at no level of detail are left out.
         std::future<RidersBuild> pose_riders(ParkScene& scene)
         {
-            std::map<std::size_t, std::vector<rct3::park::person::PlacedPerson>> by_car;
+            std::map<std::optional<std::size_t>, std::vector<rct3::park::person::PlacedPerson>> by_car;
             std::map<entt::entity, ParkScene::RiderTurn> turns;
             for (std::size_t i = 0; i < scene.shown_people.size() && i < scene.people_levels.size(); ++i)
             {
@@ -219,13 +225,13 @@ namespace rct3::scene::park
                 rct3::park::person::PlacedPerson pose = dressed(shown);
                 pose.level = static_cast<std::size_t>(scene.people_levels[i]);
                 pose.time = shown.saved_time + scene.park_clock * shown.speed;
-                pose.world = seat->second;
+                pose.world = seat->place;
                 pose.motion = kRideMotion;
                 // They sit as their car seats them, or on a flat ride as the ride does, reacting to the ride.
                 std::optional<std::uint8_t> seating;
-                if (seat->first < scene.cars.size())
+                if (seat->carrier && *seat->carrier < scene.cars.size())
                 {
-                    if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[seat->first])); model != scene.models.end())
+                    if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[*seat->carrier])); model != scene.models.end())
                         seating = model->second.seating;
                 }
                 else if (const auto flat = scene.ride_seatings.find(scene.sim.registry.get<simulation::Errand>(shown.guest).target); flat != scene.ride_seatings.end())
@@ -262,7 +268,7 @@ namespace rct3::scene::park
                         pose.time = at.seconds;
                     }
                 }
-                by_car[seat->first].push_back(pose);
+                by_car[seat->carrier].push_back(pose);
             }
             scene.rider_turns = std::move(turns);
             return std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.rider_runs, &gathered = scene.rider_gathered, by_car = std::move(by_car)] {

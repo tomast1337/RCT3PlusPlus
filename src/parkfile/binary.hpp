@@ -9,6 +9,7 @@
 //   std::vector                      u32 count, then each element
 //   std::array and glm vectors       each element
 //   std::optional                    u8 1 then the value, or u8 0
+//   core::NoneAsMinusOne             the value, or -1 for none, as the bare type it holds
 //   std::variant                     u8 index of the alternative held, then its value (std::monostate: none)
 //   a struct                         each member in the order declared; a unit (units/units.hpp) as its number
 //
@@ -16,6 +17,8 @@
 // whose models have changed since the file was written refuses the chunk rather than misread it.
 // Internal to src/parkfile.
 #pragma once
+
+#include "core/none_as_minus_one.hpp"
 
 #include <algorithm>
 #include <array>
@@ -221,6 +224,12 @@ namespace rct3::parkfile::detail
     template<typename T> struct IsOptional<std::optional<T>> : std::true_type
     {
     };
+    template<typename T> struct IsNoneAsMinusOne : std::false_type
+    {
+    };
+    template<typename T> struct IsNoneAsMinusOne<core::NoneAsMinusOne<T>> : std::true_type
+    {
+    };
     template<typename T> struct IsArray : std::false_type
     {
     };
@@ -263,6 +272,8 @@ namespace rct3::parkfile::detail
             layout<typename T::value_type>(out);
             out += ')';
         }
+        else if constexpr (IsNoneAsMinusOne<T>::value)
+            layout<typename T::value_type>(out); // Kept as the number it holds, so a field that was that number reads the same
         else if constexpr (IsOptional<T>::value)
         {
             out += "o(";
@@ -332,6 +343,8 @@ namespace rct3::parkfile::detail
             for (const auto& item : value)
                 put(w, item);
         }
+        else if constexpr (IsNoneAsMinusOne<T>::value)
+            put(w, value.stored());
         else if constexpr (IsOptional<T>::value)
         {
             w.number(std::uint8_t { value.has_value() });
@@ -391,6 +404,12 @@ namespace rct3::parkfile::detail
                 if (!r.ok())
                     return;
             }
+        }
+        else if constexpr (IsNoneAsMinusOne<T>::value)
+        {
+            typename T::value_type stored { };
+            get(r, stored);
+            value = core::from_stored(stored);
         }
         else if constexpr (IsOptional<T>::value)
         {

@@ -210,6 +210,58 @@ TEST_CASE("a unit is laid out as its bare number, so parks saved before it was w
     CHECK(parkfile::detail::layout_hash<std::optional<units::Seconds>>() == parkfile::detail::layout_hash<std::optional<float>>());
 }
 
+TEST_CASE("a value that may be missing is kept as the plain number, -1 for none, and reads back as it was")
+{
+    struct Kept
+    {
+        core::NoneAsMinusOne<std::int32_t> place { };
+        core::NoneAsMinusOne<units::Seconds> since { };
+    };
+    struct Plain
+    {
+        std::int32_t place = -1;
+        float since = -1;
+    };
+    CHECK(parkfile::detail::layout_hash<Kept>() == parkfile::detail::layout_hash<Plain>());
+    const auto round_trip = [](const Kept& kept) {
+        parkfile::detail::Writer w;
+        parkfile::detail::put(w, kept);
+        const auto bytes = w.take();
+        parkfile::detail::Reader r(bytes);
+        const auto plain = std::pair { r.number<std::int32_t>(), r.number<float>() };
+        parkfile::detail::Reader again(bytes);
+        Kept read { .place = 99, .since = units::Seconds { 99 } };
+        parkfile::detail::get(again, read);
+        CHECK(again.ok());
+        CHECK(again.left() == 0);
+        return std::pair { plain, read };
+    };
+
+    const auto [none_plain, none] = round_trip({ });
+    CHECK(none_plain == std::pair { -1, -1.0f });
+    CHECK_FALSE(none.place);
+    CHECK_FALSE(none.since);
+
+    const auto [some_plain, some] = round_trip({ .place = 0, .since = units::Seconds { 2.5f } });
+    CHECK(some_plain == std::pair { 0, 2.5f });
+    CHECK(some.place == 0);
+    CHECK(some.since == units::Seconds { 2.5f });
+    // And they compare as optionals do, none first.
+    CHECK(some.since > none.since);
+    CHECK(none.place == Kept { }.place);
+
+    // None of these can be below zero, so any such number in a file reads as none.
+    parkfile::detail::Writer w;
+    w.number(std::int32_t { -5 });
+    w.number(-0.5f);
+    const auto bytes = w.take();
+    parkfile::detail::Reader r(bytes);
+    Kept odd { .place = 1, .since = units::Seconds { 1 } };
+    parkfile::detail::get(r, odd);
+    CHECK_FALSE(odd.place);
+    CHECK_FALSE(odd.since);
+}
+
 TEST_CASE("a save keeps the park's objects and those the player built, platforms too, not those loading makes")
 {
     std::vector<save::model::PlacedObject> objects(11);

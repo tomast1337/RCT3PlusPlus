@@ -49,7 +49,7 @@ namespace rct3::simulation
             if ((swimmer.dive == DiveStep::Climb || swimmer.dive == DiveStep::Walk || swimmer.dive == DiveStep::Jump) && std::ranges::find(board.levels, swimmer.height) == board.levels.end())
             {
                 next(DiveStep::None);
-                swimmer.board = -1;
+                swimmer.board.reset();
                 pose.position = swimmer.goal = board.foot;
                 return;
             }
@@ -98,7 +98,7 @@ namespace rct3::simulation
                     if (swimmer.diving.value < k.surfacing.value)
                         break;
                     next(DiveStep::None);
-                    swimmer.board = -1;
+                    swimmer.board.reset();
                     swimmer.goal = pose.position;
                     swimmer.idle = kTuning.pools.shortest_rest;
                     break;
@@ -183,7 +183,8 @@ namespace rct3::simulation
                         swimmer->room = entt::null;
                         swimmer->in_water = false;
                         swimmer->idle = { };
-                        swimmer->spot = swimmer->place = -1;
+                        swimmer->spot.reset();
+                        swimmer->place.reset();
                         continue;
                     }
                 }
@@ -488,27 +489,27 @@ namespace rct3::simulation
         // The places taken on each pool's extras, a bit for each.
         std::unordered_map<entt::entity, std::vector<std::uint32_t>> places_taken;
         for (const auto [g, swimmer, errand] : r.view<const Swimmer, const Errand>().each())
-            if (const auto* door = swimmer.place >= 0 && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
+            if (const auto* door = swimmer.place && swimmer.spot && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
             {
                 auto& places = places_taken[door->pool];
-                places.resize(std::max(places.size(), static_cast<std::size_t>(swimmer.spot) + 1));
-                places[static_cast<std::size_t>(swimmer.spot)] |= 1u << swimmer.place;
+                places.resize(std::max(places.size(), static_cast<std::size_t>(*swimmer.spot) + 1));
+                places[static_cast<std::size_t>(*swimmer.spot)] |= 1u << *swimmer.place;
             }
         // The diving boards in use, by pool, one swimmer on each at a time.
         std::set<std::pair<entt::entity, std::int32_t>> boards_taken;
         for (const auto [g, swimmer, errand] : r.view<const Swimmer, const Errand>().each())
-            if (const auto* door = swimmer.dive != DiveStep::None && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
-                boards_taken.insert({ door->pool, swimmer.board });
+            if (const auto* door = swimmer.dive != DiveStep::None && swimmer.board && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
+                boards_taken.insert({ door->pool, *swimmer.board });
         // And the ladders, one swimmer on the way to each or on it at a time.
         std::set<std::pair<entt::entity, std::int32_t>> ladders_taken;
         for (const auto [g, swimmer, errand] : r.view<const Swimmer, const Errand>().each())
-            if (const auto* door = swimmer.ladder >= 0 && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
-                ladders_taken.insert({ door->pool, swimmer.ladder });
+            if (const auto* door = swimmer.ladder && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
+                ladders_taken.insert({ door->pool, *swimmer.ladder });
         // And those waiting their turn at each high board, in a line behind its ladder.
         std::map<std::pair<entt::entity, std::int32_t>, std::vector<entt::entity>> board_lines;
         for (const auto [g, swimmer, errand] : r.view<const Swimmer, const Errand>().each())
-            if (const auto* door = swimmer.board >= 0 && swimmer.dive == DiveStep::None && swimmer.waited.value > 0 && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
-                board_lines[{ door->pool, swimmer.board }].push_back(g);
+            if (const auto* door = swimmer.board && swimmer.dive == DiveStep::None && swimmer.waited.value > 0 && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
+                board_lines[{ door->pool, *swimmer.board }].push_back(g);
         for (const entt::entity g : sorted(r.view<Swimmer>()))
         {
             auto& swimmer = r.get<Swimmer>(g);
@@ -608,10 +609,10 @@ namespace rct3::simulation
             // On or off a diving board, the dive takes them till they are back in the water.
             if (swimmer.dive != DiveStep::None)
             {
-                if (swimmer.board >= 0 && static_cast<std::size_t>(swimmer.board) < pool->boards.size())
+                if (swimmer.board && static_cast<std::size_t>(*swimmer.board) < pool->boards.size())
                 {
                     const bool falling = swimmer.dive == DiveStep::Fall;
-                    dive_off(*pool, pool->boards[static_cast<std::size_t>(swimmer.board)], swimmer, pose, r.get<Mood>(g), r.get<Stride>(g).speed.value, paths.tile_size, dt);
+                    dive_off(*pool, pool->boards[static_cast<std::size_t>(*swimmer.board)], swimmer, pose, r.get<Mood>(g), r.get<Stride>(g).speed.value, paths.tile_size, dt);
                     // Down on hard ground, not in the water: a dangerous happening, and the park's inspector, if it
                     // has one, says so of the complex.
                     if (falling && swimmer.dive == DiveStep::Surface && !swimmer.in_water)
@@ -642,7 +643,7 @@ namespace rct3::simulation
                     continue;
                 swimmer.in_water = swimmer.edge == PoolEdge::DiveIn || swimmer.edge == PoolEdge::LadderIn;
                 swimmer.edge = PoolEdge::None;
-                swimmer.ladder = -1;
+                swimmer.ladder.reset();
                 // A goal the motion carried them past is as good as reached: not back over the edge to it.
                 const auto flat = [](const glm::vec3& v) { return glm::vec2 { v.x, v.z }; };
                 if (glm::distance(flat(swimmer.edge_from), flat(swimmer.goal)) <= glm::distance(flat(swimmer.edge_from), flat(swimmer.edge_to)))
@@ -773,13 +774,13 @@ namespace rct3::simulation
                 swimmer.edge_to = glm::vec3 { pose.position.x, height, pose.position.z } + ahead * reach;
                 swimmer.edging = { };
             };
-            if (swimmer.ladder < 0 && !in_spa && wet && !swimmer.in_water)
+            if (!swimmer.ladder && !in_spa && wet && !swimmer.in_water)
             {
                 edge(PoolEdge::DiveIn, kTuning.pools.dive_reach.value, *water);
                 continue;
             }
             const bool spa = std::ranges::any_of(pool->spa, [&](const glm::vec3& seat) { return std::abs(seat.x - pose.position.x) <= half && std::abs(seat.z - pose.position.z) <= half; });
-            if (swimmer.ladder < 0 && !in_spa && !wet && swimmer.in_water && !spa)
+            if (!swimmer.ladder && !in_spa && !wet && swimmer.in_water && !spa)
             {
                 edge(PoolEdge::ClimbOut, kTuning.pools.out_reach, paved.value_or(pose.position.y));
                 continue;
@@ -787,7 +788,7 @@ namespace rct3::simulation
             // On the way to a ladder they keep to the water or the paving they are on.
             // shortcut: one walking to a ladder over open water walks it at the paving's height; upgrade with a way
             // round the water's edge.
-            if (swimmer.ladder >= 0)
+            if (swimmer.ladder)
                 pose.position = { at.x, swimmer.in_water ? water.value_or(swimmer.goal.y) : paved.value_or(swimmer.goal.y), at.y };
             else
             {
@@ -811,11 +812,11 @@ namespace rct3::simulation
                 continue;
             }
             // At a ladder: up it out of the water, or down it in.
-            if (swimmer.ladder >= 0)
+            if (swimmer.ladder)
             {
-                const auto which = static_cast<std::size_t>(swimmer.ladder);
+                const auto which = static_cast<std::size_t>(*swimmer.ladder);
                 if (which >= pool->ladders.size())
-                    swimmer.ladder = -1;
+                    swimmer.ladder.reset();
                 else
                 {
                     const PoolLadder& ladder = pool->ladders[which];
@@ -889,17 +890,17 @@ namespace rct3::simulation
             }
             // At a diving board's foot: on it, once nobody else is; a high one up to one of its boards, the top one
             // unless they walk out on a lower one on the way.
-            if (swimmer.board >= 0 && static_cast<std::size_t>(swimmer.board) < pool->boards.size())
+            if (swimmer.board && static_cast<std::size_t>(*swimmer.board) < pool->boards.size())
             {
-                const PoolBoard& board = pool->boards[static_cast<std::size_t>(swimmer.board)];
+                const PoolBoard& board = pool->boards[static_cast<std::size_t>(*swimmer.board)];
                 // Those waiting their turn stand in a line behind it, a high board's behind its ladder, not in the
                 // tower, a gap apart, in the order they came to their places; each steps up as the line moves.
-                auto& line = board_lines[{ door->pool, swimmer.board }];
+                auto& line = board_lines[{ door->pool, *swimmer.board }];
                 const auto ahead = swimmer.waited.value == 0 ? line.size() : static_cast<std::size_t>(std::ranges::count_if(line, [&](entt::entity o) {
                     const float waited = r.get<Swimmer>(o).waited.value;
                     return o != g && (waited > swimmer.waited.value || (waited == swimmer.waited.value && o < g));
                 }));
-                if (ahead > 0 || !boards_taken.insert({ door->pool, swimmer.board }).second)
+                if (ahead > 0 || !boards_taken.insert({ door->pool, *swimmer.board }).second)
                 {
                     const float back = (board.high ? kTuning.dives.ladder_queue : kTuning.pools.queue_gap.value) + static_cast<float>(ahead) * kTuning.pools.queue_gap.value;
                     glm::vec3 place = board.foot - glm::vec3 { std::sin(board.heading.value), 0, std::cos(board.heading.value) } * back;
@@ -916,7 +917,7 @@ namespace rct3::simulation
                     }
                     if (room && (swimmer.waited.value += dt) < kTuning.pools.patience.value)
                         continue;
-                    swimmer.board = -1;
+                    swimmer.board.reset();
                     swimmer.waited = { };
                 }
                 else
@@ -938,7 +939,8 @@ namespace rct3::simulation
             }
             if (swimmer.left.value <= 0)
             {
-                swimmer.spot = swimmer.place = -1;
+                swimmer.spot.reset();
+                swimmer.place.reset();
                 // Back at the room's side of the pool: in to change.
                 if (glm::distance(pose.position, door->poolside) < 0.01f)
                     swimmer.changing = kTuning.pools.changing;
@@ -949,14 +951,14 @@ namespace rct3::simulation
                 }
                 continue;
             }
-            if (swimmer.spot >= 0 && static_cast<std::size_t>(swimmer.spot) < pool->extras.size() && swimmer.place < 0 && pool->extras[static_cast<std::size_t>(swimmer.spot)].use != PoolUse::Stand)
+            if (swimmer.spot && static_cast<std::size_t>(*swimmer.spot) < pool->extras.size() && !swimmer.place && pool->extras[static_cast<std::size_t>(*swimmer.spot)].use != PoolUse::Stand)
             {
                 // At a lounger or shower: on it in a free place, one lounger of a set each, round a shower's pole
                 // facing it; else wait their turn.
-                const PoolSpot& spot = pool->extras[static_cast<std::size_t>(swimmer.spot)];
+                const PoolSpot& spot = pool->extras[static_cast<std::size_t>(*swimmer.spot)];
                 auto& places = places_taken[door->pool];
                 places.resize(std::max(places.size(), pool->extras.size()));
-                std::uint32_t& used = places[static_cast<std::size_t>(swimmer.spot)];
+                std::uint32_t& used = places[static_cast<std::size_t>(*swimmer.spot)];
                 std::int32_t free = 0;
                 while (free < spot.places && (used & (1u << free)) != 0)
                     ++free;
@@ -985,7 +987,8 @@ namespace rct3::simulation
             }
             if ((swimmer.idle.value -= dt) > 0)
                 continue;
-            swimmer.spot = swimmer.place = -1;
+            swimmer.spot.reset();
+            swimmer.place.reset();
             swimmer.use = PoolUse::Stand;
             swimmer.waited = { };
             swimmer.idle.value = static_cast<float>(random::between(dice, double { kTuning.pools.shortest_rest.value }, double { kTuning.pools.longest_rest.value }));
@@ -1069,8 +1072,9 @@ namespace rct3::simulation
                     boards.push_back(static_cast<std::int32_t>(i));
             if (!boards.empty() && random::chance(dice, kTuning.dives.chance.value))
             {
-                swimmer.board = boards[random::below(dice, boards.size())];
-                swimmer.goal = pool->boards[static_cast<std::size_t>(swimmer.board)].foot;
+                const std::int32_t board = boards[random::below(dice, boards.size())];
+                swimmer.board = board;
+                swimmer.goal = pool->boards[static_cast<std::size_t>(board)].foot;
                 swimmer.to_spa = false;
                 continue;
             }
@@ -1100,7 +1104,7 @@ namespace rct3::simulation
             if (extra)
             {
                 swimmer.goal = spot_at(pick);
-                swimmer.spot = swimmer.to_spa ? -1 : static_cast<std::int32_t>(pick - pool->spa.size());
+                swimmer.spot = swimmer.to_spa ? std::nullopt : std::optional(static_cast<std::int32_t>(pick - pool->spa.size()));
             }
             else
             {

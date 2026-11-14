@@ -4,6 +4,7 @@
 // round and the slides they climb on foot. The components here, and the step that moves them.
 #pragma once
 
+#include "core/none_as_minus_one.hpp"
 #include "math/glm.hpp"
 #include "park/pools/score.hpp"
 #include "profiling/profiler.hpp"
@@ -167,31 +168,31 @@ namespace rct3::simulation
     /// A guest at a pool, from paying at its changing room until they come out of it again.
     struct Swimmer
     {
-        units::Seconds changing { };     ///< Still to spend changing, out of sight in the room
-        bool changed = false;            ///< Into their swimwear
-        units::Seconds left { };         ///< In the pool still; then they go back to change
-        glm::vec3 goal { 0.0f };         ///< Where they swim or walk to next
-        bool in_water = false;           ///< Swimming, or sitting in a spa pool; else on the paved squares round the water
-        bool to_spa = false;             ///< The goal is a seat in a spa pool
-        units::Seconds idle { };         ///< Floating, or standing, before going on
-        std::int32_t spot = -1;          ///< The extra of the pool's they head for, wait at or use; -1 for none
-        std::int32_t place = -1;         ///< Their place on it while they use it; -1 on the way or waiting
-        PoolUse use = PoolUse::Stand;    ///< What they do there
-        units::Seconds waited { };       ///< For a place on it so far
-        units::Seconds stayed { };       ///< At their goal so far
-        entt::entity slide = entt::null; ///< The pool slide they head for, to queue at its station
+        units::Seconds changing { };                  ///< Still to spend changing, out of sight in the room
+        bool changed = false;                         ///< Into their swimwear
+        units::Seconds left { };                      ///< In the pool still; then they go back to change
+        glm::vec3 goal { 0.0f };                      ///< Where they swim or walk to next
+        bool in_water = false;                        ///< Swimming, or sitting in a spa pool; else on the paved squares round the water
+        bool to_spa = false;                          ///< The goal is a seat in a spa pool
+        units::Seconds idle { };                      ///< Floating, or standing, before going on
+        core::NoneAsMinusOne<std::int32_t> spot { };  ///< The extra of the pool's they head for, wait at or use
+        core::NoneAsMinusOne<std::int32_t> place { }; ///< Their place on it while they use it; none on the way or waiting
+        PoolUse use = PoolUse::Stand;                 ///< What they do there
+        units::Seconds waited { };                    ///< For a place on it so far
+        units::Seconds stayed { };                    ///< At their goal so far
+        entt::entity slide = entt::null;              ///< The pool slide they head for, to queue at its station
         /// The changing room of the complex whose slide they queue for or ride, to swim on in after
         entt::entity room = entt::null;
-        std::int32_t board = -1;        ///< The pool's diving board they head for or dive off; -1 for none
-        DiveStep dive = DiveStep::None; ///< How far they are with it
-        float height = 0;               ///< The board's top they climb to and walk out on, in world units
-        units::Pace fall { };           ///< Their speed down, falling
-        units::Seconds diving { };      ///< In this step so far
-        std::int32_t ladder = -1;       ///< The pool's ladder they head for, to climb out or in by; -1 for none
-        PoolEdge edge = PoolEdge::None; ///< Over the water's edge now
-        glm::vec3 edge_from { 0.0f };   ///< Where they stand for it, the motion carrying them on from there
-        glm::vec3 edge_to { 0.0f };     ///< Where the motion leaves them
-        units::Seconds edging { };      ///< Into it so far
+        core::NoneAsMinusOne<std::int32_t> board { };  ///< The pool's diving board they head for or dive off
+        DiveStep dive = DiveStep::None;                ///< How far they are with it
+        float height = 0;                              ///< The board's top they climb to and walk out on, in world units
+        units::Pace fall { };                          ///< Their speed down, falling
+        units::Seconds diving { };                     ///< In this step so far
+        core::NoneAsMinusOne<std::int32_t> ladder { }; ///< The pool's ladder they head for, to climb out or in by
+        PoolEdge edge = PoolEdge::None;                ///< Over the water's edge now
+        glm::vec3 edge_from { 0.0f };                  ///< Where they stand for it, the motion carrying them on from there
+        glm::vec3 edge_to { 0.0f };                    ///< Where the motion leaves them
+        units::Seconds edging { };                     ///< Into it so far
     };
 
     /// A swimmer's way to their goal over the squares of their pool joined to the one they are on; not kept in saves,

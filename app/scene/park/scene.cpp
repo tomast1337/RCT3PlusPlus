@@ -109,9 +109,9 @@ namespace rct3::scene::park
         constexpr float kFocusZoomOut = 2;             ///< A message's camera looks from this many times the round view's distance (ours)
         constexpr float kFocusClosest = 20;            ///< But no closer, so a small stall shows with what is round it (ours)
         // Values for photos at photo spots.
-        constexpr float kPhotoPitch = 0.15f;     ///< Radians down: near eye level
-        constexpr float kPhotoClosest = 3;       ///< Of the eye from the party
-        constexpr float kPhotoPersonTall = 1.8f; ///< Framed from the feet up to this high
+        constexpr units::Radians kPhotoPitch { 0.15f }; ///< Down: near eye level
+        constexpr float kPhotoClosest = 3;              ///< Of the eye from the party
+        constexpr float kPhotoPersonTall = 1.8f;        ///< Framed from the feet up to this high
         /// Of the pointer between pressing and letting go, in interface units, beyond which it is no click.
         constexpr float kClickSlack = 4;
         constexpr int kFahrenheit = 1;                            ///< The temperature units option's choice for Fahrenheit
@@ -596,8 +596,8 @@ namespace rct3::scene::park
                 else if (const auto path = footpath_at(scene, at, size))
                     delete_paths(device, scene, assets, std::span(&*path, 1));
                 // What was taken stays among the objects, hidden: the tools out see its room free again.
-                scene.placing.solids_of = static_cast<std::size_t>(-1);
-                scene.footpaths.solids_of = static_cast<std::size_t>(-1);
+                scene.placing.solids_of.reset();
+                scene.footpaths.solids_of.reset();
             };
             // A click is the left button pressed and let go over the park without the pointer going far.
             if (pointer.down && !scene.press && !over && !input.right && !input.middle)
@@ -1596,7 +1596,7 @@ namespace rct3::scene::park
                             frame(photo.guest);
                         const float yaw = r.get<simulation::Pose>(photo.guest).heading.value + glm::pi<float>();
                         const std::string& name = r.get<simulation::Visitor>(photo.guest).name;
-                        scene.photos.push_back({ rct3::park::framed(points, yaw, kPhotoPitch, kPhotoClosest), std::format("{} at photo spot_", name.empty() ? "Guest" : name) });
+                        scene.photos.push_back({ rct3::park::framed(points, yaw, kPhotoPitch.value, kPhotoClosest), std::format("{} at photo spot_", name.empty() ? "Guest" : name) });
                     }
                 }
                 // Their money and mood into the saved guests, for their windows and the guest list to show.

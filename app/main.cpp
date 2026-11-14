@@ -540,14 +540,14 @@ int main(int argc, char** argv)
     load_user_file(config::UserFile::Settings, settings);
 
     // Command-line options that are also settings go into `settings`, so --write-settings keeps them.
-    int max_frames = -1;
+    std::optional<int> max_frames;
     render::Backend backend = render::Backend::Vulkan;
     bool vsync = true;
     bool write_settings = false;
     bool widget_demo = false;
     bool headless = false;
     std::optional<bool> sound_this_run;
-    double max_seconds = -1;
+    std::optional<double> max_seconds;
     std::optional<double> max_fps;
     std::optional<std::filesystem::path> park_file;
     std::optional<std::filesystem::path> script_file;
@@ -1066,7 +1066,7 @@ int main(int argc, char** argv)
         int frame = 0;
         for (; !window->should_close() && !quit && frame != max_frames && g_stop_requested == 0; ++frame)
         {
-            if (max_seconds >= 0 && window->time() - start_time >= max_seconds)
+            if (max_seconds && window->time() - start_time >= *max_seconds)
                 break;
             if (frame_limit > 0)
             {

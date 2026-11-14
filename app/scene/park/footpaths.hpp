@@ -131,7 +131,7 @@ namespace rct3::scene::park
         std::optional<std::vector<rct3::park::path::RouteStep>> route; ///< The route there, worked out when it changes
         bool route_blocked = false;                                    ///< Only through what is in the way, so it is shown refused
         rct3::park::path::SolidTiles solids;                           ///< What stands in the paths' way
-        std::size_t solids_of = 0;                                     ///< The scene's object count when worked out
+        std::optional<std::size_t> solids_of;                          ///< The scene's object count when worked out
         bool route_press = false;                                      ///< The button went down to lay the route
         bool lay_route = false;                                        ///< And came up, so the route is laid
         std::size_t route_laid = 0;                                    ///< Pieces the last route laid, until another piece is laid

@@ -68,7 +68,7 @@ namespace rct3::scene
         rct3::park::object::ObjectMesh ghost_mesh;
         std::map<std::string, TrackModels, std::less<>> models;
         rct3::park::path::SolidTiles solids;
-        std::size_t solids_of = static_cast<std::size_t>(-1);
+        std::optional<std::size_t> solids_of; ///< The scene's object count when worked out
         // The windows that save and load them
         std::optional<ui::screens::dialogs::FileDialogMode> asked; ///< A window to open, until the owner opens it
         SaveBrowser browser;

@@ -548,8 +548,13 @@ namespace rct3::save::model
             std::unordered_map<std::string, std::vector<std::string>> by_lower { };
         };
         const Listing& list(const std::filesystem::path& dir);
-        /// Entries of `dir` matching `name` ignoring ASCII case, the exact spelling first; the flag says exact.
-        std::vector<std::pair<std::string, bool>> candidates(const std::filesystem::path& dir, std::string_view name);
+        struct Candidate
+        {
+            std::string name { }; ///< As spelled in the directory
+            bool exact { };       ///< Spelled as asked
+        };
+        /// Entries of `dir` matching `name` ignoring ASCII case, the exact spelling first.
+        std::vector<Candidate> candidates(const std::filesystem::path& dir, std::string_view name);
         std::optional<OverlayFiles> descend(const std::filesystem::path& dir, std::span<const std::string_view> parts, bool exact);
 
         std::filesystem::path root_;

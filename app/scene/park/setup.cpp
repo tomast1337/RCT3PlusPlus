@@ -604,7 +604,9 @@ namespace rct3::scene::park
                 boned.ride = entity;
                 boned.object = k;
                 boned.placed = is_exit ? out : in;
-                std::tie(boned.mesh, boned.bones) = rct3::park::boned_meshes(scene.objects[k], *model, scene.grid);
+                auto [meshes, bones] = rct3::park::boned_meshes(scene.objects[k], *model, scene.grid);
+                boned.mesh = std::move(meshes);
+                boned.bones = std::move(bones);
                 boned.first_seat = scene.seat_carriers.size();
                 boned.reach = scene.grid.tile_size_x;
                 boned.gate = { *shut, *opening, *open, *shutting };
@@ -687,7 +689,9 @@ namespace rct3::scene::park
                     boned.ride = entity;
                     boned.object = k;
                     boned.placed = placed;
-                    std::tie(boned.mesh, boned.bones) = rct3::park::boned_meshes(scene.objects[k], model->second, scene.grid);
+                    auto [meshes, bones] = rct3::park::boned_meshes(scene.objects[k], model->second, scene.grid);
+                    boned.mesh = std::move(meshes);
+                    boned.bones = std::move(bones);
                     boned.first_seat = scene.seat_carriers.size();
                     boned.seats = model->second.seat_bones.size();
                     scene.seat_carriers.resize(scene.seat_carriers.size() + boned.seats, boned.placed);
@@ -772,7 +776,7 @@ namespace rct3::scene::park
             {
                 ParkScene::BonedCar& boned = scene.boned_cars.emplace_back();
                 boned.car = i;
-                boned.mesh = rct3::park::boned_meshes(scene.cars[i], model->second, scene.grid).first;
+                boned.mesh = rct3::park::boned_meshes(scene.cars[i], model->second, scene.grid).meshes;
                 add_textures(device, scene, boned.mesh.mesh.batches);
             }
         // Arms' joints follow the cars, each where its car stands until the cars are next placed.
@@ -923,7 +927,9 @@ namespace rct3::scene::park
         ParkScene::BonedRide& boned = scene.boned_rides.emplace_back();
         boned.object = k;
         boned.placed = rct3::park::object::placed_transform(scene.objects[k], &model->second, scene.grid, scene.fitted);
-        std::tie(boned.mesh, boned.bones) = rct3::park::boned_meshes(scene.objects[k], model->second, scene.grid);
+        auto [meshes, bones] = rct3::park::boned_meshes(scene.objects[k], model->second, scene.grid);
+        boned.mesh = std::move(meshes);
+        boned.bones = std::move(bones);
         boned.first_seat = scene.seat_carriers.size();
         // Half its footprint's diagonal and a tile over, for what stands taller than wide.
         boned.reach = scene.grid.tile_size_x * (std::hypot(static_cast<float>(model->second.squares[0]), static_cast<float>(model->second.squares[1])) / 2 + 1);

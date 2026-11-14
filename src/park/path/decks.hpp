@@ -131,11 +131,24 @@ namespace rct3::park::path
     [[nodiscard]] std::string deck_symbol(const PathStyle& style, DeckPiece piece);
 
     /// The piece of a raised queue tile and its turn.
-    [[nodiscard]] std::pair<QueuePiece, ModelTurn> queue_deck(const save::model::PathTile& queue);
+    struct QueueDeck
+    {
+        QueuePiece piece { };
+        ModelTurn turn { };
+        friend bool operator==(const QueueDeck&, const QueueDeck&) = default;
+    };
 
-    /// The symbol and turn of the object drawing raised path or queue `path` of `style` among `paths`; an empty
-    /// symbol when the style lacks the piece.
-    [[nodiscard]] std::pair<std::string, ModelTurn> deck_for(const PathStyle& style, const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
+    [[nodiscard]] QueueDeck queue_deck(const save::model::PathTile& queue);
+
+    /// The object drawing a raised path or queue.
+    struct DeckObject
+    {
+        std::string symbol { }; ///< Empty when the style lacks the piece
+        ModelTurn turn { };
+    };
+
+    /// The object drawing raised path or queue `path` of `style` among `paths`.
+    [[nodiscard]] DeckObject deck_for(const PathStyle& style, const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
 
     /// Gives each raised path and queue on the tiles from `low` to `high` (inclusive) the piece and turn
     /// its neighbours call for, changing the symbol and rotation of the object that draws it. The pieces come

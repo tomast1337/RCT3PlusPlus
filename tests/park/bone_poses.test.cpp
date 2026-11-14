@@ -50,10 +50,10 @@ TEST_CASE("a bone carries the bones hung from it, between its keys")
 TEST_CASE("a flat ride starts, runs round and stops within its ride, and stands between rides")
 {
     const float seconds[] = { 5, 2, 3, 1 }; // Standing, starting, running, stopping
-    CHECK(flat_ride_motion(seconds, 10, 1, true, 0) == std::pair<std::size_t, float> { kRideStarting, 1.0f });
-    CHECK(flat_ride_motion(seconds, 10, 7, true, 0) == std::pair<std::size_t, float> { kRideRunning, 2.0f });
-    CHECK(flat_ride_motion(seconds, 10, 9.5f, true, 0) == std::pair<std::size_t, float> { kRideStopping, 0.5f });
-    CHECK(flat_ride_motion(seconds, 10, 0, false, 7) == std::pair<std::size_t, float> { kRideStanding, 2.0f });
+    CHECK(flat_ride_motion(seconds, 10, 1, true, 0) == MotionAt { kRideStarting, 1.0f });
+    CHECK(flat_ride_motion(seconds, 10, 7, true, 0) == MotionAt { kRideRunning, 2.0f });
+    CHECK(flat_ride_motion(seconds, 10, 9.5f, true, 0) == MotionAt { kRideStopping, 0.5f });
+    CHECK(flat_ride_motion(seconds, 10, 0, false, 7) == MotionAt { kRideStanding, 2.0f });
 }
 
 TEST_CASE("a gate finishes the motion it is in before it opens or shuts")

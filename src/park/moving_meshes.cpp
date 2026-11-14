@@ -55,7 +55,7 @@ namespace rct3::park
         return moves;
     }
 
-    std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::model::PlacedObject& object, const object::ObjectModel& model, const save::model::TerrainGrid& grid)
+    BonedMeshes boned_meshes(const save::model::PlacedObject& object, const object::ObjectModel& model, const save::model::TerrainGrid& grid)
     {
         std::vector<object::ObjectMesh> alone;
         std::vector<VertexSkin> skins;
@@ -78,7 +78,7 @@ namespace rct3::park
         std::vector<std::int32_t> bones(model.rig ? model.rig->parents.size() : 0);
         std::iota(bones.begin(), bones.end(), 0);
         out.places.assign(bones.size(), glm::mat4(1.0f));
-        return { std::move(out), std::move(bones) };
+        return BonedMeshes { std::move(out), std::move(bones) };
     }
 
     MovingMeshes gathered_meshes(std::span<const object::ObjectMesh> alone)

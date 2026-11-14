@@ -42,9 +42,15 @@ namespace rct3::park
     /// Shapes already built, each in its own space, as one mesh: batches drawn alike are gathered.
     [[nodiscard]] MovingMeshes gathered_meshes(std::span<const object::ObjectMesh> alone);
 
-    /// The parts of `object` (whose model `model` has a rig) at its rig's level, in the model's own space, each
-    /// vertex skinned to the bones that move it; with the rig's bones, one per place to be given.
-    [[nodiscard]] std::pair<MovingMeshes, std::vector<std::int32_t>> boned_meshes(const save::model::PlacedObject& object, const object::ObjectModel& model, const save::model::TerrainGrid& grid);
+    /// The parts of a rigged object, skinned to the bones that move them.
+    struct BonedMeshes
+    {
+        MovingMeshes meshes { };             ///< In the model's own space, each vertex skinned to the bones that move it
+        std::vector<std::int32_t> bones { }; ///< The rig's bones, one per place to be given
+    };
+
+    /// The parts of `object` (whose model `model` has a rig) at its rig's level.
+    [[nodiscard]] BonedMeshes boned_meshes(const save::model::PlacedObject& object, const object::ObjectModel& model, const save::model::TerrainGrid& grid);
 
     /// How each of an arm's joints, at rest at `joints` (model space, from the base out), moves what it carries
     /// once turned by `degrees`: model space, each joint carried by those before it. The first turns about its

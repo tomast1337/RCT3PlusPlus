@@ -236,7 +236,7 @@ namespace rct3::park::path
         return at < style.pieces.size() ? style.pieces[at] : std::string();
     }
 
-    std::pair<QueuePiece, ModelTurn> queue_deck(const save::model::PathTile& queue)
+    QueueDeck queue_deck(const save::model::PathTile& queue)
     {
         if (!queue.elevation || !queue.queue)
             return { };
@@ -253,7 +253,7 @@ namespace rct3::park::path
         return { piece, ModelTurn::toward(start.right()) };
     }
 
-    std::pair<std::string, ModelTurn> deck_for(const PathStyle& style, const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid)
+    DeckObject deck_for(const PathStyle& style, const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid)
     {
         if (path.kind == save::model::PathKind::Queue)
         {
@@ -295,7 +295,11 @@ namespace rct3::park::path
                     ModelTurn turn;
                     std::string symbol;
                     if (queue)
-                        std::tie(symbol, turn) = deck_for(*style, *p, paths, grid);
+                    {
+                        DeckObject deck = deck_for(*style, *p, paths, grid);
+                        symbol = std::move(deck.symbol);
+                        turn = deck.turn;
+                    }
                     else
                     {
                         const Deck deck = choose(*p, tiles, grid, walls);

@@ -52,10 +52,17 @@ namespace rct3::park
     inline constexpr std::size_t kRideRunning = 2;
     inline constexpr std::size_t kRideStopping = 3;
 
-    /// Which of a flat ride's motions (with lengths `seconds`) plays, and how far into it: `into` seconds into
-    /// a ride of `cycle` seconds (start, running round as many times as fit, stop), or standing `idle` seconds
-    /// when not riding.
-    [[nodiscard]] std::pair<std::size_t, float> flat_ride_motion(std::span<const float> seconds, float cycle, float into, bool riding, float idle);
+    /// A motion playing, and how far into it.
+    struct MotionAt
+    {
+        std::size_t motion { };
+        float seconds { }; ///< Into it
+        friend bool operator==(const MotionAt&, const MotionAt&) = default;
+    };
+
+    /// Which of a flat ride's motions (with lengths `seconds`) plays: `into` seconds into a ride of `cycle`
+    /// seconds (start, running round as many times as fit, stop), or standing `idle` seconds when not riding.
+    [[nodiscard]] MotionAt flat_ride_motion(std::span<const float> seconds, float cycle, float into, bool riding, float idle);
 
     /// A ride entrance's or exit's gate motions: shut, opening, open and shutting.
     inline constexpr std::size_t kGateShut = 0;

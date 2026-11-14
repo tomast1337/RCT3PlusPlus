@@ -717,13 +717,13 @@ namespace rct3::scene::park
         }
     }
 
-    void add_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t from, std::size_t count)
+    void add_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t from, std::size_t count, RideCarsAdded added)
     {
         std::uint64_t last = 0;
         for (const auto& list : { std::span<const save::model::PlacedObject>(scene.objects), std::span<const save::model::PlacedObject>(scene.cars) })
             for (const save::model::PlacedObject& o : list)
                 last = std::max(last, o.id);
-        rct3::park::ride::RideCars cars = rct3::park::ride::ride_cars(std::span(scene.rides.rides).subspan(from, count), last);
+        rct3::park::ride::RideCars cars = added == RideCarsAdded::LiftsOnly ? rct3::park::ride::RideCars { } : rct3::park::ride::ride_cars(std::span(scene.rides.rides).subspan(from, count), last);
         for (rct3::park::ride::CarSpot& spot : cars.spots)
             spot.ride += from;
         // A ride whose kind has a lift car has one on each of its lift towers, numbered past its trains.

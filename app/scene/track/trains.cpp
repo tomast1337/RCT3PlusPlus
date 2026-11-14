@@ -66,6 +66,11 @@ namespace rct3::scene::track
         if (const auto file = install.find(std::format("{}.common.ovl", path)))
             (void)found.add_file(*file);
         park::add_referenced(found, install); // Links between cars are often in files of their own
+        const auto& course = index < scene.courses.size() ? scene.courses[index] : std::nullopt;
+        const auto& lift = index < scene.track_rules.size() ? scene.track_rules[index].lift_car : std::nullopt;
+        const auto lift_file = lift && course && !course->lifts.empty() ? train_file(install, lift->train) : std::nullopt;
+        if (lift_file)
+            (void)found.add_file(*lift_file);
         rct3::park::object::ModelLoader loader(found);
         // The train's designs by slot (rct3::park::ride::car_slots), each that it fills.
         std::array<std::optional<rct3::park::object::ObjectModel>, 6> designs;
@@ -81,7 +86,6 @@ namespace rct3::scene::track
         };
         // On a course with a station, as many cars as its shortest station takes, as in the game; where even the
         // fewest its kind allows do not fit, that many all the same, so that any circuit runs.
-        const auto& course = index < scene.courses.size() ? scene.courses[index] : std::nullopt;
         if (course && ride.mode != save::model::OperatingMode::MiniGolf && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station))
         {
             const auto limits = scene.train_limits.find(index);
@@ -91,6 +95,15 @@ namespace rct3::scene::track
                 lengths.push_back(rct3::park::track::train_length(fits_of(rct3::park::ride::car_slots(n, filled))));
             const int fit = rct3::park::track::cars_fitting(*course, lengths, fewest);
             cars = fit > 0 ? fit : fewest;
+        }
+        // No longer than the track a lift's car carries.
+        if (lift_file)
+        {
+            std::string lift_path = std::filesystem::relative(*lift_file, install.root()).generic_string();
+            lift_path.resize(lift_path.size() - std::string_view(".common.ovl").size());
+            if (const auto carrier = loader.load_car(lift->train, lift_path, 0); carrier && rct3::park::track::carried_length(*carrier) > 0)
+                while (cars > 1 && rct3::park::track::train_length(fits_of(rct3::park::ride::car_slots(cars, filled))) > rct3::park::track::carried_length(*carrier))
+                    --cars;
         }
         // A car more where those there have no seat, as a front car alone may have none.
         while (cars < 2 && std::ranges::none_of(rct3::park::ride::car_slots(cars, filled), [&](std::size_t slot) { return designs[slot] && designs[slot]->seats > 0; }))

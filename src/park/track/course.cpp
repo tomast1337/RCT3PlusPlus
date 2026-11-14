@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <iterator>
@@ -258,14 +259,13 @@ namespace rct3::park::track
     {
         /// The track's own frame under a car with wheels `at`: x across, y up, z from the rear wheels to the
         /// front ones, standing midway between them.
-        glm::mat4 frame_at(const TrackCourse& course, Axles at)
+        /// The frame of a car with its front wheels at `front` and rear ones at `rear`, the track's up there
+        /// `up` summed; along `alone` where the wheels are at one point.
+        glm::mat4 frame_between(const glm::vec3& front, const glm::vec3& rear, glm::vec3 up, const glm::vec3& alone)
         {
-            const glm::vec3 front = course_point(course, at.front);
-            const glm::vec3 rear = course_point(course, at.rear);
             glm::vec3 way = front - rear;
             constexpr float kOnePoint = 1e-3f;
-            way = glm::length(way) > kOnePoint ? glm::normalize(way) : course_direction(course, (at.front + at.rear) / 2);
-            glm::vec3 up = course_up(course, at.front) + course_up(course, at.rear);
+            way = glm::length(way) > kOnePoint ? glm::normalize(way) : alone;
             up -= glm::dot(up, way) * way;
             if (glm::length(up) < 1e-6f) // Up along the way: any square to it will do
                 up = std::abs(way.y) < 0.9f ? glm::vec3 { 0, 1, 0 } - way.y * way : glm::vec3 { 1, 0, 0 } - way.x * way;
@@ -276,6 +276,17 @@ namespace rct3::park::track
             frame[2] = glm::vec4(way, 0);
             frame[3] = glm::vec4((front + rear) / 2.0f, 1);
             return frame;
+        }
+        glm::mat4 frame_at(const TrackCourse& course, Axles at)
+        {
+            return frame_between(course_point(course, at.front), course_point(course, at.rear), course_up(course, at.front) + course_up(course, at.rear), course_direction(course, (at.front + at.rear) / 2));
+        }
+        /// A frame's inverse: as it is a turn and a shift, the turn's transpose and the shift taken back.
+        glm::mat4 undone(const glm::mat4& frame)
+        {
+            glm::mat4 back = glm::transpose(glm::mat4(glm::mat3(frame)));
+            back[3] = glm::vec4(-(glm::mat3(back) * glm::vec3(frame[3])), 1);
+            return back;
         }
         /// Track from the rear of the car ahead of `link` to the front of the car behind it: from where the one couples
         /// on, the link's reach on, less how far back from its front the other couples on. Below zero where the cars'
@@ -288,12 +299,57 @@ namespace rct3::park::track
 
     glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, float by)
     {
-        const glm::mat4 from = frame_at(course, saved_at);
-        const glm::mat4 to = frame_at(course, { saved_at.front + by, saved_at.rear + by });
-        // The frame is a turn and a shift, so its inverse is the turn's transpose and the shift taken back.
-        glm::mat4 back = glm::transpose(glm::mat4(glm::mat3(from)));
-        back[3] = glm::vec4(-(glm::mat3(back) * glm::vec3(from[3])), 1);
-        return to * back * saved;
+        return frame_at(course, { saved_at.front + by, saved_at.rear + by }) * undone(frame_at(course, saved_at)) * saved;
+    }
+
+    float carried_length(const object::ObjectModel& model)
+    {
+        float length = 0;
+        for (std::size_t k = 1; k < model.carried.size(); ++k)
+            length += glm::distance(model.carried[k - 1], model.carried[k]);
+        return length;
+    }
+
+    glm::mat4 lift_car_place(const TrackCourse& course, const LiftRun& run, const object::ObjectModel& model, float at)
+    {
+        const object::CarFit fit = model.car_fit.value_or(object::CarFit { });
+        const float span = std::max(fit.rear_wheels - fit.front_wheels, 0.0f);
+        // Its front wheels go from a wheelbase up the rails to their top, as it goes from the bottom to the top.
+        const float climb = std::max(run.to - run.from, 1e-3f);
+        const auto place_at = [&](float d, bool turned) {
+            const float front = run.from + span + (std::clamp(d, run.from, run.to) - run.from) * std::max(run.to - run.from - span, 0.0f) / climb;
+            const glm::mat4 half = turned ? glm::rotate(glm::mat4(1.0f), glm::pi<float>(), glm::vec3(0, 0, 1)) : glm::mat4(1.0f);
+            return frame_at(course, { front, front - span }) * half * glm::translate(glm::mat4(1.0f), -fit.on_track);
+        };
+        if (model.carried.empty())
+            return place_at(at, false);
+        const glm::vec3 entry = course_point(course, run.entry);
+        const auto start_off = [&](bool turned) { return glm::distance(glm::vec3(place_at(run.from, turned) * glm::vec4(model.carried.front(), 1)), entry); };
+        return place_at(at, start_off(true) < start_off(false));
+    }
+
+    glm::mat4 moved_on_lift(const TrackCourse& course, const LiftRun& lift, const object::ObjectModel& model, const glm::mat4& lift_place, const glm::mat4& saved, Axles saved_at, Axles on)
+    {
+        const float carried = carried_length(model);
+        // A wheel `x` along the car's track: where it is, and up there.
+        const auto wheel = [&](float x) -> std::pair<glm::vec3, glm::vec3> {
+            if (x < 0 || model.carried.size() < 2)
+                return { course_point(course, lift.entry + x), course_up(course, lift.entry + x) };
+            if (x > carried)
+                return { course_point(course, lift.to + x - carried), course_up(course, lift.to + x - carried) };
+            std::size_t k = 1;
+            float before = 0;
+            for (; k + 1 < model.carried.size() && before + glm::distance(model.carried[k - 1], model.carried[k]) < x; ++k)
+                before += glm::distance(model.carried[k - 1], model.carried[k]);
+            const float step = glm::distance(model.carried[k - 1], model.carried[k]);
+            const float t = step > 0 ? std::clamp((x - before) / step, 0.0f, 1.0f) : 0.0f;
+            const glm::vec3 up = k < model.carried_ups.size() ? glm::mix(model.carried_ups[k - 1], model.carried_ups[k], t) : glm::vec3(0, 1, 0);
+            return { glm::vec3(lift_place * glm::vec4(glm::mix(model.carried[k - 1], model.carried[k], t), 1)), glm::mat3(lift_place) * up };
+        };
+        const auto [front, front_up] = wheel(on.front);
+        const auto [rear, rear_up] = wheel(on.rear);
+        const glm::vec3 alone = glm::mat3(lift_place) * (model.carried.size() >= 2 ? glm::normalize(model.carried.back() - model.carried.front()) : glm::vec3(0, 0, 1));
+        return frame_between(front, rear, front_up + rear_up, alone) * undone(frame_at(course, saved_at)) * saved;
     }
 
     float train_length(std::span<const object::CarFit> fits)

@@ -726,6 +726,32 @@ namespace rct3::scene::park
         rct3::park::ride::RideCars cars = rct3::park::ride::ride_cars(std::span(scene.rides.rides).subspan(from, count), last);
         for (rct3::park::ride::CarSpot& spot : cars.spots)
             spot.ride += from;
+        // A ride whose kind has a lift car has one on each of its lift towers, numbered past its trains.
+        for (const save::model::PlacedObject& o : cars.pieces)
+            last = std::max(last, o.id);
+        for (std::size_t r = from; r < from + count; ++r)
+        {
+            const auto& lift = r < scene.track_rules.size() ? scene.track_rules[r].lift_car : std::nullopt;
+            const auto& course = r < scene.courses.size() ? scene.courses[r] : std::nullopt;
+            const auto file = lift && course && !course->lifts.empty() ? track::train_file(install, lift->train) : std::nullopt;
+            if (!file)
+                continue;
+            std::string path = std::filesystem::relative(*file, install.root()).generic_string();
+            path.resize(path.size() - std::string_view(".common.ovl").size());
+            const save::model::Ride& ride = scene.rides.rides[r];
+            for (std::size_t l = 0; l < course->lifts.size(); ++l)
+            {
+                save::model::PlacedObject& o = cars.pieces.emplace_back();
+                o.id = ++last;
+                o.owner_ref = o.id;
+                o.overlay = path;
+                o.symbol = std::format("{}#0", lift->train);
+                o.colours = { ride.car_colours[0], ride.car_colours[1], ride.car_colours[2] };
+                cars.designs.push_back({ lift->train, 0 });
+                cars.spots.push_back({ .ride = r, .train = ride.trains.size() + l, .front = 0, .rear = 0, .lift = l });
+                cars.fitted.emplace(o.id, glm::mat4(1.0f));
+            }
+        }
         load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
         const std::size_t first = scene.cars.size();
         scene.cars.insert(scene.cars.end(), cars.pieces.begin(), cars.pieces.end());
@@ -833,6 +859,29 @@ namespace rct3::scene::park
             if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[cars.front()])); model != scene.models.end())
                 for (simulation::Coaster& train : fleet->trains)
                     fit_car(train, model->second, ride_index < scene.track_rules.size() && scene.track_rules[ride_index].pool_ride);
+        // Each lift's car carries a train as long as its track, at its kind's speeds, letting it go as steeply as
+        // that track points down at the top.
+        const auto& lift_car = ride_index < scene.track_rules.size() ? scene.track_rules[ride_index].lift_car : std::nullopt;
+        for (const std::size_t car : lift_car&& fleet != nullptr && scene.courses[ride_index] ? cars : std::vector<std::size_t> { })
+        {
+            const rct3::park::ride::CarSpot& spot = scene.car_spots[car];
+            const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[car]));
+            if (!spot.lift || *spot.lift >= scene.courses[ride_index]->lifts.size() || model == scene.models.end() || model->second.carried.size() < 2)
+                continue;
+            const std::vector<glm::vec3>& track = model->second.carried;
+            const rct3::park::track::LiftRun& run = scene.courses[ride_index]->lifts[*spot.lift];
+            const glm::vec3 off = glm::mat3(rct3::park::track::lift_car_place(*scene.courses[ride_index], run, model->second, run.to)) * (track[track.size() - 1] - track[track.size() - 2]);
+            const float drop = glm::length(off) > 0 ? std::clamp(-glm::normalize(off).y, 0.0f, 1.0f) : 0.0f;
+            for (simulation::Coaster& train : fleet->trains)
+                if (*spot.lift < train.lifts.size())
+                {
+                    simulation::Lift& l = train.lifts[*spot.lift];
+                    l.carried = { rct3::park::track::carried_length(model->second) };
+                    l.up = lift_car->up;
+                    l.down = lift_car->down;
+                    l.drop = drop;
+                }
+        }
         if (cars.empty() || fleet == nullptr || fleet->trains.empty() || !scene.courses[ride_index] || ride.trains.empty())
             return;
         // Riders of tracked rides board the first train as it waits at the station, seats front to back.
@@ -978,7 +1027,11 @@ namespace rct3::scene::park
                     for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
                     {
                         seat_flat_ride(device, scene, i);
-                        board_tracked_ride(device, scene, install, i);
+                        // Lift cars are known only once the kind's rules are read, after the cars were added.
+                        if (scene.track_rules[i].lift_car && scene.courses[i] && !scene.courses[i]->lifts.empty())
+                            replace_ride_cars(device, scene, install, i);
+                        else
+                            board_tracked_ride(device, scene, install, i);
                     }
                     simulation::start_guests(scene.sim);
                     if (kept != nullptr)

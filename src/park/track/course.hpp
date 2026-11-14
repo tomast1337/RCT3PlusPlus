@@ -109,6 +109,19 @@ namespace rct3::park::track
     /// between them, and keeps the place and turn it had against the track.
     [[nodiscard]] glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, float by);
 
+    /// How long the track a lift's car, `model`, carries is; 0 for a model carrying none.
+    [[nodiscard]] float carried_length(const object::ObjectModel& model);
+
+    /// Where a lift's car, `model`, stands `at` along `course` up `run`, from the run's `from` at the bottom to its
+    /// `to`: its wheels on the tower's rails, turned so that at the bottom the track it carries starts on the
+    /// side trains come from.
+    [[nodiscard]] glm::mat4 lift_car_place(const TrackCourse& course, const LiftRun& run, const object::ObjectModel& model, float at);
+
+    /// Where a car the park kept at `saved`, its wheels at `saved_at` along `course`, stands with its wheels
+    /// `on` along the track of the lift's car `lift` (`model`, standing at `lift_place`): a wheel short of that
+    /// track's start is on the course back from the run's entry, one past its end on the course on from its top.
+    [[nodiscard]] glm::mat4 moved_on_lift(const TrackCourse& course, const LiftRun& lift, const object::ObjectModel& model, const glm::mat4& lift_place, const glm::mat4& saved, Axles saved_at, Axles on);
+
     /// Track left clear between trains queued one behind another, in metres.
     inline constexpr float kTrainGap = 2;
 

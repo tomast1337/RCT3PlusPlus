@@ -23,6 +23,7 @@
 #include "park/water/surface.hpp"
 #include "render/device.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <expected>
@@ -81,7 +82,7 @@ namespace rct3::scene::park
     void destroy_park_water(render::Device& device, ParkWater& water);
 
     /// Ages the ripples.
-    void advance_park_water(ParkWater& water, float seconds);
+    void advance_park_water(ParkWater& water, units::Seconds elapsed);
 
     /// Starts a ripple where `ray` meets the water, unless the ground is in front of it. True if it did.
     bool ripple_park_water(ParkWater& water, const rct3::park::Ray& ray, const save::model::TerrainGrid& grid);

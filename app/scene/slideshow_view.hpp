@@ -8,6 +8,7 @@
 #include "render/device.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/slideshow.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <set>
@@ -30,7 +31,7 @@ namespace rct3::scene
     };
 
     /// Moves the show on and loads what it now shows.
-    void update_slideshow_view(render::Device& device, SlideshowView& view, float elapsed);
+    void update_slideshow_view(render::Device& device, SlideshowView& view, units::Seconds elapsed);
 
     /// Adds the pictures to `list`, in `area`.
     void draw_slideshow_view(const SlideshowView& view, ui::DrawList& list, const ui::Rect& area);

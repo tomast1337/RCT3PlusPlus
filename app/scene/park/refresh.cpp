@@ -615,8 +615,9 @@ namespace rct3::scene::park
         return rct3::park::object::placed_transform(o, &model->second, scene.grid, scene.fitted) * (*places)[at];
     }
 
-    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed)
+    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, units::Seconds elapsed)
     {
+        const float seconds = elapsed.value;
         // Chosen by eye: the effects a car's splash points spray, by strength, and its wake.
         constexpr std::array<std::string_view, 3> kSplashEffects { "splash2", "splash4", "watersplashbig" };
         constexpr std::string_view kWakeEffect = "waterwakemedium";
@@ -751,7 +752,7 @@ namespace rct3::scene::park
                 else if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[i])); model != scene.models.end())
                 {
                     // Through the water: sprays from its splash points as it splashes, a wake behind it now and then.
-                    const glm::vec3 velocity = elapsed > 0 ? (glm::vec3(place[3]) - glm::vec3(scene.car_places[i][3])) / elapsed : glm::vec3(0.0f);
+                    const glm::vec3 velocity = seconds > 0 ? (glm::vec3(place[3]) - glm::vec3(scene.car_places[i][3])) / seconds : glm::vec3(0.0f);
                     // Only cars that spray, and the one ridden for the water on the lens, look for the park's water.
                     const bool looks = !model->second.splash_points.empty() || scene.riding == i;
                     const rct3::park::track::TrackCourse& course = *scene.courses[spot.ride];
@@ -761,7 +762,7 @@ namespace rct3::scene::park
                     const auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(ride);
                     const bool dry_splasher = cycle != nullptr && cycle->splash && std::ranges::none_of(course.wet, std::identity { });
                     const bool in_water = dry_splasher || (looks && rct3::park::water::water_above(scene.water.surface, glm::vec3(place[3])).has_value());
-                    const rct3::park::CarSplash splash = rct3::park::car_splash(scene.car_waters[i], course, spot.front + moved[i], in_water, velocity, elapsed);
+                    const rct3::park::CarSplash splash = rct3::park::car_splash(scene.car_waters[i], course, spot.front + moved[i], in_water, velocity, seconds);
                     for (const rct3::park::object::SplashPoint& point : model->second.splash_points)
                         if (point.wake ? splash.wake : splash.splash)
                             fire_park_particles(scene.particles, point.wake ? kWakeEffect : kSplashEffects[std::min<std::size_t>(point.strength, 2)], glm::vec3(place * glm::vec4(point.position, 1.0f)), glm::vec3(place[1]));
@@ -798,7 +799,7 @@ namespace rct3::scene::park
             if (const auto& course = scene.courses[spot.ride]; course && tuning.look_ahead > 0 && scene.riding_eye != rct3::park::object::RideEye::Rear && !(train && train->speed < 0))
                 ahead = glm::vec3(rct3::park::track::moved_along(*course, scene.saved_cars.at(scene.cars[i].id), { spot.front, spot.rear }, moved[i] + tuning.look_ahead) * (*seat)[3]);
             const glm::vec2 dice { static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1, static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1 };
-            scene.seat = rct3::park::looked_round(rct3::park::ride_look(scene.ride_view, scene.car_places[i] * *seat, ahead, scene.riding_eye != rct3::park::object::RideEye::Nose, tuning, elapsed, dice), scene.ride_turn);
+            scene.seat = rct3::park::looked_round(rct3::park::ride_look(scene.ride_view, scene.car_places[i] * *seat, ahead, scene.riding_eye != rct3::park::object::RideEye::Nose, tuning, seconds, dice), scene.ride_turn);
         }
         // On a flat ride, from one of its fixed cameras, or from a rider's eyes over their seat, as they move. A
         // seat faces +Z with +Y up, as the people sat on it are modelled.
@@ -903,7 +904,7 @@ namespace rct3::scene::park
     /// Builds the people meshes again as often as they need, all beside the frame: the moving ones as soon as
     /// the last are done, the riders a few times a second, the still ones when a person's level of detail
     /// changes. The still ones' levels are only taken on with them, so the moving ones keep to the same levels.
-    void refresh_people(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed)
+    void refresh_people(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, units::Seconds elapsed)
     {
         if (!scene.person_models)
             return;
@@ -921,7 +922,7 @@ namespace rct3::scene::park
         }
         if (scene.since_people_levels >= kObjectRebuildInterval && !scene.people_build.valid())
         {
-            scene.since_people_levels = 0;
+            scene.since_people_levels = { };
             // Guests who came in at the gate since: dressed from the wardrobe for their age and sex, and kept
             // with the park's people like those it was saved with. Here, as no build reads the shown people.
             auto& r = scene.sim.registry;
@@ -1197,7 +1198,7 @@ namespace rct3::scene::park
         scene.since_riders += elapsed;
         if (scene.simulate && scene.since_riders >= kRidersRebuildInterval && !scene.riders_build.valid())
         {
-            scene.since_riders = 0;
+            scene.since_riders = { };
             scene.riders_build = profiling::section("Riders", [&] { return pose_riders(scene); });
         }
     }
@@ -1265,7 +1266,7 @@ namespace rct3::scene::park
 
     /// Takes on the objects' meshes once built, and looks at their levels again every
     /// kObjectRebuildInterval, building the meshes again beside the frame when one differs.
-    void refresh_objects(render::Device& device, ParkScene& scene, const glm::vec3& eye, float elapsed)
+    void refresh_objects(render::Device& device, ParkScene& scene, const glm::vec3& eye, units::Seconds elapsed)
     {
         if (ready(scene.object_build))
         {
@@ -1295,7 +1296,7 @@ namespace rct3::scene::park
         scene.since_rebuild += elapsed;
         if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid() || scene.supports.stale)
             return; // Stale supports change the objects first (refresh_supports)
-        scene.since_rebuild = 0;
+        scene.since_rebuild = { };
         scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, scales = scene.level_scales, supports = scene.show_supports, broken = scene.broken_objects, chains = rct3::park::chain_runs(scene.rides, scene.objects, scene.models), fades = flow_fades(scene)] {
             profiling::register_thread("ObjectWorker");
             auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band, scales, supports, broken, chains, fades); });

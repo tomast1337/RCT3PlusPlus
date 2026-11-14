@@ -101,7 +101,7 @@ namespace rct3::scene::park
         return shown.has_value();
     }
 
-    void advance_park_particles(ParkParticles& particles, float seconds, glm::vec3 eye, std::size_t budget)
+    void advance_park_particles(ParkParticles& particles, units::Seconds elapsed, glm::vec3 eye, std::size_t budget)
     {
         std::erase_if(particles.fired, [](const ParkParticles::Shown& s) { return s.run.finished(); });
         std::vector<std::pair<float, ParkParticles::Shown*>> near;
@@ -118,7 +118,7 @@ namespace rct3::scene::park
         {
             if (alive >= budget)
                 break;
-            shown->run.advance(seconds);
+            shown->run.advance(elapsed.value);
             shown->awake = true;
             alive += shown->run.particles().count();
         }

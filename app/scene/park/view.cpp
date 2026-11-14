@@ -133,7 +133,7 @@ namespace rct3::scene::park
             scene.money.push_back({ at, amount, 0 });
     }
 
-    std::vector<ui::widgets::MoneyFloat> money_floats(ParkScene& scene, ui::Point size, const ui::Currency& currency, float elapsed)
+    std::vector<ui::widgets::MoneyFloat> money_floats(ParkScene& scene, ui::Point size, const ui::Currency& currency, units::Seconds elapsed)
     {
         // Every attraction's takings are followed, shown or not, so switching them on shows only what comes after.
         for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
@@ -147,7 +147,7 @@ namespace rct3::scene::park
             float_money(scene, { scene.grid.world_x(n.tile.col) + scene.grid.tile_size_x / 2, n.height, scene.grid.world_z(n.tile.row) + scene.grid.tile_size_z / 2 }, attraction.income.value - paid);
         }
         for (FloatingMoney& m : scene.money)
-            m.age += elapsed;
+            m.age += elapsed.value;
         std::erase_if(scene.money, [](const FloatingMoney& m) { return m.age >= ui::widgets::kMoneyFloatLife; });
         if (size.x <= 0 || size.y <= 0)
             return { };

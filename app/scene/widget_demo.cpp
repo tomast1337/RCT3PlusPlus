@@ -325,7 +325,7 @@ namespace rct3::scene
         return demo;
     }
 
-    bool update_widget_demo(render::Device& device, WidgetDemo& demo, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, float elapsed)
+    bool update_widget_demo(render::Device& device, WidgetDemo& demo, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, units::Seconds elapsed)
     {
         const float scale = scale_for(device, demo);
         const render::Extent extent = device.extent();
@@ -338,7 +338,7 @@ namespace rct3::scene
         ui::PointerState pointer = pointer_pixels;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         demo.current_fonts = &ui::fonts_for(device, demo.assets, demo.desktop.root().rect().width());
-        const bool over = demo.desktop.update(pointer, keyboard, { units::Seconds { elapsed }, demo.current_fonts });
+        const bool over = demo.desktop.update(pointer, keyboard, { elapsed, demo.current_fonts });
         follow_bars(demo);
         return over;
     }

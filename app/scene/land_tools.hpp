@@ -82,6 +82,7 @@
 #include "park/tile_shaping.hpp"
 #include "render/device.hpp"
 #include "ui/widget.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -183,6 +184,6 @@ namespace rct3::scene
 
     /// Each frame: follows the pointer at `at` (of a view `size`, not `over` the interface) while the left
     /// button is `down`.
-    void update_land_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed);
+    void update_land_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, units::Seconds elapsed);
 
 } // namespace rct3::scene

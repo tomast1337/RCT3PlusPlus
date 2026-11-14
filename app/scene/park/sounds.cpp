@@ -36,16 +36,16 @@ namespace rct3::scene::park
         constexpr float kFireLevel = 0.5f;                        ///< Of that, its fire burning
         constexpr float kCrashNear = 20;                          ///< World units from a wreck it is heard full loud
         constexpr float kCrashFar = 250;                          ///< And no longer heard
-        constexpr float kChainFade = 0.5f;                        ///< Seconds the chain's loop takes to come in and to die away
+        constexpr units::Seconds kChainFade { 0.5f };             ///< The chain's loop takes this long to come in and to die away
         constexpr std::array kSplashLevels { 0.5f, 0.75f, 1.0f }; ///< Chosen by eye: a splash's loudness by its strength
-        constexpr float kPlumeSeconds = 2.5f;                     ///< Chosen by eye: how long the plume plays after a splash
+        constexpr units::Seconds kPlume { 2.5f };                 ///< Chosen by eye: how long the plume plays after a splash
         constexpr float kWaterfallLevel = 0.6f;                   ///< Of full loudness.
         constexpr float kWaterfallNear = 10;                      ///< World units from where it lands a waterfall is heard full loud.
         constexpr float kWaterfallFar = 90;                       ///< And no longer heard.
         constexpr float kRainLevel = 0.5f;                        ///< Of full loudness, a downpour. Chosen by eye, as the next
         constexpr float kThunderLevel = 0.9f;
-        constexpr float kThumpLevel = 0.6f; ///< Chosen by eye: clear over the park without drowning it
-        constexpr float kThumpGap = 0.4f;   ///< Chosen by eye: seconds before another thump, so a burst of pieces is one
+        constexpr float kThumpLevel = 0.6f;          ///< Chosen by eye: clear over the park without drowning it
+        constexpr units::Seconds kThumpGap { 0.4f }; ///< Chosen by eye: the wait before another thump, so a burst of pieces is one
 
         void silence_trains(audio::AudioEngine& engine, ParkSounds& sounds)
         {
@@ -153,8 +153,9 @@ namespace rct3::scene::park
         return s;
     }
 
-    void update_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds, const ParkScene& scene, float elapsed)
+    void update_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds, const ParkScene& scene, units::Seconds elapsed)
     {
+        const float seconds = elapsed.value;
         const auto& r = scene.sim.registry;
         const bool quiet = scene.park.speed.paused || !scene.simulate;
         const glm::vec3 eye = rct3::park::eye(scene.camera);
@@ -166,7 +167,7 @@ namespace rct3::scene::park
         if (scene.built != std::exchange(sounds.built_heard, scene.built) && sounds.since_thump >= kThumpGap)
         {
             play_any(engine, sounds.thumps, sounds.random, { .volume = kThumpLevel });
-            sounds.since_thump = 0;
+            sounds.since_thump = { };
         }
         // A level won, heard paused too.
         if (scene.levels_won != std::exchange(sounds.levels_heard, scene.levels_won) && sounds.fanfare)
@@ -342,7 +343,7 @@ namespace rct3::scene::park
         sounds.wrecks_heard = std::move(wrecks_heard);
 
         // Riders screaming, one voice a train at most, from its first car.
-        if (sounds.car_were.size() != scene.car_places.size() || elapsed <= 0)
+        if (sounds.car_were.size() != scene.car_places.size() || seconds <= 0)
         {
             sounds.car_were.clear();
             for (const glm::mat4& place : scene.car_places)
@@ -361,7 +362,7 @@ namespace rct3::scene::park
         for (std::size_t i = 0; i < scene.car_places.size() && i < scene.car_spots.size(); ++i)
         {
             const glm::vec3 at { scene.car_places[i][3] };
-            const glm::vec3 velocity = elapsed > 0 ? (at - sounds.car_were[i]) / elapsed : glm::vec3 { 0.0f };
+            const glm::vec3 velocity = seconds > 0 ? (at - sounds.car_were[i]) / seconds : glm::vec3 { 0.0f };
             sounds.car_were[i] = at;
             const rct3::park::ride::CarSpot spot = scene.car_spots[i];
             const entt::entity ride = spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
@@ -375,7 +376,7 @@ namespace rct3::scene::park
                 engine.set_voice_place(voice, at, velocity);
             if (riders.empty() || !fleet->trains[spot.train].running || engine.is_playing(voice))
                 continue;
-            std::bernoulli_distribution scream(std::min(audio::screams_per_second(fleet->trains[spot.train].speed, -velocity.y) * elapsed, 1.0f));
+            std::bernoulli_distribution scream(std::min(audio::screams_per_second(fleet->trains[spot.train].speed, -velocity.y) * seconds, 1.0f));
             if (!scream(sounds.random))
                 continue;
             // A rider picked at random leads, joined by the rest when there are a few.
@@ -431,16 +432,16 @@ namespace rct3::scene::park
 
             // The chain comes in as the train reaches the lift and dies away once all of it is off.
             const bool chained = t.train->running && simulation::on_chain(*t.train);
-            train.chain_off = chained ? 0.0f : train.chain_off + elapsed;
+            train.chain_off = chained ? units::Seconds { } : train.chain_off + elapsed;
             const bool was_playing = engine.is_playing(train.chain);
             keep(train.chain, sound(Chain), chained || (was_playing && train.chain_off < kChainFade) ? level : 0.0f);
             if (chained && !was_playing && engine.is_playing(train.chain))
             {
                 engine.fade_voice(train.chain, 0, 0);
-                engine.fade_voice(train.chain, 1, kChainFade);
+                engine.fade_voice(train.chain, 1, kChainFade.value);
             }
             else if (!chained)
-                engine.fade_voice(train.chain, 0, std::max(kChainFade - train.chain_off, 0.0f));
+                engine.fade_voice(train.chain, 0, std::max(kChainFade - train.chain_off, units::Seconds { }).value);
 
             // Water: a splash as the first car splashes through water, louder the harder, then the plume loop for a
             // few seconds.
@@ -451,12 +452,12 @@ namespace rct3::scene::park
                 {
                     if (const auto& splash = sound(WaterSplash); splash && level > 0)
                         (void)engine.play(*splash, params(level * kSplashLevels[std::min<std::size_t>(water.strength, 2)]));
-                    train.plume_left = kPlumeSeconds;
+                    train.plume_left = kPlume;
                 }
                 train.splashes = water.splashes;
             }
-            train.plume_left = std::max(0.0f, train.plume_left - elapsed);
-            keep(train.plume, sound(WaterPlume), train.plume_left > 0 ? level : 0.0f);
+            train.plume_left = std::max(units::Seconds { }, train.plume_left - elapsed);
+            keep(train.plume, sound(WaterPlume), train.plume_left > units::Seconds { } ? level : 0.0f);
             kept.emplace(t.key, std::move(train));
         }
         silence_trains(engine, sounds); // Trains no longer there

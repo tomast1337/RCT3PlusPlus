@@ -105,9 +105,9 @@ namespace rct3::scene::park
 
         namespace skins = ui::game_skins;
 
-        constexpr float kViewTurn = 0.15f;  ///< Radians a second the round view turns round its attraction
-        constexpr float kFocusZoomOut = 2;  ///< A message's camera looks from this many times the round view's distance (ours)
-        constexpr float kFocusClosest = 20; ///< But no closer, so a small stall shows with what is round it (ours)
+        constexpr units::TurnRate kViewTurn { 0.15f }; ///< The round view turns round its attraction at
+        constexpr float kFocusZoomOut = 2;             ///< A message's camera looks from this many times the round view's distance (ours)
+        constexpr float kFocusClosest = 20;            ///< But no closer, so a small stall shows with what is round it (ours)
         // Values for photos at photo spots.
         constexpr float kPhotoPitch = 0.15f;     ///< Radians down: near eye level
         constexpr float kPhotoClosest = 3;       ///< Of the eye from the party
@@ -121,7 +121,7 @@ namespace rct3::scene::park
         constexpr std::string_view kPrizeName = "prize_won"; ///< The box telling a prize won, one at a time
         constexpr glm::vec4 kDeleteMarkColour { 1.0f, 0.35f, 0.3f, 0.9f };
 
-        constexpr float kHoverPickInterval = 0.1f; ///< Seconds between looks at what is under the pointer, for its look
+        constexpr units::Seconds kHoverPickInterval { 0.1f }; ///< Between looks at what is under the pointer, for its look
 
         /// The sky and the light as the day clock shows them, with a look that is fading out over them.
         void show_time_of_day(ParkScene& scene, glm::vec3 viewer)
@@ -387,7 +387,7 @@ namespace rct3::scene::park
         return ripple_park_water(scene.water, rct3::park::view_ray(scene.camera, size.x / size.y, ndc), scene.grid);
     }
 
-    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed)
+    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, units::Seconds elapsed)
     {
         // The ground is built before the models that give the rides' and stalls' paving its size are read.
         if (scene.footpaths.pavings_stale)
@@ -474,7 +474,7 @@ namespace rct3::scene::park
         ui::PointerState pointer = input.pointer;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         scene.current_fonts = &ui::fonts_for(device, assets, desktop.root().rect().width());
-        const bool over_interface = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { units::Seconds { elapsed }, scene.current_fonts }); });
+        const bool over_interface = profiling::section("Interface", [&] { return desktop.update(pointer, keys, { elapsed, scene.current_fonts }); });
         // Riding along, the park takes no clicks: the whole screen counts as interface.
         const bool over = over_interface || scene.riding_along();
         if (auto panel = scene.riding_along() ? desktop.root().find_as<ui::screens::park_view::RideCameraPanel>(kRideCameraName) : std::nullopt)
@@ -515,7 +515,7 @@ namespace rct3::scene::park
             const ui::Rect screen = desktop.root().rect();
             const Picked picked = picked_at(scene, pointer.position, { screen.width(), screen.height() });
             scene.hover_pickable = picked.person || picked.attraction || picked.prop;
-            scene.since_hover_pick = 0;
+            scene.since_hover_pick = { };
         }
         if (info)
         {
@@ -705,7 +705,7 @@ namespace rct3::scene::park
             scene.since_info_page += elapsed;
             if (scene.shown && (std::exchange(scene.shown_closed, false) || (scene.simulate && scene.info_tab == ui::screens::info::AttractionTab::Customers && scene.since_info_page >= kLivePageInterval)))
             {
-                scene.since_info_page = 0;
+                scene.since_info_page = { };
                 show_info_page(scene, *info, assets, options);
             }
             const auto action = info->take_action();
@@ -966,7 +966,7 @@ namespace rct3::scene::park
         // A slide built up to a pool, or taken away, opens or closes its railing there.
         if (!scene.pools.squares.empty() && pool_openings(scene) != scene.pool_openings)
             pools_changed(device, scene, assets);
-        scene.view_camera.yaw += kViewTurn * elapsed;
+        scene.view_camera.yaw += kViewTurn.value * elapsed.value;
         if (scene.shown_person && *scene.shown_person < scene.shown_people.size())
             scene.view_camera = person_view(scene, *scene.shown_person, scene.view_camera.yaw);
         const glm::vec3 viewer = rct3::park::eye(scene.camera, scene.seat);
@@ -978,13 +978,13 @@ namespace rct3::scene::park
                 rct3::park::object::face_billboards(shown->billboards, viewer);
             scene.billboards_eye = viewer;
         }
-        scene.clock += elapsed;
-        const float park_seconds = elapsed * simulation::time_factor(scene.park.speed);
-        scene.park_clock += park_seconds;
+        scene.clock += elapsed.value;
+        const units::Seconds park_time { elapsed.value * simulation::time_factor(scene.park.speed) };
+        scene.park_clock += park_time.value;
         scene.chain_shifts.resize(scene.rides.rides.size());
         for (std::size_t i = 0; i < scene.chain_shifts.size(); ++i)
-            scene.chain_shifts[i] = rct3::park::chain_shift(scene.chain_shifts[i], scene.rides.rides[i].options.lift_speed, park_seconds);
-        advance_park_particles(scene.particles, park_seconds, viewer, static_cast<std::size_t>(options.get(config::game::GameOption::ParticleBudget)));
+            scene.chain_shifts[i] = rct3::park::chain_shift(scene.chain_shifts[i], scene.rides.rides[i].options.lift_speed, park_time.value);
+        advance_park_particles(scene.particles, park_time, viewer, static_cast<std::size_t>(options.get(config::game::GameOption::ParticleBudget)));
         scene.water.look = water_look(options);
         scene.shadows = options.choice(config::game::GameOption::Shadows);
         scene.blend_shadows = options.flag(config::game::GameOption::BlendShadows);
@@ -994,7 +994,7 @@ namespace rct3::scene::park
         scene.light_shafts = options.flag(config::game::GameOption::LightShafts);
         scene.ambient_occlusion = options.flag(config::game::GameOption::AmbientOcclusion);
         scene.surface_detail = options.choice(config::game::GameOption::SurfaceDetail);
-        advance_park_water(scene.water, park_seconds);
+        advance_park_water(scene.water, park_time);
         rct3::park::pools::drop_spent_waves(scene.drawn_waves, scene.park_clock);
         rct3::park::pools::drop_spent_waves(scene.rings, scene.park_clock);
         scene.water.pool_waves = scene.machine_waves;
@@ -1057,12 +1057,12 @@ namespace rct3::scene::park
         }
         profiling::section("Simulation", [&] {
             // The park's day, its calendar and its messages' ages run at the speed picked, and stop while paused.
-            const float game_seconds = elapsed * simulation::time_factor(scene.park.speed);
+            const float game_seconds = elapsed.value * simulation::time_factor(scene.park.speed);
             simulation::advance(scene.day, game_seconds);
             const float before = scene.park.time;
             const std::int32_t weeks = simulation::park::pass_time(scene.park, game_seconds);
             simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, options.flag(config::game::GameOption::DisableWeather));
-            scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed, scene.weather_dice);
+            scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed.value, scene.weather_dice);
             // Research, once the build lists say what each item is. It goes by the calendar, so that a calendar set
             // on by hand takes research with it.
             if (scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)

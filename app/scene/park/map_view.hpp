@@ -19,6 +19,7 @@
 #include "save/model/world.hpp"
 #include "ui/desktop.hpp"
 #include "ui/string_table.hpp"
+#include "units/units.hpp"
 
 #include <functional>
 #include <optional>
@@ -35,8 +36,8 @@ namespace rct3::scene::park
         rct3::park::MapLayers layers = rct3::park::all_map_layers();
         render::TextureHandle picture;
         render::TextureHandle people;
-        bool stale = true;         ///< The picture no longer shows the layers picked
-        float since_people = 1e9f; ///< Seconds since the people's picture was drawn
+        bool stale = true;                          ///< The picture no longer shows the layers picked
+        std::optional<units::Seconds> since_people; ///< Since the people's picture was drawn; none to draw it at once
     };
 
     /// What a park's map shows: its paths, water, scenery and attractions by kind, and the ground in the
@@ -50,7 +51,7 @@ namespace rct3::scene::park
     /// Brings the open window up to date: its pictures, the people (`people` is asked only when they are
     /// drawn again) and the camera, seen in a view `aspect` times as wide as it is tall. Returns the park
     /// point (x, z) the player picked on the map since the last frame, if any.
-    [[nodiscard]] std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::model::TerrainGrid& grid, const rct3::park::ParkCamera& camera, float aspect, const std::function<rct3::park::MapPeople()>& people, float elapsed);
+    [[nodiscard]] std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::model::TerrainGrid& grid, const rct3::park::ParkCamera& camera, float aspect, const std::function<rct3::park::MapPeople()>& people, units::Seconds elapsed);
 
     void destroy_park_map(render::Device& device, ParkMap& map);
 

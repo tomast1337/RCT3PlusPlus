@@ -16,6 +16,7 @@
 #include "ui/draw_list.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/screens/front/desktop.hpp"
+#include "units/units.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -86,7 +87,7 @@ namespace rct3::scene
 
     /// Lays out for the device's size and routes the pointer, given in framebuffer pixels, and the keys.
     /// Returns whether the interface has the pointer.
-    bool update_front_end_scene(render::Device& device, FrontEndScene& scene, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, float elapsed);
+    bool update_front_end_scene(render::Device& device, FrontEndScene& scene, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, units::Seconds elapsed);
 
     /// The interface's scale on the device.
     [[nodiscard]] float front_end_scale(const render::Device& device, const FrontEndScene& scene);

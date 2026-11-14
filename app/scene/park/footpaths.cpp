@@ -1400,7 +1400,7 @@ namespace rct3::scene::park
         return true;
     }
 
-    void follow_footpaths(ParkScene& scene, float elapsed)
+    void follow_footpaths(ParkScene& scene, units::Seconds elapsed)
     {
         ParkFootpaths& f = scene.footpaths;
         if (!f.camera_goal || scene.dragging || scene.turning)
@@ -1411,7 +1411,7 @@ namespace rct3::scene::park
         const glm::vec3 to = *f.camera_goal - scene.camera.target;
         if (glm::length(to) < kFollowNear)
             f.camera_goal.reset();
-        scene.camera.target += to * (1 - std::exp(-kFollowRate * elapsed));
+        scene.camera.target += to * (1 - std::exp(-kFollowRate * elapsed.value));
     }
 
     bool footpath_sell(ParkScene& scene, ui::Point at, ui::Point size)

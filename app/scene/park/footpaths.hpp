@@ -50,6 +50,7 @@
 #include "scene/objects.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/screens/build/paths.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -172,9 +173,9 @@ namespace rct3::scene::park
     /// `control`: Control is held, so the trail starts at the last piece's height.
     bool footpath_click(ParkScene& scene, ui::Point at, ui::Point size, bool control);
 
-    /// With the panel's camera follow on, glides the camera over `elapsed` seconds towards the next piece each
+    /// With the panel's camera follow on, glides the camera over `elapsed` towards the next piece each
     /// time the trail goes on; the player moving the camera stops it until the next piece.
-    void follow_footpaths(ParkScene& scene, float elapsed);
+    void follow_footpaths(ParkScene& scene, units::Seconds elapsed);
 
     /// A right click while the path panel shows its controls lets go of the trail's arrow, or with no trail
     /// going on sells the path under the pointer, as in the game. Whether it did either.

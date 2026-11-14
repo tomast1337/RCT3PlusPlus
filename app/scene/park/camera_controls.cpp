@@ -14,26 +14,27 @@ namespace rct3::scene::park
     {
 
         // How far the controls move the camera.
-        constexpr float kDragPan = 0.0025f;     ///< Per pixel, times the distance
-        constexpr float kDragTurn = 0.006f;     ///< Radians per pixel
-        constexpr float kKeyPan = 0.8f;         ///< Per second, times the distance
-        constexpr float kEdgeBand = 12;         ///< Interface units in from a screen edge where the pointer pushes
-        constexpr float kWheelZoom = 0.85f;     ///< Distance times this per notch towards the screen
-        constexpr float kWheelSeconds = 0.25f;  ///< How long a notch takes to roll in, nearly all of it
-        constexpr float kKeyZoom = 2.5f;        ///< Times per second
-        constexpr float kKeyTurn = 1.5f;        ///< Radians per second
-        constexpr float kIsoTurnDrag = 60;      ///< Interface units across, times the sensitivity option, that turn isometric a quarter
-        constexpr float kIsoTurnSpeed = 3.5f;   ///< Radians a second isometric turns at
-        constexpr float kDragZoom = 1.006f;     ///< Distance times this per pixel down, advanced's right drag
-        constexpr float kWheelTilt = 0.08f;     ///< Radians down per notch away, advanced's wheel in its first scheme
-        constexpr float kFlySpeed = 80;         ///< World units a second free look flies at, times its speed option
-        constexpr float kFlyDrag = 0.004f;      ///< Seconds of flight per pixel a middle drag goes
-        constexpr float kFlyAboveGround = 1.5f; ///< Free look's eye stays this high over the ground
+        constexpr float kDragPan = 0.0025f;            ///< Per pixel, times the distance
+        constexpr float kDragTurn = 0.006f;            ///< Radians per pixel
+        constexpr float kKeyPan = 0.8f;                ///< Per second, times the distance
+        constexpr float kEdgeBand = 12;                ///< Interface units in from a screen edge where the pointer pushes
+        constexpr float kWheelZoom = 0.85f;            ///< Distance times this per notch towards the screen
+        constexpr units::Seconds kWheelRoll { 0.25f }; ///< How long a notch takes to roll in, nearly all of it
+        constexpr float kKeyZoom = 2.5f;               ///< Times per second
+        constexpr units::TurnRate kKeyTurn { 1.5f };
+        constexpr float kIsoTurnDrag = 60;                ///< Interface units across, times the sensitivity option, that turn isometric a quarter
+        constexpr units::TurnRate kIsoTurnSpeed { 3.5f }; ///< Isometric turns at
+        constexpr float kDragZoom = 1.006f;               ///< Distance times this per pixel down, advanced's right drag
+        constexpr float kWheelTilt = 0.08f;               ///< Radians down per notch away, advanced's wheel in its first scheme
+        constexpr units::Pace kFlySpeed { 80 };           ///< Free look flies at, times its speed option
+        constexpr float kFlyDrag = 0.004f;                ///< Seconds of flight per pixel a middle drag goes
+        constexpr float kFlyAboveGround = 1.5f;           ///< Free look's eye stays this high over the ground
 
     } // namespace
 
-    void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, const config::game::GameOptions& options, float elapsed)
+    void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, const config::game::GameOptions& options, units::Seconds elapsed)
     {
+        const float dt = elapsed.value;
         using rct3::park::ControlMode;
         const ui::Point p = input.pointer.position;
         const float dx = p.x - scene.last_pointer.x;
@@ -89,7 +90,7 @@ namespace rct3::scene::park
         };
         // Notches to zoom; free look has no zoom.
         float wheel = over_interface || mode == ControlMode::Freelook ? 0 : input.pointer.wheel.y;
-        const float fly = options.get(config::game::GameOption::FreeLookSpeed) * kFlySpeed; ///< World units a second, flying
+        const units::Pace fly { options.get(config::game::GameOption::FreeLookSpeed) * kFlySpeed.value };
 
         switch (mode)
         {
@@ -120,7 +121,7 @@ namespace rct3::scene::park
                 }
                 else if (held == DragButtons::Middle)
                 {
-                    c = rct3::park::flown(c, glm::vec3 { dx, 0, -dy } * kFlyDrag * fly);
+                    c = rct3::park::flown(c, glm::vec3 { dx, 0, -dy } * kFlyDrag * fly.value);
                     scene.dragging = true;
                 }
                 break;
@@ -161,7 +162,7 @@ namespace rct3::scene::park
         scene.zoom_pending += wheel;
         if (scene.zoom_pending != 0)
         {
-            const float notches = rct3::park::zoom_step(scene.zoom_pending, elapsed, kWheelSeconds);
+            const float notches = rct3::park::zoom_step(scene.zoom_pending, dt, kWheelRoll.value);
             scene.zoom_pending -= notches;
             const rct3::park::ParkCamera before = c;
             c = rct3::park::zoomed(c, std::pow(kWheelZoom, notches), free);
@@ -182,9 +183,9 @@ namespace rct3::scene::park
             // Free look flies the eye: the zoom keys take it up and down.
             const float rise = (input.zoom_out_key ? 1.0f : 0.0f) - (input.zoom_in_key ? 1.0f : 0.0f);
             if (slide != glm::vec2(0) || rise != 0)
-                c = rct3::park::flown(c, glm::vec3 { slide.x, rise, slide.y } * fly * elapsed);
+                c = rct3::park::flown(c, glm::vec3 { slide.x, rise, slide.y } * fly.value * dt);
             if (yaw != 0 || pitch != 0)
-                c = rct3::park::turned_at_eye(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed);
+                c = rct3::park::turned_at_eye(c, yaw * kKeyTurn.value * dt, pitch * kKeyTurn.value * dt);
             // The eye stays over the map and above its ground.
             const glm::vec3 at = rct3::park::eye(c);
             glm::vec3 kept = at;
@@ -200,9 +201,9 @@ namespace rct3::scene::park
             return;
         }
         if (slide != glm::vec2(0))
-            c = rct3::park::panned(c, slide.x * kKeyPan * c.distance * elapsed, slide.y * kKeyPan * c.distance * elapsed);
+            c = rct3::park::panned(c, slide.x * kKeyPan * c.distance * dt, slide.y * kKeyPan * c.distance * dt);
         if (input.zoom_in_key != input.zoom_out_key)
-            c = rct3::park::zoomed(c, std::pow(kKeyZoom, (input.zoom_in_key ? -1.0f : 1.0f) * elapsed), free);
+            c = rct3::park::zoomed(c, std::pow(kKeyZoom, (input.zoom_in_key ? -1.0f : 1.0f) * dt), free);
         if (mode == ControlMode::Isometric)
         {
             // The turn keys and the game's isometric turn commands step a quarter, once the last turn is done.
@@ -213,11 +214,11 @@ namespace rct3::scene::park
                 if (command == ui::PlayCommand::RotateIsometric || command == ui::PlayCommand::ReverseIsometric)
                     keyed = command == ui::PlayCommand::ReverseIsometric ? -1 : 1;
             scene.iso_step += keyed;
-            c.yaw = rct3::park::yaw_towards(c.yaw, rct3::park::isometric_yaw(scene.iso_step), kIsoTurnSpeed * elapsed);
+            c.yaw = rct3::park::yaw_towards(c.yaw, rct3::park::isometric_yaw(scene.iso_step), kIsoTurnSpeed.value * dt);
             c.pitch = rct3::park::kIsometricPitch;
         }
         else if (yaw != 0 || pitch != 0)
-            c = rct3::park::turned(c, yaw * kKeyTurn * elapsed, pitch * kKeyTurn * elapsed, free);
+            c = rct3::park::turned(c, yaw * kKeyTurn.value * dt, pitch * kKeyTurn.value * dt, free);
         // Advanced turns round points above the ground too. The pool tool's work shown is not yet the
         // ground: the view settles as if it were not there, so a drag's squares stay under the pointer.
         swap_pool_work(scene);

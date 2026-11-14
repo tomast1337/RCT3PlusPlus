@@ -63,7 +63,7 @@ namespace rct3::scene::park
                     run.push_back(course->points[k + 1]);
                 joined += simulation::pool_beside(scene.sim, run).has_value() ? 1 : 0;
             }
-        return rct3::park::track::open_refusal(r, rules, state, scene.building.ride == ride, course, joined);
+        return rct3::park::track::open_refusal(r, rules, state, scene.building.ride == ref.ride(), course, joined);
     }
 
     std::vector<ui::screens::info::StateChoice> state_choices(const ParkScene& scene, rct3::park::AttractionRef ref)
@@ -86,12 +86,12 @@ namespace rct3::scene::park
         return fan;
     }
 
-    std::optional<std::string> change_ride_state(ParkScene& scene, std::size_t ride, save::model::AttractionState state)
+    std::optional<std::string> change_ride_state(ParkScene& scene, save::model::RideIndex ride, save::model::AttractionState state)
     {
-        auto refused = state_refusal(scene, { .kind = rct3::park::AttractionRef::Kind::Ride, .index = ride }, state);
+        auto refused = state_refusal(scene, rct3::park::AttractionRef::of(ride), state);
         if (!refused)
-            set_attraction_state(scene, scene.rides.rides.at(ride).base, state);
-        if (!refused && state != save::model::AttractionState::Closed && scene.rides.rides[ride].kind == save::model::RideKind::Tracked && !std::ranges::contains(scene.readying, ride))
+            set_attraction_state(scene, scene.rides.rides.at(ride.value).base, state);
+        if (!refused && state != save::model::AttractionState::Closed && scene.rides.rides[ride.value].kind == save::model::RideKind::Tracked && !std::ranges::contains(scene.readying, ride))
             scene.readying.push_back(ride);
         return refused;
     }

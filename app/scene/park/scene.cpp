@@ -454,13 +454,13 @@ namespace rct3::scene::park
         // Tracked rides put to test or opened: their trains made ready, as the game does, and run round a whole
         // circuit, a shuttle's track, or an unfinished one to its end, where they crash. While the panel builds an
         // unfinished track, a test of it runs a ghost instead (scene/track/building.hpp); closing the panel readies it again.
-        for (const std::size_t ride : std::exchange(scene.readying, { }))
+        for (const save::model::RideIndex ride : std::exchange(scene.readying, { }))
         {
-            const auto& course = ride < scene.courses.size() ? scene.courses[ride] : std::nullopt;
-            const save::model::Ride& r = scene.rides.rides[ride];
+            const auto& course = ride.value < scene.courses.size() ? scene.courses[ride.value] : std::nullopt;
+            const save::model::Ride& r = scene.rides.rides[ride.value];
             const auto coaster = course ? simulation::coaster_of(*course, r) : std::nullopt;
             // Laid but not run, its lift towers' cars stand at their feet all the same.
-            if (assets.install && r.base.state == save::model::AttractionState::Closed && course && !course->lifts.empty() && ride < scene.track_rules.size() && scene.track_rules[ride].lift_car && std::ranges::none_of(scene.car_spots, [&](const rct3::park::ride::CarSpot& s) { return s.ride == ride; }))
+            if (assets.install && r.base.state == save::model::AttractionState::Closed && course && !course->lifts.empty() && ride.value < scene.track_rules.size() && scene.track_rules[ride.value].lift_car && std::ranges::none_of(scene.car_spots, [&](const rct3::park::ride::CarSpot& s) { return s.ride == ride; }))
                 add_ride_cars(device, scene, *assets.install, ride, 1, RideCarsAdded::LiftsOnly);
             // Boats sail off a dock that is only station, which no train could run round.
             const bool boats = (r.mode == save::model::OperatingMode::Boat || r.mode == save::model::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station);
@@ -468,9 +468,9 @@ namespace rct3::scene::park
                 continue;
             const bool ghosted = coaster && !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;
             // A lazy river has no trains: swimmers float round it; nor has a slide climbed on foot.
-            if ((r.mode == save::model::OperatingMode::LazyRiver || (!coaster && !boats) || track::set_trains(device, scene, *assets.install, ride, r.train_count.value_or(0), r.cars_per_train.value_or(0))) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
+            if ((r.mode == save::model::OperatingMode::LazyRiver || (!coaster && !boats) || track::set_trains(device, scene, *assets.install, ride, r.train_count.value_or(0), r.cars_per_train.value_or(0))) && !ghosted && (ride.value >= scene.ride_entities.size() || scene.ride_entities[ride.value] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
                 scene.placing.unjoined.push_back(ride);
-            if (auto info = desktop.root().find_as<ui::screens::info::InfoPanel>(kInfoName); info && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && scene.shown->index == ride)
+            if (auto info = desktop.root().find_as<ui::screens::info::InfoPanel>(kInfoName); info && scene.shown == rct3::park::AttractionRef::of(ride))
                 show_info_page(scene, *info, assets, options);
         }
 
@@ -525,7 +525,7 @@ namespace rct3::scene::park
             const profiling::Scope zone("InfoPanel");
             // A double click on a ride's round view rides along on it, as the ride camera key does.
             if (info->take_view_double_click() && !scene.riding_along() && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride)
-                ride_cam(scene, assets, scene.shown->index);
+                ride_cam(scene, assets, scene.shown->ride());
             // Pressing the park puts open colours away without picking.
             if ((pointer.down || input.right) && !over && info->painting())
                 info->close_palette();
@@ -734,32 +734,32 @@ namespace rct3::scene::park
             const auto door = [](const ui::screens::info::InfoChange& c) { return c.id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Entrance) || c.id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Exit); };
             // A tracked ride's entrance or exit goes beside its station, a flat ride's round its ground, placed as its
             // kind's item has it; a flat ride takes its own item, whose size it stands on.
-            const auto start_door = [&](std::size_t ride, bool exit) {
+            const auto start_door = [&](save::model::RideIndex ride, bool exit) {
                 const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const rct3::park::BuildItem> { };
-                std::string overlay = scene.rides.rides.at(ride).base.overlay_path;
+                std::string overlay = scene.rides.rides.at(ride.value).base.overlay_path;
                 std::ranges::replace(overlay, '\\', '/');
                 // A theme's flat rides share its overlay; the symbol, before its type tag, tells them apart.
-                const std::string_view symbol = scene.rides.rides[ride].base.symbol;
+                const std::string_view symbol = scene.rides.rides[ride.value].base.symbol;
                 const std::string_view name = symbol.substr(0, symbol.find(':'));
                 const auto in_overlay = [&](const rct3::park::BuildItem& i) { return !i.entrance.empty() && strings::equals_ignoring_case(i.overlay, overlay); };
                 auto kind = std::ranges::find_if(items, [&](const rct3::park::BuildItem& i) { return in_overlay(i) && strings::equals_ignoring_case(i.symbol, name); });
                 if (kind == items.end())
                     kind = std::ranges::find_if(items, in_overlay);
                 const auto any = std::ranges::find_if(items, [](const rct3::park::BuildItem& i) { return !i.entrance.empty(); });
-                const auto item = kind != items.end() || scene.rides.rides[ride].kind == save::model::RideKind::Flat ? kind : any;
+                const auto item = kind != items.end() || scene.rides.rides[ride.value].kind == save::model::RideKind::Flat ? kind : any;
                 return item != items.end() && start_door_placing(scene, ride, *item, track::station_pieces(scene, ride, assets), exit);
             };
             // A closed circuit goes on to its doors, the entrance first, while its window shows, as in the game.
-            if (const auto ride = std::exchange(scene.doors_requested, std::nullopt); ride && *ride < scene.rides.rides.size())
+            if (const auto ride = std::exchange(scene.doors_requested, std::nullopt); ride && ride->value < scene.rides.rides.size())
             {
-                const auto& stations = scene.rides.rides[*ride].stations;
+                const auto& stations = scene.rides.rides[ride->value].stations;
                 const bool entrance = !stations.empty() && stations.front().entrance_spot.has_value();
                 if ((!entrance || stations.front().exit_spot == std::nullopt) && start_door(*ride, entrance))
                     stop_land_tools(scene);
             }
             if (const auto change = info->take_change(); change && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && door(*change))
             {
-                if (start_door(scene.shown->index, change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Exit)))
+                if (start_door(scene.shown->ride(), change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Exit)))
                 {
                     stop_land_tools(scene);
                     info->hide();
@@ -924,7 +924,7 @@ namespace rct3::scene::park
                     const save::model::AttractionState state = states[choice->second].state;
                     scene.refusal.clear();
                     if (f.ride != nullptr)
-                        scene.refusal = change_ride_state(scene, scene.shown->index, state).value_or("");
+                        scene.refusal = change_ride_state(scene, scene.shown->ride(), state).value_or("");
                     else
                         scene.refusal = change_stall_state(scene, scene.shown->index, state).value_or("");
                     open_info(scene, *info, *scene.shown, assets, options);
@@ -954,9 +954,9 @@ namespace rct3::scene::park
                 if (info && scene.shown)
                     open_info(scene, *info, *scene.shown, assets, options);
             }
-            else if (const auto overlay = track::ride_track_overlay(scene, asked->index))
+            else if (const auto overlay = track::ride_track_overlay(scene, asked->ride()))
             {
-                if (track::open_track_building(scene, asked->index, *overlay, assets))
+                if (track::open_track_building(scene, asked->ride(), *overlay, assets))
                 {
                     close_footpath_panel(scene); // One tool panel at the bottom left at a time
                     stop_land_tools(scene);
@@ -1053,7 +1053,7 @@ namespace rct3::scene::park
             else if (c == ui::PlayCommand::ToggleRideCamera && scene.riding_along())
                 stop_riding(scene);
             else if (c == ui::PlayCommand::ToggleRideCamera && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride)
-                ride_cam(scene, assets, scene.shown->index);
+                ride_cam(scene, assets, scene.shown->ride());
             else if (c == ui::PlayCommand::NextRideCamera)
                 ride_action(scene, assets, ui::screens::park_view::RideCameraAction::NextCamera);
             else if (c == ui::PlayCommand::PreviousRideCamera)
@@ -2259,7 +2259,7 @@ namespace rct3::scene::park
         for (const ui::screens::management::ManagementRow& r : asks.listed)
         {
             if (r.kind == ui::screens::management::ManagementRow::Kind::Ride && r.index < scene.rides.rides.size())
-                (void)change_ride_state(scene, r.index, *asks.state_all);
+                (void)change_ride_state(scene, save::model::RideIndex { r.index }, *asks.state_all);
             else if (r.kind == ui::screens::management::ManagementRow::Kind::Stall && r.index < scene.rides.stalls.size())
                 set_attraction_state(scene, scene.rides.stalls[r.index].base, *asks.state_all);
         }

@@ -94,7 +94,7 @@ namespace rct3::park::water
             v.uv.y = ends - v.uv.y;
     }
 
-    object::FlowFades flow_fades(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const std::function<bool(std::size_t)>& pool_slides)
+    object::FlowFades flow_fades(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const std::function<bool(save::model::RideIndex)>& pool_slides)
     {
         std::map<std::uint64_t, bool> wet;
         for (const save::model::Ride& ride : rides.rides)
@@ -121,7 +121,7 @@ namespace rct3::park::water
                 const bool after = i + 1 < count ? wet_at(i + 1) : track.circuit && wet_at(0);
                 object::FlowFade fade { .in = !before, .out = !after };
                 // A pool slide's open end runs full to its last stretch and stops there.
-                if (i + 1 == count && !track.circuit && pool_slides(r))
+                if (i + 1 == count && !track.circuit && pool_slides(save::model::RideIndex { r }))
                     fade = { .in = fade.in, .out = false, .end = true };
                 if (track.pieces[i].reversed)
                     std::swap(fade.in, fade.out);

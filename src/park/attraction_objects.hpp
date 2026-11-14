@@ -27,6 +27,16 @@ namespace rct3::park
         Kind kind = Kind::Ride;
         std::size_t index = 0;
 
+        [[nodiscard]] static constexpr AttractionRef of(save::model::RideIndex ride) noexcept
+        {
+            return { Kind::Ride, ride.value };
+        }
+        /// Its place among the rides, for a Kind::Ride.
+        [[nodiscard]] constexpr save::model::RideIndex ride() const noexcept
+        {
+            return save::model::RideIndex { index };
+        }
+
         friend bool operator==(const AttractionRef&, const AttractionRef&) = default;
     };
 

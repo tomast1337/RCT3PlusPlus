@@ -42,8 +42,8 @@ namespace rct3::scene
 
     struct LedSign
     {
-        std::optional<std::size_t> ride;   ///< Of the scene's rides, for a queue sign
-        std::optional<std::size_t> placed; ///< Of the scene's signs, for a sign placed as scenery
+        std::optional<save::model::RideIndex> ride; ///< For a queue sign
+        std::optional<std::size_t> placed;          ///< Of the scene's signs, for a sign placed as scenery
         save::model::PlacedObject object;
         rct3::park::object::ObjectMesh mesh;                    ///< Its board's batch painted with `board`
         std::string board;                                      ///< Key of the board's picture in LedSigns::textures

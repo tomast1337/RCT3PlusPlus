@@ -152,7 +152,7 @@ namespace rct3::scene
             {
                 if (const auto model = scene.models.find(rct3::park::object::model_ref(o)); model != scene.models.end())
                     o.colours = model->second.default_colours;
-                scene.attractions[o.id] = { scene.placing.item->stall ? rct3::park::AttractionRef::Kind::Stall : rct3::park::AttractionRef::Kind::Ride, scene.placing.ride };
+                scene.attractions[o.id] = scene.placing.placed;
             }
             else
                 scene.placed.insert(o.id);
@@ -206,7 +206,8 @@ namespace rct3::scene
         void join_rides(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets)
         {
             RidePlacing& p = scene.placing;
-            std::erase_if(p.unjoined, [&](std::size_t i) {
+            std::erase_if(p.unjoined, [&](save::model::RideIndex index) {
+                const std::size_t i = index.value;
                 if (i >= scene.rides.rides.size() || scene.rides.rides[i].base.demolished)
                     return true;
                 save::model::Ride& ride = scene.rides.rides[i];
@@ -221,10 +222,10 @@ namespace rct3::scene
                 // station, from where they run up to it in turn.
                 const auto& course = i < scene.courses.size() ? scene.courses[i] : std::nullopt;
                 // An unfinished track waits while the panel builds it: a test of it runs a ghost till then.
-                if (scene.building.ride == i && course && !course->closed)
+                if (scene.building.ride == index && course && !course->closed)
                     if (const auto runs = simulation::coaster_of(*course, ride); runs && runs->shuttle == simulation::Shuttle::None)
                         return false;
-                track::stand_trains(scene, i);
+                track::stand_trains(scene, index);
                 const std::array coaster { course ? simulation::coaster_of(*course, ride) : std::nullopt };
                 save::model::RideModel one;
                 one.rides.push_back(ride);
@@ -243,10 +244,10 @@ namespace rct3::scene
                     scene.ride_seatings[added.front()] = static_cast<std::uint8_t>(*seating);
                 if (const auto show = std::ranges::find(scene.shows, ride.base.id, &save::model::RideShow::ride); show != scene.shows.end())
                     park::stage_show(scene, *show);
-                park::seat_flat_ride(device, scene, i);
+                park::seat_flat_ride(device, scene, index);
                 if (assets.install && ride.kind == save::model::RideKind::Tracked)
-                    park::replace_ride_cars(device, scene, *assets.install, i);
-                track::ready_boats(scene, i);
+                    park::replace_ride_cars(device, scene, *assets.install, index);
+                track::ready_boats(scene, index);
                 logging::logger("park").info("{} joins the paths", ride.base.name);
                 return true;
             });
@@ -259,11 +260,11 @@ namespace rct3::scene
                 return simulation::import_stalls(scene.sim, one, scene.carried) > 0;
             });
             // A facility serves from a path on any side.
-            std::erase_if(p.unjoined_facilities, [&](const std::pair<std::size_t, std::uint32_t>& f) {
-                if (f.first >= scene.rides.rides.size() || scene.rides.rides[f.first].base.demolished)
+            std::erase_if(p.unjoined_facilities, [&](const std::pair<save::model::RideIndex, std::uint32_t>& f) {
+                if (f.first.value >= scene.rides.rides.size() || scene.rides.rides[f.first.value].base.demolished)
                     return true;
                 save::model::RideModel one;
-                one.rides.push_back(scene.rides.rides[f.first]);
+                one.rides.push_back(scene.rides.rides[f.first.value]);
                 return simulation::import_facilities(scene.sim, one, [&](const save::model::Ride&) { return std::optional(f.second); }) > 0;
             });
         }
@@ -296,17 +297,17 @@ namespace rct3::scene
         return true;
     }
 
-    bool start_door_placing(park::ParkScene& scene, std::size_t ride, const rct3::park::BuildItem& item, std::vector<save::model::TrackPiece> stations, bool exit)
+    bool start_door_placing(park::ParkScene& scene, save::model::RideIndex ride, const rct3::park::BuildItem& item, std::vector<save::model::TrackPiece> stations, bool exit)
     {
-        if (item.entrance.empty() || item.exit.empty() || ride >= scene.rides.rides.size())
+        if (item.entrance.empty() || item.exit.empty() || ride.value >= scene.rides.rides.size())
             return false;
-        save::model::Ride& r = scene.rides.rides[ride];
+        save::model::Ride& r = scene.rides.rides[ride.value];
         if (stations.empty() && (r.kind != save::model::RideKind::Flat || !r.base.spot))
             return false;
         RidePlacing& p = scene.placing;
         p.item = item;
         p.step = exit ? RidePlacing::Step::Exit : RidePlacing::Step::Entrance;
-        p.ride = ride;
+        p.placed = rct3::park::AttractionRef::of(ride);
         p.site.reset();
         if (stations.empty())
         {
@@ -339,7 +340,7 @@ namespace rct3::scene
         p.stations = std::move(stations);
         // The other door keeps its tile.
         p.entrance.reset();
-        if (const auto& doors = scene.rides.rides[ride].stations; !doors.empty())
+        if (const auto& doors = r.stations; !doors.empty())
         {
             if (const auto& other = exit ? doors.front().entrance_spot : doors.front().exit_spot)
                 p.entrance = rct3::park::ride::DoorSpot::of(*other);
@@ -706,7 +707,7 @@ namespace rct3::scene
                 p.ground = rct3::park::ride::ride_site({ p.door->col, p.door->row }, { 1, 1 }, { }, scene.grid).height;
                 p.site = rct3::park::ride::RideSite { .col = p.door->col, .row = p.door->row, .height = p.door->height };
                 // The other door kept at the station this one goes to keeps its tile.
-                const auto& kept = scene.rides.rides.at(p.ride).stations;
+                const auto& kept = scene.rides.rides.at(p.placed.index).stations;
                 const std::size_t k = p.base ? 0 : rct3::park::ride::door_station(p.stations, kept, *p.door);
                 const auto& other = k >= kept.size() ? std::nullopt : p.step == RidePlacing::Step::Exit ? kept[k].entrance_spot : kept[k].exit_spot;
                 p.entrance = other ? std::optional(rct3::park::ride::DoorSpot::of(*other)) : std::nullopt;
@@ -716,7 +717,7 @@ namespace rct3::scene
             p.problem = rct3::park::ride::door_problem(*p.site, *p.door, p.entrance, scene.grid, paths, p.solids);
             // The ride's own door of that kind standing there moves when this one is placed, so it is no block.
             const bool exit = p.step == RidePlacing::Step::Exit;
-            if (p.problem == rct3::park::ride::SiteProblem::Blocked && std::ranges::any_of(scene.rides.rides.at(p.ride).stations, [&](const save::model::Station& st) {
+            if (p.problem == rct3::park::ride::SiteProblem::Blocked && std::ranges::any_of(scene.rides.rides.at(p.placed.index).stations, [&](const save::model::Station& st) {
                     const auto& old = exit ? st.exit_spot : st.entrance_spot;
                     return old && old->col == p.door->col && old->row == p.door->row;
                 }))
@@ -738,17 +739,17 @@ namespace rct3::scene
             ride.fence_colours[i] = static_cast<std::uint8_t>(colours[i]);
     }
 
-    void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t station_index, const save::model::PlacedObject& door, std::int32_t height, bool exit)
+    void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, std::size_t station_index, const save::model::PlacedObject& door, std::int32_t height, bool exit)
     {
         RidePlacing& p = scene.placing;
-        p.ride = ride;
+        p.placed = rct3::park::AttractionRef::of(ride);
         p.step = exit ? RidePlacing::Step::Exit : RidePlacing::Step::Entrance;
         const std::uint64_t object = add_object(scene, door);
-        save::model::Ride& r = scene.rides.rides.at(ride);
+        save::model::Ride& r = scene.rides.rides.at(ride.value);
         if (r.stations.size() <= station_index)
             r.stations.resize(station_index + 1);
         // One placed before moves: at this station, or anywhere on a ride that has just one of that door.
-        const rct3::park::track::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : rct3::park::track::TrackRules { };
+        const rct3::park::track::TrackRules rules = ride.value < scene.track_rules.size() ? scene.track_rules[ride.value] : rct3::park::track::TrackRules { };
         const bool only_one = (exit ? rules.exits : rules.entrances) == rct3::park::track::kOneDoor;
         for (std::size_t k = 0; k < r.stations.size(); ++k)
         {
@@ -842,7 +843,7 @@ namespace rct3::scene
             }
             if (p.item->stall)
             {
-                p.ride = scene.rides.stalls.size();
+                p.placed = { rct3::park::AttractionRef::Kind::Stall, scene.rides.stalls.size() };
                 const std::uint64_t object = add_object(scene, *o);
                 park::animate_scenery(device, scene, scene.objects.size() - 1);
                 save::model::Stall& stall = scene.rides.stalls.emplace_back();
@@ -866,15 +867,15 @@ namespace rct3::scene
                 rct3::park::ride::offer_extras(stall, scene.carried.items);
                 park::float_money(scene, site_point(scene, *p.site), -price);
                 logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
-                p.unjoined_stalls.push_back(p.ride);
+                p.unjoined_stalls.push_back(p.placed.index);
                 // One stall a pick: the tool goes away and the stall's window opens, as in the game.
-                scene.info_requested = rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Stall, p.ride };
+                scene.info_requested = p.placed;
                 stop_ride_placing(scene);
                 park::refresh_pavings(scene);
                 park::rebuild_ground(device, scene, assets);
                 return true;
             }
-            p.ride = scene.rides.rides.size();
+            p.placed = rct3::park::AttractionRef::of(save::model::RideIndex { scene.rides.rides.size() });
             if (p.item->kind == rct3::park::BuildKind::Shop)
             {
                 // A facility (a toilet, a cash machine and the like): a special attraction, opening onto every side.
@@ -894,8 +895,8 @@ namespace rct3::scene
                 facility.base.running_cost = simulation::kTuning.charges.facility_running_cost.value;
                 park::float_money(scene, site_point(scene, *p.site), -price);
                 logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
-                p.unjoined_facilities.emplace_back(p.ride, p.item->type);
-                scene.info_requested = rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Ride, p.ride };
+                p.unjoined_facilities.emplace_back(p.placed.ride(), p.item->type);
+                scene.info_requested = p.placed;
                 stop_ride_placing(scene);
                 park::refresh_pavings(scene);
                 park::rebuild_ground(device, scene, assets);
@@ -941,7 +942,7 @@ namespace rct3::scene
             fence_ride(scene, assets, ride);
             p.step = RidePlacing::Step::Entrance;
             // Its window opens at once, on the tab last used, while its doors are placed.
-            scene.info_requested = rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Ride, p.ride };
+            scene.info_requested = p.placed;
         }
         else
         {
@@ -952,11 +953,11 @@ namespace rct3::scene
             if (!p.stations.empty())
             {
                 // Each door goes to the station it stands beside; a station on a base of its own is the only one.
-                const std::size_t k = p.base ? 0 : rct3::park::ride::door_station(p.stations, scene.rides.rides.at(p.ride).stations, *p.door);
-                place_station_door(scene, assets, p.ride, k, *o, p.site->height, p.step == RidePlacing::Step::Exit);
+                const std::size_t k = p.base ? 0 : rct3::park::ride::door_station(p.stations, scene.rides.rides.at(p.placed.index).stations, *p.door);
+                place_station_door(scene, assets, p.placed.ride(), k, *o, p.site->height, p.step == RidePlacing::Step::Exit);
                 // The entrance down, the exit follows when its station has none, as in the game.
-                const auto& doors = scene.rides.rides.at(p.ride).stations;
-                if (p.step == RidePlacing::Step::Exit || k >= doors.size() || doors[k].exit_spot || !start_door_placing(scene, p.ride, rct3::park::BuildItem(*p.item), std::vector(p.stations), true))
+                const auto& doors = scene.rides.rides.at(p.placed.index).stations;
+                if (p.step == RidePlacing::Step::Exit || k >= doors.size() || doors[k].exit_spot || !start_door_placing(scene, p.placed.ride(), rct3::park::BuildItem(*p.item), std::vector(p.stations), true))
                     stop_ride_placing(scene);
                 p.door.reset();
                 p.ghost_mesh = { };
@@ -964,7 +965,7 @@ namespace rct3::scene
                 return true;
             }
             const std::uint64_t object = add_object(scene, *o);
-            save::model::Ride& ride = scene.rides.rides.at(p.ride);
+            save::model::Ride& ride = scene.rides.rides.at(p.placed.index);
             if (ride.stations.empty())
                 ride.stations.emplace_back();
             save::model::Station& doors = ride.stations.front();
@@ -976,7 +977,7 @@ namespace rct3::scene
             old = object;
             (exit ? doors.exit_spot : doors.entrance_spot) = save::model::PlacementSpot { object, p.door->col, p.door->row, p.site->height, static_cast<std::uint8_t>(p.door->turn.value) };
             fence_ride(scene, assets, ride);
-            park::rejoin_queues(scene, assets, p.ride);
+            park::rejoin_queues(scene, assets, p.placed.ride());
             // The entrance down, the exit follows when the ride has none, as in the game.
             if (!exit && !doors.exit_spot)
             {
@@ -986,8 +987,8 @@ namespace rct3::scene
             else
             {
                 // One the park runs already finds its moved door from the paths there (join_rides).
-                if (doors.entrance_spot && doors.exit_spot && !std::ranges::contains(p.unjoined, p.ride))
-                    p.unjoined.push_back(p.ride);
+                if (doors.entrance_spot && doors.exit_spot && !std::ranges::contains(p.unjoined, p.placed.ride()))
+                    p.unjoined.push_back(p.placed.ride());
                 stop_ride_placing(scene);
             }
         }

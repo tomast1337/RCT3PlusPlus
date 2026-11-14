@@ -198,7 +198,7 @@ namespace rct3::scene::park
 
     /// Joins the queues laid behind ride `ride`'s entrances to their stations' lines, as a queue laid there after
     /// the entrance joins; when the ride is demolished, its lines go back to plain queues instead.
-    void rejoin_queues(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride);
+    void rejoin_queues(ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride);
 
     /// Lets go of the trail going on, so its arrow stops showing. Whether there was one.
     bool drop_footpath_trail(ParkScene& scene);

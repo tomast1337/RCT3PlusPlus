@@ -54,9 +54,9 @@ namespace rct3::scene::track
 
     } // namespace
 
-    bool fit_trains(park::ParkScene& scene, const config::game::GameInstall& install, std::size_t index, int trains, int cars)
+    bool fit_trains(park::ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex index, int trains, int cars)
     {
-        save::model::Ride& ride = scene.rides.rides[index];
+        save::model::Ride& ride = scene.rides.rides[index.value];
         if (ride.trains.empty() || trains < 1 || cars < 1)
             return false;
         const std::string symbol = ride.trains.front().symbol;
@@ -66,8 +66,8 @@ namespace rct3::scene::track
         if (const auto file = install.find(std::format("{}.common.ovl", path)))
             (void)found.add_file(*file);
         park::add_referenced(found, install); // Links between cars are often in files of their own
-        const auto& course = index < scene.courses.size() ? scene.courses[index] : std::nullopt;
-        const auto& lift = index < scene.track_rules.size() ? scene.track_rules[index].lift_car : std::nullopt;
+        const auto& course = index.value < scene.courses.size() ? scene.courses[index.value] : std::nullopt;
+        const auto& lift = index.value < scene.track_rules.size() ? scene.track_rules[index.value].lift_car : std::nullopt;
         const auto lift_file = lift && course && !course->lifts.empty() ? train_file(install, lift->train) : std::nullopt;
         if (lift_file)
             (void)found.add_file(*lift_file);
@@ -116,7 +116,7 @@ namespace rct3::scene::track
         if (const auto coaster = course ? simulation::coaster_of(*course, ride) : std::nullopt; coaster && coaster->shuttle != simulation::Shuttle::None)
             trains = 1;
         else if (course)
-            trains = std::min(trains, rct3::park::track::trains_fitting(*course, fits, ride.options.block_sectioned, index < scene.track_rules.size() ? scene.track_rules[index].most_trains : std::nullopt));
+            trains = std::min(trains, rct3::park::track::trains_fitting(*course, fits, ride.options.block_sectioned, index.value < scene.track_rules.size() ? scene.track_rules[index.value].most_trains : std::nullopt));
         ride.trains.assign(static_cast<std::size_t>(trains), save::model::Train { });
         ride.seats.clear();
         bool arm = false;
@@ -140,9 +140,9 @@ namespace rct3::scene::track
         return arm;
     }
 
-    std::optional<bool> use_train(park::ParkScene& scene, const config::game::GameInstall& install, std::size_t index, std::string_view train_name)
+    std::optional<bool> use_train(park::ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex index, std::string_view train_name)
     {
-        save::model::Ride& ride = scene.rides.rides[index];
+        save::model::Ride& ride = scene.rides.rides[index.value];
         if (const auto file = train_file(install, train_name))
         {
             std::string path = std::filesystem::relative(*file, install.root()).generic_string();
@@ -166,9 +166,9 @@ namespace rct3::scene::track
         return std::nullopt;
     }
 
-    void ready_trains(park::ParkScene& scene, const config::game::GameInstall& install, std::size_t index)
+    void ready_trains(park::ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex index)
     {
-        const save::model::Ride& ride = scene.rides.rides[index];
+        const save::model::Ride& ride = scene.rides.rides[index.value];
         if (ride.kind != save::model::RideKind::Tracked || scene.train_limits.contains(index))
             return;
         // The trains its kind's file offers, the first of them when it has none.
@@ -187,10 +187,10 @@ namespace rct3::scene::track
         scene.train_limits[index] = train_limits_of(install, train);
     }
 
-    void stand_trains(park::ParkScene& scene, std::size_t index)
+    void stand_trains(park::ParkScene& scene, save::model::RideIndex index)
     {
-        save::model::Ride& ride = scene.rides.rides[index];
-        const auto& course = index < scene.courses.size() ? scene.courses[index] : std::nullopt;
+        save::model::Ride& ride = scene.rides.rides[index.value];
+        const auto& course = index.value < scene.courses.size() ? scene.courses[index.value] : std::nullopt;
         const auto fits = scene.car_fits.find(index);
         const auto coaster = course ? simulation::coaster_of(*course, ride) : std::nullopt;
         // Boats wait along their dock back from where they set off, at its end.
@@ -232,24 +232,24 @@ namespace rct3::scene::track
         return solids;
     }
 
-    void ready_boats(park::ParkScene& scene, std::size_t index)
+    void ready_boats(park::ParkScene& scene, save::model::RideIndex index)
     {
-        const entt::entity e = index < scene.ride_entities.size() ? scene.ride_entities[index] : entt::null;
-        if (e == entt::null || index >= scene.courses.size())
+        const entt::entity e = index.value < scene.ride_entities.size() ? scene.ride_entities[index.value] : entt::null;
+        if (e == entt::null || index.value >= scene.courses.size())
             return;
         save::model::RideModel one;
-        one.rides.push_back(scene.rides.rides[index]);
-        simulation::import_boats(scene.sim, one, std::span(&e, 1), std::span(&scene.courses[index], 1), scene.grid, scene.footpaths.water.bodies, boat_obstacles(scene));
+        one.rides.push_back(scene.rides.rides[index.value]);
+        simulation::import_boats(scene.sim, one, std::span(&e, 1), std::span(&scene.courses[index.value], 1), scene.grid, scene.footpaths.water.bodies, boat_obstacles(scene));
         auto* boats = scene.sim.registry.try_get<simulation::Boats>(e);
         for (std::size_t k = 0; boats && k < scene.cars.size(); ++k)
             if (const auto model = scene.car_spots[k].ride == index ? scene.models.find(rct3::park::object::model_ref(scene.cars[k])) : scene.models.end(); model != scene.models.end() && model->second.boat_handling.turn_most > 0)
                 boats->handling = model->second.boat_handling;
     }
 
-    bool set_trains(render::Device& device, park::ParkScene& scene, const config::game::GameInstall& install, std::size_t index, int trains, int cars)
+    bool set_trains(render::Device& device, park::ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex index, int trains, int cars)
     {
-        save::model::Ride& ride = scene.rides.rides[index];
-        const entt::entity e = index < scene.ride_entities.size() ? scene.ride_entities[index] : entt::null;
+        save::model::Ride& ride = scene.rides.rides[index.value];
+        const entt::entity e = index.value < scene.ride_entities.size() ? scene.ride_entities[index.value] : entt::null;
         auto& r = scene.sim.registry;
         const auto* fleet = e != entt::null ? r.try_get<simulation::Trains>(e) : nullptr;
         if (fleet && std::ranges::any_of(fleet->riders, [](const auto& riders) { return !riders.empty(); }))
@@ -270,7 +270,7 @@ namespace rct3::scene::track
         scene.building.arm = fit_trains(scene, install, index, std::max(trains, 1), cars) || scene.building.arm;
         stand_trains(scene, index);
         // The park runs them from where they stand, its riders shared among them.
-        const auto& course = index < scene.courses.size() ? scene.courses[index] : std::nullopt;
+        const auto& course = index.value < scene.courses.size() ? scene.courses[index.value] : std::nullopt;
         if (auto coaster = fleet && !fleet->trains.empty() && course ? simulation::coaster_of(*course, ride) : std::nullopt)
         {
             coaster->start = fleet->trains.front().start;

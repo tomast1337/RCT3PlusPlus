@@ -130,6 +130,11 @@ behaviour identical: `sim-run` output must not change.
   `units::Radians`, ...), so the declaration says what it measures: `units::Seconds idle { 5 };`, not
   `float idle = 5; ///< Seconds`. Add a kind there when none fits, with one doc comment. Plain numbers stay at
   the edges a type cannot cross (file layouts, the GPU, third-party code) and in short locals.
+- A place in one list that is passed around or kept has an id type from `core/id.hpp`
+  (`using RideIndex = core::Id<struct RideIndexTag>;`, declared beside the list), so a ride's place cannot be
+  passed where a stall's is meant: `void drop_ride_cars(Scene&, RideIndex ride)`, not `std::size_t ride`.
+  Index the list with `.value`. Loop counters, file layouts, the GPU, EnTT and the script API's JSON numbers
+  stay plain and are wrapped where they come in.
 - No magic "none" values: a value that may be missing is `std::optional<T>` (or an enum when there are more
   than two states), not `-1` meaning "never".
 - No bare `bool` arguments: a flag that changes what a function does is an `enum class` declared beside it, so

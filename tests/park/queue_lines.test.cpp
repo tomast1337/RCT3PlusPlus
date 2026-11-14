@@ -53,8 +53,8 @@ namespace
 TEST_CASE("an entrance is joined only from the tile behind it, near its height")
 {
     const save::model::RideModel rides = ride_at(3, 2);
-    CHECK(entrance_beside(rides, { 4, 2 }, 0) == EntranceBeside { 0, 0, Side::kColBefore });
-    CHECK(entrance_beside(rides, { 4, 2 }, std::nullopt) == EntranceBeside { 0, 0, Side::kColBefore });
+    CHECK(entrance_beside(rides, { 4, 2 }, 0) == EntranceBeside { save::model::RideIndex { 0 }, 0, Side::kColBefore });
+    CHECK(entrance_beside(rides, { 4, 2 }, std::nullopt) == EntranceBeside { save::model::RideIndex { 0 }, 0, Side::kColBefore });
     CHECK_FALSE(entrance_beside(rides, { 4, 2 }, kEntranceReach + 1));
     CHECK_FALSE(entrance_beside(rides, { 2, 2 }, 0)); // The ride's side
     CHECK_FALSE(entrance_beside(rides, { 3, 1 }, 0));
@@ -80,7 +80,7 @@ TEST_CASE("an entrance's back turns with it")
             const save::model::Tile tile = side.beyond({ 3, 3 });
             const auto found = entrance_beside(rides, tile, 0);
             if (tile == behind[static_cast<std::size_t>(turn)].first)
-                CHECK(found == EntranceBeside { 0, 0, behind[static_cast<std::size_t>(turn)].second });
+                CHECK(found == EntranceBeside { save::model::RideIndex { 0 }, 0, behind[static_cast<std::size_t>(turn)].second });
             else
                 CHECK_FALSE(found);
         }
@@ -236,7 +236,7 @@ TEST_CASE("a queue laid before its ride joins the line when the entrance is put 
         std::vector<save::model::PathTile> paths = towards ? lay_queue(g, { 3, 1 }, Side::kColBefore, 3) : lay_queue(g, { 1, 1 }, Side::kNextCol, 3);
         save::model::RideModel rides = ride_at(0, 1);
         rides.rides[0].fence_symbol = "Picket";
-        CHECK(join_queue_behind(rides, paths, g, 0, 0, 99) == 99);
+        CHECK(join_queue_behind(rides, paths, g, save::model::RideIndex { 0 }, 0, 99) == 99);
         CHECK(rides.rides[0].stations[0].queue_line == 99);
         CHECK(rides.rides[0].stations[0].queue_tiles == 3);
         for (const save::model::PathTile& p : paths)
@@ -245,15 +245,15 @@ TEST_CASE("a queue laid before its ride joins the line when the entrance is put 
             CHECK(p.queue->fence_symbol == "Picket");
             CHECK(p.queue->end_direction == path::stored_direction(Side::kColBefore)); // All lead to the entrance
         }
-        CHECK_FALSE(join_queue_behind(rides, paths, g, 0, 0, 99)); // Already on it
+        CHECK_FALSE(join_queue_behind(rides, paths, g, save::model::RideIndex { 0 }, 0, 99)); // Already on it
     }
 
     // A queue touching only the entrance's side, or behind it out of reach above, stays as it is.
     std::vector<save::model::PathTile> side = lay_queue(g, { 0, 2 }, Side::kNextCol, 3);
     save::model::RideModel rides = ride_at(0, 1);
-    CHECK_FALSE(join_queue_behind(rides, side, g, 0, 0, 99));
+    CHECK_FALSE(join_queue_behind(rides, side, g, save::model::RideIndex { 0 }, 0, 99));
     rides.rides[0].stations[0].entrance_spot->height = kEntranceReach + 1;
     std::vector<save::model::PathTile> low = lay_queue(g, { 1, 1 }, Side::kNextCol, 2);
-    CHECK_FALSE(join_queue_behind(rides, low, g, 0, 0, 99));
+    CHECK_FALSE(join_queue_behind(rides, low, g, save::model::RideIndex { 0 }, 0, 99));
     CHECK(rides.rides[0].stations[0].queue_line == 0);
 }

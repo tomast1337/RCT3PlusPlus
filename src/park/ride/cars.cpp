@@ -46,7 +46,7 @@ namespace rct3::park::ride
                     o.symbol = std::format("{}#{}", name, car.design_slot);
                     o.colours = { ride.car_colours[0], ride.car_colours[1], ride.car_colours[2] };
                     out.designs.push_back({ name, static_cast<std::size_t>(car.design_slot) });
-                    out.spots.push_back({ r, t, car.front_wheel_distance, car.rear_wheel_distance });
+                    out.spots.push_back({ save::model::RideIndex { r }, t, car.front_wheel_distance, car.rear_wheel_distance });
                     glm::mat4 placed = glm::translate(glm::mat4(1.0f), { car.position[0], car.position[1], car.position[2] });
                     const glm::vec3 turn { car.orientation[0], car.orientation[1], car.orientation[2] };
                     if (const float angle = glm::length(turn); angle > 1e-6f)

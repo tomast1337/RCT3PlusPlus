@@ -124,7 +124,7 @@ namespace rct3::scene
             LedSigns& q = scene.led_signs;
             ui::destroy_textures(device, q.textures);
             q.signs.clear();
-            std::map<std::uint64_t, std::size_t> ride_of_line;
+            std::map<std::uint64_t, save::model::RideIndex> ride_of_line;
             for (std::size_t r = 0; r < scene.rides.rides.size(); ++r)
             {
                 const save::model::Ride& ride = scene.rides.rides[r];
@@ -133,7 +133,7 @@ namespace rct3::scene
                 for (const save::model::Station& station : ride.stations)
                 {
                     if (station.queue_line != 0)
-                        ride_of_line.emplace(station.queue_line, r);
+                        ride_of_line.emplace(station.queue_line, save::model::RideIndex { r });
                 }
             }
             // Writes `sign`'s board into its mesh and gives it a blank picture; false when `model` has no board.
@@ -185,7 +185,7 @@ namespace rct3::scene
                 const auto ride = ride_of_line.find(spot.line);
                 if (ride == ride_of_line.end())
                     continue;
-                std::string theme = theme_of(scene.rides.rides[ride->second]);
+                std::string theme = theme_of(scene.rides.rides[ride->second.value]);
                 if (sign_of(q, assets, theme).empty())
                     theme = std::string(kPlainTheme);
                 const std::string& symbol = sign_of(q, assets, theme);
@@ -259,7 +259,7 @@ namespace rct3::scene
             return;
         for (LedSign& sign : q.signs)
         {
-            if ((sign.ride && *sign.ride >= scene.rides.rides.size()) || (sign.placed && *sign.placed >= scene.signs.size()))
+            if ((sign.ride && sign.ride->value >= scene.rides.rides.size()) || (sign.placed && *sign.placed >= scene.signs.size()))
                 continue;
             const save::model::Park& park = scene.park_model.park;
             // An entrance shows the park's name, or that the park is closed. A placed sign shows what the player
@@ -278,7 +278,7 @@ namespace rct3::scene
                 words = park.flags.has(save::model::ParkFlag::Open) ? ui::screens::management::park_name(park, *assets.strings) : std::u16string(assets.strings->get("AttractionStatusClosed"));
             else
             {
-                const save::model::AttractionCommon& ride = scene.rides.rides[*sign.ride].base;
+                const save::model::AttractionCommon& ride = scene.rides.rides[sign.ride->value].base;
                 words = ride.state == save::model::AttractionState::Open && ride.repair_status == save::model::RepairStatus::Fine ? ui::screens::info::attraction_name(ride, *assets.strings) : ui::screens::info::attraction_status(ride, *assets.strings);
             }
             if (words == sign.shown)

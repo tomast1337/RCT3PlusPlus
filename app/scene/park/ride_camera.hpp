@@ -6,6 +6,7 @@
 #pragma once
 
 #include "park/object/models.hpp"
+#include "save/model/rides.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/screens/park_view/ride_camera.hpp"
 
@@ -18,17 +19,17 @@ namespace rct3::scene::park
     struct ParkScene;
 
     /// Of the cars of ride `ride`, those with a camera of kind `eye`, in the order the park keeps them.
-    [[nodiscard]] std::vector<std::size_t> ride_seats(const ParkScene& scene, std::size_t ride, rct3::park::object::RideEye eye);
+    [[nodiscard]] std::vector<std::size_t> ride_seats(const ParkScene& scene, save::model::RideIndex ride, rct3::park::object::RideEye eye);
 
     /// Goes with person `person` of `shown_people`, from their eyes or with `behind` from behind them, as
     /// ride_along does in a car; the train buttons go from person to person, the type button changes between
     /// the two views.
     void ride_person(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t person, bool behind);
 
-    /// Rides along on ride `ride` (of the park's rides): a flat ride from its first rider seat; a tracked ride
+    /// Rides along on ride `ride`: a flat ride from its first rider seat; a tracked ride
     /// from the first front seat camera of a train under way, else of the first train, the rear or nose
     /// camera where the cars have no front one. Nothing when it has neither.
-    void ride_cam(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride);
+    void ride_cam(ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride);
 
     /// Leaves, or changes to the train's first camera of the next kind it has, or steps to the previous or next
     /// camera of the same kind on the train (round from the last to the first), or to the previous or next

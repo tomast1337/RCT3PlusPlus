@@ -190,7 +190,7 @@ namespace rct3::scene::park
             f.ride = &scene.rides.rides[ref.index];
             f.common = &f.ride->base;
             f.queue_signs = !scene.led_signs.hidden.contains(f.ride->base.id);
-            f.seats = flat_view(scene, ref.index, FlatEye::Seat, 0) || flat_view(scene, ref.index, FlatEye::Fixed, 0);
+            f.seats = flat_view(scene, ref.ride(), FlatEye::Seat, 0) || flat_view(scene, ref.ride(), FlatEye::Fixed, 0);
             f.music = scene.tunes;
             if (const auto tune = scene.ride_tunes.find(f.ride->base.id); tune != scene.ride_tunes.end())
                 f.tune = tune->second;
@@ -212,17 +212,17 @@ namespace rct3::scene::park
                 const entt::entity e = scene.simulate && ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null;
                 const auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr;
                 const bool aboard = fleet && std::ranges::any_of(fleet->riders, [](const auto& riders) { return !riders.empty(); });
-                const auto limits = scene.train_limits.find(ref.index);
+                const auto limits = scene.train_limits.find(ref.ride());
                 if (limits != scene.train_limits.end() && f.ride->base.state != save::model::AttractionState::Open && !aboard)
                 {
-                    const auto choices = scene.train_choices.find(ref.index);
+                    const auto choices = scene.train_choices.find(ref.ride());
                     f.other_cars = choices != scene.train_choices.end() && choices->second.size() > 1;
                     f.trains = limits->second;
                     // A ride from a saved park measured by its cars' kept lengths until its trains are made here.
                     std::vector<rct3::park::object::CarFit> kept;
                     for (const save::model::Car& car : f.ride->trains.empty() ? std::vector<save::model::Car> { } : f.ride->trains.front().cars)
                         kept.push_back({ .length = car.length });
-                    const auto fits = scene.car_fits.find(ref.index);
+                    const auto fits = scene.car_fits.find(ref.ride());
                     const rct3::park::track::TrackRules rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : rct3::park::track::TrackRules { };
                     // A shuttle runs one (fit_trains).
                     const auto coaster = course ? simulation::coaster_of(*course, *f.ride) : std::nullopt;
@@ -359,7 +359,7 @@ namespace rct3::scene::park
         {
             // A tracked ride's train limits are read the first time its window shows them.
             if (scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && assets.install)
-                track::ready_trains(scene, *assets.install, scene.shown->index);
+                track::ready_trains(scene, *assets.install, scene.shown->ride());
             panel.show_page(ui::screens::info::attraction_page(scene.info_tab, facts(scene, *scene.shown), *assets.strings, info_units(assets, options), scene.info_section));
         }
     }
@@ -575,7 +575,7 @@ namespace rct3::scene::park
                 scene.camera.target = sum / static_cast<float>(count);
         }
         else if (change.id == ui::screens::info::control_id(RideCam) && ride != nullptr)
-            ride_cam(scene, assets, ref.index);
+            ride_cam(scene, assets, ref.ride());
         else if (stall != nullptr)
         {
             const std::size_t index = ref.index;
@@ -655,23 +655,23 @@ namespace rct3::scene::park
             ride->options.max_wait = change.value;
         else if (change.id == ui::screens::info::control_id(WaitFor))
             ride->options.wait_for_load = change.value;
-        else if ((change.id == ui::screens::info::control_id(Trains) || change.id == ui::screens::info::control_id(Cars)) && scene.train_limits.contains(ref.index) && ride->base.state != save::model::AttractionState::Open && assets.install)
+        else if ((change.id == ui::screens::info::control_id(Trains) || change.id == ui::screens::info::control_id(Cars)) && scene.train_limits.contains(ref.ride()) && ride->base.state != save::model::AttractionState::Open && assets.install)
         {
             const bool trains = change.id == ui::screens::info::control_id(Trains);
-            (void)track::set_trains(device, scene, *assets.install, ref.index, trains ? change.value : ride->train_count.value_or(0), trains ? ride->cars_per_train.value_or(0) : change.value);
+            (void)track::set_trains(device, scene, *assets.install, ref.ride(), trains ? change.value : ride->train_count.value_or(0), trains ? ride->cars_per_train.value_or(0) : change.value);
         }
-        else if (change.id == ui::screens::info::control_id(CarKind) && scene.train_limits.contains(ref.index) && ride->base.state != save::model::AttractionState::Open && assets.install && !ride->trains.empty())
+        else if (change.id == ui::screens::info::control_id(CarKind) && scene.train_limits.contains(ref.ride()) && ride->base.state != save::model::AttractionState::Open && assets.install && !ride->trains.empty())
         {
             // The next kind of train its kind runs, round to the first after the last.
-            const std::vector<std::string>& choices = scene.train_choices[ref.index];
+            const std::vector<std::string>& choices = scene.train_choices[ref.ride()];
             const std::string_view symbol = ride->trains.front().symbol;
             const std::string_view now = symbol.substr(0, symbol.find(':'));
             const auto at = std::ranges::find_if(choices, [&](const std::string& c) { return strings::equals_ignoring_case(c, now); });
             if (choices.size() > 1)
-                if (track::use_train(scene, *assets.install, ref.index, choices[at == choices.end() ? 0 : static_cast<std::size_t>(at - choices.begin() + 1) % choices.size()]))
+                if (track::use_train(scene, *assets.install, ref.ride(), choices[at == choices.end() ? 0 : static_cast<std::size_t>(at - choices.begin() + 1) % choices.size()]))
                 {
-                    (void)track::set_trains(device, scene, *assets.install, ref.index, ride->train_count.value_or(0), ride->cars_per_train.value_or(0));
-                    track::update_platforms(scene, ref.index, assets);
+                    (void)track::set_trains(device, scene, *assets.install, ref.ride(), ride->train_count.value_or(0), ride->cars_per_train.value_or(0));
+                    track::update_platforms(scene, ref.ride(), assets);
                 }
         }
         else if (change.id == ui::screens::info::control_id(Circuits))

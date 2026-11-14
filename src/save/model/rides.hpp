@@ -16,6 +16,7 @@
 // Only fields whose meaning is established are exposed; anything else is left out rather than guessed.
 #pragma once
 
+#include "core/id.hpp"
 #include "core/none_as_minus_one.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
@@ -550,6 +551,9 @@ namespace rct3::save::model
         std::size_t orphan_pieces = 0; ///< Track pieces in the file that no track reaches
         RideDiagnostics diagnostics { };
     };
+
+    /// A ride's place in RideModel::rides.
+    using RideIndex = core::Id<struct RideIndexTag>;
 
     /// A trick the performers of a show ride know.
     struct ShowTrick

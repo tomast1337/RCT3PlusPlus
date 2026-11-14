@@ -696,7 +696,7 @@ namespace rct3::scene::park
             }
             const Joined joined = join_laid(scene.rides, f.paths, scene.grid, piece, unused_id(scene));
             if (joined.entrance)
-                logging::logger("park").info("queue joins ride {} on line {}", joined.entrance->ride, *joined.line);
+                logging::logger("park").info("queue joins ride {} on line {}", joined.entrance->ride.value, *joined.line);
             for (const save::model::PathTile& p : f.paths)
             {
                 if (joined.line && p.queue && p.queue->queue_line_ref == *joined.line && !std::ranges::contains(railed, p.id))
@@ -1448,10 +1448,10 @@ namespace rct3::scene::park
         scene.footpaths.dirty = true;
     }
 
-    void rejoin_queues(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride)
+    void rejoin_queues(ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride)
     {
         ParkFootpaths& f = scene.footpaths;
-        save::model::Ride& r = scene.rides.rides.at(ride);
+        save::model::Ride& r = scene.rides.rides.at(ride.value);
         std::vector<std::uint64_t> railed;
         for (std::size_t s = 0; s < r.stations.size(); ++s)
         {
@@ -1474,7 +1474,7 @@ namespace rct3::scene::park
             }
             else if (const auto line = rct3::park::join_queue_behind(scene.rides, f.paths, scene.grid, ride, s, unused_id(scene)))
             {
-                logging::logger("park").info("queue joins ride {} on line {}", ride, *line);
+                logging::logger("park").info("queue joins ride {} on line {}", ride.value, *line);
                 for (const save::model::PathTile& p : f.paths)
                 {
                     if (p.queue && p.queue->queue_line_ref == *line)

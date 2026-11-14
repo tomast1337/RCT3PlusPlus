@@ -40,9 +40,9 @@ namespace rct3::scene::park
         std::vector<std::pair<std::size_t, rct3::park::object::RideEye>> train_stops(const ParkScene& scene, rct3::park::object::RideEye eye)
         {
             std::vector<std::pair<std::size_t, rct3::park::object::RideEye>> stops;
-            for (std::size_t ride = 0; ride < scene.rides.rides.size(); ++ride)
+            for (std::size_t r = 0; r < scene.rides.rides.size(); ++r)
                 for (const rct3::park::object::RideEye kind : { eye, rct3::park::object::RideEye::Front, rct3::park::object::RideEye::Rear, rct3::park::object::RideEye::Nose })
-                    if (const std::vector<std::size_t> seats = ride_seats(scene, ride, kind); !seats.empty())
+                    if (const std::vector<std::size_t> seats = ride_seats(scene, save::model::RideIndex { r }, kind); !seats.empty())
                     {
                         std::vector<std::size_t> trains;
                         for (const std::size_t seat : seats)
@@ -76,7 +76,7 @@ namespace rct3::scene::park
         }
 
         /// How many rider seats or fixed cameras (`eye`) flat ride `ride` has to look out from.
-        std::size_t flat_views(const ParkScene& scene, std::size_t ride, FlatEye eye)
+        std::size_t flat_views(const ParkScene& scene, save::model::RideIndex ride, FlatEye eye)
         {
             std::size_t count = 0;
             while (flat_view(scene, ride, eye, count))
@@ -85,11 +85,11 @@ namespace rct3::scene::park
         }
 
         /// The flat rides with rider seats or fixed cameras to look out from, in the park's order.
-        std::vector<std::size_t> flat_rides(const ParkScene& scene)
+        std::vector<save::model::RideIndex> flat_rides(const ParkScene& scene)
         {
-            std::vector<std::size_t> rides;
-            for (std::size_t ride = 0; ride < scene.rides.rides.size(); ++ride)
-                if (!scene.rides.rides[ride].base.demolished && (flat_view(scene, ride, FlatEye::Seat, 0) || flat_view(scene, ride, FlatEye::Fixed, 0)))
+            std::vector<save::model::RideIndex> rides;
+            for (save::model::RideIndex ride { }; ride.value < scene.rides.rides.size(); ++ride.value)
+                if (!scene.rides.rides[ride.value].base.demolished && (flat_view(scene, ride, FlatEye::Seat, 0) || flat_view(scene, ride, FlatEye::Fixed, 0)))
                     rides.push_back(ride);
             return rides;
         }
@@ -97,7 +97,7 @@ namespace rct3::scene::park
         /// Looks out from rider seat or fixed camera (`eye`) `at` of flat ride `ride`, as ride_along does from a
         /// car. The type button changes between seats and fixed cameras, the train buttons go from flat ride to
         /// flat ride.
-        void ride_flat(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, FlatEye eye, std::size_t at)
+        void ride_flat(ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, FlatEye eye, std::size_t at)
         {
             start_riding(scene, assets);
             if (scene.riding_flat != std::pair { ride, at } || scene.flat_eye != eye)
@@ -111,7 +111,7 @@ namespace rct3::scene::park
             scene.flat_eye = eye;
             const ui::StringTable& strings = *assets.strings;
             constexpr std::array<std::string_view, 2> kNames { "RidecamGUI_TypePeep", "RidecamGUI_TypeStatic" };
-            std::u16string info = ui::screens::info::attraction_name(scene.rides.rides[ride].base, strings);
+            std::u16string info = ui::screens::info::attraction_name(scene.rides.rides[ride.value].base, strings);
             const FlatEye other_eye = eye == FlatEye::Fixed ? FlatEye::Seat : FlatEye::Fixed;
             info += u"  " + std::u16string(strings.get(kNames[std::to_underlying(eye)])) + u" " + strings::to_utf16(std::format("{}", at + 1));
             const bool other = flat_views(scene, ride, other_eye) > 0;
@@ -141,7 +141,7 @@ namespace rct3::scene::park
             for (std::size_t c = 0; c < car; ++c)
                 place += scene.car_spots[c].ride == spot.ride && scene.car_spots[c].train == spot.train ? 1 : 0;
             const ui::StringTable& strings = *assets.strings;
-            std::u16string info = ui::screens::info::attraction_name(scene.rides.rides[spot.ride].base, strings);
+            std::u16string info = ui::screens::info::attraction_name(scene.rides.rides[spot.ride.value].base, strings);
             info += u"  " + std::u16string(strings.get("RidecamGUI_Train")) + u" " + strings::to_utf16(std::format("{}", spot.train + 1));
             info += u"  " + std::u16string(strings.get("RidecamGUI_Car")) + u" " + strings::to_utf16(std::format("{}", place));
             constexpr std::array<std::string_view, 3> kEyeNames { "RidecamGUI_TypeNose", "RidecamGUI_TypeFront", "RidecamGUI_TypeRear" };
@@ -154,10 +154,10 @@ namespace rct3::scene::park
 
     } // namespace
 
-    std::vector<std::size_t> ride_seats(const ParkScene& scene, std::size_t ride, rct3::park::object::RideEye eye)
+    std::vector<std::size_t> ride_seats(const ParkScene& scene, save::model::RideIndex ride, rct3::park::object::RideEye eye)
     {
         std::vector<std::size_t> seats;
-        for (std::size_t i = 0; i < scene.cars.size() && i < scene.car_spots.size() && !scene.rides.rides.at(ride).base.demolished; ++i)
+        for (std::size_t i = 0; i < scene.cars.size() && i < scene.car_spots.size() && !scene.rides.rides.at(ride.value).base.demolished; ++i)
             if (scene.car_spots[i].ride == ride && ride_eye(scene, i, eye))
                 seats.push_back(i);
         return seats;
@@ -185,14 +185,14 @@ namespace rct3::scene::park
             panel->show(saved != nullptr ? strings::to_utf16(saved->name) : std::u16string { }, { .trains = scene.shown_people.size() > 1 }, { }, behind ? ui::screens::park_view::kFlatSeatType : ui::screens::park_view::kFlatFixedType, strings.get(kNames[!behind]));
     }
 
-    void ride_cam(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride)
+    void ride_cam(ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride)
     {
         if (flat_view(scene, ride, FlatEye::Seat, 0) || flat_view(scene, ride, FlatEye::Fixed, 0))
         {
             ride_flat(scene, assets, ride, flat_view(scene, ride, FlatEye::Seat, 0) ? FlatEye::Seat : FlatEye::Fixed, 0);
             return;
         }
-        const entt::entity e = ride < scene.ride_entities.size() ? scene.ride_entities[ride] : entt::null;
+        const entt::entity e = ride.value < scene.ride_entities.size() ? scene.ride_entities[ride.value] : entt::null;
         const auto* fleet = e != entt::null ? scene.sim.registry.try_get<simulation::Trains>(e) : nullptr;
         for (const rct3::park::object::RideEye eye : { rct3::park::object::RideEye::Front, rct3::park::object::RideEye::Rear, rct3::park::object::RideEye::Nose })
             if (const std::vector<std::size_t> seats = ride_seats(scene, ride, eye); !seats.empty())
@@ -230,14 +230,14 @@ namespace rct3::scene::park
             const FlatEye eye = scene.flat_eye;
             const FlatEye other_eye = eye == FlatEye::Fixed ? FlatEye::Seat : FlatEye::Fixed;
             const std::size_t views = flat_views(scene, ride, eye);
-            const std::vector<std::size_t> rides = flat_rides(scene);
+            const std::vector<save::model::RideIndex> rides = flat_rides(scene);
             if ((action == PreviousCamera || action == NextCamera) && views > 0)
                 ride_flat(scene, assets, ride, eye, step(view, views));
             else if (action == ChangeType && flat_views(scene, ride, other_eye) > 0)
                 ride_flat(scene, assets, ride, other_eye, 0);
             else if (const auto at = std::ranges::find(rides, ride); (action == PreviousTrain || action == NextTrain) && at != rides.end())
             {
-                const std::size_t to = rides[step(static_cast<std::size_t>(at - rides.begin()), rides.size())];
+                const save::model::RideIndex to = rides[step(static_cast<std::size_t>(at - rides.begin()), rides.size())];
                 ride_flat(scene, assets, to, flat_view(scene, to, FlatEye::Seat, 0) ? FlatEye::Seat : FlatEye::Fixed, 0);
             }
             return;

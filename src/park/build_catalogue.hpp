@@ -162,9 +162,9 @@ namespace rct3::park
         /// item in its list; 0 for others.
         std::uint32_t type = 0;
         /// The theme the item belongs to, as the theme's overlay numbers and names it: its name for skins
-        /// ("Space") and its title shown to the player ("Sci-fi"). -1 and empty for items of no theme. Overlays
+        /// ("Space") and its title shown to the player ("Sci-fi"). None and empty for items of no theme. Overlays
         /// that add to a theme give only its number.
-        std::int32_t style_index = -1;
+        std::optional<std::int32_t> style_index { };
         std::string style;
         std::string style_title;
         EnclosurePart part = EnclosurePart::None;

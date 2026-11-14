@@ -194,7 +194,7 @@ namespace rct3::simulation
             std::map<std::string, float, std::less<>> tiles_of; // Footprint of each item, by overlay and symbol
             for (const rct3::park::BuildItem& item : catalogue)
             {
-                if (item.style_index > 0 && !item.style.empty())
+                if (item.style_index.value_or(0) > 0 && !item.style.empty())
                     theme_of.try_emplace(key(item.overlay), item.style);
                 tiles_of.try_emplace(key(item.overlay) + '|' + key(item.symbol), static_cast<float>(std::max(1u, item.width * item.length)));
             }

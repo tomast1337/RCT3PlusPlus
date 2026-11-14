@@ -26,21 +26,21 @@ namespace rct3::scene::park
     namespace
     {
 
-        constexpr float kChatterReach = 30;   ///< World units about the camera's point whose people are heard chatting
-        constexpr float kChatterLevel = 0.5f; ///< Of full loudness, with a full crowd
+        constexpr units::Distance kChatterReach { 30 }; ///< About the camera's point, whose people are heard chatting
+        constexpr float kChatterLevel = 0.5f;           ///< Of full loudness, with a full crowd
         constexpr float kGestureLevel = 0.8f;
         constexpr float kScreamLevel = 0.9f;
         constexpr float kRideLevel = 0.7f;
         constexpr float kCrashLevel = 1;                          ///< Of the game volume, a wreck blowing up
         constexpr float kLandingLevel = 0.4f;                     ///< Of that, one landing
         constexpr float kFireLevel = 0.5f;                        ///< Of that, its fire burning
-        constexpr float kCrashNear = 20;                          ///< World units from a wreck it is heard full loud
+        constexpr units::Distance kCrashNear { 20 };              ///< From a wreck, it is heard full loud
         constexpr float kCrashFar = 250;                          ///< And no longer heard
         constexpr units::Seconds kChainFade { 0.5f };             ///< The chain's loop takes this long to come in and to die away
         constexpr std::array kSplashLevels { 0.5f, 0.75f, 1.0f }; ///< Chosen by eye: a splash's loudness by its strength
         constexpr units::Seconds kPlume { 2.5f };                 ///< Chosen by eye: how long the plume plays after a splash
         constexpr float kWaterfallLevel = 0.6f;                   ///< Of full loudness.
-        constexpr float kWaterfallNear = 10;                      ///< World units from where it lands a waterfall is heard full loud.
+        constexpr units::Distance kWaterfallNear { 10 };          ///< From where it lands, a waterfall is heard full loud
         constexpr float kWaterfallFar = 90;                       ///< And no longer heard.
         constexpr float kRainLevel = 0.5f;                        ///< Of full loudness, a downpour. Chosen by eye, as the next
         constexpr float kThunderLevel = 0.9f;
@@ -191,7 +191,7 @@ namespace rct3::scene::park
         glm::vec3 crowd { 0.0f };
         if (!quiet)
             for (const auto [e, pose, errand] : r.view<const simulation::Pose, const simulation::Errand>(entt::exclude<simulation::Left>).each())
-                if (errand.kind != simulation::ErrandKind::Riding && glm::distance(glm::vec2(pose.position.x, pose.position.z), glm::vec2(scene.camera.target.x, scene.camera.target.z)) <= kChatterReach)
+                if (errand.kind != simulation::ErrandKind::Riding && glm::distance(glm::vec2(pose.position.x, pose.position.z), glm::vec2(scene.camera.target.x, scene.camera.target.z)) <= kChatterReach.value)
                 {
                     ++near;
                     crowd += pose.position;
@@ -245,7 +245,7 @@ namespace rct3::scene::park
             const glm::vec3 at = rct3::park::waterfall_point(falls[i], 1.0f);
             if (!engine.is_playing(voice))
             {
-                const auto played = engine.play(sounds.waterfall[i % sounds.waterfall.size()], { .volume = kWaterfallLevel, .at = at, .near = kWaterfallNear, .far = kWaterfallFar, .loop = true });
+                const auto played = engine.play(sounds.waterfall[i % sounds.waterfall.size()], { .volume = kWaterfallLevel, .at = at, .near = kWaterfallNear.value, .far = kWaterfallFar, .loop = true });
                 voice = played ? *played : audio::VoiceHandle { };
             }
             else
@@ -298,7 +298,7 @@ namespace rct3::scene::park
         // Crashed trains' wrecks: heard landing, softer, and blowing up, and their fires burning where they lie.
         std::map<std::tuple<entt::entity, std::size_t, std::size_t>, std::pair<int, simulation::WreckState>> wrecks_heard;
         std::map<entt::entity, audio::VoiceHandle> fires;
-        const auto crash_heard = [&](glm::vec3 at, float level) { return audio::PlayParams { .volume = kCrashLevel * level, .at = at, .near = kCrashNear, .far = kCrashFar }; };
+        const auto crash_heard = [&](glm::vec3 at, float level) { return audio::PlayParams { .volume = kCrashLevel * level, .at = at, .near = kCrashNear.value, .far = kCrashFar }; };
         // By ride, or none for the construction panel's test train, the wrecks of each train.
         std::vector<std::pair<entt::entity, std::span<const std::vector<simulation::Wreck>>>> crashed;
         for (const auto [e, wrecks] : r.view<const simulation::Wrecks>().each())

@@ -237,7 +237,7 @@ namespace rct3::scene::park
                     const RideReaction now = thrill != nullptr ? thrill->reaction : RideReaction::Calm;
                     // Riders not posed last time show no change.
                     const auto last = scene.rider_turns.find(shown.guest);
-                    auto& turn = turns[shown.guest] = last != scene.rider_turns.end() ? last->second : ParkScene::RiderTurn { now, now, -1e9f };
+                    auto& turn = turns[shown.guest] = last != scene.rider_turns.end() ? last->second : ParkScene::RiderTurn { now, now, scene.park_clock };
                     if (turn.now != now)
                         turn = { turn.now, now, scene.park_clock };
                     // Bringing down their hands or their arms from their eyes, then raising them, then the loop.

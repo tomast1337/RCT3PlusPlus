@@ -105,7 +105,7 @@ namespace rct3::scene
         std::map<std::string, TrackModels, std::less<>> models;
         rct3::park::path::SolidTiles solids;
         rct3::park::ground::GroundHolds holds;                                  ///< What keeps the ground still, worked out with the solids
-        std::size_t solids_of = static_cast<std::size_t>(-1);                   ///< The scene's object count when worked out
+        std::optional<std::size_t> solids_of;                                   ///< The scene's object count when worked out
         std::vector<std::size_t> unjoined;                                      ///< Rides placed here that the simulation does not run yet
         std::vector<std::size_t> unjoined_stalls;                               ///< The same of the stalls placed here
         std::vector<std::pair<std::size_t, std::uint32_t>> unjoined_facilities; ///< The same of the facilities placed here, with their kinds

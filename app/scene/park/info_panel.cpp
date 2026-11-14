@@ -35,10 +35,10 @@ namespace rct3::scene::park
 
         namespace skins = ui::game_skins;
 
-        constexpr float kPropViewClosest = 1.5f;    ///< Small props fill the round view
-        constexpr float kViewPitch = 0.5f;          ///< Radians down, of the info panel's round view
-        constexpr float kPersonViewDistance = 4.5f; ///< Of the round view's eye from the person it shows
-        constexpr float kPersonViewHeight = 0.9f;   ///< Of the point it looks at, above the person's feet
+        constexpr float kPropViewClosest = 1.5f;      ///< Small props fill the round view
+        constexpr units::Radians kViewPitch { 0.5f }; ///< Down, of the info panel's round view
+        constexpr float kPersonViewDistance = 4.5f;   ///< Of the round view's eye from the person it shows
+        constexpr float kPersonViewHeight = 0.9f;     ///< Of the point it looks at, above the person's feet
 
         /// The first of the attraction's objects that takes colours, and the slots it takes.
         std::optional<std::pair<std::size_t, std::vector<std::size_t>>> painted_object(const ParkScene& scene, rct3::park::AttractionRef ref)
@@ -369,7 +369,7 @@ namespace rct3::scene::park
         rct3::park::ParkCamera camera;
         camera.target = glm::vec3(scene.shown_people[shown].pose.world[3]) + glm::vec3(0, kPersonViewHeight, 0);
         camera.yaw = yaw;
-        camera.pitch = kViewPitch;
+        camera.pitch = kViewPitch.value;
         camera.distance = kPersonViewDistance;
         return camera;
     }
@@ -475,7 +475,7 @@ namespace rct3::scene::park
                 if (owner != scene.attractions.end() && owner->second == ref)
                     points.push_back(scene.anchors[i]);
             }
-            scene.view_camera = rct3::park::framed(points, scene.camera.yaw, kViewPitch);
+            scene.view_camera = rct3::park::framed(points, scene.camera.yaw, kViewPitch.value);
         }
         scene.shown_person.reset();
         scene.shown_prop.reset();
@@ -508,7 +508,7 @@ namespace rct3::scene::park
             scene.prop_tabs.push_back(t.tab);
         }
         if (scene.shown_prop != index)
-            scene.view_camera = rct3::park::framed(rct3::park::object::object_corners(scene.objects[index], scene.models, scene.grid, scene.fitted), scene.camera.yaw, kViewPitch, kPropViewClosest);
+            scene.view_camera = rct3::park::framed(rct3::park::object::object_corners(scene.objects[index], scene.models, scene.grid, scene.fitted), scene.camera.yaw, kViewPitch.value, kPropViewClosest);
         scene.shown.reset();
         scene.shown_person.reset();
         scene.shown_party.clear();

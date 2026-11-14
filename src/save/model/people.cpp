@@ -462,7 +462,7 @@ namespace rct3::save::model
                 out[i].about = ref(sub(t, at::thought_about), index);
                 out[i].other = ref(sub(t, at::thought_person), index);
                 out[i].id = i32(sub(t, at::thought_id));
-                out[i].time = f32(sub(t, at::thought_time), -1);
+                out[i].time = core::from_stored(f32(sub(t, at::thought_time), -1));
                 out[i].variant = i32(sub(t, at::thought_variant));
             }
             return out;
@@ -496,10 +496,10 @@ namespace rct3::save::model
                 .decide_time = f32(get(at::decide_time)),
                 .start_time = f32(get(at::start_date)),
                 .animation = {
-                    .anim_type = i32(get(at::anim_type), -1),
-                    .walk = i32(get(at::current_walk_anim), -1),
-                    .idle = i32(get(at::idle_anim), -1),
-                    .alternate_walk = i32(get(at::alternate_walk_anim), -1),
+                    .anim_type = core::from_stored(i32(get(at::anim_type), -1)),
+                    .walk = core::from_stored(i32(get(at::current_walk_anim), -1)),
+                    .idle = core::from_stored(i32(get(at::idle_anim), -1)),
+                    .alternate_walk = core::from_stored(i32(get(at::alternate_walk_anim), -1)),
                     .time = f32(get(at::anim_time)),
                     .speed = f32(get(at::anim_speed)),
                     .move_speed = f32(get(at::move_speed)),
@@ -803,10 +803,10 @@ namespace rct3::save::model
             .happiness = f32(get(at::happiness), 0.5f),
             .think_timer = units::Seconds { f32(get(at::think_timer)) },
             .last_task_type = i32(get(at::last_task_type)),
-            .thinks_since_last_task = i32(get(at::thinks_last_task), -1),
-            .thinks_since_different_task = i32(get(at::thinks_different_task), -1),
-            .thinks_since_no_task = i32(get(at::thinks_no_task), -1),
-            .thinks_since_happy = i32(get(at::thinks_happy), -1),
+            .thinks_since_last_task = core::from_stored(i32(get(at::thinks_last_task), -1)),
+            .thinks_since_different_task = core::from_stored(i32(get(at::thinks_different_task), -1)),
+            .thinks_since_no_task = core::from_stored(i32(get(at::thinks_no_task), -1)),
+            .thinks_since_happy = core::from_stored(i32(get(at::thinks_happy), -1)),
             .patrol = { u8(get(at::start_col)), u8(get(at::start_row)), u8(get(at::grid_x)), u8(get(at::grid_y)), flag(get(at::start_state)) },
             .task_flags = i32(get(at::task_flags)),
             .time_in_pool = opt_f32(get(at::time_in_pool)).transform([](float s) { return units::Seconds { s }; }),
@@ -965,7 +965,7 @@ namespace rct3::save::model
             .entry = ref(get(at::wa_entry), index),
             .family_membership = ref(get(at::wa_family), index),
             .visual = ref(get(at::wa_visual), index),
-            .pregnancy_timer = f32(get(at::wa_pregnancy), -1),
+            .pregnancy_timer = core::from_stored(f32(get(at::wa_pregnancy), -1)),
             .babies_in_womb = i32(get(at::wa_babies)),
             .enclosure_health_score = f32(get(at::wa_enclosure_score)),
             .thoughts = thoughts(get(at::wa_thoughts), index),
@@ -1028,7 +1028,7 @@ namespace rct3::save::model
         ItemHolder h {
             .id = o.id,
             .owner = ref(get(at::h_owner), index),
-            .consuming_slot = i32(get(at::h_consuming), -1),
+            .consuming_slot = core::from_stored(i32(get(at::h_consuming), -1)),
             .head = ref(get(at::h_head), index),
             .left_hand = ref(get(at::h_lhand), index),
             .right_hand = ref(get(at::h_rhand), index),
@@ -1060,7 +1060,7 @@ namespace rct3::save::model
             .becomes = ref(get(at::i_becomes), index),
             .voucher_target = ref(get(at::i_voucher), index),
             .colours = { u8(get(at::i_colour0)), u8(get(at::i_colour1)), u8(get(at::i_colour2)) },
-            .inventory_choice = i32(get(at::i_inventory), -1),
+            .inventory_choice = core::from_stored(i32(get(at::i_inventory), -1)),
         };
     }
 

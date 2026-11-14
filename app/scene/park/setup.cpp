@@ -371,7 +371,7 @@ namespace rct3::scene::park
                     for (glm::length_t r = 0; r < 4; ++r)
                         shown.pose.world[c][r] = person.world[static_cast<std::size_t>(c * 4 + r)];
                 }
-                shown.pose.motion = person.animation.anim_type >= 0 ? person.animation.anim_type : rct3::park::person::motion::kIdle;
+                shown.pose.motion = person.animation.anim_type.value_or(rct3::park::person::motion::kIdle);
                 shown.saved_time = person.animation.time;
                 shown.speed = person.animation.speed > 0 ? person.animation.speed : 1.0f;
                 shown.walking = person.animation.anim_type == person.animation.walk || person.animation.anim_type == person.animation.alternate_walk;

@@ -98,7 +98,7 @@ namespace rct3::park
                     item.icon = placed->icon;
                 if (item.name_text.empty())
                     item.name_text = placed->name_text;
-                item.price = placed->cost;
+                item.price = units::Money { placed->cost };
                 if (placed->addon != 0)
                     item.addon = placed->addon;
                 item.placement = placed->positioning;
@@ -120,7 +120,7 @@ namespace rct3::park
             item.overlay = path;
             item.name_text = s.name_text;
             item.icon = s.icon;
-            item.price = s.cost;
+            item.price = units::Money { s.cost };
             item.group_icon = s.group_icon;
             item.group_text = s.group_text;
             item.placement = s.positioning;
@@ -159,8 +159,8 @@ namespace rct3::park
                 item.part = EnclosurePart::Fences;
                 item.name_text = e.fence->name_text;
                 item.icon = e.fence->icon;
-                item.price = e.fence->fence_cost;
-                item.refund = e.fence->fence_refund;
+                item.price = units::Money { e.fence->fence_cost };
+                item.refund = units::Money { e.fence->fence_refund };
                 item.strength = e.fence->strength;
                 items.push_back(std::move(item));
             }
@@ -176,7 +176,7 @@ namespace rct3::park
                 item.scenery = e.hut;
                 item.name_text = s.name_text;
                 item.icon = s.icon;
-                item.price = s.cost;
+                item.price = units::Money { s.cost };
                 item.placement = s.positioning;
                 item.width = s.x_squares;
                 item.length = s.z_squares;
@@ -192,7 +192,7 @@ namespace rct3::park
                 item.name_text = e.toy->name_text;
                 item.description_text = e.toy->description_text;
                 item.icon = e.toy->icon;
-                item.price = e.toy->price;
+                item.price = units::Money { e.toy->price };
                 items.push_back(std::move(item));
             }
             for (const auto& e : ovl::animal::read_animal_species(overlay, part))
@@ -208,7 +208,7 @@ namespace rct3::park
                     item.name_text = v->description_text;
                     item.description_text = s.description_text;
                     item.icon = v->icon.empty() ? s.icon : v->icon;
-                    item.price = v->price;
+                    item.price = units::Money { v->price };
                     item.group_icon = s.icon;
                     item.group_text = s.name_text;
                     item.needs = s.shelter;
@@ -445,7 +445,7 @@ namespace rct3::park
                     item.icon = square ? std::string(e.pool->icon) : std::string(kEnclosureDeleteIcon);
                     item.group_icon = e.pool->icon;
                     item.group_text = kPoolPanelText;
-                    item.price = square ? static_cast<std::int32_t>(pools::pool_build_cost(e.pool->prices, *square)) : 0;
+                    item.price = square ? pools::pool_build_cost(e.pool->prices, *square) : units::Money { };
                     item.pool_prices.assign(e.pool->prices.begin(), e.pool->prices.end());
                     return item;
                 };
@@ -476,7 +476,7 @@ namespace rct3::park
                     if (const ovl::SceneryItem* p = placed_as(piece, piece); p && !p->name_text.empty())
                         item->name_text = p->name_text;
                 if (const ovl::SceneryItem* p = placed_as("StairsBase", "StairsBase"))
-                    stairs.price = p->cost;
+                    stairs.price = units::Money { p->cost };
                 // The extras are the scenery items of the pool type's overlay that say where in a pool they go.
                 for (const auto& [name, item] : placed)
                 {
@@ -492,7 +492,7 @@ namespace rct3::park
                     extra.icon = item->icon;
                     extra.group_icon = kJacuzziIcon;
                     extra.group_text = kPoolExtraText;
-                    extra.price = item->cost;
+                    extra.price = units::Money { item->cost };
                     extra.pool_extra = words->value;
                 }
             }
@@ -692,7 +692,7 @@ namespace rct3::park
         const auto in = [&](C low, C high) { return item.type >= static_cast<std::uint32_t>(low) && item.type <= static_cast<std::uint32_t>(high); };
         const auto is = [&](C c) { return item.type == static_cast<std::uint32_t>(c); };
         const bool for_looks = in(C::Tree, C::Animatronic) || in(C::LitterBin, C::WallCorner) || in(C::RideEntrance, C::RideExit) || is(C::ParkEntrance) || is(C::RideEvent) || is(C::Effect);
-        return item.kind == BuildKind::Scenery && for_looks && item.price > 0 && !item.names_category;
+        return item.kind == BuildKind::Scenery && for_looks && item.price > units::Money { } && !item.names_category;
     }
 
     BuildOffer::BuildOffer(const save::model::RequiredContent& content)

@@ -88,7 +88,7 @@ TEST_CASE("researchable scenery and path styles join research, scenery costing b
         catalogue[at].overlay = "style/plain/style";
         catalogue[at].symbol = std::move(symbol);
         catalogue[at].type = category;
-        catalogue[at].price = price;
+        catalogue[at].price = rct3::units::Money { price };
     };
     scenery(0, "Bench", 31, 1500);
     scenery(1, "Volcano", 28, 95000); // dear enough to meet the cap

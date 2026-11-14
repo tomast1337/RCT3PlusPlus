@@ -39,7 +39,7 @@ namespace rct3::scene::park
     struct FloatingMoney
     {
         glm::vec3 at { 0.0f };
-        std::int64_t amount = 0; ///< Hundredths; above 0 for money in
+        units::Money amount; ///< Above 0 for money in
         units::Seconds age;
     };
 
@@ -61,10 +61,10 @@ namespace rct3::scene::park
     /// The ground in the middle of `tile`.
     [[nodiscard]] glm::vec3 tile_point(const save::model::TerrainGrid& grid, save::model::Tile tile);
 
-    /// Floats `amount` (hundredths, above 0 for money in) up from `at`. One begun near there a moment ago takes
+    /// Floats `amount` (above 0 for money in) up from `at`. One begun near there a moment ago takes
     /// it instead, so a drag or a held brush shows a few sums rather than a crowd. Nothing floats for a zero
     /// amount unless `zero`, as scenery pulled down shows what it cost even when that is nothing.
-    void float_money(ParkScene& scene, glm::vec3 at, std::int64_t amount, bool zero = false);
+    void float_money(ParkScene& scene, glm::vec3 at, units::Money amount, bool zero = false);
 
     /// Floats up what guests paid since the last call, when shown; ages the floats and drops those that ended.
     /// Returns them pinned on a view `size` across (interface units).

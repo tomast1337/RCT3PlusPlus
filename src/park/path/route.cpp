@@ -48,10 +48,10 @@ namespace rct3::park::path
             return b;
         }
 
-        std::int64_t price_of(const NextPiece& piece, const FootpathBuilder& b, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::int32_t ground_cost)
+        units::Money price_of(const NextPiece& piece, const FootpathBuilder& b, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, units::Money ground_cost)
         {
             if (same_piece_at(paths, piece, b))
-                return 0;
+                return { };
             return piece_price(piece, grid, ground_cost);
         }
 
@@ -65,7 +65,7 @@ namespace rct3::park::path
         }
     } // namespace
 
-    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::model::Tile goal, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::int32_t ground_cost, std::optional<std::int32_t> goal_height, std::optional<const SolidTiles&> solids, bool straight)
+    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::model::Tile goal, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, units::Money ground_cost, std::optional<std::int32_t> goal_height, std::optional<const SolidTiles&> solids, bool straight)
     {
         if (!from.start || !grid.contains(goal.col, goal.row) || grid.at(goal.col, goal.row).ownership() != save::model::Ownership::Owned)
             return std::nullopt;
@@ -123,7 +123,7 @@ namespace rct3::park::path
         const std::int32_t first_height = first.started ? first.height : start_piece ? start_piece->start : 0;
         const std::int32_t floor = std::min(first_height, goal_height.value_or(next_piece(at_goal, grid)->start));
         const auto dip_cost = [&](const NextPiece& piece) { return kRouteDipCost * std::max(0, floor - std::min(piece.start, piece.end)); };
-        const std::int64_t least_step = std::max<std::int64_t>(ground_cost, 0) + kRouteStepCost;
+        const std::int64_t least_step = std::max<std::int64_t>(ground_cost.value, 0) + kRouteStepCost;
         const auto estimate = [&](save::model::Tile at) { return (std::abs(at.col - goal.col) + std::abs(at.row - goal.row)) * least_step; };
         using Open = std::pair<std::int64_t, std::size_t>;
         std::priority_queue<Open, std::vector<Open>, std::greater<>> open;
@@ -177,7 +177,7 @@ namespace rct3::park::path
                     next.on_slope = b.slope != PathSlope::Flat;
                     next.parent = at;
                     next.step = { heading, b.slope, *piece };
-                    next.cost = node.cost + price_of(*piece, b, grid, here, ground_cost) + kRouteStepCost + (node.started && turn && !straight ? kRouteTurnCost : 0) + (straight ? std::llround(kRouteLineCost * off_line(piece->spot)) : 0) + cut_cost(*piece, grid) + dip_cost(*piece) + (b.slope != PathSlope::Flat ? kRouteSlopeCost : 0);
+                    next.cost = node.cost + price_of(*piece, b, grid, here, ground_cost).value + kRouteStepCost + (node.started && turn && !straight ? kRouteTurnCost : 0) + (straight ? std::llround(kRouteLineCost * off_line(piece->spot)) : 0) + cut_cost(*piece, grid) + dip_cost(*piece) + (b.slope != PathSlope::Flat ? kRouteSlopeCost : 0);
                     const std::uint64_t key = key_of(next);
                     if (const auto known = best.find(key); known != best.end() && known->second <= next.cost)
                         continue;
@@ -190,10 +190,10 @@ namespace rct3::park::path
         return std::nullopt;
     }
 
-    std::int64_t route_price(std::span<const RouteStep> route, const FootpathBuilder& from, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::int32_t ground_cost)
+    units::Money route_price(std::span<const RouteStep> route, const FootpathBuilder& from, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, units::Money ground_cost)
     {
         FootpathBuilder b = from;
-        std::int64_t total = 0;
+        units::Money total;
         for (const RouteStep& s : route)
         {
             b.heading = s.heading;

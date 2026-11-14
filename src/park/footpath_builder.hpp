@@ -44,6 +44,7 @@
 #include "park/terrain_mesh.hpp"
 #include "park/turns.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -227,21 +228,20 @@ namespace rct3::park
     /// How far a piece of `slope` climbs from its start to its end, in world units; negative going down.
     [[nodiscard]] float slope_rise(PathSlope slope) noexcept;
 
-    /// Added to a raised piece's price for each started unit of height of its middle above the ground, in
-    /// hundredths of the currency unit.
-    inline constexpr std::int64_t kRaisedPieceCost = 500;
+    /// Added to a raised piece's price for each started unit of height of its middle above the ground.
+    inline constexpr units::Money kRaisedPieceCost { 500 };
 
     /// The price of a piece whose style costs `ground_cost` on the ground. `raised` false for a piece laid on
     /// the ground; otherwise `height` is how far its middle is above the ground under it, in world units.
-    [[nodiscard]] std::int64_t piece_cost(std::int32_t ground_cost, bool raised, float height) noexcept;
+    [[nodiscard]] units::Money piece_cost(units::Money ground_cost, bool raised, float height) noexcept;
 
-    /// Added to a tunnel piece's price, in hundredths of the currency unit.
-    inline constexpr std::int64_t kTunnelPieceCost = 1000;
+    /// Added to a tunnel piece's price.
+    inline constexpr units::Money kTunnelPieceCost { 1000 };
 
     /// The price of `piece` on `grid` of a style that costs `ground_cost` on the ground.
-    [[nodiscard]] std::int64_t piece_price(const NextPiece& piece, const save::model::TerrainGrid& grid, std::int32_t ground_cost);
+    [[nodiscard]] units::Money piece_price(const NextPiece& piece, const save::model::TerrainGrid& grid, units::Money ground_cost);
 
     /// What laying `path` cost, worked out again from where it lies, for paying it back when it is taken away.
-    [[nodiscard]] std::int64_t laid_price(const save::model::PathTile& path, const save::model::TerrainGrid& grid, std::int32_t ground_cost);
+    [[nodiscard]] units::Money laid_price(const save::model::PathTile& path, const save::model::TerrainGrid& grid, units::Money ground_cost);
 
 } // namespace rct3::park

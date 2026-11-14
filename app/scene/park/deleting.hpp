@@ -9,6 +9,7 @@
 #include "render/device.hpp"
 #include "save/model/world.hpp"
 #include "ui/interface_assets.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -46,7 +47,7 @@ namespace rct3::scene::park
         {
             std::array<std::int32_t, 4> area { };
             save::model::EnclosureMap enclosures { };
-            std::int64_t cost = 0;
+            units::Money cost;
         };
         std::optional<Marked> marked { };
     };
@@ -58,7 +59,7 @@ namespace rct3::scene::park
     /// say pulling one down costs (or gets back), floated up even when nothing unless not `floated`. The park
     /// entrance stays, and nothing goes when the park cannot pay; either is told in a box. What was paid, when
     /// any went.
-    std::optional<std::int64_t> delete_props(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::size_t> indices, bool floated = true);
+    std::optional<units::Money> delete_props(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::size_t> indices, bool floated = true);
 
     /// Takes paths `ids` away with the delete tools, and the bins, benches, signs and the like on their tiles, the
     /// money for both floating up as one sum.

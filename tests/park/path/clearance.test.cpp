@@ -106,7 +106,7 @@ TEST_CASE("a route goes round a stall in its way")
     FootpathBuilder b;
     start_at(b, { 0, 1 });
     b.heading = Side::kNextCol;
-    const auto route = find_route(b, { 4, 1 }, g, { }, 1000, std::nullopt, solids);
+    const auto route = find_route(b, { 4, 1 }, g, { }, rct3::units::Money { 1000 }, std::nullopt, solids);
     REQUIRE(route);
     CHECK(route->back().piece.spot == save::model::Tile { 4, 1 });
     CHECK(std::ranges::none_of(*route, [](const RouteStep& s) { return s.piece.spot == save::model::Tile { 2, 1 } && s.piece.end < 4; }));

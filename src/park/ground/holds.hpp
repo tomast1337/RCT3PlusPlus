@@ -19,6 +19,7 @@
 #include "park/object/mesh.hpp"
 #include "park/path/clearance.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -77,8 +78,8 @@ namespace rct3::park::ground
     /// not, else those of the rim that may not. Whether the footprint's may all be made.
     bool allow_cuts(GroundCuts& cuts, const save::model::TerrainGrid& grid, const GroundHolds& holds, std::span<const save::model::WaterBody> bodies);
 
-    /// What moving the ground to `cuts` costs, in hundredths.
-    [[nodiscard]] std::int64_t cuts_cost(const GroundCuts& cuts, const save::model::TerrainGrid& grid);
+    /// What moving the ground to `cuts` costs.
+    [[nodiscard]] units::Money cuts_cost(const GroundCuts& cuts, const save::model::TerrainGrid& grid);
 
     /// Moves the ground to `cuts`.
     void make_cuts(save::model::TerrainGrid& grid, const GroundCuts& cuts);

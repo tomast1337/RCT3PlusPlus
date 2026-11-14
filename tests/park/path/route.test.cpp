@@ -7,6 +7,7 @@
 using namespace rct3;
 using namespace rct3::park;
 using namespace rct3::park::path;
+using rct3::units::Money;
 
 namespace
 {
@@ -75,7 +76,7 @@ namespace
 TEST_CASE("a route over flat ground lies on the ground, short and with one turn")
 {
     const save::model::TerrainGrid g = owned_grid(10, 10);
-    const auto route = find_route(started_at({ 1, 1 }), { 6, 4 }, g, { }, 1000);
+    const auto route = find_route(started_at({ 1, 1 }), { 6, 4 }, g, { }, Money { 1000 });
     REQUIRE(route);
     CHECK(route->size() == 9); // The start tile and eight more
     CHECK(route->front().piece.spot == save::model::Tile { 1, 1 });
@@ -86,7 +87,7 @@ TEST_CASE("a route over flat ground lies on the ground, short and with one turn"
     for (std::size_t i = 2; i < route->size(); ++i)
         turns += (*route)[i].heading != (*route)[i - 1].heading;
     CHECK(turns == 1);
-    CHECK(route_price(*route, started_at({ 1, 1 }), g, { }, 1000) == 9000);
+    CHECK(route_price(*route, started_at({ 1, 1 }), g, { }, Money { 1000 }) == Money { 9000 });
 }
 
 TEST_CASE("a route goes round land the park does not own")
@@ -94,7 +95,7 @@ TEST_CASE("a route goes round land the park does not own")
     save::model::TerrainGrid g = owned_grid(8, 6);
     for (int row = 0; row < 5; ++row)
         cell(g, 4, row).flags = 0;
-    const auto route = find_route(started_at({ 1, 0 }), { 7, 0 }, g, { }, 1000);
+    const auto route = find_route(started_at({ 1, 0 }), { 7, 0 }, g, { }, Money { 1000 });
     REQUIRE(route);
     CHECK(joined(*route));
     CHECK(std::ranges::any_of(*route, [](const RouteStep& s) { return s.piece.spot == save::model::Tile { 4, 5 }; }));
@@ -106,14 +107,14 @@ TEST_CASE("across a ridge a route climbs over it, or cuts through when cutting i
     ridge(g, 5, 2);
     ridge(g, 6, 2);
 
-    const auto over = find_route(started_at({ 1, 1 }), { 10, 1 }, g, { }, 1000);
+    const auto over = find_route(started_at({ 1, 1 }), { 10, 1 }, g, { }, Money { 1000 });
     REQUIRE(over);
     CHECK(joined(*over));
     CHECK(std::ranges::any_of(*over, [](const RouteStep& s) { return s.slope != PathSlope::Flat; }));
     CHECK(std::ranges::none_of(*over, [](const RouteStep& s) { return s.piece.cut; }));
     CHECK(over->back().piece.ground);
 
-    const auto through = find_route(started_at({ 1, 1 }, true), { 10, 1 }, g, { }, 1000);
+    const auto through = find_route(started_at({ 1, 1 }, true), { 10, 1 }, g, { }, Money { 1000 });
     REQUIRE(through);
     CHECK(joined(*through));
     CHECK(std::ranges::any_of(*through, [](const RouteStep& s) { return s.piece.cut; }));
@@ -128,7 +129,7 @@ TEST_CASE("under a mountain a route tunnels rather than climb over or cut a tren
         ridge(g, col, 12);
     for (const bool cut : { false, true })
     {
-        const auto route = find_route(started_at({ 1, 1 }, cut), { 12, 1 }, g, { }, 1000);
+        const auto route = find_route(started_at({ 1, 1 }, cut), { 12, 1 }, g, { }, Money { 1000 });
         REQUIRE(route);
         CHECK(joined(*route));
         CHECK(std::ranges::count_if(*route, [](const RouteStep& s) { return s.piece.tunnel; }) == 6);
@@ -144,7 +145,7 @@ TEST_CASE("a route to a raised path ends on it, not on the ground under it")
     raised.elevation = save::model::PathElevation { };
     raised.elevation->quantised_height = 4;
     const std::vector<save::model::PathTile> paths { raised };
-    const auto route = find_route(started_at({ 1, 1 }), { 7, 1 }, g, paths, 1000, 4);
+    const auto route = find_route(started_at({ 1, 1 }), { 7, 1 }, g, paths, Money { 1000 }, 4);
     REQUIRE(route);
     CHECK(joined(*route));
     CHECK(route->back().piece.spot == save::model::Tile { 7, 1 });
@@ -152,7 +153,7 @@ TEST_CASE("a route to a raised path ends on it, not on the ground under it")
     CHECK_FALSE(route->back().piece.ground);
     CHECK(std::ranges::any_of(*route, [](const RouteStep& s) { return s.slope != PathSlope::Flat; }));
     // Without the height, the ground under it will do.
-    const auto ground = find_route(started_at({ 1, 1 }), { 7, 1 }, g, paths, 1000);
+    const auto ground = find_route(started_at({ 1, 1 }), { 7, 1 }, g, paths, Money { 1000 });
     REQUIRE(ground);
     CHECK(ground->back().piece.end == 0);
 }
@@ -164,14 +165,14 @@ TEST_CASE("a route goes on from the trail's end and walks over paths already the
     b.heading = Side::kNextCol;
     b.trail.push_back({ { 0, 1 }, 7, 0 });
     const std::vector<save::model::PathTile> paths { ground_path({ 0, 1 }, "Old", 7), ground_path({ 3, 1 }, "Old", 8) };
-    const auto route = find_route(b, { 5, 1 }, g, paths, 1000);
+    const auto route = find_route(b, { 5, 1 }, g, paths, Money { 1000 });
     REQUIRE(route);
     CHECK(route->size() == 5);
     CHECK(route->front().piece.spot == save::model::Tile { 1, 1 });
-    CHECK(route_price(*route, b, g, paths, 1000) == 4000); // The path at column 3 is walked over
-    CHECK(find_route(b, { 0, 1 }, g, paths, 1000)->empty());
-    CHECK_FALSE(find_route(FootpathBuilder { }, { 5, 1 }, g, paths, 1000));
-    CHECK_FALSE(find_route(b, { 9, 1 }, g, paths, 1000)); // Off the map
+    CHECK(route_price(*route, b, g, paths, Money { 1000 }) == Money { 4000 }); // The path at column 3 is walked over
+    CHECK(find_route(b, { 0, 1 }, g, paths, Money { 1000 })->empty());
+    CHECK_FALSE(find_route(FootpathBuilder { }, { 5, 1 }, g, paths, Money { 1000 }));
+    CHECK_FALSE(find_route(b, { 9, 1 }, g, paths, Money { 1000 })); // Off the map
 }
 
 TEST_CASE("a route climbing round to a path over its own start keeps room over its own pieces")
@@ -184,7 +185,7 @@ TEST_CASE("a route climbing round to a path over its own start keeps room over i
         raised.elevation = save::model::PathElevation { };
         raised.elevation->quantised_height = height;
         const std::vector<save::model::PathTile> paths { raised };
-        const auto route = find_route(started_at({ 1, 1 }), { 2, 1 }, g, paths, 1000, height);
+        const auto route = find_route(started_at({ 1, 1 }), { 2, 1 }, g, paths, Money { 1000 }, height);
         if (!route)
             continue;
         CHECK(joined(*route));
@@ -200,7 +201,7 @@ TEST_CASE("a queue route bridging a path leaves room to walk under it")
         paths.push_back(ground_path({ 5, row }, "Old", static_cast<std::uint64_t>(row + 1)));
     FootpathBuilder queue = started_at({ 1, 1 });
     queue.queue = true;
-    const auto route = find_route(queue, { 9, 1 }, g, paths, 1000);
+    const auto route = find_route(queue, { 9, 1 }, g, paths, Money { 1000 });
     REQUIRE(route);
     CHECK(joined(*route));
     const auto over = std::ranges::find_if(*route, [](const RouteStep& s) { return s.piece.spot.col == 5; });
@@ -212,13 +213,13 @@ TEST_CASE("a straight route steps along the line to its goal, where the default 
 {
     const save::model::TerrainGrid g = owned_grid(10, 10);
     const auto off_diagonal = [](const RouteStep& s) { return std::abs(s.piece.spot.col - s.piece.spot.row); };
-    const auto straight = find_route(started_at({ 1, 1 }), { 7, 7 }, g, { }, 1000, std::nullopt, std::nullopt, true);
+    const auto straight = find_route(started_at({ 1, 1 }), { 7, 7 }, g, { }, Money { 1000 }, std::nullopt, std::nullopt, true);
     REQUIRE(straight);
     CHECK(joined(*straight));
     CHECK(straight->size() == 13);
     CHECK(straight->back().piece.spot == save::model::Tile { 7, 7 });
     CHECK(std::ranges::all_of(*straight, [&](const RouteStep& s) { return off_diagonal(s) <= 1; }));
-    const auto corner = find_route(started_at({ 1, 1 }), { 7, 7 }, g, { }, 1000);
+    const auto corner = find_route(started_at({ 1, 1 }), { 7, 7 }, g, { }, Money { 1000 });
     REQUIRE(corner);
     CHECK(corner->size() == 13);
     CHECK(std::ranges::any_of(*corner, [&](const RouteStep& s) { return off_diagonal(s) >= 3; }));
@@ -229,7 +230,7 @@ TEST_CASE("across a dip a route bridges it level rather than ramp down into it")
     save::model::TerrainGrid g = owned_grid(12, 3);
     for (int col = 4; col <= 7; ++col)
         ridge(g, col, -3);
-    const auto route = find_route(started_at({ 1, 1 }), { 10, 1 }, g, { }, 1000);
+    const auto route = find_route(started_at({ 1, 1 }), { 10, 1 }, g, { }, Money { 1000 });
     REQUIRE(route);
     CHECK(joined(*route));
     CHECK(route->size() == 10);

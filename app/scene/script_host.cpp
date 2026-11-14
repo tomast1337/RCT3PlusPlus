@@ -806,7 +806,7 @@ namespace rct3::scene
             Json rides = Json::array();
             for (const rct3::park::BuildItem& item : *items)
                 if (item.kind == rct3::park::BuildKind::FlatRide)
-                    rides.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price }, { "doors", !item.entrance.empty() && !item.exit.empty() }, { "water", item.water_only }, { "fence", item.fence } });
+                    rides.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price.value }, { "doors", !item.entrance.empty() && !item.exit.empty() }, { "water", item.water_only }, { "fence", item.fence } });
             return rides;
         });
         engine_.define("build.facilities", [this](const Json&) -> Json {
@@ -816,7 +816,7 @@ namespace rct3::scene
             Json facilities = Json::array();
             for (const rct3::park::BuildItem& item : *items)
                 if (item.kind == rct3::park::BuildKind::Shop && !item.stall)
-                    facilities.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price }, { "kind", item.type } });
+                    facilities.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price.value }, { "kind", item.type } });
             return facilities;
         });
         engine_.define("build.stalls", [this](const Json&) -> Json {
@@ -831,7 +831,7 @@ namespace rct3::scene
                 Json goods = Json::array();
                 for (const rct3::park::BuildItem::Goods& g : item.goods)
                     goods.push_back({ { "item", g.item }, { "price", g.price } });
-                stalls.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price }, { "goods", std::move(goods) } });
+                stalls.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price.value }, { "goods", std::move(goods) } });
             }
             return stalls;
         });
@@ -1207,7 +1207,7 @@ namespace rct3::scene
             constexpr std::array<std::string_view, 4> kSteps { "ride", "entrance", "exit", "scenery" };
             constexpr std::array<std::string_view, 9> kProblems { "none", "not owned", "path", "blocked", "off water", "under water", "off path", "off enclosure", "into ground" };
             constexpr std::array<std::string_view, 3> kFlattens { "off", "sharp", "smooth" };
-            Json placing { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable }, { "flatten", kFlattens.at(static_cast<std::size_t>(p.flatten)) }, { "levelling", p.levelling_cost }, { "ghost", !p.ghost_mesh.vertices.empty() }, { "arrow", !stall_arrow(park_of(park_)).vertices.empty() } };
+            Json placing { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable }, { "flatten", kFlattens.at(static_cast<std::size_t>(p.flatten)) }, { "levelling", p.levelling_cost.value }, { "ghost", !p.ghost_mesh.vertices.empty() }, { "arrow", !stall_arrow(park_of(park_)).vertices.empty() } };
             if (p.site)
                 placing["site"] = { { "col", p.site->col }, { "row", p.site->row }, { "turns", p.site->turn.value }, { "height", p.site->height } };
             return placing;
@@ -1230,14 +1230,14 @@ namespace rct3::scene
             std::int64_t tiles = 0;
             for (std::size_t i = 0; i < m->enclosures.tiles.size(); ++i)
                 tiles += (m->enclosures.tiles[i] >= 0) != (i < scene.enclosures.tiles.size() && scene.enclosures.tiles[i] >= 0) ? 1 : 0;
-            return Json { { "cost", m->cost }, { "tiles", tiles } };
+            return Json { { "cost", m->cost.value }, { "tiles", tiles } };
         });
         engine_.define("structures.placing", [this](const Json&) -> Json {
             const StructureTools& t = park_of(park_).structures;
             if (t.tool != StructureTools::Tool::Place || !t.structure)
                 return nullptr;
             constexpr std::array<std::string_view, 4> kProblems { "none", "not owned", "blocked", "path" };
-            Json placing { { "name", t.structure->name }, { "items", t.placed.size() }, { "problem", kProblems.at(static_cast<std::size_t>(t.problem)) }, { "affordable", t.affordable }, { "cost", t.cost }, { "turns", t.turn.value }, { "height", t.height }, { "ghost", !t.ghost_mesh.vertices.empty() } };
+            Json placing { { "name", t.structure->name }, { "items", t.placed.size() }, { "problem", kProblems.at(static_cast<std::size_t>(t.problem)) }, { "affordable", t.affordable }, { "cost", t.cost.value }, { "turns", t.turn.value }, { "height", t.height }, { "ghost", !t.ghost_mesh.vertices.empty() } };
             if (t.at)
                 placing["at"] = { { "col", t.at->col }, { "row", t.at->row } };
             return placing;

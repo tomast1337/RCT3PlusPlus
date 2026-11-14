@@ -122,11 +122,11 @@ namespace rct3::scene::park
         return { x, grid.height_at(x, z).value_or(0), z };
     }
 
-    void float_money(ParkScene& scene, glm::vec3 at, std::int64_t amount, bool zero)
+    void float_money(ParkScene& scene, glm::vec3 at, units::Money amount, bool zero)
     {
-        if (!scene.show_money || (amount == 0 && !zero))
+        if (!scene.show_money || (amount == units::Money { } && !zero))
             return;
-        const auto near = std::ranges::find_if(scene.money, [&](const FloatingMoney& m) { return m.age < kMoneyMerge && (m.amount > 0) == (amount > 0) && glm::distance(m.at, at) <= kMoneyReach; });
+        const auto near = std::ranges::find_if(scene.money, [&](const FloatingMoney& m) { return m.age < kMoneyMerge && (m.amount > units::Money { }) == (amount > units::Money { }) && glm::distance(m.at, at) <= kMoneyReach; });
         if (near != scene.money.end())
             near->amount += amount;
         else
@@ -144,7 +144,7 @@ namespace rct3::scene::park
             if (!scene.show_guest_payments || attraction.income.value <= paid || attraction.entrance >= nodes.size())
                 continue;
             const simulation::PathNode& n = nodes[attraction.entrance];
-            float_money(scene, { scene.grid.world_x(n.tile.col) + scene.grid.tile_size_x / 2, n.height, scene.grid.world_z(n.tile.row) + scene.grid.tile_size_z / 2 }, attraction.income.value - paid);
+            float_money(scene, { scene.grid.world_x(n.tile.col) + scene.grid.tile_size_x / 2, n.height, scene.grid.world_z(n.tile.row) + scene.grid.tile_size_z / 2 }, attraction.income - units::Money { paid });
         }
         for (FloatingMoney& m : scene.money)
             m.age += elapsed;
@@ -161,16 +161,16 @@ namespace rct3::scene::park
             const glm::vec2 ndc = glm::vec2(clip) / clip.w;
             if (std::abs(ndc.x) > 1 || std::abs(ndc.y) > 1)
                 return;
-            shown.push_back({ { (ndc.x + 1) / 2 * size.x, (1 - ndc.y) / 2 * size.y }, ui::money_text(currency, units::Money { std::abs(m.amount) }), m.amount > 0, m.age });
+            shown.push_back({ { (ndc.x + 1) / 2 * size.x, (1 - ndc.y) / 2 * size.y }, ui::money_text(currency, units::Money { std::abs(m.amount.value) }), m.amount > units::Money { }, m.age });
         };
         if (scene.show_money)
             for (const FloatingMoney& m : scene.money)
                 show(m);
         // What letting go of an enclosure drag would cost stands at the pointer's end of it, still, until then.
-        if (const EnclosureTool& t = scene.enclosing; t.marked && t.other && t.marked->cost != 0)
+        if (const EnclosureTool& t = scene.enclosing; t.marked && t.other && t.marked->cost != units::Money { })
             show({ tile_point(scene.grid, *t.other), -t.marked->cost, units::Seconds { } });
         // So does what the pool tool's work costs, or pays back.
-        if (const PoolTool& t = scene.pooling; t.item && t.working && t.ok && t.cost != 0)
+        if (const PoolTool& t = scene.pooling; t.item && t.working && t.ok && t.cost != units::Money { })
             show({ tile_point(scene.grid, t.working->second), -t.cost, units::Seconds { } });
         return shown;
     }

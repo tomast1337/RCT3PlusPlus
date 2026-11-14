@@ -67,7 +67,7 @@ namespace rct3::simulation
             {
                 const auto item = std::ranges::find_if(catalogue, [&](const rct3::park::BuildItem& i) { return i.kind == BuildKind::Scenery && strings::equals_ignoring_case(i.symbol, e.symbol) && strings::equals_ignoring_case(i.overlay, e.overlay_stem); });
                 if (item != catalogue.end() && rct3::park::researchable(*item))
-                    items.push_back({ .id = e.id, .area = ResearchArea::Scenery, .cost = { std::min<std::int64_t>(std::llround(item->price * t.scenery_cost_per_price), t.scenery_cost_cap.value) } });
+                    items.push_back({ .id = e.id, .area = ResearchArea::Scenery, .cost = { std::min<std::int64_t>(std::llround(static_cast<double>(item->price.value) * t.scenery_cost_per_price), t.scenery_cost_cap.value) } });
                 continue;
             }
             if (e.kind != AssetKind::Attraction || e.hidden)

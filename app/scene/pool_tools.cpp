@@ -133,7 +133,7 @@ namespace rct3::scene
         }
 
         /// The pools with the area marked laid or taken up, and what that costs; below zero, money back.
-        std::pair<rct3::park::pools::PoolMap, std::int64_t> marked_pools(const park::ParkScene& scene, save::model::Tile a, save::model::Tile b)
+        std::pair<rct3::park::pools::PoolMap, units::Money> marked_pools(const park::ParkScene& scene, save::model::Tile a, save::model::Tile b)
         {
             const rct3::park::BuildItem& item = *scene.pooling.item;
             rct3::park::pools::PoolMap map = scene.pools;
@@ -142,7 +142,7 @@ namespace rct3::scene
             const auto begun = scene.pools.at(a.col, a.row);
             if (item.symbol == rct3::park::kPoolDelete)
             {
-                const std::int64_t cost = rct3::park::pools::take_up_pool(map, prices, a, b, begun ? std::optional(begun->surface) : std::nullopt);
+                const units::Money cost = rct3::park::pools::take_up_pool(map, prices, a, b, begun ? std::optional(begun->surface) : std::nullopt);
                 return { std::move(map), cost };
             }
             // Raised or lowered with Shift, the surface is where Shift took it. Snapped to the ground, it is the
@@ -181,7 +181,7 @@ namespace rct3::scene
                 for (std::int32_t row = area[1]; row <= area[3]; ++row)
                     for (std::int32_t col = area[0]; col <= area[2]; ++col)
                         square(col, row);
-            const std::int64_t cost = rct3::park::pools::lay_pool(map, prices, squares);
+            const units::Money cost = rct3::park::pools::lay_pool(map, prices, squares);
             return { std::move(map), cost };
         }
 
@@ -305,7 +305,7 @@ namespace rct3::scene
             const auto nearest = tile ? rct3::park::object::nearest_side(*spot - glm::vec2 { tile->col, tile->row }, fits_at) : std::nullopt;
             const rct3::park::Side side = nearest && !std::ranges::all_of(rct3::park::kSides, fits_at) ? *nearest : t.side;
             const bool fits = fits_at(side) && (!room || rct3::park::owned_outright(scene.grid.at(tile->col, tile->row)));
-            const bool ok = fits && (!scene.park.cash || *scene.park.cash >= units::Money { item.price });
+            const bool ok = fits && (!scene.park.cash || *scene.park.cash >= item.price);
             if (down && tile)
                 t.corner = tile;
             else if (t.corner && !down)
@@ -319,7 +319,7 @@ namespace rct3::scene
                     ++scene.built;
                     pools_changed(device, scene, assets);
                 }
-                else if (ok && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { item.price }, simulation::park::LedgerLine::RideConstruction, false))
+                else if (ok && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, item.price, simulation::park::LedgerLine::RideConstruction, false))
                 {
                     save::model::PlacedObject model { .symbol = item.symbol, .overlay = item.overlay };
                     const bool loaded = load_object_model(scene, scene.placing.models, assets, model);
@@ -334,7 +334,7 @@ namespace rct3::scene
                             .fit = fit,
                         });
                     ++scene.built;
-                    if (item.price != 0)
+                    if (item.price != units::Money { })
                         park::float_money(scene, park::tile_point(scene.grid, *tile), -item.price);
                     pools_changed(device, scene, assets);
                 }
@@ -364,13 +364,13 @@ namespace rct3::scene
 
         /// Whether the area may be worked on: all of it land the park owns outright, and paid for.
         /// shortcut: what stands on the land is not checked; refuse paths and objects once pools can clash.
-        bool allowed(const park::ParkScene& scene, const std::array<std::int32_t, 4>& area, std::int64_t cost)
+        bool allowed(const park::ParkScene& scene, const std::array<std::int32_t, 4>& area, units::Money cost)
         {
             for (std::int32_t row = area[1]; row <= area[3]; ++row)
                 for (std::int32_t col = area[0]; col <= area[2]; ++col)
                     if (!scene.grid.contains(col, row) || !rct3::park::owned_outright(scene.grid.at(col, row)))
                         return false;
-            return !scene.park.cash || cost <= 0 || *scene.park.cash >= units::Money { cost };
+            return !scene.park.cash || cost <= units::Money { } || *scene.park.cash >= cost;
         }
 
         /// Takes the work shown out of the pools again, and puts back the ground it dug. True when there was any.
@@ -414,7 +414,7 @@ namespace rct3::scene
                 const bool redraw = put_back(scene);
                 t.working.reset();
                 std::optional<save::model::Tile> done;
-                std::int64_t cost = 0;
+                units::Money cost;
                 if (const auto piece = rct3::park::pools::next_pool_path(t.trail); step == rct3::park::PathStep::Lay && piece)
                 {
                     const save::model::Tile spot { piece->square.col, piece->square.row };
@@ -429,7 +429,7 @@ namespace rct3::scene
                         t.trail.on_slope = piece->square.kind != rct3::park::pools::PoolKind::Path;
                         done = spot;
                     }
-                    else if (allowed(scene, marked(spot, spot), 0))
+                    else if (allowed(scene, marked(spot, spot), units::Money { }))
                         simulation::park::cannot_pay(scene.park);
                 }
                 else if (step == rct3::park::PathStep::Remove && !t.trail.trail.empty() && t.trail.trail.back().laid != 0)
@@ -457,8 +457,8 @@ namespace rct3::scene
                 {
                     ++scene.built;
                     // Laying was allowed only when paid for; taking up pays back.
-                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, simulation::park::LedgerLine::RideConstruction, false);
-                    if (cost != 0)
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::RideConstruction, false);
+                    if (cost != units::Money { })
                         park::float_money(scene, park::tile_point(scene.grid, *done), -cost);
                     scene.supports.stale = true;
                 }
@@ -551,7 +551,7 @@ namespace rct3::scene
         const auto choices = [&](const std::vector<const rct3::park::BuildItem*>& items) {
             std::vector<ui::screens::build::PoolChoice> out;
             for (const rct3::park::BuildItem* i : items)
-                out.push_back({ i->icon, std::u16string(assets.strings->get(i->name_text)) + (i->price > 0 ? u" : " + ui::money_text(currency, units::Money { i->price }) : std::u16string { }) });
+                out.push_back({ i->icon, std::u16string(assets.strings->get(i->name_text)) + (i->price > units::Money { } ? u" : " + ui::money_text(currency, i->price) : std::u16string { }) });
             return out;
         };
         panel->show(choices(offer.extras), choices(offer.rooms), choices(offer.stairs), page);
@@ -781,10 +781,10 @@ namespace rct3::scene
         {
             // Let go: the work is kept and paid for. Work on the park's own land that it cannot pay for is
             // turned down with a message.
-            if (t.before && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { t.cost }, simulation::park::LedgerLine::RideConstruction, false))
+            if (t.before && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, t.cost, simulation::park::LedgerLine::RideConstruction, false))
             {
                 ++scene.built;
-                if (t.cost != 0)
+                if (t.cost != units::Money { })
                     park::float_money(scene, park::tile_point(scene.grid, *t.other), -t.cost);
                 t.before.reset();
                 t.dug.clear();
@@ -808,7 +808,7 @@ namespace rct3::scene
                     t.trail.on_slope = rise > 0;
                 }
             }
-            else if (t.faces && allowed(scene, marked(*t.corner, *t.other), 0))
+            else if (t.faces && allowed(scene, marked(*t.corner, *t.other), units::Money { }))
                 simulation::park::cannot_pay(scene.park);
             t.corner.reset();
             t.other.reset();
@@ -894,7 +894,7 @@ namespace rct3::scene
             return;
         // Each square goes as the delete tool takes it up, the ground it dug put back; the rooms opening on them go
         // with them.
-        std::int64_t cost = 0;
+        units::Money cost;
         for (const save::model::Tile tile : complex)
         {
             for (const rct3::park::pools::PoolSquare& s : scene.pools.squares)
@@ -902,8 +902,8 @@ namespace rct3::scene
                     scene.grid.at(tile.col, tile.row).corners = *s.ground;
             cost += rct3::park::pools::take_up_pool(scene.pools, prices, tile, tile);
         }
-        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, simulation::park::LedgerLine::RideConstruction, false); // A refund, below zero
-        if (cost != 0)
+        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::RideConstruction, false); // A refund, below zero
+        if (cost != units::Money { })
             park::float_money(scene, park::tile_point(scene.grid, complex.front()), -cost);
         pools_changed(device, scene, assets);
     }
@@ -931,14 +931,14 @@ namespace rct3::scene
         // The top square there goes as the delete tool takes it up, with what stands on it, the ground it dug put back.
         const std::int32_t level = top->surface;
         rct3::park::pools::PoolMap map = scene.pools;
-        const std::int64_t cost = rct3::park::pools::take_up_pool(map, std::span<const std::int32_t, 18>(type->pool_prices.data(), 18), *tile, *tile, level);
+        const units::Money cost = rct3::park::pools::take_up_pool(map, std::span<const std::int32_t, 18>(type->pool_prices.data(), 18), *tile, *tile, level);
         for (const rct3::park::pools::PoolSquare& s : scene.pools.squares)
             if (const auto now = map.at(s.col, s.row, s.surface); s.ground && (!now || now->surface != s.surface))
                 scene.grid.at(s.col, s.row).corners = *s.ground;
         scene.pools = std::move(map);
         ++scene.built;
-        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, simulation::park::LedgerLine::RideConstruction, false); // A refund, below zero
-        if (cost != 0)
+        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::RideConstruction, false); // A refund, below zero
+        if (cost != units::Money { })
             park::float_money(scene, park::tile_point(scene.grid, *tile), -cost);
         scene.supports.stale = true;
         pools_changed(device, scene, assets);

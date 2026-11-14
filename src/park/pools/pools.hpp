@@ -319,10 +319,10 @@ namespace rct3::park::pools
     /// the ground it dug; the ground under a raised square is left as it is.
     void dig_under_pools(PoolMap& map, save::model::TerrainGrid& grid);
 
-    /// What laying `square` costs, from the pool type's price list (ovl::PoolType::prices); in hundredths.
-    [[nodiscard]] std::int64_t pool_build_cost(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept;
+    /// What laying `square` costs, from the pool type's price list (ovl::PoolType::prices).
+    [[nodiscard]] units::Money pool_build_cost(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept;
     /// What taking `square` up again costs: below zero, money back.
-    [[nodiscard]] std::int64_t pool_refund(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept;
+    [[nodiscard]] units::Money pool_refund(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept;
 
     /// Whether an extra that fits as `fit` may go in `map` on the square at (`col`, `row`), against its side
     /// `side`.
@@ -344,10 +344,10 @@ namespace rct3::park::pools
     /// laid over one the same, but for its edge setting, costs nothing. A square laid above or below one on its tile,
     /// with kPoolHeadroom between, is stacked with it. Changing rooms whose square is no longer paved, or that now stand
     /// in the pool, go.
-    std::int64_t lay_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, std::span<const PoolSquare> squares);
+    units::Money lay_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, std::span<const PoolSquare> squares);
 
     /// Takes up the squares of `map` from `a` to `b`, the extras on them and the changing rooms opening on
     /// them; returns the refund, below zero. Given a `level`, of squares stacked on a tile only the one nearest it.
-    std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::model::Tile a, save::model::Tile b, std::optional<std::int32_t> level = std::nullopt);
+    units::Money take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::model::Tile a, save::model::Tile b, std::optional<std::int32_t> level = std::nullopt);
 
 } // namespace rct3::park::pools

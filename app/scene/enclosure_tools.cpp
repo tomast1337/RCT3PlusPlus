@@ -52,7 +52,7 @@ namespace rct3::scene
             if (items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
                 for (const rct3::park::BuildItem& i : items.get())
                     if (i.kind == rct3::park::BuildKind::EnclosureFence && i.symbol == fence)
-                        return { .build = units::Money { i.price }, .refund = units::Money { i.refund } };
+                        return { .build = i.price, .refund = i.refund };
             return { };
         }
 
@@ -123,14 +123,14 @@ namespace rct3::scene
             else
                 (void)rct3::park::enclose(map, scene.grid, *t.corner, *t.other, t.item->symbol, free);
             const auto price = [&](std::string_view fence) { return fence_price(scene, fence); };
-            const std::int64_t cost = rct3::park::fence_cost(scene.enclosures, map, price).value;
+            const units::Money cost = rct3::park::fence_cost(scene.enclosures, map, price);
             return t.marked.emplace(park::EnclosureTool::Marked { .area = area, .enclosures = std::move(map), .cost = cost });
         }
 
         /// Whether the park can pay `cost`.
-        bool affordable(const park::ParkScene& scene, std::int64_t cost)
+        bool affordable(const park::ParkScene& scene, units::Money cost)
         {
-            return !scene.park.cash || *scene.park.cash >= units::Money { cost };
+            return !scene.park.cash || *scene.park.cash >= cost;
         }
 
         /// Whether an animal may come down on `tile`: on the park's own land. Outside every enclosure it gets out as
@@ -145,7 +145,7 @@ namespace rct3::scene
         {
             const glm::vec3 at = park::tile_point(scene.grid, tile);
             const std::string name = strings::to_utf8(assets.strings->get(item.name_text));
-            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { item.price }, simulation::park::LedgerLine::RideConstruction, false))
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, item.price, simulation::park::LedgerLine::RideConstruction, false))
                 return;
             // shortcut: every animal bought is a grown one; offer young ones once the animal list shows them.
             (void)simulation::add_animal(scene.sim, { .species = item.symbol, .overlay = item.overlay, .name = name, .male = random::below(scene.looks, 2) == 0, .enclosure = scene.enclosures.at(tile.col, tile.row) }, at);
@@ -198,7 +198,7 @@ namespace rct3::scene
         {
             // Let go: the tiles go in or out, the fence put up paid for and the fence taken down paid back.
             const park::EnclosureTool::Marked& m = marked_now(scene);
-            if (m.enclosures.tiles != scene.enclosures.tiles && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { m.cost }, simulation::park::LedgerLine::RideConstruction, false))
+            if (m.enclosures.tiles != scene.enclosures.tiles && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, m.cost, simulation::park::LedgerLine::RideConstruction, false))
             {
                 scene.enclosures = m.enclosures;
                 park::float_money(scene, park::tile_point(scene.grid, *t.other), -m.cost);

@@ -139,14 +139,14 @@ namespace rct3::park::ground
         return true;
     }
 
-    std::int64_t cuts_cost(const GroundCuts& cuts, const save::model::TerrainGrid& grid)
+    units::Money cuts_cost(const GroundCuts& cuts, const save::model::TerrainGrid& grid)
     {
         float moved = 0;
         for (const std::vector<GroundCut>* part : { &cuts.footprint, &cuts.rim })
             for (const GroundCut& cut : *part)
                 for (std::size_t k = 0; k < 4; ++k)
                     moved += std::abs(cut.corners[k] - grid.at(cut.tile.col, cut.tile.row).corners[k]);
-        return std::lround(moved * kShapeCost);
+        return units::Money { std::lround(moved * kShapeCost) };
     }
 
     void make_cuts(save::model::TerrainGrid& grid, const GroundCuts& cuts)

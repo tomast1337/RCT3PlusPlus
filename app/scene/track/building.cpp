@@ -390,14 +390,14 @@ namespace rct3::scene::track
         return std::nullopt;
     }
 
-    std::int64_t track_cost(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets)
+    units::Money track_cost(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets)
     {
         const auto overlay = ride_track_overlay(scene, ride);
         const auto c = overlay ? load_catalogue(scene.building, *overlay, assets) : std::nullopt;
-        std::int64_t cost = 0;
+        units::Money cost;
         for (const save::model::TrackPiece& piece : c ? scene.rides.rides[ride].track->pieces : std::vector<save::model::TrackPiece> { })
             if (const auto shape = rct3::park::track::shape_named(*c, piece.symbol))
-                cost += shape->record.cost;
+                cost += units::Money { shape->record.cost };
         return cost;
     }
 
@@ -1059,11 +1059,11 @@ namespace rct3::scene::track
                 design->show_page(page());
             if (auto status = design->find_as<ui::widgets::Label>("body/status_label"))
                 status->text = assets.strings->get(rct3::park::refusal_key(b.refusal));
-            std::int64_t price = 0;
+            units::Money price;
             for (const save::model::TrackPiece& p : b.design)
                 if (const auto shape = c != nullptr ? rct3::park::track::shape_named(*c, p.symbol) : std::nullopt)
-                    price += shape->record.cost;
-            design->show_view_text(ui::money_text(ui::currency(*assets.strings, currency), units::Money { price }));
+                    price += units::Money { shape->record.cost };
+            design->show_view_text(ui::money_text(ui::currency(*assets.strings, currency), price));
         }
         else if (design && design->showing())
         {

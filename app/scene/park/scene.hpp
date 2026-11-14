@@ -89,6 +89,7 @@
 #include "ui/screens/park_view/tool_menus.hpp"
 #include "ui/screens/park_view/top_bar.hpp"
 #include "ui/ui_textures.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <expected>
@@ -220,7 +221,7 @@ namespace rct3::scene::park
         {
             std::array<std::int32_t, 4> area { };
             save::model::EnclosureMap enclosures { };
-            std::int64_t cost = 0;
+            units::Money cost;
         };
         std::optional<Marked> marked { };
     };
@@ -239,8 +240,8 @@ namespace rct3::scene::park
         rct3::park::pools::PoolEdge edge = rct3::park::pools::PoolEdge::Straight; ///< The pool panel's edge setting, for the squares laid
         /// The squares worked on now, from where the drag began to where it is, or the square under the pointer.
         std::optional<std::pair<save::model::Tile, save::model::Tile>> working;
-        std::int64_t cost = 0; ///< Of the work, below zero for money back
-        bool ok = false;       ///< Whether the work may be done
+        units::Money cost; ///< Of the work, below zero for money back
+        bool ok = false;   ///< Whether the work may be done
         /// The pools before the work was laid into them to be seen, and the ground it dug, to put back.
         std::optional<rct3::park::pools::PoolMap> before;
         std::vector<std::pair<save::model::Tile, std::array<float, 4>>> dug;

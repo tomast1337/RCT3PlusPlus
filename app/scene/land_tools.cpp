@@ -61,17 +61,17 @@ namespace rct3::scene
         /// Pays `cost` for work on `tile` as landscaping. A stroke shows one sum, where it first paid, that grows
         /// while the stroke goes and floats away once it stops. False when the park cannot afford it, and nothing
         /// is paid.
-        bool pay(park::ParkScene& scene, std::int32_t cost, save::model::Tile tile)
+        bool pay(park::ParkScene& scene, units::Money cost, save::model::Tile tile)
         {
-            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, simulation::park::LedgerLine::Landscaping, false))
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
                 return false;
             LandTools& l = scene.land;
             if (!l.cost_at)
                 l.cost_at = park::tile_point(scene.grid, tile);
-            const auto sum = std::ranges::find_if(scene.money, [&](const park::FloatingMoney& m) { return m.at == *l.cost_at && m.amount < 0; });
+            const auto sum = std::ranges::find_if(scene.money, [&](const park::FloatingMoney& m) { return m.at == *l.cost_at && m.amount < units::Money { }; });
             if (sum == scene.money.end())
                 park::float_money(scene, *l.cost_at, -cost);
-            else if (cost != 0)
+            else if (cost != units::Money { })
             {
                 sum->amount -= cost;
                 sum->age = { };
@@ -311,7 +311,7 @@ namespace rct3::scene
             if (!trial)
                 return;
             const float moved = trial->second;
-            const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * rct3::park::ground::kShapeCost));
+            const units::Money cost { std::lround(std::max(moved - l.paid_for, 0.0f) * rct3::park::ground::kShapeCost) };
             if (!pay(scene, cost, *l.tile))
                 return;
             l.paid_for = std::max(l.paid_for, moved);
@@ -425,11 +425,11 @@ namespace rct3::scene
                     return;
                 // Paid in whole hundredths; the rest is carried to the next moment.
                 const float owed = (l.amount + trial->second - l.paid_for) * rct3::park::ground::kShapeCost;
-                const auto cost = static_cast<std::int32_t>(std::floor(owed));
+                const units::Money cost { static_cast<std::int64_t>(std::floor(owed)) };
                 if (!pay(scene, cost, { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }))
                     return;
                 l.amount += trial->second;
-                l.paid_for += static_cast<float>(cost) / rct3::park::ground::kShapeCost;
+                l.paid_for += static_cast<float>(cost.value) / rct3::park::ground::kShapeCost;
                 l.middle = *spot;
                 take_ground(device, scene, assets, std::move(trial->first));
                 return;
@@ -451,7 +451,7 @@ namespace rct3::scene
             if (!trial)
                 return;
             const float moved = trial->second;
-            const auto cost = static_cast<std::int32_t>(std::lround(std::max(moved - l.paid_for, 0.0f) * rct3::park::ground::kShapeCost));
+            const units::Money cost { std::lround(std::max(moved - l.paid_for, 0.0f) * rct3::park::ground::kShapeCost) };
             if (!pay(scene, cost, *l.tile))
                 return;
             l.paid_for = std::max(l.paid_for, moved);
@@ -491,7 +491,7 @@ namespace rct3::scene
                 auto trial = try_shape(scene, l.start->grid, [&](save::model::TerrainGrid& g) { return rct3::park::ground::smooth_ground(g, tool.tool, l.middle, reach, share, std::numeric_limits<float>::infinity(), l.target, 1, free); });
                 if (!trial)
                     return;
-                const auto cost = static_cast<std::int32_t>(std::lround(std::max(trial->second - l.paid_for, 0.0f) * rct3::park::ground::kShapeCost));
+                const units::Money cost { std::lround(std::max(trial->second - l.paid_for, 0.0f) * rct3::park::ground::kShapeCost) };
                 if (!pay(scene, cost, *l.tile))
                     return;
                 l.paid_for = std::max(l.paid_for, trial->second);
@@ -510,11 +510,11 @@ namespace rct3::scene
             if (!trial || trial->second <= 0)
                 return;
             const float owed = (l.amount + trial->second - l.paid_for) * rct3::park::ground::kShapeCost;
-            const auto cost = static_cast<std::int32_t>(std::floor(owed));
+            const units::Money cost { static_cast<std::int64_t>(std::floor(owed)) };
             if (!pay(scene, cost, { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }))
                 return;
             l.amount += trial->second;
-            l.paid_for += static_cast<float>(cost) / rct3::park::ground::kShapeCost;
+            l.paid_for += static_cast<float>(cost.value) / rct3::park::ground::kShapeCost;
             take_ground(device, scene, assets, std::move(trial->first));
         }
 
@@ -705,7 +705,7 @@ namespace rct3::scene
                 return;
             // buy_land took no more than the cash could pay for.
             simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, bought.spent, simulation::park::LedgerLine::LandPurchase, false);
-            park::float_money(scene, park::tile_point(scene.grid, tile), -bought.spent.value);
+            park::float_money(scene, park::tile_point(scene.grid, tile), -bought.spent);
             land_owned_changed(scene, assets);
         }
 

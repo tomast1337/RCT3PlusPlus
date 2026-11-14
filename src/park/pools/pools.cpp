@@ -59,12 +59,12 @@ namespace rct3::park::pools
         constexpr PriceFields kBuild[] { { 2, 3, 0, 0, 0 }, { 6, 7, 12, 16, 14 }, { 10, 0, 0, 0, 0 } };  // Water, paved, paths
         constexpr PriceFields kRefund[] { { 4, 5, 0, 0, 0 }, { 8, 9, 13, 17, 15 }, { 11, 0, 0, 0, 0 } }; // The same, when taken up
 
-        std::int64_t price(std::span<const std::int32_t, 18> prices, const PoolSquare& square, const PriceFields (&fields)[3]) noexcept
+        units::Money price(std::span<const std::int32_t, 18> prices, const PoolSquare& square, const PriceFields (&fields)[3]) noexcept
         {
             const PriceFields& f = fields[square.kind == PoolKind::Water ? 0 : is_pool_path(square.kind) ? 2 : 1];
             const std::int64_t climb = square.kind == PoolKind::HighDive ? square.board / kBoardLevel * kBoardLevel : 0;
             const std::int64_t stairs = square.kind == PoolKind::Stairs ? square.board : 0;
-            return prices[f.base] + std::int64_t { prices[f.per_depth] } * square.depth + (square.kind == PoolKind::Jacuzzi ? prices[f.jacuzzi] : 0) + climb * prices[f.board] + stairs * prices[f.stairs];
+            return units::Money { prices[f.base] + std::int64_t { prices[f.per_depth] } * square.depth + (square.kind == PoolKind::Jacuzzi ? prices[f.jacuzzi] : 0) + climb * prices[f.board] + stairs * prices[f.stairs] };
         }
 
         bool same(const PoolSquare& a, const PoolSquare& b) noexcept
@@ -136,13 +136,13 @@ namespace rct3::park::pools
         }
 
         /// Takes the extras on the square at (`col`, `row`) out of `map`; returns their refunds.
-        std::int64_t clear_extras(PoolMap& map, std::int32_t col, std::int32_t row)
+        units::Money clear_extras(PoolMap& map, std::int32_t col, std::int32_t row)
         {
-            std::int64_t cost = 0;
+            units::Money cost;
             std::erase_if(map.extras, [&](const PoolExtra& e) {
                 if (e.col != col || e.row != row)
                     return false;
-                cost += e.refund.value;
+                cost += e.refund;
                 return true;
             });
             return cost;
@@ -722,12 +722,12 @@ namespace rct3::park::pools
             }
     }
 
-    std::int64_t pool_build_cost(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept
+    units::Money pool_build_cost(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept
     {
         return price(prices, square, kBuild);
     }
 
-    std::int64_t pool_refund(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept
+    units::Money pool_refund(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept
     {
         return price(prices, square, kRefund);
     }
@@ -767,9 +767,9 @@ namespace rct3::park::pools
         return out;
     }
 
-    std::int64_t lay_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, std::span<const PoolSquare> squares)
+    units::Money lay_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, std::span<const PoolSquare> squares)
     {
-        std::int64_t cost = 0;
+        units::Money cost;
         for (const PoolSquare& square : squares)
         {
             const auto in_the_way = [&](const PoolSquare& s) { return s.col == square.col && s.row == square.row && !stacked(s, square); };
@@ -802,11 +802,11 @@ namespace rct3::park::pools
         return cost;
     }
 
-    std::int64_t take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::model::Tile a, save::model::Tile b, std::optional<std::int32_t> level)
+    units::Money take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::model::Tile a, save::model::Tile b, std::optional<std::int32_t> level)
     {
         const auto [c0, c1] = std::minmax(a.col, b.col);
         const auto [r0, r1] = std::minmax(a.row, b.row);
-        std::int64_t cost = 0;
+        units::Money cost;
         // Each square going, marked first: which of a stack is nearest the level is seen before any goes.
         std::vector<bool> going(map.squares.size());
         for (std::size_t i = 0; i < map.squares.size(); ++i)
@@ -823,7 +823,7 @@ namespace rct3::park::pools
         std::erase_if(map.extras, [&](const PoolExtra& e) {
             if (e.col < c0 || e.col > c1 || e.row < r0 || e.row > r1)
                 return false;
-            cost += e.refund.value;
+            cost += e.refund;
             return true;
         });
         drop_loose_rooms(map);

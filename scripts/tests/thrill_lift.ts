@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Lays the install's saved designs with a lift tower, a tilt coaster's and a sky swinger's, on the game's blank
-// landscape and tests the tilt coaster with no path to it. The train rolls onto the lift's car at the tower's foot, the car
+// landscape and tests each with no path to it. The train rolls onto the lift's car at the tower's foot, the car
 // carries it up, lets it go at the top and goes back down, and the train comes round to it again.
 //
 //   ./nob script scripts/tests/thrill_lift.ts -- --no-audio
@@ -50,7 +50,16 @@ function lift_car(ride: number): MapPoint & { facing: number } {
 /** Takes the picture `name` of ride `ride`'s lift car, from a little off to its side. */
 async function picture(ride: number, name: string): Promise<void> {
     const car = lift_car(ride);
-    camera.look(car, { col: car.col + 7, row: car.row + 10, up: (car.up ?? 0) + 3 });
+    // The view looks at the ground, so it looks past the car at the ground beyond it, from a little above and
+    // off to its side, the car on the line between.
+    const up = car.up ?? 0;
+    const side = 6;
+    const above = 12;
+    const beyond = (side * up) / above;
+    camera.look(
+        { col: car.col - beyond, row: car.row - 1.5 * beyond },
+        { col: car.col + side, row: car.row + 1.5 * side, up: up + above },
+    );
     await frames(10);
     await screenshot(name);
 }
@@ -64,6 +73,9 @@ function lifted(ride: number): Lifted | null {
 async function ride_up(ride: number, name: string): Promise<void> {
     const laid = rides.list()[ride];
     log(`${name}:`, laid.track?.filter((p) => p.includes("Lift")).join(" "), `train ${laid.trainsAt?.[0]?.length}`);
+    // Laid and not yet run, its lift's car already stands at the tower's foot.
+    const laid_car = lift_car(ride);
+    expect((laid_car.up ?? 0) < 6, `${name}'s lift car standing at the foot once laid, not ${laid_car.up} m up`);
     const refused = rides.setState(ride, "testing");
     expect(refused == null, `${name} tested, not refused with ${refused}`);
     await until(() => lifted(ride) !== null, 600, `${name}'s train on the lift's car`);
@@ -99,16 +111,4 @@ async function ride_up(ride: number, name: string): Promise<void> {
 
 await ride_up(await lay("TiltCoaster", "ThrillLift Extreme"), "tilt");
 
-// shortcut: the sky swinger's cars are read with no seats, so the park does not run it; it is only checked to stand
-// its lift's car at the tower's foot. Upgrade to ride_up once its cars' seats are read.
-{
-    const ride = await lay("SkySwinger", "Stomach Turn");
-    expect(rides.list()[ride].track?.some((p) => p.startsWith("LiftTop")) === true, "the swinger's lift tower laid");
-    // Put to test, its trains are made ready, and with them its lift's car.
-    expect(rides.setState(ride, "testing") == null, "the swinger tested");
-    await frames(30);
-    const car = lift_car(ride);
-    log("swinger's lift car at", JSON.stringify(car));
-    expect((car.up ?? 0) < 6, "the swinger's lift car standing at the tower's foot");
-    await picture(ride, "swinger_bottom");
-}
+await ride_up(await lay("SkySwinger", "Stomach Turn"), "swinger");

@@ -243,6 +243,10 @@ namespace rct3::park::object
         /// Of a car with bones named "carfront" and "carrear" at its ends: how it sits on its track. Its wheels
         /// are its wheel bones, or both midway between its ends, on its own centre line, where it has none.
         std::optional<CarFit> car_fit;
+        /// Of a lift car: the track it carries, in its own space from where a train boards it to where it is let
+        /// go, from the rails named after its train with "L_spline" and "R_spline"; and up for it at each point.
+        std::vector<glm::vec3> carried { };
+        std::vector<glm::vec3> carried_ups { };
         /// Of a car that rides through water: its bones named "watersplash" or "wake", a strength ("low", "med",
         /// "high") and a number.
         std::vector<SplashPoint> splash_points;

@@ -70,11 +70,16 @@ namespace rct3::park::track
     inline constexpr std::uint32_t kPieceWater = 0x1000;      ///< The track runs through water
     inline constexpr std::uint32_t kPieceBooster = 0x1000000; ///< Speeds the cars up
     inline constexpr std::uint32_t kPieceStation = 0x40;
-    inline constexpr std::uint32_t kPiecePlatformAlone = 0x80;   ///< Its platform is capped at both ends, whatever stands beside it
-    inline constexpr std::uint32_t kPieceCableLift = 0x20;       ///< A cable pulls the cars up it
-    inline constexpr std::uint32_t kPieceLaunch = 0x4000;        ///< Pushes a launched train on, as launch sections do
-    inline constexpr std::uint32_t kPieceHolds = 0x100;          ///< A train may be held on it: holding brakes, tilt and reverser pieces, tower caps
-    inline constexpr std::uint32_t kPieceLiftTop = 0x800;        ///< The top of a lift, where a train waits for the block ahead
+    inline constexpr std::uint32_t kPiecePlatformAlone = 0x80; ///< Its platform is capped at both ends, whatever stands beside it
+    inline constexpr std::uint32_t kPieceCableLift = 0x20;     ///< A cable pulls the cars up it
+    inline constexpr std::uint32_t kPieceLaunch = 0x4000;      ///< Pushes a launched train on, as launch sections do
+    inline constexpr std::uint32_t kPieceHolds = 0x100;        ///< A train may be held on it: holding brakes, tilt and reverser pieces, tower caps
+    /// A lift tower's pieces: its foot, any number of middles and its top, up which a lift car carries a train on
+    /// a length of track of its own. Each piece's first rails are the car's, up the tower.
+    inline constexpr std::uint32_t kPieceLiftBottom = 0x200;
+    inline constexpr std::uint32_t kPieceLiftMiddle = 0x400;
+    inline constexpr std::uint32_t kPieceLiftTop = 0x800;
+    inline constexpr std::uint32_t kPieceLift = kPieceLiftBottom | kPieceLiftMiddle | kPieceLiftTop;
     inline constexpr std::uint32_t kPieceReverseLift = 0x800000; ///< The hill a reverse cable lift ride's train is pulled up backwards
     inline constexpr std::uint32_t kPieceCommon = std::uint32_t { 1 } << 22;
     /// A track may start with the piece laid as drawn, and with the second bit also laid backwards.

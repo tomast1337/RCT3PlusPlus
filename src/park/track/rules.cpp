@@ -7,6 +7,7 @@
 #include "strings/ascii.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <format>
 #include <ranges>
 
@@ -69,6 +70,8 @@ namespace rct3::park::track
         rules.pieces.assign(ride.pieces.begin(), ride.pieces.end());
         const auto& slots = ride.track_sections;
         rules.builds_back = !slots[0].empty() && !slots[1].empty() && slots[2].empty() && slots[3].empty();
+        if (const auto& d = ride.operating; d && !d->lift_car.empty())
+            rules.lift_car = TrackRules::LiftCar { .train = std::string(d->lift_car), .up = { d->lift_car_up }, .down = { std::abs(d->lift_car_down) } };
         return rules;
     }
 

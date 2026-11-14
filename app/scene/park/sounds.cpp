@@ -353,8 +353,8 @@ namespace rct3::scene::park
         struct HeardTrain
         {
             std::pair<entt::entity, std::size_t> key;
-            std::size_t ride = 0; ///< In scene.rides
-            std::size_t car = 0;  ///< Its first car, in scene.cars
+            save::model::RideIndex ride { };
+            std::size_t car = 0; ///< Its first car, in scene.cars
             glm::vec3 at { }, velocity { };
             const simulation::Coaster* train = nullptr;
         };
@@ -365,7 +365,7 @@ namespace rct3::scene::park
             const glm::vec3 velocity = seconds > 0 ? (at - sounds.car_were[i]) / seconds : glm::vec3 { 0.0f };
             sounds.car_were[i] = at;
             const rct3::park::ride::CarSpot spot = scene.car_spots[i];
-            const entt::entity ride = spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
+            const entt::entity ride = spot.ride.value < scene.ride_entities.size() ? scene.ride_entities[spot.ride.value] : entt::null;
             const auto* fleet = ride != entt::null ? r.try_get<simulation::Trains>(ride) : nullptr;
             if (fleet == nullptr || spot.train >= fleet->trains.size() || !trains.emplace(ride, spot.train).second)
                 continue;
@@ -395,7 +395,7 @@ namespace rct3::scene::park
         {
             const HeardTrain& t = heard_trains[i];
             auto node = sounds.train_sounds.extract(t.key);
-            TrainSounds train = node ? std::move(node.mapped()) : TrainSounds { .set = t.ride < scene.rides.rides.size() ? audio::track_sound_set(scene.rides.rides[t.ride].base.overlay_path) : audio::TrackSoundSet::None, .was_running = t.train->running };
+            TrainSounds train = node ? std::move(node.mapped()) : TrainSounds { .set = t.ride.value < scene.rides.rides.size() ? audio::track_sound_set(scene.rides.rides[t.ride.value].base.overlay_path) : audio::TrackSoundSet::None, .was_running = t.train->running };
             const auto& kit = sounds.track_sounds[static_cast<std::size_t>(train.set)];
             const float level = i < audio::kHeardTrains ? kRideLevel : 0.0f;
             const auto params = [&](float gain) { return audio::PlayParams { .volume = gain, .at = t.at, .near = audio::kRideNear, .far = audio::kRideFar }; };

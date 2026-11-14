@@ -75,8 +75,8 @@ namespace rct3::scene::track
 
     struct TrackBuilding
     {
-        std::optional<std::size_t> ride; ///< Of the scene's rides; none while idle
-        std::string overlay;             ///< The ride's track overlay, as its objects name it
+        std::optional<save::model::RideIndex> ride; ///< None while idle
+        std::string overlay;                        ///< The ride's track overlay, as its objects name it
         std::map<std::string, rct3::park::track::PieceCatalogue, std::less<>> catalogues;
         std::map<std::string, TrackModels, std::less<>> models;
         /// The platform pieces of each platform type's file, by the file as a park names it, read once.
@@ -194,15 +194,15 @@ namespace rct3::scene::track
     /// opens the construction panel on it. False when its pieces cannot be found.
     bool new_tracked_ride(park::ParkScene& scene, const rct3::park::BuildItem& item, const ui::InterfaceAssets& assets);
 
-    /// Opens the construction panel on the tracked ride `ride` of the scene's rides, its pieces coming from
+    /// Opens the construction panel on the tracked ride `ride`, its pieces coming from
     /// the track overlay `overlay` (as a park names it). False when the ride has no track or the overlay
     /// cannot be read. The selection windows open new rides through this.
-    bool open_track_building(park::ParkScene& scene, std::size_t ride, std::string overlay, const ui::InterfaceAssets& assets);
+    bool open_track_building(park::ParkScene& scene, save::model::RideIndex ride, std::string overlay, const ui::InterfaceAssets& assets);
 
     /// Gives each station piece of the tracked ride `ride` the platform piece its type, its place in the
     /// station and the doors beside it call for (rct3::park::ride::platform_symbol), adding those it lacks. Nothing for a
     /// ride without a platform type.
-    void update_platforms(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
+    void update_platforms(park::ParkScene& scene, save::model::RideIndex ride, const ui::InterfaceAssets& assets);
 
     /// A click on the park at `at`, in interface units on a screen of `size`, while a ride is built. With no
     /// pieces yet, lays its first piece where the ghost shows it. Otherwise a click on one of its pieces picks
@@ -214,13 +214,13 @@ namespace rct3::scene::track
     void close_track_building(park::ParkScene& scene);
 
     /// The track overlay of the ride's built pieces, if it has any.
-    [[nodiscard]] std::optional<std::string> ride_track_overlay(const park::ParkScene& scene, std::size_t ride);
+    [[nodiscard]] std::optional<std::string> ride_track_overlay(const park::ParkScene& scene, save::model::RideIndex ride);
 
     /// What ride `ride`'s track pieces cost to lay; nothing when its pieces cannot be read.
-    [[nodiscard]] units::Money track_cost(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
+    [[nodiscard]] units::Money track_cost(park::ParkScene& scene, save::model::RideIndex ride, const ui::InterfaceAssets& assets);
 
     /// The station pieces of the ride's track, which its entrance and exit stand beside.
-    [[nodiscard]] std::vector<save::model::TrackPiece> station_pieces(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
+    [[nodiscard]] std::vector<save::model::TrackPiece> station_pieces(park::ParkScene& scene, save::model::RideIndex ride, const ui::InterfaceAssets& assets);
 
     /// Handles the panel's events, and for a track with no pieces the pointer at `at` on a view of `size` (over
     /// the interface or not), the turn commands and Shift, held to raise or sink the first piece. Call once per

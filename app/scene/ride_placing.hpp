@@ -27,6 +27,7 @@
 // simulation takes it on once a path runs past the tile it faces.
 #pragma once
 
+#include "park/attraction_objects.hpp"
 #include "park/build_catalogue.hpp"
 #include "park/camera.hpp"
 #include "park/moving_meshes.hpp"
@@ -92,7 +93,7 @@ namespace rct3::scene
         rct3::park::ride::Flatten flatten = rct3::park::ride::Flatten::Off; ///< How a ride's ground is levelled, as the panel's tabs set it
         rct3::park::ground::GroundCuts levelling;                           ///< The ground levelled under the ride pointed at, when it may be
         units::Money levelling_cost;
-        std::size_t ride = 0; ///< Of the scene's rides, once placed
+        rct3::park::AttractionRef placed { }; ///< Once placed
         rct3::park::object::ObjectMesh ghost_mesh;
         std::array<std::int32_t, 3> colours { };     ///< Of the scenery: its own when picked, then those the player paints
         std::string panel_item;                      ///< The scenery the placing panel is set up for
@@ -105,11 +106,11 @@ namespace rct3::scene
         std::uint32_t preview_pixels = 0;
         std::map<std::string, TrackModels, std::less<>> models;
         rct3::park::path::SolidTiles solids;
-        rct3::park::ground::GroundHolds holds;                                  ///< What keeps the ground still, worked out with the solids
-        std::optional<std::size_t> solids_of;                                   ///< The scene's object count when worked out
-        std::vector<std::size_t> unjoined;                                      ///< Rides placed here that the simulation does not run yet
-        std::vector<std::size_t> unjoined_stalls;                               ///< The same of the stalls placed here
-        std::vector<std::pair<std::size_t, std::uint32_t>> unjoined_facilities; ///< The same of the facilities placed here, with their kinds
+        rct3::park::ground::GroundHolds holds;                                             ///< What keeps the ground still, worked out with the solids
+        std::optional<std::size_t> solids_of;                                              ///< The scene's object count when worked out
+        std::vector<save::model::RideIndex> unjoined;                                      ///< Rides placed here that the simulation does not run yet
+        std::vector<std::size_t> unjoined_stalls;                                          ///< The same of the stalls placed here
+        std::vector<std::pair<save::model::RideIndex, std::uint32_t>> unjoined_facilities; ///< The same of the facilities placed here, with their kinds
         /// Every show trick the game names, read from its main file when the first show ride is placed.
         std::optional<std::vector<std::string>> trick_names;
         /// Of a tracked ride getting a door: its station pieces, which the door stands beside
@@ -137,12 +138,12 @@ namespace rct3::scene
     /// Starts placing the entrance, or the `exit`, of the ride `ride` as `item` (the ride's) has it: of a tracked
     /// ride beside its `stations`, of a placed flat ride (no stations) round its ground; one placed before moves.
     /// False without stations on a tracked ride or a door in the item.
-    bool start_door_placing(park::ParkScene& scene, std::size_t ride, const rct3::park::BuildItem& item, std::vector<save::model::TrackPiece> stations, bool exit);
+    bool start_door_placing(park::ParkScene& scene, save::model::RideIndex ride, const rct3::park::BuildItem& item, std::vector<save::model::TrackPiece> stations, bool exit);
     /// Gives the new ride `ride` the fence of `item` (its theme's), in the fence's own colours.
     void take_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Ride& ride, const rct3::park::BuildItem& item);
     /// Adds `door`, whose model is loaded, as the entrance (or `exit`) of station `station` of the tracked ride
     /// `ride`, standing at `height`, in place of the one it had.
-    void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, std::size_t station, const save::model::PlacedObject& door, std::int32_t height, bool exit);
+    void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, std::size_t station, const save::model::PlacedObject& door, std::int32_t height, bool exit);
 
     /// Puts the tool away.
     void stop_ride_placing(park::ParkScene& scene);

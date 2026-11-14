@@ -29,7 +29,7 @@ namespace rct3::park::ride
     /// Where a car piece's car is: its ride, and how far along the track the park kept its wheels.
     struct CarSpot
     {
-        std::size_t ride = 0;
+        save::model::RideIndex ride { };
         std::size_t train = 0; ///< Of the ride's trains
         float front = 0;       ///< Of the car's front wheels
         float rear = 0;        ///< Of its rear wheels

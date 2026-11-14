@@ -539,9 +539,8 @@ namespace rct3::scene::park
         std::vector<glm::mat4> car_places;                ///< Where each car stands now, by car
         std::vector<rct3::park::CarWater> car_waters;     ///< Of each car, the water it runs through
         std::optional<std::size_t> riding;                ///< The car the view rides along in, of `cars`
-        /// The flat ride (of the park's rides) and the rider seat or fixed camera on it the view looks out from;
-        /// never with `riding`.
-        std::optional<std::pair<std::size_t, std::size_t>> riding_flat;
+        /// The flat ride and the rider seat or fixed camera on it the view looks out from; never with `riding`.
+        std::optional<std::pair<save::model::RideIndex, std::size_t>> riding_flat;
         FlatEye flat_eye = FlatEye::Seat; ///< On a flat ride, from a seat or one of its own fixed cameras
         /// Of `shown_people`, the person the view goes with, from their eyes or from behind them; never with
         /// `riding` or `riding_flat`.
@@ -596,16 +595,16 @@ namespace rct3::scene::park
         } week_began;
         /// The cars of each simulated ride, by their places in `cars`, front to back.
         std::map<entt::entity, std::vector<std::size_t>> ride_cars; ///< In the simulation, by ride; null when not there
-        /// Of tracked rides whose trains were made here (fit_trains), by ride (of rides): how each car of a train
+        /// Of tracked rides whose trains were made here (fit_trains), by ride: how each car of a train
         /// sits on the track, by car.
-        std::map<std::size_t, std::vector<rct3::park::object::CarFit>> car_fits;
+        std::map<save::model::RideIndex, std::vector<rct3::park::object::CarFit>> car_fits;
         /// Tracked rides put to test or opened since the last update, whose trains are made ready to run then.
-        std::vector<std::size_t> readying;
+        std::vector<save::model::RideIndex> readying;
         /// Of tracked rides whose window has shown or built them, by ride: how many cars their trains may have.
         /// Their trains can be changed while they are not open.
-        std::map<std::size_t, ui::screens::info::TrainLimits> train_limits;
+        std::map<save::model::RideIndex, ui::screens::info::TrainLimits> train_limits;
         /// Of the same rides: the trains their kind's file offers, by name, the first theirs at first.
-        std::map<std::size_t, std::vector<std::string>> train_choices;
+        std::map<save::model::RideIndex, std::vector<std::string>> train_choices;
         /// The object each simulated flat ride stands as, the one with seats, by its place in `objects`.
         std::map<entt::entity, std::size_t> ride_seats;
         /// How the riders of each simulated flat ride sit, where its item says (see rct3::park::person::rider_motions).
@@ -731,7 +730,7 @@ namespace rct3::scene::park
         {
             return riding || riding_flat || riding_person;
         }
-        std::optional<std::size_t> doors_requested;                                      ///< A tracked ride whose circuit closed, to place its doors next
+        std::optional<save::model::RideIndex> doors_requested;                           ///< A tracked ride whose circuit closed, to place its doors next
         std::optional<rct3::park::AttractionRef> info_requested;                         ///< Asked by a script or a finished building, opened as a click on it does
         std::string refusal;                                                             ///< String key: why the shown attraction was not opened, tested or edited
         std::optional<std::size_t> shown_person;                                         ///< Of shown_people, the one the info panel tells about instead
@@ -889,9 +888,9 @@ namespace rct3::scene::park
     /// Whether a box of the park's interface has the keyboard, or selected text to copy, so keys are not the game's.
     [[nodiscard]] bool typing(const ParkScene& scene);
 
-    /// Has the simulated flat ride `ride_index` (of scene.rides) seat its riders on the object that has the
+    /// Has the simulated flat ride `ride` seat its riders on the object that has the
     /// seats, as flat_ride_timings finds it. Nothing for other rides, or one the simulation does not run.
-    void seat_flat_ride(render::Device& device, ParkScene& scene, std::size_t ride_index);
+    void seat_flat_ride(render::Device& device, ParkScene& scene, save::model::RideIndex ride);
 
     /// Which of a ride's cars add_ride_cars adds.
     enum class RideCarsAdded : std::uint8_t
@@ -900,16 +899,16 @@ namespace rct3::scene::park
         LiftsOnly, ///< Its lift towers' cars alone, as on a track laid but not yet run
     };
 
-    /// Adds the cars of `count` rides from `from` (of scene.rides) to the scene, where the park keeps them; cars
+    /// Adds the cars of `count` rides from `from` on to the scene, where the park keeps them; cars
     /// without a kept place are left out.
-    void add_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t from, std::size_t count, RideCarsAdded added = RideCarsAdded::TrainsAndLifts);
+    void add_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex from, std::size_t count, RideCarsAdded added = RideCarsAdded::TrainsAndLifts);
 
-    /// Takes the scene's cars of ride `ride_index` (of scene.rides) away.
-    void drop_ride_cars(ParkScene& scene, std::size_t ride_index);
+    /// Takes the scene's cars of ride `ride` away.
+    void drop_ride_cars(ParkScene& scene, save::model::RideIndex ride);
 
-    /// Has the scene's cars of ride `ride_index` (of scene.rides) be its trains' cars as they are now: those it had
+    /// Has the scene's cars of ride `ride` be its trains' cars as they are now: those it had
     /// go and its trains' cars are added where they stand, boarded as board_tracked_ride boards them.
-    void replace_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t ride_index);
+    void replace_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex ride);
 
     /// Has `train`, of cars of `model`, swing in a pool slide's trough as the car does (not at all for a car that
     /// does not) and, on a pool slide, be held back as its train's file has it.
@@ -918,9 +917,9 @@ namespace rct3::scene::park
     /// Loads the models of `cars` the scene does not have yet, and their pictures.
     void load_car_models(ParkScene& scene, const config::game::GameInstall& install, const rct3::park::ride::RideCars& cars);
 
-    /// Has the simulated tracked ride `ride_index` (of scene.rides) carry riders in its scene cars, boarding its
+    /// Has the simulated tracked ride `ride` carry riders in its scene cars, boarding its
     /// first train at the station. Nothing for a ride the simulation does not run.
-    void board_tracked_ride(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t ride_index);
+    void board_tracked_ride(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex ride);
 
     /// Has object `k` (of scene.objects) move on its own when its model has bones and it is scenery of no attraction,
     /// as animatronics are.

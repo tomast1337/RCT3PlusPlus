@@ -128,7 +128,7 @@ namespace rct3::scene::park
         if (base == nullptr || base->demolished)
             return;
         const bool ride = ref.kind == rct3::park::AttractionRef::Kind::Ride;
-        if (ride && scene.building.ride == ref.index)
+        if (ride && scene.building.ride == ref.ride())
             track::close_track_building(scene);
         stop_ride_placing(scene);
         wait_for_build(scene);
@@ -137,7 +137,7 @@ namespace rct3::scene::park
         const auto main = base->spot ? std::ranges::find(scene.objects, base->spot->object, &save::model::PlacedObject::id) : scene.objects.end();
         const auto model = main != scene.objects.end() ? scene.models.find(rct3::park::object::model_ref(*main)) : scene.models.end();
         const bool tracked = ride && scene.rides.rides[ref.index].kind == save::model::RideKind::Tracked;
-        const units::Money value = tracked ? track::track_cost(scene, ref.index, assets) : units::Money { model != scene.models.end() ? model->second.price : 0 };
+        const units::Money value = tracked ? track::track_cost(scene, ref.ride(), assets) : units::Money { model != scene.models.end() ? model->second.price : 0 };
         const units::Money back = rct3::park::demolish_refund(value, (base->flags & save::model::AttractionCommon::kNeverOpened) == 0);
         std::set<std::uint64_t> parts;
         // Its fence, which the park built round it, goes with it.
@@ -175,13 +175,13 @@ namespace rct3::scene::park
                 break;
             }
         if (ride)
-            drop_ride_cars(scene, ref.index);
+            drop_ride_cars(scene, ref.ride());
         if (ride && ref.index < scene.ride_entities.size())
             scene.ride_entities[ref.index] = entt::null;
         base->state = save::model::AttractionState::Closed;
         base->demolished = true;
         if (ride)
-            rejoin_queues(scene, assets, ref.index);
+            rejoin_queues(scene, assets, ref.ride());
         simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, simulation::park::Charge::IfAffordable);
         if (at)
             float_money(scene, *at, back);

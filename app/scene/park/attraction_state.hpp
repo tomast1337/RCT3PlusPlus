@@ -33,7 +33,7 @@ namespace rct3::scene::park
 
     /// Puts ride `ride` in `state` when its track and doors let it; otherwise leaves it and gives the string
     /// key of why not.
-    [[nodiscard]] std::optional<std::string> change_ride_state(ParkScene& scene, std::size_t ride, save::model::AttractionState state);
+    [[nodiscard]] std::optional<std::string> change_ride_state(ParkScene& scene, save::model::RideIndex ride, save::model::AttractionState state);
     /// The same for stall `stall`, which cannot open with nothing on its menu.
     [[nodiscard]] std::optional<std::string> change_stall_state(ParkScene& scene, std::size_t stall, save::model::AttractionState state);
 

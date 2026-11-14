@@ -178,7 +178,7 @@ namespace rct3::scene::park
     std::vector<ui::widgets::WorldLabel> height_labels(const ParkScene& scene, ui::Point size)
     {
         // The construction panel shows the heights of the ride it builds, the view menu every ride's.
-        const std::optional<std::size_t> built = scene.building.heights ? scene.building.ride : std::nullopt;
+        const std::optional<save::model::RideIndex> built = scene.building.heights ? scene.building.ride : std::nullopt;
         if ((!scene.show_path_heights && !scene.show_ride_heights && !built) || size.x <= 0 || size.y <= 0)
             return { };
         const glm::mat4 view = rct3::park::view_projection(scene.camera, size.x / size.y);
@@ -209,7 +209,7 @@ namespace rct3::scene::park
             for (std::size_t r = 0; r < scene.rides.rides.size(); ++r)
             {
                 const save::model::Ride& ride = scene.rides.rides[r];
-                if (!ride.track || ride.base.demolished || (!scene.show_ride_heights && r != built))
+                if (!ride.track || ride.base.demolished || (!scene.show_ride_heights && save::model::RideIndex { r } != built))
                     continue;
                 for (const save::model::TrackPiece& p : ride.track->pieces)
                 {

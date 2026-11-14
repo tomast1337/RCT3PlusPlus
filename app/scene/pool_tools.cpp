@@ -871,7 +871,7 @@ namespace rct3::scene
         // Pool rides' platforms show steps down the sides the paving now meets, or no longer does.
         for (std::size_t ride = 0; ride < scene.rides.rides.size() && ride < scene.track_rules.size(); ++ride)
             if (scene.track_rules[ride].pool_ride && !scene.rides.rides[ride].base.demolished)
-                track::update_platforms(scene, ride, assets);
+                track::update_platforms(scene, save::model::RideIndex { ride }, assets);
         objects_changed(scene);
         std::vector<save::model::PoolWater>& water = scene.footpaths.pools;
         water.resize(scene.saved_pool_water);

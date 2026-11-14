@@ -679,11 +679,11 @@ namespace rct3::scene
             if (park.riding_person)
                 out = { { "ride", -1 }, { "car", *park.riding_person }, { "kind", park.person_behind ? "behind" : "guest" } };
             else if (park.riding_flat)
-                out = { { "ride", park.riding_flat->first }, { "car", park.riding_flat->second }, { "kind", park.flat_eye == park::FlatEye::Fixed ? "fixed" : "seat" } };
+                out = { { "ride", park.riding_flat->first.value }, { "car", park.riding_flat->second }, { "kind", park.flat_eye == park::FlatEye::Fixed ? "fixed" : "seat" } };
             else if (park.riding && *park.riding < park.car_spots.size())
             {
                 constexpr std::array<std::string_view, 3> kEyes { "nose", "front", "rear" };
-                out = { { "ride", park.car_spots[*park.riding].ride }, { "car", *park.riding }, { "kind", kEyes[std::to_underlying(park.riding_eye)] } };
+                out = { { "ride", park.car_spots[*park.riding].ride.value }, { "car", *park.riding }, { "kind", kEyes[std::to_underlying(park.riding_eye)] } };
             }
             else
                 return nullptr;
@@ -907,7 +907,7 @@ namespace rct3::scene
             Json designs = Json::array();
             for (const DesignFile& d : b.designs)
                 designs.push_back(d.path.filename().string());
-            return { { "ride", *b.ride },
+            return { { "ride", b.ride->value },
                      { "offered", b.candidates.size() },
                      { "piece", named ? Json(c->second.pieces[b.picked->index].record.name) : Json(nullptr) },
                      { "ghost", b.ghost.has_value() },
@@ -949,7 +949,7 @@ namespace rct3::scene
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.rides.size() || state == kStates.end())
                 throw std::invalid_argument("rides.setState takes a ride's place in rides.list() and \"closed\", \"testing\" or \"open\"");
             // The reason it stays as it was, as a string key; null once changed.
-            const auto refused = park::change_ride_state(park, a[0].get<std::size_t>(), state->second);
+            const auto refused = park::change_ride_state(park, save::model::RideIndex { a[0].get<std::size_t>() }, state->second);
             return refused ? Json(*refused) : Json(nullptr);
         });
         engine_.define("rides.setFixedSpeed", [this](const Json& a) {
@@ -983,7 +983,7 @@ namespace rct3::scene
             park::ParkScene& park = park_of(park_);
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.rides.size())
                 throw std::invalid_argument("rides.show takes a ride's place in rides.list()");
-            park.info_requested = rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Ride, a[0].get<std::size_t>() };
+            park.info_requested = rct3::park::AttractionRef::of(save::model::RideIndex { a[0].get<std::size_t>() });
             return Json(nullptr);
         });
         engine_.define("stalls.breakDown", [this](const Json& a) -> Json {
@@ -1297,7 +1297,7 @@ namespace rct3::scene
                     Json cars = Json::array();
                     for (std::size_t k = 0; k < park.car_spots.size() && k < park.car_places.size(); ++k)
                     {
-                        if (park.car_spots[k].ride != i)
+                        if (park.car_spots[k].ride != save::model::RideIndex { i })
                             continue;
                         const glm::vec3 at = park.car_places[k][3];
                         const float col = (at.x - park.grid.origin_x) / park.grid.tile_size_x;

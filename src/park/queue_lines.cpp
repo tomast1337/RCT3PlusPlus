@@ -26,7 +26,7 @@ namespace rct3::park
                     continue;
                 const Side back = ride::door_back(*at);
                 if (back.beyond({ at->col, at->row }) == tile)
-                    return EntranceBeside { r, s, back.opposite() };
+                    return EntranceBeside { save::model::RideIndex { r }, s, back.opposite() };
             }
         }
         return std::nullopt;
@@ -150,7 +150,7 @@ namespace rct3::park
 
     std::uint64_t join_entrance(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t tile, const EntranceBeside& entrance, std::uint64_t new_line)
     {
-        save::model::Station& station = rides.rides.at(entrance.ride).stations.at(entrance.station);
+        save::model::Station& station = rides.rides.at(entrance.ride.value).stations.at(entrance.station);
         if (station.queue_line == 0)
             station.queue_line = new_line;
         const std::uint64_t line = station.queue_line;
@@ -186,9 +186,9 @@ namespace rct3::park
         return std::nullopt;
     }
 
-    std::optional<std::uint64_t> join_queue_behind(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t ride, std::size_t station, std::uint64_t new_line)
+    std::optional<std::uint64_t> join_queue_behind(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, save::model::RideIndex ride, std::size_t station, std::uint64_t new_line)
     {
-        const std::optional<save::model::PlacementSpot> at = rides.rides.at(ride).stations.at(station).entrance_spot;
+        const std::optional<save::model::PlacementSpot> at = rides.rides.at(ride.value).stations.at(station).entrance_spot;
         if (!at)
             return std::nullopt;
         const Side back = ride::door_back(*at);

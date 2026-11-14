@@ -603,9 +603,9 @@ namespace rct3::scene::park
         return model->second.ride_eyes[std::to_underlying(eye)];
     }
 
-    std::optional<glm::mat4> flat_view(const ParkScene& scene, std::size_t ride, FlatEye eye, std::size_t at)
+    std::optional<glm::mat4> flat_view(const ParkScene& scene, save::model::RideIndex ride, FlatEye eye, std::size_t at)
     {
-        const auto object = scene.ride_seats.find(ride < scene.ride_entities.size() ? scene.ride_entities[ride] : entt::null);
+        const auto object = scene.ride_seats.find(ride.value < scene.ride_entities.size() ? scene.ride_entities[ride.value] : entt::null);
         if (object == scene.ride_seats.end())
             return std::nullopt;
         const save::model::PlacedObject& o = scene.objects[object->second];
@@ -668,8 +668,8 @@ namespace rct3::scene::park
         std::vector<float> moved(scene.cars.size()); // Along its course since the park kept it, by car
         // Where the car of ride `ride`'s lift `lift` stands now, between its last step's ends, with its model; at
         // the bottom while the simulation does not run it.
-        const auto lift_car = [&](std::size_t ride, std::size_t lift, const simulation::Trains* fleet) -> std::optional<std::pair<glm::mat4, const rct3::park::object::ObjectModel&>> {
-            const auto& course = scene.courses[ride];
+        const auto lift_car = [&](save::model::RideIndex ride, std::size_t lift, const simulation::Trains* fleet) -> std::optional<std::pair<glm::mat4, const rct3::park::object::ObjectModel&>> {
+            const auto& course = scene.courses[ride.value];
             const auto spot = std::ranges::find_if(scene.car_spots, [&](const rct3::park::ride::CarSpot& s) { return s.ride == ride && s.lift == lift; });
             if (!course || lift >= course->lifts.size() || spot == scene.car_spots.end())
                 return std::nullopt;
@@ -690,7 +690,7 @@ namespace rct3::scene::park
             const std::uint64_t id = scene.cars[i].id;
             const rct3::park::ride::CarSpot spot = scene.car_spots[i];
             glm::mat4 place = scene.saved_cars.at(id);
-            const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
+            const entt::entity ride = scene.simulate && spot.ride.value < scene.ride_entities.size() ? scene.ride_entities[spot.ride.value] : entt::null;
             const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
             const auto* boats = ride != entt::null ? scene.sim.registry.try_get<simulation::Boats>(ride) : nullptr;
             if (spot.lift)
@@ -709,7 +709,7 @@ namespace rct3::scene::park
                 const glm::mat4 lean = glm::rotate(glm::mat4(1.0f), boat.lean.value, glm::vec3(boat.heading.x, 0, boat.heading.y));
                 place = glm::translate(glm::mat4(1.0f), glm::vec3(boat.at.x, kept.y, boat.at.y)) * lean * glm::rotate(glm::mat4(1.0f), -turn, glm::vec3(0, 1, 0)) * glm::translate(glm::mat4(1.0f), -kept) * place;
             }
-            else if (fleet && spot.train < fleet->trains.size() && scene.courses[spot.ride])
+            else if (fleet && spot.train < fleet->trains.size() && scene.courses[spot.ride.value])
             {
                 const simulation::Coaster& train = fleet->trains[spot.train];
                 const bool aboard = spot.train < fleet->riders.size() && !fleet->riders[spot.train].empty();
@@ -720,19 +720,19 @@ namespace rct3::scene::park
                 const float along = std::clamp(scene.sim_time / simulation::kTickSeconds, 0.0f, 1.0f);
                 const float flown_for = train.flight ? train.flight->off.value - (1 - along) * simulation::kTickSeconds : 0.0f;
                 const float at = train.flight ? std::max(train.was_at, train.at + train.flight->speed.value * std::min(flown_for, 0.0f)) : simulation::between_drives(train, along);
-                moved[i] = at - scene.rides.rides[spot.ride].trains[spot.train].distance;
+                moved[i] = at - scene.rides.rides[spot.ride.value].trains[spot.train].distance;
                 // On a lift, it stands on the track the lift's car carries, as far along it as the train's front is.
                 const auto lifted = train.lifted ? lift_car(spot.ride, train.lifted->lift, fleet) : std::nullopt;
                 if (lifted)
                 {
                     const simulation::LiftRide& on = *train.lifted;
                     const float front = on.was_aboard.value + (on.aboard.value - on.was_aboard.value) * along;
-                    const float saved_front = scene.rides.rides[spot.ride].trains[spot.train].distance;
+                    const float saved_front = scene.rides.rides[spot.ride.value].trains[spot.train].distance;
                     const rct3::park::track::Axles wheels { front - (saved_front - spot.front), front - (saved_front - spot.rear) };
-                    place = rct3::park::track::moved_on_lift(*scene.courses[spot.ride], scene.courses[spot.ride]->lifts[on.lift], lifted->second, lifted->first, place, { spot.front, spot.rear }, wheels);
+                    place = rct3::park::track::moved_on_lift(*scene.courses[spot.ride.value], scene.courses[spot.ride.value]->lifts[on.lift], lifted->second, lifted->first, place, { spot.front, spot.rear }, wheels);
                 }
                 else
-                    place = rct3::park::track::moved_along(*scene.courses[spot.ride], place, { spot.front, spot.rear }, moved[i]);
+                    place = rct3::park::track::moved_along(*scene.courses[spot.ride.value], place, { spot.front, spot.rear }, moved[i]);
                 // A slide's car swung up its trough's wall, turned about its shape's pivot.
                 if (train.trough && train.lean.value != 0)
                 {
@@ -796,7 +796,7 @@ namespace rct3::scene::park
                     const glm::vec3 velocity = seconds > 0 ? (glm::vec3(place[3]) - glm::vec3(scene.car_places[i][3])) / seconds : glm::vec3(0.0f);
                     // Only cars that spray, and the one ridden for the water on the lens, look for the park's water.
                     const bool looks = !model->second.splash_points.empty() || scene.riding == i;
-                    const rct3::park::track::TrackCourse& course = *scene.courses[spot.ride];
+                    const rct3::park::track::TrackCourse& course = *scene.courses[spot.ride.value];
                     // shortcut: a splash ride whose track says nothing of water (a sea serpent diving into its
                     // lake) is taken as wet all along, splashing where its fall stops short; upgrade once such a
                     // track's water is found in its files.
@@ -811,7 +811,7 @@ namespace rct3::scene::park
             }
             // Pulled down, its cars go with it; a kept train the park does not run (a shuttle runs one) is not shown
             // standing on the course the one it runs goes along.
-            if ((spot.ride < scene.rides.rides.size() && scene.rides.rides[spot.ride].base.demolished) || (fleet && !boats && !spot.lift && spot.train >= fleet->trains.size()))
+            if ((spot.ride.value < scene.rides.rides.size() && scene.rides.rides[spot.ride.value].base.demolished) || (fleet && !boats && !spot.lift && spot.train >= fleet->trains.size()))
                 place = glm::mat4(0.0f);
             scene.car_places[i] = place;
         }
@@ -825,7 +825,7 @@ namespace rct3::scene::park
             const rct3::park::ride::CarSpot spot = scene.car_spots[i];
             ovl::RideCameraTuning tuning = scene.models.at(rct3::park::object::model_ref(scene.cars[i])).ride_look;
             // On a lift chain the view shakes as the train sets for the chain, from when this car is on it.
-            const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
+            const entt::entity ride = scene.simulate && spot.ride.value < scene.ride_entities.size() ? scene.ride_entities[spot.ride.value] : entt::null;
             const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
             const simulation::Coaster* train = fleet && spot.train < fleet->trains.size() ? &fleet->trains[spot.train] : nullptr;
             if (train && simulation::chain_at(*train, spot.front + moved[i]))
@@ -837,7 +837,7 @@ namespace rct3::scene::park
             // The nose and front seat look at the track ahead rather than straight out, so a curve stays in view;
             // the nose does not sway. Running backwards, the view looks the way the car faces.
             std::optional<glm::vec3> ahead;
-            if (const auto& course = scene.courses[spot.ride]; course && tuning.look_ahead > 0 && scene.riding_eye != rct3::park::object::RideEye::Rear && !(train && train->speed < 0))
+            if (const auto& course = scene.courses[spot.ride.value]; course && tuning.look_ahead > 0 && scene.riding_eye != rct3::park::object::RideEye::Rear && !(train && train->speed < 0))
                 ahead = glm::vec3(rct3::park::track::moved_along(*course, scene.saved_cars.at(scene.cars[i].id), { spot.front, spot.rear }, moved[i] + tuning.look_ahead) * (*seat)[3]);
             const glm::vec2 dice { static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1, static_cast<float>(random::unit(scene.ride_dice)) * 2 - 1 };
             scene.seat = rct3::park::looked_round(rct3::park::ride_look(scene.ride_view, scene.car_places[i] * *seat, ahead, scene.riding_eye != rct3::park::object::RideEye::Nose, tuning, seconds, dice), scene.ride_turn);
@@ -896,7 +896,7 @@ namespace rct3::scene::park
             scene.car_mesh_places[boned.car] = glm::mat4(0.0f);
             const rct3::park::object::ObjectModel& model = scene.models.at(rct3::park::object::model_ref(scene.cars[boned.car]));
             const rct3::park::ride::CarSpot spot = scene.car_spots[boned.car];
-            const entt::entity ride = scene.simulate && spot.ride < scene.ride_entities.size() ? scene.ride_entities[spot.ride] : entt::null;
+            const entt::entity ride = scene.simulate && spot.ride.value < scene.ride_entities.size() ? scene.ride_entities[spot.ride.value] : entt::null;
             const auto* boats = ride != entt::null ? scene.sim.registry.try_get<simulation::Boats>(ride) : nullptr;
             const simulation::Boat* boat = boats && spot.train < boats->boats.size() && boats->boats[spot.train].state != simulation::Sailing::Docked ? &boats->boats[spot.train] : nullptr;
             const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
@@ -920,12 +920,12 @@ namespace rct3::scene::park
         {
             const rct3::park::ride::CarSpot spot = scene.car_spots[arm.car];
             std::optional<rct3::park::track::ArmAngles> angles;
-            if (const save::model::Ride& ride = scene.rides.rides[spot.ride]; ride.track && scene.courses[spot.ride])
+            if (const save::model::Ride& ride = scene.rides.rides[spot.ride.value]; ride.track && scene.courses[spot.ride.value])
             {
                 std::vector<std::optional<rct3::park::track::ArmAngles>> held;
-                for (const save::model::TrackPiece& piece : std::span(ride.track->pieces).subspan(std::min(scene.courses[spot.ride]->first_piece, ride.track->pieces.size())))
+                for (const save::model::TrackPiece& piece : std::span(ride.track->pieces).subspan(std::min(scene.courses[spot.ride.value]->first_piece, ride.track->pieces.size())))
                     held.push_back(piece.arm_angles);
-                angles = rct3::park::track::arm_angles_at(*scene.courses[spot.ride], held, (spot.front + spot.rear) / 2 + moved[arm.car]);
+                angles = rct3::park::track::arm_angles_at(*scene.courses[spot.ride.value], held, (spot.front + spot.rear) / 2 + moved[arm.car]);
             }
             const std::vector<glm::mat4> moves = rct3::park::arm_moves(arm.joints, angles ? std::span<const float>(*angles) : std::span<const float> { });
             for (const glm::mat4& move : moves)
@@ -1249,7 +1249,7 @@ namespace rct3::scene::park
     /// may run beside the frame.
     rct3::park::object::FlowFades flow_fades(const ParkScene& scene)
     {
-        return rct3::park::water::flow_fades(scene.rides, scene.objects, scene.models, [&](std::size_t ride) { return ride < scene.track_rules.size() && scene.track_rules[ride].pool_ride; });
+        return rct3::park::water::flow_fades(scene.rides, scene.objects, scene.models, [&](save::model::RideIndex ride) { return ride.value < scene.track_rules.size() && scene.track_rules[ride.value].pool_ride; });
     }
 
     std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const rct3::park::object::LevelPlan& shown, float band, const rct3::park::object::LevelScales& scales, bool supports, const rct3::park::object::Broken& broken, const rct3::park::object::Chains& chains, const rct3::park::object::FlowFades& fades)

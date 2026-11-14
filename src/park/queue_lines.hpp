@@ -26,7 +26,7 @@ namespace rct3::park
     /// A station entrance beside a tile.
     struct EntranceBeside
     {
-        std::size_t ride = 0;    ///< Of the rides
+        save::model::RideIndex ride { };
         std::size_t station = 0; ///< Of the ride's stations
         Side side;               ///< Heading from the tile to the entrance
         friend bool operator==(const EntranceBeside&, const EntranceBeside&) = default;
@@ -60,6 +60,6 @@ namespace rct3::park
     /// would join: the queue tile behind it, meeting it within kEntranceReach and on no line yet, joins the
     /// station's line (made with id `new_line` when it has none), and the tiles laid on from it follow. Returns the
     /// line's id, nothing when no such queue is there.
-    std::optional<std::uint64_t> join_queue_behind(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t ride, std::size_t station, std::uint64_t new_line);
+    std::optional<std::uint64_t> join_queue_behind(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, save::model::RideIndex ride, std::size_t station, std::uint64_t new_line);
 
 } // namespace rct3::park

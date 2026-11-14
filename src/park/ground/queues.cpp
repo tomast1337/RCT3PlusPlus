@@ -17,9 +17,10 @@ namespace rct3::park::ground
         const auto out = path::stored_heading(end);
         if (!in || !out)
             return { };
-        // Counted as the picture turns, from its top.
-        const int a = in->turned(-Side::kRowBefore.value).value;
-        const int b = out->turned(-Side::kRowBefore.value).value;
+        // Counted as the picture turns, from its top: the row before, then the next column, the next row, the
+        // column before, which runs through Side's numbers backwards.
+        const int a = Side::kRowBefore.turned(-in->value).value;
+        const int b = Side::kRowBefore.turned(-out->value).value;
         const auto turns = static_cast<std::uint8_t>(a);
         if (a == b || (a + 2) % 4 == b)
             return { QueueCell::Straight, static_cast<std::uint8_t>(a % 2) };

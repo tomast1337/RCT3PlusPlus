@@ -22,14 +22,19 @@ namespace
     {
         return {
             .height = [](glm::vec2) { return 0.0f; },
-            .enclosure = [](glm::vec2 p) { return p.y >= 0 && p.y < 4 ? (p.x >= 0 && p.x < 4         ? 0
-                                                                             : p.x >= 10 && p.x < 14 ? 1
-                                                                                                     : -1)
-                                                                      : -1; },
-            .somewhere = [](std::int32_t which, random::RandomState& dice) -> std::optional<glm::vec2> {
-                if (which < 0 || which > 1)
+            .enclosure = [](glm::vec2 p) -> std::optional<std::int32_t> {
+                if (p.y < 0 || p.y >= 4)
                     return std::nullopt;
-                return glm::vec2 { static_cast<float>(which * 10) + static_cast<float>(random::between(dice, 0.0, 4.0)), static_cast<float>(random::between(dice, 0.0, 4.0)) };
+                if (p.x >= 0 && p.x < 4)
+                    return 0;
+                if (p.x >= 10 && p.x < 14)
+                    return 1;
+                return std::nullopt;
+            },
+            .somewhere = [](std::optional<std::int32_t> which, random::RandomState& dice) -> std::optional<glm::vec2> {
+                if (!which || *which > 1)
+                    return std::nullopt;
+                return glm::vec2 { static_cast<float>(*which * 10) + static_cast<float>(random::between(dice, 0.0, 4.0)), static_cast<float>(random::between(dice, 0.0, 4.0)) };
             },
         };
     }
@@ -50,7 +55,7 @@ namespace
 TEST_CASE("animals: an animal house comes with a paid keeper at the given spot")
 {
     SimWorld world;
-    const entt::entity keeper = add_animal_house(world, { .object = 7, .hut = 8, .enclosure = 1 }, { 11, 0, 1 });
+    const entt::entity keeper = add_animal_house(world, { .object = 7, .hut = 8, .enclosure = std::optional { 1 } }, { 11, 0, 1 });
     const auto& r = world.registry;
     CHECK(r.get<Staff>(keeper).role == StaffRole::Keeper);
     CHECK(r.get<Staff>(keeper).wage.value > 0);
@@ -63,7 +68,7 @@ TEST_CASE("animals: a keeper strolls about their own enclosure and nowhere else,
 {
     SimWorld world;
     const AnimalGround ground = two_pens();
-    const entt::entity keeper = add_animal_house(world, { .enclosure = 1, .troughs = { 13, 0, 2 }, .low = { 10, 0 }, .high = { 12, 4 } }, { 12, 0, 2 });
+    const entt::entity keeper = add_animal_house(world, { .enclosure = std::optional { 1 }, .troughs = { 13, 0, 2 }, .low = { 10, 0 }, .high = { 12, 4 } }, { 12, 0, 2 });
     const glm::vec3 first = world.registry.get<Pose>(keeper).position;
     bool moved = false;
     for (int i = 0; i < 400; ++i)
@@ -84,8 +89,8 @@ namespace
     /// (1, 1); returns the animal.
     entt::entity animal_at_home(SimWorld& world, const AnimalGround& ground, std::string species = "zebu")
     {
-        (void)add_animal_house(world, { .enclosure = 0, .troughs = { 3, 0, 2 }, .low = { 3.5f, 0 }, .high = { 4, 4 } }, { 3, 0, 3 });
-        const entt::entity e = add_animal(world, { .species = std::move(species), .enclosure = 0 }, { 1, 0, 1 });
+        (void)add_animal_house(world, { .enclosure = std::optional { 0 }, .troughs = { 3, 0, 2 }, .low = { 3.5f, 0 }, .high = { 4, 4 } }, { 3, 0, 3 });
+        const entt::entity e = add_animal(world, { .species = std::move(species), .enclosure = std::optional { 0 } }, { 1, 0, 1 });
         run(world, ground, kAnimalRates.crated.value + 0.5f);
         return e;
     }
@@ -95,7 +100,7 @@ TEST_CASE("animals: an animal stays in its crate a while, then walks out about i
 {
     SimWorld world;
     const AnimalGround ground = two_pens();
-    const entt::entity e = add_animal(world, { .species = "zebu", .enclosure = 0 }, { 1, 0, 1 });
+    const entt::entity e = add_animal(world, { .species = "zebu", .enclosure = std::optional { 0 } }, { 1, 0, 1 });
     run(world, ground, kAnimalRates.crated.value - 1);
     CHECK(world.registry.get<Animal>(e).job == AnimalJob::Crated);
     CHECK(world.registry.get<Pose>(e).position == glm::vec3 { 1, 0, 1 });
@@ -193,8 +198,8 @@ TEST_CASE("animals: a keeper fills another house in their enclosure, but not one
     SimWorld world;
     const AnimalGround ground = two_pens();
     auto& r = world.registry;
-    const entt::entity keeper = add_animal_house(world, { .object = 1, .enclosure = 0, .troughs = { 0.5f, 0, 0.5f } }, { 1, 0, 1 });
-    const entt::entity other = r.get<KeeperDuty>(add_animal_house(world, { .object = 2, .enclosure = 0, .troughs = { 3.5f, 0, 3.5f } }, { 3, 0, 3 })).house;
+    const entt::entity keeper = add_animal_house(world, { .object = 1, .enclosure = std::optional { 0 }, .troughs = { 0.5f, 0, 0.5f } }, { 1, 0, 1 });
+    const entt::entity other = r.get<KeeperDuty>(add_animal_house(world, { .object = 2, .enclosure = std::optional { 0 }, .troughs = { 3.5f, 0, 3.5f } }, { 3, 0, 3 })).house;
     r.destroy(*std::ranges::find_if(r.view<KeeperDuty>(), [&](entt::entity k) { return k != keeper; }));
     r.get<AnimalHouse>(other).food = { 0.1f };
     world.paths.tile_size = 1;
@@ -307,8 +312,8 @@ TEST_CASE("animals: an animal alone grows lonely; one with its own kind about do
     SimWorld world;
     const AnimalGround ground = two_pens();
     const entt::entity alone = animal_at_home(world, ground, "zebu");
-    const entt::entity a = add_animal(world, { .species = "yak", .enclosure = 1 }, { 11, 0, 1 });
-    const entt::entity b = add_animal(world, { .species = "yak", .enclosure = 1 }, { 12, 0, 1 });
+    const entt::entity a = add_animal(world, { .species = "yak", .enclosure = std::optional { 1 } }, { 11, 0, 1 });
+    const entt::entity b = add_animal(world, { .species = "yak", .enclosure = std::optional { 1 } }, { 12, 0, 1 });
     run(world, ground, 120);
     auto& r = world.registry;
     CHECK(r.get<Animal>(alone).loneliness.value > 0.2f);
@@ -336,10 +341,10 @@ TEST_CASE("animals: an animal whose enclosure is taken from under it escapes")
 {
     SimWorld world;
     AnimalGround ground = two_pens();
-    const entt::entity e = add_animal(world, { .species = "zebu", .enclosure = 0 }, { 1, 0, 1 });
+    const entt::entity e = add_animal(world, { .species = "zebu", .enclosure = std::optional { 0 } }, { 1, 0, 1 });
     run(world, ground, kAnimalRates.crated.value + 1);
     CHECK_FALSE(world.registry.get<Animal>(e).escaped);
-    ground.enclosure = [](glm::vec2) { return -1; };
+    ground.enclosure = [](glm::vec2) -> std::optional<std::int32_t> { return std::nullopt; };
     run(world, ground, 1);
     CHECK(world.registry.get<Animal>(e).escaped);
 }
@@ -348,7 +353,7 @@ TEST_CASE("animals: a keeper crates an escaped animal and takes it back to their
 {
     SimWorld world;
     const AnimalGround ground = two_pens();
-    (void)add_animal_house(world, { .enclosure = 1, .troughs = { 13, 0, 2 }, .low = { 13.5f, 0 }, .high = { 14, 4 } }, { 12, 0, 2 });
+    (void)add_animal_house(world, { .enclosure = std::optional { 1 }, .troughs = { 13, 0, 2 }, .low = { 13.5f, 0 }, .high = { 14, 4 } }, { 12, 0, 2 });
     const entt::entity e = add_animal(world, { .species = "zebu" }, { 7, 0, 2 });
     auto& r = world.registry;
     run(world, ground, kAnimalRates.crated.value + 1);
@@ -428,7 +433,7 @@ TEST_CASE("animals: a park's keepers each keep a house of their own in the enclo
     const entt::entity a = keeper_at({ 1, 0, 1 });
     const entt::entity b = keeper_at({ 1, 0, 1 }); // Nearer the first house too, which a has
     const entt::entity c = keeper_at({ 1, 0, 1 }); // Given an enclosure with no house
-    const std::array houses { AnimalHouse { .object = 1, .enclosure = 0, .troughs = { 1, 0, 2 } }, AnimalHouse { .object = 2, .enclosure = 0, .troughs = { 3, 0, 3 } }, AnimalHouse { .object = 3, .enclosure = 1, .troughs = { 11, 0, 2 } } };
+    const std::array houses { AnimalHouse { .object = 1, .enclosure = std::optional { 0 }, .troughs = { 1, 0, 2 } }, AnimalHouse { .object = 2, .enclosure = std::optional { 0 }, .troughs = { 3, 0, 3 } }, AnimalHouse { .object = 3, .enclosure = std::optional { 1 }, .troughs = { 11, 0, 2 } } };
     const std::array keepers { std::pair { a, 0 }, std::pair { b, 0 }, std::pair { c, 5 } };
     import_animal_houses(world, houses, keepers);
     CHECK(r.view<const AnimalHouse>().size() == 3);

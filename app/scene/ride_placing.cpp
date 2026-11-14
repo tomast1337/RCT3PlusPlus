@@ -611,7 +611,7 @@ namespace rct3::scene
                 const save::model::PlacedObject o = *ghost_object(p);
                 if (!rct3::park::object::on_owned_land(o, squares, scene.grid))
                     return rct3::park::ride::SiteProblem::NotOwned;
-                if (p.item->kind == rct3::park::BuildKind::Shelter && rct3::park::enclosure_under(scene.enclosures, { p.site->col, p.site->row }, p.site->span) < 0)
+                if (p.item->kind == rct3::park::BuildKind::Shelter && !rct3::park::enclosure_under(scene.enclosures, { p.site->col, p.site->row }, p.site->span))
                     return rct3::park::ride::SiteProblem::OffEnclosure;
                 if (!load_object_model(scene, p.models, assets, o))
                     return rct3::park::ride::SiteProblem::None;

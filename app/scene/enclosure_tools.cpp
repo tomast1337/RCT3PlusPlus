@@ -234,7 +234,7 @@ namespace rct3::scene
                 const glm::vec4 colour = affordable(scene, m.cost) ? kMarkColour : kRefusedColour;
                 for (std::int32_t row = m.area[1]; row <= m.area[3]; ++row)
                     for (std::int32_t col = m.area[0]; col <= m.area[2]; ++col)
-                        if ((m.enclosures.at(col, row) >= 0) != (scene.enclosures.at(col, row) >= 0))
+                        if (m.enclosures.at(col, row).has_value() != scene.enclosures.at(col, row).has_value())
                             rct3::park::tile_marks(mesh, scene.grid, col, row, col, row, rct3::park::TilePart::Whole, colour);
             }
             else if (marks)
@@ -246,7 +246,7 @@ namespace rct3::scene
 
     void house_placed(park::ParkScene& scene, const ui::InterfaceAssets& assets, const save::model::PlacedObject& house, const rct3::park::BuildItem& item, const rct3::park::ride::RideSite& site)
     {
-        const std::int32_t enclosure = rct3::park::enclosure_under(scene.enclosures, { site.col, site.row }, site.span);
+        const std::optional<std::int32_t> enclosure = rct3::park::enclosure_under(scene.enclosures, { site.col, site.row }, site.span);
         // The hut goes on a tile beside the house in the same enclosure that nothing stands on, the side it
         // faces first.
         // shortcut: a tile is taken when an object's corner is on it; check the hut's footprint against solid

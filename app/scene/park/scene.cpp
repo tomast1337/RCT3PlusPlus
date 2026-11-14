@@ -1366,7 +1366,7 @@ namespace rct3::scene::park
                             const glm::ivec2 t = tile_of(p);
                             return scene.enclosures.at(t.x, t.y);
                         },
-                    .somewhere = [&](std::int32_t which, random::RandomState& dice) -> std::optional<glm::vec2> {
+                    .somewhere = [&](std::optional<std::int32_t> which, random::RandomState& dice) -> std::optional<glm::vec2> {
                         const auto tiles = static_cast<std::uint64_t>(rct3::park::enclosure_size(scene.enclosures, which));
                         if (tiles == 0)
                             return std::nullopt;

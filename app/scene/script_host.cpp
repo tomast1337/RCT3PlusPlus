@@ -610,7 +610,7 @@ namespace rct3::scene
             if (!g.contains(col, row))
                 return nullptr;
             const save::model::TerrainCell& c = g.at(col, row);
-            Json tile { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff }, { "owned", rct3::park::owned_outright(c) }, { "ownership", save::model::to_string(c.ownership()) }, { "enclosure", park_->enclosures.at(col, row) } };
+            Json tile { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff }, { "owned", rct3::park::owned_outright(c) }, { "ownership", save::model::to_string(c.ownership()) }, { "enclosure", park_->enclosures.at(col, row).value_or(-1) } };
             for (const save::model::WaterBody& b : park_->footpaths.water.bodies)
                 if (rct3::park::water::holds(b, { col, row }))
                     tile["water"] = b.level;
@@ -1184,7 +1184,7 @@ namespace rct3::scene
             for (const auto [e, animal, pose] : park.sim.registry.view<const simulation::Animal, const simulation::Pose>().each())
             {
                 const Json tile { { "col", g.tile_size_x > 0 ? (pose.position.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (pose.position.z - g.origin_z) / g.tile_size_z : 0 } };
-                out.push_back({ { "id", entt::to_integral(e) }, { "species", animal.species }, { "enclosure", animal.enclosure }, { "crated", animal.job == simulation::AnimalJob::Crated }, { "escaped", animal.escaped }, { "health", animal.health.value }, { "at", tile } });
+                out.push_back({ { "id", entt::to_integral(e) }, { "species", animal.species }, { "enclosure", animal.enclosure.value_or(-1) }, { "crated", animal.job == simulation::AnimalJob::Crated }, { "escaped", animal.escaped }, { "health", animal.health.value }, { "at", tile } });
             }
             return out;
         });
@@ -1229,7 +1229,7 @@ namespace rct3::scene
                 return nullptr;
             std::int64_t tiles = 0;
             for (std::size_t i = 0; i < m->enclosures.tiles.size(); ++i)
-                tiles += (m->enclosures.tiles[i] >= 0) != (i < scene.enclosures.tiles.size() && scene.enclosures.tiles[i] >= 0) ? 1 : 0;
+                tiles += m->enclosures.tiles[i].has_value() != (i < scene.enclosures.tiles.size() && scene.enclosures.tiles[i].has_value()) ? 1 : 0;
             return Json { { "cost", m->cost.value }, { "tiles", tiles } };
         });
         engine_.define("structures.placing", [this](const Json&) -> Json {

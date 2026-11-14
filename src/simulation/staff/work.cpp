@@ -172,7 +172,7 @@ namespace rct3::simulation::staff
             for (const entt::entity ride : rides)
             {
                 auto& upkeep = r.get<Upkeep>(ride);
-                const bool due = broken ? upkeep.broken : upkeep.called || (upkeep.inspect_every.value >= 0 && upkeep.since_inspection.value >= upkeep.inspect_every.value);
+                const bool due = broken ? upkeep.broken : upkeep.called || (upkeep.inspect_every && upkeep.since_inspection >= *upkeep.inspect_every);
                 if (!free.empty() && due && upkeep.mechanic == entt::null)
                     send(ride, upkeep, broken ? kFixRidesTask : kInspectRidesTask);
             }
@@ -388,7 +388,7 @@ namespace rct3::simulation::staff
                     std::size_t breakable = 0;
                     std::size_t broken = 0;
                     for (const auto [a, upkeep] : r.view<const Upkeep>().each())
-                        if (r.all_of<CycleRide>(a) || upkeep.break_in.value >= 0)
+                        if (r.all_of<CycleRide>(a) || upkeep.break_in)
                         {
                             ++breakable;
                             broken += upkeep.broken ? 1 : 0;

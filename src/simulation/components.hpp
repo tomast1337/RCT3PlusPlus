@@ -497,7 +497,9 @@ namespace rct3::simulation
 
     /// The intervals the maintenance page lists, in its order, in seconds: every 10, 20, 30 and 45 minutes, every
     /// hour, every two hours, never.
-    inline constexpr std::array<float, 7> kInspectionSeconds { 600, 1200, 1800, 2700, 3600, 7200, -1 };
+    inline constexpr std::array<std::optional<units::Seconds>, 7> kInspectionSeconds {
+        units::Seconds { 600 }, units::Seconds { 1200 }, units::Seconds { 1800 }, units::Seconds { 2700 }, units::Seconds { 3600 }, units::Seconds { 7200 }, std::nullopt,
+    };
     /// The interval a new changing room is inspected at, of those: every 30 minutes, as the game's window shows.
     inline constexpr std::size_t kRoomInspection = 2;
 
@@ -509,20 +511,20 @@ namespace rct3::simulation
         units::Share reliability { 1 };
         bool broken = false;
         units::Seconds since_inspection { };
-        units::Seconds inspect_every { 600 }; ///< Negative never
-        entt::entity mechanic = entt::null;   ///< Sent to it, or at work on it
-        bool called = false;                  ///< The player asked for a mechanic, who inspects it as if due
-        std::uint32_t breakdowns = 0;         ///< Since the run began
-        Breakdown kind = Breakdown::None;     ///< The breakdown going on
-        Breakdown last = Breakdown::None;     ///< The latest one, going on or fixed
+        std::optional<units::Seconds> inspect_every { units::Seconds { 600 } }; ///< None never
+        entt::entity mechanic = entt::null;                                     ///< Sent to it, or at work on it
+        bool called = false;                                                    ///< The player asked for a mechanic, who inspects it as if due
+        std::uint32_t breakdowns = 0;                                           ///< Since the run began
+        Breakdown kind = Breakdown::None;                                       ///< The breakdown going on
+        Breakdown last = Breakdown::None;                                       ///< The latest one, going on or fixed
         /// Downtime: each window is sampled a set number of times, and counts the samples the ride was down
         /// in. Newest first; the oldest drops off as a new window starts.
         std::array<std::uint8_t, 8> downtime { };
         std::uint8_t samples = 0;        ///< Taken in the newest window
         units::Seconds sample_clock { }; ///< Since the last sample
         /// A stall's or cash machine's wear: what is left before it breaks down, counted down faster the fewer
-        /// guards the park has for its guests. Zero for one to be rolled afresh; negative for rides and pools.
-        units::Seconds break_in { -1 };
+        /// guards the park has for its guests. Zero for one to be rolled afresh; none for rides and pools.
+        std::optional<units::Seconds> break_in { };
 
         /// Share of the samples in all windows taken while down, 0..1.
         [[nodiscard]] float downtime_share() const;

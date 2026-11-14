@@ -894,7 +894,7 @@ namespace rct3::simulation
             const entt::entity e = r.create();
             const bool broken = (stall.base.flags & save::model::AttractionCommon::kBrokenDown) != 0;
             r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = stall.base.name, .entrance = entrance, .price = sale->price, .open = stall.base.state == save::model::AttractionState::Open && !broken, .saved = stall.base.id });
-            r.emplace<Upkeep>(e, Upkeep { .broken = broken, .inspect_every = { -1 }, .break_in = { 0 } });
+            r.emplace<Upkeep>(e, Upkeep { .broken = broken, .inspect_every = std::nullopt, .break_in = units::Seconds { 0 } });
             const PathTileSpot& tile = world.paths.nodes()[entrance].tile;
             Shop shop = sale->shop;
             shop.counter = { static_cast<float>(stall.base.spot->col - tile.col), static_cast<float>(stall.base.spot->row - tile.row) };
@@ -1145,7 +1145,7 @@ namespace rct3::simulation
             r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = ride.base.name, .entrance = entrance, .price = units::Money { std::max<std::int64_t>(ride.ticket_price.value, 0) }, .open = ride.base.state == save::model::AttractionState::Open && !broken, .saved = ride.base.id, .running_cost = { ride.base.running_cost } });
             r.emplace<Shop>(e, *product);
             if (breaks)
-                r.emplace<Upkeep>(e, Upkeep { .broken = broken, .inspect_every = { -1 }, .break_in = { 0 } });
+                r.emplace<Upkeep>(e, Upkeep { .broken = broken, .inspect_every = std::nullopt, .break_in = units::Seconds { 0 } });
             ++added;
         }
         return added;
@@ -1301,7 +1301,7 @@ namespace rct3::simulation
             .reliability = { std::clamp(ride.breakdown.reliability / 100, 0.0f, 1.0f) },
             .broken = broken,
             .since_inspection = ride.base.time_since_inspection.value_or(units::Seconds { }),
-            .inspect_every = interval >= 0 && std::cmp_less(interval, kIntervals.size()) ? units::Seconds { kIntervals[static_cast<std::size_t>(interval)] } : Upkeep { }.inspect_every,
+            .inspect_every = interval >= 0 && std::cmp_less(interval, kIntervals.size()) ? kIntervals[static_cast<std::size_t>(interval)] : Upkeep { }.inspect_every,
             .called = ride.base.mechanic_asked,
             .kind = broken ? static_cast<Breakdown>(std::to_underlying(ride.breakdown.current)) : Breakdown::None,
             .last = static_cast<Breakdown>(std::to_underlying(ride.breakdown.last)),

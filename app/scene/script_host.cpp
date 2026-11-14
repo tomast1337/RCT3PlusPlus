@@ -992,7 +992,7 @@ namespace rct3::scene
                 throw std::invalid_argument("stalls.breakDown takes a stall's place in stalls.list()");
             auto& r = park.sim.registry;
             for (auto [e, attraction, upkeep] : r.view<simulation::Attraction, simulation::Upkeep>().each())
-                if (attraction.saved == park.rides.stalls[a[0].get<std::size_t>()].base.id && upkeep.break_in.value >= 0 && !upkeep.broken)
+                if (attraction.saved == park.rides.stalls[a[0].get<std::size_t>()].base.id && upkeep.break_in && !upkeep.broken)
                 {
                     upkeep.broken = true;
                     attraction.open = false;

@@ -800,7 +800,7 @@ namespace rct3::scene::park
                 {
                     // Each room is inspected on its own, as each ride is.
                     if (const entt::entity e = room_entity(scene, *room); e != entt::null && change->value >= 0 && std::cmp_less(change->value, simulation::kInspectionSeconds.size()))
-                        scene.sim.registry.get_or_emplace<simulation::Upkeep>(e).inspect_every = { simulation::kInspectionSeconds[static_cast<std::size_t>(change->value)] };
+                        scene.sim.registry.get_or_emplace<simulation::Upkeep>(e).inspect_every = simulation::kInspectionSeconds[static_cast<std::size_t>(change->value)];
                 }
                 else if (change->id == ui::screens::info::kPoolLocateControl)
                 {
@@ -1740,7 +1740,7 @@ namespace rct3::scene::park
                     const auto index = static_cast<std::size_t>(at - scene.ride_entities.begin());
                     // Stalls and cash machines break with time and have no maintenance page: their messages open
                     // the window, and the window shows the state.
-                    const bool stall = upkeep.break_in.value >= 0;
+                    const bool stall = upkeep.break_in.has_value();
                     const auto tell = [&](std::string_view key) {
                         if (stall)
                             simulation::park::post(scene.park.messages, { .text_key = std::string(key), .subject = attraction.saved != 0 ? std::optional(attraction.saved) : std::nullopt, .panel = ui::screens::info::message_panel(ui::screens::info::AttractionTab::View) }); // Named once shown, as the window names it

@@ -36,7 +36,7 @@ TEST_CASE("a stall wears with time, breaks down and shuts, and a mechanic mends 
     park.path({ 0, 0 }, { 4, 0 });
     auto& r = park.world().registry;
     const auto stall = park.shop("Food", Product::Food, { 4, 0 }, 100);
-    r.emplace<Upkeep>(stall, Upkeep { .inspect_every = -1, .break_in = 10 });
+    r.emplace<Upkeep>(stall, Upkeep { .inspect_every = std::nullopt, .break_in = rct3::units::Seconds { 10 } });
     CHECK(park.run_until([&] { return r.get<Upkeep>(stall).broken; }, 11));
     CHECK_FALSE(r.get<Attraction>(stall).open);
     CHECK(r.get<Upkeep>(stall).breakdowns == 1);
@@ -47,7 +47,7 @@ TEST_CASE("a stall wears with time, breaks down and shuts, and a mechanic mends 
     CHECK(r.get<Staff>(mechanic).fixed == 1);
     CHECK(r.get<Staff>(mechanic).inspected == 0);
     park.run(1);
-    const float next = r.get<Upkeep>(stall).break_in.value;
+    const float next = r.get<Upkeep>(stall).break_in->value;
     CHECK(next >= kTuning.wear.stall_shortest.value - 1);
     CHECK(next <= kTuning.wear.stall_longest.value);
 }
@@ -58,7 +58,7 @@ TEST_CASE("a broken stall sells nothing")
     park.path({ 0, 0 }, { 4, 0 });
     auto& r = park.world().registry;
     const auto stall = park.shop("Food", Product::Food, { 4, 0 }, 100);
-    r.emplace<Upkeep>(stall, Upkeep { .inspect_every = -1, .break_in = 1 });
+    r.emplace<Upkeep>(stall, Upkeep { .inspect_every = std::nullopt, .break_in = rct3::units::Seconds { 1 } });
     park.run_seconds(2);
     for (int i = 0; i < 4; ++i)
         park.guest({ i, 0 }, { .hunger = 0.95f });
@@ -75,7 +75,7 @@ TEST_CASE("guards slow how fast stalls wear, the more for their training")
         park.path({ 0, 0 }, { 4, 0 });
         auto& r = park.world().registry;
         const auto stall = park.shop("Food", Product::Food, { 4, 0 }, 100);
-        r.emplace<Upkeep>(stall, Upkeep { .inspect_every = -1, .break_in = 100 });
+        r.emplace<Upkeep>(stall, Upkeep { .inspect_every = std::nullopt, .break_in = rct3::units::Seconds { 100 } });
         if (guards > 0)
             r.get<Staff>(park.staff(StaffRole::Guard, { 0, 0 })).training = 3;
         park.run_seconds(120);
@@ -93,7 +93,7 @@ TEST_CASE("with an inspector, a broken ride no mechanic can reach is told, again
         park.path({ 6, 0 }, { 8, 0 }); // Apart from the mechanic's paths
         auto& r = park.world().registry;
         const auto ride = park.flat_ride("Twister", { 8, 0 }, 0);
-        r.emplace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = -1 });
+        r.emplace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = std::nullopt });
         r.get<Attraction>(ride).open = false;
         park.staff(StaffRole::Mechanic, { 0, 0 });
         if (inspector)
@@ -114,7 +114,7 @@ TEST_CASE("a mechanic keeps to their patrol, and when every patrol leaves a brok
     park.path({ 0, 0 }, { 8, 0 });
     const auto ride = park.flat_ride("Twister", { 8, 0 }, 0, { .capacity = 2, .cycle_seconds = 10 });
     auto& r = park.world().registry;
-    r.emplace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = -1 });
+    r.emplace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = std::nullopt });
     const auto mechanic = park.staff(StaffRole::Mechanic, { 0, 0 });
     r.emplace<staff::Patrol>(mechanic, staff::Patrol { { { 0, 0 }, { 1, 0 }, { 2, 0 } } });
     r.get<Staff>(park.staff(StaffRole::Inspector, { 0, 0 })).tasks = 0;
@@ -139,7 +139,7 @@ TEST_CASE("an inspector tells of many attractions broken down at once")
         for (int i = 0; i < 3; ++i)
         {
             const auto ride = park.flat_ride("Twister", { 2 + 2 * i, 0 }, 0);
-            r.emplace<Upkeep>(ride, Upkeep { .broken = i < broken, .inspect_every = -1 });
+            r.emplace<Upkeep>(ride, Upkeep { .broken = i < broken, .inspect_every = std::nullopt });
             r.get<Attraction>(ride).open = i >= broken;
         }
         r.get<Staff>(park.staff(StaffRole::Inspector, { 0, 0 })).tasks = kFlatRidesTask;

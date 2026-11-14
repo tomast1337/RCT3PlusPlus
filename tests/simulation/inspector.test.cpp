@@ -227,7 +227,7 @@ TEST_CASE("an inspector tells of a broken ride with no mechanic near, and of an 
         park.path({ 0, 0 }, { 6, 0 });
         auto& r = park.world().registry;
         const auto ride = park.flat_ride("Broken", { 6, 0 }, 300);
-        r.emplace_or_replace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = -1 });
+        r.emplace_or_replace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = std::nullopt });
         r.get<Attraction>(ride).open = false;
         const auto stall = park.shop("Lost", Product::Food, { 3, 0 }, 100);
         r.get<Attraction>(stall).entrance = kNoNode;

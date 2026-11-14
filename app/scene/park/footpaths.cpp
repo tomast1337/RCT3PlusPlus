@@ -1468,7 +1468,9 @@ namespace rct3::scene::park
                 draw.filter = render::Filter::Linear;
                 draw.address = render::AddressMode::Repeat;
                 draw.light = steady ? light : ghost_light(light, scene.clock);
-                draw.light.cut_clear = batch.paint == rct3::park::GroundPaint::PathA || batch.paint == rct3::park::GroundPaint::PathB || batch.paint == rct3::park::GroundPaint::Queue;
+                // A picture drawn whole (an arrow) is a tile of clear pixels round its shape: depth there would hide the
+                // raised ghost's deck just under it.
+                draw.light.cut_clear = only || batch.paint == rct3::park::GroundPaint::PathA || batch.paint == rct3::park::GroundPaint::PathB || batch.paint == rct3::park::GroundPaint::Queue;
                 device.draw(draw);
             }
         }

@@ -16,6 +16,7 @@
 #include "park/ride/placement.hpp"
 #include "render/device.hpp"
 #include "save/model/world.hpp"
+#include "scene/tool_input.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/widget.hpp"
 
@@ -34,8 +35,8 @@ namespace rct3::scene
     /// Puts the fence tool away.
     void stop_enclosing(park::ParkScene& scene);
 
-    /// Marks the tiles under a drag at `at`, in a view of `size`, while `down`; works on them when it ends.
-    void update_enclosing(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over);
+    /// Marks the tiles under a drag at `at`, in a view of `size`, while `input.down`; works on them when it ends.
+    void update_enclosing(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, ToolInput input);
 
     /// Puts up the keeper's hut beside animal house `house`, just placed at `site` from `item`, and hires its
     /// keeper, who starts at the hut.

@@ -60,8 +60,9 @@ namespace rct3::scene::track
 
     std::optional<Platforms> ride_platforms(TrackBuilding& b, const save::model::Ride& ride, const ui::InterfaceAssets& assets);
 
-    /// Where a station piece of `shape` stands, from which of its neighbours are stations and whether it has any.
-    rct3::park::ride::PlatformPlace platform_place(const rct3::park::track::PieceShape& shape, bool station_before, bool station_after, bool track_before, bool track_after);
+    /// Where a station piece of `shape` stands, from `neighbours`: which pieces beside it are stations and
+    /// whether it has any (their run and side are not read).
+    rct3::park::ride::PlatformPlace platform_place(const rct3::park::track::PieceShape& shape, const rct3::park::ride::PlatformPlace& neighbours);
 
     /// The catalogue's piece a track piece is, laid as it is.
     std::optional<rct3::park::track::LaidPiece> laid_piece(const rct3::park::track::PieceCatalogue& c, const save::model::TrackPiece& piece);

@@ -31,9 +31,16 @@ namespace rct3::scene::park
     /// not walking in the park, or on a ride.
     bool pick_up_person(ParkScene& scene, std::size_t shown);
 
+    /// What to do with the person held this frame.
+    enum class Hold
+    {
+        Carry,    ///< Keep them under the pointer
+        PutDown,  ///< Let them go where they hang, if they may be there
+        GiveBack, ///< Send them back where they came from
+    };
+
     /// Hangs the held person over what is under the pointer at `at` (interface units, on a view `size`
-    /// across), and lets them go there on `click` if they may be, or back where they came from on `cancel`.
-    /// Returns whether someone is held, so a click goes to nothing else.
-    bool hold_person(ParkScene& scene, ui::Point at, ui::Point size, bool click, bool cancel);
+    /// across), then does `hold` with them. Returns whether someone is held, so a click goes to nothing else.
+    bool hold_person(ParkScene& scene, ui::Point at, ui::Point size, Hold hold);
 
 } // namespace rct3::scene::park

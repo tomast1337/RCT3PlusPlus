@@ -75,11 +75,11 @@ namespace rct3::scene::park
             scene.park.speed.paused = false;
         }
 
-        /// How many rider seats flat ride `ride` has to look out from, or with `fixed` fixed cameras.
-        std::size_t flat_views(const ParkScene& scene, std::size_t ride, bool fixed)
+        /// How many rider seats or fixed cameras (`eye`) flat ride `ride` has to look out from.
+        std::size_t flat_views(const ParkScene& scene, std::size_t ride, FlatEye eye)
         {
             std::size_t count = 0;
-            while (flat_view(scene, ride, fixed, count))
+            while (flat_view(scene, ride, eye, count))
                 ++count;
             return count;
         }
@@ -89,18 +89,18 @@ namespace rct3::scene::park
         {
             std::vector<std::size_t> rides;
             for (std::size_t ride = 0; ride < scene.rides.rides.size(); ++ride)
-                if (!scene.rides.rides[ride].base.demolished && (flat_view(scene, ride, false, 0) || flat_view(scene, ride, true, 0)))
+                if (!scene.rides.rides[ride].base.demolished && (flat_view(scene, ride, FlatEye::Seat, 0) || flat_view(scene, ride, FlatEye::Fixed, 0)))
                     rides.push_back(ride);
             return rides;
         }
 
-        /// Looks out from rider seat `at` of flat ride `ride`, or with `fixed` from its fixed camera `at`, as
-        /// ride_along does from a car. The type button changes between seats and fixed cameras, the train
-        /// buttons go from flat ride to flat ride.
-        void ride_flat(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, bool fixed, std::size_t at)
+        /// Looks out from rider seat or fixed camera (`eye`) `at` of flat ride `ride`, as ride_along does from a
+        /// car. The type button changes between seats and fixed cameras, the train buttons go from flat ride to
+        /// flat ride.
+        void ride_flat(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride, FlatEye eye, std::size_t at)
         {
             start_riding(scene, assets);
-            if (scene.riding_flat != std::pair { ride, at } || scene.riding_fixed != fixed)
+            if (scene.riding_flat != std::pair { ride, at } || scene.flat_eye != eye)
             {
                 scene.ride_turn = { };
                 scene.ride_pull = 0;
@@ -108,15 +108,16 @@ namespace rct3::scene::park
             scene.riding.reset();
             scene.riding_person.reset();
             scene.riding_flat = { ride, at };
-            scene.riding_fixed = fixed;
+            scene.flat_eye = eye;
             const ui::StringTable& strings = *assets.strings;
             constexpr std::array<std::string_view, 2> kNames { "RidecamGUI_TypePeep", "RidecamGUI_TypeStatic" };
             std::u16string info = ui::screens::info::attraction_name(scene.rides.rides[ride].base, strings);
-            info += u"  " + std::u16string(strings.get(kNames[fixed])) + u" " + strings::to_utf16(std::format("{}", at + 1));
-            const bool other = flat_views(scene, ride, !fixed) > 0;
-            const std::optional<std::size_t> next = other ? std::optional<std::size_t>(fixed ? ui::screens::park_view::kFlatSeatType : ui::screens::park_view::kFlatFixedType) : std::nullopt;
+            const FlatEye other_eye = eye == FlatEye::Fixed ? FlatEye::Seat : FlatEye::Fixed;
+            info += u"  " + std::u16string(strings.get(kNames[std::to_underlying(eye)])) + u" " + strings::to_utf16(std::format("{}", at + 1));
+            const bool other = flat_views(scene, ride, other_eye) > 0;
+            const std::optional<std::size_t> next = other ? std::optional<std::size_t>(eye == FlatEye::Fixed ? ui::screens::park_view::kFlatSeatType : ui::screens::park_view::kFlatFixedType) : std::nullopt;
             if (auto panel = scene.desktop->root().find_as<ui::screens::park_view::RideCameraPanel>(kRideCameraName))
-                panel->show(std::move(info), { .cameras = flat_views(scene, ride, fixed) > 1, .trains = flat_rides(scene).size() > 1 }, strings.get("RidecamGUI_Ride"), next, other ? strings.get(kNames[!fixed]) : std::u16string_view { });
+                panel->show(std::move(info), { .cameras = flat_views(scene, ride, eye) > 1, .trains = flat_rides(scene).size() > 1 }, strings.get("RidecamGUI_Ride"), next, other ? strings.get(kNames[std::to_underlying(other_eye)]) : std::u16string_view { });
         }
 
         /// Rides along in `car`, from its camera of kind `eye`.
@@ -186,9 +187,9 @@ namespace rct3::scene::park
 
     void ride_cam(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride)
     {
-        if (flat_view(scene, ride, false, 0) || flat_view(scene, ride, true, 0))
+        if (flat_view(scene, ride, FlatEye::Seat, 0) || flat_view(scene, ride, FlatEye::Fixed, 0))
         {
-            ride_flat(scene, assets, ride, !flat_view(scene, ride, false, 0), 0);
+            ride_flat(scene, assets, ride, flat_view(scene, ride, FlatEye::Seat, 0) ? FlatEye::Seat : FlatEye::Fixed, 0);
             return;
         }
         const entt::entity e = ride < scene.ride_entities.size() ? scene.ride_entities[ride] : entt::null;
@@ -226,17 +227,18 @@ namespace rct3::scene::park
         if (scene.riding_flat)
         {
             const auto [ride, view] = *scene.riding_flat;
-            const bool fixed = scene.riding_fixed;
-            const std::size_t views = flat_views(scene, ride, fixed);
+            const FlatEye eye = scene.flat_eye;
+            const FlatEye other_eye = eye == FlatEye::Fixed ? FlatEye::Seat : FlatEye::Fixed;
+            const std::size_t views = flat_views(scene, ride, eye);
             const std::vector<std::size_t> rides = flat_rides(scene);
             if ((action == PreviousCamera || action == NextCamera) && views > 0)
-                ride_flat(scene, assets, ride, fixed, step(view, views));
-            else if (action == ChangeType && flat_views(scene, ride, !fixed) > 0)
-                ride_flat(scene, assets, ride, !fixed, 0);
+                ride_flat(scene, assets, ride, eye, step(view, views));
+            else if (action == ChangeType && flat_views(scene, ride, other_eye) > 0)
+                ride_flat(scene, assets, ride, other_eye, 0);
             else if (const auto at = std::ranges::find(rides, ride); (action == PreviousTrain || action == NextTrain) && at != rides.end())
             {
                 const std::size_t to = rides[step(static_cast<std::size_t>(at - rides.begin()), rides.size())];
-                ride_flat(scene, assets, to, !flat_view(scene, to, false, 0), 0);
+                ride_flat(scene, assets, to, flat_view(scene, to, FlatEye::Seat, 0) ? FlatEye::Seat : FlatEye::Fixed, 0);
             }
             return;
         }

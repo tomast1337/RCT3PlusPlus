@@ -557,7 +557,7 @@ namespace rct3::scene
         panel->show(choices(offer.extras), choices(offer.rooms), choices(offer.stairs), page);
     }
 
-    void update_pooling(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands)
+    void update_pooling(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands)
     {
         follow_path_controls(device, scene, assets);
         follow_panel(scene);
@@ -566,7 +566,7 @@ namespace rct3::scene
         swap_pool_work(scene);
         // The paths page's trails start from pool slides' platforms too.
         const std::vector<rct3::park::pools::SlidePlatform> decks = t.item && laying_paths(*t.item) ? slide_platforms(scene) : std::vector<rct3::park::pools::SlidePlatform> { };
-        auto spot = t.item && !over ? pointed_spot(scene, at, size, decks) : std::nullopt;
+        auto spot = t.item && !input.over_interface ? pointed_spot(scene, at, size, decks) : std::nullopt;
         // On a slide's platform, a path starts beside it at its deck, off the side nearest the pointer that a
         // trail may start from, as the pinned controls do.
         std::optional<std::pair<save::model::Tile, std::int32_t>> deck_start;
@@ -586,12 +586,12 @@ namespace rct3::scene
         // pointer, as it lifts scenery; the drag then lays the squares at that height. Let go of before a drag, the
         // surface goes back.
         const bool squares = t.item && t.item->kind == rct3::park::BuildKind::PoolSquare;
-        if (!shift && !t.corner)
+        if (!input.shift && !t.corner)
         {
             t.lift.reset();
             t.lifted = deck_start ? std::optional(deck_start->second) : std::nullopt;
         }
-        else if (shift && squares && !t.corner && size.x > 0 && size.y > 0)
+        else if (input.shift && squares && !t.corner && size.x > 0 && size.y > 0)
         {
             if (!t.lift && spot)
             {
@@ -617,7 +617,7 @@ namespace rct3::scene
                 t.side = t.side.left();
         }
         if (t.item && (t.item->kind == rct3::park::BuildKind::PoolExtra || t.item->kind == rct3::park::BuildKind::PoolRoom))
-            return update_extra(device, scene, assets, spot, down);
+            return update_extra(device, scene, assets, spot, input.down);
         // The disc shows the piece the tool lays: the floor of a water square, the paving, or the extra laid as
         // a square; nothing while taking squares up.
         if (t.item)
@@ -648,12 +648,12 @@ namespace rct3::scene
                 hovered.trail.push_back({ .spot = *tile, .laid = 0, .height = *hovered.start_height });
                 hovered.on_slope = square && (square->kind == rct3::park::pools::PoolKind::PathSlope || square->kind == rct3::park::pools::PoolKind::PathStairs);
             }
-            if (down && !t.corner && side)
+            if (input.down && !t.corner && side)
             {
                 t.trail = hovered;
                 t.trail_ground.assign(1, std::nullopt);
             }
-            if (down)
+            if (input.down)
                 t.corner = tile;
             else
                 t.corner.reset();
@@ -707,7 +707,7 @@ namespace rct3::scene
         }
         if (std::exchange(t.redraw, false))
             pools_changed(device, scene, assets);
-        const bool dragging = t.item && down && (t.corner || tile);
+        const bool dragging = t.item && input.down && (t.corner || tile);
         // A spa pool, a high diving board or a spiral staircase goes on the square pressed; dragging up or down
         // raises or lowers the board or the staircase's top.
         const bool climbs = t.item && (t.item->symbol == rct3::park::kPoolHighDive || t.item->symbol == rct3::park::kPoolStairs);

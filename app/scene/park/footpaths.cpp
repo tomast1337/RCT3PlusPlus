@@ -836,10 +836,10 @@ namespace rct3::scene::park
 
     } // namespace
 
-    void wall_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const rct3::park::EdgeWall& wall, bool standing)
+    void wall_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const rct3::park::EdgeWall& wall, WallChange change)
     {
         scene.footpaths.walls = rct3::park::edge_walls(scene.objects, scene.models, scene.grid);
-        simulation::set_wall(scene.sim, wall, standing);
+        simulation::set_wall(scene.sim, wall, change == WallChange::PutUp);
         refresh_around(scene, assets, wall.tile);
         objects_changed(scene);
         rebuild_ground(device, scene, assets, rct3::park::TileRect { wall.tile.col, wall.tile.row, wall.tile.col + 1, wall.tile.row + 1 });
@@ -1146,15 +1146,15 @@ namespace rct3::scene::park
         }
     } // namespace
 
-    void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, bool down, bool over, bool cancel, bool shift, bool control)
+    void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, ToolInput input)
     {
         ParkFootpaths& f = scene.footpaths;
         // A press on an arrow picks the slope by moving up or down, and lays the piece when let go.
         if (f.slope_press)
         {
-            if (cancel)
+            if (input.cancel)
                 f.builder.slope = f.slope_before;
-            else if (!down)
+            else if (!input.down)
                 f.lay_next = f.took_click = true;
             else
             {
@@ -1173,13 +1173,13 @@ namespace rct3::scene::park
         // With the remove tab on, a press takes away the path pointed at and every path passed over until let go.
         if (f.removing)
         {
-            if (cancel)
+            if (input.cancel)
             {
                 if (!std::exchange(f.remove_marked, { }).empty())
                     f.dirty = true;
                 return;
             }
-            const auto ray = over ? std::nullopt : controls_ray(scene, at, size);
+            const auto ray = input.over_interface ? std::nullopt : controls_ray(scene, at, size);
             const auto under = ray ? rct3::park::path::path_under(*ray, f.paths, scene.grid, ground_faded(scene)) : std::nullopt;
             const auto id = under ? std::optional(f.paths[under->path].id) : std::nullopt;
             if (id != f.remove_hover)
@@ -1187,21 +1187,21 @@ namespace rct3::scene::park
                 f.remove_hover = id;
                 f.dirty = true;
             }
-            if (down && id && !std::ranges::contains(f.remove_marked, *id))
+            if (input.down && id && !std::ranges::contains(f.remove_marked, *id))
             {
                 f.remove_marked.push_back(*id);
                 f.dirty = true;
             }
-            else if (!down && !f.remove_marked.empty())
+            else if (!input.down && !f.remove_marked.empty())
                 f.remove_now = true;
             return;
         }
         // Shift raises or sinks the trail's first piece with the pointer; a press lays it, as on the arrow.
-        if (!shift)
+        if (!input.shift)
             f.lift.reset();
-        else if (f.brush.empty() && !cancel)
+        else if (f.brush.empty() && !input.cancel)
         {
-            const auto ray = over ? std::nullopt : controls_ray(scene, at, size);
+            const auto ray = input.over_interface ? std::nullopt : controls_ray(scene, at, size);
             if (!f.lift && ray)
             {
                 const auto tile = controls_tile(scene, at, size);
@@ -1211,7 +1211,7 @@ namespace rct3::scene::park
                     // A trail going on is picked up at its next piece, wherever the pointer is: after a lifted
                     // piece the pointer is far above the ground it points at. Without one a trail begins.
                     if (!f.builder.start)
-                        begin_trail(scene, *tile, control);
+                        begin_trail(scene, *tile, input.control);
                     else if (const auto next = rct3::park::next_piece(f.builder, scene.grid))
                     {
                         rct3::park::start_at(f.builder, next->spot);
@@ -1246,7 +1246,7 @@ namespace rct3::scene::park
             }
             if (f.lift)
             {
-                if (down)
+                if (input.down)
                 {
                     f.slope_press = at.y;
                     f.slope_before = f.builder.slope;
@@ -1257,10 +1257,10 @@ namespace rct3::scene::park
         // With routing on, a click away from the arrow lays the route to where it was.
         if (f.routing && f.builder.start && f.brush.empty())
         {
-            auto tile = over ? std::nullopt : controls_tile(scene, at, size);
+            auto tile = input.over_interface ? std::nullopt : controls_tile(scene, at, size);
             // A path off the ground pointed at is the goal itself, at its height.
             std::optional<std::int32_t> height;
-            if (const auto ray = over ? std::nullopt : controls_ray(scene, at, size))
+            if (const auto ray = input.over_interface ? std::nullopt : controls_ray(scene, at, size))
             {
                 if (const auto under = rct3::park::path::path_under(*ray, f.paths, scene.grid, ground_faded(scene)))
                 {
@@ -1271,22 +1271,22 @@ namespace rct3::scene::park
                 }
             }
             const bool on_arrow = tile && tile == rct3::park::next_spot(f.builder);
-            if (cancel)
+            if (input.cancel)
             {
                 f.route_press = false;
                 return;
             }
-            if (!down && std::exchange(f.route_press, false))
+            if (!input.down && std::exchange(f.route_press, false))
             {
                 f.lay_route = f.took_click = true;
                 return;
             }
-            if (down && !on_arrow)
+            if (input.down && !on_arrow)
             {
                 f.route_press = f.route_press || tile.has_value();
                 return;
             }
-            if (!down)
+            if (!input.down)
             {
                 const auto goal = on_arrow ? std::nullopt : tile;
                 if (goal != f.route_goal || height != f.route_goal_height)
@@ -1298,7 +1298,7 @@ namespace rct3::scene::park
                 return;
             }
         }
-        if (cancel)
+        if (input.cancel)
         {
             if (!f.brush.empty())
             {
@@ -1307,7 +1307,7 @@ namespace rct3::scene::park
             }
             return;
         }
-        if (!down)
+        if (!input.down)
         {
             if (!f.brush.empty())
             {
@@ -1320,7 +1320,7 @@ namespace rct3::scene::park
             std::optional<std::array<std::int32_t, 4>> door;
             // While a trail goes on its arrow holds still: nothing else pointed at shows.
             const bool held = f.builder.start.has_value();
-            if (const auto ray = over || held ? std::nullopt : controls_ray(scene, at, size))
+            if (const auto ray = input.over_interface || held ? std::nullopt : controls_ray(scene, at, size))
             {
                 const std::vector<save::model::PlacementSpot> doors = ride_doors(scene.rides);
                 if (const auto d = rct3::park::path::door_under(*ray, doors, scene.grid, ground_faded(scene)))
@@ -1347,7 +1347,7 @@ namespace rct3::scene::park
                 f.dirty = true;
             }
             // Bare ground pointed at, away from the trail's next piece, which has its own arrow.
-            const std::optional<save::model::Tile> tile = edge || door || over || held ? std::nullopt : controls_tile(scene, at, size);
+            const std::optional<save::model::Tile> tile = edge || door || input.over_interface || held ? std::nullopt : controls_tile(scene, at, size);
             if (tile != f.hover_tile)
             {
                 f.hover_tile = tile;

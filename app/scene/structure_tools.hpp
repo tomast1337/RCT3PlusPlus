@@ -18,6 +18,7 @@
 #include "save/model/structure.hpp"
 #include "scene/objects.hpp"
 #include "scene/save_browser.hpp"
+#include "scene/tool_input.hpp"
 #include "ui/key_map.hpp"
 #include "ui/screens/dialogs/files.hpp"
 #include "units/units.hpp"
@@ -82,9 +83,9 @@ namespace rct3::scene
     /// Starts placing the structure in `file`, ours or the original game's; false when it does not read.
     bool start_structure_placing(park::ParkScene& scene, const std::filesystem::path& file, const ui::InterfaceAssets& assets);
 
-    /// Each frame, after the area delete tool: the pointer at `at` (of a view `size`, `over` the interface or
-    /// not), the left button `down`, `shift` and the game's `commands`, and the panels.
-    void update_structure_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands);
+    /// Each frame, after the area delete tool: the pointer at `at` (of a view `size`), the buttons and keys held,
+    /// the game's `commands`, and the panels.
+    void update_structure_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands);
 
     /// A click on the park: builds the structure placed. False when no structure is being placed.
     bool structure_tools_click(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets);

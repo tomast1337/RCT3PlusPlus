@@ -422,7 +422,7 @@ namespace rct3::scene::park
             const bool tool_out = ride_placing(scene) || scene.building.ride || scene.structures.tool != StructureTools::Tool::None || scene.deleting.tool != DeleteTools::Tool::None || scene.pooling.item || scene.enclosing.item || land_tool(scene) || tool_panel_out(scene);
             bool taken = true;
             if (scene.holding)
-                hold_person(scene, { }, { }, false, true);
+                hold_person(scene, { }, { }, Hold::GiveBack);
             else if (scene.riding_along())
                 stop_riding(scene);
             else if (focus && window_of(&*focus) != nullptr)
@@ -532,14 +532,16 @@ namespace rct3::scene::park
             if (paint_patrol(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle && (scene.patrol_stroke || !over)))
                 show_info_page(scene, *info, assets, options);
             // A person picked up hangs over what the pointer is on; a right click puts them back.
-            hold_person(scene, pointer.position, { view.width(), view.height() }, false, input.right && !over);
+            hold_person(scene, pointer.position, { view.width(), view.height() }, input.right && !over ? Hold::GiveBack : Hold::Carry);
             // A stroke over the ground while the path panel shows its controls lays paths on every tile it spans.
             const bool going = !scene.footpaths.brush.empty() || scene.footpaths.slope_press.has_value();
-            footpath_drag(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.middle && (going || !over), over, input.right, input.shift, input.control);
-            update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, input.shift, input.commands);
-            update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, elapsed);
-            update_enclosing(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
-            update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, input.shift, typing(scene) ? std::span<const ui::PlayCommand> { } : std::span(input.commands));
+            footpath_drag(scene, pointer.position, { view.width(), view.height() }, { .down = pointer.down && !input.middle && (going || !over), .over_interface = over, .shift = input.shift, .control = input.control, .cancel = input.right });
+            // The tools below work with the left button alone.
+            const ToolInput tool_input { .down = pointer.down && !input.right && !input.middle, .over_interface = over, .shift = input.shift };
+            update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, tool_input, input.commands);
+            update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, tool_input, elapsed);
+            update_enclosing(device, scene, assets, pointer.position, { view.width(), view.height() }, tool_input);
+            update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, tool_input, typing(scene) ? std::span<const ui::PlayCommand> { } : std::span(input.commands));
             // The area delete tool marks the tiles a drag spans; its panel clears them or deletes what stands there.
             DeleteTools& deleting = scene.deleting;
             const bool area = deleting.tool == DeleteTools::Tool::Area;
@@ -579,7 +581,7 @@ namespace rct3::scene::park
                 set_view_lines(device, scene.delete_marks, mesh);
                 deleting.drawn = marks;
             }
-            update_structure_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, input.shift, input.commands);
+            update_structure_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, tool_input, input.commands);
             // What the delete menu's tool takes at `at`: an attraction is asked about first; a changing room, a prop
             // or a path goes at once, and the tool stays out.
             const auto delete_under = [&](ui::Point at, ui::Point size) {
@@ -622,7 +624,7 @@ namespace rct3::scene::park
                 // While the path panel shows its controls, a click on the ground picks where the path starts.
                 // While painting a patrol area, the left button paints and does not pick.
                 if (scene.holding)
-                    hold_person(scene, pointer.position, { screen.width(), screen.height() }, still && !over, false);
+                    hold_person(scene, pointer.position, { screen.width(), screen.height() }, still && !over ? Hold::PutDown : Hold::Carry);
                 else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab || scene.enclosing.item || scene.pooling.item)
                     ;
                 else if (!still && scene.deleting.tool == DeleteTools::Tool::None && scene.structures.tool == StructureTools::Tool::None && !ride_placing(scene) && !scene.building.ride)
@@ -961,7 +963,7 @@ namespace rct3::scene::park
         }
         profiling::section("TrackBuilding", [&] {
             const ui::Rect screen = desktop.root().rect();
-            track::update_track_building(device, scene, assets, options.choice(config::game::GameOption::Currency), info_units(assets, options).distance, pointer.position, { screen.width(), screen.height() }, over, input.shift, input.commands, elapsed);
+            track::update_track_building(device, scene, assets, options.choice(config::game::GameOption::Currency), info_units(assets, options).distance, pointer.position, { screen.width(), screen.height() }, { .over_interface = over, .shift = input.shift }, input.commands, elapsed);
         });
         // A slide built up to a pool, or taken away, opens or closes its railing there.
         if (!scene.pools.squares.empty() && pool_openings(scene) != scene.pool_openings)
@@ -2204,7 +2206,7 @@ namespace rct3::scene::park
         // to go to the park's entrance; whoever was held before goes back first.
         if (const auto hired = asks.staff.hire ? hire(scene, *asks.staff.hire) : std::nullopt)
         {
-            (void)hold_person(scene, { }, { }, false, true);
+            (void)hold_person(scene, { }, { }, Hold::GiveBack);
             if (pick_up_person(scene, *hired))
                 scene.holding->from = simulation::entrance_drop(scene.sim).value_or(scene.holding->from);
         }

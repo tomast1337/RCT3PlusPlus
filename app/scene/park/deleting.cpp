@@ -53,7 +53,7 @@ namespace rct3::scene::park
             std::erase_if(scene.bins, [&](const save::model::BinState& b) { return b.object_ref == id; });
             std::erase_if(scene.signs, [&](const save::model::SignState& s) { return s.object_ref == id; });
             if (wall)
-                wall_changed(device, scene, assets, *wall, false);
+                wall_changed(device, scene, assets, *wall, WallChange::TakenDown);
         }
 
     } // namespace

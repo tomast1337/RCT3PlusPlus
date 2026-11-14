@@ -361,7 +361,7 @@ namespace rct3::scene
         return scene.placing.item.has_value();
     }
 
-    void update_ride_placing(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands)
+    void update_ride_placing(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands)
     {
         RidePlacing& p = scene.placing;
         join_rides(device, scene, assets);
@@ -534,7 +534,7 @@ namespace rct3::scene
             std::optional<glm::vec3> hit;
             std::optional<float> top;
             std::optional<rct3::park::Ray> ray;
-            if (!over && size.x > 0 && size.y > 0)
+            if (!input.over_interface && size.x > 0 && size.y > 0)
             {
                 ray = rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
                 if (scene.pick_boxes_of != scene.objects.size())
@@ -581,7 +581,7 @@ namespace rct3::scene
                 show_ghost();
                 return;
             }
-            if (shift && p.site && p.lift)
+            if (input.shift && p.site && p.lift)
             {
                 if (ray)
                     follow_lift(*ray);
@@ -605,7 +605,7 @@ namespace rct3::scene
                 if (top)
                     p.site->height = std::max(p.site->height, static_cast<std::int32_t>(std::ceil(*top - 0.005f)));
                 p.quadrant = (inside.x >= 0.5f ? 1 : 0) + (inside.y >= 0.5f ? 2 : 0);
-                p.lift = shift ? std::optional(RidePlacing::Lift { *hit, p.site->height }) : std::nullopt;
+                p.lift = input.shift ? std::optional(RidePlacing::Lift { *hit, p.site->height }) : std::nullopt;
             }
             const auto problem = [&] {
                 const save::model::PlacedObject o = *ghost_object(p);
@@ -622,7 +622,7 @@ namespace rct3::scene
             p.problem = problem();
             // Raised with Shift into something, it climbs onto the top of what is there; with no room near, it
             // drops back to where Shift went down.
-            if (shift && p.lift && (p.problem == rct3::park::ride::SiteProblem::Blocked || p.problem == rct3::park::ride::SiteProblem::Path))
+            if (input.shift && p.lift && (p.problem == rct3::park::ride::SiteProblem::Blocked || p.problem == rct3::park::ride::SiteProblem::Path))
             {
                 const std::int32_t from = p.site->height;
                 for (std::int32_t step = 1; step <= kClimbReach && (p.problem == rct3::park::ride::SiteProblem::Blocked || p.problem == rct3::park::ride::SiteProblem::Path); ++step)
@@ -640,10 +640,10 @@ namespace rct3::scene
             show_ghost();
             return;
         }
-        if (p.step == RidePlacing::Step::Ride && shift && p.site && p.lift)
+        if (p.step == RidePlacing::Step::Ride && input.shift && p.site && p.lift)
         {
             // Raised, it stays on its tiles.
-            if (!over && size.x > 0 && size.y > 0)
+            if (!input.over_interface && size.x > 0 && size.y > 0)
                 follow_lift(rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y }));
             p.problem = rct3::park::ride::site_problem(*p.site, scene.grid, scene.footpaths.paths, p.solids);
             if (p.problem == rct3::park::ride::SiteProblem::None)
@@ -657,7 +657,7 @@ namespace rct3::scene
             show_ghost();
             return;
         }
-        const auto tile = over ? std::nullopt : ground_tile(scene, at, size);
+        const auto tile = input.over_interface ? std::nullopt : ground_tile(scene, at, size);
         if (!tile)
         {
             if (p.step == RidePlacing::Step::Ride)
@@ -679,7 +679,7 @@ namespace rct3::scene
             if (const auto surface = rct3::park::water::water_surface(scene.footpaths.water.bodies, *tile); p.item->water_only && surface)
                 p.site->height = std::max(p.site->height, *surface);
             p.lift.reset();
-            if (shift && size.x > 0 && size.y > 0)
+            if (input.shift && size.x > 0 && size.y > 0)
             {
                 const rct3::park::Ray ray = rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
                 if (const auto distance = rct3::park::object::ground_hit(ray, scene.grid))
@@ -798,7 +798,7 @@ namespace rct3::scene
             const auto category = model.category;
             const auto kind = category == std::to_underlying(rct3::park::ItemCategory::LitterBin) ? std::optional(simulation::PathItemKind::Bin) : category == std::to_underlying(rct3::park::ItemCategory::Bench) ? std::optional(simulation::PathItemKind::Bench) : category == std::to_underlying(rct3::park::ItemCategory::Sign) ? std::optional(simulation::PathItemKind::Sign) : simulation::sight_of(category, model.feature);
             if (const auto wall = rct3::park::edge_wall(scene.objects.back(), scene.models, scene.grid))
-                park::wall_changed(device, scene, assets, *wall, true);
+                park::wall_changed(device, scene, assets, *wall, park::WallChange::PutUp);
             // Bins and signs are kept with the park; benches are found again by their kind when it loads.
             if (const entt::entity item = kind ? simulation::add_path_item(scene.sim, scene.objects.back(), *kind) : entt::null; item != entt::null)
             {

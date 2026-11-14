@@ -81,6 +81,7 @@
 #include "park/land_buying.hpp"
 #include "park/tile_shaping.hpp"
 #include "render/device.hpp"
+#include "scene/tool_input.hpp"
 #include "ui/widget.hpp"
 #include "units/units.hpp"
 
@@ -182,8 +183,8 @@ namespace rct3::scene
     /// there was one.
     bool delete_waterfall(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size);
 
-    /// Each frame: follows the pointer at `at` (of a view `size`, not `over` the interface) while the left
-    /// button is `down`.
-    void update_land_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, units::Seconds elapsed);
+    /// Each frame: follows the pointer at `at` (of a view `size`, not over the interface) while the left
+    /// button is down.
+    void update_land_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, ToolInput input, units::Seconds elapsed);
 
 } // namespace rct3::scene

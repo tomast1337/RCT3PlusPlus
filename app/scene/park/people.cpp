@@ -234,7 +234,7 @@ namespace rct3::scene::park
         if (change.id == ui::screens::info::person_control(Train))
         {
             // Paid for at once, free in a park without money; none when the park cannot afford it.
-            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, simulation::staff::training_cost(care), simulation::park::LedgerLine::StaffTraining, false))
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, simulation::staff::training_cost(care), simulation::park::LedgerLine::StaffTraining, simulation::park::Charge::IfAffordable))
                 return false;
             simulation::staff::train(care);
             return show();

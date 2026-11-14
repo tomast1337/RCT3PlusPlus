@@ -184,11 +184,11 @@ namespace rct3::scene::track
         return p;
     }
 
-    rct3::park::ride::PlatformPlace platform_place(const rct3::park::track::PieceShape& shape, bool station_before, bool station_after, bool track_before, bool track_after)
+    rct3::park::ride::PlatformPlace platform_place(const rct3::park::track::PieceShape& shape, const rct3::park::ride::PlatformPlace& neighbours)
     {
         // A piece whose platform stands alone takes no part in a longer station.
         const bool alone = (shape.record.flags & rct3::park::track::kPiecePlatformAlone) != 0;
-        return { .station_before = !alone && station_before, .station_after = !alone && station_after, .track_before = track_before, .track_after = track_after, .run = shape.record.platform_run, .side = shape.record.side };
+        return { .station_before = !alone && neighbours.station_before, .station_after = !alone && neighbours.station_after, .track_before = neighbours.track_before, .track_after = neighbours.track_after, .run = shape.record.platform_run, .side = shape.record.side };
     }
 
     std::optional<rct3::park::track::LaidPiece> laid_piece(const rct3::park::track::PieceCatalogue& c, const save::model::TrackPiece& piece)
@@ -236,7 +236,7 @@ namespace rct3::scene::track
             const units::Money cost { shape->record.cost };
             add_running_cost(scene, ride, -cost);
             const units::Money back = rct3::park::demolish_refund(cost, (ride.base.flags & save::model::AttractionCommon::kNeverOpened) == 0);
-            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, false);
+            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, simulation::park::Charge::IfAffordable);
             park::float_money(scene, rct3::park::track::start_of(object, *shape, piece.reversed, scene.grid).position, back);
         }
 
@@ -565,7 +565,7 @@ namespace rct3::scene::track
             // track is built back from it.
             const std::optional<std::size_t> before = around ? std::optional(around->before) : starting ? std::nullopt : std::optional(b.backward ? 0 : ride.track->pieces.size() - 1);
             const std::optional<std::size_t> after = around ? std::optional(around->after) : std::nullopt;
-            const rct3::park::ride::PlatformPlace place = platform_place(shape, before && station(*before), after && station(*after), before.has_value(), after.has_value());
+            const rct3::park::ride::PlatformPlace place = platform_place(shape, { .station_before = before && station(*before), .station_after = after && station(*after), .track_before = before.has_value(), .track_after = after.has_value() });
             const save::model::TrackPiece laid { .tile_x = o.col, .tile_z = o.row, .height = o.base_height.value_or(0), .direction = static_cast<std::uint8_t>(o.rotation) };
             if (const auto name = rct3::park::ride::platform_symbol(ride.platform_type, laid, place, kit->doors, kit->names))
             {
@@ -649,7 +649,7 @@ namespace rct3::scene::track
         update_platforms(scene, *b.ride, assets);
     }
 
-    void build(park::ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, bool forced)
+    void build(park::ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, simulation::park::Charge charge)
     {
         const rct3::park::track::PieceCatalogue* c = catalogue(b);
         save::model::Ride& ride = scene.rides.rides.at(*b.ride);
@@ -701,7 +701,7 @@ namespace rct3::scene::track
         }
         const rct3::park::track::PieceShape& shape = c->pieces[b.picked->index];
         const units::Money cost { shape.record.cost };
-        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::RideConstruction, forced))
+        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::RideConstruction, charge))
             return;
         add_running_cost(scene, ride, cost);
         ++scene.built;

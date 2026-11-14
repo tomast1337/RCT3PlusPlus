@@ -62,6 +62,14 @@ namespace rct3::simulation
         Staff,
     };
 
+    /// What is over a path tile.
+    enum class Cover : std::uint8_t
+    {
+        Open,
+        Shade, ///< Trees, which keep the sun off but not the rain
+        Roof,  ///< Keeps the rain and the sun off
+    };
+
     struct PathTileSpot
     {
         int col = 0;
@@ -160,10 +168,10 @@ namespace rct3::simulation
         /// Whether `who` may step from `from` to `to`, a node beside it or across a square from it.
         [[nodiscard]] bool may_step(NodeId from, NodeId to, Walker who) const;
         /// Marks what is over a node's tile.
-        void cover(NodeId node, bool covered, bool shaded)
+        void cover(NodeId node, Cover cover)
         {
-            nodes_[node].covered = covered;
-            nodes_[node].shaded = shaded || covered;
+            nodes_[node].covered = cover == Cover::Roof;
+            nodes_[node].shaded = cover != Cover::Open;
         }
         /// The path tile whose column and row hold world point `at`, at the level nearest its height.
         [[nodiscard]] std::optional<NodeId> nearest(glm::vec3 at) const;

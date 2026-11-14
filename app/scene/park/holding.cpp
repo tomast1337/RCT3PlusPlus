@@ -34,7 +34,7 @@ namespace rct3::scene::park
         return true;
     }
 
-    bool hold_person(ParkScene& scene, ui::Point at, ui::Point size, bool click, bool cancel)
+    bool hold_person(ParkScene& scene, ui::Point at, ui::Point size, Hold hold)
     {
         if (!scene.holding)
             return false;
@@ -45,7 +45,7 @@ namespace rct3::scene::park
             scene.holding.reset();
             return false;
         }
-        if (cancel)
+        if (hold == Hold::GiveBack)
         {
             simulation::let_go(scene.sim, held.who, held.from);
             scene.holding.reset();
@@ -109,7 +109,7 @@ namespace rct3::scene::park
                 pose.position = pose.was = *spot + glm::vec3 { 0, r.get<simulation::Held>(held.who).height.value, 0 };
             }
         }
-        if (click && held.spot && held.allowed && simulation::let_go(scene.sim, held.who, *held.spot))
+        if (hold == Hold::PutDown && held.spot && held.allowed && simulation::let_go(scene.sim, held.who, *held.spot))
             scene.holding.reset();
         return true;
     }

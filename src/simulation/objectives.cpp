@@ -322,7 +322,7 @@ namespace rct3::simulation
         {
             case 1:
             case 2:
-                park::book(park, finance, kept, -(id == 1 ? p.large_cash : p.small_cash), park::LedgerLine::PrizeMoney, true);
+                park::book(park, finance, kept, -(id == 1 ? p.large_cash : p.small_cash), park::LedgerLine::PrizeMoney, park::Charge::Always);
                 break;
             case 4:
                 park.rating_bonus += p.rating_bonus.value;

@@ -49,7 +49,7 @@ namespace rct3::ui::screens::park_view
         buttons_[5]->enabled = false;
     }
 
-    void RideCameraPanel::show(std::u16string info, bool cameras, bool trains, std::u16string_view noun, std::optional<std::size_t> next_type, std::u16string_view next_name)
+    void RideCameraPanel::show(std::u16string info, RideCameraSteps steps, std::u16string_view noun, std::optional<std::size_t> next_type, std::u16string_view next_name)
     {
         // The text of `key` with `with` in place of its mark, as in "Change to # camera".
         const auto marked = [&](std::string_view key, std::u16string_view with) {
@@ -69,7 +69,7 @@ namespace rct3::ui::screens::park_view
         for (std::size_t step = 0; step < style_.steps.size(); ++step)
         {
             widgets::Button& b = *buttons_[step + 1];
-            b.enabled = step < 2 ? cameras : trains;
+            b.enabled = step < 2 ? steps.cameras : steps.trains;
             b.icon = b.enabled ? style_.steps[step] : style_.no_steps[step];
             if (step < 2)
                 b.tooltip = strings_.get(b.enabled ? kHelp[step + 1] : "RidecamGUI_DisabledCamera");

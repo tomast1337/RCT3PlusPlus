@@ -98,9 +98,16 @@ namespace rct3::park::path
     /// `corners` filled. Corners whose two sides are not both joined are ignored.
     [[nodiscard]] Deck flat_deck(std::uint8_t sides, std::uint8_t corners) noexcept;
 
+    /// Which sides of a sloped path tile, as seen heading along it, have a gentle slope beside them.
+    struct SlopesBeside
+    {
+        bool left = false;
+        bool right = false;
+    };
+
     /// The piece of a tile of stored slope `slope` (1 or 2 steep, 4 or 5 gentle) entered heading `heading`,
-    /// with a gentle slope beside it on the side left of the heading (`before`) or right of it (`after`).
-    [[nodiscard]] Deck slope_deck(std::uint8_t slope, Side heading, bool before, bool after) noexcept;
+    /// with gentle slopes `beside` it.
+    [[nodiscard]] Deck slope_deck(std::uint8_t slope, Side heading, SlopesBeside beside) noexcept;
 
     /// A heading as a park stores a path's direction: 0 towards lower columns, 1 higher columns, 2 lower rows,
     /// 3 higher rows.

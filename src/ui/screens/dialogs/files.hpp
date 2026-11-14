@@ -188,9 +188,15 @@ namespace rct3::ui::screens::dialogs
             Replace,
             Message,
         };
+        /// The buttons a question box offers.
+        enum class Answers : std::uint8_t
+        {
+            Ok,
+            YesNo,
+        };
 
         [[nodiscard]] std::u16string text(std::string_view key) const;
-        void ask(Asking asking, std::u16string text, bool message);
+        void ask(Asking asking, std::u16string text, Answers answers);
         void open_chosen();
         void answer(std::size_t answer);
         void show_status();

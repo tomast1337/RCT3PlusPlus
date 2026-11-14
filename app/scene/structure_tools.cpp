@@ -150,14 +150,14 @@ namespace rct3::scene
         return true;
     }
 
-    void update_structure_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands)
+    void update_structure_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands)
     {
         StructureTools& t = scene.structures;
         if (t.tool == StructureTools::Tool::Grab)
         {
             // A drag marks the tiles it spans, or unmarks them when it starts on a marked one.
-            const auto tile = !over ? ground_tile(scene, at, size) : std::nullopt;
-            if (down && (t.corner || tile))
+            const auto tile = !input.over_interface ? ground_tile(scene, at, size) : std::nullopt;
+            if (input.down && (t.corner || tile))
             {
                 if (!t.corner)
                 {
@@ -225,8 +225,8 @@ namespace rct3::scene
             t.turn = t.turn.turned(1);
 
         // Raised with Shift it stays on its tiles; otherwise it follows the ground under the pointer.
-        const std::optional<rct3::park::Ray> ray = !over && size.x > 0 && size.y > 0 ? std::optional(rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y })) : std::nullopt;
-        if (shift && t.at && t.lift_at)
+        const std::optional<rct3::park::Ray> ray = !input.over_interface && size.x > 0 && size.y > 0 ? std::optional(rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y })) : std::nullopt;
+        if (input.shift && t.at && t.lift_at)
         {
             if (ray)
                 if (const auto h = lifted_height(*ray, *t.lift_at, t.lift_height))
@@ -242,7 +242,7 @@ namespace rct3::scene
             {
                 t.ground = rct3::park::ride::ride_site(*tile, { 1, 1 }, { }, scene.grid).height;
                 t.height = t.ground;
-                if (shift)
+                if (input.shift)
                 {
                     t.lift_at = ray->origin + ray->direction * *distance;
                     t.lift_height = t.height;
@@ -287,7 +287,7 @@ namespace rct3::scene
             return true; // Its drags mark; a click picks nothing
         if (t.tool != StructureTools::Tool::Place || !t.structure)
             return false;
-        if (t.placed.empty() || t.problem != rct3::park::StructureProblem::None || !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, t.cost, simulation::park::LedgerLine::Landscaping, false))
+        if (t.placed.empty() || t.problem != rct3::park::StructureProblem::None || !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, t.cost, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
             return true;
         wait_for_build(scene);
         ++scene.built;
@@ -305,7 +305,7 @@ namespace rct3::scene
         for (std::size_t i = first; i < scene.objects.size(); ++i)
         {
             if (const auto wall = rct3::park::edge_wall(scene.objects[i], scene.models, scene.grid))
-                park::wall_changed(device, scene, assets, *wall, true);
+                park::wall_changed(device, scene, assets, *wall, park::WallChange::PutUp);
             park::animate_scenery(device, scene, i);
         }
         const save::model::TerrainGrid& g = scene.grid;

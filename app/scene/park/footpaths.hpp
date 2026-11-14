@@ -48,6 +48,7 @@
 #include "render/device.hpp"
 #include "save/model/world.hpp"
 #include "scene/objects.hpp"
+#include "scene/tool_input.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/screens/build/paths.hpp"
 #include "units/units.hpp"
@@ -161,9 +162,16 @@ namespace rct3::scene::park
     /// The object drawing raised path `path` of `style`, with the piece the paths around it call for.
     save::model::PlacedObject deck_object(const rct3::park::path::PathStyle& style, const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::uint64_t id);
 
-    /// Stands the fence or wall `wall` between the paths either side of it, or takes it away when not
-    /// `standing`, once the scene's objects show it: the paths' looks and the walks guests take change.
-    void wall_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const rct3::park::EdgeWall& wall, bool standing);
+    /// What happened to a fence or wall on a tile's edge.
+    enum class WallChange : std::uint8_t
+    {
+        PutUp,
+        TakenDown,
+    };
+
+    /// Stands the fence or wall `wall` between the paths either side of it, or takes it away, as `change` says,
+    /// once the scene's objects show it: the paths' looks and the walks guests take change.
+    void wall_changed(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const rct3::park::EdgeWall& wall, WallChange change);
 
     /// Acts on what the player did in the panel since the last frame, and shows the result.
     void update_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);
@@ -195,10 +203,10 @@ namespace rct3::scene::park
     /// Lets go of the trail going on, so its arrow stops showing. Whether there was one.
     bool drop_footpath_trail(ParkScene& scene);
 
-    /// Follows the pointer over the park at `at` (`over` the interface or not): strokes while the left button is
-    /// `down`, slope drags on an arrow, and the path edge or door pointed at; `cancel` calls a stroke or drag off.
-    /// `shift` and `control`: those keys are held, which raise and sink the trail's first piece.
-    void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, bool down, bool over, bool cancel, bool shift, bool control);
+    /// Follows the pointer over the park at `at` (over the interface or not): strokes while the left button is
+    /// down, slope drags on an arrow, and the path edge or door pointed at; `input.cancel` calls a stroke or drag
+    /// off. Shift and Control held raise and sink the trail's first piece.
+    void footpath_drag(ParkScene& scene, ui::Point at, ui::Point size, ToolInput input);
 
     /// Draws the next piece over the ground.
     /// Whether the ground is drawn see-through, switched in the view menu or while building into a tunnel. Then

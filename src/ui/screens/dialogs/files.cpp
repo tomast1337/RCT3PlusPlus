@@ -383,19 +383,19 @@ namespace rct3::ui::screens::dialogs
         if (renaming_ && *renaming_ < rows_.size())
             rows_[*renaming_]->box->text = shown_file_name(files_[*renaming_]);
         renaming_.reset();
-        ask(Asking::Message, text(kRenameFailed), true);
+        ask(Asking::Message, text(kRenameFailed), Answers::Ok);
     }
 
-    void FileDialog::ask(Asking asking, std::u16string message, bool only_ok)
+    void FileDialog::ask(Asking asking, std::u16string message, Answers answers)
     {
         if (question_ || !parent())
             return;
-        std::vector<widgets::QuestionAnswer> answers;
-        if (only_ok)
-            answers.push_back({ text(kOk), style_.question.confirm_icon });
+        std::vector<widgets::QuestionAnswer> buttons;
+        if (answers == Answers::Ok)
+            buttons.push_back({ text(kOk), style_.question.confirm_icon });
         else
-            answers = { { text(kYes), style_.question.confirm_icon }, { text(kNo), style_.question.cancel_icon } };
-        question_ = &parent()->add<widgets::QuestionBox>(std::string(kQuestionName), style_.question, std::move(message), answers);
+            buttons = { { text(kYes), style_.question.confirm_icon }, { text(kNo), style_.question.cancel_icon } };
+        question_ = &parent()->add<widgets::QuestionBox>(std::string(kQuestionName), style_.question, std::move(message), buttons);
         asking_ = asking;
     }
 
@@ -413,11 +413,11 @@ namespace rct3::ui::screens::dialogs
             return;
         const std::u16string& name = name_box_->text;
         if (name.empty())
-            return ask(Asking::Message, text(kNeedName), true);
+            return ask(Asking::Message, text(kNeedName), Answers::Ok);
         if (name.front() == u'.')
-            return ask(Asking::Message, text(kNoDot), true);
+            return ask(Asking::Message, text(kNoDot), Answers::Ok);
         if (name.front() == u' ')
-            return ask(Asking::Message, text(kNoSpace), true);
+            return ask(Asking::Message, text(kNoSpace), Answers::Ok);
         const std::u16string file = with_save_extension(name);
         // Kept files are elsewhere: saving writes beside the others and never over them.
         for (std::size_t i = 0; i < files_.size(); ++i)
@@ -425,7 +425,7 @@ namespace rct3::ui::screens::dialogs
             if (!kept(i) && same_name(files_[i], file))
             {
                 pending_ = files_[i];
-                return ask(Asking::Replace, replaced(text(kReplace), u"%FILENAME%", shown_file_name(files_[i])), false);
+                return ask(Asking::Replace, replaced(text(kReplace), u"%FILENAME%", shown_file_name(files_[i])), Answers::YesNo);
             }
         }
         open_out_ = file;
@@ -505,7 +505,7 @@ namespace rct3::ui::screens::dialogs
             pending_ = files_[i];
             // The file keeps its kind: renaming never makes a game's park look like one of ours.
             pending_new_ = box.text + files_[i].substr(files_[i].size() - extension_size(files_[i]));
-            ask(Asking::Rename, replaced(replaced(text(kRenameFile), u"%OLDNAME%", old_name), u"%NEWNAME%", box.text), false);
+            ask(Asking::Rename, replaced(replaced(text(kRenameFile), u"%OLDNAME%", old_name), u"%NEWNAME%", box.text), Answers::YesNo);
         }
 
         if (open_->take_click())
@@ -516,7 +516,7 @@ namespace rct3::ui::screens::dialogs
         if (delete_->take_click() && selected_ && !kept(*selected_))
         {
             pending_ = files_[*selected_];
-            ask(Asking::Delete, replaced(text(kDeleteFile), u"%FILENAME%", shown_file_name(pending_)), false);
+            ask(Asking::Delete, replaced(text(kDeleteFile), u"%FILENAME%", shown_file_name(pending_)), Answers::YesNo);
         }
 
         hover_->text.clear();

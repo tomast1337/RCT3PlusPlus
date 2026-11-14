@@ -96,7 +96,7 @@ TEST_CASE("in the rain a guest with no umbrella walks to cover and stays there; 
     park.path({ 0, 0 }, { 6, 0 });
     auto& paths = park.world().paths;
     const NodeId shelter = *paths.find({ 6, 0, 0 });
-    paths.cover(shelter, true, false);
+    paths.cover(shelter, Cover::Roof);
     auto& r = park.world().registry;
     r.ctx().emplace<Weather>(Weather { .rain = true });
     const auto bare = park.guest({ 0, 0 });
@@ -118,7 +118,7 @@ TEST_CASE("guests queueing under cover stay in an open-air ride's queue in the r
     const auto ride = park.flat_ride("Spinner", { 6, 0 }, 0, { .capacity = 1, .cycle_seconds = 600, .line = { { 6, 0 }, { 5, 0 }, { 4, 0 }, { 3, 0 } } });
     auto& paths = park.world().paths;
     for (int col = 3; col <= 6; ++col)
-        paths.cover(*paths.find({ col, 0, 0 }), true, false);
+        paths.cover(*paths.find({ col, 0, 0 }), Cover::Roof);
     auto& r = park.world().registry;
     for (int i = 0; i < 4; ++i)
         r.get<Errand>(park.guest({ 0, 0 })) = { ErrandKind::Heading, ride, 0 };
@@ -171,7 +171,7 @@ TEST_CASE("the sun heats guests out in it, not those in the shade, and a cold tr
     Sandbox park;
     park.path({ 0, 0 }, { 0, 0 }).path({ 4, 0 }, { 4, 0 });
     auto& paths = park.world().paths;
-    paths.cover(*paths.find({ 4, 0, 0 }), false, true);
+    paths.cover(*paths.find({ 4, 0, 0 }), Cover::Shade);
     auto& r = park.world().registry;
     r.ctx().emplace<Weather>(Weather { .sunny = true, .temperature = rct3::units::Degrees { 32 } });
     const auto out = park.guest({ 0, 0 });

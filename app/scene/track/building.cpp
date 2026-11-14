@@ -529,7 +529,7 @@ namespace rct3::scene::track
                 continue;
             // shortcut: the open end being built on counts as the track's end, which only the aquarium's platforms
             // show; upgrade by leaving that end open while the construction panel is on it.
-            const rct3::park::ride::PlatformPlace place = platform_place(*shape, i > 0 ? station(i - 1) : ride.track->circuit && station(pieces.size() - 1), i + 1 < pieces.size() ? station(i + 1) : ride.track->circuit && station(0), i > 0 || ride.track->circuit, i + 1 < pieces.size() || ride.track->circuit);
+            const rct3::park::ride::PlatformPlace place = platform_place(*shape, { .station_before = i > 0 ? station(i - 1) : ride.track->circuit && station(pieces.size() - 1), .station_after = i + 1 < pieces.size() ? station(i + 1) : ride.track->circuit && station(0), .track_before = i > 0 || ride.track->circuit, .track_after = i + 1 < pieces.size() || ride.track->circuit });
             const auto name = rct3::park::ride::platform_symbol(ride.platform_type, pieces[i], place, doors, kit->names);
             if (!name)
             {
@@ -661,7 +661,7 @@ namespace rct3::scene::track
                 b.ghost = std::move(*placed);
             }
             const std::size_t laid = ride.track->pieces.size();
-            build(scene, b, assets, !design.empty());
+            build(scene, b, assets, design.empty() ? simulation::park::Charge::IfAffordable : simulation::park::Charge::Always);
             if (ride.track->pieces.size() == laid)
                 break;
             if (!design.empty())
@@ -905,7 +905,7 @@ namespace rct3::scene::track
         }
     } // namespace
 
-    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, units::Seconds elapsed)
+    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands, units::Seconds elapsed)
     {
         TrackBuilding& b = scene.building;
         b.clock += elapsed;
@@ -1110,8 +1110,8 @@ namespace rct3::scene::track
         {
             // The pointer off the ground, say over the panel, leaves the first piece where it was aimed. With Shift held
             // the piece stays on its tile and rises or sinks with the pointer, as scenery does.
-            const auto ray = !over && size.x > 0 && size.y > 0 ? std::optional(rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y })) : std::nullopt;
-            if (!shift || !b.ghost || !ray)
+            const auto ray = !input.over_interface && size.x > 0 && size.y > 0 ? std::optional(rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y })) : std::nullopt;
+            if (!input.shift || !b.ghost || !ray)
                 b.lift.reset();
             if (b.lift)
             {
@@ -1121,7 +1121,7 @@ namespace rct3::scene::track
                     changed = true;
                 }
             }
-            else if (shift && b.ghost && ray)
+            else if (input.shift && b.ghost && ray)
             {
                 if (const auto distance = rct3::park::object::ground_hit(*ray, scene.grid))
                     b.lift = TrackBuilding::Lift { ray->origin + ray->direction * *distance, b.ghost->object.base_height.value_or(0) };

@@ -69,6 +69,12 @@ namespace rct3::audio
     {
         float slow = 0, med = 0, fast = 0;
     };
-    [[nodiscard]] RunningMix running_mix(float speed, bool has_med, bool has_fast);
+    /// Which running loops beside the slow one a set has.
+    struct RunningLoops
+    {
+        bool med = false;
+        bool fast = false;
+    };
+    [[nodiscard]] RunningMix running_mix(float speed, RunningLoops loops);
 
 } // namespace rct3::audio

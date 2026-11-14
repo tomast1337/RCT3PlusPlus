@@ -62,7 +62,7 @@ namespace rct3::scene
         /// is paid.
         bool pay(park::ParkScene& scene, units::Money cost, save::model::Tile tile)
         {
-            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
                 return false;
             LandTools& l = scene.land;
             if (!l.cost_at)
@@ -700,7 +700,7 @@ namespace rct3::scene
             if (bought.tiles == 0)
                 return;
             // buy_land took no more than the cash could pay for.
-            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, bought.spent, simulation::park::LedgerLine::LandPurchase, false);
+            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, bought.spent, simulation::park::LedgerLine::LandPurchase, simulation::park::Charge::IfAffordable);
             park::float_money(scene, park::tile_point(scene.grid, tile), -bought.spent);
             land_owned_changed(scene, assets);
         }
@@ -894,7 +894,7 @@ namespace rct3::scene
         park::rebuild_ground(device, scene, assets);
     }
 
-    void update_land_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, units::Seconds elapsed)
+    void update_land_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, ToolInput input, units::Seconds elapsed)
     {
         LandTools& l = scene.land;
         if (l.rumble)
@@ -941,12 +941,12 @@ namespace rct3::scene
                     l.shape.reset();
             }
         }
-        if (l.tool == LandTools::Tool::None || !down)
+        if (l.tool == LandTools::Tool::None || !input.down)
         {
             end_stroke(scene);
             l.tile.reset();
             // Which way the pointer goes over the ground, read again each time it has gone a little way.
-            if (l.tool != LandTools::Tool::Shape || !l.shape || over)
+            if (l.tool != LandTools::Tool::Shape || !l.shape || input.over_interface)
                 l.travel_from.reset();
             else if (!l.travel_from || glm::distance(glm::vec2 { at.x, at.y }, l.travel_from->first) > kTravelSample)
             {
@@ -959,20 +959,20 @@ namespace rct3::scene
             }
         }
         else if (l.tool == LandTools::Tool::Shape && l.smoothing)
-            smooth(device, scene, assets, at, size, over, elapsed);
+            smooth(device, scene, assets, at, size, input.over_interface, elapsed);
         else if (l.tool == LandTools::Tool::Shape && l.shape)
-            brush_shape(device, scene, assets, at, size, over, elapsed);
+            brush_shape(device, scene, assets, at, size, input.over_interface, elapsed);
         else if (l.tool == LandTools::Tool::Shape)
-            shape(device, scene, assets, at, size, over);
+            shape(device, scene, assets, at, size, input.over_interface);
         else if (l.tool == LandTools::Tool::Paint)
-            paint(device, scene, assets, at, size, over);
+            paint(device, scene, assets, at, size, input.over_interface);
         else if (l.tool == LandTools::Tool::Waterfall)
-            pick_lake(device, scene, assets, at, size, over);
+            pick_lake(device, scene, assets, at, size, input.over_interface);
         else if (l.tool == LandTools::Tool::Buy)
-            buy(scene, assets, at, size, over);
+            buy(scene, assets, at, size, input.over_interface);
         else
-            pour(device, scene, assets, at, size, over);
-        mark(device, scene, at, size, over);
+            pour(device, scene, assets, at, size, input.over_interface);
+        mark(device, scene, at, size, input.over_interface);
     }
 
 } // namespace rct3::scene

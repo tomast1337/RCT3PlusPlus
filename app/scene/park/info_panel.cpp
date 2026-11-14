@@ -190,7 +190,7 @@ namespace rct3::scene::park
             f.ride = &scene.rides.rides[ref.index];
             f.common = &f.ride->base;
             f.queue_signs = !scene.led_signs.hidden.contains(f.ride->base.id);
-            f.seats = flat_view(scene, ref.index, false, 0) || flat_view(scene, ref.index, true, 0);
+            f.seats = flat_view(scene, ref.index, FlatEye::Seat, 0) || flat_view(scene, ref.index, FlatEye::Fixed, 0);
             f.music = scene.tunes;
             if (const auto tune = scene.ride_tunes.find(f.ride->base.id); tune != scene.ride_tunes.end())
                 f.tune = tune->second;

@@ -422,7 +422,7 @@ namespace rct3::scene::park
             const bool tool_out = ride_placing(scene) || scene.building.ride || scene.structures.tool != StructureTools::Tool::None || scene.deleting.tool != DeleteTools::Tool::None || scene.pooling.item || scene.enclosing.item || land_tool(scene) || tool_panel_out(scene);
             bool taken = true;
             if (scene.holding)
-                hold_person(scene, { }, { }, false, true);
+                hold_person(scene, { }, { }, Hold::GiveBack);
             else if (scene.riding_along())
                 stop_riding(scene);
             else if (focus && window_of(&*focus) != nullptr)
@@ -532,14 +532,16 @@ namespace rct3::scene::park
             if (paint_patrol(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle && (scene.patrol_stroke || !over)))
                 show_info_page(scene, *info, assets, options);
             // A person picked up hangs over what the pointer is on; a right click puts them back.
-            hold_person(scene, pointer.position, { view.width(), view.height() }, false, input.right && !over);
+            hold_person(scene, pointer.position, { view.width(), view.height() }, input.right && !over ? Hold::GiveBack : Hold::Carry);
             // A stroke over the ground while the path panel shows its controls lays paths on every tile it spans.
             const bool going = !scene.footpaths.brush.empty() || scene.footpaths.slope_press.has_value();
-            footpath_drag(scene, pointer.position, { view.width(), view.height() }, pointer.down && !input.middle && (going || !over), over, input.right, input.shift, input.control);
-            update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, over, input.shift, input.commands);
-            update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, elapsed);
-            update_enclosing(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over);
-            update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, input.shift, typing(scene) ? std::span<const ui::PlayCommand> { } : std::span(input.commands));
+            footpath_drag(scene, pointer.position, { view.width(), view.height() }, { .down = pointer.down && !input.middle && (going || !over), .over_interface = over, .shift = input.shift, .control = input.control, .cancel = input.right });
+            // The tools below work with the left button alone.
+            const ToolInput tool_input { .down = pointer.down && !input.right && !input.middle, .over_interface = over, .shift = input.shift };
+            update_ride_placing(device, scene, assets, pointer.position, { view.width(), view.height() }, tool_input, input.commands);
+            update_land_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, tool_input, elapsed);
+            update_enclosing(device, scene, assets, pointer.position, { view.width(), view.height() }, tool_input);
+            update_pooling(device, scene, assets, pointer.position, { view.width(), view.height() }, tool_input, typing(scene) ? std::span<const ui::PlayCommand> { } : std::span(input.commands));
             // The area delete tool marks the tiles a drag spans; its panel clears them or deletes what stands there.
             DeleteTools& deleting = scene.deleting;
             const bool area = deleting.tool == DeleteTools::Tool::Area;
@@ -579,7 +581,7 @@ namespace rct3::scene::park
                 set_view_lines(device, scene.delete_marks, mesh);
                 deleting.drawn = marks;
             }
-            update_structure_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, pointer.down && !input.right && !input.middle, over, input.shift, input.commands);
+            update_structure_tools(device, scene, assets, pointer.position, { view.width(), view.height() }, tool_input, input.commands);
             // What the delete menu's tool takes at `at`: an attraction is asked about first; a changing room, a prop
             // or a path goes at once, and the tool stays out.
             const auto delete_under = [&](ui::Point at, ui::Point size) {
@@ -622,7 +624,7 @@ namespace rct3::scene::park
                 // While the path panel shows its controls, a click on the ground picks where the path starts.
                 // While painting a patrol area, the left button paints and does not pick.
                 if (scene.holding)
-                    hold_person(scene, pointer.position, { screen.width(), screen.height() }, still && !over, false);
+                    hold_person(scene, pointer.position, { screen.width(), screen.height() }, still && !over ? Hold::PutDown : Hold::Carry);
                 else if (painting_patrol(scene) || land_tool(scene) || scene.deleting.tool == DeleteTools::Tool::Area || scene.structures.tool == StructureTools::Tool::Grab || scene.enclosing.item || scene.pooling.item)
                     ;
                 else if (!still && scene.deleting.tool == DeleteTools::Tool::None && scene.structures.tool == StructureTools::Tool::None && !ride_placing(scene) && !scene.building.ride)
@@ -961,7 +963,7 @@ namespace rct3::scene::park
         }
         profiling::section("TrackBuilding", [&] {
             const ui::Rect screen = desktop.root().rect();
-            track::update_track_building(device, scene, assets, options.choice(config::game::GameOption::Currency), info_units(assets, options).distance, pointer.position, { screen.width(), screen.height() }, over, input.shift, input.commands, elapsed);
+            track::update_track_building(device, scene, assets, options.choice(config::game::GameOption::Currency), info_units(assets, options).distance, pointer.position, { screen.width(), screen.height() }, { .over_interface = over, .shift = input.shift }, input.commands, elapsed);
         });
         // A slide built up to a pool, or taken away, opens or closes its railing there.
         if (!scene.pools.squares.empty() && pool_openings(scene) != scene.pool_openings)
@@ -1233,7 +1235,7 @@ namespace rct3::scene::park
                     {
                         const auto slot = static_cast<std::size_t>(kind);
                         if (slot < scene.park_model.awards.prize_money.size())
-                            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { -scene.park_model.awards.prize_money[slot] }, simulation::park::LedgerLine::PrizeMoney, true);
+                            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { -scene.park_model.awards.prize_money[slot] }, simulation::park::LedgerLine::PrizeMoney, simulation::park::Charge::Always);
                         simulation::park::post(scene.park.messages, { .text_key = std::string(simulation::award_message(kind)), .award = kind });
                     }
                 }
@@ -1646,7 +1648,7 @@ namespace rct3::scene::park
                 // Staff are paid from the park's cash, and the player hears of rides breaking down and being fixed.
                 if (const auto* payroll = scene.sim.registry.ctx().find<simulation::Payroll>())
                 {
-                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { payroll->paid.value - scene.wages_seen }, simulation::park::LedgerLine::StaffWages, true);
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { payroll->paid.value - scene.wages_seen }, simulation::park::LedgerLine::StaffWages, simulation::park::Charge::Always);
                     scene.wages_seen = payroll->paid.value;
                 }
                 // So are pools' cleaning fluids and stalls' stock, and what guests pay for rides, shops and entry
@@ -1656,7 +1658,7 @@ namespace rct3::scene::park
                 const auto* receipts = scene.sim.registry.ctx().find<simulation::Receipts>();
                 for (std::size_t line = 0; line < simulation::park::kLedgerLines; ++line)
                     if (const std::int64_t cost = (supplies ? supplies->paid[line].value - scene.supplies_seen.paid[line].value : 0) - (receipts ? receipts->paid[line].value - scene.receipts_seen.paid[line].value : 0); cost != 0)
-                        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, static_cast<simulation::park::LedgerLine>(line), true);
+                        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, static_cast<simulation::park::LedgerLine>(line), simulation::park::Charge::Always);
                 if (supplies)
                     scene.supplies_seen = *supplies;
                 if (receipts)
@@ -1666,8 +1668,8 @@ namespace rct3::scene::park
                     auto& charges = scene.sim.registry.ctx().emplace<simulation::Charges>();
                     charges.loan = scene.park.loan;
                     charges.rate = scene.park_model.finance.interest_rate_percent;
-                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.interest, { }), simulation::park::LedgerLine::LoanInterest, true);
-                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.running, { }), simulation::park::LedgerLine::RideRunningCosts, true);
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.interest, { }), simulation::park::LedgerLine::LoanInterest, simulation::park::Charge::Always);
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.running, { }), simulation::park::LedgerLine::RideRunningCosts, simulation::park::Charge::Always);
                 }
                 // The staff's mood into the saved staff, for their windows to show.
                 for (const ShownPerson& p : scene.shown_people)
@@ -2204,7 +2206,7 @@ namespace rct3::scene::park
         // to go to the park's entrance; whoever was held before goes back first.
         if (const auto hired = asks.staff.hire ? hire(scene, *asks.staff.hire) : std::nullopt)
         {
-            (void)hold_person(scene, { }, { }, false, true);
+            (void)hold_person(scene, { }, { }, Hold::GiveBack);
             if (pick_up_person(scene, *hired))
                 scene.holding->from = simulation::entrance_drop(scene.sim).value_or(scene.holding->from);
         }
@@ -2283,12 +2285,12 @@ namespace rct3::scene::park
         if (asks.buy_land || asks.buy_rights)
             buy_land_tool(scene, asks.buy_rights ? rct3::park::LandBuy::Rights : rct3::park::LandBuy::Land, assets);
         if (asks.borrow)
-            simulation::park::change_loan(scene.park, { scene.park_model.finance.max_loan }, *asks.borrow);
+            simulation::park::change_loan(scene.park, { scene.park_model.finance.max_loan }, *asks.borrow ? simulation::park::LoanMove::Borrow : simulation::park::LoanMove::Repay);
         // A step at a time, as the buttons do, until the loan reaches the bar's or can move no more.
         if (asks.loan)
         {
             const bool borrow = *asks.loan > scene.park.loan;
-            while (*asks.loan != scene.park.loan && (*asks.loan > scene.park.loan) == borrow && simulation::park::change_loan(scene.park, { scene.park_model.finance.max_loan }, borrow))
+            while (*asks.loan != scene.park.loan && (*asks.loan > scene.park.loan) == borrow && simulation::park::change_loan(scene.park, { scene.park_model.finance.max_loan }, borrow ? simulation::park::LoanMove::Borrow : simulation::park::LoanMove::Repay))
             {
             }
         }
@@ -2304,7 +2306,7 @@ namespace rct3::scene::park
             scene.research.priorities[p->first] = p->second;
         }
         // Every broken path item back new at once, at the full price of each: the dear way, a handyman's the free one.
-        if (asks.replace_broken && facts.broken_items > 0 && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, facts.replace_cost, simulation::park::LedgerLine::Landscaping, false))
+        if (asks.replace_broken && facts.broken_items > 0 && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, facts.replace_cost, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
             simulation::replace_broken(scene.sim);
         profiling::section("Footpaths", [&] { update_footpaths(device, scene, assets, options); });
         profiling::section("Supports", [&] { refresh_supports(scene, assets); });

@@ -53,7 +53,7 @@ namespace rct3::scene::park
             std::erase_if(scene.bins, [&](const save::model::BinState& b) { return b.object_ref == id; });
             std::erase_if(scene.signs, [&](const save::model::SignState& s) { return s.object_ref == id; });
             if (wall)
-                wall_changed(device, scene, assets, *wall, false);
+                wall_changed(device, scene, assets, *wall, WallChange::TakenDown);
         }
 
     } // namespace
@@ -91,7 +91,7 @@ namespace rct3::scene::park
             scene.prizes.emplace_back(kNoMoney);
             return std::nullopt;
         }
-        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
+        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
             return std::nullopt;
         const save::model::PlacedObject& first = scene.objects[going.front()];
         if (floated)
@@ -182,7 +182,7 @@ namespace rct3::scene::park
         base->demolished = true;
         if (ride)
             rejoin_queues(scene, assets, ref.index);
-        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, false);
+        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, simulation::park::Charge::IfAffordable);
         if (at)
             float_money(scene, *at, back);
         if (scene.shown == ref)

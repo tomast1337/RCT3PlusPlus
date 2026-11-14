@@ -72,11 +72,11 @@ namespace rct3::ui
         return info;
     }
 
-    std::u16string locked_design_help(const StringTable& strings, std::int32_t scenario, std::int32_t level)
+    std::u16string locked_design_help(const StringTable& strings, std::optional<std::int32_t> scenario, std::int32_t level)
     {
         std::u16string help(strings.get("TrackBrowser_LockedHelp"));
         const auto ids = career_scenario_ids(strings, 0);
-        const auto index = static_cast<std::size_t>(scenario);
+        const auto index = static_cast<std::size_t>(scenario.value_or(0));
         const std::u16string title = scenario >= 0 && index < ids.size() ? career_scenario(strings, 0, index, ids[index]).title : std::u16string { };
         constexpr std::array<std::string_view, 3> kLevels = { "Difficulty_Apprentice", "Difficulty_Entrepreneur", "Difficulty_Tycoon" };
         const std::u16string reach(level >= 0 && level < static_cast<std::int32_t>(kLevels.size()) ? strings.get(kLevels[static_cast<std::size_t>(level)]) : std::u16string_view { });

@@ -115,7 +115,7 @@ TEST_CASE("a design asking for a scenario opens once a career completes it at it
 {
     Career c = new_career("A", 0, ids(9));
     const std::vector<Career> none;
-    CHECK_FALSE(design_locked(-1, 2, none));
+    CHECK_FALSE(design_locked(std::nullopt, 2, none));
     CHECK(design_locked(2, 0, none));
     CHECK(design_locked(2, 2, std::span(&c, 1)));
     c.scenarios[2].status = ScenarioStatus::Entrepreneur;

@@ -106,26 +106,46 @@ TEST_CASE("a stroke lays only where a path can lie on the ground")
     CHECK(plan.kept == 1);
     CHECK(plan.refused == 2);
 }
-TEST_CASE("a door is picked at its own height, and the trail goes on from its edge at that height")
+TEST_CASE("a door is picked at its own height, and the trail goes on from its back at that height")
 {
     const save::model::TerrainGrid g = owned_grid(4, 4);
+    // Unturned, its ride is on the column before and its back faces the next column.
     const std::vector<save::model::PlacementSpot> doors { { 0, 1, 1, 6, 0 } };
-    // Down onto the door's tile, nearer its higher-column edge.
     const Ray down { { g.world_x(1) + 3.5f, 20.0f, g.world_z(1) + 2.0f }, { 0.0f, -1.0f, 0.0f } };
-    const auto under = door_under(down, doors, g);
-    REQUIRE(under);
-    CHECK(under->door == 0);
-    CHECK(under->side == Side::kNextCol);
+    CHECK(door_under(down, doors, g) == 0);
     // Beside the tile, the ray meets the ground and no door.
     CHECK_FALSE(door_under({ { g.world_x(2) + 2.0f, 20.0f, g.world_z(1) + 2.0f }, { 0.0f, -1.0f, 0.0f } }, doors, g));
 
     FootpathBuilder b;
-    start_from_door(b, doors[0], under->side);
+    start_from_door(b, doors[0]);
     const auto next = next_piece(b, g);
     REQUIRE(next);
     CHECK(next->spot == save::model::Tile { 2, 1 });
     CHECK(next->start == 6);
     CHECK_FALSE(next->ground);
+}
+TEST_CASE("a trail from a door heads out of its back, away from the ride, wherever the door is pointed at")
+{
+    const save::model::TerrainGrid g = owned_grid(5, 5);
+    // By the door's turn, the tile beyond its back.
+    const std::array<save::model::Tile, 4> behind { { { 3, 2 }, { 2, 1 }, { 1, 2 }, { 2, 3 } } };
+    for (std::uint8_t turn = 0; turn < 4; ++turn)
+    {
+        CAPTURE(turn);
+        const std::vector<save::model::PlacementSpot> doors { { .col = 2, .row = 2, .height = 2, .direction = turn } };
+        // Near each edge of the door's tile and its middle.
+        for (const glm::vec2 across : { glm::vec2 { 0.1f, 0.5f }, glm::vec2 { 0.9f, 0.5f }, glm::vec2 { 0.5f, 0.1f }, glm::vec2 { 0.5f, 0.9f }, glm::vec2 { 0.5f, 0.5f } })
+        {
+            const Ray down { { g.world_x(2) + across.x * g.tile_size_x, 20.0f, g.world_z(2) + across.y * g.tile_size_z }, { 0.0f, -1.0f, 0.0f } };
+            const auto door = door_under(down, doors, g);
+            REQUIRE(door);
+            FootpathBuilder b;
+            start_from_door(b, doors[*door]);
+            const auto next = next_piece(b, g);
+            REQUIRE(next);
+            CHECK(next->spot == behind[turn]);
+        }
+    }
 }
 TEST_CASE("a door under the ground is picked only when the ground is seen through")
 {

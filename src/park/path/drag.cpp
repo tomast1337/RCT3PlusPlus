@@ -6,6 +6,7 @@
 #include "park/object/pick.hpp"
 #include "park/path/decks.hpp"
 #include "park/queue_fences.hpp"
+#include "park/ride/placement.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -132,13 +133,13 @@ namespace rct3::park::path
         return true;
     }
 
-    std::optional<DoorEdge> door_under(const Ray& ray, std::span<const save::model::PlacementSpot> doors, const save::model::TerrainGrid& grid, bool through_ground)
+    std::optional<std::size_t> door_under(const Ray& ray, std::span<const save::model::PlacementSpot> doors, const save::model::TerrainGrid& grid, bool through_ground)
     {
         if (std::abs(ray.direction.y) < 1e-6f)
             return std::nullopt;
         const auto ground = through_ground ? std::nullopt : object::ground_hit(ray, grid);
         float nearest = ground ? *ground + 0.01f : kFar;
-        std::optional<DoorEdge> best;
+        std::optional<std::size_t> best;
         for (std::size_t i = 0; i < doors.size(); ++i)
         {
             const save::model::PlacementSpot& d = doors[i];
@@ -151,16 +152,16 @@ namespace rct3::park::path
             if (across_col < 0 || across_col >= 1 || across_row < 0 || across_row >= 1)
                 continue;
             nearest = t;
-            best = DoorEdge { i, nearest_side(across_col, across_row) };
+            best = i;
         }
         return best;
     }
 
-    void start_from_door(FootpathBuilder& builder, const save::model::PlacementSpot& door, Side side)
+    void start_from_door(FootpathBuilder& builder, const save::model::PlacementSpot& door)
     {
         const save::model::Tile spot { door.col, door.row };
         start_at(builder, spot);
-        builder.heading = side;
+        builder.heading = ride::door_back(door);
         builder.trail.push_back({ spot, 0, door.height });
     }
 

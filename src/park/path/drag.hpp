@@ -68,19 +68,12 @@ namespace rct3::park::path
     /// that edge.
     bool start_from_edge(FootpathBuilder& builder, const save::model::PathTile& path, const save::model::TerrainGrid& grid, Side side);
 
-    /// A door under the pointer, and the edge of its tile the pointer is nearest.
-    struct DoorEdge
-    {
-        std::size_t door = 0; ///< Of the doors
-        Side side { };
-    };
+    /// The index of the door of `doors` that `ray` meets first, met flat across its tile at its height, if it meets
+    /// one before the ground (or at all, `through_ground`).
+    [[nodiscard]] std::optional<std::size_t> door_under(const Ray& ray, std::span<const save::model::PlacementSpot> doors, const save::model::TerrainGrid& grid, bool through_ground = false);
 
-    /// The door of `doors` that `ray` meets first, met flat across its tile at its height, if it meets one before
-    /// the ground (or at all, `through_ground`).
-    [[nodiscard]] std::optional<DoorEdge> door_under(const Ray& ray, std::span<const save::model::PlacementSpot> doors, const save::model::TerrainGrid& grid, bool through_ground = false);
-
-    /// Has `builder` go on from `door`'s edge on `side`: the next piece on the tile beyond, heading away, at the
-    /// door's height.
-    void start_from_door(FootpathBuilder& builder, const save::model::PlacementSpot& door, Side side);
+    /// Has `builder` go on from `door`'s back, the side away from its ride, wherever on the door the pointer is:
+    /// the next piece on the tile beyond, heading away, at the door's height.
+    void start_from_door(FootpathBuilder& builder, const save::model::PlacementSpot& door);
 
 } // namespace rct3::park::path

@@ -376,7 +376,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     REQUIRE(l.all_of<Outside>(bob2));
     CHECK(l.get<Outside>(bob2).way == Outside::Way::In);
     CHECK_FALSE(l.all_of<Outside>(ann2));
-    CHECK(people.guests[1 - first].look == -1);
+    CHECK_FALSE(people.guests[1 - first].look);
     // As start_guests leaves them, walking.
     for (const entt::entity e : guests)
         l.emplace<Errand>(e);

@@ -91,7 +91,7 @@ namespace rct3::parkfile
         SavedPeople out;
         const auto look = [&](entt::entity e, std::size_t count) {
             const auto found = looks.find(e);
-            return found != looks.end() && found->second >= 0 && static_cast<std::size_t>(found->second) < count ? found->second : -1;
+            return found != looks.end() && found->second >= 0 && static_cast<std::size_t>(found->second) < count ? std::optional(found->second) : std::nullopt;
         };
         std::unordered_map<entt::entity, std::int32_t> parties;
         std::vector<bool> in_park(model.guests.size());
@@ -121,11 +121,11 @@ namespace rct3::parkfile
                 g.party = parties.try_emplace(member->party, static_cast<std::int32_t>(parties.size())).first->second;
                 g.leader = r.get<Party>(member->party).leader == e;
             }
-            if (g.look >= 0)
+            if (g.look)
             {
-                in_park[static_cast<std::size_t>(g.look)] = true;
+                in_park[static_cast<std::size_t>(*g.look)] = true;
                 // The rest of their money goes with their page, where the original keeps it.
-                model.guests[static_cast<std::size_t>(g.look)].cash = kept_cash(wallet);
+                model.guests[static_cast<std::size_t>(*g.look)].cash = kept_cash(wallet);
             }
         }
         for (std::size_t i = 0; i < model.guests.size(); ++i)
@@ -153,9 +153,9 @@ namespace rct3::parkfile
             r.emplace<Needs>(e, g.needs);
             r.emplace<Mood>(e, g.mood);
             Wallet& wallet = r.emplace<Wallet>(e, g.cash);
-            if (g.look >= 0 && static_cast<std::size_t>(g.look) < people.model.guests.size())
+            if (g.look && static_cast<std::size_t>(*g.look) < people.model.guests.size())
             {
-                const save::model::Cash& c = people.model.guests[static_cast<std::size_t>(g.look)].cash;
+                const save::model::Cash& c = people.model.guests[static_cast<std::size_t>(*g.look)].cash;
                 wallet = { .cash = { g.cash }, .bank = { c.bank }, .withdrawn = { c.withdrawn }, .spent = { c.total_spent }, .spent_entry = { c.spent_park_entry }, .spent_rides = { c.spent_rides }, .spent_food = { c.spent_food }, .spent_drink = { c.spent_drink }, .spent_souvenirs = { c.spent_souvenirs } };
             }
             if (g.taste)
@@ -174,9 +174,9 @@ namespace rct3::parkfile
         for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
         {
             const SavedGuest& g = people.guests[i];
-            if (g.party < 0 || !r.all_of<Errand>(guests[i]) || r.all_of<Member>(guests[i]))
+            if (!g.party || !r.all_of<Errand>(guests[i]) || r.all_of<Member>(guests[i]))
                 continue;
-            Party& party = parties[g.party];
+            Party& party = parties[*g.party];
             party.members.push_back(guests[i]);
             if (g.leader)
                 party.leader = guests[i];
@@ -240,10 +240,10 @@ namespace rct3::parkfile
                 continue;
             const entt::entity e = r.create();
             // The tasks the player set are on the worker's page.
-            const bool paged = w.look >= 0 && static_cast<std::size_t>(w.look) < people.model.staff.size();
-            Staff staff { .role = w.role, .tasks = paged ? people.model.staff[static_cast<std::size_t>(w.look)].task_flags : kEveryTask, .wage = w.wage, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = w.happiness, .laziness = w.laziness };
+            const bool paged = w.look && static_cast<std::size_t>(*w.look) < people.model.staff.size();
+            Staff staff { .role = w.role, .tasks = paged ? people.model.staff[static_cast<std::size_t>(*w.look)].task_flags : kEveryTask, .wage = w.wage, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = w.happiness, .laziness = w.laziness };
             if (paged)
-                staff::take_saved_work(staff, people.model.staff[static_cast<std::size_t>(w.look)]);
+                staff::take_saved_work(staff, people.model.staff[static_cast<std::size_t>(*w.look)]);
             staff.mended = w.mended;
             staff.think = w.think;
             staff.miserable = w.miserable;
@@ -298,7 +298,7 @@ namespace rct3::parkfile
             saved.keeper = keeper->second.first;
             saved.job = duty.job;
             saved.goal = duty.goal;
-            saved.target = target != at.end() ? target->second : -1;
+            saved.target = target != at.end() ? std::optional(target->second) : std::nullopt;
             saved.busy = duty.busy;
         }
         return out;
@@ -332,12 +332,12 @@ namespace rct3::parkfile
         for (std::size_t i = 0; i < animals.houses.size(); ++i)
         {
             const SavedAnimalHouse& saved = animals.houses[i];
-            const entt::entity keeper = saved.keeper >= 0 && static_cast<std::size_t>(saved.keeper) < staff.size() ? staff[static_cast<std::size_t>(saved.keeper)] : entt::null;
+            const entt::entity keeper = saved.keeper && static_cast<std::size_t>(*saved.keeper) < staff.size() ? staff[static_cast<std::size_t>(*saved.keeper)] : entt::null;
             if (keeper == entt::null || !r.valid(keeper))
                 continue;
             // A job after something no longer there starts over.
             const std::span<const entt::entity> targets = saved.job == KeeperJob::Clearing ? std::span(dropped) : saved.job == KeeperJob::Catching ? std::span(placed) : saved.job == KeeperJob::Filling ? std::span(homes) : std::span<const entt::entity> { };
-            const entt::entity target = saved.target >= 0 && static_cast<std::size_t>(saved.target) < targets.size() ? targets[static_cast<std::size_t>(saved.target)] : entt::null;
+            const entt::entity target = saved.target && static_cast<std::size_t>(*saved.target) < targets.size() ? targets[static_cast<std::size_t>(*saved.target)] : entt::null;
             const bool lost = target == entt::null && saved.job != KeeperJob::Idle && saved.job != KeeperJob::Strolling;
             r.emplace_or_replace<KeeperDuty>(keeper, lost ? KeeperDuty { .house = homes[i] } : KeeperDuty { .house = homes[i], .job = saved.job, .goal = saved.goal, .target = target, .busy = units::Seconds { saved.busy } });
             r.emplace_or_replace<Dice>(keeper, dice_for(world, keeper));

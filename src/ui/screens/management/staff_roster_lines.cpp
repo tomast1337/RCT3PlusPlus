@@ -58,7 +58,7 @@ namespace rct3::ui::screens::management
                     .warnings = s.warnings,
                     .training = s.training,
                     .wage_level = pay.wage_level,
-                    .wage = pay.wage.value,
+                    .wage = pay.wage,
                     .training_cost = simulation::staff::training_cost(pay),
                     .tasks = s.task_flags,
                     .patrol_tiles = look.patrol_tiles,
@@ -85,7 +85,7 @@ namespace rct3::ui::screens::management
                 case RosterSort::Uniform:
                     return { l.colours[0] * 256.0 + l.colours[1], { } };
                 case RosterSort::Wage:
-                    return { -static_cast<double>(l.wage), { } };
+                    return { -static_cast<double>(l.wage.value), { } };
                 case RosterSort::Activity:
                     return { 0, l.doing };
                 case RosterSort::Happiness:

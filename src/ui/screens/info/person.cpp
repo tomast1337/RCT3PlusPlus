@@ -389,7 +389,7 @@ namespace rct3::ui::screens::info
             wage.value = std::clamp(s.wage_level, 0, 2);
             wage.maximum = 2;
             if (f.wage)
-                wage.shown = money_text(units.currency, units::Money { *f.wage });
+                wage.shown = money_text(units.currency, *f.wage);
             page.controls.push_back(std::move(wage));
             page.controls_after = page.lines.size();
             add(page, strings, "StaffWindow_LazinessColumnHelp", percent(s.laziness));
@@ -524,7 +524,7 @@ namespace rct3::ui::screens::info
             {
                 std::u16string cost = text(strings, "StaffWindow_TrainingText1");
                 if (const auto at = cost.find(u"%AMOUNT%"); at != std::u16string::npos)
-                    cost.replace(at, std::u16string_view(u"%AMOUNT%").size(), money_text(units.currency, units::Money { f.training_cost }));
+                    cost.replace(at, std::u16string_view(u"%AMOUNT%").size(), money_text(units.currency, f.training_cost));
                 train.help += u" " + cost;
             }
             if (f.patrol_tiles && f.painting_patrol)

@@ -12,6 +12,7 @@
 
 #include "save/model/people.hpp"
 #include "simulation/components.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -35,8 +36,8 @@ namespace rct3::simulation::staff
     /// Sets the wage level, clamped to 0 to 2, and the wage with it.
     void set_wage_level(Staff& staff, std::int32_t level);
 
-    /// What their next level of training costs; 0 once fully trained.
-    [[nodiscard]] std::int64_t training_cost(const Staff& staff);
+    /// What their next level of training costs; nothing once fully trained.
+    [[nodiscard]] units::Money training_cost(const Staff& staff);
 
     /// The training a new hire comes with: in a park without money, such as a sandbox, all of it; where money
     /// counts, none, and the park buys each level.

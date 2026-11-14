@@ -16,6 +16,7 @@
 #include "ui/screens/info/attraction.hpp"
 #include "ui/screens/info/panel.hpp"
 #include "ui/string_table.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -72,9 +73,9 @@ namespace rct3::ui::screens::info
         /// Of a handyman the simulation walks, the broken path items they have mended since the park was opened.
         std::optional<std::uint32_t> items_mended { };
         float zero_time = 0; ///< Where the park's calendar starts, for the day staff were hired
-        /// Of staff: an hour of their pay, and what their next level of training costs (0 once fully trained).
-        std::optional<std::int64_t> wage { };
-        std::int64_t training_cost = 0;
+        /// Of staff: an hour of their pay, and what their next level of training costs (nothing once fully trained).
+        std::optional<units::Money> wage { };
+        units::Money training_cost;
         /// Of a VIP on their visit: their patience and their opinion of the park, each 0..1.
         std::optional<std::pair<float, float>> vip { };
 

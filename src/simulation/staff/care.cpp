@@ -35,9 +35,9 @@ namespace rct3::simulation::staff
         staff.wage.value = wage_at(staff.role, staff.wage_level);
     }
 
-    std::int64_t training_cost(const Staff& staff)
+    units::Money training_cost(const Staff& staff)
     {
-        return staff.training >= 0 && staff.training < kMostTraining ? kTuning.staff.training_cost[static_cast<std::size_t>(staff.training)].value : 0;
+        return staff.training >= 0 && staff.training < kMostTraining ? kTuning.staff.training_cost[static_cast<std::size_t>(staff.training)] : units::Money { };
     }
 
     std::int32_t hired_training(bool park_has_money)

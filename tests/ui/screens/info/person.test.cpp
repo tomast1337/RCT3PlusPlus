@@ -192,8 +192,8 @@ TEST_CASE("a worker's statistics show when they were hired, their mood, warnings
     mechanic.training = 0;
     PersonFacts f = staff(p);
     f.zero_time = 1000;
-    f.wage = 250;
-    f.training_cost = 5000;
+    f.wage = units::Money { 250 };
+    f.training_cost = units::Money { 5000 };
     const InfoPage stats = person_page(PersonTab::Stats, f, s, units);
     CHECK(value(stats, u"Since:").ends_with(u", Year 3"));
     CHECK(value(stats, u"Since:").starts_with(u"1 ")); // The first day of the month

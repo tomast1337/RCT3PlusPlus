@@ -48,14 +48,14 @@ namespace
 
 TEST_CASE("a quarter's look follows the path round its corner")
 {
-    CHECK(quarter_look(true, true, true) == PathLook::Open);
-    CHECK(quarter_look(true, true, false) == PathLook::Notched);
-    CHECK(quarter_look(false, true, false) == PathLook::EdgeX);
-    CHECK(quarter_look(false, true, true) == PathLook::EdgeXJoined);
-    CHECK(quarter_look(true, false, false) == PathLook::EdgeZ);
-    CHECK(quarter_look(true, false, true) == PathLook::EdgeZJoined);
-    CHECK(quarter_look(false, false, false) == PathLook::Closed);
-    CHECK(quarter_look(false, false, true) == PathLook::Closed);
+    CHECK(quarter_look({ .along_x = true, .along_z = true, .across = true }) == PathLook::Open);
+    CHECK(quarter_look({ .along_x = true, .along_z = true }) == PathLook::Notched);
+    CHECK(quarter_look({ .along_z = true }) == PathLook::EdgeX);
+    CHECK(quarter_look({ .along_z = true, .across = true }) == PathLook::EdgeXJoined);
+    CHECK(quarter_look({ .along_x = true }) == PathLook::EdgeZ);
+    CHECK(quarter_look({ .along_x = true, .across = true }) == PathLook::EdgeZJoined);
+    CHECK(quarter_look({ }) == PathLook::Closed);
+    CHECK(quarter_look({ .across = true }) == PathLook::Closed);
 }
 
 TEST_CASE("every look has a cell of its own")

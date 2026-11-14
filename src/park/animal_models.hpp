@@ -13,6 +13,7 @@
 
 #include "math/glm.hpp"
 #include "ovl/animal/motions.hpp"
+#include "ovl/animal/species.hpp"
 #include "ovl/texture/image.hpp"
 #include "park/object/models.hpp"
 
@@ -89,10 +90,10 @@ namespace rct3::park
         AnimalLibrary(AnimalLibrary&&) noexcept;
         AnimalLibrary& operator=(AnimalLibrary&&) noexcept;
 
-        /// The body of the animal of species `species` (its symbol without the tag, in any case) of that age
-        /// and sex, read the first time it is asked for. A species without that animal gives the other sex,
+        /// The body of the animal of species `species` (its symbol without the tag, in any case) of age and sex
+        /// `age`, read the first time it is asked for. A species without that animal gives the other sex,
         /// then any it has. Nothing when no file holds it or it cannot be read.
-        [[nodiscard]] std::optional<const AnimalBody&> body(std::string_view species, bool adult, bool male);
+        [[nodiscard]] std::optional<const AnimalBody&> body(std::string_view species, ovl::animal::AnimalAge age);
 
         /// The pictures the bodies name, by key, rows as stored.
         [[nodiscard]] const std::map<std::string, ovl::texture::RgbaImage, std::less<>>& pictures() const
@@ -110,7 +111,7 @@ namespace rct3::park
         std::map<std::string, std::optional<AnimalBody>, std::less<>> bodies_; ///< By "species|variant", lower case
         std::map<std::string, ovl::texture::RgbaImage, std::less<>> pictures_;
 
-        std::optional<AnimalBody> read_body(std::string_view species, bool adult, bool male);
+        std::optional<AnimalBody> read_body(std::string_view species, ovl::animal::AnimalAge age);
     };
 
 } // namespace rct3::park

@@ -71,15 +71,15 @@ TEST_CASE("a flat tile's piece follows its joined sides and filled corners")
 
 TEST_CASE("a sloping tile's piece follows its steepness, its way and the slopes beside it")
 {
-    CHECK(slope_deck(1, Side { 0 }, false, false) == Deck { DeckPiece::Slope, 3 });
-    CHECK(slope_deck(2, Side { 0 }, false, false) == Deck { DeckPiece::Slope, 1 });
-    CHECK(slope_deck(4, Side { 1 }, false, false) == Deck { DeckPiece::SlopeStraight, 0 });
-    CHECK(slope_deck(4, Side { 0 }, true, false) == Deck { DeckPiece::SlopeStraightRight, 3 });
-    CHECK(slope_deck(4, Side { 0 }, false, true) == Deck { DeckPiece::SlopeStraightLeft, 3 });
-    CHECK(slope_deck(5, Side { 0 }, true, false) == Deck { DeckPiece::SlopeStraightLeft, 1 });
-    CHECK(slope_deck(5, Side { 0 }, true, true) == Deck { DeckPiece::SlopeMid, 1 });
+    CHECK(slope_deck(1, Side { 0 }, { }) == Deck { DeckPiece::Slope, 3 });
+    CHECK(slope_deck(2, Side { 0 }, { }) == Deck { DeckPiece::Slope, 1 });
+    CHECK(slope_deck(4, Side { 1 }, { }) == Deck { DeckPiece::SlopeStraight, 0 });
+    CHECK(slope_deck(4, Side { 0 }, { .left = true }) == Deck { DeckPiece::SlopeStraightRight, 3 });
+    CHECK(slope_deck(4, Side { 0 }, { .right = true }) == Deck { DeckPiece::SlopeStraightLeft, 3 });
+    CHECK(slope_deck(5, Side { 0 }, { .left = true }) == Deck { DeckPiece::SlopeStraightLeft, 1 });
+    CHECK(slope_deck(5, Side { 0 }, { .left = true, .right = true }) == Deck { DeckPiece::SlopeMid, 1 });
     // Steep slopes have no wide pieces.
-    CHECK(slope_deck(2, Side { 3 }, true, true) == Deck { DeckPiece::Slope, 0 });
+    CHECK(slope_deck(2, Side { 3 }, { .left = true, .right = true }) == Deck { DeckPiece::Slope, 0 });
 }
 
 TEST_CASE("headings and stored directions swap both ways")

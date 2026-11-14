@@ -117,7 +117,7 @@ namespace rct3::park::path
                     const auto [col, row] = side.beyond({ path.col, path.row });
                     return std::ranges::any_of(tiles.at(col, row), [&](const save::model::PathTile* p) { return p->kind != save::model::PathKind::Queue && p->elevation && p->elevation->slope == e.slope && p->direction == path.direction && p->elevation->quantised_height == e.quantised_height; });
                 };
-                return slope_deck(e.slope, heading, beside(heading.left()), beside(heading.right()));
+                return slope_deck(e.slope, heading, { .left = beside(heading.left()), .right = beside(heading.right()) });
             }
             const save::model::Tile tile { path.col, path.row };
             std::uint8_t sides = 0;
@@ -166,15 +166,15 @@ namespace rct3::park::path
         return { };
     }
 
-    Deck slope_deck(std::uint8_t slope, Side heading, bool before, bool after) noexcept
+    Deck slope_deck(std::uint8_t slope, Side heading, SlopesBeside beside) noexcept
     {
         const bool up = !slope_falls(slope);
         const ModelTurn turn = ModelTurn::toward(up ? heading.left() : heading.right());
         if (ground::path_rise(slope) > 1)
             return { DeckPiece::Slope, turn };
         // The slope beside this one on the left going up is on the right going down.
-        const bool left = up ? after : before;
-        const bool right = up ? before : after;
+        const bool left = up ? beside.right : beside.left;
+        const bool right = up ? beside.left : beside.right;
         const DeckPiece piece = left && right ? DeckPiece::SlopeMid : left ? DeckPiece::SlopeStraightLeft : right ? DeckPiece::SlopeStraightRight : DeckPiece::SlopeStraight;
         return { piece, turn };
     }
@@ -243,7 +243,7 @@ namespace rct3::park::path
         const std::uint8_t slope = queue.elevation->slope;
         if (slope != 0)
         {
-            const ModelTurn turn = slope_deck(slope, stored_heading_or_bare(queue.direction), false, false).turn;
+            const ModelTurn turn = slope_deck(slope, stored_heading_or_bare(queue.direction), { }).turn;
             const QueuePiece piece = ground::path_rise(slope) <= 1 ? QueuePiece::SlopeStraight : slope_falls(slope) ? QueuePiece::SlopeDown : QueuePiece::SlopeUp;
             return { piece, turn };
         }

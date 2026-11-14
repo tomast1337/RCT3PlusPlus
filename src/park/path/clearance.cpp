@@ -89,7 +89,7 @@ namespace rct3::park::path
                     {
                         if ((m.supports->squares[i].cells & (1U << c)) == 0)
                             continue;
-                        const glm::vec2 at = support::spot_in_tiles(o, *m.supports, { { lx, lz }, { c % 3, c / 3 } }, true);
+                        const glm::vec2 at = support::spot_in_tiles(o, *m.supports, { { lx, lz }, { c % 3, c / 3 } }, support::SpotFit::MiddleOfThird);
                         const int x = std::clamp(static_cast<int>((at.x - std::floor(at.x)) * 3), 0, 2);
                         const int z = std::clamp(static_cast<int>((at.y - std::floor(at.y)) * 3), 0, 2);
                         thirds |= static_cast<std::uint16_t>(1U << (3 * z + x));

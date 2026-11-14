@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <format>
+#include <utility>
 
 namespace rct3::park
 {
@@ -181,23 +182,23 @@ namespace rct3::park
         files_->open.clear();
     }
 
-    std::optional<const AnimalBody&> AnimalLibrary::body(std::string_view species, bool adult, bool male)
+    std::optional<const AnimalBody&> AnimalLibrary::body(std::string_view species, ovl::animal::AnimalAge age)
     {
-        const std::string key = std::format("{}|{}{}", lower(species), adult ? 'a' : 'y', male ? 'm' : 'f');
+        const std::string key = std::format("{}|{}", lower(species), std::to_underlying(age));
         auto it = bodies_.find(key);
         if (it == bodies_.end())
-            it = bodies_.emplace(key, read_body(species, adult, male)).first;
+            it = bodies_.emplace(key, read_body(species, age)).first;
         return it->second ? std::optional<const AnimalBody&>(*it->second) : std::nullopt;
     }
 
-    std::optional<AnimalBody> AnimalLibrary::read_body(std::string_view species, bool adult, bool male)
+    std::optional<AnimalBody> AnimalLibrary::read_body(std::string_view species, ovl::animal::AnimalAge age)
     {
         Files& f = *files_;
         std::string species_file;
         const auto [unused, found] = f.find<ovl::animal::AnimalSpecies>(species, "was", "", &ovl::animal::read_animal_species, &ovl::animal::AnimalSpeciesItem::species, &species_file);
         if (!found)
             return std::nullopt;
-        const auto wanted = static_cast<std::size_t>(adult ? (male ? ovl::animal::AnimalAge::AdultMale : ovl::animal::AnimalAge::AdultFemale) : (male ? ovl::animal::AnimalAge::YoungMale : ovl::animal::AnimalAge::YoungFemale));
+        const auto wanted = static_cast<std::size_t>(age);
         // The one asked for, the other sex of the same age, then any.
         const std::optional<ovl::animal::AnimalVariant>* variant = nullptr;
         for (const std::size_t i : { wanted, wanted ^ 1, std::size_t { 0 }, std::size_t { 1 }, std::size_t { 2 }, std::size_t { 3 } })

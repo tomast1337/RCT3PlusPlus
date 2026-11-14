@@ -39,14 +39,14 @@ namespace rct3::park::ground
         return { 0, 2 };
     }
 
-    PathLook quarter_look(bool along_x, bool along_z, bool across) noexcept
+    PathLook quarter_look(QuarterPaths paths) noexcept
     {
-        if (along_x && along_z)
-            return across ? PathLook::Open : PathLook::Notched;
-        if (along_z)
-            return across ? PathLook::EdgeXJoined : PathLook::EdgeX;
-        if (along_x)
-            return across ? PathLook::EdgeZJoined : PathLook::EdgeZ;
+        if (paths.along_x && paths.along_z)
+            return paths.across ? PathLook::Open : PathLook::Notched;
+        if (paths.along_z)
+            return paths.across ? PathLook::EdgeXJoined : PathLook::EdgeX;
+        if (paths.along_x)
+            return paths.across ? PathLook::EdgeZJoined : PathLook::EdgeZ;
         return PathLook::Closed;
     }
 
@@ -416,7 +416,7 @@ namespace rct3::park::ground
                 {
                     const int dc = (k & 1) != 0 ? 1 : -1;
                     const int dr = (k & 2) != 0 ? 1 : -1;
-                    looks[static_cast<std::size_t>(k)] = quarter_look(path_continues(map, grid, { col, row }, dc, 0), path_continues(map, grid, { col, row }, 0, dr), has_ground_path(map, { col + dc, row + dr }) && may_join(map, { col, row }, { col + dc, row + dr }) && may_join(map, { col + dc, row }, { col + dc, row + dr }) && may_join(map, { col, row + dr }, { col + dc, row + dr }));
+                    looks[static_cast<std::size_t>(k)] = quarter_look({ .along_x = path_continues(map, grid, { col, row }, dc, 0), .along_z = path_continues(map, grid, { col, row }, 0, dr), .across = has_ground_path(map, { col + dc, row + dr }) && may_join(map, { col, row }, { col + dc, row + dr }) && may_join(map, { col + dc, row }, { col + dc, row + dr }) && may_join(map, { col, row + dr }, { col + dc, row + dr }) });
                 }
 
                 const save::model::TerrainCell& cell = grid.at(col, row);

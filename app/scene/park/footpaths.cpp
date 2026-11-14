@@ -367,6 +367,37 @@ namespace rct3::scene::park
             ghost_textures(device, scene, f.raised_ghost);
         }
 
+        /// What laying the last of the paths joined: the entrance and the line a queue joined, and the queue tiles whose
+        /// open end turned to a path.
+        struct Joined
+        {
+            std::optional<rct3::park::EntranceBeside> entrance { };
+            std::optional<std::uint64_t> line { };
+            std::vector<std::size_t> turned { }; ///< Of the paths
+        };
+
+        /// Joins `paths.back()`, the piece `piece` just laid: a queue to the entrance it is behind, at its height,
+        /// giving the station line `new_line` when it has none, or to the line whose head it meets. Then a queue's
+        /// open end bends to a path beside it: the queue just laid, or those beside the path just laid.
+        Joined join_laid(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, const rct3::park::NextPiece& piece, std::uint64_t new_line)
+        {
+            Joined out;
+            const save::model::PathTile laid = paths.back();
+            const bool queue = laid.kind == save::model::PathKind::Queue;
+            if (queue)
+            {
+                out.entrance = rct3::park::entrance_beside(rides, piece.spot, laid.elevation ? laid.elevation->quantised_height : piece.start);
+                out.line = out.entrance ? rct3::park::join_entrance(rides, paths, grid, paths.size() - 1, *out.entrance, new_line) : rct3::park::join_line(rides, paths, grid, paths.size() - 1);
+            }
+            for (std::size_t i = 0; i < paths.size(); ++i)
+            {
+                const bool candidate = queue ? i + 1 == paths.size() : paths[i].queue && std::abs(paths[i].col - laid.col) + std::abs(paths[i].row - laid.row) == 1;
+                if (candidate && rct3::park::turn_to_path(paths, grid, i))
+                    out.turned.push_back(i);
+            }
+            return out;
+        }
+
         /// The next piece faint, as it will look once laid: its deck and supports when raised, the ground's
         /// pictures when on the ground, and the pieces beside it that it changes. Tinted when it cannot be laid.
         void build_ghost(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool allowed)
@@ -423,6 +454,10 @@ namespace rct3::scene::park
                 return; // The same piece is already there
             if (style.queue)
                 with.back().surface_colours = std::array<std::int32_t, 3> { };
+            // Joined as laying it would, so its ends and the queues beside turn as they will; a path joins no ride, so
+            // only a queue needs the rides, which are a copy here.
+            save::model::RideModel rides = style.queue ? scene.rides : save::model::RideModel { };
+            (void)join_laid(rides, with, scene.grid, *piece, id + 2);
             if (piece->ground)
             {
                 f.ghost = ground_ghost(device, scene, assets, with, std::span(&piece->spot, 1), tint);
@@ -658,35 +693,21 @@ namespace rct3::scene::park
                     laid.queue->fence_symbol = kQueueRailing;
                     laid.queue->fence_overlay = kQueueRailingOverlay;
                 }
-                const std::int32_t height = laid.elevation ? laid.elevation->quantised_height : piece.start;
-                std::optional<std::uint64_t> line;
-                if (const auto entrance = rct3::park::entrance_beside(scene.rides, piece.spot, height))
-                {
-                    line = rct3::park::join_entrance(scene.rides, f.paths, scene.grid, f.paths.size() - 1, *entrance, unused_id(scene));
-                    logging::logger("park").info("queue joins ride {} on line {}", entrance->ride, *line);
-                }
-                else
-                    line = rct3::park::join_line(scene.rides, f.paths, scene.grid, f.paths.size() - 1);
-                for (const save::model::PathTile& p : f.paths)
-                {
-                    if (line && p.queue && p.queue->queue_line_ref == *line && !std::ranges::contains(railed, p.id))
-                        railed.push_back(p.id);
-                }
             }
-            // A queue's open end bends to a path beside it: the queue just laid, or those beside the path just laid.
-            bool turned = false;
-            const save::model::PathTile laid = f.paths.back();
-            for (std::size_t i = 0; i < f.paths.size(); ++i)
+            const Joined joined = join_laid(scene.rides, f.paths, scene.grid, piece, unused_id(scene));
+            if (joined.entrance)
+                logging::logger("park").info("queue joins ride {} on line {}", joined.entrance->ride, *joined.line);
+            for (const save::model::PathTile& p : f.paths)
             {
-                const bool candidate = f.builder.queue ? i + 1 == f.paths.size() : f.paths[i].queue && std::abs(f.paths[i].col - laid.col) + std::abs(f.paths[i].row - laid.row) == 1;
-                if (candidate && rct3::park::turn_to_path(f.paths, scene.grid, i))
-                {
-                    turned = true;
-                    if (!std::ranges::contains(railed, f.paths[i].id))
-                        railed.push_back(f.paths[i].id);
-                }
+                if (joined.line && p.queue && p.queue->queue_line_ref == *joined.line && !std::ranges::contains(railed, p.id))
+                    railed.push_back(p.id);
             }
-            if (f.builder.queue || turned)
+            for (const std::size_t i : joined.turned)
+            {
+                if (!std::ranges::contains(railed, f.paths[i].id))
+                    railed.push_back(f.paths[i].id);
+            }
+            if (f.builder.queue || !joined.turned.empty())
                 rail(scene, assets, railed);
             // Raised queue tiles whose line changed take new pieces too.
             for (const std::uint64_t changed : railed)

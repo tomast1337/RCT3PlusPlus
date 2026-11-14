@@ -731,6 +731,8 @@ namespace rct3::scene
                 paths.push_back({ { "col", p.col }, { "row", p.row }, { "raised", raised }, { "queue", p.kind == save::model::PathKind::Queue }, { "style", p.surface_name } });
                 if (raised)
                     paths.back()["height"] = p.elevation->quantised_height;
+                if (p.queue && p.queue->queue_line_ref != 0)
+                    paths.back()["line"] = p.queue->queue_line_ref;
             }
             return paths;
         });

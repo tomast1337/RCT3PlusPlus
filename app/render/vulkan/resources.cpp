@@ -49,6 +49,12 @@ namespace
     const std::uint32_t kWaterFrag[] =
 #include "water.frag.inc"
         ;
+    const std::uint32_t kWaterfallVert[] =
+#include "waterfall.vert.inc"
+        ;
+    const std::uint32_t kWaterfallFrag[] =
+#include "waterfall.frag.inc"
+        ;
     const std::uint32_t kGlowFrag[] =
 #include "glow.frag.inc"
         ;
@@ -109,8 +115,6 @@ namespace rct3::render::vulkan
                     return { kLitCrossingVert, kLitFrag, 1 };
                 case Shader::LitLayerAdded:
                     return { kLitVert, kLitFrag, 2 };
-                case Shader::LitLayerMultiplied:
-                    return { kLitVert, kLitFrag, 3 };
                 case Shader::LitChrome:
                     return { kLitVert, kLitFrag, 4 };
                 case Shader::LitCrossingChrome:
@@ -119,6 +123,8 @@ namespace rct3::render::vulkan
                     return { kShapeVert, kShapeFrag };
                 case Shader::Water:
                     return { kWaterVert, kWaterFrag };
+                case Shader::Waterfall:
+                    return { kWaterfallVert, kWaterfallFrag };
                 case Shader::Glow:
                     return { kTexturedVert, kGlowFrag };
                 case Shader::Occlusion:
@@ -497,8 +503,8 @@ namespace rct3::render::vulkan
         const ShaderCode code = shader_code(desc.shader);
         if (code.vertex.empty() || code.fragment.empty())
             return std::unexpected("unknown shader");
-        if (desc.shader == Shader::Water && set_count_ < kSetCount)
-            return std::unexpected("the device binds too few descriptor sets for the water shader");
+        if ((desc.shader == Shader::Water || desc.shader == Shader::Waterfall) && set_count_ < kSetCount)
+            return std::unexpected("the device binds too few descriptor sets for the water shaders");
         if ((lit_shader(desc.shader) || desc.shader == Shader::Occlusion || desc.shader == Shader::Shafts) && set_count_ < 8)
             return std::unexpected("the device binds too few descriptor sets for the lit shaders");
 

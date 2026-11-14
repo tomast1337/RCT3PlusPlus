@@ -39,8 +39,7 @@ namespace rct3::scene::park
 
         std::optional<particles::Library> library;
         std::vector<Shown> shown;
-        std::vector<Shown> fired;  ///< Effects set off once, such as fireworks; dropped when they end
-        std::vector<Shown> sprays; ///< The waterfalls' spray (park/waterfall_mesh.hpp), apart from the objects'
+        std::vector<Shown> fired; ///< Effects set off once, such as fireworks; dropped when they end
         random::RandomState random;
         std::map<std::string, render::TextureHandle> atlases;
         render::PipelineHandle added;
@@ -50,8 +49,8 @@ namespace rct3::scene::park
     /// Loads the particle sprites of the install at `root`, with numbers from `random`. Logs and leaves the library
     /// out when the install has no particle sprites; nothing is shown then.
     void load_park_particles(render::Device& device, ParkParticles& particles, const std::filesystem::path& root, random::RandomState random);
-    /// Starts the effects `effects` name, in place of any running in `list`.
-    void show_park_particles(ParkParticles& particles, std::span<const rct3::park::object::PlacedEffect> effects, std::vector<ParkParticles::Shown> ParkParticles::* list = &ParkParticles::shown);
+    /// Starts the effects `effects` name, in place of any running.
+    void show_park_particles(ParkParticles& particles, std::span<const rct3::park::object::PlacedEffect> effects);
     /// Sets off the effect `effect` once at `position`, pointing along `up`, `scale` times its size: how far its
     /// particles go and how big they are drawn. False when there is no such effect.
     bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up, float scale = 1);

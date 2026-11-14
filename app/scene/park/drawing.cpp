@@ -10,7 +10,6 @@
 #include "park/sun_view.hpp"
 #include "park/water/flow.hpp"
 #include "park/water/jet.hpp"
-#include "park/waterfall_mesh.hpp"
 #include "profiling/profiler.hpp"
 #include "scene/ghosts.hpp"
 #include "scene/park/footpaths.hpp"
@@ -107,6 +106,7 @@ namespace rct3::scene::park
             bool shaded_water = false; ///< With the water shader, seen from `eye`
             bool ghosts = false;       ///< What the build tools would place: never in the shadows, which would show it laid
             bool faded_ground = false; ///< The ground's land, cliffs and tunnels drawn last, see-through
+            bool mirrored = false;     ///< In a lake's reflection, where the waterfalls show without their water
             glm::vec3 eye { 0.0f };
         };
 
@@ -285,10 +285,19 @@ namespace rct3::scene::park
                         device.draw(draw);
                     }
                 });
-            if (parts.water && parts.see_through)
+            if (parts.see_through && (parts.water || parts.mirrored))
                 profiling::section("Waterfalls", [&] {
-                    // As draw_transient, each picture with its second (park/waterfall_mesh.hpp).
-                    const rct3::park::object::ObjectMesh& mesh = scene.waterfall_mesh;
+                    // The main view has the scene behind the water copied; from under a lake only the sheet shows,
+                    // through its surface.
+                    FallsSeen seen = parts.mirrored ? FallsSeen::Mirrored : FallsSeen::Direct;
+                    if (parts.shaded_water)
+                        seen = scene.water.eye_in ? FallsSeen::FromUnderWater : FallsSeen::WithScene;
+                    draw_park_waterfalls(device, scene.waterfalls, scene.water, transform, light, parts.eye, scene.park_clock, seen);
+                });
+            if (parts.water && parts.see_through)
+                profiling::section("Jets", [&] {
+                    // As draw_transient, each picture with its second (park/water/jet.hpp).
+                    const rct3::park::object::ObjectMesh& mesh = scene.jet_mesh;
                     if (mesh.indices.empty())
                         return;
                     const auto vertices = device.allocate_transient(std::as_bytes(std::span(mesh.vertices)));
@@ -297,10 +306,10 @@ namespace rct3::scene::park
                         return;
                     for (const rct3::park::object::ObjectBatch& batch : mesh.batches)
                     {
-                        const auto picture = std::ranges::find(rct3::park::kWaterfallPictures, batch.texture, &rct3::park::WaterfallPicture::key);
+                        const auto picture = std::ranges::find(rct3::park::water::kJetPictures, batch.texture, &rct3::park::water::JetPicture::key);
                         const auto texture = scene.object_textures.find(batch.texture);
                         const auto layer = scene.object_textures.find(picture->layer_key);
-                        render::DrawCommand draw { .pipeline = picture->multiplied ? scene.waterfall_multiplied_pipeline : scene.waterfall_added_pipeline, .vertices = *vertices, .indices = *indices, .index_type = render::IndexType::U32, .count = batch.count, .first = batch.first, .transform = transform };
+                        render::DrawCommand draw { .pipeline = scene.jet_pipeline, .vertices = *vertices, .indices = *indices, .index_type = render::IndexType::U32, .count = batch.count, .first = batch.first, .transform = transform };
                         draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
                         // Without its second picture, drawn alone.
                         if (layer != scene.object_textures.end())
@@ -309,7 +318,7 @@ namespace rct3::scene::park
                             draw.pipeline = scene.see_through_pipeline;
                         draw.address = render::AddressMode::Repeat;
                         draw.light = light;
-                        draw.v_shift = rct3::park::waterfall_layer_scroll(*picture, scene.park_clock);
+                        draw.v_shift = rct3::park::water::jet_layer_scroll(*picture, scene.park_clock);
                         device.draw(draw);
                     }
                 });
@@ -548,7 +557,7 @@ namespace rct3::scene::park
             into.target = scene.photo_target;
             into.clear_color = scene.horizon;
             device.begin_pass(into);
-            draw_world(device, scene, rct3::park::view_projection(shot.camera, static_cast<float>(kPhotoWidth) / kPhotoHeight), scene.light);
+            draw_world(device, scene, rct3::park::view_projection(shot.camera, static_cast<float>(kPhotoWidth) / kPhotoHeight), scene.light, { .eye = rct3::park::eye(shot.camera) });
             device.end_pass();
             if (device.read_screen(scene.photo_target))
                 scene.photo_reading = shot.name;
@@ -622,14 +631,17 @@ namespace rct3::scene::park
                 scene.slide_pours.push_back({ .left = left, .right = right, .landing = { lip.x + flow.x * throw_out, below, lip.z + flow.y * throw_out }, .water = below > scene.grid.height_at(lip.x, lip.z).value_or(below) });
             }
         }
-        // Jets of water are drawn with the waterfalls, as running water of their picture.
-        if (!scene.footpaths.waterfalls.empty() || !scene.jets.empty() || !scene.waterfall_mesh.indices.empty())
-            profiling::section("Waterfalls", [&] {
-                rct3::park::waterfall_mesh(scene.footpaths.waterfalls, scene.park_clock, scene.waterfall_mesh);
+        if (!scene.jets.empty() || !scene.jet_mesh.indices.empty())
+            profiling::section("Jets", [&] {
+                rct3::park::object::ObjectMesh& mesh = scene.jet_mesh;
+                mesh.vertices.clear();
+                mesh.indices.clear();
+                mesh.batches.clear();
+                mesh.owners.clear();
                 std::vector<const rct3::park::water::WaterJet*> jets;
                 for (const ParkScene::Jet& jet : scene.jets)
                     jets.push_back(&jet.water);
-                rct3::park::water::jet_mesh(jets, rct3::park::eye(scene.camera, scene.seat), scene.park_clock, scene.waterfall_mesh);
+                rct3::park::water::jet_mesh(jets, rct3::park::eye(scene.camera, scene.seat), scene.park_clock, mesh);
             });
         profiling::section("LedSigns", [&] { roll_led_signs(device, scene); });
         // A person shows alone on a light ground, turning as the build list's pieces do; the rest in the park.
@@ -638,7 +650,7 @@ namespace rct3::scene::park
             // A person, or a party, stands alone; anything else is seen where it is in the park.
             const std::array person { scene.shown_person.value_or(0) };
             const std::span<const std::size_t> alone = scene.shown_person ? std::span<const std::size_t>(person) : std::span<const std::size_t>(scene.shown_party);
-            profiling::section("InfoView", [&] { draw_view(device, scene, *info, scene.view_target, scene.view_pixels, "attraction view", !alone.empty() ? kPeopleViewBack : scene.horizon, [&] { !alone.empty() ? draw_people_alone(device, scene, alone) : draw_world(device, scene, rct3::park::view_projection(scene.view_camera, 1), scene.light); }); });
+            profiling::section("InfoView", [&] { draw_view(device, scene, *info, scene.view_target, scene.view_pixels, "attraction view", !alone.empty() ? kPeopleViewBack : scene.horizon, [&] { !alone.empty() ? draw_people_alone(device, scene, alone) : draw_world(device, scene, rct3::park::view_projection(scene.view_camera, 1), scene.light, { .eye = rct3::park::eye(scene.view_camera) }); }); });
         }
         // The item being placed, alone on the disc's grey, lit as the park is.
         // shortcut: its see-through parts are drawn in the mesh's order, not after the rest; sort them if a
@@ -699,8 +711,8 @@ namespace rct3::scene::park
         });
         profiling::section("Reflections", [&] {
             const WaterLook& look = scene.water.look;
-            const WorldParts mirrored { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .water = false };
-            prepare_park_water(device, scene.water, view_projection, eye, scene.horizon, [&](const glm::mat4& transform) { draw_world(device, scene, transform, scene.light, mirrored); });
+            // Seen from the eye mirrored in the water's level, as the transform mirrors the world.
+            prepare_park_water(device, scene.water, view_projection, eye, scene.horizon, [&](const glm::mat4& transform, float level) { draw_world(device, scene, transform, scene.light, { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .water = false, .mirrored = true, .eye = { eye.x, 2 * level - eye.y, eye.z } }); });
         });
         profiling::section("World", [&] {
             device.set_wireframe(scene.wireframe);

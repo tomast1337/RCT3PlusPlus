@@ -700,7 +700,7 @@ namespace rct3::scene
         engine_.define("map.effects", [this](const Json&) {
             const save::model::TerrainGrid& g = grid_of(park_);
             Json effects = Json::array();
-            for (const auto* list : { &park_->particles.shown, &park_->particles.fired, &park_->particles.sprays })
+            for (const auto* list : { &park_->particles.shown, &park_->particles.fired })
                 for (const park::ParkParticles::Shown& s : *list)
                 {
                     const glm::vec3 p = s.position;

@@ -253,7 +253,7 @@ namespace rct3::scene::park
                 into.target = water.reflections[i];
                 into.clear_color = sky;
                 device.begin_pass(into);
-                mirrored(rct3::park::water::reflection_transform(view_projection, level));
+                mirrored(rct3::park::water::reflection_transform(view_projection, level), level);
                 device.end_pass();
             }
         }

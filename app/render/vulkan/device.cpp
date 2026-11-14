@@ -51,7 +51,7 @@ namespace rct3::render::vulkan
                 const OcclusionStep& o = command.occlusion;
                 return { command.transform, glm::vec4(static_cast<float>(o.kind), static_cast<float>(o.frame % 65536), o.radius, o.strength), glm::vec4(o.history, 0.0f, o.depth_terms), { }, { } };
             }
-            if (shader != Shader::Water)
+            if (shader != Shader::Water && shader != Shader::Waterfall)
             {
                 // The push block is full, so the haze colour goes as one number: its channels in 8 bits each.
                 const glm::uvec3 h { glm::round(glm::clamp(l.haze, 0.0f, 1.0f) * 255.0f) };
@@ -62,10 +62,10 @@ namespace rct3::render::vulkan
                 const float shadow = l.shadow_map && l.shadow_view ? 1 + (before ? std::clamp(l.shadow_before, 0.0f, 1.0f) : 0.0f) : 0.0f;
                 return { command.transform, glm::vec4(l.sun_direction, shadow), glm::vec4(l.sun, l.haze_rate), glm::vec4(l.sky, (command.extra_textures[0] ? 1.0f : 0.0f) + (command.extra_textures[1] ? 2.0f : 0.0f) + 4.0f * static_cast<float>(std::clamp(l.surface_detail, 0, 2)) + (l.lamps ? 16.0f : 0.0f) + (l.ghost ? 32.0f : 0.0f) + (l.cut_clear ? 64.0f : 0.0f) + command.v_shift.lengths), glm::vec4(l.ground, haze) };
             }
-            // sky.w: the flags, plus `v_shift` (water.slang).
+            // sky.w: the flags, plus `v_shift` (water.slang, waterfall.slang).
             const WaterView& w = command.water;
             const bool shadow = l.shadow_map && l.shadow_view;
-            const auto flags = static_cast<float>((w.reflection ? 1 : 0) | (w.refraction ? 2 : 0) | (w.waves ? 4 : 0) | (w.foam ? 8 : 0) | (w.ripples ? 16 : 0) | (w.underwater ? 32 : 0) | (shadow ? 64 : 0) | (w.shafts ? 128 : 0) | (w.flow ? 256 : 0)) + command.v_shift.lengths;
+            const auto flags = static_cast<float>((w.reflection ? 1 : 0) | (w.refraction ? 2 : 0) | (w.waves ? 4 : 0) | (w.foam ? 8 : 0) | (w.ripples ? 16 : 0) | (w.underwater ? 32 : 0) | (shadow ? 64 : 0) | (w.shafts ? 128 : 0) | (w.flow ? 256 : 0) | (std::clamp(w.fall_part, 0, 3) << 9) | (std::clamp(w.fall_detail, 0, 3) << 11)) + command.v_shift.lengths;
             return { command.transform, glm::vec4(w.eye, w.time), glm::vec4(l.sun_direction, w.near), glm::vec4(l.sun, w.far), glm::vec4(l.sky, flags) };
         }
 
@@ -1027,14 +1027,15 @@ namespace rct3::render::vulkan
             std::array<VkDescriptorSet, kSetCount> sets { };
             sets.fill(texture->second.set);
             sets[1] = sampler_sets_[sampler];
-            // The Water shader reads the extra textures, the Lit ones the shadow; a missing one reads as the first.
+            // The Water and Waterfall shaders read the extra textures, the Lit ones the shadow; a missing one reads as the first.
             const Shader shader = pipeline->second.shader;
             const bool lit = lit_shader(shader);
-            const std::uint32_t count = shader == Shader::Water ? set_count_ : lit ? 8 : shader == Shader::Occlusion || shader == Shader::Shafts ? 5 : 2;
+            const bool water = shader == Shader::Water || shader == Shader::Waterfall;
+            const std::uint32_t count = water ? set_count_ : lit ? 8 : shader == Shader::Occlusion || shader == Shader::Shafts ? 5 : 2;
             std::array<TextureHandle, kExtraTextures> extras = command.extra_textures;
             if (lit)
                 extras = { command.light.shadow_map, command.light.shadow_view, command.extra_textures[0], command.light.shadow_map_before, command.light.lamps, command.extra_textures[1] };
-            else if (shader == Shader::Water)
+            else if (water)
             {
                 extras[4] = command.light.shadow_map;
                 extras[5] = command.light.shadow_view;

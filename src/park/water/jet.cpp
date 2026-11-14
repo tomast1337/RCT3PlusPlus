@@ -126,6 +126,11 @@ namespace rct3::park::water
         return Throw { .velocity = { way.x * level_speed, level_speed * std::tan(angle), way.y * level_speed }, .seconds = across / level_speed };
     }
 
+    math::TextureShift jet_layer_scroll(const JetPicture& picture, float seconds)
+    {
+        return math::TextureShift::by(-seconds * picture.layer_lag); // v falls as the water runs
+    }
+
     void jet_mesh(std::span<const WaterJet* const> jets, glm::vec3 eye, float seconds, object::ObjectMesh& mesh)
     {
         // Water breaking up shows through a second, frothy tube, as the clear water in the first thins.

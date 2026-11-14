@@ -201,8 +201,6 @@ namespace rct3::render
         /// the same coordinate, which `DrawCommand::v_shift` moves for the first picture only, so the two run at
         /// their own speeds. Its colour, lit, is added to the result; its alpha multiplies the first's.
         LitLayerAdded,
-        /// LitLayerAdded, with the second picture multiplying the first, colour and alpha, before the light.
-        LitLayerMultiplied,
         /// Lit, for a mirror-like surface: `DrawCommand::texture` is a picture of the surroundings, sky at the top,
         /// read where the way from the eye, bounced off the surface, points as the eye sees it (across for left
         /// and right, up for up), in place of the texture coordinate; and the sun glints off it. Without
@@ -218,6 +216,10 @@ namespace rct3::render
         /// see park/water/ripples.hpp). Lit by `DrawCommand::light`, with `DrawCommand::water`. Draws without the
         /// pictures `water` says are missing.
         Water,
+        /// The park's waterfalls (park/waterfall_mesh.hpp), each part a draw of its own. Inputs, pictures and
+        /// packing as Water, with `DrawCommand::water`'s `fall_part` and `fall_detail`; of the extra textures only
+        /// the scene behind and its depth are read, when `refraction` says they are given.
+        Waterfall,
         /// A shape of ui/shape.hpp, shaded by its distance from the edge. Inputs: location 0 position (Float2),
         /// location 1 the point from the shape's middle then the shape's half width and height (Float4), 2 the
         /// corner radii (Float4), 3 softness, outline width, light width and ring width (Float4), 4 to 7 the
@@ -247,7 +249,7 @@ namespace rct3::render
     /// Whether `shader` is one of the Lit family, which reads the light and the shadow.
     [[nodiscard]] constexpr bool lit_shader(Shader shader)
     {
-        return shader == Shader::Lit || shader == Shader::LitCutout || shader == Shader::LitCrossing || shader == Shader::LitCrossingCutout || shader == Shader::LitLayerAdded || shader == Shader::LitLayerMultiplied || shader == Shader::LitChrome || shader == Shader::LitCrossingChrome;
+        return shader == Shader::Lit || shader == Shader::LitCutout || shader == Shader::LitCrossing || shader == Shader::LitCrossingCutout || shader == Shader::LitLayerAdded || shader == Shader::LitChrome || shader == Shader::LitCrossingChrome;
     }
 
     enum class Topology : std::uint8_t
@@ -364,6 +366,10 @@ namespace rct3::render
         /// A slide's flowing water (park/water/flow.hpp): its vertices are an object's, and the texture is its
         /// picture, moved along its v by `DrawCommand::v_shift`. Neither the mirror nor the scene behind is read.
         bool flow = false;
+        /// For the Waterfall shader: which part of the falls is drawn (park::FallPart, as its number) and how much
+        /// of their look is worked out (park::WaterfallDetail, as its number, 0 to 3).
+        int fall_part = 0;
+        int fall_detail = 0;
     };
 
     /// What the Occlusion shader needs. Depths are as the depth buffer holds them, 0 near to 1 far.

@@ -994,6 +994,11 @@ namespace rct3::scene::park
         scene.light_shafts = options.flag(config::game::GameOption::LightShafts);
         scene.ambient_occlusion = options.flag(config::game::GameOption::AmbientOcclusion);
         scene.surface_detail = options.choice(config::game::GameOption::SurfaceDetail);
+        if (const auto detail = static_cast<rct3::park::WaterfallDetail>(options.choice(config::game::GameOption::WaterfallDetail)); detail != scene.waterfalls.detail)
+        {
+            scene.waterfalls.detail = detail;
+            refresh_park_waterfalls(device, scene.waterfalls, scene.footpaths.waterfalls, scene.water.surface);
+        }
         advance_park_water(scene.water, park_time);
         rct3::park::pools::drop_spent_waves(scene.drawn_waves, scene.park_clock);
         rct3::park::pools::drop_spent_waves(scene.rings, scene.park_clock);

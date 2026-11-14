@@ -371,6 +371,8 @@ namespace rct3::scene::park
             water.insert(water.end(), scene.ground_chunks.back().water.begin(), scene.ground_chunks.back().water.end());
             if (auto replaced = replace_park_water(device, scene.water, water); !replaced)
                 logging::logger("park").warning("water: {}", replaced.error());
+            // The waterfalls take their lakes' colours; every change to the falls ends with the ground built again.
+            refresh_park_waterfalls(device, scene.waterfalls, f.waterfalls, scene.water.surface);
         });
         picture_styles(device, scene, assets, paths.styles);
         if (paintings)

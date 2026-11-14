@@ -261,7 +261,7 @@ TEST_CASE("a track in several stretches runs along the first one with a station"
     CHECK(!bare->closed);
 }
 
-TEST_CASE("holding pieces and lift tops end blocks, and a tower's chain-marked pieces are no lift")
+TEST_CASE("holding pieces end blocks, lift tops are lift, and a tower's chain-marked pieces are no lift")
 {
     save::model::TerrainGrid grid;
     grid.width = 8;
@@ -302,8 +302,54 @@ TEST_CASE("holding pieces and lift tops end blocks, and a tower's chain-marked p
         return course->kinds[static_cast<std::size_t>(after - course->distance.begin() - 1)];
     };
     CHECK(kind_of(0) == park::track::CourseKind::BlockBrake);
-    CHECK(kind_of(1) == park::track::CourseKind::BlockBrake);
+    CHECK(kind_of(1) == park::track::CourseKind::Lift);
     CHECK(kind_of(2) == park::track::CourseKind::Plain);
+}
+
+TEST_CASE("a lift tower's foot, middle and top make one lift run, its foot keeping the start of the car's rails")
+{
+    save::model::TerrainGrid grid;
+    grid.width = 8;
+    grid.height = 8;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(64);
+    park::track::PieceShape plain;
+    plain.line.path = { { 2, 0, 0 }, { -2, 0, 0 } };
+    // The foot's rails start 3 m up, above the far end of the track before it, and climb 2 m more.
+    park::track::PieceShape foot;
+    foot.line.path = { { -2, 3, 0 }, { -2, 5, 0 } };
+    foot.record.flags = park::track::kPieceLiftBottom;
+    park::track::PieceShape middle;
+    middle.line.path = { { -2, 5, 0 }, { -2, 9, 0 } };
+    middle.record.flags = park::track::kPieceLiftMiddle;
+    park::track::PieceShape top = middle;
+    top.line.path = { { -2, 9, 0 }, { -2, 13, 0 } };
+    top.record.flags = park::track::kPieceLiftTop;
+    save::model::Ride ride;
+    auto& track = ride.track.emplace();
+    std::vector<save::model::PlacedObject> objects;
+    const std::array<std::string, 5> symbols { "Plain", "Foot", "Middle", "Top", "Plain" };
+    for (std::uint64_t i = 0; i < symbols.size(); ++i)
+    {
+        save::model::PlacedObject& o = objects.emplace_back();
+        o.id = 100 + i;
+        o.col = 0;
+        o.force_absolute_height = true;
+        save::model::TrackPiece& piece = track.pieces.emplace_back();
+        piece.symbol = symbols[i];
+        piece.scenery = o.id;
+    }
+    track.segments = { { .first_piece = 0, .piece_count = 5 } };
+    const auto shape_of = [&](const save::model::TrackPiece& p, const save::model::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Foot" ? foot : p.symbol == "Middle" ? middle : p.symbol == "Top" ? top : plain; };
+    const auto course = park::track::track_course(ride, objects, { }, grid, { }, shape_of);
+    REQUIRE(course);
+    REQUIRE(course->lifts.size() == 1);
+    const park::track::LiftRun& run = course->lifts.front();
+    CHECK(run.entry == doctest::Approx(4));
+    CHECK(run.from == doctest::Approx(7));
+    CHECK(run.to == doctest::Approx(17));
+    CHECK(course->kinds[1] == park::track::CourseKind::Lift);
 }
 
 TEST_CASE("brakes and block brakes keep their own speed, 0 when they have none, and other pieces none at all")

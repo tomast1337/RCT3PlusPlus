@@ -100,8 +100,10 @@ namespace rct3::park::track
                 if ((shape->record.flags & kPieceCableLift) != 0)
                     kind = CourseKind::Cable;
                 // shortcut: holding pieces in a row make one block, not one each, split them when a ride has them so
-                else if ((shape->record.flags & (kPieceHolds | kPieceLiftTop)) != 0)
+                else if ((shape->record.flags & kPieceHolds) != 0)
                     kind = CourseKind::BlockBrake;
+                else if ((shape->record.flags & kPieceLift) != 0)
+                    kind = CourseKind::Lift;
                 else if (kind == CourseKind::Plain && role == kRoleBlockBrake)
                     kind = CourseKind::BlockBrake;
                 else if (kind == CourseKind::Plain && (shape->record.flags & kPieceLaunch) != 0)
@@ -146,7 +148,12 @@ namespace rct3::park::track
                     course.drop_offs.push_back(course.length() + shape->record.drop_off);
                 const float top = glm::vec3(to_world * glm::vec4(path.front(), 1.0f)).y;
                 std::optional<float> wade_from;
-                for (std::size_t k = course.points.empty() ? 0 : 1; k < path.size(); ++k)
+                // A tower's foot starts up the tower, not where the track before it ends: the way between is the
+                // length of track its car carries, so that point is kept.
+                const bool lift_foot = (shape->record.flags & kPieceLiftBottom) != 0;
+                if (lift_foot)
+                    course.lifts.push_back({ .entry = course.length(), .from = course.length(), .to = course.length() });
+                for (std::size_t k = course.points.empty() || lift_foot ? 0 : 1; k < path.size(); ++k)
                 {
                     const glm::vec3 at = glm::vec3(to_world * glm::vec4(path[k], 1.0f));
                     course.distance.push_back(course.points.empty() ? 0 : course.distance.back() + glm::distance(course.points.back(), at));
@@ -160,6 +167,10 @@ namespace rct3::park::track
                 }
                 if (wade_from)
                     course.wades.push_back({ *wade_from, course.length() });
+                if (lift_foot)
+                    course.lifts.back().from = course.distance[course.distance.size() - path.size()];
+                if (kind == CourseKind::Lift && !course.lifts.empty())
+                    course.lifts.back().to = course.length();
             }
             // Missing a piece, the track has no course; past the stretch trains run on, that stretch is left out.
             if (!whole_stretch && !stopping)

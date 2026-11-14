@@ -307,7 +307,7 @@ namespace rct3::scene::park
     struct RidersBuild
     {
         rct3::park::MovingMeshes riders;
-        std::vector<std::size_t> cars;
+        std::vector<std::optional<std::size_t>> cars; ///< As ParkScene::rider_cars
     };
 
     /// Ways of going on foot, as simulation::Gait numbers them.
@@ -675,9 +675,9 @@ namespace rct3::scene::park
         std::future<RidersBuild> riders_build;                    ///< The riders, posed away from the frame
         /// Riders seated in the ride cars, each car's posed in the car's own space so they move with it.
         rct3::park::MovingMeshes riders;
-        /// By piece of `riders`: what carries them, a car in `cars` or past those a seat in `seat_carriers`, or kNoCar
+        /// By piece of `riders`: what carries them, a car in `cars` or past those a seat in `seat_carriers`, or none
         /// where they sit still.
-        std::vector<std::size_t> rider_cars;
+        std::vector<std::optional<std::size_t>> rider_cars;
         std::vector<glm::mat4> rider_places; ///< By piece of `riders`: its car's place, put each frame
         units::Seconds since_riders;
         ui::UiTextures people_textures;

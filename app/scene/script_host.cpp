@@ -967,7 +967,7 @@ namespace rct3::scene
             const bool open = a.size() == 2 && a[1] == "open";
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size() || !(open || (a.size() == 2 && a[1] == "closed")))
                 throw std::invalid_argument("stalls.setState takes a stall's place in stalls.list() and \"closed\" or \"open\"");
-            const auto refused = park::change_stall_state(park, a[0].get<std::size_t>(), open ? save::model::AttractionState::Open : save::model::AttractionState::Closed);
+            const auto refused = park::change_stall_state(park, save::model::StallIndex { a[0].get<std::size_t>() }, open ? save::model::AttractionState::Open : save::model::AttractionState::Closed);
             return refused ? Json(*refused) : Json(nullptr);
         });
         engine_.define("stalls.setPrice", [this](const Json& a) {
@@ -1004,7 +1004,7 @@ namespace rct3::scene
             park::ParkScene& park = park_of(park_);
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size())
                 throw std::invalid_argument("stalls.show takes a stall's place in stalls.list()");
-            park.info_requested = rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Stall, a[0].get<std::size_t>() };
+            park.info_requested = rct3::park::AttractionRef::of(save::model::StallIndex { a[0].get<std::size_t>() });
             return Json(nullptr);
         });
         engine_.define("people.rename", [this](const Json& a) {

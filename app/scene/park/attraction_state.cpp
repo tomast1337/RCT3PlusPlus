@@ -96,11 +96,11 @@ namespace rct3::scene::park
         return refused;
     }
 
-    std::optional<std::string> change_stall_state(ParkScene& scene, std::size_t stall, save::model::AttractionState state)
+    std::optional<std::string> change_stall_state(ParkScene& scene, save::model::StallIndex stall, save::model::AttractionState state)
     {
-        auto refused = state_refusal(scene, { .kind = rct3::park::AttractionRef::Kind::Stall, .index = stall }, state);
+        auto refused = state_refusal(scene, rct3::park::AttractionRef::of(stall), state);
         if (!refused)
-            set_attraction_state(scene, scene.rides.stalls.at(stall).base, state);
+            set_attraction_state(scene, scene.rides.stalls.at(stall.value).base, state);
         return refused;
     }
 

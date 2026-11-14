@@ -548,7 +548,8 @@ interface RideInfo {
     moving?: number;
     /** Ridden by the park on a track: each train's front along the track (metres), its speed along it (m/s), a slide car's swing up its trough's wall (radians, to its right; null for other trains), its length, and the station it
      * stands at (0 the first, k the k-th stop after it), null while under way; the station it is held up in behind
-     * the train ahead, short of its end, numbered alike, or null; and the riders still in its seats. */
+     * the train ahead, short of its end, numbered alike, or null; and the riders still in its seats. On a lift's
+     * car, how far it has come up the lift and how far its front is along the car's track (metres); else null. */
     trainsAt?: {
         front: number;
         speed: number;
@@ -557,6 +558,7 @@ interface RideInfo {
         station: number | null;
         held: number | null;
         riders: number;
+        lift: { phase: "Boarding" | "Engaging" | "Rising" | "AtTop" | "Releasing" | "Leaving"; aboard: number } | null;
     }[];
     /** Ridden by the park on a track: the length of its track, metres. */
     trackLength?: number;
@@ -583,8 +585,9 @@ interface RideInfo {
     /** Rides with a track: each piece's arm angles in degrees, base first, or null where it holds none. */
     arms?: (number[] | null)[];
     /** Rides with a track: where each of its cars stands now, and the way it faces (radians round the vertical, 0 along +row).
-     *  A rowing boat out on the water: the oars it rows with, both or those turning it to its left or right. */
-    cars?: (MapPoint & { facing: number; stroke?: "both" | "left" | "right" })[];
+     *  A rowing boat out on the water: the oars it rows with, both or those turning it to its left or right.
+     *  A lift's car is marked `lift`. */
+    cars?: (MapPoint & { facing: number; stroke?: "both" | "left" | "right"; lift?: true })[];
     site: Spot | null;
     /** Its first station's doors; `stations` has every station's. */
     entrance: Spot | null;

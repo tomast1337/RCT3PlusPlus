@@ -152,6 +152,7 @@ namespace rct3::simulation
     {
         std::vector<Coaster> trains;
         std::vector<std::vector<entt::entity>> riders; ///< By train
+        std::vector<Carriage> carriages { };           ///< Its track's lifts' cars, by lift, shared by its trains
         LapRecorder lap { };                           ///< Of the first train's lap under way
         /// The first train's last lap, for the ride's graphs, till the park takes it.
         std::optional<save::model::RideGraphs> lap_done { };

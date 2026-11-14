@@ -987,8 +987,12 @@ namespace rct3::simulation
         for (const rct3::park::track::CourseKind k : course.kinds)
         {
             using enum rct3::park::track::CourseKind;
-            c.kinds.push_back(k == Chain || k == Cable ? Stretch::Chain : k == Station ? Stretch::Station : k == BlockBrake ? Stretch::BlockBrake : k == Launch ? Stretch::Launch : k == Brake ? Stretch::Brake : k == Booster ? Stretch::Booster : Stretch::Plain);
+            c.kinds.push_back(k == Chain || k == Cable ? Stretch::Chain : k == Station ? Stretch::Station : k == BlockBrake ? Stretch::BlockBrake : k == Launch ? Stretch::Launch : k == Brake ? Stretch::Brake : k == Booster ? Stretch::Booster : k == Lift ? Stretch::Lift : Stretch::Plain);
         }
+        // How long the track each lift's car carries is, and how fast it goes, are its model's and its kind's: none
+        // till those are known.
+        for (const rct3::park::track::LiftRun& run : course.lifts)
+            c.lifts.push_back({ .entry = run.entry, .from = run.from, .to = run.to });
         // A brake or block brake with no speed of its own, under 1 m/s, slows to the ride's for its kind.
         // shortcut: a booster with no speed of its own pushes up to the lift speed, upgrade when the speed a newly
         // built booster gets is known.
@@ -1083,10 +1087,21 @@ namespace rct3::simulation
             }
             train.launched = train.travelled >= train.train_length;
             train.speed = train.running ? saved.speed : 0;
+            // No park kept a train on a lift's car, nor the car's place: one found on a lift starts again where the
+            // track before the lift ends, its car waiting at the bottom.
+            for (const Lift& lift : train.lifts)
+                if (length > 0 && std::fmod(train.at - lift.entry + length, length) < std::fmod(lift.to - lift.entry + length, length))
+                {
+                    train.travelled = std::fmod(lift.entry - train.start + length, length);
+                    train.at = lift.entry;
+                    train.speed = 0;
+                    train.running = train.travelled > 0;
+                }
             out.trains.push_back(train);
         }
         if (out.trains.empty())
             out.trains.push_back(coaster);
+        out.carriages = carriages_of(coaster);
         for (Coaster& train : out.trains)
             train.was_at = train.at;
         out.riders.resize(out.trains.size());

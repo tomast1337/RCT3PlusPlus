@@ -28,6 +28,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <span>
 #include <vector>
 
 namespace rct3::simulation
@@ -42,6 +43,60 @@ namespace rct3::simulation
         Launch,     ///< Goes on pushing a launched train as hard as its platform began to
         Brake,      ///< Slows the train to the stretch's brake speed
         Booster,    ///< Jets push the cars over it up to the stretch's brake speed, hard, the way they are going
+        Lift,       ///< Up a lift tower, its car carrying the train; a chain pulls it up where the car is not known
+    };
+
+    /// A lift tower on a coaster's track: its car takes a train standing on the length of track it carries up the
+    /// tower, tips it over at the top and lets it go into the track beyond. Distances are along the track.
+    struct Lift
+    {
+        float entry = 0; ///< Where a train rolls onto the car's track, at the tower's foot
+        float from = 0;  ///< Where the car's own rails up the tower start
+        float to = 0;    ///< And end, at its top, where the train is let go
+        /// Of the track the car carries. None while the car is not known, and then a chain pulls trains up the
+        /// tower instead.
+        units::Distance carried { };
+        units::Pace up { };   ///< The car climbs at
+        units::Pace down { }; ///< And comes back down empty at
+        /// How steeply the car's track points down once tipped over at the top: 0 level, 1 straight down.
+        float drop = 1;
+    };
+
+    /// Where a lift's car is: waiting empty at the bottom, taken by a train, or on its way back down.
+    enum class CarriageState : std::uint8_t
+    {
+        Waiting,
+        Taken,
+        Lowering,
+    };
+
+    /// A lift's car, shared by the trains of its ride.
+    struct Carriage
+    {
+        CarriageState state = CarriageState::Waiting;
+        units::Distance at { };     ///< Along the track, from the lift's `from` to its `to`
+        units::Distance was_at { }; ///< Where it was when the last step began, for drawing between steps
+    };
+
+    /// How far a train has come on a lift.
+    enum class LiftPhase : std::uint8_t
+    {
+        Boarding,  ///< Rolling onto the car's track, to a stop near its far end
+        Engaging,  ///< Standing a moment before the car sets off
+        Rising,    ///< Carried up the tower
+        AtTop,     ///< Tipped over at the top, held while the block ahead is taken
+        Releasing, ///< A moment more before it is let go
+        Leaving,   ///< Rolling off the car's track, under gravity
+    };
+
+    /// A train on a lift, from the moment its front rolls onto the car's track till its last car has left it.
+    struct LiftRide
+    {
+        std::size_t lift = 0; ///< Of Coaster::lifts
+        LiftPhase phase = LiftPhase::Boarding;
+        units::Distance aboard { };     ///< Its front is along the car's track, from where trains board it
+        units::Distance was_aboard { }; ///< Where its front was when the last step began, for drawing between steps
+        units::Seconds paused { };      ///< In a pause before the car sets off or lets it go
     };
 
     /// How a train on a track with two ends runs back and forth through its station.
@@ -171,6 +226,8 @@ namespace rct3::simulation
         /// Run off the end of a pool slide: off the track, where it left it and at the speed it left at
         bool splashed = false;
         std::optional<Flight> flight; ///< Of a car run off the end of a pool slide, till it is gone
+        std::vector<Lift> lifts { };  ///< Its track's lift towers, in order along it
+        std::optional<LiftRide> lifted { };
 
         [[nodiscard]] float length() const
         {
@@ -178,10 +235,17 @@ namespace rct3::simulation
         }
     };
 
-    /// Whether either end of `coaster`'s train is on a lift chain.
+    /// The lifts' cars of `coaster`'s track, each waiting at the bottom.
+    [[nodiscard]] std::vector<Carriage> carriages_of(const Coaster& coaster);
+
+    /// Brings the lifts' cars of `coaster`'s track that have let their train go back down by `seconds`, to wait at
+    /// the bottom.
+    void lower_carriages(const Coaster& coaster, std::span<Carriage> carriages, float seconds);
+
+    /// Whether either end of `coaster`'s train is on a lift chain or up a lift tower.
     [[nodiscard]] bool on_chain(const Coaster& coaster);
 
-    /// Whether the stretch `at` along `coaster`'s track, round again past either end, is a lift chain.
+    /// Whether the stretch `at` along `coaster`'s track, round again past either end, is a lift chain or tower.
     [[nodiscard]] bool chain_at(const Coaster& coaster, float at);
 
     /// The point `d` along `coaster`'s track, round again past the end of a circuit and held at the ends of a
@@ -202,8 +266,9 @@ namespace rct3::simulation
     /// up to the train in front), where it stops and waits; whether it has come round to its start (on a shuttle,
     /// back to it for the last time), where it stops. At one of its other stops it stops too, no longer running,
     /// but this gives false. A train that runs off an end of a track with two ends is left crashed instead, or
-    /// off the end of a pool slide left splashed, which counts as coming round.
-    bool drive(Coaster& coaster, float seconds, float room = std::numeric_limits<float>::infinity());
+    /// off the end of a pool slide left splashed, which counts as coming round. The cars of its track's lifts are
+    /// `carriages`, by lift, shared with the other trains; without them a chain pulls it up each lift tower.
+    bool drive(Coaster& coaster, float seconds, float room = std::numeric_limits<float>::infinity(), std::span<Carriage> carriages = { });
 
     /// What riders of a train feel at its front, from the bend of the track at its speed and gravity: in g, up
     /// through their seats and across them, and the track's way there (1 straight up, -1 straight down).

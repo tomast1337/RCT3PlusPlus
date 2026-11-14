@@ -534,14 +534,14 @@ namespace rct3::park
         const std::string entrance = first_of(ItemCategory::RideEntrance);
         const std::string exit = first_of(ItemCategory::RideExit);
         // Everything a theme's overlay offers is of that theme.
-        std::int32_t style_index = -1;
+        std::optional<std::int32_t> style_index;
         std::string style, style_title, fence;
         for (const ovl::Part* part : parts)
         {
             for (const ovl::IntegerItem& i : ovl::read_integers(overlay, *part))
             {
                 if (i.name == kStyleIndex)
-                    style_index = i.value;
+                    style_index = i.value >= 0 ? std::optional { i.value } : std::nullopt;
             }
             for (const ovl::TextItem& t : ovl::read_texts(overlay, *part))
             {
@@ -576,12 +576,12 @@ namespace rct3::park
         std::map<std::int32_t, std::pair<std::string, std::string>> named;
         for (const BuildItem& item : items)
         {
-            if (item.style_index >= 0 && !item.style.empty())
-                named.try_emplace(item.style_index, item.style, item.style_title);
+            if (item.style_index && !item.style.empty())
+                named.try_emplace(*item.style_index, item.style, item.style_title);
         }
         for (BuildItem& item : items)
         {
-            if (const auto found = named.find(item.style_index); item.style.empty() && found != named.end())
+            if (const auto found = item.style_index ? named.find(*item.style_index) : named.end(); item.style.empty() && found != named.end())
                 std::tie(item.style, item.style_title) = found->second;
         }
     }
@@ -666,11 +666,11 @@ namespace rct3::park
         const auto plain_fence = std::ranges::find_if(items, [](const BuildItem& i) { return !i.fence.empty() && strings::equals_ignoring_case(i.overlay, kPlainStyle); });
         std::map<std::int32_t, std::string> theme_fences;
         for (const BuildItem& item : items)
-            if (item.style_index >= 0 && !item.fence.empty())
-                theme_fences.try_emplace(item.style_index, item.fence);
+            if (item.style_index && !item.fence.empty())
+                theme_fences.try_emplace(*item.style_index, item.fence);
         for (BuildItem& item : items)
         {
-            if (const auto found = theme_fences.find(item.style_index); item.fence.empty() && found != theme_fences.end())
+            if (const auto found = item.style_index ? theme_fences.find(*item.style_index) : theme_fences.end(); item.fence.empty() && found != theme_fences.end())
                 item.fence = found->second;
             if ((item.kind == BuildKind::FlatRide || item.kind == BuildKind::TrackedRide) && item.entrance.empty() && plain != items.end())
             {

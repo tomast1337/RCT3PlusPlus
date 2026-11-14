@@ -1399,8 +1399,8 @@ namespace rct3::scene::park
                 const auto themed = [&](glm::vec3 at, std::int32_t theme, std::int32_t reach) {
                     if (theme_of.empty() && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
                         for (const rct3::park::BuildItem& item : scene.build.items.get())
-                            if (item.style_index >= 0)
-                                theme_of.try_emplace(item.symbol, item.style_index);
+                            if (item.style_index)
+                                theme_of.try_emplace(item.symbol, *item.style_index);
                     const save::model::TerrainGrid& g = scene.grid;
                     if (g.tile_size_x <= 0 || g.tile_size_z <= 0)
                         return 0;

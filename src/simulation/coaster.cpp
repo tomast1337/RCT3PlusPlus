@@ -28,7 +28,7 @@ namespace rct3::simulation
         constexpr float kJetPull = 15;        ///< m/s² booster jets push a car over them by. Chosen by eye
         constexpr float kLiftPause = 2;       ///< Seconds a lift's car stands before it sets off, and before it lets its train go. Chosen by eye
         constexpr float kBoardShort = 0.5f;   ///< Metres short of the far end of a lift car's track that a train boarding it stops. Chosen by eye
-        constexpr float kLiftEase = 3;        ///< Metres from either end of its climb over which a lift's car eases in and out. Chosen by eye
+        constexpr float kLiftEase = 2;        ///< m/s² a lift's car speeds up by from either end of its climb, and slows by to it. Chosen by eye
         constexpr float kLiftCreep = 0.3f;    ///< m/s a lift's car keeps up at its ends. Chosen by eye
         /// Radians a slide's car swings up its trough's wall to go over a rim. The rims are the piece's rails,
         /// level with the track's line the car swings from, so it goes over once swung out level with them.
@@ -353,7 +353,7 @@ namespace rct3::simulation
                     {
                         const float left = lift.to - car.at.value;
                         const float end = std::min(car.at.value - lift.from, left);
-                        c.speed = std::max(lift.up.value * std::min(end / kLiftEase, 1.0f), kLiftCreep);
+                        c.speed = std::clamp(std::sqrt(2 * kLiftEase * std::max(end, 0.0f)), kLiftCreep, std::max(lift.up.value, kLiftCreep));
                         car.at.value += std::min(c.speed * dt, left);
                         if (car.at.value >= lift.to - kArrived)
                         {

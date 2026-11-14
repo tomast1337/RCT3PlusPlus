@@ -64,6 +64,7 @@ namespace rct3::config
             O::Bloom,
             O::AmbientOcclusion,
             O::ParticleBudget,
+            O::WaterfallDetail,
             O::LightShafts,
             O::AntiAliasing, // The screen's passes
             O::RenderScale,

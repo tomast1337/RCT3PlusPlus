@@ -104,6 +104,7 @@ namespace rct3::config::game
             { O::WaterDroplets, "water_droplets", 0, 1, 1, 1 },
             { O::LaserOcclusion, "laser_occlusion", 0, 1, 1, 1 },
             { O::ParticleBudget, "particle_budget", 0, 20000, 500, 8000 },
+            { O::WaterfallDetail, "waterfall_detail", 0, 3, 1, 2 },
         } };
 
         // The table is indexed by GameOption, so its order must follow the enum.

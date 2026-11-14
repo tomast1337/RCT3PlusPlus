@@ -272,6 +272,20 @@ TEST_CASE("a value that may be missing is not made from a bare number by acciden
     CHECK(core::NoneAsMinusOne<std::int32_t> { -1 } == std::optional { -1 });
 }
 
+TEST_CASE("a value that may be missing compares with a plain optional as two optionals do")
+{
+    const core::NoneAsMinusOne<std::int32_t> none;
+    const core::NoneAsMinusOne<std::int32_t> two { 2 };
+    CHECK(none == std::optional<std::int32_t> { });
+    CHECK(std::optional<std::int32_t> { } == none);
+    CHECK(two == std::optional { 2 });
+    CHECK(none != std::optional { 2 });
+    CHECK(none < std::optional { 2 });
+    CHECK(two == 2);
+    CHECK(none != 2);
+    CHECK(two > 1);
+}
+
 TEST_CASE("a save keeps the park's objects and those the player built, platforms too, not those loading makes")
 {
     std::vector<save::model::PlacedObject> objects(11);

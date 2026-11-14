@@ -49,6 +49,28 @@ namespace rct3::core
         {
             return static_cast<const std::optional<T>&>(a) <=> static_cast<const std::optional<T>&>(b);
         }
+        // Against a plain optional or value too: std::optional's own would take this type for a value, so none
+        // would not equal an empty optional.
+        friend constexpr bool operator==(const NoneAsMinusOne& a, const std::optional<T>& b) noexcept
+        {
+            return static_cast<const std::optional<T>&>(a) == b;
+        }
+        friend constexpr auto operator<=>(const NoneAsMinusOne& a, const std::optional<T>& b) noexcept
+        {
+            return static_cast<const std::optional<T>&>(a) <=> b;
+        }
+        template<typename U>
+            requires(!requires(const U& u) { u.has_value(); })
+        friend constexpr bool operator==(const NoneAsMinusOne& a, const U& b) noexcept
+        {
+            return static_cast<const std::optional<T>&>(a) == b;
+        }
+        template<typename U>
+            requires(!requires(const U& u) { u.has_value(); })
+        friend constexpr auto operator<=>(const NoneAsMinusOne& a, const U& b) noexcept
+        {
+            return static_cast<const std::optional<T>&>(a) <=> b;
+        }
     };
 
     /// The value a file keeps as `stored`.

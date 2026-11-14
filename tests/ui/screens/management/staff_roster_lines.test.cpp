@@ -130,7 +130,7 @@ TEST_CASE("a line holds the worker's wage and what their next training costs, no
     const std::vector<RosterLine> lines = roster_lines({ .people = &people }, s, kAllRosterJobs, RosterSort::Job);
     REQUIRE(lines.size() == 2);
     CHECK(lines[0].wage_level == 1);
-    CHECK(lines[0].training_cost > 0);
-    CHECK(lines[1].training_cost == 0);
-    CHECK(lines[0].wage == simulation::staff::wage_at(simulation::StaffRole::Handyman, 1));
+    CHECK(lines[0].training_cost > units::Money { });
+    CHECK(lines[1].training_cost == units::Money { });
+    CHECK(lines[0].wage.value == simulation::staff::wage_at(simulation::StaffRole::Handyman, 1));
 }

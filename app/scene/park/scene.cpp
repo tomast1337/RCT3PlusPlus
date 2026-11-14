@@ -1125,10 +1125,10 @@ namespace rct3::scene::park
                             .teenagers = ages[static_cast<std::size_t>(simulation::AgeGroup::Teen)],
                             .children = ages[static_cast<std::size_t>(simulation::AgeGroup::Child)],
                             .intake = static_cast<std::int32_t>(intake - began.intake),
-                            .cash_less_loan = cash - scene.park.loan.value,
-                            .income = income - began.income,
-                            .profit = cash - began.cash,
-                            .park_value = simulation::park::park_value(scene.park.guests, scene.rides).value,
+                            .cash_less_loan = units::Money { cash } - scene.park.loan,
+                            .income = units::Money { income - began.income },
+                            .profit = units::Money { cash - began.cash },
+                            .park_value = simulation::park::park_value(scene.park.guests, scene.rides),
                         });
                     began = { .intake = intake, .income = income, .cash = cash };
                 }

@@ -8,6 +8,7 @@
 #include "ui/screens/management/pages.hpp"
 #include "ui/string_table.hpp"
 #include "ui/thought_text.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -82,11 +83,11 @@ namespace rct3::ui::screens::management
         std::int32_t warnings = 0;
         std::int32_t training = 0;
         std::int32_t wage_level = 0;
-        std::int64_t wage = 0;          ///< An hour's pay, hundredths
-        std::int64_t training_cost = 0; ///< Of their next level; 0 once fully trained
-        std::int32_t tasks = 0;         ///< Task flags
-        std::size_t patrol_tiles = 0;   ///< 0 for none: the whole park
-        bool painting_patrol = false;   ///< The player is painting their patrol area
+        units::Money wage;            ///< An hour's pay
+        units::Money training_cost;   ///< Of their next level; nothing once fully trained
+        std::int32_t tasks = 0;       ///< Task flags
+        std::size_t patrol_tiles = 0; ///< 0 for none: the whole park
+        bool painting_patrol = false; ///< The player is painting their patrol area
         std::array<std::uint8_t, 2> colours { };
         std::uint8_t costume = 0; ///< An entertainer's
         float hired = 0;          ///< When, in the park's seconds

@@ -83,7 +83,7 @@ namespace rct3::scene::park
                 f.staff = &scene.people.staff[p.saved];
                 simulation::Staff pay { .role = simulation::staff::staff_role(f.staff->kind), .training = f.staff->training };
                 simulation::staff::set_wage_level(pay, f.staff->wage_level);
-                f.wage = pay.wage.value;
+                f.wage = pay.wage;
                 f.training_cost = simulation::staff::training_cost(pay);
             }
             else if (!p.staff && p.saved < scene.people.guests.size())

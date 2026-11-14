@@ -95,7 +95,7 @@ TEST_CASE("laziness slows the work and brings rests")
 TEST_CASE("training goes up a level at a time, dearer each time, up to fully trained")
 {
     Staff s { .training = 0 };
-    std::int64_t last = 0;
+    rct3::units::Money last;
     for (int level = 0; level < kMostTraining; ++level)
     {
         CHECK(training_cost(s) > last);
@@ -103,7 +103,7 @@ TEST_CASE("training goes up a level at a time, dearer each time, up to fully tra
         CHECK(train(s));
     }
     CHECK(s.training == kMostTraining);
-    CHECK(training_cost(s) == 0);
+    CHECK(training_cost(s) == rct3::units::Money { });
     CHECK_FALSE(train(s));
 }
 
@@ -118,7 +118,7 @@ TEST_CASE("each level of training costs what the tuning says for it")
     Staff s { .training = 0 };
     for (std::size_t level = 0; level < kTuning.staff.training_cost.size(); ++level)
     {
-        CHECK(training_cost(s) == kTuning.staff.training_cost[level].value);
+        CHECK(training_cost(s) == kTuning.staff.training_cost[level]);
         CHECK(train(s));
     }
 }

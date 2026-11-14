@@ -315,6 +315,8 @@ interface PathPiece {
     style: string;
     /** Of a raised piece, in the game's height steps. */
     height?: number;
+    /** Of a queue tile on a ride's line, the line's id. */
+    line?: number;
 }
 
 interface Lake {

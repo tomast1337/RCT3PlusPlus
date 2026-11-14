@@ -85,13 +85,10 @@ namespace rct3::park::person
         std::array<std::optional<ovl::SimpleSkin>, 2> skins; ///< The plain face at each level
     };
 
-    /// In a level's optional pieces, one that could not be read.
-    inline constexpr std::size_t kNoPiece = static_cast<std::size_t>(-1);
-
     struct PartLevel
     {
-        std::vector<std::size_t> fixed;    ///< Pieces of the library
-        std::vector<std::size_t> optional; ///< Each drawn when its bit of the person's choice is set, or kNoPiece
+        std::vector<std::size_t> fixed;                   ///< Pieces of the library
+        std::vector<std::optional<std::size_t>> optional; ///< Each drawn when its bit of the person's choice is set; none when it could not be read
     };
 
     inline constexpr std::size_t kPersonLevels = 3;

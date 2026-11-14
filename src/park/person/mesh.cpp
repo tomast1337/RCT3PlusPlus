@@ -174,9 +174,9 @@ namespace rct3::park::person
             }
             for (std::size_t k = 0; k < pieces.optional.size() && k < 32; ++k)
             {
-                if ((person.look.optionals[section] >> k & 1u) == 0 || pieces.optional[k] == kNoPiece)
+                if ((person.look.optionals[section] >> k & 1u) == 0 || !pieces.optional[k])
                     continue;
-                const PieceModel& model = library.piece(pieces.optional[k]);
+                const PieceModel& model = library.piece(*pieces.optional[k]);
                 add_piece(runs, model, person, person.look.colours[model.channel < 3 ? model.channel : 0]);
             }
             const auto& head = person.look.swimwear ? set->swim_head : set->head;

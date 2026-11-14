@@ -229,8 +229,13 @@ namespace rct3::park::object
         std::optional<BoneRig> rig;
         std::size_t rig_level = 0;
         std::vector<std::int32_t> seat_bones; ///< By seat number, the rig's bone the seat is, when it has one
-        /// Of a water cannon: the rig's bones of its gun, which turns to aim, and of the nozzle at its muzzle.
-        std::optional<std::pair<std::int32_t, std::int32_t>> aim_bones;
+        /// Of a water cannon: the rig's bones that aim it.
+        struct AimBones
+        {
+            std::int32_t turret { }; ///< Its gun, which turns to aim
+            std::int32_t nozzle { }; ///< At its muzzle
+        };
+        std::optional<AimBones> aim_bones;
         /// Of a jumping fountain: its nozzles, points named kNozzle and more, model space.
         std::vector<glm::vec3> nozzles;
         /// Of a flat ride, its own fixed cameras, bones named "camera" and a number: model space, by number,

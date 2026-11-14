@@ -78,7 +78,7 @@ namespace rct3::park
         return out;
     }
 
-    std::pair<std::size_t, float> flat_ride_motion(std::span<const float> seconds, float cycle, float into, bool riding, float idle)
+    MotionAt flat_ride_motion(std::span<const float> seconds, float cycle, float into, bool riding, float idle)
     {
         const auto length = [&](std::size_t k) { return k < seconds.size() ? seconds[k] : 0.0f; };
         if (!riding)

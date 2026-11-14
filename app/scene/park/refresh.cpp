@@ -97,8 +97,8 @@ namespace rct3::scene::park
         /// Where a guest sits while riding.
         struct Seat
         {
-            std::optional<std::size_t> carrier; ///< As ParkScene::rider_cars
-            glm::mat4 place;                    ///< In the carrier's own space, or in the park with no carrier
+            std::optional<std::size_t> carrier { }; ///< As ParkScene::rider_cars
+            glm::mat4 place { };                    ///< In the carrier's own space, or in the park with no carrier
         };
 
         /// Where simulated guest `guest` sits while riding: the car, by its place in `cars`, and the seat in
@@ -300,7 +300,7 @@ namespace rct3::scene::park
                 if (model == scene.models.end() || !model->second.rig)
                     continue;
                 const auto& seconds = model->second.animation_seconds;
-                std::pair<std::size_t, float> playing;
+                rct3::park::MotionAt playing;
                 if (boned.gate)
                 {
                     // Kept open while the ride's riders walk through, on or off as the gate is, and a while after so

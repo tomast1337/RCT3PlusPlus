@@ -403,7 +403,9 @@ namespace rct3::scene
                 p.preview_bones.clear();
                 if (const rct3::park::object::ObjectModel& model = scene.models.at(rct3::park::object::model_key(alone)); model.rig)
                 {
-                    std::tie(p.preview_moving, p.preview_bones) = rct3::park::boned_meshes(alone, model, scene.grid);
+                    auto [meshes, bones] = rct3::park::boned_meshes(alone, model, scene.grid);
+                    p.preview_moving = std::move(meshes);
+                    p.preview_bones = std::move(bones);
                     ghost_textures(device, scene, p.preview_moving.mesh);
                 }
             };

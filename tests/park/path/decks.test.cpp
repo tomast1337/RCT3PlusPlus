@@ -179,20 +179,20 @@ TEST_CASE("a raised queue's piece follows its line")
         q.queue->end_direction = stored_direction(end);
         return queue_deck(q);
     };
-    CHECK(line(Side { 0 }, Side { 2 }) == std::pair { QueuePiece::Straight, ModelTurn { 1 } });
-    CHECK(line(Side { 3 }, Side { 1 }) == std::pair { QueuePiece::Straight, ModelTurn { 0 } });
-    CHECK(line(Side { 2 }, Side { 3 }) == std::pair { QueuePiece::TurnLeft, ModelTurn { 3 } });
-    CHECK(line(Side { 3 }, Side { 2 }) == std::pair { QueuePiece::TurnRight, ModelTurn { 0 } });
+    CHECK(line(Side { 0 }, Side { 2 }) == QueueDeck { QueuePiece::Straight, ModelTurn { 1 } });
+    CHECK(line(Side { 3 }, Side { 1 }) == QueueDeck { QueuePiece::Straight, ModelTurn { 0 } });
+    CHECK(line(Side { 2 }, Side { 3 }) == QueueDeck { QueuePiece::TurnLeft, ModelTurn { 3 } });
+    CHECK(line(Side { 3 }, Side { 2 }) == QueueDeck { QueuePiece::TurnRight, ModelTurn { 0 } });
 
     q.elevation->slope = 1; // Steep up, heading +row
-    CHECK(queue_deck(q) == std::pair { QueuePiece::SlopeUp, ModelTurn { 3 } });
+    CHECK(queue_deck(q) == QueueDeck { QueuePiece::SlopeUp, ModelTurn { 3 } });
     q.elevation->slope = 2;
-    CHECK(queue_deck(q).first == QueuePiece::SlopeDown);
+    CHECK(queue_deck(q).piece == QueuePiece::SlopeDown);
     q.elevation->slope = 5;
-    CHECK(queue_deck(q) == std::pair { QueuePiece::SlopeStraight, ModelTurn { 1 } });
+    CHECK(queue_deck(q) == QueueDeck { QueuePiece::SlopeStraight, ModelTurn { 1 } });
 
     PathStyle style;
     style.queue = true;
     style.pieces = { "Q_Straight", "Q_TurnL", "Q_TurnR", "Q_Up", "Q_Down", "Q_Gentle", "Q_Gentle" };
-    CHECK(deck_for(style, q, std::span(&q, 1), flat_grid(3, 3)).first == "Q_Gentle");
+    CHECK(deck_for(style, q, std::span(&q, 1), flat_grid(3, 3)).symbol == "Q_Gentle");
 }

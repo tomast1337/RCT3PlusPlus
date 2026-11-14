@@ -970,9 +970,9 @@ namespace rct3::save::model
         return it->second;
     }
 
-    std::vector<std::pair<std::string, bool>> OverlayResolver::candidates(const fs::path& dir, std::string_view name)
+    std::vector<OverlayResolver::Candidate> OverlayResolver::candidates(const fs::path& dir, std::string_view name)
     {
-        std::vector<std::pair<std::string, bool>> out;
+        std::vector<Candidate> out;
         const auto& l = list(dir);
         if (!l.ok)
             return out;
@@ -1009,14 +1009,14 @@ namespace rct3::save::model
         if (common.empty())
             return std::nullopt;
         OverlayFiles out {
-            .common = dir / common.front().first,
-            .exact_case = exact && common.front().second,
+            .common = dir / common.front().name,
+            .exact_case = exact && common.front().exact,
         };
         const auto unique = candidates(dir, base + std::string(names::kUniquePart) + std::string(names::kOvlExt));
         if (!unique.empty())
         {
-            out.unique = dir / unique.front().first;
-            out.exact_case = out.exact_case && unique.front().second;
+            out.unique = dir / unique.front().name;
+            out.exact_case = out.exact_case && unique.front().exact;
         }
         return out;
     }

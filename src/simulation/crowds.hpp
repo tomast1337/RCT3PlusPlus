@@ -69,8 +69,15 @@ namespace rct3::simulation
     /// How long `moves` take in turn.
     [[nodiscard]] float show_seconds(std::span<const ShowMove> moves);
 
-    /// The move of `show` they make now, and the seconds into it; the last once the show is through.
-    [[nodiscard]] std::pair<ShowMove, float> show_move_at(const Show& show);
+    /// Where a show is at.
+    struct ShowMoment
+    {
+        ShowMove move { }; ///< The one they make now; the last once the show is through
+        float into { };    ///< Seconds into it
+    };
+
+    /// The moment `show` is at.
+    [[nodiscard]] ShowMoment show_move_at(const Show& show);
 
     /// One tick of the crowds: entertainers' shows go on or start, fans gather round VIPs for autographs, and
     /// those watching step to their place round the star; nothing without paths. Run as part of the "Tidy"

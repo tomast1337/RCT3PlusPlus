@@ -246,5 +246,5 @@ TEST_CASE("a slide that throws its rider onto the path is a danger: it is shut, 
     CHECK_FALSE(r.get<Attraction>(slide).open);
     const auto* findings = r.ctx().find<Findings>();
     REQUIRE(findings != nullptr);
-    CHECK(std::ranges::contains(findings->found, std::pair { Finding::DangerousFlume, slide }));
+    CHECK(std::ranges::contains(findings->found, Findings::Found { Finding::DangerousFlume, slide }));
 }

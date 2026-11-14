@@ -17,7 +17,7 @@ namespace
     std::size_t times_found(const entt::registry& r, Finding finding, entt::entity at)
     {
         const auto* findings = r.ctx().find<Findings>();
-        return findings == nullptr ? 0 : static_cast<std::size_t>(std::ranges::count(findings->found, std::pair { finding, at }));
+        return findings == nullptr ? 0 : static_cast<std::size_t>(std::ranges::count(findings->found, Findings::Found { finding, at }));
     }
 
     NodeId node_at(Sandbox& park, glm::ivec2 tile)

@@ -58,13 +58,13 @@ TEST_CASE("one search finds the nearest of several places, the first where sever
     const std::array far_first { at(6), at(4), at(2), at(2) };
     const auto found = p.route_nearest(at(0), far_first);
     REQUIRE(found);
-    CHECK(found->first == 2);
-    CHECK(found->second.size() == 2);
+    CHECK(found->target == 2);
+    CHECK(found->walk.size() == 2);
     const std::array none { NodeId { 99 } };
     CHECK_FALSE(p.route_nearest(at(0), none));
     const std::array in_queue { queue };
-    CHECK(p.route_nearest(at(0), in_queue)->second.back() == queue);
-    CHECK(p.route_nearest(at(4), far_first)->first == 1); // Standing on one
+    CHECK(p.route_nearest(at(0), in_queue)->walk.back() == queue);
+    CHECK(p.route_nearest(at(4), far_first)->target == 1); // Standing on one
 }
 
 TEST_CASE("a point on a path tile finds it")

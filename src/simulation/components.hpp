@@ -612,7 +612,13 @@ namespace rct3::simulation
     /// to tell the player.
     struct Findings
     {
-        std::vector<std::pair<Finding, entt::entity>> found { }; ///< With the attraction or worker
+        struct Found
+        {
+            Finding finding { };
+            entt::entity about = entt::null; ///< The attraction or worker
+            friend bool operator==(const Found&, const Found&) = default;
+        };
+        std::vector<Found> found { };
     };
 
     /// Riders thrown off a pool slide and swimmers dived off a diving board who came down on hard ground, not in

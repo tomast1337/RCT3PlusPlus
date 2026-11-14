@@ -119,7 +119,7 @@ namespace rct3::simulation
                     continue; // The park has no gate yet; they come once it does
                 const entt::entity gate = *gates.begin();
                 // Celebrities 2 and 3 are women, as their models are.
-                const std::array<std::pair<AgeGroup, bool>, 1> who { std::pair { AgeGroup::Adult, goal.who == 2 || goal.who == 3 } };
+                const std::array<Newcomer, 1> who { Newcomer { AgeGroup::Adult, goal.who == 2 || goal.who == 3 } };
                 const entt::entity guest = admit_guests(world, gates.get<Dice>(gate).state, gates.get<const ParkGate>(gate).node, who, kTuning.parties.middle).front();
                 r.get<Visitor>(guest).name = name_of(goal.who);
                 r.emplace<Vip>(guest, Vip { .goal = c.id, .who = goal.who, .came = time, .look = tune.look });

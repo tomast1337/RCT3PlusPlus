@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/waterfall_mesh.hpp"
 
+#include <algorithm>
+#include <array>
+#include <cmath>
 #include <doctest/doctest.h>
+#include <utility>
 #include <vector>
 
 using namespace rct3;
@@ -48,106 +52,129 @@ TEST_CASE("waterfall_point: a fall whose direction is missing runs toward where 
     CHECK(waterfall_point(f, 1.0f).z == doctest::Approx(-10.0f));
 }
 
-TEST_CASE("waterfall_mesh: one see-through batch per picture, the sheet as wide as the edge")
+namespace
 {
-    const std::vector<save::model::Waterfall> falls { fall(), fall() };
-    object::ObjectMesh mesh;
-    waterfall_mesh(falls, 0.0f, mesh);
-    REQUIRE(mesh.batches.size() == kWaterfallPictures.size());
-    for (std::size_t i = 0; i < mesh.batches.size(); ++i)
+
+    std::size_t part(const WaterfallMesh& mesh, FallPart p)
     {
-        CHECK(mesh.batches[i].texture == kWaterfallPictures[i].key);
-        CHECK(mesh.batches[i].blend == object::PartBlend::Blended);
-        CHECK(mesh.batches[i].count % 6 == 0);
+        return mesh.parts[static_cast<std::size_t>(p)].count;
     }
-    CHECK(mesh.batches[0].count == mesh.batches[1].count);
-    CHECK(mesh.batches[2].count == 2 * 9 * 6); // A foam patch of three by three squares each
-    float low_z = 0, high_z = 0;
-    for (std::uint32_t i = mesh.batches[0].first; i < mesh.batches[0].first + mesh.batches[0].count; ++i)
+
+    /// The mist batch's puffs and droplets, by the sign of their normal's last value.
+    std::pair<int, int> puffs_and_droplets(const WaterfallMesh& mesh)
     {
-        low_z = std::min(low_z, mesh.vertices[mesh.indices[i]].position.z);
-        high_z = std::max(high_z, mesh.vertices[mesh.indices[i]].position.z);
+        const FallBatch mist = mesh.parts[static_cast<std::size_t>(FallPart::Mist)];
+        std::pair<int, int> counted { };
+        for (std::uint32_t i = mist.first; i < mist.first + mist.count; i += 6)
+            ++(mesh.vertices[mesh.indices[i]].normal.z > 0 ? counted.first : counted.second);
+        return counted;
     }
-    CHECK(low_z == doctest::Approx(-4.0f));
-    CHECK(high_z == doctest::Approx(4.0f));
+
+} // namespace
+
+TEST_CASE("fall_seconds: as long as a stone takes to fall as far")
+{
+    CHECK(fall_seconds({ 0.0f }).value == 0.0f);
+    CHECK(fall_seconds({ 15.0f }).value == doctest::Approx(std::sqrt(2.0f * 15.0f / 9.81f)));
+    CHECK(fall_seconds({ 60.0f }).value == doctest::Approx(2.0f * fall_seconds({ 15.0f }).value));
 }
 
-TEST_CASE("waterfall_mesh: the sheet's picture runs down it as time passes")
+TEST_CASE("waterfall_mesh: foam and sheet at every level, mist from Medium, more of it from High, droplets at Ultra")
+{
+    save::model::Waterfall tall = fall();
+    tall.bottom.y = -20.0f; // A 40 unit drop
+    tall.lip_left.x = tall.lip_right.x = 50.0f;
+    tall.bottom.x = 60.0f;
+    const std::vector<save::model::Waterfall> falls { fall(), tall };
+    const std::vector<FallLakes> lakes(2);
+    WaterfallMesh mesh;
+    std::array<std::pair<int, int>, 4> mist { };
+    for (const WaterfallDetail detail : { WaterfallDetail::Low, WaterfallDetail::Medium, WaterfallDetail::High, WaterfallDetail::Ultra })
+    {
+        CAPTURE(static_cast<int>(detail));
+        waterfall_mesh(falls, lakes, detail, mesh);
+        CHECK(part(mesh, FallPart::Foam) == 2 * 6);
+        CHECK(part(mesh, FallPart::Sheet) == 2 * 13 * 6); // Twelve rows down and one behind the edge each
+        mist[static_cast<std::size_t>(detail)] = puffs_and_droplets(mesh);
+    }
+    CHECK(mist[0] == std::pair { 0, 0 });
+    CHECK(mist[1].first > 0);
+    CHECK(mist[1].second == 0);
+    CHECK(mist[2].first == 2 * mist[1].first);
+    CHECK(mist[2].second == 0);
+    CHECK(mist[3].first == mist[2].first);
+    CHECK(mist[3].second > 0);
+}
+
+TEST_CASE("waterfall_mesh: the sheet's last row carries the time the whole fall takes")
 {
     const std::vector<save::model::Waterfall> falls { fall() };
-    object::ObjectMesh before;
-    object::ObjectMesh after;
-    waterfall_mesh(falls, 0.0f, before);
-    waterfall_mesh(falls, 1.0f, after);
-    REQUIRE(before.vertices.size() == after.vertices.size());
-    const auto at = before.indices[before.batches[0].first];
-    CHECK(after.vertices[at].uv.y < before.vertices[at].uv.y);
-    CHECK(after.vertices[at].position.x == before.vertices[at].position.x);
+    WaterfallMesh mesh;
+    waterfall_mesh(falls, std::vector<FallLakes>(1), WaterfallDetail::High, mesh);
+    const FallBatch sheet = mesh.parts[static_cast<std::size_t>(FallPart::Sheet)];
+    const GroundVertex& last = mesh.vertices[mesh.indices[sheet.first + sheet.count - 1]];
+    CHECK(last.uv.y == doctest::Approx(fall_seconds({ 15.0f }).value));
+    CHECK(last.position.y == doctest::Approx(5.0f));
+}
+
+TEST_CASE("waterfall_mesh: no mist under a ten unit drop, at any level")
+{
+    save::model::Waterfall low = fall();
+    low.bottom.y = 12.0f; // An 8 unit drop
+    WaterfallMesh mesh;
+    waterfall_mesh(std::span(&low, 1), { }, WaterfallDetail::High, mesh);
+    CHECK(part(mesh, FallPart::Mist) == 0);
+    waterfall_mesh(std::span(&low, 1), { }, WaterfallDetail::Ultra, mesh);
+    CHECK(puffs_and_droplets(mesh).first == 0);
+    CHECK(puffs_and_droplets(mesh).second > 0); // Droplets splash up off any fall
+}
+
+TEST_CASE("waterfall_mesh: a second fall over the same edge keeps only what the first leaves")
+{
+    const save::model::Waterfall first = fall();
+    save::model::Waterfall wider = fall();
+    wider.lip_right.z = 10.0f; // From -4 to 10: 6 units past the first
+    WaterfallMesh mesh;
+    const auto sheet_ends = [&] {
+        const FallBatch sheet = mesh.parts[static_cast<std::size_t>(FallPart::Sheet)];
+        float low = 1e9f;
+        float high = -1e9f;
+        for (std::uint32_t i = sheet.first; i < sheet.first + sheet.count; ++i)
+        {
+            low = std::min(low, mesh.vertices[mesh.indices[i]].position.z);
+            high = std::max(high, mesh.vertices[mesh.indices[i]].position.z);
+        }
+        return std::pair { low, high };
+    };
+    const std::vector<save::model::Waterfall> same { first, first };
+    waterfall_mesh(same, { }, WaterfallDetail::Low, mesh);
+    CHECK(part(mesh, FallPart::Sheet) == 13 * 6);
+    const std::vector<save::model::Waterfall> both { first, wider };
+    waterfall_mesh(both, { }, WaterfallDetail::Low, mesh);
+    CHECK(part(mesh, FallPart::Sheet) == 2 * 13 * 6);
+    CHECK(sheet_ends().first == doctest::Approx(-4.0f));
+    CHECK(sheet_ends().second == doctest::Approx(10.0f));
+    // The second's piece starts where the first ends: no stretch of edge is poured over twice.
+    const FallBatch sheet = mesh.parts[static_cast<std::size_t>(FallPart::Sheet)];
+    const float second_start = mesh.vertices[mesh.indices[sheet.first + 13 * 6]].position.z;
+    CHECK(second_start == doctest::Approx(4.0f));
+    // A fall over another edge, or to another lake, is left whole.
+    save::model::Waterfall elsewhere = wider;
+    elsewhere.bottom.y = 0.0f;
+    const std::vector<save::model::Waterfall> apart { first, elsewhere };
+    waterfall_mesh(apart, { }, WaterfallDetail::Low, mesh);
+    CHECK(sheet_ends().second == doctest::Approx(10.0f));
+    CHECK(mesh.vertices[mesh.indices[mesh.parts[static_cast<std::size_t>(FallPart::Sheet)].first + 13 * 6]].position.z == doctest::Approx(-4.0f));
 }
 
 TEST_CASE("waterfall_mesh: nothing for no falls, and the mesh is emptied")
 {
     const std::vector<save::model::Waterfall> falls { fall() };
-    object::ObjectMesh mesh;
-    waterfall_mesh(falls, 0.0f, mesh);
-    waterfall_mesh({ }, 0.0f, mesh);
+    WaterfallMesh mesh;
+    waterfall_mesh(falls, { }, WaterfallDetail::Ultra, mesh);
+    waterfall_mesh({ }, { }, WaterfallDetail::Ultra, mesh);
     CHECK(mesh.vertices.empty());
     CHECK(mesh.indices.empty());
-    CHECK(mesh.batches.empty());
-}
-
-TEST_CASE("waterfall_mesh: foam fades out at its edges and is whole in its middle")
-{
-    const std::vector<save::model::Waterfall> falls { fall() };
-    object::ObjectMesh mesh;
-    waterfall_mesh(falls, 0.0f, mesh);
-    const object::ObjectBatch& foam = mesh.batches[2];
-    int clear = 0;
-    int whole = 0;
-    for (std::uint32_t i = foam.first; i < foam.first + foam.count; ++i)
-    {
-        const float alpha = mesh.vertices[mesh.indices[i]].colour.a;
-        clear += alpha == 0.0f;
-        whole += alpha == 1.0f;
-    }
-    CHECK(clear > 0);
-    CHECK(whole > 0);
-    CHECK(clear + whole == static_cast<int>(foam.count));
-}
-
-TEST_CASE("waterfall_layer_scroll: the first picture runs on past its second, and stays within one repeat")
-{
-    const WaterfallPicture& sheet = kWaterfallPictures[0];
-    CHECK(waterfall_layer_scroll(sheet, 0.0f).lengths == doctest::Approx(0.0f));
-    const float soon = waterfall_layer_scroll(sheet, 0.5f).lengths;
-    CHECK(soon == doctest::Approx(1.0f - 0.5f * sheet.layer_lag));
-    for (const float seconds : { 1.0f, 7.3f, 1000.0f })
-    {
-        const float s = waterfall_layer_scroll(sheet, seconds).lengths;
-        CHECK(s >= 0.0f);
-        CHECK(s < 1.0f);
-    }
-}
-
-TEST_CASE("waterfall_spray: sprays spread along where the water lands, more for a wider fall")
-{
-    const std::vector<save::model::Waterfall> one { fall() };
-    const std::vector<object::PlacedEffect> narrow = waterfall_spray(one);
-    REQUIRE(!narrow.empty());
-    for (const object::PlacedEffect& spray : narrow)
-    {
-        CHECK(spray.effect == kWaterfallSpray);
-        CHECK(spray.object == 0);
-        CHECK(spray.position.x == doctest::Approx(10.0f));
-        CHECK(spray.position.y >= 5.0f);
-        CHECK(std::abs(spray.position.z) < 4.0f);
-    }
-    save::model::Waterfall wide = fall();
-    wide.lip_left.z = -20.0f;
-    wide.lip_right.z = 20.0f;
-    const std::vector<save::model::Waterfall> two { fall(), wide };
-    const std::vector<object::PlacedEffect> both = waterfall_spray(two);
-    CHECK(both.size() > 2 * narrow.size());
-    CHECK(both.back().object == 1);
-    CHECK(waterfall_spray({ }).empty());
+    for (const FallBatch& b : mesh.parts)
+        CHECK(b.count == 0);
 }

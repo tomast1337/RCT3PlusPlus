@@ -8,8 +8,10 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "math/texture_shift.hpp"
 #include "park/object/mesh.hpp"
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -88,10 +90,34 @@ namespace rct3::park::water
     /// high to reach at that angle, or straight above.
     [[nodiscard]] std::optional<Throw> throw_to(glm::vec3 from, glm::vec3 to, float angle);
 
-    /// The picture jets are drawn with: the waterfalls' sheet, scrolled along the jet.
-    inline constexpr std::string_view kJetPicture = "rct3pp:waterfall-sheet";
-    /// And where it breaks up, the waterfalls' froth over it.
-    inline constexpr std::string_view kJetSpray = "rct3pp:waterfall-froth";
+    /// The overlay holding the jets' pictures, the game's running water: seen in the game's install.
+    inline constexpr std::string_view kJetFile = "Waterfall/Waterfall.common.ovl";
+
+    /// One of the jets' pictures: its texture's name in the overlay and its key among the scene's pictures, and
+    /// the same of the second picture drawn over it (render::Shader::LitLayerAdded), running at another speed so
+    /// the water shimmers rather than slides.
+    struct JetPicture
+    {
+        std::string_view texture { };
+        std::string_view key { };
+        std::string_view layer_texture { };
+        std::string_view layer_key { };
+        float layer_lag = 0; ///< Pictures a second the second picture runs behind the first
+    };
+
+    /// The clear water of a jet, and the froth where it breaks up, in the order jet_mesh's batches come in.
+    inline constexpr std::array<JetPicture, 2> kJetPictures { {
+        { "Waterfall2", "rct3pp:jet", "Waterfall2B", "rct3pp:jet-b", 0.3f },
+        { "WaterfallFloorFroth", "rct3pp:froth", "WaterfallFloorFrothB", "rct3pp:froth-b", -0.4f },
+    } };
+    /// The picture jets are drawn with, scrolled along the jet.
+    inline constexpr std::string_view kJetPicture = kJetPictures[0].key;
+    /// And where it breaks up, the froth over it.
+    inline constexpr std::string_view kJetSpray = kJetPictures[1].key;
+
+    /// How far the first picture of `picture` is moved along v past its second after `seconds`: the mesh's
+    /// coordinates are where the second is read, and the draw moves the first on by this.
+    [[nodiscard]] math::TextureShift jet_layer_scroll(const JetPicture& picture, float seconds);
 
     /// Adds the tubes of `jets` to `mesh` as one batch of kJetPicture, and one of kJetSpray where they break up, seen from `eye` (the rims, seen edge on,
     /// are less see-through; water breaking up is whiter, ragged and clearer), the picture running along each jet

@@ -10,7 +10,6 @@
 #include "park/view_lines.hpp"
 #include "park/water/fill.hpp"
 #include "park/waterfall_making.hpp"
-#include "park/waterfall_mesh.hpp"
 #include "scene/objects.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/ground.hpp"
@@ -224,8 +223,6 @@ namespace rct3::scene
                 scene.footpaths.water = std::move(water);
                 scene.footpaths.waterfalls = std::move(falls);
             }
-            if (drained)
-                park::show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &park::ParkParticles::sprays);
             // A lake that changed may reach far from the step; a moved corner shades the tiles beside those round it.
             std::optional<rct3::park::TileRect> touched;
             if (step && !drained)
@@ -655,7 +652,6 @@ namespace rct3::scene
             end_stroke(scene);
             refit_lake(scene, fall->top, fall->carved);
             scene.footpaths.waterfalls.push_back(*fall);
-            park::show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &park::ParkParticles::sprays);
             park::rebuild_ground(device, scene, assets);
         }
 
@@ -857,7 +853,6 @@ namespace rct3::scene
         rct3::park::restore_spillway(ground, f);
         const save::model::WorldPoint3 top = f.top;
         falls.erase(falls.begin() + static_cast<std::ptrdiff_t>(*fall));
-        park::show_park_particles(scene.particles, rct3::park::waterfall_spray(falls), &park::ParkParticles::sprays);
         start_stroke(scene);
         take_ground(device, scene, assets, std::move(ground), false);
         end_stroke(scene);
@@ -871,7 +866,6 @@ namespace rct3::scene
         save::model::TerrainGrid ground = scene.grid;
         if (!rct3::park::water::remove_lake(scene.footpaths.water, scene.footpaths.waterfalls, ground, tile))
             return;
-        park::show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &park::ParkParticles::sprays);
         start_stroke(scene);
         take_ground(device, scene, assets, std::move(ground), false);
         end_stroke(scene);
@@ -891,7 +885,6 @@ namespace rct3::scene
         });
         if (gone.empty())
             return;
-        park::show_park_particles(scene.particles, rct3::park::waterfall_spray(falls), &park::ParkParticles::sprays);
         start_stroke(scene);
         take_ground(device, scene, assets, std::move(ground), false);
         end_stroke(scene);

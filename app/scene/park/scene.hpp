@@ -59,6 +59,7 @@
 #include "scene/park/supports.hpp"
 #include "scene/park/view.hpp"
 #include "scene/park/water.hpp"
+#include "scene/park/waterfalls.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/save_browser.hpp"
 #include "scene/structure_tools.hpp"
@@ -374,6 +375,7 @@ namespace rct3::scene::park
         render::PipelineHandle ground_depth_pipeline;
         render::PipelineHandle ground_faded_pipeline;
         ParkWater water;
+        ParkWaterfalls waterfalls; ///< At the Waterfall detail option's level
         ParkGlow glow;
         ParkLens lens;                                          ///< Water on the camera's lens
         ParkParticles particles;                                ///< The effects scenery and rides show
@@ -465,8 +467,8 @@ namespace rct3::scene::park
         /// By the id of each object pipeline above, the same pipeline drawing only the front of one-sided parts.
         std::map<std::uint32_t, render::PipelineHandle> front_only;
         ui::UiTextures object_textures;
-        std::uint32_t ripple_frame = 0;                ///< Of the still water of objects, the picture shown (rct3::park::object::water_picture)
-        rct3::park::object::ObjectMesh waterfall_mesh; ///< The waterfalls' water, built again each frame as it runs
+        std::uint32_t ripple_frame = 0;          ///< Of the still water of objects, the picture shown (rct3::park::object::water_picture)
+        rct3::park::object::ObjectMesh jet_mesh; ///< The jets' water (park/water/jet.hpp), built again each frame as it runs
         /// The water running off a pool slide's open end: it sprays off the lip and falls, and where it comes down
         /// rings spread on a pool's water or it splashes.
         struct SlidePour
@@ -500,8 +502,7 @@ namespace rct3::scene::park
         float jets_clock = 0;                                 ///< park_clock when the jets last moved
         float jumps_ended = 0;                                ///< park_clock when the jumping fountains last had a jump in the air
         std::vector<std::pair<float, glm::vec3>> splashdowns; ///< Pool slide riders in the air: park_clock when they reach the water, and where
-        render::PipelineHandle waterfall_added_pipeline;      ///< Its pictures with a second added
-        render::PipelineHandle waterfall_multiplied_pipeline; ///< And with a second multiplying them
+        render::PipelineHandle jet_pipeline;                  ///< Their pictures, each with its second added
         rct3::park::sky::SkyModels sky;
         rct3::park::object::ObjectMesh sky_mesh; ///< Built again each frame round the eye
         ui::UiTextures sky_textures;

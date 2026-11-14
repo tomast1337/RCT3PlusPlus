@@ -87,8 +87,8 @@ namespace rct3::scene::park
     /// Starts a ripple where `ray` meets the water, unless the ground is in front of it. True if it did.
     bool ripple_park_water(ParkWater& water, const rct3::park::Ray& ray, const save::model::TerrainGrid& grid);
 
-    /// Draws the world mirrored by the transform given, without its water.
-    using MirroredDraw = std::function<void(const glm::mat4& transform)>;
+    /// Draws the world mirrored by the transform given in the water at the level given, without its water.
+    using MirroredDraw = std::function<void(const glm::mat4& transform, float level)>;
 
     /// Call inside the screen pass before anything of the world is drawn; it ends the pass and begins it again
     /// keeping what was drawn.

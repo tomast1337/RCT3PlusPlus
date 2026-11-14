@@ -36,7 +36,7 @@
 #include "park/surrounding_land.hpp"
 #include "park/track/ground.hpp"
 #include "park/water/flow.hpp"
-#include "park/waterfall_mesh.hpp"
+#include "park/water/jet.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
@@ -1238,6 +1238,9 @@ namespace rct3::scene::park
             scene.footpaths.pictured = paths.styles;
             if (auto water = create_park_water(device, scene.water, { }, ground_layout); !water)
                 return fail(water.error());
+            // Their mesh is built with the ground's water, on the first frame.
+            scene.waterfalls.detail = static_cast<rct3::park::WaterfallDetail>(options.choice(config::game::GameOption::WaterfallDetail));
+            create_park_waterfalls(device, scene.waterfalls, ground_layout);
             auto ground = device.create_pipeline({ .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .label = "ground" });
             if (!ground)
                 return fail(ground.error());
@@ -1333,17 +1336,17 @@ namespace rct3::scene::park
                 else
                     logging::logger("park").warning("flowing water: {}", flow.error());
             }
-            if (const auto falls_file = install.find(rct3::park::kWaterfallFile))
+            if (const auto falls_file = install.find(rct3::park::water::kJetFile))
             {
-                // The waterfalls' pictures; without them the falls are drawn as plain see-through water.
+                // The jets' pictures; without them the jets are drawn as plain see-through water.
                 std::map<std::string, ovl::texture::RgbaImage, std::less<>> pictures;
-                for (const rct3::park::WaterfallPicture& picture : rct3::park::kWaterfallPictures)
+                for (const rct3::park::water::JetPicture& picture : rct3::park::water::kJetPictures)
                     for (const auto& [texture, key] : { std::pair { picture.texture, picture.key }, std::pair { picture.layer_texture, picture.layer_key } })
                     {
                         if (auto image = rct3::park::water::load_flow_picture(*falls_file, texture))
                             pictures.emplace(key, std::move(*image));
                         else
-                            logging::logger("park").warning("waterfalls: {}", image.error());
+                            logging::logger("park").warning("jets: {}", image.error());
                     }
                 if (auto uploaded = ui::upload_textures(device, pictures))
                     scene.object_textures.merge(*uploaded);
@@ -1519,14 +1522,13 @@ namespace rct3::scene::park
                     scene.tunes.push_back(file.path().stem().u16string());
             std::ranges::sort(scene.tunes);
             show_park_particles(scene.particles, rct3::park::object::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, scene.places.transforms, scene.places.models));
-            show_park_particles(scene.particles, rct3::park::waterfall_spray(scene.footpaths.waterfalls), &ParkParticles::sprays);
             const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };
             for (auto [pipeline, desc] : { std::pair { &scene.object_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" } }, std::pair { &scene.cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" } },
                                            std::pair { &scene.see_through_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "see-through objects" } }, std::pair { &scene.crossing_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .label = "crossing objects" } },
                                            std::pair { &scene.crossing_cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossingCutout, .layout = crossing_layout, .label = "crossing object cut-outs" } }, std::pair { &scene.crossing_see_through_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "crossing see-through objects" } },
                                            std::pair { &scene.depth_only_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .colour_write = false, .label = "depth-only objects" } }, std::pair { &scene.crossing_depth_only_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossing, .layout = crossing_layout, .colour_write = false, .label = "crossing depth-only objects" } },
                                            std::pair { &scene.chrome_pipeline, render::PipelineDesc { .shader = render::Shader::LitChrome, .layout = ground_layout, .label = "chrome objects" } }, std::pair { &scene.crossing_chrome_pipeline, render::PipelineDesc { .shader = render::Shader::LitCrossingChrome, .layout = crossing_layout, .label = "crossing chrome objects" } },
-                                           std::pair { &scene.waterfall_added_pipeline, render::PipelineDesc { .shader = render::Shader::LitLayerAdded, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "waterfalls" } }, std::pair { &scene.waterfall_multiplied_pipeline, render::PipelineDesc { .shader = render::Shader::LitLayerMultiplied, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "waterfall foam" } } })
+                                           std::pair { &scene.jet_pipeline, render::PipelineDesc { .shader = render::Shader::LitLayerAdded, .layout = ground_layout, .blend = render::BlendMode::Alpha, .depth_write = false, .label = "jets" } } })
             {
                 auto made = device.create_pipeline(desc);
                 if (!made)
@@ -1687,6 +1689,7 @@ namespace rct3::scene::park
     {
         finish_builds(scene);
         destroy_park_water(device, scene.water);
+        destroy_park_waterfalls(device, scene.waterfalls);
         destroy_led_signs(device, scene.led_signs);
         destroy_park_glow(device, scene.glow);
         destroy_park_lens(device, scene.lens);
@@ -1708,7 +1711,7 @@ namespace rct3::scene::park
             if (b)
                 device.destroy_buffer(b);
         }
-        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.ground_depth_pipeline, scene.ground_faded_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.crossing_pipeline, scene.crossing_cutout_pipeline, scene.crossing_see_through_pipeline, scene.depth_only_pipeline, scene.crossing_depth_only_pipeline, scene.chrome_pipeline, scene.crossing_chrome_pipeline, scene.waterfall_added_pipeline, scene.waterfall_multiplied_pipeline, scene.sky_pipeline })
+        for (const render::PipelineHandle p : { scene.ground_pipeline, scene.ground_depth_pipeline, scene.ground_faded_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.crossing_pipeline, scene.crossing_cutout_pipeline, scene.crossing_see_through_pipeline, scene.depth_only_pipeline, scene.crossing_depth_only_pipeline, scene.chrome_pipeline, scene.crossing_chrome_pipeline, scene.jet_pipeline, scene.sky_pipeline })
         {
             if (p)
                 device.destroy_pipeline(p);

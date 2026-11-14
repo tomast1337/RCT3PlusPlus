@@ -69,9 +69,9 @@ namespace rct3::scene::park
                 *pipeline = *made;
     }
 
-    void show_park_particles(ParkParticles& particles, std::span<const rct3::park::object::PlacedEffect> effects, std::vector<ParkParticles::Shown> ParkParticles::* list)
+    void show_park_particles(ParkParticles& particles, std::span<const rct3::park::object::PlacedEffect> effects)
     {
-        (particles.*list).clear();
+        particles.shown.clear();
         if (!particles.library)
             return;
         std::size_t missing = 0;
@@ -80,7 +80,7 @@ namespace rct3::scene::park
             if (auto shown = start(particles, placed.effect, placed.position, placed.axes, true))
             {
                 shown->size = placed.size;
-                (particles.*list).push_back(std::move(*shown));
+                particles.shown.push_back(std::move(*shown));
             }
             else
                 ++missing;
@@ -105,7 +105,7 @@ namespace rct3::scene::park
     {
         std::erase_if(particles.fired, [](const ParkParticles::Shown& s) { return s.run.finished(); });
         std::vector<std::pair<float, ParkParticles::Shown*>> near;
-        for (auto* list : { &particles.shown, &particles.fired, &particles.sprays })
+        for (auto* list : { &particles.shown, &particles.fired })
             for (ParkParticles::Shown& shown : *list)
             {
                 shown.awake = false;
@@ -142,7 +142,7 @@ namespace rct3::scene::park
             std::array<Corner, 6> corners;
         };
         std::map<std::pair<std::string, bool>, std::vector<Quad>> batches;
-        for (const auto* list : { &particles.shown, &particles.fired, &particles.sprays })
+        for (const auto* list : { &particles.shown, &particles.fired })
             for (const ParkParticles::Shown& shown : *list)
             {
                 if (!shown.awake)

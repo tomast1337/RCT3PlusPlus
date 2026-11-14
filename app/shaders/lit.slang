@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// render::Shader::Lit, with the constant 1 LitCutout: pixels under half opacity are not drawn; 2 LitLayerAdded and
-// 3 LitLayerMultiplied: a second picture in place of the noise, added after the light or multiplied before it; 4
-// LitChrome: the texture is the surroundings, read where the eye's way bounces off the surface.
+// render::Shader::Lit, with the constant 1 LitCutout: pixels under half opacity are not drawn; 2 LitLayerAdded: a
+// second picture in place of the noise, added after the light; 4 LitChrome: the texture is the surroundings, read
+// where the eye's way bounces off the surface.
 // Positions and normals are in world space.
 import common;
 
@@ -277,7 +277,7 @@ float4 fragment_main(LitVaryings f) : SV_Target
         discard;
     // Layered, the v shift moves the first picture only: the second is read where the mesh puts it.
     float4 layer = float4(0.0);
-    if (kMode == 2 || kMode == 3)
+    if (kMode == 2)
         layer = u_variation.Sample(u_sampler, f.uv - float2(0.0, frac(u_draw.sky.w)));
     // Lit as the normal says, from whichever side the surface is seen. Turning the normal to face the eye would
     // darken everything above the eye whose normal tilts up (roofs, the cards of trees, which are seen from below

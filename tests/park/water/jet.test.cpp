@@ -134,3 +134,17 @@ TEST_CASE("a thin jet seen from afar is drawn wider and fainter")
     CHECK(width(far) > 2 * width(close));
     CHECK(far.vertices[0].colour.a < close.vertices[0].colour.a);
 }
+
+TEST_CASE("jet_layer_scroll: the first picture runs on past its second, and stays within one repeat")
+{
+    const JetPicture& water = kJetPictures[0];
+    CHECK(jet_layer_scroll(water, 0.0f).lengths == doctest::Approx(0.0f));
+    const float soon = jet_layer_scroll(water, 0.5f).lengths;
+    CHECK(soon == doctest::Approx(1.0f - 0.5f * water.layer_lag));
+    for (const float seconds : { 1.0f, 7.3f, 1000.0f })
+    {
+        const float s = jet_layer_scroll(water, seconds).lengths;
+        CHECK(s >= 0.0f);
+        CHECK(s < 1.0f);
+    }
+}

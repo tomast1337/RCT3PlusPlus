@@ -118,7 +118,7 @@ TEST_CASE("a vendor's mood moves as other staff's do, but they never quit")
     CHECK(r.get<Staff>(vendor).happiness.value < 0.5f);
     REQUIRE(r.all_of<Thoughts>(vendor));
     const auto* findings = r.ctx().find<Findings>();
-    CHECK((findings == nullptr || std::ranges::none_of(findings->found, [&](const auto& f) { return f.second == vendor; })));
+    CHECK((findings == nullptr || std::ranges::none_of(findings->found, [&](const auto& f) { return f.about == vendor; })));
 }
 
 TEST_CASE("a lifeguard's mood moves as other staff's do, but they never quit")
@@ -132,7 +132,7 @@ TEST_CASE("a lifeguard's mood moves as other staff's do, but they never quit")
     CHECK(r.get<Staff>(guard).happiness.value < 0.5f);
     REQUIRE(r.all_of<Thoughts>(guard));
     const auto* findings = r.ctx().find<Findings>();
-    CHECK((findings == nullptr || std::ranges::none_of(findings->found, [&](const auto& f) { return f.second == guard; })));
+    CHECK((findings == nullptr || std::ranges::none_of(findings->found, [&](const auto& f) { return f.about == guard; })));
 }
 
 TEST_CASE("an idle keeper grows unhappy and, unhappy enough, quits")
@@ -146,7 +146,7 @@ TEST_CASE("an idle keeper grows unhappy and, unhappy enough, quits")
     CHECK(park.run_until(
         [&] {
             const auto* findings = r.ctx().find<Findings>();
-            return findings != nullptr && std::ranges::contains(findings->found, std::pair { Finding::WantsToQuit, keeper });
+            return findings != nullptr && std::ranges::contains(findings->found, Findings::Found { Finding::WantsToQuit, keeper });
         },
         12 * 3600));
 }

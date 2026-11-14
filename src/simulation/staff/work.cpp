@@ -356,7 +356,7 @@ namespace rct3::simulation::staff
             if (rounds != nullptr && rounds->gap.value <= 0 && rounds->watching == entt::null)
             {
                 rounds->gap = kTuning.inspector.gap;
-                std::erase_if(rounds->seen, [&](const auto& seen) { return !r.valid(seen.first) || now - seen.second >= kTuning.inspector.again.value; });
+                std::erase_if(rounds->seen, [&](const auto& seen) { return !r.valid(seen.what) || now - seen.when >= kTuning.inspector.again.value; });
                 constexpr int kTasks = 8;
                 std::int32_t task = 0;
                 for (int k = 0; k < kTasks && task == 0; ++k)
@@ -364,7 +364,7 @@ namespace rct3::simulation::staff
                         task = bit;
                 if (task != 0)
                     rounds->task = static_cast<std::uint8_t>((std::countr_zero(static_cast<std::uint32_t>(task)) + 1) % kTasks);
-                const auto been = [&](entt::entity x) { return std::ranges::contains(rounds->seen, x, &std::pair<entt::entity, float>::first); };
+                const auto been = [&](entt::entity x) { return std::ranges::contains(rounds->seen, x, &Rounds::Seen::what); };
                 // With the food and drink, whatever many of the guests want most.
                 if (task == kRefreshmentsTask)
                 {

@@ -47,7 +47,7 @@ namespace rct3::simulation
             auto found = nodes.empty() ? std::nullopt : paths.route_nearest(from, nodes);
             if (!found)
                 return std::nullopt;
-            return std::pair { spawns[found->first], std::move(found->second) };
+            return std::pair { spawns[found->target], std::move(found->walk) };
         }
 
         /// Each of `party` pays the entrance fee, the party making up what one is short of. False, with nothing
@@ -156,7 +156,7 @@ namespace rct3::simulation
             auto found = paths.route_nearest(at, entrances, Walker::Guest, wallet.cash.value - dearest);
             if (!found)
                 return std::nullopt;
-            return std::pair { wanted[found->first], std::move(found->second) };
+            return std::pair { wanted[found->target], std::move(found->walk) };
         }
 
         /// How many guests a ride's queue `line` holds; no limit for a ride guests walk straight into.
@@ -775,8 +775,8 @@ namespace rct3::simulation
                             const bool rained_on = weather.rain && (!r.all_of<Umbrella>(movers[i]) || weather.storm);
                             const bool sweltering = sun && feel.heat.value >= kTuning.needs.want.value;
                             if (!goal && (rained_on ? !paths.nodes()[at].covered : sweltering && !paths.nodes()[at].shaded))
-                                if (auto refuge = paths.route_nearest(at, rained_on ? covers : shades); refuge && !refuge->second.empty())
-                                    stride.route = std::move(refuge->second);
+                                if (auto refuge = paths.route_nearest(at, rained_on ? covers : shades); refuge && !refuge->walk.empty())
+                                    stride.route = std::move(refuge->walk);
                             if (goal)
                             {
                                 errand = { ErrandKind::Heading, goal->first, 0 };
@@ -1536,7 +1536,7 @@ namespace rct3::simulation
         const auto kind = static_cast<PartyKind>(pick);
         const auto* mix = r.ctx().find<PartyMix>();
         // Who comes, the leader first: an adult wherever there are children.
-        std::vector<std::pair<AgeGroup, bool>> who; // Age, and whether female
+        std::vector<Newcomer> who;
         const bool female = random::chance(dice, 0.5);
         const auto children = [&] {
             for (auto n = random::between(dice, std::int64_t { 1 }, kTuning.parties.most_children); n > 0; --n)
@@ -1575,7 +1575,7 @@ namespace rct3::simulation
         return admit_guests(world, dice, at, who, band);
     }
 
-    std::vector<entt::entity> admit_guests(SimWorld& world, random::RandomState& dice, NodeId at, std::span<const std::pair<AgeGroup, bool>> who, const tuning::TasteBand& band)
+    std::vector<entt::entity> admit_guests(SimWorld& world, random::RandomState& dice, NodeId at, std::span<const Newcomer> who, const tuning::TasteBand& band)
     {
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;

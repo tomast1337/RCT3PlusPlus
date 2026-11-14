@@ -111,7 +111,7 @@ namespace rct3::simulation
         return e;
     }
 
-    void import_animal_houses(SimWorld& world, std::span<const AnimalHouse> houses, std::span<const std::pair<entt::entity, std::int32_t>> keepers)
+    void import_animal_houses(SimWorld& world, std::span<const AnimalHouse> houses, std::span<const KeeperPost> keepers)
     {
         auto& r = world.registry;
         std::vector<entt::entity> homes;

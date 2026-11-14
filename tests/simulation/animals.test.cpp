@@ -214,14 +214,14 @@ TEST_CASE("animals: a keeper fills another house in their enclosure, but not one
 namespace
 {
     /// Hires the park an inspector and returns the Findings left after `seconds` of the animals.
-    std::vector<std::pair<Finding, entt::entity>> found_after(SimWorld& world, const AnimalGround& ground, float seconds, std::int32_t tasks = 0)
+    std::vector<Findings::Found> found_after(SimWorld& world, const AnimalGround& ground, float seconds, std::int32_t tasks = 0)
     {
         auto& r = world.registry;
         if (std::ranges::none_of(r.view<const Staff>(), [&](entt::entity e) { return r.get<const Staff>(e).role == StaffRole::Inspector; }))
             r.emplace<Staff>(r.create(), Staff { .role = StaffRole::Inspector, .tasks = tasks });
         r.ctx().erase<Findings>();
         run(world, ground, seconds);
-        return r.ctx().contains<Findings>() ? r.ctx().get<Findings>().found : std::vector<std::pair<Finding, entt::entity>> { };
+        return r.ctx().contains<Findings>() ? r.ctx().get<Findings>().found : std::vector<Findings::Found> { };
     }
 } // namespace
 
@@ -234,7 +234,7 @@ TEST_CASE("animals: the inspector tells of a house due its filling with no keepe
     const entt::entity house = r.view<AnimalHouse>().front();
     r.get<AnimalHouse>(house).food = { 0.1f };
     r.get<Staff>(r.view<KeeperDuty>().front()).tasks = kClearDungTask;
-    CHECK(std::ranges::contains(found_after(world, ground, 1), std::pair { Finding::NoKeeperCanReach, house }));
+    CHECK(std::ranges::contains(found_after(world, ground, 1), Findings::Found { Finding::NoKeeperCanReach, house }));
 }
 
 TEST_CASE("animals: the inspector tells of a house its keepers' patrols all leave out")
@@ -247,7 +247,7 @@ TEST_CASE("animals: the inspector tells of a house its keepers' patrols all leav
     r.get<AnimalHouse>(house).food = { 0.1f };
     world.paths.tile_size = 1;
     r.emplace<staff::Patrol>(r.view<KeeperDuty>().front(), staff::Patrol { .tiles = { { 0, 0 } } });
-    CHECK(std::ranges::contains(found_after(world, ground, 1), std::pair { Finding::KeeperBadZones, house }));
+    CHECK(std::ranges::contains(found_after(world, ground, 1), Findings::Found { Finding::KeeperBadZones, house }));
 }
 
 TEST_CASE("animals: without an inspector nobody tells of an unfilled house")
@@ -271,7 +271,7 @@ TEST_CASE("animals: the inspector tells of an animal that keeps finding its food
     r.get<Staff>(r.view<KeeperDuty>().front()).tasks = 0;
     r.get<AnimalHouse>(r.view<AnimalHouse>().front()).food = { };
     r.get<Animal>(e).hunger = { 0.9f };
-    CHECK(std::ranges::contains(found_after(world, ground, 120), std::pair { Finding::TroughsEmpty, e }));
+    CHECK(std::ranges::contains(found_after(world, ground, 120), Findings::Found { Finding::TroughsEmpty, e }));
 }
 
 TEST_CASE("animals: an inspector watching the galleries tells of an enclosure deep in dung")
@@ -288,9 +288,9 @@ TEST_CASE("animals: an inspector watching the galleries tells of an enclosure de
         r.emplace<Pose>(d, Pose { .position = { 1, 0, 1 } });
     }
     const entt::entity house = r.view<AnimalHouse>().front();
-    CHECK(!std::ranges::contains(found_after(world, ground, 1), std::pair { Finding::TooMuchDung, house }));
+    CHECK(!std::ranges::contains(found_after(world, ground, 1), Findings::Found { Finding::TooMuchDung, house }));
     r.get<Staff>(*std::ranges::find_if(r.view<const Staff>(), [&](entt::entity s) { return r.get<const Staff>(s).role == StaffRole::Inspector; })).tasks = kGalleriesTask;
-    CHECK(std::ranges::contains(found_after(world, ground, 1), std::pair { Finding::TooMuchDung, house }));
+    CHECK(std::ranges::contains(found_after(world, ground, 1), Findings::Found { Finding::TooMuchDung, house }));
 }
 
 TEST_CASE("animals: with empty troughs and no keeper to fill them, a starving animal sickens")
@@ -434,7 +434,7 @@ TEST_CASE("animals: a park's keepers each keep a house of their own in the enclo
     const entt::entity b = keeper_at({ 1, 0, 1 }); // Nearer the first house too, which a has
     const entt::entity c = keeper_at({ 1, 0, 1 }); // Given an enclosure with no house
     const std::array houses { AnimalHouse { .object = 1, .enclosure = std::optional { 0 }, .troughs = { 1, 0, 2 } }, AnimalHouse { .object = 2, .enclosure = std::optional { 0 }, .troughs = { 3, 0, 3 } }, AnimalHouse { .object = 3, .enclosure = std::optional { 1 }, .troughs = { 11, 0, 2 } } };
-    const std::array keepers { std::pair { a, 0 }, std::pair { b, 0 }, std::pair { c, 5 } };
+    const std::array keepers { KeeperPost { a, 0 }, KeeperPost { b, 0 }, KeeperPost { c, 5 } };
     import_animal_houses(world, houses, keepers);
     CHECK(r.view<const AnimalHouse>().size() == 3);
     REQUIRE(r.all_of<KeeperDuty>(a));

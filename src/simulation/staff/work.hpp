@@ -29,13 +29,22 @@ namespace rct3::simulation::staff
     {
         std::uint8_t task = 0;  ///< The next of their tasks to look at, by its bit among the task flags
         units::Seconds gap { }; ///< Before they next look for somewhere to go
-        /// The attractions visited and workers watched, with when (seconds into the run).
-        std::vector<std::pair<entt::entity, float>> seen { };
+        struct Seen
+        {
+            entt::entity what = entt::null; ///< An attraction visited or a worker watched
+            float when { };                 ///< Seconds into the run
+        };
+        std::vector<Seen> seen { };
         entt::entity watching = entt::null;    ///< The worker they are after, or watching
         float chased_from = 0;                 ///< When they set off after them
         std::optional<float> watched_from { }; ///< When they came close enough to watch; none yet
-        /// What they told the player about what, with when: not told again for a while.
-        std::vector<std::tuple<entt::entity, Finding, float>> told { };
+        struct Told
+        {
+            entt::entity about = entt::null;
+            Finding finding { };
+            float when { }; ///< Seconds into the run
+        };
+        std::vector<Told> told { }; ///< Not told again for a while
     };
 
     /// One tick of the staff's work, after the guests have walked and dropped their litter. Run as part of the

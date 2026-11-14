@@ -253,10 +253,10 @@ namespace rct3::simulation
     std::optional<std::vector<NodeId>> PathNetwork::route(NodeId from, NodeId to, Walker who, std::optional<std::int64_t> purse) const
     {
         auto found = route_nearest(from, std::span(&to, 1), who, purse);
-        return found ? std::optional(std::move(found->second)) : std::nullopt;
+        return found ? std::optional(std::move(found->walk)) : std::nullopt;
     }
 
-    std::optional<std::pair<std::size_t, std::vector<NodeId>>> PathNetwork::route_nearest(NodeId from, std::span<const NodeId> targets, Walker who, std::optional<std::int64_t> purse) const
+    std::optional<PathNetwork::NearestRoute> PathNetwork::route_nearest(NodeId from, std::span<const NodeId> targets, Walker who, std::optional<std::int64_t> purse) const
     {
         const bool linked = purse && !links_.empty();
         if (from >= nodes_.size())
@@ -267,14 +267,14 @@ namespace rct3::simulation
             if (targets[i] < nodes_.size())
                 target[targets[i]] = i;
         if (target[from] != kNotTarget)
-            return std::pair { target[from], std::vector<NodeId> { } };
+            return NearestRoute { target[from], std::vector<NodeId> { } };
         std::vector<NodeId> came(nodes_.size(), kNoNode);
         const auto walk_to = [&](NodeId to) {
             std::vector<NodeId> walk;
             for (NodeId s = to; s != from; s = came[s])
                 walk.push_back(s);
             std::ranges::reverse(walk);
-            return std::pair { target[to], std::move(walk) };
+            return NearestRoute { target[to], std::move(walk) };
         };
         came[from] = from;
         // One standing in a queue may walk out along their own line.

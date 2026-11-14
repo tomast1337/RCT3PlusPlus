@@ -1135,7 +1135,7 @@ namespace rct3::scene::park
                             houses.push_back(house);
                         }
                         // Each keeper keeps the enclosure the park gave them.
-                        std::vector<std::pair<entt::entity, std::int32_t>> keepers;
+                        std::vector<simulation::KeeperPost> keepers;
                         for (std::size_t i = 0; kept == nullptr && i < scene.people.staff.size() && i < staff.size(); ++i)
                             if (const auto* work = std::get_if<save::model::KeeperWork>(&scene.people.staff[i].work); work != nullptr && staff[i] != entt::null)
                                 keepers.emplace_back(staff[i], work->enclosure_id);

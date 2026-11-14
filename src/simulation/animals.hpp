@@ -166,10 +166,17 @@ namespace rct3::simulation
     /// The message posted as an animal escapes; its subject's name is the animal's.
     inline constexpr std::string_view kAnimalEscaped = "Thought_PI_AnimalEscaped1";
 
+    /// A keeper, and the enclosure the park gave them.
+    struct KeeperPost
+    {
+        entt::entity keeper = entt::null;
+        std::int32_t enclosure { };
+    };
+
     /// A park's own animal houses, and its keepers: each keeper, with the enclosure the park gave them, keeps
     /// the nearest house in it that no other keeper has yet, else the nearest in it. A keeper with no house in
     /// their enclosure is left without work.
-    void import_animal_houses(SimWorld& world, std::span<const AnimalHouse> houses, std::span<const std::pair<entt::entity, std::int32_t>> keepers);
+    void import_animal_houses(SimWorld& world, std::span<const AnimalHouse> houses, std::span<const KeeperPost> keepers);
 
     /// The zoo animals a park was saved with, where they stood, each in the enclosure `enclosure` says its spot is in.
     void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::optional<std::int32_t>(glm::vec2)>& enclosure);

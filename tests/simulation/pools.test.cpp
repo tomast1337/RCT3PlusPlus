@@ -682,7 +682,7 @@ TEST_CASE("a high diving board whose end is past the water is a danger, and the 
     CHECK(r.ctx().get<PoolDangers>().landings >= 1);
     const auto* findings = r.ctx().find<Findings>();
     REQUIRE(findings != nullptr);
-    CHECK(std::ranges::contains(findings->found, std::pair { Finding::DangerousDivingBoard, room_of(r) }));
+    CHECK(std::ranges::contains(findings->found, Findings::Found { Finding::DangerousDivingBoard, room_of(r) }));
 }
 
 TEST_CASE("swimmers waiting for a high diving board stand in a line behind its ladder, not on one spot, and only on the paving")

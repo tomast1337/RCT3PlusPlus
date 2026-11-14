@@ -268,8 +268,15 @@ namespace rct3::simulation
     /// or a party, each walking with nothing to do yet. Returns its members, the leader first.
     std::vector<entt::entity> admit_party(SimWorld& world, random::RandomState& dice, NodeId at);
 
-    /// Brings in `who` (each an age, and whether female) on path node `at` as one party, the first its leader,
-    /// with tastes from `band`. Returns its members.
-    std::vector<entt::entity> admit_guests(SimWorld& world, random::RandomState& dice, NodeId at, std::span<const std::pair<AgeGroup, bool>> who, const tuning::TasteBand& band);
+    /// One guest of a party coming in.
+    struct Newcomer
+    {
+        AgeGroup age { };
+        bool is_female { };
+    };
+
+    /// Brings in `who` on path node `at` as one party, the first its leader, with tastes from `band`. Returns its
+    /// members.
+    std::vector<entt::entity> admit_guests(SimWorld& world, random::RandomState& dice, NodeId at, std::span<const Newcomer> who, const tuning::TasteBand& band);
 
 } // namespace rct3::simulation

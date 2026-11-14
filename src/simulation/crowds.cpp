@@ -80,7 +80,7 @@ namespace rct3::simulation
         return seconds;
     }
 
-    std::pair<ShowMove, float> show_move_at(const Show& show)
+    ShowMoment show_move_at(const Show& show)
     {
         float into = show.into.value;
         for (const ShowMove m : show.moves)

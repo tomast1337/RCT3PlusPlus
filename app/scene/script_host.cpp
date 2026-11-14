@@ -1167,7 +1167,7 @@ namespace rct3::scene
                     if (const auto* show = r.try_get<simulation::Show>(p.guest); show != nullptr && !show->moves.empty())
                     {
                         constexpr std::array<std::string_view, 9> kMoves { "wave", "idle1", "idle2", "dancelevel1", "dancelevel2", "dancelevel3", "falloverin", "falloverout", "dejection" };
-                        person["show"] = kMoves[std::to_underlying(simulation::show_move_at(*show).first)];
+                        person["show"] = kMoves[std::to_underlying(simulation::show_move_at(*show).move)];
                     }
                     // Sliding down a slope, the motion they slide in.
                     if (const auto* drop = r.try_get<simulation::Dropped>(p.guest); drop != nullptr && drop->sliding)

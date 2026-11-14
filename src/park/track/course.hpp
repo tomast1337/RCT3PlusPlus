@@ -32,6 +32,16 @@ namespace rct3::park::track
         Launch,     ///< Pushes a launched train on, past its station
         Brake,      ///< Slows a train down to the piece's brake speed
         Booster,    ///< Jets push the cars up to the piece's speed, as a water coaster's climbs have them
+        Lift,       ///< A lift tower, up which a lift car carries the train; ends a block
+    };
+
+    /// A lift tower along a course: a train rolls from `entry` onto the length of track its car carries, the car
+    /// takes it up the rails from `from` to `to` and lets it go there. Distances along the course.
+    struct LiftRun
+    {
+        float entry = 0; ///< The start of the tower's foot, where the track before it ends
+        float from = 0;  ///< The bottom of the car's rails up the tower
+        float to = 0;    ///< The end of the tower's top
     };
 
     struct TrackCourse
@@ -56,6 +66,7 @@ namespace rct3::park::track
         /// Stretches, from and to a distance, where a slide's car on its way back to its lift is down in the pool's
         /// water: from where its path first falls below the height its piece starts at, to that piece's end.
         std::vector<std::array<float, 2>> wades { };
+        std::vector<LiftRun> lifts { }; ///< Its lift towers, in order along it
         [[nodiscard]] float length() const
         {
             return distance.empty() ? 0 : distance.back();

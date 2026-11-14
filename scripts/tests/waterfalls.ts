@@ -15,23 +15,50 @@ log("waterfalls", JSON.stringify(falls));
 expect(falls.length === 6, "the scenario's six waterfalls");
 for (const f of falls) expect(f.top > f.bottom && f.width > 0, "each to fall from a higher lake to a lower one");
 
-// The tallest, from in front of where it lands and a little to the side.
+// The tallest, from in front of where it lands and a little to the side, the eye well above the lower lake, at
+// each Waterfall detail level (0 low to 3 ultra); its water runs from the park's clock, so a later frame differs.
 const tall = falls.reduce((a, b) => (a.top - a.bottom >= b.top - b.bottom ? a : b));
 const out = [tall.landCol - tall.col, tall.landRow - tall.row];
 const span = Math.hypot(out[0], out[1]);
 const dir = [out[0] / span, out[1] / span];
-camera.look(
-    { col: (tall.col + tall.landCol) / 2, row: (tall.row + tall.landRow) / 2, up: (tall.top - tall.bottom) / 2 },
-    {
-        col: tall.landCol + dir[0] * 14 + dir[1] * 6,
-        row: tall.landRow + dir[1] * 14 - dir[0] * 6,
-        up: (tall.top - tall.bottom) * 0.6,
-    },
-);
-await frames(10);
-await screenshot("tallest");
+const drop = tall.top - tall.bottom;
+// A point `share` of the drop above the lower lake, and above any other lake there. Camera heights are over the
+// ground, which is a lake's bed: the camera put there says how high that is.
+const over_lake = (col: number, row: number, share: number) => {
+    camera.look({ col, row });
+    return {
+        col,
+        row,
+        up:
+            Math.max(tall.bottom + drop * share, (map.tile(Math.floor(col), Math.floor(row))?.water ?? -1e9) + 1) -
+            camera.view().target[1],
+    };
+};
+const look_at = (back: number, sideways: number, eye_up: number, target_up: number): void =>
+    camera.look(
+        over_lake(tall.landCol, tall.landRow, target_up),
+        over_lake(
+            tall.landCol + dir[0] * back + dir[1] * sideways,
+            tall.landRow + dir[1] * back - dir[0] * sideways,
+            eye_up,
+        ),
+    );
+for (const [detail, name] of ["low", "medium", "high", "ultra"].entries()) {
+    options.set("waterfall_detail", detail);
+    look_at(14, 6, 0.9, 0.5);
+    await frames(10);
+    await screenshot(`tallest_${name}`);
+}
 await frames(30);
 await screenshot("tallest_later");
+// From straight above, the foam where it lands; and low over the lake, the fall in the lake's reflection.
+look_at(3, 0.5, 2.5, 0);
+await frames(10);
+await screenshot("tallest_above");
+look_at(20, 0, 0.8, 0.1);
+await frames(10);
+await screenshot("tallest_reflected");
+options.set("waterfall_detail", 2);
 
 // The waterfall tool: the same two lakes clicked again make a second fall over the same edge; one lake
 // clicked twice makes none.

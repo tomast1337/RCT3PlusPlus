@@ -188,6 +188,10 @@ namespace rct3::scene::park
     /// first one's floating sum takes in `also` (above 0 for money in), paid for what stood on them.
     void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids, units::Money also = { });
 
+    /// Joins the queues laid behind ride `ride`'s entrances to their stations' lines, as a queue laid there after
+    /// the entrance joins; when the ride is demolished, its lines go back to plain queues instead.
+    void rejoin_queues(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride);
+
     /// Lets go of the trail going on, so its arrow stops showing. Whether there was one.
     bool drop_footpath_trail(ParkScene& scene);
 

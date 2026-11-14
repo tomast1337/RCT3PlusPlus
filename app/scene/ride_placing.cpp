@@ -765,6 +765,7 @@ namespace rct3::scene
         (exit ? station.exit_spot : station.entrance_spot) = save::model::PlacementSpot { object, door.col, door.row, height, static_cast<std::uint8_t>(door.rotation) };
         track::update_platforms(scene, ride, assets);
         fence_ride(scene, assets, r);
+        park::rejoin_queues(scene, assets, ride);
         park::refresh_pavings(scene);
         if (station.entrance != 0 && station.exit != 0 && !std::ranges::contains(p.unjoined, ride))
             p.unjoined.push_back(ride);
@@ -975,6 +976,7 @@ namespace rct3::scene
             old = object;
             (exit ? doors.exit_spot : doors.entrance_spot) = save::model::PlacementSpot { object, p.door->col, p.door->row, p.site->height, static_cast<std::uint8_t>(p.door->turn.value) };
             fence_ride(scene, assets, ride);
+            park::rejoin_queues(scene, assets, p.ride);
             // The entrance down, the exit follows when the ride has none, as in the game.
             if (!exit && !doors.exit_spot)
             {

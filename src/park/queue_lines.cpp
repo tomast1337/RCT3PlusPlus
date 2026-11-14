@@ -186,4 +186,40 @@ namespace rct3::park
         return std::nullopt;
     }
 
+    std::optional<std::uint64_t> join_queue_behind(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t ride, std::size_t station, std::uint64_t new_line)
+    {
+        const std::optional<save::model::PlacementSpot> at = rides.rides.at(ride).stations.at(station).entrance_spot;
+        if (!at)
+            return std::nullopt;
+        const Side back = ride::door_back(*at);
+        const save::model::Tile behind = back.beyond({ at->col, at->row });
+        const Side toward = back.opposite();
+        const auto found = std::ranges::find_if(paths, [&](const save::model::PathTile& p) {
+            if (!p.queue || p.queue->queue_line_ref != 0 || p.col != behind.col || p.row != behind.row)
+                return false;
+            // A queue has edges only where its line passes: measure as if it came in from the entrance.
+            save::model::PathTile turned = p;
+            turned.queue->start_direction = path::stored_direction(toward);
+            const auto edge = path::edge_height(turned, grid, toward);
+            return edge && std::abs(*edge - static_cast<float>(at->height)) <= static_cast<float>(kEntranceReach);
+        });
+        if (found == paths.end())
+            return std::nullopt;
+        auto head = static_cast<std::size_t>(found - paths.begin());
+        const std::uint64_t line = join_entrance(rides, paths, grid, head, EntranceBeside { ride, station, toward }, new_line);
+        // The tiles laid on away from the entrance join one by one, as they would have been laid after it.
+        for (std::size_t steps = 0; steps < paths.size(); ++steps)
+        {
+            const auto side = path::stored_heading(paths[head].queue->start_direction);
+            if (!side)
+                break;
+            const save::model::Tile next = side->beyond({ paths[head].col, paths[head].row });
+            const auto on = std::ranges::find_if(paths, [&](const save::model::PathTile& p) { return p.queue && p.queue->queue_line_ref == 0 && p.col == next.col && p.row == next.row; });
+            if (on == paths.end() || !join_line(rides, paths, grid, static_cast<std::size_t>(on - paths.begin())))
+                break;
+            head = static_cast<std::size_t>(on - paths.begin());
+        }
+        return line;
+    }
+
 } // namespace rct3::park

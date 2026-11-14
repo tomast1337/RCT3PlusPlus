@@ -56,4 +56,10 @@ namespace rct3::park
     /// when no line's head is beside it.
     std::optional<std::uint64_t> join_line(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t tile);
 
+    /// Joins a queue already laid behind the entrance of station `station` of ride `ride`, as one laid there after
+    /// would join: the queue tile behind it, meeting it within kEntranceReach and on no line yet, joins the
+    /// station's line (made with id `new_line` when it has none), and the tiles laid on from it follow. Returns the
+    /// line's id, nothing when no such queue is there.
+    std::optional<std::uint64_t> join_queue_behind(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t ride, std::size_t station, std::uint64_t new_line);
+
 } // namespace rct3::park

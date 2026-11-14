@@ -1448,6 +1448,55 @@ namespace rct3::scene::park
         scene.footpaths.dirty = true;
     }
 
+    void rejoin_queues(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t ride)
+    {
+        ParkFootpaths& f = scene.footpaths;
+        save::model::Ride& r = scene.rides.rides.at(ride);
+        std::vector<std::uint64_t> railed;
+        for (std::size_t s = 0; s < r.stations.size(); ++s)
+        {
+            save::model::Station& station = r.stations[s];
+            if (r.base.demolished)
+            {
+                // Its lines go back to plain queues, free to join the next ride put in front of them.
+                for (save::model::PathTile& p : f.paths)
+                {
+                    if (station.queue_line == 0 || !p.queue || p.queue->queue_line_ref != station.queue_line)
+                        continue;
+                    p.queue->queue_line_ref = 0;
+                    p.queue->fence_symbol = kQueueRailing;
+                    p.queue->fence_overlay = kQueueRailingOverlay;
+                    p.queue->fence_colours = { };
+                    railed.push_back(p.id);
+                }
+                station.queue_line = 0;
+                station.queue_tiles = 0;
+            }
+            else if (const auto line = rct3::park::join_queue_behind(scene.rides, f.paths, scene.grid, ride, s, unused_id(scene)))
+            {
+                logging::logger("park").info("queue joins ride {} on line {}", ride, *line);
+                for (const save::model::PathTile& p : f.paths)
+                {
+                    if (p.queue && p.queue->queue_line_ref == *line)
+                        railed.push_back(p.id);
+                }
+            }
+        }
+        if (railed.empty())
+            return;
+        rail(scene, assets, railed);
+        std::vector<save::model::PathTile> changed;
+        for (const std::uint64_t id : railed)
+        {
+            const auto at = std::ranges::find(f.paths, id, &save::model::PathTile::id);
+            refresh_around(scene, assets, { at->col, at->row });
+            changed.push_back(*at);
+        }
+        sim_paths(scene, changed, { });
+        scene.led_signs.stale = true;
+        objects_changed(scene);
+    }
+
     bool drop_footpath_trail(ParkScene& scene)
     {
         ParkFootpaths& f = scene.footpaths;

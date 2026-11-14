@@ -225,3 +225,35 @@ TEST_CASE("a queue over steps laid towards the entrance turns round whole, its s
     CHECK(spots[0].col == 1);
     CHECK(spots[0].turn == edge_turns(Side::kColBefore));
 }
+
+TEST_CASE("a queue laid before its ride joins the line when the entrance is put in front of it")
+{
+    const save::model::TerrainGrid g = owned_grid(8, 6);
+    // Laid away from where the entrance will stand, and laid towards it.
+    for (const bool towards : { false, true })
+    {
+        CAPTURE(towards);
+        std::vector<save::model::PathTile> paths = towards ? lay_queue(g, { 3, 1 }, Side::kColBefore, 3) : lay_queue(g, { 1, 1 }, Side::kNextCol, 3);
+        save::model::RideModel rides = ride_at(0, 1);
+        rides.rides[0].fence_symbol = "Picket";
+        CHECK(join_queue_behind(rides, paths, g, 0, 0, 99) == 99);
+        CHECK(rides.rides[0].stations[0].queue_line == 99);
+        CHECK(rides.rides[0].stations[0].queue_tiles == 3);
+        for (const save::model::PathTile& p : paths)
+        {
+            CHECK(p.queue->queue_line_ref == 99);
+            CHECK(p.queue->fence_symbol == "Picket");
+            CHECK(p.queue->end_direction == path::stored_direction(Side::kColBefore)); // All lead to the entrance
+        }
+        CHECK_FALSE(join_queue_behind(rides, paths, g, 0, 0, 99)); // Already on it
+    }
+
+    // A queue touching only the entrance's side, or behind it out of reach above, stays as it is.
+    std::vector<save::model::PathTile> side = lay_queue(g, { 0, 2 }, Side::kNextCol, 3);
+    save::model::RideModel rides = ride_at(0, 1);
+    CHECK_FALSE(join_queue_behind(rides, side, g, 0, 0, 99));
+    rides.rides[0].stations[0].entrance_spot->height = kEntranceReach + 1;
+    std::vector<save::model::PathTile> low = lay_queue(g, { 1, 1 }, Side::kNextCol, 2);
+    CHECK_FALSE(join_queue_behind(rides, low, g, 0, 0, 99));
+    CHECK(rides.rides[0].stations[0].queue_line == 0);
+}

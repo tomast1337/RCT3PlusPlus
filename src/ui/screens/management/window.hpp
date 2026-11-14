@@ -151,8 +151,15 @@ namespace rct3::ui::screens::management
         {
             return std::exchange(button_now_, std::nullopt);
         }
-        /// The button under the page and the one of its choices the player picked since the last call.
-        [[nodiscard]] std::optional<std::pair<std::size_t, std::size_t>> take_choice()
+        /// A choice picked under one of the page's buttons.
+        struct ButtonChoice
+        {
+            std::size_t button { };
+            std::size_t choice { }; ///< Among the button's own
+            friend bool operator==(const ButtonChoice&, const ButtonChoice&) = default;
+        };
+        /// The choice the player picked since the last call.
+        [[nodiscard]] std::optional<ButtonChoice> take_choice()
         {
             return std::exchange(choice_now_, std::nullopt);
         }
@@ -227,21 +234,30 @@ namespace rct3::ui::screens::management
         std::vector<info::InfoTick> graph_ticks_;     ///< The page's graph's marks
         std::vector<std::u16string> graph_when_;      ///< See ManagementPage::graph_when
         std::vector<widgets::Label*> marks_;          ///< Words under the graph's marks that fit its span
-        std::pair<float, float> marks_top_ { };       ///< Of the marks' words: an anchor and an offset down the page
-        std::vector<widgets::Button*> ranges_;        ///< Picking the graph's span, by graph_ranges_
+        struct MarksTop
+        {
+            float anchor = 0;
+            float offset = 0; ///< Down the page
+        };
+        MarksTop marks_top_ { };               ///< Of the marks' words
+        std::vector<widgets::Button*> ranges_; ///< Picking the graph's span, by graph_ranges_
         std::vector<GraphRange> graph_ranges_;
         std::vector<widgets::Button*> buttons_;
         std::vector<std::vector<info::InfoChoice>> button_choices_; ///< Of each of buttons_
         std::vector<widgets::Button*> choices_;                     ///< Fanned out beside the button choosing_
         std::optional<std::size_t> choosing_;
-        /// Of each tab, the column the player sorted by and whether highest first; none until they pick one.
-        std::vector<std::optional<std::pair<std::size_t, bool>>> sorts_;
-        std::optional<std::pair<std::size_t, bool>> page_sort_; ///< The page's own, for when the player has none
+        struct ColumnSort
+        {
+            std::size_t column { };
+            bool highest_first { };
+        };
+        std::vector<std::optional<ColumnSort>> sorts_; ///< Of each tab, the player's; none until they pick one
+        std::optional<ColumnSort> page_sort_;          ///< The page's own, for when the player has none
         std::size_t tab_ = 0;
         units::Seconds page_age_;
         std::optional<std::size_t> tab_now_;
         std::optional<std::size_t> button_now_;
-        std::optional<std::pair<std::size_t, std::size_t>> choice_now_;
+        std::optional<ButtonChoice> choice_now_;
         std::optional<std::size_t> row_now_;
         std::optional<std::size_t> shown_row_; ///< The row picked when the page was last shown
         struct Control

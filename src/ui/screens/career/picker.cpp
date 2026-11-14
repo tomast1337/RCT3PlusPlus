@@ -253,7 +253,7 @@ namespace rct3::ui::screens::career
         return std::exchange(delete_out_, std::nullopt);
     }
 
-    std::optional<std::pair<std::size_t, std::u16string>> CareerDialog::take_rename()
+    std::optional<CareerDialog::Rename> CareerDialog::take_rename()
     {
         return std::exchange(rename_out_, std::nullopt);
     }
@@ -269,7 +269,7 @@ namespace rct3::ui::screens::career
             return;
         }
         row.known_name = row.box->text;
-        rename_out_ = { index, row.box->text };
+        rename_out_ = Rename { index, row.box->text };
     }
 
     void CareerDialog::load()

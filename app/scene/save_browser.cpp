@@ -178,15 +178,15 @@ namespace rct3::scene
             }
             if (const auto rename = dialog.take_rename())
             {
-                const auto from = ours(browser, rename->first);
-                const fs::path to = browser.folder / rename->second;
+                const auto from = ours(browser, rename->from);
+                const fs::path to = browser.folder / rename->to;
                 std::error_code error;
                 const bool taken = !from || (fs::exists(to, error) && !fs::equivalent(*from, to, error));
                 if (!taken)
                     fs::rename(*from, to, error);
                 if (taken || error)
                 {
-                    log.warning("saves: renaming {}: {}", strings::to_utf8(rename->first), taken ? "the name is taken" : error.message());
+                    log.warning("saves: renaming {}: {}", strings::to_utf8(rename->from), taken ? "the name is taken" : error.message());
                     dialog.rename_failed();
                 }
                 else

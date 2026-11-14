@@ -29,6 +29,13 @@ namespace rct3::ui
         int line = 0;
     };
 
+    /// A key, and where the code names it.
+    struct KeyPlace
+    {
+        std::string key { };
+        SourcePlace place { };
+    };
+
     struct KeyPrefix
     {
         std::string text; ///< As a format string: "SceneryItem_" is kept as "SceneryItem_{}"
@@ -42,7 +49,7 @@ namespace rct3::ui
         std::vector<KeyPrefix> prefixes;
         /// Literals handed straight to a string table lookup (`strings.get("X")`, `text(strings, "X")`): keys
         /// for certain, so a file must have them.
-        std::vector<std::pair<std::string, SourcePlace>> lookups;
+        std::vector<KeyPlace> lookups;
     };
 
     /// The keys the sources under `root` (the repository) name.
@@ -50,7 +57,7 @@ namespace rct3::ui
 
     /// Literals in `code` that are keys for certain but `strings` lacks: our own keys (kOwnKeyPrefix) in full,
     /// and those handed straight to a lookup.
-    [[nodiscard]] std::vector<std::pair<std::string, SourcePlace>> missing_keys(const CodeKeys& code, const StringTable& strings);
+    [[nodiscard]] std::vector<KeyPlace> missing_keys(const CodeKeys& code, const StringTable& strings);
 
     /// The pattern in `code` that `key` fits, the longest when several do.
     [[nodiscard]] std::optional<const KeyPrefix&> prefix_of(const CodeKeys& code, std::string_view key);

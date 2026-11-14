@@ -864,7 +864,7 @@ namespace rct3::ui::screens::info
         {
             if (choices_[i]->take_click() && choosing_)
             {
-                choice_now_ = { *choosing_, i };
+                choice_now_ = TabChoice { *choosing_, i };
                 close_choices();
                 break;
             }

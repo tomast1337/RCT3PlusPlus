@@ -168,9 +168,9 @@ namespace rct3::ui
         return out;
     }
 
-    std::vector<std::pair<std::string, SourcePlace>> missing_keys(const CodeKeys& code, const StringTable& strings)
+    std::vector<KeyPlace> missing_keys(const CodeKeys& code, const StringTable& strings)
     {
-        std::vector<std::pair<std::string, SourcePlace>> out;
+        std::vector<KeyPlace> out;
         for (const auto& [literal, place] : code.literals)
         {
             const bool built = literal.ends_with('_') || literal.contains('{'); // A prefix, not a key

@@ -909,9 +909,9 @@ namespace rct3::scene::park
             {
                 // The whole complex opened or closed, all its rooms alike; then shown again for the flag's new look.
                 const std::vector<ui::screens::info::StateChoice> states = ui::screens::info::state_choices(ui::screens::info::AttractionKind::Stall);
-                if (choice->second < states.size())
+                if (choice->choice < states.size())
                     for (const std::size_t r : rct3::park::pools::pool_complex_rooms(scene.pools, *room))
-                        scene.pools.rooms[r].open = states[choice->second].state == save::model::AttractionState::Open;
+                        scene.pools.rooms[r].open = states[choice->choice].state == save::model::AttractionState::Open;
                 open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
             }
             if (choice && scene.shown)
@@ -919,9 +919,9 @@ namespace rct3::scene::park
                 // Put in the state picked, then shown again for the state tab's new look.
                 const ui::screens::info::AttractionFacts f = facts(scene, *scene.shown);
                 const std::vector<ui::screens::info::StateChoice> states = state_choices(scene, *scene.shown);
-                if (save::model::AttractionCommon* common = attraction_common(scene, *scene.shown); common != nullptr && choice->second < states.size())
+                if (save::model::AttractionCommon* common = attraction_common(scene, *scene.shown); common != nullptr && choice->choice < states.size())
                 {
-                    const save::model::AttractionState state = states[choice->second].state;
+                    const save::model::AttractionState state = states[choice->choice].state;
                     scene.refusal.clear();
                     if (f.ride != nullptr)
                         scene.refusal = change_ride_state(scene, scene.shown->index, state).value_or("");

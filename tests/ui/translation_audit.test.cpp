@@ -41,13 +41,13 @@ auto r = R"x(Rct3pp_Raw)x";
     REQUIRE(prefix_of(code, "Track_Straight"));
     CHECK(prefix_of(code, "Track_Straight")->note == "Followed by a piece's name");
     REQUIRE(code.lookups.size() == 1);
-    CHECK(code.lookups[0].first == "Game_Key");
+    CHECK(code.lookups[0].key == "Game_Key");
 
     StringTable strings;
     strings.add("Rct3pp_Named", u"x");
     const auto missing = missing_keys(code, strings);
     REQUIRE(missing.size() == 1);
-    CHECK(missing[0].first == "Game_Key");
+    CHECK(missing[0].key == "Game_Key");
 }
 
 // The guard on the files built in: run from the repository root, as ./nob test does.

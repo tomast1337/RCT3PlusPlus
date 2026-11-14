@@ -273,10 +273,10 @@ namespace rct3::scene
         void carry_out(CareerBrowser& browser, ui::screens::career::CareerDialog& dialog, ui::screens::front::FrontEnd& front, int pack, const ui::StringTable& strings)
         {
             const auto log = logging::logger("ui");
-            if (const auto rename = dialog.take_rename(); rename && rename->first < browser.careers.size())
+            if (const auto rename = dialog.take_rename(); rename && rename->career < browser.careers.size())
             {
-                career::CareerEntry& entry = browser.careers[rename->first];
-                entry.data.career.name = strings::to_utf8(rename->second);
+                career::CareerEntry& entry = browser.careers[rename->career];
+                entry.data.career.name = strings::to_utf8(rename->name);
                 save(entry);
             }
             if (dialog.take_new() && !browser.folder.empty())

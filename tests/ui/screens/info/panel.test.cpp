@@ -289,8 +289,8 @@ TEST_CASE("a tab with choices fans them out round itself and tells the one picke
     f.click(Fixture::middle(go));
     const auto made = f.panel->take_choice();
     REQUIRE(made);
-    CHECK(made->first == 1);
-    CHECK(made->second == 0);
+    CHECK(made->tab == 1);
+    CHECK(made->choice == 0);
     CHECK_FALSE(f.panel->choosing());
 }
 

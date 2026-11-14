@@ -130,11 +130,11 @@ namespace rct3::scene::park
             if (button && topic == ui::screens::management::ManagementTopic::Finances && ui::screens::management::finance_page(window->tab(), units.original_finances) == ui::screens::management::FinancePage::Ledger)
                 asks.export_ledger = *button == ui::screens::management::kExportLedgerButton;
             const auto choice = window->take_choice();
-            if (choice && park_page && choice->first == ui::screens::management::kOpenCloseParkButton)
-                asks.park_open = choice->second == 0;
-            if (choice && topic == ui::screens::management::ManagementTopic::Attractions && choice->first == ui::screens::management::kOpenCloseAllButton && choice->second < ui::screens::management::kOpenCloseAllStates.size())
+            if (choice && park_page && choice->button == ui::screens::management::kOpenCloseParkButton)
+                asks.park_open = choice->choice == 0;
+            if (choice && topic == ui::screens::management::ManagementTopic::Attractions && choice->button == ui::screens::management::kOpenCloseAllButton && choice->choice < ui::screens::management::kOpenCloseAllStates.size())
             {
-                asks.state_all = ui::screens::management::kOpenCloseAllStates[choice->second];
+                asks.state_all = ui::screens::management::kOpenCloseAllStates[choice->choice];
                 for (const ui::widgets::TableRow& r : ui::screens::management::management_page(topic, window->tab(), facts, strings, units).rows)
                     asks.listed.push_back(ui::screens::management::management_row(r.id));
             }

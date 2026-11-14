@@ -5,6 +5,7 @@
 // Each is marked kUnit, so the park file keeps it as its bare number.
 #pragma once
 
+#include <compare>
 #include <cstdint>
 
 namespace rct3::units

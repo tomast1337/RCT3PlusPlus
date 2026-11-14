@@ -105,7 +105,7 @@ namespace rct3::scene::park
             bool water = true;
             bool see_through = true;   ///< Blended parts, such as glass
             bool shaded_water = false; ///< With the water shader, seen from `eye`
-            bool ghosts = false;       ///< The track and raised path being built
+            bool ghosts = false;       ///< What the build tools would place: never in the shadows, which would show it laid
             bool faded_ground = false; ///< The ground's land, cliffs and tunnels drawn last, see-through
             glm::vec3 eye { 0.0f };
         };
@@ -206,7 +206,8 @@ namespace rct3::scene::park
                 profiling::section("Ground", [&] {
                     draw_ground(scene.ground_pipeline, [&](const rct3::park::GroundBatch& batch) { return !parts.faded_ground || !earth(batch); });
                     draw_view_lines(device, scene, transform, light);
-                    draw_footpath_ghost(device, scene, transform, light);
+                    if (parts.ghosts)
+                        draw_footpath_ghost(device, scene, transform, light);
                     draw_patrol(device, scene, transform, light);
                 });
             const auto draw_objects = [&](std::optional<rct3::park::object::PartBlend> pass) {

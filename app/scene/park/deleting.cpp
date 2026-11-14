@@ -180,6 +180,8 @@ namespace rct3::scene::park
             scene.ride_entities[ref.index] = entt::null;
         base->state = save::model::AttractionState::Closed;
         base->demolished = true;
+        if (ride)
+            rejoin_queues(scene, assets, ref.index);
         simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, false);
         if (at)
             float_money(scene, *at, back);

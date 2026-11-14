@@ -343,7 +343,8 @@ namespace rct3::scene::track
         // trains now; those of one it runs stop being ghosts.
         const auto ride = scene.building.ride;
         const bool run = ride && *ride < scene.ride_entities.size() && scene.ride_entities[*ride] != entt::null;
-        if (ride && !run && scene.rides.rides.at(*ride).base.state != save::model::AttractionState::Closed && !std::ranges::contains(scene.readying, *ride))
+        // A closed one is readied too, for its lift towers' cars to stand at their feet.
+        if (ride && !run && !std::ranges::contains(scene.readying, *ride))
             scene.readying.push_back(*ride);
         scene.building.ride.reset();
         scene.building.selected.reset();

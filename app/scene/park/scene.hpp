@@ -886,9 +886,16 @@ namespace rct3::scene::park
     /// seats, as flat_ride_timings finds it. Nothing for other rides, or one the simulation does not run.
     void seat_flat_ride(render::Device& device, ParkScene& scene, std::size_t ride_index);
 
+    /// Which of a ride's cars add_ride_cars adds.
+    enum class RideCarsAdded : std::uint8_t
+    {
+        TrainsAndLifts,
+        LiftsOnly, ///< Its lift towers' cars alone, as on a track laid but not yet run
+    };
+
     /// Adds the cars of `count` rides from `from` (of scene.rides) to the scene, where the park keeps them; cars
     /// without a kept place are left out.
-    void add_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t from, std::size_t count);
+    void add_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, std::size_t from, std::size_t count, RideCarsAdded added = RideCarsAdded::TrainsAndLifts);
 
     /// Takes the scene's cars of ride `ride_index` (of scene.rides) away.
     void drop_ride_cars(ParkScene& scene, std::size_t ride_index);

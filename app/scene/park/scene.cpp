@@ -459,6 +459,9 @@ namespace rct3::scene::park
             const auto& course = ride < scene.courses.size() ? scene.courses[ride] : std::nullopt;
             const save::model::Ride& r = scene.rides.rides[ride];
             const auto coaster = course ? simulation::coaster_of(*course, r) : std::nullopt;
+            // Laid but not run, its lift towers' cars stand at their feet all the same.
+            if (assets.install && r.base.state == save::model::AttractionState::Closed && course && !course->lifts.empty() && ride < scene.track_rules.size() && scene.track_rules[ride].lift_car && std::ranges::none_of(scene.car_spots, [&](const rct3::park::ride::CarSpot& s) { return s.ride == ride; }))
+                add_ride_cars(device, scene, *assets.install, ride, 1, RideCarsAdded::LiftsOnly);
             // Boats sail off a dock that is only station, which no train could run round.
             const bool boats = (r.mode == save::model::OperatingMode::Boat || r.mode == save::model::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station);
             if (!assets.install || r.base.demolished || r.base.state == save::model::AttractionState::Closed || r.mode == save::model::OperatingMode::MiniGolf || (!coaster && !boats && !(course && !course->climbs.empty())))

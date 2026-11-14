@@ -41,6 +41,7 @@
 #include "simulation/coaster.hpp"
 #include "ui/key_map.hpp"
 #include "ui/screens/info/attraction.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <filesystem>
@@ -168,7 +169,7 @@ namespace rct3::scene::track
         /// it found shows until a second click on the button lays it, or any other action turns it down.
         std::optional<rct3::park::track::CompletionSearch> completing;
         std::vector<rct3::park::track::LaidPlacement> proposed;
-        float clock = 0; ///< Seconds the panel has been open, which the button flashes by
+        units::Seconds clock; ///< The panel has been open, which the button flashes by
         /// While the ride is testing and its track is not yet a circuit, a see-through copy of its first train
         /// runs from the station to the open end and crashes off it, its see-through wrecks flying, blowing up and
         /// burning as a crashed train's do, though they hurt no one; once they are gone it sets off again. It runs
@@ -179,7 +180,7 @@ namespace rct3::scene::track
             std::vector<rct3::park::ride::CarSpot> spots;
             std::vector<glm::mat4> stood;                   ///< Where each car stood, by car
             float stood_at = 0;                             ///< Where the train's front stood
-            float waited = 0;                               ///< Seconds it has stood still short of the open end
+            units::Seconds waited;                          ///< It has stood still short of the open end
             std::vector<simulation::Wreck> wrecks;          ///< Its cars, once crashed, front to back
             random::RandomState dice = random::seeded({ }); ///< How its wrecks tumble
             rct3::park::MovingMeshes meshes;                ///< The cars, then the joints of those on arms
@@ -222,8 +223,8 @@ namespace rct3::scene::track
 
     /// Handles the panel's events, and for a track with no pieces the pointer at `at` on a view of `size` (`over`
     /// the interface or not), the turn commands and `shift`, held to raise or sink the first piece. Call once per
-    /// update after the interface, `elapsed` seconds after the last.
-    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed);
+    /// update after the interface, `elapsed` after the last.
+    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, units::Seconds elapsed);
 
     /// The arrows where the picked piece starts and ends (see park/build_arrows.hpp); empty while no piece is.
     [[nodiscard]] rct3::park::TerrainMesh track_arrows(const park::ParkScene& scene);

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "config/game/options.hpp"
+#include "units/units.hpp"
 
 namespace rct3::scene::park
 {
@@ -12,8 +13,8 @@ namespace rct3::scene::park
     struct ParkScene;
     struct ParkInput;
 
-    /// Moves the camera by this frame's input over `elapsed` seconds. With the pointer `over_interface`, its wheel and
+    /// Moves the camera by this frame's input over `elapsed`. With the pointer `over_interface`, its wheel and
     /// the screen's edges leave the camera be, and no drag begins.
-    void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, const config::game::GameOptions& options, float elapsed);
+    void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, const config::game::GameOptions& options, units::Seconds elapsed);
 
 } // namespace rct3::scene::park

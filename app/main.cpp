@@ -68,6 +68,7 @@
 #include "ui/key_map.hpp"
 #include "ui/language.hpp"
 #include "ui/screens/park_view/tool_row.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -1079,7 +1080,7 @@ int main(int argc, char** argv)
             prof::update(now - last_time);
             // A script's frame is always a sixtieth of a second, so what it waits for in frames is the same game time
             // however fast the machine draws them.
-            const double delta = script ? 1.0 / 60 : now - last_time;
+            const rct3::units::Seconds elapsed { static_cast<float>(script ? 1.0 / 60 : now - last_time) };
             last_time = now;
 
             prof::section("Frame", [&] {
@@ -1111,7 +1112,7 @@ int main(int argc, char** argv)
                     ImGui::NewFrame();
                     if (phase == Phase::Intro)
                     {
-                        startup->sequence.update(static_cast<float>(delta), skip_requested());
+                        startup->sequence.update(elapsed.value, skip_requested());
                         if (startup->sequence.finished())
                         {
                             if (audio)
@@ -1208,9 +1209,9 @@ int main(int argc, char** argv)
                             still.pointer.wheel = { };
                             still.commands.clear();
                             for (float left = ahead; left > 0 && rct3::simulation::time_factor(park->park.speed) > 0; left -= rct3::simulation::kTickSeconds)
-                                rct3::scene::park::update_park_scene(*device, *park, front->assets, front->live->options, still, no_keys, std::min(left, rct3::simulation::kTickSeconds) / rct3::simulation::time_factor(park->park.speed));
+                                rct3::scene::park::update_park_scene(*device, *park, front->assets, front->live->options, still, no_keys, rct3::units::Seconds { std::min(left, rct3::simulation::kTickSeconds) / rct3::simulation::time_factor(park->park.speed) });
                         }
-                        prof::section("Park", [&] { rct3::scene::park::update_park_scene(*device, *park, front->assets, front->live->options, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, static_cast<float>(delta)); });
+                        prof::section("Park", [&] { rct3::scene::park::update_park_scene(*device, *park, front->assets, front->live->options, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, elapsed); });
                         rct3::scene::park::update_park_windows(*device, *park, *front);
                         auto park_requests = rct3::scene::park::take_park_window_requests(*park, *front);
                         apply_requests(park_requests);
@@ -1224,7 +1225,7 @@ int main(int argc, char** argv)
                         if (audio && menu_audio)
                             prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true, music_level); });
                         if (audio && park_sounds)
-                            prof::section("ParkSounds", [&] { rct3::scene::park::update_park_sounds(*audio, *park_sounds, *park, static_cast<float>(delta)); });
+                            prof::section("ParkSounds", [&] { rct3::scene::park::update_park_sounds(*audio, *park_sounds, *park, elapsed); });
                         // Leaving, or loading another park in its place (asked for here or by a script): its loading
                         // screen shows next.
                         const bool leave = rct3::scene::park::take_park_leave(*park);
@@ -1255,14 +1256,14 @@ int main(int argc, char** argv)
                         std::vector<rct3::ui::InterfaceSound> sounds;
                         if (widgets)
                         {
-                            rct3::scene::update_widget_demo(*device, *widgets, pointer, keyboard, static_cast<float>(delta));
+                            rct3::scene::update_widget_demo(*device, *widgets, pointer, keyboard, elapsed);
                             if (const auto copied = widgets->desktop.take_clipboard())
                                 window->set_clipboard(*copied);
                             sounds = widgets->desktop.take_sounds();
                         }
                         else
                         {
-                            prof::section("FrontEnd", [&] { rct3::scene::update_front_end_scene(*device, *front, pointer, keyboard, static_cast<float>(delta)); });
+                            prof::section("FrontEnd", [&] { rct3::scene::update_front_end_scene(*device, *front, pointer, keyboard, elapsed); });
                             if (const auto copied = front->live->desktop.take_clipboard())
                                 window->set_clipboard(*copied);
                             sounds = front->live->desktop.take_sounds();

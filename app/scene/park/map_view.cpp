@@ -33,8 +33,8 @@ namespace rct3::scene::park
         constexpr std::string_view kTitleKey = "MapDialog_Title";
         constexpr std::string_view kMapIcon = "Map"; ///< The tool row's Map button shows the same
 
-        /// People move, so their picture is drawn again this often, in seconds.
-        constexpr float kPeopleInterval = 0.5f;
+        /// People move, so their picture is drawn again this often.
+        constexpr units::Seconds kPeopleInterval { 0.5f };
         /// The ground the camera sees is cut off this many times its distance from the eye: far enough to
         /// show where it looks, near enough that the horizon does not cover the map.
         constexpr float kFarthestSeen = 3.0f;
@@ -287,10 +287,10 @@ namespace rct3::scene::park
         auto& panel = desktop.root().add<ui::screens::map::MapPanel>(std::string(kMapName), panel_style(palette), text(strings, kTitleKey, u"Map"), std::move(entries));
         panel.icon = kMapIcon;
         map.stale = true;
-        map.since_people = 1e9f;
+        map.since_people.reset();
     }
 
-    std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::model::TerrainGrid& grid, const rct3::park::ParkCamera& camera, float aspect, const std::function<rct3::park::MapPeople()>& people, float elapsed)
+    std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::model::TerrainGrid& grid, const rct3::park::ParkCamera& camera, float aspect, const std::function<rct3::park::MapPeople()>& people, units::Seconds elapsed)
     {
         auto panel = desktop.root().find_as<ui::screens::map::MapPanel>(kMapName);
         if (!panel || panel->closing() || grid.empty())
@@ -301,7 +301,7 @@ namespace rct3::scene::park
             for (std::size_t i = 0; i < kLayerTexts.size(); ++i)
                 map.layers.set(static_cast<std::size_t>(kLayerTexts[i].layer), panel->shown(i));
             map.stale = true;
-            map.since_people = 1e9f;
+            map.since_people.reset();
         }
         if (!map.ground)
             map.ground = profiling::section("MapGround", [&] { return rct3::park::map_ground(grid, map.features, rct3::park::map_scale(grid)); });
@@ -310,12 +310,13 @@ namespace rct3::scene::park
             replace(device, map.picture, profiling::section("MapCompose", [&] { return rct3::park::compose_map(*map.ground, grid, map.features, map.layers); }), "park map");
             map.stale = false;
         }
-        map.since_people += elapsed;
-        if (map.since_people >= kPeopleInterval)
+        if (map.since_people)
+            *map.since_people += elapsed;
+        if (!map.since_people || *map.since_people >= kPeopleInterval)
         {
             const rct3::park::MapPeople shown = people();
             replace(device, map.people, rct3::park::people_picture(grid, map.ground->scale, shown.people, map.layers, shown.patrol_tiles), "park map people");
-            map.since_people = 0;
+            map.since_people = units::Seconds { };
         }
 
         const rct3::park::MapFrame frame = rct3::park::map_frame(grid);

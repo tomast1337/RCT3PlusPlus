@@ -207,9 +207,9 @@ namespace rct3::scene::park
         water = { };
     }
 
-    void advance_park_water(ParkWater& water, float seconds)
+    void advance_park_water(ParkWater& water, units::Seconds elapsed)
     {
-        rct3::park::water::advance_ripples(water.ripples, seconds);
+        rct3::park::water::advance_ripples(water.ripples, elapsed.value);
     }
 
     bool ripple_park_water(ParkWater& water, const rct3::park::Ray& ray, const save::model::TerrainGrid& grid)

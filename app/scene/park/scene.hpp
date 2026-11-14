@@ -139,8 +139,8 @@ namespace rct3::scene::park
         std::vector<ui::PlayCommand> commands; ///< The game's commands bound to the keys pressed
     };
 
-    /// The object buffers are built again at most this often, in seconds, while the view moves.
-    inline constexpr float kObjectRebuildInterval = 0.25f;
+    /// The object buffers are built again at most this often while the view moves.
+    inline constexpr units::Seconds kObjectRebuildInterval { 0.25f };
     inline constexpr std::int32_t kVandalismPenalty = 10; ///< Of the rating for each thing broken.
     inline constexpr std::int32_t kLitterWarning = 20;    ///< Old pieces of litter that make the player be told.
     inline constexpr float kStillBrokenReminder = 300;    ///< Game seconds a ride stays broken between reminders.
@@ -160,15 +160,15 @@ namespace rct3::scene::park
         entt::entity ride = entt::null;
         float unrepaired = 0; ///< Game seconds since the player was last told
     };
-    inline constexpr float kLivePageInterval = 1.0f; ///< Seconds between showings of a page that follows the running park
+    inline constexpr units::Seconds kLivePageInterval { 1.0f }; ///< Between showings of a page that follows the running park
 
     /// Behind the ground when the sky cannot be read.
     inline constexpr render::Color kParkSky = render::hex("#8cb3d9");
     /// How far the sky is drawn from the eye: inside the camera's far limit.
     inline constexpr float kSkyRadius = rct3::park::kFar * 0.9f;
 
-    /// Seconds between posing the riders again; their cars carry them every frame between.
-    inline constexpr float kRidersRebuildInterval = 1.0f / 15.0f;
+    /// Between posing the riders again; their cars carry them every frame between.
+    inline constexpr units::Seconds kRidersRebuildInterval { 1.0f / 15.0f };
 
     /// The park drawn from the sun into a shadow map.
     struct ShadowDrawing
@@ -437,7 +437,7 @@ namespace rct3::scene::park
         /// from the options each frame, and handed to each build.
         float blend_band = 0;
         rct3::park::object::LevelScales level_scales { }; ///< Each kind's detail and draw distance; set as blend_band is
-        float since_rebuild = 0;                          ///< Seconds since the levels were last looked at
+        units::Seconds since_rebuild;                     ///< Since the levels were last looked at
         /// Meshes for levels that differ from those shown, while being built. Building only reads what is
         /// set when the park loads, so it may run beside the frame; it must be waited for before the scene
         /// goes.
@@ -655,7 +655,7 @@ namespace rct3::scene::park
         rct3::park::object::ObjectLevels people_levels;              ///< Of each shown person, as the still people's mesh holds them
         rct3::park::object::ObjectMesh still_people;
         rct3::park::object::ObjectMesh moving_people; ///< The people in motion in view, as last posed
-        float since_people_levels = kObjectRebuildInterval;
+        units::Seconds since_people_levels = kObjectRebuildInterval;
         std::future<PeopleBuild> people_build; ///< Like object_build, for the still people
         /// Kept for moving_build, the only one to touch it, so its memory is reused. Declared first, so it
         /// outlives a build still running when the scene goes.
@@ -670,7 +670,7 @@ namespace rct3::scene::park
         /// where they sit still.
         std::vector<std::size_t> rider_cars;
         std::vector<glm::mat4> rider_places; ///< By piece of `riders`: its car's place, put each frame
-        float since_riders = 0;
+        units::Seconds since_riders;
         ui::UiTextures people_textures;
         DrawnAnimals drawn_animals;                                                         ///< The saved zoo animals, drawn with their models
         rct3::park::AttractionObjects attractions;                                          ///< Which attraction each object belongs to, for clicks
@@ -696,7 +696,7 @@ namespace rct3::scene::park
         /// Which series each ride's graph shows, by ride id, as ui::screens::info::AttractionFacts::graph_series; speed alone
         /// for those not listed. shortcut: not saved with the park; keep it with the ride once saves carry it.
         std::unordered_map<std::uint32_t, std::uint8_t> graph_series;
-        float since_info_page = 0;                 ///< Seconds since a live page was shown again
+        units::Seconds since_info_page;            ///< Since a live page was shown again
         bool shown_closed = false;                 ///< The park closed the ride shown, as a crash does, so its page shows again
         std::uint32_t vandalism_seen = 0;          ///< Breaks the park has been charged for
         std::uint32_t vandalism_warnings_seen = 0; ///< Warnings already posted as messages
@@ -792,7 +792,7 @@ namespace rct3::scene::park
         std::optional<glm::vec3> pivot;                                         ///< Advanced: what the drag turns round, picked when it started
         int zooming = 0;                                                        ///< From the keys: 1 in, -1 out
         bool hover_pickable = false;                                            ///< A click would open a panel on what is under the pointer
-        float since_hover_pick = 0;                                             ///< Seconds since that was looked at
+        units::Seconds since_hover_pick;                                        ///< Since that was looked at
         bool leave = false;
         bool message_alert = false;
         std::uint32_t built = 0;                                        ///< Things put down so far, each heard as a thump (scene/park/sounds.hpp)
@@ -846,7 +846,7 @@ namespace rct3::scene::park
     /// Its random numbers come from `seed`: the same park and seed give the same park.
     [[nodiscard]] std::expected<ParkScene, std::string> create_park_scene(render::Device& device, const config::game::GameInstall& install, const ui::StringTable& strings, const ui::Palette& palette, const config::game::GameOptions& options, const std::filesystem::path& path, random::Seed seed, const simulation::RatingModel& ratings, const ParkLoadReport& report = { });
 
-    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, float elapsed);
+    void update_park_scene(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets, const config::game::GameOptions& options, const ParkInput& input, const ui::KeyboardState& keyboard, units::Seconds elapsed);
 
     /// True once the player has confirmed leaving.
     [[nodiscard]] bool take_park_leave(ParkScene& scene);

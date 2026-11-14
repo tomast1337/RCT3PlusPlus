@@ -45,9 +45,9 @@ namespace rct3::scene
 
     } // namespace
 
-    void update_slideshow_view(render::Device& device, SlideshowView& view, float elapsed)
+    void update_slideshow_view(render::Device& device, SlideshowView& view, units::Seconds elapsed)
     {
-        view.show.update(units::Seconds { elapsed });
+        view.show.update(elapsed);
         const auto shown = view.show.shown();
         const auto wanted = [&](std::size_t index) { return index == shown.under || index == shown.over; };
         std::erase_if(view.loaded, [&](const SlideshowView::Loaded& l) {

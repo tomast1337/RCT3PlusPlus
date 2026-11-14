@@ -10,6 +10,7 @@
 
 #include "park/lens_drops.hpp"
 #include "render/device.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -44,7 +45,7 @@ namespace rct3::scene::park
         /// The car ridden a frame ago and the times it had splashed (rct3::park::CarWater::splashes)
         std::optional<std::pair<std::size_t, std::uint32_t>> car_splashes;
         float rain_due = 0;              ///< Drops the rain owes the lens, landed once whole
-        float clock = 0;                 ///< Seconds, for the wind's slow turning
+        units::Seconds clock;            ///< For the wind's slow turning
         std::vector<LensCorner> corners; ///< The drops' quads, kept from frame to frame
     };
 
@@ -62,8 +63,8 @@ namespace rct3::scene::park
         std::optional<std::pair<std::size_t, std::uint32_t>> car_splashes;
     };
 
-    /// Wets the lens as `around` says and moves its water on by `seconds`; all water goes when `on` is false.
-    void advance_park_lens(ParkLens& lens, const LensSurroundings& around, bool on, float seconds);
+    /// Wets the lens as `around` says and moves its water on by `elapsed`; all water goes when `on` is false.
+    void advance_park_lens(ParkLens& lens, const LensSurroundings& around, bool on, units::Seconds elapsed);
     /// Draws the water on the lens over the screen. Call between passes of the screen; leaves a screen pass open.
     void draw_park_lens(render::Device& device, ParkLens& lens);
     void destroy_park_lens(render::Device& device, ParkLens& lens);

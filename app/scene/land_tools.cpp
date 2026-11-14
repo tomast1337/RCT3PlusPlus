@@ -39,11 +39,11 @@ namespace rct3::scene
     namespace
     {
         // Prices, in hundredths: painting one tile (moving the ground is rct3::park::ground::kShapeCost).
-        constexpr float kTravelSample = 11.3f; ///< Pixels the pointer moves before the way it goes over the ground is read again
-        constexpr float kLongestStep = 0.1f;   ///< Seconds a spray counts a frame as at most, so a hitch does not jolt the ground
-        constexpr float kSteepestDrag = 0.5f;  ///< Chosen by eye: a tile tool reads a view steeper than this (the part of the pointer's ray along the ground) as this steep
-        constexpr float kRumbleQuiet = 0.25f;  ///< Chosen by eye: the rumble of a shaping stroke while the ground stays still
-        constexpr float kRumbleFade = 0.6f;    ///< Chosen by eye: seconds it takes to fall back to that once the ground stops moving
+        constexpr float kTravelSample = 11.3f;          ///< Pixels the pointer moves before the way it goes over the ground is read again
+        constexpr units::Seconds kLongestStep { 0.1f }; ///< A spray counts a frame as this at most, so a hitch does not jolt the ground
+        constexpr float kSteepestDrag = 0.5f;           ///< Chosen by eye: a tile tool reads a view steeper than this (the part of the pointer's ray along the ground) as this steep
+        constexpr float kRumbleQuiet = 0.25f;           ///< Chosen by eye: the rumble of a shaping stroke while the ground stays still
+        constexpr units::Seconds kRumbleFade { 0.6f };  ///< Chosen by eye: it takes this long to fall back to that once the ground stops moving
 
         constexpr std::string_view kPanelName = "land_panel";
         constexpr std::string_view kWaterRefused = "Rct3pp_WaterRefused";
@@ -389,7 +389,7 @@ namespace rct3::scene
             park::set_view_lines(device, scene.land_marks, mesh);
         }
 
-        void brush_shape(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, float elapsed)
+        void brush_shape(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, units::Seconds elapsed)
         {
             LandTools& l = scene.land;
             const auto spot = over ? std::nullopt : ground_spot(scene, at, size);
@@ -419,7 +419,7 @@ namespace rct3::scene
                 for (int r = std::max(static_cast<int>(std::floor(spot->y - reach)) - 1, 0); r <= std::min(static_cast<int>(std::ceil(spot->y + reach)), scene.grid.height - 1); ++r)
                     for (int c = std::max(static_cast<int>(std::floor(spot->x - reach)) - 1, 0); c <= std::min(static_cast<int>(std::ceil(spot->x + reach)), width - 1); ++c)
                         l.before.corners[static_cast<std::size_t>(r) * static_cast<std::size_t>(width) + static_cast<std::size_t>(c)] = scene.grid.at(c, r).corners;
-                const float amount = static_cast<float>(l.spray_speed) * rct3::park::ground::kSprayRate * std::min(elapsed, kLongestStep);
+                const float amount = static_cast<float>(l.spray_speed) * rct3::park::ground::kSprayRate * std::min(elapsed, kLongestStep).value;
                 auto trial = try_shape(scene, scene.grid, [&](save::model::TerrainGrid& g) { return rct3::park::ground::shape_ground(g, l.before, *l.shape, *spot, reach, l.along, amount, l.passes); });
                 if (!trial)
                     return;
@@ -459,7 +459,7 @@ namespace rct3::scene
             take_ground(device, scene, assets, std::move(trial->first));
         }
 
-        void smooth(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, float elapsed)
+        void smooth(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, units::Seconds elapsed)
         {
             LandTools& l = scene.land;
             const SmoothTool tool = kSmoothTools[*l.smoothing];
@@ -504,7 +504,7 @@ namespace rct3::scene
                 return;
             if (tool.level == Level::Pointer)
                 l.target = rct3::park::ground::mean_height(scene.grid, *spot, 1);
-            const float most = static_cast<float>(l.spray_speed) * rct3::park::ground::kSprayRate * rct3::park::ground::kSmoothSprayShare * std::min(elapsed, kLongestStep);
+            const float most = static_cast<float>(l.spray_speed) * rct3::park::ground::kSprayRate * rct3::park::ground::kSmoothSprayShare * std::min(elapsed, kLongestStep).value;
             const std::uint64_t seed = ++l.passes;
             auto trial = try_shape(scene, scene.grid, [&](save::model::TerrainGrid& g) { return rct3::park::ground::smooth_ground(g, tool.tool, *spot, reach, 1, most, l.target, seed, free); });
             if (!trial || trial->second <= 0)
@@ -901,11 +901,11 @@ namespace rct3::scene
         park::rebuild_ground(device, scene, assets);
     }
 
-    void update_land_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, float elapsed)
+    void update_land_tools(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, units::Seconds elapsed)
     {
         LandTools& l = scene.land;
         if (l.rumble)
-            l.rumble = std::max(kRumbleQuiet, *l.rumble - elapsed / kRumbleFade);
+            l.rumble = std::max(kRumbleQuiet, *l.rumble - elapsed.value / kRumbleFade.value);
         if (auto panel = panel_of(scene); panel && (l.tool == LandTools::Tool::Shape || l.tool == LandTools::Tool::Paint || l.tool == LandTools::Tool::Buy))
         {
             if (panel->take_closed())

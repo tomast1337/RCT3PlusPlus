@@ -14,6 +14,7 @@
 #include "ui/money_text.hpp"
 #include "ui/widgets/money_floaters.hpp"
 #include "ui/widgets/world_labels.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -67,6 +68,6 @@ namespace rct3::scene::park
 
     /// Floats up what guests paid since the last call, when shown; ages the floats and drops those that ended.
     /// Returns them pinned on a view `size` across (interface units).
-    [[nodiscard]] std::vector<ui::widgets::MoneyFloat> money_floats(ParkScene& scene, ui::Point size, const ui::Currency& currency, float elapsed);
+    [[nodiscard]] std::vector<ui::widgets::MoneyFloat> money_floats(ParkScene& scene, ui::Point size, const ui::Currency& currency, units::Seconds elapsed);
 
 } // namespace rct3::scene::park

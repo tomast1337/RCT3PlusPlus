@@ -15,6 +15,7 @@
 #include "ui/widgets/menu_bar.hpp"
 #include "ui/widgets/question_box.hpp"
 #include "ui/widgets/toolbar.hpp"
+#include "units/units.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -46,8 +47,8 @@ namespace rct3::scene
     [[nodiscard]] std::expected<WidgetDemo, std::string> create_widget_demo(render::Device& device, const config::game::GameInstall& install, const std::string& language, const std::filesystem::path& fallback_font);
 
     /// Lays out for the device's size and routes the pointer, given in framebuffer pixels, and the keys.
-    /// Returns whether the interface has the pointer. `elapsed` is the frame time in seconds.
-    bool update_widget_demo(render::Device& device, WidgetDemo& demo, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, float elapsed);
+    /// Returns whether the interface has the pointer. `elapsed` is the frame time.
+    bool update_widget_demo(render::Device& device, WidgetDemo& demo, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, units::Seconds elapsed);
 
     /// Records the interface into the current pass.
     void draw_widget_demo(render::Device& device, WidgetDemo& demo);

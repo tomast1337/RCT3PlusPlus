@@ -102,8 +102,8 @@ namespace rct3::scene::track
         /// Ends tried before finishing a track gives up, and each frame, a few seconds at most.
         constexpr std::size_t kCompletionTries = 20000;
         constexpr std::size_t kCompletionTriesPerFrame = 300;
-        constexpr float kFlashSeconds = 0.4f;              ///< The found way's button is lit, then dim, this long
-        constexpr float kTestWait = 3;                     ///< Seconds a test train stands stuck before it sets off again
+        constexpr units::Seconds kFlash { 0.4f };          ///< The found way's button is lit, then dim, this long
+        constexpr units::Seconds kTestWait { 3 };          ///< A test train stands stuck this long before it sets off again
         constexpr std::string_view kPieceNames = "Track_"; ///< Followed by the section's name
         /// Above the tool row, so the two never overlap.
         /// Of the round panel's top, from the screen's bottom edge: its disc stands as the path panel does.
@@ -254,7 +254,7 @@ namespace rct3::scene::track
             const save::model::Ride& ride = scene.rides.rides.at(*b.ride);
             v.can_demolish = ride.track && !ride.track->pieces.empty();
             v.can_complete = v.can_demolish && b.tip.has_value() && !b.backward && !opening(ride) && !b.selected;
-            v.complete_dim = !b.proposed.empty() && std::fmod(b.clock, 2 * kFlashSeconds) >= kFlashSeconds;
+            v.complete_dim = !b.proposed.empty() && std::fmod(b.clock.value, 2 * kFlash.value) >= kFlash.value;
             v.heights = b.heights;
             v.heights_locked = scene.show_ride_heights;
             const rct3::park::track::TrackRules rules = *b.ride < scene.track_rules.size() ? scene.track_rules[*b.ride] : rct3::park::track::TrackRules { };
@@ -905,7 +905,7 @@ namespace rct3::scene::track
         }
     } // namespace
 
-    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, float elapsed)
+    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, units::Seconds elapsed)
     {
         TrackBuilding& b = scene.building;
         b.clock += elapsed;
@@ -1287,14 +1287,14 @@ namespace rct3::scene::track
         if (b.test)
         {
             TrackBuilding::GhostTrain& t = *b.test;
-            if (!t.train.crashed && simulation::drive(t.train, elapsed) && t.train.splashed)
+            if (!t.train.crashed && simulation::drive(t.train, elapsed.value) && t.train.splashed)
             {
                 // Off a pool slide's end, its car flies on down to the ground there.
                 const glm::vec3 at = simulation::track_point(t.train, t.train.at);
                 const glm::vec3 way = simulation::track_way(t.train, t.train.at);
                 t.train.flight = simulation::Flight { .from = at, .way = way, .at = at, .velocity = way * t.train.speed, .water = std::min(scene.grid.height_at(at.x, at.z).value_or(0.0f), at.y) };
             }
-            if (t.train.flight && !simulation::fly(*t.train.flight, elapsed))
+            if (t.train.flight && !simulation::fly(*t.train.flight, elapsed.value))
                 t.train.flight.reset();
             if (t.train.crashed && t.wrecks.empty())
                 t.wrecks = simulation::thrown_cars(t.train, t.dice);
@@ -1303,7 +1303,7 @@ namespace rct3::scene::track
             const auto* standing = scene.sim.registry.ctx().find<simulation::WreckSurroundings>();
             const simulation::WreckSurroundings around = standing != nullptr ? *standing : simulation::WreckSurroundings { .ground = [&scene](glm::vec2 p) { return scene.grid.height_at(p.x, p.y).value_or(0.0f); } };
             for (simulation::Wreck& wreck : t.wrecks)
-                if (simulation::fly(wreck, elapsed, around) == simulation::WreckEvent::BlewUp)
+                if (simulation::fly(wreck, elapsed.value, around) == simulation::WreckEvent::BlewUp)
                     for (const std::string_view effect : { "CoasterExplosion", "CoasterSmoke" })
                         park::fire_park_particles(scene.particles, effect, wreck.at, glm::vec3(0, 1, 0));
             // Its wrecks gone, or stuck a while short of the end, it is back at the station and sets off again.
@@ -1320,7 +1320,7 @@ namespace rct3::scene::track
                 t.train.launched = false;
                 t.train.running = true;
                 t.train.speed = t.train.splash_out ? 0 : t.train.station_speed;
-                t.waited = 0;
+                t.waited = { };
             }
             std::vector<glm::mat4> places;
             for (std::size_t i = 0; i < t.stood.size(); ++i)

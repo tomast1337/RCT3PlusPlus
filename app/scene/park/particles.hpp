@@ -11,6 +11,7 @@
 #include "particles/simulation.hpp"
 #include "random/generator.hpp"
 #include "render/device.hpp"
+#include "units/units.hpp"
 
 #include <filesystem>
 #include <map>
@@ -56,7 +57,7 @@ namespace rct3::scene::park
     bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up, float scale = 1);
     /// Moves time on for the effects near enough `eye` to be seen, nearest first, until `budget` particles are
     /// alive; the rest wait and are not drawn.
-    void advance_park_particles(ParkParticles& particles, float seconds, glm::vec3 eye, std::size_t budget);
+    void advance_park_particles(ParkParticles& particles, units::Seconds elapsed, glm::vec3 eye, std::size_t budget);
     /// Draws them into the open pass, lit by `light` (smoke dims at night; fire does not).
     void draw_park_particles(render::Device& device, const ParkParticles& particles, const glm::mat4& view_projection, glm::vec3 eye, glm::vec3 target, const render::SceneLight& light);
     void destroy_park_particles(render::Device& device, ParkParticles& particles);

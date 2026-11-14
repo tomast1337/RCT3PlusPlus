@@ -44,13 +44,13 @@ namespace rct3::scene::park
 
     /// Moves the ride cars to where the simulation has their trains, or back to where the park kept them
     /// while it does not run; and the scenery moving on its own near `eye` in `view`. Riding along, it also
-    /// sets the rider's eyes, `elapsed` seconds on from the last frame's.
-    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed);
+    /// sets the rider's eyes, `elapsed` on from the last frame's.
+    void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, units::Seconds elapsed);
 
     /// Builds the people meshes again as often as they need, all beside the frame: the moving ones as soon as
     /// the last are done, the riders a few times a second, the still ones when a person's level of detail
     /// changes. The still ones' levels are only taken on with them, so the moving ones keep to the same levels.
-    void refresh_people(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, float elapsed);
+    void refresh_people(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, units::Seconds elapsed);
 
     /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`; without the
     /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
@@ -68,7 +68,7 @@ namespace rct3::scene::park
 
     /// Takes on the objects' meshes once built, and looks at their levels again every
     /// kObjectRebuildInterval, building the meshes again beside the frame when one differs.
-    void refresh_objects(render::Device& device, ParkScene& scene, const glm::vec3& eye, float elapsed);
+    void refresh_objects(render::Device& device, ParkScene& scene, const glm::vec3& eye, units::Seconds elapsed);
 
     /// Waits for the meshes being built beside the frame, dropping them.
     void finish_builds(ParkScene& scene);

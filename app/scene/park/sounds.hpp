@@ -16,6 +16,7 @@
 #include "config/game/install.hpp"
 #include "simulation/crash.hpp"
 #include "simulation/entt.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -39,10 +40,10 @@ namespace rct3::scene::park
         audio::TrackSoundSet set = audio::TrackSoundSet::None;
         std::array<audio::VoiceHandle, 3> running; ///< Slow, medium, fast
         audio::VoiceHandle chain;
-        float chain_off = 0;                       ///< Seconds since the train left the chain, while its loop fades
+        units::Seconds chain_off;                  ///< Since the train left the chain, while its loop fades
         bool was_running = false;                  ///< Last update, to hear it set off and come in
         audio::VoiceHandle plume;                  ///< The water plume loop after a splash
-        float plume_left = 0;                      ///< Seconds it has left
+        units::Seconds plume_left;                 ///< What it has left
         std::optional<std::uint32_t> splashes { }; ///< Times its first car had splashed when last heard
     };
 
@@ -80,13 +81,13 @@ namespace rct3::scene::park
         std::vector<audio::SoundBuffer> rumbles;   ///< Of the ground being shaped
         audio::VoiceHandle rumble;
         bool rumbling = false; ///< A stroke's rumble was started; one a stroke, though it ends first
-        float since_thump = 1; ///< Seconds
+        units::Seconds since_thump { 1 };
         std::minstd_rand random;
     };
 
     [[nodiscard]] ParkSounds load_park_sounds(const config::game::GameInstall& install, std::uint32_t seed);
-    /// Plays what is heard in `scene` now, `elapsed` seconds after the last update.
-    void update_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds, const ParkScene& scene, float elapsed);
+    /// Plays what is heard in `scene` now, `elapsed` after the last update.
+    void update_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds, const ParkScene& scene, units::Seconds elapsed);
     void stop_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds);
 
 } // namespace rct3::scene::park

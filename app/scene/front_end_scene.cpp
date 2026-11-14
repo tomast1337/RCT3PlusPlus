@@ -89,7 +89,7 @@ namespace rct3::scene
         return scene;
     }
 
-    bool update_front_end_scene(render::Device& device, FrontEndScene& scene, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, float elapsed)
+    bool update_front_end_scene(render::Device& device, FrontEndScene& scene, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, units::Seconds elapsed)
     {
         const float scale = scale_for(device, scene);
         const render::Extent extent = device.extent();
@@ -99,7 +99,7 @@ namespace rct3::scene
         ui::PointerState pointer = pointer_pixels;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
         scene.current_fonts = &ui::fonts_for(device, scene.assets, desktop.root().rect().width());
-        const bool over = desktop.update(pointer, keyboard, { units::Seconds { elapsed }, scene.current_fonts });
+        const bool over = desktop.update(pointer, keyboard, { elapsed, scene.current_fonts });
         update_slideshow_view(device, scene.slideshow, elapsed);
         scene.live->front->update();
         ui::screens::front::FrontEnd& front = *scene.live->front;

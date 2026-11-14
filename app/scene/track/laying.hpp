@@ -13,6 +13,7 @@
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "scene/track/building.hpp"
+#include "simulation/park/finance.hpp"
 
 #include <array>
 #include <cstdint>
@@ -94,10 +95,10 @@ namespace rct3::scene::track
     /// become, each laid where the one it replaces started, and measures the track's course again.
     void track_changed(park::ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets);
 
-    /// Adds the ghost to the park and to the ride's track, paid for if the park has the money, or `forced`
-    /// whether or not it has. Over a piece picked mid-track, the ghost takes its place, unless it is the
-    /// same piece, which is left as it stands; either way the next piece along is picked.
-    void build(park::ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, bool forced = false);
+    /// Adds the ghost to the park and to the ride's track, paid for as `charge` says. Over a piece picked
+    /// mid-track, the ghost takes its place, unless it is the same piece, which is left as it stands; either way
+    /// the next piece along is picked.
+    void build(park::ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, simulation::park::Charge charge = simulation::park::Charge::IfAffordable);
 
     /// Shows `way` as the ghost, the pieces it lays.
     void show_way(park::ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, std::span<const rct3::park::track::LaidPlacement> way);

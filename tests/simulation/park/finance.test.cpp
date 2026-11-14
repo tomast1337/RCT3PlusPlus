@@ -21,7 +21,7 @@ TEST_CASE("a park whose money never runs out books nothing")
     ParkState park;
     save::model::Finance money;
     std::optional<std::int64_t> kept;
-    CHECK(book(park, money, kept, units::Money { 5000 }, LedgerLine::StaffTraining, false));
+    CHECK(book(park, money, kept, units::Money { 5000 }, LedgerLine::StaffTraining, Charge::IfAffordable));
     CHECK_FALSE(park.cash.has_value());
     CHECK(money.ledger.empty());
 }
@@ -32,10 +32,10 @@ TEST_CASE("a spend the park cannot afford is refused and changes nothing")
     park.cash = units::Money { 4000 };
     save::model::Finance money;
     std::optional<std::int64_t> kept;
-    CHECK_FALSE(book(park, money, kept, units::Money { 5000 }, LedgerLine::StaffTraining, false));
+    CHECK_FALSE(book(park, money, kept, units::Money { 5000 }, LedgerLine::StaffTraining, Charge::IfAffordable));
     CHECK(park.cash == units::Money { 4000 });
     CHECK(money.ledger.empty());
-    CHECK(book(park, money, kept, units::Money { 4000 }, LedgerLine::StaffTraining, false));
+    CHECK(book(park, money, kept, units::Money { 4000 }, LedgerLine::StaffTraining, Charge::IfAffordable));
     CHECK(park.cash == units::Money { 0 });
     CHECK(money.ledger[0].staff_training == 4000);
 }
@@ -48,18 +48,18 @@ TEST_CASE("a refused spend tells the player, once in a while however often it is
     std::optional<std::int64_t> kept;
     const auto told = [&] { return std::ranges::count(park.messages.list, kCannotPayKey, &ParkMessage::text_key); };
     for (int i = 0; i < 10; ++i)
-        CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, false));
+        CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, Charge::IfAffordable));
     CHECK(told() == 1);
     age(park.messages, kCannotPayGap.value / 2);
-    CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, false));
+    CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, Charge::IfAffordable));
     CHECK(told() == 1);
     age(park.messages, kCannotPayGap.value);
-    CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, false));
+    CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, Charge::IfAffordable));
     CHECK(told() == 2);
     // Forced or paid for, nothing is said.
-    CHECK(book(park, money, kept, units::Money { 300 }, LedgerLine::StaffWages, true));
+    CHECK(book(park, money, kept, units::Money { 300 }, LedgerLine::StaffWages, Charge::Always));
     age(park.messages, kCannotPayGap.value);
-    CHECK(book(park, money, kept, units::Money { -50 }, LedgerLine::RideTickets, false));
+    CHECK(book(park, money, kept, units::Money { -50 }, LedgerLine::RideTickets, Charge::IfAffordable));
     CHECK(told() == 2);
 }
 
@@ -69,7 +69,7 @@ TEST_CASE("a forced spend may take the cash below nought")
     park.cash = units::Money { 100 };
     save::model::Finance money;
     std::optional<std::int64_t> kept;
-    CHECK(book(park, money, kept, units::Money { 300 }, LedgerLine::StaffWages, true));
+    CHECK(book(park, money, kept, units::Money { 300 }, LedgerLine::StaffWages, Charge::Always));
     CHECK(park.cash == units::Money { -200 });
     CHECK(money.ledger[0].staff_wages == 300);
 }
@@ -80,11 +80,11 @@ TEST_CASE("money coming in adds to the cash and books negative")
     park.cash = units::Money { -200 };
     save::model::Finance money;
     std::optional<std::int64_t> kept;
-    CHECK(book(park, money, kept, units::Money { -250 }, LedgerLine::RideTickets, false));
+    CHECK(book(park, money, kept, units::Money { -250 }, LedgerLine::RideTickets, Charge::IfAffordable));
     CHECK(park.cash == units::Money { 50 });
     CHECK(money.ledger[0].ride_tickets == -250);
     // A line only some parks have starts when first booked.
-    CHECK(book(park, money, kept, units::Money { -30 }, LedgerLine::PoolTickets, false));
+    CHECK(book(park, money, kept, units::Money { -30 }, LedgerLine::PoolTickets, Charge::IfAffordable));
     CHECK(money.ledger[0].pool_tickets == -30);
 }
 
@@ -129,18 +129,18 @@ TEST_CASE("a park whose file kept no ledger starts one at its first booking")
 TEST_CASE("the loan moves a step at a time between nought and the maximum, cash and loan together")
 {
     ParkState park { .cash = units::Money { 50'000 }, .loan = units::Money { 0 } };
-    CHECK_FALSE(change_loan(park, units::Money { 250'000 }, false)); // Nothing to repay
-    CHECK(change_loan(park, units::Money { 250'000 }, true));
+    CHECK_FALSE(change_loan(park, units::Money { 250'000 }, LoanMove::Repay)); // Nothing to repay
+    CHECK(change_loan(park, units::Money { 250'000 }, LoanMove::Borrow));
     CHECK(park.cash == units::Money { 150'000 });
     CHECK(park.loan == kLoanStep);
-    CHECK(change_loan(park, units::Money { 250'000 }, true));
-    CHECK(change_loan(park, units::Money { 250'000 }, true)); // The last step is cut short at the maximum
+    CHECK(change_loan(park, units::Money { 250'000 }, LoanMove::Borrow));
+    CHECK(change_loan(park, units::Money { 250'000 }, LoanMove::Borrow)); // The last step is cut short at the maximum
     CHECK(park.loan == units::Money { 250'000 });
     CHECK(park.cash == units::Money { 300'000 });
-    CHECK(loan_step(park, units::Money { 250'000 }, true) == units::Money { 0 });
-    CHECK_FALSE(change_loan(park, units::Money { 250'000 }, true));
+    CHECK(loan_step(park, units::Money { 250'000 }, LoanMove::Borrow) == units::Money { 0 });
+    CHECK_FALSE(change_loan(park, units::Money { 250'000 }, LoanMove::Borrow));
     CHECK(park.loan == units::Money { 250'000 });
-    CHECK(change_loan(park, units::Money { 250'000 }, false));
+    CHECK(change_loan(park, units::Money { 250'000 }, LoanMove::Repay));
     CHECK(park.loan == units::Money { 150'000 });
     CHECK(park.cash == units::Money { 200'000 });
 }
@@ -148,12 +148,12 @@ TEST_CASE("the loan moves a step at a time between nought and the maximum, cash 
 TEST_CASE("repaying the loan needs the cash in hand")
 {
     ParkState park { .cash = kLoanStep - units::Money { 1 }, .loan = units::Money { 300'000 } };
-    CHECK(loan_step(park, units::Money { 500'000 }, false) == units::Money { 0 });
-    CHECK_FALSE(change_loan(park, units::Money { 500'000 }, false));
+    CHECK(loan_step(park, units::Money { 500'000 }, LoanMove::Repay) == units::Money { 0 });
+    CHECK_FALSE(change_loan(park, units::Money { 500'000 }, LoanMove::Repay));
     CHECK(park.cash == kLoanStep - units::Money { 1 });
     CHECK(park.loan == units::Money { 300'000 });
     park.loan = units::Money { 40'000 }; // Less than a step left: only that is repaid
-    CHECK(change_loan(park, units::Money { 500'000 }, false));
+    CHECK(change_loan(park, units::Money { 500'000 }, LoanMove::Repay));
     CHECK(park.loan == units::Money { 0 });
     CHECK(park.cash == kLoanStep - units::Money { 1 + 40'000 });
 }
@@ -161,8 +161,8 @@ TEST_CASE("repaying the loan needs the cash in hand")
 TEST_CASE("a park whose money never runs out has no loan to change")
 {
     ParkState park { .loan = 0 };
-    CHECK(loan_step(park, units::Money { 500'000 }, true) == units::Money { 0 });
-    CHECK_FALSE(change_loan(park, units::Money { 500'000 }, true));
+    CHECK(loan_step(park, units::Money { 500'000 }, LoanMove::Borrow) == units::Money { 0 });
+    CHECK_FALSE(change_loan(park, units::Money { 500'000 }, LoanMove::Borrow));
     CHECK(park.loan == units::Money { 0 });
 }
 
@@ -265,7 +265,7 @@ TEST_CASE("a park whose money never runs out pays no interest or running costs")
     ParkState park;
     save::model::Finance money;
     std::optional<std::int64_t> kept;
-    CHECK(book(park, money, kept, weekly_interest(units::Money { 1'000'000 }, 6), LedgerLine::LoanInterest, true));
-    CHECK(book(park, money, kept, units::Money { 500 }, LedgerLine::RideRunningCosts, true));
+    CHECK(book(park, money, kept, weekly_interest(units::Money { 1'000'000 }, 6), LedgerLine::LoanInterest, Charge::Always));
+    CHECK(book(park, money, kept, units::Money { 500 }, LedgerLine::RideRunningCosts, Charge::Always));
     CHECK(money.ledger.empty());
 }

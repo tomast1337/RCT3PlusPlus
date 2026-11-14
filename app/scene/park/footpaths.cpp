@@ -285,7 +285,7 @@ namespace rct3::scene::park
         {
             const rct3::park::path::PathStyle* style = style_named(scene.footpaths, path);
             const units::Money back = style != nullptr ? rct3::park::laid_price(path, scene.grid, style->piece_cost) : units::Money { };
-            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::Landscaping, false);
+            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable);
             glm::vec3 at = tile_point(scene.grid, { path.col, path.row });
             if (path.elevation && !rct3::park::ground::is_ground_queue(path))
                 at.y = static_cast<float>(path.elevation->quantised_height);
@@ -577,7 +577,7 @@ namespace rct3::scene::park
                 return;
             }
             const units::Money cost = stroke_cost(f, *plan);
-            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
             {
                 f.notice = std::u16string(assets.strings->get(kNoMoney));
                 return;
@@ -652,7 +652,7 @@ namespace rct3::scene::park
             const bool there = rct3::park::same_piece_at(f.paths, piece, f.builder).has_value();
             const units::Money cost = piece_price(style, piece, scene.grid);
             // Paid before the ground is cut; walking over the same piece costs nothing.
-            if (!there && !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
+            if (!there && !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
             {
                 f.notice = std::u16string(assets.strings->get(kNoMoney));
                 return;

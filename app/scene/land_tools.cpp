@@ -62,7 +62,7 @@ namespace rct3::scene
         /// is paid.
         bool pay(park::ParkScene& scene, units::Money cost, save::model::Tile tile)
         {
-            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
                 return false;
             LandTools& l = scene.land;
             if (!l.cost_at)
@@ -700,7 +700,7 @@ namespace rct3::scene
             if (bought.tiles == 0)
                 return;
             // buy_land took no more than the cash could pay for.
-            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, bought.spent, simulation::park::LedgerLine::LandPurchase, false);
+            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, bought.spent, simulation::park::LedgerLine::LandPurchase, simulation::park::Charge::IfAffordable);
             park::float_money(scene, park::tile_point(scene.grid, tile), -bought.spent);
             land_owned_changed(scene, assets);
         }

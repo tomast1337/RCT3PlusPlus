@@ -783,7 +783,7 @@ namespace rct3::scene
         // levelling with it (see below); doors are free.
         const bool levels = p.site->height == p.ground;
         const units::Money price = p.step == RidePlacing::Step::Scenery ? p.item->price : p.step == RidePlacing::Step::Ride ? p.item->price + (levels ? p.levelling_cost : units::Money { }) : units::Money { };
-        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, price, p.step == RidePlacing::Step::Scenery ? simulation::park::LedgerLine::Landscaping : simulation::park::LedgerLine::RideConstruction, false))
+        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, price, p.step == RidePlacing::Step::Scenery ? simulation::park::LedgerLine::Landscaping : simulation::park::LedgerLine::RideConstruction, simulation::park::Charge::IfAffordable))
             return true;
         wait_for_build(scene);
         ++scene.built;

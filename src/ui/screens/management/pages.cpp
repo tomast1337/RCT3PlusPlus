@@ -419,12 +419,12 @@ namespace rct3::ui::screens::management
             }
             line("FinancialSummary_ParkValue", value);
             line("FinancialSummary_CompanyValue", company);
-            const auto loan_button = [&](std::string_view key, std::string_view help, bool borrow) {
-                const bool movable = f.state != nullptr && m != nullptr && simulation::park::loan_step(*f.state, { m->max_loan }, borrow) > units::Money { };
+            const auto loan_button = [&](std::string_view key, std::string_view help, simulation::park::LoanMove move) {
+                const bool movable = f.state != nullptr && m != nullptr && simulation::park::loan_step(*f.state, { m->max_loan }, move) > units::Money { };
                 page.buttons.push_back({ { }, text(strings, key), text(strings, help), movable, { }, std::string(key) });
             };
-            loan_button("Rct3pp_Borrow", "Rct3pp_BorrowHelp", true);
-            loan_button("Rct3pp_Repay", "Rct3pp_RepayHelp", false);
+            loan_button("Rct3pp_Borrow", "Rct3pp_BorrowHelp", simulation::park::LoanMove::Borrow);
+            loan_button("Rct3pp_Repay", "Rct3pp_RepayHelp", simulation::park::LoanMove::Repay);
             if (m == nullptr || m->ledger.empty())
             {
                 page.note = text(strings, kNotRead);

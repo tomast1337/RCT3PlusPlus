@@ -81,8 +81,8 @@ TEST_CASE("the guests walking a park do not all go at one pace")
 TEST_CASE("riders wait in the station and up the lift")
 {
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 2 });
-    CHECK(react(RideReaction::HandsUp, kCruising, false, false, { 1 }, 0, kKeen, true, dice, 1) == RideReaction::Waiting);
-    CHECK(react(RideReaction::HandsUp, kCruising, true, true, { 1 }, 0, kKeen, true, dice, 1) == RideReaction::Waiting);
+    CHECK(react(RideReaction::HandsUp, kCruising, TrainRun::Standing, { 1 }, 0, kKeen, CarPlace::Front, dice, 1) == RideReaction::Waiting);
+    CHECK(react(RideReaction::HandsUp, kCruising, TrainRun::Lifting, { 1 }, 0, kKeen, CarPlace::Front, dice, 1) == RideReaction::Waiting);
 }
 
 TEST_CASE("thrilled riders throw their hands up and keep them up till the forces grow strong")
@@ -90,10 +90,10 @@ TEST_CASE("thrilled riders throw their hands up and keep them up till the forces
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 3 });
     RideReaction now = RideReaction::Calm;
     for (int i = 0; i < 40 && now != RideReaction::HandsUp; ++i)
-        now = react(now, kCruising, true, false, { 1 }, 0, kKeen, false, dice, 0.25f);
+        now = react(now, kCruising, TrainRun::Free, { 1 }, 0, kKeen, CarPlace::Behind, dice, 0.25f);
     CHECK(now == RideReaction::HandsUp);
-    CHECK(react(now, kCruising, true, false, { 0.5f }, 0, kKeen, false, dice, 0.25f) == RideReaction::HandsUp);
-    CHECK(react(now, Felt { .vertical = 2.5f, .lateral = 5 }, true, false, { 0.5f }, 0, Leanings { .hands = 1 }, false, dice, 0.25f) == RideReaction::Calm);
+    CHECK(react(now, kCruising, TrainRun::Free, { 0.5f }, 0, kKeen, CarPlace::Behind, dice, 0.25f) == RideReaction::HandsUp);
+    CHECK(react(now, Felt { .vertical = 2.5f, .lateral = 5 }, TrainRun::Free, { 0.5f }, 0, Leanings { .hands = 1 }, CarPlace::Behind, dice, 0.25f) == RideReaction::Calm);
 }
 
 TEST_CASE("riders who are not thrilled raise their hands only floating over a hill")
@@ -102,8 +102,8 @@ TEST_CASE("riders who are not thrilled raise their hands only floating over a hi
     int cruising = 0, floating = 0;
     for (int i = 0; i < 400; ++i)
     {
-        cruising += react(RideReaction::Calm, kCruising, true, false, { 0.5f }, 0, kKeen, false, dice, 0.25f) == RideReaction::HandsUp;
-        floating += react(RideReaction::Calm, Felt { .vertical = 0 }, true, false, { 0.5f }, 0, kKeen, false, dice, 0.25f) == RideReaction::HandsUp;
+        cruising += react(RideReaction::Calm, kCruising, TrainRun::Free, { 0.5f }, 0, kKeen, CarPlace::Behind, dice, 0.25f) == RideReaction::HandsUp;
+        floating += react(RideReaction::Calm, Felt { .vertical = 0 }, TrainRun::Free, { 0.5f }, 0, kKeen, CarPlace::Behind, dice, 0.25f) == RideReaction::HandsUp;
     }
     CHECK(cruising == 0);
     CHECK(floating > 0);
@@ -113,13 +113,13 @@ TEST_CASE("timid riders never raise their hands, and the front car has fewer of 
 {
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 5 });
     for (int i = 0; i < 200; ++i)
-        CHECK(react(RideReaction::Calm, kCruising, true, false, { 1 }, 0, kTimid, true, dice, 1) != RideReaction::HandsUp);
+        CHECK(react(RideReaction::Calm, kCruising, TrainRun::Free, { 1 }, 0, kTimid, CarPlace::Front, dice, 1) != RideReaction::HandsUp);
     const Leanings middling { .hands = 0.2f };
     int front = 0, back = 0;
     for (int i = 0; i < 200; ++i)
     {
-        front += react(RideReaction::Calm, kCruising, true, false, { 1 }, 0, middling, true, dice, 1) == RideReaction::HandsUp;
-        back += react(RideReaction::Calm, kCruising, true, false, { 1 }, 0, middling, false, dice, 1) == RideReaction::HandsUp;
+        front += react(RideReaction::Calm, kCruising, TrainRun::Free, { 1 }, 0, middling, CarPlace::Front, dice, 1) == RideReaction::HandsUp;
+        back += react(RideReaction::Calm, kCruising, TrainRun::Free, { 1 }, 0, middling, CarPlace::Behind, dice, 1) == RideReaction::HandsUp;
     }
     CHECK(front > 0);
     CHECK(back == 0);
@@ -128,12 +128,12 @@ TEST_CASE("timid riders never raise their hands, and the front car has fewer of 
 TEST_CASE("riders brace against strong forces and cover their eyes going down a ride too wild for them")
 {
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 6 });
-    CHECK(react(RideReaction::Calm, Felt { .vertical = 4 }, true, false, { 0.5f }, 0, kKeen, false, dice, 0.25f) == RideReaction::Strained);
-    CHECK(react(RideReaction::Calm, Felt { .vertical = 4 }, true, false, { 0.5f }, 0, kTimid, false, dice, 0.25f) != RideReaction::Strained);
+    CHECK(react(RideReaction::Calm, Felt { .vertical = 4 }, TrainRun::Free, { 0.5f }, 0, kKeen, CarPlace::Behind, dice, 0.25f) == RideReaction::Strained);
+    CHECK(react(RideReaction::Calm, Felt { .vertical = 4 }, TrainRun::Free, { 0.5f }, 0, kTimid, CarPlace::Behind, dice, 0.25f) != RideReaction::Strained);
     const Leanings shy { .eyes = 0 };
-    CHECK(react(RideReaction::Calm, Felt { .slope = -0.8f }, true, false, { 0.5f }, 0.4f, shy, false, dice, 0.25f) == RideReaction::CoverEyes);
-    CHECK(react(RideReaction::Calm, Felt { .slope = 0.2f }, true, false, { 0.5f }, 0.4f, shy, false, dice, 0.25f) != RideReaction::CoverEyes);
-    CHECK(react(RideReaction::Calm, Felt { .slope = -0.8f }, true, false, { 0.5f }, 0, shy, false, dice, 0.25f) != RideReaction::CoverEyes);
+    CHECK(react(RideReaction::Calm, Felt { .slope = -0.8f }, TrainRun::Free, { 0.5f }, 0.4f, shy, CarPlace::Behind, dice, 0.25f) == RideReaction::CoverEyes);
+    CHECK(react(RideReaction::Calm, Felt { .slope = 0.2f }, TrainRun::Free, { 0.5f }, 0.4f, shy, CarPlace::Behind, dice, 0.25f) != RideReaction::CoverEyes);
+    CHECK(react(RideReaction::Calm, Felt { .slope = -0.8f }, TrainRun::Free, { 0.5f }, 0, shy, CarPlace::Behind, dice, 0.25f) != RideReaction::CoverEyes);
 }
 
 TEST_CASE("flat ride riders wait while it stands and cover their eyes when it is too wild for them")

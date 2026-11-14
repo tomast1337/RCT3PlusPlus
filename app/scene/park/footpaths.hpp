@@ -110,7 +110,7 @@ namespace rct3::scene::park
         std::optional<rct3::park::FootpathBuilder> hover;
         std::optional<std::pair<std::size_t, rct3::park::Side>> hover_edge;
         std::optional<save::model::Tile> hover_tile;           ///< Bare ground pointed at, shown as the path a click would lay
-        std::optional<std::array<std::int32_t, 4>> hover_door; ///< The door edge pointed at: column, row, height, side
+        std::optional<std::array<std::int32_t, 4>> hover_door; ///< The door pointed at: column, row, height, quarter turns
         /// While Shift is held: where the pointer met the ground when it went down, and the first piece's height then.
         struct Lift
         {

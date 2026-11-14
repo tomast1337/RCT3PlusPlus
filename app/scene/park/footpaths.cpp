@@ -1090,15 +1090,16 @@ namespace rct3::scene::park
         }
 
         /// Begins a trail at `tile`: on its ground, or with `control` at the last piece's height.
-        void begin_trail(ParkFootpaths& f, const save::model::RideModel& rides, save::model::Tile tile, bool control)
+        void begin_trail(ParkScene& scene, save::model::Tile tile, bool control)
         {
+            ParkFootpaths& f = scene.footpaths;
             rct3::park::start_at(f.builder, tile);
             if (control)
                 f.builder.start_height = f.last_height;
-            // A queue begun beside a ride's entrance goes away from it, so it leads guests there.
-            if (chosen_queue(f))
+            // A queue begun behind a ride's entrance, at its height, goes away from it, so it leads guests there.
+            if (const auto first = rct3::park::next_piece(f.builder, scene.grid); first && chosen_queue(f))
             {
-                if (const auto entrance = rct3::park::entrance_beside(rides, { tile.col, tile.row }, std::nullopt))
+                if (const auto entrance = rct3::park::entrance_beside(scene.rides, tile, first->start))
                     f.builder.heading = entrance->side.opposite();
             }
             f.notice.clear();
@@ -1189,7 +1190,7 @@ namespace rct3::scene::park
                     // A trail going on is picked up at its next piece, wherever the pointer is: after a lifted
                     // piece the pointer is far above the ground it points at. Without one a trail begins.
                     if (!f.builder.start)
-                        begin_trail(f, scene.rides, *tile, control);
+                        begin_trail(scene, *tile, control);
                     else if (const auto next = rct3::park::next_piece(f.builder, scene.grid))
                     {
                         rct3::park::start_at(f.builder, next->spot);
@@ -1303,8 +1304,8 @@ namespace rct3::scene::park
                 const std::vector<save::model::PlacementSpot> doors = ride_doors(scene.rides);
                 if (const auto d = rct3::park::path::door_under(*ray, doors, scene.grid, ground_faded(scene)))
                 {
-                    const save::model::PlacementSpot& spot = doors[d->door];
-                    door = std::array { spot.col, spot.row, spot.height, d->side.value };
+                    const save::model::PlacementSpot& spot = doors[*d];
+                    door = std::array<std::int32_t, 4> { spot.col, spot.row, spot.height, spot.direction };
                 }
                 else if (const auto under = rct3::park::path::path_under(*ray, f.paths, scene.grid, ground_faded(scene)); under && under->side)
                     edge = std::pair { under->path, *under->side };
@@ -1319,7 +1320,7 @@ namespace rct3::scene::park
                     f.hover = std::move(b);
                 else if (door)
                 {
-                    rct3::park::path::start_from_door(b, save::model::PlacementSpot { 0, (*door)[0], (*door)[1], (*door)[2], 0 }, rct3::park::Side::from((*door)[3]));
+                    rct3::park::path::start_from_door(b, save::model::PlacementSpot { .col = (*door)[0], .row = (*door)[1], .height = (*door)[2], .direction = static_cast<std::uint8_t>((*door)[3]) });
                     f.hover = std::move(b);
                 }
                 f.dirty = true;
@@ -1374,7 +1375,7 @@ namespace rct3::scene::park
         const auto tile = controls_tile(scene, at, size);
         if (!tile)
             return false;
-        begin_trail(scene.footpaths, scene.rides, *tile, control);
+        begin_trail(scene, *tile, control);
         return true;
     }
 

@@ -26,14 +26,13 @@ namespace
         return g;
     }
 
-    /// One ride whose station's entrance stands on (`col`, `row`).
-    save::model::RideModel ride_at(int col, int row)
+    /// One ride whose station's entrance stands on (`col`, `row`), turned `turn`: unturned, the ride is on the
+    /// column before it and its back faces the next column.
+    save::model::RideModel ride_at(int col, int row, ModelTurn turn = { })
     {
         save::model::RideModel rides;
         save::model::Station& station = rides.rides.emplace_back().stations.emplace_back();
-        station.entrance_spot = save::model::PlacementSpot { };
-        station.entrance_spot->col = col;
-        station.entrance_spot->row = row;
+        station.entrance_spot = save::model::PlacementSpot { .col = col, .row = row, .direction = static_cast<std::uint8_t>(turn.value) };
         return rides;
     }
 
@@ -51,13 +50,41 @@ namespace
     }
 } // namespace
 
-TEST_CASE("an entrance beside a tile is found on its side, near its height")
+TEST_CASE("an entrance is joined only from the tile behind it, near its height")
 {
     const save::model::RideModel rides = ride_at(3, 2);
-    CHECK(entrance_beside(rides, { 2, 2 }, 0) == EntranceBeside { 0, 0, Side::kNextCol });
-    CHECK(entrance_beside(rides, { 3, 3 }, std::nullopt) == EntranceBeside { 0, 0, Side::kRowBefore });
-    CHECK_FALSE(entrance_beside(rides, { 2, 3 }, 0));
-    CHECK_FALSE(entrance_beside(rides, { 2, 2 }, kEntranceReach + 1));
+    CHECK(entrance_beside(rides, { 4, 2 }, 0) == EntranceBeside { 0, 0, Side::kColBefore });
+    CHECK(entrance_beside(rides, { 4, 2 }, std::nullopt) == EntranceBeside { 0, 0, Side::kColBefore });
+    CHECK_FALSE(entrance_beside(rides, { 4, 2 }, kEntranceReach + 1));
+    CHECK_FALSE(entrance_beside(rides, { 2, 2 }, 0)); // The ride's side
+    CHECK_FALSE(entrance_beside(rides, { 3, 1 }, 0));
+    CHECK_FALSE(entrance_beside(rides, { 3, 3 }, 0));
+    CHECK_FALSE(entrance_beside(rides, { 4, 3 }, 0));
+}
+
+TEST_CASE("an entrance's back turns with it")
+{
+    // By turn: the tile behind and the way from it to the entrance.
+    const std::array<std::pair<save::model::Tile, Side>, 4> behind { {
+        { { 4, 3 }, Side::kColBefore },
+        { { 3, 2 }, Side::kNextRow },
+        { { 2, 3 }, Side::kNextCol },
+        { { 3, 4 }, Side::kRowBefore },
+    } };
+    for (std::int32_t turn = 0; turn < 4; ++turn)
+    {
+        CAPTURE(turn);
+        const save::model::RideModel rides = ride_at(3, 3, ModelTurn { turn });
+        for (const Side side : kSides)
+        {
+            const save::model::Tile tile = side.beyond({ 3, 3 });
+            const auto found = entrance_beside(rides, tile, 0);
+            if (tile == behind[static_cast<std::size_t>(turn)].first)
+                CHECK(found == EntranceBeside { 0, 0, behind[static_cast<std::size_t>(turn)].second });
+            else
+                CHECK_FALSE(found);
+        }
+    }
 }
 
 TEST_CASE("a queue laid away from an entrance joins the station's line")
@@ -88,7 +115,7 @@ TEST_CASE("a queue laid away from an entrance joins the station's line")
 TEST_CASE("a queue laid towards an entrance is turned round to lead to it")
 {
     const save::model::TerrainGrid g = owned_grid(8, 4);
-    save::model::RideModel rides = ride_at(5, 1);
+    save::model::RideModel rides = ride_at(5, 1, ModelTurn { 2 });
     rides.rides[0].stations[0].queue_line = 7;
     std::vector<save::model::PathTile> paths = lay_queue(g, { 2, 1 }, Side::kNextCol, 3); // Ends on (4, 1), beside the entrance
     const auto entrance = entrance_beside(rides, { 4, 1 }, 0);
@@ -127,7 +154,7 @@ TEST_CASE("a queue's open end turns to a path beside it")
 TEST_CASE("a queue laid on towards a line's open end joins it, turned round to lead in")
 {
     const save::model::TerrainGrid g = owned_grid(8, 4);
-    save::model::RideModel rides = ride_at(5, 1);
+    save::model::RideModel rides = ride_at(5, 1, ModelTurn { 2 });
     std::vector<save::model::PathTile> paths = lay_queue(g, { 2, 1 }, Side::kNextCol, 3); // (2..4, 1), the entrance beyond
     const std::uint64_t line = join_entrance(rides, paths, g, 2, *entrance_beside(rides, { 4, 1 }, 0), 99);
     // A second stroke from (0, 1) up to the line's open end at (2, 1).
@@ -150,7 +177,7 @@ TEST_CASE("a queue laid on towards a line's open end joins it, turned round to l
 TEST_CASE("a queue over steps laid towards the entrance turns round whole, its steps the same way up")
 {
     const save::model::TerrainGrid g = owned_grid(8, 4);
-    save::model::RideModel rides = ride_at(5, 1);
+    save::model::RideModel rides = ride_at(5, 1, ModelTurn { 2 });
     FootpathBuilder b;
     b.queue = true;
     b.heading = Side::kNextCol;

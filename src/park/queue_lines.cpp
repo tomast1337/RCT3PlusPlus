@@ -4,6 +4,7 @@
 #include "park/footpath_builder.hpp"
 #include "park/ground/paths.hpp"
 #include "park/path/decks.hpp"
+#include "park/ride/placement.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -15,7 +16,6 @@ namespace rct3::park
 
     std::optional<EntranceBeside> entrance_beside(const save::model::RideModel& rides, save::model::Tile tile, std::optional<std::int32_t> height)
     {
-        const auto [col, row] = tile;
         for (std::size_t r = 0; r < rides.rides.size(); ++r)
         {
             const std::vector<save::model::Station>& stations = rides.rides[r].stations;
@@ -24,14 +24,9 @@ namespace rct3::park
                 const auto& at = stations[s].entrance_spot;
                 if (!at || (height && std::abs(at->height - *height) > kEntranceReach))
                     continue;
-                // shortcut: any side of the entrance's tile joins, the way it faces is not looked at; check it
-                // once that is known.
-                for (const Side side : kSides)
-                {
-                    const save::model::Tile beside = side.beyond({ col, row });
-                    if (beside.col == at->col && beside.row == at->row)
-                        return EntranceBeside { r, s, side };
-                }
+                const Side back = ride::door_back(*at);
+                if (back.beyond({ at->col, at->row }) == tile)
+                    return EntranceBeside { r, s, back.opposite() };
             }
         }
         return std::nullopt;

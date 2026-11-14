@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Joining queues to rides. A queue tile laid beside a ride's entrance joins the line of that entrance's
-// station: its end side turns to face the entrance and every tile of the queue behind it takes the station's
-// line, which is made when the station has none yet. A queue laid towards the entrance flows the other way
+// Joining queues to rides. A queue tile laid behind a ride's entrance, on the tile beyond it away from the ride,
+// joins the line of that entrance's station, at the entrance's height: its end side turns to face the entrance and
+// every tile of the queue behind it takes the station's line, which is made when the station has none yet. A queue laid towards the entrance flows the other way
 // until it gets there, so the tiles behind are turned round to lead to it. A queue laid on from the open end of a
 // line joins that line the same way. A line's railings are its ride's fence, in the ride's fence colours.
 //
@@ -35,8 +35,8 @@ namespace rct3::park
     /// How far apart in height a queue tile and an entrance may be and still join, in world units.
     inline constexpr std::int32_t kEntranceReach = 1;
 
-    /// The entrance beside tile (`col`, `row`) whose height is within kEntranceReach of `height`, if any;
-    /// any height when `height` is empty.
+    /// The entrance whose back faces `tile` (the tile beyond it, away from its ride) and whose height is within
+    /// kEntranceReach of `height`, if any; any height when `height` is empty.
     [[nodiscard]] std::optional<EntranceBeside> entrance_beside(const save::model::RideModel& rides, save::model::Tile tile, std::optional<std::int32_t> height);
 
     /// The queue tiles linked behind `paths[tile]` (following end sides), nearest first, not counting itself.

@@ -130,6 +130,13 @@ namespace rct3::park::ride
         return object::faced_side(turn).left();
     }
 
+    /// The side of a ride door's tile away from the ride: paths and queues join the door only from the tile beyond
+    /// it.
+    [[nodiscard]] constexpr Side door_back(const save::model::PlacementSpot& door) noexcept
+    {
+        return object::faced_side(spot_turn(door)).opposite();
+    }
+
     /// A ride's entrance or exit: its tile and the turn that faces it to the ride, its +X towards the side of its
     /// tile the ride is on (faced_side).
     struct DoorSpot

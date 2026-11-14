@@ -118,7 +118,7 @@ namespace rct3::parkfile
                 g.swim = SavedSwim { .room_col = door->col, .room_row = door->row, .swimmer = *swimmer };
             if (const auto* member = r.try_get<Member>(e); member != nullptr && r.valid(member->party))
             {
-                g.party = parties.try_emplace(member->party, static_cast<std::int32_t>(parties.size())).first->second;
+                g.party.emplace(parties.try_emplace(member->party, static_cast<std::int32_t>(parties.size())).first->second);
                 g.leader = r.get<Party>(member->party).leader == e;
             }
             if (g.look)
@@ -295,7 +295,7 @@ namespace rct3::parkfile
             const KeeperDuty& duty = *keeper->second.second;
             const auto& at = duty.job == KeeperJob::Filling ? house_at : places;
             const auto target = at.find(duty.target);
-            saved.keeper = keeper->second.first;
+            saved.keeper.emplace(keeper->second.first);
             saved.job = duty.job;
             saved.goal = duty.goal;
             saved.target = target != at.end() ? std::optional(target->second) : std::nullopt;

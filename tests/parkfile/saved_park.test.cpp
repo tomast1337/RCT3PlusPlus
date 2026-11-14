@@ -9,6 +9,7 @@
 #include "units/units.hpp"
 
 #include <doctest/doctest.h>
+#include <type_traits>
 
 using namespace rct3;
 
@@ -230,7 +231,7 @@ TEST_CASE("a value that may be missing is kept as the plain number, -1 for none,
         parkfile::detail::Reader r(bytes);
         const auto plain = std::pair { r.number<std::int32_t>(), r.number<float>() };
         parkfile::detail::Reader again(bytes);
-        Kept read { .place = 99, .since = units::Seconds { 99 } };
+        Kept read { .place = std::optional { 99 }, .since = std::optional { units::Seconds { 99 } } };
         parkfile::detail::get(again, read);
         CHECK(again.ok());
         CHECK(again.left() == 0);
@@ -242,7 +243,7 @@ TEST_CASE("a value that may be missing is kept as the plain number, -1 for none,
     CHECK_FALSE(none.place);
     CHECK_FALSE(none.since);
 
-    const auto [some_plain, some] = round_trip({ .place = 0, .since = units::Seconds { 2.5f } });
+    const auto [some_plain, some] = round_trip({ .place = std::optional { 0 }, .since = std::optional { units::Seconds { 2.5f } } });
     CHECK(some_plain == std::pair { 0, 2.5f });
     CHECK(some.place == 0);
     CHECK(some.since == units::Seconds { 2.5f });
@@ -256,10 +257,19 @@ TEST_CASE("a value that may be missing is kept as the plain number, -1 for none,
     w.number(-0.5f);
     const auto bytes = w.take();
     parkfile::detail::Reader r(bytes);
-    Kept odd { .place = 1, .since = units::Seconds { 1 } };
+    Kept odd { .place = std::optional { 1 }, .since = std::optional { units::Seconds { 1 } } };
     parkfile::detail::get(r, odd);
     CHECK_FALSE(odd.place);
     CHECK_FALSE(odd.since);
+}
+
+TEST_CASE("a value that may be missing is not made from a bare number by accident")
+{
+    // `place = -1` would otherwise compile and hold the value -1.
+    static_assert(!std::is_convertible_v<std::int32_t, core::NoneAsMinusOne<std::int32_t>>);
+    static_assert(!std::is_assignable_v<core::NoneAsMinusOne<std::int32_t>&, std::int32_t>);
+    static_assert(std::is_constructible_v<core::NoneAsMinusOne<std::int32_t>, std::int32_t>);
+    CHECK(core::NoneAsMinusOne<std::int32_t> { -1 } == std::optional { -1 });
 }
 
 TEST_CASE("a save keeps the park's objects and those the player built, platforms too, not those loading makes")
@@ -408,7 +418,7 @@ TEST_CASE("a save keeps its swimmers in the pool of their changing room")
     r.emplace<Mood>(dee);
     r.emplace<Wallet>(dee);
     r.emplace<Errand>(dee, Errand { .kind = ErrandKind::Swimming, .target = room });
-    r.emplace<Swimmer>(dee, Swimmer { .changed = true, .left = { 42 }, .goal = { 5, -1, 7 }, .in_water = true, .spot = 2, .place = 1, .use = PoolUse::Lounge, .waited = { 3 } });
+    r.emplace<Swimmer>(dee, Swimmer { .changed = true, .left = { 42 }, .goal = { 5, -1, 7 }, .in_water = true, .spot = std::optional { 2 }, .place = std::optional { 1 }, .use = PoolUse::Lounge, .waited = { 3 } });
 
     parkfile::SavedPark park = small_park();
     park.people = parkfile::keep_people(world, { }, { });

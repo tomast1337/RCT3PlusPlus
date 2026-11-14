@@ -337,7 +337,7 @@ TEST_CASE("a tracked ride leaves the station as its saved operating settings say
 {
     save::model::OperatingOptions o;
     o.wait_for_load = 1;
-    o.min_wait = 10;
+    o.min_wait.emplace(10);
     o.max_wait = std::nullopt;
     const simulation::Departure d = simulation::departure_of(o);
     CHECK(d.wait_for == simulation::LoadWait::ThreeQuarters);

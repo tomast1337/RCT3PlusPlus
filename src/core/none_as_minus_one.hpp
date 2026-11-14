@@ -16,7 +16,15 @@ namespace rct3::core
 
     template<typename T> struct NoneAsMinusOne : std::optional<T>
     {
-        using std::optional<T>::optional;
+        constexpr NoneAsMinusOne() noexcept = default;
+        constexpr NoneAsMinusOne(std::nullopt_t) noexcept
+        {
+        }
+        // Explicit, so a stray `x = -1` is an error rather than the value -1.
+        constexpr explicit NoneAsMinusOne(T value) noexcept
+            : std::optional<T>(std::move(value))
+        {
+        }
         constexpr NoneAsMinusOne(std::optional<T> value) noexcept
             : std::optional<T>(std::move(value))
         {

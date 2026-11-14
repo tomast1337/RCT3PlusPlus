@@ -135,8 +135,8 @@ namespace rct3::scene::track
             }
             train.length = rct3::park::track::train_length(fits);
         }
-        ride.train_count = trains;
-        ride.cars_per_train = cars;
+        ride.train_count.emplace(trains);
+        ride.cars_per_train.emplace(cars);
         return arm;
     }
 
@@ -220,7 +220,7 @@ namespace rct3::scene::track
         const auto kept = static_cast<std::int32_t>(fronts.size());
         ride.trains.resize(fronts.size());
         std::erase_if(ride.seats, [&](const auto& seat) { return seat.train >= kept; });
-        ride.train_count = kept;
+        ride.train_count.emplace(kept);
         for (std::size_t t = 0; t < fronts.size(); ++t)
             rct3::park::track::stand_train(*course, ride.trains[t], fits->second, fronts[t]);
     }

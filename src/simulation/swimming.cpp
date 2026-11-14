@@ -965,7 +965,7 @@ namespace rct3::simulation
                 if (free < spot.places)
                 {
                     used |= 1u << free;
-                    swimmer.place = free;
+                    swimmer.place.emplace(free);
                     swimmer.use = spot.use;
                     swimmer.waited = { };
                     swimmer.idle = spot.use == PoolUse::Lounge ? kTuning.pools.lounging : kTuning.pools.showering;
@@ -1073,7 +1073,7 @@ namespace rct3::simulation
             if (!boards.empty() && random::chance(dice, kTuning.dives.chance.value))
             {
                 const std::int32_t board = boards[random::below(dice, boards.size())];
-                swimmer.board = board;
+                swimmer.board.emplace(board);
                 swimmer.goal = pool->boards[static_cast<std::size_t>(board)].foot;
                 swimmer.to_spa = false;
                 continue;
@@ -1085,7 +1085,7 @@ namespace rct3::simulation
             if (out == swimmer.in_water && !pool->ladders.empty() && random::chance(dice, kTuning.dives.ladder.value))
                 if (const auto which = static_cast<std::int32_t>(random::below(dice, pool->ladders.size())); reach(pool->ladders[static_cast<std::size_t>(which)].water) && ladders_taken.insert({ door->pool, which }).second)
                 {
-                    swimmer.ladder = which;
+                    swimmer.ladder.emplace(which);
                     const PoolLadder& ladder = pool->ladders[static_cast<std::size_t>(which)];
                     swimmer.goal = swimmer.in_water ? ladder.water : ladder.deck;
                     swimmer.to_spa = false;

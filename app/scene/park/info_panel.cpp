@@ -650,9 +650,9 @@ namespace rct3::scene::park
         else if (change.id == ui::screens::info::control_id(MaxWaitOn))
             wait_on(ride->options.max_wait, MaxWait);
         else if (change.id == ui::screens::info::control_id(MinWait))
-            ride->options.min_wait = change.value;
+            ride->options.min_wait.emplace(change.value);
         else if (change.id == ui::screens::info::control_id(MaxWait))
-            ride->options.max_wait = change.value;
+            ride->options.max_wait.emplace(change.value);
         else if (change.id == ui::screens::info::control_id(WaitFor))
             ride->options.wait_for_load = change.value;
         else if ((change.id == ui::screens::info::control_id(Trains) || change.id == ui::screens::info::control_id(Cars)) && scene.train_limits.contains(ref.index) && ride->base.state != save::model::AttractionState::Open && assets.install)

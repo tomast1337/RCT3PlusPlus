@@ -182,7 +182,7 @@ namespace rct3::parkfile
                 w.number(std::to_underlying(u.kind));
                 w.number(std::to_underlying(u.last));
                 w.number(u.since_inspection.value);
-                w.number(u.inspect_every.value);
+                w.number(u.inspect_every.value_or(units::Seconds { -1 }).value);
                 w.number(u.breakdowns);
                 for (const std::uint8_t d : u.downtime)
                     w.number(d);
@@ -202,7 +202,8 @@ namespace rct3::parkfile
                 u.kind = static_cast<simulation::Breakdown>(kind);
                 u.last = static_cast<simulation::Breakdown>(last);
                 u.since_inspection.value = r.number<float>();
-                u.inspect_every.value = r.number<float>();
+                const units::Seconds every { r.number<float>() };
+                u.inspect_every = every.value >= 0 ? std::optional { every } : std::nullopt;
                 u.breakdowns = r.number<std::uint32_t>();
                 for (std::uint8_t& d : u.downtime)
                     d = r.number<std::uint8_t>();

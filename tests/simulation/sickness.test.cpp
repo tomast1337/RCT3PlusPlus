@@ -52,7 +52,7 @@ TEST_CASE("guests sick from a ride are sick by its exit, the mess upsets others 
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 20, .cycle_seconds = 10, .nausea = 1, .exit = glm::ivec2 { 3, 0 } });
     auto& r = park.world().registry;
-    r.emplace<Upkeep>(ride, Upkeep { .inspect_every = -1 });
+    r.emplace<Upkeep>(ride, Upkeep { .inspect_every = std::nullopt });
     std::vector<entt::entity> riders;
     for (int i = 0; i < 20; ++i)
     {

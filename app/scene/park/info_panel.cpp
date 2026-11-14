@@ -314,7 +314,7 @@ namespace rct3::scene::park
             {
                 f.pool->reliability = upkeep->reliability.value;
                 f.pool->since_inspection = upkeep->since_inspection;
-                if (const auto interval = std::ranges::find(simulation::kInspectionSeconds, upkeep->inspect_every.value); interval != simulation::kInspectionSeconds.end())
+                if (const auto interval = std::ranges::find(simulation::kInspectionSeconds, upkeep->inspect_every); interval != simulation::kInspectionSeconds.end())
                     f.pool->inspection = static_cast<int>(interval - simulation::kInspectionSeconds.begin());
             }
             for (const auto [g, thoughts] : r.view<const simulation::Thoughts>().each())

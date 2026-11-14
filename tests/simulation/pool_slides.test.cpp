@@ -188,7 +188,7 @@ TEST_CASE("a mechanic mends a broken pool slide from its complex's changing room
     auto& attraction = r.get<Attraction>(slide);
     attraction.entrance = r.get<CycleRide>(slide).exit = kNoNode; // A pool slide's platform has no doors of its own
     attraction.open = false;
-    r.emplace_or_replace<Upkeep>(slide, Upkeep { .broken = true, .inspect_every = -1 });
+    r.emplace_or_replace<Upkeep>(slide, Upkeep { .broken = true, .inspect_every = std::nullopt });
     const auto mechanic = park.staff(StaffRole::Mechanic, { 0, 0 });
     const float pool_edge = park.world().paths.tile_size; // Row 0's far side; the complex starts past it
     bool kept_out = true;

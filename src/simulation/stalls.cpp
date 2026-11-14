@@ -33,15 +33,15 @@ namespace rct3::simulation
         {
             auto& upkeep = r.get<Upkeep>(e);
             auto& attraction = r.get<Attraction>(e);
-            if (upkeep.break_in.value < 0 || upkeep.broken || !attraction.open)
+            if (!upkeep.break_in || upkeep.broken || !attraction.open)
                 continue;
-            if (upkeep.break_in.value == 0)
+            if (upkeep.break_in->value == 0)
             {
                 if (!r.all_of<Dice>(e))
                     r.emplace<Dice>(e, dice_for(world, e));
-                upkeep.break_in.value = static_cast<float>(random::between(r.get<Dice>(e).state, kTuning.wear.stall_shortest.value, kTuning.wear.stall_longest.value));
+                upkeep.break_in->value = static_cast<float>(random::between(r.get<Dice>(e).state, kTuning.wear.stall_shortest.value, kTuning.wear.stall_longest.value));
             }
-            else if ((upkeep.break_in.value = std::max(upkeep.break_in.value - pace * dt, 0.0f)) == 0)
+            else if ((upkeep.break_in->value = std::max(upkeep.break_in->value - pace * dt, 0.0f)) == 0)
             {
                 upkeep.broken = true;
                 ++upkeep.breakdowns;

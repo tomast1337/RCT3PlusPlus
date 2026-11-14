@@ -230,7 +230,7 @@ TEST_CASE("an open ride costs its running cost each week; a closed ride nothing"
     const auto broken = park.flat_ride("Breaker", { 4, 0 }, 0);
     r.get<Attraction>(broken).running_cost = { 300 };
     r.get<Attraction>(broken).open = false;
-    r.emplace<Upkeep>(broken, Upkeep { .broken = true, .inspect_every = -1 });
+    r.emplace<Upkeep>(broken, Upkeep { .broken = true, .inspect_every = std::nullopt });
     park.run_seconds(kWeek);
     CHECK(r.ctx().get<Charges>().running.value == 3 * 500 + 300);
 }

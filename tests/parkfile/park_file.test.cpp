@@ -201,7 +201,7 @@ TEST_CASE("a ride mid-breakdown and a staff member's patrol are read back as wri
     SimWorld world;
     auto& r = world.registry;
     const auto ride = r.create();
-    simulation::Upkeep upkeep { .reliability = 0.4f, .broken = true, .since_inspection = 90, .inspect_every = -1, .breakdowns = 3, .kind = simulation::Breakdown::DoorsFailToOpen, .last = simulation::Breakdown::DoorsFailToOpen };
+    simulation::Upkeep upkeep { .reliability = 0.4f, .broken = true, .since_inspection = 90, .inspect_every = std::nullopt, .breakdowns = 3, .kind = simulation::Breakdown::DoorsFailToOpen, .last = simulation::Breakdown::DoorsFailToOpen };
     upkeep.downtime = { 20, 4, 0, 0, 0, 0, 0, 7 };
     upkeep.samples = 11;
     upkeep.sample_clock.value = 0.75f;

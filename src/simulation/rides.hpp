@@ -61,13 +61,12 @@ namespace rct3::simulation
     struct Stop
     {
         NodeId entrance = kNoNode;
-        std::vector<NodeId> line { };        ///< As CycleRide::line
-        NodeId exit = kNoNode;               ///< Where riders get off; none lets no one off here
-        std::vector<entt::entity> queue { }; ///< Guests waiting, first in line first
-        units::Seconds loading { };          ///< The train standing here has been loading
-        static constexpr std::size_t kNone = std::numeric_limits<std::size_t>::max();
-        std::size_t saved = kNone;           ///< Its place among the saved ride's stations; kNone till it has doors
-        std::vector<glm::vec3> platform { }; ///< Points along its station track
+        std::vector<NodeId> line { };         ///< As CycleRide::line
+        NodeId exit = kNoNode;                ///< Where riders get off; none lets no one off here
+        std::vector<entt::entity> queue { };  ///< Guests waiting, first in line first
+        units::Seconds loading { };           ///< The train standing here has been loading
+        std::optional<std::size_t> saved { }; ///< Its place among the saved ride's stations; none till it has doors
+        std::vector<glm::vec3> platform { };  ///< Points along its station track
     };
 
     struct CycleRide

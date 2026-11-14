@@ -1186,20 +1186,24 @@ namespace rct3::scene::park
                 const auto distance = rct3::park::object::ground_hit(*ray, scene.grid);
                 if (tile && distance)
                 {
-                    // The trail's next piece pointed at is picked up where it is; elsewhere a trail begins.
-                    if (const auto next = rct3::park::next_piece(f.builder, scene.grid); next && next->spot == *tile)
+                    // A trail going on is picked up at its next piece, wherever the pointer is: after a lifted
+                    // piece the pointer is far above the ground it points at. Without one a trail begins.
+                    if (!f.builder.start)
+                        begin_trail(f, scene.rides, *tile, control);
+                    else if (const auto next = rct3::park::next_piece(f.builder, scene.grid))
                     {
-                        rct3::park::start_at(f.builder, *tile);
+                        rct3::park::start_at(f.builder, next->spot);
                         f.builder.start_height = next->start;
                     }
-                    else
-                        begin_trail(f, scene.rides, *tile, control);
-                    f.lift = ParkFootpaths::Lift { ray->origin + ray->direction * *distance, rct3::park::next_piece(f.builder, scene.grid)->start };
-                    f.hover.reset();
-                    f.hover_edge.reset();
-                    f.hover_door.reset();
-                    f.hover_tile.reset();
-                    f.dirty = true;
+                    if (const auto first = rct3::park::next_piece(f.builder, scene.grid))
+                    {
+                        f.lift = ParkFootpaths::Lift { ray->origin + ray->direction * *distance, first->start };
+                        f.hover.reset();
+                        f.hover_edge.reset();
+                        f.hover_door.reset();
+                        f.hover_tile.reset();
+                        f.dirty = true;
+                    }
                 }
             }
             else if (f.lift && ray)

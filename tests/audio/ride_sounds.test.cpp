@@ -27,29 +27,29 @@ TEST_CASE("each set and sound has its overlay name")
 
 TEST_CASE("a train's running loops cross from slow to fast with its speed, silent when it stands")
 {
-    const RunningMix still = running_mix(0, true, true);
+    const RunningMix still = running_mix(0, { .med = true, .fast = true });
     CHECK(still.slow + still.med + still.fast == 0);
 
-    const RunningMix crawl = running_mix(3, true, true);
+    const RunningMix crawl = running_mix(3, { .med = true, .fast = true });
     CHECK(crawl.slow > 0);
     CHECK(crawl.med == 0);
     CHECK(crawl.fast == 0);
 
-    const RunningMix fast = running_mix(40, true, true);
+    const RunningMix fast = running_mix(40, { .med = true, .fast = true });
     CHECK(fast.slow == 0);
     CHECK(fast.med == 0);
     CHECK(fast.fast == doctest::Approx(1));
 
-    const RunningMix middling = running_mix(14, true, true);
+    const RunningMix middling = running_mix(14, { .med = true, .fast = true });
     CHECK(middling.slow + middling.med + middling.fast == doctest::Approx(1));
-    CHECK(running_mix(-14, true, true).med == doctest::Approx(middling.med)); // Backwards as forwards
+    CHECK(running_mix(-14, { .med = true, .fast = true }).med == doctest::Approx(middling.med)); // Backwards as forwards
 
     SUBCASE("a set lacking loops plays the next slower in their place")
     {
-        const RunningMix no_fast = running_mix(40, true, false);
+        const RunningMix no_fast = running_mix(40, { .med = true });
         CHECK(no_fast.fast == 0);
         CHECK(no_fast.med == doctest::Approx(1));
-        const RunningMix slow_only = running_mix(40, false, false);
+        const RunningMix slow_only = running_mix(40, { });
         CHECK(slow_only.slow == doctest::Approx(1));
     }
 }

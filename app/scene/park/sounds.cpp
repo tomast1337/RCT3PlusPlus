@@ -425,7 +425,7 @@ namespace rct3::scene::park
                 engine.set_voice_volume(voice, gain);
                 engine.set_voice_place(voice, t.at, t.velocity);
             };
-            const audio::RunningMix mix = audio::running_mix(t.train->running ? t.train->speed : 0.0f, sound(Med).has_value(), sound(Fast).has_value());
+            const audio::RunningMix mix = audio::running_mix(t.train->running ? t.train->speed : 0.0f, { .med = sound(Med).has_value(), .fast = sound(Fast).has_value() });
             keep(train.running[0], sound(Slow), level * mix.slow);
             keep(train.running[1], sound(Med), level * mix.med);
             keep(train.running[2], sound(Fast), level * mix.fast);

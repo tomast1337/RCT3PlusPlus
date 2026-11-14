@@ -82,7 +82,7 @@ namespace rct3::audio
         return coaster ? TrackSoundSet::Steel : TrackSoundSet::None;
     }
 
-    RunningMix running_mix(float speed, bool has_med, bool has_fast)
+    RunningMix running_mix(float speed, RunningLoops loops)
     {
         speed = std::abs(speed);
         const float loud = ramp(speed, 0, kLoud);
@@ -90,9 +90,9 @@ namespace rct3::audio
         mix.slow = 1 - ramp(speed, kSlowOnly, kSlowGone);
         mix.fast = ramp(speed, kFastFrom, kFastOnly);
         mix.med = std::max(0.0f, 1 - mix.slow - mix.fast);
-        if (!has_fast)
+        if (!loops.fast)
             mix.med += std::exchange(mix.fast, 0.0f);
-        if (!has_med)
+        if (!loops.med)
             mix.slow += std::exchange(mix.med, 0.0f);
         mix.slow *= loud;
         mix.med *= loud;

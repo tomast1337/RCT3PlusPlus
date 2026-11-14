@@ -61,16 +61,23 @@ namespace rct3::ui::screens::park_view
         inline constexpr float kWakeDistance = 2;        ///< Units the pointer moves in a frame to bring it back
     } // namespace ride_camera_panel
 
+    /// Whether the ride camera's step buttons have anywhere to go.
+    struct RideCameraSteps
+    {
+        bool cameras = false; ///< Other cameras on the train
+        bool trains = false;  ///< Other trains
+    };
+
     class RideCameraPanel : public Widget
     {
     public:
         RideCameraPanel(std::string name, RideCameraPanelStyle style, const StringTable& strings);
 
-        /// What its line says, and whether there are other cameras on the train and other trains to step to; the
-        /// train buttons name what they step to as `noun` (a train, or on a flat ride a ride). `next_type` is the
+        /// What its line says, and where its buttons can `step`; the train buttons name what they step to as
+        /// `noun` (a train, or on a flat ride a ride). `next_type` is the
         /// kind of camera the type button changes to, by park::object::RideEye, named `next_name`; nothing when the train
         /// has one kind.
-        void show(std::u16string info, bool cameras, bool trains, std::u16string_view noun, std::optional<std::size_t> next_type = std::nullopt, std::u16string_view next_name = { });
+        void show(std::u16string info, RideCameraSteps steps, std::u16string_view noun, std::optional<std::size_t> next_type = std::nullopt, std::u16string_view next_name = { });
         /// The pointer moved `distance` units since the last update.
         void pointer_moved(float distance);
         /// What a button asked for since the last call.

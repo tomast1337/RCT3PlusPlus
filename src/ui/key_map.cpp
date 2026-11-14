@@ -16,47 +16,47 @@ namespace rct3::ui
         using C = Command;
         using K = Key;
 
-        constexpr KeyCombo key(Key k, bool control = false, bool shift = false)
+        constexpr KeyCombo key(Key k)
         {
-            return { k, 0, control, shift };
+            return { .key = k };
         }
         constexpr KeyCombo control(char32_t c)
         {
-            return { Key::Shortcut, c, true, false };
+            return { .key = Key::Shortcut, .character = c, .control = true };
         }
 
         const std::array<CommandInfo, kCommandCount> kCommands = { {
             { C::Cancel, "cancel", "Rct3pp_Command_Cancel", CommandPress { K::Escape }, { key(K::Escape) } },
             { C::DefaultButton, "default_button", "Rct3pp_Command_DefaultButton", CommandPress { K::Enter }, { key(K::Enter) } },
             { C::NextControl, "next_control", "Rct3pp_Command_NextControl", CommandPress { K::Tab }, { key(K::Tab) } },
-            { C::PreviousControl, "previous_control", "Rct3pp_Command_PreviousControl", CommandPress { K::Tab, true }, { key(K::Tab, false, true) } },
-            { C::NextPage, "next_page", "Rct3pp_Command_NextPage", CommandPress { K::Tab, false, true }, { key(K::Tab, true), key(K::PageDown, true) } },
-            { C::PreviousPage, "previous_page", "Rct3pp_Command_PreviousPage", CommandPress { K::Tab, true, true }, { key(K::Tab, true, true), key(K::PageUp, true) } },
-            { C::Copy, "copy", "Rct3pp_Command_Copy", CommandPress { K::Copy }, { control(U'c'), key(K::Insert, true) } },
-            { C::Cut, "cut", "Rct3pp_Command_Cut", CommandPress { K::Cut }, { control(U'x'), key(K::Delete, false, true) } },
-            { C::Paste, "paste", "Rct3pp_Command_Paste", CommandPress { K::Paste }, { control(U'v'), key(K::Insert, false, true) } },
-            { C::SelectAll, "select_all", "Rct3pp_Command_SelectAll", CommandPress { K::Shortcut, false, true, U'a' }, { control(U'a') } },
+            { C::PreviousControl, "previous_control", "Rct3pp_Command_PreviousControl", CommandPress { .key = K::Tab, .shift = true }, { KeyCombo { .key = K::Tab, .shift = true } } },
+            { C::NextPage, "next_page", "Rct3pp_Command_NextPage", CommandPress { .key = K::Tab, .control = true }, { KeyCombo { .key = K::Tab, .control = true }, KeyCombo { .key = K::PageDown, .control = true } } },
+            { C::PreviousPage, "previous_page", "Rct3pp_Command_PreviousPage", CommandPress { .key = K::Tab, .shift = true, .control = true }, { KeyCombo { .key = K::Tab, .control = true, .shift = true }, KeyCombo { .key = K::PageUp, .control = true } } },
+            { C::Copy, "copy", "Rct3pp_Command_Copy", CommandPress { K::Copy }, { control(U'c'), KeyCombo { .key = K::Insert, .control = true } } },
+            { C::Cut, "cut", "Rct3pp_Command_Cut", CommandPress { K::Cut }, { control(U'x'), KeyCombo { .key = K::Delete, .shift = true } } },
+            { C::Paste, "paste", "Rct3pp_Command_Paste", CommandPress { K::Paste }, { control(U'v'), KeyCombo { .key = K::Insert, .shift = true } } },
+            { C::SelectAll, "select_all", "Rct3pp_Command_SelectAll", CommandPress { .key = K::Shortcut, .control = true, .character = U'a' }, { control(U'a') } },
             { C::DeveloperWindows, "developer_windows", "Rct3pp_Command_DeveloperWindows", std::nullopt, { key(K::F12) } },
         } };
 
         using P = PlayCommand;
         using G = PlayKeyGroup;
 
-        constexpr KeyCombo letter(char32_t c, bool control = false, bool shift = false)
+        constexpr KeyCombo letter(char32_t c)
         {
-            return { Key::Letter, c, control, shift };
+            return { .key = Key::Letter, .character = c };
         }
 
         const std::array<PlayCommandInfo, kPlayCommandCount> kPlayCommands = { {
             { P::ExitGame, G::Universal, "exit_game", "KeySetting_Exit", key(K::Escape) },
             { P::ScreenSnapshot, G::Universal, "screen_snapshot", "KeySetting_TakeScreenSnapshot", key(K::F10) },
-            { P::ScreenMovie, G::Universal, "screen_movie", "KeySetting_TakeScreenMovie", key(K::F11, true, true) },
+            { P::ScreenMovie, G::Universal, "screen_movie", "KeySetting_TakeScreenMovie", KeyCombo { .key = K::F11, .control = true, .shift = true } },
             { P::NextCoasterCamType, G::DuringPlay, "next_coaster_cam_type", "KeySetting_RCNextType", letter(U'b') },
             { P::NextRideCamera, G::DuringPlay, "next_ride_camera", "KeySetting_RCNextCam", letter(U'n') },
             { P::PreviousRideCamera, G::DuringPlay, "previous_ride_camera", "KeySetting_RCPrevCam", letter(U'm') },
-            { P::NextRide, G::DuringPlay, "next_ride", "KeySetting_RCNextRide", letter(U'n', false, true) },
-            { P::PreviousRide, G::DuringPlay, "previous_ride", "KeySetting_RCPrevRide", letter(U'm', false, true) },
-            { P::ToggleRideCamera, G::DuringPlay, "toggle_ride_camera", "KeySetting_ToggleRideCam", letter(U'c', true) },
+            { P::NextRide, G::DuringPlay, "next_ride", "KeySetting_RCNextRide", KeyCombo { .key = K::Letter, .character = U'n', .shift = true } },
+            { P::PreviousRide, G::DuringPlay, "previous_ride", "KeySetting_RCPrevRide", KeyCombo { .key = K::Letter, .character = U'm', .shift = true } },
+            { P::ToggleRideCamera, G::DuringPlay, "toggle_ride_camera", "KeySetting_ToggleRideCam", KeyCombo { .key = K::Letter, .character = U'c', .control = true } },
             { P::ResetCamera, G::DuringPlay, "reset_camera", "KeySetting_CamReset", letter(U'r') },
             { P::MoveLeft, G::DuringPlay, "move_left", "KeySetting_SlideLeft", key(K::Left) },
             { P::MoveRight, G::DuringPlay, "move_right", "KeySetting_SlideRight", key(K::Right) },
@@ -72,9 +72,9 @@ namespace rct3::ui
             { P::RotateRight, G::DuringPlay, "rotate_right", "KeySetting_RotRight", letter(U'e') },
             { P::RotateUp, G::DuringPlay, "rotate_up", "KeySetting_RotUp", key(K::Home) },
             { P::RotateDown, G::DuringPlay, "rotate_down", "KeySetting_RotDown", key(K::End) },
-            { P::TogglePointerLight, G::DuringPlay, "toggle_pointer_light", "KeySetting_TogglePointerLight", letter(U'l', false, true) },
+            { P::TogglePointerLight, G::DuringPlay, "toggle_pointer_light", "KeySetting_TogglePointerLight", KeyCombo { .key = K::Letter, .character = U'l', .shift = true } },
             { P::RotateIsometric, G::DuringPlay, "rotate_isometric", "KeySetting_RotateIsoCam", key(K::Enter) },
-            { P::ReverseIsometric, G::DuringPlay, "reverse_isometric", "KeySetting_RotateIsoCamReverser", key(K::Enter, false, true) },
+            { P::ReverseIsometric, G::DuringPlay, "reverse_isometric", "KeySetting_RotateIsoCamReverser", KeyCombo { .key = K::Enter, .shift = true } },
             { P::FlattenTerrainSmooth, G::DuringPlay, "flatten_terrain_smooth", "KeySetting_FlattenTerrainSmooth", std::nullopt, u"Alt+Ctrl" },
             { P::FlattenTerrain, G::DuringPlay, "flatten_terrain", "KeySetting_FlattenTerrain", std::nullopt, u"Alt" },
             { P::TogglePause, G::DuringPlay, "toggle_pause", "KeySetting_TogglePaused", letter(U'p') },

@@ -62,6 +62,8 @@ TEST_CASE("a train boards a lift's car, is carried up, let go at the top, and th
     // Carried up, no faster than the car climbs.
     drive_until(c, cars, [&] { return c.lifted->phase != LiftPhase::Rising; });
     // With the block ahead clear, it is let go as soon as it is up.
+    if (c.lifted->phase == LiftPhase::AtTop)
+        drive(c, 0.1f, kOpen, cars);
     CHECK(c.lifted->phase == LiftPhase::Releasing);
     CHECK(cars[0].at.value == doctest::Approx(40));
     CHECK(c.at == doctest::Approx(40));

@@ -211,12 +211,12 @@ namespace rct3::park::support
 
     } // namespace
 
-    glm::vec2 spot_in_tiles(const save::model::PlacedObject& object, const SupportFootprint& footprint, const SupportSpot& spot, bool middle_of_third)
+    glm::vec2 spot_in_tiles(const save::model::PlacedObject& object, const SupportFootprint& footprint, const SupportSpot& spot, SpotFit fit)
     {
         const glm::vec2 x = object::turned_x(ModelTurn::from(object.rotation));
         const glm::vec2 z { -x.y, x.x };
         const auto along = [&](int i) {
-            const float within = middle_of_third ? 0.5f : spot.within[static_cast<std::size_t>(i)];
+            const float within = fit == SpotFit::MiddleOfThird ? 0.5f : spot.within[static_cast<std::size_t>(i)];
             return static_cast<float>(spot.square[static_cast<std::size_t>(i)]) + (static_cast<float>(spot.cell[static_cast<std::size_t>(i)]) + within) / kCells;
         };
         const float u = along(0) - static_cast<float>(footprint.x_squares) / 2;
@@ -230,7 +230,7 @@ namespace rct3::park::support
         for (std::int32_t lz = 0; lz < footprint.z_squares; ++lz)
         {
             for (std::int32_t lx = 0; lx < footprint.x_squares; ++lx)
-                out.push_back(tile_of(spot_in_tiles(object, footprint, { { lx, lz }, { 1, 1 } }, true)));
+                out.push_back(tile_of(spot_in_tiles(object, footprint, { { lx, lz }, { 1, 1 } }, SpotFit::MiddleOfThird)));
         }
         return out;
     }
@@ -243,7 +243,7 @@ namespace rct3::park::support
         const SupportFootprint& f = *model->second.supports;
         std::vector<Tile> out = footprint_tiles(object, f);
         for (const SupportPoint& p : f.points)
-            out.push_back(tile_of(spot_in_tiles(object, f, p.column, true)));
+            out.push_back(tile_of(spot_in_tiles(object, f, p.column, SpotFit::MiddleOfThird)));
         std::ranges::sort(out);
         out.erase(std::ranges::unique(out).begin(), out.end());
         return out;
@@ -294,7 +294,7 @@ namespace rct3::park::support
             const SupportFootprint& f = *m->supports;
             std::vector<Tile> under;
             for (const SupportPoint& p : f.points)
-                under.push_back(tile_of(spot_in_tiles(o, f, p.column, true)));
+                under.push_back(tile_of(spot_in_tiles(o, f, p.column, SpotFit::MiddleOfThird)));
             if (!std::ranges::any_of(under, wanted))
                 continue;
             by_points.emplace_back(&o, m);
@@ -382,8 +382,8 @@ namespace rct3::park::support
             {
                 if (groups_built.contains(p.group))
                     continue;
-                const glm::vec2 top_spot = spot_in_tiles(*object, f, p.top, false);
-                const glm::vec2 column_spot = spot_in_tiles(*object, f, p.column, true);
+                const glm::vec2 top_spot = spot_in_tiles(*object, f, p.top, SpotFit::Exact);
+                const glm::vec2 column_spot = spot_in_tiles(*object, f, p.column, SpotFit::MiddleOfThird);
                 const Tile top_tile = tile_of(top_spot);
                 const Tile tile = tile_of(column_spot);
                 if (f.alternate_tiles && ((top_tile.first ^ top_tile.second) & 1) == 0)

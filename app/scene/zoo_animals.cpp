@@ -36,6 +36,15 @@ namespace rct3::scene
                 logging::logger("park").warning("animal pictures: {}", uploaded.error());
         }
 
+        /// The body `animal` is drawn with, by age and sex.
+        ovl::animal::AnimalAge age_of(const simulation::Animal& animal)
+        {
+            using enum ovl::animal::AnimalAge;
+            if (animal.adult)
+                return animal.male ? AdultMale : AdultFemale;
+            return animal.male ? YoungMale : YoungFemale;
+        }
+
         /// The motion of `body` that shows what `animal` is doing, standing at `pose`.
         ovl::animal::AnimalMotion motion_of(const rct3::park::AnimalBody& body, const simulation::Animal& animal, const simulation::Pose& pose)
         {
@@ -82,7 +91,7 @@ namespace rct3::scene
         if (drawn.library)
         {
             for (const auto [e, animal] : scene.sim.registry.view<const simulation::Animal>().each())
-                (void)drawn.library->body(animal.species, animal.adult, animal.male);
+                (void)drawn.library->body(animal.species, age_of(animal));
             drawn.library->close_files();
             upload_new_pictures(device, scene);
         }
@@ -102,7 +111,7 @@ namespace rct3::scene
         {
             const simulation::Pose at = simulation::between_steps(pose, scene.sim_time / simulation::kTickSeconds);
             const glm::mat4 world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
-            const auto body = animal.job == simulation::AnimalJob::Crated || !drawn.library ? std::nullopt : drawn.library->body(animal.species, animal.adult, animal.male);
+            const auto body = animal.job == simulation::AnimalJob::Crated || !drawn.library ? std::nullopt : drawn.library->body(animal.species, age_of(animal));
             if (!body)
             {
                 crated.push_back(e);

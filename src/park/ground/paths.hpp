@@ -73,9 +73,16 @@ namespace rct3::park::ground
 
     [[nodiscard]] PathCell path_cell(PathLook look) noexcept;
 
-    /// The look of a tile quarter, given whether there is path beside it along x, along z and across the
-    /// corner.
-    [[nodiscard]] PathLook quarter_look(bool along_x, bool along_z, bool across) noexcept;
+    /// Where a tile quarter has path beside it.
+    struct QuarterPaths
+    {
+        bool along_x = false;
+        bool along_z = false;
+        bool across = false; ///< Across the corner
+    };
+
+    /// The look of a tile quarter with path beside it at `paths`.
+    [[nodiscard]] PathLook quarter_look(QuarterPaths paths) noexcept;
 
     /// The ground path styles of a park, and which one lies on each tile.
     struct GroundPathMap

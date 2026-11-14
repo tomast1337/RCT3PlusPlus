@@ -482,6 +482,8 @@ namespace rct3::simulation
             std::vector<std::optional<std::size_t>> standing(1 + ride.stops.size()); // The train standing at each station, ready to load
             if (fleet != nullptr)
             {
+                if (!fleet->trains.empty() && !(upkeep.broken && upkeep.kind == Breakdown::EmergencyStop))
+                    lower_carriages(fleet->trains.front(), fleet->carriages, dt);
                 for (std::size_t t = 0; t < fleet->trains.size(); ++t)
                 {
                     Coaster& train = fleet->trains[t];
@@ -515,7 +517,7 @@ namespace rct3::simulation
                         train.push = 0;
                     }
                     const bool was_running = train.running;
-                    const bool round = drive(train, dt, room_ahead(fleet->trains, t));
+                    const bool round = drive(train, dt, room_ahead(fleet->trains, t), fleet->carriages);
                     // The first train's laps, while tested or open, make the ride's graphs; a test train's on
                     // unfinished track never comes round.
                     if (t == 0 && (train.running || round))

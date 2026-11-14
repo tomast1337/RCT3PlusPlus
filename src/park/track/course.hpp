@@ -32,6 +32,16 @@ namespace rct3::park::track
         Launch,     ///< Pushes a launched train on, past its station
         Brake,      ///< Slows a train down to the piece's brake speed
         Booster,    ///< Jets push the cars up to the piece's speed, as a water coaster's climbs have them
+        Lift,       ///< A lift tower, up which a lift car carries the train; ends a block
+    };
+
+    /// A lift tower along a course: a train rolls from `entry` onto the length of track its car carries, the car
+    /// takes it up the rails from `from` to `to` and lets it go there. Distances along the course.
+    struct LiftRun
+    {
+        float entry = 0; ///< The start of the tower's foot, where the track before it ends
+        float from = 0;  ///< The bottom of the car's rails up the tower
+        float to = 0;    ///< The end of the tower's top
     };
 
     struct TrackCourse
@@ -56,6 +66,7 @@ namespace rct3::park::track
         /// Stretches, from and to a distance, where a slide's car on its way back to its lift is down in the pool's
         /// water: from where its path first falls below the height its piece starts at, to that piece's end.
         std::vector<std::array<float, 2>> wades { };
+        std::vector<LiftRun> lifts { }; ///< Its lift towers, in order along it
         [[nodiscard]] float length() const
         {
             return distance.empty() ? 0 : distance.back();
@@ -97,6 +108,19 @@ namespace rct3::park::track
     /// moved on by `by`: it points from its rear wheels to its front ones, leans with the track's bank
     /// between them, and keeps the place and turn it had against the track.
     [[nodiscard]] glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, float by);
+
+    /// How long the track a lift's car, `model`, carries is; 0 for a model carrying none.
+    [[nodiscard]] float carried_length(const object::ObjectModel& model);
+
+    /// Where a lift's car, `model`, stands `at` along `course` up `run`, from the run's `from` at the bottom to its
+    /// `to`: its wheels on the tower's rails, turned so that at the bottom the track it carries starts on the
+    /// side trains come from.
+    [[nodiscard]] glm::mat4 lift_car_place(const TrackCourse& course, const LiftRun& run, const object::ObjectModel& model, float at);
+
+    /// Where a car the park kept at `saved`, its wheels at `saved_at` along `course`, stands with its wheels
+    /// `on` along the track of the lift's car `lift` (`model`, standing at `lift_place`): a wheel short of that
+    /// track's start is on the course back from the run's entry, one past its end on the course on from its top.
+    [[nodiscard]] glm::mat4 moved_on_lift(const TrackCourse& course, const LiftRun& lift, const object::ObjectModel& model, const glm::mat4& lift_place, const glm::mat4& saved, Axles saved_at, Axles on);
 
     /// Track left clear between trains queued one behind another, in metres.
     inline constexpr float kTrainGap = 2;

@@ -166,10 +166,12 @@ namespace rct3::simulation
                 t.highest_drop = std::max(t.highest_drop, top - last);
             }
         };
+        std::vector<Carriage> carriages = carriages_of(c);
         for (int step = 1; static_cast<float>(step) * kStep <= most; ++step)
         {
             const float time = static_cast<float>(step) * kStep;
-            const bool back = drive(c, kStep);
+            lower_carriages(c, carriages, kStep);
+            const bool back = drive(c, kStep, std::numeric_limits<float>::infinity(), carriages);
             t.max_speed = std::max(t.max_speed, std::abs(c.speed));
             const float h = height();
             if (first || h > last)

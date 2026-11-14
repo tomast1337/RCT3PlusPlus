@@ -1304,6 +1304,8 @@ namespace rct3::scene
                         const float row = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
                         // Facing: radians round the vertical its +Z points, 0 along +Z.
                         Json car = { { "col", col }, { "row", row }, { "up", at.y - park.grid.height_at(at.x, at.z).value_or(0) }, { "facing", std::atan2(park.car_places[k][2].x, park.car_places[k][2].z) } };
+                        if (park.car_spots[k].lift)
+                            car["lift"] = true;
                         if (const auto boned = std::ranges::find(park.boned_cars, k, &park::ParkScene::BonedCar::car); boned != park.boned_cars.end() && boned->stroke)
                             car["stroke"] = std::array { "both", "left", "right" }[std::to_underlying(*boned->stroke)];
                         cars.push_back(std::move(car));
@@ -1340,7 +1342,9 @@ namespace rct3::scene
                             const simulation::Coaster& c = fleet->trains[t];
                             const auto standing = simulation::standing_at(c);
                             const auto held = simulation::held_in_station(c);
-                            at.push_back({ { "front", c.at }, { "speed", c.speed }, { "lean", c.trough ? Json(c.lean.value) : Json(nullptr) }, { "length", c.train_length }, { "station", standing ? Json(*standing) : Json(nullptr) }, { "held", held ? Json(*held) : Json(nullptr) }, { "riders", t < fleet->riders.size() ? fleet->riders[t].size() : 0 } });
+                            constexpr std::array kPhases { "Boarding", "Engaging", "Rising", "AtTop", "Releasing", "Leaving" };
+                            const Json lift = c.lifted ? Json { { "phase", kPhases[std::to_underlying(c.lifted->phase)] }, { "aboard", c.lifted->aboard.value } } : Json(nullptr);
+                            at.push_back({ { "front", c.at }, { "speed", c.speed }, { "lean", c.trough ? Json(c.lean.value) : Json(nullptr) }, { "length", c.train_length }, { "station", standing ? Json(*standing) : Json(nullptr) }, { "held", held ? Json(*held) : Json(nullptr) }, { "riders", t < fleet->riders.size() ? fleet->riders[t].size() : 0 }, { "lift", lift } });
                         }
                         one["trainsAt"] = std::move(at);
                         one["trackLength"] = fleet->trains.empty() ? 0.0f : fleet->trains.front().length();

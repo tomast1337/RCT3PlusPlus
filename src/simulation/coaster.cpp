@@ -26,6 +26,10 @@ namespace rct3::simulation
         constexpr float kWadeSpeed = 2.9f;    ///< m/s a slide's car is carried through the pool at on its way back to its lift. Measured: a car of a tested slide in the original game
         constexpr float kWadeDrag = 40;       ///< m/s² the water slows a faster car by, down to that. Measured likewise: 13 m/s down to 3 in 2 m
         constexpr float kJetPull = 15;        ///< m/s² booster jets push a car over them by. Chosen by eye
+        constexpr float kLiftPause = 2;       ///< Seconds a lift's car stands before it sets off, and before it lets its train go. Chosen by eye
+        constexpr float kBoardShort = 0.5f;   ///< Metres short of the far end of a lift car's track that a train boarding it stops. Chosen by eye
+        constexpr float kLiftEase = 2;        ///< m/s² a lift's car speeds up by from either end of its climb, and slows by to it. Chosen by eye
+        constexpr float kLiftCreep = 0.3f;    ///< m/s a lift's car keeps up at its ends. Chosen by eye
         /// Radians a slide's car swings up its trough's wall to go over a rim. The rims are the piece's rails,
         /// level with the track's line the car swings from, so it goes over once swung out level with them.
         // shortcut: every piece's rims are taken as level with its line, upgrade when each piece's own rails are read.
@@ -97,6 +101,9 @@ namespace rct3::simulation
 
     Felt felt(const Coaster& c)
     {
+        if (c.lifted)
+            return { }; // Carried up a tower, sitting as if standing still
+
         // The track's way and its bend from points a little either side, so the corners between its points do
         // not jolt: the turn's pull into the bend at the train's speed. A push along the track is felt along
         // it, so neither up through the seats nor across them.
@@ -166,7 +173,32 @@ namespace rct3::simulation
 
     bool chain_at(const Coaster& c, float at)
     {
-        return c.distance.size() >= 2 && c.length() > 0 && c.kinds[point_at(c, wrap(c, at))] == Stretch::Chain;
+        if (c.distance.size() < 2 || c.length() <= 0)
+            return false;
+        const Stretch k = c.kinds[point_at(c, wrap(c, at))];
+        return k == Stretch::Chain || k == Stretch::Lift;
+    }
+
+    std::vector<Carriage> carriages_of(const Coaster& c)
+    {
+        std::vector<Carriage> out;
+        for (const Lift& lift : c.lifts)
+            out.push_back({ .at = { lift.from }, .was_at = { lift.from } });
+        return out;
+    }
+
+    void lower_carriages(const Coaster& c, std::span<Carriage> carriages, float seconds)
+    {
+        for (std::size_t l = 0; l < carriages.size() && l < c.lifts.size(); ++l)
+        {
+            Carriage& car = carriages[l];
+            car.was_at = car.at;
+            if (car.state != CarriageState::Lowering)
+                continue;
+            car.at.value = std::max(car.at.value - c.lifts[l].down.value * seconds, c.lifts[l].from);
+            if (car.at.value <= c.lifts[l].from)
+                car.state = CarriageState::Waiting;
+        }
     }
 
     bool on_chain(const Coaster& c)
@@ -227,10 +259,28 @@ namespace rct3::simulation
         return glm::translate(glm::mat4(1.0f), f.at) * turned * glm::translate(glm::mat4(1.0f), -f.from) * place;
     }
 
-    bool drive(Coaster& c, float seconds, float room)
+    bool drive(Coaster& c, float seconds, float room, std::span<Carriage> carriages)
     {
         if (!c.running || c.distance.size() < 2 || c.length() <= 0)
             return false;
+        // How far on round the track `to` is from `from`.
+        const auto ahead_of = [&](float from, float to) { return std::fmod(std::fmod(to - from, c.length()) + c.length(), c.length()); };
+        // A lift with a car of its own: one known, and long enough to carry a train.
+        const auto carried = [&](std::size_t l) { return l < carriages.size() && c.lifts[l].carried.value > 0; };
+        // The front moved on to `to` while the car carries it, as far on round the track as it went.
+        const auto carried_to = [&](float to) {
+            const float by = ahead_of(c.at, to);
+            c.travelled += by;
+            room -= by;
+            c.at = to;
+        };
+        if (c.lifted)
+            c.lifted->was_aboard = c.lifted->aboard;
+        // Short of a lift whose car is away, it waits for the car to be back down.
+        if (!c.lifted && c.shuttle == Shuttle::None)
+            for (std::size_t l = 0; l < c.lifts.size(); ++l)
+                if (carried(l) && carriages[l].state != CarriageState::Waiting)
+                    room = std::min(room, ahead_of(c.at, c.lifts[l].entry));
         const bool open = c.shuttle != Shuttle::None;
         const bool tower = c.shuttle == Shuttle::Tower || c.shuttle == Shuttle::Drop;
         const auto station_at = [&](float d) { return c.kinds[point_at(c, wrap(c, d))] == Stretch::Station; };
@@ -264,6 +314,82 @@ namespace rct3::simulation
         for (int step = 0; step < steps; ++step)
         {
             const float dt = std::min(seconds - static_cast<float>(step) * kStep, kStep);
+            // On a lift: rolled to a stop on its car's track, carried up, held at the top for the block ahead, then
+            // let go to roll off under gravity, till its front is off the car's track and the track takes it.
+            if (c.lifted && c.lifted->lift < c.lifts.size() && carried(c.lifted->lift))
+            {
+                LiftRide& ride = *c.lifted;
+                const Lift& lift = c.lifts[ride.lift];
+                Carriage& car = carriages[ride.lift];
+                const auto pause = [&](LiftPhase next) {
+                    c.speed = 0;
+                    ride.paused.value += dt;
+                    if (ride.paused.value >= kLiftPause)
+                    {
+                        ride.phase = next;
+                        ride.paused = { };
+                    }
+                };
+                bool held = true;
+                switch (ride.phase)
+                {
+                    case LiftPhase::Boarding:
+                    {
+                        const float stop = std::max(lift.carried.value - kBoardShort, 0.0f);
+                        const float most = std::max(std::sqrt(2 * kStationBrake * std::max(stop - ride.aboard.value, 0.0f)), kStationCreep);
+                        c.speed = std::clamp(c.speed, std::min(c.station_speed, most), most);
+                        ride.aboard.value = std::min(ride.aboard.value + c.speed * dt, stop);
+                        if (ride.aboard.value >= stop - kArrived)
+                        {
+                            c.speed = 0;
+                            ride.phase = LiftPhase::Engaging;
+                        }
+                        break;
+                    }
+                    case LiftPhase::Engaging:
+                        pause(LiftPhase::Rising);
+                        break;
+                    case LiftPhase::Rising:
+                    {
+                        const float left = lift.to - car.at.value;
+                        const float end = std::min(car.at.value - lift.from, left);
+                        c.speed = std::clamp(std::sqrt(2 * kLiftEase * std::max(end, 0.0f)), kLiftCreep, std::max(lift.up.value, kLiftCreep));
+                        car.at.value += std::min(c.speed * dt, left);
+                        if (car.at.value >= lift.to - kArrived)
+                        {
+                            car.at.value = lift.to;
+                            c.speed = 0;
+                            ride.phase = LiftPhase::AtTop;
+                        }
+                        carried_to(car.at.value);
+                        break;
+                    }
+                    case LiftPhase::AtTop:
+                        c.speed = 0;
+                        if (room > kArrived)
+                            ride.phase = LiftPhase::Releasing;
+                        break;
+                    case LiftPhase::Releasing:
+                        pause(LiftPhase::Leaving);
+                        break;
+                    case LiftPhase::Leaving:
+                        // Tipped over, it rolls off the car's track as steeply as that points down, at least as
+                        // fast as a station sends a train off; its front off it, the track takes it.
+                        if (ride.aboard.value >= lift.carried.value)
+                        {
+                            held = false;
+                            break;
+                        }
+                        c.speed = std::max(c.speed + kGravity * lift.drop * dt, c.station_speed);
+                        ride.aboard.value += c.speed * dt;
+                        if (ride.aboard.value > lift.carried.value)
+                            carried_to(lift.to + ride.aboard.value - lift.carried.value);
+                        held = true;
+                        break;
+                }
+                if (held)
+                    continue;
+            }
             const Stretch under = c.kinds[point_at(c, c.at)];
             const bool chained = on_chain(c);
             // Its last time in, a shuttle's train is taken by the station's tyres as soon as either end is on it.
@@ -492,6 +618,7 @@ namespace rct3::simulation
                 }
                 continue;
             }
+            const float before = c.at;
             c.at = wrap(c, c.at + moved);
             c.travelled += moved;
             c.launched = c.launched || c.travelled >= c.train_length;
@@ -524,6 +651,22 @@ namespace rct3::simulation
                 c.next_stop = 0;
                 return true;
             }
+            // Off a lift's car's track with its last car, the car goes back down for the next train.
+            if (c.lifted && (c.lifted->aboard.value += moved) - c.train_length >= c.lifts[c.lifted->lift].carried.value)
+            {
+                carriages[c.lifted->lift].state = CarriageState::Lowering;
+                c.lifted.reset();
+            }
+            // Its front rolled onto the track of a lift's car waiting at the bottom: the car has it now. Till the car
+            // sets off its front counts as where the track before the lift ends.
+            for (std::size_t l = 0; l < c.lifts.size() && !c.lifted && moved > 0; ++l)
+                if (const float short_of = ahead_of(before, c.lifts[l].entry); carried(l) && short_of < moved && carriages[l].state == CarriageState::Waiting)
+                {
+                    c.lifted = LiftRide { .lift = l, .aboard = { moved - short_of }, .was_aboard = { -short_of } };
+                    carriages[l].state = CarriageState::Taken;
+                    c.at = c.lifts[l].entry;
+                    c.travelled -= moved - short_of;
+                }
         }
         return false;
     }
@@ -567,10 +710,12 @@ namespace rct3::simulation
         c.travelled = 0;
         c.speed = 0;
         constexpr float kTick = 0.25f;
+        std::vector<Carriage> carriages = carriages_of(c);
         for (int tick = 1; static_cast<float>(tick) * kTick <= most && c.running; ++tick)
         {
             const float t = static_cast<float>(tick) * kTick;
-            if (drive(c, kTick))
+            lower_carriages(c, carriages, kTick);
+            if (drive(c, kTick, std::numeric_limits<float>::infinity(), carriages))
                 return t;
         }
         return std::nullopt;

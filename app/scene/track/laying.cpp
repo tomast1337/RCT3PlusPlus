@@ -754,7 +754,7 @@ namespace rct3::scene::track
         piece.reversed = b.picked->reversed != b.backward;
         // Brake speeds are stored in whole metres a second, as the files do; none until set, so the ride's.
         if (shape.record.role == rct3::park::track::kRoleBrakes || shape.record.role == rct3::park::track::kRoleBlockBrake)
-            piece.brake_speed = b.brake_speed > 0 ? b.brake_speed : -1;
+            piece.brake_speed = b.brake_speed > 0 ? std::optional(b.brake_speed) : std::nullopt;
         if (shape.record.role == kHoldingRole)
             piece.holding_time = b.holding_time;
         piece.car_turn = static_cast<float>(b.car_turn);

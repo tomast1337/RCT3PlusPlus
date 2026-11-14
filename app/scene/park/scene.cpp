@@ -465,7 +465,7 @@ namespace rct3::scene::park
                 continue;
             const bool ghosted = coaster && !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;
             // A lazy river has no trains: swimmers float round it; nor has a slide climbed on foot.
-            if ((r.mode == save::model::OperatingMode::LazyRiver || (!coaster && !boats) || track::set_trains(device, scene, *assets.install, ride, r.train_count, r.cars_per_train)) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
+            if ((r.mode == save::model::OperatingMode::LazyRiver || (!coaster && !boats) || track::set_trains(device, scene, *assets.install, ride, r.train_count.value_or(0), r.cars_per_train.value_or(0))) && !ghosted && (ride >= scene.ride_entities.size() || scene.ride_entities[ride] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
                 scene.placing.unjoined.push_back(ride);
             if (auto info = desktop.root().find_as<ui::screens::info::InfoPanel>(kInfoName); info && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && scene.shown->index == ride)
                 show_info_page(scene, *info, assets, options);
@@ -1189,7 +1189,7 @@ namespace rct3::scene::park
                         f.running += attraction != nullptr && attraction->open && !attraction->testing && !upkeep.broken ? 1 : 0;
                     }
                     // Rides whose last crash the park still remembers.
-                    f.crashed = static_cast<std::int32_t>(std::ranges::count_if(scene.rides.rides, [](const save::model::Ride& ride) { return ride.base.time_since_crash >= 0; }));
+                    f.crashed = static_cast<std::int32_t>(std::ranges::count_if(scene.rides.rides, [](const save::model::Ride& ride) { return ride.base.time_since_crash.has_value(); }));
                     f.coaster_dangers = scene.park_model.awards.dangerous_coaster_events.value_or(0);
                     f.pool_dangers = scene.park_model.awards.dangerous_pool_events.value_or(0);
                     const bool listed = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
@@ -1678,7 +1678,7 @@ namespace rct3::scene::park
                     ride.breakdown.reliability = upkeep->reliability.value * 100;
                     ride.breakdown.current = static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep->kind));
                     ride.breakdown.last = static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep->last));
-                    ride.base.time_since_inspection = upkeep->since_inspection.value;
+                    ride.base.time_since_inspection = upkeep->since_inspection;
                     ride.breakdown.downtime_windows = upkeep->downtime;
                     ride.breakdown.saved_downtime_percent.reset();
                     using enum save::model::RepairStatus;
@@ -1693,7 +1693,7 @@ namespace rct3::scene::park
                     if (wrecks == nullptr)
                         continue;
                     save::model::Ride& ride = scene.rides.rides[i];
-                    ride.base.time_since_crash = wrecks->since ? wrecks->since->value : -1;
+                    ride.base.time_since_crash = wrecks->since;
                     // Each wreck goes up in flames and smoke as it blows up.
                     for (std::size_t t = 0; t < wrecks->trains.size(); ++t)
                         for (std::size_t k = 0; k < wrecks->trains[t].size(); ++k)

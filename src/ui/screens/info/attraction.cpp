@@ -424,7 +424,7 @@ namespace rct3::ui::screens::info
                 };
                 const int trains = static_cast<int>(ride.trains.size());
                 // Passenger cars, without the links between them.
-                const int cars = ride.cars_per_train > 0 ? ride.cars_per_train : static_cast<int>(ride.trains.front().cars.size());
+                const int cars = ride.cars_per_train > 0 ? *ride.cars_per_train : static_cast<int>(ride.trains.front().cars.size());
                 number(AttractionControl::Cars, "AttractionVehicleDialogLabelNumCars", cars, f.trains ? f.trains->fewest_cars : cars, f.trains ? f.trains->most_cars : cars);
                 number(AttractionControl::Trains, "AttractionVehicleDialogLabelNumTrains", trains, f.trains ? 1 : trains, f.trains ? f.trains->most_trains : trains);
                 InfoControl kind;
@@ -457,16 +457,16 @@ namespace rct3::ui::screens::info
         }
 
         /// A waiting time: its tick, and its seconds beside it while ticked.
-        void wait_controls(InfoPage& page, AttractionControl on, AttractionControl seconds, std::string_view key, const StringTable& strings, std::int32_t value)
+        void wait_controls(InfoPage& page, AttractionControl on, AttractionControl seconds, std::string_view key, const StringTable& strings, std::optional<std::int32_t> value)
         {
-            InfoControl t = tick(on, key, text(strings, key), value >= 0);
+            InfoControl t = tick(on, key, text(strings, key), value.has_value());
             t.column = 1;
             page.controls.push_back(std::move(t));
             InfoControl c;
             c.id = control_id(seconds);
             c.name = std::format("{}_seconds", key);
             c.kind = InfoControlKind::Number;
-            c.value = std::max(value, 0);
+            c.value = value.value_or(0);
             c.maximum = kMostWait;
             c.step = kWaitStep;
             c.enabled = value >= 0;
@@ -668,8 +668,8 @@ namespace rct3::ui::screens::info
             page.width = kMaintenancePageWidth;
             // The interval's list under the bars, how long since and what last broke under it.
             page.controls_after = 2;
-            const float since = ride.base.time_since_inspection;
-            add(page, strings, "RideMaintenanceDialogLabel_TimeSinceLastInspection", since < 0 ? std::u16string(u"-") : ascii(std::to_string(std::lround(since / kSecondsPerMinute))));
+            const auto since = ride.base.time_since_inspection;
+            add(page, strings, "RideMaintenanceDialogLabel_TimeSinceLastInspection", !since ? std::u16string(u"-") : ascii(std::to_string(std::lround(since->value / kSecondsPerMinute))));
             add(page, strings, "RideMaintenanceDialogLabel_LastBreakdownType", breakdown(ride.breakdown.last, strings));
             InfoControl c;
             c.id = control_id(AttractionControl::Inspection);

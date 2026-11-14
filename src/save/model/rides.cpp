@@ -564,9 +564,9 @@ namespace rct3::save::model
                                 .start_distance = units::Distance { f[id::kStartDistance].number() },
                                 .reverse_start_distance = units::Distance { f[id::kStartDistanceBack].number() },
                                 .colours = colours_of(f[id::kPieceColours]),
-                                .brake_speed = f[id::kPieceBrake].i32(-1),
+                                .brake_speed = core::from_stored(f[id::kPieceBrake].i32(-1)),
                                 .holding_time = f[id::kPieceHolding].i32(0),
-                                .speed_class = f[id::kPieceSpeed].i32(-1),
+                                .speed_class = core::from_stored(f[id::kPieceSpeed].i32(-1)),
                             },
                             .next = f[id::kNext].ref(),
                             .prev = f[id::kPrev].ref(),
@@ -665,9 +665,9 @@ namespace rct3::save::model
                     .popularity = f[id::kPopularity].number(),
                     .satisfaction = f[id::kSatisfaction].number(),
                     .repair_status = static_cast<RepairStatus>(f[id::kRepair].i32()),
-                    .time_since_inspection = f[id::kSinceInspection].number(-1),
-                    .time_since_breakdown = f[id::kSinceBreakdown].number(-1),
-                    .time_since_crash = f[id::kSinceCrash].number(-1),
+                    .time_since_inspection = core::from_stored(units::Seconds { f[id::kSinceInspection].number(-1) }),
+                    .time_since_breakdown = core::from_stored(units::Seconds { f[id::kSinceBreakdown].number(-1) }),
+                    .time_since_crash = core::from_stored(units::Seconds { f[id::kSinceCrash].number(-1) }),
                     .placement = placement,
                     .spot = spot_of(placement),
                     .facing = static_cast<std::uint8_t>(f[id::kDirection].integer()),
@@ -827,10 +827,10 @@ namespace rct3::save::model
                 ride.breakdown = Breakdown {
                     .current = static_cast<BreakdownKind>(f[id::kBreakdownType].i32()),
                     .last = static_cast<BreakdownKind>(f[id::kLastBreakdownType].i32()),
-                    .station = f[id::kBreakdownStation].i32(-1),
-                    .train = f[id::kBreakdownTrain].i32(-1),
-                    .car = f[id::kBreakdownCar].i32(-1),
-                    .seat = f[id::kBreakdownSeat].i32(-1),
+                    .station = core::from_stored(f[id::kBreakdownStation].i32(-1)),
+                    .train = core::from_stored(f[id::kBreakdownTrain].i32(-1)),
+                    .car = core::from_stored(f[id::kBreakdownCar].i32(-1)),
+                    .seat = core::from_stored(f[id::kBreakdownSeat].i32(-1)),
                     .inspection_interval = f[id::kInspectionInterval].i32(),
                     .reliability = f[id::kReliability].number(100),
                 };
@@ -850,21 +850,21 @@ namespace rct3::save::model
                     .block_sectioned = f[id::kBlockSectioned].boolean(),
                     .sync_trains = f[id::kSyncTrains].boolean(),
                     .leave_if_other_train_enters_station = f[id::kLeaveIfEnters].boolean(),
-                    .min_wait = f[id::kMinWait].i32(-1),
-                    .max_wait = f[id::kMaxWait].i32(-1),
+                    .min_wait = core::from_stored(f[id::kMinWait].i32(-1)),
+                    .max_wait = core::from_stored(f[id::kMaxWait].i32(-1)),
                     .wait_for_load = f[id::kWaitForLoad].i32(4),
                     .launch_speed = f[id::kLaunchSpeed].number(),
                     .lift_speed = f[id::kLiftSpeed].number(),
                     .brake_speed = f[id::kBrakeSpeed].number(),
                     .block_brake_off_speed = f[id::kBlockBrakeOff].number(),
-                    .fixed_speed = f[id::kFixedSpeed].number(-1),
+                    .fixed_speed = core::from_stored(f[id::kFixedSpeed].number(-1)),
                     .circuits = f[id::kCircuitsRun].i32(1),
                 };
 
                 ride.race = RaceState {
                     .in_progress = f[id::kRaceInProgress].boolean(),
                     .over = f[id::kRaceOver].boolean(),
-                    .winner = f[id::kRaceWinner].i32(-1),
+                    .winner = core::from_stored(f[id::kRaceWinner].i32(-1)),
                     .seconds_since_end = f[id::kRaceSince].number(),
                 };
 
@@ -906,8 +906,8 @@ namespace rct3::save::model
 
                 if (role == Role::TrackedRide)
                 {
-                    ride.train_count = f[id::kTrainCount].i32(-1);
-                    ride.cars_per_train = f[id::kCarsPerTrain].i32(-1);
+                    ride.train_count = core::from_stored(f[id::kTrainCount].i32(-1));
+                    ride.cars_per_train = core::from_stored(f[id::kCarsPerTrain].i32(-1));
                     ride.train_selection = f[id::kTrainSelection].i32();
                     for (const auto& item : f[id::kSeats].items())
                     {
@@ -1090,9 +1090,9 @@ namespace rct3::save::model
                         .distance = tf[id::kDistance].number(),
                         .speed = tf[id::kSpeed].number(),
                         .acceleration = tf[id::kAccel].number(),
-                        .station = tf[id::kStation].i32(-1),
-                        .start_station = tf[id::kStartStation].i32(-1),
-                        .current_station = tf[id::kOnStation].i32(-1),
+                        .station = core::from_stored(tf[id::kStation].i32(-1)),
+                        .start_station = core::from_stored(tf[id::kStartStation].i32(-1)),
+                        .current_station = core::from_stored(tf[id::kOnStation].i32(-1)),
                         .lap_count = tf[id::kCircuits].i32(),
                         .shuttle_direction = tf[id::kShuttle].i32(),
                         .static_friction = tf[id::kStaticFriction].number(),

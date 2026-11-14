@@ -531,9 +531,9 @@ namespace rct3::scene::park
         using enum ui::screens::info::AttractionControl;
         save::model::Ride* ride = ref.kind == rct3::park::AttractionRef::Kind::Ride && ref.index < scene.rides.rides.size() ? &scene.rides.rides[ref.index] : nullptr;
         save::model::Stall* stall = ref.kind == rct3::park::AttractionRef::Kind::Stall && ref.index < scene.rides.stalls.size() ? &scene.rides.stalls[ref.index] : nullptr;
-        const auto wait_on = [&](std::int32_t& wait, ui::screens::info::AttractionControl seconds) {
+        const auto wait_on = [&](std::optional<std::int32_t>& wait, ui::screens::info::AttractionControl seconds) {
             const auto field = panel.control(ui::screens::info::control_id(seconds));
-            wait = change.value != 0 ? (field ? static_cast<const ui::widgets::Spinner&>(*field).value() : 0) : -1;
+            wait = change.value != 0 ? std::optional(field ? static_cast<const ui::widgets::Spinner&>(*field).value() : 0) : std::nullopt;
             if (field)
                 field->enabled = change.value != 0;
         };
@@ -658,7 +658,7 @@ namespace rct3::scene::park
         else if ((change.id == ui::screens::info::control_id(Trains) || change.id == ui::screens::info::control_id(Cars)) && scene.train_limits.contains(ref.index) && ride->base.state != save::model::AttractionState::Open && assets.install)
         {
             const bool trains = change.id == ui::screens::info::control_id(Trains);
-            (void)track::set_trains(device, scene, *assets.install, ref.index, trains ? change.value : ride->train_count, trains ? ride->cars_per_train : change.value);
+            (void)track::set_trains(device, scene, *assets.install, ref.index, trains ? change.value : ride->train_count.value_or(0), trains ? ride->cars_per_train.value_or(0) : change.value);
         }
         else if (change.id == ui::screens::info::control_id(CarKind) && scene.train_limits.contains(ref.index) && ride->base.state != save::model::AttractionState::Open && assets.install && !ride->trains.empty())
         {
@@ -670,7 +670,7 @@ namespace rct3::scene::park
             if (choices.size() > 1)
                 if (track::use_train(scene, *assets.install, ref.index, choices[at == choices.end() ? 0 : static_cast<std::size_t>(at - choices.begin() + 1) % choices.size()]))
                 {
-                    (void)track::set_trains(device, scene, *assets.install, ref.index, ride->train_count, ride->cars_per_train);
+                    (void)track::set_trains(device, scene, *assets.install, ref.index, ride->train_count.value_or(0), ride->cars_per_train.value_or(0));
                     track::update_platforms(scene, ref.index, assets);
                 }
         }

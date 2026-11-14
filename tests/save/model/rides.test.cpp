@@ -474,12 +474,12 @@ TEST_CASE("missing attributes take defaults")
     const auto& ride = w->model.rides[0];
     CHECK(ride.base.name == "Bare");
     CHECK(ride.base.state == AttractionState::Closed);
-    CHECK(ride.options.fixed_speed == -1);
-    CHECK(ride.options.min_wait == -1);
+    CHECK_FALSE(ride.options.fixed_speed);
+    CHECK_FALSE(ride.options.min_wait);
     CHECK(ride.breakdown.reliability == 100);
-    CHECK(ride.breakdown.station == -1);
-    CHECK(ride.base.time_since_crash == -1);
-    CHECK(ride.train_count == -1);
+    CHECK_FALSE(ride.breakdown.station);
+    CHECK_FALSE(ride.base.time_since_crash);
+    CHECK_FALSE(ride.train_count);
     CHECK_FALSE(ride.track.has_value());
     CHECK(ride.stations.empty());
     CHECK_FALSE(ride.stats.last_lap.has_value());

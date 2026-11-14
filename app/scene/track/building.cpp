@@ -466,7 +466,7 @@ namespace rct3::scene::track
                     ride.options.lift_speed = o.lift_speed;
                     ride.options.brake_speed = o.brake_speed;
                     ride.options.block_brake_off_speed = o.block_brake_speed;
-                    ride.options.fixed_speed = o.fixed_speed.value_or(-1);
+                    ride.options.fixed_speed = o.fixed_speed;
                 }
         // Its riders sit on arms.
         const bool arm = !train_name.empty() && use_train(scene, *assets.install, index, train_name).value_or(false);
@@ -701,7 +701,7 @@ namespace rct3::scene::track
                 ride.options = settings->options;
                 // Its trains as many and as long as the design's, as far as its kind and its track allow.
                 if (const auto limits = scene.train_limits.find(*b.ride); limits != scene.train_limits.end() && settings->train_count > 0 && settings->cars_per_train > 0)
-                    b.arm = fit_trains(scene, *assets.install, *b.ride, settings->train_count, std::clamp(settings->cars_per_train, limits->second.fewest_cars, limits->second.most_cars)) || b.arm;
+                    b.arm = fit_trains(scene, *assets.install, *b.ride, *settings->train_count, std::clamp(*settings->cars_per_train, limits->second.fewest_cars, limits->second.most_cars)) || b.arm;
                 ride.car_colours = settings->car_colours;
                 ride.fence_colours = settings->fence_colours;
                 ride.queue_colours = settings->queue_colours;

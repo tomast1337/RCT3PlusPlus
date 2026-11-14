@@ -156,7 +156,7 @@ TEST_CASE("a saved ride brings its reliability, breakdown and inspections")
     rct3::save::model::Ride ride;
     ride.breakdown.reliability = 80;
     ride.breakdown.inspection_interval = 4; // Every hour
-    ride.base.time_since_inspection = 90;
+    ride.base.time_since_inspection = rct3::units::Seconds { 90 };
     Upkeep upkeep = upkeep_of(ride);
     CHECK(upkeep.reliability.value == doctest::Approx(0.8f));
     CHECK_FALSE(upkeep.broken);

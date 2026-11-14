@@ -1263,7 +1263,8 @@ namespace rct3::scene
                     one["pieces"] = ride.track->pieces.size();
                     one["trains"] = ride.trains.size();
                     one["carsPerTrain"] = ride.trains.empty() ? 0 : ride.trains.front().cars.size();
-                    one["passengerCars"] = ride.cars_per_train;
+                    if (ride.cars_per_train)
+                        one["passengerCars"] = *ride.cars_per_train;
                     Json symbols = Json::array();
                     for (const save::model::TrackPiece& p : ride.track->pieces)
                         symbols.push_back(p.symbol);

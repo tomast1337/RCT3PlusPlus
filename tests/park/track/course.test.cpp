@@ -326,7 +326,7 @@ TEST_CASE("brakes and block brakes keep their own speed, 0 when they have none, 
     auto& track = ride.track.emplace();
     std::vector<save::model::PlacedObject> objects;
     const std::array<std::string, 4> symbols { "Brakes", "Block", "Holds", "Plain" };
-    const std::array<std::int32_t, 4> speeds { 6, -1, -1, 9 };
+    const std::array<std::optional<std::int32_t>, 4> speeds { 6, std::nullopt, std::nullopt, 9 };
     for (std::uint64_t i = 0; i < symbols.size(); ++i)
     {
         save::model::PlacedObject& o = objects.emplace_back();

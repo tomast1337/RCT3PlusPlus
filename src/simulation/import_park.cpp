@@ -1285,7 +1285,7 @@ namespace rct3::simulation
         return {
             .reliability = { std::clamp(ride.breakdown.reliability / 100, 0.0f, 1.0f) },
             .broken = broken,
-            .since_inspection = { std::max(ride.base.time_since_inspection, 0.0f) },
+            .since_inspection = ride.base.time_since_inspection.value_or(units::Seconds { }),
             .inspect_every = interval >= 0 && std::cmp_less(interval, kIntervals.size()) ? units::Seconds { kIntervals[static_cast<std::size_t>(interval)] } : Upkeep { }.inspect_every,
             .called = ride.base.mechanic_asked,
             .kind = broken ? static_cast<Breakdown>(std::to_underlying(ride.breakdown.current)) : Breakdown::None,
@@ -1496,8 +1496,8 @@ namespace rct3::simulation
             r.emplace<CycleRide>(e, std::move(cycle));
             if (stopping)
                 r.emplace<Trains>(e, trains_of(*stopping, ride));
-            if (ride.base.time_since_crash >= 0)
-                r.emplace<Wrecks>(e, Wrecks { .since = units::Seconds { ride.base.time_since_crash } });
+            if (ride.base.time_since_crash)
+                r.emplace<Wrecks>(e, Wrecks { .since = ride.base.time_since_crash });
             r.emplace<Upkeep>(e, upkeep_of(ride));
             if (r.get<Upkeep>(e).broken)
                 r.get<Attraction>(e).open = false;
@@ -1770,7 +1770,7 @@ namespace rct3::simulation
     Departure departure_of(const save::model::OperatingOptions& options)
     {
         const bool listed = options.wait_for_load >= 0 && options.wait_for_load <= static_cast<std::int32_t>(LoadWait::Any);
-        const auto wait_of = [](std::int32_t seconds) { return seconds >= 0 ? std::optional(units::Seconds { static_cast<float>(seconds) }) : std::nullopt; };
+        const auto wait_of = [](std::optional<std::int32_t> seconds) { return seconds.transform([](std::int32_t s) { return units::Seconds { static_cast<float>(s) }; }); };
         return { .wait_for = listed ? static_cast<LoadWait>(options.wait_for_load) : LoadWait::Any, .min_wait = wait_of(options.min_wait), .max_wait = wait_of(options.max_wait), .leave_on_arrival = options.leave_if_other_train_enters_station, .sync = options.sync_trains };
     }
 

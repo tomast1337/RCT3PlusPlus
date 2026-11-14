@@ -1640,7 +1640,7 @@ namespace rct3::scene::park
                         std::shift_right(slots.begin(), slots.end(), 1);
                         // A thought about a path item is about the placed object it stands as.
                         const auto* item = about == nullptr && scene.sim.registry.valid(t.about) ? scene.sim.registry.try_get<simulation::PathItem>(t.about) : nullptr;
-                        slots[0] = { .about = { about != nullptr ? about->saved : item != nullptr ? item->object : 0 }, .id = std::to_underlying(t.kind), .time = newest ? *newest + 1 : 0.0f, .variant = static_cast<std::int32_t>(t.variant) };
+                        slots[0] = { .about = { about != nullptr ? about->saved : item != nullptr ? item->object : 0 }, .id = std::to_underlying(t.kind), .time = std::optional { newest ? *newest + 1 : 0.0f }, .variant = static_cast<std::int32_t>(t.variant) };
                         // shortcut: the message names what they thought about but cannot take the view to the
                         // person; add it once messages open people.
                         if (std::string key = ui::thought_text_key(*assets.strings, slots[0].id, slots[0].variant); person.thoughts_to_console && !key.empty())
@@ -1688,7 +1688,7 @@ namespace rct3::scene::park
                     ride.breakdown.reliability = upkeep->reliability.value * 100;
                     ride.breakdown.current = static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep->kind));
                     ride.breakdown.last = static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep->last));
-                    ride.base.time_since_inspection = upkeep->since_inspection;
+                    ride.base.time_since_inspection.emplace(upkeep->since_inspection);
                     ride.breakdown.downtime_windows = upkeep->downtime;
                     ride.breakdown.saved_downtime_percent.reset();
                     using enum save::model::RepairStatus;

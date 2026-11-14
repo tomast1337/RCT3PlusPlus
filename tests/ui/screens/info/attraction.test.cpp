@@ -218,7 +218,7 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     ride.base.symbol = "SpinnerRide:trr";
     ride.trains.resize(3);
     ride.mode = save::model::OperatingMode::Shuttle;
-    ride.options.min_wait = 12;
+    ride.options.min_wait.emplace(12);
     const AttractionFacts f { &ride.base, &ride, nullptr };
 
     const InfoPage vehicles = attraction_page(AttractionTab::Vehicles, f, s, { });

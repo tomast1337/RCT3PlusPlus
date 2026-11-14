@@ -198,9 +198,16 @@ namespace rct3::ui::screens::management
             return { .guest = &g, .people = f.people, .rides = f.rides };
         }
 
-        /// Adds a weekly series to a page's graph, on a scale up to `full` (its own when 0), its numbers counts or
-        /// amounts of money. The graph spans the weeks the longest series has, at least a park file's.
-        void add_series(ManagementPage& page, const StringTable& strings, const info::InfoUnits& units, std::string_view key, const save::model::Series& series, bool money_values, float full = 0)
+        /// What a graph's numbers are.
+        enum class Figure : std::uint8_t
+        {
+            Count,
+            Money,
+        };
+
+        /// Adds a weekly series of `figure` numbers to a page's graph, on a scale up to `full` (its own when 0).
+        /// The graph spans the weeks the longest series has, at least a park file's.
+        void add_series(ManagementPage& page, const StringTable& strings, const info::InfoUnits& units, std::string_view key, const save::model::Series& series, Figure figure, float full = 0)
         {
             if (series.empty())
                 return;
@@ -209,9 +216,9 @@ namespace rct3::ui::screens::management
             if (full <= 0)
                 full = widgets::full_scale(values);
             // Money reads in whole units at least, so a series of nought or a few cents is not on a scale of one.
-            if (money_values)
+            if (figure == Figure::Money)
                 full = std::max(full, 100.0f);
-            const auto words = [&](float v) { return money_values ? money(units, units::Money { std::llround(v) }) : whole(std::lround(v)); };
+            const auto words = [&](float v) { return figure == Figure::Money ? money(units, units::Money { std::llround(v) }) : whole(std::lround(v)); };
             std::vector<std::u16string> axis;
             for (const float v : widgets::axis_values(full, centred))
                 axis.push_back(words(v));
@@ -286,17 +293,17 @@ namespace rct3::ui::screens::management
             // Graphs come from the series alone: a park without its records has them once the simulation starts them.
             if (f.park != nullptr)
             {
-                add_series(page, strings, units, "Graph_ParkValue", f.park->finance.park_value, true);
+                add_series(page, strings, units, "Graph_ParkValue", f.park->finance.park_value, Figure::Money);
                 const save::model::Park& p = f.park->park;
                 // The guests by age share the scale of all of them, so they read against it.
                 const float guests = widgets::full_scale(weeks_gone(p.guests_in_park));
-                add_series(page, strings, units, "Graph_AdultsInPark", p.adults_in_park, false, guests);
-                add_series(page, strings, units, "Graph_TeenagersInPark", p.teenagers_in_park, false, guests);
-                add_series(page, strings, units, "Graph_ChildrenInPark", p.children_in_park, false, guests);
-                add_series(page, strings, units, "Graph_Guests", p.guests_in_park, false, guests);
-                add_series(page, strings, units, "Graph_GuestIntake", p.guest_intake, false);
-                add_series(page, strings, units, "Graph_PublicityLevel", p.publicity_level, false);
-                add_series(page, strings, units, "Graph_ParkRating", p.park_rating, false);
+                add_series(page, strings, units, "Graph_AdultsInPark", p.adults_in_park, Figure::Count, guests);
+                add_series(page, strings, units, "Graph_TeenagersInPark", p.teenagers_in_park, Figure::Count, guests);
+                add_series(page, strings, units, "Graph_ChildrenInPark", p.children_in_park, Figure::Count, guests);
+                add_series(page, strings, units, "Graph_Guests", p.guests_in_park, Figure::Count, guests);
+                add_series(page, strings, units, "Graph_GuestIntake", p.guest_intake, Figure::Count);
+                add_series(page, strings, units, "Graph_PublicityLevel", p.publicity_level, Figure::Count);
+                add_series(page, strings, units, "Graph_ParkRating", p.park_rating, Figure::Count);
             }
             if (page.graph.empty())
                 page.note = text(strings, kNotRead);
@@ -562,12 +569,12 @@ namespace rct3::ui::screens::management
                 return;
             }
             const save::model::Finance& m = f.park->finance;
-            add_series(page, strings, units, "Graph_CashLessLoan", m.cash_less_loan, true);
-            add_series(page, strings, units, "Graph_ParkValue", m.park_value, true);
-            add_series(page, strings, units, "Graph_WeeklyProfit", m.weekly_profit, true);
-            add_series(page, strings, units, "Graph_CompanyValue", m.company_value, true);
-            add_series(page, strings, units, "Graph_Income", m.income, true);
-            add_series(page, strings, units, "Graph_MoneySpent", m.expenditure, true);
+            add_series(page, strings, units, "Graph_CashLessLoan", m.cash_less_loan, Figure::Money);
+            add_series(page, strings, units, "Graph_ParkValue", m.park_value, Figure::Money);
+            add_series(page, strings, units, "Graph_WeeklyProfit", m.weekly_profit, Figure::Money);
+            add_series(page, strings, units, "Graph_CompanyValue", m.company_value, Figure::Money);
+            add_series(page, strings, units, "Graph_Income", m.income, Figure::Money);
+            add_series(page, strings, units, "Graph_MoneySpent", m.expenditure, Figure::Money);
             if (page.graph.empty())
                 page.note = text(strings, kNotRead);
             month_ticks(page, strings, f.state);

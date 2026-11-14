@@ -33,7 +33,7 @@ namespace rct3::simulation
         }
 
         /// A spot to stroll to in `enclosure`, off the houses; nothing when none turns up.
-        std::optional<glm::vec3> stroll_spot(const entt::registry& r, const AnimalGround& ground, std::int32_t enclosure, random::RandomState& dice)
+        std::optional<glm::vec3> stroll_spot(const entt::registry& r, const AnimalGround& ground, std::optional<std::int32_t> enclosure, random::RandomState& dice)
         {
             if (!ground.somewhere)
                 return std::nullopt;
@@ -139,13 +139,13 @@ namespace rct3::simulation
         }
     }
 
-    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::int32_t(glm::vec2)>& enclosure)
+    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::optional<std::int32_t>(glm::vec2)>& enclosure)
     {
         for (const save::model::ZooAnimal& z : saved)
         {
             // Its model's place: rows of the x, y and z axes, then the position.
             const glm::vec3 at { z.world[12], z.world[13], z.world[14] };
-            const std::int32_t in = enclosure ? enclosure({ at.x, at.z }) : -1;
+            const std::optional<std::int32_t> in = enclosure ? enclosure({ at.x, at.z }) : std::nullopt;
             // The park keeps how fed, watered and in company it is, where we keep how much it wants each.
             const auto share = [](float v) { return units::Share { std::clamp(v, 0.0f, 1.0f) }; };
             const entt::entity e = add_animal(world, { .species = z.species, .name = z.first_names, .adult = z.is_adult, .male = z.is_male, .enclosure = in, .hunger = share(1 - z.food), .thirst = share(1 - z.drink), .tiredness = share(z.tiredness), .loneliness = share(1 - z.social), .health = share(z.health) }, at);
@@ -157,7 +157,7 @@ namespace rct3::simulation
                 animal.job = AnimalJob::Idle;
                 animal.busy = { };
             }
-            animal.escaped = in < 0 && !z.in_crate;
+            animal.escaped = !in && !z.in_crate;
         }
     }
 
@@ -173,7 +173,7 @@ namespace rct3::simulation
         for (auto [e, house] : houses.each())
             house.since_fed.value += dt.value;
         // The house in `enclosure` nearest `at`, null for none.
-        const auto house_for = [&](std::int32_t enclosure, glm::vec3 at) {
+        const auto house_for = [&](std::optional<std::int32_t> enclosure, glm::vec3 at) {
             entt::entity best = entt::null;
             float nearest = 0;
             for (const auto [h, house] : houses.each())
@@ -189,20 +189,20 @@ namespace rct3::simulation
         };
         // Dung by enclosure, less what the animals living there put up with.
         std::vector<std::int32_t> dung_in;
-        const auto count_in = [&](std::int32_t enclosure, std::int32_t n) {
-            if (enclosure < 0)
+        const auto count_in = [&](std::optional<std::int32_t> enclosure, std::int32_t n) {
+            if (!enclosure)
                 return;
-            dung_in.resize(std::max(dung_in.size(), static_cast<std::size_t>(enclosure) + 1));
-            dung_in[static_cast<std::size_t>(enclosure)] += n;
+            dung_in.resize(std::max(dung_in.size(), static_cast<std::size_t>(*enclosure) + 1));
+            dung_in[static_cast<std::size_t>(*enclosure)] += n;
         };
         for (const auto [a, animal] : r.view<const Animal>().each())
             count_in(animal.enclosure, -kRates.dung_limit);
         for (const auto [d, dung] : r.view<const Dung>().each())
             count_in(dung.enclosure, 1);
-        const auto dung_over = [&](std::int32_t enclosure) { return enclosure >= 0 && static_cast<std::size_t>(enclosure) < dung_in.size() ? dung_in[static_cast<std::size_t>(enclosure)] : 0; };
+        const auto dung_over = [&](std::optional<std::int32_t> enclosure) { return enclosure && static_cast<std::size_t>(*enclosure) < dung_in.size() ? dung_in[static_cast<std::size_t>(*enclosure)] : 0; };
 
         // The animals.
-        std::vector<std::pair<glm::vec3, std::int32_t>> dropped; // Dung left this step, and its enclosure
+        std::vector<std::pair<glm::vec3, std::optional<std::int32_t>>> dropped; // Dung left this step, and its enclosure
         const auto animals = r.view<Animal, Pose, Dice>();
         for (auto [e, animal, pose, dice] : animals.each())
         {
@@ -216,10 +216,10 @@ namespace rct3::simulation
                 continue;
             }
             // Where it stands decides its enclosure; in none, it is out.
-            const std::int32_t standing = ground.enclosure ? ground.enclosure({ pose.position.x, pose.position.z }) : animal.enclosure;
-            if (standing < 0 && !animal.escaped)
+            const std::optional<std::int32_t> standing = ground.enclosure ? ground.enclosure({ pose.position.x, pose.position.z }) : animal.enclosure;
+            if (!standing && !animal.escaped)
                 park::post(messages, { .text_key = std::string(kAnimalEscaped), .subject_name = animal.name });
-            animal.escaped = standing < 0;
+            animal.escaped = !standing;
             animal.enclosure = standing;
             rise(animal.hunger, dt, kRates.hungry);
             rise(animal.thirst, dt, kRates.thirsty);
@@ -336,7 +336,7 @@ namespace rct3::simulation
         };
         const auto keepers = r.view<KeeperDuty>();
         const auto being_filled = [&](entt::entity h) { return std::ranges::any_of(keepers, [&](entt::entity k) { return keepers.get<KeeperDuty>(k).job == KeeperJob::Filling && keepers.get<KeeperDuty>(k).target == h; }); };
-        const auto enclosure_of = [&](const KeeperDuty& duty) { return r.valid(duty.house) && r.all_of<AnimalHouse>(duty.house) ? r.get<AnimalHouse>(duty.house).enclosure : -1; };
+        const auto enclosure_of = [&](const KeeperDuty& duty) { return r.valid(duty.house) && r.all_of<AnimalHouse>(duty.house) ? std::optional<std::int32_t> { r.get<AnimalHouse>(duty.house).enclosure } : std::nullopt; };
         for (auto [e, duty, pose, dice] : r.view<KeeperDuty, Pose, Dice>().each())
         {
             pose.was = pose.position;
@@ -507,9 +507,9 @@ namespace rct3::simulation
                 else if (!reach)
                     tell(r, inspector, Finding::KeeperBadZones, h, now);
             }
-            if ((r.get<const Staff>(inspector).tasks & kGalleriesTask) != 0 && dung_over(house.enclosure) > 0 && !std::ranges::contains(dung_told, house.enclosure))
+            if ((r.get<const Staff>(inspector).tasks & kGalleriesTask) != 0 && dung_over(house.enclosure) > 0 && !std::ranges::contains(dung_told, *house.enclosure))
             {
-                dung_told.push_back(house.enclosure);
+                dung_told.push_back(*house.enclosure);
                 tell(r, inspector, Finding::TooMuchDung, h, now);
             }
         }

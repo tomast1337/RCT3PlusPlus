@@ -507,14 +507,14 @@ TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animal
     const entt::entity sweeper = r.create();
     r.emplace<Staff>(sweeper, Staff { .role = StaffRole::Handyman });
     r.emplace<Pose>(sweeper);
-    const entt::entity keeper = add_animal_house(world, { .object = 7, .enclosure = 0, .troughs = { 2, 0, 2 }, .food = { 0.5f } }, { 1, 0, 1 });
-    const entt::entity yak = add_animal(world, { .species = "yak", .name = "Yak", .enclosure = 0 }, { 3, 0, 1 });
+    const entt::entity keeper = add_animal_house(world, { .object = 7, .enclosure = std::optional { 0 }, .troughs = { 2, 0, 2 }, .food = { 0.5f } }, { 1, 0, 1 });
+    const entt::entity yak = add_animal(world, { .species = "yak", .name = "Yak", .enclosure = std::optional { 0 } }, { 3, 0, 1 });
     r.get<Animal>(yak).hunger = { 0.25f };
     const entt::entity dung = r.create();
     r.emplace<Dung>(dung, Dung { 0 });
     r.emplace<Pose>(dung, Pose { .position = { 2, 0, 3 } });
     r.get<KeeperDuty>(keeper) = { .house = r.get<KeeperDuty>(keeper).house, .job = KeeperJob::Clearing, .goal = { 2, 0, 3 }, .target = dung, .busy = { 4 } };
-    save::model::EnclosureMap map { .cols = 2, .rows = 1, .tiles = { 0, -1 }, .fences = { "Wood" } };
+    save::model::EnclosureMap map { .cols = 2, .rows = 1, .tiles = { std::optional { 0 }, std::nullopt }, .fences = { "Wood" } };
 
     parkfile::SavedPark park = small_park();
     park.people = parkfile::keep_people(world, { }, { });
@@ -522,7 +522,7 @@ TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animal
     const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
     REQUIRE_MESSAGE(read, (read ? "" : read.error()));
     REQUIRE(read->animals);
-    CHECK(read->animals->enclosures.tiles == std::vector<std::int32_t> { 0, -1 });
+    CHECK(std::ranges::equal(read->animals->enclosures.tiles, std::vector<std::optional<std::int32_t>> { 0, std::nullopt }));
     CHECK(read->animals->enclosures.fences == std::vector<std::string> { "Wood" });
 
     SimWorld loaded;
@@ -555,8 +555,8 @@ TEST_CASE("a save keeps the house a keeper is filling the troughs of")
     using namespace simulation;
     SimWorld world;
     auto& r = world.registry;
-    const entt::entity keeper = add_animal_house(world, { .object = 7, .enclosure = 0, .troughs = { 2, 0, 2 } }, { 1, 0, 1 });
-    const entt::entity other = r.get<KeeperDuty>(add_animal_house(world, { .object = 8, .enclosure = 0, .troughs = { 3, 0, 3 } }, { 3, 0, 1 })).house;
+    const entt::entity keeper = add_animal_house(world, { .object = 7, .enclosure = std::optional { 0 }, .troughs = { 2, 0, 2 } }, { 1, 0, 1 });
+    const entt::entity other = r.get<KeeperDuty>(add_animal_house(world, { .object = 8, .enclosure = std::optional { 0 }, .troughs = { 3, 0, 3 } }, { 3, 0, 1 })).house;
     r.get<KeeperDuty>(keeper) = { .house = r.get<KeeperDuty>(keeper).house, .job = KeeperJob::Filling, .goal = { 3, 0, 3 }, .target = other, .busy = { 2 } };
     parkfile::SavedPark park = small_park();
     park.people = parkfile::keep_people(world, { }, { });

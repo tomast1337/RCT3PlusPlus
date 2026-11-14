@@ -18,6 +18,7 @@
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -41,8 +42,8 @@ namespace rct3::park
 
     /// Makes the tiles from `a` to `b` an enclosure fenced with `fence`: those `takeable` allows and in no
     /// enclosure yet; the rest are left as they are. A map with no grid yet takes `grid`'s size. Returns the
-    /// place in the map of the enclosure the new tiles ended up in, -1 when none were taken.
-    std::int32_t enclose(save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, save::model::Tile a, save::model::Tile b, const std::string& fence, std::function_ref<bool(save::model::Tile)> takeable);
+    /// place in the map of the enclosure the new tiles ended up in, none when none were taken.
+    std::optional<std::int32_t> enclose(save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, save::model::Tile a, save::model::Tile b, const std::string& fence, std::function_ref<bool(save::model::Tile)> takeable);
 
     /// Takes the tiles from `a` to `b` that `removable` allows out of their enclosures.
     void unenclose(save::model::EnclosureMap& map, save::model::Tile a, save::model::Tile b, std::function_ref<bool(save::model::Tile)> removable);
@@ -58,10 +59,10 @@ namespace rct3::park
     /// the refund of every length taken down.
     [[nodiscard]] units::Money fence_cost(const save::model::EnclosureMap& before, const save::model::EnclosureMap& after, std::function_ref<FencePrice(std::string_view fence)> price);
 
-    /// The enclosure all `span` tiles from `corner` are in; -1 when they are not all in the same one.
-    [[nodiscard]] std::int32_t enclosure_under(const save::model::EnclosureMap& map, save::model::Tile corner, std::array<std::int32_t, 2> span) noexcept;
+    /// The enclosure all `span` tiles from `corner` are in; none when they are not all in the same one.
+    [[nodiscard]] std::optional<std::int32_t> enclosure_under(const save::model::EnclosureMap& map, save::model::Tile corner, std::array<std::int32_t, 2> span) noexcept;
 
-    /// How many tiles enclosure `region` has.
-    [[nodiscard]] std::int32_t enclosure_size(const save::model::EnclosureMap& map, std::int32_t region) noexcept;
+    /// How many tiles enclosure `region` has; with none, how many are in no enclosure.
+    [[nodiscard]] std::int32_t enclosure_size(const save::model::EnclosureMap& map, std::optional<std::int32_t> region) noexcept;
 
 } // namespace rct3::park

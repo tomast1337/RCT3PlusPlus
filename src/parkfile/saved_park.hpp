@@ -185,7 +185,7 @@ namespace rct3::parkfile
     /// Dung left lying.
     struct SavedDung
     {
-        std::int32_t enclosure = -1;
+        core::NoneAsMinusOne<std::int32_t> enclosure { };
         glm::vec3 position { 0.0f };
     };
 

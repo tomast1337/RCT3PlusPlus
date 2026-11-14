@@ -19,6 +19,7 @@
 // goes after it, shuts it in a crate where it stands and takes it back to their own enclosure, where the crate
 // opens again. Guests keep to the paths, where a loose animal does not scare them off. All the rates are our own.
 
+#include "core/none_as_minus_one.hpp"
 #include "save/model/people.hpp"
 #include "simulation/components.hpp"
 #include "simulation/park/messages.hpp"
@@ -39,19 +40,20 @@ namespace rct3::simulation
     /// What the animals and their keepers walk over.
     struct AnimalGround
     {
-        std::function<float(glm::vec2)> height;           ///< Of the ground, at a point across the park
-        std::function<std::int32_t(glm::vec2)> enclosure; ///< The enclosure a point is in; -1 in none
-        /// A point picked at random in enclosure `which`; nothing when it has no ground.
-        std::function<std::optional<glm::vec2>(std::int32_t which, random::RandomState&)> somewhere;
+        std::function<float(glm::vec2)> height;                          ///< Of the ground, at a point across the park
+        std::function<std::optional<std::int32_t>(glm::vec2)> enclosure; ///< The enclosure a point is in
+        /// A point picked at random in enclosure `which`, or with none outside every enclosure; nothing when it
+        /// has no ground.
+        std::function<std::optional<glm::vec2>(std::optional<std::int32_t> which, random::RandomState&)> somewhere;
     };
 
     /// An animal house, standing in an enclosure.
     struct AnimalHouse
     {
-        std::uint64_t object = 0;    ///< The house as placed
-        std::uint64_t hut = 0;       ///< Its keeper's hut as placed; 0 for none
-        std::int32_t enclosure = -1; ///< The one it stands in
-        glm::vec3 troughs { 0.0f };  ///< Where its animals eat, drink and sleep, beside it
+        std::uint64_t object = 0;                         ///< The house as placed
+        std::uint64_t hut = 0;                            ///< Its keeper's hut as placed; 0 for none
+        core::NoneAsMinusOne<std::int32_t> enclosure { }; ///< The one it stands in
+        glm::vec3 troughs { 0.0f };                       ///< Where its animals eat, drink and sleep, beside it
         /// The ground the house stands on, across the park from its least corner to its greatest; nobody
         /// strolls to a spot on it.
         glm::vec2 low { 0.0f }, high { 0.0f };
@@ -98,7 +100,7 @@ namespace rct3::simulation
         std::string name { };    ///< As the park's messages call it
         bool adult = true;
         bool male = false;
-        std::int32_t enclosure = -1; ///< The one it lives in
+        core::NoneAsMinusOne<std::int32_t> enclosure { }; ///< The one it lives in
         AnimalJob job = AnimalJob::Crated;
         glm::vec3 goal { 0.0f };
         units::Seconds busy { }; ///< Left in its crate, at what it is doing, or standing about
@@ -115,7 +117,7 @@ namespace rct3::simulation
     /// Dung an animal left in its enclosure.
     struct Dung
     {
-        std::int32_t enclosure = -1;
+        std::optional<std::int32_t> enclosure { };
     };
 
     /// Values for how animals and keepers live.
@@ -170,7 +172,7 @@ namespace rct3::simulation
     void import_animal_houses(SimWorld& world, std::span<const AnimalHouse> houses, std::span<const std::pair<entt::entity, std::int32_t>> keepers);
 
     /// The zoo animals a park was saved with, where they stood, each in the enclosure `enclosure` says its spot is in.
-    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::int32_t(glm::vec2)>& enclosure);
+    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::optional<std::int32_t>(glm::vec2)>& enclosure);
 
     /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape, and leaving what the
     /// park's inspector finds among the Findings.

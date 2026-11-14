@@ -17,6 +17,7 @@
 //    as the stored integers or floats.
 #pragma once
 
+#include "core/none_as_minus_one.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 #include "units/units.hpp"
@@ -411,12 +412,12 @@ namespace rct3::save::model
     {
         std::int32_t cols = 0;
         std::int32_t rows = 0;
-        std::vector<std::int32_t> tiles { }; ///< Row-major, the place in `fences` of the tile's enclosure; -1 outside one
-        std::vector<std::string> fences { }; ///< Of each enclosure, the kind of fence it has; empty for a place unused
+        std::vector<core::NoneAsMinusOne<std::int32_t>> tiles { }; ///< Row-major, the place in `fences` of the tile's enclosure; none outside one
+        std::vector<std::string> fences { };                       ///< Of each enclosure, the kind of fence it has; empty for a place unused
 
-        [[nodiscard]] std::int32_t at(std::int32_t col, std::int32_t row) const noexcept
+        [[nodiscard]] std::optional<std::int32_t> at(std::int32_t col, std::int32_t row) const noexcept
         {
-            return col >= 0 && row >= 0 && col < cols && row < rows ? tiles[static_cast<std::size_t>(row * cols + col)] : -1;
+            return col >= 0 && row >= 0 && col < cols && row < rows ? tiles[static_cast<std::size_t>(row * cols + col)] : std::nullopt;
         }
     };
 

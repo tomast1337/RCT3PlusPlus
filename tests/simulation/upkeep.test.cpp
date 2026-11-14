@@ -140,7 +140,7 @@ TEST_CASE("an idle keeper grows unhappy and, unhappy enough, quits")
     Sandbox park;
     park.path({ 0, 0 }, { 2, 0 });
     auto& r = park.world().registry;
-    const entt::entity keeper = add_animal_house(park.world(), { .enclosure = 0 }, { 50, 0, 50 });
+    const entt::entity keeper = add_animal_house(park.world(), { .enclosure = std::optional { 0 } }, { 50, 0, 50 });
     staff::set_wage_level(r.get<Staff>(keeper), 0);
     r.get<Staff>(keeper).training = 0;
     CHECK(park.run_until(

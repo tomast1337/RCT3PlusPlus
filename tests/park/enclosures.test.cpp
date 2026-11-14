@@ -98,10 +98,10 @@ TEST_CASE("enclosures: a drag takes only free tiles the test allows")
     const auto no_middle = [](save::model::Tile t) { return !(t.col == 3 && t.row == 1); };
     CHECK(enclose(map, g, { 1, 0 }, { 4, 2 }, "Wood", no_middle) == 1);
     CHECK(map.at(1, 1) == 0); // Still the electric one's
-    CHECK(map.at(3, 1) == -1);
+    CHECK_FALSE(map.at(3, 1));
     CHECK(enclosure_size(map, 0) == 4);
     CHECK(enclosure_size(map, 1) == 9);
-    CHECK(enclose(map, g, { 5, 5 }, { 5, 5 }, "Wood", [](save::model::Tile) { return false; }) == -1);
+    CHECK_FALSE(enclose(map, g, { 5, 5 }, { 5, 5 }, "Wood", [](save::model::Tile) { return false; }));
     CHECK(map.fences == std::vector<std::string> { "Electric", "Wood", "" });
 }
 
@@ -170,10 +170,10 @@ TEST_CASE("enclosures: an animal house fits only wholly inside one enclosure")
     (void)enclose(map, g, { 0, 0 }, { 3, 3 }, "Wood", any);
     (void)enclose(map, g, { 5, 0 }, { 7, 3 }, "Chain", any);
     CHECK(enclosure_under(map, { 1, 1 }, { 3, 3 }) == 0);
-    CHECK(enclosure_under(map, { 2, 2 }, { 3, 3 }) == -1); // Over the edge
+    CHECK_FALSE(enclosure_under(map, { 2, 2 }, { 3, 3 })); // Over the edge
     CHECK(enclosure_under(map, { 5, 1 }, { 3, 2 }) == 1);
-    CHECK(enclosure_under(map, { 3, 0 }, { 3, 1 }) == -1); // Across the gap into the other
-    CHECK(enclosure_under(map, { 0, 5 }, { 1, 1 }) == -1);
+    CHECK_FALSE(enclosure_under(map, { 3, 0 }, { 3, 1 })); // Across the gap into the other
+    CHECK_FALSE(enclosure_under(map, { 0, 5 }, { 1, 1 }));
 }
 
 TEST_CASE("enclosures: pieces round more than one side lean with both sides of their corner")

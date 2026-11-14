@@ -33,11 +33,11 @@ namespace rct3::park
         /// The fence along `side` of (`col`, `row`) in `map`, if one stands there.
         std::optional<std::string_view> fenced(const save::model::EnclosureMap& map, std::int32_t col, std::int32_t row, Side side)
         {
-            const std::int32_t own = map.at(col, row);
+            const std::optional<std::int32_t> own = map.at(col, row);
             const save::model::Tile other = across(col, row, side);
-            if (own < 0 || static_cast<std::size_t>(own) >= map.fences.size() || map.at(other.col, other.row) == own)
+            if (!own || static_cast<std::size_t>(*own) >= map.fences.size() || map.at(other.col, other.row) == own)
                 return std::nullopt;
-            return map.fences[static_cast<std::size_t>(own)];
+            return map.fences[static_cast<std::size_t>(*own)];
         }
 
         /// Makes each connected area of tiles with the same fence one enclosure. Each area keeps the place of
@@ -50,15 +50,15 @@ namespace rct3::park
                 std::int32_t size = 0;
                 std::vector<std::int32_t> was { }; ///< Tiles by the place they were in
             };
-            std::vector<std::int32_t> area_of(map.tiles.size(), -1);
+            std::vector<std::optional<std::int32_t>> area_of(map.tiles.size());
             std::vector<Area> areas;
             std::vector<std::int32_t> open;
             for (std::size_t first = 0; first < map.tiles.size(); ++first)
             {
-                if (map.tiles[first] < 0 || area_of[first] >= 0)
+                if (!map.tiles[first] || area_of[first])
                     continue;
                 const auto index = static_cast<std::int32_t>(areas.size());
-                Area& area = areas.emplace_back(Area { .fence = map.fences[static_cast<std::size_t>(map.tiles[first])], .was = std::vector<std::int32_t>(map.fences.size()) });
+                Area& area = areas.emplace_back(Area { .fence = map.fences[static_cast<std::size_t>(*map.tiles[first])], .was = std::vector<std::int32_t>(map.fences.size()) });
                 area_of[first] = index;
                 open.assign(1, static_cast<std::int32_t>(first));
                 while (!open.empty())
@@ -66,13 +66,13 @@ namespace rct3::park
                     const std::int32_t k = open.back();
                     open.pop_back();
                     ++area.size;
-                    ++area.was[static_cast<std::size_t>(map.tiles[static_cast<std::size_t>(k)])];
+                    ++area.was[static_cast<std::size_t>(*map.tiles[static_cast<std::size_t>(k)])];
                     for (const Side side : ground::kSidesFromRowBefore)
                     {
                         const save::model::Tile t = across(k % map.cols, k / map.cols, side);
-                        const std::int32_t other = map.at(t.col, t.row);
+                        const std::optional<std::int32_t> other = map.at(t.col, t.row);
                         const std::int32_t j = t.row * map.cols + t.col;
-                        if (other >= 0 && area_of[static_cast<std::size_t>(j)] < 0 && map.fences[static_cast<std::size_t>(other)] == area.fence)
+                        if (other && !area_of[static_cast<std::size_t>(j)] && map.fences[static_cast<std::size_t>(*other)] == area.fence)
                         {
                             area_of[static_cast<std::size_t>(j)] = index;
                             open.push_back(j);
@@ -85,7 +85,7 @@ namespace rct3::park
                 order[i] = i;
             std::ranges::stable_sort(order, std::greater { }, [&](std::size_t i) { return areas[i].size; });
             std::vector<bool> claimed(map.fences.size() + areas.size());
-            std::vector<std::int32_t> place(areas.size(), -1);
+            std::vector<std::optional<std::int32_t>> place(areas.size());
             for (const std::size_t i : order)
             {
                 std::int32_t most = 0;
@@ -95,26 +95,26 @@ namespace rct3::park
                         most = areas[i].was[r];
                         place[i] = static_cast<std::int32_t>(r);
                     }
-                if (place[i] >= 0)
-                    claimed[static_cast<std::size_t>(place[i])] = true;
+                if (place[i])
+                    claimed[static_cast<std::size_t>(*place[i])] = true;
             }
             for (const std::size_t i : order)
             {
-                if (place[i] >= 0)
+                if (place[i])
                     continue;
                 place[i] = static_cast<std::int32_t>(std::ranges::find(claimed, false) - claimed.begin());
-                claimed[static_cast<std::size_t>(place[i])] = true;
+                claimed[static_cast<std::size_t>(*place[i])] = true;
             }
             std::vector<std::string> fences(map.fences.size());
             for (std::size_t i = 0; i < areas.size(); ++i)
             {
-                const auto p = static_cast<std::size_t>(place[i]);
+                const auto p = static_cast<std::size_t>(*place[i]);
                 fences.resize(std::max(fences.size(), p + 1));
                 fences[p] = areas[i].fence;
             }
             for (std::size_t k = 0; k < map.tiles.size(); ++k)
-                if (area_of[k] >= 0)
-                    map.tiles[k] = place[static_cast<std::size_t>(area_of[k])];
+                if (area_of[k])
+                    map.tiles[k] = place[static_cast<std::size_t>(*area_of[k])];
             map.fences = std::move(fences);
         }
 
@@ -137,10 +137,10 @@ namespace rct3::park
         {
             for (std::int32_t col = 0; col < map.cols; ++col)
             {
-                const std::int32_t own = map.at(col, row);
-                if (own < 0)
+                const std::optional<std::int32_t> own = map.at(col, row);
+                if (!own)
                     continue;
-                const std::string& fence = map.fences[static_cast<std::size_t>(own)];
+                const std::string& fence = map.fences[static_cast<std::size_t>(*own)];
                 const auto add = [&](std::string_view piece, std::int32_t turns) {
                     save::model::PlacedObject& o = out.pieces.emplace_back();
                     o.id = ++last_id;
@@ -207,10 +207,10 @@ namespace rct3::park
         return edge_lean(grid, { piece.col, piece.row }, side_of(piece.rotation)) + edge_lean(grid, { piece.col, piece.row }, side_of(piece.rotation + 1));
     }
 
-    std::int32_t enclose(save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, save::model::Tile a, save::model::Tile b, const std::string& fence, std::function_ref<bool(save::model::Tile)> takeable)
+    std::optional<std::int32_t> enclose(save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, save::model::Tile a, save::model::Tile b, const std::string& fence, std::function_ref<bool(save::model::Tile)> takeable)
     {
         if (map.tiles.empty())
-            map = { .cols = grid.width, .rows = grid.height, .tiles = std::vector<std::int32_t>(static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height), -1), .fences = map.fences };
+            map = { .cols = grid.width, .rows = grid.height, .tiles = std::vector<core::NoneAsMinusOne<std::int32_t>>(static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height)), .fences = map.fences };
         // The new tiles go in a free place first, so an area that joins nothing keeps it.
         const auto unused = std::ranges::find(map.fences, std::string());
         const auto region = static_cast<std::int32_t>(unused - map.fences.begin());
@@ -222,13 +222,13 @@ namespace rct3::park
         const auto [c0, r0, c1, r1] = clamped(map, a, b);
         for (std::int32_t row = r0; row <= r1; ++row)
             for (std::int32_t col = c0; col <= c1; ++col)
-                if (std::int32_t& t = map.tiles[static_cast<std::size_t>(row * map.cols + col)]; t < 0 && takeable({ col, row }))
+                if (core::NoneAsMinusOne<std::int32_t>& t = map.tiles[static_cast<std::size_t>(row * map.cols + col)]; !t && takeable({ col, row }))
                 {
-                    t = region;
+                    t.emplace(region);
                     first = first.value_or(static_cast<std::size_t>(row * map.cols + col));
                 }
         regroup(map);
-        return first ? map.tiles[*first] : -1;
+        return first ? map.tiles[*first] : std::nullopt;
     }
 
     void unenclose(save::model::EnclosureMap& map, save::model::Tile a, save::model::Tile b, std::function_ref<bool(save::model::Tile)> removable)
@@ -236,8 +236,8 @@ namespace rct3::park
         const auto [c0, r0, c1, r1] = clamped(map, a, b);
         for (std::int32_t row = r0; row <= r1; ++row)
             for (std::int32_t col = c0; col <= c1; ++col)
-                if (std::int32_t& t = map.tiles[static_cast<std::size_t>(row * map.cols + col)]; t >= 0 && removable({ col, row }))
-                    t = -1;
+                if (core::NoneAsMinusOne<std::int32_t>& t = map.tiles[static_cast<std::size_t>(row * map.cols + col)]; t && removable({ col, row }))
+                    t.reset();
         regroup(map);
     }
 
@@ -264,18 +264,18 @@ namespace rct3::park
         return cost;
     }
 
-    std::int32_t enclosure_size(const save::model::EnclosureMap& map, std::int32_t region) noexcept
+    std::int32_t enclosure_size(const save::model::EnclosureMap& map, std::optional<std::int32_t> region) noexcept
     {
         return static_cast<std::int32_t>(std::ranges::count(map.tiles, region));
     }
 
-    std::int32_t enclosure_under(const save::model::EnclosureMap& map, save::model::Tile corner, std::array<std::int32_t, 2> span) noexcept
+    std::optional<std::int32_t> enclosure_under(const save::model::EnclosureMap& map, save::model::Tile corner, std::array<std::int32_t, 2> span) noexcept
     {
-        const std::int32_t first = map.at(corner.col, corner.row);
+        const std::optional<std::int32_t> first = map.at(corner.col, corner.row);
         for (std::int32_t row = corner.row; row < corner.row + span[1]; ++row)
             for (std::int32_t col = corner.col; col < corner.col + span[0]; ++col)
                 if (map.at(col, row) != first)
-                    return -1;
+                    return std::nullopt;
         return first;
     }
 

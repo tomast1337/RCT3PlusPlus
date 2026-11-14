@@ -1017,9 +1017,9 @@ TEST_CASE("load_world: enclosures, each tile naming its own and each its fence")
     CHECK(e.cols == 3);
     CHECK(e.rows == 2);
     CHECK(e.fences == std::vector<std::string> { "Wood", "", "Electric" });
-    CHECK(e.tiles == std::vector<std::int32_t> { 0, 0, -1, 2, -1, 2 });
+    CHECK(std::ranges::equal(e.tiles, std::vector<std::optional<std::int32_t>> { 0, 0, std::nullopt, 2, std::nullopt, 2 }));
     CHECK(e.at(2, 1) == 2);
-    CHECK(e.at(3, 0) == -1);
+    CHECK_FALSE(e.at(3, 0));
 }
 
 TEST_CASE("load_world: an enclosure grid that does not fit its size is left empty")

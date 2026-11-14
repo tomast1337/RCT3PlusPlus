@@ -289,7 +289,7 @@ namespace rct3::scene::park
                 continue;
             const auto* door = r.valid(errand.target) ? r.try_get<simulation::PoolDoor>(errand.target) : nullptr;
             const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
-            const bool high = pool != nullptr && swimmer.board >= 0 && static_cast<std::size_t>(swimmer.board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(swimmer.board)].high;
+            const bool high = pool != nullptr && swimmer.board && static_cast<std::size_t>(*swimmer.board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(*swimmer.board)].high;
             play_any(engine, sounds.dives[high ? 1 : 0], sounds.random, audio::heard(pose.position, kGestureLevel));
         }
         sounds.under = std::move(under);

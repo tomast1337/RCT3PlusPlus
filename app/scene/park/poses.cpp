@@ -401,7 +401,7 @@ namespace rct3::scene::park
                     const auto* errand = r.try_get<simulation::Errand>(shown.guest);
                     const auto* door = errand != nullptr && r.valid(errand->target) ? r.try_get<simulation::PoolDoor>(errand->target) : nullptr;
                     const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
-                    const bool high = pool != nullptr && swimmer->board >= 0 && static_cast<std::size_t>(swimmer->board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(swimmer->board)].high;
+                    const bool high = pool != nullptr && swimmer->board && static_cast<std::size_t>(*swimmer->board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(*swimmer->board)].high;
                     const float into = swimmer->diving.value + scene.sim_time;
                     using enum simulation::DiveStep;
                     switch (swimmer->dive)

@@ -1162,7 +1162,7 @@ namespace rct3::scene::park
                     const auto* errand = r.try_get<simulation::Errand>(shown.guest);
                     const auto* door = errand != nullptr && r.valid(errand->target) ? r.try_get<simulation::PoolDoor>(errand->target) : nullptr;
                     const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
-                    const bool high = pool != nullptr && swimmer->board >= 0 && static_cast<std::size_t>(swimmer->board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(swimmer->board)].high;
+                    const bool high = pool != nullptr && swimmer->board && static_cast<std::size_t>(*swimmer->board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(*swimmer->board)].high;
                     constexpr std::string_view kSpray = "splash2"; ///< Chosen by eye: a low spray of drops
                     constexpr float kSmallSpray = 0.35f;           ///< Chosen by eye: its size off a small board
                     constexpr float kHighSpray = 0.6f;             ///< Chosen by eye: and off a high one

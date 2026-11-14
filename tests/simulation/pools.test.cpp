@@ -619,7 +619,7 @@ TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into t
     import_pools(park.world(), pools);
     park.run_seconds(0.1f);
     const Swimmer& down = r.get<Swimmer>(climber);
-    CHECK((down.dive != DiveStep::Climb || r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).boards[static_cast<std::size_t>(down.board)].high));
+    CHECK((down.dive != DiveStep::Climb || r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).boards[static_cast<std::size_t>(*down.board)].high));
 }
 
 TEST_CASE("swimmers spend a good part of their time out on the paving round the water, mostly walking it")

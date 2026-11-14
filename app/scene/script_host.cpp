@@ -1155,7 +1155,7 @@ namespace rct3::scene
                         person["diving"] = kDiveSteps[std::to_underlying(swimmer->dive)];
                         const auto* door = errand != nullptr && r.valid(errand->target) ? r.try_get<simulation::PoolDoor>(errand->target) : nullptr;
                         const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
-                        person["high_board"] = pool != nullptr && swimmer->board >= 0 && static_cast<std::size_t>(swimmer->board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(swimmer->board)].high;
+                        person["high_board"] = pool != nullptr && swimmer->board && static_cast<std::size_t>(*swimmer->board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(*swimmer->board)].high;
                     }
                     // Stopped at a path item: on a bench, at a view, firing a water cannon.
                     if (const auto* linger = r.try_get<simulation::Linger>(p.guest))

@@ -47,7 +47,7 @@ namespace rct3::ui
 
     /// What a design locked behind base game scenario `scenario` (by place) says: the scenario to complete there
     /// and the level, 0 apprentice to 2 tycoon, to reach.
-    [[nodiscard]] std::u16string locked_design_help(const StringTable& strings, std::int32_t scenario, std::int32_t level);
+    [[nodiscard]] std::u16string locked_design_help(const StringTable& strings, std::optional<std::int32_t> scenario, std::int32_t level);
 
     /// The folder of game `pack`'s career parks, relative to the game.
     [[nodiscard]] std::string career_park_folder(const StringTable& strings, int pack);

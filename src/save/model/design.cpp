@@ -128,7 +128,9 @@ namespace rct3::save::model
         s.length = integer(h, "Rows");
         if (const auto cost = h.field("Cost"); cost && cost->kind() == ValueKind::Integer)
             s.cost = cost->as_integer();
-        s.scenario = integer(h, "NeedScenarioComplete", -1);
+        // The file keeps -1 for none.
+        if (const std::int32_t scenario = integer(h, "NeedScenarioComplete", -1); scenario >= 0)
+            s.scenario = scenario;
         s.level = integer(h, "CompletionLevel");
         s.train = integer(h, "TrainSelection");
         if (const auto a = h.field("RideAssessmentResults"); a && a->kind() == ValueKind::Struct)

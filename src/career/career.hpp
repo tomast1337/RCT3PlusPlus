@@ -18,6 +18,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -99,9 +100,9 @@ namespace rct3::career
 
     [[nodiscard]] bool is_open(ScenarioStatus status);
 
-    /// Whether a saved design that asks for scenario `scenario` (by place in the list; -1 for none) to be
+    /// Whether a saved design that asks for scenario `scenario` (by place in the list), if any, to be
     /// completed at `level` (0 apprentice, 1 entrepreneur, 2 tycoon) is still locked, by the best any of
     /// `careers` has done there. With no career it is locked.
-    [[nodiscard]] bool design_locked(std::int32_t scenario, std::int32_t level, std::span<const Career> careers);
+    [[nodiscard]] bool design_locked(std::optional<std::int32_t> scenario, std::int32_t level, std::span<const Career> careers);
 
 } // namespace rct3::career

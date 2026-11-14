@@ -17,14 +17,14 @@ namespace rct3::career
         return status != ScenarioStatus::Locked;
     }
 
-    bool design_locked(std::int32_t scenario, std::int32_t level, std::span<const Career> careers)
+    bool design_locked(std::optional<std::int32_t> scenario, std::int32_t level, std::span<const Career> careers)
     {
-        if (scenario < 0)
+        if (!scenario)
             return false;
         int best = -1;
         for (const Career& c : careers)
-            if (static_cast<std::size_t>(scenario) < c.scenarios.size())
-                best = std::max(best, static_cast<int>(c.scenarios[static_cast<std::size_t>(scenario)].status));
+            if (static_cast<std::size_t>(*scenario) < c.scenarios.size())
+                best = std::max(best, static_cast<int>(c.scenarios[static_cast<std::size_t>(*scenario)].status));
         return best < static_cast<int>(ScenarioStatus::Apprentice) + level;
     }
 

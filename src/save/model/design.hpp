@@ -26,15 +26,15 @@ namespace rct3::save::model
 
     struct DesignSummary
     {
-        std::string ride_symbol;            ///< Of the ride kind, as a park's rides name it ("Giga:trr")
-        std::int32_t width = 0;             ///< Tiles the design covers across
-        std::int32_t length = 0;            ///< ... and along
-        std::int64_t cost = 0;              ///< Hundredths
-        Assessment assessment;              ///< Not valid when the design was never rated
-        std::optional<TestResults> results; ///< None when it was never tested
-        std::int32_t scenario = -1;         ///< The career scenario to complete first, by place in the list; -1 none
-        std::int32_t level = 0;             ///< ... at this level or better: 0 apprentice, 1 entrepreneur, 2 tycoon
-        std::int32_t train = 0;             ///< The train it suggests, by place in its kind's list of trains
+        std::string ride_symbol;                  ///< Of the ride kind, as a park's rides name it ("Giga:trr")
+        std::int32_t width = 0;                   ///< Tiles the design covers across
+        std::int32_t length = 0;                  ///< ... and along
+        std::int64_t cost = 0;                    ///< Hundredths
+        Assessment assessment;                    ///< Not valid when the design was never rated
+        std::optional<TestResults> results;       ///< None when it was never tested
+        std::optional<std::int32_t> scenario { }; ///< The career scenario to complete first, by place in the list
+        std::int32_t level = 0;                   ///< ... at this level or better: 0 apprentice, 1 entrepreneur, 2 tycoon
+        std::int32_t train = 0;                   ///< The train it suggests, by place in its kind's list of trains
         std::uint32_t picture_width = 0;
         std::uint32_t picture_height = 0;
         std::vector<std::uint8_t> picture; ///< RGBA, top row first, grey levels; empty when absent

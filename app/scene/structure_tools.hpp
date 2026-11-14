@@ -20,6 +20,7 @@
 #include "scene/save_browser.hpp"
 #include "ui/key_map.hpp"
 #include "ui/screens/dialogs/files.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -62,7 +63,7 @@ namespace rct3::scene
         std::int32_t lift_height = 0;
         std::vector<save::model::PlacedObject> placed; ///< The ghost's items
         rct3::park::StructureProblem problem = rct3::park::StructureProblem::None;
-        std::int64_t cost = 0; ///< Of all the items
+        units::Money cost; ///< Of all the items
         bool affordable = true;
         rct3::park::object::ObjectMesh ghost_mesh;
         std::map<std::string, TrackModels, std::less<>> models;

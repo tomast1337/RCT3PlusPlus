@@ -56,13 +56,13 @@ namespace rct3::scene
 
         /// What `symbol` costs, as the build lists price it; nothing until they are read or for one they lack.
         /// shortcut: found by its symbol alone; match the overlay too once items of two overlays share a symbol.
-        std::int64_t price_of(const park::ParkScene& scene, std::string_view symbol)
+        units::Money price_of(const park::ParkScene& scene, std::string_view symbol)
         {
             if (!scene.build.items.valid() || scene.build.items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
-                return 0;
+                return { };
             const auto& items = scene.build.items.get();
             const auto item = std::ranges::find(items, symbol, &rct3::park::BuildItem::symbol);
-            return item == items.end() ? 0 : item->price;
+            return item == items.end() ? units::Money { } : item->price;
         }
 
         std::optional<std::vector<std::byte>> read_bytes(const std::filesystem::path& path)
@@ -265,10 +265,10 @@ namespace rct3::scene
         const bool moved = placed.size() != t.placed.size() || !std::ranges::equal(placed, t.placed, [](const save::model::PlacedObject& a, const save::model::PlacedObject& b) { return a.col == b.col && a.row == b.row && a.base_height == b.base_height && a.rotation == b.rotation; });
         t.placed = std::move(placed);
         const rct3::park::StructureProblem problem = rct3::park::structure_problem(*t.structure, *t.at, t.turn, t.placed, scene.models, t.solids, scene.footpaths.paths, scene.grid);
-        t.cost = 0;
+        t.cost = { };
         for (const save::model::PlacedObject& o : t.placed)
             t.cost += price_of(scene, o.symbol);
-        const bool affordable = !scene.park.cash || *scene.park.cash >= units::Money { t.cost };
+        const bool affordable = !scene.park.cash || *scene.park.cash >= t.cost;
         if (!moved && problem == t.problem && affordable == t.affordable && !t.ghost_mesh.vertices.empty())
             return;
         t.problem = problem;
@@ -287,7 +287,7 @@ namespace rct3::scene
             return true; // Its drags mark; a click picks nothing
         if (t.tool != StructureTools::Tool::Place || !t.structure)
             return false;
-        if (t.placed.empty() || t.problem != rct3::park::StructureProblem::None || !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { t.cost }, simulation::park::LedgerLine::Landscaping, false))
+        if (t.placed.empty() || t.problem != rct3::park::StructureProblem::None || !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, t.cost, simulation::park::LedgerLine::Landscaping, false))
             return true;
         wait_for_build(scene);
         ++scene.built;

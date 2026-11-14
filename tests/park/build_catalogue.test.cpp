@@ -159,7 +159,7 @@ TEST_CASE("a species gives an animal item for each animal, under the species")
     CHECK(a.name_text == "BigWombat");
     CHECK(a.icon == "WombatIcon"); // the animal has none of its own
     CHECK(a.group_text == "WombatName");
-    CHECK(a.price == 900);
+    CHECK(a.price.value == 900);
     CHECK(a.rarity == doctest::Approx(0.5f));
     CHECK(a.strength == doctest::Approx(2.0f));
     CHECK(a.needs == "burrow");
@@ -203,7 +203,7 @@ TEST_CASE("a park offers scenery by its kind: what research invents once invente
         i.overlay = "Style/Plain/Style";
         i.symbol = std::move(symbol);
         i.type = category;
-        i.price = price;
+        i.price = rct3::units::Money { price };
         i.names_category = names_category;
         return i;
     };

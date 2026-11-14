@@ -130,7 +130,7 @@ TEST_CASE("a smooth cut slopes the tiles round it down to meet it, leaving the f
         if (cut.tile == save::model::Tile { 1, 0 }) // North-west: only the corner it shares
             CHECK(cut.corners == std::array { 2.0f, 2.0f, 2.0f, 0.0f });
     }
-    CHECK(ground::cuts_cost(smooth, g) == std::lround(4 * 2 * ground::kShapeCost + 4 * 2 * 2 * ground::kShapeCost + 4 * 2 * ground::kShapeCost));
+    CHECK(ground::cuts_cost(smooth, g).value == std::lround(4 * 2 * ground::kShapeCost + 4 * 2 * 2 * ground::kShapeCost + 4 * 2 * ground::kShapeCost));
 }
 
 TEST_CASE("a piece, ride or stall under enough ground all round hollows its tile up to its top, scenery never does")

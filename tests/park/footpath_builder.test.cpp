@@ -9,6 +9,7 @@
 
 using namespace rct3;
 using namespace rct3::park;
+using rct3::units::Money;
 
 namespace
 {
@@ -246,7 +247,7 @@ TEST_CASE("deep under a hill a piece is a tunnel, laid without cutting")
     CHECK_FALSE(under.cut);
     CHECK_FALSE(under.ground);
     CHECK(lay_problem(b, g, { }) == LayProblem::None);
-    CHECK(piece_price(under, g, 1200) == 1200 + kTunnelPieceCost);
+    CHECK(piece_price(under, g, Money { 1200 }) == Money { 1200 } + kTunnelPieceCost);
     CHECK(lay_path(b, paths, under, "Gravel", 11, 12));
     REQUIRE(paths.back().elevation);
     CHECK(paths.back().elevation->underground);
@@ -262,11 +263,11 @@ TEST_CASE("deep under a hill a piece is a tunnel, laid without cutting")
 
 TEST_CASE("a raised piece costs more for each started unit of height")
 {
-    CHECK(piece_cost(1200, false, 5.0f) == 1200);
-    CHECK(piece_cost(1200, true, 0.0f) == 1200);
-    CHECK(piece_cost(1200, true, 0.25f) == 1200 + kRaisedPieceCost);
-    CHECK(piece_cost(1200, true, 1.0f) == 1200 + kRaisedPieceCost);
-    CHECK(piece_cost(1200, true, 2.5f) == 1200 + 3 * kRaisedPieceCost);
+    CHECK(piece_cost(Money { 1200 }, false, 5.0f) == Money { 1200 });
+    CHECK(piece_cost(Money { 1200 }, true, 0.0f) == Money { 1200 });
+    CHECK(piece_cost(Money { 1200 }, true, 0.25f) == Money { 1200 } + kRaisedPieceCost);
+    CHECK(piece_cost(Money { 1200 }, true, 1.0f) == Money { 1200 } + kRaisedPieceCost);
+    CHECK(piece_cost(Money { 1200 }, true, 2.5f) == Money { 1200 + 3 * kRaisedPieceCost.value });
 }
 
 TEST_CASE("taking a piece away pays back what laying it cost")
@@ -276,19 +277,19 @@ TEST_CASE("taking a piece away pays back what laying it cost")
     start_at(b, { 1, 0 });
     std::vector<save::model::PathTile> paths;
     std::uint64_t id = 1;
-    std::vector<std::int64_t> paid;
+    std::vector<Money> paid;
     for (const PathSlope slope : { PathSlope::Flat, PathSlope::Up, PathSlope::SteepUp, PathSlope::Flat, PathSlope::Down })
     {
         b.slope = slope;
         const NextPiece piece = *next_piece(b, g);
-        paid.push_back(piece_price(piece, g, 1200));
+        paid.push_back(piece_price(piece, g, Money { 1200 }));
         REQUIRE(lay_path(b, paths, piece, "Gravel", id, piece.ground ? 0 : id + 1));
         id += 2;
     }
     REQUIRE(paths.size() == paid.size());
-    CHECK(paid.back() > 1200); // Raised by then
+    CHECK(paid.back() > Money { 1200 }); // Raised by then
     for (std::size_t i = 0; i < paths.size(); ++i)
-        CHECK(laid_price(paths[i], g, 1200) == paid[i]);
+        CHECK(laid_price(paths[i], g, Money { 1200 }) == paid[i]);
 }
 
 TEST_CASE("another path within headroom takes the tile; one far enough above or below does not")

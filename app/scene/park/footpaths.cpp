@@ -84,13 +84,13 @@ namespace rct3::scene::park
         }
 
         /// The price of a piece of `style` on the ground.
-        std::int64_t next_cost(const rct3::park::path::PathStyle& style)
+        units::Money next_cost(const rct3::park::path::PathStyle& style)
         {
             return rct3::park::piece_cost(style.piece_cost, false, 0);
         }
 
         /// The price of `piece` in `style`, dearer the higher it is raised.
-        std::int64_t piece_price(const rct3::park::path::PathStyle& style, const rct3::park::NextPiece& piece, const save::model::TerrainGrid& grid)
+        units::Money piece_price(const rct3::park::path::PathStyle& style, const rct3::park::NextPiece& piece, const save::model::TerrainGrid& grid)
         {
             return rct3::park::piece_price(piece, grid, style.piece_cost);
         }
@@ -108,7 +108,7 @@ namespace rct3::scene::park
             for (const rct3::park::path::PathStyle& s : f.styles)
             {
                 if (offered(offer, s))
-                    (s.queue ? out.second : out.first).push_back({ s.icon, name_of(assets, s), ui::money_text(money, units::Money { next_cost(s) }) });
+                    (s.queue ? out.second : out.first).push_back({ s.icon, name_of(assets, s), ui::money_text(money, next_cost(s)) });
             }
             return out;
         }
@@ -184,9 +184,9 @@ namespace rct3::scene::park
             return plan.lay.empty() ? std::nullopt : std::optional(std::move(plan));
         }
 
-        std::int64_t stroke_cost(const ParkFootpaths& f, const rct3::park::path::DragPlan& plan)
+        units::Money stroke_cost(const ParkFootpaths& f, const rct3::park::path::DragPlan& plan)
         {
-            return static_cast<std::int64_t>(plan.lay.size()) * next_cost(f.styles[*f.style]);
+            return units::Money { static_cast<std::int64_t>(plan.lay.size()) * next_cost(f.styles[*f.style]).value };
         }
 
         /// The route to the tile pointed at, with routing on, and whether it only goes through what is in the
@@ -196,7 +196,7 @@ namespace rct3::scene::park
             const ParkFootpaths& f = scene.footpaths;
             if (!f.routing || !f.route_goal || !f.builder.start || !f.style || *f.style >= f.styles.size())
                 return { };
-            const auto cost = static_cast<std::int32_t>(next_cost(f.styles[*f.style]));
+            const units::Money cost = next_cost(f.styles[*f.style]);
             // shortcut: routes are one tile wide whatever the brush size; widen them once raised runs beside each
             // other can be checked lane by lane.
             if (auto route = rct3::park::path::find_route(f.builder, *f.route_goal, scene.grid, f.paths, cost, f.route_goal_height, f.solids, f.straight))
@@ -206,10 +206,10 @@ namespace rct3::scene::park
             return { std::move(through), blocked };
         }
 
-        std::int64_t route_cost(const ParkScene& scene, const std::vector<rct3::park::path::RouteStep>& route)
+        units::Money route_cost(const ParkScene& scene, const std::vector<rct3::park::path::RouteStep>& route)
         {
             const ParkFootpaths& f = scene.footpaths;
-            return rct3::park::path::route_price(route, f.builder, scene.grid, f.paths, static_cast<std::int32_t>(next_cost(f.styles[*f.style])));
+            return rct3::park::path::route_price(route, f.builder, scene.grid, f.paths, next_cost(f.styles[*f.style]));
         }
 
         std::uint64_t unused_id(const ParkScene& scene)
@@ -279,13 +279,13 @@ namespace rct3::scene::park
             return found != f.styles.end() ? &*found : nullptr;
         }
 
-        /// Pays back what laying `path` cost, floating it up from there with `also` (hundredths, above 0 for money
-        /// in) paid elsewhere for what stood on it, so the two show as one sum.
-        void refund(ParkScene& scene, const save::model::PathTile& path, std::int64_t also = 0)
+        /// Pays back what laying `path` cost, floating it up from there with `also` (above 0 for money in) paid
+        /// elsewhere for what stood on it, so the two show as one sum.
+        void refund(ParkScene& scene, const save::model::PathTile& path, units::Money also = { })
         {
             const rct3::park::path::PathStyle* style = style_named(scene.footpaths, path);
-            const std::int64_t back = style != nullptr ? rct3::park::laid_price(path, scene.grid, style->piece_cost) : 0;
-            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { -back }, simulation::park::LedgerLine::Landscaping, false);
+            const units::Money back = style != nullptr ? rct3::park::laid_price(path, scene.grid, style->piece_cost) : units::Money { };
+            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::Landscaping, false);
             glm::vec3 at = tile_point(scene.grid, { path.col, path.row });
             if (path.elevation && !rct3::park::ground::is_ground_queue(path))
                 at.y = static_cast<float>(path.elevation->quantised_height);
@@ -325,7 +325,7 @@ namespace rct3::scene::park
         {
             ParkFootpaths& f = scene.footpaths;
             const rct3::park::path::PathStyle& style = f.styles[*f.style];
-            const bool affordable = !scene.park.cash || *scene.park.cash >= units::Money { route_cost(scene, *f.route) };
+            const bool affordable = !scene.park.cash || *scene.park.cash >= route_cost(scene, *f.route);
             const glm::vec4 tint = affordable && !f.route_blocked ? kGhostTint : kRefusedTint;
             std::vector<save::model::PathTile> with = f.paths;
             rct3::park::FootpathBuilder trial = f.builder;
@@ -427,7 +427,7 @@ namespace rct3::scene::park
             }
             if (const auto& plan = f.plan)
             {
-                const bool affordable = !scene.park.cash || *scene.park.cash >= units::Money { stroke_cost(f, *plan) };
+                const bool affordable = !scene.park.cash || *scene.park.cash >= stroke_cost(f, *plan);
                 std::vector<save::model::PathTile> with = f.paths;
                 for (const save::model::Tile spot : plan->lay)
                     with.push_back(rct3::park::ground_path(spot, f.styles[*f.style].name, 0));
@@ -576,8 +576,8 @@ namespace rct3::scene::park
                     rct3::park::start_at(f.builder, brush.front());
                 return;
             }
-            const std::int64_t cost = stroke_cost(f, *plan);
-            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, simulation::park::LedgerLine::Landscaping, false))
+            const units::Money cost = stroke_cost(f, *plan);
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
             {
                 f.notice = std::u16string(assets.strings->get(kNoMoney));
                 return;
@@ -650,9 +650,9 @@ namespace rct3::scene::park
             const rct3::park::path::PathStyle& style = f.styles[*f.style];
             const rct3::park::NextPiece piece = *rct3::park::next_piece(f.builder, scene.grid);
             const bool there = rct3::park::same_piece_at(f.paths, piece, f.builder).has_value();
-            const std::int64_t cost = piece_price(style, piece, scene.grid);
+            const units::Money cost = piece_price(style, piece, scene.grid);
             // Paid before the ground is cut; walking over the same piece costs nothing.
-            if (!there && !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, simulation::park::LedgerLine::Landscaping, false))
+            if (!there && !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
             {
                 f.notice = std::u16string(assets.strings->get(kNoMoney));
                 return;
@@ -727,7 +727,7 @@ namespace rct3::scene::park
         }
 
         /// Takes away what draws and holds up `removed`, just taken out of the paths; `also` as refund takes it.
-        void take_away(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const save::model::PathTile& removed, std::int64_t also = 0)
+        void take_away(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const save::model::PathTile& removed, units::Money also = { })
         {
             ParkFootpaths& f = scene.footpaths;
             refund(scene, removed, also);
@@ -764,7 +764,7 @@ namespace rct3::scene::park
         }
 
         /// Takes paths `ids` away, the trail backing up over its own (rct3::park::remove_paths).
-        void take_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids, std::int64_t also = 0)
+        void take_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids, units::Money also = { })
         {
             ParkFootpaths& f = scene.footpaths;
             // Indices into the paths may point at what is gone, and the last stroke or route may be part of it.
@@ -774,7 +774,7 @@ namespace rct3::scene::park
             f.route_laid = 0;
             // shortcut: builds the ground again for each path taken; once per drag if long drags are slow.
             for (const save::model::PathTile& gone : rct3::park::remove_paths(f.builder, f.paths, ids))
-                take_away(device, scene, assets, gone, std::exchange(also, 0));
+                take_away(device, scene, assets, gone, std::exchange(also, units::Money { }));
         }
 
         std::u16string problem_text(const ui::InterfaceAssets& assets, rct3::park::LayProblem problem)
@@ -811,7 +811,7 @@ namespace rct3::scene::park
                 f.notice = std::u16string(assets.strings->get(kBlocked));
                 return;
             }
-            if (scene.park.cash && *scene.park.cash < units::Money { route_cost(scene, *route) })
+            if (scene.park.cash && *scene.park.cash < route_cost(scene, *route))
             {
                 simulation::park::cannot_pay(scene.park);
                 f.notice = std::u16string(assets.strings->get(kNoMoney));
@@ -1058,18 +1058,18 @@ namespace rct3::scene::park
             std::tie(f.route, f.route_blocked) = route_for(scene);
         }
         if (const auto& plan = f.plan)
-            status = name_of(assets, f.styles[*f.style]) + u"  " + ui::money_text(currency_of(assets, options), units::Money { stroke_cost(f, *plan) });
+            status = name_of(assets, f.styles[*f.style]) + u"  " + ui::money_text(currency_of(assets, options), stroke_cost(f, *plan));
         else if (f.route && f.route_blocked)
             status = std::u16string(assets.strings->get(kBlocked));
         else if (f.route)
-            status = name_of(assets, f.styles[*f.style]) + u"  " + ui::money_text(currency_of(assets, options), units::Money { route_cost(scene, *f.route) });
+            status = name_of(assets, f.styles[*f.style]) + u"  " + ui::money_text(currency_of(assets, options), route_cost(scene, *f.route));
         else if (f.route_goal && f.routing && f.notice.empty())
             status = std::u16string(assets.strings->get(kNoRoute));
         else if (status.empty() && f.style && *f.style < f.styles.size())
         {
             const auto piece = rct3::park::next_piece(f.builder, scene.grid);
-            const std::int64_t cost = piece ? piece_price(f.styles[*f.style], *piece, scene.grid) : next_cost(f.styles[*f.style]);
-            status = name_of(assets, f.styles[*f.style]) + u"  " + ui::money_text(currency_of(assets, options), units::Money { cost });
+            const units::Money cost = piece ? piece_price(f.styles[*f.style], *piece, scene.grid) : next_cost(f.styles[*f.style]);
+            status = name_of(assets, f.styles[*f.style]) + u"  " + ui::money_text(currency_of(assets, options), cost);
         }
         panel->set_status(std::move(status));
 
@@ -1439,7 +1439,7 @@ namespace rct3::scene::park
         return under ? std::optional(scene.footpaths.paths[under->path].id) : std::nullopt;
     }
 
-    void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids, std::int64_t also)
+    void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids, units::Money also)
     {
         if (ids.empty())
             return;

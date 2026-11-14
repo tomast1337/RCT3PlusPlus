@@ -26,7 +26,7 @@ namespace
         i.overlay = "Style/Made/Style";
         i.name_text = std::move(name);
         i.icon = std::format("{}Icon", i.symbol);
-        i.price = price;
+        i.price = rct3::units::Money { price };
         i.width = 1;
         i.length = 2;
         return i;

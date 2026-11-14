@@ -294,8 +294,8 @@ TEST_CASE("pools: a high diving board climbs from its paved stack in levels, a b
     using Piece = std::pair<std::string_view, std::int32_t>;
     CHECK(above == std::vector<Piece> { { "DBBase", 4 }, { "DBMidBoard", 6 }, { "DBMid", 7 }, { "DBMidBoard", 9 }, { "DBMid", 10 }, { "DBTopBoard", 12 } });
     // Its climb is paid by the unit, in whole levels.
-    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::HighDive, .depth = 2, .board = 10 }) == 70 + 2 * 10 + 9 * 40);
-    CHECK(pool_refund(kPrices, { .kind = PoolKind::HighDive, .depth = 2, .board = 10 }) == -60 - 2 * 5 - 9 * 30);
+    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::HighDive, .depth = 2, .board = 10 }).value == 70 + 2 * 10 + 9 * 40);
+    CHECK(pool_refund(kPrices, { .kind = PoolKind::HighDive, .depth = 2, .board = 10 }).value == -60 - 2 * 5 - 9 * 30);
 }
 
 TEST_CASE("pools: a high diving board's boards are named by the first of the three squares they cover")
@@ -376,8 +376,8 @@ TEST_CASE("pools: a spiral staircase winds up from its paved stack, railed at it
     CHECK(turns == std::vector<std::int32_t> { 0, 3, 2, 1, 0 });
     CHECK(top_rails == std::vector<std::int32_t> { 0, 1, 3 });
     // Its climb is paid by the unit.
-    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Stairs, .depth = 2, .board = 5 }) == 70 + 2 * 10 + 5 * 25);
-    CHECK(pool_refund(kPrices, { .kind = PoolKind::Stairs, .depth = 2, .board = 5 }) == -60 - 2 * 5 - 5 * 15);
+    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Stairs, .depth = 2, .board = 5 }).value == 70 + 2 * 10 + 5 * 25);
+    CHECK(pool_refund(kPrices, { .kind = PoolKind::Stairs, .depth = 2, .board = 5 }).value == -60 - 2 * 5 - 5 * 15);
 }
 
 TEST_CASE("pools: a pool path's piece follows the paths joining it, slopes by their foot and top")
@@ -413,8 +413,8 @@ TEST_CASE("pools: a pool path's piece follows the paths joining it, slopes by th
     cross.squares.pop_back();
     CHECK(piece(cross, 1, 1) == Piece { "PathTJunction", 3 });
     // A path costs its flat price.
-    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Path, .depth = 0 }) == 11);
-    CHECK(pool_refund(kPrices, { .kind = PoolKind::PathStairs, .depth = 0 }) == -9);
+    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Path, .depth = 0 }).value == 11);
+    CHECK(pool_refund(kPrices, { .kind = PoolKind::PathStairs, .depth = 0 }).value == -9);
 }
 
 TEST_CASE("pools: a pool path joins a slide's station, the paving, the water and a spiral staircase's top beside it")
@@ -555,25 +555,25 @@ TEST_CASE("pools: a pool ride's station counts once as joined where any square o
 
 TEST_CASE("pools: each square costs its kind's price and its depth's")
 {
-    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Water, .depth = 2 }) == 100 + 2 * 300);
-    CHECK(pool_refund(kPrices, { .kind = PoolKind::Water, .depth = 2 }) == 50 - 2 * 200);
-    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Tile, .depth = 3 }) == 70 + 3 * 10);
-    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Jacuzzi, .depth = 2 }) == 70 + 2 * 10 + 900);
-    CHECK(pool_refund(kPrices, { .kind = PoolKind::Jacuzzi, .depth = 2 }) == -60 - 2 * 5 - 800);
+    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Water, .depth = 2 }).value == 100 + 2 * 300);
+    CHECK(pool_refund(kPrices, { .kind = PoolKind::Water, .depth = 2 }).value == 50 - 2 * 200);
+    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Tile, .depth = 3 }).value == 70 + 3 * 10);
+    CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Jacuzzi, .depth = 2 }).value == 70 + 2 * 10 + 900);
+    CHECK(pool_refund(kPrices, { .kind = PoolKind::Jacuzzi, .depth = 2 }).value == -60 - 2 * 5 - 800);
 }
 
 TEST_CASE("pools: laying over a square costs the new one and refunds the old")
 {
     PoolMap map;
     const PoolSquare water { .col = 0, .row = 0, .kind = PoolKind::Water, .depth = 2 };
-    CHECK(lay_pool(map, kPrices, std::array { water }) == 700);
-    CHECK(lay_pool(map, kPrices, std::array { water }) == 0);
+    CHECK(lay_pool(map, kPrices, std::array { water }).value == 700);
+    CHECK(lay_pool(map, kPrices, std::array { water }).value == 0);
     PoolSquare tile = water;
     tile.kind = PoolKind::Tile;
-    CHECK(lay_pool(map, kPrices, std::array { tile }) == 90 + (50 - 400));
+    CHECK(lay_pool(map, kPrices, std::array { tile }).value == 90 + (50 - 400));
     REQUIRE(map.squares.size() == 1);
     CHECK(map.squares[0].kind == PoolKind::Tile);
-    CHECK(take_up_pool(map, kPrices, { 0, 0 }, { 3, 3 }) == -70);
+    CHECK(take_up_pool(map, kPrices, { 0, 0 }, { 3, 3 }).value == -70);
     CHECK(map.squares.empty());
 }
 
@@ -704,10 +704,10 @@ TEST_CASE("pools: extras go with their square, refunded")
     PoolMap map = ringed(1, 1);
     map.extras.push_back({ .col = 0, .row = 0, .refund = units::Money { -30 }, .fit = { .paved_middle = true } });
     map.extras.push_back({ .col = 2, .row = 2, .refund = units::Money { -40 }, .fit = { .paved_middle = true } });
-    CHECK(take_up_pool(map, kPrices, { 0, 0 }, { 0, 0 }) == -60 - 2 * 5 - 30);
+    CHECK(take_up_pool(map, kPrices, { 0, 0 }, { 0, 0 }).value == -60 - 2 * 5 - 30);
     REQUIRE(map.extras.size() == 1);
     PoolSquare water { .col = 2, .row = 2, .kind = PoolKind::Water, .surface = 4, .depth = 2 };
-    CHECK(lay_pool(map, kPrices, std::array { water }) == 700 + (-60 - 2 * 5) - 40);
+    CHECK(lay_pool(map, kPrices, std::array { water }).value == 700 + (-60 - 2 * 5) - 40);
     CHECK(map.extras.empty());
     map.extras.push_back({ .symbol = "Lamp", .overlay = "Pools/Own", .col = 1, .row = 1, .side = Side { 3 } });
     const auto objects = pool_objects(map, "Pools/Own", 0);

@@ -400,21 +400,21 @@ namespace rct3::park
         return slope == PathSlope::Down || slope == PathSlope::SteepDown ? -rise : rise;
     }
 
-    std::int64_t piece_cost(std::int32_t ground_cost, bool raised, float height) noexcept
+    units::Money piece_cost(units::Money ground_cost, bool raised, float height) noexcept
     {
         if (!raised || height <= 0)
             return ground_cost;
-        return ground_cost + kRaisedPieceCost * static_cast<std::int64_t>(std::ceil(height));
+        return ground_cost + units::Money { kRaisedPieceCost.value * static_cast<std::int64_t>(std::ceil(height)) };
     }
 
-    std::int64_t piece_price(const NextPiece& piece, const save::model::TerrainGrid& grid, std::int32_t ground_cost)
+    units::Money piece_price(const NextPiece& piece, const save::model::TerrainGrid& grid, units::Money ground_cost)
     {
         if (piece.tunnel)
             return ground_cost + kTunnelPieceCost;
         return piece_cost(ground_cost, !piece.ground, height_above_ground(piece, grid));
     }
 
-    std::int64_t laid_price(const save::model::PathTile& path, const save::model::TerrainGrid& grid, std::int32_t ground_cost)
+    units::Money laid_price(const save::model::PathTile& path, const save::model::TerrainGrid& grid, units::Money ground_cost)
     {
         if (!path.elevation || ground::is_ground_queue(path))
             return ground_cost;

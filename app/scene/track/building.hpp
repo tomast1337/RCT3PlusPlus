@@ -215,8 +215,8 @@ namespace rct3::scene::track
     /// The track overlay of the ride's built pieces, if it has any.
     [[nodiscard]] std::optional<std::string> ride_track_overlay(const park::ParkScene& scene, std::size_t ride);
 
-    /// What ride `ride`'s track pieces cost to lay, hundredths; 0 when its pieces cannot be read.
-    [[nodiscard]] std::int64_t track_cost(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
+    /// What ride `ride`'s track pieces cost to lay; nothing when its pieces cannot be read.
+    [[nodiscard]] units::Money track_cost(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
 
     /// The station pieces of the ride's track, which its entrance and exit stand beside.
     [[nodiscard]] std::vector<save::model::TrackPiece> station_pieces(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);

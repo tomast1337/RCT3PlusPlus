@@ -37,6 +37,7 @@
 #include "scene/objects.hpp"
 #include "ui/key_map.hpp"
 #include "ui/widget.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <map>
@@ -89,8 +90,8 @@ namespace rct3::scene
         bool affordable = true;
         rct3::park::ride::Flatten flatten = rct3::park::ride::Flatten::Off; ///< How a ride's ground is levelled, as the panel's tabs set it
         rct3::park::ground::GroundCuts levelling;                           ///< The ground levelled under the ride pointed at, when it may be
-        std::int64_t levelling_cost = 0;                                    ///< In hundredths
-        std::size_t ride = 0;                                               ///< Of the scene's rides, once placed
+        units::Money levelling_cost;
+        std::size_t ride = 0; ///< Of the scene's rides, once placed
         rct3::park::object::ObjectMesh ghost_mesh;
         std::array<std::int32_t, 3> colours { };     ///< Of the scenery: its own when picked, then those the player paints
         std::string panel_item;                      ///< The scenery the placing panel is set up for

@@ -12,6 +12,7 @@
 
 #include "ovl/overlay.hpp"
 #include "ovl/piece_set.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -24,10 +25,10 @@ namespace rct3::park::path
 
     struct PathStyle
     {
-        std::string name;            ///< The style's own name, which the park's paths name it by
-        std::string name_text;       ///< Key of its name in the strings
-        std::string icon;            ///< Skin that stands for it in the interface
-        std::int32_t piece_cost = 0; ///< Of one piece laid on the ground, in hundredths of the currency unit
+        std::string name;        ///< The style's own name, which the park's paths name it by
+        std::string name_text;   ///< Key of its name in the strings
+        std::string icon;        ///< Skin that stands for it in the interface
+        units::Money piece_cost; ///< Of one piece laid on the ground
         bool queue = false;
         std::vector<std::string> pieces; ///< Symbols of the pieces raised paths are drawn with, in the order named
         /// The describing overlay, as a park names the overlay of a placed piece: relative to the install,

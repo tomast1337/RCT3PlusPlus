@@ -344,15 +344,15 @@ namespace rct3::ui::screens::build
                 case park::BuildKind::PoolSquare:
                 case park::BuildKind::PoolExtra:
                 case park::BuildKind::PoolRoom:
-                    row.rank = item.price; // Taking up first, then tiles, then water from the shallowest
+                    row.rank = item.price.value; // Taking up first, then tiles, then water from the shallowest
                     break;
                 case park::BuildKind::Animal:
                     row.size = std::u16string(strings.get(kRarity)) + u' ' + std::u16string(strings.get(rarity_text(item.rarity)));
                     break;
             }
-            if (item.price > 0)
-                row.price = money_text(currency, units::Money { item.price });
-            row.cost = units::Money { item.price };
+            if (item.price > units::Money { })
+                row.price = money_text(currency, item.price);
+            row.cost = item.price;
             row.style = item.style;
             row.addon = item.addon;
             row.kind = object_filter(item);

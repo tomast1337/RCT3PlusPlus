@@ -22,7 +22,7 @@ TEST_CASE("a path type and a queue type become styles with their first item's pr
     CHECK(p.name == "Gravel");
     CHECK(p.name_text == "Gravel_Name");
     CHECK(p.icon == "Gravel_Icon");
-    CHECK(p.piece_cost == 900);
+    CHECK(p.piece_cost.value == 900);
     CHECK_FALSE(p.queue);
     CHECK(p.pieces == std::vector<std::string> { "Gravel_Flat", "Gravel_Straight_A" });
 
@@ -31,7 +31,7 @@ TEST_CASE("a path type and a queue type become styles with their first item's pr
     queue.piece_names[0] = "Straight";
     const PathStyle q = queue_style(queue);
     CHECK(q.name == "Ropes");
-    CHECK(q.piece_cost == 0);
+    CHECK(q.piece_cost.value == 0);
     CHECK(q.queue);
     CHECK(q.pieces.front() == "Straight");
     CHECK(q.pieces.size() == 7);

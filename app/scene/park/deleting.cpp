@@ -65,10 +65,10 @@ namespace rct3::scene::park
         scene.deleting = DeleteTools { .drawn = scene.deleting.drawn }; // The marks go on the next frame
     }
 
-    std::optional<std::int64_t> delete_props(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::size_t> indices, bool floated)
+    std::optional<units::Money> delete_props(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::size_t> indices, bool floated)
     {
         std::vector<std::size_t> going;
-        std::int64_t cost = 0;
+        units::Money cost;
         bool entrance = false;
         for (const std::size_t i : indices)
         {
@@ -78,7 +78,7 @@ namespace rct3::scene::park
             else
             {
                 going.push_back(i);
-                cost += model != scene.models.end() ? model->second.removal_cost : 0;
+                cost += units::Money { model != scene.models.end() ? model->second.removal_cost : 0 };
             }
         }
         if (entrance)
@@ -86,12 +86,12 @@ namespace rct3::scene::park
         if (going.empty())
             return std::nullopt;
         // Deleting the park cannot pay for asks in a box, as the original does, rather than the park message.
-        if (cost > 0 && scene.park.cash && *scene.park.cash < units::Money { cost })
+        if (cost > units::Money { } && scene.park.cash && *scene.park.cash < cost)
         {
             scene.prizes.emplace_back(kNoMoney);
             return std::nullopt;
         }
-        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, simulation::park::LedgerLine::Landscaping, false))
+        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, false))
             return std::nullopt;
         const save::model::PlacedObject& first = scene.objects[going.front()];
         if (floated)
@@ -118,7 +118,7 @@ namespace rct3::scene::park
             if (model != scene.models.end() && model->second.category >= std::to_underlying(rct3::park::ItemCategory::LitterBin) && model->second.category <= std::to_underlying(rct3::park::ItemCategory::PathFeature))
                 extras.push_back(i);
         }
-        const std::int64_t paid = delete_props(device, scene, assets, extras, false).value_or(0);
+        const units::Money paid = delete_props(device, scene, assets, extras, false).value_or(units::Money { });
         remove_footpaths(device, scene, assets, ids, -paid);
     }
 
@@ -137,8 +137,8 @@ namespace rct3::scene::park
         const auto main = base->spot ? std::ranges::find(scene.objects, base->spot->object, &save::model::PlacedObject::id) : scene.objects.end();
         const auto model = main != scene.objects.end() ? scene.models.find(rct3::park::object::model_ref(*main)) : scene.models.end();
         const bool tracked = ride && scene.rides.rides[ref.index].kind == save::model::RideKind::Tracked;
-        const std::int64_t value = tracked ? track::track_cost(scene, ref.index, assets) : (model != scene.models.end() ? model->second.price : 0);
-        const std::int64_t back = rct3::park::demolish_refund(value, (base->flags & save::model::AttractionCommon::kNeverOpened) == 0);
+        const units::Money value = tracked ? track::track_cost(scene, ref.index, assets) : units::Money { model != scene.models.end() ? model->second.price : 0 };
+        const units::Money back = rct3::park::demolish_refund(value, (base->flags & save::model::AttractionCommon::kNeverOpened) == 0);
         std::set<std::uint64_t> parts;
         // Its fence, which the park built round it, goes with it.
         if (const auto fence = scene.ride_fence_pieces.find(base->id); ride && fence != scene.ride_fence_pieces.end())
@@ -180,7 +180,7 @@ namespace rct3::scene::park
             scene.ride_entities[ref.index] = entt::null;
         base->state = save::model::AttractionState::Closed;
         base->demolished = true;
-        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { -back }, simulation::park::LedgerLine::RideConstruction, false);
+        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, false);
         if (at)
             float_money(scene, *at, back);
         if (scene.shown == ref)
@@ -189,7 +189,7 @@ namespace rct3::scene::park
             if (auto info = scene.desktop->root().find_as<ui::screens::info::InfoPanel>(kInfoName))
                 info->hide();
         }
-        logging::logger("park").info("demolished {}, {} back", base->name, back);
+        logging::logger("park").info("demolished {}, {} back", base->name, back.value);
         scene.led_signs.stale = true;
         scene.levels = { };
         scene.since_rebuild = kObjectRebuildInterval;

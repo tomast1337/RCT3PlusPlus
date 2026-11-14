@@ -21,9 +21,9 @@ namespace rct3::park::path
         constexpr std::size_t kPieces = 19;
         constexpr std::string_view kCommonEnding = ".common.ovl";
 
-        std::int32_t first_cost(const std::vector<ovl::SceneryItem>& items)
+        units::Money first_cost(const std::vector<ovl::SceneryItem>& items)
         {
-            return items.empty() ? 0 : items.front().cost;
+            return units::Money { items.empty() ? 0 : items.front().cost };
         }
 
         std::string first_group(const std::vector<ovl::SceneryItem>& items)

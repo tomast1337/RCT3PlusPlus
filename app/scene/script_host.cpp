@@ -679,7 +679,7 @@ namespace rct3::scene
             if (park.riding_person)
                 out = { { "ride", -1 }, { "car", *park.riding_person }, { "kind", park.person_behind ? "behind" : "guest" } };
             else if (park.riding_flat)
-                out = { { "ride", park.riding_flat->first }, { "car", park.riding_flat->second }, { "kind", park.riding_fixed ? "fixed" : "seat" } };
+                out = { { "ride", park.riding_flat->first }, { "car", park.riding_flat->second }, { "kind", park.flat_eye == park::FlatEye::Fixed ? "fixed" : "seat" } };
             else if (park.riding && *park.riding < park.car_spots.size())
             {
                 constexpr std::array<std::string_view, 3> kEyes { "nose", "front", "rear" };

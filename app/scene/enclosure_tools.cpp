@@ -170,12 +170,12 @@ namespace rct3::scene
         scene.enclosing = park::EnclosureTool { .drawn = scene.enclosing.drawn }; // The marks go on the next frame
     }
 
-    void update_enclosing(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over)
+    void update_enclosing(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, ToolInput input)
     {
         park::EnclosureTool& t = scene.enclosing;
         const bool animal = t.item && t.item->kind == rct3::park::BuildKind::Animal;
-        const auto tile = t.item && !over ? ground_tile(scene, at, size) : std::nullopt;
-        if (t.item && down && (t.corner || tile))
+        const auto tile = t.item && !input.over_interface ? ground_tile(scene, at, size) : std::nullopt;
+        if (t.item && input.down && (t.corner || tile))
         {
             if (!t.corner)
             {

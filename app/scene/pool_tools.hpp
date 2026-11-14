@@ -21,6 +21,7 @@
 #include "park/pools/pools.hpp"
 #include "park/terrain_mesh.hpp"
 #include "render/device.hpp"
+#include "scene/tool_input.hpp"
 #include "ui/interface_assets.hpp"
 #include "ui/key_map.hpp"
 #include "ui/money_text.hpp"
@@ -53,8 +54,8 @@ namespace rct3::scene
     /// twice swaps it back.
     void swap_pool_work(park::ParkScene& scene);
 
-    /// Marks the squares under a drag at `at`, in a view of `size`, while `down`; lays them when it ends.
-    void update_pooling(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool down, bool over, bool shift, std::span<const ui::PlayCommand> commands);
+    /// Marks the squares under a drag at `at`, in a view of `size`, while `input.down`; lays them when it ends.
+    void update_pooling(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands);
 
     /// Takes up the pool complex the changing room `room` (of the pools' rooms) opens on, its squares, extras
     /// and rooms, refunded as the delete tool refunds them.

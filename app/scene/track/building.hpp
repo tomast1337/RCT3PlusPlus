@@ -38,6 +38,7 @@
 #include "save/model/world.hpp"
 #include "scene/build_menus.hpp"
 #include "scene/objects.hpp"
+#include "scene/tool_input.hpp"
 #include "simulation/coaster.hpp"
 #include "ui/key_map.hpp"
 #include "ui/screens/info/attraction.hpp"
@@ -221,10 +222,10 @@ namespace rct3::scene::track
     /// The station pieces of the ride's track, which its entrance and exit stand beside.
     [[nodiscard]] std::vector<save::model::TrackPiece> station_pieces(park::ParkScene& scene, std::size_t ride, const ui::InterfaceAssets& assets);
 
-    /// Handles the panel's events, and for a track with no pieces the pointer at `at` on a view of `size` (`over`
-    /// the interface or not), the turn commands and `shift`, held to raise or sink the first piece. Call once per
+    /// Handles the panel's events, and for a track with no pieces the pointer at `at` on a view of `size` (over
+    /// the interface or not), the turn commands and Shift, held to raise or sink the first piece. Call once per
     /// update after the interface, `elapsed` after the last.
-    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands, units::Seconds elapsed);
+    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands, units::Seconds elapsed);
 
     /// The arrows where the picked piece starts and ends (see park/build_arrows.hpp); empty while no piece is.
     [[nodiscard]] rct3::park::TerrainMesh track_arrows(const park::ParkScene& scene);

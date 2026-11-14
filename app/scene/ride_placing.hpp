@@ -35,6 +35,7 @@
 #include "park/ride/placement.hpp"
 #include "render/device.hpp"
 #include "scene/objects.hpp"
+#include "scene/tool_input.hpp"
 #include "ui/key_map.hpp"
 #include "ui/widget.hpp"
 #include "units/units.hpp"
@@ -148,10 +149,10 @@ namespace rct3::scene
 
     [[nodiscard]] bool ride_placing(const park::ParkScene& scene);
 
-    /// Each frame: follows the pointer at `at` (of a view `size`, not `over` the interface), the game's
+    /// Each frame: follows the pointer at `at` (of a view `size`, not over the interface), the game's
     /// `commands` and the placing panel, and has the simulation take on the rides placed here as their entrances
-    /// join the paths. `shift`: whether Shift is held, which raises and lowers scenery.
-    void update_ride_placing(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over, bool shift, std::span<const ui::PlayCommand> commands);
+    /// join the paths. Shift held raises and lowers scenery.
+    void update_ride_placing(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands);
 
     /// A click on the park while placing: places what the ghost shows. False when not placing.
     bool ride_placing_click(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets);

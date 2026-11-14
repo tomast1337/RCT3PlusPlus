@@ -119,6 +119,13 @@ namespace rct3::scene::park
         Middle,
     };
 
+    /// What the view looks out from on a flat ride.
+    enum class FlatEye : std::uint8_t
+    {
+        Seat,  ///< A rider's seat
+        Fixed, ///< One of the ride's own fixed cameras
+    };
+
     /// The pointer and the keys that act for as long as they are held, in framebuffer pixels.
     struct ParkInput
     {
@@ -535,7 +542,7 @@ namespace rct3::scene::park
         /// The flat ride (of the park's rides) and the rider seat or fixed camera on it the view looks out from;
         /// never with `riding`.
         std::optional<std::pair<std::size_t, std::size_t>> riding_flat;
-        bool riding_fixed = false; ///< On a flat ride, from one of its own fixed cameras rather than a seat
+        FlatEye flat_eye = FlatEye::Seat; ///< On a flat ride, from a seat or one of its own fixed cameras
         /// Of `shown_people`, the person the view goes with, from their eyes or from behind them; never with
         /// `riding` or `riding_flat`.
         std::optional<std::size_t> riding_person;

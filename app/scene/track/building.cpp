@@ -661,7 +661,7 @@ namespace rct3::scene::track
                 b.ghost = std::move(*placed);
             }
             const std::size_t laid = ride.track->pieces.size();
-            build(scene, b, assets, !design.empty());
+            build(scene, b, assets, design.empty() ? simulation::park::Charge::IfAffordable : simulation::park::Charge::Always);
             if (ride.track->pieces.size() == laid)
                 break;
             if (!design.empty())

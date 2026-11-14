@@ -215,12 +215,27 @@ namespace rct3::simulation
         float eyes = 0;
     };
 
-    /// How a rider reacting as `now` reacts `dt` seconds on, as the train they ride feels (`running` it is off
-    /// round the track, `lifted` up a lift chain): waiting at the station and up the lift; bracing against
-    /// strong forces; covering their eyes going down a ride `over` (intensity past what they like) too wild for
-    /// them; throwing up their hands when `happiness` thrills them or floating over a hill, more readily in
-    /// the `front` car, and keeping them up till the forces grow too strong. Drawn with `dice`.
-    [[nodiscard]] RideReaction react(RideReaction now, const Felt& feel, bool running, bool lifted, units::Share happiness, float over, const Leanings& leanings, bool front, random::RandomState& dice, float dt);
+    /// How the train a rider is on moves, as far as their reaction goes.
+    enum class TrainRun : std::uint8_t
+    {
+        Standing, ///< Still, at the station or held
+        Lifting,  ///< Going up a lift chain
+        Free,     ///< Off round the track
+    };
+
+    /// Where a rider sits on their train.
+    enum class CarPlace : std::uint8_t
+    {
+        Front,
+        Behind,
+    };
+
+    /// How a rider reacting as `now` reacts `dt` seconds on, as the train they ride feels and moves (`run`):
+    /// waiting unless it runs free; bracing against strong forces; covering their eyes going down a ride `over`
+    /// (intensity past what they like) too wild for them; throwing up their hands when `happiness` thrills them
+    /// or floating over a hill, more readily in the front car, and keeping them up till the forces grow too
+    /// strong. Drawn with `dice`.
+    [[nodiscard]] RideReaction react(RideReaction now, const Felt& feel, TrainRun run, units::Share happiness, float over, const Leanings& leanings, CarPlace car, random::RandomState& dice, float dt);
 
     /// How a flat ride's rider reacting as `now` reacts `dt` seconds on, the ride `running` its cycle or not:
     /// waiting while it stands; covering their eyes on a ride `over` (intensity past what they like) too wild

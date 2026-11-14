@@ -537,8 +537,8 @@ namespace rct3::simulation
                             Eyes = 23
                         };
                         const Felt feel = felt(train);
-                        const bool lifted = on_chain(train);
                         const bool moving = train.running && std::abs(train.speed) >= kTuning.reactions.still;
+                        const TrainRun run = !moving ? TrainRun::Standing : on_chain(train) ? TrainRun::Lifting : TrainRun::Free;
                         const std::size_t per_car = std::max<std::size_t>(ride.capacity / static_cast<std::size_t>(std::max(train.cars, 1)), 1);
                         for (std::size_t seat = 0; seat < riders.size(); ++seat)
                         {
@@ -550,7 +550,7 @@ namespace rct3::simulation
                             const float over = ride.intensity.value - (taste != nullptr ? taste->most.value : 1.0f);
                             const Leanings leanings { .hands = fixed_share(guest, Hands), .brace = fixed_share(guest, Brace), .eyes = fixed_share(guest, Eyes) };
                             auto& thrill = r.get_or_emplace<Thrill>(guest);
-                            thrill.reaction = react(thrill.reaction, feel, moving, lifted, mood->happiness, over, leanings, seat < per_car, r.get<Dice>(guest).state, dt);
+                            thrill.reaction = react(thrill.reaction, feel, run, mood->happiness, over, leanings, seat < per_car ? CarPlace::Front : CarPlace::Behind, r.get<Dice>(guest).state, dt);
                         }
                     }
                     if (round && train.splashed)
@@ -893,17 +893,17 @@ namespace rct3::simulation
             be_sick(r, guest, out);
     }
 
-    RideReaction react(RideReaction now, const Felt& feel, bool running, bool lifted, units::Share happiness, float over, const Leanings& leanings, bool front, random::RandomState& dice, float dt)
+    RideReaction react(RideReaction now, const Felt& feel, TrainRun run, units::Share happiness, float over, const Leanings& leanings, CarPlace car, random::RandomState& dice, float dt)
     {
         const auto& k = kTuning.reactions;
-        if (!running || lifted)
+        if (run != TrainRun::Free)
             return RideReaction::Waiting;
         if (leanings.brace >= k.stoic.value && (feel.vertical > k.strain || std::abs(feel.lateral) > k.strain_across))
             return RideReaction::Strained;
         if (over > k.too_wild.value && leanings.eyes < k.hide_eyes.value && feel.slope < k.diving)
             return RideReaction::CoverEyes;
         bool hands = now == RideReaction::HandsUp && feel.vertical < k.hands_down && std::abs(feel.lateral) < k.hands_down;
-        if (!hands && leanings.hands >= (front ? k.timid_front : k.timid).value)
+        if (!hands && leanings.hands >= (car == CarPlace::Front ? k.timid_front : k.timid).value)
         {
             if (happiness.value > k.thrilled.value)
                 hands = random::chance(dice, k.hands_up.value * dt);

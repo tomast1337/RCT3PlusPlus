@@ -194,7 +194,7 @@ namespace rct3::simulation
             return;
         }
         research.since_part = std::max(research.since_part - static_cast<float>(static_cast<double>(amount.value) * kMonth / static_cast<double>(research.budget.value)), 0.0f);
-        park::book(park, finance, kept, amount, park::LedgerLine::Research, false);
+        park::book(park, finance, kept, amount, park::LedgerLine::Research, park::Charge::IfAffordable);
         research.spent += amount + std::exchange(research.boost, { });
         while (item != items.end() && research.spent >= research_cost(*item, research.focus == item->id))
         {

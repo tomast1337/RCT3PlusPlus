@@ -1233,7 +1233,7 @@ namespace rct3::scene::park
                     {
                         const auto slot = static_cast<std::size_t>(kind);
                         if (slot < scene.park_model.awards.prize_money.size())
-                            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { -scene.park_model.awards.prize_money[slot] }, simulation::park::LedgerLine::PrizeMoney, true);
+                            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { -scene.park_model.awards.prize_money[slot] }, simulation::park::LedgerLine::PrizeMoney, simulation::park::Charge::Always);
                         simulation::park::post(scene.park.messages, { .text_key = std::string(simulation::award_message(kind)), .award = kind });
                     }
                 }
@@ -1646,7 +1646,7 @@ namespace rct3::scene::park
                 // Staff are paid from the park's cash, and the player hears of rides breaking down and being fixed.
                 if (const auto* payroll = scene.sim.registry.ctx().find<simulation::Payroll>())
                 {
-                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { payroll->paid.value - scene.wages_seen }, simulation::park::LedgerLine::StaffWages, true);
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { payroll->paid.value - scene.wages_seen }, simulation::park::LedgerLine::StaffWages, simulation::park::Charge::Always);
                     scene.wages_seen = payroll->paid.value;
                 }
                 // So are pools' cleaning fluids and stalls' stock, and what guests pay for rides, shops and entry
@@ -1656,7 +1656,7 @@ namespace rct3::scene::park
                 const auto* receipts = scene.sim.registry.ctx().find<simulation::Receipts>();
                 for (std::size_t line = 0; line < simulation::park::kLedgerLines; ++line)
                     if (const std::int64_t cost = (supplies ? supplies->paid[line].value - scene.supplies_seen.paid[line].value : 0) - (receipts ? receipts->paid[line].value - scene.receipts_seen.paid[line].value : 0); cost != 0)
-                        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, static_cast<simulation::park::LedgerLine>(line), true);
+                        simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, static_cast<simulation::park::LedgerLine>(line), simulation::park::Charge::Always);
                 if (supplies)
                     scene.supplies_seen = *supplies;
                 if (receipts)
@@ -1666,8 +1666,8 @@ namespace rct3::scene::park
                     auto& charges = scene.sim.registry.ctx().emplace<simulation::Charges>();
                     charges.loan = scene.park.loan;
                     charges.rate = scene.park_model.finance.interest_rate_percent;
-                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.interest, { }), simulation::park::LedgerLine::LoanInterest, true);
-                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.running, { }), simulation::park::LedgerLine::RideRunningCosts, true);
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.interest, { }), simulation::park::LedgerLine::LoanInterest, simulation::park::Charge::Always);
+                    simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, std::exchange(charges.running, { }), simulation::park::LedgerLine::RideRunningCosts, simulation::park::Charge::Always);
                 }
                 // The staff's mood into the saved staff, for their windows to show.
                 for (const ShownPerson& p : scene.shown_people)
@@ -2283,12 +2283,12 @@ namespace rct3::scene::park
         if (asks.buy_land || asks.buy_rights)
             buy_land_tool(scene, asks.buy_rights ? rct3::park::LandBuy::Rights : rct3::park::LandBuy::Land, assets);
         if (asks.borrow)
-            simulation::park::change_loan(scene.park, { scene.park_model.finance.max_loan }, *asks.borrow);
+            simulation::park::change_loan(scene.park, { scene.park_model.finance.max_loan }, *asks.borrow ? simulation::park::LoanMove::Borrow : simulation::park::LoanMove::Repay);
         // A step at a time, as the buttons do, until the loan reaches the bar's or can move no more.
         if (asks.loan)
         {
             const bool borrow = *asks.loan > scene.park.loan;
-            while (*asks.loan != scene.park.loan && (*asks.loan > scene.park.loan) == borrow && simulation::park::change_loan(scene.park, { scene.park_model.finance.max_loan }, borrow))
+            while (*asks.loan != scene.park.loan && (*asks.loan > scene.park.loan) == borrow && simulation::park::change_loan(scene.park, { scene.park_model.finance.max_loan }, borrow ? simulation::park::LoanMove::Borrow : simulation::park::LoanMove::Repay))
             {
             }
         }
@@ -2304,7 +2304,7 @@ namespace rct3::scene::park
             scene.research.priorities[p->first] = p->second;
         }
         // Every broken path item back new at once, at the full price of each: the dear way, a handyman's the free one.
-        if (asks.replace_broken && facts.broken_items > 0 && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, facts.replace_cost, simulation::park::LedgerLine::Landscaping, false))
+        if (asks.replace_broken && facts.broken_items > 0 && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, facts.replace_cost, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
             simulation::replace_broken(scene.sim);
         profiling::section("Footpaths", [&] { update_footpaths(device, scene, assets, options); });
         profiling::section("Supports", [&] { refresh_supports(scene, assets); });

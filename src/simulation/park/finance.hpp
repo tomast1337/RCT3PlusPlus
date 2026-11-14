@@ -37,23 +37,37 @@ namespace rct3::simulation::park
     /// kCannotPayGap ago.
     void cannot_pay(ParkState& park);
 
+    /// Whether a spend goes through when the park cannot afford it.
+    enum class Charge : std::uint8_t
+    {
+        IfAffordable, ///< Refused, and the player told
+        Always,       ///< Paid anyway, which may leave the cash below nought
+    };
+
     /// Takes `cost` (negative for money coming in) from `park`'s cash and books it on `line` of the
-    /// month's ledger in `finance` (see ledger_month). A park whose money never runs out books nothing. Unless
-    /// `forced`, a spend the park cannot afford is refused: the money and ledger stay as they were, the player is
-    /// told (see cannot_pay) and false comes back. A forced one may leave the cash below nought.
-    bool book(ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, units::Money cost, LedgerLine line, bool forced);
+    /// month's ledger in `finance` (see ledger_month). A park whose money never runs out books nothing. A spend
+    /// the park cannot afford is refused when `charge` is IfAffordable: the money and ledger stay as they were,
+    /// the player is told (see cannot_pay) and false comes back.
+    bool book(ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, units::Money cost, LedgerLine line, Charge charge);
 
     /// How much the loan moves at a time: 1,000.00. Chosen by eye: a few presses buy a ride.
     inline constexpr units::Money kLoanStep { 100'000 };
 
-    /// How much `park` can borrow (`borrow`) or repay in one step: kLoanStep, cut short to keep the loan between
+    /// Which way the loan moves.
+    enum class LoanMove : std::uint8_t
+    {
+        Borrow,
+        Repay,
+    };
+
+    /// How much `park` can borrow or repay (`move`) in one step: kLoanStep, cut short to keep the loan between
     /// nought and `max_loan`. A repayment needs the cash in hand. Nought when nothing can move, as in
     /// a park whose money never runs out.
-    [[nodiscard]] units::Money loan_step(const ParkState& park, units::Money max_loan, bool borrow);
+    [[nodiscard]] units::Money loan_step(const ParkState& park, units::Money max_loan, LoanMove move);
 
     /// Borrows or repays one loan_step: the cash and the loan move together, with no ledger line. Returns
     /// whether the loan changed.
-    bool change_loan(ParkState& park, units::Money max_loan, bool borrow);
+    bool change_loan(ParkState& park, units::Money max_loan, LoanMove move);
 
     /// What the park is worth: its guests, and each open ride by how exciting it was rated, a
     /// thrilling ride worth many gentle ones. Facilities, rides not yet rated, scenery, paths and land count for

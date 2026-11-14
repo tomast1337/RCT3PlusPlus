@@ -43,11 +43,11 @@ namespace rct3::simulation::park
             post(park.messages, { .text_key = std::string(kCannotPayKey) });
     }
 
-    bool book(ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, units::Money cost, LedgerLine line, bool forced)
+    bool book(ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, units::Money cost, LedgerLine line, Charge charge)
     {
         if (!park.cash)
             return true;
-        if (!forced && cost > units::Money { } && *park.cash < cost)
+        if (charge == Charge::IfAffordable && cost > units::Money { } && *park.cash < cost)
         {
             cannot_pay(park);
             return false;
@@ -124,23 +124,23 @@ namespace rct3::simulation::park
         return true;
     }
 
-    units::Money loan_step(const ParkState& park, units::Money max_loan, bool borrow)
+    units::Money loan_step(const ParkState& park, units::Money max_loan, LoanMove move)
     {
         if (!park.cash)
             return { };
-        if (borrow)
+        if (move == LoanMove::Borrow)
             return std::clamp(max_loan - park.loan, units::Money { }, kLoanStep);
         const units::Money step = std::clamp(park.loan, units::Money { }, kLoanStep);
         return *park.cash >= step ? step : units::Money { };
     }
 
-    bool change_loan(ParkState& park, units::Money max_loan, bool borrow)
+    bool change_loan(ParkState& park, units::Money max_loan, LoanMove move)
     {
-        const units::Money step = loan_step(park, max_loan, borrow);
+        const units::Money step = loan_step(park, max_loan, move);
         if (step == units::Money { })
             return false;
-        *park.cash += borrow ? step : -step;
-        park.loan += borrow ? step : -step;
+        *park.cash += move == LoanMove::Borrow ? step : -step;
+        park.loan += move == LoanMove::Borrow ? step : -step;
         return true;
     }
 

@@ -145,7 +145,7 @@ namespace rct3::scene
         {
             const glm::vec3 at = park::tile_point(scene.grid, tile);
             const std::string name = strings::to_utf8(assets.strings->get(item.name_text));
-            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, item.price, simulation::park::LedgerLine::RideConstruction, false))
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, item.price, simulation::park::LedgerLine::RideConstruction, simulation::park::Charge::IfAffordable))
                 return;
             // shortcut: every animal bought is a grown one; offer young ones once the animal list shows them.
             (void)simulation::add_animal(scene.sim, { .species = item.symbol, .overlay = item.overlay, .name = name, .male = random::below(scene.looks, 2) == 0, .enclosure = scene.enclosures.at(tile.col, tile.row) }, at);
@@ -198,7 +198,7 @@ namespace rct3::scene
         {
             // Let go: the tiles go in or out, the fence put up paid for and the fence taken down paid back.
             const park::EnclosureTool::Marked& m = marked_now(scene);
-            if (m.enclosures.tiles != scene.enclosures.tiles && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, m.cost, simulation::park::LedgerLine::RideConstruction, false))
+            if (m.enclosures.tiles != scene.enclosures.tiles && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, m.cost, simulation::park::LedgerLine::RideConstruction, simulation::park::Charge::IfAffordable))
             {
                 scene.enclosures = m.enclosures;
                 park::float_money(scene, park::tile_point(scene.grid, *t.other), -m.cost);

@@ -448,7 +448,7 @@ namespace rct3::simulation
         std::size_t roofed = 0;
         for (NodeId n = 0; n < paths.nodes().size() && n < over.size(); ++n)
         {
-            paths.cover(n, over[n].roof, over[n].shade);
+            paths.cover(n, over[n].roof ? Cover::Roof : over[n].shade ? Cover::Shade : Cover::Open);
             roofed += over[n].roof ? 1 : 0;
         }
         return roofed;

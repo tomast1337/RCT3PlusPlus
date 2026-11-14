@@ -236,7 +236,7 @@ namespace rct3::scene::track
             const units::Money cost { shape->record.cost };
             add_running_cost(scene, ride, -cost);
             const units::Money back = rct3::park::demolish_refund(cost, (ride.base.flags & save::model::AttractionCommon::kNeverOpened) == 0);
-            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, false);
+            simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, simulation::park::Charge::IfAffordable);
             park::float_money(scene, rct3::park::track::start_of(object, *shape, piece.reversed, scene.grid).position, back);
         }
 
@@ -649,7 +649,7 @@ namespace rct3::scene::track
         update_platforms(scene, *b.ride, assets);
     }
 
-    void build(park::ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, bool forced)
+    void build(park::ParkScene& scene, TrackBuilding& b, const ui::InterfaceAssets& assets, simulation::park::Charge charge)
     {
         const rct3::park::track::PieceCatalogue* c = catalogue(b);
         save::model::Ride& ride = scene.rides.rides.at(*b.ride);
@@ -701,7 +701,7 @@ namespace rct3::scene::track
         }
         const rct3::park::track::PieceShape& shape = c->pieces[b.picked->index];
         const units::Money cost { shape.record.cost };
-        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::RideConstruction, forced))
+        if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::RideConstruction, charge))
             return;
         add_running_cost(scene, ride, cost);
         ++scene.built;

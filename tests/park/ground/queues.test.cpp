@@ -73,25 +73,19 @@ TEST_CASE("a queue tile open on opposite sides is straight, turned to their axis
 
 TEST_CASE("a turn is turned so its open sides face the start and end")
 {
-    // Turned clockwise, the back side goes round Right, Front, Left: the cell's open sides follow.
-    const auto open_sides = [](QueueShape s) {
-        const int second = s.cell == QueueCell::TurnLeftSide ? 3 : 1;
-        return std::array<int, 2> { s.turns % 4, (second + s.turns) % 4 };
+    // Worked by hand: the picture's turns count from the row before towards the next column.
+    const auto shape = [](std::uint8_t start, std::uint8_t end) {
+        const QueueShape s = queue_shape(start, end);
+        return std::pair { s.cell, int { s.turns } };
     };
-    for (const std::uint8_t start : { kMinusX, kPlusX, kMinusZ, kPlusZ })
-    {
-        for (const std::uint8_t end : { kMinusX, kPlusX, kMinusZ, kPlusZ })
-        {
-            // Counted from the picture's top, towards the row before.
-            const int a = path::stored_heading(start)->turned(-Side::kRowBefore.value).value;
-            const int b = path::stored_heading(end)->turned(-Side::kRowBefore.value).value;
-            if (a == b || (a + 2) % 4 == b)
-                continue;
-            const QueueShape s = queue_shape(start, end);
-            REQUIRE(s.cell != QueueCell::Straight);
-            CHECK(open_sides(s) == std::array<int, 2> { a, b });
-        }
-    }
+    CHECK(shape(kMinusX, kMinusZ) == std::pair { QueueCell::TurnRightSide, 3 });
+    CHECK(shape(kMinusX, kPlusZ) == std::pair { QueueCell::TurnLeftSide, 3 });
+    CHECK(shape(kPlusX, kMinusZ) == std::pair { QueueCell::TurnLeftSide, 1 });
+    CHECK(shape(kPlusX, kPlusZ) == std::pair { QueueCell::TurnRightSide, 1 });
+    CHECK(shape(kMinusZ, kMinusX) == std::pair { QueueCell::TurnLeftSide, 0 });
+    CHECK(shape(kMinusZ, kPlusX) == std::pair { QueueCell::TurnRightSide, 0 });
+    CHECK(shape(kPlusZ, kMinusX) == std::pair { QueueCell::TurnRightSide, 2 });
+    CHECK(shape(kPlusZ, kPlusX) == std::pair { QueueCell::TurnLeftSide, 2 });
 }
 
 TEST_CASE("a queue tile without usable sides is closed")

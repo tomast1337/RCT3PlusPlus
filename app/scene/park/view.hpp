@@ -40,7 +40,7 @@ namespace rct3::scene::park
     {
         glm::vec3 at { 0.0f };
         std::int64_t amount = 0; ///< Hundredths; above 0 for money in
-        float age = 0;           ///< Seconds
+        units::Seconds age;
     };
 
     /// Makes the grid and contours the view menu shows, and drops those it hides.

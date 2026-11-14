@@ -8,6 +8,7 @@
 #pragma once
 
 #include "ui/widget.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <string>
@@ -16,26 +17,26 @@
 namespace rct3::ui::widgets
 {
 
-    /// Seconds a float shows.
-    inline constexpr float kMoneyFloatLife = 2.5f;
+    /// How long a float shows.
+    inline constexpr units::Seconds kMoneyFloatLife { 2.5f };
 
     struct MoneyFloat
     {
         Point at; ///< Where it rose from: the middle of the text's bottom edge when it began
         std::u16string text;
-        bool gain = false; ///< Money in; otherwise money out
-        float age = 0;     ///< Seconds since it began
+        bool gain = false;  ///< Money in; otherwise money out
+        units::Seconds age; ///< Since it began
     };
 
     /// How far a float has risen at `age`, in interface units.
-    [[nodiscard]] float money_float_rise(float age) noexcept;
+    [[nodiscard]] float money_float_rise(units::Seconds age) noexcept;
 
     /// How opaque a float is at `age`, from 1 down to 0 as it ends.
-    [[nodiscard]] float money_float_alpha(float age) noexcept;
+    [[nodiscard]] float money_float_alpha(units::Seconds age) noexcept;
 
     /// How far letter `letter` of a float stands above the rest of its line at `age`, for text
     /// `line_height` high: a wave running along the letters.
-    [[nodiscard]] float money_float_bob(std::size_t letter, float age, float line_height) noexcept;
+    [[nodiscard]] float money_float_bob(std::size_t letter, units::Seconds age, float line_height) noexcept;
 
     class MoneyFloaters : public Widget
     {

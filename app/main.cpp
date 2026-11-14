@@ -1112,7 +1112,7 @@ int main(int argc, char** argv)
                     ImGui::NewFrame();
                     if (phase == Phase::Intro)
                     {
-                        startup->sequence.update(elapsed.value, skip_requested());
+                        startup->sequence.update(elapsed, skip_requested());
                         if (startup->sequence.finished())
                         {
                             if (audio)

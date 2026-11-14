@@ -109,7 +109,7 @@ namespace rct3::scene
         {
             if (const auto movie = screen.movies.find(step.image); movie != screen.movies.end())
             {
-                step.seconds = std::max(static_cast<float>(movie->second.movie.seconds()) - ui::kStartupFadeSeconds, 0.0f);
+                step.shown = std::max(units::Seconds { static_cast<float>(movie->second.movie.seconds()) } - ui::kStartupFade, units::Seconds { });
                 steps.push_back(std::move(step));
             }
             else if (screen.logos.contains(step.image))
@@ -132,7 +132,7 @@ namespace rct3::scene
                 m.sound.reset();
                 continue;
             }
-            if (m.movie.advance(frame->time))
+            if (m.movie.advance(frame->time.value))
                 device.update_texture(m.picture.handle, std::as_bytes(m.movie.picture()));
             if (!audio)
                 continue;

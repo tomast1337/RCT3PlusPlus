@@ -74,7 +74,7 @@ namespace rct3::scene
             else if (cost != 0)
             {
                 sum->amount -= cost;
-                sum->age = 0;
+                sum->age = { };
             }
             return true;
         }

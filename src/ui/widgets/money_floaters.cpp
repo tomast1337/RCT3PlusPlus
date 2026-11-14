@@ -12,26 +12,26 @@ namespace rct3::ui::widgets
 
     namespace
     {
-        constexpr float kRiseSpeed = 24;    ///< Interface units a second
-        constexpr float kFade = 0.8f;       ///< The last seconds, over which it fades
-        constexpr float kBobHeight = 0.18f; ///< Of the line height
-        constexpr float kBobStep = 1.1f;    ///< Phase between one letter and the next, in radians
-        constexpr float kBobSpeed = 9;      ///< Radians a second
+        constexpr float kRiseSpeed = 24;            ///< Interface units a second
+        constexpr units::Seconds kFade { 0.8f };    ///< The last of its life, over which it fades
+        constexpr float kBobHeight = 0.18f;         ///< Of the line height
+        constexpr units::Radians kBobStep { 1.1f }; ///< Phase between one letter and the next
+        constexpr units::TurnRate kBobSpeed { 9 };
     } // namespace
 
-    float money_float_rise(float age) noexcept
+    float money_float_rise(units::Seconds age) noexcept
     {
-        return std::max(age, 0.0f) * kRiseSpeed;
+        return std::max(age.value, 0.0f) * kRiseSpeed;
     }
 
-    float money_float_alpha(float age) noexcept
+    float money_float_alpha(units::Seconds age) noexcept
     {
-        return std::clamp((kMoneyFloatLife - age) / kFade, 0.0f, 1.0f);
+        return std::clamp((kMoneyFloatLife - age).value / kFade.value, 0.0f, 1.0f);
     }
 
-    float money_float_bob(std::size_t letter, float age, float line_height) noexcept
+    float money_float_bob(std::size_t letter, units::Seconds age, float line_height) noexcept
     {
-        return (std::sin(static_cast<float>(letter) * kBobStep - age * kBobSpeed) + 1) / 2 * kBobHeight * line_height;
+        return (std::sin(static_cast<float>(letter) * kBobStep.value - age.value * kBobSpeed.value) + 1) / 2 * kBobHeight * line_height;
     }
 
     MoneyFloaters::MoneyFloaters(std::string name)

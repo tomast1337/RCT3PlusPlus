@@ -24,10 +24,10 @@ namespace rct3::scene::park
         /// own value.
         constexpr float kLabelReach = 48.0f;
         constexpr float kLabelLift = 0.6f; ///< Over the path or track, so the label stands above it.
-        /// A float younger than this, in seconds, and this near, in world units, takes another amount rather than
+        /// A float younger than this, and this near, in world units, takes another amount rather than
         /// a new float beginning. A held brush shows a sum a few times a second, while pieces
         /// laid one after another on neighbouring tiles each show their own.
-        constexpr float kMoneyMerge = 0.3f;
+        constexpr units::Seconds kMoneyMerge { 0.3f };
         constexpr float kMoneyReach = 1.0f;
 
         void drop(render::Device& device, ViewLines& lines)
@@ -130,7 +130,7 @@ namespace rct3::scene::park
         if (near != scene.money.end())
             near->amount += amount;
         else
-            scene.money.push_back({ at, amount, 0 });
+            scene.money.push_back({ at, amount, units::Seconds { } });
     }
 
     std::vector<ui::widgets::MoneyFloat> money_floats(ParkScene& scene, ui::Point size, const ui::Currency& currency, units::Seconds elapsed)
@@ -147,7 +147,7 @@ namespace rct3::scene::park
             float_money(scene, { scene.grid.world_x(n.tile.col) + scene.grid.tile_size_x / 2, n.height, scene.grid.world_z(n.tile.row) + scene.grid.tile_size_z / 2 }, attraction.income.value - paid);
         }
         for (FloatingMoney& m : scene.money)
-            m.age += elapsed.value;
+            m.age += elapsed;
         std::erase_if(scene.money, [](const FloatingMoney& m) { return m.age >= ui::widgets::kMoneyFloatLife; });
         if (size.x <= 0 || size.y <= 0)
             return { };
@@ -168,10 +168,10 @@ namespace rct3::scene::park
                 show(m);
         // What letting go of an enclosure drag would cost stands at the pointer's end of it, still, until then.
         if (const EnclosureTool& t = scene.enclosing; t.marked && t.other && t.marked->cost != 0)
-            show({ tile_point(scene.grid, *t.other), -t.marked->cost, 0 });
+            show({ tile_point(scene.grid, *t.other), -t.marked->cost, units::Seconds { } });
         // So does what the pool tool's work costs, or pays back.
         if (const PoolTool& t = scene.pooling; t.item && t.working && t.ok && t.cost != 0)
-            show({ tile_point(scene.grid, t.working->second), -t.cost, 0 });
+            show({ tile_point(scene.grid, t.working->second), -t.cost, units::Seconds { } });
         return shown;
     }
 

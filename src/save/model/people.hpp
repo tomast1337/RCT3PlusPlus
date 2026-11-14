@@ -15,6 +15,7 @@
 // Floats that are meant to be levels are not clamped; use validate() to find out-of-range values.
 #pragma once
 
+#include "core/none_as_minus_one.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 #include "units/units.hpp"
@@ -178,11 +179,11 @@ namespace rct3::save::model
 
     struct Thought
     {
-        PeopleRef about { };      ///< Object the thought is about
-        PeopleRef other { };      ///< A second person involved (a guest, for staff thoughts)
-        std::int32_t id = 0;      ///< Thought identifier, 0 = empty slot. Label list not modelled.
-        float time = -1;          ///< Game clock when it was had, -1 for an empty slot
-        std::int32_t variant = 0; ///< Seed choosing a text variant
+        PeopleRef about { };                  ///< Object the thought is about
+        PeopleRef other { };                  ///< A second person involved (a guest, for staff thoughts)
+        std::int32_t id = 0;                  ///< Thought identifier, 0 = empty slot. Label list not modelled.
+        core::NoneAsMinusOne<float> time { }; ///< Game clock when it was had; none for an empty slot
+        std::int32_t variant = 0;             ///< Seed choosing a text variant
         [[nodiscard]] bool empty() const noexcept
         {
             return id == 0;
@@ -204,10 +205,10 @@ namespace rct3::save::model
 
     struct Animation
     {
-        std::int32_t anim_type = -1; ///< Index into the person's animation set, -1 none
-        std::int32_t walk = -1;
-        std::int32_t idle = -1;
-        std::int32_t alternate_walk = -1;
+        core::NoneAsMinusOne<std::int32_t> anim_type { }; ///< Index into the person's animation set
+        core::NoneAsMinusOne<std::int32_t> walk { };
+        core::NoneAsMinusOne<std::int32_t> idle { };
+        core::NoneAsMinusOne<std::int32_t> alternate_walk { };
         float time = 0;       ///< Playback position
         float speed = 0;      ///< Playback rate
         float move_speed = 0; ///< Walking speed
@@ -411,11 +412,11 @@ namespace rct3::save::model
         float happiness = 0.5f;    ///< 0..1
         units::Seconds think_timer { };
         std::int32_t last_task_type = 0;
-        // Counters of thinks since an event; -1 means never.
-        std::int32_t thinks_since_last_task = -1;
-        std::int32_t thinks_since_different_task = -1;
-        std::int32_t thinks_since_no_task = -1;
-        std::int32_t thinks_since_happy = -1;
+        // Counters of thinks since an event; none when it never happened.
+        core::NoneAsMinusOne<std::int32_t> thinks_since_last_task { };
+        core::NoneAsMinusOne<std::int32_t> thinks_since_different_task { };
+        core::NoneAsMinusOne<std::int32_t> thinks_since_no_task { };
+        core::NoneAsMinusOne<std::int32_t> thinks_since_happy { };
         PatrolArea patrol { };
         std::int32_t task_flags = 0;
         std::optional<units::Seconds> time_in_pool { }; ///< Still to swim, while in a pool (an inspector looking one over)
@@ -483,7 +484,7 @@ namespace rct3::save::model
         std::string species { }; ///< Symbol of its species ("was" item), from the database entry `entry` names
         /// Model to world from the visual `visual` names, stored as Person::world is; identity without one.
         std::array<float, 16> world { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
-        float pregnancy_timer = -1; ///< -1 when not pregnant
+        core::NoneAsMinusOne<float> pregnancy_timer { }; ///< None when not pregnant
         std::int32_t babies_in_womb = 0;
         float enclosure_health_score = 0;
         std::array<Thought, kThoughtSlots> thoughts { };
@@ -528,7 +529,7 @@ namespace rct3::save::model
     {
         PeopleObjectId id = 0;
         PeopleRef owner { };
-        std::int32_t consuming_slot = -1; ///< -1 none
+        core::NoneAsMinusOne<std::int32_t> consuming_slot { };
         PeopleRef head { }, left_hand { }, right_hand { }, left_pocket { }, right_pocket { };
         PeopleRef umbrella { }, sunglasses { }, swimsuit { };
         std::vector<PeopleRef> slotless { };
@@ -547,7 +548,7 @@ namespace rct3::save::model
         PeopleRef becomes { }; ///< Item this turns into when used up
         PeopleRef voucher_target { };
         std::array<std::uint8_t, 3> colours { };
-        std::int32_t inventory_choice = -1; ///< -1 none
+        core::NoneAsMinusOne<std::int32_t> inventory_choice { };
     };
 
     struct ShopItem

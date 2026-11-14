@@ -367,7 +367,7 @@ TEST_CASE("missing attributes take defaults")
     CHECK(guest->person.name.empty());
     CHECK(guest->person.appearance.visible);
     CHECK(guest->person.look_at.distance == 1.5f);
-    CHECK(guest->person.animation.anim_type == -1);
+    CHECK_FALSE(guest->person.animation.anim_type);
     CHECK(guest->needs.food == 1.0f);
     CHECK(guest->needs.toilet == 0.0f);
     CHECK(guest->ride_preference.intensity == RideIntensity::Medium);
@@ -496,7 +496,7 @@ TEST_CASE("staff roles carry their own data")
     CHECK(hs->training == 3);
     CHECK(hs->laziness == 0.5f);
     CHECK(hs->happiness == 0.75f);
-    CHECK(hs->thinks_since_happy == -1);
+    CHECK_FALSE(hs->thinks_since_happy);
     CHECK(hs->patrol.start_col == 10);
     CHECK(hs->patrol.size_y == 6);
     CHECK(hs->patrol.start_state);
@@ -610,7 +610,7 @@ TEST_CASE("zoo animal")
     CHECK(a->health == 0.5f);
     CHECK(a->adoption_fee == 100);
     CHECK(a->species_hunger == 12);
-    CHECK(a->pregnancy_timer == -1.0f);
+    CHECK_FALSE(a->pregnancy_timer);
     CHECK(a->entry.id == 2);
     CHECK(a->family_membership.is_none());
     CHECK(a->thoughts[0].id == 250);
@@ -670,7 +670,7 @@ TEST_CASE("guest groups, holders, items and litter")
     const auto hold = build(*w, 2, make_item_holder);
     REQUIRE(hold);
     CHECK(hold->owner.id == 10);
-    CHECK(hold->consuming_slot == -1);
+    CHECK_FALSE(hold->consuming_slot);
     CHECK(hold->left_hand.id == 3);
     CHECK(hold->right_hand.is_none());
     CHECK(hold->hidden_parts == 88u);
@@ -682,7 +682,7 @@ TEST_CASE("guest groups, holders, items and litter")
     CHECK(item->drink == -0.5f);
     CHECK(item->bad);
     CHECK(item->colours[1] == 4);
-    CHECK(item->inventory_choice == -1);
+    CHECK_FALSE(item->inventory_choice);
 
     const auto shop = build(*w, 4, make_shop_item);
     REQUIRE(shop);

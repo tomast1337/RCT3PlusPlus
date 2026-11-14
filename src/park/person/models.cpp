@@ -215,18 +215,13 @@ namespace rct3::park::person
     std::optional<PartLevel> PersonLibrary::read_level(std::span<const std::string_view> fixed, std::span<const std::string_view> optional, std::string_view near)
     {
         PartLevel level;
-        for (const auto& [names, out] : { std::pair { fixed, &level.fixed }, std::pair { optional, &level.optional } })
-        {
-            for (const std::string_view name : names)
-            {
-                // A piece that cannot be read is left out; an optional one keeps its place so later bits still
-                // pick the right pieces.
-                if (const auto piece = read_piece(name, near))
-                    out->push_back(*piece);
-                else if (out == &level.optional)
-                    out->push_back(kNoPiece);
-            }
-        }
+        // A piece that cannot be read is left out; an optional one keeps its place so later bits still pick the
+        // right pieces.
+        for (const std::string_view name : fixed)
+            if (const auto piece = read_piece(name, near))
+                level.fixed.push_back(*piece);
+        for (const std::string_view name : optional)
+            level.optional.push_back(read_piece(name, near));
         return level;
     }
 

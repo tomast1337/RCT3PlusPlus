@@ -207,7 +207,7 @@ namespace rct3::scene::park
         const rct3::park::person::PartLevel& pieces = person.look.body->swim_levels[0];
         for (std::size_t k = 0; k < pieces.optional.size() && k < 32; ++k)
         {
-            if ((person.look.optionals[1] >> k & 1u) != 0 && pieces.optional[k] != rct3::park::person::kNoPiece && library.piece(pieces.optional[k]).texture.contains("inflatable"))
+            if ((person.look.optionals[1] >> k & 1u) != 0 && pieces.optional[k] && library.piece(*pieces.optional[k]).texture.contains("inflatable"))
                 return true;
         }
         return false;

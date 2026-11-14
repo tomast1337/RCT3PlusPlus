@@ -132,3 +132,8 @@ behaviour identical: `sim-run` output must not change.
   the edges a type cannot cross (file layouts, the GPU, third-party code) and in short locals.
 - No magic "none" values: a value that may be missing is `std::optional<T>` (or an enum when there are more
   than two states), not `-1` meaning "never".
+- No bare `bool` arguments: a flag that changes what a function does is an `enum class` declared beside it, so
+  the call says what it asks for (`hold_person(scene, at, size, Hold::GiveBack)`, not `..., false, true)`).
+  Several flags go in a struct built with designated initializers (`{ .down = held, .shift = shift }`). A bool
+  that is plainly the value being set (`set_open(bool open)`) or passed straight from a variable of that name
+  stays.

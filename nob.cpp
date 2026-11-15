@@ -466,11 +466,11 @@ namespace
         return cfg;
     }
 
-    // The app's flags: ImGui and Vulkan headers, app/ and the shaders slangc writes to build/<mode>/gen.
+    // The app's flags: ImGui, Vulkan and OpenGL headers, app/ and the shaders slangc writes to build/<mode>/gen.
     Config app_config(const Config& cfg)
     {
         Config app = cfg;
-        app.compile_flags.insert(app.compile_flags.end(), { "-Wno-missing-field-initializers", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-Iapp", std::format("-I{}", (cfg.out_dir() / "gen").string()) });
+        app.compile_flags.insert(app.compile_flags.end(), { "-Wno-missing-field-initializers", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-isystem", "third_party/opengl", "-Iapp", std::format("-I{}", (cfg.out_dir() / "gen").string()) });
         return app;
     }
 
@@ -522,10 +522,74 @@ namespace
         return true;
     }
 
+    // slangc's GLSL is written for Vulkan; this turns it into OpenGL 4.5's, for the OpenGL backend
+    // (app/render/opengl). The push constant block becomes uniform block 0 (its members are all vec4 and mat4,
+    // laid out alike in std140). Each separate texture and sampler pair becomes one sampler2D at texture unit
+    // = the Vulkan set, and the backend binds the draw's sampler object on every unit. Specialisation
+    // constant K reads the macro SPECIALISATION_K, and the #version line is left for the backend to put back
+    // in front of its defines. Line by line, as slangc writes each declaration on its own lines.
+    std::string glsl_for_opengl(std::string_view vulkan)
+    {
+        std::string out;
+        bool push_block = false;
+        std::string specialisation;                  // The macro the next constant reads, after a layout(constant_id = K)
+        std::size_t layout_line = std::string::npos; // Where the last line began when it was a lone layout(...)
+        for (std::string_view line : vulkan | std::views::split('\n') | std::views::transform([](auto r) { return std::string_view(r); }))
+        {
+            if (line.starts_with("#version") || line.starts_with("#extension") || line.starts_with("#line"))
+                continue;
+            if (line == "layout(push_constant)")
+            {
+                push_block = true;
+                continue;
+            }
+            if (line.starts_with("layout(constant_id = "))
+            {
+                specialisation = std::format("SPECIALISATION_{}", line.substr(21, line.find(')') - 21));
+                continue;
+            }
+            std::string text { line };
+            if (push_block && text.starts_with("layout(std430) uniform"))
+            {
+                text.replace(0, 14, "layout(std140, binding = 0)");
+                push_block = false;
+            }
+            if (const std::string_view set = "layout(binding = 0, set = "; text.starts_with(set))
+                text = std::format("layout(binding = {}", text.substr(set.size()));
+            if (text.starts_with("uniform sampler "))
+            {
+                out.resize(std::min(layout_line, out.size())); // Its layout line goes with it
+                continue;
+            }
+            layout_line = text.starts_with("layout(") && text.ends_with(")") ? out.size() : std::string::npos;
+            if (!specialisation.empty() && text.starts_with("const ") && text.contains(" = "))
+            {
+                text = std::format("{} = {};", text.substr(0, text.find(" = ")), specialisation);
+                specialisation.clear();
+            }
+            for (std::size_t at = 0; (at = text.find("sampler2D(", at)) != std::string::npos;)
+            {
+                // sampler2D(TEXTURE,SAMPLER) -> TEXTURE
+                const std::size_t comma = text.find(',', at);
+                const std::size_t close = text.find(')', at);
+                text.replace(at, close + 1 - at, text.substr(at + 10, comma - at - 10));
+            }
+            for (const auto [from, to] : { std::pair { "uniform texture2D", "uniform sampler2D" }, std::pair { "gl_VertexIndex", "gl_VertexID" }, std::pair { "gl_BaseVertex", "0" } })
+            {
+                for (std::size_t at = 0; (at = text.find(from, at)) != std::string::npos; at += std::strlen(to))
+                    text.replace(at, std::strlen(from), to);
+            }
+            out += text;
+            out += '\n';
+        }
+        return out;
+    }
+
     // The graphical viewer in app/. Not part of `build` so the library and tests never need GLFW or Vulkan.
     // Shaders (app/shaders/NAME.slang, entry points vertex_main and fragment_main) are compiled with slangc into
-    // NAME.vert.inc and NAME.frag.inc, C arrays of SPIR-V words included by the sources. Files without an entry
-    // point are modules the others import.
+    // NAME.vert.inc and NAME.frag.inc, C arrays of SPIR-V words included by the sources, and NAME.vert.glsl.inc
+    // and NAME.frag.glsl.inc, OpenGL GLSL as string literals (glsl_for_opengl). Files without an entry point are
+    // modules the others import.
     bool build_app(const Config& cfg, fs::path& binary)
     {
         if (!mkdir_p(cfg.obj_dir()))
@@ -546,7 +610,8 @@ namespace
                 if (text.find(std::format("[shader(\"{}\")]", stage)) == std::string::npos)
                     continue;
                 const fs::path output = gen_dir / std::format("{}.{}.inc", source.stem().string(), ext);
-                if (!needs_rebuild(output, shaders))
+                const fs::path gl_output = gen_dir / std::format("{}.{}.glsl.inc", source.stem().string(), ext);
+                if (!needs_rebuild(output, shaders) && !needs_rebuild(gl_output, shaders))
                     continue;
                 const fs::path spirv = gen_dir / std::format("{}.{}.spv", source.stem().string(), ext);
                 Cmd cmd;
@@ -563,6 +628,15 @@ namespace
                     words += std::format("{}0x{:08x}", i == 0 ? "" : ",", word);
                 }
                 std::ofstream(output) << words << "}\n";
+
+                const fs::path glsl = gen_dir / std::format("{}.{}.glsl", source.stem().string(), ext);
+                Cmd gl;
+                gl << "slangc" << source.string() << "-I" << "app/shaders" << "-entry" << std::format("{}_main", stage) << "-stage" << stage << "-target" << "glsl" << "-profile" << "glsl_450" << "-O2" << "-o" << glsl.string();
+                if (!run(gl))
+                    return false;
+                std::ifstream text_in(glsl);
+                const std::string text { std::istreambuf_iterator<char>(text_in), { } };
+                std::ofstream(gl_output) << "R\"glsl(" << glsl_for_opengl(text) << ")glsl\"\n";
             }
         }
 

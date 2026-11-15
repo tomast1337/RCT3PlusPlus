@@ -149,3 +149,7 @@ behaviour identical: `sim-run` output must not change.
   with named fields (`struct NearestRoute { std::size_t target { }; std::vector<NodeId> walk { }; };`), not
   `std::pair` or `std::tuple`, so callers read `route->walk`, not `route->second`. A pair stays inside one
   function, and where a library wants one (`std::map` entries, keys built from several values).
+- No comments that only say what: when a comment restates the name or the next line, rename the code so it says
+  it (`std::size_t next_file = 0;`, not `std::size_t next = 0; ///< The next file to read`), or split a condition
+  into a named local, then delete the comment. A comment stays when it says why: a reason, a source, a surprise,
+  a rule of the game, a range or edge case, or a unit no type carries yet.

@@ -12,6 +12,7 @@
 #include "save/model/park.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
+#include "simulation/components.hpp"
 #include "units/units.hpp"
 
 #include <cstdint>
@@ -45,8 +46,8 @@ namespace rct3::simulation
         bool fee_charged = false; ///< And the player sets the entrance fee
         units::Money entrance_fee { };
         units::Money fair_fee { }; ///< What guests think the park is worth getting in
-        /// By kind of thought (as ThoughtKind numbers them): how many guests have had it lately.
-        std::map<std::int32_t, std::int32_t> thoughts { };
+        /// By kind of thought: how many guests have had it lately.
+        std::map<ThoughtKind, std::int32_t> thoughts { };
         std::int32_t old_litter = 0; ///< Pieces lying about long
         std::int32_t stalls = 0;
         std::int32_t food_stalls = 0;

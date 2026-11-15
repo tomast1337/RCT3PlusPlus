@@ -264,7 +264,7 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
 
     // A launch's speed is set in the player's unit, in hundredths.
     ride.mode = save::model::OperatingMode::PoweredLaunch;
-    ride.options.launch_speed = 10;
+    ride.options.launch_speed = { 10 };
     InfoUnits imperial;
     imperial.distance = DistanceUnits::Imperial;
     const InfoPage launch = attraction_page(AttractionTab::Mode, f, s, imperial);

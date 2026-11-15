@@ -803,7 +803,7 @@ namespace rct3::save::model
                         .intensity = at(1),
                         .nausea = at(2),
                         .reliability_base = a[id::kAssessReliability].number(),
-                        .under_cover = a[id::kAssessCover].number(),
+                        .under_cover = { a[id::kAssessCover].number() },
                         .value = a[id::kAssessValue].number(),
                     };
                 }
@@ -853,11 +853,11 @@ namespace rct3::save::model
                     .min_wait = core::from_stored(f[id::kMinWait].i32(-1)),
                     .max_wait = core::from_stored(f[id::kMaxWait].i32(-1)),
                     .wait_for_load = f[id::kWaitForLoad].i32(4),
-                    .launch_speed = f[id::kLaunchSpeed].number(),
-                    .lift_speed = f[id::kLiftSpeed].number(),
-                    .brake_speed = f[id::kBrakeSpeed].number(),
-                    .block_brake_off_speed = f[id::kBlockBrakeOff].number(),
-                    .fixed_speed = core::from_stored(f[id::kFixedSpeed].number(-1)),
+                    .launch_speed = { f[id::kLaunchSpeed].number() },
+                    .lift_speed = { f[id::kLiftSpeed].number() },
+                    .brake_speed = { f[id::kBrakeSpeed].number() },
+                    .block_brake_off_speed = { f[id::kBlockBrakeOff].number() },
+                    .fixed_speed = core::from_stored(units::Pace { f[id::kFixedSpeed].number(-1) }),
                     .circuits = f[id::kCircuitsRun].i32(1),
                 };
 

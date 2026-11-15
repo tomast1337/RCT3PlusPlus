@@ -189,8 +189,8 @@ namespace rct3::save::model
         float intensity = 0;
         float nausea = 0;
         float reliability_base = 0;
-        float under_cover = 0; ///< Fraction 0..1
-        float value = 0;       ///< Score
+        units::Share under_cover { };
+        float value = 0; ///< Score
     };
 
     struct RideStats
@@ -237,12 +237,12 @@ namespace rct3::save::model
         core::NoneAsMinusOne<std::int32_t> min_wait { }; ///< Whole seconds
         core::NoneAsMinusOne<std::int32_t> max_wait { }; ///< Whole seconds
         std::int32_t wait_for_load = 4;                  ///< Load a train waits for: 0 full, 1 three quarters, 2 half, 3 quarter, 4 any
-        float launch_speed = 0;                          ///< m/s
-        float lift_speed = 0;                            ///< m/s
-        float brake_speed = 0;                           ///< m/s
-        float block_brake_off_speed = 0;
-        core::NoneAsMinusOne<float> fixed_speed { }; ///< m/s
-        std::int32_t circuits = 1;                   ///< Times round the track, or through the station and back for a shuttle
+        units::Pace launch_speed { };
+        units::Pace lift_speed { };
+        units::Pace brake_speed { };
+        units::Pace block_brake_off_speed { };
+        core::NoneAsMinusOne<units::Pace> fixed_speed { };
+        std::int32_t circuits = 1; ///< Times round the track, or through the station and back for a shuttle
     };
 
     struct RaceState

@@ -251,9 +251,14 @@ namespace rct3::simulation
     std::size_t resume_saved_swimmers(SimWorld& world, const save::model::PeopleModel& people, std::span<const entt::entity> guests);
     /// Puts the guests the park had using what stands by its paths (`guests` by place in `people`) back to it:
     /// on a bench, at a view, at a water cannon, round an entertainer (`staff` by place in `people`) whose show
-    /// starts again for them; and puts in their hands and pockets the food, drink and empties they carried,
-    /// telling empties by `kinds`. Returns how many it put back to a use. Call after start_guests, import_staff,
+    /// starts again for them; puts in their hands and pockets the food, drink and empties they carried, telling
+    /// empties by `kinds`; and gives them back their passport's stamps. Returns how many
+    /// it put back to a use. Call after start_guests, import_staff,
     /// import_path_items and import_sights.
     std::size_t resume_saved_uses(SimWorld& world, const save::model::PeopleModel& people, std::span<const entt::entity> guests, std::span<const entt::entity> staff, std::span<const save::model::UsePoint> points, const rct3::park::CarriedKinds& kinds = { });
+    /// The colour each passport post among `points` stamps in; what the park gives guests for a passport with
+    /// enough stamps, and what it pays for it, by what its kind of item costs a stall among `kinds`, unless the
+    /// park keeps no such gift.
+    void import_passport_rules(SimWorld& world, const save::model::PeopleModel& people, std::span<const save::model::UsePoint> points, const rct3::park::CarriedKinds& kinds = { });
 
 } // namespace rct3::simulation

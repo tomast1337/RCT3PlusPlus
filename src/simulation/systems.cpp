@@ -19,6 +19,7 @@
 #include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/tuning.hpp"
+#include "simulation/vip.hpp"
 #include "simulation/workers.hpp"
 
 #include <algorithm>
@@ -315,6 +316,35 @@ namespace rct3::simulation
                     const bool lately = thoughts != nullptr && std::ranges::any_of(thoughts->recent, [&](const Thought& t) { return t.kind == ThoughtKind::NiceMusic && now - t.time.value < kTuning.thoughts.rethink.value; });
                     if (heard != speakers.end() && !lately && random::chance(dice.state, kTuning.surroundings.music_thought.value))
                         think(r, g, ThoughtKind::NiceMusic, *heard, now);
+                }
+                // Every guest walking by a passport post they have no stamp from has their passport stamped there,
+                // but VIPs and those already given the park's gift. With enough stamps the park gives them its
+                // gift, if it can pay for it.
+                const bool on_foot = errand.kind == ErrandKind::Wandering || errand.kind == ErrandKind::Heading || errand.kind == ErrandKind::Following;
+                const std::span<const entt::entity> passed = stride.fresh && on_foot && !r.all_of<Vip>(g) ? items(stride.from) : std::span<const entt::entity> { };
+                if (const auto post = std::ranges::find_if(passed, [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::PassportPost && !r.get<PathItem>(i).broken; }); post != passed.end())
+                {
+                    Passport& passport = r.get_or_emplace<Passport>(g);
+                    if (!passport.gift && std::ranges::none_of(passport.stamps, [&](const Passport::Stamp& s) { return s.post == r.get<PathItem>(*post).object; }))
+                    {
+                        const auto* colour = r.try_get<StampColour>(*post);
+                        passport.stamps.push_back({ .post = r.get<PathItem>(*post).object, .colour = colour != nullptr ? colour->value : 0, .at = { static_cast<float>(random::unit(dice.state)), static_cast<float>(random::unit(dice.state)) } });
+                        r.emplace_or_replace<Gesture>(g, Gesture { .kind = GestureKind::HandOver, .left = kTuning.gestures.shown, .at = *post });
+                        mood.happiness.value = clamp01(mood.happiness.value + kTuning.surroundings.stamp_cheer.value);
+                        if (auto* rules = r.ctx().find<PassportRules>(); rules != nullptr && rules->stamps_for_gift > 0 && passport.stamps.size() >= rules->stamps_for_gift)
+                        {
+                            if (rules->park_cash && rules->park_cash->value < rules->gift_cost.value)
+                                mood.happiness.value = clamp01(mood.happiness.value - kTuning.surroundings.no_gift_gloom.value);
+                            else
+                            {
+                                passport.gift = true;
+                                r.ctx().emplace<Supplies>().paid[std::to_underlying(park::LedgerLine::ShopStock)].value += rules->gift_cost.value;
+                                if (rules->park_cash)
+                                    rules->park_cash->value -= rules->gift_cost.value;
+                                mood.happiness.value = clamp01(mood.happiness.value + kTuning.surroundings.gift_cheer.value);
+                            }
+                        }
+                    }
                 }
                 // A wandering guest just come to a tile may sit on a bench there when tired or eating, or stop at a sight.
                 if (errand.kind == ErrandKind::Wandering && stride.fresh)

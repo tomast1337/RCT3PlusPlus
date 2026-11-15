@@ -333,8 +333,9 @@ namespace rct3::save::model
     /// object a saved guest names while using it or heading for it.
     struct UsePoint
     {
-        std::uint64_t id = 0;         ///< What a guest's saved state names
-        std::uint64_t object_ref = 0; ///< The placed object it belongs to
+        std::uint64_t id = 0;                         ///< What a guest's saved state names
+        std::uint64_t object_ref = 0;                 ///< The placed object it belongs to
+        std::optional<std::int32_t> stamp_colour { }; ///< A passport post's, as it keeps it
     };
 
     /// How much water a flower bed placed in the park holds.

@@ -305,6 +305,15 @@ namespace rct3::save::model
         std::int32_t minutes_in_park = 0;
     };
 
+    /// A stamp in a guest's passport, from a passport post.
+    struct PassportStamp
+    {
+        std::int32_t colour = 0; ///< The post's stamp colour, as the post keeps it
+        PeopleRef post { };      ///< The post, as a use point (WorldModel::use_points)
+        float x = 0;             ///< Where on the page it sits, 0..1 across
+        float y = 0;             ///< And 0..1 down
+    };
+
     struct Guest
     {
         Person person { };
@@ -327,7 +336,8 @@ namespace rct3::save::model
         // Newer saves only; false or nullopt when absent.
         bool enjoyed_last_ride = false;
         bool last_ride_was_favourite = false;
-        bool got_gift = false;
+        bool got_gift = false; ///< Given the park's passport gift
+        std::vector<PassportStamp> passport_stamps { };
         bool needs_cash = false;
         bool wants_leave_park = false;
         bool leaving_due_to_closed_park = false;
@@ -594,6 +604,13 @@ namespace rct3::save::model
         std::uint8_t type = 0; ///< Same numbers as PersonType
     };
 
+    /// What the park gives a guest whose passport has enough stamps.
+    struct PassportRules
+    {
+        PeopleRef gift { }; ///< The carried item given, among PeopleModel::carried_items
+        std::int32_t stamps_for_gift = 0;
+    };
+
     struct PeopleModel
     {
         std::vector<PartGroup> part_groups { };
@@ -607,6 +624,7 @@ namespace rct3::save::model
         std::vector<ShopItem> shop_items { };
         std::vector<ShopExtra> shop_extras { };
         std::vector<Litter> litter { };
+        std::optional<PassportRules> passport { }; ///< None when the file keeps none
     };
 
     // ----- builders: nullopt only when the object is of another class -----

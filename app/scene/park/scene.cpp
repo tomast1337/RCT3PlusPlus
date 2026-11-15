@@ -1341,6 +1341,8 @@ namespace rct3::scene::park
                     scene.machine_waves = rct3::park::pools::machine_waves(scene.pools, scene.scenery_pool_extras, scene.grid);
                 }
                 scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating, .guest_cash = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_cash : 0 }, .guest_bank = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_bank_funds : 0 } });
+                if (auto* passports = scene.sim.registry.ctx().find<simulation::PassportRules>())
+                    passports->park_cash = scene.park.cash;
                 // What a crashed train's wrecks fly over and into: the ground, and the scenery, stalls and flat rides
                 // standing in the park, each as the box it is clicked in.
                 // shortcut: wrecks fly through the tracked rides, their own and others', with their stations and

@@ -330,6 +330,7 @@ int main(int argc, char** argv)
     if (park_model && park_model->group_mix)
         simulation::import_party_mix(world, *park_model->group_mix);
     const std::size_t uses = simulation::resume_saved_uses(world, *people, guests, staff, world_model->use_points, carried);
+    simulation::import_passport_rules(world, *people, world_model->use_points, carried);
     out.info("facilities {:d}  sights {:d}  gate {}  guests back at a use {:d}", facilities, sight_count, gate ? "yes" : "none", uses);
     // The park's time of day, as its file left it, run through every hour.
     simulation::DayWindow hours;
@@ -671,6 +672,12 @@ int main(int argc, char** argv)
             line += std::format(" {:d}:{}", std::to_underlying(kind), n);
         out.info("{}", line);
         out.info("guests sat on benches {:d} times and stopped at sights {:d} times", tally.sat, tally.watched);
+        std::size_t passports = 0, stamps = 0, gifts = 0;
+        for (const auto [_, passport] : r.view<const simulation::Passport>(entt::exclude<simulation::Left>).each())
+            ++passports, stamps += passport.stamps.size(), gifts += passport.gift ? 1 : 0;
+        const auto posts = std::ranges::count_if(r.view<const simulation::PathItem>().each(), [](const auto& item) { return std::get<1>(item).kind == simulation::PathItemKind::PassportPost; });
+        const auto* rules = r.ctx().find<simulation::PassportRules>();
+        out.info("passports: {:d} posts, gift for {:d} stamps; {:d} guests hold {:d} stamps, {:d} given the gift", posts, rules != nullptr ? rules->stamps_for_gift : 0, passports, stamps, gifts);
         const auto vomit_lying = std::ranges::count_if(r.view<const simulation::Litter>(), [&](entt::entity e) { return r.get<simulation::Litter>(e).vomit; });
         const auto queasy = std::ranges::count_if(r.view<const simulation::Mood>(), [&](entt::entity e) { return r.get<simulation::Mood>(e).nausea.value >= 0.6f; });
         out.info("sickness: guests sick {:d} times, {:d} by a ride's exit; {:d} lying now; {:d} guests too sick to ride", tally.sick, tally.sick_by_exit, vomit_lying, queasy);

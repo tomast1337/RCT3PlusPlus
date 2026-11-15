@@ -321,6 +321,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     r.emplace<Mood>(ann);
     r.emplace<Wallet>(ann, Wallet { .cash = { 500 }, .bank = { 4000 }, .spent = { 300 }, .spent_rides = { 300 } });
     r.emplace<Taste>(ann, 0.1f, 0.7f);
+    r.emplace<Passport>(ann, Passport { .stamps = { { .post = 9, .colour = 3, .at = { 0.25f, 0.75f } } }, .gift = true });
     const entt::entity bob = r.create();
     r.emplace<Visitor>(bob, Visitor { .name = "Bob" });
     r.emplace<Pose>(bob);
@@ -382,6 +383,13 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     CHECK(l.get<Wallet>(ann2).bank.value == 4000);
     CHECK(l.get<Wallet>(ann2).spent_rides.value == 300);
     CHECK(l.get<Taste>(ann2).most.value == 0.7f);
+    REQUIRE(l.all_of<Passport>(ann2));
+    REQUIRE(l.get<Passport>(ann2).stamps.size() == 1);
+    CHECK(l.get<Passport>(ann2).stamps[0].post == 9);
+    CHECK(l.get<Passport>(ann2).stamps[0].colour == 3);
+    CHECK(l.get<Passport>(ann2).stamps[0].at == glm::vec2 { 0.25f, 0.75f });
+    CHECK(l.get<Passport>(ann2).gift);
+    CHECK_FALSE(l.all_of<Passport>(bob2));
     CHECK(l.get<Visitor>(bob2).name == "Bob");
     REQUIRE(l.all_of<Outside>(bob2));
     CHECK(l.get<Outside>(bob2).way == Outside::Way::In);

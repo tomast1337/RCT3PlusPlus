@@ -38,11 +38,11 @@ namespace rct3::scene
     namespace
     {
         // Prices, in hundredths: painting one tile (moving the ground is rct3::park::ground::kShapeCost).
-        constexpr float kTravelSample = 11.3f;          ///< Pixels the pointer moves before the way it goes over the ground is read again
-        constexpr units::Seconds kLongestStep { 0.1f }; ///< A spray counts a frame as this at most, so a hitch does not jolt the ground
-        constexpr float kSteepestDrag = 0.5f;           ///< Chosen by eye: a tile tool reads a view steeper than this (the part of the pointer's ray along the ground) as this steep
-        constexpr float kRumbleQuiet = 0.25f;           ///< Chosen by eye: the rumble of a shaping stroke while the ground stays still
-        constexpr units::Seconds kRumbleFade { 0.6f };  ///< Chosen by eye: it takes this long to fall back to that once the ground stops moving
+        constexpr units::Pixels kTravelSample { 11.3f }; ///< The pointer moves before the way it goes over the ground is read again
+        constexpr units::Seconds kLongestStep { 0.1f };  ///< A spray counts a frame as this at most, so a hitch does not jolt the ground
+        constexpr float kSteepestDrag = 0.5f;            ///< Chosen by eye: a tile tool reads a view steeper than this (the part of the pointer's ray along the ground) as this steep
+        constexpr float kRumbleQuiet = 0.25f;            ///< Chosen by eye: the rumble of a shaping stroke while the ground stays still
+        constexpr units::Seconds kRumbleFade { 0.6f };   ///< Chosen by eye: it takes this long to fall back to that once the ground stops moving
 
         constexpr std::string_view kPanelName = "land_panel";
         constexpr std::string_view kWaterRefused = "Rct3pp_WaterRefused";
@@ -948,7 +948,7 @@ namespace rct3::scene
             // Which way the pointer goes over the ground, read again each time it has gone a little way.
             if (l.tool != LandTools::Tool::Shape || !l.shape || input.over_interface)
                 l.travel_from.reset();
-            else if (!l.travel_from || glm::distance(glm::vec2 { at.x, at.y }, l.travel_from->first) > kTravelSample)
+            else if (!l.travel_from || glm::distance(glm::vec2 { at.x, at.y }, l.travel_from->first) > kTravelSample.value)
             {
                 if (const auto spot = ground_spot(scene, at, size))
                 {

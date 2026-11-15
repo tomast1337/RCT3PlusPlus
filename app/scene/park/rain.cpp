@@ -21,16 +21,16 @@ namespace rct3::scene::park
         constexpr std::string_view kRainTexture = "Rain";
 
         // Chosen by eye.
-        constexpr std::size_t kMostDrops = 2400; ///< Streaks in a downpour
-        constexpr float kAcross = 40;            ///< Metres the box of drops spans round the eye, each way
-        constexpr float kHigh = 24;              ///< And up and down
-        constexpr float kFall = 11;              ///< Metres a second a drop falls
-        constexpr float kLean = 6;               ///< Metres a second the strongest wind carries it
-        constexpr float kLength = 0.9f;          ///< Of a streak, in metres
-        constexpr float kWidth = 0.02f;          ///< Half a streak's width, near
-        constexpr float kWidening = 0.12f;       ///< Share of its distance a streak widens by, so far ones still show
-        constexpr float kNearest = 2.5f;         ///< Metres from the eye inside which drops are not drawn
-        constexpr float kOpacity = 0.5f;         ///< Of the nearest streaks; farther ones fade out
+        constexpr std::size_t kMostDrops = 2400;     ///< Streaks in a downpour
+        constexpr units::Distance kAcross { 40 };    ///< The box of drops spans round the eye, each way
+        constexpr units::Distance kHigh { 24 };      ///< And up and down
+        constexpr units::Pace kFall { 11 };          ///< A drop falls
+        constexpr units::Pace kLean { 6 };           ///< The strongest wind carries it
+        constexpr units::Distance kLength { 0.9f };  ///< Of a streak
+        constexpr float kWidth = 0.02f;              ///< Half a streak's width, near
+        constexpr float kWidening = 0.12f;           ///< Share of its distance a streak widens by, so far ones still show
+        constexpr units::Distance kNearest { 2.5f }; ///< From the eye inside which drops are not drawn
+        constexpr float kOpacity = 0.5f;             ///< Of the nearest streaks; farther ones fade out
         const glm::vec3 kWindWay = glm::normalize(glm::vec3(1.0f, 0.0f, 0.35f));
 
         using Corner = RainCorner;
@@ -77,30 +77,30 @@ namespace rct3::scene::park
         const auto count = static_cast<std::size_t>(std::clamp(view.amount, 0.0f, 1.0f) * static_cast<float>(kMostDrops));
         if (!rain.streak || !rain.pipeline || count == 0)
             return;
-        const glm::vec3 velocity = kWindWay * (view.wind * kLean) + glm::vec3(0.0f, -kFall, 0.0f);
+        const glm::vec3 velocity = kWindWay * (view.wind * kLean.value) + glm::vec3(0.0f, -kFall.value, 0.0f);
         const glm::vec3 along = glm::normalize(velocity);
         const glm::vec3 moved = velocity * view.seconds;
-        const glm::vec3 corner = view.eye - glm::vec3(kAcross, kHigh, kAcross) / 2.0f;
+        const glm::vec3 corner = view.eye - glm::vec3(kAcross.value, kHigh.value, kAcross.value) / 2.0f;
         const float shade = std::clamp(view.light, 0.15f, 1.0f);
         std::vector<Corner>& corners = rain.corners;
         corners.clear();
         for (std::size_t i = 0; i < count; ++i)
         {
             std::uint64_t state = i;
-            const glm::vec3 start { share(state) * kAcross, share(state) * kHigh, share(state) * kAcross };
+            const glm::vec3 start { share(state) * kAcross.value, share(state) * kHigh.value, share(state) * kAcross.value };
             // Each drop keeps its place in the world, wrapped into the box about the eye.
-            const glm::vec3 p = corner + glm::vec3(wrapped(start.x + moved.x - corner.x, kAcross), wrapped(start.y + moved.y - corner.y, kHigh), wrapped(start.z + moved.z - corner.z, kAcross));
+            const glm::vec3 p = corner + glm::vec3(wrapped(start.x + moved.x - corner.x, kAcross.value), wrapped(start.y + moved.y - corner.y, kHigh.value), wrapped(start.z + moved.z - corner.z, kAcross.value));
             const glm::vec3 to_eye = view.eye - p;
             const float distance = glm::length(to_eye);
-            if (distance < kNearest)
+            if (distance < kNearest.value)
                 continue;
             const glm::vec3 across = glm::cross(along, to_eye / distance);
             if (glm::dot(across, across) < 1e-6f)
                 continue;
             const glm::vec3 side = glm::normalize(across) * (kWidth * (1 + kWidening * distance));
-            const float fade = 1 - std::min(distance / (kAcross / 2), 1.0f);
+            const float fade = 1 - std::min(distance / (kAcross.value / 2), 1.0f);
             const glm::vec4 colour { glm::vec3(0.8f, 0.82f, 0.88f) * shade, kOpacity * fade };
-            const glm::vec3 tail = p - along * kLength;
+            const glm::vec3 tail = p - along * kLength.value;
             const Corner a { tail - side, colour, { 0, 1 } };
             const Corner b { tail + side, colour, { 1, 1 } };
             const Corner c { p + side, colour, { 1, 0 } };

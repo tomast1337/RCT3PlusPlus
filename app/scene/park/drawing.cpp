@@ -604,7 +604,7 @@ namespace rct3::scene::park
             scene.pours_found = scene.objects.size();
             scene.slide_pours.clear();
             scene.pours_next = 0;
-            constexpr float kPourSpeed = 1.5f; ///< m/s the water leaves the lip at. Chosen by eye
+            constexpr units::Pace kPourSpeed { 1.5f }; ///< The water leaves the lip at. Chosen by eye
             for (const save::model::PlacedObject& o : scene.objects)
             {
                 const auto model = scene.models.find(rct3::park::object::model_ref(o));
@@ -630,7 +630,7 @@ namespace rct3::scene::park
                     }
                 if (below >= lip.y)
                     continue;
-                const float throw_out = kPourSpeed * std::sqrt(2 * (lip.y - below) / units::kGravity.value);
+                const float throw_out = kPourSpeed.value * std::sqrt(2 * (lip.y - below) / units::kGravity.value);
                 scene.slide_pours.push_back({ .left = left, .right = right, .landing = { lip.x + flow.x * throw_out, below, lip.z + flow.y * throw_out }, .water = below > scene.grid.height_at(lip.x, lip.z).value_or(below) });
             }
         }

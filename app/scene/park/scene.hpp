@@ -796,7 +796,7 @@ namespace rct3::scene::park
         DragButtons drag_buttons = DragButtons::None;                           ///< Of the drag moving the camera
         rct3::park::ControlMode control_mode = rct3::park::ControlMode::Normal; ///< The camera last moved in
         int iso_step = 0;                                                       ///< Isometric's diagonal, any whole number taken round the four
-        float iso_drag = 0;                                                     ///< Isometric: pixels across the turning drag has gone since it last turned
+        units::Pixels iso_drag { };                                             ///< Isometric: across the turning drag has gone since it last turned
         std::optional<glm::vec3> pivot;                                         ///< Advanced: what the drag turns round, picked when it started
         int zooming = 0;                                                        ///< From the keys: 1 in, -1 out
         bool hover_pickable = false;                                            ///< A click would open a panel on what is under the pointer

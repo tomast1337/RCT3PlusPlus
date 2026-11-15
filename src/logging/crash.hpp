@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// A report when the program dies of a fatal signal (a failed assertion's abort, a bad memory access): which
-// signal, then the stack of the thread that died, with source lines where debug information has them,
-// printed to the standard error and appended to the run's log file when it has one.
+// A report when the program dies of a fatal signal (a failed assertion's abort, a bad memory access): the build's
+// version and which signal, then the stack of the thread that died, with source lines where debug information has
+// them, printed to the standard error and appended to the run's log file when it has one.
 //
 // Libraries' own checks (EnTT's, through simulation/entt.hpp) report through check_failed(): what failed is
 // logged, then the abort brings the report.

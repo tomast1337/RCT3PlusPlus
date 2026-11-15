@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "logging/crash.hpp"
 
+#include "core/version.hpp"
 #include "logging/log.hpp"
 
 #include <csignal>
@@ -24,12 +25,13 @@ namespace rct3::logging
             // instead of reporting when the heap itself is broken. Upgrade to a pre-allocated writer if it does.
             std::signal(signal, SIG_DFL);
             const std::string stack = std::to_string(std::stacktrace::current(1));
-            std::fprintf(stderr, "\nfatal signal %d (%s); stack:\n%s\n", signal, strsignal(signal), stack.c_str());
+            const std::string_view version = core::version();
+            std::fprintf(stderr, "\nrct3++ %.*s: fatal signal %d (%s); stack:\n%s\n", static_cast<int>(version.size()), version.data(), signal, strsignal(signal), stack.c_str());
             if (!g_file.empty())
             {
                 if (std::FILE* out = std::fopen(g_file.c_str(), "a"))
                 {
-                    std::fprintf(out, "\nfatal signal %d (%s); stack:\n%s\n", signal, strsignal(signal), stack.c_str());
+                    std::fprintf(out, "\nrct3++ %.*s: fatal signal %d (%s); stack:\n%s\n", static_cast<int>(version.size()), version.data(), signal, strsignal(signal), stack.c_str());
                     std::fclose(out);
                 }
                 std::fprintf(stderr, "report appended to %s\n", g_file.c_str());

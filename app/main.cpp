@@ -4,7 +4,7 @@
 // the game installed it first plays the startup logos and the loading screen, then shows the front screen
 // built from real skins, with the menu music and the buttons' clicks.
 //
-//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]
+//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--version] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default), opengl, software (on the CPU) or null; kept by
 //                     --write-settings
@@ -28,6 +28,7 @@
 //   --seconds N       exit after N seconds of real time
 //   --max-fps N       wait between frames so no more than N are drawn a second; 0 for no limit
 //   --write-settings  write the settings file, with any settings given here, and exit
+//   --version         the build's version (core/version.hpp)
 //   --help            this text, the user's data folder (config/user_data.hpp), the settings
 //                     (config/settings.hpp) and the environment variables read (config/environment.hpp)
 #include "config/environment.hpp"
@@ -37,6 +38,7 @@
 #include "config/settings.hpp"
 #include "config/text_file.hpp"
 #include "config/user_data.hpp"
+#include "core/version.hpp"
 #include "image/png_encoder.hpp"
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -100,7 +102,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|opengl|software|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|opengl|software|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--version] [--help]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)
@@ -521,6 +523,7 @@ int main(int argc, char** argv)
         else
             log.warning("{}", opened.error());
     }
+    log.info("rct3++ {}", rct3::core::version());
     const auto user_file = [&](config::UserFile file) { return data ? std::optional(data->file(file)) : std::nullopt; };
     // Reads one of the user's files; what cannot be read is logged, and the defaults stand in for it.
     const auto load_user_file = [&]<typename T>(config::UserFile file, T& into) {
@@ -650,6 +653,11 @@ int main(int argc, char** argv)
         {
             write_settings = true;
         }
+        else if (std::strcmp(argv[i], "--version") == 0)
+        {
+            std::printf("rct3++ %.*s\n", static_cast<int>(rct3::core::version().size()), rct3::core::version().data());
+            return 0;
+        }
         else if (std::strcmp(argv[i], "--help") == 0)
         {
             print_help(data);
@@ -725,7 +733,8 @@ int main(int argc, char** argv)
         log.warning("settings: no renderer named '{}'; using {}", renderer, render::backend_name(backend));
     // OpenGL falls back to Vulkan when its window or device cannot be made; the window goes first, as it holds
     // the OpenGL context.
-    auto window = rct3::platform::Window::open({ .headless = headless }, backend);
+    const std::string title = std::format("rct3++ {}", rct3::core::version());
+    auto window = rct3::platform::Window::open({ .title = title.c_str(), .headless = headless }, backend);
     std::unique_ptr<render::Device> device;
     for (;;)
     {
@@ -751,7 +760,7 @@ int main(int argc, char** argv)
         }
         backend = render::Backend::Vulkan;
         log.warning("{}; falling back to {}", failure, render::backend_name(backend));
-        if (auto opened = rct3::platform::Window::open({ .headless = headless }, backend))
+        if (auto opened = rct3::platform::Window::open({ .title = title.c_str(), .headless = headless }, backend))
             window.emplace(std::move(*opened));
         else
             window = std::unexpected(opened.error());

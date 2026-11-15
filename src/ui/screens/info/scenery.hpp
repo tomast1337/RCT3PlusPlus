@@ -27,10 +27,11 @@ namespace rct3::ui::screens::info
 
     enum class SceneryTab : std::uint8_t
     {
-        Destroy, ///< Pulls the prop down; has no page
-        Colour,  ///< Picks the colours of the parts that take them
-        Bin,     ///< How full a litter bin is and when it was emptied
-        Sign,    ///< What a sign says
+        Destroy,  ///< Pulls the prop down; has no page
+        Colour,   ///< Picks the colours of the parts that take them
+        Bin,      ///< How full a litter bin is and when it was emptied
+        Sign,     ///< What a sign says
+        Passport, ///< On a passport post: the park's passport gift and the stamps it takes
         // A changing room's, laid out as an attraction's window about the room and its pool complex:
         RoomDetails,      ///< The room's and the complex's names, its state, pulling them down and finding the room
         RoomFinances,     ///< The ticket price and the room's takings
@@ -56,6 +57,10 @@ namespace rct3::ui::screens::info
     inline constexpr int kPoolWaveEveryControl = 12;  ///< Minutes from one start of theirs to the next
     inline constexpr int kPoolInspectionControl = 13; ///< A choice: the inspection interval, in the maintenance page's order
     inline constexpr int kPoolSaveControl = 14;
+    /// Stamps a passport needs for the gift.
+    inline constexpr int kPassportStampsControl = 15;
+    /// A choice: the gift, by its place in PassportFacts::gifts.
+    inline constexpr int kPassportGiftControl = 16;
     inline constexpr int kMostWaveOn = 600;   ///< Chosen by eye
     inline constexpr int kWaveOnStep = 10;    ///< Chosen by eye
     inline constexpr int kMostWaveEvery = 30; ///< Chosen by eye: minutes
@@ -85,6 +90,15 @@ namespace rct3::ui::screens::info
         std::vector<save::model::ThoughtEntry> thoughts { }; ///< Guests' thoughts about the room
     };
 
+    /// The park's passport rules, which every passport post's window sets.
+    struct PassportFacts
+    {
+        int stamps_for_gift = 0;
+        int most_stamps = 0;
+        std::vector<std::string_view> gifts { }; ///< What it may give, by the string keys of their names
+        int gift = 0;                            ///< Of `gifts`
+    };
+
     struct SceneryTabInfo
     {
         SceneryTab tab = SceneryTab::Destroy;
@@ -101,10 +115,11 @@ namespace rct3::ui::screens::info
         std::string_view symbol { };
         const save::model::BinState* bin = nullptr;
         const save::model::SignState* sign = nullptr;
-        std::optional<PoolComplexFacts> pool { }; ///< When it is a changing room
-        std::uint32_t colour_slots = 0;           ///< The colour slots its pictures take (bit k: slot k)
-        std::array<std::int32_t, 3> colours { };  ///< The colour picked for each slot, of the 32
-        float zero_time = 0;                      ///< Where the park's calendar starts, for the dates shown
+        std::optional<PoolComplexFacts> pool { };  ///< When it is a changing room
+        std::optional<PassportFacts> passport { }; ///< When it is a passport post
+        std::uint32_t colour_slots = 0;            ///< The colour slots its pictures take (bit k: slot k)
+        std::array<std::int32_t, 3> colours { };   ///< The colour picked for each slot, of the 32
+        float zero_time = 0;                       ///< Where the park's calendar starts, for the dates shown
     };
 
     /// The colour slots the colour tab paints, in the order of its pots.

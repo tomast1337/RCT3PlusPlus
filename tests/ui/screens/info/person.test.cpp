@@ -382,3 +382,25 @@ TEST_CASE("a worker's patrol area button is held down while their area is painte
     f.painting_patrol = true;
     CHECK(patrol() == 1);
 }
+
+TEST_CASE("a guest's passport shows its stamps, and how many more the gift takes, or that they have it")
+{
+    StringTable s = table();
+    s.add("Passport_NeedXMoreStampsToGetGift", u"%NUMBER% more for a %GIFT%.");
+    s.add("Passport_AlreadyGotGift", u"Got it.");
+    s.add("Passport_PlacePostsToGetStamps", u"No posts.");
+    s.add("HatName", u"hat");
+    const Park p = sample_park();
+    PersonFacts f = guest(p);
+    CHECK(person_page(PersonTab::Passport, f, s, { }).note == u"No posts.");
+
+    f.passport = { .stamps = { { .colour = { 200, 40, 40, 255 }, .x = 0.25f, .y = 0.5f } }, .gift_name = "HatName", .stamps_for_gift = 3, .posts = true };
+    const InfoPage page = person_page(PersonTab::Passport, f, s, { });
+    REQUIRE(page.stamps.size() == 1);
+    CHECK(page.stamps[0].x == 0.25f);
+    CHECK(page.stamps[0].colour.r == 200);
+    CHECK(page.note == u"2 more for a hat.");
+
+    f.passport.gift = true;
+    CHECK(person_page(PersonTab::Passport, f, s, { }).note == u"Got it.");
+}

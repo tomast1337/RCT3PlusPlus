@@ -28,6 +28,7 @@
 #include "simulation/rides.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
+#include "simulation/tuning.hpp"
 #include "simulation/vip.hpp"
 #include "strings/unicode.hpp"
 #include "ui/key_combo.hpp"
@@ -446,6 +447,33 @@ namespace rct3::scene
             for (const auto [e, item] : park_->sim.registry.view<const simulation::PathItem>().each())
                 items.push_back({ { "object", item.object }, { "kind", kPathItemKinds.at(std::to_underlying(item.kind)) }, { "broken", item.broken } });
             return items;
+        });
+        engine_.define("park.passport", [this](const Json&) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            const auto* rules = park_->sim.registry.ctx().find<simulation::PassportRules>();
+            Json gifts = Json::array();
+            for (const rct3::park::CarriedKind* g : simulation::passport_gifts(park_->carried))
+                gifts.push_back(g->symbol);
+            return { { "stampsForGift", rules != nullptr ? rules->stamps_for_gift : 0 }, { "gift", rules != nullptr ? rules->gift : std::string { } }, { "gifts", std::move(gifts) } };
+        });
+        engine_.define("park.setPassport", [this](const Json& a) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            auto* rules = park_->sim.registry.ctx().find<simulation::PassportRules>();
+            const auto gifts = simulation::passport_gifts(park_->carried);
+            const std::string gift = a.size() > 1 && a[1].is_string() ? a[1].get<std::string>() : std::string { };
+            const auto stamps = static_cast<std::int64_t>(number(a, 0));
+            if (rules == nullptr || stamps < 1 || std::cmp_greater(stamps, simulation::kTuning.surroundings.most_stamps) || (!gift.empty() && std::ranges::none_of(gifts, [&](const rct3::park::CarriedKind* g) { return g->symbol == gift; })))
+                return Json(false);
+            rules->stamps_for_gift = static_cast<std::uint32_t>(stamps);
+            if (!gift.empty())
+                simulation::set_passport_gift(*rules, gift, park_->carried);
+            return Json(true);
+        });
+        engine_.define("park.showObject", [this](const Json& a) -> Json {
+            park_of(park_).prop_requested = static_cast<std::uint64_t>(number(a, 0));
+            return Json(nullptr);
         });
         engine_.define("park.litter", [this](const Json&) -> Json {
             if (park_ == nullptr)
@@ -1066,6 +1094,13 @@ namespace rct3::scene
                 {
                     person["role"] = kRoles[std::to_underlying(staff->role)];
                     person["job"] = kJobs[std::to_underlying(staff->job)];
+                }
+                if (const auto* passport = r.valid(p.guest) ? r.try_get<simulation::Passport>(p.guest) : nullptr)
+                {
+                    Json stamps = Json::array();
+                    for (const simulation::Passport::Stamp& s : passport->stamps)
+                        stamps.push_back({ { "post", s.post }, { "colour", s.colour }, { "x", s.at.x }, { "y", s.at.y } });
+                    person["passport"] = { { "stamps", std::move(stamps) }, { "gift", passport->gift } };
                 }
                 // Where the simulation has them, and what of: walking the paths, held by the player, or let go.
                 if (r.valid(p.guest) && !r.all_of<simulation::Left>(p.guest) && r.all_of<simulation::Pose>(p.guest))

@@ -78,6 +78,17 @@ namespace rct3::ui::screens::info
         units::Money training_cost;
         /// Of a VIP on their visit: their patience and their opinion of the park, each 0..1.
         std::optional<std::pair<float, float>> vip { };
+        /// Of a guest: the stamps in their passport and whether they have the park's gift for them, with the gift's
+        /// name key and the stamps it takes, and whether the park has any passport post.
+        struct Passport
+        {
+            std::vector<InfoStamp> stamps { };
+            bool gift = false;
+            std::string_view gift_name { };
+            std::size_t stamps_for_gift = 0;
+            bool posts = false;
+        };
+        Passport passport { };
 
         [[nodiscard]] std::optional<const save::model::Person&> person() const
         {

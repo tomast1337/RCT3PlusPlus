@@ -422,6 +422,8 @@ TEST_CASE("with enough stamps a guest is given the park's passport gift, paid fo
         const auto* supplies = r.ctx().find<Supplies>();
         const std::int64_t paid = supplies != nullptr ? supplies->paid[std::to_underlying(park::LedgerLine::ShopStock)].value : 0;
         CHECK(r.get<Passport>(g).gift == (cash == 1000));
+        // Posts with no colour of their own ink in one, opaque.
+        CHECK((static_cast<std::uint32_t>(r.get<Passport>(g).stamps[0].colour) >> 24U) == 255);
         CHECK(paid == (cash == 1000 ? 150 : 0));
     }
 }

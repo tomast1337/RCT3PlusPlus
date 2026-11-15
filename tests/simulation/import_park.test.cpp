@@ -629,7 +629,33 @@ TEST_CASE("passport stamps, the gift and the park's passport rules come back fro
     CHECK(passport.stamps[0].at == glm::vec2 { 0.25f, 0.5f });
     const auto& rules = r.ctx().get<simulation::PassportRules>();
     CHECK(rules.stamps_for_gift == 4);
+    CHECK(rules.gift == "Badge:cid");
     CHECK(rules.gift_cost == units::Money { 150 });
+}
+
+TEST_CASE("a park that keeps no passport gift gives its cheapest souvenir, and the gift can be changed")
+{
+    simulation::SimWorld world;
+    rct3::park::CarriedKinds kinds;
+    kinds.items.push_back({ .symbol = "Burger:cid", .effects = { 0.5f, 0, 0 }, .cost = 50 });
+    kinds.items.push_back({ .symbol = "Map:cid", .cost = 10, .map = true });
+    kinds.items.push_back({ .symbol = "Cup:cid", .cost = 5, .empty = true });
+    kinds.items.push_back({ .symbol = "Hat:cid", .cost = 300, .worth = { 500, 500, 500 } });
+    kinds.items.push_back({ .symbol = "Autograph:cid", .cost = 0 }); // Never sold
+    kinds.items.push_back({ .symbol = "Badge:cid", .cost = 150, .worth = { 300, 300, 300 } });
+    const auto gifts = simulation::passport_gifts(kinds);
+    REQUIRE(gifts.size() == 2);
+    CHECK(gifts[0]->symbol == "Hat:cid");
+    CHECK(gifts[1]->symbol == "Badge:cid");
+
+    simulation::import_passport_rules(world, { }, { }, kinds);
+    auto& rules = world.registry.ctx().get<simulation::PassportRules>();
+    CHECK(rules.stamps_for_gift == simulation::kTuning.surroundings.stamps_for_gift);
+    CHECK(rules.gift == "Badge:cid");
+    CHECK(rules.gift_cost == units::Money { 150 });
+    simulation::set_passport_gift(rules, "Hat:cid", kinds);
+    CHECK(rules.gift == "Hat:cid");
+    CHECK(rules.gift_cost == units::Money { 300 });
 }
 
 TEST_CASE("a sight placed beside a path is used from it at once; a bench there is not")

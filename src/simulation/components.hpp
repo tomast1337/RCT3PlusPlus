@@ -301,7 +301,8 @@ namespace rct3::simulation
         float heading = 0;        ///< Where its model's +X points, round the vertical, 0 along +Z as Pose's: a water cannon's barrel at rest
     };
 
-    /// On a passport post: the colour of the stamp it prints, as saved parks keep it.
+    /// On a passport post: the colour of the stamp it prints, as saved parks keep it, taken as 0xAARRGGBB. A post
+    /// without one prints in one of tuning's stamp inks, picked by its object.
     struct StampColour
     {
         std::int32_t value = 0;
@@ -326,6 +327,7 @@ namespace rct3::simulation
     struct PassportRules
     {
         std::uint32_t stamps_for_gift = 0;
+        std::string gift { };       ///< The item given, as rct3::park::CarriedKind::symbol; empty for none
         units::Money gift_cost { }; ///< To the park, for each one given
         /// The park's cash, kept up by whoever shows the park, so a gift it cannot pay for is not given; none
         /// when money never runs out.

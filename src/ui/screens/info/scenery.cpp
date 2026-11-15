@@ -27,6 +27,9 @@ namespace rct3::ui::screens::info
         constexpr std::string_view kNeverEmptied = "Bin_NeverEmptied";
         constexpr std::string_view kSignOptions = "Sign_Options";
         constexpr std::string_view kNoEntry = "Sign_NoEntry";
+        constexpr std::string_view kPassportSetup = "Passport_SetupPanel";
+        constexpr std::string_view kStampsNeeded = "Passport_StampsNeededLabelText";
+        constexpr std::string_view kChooseGift = "Passport_ChooseGiftLabelText";
         constexpr std::string_view kPoolDefaultName = "PoolComplexDefaultName";
         constexpr std::string_view kPoolName = "PoolComplexName";
         constexpr std::string_view kRoomName = "ChangingRoomName";
@@ -109,6 +112,8 @@ namespace rct3::ui::screens::info
             tabs.push_back({ SceneryTab::Bin, slot++, "Guest_Stats", "Bin_Statistics", false, { } });
         if (facts.sign != nullptr)
             tabs.push_back({ SceneryTab::Sign, slot++, "Obj_Scenery", kSignOptions, false, { } });
+        if (facts.passport)
+            tabs.push_back({ SceneryTab::Passport, slot++, "Guest_Passport", kPassportSetup, false, { } });
         return tabs;
     }
 
@@ -144,6 +149,16 @@ namespace rct3::ui::screens::info
             page.heading = strings.get(kSignOptions);
             const std::u16string words = facts.sign->kind == 1 ? std::u16string(strings.get(kNoEntry)) : strings::to_utf16(facts.sign->text);
             page.lines.push_back({ words, { }, false });
+        }
+        else if (tab == SceneryTab::Passport && facts.passport)
+        {
+            // The stamps a passport needs over the gift given for them, the same for every post in the park.
+            const PassportFacts& passport = *facts.passport;
+            page.heading = strings.get(kPassportSetup);
+            page.controls.push_back({ .id = kPassportStampsControl, .name = std::string(kStampsNeeded), .kind = InfoControlKind::Number, .label = std::u16string(strings.get(kStampsNeeded)), .value = std::clamp(passport.stamps_for_gift, 1, passport.most_stamps), .minimum = 1, .maximum = passport.most_stamps });
+            InfoControl& gift = page.controls.emplace_back(InfoControl { .id = kPassportGiftControl, .name = std::string(kChooseGift), .kind = InfoControlKind::Choice, .label = std::u16string(strings.get(kChooseGift)), .value = passport.gift, .enabled = !passport.gifts.empty() });
+            for (const std::string_view g : passport.gifts)
+                gift.items.push_back(std::u16string(strings.get(g)));
         }
         else if (facts.pool)
         {

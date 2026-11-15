@@ -328,7 +328,9 @@ namespace rct3::simulation
                     if (!passport.gift && std::ranges::none_of(passport.stamps, [&](const Passport::Stamp& s) { return s.post == r.get<PathItem>(*post).object; }))
                     {
                         const auto* colour = r.try_get<StampColour>(*post);
-                        passport.stamps.push_back({ .post = r.get<PathItem>(*post).object, .colour = colour != nullptr ? colour->value : 0, .at = { static_cast<float>(random::unit(dice.state)), static_cast<float>(random::unit(dice.state)) } });
+                        const auto& ink = kTuning.surroundings.stamp_inks[r.get<PathItem>(*post).object % kTuning.surroundings.stamp_inks.size()];
+                        const auto inked = static_cast<std::int32_t>(0xFFU << 24U | std::uint32_t { ink[0] } << 16U | std::uint32_t { ink[1] } << 8U | ink[2]);
+                        passport.stamps.push_back({ .post = r.get<PathItem>(*post).object, .colour = colour != nullptr ? colour->value : inked, .at = { static_cast<float>(random::unit(dice.state)), static_cast<float>(random::unit(dice.state)) } });
                         r.emplace_or_replace<Gesture>(g, Gesture { .kind = GestureKind::HandOver, .left = kTuning.gestures.shown, .at = *post });
                         mood.happiness.value = clamp01(mood.happiness.value + kTuning.surroundings.stamp_cheer.value);
                         if (auto* rules = r.ctx().find<PassportRules>(); rules != nullptr && rules->stamps_for_gift > 0 && passport.stamps.size() >= rules->stamps_for_gift)

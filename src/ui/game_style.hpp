@@ -732,6 +732,7 @@ namespace rct3::ui::game_skins
         s.tick_box = kTickbox;
         s.tick = kTick;
         s.button = kTextButton;
+        s.stamp = "PassportStamp";
         // A stall's menu: the lists' rows, the page's boxes and pots, and the game's bin for what goes off it.
         s.menu.rows = row_bands(p);
         s.menu.bar = scroll_bar_style(p, widgets::Orientation::Vertical);

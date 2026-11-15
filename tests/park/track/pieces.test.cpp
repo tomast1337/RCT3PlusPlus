@@ -436,7 +436,8 @@ namespace
             return shape_piece(std::move(r), vertical({ 3, 0, 0 }, { 3, rise, 0 }, up, up));
         };
         LiftTower tower {
-            .foot = piece("LiftFoot", kPieceLiftBottom, "", "Lift", vertical({ kTile, 2, 0 }, { -kTile / 2, 4, 0 }, { -1, 0, 0 }, up), 4),
+            // Its joining rails end a little off true, as some rides' do.
+            .foot = piece("LiftFoot", kPieceLiftBottom, "", "Lift", vertical({ kTile, 2, 0 }, { -kTile / 2, 4, 0 }, { -1, 0, 0 }, { 0.3f, 1, 0 }), 4),
             .middle = piece("LiftMiddle", kPieceLiftMiddle, "Lift", "Lift", vertical({ 0, 0, 0 }, { 0, 4, 0 }, up, up), 4),
             .top = piece("LiftTop", kPieceLiftTop, "Lift", "", vertical({ 0, 0, 0 }, { -kTile, 2, 0 }, up, { 0, -1, 0 }), 2),
         };

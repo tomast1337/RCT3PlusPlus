@@ -354,8 +354,17 @@ namespace rct3::park::track
         PieceShape shape;
         shape.line = line;
         const PieceLine& meets = record.join_line ? *record.join_line : line;
-        shape.entry = measure_end(meets.start_direction, meets.start_side, base_bank);
-        shape.exit = measure_end(meets.end_direction, meets.end_side, base_bank);
+        // Where a lift car's rails run straight up the tower, so does the track joining there, though some rides'
+        // joining rails end a little off true.
+        const auto meeting_end = [&](glm::vec3 direction, const glm::vec3& side, const glm::vec3& rails) {
+            constexpr float kClimbing = 0.5f; ///< Steeper than this, chosen by eye: past a gentle slope
+            const auto steepness = [](const glm::vec3& d) { return glm::normalize(d).y; };
+            if (record.join_line && std::abs(steepness(rails)) > kUpright && std::abs(steepness(direction)) > kClimbing)
+                direction = { 0, direction.y > 0 ? 1 : -1, 0 };
+            return measure_end(direction, side, base_bank);
+        };
+        shape.entry = meeting_end(meets.start_direction, meets.start_side, line.start_direction);
+        shape.exit = meeting_end(meets.end_direction, meets.end_side, line.end_direction);
         for (const auto& [flag, toggle] : { std::pair { kPieceChain, PieceToggle::Chain }, { kPieceEnclosed, PieceToggle::Enclosed }, { kPieceWater, PieceToggle::Water }, { kPieceBooster, PieceToggle::Booster } })
         {
             if ((record.flags & flag) != 0)

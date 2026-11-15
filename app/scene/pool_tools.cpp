@@ -849,7 +849,7 @@ namespace rct3::scene
         // The work shown lays the pieces again at every move; those that stay as they were keep their objects.
         // The prop the info panel tells about is found again after, a changing room as the new piece of the
         // same room.
-        const auto shown = scene.shown_prop && *scene.shown_prop < scene.objects.size() ? std::optional(scene.objects[*scene.shown_prop]) : std::nullopt;
+        const auto shown = scene.shown_prop && scene.shown_prop->value < scene.objects.size() ? std::optional(scene.objects[scene.shown_prop->value]) : std::nullopt;
         const bool shown_piece = shown && std::ranges::contains(scene.pool_pieces, shown->id);
         rct3::park::pools::dig_under_pools(scene.pools, scene.grid);
         scene.pool_openings = pool_openings(scene);
@@ -866,7 +866,7 @@ namespace rct3::scene
         {
             const auto same_piece = [&](const save::model::PlacedObject& o) { return shown_piece && o.col == shown->col && o.row == shown->row && o.symbol == shown->symbol && std::ranges::contains(scene.pool_pieces, o.id); };
             const auto found = std::ranges::find_if(scene.objects, [&](const save::model::PlacedObject& o) { return (!shown_piece && o.id == shown->id) || same_piece(o); });
-            scene.shown_prop = found != scene.objects.end() ? std::optional(static_cast<std::size_t>(found - scene.objects.begin())) : std::nullopt;
+            scene.shown_prop = found != scene.objects.end() ? std::optional(save::model::PlacedObjectIndex { static_cast<std::size_t>(found - scene.objects.begin()) }) : std::nullopt;
         }
         // Pool rides' platforms show steps down the sides the paving now meets, or no longer does.
         for (std::size_t ride = 0; ride < scene.rides.rides.size() && ride < scene.track_rules.size(); ++ride)

@@ -258,7 +258,7 @@ namespace rct3::scene::park
         {
             std::optional<rct3::park::AttractionRef> attraction;
             std::optional<std::size_t> person;
-            std::optional<std::size_t> prop;
+            std::optional<save::model::PlacedObjectIndex> prop;
         };
 
         /// What is under the pointer at `at`, in interface units on a screen of `size`: the nearest of an
@@ -293,7 +293,7 @@ namespace rct3::scene::park
             const auto owner = scene.attractions.find(scene.objects[object->index].id);
             if (owner != scene.attractions.end())
                 return { .attraction = owner->second, .person = std::nullopt, .prop = std::nullopt };
-            return { .attraction = std::nullopt, .person = std::nullopt, .prop = object->index };
+            return { .attraction = std::nullopt, .person = std::nullopt, .prop = save::model::PlacedObjectIndex { object->index } };
         }
 
         /// The people as the map draws them.
@@ -593,7 +593,7 @@ namespace rct3::scene::park
                 const Picked picked = picked_at(scene, at, size);
                 if (picked.attraction)
                     ask_demolish(scene, *assets.strings, assets.palette, { *picked.attraction });
-                else if (const auto room = picked.prop ? pool_room(scene, scene.objects[*picked.prop]) : std::nullopt)
+                else if (const auto room = picked.prop ? pool_room(scene, scene.objects[picked.prop->value]) : std::nullopt)
                 {
                     scene.pools.rooms.erase(scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room));
                     pools_changed(device, scene, assets);
@@ -659,7 +659,7 @@ namespace rct3::scene::park
                     else if (picked.prop)
                     {
                         // An entrance opens the park's window, and its own panel too on the park's land.
-                        const save::model::PlacedObject& o = scene.objects[*picked.prop];
+                        const save::model::PlacedObject& o = scene.objects[picked.prop->value];
                         if (park_entrance(scene, o))
                             open_management_window(desktop, ui::screens::management::ManagementTopic::ParkOperations, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
                         // A changing room's window opens on the tab last open in one.
@@ -781,9 +781,9 @@ namespace rct3::scene::park
                     || (change->id >= ui::screens::info::control_id(ui::screens::info::AttractionControl::SpeedSeries) && change->id <= ui::screens::info::control_id(ui::screens::info::AttractionControl::LateralSeries)))
                     show_info_page(scene, *info, assets, options);
             }
-            else if (const auto room = change && scene.shown_prop ? pool_room(scene, scene.objects[*scene.shown_prop]) : std::nullopt)
+            else if (const auto room = change && scene.shown_prop ? pool_room(scene, scene.objects[scene.shown_prop->value]) : std::nullopt)
             {
-                const save::model::PlacedObject& o = scene.objects[*scene.shown_prop];
+                const save::model::PlacedObject& o = scene.objects[scene.shown_prop->value];
                 if (change->id == ui::screens::info::kPoolDeleteRoomControl)
                 {
                     scene.pools.rooms.erase(scene.pools.rooms.begin() + static_cast<std::ptrdiff_t>(*room));
@@ -874,7 +874,7 @@ namespace rct3::scene::park
                 if (*tab < scene.prop_tabs.size())
                 {
                     scene.prop_tab = scene.prop_tabs[*tab];
-                    if (pool_room(scene, scene.objects[*scene.shown_prop]))
+                    if (pool_room(scene, scene.objects[scene.shown_prop->value]))
                         scene.room_tab = scene.prop_tab;
                     show_info_page(scene, *info, assets, options);
                 }
@@ -907,7 +907,7 @@ namespace rct3::scene::park
                 show_info_page(scene, *info, assets, options);
             }
             const auto choice = info->take_choice();
-            if (const auto room = choice && scene.shown_prop ? pool_room(scene, scene.objects[*scene.shown_prop]) : std::nullopt)
+            if (const auto room = choice && scene.shown_prop ? pool_room(scene, scene.objects[scene.shown_prop->value]) : std::nullopt)
             {
                 // The whole complex opened or closed, all its rooms alike; then shown again for the flag's new look.
                 const std::vector<ui::screens::info::StateChoice> states = ui::screens::info::state_choices(ui::screens::info::AttractionKind::Stall);

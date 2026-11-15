@@ -17,6 +17,7 @@
 //    as the stored integers or floats.
 #pragma once
 
+#include "core/id.hpp"
 #include "core/none_as_minus_one.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
@@ -553,6 +554,9 @@ namespace rct3::save::model
 
         [[nodiscard]] std::size_t issue_count(WorldIssueKind k) const noexcept;
     };
+
+    /// An object's place in WorldModel::objects, and in the copies of that list the park keeps and builds on.
+    using PlacedObjectIndex = core::Id<struct PlacedObjectIndexTag>;
 
     /// Builds the world model from a read save. Fails only when an object cannot be decoded. Malformed blobs and
     /// inconsistent data are reported in `issues` and leave the affected part empty.

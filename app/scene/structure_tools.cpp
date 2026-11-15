@@ -306,7 +306,7 @@ namespace rct3::scene
         {
             if (const auto wall = rct3::park::edge_wall(scene.objects[i], scene.models, scene.grid))
                 park::wall_changed(device, scene, assets, *wall, park::WallChange::PutUp);
-            park::animate_scenery(device, scene, i);
+            park::animate_scenery(device, scene, save::model::PlacedObjectIndex { i });
         }
         const save::model::TerrainGrid& g = scene.grid;
         park::float_money(scene, { g.world_x(t.pointed_tile->col) + g.tile_size_x / 2, static_cast<float>(t.height), g.world_z(t.pointed_tile->row) + g.tile_size_z / 2 }, -t.cost);

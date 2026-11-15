@@ -590,7 +590,7 @@ namespace rct3::scene::park
             for (const auto& [door, is_exit] : { std::pair { entrance, false }, std::pair { exit, true } })
             {
                 const rct3::park::object::ObjectModel* model = model_of(*door);
-                const auto k = static_cast<std::size_t>(door - scene.objects.begin());
+                const auto k = save::model::PlacedObjectIndex { static_cast<std::size_t>(door - scene.objects.begin()) };
                 if (model == nullptr || !model->rig || std::ranges::contains(scene.boned_rides, k, &ParkScene::BonedRide::object))
                     continue;
                 const auto motion = [&](std::string_view end) -> std::optional<std::size_t> {
@@ -604,7 +604,7 @@ namespace rct3::scene::park
                 boned.ride = entity;
                 boned.object = k;
                 boned.placed = is_exit ? out : in;
-                auto [meshes, bones] = rct3::park::boned_meshes(scene.objects[k], *model, scene.grid);
+                auto [meshes, bones] = rct3::park::boned_meshes(scene.objects[k.value], *model, scene.grid);
                 boned.mesh = std::move(meshes);
                 boned.bones = std::move(bones);
                 boned.first_seat = scene.seat_carriers.size();
@@ -675,7 +675,7 @@ namespace rct3::scene::park
             const auto model = scene.objects[k].owner_ref == ride.base.placement ? scene.models.find(rct3::park::object::model_ref(scene.objects[k])) : scene.models.end();
             if (model != scene.models.end() && !model->second.seat_places.empty())
             {
-                scene.ride_seats[entity] = k;
+                scene.ride_seats[entity] = save::model::PlacedObjectIndex { k };
                 const glm::mat4 placed = rct3::park::object::placed_transform(scene.objects[k], &model->second, scene.grid, scene.fitted);
                 walk_ride(device, scene, entity, ride, [&](const glm::mat4& entrance, const glm::mat4& exit) {
                     std::vector<glm::vec3> seats;
@@ -687,7 +687,7 @@ namespace rct3::scene::park
                 {
                     ParkScene::BonedRide& boned = scene.boned_rides.emplace_back();
                     boned.ride = entity;
-                    boned.object = k;
+                    boned.object = save::model::PlacedObjectIndex { k };
                     boned.placed = placed;
                     auto [meshes, bones] = rct3::park::boned_meshes(scene.objects[k], model->second, scene.grid);
                     boned.mesh = std::move(meshes);
@@ -915,8 +915,9 @@ namespace rct3::scene::park
         });
     }
 
-    void animate_scenery(render::Device& device, ParkScene& scene, std::size_t k)
+    void animate_scenery(render::Device& device, ParkScene& scene, save::model::PlacedObjectIndex object)
     {
+        const std::size_t k = object.value;
         const auto model = k < scene.objects.size() ? scene.models.find(rct3::park::object::model_ref(scene.objects[k])) : scene.models.end();
         // Rides' parts move with their rides (doors as guests pass, chains while the ride runs), so only what the
         // scenery lists hold moves on its own, and stalls, whose one motion loops open or closed.
@@ -925,7 +926,7 @@ namespace rct3::scene::park
         if (model == scene.models.end() || !model->second.rig || scene.objects[k].hidden || (!stall && (!rct3::park::scenery_list(model->second.category) || owner != scene.attractions.end())))
             return;
         ParkScene::BonedRide& boned = scene.boned_rides.emplace_back();
-        boned.object = k;
+        boned.object = object;
         boned.placed = rct3::park::object::placed_transform(scene.objects[k], &model->second, scene.grid, scene.fitted);
         auto [meshes, bones] = rct3::park::boned_meshes(scene.objects[k], model->second, scene.grid);
         boned.mesh = std::move(meshes);
@@ -1723,7 +1724,7 @@ namespace rct3::scene::park
         // ── 9. People and simulation ──
         scene.attractions = rct3::park::attraction_objects(scene.rides, scene.objects);
         for (std::size_t k = 0; k < scene.objects.size(); ++k)
-            animate_scenery(device, scene, k);
+            animate_scenery(device, scene, save::model::PlacedObjectIndex { k });
         start_simulation(device, scene, install, *file, index, saved, *world, park_model, seed, ratings);
 
         // ── 10. Tutorial, map and summary ──

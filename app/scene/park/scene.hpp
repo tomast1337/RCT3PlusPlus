@@ -493,8 +493,8 @@ namespace rct3::scene::park
         /// Water a park object shoots: a cannon a guest fires, or a jumping fountain at the next.
         struct Jet
         {
-            std::size_t object = 0;                                         ///< Its place in `objects`
-            std::optional<std::size_t> to;                                  ///< Of a jump, the fountain it lands in, by place in `objects`
+            save::model::PlacedObjectIndex object { };
+            std::optional<save::model::PlacedObjectIndex> to;               ///< Of a jump, the fountain it lands in
             float pours = 0;                                                ///< Of a jump, park_clock until which water leaves the nozzle
             float lands = 0;                                                ///< And when it lands
             bool landed = false;                                            ///< A jump's landing handed on to the next fountain
@@ -605,8 +605,8 @@ namespace rct3::scene::park
         std::map<save::model::RideIndex, ui::screens::info::TrainLimits> train_limits;
         /// Of the same rides: the trains their kind's file offers, by name, the first theirs at first.
         std::map<save::model::RideIndex, std::vector<std::string>> train_choices;
-        /// The object each simulated flat ride stands as, the one with seats, by its place in `objects`.
-        std::map<entt::entity, std::size_t> ride_seats;
+        /// The object each simulated flat ride stands as, the one with seats.
+        std::map<entt::entity, save::model::PlacedObjectIndex> ride_seats;
         /// How the riders of each simulated flat ride sit, where its item says (see rct3::park::person::rider_motions).
         std::map<entt::entity, std::uint8_t> ride_seatings;
         /// A rider's last change of reaction as their pose shows it: from what to what, and scene.park_clock then.
@@ -623,7 +623,7 @@ namespace rct3::scene::park
         struct BonedRide
         {
             entt::entity ride = entt::null; ///< Null for scenery, which loops its first motion
-            std::size_t object = 0;         ///< Its place in `objects`
+            save::model::PlacedObjectIndex object { };
             glm::mat4 placed { 1.0f };
             rct3::park::MovingMeshes mesh;
             std::vector<std::int32_t> bones; ///< By piece of `mesh`
@@ -744,7 +744,7 @@ namespace rct3::scene::park
         std::optional<HeldPerson> holding;                                               ///< The person the player has picked up
         std::vector<save::model::BinState> bins;                                         ///< Of the litter bins among the objects
         std::vector<save::model::SignState> signs;                                       ///< Of the signs among the objects
-        std::optional<std::size_t> shown_prop;                                           ///< Of objects, the prop the info panel tells about instead
+        std::optional<save::model::PlacedObjectIndex> shown_prop;                        ///< The prop the info panel tells about instead
         std::vector<ui::screens::info::SceneryTab> prop_tabs;                            ///< Its tabs in the panel's order
         std::optional<ui::screens::info::SceneryTab> prop_tab;                           ///< Its open tab; none while only its name shows
         bool show_people = true;                                                         ///< Switched in the view menu
@@ -920,9 +920,9 @@ namespace rct3::scene::park
     /// first train at the station. Nothing for a ride the simulation does not run.
     void board_tracked_ride(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex ride);
 
-    /// Has object `k` (of scene.objects) move on its own when its model has bones and it is scenery of no attraction,
+    /// Has `object` move on its own when its model has bones and it is scenery of no attraction,
     /// as animatronics are.
-    void animate_scenery(render::Device& device, ParkScene& scene, std::size_t k);
+    void animate_scenery(render::Device& device, ParkScene& scene, save::model::PlacedObjectIndex object);
 
     /// The part every attraction has of `ref`, the ride's or the stall's; nothing when the park has no such one.
     [[nodiscard]] save::model::AttractionCommon* attraction_common(ParkScene& scene, rct3::park::AttractionRef ref);
@@ -931,13 +931,13 @@ namespace rct3::scene::park
     [[nodiscard]] bool clickable_prop(const ParkScene& scene, const save::model::PlacedObject& o);
     /// Changes the object `index` by `change`. The objects' meshes are built beside the frame from the
     /// objects, so the build in hand is dropped first and another started with the change.
-    template<typename Change> void change_object(render::Device& device, ParkScene& scene, std::size_t index, Change&& change)
+    template<typename Change> void change_object(render::Device& device, ParkScene& scene, save::model::PlacedObjectIndex index, Change&& change)
     {
-        if (index >= scene.objects.size())
+        if (index.value >= scene.objects.size())
             return;
         if (scene.object_build.valid())
             (void)scene.object_build.get();
-        change(scene.objects[index]);
+        change(scene.objects[index.value]);
         // Scenery its bones move is built again, in its new colours or not at all.
         if (const auto boned = std::ranges::find_if(scene.boned_rides, [&](const ParkScene::BonedRide& b) { return b.object == index && b.ride == entt::null; }); boned != scene.boned_rides.end())
         {

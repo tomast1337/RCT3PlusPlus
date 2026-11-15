@@ -75,11 +75,11 @@ namespace rct3::scene::track
         return b.catalogues.emplace(overlay, std::move(*loaded)).first->second;
     }
 
-    std::unordered_map<std::uint64_t, std::size_t> object_indices(const park::ParkScene& scene)
+    std::unordered_map<std::uint64_t, save::model::PlacedObjectIndex> object_indices(const park::ParkScene& scene)
     {
-        std::unordered_map<std::uint64_t, std::size_t> out;
+        std::unordered_map<std::uint64_t, save::model::PlacedObjectIndex> out;
         for (std::size_t i = 0; i < scene.objects.size(); ++i)
-            out.emplace(scene.objects[i].id, i);
+            out.emplace(scene.objects[i].id, save::model::PlacedObjectIndex { i });
         return out;
     }
 
@@ -113,7 +113,7 @@ namespace rct3::scene::track
         auto shape = rct3::park::track::shape_named(*c, last.symbol);
         if (object == objects.end() || !shape)
             return std::nullopt;
-        return rct3::park::track::tip_of(scene.objects[object->second], *shape, last.reversed, scene.grid);
+        return rct3::park::track::tip_of(scene.objects[object->second.value], *shape, last.reversed, scene.grid);
     }
 
     namespace
@@ -203,7 +203,7 @@ namespace rct3::scene::track
         /// A track piece as built: its object, of the scene's, and the catalogue's piece it is.
         struct BuiltPiece
         {
-            std::size_t object = 0;
+            save::model::PlacedObjectIndex object { };
             rct3::park::track::LaidPiece laid;
         };
 
@@ -213,7 +213,7 @@ namespace rct3::scene::track
             const auto laid = laid_piece(c, piece);
             if (object == scene.objects.end() || !laid)
                 return std::nullopt;
-            return BuiltPiece { static_cast<std::size_t>(object - scene.objects.begin()), *laid };
+            return BuiltPiece { save::model::PlacedObjectIndex { static_cast<std::size_t>(object - scene.objects.begin()) }, *laid };
         }
 
         /// Adds to ride `ride`'s running cost what building `cost` of its track adds (taking it away when below
@@ -395,8 +395,8 @@ namespace rct3::scene::track
             b.tip.reset();
             if (before && after)
             {
-                b.tip = rct3::park::track::tip_of(scene.objects[before->object], c->pieces[before->laid.index], before->laid.reversed, scene.grid);
-                const rct3::park::track::TrackTip goal = rct3::park::track::start_of(scene.objects[after->object], c->pieces[after->laid.index], after->laid.reversed, scene.grid);
+                b.tip = rct3::park::track::tip_of(scene.objects[before->object.value], c->pieces[before->laid.index], before->laid.reversed, scene.grid);
+                const rct3::park::track::TrackTip goal = rct3::park::track::start_of(scene.objects[after->object.value], c->pieces[after->laid.index], after->laid.reversed, scene.grid);
                 between = rct3::park::track::pieces_between(c->pieces, *b.tip, before->laid, goal, after->laid, scene.grid);
             }
         }
@@ -420,7 +420,7 @@ namespace rct3::scene::track
             {
                 // The first piece laid backwards, and its far end.
                 const rct3::park::track::LaidPiece turned { static_cast<std::size_t>(&*shape - c->pieces.data()), !first.reversed };
-                b.tip = rct3::park::track::tip_of(scene.objects[object->second], *shape, turned.reversed, scene.grid);
+                b.tip = rct3::park::track::tip_of(scene.objects[object->second.value], *shape, turned.reversed, scene.grid);
                 b.candidates = rct3::park::track::pieces_after(c->pieces, b.tip->end, turned);
             }
         }
@@ -622,7 +622,7 @@ namespace rct3::scene::track
             const auto objects = object_indices(scene);
             const auto object_of = [&](const save::model::TrackPiece& p) {
                 const auto found = objects.find(p.scenery);
-                return found != objects.end() ? core::maybe(&scene.objects[found->second]) : std::nullopt;
+                return found != objects.end() ? core::maybe(&scene.objects[found->second.value]) : std::nullopt;
             };
             for (std::size_t i = 0; i < laid.size(); ++i)
             {
@@ -686,8 +686,8 @@ namespace rct3::scene::track
             return;
         }
         save::model::PlacedObject object = b.ghost->object;
-        object.id = over ? scene.objects[over->object].id : last_id(scene) + 1;
-        object.owner_ref = over ? scene.objects[over->object].owner_ref : object.id;
+        object.id = over ? scene.objects[over->object.value].id : last_id(scene) + 1;
+        object.owner_ref = over ? scene.objects[over->object.value].owner_ref : object.id;
         const auto objects = object_indices(scene);
         save::model::TrackPiece piece;
         if (!ride.track->pieces.empty())
@@ -697,7 +697,7 @@ namespace rct3::scene::track
             piece.segment = ride.track->segments.empty() || b.selected ? before.segment : static_cast<std::uint32_t>(ride.track->segments.size() - 1);
             piece.asset = before.asset;
             if (const auto found = objects.find(before.scenery); found != objects.end())
-                object.colours = scene.objects[found->second].colours;
+                object.colours = scene.objects[found->second.value].colours;
         }
         else
         {
@@ -750,7 +750,7 @@ namespace rct3::scene::track
             const auto first_shape = rct3::park::track::shape_named(*c, first.symbol);
             if (first_object != objects.end() && first_shape)
             {
-                const rct3::park::track::TrackTip start = rct3::park::track::start_of(scene.objects[first_object->second], *first_shape, first.reversed, scene.grid);
+                const rct3::park::track::TrackTip start = rct3::park::track::start_of(scene.objects[first_object->second.value], *first_shape, first.reversed, scene.grid);
                 const bool closes = glm::length(b.ghost->next.position - start.position) < kCloses && b.ghost->next.end == start.end;
                 if (!ride.track->segments.empty())
                     ride.track->segments.back().closed = closes;
@@ -775,10 +775,10 @@ namespace rct3::scene::track
         if (over)
         {
             save::model::TrackPiece& old = ride.track->pieces[*b.selected];
-            refund_piece(scene, *c, *b.ride, old, scene.objects[over->object]);
+            refund_piece(scene, *c, *b.ride, old, scene.objects[over->object.value]);
             hide_platform(scene, old); // A station's platform is built again if the new piece is one
             old = piece;
-            scene.objects[over->object] = std::move(object);
+            scene.objects[over->object.value] = std::move(object);
             objects_changed(scene);
             track_changed(scene, b, assets);
             step_on();
@@ -810,13 +810,13 @@ namespace rct3::scene::track
             for (std::size_t s = 0; !onto && s + 1 < segments.size(); ++s)
             {
                 const auto last = segments[s].closed || segments[s].piece_count == 0 ? std::nullopt : built_piece(scene, *c, ride.track->pieces.at(segments[s].first_piece + segments[s].piece_count - 1));
-                if (last && c->pieces[last->laid.index].record.side == other->record.side && meets(rct3::park::track::tip_of(scene.objects[last->object], c->pieces[last->laid.index], last->laid.reversed, scene.grid), start))
+                if (last && c->pieces[last->laid.index].record.side == other->record.side && meets(rct3::park::track::tip_of(scene.objects[last->object.value], c->pieces[last->laid.index], last->laid.reversed, scene.grid), start))
                     onto = s;
             }
             const std::size_t s = rct3::park::track::add_piece(*ride.track, onto, std::move(joined));
             // Its end meeting where its stretch starts closes that stretch.
             if (const auto first = segments[s].piece_count > 1 ? built_piece(scene, *c, ride.track->pieces.at(segments[s].first_piece)) : std::nullopt)
-                ride.track->segments[s].closed = meets(end, rct3::park::track::start_of(scene.objects[first->object], c->pieces[first->laid.index], first->laid.reversed, scene.grid));
+                ride.track->segments[s].closed = meets(end, rct3::park::track::start_of(scene.objects[first->object.value], c->pieces[first->laid.index], first->laid.reversed, scene.grid));
             ride.track->circuit = std::ranges::all_of(ride.track->segments, &save::model::TrackSegment::closed);
             (void)load_object_model(scene, b.models, assets, half);
             scene.attractions[half.id] = rct3::park::AttractionRef::of(*b.ride);
@@ -830,7 +830,7 @@ namespace rct3::scene::track
         for (std::size_t s = 0; !b.backward && segments.size() > 1 && !segments.back().closed && s + 1 < segments.size(); ++s)
         {
             const auto start = segments[s].closed || segments[s].piece_count == 0 ? std::nullopt : built_piece(scene, *c, ride.track->pieces.at(segments[s].first_piece));
-            const auto at = start ? std::optional(rct3::park::track::start_of(scene.objects[start->object], c->pieces[start->laid.index], start->laid.reversed, scene.grid)) : std::nullopt;
+            const auto at = start ? std::optional(rct3::park::track::start_of(scene.objects[start->object.value], c->pieces[start->laid.index], start->laid.reversed, scene.grid)) : std::nullopt;
             if (at && c->pieces[start->laid.index].record.side == shape.record.side && glm::length(b.ghost->next.position - at->position) < kCloses && b.ghost->next.end == at->end)
             {
                 rct3::park::track::join_stretch(*ride.track, s);
@@ -882,7 +882,7 @@ namespace rct3::scene::track
             // shortcut: the way found may cross itself, as only what stands already is in its way; keep the pieces
             // laid in thought in its way too if a found way does.
             const rct3::park::track::TrackRules rules = b.ride->value < scene.track_rules.size() ? scene.track_rules[b.ride->value] : rct3::park::track::TrackRules { };
-            b.completing = rct3::park::track::start_completion(c->pieces, *b.tip, *last, rct3::park::track::start_of(scene.objects[object->second], *shape, first.reversed, scene.grid), start, scene.grid, [&scene, &b, &assets, c, rules, taken = taken_room(scene, b)](save::model::PlacedObject o) {
+            b.completing = rct3::park::track::start_completion(c->pieces, *b.tip, *last, rct3::park::track::start_of(scene.objects[object->second.value], *shape, first.reversed, scene.grid), start, scene.grid, [&scene, &b, &assets, c, rules, taken = taken_room(scene, b)](save::model::PlacedObject o) {
                 o.overlay = b.overlay;
                 const bool listed = std::ranges::any_of(c->pieces, [&](const rct3::park::track::PieceShape& p) { return p.record.item == o.symbol && rct3::park::track::lists_piece(rules, p.record.name); });
                 return listed && !off_water(scene, b, assets, o) && !clashes(scene, taken, o);
@@ -960,11 +960,11 @@ namespace rct3::scene::track
         if (const auto found = objects.find(last.scenery); found != objects.end())
         {
             if (c != nullptr)
-                refund_piece(scene, *c, *b.ride, last, scene.objects[found->second]);
+                refund_piece(scene, *c, *b.ride, last, scene.objects[found->second.value]);
             // Its tunnel closes; the ground it cut stays cut.
-            if (!rct3::park::track::buried_hollows(std::span(&scene.objects[found->second], 1), scene.models, scene.grid).empty())
+            if (!rct3::park::track::buried_hollows(std::span(&scene.objects[found->second.value], 1), scene.models, scene.grid).empty())
                 scene.footpaths.pavings_stale = true;
-            scene.objects[found->second].hidden = true;
+            scene.objects[found->second.value].hidden = true;
         }
         hide_platform(scene, last);
         scene.attractions.erase(last.scenery);

@@ -41,7 +41,7 @@ namespace rct3::scene::park
         constexpr float kPersonViewHeight = 0.9f;     ///< Of the point it looks at, above the person's feet
 
         /// The first of the attraction's objects that takes colours, and the slots it takes.
-        std::optional<std::pair<std::size_t, std::vector<std::size_t>>> painted_object(const ParkScene& scene, rct3::park::AttractionRef ref)
+        std::optional<std::pair<save::model::PlacedObjectIndex, std::vector<std::size_t>>> painted_object(const ParkScene& scene, rct3::park::AttractionRef ref)
         {
             for (std::size_t i = 0; i < scene.objects.size(); ++i)
             {
@@ -53,7 +53,7 @@ namespace rct3::scene::park
                 f.colours = scene.objects[i].colours;
                 f.colour_slots = model == scene.models.end() ? 0 : rct3::park::object::colour_slots(model->second);
                 if (std::vector<std::size_t> slots = ui::screens::info::scenery_paint_slots(f); !slots.empty())
-                    return std::pair { i, std::move(slots) };
+                    return std::pair { save::model::PlacedObjectIndex { i }, std::move(slots) };
             }
             return std::nullopt;
         }
@@ -245,7 +245,7 @@ namespace rct3::scene::park
         if (const auto painted = painted_object(scene, ref))
         {
             for (const std::size_t slot : painted->second)
-                f.colours.push_back(static_cast<std::size_t>(std::max(scene.objects[painted->first].colours.at(slot), 0)));
+                f.colours.push_back(static_cast<std::size_t>(std::max(scene.objects[painted->first.value].colours.at(slot), 0)));
         }
         return f;
     }
@@ -275,12 +275,12 @@ namespace rct3::scene::park
         return entt::null;
     }
 
-    ui::screens::info::SceneryFacts prop_facts(const ParkScene& scene, std::size_t index)
+    ui::screens::info::SceneryFacts prop_facts(const ParkScene& scene, save::model::PlacedObjectIndex index)
     {
         ui::screens::info::SceneryFacts f;
-        if (index >= scene.objects.size())
+        if (index.value >= scene.objects.size())
             return f;
-        const save::model::PlacedObject& o = scene.objects[index];
+        const save::model::PlacedObject& o = scene.objects[index.value];
         f.symbol = o.symbol;
         f.colours = o.colours;
         f.zero_time = scene.park.zero_time;
@@ -487,9 +487,9 @@ namespace rct3::scene::park
         show_info_page(scene, panel, assets, options);
     }
 
-    void open_prop(ParkScene& scene, ui::screens::info::InfoPanel& panel, std::size_t index, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, std::optional<ui::screens::info::SceneryTab> open)
+    void open_prop(ParkScene& scene, ui::screens::info::InfoPanel& panel, save::model::PlacedObjectIndex index, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, std::optional<ui::screens::info::SceneryTab> open)
     {
-        if (index >= scene.objects.size())
+        if (index.value >= scene.objects.size())
             return;
         std::vector<ui::screens::info::InfoTab> tabs;
         scene.prop_tabs.clear();
@@ -508,7 +508,7 @@ namespace rct3::scene::park
             scene.prop_tabs.push_back(t.tab);
         }
         if (scene.shown_prop != index)
-            scene.view_camera = rct3::park::framed(rct3::park::object::object_corners(scene.objects[index], scene.models, scene.grid, scene.fitted), scene.camera.yaw, kViewPitch.value, kPropViewClosest);
+            scene.view_camera = rct3::park::framed(rct3::park::object::object_corners(scene.objects[index.value], scene.models, scene.grid, scene.fitted), scene.camera.yaw, kViewPitch.value, kPropViewClosest);
         scene.shown.reset();
         scene.shown_person.reset();
         scene.shown_party.clear();
@@ -520,7 +520,7 @@ namespace rct3::scene::park
         show_info_page(scene, panel, assets, options);
     }
 
-    void paint_prop(render::Device& device, ParkScene& scene, std::size_t index, std::size_t slot, std::int32_t colour)
+    void paint_prop(render::Device& device, ParkScene& scene, save::model::PlacedObjectIndex index, std::size_t slot, std::int32_t colour)
     {
         if (slot < rct3::park::kFlexiSlotCount)
             change_object(device, scene, index, [&](save::model::PlacedObject& o) { o.colours.at(slot) = colour; });
@@ -548,7 +548,7 @@ namespace rct3::scene::park
             {
                 const auto owner = scene.attractions.find(scene.objects[i].id);
                 if (owner != scene.attractions.end() && owner->second == ref)
-                    paint_prop(device, scene, i, slot, change.value);
+                    paint_prop(device, scene, save::model::PlacedObjectIndex { i }, slot, change.value);
             }
         }
         else if (change.id == ui::screens::info::control_id(Name))

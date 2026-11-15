@@ -539,7 +539,7 @@ namespace rct3::simulation
                             Eyes = 23
                         };
                         const Felt feel = felt(train);
-                        const bool moving = train.running && std::abs(train.speed) >= kTuning.reactions.still;
+                        const bool moving = train.running && std::abs(train.speed) >= kTuning.reactions.still.value;
                         const TrainRun run = !moving ? TrainRun::Standing : on_chain(train) ? TrainRun::Lifting : TrainRun::Free;
                         const std::size_t per_car = std::max<std::size_t>(ride.capacity / static_cast<std::size_t>(std::max(train.cars, 1)), 1);
                         for (std::size_t seat = 0; seat < riders.size(); ++seat)
@@ -569,14 +569,14 @@ namespace rct3::simulation
                         const glm::vec3 way = track_way(train, train.at);
                         train.flight = Flight { .from = at, .way = way, .at = at, .velocity = way * train.speed, .water = std::min(water, at.y), .speed = { train.speed } };
                         // A pool's far wall stops it, its middle half a car short of it, however far it would fly.
-                        constexpr float kFar = 100;   ///< Metres on it looks for the wall. Chosen by eye: past any slide's throw
-                        constexpr float kHalfCar = 1; ///< Metres from a slide car's middle to its nose. Chosen by eye
+                        constexpr units::Distance kFar { 100 };   ///< On it looks for the wall. Chosen by eye: past any slide's throw
+                        constexpr units::Distance kHalfCar { 1 }; ///< From a slide car's middle to its nose. Chosen by eye
                         if (const glm::vec2 level { way.x, way.z }; pool != nullptr && glm::length(level) > 1e-3f)
                         {
                             const glm::vec2 from { at.x, at.z };
-                            const glm::vec2 far = from + glm::normalize(level) * kFar;
+                            const glm::vec2 far = from + glm::normalize(level) * kFar.value;
                             if (const glm::vec2 stop = pool_stop(*pool, from, far, world.paths.tile_size); stop != far)
-                                train.flight->reach.value = std::max(glm::distance(from, stop) - kHalfCar, 0.0f);
+                                train.flight->reach.value = std::max(glm::distance(from, stop) - kHalfCar.value, 0.0f);
                         }
                         // It flies the rest of the step it ran off in.
                         fly(*train.flight, off_for(train));

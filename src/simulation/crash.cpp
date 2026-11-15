@@ -10,25 +10,25 @@ namespace rct3::simulation
     namespace
     {
         constexpr float kGravity = 9.81f;
-        constexpr float kStep = 0.05f;   ///< Seconds per step of a flight, short enough not to pass through a wall
-        constexpr float kKept = 0.4f;    ///< Of its speed down, how much a bounce sends it back up with
-        constexpr float kSkid = 0.6f;    ///< Of its speed across, how much it keeps through a bounce
-        constexpr int kLandings = 2;     ///< It blows up the time it comes down this often
-        constexpr float kFlightMost = 7; ///< Seconds it flies at most before it blows up in the air
-        constexpr float kBurnsFor = 6;   ///< Seconds it burns where it lies before it is gone
+        constexpr units::Seconds kStep { 0.05f };   ///< A step of a flight, short enough not to pass through a wall
+        constexpr float kKept = 0.4f;               ///< Of its speed down, how much a bounce sends it back up with
+        constexpr float kSkid = 0.6f;               ///< Of its speed across, how much it keeps through a bounce
+        constexpr int kLandings = 2;                ///< It blows up the time it comes down this often
+        constexpr units::Seconds kFlightMost { 7 }; ///< It flies at most before it blows up in the air
+        constexpr units::Seconds kBurnsFor { 6 };   ///< It burns where it lies before it is gone
     } // namespace
 
     WreckEvent fly(Wreck& w, float seconds, const WreckSurroundings& around)
     {
         WreckEvent event = WreckEvent::None;
-        const int steps = static_cast<int>(std::ceil(seconds / kStep));
+        const int steps = static_cast<int>(std::ceil(seconds / kStep.value));
         for (int step = 0; step < steps && w.state != WreckState::Gone; ++step)
         {
-            const float dt = std::min(seconds - static_cast<float>(step) * kStep, kStep);
+            const float dt = std::min(seconds - static_cast<float>(step) * kStep.value, kStep.value);
             if (w.state == WreckState::Burning)
             {
                 w.burnt.value += dt;
-                if (w.burnt.value >= kBurnsFor)
+                if (w.burnt >= kBurnsFor)
                 {
                     w.state = WreckState::Gone;
                     event = WreckEvent::Vanished;
@@ -41,7 +41,7 @@ namespace rct3::simulation
                 w.turned = glm::normalize(glm::angleAxis(turn * dt, w.spin / turn) * w.turned);
             w.flying.value += dt;
             const float ground = around.ground ? around.ground({ w.at.x, w.at.z }) : 0.0f;
-            bool blown = w.flying.value >= kFlightMost || (around.struck && around.struck(w.at));
+            bool blown = w.flying >= kFlightMost || (around.struck && around.struck(w.at));
             if (w.at.y <= ground && w.velocity.y < 0)
             {
                 w.at.y = ground;

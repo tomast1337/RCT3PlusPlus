@@ -18,10 +18,10 @@ namespace rct3::simulation
         /// A climate through the season, March to October.
         struct ClimateShape
         {
-            std::array<float, kMonths> warmth; ///< Degrees on a cloudy day
-            std::array<float, kMonths> wet;    ///< Share of rolls that rain
-            float storm = 0;                   ///< Share of the rain that comes as thunderstorms
-            float cloud = 0;                   ///< Share of the dry weather that is not plain sunny
+            std::array<units::Degrees, kMonths> warmth; ///< On a cloudy day
+            std::array<float, kMonths> wet;             ///< Share of rolls that rain
+            float storm = 0;                            ///< Share of the rain that comes as thunderstorms
+            float cloud = 0;                            ///< Share of the dry weather that is not plain sunny
         };
 
         // Chosen by eye, each from the name of its climate: deserts and the red planet are dry and hot, the
@@ -95,12 +95,12 @@ namespace rct3::simulation
         const double wet = c.wet[m];
         const double dry = 1 - wet;
         const double rain = wet * (1 - c.storm);
-        return { .warmth = { c.warmth[m] }, .odds = { dry * (1 - c.cloud), dry * c.cloud / 2, dry * c.cloud / 2, rain * kLightShare, rain * (1 - kLightShare), wet * c.storm } };
+        return { .warmth = c.warmth[m], .odds = { dry * (1 - c.cloud), dry * c.cloud / 2, dry * c.cloud / 2, rain * kLightShare, rain * (1 - kLightShare), wet * c.storm } };
     }
 
     units::Degrees weather_temperature(std::int32_t climate, std::int32_t month, save::model::WeatherType type)
     {
-        return { shape(climate).warmth[month_index(month)] + kKindWarmth[kind_index(type)] };
+        return { shape(climate).warmth[month_index(month)].value + kKindWarmth[kind_index(type)] };
     }
 
     std::optional<std::int32_t> career_climate(std::string_view scenario)

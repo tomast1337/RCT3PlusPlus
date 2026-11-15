@@ -19,7 +19,7 @@ namespace rct3::simulation
     namespace
     {
         constexpr float kGravity = 9.81f;
-        constexpr float kSmallestDrop = 1; ///< Metres down before a descent counts as a drop
+        constexpr units::Distance kSmallestDrop { 1 }; ///< Down, before a descent counts as a drop
         constexpr std::string_view kModelPath = "simulation/ride_ratings.json";
         constexpr std::string_view kFallbackFamily = "default";
         constexpr std::array<std::string_view, 3> kRatingNames { "excitement", "intensity", "nausea" };
@@ -160,7 +160,7 @@ namespace rct3::simulation
             return c.height[i];
         };
         const auto end_drop = [&] {
-            if (top - last >= kSmallestDrop)
+            if (top - last >= kSmallestDrop.value)
             {
                 ++t.drop_count;
                 t.highest_drop = std::max(t.highest_drop, top - last);

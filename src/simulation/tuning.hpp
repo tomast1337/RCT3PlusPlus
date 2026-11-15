@@ -100,7 +100,7 @@ namespace rct3::simulation::tuning
         units::Share hide_eyes { 0.5f }; ///< Of riders it is too wild for, the share who cover them
         units::Share suits { 0.5f };     ///< Chosen by eye: intensity short of what a flat ride's rider likes most that still thrills them
         float diving = -0.5f;            ///< Of the track's way, the drop under which a car heads down
-        float still = 0.5f;              ///< m/s under which a train counts as standing, held at a brake or block
+        units::Pace still { 0.5f };      ///< Under which a train counts as standing, held at a brake or block
     };
 
     /// Queues. Tuned by eye against busy saved parks, whose queue tiles hold 7 to 16 waiting guests two to four abreast.

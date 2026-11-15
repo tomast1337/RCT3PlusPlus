@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "logging/log.hpp"
 
+#include "core/hash.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstdio>
@@ -47,9 +49,9 @@ namespace rct3::logging
             static constexpr std::array<std::string_view, 6> kPalette = {
                 "\x1b[36m", "\x1b[35m", "\x1b[34m", "\x1b[96m", "\x1b[95m", "\x1b[94m",
             };
-            std::uint32_t h = 2166136261u; // FNV-1a
+            std::uint32_t h = core::kFnv32Offset;
             for (const char c : category)
-                h = (h ^ static_cast<std::uint8_t>(c)) * 16777619u;
+                h = (h ^ static_cast<std::uint8_t>(c)) * core::kFnv32Prime;
             return kPalette[h % kPalette.size()];
         }
 

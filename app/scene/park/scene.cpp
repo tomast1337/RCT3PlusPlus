@@ -3,6 +3,7 @@
 
 #include "career/career_file.hpp"
 #include "config/game/saves.hpp"
+#include "core/hash.hpp"
 #include "core/maybe.hpp"
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
@@ -1319,8 +1320,8 @@ namespace rct3::scene::park
                 const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
                 // The pools taken in again once built on, or their rooms opened, closed, priced or given another fluid or
                 // other waves.
-                std::size_t pools = 14695981039346656037u;
-                const auto mix = [&](std::int64_t v) { pools = (pools ^ static_cast<std::size_t>(v)) * 1099511628211u; };
+                std::size_t pools = core::kFnv64Offset;
+                const auto mix = [&](std::int64_t v) { pools = (pools ^ static_cast<std::size_t>(v)) * core::kFnv64Prime; };
                 for (const rct3::park::pools::PoolSquare& s : scene.pools.squares)
                     for (const std::int64_t v : { std::int64_t { s.col }, std::int64_t { s.row }, std::int64_t { std::to_underlying(s.kind) }, std::int64_t { s.surface } })
                         mix(v);

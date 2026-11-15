@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/water/jet.hpp"
 
+#include "core/hash.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <numbers>
@@ -27,7 +29,7 @@ namespace rct3::park::water
         /// A steady number 0 to 1 for a drop's ring corner.
         float noise(std::uint32_t serial, std::uint32_t corner)
         {
-            std::uint32_t h = (serial * 9 + corner) * 2654435761U;
+            std::uint32_t h = (serial * 9 + corner) * core::kGoldenSpread;
             h ^= h >> 15;
             h *= 2246822519U;
             h ^= h >> 13;

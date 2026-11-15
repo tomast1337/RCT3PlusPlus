@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/flexi_colours.hpp"
 
+#include "core/hash.hpp"
 #include "math/hex_colour.hpp"
 #include "strings/ascii.hpp"
 
@@ -112,9 +113,9 @@ namespace rct3::park
             { 14, 3, 2 },   // bright green, indigo, pale grey
             { 29, 8, 0 },   // crimson, pale blue, charcoal
         } };
-        std::uint32_t hash = 2166136261u; // FNV-1a
+        std::uint32_t hash = core::kFnv32Offset;
         for (const char c : name)
-            hash = (hash ^ static_cast<std::uint8_t>(strings::ascii_lower(c))) * 16777619u;
+            hash = (hash ^ static_cast<std::uint8_t>(strings::ascii_lower(c))) * core::kFnv32Prime;
         return kSchemes[hash % kSchemes.size()];
     }
 

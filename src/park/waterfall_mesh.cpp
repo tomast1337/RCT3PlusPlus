@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/waterfall_mesh.hpp"
 
+#include "core/hash.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <optional>
@@ -109,7 +111,7 @@ namespace rct3::park
         /// A steady number 0 to 1 for `k` and `salt`.
         float own_number(std::uint32_t k, std::uint32_t salt)
         {
-            const std::uint32_t h = (k * 9 + salt) * 2654435761U;
+            const std::uint32_t h = (k * 9 + salt) * core::kGoldenSpread;
             return static_cast<float>(h >> 8) / static_cast<float>(1U << 24);
         }
 

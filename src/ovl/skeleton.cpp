@@ -37,7 +37,7 @@ namespace rct3::ovl
                     skeleton.bones.push_back(names->text(std::size_t { i } * 4));
                     const std::int32_t parent = parents->i32(std::size_t { i } * 4);
                     // A bone only ever hangs from one listed before it; anything else is treated as none.
-                    skeleton.parents.push_back(parent >= 0 && static_cast<std::uint32_t>(parent) < i ? parent : -1);
+                    skeleton.parents.push_back(parent >= 0 && static_cast<std::uint32_t>(parent) < i ? std::optional { BoneIndex { static_cast<std::size_t>(parent) } } : std::nullopt);
                 }
             }
             if (animations != 0)

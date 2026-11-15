@@ -66,10 +66,10 @@ namespace rct3::park
     /// One animal's look: its bones, its meshes at each level of detail and its motions.
     struct AnimalBody
     {
-        std::vector<std::int32_t> parents { };            ///< By bone, -1 for a root; parents come before children
-        std::vector<glm::vec3> rest_positions { };        ///< By bone, from the parent
-        std::vector<glm::quat> rest_rotations { };        ///< By bone, from the parent
-        std::vector<std::vector<AnimalPiece>> levels { }; ///< Finest first; coarse ones may be empty
+        std::vector<std::optional<ovl::BoneIndex>> parents { }; ///< By bone, none for a root; parents come before children
+        std::vector<glm::vec3> rest_positions { };              ///< By bone, from the parent
+        std::vector<glm::quat> rest_rotations { };              ///< By bone, from the parent
+        std::vector<std::vector<AnimalPiece>> levels { };       ///< Finest first; coarse ones may be empty
         /// By motion slot (ovl::animal::AnimalMotion), nothing where the animal has no such motion.
         std::vector<std::optional<AnimalClip>> motions { };
     };

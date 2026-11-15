@@ -16,7 +16,7 @@ namespace
     AnimalBody two_bones()
     {
         AnimalBody body;
-        body.parents = { -1, 0 };
+        body.parents = { std::nullopt, rct3::ovl::BoneIndex { 0 } };
         body.rest_positions = { glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f) };
         body.rest_rotations = { glm::quat(1, 0, 0, 0), glm::quat(1, 0, 0, 0) };
         body.motions.resize(static_cast<std::size_t>(AnimalMotion::TurnRight90) + 1);

@@ -5,6 +5,7 @@
 // channel per bone, in the skeleton's bone order (see simple_anim.hpp).
 #pragma once
 
+#include "ovl/bone_index.hpp"
 #include "ovl/overlay.hpp"
 
 #include <cstdint>
@@ -18,7 +19,7 @@ namespace rct3::ovl
     struct Skeleton
     {
         std::vector<std::string_view> bones;
-        std::vector<std::int32_t> parents; ///< One per bone: the index of an earlier bone, or -1 for none
+        std::vector<std::optional<BoneIndex>> parents; ///< One per bone: an earlier bone, or none
         std::vector<std::string_view> animation_names;
         std::vector<std::string_view> animations; ///< One "san" item per name
     };

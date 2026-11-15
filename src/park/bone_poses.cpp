@@ -65,9 +65,9 @@ namespace rct3::park
         const auto solve = [&](auto&& self, std::size_t b, std::size_t depth) -> const glm::mat4& {
             if (!done[b])
             {
-                const std::int32_t p = rig.parents[b];
-                const bool has_parent = p >= 0 && static_cast<std::size_t>(p) < count && depth < count;
-                world[b] = has_parent ? self(self, static_cast<std::size_t>(p), depth + 1) * local[b] : local[b];
+                const std::optional<ovl::BoneIndex> p = rig.parents[b];
+                const bool has_parent = p && p->value < count && depth < count;
+                world[b] = has_parent ? self(self, p->value, depth + 1) * local[b] : local[b];
                 done[b] = 1;
             }
             return world[b];

@@ -14,6 +14,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "ovl/bone_index.hpp"
 #include "ovl/frame_mesh.hpp"
 #include "ovl/simple_anim.hpp"
 #include "ovl/simple_skin.hpp"
@@ -78,8 +79,8 @@ namespace rct3::park::person
     struct HeadModel
     {
         std::string texture;
-        std::vector<std::int32_t> parents; ///< Of each bone
-        std::size_t turns = 0;             ///< The bone that turns the head to look about: the one its name calls the head
+        std::vector<std::optional<ovl::BoneIndex>> parents; ///< Of each bone
+        std::size_t turns = 0;                              ///< The bone that turns the head to look about: the one its name calls the head
         std::vector<std::optional<ovl::SimpleAnim>> motions;
         MotionIndex motion_index;
         std::array<std::optional<ovl::SimpleSkin>, 2> skins; ///< The plain face at each level

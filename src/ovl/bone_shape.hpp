@@ -3,6 +3,7 @@
 // Bone shapes: animated 3D models. Meshes whose vertices are weighted to a skeleton of named bones.
 #pragma once
 
+#include "ovl/bone_index.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -56,7 +57,7 @@ namespace rct3::ovl
     struct Bone
     {
         std::string_view name;
-        std::int32_t parent = -1; ///< Index of the parent bone, or -1 for a root
+        std::optional<BoneIndex> parent { }; ///< None for a root
         /// Row-major 4x4, row vectors (translation in the last row). Relative to the parent bone.
         std::array<float, 16> local { };
         /// Row-major 4x4 in model space. Equals `local * parent.world`, and `local` itself for a root.

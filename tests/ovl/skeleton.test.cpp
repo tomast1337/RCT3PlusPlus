@@ -91,7 +91,7 @@ TEST_CASE("a skeleton lists its bones, what each hangs from and its motions")
     REQUIRE(items[0].skeleton.has_value());
     const auto& s = *items[0].skeleton;
     CHECK(s.bones == std::vector<std::string_view> { "Root", "Arm", "Hand" });
-    CHECK(s.parents == std::vector<std::int32_t> { -1, 0, -1 });
+    CHECK(s.parents == std::vector<std::optional<rct3::ovl::BoneIndex>> { std::nullopt, rct3::ovl::BoneIndex { 0 }, std::nullopt });
     CHECK(s.animation_names == std::vector<std::string_view> { "Wave" });
     CHECK(s.animations == std::vector<std::string_view> { "W" });
 }

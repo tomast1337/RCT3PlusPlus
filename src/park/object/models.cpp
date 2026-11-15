@@ -731,9 +731,9 @@ namespace rct3::park::object
                     joint_of.assign(shape->bones.size(), -1);
                     for (std::size_t b = 0; b < shape->bones.size(); ++b)
                     {
-                        auto up = static_cast<std::int32_t>(b);
-                        for (std::size_t hops = 0; up >= 0 && up < std::ssize(shape->bones) && hops < shape->bones.size() && joint_of[b] < 0; ++hops, up = shape->bones[static_cast<std::size_t>(up)].parent)
-                            if (const auto j = std::ranges::find(joint_bones, up); j != joint_bones.end())
+                        std::optional up = ovl::BoneIndex { b };
+                        for (std::size_t hops = 0; up && up->value < shape->bones.size() && hops < shape->bones.size() && joint_of[b] < 0; ++hops, up = shape->bones[up->value].parent)
+                            if (const auto j = std::ranges::find(joint_bones, static_cast<std::int32_t>(up->value)); j != joint_bones.end())
                                 joint_of[b] = static_cast<std::int32_t>(j - joint_bones.begin());
                     }
                     if (model.arm_joints.empty())
@@ -755,7 +755,7 @@ namespace rct3::park::object
                     for (std::size_t b = 0; b < shape->bones.size(); ++b)
                     {
                         const auto bone = static_cast<std::int32_t>(b);
-                        places.push_back({ .name = shape->bones[b].name, .place = column_matrix(shape->bones[b].world), .bone = rigged ? bone : !joint_of.empty() ? joint_of[b] : -1 });
+                        places.push_back({ .name = shape->bones[b].name, .place = column_matrix(shape->bones[b].world), .bone = rigged ? std::optional { bone } : !joint_of.empty() && joint_of[b] >= 0 ? std::optional { joint_of[b] } : std::nullopt });
                     }
                     if (model.lights.empty())
                         model.lights = model_lights(places);
@@ -954,7 +954,7 @@ namespace rct3::park::object
             for (ModelLight light : pieces.lights)
             {
                 light.position = glm::vec3(place * glm::vec4(light.position, 1.0f));
-                light.bone = -1;
+                light.bone.reset();
                 model.lights.push_back(light);
             }
             if (model.levels.empty())
@@ -1141,8 +1141,8 @@ namespace rct3::park::object
                 if (const auto splash = bone_of(car->visual, std::format("watersplash{}{:02}", kStrengths[strength], n)))
                     model.splash_points.push_back({ .position = glm::vec3((*splash)[3]), .strength = strength });
         }
-        if (model.rig && std::ranges::all_of(car->rowing, [&](std::int32_t m) { return m >= 0 && std::cmp_less(m, model.rig->motions.size()); }))
-            model.rowing = { static_cast<std::size_t>(car->rowing[0]), static_cast<std::size_t>(car->rowing[1]), static_cast<std::size_t>(car->rowing[2]) };
+        if (model.rig && std::ranges::all_of(car->rowing, [&](std::optional<std::int32_t> m) { return m && std::cmp_less(*m, model.rig->motions.size()); }))
+            model.rowing = { static_cast<std::size_t>(*car->rowing[0]), static_cast<std::size_t>(*car->rowing[1]), static_cast<std::size_t>(*car->rowing[2]) };
         constexpr std::uint8_t kRideSeating = 35; ///< The seating number that leaves it to the ride
         if (const auto seating = static_cast<std::uint8_t>(car->kind & 0xff); seating != kRideSeating)
             model.seating = seating;

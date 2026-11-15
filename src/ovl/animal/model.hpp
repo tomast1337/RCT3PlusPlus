@@ -11,6 +11,7 @@
 // (see bone_shape.hpp). Bones are stored relative to their parent, as an offset and a turn.
 #pragma once
 
+#include "ovl/bone_index.hpp"
 #include "ovl/bone_shape.hpp"
 #include "ovl/overlay.hpp"
 
@@ -26,7 +27,7 @@ namespace rct3::ovl::animal
     struct AnimalBone
     {
         std::string_view name;
-        std::int32_t parent = -1;                     ///< Index of an earlier bone, or -1 for a root
+        std::optional<BoneIndex> parent { };          ///< An earlier bone; none for a root
         std::array<float, 3> position { };            ///< At rest, from the parent bone
         std::array<float, 4> rotation { 0, 0, 0, 1 }; ///< At rest, from the parent bone: a unit quaternion x, y, z, w
     };

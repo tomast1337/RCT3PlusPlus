@@ -123,9 +123,11 @@ namespace rct3::ovl
                     Bone bone;
                     if (const auto name = space.cstring_at(u32_at(*rows, std::size_t { i } * kBoneSize)))
                         bone.name = *name;
-                    bone.parent = static_cast<std::int32_t>(u32_at(*rows, std::size_t { i } * kBoneSize + 4));
-                    if (bone.parent < -1 || bone.parent >= static_cast<std::int64_t>(bone_count))
+                    const auto parent = static_cast<std::int32_t>(u32_at(*rows, std::size_t { i } * kBoneSize + 4));
+                    if (parent < -1 || parent >= static_cast<std::int64_t>(bone_count))
                         return std::nullopt;
+                    if (parent >= 0)
+                        bone.parent = BoneIndex { static_cast<std::size_t>(parent) };
                     if (!read_matrix(*locals, std::size_t { i } * kMatrixSize, bone.local))
                         return std::nullopt;
                     if (!read_matrix(*worlds, std::size_t { i } * kMatrixSize, bone.world))

@@ -182,7 +182,7 @@ namespace rct3::park::track
         /// one of its slides, laid as drawn. None on other pieces.
         std::vector<std::vector<glm::vec3>> climbs { };
         std::vector<PieceOpening> pool_sides { }; ///< Where it joins a pool beside: a slide's end, or its track out over the water
-        float drop_off = -1;                      ///< As ovl::TrackSection::drop_off
+        std::optional<float> drop_off { };        ///< As ovl::TrackSection::drop_off
         /// Of a lift tower's pieces, whose line is its car's way up the tower: the middle line of its second pair of
         /// rails, where the train's track joins it (at the foot from level some way before the tower, at the top
         /// pointing down past it). Its ends stand for the piece's own wherever pieces meet. None on other pieces.

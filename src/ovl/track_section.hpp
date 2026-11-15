@@ -91,8 +91,8 @@ namespace rct3::ovl
         static constexpr std::uint32_t kPavedUnder = 0x8;   ///< Its footprint is paved as a flat ride's floor is
         static constexpr std::uint32_t kFencedRound = 0x10; ///< Its footprint is fenced round as a flat ride's is
         /// Of a pool slide's end that runs on back to its lift: how far along it, in metres, its riders are let off
-        /// into the pool. Below 0 on other pieces. Version 4 and 5 files only.
-        float drop_off = -1;
+        /// into the pool. None on other pieces, whose files keep a number below 0. Version 4 and 5 files only.
+        std::optional<float> drop_off { };
         /// Squares of its footprint that meet things beside them. Version 4 and 5 files only.
         std::vector<TrackSquare> squares;
         /// Join tags of the start and of the end.

@@ -12,9 +12,9 @@ namespace rct3::ovl
         struct Variant
         {
             detail::AttractionLayout layout;
-            std::size_t size;    // bytes of the item that are read
-            std::size_t minimum; // bytes that must be there: the spline slots are missing from some items
-            int splines;         // offset of the four spline slots, -1 for none
+            std::size_t size;                   // bytes of the item that are read
+            std::size_t minimum;                // bytes that must be there: the spline slots are missing from some items
+            std::optional<std::size_t> splines; // offset of the four spline slots
         };
 
         Variant variant(OvlLayout layout)
@@ -22,7 +22,7 @@ namespace rct3::ovl
             switch (layout)
             {
                 case OvlLayout::NoStream:
-                    return { { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 }, 0x28, 0x28, -1 };
+                    return { { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 }, 0x28, 0x28, std::nullopt };
                 case OvlLayout::OneStream:
                     return { { .type_id = 0x68, .name_text = 0x6C, .description_text = 0x70, .icon = 0x74, .style = 0x18, .spline = 0x8C, .value_a = 0x78, .value_b = 0x7C, .value_c = 0x88 }, 0xB8, 0x90, 0xA8 };
                 default:
@@ -53,11 +53,11 @@ namespace rct3::ovl
             {
                 AnimatedRide ride;
                 ride.info = detail::read_attraction(*record, v.layout, layout);
-                if (v.splines >= 0)
+                if (v.splines)
                 {
                     for (std::size_t i = 0; i < ride.splines.size(); ++i)
                     {
-                        ride.splines[i] = record->ref(static_cast<std::size_t>(v.splines) + i * 4, "spl");
+                        ride.splines[i] = record->ref(*v.splines + i * 4, "spl");
                     }
                 }
                 if (layout != OvlLayout::NoStream)

@@ -9,7 +9,7 @@ using namespace rct3::park;
 
 namespace
 {
-    NamedPlace at(std::string_view name, glm::vec3 position, std::int32_t bone = -1)
+    NamedPlace at(std::string_view name, glm::vec3 position, std::optional<std::int32_t> bone = std::nullopt)
     {
         return { .name = name, .place = glm::translate(glm::mat4(1.0f), position), .bone = bone };
     }

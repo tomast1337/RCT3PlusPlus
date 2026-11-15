@@ -75,7 +75,7 @@ namespace rct3::park
             view.velocity = velocity;
         }
         view.last = at;
-        glm::vec3 sway = sways ? -pull * (tuning.sway_per_g / kGravity) : glm::vec3 { };
+        glm::vec3 sway = sways ? -pull * (tuning.sway_per_g / kGravity.value) : glm::vec3 { };
         if (const float length = glm::length(sway); length > tuning.sway_most)
             sway *= tuning.sway_most / length;
         view.sway += (sway - view.sway) * settling(tuning.sway_settle);

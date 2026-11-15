@@ -630,7 +630,7 @@ namespace rct3::scene::park
                     }
                 if (below >= lip.y)
                     continue;
-                const float throw_out = kPourSpeed * std::sqrt(2 * (lip.y - below) / units::kGravity);
+                const float throw_out = kPourSpeed * std::sqrt(2 * (lip.y - below) / units::kGravity.value);
                 scene.slide_pours.push_back({ .left = left, .right = right, .landing = { lip.x + flow.x * throw_out, below, lip.z + flow.y * throw_out }, .water = below > scene.grid.height_at(lip.x, lip.z).value_or(below) });
             }
         }

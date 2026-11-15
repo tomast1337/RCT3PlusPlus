@@ -37,7 +37,7 @@ namespace rct3::simulation
                 }
                 continue;
             }
-            w.velocity.y -= kGravity * dt;
+            w.velocity.y -= kGravity.value * dt;
             w.at += w.velocity * dt;
             if (const float turn = glm::length(w.spin); turn > 0)
                 w.turned = glm::normalize(glm::angleAxis(turn * dt, w.spin / turn) * w.turned);

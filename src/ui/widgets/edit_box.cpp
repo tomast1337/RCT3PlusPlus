@@ -171,7 +171,7 @@ namespace rct3::ui::widgets
         {
             char32_t c = typed[i];
             if (is_high_surrogate(c) && i + 1 < typed.size() && is_low_surrogate(typed[i + 1]))
-                c = 0x10000 + ((c - 0xD800) << 10) + (typed[++i] - 0xDC00);
+                c = strings::from_surrogates(c, typed[++i]);
             if (c < 0x20 || c == 0x7F || c > 0x10FFFF || is_high_surrogate(c) || is_low_surrogate(c))
                 continue;
             if (upper_case && c >= U'a' && c <= U'z')

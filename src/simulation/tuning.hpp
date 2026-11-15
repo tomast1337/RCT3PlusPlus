@@ -709,11 +709,11 @@ namespace rct3::simulation::tuning
         units::Share view_cheer { 0.05f };      ///< Chosen by eye: happiness from a fine view
         std::int32_t earshot = 2;               ///< Chosen by eye: tiles from a loudspeaker within which guests hear it
         units::Chance music_thought { 0.15 };   ///< Chosen by eye: of liking its music, on each tile walked in earshot
-        units::Share stamp_cheer { 0.1f };      ///< Happiness from a new stamp in a guest's passport
-        units::Share gift_cheer { 0.2f };       ///< Happiness from being given the park's passport gift
-        units::Share no_gift_gloom { 0.1f };    ///< Happiness lost when the park cannot pay for the gift they are due
-        units::Chance map_wish { 0.02 };        ///< Of a party with no map going to buy one, each time it picks where to go
-        float map_rides = 0.125f / 0.03f;       ///< How many times as often a party holding a map goes for a ride
+        units::Share stamp_cheer { 0.1f };      ///< Chosen by eye: happiness from a new stamp in a guest's passport
+        units::Share gift_cheer { 0.2f };       ///< Chosen by eye: happiness from being given the park's passport gift
+        units::Share no_gift_gloom { 0.1f };    ///< Chosen by eye: happiness lost when the park cannot pay for the gift they are due
+        units::Chance map_wish { 0.02 };        ///< Chosen by eye: of a party with no map going to buy one, each time it picks where to go
+        float map_rides = 4;                    ///< Chosen by eye: how many times as often a party holding a map goes for a ride
     };
 
     struct Tuning

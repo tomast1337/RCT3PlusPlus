@@ -26,10 +26,10 @@ namespace rct3::save::model
 
     struct DesignSummary
     {
-        std::string ride_symbol;                  ///< Of the ride kind, as a park's rides name it ("Giga:trr")
-        std::int32_t width = 0;                   ///< Tiles the design covers across
-        std::int32_t length = 0;                  ///< ... and along
-        std::int64_t cost = 0;                    ///< Hundredths
+        std::string ride_symbol; ///< Of the ride kind, as a park's rides name it ("Giga:trr")
+        std::int32_t width = 0;  ///< Tiles the design covers across
+        std::int32_t length = 0; ///< ... and along
+        units::Money cost { };
         Assessment assessment;                    ///< Not valid when the design was never rated
         std::optional<TestResults> results;       ///< None when it was never tested
         std::optional<std::int32_t> scenario { }; ///< The career scenario to complete first, by place in the list

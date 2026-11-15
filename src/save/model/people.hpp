@@ -218,9 +218,9 @@ namespace rct3::save::model
     {
         std::int32_t type = 0; ///< 0 none; 1, 2, 6 seen
         PeopleRef target { };
-        float horizontal = 0;  ///< radians
-        float vertical = 0;    ///< radians
-        float distance = 1.5f; ///< metres
+        units::Radians horizontal { };
+        units::Radians vertical { };
+        units::Distance distance { 1.5f };
         /// Union keyed by `type` (float bits or an id); kept as the stored bit pattern.
         std::uint32_t extra_bits = 0;
     };
@@ -235,7 +235,7 @@ namespace rct3::save::model
         PeopleVec3 position { };   ///< World position
         /// Model to world as stored: four rows, the model's x, y and z axes then its position.
         std::array<float, 16> world { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
-        float heading = 0;          ///< Radians, 0..2pi
+        units::Radians heading { }; ///< 0..2pi
         PeopleVec3 lane_offset { }; ///< Offset from the path centre line
         PersonState state = PersonState::Decision;
         std::int32_t sub_state = 0;

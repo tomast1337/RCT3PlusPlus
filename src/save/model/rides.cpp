@@ -661,7 +661,7 @@ namespace rct3::save::model
                     .build_time = units::Seconds { f[id::kBuildTime].number() },
                     .total_guests = f[id::kTotalGuests].integer(),
                     .total_profit = units::Money { f[id::kTotalProfit].integer() },
-                    .running_cost = f[id::kRunningCost].integer(),
+                    .running_cost = { f[id::kRunningCost].integer() },
                     .popularity = f[id::kPopularity].number(),
                     .satisfaction = f[id::kSatisfaction].number(),
                     .repair_status = static_cast<RepairStatus>(f[id::kRepair].i32()),
@@ -680,7 +680,7 @@ namespace rct3::save::model
                 for (const auto& item : f[id::kIntervals].items())
                 {
                     const View v(item);
-                    out.push_back({ v[id::kIntervalGuests].integer(), v[id::kIntervalIncome].integer(), v[id::kIntervalLosses].integer() });
+                    out.push_back({ v[id::kIntervalGuests].integer(), { v[id::kIntervalIncome].integer() }, { v[id::kIntervalLosses].integer() } });
                 }
                 return out;
             }
@@ -705,14 +705,14 @@ namespace rct3::save::model
                 TestResults t {
                     .max_speed = r[id::kMaxSpeed].number(),
                     .average_speed = r[id::kAverageSpeed].number(),
-                    .ride_time = r[id::kRideTime].number(),
-                    .ride_length = r[id::kRideLength].number(),
+                    .ride_time = { r[id::kRideTime].number() },
+                    .ride_length = { r[id::kRideLength].number() },
                     .max_positive_vertical = r[id::kMaxPositiveG].number(),
                     .max_negative_vertical = r[id::kMaxNegativeG].number(),
                     .max_lateral = r[id::kMaxLateralG].number(),
-                    .air_time = r[id::kAirTime].number(),
+                    .air_time = { r[id::kAirTime].number() },
                     .drop_count = r[id::kDrops].i32(),
-                    .highest_drop = r[id::kHighestDrop].number(),
+                    .highest_drop = { r[id::kHighestDrop].number() },
                     .inversion_count = r[id::kInversions].i32(),
                     .lift_hill_count = r[id::kLiftHills].i32(),
                     .corners_flat = corners(r[id::kCorners]),
@@ -1087,8 +1087,8 @@ namespace rct3::save::model
                         .state_time = units::Seconds { tf[id::kStateTime].number() },
                         .front_piece = live(tf[id::kFrontPiece]),
                         .rear_piece = live(tf[id::kRearPiece]),
-                        .distance = tf[id::kDistance].number(),
-                        .speed = tf[id::kSpeed].number(),
+                        .distance = { tf[id::kDistance].number() },
+                        .speed = { tf[id::kSpeed].number() },
                         .acceleration = tf[id::kAccel].number(),
                         .station = core::from_stored(tf[id::kStation].i32(-1)),
                         .start_station = core::from_stored(tf[id::kStartStation].i32(-1)),
@@ -1098,7 +1098,7 @@ namespace rct3::save::model
                         .static_friction = tf[id::kStaticFriction].number(),
                         .dynamic_friction = tf[id::kDynamicFriction].number(),
                         .mass = tf[id::kMass].number(),
-                        .length = tf[id::kLength].number(),
+                        .length = { tf[id::kLength].number() },
                         .symbol = tf[id::kTrainSymbol].text(),
                         .overlay_path = tf[id::kTrainOverlay].text(),
                     };
@@ -1136,9 +1136,9 @@ namespace rct3::save::model
                             .design_slot = cf[id::kCarSlot].i32(),
                             .state = static_cast<CarState>(cf[id::kState].i32()),
                             .passengers = cf[id::kPeeps].i32(),
-                            .distance = st[id::kDistance].number(),
-                            .speed = st[id::kSpeed].number(),
-                            .length = st[id::kLength].number(),
+                            .distance = { st[id::kDistance].number() },
+                            .speed = { st[id::kSpeed].number() },
+                            .length = { st[id::kLength].number() },
                             .mass = st[id::kMass].number(),
                             .reversed = st[id::kReversed].boolean(),
                             .front_wheel_distance = cf[id::kFrontWheel].number(),
@@ -1205,7 +1205,7 @@ namespace rct3::save::model
                     StallItem si {
                         .id = it->id,
                         .item_asset = live(v[id::kItemAsset]),
-                        .price = v[id::kPrice].integer(),
+                        .price = { v[id::kPrice].integer() },
                         .total_sold = v[id::kSold].integer(),
                         .name = v[id::kName].text(),
                         .stall = v[id::kItemStall].ref(),

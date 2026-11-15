@@ -363,8 +363,8 @@ TEST_CASE("a synchronised stall gives its menu to the other stalls of its kind")
     park::ride::copy_menu(stalls, 0);
     REQUIRE(stalls[1].items.size() == 2);
     CHECK(stalls[1].items[0].kind_symbol == "Burger:cid");
-    CHECK(stalls[1].items[0].price == 175);
-    CHECK(stalls[1].items[1].price == 260);
+    CHECK(stalls[1].items[0].price.value == 175);
+    CHECK(stalls[1].items[1].price.value == 260);
     CHECK(stalls[1].items[1].total_sold == 12);
     CHECK(stalls[1].extras[0].level == 3);
     CHECK(stalls[2].items.empty());

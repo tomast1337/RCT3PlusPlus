@@ -213,9 +213,9 @@ TEST_CASE("a ride whose cable lift is missing does not open; one whose station i
     course.closed = true;
     save::model::Ride r = built_ride(6);
     r.trains.resize(1);
-    r.trains[0].length = 5;
+    r.trains[0].length = { 5 };
     CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
-    r.trains[0].length = 7;
+    r.trains[0].length = { 7 };
     CHECK_FALSE(open_refusal(r, TrackRules { }, kTest, false, course));
     // A course that comes round to its start is a circuit, however its pieces were laid.
     r.track->circuit = false;
@@ -230,7 +230,7 @@ TEST_CASE("a ride whose cable lift is missing does not open; one whose station i
     course.kinds[0] = K::Station;
 
     r.mode = save::model::OperatingMode::ReverseCableLiftHill;
-    r.trains[0].length = 5;
+    r.trains[0].length = { 5 };
     CHECK(open_refusal(r, TrackRules { }, kOpen, false, course) == "CannotOpenOrTestNoReverseCableLiftHill");
     course.reverse_lift = true;
     CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));

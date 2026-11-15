@@ -749,7 +749,7 @@ TEST_CASE("load_world: a complete synthetic save")
     CHECK(w.weather->type == WeatherType::LightRain);
     CHECK(w.weather->forecast == WeatherType::Unknown); // 9 is outside the known range
     CHECK(w.weather->raw_forecast == 9);
-    CHECK(w.weather->temperature == 21.5f);
+    CHECK(w.weather->temperature.value == 21.5f);
     REQUIRE(w.weather->thunder_time.has_value());
     REQUIRE(w.weather->fog.has_value());
     CHECK(w.weather->fog->colour.r == 0.3f); // stored blue, green, red
@@ -759,7 +759,7 @@ TEST_CASE("load_world: a complete synthetic save")
     CHECK(w.sky_background == 5);
     REQUIRE(w.time.has_value());
     CHECK(w.time->day_fraction == 0.4f);
-    CHECK(w.time->time_origin == 100.0f);
+    CHECK(w.time->time_origin.value == 100.0f);
     CHECK_FALSE(w.time->day_night_mode.has_value());
     REQUIRE(w.camera.has_value());
     CHECK(w.camera->orientation.x == 0.1f);

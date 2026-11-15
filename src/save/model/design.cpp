@@ -127,7 +127,7 @@ namespace rct3::save::model
         s.width = integer(h, "Cols");
         s.length = integer(h, "Rows");
         if (const auto cost = h.field("Cost"); cost && cost->kind() == ValueKind::Integer)
-            s.cost = cost->as_integer();
+            s.cost = { cost->as_integer() };
         // The file keeps -1 for none.
         if (const std::int32_t scenario = integer(h, "NeedScenarioComplete", -1); scenario >= 0)
             s.scenario = scenario;
@@ -144,14 +144,14 @@ namespace rct3::save::model
             s.results = TestResults {
                 .max_speed = number(*r, "MaxSpeed"),
                 .average_speed = number(*r, "AverageSpeed"),
-                .ride_time = number(*r, "RideTime"),
-                .ride_length = number(*r, "RideLength"),
+                .ride_time = { number(*r, "RideTime") },
+                .ride_length = { number(*r, "RideLength") },
                 .max_positive_vertical = number(*r, "MaxPositiveVerticalG"),
                 .max_negative_vertical = number(*r, "MaxNegativeVerticalG"),
                 .max_lateral = number(*r, "MaxLateralG"),
-                .air_time = number(*r, "AirTime"),
+                .air_time = { number(*r, "AirTime") },
                 .drop_count = integer(*r, "NDrops"),
-                .highest_drop = number(*r, "HighestDropHeight"),
+                .highest_drop = { number(*r, "HighestDropHeight") },
                 .inversion_count = integer(*r, "NInversions"),
                 .lift_hill_count = integer(*r, "NLiftHills"),
                 .valid = true,

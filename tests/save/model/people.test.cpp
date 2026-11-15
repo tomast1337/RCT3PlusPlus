@@ -315,7 +315,7 @@ TEST_CASE("a minimal guest decodes into typed fields")
     CHECK(p.state == static_cast<PersonState>(16));
     CHECK(p.guest_state() == GuestState::FollowingGroup);
     CHECK(p.sub_state == 2);
-    CHECK(p.heading == 1.5f);
+    CHECK(p.heading.value == 1.5f);
     CHECK(p.position == PeopleVec3 { 3, 4, 5 });
     CHECK(p.world[0] == 1.0f);
     CHECK(p.world[1] == 0.0f);
@@ -366,7 +366,7 @@ TEST_CASE("missing attributes take defaults")
     CHECK(guest->person.state == PersonState::Wandering);
     CHECK(guest->person.name.empty());
     CHECK(guest->person.appearance.visible);
-    CHECK(guest->person.look_at.distance == 1.5f);
+    CHECK(guest->person.look_at.distance.value == 1.5f);
     CHECK_FALSE(guest->person.animation.anim_type);
     CHECK(guest->needs.food == 1.0f);
     CHECK(guest->needs.toilet == 0.0f);
@@ -390,7 +390,7 @@ TEST_CASE("uninitialised fill becomes the default or none")
     const auto w = make_world({ g });
     const auto guest = build(*w, 1, make_guest);
     REQUIRE(guest);
-    CHECK(guest->person.heading == 0.0f);
+    CHECK(guest->person.heading.value == 0.0f);
     CHECK(guest->counters.rides == 0);
     CHECK(guest->needs.food == 1.0f);
     CHECK(guest->needs.drink == 0.25f);

@@ -201,7 +201,7 @@ TEST_CASE("the finances' attractions tab lists each ride and stall with its taki
     const StringTable s = test_strings();
     save::model::RideModel rides;
     rides.rides.push_back({ });
-    rides.rides[0].base = { .id = 7, .total_guests = 40, .total_profit = units::Money { 9000 }, .running_cost = 120 };
+    rides.rides[0].base = { .id = 7, .total_guests = 40, .total_profit = units::Money { 9000 }, .running_cost = units::Money { 120 } };
     rides.stalls.push_back({ });
     rides.stalls[0].base = { .total_guests = 15, .total_profit = units::Money { 500 } };
     rides.stalls.push_back({ });

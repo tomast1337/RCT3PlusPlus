@@ -175,11 +175,11 @@ TEST_CASE("a test run finds the coaster's speed, time and drops")
 {
     const auto test = test_lap(hill());
     REQUIRE(test);
-    CHECK(test->ride_length == 100);
+    CHECK(test->ride_length.value == 100);
     CHECK(test->drop_count == 1);
-    CHECK(test->highest_drop == doctest::Approx(15).epsilon(0.1));
+    CHECK(test->highest_drop.value == doctest::Approx(15).epsilon(0.1));
     CHECK(test->max_speed > 10);
-    CHECK(test->average_speed == doctest::Approx(100 / test->ride_time));
+    CHECK(test->average_speed == doctest::Approx(100 / test->ride_time.value));
 }
 
 TEST_CASE("brakes slow a train down along them to their speed and no further")
@@ -540,7 +540,7 @@ TEST_CASE("a train off the end of a pool slide splashes out, not crashed, still 
     tested.splash_out = true;
     const auto test = test_lap(tested); // Rated as a ride that comes round
     REQUIRE(test);
-    CHECK(test->ride_length == doctest::Approx(80));
+    CHECK(test->ride_length.value == doctest::Approx(80));
 }
 
 TEST_CASE("a shuttle's train pushed too hard runs off an end and crashes")

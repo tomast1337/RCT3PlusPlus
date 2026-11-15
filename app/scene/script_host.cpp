@@ -843,7 +843,7 @@ namespace rct3::scene
                 const save::model::Stall& stall = park.rides.stalls[i];
                 Json items = Json::array();
                 for (const save::model::StallItem& item : stall.items)
-                    items.push_back({ { "item", item.kind_symbol }, { "price", item.price }, { "name", item.name }, { "extras", item.extras } });
+                    items.push_back({ { "item", item.kind_symbol }, { "price", item.price.value }, { "name", item.name }, { "extras", item.extras } });
                 Json extras = Json::array();
                 for (const save::model::StallExtra& extra : stall.extras)
                     extras.push_back({ { "extra", extra.kind_symbol }, { "level", extra.level } });
@@ -975,7 +975,7 @@ namespace rct3::scene
             if (a.size() != 3 || !a[0].is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size() || !a[1].is_number_unsigned() || a[1].get<std::size_t>() >= park.rides.stalls[a[0].get<std::size_t>()].items.size() || !a[2].is_number_integer())
                 throw std::invalid_argument("stalls.setPrice takes a stall's place in stalls.list(), an item's place in its menu and hundredths");
             save::model::Stall& stall = park.rides.stalls[a[0].get<std::size_t>()];
-            stall.items[a[1].get<std::size_t>()].price = a[2].get<std::int64_t>();
+            stall.items[a[1].get<std::size_t>()].price = { a[2].get<std::int64_t>() };
             simulation::restock(park.sim, stall, park.carried);
             return Json(nullptr);
         });

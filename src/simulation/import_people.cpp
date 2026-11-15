@@ -48,7 +48,7 @@ namespace rct3::simulation
             out[i] = e;
             r.emplace<Visitor>(e, age_group(p.type), p.sub_type == std::to_underlying(save::model::Sex::Female), p.name, std::uint64_t { 0 }, g.is_avatar);
             const glm::vec3 at { p.position.x, p.position.y, p.position.z };
-            r.emplace<Pose>(e, at, -p.heading, at, -p.heading); // The original turns the other way
+            r.emplace<Pose>(e, at, units::Radians { -p.heading.value }, at, units::Radians { -p.heading.value }); // The original turns the other way
             r.emplace<Needs>(e, need(g.needs.food), need(g.needs.drink), std::clamp(g.needs.toilet, 0.0f, 1.0f));
             r.emplace<Mood>(e, g.mood_now.happiness, g.mood_now.energy, g.mood_now.nausea, kTuning.sickness.tolerance_per_saved_level.value * static_cast<float>(std::to_underlying(g.nausea_tolerance) + 1));
             const save::model::Cash& c = g.cash;

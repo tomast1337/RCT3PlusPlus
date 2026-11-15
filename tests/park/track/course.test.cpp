@@ -58,11 +58,11 @@ TEST_CASE("a train stands nose to tail back from its front, its wheels on the tr
     // A car 2 long, its wheels 0.5 and 1.5 behind its front and 1 below its middle; the last fits as the second.
     const std::array fits { park::object::CarFit { .length = 2, .front_wheels = 0.5f, .rear_wheels = 1.5f, .on_track = { 0, -1, 0 } }, park::object::CarFit { .length = 3, .front_wheels = 1, .rear_wheels = 2, .on_track = { 0, 0, -0.5f } } };
     park::track::stand_train(c, train, fits, 8);
-    CHECK(train.distance == 8);
-    CHECK(train.length == 8);
+    CHECK(train.distance.value == 8);
+    CHECK(train.length.value == 8);
     const save::model::Car& first = train.cars[0];
-    CHECK(first.distance == 8);
-    CHECK(first.length == 2);
+    CHECK(first.distance.value == 8);
+    CHECK(first.length.value == 2);
     CHECK(first.front_wheel_distance == doctest::Approx(7.5f));
     CHECK(first.rear_wheel_distance == doctest::Approx(6.5f));
     CHECK(first.position_valid);
@@ -72,9 +72,9 @@ TEST_CASE("a train stands nose to tail back from its front, its wheels on the tr
     const glm::vec3 axis { first.orientation[0], first.orientation[1], first.orientation[2] };
     check_near(glm::vec3(glm::rotate(glm::mat4(1.0f), glm::length(axis), glm::normalize(axis)) * glm::vec4(0, 0, 1, 0)), { 1, 0, 0 });
     // The second's front 2 behind, its wheels at 5 and 4 along, its point between them 0.5 behind its origin.
-    CHECK(train.cars[1].distance == 6);
+    CHECK(train.cars[1].distance.value == 6);
     check_near({ train.cars[1].position[0], train.cars[1].position[1], train.cars[1].position[2] }, { 5, 0, 0 });
-    CHECK(train.cars[2].distance == 3);
+    CHECK(train.cars[2].distance.value == 3);
 }
 
 TEST_CASE("a link couples a train's cars, reaching along the track from where one couples on to where the next does")
@@ -89,13 +89,13 @@ TEST_CASE("a link couples a train's cars, reaching along the track from where on
     const std::array fits { car, link, car };
     park::track::stand_train(c, train, fits, 8);
     // The link from 6.25 to 5.25 along, so the car behind's front is 0.25 further on, at 5.5.
-    CHECK(train.cars[1].distance == 6);
-    CHECK(train.cars[1].length == doctest::Approx(0.5f));
+    CHECK(train.cars[1].distance.value == 6);
+    CHECK(train.cars[1].length.value == doctest::Approx(0.5f));
     CHECK(train.cars[1].front_wheel_distance == doctest::Approx(6.25f));
     CHECK(train.cars[1].rear_wheel_distance == doctest::Approx(5.25f));
     check_near({ train.cars[1].position[0], train.cars[1].position[1], train.cars[1].position[2] }, { 5.75f, 0.5f, 0 });
-    CHECK(train.cars[2].distance == doctest::Approx(5.5f));
-    CHECK(train.length == doctest::Approx(4.5f));
+    CHECK(train.cars[2].distance.value == doctest::Approx(5.5f));
+    CHECK(train.length.value == doctest::Approx(4.5f));
     CHECK(park::track::train_length(fits) == doctest::Approx(4.5f));
 }
 

@@ -133,7 +133,7 @@ namespace rct3::scene::track
                 for (std::uint32_t seat = 0; seated && seat < seated->seats; ++seat)
                     ride.seats.push_back({ .car = static_cast<std::int32_t>(car), .seat = static_cast<std::int32_t>(seat), .train = t });
             }
-            train.length = rct3::park::track::train_length(fits);
+            train.length = { rct3::park::track::train_length(fits) };
         }
         ride.train_count.emplace(trains);
         ride.cars_per_train.emplace(cars);
@@ -203,7 +203,7 @@ namespace rct3::scene::track
             for (save::model::Train& train : ride.trains)
             {
                 rct3::park::track::stand_train(*course, train, fits->second, std::max(front, 0.0f));
-                front -= train.length + rct3::park::track::kTrainGap;
+                front -= train.length.value + rct3::park::track::kTrainGap;
             }
             return;
         }
@@ -216,7 +216,7 @@ namespace rct3::scene::track
             return;
         }
         // Spread over its stations; those with no room are left out, as the game does.
-        const std::vector<float> fronts = rct3::park::track::train_fronts(*course, coaster->start, ride.trains.front().length, static_cast<int>(ride.trains.size()), ride.options.block_sectioned);
+        const std::vector<float> fronts = rct3::park::track::train_fronts(*course, coaster->start, ride.trains.front().length.value, static_cast<int>(ride.trains.size()), ride.options.block_sectioned);
         const auto kept = static_cast<std::int32_t>(fronts.size());
         ride.trains.resize(fronts.size());
         std::erase_if(ride.seats, [&](const auto& seat) { return seat.train >= kept; });

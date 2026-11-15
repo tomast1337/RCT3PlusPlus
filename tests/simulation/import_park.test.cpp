@@ -246,7 +246,7 @@ TEST_CASE("a stall joins only the path on the tile in front of it, near its heig
         stall.base.id = 7;
         stall.base.facing = facing;
         stall.base.spot = save::model::PlacementSpot { .col = 5, .row = 5 };
-        stall.items.push_back({ .price = 100, .name = "Cola" });
+        stall.items.push_back({ .price = { 100 }, .name = "Cola" });
         CHECK(simulation::import_stalls(world, rides) == 0);
 
         // A path laid in front a level up, as a ramp's middle may lie, joins it.

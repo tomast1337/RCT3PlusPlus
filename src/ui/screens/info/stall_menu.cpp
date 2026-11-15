@@ -165,7 +165,7 @@ namespace rct3::ui::screens::info
             price.maximum = view_.most_price;
             price.step = view_.price_step;
             price.decimals = 2;
-            price.set_value(line.price);
+            price.set_value(static_cast<int>(line.price.value));
             price.placement = { { 1, 0, 1, 0 }, { -extras_right, y, -right, y + h } };
             price.tooltip = line.help;
             w.price = &price;

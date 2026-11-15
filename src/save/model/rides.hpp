@@ -130,7 +130,7 @@ namespace rct3::save::model
         units::Seconds build_time { }; ///< Game clock when built
         std::int64_t total_guests = 0;
         units::Money total_profit { };
-        std::int64_t running_cost = 0; ///< Assessed running cost per interval, hundredths
+        units::Money running_cost { }; ///< Assessed running cost per interval
         float popularity = 0;
         float satisfaction = 0;
         RepairStatus repair_status = RepairStatus::Fine;
@@ -151,8 +151,8 @@ namespace rct3::save::model
     struct IntervalStats
     {
         std::int64_t guests = 0;
-        std::int64_t income = 0; ///< Hundredths
-        std::int64_t losses = 0; ///< Hundredths
+        units::Money income { };
+        units::Money losses { };
     };
 
     // ---------------------------------------------------------------------------------------------------------
@@ -163,14 +163,14 @@ namespace rct3::save::model
     {
         float max_speed = 0;
         float average_speed = 0;
-        float ride_time = 0;   ///< Seconds
-        float ride_length = 0; ///< Metres
+        units::Seconds ride_time { };
+        units::Distance ride_length { };
         float max_positive_vertical = 0;
         float max_negative_vertical = 0;
         float max_lateral = 0;
-        float air_time = 0; ///< Seconds
+        units::Seconds air_time { };
         std::int32_t drop_count = 0;
-        float highest_drop = 0; ///< Metres
+        units::Distance highest_drop { };
         std::int32_t inversion_count = 0;
         std::int32_t lift_hill_count = 0;
         /// Corner counts by turned angle: index 0..3 = 90, 180, 270, 360 degrees.
@@ -389,9 +389,9 @@ namespace rct3::save::model
         std::int32_t design_slot = 0;
         CarState state = CarState { }; ///< As stored; most numbers are not named
         std::int32_t passengers = 0;
-        float distance = 0; ///< Metres along the track
-        float speed = 0;    ///< m/s
-        float length = 0;   ///< Metres
+        units::Distance distance { }; ///< Along the track
+        units::Pace speed { };
+        units::Distance length { };
         float mass = 0;
         bool reversed = false;
         float front_wheel_distance = 0;
@@ -413,8 +413,8 @@ namespace rct3::save::model
         units::Seconds state_time { };     ///< In the current state
         ObjectId front_piece = 0;
         ObjectId rear_piece = 0;
-        float distance = 0; ///< Metres along the track
-        float speed = 0;    ///< m/s
+        units::Distance distance { }; ///< Along the track
+        units::Pace speed { };
         float acceleration = 0;
         core::NoneAsMinusOne<std::int32_t> station { }; ///< Station indices
         core::NoneAsMinusOne<std::int32_t> start_station { };
@@ -424,7 +424,7 @@ namespace rct3::save::model
         float static_friction = 0;
         float dynamic_friction = 0;
         float mass = 0;
-        float length = 0;       ///< Metres
+        units::Distance length { };
         std::string symbol { }; ///< Train design asset symbol
         std::string overlay_path { };
         std::vector<Car> cars { }; ///< Front to back
@@ -489,7 +489,7 @@ namespace rct3::save::model
         ObjectId id = 0;
         ObjectId item_asset = 0;     ///< Carried-item asset entry
         std::string kind_symbol { }; ///< That entry's symbol, as `Soda:cid`; empty when unresolved
-        std::int64_t price = 0;      ///< Hundredths
+        units::Money price { };
         std::int64_t total_sold = 0;
         std::string name { };
         ObjectId stall = 0;     ///< Back reference as stored

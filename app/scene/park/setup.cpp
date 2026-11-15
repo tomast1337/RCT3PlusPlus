@@ -904,7 +904,7 @@ namespace rct3::scene::park
                 if (spot.train != 0)
                     continue;
                 const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[car]));
-                const glm::mat4 place = rct3::park::track::moved_along(*scene.courses[ride_index.value], scene.saved_cars.at(scene.cars[car].id), { spot.front, spot.rear }, fleet->trains.front().start - ride.trains.front().distance);
+                const glm::mat4 place = rct3::park::track::moved_along(*scene.courses[ride_index.value], scene.saved_cars.at(scene.cars[car].id), { spot.front, spot.rear }, fleet->trains.front().start - ride.trains.front().distance.value);
                 if (model == scene.models.end())
                     seats.insert(seats.end(), share, glm::vec3(place[3]));
                 else

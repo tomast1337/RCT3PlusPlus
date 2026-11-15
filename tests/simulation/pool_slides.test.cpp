@@ -159,9 +159,9 @@ TEST_CASE("a pool slide's train kept past its open end is out of sight there, an
     slide.start = slide.at = 2;
     save::model::Ride ride;
     ride.trains.resize(3);
-    ride.trains[0].distance = 2;
-    ride.trains[1].distance = 10;
-    ride.trains[2].distance = 10;
+    ride.trains[0].distance = { 2 };
+    ride.trains[1].distance = { 10 };
+    ride.trains[2].distance = { 10 };
     const Trains trains = trains_of(slide, ride);
     REQUIRE(trains.trains.size() == 3);
     CHECK(trains.trains[0].at == doctest::Approx(2));

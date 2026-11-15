@@ -270,7 +270,7 @@ namespace rct3::scene::park
                 const auto [move, into] = simulation::show_move_at(*show);
                 pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position), at.heading.value, glm::vec3(0.0f, 1.0f, 0.0f));
                 pose.motion = rct3::park::person::motion_number(kShowMotions[std::to_underlying(move)]).value_or(rct3::park::person::motion::kIdle);
-                pose.time = into + scene.sim_time;
+                pose.time = into.value + scene.sim_time;
                 return pose;
             }
             pose.time = shown.saved_time + clock * shown.speed;
@@ -335,7 +335,7 @@ namespace rct3::scene::park
                     const auto model = cars != scene.ride_cars.end() && !cars->second.empty() ? scene.models.find(rct3::park::object::model_ref(scene.cars[cars->second.front()])) : scene.models.end();
                     const bool body = (model != scene.models.end() && model->second.seating == rct3::park::person::kSlideBodySeating) || (r.valid(drop->slide) && r.all_of<simulation::ClimbSlide>(drop->slide));
                     pose.motion = rct3::park::person::motion_number(drop->slide == entt::null ? "knockdownin" : body ? "slidebodybacksplashdownin" : "slideringsplashdownin").value_or(pose.motion);
-                    pose.time = drop->fall.value / simulation::kTuning.holding.gravity;
+                    pose.time = drop->fall.value / simulation::kTuning.holding.gravity.value;
                 }
                 if (held == nullptr && !falling && shown.paces[0] > 0)
                     pose.time = at.walked.value / shown.paces[0];

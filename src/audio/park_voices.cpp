@@ -8,11 +8,11 @@ namespace rct3::audio
 
     namespace
     {
-        constexpr units::Pace kThrillSpeed { 14 }; ///< From which a car's speed thrills
-        constexpr units::Pace kWildSpeed { 30 };   ///< At which it thrills the most
-        constexpr units::Pace kThrillDrop { 4 };   ///< Of drop, from which it thrills
-        constexpr units::Pace kWildDrop { 20 };    ///< At which it thrills the most
-        constexpr float kMostScreams = 1.5f;       ///< A second, on the wildest stretch
+        constexpr units::Pace kThrillSpeed { 14 };       ///< From which a car's speed thrills
+        constexpr units::Pace kWildSpeed { 30 };         ///< At which it thrills the most
+        constexpr units::Pace kThrillDrop { 4 };         ///< Of drop, from which it thrills
+        constexpr units::Pace kWildDrop { 20 };          ///< At which it thrills the most
+        constexpr units::Frequency kMostScreams { 1.5 }; ///< On the wildest stretch
     } // namespace
 
     PlayParams heard(glm::vec3 at, float volume)
@@ -29,7 +29,7 @@ namespace rct3::audio
     {
         const float fast = std::clamp((speed - kThrillSpeed.value) / (kWildSpeed.value - kThrillSpeed.value), 0.0f, 1.0f);
         const float falling = std::clamp((drop - kThrillDrop.value) / (kWildDrop.value - kThrillDrop.value), 0.0f, 1.0f);
-        return kMostScreams * std::min(fast + falling, 1.0f);
+        return static_cast<float>(kMostScreams.value) * std::min(fast + falling, 1.0f);
     }
 
 } // namespace rct3::audio

@@ -67,10 +67,10 @@ namespace rct3::simulation
     void tell(entt::registry& r, entt::entity inspector, Finding finding, entt::entity about, float now)
     {
         auto& told = r.get_or_emplace<staff::Rounds>(inspector).told;
-        std::erase_if(told, [&](const auto& t) { return now - t.when >= kTuning.inspector.quiet.value; });
+        std::erase_if(told, [&](const auto& t) { return now - t.when.value >= kTuning.inspector.quiet.value; });
         if (std::ranges::any_of(told, [&](const auto& t) { return t.about == about && t.finding == finding; }))
             return;
-        told.emplace_back(about, finding, now);
+        told.emplace_back(about, finding, units::Seconds { now });
         r.ctx().emplace<Findings>().found.emplace_back(finding, about);
     }
 

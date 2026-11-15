@@ -356,7 +356,7 @@ namespace rct3::simulation::staff
             if (rounds != nullptr && rounds->gap.value <= 0 && rounds->watching == entt::null)
             {
                 rounds->gap = kTuning.inspector.gap;
-                std::erase_if(rounds->seen, [&](const auto& seen) { return !r.valid(seen.what) || now - seen.when >= kTuning.inspector.again.value; });
+                std::erase_if(rounds->seen, [&](const auto& seen) { return !r.valid(seen.what) || now - seen.when.value >= kTuning.inspector.again.value; });
                 constexpr int kTasks = 8;
                 std::int32_t task = 0;
                 for (int k = 0; k < kTasks && task == 0; ++k)
@@ -409,7 +409,7 @@ namespace rct3::simulation::staff
                         tell(r, e, Finding::NoPathToStaff, w, now);
                         continue;
                     }
-                    rounds->seen.emplace_back(w, now);
+                    rounds->seen.emplace_back(w, units::Seconds { now });
                     rounds->watching = w;
                     rounds->chased_from = now;
                     rounds->watched_from.reset();
@@ -440,7 +440,7 @@ namespace rct3::simulation::staff
                     // Rides and stalls that do not fit their scenery are told from afar.
                     if (task == kVistasTask)
                     {
-                        rounds->seen.emplace_back(a, now);
+                        rounds->seen.emplace_back(a, units::Seconds { now });
                         tell(r, e, Finding::OffTheme, a, now);
                         break;
                     }
@@ -449,14 +449,14 @@ namespace rct3::simulation::staff
                     {
                         if (r.any_of<River, ClimbSlide>(a) || pool_ride_pool(world, a))
                             continue;
-                        rounds->seen.emplace_back(a, now);
+                        rounds->seen.emplace_back(a, units::Seconds { now });
                         tell(r, e, Finding::NoPath, a, now);
                         continue;
                     }
                     auto way = paths.route(at, attraction.entrance, Walker::Guest);
                     if (!way)
                         continue;
-                    rounds->seen.emplace_back(a, now);
+                    rounds->seen.emplace_back(a, units::Seconds { now });
                     if (shop != nullptr)
                     {
                         bool dear = false;

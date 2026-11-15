@@ -87,10 +87,10 @@ namespace rct3::simulation
         {
             const float length = kTuning.shows.move_length[std::to_underlying(m)].value;
             if (into < length || &m == &show.moves.back())
-                return { m, std::min(into, length) };
+                return { m, units::Seconds { std::min(into, length) } };
             into -= length;
         }
-        return { ShowMove::Idle, 0.0f };
+        return { ShowMove::Idle, { } };
     }
 
     void step_crowds(SimWorld& world)

@@ -824,7 +824,7 @@ TEST_CASE("pools: a park from the game gives its squares, boards and changing ro
     world.pool_segments = {
         { .id = 1, .col = 5, .row = 5, .type = 0, .surface = 4, .depth = 2 }, { .id = 2, .col = 5, .row = 6, .type = 3, .surface = 4, .special = 8 }, { .id = 3, .col = 6, .row = 5, .type = 1, .surface = 4, .complex = 2 }, { .id = 4, .col = 4, .row = 5, .type = 4, .surface = 4 }, { .id = 5, .col = 5, .row = 4, .type = 6, .surface = 4 }, { .id = 6, .col = 5, .row = 3, .type = 5, .surface = 4 },
     };
-    world.pool_complexes = { { .index = 2, .ticket = 250, .name = "Lido", .wave_height = 5, .wave_frequency = 4, .wave_on = 45, .wave_every = 120 } };
+    world.pool_complexes = { { .index = 2, .ticket = { 250 }, .name = "Lido", .wave_height = 5, .wave_frequency = { 4 }, .wave_on = { 45 }, .wave_every = { 120 } } };
     world.changing_rooms = { { .object_ref = 90, .segment = 3, .open = true, .fluid = 2 } };
     const std::vector<save::model::PlacedObject> objects { { .id = 90, .symbol = "Room", .col = 7, .row = 5 } };
     const park::pools::PoolMap map = park::pools::saved_pools(world, objects);
@@ -844,9 +844,9 @@ TEST_CASE("pools: a park from the game gives its squares, boards and changing ro
     CHECK(map.rooms[0].open);
     CHECK(map.rooms[0].fluid == 2);
     CHECK(map.rooms[0].waves.height == 5);
-    CHECK(map.rooms[0].waves.frequency == 4);
-    CHECK(map.rooms[0].waves.on == 45);
-    CHECK(map.rooms[0].waves.every == 120);
+    CHECK(map.rooms[0].waves.frequency.value == 4);
+    CHECK(map.rooms[0].waves.on.value == 45);
+    CHECK(map.rooms[0].waves.every.value == 120);
 }
 
 TEST_CASE("pools: a park from the game's own pieces for its squares go, so the squares alone place them; its extras stay")

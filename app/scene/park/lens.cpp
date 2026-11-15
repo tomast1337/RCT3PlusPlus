@@ -94,7 +94,7 @@ namespace rct3::scene::park
             const glm::vec4 was = around.view_projection * glm::vec4(around.eye + *lens.last_ahead * 1000.0f, 1.0f);
             if (was.w > 0)
                 push.turn = glm::vec2 { was.x / was.w * around.aspect * 0.5f, -was.y / was.w * 0.5f } / seconds;
-            push.onrush = glm::dot(around.eye - *lens.last_eye, ahead) / seconds;
+            push.onrush = { glm::dot(around.eye - *lens.last_eye, ahead) / seconds };
         }
         lens.last_ahead = ahead;
         lens.last_eye = around.eye;
@@ -131,7 +131,7 @@ namespace rct3::scene::park
         corners.clear();
         for (const rct3::park::LensDrop& drop : lens.water.drops)
         {
-            const float shown = std::min({ 1.0f, drop.age / kFadeIn.value, (drop.life - drop.age) / kFadeOut.value });
+            const float shown = std::min({ 1.0f, drop.age.value / kFadeIn.value, (drop.life - drop.age).value / kFadeOut.value });
             if (shown <= 0)
                 continue;
             // Long along its slide, a little narrower across it; to screen shares, then clip space with y up.

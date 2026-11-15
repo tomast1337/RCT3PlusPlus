@@ -13,8 +13,8 @@ namespace rct3::park::path
 
     namespace
     {
-        constexpr float kSameHeight = 0.5f;    ///< World units between two edges that still meet
-        constexpr std::int32_t kSameLevel = 2; ///< Units between two items' bases that still clash
+        constexpr units::Distance kSameHeight { 0.5f }; ///< Between two edges that still meet
+        constexpr std::int32_t kSameLevel = 2;          ///< Units between two items' bases that still clash
     } // namespace
 
     std::optional<FurnitureSpot> furniture_spot(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, glm::vec3 hit, object::Positioning positioning, ModelTurn turn, object::PathRules rules)
@@ -95,7 +95,7 @@ namespace rct3::park::path
                        if (p.col != across.col || p.row != across.row)
                            return false;
                        const auto there = level(p, side.opposite());
-                       return there && std::abs(*there - *here) < kSameHeight;
+                       return there && std::abs(*there - *here) < kSameHeight.value;
                    });
         };
         const float in_x = fx - static_cast<float>(tile.col);

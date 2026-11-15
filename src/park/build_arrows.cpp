@@ -11,13 +11,13 @@ namespace rct3::park
     namespace
     {
 
-        constexpr float kStripWidth = 0.08f; ///< Of each strip of a track arrow, in world units
-        constexpr float kAboveRails = 0.2f;  ///< How far the track arrows float over the rails
+        constexpr units::Distance kStripWidth { 0.08f }; ///< Of each strip of a track arrow
+        constexpr float kAboveRails = 0.2f;              ///< How far the track arrows float over the rails
 
         /// Adds the strip from `from` to `to`, `up` being the arrow's own up: both faces, so it shows from below.
         void add_strip(TerrainMesh& mesh, glm::vec3 from, glm::vec3 to, glm::vec3 up, glm::vec4 colour)
         {
-            const glm::vec3 side = glm::normalize(glm::cross(to - from, up)) * (kStripWidth / 2);
+            const glm::vec3 side = glm::normalize(glm::cross(to - from, up)) * (kStripWidth.value / 2);
             const auto first = static_cast<std::uint32_t>(mesh.vertices.size());
             for (const glm::vec3 p : { from - side, from + side, to - side, to + side })
                 mesh.vertices.push_back({ .position = p, .colour = colour, .uv = { 0, 0 }, .normal = { 0, 1, 0 } });

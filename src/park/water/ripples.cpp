@@ -45,7 +45,7 @@ namespace rct3::park::water
             return 0;
         // Energy spreads round a growing ring, so the height falls with the square root of its length.
         const float spreading = 1 / std::sqrt(1 + ripple_radius(ripple, look) / look.spread);
-        return look.height * ripple.strength * std::exp(-ripple.age / look.fade) * spreading;
+        return look.height * ripple.strength * std::exp(-ripple.age / look.fade.value) * spreading;
     }
 
     float ripple_height(const Ripples& ripples, glm::vec2 at, const RippleLook& look)

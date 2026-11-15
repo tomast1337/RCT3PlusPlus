@@ -33,6 +33,7 @@
 #include "park/pools/pools.hpp"
 #include "park/water/ripples.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -47,44 +48,44 @@ namespace rct3::park::pools
     /// The most waves the water shows at once, wave machines' and drawn together.
     inline constexpr std::size_t kMaxPoolWaves = water::kMaxRipples;
 
-    /// How the waves look and behave. Lengths in world units (about a metre), times in seconds; all chosen by eye.
+    /// How the waves look and behave. Lengths in world units (about a metre); all chosen by eye.
     struct PoolWaveLook
     {
-        float crest = 0.05f;        ///< A wave machine's crest height for each step of its height setting
-        float speed = 3.0f;         ///< Of a wave machine's crests, out from its wall
-        float reach = 8.0f;         ///< A wave machine's crests fall to a third (1/e) over this distance
-        float cut = 14.0f;          ///< And are gone this far from its wall
-        float spread = 0.25f;       ///< Its front widens by this much each side for each unit out
-        float front_soft = 0.75f;   ///< Over this far its front fades out at each side
-        float ramp = 2.0f;          ///< Seconds a wave machine takes to start and to stop
-        float line_height = 0.3f;   ///< Of a drawn line's crests at first
-        float line_speed = 3.5f;    ///< Of a drawn line's crests
-        float line_length = 2.5f;   ///< From one of a drawn line's crests to the next
-        float line_width = 2.5f;    ///< Of a drawn line's train of crests
-        float line_fade = 4.0f;     ///< Seconds a drawn line's crests take to fall to a third
-        float line_life = 16.0f;    ///< Seconds before a drawn line's crests are gone
-        float whirl_depth = 0.6f;   ///< Of a whirlpool's dip in the middle
-        float whirl_life = 10.0f;   ///< Seconds a whirlpool lasts, its last few dying down
-        float whirl_turn = 3.0f;    ///< Radians a second its arms turn
-        float whirl_arms = 0.6f;    ///< How deep its arms cut into the dip, at its radius
-        float whirl_wind = 3.0f;    ///< Radians its arms wind round for each radius out
-        float edge = 1.0f;          ///< Waves die down over this far from their water's walls
-        float rim_room = 0.08f;     ///< At a wall the water rises at most this far, under the rim (kPoolBrim below its top)
-        float rim_rise = 0.3f;      ///< And for each world unit out from the wall, this much more
-        float least_radius = 1.0f;  ///< Of a whirlpool, however small the circle drawn
-        float most_radius = 4.0f;   ///< Of a whirlpool, however big the circle drawn
-        float least_stroke = 1.5f;  ///< The shortest drawn line or circle that makes a wave, along the pointer's way
-        float straight = 0.8f;      ///< A line runs at least this share of the way the pointer went, end to end
-        float aslant = 0.3f;        ///< Radians a line may lean off a side of the grid and still make a wave
-        float round = 0.4f;         ///< A circle's box is at least this share as wide as it is long
-        float least_turning = 5.0f; ///< Radians the pointer turns round a circle, all one way, to make a whirlpool
-        float ring_height = 0.14f;  ///< Of the rings where someone falls in at full strength, at first
-        float ring_speed = 1.6f;    ///< Of the rings, outwards
-        float ring_length = 0.7f;   ///< From one of a ring's crests to the next
-        float ring_width = 0.6f;    ///< Of the train of crests round a ring
-        float ring_fade = 2.0f;     ///< Seconds the rings take to fall to a third
-        float ring_spread = 2.0f;   ///< The rings fall to half as they widen to this radius
-        float ring_life = 5.0f;     ///< Seconds before the rings are gone
+        float crest = 0.05f;                   ///< A wave machine's crest height for each step of its height setting
+        float speed = 3.0f;                    ///< Of a wave machine's crests, out from its wall
+        float reach = 8.0f;                    ///< A wave machine's crests fall to a third (1/e) over this distance
+        float cut = 14.0f;                     ///< And are gone this far from its wall
+        float spread = 0.25f;                  ///< Its front widens by this much each side for each unit out
+        float front_soft = 0.75f;              ///< Over this far its front fades out at each side
+        units::Seconds ramp { 2.0f };          ///< A wave machine takes to start and to stop
+        float line_height = 0.3f;              ///< Of a drawn line's crests at first
+        float line_speed = 3.5f;               ///< Of a drawn line's crests
+        float line_length = 2.5f;              ///< From one of a drawn line's crests to the next
+        float line_width = 2.5f;               ///< Of a drawn line's train of crests
+        units::Seconds line_fade { 4.0f };     ///< A drawn line's crests take to fall to a third
+        units::Seconds line_life { 16.0f };    ///< Before a drawn line's crests are gone
+        float whirl_depth = 0.6f;              ///< Of a whirlpool's dip in the middle
+        units::Seconds whirl_life { 10.0f };   ///< A whirlpool lasts, its last few seconds dying down
+        units::TurnRate whirl_turn { 3.0f };   ///< Its arms turn
+        float whirl_arms = 0.6f;               ///< How deep its arms cut into the dip, at its radius
+        float whirl_wind = 3.0f;               ///< Radians its arms wind round for each radius out
+        float edge = 1.0f;                     ///< Waves die down over this far from their water's walls
+        float rim_room = 0.08f;                ///< At a wall the water rises at most this far, under the rim (kPoolBrim below its top)
+        float rim_rise = 0.3f;                 ///< And for each world unit out from the wall, this much more
+        float least_radius = 1.0f;             ///< Of a whirlpool, however small the circle drawn
+        float most_radius = 4.0f;              ///< Of a whirlpool, however big the circle drawn
+        float least_stroke = 1.5f;             ///< The shortest drawn line or circle that makes a wave, along the pointer's way
+        float straight = 0.8f;                 ///< A line runs at least this share of the way the pointer went, end to end
+        units::Radians aslant { 0.3f };        ///< A line may lean off a side of the grid this far and still make a wave
+        float round = 0.4f;                    ///< A circle's box is at least this share as wide as it is long
+        units::Radians least_turning { 5.0f }; ///< The pointer turns round a circle, all one way, to make a whirlpool
+        float ring_height = 0.14f;             ///< Of the rings where someone falls in at full strength, at first
+        float ring_speed = 1.6f;               ///< Of the rings, outwards
+        float ring_length = 0.7f;              ///< From one of a ring's crests to the next
+        float ring_width = 0.6f;               ///< Of the train of crests round a ring
+        units::Seconds ring_fade { 2.0f };     ///< The rings take to fall to a third
+        float ring_spread = 2.0f;              ///< The rings fall to half as they widen to this radius
+        units::Seconds ring_life { 5.0f };     ///< Before the rings are gone
     };
     inline constexpr PoolWaveLook kPoolWaveLook { };
 

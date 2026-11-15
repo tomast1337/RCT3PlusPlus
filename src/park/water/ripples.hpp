@@ -12,6 +12,7 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -24,13 +25,13 @@ namespace rct3::park::water
     /// How ripples look and behave. Lengths in world units (about a metre), times in seconds.
     struct RippleLook
     {
-        float speed = 3.0f;      ///< Of the ring, outwards
-        float wavelength = 1.2f; ///< From one crest to the next
-        float width = 1.6f;      ///< Of the train of waves round the ring
-        float height = 0.07f;    ///< Of the crests when the ripple starts
-        float fade = 2.2f;       ///< Seconds for the height to fall to a third (1/e)
-        float spread = 2.0f;     ///< The height also falls as the ring grows past this radius
-        float gone = 0.02f;      ///< A ripple whose height has fallen below this share of `height` ends
+        float speed = 3.0f;           ///< Of the ring, outwards
+        float wavelength = 1.2f;      ///< From one crest to the next
+        float width = 1.6f;           ///< Of the train of waves round the ring
+        float height = 0.07f;         ///< Of the crests when the ripple starts
+        units::Seconds fade { 2.2f }; ///< For the height to fall to a third (1/e)
+        float spread = 2.0f;          ///< The height also falls as the ring grows past this radius
+        float gone = 0.02f;           ///< A ripple whose height has fallen below this share of `height` ends
     };
     inline constexpr RippleLook kRippleLook { };
 

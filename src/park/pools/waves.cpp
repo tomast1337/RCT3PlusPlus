@@ -122,7 +122,7 @@ namespace rct3::park::pools
         w.bounds = body_bounds(map, grid, *square);
         w.start = clock;
         const glm::vec2 size = high - low;
-        if (std::abs(turning) >= look.least_turning && std::min(size.x, size.y) >= look.round * std::max(size.x, size.y))
+        if (std::abs(turning) >= look.least_turning.value && std::min(size.x, size.y) >= look.round * std::max(size.x, size.y))
         {
             w.kind = PoolWaveKind::Whirlpool;
             w.from = (low + high) / 2.0f;
@@ -137,7 +137,7 @@ namespace rct3::park::pools
         if (glm::length(chord) < look.straight * stroke)
             return std::nullopt;
         const bool along_x = std::abs(chord.x) >= std::abs(chord.y);
-        if (std::atan2(along_x ? std::abs(chord.y) : std::abs(chord.x), along_x ? std::abs(chord.x) : std::abs(chord.y)) > look.aslant)
+        if (std::atan2(along_x ? std::abs(chord.y) : std::abs(chord.x), along_x ? std::abs(chord.x) : std::abs(chord.y)) > look.aslant.value)
             return std::nullopt;
         w.kind = PoolWaveKind::Line;
         w.from = glm::vec2 { points.front() };
@@ -161,14 +161,14 @@ namespace rct3::park::pools
     float ring_crest(const PoolWave& rings, float clock, const PoolWaveLook& look)
     {
         const float age = clock - rings.start;
-        if (rings.kind != PoolWaveKind::Ring || age < 0 || age > look.ring_life)
+        if (rings.kind != PoolWaveKind::Ring || age < 0 || age > look.ring_life.value)
             return 0;
-        return look.ring_height * rings.strength * std::exp(-age / look.ring_fade) / (1 + look.ring_speed * age / look.ring_spread);
+        return look.ring_height * rings.strength * std::exp(-age / look.ring_fade.value) / (1 + look.ring_speed * age / look.ring_spread);
     }
 
     void drop_spent_waves(std::vector<PoolWave>& waves, float clock, const PoolWaveLook& look)
     {
-        std::erase_if(waves, [&](const PoolWave& w) { return (w.kind == PoolWaveKind::Line && clock - w.start > look.line_life) || (w.kind == PoolWaveKind::Whirlpool && clock - w.start > look.whirl_life) || (w.kind == PoolWaveKind::Ring && clock - w.start > look.ring_life); });
+        std::erase_if(waves, [&](const PoolWave& w) { return (w.kind == PoolWaveKind::Line && clock - w.start > look.line_life.value) || (w.kind == PoolWaveKind::Whirlpool && clock - w.start > look.whirl_life.value) || (w.kind == PoolWaveKind::Ring && clock - w.start > look.ring_life.value); });
     }
 
     float pool_wave_height(std::span<const PoolWave> waves, glm::vec2 at, float clock, std::optional<float> level, const PoolWaveLook& look)
@@ -184,28 +184,29 @@ namespace rct3::park::pools
             {
                 // When the water at d left the wall, and whether the machine ran then, easing in and out.
                 const PoolWaves& s = w.settings;
+                const float on = s.on.value;
                 const float left = clock - d / look.speed;
-                if (d < 0 || d > look.cut || left < 0 || s.on <= 0)
+                if (d < 0 || d > look.cut || left < 0 || on <= 0)
                     continue;
                 // Its front, wider out from the wall and lower for it, fading out at its sides.
                 const float half_front = w.radius + look.spread * d;
                 const float out = std::abs(glm::dot(at - w.from, glm::vec2 { -w.heading.y, w.heading.x }));
                 const float across = std::clamp((half_front + look.front_soft - out) / (2 * look.front_soft), 0.0f, 1.0f) * std::sqrt(w.radius / half_front);
-                const float phase = std::fmod(left, std::max({ s.every, s.on, 1.0f }));
-                const float running = std::clamp(phase / look.ramp, 0.0f, 1.0f) * std::clamp((s.on - phase) / look.ramp, 0.0f, 1.0f);
-                sum += look.crest * s.height * running * std::sin(s.frequency * left) * std::exp(-d / look.reach) * across * std::clamp(look.cut - d, 0.0f, 1.0f);
+                const float phase = std::fmod(left, std::max({ s.every.value, on, 1.0f }));
+                const float running = std::clamp(phase / look.ramp.value, 0.0f, 1.0f) * std::clamp((on - phase) / look.ramp.value, 0.0f, 1.0f);
+                sum += look.crest * s.height * running * std::sin(s.frequency.value * left) * std::exp(-d / look.reach) * across * std::clamp(look.cut - d, 0.0f, 1.0f);
             }
-            else if (w.kind == PoolWaveKind::Line && age >= 0 && age <= look.line_life)
+            else if (w.kind == PoolWaveKind::Line && age >= 0 && age <= look.line_life.value)
             {
                 const float x = d - look.line_speed * age;
-                sum += look.line_height * std::exp(-age / look.line_fade) * std::exp(-(x / look.line_width) * (x / look.line_width)) * std::cos(2 * std::numbers::pi_v<float> / look.line_length * x);
+                sum += look.line_height * std::exp(-age / look.line_fade.value) * std::exp(-(x / look.line_width) * (x / look.line_width)) * std::cos(2 * std::numbers::pi_v<float> / look.line_length * x);
             }
-            else if (w.kind == PoolWaveKind::Whirlpool && age >= 0 && age <= look.whirl_life)
+            else if (w.kind == PoolWaveKind::Whirlpool && age >= 0 && age <= look.whirl_life.value)
             {
-                const float strength = std::clamp(age, 0.0f, 1.0f) * std::clamp((look.whirl_life - age) / 3, 0.0f, 1.0f);
+                const float strength = std::clamp(age, 0.0f, 1.0f) * std::clamp((look.whirl_life.value - age) / 3, 0.0f, 1.0f);
                 const glm::vec2 off = at - w.from;
                 const float r = glm::length(off) / w.radius;
-                const float arms = look.whirl_arms * r * std::sin(3 * std::atan2(off.y, off.x) - w.spin * (look.whirl_turn * age - look.whirl_wind * r));
+                const float arms = look.whirl_arms * r * std::sin(3 * std::atan2(off.y, off.x) - w.spin * (look.whirl_turn.value * age - look.whirl_wind * r));
                 sum -= look.whirl_depth * strength * std::exp(-r * r) * (1 - arms);
             }
             else if (w.kind == PoolWaveKind::Ring && (!level || std::abs(*level - w.level) < kPoolHeadroom / 2.0f))
@@ -233,7 +234,7 @@ namespace rct3::park::pools
             texels[i] = { w.from.x, w.from.y, w.heading.x, w.heading.y };
             texels[kMaxPoolWaves + i] = { static_cast<float>(std::to_underlying(w.kind)), crest, w.start, w.kind == Ring ? w.level : w.spin };
             texels[2 * kMaxPoolWaves + i] = w.bounds;
-            texels[3 * kMaxPoolWaves + i] = { w.settings.frequency, w.settings.on, w.settings.every, w.radius };
+            texels[3 * kMaxPoolWaves + i] = { w.settings.frequency.value, w.settings.on.value, w.settings.every.value, w.radius };
         }
         return texels;
     }

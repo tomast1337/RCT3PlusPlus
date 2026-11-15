@@ -186,7 +186,7 @@ TEST_CASE("a changing room sets its complex's waves on bars, the machines' times
     s.add("ManySeconds", u"# secs");
     s.add("OneMinute", u"# min");
     s.add("ManyMinutes", u"# mins");
-    const auto mode = [&](bool machines, float every) { return scenery_page(SceneryTab::RoomMode, { .pool = PoolComplexFacts { .waves = { .height = 5, .frequency = 4, .on = 40, .every = every }, .machines = machines } }, s); };
+    const auto mode = [&](bool machines, float every) { return scenery_page(SceneryTab::RoomMode, { .pool = PoolComplexFacts { .waves = { .height = 5, .frequency = { 4 }, .on = { 40 }, .every = { every } }, .machines = machines } }, s); };
     const InfoPage page = mode(true, 180);
     REQUIRE(page.controls.size() == 4);
     CHECK(page.controls[0].id == kPoolWaveHeightControl);

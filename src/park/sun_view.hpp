@@ -7,6 +7,7 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 
@@ -19,7 +20,7 @@ namespace rct3::park
     struct SunView
     {
         glm::mat4 view_projection { 1.0f }; ///< World to the map's clip space; depth 0 is nearest the sun
-        float texel = 1;                    ///< World units across one texel of the map
+        units::Distance texel { 1 };        ///< Across one texel of the map
     };
 
     /// The view down `to_sun` (towards the sun, any length) over a square `2 * radius` across round `centre`, for a

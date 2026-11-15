@@ -614,8 +614,8 @@ namespace rct3::simulation::tuning
         units::Seconds showering { 6 };                           ///< Chosen by eye: under a shower
         units::Seconds patience { 20 };                           ///< Chosen by eye: waiting for a place at an extra before going elsewhere
         float spa_water = 0.0f;                                   ///< A spa pool's water over the paving round it, in height units
-        float long_ramp = 0.75f;                                  ///< A ramp climbing two or more: from its side to its foot, in tiles, as its model runs
-        float short_ramp = 0.25f;                                 ///< One climbing one
+        units::Tiles long_ramp { 0.75f };                         ///< A ramp climbing two or more: from its side to its foot, as its model runs
+        units::Tiles short_ramp { 0.25f };                        ///< One climbing one
         units::Distance dip { 16.0f };                            ///< Chosen by eye: a way into or out of the water counts as this much longer (four squares), so walkers keep to the paving
         float platform = 3.5f;                                    ///< Chosen by eye: how many squares off the paving a slide's station may stand and be walked to, a platform three long beside it
         units::PerSecond cheer = units::PerSecond::over({ 600 }); ///< Happiness gained while swimming in clean water; lost in dirty
@@ -642,7 +642,7 @@ namespace rct3::simulation::tuning
         units::Chance paddle { 0.15 };                          ///< Chosen by eye: of paddling off, each time a resting rider's ring comes round to face along the river or back
         units::Frequency rest = units::Frequency::every({ 8 }); ///< Chosen by eye: how often a paddling rider stops to rest
         units::Distance lane { 1.0f };                          ///< Chosen by eye: most to either side of the channel's middle a rider floats
-        float join = 1.75f;                                     ///< Chosen by eye: most tiles across from a pool ride's station track to the middle of a square beside it that joins it to its complex, a wide station's track lying a tile and a half from its sides' squares
+        units::Tiles join { 1.75f };                            ///< Chosen by eye: most across from a pool ride's station track to the middle of a square beside it that joins it to its complex, a wide station's track lying a tile and a half from its sides' squares
         /// Excitement, intensity and nausea of a river not rated yet, as a saved park rates its river (with no test run)
         std::array<float, 3> rated { 3.6f, 0.9f, 0.0f };
     };

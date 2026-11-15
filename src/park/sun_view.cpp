@@ -19,7 +19,7 @@ namespace rct3::park
         middle.y = std::floor(middle.y / texel) * texel;
         middle.z = std::floor(middle.z / texel) * texel; // Not needed for still edges; keeps the whole view in steps
         const glm::mat4 projection = glm::ortho(middle.x - radius, middle.x + radius, middle.y - radius, middle.y + radius, middle.z - kSunViewDepth, middle.z + kSunViewDepth);
-        return { projection * view, texel };
+        return { projection * view, { texel } };
     }
 
     float shadow_radius(float distance)

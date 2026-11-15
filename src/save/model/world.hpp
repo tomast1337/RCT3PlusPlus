@@ -369,13 +369,13 @@ namespace rct3::save::model
     struct PoolComplexState
     {
         std::int32_t index = 0;
-        std::int64_t ticket = 0; ///< Hundredths
-        std::string name { };    ///< As stored; "%ME%" and a number for the default
+        units::Money ticket { };
+        std::string name { }; ///< As stored; "%ME%" and a number for the default
         // How its wave machines run, as stored: what parks saved with a pool just built show, when missing.
         float wave_height = 8;
-        float wave_frequency = 6; ///< Radians a second
-        float wave_on = 30;       ///< Seconds
-        float wave_every = 60;    ///< Seconds
+        units::TurnRate wave_frequency { 6 };
+        units::Seconds wave_on { 30 };
+        units::Seconds wave_every { 60 };
     };
 
     /// A changing room: the placed object it is, the pool square it opens on, and its settings.

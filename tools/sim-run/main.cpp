@@ -677,6 +677,7 @@ int main(int argc, char** argv)
             ++passports, stamps += passport.stamps.size(), gifts += passport.gift ? 1 : 0;
         const auto posts = std::ranges::count_if(r.view<const simulation::PathItem>().each(), [](const auto& item) { return std::get<1>(item).kind == simulation::PathItemKind::PassportPost; });
         const auto* rules = r.ctx().find<simulation::PassportRules>();
+        out.info("maps: {:d} guests hold one", std::ranges::distance(r.view<const simulation::ParkMap>(entt::exclude<simulation::Left>)));
         out.info("passports: {:d} posts, gift for {:d} stamps; {:d} guests hold {:d} stamps, {:d} given the gift", posts, rules != nullptr ? rules->stamps_for_gift : 0, passports, stamps, gifts);
         const auto vomit_lying = std::ranges::count_if(r.view<const simulation::Litter>(), [&](entt::entity e) { return r.get<simulation::Litter>(e).vomit; });
         const auto queasy = std::ranges::count_if(r.view<const simulation::Mood>(), [&](entt::entity e) { return r.get<simulation::Mood>(e).nausea.value >= 0.6f; });

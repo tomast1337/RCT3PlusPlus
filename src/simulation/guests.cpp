@@ -91,6 +91,15 @@ namespace rct3::simulation
             bool splash;
         };
 
+        /// Whether the guest, or anyone in their party, carries a park map.
+        bool party_map(const entt::registry& r, entt::entity guest)
+        {
+            if (r.all_of<ParkMap>(guest))
+                return true;
+            const auto* member = r.try_get<Member>(guest);
+            return member != nullptr && r.valid(member->party) && std::ranges::any_of(r.get<Party>(member->party).members, [&](entt::entity m) { return r.all_of<ParkMap>(m); });
+        }
+
         /// Whether `pool` has as many guests as it takes: those changing, swimming or on its rides, by the room they
         /// came in at or swim on from, and with `on_way` those walking to one of its rooms.
         bool pool_full(const entt::registry& r, entt::entity pool, bool on_way)
@@ -117,7 +126,11 @@ namespace rct3::simulation
                 if (!a.open || !a.entrance)
                     continue;
                 if (const auto* shop = r.try_get<Shop>(e))
+                {
                     out.push_back({ e, AttractionKind::Shop, shop->product, *a.entrance, a.price.value, 0, 1, shop->serve, false });
+                    if (const auto map = std::ranges::find(shop->menu, Product::Map, &Ware::product); map != shop->menu.end() && shop->product != Product::Map)
+                        out.push_back({ e, AttractionKind::Shop, Product::Map, *a.entrance, map->price.value, 0, 1, Serve::Any, false });
+                }
                 else if (const auto* ride = r.try_get<CycleRide>(e))
                 {
                     // A ride with more than one station is on offer at each, guests going to the nearest.
@@ -172,8 +185,9 @@ namespace rct3::simulation
         /// Where the guest goes next: a shop or facility for the most pressing need there is one for, else now
         /// and then a ride. In the rain with no umbrella, a guest getting wet wants one first, and rides only
         /// under cover. On a hot day food and drink is best cold, on a cold day hot; a guest too hot wants
-        /// something cold to eat or drink, or a ride that splashes them.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, float daring, const Taste& taste, float temperature)
+        /// something cold to eat or drink, or a ride that splashes them. A party with a map goes for rides more
+        /// often; one without now and then goes to buy one.
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, float daring, const Taste& taste, float temperature, bool with_map)
         {
             struct Want
             {
@@ -221,7 +235,12 @@ namespace rct3::simulation
             if (needs.swim.value >= swim_wish_needed(temperature))
                 if (auto found = nearest_offer(paths, at, offers, wallet, [](const Offer& o) { return o.kind == AttractionKind::Pool; }))
                     return found;
-            if (mood.nausea.value >= kTuning.needs.max_nausea.value || !random::chance(dice.state, kTuning.needs.ride_chance.value))
+            const bool maps_sold = std::ranges::any_of(offers, [](const Offer& o) { return o.product == Product::Map && o.kind == AttractionKind::Shop; });
+            if (!with_map && maps_sold && random::chance(dice.state, kTuning.surroundings.map_wish.value))
+                if (auto found = shop(Product::Map, false))
+                    return found;
+            const double ride_chance = std::min(1.0, kTuning.needs.ride_chance.value * (with_map ? kTuning.surroundings.map_rides : 1));
+            if (mood.nausea.value >= kTuning.needs.max_nausea.value || !random::chance(dice.state, ride_chance))
                 return std::nullopt;
             const float wildest = std::min(mood.tolerance.value + kTuning.sickness.wildest.value, taste.most.value) + daring;
             const float least_cover = rained_on ? kTuning.weather.covered.value : 0;
@@ -773,8 +792,17 @@ namespace rct3::simulation
                             if (munching(r, movers[i]))
                                 want.hunger.value = want.thirst.value = 0;
                             auto goal = going_home(r, paths, movers[i], at, dice, night, weather.storm, cash_machine, world.tick);
+                            const bool with_map = party_map(r, movers[i]);
                             if (!goal)
-                                goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kTuning.night.daring.value : 0, taste_of(r, movers[i]), weather.temperature.value);
+                                goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kTuning.night.daring.value : 0, taste_of(r, movers[i]), weather.temperature.value, with_map);
+                            // Off to a ride: whoever holds the party's map looks at it.
+                            if (goal && with_map && r.all_of<CycleRide>(goal->first))
+                            {
+                                const auto* member = r.try_get<Member>(movers[i]);
+                                for (const entt::entity m : member != nullptr && r.valid(member->party) ? std::span<const entt::entity>(r.get<Party>(member->party).members) : std::span<const entt::entity>(&movers[i], 1))
+                                    if (r.all_of<ParkMap>(m))
+                                        r.emplace_or_replace<Gesture>(m, Gesture { .kind = GestureKind::LookMap, .left = kTuning.gestures.shown });
+                            }
                             // Nowhere to go: out of the rain under the nearest roof (in a storm even with an
                             // umbrella), or out of the sun into the nearest shade.
                             const bool rained_on = weather.rain && (!r.all_of<Umbrella>(movers[i]) || weather.storm);
@@ -1033,6 +1061,16 @@ namespace rct3::simulation
             float* need = shop.product == Product::Drink ? &needs.thirst.value : shop.product == Product::Food ? &needs.hunger.value : shop.product == Product::Toilet ? &needs.bladder.value : shop.product == Product::FirstAid ? &mood.nausea.value : nullptr;
             const bool umbrella = shop.product == Product::Umbrella;
             const bool meal = shop.product == Product::Food || shop.product == Product::Drink;
+            // Where maps are sold, a party with none buys one, whatever else it came for.
+            if (const auto map = std::ranges::find(shop.menu, Product::Map, &Ware::product); map != shop.menu.end() && attraction.open && !party_map(r, guest) && wallet.cash.value >= map->price.value && pay(r, guest, map->price, &Wallet::spent_souvenirs, park::LedgerLine::ShopSales))
+            {
+                r.emplace<ParkMap>(guest);
+                attraction.income.value += map->price.value;
+                ++attraction.customers;
+                r.ctx().emplace<Supplies>().paid[std::to_underlying(park::LedgerLine::ShopStock)].value += map->cost.value;
+                if (!umbrella || !weather.rain || r.all_of<Umbrella>(guest))
+                    return true;
+            }
             if (meal && munching(r, guest))
             {
                 think(r, guest, ThoughtKind::HaventFinished, at, now);

@@ -712,6 +712,8 @@ namespace rct3::simulation::tuning
         units::Share stamp_cheer { 0.1f };      ///< Happiness from a new stamp in a guest's passport
         units::Share gift_cheer { 0.2f };       ///< Happiness from being given the park's passport gift
         units::Share no_gift_gloom { 0.1f };    ///< Happiness lost when the park cannot pay for the gift they are due
+        units::Chance map_wish { 0.02 };        ///< Of a party with no map going to buy one, each time it picks where to go
+        float map_rides = 0.125f / 0.03f;       ///< How many times as often a party holding a map goes for a ride
     };
 
     struct Tuning

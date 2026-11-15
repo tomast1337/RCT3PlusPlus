@@ -426,6 +426,27 @@ TEST_CASE("with enough stamps a guest is given the park's passport gift, paid fo
     }
 }
 
+TEST_CASE("a guest with no map buys one where maps are sold, and looks at it on picking a ride")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    auto& r = park.world().registry;
+    const auto kiosk = park.shop("Kiosk", Product::Umbrella, { 0, 0 }, 300);
+    r.get<Shop>(kiosk).menu = { { .product = Product::Umbrella, .price = { 300 } }, { .product = Product::Map, .price = { 100 }, .cost = { 40 } } };
+    const auto g = park.guest({ 3, 0 });
+    CHECK(park.run_until([&] { return r.all_of<ParkMap>(g); }, 3600));
+    CHECK(r.get<Wallet>(g).cash.value == 5000 - 100);
+    CHECK(r.get<Attraction>(kiosk).customers == 1);
+    CHECK(r.ctx().get<Supplies>().paid[std::to_underlying(park::LedgerLine::ShopStock)].value == 40);
+    CHECK_FALSE(r.all_of<Umbrella>(g)); // Dry, so no umbrella with it
+
+    // A ride to go to now: they stop to look at their map on the way.
+    park.flat_ride("Twister", { 6, 0 }, 0, { .cycle_seconds = 10 });
+    CHECK(park.run_until([&] { return r.all_of<Gesture>(g) && r.get<Gesture>(g).kind == GestureKind::LookMap; }, 600));
+    park.run_seconds(600);
+    CHECK(r.get<Attraction>(kiosk).customers == 1); // One map is enough
+}
+
 TEST_CASE("guests near a loudspeaker like its music now and then, about that speaker, once in a while")
 {
     Sandbox park;

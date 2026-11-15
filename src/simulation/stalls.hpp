@@ -28,6 +28,7 @@ namespace rct3::simulation
         CashMachine, ///< Gives the guest more cash
         FirstAid,    ///< Settles a sick guest's stomach
         Umbrella,    ///< Keeps the rain off
+        Map,         ///< A park map: its party goes for rides more often
     };
 
     /// Whether a shop's food or drink is cold (ice cream, a slush), hot (coffee, soup) or neither.

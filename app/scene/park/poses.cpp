@@ -279,7 +279,7 @@ namespace rct3::scene::park
                 if (gesture == nullptr)
                     return;
                 // By the names the people's meshes give these motions, in GestureKind's order.
-                constexpr std::array<std::string_view, 13> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop", "handticket", "applause", "lookwatch", "disapproval", "cry", "horror" };
+                constexpr std::array<std::string_view, 14> kGestureMotions { "jumpjoy", "laugh", "nodhead", "shakehead", "dizzy", "vomit", "knockdownloop", "handticket", "applause", "lookwatch", "disapproval", "cry", "horror", "lookmap" };
                 pose.motion = rct3::park::person::motion_number(kGestureMotions[std::to_underlying(gesture->kind)]).value_or(rct3::park::person::motion::kIdle);
                 pose.time = simulation::kTuning.gestures.shown.value - gesture->left.value + scene.sim_time;
                 // Rubbish into a bin: a quick step over to it, facing it, and back.

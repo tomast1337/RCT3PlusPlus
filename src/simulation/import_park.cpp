@@ -109,7 +109,7 @@ namespace rct3::simulation
                 const std::string_view name = product_named(item.name) ? std::string_view(item.name) : std::string_view(item.kind_symbol);
                 const rct3::park::CarriedKind* kind = kind_of(kinds.items, item.kind_symbol);
                 // What it feeds or quenches says what it is; a name only where its kind is unknown or does neither.
-                const auto product = kind && kind->effects[0] > 0 ? std::optional(Product::Food) : kind && kind->effects[1] > 0 ? std::optional(Product::Drink) : product_named(name);
+                const auto product = kind && kind->map ? std::optional(Product::Map) : kind && kind->effects[0] > 0 ? std::optional(Product::Food) : kind && kind->effects[1] > 0 ? std::optional(Product::Drink) : product_named(name);
                 if (!product)
                     continue;
                 Ware& ware = menu.emplace_back(Ware { *product, serve_named(name), item.price, item.kind_symbol });
@@ -138,9 +138,12 @@ namespace rct3::simulation
                         ware.worth[w].value = kind->worth[w] > 0 ? kind->worth[w] + ware.cost.value : 0;
                     ware.cost.value += kind->cost;
                 }
-                if (!sale)
+                // A kiosk is visited for its umbrellas; its maps are sold to whoever comes (guests.cpp).
+                if (!sale && *product != Product::Map)
                     sale = Sale { { *product, serve_named(name) }, item.price };
             }
+            if (!sale && !menu.empty())
+                sale = Sale { { menu.front().product, menu.front().serve }, menu.front().price };
             if (const auto product = product_named(stall.base.symbol); !sale && product && !stall.items.empty())
                 sale = Sale { { *product, serve_named(stall.base.symbol) }, stall.items.front().price };
             if (sale)
@@ -1929,6 +1932,7 @@ namespace rct3::simulation
         for (const save::model::ItemHolder& h : people.holders)
             holders.emplace(h.owner.id, &h);
         const auto empty = [&](const save::model::CarriedItem& c) { return std::ranges::any_of(kinds.items, [&](const rct3::park::CarriedKind& k) { return k.empty && k.symbol == c.kind_symbol; }); };
+        const auto map = [&](const save::model::CarriedItem& c) { return std::ranges::any_of(kinds.items, [&](const rct3::park::CarriedKind& k) { return k.map && k.symbol == c.kind_symbol; }); };
 
         std::size_t resumed = 0;
         for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
@@ -1952,13 +1956,16 @@ namespace rct3::simulation
             if (!r.all_of<Errand, Stride, Pose>(g) || !std::ranges::contains(std::array { ErrandKind::Wandering, ErrandKind::Following, ErrandKind::Waiting }, r.get<Errand>(g).kind))
                 continue;
 
-            // ---- 1. What they carry: food or a drink in hand, or an empty, and empties in their pockets ----
+            // ---- 1. What they carry: food or a drink in hand, or an empty, and empties in their pockets; a map anywhere ----
             if (const auto holder = holders.find(saved.person.id); holder != holders.end() && !r.all_of<Carried>(g))
             {
                 const auto item = [&](const save::model::PeopleRef& ref) -> const save::model::CarriedItem* {
                     const auto found = ref ? items.find(ref.id) : items.end();
                     return found != items.end() ? found->second : nullptr;
                 };
+                const save::model::ItemHolder& h = *holder->second;
+                if (std::ranges::any_of(std::array { &h.left_hand, &h.right_hand, &h.left_pocket, &h.right_pocket, &h.head }, [&](const save::model::PeopleRef* slot) { return item(*slot) != nullptr && map(*item(*slot)); }) || std::ranges::any_of(h.slotless, [&](const save::model::PeopleRef& slot) { return item(slot) != nullptr && map(*item(slot)); }))
+                    r.emplace_or_replace<ParkMap>(g);
                 std::optional<Carried> carried;
                 for (const save::model::PeopleRef* hand : { &holder->second->left_hand, &holder->second->right_hand })
                 {

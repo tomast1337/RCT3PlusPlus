@@ -522,7 +522,7 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     CHECK(world.registry.get<simulation::Stride>(staff[2]).to == tile); // Off the paths: from the nearest walkway
 }
 
-TEST_CASE("guests the park had on a bench, at a view, a water cannon or a show go back to it, with what they carried")
+TEST_CASE("guests the park had on a bench, at a view, a water cannon or a show go back to it, with what they carried and their map")
 {
     simulation::SimWorld world;
     const auto tile = world.paths.add({ 2, 1, 0 });
@@ -558,9 +558,11 @@ TEST_CASE("guests the park had on a bench, at a view, a water cannon or a show g
     people.carried_items.push_back({ .id = 900, .kind_symbol = "Cola:cid", .drink = 0.3f });
     people.carried_items.push_back({ .id = 901, .kind_symbol = "Cup:cid" });
     people.holders.push_back({ .id = 800, .owner = { 6 }, .left_hand = { 900 }, .left_pocket = { 901 } });
-    people.holders.push_back({ .id = 801, .owner = { 7 }, .right_pocket = { 901 } });
+    people.carried_items.push_back({ .id = 902, .kind_symbol = "Map:cid" });
+    people.holders.push_back({ .id = 801, .owner = { 7 }, .left_hand = { 902 }, .right_pocket = { 901 } });
     rct3::park::CarriedKinds kinds;
     kinds.items.push_back({ .symbol = "Cup:cid", .empty = true });
+    kinds.items.push_back({ .symbol = "Map:cid", .map = true });
 
     const auto guests = simulation::import_guests(world, people);
     simulation::start_guests(world);
@@ -588,6 +590,8 @@ TEST_CASE("guests the park had on a bench, at a view, a water cannon or a show g
     const auto& pocket = r.get<simulation::Carried>(guests[6]);
     CHECK_FALSE(pocket.held);
     CHECK(pocket.pocketed == 1);
+    CHECK(r.all_of<simulation::ParkMap>(guests[6]));
+    CHECK_FALSE(r.all_of<simulation::ParkMap>(guests[5]));
 }
 
 TEST_CASE("passport stamps, the gift and the park's passport rules come back from a saved park")

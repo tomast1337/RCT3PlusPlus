@@ -116,10 +116,10 @@ namespace rct3::simulation
         float damping = 0;  ///< Per second, how fast its swing dies down
         float centring = 0; ///< Per second, how fast it is drawn back to the trough's middle
         float friction = 0; ///< Of the car on the wall, held back as it swings by this much of the weight pressing it there
-        /// Metres from the middle of its swing, on the track's line, down to the car: its shape's pivot height. A
-        /// body slide's car's, matching one under way in a saved park, unless the car's shape gives its own.
-        float length = 0.77f;
-        float pivot = 0; ///< Metres up from where the car is drawn to the middle of its swing on the car's shape
+        /// From the middle of its swing, on the track's line, down to the car: its shape's pivot height. A body
+        /// slide's car's, matching one under way in a saved park, unless the car's shape gives its own.
+        units::Distance length { 0.77f };
+        units::Distance pivot { }; ///< Up from where the car is drawn to the middle of its swing on the car's shape
     };
 
     /// Of a car run off a pool slide's open end: flying on as fast as it left, falling, then afloat where it came

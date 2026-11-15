@@ -737,7 +737,7 @@ namespace rct3::scene::park
                 if (train.trough && train.lean.value != 0)
                 {
                     const glm::vec3 way = glm::normalize(glm::vec3(place[2]));
-                    const glm::vec3 pivot = glm::vec3(place[3]) + glm::normalize(glm::vec3(place[1])) * train.trough->pivot;
+                    const glm::vec3 pivot = glm::vec3(place[3]) + glm::normalize(glm::vec3(place[1])) * train.trough->pivot.value;
                     place = glm::translate(glm::mat4(1.0f), pivot) * glm::rotate(glm::mat4(1.0f), -train.lean.value, way) * glm::translate(glm::mat4(1.0f), -pivot) * place;
                 }
                 // Crashed, each car flies on and tumbles as its wreck does from where it left the track, and is

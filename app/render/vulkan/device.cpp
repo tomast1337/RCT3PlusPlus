@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include "logging/log.hpp"
 #include "profiling/profiler.hpp"
+#include "render/shader_inputs.hpp"
 #include "render/vulkan/check.hpp"
 
 #include <GLFW/glfw3.h>
@@ -27,47 +28,7 @@ namespace rct3::render::vulkan
     namespace
     {
 
-        // What every shader finds in its push constants (app/shaders): the draw's transform, then the light of
-        // the Lit shaders, or what the Water shader needs (app/shaders/water.slang). 128 bytes is all a device
-        // must offer.
-        struct PushBlock
-        {
-            glm::mat4 transform;
-            glm::vec4 a;
-            glm::vec4 b;
-            glm::vec4 c;
-            glm::vec4 d;
-        };
-        static_assert(sizeof(PushBlock) == 128);
-
         constexpr VkShaderStageFlags kPushStages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-
-        PushBlock push_block(const DrawCommand& command, Shader shader)
-        {
-            const SceneLight& l = command.light;
-            if (shader == Shader::Occlusion)
-            {
-                // app/shaders/occlusion.slang
-                const OcclusionStep& o = command.occlusion;
-                return { command.transform, glm::vec4(static_cast<float>(o.kind), static_cast<float>(o.frame % 65536), o.radius, o.strength), glm::vec4(o.history, 0.0f, o.depth_terms), { }, { } };
-            }
-            if (shader != Shader::Water && shader != Shader::Waterfall)
-            {
-                // The push block is full, so the haze colour goes as one number: its channels in 8 bits each.
-                const glm::uvec3 h { glm::round(glm::clamp(l.haze, 0.0f, 1.0f) * 255.0f) };
-                const auto haze = static_cast<float>((h.r << 16) | (h.g << 8) | h.b);
-                // sky.w: 1 with the variation, 2 with the relief map, plus 4 times the surface detail, plus 16 with
-                // lamps, plus 32 for a ghost, plus 64 to leave nearly clear pixels out, plus `v_shift` (lit.slang). sun_direction.w: 0 without a shadow, else 1 plus the older shadow's weight.
-                const bool before = static_cast<bool>(l.shadow_map_before);
-                const float shadow = l.shadow_map && l.shadow_view ? 1 + (before ? std::clamp(l.shadow_before, 0.0f, 1.0f) : 0.0f) : 0.0f;
-                return { command.transform, glm::vec4(l.sun_direction, shadow), glm::vec4(l.sun, l.haze_rate), glm::vec4(l.sky, (command.extra_textures[0] ? 1.0f : 0.0f) + (command.extra_textures[1] ? 2.0f : 0.0f) + 4.0f * static_cast<float>(std::clamp(l.surface_detail, 0, 2)) + (l.lamps ? 16.0f : 0.0f) + (l.ghost ? 32.0f : 0.0f) + (l.cut_clear ? 64.0f : 0.0f) + command.v_shift.lengths), glm::vec4(l.ground, haze) };
-            }
-            // sky.w: the flags, plus `v_shift` (water.slang, waterfall.slang).
-            const WaterView& w = command.water;
-            const bool shadow = l.shadow_map && l.shadow_view;
-            const auto flags = static_cast<float>((w.reflection ? 1 : 0) | (w.refraction ? 2 : 0) | (w.waves ? 4 : 0) | (w.foam ? 8 : 0) | (w.ripples ? 16 : 0) | (w.underwater ? 32 : 0) | (shadow ? 64 : 0) | (w.shafts ? 128 : 0) | (w.flow ? 256 : 0) | (std::clamp(w.fall_part, 0, 3) << 9) | (std::clamp(w.fall_detail, 0, 3) << 11)) + command.v_shift.lengths;
-            return { command.transform, glm::vec4(w.eye, w.time), glm::vec4(l.sun_direction, w.near), glm::vec4(l.sun, w.far), glm::vec4(l.sky, flags) };
-        }
 
         void check_imgui(VkResult result)
         {
@@ -674,7 +635,7 @@ namespace rct3::render::vulkan
 
         VkPushConstantRange push { };
         push.stageFlags = kPushStages;
-        push.size = sizeof(PushBlock);
+        push.size = sizeof(ShaderConstants);
 
         // The extra textures take a set each, which only devices that bind enough sets get; the least Vulkan
         // promises is four, enough for the Lit shaders' shadow. Without eight the Water shader is not offered.
@@ -1015,7 +976,7 @@ namespace rct3::render::vulkan
         const VkPipeline wire = pass_samples_ > 1 ? p.multi_wire : p.wire;
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, wireframe_ && wire ? wire : fill);
-        const PushBlock block = push_block(command, p.shader);
+        const ShaderConstants block = shader_constants(command, p.shader);
         vkCmdPushConstants(cmd, pipeline_layout_, kPushStages, 0, sizeof block, &block);
         if (command.texture)
         {
@@ -1027,19 +988,11 @@ namespace rct3::render::vulkan
             std::array<VkDescriptorSet, kSetCount> sets { };
             sets.fill(texture->second.set);
             sets[1] = sampler_sets_[sampler];
-            // The Water and Waterfall shaders read the extra textures, the Lit ones the shadow; a missing one reads as the first.
+            // A missing extra texture reads as the first.
             const Shader shader = pipeline->second.shader;
-            const bool lit = lit_shader(shader);
             const bool water = shader == Shader::Water || shader == Shader::Waterfall;
-            const std::uint32_t count = water ? set_count_ : lit ? 8 : shader == Shader::Occlusion || shader == Shader::Shafts ? 5 : 2;
-            std::array<TextureHandle, kExtraTextures> extras = command.extra_textures;
-            if (lit)
-                extras = { command.light.shadow_map, command.light.shadow_view, command.extra_textures[0], command.light.shadow_map_before, command.light.lamps, command.extra_textures[1] };
-            else if (water)
-            {
-                extras[4] = command.light.shadow_map;
-                extras[5] = command.light.shadow_view;
-            }
+            const std::uint32_t count = water ? set_count_ : lit_shader(shader) ? 8 : shader == Shader::Occlusion || shader == Shader::Shafts ? 5 : 2;
+            const std::array<TextureHandle, kExtraTextures> extras = bound_extra_textures(command, shader);
             for (std::uint32_t i = 2; i < count; ++i)
             {
                 const TextureHandle extra = extras[i - 2];

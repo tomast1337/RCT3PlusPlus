@@ -17,8 +17,9 @@
 //   "RIDE" v1  save::model::RideModel
 //   "PARK" v1  SavedProgress: the money, the calendar and the weather, with the ledger and the weekly graphs
 //   "VIEW" v1  park::ParkCamera
-//   "PEOP" v3  SavedPeople: the people's looks and pages, and where the guests and staff stand and how
-//              they are. Saves made before it lack it; their people start again from the original park.
+//   "PEOP" v5  SavedPeople: the people's looks and pages, where the guests and staff stand and how they are,
+//              their passports, and the park's passport gift. Saves made before it lack it; their people start
+//              again from the original park.
 //   "QSGN" v1  std::vector<save::model::ObjectId>: the rides whose queues have no signs, by id. Only when there are any.
 //   "SHOW" v1  std::vector<save::model::RideShow>: the show rides' shows. Only when there are any; without it, the
 //              shows are read again from the original park.
@@ -155,6 +156,7 @@ namespace rct3::parkfile
         save::model::PeopleModel model; ///< Looks, names and pages; the guests no longer in the park marked out
         std::vector<SavedGuest> guests;
         std::vector<SavedWorker> staff;
+        std::optional<simulation::PassportRules> passport { }; ///< The park's gift and the stamps it takes, as the player set them
     };
 
     /// How far the scenario's goals have got.

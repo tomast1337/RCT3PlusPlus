@@ -781,6 +781,16 @@ namespace rct3::scene::park
                     || (change->id >= ui::screens::info::control_id(ui::screens::info::AttractionControl::SpeedSeries) && change->id <= ui::screens::info::control_id(ui::screens::info::AttractionControl::LateralSeries)))
                     show_info_page(scene, *info, assets, options);
             }
+            else if (auto* rules = change && scene.shown_prop && (change->id == ui::screens::info::kPassportStampsControl || change->id == ui::screens::info::kPassportGiftControl) ? scene.sim.registry.ctx().find<simulation::PassportRules>() : nullptr)
+            {
+                // The rules are the park's, whichever post's window sets them.
+                const auto gifts = simulation::passport_gifts(scene.carried);
+                if (change->id == ui::screens::info::kPassportStampsControl)
+                    rules->stamps_for_gift = static_cast<std::uint32_t>(std::clamp<int>(change->value, 1, static_cast<int>(simulation::kTuning.surroundings.most_stamps)));
+                else if (change->value >= 0 && std::cmp_less(change->value, gifts.size()))
+                    simulation::set_passport_gift(*rules, gifts[static_cast<std::size_t>(change->value)]->symbol, scene.carried);
+                open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
+            }
             else if (const auto room = change && scene.shown_prop ? pool_room(scene, scene.objects[scene.shown_prop->value]) : std::nullopt)
             {
                 const save::model::PlacedObject& o = scene.objects[scene.shown_prop->value];
@@ -946,6 +956,9 @@ namespace rct3::scene::park
             open_info(scene, *info, *asked, assets, options);
         if (const auto asked = std::exchange(scene.person_requested, std::nullopt); asked && info && *asked < scene.shown_people.size())
             open_person(scene, *info, *asked, assets, options);
+        if (const auto asked = std::exchange(scene.prop_requested, std::nullopt); asked && info)
+            if (const auto found = std::ranges::find(scene.objects, *asked, &save::model::PlacedObject::id); found != scene.objects.end())
+                open_prop(scene, *info, save::model::PlacedObjectIndex { static_cast<std::size_t>(found - scene.objects.begin()) }, assets, options);
         // The Construction tab has no page: it opens the panel that builds the ride's track.
         if (const auto asked = std::exchange(scene.construct_requested, std::nullopt); asked && asked->kind == rct3::park::AttractionRef::Kind::Ride)
         {

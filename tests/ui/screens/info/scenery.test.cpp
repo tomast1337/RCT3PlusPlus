@@ -252,3 +252,26 @@ TEST_CASE("paths, rides, supports and what lies about are not props")
     for (const auto c : { SupportColumn, SupportCap, TrackPiece, PathPiece, Leftover, GuestSpawn, Ride, RideEntrance, RideExit, KeepClear, Stall, Effect })
         CHECK_FALSE(park::is_prop(static_cast<std::uint32_t>(c)));
 }
+
+TEST_CASE("a passport post's tab sets the stamps the park's gift takes, and the gift")
+{
+    StringTable s = table();
+    s.add("Passport_StampsNeededLabelText", u"Stamps:");
+    s.add("HatName", u"Hat");
+    s.add("BadgeName", u"Badge");
+    SceneryFacts f;
+    f.passport = PassportFacts { .stamps_for_gift = 4, .most_stamps = 12, .gifts = { "HatName", "BadgeName" }, .gift = 1 };
+    const auto tabs = scenery_tabs(f);
+    REQUIRE(tabs.size() == 2);
+    CHECK(tabs[1].tab == SceneryTab::Passport);
+
+    const InfoPage page = scenery_page(SceneryTab::Passport, f, s);
+    REQUIRE(page.controls.size() == 2);
+    CHECK(page.controls[0].id == kPassportStampsControl);
+    CHECK(page.controls[0].label == u"Stamps:");
+    CHECK(page.controls[0].value == 4);
+    CHECK(page.controls[0].maximum == 12);
+    CHECK(page.controls[1].id == kPassportGiftControl);
+    CHECK(page.controls[1].items == std::vector<std::u16string> { u"Hat", u"Badge" });
+    CHECK(page.controls[1].value == 1);
+}

@@ -199,7 +199,7 @@ namespace rct3::ui::screens::info
         value_icons_.clear();
         control_rows_.clear();
         measured_ = false;
-        paper_ = !page.bare && (!page.lines.empty() || !page.note.empty() || !page.graph.empty() || !page.controls.empty());
+        paper_ = !page.bare && (!page.lines.empty() || !page.note.empty() || !page.stamps.empty() || !page.graph.empty() || !page.controls.empty());
         // Toggles with pictures, a task's, sit on the stripes as lines do.
         striped_ = !page.lines.empty() || std::ranges::any_of(page.controls, [](const InfoControl& c) { return c.kind == InfoControlKind::Tick && !c.icon.empty(); });
         const Color ink = paper_ ? style_.paper_text_colour : style_.text_colour;
@@ -310,6 +310,20 @@ namespace rct3::ui::screens::info
                 y += info_panel::kLineHeight;
             }
         };
+        // A passport's stamps, each where it fell on the page, across the page clear of the ring's tabs.
+        if (!page.stamps.empty())
+        {
+            const float across = info_panel::kPageWidth - info_panel::kRingReach - info_panel::kStampSize;
+            const float down = info_panel::kStampPage - info_panel::kStampSize;
+            for (std::size_t i = 0; i < page.stamps.size(); ++i)
+            {
+                const InfoStamp& s = page.stamps[i];
+                widgets::Panel& stamp = body_->add<widgets::Panel>(std::format("{}_{}", style_.stamp, i), style_.stamp);
+                stamp.tint = s.colour;
+                stamp.placement = top_left(std::clamp(s.x, 0.0f, 1.0f) * across, y + std::clamp(s.y, 0.0f, 1.0f) * down, info_panel::kStampSize, info_panel::kStampSize);
+            }
+            y += info_panel::kStampPage;
+        }
         const std::size_t split = std::min(page.controls_after.value_or(page.lines.size()), page.lines.size());
         lines(0, split);
         if (!page.graph.empty())

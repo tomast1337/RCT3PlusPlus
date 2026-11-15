@@ -181,6 +181,14 @@ declare namespace park {
     function dropParties(parties: number, seed?: number): { col: number; row: number; guests: number }[];
     /** The things guests use on the paths: benches, bins, signs and sights, by the placed object each stands as. */
     function pathItems(): { object: number; kind: PathItemKind; broken: boolean }[];
+    /** The park's passport gift, which its passport posts' windows set: how many stamps a guest needs for it, the
+     *  item given (by symbol, "" for none), and the items it may be (souvenirs). */
+    function passport(): { stampsForGift: number; gift: string; gifts: string[] };
+    /** Sets how many stamps a passport needs for the gift (1 to 12), and the gift, one of passport().gifts, unless
+     *  left out; false, changing nothing, for a number or gift out of these. */
+    function setPassport(stampsForGift: number, gift?: string): boolean;
+    /** Opens the window of the placed object `object` (as pathItems() gives) on the next frame, as a click on it does. */
+    function showObject(object: number): void;
     /** The litter and sick lying on the paths, each by the middle of the path tile it lies on, in tiles. */
     function litter(): { col: number; row: number; sick: boolean }[];
     /** Breaks every bench, bin and sign at once, as vandals would; how many it broke. */
@@ -756,6 +764,9 @@ declare namespace people {
         watching?: "show" | "autograph" | "chasing";
         show?: string;
         slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry";
+        /** A guest's passport, once stamped: each stamp's post (as pathItems()' object), ink (0xAARRGGBB) and place on
+         *  the page (0 to 1 across and down), and whether they were given the park's gift. */
+        passport?: { stamps: { post: number; colour: number; x: number; y: number }[]; gift: boolean };
     }[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;

@@ -561,10 +561,25 @@ namespace rct3::ui::screens::info
             page.controls.push_back(std::move(c));
         }
 
-        void passport(InfoPage& page, const StringTable& strings)
+        void passport(InfoPage& page, const PersonFacts::Passport& passport, const StringTable& strings)
         {
-            // The stamps are not read from the save.
-            page.note = text(strings, "Passport_StampsNeededLabelText") + u": " + std::u16string(kMissingValue);
+            // The page of stamps, then the gift: had, still so many stamps off, or no posts to get them at.
+            page.stamps = passport.stamps;
+            if (passport.gift)
+                page.note = text(strings, "Passport_AlreadyGotGift");
+            else if (!passport.posts)
+                page.note = text(strings, "Passport_PlacePostsToGetStamps");
+            else
+            {
+                page.note = text(strings, "Passport_NeedXMoreStampsToGetGift");
+                const auto fill = [&](std::u16string_view mark, std::u16string_view value) {
+                    if (const auto at = page.note.find(mark); at != std::u16string::npos)
+                        page.note.replace(at, mark.size(), value);
+                };
+                fill(u"%GIFT%", strings.get(passport.gift_name));
+                const std::string more = std::to_string(passport.stamps_for_gift - std::min(passport.stamps.size(), passport.stamps_for_gift));
+                fill(u"%NUMBER%", std::u16string(more.begin(), more.end()));
+            }
         }
 
     } // namespace
@@ -684,7 +699,7 @@ namespace rct3::ui::screens::info
                     cash_lines(page, { &facts, 1 }, strings, units);
                 break;
             case PersonTab::Passport:
-                passport(page, strings);
+                passport(page, facts.passport, strings);
                 break;
             case PersonTab::Tasks:
                 if (facts.staff != nullptr)

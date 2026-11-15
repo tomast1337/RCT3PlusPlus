@@ -110,6 +110,25 @@ namespace rct3::scene::park
                 if (goal != goals.end() && goal->vip)
                     f.vip = { vip.patience.value, simulation::vip_opinion(vip, *goal->vip, happiness) };
             }
+            // Their passport as the simulation keeps it, the stamps in the inks their posts print in (0xAARRGGBB).
+            if (const ShownPerson& p = scene.shown_people[shown]; !p.staff)
+            {
+                const auto byte = [](std::int32_t c, unsigned shift) { return static_cast<std::uint8_t>(static_cast<std::uint32_t>(c) >> shift); };
+                if (const auto* passport = p.guest != entt::null && r.valid(p.guest) ? r.try_get<simulation::Passport>(p.guest) : nullptr)
+                {
+                    f.passport.gift = passport->gift;
+                    for (const simulation::Passport::Stamp& s : passport->stamps)
+                        f.passport.stamps.push_back({ .colour = { byte(s.colour, 16), byte(s.colour, 8), byte(s.colour, 0), byte(s.colour, 24) }, .x = s.at.x, .y = s.at.y });
+                }
+                if (const auto* rules = r.ctx().find<simulation::PassportRules>())
+                {
+                    f.passport.stamps_for_gift = rules->stamps_for_gift;
+                    const auto gift = std::ranges::find(scene.carried.items, rules->gift, &rct3::park::CarriedKind::symbol);
+                    f.passport.gift_name = gift != scene.carried.items.end() ? std::string_view(gift->name_text) : std::string_view { };
+                }
+                const auto items = r.view<const simulation::PathItem>();
+                f.passport.posts = std::ranges::any_of(items, [&](entt::entity e) { return items.get<const simulation::PathItem>(e).kind == simulation::PathItemKind::PassportPost; });
+            }
             return f;
         }
 
@@ -290,6 +309,21 @@ namespace rct3::scene::park
             f.bin = &*bin;
         if (const auto sign = std::ranges::find(scene.signs, o.id, &save::model::SignState::object_ref); sign != scene.signs.end())
             f.sign = &*sign;
+        const auto items = scene.sim.registry.view<const simulation::PathItem>();
+        const auto* rules = scene.sim.registry.ctx().find<simulation::PassportRules>();
+        if (rules != nullptr && std::ranges::any_of(items, [&](entt::entity e) {
+                const auto& i = items.get<const simulation::PathItem>(e);
+                return i.object == o.id && i.kind == simulation::PathItemKind::PassportPost;
+            }))
+        {
+            f.passport = ui::screens::info::PassportFacts { .stamps_for_gift = static_cast<int>(rules->stamps_for_gift), .most_stamps = static_cast<int>(simulation::kTuning.surroundings.most_stamps) };
+            for (const rct3::park::CarriedKind* gift : simulation::passport_gifts(scene.carried))
+            {
+                if (gift->symbol == rules->gift)
+                    f.passport->gift = static_cast<int>(f.passport->gifts.size());
+                f.passport->gifts.push_back(gift->name_text);
+            }
+        }
         if (const auto room = pool_room(scene, o))
         {
             // Its complex's swimmers, and its water's dirt, as the simulation has them.

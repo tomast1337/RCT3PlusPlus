@@ -79,6 +79,7 @@ namespace rct3::ui::screens::info
         std::size_t palette_columns = 8;
         widgets::SpinnerStyle spinner;                                                                                            ///< Of a page's number controls
         widgets::SliderStyle bar { .rail = { }, .thumb = { }, .thumb_width = 0, .bar = true, .bar_back_colour = hex("#ece8f0") }; ///< Of its bars set by pressing along them; colours chosen by eye
+        std::string stamp;                                                                                                        ///< A passport stamp's skin, tinted in its ink
         StallMenuStyle menu;                                                                                                      ///< Of a stall's menu
         widgets::DropdownStyle dropdown;                                                                                          ///< Of its lists
         std::string tick_box;                                                                                                     ///< Of its ticks
@@ -190,6 +191,8 @@ namespace rct3::ui::screens::info
         inline constexpr float kToggleInset = 40;             ///< Chosen by eye: a task's toggle short of the page's end, as the game's sits
         inline constexpr float kScrollStep = 2 * kLineHeight; ///< Down the page for a notch of the wheel
         inline constexpr float kScrollGap = 2;                ///< Between the scroll bar and the paper's end
+        inline constexpr float kStampSize = 38;               ///< Of a passport stamp, its picture's own size
+        inline constexpr float kStampPage = 80;               ///< Chosen by eye: of the page the stamps sit on, two stamps high
     } // namespace info_panel
 
     struct InfoLine
@@ -278,6 +281,14 @@ namespace rct3::ui::screens::info
         std::u16string text; ///< Typed
     };
 
+    /// A stamp on a passport's page: its ink, and where it sits on the page, 0..1 across and down.
+    struct InfoStamp
+    {
+        Color colour { };
+        float x = 0;
+        float y = 0;
+    };
+
     /// A tab's content: a title, a row of buttons for its sections when it has more than one, lines of a
     /// label and a value, a note under them and a graph.
     struct InfoPage
@@ -290,6 +301,7 @@ namespace rct3::ui::screens::info
         std::vector<InfoLine> lines;
 
         std::u16string note;
+        std::vector<InfoStamp> stamps; ///< Over the note, on a passport's page
         std::vector<InfoSeries> graph;
         /// Numbers up the graph's left, top first, evenly apart from its top to its bottom; with them, the names
         /// under the graph are left to the controls.

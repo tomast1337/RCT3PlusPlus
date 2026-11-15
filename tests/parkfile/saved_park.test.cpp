@@ -345,12 +345,19 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     r.emplace<Pose>(sweeper, Pose { .position = { 3, 0, 4 } });
     r.emplace<staff::Patrol>(sweeper, staff::Patrol { { { 1, 2 }, { 3, 4 } }, 7 });
 
+    r.ctx().emplace<PassportRules>(PassportRules { .stamps_for_gift = 7, .gift = "Badge:cid", .gift_cost = { 150 } });
+
     parkfile::SavedPark park = small_park();
     park.people = parkfile::keep_people(world, model, { { ann, 1 }, { sweeper, 0 } });
     const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
     REQUIRE_MESSAGE(read, (read ? "" : read.error()));
     REQUIRE(read->people);
     const parkfile::SavedPeople& people = *read->people;
+    // The park's passport gift, as the player set it.
+    REQUIRE(people.passport);
+    CHECK(people.passport->stamps_for_gift == 7);
+    CHECK(people.passport->gift == "Badge:cid");
+    CHECK(people.passport->gift_cost == units::Money { 150 });
     CHECK_FALSE(people.model.guests[0].in_park);
     CHECK(people.model.guests[1].in_park);
     REQUIRE(people.guests.size() == 2);

@@ -712,8 +712,13 @@ namespace rct3::simulation::tuning
         units::Share stamp_cheer { 0.1f };      ///< Chosen by eye: happiness from a new stamp in a guest's passport
         units::Share gift_cheer { 0.2f };       ///< Chosen by eye: happiness from being given the park's passport gift
         units::Share no_gift_gloom { 0.1f };    ///< Chosen by eye: happiness lost when the park cannot pay for the gift they are due
-        units::Chance map_wish { 0.02 };        ///< Chosen by eye: of a party with no map going to buy one, each time it picks where to go
-        float map_rides = 4;                    ///< Chosen by eye: how many times as often a party holding a map goes for a ride
+        std::uint32_t stamps_for_gift = 5;      ///< Chosen by eye: stamps a new park asks for before giving its passport gift
+        std::uint32_t most_stamps = 12;         ///< Chosen by eye: about as many stamps as a passport's page shows without hiding each other
+        /// Chosen by eye: the inks of passport posts with no colour of their own, red, blue, green, orange, purple
+        /// and teal, as red, green and blue.
+        std::array<std::array<std::uint8_t, 3>, 6> stamp_inks { { { 200, 40, 40 }, { 40, 80, 200 }, { 40, 150, 60 }, { 230, 130, 20 }, { 140, 60, 170 }, { 20, 150, 150 } } };
+        units::Chance map_wish { 0.02 }; ///< Chosen by eye: of a party with no map going to buy one, each time it picks where to go
+        float map_rides = 4;             ///< Chosen by eye: how many times as often a party holding a map goes for a ride
     };
 
     struct Tuning

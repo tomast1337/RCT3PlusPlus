@@ -256,9 +256,14 @@ namespace rct3::simulation
     /// many it put back to a use. Call after start_guests, import_staff,
     /// import_path_items and import_sights.
     std::size_t resume_saved_uses(SimWorld& world, const save::model::PeopleModel& people, std::span<const entt::entity> guests, std::span<const entt::entity> staff, std::span<const save::model::UsePoint> points, const rct3::park::CarriedKinds& kinds = { });
+    /// The items among `kinds` a park may give as its passport gift: souvenirs, sold for a price, neither eaten nor
+    /// drunk, nor maps.
+    [[nodiscard]] std::vector<const rct3::park::CarriedKind*> passport_gifts(const rct3::park::CarriedKinds& kinds);
+    /// Makes the item `symbol` among `kinds` the park's passport gift, paid for at what its kind costs a stall.
+    void set_passport_gift(PassportRules& rules, std::string_view symbol, const rct3::park::CarriedKinds& kinds);
     /// The colour each passport post among `points` stamps in; what the park gives guests for a passport with
-    /// enough stamps, and what it pays for it, by what its kind of item costs a stall among `kinds`, unless the
-    /// park keeps no such gift.
+    /// enough stamps, and what it pays for it, by what its kind of item costs a stall among `kinds`. A park that
+    /// keeps no such gift gives the cheapest of passport_gifts for tuning's stamps.
     void import_passport_rules(SimWorld& world, const save::model::PeopleModel& people, std::span<const save::model::UsePoint> points, const rct3::park::CarriedKinds& kinds = { });
 
 } // namespace rct3::simulation

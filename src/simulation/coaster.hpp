@@ -113,9 +113,9 @@ namespace rct3::simulation
     /// gravity swings it back down, and taken too fast it goes over the rim.
     struct Trough
     {
-        float damping = 0;  ///< Per second, how fast its swing dies down
-        float centring = 0; ///< Per second, how fast it is drawn back to the trough's middle
-        float friction = 0; ///< Of the car on the wall, held back as it swings by this much of the weight pressing it there
+        units::PerSecond damping { };  ///< How fast its swing dies down
+        units::PerSecond centring { }; ///< How fast it is drawn back to the trough's middle
+        float friction = 0;            ///< Of the car on the wall, held back as it swings by this much of the weight pressing it there
         /// From the middle of its swing, on the track's line, down to the car: its shape's pivot height. A body
         /// slide's car's, matching one under way in a saved park, unless the car's shape gives its own.
         units::Distance length { 0.77f };

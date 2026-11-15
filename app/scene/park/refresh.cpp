@@ -772,7 +772,7 @@ namespace rct3::scene::park
                             if (drop.slide == ride && pose.position.y > drop.ground)
                             {
                                 // Falling from where they are as the simulation drops them, till they reach the water.
-                                const float g = simulation::kTuning.holding.gravity;
+                                const float g = simulation::kTuning.holding.gravity.value;
                                 const float f = drop.fall.value;
                                 const float t = (std::sqrt(f * f + 2 * g * (pose.position.y - drop.ground)) - f) / g;
                                 glm::vec2 down = glm::vec2 { pose.position.x, pose.position.z } + drop.drift * t;

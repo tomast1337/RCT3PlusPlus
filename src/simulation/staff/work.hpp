@@ -32,7 +32,7 @@ namespace rct3::simulation::staff
         struct Seen
         {
             entt::entity what = entt::null; ///< An attraction visited or a worker watched
-            float when { };                 ///< Seconds into the run
+            units::Seconds when { };        ///< Into the run
         };
         std::vector<Seen> seen { };
         entt::entity watching = entt::null;    ///< The worker they are after, or watching
@@ -42,7 +42,7 @@ namespace rct3::simulation::staff
         {
             entt::entity about = entt::null;
             Finding finding { };
-            float when { }; ///< Seconds into the run
+            units::Seconds when { }; ///< Into the run
         };
         std::vector<Told> told { }; ///< Not told again for a while
     };

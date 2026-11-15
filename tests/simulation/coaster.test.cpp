@@ -745,7 +745,7 @@ namespace
         c.speed = speed;
         c.running = true;
         c.launched = true;
-        c.trough = Trough { .damping = 2, .centring = 1, .friction = 0.5f };
+        c.trough = Trough { .damping = { 2 }, .centring = { 1 }, .friction = 0.5f };
         return c;
     }
 } // namespace
@@ -799,7 +799,7 @@ TEST_CASE("a slide's car taken round onto its lift is not swung up the wall by t
 TEST_CASE("a slide's car on the straight stays in the middle of its trough")
 {
     Coaster c = hill();
-    c.trough = Trough { .damping = 2, .centring = 1, .friction = 0.5f };
+    c.trough = Trough { .damping = { 2 }, .centring = { 1 }, .friction = 0.5f };
     c.points = { { 0, 0, 0 }, { 0, 0, 10 }, { 0, 15, 40 }, { 0, 0, 70 }, { 0, 0, 100 } };
     c.running = true;
     for (int i = 0; i < 200 && c.running; ++i)

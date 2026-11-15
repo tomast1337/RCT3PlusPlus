@@ -481,11 +481,11 @@ namespace rct3::simulation::tuning
     /// People the player picks up and lets go of.
     struct Holding
     {
-        units::Distance lowest { 3 };   ///< A held person hangs at least this far over the ground under the cursor
-        units::Distance highest { 5 };  ///< and at most this far
-        float gravity = 9.8f;           ///< World units a second a falling person speeds up by, each second
-        units::Pace fastest_fall { 6 }; ///< Most they fall at
-        units::Chance happy { 0.6 };    ///< Of a held person enjoying it; the rest hang there cross
+        units::Distance lowest { 3 };         ///< A held person hangs at least this far over the ground under the cursor
+        units::Distance highest { 5 };        ///< and at most this far
+        units::Acceleration gravity { 9.8f }; ///< A falling person speeds up by
+        units::Pace fastest_fall { 6 };       ///< Most they fall at
+        units::Chance happy { 0.6 };          ///< Of a held person enjoying it; the rest hang there cross
     };
 
     /// People on foot whose ground the land tools tip too steep: they slide down it, fall over, and get up.

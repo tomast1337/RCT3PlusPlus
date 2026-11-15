@@ -181,7 +181,7 @@ namespace rct3::simulation
             if (drop.sliding)
             {
                 const auto& slides = kTuning.slides;
-                const float gravity = kTuning.holding.gravity;
+                const float gravity = kTuning.holding.gravity.value;
                 const glm::vec2 rise = surroundings != nullptr ? slope(surroundings->ground, { pose.position.x, pose.position.z }) : glm::vec2 { };
                 const float lean = 1 + glm::dot(rise, rise); // The steeper, the less of their weight presses on the ground
                 drop.drift -= rise * (gravity / lean * dt);
@@ -204,7 +204,7 @@ namespace rct3::simulation
             }
             if (drop.thrown || pose.position.y > drop.ground)
             {
-                drop.fall.value += kTuning.holding.gravity * dt;
+                drop.fall.value += kTuning.holding.gravity.value * dt;
                 if (!drop.thrown)
                     drop.fall.value = std::min(drop.fall.value, kTuning.holding.fastest_fall.value);
                 glm::vec2 across = glm::vec2 { pose.position.x, pose.position.z } + drop.drift * dt;

@@ -72,8 +72,8 @@ namespace rct3::simulation
     /// Where a show is at.
     struct ShowMoment
     {
-        ShowMove move { }; ///< The one they make now; the last once the show is through
-        float into { };    ///< Seconds into it
+        ShowMove move { };       ///< The one they make now; the last once the show is through
+        units::Seconds into { }; ///< Of it
     };
 
     [[nodiscard]] ShowMoment show_move_at(const Show& show);

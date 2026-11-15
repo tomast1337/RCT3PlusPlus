@@ -82,7 +82,7 @@ namespace rct3::simulation
                     break;
                 case DiveStep::Fall:
                 {
-                    swimmer.fall.value += kTuning.holding.gravity * dt;
+                    swimmer.fall.value += kTuning.holding.gravity.value * dt;
                     pose.position += ahead * (k.leap.value * dt) + glm::vec3 { 0, -swimmer.fall.value * dt, 0 };
                     const auto water = std::ranges::find_if(pool.water, [&](const glm::vec3& w) { return std::abs(pose.position.x - w.x) <= tile / 2 && std::abs(pose.position.z - w.z) <= tile / 2; });
                     const float surface = water != pool.water.end() ? water->y : board.foot.y;
@@ -232,7 +232,7 @@ namespace rct3::simulation
                     else
                     {
                         // Pulled down the slope, slowed by the slide.
-                        c.speed.value += (-kTuning.holding.gravity * way.y - tuning.drag * c.speed.value) * dt;
+                        c.speed.value += (-kTuning.holding.gravity.value * way.y - tuning.drag * c.speed.value) * dt;
                         c.speed.value = std::clamp(c.speed.value, tuning.slowest.value, tuning.fastest.value);
                     }
                     c.along += c.speed.value * dt;
@@ -974,8 +974,8 @@ namespace rct3::simulation
                     const glm::vec3 side { ahead.z, 0, -ahead.x };
                     const auto& tuning = kTuning.pools;
                     // The shower's places a third of a turn apart, the last where a saved park's showering guest stood.
-                    constexpr float kLastPlace = 30.5f; ///< Degrees round from the shower's front
-                    const float turn = glm::radians(kLastPlace) + 2 * std::numbers::pi_v<float> * static_cast<float>(free + 1 - spot.places) / static_cast<float>(spot.places);
+                    constexpr units::Radians kLastPlace { glm::radians(30.5f) }; ///< Round from the shower's front
+                    const float turn = kLastPlace.value + 2 * std::numbers::pi_v<float> * static_cast<float>(free + 1 - spot.places) / static_cast<float>(spot.places);
                     const glm::vec3 off = spot.use == PoolUse::Lounge ? ahead * (tuning.lounger_reach.value - static_cast<float>(spot.places - 1 - free) * tuning.lounger_gap.value) + side * tuning.lounger_side : (side * std::cos(turn) + ahead * std::sin(turn)) * tuning.shower_reach.value;
                     swimmer.goal = spot.at + off;
                     pose.position = swimmer.goal;

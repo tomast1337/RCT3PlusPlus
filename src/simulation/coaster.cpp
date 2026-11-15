@@ -14,32 +14,32 @@ namespace rct3::simulation
     namespace
     {
         using units::kGravity;
-        constexpr units::Seconds kStep { 0.05f };        ///< A part step, short enough for the steepest drops
-        constexpr units::Pace kCrawl { 0.1f };           ///< Under this a train is all but stopped
-        constexpr units::Seconds kStuck { 4 };           ///< All but stopped this long, the track's tyres take over
-        constexpr units::Distance kLaunchLeast { 0.5f }; ///< Of platform left, that a launch is still sized over
-        constexpr float kBuildUp = 3;                    ///< Passes a swinging train's pushes take to build up to full, and to die down
-        constexpr float kBounce = 0.8f;                  ///< Each push back up a tower is this much of the one before
-        constexpr units::Seconds kTopHold { 3 };         ///< A drop tower's train is held at the top
-        constexpr float kStationBrake = 3;               ///< m/s² a station's brakes slow an arriving train by. Chosen by eye
-        constexpr float kStationCreep = 0.5f;            ///< m/s an arriving train is brought the last of the way in at. Chosen by eye
-        constexpr float kSlideLeave = 1;                 ///< m/s a pool slide's car is eased off its platform at. Measured: a car setting off in a saved park
-        constexpr float kSlideEase = 4;                  ///< m/s² it is eased up to that by. Chosen by eye
-        constexpr float kWadeSpeed = 2.9f;               ///< m/s a slide's car is carried through the pool at on its way back to its lift. Measured: a car of a tested slide in the original game
-        constexpr float kWadeDrag = 40;                  ///< m/s² the water slows a faster car by, down to that. Measured likewise: 13 m/s down to 3 in 2 m
-        constexpr float kJetPull = 15;                   ///< m/s² booster jets push a car over them by. Chosen by eye
-        constexpr units::Seconds kLiftPause { 2 };       ///< A lift's car stands before it sets off, and before it lets its train go. Chosen by eye
-        constexpr units::Distance kBoardShort { 0.5f };  ///< Short of the far end of a lift car's track, a train boarding it stops. Chosen by eye
-        constexpr float kLiftEase = 2;                   ///< m/s² a lift's car speeds up by from either end of its climb, and slows by to it. Chosen by eye
-        constexpr float kLiftCreep = 0.3f;               ///< m/s a lift's car keeps up at its ends. Chosen by eye
+        constexpr units::Seconds kStep { 0.05f };          ///< A part step, short enough for the steepest drops
+        constexpr units::Pace kCrawl { 0.1f };             ///< Under this a train is all but stopped
+        constexpr units::Seconds kStuck { 4 };             ///< All but stopped this long, the track's tyres take over
+        constexpr units::Distance kLaunchLeast { 0.5f };   ///< Of platform left, that a launch is still sized over
+        constexpr float kBuildUp = 3;                      ///< Passes a swinging train's pushes take to build up to full, and to die down
+        constexpr float kBounce = 0.8f;                    ///< Each push back up a tower is this much of the one before
+        constexpr units::Seconds kTopHold { 3 };           ///< A drop tower's train is held at the top
+        constexpr units::Acceleration kStationBrake { 3 }; ///< A station's brakes slow an arriving train by. Chosen by eye
+        constexpr units::Pace kStationCreep { 0.5f };      ///< An arriving train is brought the last of the way in at. Chosen by eye
+        constexpr units::Pace kSlideLeave { 1 };           ///< A pool slide's car is eased off its platform at. Measured: a car setting off in a saved park
+        constexpr units::Acceleration kSlideEase { 4 };    ///< It is eased up to that by. Chosen by eye
+        constexpr units::Pace kWadeSpeed { 2.9f };         ///< A slide's car is carried through the pool at on its way back to its lift. Measured: a car of a tested slide in the original game
+        constexpr units::Acceleration kWadeDrag { 40 };    ///< The water slows a faster car by, down to that. Measured likewise: 13 m/s down to 3 in 2 m
+        constexpr units::Acceleration kJetPull { 15 };     ///< Booster jets push a car over them by. Chosen by eye
+        constexpr units::Seconds kLiftPause { 2 };         ///< A lift's car stands before it sets off, and before it lets its train go. Chosen by eye
+        constexpr units::Distance kBoardShort { 0.5f };    ///< Short of the far end of a lift car's track, a train boarding it stops. Chosen by eye
+        constexpr units::Acceleration kLiftEase { 2 };     ///< A lift's car speeds up by from either end of its climb, and slows by to it. Chosen by eye
+        constexpr units::Pace kLiftCreep { 0.3f };         ///< A lift's car keeps up at its ends. Chosen by eye
         /// Radians a slide's car swings up its trough's wall to go over a rim. The rims are the piece's rails,
         /// level with the track's line the car swings from, so it goes over once swung out level with them.
         // shortcut: every piece's rims are taken as level with its line, upgrade when each piece's own rails are read.
         constexpr float kRim = std::numbers::pi_v<float> / 2;
 
-        constexpr float kWaterDrag = 1.5f;         ///< Per second, how fast a car afloat slows. Chosen by eye
-        constexpr units::Distance kSink { 1 };     ///< A car afloat sinks in its last second, out of sight. Chosen by eye
-        constexpr units::Seconds kSettle { 0.5f }; ///< A car come down nose first takes to lie level afloat. Chosen by eye
+        constexpr units::PerSecond kWaterDrag { 1.5f }; ///< How fast a car afloat slows. Chosen by eye
+        constexpr units::Distance kSink { 1 };          ///< A car afloat sinks in its last second, out of sight. Chosen by eye
+        constexpr units::Seconds kSettle { 0.5f };      ///< A car come down nose first takes to lie level afloat. Chosen by eye
 
         std::size_t point_at(const Coaster& c, float d)
         {
@@ -238,9 +238,9 @@ namespace rct3::simulation
             seconds -= flown;
         }
         f.afloat->value += seconds;
-        const float drift = (1 - std::exp(-kWaterDrag * seconds)) / kWaterDrag;
+        const float drift = (1 - std::exp(-kWaterDrag.value * seconds)) / kWaterDrag.value;
         f.at += f.velocity * drift;
-        f.velocity *= std::exp(-kWaterDrag * seconds);
+        f.velocity *= std::exp(-kWaterDrag.value * seconds);
         stopped();
         f.at.y = f.water - kSink.value * std::max(f.off.value - (kGone.value - 1), 0.0f);
         return f.off.value < kGone.value;
@@ -338,7 +338,7 @@ namespace rct3::simulation
                     case LiftPhase::Boarding:
                     {
                         const float stop = std::max(lift.carried.value - kBoardShort.value, 0.0f);
-                        const float most = std::max(std::sqrt(2 * kStationBrake * std::max(stop - ride.aboard.value, 0.0f)), kStationCreep);
+                        const float most = std::max(std::sqrt(2 * kStationBrake.value * std::max(stop - ride.aboard.value, 0.0f)), kStationCreep.value);
                         c.speed = std::clamp(c.speed, std::min(c.station_speed, most), most);
                         ride.aboard.value = std::min(ride.aboard.value + c.speed * dt, stop);
                         if (ride.aboard.value >= stop - kArrived)
@@ -355,7 +355,7 @@ namespace rct3::simulation
                     {
                         const float left = lift.to - car.at.value;
                         const float end = std::min(car.at.value - lift.from, left);
-                        c.speed = std::clamp(std::sqrt(2 * kLiftEase * std::max(end, 0.0f)), kLiftCreep, std::max(lift.up.value, kLiftCreep));
+                        c.speed = std::clamp(std::sqrt(2 * kLiftEase.value * std::max(end, 0.0f)), kLiftCreep.value, std::max(lift.up.value, kLiftCreep.value));
                         car.at.value += std::min(c.speed * dt, left);
                         if (car.at.value >= lift.to - kArrived)
                         {
@@ -409,7 +409,7 @@ namespace rct3::simulation
                 // shortcut: slowed so whether or not a pool is there; upgrade once a run in the original game with no
                 // pool joined is known.
                 if (std::ranges::any_of(c.wades, [&](const std::array<float, 2>& w) { return c.at >= w[0] && c.at < w[1]; }))
-                    c.speed = std::max(c.speed - kWadeDrag * dt, kWadeSpeed);
+                    c.speed = std::max(c.speed - kWadeDrag.value * dt, kWadeSpeed.value);
                 // A shuttle's chain carries the train either way, the way it is going.
                 else if (chained)
                     c.speed = open && c.speed < 0 ? std::min(c.speed, -c.lift_speed) : std::max(c.speed, c.lift_speed);
@@ -418,8 +418,8 @@ namespace rct3::simulation
                 else if (c.splash_out && c.travelled < c.train_length)
                 {
                     // A pool slide's car is eased off its platform, no faster than a walk; the slope takes it from there.
-                    if (c.speed < kSlideLeave)
-                        c.speed = std::min(c.speed + kSlideEase * dt, kSlideLeave);
+                    if (c.speed < kSlideLeave.value)
+                        c.speed = std::min(c.speed + kSlideEase.value * dt, kSlideLeave.value);
                 }
                 else if (under == Stretch::Station)
                 {
@@ -428,7 +428,7 @@ namespace rct3::simulation
                     if (!open)
                     {
                         const float stop = c.next_stop < c.stops.size() ? c.stops[c.next_stop] : c.length();
-                        const float most = std::max(std::sqrt(2 * kStationBrake * std::max(stop - c.travelled, 0.0f)), kStationCreep);
+                        const float most = std::max(std::sqrt(2 * kStationBrake.value * std::max(stop - c.travelled, 0.0f)), kStationCreep.value);
                         c.speed = std::clamp(c.speed, std::min(c.station_speed, most), most);
                     }
                 }
@@ -468,7 +468,7 @@ namespace rct3::simulation
                     {
                         if (c.speed < c.brake_speeds[i])
                         {
-                            jets += kJetPull / static_cast<float>(cars);
+                            jets += kJetPull.value / static_cast<float>(cars);
                             jet_most = std::max(jet_most, c.brake_speeds[i]);
                         }
                         continue;
@@ -562,8 +562,8 @@ namespace rct3::simulation
                 // Turned by the pull along its arc times its arm, as a weight its own size.
                 float rate = c.lean_rate.value + glm::dot(weight, arc) * t.length.value * dt;
                 const float held = t.friction * std::max(glm::dot(weight, hang), 0.0f) * t.length.value * dt;
-                rate = std::abs(rate) <= held ? 0.0f : (rate - std::copysign(held, rate)) * std::exp(-t.damping * dt);
-                c.lean.value = (lean + rate * dt) * std::exp(-t.centring * dt);
+                rate = std::abs(rate) <= held ? 0.0f : (rate - std::copysign(held, rate)) * std::exp(-t.damping.value * dt);
+                c.lean.value = (lean + rate * dt) * std::exp(-t.centring.value * dt);
                 c.lean_rate.value = rate;
                 if (std::abs(c.lean.value) > kRim && !(i < c.covered.size() && c.covered[i]))
                 {

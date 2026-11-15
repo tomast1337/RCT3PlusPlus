@@ -1737,7 +1737,7 @@ namespace rct3::simulation
                 r.emplace<Needs>(e);
                 r.emplace<Mood>(e);
                 r.emplace<Wallet>(e);
-                r.emplace<staff::Rounds>(e, staff::Rounds { .seen = { { *door, 0.0f } } });
+                r.emplace<staff::Rounds>(e, staff::Rounds { .seen = { { *door, { } } } });
                 r.get<Errand>(e) = { .kind = ErrandKind::Swimming, .target = *door };
                 const units::Seconds left = saved.time_in_pool ? units::Seconds { std::max(saved.time_in_pool->value, 0.0f) } : kTuning.pools.stay;
                 r.emplace<Swimmer>(e, Swimmer { .changed = true, .left = left, .goal = position, .in_water = std::ranges::any_of(pool.water, within) });

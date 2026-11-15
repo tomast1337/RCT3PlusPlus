@@ -3,6 +3,7 @@
 
 #include "render/null/null_device.hpp"
 #include "render/opengl/device.hpp"
+#include "render/software/device.hpp"
 #include "render/vulkan/device.hpp"
 
 #include <GLFW/glfw3.h>
@@ -22,6 +23,7 @@ namespace rct3::render
         constexpr std::array kBackends = {
             BackendInfo { Backend::Vulkan, "vulkan" },
             BackendInfo { Backend::OpenGl, "opengl" },
+            BackendInfo { Backend::Software, "software" },
             BackendInfo { Backend::Null, "null" },
         };
 
@@ -80,6 +82,13 @@ namespace rct3::render
                 if (glfwGetPlatform() == GLFW_PLATFORM_NULL)
                     glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
                 break;
+            case Backend::Software:
+                // A window shows its frames through any OpenGL context; without a display, no context and no
+                // graphics driver is needed at all.
+                glfwWindowHint(GLFW_CLIENT_API, glfwGetPlatform() == GLFW_PLATFORM_NULL ? GLFW_NO_API : GLFW_OPENGL_API);
+                glfwWindowHint(GLFW_DEPTH_BITS, 0);
+                glfwWindowHint(GLFW_STENCIL_BITS, 0);
+                break;
         }
     }
 
@@ -91,6 +100,8 @@ namespace rct3::render
                 return std::make_unique<vulkan::VulkanDevice>();
             case Backend::OpenGl:
                 return std::make_unique<opengl::OpenGlDevice>();
+            case Backend::Software:
+                return std::make_unique<software::SoftwareDevice>();
             case Backend::Null:
                 return std::make_unique<null::NullDevice>();
         }

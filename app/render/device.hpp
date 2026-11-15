@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The render device interface. Every backend (Vulkan and OpenGL today; a software rasteriser or anything else
+// The render device interface. Every backend (Vulkan, OpenGL and a software rasteriser today; anything else
 // later) implements it, and the rest of the program only talks to this interface, so backends can be swapped
 // at startup without touching game code.
 //
@@ -44,8 +44,9 @@ namespace rct3::render
     enum class Backend : std::uint8_t
     {
         Vulkan,
-        OpenGl, ///< OpenGL 4.5 core, for machines without good Vulkan drivers
-        Null,   ///< Draws nothing; for running without a GPU and for checking callers
+        OpenGl,   ///< OpenGL 4.5 core, for machines without good Vulkan drivers
+        Software, ///< Draws on the CPU, without a GPU or its driver; slower and with less detail
+        Null,     ///< Draws nothing; for running without a GPU and for checking callers
     };
 
     struct DeviceConfig

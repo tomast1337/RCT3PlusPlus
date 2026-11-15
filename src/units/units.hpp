@@ -169,4 +169,13 @@ namespace rct3::units
         float value = 0;
     };
 
+    /// How fast things fall near the ground, world units (metres) a second squared; also one g.
+    inline constexpr float kGravity = 9.81f;
+
+    /// A clock hour, for rates given an hour, such as a ride's riders.
+    inline constexpr Seconds kHour { 3600 };
+
+    /// A whole in percent: a share times this is shown as a percent.
+    inline constexpr float kPercent = 100;
+
 } // namespace rct3::units

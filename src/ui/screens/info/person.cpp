@@ -7,6 +7,7 @@
 #include "ui/save_text.hpp"
 #include "ui/screens/info/scenery.hpp"
 #include "ui/thought_text.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -137,7 +138,7 @@ namespace rct3::ui::screens::info
 
         /// Lines of rides gone on and of thoughts at most: as many as the page has room for.
         constexpr std::size_t kListLines = 6;
-        constexpr float kPercent = 100;
+        using units::kPercent;
         constexpr int kMinutesPerHour = 60;
 
         std::u16string ascii(std::string_view s)

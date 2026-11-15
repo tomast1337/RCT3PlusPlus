@@ -7,6 +7,7 @@
 #include "ui/screens/info/person.hpp"
 #include "ui/widgets/menu.hpp"
 #include "ui/widgets/panel.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -303,7 +304,7 @@ namespace rct3::ui::screens::management
         }
         if (inspector || vendor)
             return;
-        add_label(p, "Laziness", strings::to_utf16(std::format("{}%", std::lround(l.laziness * 100))), top_right(2 * kIcon + 12, y, 50, kTaskSize), style_.text_colour, Align::End).tooltip = text(strings, "StaffWindow_LazinessColumnHelp");
+        add_label(p, "Laziness", strings::to_utf16(std::format("{}%", std::lround(l.laziness * units::kPercent))), top_right(2 * kIcon + 12, y, 50, kTaskSize), style_.text_colour, Align::End).tooltip = text(strings, "StaffWindow_LazinessColumnHelp");
         r.discipline = &add_icon(p, "Discipline", { }, "Staff_DisciplineColumnIcon", top_right(kIcon + 4, y, kIcon, kIcon), text(strings, "StaffWindow_DisciplineSackHelp"));
         r.train = &add_icon(p, "Train", { }, std::format("Staff_Training{}Icon", std::clamp(l.training, 0, simulation::staff::kMostTraining)), top_right(2, y, kIcon, kIcon), text(strings, "StaffWindow_TrainHelp"));
         y += style_.line_height;

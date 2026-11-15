@@ -5,6 +5,7 @@
 #include "simulation/park/state.hpp"
 #include "simulation/research.hpp"
 #include "simulation/tuning.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -30,7 +31,7 @@ namespace rct3::simulation
         /// The figure of a tested ride a coaster goal names, in the units the goal's value is kept in.
         std::optional<float> ride_figure(const save::model::Ride& ride, std::uint32_t figure)
         {
-            constexpr float kGravity = 9.81f;
+            using units::kGravity;
             if (!ride.stats.last_lap || !ride.stats.last_lap->valid)
                 return std::nullopt;
             const save::model::TestResults& t = *ride.stats.last_lap;

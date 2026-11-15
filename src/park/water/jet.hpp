@@ -23,8 +23,6 @@
 namespace rct3::park::water
 {
 
-    inline constexpr float kJetGravity = 9.81f; ///< Metres a second squared
-
     struct JetDrop
     {
         glm::vec3 position { 0.0f };

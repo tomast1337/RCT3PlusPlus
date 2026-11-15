@@ -6,6 +6,7 @@
 #include "strings/unicode.hpp"
 #include "ui/screens/info/stall_menu.hpp"
 #include "ui/thought_text.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -100,13 +101,12 @@ namespace rct3::ui::screens::info
         constexpr float kSpeedWidth = 100;
         constexpr std::string_view kSoldName = "%NAME%";
 
-        constexpr float kGravity = 9.81f;
+        using units::kGravity;
         constexpr float kKmhPerMs = 3.6f;
         constexpr float kMphPerMs = 2.2369363f;
         constexpr float kFeetPerMetre = 3.28084f;
         constexpr int kSecondsPerMinute = 60;
-        constexpr float kSecondsPerHour = 3600;
-        constexpr float kPercent = 100;
+        using units::kPercent;
 
         std::u16string ascii(std::string_view s)
         {
@@ -310,7 +310,7 @@ namespace rct3::ui::screens::info
                 // Running, the wait the queue now has at the rate the ride takes riders; unknown until measured.
                 const bool unknown = f.flow && !measured && f.flow->queued > 0;
                 if (f.flow)
-                    longest = measured ? static_cast<float>(f.flow->queued) * kSecondsPerHour / f.flow->per_hour : 0;
+                    longest = measured ? static_cast<float>(f.flow->queued) * units::kHour.value / f.flow->per_hour : 0;
                 add_half(page, strings, "AttractionCustomersDialogLabel_QueueTime", unknown ? missing() : duration(longest));
                 add_half(page, strings, "AttractionCustomersDialogLabel_FavouriteRide", missing());
             }
@@ -661,9 +661,9 @@ namespace rct3::ui::screens::info
         {
             // Reliability on a green bar, down time on a red one.
             add(page, strings, "RideMaintenanceDialogLabel_Reliability", percent(ride.breakdown.reliability));
-            page.lines.back().bar = ride.breakdown.reliability / 100;
+            page.lines.back().bar = ride.breakdown.reliability / kPercent;
             add(page, strings, "RideMaintenanceDialogLabel_DownTime", percent(ride.breakdown.downtime_percent()));
-            page.lines.back().bar = ride.breakdown.downtime_percent() / 100;
+            page.lines.back().bar = ride.breakdown.downtime_percent() / kPercent;
             page.lines.back().bar_colour = hex("#d04030");
             page.width = kMaintenancePageWidth;
             // The interval's list under the bars, how long since and what last broke under it.

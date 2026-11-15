@@ -13,6 +13,7 @@
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -418,7 +419,7 @@ namespace rct3::simulation
             const auto depart = [&](std::size_t riding, units::Seconds& timer) {
                 if (ride.since_departure && ride.since_departure->value > 0)
                 {
-                    const float rate = static_cast<float>(riding) * 3600 / ride.since_departure->value;
+                    const float rate = static_cast<float>(riding) * units::kHour.value / ride.since_departure->value;
                     ride.per_hour = ride.per_hour > 0 ? std::lerp(ride.per_hour, rate, kTuning.wear.flow_smoothing.value) : rate;
                 }
                 ride.since_departure = units::Seconds { };

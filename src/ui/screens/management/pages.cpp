@@ -9,6 +9,7 @@
 #include "ui/save_text.hpp"
 #include "ui/screens/info/person.hpp"
 #include "ui/thought_text.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -151,7 +152,7 @@ namespace rct3::ui::screens::management
         /// `value` of 0 to 1 as a percentage.
         std::u16string share(float value)
         {
-            return ascii(std::format("{} %", std::lround(value * 100)));
+            return ascii(std::format("{} %", std::lround(value * units::kPercent)));
         }
 
         std::u16string money(const info::InfoUnits& units, units::Money amount)

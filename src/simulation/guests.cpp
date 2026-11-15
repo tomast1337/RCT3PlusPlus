@@ -16,6 +16,7 @@
 #include "simulation/tuning.hpp"
 #include "simulation/vip.hpp"
 #include "simulation/workers.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -617,7 +618,7 @@ namespace rct3::simulation
                     const auto& queue = from == 0 ? ride.queue : ride.stops[from - 1].queue;
                     // The wait: the queue ahead at the rate the ride takes riders, or a load at a time by laps
                     // before it has a rate.
-                    const float wait = ride.per_hour > 0 ? static_cast<float>(queue.size()) * 3600 / ride.per_hour : static_cast<float>(queue.size() / std::max<std::uint32_t>(ride.capacity, 1)) * lap;
+                    const float wait = ride.per_hour > 0 ? static_cast<float>(queue.size()) * units::kHour.value / ride.per_hour : static_cast<float>(queue.size() / std::max<std::uint32_t>(ride.capacity, 1)) * lap;
                     // How far on round the track from this station each is.
                     const auto ahead = [&](std::size_t k) { return std::fmod((k == 0 ? 0 : track.stops[k - 1]) - (from == 0 ? 0 : track.stops[from - 1]) + length, length); };
                     for (std::size_t to = 0; to <= ride.stops.size(); ++to)

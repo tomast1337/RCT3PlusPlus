@@ -4,6 +4,7 @@
 #include "strings/unicode.hpp"
 #include "ui/shape.hpp"
 #include "ui/text_layout.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -150,7 +151,7 @@ namespace rct3::ui::screens::loading_screen
 
     std::u16string percent_text(float progress)
     {
-        constexpr float kPercent = 100;
+        using units::kPercent;
         return strings::to_utf16(std::format("{}%", std::lround(std::clamp(progress, 0.0f, 1.0f) * kPercent)));
     }
 

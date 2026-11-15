@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/camera.hpp"
 
+#include "units/units.hpp"
+
 #include <algorithm>
 #include <cmath>
 
@@ -55,7 +57,7 @@ namespace rct3::park
 
     glm::mat4 ride_look(RideView& view, const glm::mat4& eye, std::optional<glm::vec3> ahead, bool sways, const ovl::RideCameraTuning& tuning, float elapsed, glm::vec2 dice)
     {
-        constexpr float kGravity = 9.81f;
+        using units::kGravity;
         const glm::vec3 at(eye[3]);
         glm::vec3 x = glm::normalize(glm::vec3(eye[0]));
         glm::vec3 y = glm::normalize(glm::vec3(eye[1]));

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/party.hpp"
 
+#include "units/units.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <format>
@@ -20,7 +22,7 @@ namespace rct3::ui::screens::info
         /// Words for a guest's liking of intense rides, gentlest first.
         constexpr std::array<std::string_view, 4> kIntensityWords = { "PersonEditor_Gentle", "PersonEditor_Normal", "PersonEditor_Wild", "PersonEditor_Crazy" };
         constexpr std::size_t kListLines = 6; ///< As many as the page has room for
-        constexpr float kPercent = 100;
+        using units::kPercent;
         constexpr Color kLeaderColour = hex("#ffd75e"); ///< Of the leader's row
 
         std::u16string text(const StringTable& strings, std::string_view key)

@@ -119,7 +119,7 @@ namespace rct3::scene
                 continue;
             }
             const float offset = static_cast<float>(entt::to_entity(e)) * kMotionSpread;
-            drawn.placed.push_back({ .body = &*body, .motion = motion_of(*body, animal, pose), .time = scene.park_clock + offset, .world = world });
+            drawn.placed.push_back({ .body = &*body, .motion = motion_of(*body, animal, pose), .time = { scene.park_clock + offset }, .world = world });
         }
         if (crated != drawn.crated)
         {

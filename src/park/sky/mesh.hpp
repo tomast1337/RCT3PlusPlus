@@ -11,6 +11,7 @@
 
 #include "park/object/mesh.hpp"
 #include "park/object/models.hpp"
+#include "units/units.hpp"
 
 #include <string>
 #include <vector>
@@ -49,7 +50,7 @@ namespace rct3::park::sky
         float faded_day = kMiddayColumn; ///< Column of a look fading out over it
         float fade = 0;                  ///< How much of the fading look still shows, 0 for none
         float night = 0;                 ///< 0 by day, up to 1 when the stars show fully
-        float time = 0;                  ///< Seconds, for the clouds' drift
+        units::Seconds time { };         ///< For the clouds' drift
         glm::vec3 tint { 1.0f };         ///< Times the sky's colours, for the weather
         float overcast = 0;              ///< 0 the usual clouds, up to 1 when they cover the sky dark and hide the stars
     };

@@ -20,7 +20,7 @@ namespace rct3::park
             std::size_t level = std::min(animal.level, animal.body->levels.size() - 1);
             while (level > 0 && animal.body->levels[level].empty())
                 --level;
-            const std::vector<glm::mat4> pose = animal_pose(*animal.body, animal.motion, animal.time);
+            const std::vector<glm::mat4> pose = animal_pose(*animal.body, animal.motion, animal.time.value);
             const glm::mat3 turn(animal.world);
             for (const AnimalPiece& piece : animal.body->levels[level])
             {

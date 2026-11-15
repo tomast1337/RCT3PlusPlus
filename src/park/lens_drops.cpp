@@ -20,7 +20,7 @@ namespace rct3::park
         constexpr float kHold = 0.55f;                  ///< The push a drop holds still against: a small one holds against gravity
         constexpr float kSlide = 0.3f;                  ///< Its speed down the lens per push
         constexpr float kOnrush = 0.02f;                ///< Push out from the middle per world unit a second forward
-        constexpr float kSettle = 6.0f;                 ///< How quickly a drop's speed follows its push, a second
+        constexpr units::PerSecond kSettle { 6.0f };    ///< How quickly a drop's speed follows its push
         constexpr float kWobble = 0.25f;                ///< Its slide's sideways wander, a share of its speed
         constexpr float kSheetFall = 0.6f;              ///< How fast a sheet runs down
         constexpr units::Seconds kSheetLife { 1.4f };   ///< A sheet lasts
@@ -61,7 +61,7 @@ namespace rct3::park
     {
         auto& d = water.dice;
         const glm::vec2 middle { push.aspect * 0.5f, 0.5f };
-        const float settling = std::min(1.0f, seconds * kSettle);
+        const float settling = std::min(1.0f, seconds * kSettle.value);
         for (LensDrop& drop : water.drops)
         {
             drop.age.value += seconds;

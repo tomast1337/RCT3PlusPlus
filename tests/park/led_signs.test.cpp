@@ -115,7 +115,7 @@ TEST_CASE("the board's text loops and scrolls round in lamps")
     CHECK(at(moved, 1, 4) < 255);
 
     CHECK(sign_shift(0, 100) == 0);
-    CHECK(sign_shift(1, 1000) == static_cast<std::uint32_t>(kSignScroll) / kSignLamp * kSignLamp);
+    CHECK(sign_shift(1, 1000) == static_cast<std::uint32_t>(kSignScroll.value) / kSignLamp * kSignLamp);
     CHECK(sign_shift(1, 1000) % kSignLamp == 0);
     CHECK(sign_shift(1, 12) < 12);
 }

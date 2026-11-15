@@ -106,7 +106,7 @@ namespace rct3::park
     {
         if (length == 0)
             return 0;
-        const auto moved = static_cast<std::uint32_t>(std::fmod(std::max(seconds, 0.0f) * kSignScroll, static_cast<float>(length)));
+        const auto moved = static_cast<std::uint32_t>(std::fmod(std::max(seconds, 0.0f) * kSignScroll.value, static_cast<float>(length)));
         return moved / kSignLamp * kSignLamp;
     }
 

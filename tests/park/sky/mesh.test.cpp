@@ -83,7 +83,7 @@ TEST_CASE("stars show only at night, and clouds drift in two layers")
     // Clouds are darker at night.
     CHECK(night.vertices[night.indices[night.batches[3].first]].colour.r < day.vertices[day.indices[day.batches[1].first]].colour.r);
 
-    const object::ObjectMesh later = sky_mesh(sky_models(), { .radius = 1, .time = 10 });
+    const object::ObjectMesh later = sky_mesh(sky_models(), { .radius = 1, .time = { 10 } });
     const glm::vec2 before = day.vertices[day.indices[day.batches[1].first]].uv;
     const glm::vec2 after = later.vertices[later.indices[later.batches[1].first]].uv;
     CHECK(after.x == doctest::Approx(before.x + 10 * kCloudDrift));

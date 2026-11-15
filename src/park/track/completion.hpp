@@ -9,6 +9,7 @@
 
 #include "park/track/pieces.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <expected>
@@ -52,7 +53,7 @@ namespace rct3::park::track
             TrackTip tip;
             LaidPlacement laid;
             std::size_t before = 0; ///< The step it carries on from; the first carries on from itself
-            float come = 0;         ///< Tiles of track laid so far
+            units::Tiles come { };  ///< Of track laid so far
         };
         std::vector<Step> steps;
         std::vector<std::pair<float, std::size_t>> open; ///< A heap of steps to carry on from, nearest the goal first

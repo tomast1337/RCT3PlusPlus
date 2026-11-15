@@ -149,6 +149,9 @@ namespace rct3::simulation
         Hot = 96,
         GaveUpQueue = 131,
         QueueTooLong = 201, ///< Put off a ride by its queue, before joining
+        AttackedBySeagull = 40,
+        RideNotSafe = 45,
+        MoreRides = 105, ///< Wishing the park had more rides
         Soaked = 191,
         Disaster = 62, ///< Saw a ride crash
         PickedUpHappy = 71,

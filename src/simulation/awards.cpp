@@ -42,22 +42,23 @@ namespace rct3::simulation
     bool award_earned(std::int32_t kind, const AwardFigures& f, std::uint32_t lately, random::RandomState& dice)
     {
         const auto had = [&](std::initializer_list<std::int32_t> kinds) { return std::ranges::any_of(kinds, [&](std::int32_t k) { return (lately & (1u << k)) != 0; }); };
-        const auto count = [&](std::int32_t thought) {
+        using enum ThoughtKind;
+        const auto count = [&](ThoughtKind thought) {
             const auto found = f.thoughts.find(thought);
             return found != f.thoughts.end() ? found->second : 0;
         };
-        const auto share = [&](std::int32_t thought) { return f.guests > 0 ? static_cast<float>(count(thought)) / static_cast<float>(f.guests) : 0.0f; };
+        const auto share = [&](ThoughtKind thought) { return f.guests > 0 ? static_cast<float>(count(thought)) / static_cast<float>(f.guests) : 0.0f; };
         const auto rand = [&] { return static_cast<float>(random::unit(dice)); };
         // Litter, vandalism and sick lying about, as guests see it.
-        const std::int32_t litter = count(3) + count(14) + count(15);
-        const float litter_share = share(3) + share(14) + share(15);
+        const std::int32_t litter = count(Litter) + count(Vandalism) + count(Vomit);
+        const float litter_share = share(Litter) + share(Vandalism) + share(Vomit);
         const auto rides = static_cast<std::int32_t>(f.downtime.size());
         constexpr std::int32_t kGuestsPerFacility = 128; ///< Guests one food stall or toilet serves, for the awards that count them
         const auto down_over = [&](float percent) { return static_cast<std::int32_t>(std::ranges::count_if(f.downtime, [&](float d) { return d > percent; })); };
         switch (kind)
         {
             case 0: // Tidiest
-                return !had({ 1, 7 }) && f.guests >= 200 && static_cast<float>(f.guests) >= rand() * 500 && f.guests >= 10 * f.old_litter && share(6) > 1.0f / 64 && litter <= 5;
+                return !had({ 1, 7 }) && f.guests >= 200 && static_cast<float>(f.guests) >= rand() * 500 && f.guests >= 10 * f.old_litter && share(ReallyTidy) > 1.0f / 64 && litter <= 5;
             case 1: // Most untidy
                 return !had({ 0, 8, 10 }) && litter_share >= 1.0f / 16;
             case 2: // Worst value
@@ -65,20 +66,20 @@ namespace rct3::simulation
             case 3: // Best value
                 return !had({ 2, 7 }) && f.fee_charged && f.fair_fee >= units::Money { 100 } && static_cast<float>(f.entrance_fee.value + 10) < static_cast<float>(f.fair_fee.value) * 0.5f;
             case 4: // Best food
-                return !had({ 5 }) && share(4) <= 0.25f && f.food_stalls >= 7 && f.food_kinds >= 4 && f.stalls * kGuestsPerFacility >= f.guests;
+                return !had({ 5 }) && share(Hungry) <= 0.25f && f.food_stalls >= 7 && f.food_kinds >= 4 && f.stalls * kGuestsPerFacility >= f.guests;
             case 5: // Worst food
-                return !had({ 4 }) && f.food_kinds <= 4 && f.stalls * kGuestsPerFacility <= f.guests && share(4) > 0.3f;
+                return !had({ 4 }) && f.food_kinds <= 4 && f.stalls * kGuestsPerFacility <= f.guests && share(Hungry) > 0.3f;
             case 6: // Most thrilling
                 return !had({ 7 }) && f.thrilling >= 6;
             case 7: // Most disappointing
             {
                 float let_down = 0;
-                for (const std::int32_t thought : { 182, 105, 27, 40, 44, 45, 180, 14 })
+                for (const ThoughtKind thought : { NoPools, MoreRides, NotPaying, AttackedBySeagull, NotPayingToilet, RideNotSafe, PoolBad, Vandalism })
                     let_down += share(thought);
                 return !had({ 3 }) && f.rating <= 500 && let_down > 0.25f;
             }
             case 8: // Most beautiful
-                return !had({ 1, 7 }) && share(8) > 1.0f / 128 && litter <= 15;
+                return !had({ 1, 7 }) && share(GreatScenery) > 1.0f / 128 && litter <= 15;
             case 9: // Safest
             {
                 constexpr float kGuests = 400;       ///< The crowd that makes a safe park news, at most
@@ -87,12 +88,12 @@ namespace rct3::simulation
                 constexpr std::int32_t kSick = 5;    ///< Guests feeling sick, at most
                 constexpr std::int32_t kDangers = 1; ///< Dangerous happenings, at most
                 constexpr float kReliability = 72;   ///< Average reliability, more than
-                return !had({ 22, 23, 24, 25 }) && static_cast<float>(f.guests) >= rand() * kGuests && rides >= kRides && static_cast<float>(rides) >= rand() * kManyRides && count(14) <= kSick && f.coaster_dangers + f.pool_dangers <= kDangers && f.crashed == 0 && f.reliability > kReliability;
+                return !had({ 22, 23, 24, 25 }) && static_cast<float>(f.guests) >= rand() * kGuests && rides >= kRides && static_cast<float>(rides) >= rand() * kManyRides && count(Vandalism) <= kSick && f.coaster_dangers + f.pool_dangers <= kDangers && f.crashed == 0 && f.reliability > kReliability;
             }
             case 10: // Best staff
                 return !had({ 1 }) && litter <= 10 && f.every_staff_kind && f.staff * 32 > f.guests && down_over(25) == 0;
             case 11: // Best toilets
-                return f.toilets >= 4 && f.toilets * kGuestsPerFacility >= f.guests && share(12) < 0.25f;
+                return f.toilets >= 4 && f.toilets * kGuestsPerFacility >= f.guests && share(Toilet) < 0.25f;
             case 12: // Best roller coasters
                 return !had({ 7 }) && f.coasters >= 6;
             case 13: // Best water rides
@@ -122,7 +123,7 @@ namespace rct3::simulation
                 return found != f.themed.end() && found->second >= kThemed;
             }
             case 22: // Most unsanitary
-                return count(180) > 15;
+                return count(PoolBad) > 15;
             case 23: // Most dangerous
             case 25: // Extremely dangerous
             {

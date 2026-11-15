@@ -51,9 +51,9 @@ TEST_CASE("an award had lately keeps its opposite away")
 TEST_CASE("litter on guests' minds makes the park untidy")
 {
     random::RandomState dice = random::seeded({ });
-    simulation::AwardFigures park { .guests = 160, .thoughts = { { 3, 6 }, { 15, 4 } } };
+    simulation::AwardFigures park { .guests = 160, .thoughts = { { simulation::ThoughtKind::Litter, 6 }, { simulation::ThoughtKind::Vomit, 4 } } };
     CHECK(simulation::award_earned(1, park, 0, dice));
-    park.thoughts = { { 3, 6 } };
+    park.thoughts = { { simulation::ThoughtKind::Litter, 6 } };
     CHECK_FALSE(simulation::award_earned(1, park, 0, dice));
 }
 
@@ -66,7 +66,7 @@ TEST_CASE("a big park with reliable rides that never crashed is the safest")
     park.crashed = 1;
     CHECK_FALSE(simulation::award_earned(9, park, 0, dice));
     park.crashed = 0;
-    park.thoughts = { { 14, 30 } }; // Many guests feeling sick
+    park.thoughts = { { simulation::ThoughtKind::Vandalism, 30 } };
     CHECK_FALSE(simulation::award_earned(9, park, 0, dice));
 }
 

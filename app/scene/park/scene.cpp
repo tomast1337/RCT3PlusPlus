@@ -1162,11 +1162,11 @@ namespace rct3::scene::park
                     };
                     for (const entt::entity guest : r.view<const simulation::Thoughts, const simulation::Mood>())
                     {
-                        std::vector<std::int32_t> had;
+                        std::vector<simulation::ThoughtKind> had;
                         for (const simulation::Thought& t : r.get<const simulation::Thoughts>(guest).recent)
-                            if (!std::ranges::contains(had, std::to_underlying(t.kind)))
-                                had.push_back(std::to_underlying(t.kind));
-                        for (const std::int32_t kind : had)
+                            if (!std::ranges::contains(had, t.kind))
+                                had.push_back(t.kind);
+                        for (const simulation::ThoughtKind kind : had)
                             ++f.thoughts[kind];
                     }
                     std::vector<std::string_view> foods;

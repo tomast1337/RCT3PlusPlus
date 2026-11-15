@@ -98,7 +98,7 @@ namespace rct3::park::path
                 SolidSpan span { base + static_cast<float>((*levels)[0]), base + static_cast<float>((*levels)[1]), room, thirds };
                 if (track)
                     (hanging ? span.below : span.above) = kRiderRoom;
-                out.tiles[key_of(under[i].first, under[i].second)].push_back(span);
+                out.tiles[key_of(under[i].col, under[i].row)].push_back(span);
             }
         }
         return out;

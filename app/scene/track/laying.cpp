@@ -326,7 +326,7 @@ namespace rct3::scene::track
             if (model == scene.models.end() || !model->second.water_only)
                 return false;
             const rct3::park::support::SupportFootprint shape { .x_squares = model->second.squares[0], .z_squares = model->second.squares[1] };
-            return !std::ranges::all_of(rct3::park::support::footprint_tiles(o, shape), [&](const auto& t) { return rct3::park::water::holds_water(scene.footpaths.water.bodies, { t.first, t.second }); });
+            return !std::ranges::all_of(rct3::park::support::footprint_tiles(o, shape), [&](const auto& t) { return rct3::park::water::holds_water(scene.footpaths.water.bodies, { t.col, t.row }); });
         }
 
         /// The room the park's solid items take, but the pieces a piece `b` builds would join: the track's ends, or

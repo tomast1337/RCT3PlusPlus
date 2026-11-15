@@ -125,9 +125,9 @@ TEST_CASE("a footprint's squares start at the object's tile and turn with it")
     save::model::PlacedObject o;
     o.col = 5;
     o.row = 5;
-    CHECK(footprint_tiles(o, f) == std::vector<std::pair<int, int>> { { 5, 5 }, { 6, 5 }, { 7, 5 } });
+    CHECK(footprint_tiles(o, f) == std::vector<save::model::Tile> { { 5, 5 }, { 6, 5 }, { 7, 5 } });
     o.rotation = 1;
-    CHECK(footprint_tiles(o, f) == std::vector<std::pair<int, int>> { { 5, 7 }, { 5, 6 }, { 5, 5 } });
+    CHECK(footprint_tiles(o, f) == std::vector<save::model::Tile> { { 5, 7 }, { 5, 6 }, { 5, 5 } });
 }
 
 TEST_CASE("a column under track on the ground: deep foot, middles lined up on their heights, top piece")

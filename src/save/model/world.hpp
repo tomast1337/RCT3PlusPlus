@@ -103,7 +103,7 @@ namespace rct3::save::model
     {
         int col = 0;
         int row = 0;
-        friend bool operator==(const Tile&, const Tile&) = default;
+        friend auto operator<=>(const Tile&, const Tile&) = default;
     };
 
     struct TerrainGrid

@@ -35,9 +35,9 @@ namespace rct3::scene::park
             return s.symbol == o.symbol && s.overlay == o.overlay && s.col == o.col && s.row == o.row && s.rotation == o.rotation && s.base_height == o.base_height && s.hidden == o.hidden && s.support_set == o.support_set;
         }
 
-        std::vector<std::pair<int, int>> ground_paths(const ParkScene& scene)
+        std::vector<save::model::Tile> ground_paths(const ParkScene& scene)
         {
-            std::vector<std::pair<int, int>> out;
+            std::vector<save::model::Tile> out;
             for (const save::model::PathTile& p : scene.footpaths.paths)
             {
                 if (rct3::park::support::path_at_ground(p, scene.grid))
@@ -86,7 +86,7 @@ namespace rct3::scene::park
         diff_zone.emplace("Diff");
 
         // The tiles where anything that holds up columns or is in their way changed.
-        std::set<rct3::park::support::SupportTile> tiles;
+        std::set<save::model::Tile> tiles;
         std::unordered_map<std::uint64_t, SupportWatch::Seen> now;
         for (const save::model::PlacedObject& o : scene.objects)
         {
@@ -107,7 +107,7 @@ namespace rct3::scene::park
         for (const auto& [_, gone] : w.objects)
             tiles.insert(gone.tiles.begin(), gone.tiles.end());
         w.objects = std::move(now);
-        std::vector<std::pair<int, int>> paths = ground_paths(scene);
+        std::vector<save::model::Tile> paths = ground_paths(scene);
         std::ranges::set_symmetric_difference(paths, w.ground_paths, std::inserter(tiles, tiles.end()));
         w.ground_paths = std::move(paths);
         std::vector<std::array<float, 4>> corners = ground(scene.grid);
@@ -190,7 +190,7 @@ namespace rct3::scene::park
         std::uint64_t last = 0;
         for (const save::model::PlacedObject& o : objects)
             last = std::max(last, o.id);
-        std::set<rct3::park::support::SupportTile> tiles;
+        std::set<save::model::Tile> tiles;
         std::unordered_set<std::uint64_t> ids;
         for (const save::model::PlacedObject& ghost : ghosts)
         {

@@ -44,10 +44,10 @@ namespace rct3::scene::park
             std::optional<std::int32_t> base_height;
             bool hidden = false;
             std::string support_set;
-            std::vector<std::pair<int, int>> tiles; ///< Whose columns it may change
+            std::vector<save::model::Tile> tiles; ///< Whose columns it may change
         };
         std::unordered_map<std::uint64_t, Seen> objects; ///< By id; support pieces left out
-        std::vector<std::pair<int, int>> ground_paths;   ///< Tiles with a path on the ground, in order
+        std::vector<save::model::Tile> ground_paths;     ///< Tiles with a path on the ground, in order
         std::vector<std::array<float, 4>> ground;        ///< Each tile's corner heights, row by row
         bool stale = false;                              ///< Something changed since
     };

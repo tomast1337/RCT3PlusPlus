@@ -19,7 +19,6 @@
 // goes after it, shuts it in a crate where it stands and takes it back to their own enclosure, where the crate
 // opens again. Guests keep to the paths, where a loose animal does not scare them off. All the rates are our own.
 
-#include "core/none_as_minus_one.hpp"
 #include "save/model/people.hpp"
 #include "simulation/components.hpp"
 #include "simulation/park/messages.hpp"
@@ -50,10 +49,10 @@ namespace rct3::simulation
     /// An animal house, standing in an enclosure.
     struct AnimalHouse
     {
-        std::uint64_t object = 0;                         ///< The house as placed
-        std::uint64_t hut = 0;                            ///< Its keeper's hut as placed; 0 for none
-        core::NoneAsMinusOne<std::int32_t> enclosure { }; ///< The one it stands in
-        glm::vec3 troughs { 0.0f };                       ///< Where its animals eat, drink and sleep, beside it
+        std::uint64_t object = 0;                  ///< The house as placed
+        std::uint64_t hut = 0;                     ///< Its keeper's hut as placed; 0 for none
+        std::optional<std::int32_t> enclosure { }; ///< The one it stands in
+        glm::vec3 troughs { 0.0f };                ///< Where its animals eat, drink and sleep, beside it
         /// The ground the house stands on, across the park from its least corner to its greatest; nobody
         /// strolls to a spot on it.
         glm::vec2 low { 0.0f }, high { 0.0f };
@@ -98,7 +97,7 @@ namespace rct3::simulation
         std::string name { };    ///< As the park's messages call it
         bool adult = true;
         bool male = false;
-        core::NoneAsMinusOne<std::int32_t> enclosure { }; ///< The one it lives in
+        std::optional<std::int32_t> enclosure { }; ///< The one it lives in
         AnimalJob job = AnimalJob::Crated;
         glm::vec3 goal { 0.0f };
         units::Seconds busy { }; ///< Left in its crate, at what it is doing, or standing about

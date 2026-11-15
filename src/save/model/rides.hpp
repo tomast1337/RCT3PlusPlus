@@ -17,7 +17,6 @@
 #pragma once
 
 #include "core/id.hpp"
-#include "core/none_as_minus_one.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 #include "units/units.hpp"
@@ -134,13 +133,13 @@ namespace rct3::save::model
         float popularity = 0;
         float satisfaction = 0;
         RepairStatus repair_status = RepairStatus::Fine;
-        bool mechanic_asked = false;                                    ///< rct3++'s own saves: the player called a mechanic to inspect it, not yet come
-        core::NoneAsMinusOne<units::Seconds> time_since_inspection { }; ///< None when never inspected
-        core::NoneAsMinusOne<units::Seconds> time_since_breakdown { };  ///< None when it never broke down
-        core::NoneAsMinusOne<units::Seconds> time_since_crash { };      ///< None when it never crashed
-        ObjectId placement = 0;                                         ///< World placement record (stalls, flat rides, facilities), 0 if none
-        std::optional<PlacementSpot> spot { };                          ///< Where that record puts its object; absent without one
-        std::uint8_t facing = 0;                                        ///< Quarter turns, 0..3
+        bool mechanic_asked = false;                             ///< rct3++'s own saves: the player called a mechanic to inspect it, not yet come
+        std::optional<units::Seconds> time_since_inspection { }; ///< None when never inspected
+        std::optional<units::Seconds> time_since_breakdown { };  ///< None when it never broke down
+        std::optional<units::Seconds> time_since_crash { };      ///< None when it never crashed
+        ObjectId placement = 0;                                  ///< World placement record (stalls, flat rides, facilities), 0 if none
+        std::optional<PlacementSpot> spot { };                   ///< Where that record puts its object; absent without one
+        std::uint8_t facing = 0;                                 ///< Quarter turns, 0..3
         /// Pulled down this session; never stored. It keeps its place so lists by attraction index stay put,
         /// and saving leaves it out.
         bool demolished = false;
@@ -214,10 +213,10 @@ namespace rct3::save::model
     {
         BreakdownKind current = BreakdownKind::None;
         BreakdownKind last = BreakdownKind::None;
-        core::NoneAsMinusOne<std::int32_t> station { };
-        core::NoneAsMinusOne<std::int32_t> train { };
-        core::NoneAsMinusOne<std::int32_t> car { };
-        core::NoneAsMinusOne<std::int32_t> seat { };
+        std::optional<std::int32_t> station { };
+        std::optional<std::int32_t> train { };
+        std::optional<std::int32_t> car { };
+        std::optional<std::int32_t> seat { };
         std::int32_t inspection_interval = 0;
         float reliability = 100; ///< Percent 0..100
         /// Eight window counters, each 0..20.
@@ -234,14 +233,14 @@ namespace rct3::save::model
         bool block_sectioned = false;
         bool sync_trains = false;
         bool leave_if_other_train_enters_station = false;
-        core::NoneAsMinusOne<std::int32_t> min_wait { }; ///< Whole seconds
-        core::NoneAsMinusOne<std::int32_t> max_wait { }; ///< Whole seconds
-        std::int32_t wait_for_load = 4;                  ///< Load a train waits for: 0 full, 1 three quarters, 2 half, 3 quarter, 4 any
+        std::optional<std::int32_t> min_wait { }; ///< Whole seconds
+        std::optional<std::int32_t> max_wait { }; ///< Whole seconds
+        std::int32_t wait_for_load = 4;           ///< Load a train waits for: 0 full, 1 three quarters, 2 half, 3 quarter, 4 any
         units::Pace launch_speed { };
         units::Pace lift_speed { };
         units::Pace brake_speed { };
         units::Pace block_brake_off_speed { };
-        core::NoneAsMinusOne<units::Pace> fixed_speed { };
+        std::optional<units::Pace> fixed_speed { };
         std::int32_t circuits = 1; ///< Times round the track, or through the station and back for a shuttle
     };
 
@@ -249,7 +248,7 @@ namespace rct3::save::model
     {
         bool in_progress = false;
         bool over = false;
-        core::NoneAsMinusOne<std::int32_t> winner { }; ///< Train index
+        std::optional<std::int32_t> winner { }; ///< Train index
         float seconds_since_end = 0;
     };
 
@@ -311,10 +310,10 @@ namespace rct3::save::model
         units::Distance reverse_start_distance { };
         RideColours colours { };
         /// Per-piece operating parameters. Stored as plain integers; their meaning is only partly established.
-        core::NoneAsMinusOne<std::int32_t> brake_speed { };
+        std::optional<std::int32_t> brake_speed { };
         std::int32_t holding_time = 0;
-        core::NoneAsMinusOne<std::int32_t> speed_class { }; ///< The speed the player set the piece to, in whole m/s: a booster pushes up to it
-        std::optional<TrackPlatform> platform { };          ///< Station pieces
+        std::optional<std::int32_t> speed_class { }; ///< The speed the player set the piece to, in whole m/s: a booster pushes up to it
+        std::optional<TrackPlatform> platform { };   ///< Station pieces
         /// Of a ride whose cars ride on arms, the arm's four joint angles in degrees where the player set them:
         /// the arm holds them at the piece's middle.
         std::optional<std::array<float, 4>> arm_angles { };
@@ -416,9 +415,9 @@ namespace rct3::save::model
         units::Distance distance { }; ///< Along the track
         units::Pace speed { };
         float acceleration = 0;
-        core::NoneAsMinusOne<std::int32_t> station { }; ///< Station indices
-        core::NoneAsMinusOne<std::int32_t> start_station { };
-        core::NoneAsMinusOne<std::int32_t> current_station { };
+        std::optional<std::int32_t> station { }; ///< Station indices
+        std::optional<std::int32_t> start_station { };
+        std::optional<std::int32_t> current_station { };
         std::int32_t lap_count = 0;
         std::int32_t shuttle_direction = 0; ///< 0 or 1
         float static_friction = 0;
@@ -462,9 +461,9 @@ namespace rct3::save::model
         ObjectId track_id = 0;
         std::optional<Track> track { }; ///< Absent when the reference does not resolve
         std::vector<Train> trains { };
-        core::NoneAsMinusOne<std::int32_t> train_count { };    ///< Requested; none when never set
-        core::NoneAsMinusOne<std::int32_t> cars_per_train { }; ///< Requested passenger cars per train; none when never set
-        std::int32_t train_selection = 0;                      ///< Index of the chosen train design
+        std::optional<std::int32_t> train_count { };    ///< Requested; none when never set
+        std::optional<std::int32_t> cars_per_train { }; ///< Requested passenger cars per train; none when never set
+        std::int32_t train_selection = 0;               ///< Index of the chosen train design
         struct Seat
         {
             std::int32_t car = 0, seat = 0, train = 0;

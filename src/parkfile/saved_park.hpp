@@ -42,7 +42,6 @@
 // The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once
 
-#include "core/none_as_minus_one.hpp"
 #include "park/camera.hpp"
 #include "park/pools/pools.hpp"
 #include "save/model/park.hpp"
@@ -117,7 +116,7 @@ namespace rct3::parkfile
     /// A guest in the park.
     struct SavedGuest
     {
-        core::NoneAsMinusOne<std::int32_t> look { }; ///< Place in SavedPeople::model.guests of the guest drawn for them
+        std::optional<std::int32_t> look { }; ///< Place in SavedPeople::model.guests of the guest drawn for them
         simulation::Visitor visitor;
         glm::vec3 position { 0.0f };
         float heading = 0;
@@ -125,7 +124,7 @@ namespace rct3::parkfile
         simulation::Mood mood;
         std::int64_t cash = 0;
         std::optional<simulation::Taste> taste { };
-        core::NoneAsMinusOne<std::int32_t> party { }; ///< Guests with the same number go round together; none alone
+        std::optional<std::int32_t> party { }; ///< Guests with the same number go round together; none alone
         bool leader = false;
         std::optional<SavedSwim> swim { };              ///< In a pool
         std::optional<simulation::Outside> outside { }; ///< On the way between a spawn point and the gate
@@ -134,7 +133,7 @@ namespace rct3::parkfile
     /// A member of staff at work.
     struct SavedWorker
     {
-        core::NoneAsMinusOne<std::int32_t> look { }; ///< Place in SavedPeople::model.staff
+        std::optional<std::int32_t> look { }; ///< Place in SavedPeople::model.staff
         simulation::StaffRole role = simulation::StaffRole::Other;
         std::int64_t wage = 0;
         std::int32_t wage_level = 2;
@@ -167,10 +166,10 @@ namespace rct3::parkfile
     struct SavedAnimalHouse
     {
         simulation::AnimalHouse house { };
-        core::NoneAsMinusOne<std::int32_t> keeper { };
+        std::optional<std::int32_t> keeper { };
         simulation::KeeperJob job = simulation::KeeperJob::Idle;
         glm::vec3 goal { 0.0f };
-        core::NoneAsMinusOne<std::int32_t> target { }; ///< Of SavedAnimals::dung while clearing, ::animals while catching, ::houses while filling
+        std::optional<std::int32_t> target { }; ///< Of SavedAnimals::dung while clearing, ::animals while catching, ::houses while filling
         units::Seconds busy { };
     };
 
@@ -185,7 +184,7 @@ namespace rct3::parkfile
     /// Dung left lying.
     struct SavedDung
     {
-        core::NoneAsMinusOne<std::int32_t> enclosure { };
+        std::optional<std::int32_t> enclosure { };
         glm::vec3 position { 0.0f };
     };
 

@@ -9,7 +9,7 @@
 #include "units/units.hpp"
 
 #include <doctest/doctest.h>
-#include <type_traits>
+#include <tuple>
 
 using namespace rct3;
 
@@ -211,17 +211,25 @@ TEST_CASE("a unit is laid out as its bare number, so parks saved before it was w
     CHECK(parkfile::detail::layout_hash<std::optional<units::Seconds>>() == parkfile::detail::layout_hash<std::optional<float>>());
 }
 
-TEST_CASE("a value that may be missing is kept as the plain number, -1 for none, and reads back as it was")
+namespace
 {
     struct Kept
     {
-        core::NoneAsMinusOne<std::int32_t> place { };
-        core::NoneAsMinusOne<units::Seconds> since { };
+        std::optional<std::int32_t> place { };
+        std::optional<units::Seconds> since { };
+        std::optional<std::int32_t> flagged { };
     };
+} // namespace
+
+template<> inline constexpr auto parkfile::detail::kKeptAsMinusOne<Kept> = std::tuple { &Kept::place, &Kept::since };
+
+TEST_CASE("a member named to be kept as -1 for none is kept as the plain number, and reads back as it was")
+{
     struct Plain
     {
         std::int32_t place = -1;
         float since = -1;
+        std::optional<std::int32_t> flagged { };
     };
     CHECK(parkfile::detail::layout_hash<Kept>() == parkfile::detail::layout_hash<Plain>());
     const auto round_trip = [](const Kept& kept) {
@@ -230,8 +238,9 @@ TEST_CASE("a value that may be missing is kept as the plain number, -1 for none,
         const auto bytes = w.take();
         parkfile::detail::Reader r(bytes);
         const auto plain = std::pair { r.number<std::int32_t>(), r.number<float>() };
+        CHECK(r.number<std::uint8_t>() == (kept.flagged ? 1 : 0));
         parkfile::detail::Reader again(bytes);
-        Kept read { .place = std::optional { 99 }, .since = std::optional { units::Seconds { 99 } } };
+        Kept read { .place = 99, .since = units::Seconds { 99 }, .flagged = 99 };
         parkfile::detail::get(again, read);
         CHECK(again.ok());
         CHECK(again.left() == 0);
@@ -242,48 +251,25 @@ TEST_CASE("a value that may be missing is kept as the plain number, -1 for none,
     CHECK(none_plain == std::pair { -1, -1.0f });
     CHECK_FALSE(none.place);
     CHECK_FALSE(none.since);
+    CHECK_FALSE(none.flagged);
 
-    const auto [some_plain, some] = round_trip({ .place = std::optional { 0 }, .since = std::optional { units::Seconds { 2.5f } } });
+    const auto [some_plain, some] = round_trip({ .place = 0, .since = units::Seconds { 2.5f }, .flagged = -1 });
     CHECK(some_plain == std::pair { 0, 2.5f });
     CHECK(some.place == 0);
     CHECK(some.since == units::Seconds { 2.5f });
-    // And they compare as optionals do, none first.
-    CHECK(some.since > none.since);
-    CHECK(none.place == Kept { }.place);
+    CHECK(some.flagged == -1);
 
     // None of these can be below zero, so any such number in a file reads as none.
     parkfile::detail::Writer w;
     w.number(std::int32_t { -5 });
     w.number(-0.5f);
+    w.number(std::uint8_t { 0 });
     const auto bytes = w.take();
     parkfile::detail::Reader r(bytes);
-    Kept odd { .place = std::optional { 1 }, .since = std::optional { units::Seconds { 1 } } };
+    Kept odd { .place = 1, .since = units::Seconds { 1 } };
     parkfile::detail::get(r, odd);
     CHECK_FALSE(odd.place);
     CHECK_FALSE(odd.since);
-}
-
-TEST_CASE("a value that may be missing is not made from a bare number by accident")
-{
-    // `place = -1` would otherwise compile and hold the value -1.
-    static_assert(!std::is_convertible_v<std::int32_t, core::NoneAsMinusOne<std::int32_t>>);
-    static_assert(!std::is_assignable_v<core::NoneAsMinusOne<std::int32_t>&, std::int32_t>);
-    static_assert(std::is_constructible_v<core::NoneAsMinusOne<std::int32_t>, std::int32_t>);
-    CHECK(core::NoneAsMinusOne<std::int32_t> { -1 } == std::optional { -1 });
-}
-
-TEST_CASE("a value that may be missing compares with a plain optional as two optionals do")
-{
-    const core::NoneAsMinusOne<std::int32_t> none;
-    const core::NoneAsMinusOne<std::int32_t> two { 2 };
-    CHECK(none == std::optional<std::int32_t> { });
-    CHECK(std::optional<std::int32_t> { } == none);
-    CHECK(two == std::optional { 2 });
-    CHECK(none != std::optional { 2 });
-    CHECK(none < std::optional { 2 });
-    CHECK(two == 2);
-    CHECK(none != 2);
-    CHECK(two > 1);
 }
 
 TEST_CASE("a save keeps the park's objects and those the player built, platforms too, not those loading makes")

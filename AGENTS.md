@@ -85,7 +85,10 @@ they check. Tests live in `tests/`, tools in `tools/`, library code in `src/`.
 **A value that means something has one name, in one place.** Loader type ids, environment variable names
 (`RCT3PP_*`), tables and tolerances are named once and used by that name, never retyped as a literal in
 another file. Plain `0`, `1`, `0.5f`, and format offsets and sizes with a comment naming the format and
-field, are fine. A new duplicate of an existing constant needs a reason in its commit message or PR.
+field, are fine. A new duplicate of an existing constant needs a reason in its commit message or PR. A tuning
+number gets a `constexpr` beside its use (or a field in its area's tuning struct), typed with its unit, and a
+one-line comment saying what it does; shared constants live once: gravity, the hour and percent in
+`units/units.hpp`, hash constants in `core/hash.hpp`.
 
 **Heap allocations: none again and again on hot paths.** What costs time is allocating on every frame or
 tick, not the heap itself. Data loaded once (game data, meshes, textures, save trees), EnTT's pools, the

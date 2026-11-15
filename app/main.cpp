@@ -6,7 +6,7 @@
 //
 //   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]
 //
-//   --renderer NAME   render backend: vulkan (default) or null
+//   --renderer NAME   render backend: vulkan (default), opengl or null; kept by --write-settings
 //   --headless        no window and no display needed: drawn off screen (with --renderer null, not at all), no
 //                     sound, no vsync, no logos, 60 fps
 //   --no-vsync        present as fast as possible
@@ -99,7 +99,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|opengl|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)
@@ -541,7 +541,6 @@ int main(int argc, char** argv)
 
     // Command-line options that are also settings go into `settings`, so --write-settings keeps them.
     std::optional<int> max_frames;
-    render::Backend backend = render::Backend::Vulkan;
     bool vsync = true;
     bool write_settings = false;
     bool widget_demo = false;
@@ -599,13 +598,12 @@ int main(int argc, char** argv)
         }
         else if (std::strcmp(argv[i], "--renderer") == 0 && i + 1 < argc)
         {
-            const auto parsed = render::parse_backend(argv[++i]);
-            if (!parsed)
+            if (!render::parse_backend(argv[++i]))
             {
                 print_usage(stderr);
                 return 2;
             }
-            backend = *parsed;
+            settings.set(config::Setting::Renderer, argv[i]);
         }
         else if (std::strcmp(argv[i], "--no-vsync") == 0)
         {
@@ -720,26 +718,45 @@ int main(int argc, char** argv)
     else
         log.warning("{}", config::game::describe(install.error()));
 
+    const std::string_view renderer = settings.get(config::Setting::Renderer).value_or(std::string_view { });
+    render::Backend backend = render::parse_backend(renderer).value_or(render::Backend::Vulkan);
+    if (!render::parse_backend(renderer))
+        log.warning("settings: no renderer named '{}'; using {}", renderer, render::backend_name(backend));
+    // OpenGL falls back to Vulkan when its window or device cannot be made; the window goes first, as it holds
+    // the OpenGL context.
     auto window = rct3::platform::Window::open({ .headless = headless }, backend);
-    if (!window)
+    std::unique_ptr<render::Device> device;
+    for (;;)
     {
-        log.critical("{}", window.error());
-        return 1;
+        std::string failure;
+        if (window)
+        {
+            device = render::make_device(backend);
+            auto ready = device->init({ .window = window->handle(), .vsync = vsync, .validation = env.flag(config::EnvVar::Validation) });
+            if (ready)
+                break;
+            failure = std::format("{} renderer: {}", render::backend_name(backend), ready.error());
+            device.reset();
+            window = std::unexpected(failure); // Closes the window
+        }
+        else
+        {
+            failure = window.error();
+        }
+        if (backend != render::Backend::OpenGl)
+        {
+            log.critical("{}", failure);
+            return 1;
+        }
+        backend = render::Backend::Vulkan;
+        log.warning("{}; falling back to {}", failure, render::backend_name(backend));
+        if (auto opened = rct3::platform::Window::open({ .headless = headless }, backend))
+            window.emplace(std::move(*opened));
+        else
+            window = std::unexpected(opened.error());
     }
-
-    const auto device = render::make_device(backend);
     // Behind everything that does not cover the window.
     constexpr render::Color kBackground = render::hex("#0d0f14");
-    const render::DeviceConfig device_config {
-        .window = window->handle(),
-        .vsync = vsync,
-        .validation = env.flag(config::EnvVar::Validation),
-    };
-    if (auto ready = device->init(device_config); !ready)
-    {
-        log.critical("{} renderer: {}", render::backend_name(backend), ready.error());
-        return 1;
-    }
     log.info("rendering with {} on {}", render::backend_name(backend), device->device_name());
     const std::vector<std::uint32_t> sample_levels = device->sample_levels();
 

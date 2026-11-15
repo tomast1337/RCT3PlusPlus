@@ -30,7 +30,7 @@ namespace rct3::scene
         std::filesystem::path folder;                    ///< Ours, where deleting, renaming and saving happen
         std::vector<std::filesystem::path> files;        ///< As the window lists them
         std::vector<bool> kept;                          ///< The game's files, which are only read
-        std::size_t next = 0;                            ///< The next file to read
+        std::size_t next_file = 0;
         std::vector<render::TextureHandle> pictures;
     };
 

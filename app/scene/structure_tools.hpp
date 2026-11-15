@@ -57,12 +57,12 @@ namespace rct3::scene
         // Placing
         std::optional<save::model::Structure> structure; ///< Picked out to save, or being placed
         rct3::park::ModelTurn turn;
-        std::optional<save::model::Tile> at; ///< The tile pointed at
-        std::int32_t ground = 0;             ///< The ground's height there
-        std::int32_t height = 0;             ///< The lowest item's, the ground's unless raised with Shift
+        std::optional<save::model::Tile> pointed_tile;
+        std::int32_t ground = 0; ///< The ground's height there
+        std::int32_t height = 0; ///< The lowest item's, the ground's unless raised with Shift
         std::optional<glm::vec3> lift_at;
         std::int32_t lift_height = 0;
-        std::vector<save::model::PlacedObject> placed; ///< The ghost's items
+        std::vector<save::model::PlacedObject> ghost_items;
         rct3::park::StructureProblem problem = rct3::park::StructureProblem::None;
         units::Money cost; ///< Of all the items
         bool affordable = true;
@@ -78,7 +78,6 @@ namespace rct3::scene
 
     /// Takes out the tool, or puts it away when it is out.
     void toggle_structure_tool(park::ParkScene& scene, StructureTools::Tool tool, const ui::InterfaceAssets& assets);
-    /// Puts the tools away.
     void stop_structure_tools(park::ParkScene& scene);
     /// Starts placing the structure in `file`, ours or the original game's; false when it does not read.
     bool start_structure_placing(park::ParkScene& scene, const std::filesystem::path& file, const ui::InterfaceAssets& assets);

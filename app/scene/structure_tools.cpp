@@ -95,9 +95,9 @@ namespace rct3::scene
         t.corner.reset();
         t.other.reset();
         t.structure.reset();
-        t.placed.clear();
+        t.ghost_items.clear();
         t.ghost_mesh = { };
-        t.at.reset();
+        t.pointed_tile.reset();
         t.lift_at.reset();
         t.marks_changed = shown; // The marks go on the next frame
     }
@@ -226,7 +226,7 @@ namespace rct3::scene
 
         // Raised with Shift it stays on its tiles; otherwise it follows the ground under the pointer.
         const std::optional<rct3::park::Ray> ray = !input.over_interface && size.x > 0 && size.y > 0 ? std::optional(rct3::park::view_ray(scene.camera, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y })) : std::nullopt;
-        if (input.shift && t.at && t.lift_at)
+        if (input.shift && t.pointed_tile && t.lift_at)
         {
             if (ray)
                 if (const auto h = lifted_height(*ray, *t.lift_at, t.lift_height))
@@ -236,7 +236,7 @@ namespace rct3::scene
         {
             const auto distance = rct3::park::object::ground_hit(*ray, scene.grid);
             const auto tile = ground_tile(scene, at, size);
-            t.at = tile;
+            t.pointed_tile = tile;
             t.lift_at.reset();
             if (tile && distance)
             {
@@ -249,9 +249,9 @@ namespace rct3::scene
                 }
             }
         }
-        if (!t.at)
+        if (!t.pointed_tile)
         {
-            t.placed.clear();
+            t.ghost_items.clear();
             t.ghost_mesh = { };
             return;
         }
@@ -260,20 +260,20 @@ namespace rct3::scene
             t.solids = rct3::park::path::solid_tiles(scene.objects, scene.models, scene.grid);
             t.solids_of = scene.objects.size();
         }
-        std::vector<save::model::PlacedObject> placed = rct3::park::structure_objects(*t.structure, *t.at, t.turn, t.height, scene.models);
+        std::vector<save::model::PlacedObject> placed = rct3::park::structure_objects(*t.structure, *t.pointed_tile, t.turn, t.height, scene.models);
         std::erase_if(placed, [&](const save::model::PlacedObject& o) { return !load_object_model(scene, t.models, assets, o); });
-        const bool moved = placed.size() != t.placed.size() || !std::ranges::equal(placed, t.placed, [](const save::model::PlacedObject& a, const save::model::PlacedObject& b) { return a.col == b.col && a.row == b.row && a.base_height == b.base_height && a.rotation == b.rotation; });
-        t.placed = std::move(placed);
-        const rct3::park::StructureProblem problem = rct3::park::structure_problem(*t.structure, *t.at, t.turn, t.placed, scene.models, t.solids, scene.footpaths.paths, scene.grid);
+        const bool moved = placed.size() != t.ghost_items.size() || !std::ranges::equal(placed, t.ghost_items, [](const save::model::PlacedObject& a, const save::model::PlacedObject& b) { return a.col == b.col && a.row == b.row && a.base_height == b.base_height && a.rotation == b.rotation; });
+        t.ghost_items = std::move(placed);
+        const rct3::park::StructureProblem problem = rct3::park::structure_problem(*t.structure, *t.pointed_tile, t.turn, t.ghost_items, scene.models, t.solids, scene.footpaths.paths, scene.grid);
         t.cost = { };
-        for (const save::model::PlacedObject& o : t.placed)
+        for (const save::model::PlacedObject& o : t.ghost_items)
             t.cost += price_of(scene, o.symbol);
         const bool affordable = !scene.park.cash || *scene.park.cash >= t.cost;
         if (!moved && problem == t.problem && affordable == t.affordable && !t.ghost_mesh.vertices.empty())
             return;
         t.problem = problem;
         t.affordable = affordable;
-        t.ghost_mesh = rct3::park::object::object_mesh(t.placed, scene.models, scene.grid);
+        t.ghost_mesh = rct3::park::object::object_mesh(t.ghost_items, scene.models, scene.grid);
         const glm::vec4 tint = problem == rct3::park::StructureProblem::None && affordable ? kGhostTint : kRefusedTint;
         for (rct3::park::GroundVertex& v : t.ghost_mesh.vertices)
             v.colour *= tint;
@@ -287,14 +287,14 @@ namespace rct3::scene
             return true; // Its drags mark; a click picks nothing
         if (t.tool != StructureTools::Tool::Place || !t.structure)
             return false;
-        if (t.placed.empty() || t.problem != rct3::park::StructureProblem::None || !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, t.cost, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
+        if (t.ghost_items.empty() || t.problem != rct3::park::StructureProblem::None || !simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, t.cost, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
             return true;
         wait_for_build(scene);
         ++scene.built;
         // The tool stays out for another, as in the game.
         const std::size_t first = scene.objects.size();
         std::uint64_t id = last_id(scene);
-        for (save::model::PlacedObject o : t.placed)
+        for (save::model::PlacedObject o : t.ghost_items)
         {
             o.id = ++id;
             o.owner_ref = o.id;
@@ -309,8 +309,8 @@ namespace rct3::scene
             park::animate_scenery(device, scene, i);
         }
         const save::model::TerrainGrid& g = scene.grid;
-        park::float_money(scene, { g.world_x(t.at->col) + g.tile_size_x / 2, static_cast<float>(t.height), g.world_z(t.at->row) + g.tile_size_z / 2 }, -t.cost);
-        logging::logger("park").info("structures: built {} ({} items) at {},{} height {} turned {}", t.structure->name, t.placed.size(), t.at->col, t.at->row, t.height, t.turn.value);
+        park::float_money(scene, { g.world_x(t.pointed_tile->col) + g.tile_size_x / 2, static_cast<float>(t.height), g.world_z(t.pointed_tile->row) + g.tile_size_z / 2 }, -t.cost);
+        logging::logger("park").info("structures: built {} ({} items) at {},{} height {} turned {}", t.structure->name, t.ghost_items.size(), t.pointed_tile->col, t.pointed_tile->row, t.height, t.turn.value);
         t.ghost_mesh = { };
         return true;
     }

@@ -64,10 +64,10 @@ namespace rct3::scene::park
         std::array<std::array<std::optional<audio::SoundBuffer>, audio::kTrackSounds>, audio::kTrackSoundSets> track_sounds;
         std::map<std::pair<entt::entity, std::size_t>, TrainSounds> train_sounds; ///< By ride and train
         std::vector<glm::vec3> car_were;                                          ///< By car, where last heard
-        std::vector<audio::SoundBuffer> waterfall;                                ///< The waterfalls' loops
-        std::vector<audio::VoiceHandle> waterfall_voices;                         ///< By waterfall of the park
-        std::vector<audio::SoundBuffer> explosions;                               ///< Of crashed trains' wrecks
-        std::vector<audio::SoundBuffer> burning;                                  ///< Loops of their fires
+        std::vector<audio::SoundBuffer> waterfall_loops;
+        std::vector<audio::VoiceHandle> waterfall_voices; ///< By waterfall of the park
+        std::vector<audio::SoundBuffer> explosions;       ///< Of crashed trains' wrecks
+        std::vector<audio::SoundBuffer> burning;          ///< Loops of their fires
         /// Of each wreck, by ride, train and car: its landings and state when last heard.
         std::map<std::tuple<entt::entity, std::size_t, std::size_t>, std::pair<int, simulation::WreckState>> wrecks_heard;
         std::map<entt::entity, audio::VoiceHandle> fires;      ///< By ride: the loop of its burning wrecks

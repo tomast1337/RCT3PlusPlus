@@ -38,7 +38,7 @@ namespace rct3::scene::park
             if (effect == nullptr)
                 return std::nullopt;
             const random::RandomState own = random::seeded(random::Seed { random::next(particles.random) });
-            ParkParticles::Shown shown { .run = particles::EffectRun(*effect, own, loops, kRunCapacity, 1, scale), .sprites = { }, .position = position, .effect = std::string(name), .size = scale };
+            ParkParticles::Shown shown { .run = particles::EffectRun(*effect, own, loops, kRunCapacity, 1, scale), .sprites = { }, .position = position, .effect_file = std::string(name), .size = scale };
             shown.run.place(position, axes);
             for (const particles::Particle& kind : effect->particles)
                 shown.sprites.push_back(particles.library->sprite(kind.skin));

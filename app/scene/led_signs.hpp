@@ -46,7 +46,7 @@ namespace rct3::scene
         std::optional<std::size_t> placed;          ///< Of the scene's signs, for a sign placed as scenery
         save::model::PlacedObject object;
         rct3::park::object::ObjectMesh mesh;                    ///< Its board's batch painted with `board`
-        std::string board;                                      ///< Key of the board's picture in LedSigns::textures
+        std::string board;                                      ///< Key of the board's picture in LedSigns::board_textures
         std::uint32_t width = 0;                                ///< Of the board's picture, whole lamps
         rct3::park::LampColour colour = rct3::park::kSignWhite; ///< Of its lamps
         std::u16string shown;
@@ -63,8 +63,8 @@ namespace rct3::scene
         std::optional<ui::font::Font> font;
         std::vector<ovl::texture::RgbaImage> font_pages; ///< Of `font`, by its glyphs' page index
         bool font_tried = false;
-        ui::UiTextures textures; ///< The boards' pictures
-        bool stale = true;       ///< Put the signs up again at the next update
+        ui::UiTextures board_textures;
+        bool stale = true; ///< Put the signs up again at the next update
         /// The counts of paths, rides and objects the signs were put up for.
         /// shortcut: a path raised or changed in place keeps the counts, so its sign stays; upgrade to a change
         /// counter on the paths if signs float.

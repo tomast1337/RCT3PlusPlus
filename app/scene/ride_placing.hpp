@@ -145,7 +145,6 @@ namespace rct3::scene
     /// `ride`, standing at `height`, in place of the one it had.
     void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, std::size_t station, const save::model::PlacedObject& door, std::int32_t height, bool exit);
 
-    /// Puts the tool away.
     void stop_ride_placing(park::ParkScene& scene);
 
     [[nodiscard]] bool ride_placing(const park::ParkScene& scene);

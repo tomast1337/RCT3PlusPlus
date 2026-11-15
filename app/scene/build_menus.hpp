@@ -75,7 +75,6 @@ namespace rct3::scene
     /// Closes the open list, if one is.
     void close_build_list(ui::Widget& root);
 
-    /// Whether a list is open.
     [[nodiscard]] bool build_list_open(const ui::Widget& root);
 
     /// Each frame: keeps what the open list changed and shades its items dearer than `cash`; returns the item

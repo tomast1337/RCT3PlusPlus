@@ -188,11 +188,11 @@ namespace rct3::ui::screens::management
         contract_all_ = &add_icon(body, "ContractAll", "Box_Minus", { }, bottom_right(0, style.bottom_line / 2 - kBox - 1, kBox, kBox), text(strings, "Staff_Panel_ContractAll"));
     }
 
-    std::vector<std::pair<std::size_t, bool>> StaffRoster::rows() const
+    std::vector<StaffRoster::ShownRow> StaffRoster::rows() const
     {
-        std::vector<std::pair<std::size_t, bool>> out;
+        std::vector<ShownRow> out;
         for (const Row& r : rows_)
-            out.emplace_back(r.line.index, r.expanded);
+            out.push_back({ .staff = r.line.index, .unfolded = r.expanded });
         return out;
     }
 

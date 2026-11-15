@@ -2221,7 +2221,7 @@ namespace rct3::scene::park
             return p != scene.shown_people.end() ? std::optional(static_cast<std::size_t>(p - scene.shown_people.begin())) : std::nullopt;
         };
         // A worker's patrol button in the list opens their details, where painting their area is done.
-        if (asks.staff.change && asks.staff.change->second.id == ui::screens::info::person_control(ui::screens::info::PersonControl::PatrolPaint))
+        if (asks.staff.change && asks.staff.change->what.id == ui::screens::info::person_control(ui::screens::info::PersonControl::PatrolPaint))
             scene.person_tab = ui::screens::info::PersonTab::General;
         if (const auto who = asks.staff.open ? shown_worker(*asks.staff.open) : std::nullopt; who && info)
             open_person(scene, *info, *who, assets, options);
@@ -2233,10 +2233,10 @@ namespace rct3::scene::park
         }
         if (const auto paint = asks.staff.paint; paint && shown_worker(paint->staff))
             paint_person(scene, *shown_worker(paint->staff), paint->pot, paint->colour);
-        if (const auto change = asks.staff.change; change && shown_worker(change->first))
+        if (const auto change = asks.staff.change; change && shown_worker(change->staff))
         {
-            const std::size_t who = *shown_worker(change->first);
-            if (change->second.id == ui::screens::info::person_control(ui::screens::info::PersonControl::Sack))
+            const std::size_t who = *shown_worker(change->staff);
+            if (change->what.id == ui::screens::info::person_control(ui::screens::info::PersonControl::Sack))
             {
                 if (info && scene.shown_person == who)
                 {
@@ -2250,8 +2250,8 @@ namespace rct3::scene::park
                 // The info panel's changes go to the worker it shows; this one is shown for the change alone,
                 // unless the patrol button opened their panel for painting.
                 const auto kept = std::exchange(scene.shown_person, who);
-                const bool changed = change_person(scene, who, change->second);
-                if (change->second.id != ui::screens::info::person_control(ui::screens::info::PersonControl::PatrolPaint))
+                const bool changed = change_person(scene, who, change->what);
+                if (change->what.id != ui::screens::info::person_control(ui::screens::info::PersonControl::PatrolPaint))
                     scene.shown_person = kept;
                 if (changed && info && scene.shown_person == who)
                     show_info_page(scene, *info, assets, options);

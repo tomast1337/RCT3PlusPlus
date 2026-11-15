@@ -118,7 +118,7 @@ TEST_CASE("an extra picked replaces the editor's tool until the editor's tab ope
     (void)f.panel->take_change();
     f.click("pools/body/ladder");
     CHECK(f.panel->take_change());
-    CHECK(f.panel->placing() == std::pair { PoolPage::Extras, std::size_t { 1 } });
+    CHECK(f.panel->placing() == PickedChoice { .page = PoolPage::Extras, .choice = 1 });
     f.click("pools/Pool_PoolPanel");
     CHECK(f.panel->take_change());
     CHECK_FALSE(f.panel->placing());
@@ -131,7 +131,7 @@ TEST_CASE("the paths page offers the ways between levels, picked like the extras
     (void)f.panel->take_change();
     f.click("pools/body/ramp");
     CHECK(f.panel->take_change());
-    CHECK(f.panel->placing() == std::pair { PoolPage::Paths, std::size_t { 0 } });
+    CHECK(f.panel->placing() == PickedChoice { .page = PoolPage::Paths, .choice = 0 });
 }
 
 TEST_CASE("the paths page alone has the pin and the camera follow switch, and the pin shows its controls")

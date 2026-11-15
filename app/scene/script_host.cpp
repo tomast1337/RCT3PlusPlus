@@ -257,7 +257,7 @@ namespace rct3::scene
         engine_.define("career.start", [this](const Json& a) {
             if (a.empty() || !a[0].is_number_integer() || a[0].get<int>() < 0 || (a.size() > 1 && !a[1].is_number_integer()))
                 throw std::invalid_argument("career.start takes a scenario's place in the list and a game");
-            career_ = { a.size() > 1 ? a[1].get<int>() : 0, a[0].get<std::size_t>() };
+            career_ = CareerRequest { .game = a.size() > 1 ? a[1].get<int>() : 0, .scenario = a[0].get<std::size_t>() };
             return Json(nullptr);
         });
         engine_.define("career.map", [this](const Json&) { return Json(park_ == nullptr && front_ != nullptr && front_->live->front->career_board().has_value()); });
@@ -288,7 +288,7 @@ namespace rct3::scene
         engine_.define("park.open", [this](const Json& a) {
             if (a.empty() || !a[0].is_string() || (a.size() > 1 && !a[1].is_object()))
                 throw std::invalid_argument("park.open takes a path in the game's folder and optional settings");
-            open_ = { a[0].get<std::string>(), a.size() < 2 || a[1].value("sandbox", true) };
+            open_ = ParkRequest { .path = a[0].get<std::string>(), .sandbox = a.size() < 2 || a[1].value("sandbox", true) };
             return Json(nullptr);
         });
         engine_.define("render.live", [this](const Json&) -> Json {
@@ -1488,12 +1488,12 @@ namespace rct3::scene
         return std::nullopt;
     }
 
-    std::optional<std::pair<int, std::size_t>> ScriptHost::take_career()
+    std::optional<ScriptHost::CareerRequest> ScriptHost::take_career()
     {
         return std::exchange(career_, std::nullopt);
     }
 
-    std::optional<std::pair<std::string, bool>> ScriptHost::take_park()
+    std::optional<ScriptHost::ParkRequest> ScriptHost::take_park()
     {
         return std::exchange(open_, std::nullopt);
     }

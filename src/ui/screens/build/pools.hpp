@@ -70,6 +70,14 @@ namespace rct3::ui::screens::build
         Load,
     };
 
+    /// A choice picked on one of the pages that offer them.
+    struct PickedChoice
+    {
+        PoolPage page = PoolPage::Extras;
+        std::size_t choice = 0; ///< Its place in the page's choices
+        friend bool operator==(const PickedChoice&, const PickedChoice&) = default;
+    };
+
     /// What the editor's tool does.
     enum class PoolMode : std::uint8_t
     {
@@ -147,7 +155,7 @@ namespace rct3::ui::screens::build
             return editor_;
         }
         /// The extra, changing room or way between levels picked, by its page, out instead of the editor's tool.
-        [[nodiscard]] std::optional<std::pair<PoolPage, std::size_t>> placing() const
+        [[nodiscard]] std::optional<PickedChoice> placing() const
         {
             return placing_;
         }
@@ -243,7 +251,7 @@ namespace rct3::ui::screens::build
         std::vector<PoolChoice> stairs_;
         std::optional<PoolPage> page_ = PoolPage::Editor;
         PoolEditor editor_;
-        std::optional<std::pair<PoolPage, std::size_t>> placing_;
+        std::optional<PickedChoice> placing_;
         bool changed_ = false;
         TextureId view_ = 0;
         bool closed_ = false;

@@ -131,10 +131,20 @@ namespace rct3::scene
             float wheel = 0; ///< Notches turned this frame, positive away from the user
         };
         [[nodiscard]] std::optional<Pointer> pointer(const render::Device& device) const;
-        /// The career scenario the script asked to start, once: the game and the scenario's place.
-        [[nodiscard]] std::optional<std::pair<int, std::size_t>> take_career();
-        /// The park the script asked for, once: a path in the game's folder, and whether it is played as a sandbox.
-        [[nodiscard]] std::optional<std::pair<std::string, bool>> take_park();
+        struct CareerRequest
+        {
+            int game = 0;
+            std::size_t scenario = 0; ///< Its place in the game's list
+        };
+        /// The career scenario the script asked to start, once.
+        [[nodiscard]] std::optional<CareerRequest> take_career();
+        struct ParkRequest
+        {
+            std::string path { }; ///< In the game's folder
+            bool sandbox = false; ///< Played as a sandbox
+        };
+        /// The park the script asked for, once.
+        [[nodiscard]] std::optional<ParkRequest> take_park();
         /// The keys the script pressed and typed since the last call, oldest first, as the window reports them.
         [[nodiscard]] std::vector<ui::KeyPress> take_keys()
         {
@@ -178,8 +188,8 @@ namespace rct3::scene
         std::optional<std::filesystem::path> report_;
         std::ofstream report_log_;
         int shots_ = 0;
-        std::optional<std::pair<std::string, bool>> open_;
-        std::optional<std::pair<int, std::size_t>> career_;
+        std::optional<ParkRequest> open_;
+        std::optional<CareerRequest> career_;
         std::optional<int> quit_;
         float advance_ = 0;
         const render::Device* device_ = nullptr; ///< While a tick runs

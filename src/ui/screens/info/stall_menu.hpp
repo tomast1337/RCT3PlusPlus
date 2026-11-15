@@ -146,8 +146,13 @@ namespace rct3::ui::screens::info
         }
         /// What the player did since the last call, once.
         [[nodiscard]] std::optional<MenuEvent> take_event();
+        struct LinePot
+        {
+            std::size_t line = 0;
+            widgets::PaintButton* pot = nullptr;
+        };
         /// The pots of the lines that can be painted, each with its line.
-        [[nodiscard]] std::vector<std::pair<std::size_t, widgets::PaintButton*>> pots() const;
+        [[nodiscard]] std::vector<LinePot> pots() const;
         /// The pane's scroll position, to keep when the menu is shown anew.
         [[nodiscard]] float scrolled() const;
         void scroll_to(float position);

@@ -109,8 +109,8 @@ namespace rct3::scene
             const rct3::park::BuildItem* item = nullptr;
             if (const auto p = panel->placing())
             {
-                const auto& from = p->first == ui::screens::build::PoolPage::Extras ? offer.extras : p->first == ui::screens::build::PoolPage::Paths ? offer.stairs : offer.rooms;
-                item = p->second < from.size() ? from[p->second] : nullptr;
+                const auto& from = p->page == ui::screens::build::PoolPage::Extras ? offer.extras : p->page == ui::screens::build::PoolPage::Paths ? offer.stairs : offer.rooms;
+                item = p->choice < from.size() ? from[p->choice] : nullptr;
             }
             else if (const auto& items = scene.build.items; items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
             {

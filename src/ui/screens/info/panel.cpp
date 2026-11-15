@@ -491,13 +491,13 @@ namespace rct3::ui::screens::info
             menu_->scroll_to(scrolled);
             y += page.menu_height;
             // Its pots open the colours as the page's own do.
-            for (const auto& [line, pots] : menu_->pots())
+            for (const auto& [line, pot] : menu_->pots())
             {
                 InfoControl c;
                 c.id = page.menu->ids[std::to_underlying(MenuAction::Colour)] + static_cast<int>(line);
                 c.kind = InfoControlKind::Paint;
-                c.paints = pots->colours;
-                controls_.emplace_back(std::move(c), pots);
+                c.paints = pot->colours;
+                controls_.emplace_back(std::move(c), pot);
             }
         }
         page_width_ = page.width > 0 ? page.width : info_panel::kPageWidth;

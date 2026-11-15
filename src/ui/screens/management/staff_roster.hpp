@@ -74,7 +74,13 @@ namespace rct3::ui::screens::management
         std::optional<save::model::StaffKind> hire;
         std::optional<std::size_t> open;   ///< Their panel
         std::optional<std::size_t> centre; ///< The view to them
-        std::optional<std::pair<std::size_t, info::InfoChange>> change;
+        /// A change to worker `staff`.
+        struct Change
+        {
+            std::size_t staff = 0;
+            info::InfoChange what { };
+        };
+        std::optional<Change> change;
         /// Paint the clothes of pot `pot` of worker `staff` in colour `colour`.
         struct Paint
         {
@@ -117,8 +123,14 @@ namespace rct3::ui::screens::management
         {
             return jobs_;
         }
-        /// The rows in the order shown, by place in the park's staff, and whether each is unfolded.
-        [[nodiscard]] std::vector<std::pair<std::size_t, bool>> rows() const;
+        struct ShownRow
+        {
+            std::size_t staff = 0; ///< By place in the park's staff
+            bool unfolded = false;
+            friend bool operator==(const ShownRow&, const ShownRow&) = default;
+        };
+        /// The rows in the order shown.
+        [[nodiscard]] std::vector<ShownRow> rows() const;
         [[nodiscard]] RosterAsks take_asks()
         {
             return std::exchange(asks_, { });

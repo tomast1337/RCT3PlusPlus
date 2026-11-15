@@ -301,6 +301,37 @@ namespace rct3::simulation
         float heading = 0;        ///< Where its model's +X points, round the vertical, 0 along +Z as Pose's: a water cannon's barrel at rest
     };
 
+    /// On a passport post: the colour of the stamp it prints, as saved parks keep it.
+    struct StampColour
+    {
+        std::int32_t value = 0;
+    };
+
+    /// The stamps in a guest's passport, one from each passport post they have been to, and whether the park has
+    /// given them its gift for them.
+    struct Passport
+    {
+        struct Stamp
+        {
+            std::uint64_t post = 0;  ///< The placed object that is the post, as PathItem::object
+            std::int32_t colour = 0; ///< As StampColour
+            glm::vec2 at { };        ///< Where on the page it sits, 0..1 each way
+        };
+        std::vector<Stamp> stamps;
+        bool gift = false;
+    };
+
+    /// In the registry's context: what the park gives a guest whose passport has enough stamps. None of it is
+    /// given when there is no such context.
+    struct PassportRules
+    {
+        std::uint32_t stamps_for_gift = 0;
+        units::Money gift_cost { }; ///< To the park, for each one given
+        /// The park's cash, kept up by whoever shows the park, so a gift it cannot pay for is not given; none
+        /// when money never runs out.
+        std::optional<units::Money> park_cash { };
+    };
+
     /// In the registry's context: how much scenery stands round each path tile, by NodeId, as weighed by
     /// scenery_weight. Tiles laid since count as bare.
     /// shortcut: scenery taken away still counts till the park loads again; upgrade when removal reaches the

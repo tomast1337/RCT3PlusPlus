@@ -37,6 +37,7 @@ namespace rct3::save::model
             constexpr std::string_view shop_extra = "ShopExtraInstance";
             constexpr std::string_view litter = "Litter";
             constexpr std::string_view part_group = "PPGDatabaseEntry";
+            constexpr std::string_view passport = "GlobalPassportData";
         } // namespace cls
 
         namespace at
@@ -138,6 +139,13 @@ namespace rct3::save::model
             constexpr std::string_view enjoyed_last_ride = "EnjoyedLastRide";
             constexpr std::string_view last_ride_favourite = "LastRideWasFavourite";
             constexpr std::string_view got_gift = "GotGift";
+            constexpr std::string_view stamps = "PassportStamps";
+            constexpr std::string_view stamp_colour = "Colour";
+            constexpr std::string_view stamp_post = "PassportPost";
+            constexpr std::string_view stamp_x = "XPos";
+            constexpr std::string_view stamp_y = "YPos";
+            constexpr std::string_view gift = "Gift";
+            constexpr std::string_view stamps_for_gift = "NumStampsRequiredForGift";
             constexpr std::string_view needs_cash = "NeedsCash";
             constexpr std::string_view want_leave = "WantLeavePark";
             constexpr std::string_view leaving_closed = "LeavingDueToClosedPark";
@@ -470,6 +478,16 @@ namespace rct3::save::model
             return out;
         }
 
+        std::vector<PassportStamp> stamps(std::optional<const Value&> v, const ObjectIndex& index)
+        {
+            std::vector<PassportStamp> out;
+            if (!v || v->kind() != ValueKind::List)
+                return out;
+            for (std::optional<const Value&> s : v->items())
+                out.push_back({ .colour = i32(sub(s, at::stamp_colour)), .post = ref(sub(s, at::stamp_post), index), .x = f32(sub(s, at::stamp_x)), .y = f32(sub(s, at::stamp_y)) });
+            return out;
+        }
+
         Mood mood(std::optional<const Value&> v) noexcept
         {
             return Mood {
@@ -778,6 +796,7 @@ namespace rct3::save::model
             .enjoyed_last_ride = flag(get(at::enjoyed_last_ride)),
             .last_ride_was_favourite = flag(get(at::last_ride_favourite)),
             .got_gift = flag(get(at::got_gift)),
+            .passport_stamps = stamps(get(at::stamps), index),
             .needs_cash = flag(get(at::needs_cash)),
             .wants_leave_park = flag(get(at::want_leave)),
             .leaving_due_to_closed_park = flag(get(at::leaving_closed)),
@@ -1143,7 +1162,8 @@ namespace rct3::save::model
             ShopItem,
             ShopExtra,
             Litter,
-            PartGroup
+            PartGroup,
+            Passport,
         };
         std::vector<Slot> slot(file.classes.size(), Slot::None);
         for (std::size_t i = 0; i < file.classes.size(); ++i)
@@ -1171,6 +1191,8 @@ namespace rct3::save::model
                 slot[i] = Slot::Litter;
             else if (n == cls::part_group)
                 slot[i] = Slot::PartGroup;
+            else if (n == cls::passport)
+                slot[i] = Slot::Passport;
         }
         for (const auto& obj : file.objects)
         {
@@ -1240,6 +1262,9 @@ namespace rct3::save::model
                 case Slot::PartGroup:
                     if (auto g = make_part_group(d))
                         m.part_groups.push_back(std::move(*g));
+                    break;
+                case Slot::Passport:
+                    m.passport = PassportRules { .gift = ref(d.find(at::gift), index), .stamps_for_gift = i32(d.find(at::stamps_for_gift)) };
                     break;
                 case Slot::None:
                     break;

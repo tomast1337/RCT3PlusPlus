@@ -709,6 +709,9 @@ namespace rct3::simulation::tuning
         units::Share view_cheer { 0.05f };      ///< Chosen by eye: happiness from a fine view
         std::int32_t earshot = 2;               ///< Chosen by eye: tiles from a loudspeaker within which guests hear it
         units::Chance music_thought { 0.15 };   ///< Chosen by eye: of liking its music, on each tile walked in earshot
+        units::Share stamp_cheer { 0.1f };      ///< Happiness from a new stamp in a guest's passport
+        units::Share gift_cheer { 0.2f };       ///< Happiness from being given the park's passport gift
+        units::Share no_gift_gloom { 0.1f };    ///< Happiness lost when the park cannot pay for the gift they are due
     };
 
     struct Tuning

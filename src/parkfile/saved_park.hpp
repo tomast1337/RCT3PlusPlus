@@ -128,6 +128,7 @@ namespace rct3::parkfile
         bool leader = false;
         std::optional<SavedSwim> swim { };              ///< In a pool
         std::optional<simulation::Outside> outside { }; ///< On the way between a spawn point and the gate
+        std::optional<simulation::Passport> passport { };
     };
 
     /// A member of staff at work.

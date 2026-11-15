@@ -590,6 +590,44 @@ TEST_CASE("guests the park had on a bench, at a view, a water cannon or a show g
     CHECK(pocket.pocketed == 1);
 }
 
+TEST_CASE("passport stamps, the gift and the park's passport rules come back from a saved park")
+{
+    simulation::SimWorld world;
+    world.paths.add({ 2, 1, 0 });
+    auto& r = world.registry;
+    save::model::WorldModel w;
+    w.objects.push_back({ .id = 1, .col = 2, .row = 1 });
+    const entt::entity post = simulation::add_path_item(world, w.objects[0], simulation::PathItemKind::PassportPost);
+    const std::array<save::model::UsePoint, 1> points { { { .id = 101, .object_ref = 1, .stamp_colour = 7 } } };
+
+    save::model::PeopleModel people;
+    save::model::Guest& g = people.guests.emplace_back();
+    g.in_park = true;
+    g.person.id = 1;
+    g.got_gift = true;
+    g.passport_stamps.push_back({ .colour = 7, .post = { 101 }, .x = 0.25f, .y = 0.5f });
+    people.carried_items.push_back({ .id = 900, .kind_symbol = "Badge:cid" });
+    people.passport = save::model::PassportRules { .gift = { 900 }, .stamps_for_gift = 4 };
+    rct3::park::CarriedKinds kinds;
+    kinds.items.push_back({ .symbol = "Badge:cid", .cost = 150 });
+
+    const auto guests = simulation::import_guests(world, people);
+    simulation::start_guests(world);
+    simulation::resume_saved_uses(world, people, guests, { }, points, kinds);
+    simulation::import_passport_rules(world, people, points, kinds);
+
+    CHECK(r.get<simulation::StampColour>(post).value == 7);
+    const auto& passport = r.get<simulation::Passport>(guests[0]);
+    CHECK(passport.gift);
+    REQUIRE(passport.stamps.size() == 1);
+    CHECK(passport.stamps[0].post == 1);
+    CHECK(passport.stamps[0].colour == 7);
+    CHECK(passport.stamps[0].at == glm::vec2 { 0.25f, 0.5f });
+    const auto& rules = r.ctx().get<simulation::PassportRules>();
+    CHECK(rules.stamps_for_gift == 4);
+    CHECK(rules.gift_cost == units::Money { 150 });
+}
+
 TEST_CASE("a sight placed beside a path is used from it at once; a bench there is not")
 {
     simulation::SimWorld world;

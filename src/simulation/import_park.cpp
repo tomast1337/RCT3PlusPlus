@@ -1935,8 +1935,21 @@ namespace rct3::simulation
         {
             const save::model::Guest& saved = people.guests[i];
             const entt::entity g = guests[i];
+            if (g == entt::null)
+                continue;
+            // Their passport's stamps, by the posts that stamped it, and whether they were given the gift.
+            if (!saved.passport_stamps.empty() || saved.got_gift)
+            {
+                Passport& passport = r.get_or_emplace<Passport>(g);
+                passport.gift = saved.got_gift;
+                for (const save::model::PassportStamp& s : saved.passport_stamps)
+                {
+                    const auto point = std::ranges::find(points, s.post.id, &save::model::UsePoint::id);
+                    passport.stamps.push_back({ .post = point != points.end() ? point->object_ref : 0, .colour = s.colour, .at = { s.x, s.y } });
+                }
+            }
             // On foot, alone or with their party; not put back on a ride or in a pool.
-            if (g == entt::null || !r.all_of<Errand, Stride, Pose>(g) || !std::ranges::contains(std::array { ErrandKind::Wandering, ErrandKind::Following, ErrandKind::Waiting }, r.get<Errand>(g).kind))
+            if (!r.all_of<Errand, Stride, Pose>(g) || !std::ranges::contains(std::array { ErrandKind::Wandering, ErrandKind::Following, ErrandKind::Waiting }, r.get<Errand>(g).kind))
                 continue;
 
             // ---- 1. What they carry: food or a drink in hand, or an empty, and empties in their pockets ----
@@ -2027,6 +2040,20 @@ namespace rct3::simulation
             }
         }
         return resumed;
+    }
+
+    void import_passport_rules(SimWorld& world, const save::model::PeopleModel& people, std::span<const save::model::UsePoint> points, const rct3::park::CarriedKinds& kinds)
+    {
+        auto& r = world.registry;
+        for (const auto [item, placed] : r.view<const PathItem>().each())
+            if (const auto point = std::ranges::find(points, placed.object, &save::model::UsePoint::object_ref); point != points.end() && point->stamp_colour)
+                r.emplace_or_replace<StampColour>(item, *point->stamp_colour);
+        if (!people.passport || people.passport->stamps_for_gift <= 0)
+            return;
+        // The gift costs the park what its kind of item costs a stall.
+        const auto gift = std::ranges::find(people.carried_items, people.passport->gift.id, &save::model::CarriedItem::id);
+        const auto kind = gift != people.carried_items.end() ? std::ranges::find(kinds.items, gift->kind_symbol, &rct3::park::CarriedKind::symbol) : kinds.items.end();
+        r.ctx().insert_or_assign(PassportRules { .stamps_for_gift = static_cast<std::uint32_t>(people.passport->stamps_for_gift), .gift_cost = { kind != kinds.items.end() ? kind->cost : 0 } });
     }
 
     std::size_t start_guests(SimWorld& world)

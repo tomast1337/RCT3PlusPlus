@@ -6,6 +6,7 @@
 #include "simulation/stalls.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
+#include "simulation/vip.hpp"
 
 #include <algorithm>
 #include <array>
@@ -380,6 +381,48 @@ TEST_CASE("a party stops together at a view and likes it with scenery round it, 
             CHECK((thoughts != nullptr && std::ranges::contains(thoughts->recent, ThoughtKind::PhotoSpotGood, &Thought::kind)) == planted);
             CHECK((r.all_of<Gesture>(g) && r.get<Gesture>(g).kind == GestureKind::Disapproval) == !planted);
         }
+    }
+}
+
+TEST_CASE("every guest at a passport post they have no stamp from has it stamped there, once, and is cheered")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 1, 0 });
+    const auto post = park.item(PathItemKind::PassportPost, { 0, 0 });
+    auto& r = park.world().registry;
+    r.get<PathItem>(post).object = 7;
+    r.emplace<StampColour>(post, 5);
+    const auto g = park.guest({ 1, 0 }, { .happiness = 0.3f });
+    const auto vip = park.guest({ 1, 0 });
+    r.emplace<Vip>(vip);
+    CHECK(park.run_until([&] { return r.all_of<Passport>(g); }, 240));
+    const auto& stamps = r.get<Passport>(g).stamps;
+    REQUIRE(stamps.size() == 1);
+    CHECK(stamps[0].post == 7);
+    CHECK(stamps[0].colour == 5);
+    CHECK(r.get<Mood>(g).happiness.value > 0.35f);
+    park.run_seconds(300);
+    CHECK(r.get<Passport>(g).stamps.size() == 1);
+    CHECK_FALSE(r.get<Passport>(g).gift); // The park gives none
+    CHECK_FALSE(r.all_of<Passport>(vip));
+}
+
+TEST_CASE("with enough stamps a guest is given the park's passport gift, paid for by the park, unless it cannot pay")
+{
+    for (const std::int64_t cash : { 1000, 100 })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 1, 0 });
+        auto& r = park.world().registry;
+        for (const int col : { 0, 1 })
+            r.get<PathItem>(park.item(PathItemKind::PassportPost, { col, 0 })).object = static_cast<std::uint64_t>(col + 1);
+        r.ctx().emplace<PassportRules>(PassportRules { .stamps_for_gift = 2, .gift_cost = { 150 }, .park_cash = units::Money { cash } });
+        const auto g = park.guest({ 1, 0 }, { .happiness = 0.5f });
+        CHECK(park.run_until([&] { return r.all_of<Passport>(g) && r.get<Passport>(g).stamps.size() == 2; }, 600));
+        const auto* supplies = r.ctx().find<Supplies>();
+        const std::int64_t paid = supplies != nullptr ? supplies->paid[std::to_underlying(park::LedgerLine::ShopStock)].value : 0;
+        CHECK(r.get<Passport>(g).gift == (cash == 1000));
+        CHECK(paid == (cash == 1000 ? 150 : 0));
     }
 }
 

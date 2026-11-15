@@ -90,6 +90,7 @@ namespace rct3::save::model
             constexpr std::string_view kFlowerBedClass = "WaterableBehaviour";
             constexpr std::string_view kFlowerBedWater = "CurrentWater";
             constexpr std::string_view kBehaviourOwner = "\"SceneryItem\""; ///< The quotes are part of the stored name
+            constexpr std::string_view kStampColour = "StampColour";
             constexpr std::string_view kBinCapacity = "Capacity";
             constexpr std::string_view kBinContents = "Contents";
             constexpr std::string_view kBinEmptied = "LastEmptied";
@@ -1078,7 +1079,7 @@ namespace rct3::save::model
                     break;
                 case Kind::UsePoint:
                     if (const auto owner = get_ref(o.find(names::kBehaviourOwner)))
-                        m.use_points.push_back({ .id = o.id, .object_ref = *owner });
+                        m.use_points.push_back({ .id = o.id, .object_ref = *owner, .stamp_colour = get_int(o.find(names::kStampColour)).transform([](std::int64_t c) { return static_cast<std::int32_t>(c); }) });
                     break;
                 case Kind::Weather:
                     if (singleton(have_weather, o))

@@ -1110,6 +1110,7 @@ namespace rct3::scene::park
                     const auto staff = kept != nullptr ? by_look(scene.people.staff.size(), placed_staff, kept->staff) : simulation::import_staff(scene.sim, scene.people);
                     if (kept == nullptr)
                         simulation::resume_saved_uses(scene.sim, scene.people, guests, staff, world.use_points, scene.carried);
+                    simulation::import_passport_rules(scene.sim, scene.people, world.use_points, scene.carried);
                     // The animals as our save kept them, else as the original park did.
                     if (kept != nullptr && saved->animals)
                         parkfile::place_animals(scene.sim, *saved->animals, placed_staff);

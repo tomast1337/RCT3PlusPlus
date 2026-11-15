@@ -15,17 +15,23 @@ namespace rct3::park
         constexpr float kLargest = 0.018f;  ///< Of the largest that lands
         constexpr float kSheetSmallest = 0.18f;
         constexpr float kSheetLargest = 0.32f;
-        constexpr float kHeavy = 0.012f;              ///< A drop this big slides at the full pull of gravity
-        constexpr float kGravity = 0.9f;              ///< Its slide down the lens
-        constexpr float kHold = 0.55f;                ///< The push a drop holds still against: a small one holds against gravity
-        constexpr float kSlide = 0.3f;                ///< Its speed down the lens per push
-        constexpr float kOnrush = 0.02f;              ///< Push out from the middle per world unit a second forward
-        constexpr float kSettle = 6.0f;               ///< How quickly a drop's speed follows its push, a second
-        constexpr float kWobble = 0.25f;              ///< Its slide's sideways wander, a share of its speed
-        constexpr float kSheetFall = 0.6f;            ///< How fast a sheet runs down
-        constexpr units::Seconds kSheetLife { 1.4f }; ///< A sheet lasts
-        constexpr units::Seconds kDropLife { 9.0f };  ///< A drop lasts at most; most dry sooner
-        constexpr float kMeet = 0.8f;                 ///< Two drops run together when closer than this share of their radii
+        constexpr float kHeavy = 0.012f;                ///< A drop this big slides at the full pull of gravity
+        constexpr float kGravity = 0.9f;                ///< Its slide down the lens
+        constexpr float kHold = 0.55f;                  ///< The push a drop holds still against: a small one holds against gravity
+        constexpr float kSlide = 0.3f;                  ///< Its speed down the lens per push
+        constexpr float kOnrush = 0.02f;                ///< Push out from the middle per world unit a second forward
+        constexpr float kSettle = 6.0f;                 ///< How quickly a drop's speed follows its push, a second
+        constexpr float kWobble = 0.25f;                ///< Its slide's sideways wander, a share of its speed
+        constexpr float kSheetFall = 0.6f;              ///< How fast a sheet runs down
+        constexpr units::Seconds kSheetLife { 1.4f };   ///< A sheet lasts
+        constexpr units::Seconds kDropLife { 9.0f };    ///< A drop lasts at most; most dry sooner
+        constexpr float kMeet = 0.8f;                   ///< Two drops run together when closer than this share of their radii
+        constexpr float kSheetShortest = 0.7f;          ///< Of kSheetLife, the least a sheet lasts
+        constexpr float kDropShortest = 0.4f;           ///< Of kDropLife, the least a drop lasts
+        constexpr units::Seconds kClingLeast { 0.1f };  ///< A drop that lands holds still this long, at least
+        constexpr units::Seconds kClingMost { 1.5f };   ///< And at most
+        constexpr units::Seconds kCatchLeast { 0.05f }; ///< A sliding drop that catches holds still this long, at least
+        constexpr units::Seconds kCatchMost { 0.4f };   ///< And at most
 
         float between(random::RandomState& dice, float low, float high)
         {
@@ -40,14 +46,14 @@ namespace rct3::park
         for (std::size_t i = count(true); i < kMostLensSheets && sheets > 0; ++i, --sheets)
         {
             const float radius = between(d, kSheetSmallest, kSheetLargest);
-            water.drops.push_back({ .at = { between(d, 0.0f, aspect), between(d, -0.2f, 0.6f) }, .velocity = { 0, kSheetFall * 0.5f }, .radius = radius, .life = { kSheetLife.value * between(d, 0.7f, 1.0f) }, .sheet = true });
+            water.drops.push_back({ .at = { between(d, 0.0f, aspect), between(d, -0.2f, 0.6f) }, .velocity = { 0, kSheetFall * 0.5f }, .radius = radius, .life = { kSheetLife.value * between(d, kSheetShortest, 1.0f) }, .sheet = true });
         }
         for (std::size_t i = count(false); i < kMostLensDrops && drops > 0; ++i, --drops)
         {
             // Most drops are small: the square of an even share leans towards the small end.
             const float share = static_cast<float>(random::unit(d));
             const float radius = kSmallest + (kLargest - kSmallest) * share * share;
-            water.drops.push_back({ .at = { between(d, 0.0f, aspect), between(d, 0.0f, 1.0f) }, .radius = radius, .clinging = { between(d, 0.1f, 1.5f) }, .life = { kDropLife.value * between(d, 0.4f, 1.0f) } });
+            water.drops.push_back({ .at = { between(d, 0.0f, aspect), between(d, 0.0f, 1.0f) }, .radius = radius, .clinging = { between(d, kClingLeast.value, kClingMost.value) }, .life = { kDropLife.value * between(d, kDropShortest, 1.0f) } });
         }
     }
 
@@ -78,7 +84,7 @@ namespace rct3::park
                 const glm::vec2 side { -drop.velocity.y / speed, drop.velocity.x / speed };
                 drop.velocity += side * (speed * kWobble * between(d, -1.0f, 1.0f));
                 if (random::unit(d) < seconds * 0.5)
-                    drop.clinging = { between(d, 0.05f, 0.4f) };
+                    drop.clinging = { between(d, kCatchLeast.value, kCatchMost.value) };
             }
             drop.at += drop.velocity * seconds;
         }

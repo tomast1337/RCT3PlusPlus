@@ -11,6 +11,14 @@ namespace rct3::park
     namespace
     {
 
+        // Heights of the sun, in degrees, over which each part of the light comes in.
+        constexpr float kDiscFrom = -1.0f;       ///< The disc starts to clear the horizon
+        constexpr float kDiscTo = 6.0f;          ///< And has cleared it
+        constexpr float kWarmLightTo = 2.0f;     ///< Under this the sun's light is at its warmest
+        constexpr float kWhiteLightFrom = 25.0f; ///< And from this at its whitest
+        constexpr float kNightSkyTo = -12.0f;    ///< Under this the sky is the night's
+        constexpr float kDaySkyFrom = 10.0f;     ///< And from this the day's
+
         /// 0 below `from`, 1 above `to` and a smooth rise between, for heights of the sun in degrees.
         float rise(float from, float to, float height)
         {
@@ -26,10 +34,10 @@ namespace rct3::park
         out.sun_direction = sun_direction(time);
         const float height = glm::degrees(sun_elevation(time));
         // The disc clears the horizon over a few degrees, and its light warms the lower it is.
-        const float shown = rise(-1.0f, 6.0f, height);
-        out.sun = glm::mix(kLowSun, kHighSun, rise(2.0f, 25.0f, height)) * shown;
+        const float shown = rise(kDiscFrom, kDiscTo, height);
+        out.sun = glm::mix(kLowSun, kHighSun, rise(kWarmLightTo, kWhiteLightFrom, height)) * shown;
         // The sky stays light a while after sunset and before sunrise.
-        out.sky = glm::mix(kNightSky, kDaySky, rise(-12.0f, 10.0f, height));
+        out.sky = glm::mix(kNightSky, kDaySky, rise(kNightSkyTo, kDaySkyFrom, height));
         out.ground = kGroundBounce * (out.sky + out.sun * std::max(out.sun_direction.y, 0.0f));
         return out;
     }

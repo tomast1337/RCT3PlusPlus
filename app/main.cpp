@@ -6,7 +6,8 @@
 //
 //   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]
 //
-//   --renderer NAME   render backend: vulkan (default), opengl or null; kept by --write-settings
+//   --renderer NAME   render backend: vulkan (default), opengl, software (on the CPU) or null; kept by
+//                     --write-settings
 //   --headless        no window and no display needed: drawn off screen (with --renderer null, not at all), no
 //                     sound, no vsync, no logos, 60 fps
 //   --no-vsync        present as fast as possible
@@ -99,7 +100,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|opengl|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|opengl|software|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--help]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)

@@ -149,7 +149,7 @@ namespace rct3::particles
 
         // Particles: age, move, emit, die. Ones born this step are moved from the next.
         const std::size_t count = live_.count();
-        const glm::vec3 down(0, -kGravity, 0);
+        const glm::vec3 down(0, -kGravity.value, 0);
         for (std::size_t i = 0; i < count; ++i)
         {
             live_.age[i] += dt;

@@ -30,7 +30,7 @@ TEST_CASE("a level jet lands as far as a thrown stone would")
     const auto land = jet.landing(flat);
     REQUIRE(land.has_value());
     // Falling 5 m takes sqrt(2 * 5 / g) seconds.
-    CHECK(land->x == doctest::Approx(6 * std::sqrt(10 / rct3::units::kGravity)).epsilon(0.05));
+    CHECK(land->x == doctest::Approx(6 * std::sqrt(10 / rct3::units::kGravity.value)).epsilon(0.05));
     CHECK(land->y == doctest::Approx(0).epsilon(0.01));
     CHECK(land->z == doctest::Approx(0));
 }
@@ -90,7 +90,7 @@ TEST_CASE("a throw lands where it is aimed, up or down hill")
         const glm::vec3 to { 5, 2 + rise, 0 };
         const auto t = throw_to(from, to, 0.9f);
         REQUIRE(t.has_value());
-        const glm::vec3 at = from + t->velocity * t->seconds + glm::vec3(0, -rct3::units::kGravity / 2, 0) * t->seconds * t->seconds;
+        const glm::vec3 at = from + t->velocity * t->seconds + glm::vec3(0, -rct3::units::kGravity.value / 2, 0) * t->seconds * t->seconds;
         CHECK(glm::distance(at, to) < 1e-3f);
         CHECK(std::atan2(t->velocity.y, std::hypot(t->velocity.x, t->velocity.z)) == doctest::Approx(0.9f));
     }

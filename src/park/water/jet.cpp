@@ -90,7 +90,7 @@ namespace rct3::park::water
             pending_ -= kStep;
             for (JetDrop& d : drops_)
             {
-                d.velocity.y -= units::kGravity * kStep;
+                d.velocity.y -= units::kGravity.value * kStep;
                 d.position += d.velocity * kStep;
                 d.age.value += kStep;
             }
@@ -124,7 +124,7 @@ namespace rct3::park::water
         if (across < 1e-3f || rise <= 0)
             return std::nullopt;
         // Thrown at speed v, it falls g t^2 / 2 below its straight line by the time t it is `across` along.
-        const float level_speed = across * std::sqrt(units::kGravity / (2 * rise));
+        const float level_speed = across * std::sqrt(units::kGravity.value / (2 * rise));
         const glm::vec2 way = level / across;
         return Throw { .velocity = { way.x * level_speed, level_speed * std::tan(angle), way.y * level_speed }, .seconds = across / level_speed };
     }

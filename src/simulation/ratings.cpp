@@ -117,7 +117,7 @@ namespace rct3::simulation
     RatingFeatures rating_features(const save::model::TestResults& t)
     {
         return {
-            1, t.max_speed, t.average_speed, t.ride_time.value, t.ride_length.value, std::max(t.max_positive_vertical / kGravity - 1, 0.0f), std::abs(t.max_negative_vertical) / kGravity, std::abs(t.max_lateral) / kGravity, t.air_time.value, static_cast<float>(t.drop_count), t.highest_drop.value, static_cast<float>(t.inversion_count), static_cast<float>(t.lift_hill_count),
+            1, t.max_speed, t.average_speed, t.ride_time.value, t.ride_length.value, std::max(t.max_positive_vertical / kGravity.value - 1, 0.0f), std::abs(t.max_negative_vertical) / kGravity.value, std::abs(t.max_lateral) / kGravity.value, t.air_time.value, static_cast<float>(t.drop_count), t.highest_drop.value, static_cast<float>(t.inversion_count), static_cast<float>(t.lift_hill_count),
         };
     }
 

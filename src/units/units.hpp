@@ -37,7 +37,8 @@ namespace rct3::units
         }
     };
 
-    /// How fast something on a 0 to 1 scale (a need, happiness, nausea, wetness) moves: how much a second.
+    /// How fast something on a 0 to 1 scale (a need, happiness, nausea, wetness) moves, or how fast a gap closes
+    /// or a motion dies away: the share of it a second.
     struct PerSecond
     {
         static constexpr bool kUnit = true;
@@ -148,8 +149,29 @@ namespace rct3::units
         float value = 0;
     };
 
+    /// How fast a speed changes: world units (metres) a second, each second.
+    struct Acceleration
+    {
+        static constexpr bool kUnit = true;
+        float value = 0;
+    };
+
     /// How fast something turns: radians a second.
     struct TurnRate
+    {
+        static constexpr bool kUnit = true;
+        float value = 0;
+    };
+
+    /// A length on screen or across a picture, in pixels; in the interface, in its units (pixels at a scale of one).
+    struct Pixels
+    {
+        static constexpr bool kUnit = true;
+        float value = 0;
+    };
+
+    /// How fast something moves on screen or across a picture: pixels a second, as `Pixels` counts them.
+    struct PixelPace
     {
         static constexpr bool kUnit = true;
         float value = 0;
@@ -169,8 +191,8 @@ namespace rct3::units
         float value = 0;
     };
 
-    /// How fast things fall near the ground, world units (metres) a second squared; also one g.
-    inline constexpr float kGravity = 9.81f;
+    /// How fast things fall near the ground; also one g.
+    inline constexpr Acceleration kGravity { 9.81f };
 
     /// A clock hour, for rates given an hour, such as a ride's riders.
     inline constexpr Seconds kHour { 3600 };

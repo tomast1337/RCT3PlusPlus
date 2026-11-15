@@ -117,11 +117,11 @@ namespace rct3::simulation
         const glm::vec3 way = glm::length(chord) > 0 ? glm::normalize(chord) : track_way(c, c.at);
         const glm::vec3 bend = (ahead - 2.0f * here + behind) / (kReach * kReach);
         // What riders feel: the train's acceleration less gravity's, up through their seats and across them.
-        const glm::vec3 pull = bend * c.speed * c.speed + glm::vec3(0, kGravity, 0);
+        const glm::vec3 pull = bend * c.speed * c.speed + glm::vec3(0, kGravity.value, 0);
         const glm::vec3 lean = glm::cross(track_up(c, c.at), way);
         const glm::vec3 across = glm::length(lean) > 1e-6f ? glm::normalize(lean) : glm::vec3(1, 0, 0);
         const glm::vec3 up = glm::cross(way, across);
-        return { .vertical = glm::dot(pull, up) / kGravity, .lateral = glm::dot(pull, across) / kGravity, .slope = way.y };
+        return { .vertical = glm::dot(pull, up) / kGravity.value, .lateral = glm::dot(pull, across) / kGravity.value, .slope = way.y };
     }
 
     void record(LapRecorder& lap, const Coaster& c, float seconds)
@@ -133,8 +133,8 @@ namespace rct3::simulation
         lap.seconds += seconds;
         lap.speed_sum += std::abs(c.speed) * seconds;
         lap.height_sum += here.y * seconds;
-        lap.vertical_sum += forces.vertical * kGravity * seconds;
-        lap.lateral_sum += forces.lateral * kGravity * seconds;
+        lap.vertical_sum += forces.vertical * kGravity.value * seconds;
+        lap.lateral_sum += forces.lateral * kGravity.value * seconds;
         constexpr float kSample = 1.0f / static_cast<float>(save::model::kGraphSamplesPerSecond);
         if (lap.seconds < kSample)
             return;
@@ -225,10 +225,10 @@ namespace rct3::simulation
         {
             const float down = f.at.y - f.water;
             // Down on its water within the step: at the moment the fall from its height takes.
-            const float t = (f.velocity.y + std::sqrt(f.velocity.y * f.velocity.y + 2 * kGravity * std::max(down, 0.0f))) / kGravity;
+            const float t = (f.velocity.y + std::sqrt(f.velocity.y * f.velocity.y + 2 * kGravity.value * std::max(down, 0.0f))) / kGravity.value;
             const float flown = std::min(t, seconds);
-            f.at += f.velocity * flown + glm::vec3(0, -kGravity / 2 * flown * flown, 0);
-            f.velocity.y -= kGravity * flown;
+            f.at += f.velocity * flown + glm::vec3(0, -kGravity.value / 2 * flown * flown, 0);
+            f.velocity.y -= kGravity.value * flown;
             stopped();
             if (flown < t)
                 return f.off.value < kGone.value;
@@ -252,7 +252,7 @@ namespace rct3::simulation
         // stored but how it left, so it turns the same between steps as at them.
         const glm::vec3 level = glm::length(glm::vec2(f.way.x, f.way.z)) > 1e-3f ? glm::normalize(glm::vec3(f.way.x, 0, f.way.z)) : f.way;
         const float fallen_for = f.afloat ? f.off.value - f.afloat->value : f.off.value;
-        const glm::vec3 fall = f.way * f.speed.value - glm::vec3(0, kGravity * fallen_for, 0);
+        const glm::vec3 fall = f.way * f.speed.value - glm::vec3(0, kGravity.value * fallen_for, 0);
         const glm::vec3 nose = glm::length(fall) > 1e-3f ? glm::normalize(fall) : level;
         const glm::vec3 to = f.afloat ? glm::normalize(glm::mix(nose, level, std::min(f.afloat->value / kSettle.value, 1.0f)) + level * 1e-3f) : nose;
         const glm::vec3 axis = glm::cross(f.way, to);
@@ -382,7 +382,7 @@ namespace rct3::simulation
                             held = false;
                             break;
                         }
-                        c.speed = std::max(c.speed + kGravity * lift.drop * dt, c.station_speed);
+                        c.speed = std::max(c.speed + kGravity.value * lift.drop * dt, c.station_speed);
                         ride.aboard.value += c.speed * dt;
                         if (ride.aboard.value > lift.carried.value)
                             carried_to(lift.to + ride.aboard.value - lift.carried.value);
@@ -404,7 +404,7 @@ namespace rct3::simulation
                 // track, and by the air.
                 const float back = c.at - c.train_length;
                 const float slope = std::clamp((height_at(c, c.at) - height_at(c, back)) / c.train_length, -1.0f, 1.0f);
-                c.speed += (-kGravity * slope - kGravity * c.rolling * std::sqrt(1 - slope * slope) - c.air * c.speed * std::abs(c.speed)) * dt;
+                c.speed += (-kGravity.value * slope - kGravity.value * c.rolling * std::sqrt(1 - slope * slope) - c.air * c.speed * std::abs(c.speed)) * dt;
                 // A slide's way back to its lift has a chain under the water too, which the water's pace overrides.
                 // shortcut: slowed so whether or not a pool is there; upgrade once a run in the original game with no
                 // pool joined is known.
@@ -555,7 +555,7 @@ namespace rct3::simulation
                 const glm::vec3 right = glm::length(across) > 1e-6f ? glm::normalize(across) : glm::vec3(1, 0, 0);
                 const std::size_t i = point_at(c, wrap(c, d));
                 const bool steady = i < c.steady.size() && c.steady[i];
-                const glm::vec3 weight = glm::vec3(0, -kGravity, 0) - (steady ? glm::vec3(0) : bend * c.speed * c.speed);
+                const glm::vec3 weight = glm::vec3(0, -kGravity.value, 0) - (steady ? glm::vec3(0) : bend * c.speed * c.speed);
                 const float lean = c.lean.value;
                 const glm::vec3 hang = right * std::sin(lean) - up * std::cos(lean);
                 const glm::vec3 arc = right * std::cos(lean) + up * std::sin(lean);

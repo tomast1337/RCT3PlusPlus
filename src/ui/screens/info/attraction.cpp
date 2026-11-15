@@ -169,7 +169,7 @@ namespace rct3::ui::screens::info
 
         std::u16string force(float acceleration)
         {
-            return ascii(std::format("{:.2f} g", acceleration / kGravity));
+            return ascii(std::format("{:.2f} g", acceleration / kGravity.value));
         }
 
         std::u16string percent(float value)
@@ -618,8 +618,8 @@ namespace rct3::ui::screens::info
             const std::array<std::tuple<std::string_view, const std::vector<float>*, float, std::u16string, AttractionControl>, 4> all { {
                 { "Graph_Speed", &g.speed, speed_scale(units.distance), speed_words, AttractionControl::SpeedSeries },
                 { "Graph_Altitude", &g.altitude, feet ? kFeetPerMetre : 1.0f, feet ? u"ft" : u"m", AttractionControl::AltitudeSeries },
-                { "Graph_VerticalG", &g.vertical_g, 1 / kGravity, u"g", AttractionControl::VerticalSeries },
-                { "Graph_LateralG", &g.lateral_g, 1 / kGravity, u"g", AttractionControl::LateralSeries },
+                { "Graph_VerticalG", &g.vertical_g, 1 / kGravity.value, u"g", AttractionControl::VerticalSeries },
+                { "Graph_LateralG", &g.lateral_g, 1 / kGravity.value, u"g", AttractionControl::LateralSeries },
             } };
             std::array<InfoControl, 4> ticks;
             for (std::size_t i = 0; i < all.size(); ++i)

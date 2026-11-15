@@ -125,7 +125,7 @@ namespace rct3::park
 
     units::Seconds fall_seconds(units::Distance drop)
     {
-        return { std::sqrt(2.0f * std::max(drop.value, 0.0f) / kGravity) };
+        return { std::sqrt(2.0f * std::max(drop.value, 0.0f) / kGravity.value) };
     }
 
     void waterfall_mesh(std::span<const save::model::Waterfall> falls, std::span<const FallLakes> lakes, WaterfallDetail detail, WaterfallMesh& mesh)
@@ -214,7 +214,7 @@ namespace rct3::park
                             const auto n = static_cast<std::uint32_t>(k);
                             const auto salt = static_cast<std::uint32_t>(f) * 7;
                             const glm::vec3 from = land + side * ((own_number(n, salt) - 0.5f) * width) + kUp * kFoamLift.value;
-                            const float up = std::sqrt(2.0f * kGravity * rise * (0.4f + 0.6f * own_number(n, salt + 1)));
+                            const float up = std::sqrt(2.0f * kGravity.value * rise * (0.4f + 0.6f * own_number(n, salt + 1)));
                             const glm::vec3 speed = kUp * up + s.flow * (up * (0.2f + 0.5f * own_number(n, salt + 2))) + side * (up * 0.4f * (own_number(n, salt + 3) - 0.5f));
                             const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
                             for (const glm::vec2 corner : kCorners)

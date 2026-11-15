@@ -49,11 +49,11 @@ namespace rct3::simulation
                 case 3:
                     return t.ride_length.value;
                 case 4:
-                    return t.max_negative_vertical / kGravity;
+                    return t.max_negative_vertical / kGravity.value;
                 case 5:
-                    return t.max_positive_vertical / kGravity;
+                    return t.max_positive_vertical / kGravity.value;
                 case 6:
-                    return t.max_lateral / kGravity;
+                    return t.max_lateral / kGravity.value;
                 case 7:
                     return t.max_speed;
                 case 8:

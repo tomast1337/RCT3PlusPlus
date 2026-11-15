@@ -394,7 +394,7 @@ namespace rct3::simulation
         const auto& r = world.registry;
         const float tile = world.paths.tile_size;
         std::optional<PoolJoin> found;
-        float closest = kTuning.rivers.join * tile;
+        float closest = kTuning.rivers.join.value * tile;
         for (const entt::entity pool : sorted(r.view<const SwimPool>()))
         {
             const SwimPool& complex = r.get<SwimPool>(pool);

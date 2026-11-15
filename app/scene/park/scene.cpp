@@ -820,11 +820,11 @@ namespace rct3::scene::park
                         else if (change->id == ui::screens::info::kPoolWaveHeightControl)
                             scene.pools.rooms[r].waves.height = static_cast<float>(change->value);
                         else if (change->id == ui::screens::info::kPoolWaveLengthControl)
-                            scene.pools.rooms[r].waves.frequency = rct3::park::pools::kLeastWaveFrequency + rct3::park::pools::kMostWaveFrequency - static_cast<float>(change->value);
+                            scene.pools.rooms[r].waves.frequency = { rct3::park::pools::kLeastWaveFrequency + rct3::park::pools::kMostWaveFrequency - static_cast<float>(change->value) };
                         else if (change->id == ui::screens::info::kPoolWaveOnControl)
-                            scene.pools.rooms[r].waves.on = static_cast<float>(change->value);
+                            scene.pools.rooms[r].waves.on = { static_cast<float>(change->value) };
                         else if (change->id == ui::screens::info::kPoolWaveEveryControl)
-                            scene.pools.rooms[r].waves.every = static_cast<float>(change->value) * 60;
+                            scene.pools.rooms[r].waves.every = { static_cast<float>(change->value) * 60 };
                         else if (change->id == ui::screens::info::kPoolNameControl && change->text.find_first_not_of(u' ') != std::u16string::npos)
                             scene.pools.rooms[r].complex_name = strings::to_utf8(change->text);
                     }
@@ -1325,7 +1325,7 @@ namespace rct3::scene::park
                     for (const std::int64_t v : { std::int64_t { s.col }, std::int64_t { s.row }, std::int64_t { std::to_underlying(s.kind) }, std::int64_t { s.surface } })
                         mix(v);
                 for (const rct3::park::pools::PoolRoom& room : scene.pools.rooms)
-                    for (const std::int64_t v : { std::int64_t { room.col }, std::int64_t { room.row }, std::int64_t { room.side.value }, room.ticket, std::int64_t { room.open }, std::int64_t { room.fluid }, static_cast<std::int64_t>(std::llround(room.waves.height * 100)), static_cast<std::int64_t>(std::llround(room.waves.frequency * 100)), static_cast<std::int64_t>(std::llround(room.waves.on)), static_cast<std::int64_t>(std::llround(room.waves.every)) })
+                    for (const std::int64_t v : { std::int64_t { room.col }, std::int64_t { room.row }, std::int64_t { room.side.value }, room.ticket, std::int64_t { room.open }, std::int64_t { room.fluid }, static_cast<std::int64_t>(std::llround(room.waves.height * 100)), static_cast<std::int64_t>(std::llround(room.waves.frequency.value * 100)), static_cast<std::int64_t>(std::llround(room.waves.on.value)), static_cast<std::int64_t>(std::llround(room.waves.every.value)) })
                         mix(v);
                 mix(static_cast<std::int64_t>(scene.pools.extras.size() + scene.scenery_pool_extras.size()));
                 if (std::exchange(scene.pools_seen, pools) != pools)

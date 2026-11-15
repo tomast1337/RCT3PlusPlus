@@ -26,7 +26,7 @@ namespace
                 const bool edge = col == 0 || row == 0 || col == 7 || row == 5;
                 map.squares.push_back({ .col = col, .row = row, .kind = edge ? PoolKind::Tile : PoolKind::Water, .surface = 4, .depth = 2 });
             }
-        map.rooms.push_back({ .col = -1, .row = 2, .side = rct3::park::Side { 1 }, .waves = { .height = 10, .frequency = 4, .on = 20, .every = 60 } });
+        map.rooms.push_back({ .col = -1, .row = 2, .side = rct3::park::Side { 1 }, .waves = { .height = 10, .frequency = { 4 }, .on = { 20 }, .every = { 60 } } });
         return map;
     }
 
@@ -60,7 +60,7 @@ TEST_CASE("pool waves: a wave machine sends crests out from its wall, with its c
     CHECK(waves[0].bounds == glm::vec4 { 4, 4, 28, 20 });
     CHECK(waves[0].radius == 2); // Half its square, along the wall
     CHECK(waves[0].settings.height == 10);
-    CHECK(waves[0].settings.every == 60);
+    CHECK(waves[0].settings.every.value == 60);
 }
 
 TEST_CASE("pool waves: the machines run for their time out of every period, and the crests go on out after")
@@ -119,7 +119,7 @@ TEST_CASE("pool waves: a line drawn along a side of the grid sends a train of cr
     CHECK(std::abs(pool_wave_height(lone, { 6 + kPoolWaveLook.line_speed * 2, 10 }, 52)) > 0.02f);
     CHECK(std::abs(pool_wave_height(lone, { 6, 10 }, 52)) < 1e-3f);
     std::vector<PoolWave> kept { *wave };
-    drop_spent_waves(kept, 50 + kPoolWaveLook.line_life + 1);
+    drop_spent_waves(kept, 50 + kPoolWaveLook.line_life.value + 1);
     CHECK(kept.empty());
 }
 
@@ -151,12 +151,12 @@ TEST_CASE("pool waves: a circle drawn round makes a whirlpool turning the way it
     CHECK(drawn_wave(map, grid(), drawn(way), 10)->spin == -1);
     const std::array lone { *wave };
     CHECK(pool_wave_height(lone, { 14, 12 }, 13) < -0.1f); // A dip in the middle
-    CHECK(pool_wave_height(lone, { 14, 12 }, 10 + kPoolWaveLook.whirl_life + 1) == 0.0f);
+    CHECK(pool_wave_height(lone, { 14, 12 }, 10 + kPoolWaveLook.whirl_life.value + 1) == 0.0f);
 }
 
 TEST_CASE("pool waves: the renderer gets each wave's place, shape and timing")
 {
-    PoolWave w { .kind = PoolWaveKind::Machine, .from = { 1, 2 }, .heading = { 0, -1 }, .bounds = { 0, 0, 8, 8 }, .settings = { .height = 10, .frequency = 4, .on = 20, .every = 60 } };
+    PoolWave w { .kind = PoolWaveKind::Machine, .from = { 1, 2 }, .heading = { 0, -1 }, .bounds = { 0, 0, 8, 8 }, .settings = { .height = 10, .frequency = { 4 }, .on = { 20 }, .every = { 60 } } };
     const PoolWaveTexels texels = pool_wave_texels(std::array { w });
     CHECK(texels[0] == glm::vec4 { 1, 2, 0, -1 });
     CHECK(texels[kMaxPoolWaves].x == 1);
@@ -196,11 +196,11 @@ TEST_CASE("pool waves: rings spread out from where someone falls into open water
     CHECK(ring_crest(*rings, 20) == doctest::Approx(look.ring_height));
     CHECK(ring_crest(*rings, 22) < ring_crest(*rings, 21));
     CHECK(ring_crest(*rings, 19) == 0.0f); // Not started yet
-    CHECK(ring_crest(*rings, 20 + look.ring_life + 0.1f) == 0.0f);
+    CHECK(ring_crest(*rings, 20 + look.ring_life.value + 0.1f) == 0.0f);
     std::vector<PoolWave> kept = lone;
-    drop_spent_waves(kept, 20 + look.ring_life - 0.1f);
+    drop_spent_waves(kept, 20 + look.ring_life.value - 0.1f);
     CHECK(kept.size() == 1);
-    drop_spent_waves(kept, 20 + look.ring_life + 0.1f);
+    drop_spent_waves(kept, 20 + look.ring_life.value + 0.1f);
     CHECK(kept.empty());
 }
 

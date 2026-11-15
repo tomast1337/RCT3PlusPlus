@@ -226,9 +226,9 @@ namespace rct3::ui::screens::info
                 const auto least_frequency = static_cast<int>(park::pools::kLeastWaveFrequency);
                 const auto most_frequency = static_cast<int>(park::pools::kMostWaveFrequency);
                 bar(kPoolWaveHeightControl, static_cast<int>(std::lround(pool.waves.height)), static_cast<int>(park::pools::kLeastWaveHeight), static_cast<int>(park::pools::kMostWaveHeight));
-                bar(kPoolWaveLengthControl, least_frequency + most_frequency - static_cast<int>(std::lround(pool.waves.frequency)), least_frequency, most_frequency);
-                timed(kPoolWaveOnControl, static_cast<int>(std::lround(pool.waves.on)), 0, kMostWaveOn, kWaveOnStep, "OneSecond", "ManySeconds");
-                timed(kPoolWaveEveryControl, static_cast<int>(std::lround(pool.waves.every / kSecondsPerMinute)), 1, kMostWaveEvery, 1, "OneMinute", "ManyMinutes");
+                bar(kPoolWaveLengthControl, least_frequency + most_frequency - static_cast<int>(std::lround(pool.waves.frequency.value)), least_frequency, most_frequency);
+                timed(kPoolWaveOnControl, static_cast<int>(std::lround(pool.waves.on.value)), 0, kMostWaveOn, kWaveOnStep, "OneSecond", "ManySeconds");
+                timed(kPoolWaveEveryControl, static_cast<int>(std::lround(pool.waves.every.value / kSecondsPerMinute)), 1, kMostWaveEvery, 1, "OneMinute", "ManyMinutes");
             }
             else if (tab == SceneryTab::RoomCustomers)
             {

@@ -102,7 +102,7 @@ TEST_CASE("a jet that breaks up is wider, whiter and clearer toward its end, and
     jet.advance(2.5f);
     const auto drops = jet.drops();
     REQUIRE(drops.size() > 30);
-    CHECK(jet.radius(drops[drops.size() / 2]) > 0.1f + 0.1f * drops[drops.size() / 2].age);
+    CHECK(jet.radius(drops[drops.size() / 2]) > 0.1f + 0.1f * drops[drops.size() / 2].age.value);
     const std::array<const WaterJet*, 1> jets { &jet };
     object::ObjectMesh mesh;
     jet_mesh(jets, { 10, 50, 0 }, 0, mesh);

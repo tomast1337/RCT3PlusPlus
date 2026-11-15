@@ -15,10 +15,10 @@ namespace rct3::park
 
     namespace
     {
-        constexpr float kMinDrop = 8.0f;    ///< Least height, in world units, the water must fall.
-        constexpr int kMaxReach = 6;        ///< Most tiles out from the edge the lower lake may lie.
-        constexpr int kNarrowestEdge = 2;   ///< Fewest tiles of edge a waterfall needs.
-        constexpr float kPickMargin = 1.0f; ///< World units round a waterfall it can be picked.
+        constexpr units::Distance kMinDrop { 8.0f };    ///< Least height the water must fall.
+        constexpr int kMaxReach = 6;                    ///< Most tiles out from the edge the lower lake may lie.
+        constexpr int kNarrowestEdge = 2;               ///< Fewest tiles of edge a waterfall needs.
+        constexpr units::Distance kPickMargin { 1.0f }; ///< Round a waterfall, it can be picked.
 
         save::model::Tile step(save::model::Tile t, save::model::Tile d, int n = 1)
         {
@@ -37,7 +37,7 @@ namespace rct3::park
             return std::unexpected(kWaterfallSameWater);
         const save::model::WaterBody& high = bodies[first].level >= bodies[second].level ? bodies[first] : bodies[second];
         const save::model::WaterBody& low = &high == &bodies[first] ? bodies[second] : bodies[first];
-        if (high.level - low.level < kMinDrop)
+        if (high.level - low.level < kMinDrop.value)
             return std::unexpected(kWaterfallTooLittleDrop);
 
         // Which tiles each lake holds, looked up for every tile tried.
@@ -244,7 +244,7 @@ namespace rct3::park
             const glm::vec2 d = glm::vec2 { x, z } - lip;
             const float along = glm::dot(d, out / reach);
             const float aside = std::abs(glm::dot(d, (right - left) / (2 * half)));
-            if (along < -kPickMargin || along > reach + kPickMargin || aside > half + kPickMargin)
+            if (along < -kPickMargin.value || along > reach + kPickMargin.value || aside > half + kPickMargin.value)
                 continue;
             const float off = std::abs(along - reach / 2) + aside;
             if (!found || off < nearest)

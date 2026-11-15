@@ -356,8 +356,9 @@ namespace rct3::scene::park
         void draw_shadow(render::Device& device, ParkScene& scene, ShadowDrawing& drawing, const rct3::park::SunView& sun)
         {
             // The depth bias: about a tenth of a world unit, in the map's depth.
-            const std::array<float, 20> values
-                = { sun.view_projection[0][0], sun.view_projection[0][1], sun.view_projection[0][2], sun.view_projection[0][3], sun.view_projection[1][0], sun.view_projection[1][1], sun.view_projection[1][2], sun.view_projection[1][3], sun.view_projection[2][0], sun.view_projection[2][1], sun.view_projection[2][2], sun.view_projection[2][3], sun.view_projection[3][0], sun.view_projection[3][1], sun.view_projection[3][2], sun.view_projection[3][3], sun.texel, 0.1f / (2 * rct3::park::kSunViewDepth), 0, 0 };
+            const std::array<float, 20> values = {
+                sun.view_projection[0][0], sun.view_projection[0][1], sun.view_projection[0][2], sun.view_projection[0][3], sun.view_projection[1][0], sun.view_projection[1][1], sun.view_projection[1][2], sun.view_projection[1][3], sun.view_projection[2][0], sun.view_projection[2][1], sun.view_projection[2][2], sun.view_projection[2][3], sun.view_projection[3][0], sun.view_projection[3][1], sun.view_projection[3][2], sun.view_projection[3][3], sun.texel.value, 0.1f / (2 * rct3::park::kSunViewDepth), 0, 0
+            };
             drawing.drawn = sun.view_projection;
             drawing.view = values;
             render::PassDesc into;

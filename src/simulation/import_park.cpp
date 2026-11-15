@@ -818,7 +818,7 @@ namespace rct3::simulation
                     if (!low || !high)
                         continue;
                     const glm::vec3 ahead { static_cast<float>(dc), 0, static_cast<float>(dr) };
-                    const float back = extra.fit.step > 1 ? kTuning.pools.long_ramp : kTuning.pools.short_ramp;
+                    const float back = extra.fit.step > 1 ? kTuning.pools.long_ramp.value : kTuning.pools.short_ramp.value;
                     const glm::vec3 side = ahead * (paths.tile_size / 2);
                     const glm::vec3 foot = middle(extra.col, extra.row, static_cast<float>(square->surface)) + side - ahead * (back * paths.tile_size) + deck;
                     const glm::vec3 brow = middle(extra.col, extra.row, static_cast<float>(top)) + side + deck;

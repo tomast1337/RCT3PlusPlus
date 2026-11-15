@@ -20,7 +20,7 @@ TEST_CASE("the sun's view holds the square round its centre, nearer the sun shal
     const glm::vec3 to_sun = glm::normalize(glm::vec3(0.3f, 1.0f, -0.4f));
     const glm::vec3 centre(100, 20, 50);
     const SunView view = sun_view(to_sun, centre, 50, 2048);
-    CHECK(view.texel == doctest::Approx(100.0f / 2048));
+    CHECK(view.texel.value == doctest::Approx(100.0f / 2048));
 
     const glm::vec3 middle = project(view, centre);
     CHECK(std::abs(middle.x) < 0.01f);

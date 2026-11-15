@@ -163,10 +163,10 @@ namespace rct3::park::pools
     /// up and down `frequency` times in 2 pi seconds, as high as `height` says, for `on` seconds of every `every`.
     struct PoolWaves
     {
-        float height = 8;    ///< Of the crests, in steps from kLeastWaveHeight to kMostWaveHeight
-        float frequency = 6; ///< Radians a second; the fewer, the longer the waves
-        float on = 30;       ///< Seconds the machines run for
-        float every = 60;    ///< Seconds from one start of the machines to the next
+        float height = 8;                ///< Of the crests, in steps from kLeastWaveHeight to kMostWaveHeight
+        units::TurnRate frequency { 6 }; ///< The fewer, the longer the waves
+        units::Seconds on { 30 };        ///< The machines run for
+        units::Seconds every { 60 };     ///< From one start of the machines to the next
     };
     inline constexpr float kLeastWaveHeight = 2;    ///< Chosen by eye: the lowest the wave height setting goes
     inline constexpr float kMostWaveHeight = 14;    ///< Chosen by eye: the highest

@@ -10,6 +10,7 @@
 #include "math/glm.hpp"
 #include "math/texture_shift.hpp"
 #include "park/object/mesh.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -28,7 +29,7 @@ namespace rct3::park::water
     {
         glm::vec3 position { 0.0f };
         glm::vec3 velocity { 0.0f };
-        float age = 0;            ///< Seconds since it left the nozzle
+        units::Seconds age { };   ///< Since it left the nozzle
         std::uint32_t serial = 0; ///< Which of the jet's drops it is, counting from its first, for a ragged look that holds as it flies
     };
 

@@ -13,8 +13,8 @@ namespace rct3::park
 
     namespace
     {
-        constexpr float kMarkWidth = 0.15f; ///< Across the marks, in world units.
-        constexpr float kCrossReach = 0.6f; ///< Of a corner's cross, from the corner along each edge.
+        constexpr units::Distance kMarkWidth { 0.15f }; ///< Across the marks.
+        constexpr float kCrossReach = 0.6f;             ///< Of a corner's cross, from the corner along each edge.
 
         bool inside(const TileStroke& s, int col, int row)
         {
@@ -190,14 +190,14 @@ namespace rct3::park
                     const auto k = static_cast<std::size_t>(std::ranges::find(picked, true) - picked.begin());
                     const glm::vec3 p = at(k);
                     for (const std::size_t other : { k ^ 1u, k ^ 2u })
-                        ground_strip(mesh, p, p + (at(other) - p) * (kCrossReach / grid.tile_size_x), colour, kMarkWidth);
+                        ground_strip(mesh, p, p + (at(other) - p) * (kCrossReach / grid.tile_size_x), colour, kMarkWidth.value);
                     continue;
                 }
                 // The tile's edges whose both ends are picked.
                 for (const auto& [a, b] : { std::pair { 0u, 1u }, std::pair { 1u, 3u }, std::pair { 3u, 2u }, std::pair { 2u, 0u } })
                 {
                     if (picked[a] && picked[b])
-                        ground_strip(mesh, at(a), at(b), colour, kMarkWidth);
+                        ground_strip(mesh, at(a), at(b), colour, kMarkWidth.value);
                 }
             }
         }

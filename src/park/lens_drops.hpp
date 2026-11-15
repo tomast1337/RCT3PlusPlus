@@ -11,6 +11,7 @@
 #pragma once
 
 #include "random/generator.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <glm/vec2.hpp>
@@ -27,12 +28,12 @@ namespace rct3::park
     struct LensDrop
     {
         glm::vec2 at { };
-        glm::vec2 velocity { }; ///< Screen heights a second
-        float radius = 0;       ///< Screen heights
-        float clinging = 0;     ///< Seconds it holds still before it may slide again
-        float age = 0;          ///< Seconds on the lens
-        float life = 0;         ///< Seconds it lasts before it has dried away
-        bool sheet = false;     ///< A wide thin sheet of water rather than a drop
+        glm::vec2 velocity { };      ///< Screen heights a second
+        float radius = 0;            ///< Screen heights
+        units::Seconds clinging { }; ///< It holds still before it may slide again
+        units::Seconds age { };      ///< On the lens
+        units::Seconds life { };     ///< It lasts before it has dried away
+        bool sheet = false;          ///< A wide thin sheet of water rather than a drop
     };
 
     struct LensWater
@@ -48,7 +49,7 @@ namespace rct3::park
         glm::vec2 down { 0, 1 }; ///< Down in the world as seen on screen; shorter the more the view looks down
         glm::vec2 wind { };      ///< The wind across the screen
         glm::vec2 turn { };      ///< How fast the world sweeps across the screen as the view turns
-        float onrush = 0;        ///< How fast the eye flies forward, in world units a second
+        units::Pace onrush { };  ///< How fast the eye flies forward
     };
 
     /// Lands `drops` drops and `sheets` sheets at random over the lens, as many as there is room for.

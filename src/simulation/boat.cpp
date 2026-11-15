@@ -25,6 +25,7 @@ namespace rct3::simulation
         constexpr units::Distance kLookAhead { 4 };    ///< How far ahead it looks for water to go on in
         constexpr units::Radians kLookWide { 0.5f };   ///< And this far either side of its bow
         constexpr units::Distance kBeam { 2 };         ///< How far to its side it looks for water to turn round in
+        constexpr float kTurnedRound = 0.75f;          ///< Of a half turn, its mark this far off its bow has it turn round
         constexpr units::Seconds kLeanSettle { 0.5f }; ///< For its lean to follow its turn
         constexpr units::Distance kHull { 2 };         ///< Two boats' middles this close touch
         constexpr units::Distance kKeepClear { 10 };   ///< Another boat this far ahead, it starts to steer round it
@@ -236,7 +237,7 @@ namespace rct3::simulation
             {
                 off = angle_between(boat.heading, glm::normalize(boat.marks.front() - boat.at));
                 const glm::vec2 left = turned(boat.heading, glm::half_pi<float>());
-                if (std::abs(off) > 0.75f * glm::pi<float>())
+                if (std::abs(off) > kTurnedRound * glm::pi<float>())
                 {
                     const bool wet_left = wet(boat.at + left * kBeam.value), wet_right = wet(boat.at - left * kBeam.value);
                     if (off > 0 && !wet_left && wet_right)

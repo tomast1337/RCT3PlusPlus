@@ -502,7 +502,7 @@ namespace rct3::simulation
 
     float side_after(random::RandomState& dice, float ahead)
     {
-        const float side = kTuning.queues.reach.value * static_cast<float>(random::between(dice, 0.2, 1.0));
+        const float side = kTuning.queues.reach.value * static_cast<float>(random::between(dice, kTuning.queues.nearest_side.value, 1.0));
         return ahead > 0 || (ahead == 0 && random::chance(dice, 0.5)) ? -side : side;
     }
 

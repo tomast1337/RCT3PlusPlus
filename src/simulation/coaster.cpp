@@ -15,6 +15,7 @@ namespace rct3::simulation
     {
         using units::kGravity;
         constexpr units::Seconds kStep { 0.05f };        ///< A part step, short enough for the steepest drops
+        constexpr units::Pace kCrawl { 0.1f };           ///< Under this a train is all but stopped
         constexpr units::Seconds kStuck { 4 };           ///< All but stopped this long, the track's tyres take over
         constexpr units::Distance kLaunchLeast { 0.5f }; ///< Of platform left, that a launch is still sized over
         constexpr float kBuildUp = 3;                    ///< Passes a swinging train's pushes take to build up to full, and to die down
@@ -436,7 +437,7 @@ namespace rct3::simulation
                     // shortcut: a train stalled in a dip is pushed on as if by tyres until it outruns them, upgrade if
                     // valleys should roll it back for good.
                     const float pace = open ? std::abs(c.speed) : c.speed;
-                    if (pace < 0.1f)
+                    if (pace < kCrawl.value)
                         c.slow.value += dt;
                     if (c.slow > kStuck)
                         c.speed = std::max(c.speed, c.station_speed);

@@ -197,7 +197,8 @@ namespace rct3::simulation
                 // stopped, unless taken up with a show: plenty of scenery, or else a tidy, unspoilt path. Each at
                 // their own moment, by who they are.
                 const float look = kTuning.surroundings.look.value;
-                const float phase = static_cast<float>(entt::to_integral(g) % 101) / 101 * look;
+                constexpr std::uint32_t kPhases = 101; ///< Moments of the interval their looks are spread over, by id
+                const float phase = static_cast<float>(entt::to_integral(g) % kPhases) / kPhases * look;
                 if (now > look && r.all_of<Visitor>(g) && !r.any_of<Watching, Gesture>(g) && std::floor((now + phase) / look) != std::floor((now - dt + phase) / look))
                 {
                     const NodeId here = stride.from;

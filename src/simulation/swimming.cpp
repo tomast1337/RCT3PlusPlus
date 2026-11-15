@@ -303,8 +303,9 @@ namespace rct3::simulation
             return square != pool.water.end() && open_water(pool, static_cast<std::size_t>(square - pool.water.begin()), { at.x, 0, at.y }, tile);
         };
         // In steps of the open water's marks, at most a few hundred squares' worth.
+        constexpr float kMostSteps = 4096;
         const float mark = tile / static_cast<float>(kOpenSteps);
-        const int steps = static_cast<int>(std::min(std::ceil(glm::distance(from, to) / mark), 4096.0f));
+        const int steps = static_cast<int>(std::min(std::ceil(glm::distance(from, to) / mark), kMostSteps));
         bool inside = over(from);
         glm::vec2 last = from;
         for (int i = 1; i <= steps; ++i)
@@ -973,7 +974,8 @@ namespace rct3::simulation
                     const glm::vec3 side { ahead.z, 0, -ahead.x };
                     const auto& tuning = kTuning.pools;
                     // The shower's places a third of a turn apart, the last where a saved park's showering guest stood.
-                    const float turn = glm::radians(30.5f) + 2 * std::numbers::pi_v<float> * static_cast<float>(free + 1 - spot.places) / static_cast<float>(spot.places);
+                    constexpr float kLastPlace = 30.5f; ///< Degrees round from the shower's front
+                    const float turn = glm::radians(kLastPlace) + 2 * std::numbers::pi_v<float> * static_cast<float>(free + 1 - spot.places) / static_cast<float>(spot.places);
                     const glm::vec3 off = spot.use == PoolUse::Lounge ? ahead * (tuning.lounger_reach.value - static_cast<float>(spot.places - 1 - free) * tuning.lounger_gap.value) + side * tuning.lounger_side : (side * std::cos(turn) + ahead * std::sin(turn)) * tuning.shower_reach.value;
                     swimmer.goal = spot.at + off;
                     pose.position = swimmer.goal;

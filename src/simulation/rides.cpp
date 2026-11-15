@@ -251,8 +251,9 @@ namespace rct3::simulation
                             Place = 2
                         };
                         // Guests brought in from a save have no side yet: across from the guest ahead too.
+                        const auto nearest = static_cast<float>(kTuning.queues.nearest_side.value);
                         if (stride.side.value == 0)
-                            stride.side.value = (side_ahead > 0 ? -kTuning.queues.reach.value : kTuning.queues.reach.value) * (0.2f + 0.8f * fixed_share(queue[k], Side));
+                            stride.side.value = (side_ahead > 0 ? -kTuning.queues.reach.value : kTuning.queues.reach.value) * (nearest + (1 - nearest) * fixed_share(queue[k], Side));
                         side_ahead = stride.side.value;
                         // Off their even place by a little, so the line is not spaced like a ruler.
                         // Never nearer the guest ahead than the closest gap, wherever they stand: one still waiting for
@@ -310,8 +311,8 @@ namespace rct3::simulation
                     off[seat] = true;
                     auto& mood = r.get<Mood>(guest);
                     const float felt = felt_excitement(ride.excitement.value, r.all_of<Trains>(e), age_of(r, guest), night);
-                    mood.happiness.value = clamp01(mood.happiness.value + felt * 0.3f);
-                    mood.nausea.value = clamp01(mood.nausea.value + ride.nausea.value * 0.2f * (1.5f - mood.tolerance.value) * (eating(r, guest) ? kTuning.sickness.full_stomach.value : 1));
+                    mood.happiness.value = clamp01(mood.happiness.value + felt * kTuning.needs.ride_cheer);
+                    mood.nausea.value = clamp01(mood.nausea.value + ride.nausea.value * kTuning.sickness.ride_nausea * (kTuning.sickness.tolerance_ceiling - mood.tolerance.value) * (eating(r, guest) ? kTuning.sickness.full_stomach.value : 1));
                     // shortcut: soaked as they get off, not the moment their car splashes (park/car_splashes.hpp);
                     // upgrade when the simulation follows its cars through the water.
                     if (ride.splash)

@@ -13,6 +13,8 @@
 //   ./nob format [--check]                        clang-format our sources (never third_party/), Prettier the
 //                                                 scripts (needs npx)
 //   ./nob fetch                                   downloads optional assets (the fallback font) into downloads/
+//   ./nob package                                 release build of the viewer and the tools, packed for players
+//                                                 into build/dist/ (as the release workflow publishes them)
 //
 // The audio module (src/audio/, vendored miniaudio) is compiled into the tests and the tools that use it
 // only. It needs no audio device or system audio package.
@@ -139,6 +141,8 @@ namespace
         {
             c.mode = "release";
             c.compile_flags.insert(c.compile_flags.end(), { "-O2", "-DNDEBUG" });
+            // The C++ runtime goes in the binary, so it runs on systems whose own is older than the compiler's.
+            c.link_flags.insert(c.link_flags.end(), { "-static-libstdc++", "-static-libgcc" });
         }
         else
         {
@@ -699,6 +703,9 @@ namespace
         binary = cfg.out_dir() / "rct3pp";
         Config linker = with_audio_link(cfg);
         linker.link_flags.insert(linker.link_flags.end(), { "-lglfw", "-lvulkan" });
+#ifndef _WIN32
+        linker.link_flags.push_back("-Wl,-rpath,$ORIGIN"); // A package's GLFW, shipped next to the binary (run_package)
+#endif
         return link(linker, binary, objects);
     }
 
@@ -833,6 +840,104 @@ namespace
         Download { "https://unifoundry.com/pub/unifont/unifont-15.0.06/font-builds/unifont-15.0.06.ttf", "9282b6eff54eeca2e7f58c9a40a91049bd219f3e6a45fbee8eba013379b9af3a", "unifont-15.0.06.ttf" },
     };
 
+    // The packages players download, in build/dist: rct3pp-VERSION-PLATFORM holds the viewer, README, LICENSE,
+    // CHANGELOG, the icons and the shared libraries the viewer needs that a player's system may lack;
+    // rct3pp-tools-VERSION-PLATFORM the command line tools and LICENSE. Linux gets .tar.gz, Windows .zip.
+    bool run_package(const Config& cfg)
+    {
+        fs::path viewer;
+        if (!build_all(cfg) || !build_app(cfg, viewer))
+            return false;
+#ifdef _WIN32
+        // shortcut: x86-64 only; upgrade when another architecture is built.
+        constexpr std::string_view kPlatform = "windows-x86_64";
+        constexpr std::string_view kExe = ".exe";
+        // MSYS2's own DLLs (GLFW, what of the compiler's runtime is not linked in); Windows has the rest.
+        const auto ship = [](std::string_view path) { return path.starts_with("/ucrt64/"); };
+#else
+        constexpr std::string_view kPlatform = "linux-x86_64";
+        constexpr std::string_view kExe = "";
+        // GLFW only: distributions package it under different names, while the C library and the Vulkan loader
+        // (which must match the graphics driver) are the system's own.
+        const auto ship = [](std::string_view path) { return path.contains("libglfw"); };
+#endif
+        const std::string version = build_version();
+        const fs::path packages = kBuildDir / "package";
+        const fs::path dist = kBuildDir / "dist";
+        std::error_code ec;
+        fs::remove_all(packages, ec);
+        fs::remove_all(dist, ec);
+        if (!mkdir_p(dist))
+            return false;
+
+        const fs::path game = packages / std::format("rct3pp-{}-{}", version, kPlatform);
+        const fs::path tools = packages / std::format("rct3pp-tools-{}-{}", version, kPlatform);
+        fs::create_directories(game / "icons");
+        fs::create_directories(tools);
+        try
+        {
+            const fs::path binary = std::format("{}{}", viewer.string(), kExe);
+            fs::copy_file(binary, game / binary.filename());
+            for (const char* doc : { "README.md", "LICENSE", "CHANGELOG.md" })
+                fs::copy_file(doc, game / doc);
+            fs::copy("assets/icon", game / "icons");
+            // ldd's lines read "NAME => PATH (ADDRESS)".
+            std::FILE* ldd = popen(std::format("ldd \"{}\"", binary.string()).c_str(), "r");
+            if (ldd == nullptr)
+                return false;
+            for (char line[1024]; std::fgets(line, sizeof line, ldd) != nullptr;)
+            {
+                const std::string_view text = line;
+                const std::size_t arrow = text.find(" => ");
+                const std::size_t address = text.rfind(" (");
+                if (arrow == std::string_view::npos || address == std::string_view::npos || address < arrow)
+                    continue;
+                const std::string_view path = text.substr(arrow + 4, address - arrow - 4);
+                const std::string_view name = text.substr(0, arrow);
+                if (!ship(path))
+                    continue;
+                log(Level::Info, "shipping {}", path);
+                fs::copy_file(path, game / name.substr(name.find_first_not_of(" \t")));
+            }
+            if (pclose(ldd) != 0)
+            {
+                log(Level::Error, "ldd {} failed", binary.string());
+                return false;
+            }
+            for (const auto& main_cpp : find_sources("tools", ".cpp"))
+            {
+                const std::string name = std::format("{}{}", main_cpp.parent_path().filename().string(), kExe);
+                fs::copy_file(cfg.out_dir() / name, tools / name);
+            }
+            fs::copy_file("LICENSE", tools / "LICENSE");
+        }
+        catch (const fs::filesystem_error& e)
+        {
+            log(Level::Error, "{}", e.what());
+            return false;
+        }
+
+        for (const fs::path& folder : { game, tools })
+        {
+            Cmd pack;
+#ifdef _WIN32
+            pack << "zip" << "-qr" << fs::absolute(dist / std::format("{}.zip", folder.filename().string())).string() << folder.filename().string();
+            // zip stores paths as given, so it runs from the packages' folder.
+            const fs::path here = fs::current_path();
+            fs::current_path(packages);
+            const bool packed = run(pack);
+            fs::current_path(here);
+#else
+            pack << "tar" << "-czf" << (dist / std::format("{}.tar.gz", folder.filename().string())).string() << "-C" << packages.string() << folder.filename().string();
+            const bool packed = run(pack);
+#endif
+            if (!packed)
+                return false;
+        }
+        log(Level::Info, "packages in {}", dist.string());
+        return true;
+    }
+
     // Downloads what is missing (needs curl and sha256sum). A file that fails the check is removed.
     bool run_fetch()
     {
@@ -934,7 +1039,7 @@ int main(int argc, char** argv)
             for (++i; i < argc; ++i)
                 test_args.emplace_back(argv[i]);
         }
-        else if (arg == "build" || arg == "test" || arg == "clean" || arg == "fuzz" || arg == "app" || arg == "run" || arg == "format" || arg == "tidy" || arg == "fetch" || arg == "script")
+        else if (arg == "build" || arg == "test" || arg == "clean" || arg == "fuzz" || arg == "app" || arg == "run" || arg == "format" || arg == "tidy" || arg == "fetch" || arg == "script" || arg == "package")
             command = arg;
         else if (command == "script" && !arg.starts_with("-"))
             script = arg;
@@ -948,7 +1053,7 @@ int main(int argc, char** argv)
         {
             log(Level::Error,
                 "unknown argument '{}'. usage: ./nob [build|test|clean|app] [--release] [--sanitize] [--no-tools] [-j N] "
-                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy [FILE...] | ./nob fetch | ./nob script [FILE] [-- APP_ARGS...]",
+                "[--filter TEXT] [-- TEST_ARGS...] | ./nob fuzz [TARGET] [--seconds N] | ./nob format [--check] | ./nob tidy [FILE...] | ./nob fetch | ./nob package | ./nob script [FILE] [-- APP_ARGS...]",
                 arg);
             return 2;
         }
@@ -987,6 +1092,9 @@ int main(int argc, char** argv)
         }
         return 0;
     }
+
+    if (command == "package")
+        return run_package(make_config(true, false, false, job_count(jobs))) ? 0 : 1;
 
     Config cfg = make_config(release, sanitize, false, job_count(jobs));
     cfg.database_only = command == "tidy"; // clang-tidy reads the sources itself; it needs only their flags

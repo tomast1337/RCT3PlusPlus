@@ -27,6 +27,7 @@ g++ -std=c++26 -o nob nob.cpp
 ./nob --release | ./nob clean
 ./nob test -j 4                # at most 4 compilers at once (NOB_JOBS=4 does the same); default one per core
 ./nob fetch                    # optional downloads into downloads/: the fallback font (GNU Unifont)
+./nob package                  # release build of the viewer and tools, packed into build/dist/ as releases ship them
 build/debug/ovl-dump "/path/to/Main.common.ovl"
 build/debug/sound-play "/path/to/Main.common.ovl" SOUND_NAME   # play one sound item (omit the name to list them)
 build/debug/sound-play --null --tone 440                       # same path without an audio device

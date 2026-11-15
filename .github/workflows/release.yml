@@ -1,22 +1,34 @@
-# Release: pushing a tag named v* builds the game for Linux and Windows and publishes a GitHub release with
+# Packages for players, made by `./nob package` (the same command runs locally):
 #
-#   rct3pp-<tag>-linux-x86_64.tar.gz    the game binary, README, LICENSE and the icons
-#   rct3pp-<tag>-windows-x86_64.zip     the game binary, README and LICENSE
-#   rct3pp-tools-<tag>-linux-x86_64.tar.gz   the command line tools (ovl-dump, sim-run, ...), shipped apart
+#   rct3pp-VERSION-linux-x86_64.tar.gz       the game, README, LICENSE, CHANGELOG, the icons and GLFW
+#   rct3pp-VERSION-windows-x86_64.zip        the same for Windows, with the DLLs the game needs
+#   rct3pp-tools-VERSION-PLATFORM.tar.gz/.zip  the command line tools (ovl-dump, sim-run, ...), shipped apart
 #
-# No tests run here: ci.yml covers them on every push and pull request.
-# macOS is not built yet.
+# VERSION is what `git describe` says (src/core/version.hpp). A tag named v* publishes the packages as that
+# release. Each push to main replaces the packages of the `nightly` pre-release and moves its tag to the
+# commit. Both releases open with .github/release_notes.md.
+#
+# Windows does not build yet: its job may fail without failing the run, and the release then says Windows is not
+# available. No tests run here: ci.yml covers them on every push and pull request. macOS is not built yet.
 name: release
 
 on:
   push:
+    branches: [main]
     tags: ["v*"]
 
 permissions:
   contents: read
 
+# One run per ref at a time; a newer push to main waits, and replaces any run still waiting.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   linux:
+    # Forks have no use for the nightly.
+    if: github.repository == 'tomast1337/RCT3PlusPlus'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     container:
@@ -25,6 +37,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0 # The tags, for the version
 
       - name: Install GLFW, Vulkan and slangc
         run: |
@@ -33,32 +46,24 @@ jobs:
           curl -fsSL -o slang.tar.gz https://github.com/shader-slang/slang/releases/download/v2026.18.2/slang-2026.18.2-linux-x86_64.tar.gz
           mkdir -p /opt/slang && tar -xzf slang.tar.gz -C /opt/slang
           echo "/opt/slang/bin" >> "$GITHUB_PATH"
-
-      - name: Build
-        run: |
-          g++ -std=c++26 -o nob nob.cpp
-          ./nob build --release
-          ./nob app --release
+          # The checkout belongs to another user than the container's root; git describe refuses it otherwise.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Package
         run: |
-          name=rct3pp-${GITHUB_REF_NAME}-linux-x86_64
-          mkdir -p "$name/icons" dist
-          cp build/release/rct3pp README.md LICENSE "$name/"
-          cp assets/icon/* "$name/icons/"
-          tar -czf "dist/$name.tar.gz" "$name"
-          tools=rct3pp-tools-${GITHUB_REF_NAME}-linux-x86_64
-          mkdir -p "$tools"
-          for t in tools/*/; do cp "build/release/$(basename "$t")" "$tools/"; done
-          cp LICENSE "$tools/"
-          tar -czf "dist/$tools.tar.gz" "$tools"
+          g++ -std=c++26 -o nob nob.cpp
+          ./nob package
+          ldd build/release/rct3pp
+          echo "newest glibc symbol: $(objdump -T build/release/rct3pp | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -n 1)"
 
       - uses: actions/upload-artifact@v4
         with:
           name: linux
-          path: dist/*
+          path: build/dist/*
 
   windows:
+    if: github.repository == 'tomast1337/RCT3PlusPlus'
+    continue-on-error: true
     runs-on: windows-latest
     timeout-minutes: 60
     defaults:
@@ -68,11 +73,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
           install: >-
+            git
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-glfw
             mingw-w64-ucrt-x86_64-vulkan-devel
@@ -85,37 +92,67 @@ jobs:
           mkdir -p /opt/slang && unzip -q slang.zip -d /opt/slang
           echo "$(cygpath -w /opt/slang/bin)" >> "$GITHUB_PATH"
 
-      - name: Build
-        run: |
-          g++ -std=c++26 -o nob nob.cpp
-          ./nob app --release
-
       - name: Package
         run: |
-          name=rct3pp-${GITHUB_REF_NAME}-windows-x86_64
-          mkdir -p "$name" dist
-          cp build/release/rct3pp.exe README.md LICENSE "$name/"
-          zip -qr "dist/$name.zip" "$name"
+          g++ -std=c++26 -o nob nob.cpp
+          ./nob package
+          ldd build/release/rct3pp.exe
 
       - uses: actions/upload-artifact@v4
         with:
           name: windows
-          path: dist/*
+          path: build/dist/*
 
-  # Publishes whatever built, so a failing platform does not hold back the others.
+  # Publishes whatever built, as long as Linux did, so a missing Windows build does not hold the release back.
   publish:
     needs: [linux, windows]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && needs.linux.result == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/release_notes.md
+          sparse-checkout-cone-mode: false
+
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
 
-      - name: Create the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+      - name: Write the notes
+        run: |
+          cp .github/release_notes.md notes.md
+          if compgen -G "dist/*windows*" > /dev/null; then
+            printf '\n**Windows:** 64-bit; unpack the .zip and run rct3pp.exe.\n' >> notes.md
+          else
+            printf '\n**Windows:** not available yet. Windows support is on its way; until then this release is for Linux only.\n' >> notes.md
+          fi
+
+      - name: Publish the tag's release
+        if: github.ref_type == 'tag'
+        run: gh release create "$GITHUB_REF_NAME" dist/* --title "rct3++ $GITHUB_REF_NAME" --notes-file notes.md --generate-notes
+
+      # One pre-release, kept: its tag moves to the commit, the new packages go up, then the old ones (named after
+      # an older version) are removed.
+      - name: Publish the nightly
+        if: github.ref == 'refs/heads/main'
+        run: |
+          title="Nightly $(date -u +%Y-%m-%d) (${GITHUB_SHA::8})"
+          printf '\nBuilt from %s on main. It is replaced on every change to main; for something steadier, take the latest release.\n' "$GITHUB_SHA" >> notes.md
+          if gh release view nightly > /dev/null 2>&1; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/nightly" -f sha="$GITHUB_SHA" -F force=true > /dev/null
+            gh release edit nightly --title "$title" --notes-file notes.md --prerelease
+            gh release upload nightly dist/* --clobber
+            for asset in $(gh release view nightly --json assets --jq '.assets[].name'); do
+              [ -e "dist/$asset" ] || gh release delete-asset nightly "$asset" --yes
+            done
+          else
+            gh release create nightly dist/* --target "$GITHUB_SHA" --prerelease --title "$title" --notes-file notes.md
+          fi

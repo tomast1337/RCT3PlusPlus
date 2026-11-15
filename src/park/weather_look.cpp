@@ -11,15 +11,15 @@ namespace rct3::park
     namespace
     {
         // Chosen by eye.
-        constexpr float kEase = 0.15f;                          ///< Of the whole way, rain and gloom move a second: a change takes several seconds
-        constexpr float kFlashFade = 6;                         ///< Of a flash's brightness lost a second
+        constexpr units::PerSecond kEase { 0.15f };             ///< Of the whole way, rain and gloom move a second: a change takes several seconds
+        constexpr units::PerSecond kFlashFade { 6 };            ///< Of a flash's brightness lost a second
         constexpr float kFewestStrokeSeconds = 5;               ///< Between strokes, at least
         constexpr float kMostStrokeSeconds = 16;                ///< And at most
         constexpr float kFlickerBrightness = 0.6f;              ///< Of a stroke's second, fainter flash
-        constexpr float kFlickerSoonest = 0.08f;                ///< Seconds after a stroke its second flash comes, at least
-        constexpr float kFlickerLatest = 0.2f;                  ///< And at most
-        constexpr float kThunderSoonest = 0.4f;                 ///< Seconds after a stroke its thunder is heard, at least
-        constexpr float kThunderLatest = 3.0f;                  ///< And at most
+        constexpr units::Seconds kFlickerSoonest { 0.08f };     ///< After a stroke its second flash comes, at least
+        constexpr units::Seconds kFlickerLatest { 0.2f };       ///< And at most
+        constexpr units::Seconds kThunderSoonest { 0.4f };      ///< After a stroke its thunder is heard, at least
+        constexpr units::Seconds kThunderLatest { 3.0f };       ///< And at most
         constexpr float kDarkEnough = 0.9f;                     ///< Of the storm's gloom the sky reaches before strokes come
         constexpr float kGreyed = 0.6f;                         ///< Of the colour turned grey at full gloom
         constexpr float kDimmed = 0.7f;                         ///< Of the light taken at full gloom, for full strength
@@ -63,9 +63,9 @@ namespace rct3::park
         if (!(seconds > 0))
             return false;
         const WeatherAim aim = weather_aim(type);
-        look.rain = toward(look.rain, aim.rain, kEase * seconds);
-        look.gloom = toward(look.gloom, aim.gloom, kEase * seconds);
-        look.flash = std::max(look.flash - kFlashFade * seconds, 0.0f);
+        look.rain = toward(look.rain, aim.rain, kEase.value * seconds);
+        look.gloom = toward(look.gloom, aim.gloom, kEase.value * seconds);
+        look.flash = std::max(look.flash - kFlashFade.value * seconds, 0.0f);
 
         if (look.flicker && (look.flicker->value -= seconds) < 0)
         {
@@ -76,8 +76,8 @@ namespace rct3::park
         if (aim.lightning && look.gloom >= aim.gloom * kDarkEnough && (look.to_flash.value -= seconds) <= 0)
         {
             look.flash = 1;
-            look.flicker = units::Seconds { between(dice, kFlickerSoonest, kFlickerLatest) };
-            look.to_thunder = units::Seconds { between(dice, kThunderSoonest, kThunderLatest) }; // Farther strokes are heard later
+            look.flicker = units::Seconds { between(dice, kFlickerSoonest.value, kFlickerLatest.value) };
+            look.to_thunder = units::Seconds { between(dice, kThunderSoonest.value, kThunderLatest.value) }; // Farther strokes are heard later
             look.to_flash = { between(dice, kFewestStrokeSeconds, kMostStrokeSeconds) };
         }
         else if (!aim.lightning)

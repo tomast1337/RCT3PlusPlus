@@ -35,7 +35,7 @@ namespace rct3::park::ground
 
     float drag_amount(float pixels)
     {
-        return std::copysign(std::max(std::abs(pixels) - kDragDeadZone, 0.0f) * kDragRate, pixels);
+        return std::copysign(std::max(std::abs(pixels) - kDragDeadZone.value, 0.0f) * kDragRate, pixels);
     }
 
     float shape_share(GroundShape shape, float across, float along)

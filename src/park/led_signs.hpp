@@ -18,6 +18,7 @@
 #include "ovl/texture/image.hpp"
 #include "park/turns.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -62,12 +63,12 @@ namespace rct3::park
     /// The board's look.
     inline constexpr std::uint32_t kSignTextHeight = 40; ///< Pixels, room for the large interface font
     inline constexpr std::uint32_t kSignLamp = 3;        ///< Pixels a lamp takes each way
-    inline constexpr float kSignScroll = 24;             ///< Pixels a second
-    inline constexpr std::uint8_t kSignDark = 6;         ///< Of the board between the lamps, grey
-    inline constexpr std::uint8_t kSignLit = 96;         ///< Cover of a lamp's middle that lights it
-    inline constexpr float kSignLampOff = 0.1f;          ///< An unlit lamp's share of the colour
-    inline constexpr float kSignGlow = 0.25f;            ///< A lit lamp's glow round its dot, share of the colour
-    inline constexpr std::uint32_t kSignGap = 2;         ///< After the words, in heights
+    inline constexpr units::PixelPace kSignScroll { 24 };
+    inline constexpr std::uint8_t kSignDark = 6; ///< Of the board between the lamps, grey
+    inline constexpr std::uint8_t kSignLit = 96; ///< Cover of a lamp's middle that lights it
+    inline constexpr float kSignLampOff = 0.1f;  ///< An unlit lamp's share of the colour
+    inline constexpr float kSignGlow = 0.25f;    ///< A lit lamp's glow round its dot, share of the colour
+    inline constexpr std::uint32_t kSignGap = 2; ///< After the words, in heights
     inline constexpr LampColour kSignWhite { 255, 255, 255 };
 
 } // namespace rct3::park

@@ -59,7 +59,7 @@ namespace rct3::park
         constexpr std::array kContourSteps { 1.0f, 2.0f, 4.0f, 5.0f, 10.0f, 20.0f };
         constexpr float kMostContours = 24;
         constexpr int kMajorEvery = 5;
-        constexpr float kContourWidth = 1.0f; ///< Pixels
+        constexpr units::Pixels kContourWidth { 1.0f };
         constexpr MapRgba kMajorContour { 0x3b, 0x2e, 0x1e, 200 };
 
         // Water: lighter where shallow. Its edge fades over this much height so shores are smooth.
@@ -77,7 +77,7 @@ namespace rct3::park
 
         // Paths: a light line with a dark casing from each tile's middle to its neighbours'.
         constexpr float kPathRadius = 0.3f; ///< Of a tile
-        constexpr float kPathCasing = 0.9f; ///< Pixels
+        constexpr units::Pixels kPathCasing { 0.9f };
         constexpr MapRgba kPathCase { 0x4d, 0x47, 0x3d, 200 };
         constexpr MapRgba kQueue { 0xa8, 0xd0, 0xff, 255 }; ///< Apart from the guests' yellow
 
@@ -94,7 +94,7 @@ namespace rct3::park
         // People: dots with a dark rim, at least this big whatever the scale.
         constexpr float kPersonRadius = 0.28f; ///< Of a tile
         constexpr float kSmallestPerson = 1.3f;
-        constexpr float kPersonRim = 0.8f; ///< Pixels
+        constexpr units::Pixels kPersonRim { 0.8f };
         constexpr MapRgba kGuestRim { 0x5a, 0x40, 0x00, 230 };
         constexpr MapRgba kStaffRim { 0x15, 0x4f, 0xa8, 255 };
 
@@ -364,7 +364,7 @@ namespace rct3::park
                 for (const MapPathTile& t : paths)
                 {
                     const MapRgba colour = pass == 0 ? kPathCase : (t.queue ? kQueue : map_layer_colour(MapLayer::Paths));
-                    const float r = pass == 0 ? radius + kPathCasing : radius;
+                    const float r = pass == 0 ? radius + kPathCasing.value : radius;
                     const glm::vec2 middle = tile_middle(grid, scale, t.col, t.row);
                     fill_capsule(p, middle, middle, r, colour);
                     // Each join once, from the tile to its north and east neighbours.
@@ -595,7 +595,7 @@ namespace rct3::park
                     const float lines = (here - lowest) / step;
                     const float nearest = std::round(lines);
                     const float away = std::abs(lines - nearest) / per_pixel;
-                    const float coverage = std::clamp(kContourWidth / 2 + 0.5f - away, 0.0f, 1.0f);
+                    const float coverage = std::clamp(kContourWidth.value / 2 + 0.5f - away, 0.0f, 1.0f);
                     if (coverage > 0)
                         blend(g.contours, x, y, static_cast<int>(nearest) % kMajorEvery == 0 ? kMajorContour : minor, coverage);
                 }
@@ -686,7 +686,7 @@ namespace rct3::park
                 if (person.staff != staff)
                     continue;
                 const glm::vec2 at = to_pixels(grid, scale, person.at);
-                fill_capsule(p, at, at, radius + kPersonRim, staff ? kStaffRim : kGuestRim);
+                fill_capsule(p, at, at, radius + kPersonRim.value, staff ? kStaffRim : kGuestRim);
                 fill_capsule(p, at, at, radius, map_layer_colour(staff ? MapLayer::Staff : MapLayer::Guests));
             }
         }

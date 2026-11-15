@@ -10,13 +10,13 @@ namespace rct3::park
     namespace
     {
         // Chosen by eye.
-        constexpr units::Pace kSplashFall { 4.0f };    ///< The car must be falling this fast, to splash where it stops
-        constexpr float kSplashPull = 25.0f;           ///< And how sharply its fall must stop, world units a second squared
-        constexpr units::Pace kSplashRun { 3.0f };     ///< It must run this fast, to splash or leave a wake
-        constexpr units::Seconds kSplashRest { 1.5f }; ///< Between splashes
-        constexpr units::Seconds kWakeEvery { 0.6f };  ///< Between wakes
-        constexpr units::Pace kMedium { 7.0f };        ///< A medium splash takes this speed
-        constexpr units::Pace kHigh { 12.0f };         ///< And a high one
+        constexpr units::Pace kSplashFall { 4.0f };          ///< The car must be falling this fast, to splash where it stops
+        constexpr units::Acceleration kSplashPull { 25.0f }; ///< And how sharply its fall must stop
+        constexpr units::Pace kSplashRun { 3.0f };           ///< It must run this fast, to splash or leave a wake
+        constexpr units::Seconds kSplashRest { 1.5f };       ///< Between splashes
+        constexpr units::Seconds kWakeEvery { 0.6f };        ///< Between wakes
+        constexpr units::Pace kMedium { 7.0f };              ///< A medium splash takes this speed
+        constexpr units::Pace kHigh { 12.0f };               ///< And a high one
     } // namespace
 
     CarSplash car_splash(CarWater& water, const track::TrackCourse& course, float distance, bool in_water, glm::vec3 velocity, float seconds)
@@ -33,7 +33,7 @@ namespace rct3::park
         const float speed = glm::length(velocity);
         // Into the water from dry track, or stopped short by it at the foot of a drop; a car held at the top of a
         // spike stops short too, but stands still.
-        const bool stopped = water.rise && water.rise->value < -kSplashFall.value && (velocity.y - water.rise->value) / seconds > kSplashPull;
+        const bool stopped = water.rise && water.rise->value < -kSplashFall.value && (velocity.y - water.rise->value) / seconds > kSplashPull.value;
         CarSplash out;
         water.rest.value = std::max(0.0f, water.rest.value - seconds);
         water.wake.value = std::max(0.0f, water.wake.value - seconds);

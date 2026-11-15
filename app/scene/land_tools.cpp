@@ -482,7 +482,7 @@ namespace rct3::scene
             if (!l.spray)
             {
                 // Dragged: the ground the stroke found, worked further the further the pointer is from its press.
-                const float share = std::max(std::abs(at.y - l.press_y) - rct3::park::ground::kDragDeadZone, 0.0f) * rct3::park::ground::kSmoothDragRate;
+                const float share = std::max(std::abs(at.y - l.press_y) - rct3::park::ground::kDragDeadZone.value, 0.0f) * rct3::park::ground::kSmoothDragRate;
                 if (share == l.amount || !l.start)
                     return;
                 auto trial = try_shape(scene, l.start->grid, [&](save::model::TerrainGrid& g) { return rct3::park::ground::smooth_ground(g, tool.tool, l.middle, reach, share, std::numeric_limits<float>::infinity(), l.target, 1, free); });

@@ -135,7 +135,7 @@ namespace rct3::scene::park
             const float faded = rct3::park::sky::sky_column(day.faded);
             const float night = glm::mix(rct3::park::sky::sky_darkness(day.shown), rct3::park::sky::sky_darkness(day.faded), day.fade);
             scene.darkness = night;
-            scene.sky_mesh = rct3::park::sky::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = scene.park_clock, .tint = rct3::park::weathered(glm::vec3(1.0f), scene.weather_look, 0.6f), .overcast = scene.weather_look.gloom });
+            scene.sky_mesh = rct3::park::sky::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = { scene.park_clock }, .tint = rct3::park::weathered(glm::vec3(1.0f), scene.weather_look, 0.6f), .overcast = scene.weather_look.gloom });
             if (!scene.horizon_band.empty())
             {
                 const glm::vec4 c = glm::mix(rct3::park::sky::band_colour(scene.horizon_band, column), rct3::park::sky::band_colour(scene.horizon_band, faded), day.fade);

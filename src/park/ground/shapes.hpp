@@ -16,6 +16,7 @@
 #pragma once
 
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -37,8 +38,8 @@ namespace rct3::park::ground
         Crater,
     };
 
-    inline constexpr float kDragDeadZone = 25; ///< Pixels the pointer moves from where it pressed before the ground starts to move
-    inline constexpr float kDragRate = 0.25f;  ///< Height units the middle of a brush moves for each pixel past that
+    inline constexpr units::Pixels kDragDeadZone { 25 }; ///< The pointer moves from where it pressed before the ground starts to move
+    inline constexpr float kDragRate = 0.25f;            ///< Height units the middle of a brush moves for each pixel past that
 
     inline constexpr float kSprayRate = 0.2f; ///< Height units a second the middle of a sprayed brush moves, for each step of the spray speed
     inline constexpr int kFastestSpray = 9;   ///< The spray speed runs from 1 to this

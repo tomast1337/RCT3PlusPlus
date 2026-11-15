@@ -76,8 +76,8 @@ namespace rct3::park::sky
         constexpr float kRainCloudShade = 0.45f;
         const float shade = (1 - kNightClouds * night) * (1 - kRainCloudShade * overcast);
         const glm::vec4 cloud { view.tint * shade, glm::mix(kCloudCover, 1.0f, overcast) };
-        const float low = wrapped(view.time * kCloudDrift);
-        const float high = wrapped(view.time * kHighCloudDrift);
+        const float low = wrapped(view.time.value * kCloudDrift);
+        const float high = wrapped(view.time.value * kHighCloudDrift);
         add(mesh, sky.clouds, object::PartBlend::Blended, view.eye, scale, cloud, [&](glm::vec2 uv) { return uv + glm::vec2(low, 0.0f); });
         add(mesh, sky.clouds, object::PartBlend::Blended, view.eye, scale, cloud, [&](glm::vec2 uv) { return uv * 2.0f + glm::vec2(high, high * 0.5f); });
         mesh.drawn = mesh.batches.size();

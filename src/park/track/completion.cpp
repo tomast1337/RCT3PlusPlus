@@ -41,7 +41,7 @@ namespace rct3::park::track
         CompletionSearch s { .pieces = pieces, .goal = goal, .first = first, .grid = &grid, .allowed = std::move(allowed) };
         if (first.index >= pieces.size() || last.index >= pieces.size() || grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
             return s;
-        s.steps.push_back({ tip, { last, { } }, 0, 0 });
+        s.steps.push_back({ tip, { last, { } }, 0, { } });
         s.open.push_back({ to_go(s, tip.position), 0 });
         s.reached_ends.insert(key_of(tip, last));
         return s;
@@ -71,8 +71,8 @@ namespace rct3::park::track
                 auto placed = place_after(search.steps[at].tip, shape, next.reversed, *search.grid);
                 if (!placed || !search.allowed(placed->object) || !search.reached_ends.insert(key_of(placed->next, next)).second)
                     continue;
-                const float come = search.steps[at].come + std::max(glm::length(shape.line.end - shape.line.start) / search.grid->tile_size_x, 1.0f);
-                search.steps.push_back({ placed->next, { next, std::move(placed->object) }, at, come });
+                const float come = search.steps[at].come.value + std::max(glm::length(shape.line.end - shape.line.start) / search.grid->tile_size_x, 1.0f);
+                search.steps.push_back({ placed->next, { next, std::move(placed->object) }, at, units::Tiles { come } });
                 if (meets_goal(search.steps.back().tip, next))
                     return way_to(search, search.steps.size() - 1);
                 search.open.push_back({ come + to_go(search, search.steps.back().tip.position), search.steps.size() - 1 });

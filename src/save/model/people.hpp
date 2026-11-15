@@ -169,7 +169,6 @@ namespace rct3::save::model
     [[nodiscard]] const char* to_string(StaffKind v) noexcept;
     [[nodiscard]] const char* to_string(AnimalKind v) noexcept;
 
-    /// True for the guest person types.
     [[nodiscard]] constexpr bool is_guest_type(PersonType t) noexcept
     {
         return static_cast<std::uint8_t>(t) <= 2;
@@ -179,7 +178,7 @@ namespace rct3::save::model
 
     struct Thought
     {
-        PeopleRef about { };                  ///< Object the thought is about
+        PeopleRef about { };
         PeopleRef other { };                  ///< A second person involved (a guest, for staff thoughts)
         std::int32_t id = 0;                  ///< Thought identifier, 0 = empty slot. Label list not modelled.
         core::NoneAsMinusOne<float> time { }; ///< Game clock when it was had; none for an empty slot
@@ -209,9 +208,9 @@ namespace rct3::save::model
         core::NoneAsMinusOne<std::int32_t> walk { };
         core::NoneAsMinusOne<std::int32_t> idle { };
         core::NoneAsMinusOne<std::int32_t> alternate_walk { };
-        float time = 0;       ///< Playback position
-        float speed = 0;      ///< Playback rate
-        float move_speed = 0; ///< Walking speed
+        float playback_time = 0;
+        float playback_rate = 0;
+        float walk_speed = 0;
     };
 
     struct LookAt
@@ -318,7 +317,7 @@ namespace rct3::save::model
         NauseaTolerance nausea_tolerance = NauseaTolerance::Medium;
         PeopleRef favourite_ride { };
         float favourite_ride_rating = 0; ///< Unit not confirmed
-        PeopleRef group { };             ///< The group the guest belongs to
+        PeopleRef group { };
         GuestCounters counters { };
         std::int32_t scenery_assess_timer = 0;
         float consuming_amount = 0; ///< 0..1 progress of the item being eaten or drunk

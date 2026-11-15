@@ -51,7 +51,6 @@ namespace rct3::audio
         Float32, ///< 32-bit floats in [-1, 1]
     };
 
-    /// Bytes of one sample in `format`.
     [[nodiscard]] constexpr std::size_t bytes_per_sample(SampleFormat format) noexcept
     {
         return format == SampleFormat::Pcm16 ? 2 : 4;
@@ -221,7 +220,6 @@ namespace rct3::audio
 
         /// True while the voice has frames left to play.
         [[nodiscard]] bool is_playing(VoiceHandle voice) const;
-        /// Voices that are still playing.
         [[nodiscard]] std::uint32_t active_voices() const;
         [[nodiscard]] std::uint32_t max_voices() const noexcept;
 

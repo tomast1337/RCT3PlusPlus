@@ -161,7 +161,7 @@ namespace rct3::audio::wma
             });
         if (!s->decoder)
             return fail(std::format("the decoder cannot take this stream ({} Hz, {} channels, {} bytes a second)", f.sample_rate, f.channels, f.bytes_per_second));
-        s->blocks = AsfAudioBlocks(s->header.stream, f.block_align);
+        s->blocks = AsfAudioBlocks(s->header.audio_stream, f.block_align);
         if (auto ok = s->start(); !ok)
             return fail(ok.error());
         return WmaStream(std::move(s));

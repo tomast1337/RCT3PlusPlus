@@ -610,7 +610,7 @@ namespace rct3::scene
             if (!g.contains(col, row))
                 return nullptr;
             const save::model::TerrainCell& c = g.at(col, row);
-            Json tile { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff }, { "owned", rct3::park::owned_outright(c) }, { "ownership", save::model::to_string(c.ownership()) }, { "enclosure", park_->enclosures.at(col, row).value_or(-1) } };
+            Json tile { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff_style }, { "owned", rct3::park::owned_outright(c) }, { "ownership", save::model::to_string(c.ownership()) }, { "enclosure", park_->enclosures.at(col, row).value_or(-1) } };
             for (const save::model::WaterBody& b : park_->footpaths.water.bodies)
                 if (rct3::park::water::holds(b, { col, row }))
                     tile["water"] = b.level;

@@ -276,7 +276,7 @@ namespace
                 hi = std::max(hi, c.max_height());
                 ++own[static_cast<std::size_t>(c.ownership())];
                 surfaces.insert(c.surface);
-                cliffs.insert(c.cliff);
+                cliffs.insert(c.cliff_style);
                 if (c.min_height() == c.max_height())
                     ++flat;
                 ++flag_values[c.flags];
@@ -479,7 +479,7 @@ int main(int argc, char** argv)
                 lanes = std::max(lanes, shot.lane + 1);
                 tubes = std::max(tubes, shot.tube + 1);
             }
-            out.info("{}: \"{}\" to {}, months {:04x}, at {:02d}:{:02d}, {:d} launchers, {:d} shots over {:.1f} s, {:d} lanes, {:d} tubes", argv[i], display->name.c_str(), display->music.c_str(), display->months, display->start_minutes / 60, display->start_minutes % 60, display->launchers.size(), display->shots.size(), display->shots.empty() ? 0.0 : static_cast<double>(display->shots.back().seconds), lanes, tubes);
+            out.info("{}: \"{}\" to {}, months {:04x}, at {:02d}:{:02d}, {:d} launchers, {:d} shots over {:.1f} s, {:d} lanes, {:d} tubes", argv[i], display->name.c_str(), display->music_file.c_str(), display->months, display->start_minutes / 60, display->start_minutes % 60, display->launchers.size(), display->shots.size(), display->shots.empty() ? 0.0 : static_cast<double>(display->shots.back().seconds), lanes, tubes);
             for (const auto& l : display->launchers)
                 out.info("  launcher {} at {:d},{:d} corner {:d} turned {:d}", l.item.c_str(), l.col, l.row, l.corner, l.direction);
             for (const auto& [name, count] : effects)

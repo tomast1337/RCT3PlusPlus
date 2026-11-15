@@ -216,9 +216,9 @@ namespace rct3::park
                 const std::array<glm::vec3, 4> n { ground_normal(grid, { col, row }, 0), ground_normal(grid, { col, row }, 1), ground_normal(grid, { col, row }, 2), ground_normal(grid, { col, row }, 3) };
                 ground_layers(b, grid, col, row, c, n);
                 if (grid.contains(col + 1, row))
-                    open_wall(b, c[1], c[3], corner(grid, col + 1, row, 0), corner(grid, col + 1, row, 2), cell.cliff, grid.at(col + 1, row).cliff, false, open_between(col, row, col + 1, row));
+                    open_wall(b, c[1], c[3], corner(grid, col + 1, row, 0), corner(grid, col + 1, row, 2), cell.cliff_style, grid.at(col + 1, row).cliff_style, false, open_between(col, row, col + 1, row));
                 if (grid.contains(col, row + 1))
-                    open_wall(b, c[2], c[3], corner(grid, col, row + 1, 0), corner(grid, col, row + 1, 1), cell.cliff, grid.at(col, row + 1).cliff, true, open_between(col, row, col, row + 1));
+                    open_wall(b, c[2], c[3], corner(grid, col, row + 1, 0), corner(grid, col, row + 1, 1), cell.cliff_style, grid.at(col, row + 1).cliff_style, true, open_between(col, row, col, row + 1));
             }
         }
 

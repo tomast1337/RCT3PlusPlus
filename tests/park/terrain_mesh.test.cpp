@@ -85,7 +85,7 @@ TEST_CASE("a tile raised above its neighbours gets walls painted with its cliff 
     save::model::TerrainGrid g = flat(3, 3);
     save::model::TerrainCell& middle = g.cells[4];
     middle.corners = { 2, 2, 2, 2 };
-    middle.cliff = 3;
+    middle.cliff_style = 3;
     const TerrainMesh m = terrain_mesh(g, { });
     // Four sides, two triangles each.
     CHECK(count(m, GroundPaint::Cliff, 3) == 4 * 6);
@@ -111,7 +111,7 @@ TEST_CASE("an area builds only its own tiles, and areas side by side add up to t
 {
     save::model::TerrainGrid g = flat(4, 3);
     g.cells[5].corners = { 2, 2, 2, 2 };
-    g.cells[5].cliff = 3;
+    g.cells[5].cliff_style = 3;
     g.cells[6].surface = 7;
     save::model::WaterLayer water;
     water.bodies.push_back({ 0.5f, { { 0, 0, 0, 7 }, { 3, 2, 1, 7 } } });

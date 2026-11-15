@@ -52,8 +52,8 @@ namespace rct3::particles
 
     private:
         std::map<std::string, Sprite, strings::LessIgnoringCase> sprites_;
-        std::map<std::string, ovl::texture::RgbaImage> atlases_;                        ///< By the name sprites give
-        std::map<std::string, std::filesystem::path, strings::LessIgnoringCase> files_; ///< Effect files by name
+        std::map<std::string, ovl::texture::RgbaImage> atlases_; ///< By the name sprites give
+        std::map<std::string, std::filesystem::path, strings::LessIgnoringCase> effect_files_;
         std::map<std::string, std::optional<Effect>, strings::LessIgnoringCase> effects_;
     };
 

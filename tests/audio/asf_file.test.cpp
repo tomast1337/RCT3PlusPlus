@@ -39,7 +39,7 @@ TEST_CASE("the header gives the audio stream's format and the packets' size")
     CHECK(h->audio.bytes_per_second == 4000);
     CHECK(h->audio.block_align > 0);
     CHECK(h->audio.extra.size() == 10);
-    CHECK(h->stream == 1);
+    CHECK(h->audio_stream == 1);
     CHECK(h->packet_size == 512);
     CHECK(h->packet_count == (sine_file().size() - h->first_packet) / 512);
     CHECK(h->seconds == doctest::Approx(0.278).epsilon(0.01));
@@ -126,7 +126,7 @@ TEST_CASE("a video stream gives its picture's size and codec, and its frames who
     CHECK(h->video->height == 16);
     CHECK(h->video->codec == 0x32564D57); // "WMV2"
     CHECK(h->audio.codec == 0x161);       // The sound beside it is still read
-    CHECK(h->video_stream != h->stream);
+    CHECK(h->video_stream != h->audio_stream);
 
     AsfObjects frames(h->video_stream);
     for (std::size_t at = h->first_packet; at + h->packet_size <= file.size(); at += h->packet_size)

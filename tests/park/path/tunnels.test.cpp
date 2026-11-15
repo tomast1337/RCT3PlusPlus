@@ -25,7 +25,7 @@ namespace
     {
         save::model::TerrainCell& c = g.cells[static_cast<std::size_t>(row * g.width + col)];
         c.corners = { height, height, height, height };
-        c.cliff = cliff;
+        c.cliff_style = cliff;
     }
 
     save::model::PathTile tunnel(int col, int row, std::int32_t height)

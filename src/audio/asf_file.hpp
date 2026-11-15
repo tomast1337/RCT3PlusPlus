@@ -52,15 +52,15 @@ namespace rct3::audio
 
     struct AsfHeader
     {
-        AsfAudioFormat audio;                ///< The first audio stream
-        std::uint8_t stream = 0;             ///< Its number
+        AsfAudioFormat audio; ///< The first audio stream
+        std::uint8_t audio_stream = 0;
         std::optional<AsfVideoFormat> video; ///< The first video stream, if any
-        std::uint8_t video_stream = 0;       ///< Its number
-        std::uint32_t preroll = 0;           ///< Milliseconds that object times run ahead of the playing time
-        std::uint32_t packet_size = 0;       ///< Bytes in each data packet
-        std::uint64_t packet_count = 0;      ///< 0 when the file did not say
-        std::uint64_t first_packet = 0;      ///< Where the first data packet starts in the file
-        double seconds = 0;                  ///< How long the file plays
+        std::uint8_t video_stream = 0;
+        std::uint32_t preroll = 0;      ///< Milliseconds that object times run ahead of the playing time
+        std::uint32_t packet_size = 0;  ///< Bytes in each data packet
+        std::uint64_t packet_count = 0; ///< 0 when the file did not say
+        std::uint64_t first_packet = 0; ///< Where the first data packet starts in the file
+        double seconds = 0;             ///< How long the file plays
     };
 
     /// Reads the header from the start of a file; `head` must hold the whole header object and the data
@@ -79,7 +79,7 @@ namespace rct3::audio
         std::uint32_t object_size = 0; ///< Bytes in the whole object
         std::span<const std::byte> data;
         std::uint32_t time = 0; ///< When the object plays, in milliseconds with the preroll
-        bool key = false;       ///< The object is a key frame
+        bool key_frame = false;
     };
 
     /// The payloads of one data packet, in order. They point into `packet`.

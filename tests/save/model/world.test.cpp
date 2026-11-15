@@ -376,7 +376,7 @@ TEST_CASE("terrain: 24-byte cells decode in row-major order")
     CHECK(c.corners[2] == 22.0f);
     CHECK(c.corners[3] == 23.0f);
     CHECK(c.surface == 2);
-    CHECK(c.cliff == 1);
+    CHECK(c.cliff_style == 1);
     CHECK(c.min_height() == 12.0f);
     CHECK(c.max_height() == 23.0f);
     CHECK(g->at(0, 0).surface == 0);

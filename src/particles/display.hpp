@@ -39,7 +39,7 @@ namespace rct3::particles
     struct Display
     {
         std::string name { };
-        std::string music { };          ///< A music file's name
+        std::string music_file { };
         std::uint32_t months = 0;       ///< One bit a month the display runs in, the first month lowest
         std::int32_t start_minutes = 0; ///< Time of day it starts, minutes after midnight
         std::vector<Launcher> launchers { };

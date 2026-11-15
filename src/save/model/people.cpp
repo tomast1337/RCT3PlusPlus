@@ -500,9 +500,9 @@ namespace rct3::save::model
                     .walk = core::from_stored(i32(get(at::current_walk_anim), -1)),
                     .idle = core::from_stored(i32(get(at::idle_anim), -1)),
                     .alternate_walk = core::from_stored(i32(get(at::alternate_walk_anim), -1)),
-                    .time = f32(get(at::anim_time)),
-                    .speed = f32(get(at::anim_speed)),
-                    .move_speed = f32(get(at::move_speed)),
+                    .playback_time = f32(get(at::anim_time)),
+                    .playback_rate = f32(get(at::anim_speed)),
+                    .walk_speed = f32(get(at::move_speed)),
                 },
                 .appearance = {
                     .head = ref(get(at::head_group), index),

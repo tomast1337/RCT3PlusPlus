@@ -364,7 +364,7 @@ TEST_CASE("parts painted like the ground take the pictures of the tile they stan
     save::model::TerrainGrid grid = flat();
     grid.at(0, 0).surface = 3;
     grid.at(1, 0).surface = 5;
-    grid.at(1, 0).cliff = 2;
+    grid.at(1, 0).cliff_style = 2;
     const std::vector<save::model::PlacedObject> objects { placed_object("Block", 0), placed_object("Block", 1) };
     const ObjectMesh m = object_mesh(objects, models, grid);
 

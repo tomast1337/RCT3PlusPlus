@@ -83,7 +83,7 @@ namespace rct3::particles
 
         Display display {
             .name = text(fields, "Name"),
-            .music = text(fields, "MusicSelection"),
+            .music_file = text(fields, "MusicSelection"),
             .months = static_cast<std::uint32_t>(whole(fields, "MonthMask")),
             .start_minutes = static_cast<std::int32_t>(whole(fields, "StartTimeMinutes")),
         };

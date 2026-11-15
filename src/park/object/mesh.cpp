@@ -53,7 +53,7 @@ namespace rct3::park::object
             if (!grid.contains(col, row))
                 return ground::ground_key(paint, 0);
             const save::model::TerrainCell& cell = grid.at(col, row);
-            return ground::ground_key(paint, paint == GroundPaint::Cliff ? cell.cliff : cell.surface);
+            return ground::ground_key(paint, paint == GroundPaint::Cliff ? cell.cliff_style : cell.surface);
         }
 
         /// Where a point of a ground-painted face falls on its picture, as the terrain mesh lays it.

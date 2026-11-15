@@ -42,7 +42,7 @@ namespace rct3::career
         std::string last_save { }; ///< The game last saved in this scenario, in the career's folder; empty for none
         /// When each level was first reached: apprentice, entrepreneur, tycoon; seconds since 1970, 0 not yet.
         std::array<std::int64_t, 3> reached { };
-        std::uint64_t play_seconds = 0; ///< Time played in this scenario
+        std::uint64_t play_seconds = 0;
     };
 
     struct Career
@@ -74,7 +74,6 @@ namespace rct3::career
     /// and those the rule opens are opened.
     void fit(Career& career, std::span<const std::string> ids);
 
-    /// Opens the scenarios the career has earned.
     void open_earned(Career& career);
 
     /// Records scenario `index` done at `status`, if that is better than before, at `now` (seconds since

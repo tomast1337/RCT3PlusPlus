@@ -54,12 +54,12 @@ namespace rct3::park
         }
 
         /// Every bone's place in model space, given each one's place from its parent.
-        void chain(std::span<const std::int32_t> parents, std::span<glm::mat4> world)
+        void chain(std::span<const std::optional<ovl::BoneIndex>> parents, std::span<glm::mat4> world)
         {
             for (std::size_t b = 0; b < parents.size(); ++b)
             {
-                if (parents[b] >= 0)
-                    world[b] = world[static_cast<std::size_t>(parents[b])] * world[b];
+                if (parents[b])
+                    world[b] = world[parents[b]->value] * world[b];
             }
         }
 

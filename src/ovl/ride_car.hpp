@@ -48,9 +48,9 @@ namespace rct3::ovl
         /// "svd" items of the front and rear axles, which may carry the wheels; empty where it has none.
         std::array<std::string_view, 2> axles;
         /// Of the visual's animations, by number, the ones a rowing boat rows by: straight on with both oars,
-        /// turning to its left and turning to its right (as the car's model has its +X to its right). -1 where
+        /// turning to its left and turning to its right (as the car's model has its +X to its right). None where
         /// it has none, as in every car but rowing boats.
-        std::array<std::int32_t, 3> rowing { -1, -1, -1 };
+        std::array<std::optional<std::int32_t>, 3> rowing { };
         /// Every reference in the record, in file order. Besides the visual it holds further "svd" items for
         /// parts of the car, such as seats and wheels.
         std::vector<ItemReference> references;

@@ -92,7 +92,8 @@ namespace rct3::ovl
                 {
                     s.group = record->text(0x104);
                     s.ground = record->u32(0x128);
-                    s.drop_off = record->real(0x124);
+                    if (const float drop_off = record->real(0x124); drop_off >= 0)
+                        s.drop_off = drop_off;
                     const std::uint32_t count = record->u32(0xF4);
                     if (const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, record->u32(0xF8), std::size_t { count } * 16))
                         for (std::uint32_t i = 0; i < count; ++i)

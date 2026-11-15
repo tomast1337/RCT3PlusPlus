@@ -25,7 +25,7 @@ TEST_CASE("a bone carries the bones hung from it, between its keys")
 {
     // Bone 0 hangs a metre along x from bone 1, the root; the root turns a quarter turn about y in 2 s.
     BoneRig rig;
-    rig.parents = { 1, -1 };
+    rig.parents = { rct3::ovl::BoneIndex { 1 }, std::nullopt };
     rig.rest_local = { glm::translate(glm::mat4(1.0f), { 1, 0, 0 }), glm::mat4(1.0f) };
     rig.rest_world = rig.rest_local;
     BoneMotion turn;

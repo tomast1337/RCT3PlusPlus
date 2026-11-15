@@ -162,7 +162,8 @@ namespace rct3::ovl::animal
                 std::memcpy(&parent, links.data() + std::size_t { i } * 4, sizeof parent);
                 if (parent < -1 || parent >= static_cast<std::int32_t>(i))
                     return std::nullopt;
-                bone.parent = parent;
+                if (parent >= 0)
+                    bone.parent = BoneIndex { static_cast<std::size_t>(parent) };
                 const auto raw = bones.subspan(std::size_t { i } * kBoneSize, kBoneSize);
                 for (std::size_t k = 0; k < 3; ++k)
                     bone.position[k] = f32_at(raw, k * 4);

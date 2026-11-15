@@ -112,8 +112,8 @@ namespace rct3::park::person
                 rows[2] = glm::cross(rows[0], rows[1]);
                 const glm::vec3 at = glm::mix(glm::vec3(a.vector[0], a.vector[1], a.vector[2]), glm::vec3(b.vector[0], b.vector[1], b.vector[2]), blend.along);
                 const glm::mat4 local { glm::vec4(rows[0], 0.0f), glm::vec4(rows[1], 0.0f), glm::vec4(rows[2], 0.0f), glm::vec4(at, 1.0f) };
-                const std::int32_t parent = head.parents[bone];
-                bones[bone] = (parent >= 0 ? bones[static_cast<std::size_t>(parent)] : person.world) * local;
+                const std::optional<ovl::BoneIndex> parent = head.parents[bone];
+                bones[bone] = (parent ? bones[parent->value] : person.world) * local;
             }
             // Turned to look at something: the head bone and all that hangs from it, about the upright through it.
             if (person.head_turn.value != 0 && head.turns < bones.size())
@@ -123,8 +123,8 @@ namespace rct3::park::person
                 std::vector<bool> under(bones.size());
                 for (std::size_t bone = 0; bone < bones.size(); ++bone)
                 {
-                    const std::int32_t parent = head.parents[bone];
-                    under[bone] = bone == head.turns || (parent >= 0 && under[static_cast<std::size_t>(parent)]);
+                    const std::optional<ovl::BoneIndex> parent = head.parents[bone];
+                    under[bone] = bone == head.turns || (parent && under[parent->value]);
                     if (under[bone])
                         bones[bone] = turn * bones[bone];
                 }

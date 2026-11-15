@@ -347,7 +347,7 @@ namespace
                     untextured += m.texture.empty();
                 out.info("  {:<32} meshes {:d} vertices {:d} indices {:d} bones {:d} untextured {:d}", name.c_str(), sh.meshes.size(), sh.vertex_total, sh.index_total, sh.bones.size(), untextured);
                 for (const auto& b : sh.bones)
-                    out.info("    bone {:<24} parent {:d} at {:g} {:g} {:g}", std::string(b.name).c_str(), b.parent, b.world[12], b.world[13], b.world[14]);
+                    out.info("    bone {:<24} parent {} at {:g} {:g} {:g}", std::string(b.name).c_str(), b.parent ? std::format("{}", b.parent->value) : "none", b.world[12], b.world[13], b.world[14]);
             }
         }
         if (opt.flt)
@@ -548,8 +548,8 @@ namespace
                     s.extra_splines[1].empty() ? "-" : std::string(s.extra_splines[1]).c_str(), s.references.size());
                 for (const auto& r : s.references)
                     out.info("    +0x{:02x} {}:{}", r.offset, std::string(r.name).c_str(), std::string(r.tag).c_str());
-                if (s.drop_off >= 0)
-                    out.info("    drop off {:.2f}", s.drop_off);
+                if (s.drop_off)
+                    out.info("    drop off {:.2f}", *s.drop_off);
                 for (const auto& q : s.squares)
                     out.info("    square {:d} {:d} height {:d} flags {:#x}", q.x, q.z, q.height, q.flags);
             }

@@ -7,6 +7,7 @@
 #include "ovl/item_record.hpp"
 #include "ovl/ovl.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string_view>
@@ -38,19 +39,19 @@ namespace rct3::ovl
     namespace detail
     {
 
-        /// Byte offsets of the fields of `AttractionInfo` in one item type and file layout, -1 where it has none.
+        /// Byte offsets of the fields of `AttractionInfo` in one item type and file layout, none where it has none.
         struct AttractionLayout
         {
-            int type_id = -1;
-            int name_text = -1;
-            int description_text = -1;
-            int icon = -1;
-            int style = -1;
-            int spline = -1;
-            int value_a = -1;
-            int value_b = -1;
-            int value_c = -1;
-            int addon = -1; ///< Read from one-stream and many-stream files
+            std::optional<std::size_t> type_id { };
+            std::optional<std::size_t> name_text { };
+            std::optional<std::size_t> description_text { };
+            std::optional<std::size_t> icon { };
+            std::optional<std::size_t> style { };
+            std::optional<std::size_t> spline { };
+            std::optional<std::size_t> value_a { };
+            std::optional<std::size_t> value_b { };
+            std::optional<std::size_t> value_c { };
+            std::optional<std::size_t> addon { }; ///< Read from one-stream and many-stream files
         };
 
         /// Guests a ride makes room for in the park, from the small block of a ride item that holds it: its
@@ -80,8 +81,8 @@ namespace rct3::ovl
 
         [[nodiscard]] inline AttractionInfo read_attraction(const ItemRecord& record, const AttractionLayout& at, OvlLayout layout)
         {
-            const auto word = [&](int offset) -> std::uint32_t { return offset < 0 ? 0 : record.u32(offset); };
-            const auto ref = [&](int offset, std::string_view tag) -> std::string_view { return offset < 0 ? std::string_view { } : record.ref(offset, tag); };
+            const auto word = [&](std::optional<std::size_t> offset) -> std::uint32_t { return offset ? record.u32(*offset) : 0; };
+            const auto ref = [&](std::optional<std::size_t> offset, std::string_view tag) -> std::string_view { return offset ? record.ref(*offset, tag) : std::string_view { }; };
 
             AttractionInfo info;
             const std::uint32_t offset = layout == OvlLayout::OneStream ? 512 : layout == OvlLayout::ManyStreams ? 768 : 0;

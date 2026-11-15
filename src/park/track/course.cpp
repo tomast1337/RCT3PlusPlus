@@ -145,8 +145,8 @@ namespace rct3::park::track
                 course.covered.push_back((shape->record.flags & kPieceEnclosed) != 0);
                 course.steady.push_back(shape->record.role >= kRoleSlideToLiftFirst && shape->record.role <= kRoleSlideToLiftLast);
                 std::ranges::copy(piece_pool_openings(object, shape->record), std::back_inserter(course.pool_openings));
-                if (shape->record.drop_off >= 0)
-                    course.drop_offs.push_back(course.length() + shape->record.drop_off);
+                if (shape->record.drop_off)
+                    course.drop_offs.push_back(course.length() + *shape->record.drop_off);
                 const float top = glm::vec3(to_world * glm::vec4(path.front(), 1.0f)).y;
                 std::optional<float> wade_from;
                 // A tower's foot starts up the tower, not where the track before it ends: the way between is the

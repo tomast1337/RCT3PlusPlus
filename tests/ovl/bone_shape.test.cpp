@@ -176,11 +176,11 @@ TEST_CASE("bone shapes expose meshes, weights and bones")
 
     REQUIRE(s.bones.size() == 2);
     CHECK(s.bones[0].name == "root");
-    CHECK(s.bones[0].parent == -1);
+    CHECK_FALSE(s.bones[0].parent);
     CHECK(s.bones[0].local[13] == 1.0f);
     CHECK(s.bones[0].world[13] == 1.0f);
     CHECK(s.bones[1].name == "arm");
-    CHECK(s.bones[1].parent == 0);
+    CHECK(s.bones[1].parent == rct3::ovl::BoneIndex { 0 });
     CHECK(s.bones[1].local[12] == 1.0f);
     CHECK(s.bones[1].world[12] == 1.0f);
     CHECK(s.bones[1].world[13] == 1.0f);

@@ -388,8 +388,8 @@ namespace rct3::scene::park
                         }
                         const glm::mat4 turn = glm::translate(glm::mat4(1.0f), pivot) * glm::rotate(glm::mat4(1.0f), jet->yaw, glm::vec3(0, 1, 0)) * glm::rotate(glm::mat4(1.0f), jet->pitch, glm::cross(ahead, glm::vec3(0, 1, 0))) * glm::translate(glm::mat4(1.0f), -pivot);
                         for (std::size_t b = 0; b < moves.size(); ++b)
-                            for (std::int32_t up = static_cast<std::int32_t>(b); up >= 0; up = rig.parents[static_cast<std::size_t>(up)])
-                                if (up == turret)
+                            for (std::optional up = rct3::ovl::BoneIndex { b }; up; up = rig.parents[up->value])
+                                if (std::cmp_equal(up->value, turret))
                                 {
                                     moves[b] = turn * moves[b];
                                     break;

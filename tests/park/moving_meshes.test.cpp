@@ -90,7 +90,7 @@ TEST_CASE("a model moved by bones keeps its triangles whole, each corner followi
     part.vertices[2].bones = { 0, 1, 0, 0 };
     part.vertices[2].weights = { 51, 204, 0, 0 };
     model.levels = { { 100, { part }, { } } };
-    model.rig = BoneRig { .parents = { -1, 0 }, .rest_local = { }, .rest_world = { }, .motions = { } };
+    model.rig = BoneRig { .parents = { std::nullopt, ovl::BoneIndex { 0 } }, .rest_local = { }, .rest_world = { }, .motions = { } };
     auto [m, bones] = boned_meshes(car(1), model, { });
     CHECK(bones == std::vector<std::int32_t> { 0, 1 });
     REQUIRE(m.mesh.vertices.size() == 3);

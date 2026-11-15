@@ -5,9 +5,11 @@
 #pragma once
 
 #include "math/glm.hpp"
+#include "ovl/bone_index.hpp"
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <utility>
 #include <vector>
@@ -32,10 +34,10 @@ namespace rct3::park
 
     struct BoneRig
     {
-        std::vector<std::int32_t> parents; ///< By bone, -1 for a root
-        std::vector<glm::mat4> rest_local; ///< By bone, standing, from its parent's space to its own
-        std::vector<glm::mat4> rest_world; ///< By bone, standing, model space
-        std::vector<BoneMotion> motions;   ///< In the order the model lists them
+        std::vector<std::optional<ovl::BoneIndex>> parents; ///< By bone, none for a root
+        std::vector<glm::mat4> rest_local;                  ///< By bone, standing, from its parent's space to its own
+        std::vector<glm::mat4> rest_world;                  ///< By bone, standing, model space
+        std::vector<BoneMotion> motions;                    ///< In the order the model lists them
     };
 
     /// The turn a rotation key stands for: about its direction, by its length in radians.

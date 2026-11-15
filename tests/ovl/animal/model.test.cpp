@@ -155,9 +155,9 @@ TEST_CASE("animal models expose bones, levels and meshes with their materials")
     CHECK(m.bounds_max[1] == 3.0f);
     REQUIRE(m.bones.size() == 2);
     CHECK(m.bones[0].name == "root");
-    CHECK(m.bones[0].parent == -1);
+    CHECK_FALSE(m.bones[0].parent);
     CHECK(m.bones[1].name == "leg");
-    CHECK(m.bones[1].parent == 0);
+    CHECK(m.bones[1].parent == rct3::ovl::BoneIndex { 0 });
     CHECK(m.bones[1].position[1] == 1.0f);
     CHECK(m.bones[1].rotation[3] == 1.0f);
     REQUIRE(m.levels.size() == 2);

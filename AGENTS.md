@@ -139,7 +139,9 @@ behaviour identical: `sim-run` output must not change.
   Index the list with `.value`. Loop counters, file layouts, the GPU, EnTT and the script API's JSON numbers
   stay plain and are wrapped where they come in.
 - No magic "none" values: a value that may be missing is `std::optional<T>` (or an enum when there are more
-  than two states), not `-1` meaning "never".
+  than two states), not `-1` meaning "never". Where a file keeps `-1` for none, only the code that reads and
+  writes it sees the number: a parser turns it into an optional (`core::none_if_negative`), and a park file
+  member kept that way is named in `parkfile/kept_as_minus_one.hpp`.
 - No bare `bool` arguments: a flag that changes what a function does is an `enum class` declared beside it, so
   the call says what it asks for (`hold_person(scene, at, size, Hold::GiveBack)`, not `..., false, true)`).
   Several flags go in a struct built with designated initializers (`{ .down = held, .shift = shift }`). A bool

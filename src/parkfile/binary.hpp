@@ -8,8 +8,8 @@
 //   std::string                      u32 byte length, then UTF-8
 //   std::vector                      u32 count, then each element
 //   std::array and glm vectors       each element
-//   std::optional                    u8 1 then the value, or u8 0
-//   core::NoneAsMinusOne             the value, or -1 for none, as the bare type it holds
+//   std::optional                    u8 1 then the value, or u8 0; a member kept_as_minus_one.hpp names: the
+//                                    value, or -1 for none, as the bare type it holds
 //   std::variant                     u8 index of the alternative held, then its value (std::monostate: none)
 //   a struct                         each member in the order declared; a unit (units/units.hpp) as its number
 //
@@ -18,7 +18,8 @@
 // Internal to src/parkfile.
 #pragma once
 
-#include "core/none_as_minus_one.hpp"
+#include "core/minus_one.hpp"
+#include "parkfile/kept_as_minus_one.hpp"
 
 #include <algorithm>
 #include <array>
@@ -35,6 +36,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -224,12 +226,6 @@ namespace rct3::parkfile::detail
     template<typename T> struct IsOptional<std::optional<T>> : std::true_type
     {
     };
-    template<typename T> struct IsNoneAsMinusOne : std::false_type
-    {
-    };
-    template<typename T> struct IsNoneAsMinusOne<core::NoneAsMinusOne<T>> : std::true_type
-    {
-    };
     template<typename T> struct IsArray : std::false_type
     {
     };
@@ -253,6 +249,31 @@ namespace rct3::parkfile::detail
     template<typename T>
     concept Scalar = std::is_arithmetic_v<T> || std::is_enum_v<T>;
 
+    /// Whether a member of `T` of type `M` may be one kept as -1 for none (kept_as_minus_one.hpp).
+    template<typename T, typename M> constexpr bool kMayBeKeptAsMinusOne = std::apply([](auto... field) { return (std::same_as<M, std::remove_cvref_t<decltype(std::declval<const T&>().*field)>> || ... || false); }, kKeptAsMinusOne<T>);
+
+    /// Whether `member`, a member of `owner`, is one kept as -1 for none.
+    template<typename T, typename M> bool kept_as_minus_one(const T& owner, const M& member)
+    {
+        return std::apply(
+            [&](auto... field) {
+                return (
+                    [&] {
+                        if constexpr (std::same_as<M, std::remove_cvref_t<decltype(owner.*field)>>)
+                            return &(owner.*field) == &member;
+                        else
+                            return false;
+                    }()
+                    || ... || false);
+            },
+            kKeptAsMinusOne<T>);
+    }
+
+    // Each member of a struct, in the way kept_as_minus_one picks.
+    template<typename T, typename M> void layout_member(std::string& out, const T& owner, const M& member);
+    template<typename T, typename M> void put_member(Writer& w, const T& owner, const M& member);
+    template<typename T, typename M> void get_member(Reader& r, const T& owner, M& member);
+
     /// Writes the layout of `T` into `out`, as the hash is made from.
     template<typename T> void layout(std::string& out)
     {
@@ -272,8 +293,6 @@ namespace rct3::parkfile::detail
             layout<typename T::value_type>(out);
             out += ')';
         }
-        else if constexpr (IsNoneAsMinusOne<T>::value)
-            layout<typename T::value_type>(out); // Kept as the number it holds, so a field that was that number reads the same
         else if constexpr (IsOptional<T>::value)
         {
             out += "o(";
@@ -308,7 +327,7 @@ namespace rct3::parkfile::detail
             out += '{';
             const T value { };
             const auto& [... members] = value;
-            (layout<std::remove_cvref_t<decltype(members)>>(out), ...);
+            (layout_member(out, value, members), ...);
             out += '}';
         }
     }
@@ -343,8 +362,6 @@ namespace rct3::parkfile::detail
             for (const auto& item : value)
                 put(w, item);
         }
-        else if constexpr (IsNoneAsMinusOne<T>::value)
-            put(w, value.stored());
         else if constexpr (IsOptional<T>::value)
         {
             w.number(std::uint8_t { value.has_value() });
@@ -373,7 +390,7 @@ namespace rct3::parkfile::detail
         {
             const auto& [... members] = value;
             // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage): the analyzer loses track of structured binding packs
-            (put(w, members), ...);
+            (put_member(w, value, members), ...);
         }
     }
 
@@ -404,12 +421,6 @@ namespace rct3::parkfile::detail
                 if (!r.ok())
                     return;
             }
-        }
-        else if constexpr (IsNoneAsMinusOne<T>::value)
-        {
-            typename T::value_type stored { };
-            get(r, stored);
-            value = core::from_stored(stored);
         }
         else if constexpr (IsOptional<T>::value)
         {
@@ -443,8 +454,85 @@ namespace rct3::parkfile::detail
         {
             auto& [... members] = value;
             // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage): the analyzer loses track of structured binding packs
-            (get(r, members), ...);
+            (get_member(r, value, members), ...);
         }
+    }
+
+    // A member kept as -1 for none: a std::optional, or a std::vector of them.
+
+    template<typename T> void layout_minus_one(std::string& out)
+    {
+        if constexpr (IsVector<T>::value)
+        {
+            out += "v(";
+            layout_minus_one<typename T::value_type>(out);
+            out += ')';
+        }
+        else
+            layout<typename T::value_type>(out); // As the number it holds
+    }
+
+    template<typename T> void put_minus_one(Writer& w, const T& value)
+    {
+        if constexpr (IsVector<T>::value)
+        {
+            w.number(static_cast<std::uint32_t>(value.size()));
+            for (const auto& item : value)
+                put_minus_one(w, item);
+        }
+        else
+            put(w, value.value_or(typename T::value_type { -1 }));
+    }
+
+    template<typename T> void get_minus_one(Reader& r, T& value)
+    {
+        if constexpr (IsVector<T>::value)
+        {
+            // Every element takes at least a byte, so a count past the bytes left is not believed.
+            const auto count = r.number<std::uint32_t>();
+            if (count > r.left())
+            {
+                r.fail();
+                return;
+            }
+            value.resize(count);
+            for (auto& item : value)
+            {
+                get_minus_one(r, item);
+                if (!r.ok())
+                    return;
+            }
+        }
+        else
+        {
+            typename T::value_type stored { };
+            get(r, stored);
+            value = core::none_if_negative(stored);
+        }
+    }
+
+    template<typename T, typename M> void layout_member(std::string& out, const T& owner, const M& member)
+    {
+        if constexpr (kMayBeKeptAsMinusOne<T, M>)
+            if (kept_as_minus_one(owner, member))
+                return layout_minus_one<M>(out);
+        layout<M>(out);
+    }
+
+    template<typename T, typename M> void put_member(Writer& w, const T& owner, const M& member)
+    {
+        if constexpr (kMayBeKeptAsMinusOne<T, M>)
+            if (kept_as_minus_one(owner, member))
+                return put_minus_one(w, member);
+        put(w, member);
+    }
+
+    template<typename T, typename M> void get_member(Reader& r, const T& owner, M& member)
+    {
+        if constexpr (kMayBeKeptAsMinusOne<T, M>)
+            if (kept_as_minus_one(owner, member))
+                return get_minus_one(r, member);
+        get(r, member);
     }
 
     /// Writes `value` as the payload of chunk `tag`, after its layout hash.

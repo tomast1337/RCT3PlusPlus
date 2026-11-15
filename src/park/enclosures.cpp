@@ -210,7 +210,7 @@ namespace rct3::park
     std::optional<std::int32_t> enclose(save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, save::model::Tile a, save::model::Tile b, const std::string& fence, std::function_ref<bool(save::model::Tile)> takeable)
     {
         if (map.tiles.empty())
-            map = { .cols = grid.width, .rows = grid.height, .tiles = std::vector<core::NoneAsMinusOne<std::int32_t>>(static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height)), .fences = map.fences };
+            map = { .cols = grid.width, .rows = grid.height, .tiles = std::vector<std::optional<std::int32_t>>(static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height)), .fences = map.fences };
         // The new tiles go in a free place first, so an area that joins nothing keeps it.
         const auto unused = std::ranges::find(map.fences, std::string());
         const auto region = static_cast<std::int32_t>(unused - map.fences.begin());
@@ -222,7 +222,7 @@ namespace rct3::park
         const auto [c0, r0, c1, r1] = clamped(map, a, b);
         for (std::int32_t row = r0; row <= r1; ++row)
             for (std::int32_t col = c0; col <= c1; ++col)
-                if (core::NoneAsMinusOne<std::int32_t>& t = map.tiles[static_cast<std::size_t>(row * map.cols + col)]; !t && takeable({ col, row }))
+                if (std::optional<std::int32_t>& t = map.tiles[static_cast<std::size_t>(row * map.cols + col)]; !t && takeable({ col, row }))
                 {
                     t.emplace(region);
                     first = first.value_or(static_cast<std::size_t>(row * map.cols + col));
@@ -236,7 +236,7 @@ namespace rct3::park
         const auto [c0, r0, c1, r1] = clamped(map, a, b);
         for (std::int32_t row = r0; row <= r1; ++row)
             for (std::int32_t col = c0; col <= c1; ++col)
-                if (core::NoneAsMinusOne<std::int32_t>& t = map.tiles[static_cast<std::size_t>(row * map.cols + col)]; t && removable({ col, row }))
+                if (std::optional<std::int32_t>& t = map.tiles[static_cast<std::size_t>(row * map.cols + col)]; t && removable({ col, row }))
                     t.reset();
         regroup(map);
     }

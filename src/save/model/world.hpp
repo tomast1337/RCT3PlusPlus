@@ -18,7 +18,6 @@
 #pragma once
 
 #include "core/id.hpp"
-#include "core/none_as_minus_one.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 #include "units/units.hpp"
@@ -413,8 +412,8 @@ namespace rct3::save::model
     {
         std::int32_t cols = 0;
         std::int32_t rows = 0;
-        std::vector<core::NoneAsMinusOne<std::int32_t>> tiles { }; ///< Row-major, the place in `fences` of the tile's enclosure; none outside one
-        std::vector<std::string> fences { };                       ///< Of each enclosure, the kind of fence it has; empty for a place unused
+        std::vector<std::optional<std::int32_t>> tiles { }; ///< Row-major, the place in `fences` of the tile's enclosure; none outside one
+        std::vector<std::string> fences { };                ///< Of each enclosure, the kind of fence it has; empty for a place unused
 
         [[nodiscard]] std::optional<std::int32_t> at(std::int32_t col, std::int32_t row) const noexcept
         {

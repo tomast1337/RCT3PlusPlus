@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/world.hpp"
 
+#include "core/minus_one.hpp"
+
 #include <algorithm>
 #include <bit>
 #include <cmath>
@@ -1134,7 +1136,7 @@ namespace rct3::save::model
                     e.tiles.reserve(tiles->items().size());
                     for (const Value& t : tiles->items())
                     {
-                        const auto region = core::from_stored(int_or(t.field(names::kEnclosureTileRegion), -1));
+                        const auto region = core::none_if_negative(int_or(t.field(names::kEnclosureTileRegion), -1));
                         // A tile of a place unused, or of none, is outside.
                         e.tiles.push_back(region && static_cast<std::size_t>(*region) < e.fences.size() && !e.fences[static_cast<std::size_t>(*region)].empty() ? region : std::nullopt);
                     }

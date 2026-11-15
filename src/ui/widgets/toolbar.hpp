@@ -32,7 +32,6 @@ namespace rct3::ui::widgets
 
         /// Appends a button showing `icon`, with `tooltip` as its help.
         Button& add_button(std::string name, std::string icon, std::u16string tooltip = { });
-        /// Appends a separator line.
         void add_separator();
 
         /// The length along the bar that its buttons and separators take, padding included.

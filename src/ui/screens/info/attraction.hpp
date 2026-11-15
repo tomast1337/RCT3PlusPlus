@@ -88,7 +88,6 @@ namespace rct3::ui::screens::info
     /// The tabs of an attraction of `kind` in the state `state`, in the order of their slots.
     [[nodiscard]] std::vector<AttractionTabInfo> attraction_tabs(AttractionKind kind, save::model::AttractionState state);
 
-    /// The kind of `ride`.
     [[nodiscard]] AttractionKind attraction_kind(const save::model::Ride& ride);
 
     /// The attraction's name as the player sees it: the name they gave it, a named string, or the name of its

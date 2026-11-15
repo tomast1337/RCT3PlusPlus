@@ -140,7 +140,6 @@ namespace rct3::ui::screens::info
     /// The Cash tab's lines about guests `who`, each amount summed over them: one guest's money or a party's.
     void cash_lines(InfoPage& page, std::span<const PersonFacts> who, const StringTable& strings, const InfoUnits& units);
 
-    /// The page of `tab`.
     [[nodiscard]] InfoPage person_page(PersonTab tab, const PersonFacts& facts, const StringTable& strings, const InfoUnits& units);
 
 } // namespace rct3::ui::screens::info

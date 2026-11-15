@@ -231,7 +231,7 @@ namespace rct3::ui::screens::build
         split_->visible = view_.split.has_value();
         if (view_.split)
             split_->icon = style_.split.at(std::min(*view_.split, cp::kSplitPictures - 1));
-        heights_->icon = view_.heights || view_.heights_locked ? style_.heights_on : style_.heights;
+        heights_->icon = view_.heights_shown || view_.heights_locked ? style_.heights_on : style_.heights;
         heights_->tooltip = view_.heights_locked ? heights_locked_help : heights_help;
         piece_->text = view_.piece;
         cost_->text = view_.cost;

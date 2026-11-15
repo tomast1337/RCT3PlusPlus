@@ -17,7 +17,6 @@ namespace rct3::ui
         Rect offsets; ///< Logical units added to each anchored edge
     };
 
-    /// The rectangle `placement` gives inside `parent`.
     [[nodiscard]] Rect place(const Placement& placement, const Rect& parent);
 
     /// Fills the parent, `margin` in from every edge.

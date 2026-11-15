@@ -87,7 +87,7 @@ namespace rct3::ui::screens::management
         units::Money training_cost;   ///< Of their next level; nothing once fully trained
         std::int32_t tasks = 0;       ///< Task flags
         std::size_t patrol_tiles = 0; ///< 0 for none: the whole park
-        bool painting_patrol = false; ///< The player is painting their patrol area
+        bool painting_patrol = false;
         std::array<std::uint8_t, 2> colours { };
         std::uint8_t costume = 0; ///< An entertainer's
         float hired = 0;          ///< When, in the park's seconds

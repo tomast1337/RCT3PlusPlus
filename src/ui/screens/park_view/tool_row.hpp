@@ -97,9 +97,7 @@ namespace rct3::ui::screens::park_view
         {
             return open_;
         }
-        /// Closes the open menu.
         void close_menu();
-        /// The button of `item`.
         [[nodiscard]] widgets::Button& item(ToolItem item) const;
         /// Whether `item` can be picked; one that cannot is shown faded.
         void set_available(ToolItem item, bool available);

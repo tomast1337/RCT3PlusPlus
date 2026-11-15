@@ -188,9 +188,9 @@ namespace rct3::ui::screens::build
         bool complete_dim = false;        ///< Its button is dimmed: it flashes over a way found, waiting for a click
         std::optional<bool> new_segment;  ///< None when the track is one stretch; else whether another can begin now
         std::optional<std::size_t> split; ///< Of the split pictures, the one shown; none on a ride of one track
-        bool heights = false;             ///< The track's heights are shown
-        bool heights_locked = false;      ///< Shown for every ride, from the view menu, so the button cannot hide them
-        std::u16string piece;             ///< Name of the piece picked, empty when nothing fits
+        bool heights_shown = false;
+        bool heights_locked = false; ///< Shown for every ride, from the view menu, so the button cannot hide them
+        std::u16string piece;        ///< Name of the piece picked, empty when nothing fits
         std::u16string cost;
         std::vector<NamedPiece> named;
         std::optional<std::size_t> named_on; ///< The one picked

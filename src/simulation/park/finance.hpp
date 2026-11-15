@@ -53,7 +53,6 @@ namespace rct3::simulation::park
     /// How much the loan moves at a time: 1,000.00. Chosen by eye: a few presses buy a ride.
     inline constexpr units::Money kLoanStep { 100'000 };
 
-    /// Which way the loan moves.
     enum class LoanMove : std::uint8_t
     {
         Borrow,

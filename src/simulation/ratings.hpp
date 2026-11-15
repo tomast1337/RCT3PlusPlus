@@ -53,7 +53,6 @@ namespace rct3::simulation
     /// The model in `json` text. An error names what is wrong: not JSON, a missing part, an unknown feature.
     [[nodiscard]] std::expected<RatingModel, std::string> parse_rating_model(std::string_view json);
 
-    /// The model built into the program.
     [[nodiscard]] const RatingModel& builtin_rating_model();
 
     /// The features of a test run, before caps. Forces are in metres per second squared.

@@ -39,8 +39,8 @@ namespace rct3::simulation
         std::size_t count_ = 0;
         std::size_t next_ = 0; ///< Start of the next range to hand out
         std::size_t chunk_ = 1;
-        std::size_t busy_ = 0; ///< Helpers still in the current job
-        std::size_t job_ = 0;  ///< Counts jobs, so helpers wake once per job
+        std::size_t busy_helpers_ = 0;
+        std::size_t job_ = 0; ///< Counts jobs, so helpers wake once per job
         bool stopping_ = false;
     };
 

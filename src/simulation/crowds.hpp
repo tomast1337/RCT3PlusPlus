@@ -76,7 +76,6 @@ namespace rct3::simulation
         float into { };    ///< Seconds into it
     };
 
-    /// The moment `show` is at.
     [[nodiscard]] ShowMoment show_move_at(const Show& show);
 
     /// One tick of the crowds: entertainers' shows go on or start, fans gather round VIPs for autographs, and

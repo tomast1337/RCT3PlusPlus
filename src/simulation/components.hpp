@@ -188,7 +188,6 @@ namespace rct3::simulation
         std::uint32_t had = 0; ///< Thoughts had so far, for the park to tell new ones apart
     };
 
-    /// Where a guest is on the paths: on the way from node `from` to node `to`, `progress` of the way along.
     /// How a guest goes on foot: how fast, and how they look going.
     enum class Gait : std::uint8_t
     {
@@ -199,6 +198,7 @@ namespace rct3::simulation
         Bursting, ///< Needing the toilet badly
     };
 
+    /// Where a guest is on the paths: on the way from node `from` to node `to`, `progress` of the way along.
     struct Stride
     {
         NodeId from = kNoNode;
@@ -562,7 +562,6 @@ namespace rct3::simulation
         std::array<units::Money, park::kLedgerLines> paid { };
     };
 
-    /// The park's run of vandalism, kept in the registry's context.
     /// A photo taken of a player's guest, with their party, at a photo spot.
     struct Photo
     {
@@ -628,6 +627,7 @@ namespace rct3::simulation
         std::uint32_t landings = 0;
     };
 
+    /// The park's run of vandalism, kept in the registry's context.
     struct Vandalism
     {
         std::uint32_t broken = 0;                        ///< Things broken since the run began

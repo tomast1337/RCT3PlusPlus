@@ -62,7 +62,6 @@ namespace rct3::simulation
         units::Seconds since_fed { }; ///< Since its keeper last filled the troughs
     };
 
-    /// What a keeper is doing.
     enum class KeeperJob : std::uint8_t
     {
         Idle,      ///< Stands about
@@ -82,7 +81,6 @@ namespace rct3::simulation
         units::Seconds busy { };          ///< Left at the job in hand where it is done, or standing about
     };
 
-    /// What an animal is doing.
     enum class AnimalJob : std::uint8_t
     {
         Crated,    ///< Still in the crate it came in

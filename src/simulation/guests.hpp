@@ -40,7 +40,6 @@ namespace rct3::simulation
         Adult,
     };
 
-    /// Someone visiting the park.
     struct Visitor
     {
         AgeGroup age = AgeGroup::Adult;
@@ -137,7 +136,7 @@ namespace rct3::simulation
     struct Draw
     {
         units::Money entrance_fee { };
-        std::uint32_t pool_squares = 0;  ///< Squares of pool water
+        std::uint32_t pool_squares = 0;
         std::optional<float> rating { }; ///< The park's, 0..1; none before it has one
         units::Money guest_cash { };     ///< What guests bring in on average; none for the tuning's
         units::Money guest_bank { };     ///< What cash machines can give them on average; none for the tuning's

@@ -278,7 +278,6 @@ namespace rct3::simulation::tuning
         units::Frequency broke = units::Frequency::every({ 1 });       ///< A guest who cannot pay for anything and has no cash machine: at once
     };
 
-    /// Thoughts.
     struct Thoughts
     {
         std::size_t kept = 6;           ///< As many as saved parks keep
@@ -309,7 +308,6 @@ namespace rct3::simulation::tuning
         units::Seconds warning_every { 1200 };                        ///< At least, between telling them
     };
 
-    /// Handymen at work.
     struct Handymen
     {
         units::Seconds sweep { 2 }; ///< A piece of litter
@@ -572,7 +570,6 @@ namespace rct3::simulation::tuning
         units::Seconds dwell { 15 };    ///< A train stands at each station on the way
     };
 
-    /// Swimming pools.
     struct Pools
     {
         // Fitted to saves: parks saved on a 26 to 27 degree day with a pool as their main attraction have about half

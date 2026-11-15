@@ -42,8 +42,8 @@ namespace rct3::simulation::park
     /// Everything the weekly score is worked out from.
     struct RatingInput
     {
-        bool harder = false;            ///< The scenario asks for a harder rating
-        std::int32_t guests = 0;        ///< The park's guest count
+        bool harder = false; ///< The scenario asks for a harder rating
+        std::int32_t guests = 0;
         std::int32_t guests_inside = 0; ///< Guests walked through, counted one by one
         float happiness = 0;            ///< Their happiness, each 0..1, added up
         std::vector<RideRatingInput> rides;

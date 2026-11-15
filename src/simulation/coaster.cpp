@@ -2,6 +2,7 @@
 #include "simulation/coaster.hpp"
 
 #include "simulation/tuning.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -12,7 +13,7 @@ namespace rct3::simulation
 
     namespace
     {
-        constexpr float kGravity = 9.81f;
+        using units::kGravity;
         constexpr units::Seconds kStep { 0.05f };        ///< A part step, short enough for the steepest drops
         constexpr units::Seconds kStuck { 4 };           ///< All but stopped this long, the track's tyres take over
         constexpr units::Distance kLaunchLeast { 0.5f }; ///< Of platform left, that a launch is still sized over

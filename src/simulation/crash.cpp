@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/crash.hpp"
 
+#include "units/units.hpp"
+
 #include <algorithm>
 #include <cmath>
 
@@ -9,7 +11,7 @@ namespace rct3::simulation
 
     namespace
     {
-        constexpr float kGravity = 9.81f;
+        using units::kGravity;
         constexpr units::Seconds kStep { 0.05f };   ///< A step of a flight, short enough not to pass through a wall
         constexpr float kKept = 0.4f;               ///< Of its speed down, how much a bounce sends it back up with
         constexpr float kSkid = 0.6f;               ///< Of its speed across, how much it keeps through a bounce

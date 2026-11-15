@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "particles/simulation.hpp"
 
+#include "units/units.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <numbers>
@@ -11,7 +13,7 @@ namespace rct3::particles
     namespace
     {
 
-        constexpr float kGravity = 9.81f;
+        using units::kGravity;
         constexpr float kTau = 2 * std::numbers::pi_v<float>;
 
         float fraction(random::RandomState& r)

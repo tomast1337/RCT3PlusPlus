@@ -4,6 +4,7 @@
 #include "save/model/park.hpp"
 #include "strings/unicode.hpp"
 #include "ui/screens/info/attraction.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -41,7 +42,7 @@ namespace rct3::ui::screens::info
         // The wave machines' settings: label and help, by control from kPoolWaveHeightControl on.
         constexpr std::array<std::array<std::string_view, 2>, 4> kWaveSettings { { { "WaveHeightText", "WaveHeightToolTip" }, { "WaveLengthText", "WaveLengthToolTip" }, { "WaveOnPeriodText", "WaveOnPeriodToolTip" }, { "WaveTotalPeriodText", "WaveTotalPeriodToolTip" } } };
         constexpr int kTicketStep = 10;
-        constexpr float kPercent = 100;
+        using units::kPercent;
         constexpr int kSecondsPerMinute = 60;
         constexpr float kMaintenanceWidth = 440; ///< As wide as a ride's maintenance page
         /// Slot 1 is the colours tab's, kept even when a prop takes no colours; what a prop does goes on from the next.

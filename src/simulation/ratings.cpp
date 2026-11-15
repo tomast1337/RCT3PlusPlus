@@ -4,6 +4,7 @@
 #include "assets/embedded_files.hpp"
 #include "config/json_text.hpp"
 #include "logging/log.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -18,7 +19,7 @@ namespace rct3::simulation
 
     namespace
     {
-        constexpr float kGravity = 9.81f;
+        using units::kGravity;
         constexpr units::Distance kSmallestDrop { 1 }; ///< Down, before a descent counts as a drop
         constexpr std::string_view kModelPath = "simulation/ride_ratings.json";
         constexpr std::string_view kFallbackFamily = "default";

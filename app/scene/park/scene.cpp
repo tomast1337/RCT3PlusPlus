@@ -79,6 +79,7 @@
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/question_box.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -1194,8 +1195,8 @@ namespace rct3::scene::park
                     }
                     for (const auto [e, upkeep] : r.view<const simulation::Upkeep>(entt::exclude<simulation::PoolDoor>).each())
                     {
-                        f.downtime.push_back(upkeep.downtime_share() * 100);
-                        f.reliability += upkeep.reliability.value * 100;
+                        f.downtime.push_back(upkeep.downtime_share() * units::kPercent);
+                        f.reliability += upkeep.reliability.value * units::kPercent;
                         const auto* attraction = r.try_get<const simulation::Attraction>(e);
                         f.running += attraction != nullptr && attraction->open && !attraction->testing && !upkeep.broken ? 1 : 0;
                     }
@@ -1269,7 +1270,7 @@ namespace rct3::scene::park
                     .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
                     .loan = scene.park.loan,
                     .last_month = last_month,
-                    .animal_health = animals > 0 ? static_cast<std::int32_t>(std::floor(health / static_cast<float>(animals) * 100)) : 0,
+                    .animal_health = animals > 0 ? static_cast<std::int32_t>(std::floor(health / static_cast<float>(animals) * units::kPercent)) : 0,
                     .dung = static_cast<std::int32_t>(scene.sim.registry.view<const simulation::Dung>().size()),
                     .rides = goal_rides,
                 };
@@ -1686,7 +1687,7 @@ namespace rct3::scene::park
                     if (upkeep == nullptr)
                         continue;
                     save::model::Ride& ride = scene.rides.rides[i];
-                    ride.breakdown.reliability = upkeep->reliability.value * 100;
+                    ride.breakdown.reliability = upkeep->reliability.value * units::kPercent;
                     ride.breakdown.current = static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep->kind));
                     ride.breakdown.last = static_cast<save::model::BreakdownKind>(std::to_underlying(upkeep->last));
                     ride.base.time_since_inspection.emplace(upkeep->since_inspection);

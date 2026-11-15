@@ -29,6 +29,7 @@
 #include "simulation/tuning.hpp"
 #include "simulation/vip.hpp"
 #include "ui/scale.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <array>
@@ -370,7 +371,7 @@ namespace rct3::scene::park
                             {
                                 yaw = *turn;
                                 // The lower of the two arcs that land on them, else the farthest throw.
-                                const float g = rct3::park::water::kJetGravity;
+                                const float g = units::kGravity;
                                 const float v2 = kSpeed.value * kSpeed.value;
                                 const float room = v2 * v2 - g * (g * across * across + 2 * local.y * v2);
                                 pitch = room >= 0 ? std::atan((v2 - std::sqrt(room)) / (g * across)) : std::numbers::pi_v<float> / 4;

@@ -2,6 +2,7 @@
 #include "park/waterfall_mesh.hpp"
 
 #include "core/hash.hpp"
+#include "units/units.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -13,11 +14,11 @@ namespace rct3::park
     namespace
     {
 
-        constexpr int kRows = 12;                           ///< Rows down the sheet
-        constexpr units::Distance kLeadIn { 1.5f };         ///< How far back over the upper lake the sheet starts
-        constexpr units::Distance kMinReach { 1.0f };       ///< Least distance out from the edge the water lands
-        constexpr units::Distance kFoamLift { 0.05f };      ///< Foam lies this high over the lower lake
-        constexpr float kGravity = 9.81f;                   ///< World units are metres
+        constexpr int kRows = 12;                      ///< Rows down the sheet
+        constexpr units::Distance kLeadIn { 1.5f };    ///< How far back over the upper lake the sheet starts
+        constexpr units::Distance kMinReach { 1.0f };  ///< Least distance out from the edge the water lands
+        constexpr units::Distance kFoamLift { 0.05f }; ///< Foam lies this high over the lower lake
+        using units::kGravity;
         constexpr units::Distance kSameEdge { 0.5f };       ///< Falls this close in height and place pour over one edge
         constexpr units::Distance kFoamLeast { 3.0f };      ///< Chosen by eye: how far foam reaches round the smallest fall
         constexpr units::Distance kFoamMost { 14.0f };      ///< And round the tallest

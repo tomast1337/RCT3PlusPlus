@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <glm/geometric.hpp>
 #include <glm/mat4x4.hpp>
+#include <numbers>
 #include <span>
 
 namespace rct3::scene::park
@@ -85,7 +86,7 @@ namespace rct3::scene::park
         lens.car_splashes = around.car_splashes;
 
         // The wind keeps to one way, swinging slowly either side of it.
-        const float way = kWindSwing.value * std::sin(lens.clock.value * 6.2831853f / kWindPeriod.value);
+        const float way = kWindSwing.value * std::sin(lens.clock.value * 2 * std::numbers::pi_v<float> / kWindPeriod.value);
         const glm::vec3 wind = glm::vec3 { std::cos(way), 0.0f, std::sin(way) } * (std::clamp(around.wind, 0.0f, 1.0f) * kWindPush);
         rct3::park::LensPush push { .aspect = around.aspect, .down = across({ 0, -1, 0 }), .wind = across(wind) };
         if (lens.last_ahead && lens.last_eye && seconds > 0)

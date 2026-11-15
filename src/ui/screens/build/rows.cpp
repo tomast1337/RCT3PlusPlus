@@ -227,11 +227,14 @@ namespace rct3::ui::screens::build
 
     std::string_view rarity_text(float rarity) noexcept
     {
-        if (rarity > 0.79f)
+        constexpr float kEndangered = 0.79f; ///< Rarity past which an animal reads as endangered
+        constexpr float kRare = 0.64f;       ///< Past which as rare
+        constexpr float kModerate = 0.40f;   ///< From which as neither rare nor common
+        if (rarity > kEndangered)
             return "WildAnimalRarity_Endangered";
-        if (rarity > 0.64f)
+        if (rarity > kRare)
             return "WildAnimalRarity_Rare";
-        if (rarity >= 0.40f)
+        if (rarity >= kModerate)
             return "WildAnimalRarity_Moderate";
         return "WildAnimalRarity_Common";
     }

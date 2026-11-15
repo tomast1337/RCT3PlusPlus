@@ -356,9 +356,12 @@ namespace rct3::scene::park
                         constexpr units::TurnRate kTurn { 2.5f }; ///< Chosen by eye: the gun turns
                         constexpr float kHighest = 0.8f;          ///< Chosen by eye: most the gun tips up, and down
                         constexpr float kLowest = -0.35f;
+                        constexpr float kSweep = 0.6f;      ///< Of its swing, how far it sweeps about while idle
+                        constexpr float kSweepRate = 0.5f;  ///< Radians a second its sweep goes round at
+                        constexpr float kIdlePitch = 0.35f; ///< How far it tips up while idle
                         const float swing = simulation::kTuning.surroundings.cannon_swing.value;
-                        float yaw = 0.6f * swing * std::sin(scene.park_clock * 0.5f + static_cast<float>(boned.object)); // Sweeping about
-                        float pitch = 0.35f;
+                        float yaw = kSweep * swing * std::sin(scene.park_clock * kSweepRate + static_cast<float>(boned.object));
+                        float pitch = kIdlePitch;
                         float ground = boned.placed[3].y;
                         if (firing && r.valid(firing->target) && r.all_of<simulation::Pose>(firing->target))
                         {
@@ -403,10 +406,12 @@ namespace rct3::scene::park
                         if (const auto land = jet->water.landing([&](glm::vec2) { return ground; }); land && scene.park_clock - jet->splashed > 0.15f)
                         {
                             // One splash where it lands and two round it, as wide as the jet is there, turning each time.
-                            constexpr float kSplashWide = 0.5f; ///< Chosen by eye
+                            constexpr float kSplashWide = 0.5f;  ///< Chosen by eye
+                            constexpr float kSplashTurn = 5;     ///< Radians a second the splashes round it turn
+                            constexpr float kSplashApart = 2.1f; ///< Radians between them
                             for (int s = 0; s < 3; ++s)
                             {
-                                const float round = scene.park_clock * 5 + static_cast<float>(s) * 2.1f;
+                                const float round = scene.park_clock * kSplashTurn + static_cast<float>(s) * kSplashApart;
                                 fire_park_particles(scene.particles, kCannonSplash, *land + (s == 0 ? glm::vec3(0) : glm::vec3(std::cos(round), 0, std::sin(round)) * kSplashWide), glm::vec3(0, 1, 0));
                             }
                             jet->splashed = scene.park_clock;

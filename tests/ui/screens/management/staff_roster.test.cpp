@@ -54,18 +54,18 @@ namespace
 TEST_CASE("a row unfolds and folds up on its box, and stays unfolded when the list is written again")
 {
     Fixture f;
-    CHECK(f.window->rows() == std::vector<std::pair<std::size_t, bool>> { { 0, false }, { 1, false }, { 2, false } });
+    CHECK(f.window->rows() == std::vector<StaffRoster::ShownRow> { { 0, false }, { 1, false }, { 2, false } });
     f.button("table/view/content/row1/Expand").click();
     f.desktop.update({ });
-    CHECK(f.window->rows()[1].second);
+    CHECK(f.window->rows()[1].unfolded);
     // The mechanic's tasks show unfolded.
     CHECK(f.window->content().find("table/view/content/row1/Staff_TaskButtonRepair"));
     f.people.staff[0].happiness = 0.1f;
     f.show();
-    CHECK(f.window->rows()[1].second);
+    CHECK(f.window->rows()[1].unfolded);
     f.button("table/view/content/row1/Expand").click();
     f.desktop.update({ });
-    CHECK_FALSE(f.window->rows()[1].second);
+    CHECK_FALSE(f.window->rows()[1].unfolded);
 }
 
 TEST_CASE("the window's plus and minus unfold and fold every row")
@@ -121,14 +121,14 @@ TEST_CASE("an unfolded row's switches and arrows ask for the worker's tasks and 
     f.desktop.update({ });
     auto asks = f.window->take_asks();
     REQUIRE(asks.change);
-    CHECK(asks.change->first == 0);
-    CHECK(asks.change->second.id == person_control(PersonControl::Task, 2));
+    CHECK(asks.change->staff == 0);
+    CHECK(asks.change->what.id == person_control(PersonControl::Task, 2));
     f.button("table/view/content/row0/WageUp").click();
     f.desktop.update({ });
     asks = f.window->take_asks();
     REQUIRE(asks.change);
-    CHECK(asks.change->second.id == person_control(PersonControl::Wage));
-    CHECK(asks.change->second.value == 2);
+    CHECK(asks.change->what.id == person_control(PersonControl::Wage));
+    CHECK(asks.change->what.value == 2);
 }
 
 TEST_CASE("the inspector's row unfolds into the kinds of things they look at, with no wage")
@@ -158,7 +158,7 @@ TEST_CASE("a handyman's row has the mend switch, lit while they mend")
     f.desktop.update({ });
     const auto asks = f.window->take_asks();
     REQUIRE(asks.change);
-    CHECK(asks.change->second.id == person_control(PersonControl::Task, 3));
+    CHECK(asks.change->what.id == person_control(PersonControl::Task, 3));
 }
 
 TEST_CASE("a row's patrol button is held down while their area is painted")

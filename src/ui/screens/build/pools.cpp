@@ -336,7 +336,7 @@ namespace rct3::ui::screens::build
                 status_->text = shown[i].help;
             if (choices_[i]->take_click())
             {
-                placing_ = std::pair { *page_, i };
+                placing_ = PickedChoice { .page = *page_, .choice = i };
                 changed_ = true;
                 view_ = 0;
             }
@@ -347,8 +347,8 @@ namespace rct3::ui::screens::build
     {
         if (placing_)
         {
-            const std::vector<PoolChoice>& from = choices_of(placing_->first);
-            return placing_->second < from.size() ? std::string_view(from[placing_->second].icon) : std::string_view { };
+            const std::vector<PoolChoice>& from = choices_of(placing_->page);
+            return placing_->choice < from.size() ? std::string_view(from[placing_->choice].icon) : std::string_view { };
         }
         if (editor_.mode == PoolMode::Water)
             return kDepths[static_cast<std::size_t>(std::clamp(editor_.depth, 1, 3) - 1)];
@@ -402,8 +402,8 @@ namespace rct3::ui::screens::build
             }
             else if (page_ == PoolPage::Paths && pin_->on && !placing_ && path_slope_ < path_controls_.size())
                 lit(path_controls_[path_slope_]);
-            if (placing_ && placing_->first == page_ && placing_->second < choices_.size())
-                lit(choices_[placing_->second]);
+            if (placing_ && placing_->page == page_ && placing_->choice < choices_.size())
+                lit(choices_[placing_->choice]);
         }
 
         // The disc: round on the left, flat on the right where it meets the strip.

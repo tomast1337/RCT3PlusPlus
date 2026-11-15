@@ -279,13 +279,13 @@ namespace rct3::ui::screens::info
         return std::exchange(event_, std::nullopt);
     }
 
-    std::vector<std::pair<std::size_t, widgets::PaintButton*>> StallMenu::pots() const
+    std::vector<StallMenu::LinePot> StallMenu::pots() const
     {
-        std::vector<std::pair<std::size_t, widgets::PaintButton*>> out;
+        std::vector<LinePot> out;
         for (std::size_t i = 0; i < lines_.size(); ++i)
         {
             if (lines_[i].pot != nullptr)
-                out.emplace_back(i, lines_[i].pot);
+                out.push_back({ .line = i, .pot = lines_[i].pot });
         }
         return out;
     }

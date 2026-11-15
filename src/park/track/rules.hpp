@@ -87,6 +87,9 @@ namespace rct3::park::track
             units::Pace down { };  ///< It comes back down at
         };
         std::optional<LiftCar> lift_car { };
+        /// What its track costs for height over the ground (ground.hpp, raised_cost); nothing on kinds whose track
+        /// costs the same at any height.
+        units::Money height_rate { };
     };
 
     /// Whether `rules` let the ride build `piece`.

@@ -226,14 +226,15 @@ namespace rct3::scene::track
                     a.running_cost = ride.base.running_cost;
         }
 
-        /// Pays back what piece `piece` of ride `ride`, standing as object `object`, cost to build, as pulling the
+        /// Pays back what piece `piece` of ride `index`, standing as object `object`, cost to build, as pulling the
         /// whole ride down would, floating it up from where the piece starts. The ride costs that much less to run.
-        void refund_piece(park::ParkScene& scene, const rct3::park::track::PieceCatalogue& c, save::model::Ride& ride, const save::model::TrackPiece& piece, const save::model::PlacedObject& object)
+        void refund_piece(park::ParkScene& scene, const rct3::park::track::PieceCatalogue& c, save::model::RideIndex index, const save::model::TrackPiece& piece, const save::model::PlacedObject& object)
         {
             const auto shape = rct3::park::track::shape_named(c, piece.symbol);
             if (!shape)
                 return;
-            const units::Money cost { shape->record.cost };
+            save::model::Ride& ride = scene.rides.rides.at(index.value);
+            const units::Money cost = piece_price(scene, index, *shape, object);
             add_running_cost(scene, ride, -cost);
             const units::Money back = rct3::park::demolish_refund(cost, (ride.base.flags & save::model::AttractionCommon::kNeverOpened) == 0);
             simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::RideConstruction, simulation::park::Charge::IfAffordable);
@@ -481,6 +482,7 @@ namespace rct3::scene::track
             }
             b.tip = rct3::park::track::start_of(on, shape, b.picked->reversed, scene.grid);
         }
+        b.ghost_cost = units::Money { shape.record.cost };
         b.ghost = rct3::park::track::place_after(*b.tip, shape, b.picked->reversed, scene.grid);
         if (!b.ghost)
             return;
@@ -518,6 +520,14 @@ namespace rct3::scene::track
             }
         }
         b.ghost_doors = shown.size() - pieces;
+        // A design's pieces not shown, as it may not stand whole, at their files' prices.
+        b.ghost_cost = { };
+        for (std::size_t i = 0; i < std::max<std::size_t>(b.design.size(), 1); ++i)
+        {
+            const auto piece = i == 0 ? std::optional<const rct3::park::track::PieceShape&>(shape) : rct3::park::track::shape_named(*c, b.design[i].symbol);
+            if (piece)
+                b.ghost_cost += i < pieces ? piece_price(scene, *b.ride, *piece, shown[i]) : units::Money { piece->record.cost };
+        }
         const auto refused = rct3::park::path::first_refused(shown, scene.models, taken_room(scene, b), scene.footpaths.paths, scene.grid);
         // shortcut: the ground a ghost would cut is cut only once it is built, upgrade to show the cut under the
         // ghost if pieces into hills are hard to see.
@@ -700,9 +710,10 @@ namespace rct3::scene::track
             object.colours = { (*b.colours)[0], (*b.colours)[1], (*b.colours)[2] };
         }
         const rct3::park::track::PieceShape& shape = c->pieces[b.picked->index];
-        const units::Money cost { shape.record.cost };
+        const units::Money cost = piece_price(scene, *b.ride, shape, b.ghost->object);
         if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::RideConstruction, charge))
             return;
+        park::float_money(scene, rct3::park::track::start_of(b.ghost->object, shape, b.picked->reversed, scene.grid).position, -cost);
         add_running_cost(scene, ride, cost);
         ++scene.built;
         // The ground it passes into is cut down round it, sharply or smoothly, the scenery standing there seated
@@ -764,7 +775,7 @@ namespace rct3::scene::track
         if (over)
         {
             save::model::TrackPiece& old = ride.track->pieces[*b.selected];
-            refund_piece(scene, *c, ride, old, scene.objects[over->object]);
+            refund_piece(scene, *c, *b.ride, old, scene.objects[over->object]);
             hide_platform(scene, old); // A station's platform is built again if the new piece is one
             old = piece;
             scene.objects[over->object] = std::move(object);
@@ -881,7 +892,11 @@ namespace rct3::scene::track
         const std::vector<rct3::park::track::LaidPlacement> way = std::exchange(b.proposed, { });
         units::Money cost;
         for (const rct3::park::track::LaidPlacement& p : way)
-            cost += units::Money { c->pieces[p.piece.index].record.cost };
+        {
+            save::model::PlacedObject o = p.object;
+            o.overlay = b.overlay;
+            cost += piece_price(scene, *b.ride, c->pieces[p.piece.index], o);
+        }
         if (scene.park.cash && *scene.park.cash < cost)
         {
             b.complaint = "RideAutoCompleteNotEnoughCash";
@@ -945,7 +960,7 @@ namespace rct3::scene::track
         if (const auto found = objects.find(last.scenery); found != objects.end())
         {
             if (c != nullptr)
-                refund_piece(scene, *c, ride, last, scene.objects[found->second]);
+                refund_piece(scene, *c, *b.ride, last, scene.objects[found->second]);
             // Its tunnel closes; the ground it cut stays cut.
             if (!rct3::park::track::buried_hollows(std::span(&scene.objects[found->second], 1), scene.models, scene.grid).empty())
                 scene.footpaths.pavings_stale = true;

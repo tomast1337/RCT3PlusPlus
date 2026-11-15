@@ -21,6 +21,7 @@
 #include "park/object/mesh.hpp"
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
+#include "units/units.hpp"
 
 #include <span>
 #include <vector>
@@ -30,6 +31,17 @@ namespace rct3::park::track
 
     /// Ground over a solid square's top, in world units, that leaves it wholly under the ground, as a tunnel.
     inline constexpr float kGroundCover = 1; ///< Chosen by eye: a unit of ground holds over a coaster's cars
+
+    /// Units of height over the ground, summed over a piece's solid squares, that cost its ride's whole height rate.
+    inline constexpr float kHeightPerRate = 4;
+
+    /// What track piece `piece` (its model loaded) costs to lay where it stands, priced `ground_cost` by its file,
+    /// on a ride whose kind charges `height_rate` (TrackRules::height_rate) for height. Each solid square adds the
+    /// height of its floor over its tile's ground, the mean of the tile's corners down to a whole unit; a square in
+    /// the ground adds nothing. The sum costs the rate for every kHeightPerRate units, to the nearest hundredth. On
+    /// the ground, on water (a piece that stands only on water) or on a ride whose rate is nothing, it costs its
+    /// file's price.
+    [[nodiscard]] units::Money raised_cost(units::Money ground_cost, units::Money height_rate, const save::model::PlacedObject& piece, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
 
     /// The cuts the solid squares of `items` (their models loaded) make in the ground, a tile at a time: the
     /// tiles they pass into, and when `smooth` the tiles round those sloped down to meet them.

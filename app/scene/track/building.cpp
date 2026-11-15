@@ -6,6 +6,7 @@
 #include "ovl/tracked_ride.hpp"
 #include "park/build_arrows.hpp"
 #include "park/track/edit.hpp"
+#include "park/track/ground.hpp"
 #include "scene/ghosts.hpp"
 #include "scene/park/attraction_state.hpp"
 #include "scene/park/footpaths.hpp"
@@ -307,8 +308,7 @@ namespace rct3::scene::track
                     if (const auto at = v.piece.find(kNameMark); at != std::u16string::npos)
                         v.piece.replace(at, kNameMark.size(), ui::screens::info::attraction_name(scene.rides.rides.at(b.ride->value).base, *assets.strings));
                 }
-                // The price the piece's scenery item stores, in hundredths as the park's money is.
-                v.cost = std::u16string(assets.strings->get(kCostLabel)) + u" " + ui::money_text(ui::currency(*assets.strings, currency), units::Money { shape.record.cost });
+                v.cost = std::u16string(assets.strings->get(kCostLabel)) + u" " + ui::money_text(ui::currency(*assets.strings, currency), b.ghost_cost);
                 // The settings the piece is built with. A brake's or block brake's speed is stored in whole m/s and
                 // shown in tenths of the player's unit, a step a metre a second; the ride's for its kind until set.
                 // shortcut: nothing holds a train for the time or turns the cars yet, upgrade with holding brakes
@@ -391,14 +391,25 @@ namespace rct3::scene::track
         return std::nullopt;
     }
 
+    units::Money piece_price(const park::ParkScene& scene, save::model::RideIndex ride, const rct3::park::track::PieceShape& shape, const save::model::PlacedObject& object)
+    {
+        const units::Money rate = ride.value < scene.track_rules.size() ? scene.track_rules[ride.value].height_rate : units::Money { };
+        return rct3::park::track::raised_cost(units::Money { shape.record.cost }, rate, object, scene.models, scene.grid);
+    }
+
     units::Money track_cost(park::ParkScene& scene, save::model::RideIndex ride, const ui::InterfaceAssets& assets)
     {
         const auto overlay = ride_track_overlay(scene, ride);
         const auto c = overlay ? load_catalogue(scene.building, *overlay, assets) : std::nullopt;
+        const auto objects = object_indices(scene);
         units::Money cost;
         for (const save::model::TrackPiece& piece : c ? scene.rides.rides[ride.value].track->pieces : std::vector<save::model::TrackPiece> { })
-            if (const auto shape = rct3::park::track::shape_named(*c, piece.symbol))
-                cost += units::Money { shape->record.cost };
+        {
+            const auto shape = rct3::park::track::shape_named(*c, piece.symbol);
+            const auto object = objects.find(piece.scenery);
+            if (shape)
+                cost += object != objects.end() ? piece_price(scene, ride, *shape, scene.objects[object->second]) : units::Money { shape->record.cost };
+        }
         return cost;
     }
 
@@ -1060,11 +1071,7 @@ namespace rct3::scene::track
                 design->show_page(page());
             if (auto status = design->find_as<ui::widgets::Label>("body/status_label"))
                 status->text = assets.strings->get(rct3::park::refusal_key(b.refusal));
-            units::Money price;
-            for (const save::model::TrackPiece& p : b.design)
-                if (const auto shape = c != nullptr ? rct3::park::track::shape_named(*c, p.symbol) : std::nullopt)
-                    price += units::Money { shape->record.cost };
-            design->show_view_text(ui::money_text(ui::currency(*assets.strings, currency), price));
+            design->show_view_text(ui::money_text(ui::currency(*assets.strings, currency), b.ghost_cost));
         }
         else if (design && design->showing())
         {
@@ -1369,7 +1376,7 @@ namespace rct3::scene::track
                 b.preview_item = alone.symbol;
             }
             scene.placing.preview_camera = rct3::park::framed(rct3::park::object::object_corners(alone, scene.models, scene.grid, scene.fitted), kPreviewTurn * scene.clock, kPreviewPitch, kPreviewClosest);
-            price = ui::money_text(ui::currency(*assets.strings, currency), units::Money { c->pieces[b.picked->index].record.cost });
+            price = ui::money_text(ui::currency(*assets.strings, currency), b.ghost_cost);
         }
         else
         {

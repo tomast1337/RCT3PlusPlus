@@ -521,6 +521,17 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     CHECK(world.registry.get<simulation::Stride>(staff[2]).to == tile); // Off the paths: from the nearest walkway
 }
 
+TEST_CASE("a sight placed beside a path is used from it at once; a bench there is not")
+{
+    simulation::SimWorld world;
+    const auto tile = world.paths.add({ 2, 1, 0 });
+    const save::model::PlacedObject grass { .id = 1, .col = 3, .row = 1 }; // East of the path, on no path
+    const entt::entity fire = simulation::add_path_item(world, grass, simulation::PathItemKind::Sight);
+    REQUIRE(fire != entt::null);
+    CHECK(world.registry.get<simulation::PathItem>(fire).node == tile);
+    CHECK(simulation::add_path_item(world, grass, simulation::PathItemKind::Bench) == entt::null);
+}
+
 TEST_CASE("a seller hired with a placed stall stands in their booth, off the paths, paid as new staff are")
 {
     simulation::SimWorld world;

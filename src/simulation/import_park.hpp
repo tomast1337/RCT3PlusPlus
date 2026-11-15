@@ -133,7 +133,8 @@ namespace rct3::simulation
     void set_wall(SimWorld& world, const rct3::park::EdgeWall& wall, bool standing);
 
     /// A path item of `kind` standing as `object` does, on the path tile under its tile's middle at the level
-    /// nearest its base: a bin comes empty, holding kNewBinPieces. entt::null off the paths or for a hidden object.
+    /// nearest its base; a sight or path feature (not breakable) on that path tile or one beside it. A bin comes
+    /// empty, holding kNewBinPieces. entt::null off the paths or for a hidden object.
     entt::entity add_path_item(SimWorld& world, const save::model::PlacedObject& object, PathItemKind kind);
     /// A flower bed standing as `object` does, holding `capacity` of water when full and `water` now (full when
     /// none, or negative as a bed never watered is saved), watered from a path tile on or beside its tile.

@@ -1223,15 +1223,8 @@ namespace rct3::simulation
         std::size_t added = 0;
         for (const save::model::PlacedObject& o : objects)
         {
-            const auto kind = o.hidden ? std::nullopt : sight_of(o);
-            if (!kind)
-                continue;
-            if (const auto at = path_by(world.paths, o))
-            {
-                const glm::vec2 x = rct3::park::object::turned_x(rct3::park::ModelTurn::from(o.rotation));
-                world.registry.emplace<PathItem>(world.registry.create(), PathItem { .node = *at, .kind = *kind, .object = o.id, .heading = std::atan2(x.x, x.y) });
-                ++added;
-            }
+            if (const auto kind = o.hidden ? std::nullopt : sight_of(o))
+                added += add_path_item(world, o, *kind) != entt::null ? 1 : 0;
         }
         return added;
     }
@@ -1665,7 +1658,8 @@ namespace rct3::simulation
         if (o.hidden)
             return entt::null;
         const glm::vec3 middle { paths.origin.x + (static_cast<float>(o.col) + 0.5f) * paths.tile_size, static_cast<float>(o.base_height.value_or(0)) * paths.level_height, paths.origin.y + (static_cast<float>(o.row) + 0.5f) * paths.tile_size };
-        const auto at = paths.nearest(middle);
+        // Sights and path features may stand on the grass beside the path guests come to them by.
+        const auto at = breakable(kind) ? paths.nearest(middle) : path_by(paths, o);
         if (!at)
             return entt::null;
         auto& r = world.registry;

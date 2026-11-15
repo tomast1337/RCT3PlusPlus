@@ -187,6 +187,8 @@ declare namespace park {
     function breakPathItems(): number;
     /** Sets the energy of every guest to `share` (0 to 1), as a long day would; how many guests. */
     function tireGuests(share: number): number;
+    /** Sets the cash of every guest to `hundredths`, as a day of spending would; how many guests. */
+    function setGuestCash(hundredths: number): number;
     /** Drops `pieces` pieces of litter (1 to 50) on the path nearest tile `col`, `row`; whether there was a path. */
     function dropLitter(col: number, row: number, pieces: number): boolean;
     /** Empties every flower bed of its water; how many there are. */

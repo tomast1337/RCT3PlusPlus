@@ -484,6 +484,17 @@ namespace rct3::scene
             }
             return Json(tired);
         });
+        engine_.define("park.setGuestCash", [this](const Json& a) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            std::size_t set = 0;
+            for (auto [e, wallet] : park_->sim.registry.view<simulation::Wallet>(entt::exclude<simulation::Staff>).each())
+            {
+                wallet.cash.value = std::max<std::int64_t>(static_cast<std::int64_t>(number(a, 0)), 0);
+                ++set;
+            }
+            return Json(set);
+        });
         engine_.define("park.dropLitter", [this](const Json& a) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");

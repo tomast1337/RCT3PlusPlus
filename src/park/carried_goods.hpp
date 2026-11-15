@@ -27,6 +27,8 @@ namespace rct3::park
         std::array<float, 3> effects { };
         std::int64_t cost = 0;                 ///< In hundredths, to the stall: of an item each one sold, of an extra each one it goes on
         std::array<std::int64_t, 3> worth { }; ///< Of an item, most a guest pays for it, mild, cold and hot; in hundredths
+        bool empty = false;                    ///< Of an item, what is left once eaten or drunk: a wrapper, a cup
+        bool map = false;                      ///< Of an item, a park map
     };
 
     struct CarriedKinds

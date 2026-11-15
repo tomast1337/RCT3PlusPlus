@@ -4,6 +4,7 @@
 #include "core/minus_one.hpp"
 
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <cmath>
 #include <cstring>
@@ -85,6 +86,7 @@ namespace rct3::save::model
             constexpr std::string_view kBinClass = "LitterBinBehaviour";
             constexpr std::string_view kSignClass = "SignBehaviour";
             constexpr std::string_view kBenchClass = "ParkBenchBehaviour";
+            constexpr std::array<std::string_view, 3> kUseClasses { "VistaPointBehaviour", "WaterCannonBehaviour", "PassportPostBehaviour" };
             constexpr std::string_view kFlowerBedClass = "WaterableBehaviour";
             constexpr std::string_view kFlowerBedWater = "CurrentWater";
             constexpr std::string_view kBehaviourOwner = "\"SceneryItem\""; ///< The quotes are part of the stored name
@@ -511,6 +513,7 @@ namespace rct3::save::model
             FlowerBed,
             Sign,
             Bench,
+            UsePoint,
             Weather,
             Sky,
             Time,
@@ -907,6 +910,8 @@ namespace rct3::save::model
                 kinds[i] = Kind::Sign;
             else if (name == names::kBenchClass)
                 kinds[i] = Kind::Bench;
+            else if (std::ranges::contains(names::kUseClasses, name))
+                kinds[i] = Kind::UsePoint;
             else if (name == names::kWeatherClass)
                 kinds[i] = Kind::Weather;
             else if (name == names::kSkyClass)
@@ -1041,6 +1046,7 @@ namespace rct3::save::model
                 {
                     // Never emptied is stored as a time before the park began.
                     const auto emptied = get_float(o.find(names::kBinEmptied));
+                    m.use_points.push_back({ .id = o.id, .object_ref = get_ref(o.find(names::kBehaviourOwner)).value_or(0) });
                     m.bins.push_back(
                         {
                             .object_ref = get_ref(o.find(names::kBehaviourOwner)).value_or(0),
@@ -1065,7 +1071,14 @@ namespace rct3::save::model
                 }
                 case Kind::Bench:
                     if (const auto owner = get_ref(o.find(names::kBehaviourOwner)))
+                    {
                         m.benches.push_back(*owner);
+                        m.use_points.push_back({ .id = o.id, .object_ref = *owner });
+                    }
+                    break;
+                case Kind::UsePoint:
+                    if (const auto owner = get_ref(o.find(names::kBehaviourOwner)))
+                        m.use_points.push_back({ .id = o.id, .object_ref = *owner });
                     break;
                 case Kind::Weather:
                     if (singleton(have_weather, o))

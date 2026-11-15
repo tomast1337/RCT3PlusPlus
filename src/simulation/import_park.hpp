@@ -249,5 +249,11 @@ namespace rct3::simulation
     /// changed already, for the time the park says they had left. Returns how many. Call after start_guests
     /// and import_pools.
     std::size_t resume_saved_swimmers(SimWorld& world, const save::model::PeopleModel& people, std::span<const entt::entity> guests);
+    /// Puts the guests the park had using what stands by its paths (`guests` by place in `people`) back to it:
+    /// on a bench, at a view, at a water cannon, round an entertainer (`staff` by place in `people`) whose show
+    /// starts again for them; and puts in their hands and pockets the food, drink and empties they carried,
+    /// telling empties by `kinds`. Returns how many it put back to a use. Call after start_guests, import_staff,
+    /// import_path_items and import_sights.
+    std::size_t resume_saved_uses(SimWorld& world, const save::model::PeopleModel& people, std::span<const entt::entity> guests, std::span<const entt::entity> staff, std::span<const save::model::UsePoint> points, const rct3::park::CarriedKinds& kinds = { });
 
 } // namespace rct3::simulation

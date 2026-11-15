@@ -14,6 +14,7 @@
 #include "logging/log.hpp"
 #include "park/asset_index.hpp"
 #include "park/build_catalogue.hpp"
+#include "park/carried_goods.hpp"
 #include "park/item_category.hpp"
 #include "park/object/mesh.hpp"
 #include "park/object/models.hpp"
@@ -167,6 +168,7 @@ int main(int argc, char** argv)
     std::map<std::uint64_t, std::array<std::int32_t, 2>> gates; // Park entrances, with the tiles each covers
     std::map<std::uint64_t, float> scenery;                     // What each placed object adds to the scenery round the paths
     std::map<std::uint64_t, std::uint32_t> facility_kinds;      // Special attractions' kinds, by attraction
+    park::CarriedKinds carried;                                 // What guests carry, telling empties from the rest
     if (game)
     {
         const auto install = config::game::open_game_install(game);
@@ -175,6 +177,10 @@ int main(int argc, char** argv)
             out.error("{}: not the game's folder", game);
             return 1;
         }
+        if (const auto folder = install->find("CarriedItems"))
+            for (const std::filesystem::path& path : park::carried_overlays(*folder))
+                if (const auto overlay = ovl::Overlay::load(path))
+                    park::add_carried_kinds(*overlay, carried);
         if (awards)
         {
             std::string line;
@@ -323,7 +329,8 @@ int main(int argc, char** argv)
     simulation::keep_staff_in(world, world_model->terrain);
     if (park_model && park_model->group_mix)
         simulation::import_party_mix(world, *park_model->group_mix);
-    out.info("facilities {:d}  sights {:d}  gate {}", facilities, sight_count, gate ? "yes" : "none");
+    const std::size_t uses = simulation::resume_saved_uses(world, *people, guests, staff, world_model->use_points, carried);
+    out.info("facilities {:d}  sights {:d}  gate {}  guests back at a use {:d}", facilities, sight_count, gate ? "yes" : "none", uses);
     // The park's time of day, as its file left it, run through every hour.
     simulation::DayWindow hours;
     if (park_model && park_model->has_park)

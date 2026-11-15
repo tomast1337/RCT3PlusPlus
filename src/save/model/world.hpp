@@ -329,6 +329,14 @@ namespace rct3::save::model
         std::optional<float> last_emptied { }; ///< Park time, as the clock counts it; empty when never emptied
     };
 
+    /// Somewhere guests stop to use a placed object (a bench, a bin, a view, a water cannon, a passport post), as the
+    /// object a saved guest names while using it or heading for it.
+    struct UsePoint
+    {
+        std::uint64_t id = 0;         ///< What a guest's saved state names
+        std::uint64_t object_ref = 0; ///< The placed object it belongs to
+    };
+
     /// How much water a flower bed placed in the park holds.
     struct FlowerBedState
     {
@@ -539,6 +547,7 @@ namespace rct3::save::model
         std::vector<SignState> signs { };
         std::vector<FlowerBedState> flower_beds { };
         std::vector<std::uint64_t> benches { }; ///< The placed objects that are benches guests can sit on
+        std::vector<UsePoint> use_points { };
         std::vector<PoolWater> pool_water { };
         std::vector<PoolSegmentState> pool_segments { }; ///< Every square of the pools, water and the rest
         std::vector<PoolComplexState> pool_complexes { };

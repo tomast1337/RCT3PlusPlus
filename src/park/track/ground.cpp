@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <iterator>
 #include <limits>
 #include <unordered_map>
@@ -15,6 +16,26 @@
 
 namespace rct3::park::track
 {
+
+    units::Money raised_cost(units::Money ground_cost, units::Money height_rate, const save::model::PlacedObject& piece, const object::ObjectModels& models, const save::model::TerrainGrid& grid)
+    {
+        // A piece that stands only on water floats there, at whatever height.
+        const auto model = models.find(object::model_ref(piece));
+        if (height_rate <= units::Money { } || model == models.end() || model->second.water_only)
+            return ground_cost;
+        float height = 0;
+        for (const auto& [key, spans] : path::solid_tiles(std::span(&piece, 1), models, grid).tiles)
+        {
+            const save::model::Tile tile { static_cast<std::int32_t>(key & 0xFFFF), static_cast<std::int32_t>(key >> 16) };
+            if (!grid.contains(tile))
+                continue;
+            const std::array<float, 4>& corners = grid.at(tile).corners;
+            const float ground = std::floor((corners[0] + corners[1] + corners[2] + corners[3]) / 4);
+            for (const path::SolidSpan& s : spans)
+                height += std::max(s.low - ground, 0.0f);
+        }
+        return ground_cost + units::Money { std::llround(height * static_cast<float>(height_rate.value) / kHeightPerRate) };
+    }
 
     ground::GroundCuts ground_cuts(std::span<const save::model::PlacedObject> items, const object::ObjectModels& models, const save::model::TerrainGrid& grid, bool smooth)
     {

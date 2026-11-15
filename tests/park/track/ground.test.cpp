@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/ground.hpp"
 
+#include "park/demolish_refund.hpp"
 #include "park/item_category.hpp"
 
 #include <cmath>
@@ -173,4 +174,33 @@ TEST_CASE("an item lies buried only under enough ground on every tile it fills")
     for (save::model::TerrainCell& c : g.cells)
         c.corners.fill(4 + path::kRiderRoom + kGroundCover);
     CHECK(lies_buried(pieces, models, g));
+}
+
+TEST_CASE("a raised piece costs more on a ride that charges for height, and the same on one that does not")
+{
+    save::model::TerrainGrid g = owned_grid(5, 3);
+    auto [pieces, models] = one_piece();
+    const units::Money price { 1000 };
+    const units::Money rate { 400 };
+    CHECK(raised_cost(price, rate, pieces[0], models, g) == price); // On the ground
+    pieces[0].base_height = 3;
+    CHECK(raised_cost(price, rate, pieces[0], models, g) == units::Money { 1000 + 3 * 400 / 4 });
+    CHECK(raised_cost(price, units::Money { }, pieces[0], models, g) == price);
+    g.at(2, 1).corners = { 1, 1, 2, 2 }; // Counted from the whole unit under the corners' mean
+    CHECK(raised_cost(price, rate, pieces[0], models, g) == units::Money { 1000 + 2 * 400 / 4 });
+    g.at(2, 1).corners.fill(6); // A piece in the ground costs no less
+    CHECK(raised_cost(price, rate, pieces[0], models, g) == price);
+    g.at(2, 1).corners.fill(0);
+    models.begin()->second.water_only = true; // A boat's piece floats at whatever height
+    CHECK(raised_cost(price, rate, pieces[0], models, g) == price);
+}
+
+TEST_CASE("taking a raised piece away from a ride never opened pays back what it cost")
+{
+    save::model::TerrainGrid g = owned_grid(5, 3);
+    auto [pieces, models] = one_piece();
+    pieces[0].base_height = 5;
+    const units::Money paid = raised_cost(units::Money { 1000 }, units::Money { 500 }, pieces[0], models, g);
+    CHECK(paid > units::Money { 1000 });
+    CHECK(demolish_refund(paid, false) == paid);
 }

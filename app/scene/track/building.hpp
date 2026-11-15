@@ -122,6 +122,7 @@ namespace rct3::scene::track
         bool unowned = false;        ///< Of those, it stands off land the park owns
         bool in_ground = false;      ///< Of those, it cuts into the ground
         std::size_t ghost_doors = 0; ///< The design's doors the ghost shows with its track
+        units::Money ghost_cost;     ///< What laying the picked piece, or the design, where the ghost shows it costs
         std::string ghost_platform;  ///< The platform piece the ghost shows beside its station piece, if any
         std::string complaint;       ///< String key: why the track was last not finished; cleared by the next action
         bool arm = false;            ///< The ride's riders sit on arms, whose angles its pieces hold
@@ -215,6 +216,10 @@ namespace rct3::scene::track
 
     /// The track overlay of the ride's built pieces, if it has any.
     [[nodiscard]] std::optional<std::string> ride_track_overlay(const park::ParkScene& scene, save::model::RideIndex ride);
+
+    /// What a piece of `shape`, standing as `object` (its model loaded), costs to lay on ride `ride`: more raised
+    /// over the ground on a ride whose kind charges for height. Taking it away pays back from the same price.
+    [[nodiscard]] units::Money piece_price(const park::ParkScene& scene, save::model::RideIndex ride, const rct3::park::track::PieceShape& shape, const save::model::PlacedObject& object);
 
     /// What ride `ride`'s track pieces cost to lay; nothing when its pieces cannot be read.
     [[nodiscard]] units::Money track_cost(park::ParkScene& scene, save::model::RideIndex ride, const ui::InterfaceAssets& assets);

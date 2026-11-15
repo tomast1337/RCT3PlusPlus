@@ -105,7 +105,7 @@ namespace rct3::parkfile
             const auto* swimmer = r.try_get<Swimmer>(e);
             const auto* errand = r.try_get<Errand>(e);
             const auto* door = swimmer != nullptr && errand != nullptr && errand->kind == ErrandKind::Swimming && r.valid(errand->target) ? r.try_get<PoolDoor>(errand->target) : nullptr;
-            const bool off = door == nullptr && !world.paths.nearest(pose.position) && stride != nullptr && stride->to < world.paths.nodes().size();
+            const bool off = door == nullptr && !world.paths.nearest(pose.position) && stride != nullptr && stride->to.value < world.paths.nodes().size();
             SavedGuest& g = out.guests.emplace_back(SavedGuest { .look = look(e, model.guests.size()), .visitor = visitor, .position = off ? world.paths.centre(stride->to) : pose.position, .heading = pose.heading.value, .needs = needs, .mood = mood, .cash = wallet.cash.value });
             if (const auto* taste = r.try_get<Taste>(e))
                 g.taste = *taste;
@@ -236,7 +236,7 @@ namespace rct3::parkfile
             const auto at = world.paths.nearest(w.position);
             // A vendor stays in their booth, a keeper in their enclosure, a lifeguard in their chair.
             const bool walks = staff::walks_paths(w.role);
-            if (walks && (!at || world.paths.nodes()[*at].queue))
+            if (walks && (!at || world.paths.nodes()[at->value].queue))
                 continue;
             const entt::entity e = r.create();
             // The tasks the player set are on the worker's page.

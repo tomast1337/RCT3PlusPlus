@@ -22,9 +22,9 @@
 namespace rct3::simulation
 {
 
-    void throw_person(entt::registry& r, entt::entity person, glm::vec3 at, glm::vec3 velocity, NodeId node)
+    void throw_person(entt::registry& r, entt::entity person, glm::vec3 at, glm::vec3 velocity, std::optional<NodeId> node)
     {
-        if (!r.valid(person) || r.any_of<Left, Held, Dropped>(person) || !r.all_of<Errand, Stride, Pose>(person) || node == kNoNode)
+        if (!r.valid(person) || r.any_of<Left, Held, Dropped>(person) || !r.all_of<Errand, Stride, Pose>(person) || !node)
             return;
         step_out(r, person);
         r.remove<Errand, Stride, Linger, Gesture, Watching, RideWalk>(person);
@@ -72,15 +72,15 @@ namespace rct3::simulation
     {
         std::optional<NodeId> node = paths.nearest(ground);
         const auto& nodes = paths.nodes();
-        if (node && !nodes[*node].queue && !nodes[*node].removed && std::abs(nodes[*node].height - ground.y) <= 1)
+        if (node && !nodes[node->value].queue && !nodes[node->value].removed && std::abs(nodes[node->value].height - ground.y) <= 1)
             return node;
         node.reset();
         float best = std::numeric_limits<float>::max();
-        for (NodeId n = 0; n < nodes.size(); ++n)
-            if (const float d = glm::distance(paths.centre(n), ground); !nodes[n].queue && !nodes[n].removed && d < best)
+        for (std::uint32_t k = 0; k < nodes.size(); ++k)
+            if (const float d = glm::distance(paths.centre(NodeId { k }), ground); !nodes[k].queue && !nodes[k].removed && d < best)
             {
                 best = d;
-                node = n;
+                node = NodeId { k };
             }
         return node;
     }
@@ -131,9 +131,10 @@ namespace rct3::simulation
             return std::nullopt;
         const glm::vec3 gate = world.paths.centre(gates.get<const ParkGate>(gates.front()).node);
         std::optional<glm::vec3> best;
-        for (NodeId n = 0; n < world.paths.nodes().size(); ++n)
+        for (std::uint32_t k = 0; k < world.paths.nodes().size(); ++k)
         {
-            const PathNode& node = world.paths.nodes()[n];
+            const NodeId n { k };
+            const PathNode& node = world.paths.nodes()[k];
             if (node.removed || node.queue || node.staff_kept_off)
                 continue;
             const glm::vec3 at = world.paths.centre(n);
@@ -195,7 +196,7 @@ namespace rct3::simulation
                 {
                     drop.sliding = false;
                     drop.drift = { };
-                    drop.node = path_to_rejoin(paths, pose.position).value_or(drop.node);
+                    drop.node = path_to_rejoin(paths, pose.position).or_else([&] { return drop.node; });
                     // Staff have no motion for lying down, so they only stand up again.
                     if (r.all_of<Visitor>(e))
                         r.emplace_or_replace<Gesture>(e, GestureKind::Down, kTuning.crashes.knocked);
@@ -236,7 +237,7 @@ namespace rct3::simulation
             if (const auto* door = r.valid(drop.pool) ? r.try_get<PoolDoor>(drop.pool) : nullptr; door != nullptr && r.all_of<Attraction>(drop.pool))
             {
                 const entt::entity room = drop.pool;
-                const NodeId door_node = r.get<Attraction>(room).entrance != kNoNode ? r.get<Attraction>(room).entrance : drop.node;
+                const NodeId door_node = *r.get<Attraction>(room).entrance.or_else([&] { return drop.node; });
                 const glm::vec3 landed = pose.position;
                 const Dice dice = r.get<Dice>(e);
                 const auto* swam = r.try_get<Swimmer>(e); // Off one of its slides, with the time they had left
@@ -252,7 +253,7 @@ namespace rct3::simulation
                 r.emplace_or_replace<Swimmer>(e, Swimmer { .changed = true, .left = left, .goal = landed, .in_water = wet });
                 continue;
             }
-            const glm::vec3 to = paths.centre(drop.node) - pose.position;
+            const glm::vec3 to = paths.centre(*drop.node) - pose.position;
             const float left = glm::length(glm::vec2(to.x, to.z));
             if (left > kLaneReach)
             {
@@ -262,7 +263,7 @@ namespace rct3::simulation
                 pose.position += glm::vec3 { to.x, 0, to.z } * (std::min(pace, left) / left); // Over the ground they landed on
                 continue;
             }
-            const NodeId node = drop.node;
+            const NodeId node = *drop.node;
             const Dice dice = r.get<Dice>(e); // Going on as they were, not from the start again
             r.remove<Dropped>(e);
             start_walking(world, e, node);

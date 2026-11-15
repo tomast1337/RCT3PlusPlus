@@ -28,26 +28,26 @@ namespace rct3::simulation
             const auto& nodes = paths.nodes();
             const NodeId from = starts.front();
             const auto reached = [&](NodeId n) { return std::ranges::all_of(starts, [&](NodeId s) { return s == n || paths.route(s, n).has_value(); }); };
-            NodeId fallback = kNoNode;
+            std::optional<NodeId> fallback;
             for (const NodeId origin : starts)
             {
                 std::vector<NodeId> seen { origin };
                 for (std::size_t k = 0; k < seen.size() && seen.size() <= kTuning.walking.gather_reach; ++k)
                 {
                     const NodeId n = seen[k];
-                    if (n != from && !nodes[n].queue)
+                    if (n != from && !nodes[n.value].queue)
                     {
-                        const bool by_queue = std::ranges::any_of(nodes[n].next, [&](NodeId m) { return m != kNoNode && nodes[m].queue; });
-                        if (!by_queue && !taken[n] && reached(n))
+                        const bool by_queue = std::ranges::any_of(nodes[n.value].next, [&](std::optional<NodeId> m) { return m && nodes[m->value].queue; });
+                        if (!by_queue && !taken[n.value] && reached(n))
                             return n;
-                        fallback = fallback == kNoNode ? n : fallback;
+                        fallback = fallback.value_or(n);
                     }
-                    for (const NodeId m : nodes[n].next)
-                        if (m != kNoNode && !nodes[m].queue && !nodes[m].removed && !std::ranges::contains(seen, m) && paths.may_step(n, m, Walker::Guest))
-                            seen.push_back(m);
+                    for (const std::optional<NodeId> m : nodes[n.value].next)
+                        if (m && !nodes[m->value].queue && !nodes[m->value].removed && !std::ranges::contains(seen, *m) && paths.may_step(n, *m, Walker::Guest))
+                            seen.push_back(*m);
                 }
             }
-            return fallback == kNoNode ? from : fallback;
+            return fallback.value_or(from);
         }
     } // namespace
 
@@ -97,8 +97,8 @@ namespace rct3::simulation
         // behind the leader.
         std::vector<bool> taken(paths.nodes().size(), false); // Tiles parties wait on
         for (const auto [e, party] : r.view<const Party>().each())
-            if (party.gather < taken.size())
-                taken[party.gather] = true;
+            if (party.gather && party.gather->value < taken.size())
+                taken[party.gather->value] = true;
         for (const entt::entity e : sorted(r.view<Party>()))
         {
             Party& party = r.get<Party>(e);
@@ -106,7 +106,7 @@ namespace rct3::simulation
             if (party.members.empty())
                 continue;
             entt::entity busy_at = entt::null; // The ride, stall or bench sitter keeping them
-            NodeId near = kNoNode;             // And the tile the rest wait by
+            std::optional<NodeId> near;        // And the tile the rest wait by
             std::uint8_t off_at = 0;           // The station those on a ride get off at
             bool waiting = false;
             for (const entt::entity m : party.members)
@@ -139,27 +139,27 @@ namespace rct3::simulation
                 const auto& lead = r.get<Stride>(party.leader);
                 near = lead.progress.value < 0.5f ? lead.from : lead.to;
             }
-            if (near != kNoNode && party.gather >= taken.size())
+            if (near && (!party.gather || party.gather->value >= taken.size()))
             {
                 // Where each one comes from: the way out for those still busy, else the tile they are on.
-                std::vector<NodeId> starts { near };
+                std::vector<NodeId> starts { *near };
                 for (const entt::entity m : party.members)
                 {
                     const ErrandKind kind = r.get<Errand>(m).kind;
                     const auto& stride = r.get<Stride>(m);
                     const NodeId at = stride.progress.value < 0.5f ? stride.from : stride.to;
-                    if (kind != ErrandKind::Queueing && kind != ErrandKind::Riding && kind != ErrandKind::Swimming && kind != ErrandKind::Buying && !r.all_of<Linger>(m) && at < paths.nodes().size() && !std::ranges::contains(starts, at))
+                    if (kind != ErrandKind::Queueing && kind != ErrandKind::Riding && kind != ErrandKind::Swimming && kind != ErrandKind::Buying && !r.all_of<Linger>(m) && at.value < paths.nodes().size() && !std::ranges::contains(starts, at))
                         starts.push_back(at);
                 }
                 party.gather = gather_spot(paths, taken, starts);
-                taken[party.gather] = true;
+                taken[party.gather->value] = true;
             }
-            if (busy_at != entt::null || (waiting && party.gather < taken.size()))
+            if (busy_at != entt::null || (waiting && party.gather && party.gather->value < taken.size()))
             {
-                const NodeId spot = party.gather;
+                const std::optional<NodeId> spot = party.gather;
                 bool back = busy_at == entt::null; // All standing with the others, or where they cannot leave
                 bool cut_off = false;              // One off the queues finds no way to the spot: look for another
-                NodeId come_to = kNoNode;          // Or the tile of one the others can walk to, though not back
+                std::optional<NodeId> come_to;     // Or the tile of one the others can walk to, though not back
                 for (const entt::entity m : party.members)
                 {
                     auto& errand = r.get<Errand>(m);
@@ -169,12 +169,12 @@ namespace rct3::simulation
                     // Lost long enough, they are put with the others once there is a spot to wait on: the one place
                     // this happens.
                     // shortcut: put there in plain view; look for a moment the camera is elsewhere if it shows.
-                    if (auto* lost = r.try_get<Lost>(m); lost != nullptr && (lost->left == 0 || --lost->left == 0) && spot < paths.nodes().size())
+                    if (auto* lost = r.try_get<Lost>(m); lost != nullptr && (lost->left == 0 || --lost->left == 0) && spot && spot->value < paths.nodes().size())
                     {
                         r.remove<Lost>(m);
                         stride.route.clear();
-                        stride.from = spot;
-                        stride.to = spot;
+                        stride.from = *spot;
+                        stride.to = *spot;
                         stride.progress.value = 1;
                         stride.lane_from = stride.lane_to = glm::vec2 { 0.0f };
                         place(paths, stride, r.get<Pose>(m));
@@ -192,14 +192,14 @@ namespace rct3::simulation
                     const NodeId at = stride.progress.value < 0.5f ? stride.from : stride.to;
                     // No way over (behind a no-entry sign): at least off the queue, to wait beside it. Off it, if the
                     // others can walk to them they come; else they are lost, and stand looking about for a while.
-                    auto way = paths.route(at, spot);
-                    const bool over = way || paths.nodes()[at].queue; // On the way, or where they cannot leave: as good as back
+                    auto way = spot ? paths.route(at, *spot) : std::nullopt;
+                    const bool over = way || paths.nodes()[at.value].queue; // On the way, or where they cannot leave: as good as back
                     if (way)
                         r.remove<Lost>(m);
-                    else if (!paths.nodes()[at].queue)
+                    else if (!paths.nodes()[at.value].queue)
                     {
                         cut_off = true;
-                        if (paths.route(spot, at))
+                        if (spot && paths.route(*spot, at))
                             come_to = at;
                         else if (!r.all_of<Lost>(m))
                         {
@@ -222,10 +222,10 @@ namespace rct3::simulation
                 }
                 // The others go over to the one they can reach; else, while some are busy, a spot is chosen again
                 // next tick from where they all are now.
-                if (come_to != kNoNode)
+                if (come_to)
                     party.gather = come_to;
                 else if (cut_off && busy_at != entt::null)
-                    party.gather = kNoNode;
+                    party.gather.reset();
                 if (!back)
                     party.huddle = 0;
                 else if (party.huddle == 0)
@@ -235,7 +235,7 @@ namespace rct3::simulation
             }
             if (waiting)
             {
-                party.gather = kNoNode;
+                party.gather.reset();
                 const Errand was = r.get<Errand>(party.leader);
                 for (const entt::entity m : party.members)
                 {
@@ -250,7 +250,7 @@ namespace rct3::simulation
                 {
                     auto& stride = r.get<Stride>(party.leader);
                     const NodeId at = stride.progress.value < 0.5f ? stride.from : stride.to;
-                    if (auto back = r.valid(was.target) && r.all_of<CycleRide>(was.target) ? paths.route(at, exit_of(r, was.target, was.off)) : std::nullopt)
+                    if (auto back = r.valid(was.target) && r.all_of<CycleRide>(was.target) ? exit_of(r, was.target, was.off).and_then([&](NodeId out) { return paths.route(at, out); }) : std::nullopt)
                     {
                         back->insert(back->end(), crossing->route.begin(), crossing->route.end());
                         stride.route = std::move(*back);

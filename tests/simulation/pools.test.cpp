@@ -53,8 +53,8 @@ TEST_CASE("a changing room opens on the path tile before its door, at its comple
     CHECK(a.kind == AttractionKind::Pool);
     CHECK(a.price.value == 200);
     CHECK(a.open);
-    REQUIRE(a.entrance != kNoNode);
-    CHECK(park.world().paths.nodes()[a.entrance].tile == PathTileSpot { 5, 0, 0 });
+    REQUIRE(a.entrance.has_value());
+    CHECK(park.world().paths.nodes()[a.entrance->value].tile == PathTileSpot { 5, 0, 0 });
     const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room).pool);
     CHECK(pool.water.size() == 6);
     CHECK(pool.paved.size() == 1);
@@ -198,7 +198,7 @@ TEST_CASE("a changing room taken away sends its swimmers out at its door")
     auto& r = park.world().registry;
     const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f });
     REQUIRE(park.run_until([&] { return r.get<Errand>(guest).kind == ErrandKind::Swimming; }, 60));
-    const NodeId door = r.get<Attraction>(room_of(r)).entrance;
+    const NodeId door = *r.get<Attraction>(room_of(r)).entrance;
     park.run_seconds(40);
     pools.rooms.clear();
     import_pools(park.world(), pools);
@@ -504,7 +504,7 @@ TEST_CASE("a guest let go over a pool swims there in their swimwear; picked out,
     park.run(5);
     CHECK(pool_door_at(park.world(), pool.water[2]) == room);
     CHECK(pool_door_at(park.world(), pool.paved[0]) == room);
-    CHECK_FALSE(pool_door_at(park.world(), park.world().paths.centre(r.get<Attraction>(room).entrance)));
+    CHECK_FALSE(pool_door_at(park.world(), park.world().paths.centre(*r.get<Attraction>(room).entrance)));
 
     REQUIRE(pick_up(park.world(), guest));
     CHECK_FALSE(in_swimwear(r, guest));
@@ -523,7 +523,7 @@ TEST_CASE("a guest let go over a pool swims there in their swimwear; picked out,
     REQUIRE(pick_up(park.world(), guest));
     CHECK_FALSE(r.all_of<Swimmer>(guest));
     CHECK(in_swimwear(r, guest));
-    const glm::vec3 path = park.world().paths.centre(r.get<Attraction>(room).entrance);
+    const glm::vec3 path = park.world().paths.centre(*r.get<Attraction>(room).entrance);
     REQUIRE(let_go(park.world(), guest, path));
     r.get<Pose>(guest).position = path + glm::vec3 { 0, 5, 0 };
     park.run(1);

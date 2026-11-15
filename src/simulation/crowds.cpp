@@ -112,7 +112,7 @@ namespace rct3::simulation
             for (const auto [g, visitor, errand, stride, pose] : r.view<const Visitor, const Errand, const Stride, const Pose>(entt::exclude<Staff, Vip, Watching, Linger, Gesture, Left, Held, Dropped, RideWalk, Crossing>).each())
             {
                 const float d = glm::distance(flat(pose.position), at);
-                if (errand.kind != ErrandKind::Wandering || stride.from >= paths.nodes().size() || d > reach || d < kTuning.shows.near.value)
+                if (errand.kind != ErrandKind::Wandering || stride.from.value >= paths.nodes().size() || d > reach || d < kTuning.shows.near.value)
                     continue;
                 if (const auto* member = r.try_get<Member>(g); member != nullptr && (r.get<Party>(member->party).leader != g || r.get<Party>(member->party).huddle > 0))
                     continue;
@@ -202,7 +202,7 @@ namespace rct3::simulation
             if (staff.role != StaffRole::Entertainer)
                 continue;
             Show& show = r.get_or_emplace<Show>(e);
-            if (!show.moves.empty() || show.gap.value > 0 || staff.busy.value > 0 || r.any_of<Held, Dropped>(e) || stride.from >= paths.nodes().size())
+            if (!show.moves.empty() || show.gap.value > 0 || staff.busy.value > 0 || r.any_of<Held, Dropped>(e) || stride.from.value >= paths.nodes().size())
                 continue;
             show.gap = kTuning.shows.look;
             if (free_near(e, kTuning.shows.reach.value).empty() || !random::chance(dice.state, show_chance(staff)))
@@ -265,7 +265,7 @@ namespace rct3::simulation
             const auto* vip = gone ? nullptr : r.try_get<Vip>(watching.star);
             const float apart = gone ? 0.0f : glm::distance(flat(pose.position), flat(r.get<Pose>(watching.star).position));
             const bool tired = watching.waited.value >= kTuning.fans.give_up.value || apart >= kTuning.fans.far.value;
-            if (gone || (watching.autograph && (vip == nullptr || vip->leaving || tired)) || (!watching.autograph && r.get_or_emplace<Show>(watching.star).moves.empty()) || stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
+            if (gone || (watching.autograph && (vip == nullptr || vip->leaving || tired)) || (!watching.autograph && r.get_or_emplace<Show>(watching.star).moves.empty()) || stride.from.value >= paths.nodes().size() || stride.to.value >= paths.nodes().size())
             {
                 r.remove<Watching>(g);
                 continue;
@@ -303,10 +303,10 @@ namespace rct3::simulation
             glm::vec2 spot = want;
             float best = std::numeric_limits<float>::infinity();
             const auto* star_stride = r.try_get<Stride>(watching.star);
-            for (const NodeId n : { stride.from, stride.to, star_stride != nullptr ? star_stride->from : kNoNode, star_stride != nullptr ? star_stride->to : kNoNode })
-                if (n < paths.nodes().size())
+            for (const std::optional<NodeId> n : { std::optional(stride.from), std::optional(stride.to), star_stride != nullptr ? std::optional(star_stride->from) : std::nullopt, star_stride != nullptr ? std::optional(star_stride->to) : std::nullopt })
+                if (n && n->value < paths.nodes().size())
                 {
-                    const glm::vec2 centre = flat(paths.centre(n));
+                    const glm::vec2 centre = flat(paths.centre(*n));
                     const glm::vec2 kept = centre + glm::clamp(want - centre, -kLaneReach, kLaneReach);
                     if (const float d = glm::distance(kept, want); d < best)
                     {

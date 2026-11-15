@@ -68,7 +68,7 @@ namespace rct3::simulation
         for (const glm::ivec2 tile : setup.line)
             line.push_back(node(tile, level));
         r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = std::move(name), .entrance = line.empty() ? node(entrance, level) : line.back(), .price = price });
-        r.emplace<CycleRide>(e, CycleRide { .capacity = setup.capacity, .run = { setup.cycle_seconds }, .excitement = setup.excitement, .intensity = setup.intensity, .nausea = setup.nausea, .cover = setup.cover, .line = std::move(line), .exit = setup.exit ? node(*setup.exit, level) : kNoNode });
+        r.emplace<CycleRide>(e, CycleRide { .capacity = setup.capacity, .run = { setup.cycle_seconds }, .excitement = setup.excitement, .intensity = setup.intensity, .nausea = setup.nausea, .cover = setup.cover, .line = std::move(line), .exit = setup.exit ? std::optional(node(*setup.exit, level)) : std::nullopt });
         return e;
     }
 

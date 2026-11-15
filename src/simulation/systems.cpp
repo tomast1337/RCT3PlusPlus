@@ -158,21 +158,21 @@ namespace rct3::simulation
             guarded.assign(paths.nodes().size(), false);
             for (const auto [e, staff, stride] : r.view<const Staff, const Stride>().each())
             {
-                if (staff.role != StaffRole::Guard || stride.to >= paths.nodes().size())
+                if (staff.role != StaffRole::Guard || stride.to.value >= paths.nodes().size())
                     continue;
                 auto& ring = buffers.ring;
                 auto& next = buffers.next;
                 ring.assign(1, stride.to);
-                guarded[stride.to] = true;
+                guarded[stride.to.value] = true;
                 for (int step = 0; step < kTuning.vandals.guard_reach; ++step)
                 {
                     next.clear();
                     for (const NodeId n : ring)
-                        for (const NodeId m : paths.nodes()[n].next)
-                            if (m != kNoNode && !guarded[m])
+                        for (const std::optional<NodeId> m : paths.nodes()[n.value].next)
+                            if (m && !guarded[m->value])
                             {
-                                guarded[m] = true;
-                                next.push_back(m);
+                                guarded[m->value] = true;
+                                next.push_back(*m);
                             }
                     std::swap(ring, next);
                 }
@@ -191,7 +191,7 @@ namespace rct3::simulation
             for (const entt::entity g : sorted(guests_view))
             {
                 auto [errand, stride, mood, dice, needs] = guests_view.get(g);
-                if (!walking(errand.kind) || stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
+                if (!walking(errand.kind) || stride.from.value >= paths.nodes().size() || stride.to.value >= paths.nodes().size())
                     continue;
                 // Every so often, once the park has run a while, a guest takes in what is round them, walking or
                 // stopped, unless taken up with a show: plenty of scenery, or else a tidy, unspoilt path. Each at
@@ -203,9 +203,9 @@ namespace rct3::simulation
                 {
                     const NodeId here = stride.from;
                     const auto* near = r.ctx().find<SceneryNear>();
-                    const bool clean = litter_on(here) == 0 && std::ranges::none_of(paths.nodes()[here].next, [&](NodeId m) { return m != kNoNode && litter_on(m) > 0; });
+                    const bool clean = litter_on(here) == 0 && std::ranges::none_of(paths.nodes()[here.value].next, [&](std::optional<NodeId> m) { return m && litter_on(*m) > 0; });
                     const bool whole = std::ranges::none_of(items(here), [&](entt::entity i) { return r.get<PathItem>(i).broken; });
-                    if (near != nullptr && here < near->by_node.size() && near->by_node[here] >= kTuning.surroundings.great)
+                    if (near != nullptr && here.value < near->by_node.size() && near->by_node[here.value] >= kTuning.surroundings.great)
                     {
                         think(r, g, ThoughtKind::GreatScenery, entt::null, now);
                         mood.happiness.value = clamp01(mood.happiness.value + kTuning.surroundings.great_cheer.value);
@@ -306,9 +306,9 @@ namespace rct3::simulation
                     // Within earshot of a loudspeaker a guest may like its music, once in a while whichever it is.
                     // shortcut: every speaker plays, and its music always pleases; upgrade when speakers keep their
                     // music and on/off state.
-                    const PathTileSpot& tile = paths.nodes()[stride.from].tile;
+                    const PathTileSpot& tile = paths.nodes()[stride.from.value].tile;
                     const auto heard = std::ranges::find_if(speakers, [&](entt::entity s) {
-                        const PathTileSpot& at = paths.nodes()[r.get<PathItem>(s).node].tile;
+                        const PathTileSpot& at = paths.nodes()[r.get<PathItem>(s).node.value].tile;
                         return std::abs(at.col - tile.col) <= kTuning.surroundings.earshot && std::abs(at.row - tile.row) <= kTuning.surroundings.earshot;
                     });
                     const auto* thoughts = r.try_get<Thoughts>(g);
@@ -368,7 +368,7 @@ namespace rct3::simulation
                             const auto* member = r.try_get<Member>(g);
                             const std::vector<entt::entity> party = member != nullptr ? r.get<Party>(member->party).members : std::vector { g };
                             const auto* near = r.ctx().find<SceneryNear>();
-                            const bool fine = near != nullptr && here < near->by_node.size() && near->by_node[here] >= kTuning.surroundings.great;
+                            const bool fine = near != nullptr && here.value < near->by_node.size() && near->by_node[here.value] >= kTuning.surroundings.great;
                             entt::entity avatar = entt::null;
                             for (const entt::entity m : party)
                             {
@@ -445,7 +445,7 @@ namespace rct3::simulation
                     else if (in_hand && rubbish->since.value >= kTuning.litter.carry.value)
                         free_hand(r, g, *rubbish, at);
                 }
-                if (mood.happiness.value < kTuning.vandals.mood.value && !guarded[at] && random::chance(dice.state, kTuning.vandals.breaking.value * dt))
+                if (mood.happiness.value < kTuning.vandals.mood.value && !guarded[at.value] && random::chance(dice.state, kTuning.vandals.breaking.value * dt))
                 {
                     const auto whole = std::ranges::find_if(items(at), [&](entt::entity i) { return !r.get<PathItem>(i).broken && breakable(r.get<PathItem>(i).kind); });
                     if (whole != items(at).end())
@@ -502,8 +502,8 @@ namespace rct3::simulation
             if (errand.target != attraction)
                 continue;
             const ErrandKind was = errand.kind;
-            const NodeId entrance = ride ? entrance_of(r, attraction, errand.station) : r.get<Attraction>(attraction).entrance;
-            const NodeId exit = ride ? exit_of(r, attraction, errand.off) : entrance;
+            const std::optional<NodeId> entrance = ride ? entrance_of(r, attraction, errand.station) : r.get<Attraction>(attraction).entrance;
+            const std::optional<NodeId> exit = ride ? exit_of(r, attraction, errand.off) : entrance;
             // A party goes on together behind its leader, who picks somewhere else to go.
             const auto* member = r.try_get<Member>(guest);
             const bool follows = member != nullptr && r.valid(member->party) && r.get<Party>(member->party).leader != guest;
@@ -511,10 +511,10 @@ namespace rct3::simulation
             r.remove<RideWalk, Swimmer, PoolRoute>(guest);
             // Out of the queue at its entrance, riders off at its exit, swimmers out at the door; those on their
             // way walk on from where they are.
-            if ((was == ErrandKind::Queueing || was == ErrandKind::Swimming) && entrance != kNoNode)
-                stop_at(world.paths, entrance, stride, pose);
-            else if (was == ErrandKind::Riding && exit != kNoNode)
-                stop_at(world.paths, exit, stride, pose);
+            if ((was == ErrandKind::Queueing || was == ErrandKind::Swimming) && entrance)
+                stop_at(world.paths, *entrance, stride, pose);
+            else if (was == ErrandKind::Riding && exit)
+                stop_at(world.paths, *exit, stride, pose);
             else
                 stride.route.clear();
         }

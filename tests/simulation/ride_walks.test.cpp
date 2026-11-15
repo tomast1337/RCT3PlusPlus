@@ -27,7 +27,7 @@ TEST_CASE("riders walk past the ticket spot to their seats, and off past the exi
     const auto ride = park.flat_ride("Twirl", { 4, 0 }, 100, { .capacity = 2, .cycle_seconds = 10, .exit = glm::ivec2 { 4, 3 } });
     auto& r = park.world().registry;
     const auto& paths = park.world().paths;
-    const glm::vec3 entrance = paths.centre(r.get<Attraction>(ride).entrance);
+    const glm::vec3 entrance = paths.centre(*r.get<Attraction>(ride).entrance);
     const glm::vec3 ticket = entrance + glm::vec3(1, 0, 0);
     const glm::vec3 seat = entrance + glm::vec3(6, 1, 0);
     const glm::vec3 way_out = entrance + glm::vec3(6, 0, 8);
@@ -59,7 +59,7 @@ TEST_CASE("riders walk past the ticket spot to their seats, and off past the exi
     CHECK(r.get<CycleRide>(ride).riders.empty());
     REQUIRE(park.run_until([&] { return r.get<Errand>(g).kind != ErrandKind::Riding; }, 30));
     CHECK_FALSE(r.all_of<RideWalk>(g));
-    const glm::vec3 exit = paths.centre(r.get<CycleRide>(ride).exit);
+    const glm::vec3 exit = paths.centre(*r.get<CycleRide>(ride).exit);
     CHECK(glm::distance(glm::vec2(r.get<Pose>(g).position.x, r.get<Pose>(g).position.z), glm::vec2(exit.x, exit.z)) < 1.0f);
 }
 
@@ -69,7 +69,7 @@ TEST_CASE("the next rider steps up to the ticket spot once the one ahead has han
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = park.flat_ride("Twirl", { 4, 0 }, 100, { .capacity = 2, .cycle_seconds = 10 });
     auto& r = park.world().registry;
-    const glm::vec3 entrance = park.world().paths.centre(r.get<Attraction>(ride).entrance);
+    const glm::vec3 entrance = park.world().paths.centre(*r.get<Attraction>(ride).entrance);
     r.emplace<RideWalks>(ride, RideWalks { .ticket = entrance, .on = { { entrance + glm::vec3(20, 0, 0) }, { entrance + glm::vec3(20, 0, 1) } } });
     const auto a = park.guest({ 4, 0 }, { .cash = 1000 });
     const auto b = park.guest({ 4, 0 }, { .cash = 1000 });
@@ -94,7 +94,7 @@ TEST_CASE("a load walks off abreast, each to a side of the way out within the wa
     park.path({ 0, 0 }, { 4, 0 }).path({ 4, 1 }, { 4, 3 });
     const auto ride = park.flat_ride("Twirl", { 4, 0 }, 100, { .capacity = 3, .cycle_seconds = 10, .exit = glm::ivec2 { 4, 3 } });
     auto& r = park.world().registry;
-    const glm::vec3 entrance = park.world().paths.centre(r.get<Attraction>(ride).entrance);
+    const glm::vec3 entrance = park.world().paths.centre(*r.get<Attraction>(ride).entrance);
     const glm::vec3 bend = entrance + glm::vec3(6, 0, 4);
     std::vector<std::vector<glm::vec3>> on, off;
     for (int seat = 0; seat < 3; ++seat)
@@ -110,7 +110,7 @@ TEST_CASE("a load walks off abreast, each to a side of the way out within the wa
         r.get<Errand>(load.back()) = { ErrandKind::Heading, ride, 0 };
     }
     REQUIRE(park.run_until([&] { return std::ranges::all_of(load, [&](entt::entity g) { return r.all_of<RideWalk>(g) && r.get<RideWalk>(g).off; }); }, 120));
-    const glm::vec3 exit = park.world().paths.centre(r.get<CycleRide>(ride).exit);
+    const glm::vec3 exit = park.world().paths.centre(*r.get<CycleRide>(ride).exit);
     std::vector<float> sides;
     for (const entt::entity g : load)
     {

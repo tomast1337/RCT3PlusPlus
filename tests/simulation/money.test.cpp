@@ -54,7 +54,7 @@ TEST_CASE("guests bring cash and bank around the park's averages, or the tuning'
         double sum = 0;
         std::size_t count = 0;
         for (int i = 0; i < 100; ++i)
-            for (const entt::entity g : admit_party(park.world(), dice, 0))
+            for (const entt::entity g : admit_party(park.world(), dice, NodeId { 0 }))
             {
                 const Wallet& w = r.get<Wallet>(g);
                 const double spread = kTuning.arrivals.cash_spread.value;

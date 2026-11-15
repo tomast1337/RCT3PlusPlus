@@ -277,7 +277,7 @@ namespace rct3::simulation
                 r.remove<Errand, Stride, Linger, Gesture, Watching, RideWalk>(g);
                 pose.position = at; // On from where they were as the step began
                 pose.heading.value = std::atan2(velocity.x, velocity.z);
-                r.emplace<Dropped>(g, Dropped { .ground = ground, .fall = { -velocity.y }, .drift = { velocity.x, velocity.z }, .node = path_to_rejoin(world.paths, at).value_or(kNoNode), .swimwear = true, .pool = room, .slide = from });
+                r.emplace<Dropped>(g, Dropped { .ground = ground, .fall = { -velocity.y }, .drift = { velocity.x, velocity.z }, .node = path_to_rejoin(world.paths, at), .swimwear = true, .pool = room, .slide = from });
             }
         }
     } // namespace
@@ -437,7 +437,7 @@ namespace rct3::simulation
         const Coaster& train = fleet->trains.front();
         if (train.splash_out)
             return pool_of(pool_door_at(world, track_point(train, train.length())));
-        if (const auto* attraction = r.try_get<Attraction>(ride); attraction == nullptr || attraction->entrance != kNoNode)
+        if (const auto* attraction = r.try_get<Attraction>(ride); attraction == nullptr || attraction->entrance)
             return std::nullopt;
         std::vector<glm::vec3> station;
         for (std::size_t i = 0; i + 1 < train.points.size() && i < train.kinds.size(); ++i)
@@ -593,13 +593,13 @@ namespace rct3::simulation
                         think(r, g, ThoughtKind::PoolBad, errand.target, now);
                     else if (pool->dirt.value < kTuning.pools.good.value)
                         think(r, g, ThoughtKind::PoolGood, errand.target, now);
-                    const NodeId out = r.get<Attraction>(errand.target).entrance;
+                    const std::optional<NodeId> out = r.get<Attraction>(errand.target).entrance;
                     const auto* member = r.try_get<Member>(g);
                     const bool follows = member != nullptr && r.valid(member->party) && r.get<Party>(member->party).leader != g;
                     errand = follows ? Errand { ErrandKind::Following, entt::null, 0 } : Errand { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
                     r.remove<Swimmer, PoolRoute>(g);
-                    if (out != kNoNode)
-                        stop_at(paths, out, r.get<Stride>(g), pose);
+                    if (out)
+                        stop_at(paths, *out, r.get<Stride>(g), pose);
                     continue;
                 }
                 swimmer.changed = true;

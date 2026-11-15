@@ -40,7 +40,7 @@ namespace rct3::simulation
 
     /// Throws `person`, on foot or just let out of a crashed ride, from `at` at `velocity`: they fly, land
     /// knocked over, lie there a while, then walk to `node` and go on from there.
-    void throw_person(entt::registry& r, entt::entity person, glm::vec3 at, glm::vec3 velocity, NodeId node);
+    void throw_person(entt::registry& r, entt::entity person, glm::vec3 at, glm::vec3 velocity, std::optional<NodeId> node);
 
     /// Takes `person` out of what they were doing on foot: out of the queue they stood in, away from their party
     /// till they land (rejoin), and, a mechanic, off the job in hand.

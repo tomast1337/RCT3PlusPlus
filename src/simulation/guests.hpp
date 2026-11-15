@@ -71,7 +71,7 @@ namespace rct3::simulation
     /// the gate from, and where those going home walk off.
     struct GuestSpawn
     {
-        NodeId node = kNoNode;
+        NodeId node { };
     };
 
     /// A guest on the paths outside the park, between a spawn point and the gate.
@@ -180,7 +180,7 @@ namespace rct3::simulation
     bool pay(entt::registry& r, entt::entity guest, units::Money price, units::Money Wallet::* on, park::LedgerLine line);
 
     /// The next tile for `who` wandering at `at`, not back where they came from unless it is the only way.
-    [[nodiscard]] NodeId wander(const PathNetwork& paths, NodeId at, NodeId came, Dice& dice, Walker who, const staff::Patrol* patrol = nullptr);
+    [[nodiscard]] NodeId wander(const PathNetwork& paths, NodeId at, std::optional<NodeId> came, Dice& dice, Walker who, const staff::Patrol* patrol = nullptr);
 
     /// A lane near `was`, so walkers drift across the path rather than zigzag from tile to tile. A party
     /// member keeps `slot` off their party's middle, and the middle drifts so the whole ring stays on the path.

@@ -52,7 +52,7 @@ namespace rct3::simulation
     /// Where guests come into the park and leave it; none come in while the park is closed.
     struct ParkGate
     {
-        NodeId node = kNoNode;
+        NodeId node { };
         bool closed = false;
     };
 
@@ -204,8 +204,8 @@ namespace rct3::simulation
     /// Where a guest is on the paths: on the way from node `from` to node `to`, `progress` of the way along.
     struct Stride
     {
-        NodeId from = kNoNode;
-        NodeId to = kNoNode;
+        NodeId from { };
+        NodeId to { };
         units::Share progress { };
         bool fresh = false;         ///< Came to `from` this tick
         units::Pace speed { 1.3f }; ///< Their own walk, before their gait's pace (gait_pace)
@@ -237,7 +237,7 @@ namespace rct3::simulation
     {
         AttractionKind kind = AttractionKind::Shop;
         std::string name;
-        NodeId entrance = kNoNode; ///< The path node guests go to for it
+        std::optional<NodeId> entrance { }; ///< The path node guests go to for it
         units::Money price { };
         bool open = true;
         bool testing = false;    ///< A ride run empty to try it out, guests kept off
@@ -262,7 +262,7 @@ namespace rct3::simulation
     /// A piece of litter lying on a path tile until a handyman sweeps it up.
     struct Litter
     {
-        NodeId node = kNoNode;
+        NodeId node { };
         /// What it looks like, numbered as saved parks number it (0..5).
         /// shortcut: which saved number is a cup or a wrapper is not known, so ours are 0 for food and 1 for
         /// drink; upgrade when litter is drawn.
@@ -293,7 +293,7 @@ namespace rct3::simulation
     /// Something standing on a path tile that guests use and vandals break.
     struct PathItem
     {
-        NodeId node = kNoNode;
+        NodeId node { };
         PathItemKind kind = PathItemKind::Bin;
         bool broken = false;      ///< Of no use until a handyman mends it, or the player replaces it
         std::uint64_t object = 0; ///< The placed object it stands as, 0 for none
@@ -313,7 +313,7 @@ namespace rct3::simulation
     /// A flower bed beside a path. It dries out, and a handyman waters it once dry.
     struct FlowerBed
     {
-        NodeId node = kNoNode;              ///< The path it is watered from
+        NodeId node { };                    ///< The path it is watered from
         std::uint64_t object = 0;           ///< The placed object it stands as
         float capacity = 0;                 ///< Water it holds when full, as its scenery data gives it
         float water = 0;                    ///< In the same measure as `capacity`
@@ -389,7 +389,7 @@ namespace rct3::simulation
         bool thrown = false;     ///< Lands knocked over, and lies there a while before walking on
         bool sliding = false;    ///< Down the slope, along the ground
         units::Seconds slid { }; ///< Since they began sliding
-        NodeId node = kNoNode;
+        std::optional<NodeId> node { };
         bool swimwear = false;           ///< Taken out of a pool in their swimwear, kept on till they land
         entt::entity pool = entt::null;  ///< The changing room of the pool complex they fall into, to swim there
         entt::entity slide = entt::null; ///< The pool slide they came off the end of, splashing down
@@ -569,7 +569,7 @@ namespace rct3::simulation
     struct Photo
     {
         entt::entity guest = entt::null; ///< The player's guest
-        NodeId at = kNoNode;             ///< The spot's path tile
+        NodeId at { };                   ///< The spot's path tile
     };
 
     /// In the registry's context: photos taken since whoever shows the park last took them away to save.

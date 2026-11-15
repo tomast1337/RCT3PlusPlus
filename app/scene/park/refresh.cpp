@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/refresh.hpp"
 
+#include "core/hash.hpp"
 #include "logging/log.hpp"
 #include "park/chain_lifts.hpp"
 #include "park/object/models.hpp"
@@ -197,7 +198,7 @@ namespace rct3::scene::park
                     const auto& model = scene.litter_looks[piece.vomit ? 1 : 0];
                     if (!model || piece.node >= scene.sim.paths.nodes().size())
                         continue;
-                    const auto seed = static_cast<std::uint32_t>(entt::to_integral(e)) * 2654435761u;
+                    const auto seed = static_cast<std::uint32_t>(entt::to_integral(e)) * core::kGoldenSpread;
                     const glm::vec2 off = (glm::vec2(seed & 0xffu, seed >> 8 & 0xffu) / 255.0f * 2.0f - 1.0f) * kSpread.value;
                     const glm::vec3 at = scene.sim.paths.centre(piece.node) + glm::vec3(off.x, 0.0f, off.y);
                     if (!maybe_in_view(view, at))

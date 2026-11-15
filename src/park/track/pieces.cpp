@@ -86,6 +86,12 @@ namespace rct3::park::track
             return { a[0], a[1], a[2] };
         }
 
+        /// The line whose ends `shape` meets the pieces before and after it at.
+        const PieceLine& meeting_line(const PieceShape& shape)
+        {
+            return shape.record.join_line ? *shape.record.join_line : shape.line;
+        }
+
     } // namespace
 
     std::optional<PieceLine> middle_line(const ovl::Spline& left, const ovl::Spline& right)
@@ -278,6 +284,13 @@ namespace rct3::park::track
             r.group = section.group;
             r.platform_run = section.platform_run;
             r.drop_off = section.drop_off;
+            if ((r.flags & kPieceLift) != 0)
+            {
+                const auto join_left = splines.find(section.splines[2]);
+                const auto join_right = splines.find(section.splines[3]);
+                if (join_left != splines.end() && join_right != splines.end())
+                    r.join_line = middle_line(join_left->second, join_right->second);
+            }
             // Unturned, a model's +X faces the column before (faced_side), its +Z the row before.
             constexpr std::array<std::pair<std::uint32_t, Side>, 4> kDrawnSides { { { 0x1, Side::kColBefore }, { 0x2, Side::kNextRow }, { 0x4, Side::kNextCol }, { 0x8, Side::kRowBefore } } };
             for (const ovl::TrackSquare& q : section.squares)
@@ -340,8 +353,9 @@ namespace rct3::park::track
     {
         PieceShape shape;
         shape.line = line;
-        shape.entry = measure_end(line.start_direction, line.start_side, base_bank);
-        shape.exit = measure_end(line.end_direction, line.end_side, base_bank);
+        const PieceLine& meets = record.join_line ? *record.join_line : line;
+        shape.entry = measure_end(meets.start_direction, meets.start_side, base_bank);
+        shape.exit = measure_end(meets.end_direction, meets.end_side, base_bank);
         for (const auto& [flag, toggle] : { std::pair { kPieceChain, PieceToggle::Chain }, { kPieceEnclosed, PieceToggle::Enclosed }, { kPieceWater, PieceToggle::Water }, { kPieceBooster, PieceToggle::Booster } })
         {
             if ((record.flags & flag) != 0)
@@ -353,6 +367,9 @@ namespace rct3::park::track
         const std::uint32_t join = record.join_a;
         if ((record.flags & kPieceStation) != 0)
             shape.use = PieceUse::Station;
+        // A lift tower's pieces go only one after the other, so they are picked by name.
+        else if ((record.flags & kPieceLift) != 0)
+            shape.use = PieceUse::Special;
         else if (join == 0 && turn == 0)
             shape.curve = 0;
         else if (join >= 1 && join <= kLastCurveJoin && turn != 0)
@@ -450,7 +467,7 @@ namespace rct3::park::track
     {
         const glm::mat4 m = object::object_transform(object, shape.record.positioning, grid, shape.record.squares);
         TrackTip tip;
-        tip.position = glm::vec3(m * glm::vec4(reversed ? shape.line.start : shape.line.end, 1));
+        tip.position = glm::vec3(m * glm::vec4(reversed ? meeting_line(shape).start : meeting_line(shape).end, 1));
         tip.end = laid_exit(shape, reversed);
         tip.end.heading = tip.end.heading.turned(ModelTurn::from(object.rotation));
         return tip;
@@ -473,7 +490,8 @@ namespace rct3::park::track
         const std::optional<ModelTurn> turn = Heading8::from(tip.end.heading.value - entry.heading.value).quarter_turns();
         if (!turn)
             return std::nullopt;
-        const glm::vec3 start = turned(reversed ? shape.line.end : shape.line.start, *turn);
+        const PieceLine& meets = meeting_line(shape);
+        const glm::vec3 start = turned(reversed ? meets.end : meets.start, *turn);
         const bool across = (turn->value & 1) != 0;
         const auto span_x = static_cast<float>(shape.record.squares[across ? 1 : 0]);
         const auto span_z = static_cast<float>(shape.record.squares[across ? 0 : 1]);
@@ -493,8 +511,8 @@ namespace rct3::park::track
         o.force_absolute_height = true;
         // Checked against the transform the park draws it with, so what is placed is what shows.
         const glm::mat4 m = object::object_transform(o, shape.record.positioning, grid, shape.record.squares);
-        const glm::vec3 meets = glm::vec3(m * glm::vec4(reversed ? shape.line.end : shape.line.start, 1));
-        if (glm::length(meets - tip.position) > kMeet)
+        const glm::vec3 met = glm::vec3(m * glm::vec4(reversed ? meets.end : meets.start, 1));
+        if (glm::length(met - tip.position) > kMeet)
             return std::nullopt;
         placed.next = tip_of(o, shape, reversed, grid);
         return placed;
@@ -508,6 +526,9 @@ namespace rct3::park::track
         {
             for (const bool reversed : { false, true })
             {
+                // A lift tower's car carries trains only up it.
+                if (reversed && (pieces[i].record.flags & kPieceLift) != 0)
+                    continue;
                 if (!fits_after(tip, laid_entry(pieces[i], reversed)))
                     continue;
                 if (before && (before->record.side != pieces[i].record.side || !ends_meet(laid_end_join(*before, last->reversed), laid_start_join(pieces[i], reversed))))

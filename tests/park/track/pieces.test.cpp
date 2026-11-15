@@ -411,3 +411,90 @@ TEST_CASE("a piece's middle line follows its rails even when they are split into
     CHECK(length == doctest::Approx(8));
     CHECK(line->path[line->path.size() / 2].x == doctest::Approx(0));
 }
+
+namespace
+{
+    /// A lift tower of invented shape: a foot two tiles long whose train's track comes in level two above its base
+    /// and turns up at its far tile, a middle four high and a top that ends pointing down a tile on. The car's way
+    /// up each is a vertical line three to the side of where the track joins.
+    struct LiftTower
+    {
+        PieceShape foot { };
+        PieceShape middle { };
+        PieceShape top { };
+    };
+
+    LiftTower lift_tower()
+    {
+        const auto vertical = [](glm::vec3 start, glm::vec3 end, glm::vec3 start_direction, glm::vec3 end_direction) { return PieceLine { .start = start, .end = end, .start_direction = start_direction, .end_direction = end_direction }; };
+        const glm::vec3 up { 0, 1, 0 };
+        const auto piece = [&](std::string name, std::uint32_t flag, std::string starts, std::string ends, PieceLine joins_at, float rise) {
+            PieceRecord r = record(std::move(name), flag);
+            r.joins[0].name = std::move(starts);
+            r.joins[1].name = std::move(ends);
+            r.join_line = std::move(joins_at);
+            return shape_piece(std::move(r), vertical({ 3, 0, 0 }, { 3, rise, 0 }, up, up));
+        };
+        LiftTower tower {
+            .foot = piece("LiftFoot", kPieceLiftBottom, "", "Lift", vertical({ kTile, 2, 0 }, { -kTile / 2, 4, 0 }, { -1, 0, 0 }, up), 4),
+            .middle = piece("LiftMiddle", kPieceLiftMiddle, "Lift", "Lift", vertical({ 0, 0, 0 }, { 0, 4, 0 }, up, up), 4),
+            .top = piece("LiftTop", kPieceLiftTop, "Lift", "", vertical({ 0, 0, 0 }, { -kTile, 2, 0 }, up, { 0, -1, 0 }), 2),
+        };
+        tower.foot.record.squares = { 2, 1 };
+        return tower;
+    }
+} // namespace
+
+TEST_CASE("a lift tower's pieces meet others where the train's track joins them, not along the car's way up")
+{
+    const save::model::TerrainGrid g = flat();
+    const LiftTower tower = lift_tower();
+    CHECK(tower.foot.entry == PieceEnd { 0, 0, 0 });
+    CHECK(tower.foot.exit == PieceEnd { 3, 0, 0 });
+    CHECK(tower.top.exit == PieceEnd { -3, 0, 0 });
+    CHECK(tower.middle.use == PieceUse::Special);
+
+    const TrackTip tip = tip_of(placed(1, 5, 0, 3), shape_piece(record("Straight"), straight_line()), false, g);
+    const auto foot = place_after(tip, tower.foot, false, g);
+    REQUIRE(foot);
+    CHECK(foot->object.col == 2);
+    CHECK(foot->object.base_height == 1);
+    CHECK(foot->next.position.y == doctest::Approx(5));
+    CHECK(foot->next.position.x == doctest::Approx(3.5f * kTile));
+    const auto middle = place_after(foot->next, tower.middle, false, g);
+    REQUIRE(middle);
+    CHECK(middle->object.col == 3);
+    CHECK(middle->next.position.y == doctest::Approx(9));
+    const auto top = place_after(middle->next, tower.top, false, g);
+    REQUIRE(top);
+    CHECK(top->next.end == PieceEnd { -3, 0, 0 });
+    CHECK(top->next.position.x == doctest::Approx(4.5f * kTile));
+    // Where a placed foot starts is where the track before it ends.
+    CHECK(glm::distance(start_of(foot->object, tower.foot, false, g).position, tip.position) < 0.01f);
+}
+
+TEST_CASE("a lift tower's pieces follow in order: its foot, any middles, its top, never laid backwards")
+{
+    const LiftTower tower = lift_tower();
+    PieceLine upright = straight_line();
+    upright.start_direction = upright.end_direction = { 0, 1, 0 };
+    const std::vector<PieceShape> pieces { shape_piece(record("Straight"), straight_line()), shape_piece(record("Vertical"), upright), tower.foot, tower.middle, tower.top };
+    const auto after = [&](std::size_t last) { return pieces_after(pieces, laid_exit(pieces[last], false), LaidPiece { last, false }); };
+    const std::vector<LaidPiece> level = after(0);
+    CHECK(has(level, 2, false));
+    CHECK_FALSE(has(level, 3, false));
+    CHECK_FALSE(has(level, 4, false));
+    for (const std::size_t open : { 2, 3 })
+    {
+        CAPTURE(open);
+        const std::vector<LaidPiece> tower_open = after(open);
+        CHECK(has(tower_open, 3, false));
+        CHECK(has(tower_open, 4, false));
+        CHECK_FALSE(has(tower_open, 1, false));
+        CHECK(tower_open.size() == 2);
+    }
+    // A top turned round would climb from a plain upright piece.
+    const std::vector<LaidPiece> upward = after(1);
+    CHECK_FALSE(has(upward, 4, true));
+    CHECK_FALSE(has(upward, 3, false));
+}

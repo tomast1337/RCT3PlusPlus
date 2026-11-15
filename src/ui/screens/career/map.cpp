@@ -268,7 +268,7 @@ namespace rct3::ui::screens::career
             auto& b = static_cast<ScenarioButton&>(*buttons_[i]);
             b.placement = placed(fs::button_rect(frame, fs::on_ring(cm::scenario_angle(i), cm::kScenarioRadius), size), rect());
             const float swell = picked ? cm::kPickedSwell : fs::kSwellFactor;
-            b.swell = size * frame.round * (swell - 1) / 2;
+            b.swell = { size * frame.round * (swell - 1) / 2 };
             b.swell_time = units::Seconds { (swell - 1) / fs::kSwellRate };
             b.icon_scale = (picked ? cm::kPickedIconScale : cm::kIconScale) * frame.round;
         }
@@ -302,7 +302,7 @@ namespace rct3::ui::screens::career
             small[i]->placement = placed(fs::button_rect(frame, fs::on_ring(cm::kSmallAngles.at(i), fs::kSmallRadius), fs::kSmallButtonSize), rect());
         for (front::FrontButton* b : { new_, resume_, load_, menu_, quit_ })
         {
-            b->swell = button * (fs::kSwellFactor - 1) / 2;
+            b->swell = { button * (fs::kSwellFactor - 1) / 2 };
             b->swell_time = units::Seconds { (fs::kSwellFactor - 1) / fs::kSwellRate };
         }
     }

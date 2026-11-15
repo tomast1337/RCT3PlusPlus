@@ -58,12 +58,12 @@ namespace rct3::ui::screens::park_view
     namespace message_drawer
     {
         inline constexpr float kWidth = 480;
-        inline constexpr float kLeft = -258;         ///< From the middle of the screen to the drawer's left edge
-        inline constexpr float kTop = 4;             ///< From the top of the screen; the top never moves
-        inline constexpr float kClosed = 22;         ///< Height when closed, all of it behind the bar
-        inline constexpr float kOpen = 360;          ///< Height when fully open
-        inline constexpr float kSlideSpeed = 200;    ///< Units a second it slides by itself
-        inline constexpr units::Seconds kHold { 8 }; ///< It stays down this long to show new messages
+        inline constexpr float kLeft = -258;                   ///< From the middle of the screen to the drawer's left edge
+        inline constexpr float kTop = 4;                       ///< From the top of the screen; the top never moves
+        inline constexpr float kClosed = 22;                   ///< Height when closed, all of it behind the bar
+        inline constexpr float kOpen = 360;                    ///< Height when fully open
+        inline constexpr units::PixelPace kSlideSpeed { 200 }; ///< It slides by itself
+        inline constexpr units::Seconds kHold { 8 };           ///< It stays down this long to show new messages
     } // namespace message_drawer
 
     /// The text of `message`: its string with the subject's name, or the award's, filled in. A name that is

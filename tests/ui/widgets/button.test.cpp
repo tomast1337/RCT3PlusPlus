@@ -197,7 +197,7 @@ TEST_CASE("space and enter click a focused button")
 TEST_CASE("a swelling button grows its face while the pointer is over it")
 {
     Fixture f;
-    f.button.swell = 4;
+    f.button.swell = { 4 };
     f.button.swell_time = units::Seconds { 0.1f };
     UpdateContext half;
     half.elapsed = units::Seconds { 0.05f };

@@ -80,7 +80,7 @@ namespace rct3::ui::screens::park_view
 
     void RideCameraPanel::pointer_moved(float distance)
     {
-        if (distance > ride_camera_panel::kWakeDistance)
+        if (distance > ride_camera_panel::kWakeDistance.value)
             still_ = { };
     }
 

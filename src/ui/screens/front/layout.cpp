@@ -78,7 +78,7 @@ namespace rct3::ui::screens::front::front_screen
 
     bool ease(Polar& current, const Polar& goal, units::Seconds elapsed)
     {
-        const float k = std::max(0.0f, elapsed.value) * kEaseRate;
+        const float k = std::max(0.0f, elapsed.value) * kEaseRate.value;
         const auto toward = [k](float from, float to) { return (from + to * k) / (1 + k); };
         if (std::abs(current.angle - goal.angle) > kAngleClose)
         {

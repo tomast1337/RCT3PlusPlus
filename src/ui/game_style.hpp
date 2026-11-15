@@ -402,7 +402,7 @@ namespace rct3::ui::game_skins
         s.background = kMiniBackground;
         s.button = kButton;
         s.button_size = 30;
-        s.swell = 2;
+        s.swell = { 2 };
         return s;
     }
 

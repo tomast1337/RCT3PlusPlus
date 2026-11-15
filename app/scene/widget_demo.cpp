@@ -62,7 +62,7 @@ namespace rct3::scene
         constexpr int kScaleChoices = 4;
         constexpr std::size_t kCloseAllItem = 3;
         constexpr std::size_t kCloseAllYes = 0;
-        constexpr float kIconSwell = 2; ///< Of the confirm and cancel buttons
+        constexpr units::Pixels kIconSwell { 2 }; ///< Of the confirm and cancel buttons
         constexpr std::array<std::u16string_view, 12> kRideNames = { u"Bumper Cars", u"Carousel", u"Chairlift", u"Drop Tower", u"Ferris Wheel", u"Ghost Train", u"Go Karts", u"Log Flume", u"Monorail", u"Spiral Slide", u"Swinging Ship", u"Wooden Coaster" };
         // Characters the game fonts lack, to show the fallback font: "hello world" in Greek and Russian,
         // arrows and a few signs.

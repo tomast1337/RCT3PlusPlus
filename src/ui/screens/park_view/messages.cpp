@@ -271,7 +271,7 @@ namespace rct3::ui::screens::park_view
         older_->enabled = after_first >= kPage && skipped_ + 1 < messages_.size();
         newer_->enabled = skipped_ > 0 && !messages_.empty();
 
-        const float speed = kSlideSpeed * context.elapsed.value;
+        const float speed = kSlideSpeed.value * context.elapsed.value;
         switch (slide_)
         {
             case Slide::Resting:

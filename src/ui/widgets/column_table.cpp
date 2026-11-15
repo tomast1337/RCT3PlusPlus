@@ -59,15 +59,15 @@ namespace rct3::ui::widgets
         std::size_t shared = 0;
         for (const TableColumn& c : columns)
         {
-            fixed += c.width;
-            shared += c.width <= 0 ? 1 : 0;
+            fixed += c.width.value;
+            shared += c.width.value <= 0 ? 1 : 0;
         }
         const float share = shared > 0 ? std::max(0.0f, width - fixed) / static_cast<float>(shared) : 0;
         std::vector<ColumnEdges> edges;
         float x = 0;
         for (const TableColumn& c : columns)
         {
-            const float w = c.width > 0 ? c.width : share;
+            const float w = c.width.value > 0 ? c.width.value : share;
             edges.emplace_back(x, x + w);
             x += w;
         }

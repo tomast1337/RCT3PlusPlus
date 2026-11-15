@@ -16,6 +16,7 @@
 
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -51,10 +52,10 @@ namespace rct3::ui::screens::park_view
     {
         /// Each button's icon in the order of ParkTool; the leave button's is the one to the main menu.
         std::array<std::string, kParkToolCount> icons;
-        std::string career_leave_icon; ///< The leave button's icon in a career
-        float swell = 2;               ///< Units a button grows by under the pointer (ours)
-        std::string item_face;         ///< Behind each menu item's icon
-        float item_swell = 6;          ///< Units a menu item grows by under the pointer
+        std::string career_leave_icon;  ///< The leave button's icon in a career
+        units::Pixels swell { 2 };      ///< A button grows by under the pointer (ours)
+        std::string item_face;          ///< Behind each menu item's icon
+        units::Pixels item_swell { 6 }; ///< A menu item grows by under the pointer
     };
 
     namespace tool_row

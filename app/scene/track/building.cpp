@@ -1395,7 +1395,7 @@ namespace rct3::scene::track
                     h.pop_back();
                 return h;
             };
-            std::vector<ui::widgets::TableColumn> columns { { .heading = heading("Staff_ColumnHeader_Name") }, { .heading = heading("AttractionResultsDialogLabel_Excitement"), .width = 120, .align = ui::Align::End }, { .heading = heading("AttractionResultsDialogLabel_Intensity"), .width = 120, .align = ui::Align::End } };
+            std::vector<ui::widgets::TableColumn> columns { { .heading = heading("Staff_ColumnHeader_Name") }, { .heading = heading("AttractionResultsDialogLabel_Excitement"), .width = { 120 }, .align = ui::Align::End }, { .heading = heading("AttractionResultsDialogLabel_Intensity"), .width = { 120 }, .align = ui::Align::End } };
             std::vector<ui::widgets::TableRow> rows { { .cells = { std::u16string(strings.get(kCustomTrack)), { }, { } }, .keys = { }, .id = 0 } };
             b.designs_locked.clear();
             for (std::size_t i = 0; i < b.designs.size(); ++i)

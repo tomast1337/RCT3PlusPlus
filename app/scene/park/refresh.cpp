@@ -191,14 +191,14 @@ namespace rct3::scene::park
             // own way.
             if (moving && simulate)
             {
-                constexpr float kSpread = 1.2f; ///< Chosen by eye: farthest a piece lies from its tile's middle, in world units
+                constexpr units::Distance kSpread { 1.2f }; ///< Chosen by eye: farthest a piece lies from its tile's middle
                 for (const auto [e, piece] : scene.sim.registry.view<const simulation::Litter>().each())
                 {
                     const auto& model = scene.litter_looks[piece.vomit ? 1 : 0];
                     if (!model || piece.node >= scene.sim.paths.nodes().size())
                         continue;
                     const auto seed = static_cast<std::uint32_t>(entt::to_integral(e)) * 2654435761u;
-                    const glm::vec2 off = (glm::vec2(seed & 0xffu, seed >> 8 & 0xffu) / 255.0f * 2.0f - 1.0f) * kSpread;
+                    const glm::vec2 off = (glm::vec2(seed & 0xffu, seed >> 8 & 0xffu) / 255.0f * 2.0f - 1.0f) * kSpread.value;
                     const glm::vec3 at = scene.sim.paths.centre(piece.node) + glm::vec3(off.x, 0.0f, off.y);
                     if (!maybe_in_view(view, at))
                         continue;
@@ -350,9 +350,9 @@ namespace rct3::scene::park
                         const glm::vec3 pivot(rig.rest_world[static_cast<std::size_t>(turret)][3]);
                         const glm::vec3 muzzle(rig.rest_world[static_cast<std::size_t>(nozzle)][3]);
                         const glm::vec3 ahead = glm::normalize(glm::vec3(muzzle.x - pivot.x, 0, muzzle.z - pivot.z));
-                        constexpr float kSpeed = 11;     ///< Chosen by eye: metres a second the water leaves at
-                        constexpr float kTurn = 2.5f;    ///< Chosen by eye: radians a second the gun turns
-                        constexpr float kHighest = 0.8f; ///< Chosen by eye: most the gun tips up, and down
+                        constexpr units::Pace kSpeed { 11 };      ///< Chosen by eye: the water leaves at
+                        constexpr units::TurnRate kTurn { 2.5f }; ///< Chosen by eye: the gun turns
+                        constexpr float kHighest = 0.8f;          ///< Chosen by eye: most the gun tips up, and down
                         constexpr float kLowest = -0.35f;
                         const float swing = simulation::kTuning.surroundings.cannon_swing.value;
                         float yaw = 0.6f * swing * std::sin(scene.park_clock * 0.5f + static_cast<float>(boned.object)); // Sweeping about
@@ -370,7 +370,7 @@ namespace rct3::scene::park
                                 yaw = *turn;
                                 // The lower of the two arcs that land on them, else the farthest throw.
                                 const float g = rct3::park::water::kJetGravity;
-                                const float v2 = kSpeed * kSpeed;
+                                const float v2 = kSpeed.value * kSpeed.value;
                                 const float room = v2 * v2 - g * (g * across * across + 2 * local.y * v2);
                                 pitch = room >= 0 ? std::atan((v2 - std::sqrt(room)) / (g * across)) : std::numbers::pi_v<float> / 4;
                             }
@@ -378,8 +378,8 @@ namespace rct3::scene::park
                         // Let go, the gun stays as it was left.
                         if (const float seconds = scene.park_clock - scene.jets_clock; firing)
                         {
-                            jet->yaw += std::clamp(std::remainder(yaw - jet->yaw, 2 * std::numbers::pi_v<float>), -kTurn * seconds, kTurn * seconds);
-                            jet->pitch += std::clamp(std::clamp(pitch, kLowest, kHighest) - jet->pitch, -kTurn * seconds, kTurn * seconds);
+                            jet->yaw += std::clamp(std::remainder(yaw - jet->yaw, 2 * std::numbers::pi_v<float>), -kTurn.value * seconds, kTurn.value * seconds);
+                            jet->pitch += std::clamp(std::clamp(pitch, kLowest, kHighest) - jet->pitch, -kTurn.value * seconds, kTurn.value * seconds);
                         }
                         const glm::mat4 turn = glm::translate(glm::mat4(1.0f), pivot) * glm::rotate(glm::mat4(1.0f), jet->yaw, glm::vec3(0, 1, 0)) * glm::rotate(glm::mat4(1.0f), jet->pitch, glm::cross(ahead, glm::vec3(0, 1, 0))) * glm::translate(glm::mat4(1.0f), -pivot);
                         for (std::size_t b = 0; b < moves.size(); ++b)
@@ -394,7 +394,7 @@ namespace rct3::scene::park
                         if (firing)
                         {
                             jet->fed = true;
-                            jet->water.aim(glm::vec3(boned.placed * moves[static_cast<std::size_t>(nozzle)] * glm::vec4(muzzle, 1)), way * kSpeed);
+                            jet->water.aim(glm::vec3(boned.placed * moves[static_cast<std::size_t>(nozzle)] * glm::vec4(muzzle, 1)), way * kSpeed.value);
                         }
                         // Spray where it lands.
                         // shortcut: it lands on a level at the sprayed guest's feet, or the cannon's; upgrade with a ground test.
@@ -431,9 +431,9 @@ namespace rct3::scene::park
             // upgrade with patterns per row.
             if (scene.simulate)
             {
-                constexpr float kJumpAngle = 1.0f; ///< Chosen by eye: radians above the level a jump leaves at
-                constexpr float kPour = 0.4f;      ///< Chosen by eye: seconds of water in each jump
-                constexpr float kRest = 1.5f;      ///< Chosen by eye: seconds between the last jump landing and the next
+                constexpr units::Radians kJumpAngle { 1.0f }; ///< Chosen by eye: above the level a jump leaves at
+                constexpr units::Seconds kPour { 0.4f };      ///< Chosen by eye: of water in each jump
+                constexpr units::Seconds kRest { 1.5f };      ///< Chosen by eye: between the last jump landing and the next
                 const auto& r = scene.sim.registry;
                 const auto& nodes = scene.sim.paths.nodes();
                 // The jumping fountains next to the one at `node`.
@@ -469,10 +469,10 @@ namespace rct3::scene::park
                     {
                         const glm::vec3 out(at * glm::vec4(nozzle, 1));
                         const auto landing = std::ranges::min(b->second.nozzles | std::views::transform([&](const glm::vec3& n) { return glm::vec3(into * glm::vec4(n, 1)); }), { }, [&](const glm::vec3& n) { return glm::distance(n, out + step); });
-                        if (const auto thrown = rct3::park::water::throw_to(out, landing, kJumpAngle))
+                        if (const auto thrown = rct3::park::water::throw_to(out, landing, kJumpAngle.value))
                         {
                             // Chosen by eye: a thin, even stream.
-                            ParkScene::Jet& jet = scene.jets.emplace_back(ParkScene::Jet { .object = from, .to = to, .pours = scene.park_clock + kPour, .lands = scene.park_clock + thrown->seconds + kPour, .water = rct3::park::water::WaterJet(thrown->seconds + kPour, 0.04f, 0) });
+                            ParkScene::Jet& jet = scene.jets.emplace_back(ParkScene::Jet { .object = from, .to = to, .pours = scene.park_clock + kPour.value, .lands = scene.park_clock + thrown->seconds + kPour.value, .water = rct3::park::water::WaterJet(thrown->seconds + kPour.value, 0.04f, 0) });
                             jet.water.aim(out, thrown->velocity);
                         }
                     }
@@ -492,7 +492,7 @@ namespace rct3::scene::park
                             jump(to, *onto);
                 if (std::ranges::any_of(scene.jets, [](const ParkScene::Jet& jet) { return jet.to && !jet.landed; }))
                     scene.jumps_ended = scene.park_clock;
-                else if (scene.park_clock - scene.jumps_ended > kRest)
+                else if (scene.park_clock - scene.jumps_ended > kRest.value)
                 {
                     scene.jumps_ended = scene.park_clock;
                     for (const auto [e, item] : r.view<const simulation::PathItem>().each())
@@ -644,12 +644,12 @@ namespace rct3::scene::park
         // keep spreading on a pool, or it splashes on the ground, each a little off the last.
         if (scene.park_clock >= scene.pours_next && !scene.slide_pours.empty())
         {
-            constexpr float kPourGap = 0.4f;     ///< Chosen by eye: seconds between one spray and ring and the next
-            constexpr float kPourSpray = 0.25f;  ///< Chosen by eye: the spray this small, off the lip
-            constexpr float kPourRings = 0.35f;  ///< Chosen by eye: the rings' strength where it falls in
-            constexpr float kPourSplash = 0.3f;  ///< Chosen by eye: the splash this small on the ground
-            constexpr float kPourScatter = 0.5f; ///< Chosen by eye: how far off the landing each comes down
-            scene.pours_next = scene.park_clock + kPourGap;
+            constexpr units::Seconds kPourGap { 0.4f }; ///< Chosen by eye: between one spray and ring and the next
+            constexpr float kPourSpray = 0.25f;         ///< Chosen by eye: the spray this small, off the lip
+            constexpr float kPourRings = 0.35f;         ///< Chosen by eye: the rings' strength where it falls in
+            constexpr float kPourSplash = 0.3f;         ///< Chosen by eye: the splash this small on the ground
+            constexpr float kPourScatter = 0.5f;        ///< Chosen by eye: how far off the landing each comes down
+            scene.pours_next = scene.park_clock + kPourGap.value;
             for (std::size_t k = 0; k < scene.slide_pours.size(); ++k)
             {
                 const ParkScene::SlidePour& pour = scene.slide_pours[k];
@@ -852,16 +852,16 @@ namespace rct3::scene::park
         }
         // With a person, from their eyes, or from behind and over them looking down a little; people are
         // modelled facing +Z with +Y up.
-        constexpr float kEyeHeight = 1.6f;    ///< A standing person's eyes over their feet
-        constexpr float kBehindHeight = 1.2f; ///< The point followed from behind, over their feet
-        constexpr float kBehindPitch = 0.4f;  ///< How far down that view looks, radians
-        constexpr float kBehindDistance = 3;  ///< How far back from that point
+        constexpr float kEyeHeight = 1.6f;              ///< A standing person's eyes over their feet
+        constexpr float kBehindHeight = 1.2f;           ///< The point followed from behind, over their feet
+        constexpr units::Radians kBehindPitch { 0.4f }; ///< How far down that view looks
+        constexpr float kBehindDistance = 3;            ///< How far back from that point
         if (scene.riding_person && *scene.riding_person < scene.shown_people.size())
         {
             const glm::mat4 place = person_place(scene, scene.shown_people[*scene.riding_person]);
             scene.seat_across = rct3::park::kRideNarrowView;
             if (scene.person_behind)
-                scene.seat = rct3::park::looked_round(glm::rotate(glm::translate(place, glm::vec3(0, kBehindHeight, 0)), kBehindPitch, glm::vec3(1, 0, 0)), scene.ride_turn);
+                scene.seat = rct3::park::looked_round(glm::rotate(glm::translate(place, glm::vec3(0, kBehindHeight, 0)), kBehindPitch.value, glm::vec3(1, 0, 0)), scene.ride_turn);
             else
                 scene.seat = rct3::park::looked_round(glm::translate(place, glm::vec3(0, kEyeHeight, 0)), scene.ride_turn);
         }
@@ -1214,9 +1214,9 @@ namespace rct3::scene::park
                 }
                 if (swimmer->edge == simulation::PoolEdge::DiveIn && shown.edge != simulation::PoolEdge::DiveIn)
                 {
-                    constexpr float kEdgeRings = 0.7f; ///< Chosen by eye: rings' strength diving in off the edge
-                    constexpr float kEdgeDelay = 1.0f; ///< Chosen by eye: seconds into the dive the body meets the water
-                    start_rings(scene, swimmer->edge_to, kEdgeRings, kEdgeDelay);
+                    constexpr float kEdgeRings = 0.7f;            ///< Chosen by eye: rings' strength diving in off the edge
+                    constexpr units::Seconds kEdgeDelay { 1.0f }; ///< Chosen by eye: into the dive the body meets the water
+                    start_rings(scene, swimmer->edge_to, kEdgeRings, kEdgeDelay.value);
                 }
                 shown.edge = swimmer->edge;
                 shown.dive = swimmer->dive;

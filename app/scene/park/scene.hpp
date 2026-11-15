@@ -150,10 +150,10 @@ namespace rct3::scene::park
 
     /// The object buffers are built again at most this often while the view moves.
     inline constexpr units::Seconds kObjectRebuildInterval { 0.25f };
-    inline constexpr std::int32_t kVandalismPenalty = 10; ///< Of the rating for each thing broken.
-    inline constexpr std::int32_t kLitterWarning = 20;    ///< Old pieces of litter that make the player be told.
-    inline constexpr float kStillBrokenReminder = 300;    ///< Game seconds a ride stays broken between reminders.
-    inline constexpr float kLowReliability = 0.4f;        ///< Under it the player is told once, and again after it climbs back.
+    inline constexpr std::int32_t kVandalismPenalty = 10;         ///< Of the rating for each thing broken.
+    inline constexpr std::int32_t kLitterWarning = 20;            ///< Old pieces of litter that make the player be told.
+    inline constexpr units::Seconds kStillBrokenReminder { 300 }; ///< In game time, a ride stays broken between reminders.
+    inline constexpr float kLowReliability = 0.4f;                ///< Under it the player is told once, and again after it climbs back.
 
     /// A ride the player has been told is broken down.
     /// How a guest's food or drink looks in their hand: as handed over, and as the empty left once it is gone;
@@ -167,7 +167,7 @@ namespace rct3::scene::park
     struct BrokenRide
     {
         entt::entity ride = entt::null;
-        float unrepaired = 0; ///< Game seconds since the player was last told
+        units::Seconds unrepaired { }; ///< In game time, since the player was last told
     };
     inline constexpr units::Seconds kLivePageInterval { 1.0f }; ///< Between showings of a page that follows the running park
 

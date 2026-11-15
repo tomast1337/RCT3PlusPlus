@@ -1761,9 +1761,9 @@ namespace rct3::scene::park
                             scene.unreliable_rides.erase(unreliable);
                     }
                     const auto told = std::ranges::find(scene.broken_rides, e, &BrokenRide::ride);
-                    if (upkeep.broken && told != scene.broken_rides.end() && (told->unrepaired += game_seconds) >= kStillBrokenReminder)
+                    if (upkeep.broken && told != scene.broken_rides.end() && (told->unrepaired.value += game_seconds) >= kStillBrokenReminder.value)
                     {
-                        told->unrepaired = 0;
+                        told->unrepaired = { };
                         tell(!stall ? "RideStillBrokenMessage" : cash ? "CashMachineStillBrokenMessage" : "FoodStallStillBrokenMessage");
                     }
                     // A broken stall's or cash machine's state into the saved one, for its window to show.
@@ -2151,14 +2151,14 @@ namespace rct3::scene::park
             // they are doing floating over them.
             if (const auto bar = desktop.root().find_as<ui::screens::park_view::ParkBar>(kBarName); bar && bar->highlights() && view.width() > 0 && view.height() > 0)
             {
-                constexpr float kHighlightLift = 2.4f; ///< Chosen by eye: metres over their feet, clear of their head
+                constexpr units::Distance kHighlightLift { 2.4f }; ///< Chosen by eye: over their feet, clear of their head
                 const glm::mat4 camera = rct3::park::view_projection(scene.camera, view.width() / view.height());
                 for (const ShownPerson& p : scene.shown_people)
                 {
                     const ui::screens::info::PersonFacts f { .guest = p.staff ? nullptr : &scene.people.guests[p.saved], .staff = p.staff ? &scene.people.staff[p.saved] : nullptr, .people = &scene.people, .rides = &scene.rides };
                     if (!f.person()->highlight)
                         continue;
-                    const glm::vec4 clip = camera * (p.pose.world * glm::vec4(0, kHighlightLift, 0, 1));
+                    const glm::vec4 clip = camera * (p.pose.world * glm::vec4(0, kHighlightLift.value, 0, 1));
                     const glm::vec2 ndc = glm::vec2(clip) / clip.w;
                     if (clip.w > 0 && std::abs(ndc.x) <= 1 && std::abs(ndc.y) <= 1)
                         heights->labels.push_back({ { (ndc.x + 1) / 2 * view.width(), (1 - ndc.y) / 2 * view.height() }, ui::screens::info::person_name(f, *assets.strings) + u"\n" + ui::screens::info::person_doing(f, *assets.strings) });

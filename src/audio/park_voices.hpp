@@ -9,6 +9,7 @@
 #pragma once
 
 #include "audio/audio.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <glm/vec3.hpp>
@@ -16,9 +17,9 @@
 namespace rct3::audio
 {
 
-    inline constexpr float kNearVoice = 12;   ///< World units
-    inline constexpr float kFarVoice = 400;   ///< World units, as far as the camera goes
-    inline constexpr std::size_t kCrowd = 30; ///< People about the camera's point for the chatter at full
+    inline constexpr units::Distance kNearVoice { 12 };
+    inline constexpr units::Distance kFarVoice { 400 }; ///< As far as the camera goes
+    inline constexpr std::size_t kCrowd = 30;           ///< People about the camera's point for the chatter at full
 
     /// A sound at `at`, at `volume` when near.
     [[nodiscard]] PlayParams heard(glm::vec3 at, float volume);

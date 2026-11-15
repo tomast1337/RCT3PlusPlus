@@ -327,6 +327,7 @@ namespace rct3::parkfile::detail
             out += '{';
             const T value { };
             const auto& [... members] = value;
+            // NOLINTNEXTLINE(clang-analyzer-core.CallAndMessage): the analyzer loses track of structured binding packs
             (layout_member(out, value, members), ...);
             out += '}';
         }

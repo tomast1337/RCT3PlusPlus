@@ -16,6 +16,11 @@ namespace rct3::park
         constexpr float kFewestStrokeSeconds = 5;               ///< Between strokes, at least
         constexpr float kMostStrokeSeconds = 16;                ///< And at most
         constexpr float kFlickerBrightness = 0.6f;              ///< Of a stroke's second, fainter flash
+        constexpr float kFlickerSoonest = 0.08f;                ///< Seconds after a stroke its second flash comes, at least
+        constexpr float kFlickerLatest = 0.2f;                  ///< And at most
+        constexpr float kThunderSoonest = 0.4f;                 ///< Seconds after a stroke its thunder is heard, at least
+        constexpr float kThunderLatest = 3.0f;                  ///< And at most
+        constexpr float kDarkEnough = 0.9f;                     ///< Of the storm's gloom the sky reaches before strokes come
         constexpr float kGreyed = 0.6f;                         ///< Of the colour turned grey at full gloom
         constexpr float kDimmed = 0.7f;                         ///< Of the light taken at full gloom, for full strength
         constexpr glm::vec3 kFlashColour { 0.4f, 0.42f, 0.5f }; ///< Added at a stroke's height, at full strength
@@ -68,11 +73,11 @@ namespace rct3::park
             look.flicker.reset();
         }
         // Strokes come only once the storm has darkened the sky.
-        if (aim.lightning && look.gloom >= aim.gloom * 0.9f && (look.to_flash.value -= seconds) <= 0)
+        if (aim.lightning && look.gloom >= aim.gloom * kDarkEnough && (look.to_flash.value -= seconds) <= 0)
         {
             look.flash = 1;
-            look.flicker = units::Seconds { between(dice, 0.08f, 0.2f) };
-            look.to_thunder = units::Seconds { between(dice, 0.4f, 3.0f) }; // Farther strokes are heard later
+            look.flicker = units::Seconds { between(dice, kFlickerSoonest, kFlickerLatest) };
+            look.to_thunder = units::Seconds { between(dice, kThunderSoonest, kThunderLatest) }; // Farther strokes are heard later
             look.to_flash = { between(dice, kFewestStrokeSeconds, kMostStrokeSeconds) };
         }
         else if (!aim.lightning)

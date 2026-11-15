@@ -25,7 +25,7 @@ namespace rct3::simulation
     {
         const auto& t = kTuning.shows;
         const float keen = t.keen.value + t.keen_per_training.value * static_cast<float>(staff.training) + (staff.happiness.value - 0.5f) / 2 - staff.laziness.value / 2;
-        return std::clamp(keen, 0.05f, 1.0f);
+        return std::clamp(keen, t.least_keen.value, 1.0f);
     }
 
     bool poor_show(const Staff& staff)
@@ -130,7 +130,7 @@ namespace rct3::simulation
             const float angle = std::atan2(off.x, off.y);
             for (std::size_t k = 0; k < who.size(); ++k)
                 if (r.all_of<Stride, Pose, Mood>(who[k]) && !r.any_of<Gesture, Linger, Watching>(who[k]))
-                    r.emplace<Watching>(who[k], Watching { .star = star, .angle = { angle + 0.4f * (static_cast<float>(k) - static_cast<float>(who.size() - 1) / 2) }, .autograph = autograph });
+                    r.emplace<Watching>(who[k], Watching { .star = star, .angle = { angle + kTuning.shows.crowd_spread.value * (static_cast<float>(k) - static_cast<float>(who.size() - 1) / 2) }, .autograph = autograph });
         };
         // Done watching `star`: the crowd shows what they made of it, a good show or a poor one.
         const auto show_over = [&](entt::entity star, std::optional<bool> poor) {

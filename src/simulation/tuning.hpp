@@ -29,6 +29,7 @@ namespace rct3::simulation::tuning
         units::Share max_nausea { 0.6f };                           ///< Guests feeling sicker skip rides
         units::Seconds idle { 5 };                                  ///< Between thoughts while wandering
         units::Share treat { 0.05f };                               ///< Happiness from buying what was wanted
+        float ride_cheer = 0.3f;                                    ///< Happiness a ride gives for each point of excitement its rider felt
     };
 
     /// Guests showing how a ride left them as they step off.
@@ -108,6 +109,7 @@ namespace rct3::simulation::tuning
     {
         units::Tiles spacing { 0.08f };                             ///< Along the line from a guest to the one ahead
         units::Distance reach { 0.9f };                             ///< Farthest a queueing guest stands off the line's middle
+        units::Factor nearest_side { 0.2 };                         ///< Of `reach`, the least a queueing guest stands off the line's middle
         units::Share way_out { 0.5f };                              ///< Of `reach`, how far riders walking off a ride keep off its way's middle: its steps and gates are narrower than a path
         units::Share gap_spread { 0.4f };                           ///< Of a gap, how far guests stand off their even places in line, all told
         units::Tiles shuffle { 0.12f };                             ///< The gap ahead opens this much before a guest steps up
@@ -161,6 +163,8 @@ namespace rct3::simulation::tuning
         units::PerSecond rest_settle = units::PerSecond::over({ 120 }); ///< And while sitting on a bench
         units::Share wildest { 0.3f };                                  ///< Intensity past a guest's tolerance they still go on
         units::Factor full_stomach { 1.5 };                             ///< Nausea a ride gives a guest still eating; settling as much slower
+        float ride_nausea = 0.2f;                                       ///< Nausea a ride gives for each point of its nausea rating, before tolerance
+        float tolerance_ceiling = 1.5f;                                 ///< A rider's tolerance is taken off this to scale that nausea: the less tolerant feel more
         units::Share sick { 0.8f };                                     ///< Nausea past which a guest may be sick
         units::Chance sick_after_ride { 0.3 };                          ///< Of it, getting off a ride
         units::Frequency sick_walking = units::Frequency::every({ 120 });
@@ -516,6 +520,8 @@ namespace rct3::simulation::tuning
         units::Frequency join = units::Frequency::every({ 0.5f }); ///< Chosen by eye: a free guest in reach stopping to watch, shared by their party; soon, as shows are short
         units::Share keen { 0.3f };                                ///< Chosen by eye: of starting a show with guests near, untrained, content and not lazy
         units::Share keen_per_training { 0.15f };                  ///< Chosen by eye: more for each level of training
+        units::Share least_keen { 0.05f };                         ///< The chance of starting a show never falls below this, however lazy or glum
+        units::Radians crowd_spread { 0.4f };                      ///< Round the entertainer, between members of a party watching side by side
         units::Share poor_lazy { 0.7f };                           ///< Chosen by eye: laziness from which a show is a poor one, as when miserable
         std::int32_t moves = 5;                                    ///< Chosen by eye: moves in a show of an untrained entertainer, long enough to draw a crowd; each level adds one
         units::Seconds gap { 20 };                                 ///< Chosen by eye: rest after a show before the next

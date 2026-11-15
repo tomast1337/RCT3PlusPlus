@@ -52,6 +52,7 @@ namespace rct3::simulation
         const std::int32_t litter = count(3) + count(14) + count(15);
         const float litter_share = share(3) + share(14) + share(15);
         const auto rides = static_cast<std::int32_t>(f.downtime.size());
+        constexpr std::int32_t kGuestsPerFacility = 128; ///< Guests one food stall or toilet serves, for the awards that count them
         const auto down_over = [&](float percent) { return static_cast<std::int32_t>(std::ranges::count_if(f.downtime, [&](float d) { return d > percent; })); };
         switch (kind)
         {
@@ -64,9 +65,9 @@ namespace rct3::simulation
             case 3: // Best value
                 return !had({ 2, 7 }) && f.fee_charged && f.fair_fee >= units::Money { 100 } && static_cast<float>(f.entrance_fee.value + 10) < static_cast<float>(f.fair_fee.value) * 0.5f;
             case 4: // Best food
-                return !had({ 5 }) && share(4) <= 0.25f && f.food_stalls >= 7 && f.food_kinds >= 4 && f.stalls * 128 >= f.guests;
+                return !had({ 5 }) && share(4) <= 0.25f && f.food_stalls >= 7 && f.food_kinds >= 4 && f.stalls * kGuestsPerFacility >= f.guests;
             case 5: // Worst food
-                return !had({ 4 }) && f.food_kinds <= 4 && f.stalls * 128 <= f.guests && share(4) > 0.3f;
+                return !had({ 4 }) && f.food_kinds <= 4 && f.stalls * kGuestsPerFacility <= f.guests && share(4) > 0.3f;
             case 6: // Most thrilling
                 return !had({ 7 }) && f.thrilling >= 6;
             case 7: // Most disappointing
@@ -91,7 +92,7 @@ namespace rct3::simulation
             case 10: // Best staff
                 return !had({ 1 }) && litter <= 10 && f.every_staff_kind && f.staff * 32 > f.guests && down_over(25) == 0;
             case 11: // Best toilets
-                return f.toilets >= 4 && f.toilets * 128 >= f.guests && share(12) < 0.25f;
+                return f.toilets >= 4 && f.toilets * kGuestsPerFacility >= f.guests && share(12) < 0.25f;
             case 12: // Best roller coasters
                 return !had({ 7 }) && f.coasters >= 6;
             case 13: // Best water rides
@@ -288,9 +289,11 @@ namespace rct3::simulation
             given.push_back(kind);
         }
         // Dangerous events are forgotten in time, those at pools sooner.
-        if (awards.dangerous_pool_events && *awards.dangerous_pool_events > 0 && random::chance(dice, 0.5))
+        constexpr double kPoolForgotten = 0.5;     ///< A month's chance one dangerous event at a pool is forgotten
+        constexpr double kCoasterForgotten = 0.05; ///< And one on a coaster
+        if (awards.dangerous_pool_events && *awards.dangerous_pool_events > 0 && random::chance(dice, kPoolForgotten))
             --*awards.dangerous_pool_events;
-        if (awards.dangerous_coaster_events && *awards.dangerous_coaster_events > 0 && random::chance(dice, 0.05))
+        if (awards.dangerous_coaster_events && *awards.dangerous_coaster_events > 0 && random::chance(dice, kCoasterForgotten))
             --*awards.dangerous_coaster_events;
         return given;
     }

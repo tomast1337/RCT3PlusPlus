@@ -3,6 +3,7 @@
 
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
+#include "simulation/crowds.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/import_people.hpp"
 #include "simulation/rides.hpp"
@@ -519,6 +520,74 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     CHECK(world.registry.get<simulation::Staff>(staff[1]).role == simulation::StaffRole::Guard);
     CHECK(world.registry.get<simulation::Stride>(staff[0]).to == tile);
     CHECK(world.registry.get<simulation::Stride>(staff[2]).to == tile); // Off the paths: from the nearest walkway
+}
+
+TEST_CASE("guests the park had on a bench, at a view, a water cannon or a show go back to it, with what they carried")
+{
+    simulation::SimWorld world;
+    const auto tile = world.paths.add({ 2, 1, 0 });
+    const glm::vec3 middle = world.paths.centre(tile);
+    auto& r = world.registry;
+    save::model::WorldModel w;
+    for (std::uint64_t id = 1; id <= 3; ++id)
+        w.objects.push_back({ .id = id, .col = 2, .row = 1 });
+    const entt::entity bench = simulation::add_path_item(world, w.objects[0], simulation::PathItemKind::Bench);
+    const entt::entity view = simulation::add_path_item(world, w.objects[1], simulation::PathItemKind::PhotoSpot);
+    const entt::entity cannon = simulation::add_path_item(world, w.objects[2], simulation::PathItemKind::WaterCannon);
+    const std::array<save::model::UsePoint, 3> points { { { .id = 101, .object_ref = 1 }, { .id = 102, .object_ref = 2 }, { .id = 103, .object_ref = 3 } } };
+
+    save::model::PeopleModel people;
+    save::model::Staff& star = people.staff.emplace_back();
+    star.kind = save::model::StaffKind::Entertainer;
+    star.person.id = 500;
+    star.person.position = { middle.x, 0, middle.z };
+    // Seated, getting up, at the view, firing the cannon, watching the entertainer, and two walking by carrying
+    // things: a drink half drunk with an empty in a pocket, and an empty in a pocket only.
+    const std::array<std::pair<std::int32_t, save::model::PeopleObjectId>, 7> uses { { { 12, 101 }, { 12, 101 }, { 17, 102 }, { 17, 103 }, { 20, 500 }, { 4, 0 }, { 4, 0 } } };
+    for (std::size_t k = 0; k < uses.size(); ++k)
+    {
+        save::model::Guest& g = people.guests.emplace_back();
+        g.in_park = true;
+        g.person.id = static_cast<save::model::PeopleObjectId>(k + 1);
+        g.person.state = static_cast<save::model::PersonState>(uses[k].first);
+        g.person.sub_state = k == 1 ? 3 : 1;
+        g.person.state_target.id = uses[k].second;
+        g.person.position = { middle.x + 1, 0, middle.z };
+    }
+    people.guests[5].consuming_amount = 0.5f;
+    people.carried_items.push_back({ .id = 900, .kind_symbol = "Cola:cid", .drink = 0.3f });
+    people.carried_items.push_back({ .id = 901, .kind_symbol = "Cup:cid" });
+    people.holders.push_back({ .id = 800, .owner = { 6 }, .left_hand = { 900 }, .left_pocket = { 901 } });
+    people.holders.push_back({ .id = 801, .owner = { 7 }, .right_pocket = { 901 } });
+    rct3::park::CarriedKinds kinds;
+    kinds.items.push_back({ .symbol = "Cup:cid", .empty = true });
+
+    const auto guests = simulation::import_guests(world, people);
+    simulation::start_guests(world);
+    const auto staff = simulation::import_staff(world, people);
+    CHECK(simulation::resume_saved_uses(world, people, guests, staff, points, kinds) == 5);
+
+    const auto& seated = r.get<simulation::Linger>(guests[0]);
+    CHECK(seated.bench == bench);
+    CHECK(seated.seat == 0);
+    CHECK_FALSE(seated.rising);
+    const auto& rising = r.get<simulation::Linger>(guests[1]);
+    CHECK(rising.seat == 1);
+    CHECK(rising.rising);
+    CHECK(r.get<simulation::Linger>(guests[2]).bench == view);
+    CHECK(r.get<simulation::Linger>(guests[3]).at == simulation::PathItemKind::WaterCannon);
+    CHECK(r.get<simulation::Linger>(guests[3]).bench == cannon);
+    CHECK(r.get<simulation::Watching>(guests[4]).star == staff[0]);
+    CHECK_FALSE(r.get<simulation::Show>(staff[0]).moves.empty());
+
+    const auto& drink = r.get<simulation::Carried>(guests[5]);
+    CHECK_FALSE(drink.food);
+    CHECK(drink.held);
+    CHECK(drink.bites == simulation::kTuning.eating.bites / 2);
+    CHECK(drink.pocketed == 1);
+    const auto& pocket = r.get<simulation::Carried>(guests[6]);
+    CHECK_FALSE(pocket.held);
+    CHECK(pocket.pocketed == 1);
 }
 
 TEST_CASE("a sight placed beside a path is used from it at once; a bench there is not")

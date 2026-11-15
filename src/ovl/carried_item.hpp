@@ -50,7 +50,9 @@ namespace rct3::ovl
         /// "cid" item that is left over after the item is used up, empty when nothing is.
         std::string_view remains;
 
-        std::uint32_t flags = 0;      ///< Bit mask, 21 distinct values seen, none of them explained
+        /// Bit mask, 21 distinct values seen: 0x1 on what is eaten, 0x2 on what is drunk, kCarriedEmpty and
+        /// kCarriedMap; the rest (on umbrellas, hats and other worn items) not explained.
+        std::uint32_t flags = 0;
         std::int32_t unknown_2c = 0;  ///< -1 in most items, otherwise 3, 12 or 48
         std::uint32_t unknown_30 = 0; ///< 1, 2, 4, 6, 8, 16 or 36 seen
         /// How much it feeds, quenches and sickens: food and drink -0.8 to 0.8 seen, nausea 0 in nearly every
@@ -76,6 +78,10 @@ namespace rct3::ovl
         std::uint32_t unknown_94 = 0; ///< 0 or 1
         std::string_view style_name;  ///< Optional string, such as the name of a colour set
     };
+
+    /// CarriedItem::flags: an empty left over (a wrapper, a cup, a can), a park map.
+    inline constexpr std::uint32_t kCarriedEmpty = 0x4;
+    inline constexpr std::uint32_t kCarriedMap = 0x8;
 
     struct CarriedItemEntry
     {

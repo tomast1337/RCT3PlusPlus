@@ -1218,7 +1218,12 @@ namespace rct3::save::model
                     break;
                 case Slot::Carried:
                     if (auto c = make_carried_item(d, index))
+                    {
+                        if (const auto entry = resolve(c->definition, index))
+                            if (const auto e = decode_object(file, *entry))
+                                c->kind_symbol = str(e->find(at::pg_symbol));
                         m.carried_items.push_back(std::move(*c));
+                    }
                     break;
                 case Slot::ShopItem:
                     if (auto s = make_shop_item(d, index))

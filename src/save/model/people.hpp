@@ -537,7 +537,8 @@ namespace rct3::save::model
     struct CarriedItem
     {
         PeopleObjectId id = 0;
-        PeopleRef definition { }; ///< The item's database entry
+        PeopleRef definition { };    ///< The item's database entry
+        std::string kind_symbol { }; ///< What kind of item it is, by the database entry's symbol, as `Burger:cid`
         std::string name { };
         float food = 0;
         float drink = 0; ///< May be negative

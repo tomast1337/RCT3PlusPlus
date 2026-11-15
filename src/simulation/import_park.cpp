@@ -12,6 +12,7 @@
 #include "park/terrain_mesh.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
+#include "simulation/crowds.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
@@ -1903,6 +1904,126 @@ namespace rct3::simulation
                 pose.position = pose.was = at;
                 ++resumed;
                 break;
+            }
+        }
+        return resumed;
+    }
+
+    std::size_t resume_saved_uses(SimWorld& world, const save::model::PeopleModel& people, std::span<const entt::entity> guests, std::span<const entt::entity> staff, std::span<const save::model::UsePoint> points, const rct3::park::CarriedKinds& kinds)
+    {
+        auto& r = world.registry;
+        using save::model::GuestState;
+        // The path item each saved use point stands as.
+        std::unordered_map<std::uint64_t, entt::entity> item_of;
+        for (const auto [e, item] : r.view<const PathItem>().each())
+            if (item.object != 0)
+                item_of.emplace(item.object, e);
+        std::unordered_map<std::uint64_t, entt::entity> point_item;
+        for (const save::model::UsePoint& p : points)
+            if (const auto found = item_of.find(p.object_ref); found != item_of.end())
+                point_item.emplace(p.id, found->second);
+        std::unordered_map<save::model::PeopleObjectId, const save::model::CarriedItem*> items;
+        for (const save::model::CarriedItem& c : people.carried_items)
+            items.emplace(c.id, &c);
+        std::unordered_map<save::model::PeopleObjectId, const save::model::ItemHolder*> holders;
+        for (const save::model::ItemHolder& h : people.holders)
+            holders.emplace(h.owner.id, &h);
+        const auto empty = [&](const save::model::CarriedItem& c) { return std::ranges::any_of(kinds.items, [&](const rct3::park::CarriedKind& k) { return k.empty && k.symbol == c.kind_symbol; }); };
+
+        std::size_t resumed = 0;
+        for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
+        {
+            const save::model::Guest& saved = people.guests[i];
+            const entt::entity g = guests[i];
+            // On foot, alone or with their party; not put back on a ride or in a pool.
+            if (g == entt::null || !r.all_of<Errand, Stride, Pose>(g) || !std::ranges::contains(std::array { ErrandKind::Wandering, ErrandKind::Following, ErrandKind::Waiting }, r.get<Errand>(g).kind))
+                continue;
+
+            // ---- 1. What they carry: food or a drink in hand, or an empty, and empties in their pockets ----
+            if (const auto holder = holders.find(saved.person.id); holder != holders.end() && !r.all_of<Carried>(g))
+            {
+                const auto item = [&](const save::model::PeopleRef& ref) -> const save::model::CarriedItem* {
+                    const auto found = ref ? items.find(ref.id) : items.end();
+                    return found != items.end() ? found->second : nullptr;
+                };
+                std::optional<Carried> carried;
+                for (const save::model::PeopleRef* hand : { &holder->second->left_hand, &holder->second->right_hand })
+                {
+                    const save::model::CarriedItem* c = item(*hand);
+                    if (c == nullptr || carried)
+                        continue;
+                    // shortcut: it is not drawn in hand, having no stall to look like; upgrade when held items are
+                    // drawn by their kind.
+                    if (c->food > 0 || c->drink > 0)
+                    {
+                        const bool food = c->food > 0;
+                        // What is left of it in bites, from how far they were through it.
+                        const auto bites = static_cast<std::uint8_t>(std::max(1L, std::lround(kTuning.eating.bites * (1 - std::clamp(saved.consuming_amount, 0.0f, 1.0f)))));
+                        carried = Carried { .kind = std::uint8_t { !food }, .food = food, .bites = bites, .fill = { (food ? c->food : c->drink) / static_cast<float>(kTuning.eating.bites) } };
+                    }
+                    else if (empty(*c))
+                        carried = Carried { .bites = 0 };
+                }
+                std::uint8_t pocketed = 0;
+                for (const save::model::PeopleRef* pocket : { &holder->second->left_pocket, &holder->second->right_pocket })
+                    if (const save::model::CarriedItem* c = item(*pocket); c != nullptr && empty(*c))
+                        ++pocketed;
+                if (!carried && pocketed > 0)
+                    carried = Carried { .bites = 0, .held = false };
+                if (carried)
+                {
+                    carried->pocketed = std::min(pocketed, Carried::kPockets);
+                    r.emplace<Carried>(g, *carried);
+                }
+            }
+
+            // ---- 2. What they were using ----
+            const auto state = static_cast<std::int32_t>(saved.person.state);
+            const auto point = point_item.find(saved.person.state_target.id);
+            const entt::entity at = point != point_item.end() ? point->second : entt::null;
+            if (state == std::to_underlying(GuestState::HeadingForBench) && at != entt::null && r.get<PathItem>(at).kind == PathItemKind::Bench)
+            {
+                // The first free seat; one getting up when saved (state 3) sits down again only to rise.
+                const PathItem& bench = r.get<PathItem>(at);
+                for (std::uint8_t seat = 0; seat < bench.seats; ++seat)
+                {
+                    if (std::ranges::any_of(r.view<const Linger>().each(), [&](const auto& other) { return std::get<1>(other).bench == at && std::get<1>(other).seat == seat; }))
+                        continue;
+                    const bool rising = saved.person.sub_state == 3;
+                    r.emplace<Linger>(g, Linger { .at = PathItemKind::Bench, .left = rising ? units::Seconds { } : kTuning.facilities.sit, .bench = at, .seat = seat, .rising = rising });
+                    ++resumed;
+                    break;
+                }
+            }
+            else if (state == std::to_underlying(GuestState::AdmiringView) && at != entt::null)
+            {
+                const PathItemKind kind = r.get<PathItem>(at).kind;
+                const bool cannon = kind == PathItemKind::WaterCannon;
+                if ((cannon || kind == PathItemKind::PhotoSpot || kind == PathItemKind::Sight) && !(cannon && std::ranges::any_of(r.view<const Linger>().each(), [&](const auto& other) { return std::get<1>(other).bench == at; })))
+                {
+                    r.emplace<Linger>(g, Linger { .at = kind, .left = cannon ? kTuning.surroundings.firing : kTuning.facilities.watch, .bench = at });
+                    ++resumed;
+                }
+            }
+            else if (state == std::to_underlying(GuestState::WatchingEntertainer))
+            {
+                // The entertainer they watched puts their show on again, for them among others.
+                const auto found = std::ranges::find_if(people.staff, [&](const save::model::Staff& s) { return s.person.id == saved.person.state_target.id; });
+                const auto place = static_cast<std::size_t>(found - people.staff.begin());
+                const entt::entity star = place < staff.size() ? staff[place] : entt::null;
+                if (star == entt::null || !r.all_of<Staff, Pose, Dice>(star) || r.get<Staff>(star).role != StaffRole::Entertainer)
+                    continue;
+                if (Show& show = r.get_or_emplace<Show>(star); show.moves.empty())
+                {
+                    Staff& s = r.get<Staff>(star);
+                    show.poor = poor_show(s);
+                    show.moves = show_moves(show_quality(s), show.poor, r.get<Dice>(star).state);
+                    show.into = { };
+                    s.busy.value = std::max(s.busy.value, kTickSeconds);
+                }
+                const glm::vec3 off = r.get<Pose>(g).position - r.get<Pose>(star).position;
+                r.emplace<Watching>(g, Watching { .star = star, .angle = { std::atan2(off.x, off.z) } });
+                ++resumed;
             }
         }
         return resumed;

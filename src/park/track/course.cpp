@@ -429,29 +429,29 @@ namespace rct3::park::track
     {
         if (fits.empty())
             return;
-        train.distance = front;
-        train.length = 0;
+        train.distance = { front };
+        train.length = { };
         float at = front;
         const auto fit_of = [&](std::size_t k) -> const object::CarFit& { return fits[std::min(k, fits.size() - 1)]; };
         for (std::size_t k = 0; k < train.cars.size(); ++k)
         {
             save::model::Car& car = train.cars[k];
             const object::CarFit& fit = fit_of(k);
-            car.distance = at;
+            car.distance = { at };
             glm::mat4 frame;
             if (fit.link && k > 0 && k + 1 < train.cars.size())
             {
                 // From where the car ahead couples on back along the track, lifted to the height the cars couple at.
                 const object::CarFit& ahead = fit_of(k - 1);
                 const object::CarFit& behind = fit_of(k + 1);
-                car.length = link_gap(ahead, fit, behind);
-                car.front_wheel_distance = train.cars[k - 1].distance - ahead.link_rear;
+                car.length = { link_gap(ahead, fit, behind) };
+                car.front_wheel_distance = train.cars[k - 1].distance.value - ahead.link_rear;
                 car.rear_wheel_distance = car.front_wheel_distance - fit.length;
                 frame = glm::translate(frame_at(course, { car.front_wheel_distance, car.rear_wheel_distance }), { 0, (ahead.link_height + behind.link_height) / 2, 0 });
             }
             else
             {
-                car.length = fit.length;
+                car.length = { fit.length };
                 car.front_wheel_distance = at - fit.front_wheels;
                 car.rear_wheel_distance = at - fit.rear_wheels;
                 frame = frame_at(course, { car.front_wheel_distance, car.rear_wheel_distance });
@@ -462,8 +462,8 @@ namespace rct3::park::track
             const glm::vec3 axis = glm::angle(turn) > 0 ? glm::axis(turn) * glm::angle(turn) : glm::vec3(0.0f);
             car.orientation = { axis.x, axis.y, axis.z };
             car.position_valid = true;
-            at -= car.length;
-            train.length += car.length;
+            at -= car.length.value;
+            train.length.value += car.length.value;
         }
     }
 

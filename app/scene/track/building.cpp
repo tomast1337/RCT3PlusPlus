@@ -1272,7 +1272,7 @@ namespace rct3::scene::track
                 park::load_car_models(scene, *assets.install, cars);
                 if (const auto model = cars.pieces.empty() ? scene.models.end() : scene.models.find(rct3::park::object::model_ref(cars.pieces.front())); model != scene.models.end())
                     park::fit_car(*train, model->second, b.ride->value < scene.track_rules.size() && scene.track_rules[b.ride->value].pool_ride);
-                TrackBuilding::GhostTrain& t = b.test.emplace(TrackBuilding::GhostTrain { .train = *train, .spots = cars.spots, .stood_at = ghost.trains.front().distance });
+                TrackBuilding::GhostTrain& t = b.test.emplace(TrackBuilding::GhostTrain { .train = *train, .spots = cars.spots, .stood_at = ghost.trains.front().distance.value });
                 for (const save::model::PlacedObject& car : cars.pieces)
                     t.stood.push_back(cars.fitted.at(car.id));
                 t.meshes = rct3::park::moving_meshes(cars.pieces, scene.models, scene.grid);

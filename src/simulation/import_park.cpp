@@ -93,7 +93,7 @@ namespace rct3::simulation
         struct Sale
         {
             Shop shop;
-            std::int64_t price = 0;
+            units::Money price { };
         };
         std::optional<Sale> sale_of(const save::model::Stall& stall, const rct3::park::CarriedKinds& kinds)
         {
@@ -111,7 +111,7 @@ namespace rct3::simulation
                 const auto product = kind && kind->effects[0] > 0 ? std::optional(Product::Food) : kind && kind->effects[1] > 0 ? std::optional(Product::Drink) : product_named(name);
                 if (!product)
                     continue;
-                Ware& ware = menu.emplace_back(Ware { *product, serve_named(name), { item.price }, item.kind_symbol });
+                Ware& ware = menu.emplace_back(Ware { *product, serve_named(name), item.price, item.kind_symbol });
                 // An extra goes on when the stall offers it and it is ticked on the item, or the guest picks.
                 if (kind)
                 {
@@ -910,7 +910,7 @@ namespace rct3::simulation
         for (const auto [e, a] : world.registry.view<Attraction>().each())
             if (a.saved == stall.base.id && sale)
             {
-                a.price = units::Money { sale->price };
+                a.price = sale->price;
                 auto& shop = world.registry.get_or_emplace<Shop>(e);
                 shop.product = sale->shop.product;
                 shop.serve = sale->shop.serve;
@@ -1018,8 +1018,8 @@ namespace rct3::simulation
             c.fixed_speed = ride.options.fixed_speed;
         c.launch_speed = launch_of(ride);
         c.blocks = ride.options.block_sectioned;
-        if (!ride.trains.empty() && ride.trains[0].length > 0)
-            c.train_length = ride.trains[0].length;
+        if (!ride.trains.empty() && ride.trains[0].length.value > 0)
+            c.train_length = ride.trains[0].length.value;
         if (!ride.trains.empty() && !ride.trains[0].cars.empty())
             c.cars = static_cast<int>(ride.trains[0].cars.size());
         // Brakes hold each car over them back with the force the ride's file gives (every tracked ride the game
@@ -1047,18 +1047,18 @@ namespace rct3::simulation
             {
                 // shortcut: a shuttle runs its first train only, and one saved away from the station heads back to it
                 // on its next pass, upgrade if a park keeps more than one or its passes.
-                train.at = std::clamp(saved.distance, std::min(train.train_length, length), length);
+                train.at = std::clamp(saved.distance.value, std::min(train.train_length, length), length);
                 train.travelled = std::abs(train.at - train.start);
                 train.running = train.travelled > 0.5f;
                 train.at = train.running ? train.at : train.start;
                 train.travelled = train.running ? train.travelled : 0;
                 train.passed = train.running ? train.passes : 0;
-                train.speed = train.running ? saved.speed : 0;
+                train.speed = train.running ? saved.speed.value : 0;
                 out.trains.push_back(train);
                 break;
             }
             // One kept at or past a pool slide's open end is out of sight, as if gone off it, till the station is clear.
-            if (coaster.splash_out && length > 0 && saved.distance >= length)
+            if (coaster.splash_out && length > 0 && saved.distance.value >= length)
             {
                 train.at = length;
                 train.running = false;
@@ -1066,7 +1066,7 @@ namespace rct3::simulation
                 out.trains.push_back(train);
                 continue;
             }
-            train.at = length > 0 ? std::fmod(std::fmod(saved.distance, length) + length, length) : 0;
+            train.at = length > 0 ? std::fmod(std::fmod(saved.distance.value, length) + length, length) : 0;
             train.travelled = length > 0 ? std::fmod(train.at - train.start + length, length) : 0;
             constexpr float kAtStart = 0.5f; // Metres off the start that still count as standing at it
             constexpr float kStill = 0.1f;   // Metres a second that still count as standing
@@ -1078,7 +1078,7 @@ namespace rct3::simulation
             train.running = train.travelled > 0;
             train.next_stop = static_cast<std::size_t>(std::ranges::count_if(train.stops, [&](float stop) { return stop < train.travelled; }));
             // One still at another of its stations stands there, as one that has stopped at it does.
-            if (const auto stop = std::ranges::find_if(train.stops, [&](float s) { return std::abs(s - train.travelled) < kAtStart; }); stop != train.stops.end() && std::abs(saved.speed) < kStill)
+            if (const auto stop = std::ranges::find_if(train.stops, [&](float s) { return std::abs(s - train.travelled) < kAtStart; }); stop != train.stops.end() && std::abs(saved.speed.value) < kStill)
             {
                 train.travelled = *stop;
                 train.at = std::fmod(train.start + *stop, length);
@@ -1086,7 +1086,7 @@ namespace rct3::simulation
                 train.running = false;
             }
             train.launched = train.travelled >= train.train_length;
-            train.speed = train.running ? saved.speed : 0;
+            train.speed = train.running ? saved.speed.value : 0;
             // No park kept a train on a lift's car, nor the car's place: one found on a lift starts again where the
             // track before the lift ends, its car waiting at the bottom.
             for (const Lift& lift : train.lifts)
@@ -1142,7 +1142,7 @@ namespace rct3::simulation
             // Cash machines break down as stalls do; toilets and first aid do not.
             const bool breaks = *product == Product::CashMachine;
             const bool broken = breaks && (ride.base.flags & save::model::AttractionCommon::kBrokenDown) != 0;
-            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = ride.base.name, .entrance = entrance, .price = units::Money { std::max<std::int64_t>(ride.ticket_price.value, 0) }, .open = ride.base.state == save::model::AttractionState::Open && !broken, .saved = ride.base.id, .running_cost = { ride.base.running_cost } });
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = ride.base.name, .entrance = entrance, .price = units::Money { std::max<std::int64_t>(ride.ticket_price.value, 0) }, .open = ride.base.state == save::model::AttractionState::Open && !broken, .saved = ride.base.id, .running_cost = ride.base.running_cost });
             r.emplace<Shop>(e, *product);
             if (breaks)
                 r.emplace<Upkeep>(e, Upkeep { .broken = broken, .inspect_every = std::nullopt, .break_in = units::Seconds { 0 } });
@@ -1335,7 +1335,7 @@ namespace rct3::simulation
             return entt::null;
         auto& r = world.registry;
         const entt::entity e = r.create();
-        r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = { ride.base.running_cost } });
+        r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = ride.base.running_cost });
         const auto& rated = kTuning.climbs.rated;
         const bool valid = ride.assessment.valid;
         CycleRide cycle { .capacity = 0, .splash = true };
@@ -1360,9 +1360,9 @@ namespace rct3::simulation
             const Coaster* coaster = i < coasters.size() && coasters[i] ? &*coasters[i] : nullptr;
             if (ride.kind == save::model::RideKind::Flat && i < flat_timings.size())
                 timing = flat_timings[i];
-            else if (ride.kind == save::model::RideKind::Tracked && !ride.seats.empty() && (coaster || (ride.stats.last_lap && ride.stats.last_lap->ride_time > 0)))
+            else if (ride.kind == save::model::RideKind::Tracked && !ride.seats.empty() && (coaster || (ride.stats.last_lap && ride.stats.last_lap->ride_time.value > 0)))
                 // Each train carries its share of the ride's seats.
-                timing = RideTiming { .seats = static_cast<std::uint32_t>(ride.seats.size() / std::max<std::size_t>(coaster ? ride.trains.size() : 1, 1)), .run = ride.stats.last_lap ? ride.stats.last_lap->ride_time : 0 };
+                timing = RideTiming { .seats = static_cast<std::uint32_t>(ride.seats.size() / std::max<std::size_t>(coaster ? ride.trains.size() : 1, 1)), .run = ride.stats.last_lap ? ride.stats.last_lap->ride_time.value : 0 };
             else if (ride.kind == save::model::RideKind::Tracked && !ride.seats.empty() && (ride.mode == save::model::OperatingMode::Boat || ride.mode == save::model::OperatingMode::WaterTransport))
                 // shortcut: boats that sail off their dock go out all at once and come back after a set trip, with
                 // no boat moving on the water; upgrade with boats steering over the lake.
@@ -1373,7 +1373,7 @@ namespace rct3::simulation
             {
                 auto& r = world.registry;
                 const entt::entity e = r.create();
-                r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = { ride.base.running_cost } });
+                r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = ride.base.running_cost });
                 const auto& rated = kTuning.rivers.rated;
                 const auto valid = ride.assessment.valid;
                 CycleRide cycle { .capacity = 0, .splash = true };
@@ -1429,7 +1429,7 @@ namespace rct3::simulation
             std::vector<NodeId> line = links ? std::move(links->line) : std::vector<NodeId> { };
             auto& r = world.registry;
             const entt::entity e = r.create();
-            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = entrance, .price = ride.ticket_price, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = { ride.base.running_cost } });
+            r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = entrance, .price = ride.ticket_price, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = ride.base.running_cost });
             // Rated as the park has it; else from its last test, or a test run of our own.
             std::optional<Ratings> rated;
             if (ride.assessment.valid)
@@ -1724,7 +1724,7 @@ namespace rct3::simulation
             staff::set_wage_level(staff, saved.wage_level);
             staff::take_saved_work(staff, saved);
             r.emplace<Staff>(e, staff);
-            r.emplace<Pose>(e, position, -p.heading, position, -p.heading); // The original turns the other way
+            r.emplace<Pose>(e, position, units::Radians { -p.heading.value }, position, units::Radians { -p.heading.value }); // The original turns the other way
             if (walks)
                 start_walking(world, e, *at);
             // An inspector the park left swimming, looking a pool complex over: in it still, a swimmer till their

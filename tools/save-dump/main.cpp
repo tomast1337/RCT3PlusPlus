@@ -373,12 +373,12 @@ namespace
         if (w.weather)
         {
             const Weather& k = *w.weather;
-            out.info("  weather      {} (raw {:d}), forecast {}, climate {:d}, {:g} degC, wind {:g}", to_string(k.type), k.raw_type, to_string(k.forecast), k.climate, static_cast<double>(k.temperature), static_cast<double>(k.wind_speed));
+            out.info("  weather      {} (raw {:d}), forecast {}, climate {:d}, {:g} degC, wind {:g}", to_string(k.type), k.raw_type, to_string(k.forecast), k.climate, static_cast<double>(k.temperature.value), static_cast<double>(k.wind_speed));
         }
         if (w.sky_background)
             out.info("  sky          background {:d}", *w.sky_background);
         if (w.time)
-            out.info("  time         day fraction {:g}, time {:g}", static_cast<double>(w.time->day_fraction), static_cast<double>(w.time->time));
+            out.info("  time         day fraction {:g}, time {:g}", static_cast<double>(w.time->day_fraction), static_cast<double>(w.time->time.value));
         if (w.camera)
             out.info("  camera       pos ({:g}, {:g}, {:g}) orientation ({:g}, {:g}, {:g})", static_cast<double>(w.camera->position.x), static_cast<double>(w.camera->position.y), static_cast<double>(w.camera->position.z), static_cast<double>(w.camera->orientation.x), static_cast<double>(w.camera->orientation.y), static_cast<double>(w.camera->orientation.z));
         bool ok = true;
@@ -680,11 +680,11 @@ int main(int argc, char** argv)
                     for (const Car& c : t.cars)
                         riders += c.passengers;
                     const TrackPiece* front = piece(t.front_piece);
-                    note(trains[static_cast<int>(t.state)], argv[i], t.speed, t.state_time.value, t.acceleration, front != nullptr && front->platform.has_value(), riders, front ? shape(front->symbol) : "-", t.cars.empty() ? -1 : static_cast<int>(t.cars.front().state));
+                    note(trains[static_cast<int>(t.state)], argv[i], t.speed.value, t.state_time.value, t.acceleration, front != nullptr && front->platform.has_value(), riders, front ? shape(front->symbol) : "-", t.cars.empty() ? -1 : static_cast<int>(t.cars.front().state));
                     for (const Car& c : t.cars)
                     {
                         const TrackPiece* at = piece(c.front_piece);
-                        note(cars[static_cast<int>(c.state)], argv[i], c.speed, t.state_time.value, t.acceleration, at != nullptr && at->platform.has_value(), c.passengers, at ? shape(at->symbol) : "-", static_cast<int>(t.state));
+                        note(cars[static_cast<int>(c.state)], argv[i], c.speed.value, t.state_time.value, t.acceleration, at != nullptr && at->platform.has_value(), c.passengers, at ? shape(at->symbol) : "-", static_cast<int>(t.state));
                     }
                 }
             }

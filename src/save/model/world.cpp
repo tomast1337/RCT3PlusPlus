@@ -820,7 +820,7 @@ namespace rct3::save::model
                 .forecast = weather_type_from(raw_forecast),
                 .raw_forecast = raw_forecast,
                 .climate = int_or(o.find("Climate")),
-                .temperature = float_or(o.find("Temperature")),
+                .temperature = { float_or(o.find("Temperature")) },
                 .forecast_temperature = float_or(o.find("ForecastTemperature")),
                 .forecast_delay = float_or(o.find("ForecastDelay")),
                 .sequence_delay = float_or(o.find("SequenceDelay")),
@@ -859,8 +859,8 @@ namespace rct3::save::model
             const auto mode = get_int(o.find("DayNightMode"));
             return WorldTime {
                 .day_fraction = float_or(o.find("DayNightTime")),
-                .time = float_or(o.find("Time")),
-                .time_origin = float_or(o.find("ZeroTime")),
+                .time = { float_or(o.find("Time")) },
+                .time_origin = { float_or(o.find("ZeroTime")) },
                 .day_night_mode = mode ? std::optional(static_cast<std::int32_t>(*mode)) : std::nullopt,
                 .day_fraction_as_rendered = get_float(o.find("DayNightTimeAsRendered")),
             };

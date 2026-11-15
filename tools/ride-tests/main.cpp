@@ -62,8 +62,8 @@ int main(int argc, char** argv)
             if (ride.kind != save::model::RideKind::Tracked || !ride.assessment.valid || !t || t->max_speed <= 0)
                 continue;
             out.info(
-                "\"{}\",\"{}\",{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:d},{:g},{:d},{:d}", name.c_str(), ride.base.symbol.c_str(), static_cast<double>(ride.assessment.excitement), static_cast<double>(ride.assessment.intensity), static_cast<double>(ride.assessment.nausea), static_cast<double>(t->max_speed), static_cast<double>(t->average_speed), static_cast<double>(t->ride_time), static_cast<double>(t->ride_length), static_cast<double>(t->max_positive_vertical),
-                static_cast<double>(t->max_negative_vertical), static_cast<double>(t->max_lateral), static_cast<double>(t->air_time), t->drop_count, static_cast<double>(t->highest_drop), t->inversion_count, t->lift_hill_count);
+                "\"{}\",\"{}\",{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:d},{:g},{:d},{:d}", name.c_str(), ride.base.symbol.c_str(), static_cast<double>(ride.assessment.excitement), static_cast<double>(ride.assessment.intensity), static_cast<double>(ride.assessment.nausea), static_cast<double>(t->max_speed), static_cast<double>(t->average_speed), static_cast<double>(t->ride_time.value), static_cast<double>(t->ride_length.value), static_cast<double>(t->max_positive_vertical),
+                static_cast<double>(t->max_negative_vertical), static_cast<double>(t->max_lateral), static_cast<double>(t->air_time.value), t->drop_count, static_cast<double>(t->highest_drop.value), t->inversion_count, t->lift_hill_count);
         }
     }
     return failed == argc - 1 ? 1 : 0;

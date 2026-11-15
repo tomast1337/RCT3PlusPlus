@@ -259,10 +259,10 @@ int main(int argc, char** argv)
                 for (const save::model::Car& car : train.cars)
                     if (car.position_valid)
                     {
-                        worst = std::max(worst, glm::distance(park::track::course_point(*course, car.distance), glm::vec3 { car.position[0], car.position[1], car.position[2] }));
+                        worst = std::max(worst, glm::distance(park::track::course_point(*course, car.distance.value), glm::vec3 { car.position[0], car.position[1], car.position[2] }));
                         ++cars;
                     }
-            out.info("course {} closed {:d}: {:.1f} m (lap tested {:.1f} m), {:d} points; {:d} cars, farthest {:.2f} m off", ride.base.symbol.c_str(), course->closed, static_cast<double>(course->length()), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_length : 0), course->points.size(), cars, static_cast<double>(worst));
+            out.info("course {} closed {:d}: {:.1f} m (lap tested {:.1f} m), {:d} points; {:d} cars, farthest {:.2f} m off", ride.base.symbol.c_str(), course->closed, static_cast<double>(course->length()), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_length.value : 0), course->points.size(), cars, static_cast<double>(worst));
             coasters[index] = simulation::coaster_of(*course, ride);
             courses[index] = *course;
             const auto lap = coasters[index] ? simulation::lap_seconds(*coasters[index]) : std::nullopt;
@@ -272,7 +272,7 @@ int main(int argc, char** argv)
                 out.info("  rated {:.1f}/{:.1f}/{:.1f} from its test, saved {:.1f}/{:.1f}/{:.1f}", static_cast<double>(ours.excitement), static_cast<double>(ours.intensity), static_cast<double>(ours.nausea), static_cast<double>(ride.assessment.excitement), static_cast<double>(ride.assessment.intensity), static_cast<double>(ride.assessment.nausea));
             }
             out.info(
-                "  lap {:.1f} s (tested {:.1f} s); train {:.1f} m mass {:.0f} friction {:.3f} / {:.3f}", static_cast<double>(lap.value_or(-1)), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_time : 0), static_cast<double>(coasters[index] ? coasters[index]->train_length : 0), static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].mass), static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].static_friction),
+                "  lap {:.1f} s (tested {:.1f} s); train {:.1f} m mass {:.0f} friction {:.3f} / {:.3f}", static_cast<double>(lap.value_or(-1)), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_time.value : 0), static_cast<double>(coasters[index] ? coasters[index]->train_length : 0), static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].mass), static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].static_friction),
                 static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].dynamic_friction));
         }
         for (std::size_t i = 0; i < timings.size(); ++i)

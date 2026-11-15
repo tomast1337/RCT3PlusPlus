@@ -461,7 +461,7 @@ namespace rct3::save::model
         WeatherType forecast = WeatherType::Unknown;
         std::int32_t raw_forecast = 0;
         std::int32_t climate = 0; ///< The scenario editor's climate, by its place in the editor's list
-        float temperature = 0;    ///< Degrees Celsius
+        units::Degrees temperature { };
         float forecast_temperature = 0;
         float forecast_delay = 0;
         float sequence_delay = 0;
@@ -481,9 +481,9 @@ namespace rct3::save::model
 
     struct WorldTime
     {
-        float day_fraction = 0; ///< 0..1 through the day
-        float time = 0;         ///< Seconds accumulated
-        float time_origin = 0;  ///< Reference stamp for `time`
+        float day_fraction = 0;         ///< 0..1 through the day
+        units::Seconds time { };        ///< Accumulated
+        units::Seconds time_origin { }; ///< Reference stamp for `time`
         std::optional<std::int32_t> day_night_mode { };
         std::optional<float> day_fraction_as_rendered { };
     };

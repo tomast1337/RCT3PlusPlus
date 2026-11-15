@@ -720,14 +720,14 @@ namespace rct3::scene::park
                 const float along = std::clamp(scene.sim_time / simulation::kTickSeconds, 0.0f, 1.0f);
                 const float flown_for = train.flight ? train.flight->off.value - (1 - along) * simulation::kTickSeconds : 0.0f;
                 const float at = train.flight ? std::max(train.was_at, train.at + train.flight->speed.value * std::min(flown_for, 0.0f)) : simulation::between_drives(train, along);
-                moved[i] = at - scene.rides.rides[spot.ride.value].trains[spot.train].distance;
+                moved[i] = at - scene.rides.rides[spot.ride.value].trains[spot.train].distance.value;
                 // On a lift, it stands on the track the lift's car carries, as far along it as the train's front is.
                 const auto lifted = train.lifted ? lift_car(spot.ride, train.lifted->lift, fleet) : std::nullopt;
                 if (lifted)
                 {
                     const simulation::LiftRide& on = *train.lifted;
                     const float front = on.was_aboard.value + (on.aboard.value - on.was_aboard.value) * along;
-                    const float saved_front = scene.rides.rides[spot.ride.value].trains[spot.train].distance;
+                    const float saved_front = scene.rides.rides[spot.ride.value].trains[spot.train].distance.value;
                     const rct3::park::track::Axles wheels { front - (saved_front - spot.front), front - (saved_front - spot.rear) };
                     place = rct3::park::track::moved_on_lift(*scene.courses[spot.ride.value], scene.courses[spot.ride.value]->lifts[on.lift], lifted->second, lifted->first, place, { spot.front, spot.rear }, wheels);
                 }

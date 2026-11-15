@@ -16,7 +16,7 @@ TEST_CASE("guests in the park come over with their needs turned the other way up
     g.person.sub_type = std::to_underlying(save::model::Sex::Female);
     g.person.name = "Test Guest";
     g.person.position = { 10, 2, 30 };
-    g.person.heading = 1.25f;
+    g.person.heading = { 1.25f };
     g.needs.food = 0.75f;  // Fairly full
     g.needs.drink = 0.25f; // Thirsty
     g.needs.toilet = 0.5f;

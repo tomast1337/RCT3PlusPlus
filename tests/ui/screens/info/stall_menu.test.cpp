@@ -17,7 +17,7 @@ namespace
         StallMenuView v;
         v.goods = { { .name = u"Burger", .icon = "BurgerIcon" }, { .name = u"Fries", .icon = "FriesIcon" } };
         v.extras = { { .name = u"Ketchup", .icon = "KetchupIcon" }, { .name = u"Salt", .icon = "SaltIcon" } };
-        v.lines = { { .name = u"Burger", .icon = "BurgerIcon", .price = 150, .extras = { 0, std::nullopt } }, { .name = u"Big Burger", .icon = "BurgerIcon", .price = 250, .extras = { 0 } }, { .name = u"Fries", .icon = "FriesIcon", .price = 100, .extras = { 1 } } };
+        v.lines = { { .name = u"Burger", .icon = "BurgerIcon", .price = { 150 }, .extras = { 0, std::nullopt } }, { .name = u"Big Burger", .icon = "BurgerIcon", .price = { 250 }, .extras = { 0 } }, { .name = u"Fries", .icon = "FriesIcon", .price = { 100 }, .extras = { 1 } } };
         v.most_price = 2000;
         v.price_step = 5;
         return v;

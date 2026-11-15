@@ -41,7 +41,7 @@ namespace rct3::simulation::park
         {
             s.weather = world.weather->type;
             s.forecast = world.weather->forecast;
-            s.temperature = units::Degrees { world.weather->temperature };
+            s.temperature = world.weather->temperature;
             s.wind = std::clamp(world.weather->wind_speed, 0.0f, 1.0f);
             s.climate = world.weather->climate;
             // The file's time until the next change is in calendar units as ours is.

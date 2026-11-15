@@ -116,7 +116,7 @@ namespace rct3::simulation
     RatingFeatures rating_features(const save::model::TestResults& t)
     {
         return {
-            1, t.max_speed, t.average_speed, t.ride_time, t.ride_length, std::max(t.max_positive_vertical / kGravity - 1, 0.0f), std::abs(t.max_negative_vertical) / kGravity, std::abs(t.max_lateral) / kGravity, t.air_time, static_cast<float>(t.drop_count), t.highest_drop, static_cast<float>(t.inversion_count), static_cast<float>(t.lift_hill_count),
+            1, t.max_speed, t.average_speed, t.ride_time.value, t.ride_length.value, std::max(t.max_positive_vertical / kGravity - 1, 0.0f), std::abs(t.max_negative_vertical) / kGravity, std::abs(t.max_lateral) / kGravity, t.air_time.value, static_cast<float>(t.drop_count), t.highest_drop.value, static_cast<float>(t.inversion_count), static_cast<float>(t.lift_hill_count),
         };
     }
 
@@ -163,7 +163,7 @@ namespace rct3::simulation
             if (top - last >= kSmallestDrop.value)
             {
                 ++t.drop_count;
-                t.highest_drop = std::max(t.highest_drop, top - last);
+                t.highest_drop.value = std::max(t.highest_drop.value, top - last);
             }
         };
         std::vector<Carriage> carriages = carriages_of(c);
@@ -185,9 +185,9 @@ namespace rct3::simulation
             if (back)
             {
                 end_drop();
-                t.ride_time = time;
-                t.ride_length = c.length();
-                t.average_speed = t.ride_length / time;
+                t.ride_time = { time };
+                t.ride_length = { c.length() };
+                t.average_speed = t.ride_length.value / time;
                 return t;
             }
         }

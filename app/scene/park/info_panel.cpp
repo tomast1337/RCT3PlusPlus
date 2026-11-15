@@ -221,7 +221,7 @@ namespace rct3::scene::park
                     // A ride from a saved park measured by its cars' kept lengths until its trains are made here.
                     std::vector<rct3::park::object::CarFit> kept;
                     for (const save::model::Car& car : f.ride->trains.empty() ? std::vector<save::model::Car> { } : f.ride->trains.front().cars)
-                        kept.push_back({ .length = car.length });
+                        kept.push_back({ .length = car.length.value });
                     const auto fits = scene.car_fits.find(ref.ride());
                     const rct3::park::track::TrackRules rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : rct3::park::track::TrackRules { };
                     // A shuttle runs one (fit_trains).
@@ -582,7 +582,7 @@ namespace rct3::scene::park
             if (change.id == ui::screens::info::control_id(SyncStalls))
                 stall->sync = change.value != 0;
             else if (const auto item = ui::screens::info::listed(change.id, ItemPrice); item && *item < stall->items.size())
-                stall->items[*item].price = change.value;
+                stall->items[*item].price = { change.value };
             else if (const auto gone = ui::screens::info::listed(change.id, ItemRemove); gone && *gone < stall->items.size())
                 stall->items.erase(stall->items.begin() + static_cast<std::ptrdiff_t>(*gone));
             else if (const auto added = ui::screens::info::listed(change.id, ItemAdd))
@@ -593,7 +593,7 @@ namespace rct3::scene::park
                 const rct3::park::BuildItem::Goods& g = kind->goods[*added];
                 // shortcut: it goes on at its kind's own price, as a new stall's items do; upgrade alongside them.
                 const auto at = stall->items.begin() + std::clamp<std::ptrdiff_t>(change.value, 0, std::ssize(stall->items));
-                stall->items.insert(at, { .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
+                stall->items.insert(at, { .kind_symbol = std::format("{}:cid", g.item), .price = { g.price }, .name = "%ME%" });
             }
             else if (const auto moved = ui::screens::info::listed(change.id, ItemMove); moved && *moved < stall->items.size())
                 rct3::park::ride::move_item(*stall, *moved, static_cast<std::size_t>(std::max(change.value, 0)));

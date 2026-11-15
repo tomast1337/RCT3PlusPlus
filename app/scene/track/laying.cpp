@@ -220,10 +220,10 @@ namespace rct3::scene::track
         /// nought), on the ride and on the attraction the park runs for it.
         void add_running_cost(park::ParkScene& scene, save::model::Ride& ride, units::Money cost)
         {
-            ride.base.running_cost = std::max<std::int64_t>(ride.base.running_cost + simulation::park::running_cost(cost, true).value, 0);
+            ride.base.running_cost = std::max(ride.base.running_cost + simulation::park::running_cost(cost, true), units::Money { });
             for (const auto [e, a] : scene.sim.registry.view<simulation::Attraction>().each())
                 if (a.saved == ride.base.id)
-                    a.running_cost.value = ride.base.running_cost;
+                    a.running_cost = ride.base.running_cost;
         }
 
         /// Pays back what piece `piece` of ride `ride`, standing as object `object`, cost to build, as pulling the

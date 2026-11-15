@@ -18,7 +18,7 @@ TEST_CASE("a park starts from what its save holds")
     world.weather = save::model::Weather { };
     world.weather->type = save::model::WeatherType::Cloudy;
     world.weather->forecast = save::model::WeatherType::LightRain;
-    world.weather->temperature = 19.5f;
+    world.weather->temperature = { 19.5f };
 
     const simulation::park::ParkState s = simulation::park::park_state(&park, world);
     CHECK(s.cash == units::Money { 123456 });

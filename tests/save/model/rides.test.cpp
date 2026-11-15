@@ -558,7 +558,7 @@ TEST_CASE("trains and cars keep their stored indices and unknown states")
     CHECK(r.trains[1].state == TrainState::Arriving);
     CHECK(r.trains[0].symbol == "Invented:rit");
     CHECK(r.trains[0].front_piece == kB);
-    CHECK(r.trains[0].distance == 3.5f);
+    CHECK(r.trains[0].distance.value == 3.5f);
     REQUIRE(r.trains[0].cars.size() == 3);
     CHECK(r.trains[0].cars[1].design_slot == 5);
     CHECK(r.trains[0].cars[2].index == 2);
@@ -728,7 +728,7 @@ TEST_CASE("stalls load items and extras with prices in hundredths")
     CHECK(s.base.facing == 3);
     CHECK(s.base.placement == 310);
     REQUIRE(s.items.size() == 2);
-    CHECK(s.items[0].price == 120);
+    CHECK(s.items[0].price.value == 120);
     CHECK(s.items[0].total_sold == 4);
     CHECK(s.items[0].item_asset == 310);
     CHECK(s.items[0].extras == 5);

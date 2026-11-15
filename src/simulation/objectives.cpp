@@ -46,7 +46,7 @@ namespace rct3::simulation
                 case 2:
                     return a.nausea;
                 case 3:
-                    return t.ride_length;
+                    return t.ride_length.value;
                 case 4:
                     return t.max_negative_vertical / kGravity;
                 case 5:
@@ -61,11 +61,11 @@ namespace rct3::simulation
                     return low != ride.graphs.altitude.end() ? *high - *low : 0.0f;
                 }
                 case 9:
-                    return t.air_time;
+                    return t.air_time.value;
                 case 10:
                     return static_cast<float>(t.inversion_count);
                 case 11:
-                    return t.highest_drop;
+                    return t.highest_drop.value;
                 default:
                     return std::nullopt;
             }

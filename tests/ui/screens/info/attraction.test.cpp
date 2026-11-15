@@ -418,7 +418,7 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     save::model::Stall stall;
     stall.base.symbol = "SweetShopStall:shs";
     save::model::StallItem sweets;
-    sweets.price = 90;
+    sweets.price = { 90 };
     sweets.total_sold = 41;
     stall.items = { sweets, sweets };
     const AttractionFacts shop { &stall.base, nullptr, &stall, { 1 } };
@@ -427,7 +427,7 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     REQUIRE(items.menu.has_value());
     REQUIRE(items.menu->lines.size() == 2);
     CHECK(items.menu->lines[1].name == u"Sweets");
-    CHECK(items.menu->lines[1].price == 90);
+    CHECK(items.menu->lines[1].price.value == 90);
     CHECK(items.menu->ids[std::to_underlying(MenuAction::Price)] == control_id(AttractionControl::ItemPrice));
     const InfoPage sold = attraction_page(AttractionTab::Customers, shop, s, { });
     CHECK(std::ranges::find(sold.lines, std::u16string(u"Sweets sold"), &InfoLine::label)->value == u"41");
@@ -440,7 +440,7 @@ TEST_CASE("a stall's items page offers what its kind sells and is not yet on its
     save::model::Stall stall;
     stall.base.symbol = "BurgerStall:sta";
     stall.sync = true;
-    stall.items = { save::model::StallItem { .kind_symbol = "Burger:cid", .price = 150 } };
+    stall.items = { save::model::StallItem { .kind_symbol = "Burger:cid", .price = { 150 } } };
     AttractionFacts f { &stall.base, nullptr, &stall, { } };
     f.offers = { "Burger:cid", "MedBurger:cid", "LrgBurger:cid" };
     const park::CarriedKind burger { .symbol = "Burger:cid", .name_text = "CarriedItem_Hamburger", .icon = "BurgerIcon", .extras = { "Ketchup:ced", "Relish:ced" } };

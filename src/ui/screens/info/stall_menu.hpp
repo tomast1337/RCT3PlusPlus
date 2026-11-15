@@ -18,6 +18,7 @@
 #include "ui/widgets/row_bands.hpp"
 #include "ui/widgets/scroll_bar.hpp"
 #include "ui/widgets/spinner.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -49,7 +50,7 @@ namespace rct3::ui::screens::info
     {
         std::u16string name;
         std::string icon;
-        int price = 0; ///< Hundredths
+        units::Money price { };
         /// The extras the item can take, in its own order, each by place in StallMenuView::extras; none where
         /// the stall does not offer it.
         std::vector<std::optional<std::size_t>> extras;

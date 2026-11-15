@@ -261,7 +261,7 @@ namespace rct3::ui::screens::info
             // The projections are the game's own reckoning per hour, which the save does not keep.
             // Income, cost and profit, then the total apart under them.
             add(page, strings, "AttractionFinancesDialogLabel_Income", missing());
-            add(page, strings, "AttractionFinancesDialogLabel_RunningCost", money_text(units.currency, units::Money { f.common->running_cost }));
+            add(page, strings, "AttractionFinancesDialogLabel_RunningCost", money_text(units.currency, f.common->running_cost));
             add(page, strings, "AttractionFinancesDialogLabel_Profit", missing());
             page.lines.push_back({ });
             add(page, strings, "AttractionFinancesDialogLabel_TotalProfit", money_text(units.currency, f.common->total_profit));
@@ -357,8 +357,8 @@ namespace rct3::ui::screens::info
                     case TestSection::Speed:
                         add(page, strings, "AttractionResultsDialogLabel_MaxSpeed", speed(lap->max_speed, units.distance));
                         add(page, strings, "AttractionResultsDialogLabel_AverageSpeed", speed(lap->average_speed, units.distance));
-                        add(page, strings, "AttractionResultsDialogLabel_RideTime", duration(lap->ride_time));
-                        add(page, strings, "AttractionResultsDialogLabel_RideLength", length(lap->ride_length, units.distance));
+                        add(page, strings, "AttractionResultsDialogLabel_RideTime", duration(lap->ride_time.value));
+                        add(page, strings, "AttractionResultsDialogLabel_RideLength", length(lap->ride_length.value, units.distance));
                         break;
                     case TestSection::Force:
                         add(page, strings, "AttractionResultsDialogLabel_MaxPositiveVerticalG", force(lap->max_positive_vertical));
@@ -366,9 +366,9 @@ namespace rct3::ui::screens::info
                         add(page, strings, "AttractionResultsDialogLabel_MaxLateralG", force(lap->max_lateral));
                         break;
                     case TestSection::Drop:
-                        add(page, strings, "AttractionResultsDialogLabel_TotalAirTime", duration(lap->air_time));
+                        add(page, strings, "AttractionResultsDialogLabel_TotalAirTime", duration(lap->air_time.value));
                         add(page, strings, "AttractionResultsDialogLabel_NumberOfDrops", ascii(std::to_string(lap->drop_count)));
-                        add(page, strings, "AttractionResultsDialogLabel_HighestDropHeight", length(lap->highest_drop, units.distance));
+                        add(page, strings, "AttractionResultsDialogLabel_HighestDropHeight", length(lap->highest_drop.value, units.distance));
                         add(page, strings, "AttractionResultsDialogLabel_NumberOfInversion", ascii(std::to_string(lap->inversion_count)));
                         break;
                     case TestSection::Basic:
@@ -746,7 +746,7 @@ namespace rct3::ui::screens::info
                 MenuLine l;
                 l.name = item_name(item, stall, strings, f.carried);
                 l.icon = k != nullptr ? k->icon : std::string { };
-                l.price = static_cast<int>(std::clamp<std::int64_t>(item.price, 0, kMostRidePrice));
+                l.price = { std::clamp<std::int64_t>(item.price.value, 0, kMostRidePrice) };
                 l.ticked = item.extras;
                 // Each one sold makes its price less its own cost and that of the extras going on it, by how much
                 // of each goes on.
@@ -768,7 +768,7 @@ namespace rct3::ui::screens::info
                     if (k->paintable)
                         l.paints = { item.colours[0] };
                 }
-                l.help = filled(filled(text(strings, "StallItemLine_Profit"), u"%NAME%", l.name), u"%PROFIT%", cost ? money_text(units.currency, units::Money { item.price - *cost }) : missing());
+                l.help = filled(filled(text(strings, "StallItemLine_Profit"), u"%NAME%", l.name), u"%PROFIT%", cost ? money_text(units.currency, item.price - units::Money { *cost }) : missing());
                 m.lines.push_back(std::move(l));
             }
             page.menu = std::move(m);
@@ -890,7 +890,7 @@ namespace rct3::ui::screens::info
     {
         InfoPage page;
         add(page, strings, "AttractionResultsDialogLabel_SpaceRequired", ascii(std::format("{} x {}", design.width, design.length)));
-        add(page, strings, "AttractionResultsDialogLabel_Cost", money_text(units.currency, units::Money { design.cost }));
+        add(page, strings, "AttractionResultsDialogLabel_Cost", money_text(units.currency, design.cost));
         if (design.assessment.valid)
         {
             add(page, strings, "AttractionResultsDialogLabel_Excitement", rating(design.assessment.excitement, strings));
@@ -901,14 +901,14 @@ namespace rct3::ui::screens::info
         {
             add(page, strings, "AttractionResultsDialogLabel_MaxSpeed", speed(lap->max_speed, units.distance));
             add(page, strings, "AttractionResultsDialogLabel_AverageSpeed", speed(lap->average_speed, units.distance));
-            add(page, strings, "AttractionResultsDialogLabel_RideTime", duration(lap->ride_time));
-            add(page, strings, "AttractionResultsDialogLabel_RideLength", length(lap->ride_length, units.distance));
+            add(page, strings, "AttractionResultsDialogLabel_RideTime", duration(lap->ride_time.value));
+            add(page, strings, "AttractionResultsDialogLabel_RideLength", length(lap->ride_length.value, units.distance));
             add(page, strings, "AttractionResultsDialogLabel_MaxPositiveVerticalG", force(lap->max_positive_vertical));
             add(page, strings, "AttractionResultsDialogLabel_MaxNegativeVerticalG", force(lap->max_negative_vertical));
             add(page, strings, "AttractionResultsDialogLabel_MaxLateralG", force(lap->max_lateral));
-            add(page, strings, "AttractionResultsDialogLabel_TotalAirTime", duration(lap->air_time));
+            add(page, strings, "AttractionResultsDialogLabel_TotalAirTime", duration(lap->air_time.value));
             add(page, strings, "AttractionResultsDialogLabel_NumberOfDrops", ascii(std::to_string(lap->drop_count)));
-            add(page, strings, "AttractionResultsDialogLabel_HighestDropHeight", length(lap->highest_drop, units.distance));
+            add(page, strings, "AttractionResultsDialogLabel_HighestDropHeight", length(lap->highest_drop.value, units.distance));
             add(page, strings, "AttractionResultsDialogLabel_NumberOfInversion", ascii(std::to_string(lap->inversion_count)));
         }
         return std::move(page.lines);

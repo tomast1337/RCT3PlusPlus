@@ -865,7 +865,7 @@ namespace rct3::scene
                 // shortcut: at the stall's own price for it; the game lowers a price over what guests would pay,
                 // cap it so once carried items' price limits are read.
                 for (const rct3::park::BuildItem::Goods& g : p.item->goods)
-                    stall.items.push_back({ .kind_symbol = std::format("{}:cid", g.item), .price = g.price, .name = "%ME%" });
+                    stall.items.push_back({ .kind_symbol = std::format("{}:cid", g.item), .price = { g.price }, .name = "%ME%" });
                 // And the extras those take, at the usual amount, on none of them yet.
                 rct3::park::ride::offer_extras(stall, scene.carried.items);
                 park::float_money(scene, site_point(scene, *p.site), -price);
@@ -895,7 +895,7 @@ namespace rct3::scene
                 facility.base.placement = object;
                 facility.base.spot = save::model::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turn.value) };
                 facility.base.facing = static_cast<std::uint8_t>(p.site->turn.value);
-                facility.base.running_cost = simulation::kTuning.charges.facility_running_cost.value;
+                facility.base.running_cost = simulation::kTuning.charges.facility_running_cost;
                 park::float_money(scene, site_point(scene, *p.site), -price);
                 logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
                 p.unjoined_facilities.emplace_back(p.placed.ride(), p.item->type);
@@ -938,7 +938,7 @@ namespace rct3::scene
             ride.base.placement = object;
             ride.base.spot = save::model::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turn.value) };
             ride.base.facing = static_cast<std::uint8_t>(p.site->turn.value);
-            ride.base.running_cost = simulation::park::running_cost(p.item->price, false).value;
+            ride.base.running_cost = simulation::park::running_cost(p.item->price, false);
             park::float_money(scene, site_point(scene, *p.site), -price);
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
             take_fence(scene, assets, ride, *p.item);

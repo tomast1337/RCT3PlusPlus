@@ -107,6 +107,11 @@ namespace rct3::simulation
     {
     };
 
+    /// A guest carrying a park map. Their party goes for rides more often, and they look at it on picking one.
+    struct ParkMap
+    {
+    };
+
     /// Food or drink a guest carries from a stall, in their left hand: eaten or drunk a bite at a time, then
     /// held as an empty (a wrapper, a cup) until they are rid of it: in a bin, in a pocket, or on the path.
     struct Carried

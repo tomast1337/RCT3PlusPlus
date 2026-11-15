@@ -380,6 +380,7 @@ namespace rct3::simulation
         Disapproval, ///< Arms folded at a poor show
         Cry,         ///< A child crying after a poor show
         Horror,      ///< A child taking fright at a poor show
+        LookMap,     ///< Looking at their park map, having picked a ride to go to
     };
 
     struct Gesture

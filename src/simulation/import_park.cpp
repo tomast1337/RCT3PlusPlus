@@ -153,7 +153,7 @@ namespace rct3::simulation
             for (const glm::vec2 d : kAround)
             {
                 const glm::vec3 middle { paths.origin.x + (static_cast<float>(o.col) + 0.5f + d.x) * paths.tile_size, static_cast<float>(o.base_height.value_or(0)) * paths.level_height, paths.origin.y + (static_cast<float>(o.row) + 0.5f + d.y) * paths.tile_size };
-                if (const auto at = paths.nearest(middle); at && !paths.nodes()[*at].queue)
+                if (const auto at = paths.nearest(middle); at && !paths.nodes()[at->value].queue)
                     return at;
             }
             return std::nullopt;
@@ -162,7 +162,7 @@ namespace rct3::simulation
         /// Whether staff are kept off node `n`: off the park's land, or under one of its entrances.
         bool kept_from_staff(const SimWorld& world, const save::model::TerrainGrid& grid, NodeId n)
         {
-            const PathTileSpot& t = world.paths.nodes()[n].tile;
+            const PathTileSpot& t = world.paths.nodes()[n.value].tile;
             // Without terrain the whole park is its own.
             if (!grid.empty() && (!grid.contains(t.col, t.row) || (grid.at(t.col, t.row).ownership() != save::model::Ownership::Owned && grid.at(t.col, t.row).ownership() != save::model::Ownership::OwnedRights)))
                 return true;
@@ -174,21 +174,21 @@ namespace rct3::simulation
         // shortcut: follows the first way on at a fork, upgrade if lines that split are ever met.
         std::vector<NodeId> queue_line(const PathNetwork& paths, NodeId front)
         {
-            const std::uint64_t id = paths.nodes()[front].line;
+            const std::uint64_t id = paths.nodes()[front.value].line;
             std::vector<NodeId> line { front };
             for (NodeId at = front;;)
             {
-                NodeId next = kNoNode;
-                for (const NodeId n : paths.nodes()[at].next)
-                    if (n != kNoNode && paths.nodes()[n].queue && paths.nodes()[n].line == id && !std::ranges::contains(line, n))
+                std::optional<NodeId> next;
+                for (const std::optional<NodeId> n : paths.nodes()[at.value].next)
+                    if (n && paths.nodes()[n->value].queue && paths.nodes()[n->value].line == id && !std::ranges::contains(line, *n))
                     {
                         next = n;
                         break;
                     }
-                if (next == kNoNode)
+                if (!next)
                     return line;
-                line.push_back(next);
-                at = next;
+                line.push_back(*next);
+                at = *next;
             }
         }
 
@@ -215,29 +215,29 @@ namespace rct3::simulation
         struct RideLinks
         {
             std::vector<NodeId> line; ///< Its queue line from the entrance back, or empty
-            NodeId entrance = kNoNode;
-            NodeId exit = kNoNode;
+            std::optional<NodeId> entrance;
+            std::optional<NodeId> exit;
         };
 
         /// The path node on the tile next to `spot` the way `way` (a step of turned_x), nearest its height and no
         /// further off than a path that sets a paving's style; queue tiles only with `queues`, otherwise footpaths
-        /// only. kNoNode when none: a ride door or a stall joins only the path on the side it opens to, not one
+        /// only. None when none: a ride door or a stall joins only the path on the side it opens to, not one
         /// beside it.
-        NodeId path_at(const PathNetwork& paths, const save::model::PlacementSpot& spot, glm::vec2 way, bool queues)
+        std::optional<NodeId> path_at(const PathNetwork& paths, const save::model::PlacementSpot& spot, glm::vec2 way, bool queues)
         {
             const int col = spot.col + static_cast<int>(way.x);
             const int row = spot.row + static_cast<int>(way.y);
-            NodeId found = kNoNode;
+            std::optional<NodeId> found;
             int gap = 0;
-            for (NodeId n = 0; n < paths.nodes().size(); ++n)
+            for (std::uint32_t n = 0; n < paths.nodes().size(); ++n)
             {
                 const PathNode& node = paths.nodes()[n];
                 const int g = std::abs(node.tile.level - spot.height);
                 if (node.removed || node.queue != queues || node.tile.col != col || node.tile.row != row || static_cast<float>(g) > rct3::park::ground::kPavingReach)
                     continue;
-                if (found == kNoNode || g < gap)
+                if (!found || g < gap)
                 {
-                    found = n;
+                    found = NodeId { n };
                     gap = g;
                 }
             }
@@ -245,24 +245,24 @@ namespace rct3::simulation
         }
 
         /// The path behind the ride door `door`, on the tile away from the ride.
-        NodeId behind_door(const PathNetwork& paths, const save::model::PlacementSpot& door, bool queues)
+        std::optional<NodeId> behind_door(const PathNetwork& paths, const save::model::PlacementSpot& door, bool queues)
         {
             return path_at(paths, door, rct3::park::object::turned_x(rct3::park::ModelTurn::from(door.direction).turned(2)), queues);
         }
 
         /// The path a facility such as a toilet opens onto: it opens onto every side, so the first side with a path.
         // shortcut: guests go in from the first side found with a path, upgrade if a facility ever needs several ways in.
-        NodeId facility_door(const PathNetwork& paths, const save::model::PlacementSpot& spot)
+        std::optional<NodeId> facility_door(const PathNetwork& paths, const save::model::PlacementSpot& spot)
         {
-            NodeId entrance = kNoNode;
-            for (std::int32_t side = 0; side < 4 && entrance == kNoNode; ++side)
+            std::optional<NodeId> entrance;
+            for (std::int32_t side = 0; side < 4 && !entrance; ++side)
                 entrance = path_at(paths, spot, rct3::park::object::turned_x(rct3::park::ModelTurn { side }), false);
             return entrance;
         }
 
         /// The path in front of a stall facing `facing`, on the side it serves; facings point at -row, -col, +row,
         /// +col.
-        NodeId stall_front(const PathNetwork& paths, const save::model::PlacementSpot& spot, std::int32_t facing)
+        std::optional<NodeId> stall_front(const PathNetwork& paths, const save::model::PlacementSpot& spot, std::int32_t facing)
         {
             return path_at(paths, spot, rct3::park::object::turned_x(rct3::park::ModelTurn::from(facing).turned(3)), false);
         }
@@ -275,10 +275,10 @@ namespace rct3::simulation
                 return std::nullopt;
             const save::model::PlacementSpot& at = *station.entrance_spot;
             RideLinks links;
-            if (const NodeId front = behind_door(paths, at, true); front != kNoNode && station.queue_line != 0 && paths.nodes()[front].line == station.queue_line)
-                links.line = queue_line(paths, front);
+            if (const std::optional<NodeId> front = behind_door(paths, at, true); front && station.queue_line != 0 && paths.nodes()[front->value].line == station.queue_line)
+                links.line = queue_line(paths, *front);
             links.entrance = links.line.empty() ? behind_door(paths, at, false) : links.line.back();
-            if (links.entrance == kNoNode)
+            if (!links.entrance)
                 return std::nullopt;
             if (station.exit_spot)
                 links.exit = behind_door(paths, *station.exit_spot, false);
@@ -311,14 +311,14 @@ namespace rct3::simulation
         {
             std::optional<NodeId> best;
             float gap = std::numeric_limits<float>::max();
-            for (NodeId n = 0; n < paths.nodes().size(); ++n)
+            for (std::uint32_t n = 0; n < paths.nodes().size(); ++n)
             {
                 if (paths.nodes()[n].removed || paths.nodes()[n].queue)
                     continue;
-                if (const float g = glm::distance(paths.centre(n), at); g < gap)
+                if (const float g = glm::distance(paths.centre(NodeId { n }), at); g < gap)
                 {
                     gap = g;
-                    best = n;
+                    best = NodeId { n };
                 }
             }
             return best;
@@ -442,13 +442,13 @@ namespace rct3::simulation
     {
         PathNetwork& paths = world.paths;
         std::vector<glm::vec3> middles;
-        for (NodeId n = 0; n < paths.nodes().size(); ++n)
-            middles.push_back(paths.centre(n));
+        for (std::uint32_t n = 0; n < paths.nodes().size(); ++n)
+            middles.push_back(paths.centre(NodeId { n }));
         const std::vector<rct3::park::Overhead> over = overhead(middles);
         std::size_t roofed = 0;
-        for (NodeId n = 0; n < paths.nodes().size() && n < over.size(); ++n)
+        for (std::uint32_t n = 0; n < paths.nodes().size() && n < over.size(); ++n)
         {
-            paths.cover(n, over[n].roof ? Cover::Roof : over[n].shade ? Cover::Shade : Cover::Open);
+            paths.cover(NodeId { n }, over[n].roof ? Cover::Roof : over[n].shade ? Cover::Shade : Cover::Open);
             roofed += over[n].roof ? 1 : 0;
         }
         return roofed;
@@ -468,10 +468,10 @@ namespace rct3::simulation
             (void)add_path(world, p, grid);
     }
 
-    NodeId add_path(SimWorld& world, const save::model::PathTile& path, const save::model::TerrainGrid& grid)
+    std::optional<NodeId> add_path(SimWorld& world, const save::model::PathTile& path, const save::model::TerrainGrid& grid)
     {
         if (path.kind == save::model::PathKind::Unknown)
-            return kNoNode;
+            return std::nullopt;
         const auto [spot, height] = node_spot(world.paths, path, grid);
         const std::uint64_t line = path.queue ? path.queue->queue_line_ref : 0;
         const NodeId id = world.paths.add(spot, path.kind == save::model::PathKind::Queue, height, line);
@@ -565,10 +565,10 @@ namespace rct3::simulation
         std::vector<entt::entity> sliding;
         for (const auto [e, stride, pose] : r.view<const Stride, Pose>(entt::exclude<Held, Dropped, Swimmer, RideWalk, Thrill>).each())
         {
-            if (stride.from >= nodes.size() || stride.to >= nodes.size())
+            if (stride.from.value >= nodes.size() || stride.to.value >= nodes.size())
                 continue;
-            const PathTileSpot& at = nodes[stride.from].tile;
-            if (!inside(at.col, at.row) && !inside(nodes[stride.to].tile.col, nodes[stride.to].tile.row))
+            const PathTileSpot& at = nodes[stride.from.value].tile;
+            if (!inside(at.col, at.row) && !inside(nodes[stride.to.value].tile.col, nodes[stride.to.value].tile.row))
                 continue;
             if (const float now = steepness(grid, pose.position); now > kTuning.slides.steep && now > steepness(was, pose.position))
                 sliding.push_back(e);
@@ -618,7 +618,7 @@ namespace rct3::simulation
                             cycle->stops[*near].saved.emplace(k);
                 // The way in changes only while no one queues on it; the way out at once, so riders already
                 // aboard leave by a path laid to the exit while the ride is busy.
-                const auto relink = [&](const save::model::Station& station, NodeId& entrance, std::vector<NodeId>& line, NodeId& exit, bool queued) {
+                const auto relink = [&](const save::model::Station& station, std::optional<NodeId>& entrance, std::vector<NodeId>& line, std::optional<NodeId>& exit, bool queued) {
                     const auto links = ride_links(world.paths, station);
                     if (!links)
                         return;
@@ -643,12 +643,12 @@ namespace rct3::simulation
             // A stall, or a facility standing on its own.
             const auto stall = std::ranges::find(rides.stalls, attraction.saved, [](const save::model::Stall& x) { return x.base.id; });
             const auto facility = std::ranges::find(rides.rides, attraction.saved, [](const save::model::Ride& x) { return x.base.id; });
-            NodeId entrance = kNoNode;
+            std::optional<NodeId> entrance;
             if (stall != rides.stalls.end() && stall->base.spot)
                 entrance = stall_front(world.paths, *stall->base.spot, stall->base.facing);
             else if (facility != rides.rides.end() && facility->kind == save::model::RideKind::Special && facility->base.spot)
                 entrance = facility_door(world.paths, *facility->base.spot);
-            if (entrance == kNoNode || entrance == attraction.entrance)
+            if (!entrance || entrance == attraction.entrance)
                 continue;
             attraction.entrance = entrance;
             ++changed;
@@ -855,10 +855,10 @@ namespace rct3::simulation
             // The door opens on the path tile on the room's side away from the pool.
             const glm::vec3 outside = middle(room.col - dc, room.row - dr, surface);
             const auto node = paths.nearest(outside);
-            const bool on_path = node && !paths.nodes()[*node].removed && !paths.nodes()[*node].queue && std::abs(paths.nodes()[*node].height - outside.y) <= paths.level_height;
+            const bool on_path = node && !paths.nodes()[node->value].removed && !paths.nodes()[node->value].queue && std::abs(paths.nodes()[node->value].height - outside.y) <= paths.level_height;
             auto& attraction = r.get_or_emplace<Attraction>(e);
             attraction.kind = AttractionKind::Pool;
-            attraction.entrance = on_path ? *node : kNoNode;
+            attraction.entrance = on_path ? node : std::nullopt;
             attraction.price = { room.ticket };
             attraction.open = room.open;
             r.get_or_emplace<PoolTank>(e).fluid = static_cast<PoolFluid>(std::min<std::uint8_t>(room.fluid, 2));
@@ -887,15 +887,15 @@ namespace rct3::simulation
             const auto sale = sale_of(stall, kinds);
             if (!sale || !stall.base.spot)
                 continue;
-            const NodeId entrance = stall_front(world.paths, *stall.base.spot, stall.base.facing);
-            if (entrance == kNoNode)
+            const std::optional<NodeId> entrance = stall_front(world.paths, *stall.base.spot, stall.base.facing);
+            if (!entrance)
                 continue;
             auto& r = world.registry;
             const entt::entity e = r.create();
             const bool broken = (stall.base.flags & save::model::AttractionCommon::kBrokenDown) != 0;
             r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Shop, .name = stall.base.name, .entrance = entrance, .price = sale->price, .open = stall.base.state == save::model::AttractionState::Open && !broken, .saved = stall.base.id });
             r.emplace<Upkeep>(e, Upkeep { .broken = broken, .inspect_every = std::nullopt, .break_in = units::Seconds { 0 } });
-            const PathTileSpot& tile = world.paths.nodes()[entrance].tile;
+            const PathTileSpot& tile = world.paths.nodes()[entrance->value].tile;
             Shop shop = sale->shop;
             shop.counter = { static_cast<float>(stall.base.spot->col - tile.col), static_cast<float>(stall.base.spot->row - tile.row) };
             r.emplace<Shop>(e, shop);
@@ -1134,8 +1134,8 @@ namespace rct3::simulation
                 continue;
             const auto kind = kind_of(ride);
             const auto product = kind ? facility_of(*kind) : std::nullopt;
-            const NodeId entrance = product ? facility_door(world.paths, *ride.base.spot) : kNoNode;
-            if (entrance == kNoNode)
+            const std::optional<NodeId> entrance = product ? facility_door(world.paths, *ride.base.spot) : std::nullopt;
+            if (!entrance)
                 continue;
             auto& r = world.registry;
             const entt::entity e = r.create();
@@ -1262,11 +1262,11 @@ namespace rct3::simulation
             const bool across = (o.rotation & 1) != 0;
             const std::int32_t span_col = (*squares)[across ? 1 : 0];
             const std::int32_t span_row = (*squares)[across ? 0 : 1];
-            for (NodeId n = 0; n < paths.nodes().size(); ++n)
+            for (std::uint32_t k = 0; k < paths.nodes().size(); ++k)
             {
-                const PathNode& node = paths.nodes()[n];
-                if (!node.removed && !node.queue && node.tile.col >= o.col && node.tile.col < o.col + span_col && node.tile.row >= o.row && node.tile.row < o.row + span_row && !std::ranges::contains(under.nodes, n))
-                    under.nodes.push_back(n);
+                const PathNode& node = paths.nodes()[k];
+                if (!node.removed && !node.queue && node.tile.col >= o.col && node.tile.col < o.col + span_col && node.tile.row >= o.row && node.tile.row < o.row + span_row && !std::ranges::contains(under.nodes, NodeId { k }))
+                    under.nodes.emplace_back(k);
             }
         }
         world.registry.ctx().insert_or_assign(std::move(under));
@@ -1275,8 +1275,8 @@ namespace rct3::simulation
 
     void keep_staff_in(SimWorld& world, const save::model::TerrainGrid& grid)
     {
-        for (NodeId n = 0; n < world.paths.nodes().size(); ++n)
-            world.paths.keep_staff_off(n, kept_from_staff(world, grid, n));
+        for (std::uint32_t n = 0; n < world.paths.nodes().size(); ++n)
+            world.paths.keep_staff_off(NodeId { n }, kept_from_staff(world, grid, NodeId { n }));
     }
 
     rct3::park::Side no_entry_side(const save::model::PlacedObject& sign)
@@ -1335,7 +1335,7 @@ namespace rct3::simulation
             return entt::null;
         auto& r = world.registry;
         const entt::entity e = r.create();
-        r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = ride.base.running_cost });
+        r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = std::nullopt, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = ride.base.running_cost });
         const auto& rated = kTuning.climbs.rated;
         const bool valid = ride.assessment.valid;
         CycleRide cycle { .capacity = 0, .splash = true };
@@ -1373,7 +1373,7 @@ namespace rct3::simulation
             {
                 auto& r = world.registry;
                 const entt::entity e = r.create();
-                r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = kNoNode, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = ride.base.running_cost });
+                r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = std::nullopt, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = ride.base.running_cost });
                 const auto& rated = kTuning.rivers.rated;
                 const auto valid = ride.assessment.valid;
                 CycleRide cycle { .capacity = 0, .splash = true };
@@ -1424,8 +1424,8 @@ namespace rct3::simulation
                 elsewhere();
                 continue;
             }
-            const NodeId entrance = links ? links->entrance : kNoNode;
-            const NodeId exit = links ? links->exit : kNoNode;
+            const std::optional<NodeId> entrance = links ? links->entrance : std::nullopt;
+            const std::optional<NodeId> exit = links ? links->exit : std::nullopt;
             std::vector<NodeId> line = links ? std::move(links->line) : std::vector<NodeId> { };
             auto& r = world.registry;
             const entt::entity e = r.create();
@@ -1714,7 +1714,7 @@ namespace rct3::simulation
             if (const auto* guard = std::get_if<save::model::LifeGuardWork>(&people.staff[i].work); guard != nullptr && guard->chair.is_none())
                 continue;
             auto at = world.paths.nearest(position);
-            if (!at || world.paths.nodes()[*at].queue)
+            if (!at || world.paths.nodes()[at->value].queue)
                 at = walkway_near(world.paths, position);
             if (!at && walks)
                 continue;
@@ -1806,7 +1806,7 @@ namespace rct3::simulation
             return std::nullopt;
         };
         for (std::size_t i = 0; i < saved.rides.size() && i < rides.size(); ++i)
-            if (rides[i] != entt::null && (r.get<Attraction>(rides[i]).entrance != kNoNode || slide_room(rides[i]) || r.all_of<River>(rides[i])))
+            if (rides[i] != entt::null && (r.get<Attraction>(rides[i]).entrance || slide_room(rides[i]) || r.all_of<River>(rides[i])))
                 ride_of.emplace(saved.rides[i].base.id, rides[i]);
         std::size_t seated = 0;
         for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
@@ -1848,11 +1848,11 @@ namespace rct3::simulation
             }
             // Off the ride they get off where its riders do; off a slide, in their swimwear, into its pool.
             const auto room = slide_room(ride->second);
-            const NodeId off = cycle.exit != kNoNode ? cycle.exit : r.get<Attraction>(ride->second).entrance;
-            if (!r.all_of<Stride>(e) && off == kNoNode)
+            const std::optional<NodeId> off = cycle.exit.or_else([&] { return r.get<Attraction>(ride->second).entrance; });
+            if (!r.all_of<Stride>(e) && !off)
                 continue;
             if (!r.all_of<Stride>(e))
-                start_walking(world, e, off);
+                start_walking(world, e, *off);
             std::vector<entt::entity>* riders = nullptr;
             if (auto* fleet = r.try_get<Trains>(ride->second))
             {
@@ -1942,7 +1942,7 @@ namespace rct3::simulation
         {
             const glm::vec3 position = r.get<Pose>(e).position;
             auto at = world.paths.nearest(position);
-            if (!at || (world.paths.nodes()[*at].queue && !lines.contains(*at)))
+            if (!at || (world.paths.nodes()[at->value].queue && !lines.contains(*at)))
                 at = walkway_near(world.paths, position);
             if (!at)
                 continue;

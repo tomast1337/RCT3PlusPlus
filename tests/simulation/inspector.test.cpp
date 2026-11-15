@@ -230,7 +230,7 @@ TEST_CASE("an inspector tells of a broken ride with no mechanic near, and of an 
         r.emplace_or_replace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = std::nullopt });
         r.get<Attraction>(ride).open = false;
         const auto stall = park.shop("Lost", Product::Food, { 3, 0 }, 100);
-        r.get<Attraction>(stall).entrance = kNoNode;
+        r.get<Attraction>(stall).entrance = std::nullopt;
         if (mechanic)
             park.staff(StaffRole::Mechanic, { 6, 0 });
         const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });

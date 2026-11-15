@@ -405,7 +405,7 @@ namespace rct3::scene
             Json tiles = Json::array();
             if (const auto* under = park_->sim.registry.ctx().find<simulation::EntrancePaths>())
                 for (const simulation::NodeId n : under->nodes)
-                    tiles.push_back({ { "col", park_->sim.paths.nodes()[n].tile.col }, { "row", park_->sim.paths.nodes()[n].tile.row } });
+                    tiles.push_back({ { "col", park_->sim.paths.nodes()[n.value].tile.col }, { "row", park_->sim.paths.nodes()[n.value].tile.row } });
             return tiles;
         });
         engine_.define("park.spawns", [this](const Json&) -> Json {
@@ -414,7 +414,7 @@ namespace rct3::scene
             // The path tiles guests appear on and walk off from.
             Json tiles = Json::array();
             for (const auto [e, spawn] : park_->sim.registry.view<const simulation::GuestSpawn>().each())
-                tiles.push_back({ { "col", park_->sim.paths.nodes()[spawn.node].tile.col }, { "row", park_->sim.paths.nodes()[spawn.node].tile.row } });
+                tiles.push_back({ { "col", park_->sim.paths.nodes()[spawn.node.value].tile.col }, { "row", park_->sim.paths.nodes()[spawn.node.value].tile.row } });
             return tiles;
         });
         engine_.define("park.dropParties", [this](const Json& a) -> Json {
@@ -424,9 +424,9 @@ namespace rct3::scene
             const save::model::TerrainGrid& g = park_->grid;
             std::vector<simulation::NodeId> spots;
             const auto& nodes = park_->sim.paths.nodes();
-            for (simulation::NodeId n = 0; n < nodes.size(); ++n)
+            for (std::uint32_t n = 0; n < nodes.size(); ++n)
                 if (const auto& t = nodes[n].tile; !nodes[n].queue && !nodes[n].removed && g.contains(t.col, t.row) && rct3::park::owned_outright(g.at(t.col, t.row)))
-                    spots.push_back(n);
+                    spots.push_back(simulation::NodeId { n });
             if (spots.empty())
                 return Json::array();
             auto dice = random::seeded({ static_cast<std::uint64_t>(a.size() > 1 ? number(a, 1) : 1) });
@@ -435,7 +435,7 @@ namespace rct3::scene
             {
                 const auto spot = spots[random::below(dice, spots.size())];
                 const auto party = simulation::admit_party(park_->sim, dice, spot);
-                dropped.push_back({ { "col", nodes[spot].tile.col }, { "row", nodes[spot].tile.row }, { "guests", party.size() } });
+                dropped.push_back({ { "col", nodes[spot.value].tile.col }, { "row", nodes[spot.value].tile.row }, { "guests", party.size() } });
             }
             return dropped;
         });
@@ -453,7 +453,7 @@ namespace rct3::scene
             Json pieces = Json::array();
             const auto& g = park_->grid;
             for (const auto [e, piece] : park_->sim.registry.view<const simulation::Litter>().each())
-                if (piece.node < park_->sim.paths.nodes().size())
+                if (piece.node.value < park_->sim.paths.nodes().size())
                 {
                     // The middle of its tile, in tiles as people's places are.
                     const glm::vec3 at = park_->sim.paths.centre(piece.node);
@@ -1322,8 +1322,8 @@ namespace rct3::scene
                         {
                             one["joined"] = true;
                             one["customers"] = a.customers;
-                            if (a.entrance < park.sim.paths.nodes().size())
-                                one["servedFrom"] = { { "col", park.sim.paths.nodes()[a.entrance].tile.col }, { "row", park.sim.paths.nodes()[a.entrance].tile.row } };
+                            if (a.entrance && a.entrance->value < park.sim.paths.nodes().size())
+                                one["servedFrom"] = { { "col", park.sim.paths.nodes()[a.entrance->value].tile.col }, { "row", park.sim.paths.nodes()[a.entrance->value].tile.row } };
                         }
                 if (e != entt::null && registry.valid(e))
                 {
@@ -1355,7 +1355,7 @@ namespace rct3::scene
                         one["customers"] = a->customers;
                         one["price"] = a->price.value;
                         one["open"] = a->open;
-                        one["onPaths"] = a->entrance != simulation::kNoNode;
+                        one["onPaths"] = a->entrance.has_value();
                         // Where the guests walking to it are now.
                         Json heading = Json::array();
                         for (const auto [g, errand, pose] : registry.view<const simulation::Errand, const simulation::Pose>().each())
@@ -1371,8 +1371,8 @@ namespace rct3::scene
                         one["queueLine"] = c->line.size();
                         one["stops"] = c->stops.size();
                         // The path tile its first station lets riders out onto.
-                        if (c->exit != simulation::kNoNode)
-                            one["exitAt"] = { { "col", park.sim.paths.nodes()[c->exit].tile.col }, { "row", park.sim.paths.nodes()[c->exit].tile.row } };
+                        if (c->exit)
+                            one["exitAt"] = { { "col", park.sim.paths.nodes()[c->exit->value].tile.col }, { "row", park.sim.paths.nodes()[c->exit->value].tile.row } };
                         // A tracked ride's riders are aboard its trains.
                         std::size_t riders = c->riders.size();
                         if (const auto* fleet = registry.try_get<simulation::Trains>(e))

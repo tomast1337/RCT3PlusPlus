@@ -27,7 +27,7 @@ TEST_CASE("a thirsty guest walks to the drink stand and buys a drink")
     CHECK(r.get<Wallet>(guest).cash.value == 850);
     CHECK(r.get<Attraction>(stand).income.value == 150);
     // On the stand's tile, wherever on it they walked.
-    const glm::vec3 off = r.get<Pose>(guest).position - park.world().paths.centre(r.get<Attraction>(stand).entrance);
+    const glm::vec3 off = r.get<Pose>(guest).position - park.world().paths.centre(*r.get<Attraction>(stand).entrance);
     CHECK(std::max(std::abs(off.x), std::abs(off.z)) <= kLaneReach + 0.01f);
     // Nine tiles of four units at an adult's walk, give or take the first thought.
     CHECK(park.world().tick < ticks(40));
@@ -539,7 +539,7 @@ TEST_CASE("guests spread over the path but keep on it")
     for (int i = 0; i < 400; ++i)
     {
         park.run(1);
-        const float side = std::abs(r.get<Pose>(guest).position.z - park.world().paths.centre(0).z);
+        const float side = std::abs(r.get<Pose>(guest).position.z - park.world().paths.centre(NodeId { 0 }).z);
         CHECK(side <= kLaneReach + 0.001f);
         widest = std::max(widest, side);
     }
@@ -731,7 +731,7 @@ TEST_CASE("party members who stay off a ride wait by its exit, and all go on tog
     // Walked to the tile beside the exit, off the riders' way.
     const NodeId exit = *park.world().paths.nearest({ 12, 0, 0 });
     CHECK(r.get<Stride>(queasy).to != exit);
-    CHECK(std::ranges::contains(park.world().paths.nodes()[exit].next, r.get<Stride>(queasy).to));
+    CHECK(std::ranges::contains(park.world().paths.nodes()[exit.value].next, r.get<Stride>(queasy).to));
     CHECK(park.run_until([&] { return r.get<Errand>(queasy).kind == ErrandKind::Following; }, 30));
     CHECK(r.get<Errand>(leader).kind == ErrandKind::Wandering);
     CHECK(r.get<Attraction>(ride).customers == 1);
@@ -890,7 +890,7 @@ TEST_CASE("a lone buyer stands at the stall's counter facing it while served, th
     const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f });
     REQUIRE(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 60));
     CHECK(r.get<Errand>(guest).kind == ErrandKind::Buying);
-    const glm::vec3 off = r.get<Pose>(guest).position - park.world().paths.centre(r.get<Attraction>(stand).entrance);
+    const glm::vec3 off = r.get<Pose>(guest).position - park.world().paths.centre(*r.get<Attraction>(stand).entrance);
     CHECK(off.z > 1);                                          // At the stall's edge of the tile
     CHECK(std::abs(r.get<Pose>(guest).heading.value) < 0.01f); // Facing the stall
     park.run_seconds(kTuning.facilities.served.value / 2);
@@ -1243,8 +1243,8 @@ TEST_CASE("on a ride whose first station has no way to the paths, riders get off
     const auto first = park.guest({ 1, 0 }, { .cash = 1000 });
     r.get<Errand>(first) = { ErrandKind::Heading, ride, 0 };
     REQUIRE(park.run_until([&] { return r.get<Errand>(first).kind == ErrandKind::Riding; }, 10));
-    r.get<CycleRide>(ride).exit = kNoNode;
-    r.get<Attraction>(ride).entrance = kNoNode;
+    r.get<CycleRide>(ride).exit = std::nullopt;
+    r.get<Attraction>(ride).entrance = std::nullopt;
     const auto guest = park.guest({ 8, 0 }, { .cash = 1000 });
     r.get<Errand>(guest) = { ErrandKind::Heading, ride, 0 };
     REQUIRE(park.run_until([&] { return r.get<Errand>(guest).kind == ErrandKind::Queueing; }, 10));
@@ -1299,7 +1299,7 @@ TEST_CASE("a party waits on a tile every member can walk to, not behind a no-ent
     const auto party = park.party({ leader, queasy });
     auto& r = park.world().registry;
     r.get<Errand>(leader) = { ErrandKind::Heading, ride, 0 };
-    REQUIRE(park.run_until([&] { return r.get<Errand>(queasy).kind == ErrandKind::Waiting && r.get<Party>(party).gather < paths.nodes().size(); }, 10));
+    REQUIRE(park.run_until([&] { return r.get<Errand>(queasy).kind == ErrandKind::Waiting && r.get<Party>(party).gather && r.get<Party>(party).gather->value < paths.nodes().size(); }, 10));
     CHECK(r.get<Party>(party).gather == main);
     CHECK(park.run_until(
         [&] {

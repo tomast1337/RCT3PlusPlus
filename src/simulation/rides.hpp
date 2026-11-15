@@ -60,9 +60,9 @@ namespace rct3::simulation
     /// there as at the first.
     struct Stop
     {
-        NodeId entrance = kNoNode;
+        std::optional<NodeId> entrance { };
         std::vector<NodeId> line { };         ///< As CycleRide::line
-        NodeId exit = kNoNode;                ///< Where riders get off; none lets no one off here
+        std::optional<NodeId> exit { };       ///< Where riders get off; none lets no one off here
         std::vector<entt::entity> queue { };  ///< Guests waiting, first in line first
         units::Seconds loading { };           ///< The train standing here has been loading
         std::optional<std::size_t> saved { }; ///< Its place among the saved ride's stations; none till it has doors
@@ -91,7 +91,7 @@ namespace rct3::simulation
         /// The queue line's tiles from the entrance back to where it meets the paths; empty when guests walk
         /// straight in from a path.
         std::vector<NodeId> line { };
-        NodeId exit = kNoNode;                             ///< Where riders get off; the attraction's entrance when kNoNode
+        std::optional<NodeId> exit { };                    ///< Where riders get off; the attraction's entrance when none
         std::vector<entt::entity> riders { };              ///< Guests on the ride now
         units::Seconds loading { };                        ///< The train at the start, or the loading ride, has been loading
         std::optional<units::Seconds> since_departure { }; ///< Since a train or go last left; none before the first
@@ -197,10 +197,10 @@ namespace rct3::simulation
     void step_rides(SimWorld& world, const Weather& weather, bool night, std::optional<profiling::Scope>& phase);
 
     /// Where guests come into `ride`'s station `station` (0 the first).
-    [[nodiscard]] NodeId entrance_of(const entt::registry& r, entt::entity ride, std::size_t station);
+    [[nodiscard]] std::optional<NodeId> entrance_of(const entt::registry& r, entt::entity ride, std::size_t station);
 
     /// Where riders come off `ride` on to the paths at its station `station` (0 the first).
-    [[nodiscard]] NodeId exit_of(const entt::registry& r, entt::entity ride, std::size_t station = 0);
+    [[nodiscard]] std::optional<NodeId> exit_of(const entt::registry& r, entt::entity ride, std::size_t station = 0);
 
     /// A rider off `ride` and on the paths at the exit of the station they get off at: on to what they do
     /// next, showing how the ride left them, and sick there if it turned their stomach.

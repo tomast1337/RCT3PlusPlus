@@ -97,9 +97,9 @@ namespace rct3::scene::park
                 worn[o.section] = &o;
         // On a walkway picked at random, as the game puts them on one of the park's paths.
         std::vector<simulation::NodeId> walkways;
-        for (simulation::NodeId n = 0; n < scene.sim.paths.nodes().size(); ++n)
+        for (std::uint32_t n = 0; n < scene.sim.paths.nodes().size(); ++n)
             if (const simulation::PathNode& node = scene.sim.paths.nodes()[n]; !node.removed && !node.queue && !node.staff_kept_off)
-                walkways.push_back(n);
+                walkways.push_back(simulation::NodeId { n });
         if (std::ranges::contains(worn, nullptr) || walkways.empty())
             return std::nullopt;
         const entt::entity e = simulation::add_staff(scene.sim, role, walkways[random::below(scene.looks, walkways.size())]);

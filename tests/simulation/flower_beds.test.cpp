@@ -27,7 +27,7 @@ TEST_CASE("a flower bed is watered from the path beside it, and starts full when
     auto& r = park.world().registry;
     const auto beside = bed(park, 3, 1, -1);
     REQUIRE(beside != entt::null);
-    CHECK(paths.nodes()[r.get<FlowerBed>(beside).node].tile.col == 3);
+    CHECK(paths.nodes()[r.get<FlowerBed>(beside).node.value].tile.col == 3);
     CHECK(r.get<FlowerBed>(beside).water == 300);
     CHECK(bed(park, 3, 5, 0) == entt::null); // No path near
 }

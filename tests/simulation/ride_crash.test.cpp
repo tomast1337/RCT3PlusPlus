@@ -19,7 +19,7 @@ namespace
     {
         const auto ride = park.flat_ride("Looper", { 4, 0 }, 100, { .capacity = 2, .cycle_seconds = 1000 });
         auto& r = park.world().registry;
-        const glm::vec3 from = park.world().paths.centre(r.get<Attraction>(ride).entrance);
+        const glm::vec3 from = park.world().paths.centre(*r.get<Attraction>(ride).entrance);
         Coaster train;
         train.distance = { 0, 20 };
         train.height = { 0, 0 };

@@ -104,21 +104,21 @@ namespace rct3::simulation::staff
         // mechanic going no further in.
         const auto spots = [&](entt::entity ride) {
             const auto* cycle = r.try_get<CycleRide>(ride);
-            const NodeId exit = cycle != nullptr ? cycle->exit : kNoNode;
-            if (const NodeId at = exit != kNoNode ? exit : r.get<Attraction>(ride).entrance; at != kNoNode || r.all_of<PoolDoor>(ride))
-                return std::vector { at };
+            const std::optional<NodeId> exit = cycle != nullptr ? cycle->exit : std::nullopt;
+            if (const std::optional<NodeId> at = exit.or_else([&] { return r.get<Attraction>(ride).entrance; }); at || r.all_of<PoolDoor>(ride))
+                return at ? std::vector { *at } : std::vector<NodeId> { };
             std::vector<NodeId> rooms;
             if (const auto pool = pool_ride_pool(world, ride))
                 for (const entt::entity door : sorted(r.view<const PoolDoor, const Attraction>()))
-                    if (r.get<PoolDoor>(door).pool == *pool && r.get<Attraction>(door).entrance != kNoNode)
-                        rooms.push_back(r.get<Attraction>(door).entrance);
-            return rooms.empty() ? std::vector { kNoNode } : rooms;
+                    if (r.get<PoolDoor>(door).pool == *pool && r.get<Attraction>(door).entrance)
+                        rooms.push_back(*r.get<Attraction>(door).entrance);
+            return rooms;
         };
         std::vector<entt::entity> free;
         for (const entt::entity e : sorted(staff_view))
         {
             const auto [staff, stride] = staff_view.get<Staff, Stride>(e);
-            if (staff.role == StaffRole::Mechanic && staff.ride == entt::null && stride.to < paths.nodes().size())
+            if (staff.role == StaffRole::Mechanic && staff.ride == entt::null && stride.to.value < paths.nodes().size())
                 free.push_back(e);
         }
         // What a mechanic could not be sent to is told by the park's inspector, if it has one.
@@ -132,7 +132,7 @@ namespace rct3::simulation::staff
                 return patrol != nullptr && !patrol->tiles.empty();
             };
             const auto at = spots(ride);
-            const auto ours = [&](entt::entity m, NodeId spot) { return patrolled(m) && spot != kNoNode && r.get<Patrol>(m).covers(paths.nodes()[spot].tile); };
+            const auto ours = [&](entt::entity m, NodeId spot) { return patrolled(m) && r.get<Patrol>(m).covers(paths.nodes()[spot.value].tile); };
             std::optional<std::vector<NodeId>> best;
             auto who = free.end();
             bool best_ours = false;
@@ -158,7 +158,7 @@ namespace rct3::simulation::staff
             }
             if (who == free.end())
             {
-                if (asked && at.front() != kNoNode && inspector != inspectors.end())
+                if (asked && !at.empty() && inspector != inspectors.end())
                     tell(r, *inspector, zoned_out ? Finding::BadZones : Finding::NoMechanicCanReach, ride, now);
                 return;
             }
@@ -189,11 +189,11 @@ namespace rct3::simulation::staff
                 r.get<Errand>(e) = { };
                 stride.route.clear();
             }
-            if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
+            if (stride.from.value >= paths.nodes().size() || stride.to.value >= paths.nodes().size())
                 continue;
             // Their path taken up from under them: off the job in hand, they stand lost a while, then make
             // straight for the nearest path.
-            if (paths.nodes()[stride.from].removed && stride.to == stride.from)
+            if (paths.nodes()[stride.from.value].removed && stride.to == stride.from)
             {
                 auto* lost = r.try_get<Lost>(e);
                 if (lost == nullptr)
@@ -288,20 +288,20 @@ namespace rct3::simulation::staff
             const auto back_to = [&](const Patrol& area, NodeId from) {
                 if (!stride.route.empty())
                     return true;
-                NodeId home = kNoNode;
+                std::optional<NodeId> home;
                 float best = std::numeric_limits<float>::infinity();
-                for (NodeId n = 0; n < paths.nodes().size(); ++n)
-                    if (!paths.nodes()[n].queue && !paths.nodes()[n].removed && area.covers(paths.nodes()[n].tile))
-                        if (const float d = glm::distance(paths.centre(n), paths.centre(from)); d < best)
+                for (std::uint32_t k = 0; k < paths.nodes().size(); ++k)
+                    if (!paths.nodes()[k].queue && !paths.nodes()[k].removed && area.covers(paths.nodes()[k].tile))
+                        if (const float d = glm::distance(paths.centre(NodeId { k }), paths.centre(from)); d < best)
                         {
                             best = d;
-                            home = n;
+                            home = NodeId { k };
                         }
-                if (auto way = home != kNoNode ? paths.route(from, home, Walker::Staff) : std::nullopt; way && !way->empty())
+                if (auto way = home ? paths.route(from, *home, Walker::Staff) : std::nullopt; way && !way->empty())
                     stride.route = std::move(*way);
                 return !stride.route.empty();
             };
-            const bool inside = patrol == nullptr || patrol->covers(paths.nodes()[at].tile);
+            const bool inside = patrol == nullptr || patrol->covers(paths.nodes()[at.value].tile);
             const bool tidies = staff.role == StaffRole::Handyman && inside;
             const bool sweeps = tidies && (staff.tasks & kSweepTask) != 0;
             const bool mends = tidies && (staff.tasks & kLeaveBrokenTask) == 0;
@@ -428,9 +428,9 @@ namespace rct3::simulation::staff
                     // A broken ride: whether a mechanic is near.
                     if (const auto* upkeep = r.try_get<Upkeep>(a); upkeep != nullptr && upkeep->broken)
                     {
-                        bool near = attraction.entrance == kNoNode;
+                        bool near = !attraction.entrance;
                         for (const auto [m, worker, walk, at_m, _] : staff_view.each())
-                            near = near || (worker.role == StaffRole::Mechanic && glm::distance(at_m.position, paths.centre(attraction.entrance)) <= kTuning.inspector.mechanic_near.value);
+                            near = near || (worker.role == StaffRole::Mechanic && glm::distance(at_m.position, paths.centre(*attraction.entrance)) <= kTuning.inspector.mechanic_near.value);
                         if (!near)
                             tell(r, e, Finding::NoMechanic, a, now);
                         continue;
@@ -445,7 +445,7 @@ namespace rct3::simulation::staff
                         break;
                     }
                     // A lazy river or pool slide has no entrance on the paths: swimmers get on from its pools.
-                    if (attraction.entrance == kNoNode)
+                    if (!attraction.entrance)
                     {
                         if (r.any_of<River, ClimbSlide>(a) || pool_ride_pool(world, a))
                             continue;
@@ -453,7 +453,7 @@ namespace rct3::simulation::staff
                         tell(r, e, Finding::NoPath, a, now);
                         continue;
                     }
-                    auto way = paths.route(at, attraction.entrance, Walker::Guest);
+                    auto way = paths.route(at, *attraction.entrance, Walker::Guest);
                     if (!way)
                         continue;
                     rounds->seen.emplace_back(a, units::Seconds { now });
@@ -574,7 +574,7 @@ namespace rct3::simulation::staff
                          {
                              float best = kTuning.handymen.garden_reach.value;
                              for (const auto [b, bed] : beds.each())
-                                 if (bed.water <= 0 && bed.handyman == entt::null && bed.node < paths.nodes().size() && !paths.nodes()[bed.node].removed && (patrol == nullptr || patrol->covers(paths.nodes()[bed.node].tile)))
+                                 if (bed.water <= 0 && bed.handyman == entt::null && bed.node.value < paths.nodes().size() && !paths.nodes()[bed.node.value].removed && (patrol == nullptr || patrol->covers(paths.nodes()[bed.node.value].tile)))
                                      if (const float d = glm::distance(paths.centre(bed.node), paths.centre(at)); d <= best)
                                      {
                                          best = d;
@@ -615,12 +615,12 @@ namespace rct3::simulation::staff
                 // rest of the time staff wander. No way back to a patrol off the paths: wander the park as if
                 // they had none.
                 const Patrol* keep_to = inside ? patrol : nullptr;
-                NodeId next = wander(paths, at, came != at ? came : kNoNode, dice, Walker::Staff, keep_to);
+                NodeId next = wander(paths, at, came != at ? std::optional(came) : std::nullopt, dice, Walker::Staff, keep_to);
                 const auto work_on = [&](NodeId n) { return (sweeps ? litter_on(n) : 0) + (mends ? static_cast<std::size_t>(std::ranges::count_if(items(n), [&](entt::entity i) { return r.get<PathItem>(i).broken; })) : 0); };
                 if (sweeps || mends)
-                    for (const NodeId n : paths.nodes()[at].next)
-                        if (n != kNoNode && !paths.nodes()[n].queue && paths.may_step(at, n, Walker::Staff) && (keep_to == nullptr || keep_to->covers(paths.nodes()[n].tile)) && work_on(n) > work_on(next))
-                            next = n;
+                    for (const std::optional<NodeId> n : paths.nodes()[at.value].next)
+                        if (n && !paths.nodes()[n->value].queue && paths.may_step(at, *n, Walker::Staff) && (keep_to == nullptr || keep_to->covers(paths.nodes()[n->value].tile)) && work_on(*n) > work_on(next))
+                            next = *n;
                 stride.to = next;
                 stride.progress.value = 0;
                 stride.lane_to = next != at ? new_lane(dice, stride.lane_from) : stride.lane_from;

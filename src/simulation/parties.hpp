@@ -61,7 +61,7 @@ namespace rct3::simulation
         entt::entity leader = entt::null;
         std::vector<entt::entity> members { }; ///< The leader among them
         std::uint32_t huddle = 0;              ///< Ticks left standing together in a ring, chatting (once all are back, too)
-        NodeId gather = kNoNode;               ///< The tile it waits on for those still busy, none of another party's
+        std::optional<NodeId> gather { };      ///< The tile it waits on for those still busy, none of another party's
         std::vector<entt::entity> away { };    ///< Members out of it for now (held up, falling, thrown, sliding), back on landing
     };
 

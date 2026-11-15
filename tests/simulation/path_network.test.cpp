@@ -15,11 +15,11 @@ TEST_CASE("path tiles side by side join, unless their levels are more than a ste
     p.set_corners(b, { 0.0f, 1.0f, 0.0f, 1.0f });
     const NodeId c = p.add({ 2, 0, 3 }); // Too high to join
     const NodeId d = p.add({ 0, 1, 0 });
-    CHECK(p.nodes()[a].next[0] == b);
-    CHECK(p.nodes()[b].next[2] == a);
-    CHECK(p.nodes()[b].next[0] == kNoNode);
-    CHECK(p.nodes()[c].next[2] == kNoNode);
-    CHECK(p.nodes()[a].next[1] == d);
+    CHECK(p.nodes()[a.value].next[0] == b);
+    CHECK(p.nodes()[b.value].next[2] == a);
+    CHECK_FALSE(p.nodes()[b.value].next[0].has_value());
+    CHECK_FALSE(p.nodes()[c.value].next[2].has_value());
+    CHECK(p.nodes()[a.value].next[1] == d);
     CHECK(p.add({ 0, 0, 0 }) == a);
     CHECK(p.nodes().size() == 4);
 }
@@ -83,7 +83,7 @@ namespace
     {
         std::size_t n = 0;
         for (const PathNode& node : p.nodes())
-            n += static_cast<std::size_t>(std::ranges::count_if(node.corner, [](NodeId c) { return c != kNoNode; }));
+            n += static_cast<std::size_t>(std::ranges::count_if(node.corner, [](std::optional<NodeId> c) { return c.has_value(); }));
         return n;
     }
 } // namespace
@@ -100,7 +100,7 @@ TEST_CASE("a walk cuts across a plaza on the diagonal")
     REQUIRE(walk);
     CHECK(walk->size() == 3); // Three steps across, not six round
     CHECK(walk->front() == *p.find({ 1, 1, 0 }));
-    CHECK(p.nodes()[from].corner[0] == *p.find({ 1, 1, 0 }));
+    CHECK(p.nodes()[from.value].corner[0] == *p.find({ 1, 1, 0 }));
     // Straight along an edge stays straight: no zigzag of diagonals.
     const auto edge = p.route(from, *p.find({ 3, 0, 0 }));
     REQUIRE(edge);
@@ -115,7 +115,7 @@ TEST_CASE("no diagonal round a corner, over a gap, across a step in height or th
         corner.add({ 1, 0, 0 });
         corner.add({ 1, 1, 0 });
         CHECK(corners(corner) == 0);
-        CHECK(corner.route(0, 2)->size() == 2);
+        CHECK(corner.route(NodeId { 0 }, NodeId { 2 })->size() == 2);
     }
     {
         PathNetwork slope;
@@ -153,7 +153,7 @@ TEST_CASE("a tile taken away is joined to nothing and found by nothing; one laid
     CHECK(corners(p) > 0);
     p.remove(gone);
     CHECK(corners(p) == 0); // The square is broken
-    CHECK(p.nodes()[gone].removed);
+    CHECK(p.nodes()[gone.value].removed);
     CHECK_FALSE(p.find({ 1, 0, 0 }));
     CHECK(std::ranges::all_of(p.nodes(), [&](const PathNode& n) { return !std::ranges::contains(n.next, gone); }));
     // (2, 0) is cut off now; (0, 0) still reaches (1, 1) round the other way.
@@ -198,23 +198,23 @@ TEST_CASE("footpaths join only where their surfaces meet along the edge between 
     const NodeId top = p.add({ 2, 0, 1 }, false, 1.0f);
     const NodeId side = p.add({ 1, 1, 0 }, false, 0.0f);
     p.set_corners(ramp, { 0.0f, 1.0f, 0.0f, 1.0f });
-    CHECK(p.nodes()[ramp].next[0] == top);
-    CHECK(p.nodes()[ramp].next[2] == foot);
-    CHECK(p.nodes()[ramp].next[1] == kNoNode); // Its high end stands a level above the path beside it
-    CHECK(p.nodes()[side].next[3] == kNoNode);
+    CHECK(p.nodes()[ramp.value].next[0] == top);
+    CHECK(p.nodes()[ramp.value].next[2] == foot);
+    CHECK_FALSE(p.nodes()[ramp.value].next[1].has_value()); // Its high end stands a level above the path beside it
+    CHECK_FALSE(p.nodes()[side.value].next[3].has_value());
     // A second ramp beside it, alike, makes it a wide ramp walkers may cross.
     const NodeId twin = p.add({ 1, -1, 0 }, false, 0.5f);
     p.set_corners(twin, { 0.0f, 1.0f, 0.0f, 1.0f });
-    CHECK(p.nodes()[ramp].next[3] == twin);
+    CHECK(p.nodes()[ramp.value].next[3] == twin);
     // A raised path two levels over the ground path beside it does not join it either.
     const NodeId deck = p.add({ 2, 1, 2 }, false, 2.0f);
-    CHECK(p.nodes()[deck].next[2] == kNoNode);
+    CHECK_FALSE(p.nodes()[deck.value].next[2].has_value());
     // Ground that tilts across both tiles alike still joins: their shared corners match.
     const NodeId a = p.add({ 5, 5, 0 }, false, 0.5f);
     const NodeId b = p.add({ 6, 5, 0 }, false, 0.5f);
     p.set_corners(a, { 0.0f, 0.0f, 1.0f, 1.0f });
     p.set_corners(b, { 0.0f, 0.0f, 1.0f, 1.0f });
-    CHECK(p.nodes()[a].next[0] == b);
+    CHECK(p.nodes()[a.value].next[0] == b);
 }
 
 TEST_CASE("a queue joins a path beside it only at its ends, never along its side")
@@ -225,9 +225,9 @@ TEST_CASE("a queue joins a path beside it only at its ends, never along its side
     p.set_corners(queue, { 0.0f, 0.0f, 0.0f, 0.0f }, 0b0101);
     const NodeId end = p.add({ 0, 0, 0 });
     const NodeId side = p.add({ 1, 1, 0 });
-    CHECK(p.nodes()[queue].next[2] == end);
-    CHECK(p.nodes()[queue].next[1] == kNoNode);
-    CHECK(p.nodes()[side].next[3] == kNoNode);
+    CHECK(p.nodes()[queue.value].next[2] == end);
+    CHECK_FALSE(p.nodes()[queue.value].next[1].has_value());
+    CHECK_FALSE(p.nodes()[side.value].next[3].has_value());
 }
 
 TEST_CASE("one standing in a queue walks out along its line, never through another queue")
@@ -265,28 +265,28 @@ TEST_CASE("a wall between two tiles parts them, a queue keeps its own sides, and
     const NodeId c = p.add({ 0, 1, 0 });
     const NodeId d = p.add({ 1, 1, 0 });
     const NodeId q = p.add({ 2, 0, 0 }, true);
-    REQUIRE(p.nodes()[a].corner[0] == d);
+    REQUIRE(p.nodes()[a.value].corner[0] == d);
     p.add_wall(0, 0, rct3::park::Side::kNextCol, -0.5f, 2); // Between a and b
     p.add_wall(1, 0, rct3::park::Side::kNextCol, -0.5f, 2); // Between b and the queue
-    CHECK(p.nodes()[a].next[0] == kNoNode);
-    CHECK(p.nodes()[b].next[2] == kNoNode);
-    CHECK(p.nodes()[a].corner[0] == kNoNode); // The square is broken, so no crossing
-    CHECK(p.nodes()[b].next[0] == q);
+    CHECK_FALSE(p.nodes()[a.value].next[0].has_value());
+    CHECK_FALSE(p.nodes()[b.value].next[2].has_value());
+    CHECK_FALSE(p.nodes()[a.value].corner[0].has_value()); // The square is broken, so no crossing
+    CHECK(p.nodes()[b.value].next[0] == q);
     const auto around = p.route(a, b);
     REQUIRE(around);
     CHECK(*around == std::vector<NodeId> { c, d, b });
     // A wall low on the ground does not part a deck far above it.
     p.add_wall(0, 0, rct3::park::Side::kNextRow, -0.5f, 2);
-    CHECK(p.nodes()[a].next[1] == kNoNode);
+    CHECK_FALSE(p.nodes()[a.value].next[1].has_value());
     p.remove_wall(0, 0, rct3::park::Side::kNextRow, -0.5f, 2);
     p.remove_wall(0, 0, rct3::park::Side::kNextCol, -0.5f, 2);
-    CHECK(p.nodes()[a].next[0] == b);
-    CHECK(p.nodes()[a].next[1] == c);
-    CHECK(p.nodes()[a].corner[0] == d);
+    CHECK(p.nodes()[a.value].next[0] == b);
+    CHECK(p.nodes()[a.value].next[1] == c);
+    CHECK(p.nodes()[a.value].corner[0] == d);
     PathNetwork high;
     const NodeId low = high.add({ 0, 0, 6 });
     high.add_wall(0, 0, rct3::park::Side::kNextCol, -0.5f, 2);
-    CHECK(high.nodes()[low].next[0] == high.add({ 1, 0, 6 }));
+    CHECK(high.nodes()[low.value].next[0] == high.add({ 1, 0, 6 }));
 }
 
 TEST_CASE("a no-entry side keeps guests from coming in across it, but not from leaving or staff from passing")
@@ -314,7 +314,7 @@ TEST_CASE("a no-entry side also bars the cut across a square into its tile")
             p.add({ c, r, 0 });
     const NodeId from = *p.find({ 0, 0, 0 });
     const NodeId to = *p.find({ 1, 1, 0 });
-    REQUIRE(std::ranges::contains(p.nodes()[from].corner, to));
+    REQUIRE(std::ranges::contains(p.nodes()[from.value].corner, to));
     CHECK(p.may_step(from, to, Walker::Guest));
     p.set_no_entry(to, rct3::park::Side::kRowBefore, true); // Its -row side
     CHECK_FALSE(p.may_step(from, to, Walker::Guest));
@@ -370,6 +370,6 @@ TEST_CASE("park sides map onto the network's own count of sides")
         PathNetwork p;
         const NodeId a = p.add({ 1, 1, 0 });
         const NodeId b = p.add({ 1 + dc, 1 + dr, 0 });
-        CHECK(p.nodes()[a].next[network_side(side)] == b);
+        CHECK(p.nodes()[a.value].next[network_side(side)] == b);
     }
 }

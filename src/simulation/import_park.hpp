@@ -42,7 +42,7 @@ namespace rct3::simulation
     /// Adds the node of path tile `path`, laid on `grid`, and joins it to the paths beside it; for a node already
     /// there, takes the queue line the tile is in now. Call after import_paths, which sets the network's
     /// measures.
-    NodeId add_path(SimWorld& world, const save::model::PathTile& path, const save::model::TerrainGrid& grid);
+    std::optional<NodeId> add_path(SimWorld& world, const save::model::PathTile& path, const save::model::TerrainGrid& grid);
 
     /// Takes the node of path tile `path` away. Whoever stood on it moves to another path on its tile, if any;
     /// whoever was walking onto it or meant to cross it stops at the tile they came from and thinks again;

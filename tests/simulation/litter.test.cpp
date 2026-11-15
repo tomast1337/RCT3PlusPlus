@@ -197,14 +197,14 @@ TEST_CASE("a handyman given a patrol keeps to it and sweeps it, and leaves the l
     int furthest = 0;
     park.run_until(
         [&] {
-            furthest = std::max(furthest, nodes[r.get<Stride>(handyman).to].tile.col);
+            furthest = std::max(furthest, nodes[r.get<Stride>(handyman).to.value].tile.col);
             return false;
         },
         600);
     CHECK(furthest <= 3);
     const auto view = r.view<const Litter>();
-    CHECK(std::ranges::none_of(view, [&](entt::entity e) { return nodes[view.get<const Litter>(e).node].tile.col == 2; }));
-    CHECK(std::ranges::count_if(view, [&](entt::entity e) { return nodes[view.get<const Litter>(e).node].tile.col == 8; }) == 3);
+    CHECK(std::ranges::none_of(view, [&](entt::entity e) { return nodes[view.get<const Litter>(e).node.value].tile.col == 2; }));
+    CHECK(std::ranges::count_if(view, [&](entt::entity e) { return nodes[view.get<const Litter>(e).node.value].tile.col == 8; }) == 3);
 }
 
 TEST_CASE("paths no handyman patrols are counted once every handyman has a patrol")

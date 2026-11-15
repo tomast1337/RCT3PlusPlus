@@ -114,24 +114,24 @@ namespace rct3::simulation
             for (const entt::entity e : sorted(r.view<const Attraction>()))
             {
                 const Attraction& a = r.get<Attraction>(e);
-                if (!a.open || a.entrance == kNoNode)
+                if (!a.open || !a.entrance)
                     continue;
                 if (const auto* shop = r.try_get<Shop>(e))
-                    out.push_back({ e, AttractionKind::Shop, shop->product, a.entrance, a.price.value, 0, 1, shop->serve, false });
+                    out.push_back({ e, AttractionKind::Shop, shop->product, *a.entrance, a.price.value, 0, 1, shop->serve, false });
                 else if (const auto* ride = r.try_get<CycleRide>(e))
                 {
                     // A ride with more than one station is on offer at each, guests going to the nearest.
-                    out.push_back({ e, AttractionKind::Ride, Product::Drink, a.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash });
+                    out.push_back({ e, AttractionKind::Ride, Product::Drink, *a.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash });
                     for (const Stop& stop : ride->stops)
-                        if (stop.entrance != kNoNode)
-                            out.push_back({ e, AttractionKind::Ride, Product::Drink, stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash });
+                        if (stop.entrance)
+                            out.push_back({ e, AttractionKind::Ride, Product::Drink, *stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash });
                 }
                 else if (const auto* door = r.try_get<PoolDoor>(e))
                 {
                     // A full pool is not on offer till some leave.
                     if (pool_full(r, door->pool, true))
                         continue;
-                    out.push_back({ e, AttractionKind::Pool, Product::Drink, a.entrance, a.price.value, 0, 0, Serve::Any, false });
+                    out.push_back({ e, AttractionKind::Pool, Product::Drink, *a.entrance, a.price.value, 0, 0, Serve::Any, false });
                 }
             }
             return out;
@@ -393,15 +393,15 @@ namespace rct3::simulation
         return true;
     }
 
-    NodeId wander(const PathNetwork& paths, NodeId at, NodeId came, Dice& dice, Walker who, const staff::Patrol* patrol)
+    NodeId wander(const PathNetwork& paths, NodeId at, std::optional<NodeId> came, Dice& dice, Walker who, const staff::Patrol* patrol)
     {
         std::array<NodeId, 4> ways { };
         std::size_t count = 0;
-        for (const NodeId n : paths.nodes()[at].next)
-            if (n != kNoNode && n != came && !paths.nodes()[n].queue && paths.may_step(at, n, who) && (patrol == nullptr || patrol->covers(paths.nodes()[n].tile)))
-                ways[count++] = n;
+        for (const std::optional<NodeId> n : paths.nodes()[at.value].next)
+            if (n && n != came && !paths.nodes()[n->value].queue && paths.may_step(at, *n, who) && (patrol == nullptr || patrol->covers(paths.nodes()[n->value].tile)))
+                ways[count++] = *n;
         if (count == 0)
-            return came != kNoNode && paths.may_step(at, came, who) ? came : at;
+            return came && paths.may_step(at, *came, who) ? *came : at;
         return ways[random::below(dice.state, count)];
     }
 
@@ -524,9 +524,9 @@ namespace rct3::simulation
                 return ride != nullptr && ride->cover.value >= kTuning.weather.covered.value;
             }
             const auto* stride = r.try_get<Stride>(guest);
-            if (stride == nullptr || stride->from >= paths.nodes().size())
+            if (stride == nullptr || stride->from.value >= paths.nodes().size())
                 return false;
-            const PathNode& node = paths.nodes()[stride->from];
+            const PathNode& node = paths.nodes()[stride->from.value];
             return shade ? node.shaded : node.covered;
         };
         // Out of the rain: under an umbrella, or under cover.
@@ -623,7 +623,7 @@ namespace rct3::simulation
                     const auto ahead = [&](std::size_t k) { return std::fmod((k == 0 ? 0 : track.stops[k - 1]) - (from == 0 ? 0 : track.stops[from - 1]) + length, length); };
                     for (std::size_t to = 0; to <= ride.stops.size(); ++to)
                     {
-                        if (to == from || (to > 0 && ride.stops[to - 1].exit == kNoNode))
+                        if (to == from || (to > 0 && !ride.stops[to - 1].exit))
                             continue;
                         const float along = ahead(to);
                         // Stations passed on the way, where the train stands too.
@@ -631,7 +631,11 @@ namespace rct3::simulation
                         for (std::size_t k = 0; k <= ride.stops.size(); ++k)
                             passed += k != from && ahead(k) < along;
                         const float seconds = kTuning.transport.boarding.value + wait + lap * along / length + kTuning.transport.dwell.value * static_cast<float>(passed);
-                        world.paths.link({ .from = entrance_of(r, e, from), .to = exit_of(r, e, to), .length = seconds * pace, .toll = attraction.price, .owner = entt::to_integral(e) });
+                        // A station with no way in or out takes no one across.
+                        const std::optional<NodeId> in = entrance_of(r, e, from);
+                        const std::optional<NodeId> out = exit_of(r, e, to);
+                        if (in && out)
+                            world.paths.link({ .from = *in, .to = *out, .length = seconds * pace, .toll = attraction.price, .owner = entt::to_integral(e) });
                     }
                 }
             }
@@ -641,15 +645,15 @@ namespace rct3::simulation
         // Footpath tiles under cover and in the shade, where guests go out of the rain or the sun.
         std::vector<NodeId> covers;
         std::vector<NodeId> shades;
-        for (NodeId n = 0; n < paths.nodes().size(); ++n)
+        for (std::uint32_t k = 0; k < paths.nodes().size(); ++k)
         {
-            const PathNode& node = paths.nodes()[n];
+            const PathNode& node = paths.nodes()[k];
             if (node.queue || node.removed)
                 continue;
             if (node.covered)
-                covers.push_back(n);
+                covers.push_back(NodeId { k });
             if (node.shaded)
-                shades.push_back(n);
+                shades.push_back(NodeId { k });
         }
         const auto movers_view = r.view<Errand, Stride, Pose, Dice, const Needs, const Mood, const Wallet>();
         const auto movers = sorted(movers_view);
@@ -668,7 +672,7 @@ namespace rct3::simulation
                         errand = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
                     if (errand.kind != ErrandKind::Wandering && errand.kind != ErrandKind::Heading && errand.kind != ErrandKind::Waiting)
                         continue;
-                    if (stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
+                    if (stride.from.value >= paths.nodes().size() || stride.to.value >= paths.nodes().size())
                         continue; // Off the paths; nothing to walk on
                     if (const auto* watching = r.try_get<Watching>(movers[i]); r.any_of<Linger, Gesture>(movers[i]) || (watching != nullptr && !watching->chasing))
                         continue; // Sitting, watching or showing how they feel
@@ -775,7 +779,7 @@ namespace rct3::simulation
                             // umbrella), or out of the sun into the nearest shade.
                             const bool rained_on = weather.rain && (!r.all_of<Umbrella>(movers[i]) || weather.storm);
                             const bool sweltering = sun && feel.heat.value >= kTuning.needs.want.value;
-                            if (!goal && (rained_on ? !paths.nodes()[at].covered : sweltering && !paths.nodes()[at].shaded))
+                            if (!goal && (rained_on ? !paths.nodes()[at.value].covered : sweltering && !paths.nodes()[at.value].shaded))
                                 if (auto refuge = paths.route_nearest(at, rained_on ? covers : shades); refuge && !refuge->walk.empty())
                                     stride.route = std::move(refuge->walk);
                             if (goal)
@@ -796,7 +800,7 @@ namespace rct3::simulation
                             }
                         }
                         // Staying under cover while it rains, or in the shade until cooled.
-                        const bool refuge = (weather.rain && (!r.all_of<Umbrella>(movers[i]) || weather.storm) && paths.nodes()[at].covered) || (sun && mood.heat.value >= kTuning.needs.want.value / 2 && paths.nodes()[at].shaded);
+                        const bool refuge = (weather.rain && (!r.all_of<Umbrella>(movers[i]) || weather.storm) && paths.nodes()[at.value].covered) || (sun && mood.heat.value >= kTuning.needs.want.value / 2 && paths.nodes()[at.value].shaded);
                         if (errand.kind == ErrandKind::Wandering && !stride.route.empty())
                         {
                             stride.to = stride.route.front();
@@ -947,7 +951,7 @@ namespace rct3::simulation
             for (const auto [e, errand, stride, pose] : r.view<const Errand, const Stride, const Pose>().each())
             {
                 const bool walking = errand.kind == ErrandKind::Wandering || errand.kind == ErrandKind::Heading || errand.kind == ErrandKind::Following || errand.kind == ErrandKind::Waiting;
-                if (!walking || stride.from >= paths.nodes().size() || stride.to >= paths.nodes().size())
+                if (!walking || stride.from.value >= paths.nodes().size() || stride.to.value >= paths.nodes().size())
                     continue;
                 const glm::ivec2 cell { glm::floor(glm::vec2(pose.position.x, pose.position.z) / space) };
                 bodies.push_back({ .cell = cell_key(cell.x, cell.y), .at = pose.position, .who = e });
@@ -1208,7 +1212,7 @@ namespace rct3::simulation
                     const units::Seconds turn { std::max(kTuning.facilities.served.value, needed * kTuning.facilities.relief.value) };
                     r.get<Errand>(m) = { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(turn.value), .turn = turn };
                     auto& stride = r.get<Stride>(m);
-                    const NodeId at = r.get<Attraction>(arrived[i]).entrance;
+                    const NodeId at = *r.get<Attraction>(arrived[i]).entrance;
                     stride.route.clear();
                     stride.from = at;
                     stride.to = at;
@@ -1303,7 +1307,7 @@ namespace rct3::simulation
                 const auto& line = station == 0 ? ride->line : ride->stops[station - 1].line;
                 std::vector<std::size_t> offs;
                 for (std::size_t k = 0; k <= ride->stops.size(); ++k)
-                    if (k != station && (k == 0 ? exit_of(r, arrived[i], 0) != kNoNode : ride->stops[k - 1].exit != kNoNode))
+                    if (k != station && (k == 0 ? exit_of(r, arrived[i], 0).has_value() : ride->stops[k - 1].exit.has_value()))
                         offs.push_back(k);
                 auto off = static_cast<std::uint8_t>(offs.empty() ? station : offs.size() == 1 ? offs[0] : offs[random::below(r.get<Dice>(guest).state, offs.size())]);
                 // Riding across the park: off where their way goes on.
@@ -1355,7 +1359,7 @@ namespace rct3::simulation
             auto& errand = r.get<Errand>(g);
             auto& stride = r.get<Stride>(g);
             const auto* member = r.try_get<Member>(g);
-            if (errand.kind != ErrandKind::Wandering || stride.to >= paths.nodes().size() || (member != nullptr && r.get<Party>(member->party).leader != g))
+            if (errand.kind != ErrandKind::Wandering || stride.to.value >= paths.nodes().size() || (member != nullptr && r.get<Party>(member->party).leader != g))
                 continue;
             std::optional<std::pair<entt::entity, std::vector<NodeId>>> goal;
             if (r.get<Outside>(g).way != Outside::Way::In)

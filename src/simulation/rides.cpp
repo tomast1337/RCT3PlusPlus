@@ -212,18 +212,18 @@ namespace rct3::simulation
             if (r.any_of<River, ClimbSlide>(e))
                 continue;
             // Out of the queue at the station's entrance; a swimmer out of a pool slide's swims on from where they stand.
-            const auto leave_queue = [&](entt::entity guest, NodeId entrance) {
+            const auto leave_queue = [&](entt::entity guest, std::optional<NodeId> entrance) {
                 Errand& errand = r.get<Errand>(guest);
                 errand = after_ride(r, guest, e);
                 if (errand.kind != ErrandKind::Swimming)
-                    stop_at(paths, entrance, r.get<Stride>(guest), r.get<Pose>(guest));
+                    stop_at(paths, *entrance, r.get<Stride>(guest), r.get<Pose>(guest));
             };
             // Each station's queue in turn.
             for (std::size_t station = 0; station <= ride.stops.size(); ++station)
             {
                 auto& queue = station == 0 ? ride.queue : ride.stops[station - 1].queue;
                 const auto& line = station == 0 ? ride.line : ride.stops[station - 1].line;
-                const NodeId entrance = entrance_of(r, e, station);
+                const std::optional<NodeId> entrance = entrance_of(r, e, station);
                 for (const entt::entity guest : queue)
                     if (r.valid(guest) && (r.get<Errand>(guest).queued.value += dt) >= kLongQueue.value)
                         think(r, guest, ThoughtKind::QueueingForAges, e, now);
@@ -347,7 +347,7 @@ namespace rct3::simulation
                     {
                         RideWalk walk { .points = walks->off[seat], .off = true, .gesture = gesture };
                         walk.points.front() += shift;
-                        walk.points.push_back(paths.centre(exit_of(r, e)));
+                        walk.points.push_back(paths.centre(*exit_of(r, e)));
                         // Each to a side of the way out as in a queue, so a load spills out abreast, not in one file:
                         // from past the seat, across the way on from each point, back to the middle on the path.
                         side_ahead = side_after(dice, side_ahead);
@@ -374,7 +374,7 @@ namespace rct3::simulation
                         const auto* pool = door ? r.try_get<SwimPool>(r.get<PoolDoor>(*door).pool) : nullptr;
                         if (pool == nullptr || pool->water.empty() || !node)
                         {
-                            throw_person(r, guest, at, velocity, node.value_or(kNoNode));
+                            throw_person(r, guest, at, velocity, node);
                             // Thrown onto hard ground, not into water: a dangerous happening, the slide is shut as
                             // dangerous, and the park's inspector, if it has one, says so.
                             if (pool != nullptr && !pool->water.empty())
@@ -400,7 +400,7 @@ namespace rct3::simulation
                         pose.heading.value = std::atan2(velocity.x, velocity.z);
                         r.emplace<Dropped>(guest, Dropped { .ground = nearest->y, .fall = { -velocity.y }, .drift = { velocity.x, velocity.z }, .node = *node, .swimwear = true, .pool = *door, .slide = e });
                     }
-                    else if (auto* swimmer = exit_of(r, e, station) == kNoNode ? r.try_get<Swimmer>(guest) : nullptr; swimmer != nullptr && r.valid(swimmer->room))
+                    else if (auto* swimmer = !exit_of(r, e, station) ? r.try_get<Swimmer>(guest) : nullptr; swimmer != nullptr && r.valid(swimmer->room))
                     {
                         // Back round to the station of a slide with no way out to the paths: off onto the paving or
                         // steps they got on from, to swim on.
@@ -821,12 +821,12 @@ namespace rct3::simulation
             for (std::size_t station = 0; station <= ride.stops.size(); ++station)
             {
                 auto& queue = station == 0 ? ride.queue : ride.stops[station - 1].queue;
-                const NodeId entrance = entrance_of(r, e, station);
+                const std::optional<NodeId> entrance = entrance_of(r, e, station);
                 // In the rain, guests with nothing over them leave an open-air ride's queue.
                 if (weather.rain && ride.cover.value < kTuning.weather.covered.value)
                 {
                     std::erase_if(queue, [&](entt::entity guest) {
-                        if (!r.valid(guest) || r.all_of<Umbrella>(guest) || paths.nodes()[r.get<Stride>(guest).from].covered || !random::chance(r.get<Dice>(guest).state, kTuning.weather.rain_leave.value * (weather.storm ? 3 : 1) * dt))
+                        if (!r.valid(guest) || r.all_of<Umbrella>(guest) || paths.nodes()[r.get<Stride>(guest).from.value].covered || !random::chance(r.get<Dice>(guest).state, kTuning.weather.rain_leave.value * (weather.storm ? 3 : 1) * dt))
                             return false;
                         think(r, guest, ThoughtKind::RainKeepsMeOff, e, now);
                         leave_queue(guest, entrance);
@@ -863,23 +863,23 @@ namespace rct3::simulation
         }
     }
 
-    NodeId entrance_of(const entt::registry& r, entt::entity ride, std::size_t station)
+    std::optional<NodeId> entrance_of(const entt::registry& r, entt::entity ride, std::size_t station)
     {
         const CycleRide& cycle = r.get<CycleRide>(ride);
         return station > 0 && station <= cycle.stops.size() ? cycle.stops[station - 1].entrance : r.get<Attraction>(ride).entrance;
     }
 
-    NodeId exit_of(const entt::registry& r, entt::entity ride, std::size_t station)
+    std::optional<NodeId> exit_of(const entt::registry& r, entt::entity ride, std::size_t station)
     {
         const CycleRide& cycle = r.get<CycleRide>(ride);
         if (station > 0 && station <= cycle.stops.size())
-            return cycle.stops[station - 1].exit != kNoNode ? cycle.stops[station - 1].exit : cycle.stops[station - 1].entrance;
-        return cycle.exit != kNoNode ? cycle.exit : r.get<Attraction>(ride).entrance;
+            return cycle.stops[station - 1].exit.or_else([&] { return cycle.stops[station - 1].entrance; });
+        return cycle.exit.or_else([&] { return r.get<Attraction>(ride).entrance; });
     }
 
     void let_out(entt::registry& r, const PathNetwork& paths, entt::entity guest, entt::entity ride, std::optional<GestureKind> gesture)
     {
-        const NodeId out = exit_of(r, ride, r.get<Errand>(guest).off);
+        const NodeId out = *exit_of(r, ride, r.get<Errand>(guest).off);
         r.get<Errand>(guest) = after_ride(r, guest, ride);
         stop_at(paths, out, r.get<Stride>(guest), r.get<Pose>(guest));
         // Riding across the park, they walk on where they were going; one in a party waits for the others

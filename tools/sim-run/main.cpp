@@ -336,9 +336,9 @@ int main(int argc, char** argv)
     if (patrol)
         for (const auto [e, staff, stride] : world.registry.view<const simulation::Staff, const simulation::Stride>().each())
         {
-            if ((staff.role != simulation::StaffRole::Handyman && staff.role != simulation::StaffRole::Mechanic) || stride.to >= world.paths.nodes().size())
+            if ((staff.role != simulation::StaffRole::Handyman && staff.role != simulation::StaffRole::Mechanic) || stride.to.value >= world.paths.nodes().size())
                 continue;
-            const simulation::PathTileSpot at = world.paths.nodes()[stride.to].tile;
+            const simulation::PathTileSpot at = world.paths.nodes()[stride.to.value].tile;
             simulation::staff::Patrol area;
             for (int col = -4; col <= 4; ++col)
                 for (int row = -4; row <= 4; ++row)
@@ -402,10 +402,10 @@ int main(int argc, char** argv)
                 open.pop_back();
                 ++sizes.back();
                 for (const auto n : nodes[at].next)
-                    if (n != simulation::kNoNode && group[n] == 0)
+                    if (n && group[n->value] == 0)
                     {
-                        group[n] = sizes.size();
-                        open.push_back(n);
+                        group[n->value] = sizes.size();
+                        open.push_back(n->value);
                     }
             }
         }
@@ -457,7 +457,8 @@ int main(int argc, char** argv)
         }
     } tally;
     for (const auto [e, ride, attraction] : world.registry.view<const simulation::CycleRide, const simulation::Attraction>().each())
-        tally.exits.insert(ride.exit != simulation::kNoNode ? ride.exit : attraction.entrance);
+        if (const auto exit = ride.exit.or_else([&] { return attraction.entrance; }))
+            tally.exits.insert(*exit);
     world.registry.on_construct<simulation::Litter>().connect<&Tally::drop>(tally);
     world.registry.on_destroy<simulation::Litter>().connect<&Tally::sweep>(tally);
     world.registry.on_construct<simulation::Linger>().connect<&Tally::linger>(tally);
@@ -465,20 +466,20 @@ int main(int argc, char** argv)
     std::map<entt::entity, std::pair<float, bool>> ride_was; // Each ride's time since inspection and whether broken
     std::size_t squares = 0;                                 // Diagonals across squares of paths, each counted from both ends
     for (const simulation::PathNode& node : world.paths.nodes())
-        squares += static_cast<std::size_t>(std::ranges::count_if(node.corner, [](simulation::NodeId c) { return c != simulation::kNoNode; }));
+        squares += static_cast<std::size_t>(std::ranges::count_if(node.corner, [](std::optional<simulation::NodeId> c) { return c.has_value(); }));
     std::size_t stepping = 0;
     std::size_t across = 0; // Of the guests' steps between tiles, tick by tick, those on a diagonal
     for (std::uint32_t i = 0; i < steps; ++i)
     {
         for (const auto [g, stride, needs] : world.registry.view<const simulation::Stride, const simulation::Needs>().each())
         {
-            if (stride.from == stride.to || stride.from >= world.paths.nodes().size())
+            if (stride.from == stride.to || stride.from.value >= world.paths.nodes().size())
                 continue;
             ++stepping;
-            across += std::ranges::contains(world.paths.nodes()[stride.from].corner, stride.to);
+            across += std::ranges::contains(world.paths.nodes()[stride.from.value].corner, stride.to);
         }
         for (const auto [e, staff, stride, area] : world.registry.view<const simulation::Staff, const simulation::Stride, const simulation::staff::Patrol>().each())
-            strays += staff.ride == entt::null && stride.route.empty() && stride.from != stride.to && !area.covers(world.paths.nodes()[stride.to].tile);
+            strays += staff.ride == entt::null && stride.route.empty() && stride.from != stride.to && !area.covers(world.paths.nodes()[stride.to.value].tile);
         const auto hour = static_cast<int>(day.time * simulation::kHoursPerDay);
         simulation::advance(day, simulation::kTickSeconds);
         world.registry.ctx().insert_or_assign(simulation::Daylight { day.time });
@@ -618,10 +619,10 @@ int main(int argc, char** argv)
         std::size_t roofed = 0;
         std::size_t shaded = 0;
         for (const auto [e, errand, stride] : r.view<const simulation::Errand, const simulation::Stride>().each())
-            if (errand.kind != simulation::ErrandKind::Riding && errand.kind != simulation::ErrandKind::Queueing && stride.from < world.paths.nodes().size())
+            if (errand.kind != simulation::ErrandKind::Riding && errand.kind != simulation::ErrandKind::Queueing && stride.from.value < world.paths.nodes().size())
             {
-                roofed += world.paths.nodes()[stride.from].covered;
-                shaded += world.paths.nodes()[stride.from].shaded;
+                roofed += world.paths.nodes()[stride.from.value].covered;
+                shaded += world.paths.nodes()[stride.from.value].shaded;
             }
         std::size_t queued[2] { };
         std::size_t rides[2] { };
@@ -687,13 +688,13 @@ int main(int argc, char** argv)
             const auto areas = r.view<const simulation::Staff, const simulation::staff::Patrol>();
             for (const auto [_, litter] : r.view<const simulation::Litter>().each())
             {
-                const simulation::PathTileSpot at = world.paths.nodes()[litter.node].tile;
+                const simulation::PathTileSpot at = world.paths.nodes()[litter.node.value].tile;
                 const bool covered = std::ranges::any_of(areas, [&](entt::entity s) { return areas.get<const simulation::Staff>(s).role == simulation::StaffRole::Handyman && areas.get<const simulation::staff::Patrol>(s).covers(at); });
                 ++(covered ? on : off);
             }
             std::size_t away = 0; // Patrolled staff outside their area now
             for (const auto [s, stride, area] : r.view<const simulation::Stride, const simulation::staff::Patrol>().each())
-                away += !area.covers(world.paths.nodes()[stride.to].tile);
+                away += !area.covers(world.paths.nodes()[stride.to.value].tile);
             out.info("patrols: {:d} staff on 9x9 areas; {:d} ticks walking outside on no job; litter {:d} on handymen's areas, {:d} off them; {:d} outside their area now; paths no handyman patrols {:d}, no mechanic {:d}", patrolled, strays, on, off, away, simulation::staff::uncovered_paths(world, simulation::StaffRole::Handyman), simulation::staff::uncovered_paths(world, simulation::StaffRole::Mechanic));
         }
         out.info("rides: {:d} breakdowns, {:d} repaired, {:d} inspections, {:d} down now, reliability {:.2f} on average; {:d} mechanics; wages paid {:.2f}", breakdowns, tally.repaired, tally.inspected, down, static_cast<double>(ride_count > 0 ? reliability / static_cast<float>(ride_count) : 0), mechanics, static_cast<double>(payroll ? payroll->paid.value : 0) / 100);
@@ -766,9 +767,8 @@ int main(int argc, char** argv)
             apart.push_back(glm::distance(pose.position, r.get<simulation::Pose>(party.leader).position));
         else if (errand.kind == simulation::ErrandKind::Waiting && r.valid(errand.target) && r.all_of<simulation::CycleRide>(errand.target) && r.get<simulation::Stride>(e).route.empty())
         {
-            const simulation::NodeId exit = r.get<simulation::CycleRide>(errand.target).exit;
-            if (exit != simulation::kNoNode)
-                from_exit.push_back(glm::distance(pose.position, world.paths.centre(exit)));
+            if (const std::optional<simulation::NodeId> exit = r.get<simulation::CycleRide>(errand.target).exit)
+                from_exit.push_back(glm::distance(pose.position, world.paths.centre(*exit)));
         }
     }
     for (auto [name, v] : { std::pair { "followers from leader", &apart }, std::pair { "waiters from exit", &from_exit } })

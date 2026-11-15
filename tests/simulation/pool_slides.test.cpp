@@ -186,7 +186,7 @@ TEST_CASE("a mechanic mends a broken pool slide from its complex's changing room
     const auto slide = slide_by_pool(park);
     auto& r = park.world().registry;
     auto& attraction = r.get<Attraction>(slide);
-    attraction.entrance = r.get<CycleRide>(slide).exit = kNoNode; // A pool slide's platform has no doors of its own
+    attraction.entrance = r.get<CycleRide>(slide).exit = std::nullopt; // A pool slide's platform has no doors of its own
     attraction.open = false;
     r.emplace_or_replace<Upkeep>(slide, Upkeep { .broken = true, .inspect_every = std::nullopt });
     const auto mechanic = park.staff(StaffRole::Mechanic, { 0, 0 });
@@ -208,7 +208,7 @@ TEST_CASE("swimmers queueing for a pool slide stand apart in a line, never two o
     Sandbox park;
     const auto slide = slide_by_pool(park);
     auto& r = park.world().registry;
-    r.get<Attraction>(slide).entrance = r.get<CycleRide>(slide).exit = kNoNode; // Only swimmers queue, from the pool
+    r.get<Attraction>(slide).entrance = r.get<CycleRide>(slide).exit = std::nullopt; // Only swimmers queue, from the pool
     for (int i = 0; i < 20; ++i)
         park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
     // The longest line, and the closest two in it came once both had been in it a few seconds: two joining on one

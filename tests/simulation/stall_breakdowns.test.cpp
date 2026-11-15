@@ -20,13 +20,13 @@ namespace
         return findings == nullptr ? 0 : static_cast<std::size_t>(std::ranges::count(findings->found, Findings::Found { finding, at }));
     }
 
-    NodeId node_at(Sandbox& park, glm::ivec2 tile)
+    std::optional<NodeId> node_at(Sandbox& park, glm::ivec2 tile)
     {
         const auto& nodes = park.world().paths.nodes();
-        for (NodeId n = 0; n < nodes.size(); ++n)
+        for (std::uint32_t n = 0; n < nodes.size(); ++n)
             if (nodes[n].tile.col == tile.x && nodes[n].tile.row == tile.y)
-                return n;
-        return kNoNode;
+                return NodeId { n };
+        return std::nullopt;
     }
 } // namespace
 
@@ -166,7 +166,7 @@ TEST_CASE("a worker whose path is taken up stands lost a while, then walks to th
     park.path({ 0, 0 }, { 4, 0 });
     auto& r = park.world().registry;
     const auto worker = park.staff(StaffRole::Handyman, { 4, 0 });
-    const NodeId gone = node_at(park, { 4, 0 });
+    const NodeId gone = *node_at(park, { 4, 0 });
     park.world().paths.remove(gone);
     auto& stride = r.get<Stride>(worker);
     stride.from = stride.to = gone;
@@ -175,6 +175,6 @@ TEST_CASE("a worker whose path is taken up stands lost a while, then walks to th
     CHECK(r.all_of<Lost>(worker));
     park.run_seconds(kTuning.walking.lost_wait.value / 2);
     CHECK(r.all_of<Lost>(worker));
-    CHECK(park.run_until([&] { return r.all_of<Stride>(worker) && !r.all_of<Dropped>(worker) && !park.world().paths.nodes()[r.get<Stride>(worker).from].removed; }, kTuning.walking.lost_wait.value + 30));
+    CHECK(park.run_until([&] { return r.all_of<Stride>(worker) && !r.all_of<Dropped>(worker) && !park.world().paths.nodes()[r.get<Stride>(worker).from.value].removed; }, kTuning.walking.lost_wait.value + 30));
     CHECK_FALSE(r.all_of<Lost>(worker));
 }

@@ -219,7 +219,7 @@ TEST_CASE("a ride's door joins only the path on the tile behind it, near its hei
         const auto e = simulation::import_rides(world, rides, timings).front();
         REQUIRE(world.registry.valid(e));
         CHECK(world.registry.get<simulation::Attraction>(e).entrance == *world.paths.find({ 2 + bc, 2 + br, 0 }));
-        CHECK(world.registry.get<simulation::CycleRide>(e).exit == simulation::kNoNode);
+        CHECK_FALSE(world.registry.get<simulation::CycleRide>(e).exit.has_value());
 
         // A path laid behind it a level up, as a ramp's middle may lie, joins it.
         const auto behind = world.paths.add({ 8 + bc, 8 + br, 1 });
@@ -317,7 +317,7 @@ TEST_CASE("a path laid to a busy ride's exit lets its riders out at once; its wa
     const auto e = simulation::import_rides(world, rides, timings).front();
     REQUIRE(world.registry.valid(e));
     auto& cycle = world.registry.get<simulation::CycleRide>(e);
-    CHECK(cycle.exit == simulation::kNoNode);
+    CHECK_FALSE(cycle.exit.has_value());
 
     // Someone queues; the path to the entrance is laid again and one is laid to the exit.
     cycle.queue.push_back(world.registry.create());
@@ -385,7 +385,7 @@ TEST_CASE("a coaster tested with no path to its doors runs its train, and takes 
     const std::array<std::optional<simulation::Coaster>, 1> coasters { circuit };
     auto added = simulation::import_rides(world, rides, { }, coasters);
     REQUIRE(world.registry.valid(added[0]));
-    CHECK(world.registry.get<simulation::Attraction>(added[0]).entrance == simulation::kNoNode);
+    CHECK_FALSE(world.registry.get<simulation::Attraction>(added[0]).entrance.has_value());
     CHECK(world.registry.get<simulation::Trains>(added[0]).trains.size() == 1);
 
     save::model::PeopleModel people;
@@ -585,7 +585,7 @@ TEST_CASE("paths laid and taken away come and go from the network; walkers and r
         p.kind = save::model::PathKind::Ground;
         p.col = static_cast<std::uint8_t>(c);
         p.id = static_cast<std::uint64_t>(c + 1);
-        CHECK(simulation::add_path(world, p, grid) != simulation::kNoNode);
+        CHECK(simulation::add_path(world, p, grid).has_value());
     }
     save::model::RideModel rides;
     save::model::Ride& ride = rides.rides.emplace_back();
@@ -685,9 +685,9 @@ TEST_CASE("paths on the ground and the people on them follow the ground when it 
     simulation::follow_ground(world, laid, was, grid, { 0, 0 }, { 3, 0 });
     CHECK_FALSE(world.paths.find({ 1, 0, 0 }));
     const simulation::NodeId raised = at(1, 2);
-    CHECK(world.paths.nodes()[raised].height == doctest::Approx(2.0f));
-    CHECK(world.paths.nodes()[raised].next[0] == at(2, 2));
-    CHECK(world.paths.nodes()[raised].next[2] == at(0, 2));
+    CHECK(world.paths.nodes()[raised.value].height == doctest::Approx(2.0f));
+    CHECK(world.paths.nodes()[raised.value].next[0] == at(2, 2));
+    CHECK(world.paths.nodes()[raised.value].next[2] == at(0, 2));
     CHECK(r.get<simulation::Pose>(standing).position.y == doctest::Approx(2.0f));
     CHECK(r.get<simulation::Gesture>(standing).kind == simulation::GestureKind::Dizzy);
     CHECK(r.get<simulation::Gesture>(reeling).left.value == doctest::Approx(0.5f));
@@ -769,12 +769,12 @@ TEST_CASE("walkers stand on a ramp's slope and on the ground's own tilt under a 
     ramp.direction = 1;
     ramp.elevation = save::model::PathElevation { .slope = 4, .quantised_height = 2 };
     const auto up = simulation::add_path(world, ramp, grid);
-    REQUIRE(bank != simulation::kNoNode);
-    REQUIRE(up != simulation::kNoNode);
-    CHECK(world.paths.surface(bank, bank, { 6.0f, 1.0f }) == doctest::Approx(0.25f));
-    CHECK(world.paths.surface(bank, bank, { 6.0f, 3.0f }) == doctest::Approx(0.75f));
-    CHECK(world.paths.surface(up, up, { 9.0f, 6.0f }) == doctest::Approx(2.25f));
-    CHECK(world.paths.surface(up, up, { 11.0f, 5.0f }) == doctest::Approx(2.75f));
+    REQUIRE(bank.has_value());
+    REQUIRE(up.has_value());
+    CHECK(world.paths.surface(*bank, *bank, { 6.0f, 1.0f }) == doctest::Approx(0.25f));
+    CHECK(world.paths.surface(*bank, *bank, { 6.0f, 3.0f }) == doctest::Approx(0.75f));
+    CHECK(world.paths.surface(*up, *up, { 9.0f, 6.0f }) == doctest::Approx(2.25f));
+    CHECK(world.paths.surface(*up, *up, { 11.0f, 5.0f }) == doctest::Approx(2.75f));
 }
 
 TEST_CASE("a queue joins the paths beside it only at its open ends, not along its railings")
@@ -806,10 +806,10 @@ TEST_CASE("a queue joins the paths beside it only at its open ends, not along it
     const auto queue = simulation::add_path(world, q, grid);
     const auto front = lay(0, 1);
     const auto beside = lay(1, 0);
-    const auto& next = world.paths.nodes()[queue].next;
-    CHECK(next[2] == front);               // Across its open end
-    CHECK(next[3] == simulation::kNoNode); // Across its railing
-    CHECK(world.paths.nodes()[beside].next[1] == simulation::kNoNode);
+    const auto& next = world.paths.nodes()[queue->value].next;
+    CHECK(next[2] == front);          // Across its open end
+    CHECK_FALSE(next[3].has_value()); // Across its railing
+    CHECK_FALSE(world.paths.nodes()[beside->value].next[1].has_value());
 }
 
 TEST_CASE("rides whose stations stand side by side on one level are linked, others not")
@@ -853,21 +853,21 @@ TEST_CASE("a no-entry sign bars the side its front faces; staff are kept off lan
         (void)simulation::add_path(world, p, grid);
     }
     const auto at = [&](int c) { return *world.paths.find({ c, 0, 0 }); };
-    CHECK(world.paths.nodes()[at(4)].staff_kept_off); // Not the park's
-    CHECK_FALSE(world.paths.nodes()[at(3)].staff_kept_off);
+    CHECK(world.paths.nodes()[at(4).value].staff_kept_off); // Not the park's
+    CHECK_FALSE(world.paths.nodes()[at(3).value].staff_kept_off);
 
     // An entrance two tiles across its own X, turned a quarter so they lie along the row: columns 2 and 3.
     const std::array<save::model::PlacedObject, 2> objects { save::model::PlacedObject { .id = 1, .col = 2, .row = 0, .rotation = 1 }, save::model::PlacedObject { .id = 2, .col = 1, .row = 0 } };
     REQUIRE(simulation::import_gate(world, objects, [](const save::model::PlacedObject& o) { return o.id == 1 ? std::optional(std::array<std::int32_t, 2> { 1, 2 }) : std::nullopt; }) != entt::null);
     simulation::keep_staff_in(world, grid);
-    CHECK(world.paths.nodes()[at(2)].staff_kept_off);
-    CHECK(world.paths.nodes()[at(3)].staff_kept_off);
-    CHECK_FALSE(world.paths.nodes()[at(1)].staff_kept_off);
+    CHECK(world.paths.nodes()[at(2).value].staff_kept_off);
+    CHECK(world.paths.nodes()[at(3).value].staff_kept_off);
+    CHECK_FALSE(world.paths.nodes()[at(1).value].staff_kept_off);
 
     // Unturned, a sign's front faces lower columns.
     const std::array<save::model::SignState, 1> signs { save::model::SignState { .object_ref = 2, .kind = 1 } };
     CHECK(simulation::import_path_items(world, objects, { }, { }, signs) == 1);
-    CHECK(world.paths.nodes()[at(1)].no_entry == 1U << 2);
+    CHECK(world.paths.nodes()[at(1).value].no_entry == 1U << 2);
     CHECK_FALSE(world.paths.may_step(at(0), at(1), simulation::Walker::Guest));
     CHECK(world.paths.may_step(at(2), at(1), simulation::Walker::Guest));
 }

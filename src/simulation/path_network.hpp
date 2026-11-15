@@ -27,6 +27,7 @@
 // its searches try them in. Walls and no-entry signs are given as park sides and converted by network_side.
 #pragma once
 
+#include "core/id.hpp"
 #include "math/glm.hpp"
 #include "park/turns.hpp"
 #include "units/units.hpp"
@@ -42,14 +43,14 @@
 namespace rct3::simulation
 {
 
-    using NodeId = std::uint32_t;
+    /// A path tile's place in the network's nodes.
+    using NodeId = core::Id<struct NodeIdTag, std::uint32_t>;
 
     /// The network's number for park side `side`: the park's count with each pair swapped.
     [[nodiscard]] constexpr std::size_t network_side(rct3::park::Side side) noexcept
     {
         return static_cast<std::size_t>(side.value ^ 1);
     }
-    inline constexpr NodeId kNoNode = ~NodeId { 0 };
     /// Most a path's surface may stand above or below its neighbour's at the ends of their shared edge and
     /// still join it. Chosen by eye: a quarter of a level absorbs rounding in saved heights, while a ramp's side
     /// or a raised path beside the ground is off by at least a whole level at one end.
@@ -94,19 +95,19 @@ namespace rct3::simulation
         /// high row, high col high row. Between them it is two flat triangles, split from the second corner to
         /// the third, as the ground is.
         std::array<float, 4> corners { };
-        /// The node beside this one on each side (+col, +row, -col, -row), or kNoNode.
-        std::array<NodeId, 4> next { kNoNode, kNoNode, kNoNode, kNoNode };
+        /// The node beside this one on each side (+col, +row, -col, -row), if any.
+        std::array<std::optional<NodeId>, 4> next { };
         /// The node a step across a square of paths reaches at each corner (+col +row, -col +row, -col -row,
-        /// +col -row), or kNoNode.
-        std::array<NodeId, 4> corner { kNoNode, kNoNode, kNoNode, kNoNode };
+        /// +col -row), if any.
+        std::array<std::optional<NodeId>, 4> corner { };
     };
 
     /// A way across the park that is not walked: a guest steps on at `from` and off at `to`, as if `length`
     /// steps apart, paying `toll`.
     struct PathLink
     {
-        NodeId from = kNoNode;
-        NodeId to = kNoNode;
+        NodeId from { };
+        NodeId to { };
         float length = 0; ///< In steps between tiles side by side
         units::Money toll { };
         std::uint32_t owner = 0; ///< What it stands for, as whoever made it numbers it
@@ -142,14 +143,14 @@ namespace rct3::simulation
         /// Puts a queue tile's node in queue line `line`.
         void set_line(NodeId node, std::uint64_t line)
         {
-            nodes_[node].line = line;
+            nodes_[node.value].line = line;
         }
         /// Moves a node to `level` with its middle at `height`, as when the ground under it rose or sank; set its
         /// corners after, which joins it again.
         void set_height(NodeId node, int level, float height)
         {
-            nodes_[node].tile.level = level;
-            nodes_[node].height = height;
+            nodes_[node.value].tile.level = level;
+            nodes_[node.value].height = height;
         }
         /// Gives a node's tile a surface that is not flat at its height (a ramp, or ground that is not level) and
         /// the sides it may join across (`open`, as PathNode::open); joins its tile again to suit.
@@ -158,19 +159,19 @@ namespace rct3::simulation
         void set_no_entry(NodeId node, rct3::park::Side side, bool barred)
         {
             const auto bit = static_cast<std::uint8_t>(1U << network_side(side));
-            nodes_[node].no_entry = barred ? nodes_[node].no_entry | bit : nodes_[node].no_entry & ~bit;
+            nodes_[node.value].no_entry = barred ? nodes_[node.value].no_entry | bit : nodes_[node.value].no_entry & ~bit;
         }
         /// Keeps staff off a node's tile, or lets them on again.
         void keep_staff_off(NodeId node, bool kept)
         {
-            nodes_[node].staff_kept_off = kept;
+            nodes_[node.value].staff_kept_off = kept;
         }
         /// Whether `who` may step from `from` to `to`, a node beside it or across a square from it.
         [[nodiscard]] bool may_step(NodeId from, NodeId to, Walker who) const;
         void cover(NodeId node, Cover cover)
         {
-            nodes_[node].covered = cover == Cover::Roof;
-            nodes_[node].shaded = cover != Cover::Open;
+            nodes_[node.value].covered = cover == Cover::Roof;
+            nodes_[node.value].shaded = cover != Cover::Open;
         }
         /// The path tile whose column and row hold world point `at`, at the level nearest its height.
         [[nodiscard]] std::optional<NodeId> nearest(glm::vec3 at) const;

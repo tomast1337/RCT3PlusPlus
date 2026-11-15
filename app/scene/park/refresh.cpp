@@ -197,7 +197,7 @@ namespace rct3::scene::park
                 for (const auto [e, piece] : scene.sim.registry.view<const simulation::Litter>().each())
                 {
                     const auto& model = scene.litter_looks[piece.vomit ? 1 : 0];
-                    if (!model || piece.node >= scene.sim.paths.nodes().size())
+                    if (!model || piece.node.value >= scene.sim.paths.nodes().size())
                         continue;
                     const auto seed = static_cast<std::uint32_t>(entt::to_integral(e)) * core::kGoldenSpread;
                     const glm::vec2 off = (glm::vec2(seed & 0xffu, seed >> 8 & 0xffu) / 255.0f * 2.0f - 1.0f) * kSpread.value;
@@ -444,10 +444,10 @@ namespace rct3::scene::park
                 const auto& r = scene.sim.registry;
                 const auto& nodes = scene.sim.paths.nodes();
                 // The jumping fountains next to the one at `node`.
-                const auto next_to = [&](simulation::NodeId node) {
+                const auto next_to = [&](std::optional<simulation::NodeId> node) {
                     std::vector<simulation::NodeId> out;
                     for (const auto [e, item] : r.view<const simulation::PathItem>().each())
-                        if (item.kind == simulation::PathItemKind::Fountain && node < nodes.size() && std::ranges::contains(nodes[node].next, item.node))
+                        if (item.kind == simulation::PathItemKind::Fountain && node && node->value < nodes.size() && std::ranges::contains(nodes[node->value].next, item.node))
                             out.push_back(item.node);
                     return out;
                 };
@@ -458,11 +458,11 @@ namespace rct3::scene::park
                                 return save::model::PlacedObjectIndex { static_cast<std::size_t>(k - scene.objects.begin()) };
                     return std::nullopt;
                 };
-                const auto node_of = [&](save::model::PlacedObjectIndex object) {
+                const auto node_of = [&](save::model::PlacedObjectIndex object) -> std::optional<simulation::NodeId> {
                     for (const auto [e, item] : r.view<const simulation::PathItem>().each())
                         if (item.object == scene.objects[object.value].id)
                             return item.node;
-                    return simulation::kNoNode;
+                    return std::nullopt;
                 };
                 const auto jump = [&](save::model::PlacedObjectIndex from, save::model::PlacedObjectIndex to) {
                     const auto a = scene.models.find(rct3::park::object::model_ref(scene.objects[from.value]));

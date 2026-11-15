@@ -992,14 +992,19 @@ namespace rct3::scene::park
         for (std::size_t i = 0; i < scene.chain_shifts.size(); ++i)
             scene.chain_shifts[i] = rct3::park::chain_shift(scene.chain_shifts[i], scene.rides.rides[i].options.lift_speed.value, park_time.value);
         advance_park_particles(scene.particles, park_time, viewer, static_cast<std::size_t>(options.get(config::game::GameOption::ParticleBudget)));
+        // The software backend draws no screen-wide effects (glow, shafts in the air, occlusion, drops on the lens)
+        // and no mirrored scene: its water mirrors only the sky's colour.
+        const bool software = device.backend() == render::Backend::Software;
         scene.water.look = water_look(options);
+        scene.water.look.reflection = scene.water.look.reflection && !software;
         scene.shadows = options.choice(config::game::GameOption::Shadows);
-        scene.blend_shadows = options.flag(config::game::GameOption::BlendShadows);
+        // Nor a second shadow map to blend: its shadows step with the sun.
+        scene.blend_shadows = options.flag(config::game::GameOption::BlendShadows) && !software;
         scene.blend_band = options.get(config::game::GameOption::DetailBlendBand);
         scene.level_scales = level_scales(options);
-        scene.bloom = options.flag(config::game::GameOption::Bloom);
-        scene.light_shafts = options.flag(config::game::GameOption::LightShafts);
-        scene.ambient_occlusion = options.flag(config::game::GameOption::AmbientOcclusion);
+        scene.bloom = options.flag(config::game::GameOption::Bloom) && !software;
+        scene.light_shafts = options.flag(config::game::GameOption::LightShafts) && !software;
+        scene.ambient_occlusion = options.flag(config::game::GameOption::AmbientOcclusion) && !software;
         scene.surface_detail = options.choice(config::game::GameOption::SurfaceDetail);
         if (const auto detail = static_cast<rct3::park::WaterfallDetail>(options.choice(config::game::GameOption::WaterfallDetail)); detail != scene.waterfalls.detail)
         {
@@ -1031,7 +1036,7 @@ namespace rct3::scene::park
                 .car_splashes = splashes,
             };
             // As the game has it, drops are drawn only where refraction is.
-            advance_park_lens(scene.lens, around, options.flag(config::game::GameOption::WaterDroplets) && options.flag(config::game::GameOption::Refraction), elapsed);
+            advance_park_lens(scene.lens, around, options.flag(config::game::GameOption::WaterDroplets) && options.flag(config::game::GameOption::Refraction) && !software, elapsed);
         });
         profiling::section("People", [&] { refresh_people(scene, viewer, rct3::park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
         profiling::section("ZooAnimals", [&] { place_animals(scene); });

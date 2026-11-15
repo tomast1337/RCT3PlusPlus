@@ -341,13 +341,17 @@ namespace rct3::scene::park
                 });
         }
 
-        constexpr std::uint32_t kShadowTexels = 2048;
+        /// The shadow maps' size: half on the software backend, where filling them costs most of a frame.
+        std::uint32_t shadow_texels(const render::Device& device)
+        {
+            return device.backend() == render::Backend::Software ? 1024 : 2048;
+        }
         constexpr float kShadowSunHeight = 0.02f; ///< Of the sun's way, how far up it is before things cast shadows
 
         /// Makes the target of `drawing`; false when the device cannot.
         bool make_shadow_drawing(render::Device& device, ShadowDrawing& drawing)
         {
-            auto made = device.create_texture({ .width = kShadowTexels, .height = kShadowTexels, .label = "shadow map", .target = true, .readable_depth = true });
+            auto made = device.create_texture({ .width = shadow_texels(device), .height = shadow_texels(device), .label = "shadow map", .target = true, .readable_depth = true });
             if (!made)
                 return false;
             drawing.target = *made;
@@ -426,8 +430,8 @@ namespace rct3::scene::park
             constexpr float kRideShadowDistance = 60;
             const float centre_radius = rct3::park::shadow_radius(scene.seat ? kRideShadowDistance : scene.camera.distance);
             const glm::vec3 centre = scene.seat ? glm::vec3((*scene.seat)[3]) : scene.camera.target;
-            const rct3::park::SunView sun = rct3::park::sun_view(now->sun, centre, centre_radius, kShadowTexels);
-            const rct3::park::SunView sun_before = rct3::park::sun_view(before.sun, centre, centre_radius, kShadowTexels);
+            const rct3::park::SunView sun = rct3::park::sun_view(now->sun, centre, centre_radius, shadow_texels(device));
+            const rct3::park::SunView sun_before = rct3::park::sun_view(before.sun, centre, centre_radius, shadow_texels(device));
             // Static shadows redraw when the view moves, or every two seconds to catch what changed in the park;
             // the older drawing then too, so both cover the same ground and show the same park. A step alone
             // draws only the new one: the older is the one drawn before it.

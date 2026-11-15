@@ -67,7 +67,7 @@ for (const [name, eye] of views(row, 0)) {
 
 park.dropParties(40, 3);
 await park.advanceUntil(
-    () => people.list().some((p) => p.lingering === "water cannon" && p.col !== undefined),
+    () => people.list().some((p) => p.state !== undefined && p.lingering === "water cannon"),
     1800,
     "a guest firing the cannon",
 );

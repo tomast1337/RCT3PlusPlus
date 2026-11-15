@@ -133,8 +133,6 @@ log(
     park.dropParties(80, 7).reduce((n, p) => n + p.guests, 0),
     "guests",
 );
-const swimmers = () =>
-    people.list().filter((p) => p.state === "swimming" && p.col !== undefined && p.row !== undefined);
 await until(() => swimmers().filter((p) => p.in_water).length >= 8, 8000, "guests in the pool");
 
 // Watched for a while: each frame no one in the water over dry ground, and each getting in at the water's edge.
@@ -150,8 +148,7 @@ let entries = 0,
 for (let frame = 0; frame < 6000; ++frame) {
     await frames(1);
     for (const p of swimmers()) {
-        const col = p.col!,
-            row = p.row!;
+        const { col, row } = p;
         const crossing = p.pool_edge !== undefined;
         if (p.in_water && !crossing) {
             ++checked;

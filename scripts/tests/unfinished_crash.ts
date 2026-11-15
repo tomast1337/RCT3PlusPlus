@@ -121,20 +121,20 @@ await until(() => (rides.list()[ride].crashes ?? 0) > 0, 20000, "the train with 
 await ui.click("bar/Top_Play");
 
 // Its riders fly out, land knocked over and get up.
-const thrown = () => people.list().filter((p) => p.state === "thrown");
+const thrown = () => people.list().filter((p): p is Person & { state: "thrown" } => p.state === "thrown");
 expect(thrown().length > 0, "riders thrown out");
 const car = (rides.list()[ride].wrecks ?? [])[0];
 camera.look(car, { col: car.col + 5, row: car.row + 12, up: (car.up ?? 0) + 2 });
 await frames(6);
 expect(
-    thrown().some((p) => (p.up ?? 0) > 2),
+    thrown().some((p) => p.up > 2),
     "riders in the air",
 );
 await screenshot("riders_flying");
 await until(() => thrown().length === 0, 1200, "the thrown riders landed");
-const lying = people.list().filter((p) => p.state === "dropped");
+const lying = people.list().filter((p): p is Person & { state: "dropped" } => p.state === "dropped");
 expect(lying.length > 0, "riders lying where they landed");
-log("landed at heights", lying.map((p) => (p.up ?? 0).toFixed(1)).join(" "));
+log("landed at heights", lying.map((p) => p.up.toFixed(1)).join(" "));
 await frames(30);
 await screenshot("landed");
 expect(rides.list()[ride].open === false, "the crashed ride closed");

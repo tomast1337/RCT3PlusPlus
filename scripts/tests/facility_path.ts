@@ -116,7 +116,7 @@ const user = () =>
     people
         .list()
         .find(
-            (p) =>
+            (p): p is WalkedPerson =>
                 p.state === "buying" &&
                 p.at !== null &&
                 p.at.col >= col - 1 &&

@@ -46,11 +46,11 @@ expect(benches.length === 6, `6 benches, not ${benches.length}`);
 // Parties on the paths, worn out: their leaders sit, two by two on each bench at most.
 expect(park.dropParties(12, 5).length > 0, "parties dropped in the park");
 log("guests", park.tireGuests(0.1));
-const sitters = () => people.list().filter((p) => p.state === "sitting");
+const sitters = () => people.list().filter((p): p is Person & { state: "sitting" } => p.state === "sitting");
 /** The sitters on each bench. */
 const pairs = () => {
     const byBench = new Map<number, ReturnType<typeof sitters>>();
-    for (const p of sitters()) byBench.set(p.bench!, [...(byBench.get(p.bench!) ?? []), p]);
+    for (const p of sitters()) byBench.set(p.bench, [...(byBench.get(p.bench) ?? []), p]);
     return [...byBench.values()];
 };
 let most = 0;
@@ -70,7 +70,7 @@ log(
     "sitting",
     sitters().length,
     "pair on seats",
-    pair.map((p) => `${p.seat} at ${p.col!.toFixed(2)},${p.row!.toFixed(2)},${p.up!.toFixed(2)}`).join("; "),
+    pair.map((p) => `${p.seat} at ${p.col.toFixed(2)},${p.row.toFixed(2)},${p.up.toFixed(2)}`).join("; "),
     "road column",
     gate.col,
 );
@@ -79,7 +79,7 @@ expect(most <= 2, `no more than two on a bench, not ${most}`);
 
 // Close up while they talk, a turn of their talk apart.
 // Seen from above along the road, close by.
-const middle = { col: (pair[0].col! + pair[1].col!) / 2, row: (pair[0].row! + pair[1].row!) / 2 };
+const middle = { col: (pair[0].col + pair[1].col) / 2, row: (pair[0].row + pair[1].row) / 2 };
 camera.look({ ...middle, up: 0.5 }, { col: middle.col + 0.4, row: middle.row + 1.2, up: 3.5 });
 await park.advance(3); // Sat down
 await frames(10);

@@ -29,9 +29,9 @@ const ground = new Set(
 );
 const counts = new Map<string, number>();
 for (const p of people.list())
-    if (!p.staff && p.col !== undefined && p.state !== "riding") {
-        const key = `${Math.floor(p.col)},${Math.floor(p.row!)}`;
-        if (ground.has(key) && map.tile(Math.floor(p.col), Math.floor(p.row!))?.owned)
+    if (!p.staff && p.state !== undefined && p.state !== "riding") {
+        const key = `${Math.floor(p.col)},${Math.floor(p.row)}`;
+        if (ground.has(key) && map.tile(Math.floor(p.col), Math.floor(p.row))?.owned)
             counts.set(key, (counts.get(key) ?? 0) + 1);
     }
 const busiest = [...counts].sort((a, b) => b[1] - a[1])[0];
@@ -47,11 +47,11 @@ const near = () =>
     people
         .list()
         .filter(
-            (p) =>
+            (p): p is WalkedPerson =>
                 !p.staff &&
-                p.col !== undefined &&
+                p.state !== undefined &&
                 Math.abs(p.col - (col + 0.5)) < 1.5 &&
-                Math.abs(p.row! - (row + 0.5)) < 1.5 &&
+                Math.abs(p.row - (row + 0.5)) < 1.5 &&
                 p.state !== "riding",
         );
 
@@ -83,9 +83,9 @@ await frames(2);
 
 const after = low();
 const standing = near().filter(
-    (p) => Math.floor(p.col!) === col && Math.floor(p.row!) === row && (p.state === "walking" || p.state === "waiting"),
+    (p) => Math.floor(p.col) === col && Math.floor(p.row) === row && (p.state === "walking" || p.state === "waiting"),
 );
-log("ground", before, "->", after, "reeling", reeling, "on the tile", standing.map((p) => p.up!.toFixed(2)).join(" "));
+log("ground", before, "->", after, "reeling", reeling, "on the tile", standing.map((p) => p.up.toFixed(2)).join(" "));
 await screenshot("raised");
 expect(after > before + 0.25, "the ground under the path to rise");
 expect(
@@ -94,7 +94,7 @@ expect(
 );
 expect(reeling > 0, "guests by the tile reeling while the ground moved");
 expect(
-    standing.every((p) => p.up! >= after - 0.05),
+    standing.every((p) => p.up >= after - 0.05),
     "the guests on the tile standing on the raised path",
 );
 
@@ -109,11 +109,7 @@ await until(() => ui.find("land_panel/body/Land_Vertex_Freeform") !== undefined,
 await ui.click("land_panel/body/Land_Vertex_Freeform");
 const edge = must(map.screen(col + 0.5, row + 0.05), `tile ${col + 0.5}, ${row + 0.05} in sight`);
 const index = new Map<number, { row: number; up: number; slide: string }>(); // Of people.list, as each starts sliding
-const sliding = () =>
-    people
-        .list()
-        .map((p, i) => [p, i] as const)
-        .filter(([p]) => p.state === "sliding");
+const sliding = () => people.list().flatMap((p, i) => (p.state === "sliding" ? [[p, i] as const] : []));
 pointer.move(edge.x, edge.y);
 pointer.press();
 await frames(2);
@@ -122,7 +118,7 @@ for (let i = 1; i <= 150 && tilt() < 1.4; ++i) {
     // Short of how far a path lets its tile tip
     pointer.move(edge.x, edge.y - 0.004 * i);
     await frames(1);
-    for (const [p, k] of sliding()) if (!index.has(k)) index.set(k, { row: p.row!, up: p.up!, slide: p.slide! });
+    for (const [p, k] of sliding()) if (!index.has(k)) index.set(k, { row: p.row, up: p.up, slide: p.slide });
 }
 pointer.release();
 await frames(2);
@@ -149,30 +145,31 @@ for (let i = 0; i < 600; ++i) {
     if (fallen === index.size) break;
 }
 const list = people.list();
+const slider = (k: number) => walked(list[k], `slider ${k} walked`);
 for (const [k, v] of index)
     log(
         "slid",
         k,
         "col",
-        list[k].col!.toFixed(2),
+        slider(k).col.toFixed(2),
         "row",
         v.row.toFixed(2),
         "->",
-        list[k].row!.toFixed(2),
+        slider(k).row.toFixed(2),
         "up",
         v.up.toFixed(2),
         "->",
-        list[k].up!.toFixed(2),
-        list[k].state,
-        list[k].gesture ?? "",
+        slider(k).up.toFixed(2),
+        slider(k).state,
+        slider(k).gesture ?? "",
     );
 await screenshot("slid");
 expect(fallen === index.size, "every slider to stop");
 expect(
-    [...index].every(([k, v]) => list[k].row! > v.row && list[k].up! < v.up),
+    [...index].every(([k, v]) => slider(k).row > v.row && slider(k).up < v.up),
     "every slider further down the slope and lower than they began",
 );
 expect(
-    [...index.keys()].some((k) => list[k].gesture === "knockdown" || list[k].state === "walking"),
+    [...index.keys()].some((k) => slider(k).gesture === "knockdown" || slider(k).state === "walking"),
     "sliders fallen over or back on their feet",
 );

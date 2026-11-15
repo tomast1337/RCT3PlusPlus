@@ -52,7 +52,7 @@ park.dropParties(40, 3);
  * a screenshot named `name`. */
 async function show(
     name: string,
-    found: () => { col?: number; row?: number } | undefined,
+    found: () => { col: number; row: number } | undefined,
     from: { col: number; row: number; up: number },
     after = 0,
 ): Promise<void> {
@@ -61,41 +61,46 @@ async function show(
     const who =
         found() ??
         must(
-            people.list().find((p) => p.col !== undefined),
+            people.list().find((p): p is WalkedPerson => p.state !== undefined),
             "someone walking",
         );
     log(name, JSON.stringify(who));
     camera.look(
-        { col: who.col!, row: who.row!, up: 0.8 },
-        { col: who.col! + from.col, row: who.row! + from.row, up: from.up },
+        { col: who.col, row: who.row, up: 0.8 },
+        { col: who.col + from.col, row: who.row + from.row, up: from.up },
     );
     await frames(4);
     await screenshot(name);
 }
 // The cannon a few seconds on, once they have stepped behind it and taken hold, close up.
-const firer = () => people.list().find((p) => p.lingering === "water cannon" && p.col !== undefined);
+const firer = () =>
+    people.list().find((p): p is WalkedPerson => p.state !== undefined && p.lingering === "water cannon");
 await park.advanceUntil(() => firer() !== undefined, 1800, "someone firing the cannon");
 await park.advance(5);
-const gunner = firer()!;
-camera.look(
-    { col: gunner.col!, row: gunner.row!, up: 0.8 },
-    { col: gunner.col! - 0.1, row: gunner.row! + 0.5, up: 1.8 },
-);
+const gunner = must(firer(), "someone firing the cannon");
+camera.look({ col: gunner.col, row: gunner.row, up: 0.8 }, { col: gunner.col - 0.1, row: gunner.row + 0.5, up: 1.8 });
 await frames(4);
 await screenshot("cannon");
 // Glancing at the fountains as they go on past, the head turned to them; from the side.
-await show("fountain", () => people.list().find((p) => p.glancing === true && p.col !== undefined), {
-    col: 0.8,
-    row: -0.2,
-    up: 1.2,
-});
+await show(
+    "fountain",
+    () => people.list().find((p): p is WalkedPerson => p.state !== undefined && p.glancing === true),
+    {
+        col: 0.8,
+        row: -0.2,
+        up: 1.2,
+    },
+);
 // A party lined up at the view a few seconds after stopping, one of them filming the rest; from above.
 await show(
     "vista",
     () => {
         const party = people
             .list()
-            .filter((p) => p.lingering === "photo spot" && p.party !== undefined && p.col !== undefined);
+            .filter(
+                (p): p is WalkedPerson =>
+                    p.state !== undefined && p.lingering === "photo spot" && p.party !== undefined,
+            );
         return party.find((p) => party.filter((q) => q.party === p.party).length >= 2);
     },
     { col: 0.01, row: 0.3, up: 3 },

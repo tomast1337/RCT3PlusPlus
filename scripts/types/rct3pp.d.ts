@@ -32,10 +32,15 @@ declare function files_menu(item: string): Promise<void>;
 declare function info_tab(part: string): string | undefined;
 /** Whether a path lies on tile (col, row). */
 declare function has_path(col: number, row: number): boolean;
+/** `person`, or throws "expected `what`" when it is missing or the simulation does not walk them. */
+declare function walked<P extends Person>(
+    person: P | undefined | null,
+    what: string,
+): Exclude<P, { state?: undefined }>;
 /** The staff among people.list(). */
-declare function staff(): ReturnType<typeof people.list>;
+declare function staff(): Extract<Person, { staff: true }>[];
 /** The people swimming, among people.list(). */
-declare function swimmers(): ReturnType<typeof people.list>;
+declare function swimmers(): (Person & { state: "swimming" })[];
 
 declare namespace pointer {
     function move(x: number, y: number): void;
@@ -695,79 +700,157 @@ declare namespace stalls {
     function setPrice(i: number, item: number, hundredths: number): void;
 }
 
+/** What a person is at, as people.list() gives it for those the simulation walks. */
+type PersonState =
+    | "walking"
+    | "queueing"
+    | "riding"
+    | "waiting"
+    | "sitting"
+    | "lost"
+    | "buying"
+    | "swimming"
+    | "held"
+    | "dropped"
+    | "thrown"
+    | "sliding"
+    | "still";
+
+/** A person the simulation walks: where they are (tiles, and world height `up`) and what they are at, `state`, with
+ *  what goes with it. The other fields do not follow from the state (a swimmer's fields hold in the water, on a
+ *  river and held over the pool alike), so they stay optional. */
+type PersonOnPaths = {
+    col: number;
+    row: number;
+    up: number;
+    /** Their party's number, shared by its members, while they are with it. */
+    party?: number;
+    /** On their way out of the park. */
+    leaving?: true;
+    /** Walking in from a spawn point, not through the gate yet. */
+    arriving?: true;
+    /** How they go on foot. */
+    gait?: "walk" | "run" | "weary" | "queasy" | "bursting";
+    /** Food or drink from a stall still being had, or its empty. */
+    carrying?: "food" | "drink" | "empty";
+    /** A gesture they make now, by the motion it shows. */
+    gesture?:
+        | "jumpjoy"
+        | "laugh"
+        | "nodhead"
+        | "shakehead"
+        | "dizzy"
+        | "vomit"
+        | "knockdown"
+        | "handticket"
+        | "applause"
+        | "lookwatch"
+        | "disapproval"
+        | "cry"
+        | "horror"
+        | "lookmap";
+    /** Looking at something as they walk on past it. */
+    glancing?: true;
+    /** Stopped at a path item. */
+    lingering?: PathItemKind;
+    /** In a pool complex, or held or falling out of one. */
+    swimwear?: true;
+    /** A swimmer: in the pool's water, not on the paving and coping round it. */
+    in_water?: boolean;
+    /** A swimmer crossing the water's edge, how. */
+    pool_edge?: "dive in" | "climb out" | "ladder out" | "ladder in";
+    /** A swimmer on a pool's sun lounger, under its shower or at another of its extras. */
+    pool_extra?: "lounger" | "shower" | "other";
+    /** Stopped round someone: an entertainer's show, a VIP for an autograph, or walking after the VIP. */
+    watching?: "show" | "autograph" | "chasing";
+    /** An entertainer in a show, the move they make now. */
+    show?:
+        | "wave"
+        | "idle1"
+        | "idle2"
+        | "dancelevel1"
+        | "dancelevel2"
+        | "dancelevel3"
+        | "falloverin"
+        | "falloverout"
+        | "dejection";
+} & (
+    | {
+          /** A swimmer off a diving board, how far, and whether it is a high one. */
+          diving: "climb" | "walk" | "jump" | "fall" | "surface";
+          high_board: boolean;
+      }
+    | { diving?: undefined; high_board?: undefined }
+) &
+    (
+        | {
+              state: "sitting";
+              /** The id of the bench's object, which of its seats, and whether they are getting up. */
+              bench: number;
+              seat: number;
+              rising: boolean;
+          }
+        | {
+              state: "riding";
+              /** The ride's place in rides.list, once found. */
+              ride?: number;
+              /** Seated on a ride, how they react to it. */
+              reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained";
+              /** Round a lazy river, resting in their ring or paddling. */
+              floating?: "resting" | "paddling";
+              /** On a slide climbed on foot, up its steps or down the slide. */
+              climbing?: "climbing" | "sliding";
+          }
+        | {
+              state: "sliding";
+              /** Down ground the land tools tipped too steep, the motion they slide in. */
+              slide: "frontslide" | "backslide" | "sitslide" | "dangleangry";
+          }
+        | { state: Exclude<PersonState, "sitting" | "riding" | "sliding"> }
+    );
+
+/** A guest's passport, once stamped: each stamp's post (as pathItems()' object), ink (0xAARRGGBB) and place on the
+ *  page (0 to 1 across and down), and whether they were given the park's gift. */
+interface Passport {
+    stamps: { post: number; colour: number; x: number; y: number }[];
+    gift: boolean;
+}
+
+/** A person shown in the park, as people.list() gives them: guest or staff, and, when the simulation walks them,
+ *  where they are and what they are at (no `state` when it does not). */
+type Person = {
+    name: string;
+    /** The point of the map they stand on, in tiles. */
+    at: { col: number; row: number } | null;
+    /** The numbers of the thoughts their window lists. */
+    thoughts: number[];
+} & (
+    | {
+          staff: false;
+          /** What their window and the guest list show, 0 to 1. */
+          happiness: number;
+          passport?: Passport;
+      }
+    | ({
+          staff: true;
+          /** A seller: the id of the object of the stall or ride entrance they serve at. */
+          post?: number;
+      } & (
+          | {
+                /** A worker the simulation runs: their job, and what their time at work goes on now. */
+                role: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer";
+                job: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest";
+            }
+          | { role?: undefined; job?: undefined }
+      ))
+) &
+    ({ state?: undefined } | PersonOnPaths);
+/** A person the simulation walks, with where they are and their `state`. */
+type WalkedPerson = Exclude<Person, { state?: undefined }>;
+
 declare namespace people {
-    /** The people shown in the park, guests and staff, in the order the park keeps them, with the point of the
-     *  map they stand on, in tiles. For those the simulation walks, also where they are (tiles, and world height
-     *  `up`) and what they are at ("waiting": for the rest of their party, standing with the others; "buying":
-     *  at a stall's counter while they wait; "sitting": on a bench (the id of its object as `bench`), on its seat number `seat`, `rising` once getting up; "lost": cut off from their party, standing a while before being put with
-     *  it; "thrown": by a crash, still in the air; "sliding": down ground the land tools tipped too steep, with the
-     *  motion they slide in as `slide`), how they go on foot
-     *  (`gait`), what they carry from a stall (`carrying`: food or drink still being had, or its empty) and,
-     *  seated on a ride, how they react to it and the ride's place in rides.list (`ride`), and a gesture they make
-     *  now by the motion it shows (`gesture`, such as "dizzy" or "laugh"). A seller has the id of the object of the stall
-     *  or ride entrance they serve at as `post`; a worker the simulation runs, their job as `role`. Members of one party share its number, `party`, while they are with it,
-     *  those on their way out of the park are `leaving`, and those walking in from a spawn point who have not come
-     *  through the gate yet are `arriving`. `thoughts` are the numbers of the thoughts their window
-     *  lists, and a guest's `happiness` (0 to 1) is what their window and the guest list show. Those in their swimwear
-     *  (in a pool complex, or held or falling out of one) are `swimwear`; those floating round a lazy river (its place
-     *  in rides.list as `ride`) are `floating`, resting in their ring or paddling. A swimmer off a diving board is
-     *  `diving`, how far, and `high_board` when it is a high one. A swimmer is `in_water` in the pool's water, not
-     *  on the paving and coping round it, and `pool_edge` while crossing its edge, how. On a slide climbed on foot,
-     *  `climbing` says whether up its steps or down the slide, and `ride` which. */
-    function list(): {
-        name: string;
-        staff: boolean;
-        post?: number;
-        thoughts?: number[];
-        happiness?: number;
-        role?: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer";
-        job?: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest";
-        at: { col: number; row: number } | null;
-        col?: number;
-        row?: number;
-        up?: number;
-        party?: number;
-        leaving?: boolean;
-        arriving?: boolean;
-        bench?: number;
-        seat?: number;
-        rising?: boolean;
-        state?:
-            | "walking"
-            | "queueing"
-            | "riding"
-            | "waiting"
-            | "sitting"
-            | "lost"
-            | "buying"
-            | "swimming"
-            | "held"
-            | "dropped"
-            | "thrown"
-            | "sliding"
-            | "still";
-        gait?: "walk" | "run" | "weary" | "queasy" | "bursting";
-        reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained";
-        carrying?: "food" | "drink" | "empty";
-        ride?: number;
-        gesture?: string;
-        glancing?: boolean;
-        lingering?: PathItemKind;
-        pool_extra?: "lounger" | "shower" | "other";
-        diving?: "climb" | "walk" | "jump" | "fall" | "surface";
-        high_board?: boolean;
-        in_water?: boolean;
-        pool_edge?: "dive in" | "climb out" | "ladder out" | "ladder in";
-        swimwear?: boolean;
-        floating?: "resting" | "paddling";
-        climbing?: "climbing" | "sliding";
-        watching?: "show" | "autograph" | "chasing";
-        show?: string;
-        slide?: "frontslide" | "backslide" | "sitslide" | "dangleangry";
-        /** A guest's passport, once stamped: each stamp's post (as pathItems()' object), ink (0xAARRGGBB) and place on
-         *  the page (0 to 1 across and down), and whether they were given the park's gift. */
-        passport?: { stamps: { post: number; colour: number; x: number; y: number }[]; gift: boolean };
-    }[];
+    /** The people shown in the park, guests and staff, in the order the park keeps them. */
+    function list(): Person[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
     function show(i: number): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */

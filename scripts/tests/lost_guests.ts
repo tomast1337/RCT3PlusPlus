@@ -27,15 +27,16 @@ const inParty = () =>
                 !p.staff &&
                 p.state === "walking" &&
                 p.party !== undefined &&
-                people.list().filter((q) => q.party === p.party).length > 1,
+                people.list().filter((q) => q.state !== undefined && q.party === p.party).length > 1,
         );
 await park.advanceUntil(() => inParty() >= 0, 10, "a party walking");
 const who = inParty();
-const party = people.list()[who].party!;
-const me = () => people.list()[who];
-const others = () => people.list().filter((p, i) => i !== who && p.party === party);
+const me = () => walked(people.list()[who], "the guest");
+const party = must(me().party, "the guest's party");
+const others = () =>
+    people.list().filter((p, i): p is WalkedPerson => i !== who && p.state !== undefined && p.party === party);
 const guest = me();
-camera.look({ col: guest.col!, row: guest.row! }, { col: guest.col! + 8, row: guest.row! + 8, up: 35 });
+camera.look({ col: guest.col, row: guest.row }, { col: guest.col + 8, row: guest.row + 8, up: 35 });
 await frames(10);
 people.show(who);
 await until(() => ui.find("info") !== undefined, 120, "the guest's window");
@@ -53,22 +54,21 @@ await until(() => me().state === "held", 60, "the guest held");
 const far = paths
     .filter((p) => clear(p.col, p.row))
     .sort(
-        (p, q) =>
-            Math.hypot(q.col - guest.col!, q.row - guest.row!) - Math.hypot(p.col - guest.col!, p.row - guest.row!),
+        (p, q) => Math.hypot(q.col - guest.col, q.row - guest.row) - Math.hypot(p.col - guest.col, p.row - guest.row),
     )[0];
-expect(far !== undefined && Math.hypot(far.col - guest.col!, far.row - guest.row!) >= 5, "a path in sight well away");
+expect(far !== undefined && Math.hypot(far.col - guest.col, far.row - guest.row) >= 5, "a path in sight well away");
 const over = must(map.screen(far!.col, far!.row), "the tile in sight");
 pointer.move(over.x, over.y);
 await frames(10);
 await pointer.click(over.x, over.y);
 await until(() => me().state !== "held", 30, "the guest let go");
 await park.advanceUntil(() => me().party === party, 10, `the guest back in their party (${JSON.stringify(me())})`);
-const apart = Math.max(...others().map((o) => Math.hypot(o.col! - me().col!, o.row! - me().row!)));
+const apart = Math.max(...others().map((o) => Math.hypot(o.col - me().col, o.row - me().row)));
 log("put down", apart.toFixed(1), "tiles from the furthest of their party");
 await screenshot("put_down_far");
 
 // They find each other: all on one or neighbouring tiles.
-const spread = () => Math.max(...others().map((o) => Math.hypot(o.col! - me().col!, o.row! - me().row!)));
+const spread = () => Math.max(...others().map((o) => Math.hypot(o.col - me().col, o.row - me().row)));
 await park.advanceUntil(
     () => spread() < 1.5 && me().state !== "lost",
     100,

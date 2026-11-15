@@ -1075,16 +1075,15 @@ namespace rct3::scene
                 if (const auto* work = p.staff && p.saved < park.people.staff.size() ? std::get_if<save::model::VendorWork>(&park.people.staff[p.saved].work) : nullptr; work != nullptr)
                     person["post"] = work->scenery_item.id;
                 // The thoughts their window lists, by number, in the order kept.
+                Json thoughts = Json::array();
                 if (saved != nullptr)
-                {
-                    Json thoughts = Json::array();
                     for (const save::model::Thought& t : saved->thoughts)
                         if (!t.empty())
                             thoughts.push_back(t.id);
-                    person["thoughts"] = std::move(thoughts);
-                }
-                if (!p.staff && saved != nullptr)
-                    person["happiness"] = park.people.guests[p.saved].mood_now.happiness;
+                person["thoughts"] = std::move(thoughts);
+                // Every guest has a happiness: shown people are added with their saved record.
+                if (!p.staff)
+                    person["happiness"] = saved != nullptr ? park.people.guests[p.saved].mood_now.happiness : 0.0f;
                 const auto& r = park.sim.registry;
                 // A worker's job, in StaffRole's order.
                 constexpr std::array<std::string_view, 8> kRoles { "handyman", "mechanic", "guard", "other", "vendor", "keeper", "inspector", "entertainer" };
@@ -1095,7 +1094,7 @@ namespace rct3::scene
                     person["role"] = kRoles[std::to_underlying(staff->role)];
                     person["job"] = kJobs[std::to_underlying(staff->job)];
                 }
-                if (const auto* passport = r.valid(p.guest) ? r.try_get<simulation::Passport>(p.guest) : nullptr)
+                if (const auto* passport = !p.staff && r.valid(p.guest) ? r.try_get<simulation::Passport>(p.guest) : nullptr)
                 {
                     Json stamps = Json::array();
                     for (const simulation::Passport::Stamp& s : passport->stamps)
@@ -1107,28 +1106,30 @@ namespace rct3::scene
                 {
                     const auto* errand = r.try_get<simulation::Errand>(p.guest);
                     const auto* linger = r.try_get<simulation::Linger>(p.guest);
-                    const auto* sitting = linger != nullptr && linger->at == simulation::PathItemKind::Bench ? linger : nullptr;
+                    const auto* sitting = linger != nullptr && linger->at == simulation::PathItemKind::Bench && r.valid(linger->bench) ? linger : nullptr;
                     const auto* floating = r.try_get<simulation::Floating>(p.guest);
                     const auto* climbing = r.try_get<simulation::Climbing>(p.guest);
                     const glm::vec3 at = (errand != nullptr && errand->kind == simulation::ErrandKind::Riding && floating == nullptr && climbing == nullptr) || sitting != nullptr ? standing : r.get<simulation::Pose>(p.guest).position; // Seated, in their seat
                     person["col"] = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
                     person["row"] = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
                     person["up"] = at.y;
-                    person["state"] = r.all_of<simulation::Held>(p.guest)  ? "held"
-                        : r.all_of<simulation::Dropped>(p.guest)           ? (r.get<simulation::Dropped>(p.guest).sliding      ? "sliding"
-                                                                                  : r.get<simulation::Dropped>(p.guest).thrown ? "thrown"
-                                                                                                                               : "dropped")
-                        : r.all_of<simulation::Lost>(p.guest)              ? "lost"
-                        : errand == nullptr                                ? "still"
-                        : sitting != nullptr                               ? "sitting"
-                        : errand->kind == simulation::ErrandKind::Riding   ? "riding"
-                        : errand->kind == simulation::ErrandKind::Queueing ? "queueing"
-                        : errand->kind == simulation::ErrandKind::Waiting  ? "waiting"
-                        : errand->kind == simulation::ErrandKind::Buying   ? "buying"
-                        : errand->kind == simulation::ErrandKind::Swimming ? "swimming"
-                                                                           : "walking";
+                    // The fields that go with a state are given only with it, as the script types have them.
+                    const std::string_view state = r.all_of<simulation::Held>(p.guest) ? "held"
+                        : r.all_of<simulation::Dropped>(p.guest)                       ? (r.get<simulation::Dropped>(p.guest).sliding      ? "sliding"
+                                                                                              : r.get<simulation::Dropped>(p.guest).thrown ? "thrown"
+                                                                                                                                           : "dropped")
+                        : r.all_of<simulation::Lost>(p.guest)                          ? "lost"
+                        : errand == nullptr                                            ? "still"
+                        : sitting != nullptr                                           ? "sitting"
+                        : errand->kind == simulation::ErrandKind::Riding               ? "riding"
+                        : errand->kind == simulation::ErrandKind::Queueing             ? "queueing"
+                        : errand->kind == simulation::ErrandKind::Waiting              ? "waiting"
+                        : errand->kind == simulation::ErrandKind::Buying               ? "buying"
+                        : errand->kind == simulation::ErrandKind::Swimming             ? "swimming"
+                                                                                       : "walking";
+                    person["state"] = state;
                     // On a bench, the object it stands as, which of its seats, and whether they are getting up.
-                    if (sitting != nullptr && r.valid(sitting->bench))
+                    if (state == "sitting")
                     {
                         person["bench"] = r.get<simulation::PathItem>(sitting->bench).object;
                         person["seat"] = sitting->seat;
@@ -1149,21 +1150,22 @@ namespace rct3::scene
                     constexpr std::array<std::string_view, 5> kReactions { "waiting", "calm", "hands up", "covering eyes", "strained" };
                     if (const auto* stride = r.try_get<simulation::Stride>(p.guest))
                         person["gait"] = kGaits[std::to_underlying(stride->gait)];
-                    if (const auto* thrill = r.try_get<simulation::Thrill>(p.guest); thrill != nullptr && errand != nullptr && errand->kind == simulation::ErrandKind::Riding && !r.all_of<simulation::RideWalk>(p.guest))
+                    const bool riding = state == "riding";
+                    if (const auto* thrill = r.try_get<simulation::Thrill>(p.guest); thrill != nullptr && riding && !r.all_of<simulation::RideWalk>(p.guest))
                     {
                         person["reaction"] = kReactions[std::to_underlying(thrill->reaction)];
                         if (const auto on = std::ranges::find(park.ride_entities, errand->target); on != park.ride_entities.end())
                             person["ride"] = on - park.ride_entities.begin();
                     }
                     // Floating round a lazy river (by its place in rides.list), resting or paddling.
-                    if (floating != nullptr)
+                    if (floating != nullptr && riding)
                     {
                         person["floating"] = floating->paddling ? "paddling" : "resting";
                         if (const auto on = std::ranges::find(park.ride_entities, floating->river); on != park.ride_entities.end())
                             person["ride"] = on - park.ride_entities.begin();
                     }
                     // On a slide climbed on foot (by its place in rides.list), going up its steps or sliding down.
-                    if (climbing != nullptr)
+                    if (climbing != nullptr && riding)
                     {
                         const auto* slide = r.valid(climbing->slide) ? r.try_get<simulation::ClimbSlide>(climbing->slide) : nullptr;
                         person["climbing"] = slide != nullptr && climbing->way < slide->ways.size() && climbing->along >= slide->ways[climbing->way].top ? "sliding" : "climbing";
@@ -1217,7 +1219,7 @@ namespace rct3::scene
                         person["show"] = kMoves[std::to_underlying(simulation::show_move_at(*show).move)];
                     }
                     // Sliding down a slope, the motion they slide in.
-                    if (const auto* drop = r.try_get<simulation::Dropped>(p.guest); drop != nullptr && drop->sliding)
+                    if (const auto* drop = r.try_get<simulation::Dropped>(p.guest); drop != nullptr && state == "sliding")
                         person["slide"] = park::slide_motion(r.get<simulation::Pose>(p.guest).heading.value, drop->drift, p.staff);
                 }
                 out.push_back(std::move(person));

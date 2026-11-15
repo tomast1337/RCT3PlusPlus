@@ -43,7 +43,13 @@ await until(() => (info().riverJoined ?? 0) > 0, 30, "a station joined to a comp
 log("joined", info().riverJoined, "of", info().riverStations);
 
 // Riders the park kept float on round it, in their swimwear.
-const floating = () => people.list().filter((p) => p.floating !== undefined && p.ride === river);
+const floating = () =>
+    people
+        .list()
+        .filter(
+            (p): p is Person & { state: "riding" } =>
+                p.state === "riding" && p.floating !== undefined && p.ride === river,
+        );
 await until(() => floating().length > 0, 60, "riders on the river");
 log("floating now", floating().length);
 expect(
@@ -51,14 +57,11 @@ expect(
     "the riders in their swimwear",
 );
 const one = floating()[0];
-camera.look({ col: one.col!, row: one.row!, up: one.up! }, { col: one.col! + 3, row: one.row! + 3, up: one.up! + 10 });
+camera.look({ col: one.col, row: one.row, up: one.up }, { col: one.col + 3, row: one.row + 3, up: one.up + 10 });
 await frames(30);
 await screenshot("pool_river_floating");
 // Close by, sitting in their rings.
-camera.look(
-    { col: one.col!, row: one.row!, up: one.up! },
-    { col: one.col! + 0.15, row: one.row! + 0.15, up: one.up! + 3 },
-);
+camera.look({ col: one.col, row: one.row, up: one.up }, { col: one.col + 0.15, row: one.row + 0.15, up: one.up + 3 });
 await frames(30);
 await screenshot("pool_river_rings");
 
@@ -67,20 +70,21 @@ const customers = info().customers ?? 0;
 await until(() => (info().customers ?? 0) > customers, 6000, "a swimmer getting on");
 const names = new Set(floating().map((p) => p.name));
 await until(
-    () => people.list().some((p) => names.has(p.name) && p.floating === undefined && p.state === "swimming"),
+    () => people.list().some((p) => names.has(p.name) && p.state === "swimming"),
     6000,
     "a rider off into a pool",
 );
-const off = must(
-    people.list().find((p) => names.has(p.name) && p.floating === undefined && p.state === "swimming"),
+const off = walked(
+    people.list().find((p) => names.has(p.name) && p.state === "swimming"),
     "a rider off the river, swimming",
 );
 expect(off.swimwear === true, "the rider off still in their swimwear");
 expect(
-    people.list().some((p) => p.floating === "paddling") || people.list().some((p) => p.floating === "resting"),
+    people.list().some((p) => p.state === "riding" && p.floating === "paddling") ||
+        people.list().some((p) => p.state === "riding" && p.floating === "resting"),
     "riders resting or paddling",
 );
-camera.look({ col: off.col!, row: off.row!, up: off.up! }, { col: off.col! + 4, row: off.row! + 4, up: off.up! + 4 });
+camera.look({ col: off.col, row: off.row, up: off.up }, { col: off.col + 4, row: off.row + 4, up: off.up + 4 });
 await frames(10);
 await screenshot("pool_river_off");
 log("customers", info().customers, "riders now", info().riders);

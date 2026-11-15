@@ -26,8 +26,7 @@ for (let look = 0; look < kLooks; ++look) {
     await frames(150);
     const there = people
         .list()
-        .map((p, i) => ({ ...p, i }))
-        .filter((p) => !p.staff && p.col !== undefined && onGate(p.col, p.row!));
+        .flatMap((p, i) => (!p.staff && p.state !== undefined && onGate(p.col, p.row) ? [{ ...p, i }] : []));
     const next = new Map<number, number>();
     for (const p of there) next.set(p.i, (since.get(p.i) ?? 0) + 1);
     since = next;

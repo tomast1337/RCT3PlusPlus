@@ -16,7 +16,8 @@ await frames(30);
 const chairs = map.objects().filter((o) => o.symbol.toLowerCase().includes("lifeguard"));
 log("chairs", chairs.map((c) => `${c.symbol} ${c.col},${c.row}`).join(" "));
 expect(chairs.length > 0, "a lifeguard chair in the park");
-const guards = () => people.list().filter((p) => p.staff && p.role === "other");
+const guards = () =>
+    people.list().filter((p): p is WalkedPerson => p.state !== undefined && p.staff && p.role === "other");
 await until(() => guards().length === chairs.length, 300, "a lifeguard for each chair");
 log(
     "lifeguards",
@@ -26,20 +27,17 @@ log(
 );
 for (const c of chairs)
     expect(
-        guards().some((g) => Math.floor(g.col ?? -1) === c.col && Math.floor(g.row ?? -1) === c.row),
+        guards().some((g) => Math.floor(g.col) === c.col && Math.floor(g.row) === c.row),
         `a lifeguard sitting in the chair at ${c.col},${c.row}`,
     );
 const guard = guards()[0];
-camera.look(
-    { col: guard.col!, row: guard.row! },
-    { col: guard.col! + 2.5, row: guard.row! + 3, up: (guard.up ?? 0) + 4 },
-);
+camera.look({ col: guard.col, row: guard.row }, { col: guard.col + 2.5, row: guard.row + 3, up: guard.up + 4 });
 await frames(30);
 await screenshot("lifeguard_in_chair");
 // Close, from the side: the lifeguard sits back in the seat, looking out over the front of the chair.
 camera.look(
-    { col: guard.col!, row: guard.row!, up: (guard.up ?? 0) + 1.5 },
-    { col: guard.col! + 2, row: guard.row! + 0.2, up: (guard.up ?? 0) + 2.5 },
+    { col: guard.col, row: guard.row, up: guard.up + 1.5 },
+    { col: guard.col + 2, row: guard.row + 0.2, up: guard.up + 2.5 },
 );
 await frames(30);
 await screenshot("lifeguard_facing");

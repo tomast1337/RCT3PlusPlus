@@ -50,7 +50,7 @@ await ui.click(under("Staff_Title", "close") ?? under("Staff_Title", "Close") ??
 await frames(5);
 
 for (const role of ["handyman", "mechanic"]) {
-    const who = people.list().findIndex((p) => p.role === role);
+    const who = people.list().findIndex((p) => p.staff && p.role === role);
     expect(who >= 0, `a ${role} in the park`);
     people.show(who);
     await until(() => ui.find("info") !== undefined && info_tab("tools") !== undefined, 120, `the ${role}'s window`);
@@ -60,7 +60,7 @@ for (const role of ["handyman", "mechanic"]) {
     await screenshot(`${role}_tasks`);
 }
 
-const sweeper = people.list().findIndex((p) => p.role === "handyman");
+const sweeper = people.list().findIndex((p) => p.staff && p.role === "handyman");
 people.show(sweeper);
 await frames(5);
 await ui.click(`info/${info_tab("infoicon")}`);

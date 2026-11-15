@@ -70,18 +70,10 @@ const dropped = park.dropParties(40, 7).reduce((n, p) => n + p.guests, 0);
 log("dropped", dropped, "guests");
 
 // Through the room's door: changing (in their clothes, out of sight) or out on the deck and in the water.
-const at_pool = () => people.list().filter((p) => p.state === "swimming");
+const at_pool = () => swimmers();
 const in_pool = () =>
-    at_pool().filter(
-        (p) =>
-            p.swimwear &&
-            p.col !== undefined &&
-            p.col > c + 3.2 &&
-            p.col < c + 6.8 &&
-            p.row! > r + 0.2 &&
-            p.row! < r + 2.8,
-    );
-const cold = () => people.list().filter((p) => p.thoughts?.includes(198)).length;
+    at_pool().filter((p) => p.swimwear && p.col > c + 3.2 && p.col < c + 6.8 && p.row > r + 0.2 && p.row < r + 2.8);
+const cold = () => people.list().filter((p) => p.thoughts.includes(198)).length;
 camera.look({ col: c + 1.5, row: r + 0.5 }, { col: c - 2, row: r + 3, up: 3 });
 await until(() => at_pool().length >= 1, 6000, "a guest going in at the changing room");
 await frames(5);

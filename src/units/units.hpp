@@ -142,11 +142,12 @@ namespace rct3::units
         float value = 0;
     };
 
-    /// World units a second.
+    /// World units a second. Speeds compare as they are.
     struct Pace
     {
         static constexpr bool kUnit = true;
         float value = 0;
+        friend constexpr auto operator<=>(Pace, Pace) noexcept = default;
     };
 
     /// How fast a speed changes: world units (metres) a second, each second.

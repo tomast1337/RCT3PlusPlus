@@ -990,7 +990,7 @@ namespace rct3::scene::park
         scene.park_clock += park_time.value;
         scene.chain_shifts.resize(scene.rides.rides.size());
         for (std::size_t i = 0; i < scene.chain_shifts.size(); ++i)
-            scene.chain_shifts[i] = rct3::park::chain_shift(scene.chain_shifts[i], scene.rides.rides[i].options.lift_speed, park_time.value);
+            scene.chain_shifts[i] = rct3::park::chain_shift(scene.chain_shifts[i], scene.rides.rides[i].options.lift_speed.value, park_time.value);
         advance_park_particles(scene.particles, park_time, viewer, static_cast<std::size_t>(options.get(config::game::GameOption::ParticleBudget)));
         scene.water.look = water_look(options);
         scene.shadows = options.choice(config::game::GameOption::Shadows);

@@ -922,9 +922,9 @@ namespace rct3::simulation
     {
         using enum save::model::OperatingMode;
         constexpr std::array kLaunched { PoweredLaunch, MultiplePoweredLaunch, ReverseInclinedLaunch, UpwardsLaunch, FreefallDrop };
-        if (!std::ranges::contains(kLaunched, ride.mode) || ride.options.launch_speed <= 0)
+        if (!std::ranges::contains(kLaunched, ride.mode) || ride.options.launch_speed.value <= 0)
             return std::nullopt;
-        return ride.options.launch_speed;
+        return ride.options.launch_speed.value;
     }
 
     std::optional<Coaster> coaster_of(const rct3::park::track::TrackCourse& course, const save::model::Ride& ride)
@@ -1000,7 +1000,7 @@ namespace rct3::simulation
         {
             const float speed = course.brake_speeds[i];
             const Stretch kind = i < c.kinds.size() ? c.kinds[i] : Stretch::Plain;
-            const float ride_speed = kind == Stretch::BlockBrake ? ride.options.block_brake_off_speed : kind == Stretch::Booster ? ride.options.lift_speed : ride.options.brake_speed;
+            const float ride_speed = (kind == Stretch::BlockBrake ? ride.options.block_brake_off_speed : kind == Stretch::Booster ? ride.options.lift_speed : ride.options.brake_speed).value;
             c.brake_speeds.push_back(speed < 0 ? -1.0f : speed >= 1 ? speed : ride_speed);
         }
         // Trains set off from where a station stretch ends.
@@ -1011,11 +1011,11 @@ namespace rct3::simulation
                 break;
             }
         c.at = c.start;
-        c.lift_speed = ride.options.lift_speed;
+        c.lift_speed = ride.options.lift_speed.value;
         // shortcut: stations push at the lift speed, upgrade when the station's own speed is read.
-        c.station_speed = ride.options.lift_speed;
-        if (ride.options.fixed_speed > 0 && c.shuttle == Shuttle::None)
-            c.fixed_speed = ride.options.fixed_speed;
+        c.station_speed = ride.options.lift_speed.value;
+        if (ride.options.fixed_speed > units::Pace { } && c.shuttle == Shuttle::None)
+            c.fixed_speed = ride.options.fixed_speed->value;
         c.launch_speed = launch_of(ride);
         c.blocks = ride.options.block_sectioned;
         if (!ride.trains.empty() && ride.trains[0].length.value > 0)
@@ -1446,7 +1446,7 @@ namespace rct3::simulation
                 cycle.nausea.value = rating(rated->nausea);
             }
             if (ride.assessment.valid)
-                cycle.cover.value = std::clamp(ride.assessment.under_cover, 0.0f, 1.0f);
+                cycle.cover.value = std::clamp(ride.assessment.under_cover.value, 0.0f, 1.0f);
             cycle.splash = splashes(ride.base.symbol);
             if (i < guests.size() && guests[i])
                 cycle.room = *guests[i];
@@ -1539,7 +1539,7 @@ namespace rct3::simulation
             const glm::vec3 heading = rct3::park::track::course_direction(*course, course->length());
             Boats boats { .dock = { .leave = { leave.x, leave.z }, .heading = { heading.x, heading.z }, .enter = { course->points.front().x, course->points.front().z } } };
             boats.roams = ride.mode == save::model::OperatingMode::Boat;
-            if (ride.options.fixed_speed > 0)
+            if (ride.options.fixed_speed > units::Pace { })
                 boats.top = ride.options.fixed_speed;
             boats.bumps = contains(ride.base.symbol, "bumperboat");
             for (const glm::vec3& stop : course->other_stations)

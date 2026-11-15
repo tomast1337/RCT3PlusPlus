@@ -656,7 +656,7 @@ namespace rct3::simulation
                 if (boats != nullptr && water != nullptr)
                     for (Boat& boat : boats->boats)
                     {
-                        sail(boat, *water, boats->dock, boats->handling, boats->top.value_or(kTuning.boats.top_speed.value), ride.run.value, dt, r.get<Dice>(e).state, boats->boats, boats->bumps);
+                        sail(boat, *water, boats->dock, boats->handling, boats->top.value_or(kTuning.boats.top_speed).value, ride.run.value, dt, r.get<Dice>(e).state, boats->boats, boats->bumps);
                         sailing = sailing || boat.state != Sailing::Docked;
                     }
                 const RidePhase was = ride.phase;

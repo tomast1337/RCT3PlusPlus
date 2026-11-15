@@ -96,7 +96,7 @@ namespace rct3::scene::track
             { kBrakesRole, "TrackSpecialIcon_StraightBrakes" },
             { 2, "TrackSpecialIcon_StraightBlockBrakes" },
         } };
-        constexpr float kMostBrakeSpeed = 30; ///< m/s, past the fastest coasters' top speeds
+        constexpr units::Pace kMostBrakeSpeed { 30 }; ///< Past the fastest coasters' top speeds
         constexpr std::string_view kCompleteHelp = "ATE_TT_Autocomplete";
         constexpr std::string_view kNewSegmentHelp = "ATE_TT_NewTrackSegment";
         constexpr std::string_view kSplitHelp = "ATE_TT_Split";
@@ -316,10 +316,10 @@ namespace rct3::scene::track
                 using enum ui::screens::build::PieceParam;
                 if (shape.record.role == rct3::park::track::kRoleBrakes || shape.record.role == rct3::park::track::kRoleBlockBrake)
                 {
-                    const float ride_speed = shape.record.role == rct3::park::track::kRoleBrakes ? ride.options.brake_speed : ride.options.block_brake_off_speed;
+                    const float ride_speed = shape.record.role == rct3::park::track::kRoleBrakes ? ride.options.brake_speed.value : ride.options.block_brake_off_speed.value;
                     const float speed = b.brake_speed > 0 ? static_cast<float>(b.brake_speed) : std::round(ride_speed);
                     const auto tenths = [&](float metres) { return static_cast<int>(std::lround(metres * ui::screens::info::speed_scale(units) * 10)); };
-                    v.params.at(std::to_underlying(Speed)) = ui::screens::build::ParamBox { .value = tenths(speed), .least = tenths(1), .most = tenths(kMostBrakeSpeed), .decimals = 1, .unit = std::u16string(ui::screens::info::speed_unit(units)), .step = std::max(tenths(1), 1) };
+                    v.params.at(std::to_underlying(Speed)) = ui::screens::build::ParamBox { .value = tenths(speed), .least = tenths(1), .most = tenths(kMostBrakeSpeed.value), .decimals = 1, .unit = std::u16string(ui::screens::info::speed_unit(units)), .step = std::max(tenths(1), 1) };
                 }
                 if (shape.record.role == kHoldingRole)
                     v.params.at(std::to_underlying(HoldingTime)) = ui::screens::build::ParamBox { .value = b.holding_time, .most = kMostHoldingTime };
@@ -474,11 +474,11 @@ namespace rct3::scene::track
                     ride.platform_type = o.platform;
                     ride.mode = static_cast<save::model::OperatingMode>(o.mode);
                     // Its speeds as its file sets them, which the station pushes and the lift pulls trains at.
-                    ride.options.launch_speed = o.launch_speed;
-                    ride.options.lift_speed = o.lift_speed;
-                    ride.options.brake_speed = o.brake_speed;
-                    ride.options.block_brake_off_speed = o.block_brake_speed;
-                    ride.options.fixed_speed = o.fixed_speed;
+                    ride.options.launch_speed = { o.launch_speed };
+                    ride.options.lift_speed = { o.lift_speed };
+                    ride.options.brake_speed = { o.brake_speed };
+                    ride.options.block_brake_off_speed = { o.block_brake_speed };
+                    ride.options.fixed_speed = o.fixed_speed.transform([](float speed) { return units::Pace { speed }; });
                 }
         // Its riders sit on arms.
         const bool arm = !train_name.empty() && use_train(scene, *assets.install, index, train_name).value_or(false);
@@ -491,7 +491,7 @@ namespace rct3::scene::track
         if (ride.platform_style.empty())
             ride.platform_type.clear();
         if (!ride.trains.empty())
-            logging::logger("park").info("new {} runs {} with {} seats, lift {} m/s", item.symbol, train_name, ride.seats.size(), ride.options.lift_speed);
+            logging::logger("park").info("new {} runs {} with {} seats, lift {} m/s", item.symbol, train_name, ride.seats.size(), ride.options.lift_speed.value);
         // The simulation takes it on once its entrance and exit are placed beside its station (ride_placing.hpp).
         scene.track_rules.resize(scene.rides.rides.size());
         scene.track_rules[index.value] = rct3::park::track::load_track_rules(*file, ride.base.symbol);
@@ -729,7 +729,7 @@ namespace rct3::scene::track
         if (!design.empty())
         {
             use_split(scene, b, split);
-            logging::logger("park").info("design laid with {} of {} pieces for {}, mode {}, lift {} m/s", ride.track->pieces.size(), design.size(), (cash - scene.park.cash.value_or(units::Money { })).value, std::to_underlying(ride.mode), ride.options.lift_speed);
+            logging::logger("park").info("design laid with {} of {} pieces for {}, mode {}, lift {} m/s", ride.track->pieces.size(), design.size(), (cash - scene.park.cash.value_or(units::Money { })).value, std::to_underlying(ride.mode), ride.options.lift_speed.value);
             // Named and playing as its panel says; then, as a flat ride set down, on to its window and its doors,
             // the entrance first, where the design brought none. A ride in a pool has none to place.
             if (b.design_title.find_first_not_of(u' ') != std::u16string::npos)
@@ -1203,7 +1203,7 @@ namespace rct3::scene::track
                             b.holding_time = event->value;
                             break;
                         case ui::screens::build::PieceParam::Speed:
-                            b.brake_speed = std::clamp(static_cast<int>(std::lround(static_cast<float>(event->value) / 10 / ui::screens::info::speed_scale(units))), 1, static_cast<int>(kMostBrakeSpeed));
+                            b.brake_speed = std::clamp(static_cast<int>(std::lround(static_cast<float>(event->value) / 10 / ui::screens::info::speed_scale(units))), 1, static_cast<int>(kMostBrakeSpeed.value));
                             break;
                     }
                     break;

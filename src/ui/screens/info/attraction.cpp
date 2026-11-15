@@ -554,7 +554,7 @@ namespace rct3::ui::screens::info
             left_tick(AttractionControl::BlockSection, "RideOpModeDialog_BlockSection", o.block_sectioned);
             using enum save::model::OperatingMode;
             const bool launched = ride.mode == PoweredLaunch || ride.mode == ReverseInclinedLaunch || ride.mode == UpwardsLaunch || ride.mode == MultiplePoweredLaunch;
-            if (launched || o.lift_speed > 0)
+            if (launched || o.lift_speed.value > 0)
             {
                 // In hundredths of the player's unit, over a range of our own.
                 const float scale = speed_scale(units.distance) * 100;
@@ -566,7 +566,7 @@ namespace rct3::ui::screens::info
                 c.label = text(strings, key);
                 c.minimum = static_cast<int>(std::lround(low * scale));
                 c.maximum = static_cast<int>(std::lround(high * scale));
-                c.value = static_cast<int>(std::lround((launched ? o.launch_speed : o.lift_speed) * scale));
+                c.value = static_cast<int>(std::lround((launched ? o.launch_speed : o.lift_speed).value * scale));
                 c.step = static_cast<int>(std::lround(step * 100));
                 c.decimals = 2;
                 c.text = std::u16string(u" ") + std::u16string(speed_unit(units.distance));

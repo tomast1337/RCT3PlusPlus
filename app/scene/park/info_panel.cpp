@@ -727,7 +727,7 @@ namespace rct3::scene::park
             const float speed = static_cast<float>(change.value) / 100 / ui::screens::info::speed_scale(info_units(assets, options).distance);
             if (change.id == ui::screens::info::control_id(LaunchSpeed))
             {
-                ride->options.launch_speed = speed;
+                ride->options.launch_speed = { speed };
                 if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
                     if (auto* fleet = scene.sim.registry.try_get<simulation::Trains>(e))
                         for (simulation::Coaster& c : fleet->trains)
@@ -735,7 +735,7 @@ namespace rct3::scene::park
             }
             else
             {
-                ride->options.lift_speed = speed;
+                ride->options.lift_speed = { speed };
                 if (const entt::entity e = ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null; e != entt::null)
                     if (auto* fleet = scene.sim.registry.try_get<simulation::Trains>(e))
                         for (simulation::Coaster& c : fleet->trains)

@@ -19,7 +19,9 @@ park.setTime(0.5);
 await until(() => swimmers().length >= 3, 6000, "guests swimming");
 
 // Everyone in a pool in their swimwear, nobody outside one.
-const dressed = (state: string) => people.list().filter((p) => !p.staff && p.state === state);
+const dressed = (state: PersonState) =>
+    people.list().filter((p): p is WalkedPerson => !p.staff && p.state !== undefined && p.state === state);
+const guest = (i: number) => walked(people.list()[i], "the guest");
 expect(
     swimmers().every((p) => p.swimwear),
     "every swimmer in their swimwear",
@@ -29,18 +31,16 @@ expect(walking_in_swimwear === 0, `nobody walking the paths in swimwear, not ${w
 
 // Close up, from the side and from above: whole people in the water, not heads alone.
 const water = map.objects().filter((o) => o.overlay === kPool && o.symbol === "Base");
-const inWater = swimmers().filter((p) =>
-    water.some((w) => Math.floor(p.col!) === w.col && Math.floor(p.row!) === w.row),
-);
+const inWater = swimmers().filter((p) => water.some((w) => Math.floor(p.col) === w.col && Math.floor(p.row) === w.row));
 log("swimming", swimmers().length, "in the water", inWater.length);
 for (const [k, at] of inWater.slice(0, 2).entries()) {
     camera.look(
-        { col: at.col!, row: at.row!, up: at.up! - 0.3 },
-        { col: at.col! + 2.2, row: at.row! + 0.4, up: at.up! + 0.6 },
+        { col: at.col, row: at.row, up: at.up - 0.3 },
+        { col: at.col + 2.2, row: at.row + 0.4, up: at.up + 0.6 },
     );
     await frames(6);
     await screenshot(`pool_outfits_side_${k}`);
-    camera.look({ col: at.col!, row: at.row!, up: at.up! }, { col: at.col! + 0.6, row: at.row! + 0.6, up: at.up! + 4 });
+    camera.look({ col: at.col, row: at.row, up: at.up }, { col: at.col + 0.6, row: at.row + 0.6, up: at.up + 4 });
     await frames(6);
     await screenshot(`pool_outfits_above_${k}`);
 }
@@ -63,18 +63,15 @@ const letGo = async (col: number, row: number, name: string) => {
 };
 /** The puffs of sparkles alive round the guest. */
 const puffs = (who: number) => {
-    const at = people.list()[who];
+    const at = guest(who);
     return map
         .effects()
-        .filter((e) => e.effect === "magicsparkles" && Math.abs(e.col - at.col!) + Math.abs(e.row - at.row!) < 1.5);
+        .filter((e) => e.effect === "magicsparkles" && Math.abs(e.col - at.col) + Math.abs(e.row - at.row) < 1.5);
 };
 /** A close look at the guest, from a little above. */
 const closeUp = async (who: number, name: string) => {
-    const at = people.list()[who];
-    camera.look(
-        { col: at.col!, row: at.row!, up: at.up! + 0.5 },
-        { col: at.col! + 2.5, row: at.row! + 1, up: at.up! + 2.5 },
-    );
+    const at = guest(who);
+    camera.look({ col: at.col, row: at.row, up: at.up + 0.5 }, { col: at.col + 2.5, row: at.row + 1, up: at.up + 2.5 });
     await frames(3);
     await screenshot(name);
 };
@@ -82,24 +79,24 @@ const closeUp = async (who: number, name: string) => {
 // A guest on a path near the pool, picked up and let go over its water, close up.
 const middle = water[Math.floor(water.length / 2)];
 const paths = map.paths().filter((p) => !p.queue);
-const distance = (a: { col?: number; row?: number }, b: { col: number; row: number }) =>
-    Math.abs(a.col! - b.col) + Math.abs(a.row! - b.row);
+const distance = (a: { col: number; row: number }, b: { col: number; row: number }) =>
+    Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
 await until(() => dressed("walking").some((p) => distance(p, middle) < 25), 6000, "a guest walking near the pool");
-const list = people.list();
-const who = list.findIndex((p) => !p.staff && p.state === "walking" && distance(p, middle) < 25);
-const pool = water.reduce((a, b) => (distance(list[who], b) < distance(list[who], a) ? b : a));
-const near = (p: { col?: number; row?: number }) => distance(p, pool);
-log("guest", list[who].name, "at", list[who].col, list[who].row, "pool square", pool.col, pool.row);
+const who = people.list().findIndex((p) => !p.staff && p.state === "walking" && distance(p, middle) < 25);
+const first = guest(who);
+const pool = water.reduce((a, b) => (distance(first, b) < distance(first, a) ? b : a));
+const near = (p: { col: number; row: number }) => distance(p, pool);
+log("guest", first.name, "at", first.col, first.row, "pool square", pool.col, pool.row);
 camera.look({ col: pool.col + 0.5, row: pool.row + 0.5 }, { col: pool.col + 4, row: pool.row + 4, up: 6 });
 await frames(10);
 await pickUp(who);
-expect(people.list()[who].swimwear !== true, "the guest in their clothes, held");
+expect(guest(who).swimwear !== true, "the guest in their clothes, held");
 await letGo(pool.col + 0.5, pool.row + 0.5, "pool_outfits_held_over_pool");
 await until(() => people.list()[who].state === "swimming", 300, "the guest in the pool");
 await frames(2);
 expect(puffs(who).length > 0, "a puff of sparkles where they changed");
 await closeUp(who, "pool_outfits_puff_in");
-expect(people.list()[who].swimwear === true, "the guest in their swimwear in the pool");
+expect(guest(who).swimwear === true, "the guest in their swimwear in the pool");
 await frames(90);
 await closeUp(who, "pool_outfits_swimming_after");
 
@@ -107,13 +104,13 @@ await closeUp(who, "pool_outfits_swimming_after");
 camera.look({ col: pool.col + 0.5, row: pool.row + 0.5 }, { col: pool.col + 4, row: pool.row + 4, up: 6 });
 await frames(10);
 await pickUp(who);
-expect(people.list()[who].swimwear === true, "the guest still in their swimwear, held");
+expect(guest(who).swimwear === true, "the guest still in their swimwear, held");
 const path = paths
     .filter((p) => map.screen(p.col + 0.5, p.row + 0.5) !== undefined)
     .sort((a, b) => near(a) - near(b))[0];
 expect(path !== undefined, "a path in sight");
 await letGo(path.col + 0.5, path.row + 0.5, "pool_outfits_held_over_path");
-await until(() => people.list()[who].swimwear !== true, 300, "the guest dressed again");
+await until(() => guest(who).swimwear !== true, 300, "the guest dressed again");
 await frames(2);
 expect(puffs(who).length > 0, "a puff of sparkles where they changed back");
 await closeUp(who, "pool_outfits_puff_out");

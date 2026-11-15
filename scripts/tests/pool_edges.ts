@@ -29,8 +29,8 @@ const swimmers = (): (Seen | undefined)[] =>
     people
         .list()
         .map((p) =>
-            p.state === "swimming" && p.swimwear && p.col !== undefined && p.diving === undefined
-                ? { name: p.name, col: p.col, row: p.row!, up: p.up!, in_water: p.in_water === true, edge: p.pool_edge }
+            p.state === "swimming" && p.swimwear && p.diving === undefined
+                ? { name: p.name, col: p.col, row: p.row, up: p.up, in_water: p.in_water === true, edge: p.pool_edge }
                 : undefined,
         );
 
@@ -125,13 +125,13 @@ expect(
 
 // Each way in and out from the side: as it starts, halfway and once done.
 const shoot = async (i: number, name: string) => {
-    const p = people.list()[i];
+    const p = walked(people.list()[i], "the swimmer");
     await ui.click("bar/Top_Pause");
     const ground = (col: number, row: number) => (camera.look({ col, row }), camera.view().target[1]);
-    const from = { col: p.col! + 0.5, row: p.row! + 0.4 };
+    const from = { col: p.col + 0.5, row: p.row + 0.4 };
     camera.look(
-        { col: p.col!, row: p.row!, up: p.up! + 0.6 - ground(p.col!, p.row!) },
-        { ...from, up: p.up! + 0.9 - ground(from.col, from.row) },
+        { col: p.col, row: p.row, up: p.up + 0.6 - ground(p.col, p.row) },
+        { ...from, up: p.up + 0.9 - ground(from.col, from.row) },
     );
     await frames(3);
     await screenshot(name);
@@ -143,7 +143,7 @@ for (const [edge, name] of [
     ["ladder out", "ladder_out"],
     ["ladder in", "ladder_in"],
 ] as const) {
-    const found = () => people.list().findIndex((p) => p.pool_edge === edge);
+    const found = () => people.list().findIndex((p) => p.state !== undefined && p.pool_edge === edge);
     try {
         await until(() => found() >= 0, 3000, `a swimmer to ${edge}`);
     } catch {
@@ -154,6 +154,13 @@ for (const [edge, name] of [
     await shoot(i, `pool_edges_${name}_start`);
     await frames(40);
     await shoot(i, `pool_edges_${name}_mid`);
-    await until(() => people.list()[i].pool_edge !== edge, 600, `the ${edge} done`);
+    await until(
+        () => {
+            const p = people.list()[i];
+            return p.state === undefined || p.pool_edge !== edge;
+        },
+        600,
+        `the ${edge} done`,
+    );
     await shoot(i, `pool_edges_${name}_after`);
 }

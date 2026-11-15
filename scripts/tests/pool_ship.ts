@@ -105,7 +105,12 @@ for (let minute = 0; minute < 12 && (counts.at(-1) ?? 0) < 3; ++minute) {
     // A look each second: a slide down lasts only a few.
     for (let s = 0; s < 60; ++s) {
         await park.advance(1);
-        const on = people.list().filter((p) => p.ride === ship && p.climbing !== undefined);
+        const on = people
+            .list()
+            .filter(
+                (p): p is WalkedPerson & { state: "riding" } =>
+                    p.state === "riding" && p.ride === ship && p.climbing !== undefined,
+            );
         climbed += on.filter((p) => p.climbing === "climbing").length;
         slid += on.filter((p) => p.climbing === "sliding").length;
         if (!shot && on.some((p) => p.climbing === "sliding")) {
@@ -113,7 +118,7 @@ for (let minute = 0; minute < 12 && (counts.at(-1) ?? 0) < 3; ++minute) {
                 on.find((q) => q.climbing === "sliding"),
                 "someone sliding down the ship",
             );
-            camera.look({ col: p.col!, row: p.row!, up: p.up! }, { col: p.col! + 3, row: p.row! + 4, up: p.up! + 3 });
+            camera.look({ col: p.col, row: p.row, up: p.up }, { col: p.col + 3, row: p.row + 4, up: p.up + 3 });
             await frames(5);
             await screenshot("pool_ship_sliding");
             shot = true;

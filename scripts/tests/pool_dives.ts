@@ -43,19 +43,26 @@ await screenshot("pool_dives_tower_above");
 const diver = (high: boolean, step?: string) =>
     people
         .list()
-        .findIndex((p) => p.diving !== undefined && p.high_board === high && (step === undefined || p.diving === step));
+        .findIndex(
+            (p) =>
+                p.state !== undefined &&
+                p.diving !== undefined &&
+                p.high_board === high &&
+                (step === undefined || p.diving === step),
+        );
+const swimmer = (i: number) => walked(people.list()[i], "the diver");
 const look_at = async (i: number, name: string, behind = false) => {
     // Paused, so they stay where they are for the picture.
     await ui.click("bar/Top_Pause");
-    const p = people.list()[i];
-    log(name, p.diving, "at", p.col?.toFixed(2), p.row?.toFixed(2), "up", p.up?.toFixed(2));
+    const p = swimmer(i);
+    log(name, p.diving, "at", p.col.toFixed(2), p.row.toFixed(2), "up", p.up.toFixed(2));
     // Close and level with them, from the side of the board (both boards here reach out along the columns) or
     // from behind the tower. A person's `up` is their height in the world, a map point's over the ground there.
     const ground = (col: number, row: number) => (camera.look({ col, row }), camera.view().target[1]);
-    const from = behind ? { col: p.col! - 2, row: p.row! } : { col: p.col!, row: p.row! + 2 };
+    const from = behind ? { col: p.col - 2, row: p.row } : { col: p.col, row: p.row + 2 };
     camera.look(
-        { col: p.col!, row: p.row!, up: p.up! + 0.9 - ground(p.col!, p.row!) },
-        { ...from, up: p.up! + 1.2 - ground(from.col, from.row) },
+        { col: p.col, row: p.row, up: p.up + 0.9 - ground(p.col, p.row) },
+        { ...from, up: p.up + 1.2 - ground(from.col, from.row) },
     );
     await frames(3);
     await screenshot(name);
@@ -66,28 +73,32 @@ const look_at = async (i: number, name: string, behind = false) => {
 await until(() => diver(true, "climb") >= 0, 6000, "a swimmer climbing the high board");
 const high = diver(true);
 // Where they set off from, at the ladder's foot: the ground the pool is on need not be at height 0.
-const start = people.list()[high];
-const foot = start.up!;
+const start = swimmer(high);
+const foot = start.up;
 await look_at(high, "pool_dives_climb");
 await look_at(high, "pool_dives_climb_back", true);
 let most = 0;
-const count = () => (most = Math.max(most, people.list().filter((p) => p.diving !== undefined && p.high_board).length));
-await until(() => (count(), people.list()[high].diving === "walk"), 3600, "the diver up on a board");
-const top = people.list()[high].up!;
-await until(() => (count(), people.list()[high].diving === "jump"), 600, "the diver at the board's end");
+const count = () =>
+    (most = Math.max(
+        most,
+        people.list().filter((p) => p.state !== undefined && p.diving !== undefined && p.high_board).length,
+    ));
+await until(() => (count(), swimmer(high).diving === "walk"), 3600, "the diver up on a board");
+const top = swimmer(high).up;
+await until(() => (count(), swimmer(high).diving === "jump"), 600, "the diver at the board's end");
 await look_at(high, "pool_dives_board");
 await until(
-    () => (count(), people.list()[high].diving === "fall" && people.list()[high].up! < (top + foot) / 2),
+    () => (count(), swimmer(high).diving === "fall" && swimmer(high).up < (top + foot) / 2),
     600,
     "the diver halfway down",
 );
 await look_at(high, "pool_dives_fall");
-await until(() => (count(), people.list()[high].diving === "surface"), 600, "the diver in the water");
+await until(() => (count(), swimmer(high).diving === "surface"), 600, "the diver in the water");
 await frames(2);
 await screenshot("pool_dives_splash");
-await until(() => (count(), people.list()[high].diving === undefined), 600, "the diver swimming on");
+await until(() => (count(), swimmer(high).diving === undefined), 600, "the diver swimming on");
 expect(
-    people.list()[high].state === "swimming" && people.list()[high].swimwear === true,
+    swimmer(high).state === "swimming" && swimmer(high).swimwear === true,
     "the diver swimming on in their swimwear",
 );
 expect(most === 1, `one on the high board at a time, not ${most}`);
@@ -97,8 +108,7 @@ const off = map
     .objects()
     .filter((o) => o.overlay === kPool && o.symbol === "DBTopBoard")
     .sort(
-        (a, b) =>
-            Math.hypot(a.col - start.col!, a.row - start.row!) - Math.hypot(b.col - start.col!, b.row - start.row!),
+        (a, b) => Math.hypot(a.col - start.col, a.row - start.row) - Math.hypot(b.col - start.col, b.row - start.row),
     )[0];
 const extras = () =>
     map
@@ -149,8 +159,8 @@ build.stop();
 await until(() => diver(false, "jump") >= 0, 12000, "a swimmer at the small board's end");
 const small = diver(false);
 await look_at(small, "pool_dives_small_board");
-await until(() => people.list()[small].diving === "surface", 600, "the small board's diver in the water");
+await until(() => swimmer(small).diving === "surface", 600, "the small board's diver in the water");
 await frames(2);
 await screenshot("pool_dives_small_splash");
-await until(() => people.list()[small].diving === undefined, 600, "the small board's diver swimming on");
+await until(() => swimmer(small).diving === undefined, 600, "the small board's diver swimming on");
 log("high diver", people.list()[high].name, "small", people.list()[small].name);

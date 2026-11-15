@@ -19,7 +19,7 @@ await frames(60);
 // Guests on the paths: some running, most walking.
 await until(() => people.list().some((p) => p.state === "walking" && p.gait === "run"), 3600, "a guest running");
 const everyone = people.list();
-const walkers = everyone.filter((p) => p.state === "walking" && p.gait !== undefined);
+const walkers = everyone.filter((p): p is WalkedPerson => p.state === "walking" && p.gait !== undefined);
 log(
     "gaits",
     ["walk", "run", "weary", "queasy", "bursting"].map((g) => `${g} ${count(walkers, (p) => p.gait === g)}`).join(", "),
@@ -48,21 +48,21 @@ await behind(
 const spin = rides.list().findIndex((r) => r.symbol === "TopSpin:anr");
 expect(spin >= 0, "the Top Spin in the park");
 await until(
-    () => people.list().some((p) => p.ride === spin && p.reaction === "hands up"),
+    () => people.list().some((p) => p.state === "riding" && p.ride === spin && p.reaction === "hands up"),
     7200,
     "a Top Spin rider with their hands up",
 );
-const spinners = people.list().filter((p) => p.ride === spin);
+const spinners = people.list().filter((p) => p.state === "riding" && p.ride === spin);
 log(
     "top spin",
     ["waiting", "calm", "hands up", "covering eyes"]
-        .map((r) => `${r} ${count(spinners, (p) => p.reaction === r)}`)
+        .map((r) => `${r} ${count(spinners, (p) => p.state === "riding" && p.reaction === r)}`)
         .join(", "),
 );
 await ui.click("bar/Top_Pause");
 await frames(2);
 await behind(
-    people.list().findIndex((p) => p.ride === spin && p.reaction === "hands up"),
+    people.list().findIndex((p) => p.state === "riding" && p.ride === spin && p.reaction === "hands up"),
     "top spin rider with hands up",
 );
 
@@ -75,7 +75,11 @@ const coasters = rides
     .map((r, i) => ({ r, i }))
     .filter(({ r }) => !r.flat && (r.trains ?? 0) > 0);
 expect(coasters.length > 0, "a coaster in the park");
-await until(() => people.list().some((p) => p.reaction === "hands up"), 7200, "a rider with their hands up");
+await until(
+    () => people.list().some((p) => p.state === "riding" && p.reaction === "hands up"),
+    7200,
+    "a rider with their hands up",
+);
 // Over a lap or so, the share of the coaster riders under way with their hands up: plain to see, as in the game.
 const onCoaster = new Set(coasters.map(({ i }) => i));
 let under_way = 0;
@@ -83,10 +87,10 @@ let hands_up = 0;
 const tally = new Map<string, number>();
 for (let n = 0; n < 240; ++n) {
     await frames(15);
-    for (const p of people
-        .list()
-        .filter((p) => p.ride !== undefined && onCoaster.has(p.ride) && p.reaction !== undefined)) {
-        tally.set(p.reaction!, (tally.get(p.reaction!) ?? 0) + 1);
+    for (const p of people.list()) {
+        if (p.state !== "riding" || p.ride === undefined || !onCoaster.has(p.ride) || p.reaction === undefined)
+            continue;
+        tally.set(p.reaction, (tally.get(p.reaction) ?? 0) + 1);
         if (p.reaction === "waiting") continue;
         ++under_way;
         hands_up += p.reaction === "hands up" ? 1 : 0;
@@ -99,14 +103,18 @@ log(
 );
 expect(hands_up > under_way / 6, "hands up on more than one coaster rider in six under way");
 await until(
-    () => people.list().some((p) => p.reaction === "waiting"),
+    () => people.list().some((p) => p.state === "riding" && p.reaction === "waiting"),
     7200,
     "riders waiting in a station or up a lift",
 );
 // Paused once a rider has their hands up, so they keep them up for the picture.
-await until(() => people.list().some((p) => p.reaction === "hands up"), 7200, "a rider with their hands up again");
+await until(
+    () => people.list().some((p) => p.state === "riding" && p.reaction === "hands up"),
+    7200,
+    "a rider with their hands up again",
+);
 await ui.click("bar/Top_Pause");
 await frames(2);
-const rider = people.list().findIndex((p) => p.reaction === "hands up");
+const rider = people.list().findIndex((p) => p.state === "riding" && p.reaction === "hands up");
 expect(rider >= 0, "the rider's hands still up once paused");
 await behind(rider, "rider with hands up");

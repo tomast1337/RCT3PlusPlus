@@ -49,13 +49,13 @@ for (const slide of saved.filter((i) => !/LazyRiver/i.test(rides.list()[i].symbo
         6000,
         `a swimmer riding ${info().name}`,
     );
-    const rider = must(
+    const rider = walked(
         people.list().find((p) => p.state === "riding" && p.ride === slide),
         "a rider on the slide",
     );
     camera.look(
-        { col: rider.col!, row: rider.row!, up: rider.up! },
-        { col: rider.col! + 9, row: rider.row! + 9, up: rider.up! + 9 },
+        { col: rider.col, row: rider.row, up: rider.up },
+        { col: rider.col + 9, row: rider.row + 9, up: rider.up + 9 },
     );
     await frames(10);
     await screenshot(`pool_slides_open_riding_${slide}`);

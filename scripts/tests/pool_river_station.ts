@@ -110,7 +110,8 @@ await frames(20);
 await screenshot("river_station_joined");
 
 // 2. Swimmers get on from the square beside a station, and riders get off onto one; riders keep floating round.
-const floating = () => people.list().filter((p) => p.floating !== undefined && p.ride === river);
+const floating = () =>
+    people.list().filter((p) => p.state === "riding" && p.floating !== undefined && p.ride === river);
 const before = new Map<string, { col?: number; row?: number }>();
 const boarded: string[] = [];
 const off: string[] = [];
@@ -124,7 +125,9 @@ for (let second = 0; second < 600 && (boarded.length < 2 || off.length < 2); ++s
     const named = new Map<string, number>();
     for (const p of all) named.set(p.name, (named.get(p.name) ?? 0) + 1);
     const now = all.filter((p) => named.get(p.name) === 1);
-    const floating_now = new Set(now.filter((p) => p.floating !== undefined && p.ride === river).map((p) => p.name));
+    const floating_now = new Set(
+        now.filter((p) => p.state === "riding" && p.floating !== undefined && p.ride === river).map((p) => p.name),
+    );
     for (const p of now) {
         if (floating_now.has(p.name) && !aboard.has(p.name) && before.has(p.name)) {
             // Where they stood a second ago, before getting on: by the square beside the station.
@@ -143,12 +146,12 @@ for (let second = 0; second < 600 && (boarded.length < 2 || off.length < 2); ++s
             }
         }
         if (!floating_now.has(p.name) && aboard.has(p.name) && p.state === "swimming") {
-            log("off", p.name, "at", p.col?.toFixed(2), p.row?.toFixed(2));
+            log("off", p.name, "at", p.col.toFixed(2), p.row.toFixed(2));
             expect(near(p, 0.6), `${p.name} off onto a joined square, not at ${p.col}, ${p.row}`);
             expect(p.swimwear === true, `${p.name} still in their swimwear`);
             off.push(p.name);
         }
-        before.set(p.name, { col: p.col, row: p.row });
+        before.set(p.name, p.state !== undefined ? { col: p.col, row: p.row } : {});
     }
     aboard = floating_now;
     if (second % 30 === 0) riders.push(info().riders ?? 0);

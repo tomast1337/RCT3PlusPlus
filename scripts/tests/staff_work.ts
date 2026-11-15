@@ -66,10 +66,11 @@ await hire([
 /** Waits for any worker of `role` (the one hired among them) to be at one of `jobs`, then shows them close up. */
 async function shoot(role: string, jobs: string[], seconds: number, name: string): Promise<void> {
     // Near the ground (`up` is their height in the world): a ride raised on its station may hide them under its deck.
-    const working = () => staff().find((p) => p.role === role && jobs.includes(p.job ?? "none") && (p.up ?? 0) < 3);
+    const working = () =>
+        staff().find((p) => p.state !== undefined && p.role === role && jobs.includes(p.job ?? "none") && p.up < 3);
     await park.advanceUntil(() => working() !== undefined, seconds, `a ${role} at ${jobs.join(" or ")}`);
-    const p = working()!;
-    camera.look({ col: p.col!, row: p.row!, up: 1 }, { col: p.col! + 1, row: p.row! + 1, up: 4 });
+    const p = walked(working(), `a ${role} at work`);
+    camera.look({ col: p.col, row: p.row, up: 1 }, { col: p.col + 1, row: p.row + 1, up: 4 });
     // The people's meshes are built beside the frame, a few frames behind the camera.
     await frames(20);
     log(role, JSON.stringify(p));
@@ -77,10 +78,11 @@ async function shoot(role: string, jobs: string[], seconds: number, name: string
 }
 
 // Litter strewn where each handyman walks: the park is kept too clean to wait for the guests to drop some.
-const handymen = () => staff().filter((p) => p.role === "handyman" && p.state === "walking" && p.col !== undefined);
+const handymen = () =>
+    staff().filter((p): p is typeof p & WalkedPerson => p.role === "handyman" && p.state === "walking");
 await park.advanceUntil(() => handymen().length > 0, 120, "a handyman walking");
 for (const h of handymen())
-    expect(park.dropLitter(Math.floor(h.col!), Math.floor(h.row!), 10), "litter dropped on the path");
+    expect(park.dropLitter(Math.floor(h.col), Math.floor(h.row), 10), "litter dropped on the path");
 await shoot("handyman", ["sweep"], 600, "staff_work_sweep");
 await shoot("guard", ["watch"], 600, "staff_work_guard");
 await shoot("mechanic", ["fix", "inspect"], 3600, "staff_work_mechanic");

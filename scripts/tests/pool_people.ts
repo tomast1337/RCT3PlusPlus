@@ -24,8 +24,8 @@ const daylight = () => {
 daylight();
 const { squares, rooms } = map.pools();
 expect(rooms.length > 0, "a pool complex with changing rooms");
-const inPool = (p: { col?: number; row?: number }) =>
-    p.col !== undefined && squares.some((s) => s.col === Math.floor(p.col!) && s.row === Math.floor(p.row!));
+const inPool = (p: Person) =>
+    p.state !== undefined && squares.some((s) => s.col === Math.floor(p.col) && s.row === Math.floor(p.row));
 const slides = rides
     .list()
     .map((r, i) => [r, i] as const)
@@ -37,24 +37,27 @@ expect(looping !== undefined, "a slide running back up to its station");
 const name = (i: number) => rides.list()[i].name;
 
 // 1. The inspector, loaded where the park left them: swimming in the complex, on its paving or in its water.
-const inspector = () => people.list().find((p) => p.staff && p.role === "inspector");
-expect(inspector() !== undefined, "an inspector");
+const inspector = () =>
+    walked(
+        staff().find((p) => p.role === "inspector"),
+        "an inspector on the map",
+    );
 log("inspector", JSON.stringify(inspector()));
 expect(
-    inspector()!.state === "swimming" && inspector()!.swimwear === true && inPool(inspector()!),
+    inspector().state === "swimming" && inspector().swimwear === true && inPool(inspector()),
     "the inspector swimming in the complex",
 );
-const i0 = inspector()!;
-camera.look({ col: i0.col!, row: i0.row!, up: i0.up! }, { col: i0.col! + 6, row: i0.row! + 6, up: i0.up! + 8 });
+const i0 = inspector();
+camera.look({ col: i0.col, row: i0.row, up: i0.up }, { col: i0.col + 6, row: i0.row + 6, up: i0.up + 8 });
 await frames(10);
 await screenshot("pool_people_inspector");
-for (let k = 0; k < 20 && inspector()!.state === "swimming"; ++k) {
+for (let k = 0; k < 20 && inspector().state === "swimming"; ++k) {
     await park.advance(2);
-    const i = inspector()!;
+    const i = inspector();
     if (i.state !== "swimming") break;
-    expect(inPool(i), `the inspector staying in the complex, not at ${i.col?.toFixed(1)},${i.row?.toFixed(1)}`);
+    expect(inPool(i), `the inspector staying in the complex, not at ${i.col.toFixed(1)},${i.row.toFixed(1)}`);
     expect(
-        i.in_water === true || Math.abs(i.up! - Math.round(i.up!)) < 0.5,
+        i.in_water === true || Math.abs(i.up - Math.round(i.up)) < 0.5,
         `the inspector on the paving or in the water, not at height ${i.up}`,
     );
 }
@@ -67,7 +70,7 @@ await until(() => under("Staff_Title", "Staff_HireMechanicIcon") !== undefined, 
 const staffCount = people.list().filter((p) => p.staff).length;
 await ui.click(must(under("Staff_Title", "Staff_HireMechanicIcon"), "Staff_HireMechanicIcon under Staff_Title"));
 await until(() => people.list().filter((p) => p.staff).length === staffCount + 1, 60, "a mechanic hired");
-const mechanic = () => people.list().filter((p) => p.staff && p.role === "mechanic")[0];
+const mechanic = () => staff().filter((p) => p.role === "mechanic")[0];
 await until(() => mechanic().state === "held", 30, "the mechanic in hand");
 const paths = map.paths().filter((p) => !p.queue && !p.raised);
 const room = rooms[0];
@@ -89,37 +92,37 @@ await frames(5);
 await pointer.click(at!.x, at!.y);
 await until(() => mechanic().state !== "held", 60, "the mechanic put down");
 await park.advanceUntil(() => mechanic().job === "fix", 120, "the mechanic sent to the slide");
-const m0 = mechanic();
-camera.look({ col: m0.col!, row: m0.row!, up: m0.up! }, { col: m0.col! + 6, row: m0.row! + 6, up: m0.up! + 8 });
+const m0 = walked(mechanic(), "the mechanic on the map");
+camera.look({ col: m0.col, row: m0.row, up: m0.up }, { col: m0.col + 6, row: m0.row + 6, up: m0.up + 8 });
 await frames(10);
 await screenshot("pool_people_mechanic_going");
 // They stop at a changing room's door, out on the path, and stay there till the slide is mended.
-const fromRoom = (m: { col?: number; row?: number }) =>
-    Math.min(...rooms.map((r) => Math.hypot(m.col! - r.col - 0.5, m.row! - r.row - 0.5)));
-let last = mechanic();
+const fromRoom = (m: WalkedPerson) =>
+    Math.min(...rooms.map((r) => Math.hypot(m.col - r.col - 0.5, m.row - r.row - 0.5)));
+let last = walked(mechanic(), "the mechanic on the map");
 await park.advanceUntil(
     () => {
-        const m = mechanic();
+        const m = walked(mechanic(), "the mechanic on the map");
         expect(!inPool(m), "the mechanic kept out of the complex");
-        const still = m.job === "fix" && Math.hypot(m.col! - last.col!, m.row! - last.row!) < 0.01;
+        const still = m.job === "fix" && Math.hypot(m.col - last.col, m.row - last.row) < 0.01;
         last = m;
         return still;
     },
     600,
     "the mechanic stopped to work",
 );
-const m1 = mechanic();
+const m1 = walked(mechanic(), "the mechanic on the map");
 log(
     "mechanic working at",
-    m1.col?.toFixed(1),
-    m1.row?.toFixed(1),
+    m1.col.toFixed(1),
+    m1.row.toFixed(1),
     m1.state,
     m1.job,
     "from a room",
     fromRoom(m1).toFixed(1),
 );
 expect(fromRoom(m1) < 1.5, "the mechanic at a changing room's door");
-camera.look({ col: m1.col!, row: m1.row!, up: m1.up! }, { col: m1.col! - 4, row: m1.row! + 4, up: m1.up! + 5 });
+camera.look({ col: m1.col, row: m1.row, up: m1.up }, { col: m1.col - 4, row: m1.row + 4, up: m1.up + 5 });
 daylight();
 await frames(5);
 await screenshot("pool_people_mechanic_repairing");
@@ -139,19 +142,20 @@ await park.advanceUntil(
 // Those queueing in swimwear nearer this slide's platform than any other's.
 const platform = (ride: number) => rides.list()[ride].platformSquares![0];
 const line = (ride: number) =>
-    people.list().filter((p) => {
-        const gap = (i: number) => Math.hypot(p.col! - platform(i).col - 0.5, p.row! - platform(i).row - 0.5);
-        return p.state === "queueing" && p.swimwear && slides.every(([, i]) => gap(ride) <= gap(i));
+    people.list().filter((p): p is WalkedPerson => {
+        if (p.state !== "queueing") return false;
+        const gap = (i: number) => Math.hypot(p.col - platform(i).col - 0.5, p.row - platform(i).row - 0.5);
+        return p.swimwear === true && slides.every(([, i]) => gap(ride) <= gap(i));
     });
 const q = line(broken![1]);
-log("line", q.length, q.map((p) => `${p.col?.toFixed(1)},${p.row?.toFixed(1)},${p.up?.toFixed(1)}`).join(" "));
-const spread = Math.max(...q.map((a) => Math.max(...q.map((b) => Math.hypot(a.col! - b.col!, a.row! - b.row!)))));
+log("line", q.length, q.map((p) => `${p.col.toFixed(1)},${p.row.toFixed(1)},${p.up.toFixed(1)}`).join(" "));
+const spread = Math.max(...q.map((a) => Math.max(...q.map((b) => Math.hypot(a.col - b.col, a.row - b.row)))));
 // Under a metre a step, four to a square
 expect(spread > (q.length - 1) * 0.1, "the line strung out a step apart, not all on one spot");
 const first = q[0];
 camera.look(
-    { col: first.col!, row: first.row!, up: first.up! },
-    { col: first.col! + 2.5, row: first.row! + 2.5, up: first.up! + 3 },
+    { col: first.col, row: first.row, up: first.up },
+    { col: first.col + 2.5, row: first.row + 2.5, up: first.up + 3 },
 );
 await frames(10);
 daylight();
@@ -177,11 +181,11 @@ log(
     "riders",
     riders,
     "line",
-    loop.map((p) => `${p.col?.toFixed(1)},${p.row?.toFixed(1)},${p.up?.toFixed(1)}`).join(" "),
+    loop.map((p) => `${p.col.toFixed(1)},${p.row.toFixed(1)},${p.up.toFixed(1)}`).join(" "),
 );
 if (loop.length > 0) {
     const p = loop[loop.length - 1];
-    camera.look({ col: p.col!, row: p.row!, up: p.up! }, { col: p.col! - 3, row: p.row! - 2, up: p.up! + 3 });
+    camera.look({ col: p.col, row: p.row, up: p.up }, { col: p.col - 3, row: p.row - 2, up: p.up + 3 });
     await frames(10);
     daylight();
     await frames(5);

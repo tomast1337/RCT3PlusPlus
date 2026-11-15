@@ -94,9 +94,13 @@ await ui.click(under("Staff_Title", "close") ?? under("Staff_Title", "Close") ??
 // At work on it: the window shows it broken down.
 const mechanic = () => staff()[count];
 await until(
-    () =>
-        Math.hypot((mechanic().col ?? 1e9) - (site.col + 0.5), (mechanic().row ?? 1e9) - (site.row + 0.5)) < 1.6 ||
-        !stall().broken,
+    () => {
+        const m = mechanic();
+        return (
+            (m.state !== undefined && Math.hypot(m.col - (site.col + 0.5), m.row - (site.row + 0.5)) < 1.6) ||
+            !stall().broken
+        );
+    },
     600,
     "the mechanic at the stall",
 );

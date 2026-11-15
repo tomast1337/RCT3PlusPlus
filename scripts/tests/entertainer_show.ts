@@ -18,9 +18,9 @@ await park.advanceUntil(() => park.guests() >= 40, 1200, "guests in the park");
 // The path tile with the most guests walking about it, off the queues.
 const paths = map.paths().filter((p) => !p.queue && !p.raised);
 const walkers = () =>
-    people.list().filter((p) => !p.staff && p.state === "walking" && p.col !== undefined && p.row !== undefined);
+    people.list().filter((p): p is Person & { state: "walking" } => !p.staff && p.state === "walking");
 const crowd_at = (col: number, row: number) =>
-    walkers().filter((p) => Math.abs(p.col! - col - 0.5) < 2 && Math.abs(p.row! - row - 0.5) < 2).length;
+    walkers().filter((p) => Math.abs(p.col - col - 0.5) < 2 && Math.abs(p.row - row - 0.5) < 2).length;
 const busy = paths.reduce((a, b) => (crowd_at(b.col, b.row) > crowd_at(a.col, a.row) ? b : a));
 camera.look({ col: busy.col + 0.5, row: busy.row + 0.5 }, { col: busy.col + 4, row: busy.row + 4, up: 9 });
 await frames(5);
@@ -49,32 +49,40 @@ await pointer.click(at.x, at.y);
 await until(() => star().state !== "held", 60, "the entertainer let go");
 
 // A show, with a crowd round it.
-const watchers = () => people.list().filter((p) => p.watching === "show");
+const watchers = () => people.list().filter((p) => p.state !== undefined && p.watching === "show");
+// Put down, the entertainer is walked by the simulation from here on.
+const walker = () => walked(star(), "the entertainer walked");
 const look_at_star = () => {
-    const s = star();
-    if (s.col !== undefined && s.row !== undefined)
-        camera.look(
-            { col: s.col, row: s.row, up: (s.up ?? 0) + 1 },
-            { col: s.col - 1, row: s.row + 1.2, up: (s.up ?? 0) + 3.5 },
-        );
+    const s = walker();
+    camera.look({ col: s.col, row: s.row, up: s.up + 1 }, { col: s.col - 1, row: s.row + 1.2, up: s.up + 3.5 });
 };
-await park.advanceUntil(() => star().show !== undefined, 600, "a show");
-log("show begins with", star().show);
-await park.advanceUntil(() => watchers().length >= 3 || star().show === undefined, 30, "a crowd");
+await park.advanceUntil(() => walker().show !== undefined, 600, "a show");
+log("show begins with", walker().show);
+await park.advanceUntil(() => watchers().length >= 3 || walker().show === undefined, 30, "a crowd");
 await park.advance(2); // Time to step into the ring
 look_at_star();
 await frames(10);
-log("crowd", watchers().length, "move", star().show);
+log("crowd", watchers().length, "move", walker().show);
 expect(watchers().length >= 1, "guests watching the show");
 await screenshot("show_crowd");
 
 const clapping = () =>
     people
         .list()
-        .filter((p) => !p.staff && (p.gesture === "applause" || p.gesture === "jumpjoy" || p.gesture === "laugh"));
-await park.advanceUntil(() => star().show === undefined, 60, "the show over");
+        .filter(
+            (p) =>
+                !p.staff &&
+                p.state !== undefined &&
+                (p.gesture === "applause" || p.gesture === "jumpjoy" || p.gesture === "laugh"),
+        );
+await park.advanceUntil(() => walker().show === undefined, 60, "the show over");
 look_at_star();
 await frames(3);
-log("applause", clapping().length, "grumbles", people.list().filter((p) => p.gesture === "shakehead").length);
+log(
+    "applause",
+    clapping().length,
+    "grumbles",
+    people.list().filter((p) => p.state !== undefined && p.gesture === "shakehead").length,
+);
 expect(clapping().length >= 1, "the crowd clapping after the show");
 await screenshot("show_applause");

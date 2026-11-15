@@ -133,16 +133,19 @@ expect(
     park.pathItems().some((i) => i.kind === "bin"),
     "the bin known to guests",
 );
-const onTile = (p: { col?: number; row?: number }, col: number, row: number) =>
-    p.col !== undefined && Math.floor(p.col) === col && Math.floor(p.row!) === row;
-const binning = () => people.list().find((p) => p.gesture === "handticket" && onTile(p, binTile.col, binTile.row));
+const onTile = (p: { col: number; row: number }, col: number, row: number) =>
+    Math.floor(p.col) === col && Math.floor(p.row) === row;
+const binning = () =>
+    people
+        .list()
+        .find(
+            (p): p is WalkedPerson =>
+                p.state !== undefined && p.gesture === "handticket" && onTile(p, binTile.col, binTile.row),
+        );
 await dryUntil(() => binning() !== undefined, 1800, "a guest putting their empty in the bin");
-const binner = binning()!;
+const binner = must(binning(), "a guest at the bin");
 daylight();
-camera.look(
-    { col: binner.col!, row: binner.row!, up: 0.8 },
-    { col: binner.col! + 1.2, row: binner.row! + 1.5, up: 2.5 },
-);
+camera.look({ col: binner.col, row: binner.row, up: 0.8 }, { col: binner.col + 1.2, row: binner.row + 1.5, up: 2.5 });
 await frames(4);
 await screenshot("path_uses_bin");
 
@@ -159,11 +162,11 @@ await frames(10);
 await screenshot("path_uses_cash");
 
 // The fire beside the road watched.
-const watcher = () => people.list().find((p) => p.lingering === "sight" && p.col !== undefined);
+const watcher = () => people.list().find((p): p is WalkedPerson => p.state !== undefined && p.lingering === "sight");
 await dryUntil(() => watcher() !== undefined, 1800, "a guest watching the fire");
-const w = watcher()!;
+const w = must(watcher(), "a guest watching the fire");
 daylight();
-camera.look({ col: w.col!, row: w.row!, up: 0.8 }, { col: w.col! + 1.5, row: w.row! + 1.5, up: 2.5 });
+camera.look({ col: w.col, row: w.row, up: 0.8 }, { col: w.col + 1.5, row: w.row + 1.5, up: 2.5 });
 await frames(10);
 await screenshot("path_uses_fire");
 quit(0);

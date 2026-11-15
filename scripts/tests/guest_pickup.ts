@@ -22,7 +22,10 @@ const clear = (col: number, row: number) => {
     const at = map.screen(col, row);
     return at !== undefined && at.x > 0.05 && at.x < 0.95 && at.y > 0.1 && at.y < 0.88 && !(at.x > 0.55 && at.y > 0.65);
 };
-const tileOf = (p: { col?: number; row?: number }) => `${Math.floor(p.col!)},${Math.floor(p.row!)}`;
+const tileOf = (p: Person) => {
+    const at = walked(p, "the guest on the map");
+    return `${Math.floor(at.col)},${Math.floor(at.row)}`;
+};
 
 // A guest walking the paths, shown in the park.
 await until(() => people.list().some((p) => !p.staff && p.state === "walking"), 600, "a guest walking");
@@ -30,8 +33,8 @@ const who = people.list().findIndex((p) => !p.staff && p.state === "walking");
 const state = () => people.list()[who].state;
 /** Back on their feet: walking on, or, one of a party, waiting for or walking back to it. */
 const onFoot = () => state() === "walking" || state() === "waiting" || state() === "lost";
-const guest = people.list()[who];
-camera.look({ col: guest.col!, row: guest.row! }, { col: guest.col! + 5, row: guest.row! + 5, up: 25 });
+const guest = walked(people.list()[who], "the guest walking");
+camera.look({ col: guest.col, row: guest.row }, { col: guest.col + 5, row: guest.row + 5, up: 25 });
 await frames(10);
 people.show(who);
 await until(() => ui.find("info") !== undefined, 120, "the guest's window");
@@ -79,24 +82,22 @@ const dropAt = async (col: number, row: number) => {
 
 // Onto a path a few tiles off: they fall, then walk on from there.
 await pickUp();
-const target = paths.find(
-    (p) => Math.abs(p.col - guest.col!) + Math.abs(p.row - guest.row!) >= 3 && clear(p.col, p.row),
-);
+const target = paths.find((p) => Math.abs(p.col - guest.col) + Math.abs(p.row - guest.row) >= 3 && clear(p.col, p.row));
 expect(target !== undefined, "a path in sight a few tiles off");
 const over = must(map.screen(target!.col, target!.row), "the tile in sight");
 pointer.move(over.x, over.y);
 await frames(10);
-const hung = people.list()[who];
+const hung = walked(people.list()[who], "the guest held");
 expect(tileOf(hung) === `${target!.col},${target!.row}`, "the guest hanging over the tile under the pointer");
 await screenshot("held");
 // A close look at them hanging, the pointer kept over the same spot.
 camera.look(
-    { col: hung.col!, row: hung.row!, up: hung.up! - 2 },
-    { col: hung.col! + 1.5, row: hung.row! + 1.5, up: hung.up! + 2 },
+    { col: hung.col, row: hung.row, up: hung.up - 2 },
+    { col: hung.col + 1.5, row: hung.row + 1.5, up: hung.up + 2 },
 );
 await frames(5);
 await screenshot("held_close");
-camera.look({ col: guest.col!, row: guest.row! }, { col: guest.col! + 5, row: guest.row! + 5, up: 25 });
+camera.look({ col: guest.col, row: guest.row }, { col: guest.col + 5, row: guest.row + 5, up: 25 });
 pointer.move(over.x, over.y);
 await frames(5);
 await pointer.click(over.x, over.y);

@@ -10,7 +10,7 @@
 export {};
 
 /** The sellers in the park, each with the object they serve at. */
-const sellers = () => people.list().filter((p) => p.post !== undefined);
+const sellers = () => staff().filter((p) => p.post !== undefined);
 
 /** The seller standing on or beside tile `spot`, if any. */
 const seller_at = (spot: Spot | null | undefined) =>

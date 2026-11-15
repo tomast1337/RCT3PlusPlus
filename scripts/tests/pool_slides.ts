@@ -29,18 +29,25 @@ await until(
     6000,
     "a swimmer riding the slide",
 );
-await until(() => riding() >= 0 && people.list()[riding()].reaction !== "waiting", 600, "the rider on their way down");
+await until(
+    () => {
+        const p = people.list()[riding()];
+        return p?.state === "riding" && p.reaction !== "waiting";
+    },
+    600,
+    "the rider on their way down",
+);
 const rider = riding();
-expect(people.list()[rider].swimwear === true, "the rider in their swimwear");
-const at = people.list()[rider];
-camera.look({ col: at.col!, row: at.row!, up: at.up! }, { col: at.col! + 3, row: at.row! + 3, up: at.up! + 3 });
+const at = walked(people.list()[rider], "the rider");
+expect(at.swimwear === true, "the rider in their swimwear");
+camera.look({ col: at.col, row: at.row, up: at.up }, { col: at.col + 3, row: at.row + 3, up: at.up + 3 });
 await frames(6);
 await screenshot("pool_slides_riding");
 
 // Off the end they splash down into the pool, a low burst of spray and a ring of foam where the slide meets the
 // water, and swim on, still in their swimwear.
 await until(() => people.list()[rider].state !== "riding", 2400, "the rider off the end");
-const flying = people.list()[rider];
+const flying = walked(people.list()[rider], "the rider off the end");
 log("off the end as", flying.state, "swimwear", flying.swimwear);
 expect(flying.swimwear === true, "the rider still in their swimwear off the end");
 const splashing = () =>
@@ -49,7 +56,7 @@ const splashing = () =>
         .filter(
             (e) =>
                 /^(splash2|waterwakemedium)$/.test(e.effect) &&
-                Math.abs(e.col - flying.col!) + Math.abs(e.row - flying.row!) < 3,
+                Math.abs(e.col - flying.col) + Math.abs(e.row - flying.row) < 3,
         );
 await until(
     () => new Set(splashing().map((e) => e.effect)).size === 2,
@@ -63,14 +70,14 @@ expect(
     `rings spreading where the rider came down, not ${JSON.stringify(map.rings())}`,
 );
 await until(() => people.list()[rider].state === "swimming", 600, "the rider swimming again");
-expect(people.list()[rider].swimwear === true, "the rider swimming in their swimwear");
+expect(walked(people.list()[rider], "the rider").swimwear === true, "the rider swimming in their swimwear");
 await frames(30);
 await screenshot("pool_slides_swimming");
 
 // A close look from the side at where the riders come down, the slide's end beyond, as the next car goes off it:
 // mid-splash with its rider, then the foam spreading.
 const mouth = splashes[0];
-const flew = { col: mouth.col - flying.col!, row: mouth.row - flying.row! };
+const flew = { col: mouth.col - flying.col, row: mouth.row - flying.row };
 const far = Math.hypot(flew.col, flew.row) || 1;
 camera.look(mouth, {
     col: mouth.col - (flew.row / far) * 1.2 + (flew.col / far) * 0.6,

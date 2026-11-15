@@ -29,7 +29,7 @@ await until(
     "the tool row and the build lists",
 );
 const gate = map.paths().reduce((a, b) => (b.row > a.row ? b : a));
-const inspector = () => people.list().find((p) => p.role === "inspector");
+const inspector = () => people.list().find((p) => p.staff && p.role === "inspector");
 await until(() => inspector() !== undefined, 120, "the park's inspector");
 
 const item = build
@@ -144,7 +144,7 @@ await park.advanceUntil(
 );
 
 // The blank park's inspector has no tasks ticked: their window's tasks page ticks those to look at.
-people.show(people.list().findIndex((p) => p.role === "inspector"));
+people.show(people.list().findIndex((p) => p.staff && p.role === "inspector"));
 await until(() => ui.find("info/Staff_Tools") !== undefined, 120, "the inspector's window");
 await ui.click("info/Staff_Tools");
 await frames(2);
@@ -154,14 +154,17 @@ await ui.click("info/close");
 
 // On the ride, seated and under way.
 await park.advanceUntil(
-    () => inspector()?.state === "riding" && inspector()?.ride !== undefined,
+    () => {
+        const i = inspector();
+        return i?.state === "riding" && i.ride !== undefined;
+    },
     900,
     "the inspector riding",
 );
 log("riding", JSON.stringify(inspector()), "ride", JSON.stringify(rides.list()[ride]));
-expect(inspector()!.ride === ride, `the inspector on our ride, not ${inspector()!.ride}`);
-const seat = inspector()!;
-camera.look({ col: seat.col!, row: seat.row! }, { col: seat.col! + 3, row: seat.row! + 5, up: 5 });
+const seat = walked(inspector(), "the inspector");
+expect(seat.state === "riding" && seat.ride === ride, `the inspector on our ride, not ${JSON.stringify(seat)}`);
+camera.look({ col: seat.col, row: seat.row }, { col: seat.col + 3, row: seat.row + 5, up: 5 });
 await frames(10);
 await screenshot("inspector_riding");
 
@@ -173,8 +176,8 @@ await park.advanceUntil(
     "the inspector's word on the stall, and them at its counter",
 );
 log("messages", JSON.stringify(park.messages()));
-const counter = inspector()!;
-camera.look({ col: counter.col!, row: counter.row! }, { col: counter.col! + 3, row: counter.row! + 4, up: 4 });
+const counter = walked(inspector(), "the inspector");
+camera.look({ col: counter.col, row: counter.row }, { col: counter.col + 3, row: counter.row + 4, up: 4 });
 await frames(10);
 await screenshot("inspector_at_stall");
 

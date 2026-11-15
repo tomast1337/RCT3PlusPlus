@@ -90,6 +90,10 @@ globalThis.must = (value, what) => {
     if (value === undefined || value === null) throw new Error(`expected ${what}`);
     return value;
 };
+globalThis.walked = (person, what) => {
+    if (person === undefined || person === null || person.state === undefined) throw new Error(`expected ${what}`);
+    return person;
+};
 globalThis.under = (path, name) => {
     for (const child of ui.children(path) ?? []) {
         const at = `${path}/${child}`;

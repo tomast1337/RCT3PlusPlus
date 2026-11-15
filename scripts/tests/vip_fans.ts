@@ -19,7 +19,8 @@ const goal = must(
 park.setDate(goal.next);
 await until(() => park.vips().length === 1, 120, "the VIP to come in");
 
-const fans = (kind: "chasing" | "autograph") => people.list().filter((p) => p.watching === kind);
+const fans = (kind: "chasing" | "autograph") =>
+    people.list().filter((p) => p.state !== undefined && p.watching === kind);
 const look = () => {
     const v = park.vips()[0];
     camera.look({ col: v.col, row: v.row }, { col: v.col - 3, row: v.row + 4, up: 16 });
@@ -36,8 +37,9 @@ const signing = () =>
         .some(
             (p) =>
                 !p.staff &&
+                p.state !== undefined &&
                 p.gesture === "handticket" &&
-                Math.hypot(p.col! - park.vips()[0].col, p.row! - park.vips()[0].row) < 1,
+                Math.hypot(p.col - park.vips()[0].col, p.row - park.vips()[0].row) < 1,
         );
 await park.advanceUntil(signing, 300, "a fan signed for");
 look();

@@ -111,7 +111,7 @@ log(
     r,
 );
 // On a warm day a good share of the guests swim, as many as half the room twelve squares of water make, at the least.
-const guests = () => people.list().filter((p) => !p.staff && !p.leaving).length;
+const guests = () => people.list().filter((p) => !p.staff && !(p.state !== undefined && p.leaving)).length;
 await until(
     () => swimmers().length >= Math.min(0.15 * guests(), 12),
     3000,
@@ -127,7 +127,11 @@ camera.look({ col: c + 5, row: r + 3.5 }, { col: c + 5, row: r + 5.5, up: 1.5 })
 await frames(1800);
 await screenshot("pool_guests_extras");
 // Close up, lying on the lounger.
-await until(() => people.list().some((p) => p.pool_extra === "lounger"), 3000, "a swimmer on the lounger");
+await until(
+    () => people.list().some((p) => p.state !== undefined && p.pool_extra === "lounger"),
+    3000,
+    "a swimmer on the lounger",
+);
 camera.look({ col: c + 4.5, row: r + 3.5 }, { col: c + 6, row: r + 5, up: 1.2 });
 await frames(10);
 await screenshot("pool_guests_lounger");

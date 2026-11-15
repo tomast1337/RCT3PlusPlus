@@ -147,7 +147,7 @@ const paved = map.pavings().find((p) => p.col === exit.col && p.row === exit.row
 log("path style", style, "exit paved", JSON.stringify(paved));
 expect(paved?.style === style, `the exit paved like the path behind it (${style}), not ${JSON.stringify(paved)}`);
 const onTile = (c: number, r: number) =>
-    people.list().some((p) => !p.staff && p.col !== undefined && Math.floor(p.col) === c && Math.floor(p.row!) === r);
+    people.list().some((p) => !p.staff && p.state !== undefined && Math.floor(p.col) === c && Math.floor(p.row) === r);
 await park.advanceUntil(() => onTile(right + 2, last), 120, "a rider out onto the path behind the exit");
 await look_down(right, last, 18);
 await screenshot("exit_joined");

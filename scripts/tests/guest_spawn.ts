@@ -9,12 +9,11 @@
 export {};
 
 type Tile = { col: number; row: number };
-const near = (p: { col?: number; row?: number }, t: Tile, tiles: number) =>
-    p.col !== undefined && Math.hypot(p.col - (t.col + 0.5), p.row! - (t.row + 0.5)) < tiles;
+const near = (p: Tile, t: Tile, tiles: number) => Math.hypot(p.col - (t.col + 0.5), p.row - (t.row + 0.5)) < tiles;
 
 /** Looks close at guest `who` from the side and keeps a screenshot named `name`. */
-async function look(name: string, who: { col?: number; row?: number }): Promise<void> {
-    camera.look({ col: who.col!, row: who.row!, up: 0.8 }, { col: who.col! + 2.5, row: who.row! + 2.5, up: 2.5 });
+async function look(name: string, who: Tile): Promise<void> {
+    camera.look({ col: who.col, row: who.row, up: 0.8 }, { col: who.col + 2.5, row: who.row + 2.5, up: 2.5 });
     await frames(4);
     await screenshot(name);
 }
@@ -35,22 +34,30 @@ for (const [file, name] of [
 
     // Someone just appeared at a spawn point, not through the gate yet.
     const fresh = () =>
-        people.list().findIndex((p) => !p.staff && p.arriving === true && spawns.some((t) => near(p, t, 1.5)));
+        people
+            .list()
+            .findIndex(
+                (p) => p.state !== undefined && !p.staff && p.arriving === true && spawns.some((t) => near(p, t, 1.5)),
+            );
     await park.advanceUntil(() => fresh() >= 0, 1800, `${name}: a guest appearing at a spawn point`);
     const i = fresh();
     const name_of = people.list()[i].name;
     log(name, "appeared", JSON.stringify(people.list()[i]));
-    await look(`${name}_appear`, people.list()[i]);
+    await look(`${name}_appear`, walked(people.list()[i], `${name}: the guest walked`));
 
     // On the road in, then come through the gate, by its tiles.
     await park.advance(3);
-    const walking = people.list()[i];
+    const walking = walked(people.list()[i], `${name}: the guest walking in`);
     expect(walking.name === name_of, `${name}: the same guest still listed`);
     log(name, "walking in", JSON.stringify(walking));
     expect(walking.arriving === true, `${name}: still on the way in`);
     await look(`${name}_walk`, walking);
-    await park.advanceUntil(() => people.list()[i].arriving !== true, 600, `${name}: the guest through the gate`);
-    const inside = people.list()[i];
+    await park.advanceUntil(
+        () => walked(people.list()[i], `${name}: the guest walking in`).arriving !== true,
+        600,
+        `${name}: the guest through the gate`,
+    );
+    const inside = walked(people.list()[i], `${name}: the guest inside`);
     log(name, "came in", JSON.stringify(inside));
     expect(
         gates.some((g) => near(inside, g, 2)),

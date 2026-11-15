@@ -127,7 +127,7 @@ namespace rct3::scene
         void list(render::Device& device, CareerBrowser& browser, ui::screens::career::CareerDialog& dialog, int pack, const ui::StringTable& strings)
         {
             free_pictures(device, browser);
-            browser.ids = ui::career_scenario_ids(strings, pack);
+            browser.scenario_ids = ui::career_scenario_ids(strings, pack);
             std::vector<config::FileProblem> problems;
             browser.careers = browser.folder.empty() ? std::vector<career::CareerEntry> { } : career::list_careers(browser.folder, pack, problems);
             for (const auto& problem : problems)
@@ -135,7 +135,7 @@ namespace rct3::scene
             std::vector<ui::screens::career::CareerRow> rows;
             for (auto& entry : browser.careers)
             {
-                career::fit(entry.data.career, browser.ids);
+                career::fit(entry.data.career, browser.scenario_ids);
                 rows.push_back(row_of(entry.data.career));
             }
             browser.next_picture = 0;
@@ -283,7 +283,7 @@ namespace rct3::scene
             {
                 career::CareerEntry entry;
                 entry.path = career::free_career_path(browser.folder);
-                entry.data.career = career::new_career(strings::to_utf8(ui::default_career_name(strings, career_number(entry.path))), pack, browser.ids);
+                entry.data.career = career::new_career(strings::to_utf8(ui::default_career_name(strings, career_number(entry.path))), pack, browser.scenario_ids);
                 entry.data.career.created = now();
                 save(entry);
                 dialog.add_career(row_of(entry.data.career));

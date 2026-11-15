@@ -27,21 +27,20 @@ namespace rct3::scene::park
     /// Opens the window of `topic` at tab `tab`, or turns the open one to it.
     void open_management_window(ui::Desktop& desktop, ui::screens::management::ManagementTopic topic, std::size_t tab, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::info::InfoUnits& units);
 
-    /// Whether any management window is open.
     [[nodiscard]] bool management_window_open(const ui::Desktop& desktop);
 
     /// What the player asked of the management windows this frame.
     struct ManagementAsks
     {
-        std::optional<ui::screens::management::ManagementRow> row; ///< The row activated
-        bool replace_broken = false;                               ///< Replace every broken path item (ui::screens::management::kReplaceBrokenButton)
-        std::optional<bool> park_open;                             ///< Open the park, or close it (ui::screens::management::kOpenCloseParkButton)
-        bool centre_entrance = false;                              ///< Take the view to the next entrance (ui::screens::management::kCentreEntranceButton)
-        bool buy_land = false;                                     ///< Take out the tool buying land (ui::screens::management::kBuyLandButton)
-        bool buy_rights = false;                                   ///< Or building rights (ui::screens::management::kBuyRightsButton)
-        std::optional<bool> borrow;                                ///< Borrow a step of loan, or repay one (ui::screens::management::kBorrowButton, kRepayButton)
-        bool export_ledger = false;                                ///< Write the ledger out (ui::screens::management::kExportLedgerButton)
-        std::optional<units::Money> loan;                          ///< Borrow or repay towards this loan (ui::screens::management::kLoanControl)
+        std::optional<ui::screens::management::ManagementRow> activated_row;
+        bool replace_broken = false;      ///< Replace every broken path item (ui::screens::management::kReplaceBrokenButton)
+        std::optional<bool> park_open;    ///< Open the park, or close it (ui::screens::management::kOpenCloseParkButton)
+        bool centre_entrance = false;     ///< Take the view to the next entrance (ui::screens::management::kCentreEntranceButton)
+        bool buy_land = false;            ///< Take out the tool buying land (ui::screens::management::kBuyLandButton)
+        bool buy_rights = false;          ///< Or building rights (ui::screens::management::kBuyRightsButton)
+        std::optional<bool> borrow;       ///< Borrow a step of loan, or repay one (ui::screens::management::kBorrowButton, kRepayButton)
+        bool export_ledger = false;       ///< Write the ledger out (ui::screens::management::kExportLedgerButton)
+        std::optional<units::Money> loan; ///< Borrow or repay towards this loan (ui::screens::management::kLoanControl)
         /// Put every attraction in `listed` in this state (ui::screens::management::kOpenCloseAllButton)
         std::optional<save::model::AttractionState> state_all;
         std::vector<ui::screens::management::ManagementRow> listed;

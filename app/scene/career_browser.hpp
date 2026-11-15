@@ -34,7 +34,7 @@ namespace rct3::scene
         std::optional<config::UserData> data; ///< Where the careers are; without it none are kept
         std::size_t opened = 0;               ///< The front end's count of windows when this one was listed
         std::filesystem::path folder;
-        std::vector<std::string> ids; ///< The game's scenarios
+        std::vector<std::string> scenario_ids;
         std::vector<career::CareerEntry> careers;
         std::size_t next_picture = 0; ///< The next career whose picture to read
         std::vector<render::TextureHandle> pictures;

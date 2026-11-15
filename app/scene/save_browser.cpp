@@ -60,7 +60,7 @@ namespace rct3::scene
         void list(render::Device& device, SaveBrowser& browser, ui::screens::dialogs::FileDialog& dialog, const fs::path& game_folder)
         {
             free_pictures(device, browser);
-            browser.next = 0;
+            browser.next_file = 0;
             browser.files = saves_in(browser.folder);
             browser.kept.assign(browser.files.size(), false);
             for (auto& file : saves_in(game_folder))
@@ -107,9 +107,9 @@ namespace rct3::scene
 
         void read_next(render::Device& device, SaveBrowser& browser, ui::screens::dialogs::FileDialog& dialog)
         {
-            if (browser.next >= browser.files.size())
+            if (browser.next_file >= browser.files.size())
                 return;
-            const std::size_t index = browser.next++;
+            const std::size_t index = browser.next_file++;
             const fs::path& path = browser.files[index];
             std::optional<save::SaveSummary> summary;
             if (const auto bytes = read_bytes(path))
@@ -251,7 +251,7 @@ namespace rct3::scene
         free_pictures(device, browser);
         browser.files.clear();
         browser.kept.clear();
-        browser.next = 0;
+        browser.next_file = 0;
     }
 
 } // namespace rct3::scene

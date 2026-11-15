@@ -1239,15 +1239,15 @@ namespace rct3::scene::park
         scene.gameplay = random::stream(seed, random::RandomStream::Gameplay);
         log.info("{}: seed {} (--seed repeats it)", path.string(), random::seed_text(seed));
         scene.camera = rct3::park::overview(scene.grid);
-        scene.day = park_day(*file, index, *world, options);
+        scene.day_clock = park_day(*file, index, *world, options);
         if (saved)
         {
             scene.camera = saved->camera;
-            const simulation::DayClock from_file = scene.day;
+            const simulation::DayClock from_file = scene.day_clock;
             const simulation::DayMode mode = saved->day_mode.value_or(from_file.mode);
-            scene.day = simulation::start_day(saved->progress.day_time, simulation::day_window(mode, from_file.park_hours), from_file.transition);
-            scene.day.mode = mode;
-            scene.day.park_hours = from_file.park_hours;
+            scene.day_clock = simulation::start_day(saved->progress.day_time, simulation::day_window(mode, from_file.park_hours), from_file.transition);
+            scene.day_clock.mode = mode;
+            scene.day_clock.park_hours = from_file.park_hours;
         }
 
         // ── 2. Pools ──

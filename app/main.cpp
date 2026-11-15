@@ -1003,11 +1003,11 @@ int main(int argc, char** argv)
             if (!park_game.career.empty())
                 park->park.climate = rct3::simulation::career_climate(park_game.scenario).value_or(park->park.climate);
             // Outside a sandbox the day keeps the park's hours, whatever mode the file asks for.
-            if (!park_game.sandbox && park->day.mode != rct3::simulation::DayMode::ParkHours)
+            if (!park_game.sandbox && park->day_clock.mode != rct3::simulation::DayMode::ParkHours)
             {
-                rct3::simulation::change_mode(park->day, rct3::simulation::DayMode::ParkHours);
-                park->day.shown = park->day.time; // no fade at load
-                park->day.fade = 0;
+                rct3::simulation::change_mode(park->day_clock, rct3::simulation::DayMode::ParkHours);
+                park->day_clock.shown = park->day_clock.time; // no fade at load
+                park->day_clock.fade = 0;
             }
             // In a career, leaving goes back to the career's map, under the park.
             if (auto tools = park->desktop->root().find_as<rct3::ui::screens::park_view::ToolRow>(rct3::scene::park::kToolsName))

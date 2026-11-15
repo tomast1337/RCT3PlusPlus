@@ -122,7 +122,7 @@ namespace rct3::scene
         void put_up(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets)
         {
             LedSigns& q = scene.led_signs;
-            ui::destroy_textures(device, q.textures);
+            ui::destroy_textures(device, q.board_textures);
             q.signs.clear();
             std::map<std::uint64_t, save::model::RideIndex> ride_of_line;
             for (std::size_t r = 0; r < scene.rides.rides.size(); ++r)
@@ -156,7 +156,7 @@ namespace rct3::scene
                 auto made = ui::upload_textures(device, { { sign.board, std::move(blank) } });
                 if (!made)
                     return false;
-                q.textures.merge(*made);
+                q.board_textures.merge(*made);
                 return true;
             };
             // Only reads the models and objects, as the build beside the frame does, so it need not wait for it.
@@ -295,8 +295,8 @@ namespace rct3::scene
         for (LedSign& sign : scene.led_signs.signs)
         {
             const std::uint32_t shift = rct3::park::sign_shift(scene.park_clock, sign.loop.width);
-            const auto texture = scene.led_signs.textures.find(sign.board);
-            if (shift == sign.shift || sign.loop.width == 0 || texture == scene.led_signs.textures.end())
+            const auto texture = scene.led_signs.board_textures.find(sign.board);
+            if (shift == sign.shift || sign.loop.width == 0 || texture == scene.led_signs.board_textures.end())
                 continue;
             sign.shift = shift;
             if (std::exchange(in_pass, false))
@@ -333,7 +333,7 @@ namespace rct3::scene
                 if (batch.blend == rct3::park::object::PartBlend::DepthOnly)
                     continue;
                 const bool board = batch.texture == sign.board;
-                const ui::UiTextures& textures = board ? scene.led_signs.textures : scene.object_textures;
+                const ui::UiTextures& textures = board ? scene.led_signs.board_textures : scene.object_textures;
                 const auto texture = textures.find(batch.texture);
                 render::PipelineHandle pipeline = batch.blend == rct3::park::object::PartBlend::Opaque ? scene.object_pipeline : batch.blend == rct3::park::object::PartBlend::Cutout ? scene.cutout_pipeline : scene.see_through_pipeline;
                 if (const auto front = scene.front_only.find(pipeline.id); batch.one_sided && front != scene.front_only.end())
@@ -357,7 +357,7 @@ namespace rct3::scene
 
     void destroy_led_signs(render::Device& device, LedSigns& signs)
     {
-        ui::destroy_textures(device, signs.textures);
+        ui::destroy_textures(device, signs.board_textures);
         signs.signs.clear();
     }
 

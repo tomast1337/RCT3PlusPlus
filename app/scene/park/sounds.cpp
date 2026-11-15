@@ -133,7 +133,7 @@ namespace rct3::scene::park
         constexpr std::array<std::string_view, 3> kRumbles { "EarthMove1", "EarthMove2", "EarthMove3" };
         s.rumbles = main(kRumbles);
         constexpr std::array<std::string_view, 2> kWaterfall { "Waterfall3", "Waterfall4" };
-        s.waterfall = load_named(install, "Sounds/Waterfall/Waterfall.common.ovl", kWaterfall);
+        s.waterfall_loops = load_named(install, "Sounds/Waterfall/Waterfall.common.ovl", kWaterfall);
         for (std::size_t set = 1; set < audio::kTrackSoundSets; ++set)
         {
             const auto path = install.find(std::format("tracks/TrackSounds/{}.common.ovl", audio::file_of(static_cast<audio::TrackSoundSet>(set))));
@@ -236,7 +236,7 @@ namespace rct3::scene::park
         for (std::size_t i = 0; i < falls.size(); ++i)
         {
             audio::VoiceHandle& voice = sounds.waterfall_voices[i];
-            if (quiet || sounds.waterfall.empty())
+            if (quiet || sounds.waterfall_loops.empty())
             {
                 engine.stop(voice);
                 voice = { };
@@ -245,7 +245,7 @@ namespace rct3::scene::park
             const glm::vec3 at = rct3::park::waterfall_point(falls[i], 1.0f);
             if (!engine.is_playing(voice))
             {
-                const auto played = engine.play(sounds.waterfall[i % sounds.waterfall.size()], { .volume = kWaterfallLevel, .at = at, .near = kWaterfallNear.value, .far = kWaterfallFar, .loop = true });
+                const auto played = engine.play(sounds.waterfall_loops[i % sounds.waterfall_loops.size()], { .volume = kWaterfallLevel, .at = at, .near = kWaterfallNear.value, .far = kWaterfallFar, .loop = true });
                 voice = played ? *played : audio::VoiceHandle { };
             }
             else

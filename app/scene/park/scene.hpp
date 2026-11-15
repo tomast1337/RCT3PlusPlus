@@ -525,7 +525,7 @@ namespace rct3::scene::park
         simulation::park::ParkState park;  ///< Money, guests, rating, weather, date and speed as they are now
         BuildMenus build;                  ///< The lists of rides, shops and scenery to build
         save::model::ParkModel park_model; ///< As saved: finances, objectives, research; read by the management windows
-        simulation::DayClock day;          ///< The park's time of day
+        simulation::DayClock day_clock;
         save::model::RideModel rides;
         std::vector<save::model::RideShow> shows; ///< What the show rides put on, by ride id
         save::model::PeopleModel people;          ///< Guests, staff and litter as saved; read for the weekly rating
@@ -903,7 +903,6 @@ namespace rct3::scene::park
     /// without a kept place are left out.
     void add_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex from, std::size_t count, RideCarsAdded added = RideCarsAdded::TrainsAndLifts);
 
-    /// Takes the scene's cars of ride `ride` away.
     void drop_ride_cars(ParkScene& scene, save::model::RideIndex ride);
 
     /// Has the scene's cars of ride `ride` be its trains' cars as they are now: those it had

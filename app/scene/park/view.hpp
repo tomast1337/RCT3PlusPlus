@@ -52,7 +52,6 @@ namespace rct3::scene::park
     /// Draws the grid, the contours and the land tools' marks over the ground.
     void draw_view_lines(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light);
 
-    /// Drops the lines' buffers.
     void drop_view_lines(render::Device& device, ParkScene& scene);
 
     /// The height labels the view menu shows, on a view `size` across (interface units), farthest first.

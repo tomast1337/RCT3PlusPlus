@@ -166,7 +166,7 @@ namespace rct3::scene::park
                     asks.research_priority = std::pair(static_cast<std::size_t>(change->id - ui::screens::management::kFirstPriorityControl), static_cast<float>(change->value) / 100);
             }
             if (const auto row = window->take_row())
-                asks.row = ui::screens::management::management_row(*row);
+                asks.activated_row = ui::screens::management::management_row(*row);
         }
         if (auto roster = find_roster(desktop); roster && !roster->closing())
         {

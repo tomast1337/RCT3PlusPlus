@@ -388,8 +388,8 @@ namespace rct3::scene
                 throw std::invalid_argument("park.setTime takes a fraction of a day from midnight");
             // Shown at once, without a blend; the clock runs on from there, into the park's hours if outside.
             const float time = a[0].get<float>();
-            park_->day.time = park_->day.shown = time;
-            park_->day.fade = 0;
+            park_->day_clock.time = park_->day_clock.shown = time;
+            park_->day_clock.fade = 0;
             return Json(nullptr);
         });
         engine_.define("park.guests", [this](const Json&) -> Json {
@@ -704,7 +704,7 @@ namespace rct3::scene
                 for (const park::ParkParticles::Shown& s : *list)
                 {
                     const glm::vec3 p = s.position;
-                    effects.push_back({ { "effect", s.effect }, { "col", (p.x - g.origin_x) / g.tile_size_x }, { "row", (p.z - g.origin_z) / g.tile_size_z }, { "up", p.y - g.height_at(p.x, p.z).value_or(0) }, { "live", s.run.particles().count() } });
+                    effects.push_back({ { "effect", s.effect_file }, { "col", (p.x - g.origin_x) / g.tile_size_x }, { "row", (p.z - g.origin_z) / g.tile_size_z }, { "up", p.y - g.height_at(p.x, p.z).value_or(0) }, { "live", s.run.particles().count() } });
                 }
             return effects;
         });
@@ -1237,9 +1237,9 @@ namespace rct3::scene
             if (t.tool != StructureTools::Tool::Place || !t.structure)
                 return nullptr;
             constexpr std::array<std::string_view, 4> kProblems { "none", "not owned", "blocked", "path" };
-            Json placing { { "name", t.structure->name }, { "items", t.placed.size() }, { "problem", kProblems.at(static_cast<std::size_t>(t.problem)) }, { "affordable", t.affordable }, { "cost", t.cost.value }, { "turns", t.turn.value }, { "height", t.height }, { "ghost", !t.ghost_mesh.vertices.empty() } };
-            if (t.at)
-                placing["at"] = { { "col", t.at->col }, { "row", t.at->row } };
+            Json placing { { "name", t.structure->name }, { "items", t.ghost_items.size() }, { "problem", kProblems.at(static_cast<std::size_t>(t.problem)) }, { "affordable", t.affordable }, { "cost", t.cost.value }, { "turns", t.turn.value }, { "height", t.height }, { "ghost", !t.ghost_mesh.vertices.empty() } };
+            if (t.pointed_tile)
+                placing["at"] = { { "col", t.pointed_tile->col }, { "row", t.pointed_tile->row } };
             return placing;
         });
         engine_.define("structures.marked", [this](const Json&) -> Json {

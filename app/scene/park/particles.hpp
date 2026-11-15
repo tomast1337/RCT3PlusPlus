@@ -32,9 +32,9 @@ namespace rct3::scene::park
             /// By the effect's particle kinds: the sprite each draws, or none.
             std::vector<const particles::Sprite*> sprites;
             glm::vec3 position { 0.0f };
-            std::string effect { }; ///< Its file's name
-            float size = 1;         ///< As rct3::park::object::PlacedEffect::size
-            bool awake = false;     ///< Ran in the last advance, so it is drawn
+            std::string effect_file { };
+            float size = 1;     ///< As rct3::park::object::PlacedEffect::size
+            bool awake = false; ///< Ran in the last advance, so it is drawn
         };
 
         std::optional<particles::Library> library;

@@ -126,7 +126,7 @@ namespace rct3::scene::park
         /// The sky and the light as the day clock shows them, with a look that is fading out over them.
         void show_time_of_day(ParkScene& scene, glm::vec3 viewer)
         {
-            const simulation::DayClock& day = scene.day;
+            const simulation::DayClock& day = scene.day_clock;
             const rct3::park::Daylight light = rct3::park::mixed(rct3::park::daylight(day.shown), rct3::park::daylight(day.faded), day.fade);
             scene.light = { .sun_direction = light.sun_direction, .sun = light.sun, .sky = light.sky, .ground = light.ground };
             const float column = rct3::park::sky::sky_column(day.shown);
@@ -1039,7 +1039,7 @@ namespace rct3::scene::park
             if (const auto asked = bar->take_speed())
                 scene.park.speed = *asked;
             if (const auto mode = bar->take_day_mode())
-                simulation::change_mode(scene.day, *mode);
+                simulation::change_mode(scene.day_clock, *mode);
             if (bar->objective_button().take_click())
                 open_management_window(desktop, ui::screens::management::ManagementTopic::Objectives, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
             if (bar->take_finances())
@@ -1068,7 +1068,7 @@ namespace rct3::scene::park
         profiling::section("Simulation", [&] {
             // The park's day, its calendar and its messages' ages run at the speed picked, and stop while paused.
             const float game_seconds = elapsed.value * simulation::time_factor(scene.park.speed);
-            simulation::advance(scene.day, game_seconds);
+            simulation::advance(scene.day_clock, game_seconds);
             const float before = scene.park.time;
             const std::int32_t weeks = simulation::park::pass_time(scene.park, game_seconds);
             simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, options.flag(config::game::GameOption::DisableWeather));
@@ -1315,7 +1315,7 @@ namespace rct3::scene::park
                 constexpr float kMostSeconds = 2;
                 scene.sim_time = std::min(scene.sim_time + game_seconds, kMostSeconds);
                 scene.sim.registry.ctx().insert_or_assign(simulation::park::guest_weather(scene.park));
-                scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day.time });
+                scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day_clock.time });
                 const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
                 // The pools taken in again once built on, or their rooms opened, closed, priced or given another fluid or
                 // other waves.
@@ -1837,10 +1837,10 @@ namespace rct3::scene::park
             // The game writes its times with am and pm in English only.
             units.twelve_hour = assets.fonts.language == ui::kDefaultLanguage;
             const auto& ledger = scene.park_model.finance.ledger;
-            ui::screens::park_view::ParkBarValues values = ui::screens::park_view::park_bar_values(scene.park, scene.day.time, *assets.strings, units, ledger.size() > 1 ? std::optional(-ledger[1].raw_sum()) : std::nullopt);
+            ui::screens::park_view::ParkBarValues values = ui::screens::park_view::park_bar_values(scene.park, scene.day_clock.time, *assets.strings, units, ledger.size() > 1 ? std::optional(-ledger[1].raw_sum()) : std::nullopt);
             // The player chooses how the day goes in a sandbox, whatever its money.
             if (scene.game.sandbox)
-                values.day_mode = scene.day.mode;
+                values.day_mode = scene.day_clock.mode;
             bar->show(values);
         }
         if (auto messages = desktop.root().find_as<ui::screens::park_view::MessageDrawer>(kMessagesName))
@@ -2189,8 +2189,8 @@ namespace rct3::scene::park
         }
         const ui::screens::management::ManagementFacts facts = management_facts(scene);
         const ManagementAsks asks = update_management_windows(desktop, facts, *assets.strings, info_units(assets, options));
-        if (asks.row && info)
-            open_row(scene, *info, *asks.row, assets, options);
+        if (asks.activated_row && info)
+            open_row(scene, *info, *asks.activated_row, assets, options);
         if (asks.export_ledger && scene.saves.data)
         {
             // A new file each time, beside those written before.
@@ -2429,7 +2429,7 @@ namespace rct3::scene::park
         saved.summary.year = static_cast<std::int32_t>(scene.park.date.year) + 1;
         saved.summary.month = scene.park.date.month;
         saved.summary.day = scene.park.date.week * 7 + 1;
-        saved.summary.minutes = static_cast<std::int32_t>(scene.day.time * 24 * 60);
+        saved.summary.minutes = static_cast<std::int32_t>(scene.day_clock.time * 24 * 60);
         saved.summary.guests = scene.park.guests;
         // The pool tool's work shown is not built: the park is saved as it was before it.
         saved.grid = scene.grid;
@@ -2449,7 +2449,7 @@ namespace rct3::scene::park
                            .weather = park.weather,
                            .forecast = park.forecast,
                            .temperature = park.temperature,
-                           .day_time = scene.day.time,
+                           .day_time = scene.day_clock.time,
                            .climate = park.climate,
                            .weather_hold = park.weather_hold,
                            .wind = park.wind,
@@ -2494,7 +2494,7 @@ namespace rct3::scene::park
         if (saved.shows)
             std::erase_if(*saved.shows, [&](const save::model::RideShow& show) { return !std::ranges::contains(saved.rides.rides, show.ride, [](const save::model::Ride& r) { return r.base.id; }); });
         saved.waterfalls = scene.footpaths.waterfalls;
-        saved.day_mode = scene.day.mode;
+        saved.day_mode = scene.day_clock.mode;
         saved.animals = parkfile::keep_animals(scene.sim, scene.enclosures);
         saved.pools = scene.pooling.before ? *scene.pooling.before : scene.pools; // Even none, so the game's pools stay sold
         for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Guests using what stands by the paths, on the game's blank landscape. Beside the road in from the entrance:
-// a drink stall, one bin on the road, a cash machine, and a small fire on the grass next to the road. Guests
-// dropped on the paths then:
+// a drink stall, a cash machine, and a small fire on the grass next to the road. Guests dropped on the paths
+// then:
 //
-//   - buy drinks and put their empties in the bin as they pass it;
-//   - drop the empties they carry too long where no bin is, so litter lies on the paths;
+//   - buy drinks and, with no bin anywhere, drop the empties they carry too long, so litter lies on the paths;
+//   - put their empties in a bin once one stands on the road;
 //   - short of cash, draw more at the cash machine;
 //   - stop now and then to watch the fire, though it stands beside the road, not on it.
 //
@@ -74,11 +74,6 @@ const stall = stalls.list().findIndex((s) => s.symbol === `${drinks.symbol}:sta`
 expect(stall >= 0, "the stall in the park");
 expect(stalls.setState(stall, "open") == null, "the stall open");
 
-// One bin on the road, a little further in.
-const binTile = roadAt(gate.row - 7);
-expect(build.pick("Style/Vanilla/Style", "Bin"), "the bin in the scenery lists");
-await place("the bin", binTile.col, binTile.row);
-
 // The smallest cash machine (kind 12) east of the road, opening onto it.
 const machine = must(
     build
@@ -99,19 +94,51 @@ const fireRow = gate.row - 14;
 roadAt(fireRow);
 expect(build.pick("Style/Vanilla/Style", "SmallFire"), "the small fire in the scenery lists");
 await place("the fire", gate.col - 1, fireRow);
-const kinds = park.pathItems().map((i) => i.kind);
-log("path items", kinds.join(", "));
-expect(kinds.includes("bin") && kinds.includes("sight"), "the bin and the fire known to guests");
+expect(
+    park.pathItems().some((i) => i.kind === "sight"),
+    "the fire known to guests",
+);
 
-park.setTime(0.5);
-park.dropParties(60, 3);
+park.setWeather("sunny");
+park.setTime(0.4);
+park.dropParties(100, 3);
+/** Daylight for a picture, whatever time the park has run to. */
+const daylight = () => {
+    park.setWeather("sunny");
+    park.setTime(0.5);
+};
+/** Runs the park until `check` holds, kept dry: in the rain guests with nothing to shelter under soon go home. */
+async function dryUntil(check: () => boolean, seconds: number, what: string): Promise<void> {
+    for (let ran = 0; !check(); ran += 5) {
+        expect(ran < seconds, `${what} within ${seconds} park seconds`);
+        park.setWeather("sunny");
+        await park.advance(5);
+    }
+}
 
-// Empties put in the bin: a guest handing their rubbish over on its tile.
+// With no bin, litter on the paths: each guest's pockets hold two empties, and the third is dropped.
+await dryUntil(() => park.litter().length > 0, 3600, "litter dropped");
+const piece = park.litter()[0];
+log("litter", park.litter().length, "first at", piece.col.toFixed(1), piece.row.toFixed(1));
+daylight();
+camera.look({ col: piece.col, row: piece.row }, { col: piece.col + 1, row: piece.row + 3, up: 4 });
+await frames(10);
+await screenshot("path_uses_litter");
+
+// One bin on the road, a little further in: a guest hands their rubbish over on its tile.
+const binTile = roadAt(gate.row - 7);
+expect(build.pick("Style/Vanilla/Style", "Bin"), "the bin in the scenery lists");
+await place("the bin", binTile.col, binTile.row);
+expect(
+    park.pathItems().some((i) => i.kind === "bin"),
+    "the bin known to guests",
+);
 const onTile = (p: { col?: number; row?: number }, col: number, row: number) =>
     p.col !== undefined && Math.floor(p.col) === col && Math.floor(p.row!) === row;
 const binning = () => people.list().find((p) => p.gesture === "handticket" && onTile(p, binTile.col, binTile.row));
-await park.advanceUntil(() => binning() !== undefined, 1800, "a guest putting their empty in the bin");
+await dryUntil(() => binning() !== undefined, 1800, "a guest putting their empty in the bin");
 const binner = binning()!;
+daylight();
 camera.look(
     { col: binner.col!, row: binner.row!, up: 0.8 },
     { col: binner.col! + 1.2, row: binner.row! + 1.5, up: 2.5 },
@@ -119,31 +146,23 @@ camera.look(
 await frames(4);
 await screenshot("path_uses_bin");
 
-// Litter on paths with no bin.
-const strewn = () =>
-    park.litter().filter((l) => !(Math.floor(l.col) === binTile.col && Math.floor(l.row) === binTile.row));
-await park.advanceUntil(() => strewn().length > 0, 1800, "litter dropped away from the bin");
-const piece = strewn()[0];
-log("litter", park.litter().length, "first at", piece.col.toFixed(1), piece.row.toFixed(1));
-camera.look({ col: piece.col, row: piece.row }, { col: piece.col + 1, row: piece.row + 3, up: 4 });
-await frames(10);
-await screenshot("path_uses_litter");
-
 // Short of cash, guests draw more.
 log("guests short of cash", park.setGuestCash(100));
-await park.advanceUntil(() => (rides.list()[cashMachine].customers ?? 0) > 0, 1800, "a guest at the cash machine");
+await dryUntil(() => (rides.list()[cashMachine].customers ?? 0) > 0, 1800, "a guest at the cash machine");
 log("cash machine customers", rides.list()[cashMachine].customers);
 camera.look(
     { col: gate.col + 1.5, row: machineRow + 0.5, up: 0.5 },
     { col: gate.col - 2.5, row: machineRow + 3.5, up: 5 },
 );
+daylight();
 await frames(10);
 await screenshot("path_uses_cash");
 
 // The fire beside the road watched.
 const watcher = () => people.list().find((p) => p.lingering === "sight" && p.col !== undefined);
-await park.advanceUntil(() => watcher() !== undefined, 1800, "a guest watching the fire");
+await dryUntil(() => watcher() !== undefined, 1800, "a guest watching the fire");
 const w = watcher()!;
+daylight();
 camera.look({ col: w.col!, row: w.row!, up: 0.8 }, { col: w.col! + 1.5, row: w.row! + 1.5, up: 2.5 });
 await frames(10);
 await screenshot("path_uses_fire");

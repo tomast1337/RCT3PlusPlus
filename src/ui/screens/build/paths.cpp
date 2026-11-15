@@ -43,7 +43,7 @@ namespace rct3::ui::screens::build
             widgets::Button& b = add<widgets::Button>(std::move(tab_name), style_.tab_face, icon);
             b.tooltip = std::u16string(strings_.get(style_.tab_help.at(help)));
             b.toggle = true;
-            b.swell = (info::info_panel::kTabGrown - info::info_panel::kTabSize) / 2;
+            b.swell = { (info::info_panel::kTabGrown - info::info_panel::kTabSize) / 2 };
             b.icon_scale = info::info_panel::kTabSize / info::info_panel::kIconSize;
             return b;
         };
@@ -154,7 +154,7 @@ namespace rct3::ui::screens::build
             widgets::Button& b = body_->add<widgets::Button>(list[i].icon, std::string { }, list[i].icon);
             b.tooltip = list[i].name;
             b.icon_scale = (footpath_panel::kStyleCell - 4) / footpath_panel::kStyleIcon;
-            b.swell = 2;
+            b.swell = { 2 };
             styles_.push_back(&b);
         }
     }

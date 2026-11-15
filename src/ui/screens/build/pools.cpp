@@ -48,7 +48,7 @@ namespace rct3::ui::screens::build
             b.tooltip = std::u16string(strings_.get(kTabHelp[i]));
             b.toggle = true;
             b.enabled = kTabBuilt[i];
-            b.swell = (info::info_panel::kTabGrown - info::info_panel::kTabSize) / 2;
+            b.swell = { (info::info_panel::kTabGrown - info::info_panel::kTabSize) / 2 };
             b.icon_scale = info::info_panel::kTabSize / info::info_panel::kIconSize;
             tabs_[i] = &b;
         }
@@ -58,7 +58,7 @@ namespace rct3::ui::screens::build
             widgets::Button& b = add<widgets::Button>(button == &pin_ ? "pin" : "follow", style_.tab_face, icon);
             b.tooltip = std::u16string(strings_.get(help));
             b.toggle = true;
-            b.swell = (info::info_panel::kTabGrown - info::info_panel::kTabSize) / 2;
+            b.swell = { (info::info_panel::kTabGrown - info::info_panel::kTabSize) / 2 };
             b.icon_scale = info::info_panel::kTabSize / info::info_panel::kIconSize;
             *button = &b;
         }
@@ -131,7 +131,7 @@ namespace rct3::ui::screens::build
             widgets::Button& b = body_->add<widgets::Button>(c.icon, style_.tab_face, c.icon);
             b.tooltip = c.help;
             b.icon_fit = (page_ == PoolPage::Paths ? pool_panel::kStairCell : pool_panel::kCell) - 8; // A changing room's picture is bigger than an extra's
-            b.swell = 2;
+            b.swell = { 2 };
             choices_.push_back(&b);
         }
         for (std::size_t i = 0; i < tabs_.size(); ++i)

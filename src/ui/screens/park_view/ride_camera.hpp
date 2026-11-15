@@ -56,9 +56,9 @@ namespace rct3::ui::screens::park_view
 
     namespace ride_camera_panel
     {
-        inline constexpr units::Seconds kStill { 3 };    ///< The pointer still this long, it hides
-        inline constexpr units::Seconds kSlide { 0.3f }; ///< To slide fully in or out
-        inline constexpr float kWakeDistance = 2;        ///< Units the pointer moves in a frame to bring it back
+        inline constexpr units::Seconds kStill { 3 };       ///< The pointer still this long, it hides
+        inline constexpr units::Seconds kSlide { 0.3f };    ///< To slide fully in or out
+        inline constexpr units::Pixels kWakeDistance { 2 }; ///< The pointer moves in a frame to bring it back
     } // namespace ride_camera_panel
 
     /// Whether the ride camera's step buttons have anywhere to go.

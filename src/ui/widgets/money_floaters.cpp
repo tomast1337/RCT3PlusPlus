@@ -12,7 +12,7 @@ namespace rct3::ui::widgets
 
     namespace
     {
-        constexpr float kRiseSpeed = 24;            ///< Interface units a second
+        constexpr units::PixelPace kRiseSpeed { 24 };
         constexpr units::Seconds kFade { 0.8f };    ///< The last of its life, over which it fades
         constexpr float kBobHeight = 0.18f;         ///< Of the line height
         constexpr units::Radians kBobStep { 1.1f }; ///< Phase between one letter and the next
@@ -21,7 +21,7 @@ namespace rct3::ui::widgets
 
     float money_float_rise(units::Seconds age) noexcept
     {
-        return std::max(age.value, 0.0f) * kRiseSpeed;
+        return std::max(age.value, 0.0f) * kRiseSpeed.value;
     }
 
     float money_float_alpha(units::Seconds age) noexcept

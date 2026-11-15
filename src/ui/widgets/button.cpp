@@ -60,14 +60,14 @@ namespace rct3::ui::widgets
     {
         // Eased in and out, and whole units so the skin's edges stay sharp.
         const float t = grown_ * grown_ * (3 - 2 * grown_);
-        const float by = std::round(swell * t);
+        const float by = std::round(swell.value * t);
         const Rect& r = rect();
         return { r.x0 - by, r.y0 - by, r.x1 + by, r.y1 + by };
     }
 
     void Button::update(const UpdateContext& context)
     {
-        const float target = hovered() && enabled && swell > 0 ? 1.0f : 0.0f;
+        const float target = hovered() && enabled && swell.value > 0 ? 1.0f : 0.0f;
         const float swell_seconds = swell_time.value;
         const float step = swell_seconds > 0 ? context.elapsed.value / swell_seconds : 1.0f;
         grown_ = grown_ < target ? std::min(target, grown_ + step) : std::max(target, grown_ - step);

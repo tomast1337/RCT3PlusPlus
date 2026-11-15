@@ -151,7 +151,7 @@ namespace rct3::ui::screens::front::front_screen
     inline constexpr Polar kStart { 0, 500 };     ///< Off the right of the screen, where every button begins
     inline constexpr Polar kParked { 1.9f, 500 }; ///< Off the top
     inline constexpr float kParentRadiusFactor = 2;
-    inline constexpr float kEaseRate = 8; ///< Per second
+    inline constexpr units::PerSecond kEaseRate { 8 };
     inline constexpr float kAngleClose = 0.04f;
     inline constexpr float kRadiusClose = 0.5f;
     inline constexpr float kLabelFadeRate = 4; ///< Labels fade in over a quarter second once their button arrives

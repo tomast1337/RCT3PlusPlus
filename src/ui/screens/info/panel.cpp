@@ -91,7 +91,7 @@ namespace rct3::ui::screens::info
             paint_colours_.push_back(tabs[i].colours);
             b.tooltip = std::move(tabs[i].help);
             b.toggle = tabs[i].choices.empty() && !tabs[i].action && paint == nullptr;
-            b.swell = (info_panel::kTabGrown - info_panel::kTabSize) / 2;
+            b.swell = { (info_panel::kTabGrown - info_panel::kTabSize) / 2 };
             b.icon_scale = info_panel::kTabSize / info_panel::kIconSize;
             tabs_.push_back(&b);
             slots_.push_back(tabs[i].slot);

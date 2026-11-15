@@ -9,6 +9,7 @@
 #pragma once
 
 #include "ui/widgets/button.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <optional>
@@ -27,7 +28,7 @@ namespace rct3::ui::widgets
         float swatch = 16;           ///< A swatch's size
         float pitch = 18;            ///< From one swatch to the next, across and down
         float picture_scale = 0.75f; ///< Of the colour's picture, of its own size
-        float swell = 4;             ///< Units a swatch grows by on each side under the pointer
+        units::Pixels swell { 4 };   ///< A swatch grows by on each side under the pointer
         float margin = 9;            ///< From the board's edge to the swatches
     };
 

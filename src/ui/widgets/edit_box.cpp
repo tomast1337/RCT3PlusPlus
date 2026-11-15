@@ -19,8 +19,8 @@ namespace rct3::ui::widgets
 
         constexpr units::Seconds kBlinkPeriod { 1.0f }; ///< The caret shows for the first half
         constexpr float kCaretHalfWidth = 1.0f;
-        constexpr units::Seconds kMultiPress { 0.4f }; ///< A press this soon after the last adds to it
-        constexpr float kMultiPressReach = 4.0f;       ///< Units the pointer may move between them
+        constexpr units::Seconds kMultiPress { 0.4f };     ///< A press this soon after the last adds to it
+        constexpr units::Pixels kMultiPressReach { 4.0f }; ///< The pointer may move between them
 
         // The position `at` moved back to the start of the character it falls in.
         std::size_t boundary(const std::u16string& s, std::size_t at)
@@ -133,7 +133,7 @@ namespace rct3::ui::widgets
 
     void EditBox::on_press(Point p)
     {
-        const bool again = since_press_ <= kMultiPress && std::abs(p.x - last_press_.x) <= kMultiPressReach && std::abs(p.y - last_press_.y) <= kMultiPressReach;
+        const bool again = since_press_ <= kMultiPress && std::abs(p.x - last_press_.x) <= kMultiPressReach.value && std::abs(p.y - last_press_.y) <= kMultiPressReach.value;
         presses_ = again ? presses_ + 1 : 1;
         since_press_ = { };
         last_press_ = p;

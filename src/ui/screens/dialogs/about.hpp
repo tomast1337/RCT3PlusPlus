@@ -22,6 +22,7 @@
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/window.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -80,9 +81,9 @@ namespace rct3::ui::screens::dialogs
         font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
         Color role_colour = hex("#2484be");
-        float line_gap = 5;       ///< Between the info page's lines
-        float credit_gap = 25;    ///< Above each credit
-        float roll_speed = 40;    ///< Units a second
+        float line_gap = 5;    ///< Between the info page's lines
+        float credit_gap = 25; ///< Above each credit
+        units::PixelPace roll_speed { 40 };
         float fast_factor = 3;    ///< While the pointer holds the roll down
         float most_inset = 0.35f; ///< Of the width: the furthest a credit is moved in from its edge
     };

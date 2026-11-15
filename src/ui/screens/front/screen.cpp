@@ -391,7 +391,7 @@ namespace rct3::ui::screens::front
                 mb.arrived = fs::ease(mb.at, goal(menu, i), context.elapsed);
                 const Rect r = fs::button_rect(frame, fs::on_ring(mb.at.angle, mb.at.radius), fs::kMenuButtonSize);
                 mb.button->placement = placed(r, rect());
-                mb.button->swell = size * (fs::kSwellFactor - 1) / 2;
+                mb.button->swell = { size * (fs::kSwellFactor - 1) / 2 };
                 const bool open = menu == current_ || (current_ != FrontMenu::Main && menu == front_menu(current_).parent);
                 mb.button->visible = open || !mb.arrived;
                 if (menu == current_ && mb.arrived && i < labels_.size())

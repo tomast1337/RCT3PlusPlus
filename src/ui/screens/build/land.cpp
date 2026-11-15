@@ -48,7 +48,7 @@ namespace rct3::ui::screens::build
             widgets::Button& b = add<widgets::Button>(t.icon, style_.tab_face, t.icon);
             b.tooltip = t.help;
             b.toggle = true;
-            b.swell = (info::info_panel::kTabGrown - info::info_panel::kTabSize) / 2;
+            b.swell = { (info::info_panel::kTabGrown - info::info_panel::kTabSize) / 2 };
             b.icon_scale = info::info_panel::kTabSize / info::info_panel::kIconSize;
             tabs_.push_back(&b);
         }
@@ -90,7 +90,7 @@ namespace rct3::ui::screens::build
                 b.tooltip = t.help;
                 b.enabled = t.usable;
                 b.icon_scale = (land_panel::kToolCell - 4) / land_panel::kToolIcon;
-                b.swell = 2;
+                b.swell = { 2 };
                 tools_.push_back(&b);
             }
         mark();

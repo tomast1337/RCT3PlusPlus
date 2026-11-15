@@ -24,7 +24,7 @@ namespace rct3::ui::widgets
     struct TableColumn
     {
         std::u16string heading;
-        float width = 0; ///< Units; 0 shares out what the fixed columns leave
+        units::Pixels width { }; ///< 0 shares out what the fixed columns leave
         Align align = Align::Start;
         bool sortable = true;
     };

@@ -2,6 +2,7 @@
 #include "render/backend.hpp"
 
 #include "render/null/null_device.hpp"
+#include "render/opengl/device.hpp"
 #include "render/vulkan/device.hpp"
 
 #include <GLFW/glfw3.h>
@@ -20,6 +21,7 @@ namespace rct3::render
 
         constexpr std::array kBackends = {
             BackendInfo { Backend::Vulkan, "vulkan" },
+            BackendInfo { Backend::OpenGl, "opengl" },
             BackendInfo { Backend::Null, "null" },
         };
 
@@ -62,8 +64,21 @@ namespace rct3::render
         {
             case Backend::Vulkan:
             case Backend::Null:
-                // Neither wants GLFW to create an OpenGL context. An OpenGL backend would ask for one here.
+                // Neither wants GLFW to create an OpenGL context.
                 glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+                break;
+            case Backend::OpenGl:
+                glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+                glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+                glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
+                glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+                glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+                // The window only shows the stretched screen, which has its own depth.
+                glfwWindowHint(GLFW_DEPTH_BITS, 0);
+                glfwWindowHint(GLFW_STENCIL_BITS, 0);
+                // Without a display (--headless) only EGL makes a context.
+                if (glfwGetPlatform() == GLFW_PLATFORM_NULL)
+                    glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
                 break;
         }
     }
@@ -74,6 +89,8 @@ namespace rct3::render
         {
             case Backend::Vulkan:
                 return std::make_unique<vulkan::VulkanDevice>();
+            case Backend::OpenGl:
+                return std::make_unique<opengl::OpenGlDevice>();
             case Backend::Null:
                 return std::make_unique<null::NullDevice>();
         }

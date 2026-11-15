@@ -46,6 +46,7 @@ namespace rct3::ovl
             d.lift_min = r->real(0xF0);
             d.lift_max = r->real(0xF4);
             d.cost = r->i32(0xFC);
+            d.height_cost = r->i32(0xCC);
             d.launch_min = r->real(0x108);
             d.launch_max = r->real(0x10C);
             d.platform = r->text(0x38);

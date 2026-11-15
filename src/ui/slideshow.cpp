@@ -2,6 +2,7 @@
 #include "ui/slideshow.hpp"
 
 #include "image/picture_file.hpp"
+#include "ui/screens/front/layout.hpp"
 
 #include <algorithm>
 #include <random>
@@ -13,9 +14,10 @@ namespace rct3::ui
     namespace
     {
 
-        constexpr float kEdge = 80; ///< Of the front screen's artwork, at the reference size
-        constexpr float kReferenceWidth = 1024;
-        constexpr float kReferenceHeight = 768;
+        using screens::front::front_screen::kDesignHeight;
+        using screens::front::front_screen::kDesignWidth;
+
+        constexpr float kEdge = 80; ///< Of the front screen's artwork, at the design size
 
     } // namespace
 
@@ -35,8 +37,8 @@ namespace rct3::ui
     {
         if (width <= 0 || height <= 0)
             return { };
-        const float left = kEdge * width / kReferenceWidth;
-        const float bottom = kEdge * height / kReferenceHeight * height / width;
+        const float left = kEdge * width / kDesignWidth;
+        const float bottom = kEdge * height / kDesignHeight * height / width;
         return { left, 0, width, height - bottom };
     }
 

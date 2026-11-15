@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/game_frames.hpp"
 
+#include "ui/screens/front/layout.hpp"
+
 #include <algorithm>
 #include <array>
 #include <initializer_list>
@@ -11,6 +13,9 @@ namespace rct3::ui::game_frames
 
     namespace
     {
+
+        using screens::front::front_screen::kDesignHeight;
+        using screens::front::front_screen::kDesignWidth;
 
         constexpr Color kNone = hex("#00000000");
 
@@ -526,7 +531,7 @@ namespace rct3::ui::game_frames
         // design's right edge, moved out to the screen's right edge at `screen_right`.
         FrameBox along_strip(float left, float top, float right, float bottom, float screen_right)
         {
-            return units({ left, top, screen_right - (1024 - right), bottom });
+            return units({ left, top, screen_right - (kDesignWidth - right), bottom });
         }
 
         Rect shifted(const Rect& r, float dx, float dy)
@@ -544,8 +549,8 @@ namespace rct3::ui::game_frames
     CodedFrame front_backdrop(const Palette& p, const Rect& screen)
     {
         CodedFrame f;
-        f.width = 1024;
-        f.height = 768;
+        f.width = kDesignWidth;
+        f.height = kDesignHeight;
         // The veil, everywhere above the strip outside the white ring; the blue then covers it to the left.
         const Rect above { screen.x0 - 1, screen.y0 - 1, screen.x1 + 1, kStripTop };
         Shape veil = solid(p.veil);
@@ -565,7 +570,7 @@ namespace rct3::ui::game_frames
         under.ring = kUnderRingWidth;
         f.layers.push_back({ units({ kCentreX - kVeilInner, kCentreY - kVeilInner, kCentreX + kVeilInner, kCentreY + kVeilInner }), under, above_strip });
         // The strip: dark, with two light bands across it.
-        f.layers.push_back({ units({ screen.x0, kStripTop, screen.x1, std::max(screen.y1, 768.0f) }), solid(p.backdrop), { } });
+        f.layers.push_back({ units({ screen.x0, kStripTop, screen.x1, std::max(screen.y1, kDesignHeight) }), solid(p.backdrop), { } });
         f.layers.push_back({ units({ screen.x0, kStripLight, screen.x1, kStripMiddle }), solid(p.line), { } });
         f.layers.push_back({ units({ screen.x0, kStripThin, screen.x1, kStripThinEnd }), solid(p.line), { } });
         // The lozenge the help sits on, and the rule between its two lines.
@@ -577,8 +582,8 @@ namespace rct3::ui::game_frames
     CodedFrame front_arc(const Palette& p)
     {
         CodedFrame f;
-        f.width = 1024;
-        f.height = 768;
+        f.width = kDesignWidth;
+        f.height = kDesignHeight;
         Shape ring = solid(p.ring, round_corners(kRingOuter));
         ring.ring = kRingWidth;
         f.layers.push_back({ units({ kCentreX - kRingOuter, kCentreY - kRingOuter, kCentreX + kRingOuter, kCentreY + kRingOuter }), ring, { } });

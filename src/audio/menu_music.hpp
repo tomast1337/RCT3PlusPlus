@@ -56,7 +56,6 @@ namespace rct3::audio
         std::optional<int> next_place;   ///< Where the cycle carries on next run; nothing without cycling
     };
 
-    /// Where the menu's music comes from.
     enum class MenuMusicSource : std::uint8_t
     {
         Cycle,   ///< The run's track of the cycle

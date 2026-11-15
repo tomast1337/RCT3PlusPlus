@@ -138,7 +138,6 @@ namespace rct3::save
         Value fields; ///< A Struct with one field per class attribute, in schema order
         DecodeStats stats;
 
-        /// Attribute value by name.
         [[nodiscard]] std::optional<const Value&> find(std::string_view name) const noexcept
         {
             return fields.field(name);

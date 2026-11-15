@@ -79,8 +79,8 @@ namespace rct3::save::model
     {
         std::array<float, 4> corners { }; ///< Heights in the corner order described at the top of this file
         std::uint8_t surface = 0;         ///< Index into the terrain surface table
-        std::uint8_t cliff = 0;           ///< Cliff style index
-        std::uint8_t flags = 0;           ///< TileFlag bits, kept raw so unknown bits survive
+        std::uint8_t cliff_style = 0;
+        std::uint8_t flags = 0; ///< TileFlag bits, kept raw so unknown bits survive
 
         [[nodiscard]] bool has(TileFlag f) const noexcept
         {

@@ -265,7 +265,7 @@ namespace rct3::audio
                 }
                 else if (*stream && !have_audio)
                 {
-                    h.stream = (*stream)->number;
+                    h.audio_stream = (*stream)->number;
                     h.audio = std::move((*stream)->format);
                     have_audio = true;
                 }
@@ -324,7 +324,7 @@ namespace rct3::audio
             AsfPayload p;
             const std::uint8_t stream = r.u8();
             p.stream = stream & 0x7F;
-            p.key = (stream & 0x80) != 0;
+            p.key_frame = (stream & 0x80) != 0;
             p.object = r.sized(properties >> 4);
             p.offset = r.sized(properties >> 2);
             const std::uint32_t replicated = r.sized(properties);
@@ -403,7 +403,7 @@ namespace rct3::audio
             if (!open_)
                 return; // The middle of an object whose start was missed, or one too big
             number_ = payload.object;
-            open_object_ = { payload.time, payload.key, std::vector<std::byte>(payload.object_size) };
+            open_object_ = { payload.time, payload.key_frame, std::vector<std::byte>(payload.object_size) };
             filled_ = 0;
         }
         std::vector<std::byte>& pieces = open_object_.data;

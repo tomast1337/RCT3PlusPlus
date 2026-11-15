@@ -69,7 +69,7 @@ namespace rct3::particles
             std::error_code error;
             for (const auto& entry : std::filesystem::directory_iterator(root / folder, error))
                 if (strings::equals_ignoring_case(entry.path().extension().string(), ".frw"))
-                    library.files_.emplace(entry.path().stem().string(), entry.path());
+                    library.effect_files_.emplace(entry.path().stem().string(), entry.path());
         }
         return library;
     }
@@ -80,7 +80,7 @@ namespace rct3::particles
         if (known == effects_.end())
         {
             std::optional<Effect> read;
-            if (const auto file = files_.find(name); file != files_.end())
+            if (const auto file = effect_files_.find(name); file != effect_files_.end())
             {
                 std::ifstream in(file->second, std::ios::binary);
                 const std::vector<char> chars((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());

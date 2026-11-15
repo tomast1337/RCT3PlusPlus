@@ -528,7 +528,7 @@ namespace rct3::scene
             for (const save::model::Tile t : rct3::park::ground::round_brush_tiles(*spot, static_cast<float>(l.brush) / scene.grid.tile_size_x, scene.grid.width, scene.grid.height))
             {
                 save::model::TerrainCell& cell = scene.grid.at(t.col, t.row);
-                std::uint8_t& face = l.cliff ? cell.cliff : cell.surface;
+                std::uint8_t& face = l.cliff ? cell.cliff_style : cell.surface;
                 if (face == surface || !rct3::park::owned_outright(cell))
                     continue;
                 face = surface;

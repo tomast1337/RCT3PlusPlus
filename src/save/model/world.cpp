@@ -415,7 +415,7 @@ namespace rct3::save::model
                 {
                     .corners = { rd_f32(blob, at), rd_f32(blob, at + 4), rd_f32(blob, at + 8), rd_f32(blob, at + 12) },
                     .surface = rd_u8(blob, at + 16),
-                    .cliff = rd_u8(blob, at + 17),
+                    .cliff_style = rd_u8(blob, at + 17),
                     .flags = stride == 24 ? rd_u8(blob, at + 20) : static_cast<std::uint8_t>(rd_u8(blob, at + 19) & 0x0f),
                 });
         }

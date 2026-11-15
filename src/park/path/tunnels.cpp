@@ -49,7 +49,7 @@ namespace rct3::park::path
         };
         for (const GroundOpening& h : hollows)
         {
-            const std::uint8_t cliff = grid.at(h.col, h.row).cliff;
+            const std::uint8_t cliff = grid.at(h.col, h.row).cliff_style;
             const float x0 = grid.world_x(h.col);
             const float x1 = grid.world_x(h.col + 1);
             const float z0 = grid.world_z(h.row);

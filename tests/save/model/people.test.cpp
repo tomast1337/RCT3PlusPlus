@@ -398,7 +398,7 @@ TEST_CASE("uninitialised fill becomes the default or none")
     CHECK_FALSE(guest->pool_need.has_value());
     CHECK(guest->price_modifier == 1.5f);
     CHECK(guest->person.position == PeopleVec3 { 0, 2, 3 });
-    CHECK(guest->person.animation.move_speed == 0.0f);
+    CHECK(guest->person.animation.walk_speed == 0.0f);
 }
 
 TEST_CASE("dangling references are none, live ones kept")

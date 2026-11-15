@@ -87,7 +87,7 @@ namespace rct3::parkfile
         save::model::WeatherType weather = save::model::WeatherType::Unknown;
         std::optional<save::model::WeatherType> forecast;
         std::optional<units::Degrees> temperature;
-        float day_time = 0;       ///< The day clock's time
+        float day_time = 0;
         std::int32_t climate = 0; ///< simulation::Climate
         float weather_hold = 0;   ///< Calendar units before the forecast arrives
         float wind = 0;
@@ -106,7 +106,6 @@ namespace rct3::parkfile
         std::int64_t week_intake = 0, week_income = 0, week_cash = 0;
     };
 
-    /// A guest in the park.
     /// A guest in a pool: the tile of the changing room they came in by, and how far they are with their swim.
     struct SavedSwim
     {
@@ -115,6 +114,7 @@ namespace rct3::parkfile
         simulation::Swimmer swimmer { };
     };
 
+    /// A guest in the park.
     struct SavedGuest
     {
         core::NoneAsMinusOne<std::int32_t> look { }; ///< Place in SavedPeople::model.guests of the guest drawn for them

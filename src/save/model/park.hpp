@@ -359,11 +359,11 @@ namespace rct3::save::model
         static constexpr std::uint32_t kGalleries = 1u << 10;
 
         std::uint32_t wishes = 0;
-        std::uint8_t who = 0;                           ///< Which celebrity comes, 1..6
-        float first_visit = 0;                          ///< The first visit's date; later years' visits fall on the same day
-        float next_visit = 0;                           ///< When the next visit is due
-        std::int32_t retry_months = 0;                  ///< After a visit that went badly, months until they come again
-        std::int32_t months_to_stay = 0;                ///< How long a visit lasts
+        std::uint8_t who = 0;  ///< Which celebrity comes, 1..6
+        float first_visit = 0; ///< The first visit's date; later years' visits fall on the same day
+        float next_visit = 0;
+        std::int32_t retry_months = 0; ///< After a visit that went badly, months until they come again
+        std::int32_t months_to_stay = 0;
         std::int32_t coasters_needed = 0;               ///< kCoasters: how many different coasters they want to ride
         float min_excitement = 0;                       ///< kCoasters: how exciting each must be, as rides are rated
         std::int32_t theme = 0;                         ///< kThemedArea: the theme they want to see
@@ -380,14 +380,14 @@ namespace rct3::save::model
     {
         ConditionKind kind = ConditionKind::Other;
         std::string class_name { }; ///< The file's class, always set
-        std::uint64_t id = 0;       ///< Object id
+        std::uint64_t id = 0;
         std::int32_t difficulty = 0;
         std::int32_t objective_id = 0;
         std::int32_t slot = 0; ///< 0..7 within the objective
         bool completed = false;
-        std::int32_t months_to_hold = 0; ///< How long the condition must stay true
-        float start_time = 0.0f;         ///< Game time units
-        float next_check_time = 0.0f;    ///< Game time units; the deadline when HasDeadline is set
+        std::int32_t months_to_hold = 0;
+        float start_time = 0.0f;      ///< Game time units
+        float next_check_time = 0.0f; ///< Game time units; the deadline when HasDeadline is set
         std::uint32_t consistency_flags = 0;
         std::optional<std::int64_t> value { };    ///< Threshold, for the families that have one
         std::optional<bool> greater_than { };     ///< Comparison direction, newer generations only

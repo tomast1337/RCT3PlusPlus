@@ -77,7 +77,7 @@ namespace rct3::save
     {
         std::uint32_t class_index = 0;
         std::uint64_t id = 0;
-        std::size_t offset = 0; ///< Offset of the record in the input
+        std::size_t offset = 0;
         std::span<const std::byte> bytes;
         /// The attribute data after the class index and id.
         [[nodiscard]] std::span<const std::byte> payload() const noexcept

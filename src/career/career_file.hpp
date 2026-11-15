@@ -57,7 +57,6 @@ namespace rct3::career
     [[nodiscard]] std::vector<std::byte> write_career(const CareerData& data);
     [[nodiscard]] std::expected<CareerData, CareerFileError> read_career(std::span<const std::byte> bytes);
 
-    /// The file name ending of our career files.
     inline constexpr std::string_view kCareerExtension = ".rct3career";
 
     struct CareerEntry

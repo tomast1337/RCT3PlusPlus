@@ -255,7 +255,7 @@ namespace rct3::scene::track
             v.can_demolish = ride.track && !ride.track->pieces.empty();
             v.can_complete = v.can_demolish && b.tip.has_value() && !b.backward && !opening(ride) && !b.selected;
             v.complete_dim = !b.proposed.empty() && std::fmod(b.clock.value, 2 * kFlash.value) >= kFlash.value;
-            v.heights = b.heights;
+            v.heights_shown = b.heights;
             v.heights_locked = scene.show_ride_heights;
             const rct3::park::track::TrackRules rules = b.ride->value < scene.track_rules.size() ? scene.track_rules[b.ride->value] : rct3::park::track::TrackRules { };
             if (rules.car_facing)

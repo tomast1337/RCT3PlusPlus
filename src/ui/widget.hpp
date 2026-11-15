@@ -42,14 +42,12 @@ namespace rct3::ui
         return p.x >= rect.x0 && p.x < rect.x1 && p.y >= rect.y0 && p.y < rect.y1;
     }
 
-    /// What widgets update with.
     struct UpdateContext
     {
         units::Seconds elapsed;               ///< Since the last update
         const font::FontSet* fonts = nullptr; ///< For widgets that measure text; null when there are none
     };
 
-    /// What widgets draw with.
     struct DrawContext
     {
         DrawList& list;

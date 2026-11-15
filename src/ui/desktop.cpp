@@ -98,8 +98,7 @@ namespace rct3::ui
                 update_tree(*w.children()[i], context);
         }
 
-        // Detaches every closing widget below `w`.
-        void sweep(Widget& w)
+        void detach_closing(Widget& w)
         {
             std::vector<const Widget*> closing;
             for (const auto& c : w.children())
@@ -107,7 +106,7 @@ namespace rct3::ui
                 if (c->closing())
                     closing.push_back(c.get());
                 else
-                    sweep(*c);
+                    detach_closing(*c);
             }
             for (const Widget* c : closing)
                 w.remove(*c);
@@ -329,7 +328,7 @@ namespace rct3::ui
             last_under_ = under;
 
         update_tree(*root_, context);
-        sweep(*root_);
+        detach_closing(*root_);
         if (held_ != nullptr && !in_tree(*root_, held_))
             held_ = nullptr;
         if (focus_ != nullptr && !in_tree(*root_, focus_))

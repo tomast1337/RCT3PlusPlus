@@ -27,7 +27,6 @@ namespace rct3::ui::screens::loading_screen
     /// The game's logo, in the startup logos' overlay.
     inline constexpr std::string_view kLogoFile = "gui/Banner/Banner.common.ovl";
     inline constexpr std::string_view kLogo = "RCT3Logo";
-    /// The heading's text.
     inline constexpr std::string_view kHeadingText = "LoadingScreen_NowLoading";
 
     // Flat colours, as the game's screen has.

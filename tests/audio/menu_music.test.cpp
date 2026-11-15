@@ -101,8 +101,8 @@ TEST_CASE("in a park the picked music carries on and the menus' cycle stops")
 TEST_CASE("in a park the music is heard only with the camera well up, more the higher it is")
 {
     CHECK(park_music_level(0) == 0);
-    CHECK(park_music_level(kParkMusicQuiet) == 0);
-    CHECK(park_music_level((kParkMusicQuiet + kParkMusicFull) / 2) == doctest::Approx(0.5f));
-    CHECK(park_music_level(kParkMusicFull) == 1);
-    CHECK(park_music_level(kParkMusicFull * 2) == 1);
+    CHECK(park_music_level(kParkMusicQuiet.value) == 0);
+    CHECK(park_music_level((kParkMusicQuiet.value + kParkMusicFull.value) / 2) == doctest::Approx(0.5f));
+    CHECK(park_music_level(kParkMusicFull.value) == 1);
+    CHECK(park_music_level(kParkMusicFull.value * 2) == 1);
 }

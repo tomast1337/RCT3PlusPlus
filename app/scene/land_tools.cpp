@@ -46,7 +46,7 @@ namespace rct3::scene
 
         constexpr std::string_view kPanelName = "land_panel";
         constexpr std::string_view kWaterRefused = "Rct3pp_WaterRefused";
-        constexpr float kInFront = 0.01f; ///< Back along the pointer's ray from the ground it meets, in world units
+        constexpr units::Distance kInFront { 0.01f }; ///< Back along the pointer's ray from the ground it meets
 
         /// A tab's tools by their pictures, `usable` the first of them that work so far.
         ui::screens::build::LandTab tab_of(const ui::StringTable& strings, std::string_view icon, int slot, std::initializer_list<std::string_view> tools, std::size_t usable)
@@ -87,9 +87,9 @@ namespace rct3::scene
         /// The tile tools' pairs, in their tab's order.
         constexpr std::array kTileShapings { rct3::park::TileShaping::Snap, rct3::park::TileShaping::Free, rct3::park::TileShaping::Whole };
         constexpr glm::vec4 kMarkColour { 1.0f, 1.0f, 1.0f, 0.85f };
-        constexpr float kRingPiece = 1.0f;  ///< Length of the pieces the brush's ring is drawn in, in world units
-        constexpr float kRingLift = 0.2f;   ///< Of the ring over the ground, enough not to flicker against it from afar
-        constexpr float kRingWidth = 0.25f; ///< Of its line
+        constexpr units::Distance kRingPiece { 1.0f }; ///< Length of the pieces the brush's ring is drawn in
+        constexpr float kRingLift = 0.2f;              ///< Of the ring over the ground, enough not to flicker against it from afar
+        constexpr float kRingWidth = 0.25f;            ///< Of its line
 
         /// The smoothing tab's tools, in its order, and where a levelling one levels to.
         enum class Level : std::uint8_t
@@ -346,7 +346,7 @@ namespace rct3::scene
                 {
                     // Short pieces, each end on the ground and well over it, so slopes between do not swallow them.
                     const auto radius = static_cast<float>(l.brush);
-                    const int pieces = std::clamp(static_cast<int>(glm::two_pi<float>() * radius / kRingPiece), 24, 256);
+                    const int pieces = std::clamp(static_cast<int>(glm::two_pi<float>() * radius / kRingPiece.value), 24, 256);
                     const auto on_ring = [&](int i) {
                         const float turn = glm::two_pi<float>() * static_cast<float>(i) / static_cast<float>(pieces);
                         const float x = scene.grid.world_x(0) + middle->x * scene.grid.tile_size_x + std::cos(turn) * radius;
@@ -574,7 +574,7 @@ namespace rct3::scene
                 return;
             // The water starts on the tile the pointer was over just before meeting the ground: the one in front of
             // a cliff wall clicked, else the one clicked.
-            const glm::vec3 front = ray.origin + ray.direction * (*distance - kInFront);
+            const glm::vec3 front = ray.origin + ray.direction * (*distance - kInFront.value);
             const save::model::Tile tile { static_cast<int>(std::floor((front.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((front.z - g.origin_z) / g.tile_size_z)) };
             if (!g.contains(tile.col, tile.row))
                 return;

@@ -54,7 +54,7 @@ namespace rct3::scene::park
         const std::int32_t kStandUpMotion = rct3::park::person::motion_number("sitbenchout").value_or(rct3::park::person::motion::kIdle);
         const std::int32_t kSitEatMotion = rct3::park::person::motion_number("sitbencheatlhand").value_or(rct3::park::person::motion::kIdle);
         const std::int32_t kSitDrinkMotion = rct3::park::person::motion_number("sitbenchdrinkl").value_or(rct3::park::person::motion::kIdle);
-        constexpr float kStepToSeat = 0.8f; ///< Chosen by eye: seconds from the path to the seat and back
+        constexpr units::Seconds kStepToSeat { 0.8f }; ///< Chosen by eye: from the path to the seat and back
         /// How guests fire a water cannon, as the game's motions name them: taking hold, firing, letting go.
         const std::int32_t kCannonInMotion = rct3::park::person::motion_number("watercannonin").value_or(rct3::park::person::motion::kIdle);
         const std::int32_t kCannonMotion = rct3::park::person::motion_number("watercannonloop").value_or(rct3::park::person::motion::kIdle);
@@ -285,32 +285,32 @@ namespace rct3::scene::park
                 // Rubbish into a bin: a quick step over to it, facing it, and back.
                 if (const auto bin = gesture->kind == simulation::GestureKind::HandOver ? item_at(scene, gesture->at) : std::nullopt)
                 {
-                    constexpr float kBinReach = 0.45f; ///< Chosen by eye: from a bin to where one using it stands
-                    constexpr float kBinStep = 0.3f;   ///< Chosen by eye: seconds of the step over to a bin and back
+                    constexpr float kBinReach = 0.45f;          ///< Chosen by eye: from a bin to where one using it stands
+                    constexpr units::Seconds kBinStep { 0.3f }; ///< Chosen by eye: of the step over to a bin and back
                     const glm::vec2 to { bin->x - at.position.x, bin->z - at.position.z };
-                    const float part = std::clamp(std::min(pose.time, gesture->left.value - scene.sim_time) / kBinStep, 0.0f, 1.0f);
+                    const float part = std::clamp(std::min(pose.time, gesture->left.value - scene.sim_time) / kBinStep.value, 0.0f, 1.0f);
                     const float reach = std::max(glm::length(to) - kBinReach, 0.0f) * part;
                     const glm::vec2 way = glm::length(to) > 0 ? glm::normalize(to) : glm::vec2 { 0.0f };
                     const float turn = glm::length(to) > 0 ? std::remainder(std::atan2(to.x, to.y) - at.heading.value, glm::two_pi<float>()) : 0.0f;
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position + glm::vec3(way.x, 0.0f, way.y) * reach), at.heading.value + turn * part, glm::vec3(0.0f, 1.0f, 0.0f));
                 }
                 // Clapping: hands up, clapping a while, hands down for the last of it.
-                constexpr float kClapEnds = 0.33f; ///< Seconds the applause motions take to raise and lower the hands
+                constexpr units::Seconds kClapEnds { 0.33f }; ///< The applause motions take to raise and lower the hands
                 if (gesture->kind == simulation::GestureKind::Clap)
                 {
                     const float into = simulation::kTuning.shows.clap.value - gesture->left.value + scene.sim_time;
                     const float left = gesture->left.value - scene.sim_time;
-                    pose.motion = rct3::park::person::motion_number(into < kClapEnds ? "applausein" : left < kClapEnds ? "applauseout" : "applause").value_or(rct3::park::person::motion::kIdle);
-                    pose.time = into < kClapEnds ? into : left < kClapEnds ? kClapEnds - left : into - kClapEnds;
+                    pose.motion = rct3::park::person::motion_number(into < kClapEnds.value ? "applausein" : left < kClapEnds.value ? "applauseout" : "applause").value_or(rct3::park::person::motion::kIdle);
+                    pose.time = into < kClapEnds.value ? into : left < kClapEnds.value ? kClapEnds.value - left : into - kClapEnds.value;
                 }
                 // Knocked over, they go down, lie there, and get up for the last of it.
-                constexpr float kGettingUp = 1.5f; ///< Seconds of it a knocked over guest takes getting up
+                constexpr units::Seconds kGettingUp { 1.5f }; ///< Of it, a knocked over guest takes getting up
                 if (gesture->kind == simulation::GestureKind::Down)
                 {
                     const float down = simulation::kTuning.crashes.knocked.value - gesture->left.value + scene.sim_time;
-                    const bool up = gesture->left.value - scene.sim_time < kGettingUp;
-                    pose.motion = rct3::park::person::motion_number(down < kGettingUp ? "knockdownin" : up ? "knockdownout" : "knockdownloop").value_or(rct3::park::person::motion::kIdle);
-                    pose.time = down < kGettingUp ? down : up ? kGettingUp - gesture->left.value + scene.sim_time : down - kGettingUp;
+                    const bool up = gesture->left.value - scene.sim_time < kGettingUp.value;
+                    pose.motion = rct3::park::person::motion_number(down < kGettingUp.value ? "knockdownin" : up ? "knockdownout" : "knockdownloop").value_or(rct3::park::person::motion::kIdle);
+                    pose.time = down < kGettingUp.value ? down : up ? kGettingUp.value - gesture->left.value + scene.sim_time : down - kGettingUp.value;
                 }
             };
             // Held by the player they hang where the pointer has them; let go, they fall, then walk to the paths.
@@ -488,14 +488,14 @@ namespace rct3::scene::park
                     const float watch = simulation::kTuning.facilities.watch.value;
                     const float into = watch - linger->left.value + scene.sim_time;
                     const float off = std::min(into, watch - into);
-                    const float part = std::clamp(off / kStepToSeat, 0.0f, 1.0f);
+                    const float part = std::clamp(off / kStepToSeat.value, 0.0f, 1.0f);
                     const float turn = std::remainder(facing - at.heading.value, glm::two_pi<float>());
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), glm::mix(at.position, glm::vec3(stand.x, at.position.y, stand.z), part)), at.heading.value + turn * part, glm::vec3(0.0f, 1.0f, 0.0f));
-                    if (off < kStepToSeat)
+                    if (off < kStepToSeat.value)
                     {
                         pose.motion = rct3::park::person::motion::kWalk;
                         if (shown.paces[0] > 0)
-                            pose.time = off * glm::distance(at.position, stand) / kStepToSeat / shown.paces[0];
+                            pose.time = off * glm::distance(at.position, stand) / kStepToSeat.value / shown.paces[0];
                         return pose;
                     }
                     const auto length = [&](std::int32_t motion) {
@@ -507,11 +507,11 @@ namespace rct3::scene::park
                     const bool slouch = !linger->camera && visitor != nullptr && visitor->age == simulation::AgeGroup::Teen && entt::to_integral(shown.guest) % 2 == 0;
                     const std::int32_t in = linger->camera ? kVideoInMotion : slouch ? kSlouchInMotion : rct3::park::person::motion::kIdle;
                     const std::int32_t out = linger->camera ? kVideoOutMotion : slouch ? kSlouchOutMotion : rct3::park::person::motion::kIdle;
-                    const float stay = watch - 2 * kStepToSeat;
+                    const float stay = watch - 2 * kStepToSeat.value;
                     const float begin = in == rct3::park::person::motion::kIdle ? 0.0f : length(in);
                     const float end = out == rct3::park::person::motion::kIdle ? 0.0f : length(out);
                     const std::array clips { rct3::park::person::Clip { in, begin }, rct3::park::person::Clip { linger->camera ? kVideoMotion : slouch ? kSlouchMotion : rct3::park::person::motion::kIdle, std::max(stay - begin - end, 0.0f) }, rct3::park::person::Clip { out, end } };
-                    const rct3::park::person::Clip step = rct3::park::person::clip_at(clips, std::min(into - kStepToSeat, stay));
+                    const rct3::park::person::Clip step = rct3::park::person::clip_at(clips, std::min(into - kStepToSeat.value, stay));
                     pose.motion = step.motion;
                     pose.time = step.seconds;
                     if (!linger->camera)
@@ -546,15 +546,15 @@ namespace rct3::scene::park
                 {
                     const float firing = simulation::kTuning.surroundings.firing.value;
                     const float into = firing - linger.left.value + scene.sim_time;
-                    if (const float off = std::min(into, firing - into); off < kStepToSeat)
+                    if (const float off = std::min(into, firing - into); off < kStepToSeat.value)
                     {
-                        stepping(std::max(off, 0.0f) / kStepToSeat);
+                        stepping(std::max(off, 0.0f) / kStepToSeat.value);
                         return pose;
                     }
                     const float hold = length(kCannonInMotion);
                     const float release = length(kCannonOutMotion);
-                    const std::array clips { rct3::park::person::Clip { kCannonInMotion, hold }, rct3::park::person::Clip { kCannonMotion, std::max(firing - 2 * kStepToSeat - hold - release, 0.0f) }, rct3::park::person::Clip { kCannonOutMotion, release } };
-                    const rct3::park::person::Clip step = rct3::park::person::clip_at(clips, into - kStepToSeat);
+                    const std::array clips { rct3::park::person::Clip { kCannonInMotion, hold }, rct3::park::person::Clip { kCannonMotion, std::max(firing - 2 * kStepToSeat.value - hold - release, 0.0f) }, rct3::park::person::Clip { kCannonOutMotion, release } };
+                    const rct3::park::person::Clip step = rct3::park::person::clip_at(clips, into - kStepToSeat.value);
                     pose.motion = step.motion;
                     pose.time = step.seconds;
                     return pose;
@@ -566,16 +566,16 @@ namespace rct3::scene::park
                     pose.motion = kStandUpMotion;
                     pose.time = up;
                     if (up > standing)
-                        stepping(1 - std::min((up - standing) / kStepToSeat, 1.0f));
+                        stepping(1 - std::min((up - standing) / kStepToSeat.value, 1.0f));
                     return pose;
                 }
                 const float since = linger.sat.value + scene.sim_time;
-                if (since < kStepToSeat)
+                if (since < kStepToSeat.value)
                 {
-                    stepping(since / kStepToSeat);
+                    stepping(since / kStepToSeat.value);
                     return pose;
                 }
-                const float down = since - kStepToSeat;
+                const float down = since - kStepToSeat.value;
                 const float sitting = length(kSitDownMotion);
                 pose.motion = down < sitting ? kSitDownMotion : kSitMotion;
                 pose.time = down < sitting ? down : down - sitting;
@@ -583,7 +583,7 @@ namespace rct3::scene::park
                 const auto beside = [&](int side) {
                     return std::ranges::any_of(r.view<const simulation::Linger>().each(), [&](const auto& other) {
                         const auto& [them, l] = other;
-                        return them != shown.guest && l.bench == linger.bench && l.seat == linger.seat + side && !l.rising && l.sat.value > kStepToSeat;
+                        return them != shown.guest && l.bench == linger.bench && l.seat == linger.seat + side && !l.rising && l.sat.value > kStepToSeat.value;
                     });
                 };
                 const auto turn = static_cast<std::size_t>(scene.park_clock / kChatTurnSeconds) + entt::to_integral(shown.guest);
@@ -641,9 +641,9 @@ namespace rct3::scene::park
                 {
                     constexpr float kIndoors = 0.8f; ///< Chosen by eye: from the counter in through the door
                     const float off = std::min(into, left);
-                    if (off >= kStepToSeat)
+                    if (off >= kStepToSeat.value)
                         return std::nullopt;
-                    const float part = std::max(off, 0.0f) / kStepToSeat;
+                    const float part = std::max(off, 0.0f) / kStepToSeat.value;
                     const glm::vec3 ahead { std::sin(at.heading.value), 0.0f, std::cos(at.heading.value) };
                     const float facing = at.heading.value + (left < into ? glm::pi<float>() : 0.0f);
                     pose.world = glm::rotate(glm::translate(glm::mat4(1.0f), at.position + ahead * kIndoors * part), facing, glm::vec3(0.0f, 1.0f, 0.0f));

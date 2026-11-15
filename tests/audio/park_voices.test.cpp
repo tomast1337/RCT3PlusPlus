@@ -11,8 +11,8 @@ TEST_CASE("a park sound is placed where it happens, full loud near and silent fa
     REQUIRE(p.at.has_value());
     CHECK(p.at->y == 2.0f);
     CHECK(p.volume == doctest::Approx(0.8f));
-    CHECK(p.near == kNearVoice);
-    CHECK(p.far == kFarVoice);
+    CHECK(p.near == kNearVoice.value);
+    CHECK(p.far == kFarVoice.value);
     CHECK(is_valid(p));
 }
 

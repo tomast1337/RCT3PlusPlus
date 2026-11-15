@@ -72,7 +72,7 @@ namespace rct3::audio
 
     float park_music_level(float height)
     {
-        return std::clamp((height - kParkMusicQuiet) / (kParkMusicFull - kParkMusicQuiet), 0.0f, 1.0f);
+        return std::clamp((height - kParkMusicQuiet.value) / (kParkMusicFull.value - kParkMusicQuiet.value), 0.0f, 1.0f);
     }
 
     bool is_halloween(std::chrono::system_clock::time_point when)

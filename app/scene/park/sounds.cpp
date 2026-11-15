@@ -201,7 +201,7 @@ namespace rct3::scene::park
         for (audio::VoiceHandle& voice : sounds.chatter_voices)
         {
             if (!engine.is_playing(voice))
-                voice = play_any(engine, sounds.chatter, sounds.random, { .volume = chatter, .at = crowd, .near = audio::kFarVoice, .far = 2 * audio::kFarVoice });
+                voice = play_any(engine, sounds.chatter, sounds.random, { .volume = chatter, .at = crowd, .near = audio::kFarVoice.value, .far = 2 * audio::kFarVoice.value });
             else
             {
                 engine.set_voice_volume(voice, chatter);
@@ -398,7 +398,7 @@ namespace rct3::scene::park
             TrainSounds train = node ? std::move(node.mapped()) : TrainSounds { .set = t.ride.value < scene.rides.rides.size() ? audio::track_sound_set(scene.rides.rides[t.ride.value].base.overlay_path) : audio::TrackSoundSet::None, .was_running = t.train->running };
             const auto& kit = sounds.track_sounds[static_cast<std::size_t>(train.set)];
             const float level = i < audio::kHeardTrains ? kRideLevel : 0.0f;
-            const auto params = [&](float gain) { return audio::PlayParams { .volume = gain, .at = t.at, .near = audio::kRideNear, .far = audio::kRideFar }; };
+            const auto params = [&](float gain) { return audio::PlayParams { .volume = gain, .at = t.at, .near = audio::kRideNear.value, .far = audio::kRideFar.value }; };
             const auto sound = [&](audio::TrackSound which) -> const std::optional<audio::SoundBuffer>& { return kit[static_cast<std::size_t>(which)]; };
 
             using enum audio::TrackSound;

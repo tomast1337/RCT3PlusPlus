@@ -48,7 +48,7 @@ namespace rct3::ui::screens::park_view
         constexpr float kTrendWidth = 9;
         constexpr float kTrendHeight = 9;
         constexpr float kArcRadius = 24;                ///< From the day mode button's middle to each mode's
-        constexpr float kArcSpread = 0.8f;              ///< Radians between neighbouring modes in the arc
+        constexpr units::Radians kArcSpread { 0.8f };   ///< Between neighbouring modes in the arc
         constexpr units::Seconds kDoubleClick { 0.4f }; ///< A second click on the money this soon counts
         constexpr float kGuestsWidth = 40;
         constexpr float kThumbWidth = 12;
@@ -175,7 +175,7 @@ namespace rct3::ui::screens::park_view
         day_mode_->visible = false;
         // The modes open in an arc below the button, from Day on the left round to Night on the right.
         constexpr std::array<std::string_view, 3> kChoiceNames = { "park_hours", "day", "night" };
-        constexpr std::array<float, 3> kChoiceAngles = { 0, -kArcSpread, kArcSpread };
+        constexpr std::array<float, 3> kChoiceAngles = { 0, -kArcSpread.value, kArcSpread.value };
         for (std::size_t i = 0; i < day_choices_.size(); ++i)
         {
             day_choices_[i] = &day_mode_->add<widgets::Button>(std::string(kChoiceNames[i]), std::string { }, style_.day_mode_icons[i]);

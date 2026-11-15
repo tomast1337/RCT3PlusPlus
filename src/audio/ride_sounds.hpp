@@ -9,6 +9,8 @@
 // goes, silent when it stands. The chain loop plays while any of the train is on a lift.
 #pragma once
 
+#include "units/units.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <string_view>
@@ -48,9 +50,9 @@ namespace rct3::audio
     };
     inline constexpr std::size_t kTrackSounds = 8;
 
-    inline constexpr float kRideNear = 15;         ///< World units: a train's sounds are full loud this close
-    inline constexpr float kRideFar = 180;         ///< And gone this far
-    inline constexpr std::size_t kHeardTrains = 4; ///< Nearest trains whose loops play, to spare voices
+    inline constexpr units::Distance kRideNear { 15 }; ///< A train's sounds are full loud this close
+    inline constexpr units::Distance kRideFar { 180 }; ///< And gone this far
+    inline constexpr std::size_t kHeardTrains = 4;     ///< Nearest trains whose loops play, to spare voices
 
     /// The overlay name of `set`, as in tracks/TrackSounds/<name>.common.ovl; empty for None.
     [[nodiscard]] std::string_view file_of(TrackSoundSet set);

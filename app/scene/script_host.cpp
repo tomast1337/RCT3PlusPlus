@@ -850,7 +850,7 @@ namespace rct3::scene
                 const bool shown = park.shown && park.shown->kind == rct3::park::AttractionRef::Kind::Stall && park.shown->index == i;
                 Json one { { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::model::AttractionState::Open }, { "items", std::move(items) }, { "extras", std::move(extras) }, { "sync", stall.sync }, { "shown", shown }, { "joined", false }, { "demolished", stall.base.demolished }, { "moving", false } };
                 for (const park::ParkScene::BonedRide& boned : park.boned_rides)
-                    if (const auto owner = boned.object < park.objects.size() ? park.attractions.find(park.objects[boned.object].id) : park.attractions.end(); owner != park.attractions.end() && owner->second == rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Stall, i })
+                    if (const auto owner = boned.object.value < park.objects.size() ? park.attractions.find(park.objects[boned.object.value].id) : park.attractions.end(); owner != park.attractions.end() && owner->second == rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Stall, i })
                         one["moving"] = true;
                 for (const auto [e, a] : park.sim.registry.view<const simulation::Attraction>().each())
                     if (a.saved == stall.base.id)

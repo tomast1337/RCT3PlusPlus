@@ -385,8 +385,8 @@ namespace rct3::scene::track
         const auto objects = object_indices(scene);
         for (const save::model::TrackPiece& piece : scene.rides.rides[ride.value].track->pieces)
         {
-            if (const auto found = objects.find(piece.scenery); found != objects.end() && !scene.objects[found->second].overlay.empty())
-                return scene.objects[found->second].overlay;
+            if (const auto found = objects.find(piece.scenery); found != objects.end() && !scene.objects[found->second.value].overlay.empty())
+                return scene.objects[found->second.value].overlay;
         }
         return std::nullopt;
     }
@@ -408,7 +408,7 @@ namespace rct3::scene::track
             const auto shape = rct3::park::track::shape_named(*c, piece.symbol);
             const auto object = objects.find(piece.scenery);
             if (shape)
-                cost += object != objects.end() ? piece_price(scene, ride, *shape, scene.objects[object->second]) : units::Money { shape->record.cost };
+                cost += object != objects.end() ? piece_price(scene, ride, *shape, scene.objects[object->second.value]) : units::Money { shape->record.cost };
         }
         return cost;
     }
@@ -558,7 +558,7 @@ namespace rct3::scene::track
                 if (piece_object == objects.end())
                     continue;
                 // Stands where its piece does.
-                save::model::PlacedObject o = scene.objects[piece_object->second];
+                save::model::PlacedObject o = scene.objects[piece_object->second.value];
                 const std::uint64_t id = last_id(scene) + 1;
                 pieces[i].platform = save::model::TrackPlatform { .id = id, .tile_x = pieces[i].tile_x, .tile_z = pieces[i].tile_z, .height = pieces[i].height, .direction = pieces[i].direction };
                 o.id = id + 1;

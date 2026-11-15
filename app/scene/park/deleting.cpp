@@ -28,14 +28,14 @@ namespace rct3::scene::park
         constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
 
         /// Takes the prop `index` out of the park.
-        void destroy_prop(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t index)
+        void destroy_prop(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, save::model::PlacedObjectIndex index)
         {
-            if (index >= scene.objects.size())
+            if (index.value >= scene.objects.size())
                 return;
-            const auto wall = rct3::park::edge_wall(scene.objects[index], scene.models, scene.grid);
+            const auto wall = rct3::park::edge_wall(scene.objects[index.value], scene.models, scene.grid);
             change_object(device, scene, index, [](save::model::PlacedObject& o) { o.hidden = true; });
             // Guests stop using what stood on the path, and the park keeps no bin or sign for it.
-            const std::uint64_t id = scene.objects[index].id;
+            const std::uint64_t id = scene.objects[index.value].id;
             auto& r = scene.sim.registry;
             std::vector<entt::entity> gone;
             const auto sign = std::ranges::find(scene.signs, id, &save::model::SignState::object_ref);
@@ -44,7 +44,7 @@ namespace rct3::scene::park
                 {
                     gone.push_back(e);
                     if (sign != scene.signs.end() && sign->kind == 1)
-                        scene.sim.paths.set_no_entry(item.node, simulation::no_entry_side(scene.objects[index]), false);
+                        scene.sim.paths.set_no_entry(item.node, simulation::no_entry_side(scene.objects[index.value]), false);
                 }
             for (const auto [e, bed] : r.view<const simulation::FlowerBed>().each())
                 if (bed.object == id)
@@ -65,14 +65,14 @@ namespace rct3::scene::park
         scene.deleting = DeleteTools { .drawn = scene.deleting.drawn }; // The marks go on the next frame
     }
 
-    std::optional<units::Money> delete_props(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::size_t> indices, bool floated)
+    std::optional<units::Money> delete_props(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const save::model::PlacedObjectIndex> indices, bool floated)
     {
-        std::vector<std::size_t> going;
+        std::vector<save::model::PlacedObjectIndex> going;
         units::Money cost;
         bool entrance = false;
-        for (const std::size_t i : indices)
+        for (const save::model::PlacedObjectIndex i : indices)
         {
-            const auto model = scene.models.find(rct3::park::object::model_ref(scene.objects.at(i)));
+            const auto model = scene.models.find(rct3::park::object::model_ref(scene.objects.at(i.value)));
             if (model != scene.models.end() && model->second.category == std::to_underlying(rct3::park::ItemCategory::ParkEntrance))
                 entrance = true;
             else
@@ -93,10 +93,10 @@ namespace rct3::scene::park
         }
         if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, cost, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
             return std::nullopt;
-        const save::model::PlacedObject& first = scene.objects[going.front()];
+        const save::model::PlacedObject& first = scene.objects[going.front().value];
         if (floated)
             float_money(scene, tile_point(scene.grid, { first.col, first.row }), -cost, true);
-        for (const std::size_t i : going)
+        for (const save::model::PlacedObjectIndex i : going)
             destroy_prop(device, scene, assets, i);
         return cost;
     }
@@ -108,7 +108,7 @@ namespace rct3::scene::park
             if (std::ranges::contains(ids, p.id))
                 tiles.emplace_back(p.col, p.row);
         std::ranges::sort(tiles);
-        std::vector<std::size_t> extras;
+        std::vector<save::model::PlacedObjectIndex> extras;
         for (std::size_t i = 0; i < scene.objects.size(); ++i)
         {
             const save::model::PlacedObject& o = scene.objects[i];
@@ -116,7 +116,7 @@ namespace rct3::scene::park
                 continue;
             const auto model = scene.models.find(rct3::park::object::model_ref(o));
             if (model != scene.models.end() && model->second.category >= std::to_underlying(rct3::park::ItemCategory::LitterBin) && model->second.category <= std::to_underlying(rct3::park::ItemCategory::PathFeature))
-                extras.push_back(i);
+                extras.emplace_back(i);
         }
         const units::Money paid = delete_props(device, scene, assets, extras, false).value_or(units::Money { });
         remove_footpaths(device, scene, assets, ids, -paid);
@@ -161,7 +161,7 @@ namespace rct3::scene::park
                 continue;
             o.hidden = true;
             at = at.value_or(tile_point(scene.grid, { o.col, o.row }));
-            std::erase_if(scene.boned_rides, [&](const ParkScene::BonedRide& b) { return b.object == i; });
+            std::erase_if(scene.boned_rides, [&](const ParkScene::BonedRide& b) { return b.object.value == i; });
         }
         for (const std::uint64_t id : parts)
             scene.attractions.erase(id);
@@ -203,7 +203,7 @@ namespace rct3::scene::park
     void delete_area(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Tile a, save::model::Tile b)
     {
         const auto inside = [&](std::int32_t col, std::int32_t row) { return col >= std::min(a.col, b.col) && col <= std::max(a.col, b.col) && row >= std::min(a.row, b.row) && row <= std::max(a.row, b.row); };
-        std::vector<std::size_t> props;
+        std::vector<save::model::PlacedObjectIndex> props;
         std::vector<rct3::park::AttractionRef> attractions;
         for (std::size_t i = 0; i < scene.objects.size(); ++i)
         {
@@ -216,7 +216,7 @@ namespace rct3::scene::park
                     attractions.push_back(owner->second);
             }
             else if (clickable_prop(scene, o))
-                props.push_back(i);
+                props.emplace_back(i);
         }
         std::vector<std::uint64_t> paths;
         for (const save::model::PathTile& p : scene.footpaths.paths)

@@ -816,7 +816,7 @@ namespace rct3::scene
             simulation::add_scenery(scene.sim, scene.objects.back(), simulation::scenery_weight(category, model.feature));
             if (model.water_capacity)
                 simulation::add_flower_bed(scene.sim, scene.objects.back(), *model.water_capacity, std::nullopt);
-            park::animate_scenery(device, scene, scene.objects.size() - 1);
+            park::animate_scenery(device, scene, save::model::PlacedObjectIndex { scene.objects.size() - 1 });
             // The woods beyond the edge grow with the park's: a tree planted near it seeds some there.
             if (scene.off_map_stream && rct3::park::is_plant(scene.objects.back(), scene.models))
             {
@@ -848,7 +848,7 @@ namespace rct3::scene
             {
                 p.placed = rct3::park::AttractionRef::of(save::model::StallIndex { scene.rides.stalls.size() });
                 const std::uint64_t object = add_object(scene, *o);
-                park::animate_scenery(device, scene, scene.objects.size() - 1);
+                park::animate_scenery(device, scene, save::model::PlacedObjectIndex { scene.objects.size() - 1 });
                 save::model::Stall& stall = scene.rides.stalls.emplace_back();
                 stall.base.id = last_id(scene) + 1;
                 stall.base.symbol = std::format("{}:sta", p.item->symbol);

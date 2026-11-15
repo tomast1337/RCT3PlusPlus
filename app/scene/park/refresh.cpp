@@ -130,7 +130,7 @@ namespace rct3::scene::park
             auto seat = static_cast<std::size_t>(std::ranges::find(*riders, guest) - riders->begin());
             if (const auto object = scene.ride_seats.find(errand.target); object != scene.ride_seats.end())
             {
-                const save::model::PlacedObject& o = scene.objects[object->second];
+                const save::model::PlacedObject& o = scene.objects[object->second.value];
                 const auto model = scene.models.find(rct3::park::object::model_ref(o));
                 if (model == scene.models.end() || seat >= model->second.seat_places.size())
                     return std::nullopt;
@@ -298,7 +298,7 @@ namespace rct3::scene::park
                 const glm::vec3 at(boned.placed[3]);
                 if ((boned.ride == entt::null || boned.gate) && (glm::distance(eye, at) > kPropMoveDistance || !maybe_in_view(view, at, boned.reach)))
                     continue;
-                const auto model = scene.models.find(rct3::park::object::model_ref(scene.objects[boned.object]));
+                const auto model = scene.models.find(rct3::park::object::model_ref(scene.objects[boned.object.value]));
                 if (model == scene.models.end() || !model->second.rig)
                     continue;
                 const auto& seconds = model->second.animation_seconds;
@@ -325,7 +325,7 @@ namespace rct3::scene::park
                     const auto into = cycle != nullptr ? simulation::seconds_into_cycle(*cycle) : std::nullopt;
                     const float length = cycle != nullptr ? simulation::cycle_seconds(*cycle) : 0.0f;
                     // Scenery and stalls carry on from where the save left them, each at its own point in its loop.
-                    const float idle = scene.park_clock + (boned.ride == entt::null ? scene.objects[boned.object].motion_time.value : 0.0f);
+                    const float idle = scene.park_clock + (boned.ride == entt::null ? scene.objects[boned.object.value].motion_time.value : 0.0f);
                     playing = rct3::park::flat_ride_motion(seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), idle);
                 }
                 const auto [motion, time] = playing;
@@ -335,7 +335,7 @@ namespace rct3::scene::park
                 if (const auto& aim = model->second.aim_bones; aim && scene.simulate)
                 {
                     const auto& r = scene.sim.registry;
-                    const std::uint64_t id = scene.objects[boned.object].id;
+                    const std::uint64_t id = scene.objects[boned.object.value].id;
                     std::optional<const simulation::Linger&> firing;
                     for (const auto [e, item] : r.view<const simulation::PathItem>().each())
                         if (item.object == id)
@@ -360,7 +360,7 @@ namespace rct3::scene::park
                         constexpr units::TurnRate kSweepRate { 0.5f }; ///< Its sweep goes round at
                         constexpr float kIdlePitch = 0.35f;            ///< How far it tips up while idle
                         const float swing = simulation::kTuning.surroundings.cannon_swing.value;
-                        float yaw = kSweep * swing * std::sin(scene.park_clock * kSweepRate.value + static_cast<float>(boned.object));
+                        float yaw = kSweep * swing * std::sin(scene.park_clock * kSweepRate.value + static_cast<float>(boned.object.value));
                         float pitch = kIdlePitch;
                         float ground = boned.placed[3].y;
                         if (firing && r.valid(firing->target) && r.all_of<simulation::Pose>(firing->target))
@@ -451,26 +451,26 @@ namespace rct3::scene::park
                             out.push_back(item.node);
                     return out;
                 };
-                const auto fountain_at = [&](simulation::NodeId node) -> std::optional<std::size_t> {
+                const auto fountain_at = [&](simulation::NodeId node) -> std::optional<save::model::PlacedObjectIndex> {
                     for (const auto [e, item] : r.view<const simulation::PathItem>().each())
                         if (item.kind == simulation::PathItemKind::Fountain && item.node == node)
                             if (const auto k = std::ranges::find(scene.objects, item.object, &save::model::PlacedObject::id); k != scene.objects.end())
-                                return static_cast<std::size_t>(k - scene.objects.begin());
+                                return save::model::PlacedObjectIndex { static_cast<std::size_t>(k - scene.objects.begin()) };
                     return std::nullopt;
                 };
-                const auto node_of = [&](std::size_t object) {
+                const auto node_of = [&](save::model::PlacedObjectIndex object) {
                     for (const auto [e, item] : r.view<const simulation::PathItem>().each())
-                        if (item.object == scene.objects[object].id)
+                        if (item.object == scene.objects[object.value].id)
                             return item.node;
                     return simulation::kNoNode;
                 };
-                const auto jump = [&](std::size_t from, std::size_t to) {
-                    const auto a = scene.models.find(rct3::park::object::model_ref(scene.objects[from]));
-                    const auto b = scene.models.find(rct3::park::object::model_ref(scene.objects[to]));
+                const auto jump = [&](save::model::PlacedObjectIndex from, save::model::PlacedObjectIndex to) {
+                    const auto a = scene.models.find(rct3::park::object::model_ref(scene.objects[from.value]));
+                    const auto b = scene.models.find(rct3::park::object::model_ref(scene.objects[to.value]));
                     if (a == scene.models.end() || b == scene.models.end() || b->second.nozzles.empty())
                         return;
-                    const glm::mat4 at = rct3::park::object::placed_transform(scene.objects[from], &a->second, scene.grid, scene.fitted);
-                    const glm::mat4 into = rct3::park::object::placed_transform(scene.objects[to], &b->second, scene.grid, scene.fitted);
+                    const glm::mat4 at = rct3::park::object::placed_transform(scene.objects[from.value], &a->second, scene.grid, scene.fitted);
+                    const glm::mat4 into = rct3::park::object::placed_transform(scene.objects[to.value], &b->second, scene.grid, scene.fitted);
                     const glm::vec3 step = glm::vec3(into[3]) - glm::vec3(at[3]);
                     for (const glm::vec3& nozzle : a->second.nozzles)
                     {
@@ -485,7 +485,7 @@ namespace rct3::scene::park
                     }
                 };
                 // Landed: the fountain landed in throws on, away from where the water came from.
-                std::vector<std::pair<std::size_t, std::size_t>> landed;
+                std::vector<std::pair<save::model::PlacedObjectIndex, save::model::PlacedObjectIndex>> landed;
                 for (ParkScene::Jet& jet : scene.jets)
                     if (jet.to && !jet.landed && scene.park_clock >= jet.lands)
                     {
@@ -615,7 +615,7 @@ namespace rct3::scene::park
         const auto object = scene.ride_seats.find(ride.value < scene.ride_entities.size() ? scene.ride_entities[ride.value] : entt::null);
         if (object == scene.ride_seats.end())
             return std::nullopt;
-        const save::model::PlacedObject& o = scene.objects[object->second];
+        const save::model::PlacedObject& o = scene.objects[object->second.value];
         const auto model = scene.models.find(rct3::park::object::model_ref(o));
         const std::vector<glm::mat4>* places = model == scene.models.end() ? nullptr : eye == FlatEye::Fixed ? &model->second.view_places : &model->second.seat_places;
         if (places == nullptr || at >= places->size())
@@ -1270,7 +1270,7 @@ namespace rct3::scene::park
         };
         std::vector<std::size_t> moving;
         for (const ParkScene::BonedRide& boned : scene.boned_rides)
-            moving.push_back(boned.object);
+            moving.push_back(boned.object.value);
         // Drawn apart, moving; a twin the save keeps of one would stand still in it.
         for (const auto& list : { moving, rct3::park::twins(scene.objects, moving) })
             for (const std::size_t i : list)
@@ -1328,7 +1328,7 @@ namespace rct3::scene::park
             const std::size_t from = std::min(now[0], now[1]);
             std::vector<std::size_t> moving;
             for (const ParkScene::BonedRide& boned : scene.boned_rides)
-                moving.push_back(boned.object);
+                moving.push_back(boned.object.value);
             moving.append_range(rct3::park::twins(scene.objects, moving));
             // Drawn as the build would: moving ones apart, supports only when shown.
             std::vector<std::int8_t> levels(now[1] - from, 0);

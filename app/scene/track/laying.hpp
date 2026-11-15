@@ -35,7 +35,7 @@ namespace rct3::scene::track
     std::optional<const rct3::park::track::PieceCatalogue&> load_catalogue(TrackBuilding& b, const std::string& overlay, const ui::InterfaceAssets& assets);
 
     /// Of the scene's objects by id.
-    std::unordered_map<std::uint64_t, std::size_t> object_indices(const park::ParkScene& scene);
+    std::unordered_map<std::uint64_t, save::model::PlacedObjectIndex> object_indices(const park::ParkScene& scene);
 
     /// Whether the ride's track waits for the first piece of a stretch: it has none yet, or a new one was begun.
     bool opening(const save::model::Ride& ride);

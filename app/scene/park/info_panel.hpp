@@ -38,8 +38,8 @@ namespace rct3::scene::park
     /// The simulated changing room of `room`, if the simulation has it.
     [[nodiscard]] entt::entity room_entity(const ParkScene& scene, std::size_t room);
 
-    /// What the info panel shows of the prop `index` (of the objects).
-    [[nodiscard]] ui::screens::info::SceneryFacts prop_facts(const ParkScene& scene, std::size_t index);
+    /// What the info panel shows of the prop `index`.
+    [[nodiscard]] ui::screens::info::SceneryFacts prop_facts(const ParkScene& scene, save::model::PlacedObjectIndex index);
 
     /// Adds the pictures of what stalls sell, for their menus, to the interface's.
     void load_carried(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets);
@@ -61,11 +61,11 @@ namespace rct3::scene::park
     /// Opens the panel on the attraction `ref`, at `tab`, else the tab last opened, if it has one.
     void open_info(ParkScene& scene, ui::screens::info::InfoPanel& panel, rct3::park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, std::optional<ui::screens::info::AttractionTab> tab = std::nullopt);
 
-    /// Opens the panel on the prop `index` (of the objects), with only its name showing, or on its tab `open`.
-    void open_prop(ParkScene& scene, ui::screens::info::InfoPanel& panel, std::size_t index, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, std::optional<ui::screens::info::SceneryTab> open = std::nullopt);
+    /// Opens the panel on the prop `index`, with only its name showing, or on its tab `open`.
+    void open_prop(ParkScene& scene, ui::screens::info::InfoPanel& panel, save::model::PlacedObjectIndex index, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, std::optional<ui::screens::info::SceneryTab> open = std::nullopt);
 
     /// Paints colour slot `slot` of the prop `index` in colour `colour` of the 32.
-    void paint_prop(render::Device& device, ParkScene& scene, std::size_t index, std::size_t slot, std::int32_t colour);
+    void paint_prop(render::Device& device, ParkScene& scene, save::model::PlacedObjectIndex index, std::size_t slot, std::int32_t colour);
 
     /// Writes a change the player made on an attraction's page into the save. Nothing is shown again, so a
     /// spinner held down keeps stepping; a page that looks different after the change is set up here.

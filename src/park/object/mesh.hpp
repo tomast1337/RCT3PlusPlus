@@ -49,8 +49,8 @@ namespace rct3::park::object
         std::vector<std::uint32_t> indices;
         std::vector<ObjectBatch> batches;
         std::vector<std::uint32_t> owners; ///< By vertex, the index of the object it belongs to
-        std::size_t placed = 0;            ///< Objects drawn
-        std::size_t missing = 0;           ///< Visible objects without a model
+        std::size_t drawn = 0;
+        std::size_t missing = 0; ///< Visible objects without a model
     };
 
     /// A model's key, "overlay|symbol", as its two parts: finding a model by it builds no string.
@@ -142,8 +142,8 @@ namespace rct3::park::object
         std::string_view effect { }; ///< As ModelEffect::effect, a view into the model
         glm::vec3 position { 0.0f };
         glm::mat3 axes { 1.0f }; ///< Its second column the way it points
-        std::size_t object = 0;  ///< By index
-        float size = 1;          ///< Times the sizes its particles have in the effect
+        std::size_t object_index = 0;
+        float size = 1; ///< Times the sizes its particles have in the effect
     };
 
     /// The particle effects the objects' models show, placed in the park as object_lamps places lamps.

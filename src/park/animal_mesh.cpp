@@ -50,7 +50,7 @@ namespace rct3::park
                 for (const std::uint16_t i : piece.indices)
                     run.indices.push_back(base + i);
             }
-            ++mesh.placed;
+            ++mesh.drawn;
         }
         for (const object::PartBlend blend : { object::PartBlend::Opaque, object::PartBlend::Cutout, object::PartBlend::Blended })
         {

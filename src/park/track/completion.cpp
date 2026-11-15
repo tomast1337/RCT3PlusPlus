@@ -43,7 +43,7 @@ namespace rct3::park::track
             return s;
         s.steps.push_back({ tip, { last, { } }, 0, 0 });
         s.open.push_back({ to_go(s, tip.position), 0 });
-        s.seen.insert(key_of(tip, last));
+        s.reached_ends.insert(key_of(tip, last));
         return s;
     }
 
@@ -69,7 +69,7 @@ namespace rct3::park::track
                 if (shape.use != PieceUse::Plain || (shape.toggles & toggle_bit(PieceToggle::Chain)) != 0)
                     continue;
                 auto placed = place_after(search.steps[at].tip, shape, next.reversed, *search.grid);
-                if (!placed || !search.allowed(placed->object) || !search.seen.insert(key_of(placed->next, next)).second)
+                if (!placed || !search.allowed(placed->object) || !search.reached_ends.insert(key_of(placed->next, next)).second)
                     continue;
                 const float come = search.steps[at].come + std::max(glm::length(shape.line.end - shape.line.start) / search.grid->tile_size_x, 1.0f);
                 search.steps.push_back({ placed->next, { next, std::move(placed->object) }, at, come });

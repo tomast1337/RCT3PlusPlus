@@ -29,7 +29,7 @@ namespace rct3::park::pools
             t.high_dives += s.kind == PoolKind::HighDive ? 1 : 0;
             if (s.kind != PoolKind::Water)
                 continue;
-            ++t.water;
+            ++t.water_squares;
             // Dry on two sides that meet: a corner jutting out.
             const auto dry = [&](std::int32_t dc, std::int32_t dr) { return !water.contains({ s.col + dc, s.row + dr }); };
             const bool corner = (dry(0, 1) || dry(0, -1)) && (dry(1, 0) || dry(-1, 0));
@@ -57,12 +57,12 @@ namespace rct3::park::pools
         const float mean = static_cast<float>(t.depth_sum) / n;
         const float spread = std::sqrt(std::max(0.0f, static_cast<float>(t.depth_sum2) / n - mean * mean));
         // Chosen by eye: each term full at about what a well kept pool of fair size has, the weights adding to 1.
-        float e = 0.30f * share(static_cast<float>(t.water) / 40) // 40 squares of water
-            + 0.15f * share(spread / 0.8f)                        // shallow, normal and deep ends
-            + 0.10f * share(static_cast<float>(t.lamps) * 6 / n); // a lamp to six squares
-        if (t.water > 0)
+        float e = 0.30f * share(static_cast<float>(t.water_squares) / 40) // 40 squares of water
+            + 0.15f * share(spread / 0.8f)                                // shallow, normal and deep ends
+            + 0.10f * share(static_cast<float>(t.lamps) * 6 / n);         // a lamp to six squares
+        if (t.water_squares > 0)
         {
-            const float w = static_cast<float>(t.water);
+            const float w = static_cast<float>(t.water_squares);
             e += 0.15f * share(static_cast<float>(t.shaped) * 3 / w)        // a third of the water shaped
                 + 0.15f * share(static_cast<float>(t.ladders) * 12 / w)     // a ladder to twelve squares of water
                 + 0.15f * share(static_cast<float>(t.lifeguards) * 30 / w); // a lifeguard to thirty

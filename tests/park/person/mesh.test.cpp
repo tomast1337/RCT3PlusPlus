@@ -39,7 +39,7 @@ TEST_CASE("groups of people carried together are each one piece, standing where 
     const park::MovingMeshes meshes = park::person::carried_people_meshes(library, cars, runs, gathered);
     CHECK(meshes.ends.size() == 2);
     CHECK(meshes.places.size() == 2);
-    CHECK(meshes.mesh.placed == 3);
+    CHECK(meshes.mesh.drawn == 3);
     CHECK(meshes.mesh.batches.empty()); // A library without models draws nobody
 }
 

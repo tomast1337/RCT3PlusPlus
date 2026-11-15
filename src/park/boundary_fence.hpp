@@ -24,7 +24,6 @@ namespace rct3::park
         object::Leans leans; ///< Of the pieces that do not stand level
     };
 
-    /// Whether the park owns `cell` outright.
     [[nodiscard]] bool owned_outright(const save::model::TerrainCell& cell) noexcept;
 
     /// How a fence panel on a tile's edge leans with the ground under that edge as it is now: by the rise

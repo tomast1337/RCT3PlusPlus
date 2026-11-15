@@ -344,7 +344,7 @@ namespace rct3::park::person
     object::ObjectMesh person_mesh(const PersonLibrary& library, std::span<const PlacedPerson> people, PersonRuns& runs)
     {
         gather_people(runs, library, people);
-        object::ObjectMesh mesh { .placed = people.size() };
+        object::ObjectMesh mesh { .drawn = people.size() };
         for (auto& [texture, run] : runs)
         {
             if (run.vertices.empty())
@@ -377,7 +377,7 @@ namespace rct3::park::person
                     indices.push_back(base + i);
             }
             out.ends.push_back(static_cast<std::uint32_t>(out.own.size()));
-            out.mesh.placed += people.size();
+            out.mesh.drawn += people.size();
         }
         for (const auto& [texture, run] : gathered)
         {

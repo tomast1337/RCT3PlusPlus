@@ -1348,7 +1348,7 @@ namespace rct3::scene::park
                                 return std::ranges::any_of(scene.pick_boxes, [&](const rct3::park::object::PickBox& box) {
                                     if (glm::any(glm::lessThan(p, box.park_low)) || glm::any(glm::greaterThan(p, box.park_high)))
                                         return false;
-                                    const save::model::PlacedObject& o = scene.objects[box.index];
+                                    const save::model::PlacedObject& o = scene.objects[box.object_index];
                                     const auto owner = scene.attractions.find(o.id);
                                     const bool tracked = owner != scene.attractions.end() && owner->second.kind == rct3::park::AttractionRef::Kind::Ride && owner->second.index < scene.rides.rides.size() && scene.rides.rides[owner->second.index].track;
                                     const glm::vec3 local(box.back * glm::vec4(p, 1));

@@ -39,7 +39,6 @@ namespace rct3::park
     /// The wall `object` is, if it is a fence or wall that stands on an edge and is shown.
     [[nodiscard]] std::optional<EdgeWall> edge_wall(const save::model::PlacedObject& object, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
 
-    /// The walls among `objects`.
     [[nodiscard]] EdgeWalls edge_walls(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
 
     /// Whether a wall stands along `side` of `tile` where a path's edge meets it at `height`.

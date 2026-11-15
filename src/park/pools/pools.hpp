@@ -66,7 +66,6 @@ namespace rct3::park::pools
         PathStairs, ///< Rising kPathStairsRise units, the same way
     };
 
-    /// Whether `kind` is a pool path's.
     [[nodiscard]] constexpr bool is_pool_path(PoolKind kind) noexcept
     {
         return kind == PoolKind::Path || kind == PoolKind::PathSlope || kind == PoolKind::PathStairs;

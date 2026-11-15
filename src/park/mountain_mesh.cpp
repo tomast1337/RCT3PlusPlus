@@ -52,7 +52,7 @@ namespace rct3::park
             batch.count = static_cast<std::uint32_t>(mesh.indices.size()) - batch.first;
             mesh.batches.push_back(std::move(batch));
         }
-        mesh.placed = mesh.batches.empty() ? 0 : 1;
+        mesh.drawn = mesh.batches.empty() ? 0 : 1;
         return mesh;
     }
 

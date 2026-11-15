@@ -55,8 +55,8 @@ namespace rct3::park::track
             float come = 0;         ///< Tiles of track laid so far
         };
         std::vector<Step> steps;
-        std::vector<std::pair<float, std::size_t>> open;                               ///< A heap of steps to carry on from, nearest the goal first
-        std::set<std::tuple<long, long, long, int, int, int, std::size_t, bool>> seen; ///< Ends reached
+        std::vector<std::pair<float, std::size_t>> open; ///< A heap of steps to carry on from, nearest the goal first
+        std::set<std::tuple<long, long, long, int, int, int, std::size_t, bool>> reached_ends;
         std::size_t tried = 0;
         std::size_t nearest = 0; ///< The step tried that came nearest the goal
     };

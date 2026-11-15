@@ -88,7 +88,7 @@ namespace rct3::park
         {
             out.own.insert(out.own.end(), one.vertices.begin(), one.vertices.end());
             out.ends.push_back(static_cast<std::uint32_t>(out.own.size()));
-            out.mesh.placed += one.placed;
+            out.mesh.drawn += one.drawn;
             out.mesh.missing += one.missing;
         }
         std::map<std::tuple<std::string, object::PartBlend, bool>, std::size_t> batch_of;

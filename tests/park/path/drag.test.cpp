@@ -67,7 +67,7 @@ TEST_CASE("the pointer over a raised path picks it and its edge; the next piece 
     const Ray ray { { g.world_x(1) + 3.5f, 20.0f, g.world_z(1) + 2.0f }, { 0.0f, -1.0f, 0.0f } };
     const auto under = path_under(ray, paths, g);
     REQUIRE(under);
-    CHECK(under->path == 0);
+    CHECK(under->path_index == 0);
     CHECK(under->side == Side::kNextCol);
 
     FootpathBuilder b;
@@ -92,7 +92,7 @@ TEST_CASE("a path in a tunnel is picked only when the ground is seen through")
     CHECK_FALSE(path_under(ray, paths, g));
     const auto under = path_under(ray, paths, g, true);
     REQUIRE(under);
-    CHECK(under->path == 0);
+    CHECK(under->path_index == 0);
 }
 
 TEST_CASE("a stroke lays only where a path can lie on the ground")

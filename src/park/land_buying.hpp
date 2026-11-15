@@ -26,7 +26,7 @@ namespace rct3::park
     struct LandBought
     {
         units::Money spent { };
-        std::size_t tiles = 0;      ///< Bought
+        std::size_t tiles = 0;
         bool short_of_cash = false; ///< A tile on sale was left for want of money
     };
 

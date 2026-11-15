@@ -31,8 +31,8 @@ namespace rct3::park::ride
     {
         save::model::RideIndex ride { };
         std::size_t train = 0; ///< Of the ride's trains
-        float front = 0;       ///< Of the car's front wheels
-        float rear = 0;        ///< Of its rear wheels
+        float front_wheels = 0;
+        float rear_wheels = 0;
         /// Of a lift's car, which of its course's lifts it carries trains up; its `train` is then numbered past the
         /// ride's trains.
         std::optional<std::size_t> lift { };

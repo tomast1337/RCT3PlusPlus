@@ -21,8 +21,8 @@ namespace rct3::park::pools
     /// What a pool complex has, counted from its squares and the extras on them.
     struct PoolTally
     {
-        std::int32_t squares = 0;    ///< Of every kind
-        std::int32_t water = 0;      ///< Water squares
+        std::int32_t squares = 0; ///< Of every kind
+        std::int32_t water_squares = 0;
         std::int32_t depth_sum = 0;  ///< Of all squares' depths
         std::int32_t depth_sum2 = 0; ///< Of their squares
         std::int32_t shaped = 0;     ///< Water squares with a curved or cut corner, or at a corner jutting out

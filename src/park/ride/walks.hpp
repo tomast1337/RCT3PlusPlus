@@ -36,7 +36,6 @@ namespace rct3::park::ride
         std::vector<std::vector<glm::vec3>> paths;
     };
 
-    /// `ways` moved by `place`.
     [[nodiscard]] Walkways placed_walkways(const Walkways& ways, const glm::mat4& place);
 
     /// A station platform as its type's file sets it, in units across from the middle of the entrance's tile.

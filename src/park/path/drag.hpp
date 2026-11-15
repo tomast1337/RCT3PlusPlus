@@ -54,7 +54,7 @@ namespace rct3::park::path
     /// A path under the pointer, and the edge of it the pointer is nearest.
     struct PathEdge
     {
-        std::size_t path = 0;     ///< Of the paths
+        std::size_t path_index = 0;
         std::optional<Side> side; ///< None when the path does not reach that edge
     };
 

@@ -86,7 +86,7 @@ TEST_CASE("an animal's mesh is skinned, placed and batched by picture")
     const PlacedAnimal animal { .body = &with_glass, .level = 5, .motion = AnimalMotion::Walk, .time = 0.5f / kAnimalFramesPerSecond, .world = glm::translate(glm::mat4(1.0f), glm::vec3(10, 0, 0)) };
     AnimalRuns runs;
     const object::ObjectMesh mesh = animal_mesh({ &animal, 1 }, runs);
-    CHECK(mesh.placed == 1);
+    CHECK(mesh.drawn == 1);
     REQUIRE(mesh.batches.size() == 2);
     // Solid first, then see-through, whatever order the pieces came in; the empty coarse level falls back.
     CHECK(mesh.batches[0].picture == "skin");

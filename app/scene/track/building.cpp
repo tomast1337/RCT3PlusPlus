@@ -1326,7 +1326,7 @@ namespace rct3::scene::track
             std::vector<glm::mat4> places;
             for (std::size_t i = 0; i < t.stood.size(); ++i)
             {
-                glm::mat4 place = rct3::park::track::moved_along(*course, t.stood[i], { t.spots[i].front, t.spots[i].rear }, t.train.at - t.stood_at);
+                glm::mat4 place = rct3::park::track::moved_along(*course, t.stood[i], { t.spots[i].front_wheels, t.spots[i].rear_wheels }, t.train.at - t.stood_at);
                 if (t.train.splashed)
                     place = t.train.flight ? simulation::flown(*t.train.flight, place) : glm::mat4(0.0f); // Off a pool slide's end, flying on and afloat till gone
                 // Crashed, each car flies and tumbles as its wreck does, and is gone with it.

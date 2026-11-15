@@ -172,11 +172,11 @@ namespace rct3::park::ride
     struct PlatformPlace
     {
         bool station_before = false; ///< The piece before it along the track is a station piece too
-        bool station_after = false;  ///< The piece after it is
-        bool track_before = false;   ///< Any piece comes before it
-        bool track_after = false;    ///< Any piece comes after it
-        std::string_view run { };    ///< Its section's own word for its place in the station; mostly empty
-        std::uint32_t side = 0;      ///< Of side by side tracks: 1 the left track, 2 the right
+        bool station_after = false;
+        bool track_before = false;
+        bool track_after = false;
+        std::string_view run { }; ///< Its section's own word for its place in the station; mostly empty
+        std::uint32_t side = 0;   ///< Of side by side tracks: 1 the left track, 2 the right
     };
 
     /// The platform piece of `names` (the "sid" names in the platform type `type`'s file, matched ignoring case) a

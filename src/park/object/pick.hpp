@@ -42,7 +42,7 @@ namespace rct3::park::object
     /// park, and a box square to the park's axes round it for a quick first look.
     struct PickBox
     {
-        std::size_t index = 0; ///< Of the object
+        std::size_t object_index = 0;
         glm::mat4 back { 1.0f };
         glm::vec3 low { 0.0f }, high { 0.0f };
         glm::vec3 park_low { 0.0f }, park_high { 0.0f };

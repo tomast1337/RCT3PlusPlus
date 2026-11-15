@@ -60,7 +60,7 @@ TEST_CASE("objects are placed and batched by blending, then picture")
     hidden.hidden = true;
     const std::vector<save::model::PlacedObject> objects { placed_object("Tree", 0), placed_object("Glass", 1), placed_object("Rock", 1), hidden };
     const ObjectMesh m = object_mesh(objects, models, flat());
-    CHECK(m.placed == 2);
+    CHECK(m.drawn == 2);
     CHECK(m.missing == 1);
 
     REQUIRE(m.batches.size() == 3);
@@ -224,7 +224,7 @@ TEST_CASE("billboards stand on their anchor facing the viewer")
     REQUIRE(m.batches.size() == 1);
     CHECK(m.batches[0].blend == PartBlend::Cutout);
     CHECK(m.batches[0].texture == "flat");
-    CHECK(m.placed == 1);
+    CHECK(m.drawn == 1);
     REQUIRE(m.vertices.size() == 4);
     REQUIRE(m.indices.size() == 6);
     // Seen from +Z the quad spans X, two wide and three tall, the top at the picture's top.
@@ -250,7 +250,7 @@ TEST_CASE("gathered billboards turn again to each new viewer")
     const std::vector<glm::vec3> anchors { { 2, 1, 2 }, { 8, 0, 2 } };
     Billboards boards = gather_billboards(objects, models, anchors, ObjectLevels { 2, 2 });
     REQUIRE(boards.stands.size() == 2);
-    CHECK(boards.mesh.placed == 2);
+    CHECK(boards.mesh.drawn == 2);
     for (const glm::vec3 eye : { glm::vec3(2, 1, 100), glm::vec3(100, 1, 2) })
     {
         face_billboards(boards, eye);

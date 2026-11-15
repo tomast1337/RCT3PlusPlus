@@ -61,7 +61,7 @@ namespace rct3::scene::park
             // A path under the pointer, at the height the simulation walks it there.
             if (const auto under = rct3::park::path::path_under(ray, scene.footpaths.paths, scene.grid); under && std::abs(ray.direction.y) > 1e-6f)
             {
-                const save::model::PathTile& p = scene.footpaths.paths[under->path];
+                const save::model::PathTile& p = scene.footpaths.paths[under->path_index];
                 float nearest = std::numeric_limits<float>::max();
                 for (const simulation::PathNode& n : scene.sim.paths.nodes())
                 {

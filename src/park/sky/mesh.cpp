@@ -80,7 +80,7 @@ namespace rct3::park::sky
         const float high = wrapped(view.time * kHighCloudDrift);
         add(mesh, sky.clouds, object::PartBlend::Blended, view.eye, scale, cloud, [&](glm::vec2 uv) { return uv + glm::vec2(low, 0.0f); });
         add(mesh, sky.clouds, object::PartBlend::Blended, view.eye, scale, cloud, [&](glm::vec2 uv) { return uv * 2.0f + glm::vec2(high, high * 0.5f); });
-        mesh.placed = mesh.batches.size();
+        mesh.drawn = mesh.batches.size();
         return mesh;
     }
 

@@ -81,8 +81,8 @@ namespace rct3::park
     /// across and down.
     struct MapFrame
     {
-        float x0 = 0;    ///< West edge
-        float z0 = 0;    ///< South edge
+        float west_edge = 0;
+        float south_edge = 0;
         float width = 1; ///< West to east
         float depth = 1; ///< South to north
     };

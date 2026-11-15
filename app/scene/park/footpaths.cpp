@@ -1181,7 +1181,7 @@ namespace rct3::scene::park
             }
             const auto ray = input.over_interface ? std::nullopt : controls_ray(scene, at, size);
             const auto under = ray ? rct3::park::path::path_under(*ray, f.paths, scene.grid, ground_faded(scene)) : std::nullopt;
-            const auto id = under ? std::optional(f.paths[under->path].id) : std::nullopt;
+            const auto id = under ? std::optional(f.paths[under->path_index].id) : std::nullopt;
             if (id != f.remove_hover)
             {
                 f.remove_hover = id;
@@ -1264,7 +1264,7 @@ namespace rct3::scene::park
             {
                 if (const auto under = rct3::park::path::path_under(*ray, f.paths, scene.grid, ground_faded(scene)))
                 {
-                    const save::model::PathTile& p = f.paths[under->path];
+                    const save::model::PathTile& p = f.paths[under->path_index];
                     tile = save::model::Tile { p.col, p.row };
                     if (p.elevation && !rct3::park::ground::is_ground_queue(p))
                         height = p.elevation->quantised_height;
@@ -1329,7 +1329,7 @@ namespace rct3::scene::park
                     door = std::array<std::int32_t, 4> { spot.col, spot.row, spot.height, spot.direction };
                 }
                 else if (const auto under = rct3::park::path::path_under(*ray, f.paths, scene.grid, ground_faded(scene)); under && under->side)
-                    edge = std::pair { under->path, *under->side };
+                    edge = std::pair { under->path_index, *under->side };
             }
             if (edge != f.hover_edge || door != f.hover_door)
             {
@@ -1426,7 +1426,7 @@ namespace rct3::scene::park
         const auto under = ray ? rct3::park::path::path_under(*ray, f.paths, scene.grid, ground_faded(scene)) : std::nullopt;
         if (!under)
             return false;
-        f.sell = f.paths[under->path].id;
+        f.sell = f.paths[under->path_index].id;
         return true;
     }
 
@@ -1436,7 +1436,7 @@ namespace rct3::scene::park
             return std::nullopt;
         const glm::vec2 ndc { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y };
         const auto under = rct3::park::path::path_under(rct3::park::view_ray(scene.camera, size.x / size.y, ndc), scene.footpaths.paths, scene.grid, ground_faded(scene));
-        return under ? std::optional(scene.footpaths.paths[under->path].id) : std::nullopt;
+        return under ? std::optional(scene.footpaths.paths[under->path_index].id) : std::nullopt;
     }
 
     void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids, units::Money also)

@@ -547,7 +547,7 @@ namespace rct3::scene
                 if (object)
                 {
                     // Only a top pointed at takes the item; past a side, as of a tree's crown, it goes on the ground.
-                    const auto box = std::ranges::find(scene.pick_boxes, object->index, &rct3::park::object::PickBox::index);
+                    const auto box = std::ranges::find(scene.pick_boxes, object->index, &rct3::park::object::PickBox::object_index);
                     if ((ray->origin + ray->direction * object->distance).y >= box->park_high.y - kTopSlack)
                         top = box->park_high.y;
                     else

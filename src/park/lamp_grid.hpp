@@ -24,8 +24,8 @@ namespace rct3::park
     struct Lamp
     {
         glm::vec3 position { 0.0f }; ///< World space
-        float radius = 0;            ///< How far it reaches
-        glm::vec3 colour { 0.0f };   ///< Times its strength
+        float radius = 0;
+        glm::vec3 colour { 0.0f }; ///< Times its strength
     };
 
     /// The texture's texels, four floats each, `kLampTexelsAcross` to a row, padded to a whole row.

@@ -166,6 +166,6 @@ TEST_CASE("kept places and boxes are worked out again only for the objects that 
     objects.erase(objects.begin());
     CHECK(update() == std::vector<std::size_t> { 0, 1 });
     REQUIRE(boxes.size() == 2);
-    CHECK(boxes[1].index == 1);
+    CHECK(boxes[1].object_index == 1);
     CHECK(index_of(pick_object(down_at(14, 2), boxes, g, wanted)) == 0u);
 }

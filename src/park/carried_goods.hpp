@@ -35,7 +35,6 @@ namespace rct3::park
         std::vector<CarriedKind> extras { };
     };
 
-    /// Adds what `overlay` holds to `kinds`.
     void add_carried_kinds(const ovl::Overlay& overlay, CarriedKinds& kinds);
 
     /// Every overlay of carried items in `folder`, the common files only.

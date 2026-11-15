@@ -81,7 +81,7 @@ namespace rct3::park
         std::unordered_map<std::uint64_t, std::vector<std::size_t>> by_cell;
         for (std::size_t b = 0; b < boxes.size(); ++b)
         {
-            const save::model::PlacedObject& o = objects[boxes[b].index];
+            const save::model::PlacedObject& o = objects[boxes[b].object_index];
             const object::ObjectModel& model = models.find(object::model_ref(o))->second;
             const bool tree = model.category == static_cast<std::uint32_t>(ItemCategory::Tree);
             if (o.hidden || (!tree && !is_roof(model.category)))

@@ -114,7 +114,7 @@ namespace rct3::park::path
         }
         if (!best)
             return std::nullopt;
-        const save::model::PathTile& p = paths[best->path];
+        const save::model::PathTile& p = paths[best->path_index];
         const Side side = nearest_side((best_hit.x - grid.world_x(p.col)) / grid.tile_size_x, (best_hit.z - grid.world_z(p.row)) / grid.tile_size_z);
         if (edge_height(p, grid, side))
             best->side = side;

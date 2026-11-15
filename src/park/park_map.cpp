@@ -417,8 +417,8 @@ namespace rct3::park
     MapFrame map_frame(const save::model::TerrainGrid& grid)
     {
         MapFrame f;
-        f.x0 = grid.origin_x;
-        f.z0 = grid.origin_z;
+        f.west_edge = grid.origin_x;
+        f.south_edge = grid.origin_z;
         f.width = std::max(1e-3f, static_cast<float>(grid.width) * grid.tile_size_x);
         f.depth = std::max(1e-3f, static_cast<float>(grid.height) * grid.tile_size_z);
         return f;
@@ -426,12 +426,12 @@ namespace rct3::park
 
     glm::vec2 to_map(const MapFrame& frame, glm::vec2 park)
     {
-        return { (park.x - frame.x0) / frame.width, 1.0f - (park.y - frame.z0) / frame.depth };
+        return { (park.x - frame.west_edge) / frame.width, 1.0f - (park.y - frame.south_edge) / frame.depth };
     }
 
     glm::vec2 to_park(const MapFrame& frame, glm::vec2 map)
     {
-        return { frame.x0 + map.x * frame.width, frame.z0 + (1.0f - map.y) * frame.depth };
+        return { frame.west_edge + map.x * frame.width, frame.south_edge + (1.0f - map.y) * frame.depth };
     }
 
     MapFeatures map_features(const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const save::model::WaterLayer& water)

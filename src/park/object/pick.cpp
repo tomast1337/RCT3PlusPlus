@@ -111,11 +111,11 @@ namespace rct3::park::object
         auto next = changed.begin();
         for (std::size_t i = 0; i < places.models.size(); ++i)
         {
-            while (kept != boxes.end() && kept->index < i)
+            while (kept != boxes.end() && kept->object_index < i)
                 ++kept;
             if (next == changed.end() || *next != i)
             {
-                if (kept != boxes.end() && kept->index == i)
+                if (kept != boxes.end() && kept->object_index == i)
                     out.push_back(*kept);
                 continue;
             }
@@ -130,7 +130,7 @@ namespace rct3::park::object
                 continue;
             const glm::mat4& transform = places.transforms[i];
             PickBox& box = out.emplace_back();
-            box.index = i;
+            box.object_index = i;
             box.back = glm::inverse(transform);
             box.low = shape->second->first;
             box.high = shape->second->second;
@@ -154,7 +154,7 @@ namespace rct3::park::object
         for (const PickBox& box : boxes)
         {
             // The park box holds the turned one, so missing it, or meeting it past the nearest hit, rules it out.
-            if (const auto near = box_hit(ray, box.park_low, box.park_high); !near || *near >= nearest || !wanted(box.index))
+            if (const auto near = box_hit(ray, box.park_low, box.park_high); !near || *near >= nearest || !wanted(box.object_index))
                 continue;
             // In the model's own space the box is square to the axes; the transform keeps distances along the
             // line in step, so the hit's distance holds in the park too.
@@ -162,7 +162,7 @@ namespace rct3::park::object
             if (const auto t = box_hit(local, box.low, box.high); t && *t < nearest)
             {
                 nearest = *t;
-                best = PickHit { box.index, *t };
+                best = PickHit { box.object_index, *t };
             }
         }
         return best;

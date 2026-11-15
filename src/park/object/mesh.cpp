@@ -222,7 +222,7 @@ namespace rct3::park::object
             {
                 const glm::vec3 up = glm::normalize(glm::mat3(placed) * e.up);
                 const glm::vec3 side = glm::normalize(glm::cross(up, std::abs(up.y) < 0.9f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0)));
-                effects.push_back({ .effect = e.effect, .position = glm::vec3(placed * glm::vec4(e.position, 1.0f)), .axes = glm::mat3(side, up, glm::cross(side, up)), .object = i });
+                effects.push_back({ .effect = e.effect, .position = glm::vec3(placed * glm::vec4(e.position, 1.0f)), .axes = glm::mat3(side, up, glm::cross(side, up)), .object_index = i });
             }
         }
         return effects;
@@ -305,7 +305,7 @@ namespace rct3::park::object
             const ModelLevel& shown = (worn ? model->second.broken_levels : model->second.levels)[static_cast<std::size_t>(level)];
             if (shown.parts.empty())
                 continue;
-            ++mesh.placed;
+            ++mesh.drawn;
             const glm::mat4 transform = placed_transform(object, &model->second, grid, fitted);
             // A fitted piece may be stretched: its normals take the inverse transpose to stay square to its faces.
             const bool stretched = fitted.contains(object.id);
@@ -363,7 +363,7 @@ namespace rct3::park::object
             const auto& board = model->second.levels[static_cast<std::size_t>(levels[index])].billboard;
             if (!board)
                 continue;
-            ++boards.mesh.placed;
+            ++boards.mesh.drawn;
             const FlexiColours colours = colours_of(objects[index], overrides);
             Run& run = runs[{ PartBlend::Cutout, painted_name(board->texture, board->slots, colours), false, 0 }];
             run.picture = board->texture;

@@ -33,7 +33,7 @@ TEST_CASE("a pool's tally counts its water, shaped corners, features and the ext
     const std::vector extras { extra(0, 0, { .ladder = true }), extra(3, 1, { .lounger = true }), extra(9, 9, { .light = true }) };
     const PoolTally t = pool_tally(squares, extras);
     CHECK(t.squares == 10);
-    CHECK(t.water == 9);
+    CHECK(t.water_squares == 9);
     CHECK(t.shaped == 5); // Four corners and the curved one
     CHECK(t.jacuzzis == 1);
     CHECK(t.ladders == 1);
@@ -54,7 +54,7 @@ TEST_CASE("more water, mixed depths, lamps, ladders and lifeguards each make a p
     for (const PoolExtraFit fit : { PoolExtraFit { .ladder = true }, PoolExtraFit { .light = true }, PoolExtraFit { .lifeguard = true } })
         CHECK(pool_excitement(pool_tally(water(4, 4), std::vector { extra(1, 1, fit) }), 0) > base);
     PoolTally full = plain;
-    full.water = full.squares = 1000;
+    full.water_squares = full.squares = 1000;
     full.shaped = full.ladders = full.lifeguards = full.lamps = 1000;
     full.depth_sum = 2000;
     full.depth_sum2 = 5000;

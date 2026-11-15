@@ -26,7 +26,7 @@ namespace rct3::park::ground
             return static_cast<std::uint32_t>(row) << 16 | static_cast<std::uint16_t>(col);
         }
 
-        std::vector<std::pair<int, int>> under(const save::model::PlacedObject& o, const object::ObjectModel& m)
+        std::vector<save::model::Tile> under(const save::model::PlacedObject& o, const object::ObjectModel& m)
         {
             support::SupportFootprint shape;
             shape.x_squares = m.squares[0];
@@ -167,7 +167,7 @@ namespace rct3::park::ground
                 continue;
             const object::ObjectModel& m = model->second;
             const auto tiles = under(o, m);
-            if (std::ranges::none_of(tiles, [&](const auto& t) { return t.first >= first.col && t.first <= last.col && t.second >= first.row && t.second <= last.row; }))
+            if (std::ranges::none_of(tiles, [&](const auto& t) { return t.col >= first.col && t.col <= last.col && t.row >= first.row && t.row <= last.row; }))
                 continue;
             // Whole units, rounded up so it stands on the ground, not in it.
             const float ground = object::object_transform(o, static_cast<object::Positioning>(m.positioning), grid, m.squares, true)[3].y - o.height_adjust.value_or(0);

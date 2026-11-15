@@ -750,12 +750,12 @@ namespace rct3::scene
         });
         engine_.define("map.supports", [this](const Json&) {
             grid_of(park_);
-            std::map<std::pair<int, int>, int> pieces;
+            std::map<save::model::Tile, int> pieces;
             for (const auto& [_, tile] : park_->columns)
                 ++pieces[tile];
             Json tiles = Json::array();
             for (const auto& [tile, n] : pieces)
-                tiles.push_back({ { "col", tile.first }, { "row", tile.second }, { "pieces", n } });
+                tiles.push_back({ { "col", tile.col }, { "row", tile.row }, { "pieces", n } });
             return tiles;
         });
         engine_.define("map.objects", [this](const Json&) {

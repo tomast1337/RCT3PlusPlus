@@ -803,38 +803,38 @@ namespace rct3::scene::park
         units::Seconds since_hover_pick;                                        ///< Since that was looked at
         bool leave = false;
         bool message_alert = false;
-        std::uint32_t built = 0;                                        ///< Things put down so far, each heard as a thump (scene/park/sounds.hpp)
-        std::uint32_t levels_won = 0;                                   ///< Levels of the scenario won while playing, each heard as a fanfare (scene/park/sounds.hpp)
-        std::optional<std::size_t> pool_complex_asked;                  ///< Of the pools' rooms, one whose complex the player was asked to sell
-        std::optional<ui::screens::info::SceneryTab> room_tab;          ///< Last open in a changing room's window
-        std::vector<rct3::park::AttractionRef> demolish_asked;          ///< Waiting on the question whether to pull them down
-        std::vector<std::string> prizes;                                ///< Text keys told one box at a time, oldest first: prizes won, deletes refused
-        bool info_shown = false;                                        ///< The info panel showed last frame, to tell it opening
-        std::optional<ui::screens::park_view::ParkTool> menu_shown;     ///< The tool row's menu open last frame, to tell one opening
-        std::vector<ui::screens::park_view::ToolItem> window_requests;  ///< Files menu items that open a window the owner opens (scene/park/files_menu.hpp)
-        std::unique_ptr<ui::screens::options::OptionsSession> options;  ///< The options window over the park, once opened
-        std::filesystem::path file;                                     ///< The park file loaded, whose name saving offers
-        std::vector<std::byte> base;                                    ///< The original park file the park started from, kept for saving
-        std::size_t own_objects = 0;                                    ///< `objects` from the file; those after it were made on loading or built since
-        std::unordered_set<std::uint64_t> placed;                       ///< Scenery the player put down since loading, by id; saved with the park
-        std::optional<random::RandomState> off_map_stream;              ///< Where the trees beyond the edge left their stream; none when not grown
-        bool modelled_plants = true;                                    ///< Trees and plants modelled, not flat, as the options were on loading
-        std::unordered_map<std::uint64_t, std::pair<int, int>> columns; ///< Support pieces built, by id, and the tile their column stands on
-        SupportWatch supports;                                          ///< How the park stood when its supports were last built
-        SaveBrowser saves;                                              ///< Behind the save and load windows over the park
-        ParkGame game;                                                  ///< Where the park's games go, and the career it counts for
-        std::size_t file_windows_opened = 0;                            ///< Counts them, so the browser tells a new one from the last
-        std::optional<std::filesystem::path> park_to_load;              ///< Picked in the load window, until taken
-        ParkMap map;                                                    ///< The map window's pictures and what they show
-        ParkFootpaths footpaths;                                        ///< The path panel's styles and the paths laid with it
-        track::TrackBuilding building;                                  ///< The construction panel's ride and the piece it would build
-        EnclosureTool enclosing;                                        ///< The enclosure list's fence tool out, or an animal
-        PoolTool pooling;                                               ///< The pool list's tool out
-        DeleteTools deleting;                                           ///< The delete menu's tool out
-        LandTools land;                                                 ///< The land menu's shape and paint tools
-        RidePlacing placing;                                            ///< The ride picked in a build list, while it is placed
-        StructureTools structures;                                      ///< The scenery menu's tools that pick out and place structures
-        LedSigns led_signs;                                             ///< The scrolling boards over queues and on park entrances
+        std::uint32_t built = 0;                                       ///< Things put down so far, each heard as a thump (scene/park/sounds.hpp)
+        std::uint32_t levels_won = 0;                                  ///< Levels of the scenario won while playing, each heard as a fanfare (scene/park/sounds.hpp)
+        std::optional<std::size_t> pool_complex_asked;                 ///< Of the pools' rooms, one whose complex the player was asked to sell
+        std::optional<ui::screens::info::SceneryTab> room_tab;         ///< Last open in a changing room's window
+        std::vector<rct3::park::AttractionRef> demolish_asked;         ///< Waiting on the question whether to pull them down
+        std::vector<std::string> prizes;                               ///< Text keys told one box at a time, oldest first: prizes won, deletes refused
+        bool info_shown = false;                                       ///< The info panel showed last frame, to tell it opening
+        std::optional<ui::screens::park_view::ParkTool> menu_shown;    ///< The tool row's menu open last frame, to tell one opening
+        std::vector<ui::screens::park_view::ToolItem> window_requests; ///< Files menu items that open a window the owner opens (scene/park/files_menu.hpp)
+        std::unique_ptr<ui::screens::options::OptionsSession> options; ///< The options window over the park, once opened
+        std::filesystem::path file;                                    ///< The park file loaded, whose name saving offers
+        std::vector<std::byte> base;                                   ///< The original park file the park started from, kept for saving
+        std::size_t own_objects = 0;                                   ///< `objects` from the file; those after it were made on loading or built since
+        std::unordered_set<std::uint64_t> placed;                      ///< Scenery the player put down since loading, by id; saved with the park
+        std::optional<random::RandomState> off_map_stream;             ///< Where the trees beyond the edge left their stream; none when not grown
+        bool modelled_plants = true;                                   ///< Trees and plants modelled, not flat, as the options were on loading
+        std::unordered_map<std::uint64_t, save::model::Tile> columns;  ///< Support pieces built, by id, and the tile their column stands on
+        SupportWatch supports;                                         ///< How the park stood when its supports were last built
+        SaveBrowser saves;                                             ///< Behind the save and load windows over the park
+        ParkGame game;                                                 ///< Where the park's games go, and the career it counts for
+        std::size_t file_windows_opened = 0;                           ///< Counts them, so the browser tells a new one from the last
+        std::optional<std::filesystem::path> park_to_load;             ///< Picked in the load window, until taken
+        ParkMap map;                                                   ///< The map window's pictures and what they show
+        ParkFootpaths footpaths;                                       ///< The path panel's styles and the paths laid with it
+        track::TrackBuilding building;                                 ///< The construction panel's ride and the piece it would build
+        EnclosureTool enclosing;                                       ///< The enclosure list's fence tool out, or an animal
+        PoolTool pooling;                                              ///< The pool list's tool out
+        DeleteTools deleting;                                          ///< The delete menu's tool out
+        LandTools land;                                                ///< The land menu's shape and paint tools
+        RidePlacing placing;                                           ///< The ride picked in a build list, while it is placed
+        StructureTools structures;                                     ///< The scenery menu's tools that pick out and place structures
+        LedSigns led_signs;                                            ///< The scrolling boards over queues and on park entrances
     };
 
     /// The stages of loading a park, in the order they run.

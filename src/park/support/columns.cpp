@@ -29,7 +29,7 @@ namespace rct3::park::support
         /// stand right under it.
         constexpr float kStraightUnder = 0.2f;
 
-        using Tile = std::pair<int, int>;
+        using save::model::Tile;
 
         /// One square of an item, on the tile it covers.
         struct Covered
@@ -125,8 +125,8 @@ namespace rct3::park::support
         /// nothing in the way the column stands on the ground, if no ground path is there and there is room.
         std::optional<std::pair<std::int32_t, bool>> column_base(std::span<const Covered> below, const std::set<Tile>& ground_paths, const save::model::TerrainGrid& grid, const Tile& tile, const save::model::PlacedObject* self, float top, const SupportSet& set, std::optional<int> cell, bool gap_over_track)
         {
-            const bool known = grid.contains(tile.first, tile.second);
-            const float ground = known ? grid.at(tile.first, tile.second).min_height() : 0.0f;
+            const bool known = grid.contains(tile.col, tile.row);
+            const float ground = known ? grid.at(tile.col, tile.row).min_height() : 0.0f;
             for (const Covered& b : below)
             {
                 if (b.object == self)
@@ -164,8 +164,8 @@ namespace rct3::park::support
                 o.owner_ref = o.id;
                 o.symbol = piece.symbol;
                 o.overlay = std::string(kSupportOverlay);
-                o.col = tile.first;
-                o.row = tile.second;
+                o.col = tile.col;
+                o.row = tile.row;
                 o.base_height = level;
                 o.height_adjust = 0.0f;
                 o.force_absolute_height = true;
@@ -332,7 +332,7 @@ namespace rct3::park::support
         {
             if (!wanted(tile))
                 continue;
-            const bool odd_tile = ((tile.first ^ tile.second) & 1) != 0;
+            const bool odd_tile = ((tile.col ^ tile.row) & 1) != 0;
             for (std::size_t i = 0; i < covered.size(); ++i)
             {
                 const Covered& c = covered[i];
@@ -386,9 +386,9 @@ namespace rct3::park::support
                 const glm::vec2 column_spot = spot_in_tiles(*object, f, p.column, SpotFit::MiddleOfThird);
                 const Tile top_tile = tile_of(top_spot);
                 const Tile tile = tile_of(column_spot);
-                if (f.alternate_tiles && ((top_tile.first ^ top_tile.second) & 1) == 0)
+                if (f.alternate_tiles && ((top_tile.col ^ top_tile.row) & 1) == 0)
                     continue;
-                const glm::vec2 third_in_tile = (column_spot - glm::vec2 { static_cast<float>(tile.first), static_cast<float>(tile.second) }) * static_cast<float>(kCells);
+                const glm::vec2 third_in_tile = (column_spot - glm::vec2 { static_cast<float>(tile.col), static_cast<float>(tile.row) }) * static_cast<float>(kCells);
                 const int third = std::clamp(static_cast<int>(third_in_tile.x), 0, kCells - 1) + kCells * std::clamp(static_cast<int>(third_in_tile.y), 0, kCells - 1);
 
                 const glm::vec2 off_middle { p.top.within[0] - 0.5f, p.top.within[1] - 0.5f };

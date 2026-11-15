@@ -30,6 +30,9 @@ namespace rct3::ovl
         float lift_min = 0, lift_max = 0;     ///< Range the player may set the lift speed in
         float launch_min = 0, launch_max = 0; ///< Range the player may set the launch speed in
         std::int32_t cost = 0;                ///< Base build cost, hundredths
+        /// At 0xCC: hundredths added to a track piece's price for its height over the ground; 0 on rides whose
+        /// track costs the same at any height. The files hold 0 to 700, most coasters 500.
+        std::int32_t height_cost = 0;
         /// Names of the "rit" trains the ride may run, the one it starts with first: a count at 0x08 and a
         /// pointer at 0x0C to as many string pointers.
         std::vector<std::string_view> trains;

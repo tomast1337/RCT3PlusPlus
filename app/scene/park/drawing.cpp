@@ -342,6 +342,7 @@ namespace rct3::scene::park
         }
 
         constexpr std::uint32_t kShadowTexels = 2048;
+        constexpr float kShadowSunHeight = 0.02f; ///< Of the sun's way, how far up it is before things cast shadows
 
         /// Makes the target of `drawing`; false when the device cannot.
         bool make_shadow_drawing(render::Device& device, ShadowDrawing& drawing)
@@ -388,7 +389,7 @@ namespace rct3::scene::park
             scene.light.shadow_view = { };
             scene.light.shadow_map_before = { };
             scene.light.shadow_before = 0;
-            if (!scene.shadows || scene.light.sun_direction.y <= 0.02f)
+            if (!scene.shadows || scene.light.sun_direction.y <= kShadowSunHeight)
                 return;
             for (ShadowDrawing& drawing : scene.shadow_drawings)
             {

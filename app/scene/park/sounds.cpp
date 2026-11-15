@@ -37,6 +37,8 @@ namespace rct3::scene::park
         constexpr units::Distance kCrashNear { 20 };              ///< From a wreck, it is heard full loud
         constexpr float kCrashFar = 250;                          ///< And no longer heard
         constexpr units::Seconds kChainFade { 0.5f };             ///< The chain's loop takes this long to come in and to die away
+        constexpr float kLowestPitch = 0.94f;                     ///< A sound picked from a set plays at a pitch from this
+        constexpr float kHighestPitch = 1.06f;                    ///< To this, so repeats do not sound alike
         constexpr std::array kSplashLevels { 0.5f, 0.75f, 1.0f }; ///< Chosen by eye: a splash's loudness by its strength
         constexpr units::Seconds kPlume { 2.5f };                 ///< Chosen by eye: how long the plume plays after a splash
         constexpr float kWaterfallLevel = 0.6f;                   ///< Of full loudness.
@@ -78,7 +80,7 @@ namespace rct3::scene::park
             if (sounds.empty() || params.volume <= 0)
                 return { };
             std::uniform_int_distribution<std::size_t> pick(0, sounds.size() - 1);
-            std::uniform_real_distribution<float> pitch(0.94f, 1.06f);
+            std::uniform_real_distribution<float> pitch(kLowestPitch, kHighestPitch);
             params.pitch *= pitch(random);
             const auto played = engine.play(sounds[pick(random)], params);
             return played ? *played : audio::VoiceHandle { };

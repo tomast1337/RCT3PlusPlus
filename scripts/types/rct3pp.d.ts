@@ -447,7 +447,8 @@ declare namespace build {
      * enclosure fence, or the enclosure list's delete tool ("", "EnclosureDelete"), takes out the enclosure tool. */
     function pick(overlay: string, symbol: string, offer?: "designs"): boolean;
     /** The construction panel's ride (its place in rides.list()), how many pieces fit where the track goes on,
-     * the one picked, whether it can be built there (and its arrows show), whether it may not stand there (for a design,
+     * the one picked, whether it can be built there (and its arrows show), what laying it (or the design) where
+     * its ghost shows costs as the panel shows it, in hundredths, whether it may not stand there (for a design,
      * any of its pieces or doors) and whether for land the park does not own, for a design in hand the string key of why
      * it may not stand ("" when it may) and the tiles where its ghost meets a pool beside them (each with the height and the side, as
      * the pools' sides count, the pool square must be across), the quarter turns of the first piece, the doors a design's ghost shows, and the files of the saved designs of its kind (the
@@ -463,6 +464,7 @@ declare namespace build {
               ghost: boolean;
               arrows: boolean;
               ghostAt: { col: number; row: number; height: number } | null;
+              cost: number;
               clashes: boolean;
               unowned: boolean;
               refusal: string;

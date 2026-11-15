@@ -23,6 +23,15 @@ namespace rct3::strings
         return c >= 0xDC00 && c <= 0xDFFF;
     }
 
+    /// The character past U+FFFF that the surrogate pair `high`, `low` stands for.
+    [[nodiscard]] constexpr char32_t from_surrogates(char32_t high, char32_t low) noexcept
+    {
+        return 0x10000 + ((high - 0xD800) << 10) + (low - 0xDC00);
+    }
+
+    /// Appends `c` as UTF-8: one byte for ASCII, up to four past U+FFFF.
+    void append_utf8(std::string& out, char32_t c);
+
     /// Appends `c` as one code unit, or two for characters past U+FFFF.
     void append_utf16(std::u16string& out, char32_t c);
 

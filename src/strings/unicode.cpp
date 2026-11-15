@@ -7,32 +7,6 @@ namespace rct3::strings
     namespace
     {
 
-        void append_utf8(std::string& out, char32_t cp)
-        {
-            if (cp < 0x80)
-            {
-                out.push_back(static_cast<char>(cp));
-            }
-            else if (cp < 0x800)
-            {
-                out.push_back(static_cast<char>(0xC0 | (cp >> 6)));
-                out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
-            }
-            else if (cp < 0x10000)
-            {
-                out.push_back(static_cast<char>(0xE0 | (cp >> 12)));
-                out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
-                out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
-            }
-            else
-            {
-                out.push_back(static_cast<char>(0xF0 | (cp >> 18)));
-                out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
-                out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
-                out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
-            }
-        }
-
         // The character starting at `text[i]` and its length in bytes. Overlong forms, surrogates and values
         // past U+10FFFF are refused; a bad sequence is one replacement character for its first byte.
         std::pair<char32_t, std::size_t> decode_utf8(std::string_view text, std::size_t i)
@@ -81,6 +55,32 @@ namespace rct3::strings
 
     } // namespace
 
+    void append_utf8(std::string& out, char32_t cp)
+    {
+        if (cp < 0x80)
+        {
+            out.push_back(static_cast<char>(cp));
+        }
+        else if (cp < 0x800)
+        {
+            out.push_back(static_cast<char>(0xC0 | (cp >> 6)));
+            out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        }
+        else if (cp < 0x10000)
+        {
+            out.push_back(static_cast<char>(0xE0 | (cp >> 12)));
+            out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+            out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        }
+        else
+        {
+            out.push_back(static_cast<char>(0xF0 | (cp >> 18)));
+            out.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+            out.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+            out.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        }
+    }
+
     void append_utf16(std::u16string& out, char32_t c)
     {
         if (c < 0x10000)
@@ -117,7 +117,7 @@ namespace rct3::strings
             const char16_t unit = text[i];
             if (is_high_surrogate(unit) && i + 1 < text.size() && is_low_surrogate(text[i + 1]))
             {
-                append_utf8(out, 0x10000 + ((static_cast<char32_t>(unit) - 0xD800) << 10) + (static_cast<char32_t>(text[i + 1]) - 0xDC00));
+                append_utf8(out, from_surrogates(unit, text[i + 1]));
                 ++i;
             }
             else if (is_high_surrogate(unit) || is_low_surrogate(unit))

@@ -197,7 +197,7 @@ namespace rct3::scene
             {
                 char32_t c = text[i];
                 if (strings::is_high_surrogate(c) && i + 1 < text.size())
-                    c = 0x10000 + ((c - 0xD800) << 10) + (text[++i] - 0xDC00);
+                    c = strings::from_surrogates(c, text[++i]);
                 keys_.push_back({ ui::Key::Character, false, false, c });
             }
             return Json(nullptr);

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/value.hpp"
 
+#include "strings/unicode.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -286,32 +288,6 @@ namespace rct3::save
             std::size_t pos_ = 0;
         };
 
-        void append_utf8(std::string& out, char32_t cp)
-        {
-            if (cp < 0x80)
-            {
-                out += static_cast<char>(cp);
-            }
-            else if (cp < 0x800)
-            {
-                out += static_cast<char>(0xC0 | (cp >> 6));
-                out += static_cast<char>(0x80 | (cp & 0x3F));
-            }
-            else if (cp < 0x10000)
-            {
-                out += static_cast<char>(0xE0 | (cp >> 12));
-                out += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
-                out += static_cast<char>(0x80 | (cp & 0x3F));
-            }
-            else
-            {
-                out += static_cast<char>(0xF0 | (cp >> 18));
-                out += static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
-                out += static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
-                out += static_cast<char>(0x80 | (cp & 0x3F));
-            }
-        }
-
         // UTF-16LE to UTF-8; unpaired surrogates become U+FFFD.
         std::string utf16le_to_utf8(std::span<const std::byte> bytes)
         {
@@ -321,24 +297,24 @@ namespace rct3::save
             for (std::size_t i = 0; i < n; ++i)
             {
                 char32_t u = Cursor::load<std::uint16_t>(bytes, i * 2);
-                if (u >= 0xD800 && u <= 0xDBFF && i + 1 < n)
+                if (strings::is_high_surrogate(u) && i + 1 < n)
                 {
                     const char32_t lo = Cursor::load<std::uint16_t>(bytes, (i + 1) * 2);
-                    if (lo >= 0xDC00 && lo <= 0xDFFF)
+                    if (strings::is_low_surrogate(lo))
                     {
-                        u = 0x10000 + ((u - 0xD800) << 10) + (lo - 0xDC00);
+                        u = strings::from_surrogates(u, lo);
                         ++i;
                     }
                     else
                     {
-                        u = 0xFFFD;
+                        u = strings::kReplacement;
                     }
                 }
-                else if (u >= 0xD800 && u <= 0xDFFF)
+                else if (strings::is_high_surrogate(u) || strings::is_low_surrogate(u))
                 {
-                    u = 0xFFFD;
+                    u = strings::kReplacement;
                 }
-                append_utf8(out, u);
+                strings::append_utf8(out, u);
             }
             return out;
         }
@@ -514,7 +490,7 @@ namespace rct3::save
                 }
                 std::string s;
                 for (const std::byte b : bytes)
-                    append_utf8(s, static_cast<std::uint8_t>(b));
+                    strings::append_utf8(s, static_cast<std::uint8_t>(b));
                 return produce(Value::make_string(std::move(s)));
             }
 

@@ -50,7 +50,7 @@ namespace rct3::simulation
         std::int32_t old_litter = 0; ///< Pieces lying about long
         std::int32_t stalls = 0;
         std::int32_t food_stalls = 0;
-        std::int32_t food_kinds = 0; ///< Kinds of food sold
+        std::int32_t food_kinds = 0;
         std::int32_t toilets = 0;
         std::int32_t thrilling = 0; ///< Rides rated over 5 for excitement and intensity both
         std::int32_t coasters = 0;

@@ -82,14 +82,14 @@ namespace rct3::simulation
     {
         PathTileSpot tile;
         bool queue = false;
-        float height = 0;            ///< World height of the middle of the tile
-        std::uint64_t line = 0;      ///< Of a queue tile, the queue line it belongs to as the save names it; 0 if none
-        bool covered = false;        ///< Under a roof that keeps the rain off
-        bool shaded = false;         ///< Out of the sun: under a roof or trees
-        bool removed = false;        ///< Its tile was taken away
-        std::uint8_t no_entry = 0;   ///< Sides guests may not come in across, bit k for side k as `next` numbers them
-        bool staff_kept_off = false; ///< Staff do not step onto it
-        std::uint8_t open = 0b1111;  ///< Sides it may join across, bit k for side k as `next` numbers them; a queue only its two ends
+        float height = 0;          ///< World height of the middle of the tile
+        std::uint64_t line = 0;    ///< Of a queue tile, the queue line it belongs to as the save names it; 0 if none
+        bool covered = false;      ///< Under a roof that keeps the rain off
+        bool shaded = false;       ///< Out of the sun: under a roof or trees
+        bool removed = false;      ///< Its tile was taken away
+        std::uint8_t no_entry = 0; ///< Sides guests may not come in across, bit k for side k as `next` numbers them
+        bool staff_kept_off = false;
+        std::uint8_t open = 0b1111; ///< Sides it may join across, bit k for side k as `next` numbers them; a queue only its two ends
         /// World heights of the path's surface at the tile's corners: low col low row, high col low row, low col
         /// high row, high col high row. Between them it is two flat triangles, split from the second corner to
         /// the third, as the ground is.
@@ -167,7 +167,6 @@ namespace rct3::simulation
         }
         /// Whether `who` may step from `from` to `to`, a node beside it or across a square from it.
         [[nodiscard]] bool may_step(NodeId from, NodeId to, Walker who) const;
-        /// Marks what is over a node's tile.
         void cover(NodeId node, Cover cover)
         {
             nodes_[node].covered = cover == Cover::Roof;
@@ -183,12 +182,10 @@ namespace rct3::simulation
 
         /// Adds a link; a queue tile it starts from is entered on the way only to take it.
         void link(const PathLink& link);
-        /// Takes every link away.
         void clear_links()
         {
             links_.clear();
         }
-        /// The link from `from` to `to`, if there is one.
         [[nodiscard]] std::optional<const PathLink&> link_between(NodeId from, NodeId to) const;
 
         /// The nodes after `from` on a shortest walk to `to`, ending with `to`; empty when `from` is `to`, none

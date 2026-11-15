@@ -60,7 +60,7 @@ namespace rct3::simulation
             take_ranges();
             {
                 const std::scoped_lock lock(mutex_);
-                --busy_;
+                --busy_helpers_;
             }
             done_.notify_one();
         }
@@ -81,13 +81,13 @@ namespace rct3::simulation
             count_ = count;
             next_ = 0;
             chunk_ = std::max(kMinChunk, count / ((threads_.size() + 1) * 4));
-            busy_ = threads_.size();
+            busy_helpers_ = threads_.size();
             ++job_;
         }
         wake_.notify_all();
         take_ranges();
         std::unique_lock lock(mutex_);
-        done_.wait(lock, [&] { return busy_ == 0; });
+        done_.wait(lock, [&] { return busy_helpers_ == 0; });
         body_ = nullptr;
     }
 

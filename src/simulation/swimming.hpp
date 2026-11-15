@@ -36,7 +36,7 @@ namespace rct3::simulation
     struct PoolSpot
     {
         glm::vec3 at { 0.0f };
-        units::Radians heading { }; ///< The way it faces
+        units::Radians heading { };
         PoolUse use = PoolUse::Stand;
         std::uint8_t places = 1; ///< Swimmers it takes at once; more wait their turn beside it
     };

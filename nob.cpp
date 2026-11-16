@@ -3,7 +3,8 @@
 // Build script. Bootstrap once with:  g++ -std=c++26 -o nob nob.cpp
 //
 //   ./nob [build|test|clean] [--release] [--sanitize] [--no-tools] [--filter TEXT] [-- TEST_ARGS...]
-//   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs GLFW, Vulkan, slangc)
+//   ./nob app|run [--release] [-- APP_ARGS...]    graphical viewer (needs Vulkan, slangc and, on
+//                                                 Linux, the X11, Wayland and xkbcommon headers)
 //   ./nob script [FILE.ts|FILE.js] [-- APP_ARGS...] runs the viewer with the script FILE, or each of
 //                                                 scripts/tests; TypeScript compiles with tsc (npm install -g
 //                                                 typescript) first. Reports: build/scripts/report/NAME/
@@ -143,6 +144,9 @@ namespace
             c.compile_flags.insert(c.compile_flags.end(), { "-O2", "-DNDEBUG" });
             // The C++ runtime goes in the binary, so it runs on systems whose own is older than the compiler's.
             c.link_flags.insert(c.link_flags.end(), { "-static-libstdc++", "-static-libgcc" });
+#ifdef _WIN32
+            c.link_flags.push_back("-static"); // MinGW's thread library too, so a package needs no DLL beside the .exe
+#endif
         }
         else
         {
@@ -250,11 +254,11 @@ namespace
 
         Cmd cmd;
         cmd << cfg.cxx;
-        cmd.append(cfg.link_flags);
         cmd << "-o" << output.string();
         for (const auto& o : objects)
             cmd << o.string();
-        cmd << "-lstdc++exp"; // std::stacktrace; a static library, so after the objects
+        cmd.append(cfg.link_flags); // After the objects: an import or static library only serves what comes before it
+        cmd << "-lstdc++exp";       // std::stacktrace; a static library, so after the objects
         if (!run(cmd))
             return false;
 
@@ -509,7 +513,7 @@ namespace
     Config app_config(const Config& cfg)
     {
         Config app = cfg;
-        app.compile_flags.insert(app.compile_flags.end(), { "-Wno-missing-field-initializers", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-isystem", "third_party/opengl", "-Iapp", std::format("-I{}", (cfg.out_dir() / "gen").string()) });
+        app.compile_flags.insert(app.compile_flags.end(), { "-Wno-missing-field-initializers", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-isystem", "third_party/opengl", "-isystem", "third_party/glfw/include", "-Iapp", std::format("-I{}", (cfg.out_dir() / "gen").string()) });
         return app;
     }
 
@@ -624,7 +628,8 @@ namespace
         return out;
     }
 
-    // The graphical viewer in app/. Not part of `build` so the library and tests never need GLFW or Vulkan.
+    // The graphical viewer in app/. Not part of `build` so the library and tests never need Vulkan or the windowing
+    // headers.
     // Shaders (app/shaders/NAME.slang, entry points vertex_main and fragment_main) are compiled with slangc into
     // NAME.vert.inc and NAME.frag.inc, C arrays of SPIR-V words included by the sources, and NAME.vert.glsl.inc
     // and NAME.frag.glsl.inc, OpenGL GLSL as string literals (glsl_for_opengl). Files without an entry point are
@@ -683,10 +688,27 @@ namespace
 
         // Dear ImGui is vendored as-is; its warnings are not ours.
         Config third_party = cfg;
-        third_party.compile_flags.insert(third_party.compile_flags.end(), { "-w", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan" });
+        third_party.compile_flags.insert(third_party.compile_flags.end(), { "-w", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-isystem", "third_party/glfw/include" });
         std::vector<fs::path> imgui_sources = find_files("third_party/imgui", ".cpp");
         std::vector<fs::path> objects;
         if (!compile(third_party, imgui_sources, objects, ignored))
+            return false;
+
+        // GLFW, vendored and built in, so neither building nor running needs a GLFW library. On Linux it has both
+        // the X11 and the Wayland back end, and opens their libraries at run time.
+        std::vector<fs::path> glfw_sources = find_files("third_party/glfw/src", ".c");
+#ifdef _WIN32
+        const std::vector<std::string_view> other_platforms = { "posix_", "linux_", "x11_", "xkb_", "glx_", "wl_" };
+#else
+        const std::vector<std::string_view> other_platforms = { "win32_", "wgl_" };
+#endif
+        std::erase_if(glfw_sources, [&](const fs::path& p) { return std::ranges::any_of(other_platforms, [&](std::string_view prefix) { return p.filename().string().starts_with(prefix); }); });
+#ifdef _WIN32
+        const Config glfw = c_config(cfg, { "-D_GLFW_WIN32", "-DUNICODE", "-D_UNICODE" });
+#else
+        const Config glfw = c_config(cfg, { "-D_GLFW_X11", "-D_GLFW_WAYLAND", "-D_DEFAULT_SOURCE", "-DHAVE_MEMFD_CREATE" });
+#endif
+        if (!compile(glfw, glfw_sources, objects, ignored))
             return false;
 
         const Config app = app_config(cfg);
@@ -702,9 +724,12 @@ namespace
 
         binary = cfg.out_dir() / "rct3pp";
         Config linker = with_audio_link(cfg);
-        linker.link_flags.insert(linker.link_flags.end(), { "-lglfw", "-lvulkan" });
-#ifndef _WIN32
-        linker.link_flags.push_back("-Wl,-rpath,$ORIGIN"); // A package's GLFW, shipped next to the binary (run_package)
+#ifdef _WIN32
+        // The Vulkan loader is the system's (it must match the driver), so its import library is searched as one
+        // even in a -static link.
+        linker.link_flags.insert(linker.link_flags.end(), { "-Wl,-Bdynamic", "-lvulkan-1", "-Wl,-Bstatic", "-lgdi32" });
+#else
+        linker.link_flags.push_back("-lvulkan");
 #endif
         return link(linker, binary, objects);
     }
@@ -841,8 +866,9 @@ namespace
     };
 
     // The packages players download, in build/dist: rct3pp-VERSION-PLATFORM holds the viewer, README, LICENSE,
-    // CHANGELOG, the icons and the shared libraries the viewer needs that a player's system may lack;
-    // rct3pp-tools-VERSION-PLATFORM the command line tools and LICENSE. Linux gets .tar.gz, Windows .zip.
+    // CHANGELOG and the icons (the viewer is one file: GLFW and the C++ runtime are built in, and the Vulkan
+    // loader, which must match the graphics driver, is the system's); rct3pp-tools-VERSION-PLATFORM the command
+    // line tools and LICENSE. Linux gets .tar.gz, Windows .zip.
     bool run_package(const Config& cfg)
     {
         fs::path viewer;
@@ -852,14 +878,9 @@ namespace
         // shortcut: x86-64 only; upgrade when another architecture is built.
         constexpr std::string_view kPlatform = "windows-x86_64";
         constexpr std::string_view kExe = ".exe";
-        // MSYS2's own DLLs (GLFW, what of the compiler's runtime is not linked in); Windows has the rest.
-        const auto ship = [](std::string_view path) { return path.starts_with("/ucrt64/"); };
 #else
         constexpr std::string_view kPlatform = "linux-x86_64";
         constexpr std::string_view kExe = "";
-        // GLFW only: distributions package it under different names, while the C library and the Vulkan loader
-        // (which must match the graphics driver) are the system's own.
-        const auto ship = [](std::string_view path) { return path.contains("libglfw"); };
 #endif
         const std::string version = build_version();
         const fs::path packages = kBuildDir / "package";
@@ -881,29 +902,6 @@ namespace
             for (const char* doc : { "README.md", "LICENSE", "CHANGELOG.md" })
                 fs::copy_file(doc, game / doc);
             fs::copy("assets/icon", game / "icons");
-            // ldd's lines read "NAME => PATH (ADDRESS)".
-            std::FILE* ldd = popen(std::format("ldd \"{}\"", binary.string()).c_str(), "r");
-            if (ldd == nullptr)
-                return false;
-            for (char line[1024]; std::fgets(line, sizeof line, ldd) != nullptr;)
-            {
-                const std::string_view text = line;
-                const std::size_t arrow = text.find(" => ");
-                const std::size_t address = text.rfind(" (");
-                if (arrow == std::string_view::npos || address == std::string_view::npos || address < arrow)
-                    continue;
-                const std::string_view path = text.substr(arrow + 4, address - arrow - 4);
-                const std::string_view name = text.substr(0, arrow);
-                if (!ship(path))
-                    continue;
-                log(Level::Info, "shipping {}", path);
-                fs::copy_file(path, game / name.substr(name.find_first_not_of(" \t")));
-            }
-            if (pclose(ldd) != 0)
-            {
-                log(Level::Error, "ldd {} failed", binary.string());
-                return false;
-            }
             for (const auto& main_cpp : find_sources("tools", ".cpp"))
             {
                 const std::string name = std::format("{}{}", main_cpp.parent_path().filename().string(), kExe);

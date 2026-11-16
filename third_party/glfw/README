@@ -1,0 +1,26 @@
+GLFW 3.5.1 (https://www.glfw.org/, https://github.com/glfw/glfw), zlib license; see LICENSE.md.
+From the release archive glfw-3.5.1.zip (https://github.com/glfw/glfw/releases/download/3.5.1/glfw-3.5.1.zip,
+sha256 ea79bc5feffc254c87291980c2d0bce9acebb68c4983b79f961dcd2cb8a611a0, as the release lists it), whose
+sources match the 3.5.1 tag (commit d9d6f0f1f967807ffade6598ea9a631ebaf37a56). 3.5 or newer is needed: --headless
+runs Vulkan on GLFW's null platform, which 3.4 cannot. nob compiles it into the viewer, so no GLFW library is
+needed to build or run it.
+
+Kept, unchanged: include/GLFW/ and, from src/, the files of the platforms built here: the shared ones, null,
+POSIX and Linux joysticks, X11 with GLX, Wayland, Win32 with WGL, and EGL and OSMesa. macOS (Cocoa), the
+build files, examples, tests, docs and deps/ are left out. nob builds every .c file in src/ but the other
+platform's (win32_ and wgl_ on Linux; posix_, linux_, x11_, xkb_, glx_ and wl_ on Windows).
+
+X11 and Wayland are both compiled on Linux; GLFW opens their libraries (libX11, libXrandr, libwayland-client,
+libxkbcommon, libdecor, ...) at run time, so the binary does not depend on them. Building needs only their
+headers.
+
+Generated: the Wayland protocol headers src/*-client-protocol.h and src/*-client-protocol-code.h, made from
+the protocol files in the release's deps/wayland/ with wayland-scanner 1.26.0, as GLFW's CMake build does:
+
+  for x in deps/wayland/*.xml; do
+      n=$(basename "$x" .xml)
+      wayland-scanner client-header "$x" "src/$n-client-protocol.h"
+      wayland-scanner private-code "$x" "src/$n-client-protocol-code.h"
+  done
+
+Each carries its protocol's copyright and license (MIT) in the header comment.

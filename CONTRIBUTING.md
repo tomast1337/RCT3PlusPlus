@@ -22,7 +22,7 @@ g++ -std=c++26 -o nob nob.cpp
 ./nob test --sanitize --no-tools   # the same without building the tools
 ./nob test -- -ltc             # extra args go to the test binary (list test cases)
 ./nob fuzz ovl_header --seconds 60   # libFuzzer, needs Clang
-./nob run                      # graphical viewer: front screen + Dear ImGui (needs GLFW, a Vulkan 1.3 driver, slangc)
+./nob run                      # graphical viewer: front screen + Dear ImGui (needs a Vulkan 1.3 driver, slangc)
 ./nob run -- --frames 120      # exit after 120 frames (smoke test); RCT3PP_VALIDATION=1 enables validation layers
 ./nob --release | ./nob clean
 ./nob test -j 4                # at most 4 compilers at once (NOB_JOBS=4 does the same); default one per core
@@ -43,6 +43,11 @@ loads ALSA, PulseAudio or JACK at run time, and falls back to its null backend w
 The game's music is Windows Media Audio, and the first release's startup movies Windows Media Video 9, both
 decoded by [a cut of FFmpeg](third_party/ffmpeg/) (LGPL-2.1-or-later) holding only those decoders, vendored
 and built into the binary.
+
+The viewer's window comes from [GLFW](third_party/glfw/), vendored and built into the binary too. On Linux it
+has both the X11 and the Wayland back end and opens their libraries at run time; building needs only their
+headers (Debian and Ubuntu: `libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev
+libwayland-dev libxkbcommon-dev`; Arch: `libx11 libxrandr libxinerama libxcursor libxi wayland libxkbcommon`).
 
 Files under `assets/` are built into every binary with `#embed`, so rct3++ ships as one file. Among them
 are our own translations, `assets/lang/<Language>.json`, for text the game's string tables lack: a JSON

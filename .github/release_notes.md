@@ -20,4 +20,4 @@ ships no game content: it reads the data from your install.
    `--renderer opengl`.
 
 **Linux:** x86-64, glibc 2.38 or newer (Ubuntu 24.04, Debian 13, Fedora 39 or later), and the Vulkan loader
-(`libvulkan1` or `vulkan-loader`), which most desktops have. GLFW is included next to the binary.
+(`libvulkan1` or `vulkan-loader`), which most desktops have. Everything else is built into the binary.

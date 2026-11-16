@@ -1342,22 +1342,14 @@ namespace rct3::scene::park
         }
         const auto started = std::chrono::steady_clock::now();
         const float side = scene.tint_crossing ? 2.0f : 1.0f; // Twice as far tints them (lit.slang)
-        // A set of a chunk at a time, at least one a frame however slow.
+        // A whole chunk at a time, at least one a frame however slow. Its three sets go in the same frame: an
+        // object moving between them would otherwise show twice or not at all for the frames between.
         for (bool first = true; !built.chunks.empty() && (first || built.whole || !budget || std::chrono::duration<float>(std::chrono::steady_clock::now() - started).count() < budget->value); first = false)
         {
             ChunkShapes& shapes = built.chunks.back();
             ObjectChunk& chunk = scene.object_chunks[shapes.chunk];
-            // Round the old shapes and the new while it is half shown.
-            if (!shapes.box.empty)
-            {
-                chunk.box.take(shapes.box.low);
-                chunk.box.take(shapes.box.high);
-            }
-            const std::array sets { std::tuple { &chunk.steady, &shapes.steady, 0.0f }, std::tuple { &chunk.finer, &shapes.finer, -side }, std::tuple { &chunk.coarser, &shapes.coarser, side } };
-            const auto [shown, made, on] = sets[shapes.shown++];
-            show_shapes(device, scene, *shown, std::move(*made), built.plan, on);
-            if (shapes.shown < sets.size())
-                continue;
+            for (const auto& [shown, made, on] : { std::tuple { &chunk.steady, &shapes.steady, 0.0f }, std::tuple { &chunk.finer, &shapes.finer, -side }, std::tuple { &chunk.coarser, &shapes.coarser, side } })
+                show_shapes(device, scene, *shown, std::move(*made), built.plan, on);
             chunk.box = shapes.box;
             built.chunks.pop_back();
         }

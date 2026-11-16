@@ -196,6 +196,20 @@ TEST_CASE("guests think the scenery round them great, or else the paths tidy")
     }
 }
 
+TEST_CASE("scenery taken away stops counting round the paths at once, never below none")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 3, 0 });
+    const rct3::save::model::PlacedObject tree { .id = 1, .col = 0, .row = 1 };
+    import_scenery(park.world(), std::span(&tree, 1), [](const rct3::save::model::PlacedObject&) { return 2.0f; });
+    const auto& near = park.world().registry.ctx().get<SceneryNear>().by_node;
+    REQUIRE(std::ranges::any_of(near, [](float w) { return w > 0; }));
+    add_scenery(park.world(), tree, -2.0f);
+    CHECK(std::ranges::all_of(near, [](float w) { return w == 0; }));
+    add_scenery(park.world(), tree, -2.0f);
+    CHECK(std::ranges::all_of(near, [](float w) { return w == 0; }));
+}
+
 TEST_CASE("a party with the player's guest in it has its photo taken at a photo spot, others do not")
 {
     for (const bool avatar : { true, false })

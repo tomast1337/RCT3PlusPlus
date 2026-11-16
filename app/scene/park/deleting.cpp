@@ -33,6 +33,8 @@ namespace rct3::scene::park
             if (index.value >= scene.objects.size())
                 return;
             const auto wall = rct3::park::edge_wall(scene.objects[index.value], scene.models, scene.grid);
+            if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.objects[index.value])); model != scene.models.end())
+                simulation::add_scenery(scene.sim, scene.objects[index.value], -simulation::scenery_weight(model->second.category, model->second.feature));
             change_object(device, scene, index, [](save::model::PlacedObject& o) { o.hidden = true; });
             // Guests stop using what stood on the path, and the park keeps no bin or sign for it.
             const std::uint64_t id = scene.objects[index.value].id;

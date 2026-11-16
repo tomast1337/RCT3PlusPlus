@@ -13,6 +13,7 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstring>
 #include <format>
 #include <thread>
 #include <utility>
@@ -195,7 +196,7 @@ namespace rct3::render::opengl
         present_program_ = constants_ = empty_vertex_array_ = 0;
         frames_ = { };
         frame_index_ = 0;
-        applied_ = 0;
+        applied_ = std::nullopt;
         gl = { };
         state_ = State::Off;
     }
@@ -300,7 +301,7 @@ namespace rct3::render::opengl
         gl.BindBufferBase(GL_UNIFORM_BUFFER, 0, constants_);
         frame_stats_ = { };
         ui_drawn_ = false;
-        applied_ = 0;
+        applied_ = std::nullopt;
         state_ = State::InFrame;
     }
 
@@ -334,7 +335,8 @@ namespace rct3::render::opengl
         gl.Disable(GL_SCISSOR_TEST);
         gl.ColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
         gl.DepthMask(GL_TRUE);
-        applied_ = 0;
+        applied_ = std::nullopt;
+        bound_ = { };
         if (pass.clear)
         {
             const std::array<float, 4> colour { pass.clear_color.r, pass.clear_color.g, pass.clear_color.b, pass.clear_color.a };
@@ -357,48 +359,65 @@ namespace rct3::render::opengl
         state_ = State::InPass;
     }
 
-    // Sets the fixed-function state `pipeline` was made with.
-    void OpenGlDevice::apply(const Pipeline& pipeline)
+    // Sets the fixed-function state `pipeline` was made with, only what differs from the pipeline set before.
+    void OpenGlDevice::apply(const Pipeline& pipeline, bool wire)
     {
+        const std::optional<const Pipeline&> before = std::exchange(applied_, pipeline);
+        const bool wire_before = std::exchange(applied_wire_, wire);
         const PipelineDesc& d = pipeline.desc;
-        gl.UseProgram(programs_.at(static_cast<std::size_t>(pipeline.shader)));
+        if (!before || before->shader != pipeline.shader)
+            gl.UseProgram(programs_.at(static_cast<std::size_t>(pipeline.shader)));
         gl.BindVertexArray(pipeline.vertex_array);
-        if (d.cull == CullMode::None)
+        if (!before || before->desc.cull != d.cull)
         {
-            gl.Disable(GL_CULL_FACE);
+            if (d.cull == CullMode::None)
+            {
+                gl.Disable(GL_CULL_FACE);
+            }
+            else
+            {
+                gl.Enable(GL_CULL_FACE);
+                gl.CullFace(d.cull == CullMode::Back ? GL_BACK : GL_FRONT);
+            }
         }
-        else
+        if (!before || before->desc.blend != d.blend || (d.blend == BlendMode::Faded && before->desc.fade != d.fade))
         {
-            gl.Enable(GL_CULL_FACE);
-            gl.CullFace(d.cull == CullMode::Back ? GL_BACK : GL_FRONT);
+            switch (d.blend)
+            {
+                case BlendMode::Opaque:
+                    gl.Disable(GL_BLEND);
+                    break;
+                case BlendMode::Alpha:
+                    gl.Enable(GL_BLEND);
+                    gl.BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+                    break;
+                case BlendMode::Add:
+                    gl.Enable(GL_BLEND);
+                    gl.BlendFuncSeparate(GL_ONE, GL_ONE, GL_ZERO, GL_ONE);
+                    break;
+                case BlendMode::Faded:
+                    gl.Enable(GL_BLEND);
+                    gl.BlendFuncSeparate(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA, GL_ZERO, GL_ONE);
+                    gl.BlendColor(0, 0, 0, d.fade);
+                    break;
+            }
         }
-        switch (d.blend)
+        if (!before || before->desc.depth_test != d.depth_test)
         {
-            case BlendMode::Opaque:
-                gl.Disable(GL_BLEND);
-                break;
-            case BlendMode::Alpha:
-                gl.Enable(GL_BLEND);
-                gl.BlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-                break;
-            case BlendMode::Add:
-                gl.Enable(GL_BLEND);
-                gl.BlendFuncSeparate(GL_ONE, GL_ONE, GL_ZERO, GL_ONE);
-                break;
-            case BlendMode::Faded:
-                gl.Enable(GL_BLEND);
-                gl.BlendFuncSeparate(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA, GL_ZERO, GL_ONE);
-                gl.BlendColor(0, 0, 0, d.fade);
-                break;
+            if (d.depth_test)
+                gl.Enable(GL_DEPTH_TEST);
+            else
+                gl.Disable(GL_DEPTH_TEST);
         }
-        if (d.depth_test)
-            gl.Enable(GL_DEPTH_TEST);
-        else
-            gl.Disable(GL_DEPTH_TEST);
-        gl.DepthMask(d.depth_write ? GL_TRUE : GL_FALSE);
-        const GLboolean colour = d.colour_write ? GL_TRUE : GL_FALSE;
-        gl.ColorMask(colour, colour, colour, colour);
-        gl.PolygonMode(GL_FRONT_AND_BACK, applied_wire_ ? GL_LINE : GL_FILL);
+        if (!before || before->desc.depth_write != d.depth_write)
+            gl.DepthMask(d.depth_write ? GL_TRUE : GL_FALSE);
+        if (!before || before->desc.colour_write != d.colour_write)
+        {
+            const GLboolean colour = d.colour_write ? GL_TRUE : GL_FALSE;
+            gl.ColorMask(colour, colour, colour, colour);
+        }
+        if (!before || wire_before != wire)
+            gl.PolygonMode(GL_FRONT_AND_BACK, wire ? GL_LINE : GL_FILL);
     }
 
     void OpenGlDevice::draw(const DrawCommand& command)
@@ -410,15 +429,17 @@ namespace rct3::render::opengl
         assert(vertices != buffers_.end() && "draw with an unknown vertex buffer");
         if (pipeline == pipelines_.end() || vertices == buffers_.end())
             return;
-        const Pipeline& p = pipeline->second;
-        if (const bool wire = wireframe_ && p.desc.topology == Topology::Triangles; applied_ != command.pipeline.id || applied_wire_ != wire)
+        Pipeline& p = pipeline->second;
+        if (const bool wire = wireframe_ && p.desc.topology == Topology::Triangles; !applied_ || &*applied_ != &p || applied_wire_ != wire)
         {
-            applied_wire_ = wire;
-            apply(p);
-            applied_ = command.pipeline.id;
+            apply(p, wire);
         }
-        const ShaderConstants constants = shader_constants(command, p.shader);
-        gl.NamedBufferSubData(constants_, 0, sizeof constants, &constants);
+        if (const ShaderConstants constants = shader_constants(command, p.shader); !bound_.has_constants || std::memcmp(&constants, &bound_.constants, sizeof constants) != 0)
+        {
+            gl.NamedBufferSubData(constants_, 0, sizeof constants, &constants);
+            bound_.constants = constants;
+            bound_.has_constants = true;
+        }
         if (command.texture)
         {
             const auto texture = textures_.find(command.texture.id);
@@ -434,12 +455,26 @@ namespace rct3::render::opengl
                 if (const auto found = textures_.find(extras[i].id); extras[i] && found != textures_.end())
                     units[2 + i] = found->second.texture;
             }
-            std::array<GLuint, kUnits> samplers { };
-            samplers.fill(samplers_[static_cast<std::size_t>(command.filter) * 2 + static_cast<std::size_t>(command.address)]);
-            gl.BindTextures(0, kUnits, units.data());
-            gl.BindSamplers(0, kUnits, samplers.data());
+            if (!bound_.has_textures || units != bound_.textures)
+            {
+                gl.BindTextures(0, kUnits, units.data());
+                bound_.textures = units;
+                bound_.has_textures = true;
+            }
+            if (const GLuint sampler = samplers_[static_cast<std::size_t>(command.filter) * 2 + static_cast<std::size_t>(command.address)]; sampler != bound_.sampler)
+            {
+                std::array<GLuint, kUnits> samplers { };
+                samplers.fill(sampler);
+                gl.BindSamplers(0, kUnits, samplers.data());
+                bound_.sampler = sampler;
+            }
         }
-        gl.VertexArrayVertexBuffer(p.vertex_array, 0, vertices->second.buffer, command.vertices.offset, static_cast<GLsizei>(p.desc.layout.stride));
+        if (vertices->second.buffer != p.vertices || command.vertices.offset != p.vertex_offset)
+        {
+            gl.VertexArrayVertexBuffer(p.vertex_array, 0, vertices->second.buffer, command.vertices.offset, static_cast<GLsizei>(p.desc.layout.stride));
+            p.vertices = vertices->second.buffer;
+            p.vertex_offset = command.vertices.offset;
+        }
 
         if (command.indices.buffer)
         {
@@ -447,7 +482,11 @@ namespace rct3::render::opengl
             assert(indices != buffers_.end() && "draw with an unknown index buffer");
             if (indices == buffers_.end())
                 return;
-            gl.VertexArrayElementBuffer(p.vertex_array, indices->second.buffer);
+            if (indices->second.buffer != p.indices)
+            {
+                gl.VertexArrayElementBuffer(p.vertex_array, indices->second.buffer);
+                p.indices = indices->second.buffer;
+            }
             const bool u16 = command.index_type == IndexType::U16;
             const std::uintptr_t offset = command.indices.offset + std::uintptr_t { command.first } * (u16 ? 2 : 4);
             gl.DrawElementsBaseVertex(topology(p.desc.topology), static_cast<GLsizei>(command.count), u16 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, reinterpret_cast<const void*>(offset), command.vertex_offset);

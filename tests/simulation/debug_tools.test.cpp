@@ -89,6 +89,40 @@ TEST_CASE("debug tools: refreshing guests meets their needs")
     CHECK(r.get<Mood>(guest).nausea.value == 0);
 }
 
+TEST_CASE("debug tools: rides break down all at once, and a reset repairs, empties and zeroes them")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 2, .cycle_seconds = 30, .excitement = 1, .intensity = 0.3f });
+    const auto other = park.flat_ride("Teacups", { 0, 0 }, 0);
+    for (int i = 0; i < 6; ++i)
+        park.guest({ 1 + i % 3, 0 }, { .happiness = 1 });
+    auto& r = park.world().registry;
+    REQUIRE(park.run_until([&] { return r.get<Attraction>(ride).customers > 0 && !r.get<CycleRide>(ride).queue.empty(); }, 120));
+    r.get<Upkeep>(ride).reliability = units::Share { 0.4f };
+
+    CHECK(break_down_rides(park.world()) == 2);
+    CHECK(break_down_rides(park.world()) == 0); // Broken already
+    for (const auto e : { ride, other })
+    {
+        CHECK(r.get<Upkeep>(e).broken);
+        CHECK(r.get<Upkeep>(e).kind != Breakdown::None);
+        CHECK_FALSE(r.get<Attraction>(e).open);
+    }
+
+    reset_rides(park.world());
+    CHECK_FALSE(r.get<Upkeep>(ride).broken);
+    CHECK(r.get<Upkeep>(ride).kind == Breakdown::None);
+    CHECK(r.get<Upkeep>(ride).reliability.value == 1);
+    CHECK(r.get<Upkeep>(ride).breakdowns == 0);
+    CHECK(r.get<Attraction>(ride).open);
+    CHECK(r.get<Attraction>(ride).customers == 0);
+    CHECK(r.get<CycleRide>(ride).queue.empty());
+    for (const auto [e, errand] : r.view<const Errand>().each())
+        CHECK(errand.kind != ErrandKind::Queueing);
+    park.run_seconds(30);
+}
+
 TEST_CASE("debug tools: litter is dropped across the spots given and cleared again")
 {
     Sandbox park;

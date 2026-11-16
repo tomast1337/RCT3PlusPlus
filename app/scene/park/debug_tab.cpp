@@ -79,6 +79,10 @@ namespace rct3::scene::park
                 return simulation::send_guests_home(scene.sim);
             case DebugTool::RefreshGuests:
                 return simulation::refresh_guests(scene.sim);
+            case DebugTool::BreakRides:
+                return simulation::break_down_rides(scene.sim);
+            case DebugTool::ResetRides:
+                return simulation::reset_rides(scene.sim);
             case DebugTool::DropLitter:
                 return simulation::scatter_litter(scene.sim, scene.gameplay, park_paths(scene), count);
             case DebugTool::ClearLitter:
@@ -150,6 +154,14 @@ namespace rct3::scene::park
             }
             else
                 ImGui::TextDisabled("Open a person's window to step through their motions");
+        }
+
+        if (ImGui::CollapsingHeader("Rides", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            tool_button(device, scene, assets, "Break down every ride", DebugTool::BreakRides);
+            ImGui::SameLine();
+            tool_button(device, scene, assets, "Reset all rides", DebugTool::ResetRides);
+            ImGui::SetItemTooltip("Repaired, fully reliable, queues emptied and their counts back to nought");
         }
 
         if (ImGui::CollapsingHeader("Litter", ImGuiTreeNodeFlags_DefaultOpen))

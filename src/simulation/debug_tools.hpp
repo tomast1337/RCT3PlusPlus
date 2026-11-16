@@ -34,6 +34,15 @@ namespace rct3::simulation
     /// Returns how many guests.
     std::size_t refresh_guests(SimWorld& world);
 
+    /// Breaks down every ride that is not broken already, closing it till a mechanic repairs it. Returns how many
+    /// broke.
+    std::size_t break_down_rides(SimWorld& world);
+
+    /// Puts every ride back as new: repaired and opened again if a breakdown had closed it, fully reliable and just
+    /// inspected, its queues emptied (those in them walk off from its entrance) and its counts back to nought.
+    /// Returns how many rides.
+    std::size_t reset_rides(SimWorld& world);
+
     /// Drops `count` pieces of litter, each on a tile of `spots` picked with `dice`. Returns how many; none without
     /// spots.
     std::size_t scatter_litter(SimWorld& world, random::RandomState& dice, std::span<const NodeId> spots, std::size_t count);

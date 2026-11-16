@@ -290,7 +290,8 @@ namespace rct3::park::object
         for (std::size_t index = 0; index < objects.size(); ++index)
         {
             const save::model::PlacedObject& object = objects[index];
-            if (object.hidden)
+            // Before the model is looked up: a chunk's build passes every object, most of them not drawn.
+            if (object.hidden || (!finest && levels[index] < 0))
                 continue;
             const auto model = models.find(model_ref(object));
             if (model == models.end())

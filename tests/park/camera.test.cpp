@@ -353,3 +353,16 @@ TEST_CASE("the eye stays above a hill behind the target, tilting down only as fa
         CHECK(on_ground(flat, g).pitch == doctest::Approx(flat.pitch));
     }
 }
+
+TEST_CASE("a box is in view unless wholly beyond one side of it or behind the eye")
+{
+    const glm::mat4 view = glm::perspective(0.9f, 1.0f, 1.0f, 500.0f) * glm::lookAt(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    CHECK(box_in_view(view, { -1, -1, -20 }, { 1, 1, -10 }));
+    CHECK(box_in_view(view, { -100, -1, -20 }, { 100, 1, -10 })); // Wider than the view, corners all outside
+    CHECK_FALSE(box_in_view(view, { 50, -1, -20 }, { 60, 1, -10 }));
+    CHECK_FALSE(box_in_view(view, { -1, -1, 10 }, { 1, 1, 20 }));
+    // Looking down the light, as a shadow map does: only what lies in its square.
+    const glm::mat4 sun = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, -100.0f, 100.0f) * glm::lookAt(glm::vec3(0.0f, 50.0f, 0.0f), glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+    CHECK(box_in_view(sun, { 8, 0, 8 }, { 12, 5, 12 }));
+    CHECK_FALSE(box_in_view(sun, { 11, 0, 0 }, { 15, 5, 2 }));
+}

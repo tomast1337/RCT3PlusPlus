@@ -1628,7 +1628,7 @@ namespace rct3::scene::park
                 }
             }
             profiling::section("ObjectBuffers", [&] {
-                if (auto built = build_objects(scene, rct3::park::eye(scene.camera), { }, scene.blend_band, scene.level_scales, scene.show_supports, { }, rct3::park::chain_runs(scene.rides, scene.objects, scene.models), flow_fades(scene)))
+                if (auto built = build_objects(scene, rct3::park::eye(scene.camera), { }, 0, scene.blend_band, scene.level_scales, scene.show_supports, { }, rct3::park::chain_runs(scene.rides, scene.objects, scene.models), flow_fades(scene)))
                     show_objects(device, scene, std::move(*built));
             });
             if (auto sky = load_sky(device, install, options, rct3::park::background_theme(world->sky_background), scene); !sky)
@@ -1772,11 +1772,11 @@ namespace rct3::scene::park
                     device.destroy_buffer(b);
             }
         }
-        for (const render::BufferHandle b : { scene.steady_objects.vertices, scene.steady_objects.indices, scene.finer_objects.vertices, scene.finer_objects.indices, scene.coarser_objects.vertices, scene.coarser_objects.indices })
-        {
-            if (b)
-                device.destroy_buffer(b);
-        }
+        for (const ObjectChunk& chunk : scene.object_chunks)
+            for (const ShownObjects* shown : { &chunk.steady, &chunk.finer, &chunk.coarser })
+                for (const render::BufferHandle b : { shown->vertices, shown->indices })
+                    if (b)
+                        device.destroy_buffer(b);
         for (const render::PipelineHandle p : { scene.ground_pipeline, scene.ground_depth_pipeline, scene.ground_faded_pipeline, scene.object_pipeline, scene.cutout_pipeline, scene.see_through_pipeline, scene.crossing_pipeline, scene.crossing_cutout_pipeline, scene.crossing_see_through_pipeline, scene.depth_only_pipeline, scene.crossing_depth_only_pipeline, scene.chrome_pipeline, scene.crossing_chrome_pipeline, scene.jet_pipeline, scene.sky_pipeline })
         {
             if (p)

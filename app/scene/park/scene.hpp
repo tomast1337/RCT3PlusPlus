@@ -28,6 +28,7 @@
 #include "park/camera.hpp"
 #include "park/car_splashes.hpp"
 #include "park/moving_meshes.hpp"
+#include "park/object/chunks.hpp"
 #include "park/object/mesh.hpp"
 #include "park/object/pick.hpp"
 #include "park/person/mesh.hpp"
@@ -150,6 +151,9 @@ namespace rct3::scene::park
 
     /// The object buffers are built again at most this often while the view moves.
     inline constexpr units::Seconds kObjectRebuildInterval { 0.25f };
+    /// Of a frame, spent at most putting newly built chunks of objects in their buffers (at least one a frame).
+    /// Chosen by eye: a pan's chunks show within a few frames without a frame standing out.
+    inline constexpr units::Seconds kChunksShownBudget { 0.002f };
     inline constexpr std::int32_t kVandalismPenalty = 10;         ///< Of the rating for each thing broken.
     inline constexpr std::int32_t kLitterWarning = 20;            ///< Old pieces of litter that make the player be told.
     inline constexpr units::Seconds kStillBrokenReminder { 300 }; ///< In game time, a ride stays broken between reminders.
@@ -196,14 +200,27 @@ namespace rct3::scene::park
         rct3::park::object::Billboards billboards;
     };
 
-    /// The objects' meshes for new levels, built away from the frame: those drawn at one level apart from those
-    /// crossing between two, at each.
-    struct ObjectBuild
+    /// One chunk's objects built for new levels: those drawn at one level apart from those crossing between two,
+    /// at each.
+    struct ChunkShapes
     {
-        rct3::park::object::LevelPlan plan;
+        std::size_t chunk = 0; ///< In ParkScene::object_chunks
         ObjectShapes steady;
         ObjectShapes finer;
         ObjectShapes coarser;
+        rct3::park::object::ShapeBox box;
+        std::size_t shown = 0; ///< Of its three sets, how many are in their buffers
+    };
+
+    /// The objects' meshes for new levels, built away from the frame, for the chunks whose levels changed.
+    struct ObjectBuild
+    {
+        rct3::park::object::LevelPlan plan;
+        std::size_t chunk_count = 0;
+        /// Every chunk was built, for other objects than those shown: shown all at once, so no chunk shows an
+        /// object that is gone, or one twice beside ParkScene::fresh_objects.
+        bool whole = false;
+        std::vector<ChunkShapes> chunks;
     };
 
     /// A vertex of an object crossing between two levels: as GroundVertex, then its object's anchor and the
@@ -302,6 +319,26 @@ namespace rct3::scene::park
         render::BufferHandle indices;
         rct3::park::object::Billboards billboards;
         std::vector<std::pair<glm::vec4, glm::vec2>> bands;
+    };
+
+    /// The objects standing in one chunk of the map (rct3::park::object::ChunkGrid, kGroundChunk tiles square),
+    /// in buffers of their own, and the box round them.
+    struct ObjectChunk
+    {
+        ShownObjects steady;  ///< Objects drawn at one level
+        ShownObjects finer;   ///< Those crossing between two, at the finer
+        ShownObjects coarser; ///< The same at the coarser
+        rct3::park::object::ShapeBox box;
+    };
+
+    /// Each of an ObjectChunk's sets, steady, finer and coarser.
+    inline constexpr std::array<ShownObjects ObjectChunk::*, 3> kChunkSets { &ObjectChunk::steady, &ObjectChunk::finer, &ObjectChunk::coarser };
+
+    /// A batch of one chunk's objects.
+    struct ChunkBatch
+    {
+        std::uint32_t chunk = 0;
+        std::uint32_t batch = 0;
     };
 
     /// The still people's mesh for new levels, built away from the frame.
@@ -461,9 +498,14 @@ namespace rct3::scene::park
         /// set when the park loads, so it may run beside the frame; it must be waited for before the scene
         /// goes.
         std::future<std::optional<ObjectBuild>> object_build;
-        ShownObjects steady_objects;   ///< Objects drawn at one level
-        ShownObjects finer_objects;    ///< Those crossing between two, at the finer
-        ShownObjects coarser_objects;  ///< The same at the coarser
+        std::vector<ObjectChunk> object_chunks;
+        /// By set (kChunkSets), every chunk's batches in the order one mesh of all of them would have, by picture
+        /// then chunk: draws of a picture come together and share what they bind.
+        std::array<std::vector<ChunkBatch>, 3> object_order;
+        std::vector<char> chunks_seen; ///< By chunk, whether the pass being drawn sees it
+        /// A build's chunks not shown yet: a few are put in their buffers each frame, so taking a build on does
+        /// not hold up one frame. The worker waits until all are.
+        std::optional<ObjectBuild> objects_pending;
         std::size_t objects_shown = 0; ///< How many objects those were built from
         /// Objects added since the shown ones were built, drawn on their own until a build takes them in, so a
         /// piece laid shows at once.
@@ -785,6 +827,7 @@ namespace rct3::scene::park
         std::vector<glm::vec3> stroke;                                                   ///< The pool water under the pointer while pressed: world x, z and scene.clock
         std::optional<ui::Point> right_press;                                            ///< Likewise the right button
         render::SceneLight light;                                                        ///< What the day clock shows, for this frame
+        std::vector<CrossingVertex> crossing_scratch;                                    ///< Crossing billboards' vertices, written into for each upload
         std::vector<FrameUpload> frame_uploads;                                          ///< Meshes copied for this frame so far, cleared as it starts
         int shadows = 0;                                                                 ///< The Shadows option: none, static (drawn now and then), dynamic
         /// The shadow drawn at the sun's last kept direction, and the one before it, which fades out as the sun

@@ -4,6 +4,7 @@
 #include "units/units.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 namespace rct3::park
@@ -131,6 +132,21 @@ namespace rct3::park
             return projection(aspect, seat, across) * glm::lookAt(from, from + glm::normalize(glm::vec3((*seat)[2])), glm::normalize(glm::vec3((*seat)[1])));
         }
         return projection(aspect) * glm::lookAt(eye(camera), camera.target, glm::vec3(0, 1, 0));
+    }
+
+    bool box_in_view(const glm::mat4& transform, const glm::vec3& low, const glm::vec3& high)
+    {
+        std::array<int, 5> beyond { };
+        for (int k = 0; k < 8; ++k)
+        {
+            const glm::vec4 p = transform * glm::vec4((k & 1) != 0 ? high.x : low.x, (k & 2) != 0 ? high.y : low.y, (k & 4) != 0 ? high.z : low.z, 1.0f);
+            beyond[0] += p.x < -p.w ? 1 : 0;
+            beyond[1] += p.x > p.w ? 1 : 0;
+            beyond[2] += p.y < -p.w ? 1 : 0;
+            beyond[3] += p.y > p.w ? 1 : 0;
+            beyond[4] += p.w <= 0 ? 1 : 0;
+        }
+        return std::ranges::none_of(beyond, [](int n) { return n == 8; });
     }
 
     glm::mat4 projection(float aspect, const Seat& seat, float across)

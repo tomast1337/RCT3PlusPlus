@@ -1479,34 +1479,47 @@ namespace rct3::simulation
             const double fill = guests < ideal ? std::max(1.0, ideal / (kTuning.arrivals.fill.value * kTuning.arrivals.rate.value)) : 1.0;
             arrivals *= fill * drawn(*draw, guests, ideal, fair_entrance_fee(world));
         }
-        for (const entt::entity gate : sorted(r.view<const ParkGate>()))
+        // The park draws its parties as a whole, however many gates it has; each heads for the open gate
+        // nearest the spawn point it appears at.
+        const auto gates = sorted(r.view<const ParkGate>());
+        std::vector<entt::entity> open;
+        std::vector<NodeId> entries;
+        for (const entt::entity gate : gates)
+            if (!r.get<ParkGate>(gate).closed)
+            {
+                open.push_back(gate);
+                entries.push_back(r.get<ParkGate>(gate).node);
+            }
+        if (!gates.empty())
         {
-            if (!r.all_of<Dice>(gate))
-                r.emplace<Dice>(gate, dice_for(world, gate));
-            auto& dice = r.get<Dice>(gate).state;
-            if (!random::chance(dice, arrivals * dt) || r.get<ParkGate>(gate).closed)
-                continue;
-            const NodeId entry = r.get<ParkGate>(gate).node;
+            // The roll is kept on the first gate's dice, so a park with one gate draws as it always did.
+            if (!r.all_of<Dice>(gates.front()))
+                r.emplace<Dice>(gates.front(), dice_for(world, gates.front()));
+            auto& dice = r.get<Dice>(gates.front()).state;
+            if (!random::chance(dice, arrivals * dt) || open.empty())
+                return;
             const auto spawns = sorted(r.view<const GuestSpawn>());
-            std::optional<std::vector<NodeId>> walk;
-            NodeId from = entry;
+            std::optional<PathNetwork::NearestRoute> walk;
+            NodeId from { };
             for (std::size_t k = 0, first = spawns.empty() ? 0 : random::below(dice, spawns.size()); k < spawns.size() && !walk; ++k)
             {
                 from = r.get<GuestSpawn>(spawns[(first + k) % spawns.size()]).node;
-                walk = paths.route(from, entry);
+                walk = paths.route_nearest(from, entries);
             }
+            const entt::entity gate = open[walk ? walk->target : random::below(dice, open.size())];
+            const NodeId entry = r.get<ParkGate>(gate).node;
             const std::vector<entt::entity> party = admit_party(world, dice, walk ? from : entry);
             if (walk)
             {
                 for (const entt::entity m : party)
                     r.emplace<Outside>(m);
                 r.get<Errand>(party.front()) = { ErrandKind::Heading, gate, 0 };
-                r.get<Stride>(party.front()).route = std::move(*walk);
-                continue;
+                r.get<Stride>(party.front()).route = std::move(walk->walk);
+                return;
             }
             // At the gate they pay at once; a party that cannot is gone again.
             if (pay_entry(r, party))
-                continue;
+                return;
             if (const auto* member = r.try_get<Member>(party.front()))
                 r.destroy(member->party);
             for (const entt::entity m : party)

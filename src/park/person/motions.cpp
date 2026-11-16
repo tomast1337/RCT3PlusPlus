@@ -7,6 +7,7 @@
 #include <array>
 #include <format>
 #include <string>
+#include <vector>
 
 namespace rct3::park::person
 {
@@ -434,6 +435,18 @@ namespace rct3::park::person
         if (it == kMotions.end() || it->name != lower)
             return std::nullopt;
         return it->number;
+    }
+
+    std::vector<NamedMotion> motions_by_number()
+    {
+        std::vector<NamedMotion> out;
+        for (const Named& m : kMotions)
+            out.push_back({ .number = m.number, .name = m.name });
+        // The first name of each number, as the table sorts them.
+        std::ranges::stable_sort(out, { }, &NamedMotion::number);
+        const auto [first, last] = std::ranges::unique(out, { }, &NamedMotion::number);
+        out.erase(first, last);
+        return out;
     }
 
     std::optional<RiderMotions> rider_motions(std::uint8_t seating)

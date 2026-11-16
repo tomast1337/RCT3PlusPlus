@@ -13,6 +13,7 @@
 #include <optional>
 #include <span>
 #include <string_view>
+#include <vector>
 
 namespace rct3::park::person
 {
@@ -26,6 +27,16 @@ namespace rct3::park::person
 
     /// The number of the motion named `name`, whatever its case. Nothing for a name not in the table.
     [[nodiscard]] std::optional<std::int32_t> motion_number(std::string_view name);
+
+    /// A motion's number and one of its names.
+    struct NamedMotion
+    {
+        std::int32_t number = 0;
+        std::string_view name { };
+    };
+
+    /// Every motion the table knows, by number, each once.
+    [[nodiscard]] std::vector<NamedMotion> motions_by_number();
 
     /// How a rider seated in a ride car moves: riding along, waiting at the station or up a lift, with their
     /// hands up, covering their eyes, and pressed hard by the ride. Each by number; those a seating has no

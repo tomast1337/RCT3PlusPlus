@@ -4,9 +4,11 @@
 #include "imgui.h"
 #include "park/boundary_fence.hpp"
 #include "park/land_buying.hpp"
+#include "park/person/motions.hpp"
 #include "scene/land_tools.hpp"
 #include "scene/park/scene.hpp"
 #include "simulation/debug_tools.hpp"
+#include "simulation/guests.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -16,6 +18,18 @@ namespace rct3::scene::park
 
     namespace
     {
+        /// The park's own walkable tiles, not its queues nor the road out to the gate: where guests and litter are
+        /// dropped.
+        std::vector<simulation::NodeId> park_paths(const ParkScene& scene)
+        {
+            std::vector<simulation::NodeId> spots;
+            const auto& nodes = scene.sim.paths.nodes();
+            for (std::uint32_t n = 0; n < nodes.size(); ++n)
+                if (const auto& t = nodes[n].tile; !nodes[n].queue && !nodes[n].removed && scene.grid.contains(t.col, t.row) && rct3::park::owned_outright(scene.grid.at(t.col, t.row)))
+                    spots.push_back(simulation::NodeId { n });
+            return spots;
+        }
+
         void tool_button(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const char* label, DebugTool tool, std::int64_t amount = 0)
         {
             if (ImGui::Button(label))
@@ -25,6 +39,7 @@ namespace rct3::scene::park
 
     std::size_t use_debug_tool(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, DebugTool tool, std::int64_t amount)
     {
+        const auto count = static_cast<std::size_t>(std::max<std::int64_t>(amount, 0));
         switch (tool)
         {
             case DebugTool::AddMoney:
@@ -58,6 +73,16 @@ namespace rct3::scene::park
                 scene.build.researching = std::nullopt;
                 return scene.research.invented.size() - had;
             }
+            case DebugTool::AddGuests:
+                return simulation::add_guests(scene.sim, scene.gameplay, park_paths(scene), count);
+            case DebugTool::RemoveGuests:
+                return simulation::send_guests_home(scene.sim);
+            case DebugTool::RefreshGuests:
+                return simulation::refresh_guests(scene.sim);
+            case DebugTool::DropLitter:
+                return simulation::scatter_litter(scene.sim, scene.gameplay, park_paths(scene), count);
+            case DebugTool::ClearLitter:
+                return simulation::clear_litter(scene.sim);
         }
         return 0;
     }
@@ -66,6 +91,8 @@ namespace rct3::scene::park
     {
         // What the tab's boxes hold between frames, as ImGui leaves them to the caller; one tab, one set.
         static int money = 10000;
+        static int guests = 100;
+        static int litter = 200;
 
         if (ImGui::CollapsingHeader("Park and money", ImGuiTreeNodeFlags_DefaultOpen))
         {
@@ -81,6 +108,58 @@ namespace rct3::scene::park
             ImGui::BeginDisabled(!scene.research_items);
             tool_button(device, scene, assets, "Finish all research", DebugTool::FinishResearch);
             ImGui::EndDisabled();
+        }
+
+        if (ImGui::CollapsingHeader("Guests", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::BeginDisabled(!scene.simulate);
+            ImGui::SetNextItemWidth(120);
+            ImGui::InputInt("##guests", &guests, 10, 100);
+            ImGui::SameLine();
+            tool_button(device, scene, assets, "Add guests", DebugTool::AddGuests, guests);
+            ImGui::SetItemTooltip("Parties as the gate lets them in, spread over the park's paths");
+            tool_button(device, scene, assets, "Remove all guests", DebugTool::RemoveGuests);
+            ImGui::SameLine();
+            tool_button(device, scene, assets, "Reset needs", DebugTool::RefreshGuests);
+            ImGui::EndDisabled();
+            // The person whose window is open plays the motion picked, from its start.
+            static const std::vector<rct3::park::person::NamedMotion> kMotions = rct3::park::person::motions_by_number();
+            if (scene.shown_person && !kMotions.empty())
+            {
+                const auto at = scene.held_motion ? std::ranges::find(kMotions, scene.held_motion->motion, &rct3::park::person::NamedMotion::number) : kMotions.end();
+                const std::size_t now = at == kMotions.end() ? 0 : static_cast<std::size_t>(at - kMotions.begin());
+                const auto play = [&](std::size_t i) { scene.held_motion = ParkScene::HeldMotion { .motion = kMotions[i].number, .since = scene.clock }; };
+                if (ImGui::ArrowButton("##motion_back", ImGuiDir_Left))
+                    play(scene.held_motion && now > 0 ? now - 1 : kMotions.size() - 1);
+                ImGui::SameLine();
+                if (ImGui::ArrowButton("##motion_on", ImGuiDir_Right))
+                    play(scene.held_motion && now + 1 < kMotions.size() ? now + 1 : 0);
+                ImGui::SameLine();
+                if (scene.held_motion)
+                {
+                    ImGui::Text("Motion %d: %.*s", scene.held_motion->motion, static_cast<int>(kMotions[now].name.size()), kMotions[now].name.data());
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("Again"))
+                        play(now);
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("Own motions"))
+                        scene.held_motion.reset();
+                }
+                else
+                    ImGui::TextUnformatted("Step through the person's motions");
+            }
+            else
+                ImGui::TextDisabled("Open a person's window to step through their motions");
+        }
+
+        if (ImGui::CollapsingHeader("Litter", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::SetNextItemWidth(120);
+            ImGui::InputInt("##litter", &litter, 10, 100);
+            ImGui::SameLine();
+            tool_button(device, scene, assets, "Drop litter", DebugTool::DropLitter, litter);
+            ImGui::SameLine();
+            tool_button(device, scene, assets, "Clear all litter", DebugTool::ClearLitter);
         }
     }
 

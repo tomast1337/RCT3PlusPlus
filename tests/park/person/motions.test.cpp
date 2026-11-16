@@ -82,3 +82,13 @@ TEST_CASE("clips play in turn, each once, and the last for good")
     const std::array<park::person::Clip, 1> loop { { { 4, 0 } } };
     CHECK(park::person::clip_at(loop, 3).motion == 4);
 }
+
+TEST_CASE("the motions listed by number name each number once, in order")
+{
+    const auto motions = park::person::motions_by_number();
+    REQUIRE_FALSE(motions.empty());
+    for (std::size_t i = 1; i < motions.size(); ++i)
+        CHECK(motions[i - 1].number < motions[i].number);
+    for (const park::person::NamedMotion& m : motions)
+        CHECK(park::person::motion_number(m.name) == m.number);
+}

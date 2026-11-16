@@ -1956,7 +1956,7 @@ namespace rct3::simulation
             if (!r.all_of<Errand, Stride, Pose>(g) || !std::ranges::contains(std::array { ErrandKind::Wandering, ErrandKind::Following, ErrandKind::Waiting }, r.get<Errand>(g).kind))
                 continue;
 
-            // ---- 1. What they carry: food or a drink in hand, or an empty, and empties in their pockets; a map anywhere ----
+            // ---- 1. What they carry: food or a drink in hand, or an empty, and empties in their pockets; a map anywhere; an umbrella ----
             if (const auto holder = holders.find(saved.person.id); holder != holders.end() && !r.all_of<Carried>(g))
             {
                 const auto item = [&](const save::model::PeopleRef& ref) -> const save::model::CarriedItem* {
@@ -1966,6 +1966,8 @@ namespace rct3::simulation
                 const save::model::ItemHolder& h = *holder->second;
                 if (std::ranges::any_of(std::array { &h.left_hand, &h.right_hand, &h.left_pocket, &h.right_pocket, &h.head }, [&](const save::model::PeopleRef* slot) { return item(*slot) != nullptr && map(*item(*slot)); }) || std::ranges::any_of(h.slotless, [&](const save::model::PeopleRef& slot) { return item(slot) != nullptr && map(*item(slot)); }))
                     r.emplace_or_replace<ParkMap>(g);
+                if (item(h.umbrella) != nullptr)
+                    r.emplace_or_replace<Umbrella>(g);
                 std::optional<Carried> carried;
                 for (const save::model::PeopleRef* hand : { &holder->second->left_hand, &holder->second->right_hand })
                 {
@@ -2013,6 +2015,15 @@ namespace rct3::simulation
                     r.emplace<Linger>(g, Linger { .at = PathItemKind::Bench, .left = rising ? units::Seconds { } : kTuning.facilities.sit, .bench = at, .seat = seat, .rising = rising });
                     ++resumed;
                     break;
+                }
+            }
+            else if (state == std::to_underlying(GuestState::HeadingForBin) && at != entt::null && r.all_of<Bin>(at) && r.all_of<Carried>(g))
+            {
+                // At their bin or nearly there: what they carried over goes in, as far as it has room.
+                if (Carried& rubbish = r.get<Carried>(g); (rubbish.held && rubbish.bites == 0) || rubbish.pocketed > 0)
+                {
+                    bin_empties(r, g, rubbish, at);
+                    ++resumed;
                 }
             }
             else if (state == std::to_underlying(GuestState::AdmiringView) && at != entt::null)

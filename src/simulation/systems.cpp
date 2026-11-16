@@ -466,20 +466,7 @@ namespace rct3::simulation
                         rubbish->since.value += dt;
                     const auto bin = std::ranges::find_if(items(at), [&](entt::entity i) { return r.all_of<Bin>(i) && !r.get<PathItem>(i).broken && r.get<Bin>(i).contents + 1 <= r.get<Bin>(i).capacity; });
                     if (bin != items(at).end())
-                    {
-                        auto& b = r.get<Bin>(*bin);
-                        for (bool hand = in_hand; (hand || rubbish->pocketed > 0) && b.contents + 1 <= b.capacity; hand = false)
-                        {
-                            b.contents += 1;
-                            if (hand)
-                                rubbish->held = false;
-                            else
-                                --rubbish->pocketed;
-                        }
-                        r.emplace_or_replace<Gesture>(g, Gesture { .kind = GestureKind::HandOver, .left = kTuning.gestures.shown, .at = *bin });
-                        if (!rubbish->held && rubbish->pocketed == 0)
-                            r.remove<Carried>(g);
-                    }
+                        bin_empties(r, g, *rubbish, *bin);
                     else if (in_hand && rubbish->since.value >= kTuning.litter.carry.value)
                         free_hand(r, g, *rubbish, at);
                 }

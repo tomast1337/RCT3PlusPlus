@@ -485,6 +485,22 @@ namespace rct3::simulation
             r.remove<Carried>(guest);
     }
 
+    void bin_empties(entt::registry& r, entt::entity guest, Carried& carried, entt::entity bin)
+    {
+        auto& b = r.get<Bin>(bin);
+        for (bool hand = carried.held && carried.bites == 0; (hand || carried.pocketed > 0) && b.contents + 1 <= b.capacity; hand = false)
+        {
+            b.contents += 1;
+            if (hand)
+                carried.held = false;
+            else
+                --carried.pocketed;
+        }
+        r.emplace_or_replace<Gesture>(guest, Gesture { .kind = GestureKind::HandOver, .left = kTuning.gestures.shown, .at = bin });
+        if (!carried.held && carried.pocketed == 0)
+            r.remove<Carried>(guest);
+    }
+
     entt::entity be_sick(entt::registry& r, entt::entity guest, NodeId at)
     {
         const entt::entity mess = r.create();

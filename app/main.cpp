@@ -723,7 +723,7 @@ int main(int argc, char** argv)
     // Only the startup screens and widget demo use the game so far, so a missing install is not fatal for now.
     const auto install = config::game::find_game_install(env, settings);
     if (install)
-        log.info("game install: {}", install->root().string());
+        log.info("game install: {} (from {})", install->root().string(), install->source());
     else
         log.warning("{}", config::game::describe(install.error()));
 

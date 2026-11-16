@@ -7,7 +7,9 @@ ships no game content: it reads the data from your install.
 ### Running it
 
 1. Download the package for your system below and unpack it.
-2. Tell rct3++ where the game is installed: the folder that contains `gui/` and `Style/`. Either set an
+2. rct3++ looks for the game by itself: in the folder it was unpacked into (unpack it into the game's
+   folder, the one that contains `gui/` and `Style/`, or into a folder inside it), in the Steam libraries
+   and in the usual GOG folders. If it does not find it, tell it where the game is: either set an
    environment variable,
 
    ```

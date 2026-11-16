@@ -248,16 +248,38 @@ namespace rct3::simulation
                 return std::nullopt;
             const float wildest = std::min(mood.tolerance.value + kTuning.sickness.wildest.value, taste.most.value) + daring;
             const float least_cover = rained_on ? kTuning.weather.covered.value : 0;
-            const auto appeals = [&](const Offer& o) {
-                const RideInMind ride { .excitement = { o.excitement }, .intensity = { o.intensity }, .nausea = { o.nausea }, .price = { o.price }, .worth = o.worth, .favourite = o.entity == favourite, .just_been = o.entity == last_ridden };
-                return ride_appeal(ride, taste, mood) >= kTuning.choosing.bar;
-            };
-            const auto ride = [&](bool splash) {
-                const auto suits = [&](const Offer& o) { return o.kind == AttractionKind::Ride && o.intensity <= wildest && o.intensity >= taste.least.value && o.cover >= least_cover && (!splash || o.splash) && appeals(o); };
-                // The nearest of those that come to mind, so a ride behind another on the same path still gets riders.
-                if (auto found = nearest_offer(paths, at, offers, wallet, [&](const Offer& o) { return suits(o) && random::chance(dice.state, kTuning.needs.ride_considered.value); }))
-                    return found;
-                return nearest_offer(paths, at, offers, wallet, suits);
+            const glm::vec3 here = paths.centre(at);
+            const float reach = (with_map ? kTuning.choosing.map_reach : kTuning.choosing.reach) * paths.tile_size;
+            // Any ride in reach that suits them and that they want enough, the likelier the more they want it and
+            // the nearer it is.
+            const auto ride = [&](bool splash) -> std::optional<std::pair<entt::entity, std::vector<NodeId>>> {
+                std::vector<std::pair<const Offer*, float>> weighed;
+                float total = 0;
+                for (const Offer& o : offers)
+                {
+                    if (o.kind != AttractionKind::Ride || o.price > wallet.cash.value || o.intensity > wildest || o.intensity < taste.least.value || o.cover < least_cover || (splash && !o.splash))
+                        continue;
+                    const RideInMind in_mind { .excitement = { o.excitement }, .intensity = { o.intensity }, .nausea = { o.nausea }, .price = { o.price }, .worth = o.worth, .favourite = o.entity == favourite, .just_been = o.entity == last_ridden };
+                    const float wants = ride_appeal(in_mind, taste, mood);
+                    const float near = 1 - glm::distance(here, paths.centre(o.entrance)) / reach;
+                    if (wants < kTuning.choosing.bar || near <= 0)
+                        continue;
+                    weighed.emplace_back(&o, wants * near * near);
+                    total += weighed.back().second;
+                }
+                float roll = static_cast<float>(random::unit(dice.state)) * total;
+                for (const auto& [o, weight] : weighed)
+                {
+                    roll -= weight;
+                    if (roll > 0 && o != weighed.back().first)
+                        continue;
+                    // On the way only with what they would still have left for it.
+                    auto found = paths.route_nearest(at, std::span(&o->entrance, 1), Walker::Guest, wallet.cash.value - o->price);
+                    if (!found)
+                        return std::nullopt;
+                    return std::pair { o->entity, std::move(found->walk) };
+                }
+                return std::nullopt;
             };
             if (hot >= kTuning.needs.want.value)
                 if (auto found = ride(true))

@@ -178,3 +178,15 @@ TEST_CASE("a guest walks past a dull ride far dearer than it is worth")
     auto& r = park.world().registry;
     CHECK_FALSE(park.run_until([&] { return r.get<Attraction>(ride).customers > 0; }, 300));
 }
+
+TEST_CASE("a guest does not think of a ride too far off, and goes on one of those nearby they want")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 40, 0 });
+    const auto far = park.flat_ride("Carousel", { 40, 0 }, 0, { .capacity = 4, .cycle_seconds = 10, .intensity = 0.3f, .nausea = 0.1f });
+    const auto near = park.flat_ride("Carousel", { 3, 0 }, 0, { .capacity = 4, .cycle_seconds = 10, .intensity = 0.3f, .nausea = 0.1f });
+    park.guest({ 0, 0 }, { .happiness = 0.6f });
+    auto& r = park.world().registry;
+    CHECK(park.run_until([&] { return r.get<Attraction>(near).customers > 0; }, 600));
+    CHECK(r.get<Attraction>(far).customers == 0);
+}

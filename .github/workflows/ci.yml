@@ -118,6 +118,10 @@ jobs:
       - name: Check formatting
         run: ./nob format --check
 
+      # The scripts' types (scripts/types/rct3pp.d.ts) checked as ./nob script compiles them, at a pinned tsc.
+      - name: Type-check the scripts
+        run: npx --yes -p typescript@5.4.5 tsc -p scripts --noEmit
+
   # Static analysis. Pull requests check only the sources they change, and the sources that include a header they
   # change; main checks everything.
   tidy:

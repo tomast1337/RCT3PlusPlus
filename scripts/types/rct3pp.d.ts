@@ -926,6 +926,24 @@ declare namespace people {
     function rename(i: number, name: string): void;
 }
 
+/** A level of a guest's feelings and needs, as the developer windows' editor names them. */
+type GuestLevel =
+    "happiness" | "energy" | "nausea" | "wet" | "heat" | "hunger" | "thirst" | "bladder" | "swim" | "tolerance";
+
+declare namespace editor {
+    /** Whether the developer windows' editor (F12) was drawn on the last frame. */
+    function shown(): boolean;
+    /** Picks person `i` of people.list(), a guest the simulation walks, as a click on their row in the editor's
+     *  guest list does. */
+    function pick(i: number): void;
+    /** The picked guest as the simulation has them: their levels, 0 to 1, and those held. */
+    function guest(): { name: string; levels: Partial<Record<GuestLevel, number>>; held: GuestLevel[] } | undefined;
+    /** Sets the picked guest's `level`, as its slider does; false when they have none. */
+    function set(level: GuestLevel, value: number): boolean;
+    /** Holds the picked guest's `level` where it is, or lets it go, as its hold switch does. */
+    function hold(level: GuestLevel, on: boolean): void;
+}
+
 declare namespace structures {
     /** The structure being placed, while the placing tool is out: what its ghost shows and whether it may go there. */
     function placing():

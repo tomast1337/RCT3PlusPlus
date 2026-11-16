@@ -49,6 +49,7 @@
 #include "scene/land_tools.hpp"
 #include "scene/led_signs.hpp"
 #include "scene/park/deleting.hpp"
+#include "scene/park/developer_editor.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/glow.hpp"
 #include "scene/park/holding.hpp"
@@ -600,6 +601,7 @@ namespace rct3::scene::park
         /// Of a person in `shown_people`, a new name asked by a script, given as the name box gives one.
         std::optional<std::pair<std::size_t, std::u16string>> rename_requested;
         std::optional<std::size_t> person_requested;                                 ///< Of a person in `shown_people`, their window asked by a script
+        DeveloperEditor editor;                                                      ///< The developer windows' guest and park editor
         std::optional<std::uint64_t> prop_requested;                                 ///< Of a placed object, by id, its window asked by a script
         rct3::park::Seat seat;                                                       ///< Its rider's eyes, while riding
         float seat_across = rct3::park::kRideWideView;                               ///< How far across the screen the rider's view takes in

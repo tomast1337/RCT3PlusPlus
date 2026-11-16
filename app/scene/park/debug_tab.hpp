@@ -34,13 +34,15 @@ namespace rct3::scene::park
         RefreshGuests,
         BreakRides,
         ResetRides,
+        RemoveAnimals,
+        RefreshAnimals,
         DropLitter,
         ClearLitter,
     };
 
     /// Each tool by the name scripts use for it, in DebugTool's order.
-    inline constexpr std::array<std::string_view, 10> kDebugToolNames {
-        "add_money", "buy_all_land", "finish_research", "add_guests", "remove_guests", "refresh_guests", "break_rides", "reset_rides", "drop_litter", "clear_litter",
+    inline constexpr std::array<std::string_view, 12> kDebugToolNames {
+        "add_money", "buy_all_land", "finish_research", "add_guests", "remove_guests", "refresh_guests", "break_rides", "reset_rides", "remove_animals", "refresh_animals", "drop_litter", "clear_litter",
     };
 
     /// Uses `tool` on the park; `amount` is the money to add, in hundredths, or how many guests or pieces of

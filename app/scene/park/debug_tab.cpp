@@ -83,6 +83,10 @@ namespace rct3::scene::park
                 return simulation::break_down_rides(scene.sim);
             case DebugTool::ResetRides:
                 return simulation::reset_rides(scene.sim);
+            case DebugTool::RemoveAnimals:
+                return simulation::remove_animals(scene.sim);
+            case DebugTool::RefreshAnimals:
+                return simulation::refresh_animals(scene.sim);
             case DebugTool::DropLitter:
                 return simulation::scatter_litter(scene.sim, scene.gameplay, park_paths(scene), count);
             case DebugTool::ClearLitter:
@@ -162,6 +166,13 @@ namespace rct3::scene::park
             ImGui::SameLine();
             tool_button(device, scene, assets, "Reset all rides", DebugTool::ResetRides);
             ImGui::SetItemTooltip("Repaired, fully reliable, queues emptied and their counts back to nought");
+        }
+
+        if (ImGui::CollapsingHeader("Animals", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            tool_button(device, scene, assets, "Remove all animals", DebugTool::RemoveAnimals);
+            ImGui::SameLine();
+            tool_button(device, scene, assets, "Reset animals' needs", DebugTool::RefreshAnimals);
         }
 
         if (ImGui::CollapsingHeader("Litter", ImGuiTreeNodeFlags_DefaultOpen))

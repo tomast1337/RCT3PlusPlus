@@ -487,6 +487,7 @@ namespace
             ImGui::DockBuilderDockWindow("Log", bottom);
             ImGui::DockBuilderDockWindow("Interface", right_top);
             ImGui::DockBuilderDockWindow("Park", right_top);
+            ImGui::DockBuilderDockWindow("Editor", right_top);
             ImGui::DockBuilderDockWindow("Widgets", right_bottom);
             ImGui::DockBuilderFinish(space);
         }
@@ -1176,6 +1177,8 @@ int main(int argc, char** argv)
                     // The developer windows dock around the game rather than cover it; the game draws in the
                     // space left in the middle.
                     device->set_view(std::nullopt);
+                    if (park)
+                        park->editor.shown = false;
                     if (phase == Phase::Running && developer_windows)
                     {
                         const prof::Scope zone("DeveloperWindows");
@@ -1186,6 +1189,14 @@ int main(int argc, char** argv)
                         developer_window("Log", draw_log);
                         if (park)
                             developer_window("Park", [&] { draw_park_debug(*park); });
+                        if (park && front)
+                        {
+                            // A guest picked from elsewhere (a script) brings the editor in front of the windows docked with it.
+                            if (std::exchange(park->editor.focus, false))
+                                ImGui::SetNextWindowFocus();
+                            developer_window("Editor", [&] { rct3::scene::park::draw_developer_editor(*park, *front->assets.strings); });
+                            rct3::scene::park::mark_picked_guest(*park, view);
+                        }
                         if (const rct3::ui::Desktop* desktop = park ? park->desktop.get() : widgets ? &widgets->desktop : front ? &front->live->desktop : nullptr)
                         {
                             pick_widget(*desktop, view, window->pointer());

@@ -8,6 +8,7 @@
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/guest_edits.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
 #include "simulation/park/finance.hpp"
@@ -584,6 +585,8 @@ namespace rct3::simulation
         phase.emplace("Tidy");
         tidy(world);
         phase.reset();
+        // Levels held by hand from the developer windows (simulation/guest_edits.hpp).
+        keep_held_levels(r);
         ++world.tick;
     }
 

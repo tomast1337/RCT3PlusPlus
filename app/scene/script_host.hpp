@@ -72,6 +72,12 @@
 //   rides.show(i)       opens ride `i`'s window, as clicking the ride does
 //   people.list()       each person shown in the park: { name, staff, post? } (post: a seller's object)
 //   people.rename(i, name)  renames person `i` of people.list(), as their window's name box does
+//   editor.shown()      whether the developer windows' editor (F12) was drawn on the last frame
+//   editor.pick(i)      picks person `i` of people.list(), a guest the simulation walks, in the editor, as a
+//                       click on their row in its guest list does
+//   editor.guest()      the picked guest as the simulation has them: { name, levels, held }, levels by name (0..1)
+//                       and the names of those held; undefined when none is picked
+//   editor.set(level, value), editor.hold(level, on)  as the picked guest's slider and hold switch for `level` do
 //
 // With a report folder (rct3pp --script-report DIR), the script's screenshots and log, with how it ended, go
 // there for review; ./nob script gathers them into a report.

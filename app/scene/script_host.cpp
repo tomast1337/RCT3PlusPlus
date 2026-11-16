@@ -19,6 +19,7 @@
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
+#include "simulation/guest_edits.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/objectives.hpp"
@@ -1079,6 +1080,51 @@ namespace rct3::scene
             if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.shown_people.size())
                 throw std::invalid_argument("people.show takes a person's place in people.list()");
             park.person_requested = a[0].get<std::size_t>();
+            return Json(nullptr);
+        });
+        engine_.define("editor.shown", [this](const Json&) { return Json(park_ != nullptr && park_->editor.shown); });
+        engine_.define("editor.pick", [this](const Json& a) {
+            park::ParkScene& park = park_of(park_);
+            const bool walked = a.at(0).is_number_unsigned() && a[0].get<std::size_t>() < park.shown_people.size() && !park.shown_people[a[0].get<std::size_t>()].staff && park.sim.registry.valid(park.shown_people[a[0].get<std::size_t>()].guest);
+            if (!walked)
+                throw std::invalid_argument("editor.pick takes the place in people.list() of a guest the simulation walks");
+            park::pick_guest(park, park.shown_people[a[0].get<std::size_t>()].guest);
+            return Json(nullptr);
+        });
+        engine_.define("editor.guest", [this](const Json&) -> Json {
+            const park::ParkScene& park = park_of(park_);
+            const auto& r = park.sim.registry;
+            const entt::entity guest = park.editor.guest;
+            if (!r.valid(guest) || !r.all_of<simulation::Visitor>(guest))
+                return nullptr;
+            Json levels = Json::object();
+            Json held = Json::array();
+            for (std::size_t k = 0; k < simulation::kGuestLevels; ++k)
+            {
+                const auto level = static_cast<simulation::GuestLevel>(k);
+                if (const auto at = simulation::level_of(r, guest, level))
+                    levels[std::string(simulation::level_name(level))] = at->value;
+                if (simulation::level_held(r, guest, level))
+                    held.push_back(simulation::level_name(level));
+            }
+            return { { "name", r.get<simulation::Visitor>(guest).name }, { "levels", std::move(levels) }, { "held", std::move(held) } };
+        });
+        const auto picked_level = [this](const Json& a, std::string_view call) {
+            park::ParkScene& park = park_of(park_);
+            const auto level = a.at(0).is_string() ? simulation::level_named(a[0].get<std::string>()) : std::nullopt;
+            if (!level || !park.sim.registry.valid(park.editor.guest))
+                throw std::invalid_argument(std::format("{} takes a level's name, with a guest picked", call));
+            return std::pair<park::ParkScene&, simulation::GuestLevel> { park, *level };
+        };
+        engine_.define("editor.set", [picked_level](const Json& a) {
+            const auto [park, level] = picked_level(a, "editor.set");
+            if (!a.at(1).is_number())
+                throw std::invalid_argument("editor.set takes a level's name and a value from 0 to 1");
+            return Json(simulation::set_level(park.sim.registry, park.editor.guest, level, { a[1].get<float>() }));
+        });
+        engine_.define("editor.hold", [picked_level](const Json& a) {
+            const auto [park, level] = picked_level(a, "editor.hold");
+            simulation::hold_level(park.sim.registry, park.editor.guest, level, a.at(1).is_boolean() && a[1].get<bool>());
             return Json(nullptr);
         });
         engine_.define("people.list", [this](const Json&) {

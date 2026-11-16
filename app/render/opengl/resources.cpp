@@ -220,6 +220,8 @@ namespace rct3::render::opengl
             return;
         gl.DeleteBuffers(1, &it->second.buffer);
         buffers_.erase(it);
+        for (auto& [_, p] : pipelines_)
+            p.vertices = p.indices = 0;
     }
 
     // A texture, or a target with its depth and framebuffer, cleared as create_texture promises.
@@ -291,6 +293,7 @@ namespace rct3::render::opengl
             textures_.erase(it->second.depth_id);
         destroy(it->second);
         textures_.erase(it);
+        bound_ = { };
     }
 
     TextureHandle OpenGlDevice::depth_texture(TextureHandle target) const
@@ -407,8 +410,8 @@ namespace rct3::render::opengl
         if (it == pipelines_.end())
             return;
         gl.DeleteVertexArrays(1, &it->second.vertex_array);
-        if (applied_ == pipeline.id)
-            applied_ = 0;
+        if (applied_ && &*applied_ == &it->second)
+            applied_ = std::nullopt;
         pipelines_.erase(it);
     }
 

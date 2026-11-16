@@ -9,9 +9,11 @@
 
 #include "render/device.hpp"
 #include "render/opengl/functions.hpp"
+#include "render/shader_inputs.hpp"
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -102,6 +104,11 @@ namespace rct3::render::opengl
             Shader shader = Shader::VertexColor;
             PipelineDesc desc; ///< Its label and attributes dropped; the vertex array keeps the attributes
             GLuint vertex_array = 0;
+            // The buffers its vertex array draws from, so a draw sets only what differs. Only draws set them,
+            // and they stay set; forgotten whenever any buffer goes, as its name may come back.
+            GLuint vertices = 0;
+            std::uintptr_t vertex_offset = 0;
+            GLuint indices = 0;
         };
 
         struct Frame
@@ -127,7 +134,7 @@ namespace rct3::render::opengl
         void create_multisample();
         void destroy_multisample();
         void reset_transient(Frame& frame);
-        void apply(const Pipeline& pipeline);
+        void apply(const Pipeline& pipeline, bool wire);
         /// Where passes into the screen draw: the view, kept inside the screen, or all of it.
         [[nodiscard]] ScreenView screen_area() const;
 
@@ -163,8 +170,19 @@ namespace rct3::render::opengl
         std::array<GLuint, kShaderCount> programs_ { };
         static constexpr std::size_t kSamplerCount = 4; // Filter x AddressMode, at filter * 2 + address
         std::array<GLuint, kSamplerCount> samplers_ { };
-        std::uint32_t applied_ = 0; ///< The pipeline whose state is set, 0 after anything else changed it
+        std::optional<const Pipeline&> applied_; ///< The pipeline whose state is set, none after anything else changed it
         bool applied_wire_ = false;
+        /// What the open pass's draws last bound, so a draw binds only what differs: the park's draws come in runs
+        /// sharing a picture and constants. Forgotten as each pass begins and as a texture goes.
+        struct Bound
+        {
+            std::array<GLuint, kUnits> textures { };
+            GLuint sampler = 0;
+            ShaderConstants constants { };
+            bool has_textures = false;
+            bool has_constants = false;
+        };
+        Bound bound_;
 
         bool ui_ready_ = false;
         bool ui_drawn_ = false;

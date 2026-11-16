@@ -1,0 +1,2 @@
+# Vendored libraries: left out of GitHub's language bar and folded shut in pull request diffs.
+third_party/** linguist-vendored linguist-generated

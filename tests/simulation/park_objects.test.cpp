@@ -344,6 +344,24 @@ TEST_CASE("a water cannon's firer sprays another guest in reach, who gets wet")
     CHECK(r.get<Mood>(firer).wet.value == 0);
 }
 
+TEST_CASE("a water cannon's firer sprays no rider in a car, whose place is where they boarded")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 1, 0 });
+    const auto cannon = park.item(PathItemKind::WaterCannon, { 0, 0 });
+    const auto firer = park.guest({ 0, 0 });
+    const auto rider = park.guest({ 1, 0 });
+    auto& r = park.world().registry;
+    const glm::vec3 way = r.get<Pose>(rider).position - r.get<Pose>(firer).position;
+    r.get<PathItem>(cannon).heading = std::atan2(way.x, way.z);
+    r.get<Errand>(rider) = { .kind = ErrandKind::Riding };
+    r.emplace_or_replace<Linger>(firer, Linger { .at = PathItemKind::WaterCannon, .left = units::Seconds { 20 }, .bench = cannon });
+    park.run_seconds(3);
+    REQUIRE(r.all_of<Linger>(firer));
+    CHECK(r.get<Linger>(firer).target == entt::entity { entt::null });
+    CHECK(r.get<Mood>(rider).wet.value == 0);
+}
+
 TEST_CASE("a water cannon's firer sprays no one behind it, but aims about in front")
 {
     Sandbox park;

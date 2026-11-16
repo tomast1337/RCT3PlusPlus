@@ -111,6 +111,15 @@ namespace rct3::scene::park
             return std::ranges::none_of(beyond, [](int n) { return n == 8; });
         }
 
+        /// Which of the things casting shadows a draw takes: the shadow keeps those standing still in a drawing of
+        /// their own, and draws only the others each frame.
+        enum class Casters : std::uint8_t
+        {
+            All,
+            Still,  ///< The ground, objects, billboards, signs and crates
+            Moving, ///< People, animals, cars and rides
+        };
+
         /// Which parts of the world a draw shows: a reflection leaves some out, as the options ask.
         struct WorldParts
         {
@@ -124,6 +133,7 @@ namespace rct3::scene::park
             bool ghosts = false;       ///< What the build tools would place: never in the shadows, which would show it laid
             bool faded_ground = false; ///< The ground's land, cliffs and tunnels drawn last, see-through
             bool mirrored = false;     ///< In a lake's reflection, where the waterfalls show without their water
+            Casters casters = Casters::All;
             glm::vec3 eye { 0.0f };
         };
 
@@ -159,6 +169,8 @@ namespace rct3::scene::park
             // objects' vertices carry the band too, which the water shader does not read.
             const bool shaded_flow = parts.shaded_water && scene.water.shaded && parts.water && scene.show_scenery && parts.scenery && parts.see_through;
             // Opaque and cut-out parts in the solid pass, the others in their own.
+            const bool still = parts.casters != Casters::Moving;
+            const bool moving = parts.casters != Casters::Still;
             const auto draw_shown = [&](const ShownObjects& shown, std::optional<rct3::park::object::PartBlend> pass) {
                 if (!shown.indices)
                     return;
@@ -219,7 +231,7 @@ namespace rct3::scene::park
                     }
                 }
             };
-            if (parts.terrain)
+            if (parts.terrain && still)
                 profiling::section("Ground", [&] {
                     draw_ground(scene.ground_pipeline, [&](const rct3::park::GroundBatch& batch) { return !parts.faded_ground || !earth(batch); });
                     draw_view_lines(device, scene, transform, light);
@@ -231,12 +243,12 @@ namespace rct3::scene::park
                 for (const ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })
                     draw_shown(*shown, pass);
             };
-            if (scene.show_scenery && parts.scenery)
+            if (scene.show_scenery && parts.scenery && still)
                 profiling::section("Objects", [&] {
                     draw_objects(std::nullopt);
                     draw_transient(device, scene, scene.frame_uploads, scene.fresh_objects, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                 });
-            if (scene.show_scenery && parts.scenery)
+            if (scene.show_scenery && parts.scenery && still)
                 profiling::section("Billboards", [&] {
                     for (const ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })
                     {
@@ -250,31 +262,32 @@ namespace rct3::scene::park
                         draw_transient(device, scene, scene.frame_uploads, shown->billboards.mesh, scene.object_textures, transform, light, [&](const rct3::park::object::ObjectBatch& b) { return sided(pipeline_for(*shown, b.blend), b); }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                     }
                 });
-            if (scene.show_people && parts.people)
+            if (scene.show_people && parts.people && moving)
                 profiling::section("People", [&] {
                     draw_transient(device, scene, scene.frame_uploads, scene.still_people, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                     draw_transient(device, scene, scene.frame_uploads, scene.moving_people, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                     if (scene.simulate)
                         draw_transient(device, scene, scene.frame_uploads, scene.riders.mesh, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                 });
-            if (parts.people)
+            if (parts.people && moving)
                 profiling::section("ZooAnimals", [&] { draw_transient(device, scene, scene.frame_uploads, scene.drawn_animals.mesh, scene.drawn_animals.textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
-            if (scene.show_scenery && parts.scenery)
+            if (scene.show_scenery && parts.scenery && still)
                 profiling::section("LedSigns", [&] { draw_led_signs(device, scene, transform, light); });
-            if (scene.show_scenery && parts.scenery)
+            if (scene.show_scenery && parts.scenery && moving)
                 profiling::section("Cars", [&] {
                     draw_transient(device, scene, scene.frame_uploads, scene.car_meshes.mesh, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                     for (const ParkScene::BonedCar& boned : scene.boned_cars)
                         draw_transient(device, scene, scene.frame_uploads, boned.mesh.mesh, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                 });
-            if (scene.show_scenery && parts.scenery && !scene.drawn_animals.crated.empty())
+            if (scene.show_scenery && parts.scenery && still && !scene.drawn_animals.crated.empty())
                 profiling::section("Crates", [&] { draw_transient(device, scene, scene.frame_uploads, scene.drawn_animals.crates.mesh, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; }); });
             const auto draw_rides = [&](auto&& pipeline_of) {
                 for (const ParkScene::BonedRide& boned : scene.boned_rides)
                     if ((boned.ride != entt::null && !boned.gate) || maybe_in_view(transform, glm::vec3(boned.placed[3]), boned.reach))
                         draw_transient(device, scene, scene.frame_uploads, boned.mesh.mesh, scene.object_textures, transform, light, pipeline_of, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
             };
-            profiling::section("Rides", [&] { draw_rides(object_pipeline); });
+            if (moving)
+                profiling::section("Rides", [&] { draw_rides(object_pipeline); });
             // After everything solid, before the water and the see-through parts it is there to hide.
             if (scene.show_scenery && parts.scenery && parts.water)
                 profiling::section("DepthOnly", [&] {
@@ -367,27 +380,22 @@ namespace rct3::scene::park
         }
         constexpr float kShadowSunHeight = 0.02f; ///< Of the sun's way, how far up it is before things cast shadows
 
-        /// Makes the target of `drawing`; false when the device cannot.
-        bool make_shadow_drawing(render::Device& device, ShadowDrawing& drawing)
+        /// Makes `target` for a shadow map when it is not made yet; false when the device cannot.
+        bool make_shadow_target(render::Device& device, render::TextureHandle& target)
         {
+            if (target)
+                return true;
             auto made = device.create_texture({ .width = shadow_texels(device), .height = shadow_texels(device), .label = "shadow map", .target = true, .readable_depth = true });
             if (!made)
                 return false;
-            drawing.target = *made;
+            target = *made;
             return true;
         }
 
-        /// Draws the park round the camera from `drawing.sun` into its map, outside any pass.
-        void draw_shadow(render::Device& device, ParkScene& scene, ShadowDrawing& drawing, const rct3::park::SunView& sun)
+        /// Draws `casters` of the park round the camera, as `sun` sees them, into the depth of `into.target`,
+        /// outside any pass.
+        void draw_shadow(render::Device& device, ParkScene& scene, const render::PassDesc& into, const glm::mat4& sun, Casters casters)
         {
-            // The depth bias: about a tenth of a world unit, in the map's depth.
-            const std::array<float, 20> values = {
-                sun.view_projection[0][0], sun.view_projection[0][1], sun.view_projection[0][2], sun.view_projection[0][3], sun.view_projection[1][0], sun.view_projection[1][1], sun.view_projection[1][2], sun.view_projection[1][3], sun.view_projection[2][0], sun.view_projection[2][1], sun.view_projection[2][2], sun.view_projection[2][3], sun.view_projection[3][0], sun.view_projection[3][1], sun.view_projection[3][2], sun.view_projection[3][3], sun.texel.value, 0.1f / (2 * rct3::park::kSunViewDepth), 0, 0
-            };
-            drawing.drawn = sun.view_projection;
-            drawing.view = values;
-            render::PassDesc into;
-            into.target = drawing.target;
             device.begin_pass(into);
             // Without shadows: the map would be read while drawn into.
             render::SceneLight light = scene.light;
@@ -395,7 +403,7 @@ namespace rct3::scene::park
             light.shadow_view = { };
             light.lamps = { };
             light.depth_only = true; // Only the map's depth is read
-            draw_world(device, scene, sun.view_projection, light, { .background = false, .water = false, .see_through = false });
+            draw_world(device, scene, sun, light, { .background = false, .water = false, .see_through = false, .casters = casters });
             device.end_pass();
         }
 
@@ -407,6 +415,9 @@ namespace rct3::scene::park
         /// kept: the shader mixes the two by how far the sun is on its way to the next step, so the shadow
         /// moves smoothly yet each map is drawn from a steady direction, without the crawl of one drawn anew
         /// each frame. It lags the sun by a step.
+        ///
+        /// What stands still is drawn into each drawing's own map and kept until the sun steps, the view leaves
+        /// its step (rct3::park::sun_view), or the park changes; what moves is drawn over a copy of the latest.
         void draw_shadow_map(render::Device& device, ParkScene& scene)
         {
             scene.light.shadow_map = { };
@@ -415,13 +426,10 @@ namespace rct3::scene::park
             scene.light.shadow_before = 0;
             if (!scene.shadows || scene.light.sun_direction.y <= kShadowSunHeight)
                 return;
-            for (ShadowDrawing& drawing : scene.shadow_drawings)
+            if (!make_shadow_target(device, scene.shadow_map) || !make_shadow_target(device, scene.shadow_drawings[0].still) || !make_shadow_target(device, scene.shadow_drawings[1].still))
             {
-                if (!drawing.target && !make_shadow_drawing(device, drawing))
-                {
-                    scene.shadows = 0;
-                    return;
-                }
+                scene.shadows = 0;
+                return;
             }
             if (!scene.shadow_views)
             {
@@ -452,32 +460,41 @@ namespace rct3::scene::park
             const glm::vec3 centre = scene.seat ? glm::vec3((*scene.seat)[3]) : scene.camera.target;
             const rct3::park::SunView sun = rct3::park::sun_view(now->sun, centre, centre_radius, shadow_texels(device));
             const rct3::park::SunView sun_before = rct3::park::sun_view(before.sun, centre, centre_radius, shadow_texels(device));
-            // Static shadows redraw when the view moves, or every two seconds to catch what changed in the park;
-            // the older drawing then too, so both cover the same ground and show the same park. A step alone
-            // draws only the new one: the older is the one drawn before it.
-            // Dynamic shadows draw the newer every frame and the older, fading out, every other frame: a frame
-            // behind is not seen, and it saves half the cost of the second drawing.
+            // Every two seconds the latest still drawing is drawn again anyway, in case a change slipped past
+            // still_changes; static shadows then show where things moved to.
             const bool timed = scene.clock - scene.shadow_drawn_at > 2;
-            const bool dynamic = scene.shadows > 1;
-            scene.shadow_before_due = dynamic && !scene.shadow_before_due;
-            const bool draw_now = dynamic || timed || stepped || sun.view_projection != now->drawn;
-            const bool draw_before = blend && (timed || scene.shadow_before_due || sun_before.view_projection != before.drawn);
-            scene.light.shadow_map = device.depth_texture(now->target);
+            const auto stale = [&](const ShadowDrawing& drawing, const rct3::park::SunView& view) { return drawing.drawn != view.view_projection || drawing.changes != scene.still_changes; };
+            const bool still_now = timed || stepped || stale(*now, sun);
+            const bool still_before = blend && stale(before, sun_before);
+            // Static shadows draw what moves only with the still drawing under it, dynamic ones every frame.
+            const bool moving_now = scene.shadows > 1 || still_now;
+            scene.light.shadow_map = device.depth_texture(scene.shadow_map);
             scene.light.shadow_view = scene.shadow_views;
             if (blend)
             {
-                scene.light.shadow_map_before = device.depth_texture(before.target);
+                // Its still drawing alone: what moves leaves the fading shadow.
+                scene.light.shadow_map_before = device.depth_texture(before.still);
                 scene.light.shadow_before = 1 - rct3::park::sun_step_share(now->sun, to_sun, step);
             }
-            if (!draw_now && !draw_before)
+            if (!moving_now && !still_before)
                 return;
             if (timed)
                 scene.shadow_drawn_at = scene.clock;
             device.end_pass();
-            if (draw_now)
-                profiling::section("Now", [&] { draw_shadow(device, scene, *now, sun); });
-            if (draw_before)
-                profiling::section("Before", [&] { draw_shadow(device, scene, before, sun_before); });
+            const auto draw_still = [&](ShadowDrawing& drawing, const rct3::park::SunView& view) {
+                // The depth bias: about a tenth of a world unit, in the map's depth.
+                const glm::mat4& m = view.view_projection;
+                drawing.view = { m[0][0], m[0][1], m[0][2], m[0][3], m[1][0], m[1][1], m[1][2], m[1][3], m[2][0], m[2][1], m[2][2], m[2][3], m[3][0], m[3][1], m[3][2], m[3][3], view.texel.value, 0.1f / (2 * rct3::park::kSunViewDepth), 0, 0 };
+                drawing.drawn = m;
+                drawing.changes = scene.still_changes;
+                draw_shadow(device, scene, { .target = drawing.still }, m, Casters::Still);
+            };
+            if (still_now)
+                profiling::section("Now", [&] { draw_still(*now, sun); });
+            if (still_before)
+                profiling::section("Before", [&] { draw_still(before, sun_before); });
+            if (moving_now)
+                profiling::section("Moving", [&] { draw_shadow(device, scene, { .target = scene.shadow_map, .depth_from = now->still }, sun.view_projection, Casters::Moving); });
             // A step swaps which drawing is the latest, and it is always drawn then, so the rows follow here.
             std::array<float, 40> views { };
             std::ranges::copy(now->view, views.begin());

@@ -179,13 +179,14 @@ namespace rct3::scene::park
     /// Between posing the riders again; their cars carry them every frame between.
     inline constexpr units::Seconds kRidersRebuildInterval { 1.0f / 15.0f };
 
-    /// The park drawn from the sun into a shadow map.
+    /// What stands still in the park drawn from the sun into a shadow map, kept while the view and the park stay.
     struct ShadowDrawing
     {
-        render::TextureHandle target;   ///< For its depth
+        render::TextureHandle still;    ///< For its depth
         std::array<float, 20> view { }; ///< How it was drawn, a row of render::SceneLight::shadow_view
         glm::vec3 sun { 0.0f, 1.0f, 0.0f };
-        glm::mat4 drawn { 0.0f }; ///< The view it was last drawn from; 0 when not drawn yet
+        glm::mat4 drawn { 0.0f };  ///< The view it was last drawn from; 0 when not drawn yet
+        std::uint32_t changes = 0; ///< ParkScene::still_changes when drawn
     };
 
     /// Objects' shapes and billboards at some levels.
@@ -790,10 +791,13 @@ namespace rct3::scene::park
         /// goes on towards its next step (rct3::park::sun_step_share).
         std::array<ShadowDrawing, 2> shadow_drawings;
         std::size_t shadow_now = 0;         ///< Which of them is the latest
+        render::TextureHandle shadow_map;   ///< The latest still drawing with what moves drawn over it
         render::TextureHandle shadow_views; ///< Both drawings' views, the latest first (render::SceneLight::shadow_view)
-        bool shadow_before_due = false;     ///< Dynamic shadows draw the older drawing every other frame
-        float shadow_drawn_at = 0;          ///< `clock` when they were last drawn
-        bool blend_shadows = true;          ///< The BlendShadows option: without it, shadows step from one drawing to the next
+        float shadow_drawn_at = 0;          ///< `clock` when the latest still drawing was last drawn
+        /// Counts changes to what stands still in the park as the shadows draw it (Casters::Still in
+        /// drawing.cpp): the ground, the objects shown and Scenery being switched. The kept shadows draw again on one.
+        std::uint32_t still_changes = 0;
+        bool blend_shadows = true; ///< The BlendShadows option: without it, shadows step from one drawing to the next
         // On the heap: windows keep a reference to the desktop, and the scene moves.
         std::unique_ptr<ui::Desktop> desktop = std::make_unique<ui::Desktop>();
         const ui::font::FontSet* current_fonts = nullptr;

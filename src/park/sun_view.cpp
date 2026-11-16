@@ -13,12 +13,17 @@ namespace rct3::park
         // Any up will do that is not along the sunlight.
         const glm::vec3 up = std::abs(towards.y) > 0.99f ? glm::vec3(0, 0, 1) : glm::vec3(0, 1, 0);
         const glm::mat4 view = glm::lookAt(glm::vec3(0.0f), -towards, up);
-        const float texel = 2 * radius / static_cast<float>(std::max(texels, 1u));
+        // The square reaches half a step further each way, so it holds the one round `centre` wherever that
+        // falls in its step: a fifteenth more across, the texels as much larger.
+        const auto across = static_cast<float>(std::max(texels, 1u));
+        const float texel = 2 * radius / (across - across / kSunViewSteps);
+        const float step = texel * std::max(1.0f, std::floor(across / kSunViewSteps));
+        const float half = texel * across / 2;
         glm::vec3 middle = glm::vec3(view * glm::vec4(centre, 1.0f));
-        middle.x = std::floor(middle.x / texel) * texel;
-        middle.y = std::floor(middle.y / texel) * texel;
-        middle.z = std::floor(middle.z / texel) * texel; // Not needed for still edges; keeps the whole view in steps
-        const glm::mat4 projection = glm::ortho(middle.x - radius, middle.x + radius, middle.y - radius, middle.y + radius, middle.z - kSunViewDepth, middle.z + kSunViewDepth);
+        middle.x = std::round(middle.x / step) * step;
+        middle.y = std::round(middle.y / step) * step;
+        middle.z = std::round(middle.z / step) * step; // Not needed for still edges; keeps the whole view in steps
+        const glm::mat4 projection = glm::ortho(middle.x - half, middle.x + half, middle.y - half, middle.y + half, middle.z - kSunViewDepth, middle.z + kSunViewDepth);
         return { projection * view, { texel } };
     }
 

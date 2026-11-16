@@ -4,6 +4,7 @@
 // point near the camera, deep enough to hold everything that could cast a shadow into it. Shadow edges crawl
 // whenever the map is drawn from a slightly different place, so everything about the view moves in steps: the
 // square in whole texels, its size in a few fixed sizes, and the sun's direction only once it has moved enough.
+// The square's steps are a sixteenth of it, so a map of what stands still serves while the camera pans within one.
 #pragma once
 
 #include "math/glm.hpp"
@@ -16,6 +17,9 @@ namespace rct3::park
 
     /// Half the depth of the view, in world units, either side of the point it is round.
     inline constexpr float kSunViewDepth = 600;
+    /// The square moves in steps of this share of its width. Chosen by eye: fewer steps keep a still map longer
+    /// while panning but spread the map's texels over more ground than the shadows need.
+    inline constexpr float kSunViewSteps = 16;
 
     struct SunView
     {
@@ -23,8 +27,8 @@ namespace rct3::park
         units::Distance texel { 1 };        ///< Across one texel of the map
     };
 
-    /// The view down `to_sun` (towards the sun, any length) over a square `2 * radius` across round `centre`, for a
-    /// map `texels` wide.
+    /// The view down `to_sun` (towards the sun, any length) over a square at least `2 * radius` across round
+    /// `centre`, for a map `texels` wide; it stays put while `centre` moves within a step.
     [[nodiscard]] SunView sun_view(glm::vec3 to_sun, glm::vec3 centre, float radius, std::uint32_t texels);
 
     /// How far round the camera's target shadows reach, for a camera `distance` from it: more when further out,

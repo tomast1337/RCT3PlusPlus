@@ -2038,7 +2038,10 @@ namespace rct3::scene::park
                 else if (*item == ui::screens::park_view::ToolItem::People)
                     scene.show_people = tools->switched_on(*item);
                 else if (*item == ui::screens::park_view::ToolItem::Scenery)
+                {
                     scene.show_scenery = tools->switched_on(*item);
+                    ++scene.still_changes;
+                }
                 else if (*item == ui::screens::park_view::ToolItem::SeeThroughGround)
                     scene.see_through_ground = !tools->switched_on(*item); // Switched on, the ground shows whole
                 else if (*item == ui::screens::park_view::ToolItem::Grid)

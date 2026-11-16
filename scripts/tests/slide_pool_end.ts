@@ -99,7 +99,7 @@ log(
     "slide",
     rides.list()[slide].name,
     "last piece",
-    rides.list()[slide].track?.at(-1),
+    tracked(rides.list()[slide], "the slide").track.at(-1),
     "open squares",
     JSON.stringify(open_end),
 );
@@ -157,7 +157,7 @@ expect(await byPool(pick), "the Undertow free beside its pool");
 await pointer.click(...here);
 await frames(30);
 const undertow = rides.list().length - 1;
-const info = () => rides.list()[undertow];
+const info = () => tracked(rides.list()[undertow], "the Undertow");
 log("undertow", info().name, "pieces", info().pieces);
 expect(info().pieces === 56, `the Undertow laid whole, not ${info().pieces} pieces`);
 const joined = missing().filter(
@@ -171,7 +171,7 @@ const run = async (seconds: number) => {
     const seen: { col: number; row: number; up: number; speed: number; front: number }[] = [];
     for (let k = 0; k < seconds * 10; ++k) {
         await park.advance(0.1);
-        const cars = info().cars ?? [];
+        const cars = info().cars;
         (info().trainsAt ?? []).forEach((t, i) => {
             if (cars[i] !== undefined && t.station === null)
                 seen.push({ col: cars[i].col, row: cars[i].row, up: cars[i].up ?? 0, speed: t.speed, front: t.front });
@@ -200,7 +200,7 @@ log(
 let shown = false;
 for (let k = 0; k < 3000 && !shown; ++k) {
     await park.advance(0.1);
-    const cars = info().cars ?? [];
+    const cars = info().cars;
     const t = (info().trainsAt ?? []).findIndex(
         (t, i) => cars[i] !== undefined && t.station === null && in_dip(t.front),
     );

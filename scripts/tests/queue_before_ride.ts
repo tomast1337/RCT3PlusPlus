@@ -36,7 +36,8 @@ const rows = [last + 2, last + 3, last + 4, last + 5];
 
 const queued = (c: number, r: number) => map.paths().some((p) => p.col === c && p.row === r && p.queue);
 /** The line of the queue on tile (c, r), if it is on one. */
-const line = (c: number, r: number) => map.paths().find((p) => p.col === c && p.row === r && p.queue)?.line;
+const line = (c: number, r: number) =>
+    map.paths().flatMap((p) => (p.col === c && p.row === r && p.queue ? [p.line] : []))[0];
 
 // The queue first, from behind where the entrance will stand, away from it.
 await ui.click("tools/Paths/Obj_Paths");

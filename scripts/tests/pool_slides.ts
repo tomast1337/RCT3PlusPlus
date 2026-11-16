@@ -17,7 +17,15 @@ park.setTime(0.5);
 const slide = rides.list().findIndex((r) => !r.flat && !r.demolished && /(body|ring|pro)slide/i.test(r.symbol));
 expect(slide >= 0, "a pool slide in the park");
 const info = () => rides.list()[slide];
-log("slide", info().name, info().symbol, "trains", info().trains, "length", info().trackLength?.toFixed(1));
+log(
+    "slide",
+    info().name,
+    info().symbol,
+    "trains",
+    tracked(info(), "the slide").trains,
+    "length",
+    info().trackLength?.toFixed(1),
+);
 expect(info().joined, "the slide run by the park");
 expect(info().ratings !== undefined, "the slide rated");
 const messages = park.messages().length;
@@ -123,8 +131,8 @@ log("customers", info().customers, "riders now", info().riders);
 // A pool path trail starts from the slide's platform: pinned, from a side of a platform square off the slide's
 // track, at the platform's height, the first piece's ghost and arrow out from it; laid, the piece is level with
 // the platform.
-const ride = info();
-expect((ride.platformSquares ?? []).length > 0, "the slide's platform squares");
+const ride = tracked(info(), "the slide");
+expect(ride.platformSquares.length > 0, "the slide's platform squares");
 log("platform squares", JSON.stringify(ride.platformSquares));
 const rides_menu = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
 await until(() => build.flatRides() !== undefined, 1200, "the build items");
@@ -142,7 +150,7 @@ const kOut = [
     [-1, 0],
 ];
 let anchored: { col: number; row: number; height: number; out: number[] } | undefined;
-for (const square of ride.platformSquares!) {
+for (const square of ride.platformSquares) {
     if (anchored) break;
     for (const turn of [square.turn & 3, (square.turn + 2) & 3]) {
         const out = kOut[turn];

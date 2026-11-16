@@ -45,12 +45,16 @@ expect(stalls.setState(stall, "open") == null, "the kiosk open");
 park.setTime(0.4);
 park.dropParties(60, 3);
 // Dry all along, so what the kiosk sells is maps, not umbrellas.
-for (let ran = 0; (stalls.list()[stall].customers ?? 0) === 0; ran += 5) {
+const sold = () => {
+    const kiosk = stalls.list()[stall];
+    return kiosk.joined ? kiosk.customers : 0;
+};
+for (let ran = 0; sold() === 0; ran += 5) {
     expect(ran < 1800, "a map sold within 1800 park seconds");
     park.setWeather("sunny");
     await park.advance(5);
 }
-log("maps sold", stalls.list()[stall].customers);
+log("maps sold", sold());
 park.setTime(0.5);
 camera.look({ col: road.col + 1.5, row: road.row + 0.5, up: 0.5 }, { col: road.col - 2.5, row: road.row + 3.5, up: 5 });
 await frames(10);

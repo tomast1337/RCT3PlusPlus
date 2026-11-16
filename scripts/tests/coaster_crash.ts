@@ -29,16 +29,17 @@ await frames(10);
 pointer.move(0.5, 0.45);
 await frames(30);
 const ride = build.construction()!.ride;
+const coaster = () => tracked(rides.list()[ride], "the coaster");
 await pointer.click(0.5, 0.45);
 await frames(30);
-expect((rides.list()[ride].pieces ?? 0) > 0, "the design laid");
+expect(coaster().pieces > 0, "the design laid");
 // Laid, its building closes and its window opens; the window's crane opens the building again.
 await until(() => ui.find("info/Attraction_Construction") !== undefined, 120, "the ride's window");
 await ui.click("info/Attraction_Construction");
 await until(() => build.construction() !== undefined, 120, "the building open again");
 
 // A piece of the circuit taken out leaves it open.
-const before = rides.list()[ride].pieces ?? 0;
+const before = coaster().pieces;
 for (let i = 0; i < 25 && typeof build.construction()?.selected !== "number"; ++i) {
     await pointer.click(0.48 + 0.01 * (i % 5), 0.43 + 0.01 * Math.floor(i / 5));
     await frames(3);
@@ -46,7 +47,7 @@ for (let i = 0; i < 25 && typeof build.construction()?.selected !== "number"; ++
 expect(typeof build.construction()?.selected === "number", "a piece picked mid-track");
 await ui.click("placing/body/construction/demolish");
 await frames(5);
-expect(rides.list()[ride].pieces === before - 1, "the picked piece taken out");
+expect(coaster().pieces === before - 1, "the picked piece taken out");
 build.stop();
 await frames(5);
 
@@ -87,7 +88,7 @@ await until(() => (rides.list()[ride].crashes ?? 0) > 0, 20000, "the train crash
 // Back to the game's own pace, so the wrecks are seen in flight.
 await ui.click("bar/Top_Play");
 const flying = rides.list()[ride].wrecks ?? [];
-expect(flying.length === (rides.list()[ride].carsPerTrain ?? 0), "a wreck for each car");
+expect(flying.length === coaster().carsPerTrain, "a wreck for each car");
 const first = flying[0];
 camera.look(first, { col: first.col + 6, row: first.row + 14, up: (first.up ?? 0) + 8 });
 await frames(10);

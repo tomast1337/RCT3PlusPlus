@@ -112,10 +112,10 @@ expect(
 );
 log("off the edge:", status());
 await screenshot("design_place_off_pool_edge");
-const away = rides.list()[slide].pieces ?? 0;
+const away = tracked(rides.list()[slide], "the ride").pieces;
 await lay();
 expect(
-    (rides.list()[slide].pieces ?? 0) === away && build.construction() !== undefined,
+    tracked(rides.list()[slide], "the ride").pieces === away && build.construction() !== undefined,
     "nothing laid off the edge, the design still in hand",
 );
 
@@ -155,7 +155,7 @@ expect(fitted !== undefined, "a pool edge the slide fits");
 expect(status() === "", `nothing said once it may stand, not "${status()}"`);
 await screenshot("design_place_pool_edge");
 await lay();
-const laid = rides.list()[slide];
+const laid = tracked(rides.list()[slide], "the Undertow");
 log("undertow laid", laid.pieces, "pieces");
 expect(laid.pieces === 56, `the Undertow laid whole, not ${laid.pieces} pieces`);
 expect(build.construction() === undefined, "its building closed once laid");
@@ -208,7 +208,7 @@ log("too high at", build.construction()!.ghostAt!.height, "over", ground, ":", s
 await screenshot("design_place_too_high");
 await pointer.click(p.x, p.y - 0.01 * 60);
 await frames(5);
-expect((rides.list()[coaster].pieces ?? 0) === 0, "nothing laid too high");
+expect(tracked(rides.list()[coaster], "the ride").pieces === 0, "nothing laid too high");
 // Down to the ground again.
 for (let i = 0; i <= 80 && build.construction()!.ghostAt!.height > ground; ++i) {
     pointer.move(p.x, p.y - 0.6 + 0.01 * i);
@@ -229,10 +229,10 @@ await over(middle);
 expect(refusal() === "", `the design free again, not ${refusal()}`);
 const cash = park.cash();
 await lay();
-const first = rides.list()[coaster];
+const first = tracked(rides.list()[coaster], "the coaster");
 log("coaster laid", first.pieces, "pieces for", cash !== undefined ? cash - park.cash()! : "-");
 expect(
-    (first.pieces ?? 0) > 0 && first.entrance !== null && first.exit !== null,
+    first.pieces > 0 && first.entrance !== null && first.exit !== null,
     `the design laid with its doors, not ${JSON.stringify(first)}`,
 );
 expect(first.name === "Design Corkscrew", `the name typed, not ${first.name}`);
@@ -248,7 +248,7 @@ log("in the way:", status());
 await screenshot("design_place_intersects");
 await lay();
 expect(
-    (rides.list()[second].pieces ?? 0) === 0 && build.construction()?.ride === second,
+    tracked(rides.list()[second], "the ride").pieces === 0 && build.construction()?.ride === second,
     "nothing of it laid, still in hand",
 );
 await ui.click(`${kPanel}/close`);
@@ -310,7 +310,7 @@ await over(dig!);
 expect(refusal() === "", `the design free with the ground cut smoothly, not ${refusal()}`);
 await screenshot("design_place_adjust");
 await lay();
-expect((rides.list()[cutting].pieces ?? 0) > 0, "the design laid into the hill");
+expect(tracked(rides.list()[cutting], "the ride").pieces > 0, "the design laid into the hill");
 log("hill top", raised, "->", top());
 camera.look({ col: hill.col, row: hill.row }, { col: hill.col + 12, row: hill.row + 22, up: 30 });
 await frames(20);

@@ -70,7 +70,7 @@ const spent = park.ledger().rideConstruction;
 await pointer.click(...top);
 await frames(20);
 const ride = build.construction()!.ride;
-expect(rides.list()[ride].pieces === 1, "the raised piece laid");
+expect(tracked(rides.list()[ride], "the ride").pieces === 1, "the raised piece laid");
 expect(
     park.ledger().rideConstruction - spent === price,
     `${price} paid, not ${park.ledger().rideConstruction - spent}`,
@@ -78,7 +78,7 @@ expect(
 await screenshot("raised_laid"); // Its price floats up
 await ui.click("placing/body/construction/demolish");
 await frames(10);
-expect(rides.list()[ride].pieces === 0, "the raised piece demolished");
+expect(tracked(rides.list()[ride], "the ride").pieces === 0, "the raised piece demolished");
 expect(
     park.ledger().rideConstruction === spent,
     `${price} paid back, not ${spent + price - park.ledger().rideConstruction}`,

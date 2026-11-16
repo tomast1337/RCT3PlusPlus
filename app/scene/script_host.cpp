@@ -770,7 +770,7 @@ namespace rct3::scene
                 paths.push_back({ { "col", p.col }, { "row", p.row }, { "raised", raised }, { "queue", p.kind == save::model::PathKind::Queue }, { "style", p.surface_name } });
                 if (raised)
                     paths.back()["height"] = p.elevation->quantised_height;
-                if (p.queue && p.queue->queue_line_ref != 0)
+                if (p.kind == save::model::PathKind::Queue && p.queue && p.queue->queue_line_ref != 0)
                     paths.back()["line"] = p.queue->queue_line_ref;
             }
             return paths;
@@ -855,7 +855,12 @@ namespace rct3::scene
             Json facilities = Json::array();
             for (const rct3::park::BuildItem& item : *items)
                 if (item.kind == rct3::park::BuildKind::Shop && !item.stall)
-                    facilities.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price.value }, { "kind", item.type } });
+                {
+                    // What it does for guests; the park runs no others, such as information.
+                    const auto does = simulation::facility_of(item.type);
+                    const char* kind = !does ? "other" : *does == simulation::Product::Toilet ? "toilet" : *does == simulation::Product::CashMachine ? "cash machine" : "first aid";
+                    facilities.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price.value }, { "kind", kind } });
+                }
             return facilities;
         });
         engine_.define("build.stalls", [this](const Json&) -> Json {
@@ -1302,29 +1307,33 @@ namespace rct3::scene
             {
                 const save::model::Ride& ride = park.rides.rides[i];
                 const save::model::Station* station = ride.stations.empty() ? nullptr : &ride.stations.front();
-                Json one { { "name", ride.base.name }, { "symbol", ride.base.symbol }, { "overlay", ride.base.overlay_path }, { "flat", ride.kind == save::model::RideKind::Flat }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) }, { "joined", false }, { "fence", ride.fence_symbol }, { "demolished", ride.base.demolished }, { "graphSamples", ride.graphs.speed.size() } };
+                Json one { { "name", ride.base.name }, { "symbol", ride.base.symbol }, { "overlay", ride.base.overlay_path },  { "flat", ride.kind == save::model::RideKind::Flat }, { "kind", std::array { "tracked", "flat", "facility" }[std::to_underlying(ride.kind)] }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) },
+                           { "joined", false },        { "fence", ride.fence_symbol }, { "demolished", ride.base.demolished }, { "graphSamples", ride.graphs.speed.size() } };
                 Json stations = Json::array();
                 for (const save::model::Station& s : ride.stations)
                     stations.push_back({ { "entrance", spot_json(s.entrance_spot) }, { "exit", spot_json(s.exit_spot) } });
                 one["stations"] = std::move(stations);
-                if (ride.track)
+                // A tracked ride whose track the park file does not resolve shows an empty one.
+                const std::vector<save::model::TrackPiece> no_pieces;
+                const std::vector<save::model::TrackPiece>& pieces = ride.track ? ride.track->pieces : no_pieces;
+                if (ride.kind == save::model::RideKind::Tracked)
                 {
-                    one["pieces"] = ride.track->pieces.size();
+                    one["pieces"] = pieces.size();
                     one["trains"] = ride.trains.size();
                     one["carsPerTrain"] = ride.trains.empty() ? 0 : ride.trains.front().cars.size();
                     if (ride.cars_per_train)
                         one["passengerCars"] = *ride.cars_per_train;
                     Json symbols = Json::array();
-                    for (const save::model::TrackPiece& p : ride.track->pieces)
+                    for (const save::model::TrackPiece& p : pieces)
                         symbols.push_back(p.symbol);
                     one["track"] = std::move(symbols);
                     Json track_colours = Json::array();
-                    for (const save::model::TrackPiece& p : ride.track->pieces)
+                    for (const save::model::TrackPiece& p : pieces)
                         track_colours.push_back(std::vector<int>(p.colours.begin(), p.colours.end()));
                     one["trackColours"] = std::move(track_colours);
                     Json platforms = Json::array();
                     Json platform_colours = Json::array();
-                    for (const save::model::TrackPiece& p : ride.track->pieces)
+                    for (const save::model::TrackPiece& p : pieces)
                         for (const save::model::PlacedObject& o : p.platform ? park.objects : std::vector<save::model::PlacedObject> { })
                             if (o.owner_ref == p.platform->id && o.id != p.platform->id && !o.hidden)
                             {
@@ -1333,13 +1342,13 @@ namespace rct3::scene
                             }
                     one["platforms"] = std::move(platforms);
                     Json decks = Json::array();
-                    for (const save::model::TrackPiece& p : ride.track->pieces)
+                    for (const save::model::TrackPiece& p : pieces)
                         if (p.platform)
                             decks.push_back({ { "col", p.platform->tile_x }, { "row", p.platform->tile_z }, { "height", p.platform->height }, { "turn", p.platform->direction } });
                     one["platformSquares"] = std::move(decks);
                     one["platformColours"] = std::move(platform_colours);
                     Json arms = Json::array();
-                    for (const save::model::TrackPiece& p : ride.track->pieces)
+                    for (const save::model::TrackPiece& p : pieces)
                         arms.push_back(p.arm_angles ? Json(std::vector<float>(p.arm_angles->begin(), p.arm_angles->end())) : Json(nullptr));
                     one["arms"] = std::move(arms);
                     // Where its cars stand now, as map points above the ground.

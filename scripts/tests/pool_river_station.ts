@@ -203,7 +203,10 @@ await pointer.click(...here);
 await frames(30);
 await screenshot("slide_laid");
 const built = rides.list().length - 1;
-expect(/ringslide/i.test(rides.list()[built].symbol) && rides.list()[built].pieces! > 1, "the slide laid");
+expect(
+    /ringslide/i.test(rides.list()[built].symbol) && tracked(rides.list()[built], "the ride").pieces > 1,
+    "the slide laid",
+);
 expect(build.placing() === undefined, `no entrance or exit asked for, not ${JSON.stringify(build.placing())}`);
 // Its construction panel shut: taking out the ground tool and putting it away shuts it.
 await ui.click("tools/Land/Land");
@@ -215,7 +218,7 @@ await ui.click("tools/Land/Land_Brush_Height");
 await frames(5);
 expect(build.construction() === undefined, "the construction panel shut");
 const why = rides.setState(built, "open");
-log("laid", rides.list()[built].name, "pieces", rides.list()[built].pieces, "open:", why ?? "yes");
+log("laid", rides.list()[built].name, "pieces", tracked(rides.list()[built], "the ride").pieces, "open:", why ?? "yes");
 expect(why === "CantOpenPoolRideNoEntrance", `the slide refused till joined to a pool, not ${why}`);
 expect(rides.list()[built].entrance == null, "the slide with no entrance");
 

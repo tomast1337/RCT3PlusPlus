@@ -27,7 +27,7 @@ const shape = (col: number, row: number) => {
 };
 const slide = rides.list().findIndex((r) => !r.demolished && /(body|ring|pro)slide/i.test(r.symbol));
 expect(slide >= 0, "a pool slide in the park");
-const decks = rides.list()[slide].platformSquares ?? [];
+const decks = tracked(rides.list()[slide], "the ride").platformSquares;
 log("platform squares", JSON.stringify(decks));
 expect(
     [24, 25, 26].every((row) => decks.some((d) => d.col === 83 && d.row === row && d.height === kDeck)),
@@ -68,10 +68,12 @@ await frames(3);
 const shown = build.pooling();
 log("at the platform", JSON.stringify(shown));
 expect(
-    shown?.ghost?.startsWith("Path") === true &&
-        shown.ghostAt?.col === 84 &&
-        shown.ghostAt?.row === 25 &&
-        shown.ghostAt?.height === kDeck,
+    shown !== undefined &&
+        shown.ghost !== null &&
+        shown.ghost.startsWith("Path") &&
+        shown.ghostAt.col === 84 &&
+        shown.ghostAt.row === 25 &&
+        shown.ghostAt.height === kDeck,
     `the first piece's ghost off the platform at its deck, not ${JSON.stringify(shown)}`,
 );
 await pointer.click(...screen(83.85, 25.5));

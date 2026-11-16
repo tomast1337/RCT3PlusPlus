@@ -119,7 +119,10 @@ await frames(30);
 await pointer.click(0.5, 0.6);
 await frames(30);
 const tower = rides.list().length - 1;
-expect((rides.list()[tower].pieces ?? 0) === 1, `the tower set down, not ${JSON.stringify(rides.list()[tower])}`);
+expect(
+    tracked(rides.list()[tower], "the tower").pieces === 1,
+    `the tower set down, not ${JSON.stringify(rides.list()[tower])}`,
+);
 await placeDoor(tower, "entrance");
 lookAt(rides.list()[tower].entrance!, 3);
 await frames(20);

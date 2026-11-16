@@ -62,17 +62,22 @@ for (let k = 0; k < wanted.length; ++k) {
     at.push(i);
 }
 await frames(2);
+/** Stall `i` as the park runs it, or undefined while it does not. */
+const run = (i: number) => {
+    const stall = stalls.list()[i];
+    return stall.joined ? stall : undefined;
+};
 for (const i of at)
     expect(
-        stalls.list()[i].selling === true,
+        run(i)?.selling === true,
         `${stalls.list()[i].symbol} run by the park, open (${JSON.stringify(stalls.list()[i])})`,
     );
 park.dropParties(60, 3);
-const served = () => at.map((i) => `${stalls.list()[i].symbol} ${stalls.list()[i].customers}`).join(", ");
-for (let t = 0; t < 30 && !at.every((i) => (stalls.list()[i].customers ?? 0) > 0); ++t) await park.advance(120);
+const served = () => at.map((i) => `${stalls.list()[i].symbol} ${run(i)?.customers}`).join(", ");
+for (let t = 0; t < 30 && !at.every((i) => (run(i)?.customers ?? 0) > 0); ++t) await park.advance(120);
 log("customers", served(), "guests", park.guests());
 expect(
-    at.every((i) => (stalls.list()[i].customers ?? 0) > 0),
+    at.every((i) => (run(i)?.customers ?? 0) > 0),
     `guests buying at every stall (${served()})`,
 );
 park.setTime(0.5);

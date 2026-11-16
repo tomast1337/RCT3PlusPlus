@@ -37,12 +37,12 @@ await frames(30);
 const ride = build.construction()!.ride;
 await pointer.click(0.5, 0.45);
 await frames(30);
-expect((rides.list()[ride].pieces ?? 0) > 0, "the design laid");
+expect(tracked(rides.list()[ride], "the ride").pieces > 0, "the design laid");
 // Laid, its building closes and its window opens; the window's crane opens the building again.
 await until(() => ui.find("info/Attraction_Construction") !== undefined, 120, "the ride's window");
 await ui.click("info/Attraction_Construction");
 await until(() => build.construction() !== undefined, 120, "the building open again");
-const before = rides.list()[ride].pieces ?? 0;
+const before = tracked(rides.list()[ride], "the ride").pieces;
 for (let i = 0; i < 25 && typeof build.construction()?.selected !== "number"; ++i) {
     await pointer.click(0.48 + 0.01 * (i % 5), 0.43 + 0.01 * Math.floor(i / 5));
     await frames(3);
@@ -50,7 +50,7 @@ for (let i = 0; i < 25 && typeof build.construction()?.selected !== "number"; ++
 expect(typeof build.construction()?.selected === "number", "a piece picked mid-track");
 await ui.click("placing/body/construction/demolish");
 await frames(5);
-expect(rides.list()[ride].pieces === before - 1, "the picked piece taken out");
+expect(tracked(rides.list()[ride], "the ride").pieces === before - 1, "the picked piece taken out");
 build.stop();
 await frames(5);
 
@@ -158,13 +158,13 @@ await frames(10);
 await pointer.click(0.3, 0.55);
 await frames(20);
 const begun = build.construction()!.ride;
-expect(begun !== ride && rides.list()[begun].pieces === 1, "the first piece laid");
+expect(begun !== ride && tracked(rides.list()[begun], "the ride").pieces === 1, "the first piece laid");
 for (let i = 0; i < 4; ++i) {
     await ui.click("placing/body/construction/AttractionEditor_IconCurve0");
     await frames(10);
 }
-log("laid by hand:", rides.list()[begun].pieces, "pieces");
-expect((rides.list()[begun].pieces ?? 0) > 1, "straights laid on from the station");
+log("laid by hand:", tracked(rides.list()[begun], "the ride").pieces, "pieces");
+expect(tracked(rides.list()[begun], "the ride").pieces > 1, "straights laid on from the station");
 const untested = rides.setState(begun, "testing");
 expect(untested == null, `the track begun by hand tested, not refused with ${untested}`);
 await frames(10);

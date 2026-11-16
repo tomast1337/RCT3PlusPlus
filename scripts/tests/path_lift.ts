@@ -58,7 +58,10 @@ const laid = map.paths().slice(before);
 log("laid", JSON.stringify(laid));
 expect(laid.length === 2, `two pieces laid, not ${JSON.stringify(laid)}`);
 const [a, b] = laid;
-expect(b.raised && b.height === a.height, `the second piece raised at the first's height, not ${JSON.stringify(laid)}`);
+expect(
+    a.raised && b.raised && b.height === a.height,
+    `the second piece raised at the first's height, not ${JSON.stringify(laid)}`,
+);
 expect(
     Math.abs(a.col - b.col) + Math.abs(a.row - b.row) === 1,
     `the second piece beside the first, not ${JSON.stringify(laid)}`,

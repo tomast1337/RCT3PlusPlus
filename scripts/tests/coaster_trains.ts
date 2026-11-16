@@ -32,7 +32,10 @@ async function lay(kind: string): Promise<number> {
     // Laid, the design's building closes and its window opens.
     await pointer.click(0.5, 0.45);
     await frames(30);
-    expect((rides.list()[ride].pieces ?? 0) > 0 && build.construction() === undefined, `the ${kind} design laid`);
+    expect(
+        tracked(rides.list()[ride], "the ride").pieces > 0 && build.construction() === undefined,
+        `the ${kind} design laid`,
+    );
     await frames(5);
     return ride;
 }
@@ -51,8 +54,8 @@ async function step(ride: number, key: string, up: boolean): Promise<void> {
 }
 
 function shown(ride: number): string {
-    const r = rides.list()[ride];
-    return `${r.trains} trains of ${r.passengerCars} cars (${r.carsPerTrain} with links), ${r.running} run, ${r.moving} under way, ${r.cars?.length} drawn`;
+    const r = tracked(rides.list()[ride], "the ride");
+    return `${r.trains} trains of ${r.passengerCars} cars (${r.carsPerTrain} with links), ${r.running} run, ${r.moving} under way, ${r.cars.length} drawn`;
 }
 
 const kTrains = "AttractionVehicleDialogLabelNumTrains";
@@ -65,7 +68,7 @@ const refused = rides.setState(coaster, "testing");
 expect(refused == null, `the coaster tested, not refused with ${refused}`);
 await until(() => (rides.list()[coaster].moving ?? 0) > 0, 600, "its train under way with no path to it");
 expect(rides.list()[coaster].simulated === 1, "the ride run once");
-const station = rides.list()[coaster].entrance ?? rides.list()[coaster].cars![0];
+const station = rides.list()[coaster].entrance ?? tracked(rides.list()[coaster], "the ride").cars[0];
 camera.look(station, { col: station.col + 8, row: station.row + 14, up: 25 });
 await frames(30);
 await screenshot("tested");
@@ -73,22 +76,22 @@ await screenshot("tested");
 // Closed, one more train: the park runs both, and draws both.
 expect(rides.setState(coaster, "closed") == null, "the coaster closed");
 await frames(5);
-const before = rides.list()[coaster];
+const before = tracked(rides.list()[coaster], "the coaster");
 await step(coaster, kTrains, true);
-let now = rides.list()[coaster];
+let now = tracked(rides.list()[coaster], "the coaster");
 log("one more train:", shown(coaster));
-expect(now.trains === before.trains! + 1, "a train more");
+expect(now.trains === before.trains + 1, "a train more");
 expect(now.running === now.trains, "the park running each of them");
-expect(now.cars?.length === now.trains! * now.carsPerTrain!, "each train's cars drawn");
+expect(now.cars.length === now.trains * now.carsPerTrain, "each train's cars drawn");
 
 // A car fewer, or one more where it has the fewest its kind allows.
 await step(coaster, kCars, false);
-if (rides.list()[coaster].passengerCars === now.passengerCars) await step(coaster, kCars, true);
-const cars = rides.list()[coaster];
+if (tracked(rides.list()[coaster], "the ride").passengerCars === now.passengerCars) await step(coaster, kCars, true);
+const cars = tracked(rides.list()[coaster], "the coaster");
 log("other cars:", shown(coaster));
 expect(cars.passengerCars !== now.passengerCars, "the cars changed");
 expect(cars.running === cars.trains && cars.trains === now.trains, "as many trains run");
-expect(cars.cars?.length === cars.trains! * cars.carsPerTrain!, "the new cars drawn, the old ones gone");
+expect(cars.cars.length === cars.trains * cars.carsPerTrain, "the new cars drawn, the old ones gone");
 
 // Tested again, its trains set off in turn.
 expect(rides.setState(coaster, "testing") == null, "the coaster tested again");
@@ -103,20 +106,20 @@ expect(
     `the coaster opened, not refused with ${rides.setState(coaster, "open")}`,
 );
 await frames(5);
-now = rides.list()[coaster];
+now = tracked(rides.list()[coaster], "the coaster");
 await step(coaster, kTrains, true);
-expect(rides.list()[coaster].trains === now.trains, "no train added while open");
+expect(tracked(rides.list()[coaster], "the ride").trains === now.trains, "no train added while open");
 
 // A shuttle runs one train, however many are asked for.
 const shuttle = await lay("Halfpipe");
 log("shuttle laid:", shown(shuttle));
 await step(shuttle, kTrains, true);
-expect(rides.list()[shuttle].trains === 1, "the shuttle kept to one train");
+expect(tracked(rides.list()[shuttle], "the ride").trains === 1, "the shuttle kept to one train");
 expect(rides.setState(shuttle, "testing") == null, "the shuttle tested");
 await until(() => (rides.list()[shuttle].moving ?? 0) > 0, 600, "the shuttle's train under way");
 log("shuttle tested:", shown(shuttle));
 expect(rides.list()[shuttle].running === 1, "one shuttle train run");
-const end = rides.list()[shuttle].cars![0];
+const end = tracked(rides.list()[shuttle], "the ride").cars[0];
 camera.look(end, { col: end.col + 8, row: end.row + 14, up: 25 });
 await frames(60);
 await screenshot("shuttle");

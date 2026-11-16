@@ -45,7 +45,7 @@ await frames(30);
 await pointer.click(0.5, 0.45);
 await frames(30);
 expect(
-    rides.list().some((r) => (r.pieces ?? 0) > 0),
+    rides.list().some((r) => r.kind === "tracked" && r.pieces > 0),
     "the design laid",
 );
 // Laid, its building closes and its window opens; the window's crane opens the building again.
@@ -94,13 +94,13 @@ expect(build.construction()?.ride === coaster, "the construction panel back");
 
 // A click on a piece of the circuit picks it to build over, and demolish takes it out, opening the circuit.
 const ride = build.construction()!.ride;
-const before = rides.list()[ride].pieces ?? 0;
+const before = tracked(rides.list()[ride], "the ride").pieces;
 // A straight piece near the entrance, off the station and not just past it, so the station stays whole and auto-complete can lay a way
 // across the gap: looked for on the tiles round the entrance.
 const door = rides.list()[ride].entrance!;
 const straight = () => {
     const at = build.construction()?.selected;
-    const track = rides.list()[ride].track ?? [];
+    const track = tracked(rides.list()[ride], "the ride").track;
     if (typeof at !== "number") return false;
     // Not just past the station, which would leave the train no track to run on.
     const before = track[(at + track.length - 1) % track.length] ?? "";
@@ -119,7 +119,7 @@ await screenshot("picked");
 await ui.click("placing/body/construction/demolish");
 await frames(5);
 expect(build.construction()?.selected === null, "building back at the open end");
-expect(rides.list()[ride].pieces === before - 1, "the picked piece taken out");
+expect(tracked(rides.list()[ride], "the ride").pieces === before - 1, "the picked piece taken out");
 expect(build.construction()?.ghost === true, "the piece taken out offered again in the gap");
 expect(build.construction()?.clashes === false, "the gap's piece clear of the pieces either side");
 expect(build.construction()?.arrows === true, "arrows where the gap's piece starts and ends");
@@ -203,9 +203,9 @@ expect(
     (build.construction()?.proposed ?? 0) > 0,
     `a way found round to the station, not ${build.construction()?.complaint}`,
 );
-expect(rides.list()[ride].pieces === before - 1, "the way not laid before the second click");
+expect(tracked(rides.list()[ride], "the ride").pieces === before - 1, "the way not laid before the second click");
 await screenshot("proposed");
 await ui.click("placing/body/construction/complete");
 await frames(5);
 expect(build.construction()?.proposed === 0, "the way taken");
-expect(rides.list()[ride].pieces! >= before, "the way laid, closing the circuit");
+expect(tracked(rides.list()[ride], "the ride").pieces >= before, "the way laid, closing the circuit");

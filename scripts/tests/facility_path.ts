@@ -25,7 +25,7 @@ const gate = map.paths().reduce((a, b) => (b.row > a.row ? b : a));
 // The smallest toilet (kind 11).
 const kind = build
     .facilities()!
-    .filter((f) => f.kind === 11)
+    .filter((f) => f.kind === "toilet")
     .sort((a, b) => a.width * a.length - b.width * b.length)[0];
 expect(kind !== undefined, "a toilet to build");
 log("toilet", kind.symbol, kind.overlay, `${kind.width}x${kind.length}`);

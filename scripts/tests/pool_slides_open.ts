@@ -142,7 +142,8 @@ expect(spot, "clear ground for the design");
 await pointer.click(...here);
 await frames(30);
 const built = rides.list().length - 1;
-expect(/ringslide/i.test(rides.list()[built].symbol) && rides.list()[built].pieces! > 1, "the slide laid");
+const slide = () => tracked(rides.list()[built], "the new slide");
+expect(/ringslide/i.test(slide().symbol) && slide().pieces > 1, "the slide laid");
 build.stop();
 await frames(5);
 const refused = rides.setState(built, "open");
@@ -150,8 +151,8 @@ expect(refused === "CantOpenPoolRideNoEntrance", `the new slide refused till joi
 
 // Its window's join button opens the pool paths page; pinned, a press off the platform's side lays a path there at
 // its deck, joining the station.
-const deck = rides.list()[built].platformSquares![1] ?? rides.list()[built].platformSquares![0];
-log("new slide", rides.list()[built].name, "platform", JSON.stringify(rides.list()[built].platformSquares));
+const deck = slide().platformSquares[1] ?? slide().platformSquares[0];
+log("new slide", slide().name, "platform", JSON.stringify(slide().platformSquares));
 rides.show(built);
 await frames(10);
 await ui.click("info/body/Pool_PathPanel");
@@ -170,7 +171,8 @@ for (const side of [deck.turn, (deck.turn + 2) % 4]) {
     if (!at) continue;
     pointer.move(at.x, at.y);
     await frames(3);
-    const g = build.pooling()?.ghostAt;
+    const pooled = build.pooling();
+    const g = pooled !== undefined && pooled.ghost !== null ? pooled.ghostAt : undefined;
     log("side", side, "ghost", JSON.stringify(build.pooling()));
     if (g?.col !== deck.col + dc || g?.row !== deck.row + dr || g?.height !== deck.height) continue;
     await pointer.click(at.x, at.y);

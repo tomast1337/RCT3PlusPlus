@@ -42,12 +42,12 @@ async function pickStation(): Promise<string | undefined> {
 }
 /** Lays a straight, clicked until one more piece is laid. */
 async function straight(): Promise<void> {
-    const before = rides.list()[ride].pieces ?? 0;
-    for (let i = 0; i < 3 && (rides.list()[ride].pieces ?? 0) === before; ++i) {
+    const before = tracked(rides.list()[ride], "the ride").pieces;
+    for (let i = 0; i < 3 && tracked(rides.list()[ride], "the ride").pieces === before; ++i) {
         await ui.click("placing/body/construction/AttractionEditor_IconCurve0");
         await frames(10);
     }
-    expect((rides.list()[ride].pieces ?? 0) === before + 1, "a straight laid");
+    expect(tracked(rides.list()[ride], "the ride").pieces === before + 1, "a straight laid");
 }
 
 const at = must(map.screen(centre.col, centre.row), `tile ${centre.col}, ${centre.row} in sight`);
@@ -58,7 +58,7 @@ await frames(30);
 const first: Tile = build.construction()!.ghostAt!;
 await pointer.click(at.x, at.y);
 await frames(30);
-expect((rides.list()[ride].pieces ?? 0) === 1, "the first station laid");
+expect(tracked(rides.list()[ride], "the ride").pieces === 1, "the first station laid");
 await straight();
 await straight();
 const special = await pickStation();
@@ -66,9 +66,9 @@ expect(special !== undefined, "a station piece to build");
 const second: Tile = build.construction()!.ghostAt!;
 await ui.click(special!);
 await frames(10);
-expect(rides.list()[ride].pieces === 4, "the second station laid");
+expect(tracked(rides.list()[ride], "the ride").pieces === 4, "the second station laid");
 await straight();
-log("track", JSON.stringify(rides.list()[ride].track));
+log("track", JSON.stringify(tracked(rides.list()[ride], "the ride").track));
 
 await ui.click("placing/body/construction/complete");
 await until(
@@ -78,7 +78,7 @@ await until(
 );
 await ui.click("placing/body/construction/complete");
 await frames(10);
-log("closed", JSON.stringify(rides.list()[ride].track));
+log("closed", JSON.stringify(tracked(rides.list()[ride], "the ride").track));
 
 /** Places the door at the station on `station` from the ride's window: tried on the tiles round it. */
 async function placeDoor(station: Tile, step: "entrance" | "exit"): Promise<void> {
@@ -138,9 +138,9 @@ async function watch(count: number): Promise<{ stood: number[]; change: number; 
     let steps: { dc: number; dr: number }[] = [];
     for (let n = 0; n < count; ++n) {
         await frames(1);
-        const r = rides.list()[ride];
+        const r = tracked(rides.list()[ride], "the ride");
         for (const t of r.trainsAt ?? []) if (t.station !== null && t.station < stood.length) ++stood[t.station];
-        const cars = r.cars ?? [];
+        const cars = r.cars;
         const now = cars.map((c, k) => ({ dc: c.col - (last[k]?.col ?? c.col), dr: c.row - (last[k]?.row ?? c.row) }));
         if (last.length === cars.length && steps.length === cars.length)
             for (let k = 0; k < cars.length; ++k) {
@@ -265,7 +265,7 @@ await screenshot("two_stations");
 // Saved and loaded again.
 const saved = JSON.stringify(doors());
 // Each station piece of both stations stands in its platform, with stairs beside the doors.
-const platforms = rides.list()[ride].platforms ?? [];
+const platforms = tracked(rides.list()[ride], "the ride").platforms;
 log("platforms", JSON.stringify(platforms));
 expect(
     platforms.length === 2 && platforms.every((p) => /stair/i.test(p)),
@@ -295,8 +295,8 @@ await until(
 );
 expect(JSON.stringify(doors()) === saved, `both stations' doors back after loading, not ${JSON.stringify(doors())}`);
 expect(
-    JSON.stringify(rides.list()[ride].platforms) === JSON.stringify(platforms),
-    `both stations' platforms back after loading, not ${JSON.stringify(rides.list()[ride].platforms)}`,
+    JSON.stringify(tracked(rides.list()[ride], "the ride").platforms) === JSON.stringify(platforms),
+    `both stations' platforms back after loading, not ${JSON.stringify(tracked(rides.list()[ride], "the ride").platforms)}`,
 );
 camera.look(
     { col: (first.col + second.col) / 2 + 0.5, row: (first.row + second.row) / 2 + 0.5 },

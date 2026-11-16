@@ -13,7 +13,7 @@ export {};
 await park.open("Campaigns/Base/VanillaHills.dat");
 await park.ready();
 await frames(60);
-const ride = rides.list().findIndex((r) => !r.flat && (r.trains ?? 0) > 0);
+const ride = rides.list().findIndex((r) => r.kind === "tracked" && r.trains > 0);
 expect(ride >= 0, "a ride with trains");
 rides.show(ride);
 await frames(30);
@@ -62,7 +62,7 @@ expect(
     "each kind once, then the first again",
 );
 // Next train goes round every train of the park, ride after ride, and back to the first.
-const tracked = rides.list().filter((r) => !r.flat && (r.trains ?? 0) > 0).length;
+const tracked = rides.list().filter((r) => r.kind === "tracked" && r.trains > 0).length;
 const start = camera.riding()!;
 const stops: string[] = [];
 for (let i = 0; i < 40; ++i) {

@@ -57,6 +57,18 @@ namespace rct3::simulation::tuning
         units::Share stomach_margin { 0.1f };   ///< ...and over it
     };
 
+    /// How much a guest wants to go on a ride they think of.
+    struct Choosing
+    {
+        float excitement = 0.3f; ///< For each share of a ride's excitement
+        float suits = 0.3f;      ///< For an intensity right in their range; less the further off it is
+        float bargain = 0.2f;    ///< For a free ride; none for one at its worth, as much off at twice that
+        float sickening = 0.6f;  ///< Off for each share of nausea past what their stomach takes in comfort
+        float favourite = 0.3f;
+        float again = 0.25f; ///< Off for the ride they just got off: they would rather try another
+        float bar = 0.15f;   ///< Below this a guest does not go on a ride at all
+    };
+
     /// Guests showing how a ride left them as they step off.
     struct Gestures
     {
@@ -750,6 +762,7 @@ namespace rct3::simulation::tuning
     {
         Needs needs;
         Enjoyment enjoyment;
+        Choosing choosing;
         Walking walking;
         Gaits gaits;
         Reactions reactions;

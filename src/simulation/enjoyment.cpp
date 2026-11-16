@@ -59,4 +59,14 @@ namespace rct3::simulation
         return true;
     }
 
+    float ride_appeal(const RideInMind& ride, const Taste& taste, const Mood& mood)
+    {
+        const auto& k = kTuning.choosing;
+        const float slack = kTuning.enjoyment.slack.value + kTuning.enjoyment.happy_slack.value * mood.happiness.value;
+        const float suits = static_cast<float>(std::to_underlying(fit(ride.intensity.value, taste.least.value, taste.most.value, slack))) / static_cast<float>(std::to_underlying(Fit::Within));
+        const float sickening = std::max(0.0f, ride.nausea.value - stomach_range(mood.tolerance).most.value);
+        const float bargain = ride.worth.value > 0 ? std::clamp(static_cast<float>(ride.worth.value - ride.price.value) / static_cast<float>(ride.worth.value), -1.0f, 1.0f) : 0.0f;
+        return k.excitement * ride.excitement.value + k.suits * suits + k.bargain * bargain - k.sickening * sickening + (ride.favourite ? k.favourite : 0) - (ride.just_been ? k.again : 0);
+    }
+
 } // namespace rct3::simulation

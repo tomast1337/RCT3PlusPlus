@@ -2,6 +2,7 @@
 #include "simulation/enjoyment.hpp"
 
 #include "simulation/sandbox.hpp"
+#include "simulation/tuning.hpp"
 
 #include <doctest/doctest.h>
 
@@ -127,4 +128,53 @@ TEST_CASE("a guest off a ride in the park has it for their favourite")
     auto& r = park.world().registry;
     REQUIRE(park.run_until([&] { return r.all_of<Favourite>(guest) && r.get<Favourite>(guest).ride == ride; }, 600));
     CHECK(r.get<Ridden>(guest).rides.size() == 1);
+}
+
+namespace
+{
+    RideInMind fair_ride()
+    {
+        return { .excitement = { 0.6f }, .intensity = { 0.45f }, .nausea = { 0.2f }, .price = Money { 100 }, .worth = Money { 300 } };
+    }
+} // namespace
+
+TEST_CASE("a guest wants a ride the more for its thrills, a fair price and suiting them")
+{
+    const Mood mood { .happiness = { 0.5f } };
+    const float plain = ride_appeal(fair_ride(), kMiddling, mood);
+    CHECK(plain >= kTuning.choosing.bar);
+
+    RideInMind dull = fair_ride();
+    dull.excitement = Share { 0 };
+    RideInMind dear = fair_ride();
+    dear.price = Money { 600 };
+    RideInMind wild = fair_ride();
+    wild.intensity = Share { 1 };
+    RideInMind sickening = fair_ride();
+    sickening.nausea = Share { 1 };
+    RideInMind favourite = fair_ride();
+    favourite.favourite = true;
+    RideInMind again = fair_ride();
+    again.just_been = true;
+    CHECK(ride_appeal(dull, kMiddling, mood) < plain);
+    CHECK(ride_appeal(dear, kMiddling, mood) < plain);
+    CHECK(ride_appeal(wild, kMiddling, mood) < plain);
+    CHECK(ride_appeal(sickening, kMiddling, mood) < plain);
+    CHECK(ride_appeal(favourite, kMiddling, mood) > plain);
+    CHECK(ride_appeal(again, kMiddling, mood) < plain);
+
+    RideInMind awful = dull;
+    awful.price = Money { 900 };
+    awful.intensity = Share { 1 };
+    CHECK(ride_appeal(awful, kMiddling, mood) < kTuning.choosing.bar);
+}
+
+TEST_CASE("a guest walks past a dull ride far dearer than it is worth")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 3, 0 });
+    const auto ride = park.flat_ride("Carousel", { 3, 0 }, 4000, { .capacity = 4, .cycle_seconds = 10, .excitement = 0, .intensity = 0.3f, .nausea = 0.1f });
+    park.guest({ 0, 0 }, { .happiness = 0.6f });
+    auto& r = park.world().registry;
+    CHECK_FALSE(park.run_until([&] { return r.get<Attraction>(ride).customers > 0; }, 300));
 }

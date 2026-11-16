@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Every saved design of a pool slide the game ships, laid on the blank landscape, tested and then opened: each is laid
-// whole, with pool water put down first where its pool sides must meet one, and runs several cars down with none
-// crashing. Logs for each design its pieces, its cars' top speed, the most
-// they swing up a trough's wall and any crash, and each train's place, speed and swing through its test.
+// Every saved design of a pool slide the game ships, and of the dinghy slide, laid on the blank landscape, tested and
+// then opened: each is laid whole, with pool water put down first where its pool sides must meet one, and runs several
+// cars down with none crashing. Logs for each design its pieces, its cars' top speed, the most they swing up a trough's
+// wall and any crash, and each train's place, speed and swing through its test. A look at the first dinghy well up a
+// wall while on test.
 //
 //   ./nob script scripts/tests/slide_designs.ts -- --no-intro --no-audio --seed 1
 
@@ -30,7 +31,11 @@ const kDesigns: [string, string, number][] = [
     ["MasterBlaster", "Journey to the deep", 73],
     ["MasterBlaster", "Slipstream", 69],
     ["MasterBlaster", "Tubular", 63],
+    ["Dingy", "Demon Drop", 44],
+    ["Dingy", "Ocean Turns", 37],
+    ["Dingy", "Splash Down", 95],
 ];
+const kFolders: Record<string, string> = { Dingy: "coasters" }; // Under tracks/, where not TrackedRides
 
 const kPool = "Pool/Default/Default_Stub";
 let here: [number, number] = [0, 0]; // Where the pointer was last moved for a ghost
@@ -93,11 +98,15 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
 
 const failed: string[] = [];
 let shown: string | undefined;
+let swung = false; // Whether the dinghy up a wall was shown
 for (const [kind, design, size] of kDesigns) {
     await park.open("Campaigns/Base/BlankLandscape.dat");
     await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
     const pick = async () => {
-        expect(build.pick(`tracks/TrackedRides/${kind}/${kind}`, kind, "designs"), `a ${kind} to build`);
+        expect(
+            build.pick(`tracks/${kFolders[kind] ?? "TrackedRides"}/${kind}/${kind}`, kind, "designs"),
+            `a ${kind} to build`,
+        );
         await until(() => ui.find("design_browser") !== undefined, 600, "the designs window");
         await frames(3);
         const row = build.construction()!.designs.findIndex((d) => d.includes(design));
@@ -159,6 +168,14 @@ for (const [kind, design, size] of kDesigns) {
     for (let k = 0; k < 2700 && state == null; ++k) {
         await park.advance(1 / 30);
         watch();
+        const up = (info().trainsAt ?? []).findIndex((t) => t.station === null && Math.abs(t.lean ?? 0) > 0.4);
+        if (kind === "Dingy" && !swung && up >= 0) {
+            swung = true;
+            const car = info().cars[up];
+            camera.look(car, { col: car.col + 2, row: car.row + 2, up: (car.up ?? 0) + 4 });
+            await frames(3);
+            await screenshot("slide_designs_dinghy");
+        }
         for (const [i, t] of (info().trainsAt ?? []).entries())
             log(
                 "TRACE",

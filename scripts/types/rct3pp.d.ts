@@ -239,6 +239,11 @@ declare namespace park {
     };
     /** Sets the time of day, as a fraction of a day from midnight (0.5 is noon), shown at once. */
     function setTime(fraction: number): void;
+    /** Which part of the day the park keeps: its opening hours, or a window round the middle of the day or of
+     *  the night, as the bar's day button sets it. The look gets there as the day transition option says. */
+    function setDayMode(mode: "hours" | "day" | "night"): void;
+    /** Where the park is in its day and what the sky shows (fractions of a day from midnight), and its mode. */
+    function dayClock(): { time: number; shown: number; mode: "hours" | "day" | "night" };
     /** The calendar, in units of 90 a week and 360 a month. */
     function date(): number;
     /** Levels of the scenario won since the park opened, each heard as a fanfare. */

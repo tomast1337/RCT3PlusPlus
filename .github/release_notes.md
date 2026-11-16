@@ -8,8 +8,8 @@ ships no game content: it reads the data from your install.
 
 1. Download the package for your system below and unpack it.
 2. rct3++ looks for the game by itself: in the folder it was unpacked into (unpack it into the game's
-   folder, the one that contains `gui/` and `Style/`, or into a folder inside it), in the Steam libraries
-   and in the usual GOG folders. If it does not find it, tell it where the game is: either set an
+   folder, the one that contains `gui/` and `Style/`, or into a folder inside it), in the Steam libraries,
+   in Epic's installs, and in the usual GOG and disc install folders. If it does not find it, tell it where the game is: either set an
    environment variable,
 
    ```

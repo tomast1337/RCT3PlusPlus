@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Where installs live on Windows: Steam's folder from the registry, and GOG's installs.
+// Where installs live on Windows: Steam's folder from the registry, Epic's list of installs, GOG's installs
+// and the disc versions' folders.
 #include "config/game/install.hpp"
 
 #include <array>
@@ -58,12 +59,20 @@ namespace rct3::config::game
                 if (!name || !name->contains(L"RollerCoaster Tycoon 3"))
                     continue;
                 if (const auto path = registry_text(games, id.data(), L"path"))
-                    places.game_folders.emplace_back(*path);
+                    places.game_folders.push_back({ .path = *path, .source = "GOG" });
             }
             RegCloseKey(games);
         }
+        // Epic's launcher keeps its list of installs here, whichever drive the games are on.
+        places.epic_lists.emplace_back("C:\\ProgramData\\Epic\\EpicGamesLauncher\\Data\\Manifests");
+        // GOG's default folder, then where the disc versions install (Atari published them).
         for (std::string_view name : kGameFolderNames)
-            places.game_folders.push_back(fs::path("C:\\GOG Games") / name);
+            places.game_folders.push_back({ .path = fs::path("C:\\GOG Games") / name, .source = "GOG" });
+        for (std::string_view program_files : { "C:\\Program Files (x86)", "C:\\Program Files" })
+        {
+            for (std::string_view name : kGameFolderNames)
+                places.game_folders.push_back({ .path = fs::path(program_files) / "Atari" / name, .source = "disc install" });
+        }
         return places;
     }
 

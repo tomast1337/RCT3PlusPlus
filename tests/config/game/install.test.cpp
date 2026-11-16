@@ -187,10 +187,37 @@ TEST_CASE("without the variable or the setting, the usual places are searched in
     SUBCASE("a GOG folder")
     {
         FakeInstall fake("gog");
-        const auto install = find_game_install(Environment(), { }, { .game_folders = { fake.root / "nowhere", fake.root / "gog" } });
+        const auto install = find_game_install(Environment(), { }, { .game_folders = { { .path = fake.root / "nowhere", .source = "GOG" }, { .path = fake.root / "gog", .source = "GOG" } } });
         REQUIRE(install.has_value());
         CHECK(install->root() == fake.root / "gog");
         CHECK(install->source() == "GOG");
+    }
+    SUBCASE("Epic's launcher: its folder of .item files")
+    {
+        FakeInstall fake("epic game");
+        fs::create_directories(fake.root / "manifests");
+        std::ofstream(fake.root / "manifests" / "other.item") << R"({ "DisplayName": "Some Other Game", "InstallLocation": "/elsewhere" })";
+        std::ofstream(fake.root / "manifests" / "not json.item") << "{ \"DisplayName\": ";
+        std::ofstream(fake.root / "manifests" / "game.item") << std::format(R"({{ "DisplayName": "RollerCoaster Tycoon 3 Complete Edition", "InstallLocation": "{}" }})", (fake.root / "epic game").generic_string());
+        const auto install = find_game_install(Environment(), { }, { .epic_lists = { fake.root / "manifests" } });
+        REQUIRE(install.has_value());
+        CHECK(install->root() == fake.root / "epic game");
+        CHECK(install->source() == "Epic Games");
+    }
+    SUBCASE("Heroic's list of Epic installs")
+    {
+        FakeInstall fake("heroic game");
+        std::ofstream(fake.root / "installed.json") << std::format(R"({{ "AnId": {{ "title": "Wrong Shape", "install_path": 5 }}, "Another": {{ "title": "RollerCoaster Tycoon 3 Complete Edition", "install_path": "{}" }} }})", (fake.root / "heroic game").generic_string());
+        const auto install = find_game_install(Environment(), { }, { .epic_lists = { fake.root / "installed.json" } });
+        REQUIRE(install.has_value());
+        CHECK(install->root() == fake.root / "heroic game");
+    }
+    SUBCASE("a disc install folder")
+    {
+        FakeInstall fake(fs::path("Atari") / "RollerCoaster Tycoon 3 Platinum");
+        const auto install = find_game_install(Environment(), { }, { .game_folders = { { .path = fake.root / "Atari" / "RollerCoaster Tycoon 3 Platinum", .source = "disc install" } } });
+        REQUIRE(install.has_value());
+        CHECK(install->source() == "disc install");
     }
     SUBCASE("the variable and the setting still win, and a broken one is not searched past")
     {
@@ -210,7 +237,7 @@ TEST_CASE("without the variable or the setting, the usual places are searched in
     SUBCASE("nothing found says it searched")
     {
         FakeInstall fake(fs::path("deep") / "inside");
-        const auto install = find_game_install(Environment(), { }, { .program_folder = fake.root / "deep" / "x", .steam_roots = { fake.root }, .game_folders = { fake.root } });
+        const auto install = find_game_install(Environment(), { }, { .program_folder = fake.root / "deep" / "x", .steam_roots = { fake.root }, .epic_lists = { fake.root }, .game_folders = { { .path = fake.root, .source = "GOG" } } });
         REQUIRE_FALSE(install.has_value());
         CHECK(install.error().error == InstallError::NotConfigured);
         CHECK(describe(install.error()).find("Steam") != std::string::npos);

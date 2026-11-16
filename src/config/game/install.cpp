@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "config/game/install.hpp"
 
+#include "config/json_text.hpp"
 #include "config/text_file.hpp"
 #include "strings/ascii.hpp"
 
@@ -72,6 +73,55 @@ namespace rct3::config::game
             return libraries;
         }
 
+        // The game's folders in Epic's lists of installs. Epic's launcher keeps one .item file per game, an
+        // object with DisplayName and InstallLocation; Heroic (the launcher Linux players use for Epic) keeps
+        // one installed.json, an object per game with title and install_path. Both are text other programs
+        // wrote: anything not shaped so is skipped.
+        std::vector<fs::path> epic_installs(const fs::path& list)
+        {
+            constexpr std::size_t kMaxFiles = 1000; ///< Chosen by eye: far more games than anyone installs
+            std::vector<fs::path> files;
+            std::error_code ec;
+            if (fs::is_directory(list, ec))
+            {
+                for (fs::directory_iterator it(list, ec), end; !ec && it != end && files.size() < kMaxFiles; it.increment(ec))
+                {
+                    if (it->path().extension() == ".item")
+                        files.push_back(it->path());
+                }
+            }
+            else
+            {
+                files.push_back(list);
+            }
+
+            std::vector<fs::path> installs;
+            const auto look_at = [&](const Json& game) {
+                if (!game.is_object())
+                    return;
+                for (const auto [title_key, path_key] : { std::pair { "DisplayName", "InstallLocation" }, std::pair { "title", "install_path" } })
+                {
+                    const auto title = game.find(title_key);
+                    const auto path = game.find(path_key);
+                    if (title != game.end() && path != game.end() && title->is_string() && path->is_string() && title->get_ref<const std::string&>().contains("RollerCoaster Tycoon 3"))
+                        installs.emplace_back(path->get<std::string>());
+                }
+            };
+            for (const fs::path& file : files)
+            {
+                const auto text = read_text_file(file);
+                if (!text || !*text)
+                    continue;
+                const auto json = parse_json_object(**text);
+                if (!json)
+                    continue;
+                look_at(*json);
+                for (const Json& member : *json)
+                    look_at(member);
+            }
+            return installs;
+        }
+
     } // namespace
 
     std::string describe(const InstallProblem& problem)
@@ -80,7 +130,7 @@ namespace rct3::config::game
         switch (problem.error)
         {
             case InstallError::NotConfigured:
-                return std::format("{} and {} in the settings file are not set, and no install was found in the program's folder, the Steam libraries or the GOG folders; point one of them at the folder the original game is installed in", env_name(EnvVar::GamePath), setting_name(Setting::GamePath));
+                return std::format("{} and {} in the settings file are not set, and no install was found in the program's folder, the Steam libraries, Epic's installs or the GOG and disc install folders; point one of them at the folder the original game is installed in", env_name(EnvVar::GamePath), setting_name(Setting::GamePath));
             case InstallError::NotFound:
                 return std::format("game folder {} does not exist (from {})", problem.path.string(), variable);
             case InstallError::NotADirectory:
@@ -162,8 +212,13 @@ namespace rct3::config::game
                     candidates.emplace_back(library / "steamapps" / "common" / name, std::format("Steam library {}", library.string()));
             }
         }
-        for (const fs::path& folder : places.game_folders)
-            candidates.emplace_back(folder, "GOG");
+        for (const fs::path& list : places.epic_lists)
+        {
+            for (const fs::path& folder : epic_installs(list))
+                candidates.emplace_back(folder, "Epic Games");
+        }
+        for (const GameFolder& folder : places.game_folders)
+            candidates.emplace_back(folder.path, std::string(folder.source));
 
         for (auto& [path, source] : candidates)
         {

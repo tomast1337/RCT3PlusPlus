@@ -1485,6 +1485,8 @@ namespace rct3::scene
                         one["customers"] = a->customers;
                         one["price"] = a->price.value;
                         one["open"] = a->open;
+                        if (const auto* upkeep = registry.try_get<simulation::Upkeep>(e))
+                            one["broken"] = upkeep->broken;
                         one["onPaths"] = a->entrance.has_value();
                         // Where the guests walking to it are now.
                         Json heading = Json::array();

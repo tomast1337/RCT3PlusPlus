@@ -295,6 +295,8 @@ declare namespace debug {
             | "add_guests"
             | "remove_guests"
             | "refresh_guests"
+            | "break_rides"
+            | "reset_rides"
             | "drop_litter"
             | "clear_litter",
         amount?: number,
@@ -638,6 +640,8 @@ interface RideRun {
     /** Hundredths of the currency. */
     price?: number;
     open?: boolean;
+    /** Broken down, waiting for a mechanic. */
+    broken?: boolean;
     /** Whether its entrance was found on the paths. */
     onPaths?: boolean;
     /** Where the guests walking to it are now. */

@@ -84,6 +84,65 @@ namespace rct3::simulation
         return count;
     }
 
+    std::size_t break_down_rides(SimWorld& world)
+    {
+        entt::registry& r = world.registry;
+        std::size_t broke = 0;
+        for (const entt::entity e : r.view<Attraction, CycleRide>())
+        {
+            Attraction& attraction = r.get<Attraction>(e);
+            Upkeep& upkeep = r.get_or_emplace<Upkeep>(e);
+            if (upkeep.broken)
+                continue;
+            // A failure any ride, flat or with trains, can have.
+            upkeep.kind = upkeep.last = Breakdown::ControlFailure;
+            upkeep.broken = true;
+            ++upkeep.breakdowns;
+            attraction.open = false;
+            ++broke;
+        }
+        return broke;
+    }
+
+    std::size_t reset_rides(SimWorld& world)
+    {
+        entt::registry& r = world.registry;
+        std::size_t count = 0;
+        for (auto [e, attraction, ride] : r.view<Attraction, CycleRide>().each())
+        {
+            ++count;
+            if (Upkeep* upkeep = r.try_get<Upkeep>(e))
+            {
+                if (upkeep->broken)
+                    attraction.open = true;
+                *upkeep = Upkeep { .inspect_every = upkeep->inspect_every, .mechanic = upkeep->mechanic, .break_in = upkeep->break_in };
+            }
+            attraction.customers = 0;
+            attraction.income = { };
+            ride.queue.clear();
+            for (Stop& stop : ride.stops)
+                stop.queue.clear();
+            ride.per_hour = 0;
+            ride.since_departure.reset();
+        }
+        for (auto [guest, errand, stride, pose] : r.view<Errand, Stride, Pose>().each())
+        {
+            if (errand.kind != ErrandKind::Queueing || !r.valid(errand.target) || !r.all_of<CycleRide>(errand.target))
+                continue;
+            const std::optional<NodeId> entrance = entrance_of(r, errand.target, errand.station);
+            // A party goes on together behind its leader, who picks somewhere else to go.
+            const auto* member = r.try_get<Member>(guest);
+            const bool follows = member != nullptr && r.valid(member->party) && r.get<Party>(member->party).leader != guest;
+            errand = follows ? Errand { ErrandKind::Following, entt::null, 0 } : Errand { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
+            r.remove<RideWalk>(guest);
+            if (entrance)
+                stop_at(world.paths, *entrance, stride, pose);
+            else
+                stride.route.clear();
+        }
+        return count;
+    }
+
     std::size_t scatter_litter(SimWorld& world, random::RandomState& dice, std::span<const NodeId> spots, std::size_t count)
     {
         if (spots.empty())

@@ -54,6 +54,8 @@ namespace rct3::simulation::tuning
         units::Share most_queasy { 0.8f };      ///< And a miserable one this much
         units::Share stomach_reach { 0.6f };    ///< Nausea a stomach takes in comfort, under its tolerance...
         units::Share stomach_margin { 0.1f };   ///< ...and over it
+        units::Share delighted { 0.8f };        ///< Happiness a ride leaves a guest at that makes them braver
+        units::Share braver { 0.02f };          ///< How much wilder the rides they like then get
     };
 
     /// How much a guest wants to go on a ride they think of.
@@ -268,7 +270,9 @@ namespace rct3::simulation::tuning
         units::Share too_intense { 0.9f };      ///< Intensity past which a ride is worth half to most
         units::Factor fair_fee { 1.5 };         ///< On what the rides are worth over their prices
         units::Share mood { 0.7f };             ///< Happiness guests come in with
-        units::Share teen_tolerance { 0.75f };
+        /// Fitted to saves: how many guests have each of the four saved stomach tolerances, weakest first, among
+        /// 14,500 guests of nine parks; the same at every age.
+        std::array<units::Chance, 4> stomachs { { { 0.117 }, { 0.251 }, { 0.375 }, { 0.258 } } };
         units::Money cash { 5000 };        ///< What a guest brings in, where the park sets no average
         units::Money bank { 10000 };       ///< What cash machines can give a guest, where the park sets no average
         units::Share cash_spread { 0.2f }; ///< How far either side of the average a guest's cash and bank lie

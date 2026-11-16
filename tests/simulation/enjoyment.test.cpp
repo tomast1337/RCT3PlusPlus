@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/enjoyment.hpp"
 
+#include "simulation/guests.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/tuning.hpp"
 
@@ -189,4 +190,32 @@ TEST_CASE("a guest does not think of a ride too far off, and goes on one of thos
     auto& r = park.world().registry;
     CHECK(park.run_until([&] { return r.get<Attraction>(near).customers > 0; }, 600));
     CHECK(r.get<Attraction>(far).customers == 0);
+}
+
+TEST_CASE("guests come with every strength of stomach, the middling ones most")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 1, 0 });
+    auto dice = rct3::random::seeded(rct3::random::Seed { 7 });
+    const std::array<Newcomer, 1> one { { { .age = AgeGroup::Teen } } };
+    std::array<int, 4> by_level { };
+    for (int i = 0; i < 2000; ++i)
+        for (const entt::entity g : admit_guests(park.world(), dice, park.world().paths.find({ 0, 0, 0 }).value(), one, kTuning.parties.middle))
+            ++by_level[static_cast<std::size_t>(std::lround(park.world().registry.get<Mood>(g).tolerance.value / kTuning.sickness.tolerance_per_saved_level.value)) - 1];
+    CHECK(by_level[0] > 0);
+    CHECK(by_level[2] > by_level[1]);
+    CHECK(by_level[2] > by_level[3]);
+    CHECK(by_level[0] < by_level[1]);
+}
+
+TEST_CASE("a ride that delights a guest leaves them liking wilder ones")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 3, 0 });
+    park.flat_ride("Carousel", { 3, 0 }, 0, { .capacity = 4, .cycle_seconds = 10, .excitement = 0.8f, .intensity = 0.3f, .nausea = 0.1f });
+    const auto guest = park.guest({ 0, 0 }, { .happiness = 0.9f });
+    auto& r = park.world().registry;
+    r.emplace_or_replace<Taste>(guest, Taste { .least = { 0.2f }, .most = { 0.5f } });
+    REQUIRE(park.run_until([&] { return r.all_of<Ridden>(guest); }, 600));
+    CHECK(r.get<Taste>(guest).most.value > 0.5f);
 }

@@ -1687,7 +1687,11 @@ namespace rct3::simulation
             // Some come wishing for a swim already, the more the more they like pools.
             const auto liking = static_cast<float>(random::between(dice, double { kTuning.pools.least_liking.value }, double { kTuning.pools.most_liking.value }));
             r.emplace<Needs>(guest, Needs { .swim = { liking * static_cast<float>(random::unit(dice)) } });
-            r.emplace<Mood>(guest, Mood { .happiness = kTuning.arrivals.mood, .energy = { 1 }, .tolerance = age == AgeGroup::Teen ? kTuning.arrivals.teen_tolerance : Mood { }.tolerance });
+            double stomach = random::unit(dice);
+            std::size_t level = 0;
+            for (; level + 1 < kTuning.arrivals.stomachs.size() && stomach >= kTuning.arrivals.stomachs[level].value; ++level)
+                stomach -= kTuning.arrivals.stomachs[level].value;
+            r.emplace<Mood>(guest, Mood { .happiness = kTuning.arrivals.mood, .energy = { 1 }, .tolerance = { kTuning.sickness.tolerance_per_saved_level.value * static_cast<float>(level + 1) } });
             const auto spread = [&] { return static_cast<float>(random::between(dice, -1.0, 1.0)) * kTuning.parties.taste_spread.value; };
             const float least = std::clamp(band.least.value + spread(), 0.0f, 1.0f);
             r.emplace<Taste>(guest, least, std::clamp(band.most.value + spread(), least, 1.0f), liking);

@@ -209,7 +209,6 @@ namespace rct3::scene::park
         ObjectShapes finer;
         ObjectShapes coarser;
         rct3::park::object::ShapeBox box;
-        std::size_t shown = 0; ///< Of its three sets, how many are in their buffers
     };
 
     /// The objects' meshes for new levels, built away from the frame, for the chunks whose levels changed.

@@ -828,7 +828,7 @@ namespace rct3::scene::park
 
     void fit_car(simulation::Coaster& train, const rct3::park::object::ObjectModel& model, bool pool_slide)
     {
-        train.trough = model.trough ? std::optional(simulation::Trough { .damping = { model.trough->damping }, .centring = { model.trough->centring }, .friction = model.trough->friction, .length = model.swing_arm > 0 ? units::Distance { model.swing_arm } : simulation::Trough { }.length, .pivot = { model.swing_pivot } }) : std::nullopt;
+        train.trough = model.trough ? std::optional(simulation::Trough { .damping = { model.trough->damping }, .centring = { model.trough->centring }, .friction = model.trough->friction, .pull = model.trough->pull, .length = model.swing_arm > 0 ? units::Distance { model.swing_arm } : simulation::Trough { }.length, .pivot = { model.swing_pivot } }) : std::nullopt;
         // shortcut: other trains keep the losses fitted to saved parks' test times, upgrade when their laps are
         // checked against their files' losses.
         // shortcut: the air is taken on one empty car, as every pool slide's train is; upgrade with riders' weight.

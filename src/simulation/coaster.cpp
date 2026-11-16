@@ -540,9 +540,9 @@ namespace rct3::simulation
             }
             room -= moved;
             // A slide's car swings in its trough as a weight hung from the middle of the swing: gravity, less the
-            // turn's pull, swings it on along its arc; the wall's friction holds it, enough to stop a slow swing dead;
-            // the swing dies down and drifts back to the middle. Swung out past the rails of an open trough, it flies
-            // out and crashes, going as fast as it left; a tube holds it in.
+            // share of the turn's pull its car file gives, swings it on along its arc; the wall's friction holds it,
+            // enough to stop a slow swing dead; the swing dies down and drifts back to the middle. Swung out past the
+            // rails of an open trough, it flies out and crashes, going as fast as it left; a tube holds it in.
             if (c.trough && !c.points.empty())
             {
                 const Trough& t = *c.trough;
@@ -555,7 +555,7 @@ namespace rct3::simulation
                 const glm::vec3 right = glm::length(across) > 1e-6f ? glm::normalize(across) : glm::vec3(1, 0, 0);
                 const std::size_t i = point_at(c, wrap(c, d));
                 const bool steady = i < c.steady.size() && c.steady[i];
-                const glm::vec3 weight = glm::vec3(0, -kGravity.value, 0) - (steady ? glm::vec3(0) : bend * c.speed * c.speed);
+                const glm::vec3 weight = glm::vec3(0, -kGravity.value, 0) - (steady ? glm::vec3(0) : t.pull * bend * c.speed * c.speed);
                 const float lean = c.lean.value;
                 const glm::vec3 hang = right * std::sin(lean) - up * std::cos(lean);
                 const glm::vec3 arc = right * std::cos(lean) + up * std::sin(lean);

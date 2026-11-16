@@ -786,6 +786,22 @@ TEST_CASE("a slide's car taken round a tight turn too fast flies out of its trou
     CHECK(tube.running);
 }
 
+TEST_CASE("a slide's car that feels only a share of a turn's pull rides a turn that throws out one feeling all of it")
+{
+    // A heavy raft on a long arm, little damped, as the dinghy slide's.
+    Coaster full = circling(6, 12);
+    full.trough = Trough { .damping = { 2 }, .friction = 0.1f, .length = { 1.6f } };
+    Coaster share = full;
+    share.trough->pull = 0.2f;
+    for (int i = 0; i < 40 && full.running; ++i)
+        drive(full, 0.05f);
+    for (int i = 0; i < 40; ++i)
+        drive(share, 0.05f);
+    CHECK(full.crashed);
+    CHECK_FALSE(share.crashed);
+    CHECK(std::abs(share.lean.value) > 0.05f);
+}
+
 TEST_CASE("a slide's car taken round onto its lift is not swung up the wall by the turn")
 {
     Coaster c = circling(3, 22);

@@ -8,6 +8,7 @@
 #pragma once
 
 #include "render/device.hpp"
+#include "render/shader_inputs.hpp"
 
 #include <array>
 #include <cstdint>
@@ -126,6 +127,15 @@ namespace rct3::render::vulkan
             std::uint32_t multi_samples = 0;
         };
 
+        // A buffer's copy from its staging, sent without waiting for the GPU; the staging and the commands go
+        // once its fence is reached.
+        struct BufferUpload
+        {
+            VkFence done = VK_NULL_HANDLE;
+            VkCommandBuffer commands = VK_NULL_HANDLE;
+            Buffer staging;
+        };
+
         // Objects released once the frame slot that last used them has finished on the GPU.
         struct Garbage
         {
@@ -187,6 +197,8 @@ namespace rct3::render::vulkan
         void destroy(const Texture& texture);
         [[nodiscard]] TransientBlock make_transient_block(VkDeviceSize size);
         void submit_once(const std::function<void(VkCommandBuffer)>& record);
+        /// Lets go of the uploads the GPU is done with; all of them, waiting, when `wait`.
+        void release_uploads(bool wait);
         void upload(const Buffer& staging, const Texture& texture, std::uint32_t width, std::uint32_t height);
         void make_depth_readable(Texture& texture, std::uint32_t id);
         /// `desc` as a pipeline drawing with `samples` per pixel, and the same outlining triangles where it can.
@@ -198,6 +210,22 @@ namespace rct3::render::vulkan
         DeviceConfig config_;
         State state_ = State::Off;
         const Texture* pass_target_ = nullptr; // The target the open pass draws into; null for the screen
+        /// What the open pass's draws last bound, so a draw binds only what differs: the park's draws come in runs
+        /// sharing a pipeline, a buffer or a picture.
+        struct Bound
+        {
+            VkPipeline pipeline = VK_NULL_HANDLE;
+            std::array<VkDescriptorSet, 2 + kExtraTextures> sets { };
+            std::uint32_t set_count = 0;
+            ShaderConstants constants { };
+            bool has_constants = false;
+            VkBuffer vertices = VK_NULL_HANDLE;
+            VkDeviceSize vertex_offset = 0;
+            VkBuffer indices = VK_NULL_HANDLE;
+            VkDeviceSize index_offset = 0;
+            VkIndexType index_type = VK_INDEX_TYPE_UINT32;
+        };
+        Bound bound_;
 
         VkInstance instance_ = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT messenger_ = VK_NULL_HANDLE;
@@ -252,6 +280,7 @@ namespace rct3::render::vulkan
         VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
         VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
         VkCommandPool upload_pool_ = VK_NULL_HANDLE;
+        std::vector<BufferUpload> uploads_;
         static constexpr std::size_t kSamplerCount = 4; // Filter x AddressMode
         std::array<VkSampler, kSamplerCount> samplers_ { };
         std::array<VkDescriptorSet, kSamplerCount> sampler_sets_ { };

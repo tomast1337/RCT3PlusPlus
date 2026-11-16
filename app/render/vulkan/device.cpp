@@ -119,6 +119,7 @@ namespace rct3::render::vulkan
         }
         if (device_ != VK_NULL_HANDLE)
         {
+            release_uploads(true);
             // Garbage first: freeing a texture's descriptor set needs the pool still alive.
             for (Frame& f : frames_)
                 release(f.garbage);
@@ -832,6 +833,7 @@ namespace rct3::render::vulkan
             }
         }
         release(frame.garbage);
+        release_uploads(false);
         reset_transient(frame);
 
         for (;;)
@@ -880,6 +882,7 @@ namespace rct3::render::vulkan
         assert(state_ == State::InFrame);
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
         pass_target_ = nullptr;
+        bound_ = { };
         if (pass.target)
         {
             const auto found = textures_.find(pass.target.id);
@@ -995,9 +998,17 @@ namespace rct3::render::vulkan
         const VkPipeline fill = pass_samples_ > 1 ? p.multi : p.pipeline;
         const VkPipeline wire = pass_samples_ > 1 ? p.multi_wire : p.wire;
         const VkCommandBuffer cmd = frames_[frame_index_].commands;
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, wireframe_ && wire ? wire : fill);
-        const ShaderConstants block = shader_constants(command, p.shader);
-        vkCmdPushConstants(cmd, pipeline_layout_, kPushStages, 0, sizeof block, &block);
+        if (const VkPipeline drawn = wireframe_ && wire ? wire : fill; drawn != bound_.pipeline)
+        {
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, drawn);
+            bound_.pipeline = drawn;
+        }
+        if (const ShaderConstants block = shader_constants(command, p.shader); !bound_.has_constants || std::memcmp(&block, &bound_.constants, sizeof block) != 0)
+        {
+            vkCmdPushConstants(cmd, pipeline_layout_, kPushStages, 0, sizeof block, &block);
+            bound_.constants = block;
+            bound_.has_constants = true;
+        }
         if (command.texture)
         {
             const auto texture = textures_.find(command.texture.id);
@@ -1019,10 +1030,20 @@ namespace rct3::render::vulkan
                 if (const auto found = textures_.find(extra.id); extra && found != textures_.end())
                     sets[i] = found->second.set;
             }
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, count, sets.data(), 0, nullptr);
+            if (count != bound_.set_count || !std::equal(sets.begin(), sets.begin() + count, bound_.sets.begin()))
+            {
+                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, count, sets.data(), 0, nullptr);
+                bound_.sets = sets;
+                bound_.set_count = count;
+            }
         }
         const VkDeviceSize offset = command.vertices.offset;
-        vkCmdBindVertexBuffers(cmd, 0, 1, &vertices->second.buffer, &offset);
+        if (vertices->second.buffer != bound_.vertices || offset != bound_.vertex_offset)
+        {
+            vkCmdBindVertexBuffers(cmd, 0, 1, &vertices->second.buffer, &offset);
+            bound_.vertices = vertices->second.buffer;
+            bound_.vertex_offset = offset;
+        }
 
         if (command.indices.buffer)
         {
@@ -1030,7 +1051,13 @@ namespace rct3::render::vulkan
             assert(indices != buffers_.end() && "draw with an unknown index buffer");
             if (indices == buffers_.end())
                 return;
-            vkCmdBindIndexBuffer(cmd, indices->second.buffer, command.indices.offset, command.index_type == IndexType::U16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+            if (const VkIndexType type = command.index_type == IndexType::U16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32; indices->second.buffer != bound_.indices || command.indices.offset != bound_.index_offset || type != bound_.index_type)
+            {
+                vkCmdBindIndexBuffer(cmd, indices->second.buffer, command.indices.offset, type);
+                bound_.indices = indices->second.buffer;
+                bound_.index_offset = command.indices.offset;
+                bound_.index_type = type;
+            }
             vkCmdDrawIndexed(cmd, command.count, 1, command.first, command.vertex_offset, 0);
         }
         else

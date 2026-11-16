@@ -253,12 +253,42 @@ namespace rct3::render::vulkan
             std::memcpy(mapped, desc.data.data(), desc.data.size());
             vkUnmapMemory(device_, staging.memory);
             b = make_buffer(desc.data.size(), VK_BUFFER_USAGE_TRANSFER_DST_BIT | (desc.usage == BufferUsage::Index ? VK_BUFFER_USAGE_INDEX_BUFFER_BIT : VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-            submit_once([&](VkCommandBuffer cmd) {
+            // Sent without waiting: waiting would wait for the frame on the GPU before it too, a whole frame for
+            // each frame buffers are made in. The barrier holds every command sent after it until the copy is done.
+            release_uploads(false);
+            BufferUpload sent;
+            VkCommandBufferAllocateInfo alloc { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+            alloc.commandPool = upload_pool_;
+            alloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            alloc.commandBufferCount = 1;
+            check(vkAllocateCommandBuffers(device_, &alloc, &sent.commands), "vkAllocateCommandBuffers");
+            try
+            {
+                VkCommandBufferBeginInfo begin { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+                begin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+                check(vkBeginCommandBuffer(sent.commands, &begin), "vkBeginCommandBuffer");
                 const VkBufferCopy region { 0, 0, desc.data.size() };
-                vkCmdCopyBuffer(cmd, staging.buffer, b.buffer, 1, &region);
-            });
-            destroy(staging);
-            staging = { };
+                vkCmdCopyBuffer(sent.commands, staging.buffer, b.buffer, 1, &region);
+                VkMemoryBarrier copied { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+                copied.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+                copied.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_INDEX_READ_BIT;
+                vkCmdPipelineBarrier(sent.commands, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 1, &copied, 0, nullptr, 0, nullptr);
+                check(vkEndCommandBuffer(sent.commands), "vkEndCommandBuffer");
+                const VkFenceCreateInfo fence { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+                check(vkCreateFence(device_, &fence, nullptr, &sent.done), "vkCreateFence");
+                VkSubmitInfo submit { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+                submit.commandBufferCount = 1;
+                submit.pCommandBuffers = &sent.commands;
+                check(vkQueueSubmit(queue_, 1, &submit, sent.done), "vkQueueSubmit");
+            }
+            catch (...)
+            {
+                vkDestroyFence(device_, sent.done, nullptr);
+                vkFreeCommandBuffers(device_, upload_pool_, 1, &sent.commands);
+                throw;
+            }
+            sent.staging = std::exchange(staging, { });
+            uploads_.push_back(sent);
         }
         catch (const std::exception& e)
         {
@@ -269,6 +299,20 @@ namespace rct3::render::vulkan
         const std::uint32_t id = next_id_++;
         buffers_.emplace(id, b);
         return BufferHandle { id };
+    }
+
+    void VulkanDevice::release_uploads(bool wait)
+    {
+        std::erase_if(uploads_, [&](const BufferUpload& u) {
+            if (wait)
+                vkWaitForFences(device_, 1, &u.done, VK_TRUE, UINT64_MAX);
+            else if (vkGetFenceStatus(device_, u.done) != VK_SUCCESS)
+                return false;
+            destroy(u.staging);
+            vkFreeCommandBuffers(device_, upload_pool_, 1, &u.commands);
+            vkDestroyFence(device_, u.done, nullptr);
+            return true;
+        });
     }
 
     void VulkanDevice::destroy_buffer(BufferHandle buffer)

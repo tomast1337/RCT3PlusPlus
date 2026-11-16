@@ -230,10 +230,16 @@ namespace rct3::simulation
                         {
                             const glm::vec3 from = r.get<Pose>(g).position;
                             const float reach = kTuning.surroundings.cannon_reach.value;
-                            // Only those in front of it: it turns so far, and never back on its firer.
+                            // Only those in front of it: it turns so far, and never back on its firer. Not riders in
+                            // cars: their Pose stays where they boarded while the car is away. Swimmers riding a slide
+                            // or a river move with it, so they may be hit.
+                            // shortcut: riders and boats passing are never hit; upgrade when the simulation knows
+                            // where ride cars are.
                             const auto* cannon = r.valid(linger->bench) ? r.try_get<PathItem>(linger->bench) : nullptr;
                             const auto in_reach = [&](entt::entity t) {
                                 if (t == g || cannon == nullptr || !r.valid(t) || !r.all_of<Pose, Mood, Visitor>(t) || r.any_of<Staff>(t))
+                                    return false;
+                                if (const auto* errand = r.try_get<Errand>(t); errand != nullptr && errand->kind == ErrandKind::Riding && !r.all_of<Swimmer>(t))
                                     return false;
                                 const glm::vec3 to = r.get<Pose>(t).position - from;
                                 return glm::length(to) <= reach && cannon_turn(cannon->heading, { to.x, to.z }, kTuning.surroundings.cannon_swing.value).has_value();

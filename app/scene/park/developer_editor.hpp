@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // The developer windows' editor (F12): a guest picked from a list and looked into, their feelings, needs and money
-// changed or held, and the guest sent somewhere. Every change goes to the simulation, so a park saved afterwards
-// keeps it.
+// changed or held, and the guest sent somewhere; and the park's live values changed, groups of guests let in and
+// everyone treated at once. Every change goes to the simulation, so a park saved afterwards keeps it.
 #pragma once
 
 #include "render/device.hpp"
@@ -29,6 +29,8 @@ namespace rct3::scene::park
         std::array<char, 64> name { };     ///< The rename box, filled from the guest when they are picked
         std::int32_t thought = 0;          ///< Picked to give: by ThoughtKind's number
         entt::entity send_to = entt::null; ///< Picked to send the guest to
+        std::int32_t groups = 5;           ///< To let in at the gate
+        double cash_for_all = 10;          ///< In currency units
         std::vector<entt::entity> rows;    ///< The guest list as shown, kept so its memory is reused
         /// The thoughts the language has words for: ThoughtKind's number and the words; read once.
         struct ThoughtText

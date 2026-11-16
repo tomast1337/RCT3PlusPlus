@@ -300,6 +300,9 @@ namespace rct3::render
         /// A texture made as a target to draw into instead of the screen. It can be drawn with in later passes
         /// of the frame, and keeps what was drawn until it is drawn into again.
         TextureHandle target;
+        /// With `target`: its depth starts as a copy of this target's instead of cleared. Both made with
+        /// `readable_depth` and of one size; otherwise it is cleared as without.
+        TextureHandle depth_from;
     };
 
     /// The light the Lit shaders shade with. Directions point towards the light; colours are linear and may go

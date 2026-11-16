@@ -271,10 +271,13 @@ namespace rct3::render::software
                 pass_area_ = { 0, 0, found->second.extent };
             }
         }
-        // As the OpenGL backend: clears cover the whole target, and a target's depth is always cleared.
+        // As the OpenGL backend: clears cover the whole target, and a target's depth is cleared unless copied.
         if (pass.clear)
             std::ranges::fill(pass_target_->texels, pack({ pass.clear_color.r, pass.clear_color.g, pass.clear_color.b, pass.clear_color.a }));
-        if (pass.clear || pass.target)
+        const auto depth_from = textures_.find(pass.depth_from.id);
+        if (pass.target && pass.depth_from && depth_from != textures_.end() && depth_from->second.depth.size() == pass_target_->depth.size())
+            std::ranges::copy(depth_from->second.depth, pass_target_->depth.begin());
+        else if (pass.clear || pass.target)
             std::ranges::fill(pass_target_->depth, pass.clear_depth);
         ++frame_stats_.passes;
         state_ = State::InPass;

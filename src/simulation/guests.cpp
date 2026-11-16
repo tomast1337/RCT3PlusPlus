@@ -6,6 +6,7 @@
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/enjoyment.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/ride_walks.hpp"
 #include "simulation/rides.hpp"
@@ -89,6 +90,9 @@ namespace rct3::simulation
             float cover;
             Serve serve;
             bool splash;
+            float excitement = 0;
+            float nausea = 0;
+            units::Money worth { };
         };
 
         /// Whether the guest, or anyone in their party, carries a park map.
@@ -134,10 +138,10 @@ namespace rct3::simulation
                 else if (const auto* ride = r.try_get<CycleRide>(e))
                 {
                     // A ride with more than one station is on offer at each, guests going to the nearest.
-                    out.push_back({ e, AttractionKind::Ride, Product::Drink, *a.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash });
+                    out.push_back({ e, AttractionKind::Ride, Product::Drink, *a.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride) });
                     for (const Stop& stop : ride->stops)
                         if (stop.entrance)
-                            out.push_back({ e, AttractionKind::Ride, Product::Drink, *stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash });
+                            out.push_back({ e, AttractionKind::Ride, Product::Drink, *stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride) });
                 }
                 else if (const auto* door = r.try_get<PoolDoor>(e))
                 {
@@ -187,7 +191,7 @@ namespace rct3::simulation
         /// under cover. On a hot day food and drink is best cold, on a cold day hot; a guest too hot wants
         /// something cold to eat or drink, or a ride that splashes them. A party with a map goes for rides more
         /// often; one without now and then goes to buy one.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, float daring, const Taste& taste, float temperature, bool with_map)
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, float daring, const Taste& taste, float temperature, bool with_map, entt::entity last_ridden, entt::entity favourite)
         {
             struct Want
             {
@@ -244,8 +248,12 @@ namespace rct3::simulation
                 return std::nullopt;
             const float wildest = std::min(mood.tolerance.value + kTuning.sickness.wildest.value, taste.most.value) + daring;
             const float least_cover = rained_on ? kTuning.weather.covered.value : 0;
+            const auto appeals = [&](const Offer& o) {
+                const RideInMind ride { .excitement = { o.excitement }, .intensity = { o.intensity }, .nausea = { o.nausea }, .price = { o.price }, .worth = o.worth, .favourite = o.entity == favourite, .just_been = o.entity == last_ridden };
+                return ride_appeal(ride, taste, mood) >= kTuning.choosing.bar;
+            };
             const auto ride = [&](bool splash) {
-                const auto suits = [&](const Offer& o) { return o.kind == AttractionKind::Ride && o.intensity <= wildest && o.intensity >= taste.least.value && o.cover >= least_cover && (!splash || o.splash); };
+                const auto suits = [&](const Offer& o) { return o.kind == AttractionKind::Ride && o.intensity <= wildest && o.intensity >= taste.least.value && o.cover >= least_cover && (!splash || o.splash) && appeals(o); };
                 // The nearest of those that come to mind, so a ride behind another on the same path still gets riders.
                 if (auto found = nearest_offer(paths, at, offers, wallet, [&](const Offer& o) { return suits(o) && random::chance(dice.state, kTuning.needs.ride_considered.value); }))
                     return found;
@@ -810,7 +818,7 @@ namespace rct3::simulation
                             auto goal = going_home(r, paths, movers[i], at, dice, night, weather.storm, cash_machine, world.tick);
                             const bool with_map = party_map(r, movers[i]);
                             if (!goal)
-                                goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kTuning.night.daring.value : 0, taste_of(r, movers[i]), weather.temperature.value, with_map);
+                                goal = choose(paths, at, on_offer, want, feel, wallet, dice, weather.rain && !r.all_of<Umbrella>(movers[i]), night && age_of(r, movers[i]) == AgeGroup::Teen ? kTuning.night.daring.value : 0, taste_of(r, movers[i]), weather.temperature.value, with_map, r.all_of<Ridden>(movers[i]) ? r.get<Ridden>(movers[i]).last : entt::null, r.all_of<Favourite>(movers[i]) ? r.get<Favourite>(movers[i]).ride : entt::null);
                             // Off to a ride: whoever holds the party's map looks at it.
                             if (goal && with_map && r.all_of<CycleRide>(goal->first))
                             {

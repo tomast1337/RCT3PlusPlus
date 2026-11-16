@@ -20,10 +20,11 @@ namespace rct3::simulation
         float score = 0;
     };
 
-    /// The rides a guest has been on, each once.
+    /// The rides a guest has been on, each once, and the one they were on last.
     struct Ridden
     {
         std::vector<entt::entity> rides { };
+        entt::entity last = entt::null;
     };
 
     /// What a guest weighs up as they step off a ride.
@@ -67,5 +68,22 @@ namespace rct3::simulation
     /// nausea, the less so the happier it left them; and it is their favourite from now on when it beats the one
     /// they have, unless they are in too low a mood to think so. Returns whether it became their favourite.
     bool take_ride(Mood& mood, Favourite& favourite, entt::entity ride, std::uint64_t saved, const RideTaken& taken, std::int32_t points);
+
+    /// A ride a guest thinks of going on.
+    struct RideInMind
+    {
+        units::Share excitement { };
+        units::Share intensity { };
+        units::Share nausea { };
+        units::Money price { };
+        units::Money worth { }; ///< What a ride like it is worth to a guest
+        bool favourite = false;
+        bool just_been = false; ///< The ride they got off last
+    };
+
+    /// How much a guest in `mood` with `taste` wants to go on `ride`: for its excitement, how well its intensity
+    /// suits them, its price against its worth, and whether it would sicken them; more for their favourite, less
+    /// for the one they just got off. They go only on a ride that reaches the bar in the tuning.
+    [[nodiscard]] float ride_appeal(const RideInMind& ride, const Taste& taste, const Mood& mood);
 
 } // namespace rct3::simulation

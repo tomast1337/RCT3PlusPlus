@@ -312,7 +312,9 @@ namespace rct3::simulation
                     off[seat] = true;
                     auto& mood = r.get<Mood>(guest);
                     const float felt = felt_excitement(ride.excitement.value, r.all_of<Trains>(e), age_of(r, guest), night);
-                    auto& ridden = r.get_or_emplace<Ridden>(guest).rides;
+                    Ridden& been = r.get_or_emplace<Ridden>(guest);
+                    auto& ridden = been.rides;
+                    been.last = e;
                     const bool new_to_them = !std::ranges::contains(ridden, e);
                     if (new_to_them)
                         ridden.push_back(e);

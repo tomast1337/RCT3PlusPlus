@@ -39,6 +39,8 @@ namespace rct3::park
     inline constexpr float kMaxDistance = 400;
     inline constexpr float kMinPitch = 0.1f;
     inline constexpr float kMaxPitch = 1.5f;
+    /// The eye stays at least this high over the ground round it, so the near plane never cuts into a hill.
+    inline constexpr float kEyeAboveGround = 1.5f;
 
     [[nodiscard]] glm::vec3 eye(const ParkCamera& camera, const Seat& seat = std::nullopt);
 
@@ -109,7 +111,8 @@ namespace rct3::park
     /// Looking at the middle of the box round `points` from `yaw`, tilted `pitch` down, near enough that the
     /// box fills a square view without leaving it.
     [[nodiscard]] ParkCamera framed(std::span<const glm::vec3> points, float yaw, float pitch, float closest = kMinDistance);
-    /// Kept over the map, its target on the surface; or, `lifted`, no lower than the surface.
+    /// Kept over the map, its target on the surface; or, `lifted`, no lower than the surface. Its eye stays
+    /// kEyeAboveGround over the ground round it: with a hill behind the target, the view tilts down further.
     [[nodiscard]] ParkCamera on_ground(ParkCamera camera, const save::model::TerrainGrid& grid, bool lifted = false);
 
     /// The choices of the control mode option, in its order: how the mouse and the keys move the camera.

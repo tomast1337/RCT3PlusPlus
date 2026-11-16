@@ -318,3 +318,38 @@ TEST_CASE("what is dragged up an upright plane stays under the pointer, near and
     CHECK(std::abs(*upright_height(moved, at) - *upright_height(steep, at)) > 30);
     CHECK(std::abs(*upright_height(moved, at, 0.5f) - *upright_height(steep, at, 0.5f)) < 0.1f);
 }
+
+TEST_CASE("the eye stays above a hill behind the target, tilting down only as far as it must")
+{
+    // Flat at 0, with a hill 20 high over the rows behind the target (low Z), which the camera looks along +Z at.
+    save::model::TerrainGrid g;
+    g.width = 16;
+    g.height = 16;
+    g.tile_size_x = 4;
+    g.tile_size_z = 4;
+    g.cells.resize(16 * 16);
+    for (int row = 0; row < 4; ++row)
+        for (int col = 0; col < 16; ++col)
+            g.cells[static_cast<std::size_t>(row * 16 + col)].corners = { 20, 20, 20, 20 };
+
+    ParkCamera low;
+    low.target = { 32, 0, 40 };
+    low.yaw = 0;
+    low.pitch = 0.2f;
+    low.distance = 40;
+    CHECK(eye(low).z < 16); // Over the hill
+
+    const ParkCamera kept = on_ground(low, g);
+    const glm::vec3 e = eye(kept);
+    CHECK(e.y >= 20 + kEyeAboveGround - 1e-3f);
+    CHECK(kept.pitch > low.pitch);
+    CHECK(kept.distance == doctest::Approx(low.distance));
+
+    SUBCASE("over flat ground the tilt is left alone")
+    {
+        ParkCamera flat = low;
+        flat.distance = 10;
+        CHECK(eye(flat).z > 16);
+        CHECK(on_ground(flat, g).pitch == doctest::Approx(flat.pitch));
+    }
+}

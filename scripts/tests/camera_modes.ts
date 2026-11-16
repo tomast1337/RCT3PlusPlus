@@ -194,6 +194,37 @@ expect(
 options.set("camera_ignores_scenery", 0);
 await clickRide("advanced");
 
+// Looking at low ground with a hill behind, the eye stays above the hill instead of inside it: the view tilts
+// down further.
 options.set("camera_mode", 3);
 options.set("camera_controls", 1);
+const size = map.size();
+let hill = { col: 0, row: 0, top: -Infinity };
+for (let row = 0; row < size.height; ++row)
+    for (let col = 0; col < size.width; ++col) {
+        const top = Math.max(...map.tile(col, row)!.corners);
+        if (top > hill.top) hill = { col, row, top };
+    }
+// World units a tile, and where tile (0, 0) starts, from where two looks land.
+camera.look({ col: 10, row: 10 });
+await frames(1);
+const at10 = camera.view().target;
+camera.look({ col: 20, row: 20 });
+await frames(1);
+const at20 = camera.view().target;
+const tileSize = (at20[0] - at10[0]) / 10;
+const origin = [at10[0] - 10 * tileSize, at10[2] - 10 * tileSize];
+const groundUnder = (x: number, z: number) => {
+    const tile = map.tile(Math.floor((x - origin[0]) / tileSize), Math.floor((z - origin[1]) / tileSize));
+    return tile ? Math.max(...tile.corners) : -Infinity;
+};
+const lowRow = hill.row + 12 < size.height ? hill.row + 12 : hill.row - 12;
+camera.look({ col: hill.col + 0.5, row: lowRow + 0.5 }, { col: hill.col + 0.5, row: hill.row + 0.5, up: -3 });
+await frames(3);
+const overHill = camera.view();
+log("hill", JSON.stringify(hill), "view", JSON.stringify(overHill));
+expect(
+    overHill.eye[1] >= groundUnder(overHill.eye[0], overHill.eye[2]) + 1,
+    `the eye above the ground under it, at ${overHill.eye[1]}, ground ${groundUnder(overHill.eye[0], overHill.eye[2])}`,
+);
 quit(0);

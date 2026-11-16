@@ -344,6 +344,9 @@ namespace rct3::render
         /// The Lit shaders only: nearly clear pixels left out, so a blended picture with clear parts (a path laid
         /// on the grass) writes no depth there for the shading and shadows that read it.
         bool cut_clear = false;
+        /// The Lit shaders only: only depth is wanted, as in a shadow map. The picture is read only for the pixels a
+        /// cut-out or `cut_clear` leaves out, and nothing is lit.
+        bool depth_only = false;
     };
 
     /// What the Water shader needs besides its light and pictures.

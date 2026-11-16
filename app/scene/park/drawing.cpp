@@ -394,6 +394,7 @@ namespace rct3::scene::park
             light.shadow_map = light.shadow_map_before = { };
             light.shadow_view = { };
             light.lamps = { };
+            light.depth_only = true; // Only the map's depth is read
             draw_world(device, scene, sun.view_projection, light, { .background = false, .water = false, .see_through = false });
             device.end_pass();
         }

@@ -21,7 +21,8 @@
 // only. It needs no audio device or system audio package.
 //
 // Platform files: a source whose name (up to its first dot) ends in _windows is built only when nob itself is
-// built for Windows, and one ending in _ffmpeg only when it is not; Windows skips the FFmpeg cut too.
+// built for Windows, one ending in _linux only on Linux, and one ending in _ffmpeg only when not on Windows;
+// Windows skips the FFmpeg cut too.
 //
 // -j N (or --jobs N) limits how many compilers run at once, to keep a build from taking the whole machine;
 // without it, NOB_JOBS does the same, and by default there is one per core, fewer when memory is short.
@@ -389,15 +390,18 @@ namespace
     // find_files without the other platform's files (see the top of this file). Every source list goes through it.
     std::vector<fs::path> find_sources(const fs::path& dir, std::string_view ext)
     {
-#ifdef _WIN32
-        constexpr std::string_view kOtherPlatform = "_ffmpeg";
+#if defined(_WIN32)
+        constexpr std::array<std::string_view, 2> kOtherPlatforms = { "_ffmpeg", "_linux" };
+#elif defined(__linux__)
+        constexpr std::array<std::string_view, 1> kOtherPlatforms = { "_windows" };
 #else
-        constexpr std::string_view kOtherPlatform = "_windows";
+        constexpr std::array<std::string_view, 2> kOtherPlatforms = { "_windows", "_linux" };
 #endif
         auto out = find_files(dir, ext);
         std::erase_if(out, [&](const fs::path& p) {
             const std::string name = p.filename().string();
-            return std::string_view(name).substr(0, name.find('.')).ends_with(kOtherPlatform);
+            const std::string_view stem = std::string_view(name).substr(0, name.find('.'));
+            return std::ranges::any_of(kOtherPlatforms, [&](std::string_view other) { return stem.ends_with(other); });
         });
         return out;
     }

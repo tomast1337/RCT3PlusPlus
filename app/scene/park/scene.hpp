@@ -448,9 +448,10 @@ namespace rct3::scene::park
         /// How quickly far land fades into haze, per world unit beyond its start. The default leaves the hills
         /// round the park about half hidden; weather can raise it for misty or rainy days, or set 0 for none.
         float haze_rate = 0.0004f;
-        bool wireframe = false;     ///< Developer switch: outline the world's triangles
-        bool tint_crossing = false; ///< Developer switch: objects crossing levels show the finer blue, the coarser red
-        bool free_camera = false;   ///< Developer switch: no camera limits, and the camera leaves the ground
+        bool wireframe = false;             ///< Developer switch: outline the world's triangles
+        bool tint_crossing = false;         ///< Developer switch: objects crossing levels show the finer blue, the coarser red
+        bool free_camera = false;           ///< Developer switch: no camera limits, and the camera leaves the ground
+        std::optional<float> rain_strength; ///< Developer switch: the rain falls this hard, 0 to 1, whatever the weather
         /// Developer switch: the motion the person the info panel shows plays in place of their own, and `clock` when
         /// it began.
         struct HeldMotion

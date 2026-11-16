@@ -11,6 +11,7 @@
 #include "simulation/guests.hpp"
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 namespace rct3::scene::park
@@ -183,6 +184,41 @@ namespace rct3::scene::park
             tool_button(device, scene, assets, "Drop litter", DebugTool::DropLitter, litter);
             ImGui::SameLine();
             tool_button(device, scene, assets, "Clear all litter", DebugTool::ClearLitter);
+        }
+
+        if (ImGui::CollapsingHeader("Time and weather", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            const std::int32_t weather = std::to_underlying(scene.park.weather);
+            if (ImGui::BeginCombo("Weather", save::model::to_string(scene.park.weather)))
+            {
+                for (std::int32_t raw = 0; raw <= std::to_underlying(save::model::WeatherType::Snowstorm); ++raw)
+                {
+                    const save::model::WeatherType type = save::model::weather_type_from(raw);
+                    if (ImGui::Selectable(save::model::to_string(type), raw == weather))
+                    {
+                        scene.park.weather = type;
+                        scene.park.forecast = type;
+                    }
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::SetItemTooltip("Holds till the next forecast; the Disable weather option holds it for good");
+            float hour = scene.day_clock.time * 24;
+            if (ImGui::SliderFloat("Time of day", &hour, 0, 24, "%.1f h"))
+            {
+                // Shown at once, without a blend; the clock runs on from there, into the park's hours if outside.
+                scene.day_clock.time = scene.day_clock.shown = hour / 24;
+                scene.day_clock.fade = 0;
+            }
+            bool rain = scene.rain_strength.has_value();
+            if (ImGui::Checkbox("Set rain", &rain))
+                scene.rain_strength = rain ? std::optional(scene.weather_look.rain) : std::nullopt;
+            ImGui::SameLine();
+            ImGui::BeginDisabled(!rain);
+            float strength = scene.rain_strength.value_or(scene.weather_look.rain);
+            if (ImGui::SliderFloat("Rain strength", &strength, 0, 1) && rain)
+                scene.rain_strength = strength;
+            ImGui::EndDisabled();
         }
     }
 

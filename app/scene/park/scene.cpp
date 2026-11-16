@@ -1095,6 +1095,8 @@ namespace rct3::scene::park
             const std::int32_t weeks = simulation::park::pass_time(scene.park, game_seconds);
             simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, options.flag(config::game::GameOption::DisableWeather));
             scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed.value, scene.weather_dice);
+            if (scene.rain_strength)
+                scene.weather_look.rain = *scene.rain_strength;
             // Research, once the build lists say what each item is. It goes by the calendar, so that a calendar set
             // on by hand takes research with it.
             if (scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)

@@ -222,7 +222,7 @@ namespace rct3::scene::park
         return ahead > kFacing ? "frontslide" : ahead < -kFacing ? "backslide" : "sitslide";
     }
 
-    std::optional<rct3::park::person::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate)
+    static std::optional<rct3::park::person::PlacedPerson> pose_as_playing(const ParkScene& scene, std::size_t i, float clock, bool simulate)
     {
         const ShownPerson& shown = scene.shown_people[i];
         const bool simulated = simulate && shown.guest != entt::null;
@@ -737,6 +737,17 @@ namespace rct3::scene::park
                     const float turn = std::remainder(std::atan2(seen->x - at.position.x, seen->z - at.position.z) - at.heading.value, glm::two_pi<float>());
                     pose.head_turn = { std::clamp(turn, -kNeckTurn, kNeckTurn) * std::sin(glm::pi<float>() * into / length) };
                 }
+        }
+        return pose;
+    }
+
+    std::optional<rct3::park::person::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate)
+    {
+        std::optional<rct3::park::person::PlacedPerson> pose = pose_as_playing(scene, i, clock, simulate);
+        if (pose && scene.held_motion && scene.shown_person == i)
+        {
+            pose->motion = scene.held_motion->motion;
+            pose->time = scene.clock - scene.held_motion->since;
         }
         return pose;
     }

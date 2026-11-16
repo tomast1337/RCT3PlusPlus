@@ -287,7 +287,18 @@ declare namespace debug {
     function open(): void;
     /** Uses the Debug tab's tool `tool` with `amount`: money to add in hundredths, or how many guests or pieces of
      *  litter. Returns how many things it changed. */
-    function use(tool: "add_money" | "buy_all_land" | "finish_research", amount?: number): number;
+    function use(
+        tool:
+            | "add_money"
+            | "buy_all_land"
+            | "finish_research"
+            | "add_guests"
+            | "remove_guests"
+            | "refresh_guests"
+            | "drop_litter"
+            | "clear_litter",
+        amount?: number,
+    ): number;
 }
 
 declare namespace options {

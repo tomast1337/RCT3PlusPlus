@@ -216,7 +216,7 @@ namespace rct3::scene::park
                     }
                 }
             };
-            if (parts.terrain && still)
+            if (parts.terrain && scene.show_ground && still)
                 profiling::section("Ground", [&] {
                     draw_ground(scene.ground_pipeline, [&](const rct3::park::GroundBatch& batch) { return !parts.faded_ground || !earth(batch); });
                     draw_view_lines(device, scene, transform, light);
@@ -791,7 +791,7 @@ namespace rct3::scene::park
         if (!scene.lens.water.drops.empty())
             profiling::section("LensDrops", [&] { draw_park_lens(device, scene.lens); });
 
-        if (!interface)
+        if (!interface || !scene.show_interface)
             return;
         const profiling::Scope zone("Interface");
         scene.list.clear();

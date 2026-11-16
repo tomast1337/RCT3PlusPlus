@@ -451,6 +451,8 @@ namespace rct3::scene::park
         bool wireframe = false;             ///< Developer switch: outline the world's triangles
         bool tint_crossing = false;         ///< Developer switch: objects crossing levels show the finer blue, the coarser red
         bool free_camera = false;           ///< Developer switch: no camera limits, and the camera leaves the ground
+        bool show_ground = true;            ///< Developer switch: off leaves the ground and the paths on it undrawn
+        bool show_interface = true;         ///< Developer switch: off leaves the game's interface undrawn
         std::optional<float> rain_strength; ///< Developer switch: the rain falls this hard, 0 to 1, whatever the weather
         /// Developer switch: the motion the person the info panel shows plays in place of their own, and `clock` when
         /// it began.

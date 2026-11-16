@@ -7,6 +7,7 @@
 #include "park/person/motions.hpp"
 #include "scene/land_tools.hpp"
 #include "scene/park/scene.hpp"
+#include "scene/park/waterfalls.hpp"
 #include "simulation/debug_tools.hpp"
 #include "simulation/guests.hpp"
 
@@ -92,6 +93,17 @@ namespace rct3::scene::park
                 return simulation::scatter_litter(scene.sim, scene.gameplay, park_paths(scene), count);
             case DebugTool::ClearLitter:
                 return simulation::clear_litter(scene.sim);
+            case DebugTool::RebuildWaterfalls:
+                refresh_park_waterfalls(device, scene.waterfalls, scene.footpaths.waterfalls, scene.water.surface);
+                return scene.footpaths.waterfalls.size();
+            case DebugTool::ResetJets:
+            {
+                const std::size_t jets = scene.jets.size();
+                scene.jets.clear();
+                // The jumping fountains start again at once rather than after their rest.
+                scene.jumps_ended = 0;
+                return jets;
+            }
         }
         return 0;
     }
@@ -219,6 +231,17 @@ namespace rct3::scene::park
             if (ImGui::SliderFloat("Rain strength", &strength, 0, 1) && rain)
                 scene.rain_strength = strength;
             ImGui::EndDisabled();
+        }
+
+        if (ImGui::CollapsingHeader("Water and display", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            tool_button(device, scene, assets, "Rebuild waterfalls", DebugTool::RebuildWaterfalls);
+            ImGui::SameLine();
+            tool_button(device, scene, assets, "Reset water jets", DebugTool::ResetJets);
+            ImGui::Checkbox("Interface", &scene.show_interface);
+            ImGui::SameLine();
+            ImGui::Checkbox("Ground", &scene.show_ground);
+            ImGui::SetItemTooltip("The land and the paths on it; the render statistics are in the Profiler");
         }
     }
 

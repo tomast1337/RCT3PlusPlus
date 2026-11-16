@@ -300,7 +300,9 @@ declare namespace debug {
             | "remove_animals"
             | "refresh_animals"
             | "drop_litter"
-            | "clear_litter",
+            | "clear_litter"
+            | "rebuild_waterfalls"
+            | "reset_jets",
         amount?: number,
     ): number;
 }

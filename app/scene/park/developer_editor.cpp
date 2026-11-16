@@ -16,6 +16,7 @@
 #include <cmath>
 #include <cstring>
 #include <format>
+#include <limits>
 #include <string_view>
 #include <utility>
 
@@ -27,6 +28,7 @@ namespace rct3::scene::park
 
         constexpr std::array<std::string_view, 8> kErrands { "wandering", "heading", "queueing", "riding", "following", "waiting", "buying", "swimming" };
         constexpr std::array<std::string_view, 3> kAges { "child", "teen", "adult" };
+        constexpr int kMinutesPerDay = 24 * 60;
 
         std::string guest_name(const entt::registry& r, entt::entity guest)
         {
@@ -330,6 +332,73 @@ namespace rct3::scene::park
             }
         }
 
+        void draw_park_values(ParkScene& scene)
+        {
+            DeveloperEditor& ed = scene.editor;
+            simulation::park::ParkState& park = scene.park;
+            auto& r = scene.sim.registry;
+
+            ImGui::SeparatorText("Live values");
+            float rating = park.rating.value_or(0);
+            if (ImGui::SliderFloat("Rating", &rating, 0, 1, "%.3f"))
+                park.rating = rating;
+            ImGui::Text("Guests in the park: %d", park.guests);
+            if (park.cash)
+            {
+                ImGui::SetNextItemWidth(160);
+                (void)money_input("Cash", *park.cash);
+                ImGui::SetNextItemWidth(160);
+                if (money_input("Loan", park.loan))
+                    park.loan.value = std::max<std::int64_t>(park.loan.value, 0);
+            }
+            else
+                ImGui::TextDisabled("Money never runs out in this park");
+            if (scene.park_model.has_finance)
+            {
+                units::Money fee { scene.park_model.finance.entrance_fee };
+                ImGui::SetNextItemWidth(160);
+                if (money_input("Entrance fee", fee))
+                    scene.park_model.finance.entrance_fee = static_cast<std::int32_t>(std::clamp<std::int64_t>(fee.value, 0, std::numeric_limits<std::int32_t>::max()));
+            }
+            std::array<int, 2> hours { static_cast<int>(std::lround(scene.day_clock.park_hours.open * kMinutesPerDay)), static_cast<int>(std::lround(scene.day_clock.park_hours.close * kMinutesPerDay)) };
+            ImGui::SetNextItemWidth(160);
+            if (ImGui::SliderInt2("Opening hours (minutes)", hours.data(), 0, kMinutesPerDay))
+            {
+                scene.day_clock.park_hours = simulation::opening_hours(hours[0], hours[1]);
+                simulation::change_mode(scene.day_clock, scene.day_clock.mode);
+                scene.park_model.park.opening_minutes = hours[0];
+                scene.park_model.park.closing_minutes = hours[1];
+            }
+            for (auto [e, gate] : r.view<simulation::ParkGate>().each())
+            {
+                ImGui::PushID(static_cast<int>(entt::to_integral(e)));
+                ImGui::Checkbox("Gate closed", &gate.closed);
+                ImGui::PopID();
+            }
+
+            ImGui::SeparatorText("Guests");
+            ImGui::SetNextItemWidth(100);
+            ImGui::InputInt("##groups", &ed.groups);
+            ed.groups = std::clamp(ed.groups, 1, 500);
+            ImGui::SameLine();
+            const auto gates = r.view<const simulation::ParkGate>();
+            if (ImGui::Button("Let groups in at the gate") && !gates.empty())
+                for (std::int32_t k = 0; k < ed.groups; ++k)
+                    (void)simulation::admit_party(scene.sim, scene.looks, r.get<const simulation::ParkGate>(gates.front()).node);
+            ImGui::SetItemTooltip("Free of the entrance fee");
+
+            ImGui::SeparatorText("Everyone at once");
+            ImGui::SetNextItemWidth(100);
+            ImGui::InputDouble("##cash", &ed.cash_for_all, 0, 0, "%.2f");
+            ImGui::SameLine();
+            if (ImGui::Button("Give cash to everyone"))
+                for (auto [e, wallet] : r.view<simulation::Wallet>(entt::exclude<simulation::Left>).each())
+                    wallet.cash.value += std::llround(ed.cash_for_all * 100);
+            if (ImGui::Button("Make everyone happy and healthy"))
+                for (const entt::entity e : r.view<simulation::Mood, simulation::Needs>())
+                    simulation::make_happy_and_healthy(r, e);
+        }
+
     } // namespace
 
     void pick_guest(ParkScene& scene, entt::entity guest)
@@ -354,6 +423,11 @@ namespace rct3::scene::park
             ImGui::BeginChild("guest");
             draw_guest_page(scene, strings);
             ImGui::EndChild();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Park"))
+        {
+            draw_park_values(scene);
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();

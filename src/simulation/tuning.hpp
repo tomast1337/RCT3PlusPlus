@@ -25,7 +25,6 @@ namespace rct3::simulation::tuning
         units::Share pressing { 0.7f };                             ///< A need this high spoils the guest's mood
         units::Share want { 0.55f };                                ///< A need this high sends the guest to a shop
         units::Chance ride_chance { 0.25 };                         ///< Of a guest with no pressing need going for a ride
-        units::Chance ride_considered { 0.5 };                      ///< Of each ride that suits being thought of when choosing one
         units::Share max_nausea { 0.6f };                           ///< Guests feeling sicker skip rides
         units::Seconds idle { 5 };                                  ///< Between thoughts while wandering
         units::Share treat { 0.05f };                               ///< Happiness from buying what was wanted
@@ -65,8 +64,10 @@ namespace rct3::simulation::tuning
         float bargain = 0.2f;    ///< For a free ride; none for one at its worth, as much off at twice that
         float sickening = 0.6f;  ///< Off for each share of nausea past what their stomach takes in comfort
         float favourite = 0.3f;
-        float again = 0.25f; ///< Off for the ride they just got off: they would rather try another
-        float bar = 0.15f;   ///< Below this a guest does not go on a ride at all
+        float again = 0.25f;  ///< Off for the ride they just got off: they would rather try another
+        float bar = 0.15f;    ///< Below this a guest does not go on a ride at all
+        float reach = 25;     ///< Tiles away, as the crow flies, past which a guest does not think of a ride
+        float map_reach = 60; ///< And with a park map in hand
     };
 
     /// Guests showing how a ride left them as they step off.

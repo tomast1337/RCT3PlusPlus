@@ -6,6 +6,7 @@
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/enjoyment.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
 #include "simulation/parties.hpp"
@@ -311,8 +312,12 @@ namespace rct3::simulation
                     off[seat] = true;
                     auto& mood = r.get<Mood>(guest);
                     const float felt = felt_excitement(ride.excitement.value, r.all_of<Trains>(e), age_of(r, guest), night);
-                    mood.happiness.value = clamp01(mood.happiness.value + felt * kTuning.needs.ride_cheer);
-                    mood.nausea.value = clamp01(mood.nausea.value + ride.nausea.value * kTuning.sickness.ride_nausea * (kTuning.sickness.tolerance_ceiling - mood.tolerance.value) * (eating(r, guest) ? kTuning.sickness.full_stomach.value : 1));
+                    auto& ridden = r.get_or_emplace<Ridden>(guest).rides;
+                    const bool new_to_them = !std::ranges::contains(ridden, e);
+                    if (new_to_them)
+                        ridden.push_back(e);
+                    const RideTaken taken { .excitement = { felt }, .intensity = ride.intensity, .nausea = ride.nausea, .price = attraction.price, .worth = ride_worth(ride), .waited = riding.queued, .new_to_them = new_to_them, .eating = eating(r, guest) };
+                    take_ride(mood, r.get_or_emplace<Favourite>(guest), e, attraction.saved, taken, enjoyment_points(taken, taste_of(r, guest), mood));
                     // shortcut: soaked as they get off, not the moment their car splashes (park/car_splashes.hpp);
                     // upgrade when the simulation follows its cars through the water.
                     if (ride.splash)
@@ -935,6 +940,13 @@ namespace rct3::simulation
         if (!coaster || !night)
             return excitement;
         return excitement * (age == AgeGroup::Teen ? 1 + kTuning.night.thrill.value : 1 - kTuning.night.dread.value);
+    }
+
+    units::Money ride_worth(const CycleRide& ride)
+    {
+        const auto& k = kTuning.arrivals;
+        const float worth = k.ride_worth.value * (ride.excitement.value + k.intensity_worth.value * ride.intensity.value);
+        return { std::lround(ride.intensity.value > k.too_intense.value ? worth / 2 : worth) };
     }
 
 } // namespace rct3::simulation

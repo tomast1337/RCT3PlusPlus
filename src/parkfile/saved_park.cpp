@@ -2,6 +2,7 @@
 #include "parkfile/saved_park.hpp"
 
 #include "parkfile/binary.hpp"
+#include "simulation/enjoyment.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/staff/care.hpp"
@@ -128,8 +129,14 @@ namespace rct3::parkfile
             if (g.look)
             {
                 in_park[static_cast<std::size_t>(*g.look)] = true;
-                // The rest of their money goes with their page, where the original keeps it.
-                model.guests[static_cast<std::size_t>(*g.look)].cash = kept_cash(wallet);
+                // The rest of their money goes with their page, where the original keeps it; so does their favourite.
+                save::model::Guest& page = model.guests[static_cast<std::size_t>(*g.look)];
+                page.cash = kept_cash(wallet);
+                if (const auto* favourite = r.try_get<Favourite>(e); favourite != nullptr && favourite->saved != 0)
+                {
+                    page.favourite_ride = { favourite->saved };
+                    page.favourite_ride_rating = favourite->score;
+                }
             }
         }
         for (std::size_t i = 0; i < model.guests.size(); ++i)
@@ -161,8 +168,11 @@ namespace rct3::parkfile
             Wallet& wallet = r.emplace<Wallet>(e, g.cash);
             if (g.look && static_cast<std::size_t>(*g.look) < people.model.guests.size())
             {
-                const save::model::Cash& c = people.model.guests[static_cast<std::size_t>(*g.look)].cash;
+                const save::model::Guest& page = people.model.guests[static_cast<std::size_t>(*g.look)];
+                const save::model::Cash& c = page.cash;
                 wallet = { .cash = { g.cash }, .bank = { c.bank }, .withdrawn = { c.withdrawn }, .spent = { c.total_spent }, .spent_entry = { c.spent_park_entry }, .spent_rides = { c.spent_rides }, .spent_food = { c.spent_food }, .spent_drink = { c.spent_drink }, .spent_souvenirs = { c.spent_souvenirs } };
+                if (page.favourite_ride)
+                    r.emplace<Favourite>(e, Favourite { .ride = entt::null, .saved = page.favourite_ride.id, .score = page.favourite_ride_rating });
             }
             if (g.taste)
                 r.emplace<Taste>(e, *g.taste);

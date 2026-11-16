@@ -29,7 +29,32 @@ namespace rct3::simulation::tuning
         units::Share max_nausea { 0.6f };                           ///< Guests feeling sicker skip rides
         units::Seconds idle { 5 };                                  ///< Between thoughts while wandering
         units::Share treat { 0.05f };                               ///< Happiness from buying what was wanted
-        float ride_cheer = 0.3f;                                    ///< Happiness a ride gives for each point of excitement its rider felt
+    };
+
+    /// The points a guest gives a ride they just got off, and what those do to them.
+    struct Enjoyment
+    {
+        /// Fitted to saves: a saved guest's favourite-ride score less 25 for each point of that ride's excitement
+        /// rating leaves a whole number of points in steps of five, between about -130 and 140, for over 8,000
+        /// guests of eight parks. So a favourite scores this for each share of excitement, plus its points.
+        float favourite_per_excitement = 250;
+        units::Share slack { 0.1f };            ///< How far past their range a ride still nearly suits a guest
+        units::Share happy_slack { 0.2f };      ///< And more, at full happiness: a happy guest takes more in their stride
+        std::int32_t suited = 60;               ///< For a ride whose intensity and nausea both suit them
+        std::int32_t per_miss = 12;             ///< Less for each step either is from suiting them
+        std::int32_t way_off = 40;              ///< Less again when either is way off
+        std::int32_t fair_price = 35;           ///< For a ride that cost no more than it is worth
+        std::int32_t dear_price = -40;          ///< For one that cost twice that or more; in between in step
+        std::int32_t quick = 15;                ///< For a ride with no wait
+        units::Seconds per_point { 10 };        ///< Of waiting, that takes a point off that
+        std::int32_t longest_wait = -30;        ///< The least any wait gives
+        std::int32_t new_ride = 15;             ///< For a ride they have not been on before
+        float happiness_per_point = 1.0f / 300; ///< Happiness for each point
+        units::Share content { 0.45f };         ///< Happiness below which a guest takes no ride for their favourite
+        units::Share least_queasy { 0.2f };     ///< A ride sickens a guest it left happy only this much of their unhappiness
+        units::Share most_queasy { 0.8f };      ///< And a miserable one this much
+        units::Share stomach_reach { 0.6f };    ///< Nausea a stomach takes in comfort, under its tolerance...
+        units::Share stomach_margin { 0.1f };   ///< ...and over it
     };
 
     /// Guests showing how a ride left them as they step off.
@@ -724,6 +749,7 @@ namespace rct3::simulation::tuning
     struct Tuning
     {
         Needs needs;
+        Enjoyment enjoyment;
         Walking walking;
         Gaits gaits;
         Reactions reactions;

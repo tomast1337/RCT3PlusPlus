@@ -522,7 +522,7 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     CHECK(world.registry.get<simulation::Stride>(staff[2]).to == tile); // Off the paths: from the nearest walkway
 }
 
-TEST_CASE("guests the park had on a bench, at a view, a water cannon or a show go back to it, with what they carried and their map")
+TEST_CASE("guests the park had on a bench, at a view, a water cannon or a show go back to it, with what they carried, their map and umbrella")
 {
     simulation::SimWorld world;
     const auto tile = world.paths.add({ 2, 1, 0 });
@@ -557,7 +557,8 @@ TEST_CASE("guests the park had on a bench, at a view, a water cannon or a show g
     people.guests[5].consuming_amount = 0.5f;
     people.carried_items.push_back({ .id = 900, .kind_symbol = "Cola:cid", .drink = 0.3f });
     people.carried_items.push_back({ .id = 901, .kind_symbol = "Cup:cid" });
-    people.holders.push_back({ .id = 800, .owner = { 6 }, .left_hand = { 900 }, .left_pocket = { 901 } });
+    people.carried_items.push_back({ .id = 903, .kind_symbol = "Umbrella:cid" });
+    people.holders.push_back({ .id = 800, .owner = { 6 }, .left_hand = { 900 }, .left_pocket = { 901 }, .umbrella = { 903 } });
     people.carried_items.push_back({ .id = 902, .kind_symbol = "Map:cid" });
     people.holders.push_back({ .id = 801, .owner = { 7 }, .left_hand = { 902 }, .right_pocket = { 901 } });
     rct3::park::CarriedKinds kinds;
@@ -592,6 +593,41 @@ TEST_CASE("guests the park had on a bench, at a view, a water cannon or a show g
     CHECK(pocket.pocketed == 1);
     CHECK(r.all_of<simulation::ParkMap>(guests[6]));
     CHECK_FALSE(r.all_of<simulation::ParkMap>(guests[5]));
+    CHECK(r.all_of<simulation::Umbrella>(guests[5]));
+    CHECK_FALSE(r.all_of<simulation::Umbrella>(guests[6]));
+}
+
+TEST_CASE("a guest the park had heading for a bin puts their empties in it, as many as fit")
+{
+    simulation::SimWorld world;
+    const auto tile = world.paths.add({ 2, 1, 0 });
+    const glm::vec3 middle = world.paths.centre(tile);
+    auto& r = world.registry;
+    const save::model::PlacedObject placed { .id = 1, .col = 2, .row = 1 };
+    const entt::entity bin = simulation::add_path_item(world, placed, simulation::PathItemKind::Bin);
+    r.get<simulation::Bin>(bin) = { .capacity = 2, .contents = 1 };
+    const std::array<save::model::UsePoint, 1> points { { { .id = 101, .object_ref = 1 } } };
+
+    save::model::PeopleModel people;
+    save::model::Guest& g = people.guests.emplace_back();
+    g.in_park = true;
+    g.person.id = 1;
+    g.person.state = static_cast<save::model::PersonState>(save::model::GuestState::HeadingForBin);
+    g.person.state_target.id = 101;
+    g.person.position = { middle.x + 1, 0, middle.z };
+    people.carried_items.push_back({ .id = 900, .kind_symbol = "Cup:cid" });
+    people.holders.push_back({ .id = 800, .owner = { 1 }, .left_hand = { 900 }, .left_pocket = { 900 } });
+    rct3::park::CarriedKinds kinds;
+    kinds.items.push_back({ .symbol = "Cup:cid", .empty = true });
+
+    const auto guests = simulation::import_guests(world, people);
+    simulation::start_guests(world);
+    CHECK(simulation::resume_saved_uses(world, people, guests, { }, points, kinds) == 1);
+    CHECK(r.get<simulation::Bin>(bin).contents == 2);
+    // The bin is full with the one in hand; the pocketed one stays.
+    const auto& left = r.get<simulation::Carried>(guests[0]);
+    CHECK_FALSE(left.held);
+    CHECK(left.pocketed == 1);
 }
 
 TEST_CASE("passport stamps, the gift and the park's passport rules come back from a saved park")

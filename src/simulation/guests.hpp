@@ -212,6 +212,10 @@ namespace rct3::simulation
     /// Their carried rubbish is gone once nothing is left of it.
     void free_hand(entt::registry& r, entt::entity guest, Carried& carried, NodeId at);
 
+    /// A guest puts the empty in their hand, then those in their pockets, into `bin`, as many as it has room for.
+    /// Their carried rubbish is gone once nothing is left of it.
+    void bin_empties(entt::registry& r, entt::entity guest, Carried& carried, entt::entity bin);
+
     /// A guest is sick on the path tile `at`, and feels better for it. Returns the mess.
     entt::entity be_sick(entt::registry& r, entt::entity guest, NodeId at);
 

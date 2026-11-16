@@ -7,6 +7,7 @@
 
 #include <doctest/doctest.h>
 #include <functional>
+#include <set>
 
 using namespace rct3::simulation;
 
@@ -101,4 +102,34 @@ TEST_CASE("without a way from any spawn point to the gate, guests come in at the
     const entt::entity first = road.leader([](entt::entity) { return true; });
     CHECK_FALSE(r.all_of<Outside>(first));
     CHECK(road.from(first, road.gate) < 2.0f);
+}
+
+TEST_CASE("a park with a second gate draws no more guests, who head for the gate nearest their spawn point")
+{
+    const auto parties_in = [](bool second_gate) {
+        Road road { 1000 };
+        auto& r = road.park.world().registry;
+        entt::entity near = entt::null;
+        if (second_gate)
+        {
+            near = r.create();
+            r.emplace<ParkGate>(near, ParkGate { road.park.world().paths.find({ 4, 0, 0 }).value() });
+        }
+        std::set<entt::entity> seen;
+        std::size_t heading_near = 0;
+        for (int second = 0; second < 6000; ++second)
+        {
+            road.park.run_until([] { return false; }, 1);
+            for (const entt::entity p : r.view<Party>())
+                if (const entt::entity leader = r.get<Party>(p).leader; r.all_of<Outside>(leader) && seen.insert(leader).second)
+                    heading_near += r.get<Errand>(leader).target == near ? 1 : 0;
+        }
+        return std::pair { seen.size(), heading_near };
+    };
+    const auto [alone, none_near] = parties_in(false);
+    const auto [with_second, near] = parties_in(true);
+    REQUIRE(alone > 0);
+    // Not to the party: who leaves when, and so how many more the park draws, shifts with the nearer gate.
+    CHECK(static_cast<double>(with_second) < 1.25 * static_cast<double>(alone) + 1);
+    CHECK(near == with_second);
 }

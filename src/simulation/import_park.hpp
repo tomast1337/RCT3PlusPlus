@@ -178,7 +178,7 @@ namespace rct3::simulation
     /// Sets SceneryNear from `objects`, each adding what `weight_of` gives it to the path tiles within reach of
     /// its tile. Call after import_paths.
     void import_scenery(SimWorld& world, std::span<const save::model::PlacedObject> objects, const std::function<float(const save::model::PlacedObject&)>& weight_of);
-    /// Adds `object`, of `weight`, to SceneryNear.
+    /// Adds `object`, of `weight`, to SceneryNear; a negative weight takes it away again, as it is removed.
     void add_scenery(SimWorld& world, const save::model::PlacedObject& object, float weight);
     /// The objects `sight_of` gives a kind, each on the path tile it stands on or one beside it, for guests to
     /// react to. Returns how many came over. Call after import_paths.

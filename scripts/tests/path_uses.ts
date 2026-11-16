@@ -7,7 +7,8 @@
 //   - buy drinks and, with no bin anywhere, drop the empties they carry too long, so litter lies on the paths;
 //   - put their empties in a bin once one stands on the road;
 //   - short of cash, draw more at the cash machine;
-//   - stop now and then to watch the fire, though it stands beside the road, not on it.
+//   - stop now and then to watch the fire, though it stands beside the road, not on it;
+//   - know the fire no more once it is pulled down.
 //
 //   ./nob script scripts/tests/path_uses.ts -- --no-audio
 
@@ -169,4 +170,15 @@ daylight();
 camera.look({ col: w.col, row: w.row, up: 0.8 }, { col: w.col + 1.5, row: w.row + 1.5, up: 2.5 });
 await frames(10);
 await screenshot("path_uses_fire");
+
+// Pulled down from its window, the fire is at once nothing guests know.
+const fire = must(
+    park.pathItems().find((i) => i.kind === "sight"),
+    "the fire among the path items",
+);
+park.showObject(fire.object);
+await frames(3);
+await ui.click("info/Attraction_General_Delete");
+await frames(3);
+expect(!park.pathItems().some((i) => i.object === fire.object), "the fire gone from the path items");
 quit(0);

@@ -336,8 +336,6 @@ namespace rct3::simulation
 
     /// In the registry's context: how much scenery stands round each path tile, by NodeId, as weighed by
     /// scenery_weight. Tiles laid since count as bare.
-    /// shortcut: scenery taken away still counts till the park loads again; upgrade when removal reaches the
-    /// simulation.
     struct SceneryNear
     {
         std::vector<float> by_node;

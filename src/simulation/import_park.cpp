@@ -1212,14 +1212,14 @@ namespace rct3::simulation
 
     void add_scenery(SimWorld& world, const save::model::PlacedObject& object, float weight)
     {
-        if (weight <= 0 || object.hidden)
+        if (weight == 0 || object.hidden)
             return;
         const auto& nodes = world.paths.nodes();
         auto& near = world.registry.ctx().emplace<SceneryNear>().by_node;
         near.resize(std::max(near.size(), nodes.size()), 0.0f);
         for (std::size_t n = 0; n < nodes.size(); ++n)
             if (std::abs(nodes[n].tile.col - object.col) <= kTuning.surroundings.reach && std::abs(nodes[n].tile.row - object.row) <= kTuning.surroundings.reach)
-                near[n] += weight;
+                near[n] = std::max(near[n] + weight, 0.0f); // A tile laid after it was placed never counted it
     }
 
     std::size_t import_sights(SimWorld& world, std::span<const save::model::PlacedObject> objects, const std::function<std::optional<PathItemKind>(const save::model::PlacedObject&)>& sight_of)

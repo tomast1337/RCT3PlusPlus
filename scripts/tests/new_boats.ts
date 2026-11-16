@@ -35,6 +35,7 @@ expect(middle !== undefined, "open water in the park");
 log("dock at", JSON.stringify(middle));
 
 const ride = rides.list().length;
+const boatRide = () => tracked(rides.list()[ride], "the boat ride");
 expect(build.pick("tracks/TrackedRides/RowingBoats/RowingBoats", "RowingBoats"), "rowing boats to build");
 await until(() => build.construction() !== undefined, 600, "the construction panel");
 await frames(10);
@@ -63,31 +64,27 @@ expect(station !== undefined, "a dock piece to start with");
 await frames(10);
 await pointer.click(at.x, at.y);
 await frames(30);
-expect((rides.list()[ride].pieces ?? 0) === 1, `the first dock piece laid, not ${rides.list()[ride].pieces}`);
+expect(boatRide().pieces === 1, `the first dock piece laid, not ${boatRide().pieces}`);
 for (let n = 2; n <= 3; ++n) {
     await ui.click(station!);
     await frames(10);
-    if ((rides.list()[ride].pieces ?? 0) < n) {
+    if (boatRide().pieces < n) {
         await ui.click(station!);
         await frames(10);
     }
 }
-log("dock", JSON.stringify(rides.list()[ride].track), "pieces", rides.list()[ride].pieces);
+log("dock", JSON.stringify(boatRide().track), "pieces", boatRide().pieces);
 await ui.click("placing/close");
 await frames(10);
 
 // No boats till it is tested; then they wait at the dock and set off over the water.
-expect((rides.list()[ride].cars?.length ?? 0) === 0, "no boats before the ride is tested");
+expect(boatRide().cars.length === 0, "no boats before the ride is tested");
 const refused = rides.setState(ride, "testing");
 expect(refused == null, `the ride tested, not refused with ${refused}`);
-await until(
-    () => rides.list()[ride].joined && (rides.list()[ride].cars?.length ?? 0) > 0,
-    600,
-    "boats at the new dock",
-);
-const cars = () => rides.list()[ride].cars!;
+await until(() => boatRide().joined && boatRide().cars.length > 0, 600, "boats at the new dock");
+const cars = () => boatRide().cars;
 const docked = cars();
-log("boats", docked.length, "trains", rides.list()[ride].trains, JSON.stringify(docked));
+log("boats", docked.length, "trains", boatRide().trains, JSON.stringify(docked));
 
 // A path from the west shore out over the lake south of the dock, laid at the shore's height after the boats are out.
 // Boats keep off its tiles when it is less than a metre over the water, and may pass under it when higher.
@@ -113,7 +110,7 @@ log("bridge", JSON.stringify(map.paths().slice(laid)));
 const bridge = map
     .paths()
     .slice(laid)
-    .filter((p) => p.raised && water(p.col, p.row) !== undefined);
+    .filter((p): p is PathPiece & { raised: true } => p.raised && water(p.col, p.row) !== undefined);
 expect(bridge.length > 0, "a path laid out over the lake");
 
 await ui.click("bar/Top_FastForward");
@@ -129,7 +126,7 @@ const low_paths = new Set(
         .paths()
         .filter((p) => {
             const level = water(p.col, p.row);
-            return level !== undefined && p.raised && (p.height ?? 0) < level + 1;
+            return level !== undefined && p.raised && p.height < level + 1;
         })
         .map((p) => `${p.col},${p.row}`),
 );
@@ -137,7 +134,7 @@ log(
     "paths low over the water",
     low_paths.size,
     "bridge clear of the water by",
-    (bridge[0].height ?? 0) - water(bridge[0].col, bridge[0].row)!,
+    bridge[0].height - water(bridge[0].col, bridge[0].row)!,
 );
 let off_water = 0;
 let under_paths = 0;
@@ -167,6 +164,6 @@ await ui.click("demolish_question/content/GUI2MiniDialog_Confirm");
 await frames(10);
 const gone = rides.list()[ride];
 expect(
-    gone.demolished && (gone.cars?.length ?? 0) === 0,
+    gone.demolished && (gone.kind !== "tracked" || gone.cars.length === 0),
     `the ride and its boats gone (${JSON.stringify({ ...gone, track: undefined })})`,
 );

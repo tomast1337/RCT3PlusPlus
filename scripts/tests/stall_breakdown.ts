@@ -34,6 +34,12 @@ await ui.click("info/close");
 const at = stalls.list().findIndex((s) => s.symbol === `${kind!.symbol}:sta`);
 expect(at >= 0, "the stall placed");
 const stall = () => stalls.list()[at];
+/** The stall once the park runs it. */
+const joined = () => {
+    const s = stall();
+    if (!s.joined) throw new Error("expected the stall run by the park");
+    return s;
+};
 const site = stall().site!;
 const kFront: [number, number][] = [
     [0, -1],
@@ -61,13 +67,13 @@ await until(() => stall().joined === true, 60, "the stall joined by the path at 
 // Opened, as its window's tab does: a new stall starts shut.
 const refused = stalls.setState(at, "open");
 expect(!refused, `the stall opened, not refused with ${refused}`);
-await until(() => stall().selling === true, 600, "the stall selling");
+await until(() => joined().selling === true, 600, "the stall selling");
 log("stall", stall().name, JSON.stringify(site));
 
 const told = (key: string) => park.messages().filter((m) => m.key === key).length;
 expect(stalls.breakDown(at), "the stall broken down");
 await until(() => told("FoodStallBrokenMessage") === 1, 60, "the player told the stall broke down");
-expect(stall().broken === true && stall().selling === false, "the stall shut while broken");
+expect(joined().broken === true && joined().selling === false, "the stall shut while broken");
 
 // A mechanic hired, put on the far end of its path.
 const near = { col: far[0], row: far[1] };
@@ -98,18 +104,18 @@ await until(
         const m = mechanic();
         return (
             (m.state !== undefined && Math.hypot(m.col - (site.col + 0.5), m.row - (site.row + 0.5)) < 1.6) ||
-            !stall().broken
+            !joined().broken
         );
     },
     600,
     "the mechanic at the stall",
 );
-expect(stall().broken === true, "the stall still broken as the mechanic sets to work");
+expect(joined().broken === true, "the stall still broken as the mechanic sets to work");
 stalls.show(at);
 await frames(30);
 await screenshot("stall_breakdown_mending");
 
-await until(() => !stall().broken && stall().selling === true, 3000, "the stall mended and selling again");
+await until(() => !joined().broken && joined().selling === true, 3000, "the stall mended and selling again");
 await until(() => told("RideFixedMessage") === 1, 60, "the player told the stall was fixed");
 await frames(10);
 await screenshot("stall_breakdown_fixed");

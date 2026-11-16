@@ -47,12 +47,12 @@ expect(
 await pointer.click(0.4, 0.5);
 await frames(20);
 const ride = build.construction()!.ride;
-expect(rides.list()[ride].pieces === 1, "the first piece laid");
+expect(tracked(rides.list()[ride], "the ride").pieces === 1, "the first piece laid");
 await screenshot("laid_raised");
 
 await ui.click("placing/body/construction/demolish");
 await frames(10);
-expect(rides.list()[ride].pieces === 0, "the first piece demolished");
+expect(tracked(rides.list()[ride], "the ride").pieces === 0, "the first piece demolished");
 await screenshot("demolished"); // Its price floats up, paid back
 pointer.move(0.35, 0.6);
 await frames(10);
@@ -63,5 +63,5 @@ expect(
 );
 await pointer.click(0.35, 0.6);
 await frames(20);
-expect(rides.list()[ride].pieces === 1, "the first piece laid again");
+expect(tracked(rides.list()[ride], "the ride").pieces === 1, "the first piece laid again");
 await screenshot("laid_again");

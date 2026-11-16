@@ -140,7 +140,7 @@ await park.advanceUntil(
     `a line at ${name(broken![1])}`,
 );
 // Those queueing in swimwear nearer this slide's platform than any other's.
-const platform = (ride: number) => rides.list()[ride].platformSquares![0];
+const platform = (ride: number) => tracked(rides.list()[ride], "the ride").platformSquares[0];
 const line = (ride: number) =>
     people.list().filter((p): p is WalkedPerson => {
         if (p.state !== "queueing") return false;

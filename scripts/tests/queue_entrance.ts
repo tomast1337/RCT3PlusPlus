@@ -72,7 +72,8 @@ await ui.click(`footpaths/body/${style}`);
 await frames(2);
 const queued = (c: number, r: number) => map.paths().some((p) => p.col === c && p.row === r && p.queue);
 /** The line of the queue on tile (c, r), if it is on one. */
-const line = (c: number, r: number) => map.paths().find((p) => p.col === c && p.row === r && p.queue)?.line;
+const line = (c: number, r: number) =>
+    map.paths().find((p): p is PathPiece & { queue: true } => p.col === c && p.row === r && p.queue)?.line;
 
 // Along the entrance's side: not joined.
 await look_down(col + 1, last + 1, 25);
@@ -115,7 +116,7 @@ log(
     JSON.stringify(
         map
             .paths()
-            .filter((p) => p.queue)
+            .filter((p): p is PathPiece & { queue: true } => p.queue)
             .map((p) => [p.col, p.row, p.line]),
     ),
 );

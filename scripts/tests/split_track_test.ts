@@ -25,7 +25,7 @@ pointer.move(at.x, at.y);
 await frames(30);
 await pointer.click(at.x, at.y);
 await frames(30);
-expect(rides.list()[ride].pieces === 2, "both halves of the station laid");
+expect(tracked(rides.list()[ride], "the ride").pieces === 2, "both halves of the station laid");
 await frames(60);
 await screenshot("station");
 
@@ -35,8 +35,11 @@ expect(build.construction()?.split === 2, "the left track alone next");
 expect(build.construction()?.ghost === true, "a piece of the left track alone offered");
 await ui.click("placing/body/construction/AttractionEditor_IconCurve0");
 await frames(10);
-expect(rides.list()[ride].pieces === 3, "a piece laid on the left track only");
-expect(rides.list()[ride].track?.at(-1)?.endsWith("_l:tks") === true, "the piece laid of the left track alone");
+expect(tracked(rides.list()[ride], "the ride").pieces === 3, "a piece laid on the left track only");
+expect(
+    tracked(rides.list()[ride], "the ride").track.at(-1)?.endsWith("_l:tks") === true,
+    "the piece laid of the left track alone",
+);
 camera.look({ col: col + 0.5, row: row + 0.5 }, { col: col + 0.5, row: row + 6.5, up: 15 });
 await frames(60);
 await screenshot("left_alone");

@@ -109,8 +109,12 @@ expect(
 // Its window's items page takes items off the menu and puts them back. Bare, it cannot open.
 const at = stalls.list().findIndex((s) => s.symbol === `${kind.symbol}:sta`);
 const menu = () => stalls.list()[at];
+const selling = () => {
+    const stall = menu();
+    return stall.joined && stall.selling;
+};
 const opened = stalls.setState(at, "open");
-expect(opened == null && menu().selling === true, `it opened (${opened}, ${JSON.stringify(menu())})`);
+expect(opened == null && selling(), `it opened (${opened}, ${JSON.stringify(menu())})`);
 await ui.click("info/Stall_ItemsIcon");
 await frames(2);
 await ui.click("info/body/StallMenu/Stall_Synchronize");
@@ -172,8 +176,8 @@ expect(
         back.items[0].price === kind.goods[0].price,
     `its first good dragged on before it (${JSON.stringify(back)})`,
 );
-expect(back.price === kind.goods[0].price, "the park selling it at that item's price");
-expect(stalls.setState(at, "open") == null && menu().selling === true, "it opened again");
+expect(back.joined && back.price === kind.goods[0].price, "the park selling it at that item's price");
+expect(stalls.setState(at, "open") == null && selling(), "it opened again");
 // The park's objects are built again a few times a second, beside the frame; a frame here takes far less.
 camera.look({ col: road!.col + 1.5, row: road!.row + 0.5 }, { col: road!.col + 1.5, row: road!.row + 4.5, up: 8 });
 await frames(300);

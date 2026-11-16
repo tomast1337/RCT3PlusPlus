@@ -218,7 +218,7 @@ const flag = (what: string, p: Seen, more = "") =>
         `${p.name} at ${p.col.toFixed(2)} ${p.row.toFixed(2)} ${p.up.toFixed(2)}${more}`,
     ]);
 // Going in and out at a changing room's door, and on to a slide's platform from the paving beside it.
-const platforms = rides.list().flatMap((r) => r.platformSquares ?? []);
+const platforms = rides.list().flatMap((r) => (r.kind === "tracked" ? r.platformSquares : []));
 const off_pool_ok = (col: number, row: number) =>
     pools.rooms.some((m) => m.col === col && m.row === row) || platforms.some((p) => p.col === col && p.row === row);
 let last = walkers();

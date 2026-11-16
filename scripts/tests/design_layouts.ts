@@ -44,9 +44,9 @@ for (const [overlay, kind, place, pieces, name] of designs) {
         if (!c.ghost || c.clashes) continue;
         await pointer.click(...at);
         await frames(30);
-        laid = (rides.list()[ride].pieces ?? 0) > 0;
+        laid = tracked(rides.list()[ride], "the ride").pieces > 0;
     }
-    const r = rides.list()[ride];
+    const r = tracked(rides.list()[ride], "the ride");
     expect(r.pieces === pieces, `the ${kind} design laid whole, ${pieces} pieces, not ${r.pieces}`);
     const heights = map
         .objects()

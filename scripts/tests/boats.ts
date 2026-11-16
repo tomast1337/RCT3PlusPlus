@@ -20,11 +20,14 @@ await frames(10);
 const hires = rides
     .list()
     .map((r, i) => ({ r, i }))
-    .filter(({ r }) => kBoats.test(r.symbol) && (r.cars?.length ?? 0) > 0);
+    .filter(
+        (h): h is { r: RideInfo & { kind: "tracked" }; i: number } =>
+            h.r.kind === "tracked" && kBoats.test(h.r.symbol) && h.r.cars.length > 0,
+    );
 expect(hires.length > 0, "a boat hire ride in the park");
-log("boat rides", hires.map(({ r }) => `${r.symbol} (${r.cars!.length} boats)`).join(", "));
+log("boat rides", hires.map(({ r }) => `${r.symbol} (${r.cars.length} boats)`).join(", "));
 const bumping = (i: number) => /bumperboat/i.test(rides.list()[i].symbol);
-const cars = (i: number) => rides.list()[i].cars!;
+const cars = (i: number) => tracked(rides.list()[i], "a boat ride").cars;
 const tile = (c: { col: number; row: number }) => map.tile(Math.floor(c.col), Math.floor(c.row));
 const water_at = (c: { col: number; row: number }) => tile(c)?.water !== undefined;
 const docked = hires.map(({ i }) => cars(i));

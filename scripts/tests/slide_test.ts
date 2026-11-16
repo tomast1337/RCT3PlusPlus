@@ -73,7 +73,9 @@ const kSlides = /^(BodySlide|RingSlide|ProSlide|MasterBlaster):/;
 const slides = () =>
     rides
         .list()
-        .flatMap((r, i) => (!r.flat && !r.demolished && (r.pieces ?? 0) > 0 && kSlides.test(r.symbol) ? [i] : []));
+        .flatMap((r, i) =>
+            r.kind === "tracked" && !r.demolished && r.pieces > 0 && kSlides.test(r.symbol) ? [i] : [],
+        );
 
 await frames(300);
 let names: string[] = [];
@@ -116,8 +118,8 @@ if (park.loaded()) {
         expect(spot && (build.construction()!.refusal === "" || (await byPool(pick))), `clear ground for the ${kind}`);
         await pointer.click(...here);
         await frames(30);
-        const laid = rides.list()[rides.list().length - 1];
-        log(kind, design, "pieces", laid.pieces, "track", (laid.track ?? []).join(" "));
+        const laid = tracked(rides.list()[rides.list().length - 1], `${kind} ${design} laid`);
+        log(kind, design, "pieces", laid.pieces, "track", laid.track.join(" "));
         names.push(kind);
     }
     // The last one's construction panel shut, as when the player tests from the ride's window: taking out the ground
@@ -140,7 +142,7 @@ expect(
 
 const messages = park.messages().length;
 for (const slide of found) {
-    const info = () => rides.list()[slide];
+    const info = () => tracked(rides.list()[slide], "the slide");
     const kind = info().symbol.split(":")[0];
     expect(rides.setState(slide, "closed") == null, `${kind} closed`);
     await frames(10);
@@ -154,7 +156,7 @@ for (const slide of found) {
     // Ending in an open end, one car waits at the top and any others are out of sight past that end. A ring slide
     // may instead go round, carried back up by a lift, as a coaster does.
     const at = info().trainsAt!;
-    const open_end = /^(EndStraight|Bowl|Funnel)/.test(info().track!.at(-1) ?? "");
+    const open_end = /^(EndStraight|Bowl|Funnel)/.test(info().track.at(-1) ?? "");
     log(
         kind,
         "length",
@@ -207,7 +209,7 @@ for (const slide of found) {
         `${kind}'s car on its way down`,
     );
     const down = sliding();
-    const car = info().cars![down];
+    const car = info().cars[down];
     camera.look(car, { col: car.col + 3, row: car.row + 3, up: car.up! + 4 });
     await frames(10);
     await screenshot(`${kind}_testing`);
@@ -235,7 +237,7 @@ for (const slide of found) {
     // Stopped for a look the first time it is well up a wall.
     await park.advanceUntil(() => swing() || done(), 240, `${kind}'s car up a wall or round`);
     if (swing()) {
-        const c = info().cars![down];
+        const c = info().cars[down];
         camera.look(c, { col: c.col + 2, row: c.row + 2, up: c.up! + 2 });
         await frames(5);
         await screenshot(`${kind}_up_the_wall`);
@@ -272,7 +274,7 @@ expect(!told.some((k) => /crash/i.test(k)), `no crash message, not ${told.join("
 // trough in the first tight turn and crashes, as a coaster's train off its track does.
 const ring = found.find((i) => /^RingSlide:/.test(rides.list()[i].symbol));
 if (ring !== undefined) {
-    const info = () => rides.list()[ring];
+    const info = () => tracked(rides.list()[ring], "the ring slide");
     expect(rides.setState(ring, "closed") == null, "the ring slide closed");
     await frames(10);
     expect(rides.setState(ring, "testing") == null, "the ring slide tested");
@@ -294,7 +296,7 @@ if (ring !== undefined) {
         "the ring slide's car flying out of its trough",
     );
     log("RingSlide at 25 m/s flew out at", info().trainsAt![car].front.toFixed(1), "swung", most.toFixed(2));
-    const c = info().cars?.[car];
+    const c = info().cars[car];
     if (c !== undefined) {
         camera.look(c, { col: c.col + 3, row: c.row + 3, up: (c.up ?? 0) + 4 });
         await frames(10);

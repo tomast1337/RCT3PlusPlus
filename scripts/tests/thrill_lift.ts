@@ -35,7 +35,10 @@ async function lay(kind: string, design: string): Promise<number> {
     const ride = build.construction()!.ride;
     await pointer.click(0.5, 0.45);
     await frames(30);
-    expect((rides.list()[ride].pieces ?? 0) > 0 && build.construction() === undefined, `the ${design} design laid`);
+    expect(
+        tracked(rides.list()[ride], `the ${design} coaster`).pieces > 0 && build.construction() === undefined,
+        `the ${design} design laid`,
+    );
     await frames(5);
     return ride;
 }
@@ -92,7 +95,7 @@ async function build_by_hand(
     await frames(10);
     await pointer.click(p.x, p.y);
     await frames(30);
-    const laid = () => rides.list()[ride].track ?? [];
+    const laid = () => tracked(rides.list()[ride], "the coaster").track;
     // The station, from its picture button, clicked once to pick it (once it is picked, a click builds it) and again
     // to build it.
     for (let tries = 0; tries < 4 * stations && laid().length < stations; ++tries) {
@@ -178,7 +181,7 @@ type Lifted = { phase: string; aboard: number };
 /** The lift car of ride `ride`, as drawn now. */
 function lift_car(ride: number): MapPoint & { facing: number } {
     return must(
-        rides.list()[ride].cars?.find((c) => c.lift),
+        tracked(rides.list()[ride], "the coaster").cars.find((c) => c.lift),
         "the lift car drawn",
     );
 }
@@ -207,10 +210,14 @@ function lifted(ride: number): Lifted | null {
 /** Tests the ride `ride`, watching its first train up its first lift tower and round to it again, with a picture `name`
  * at the foot, half way up, at the top and on the way down. */
 async function ride_up(ride: number, name: string): Promise<void> {
-    const laid = rides.list()[ride];
-    log(`${name}:`, laid.track?.filter((p) => p.includes("Lift")).join(" "), `train ${laid.trainsAt?.[0]?.length}`);
+    const laid = tracked(rides.list()[ride], name);
+    log(`${name}:`, laid.track.filter((p) => p.includes("Lift")).join(" "), `train ${laid.trainsAt?.[0]?.length}`);
     // Laid and not yet run, its lift's car already stands at the tower's foot.
-    await until(() => rides.list()[ride].cars?.some((c) => c.lift) === true, 120, `${name}'s lift car drawn`);
+    await until(
+        () => tracked(rides.list()[ride], "the coaster").cars.some((c) => c.lift),
+        120,
+        `${name}'s lift car drawn`,
+    );
     const laid_car = lift_car(ride);
     expect((laid_car.up ?? 0) < 6, `${name}'s lift car standing at the foot once laid, not ${laid_car.up} m up`);
     const refused = rides.setState(ride, "testing");
@@ -237,7 +244,7 @@ async function ride_up(ride: number, name: string): Promise<void> {
     log("let go at", JSON.stringify(rides.list()[ride].trainsAt?.[0]));
     // The car goes back down.
     await until(
-        () => (rides.list()[ride].cars?.find((c) => c.lift)?.up ?? 1e9) < bottom + 0.5,
+        () => (tracked(rides.list()[ride], "the coaster").cars.find((c) => c.lift)?.up ?? 1e9) < bottom + 0.5,
         900,
         `${name}'s car back down`,
     );

@@ -32,16 +32,14 @@ await lay("Path_UpwardSteps", 3);
 await lay("Path_NoSlope", 3);
 await ui.click("tools/Paths/Obj_Paths"); // Put away
 await frames(5);
-const top = Math.max(
-    ...map
-        .paths()
-        .filter((p) => p.row === row && p.raised)
-        .map((p) => p.height ?? 0),
-);
+const top = Math.max(...map.paths().flatMap((p) => (p.row === row && p.raised ? [p.height] : [])));
 const over = map.paths().find((p) => p.row === row && p.raised && p.height === top && p.col > col);
 log("paths", JSON.stringify(map.paths().filter((p) => p.raised)));
-expect(over !== undefined && (over.height ?? 0) >= 5, "a path raised at least five units over the tile under test");
-const deck = over!.height!;
+expect(
+    over !== undefined && over.raised && over.height >= 5,
+    "a path raised at least five units over the tile under test",
+);
+const deck = over !== undefined && over.raised ? over.height : 0;
 
 // The station lifted on the tile under the path, a step at a time: where it may stand.
 async function custom(): Promise<number> {
@@ -100,7 +98,7 @@ pointer.move(...on_view(dive.col + 0.5, dive.row + 0.5));
 await frames(10);
 await pointer.click(...on_view(dive.col + 0.5, dive.row + 0.5));
 await frames(20);
-expect(rides.list()[ride].pieces === 1, "the station laid");
+expect(tracked(rides.list()[ride], "the ride").pieces === 1, "the station laid");
 async function piece(slope: string, count: number): Promise<void> {
     await ui.click(`placing/body/construction/${slope}`);
     await frames(3);
@@ -115,8 +113,8 @@ await piece("AttractionEditor_IconSlope0", 4);
 build.stop();
 await ui.click("placing/close");
 await frames(20);
-const names = rides.list()[ride].track ?? [];
-log("dive pieces", rides.list()[ride].pieces, JSON.stringify(names));
+const names = tracked(rides.list()[ride], "the ride").track;
+log("dive pieces", tracked(rides.list()[ride], "the ride").pieces, JSON.stringify(names));
 const track = map.objects().filter((o) => o.overlay.includes("Track") && o.height !== null && o.row === dive.row);
 log(
     "track objects on the dive's row",

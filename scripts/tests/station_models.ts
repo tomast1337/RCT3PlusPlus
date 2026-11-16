@@ -43,7 +43,10 @@ async function station(overlay: string, kind: string, type: RegExp): Promise<num
     await pointer.click(p.x, p.y);
     await frames(30);
     // Then the plain station among the pictured pieces, clicked again to build it, up to five pieces.
-    const laid = () => rides.list()[ride].track?.length ?? 0;
+    const laid = () => {
+        const r = rides.list()[ride];
+        return r.kind === "tracked" ? r.track.length : 0;
+    };
     for (let tries = 0; tries < 12 && laid() < 5; ++tries) {
         for (let i = 0; i < 8 && laid() < 5; ++i) {
             const button = `placing/body/construction/special${i}`;
@@ -80,10 +83,10 @@ const view = () =>
     camera.look({ col: at.col + 2.5, row: at.row + 0.5 }, { col: at.col + 0.5, row: at.row + 3, up: 3.5 });
 
 function check(ride: number, kind: string, type: RegExp): string[] {
-    const built = rides.list()[ride];
+    const built = tracked(rides.list()[ride], `the ${kind} ride`);
     log(kind, JSON.stringify({ track: built.track, platforms: built.platforms }));
-    expect(built.track?.length === 5, `five ${kind} station pieces, not ${JSON.stringify(built.track)}`);
-    const platforms = built.platforms ?? [];
+    expect(built.track.length === 5, `five ${kind} station pieces, not ${JSON.stringify(built.track)}`);
+    const platforms = built.platforms;
     expect(
         platforms.length === 5 && platforms.every((p) => type.test(p)),
         `a ${type} platform model on each ${kind} station piece, not ${JSON.stringify(platforms)}`,
@@ -113,7 +116,7 @@ for (const [overlay, kind, type] of [
     const ride = await station(overlay, kind, type);
     check(ride, kind, type);
     expect(
-        rides.list()[ride].track!.every((piece) => !/^inv/i.test(piece)),
+        tracked(rides.list()[ride], "the ride").track.every((piece) => !/^inv/i.test(piece)),
         `an upright ${kind} station`,
     );
     view();
@@ -151,7 +154,7 @@ await until(() => ui.find(row) !== undefined, 120, "the save in the load window"
 await ui.click(row);
 await ui.click("park_files/content/open");
 await until(() => park.loaded() && rides.list().length > ride, 1200, "the park back after loading");
-const loaded = rides.list()[ride];
+const loaded = tracked(rides.list()[ride], "the ride loaded");
 log("loaded", JSON.stringify({ track: loaded.track, platforms: loaded.platforms }));
 view();
 await frames(30);

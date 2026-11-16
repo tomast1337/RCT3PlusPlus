@@ -37,6 +37,8 @@ declare function walked<P extends Person>(
     person: P | undefined | null,
     what: string,
 ): Exclude<P, { state?: undefined }>;
+/** `ride`, or throws "expected `what`" when it is missing or has no track. */
+declare function tracked(ride: RideInfo | undefined | null, what: string): RideInfo & { kind: "tracked" };
 /** The staff among people.list(). */
 declare function staff(): Extract<Person, { staff: true }>[];
 /** The people swimming, among people.list(). */
@@ -76,7 +78,8 @@ declare namespace clipboard {
 
 declare namespace ui {
     /** The middle of the widget at `path` (such as "tools/Land/Land") and its edges, or undefined when it is not shown;
-     * `on` for a toggle button or a tick box, `text` for an edit box, a label or a button with words, `tooltip` for one with help. */
+     * `on` for a toggle button or a tick box, `text` for an edit box, a label or a button with words, `tooltip` for one with help.
+     * These stay optional: they follow the widget's kind, which no field gives. */
     function find(path: string):
         | {
               x: number;
@@ -116,6 +119,9 @@ declare namespace render {
 /** What a path item is, as park.pathItems() and people.list() name it. */
 type PathItemKind =
     "bin" | "bench" | "sign" | "sight" | "photo spot" | "fountain" | "water cannon" | "speaker" | "passport post";
+
+/** The weathers a park has. */
+type Weather = "sunny" | "sunny-cloudy" | "cloudy" | "light rain" | "heavy rain" | "thunderstorm" | "snowstorm";
 
 declare namespace park {
     /** Opens the park at `path` in the game's folder, such as "Campaigns/Base/BlankLandscape.dat", and waits until it shows.
@@ -212,12 +218,13 @@ declare namespace park {
      *  for its camera to open (as saved messages number them). */
     function postMessage(key: string, ride?: number, tab?: number): void;
     /** The park's messages, oldest first: each one's text key, the name it was posted about, and for an award or a
-     *  fine, its number as the park file keeps them. */
+     *  fine, its number as the park file keeps them. Text keys come from the game's string tables, an open set, so
+     *  `award` cannot be told apart by `key` here and stays optional. */
     function messages(): { key: string; name: string; award?: number }[];
-    /** The weather now, as "sunny", "cloudy", "light rain", "heavy rain", "thunderstorm" and the rest. */
-    function weather(): string;
-    /** Sets the weather now, by one of the names weather() gives. */
-    function setWeather(name: string): void;
+    /** The weather now; "unknown" for a value the park file keeps outside the known ones. */
+    function weather(): Weather | "unknown";
+    /** Sets the weather now. */
+    function setWeather(name: Weather): void;
     /** Sets the park's temperature, in degrees, which the weather then drifts on from. */
     function setTemperature(degrees: number): void;
     /** How the weather shows now (rain and gloom 0 to 1, a lightning flash), the forecast, the climate's number and the temperature. */
@@ -225,7 +232,8 @@ declare namespace park {
         rain: number;
         gloom: number;
         flash: number;
-        forecast: string;
+        /** "" when the park has none. */
+        forecast: Weather | "unknown" | "";
         climate: number;
         temperature: number;
     };
@@ -288,18 +296,16 @@ declare namespace camera {
     function look(at: MapPoint, from?: MapPoint): void;
     /** The water on the camera's lens: its drops and its sheets of water. */
     function lens(): { drops: number; sheets: number };
-    /** Riding along in a car: its ride's place in rides.list(), the car (on a flat ride, the seat or fixed camera; going with a person, ride is -1 and car their place in
-     *  people.list()), and once it
-     *  is seen from, the rider's eyes in world units and the way they look. Undefined while the view is overhead. */
+    /** Riding along: in a car of a ride with a track (its place in rides.list() and the car's), on a flat ride (the
+     *  seat or its fixed camera), or going with a person (their place in people.list(); ride is -1). Once it is seen
+     *  from (a frame or so after it starts, which no field tells), the rider's eyes in world units and the way they
+     *  look. Undefined while the view is overhead. */
     function riding():
-        | {
-              ride: number;
-              car: number;
-              kind: "nose" | "front" | "rear" | "seat" | "fixed" | "guest" | "behind";
-              turn: [number, number];
-              eye?: [number, number, number];
-              ahead?: [number, number, number];
-          }
+        | ({ turn: [number, number]; eye?: [number, number, number]; ahead?: [number, number, number] } & (
+              | { kind: "nose" | "front" | "rear"; ride: number; car: number }
+              | { kind: "seat" | "fixed"; ride: number; car: number }
+              | { kind: "guest" | "behind"; ride: -1; car: number }
+          ))
         | undefined;
 }
 
@@ -320,19 +326,29 @@ interface Tile {
     water?: number;
 }
 
-interface PathPiece {
+/** A path tile: raised ones have a height, queue tiles on a ride's line its id. */
+type PathPiece = {
     col: number;
     row: number;
-    /** Off the ground, on supports. */
-    raised: boolean;
-    queue: boolean;
-    /** The path style it is laid in. */
+    /** The path style it is laid in, by the name the install gives it (an open set). */
     style: string;
-    /** Of a raised piece, in the game's height steps. */
-    height?: number;
-    /** Of a queue tile on a ride's line, the line's id. */
-    line?: number;
-}
+} & (
+    | {
+          /** Off the ground, on supports. */
+          raised: true;
+          /** In the game's height steps. */
+          height: number;
+      }
+    | { raised: false }
+) &
+    (
+        | {
+              queue: true;
+              /** The line's id, while the queue is on a ride's line. */
+              line?: number;
+          }
+        | { queue: false }
+    );
 
 interface Lake {
     level: number;
@@ -429,8 +445,8 @@ interface FacilityItem {
     length: number;
     /** Hundredths of the currency. */
     price: number;
-    /** Its attraction kind: 11 toilet, 12 cash machine, 13 first aid, others not run by the park. */
-    kind: number;
+    /** What it does for guests; "other" for those the park does not run (information). */
+    kind: "toilet" | "cash machine" | "first aid" | "other";
 }
 
 interface StallItem {
@@ -482,20 +498,27 @@ declare namespace build {
               cost: number;
               clashes: boolean;
               unowned: boolean;
-              refusal: string;
+              refusal:
+                  | ""
+                  | "PlaceObject_NotOwned"
+                  | "PlaceObject_TooHigh"
+                  | "PlaceObject_Intersects"
+                  | "PlaceObject_IntersectsGround"
+                  | "PlaceObject_MustEndOnPoolEdge";
               turn: number;
               poolSides: { col: number; row: number; height: number; side: number }[];
               ghostDoors: number;
               ghostPlatform: string;
               completing: boolean;
               proposed: number;
-              complaint: string;
+              complaint:
+                  "" | "RideAutoCompleteNotEnoughCash" | "RideAutoCompleteNoSolution" | "RideAutoCompleteOutOfTime";
               testing: boolean;
               testAt: number | null;
               testWrecks: number;
               designs: string[];
               selected: number | null;
-              split: number;
+              split: 0 | 1 | 2 | 3 | 4;
           }
         | undefined;
     /** What building gave to be heard: how many thumps of something put down were asked for since the park opened
@@ -504,7 +527,10 @@ declare namespace build {
     /** With the pool tool out: the piece its ghost shows (an extra, a changing room or the paths page's next piece)
      * and where, and whether the arrow over the next pool path piece shows; undefined while the tool is away. */
     function pooling():
-        { ghost: string | null; ghostAt?: { col: number; row: number; height: number }; arrow: boolean } | undefined;
+        | ({ arrow: boolean } & (
+              { ghost: string; ghostAt: { col: number; row: number; height: number } } | { ghost: null }
+          ))
+        | undefined;
     /** Puts the placing tool, the enclosure tool or the pool tool away, as Escape does. */
     function stop(): void;
     /** While an enclosure drag is held: what letting go would cost in hundredths (below 0 when it pays back),
@@ -543,30 +569,24 @@ interface Spot {
     direction: number;
 }
 
-interface RideInfo {
-    name: string;
-    /** The fence round it, without its tag; empty when it has none. */
-    fence: string;
-    /** With its tag, as "Twist:anr". */
-    symbol: string;
-    overlay: string;
-    flat: boolean;
-    /** Rides with a track: how many pieces it has. */
-    pieces?: number;
-    /** Rides with a track: how many trains it has, and cars in each. */
-    trains?: number;
-    carsPerTrain?: number;
-    /** Rides with a track: passenger cars in each train, without the links between them. */
-    passengerCars?: number;
-    /** Ridden by the park: how many of the simulation's attractions are this ride (1 unless taken on twice). */
+/** What rides.list() gives for a ride the simulation runs (`joined`). Which of these it gives depends on what the
+ *  simulation runs for the ride, which no field names, so they stay optional: each group is given together, and
+ *  a facility has only `customers` and `servedFrom`. A ride not joined has none of them. */
+interface RideRun {
+    customers?: number;
+    /** A facility: the path tile it serves from. */
+    servedFrom?: { col: number; row: number };
+    /** How many of the simulation's attractions are this ride (1 unless taken on twice). */
     simulated?: number;
-    /** Ridden by the park on a track: the trains it runs, and how many are under way now. */
+    /** On a track: the trains it runs, and how many are under way now. */
     running?: number;
     moving?: number;
-    /** Ridden by the park on a track: each train's front along the track (metres), its speed along it (m/s), a slide car's swing up its trough's wall (radians, to its right; null for other trains), its length, and the station it
-     * stands at (0 the first, k the k-th stop after it), null while under way; the station it is held up in behind
-     * the train ahead, short of its end, numbered alike, or null; and the riders still in its seats. On a lift's
-     * car, how far it has come up the lift and how far its front is along the car's track (metres); else null. */
+    /** On a track: each train's front along the track (metres), its speed along it (m/s), a slide car's
+     *  swing up its trough's wall (radians, to its right; null for other trains), its length, and the
+     *  station it stands at (0 the first, k the k-th stop after it), null while under way; the station it
+     *  is held up in behind the train ahead, short of its end, numbered alike, or null; and the riders
+     *  still in its seats. On a lift's car, how far it has come up the lift and how far its front is along
+     *  the car's track (metres); else null. */
     trainsAt?: {
         front: number;
         speed: number;
@@ -575,50 +595,22 @@ interface RideInfo {
         station: number | null;
         held: number | null;
         riders: number;
-        lift: { phase: "Boarding" | "Engaging" | "Rising" | "AtTop" | "Releasing" | "Leaving"; aboard: number } | null;
+        lift: {
+            phase: "Boarding" | "Engaging" | "Rising" | "AtTop" | "Releasing" | "Leaving";
+            aboard: number;
+        } | null;
     }[];
-    /** Ridden by the park on a track: the length of its track, metres. */
+    /** On a track or a lazy river: the length of its course, metres. */
     trackLength?: number;
-    /** A lazy river the park runs: its stations, how many of them a pool complex joins, and the middle of the
-     *  paving, pool path or stairs square beside each joined one, where swimmers get on and off. */
+    /** A lazy river: its stations, how many of them a pool complex joins, and the middle of the paving,
+     *  pool path or stairs square beside each joined one, where swimmers get on and off. */
     riverStations?: number;
     riverJoined?: number;
     riverSquares?: { col: number; row: number; up: number }[];
-    /** A slide the park runs that swimmers climb on foot, as an inflatable ship: its ways up and down, and the
-     *  foot of its steps, where swimmers get on. */
+    /** A slide that swimmers climb on foot, as an inflatable ship: its ways up and down, and the foot of
+     *  its steps, where swimmers get on. */
     climbWays?: number;
     climbFoot?: { col: number; row: number; up: number };
-    /** Rides with a track: each piece's name, in track order. */
-    track?: string[];
-    /** Rides with a track: each piece's three colours (palette places), in track order. */
-    trackColours?: number[][];
-    /** Rides with a track: the platform pieces of its stations, in track order. */
-    platforms?: string[];
-    /** Rides with a track: the three colours of each of `platforms`. */
-    platformColours?: number[][];
-    /** Rides with a track: the squares its stations' platforms stand on, the height of their decks and the
-     *  quarter turn of their pieces, in track order. */
-    platformSquares?: { col: number; row: number; height: number; turn: number }[];
-    /** Rides with a track: each piece's arm angles in degrees, base first, or null where it holds none. */
-    arms?: (number[] | null)[];
-    /** Rides with a track: where each of its cars stands now, and the way it faces (radians round the vertical, 0 along +row).
-     *  A rowing boat out on the water: the oars it rows with, both or those turning it to its left or right.
-     *  A lift's car is marked `lift`. */
-    cars?: (MapPoint & { facing: number; stroke?: "both" | "left" | "right"; lift?: true })[];
-    site: Spot | null;
-    /** Its first station's doors; `stations` has every station's. */
-    entrance: Spot | null;
-    exit: Spot | null;
-    stations: { entrance: Spot | null; exit: Spot | null }[];
-    /** Whether it was pulled down; it keeps its place in the list. */
-    demolished: boolean;
-    /** Samples in its graphs: its last lap's, a tenth of a second each. */
-    graphSamples: number;
-    /** Whether the simulation runs it. The rest are there only when it does. */
-    joined: boolean;
-    customers?: number;
-    /** A facility: the path tile it serves from. */
-    servedFrom?: { col: number; row: number };
     /** Hundredths of the currency. */
     price?: number;
     open?: boolean;
@@ -642,11 +634,79 @@ interface RideInfo {
     wrecks?: (MapPoint & { state: "flying" | "burning" | "gone" })[];
 }
 
+/** A ride, as rides.list() gives it: its kind says whether it has a track, and `joined` whether the simulation
+ *  runs it. */
+type RideInfo = {
+    name: string;
+    /** The fence round it, without its tag; empty when it has none. */
+    fence: string;
+    /** With its tag, as "Twist:anr". */
+    symbol: string;
+    overlay: string;
+    /** A flat ride, as `kind` "flat" says too. */
+    flat: boolean;
+    site: Spot | null;
+    /** Its first station's doors; `stations` has every station's. */
+    entrance: Spot | null;
+    exit: Spot | null;
+    stations: { entrance: Spot | null; exit: Spot | null }[];
+    /** Whether it was pulled down; it keeps its place in the list. */
+    demolished: boolean;
+    /** Samples in its graphs: its last lap's, a tenth of a second each. */
+    graphSamples: number;
+} & (
+    | {
+          /** A ride built piece by piece, with trains on its track. */
+          kind: "tracked";
+          /** How many pieces it has. */
+          pieces: number;
+          /** How many trains it has, and cars in each. */
+          trains: number;
+          carsPerTrain: number;
+          /** Passenger cars in each train, without the links between them, when the park file says. */
+          passengerCars?: number;
+          /** Each piece's name, in track order. */
+          track: string[];
+          /** Each piece's three colours (palette places), in track order. */
+          trackColours: number[][];
+          /** The platform pieces of its stations, in track order. */
+          platforms: string[];
+          /** The three colours of each of `platforms`. */
+          platformColours: number[][];
+          /** The squares its stations' platforms stand on, the height of their decks and the quarter turn of their
+           *  pieces, in track order. */
+          platformSquares: { col: number; row: number; height: number; turn: number }[];
+          /** Each piece's arm angles in degrees, base first, or null where it holds none. */
+          arms: (number[] | null)[];
+          /** Where each of its cars stands now, and the way it faces (radians round the vertical, 0 along +row).
+           *  A rowing boat out on the water: the oars it rows with, both or those turning it to its left or right.
+           *  A lift's car is marked `lift`. */
+          cars: (MapPoint & { facing: number; stroke?: "both" | "left" | "right"; lift?: true })[];
+      }
+    | {
+          /** A ride placed whole, or a facility (toilets, cash machines, first aid, information). */
+          kind: "flat" | "facility";
+      }
+) &
+    (({ joined: false } & { [K in keyof RideRun]?: undefined }) | ({ joined: true } & RideRun));
+
+/** Why a ride stays as it was, as rides.setState() gives it: a string key. */
+type RideRefusal =
+    | "TrackedRideIsDisjoint"
+    | "RideHasNoStation"
+    | "CannotOpenOrTestInsufficientPieces"
+    | "CannotOpenOrTestNotCircuit"
+    | "CannotTestTrackedRide"
+    | "CannotOpenTrackedRideWhileEditing"
+    | "CannotOpenOrTestNoReverseCableLiftHill"
+    | `CantOpen${"Ride" | "PoolRide"}${"Missing" | "No"}${"Entrance" | "Exit"}`
+    | "CannotOpenExitBeforeEntrance";
+
 declare namespace rides {
     function list(): RideInfo[];
     /** Puts ride `i` of list() in `state`, as its window's open-or-close tab does. Null once changed, else the
      *  string key of why the ride stays as it was (a track without a station, a missing exit...). */
-    function setState(i: number, state: "closed" | "testing" | "open"): string | null;
+    function setState(i: number, state: "closed" | "testing" | "open"): RideRefusal | null;
     /** Has every train of ride `i` (its place in list()) run at `speed` m/s all the way round, as a ride set to a
      *  fixed speed does; 0 or less lets them run free again. Throws for a ride the park runs no trains on. */
     function setFixedSpeed(i: number, speed: number): void;
@@ -656,7 +716,7 @@ declare namespace rides {
     function shown(): { ride: number; tab?: string } | undefined;
 }
 
-interface StallInfo {
+type StallInfo = {
     name: string;
     /** With its tag, as "BurgerStall:sta". */
     symbol: string;
@@ -676,16 +736,20 @@ interface StallInfo {
     demolished: boolean;
     /** Whether its building moves: stalls whose models have a motion play it round and round, open or not. */
     moving: boolean;
-    /** Whether the simulation runs it, once a path runs past the tile it faces. The rest are there only when
-     * it does: the price it sells at, in hundredths, and whether it is open to guests there. */
-    joined: boolean;
-    price?: number;
-    selling?: boolean;
-    /** How many guests have bought from it. */
-    customers?: number;
-    /** Broken down, shut until a mechanic mends it. */
-    broken?: boolean;
-}
+} & (
+    | {
+          /** The simulation runs it, once a path runs past the tile it faces. */
+          joined: true;
+          /** The price it sells at, in hundredths, and whether it is open to guests there. */
+          price: number;
+          selling: boolean;
+          /** How many guests have bought from it. */
+          customers: number;
+          /** Broken down, shut until a mechanic mends it. */
+          broken: boolean;
+      }
+    | { joined: false }
+);
 
 declare namespace stalls {
     function list(): StallInfo[];
@@ -695,7 +759,7 @@ declare namespace stalls {
     function show(i: number): void;
     /** Puts stall `i` of list() in `state`, as its window's open-or-close tab does. Null once changed, else the
      *  string key of why it stays as it was (nothing on its menu). */
-    function setState(i: number, state: "closed" | "open"): string | null;
+    function setState(i: number, state: "closed" | "open"): "CantOpenStallNoItems" | null;
     /** Sets the price of item `item` on stall `i`'s menu, in hundredths, as its window's items page does. */
     function setPrice(i: number, item: number, hundredths: number): void;
 }

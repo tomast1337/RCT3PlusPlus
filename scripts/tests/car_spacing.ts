@@ -31,7 +31,10 @@ async function lay(kind: string): Promise<number> {
     // Laid, the design's building closes and its window opens.
     await pointer.click(0.5, 0.45);
     await frames(30);
-    expect((rides.list()[ride].pieces ?? 0) > 0 && build.construction() === undefined, `the ${kind} design laid`);
+    expect(
+        tracked(rides.list()[ride], "the ride").pieces > 0 && build.construction() === undefined,
+        `the ${kind} design laid`,
+    );
     await frames(5);
     return ride;
 }
@@ -49,15 +52,15 @@ for (const kind of ["Giga", "HyperTwist", "LoopingRC", "Drifting", "Reverser", "
     const ride = await lay(kind);
     // Tested, its train is drawn waiting in the station.
     expect(rides.setState(ride, "testing") == null, `${kind} tested`);
-    await until(() => (rides.list()[ride].cars?.length ?? 0) > 0, 600, `${kind}'s cars drawn`);
-    const r = rides.list()[ride];
-    const cars: Car[] = (r.cars ?? []).slice(0, r.carsPerTrain);
+    await until(() => (tracked(rides.list()[ride], "the ride").cars.length ?? 0) > 0, 600, `${kind}'s cars drawn`);
+    const r = tracked(rides.list()[ride], `the ${kind}`);
+    const cars: Car[] = r.cars.slice(0, r.carsPerTrain);
     log(`${kind}: ${r.trains} trains of ${r.passengerCars} cars (${r.carsPerTrain} with links)`);
     expect(
         cars.length === r.carsPerTrain,
-        `${kind}'s first train drawn, not ${r.cars?.length} of ${r.trains! * r.carsPerTrain!} cars drawn`,
+        `${kind}'s first train drawn, not ${r.cars.length} of ${r.trains * r.carsPerTrain} cars drawn`,
     );
-    const linked = r.carsPerTrain! > r.passengerCars!;
+    const linked = r.carsPerTrain > must(r.passengerCars, "passenger cars");
     const step = linked ? 2 : 1;
     const gaps: number[] = [];
     for (let k = 0; k + step < cars.length; k += step) {

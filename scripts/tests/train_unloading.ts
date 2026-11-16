@@ -14,10 +14,10 @@ await park.ready();
 await frames(30);
 const coaster = rides.list().findIndex((r) => r.symbol === "SuspendedSwinging:trr");
 expect(coaster >= 0, "the suspended coaster in the park");
-const info = rides.list()[coaster];
+const info = tracked(rides.list()[coaster], "the suspended coaster");
 log("coaster", info.trains, "trains of", info.passengerCars, "cars, seats", info.capacity);
 expect(
-    (info.trains ?? 0) >= 2 && (info.passengerCars ?? 0) >= 2 && info.open === true,
+    info.trains >= 2 && (info.passengerCars ?? 0) >= 2 && info.open === true,
     "an open coaster with two trains of several cars",
 );
 
@@ -49,8 +49,8 @@ for (let k = 0; k < 300 / kStep && endOff < 3; ++k) {
             if (train.held !== null) ++heldOff;
             else ++endOff;
             if (!pictured) {
-                const cars = rides.list()[coaster].cars!;
-                const per = rides.list()[coaster].carsPerTrain!;
+                const cars = tracked(rides.list()[coaster], "the coaster").cars;
+                const per = tracked(rides.list()[coaster], "the coaster").carsPerTrain;
                 const car = cars[t * per + (per >> 1)];
                 camera.look(car, { col: car.col + 6, row: car.row + 9, up: 14 });
                 await frames(20);

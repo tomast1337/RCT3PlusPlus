@@ -78,7 +78,7 @@ expect(stalls.setState(stall, "open") == null, "the stall open");
 const machine = must(
     build
         .facilities()!
-        .filter((f) => f.kind === 12)
+        .filter((f) => f.kind === "cash machine")
         .sort((a, b) => a.width * a.length - b.width * b.length)[0],
     "a cash machine to build",
 );

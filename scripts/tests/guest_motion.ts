@@ -73,7 +73,7 @@ await frames(60);
 const coasters = rides
     .list()
     .map((r, i) => ({ r, i }))
-    .filter(({ r }) => !r.flat && (r.trains ?? 0) > 0);
+    .filter(({ r }) => r.kind === "tracked" && r.trains > 0);
 expect(coasters.length > 0, "a coaster in the park");
 await until(
     () => people.list().some((p) => p.state === "riding" && p.reaction === "hands up"),

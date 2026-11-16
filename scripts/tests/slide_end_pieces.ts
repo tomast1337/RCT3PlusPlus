@@ -76,7 +76,7 @@ for (const turn of [0, 1]) {
             await pointer.click(0.5, 0.5);
             await frames(20);
             const slide = build.construction()!.ride;
-            const info = () => rides.list()[slide];
+            const info = () => tracked(rides.list()[slide], `${name}: the slide`);
             expect(info().pieces === 1, `${name}: the station laid`);
             // With the enclosed toggle as wanted first, the list's row gives that one of the twins.
             if (!(await pickListed(open, enclosed))) {
@@ -104,7 +104,7 @@ for (const turn of [0, 1]) {
             // Enter on its row builds it.
             keys.press("Enter");
             await frames(20);
-            const built = info().track?.at(-1);
+            const built = info().track.at(-1);
             build.stop();
             await ui.click("placing/close");
             await frames(10);
@@ -122,7 +122,7 @@ for (const turn of [0, 1]) {
                 for (const [i, t] of (info().trainsAt ?? []).entries()) {
                     if (t.station !== null) continue;
                     farthest = Math.max(farthest, t.front);
-                    const car = (info().cars ?? [])[i];
+                    const car = info().cars[i];
                     if (!shot && car && t.front > length - least / 2) {
                         camera.look(car, { col: car.col + 2, row: car.row + 3, up: (car.up ?? 0) + 14 });
                         await frames(4);

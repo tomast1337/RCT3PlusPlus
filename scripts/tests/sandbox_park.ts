@@ -93,7 +93,7 @@ async function lay(control: string, count: number): Promise<void> {
 await lay("Path_UpwardSlope", 1);
 await lay("Path_UpwardSteps", 1);
 await lay("Path_NoSlope", 3);
-const top = Math.max(...map.paths().map((p) => p.height ?? 0));
+const top = Math.max(...map.paths().map((p) => (p.raised ? p.height : 0)));
 await lay("Path_DownwardSteps", 1);
 await lay("Path_DownwardSlope", 1);
 await lay("Path_NoSlope", 1);
@@ -102,7 +102,7 @@ await frames(5);
 await screenshot("climb");
 
 const pieces = map.paths().slice(ground);
-const raised = pieces.filter((p) => p.raised);
+const raised = pieces.filter((p): p is PathPiece & { raised: true } => p.raised);
 log(
     "climb pieces",
     pieces.length,

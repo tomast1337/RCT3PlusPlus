@@ -13,6 +13,7 @@
 #include "config/environment.hpp"
 #include "config/settings.hpp"
 
+#include <array>
 #include <expected>
 #include <filesystem>
 #include <optional>
@@ -75,6 +76,10 @@ namespace rct3::config::game
         std::string source_;
     };
 
+    /// The folder names the game's editions install to: the Complete Edition, then the older Platinum and first
+    /// releases.
+    inline constexpr std::array<std::string_view, 3> kGameFolderNames = { "RollerCoaster Tycoon 3 Complete Edition", "RollerCoaster Tycoon 3 Platinum", "RollerCoaster Tycoon 3" };
+
     /// Where to look for an install that neither RCT3PP_GAME_PATH nor game_path names, in order.
     struct InstallPlaces
     {
@@ -83,8 +88,9 @@ namespace rct3::config::game
         std::vector<std::filesystem::path> game_folders { }; ///< Folders that may hold the game itself (GOG)
     };
 
-    /// This machine's usual places: the program's folder, the default Steam installs and GOG folders.
-    /// shortcut: none on macOS; add its folders once there is a macOS build.
+    /// This machine's usual places: the program's folder, the default Steam installs and GOG folders. Each
+    /// platform has its own file: install_linux.cpp, install_windows.cpp.
+    /// shortcut: no macOS file yet; add install_macos.cpp once there is a macOS build.
     [[nodiscard]] InstallPlaces usual_install_places(const Environment& env);
 
     /// Checks that `root` looks like an install of the game.

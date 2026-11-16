@@ -219,7 +219,7 @@ TEST_CASE("without the variable or the setting, the usual places are searched in
 
 TEST_CASE("the usual places on Linux follow the home folder")
 {
-#ifndef _WIN32
+#ifdef __linux__
     const auto places = usual_install_places(Environment::from_values({ { EnvVar::Home, "/home/someone" } }));
     CHECK(std::ranges::contains(places.steam_roots, fs::path("/home/someone/.local/share/Steam")));
     CHECK(std::ranges::contains(places.steam_roots, fs::path("/home/someone/.var/app/com.valvesoftware.Steam/.local/share/Steam")));

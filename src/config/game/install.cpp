@@ -10,12 +10,6 @@
 #include <system_error>
 #include <utility>
 
-#ifdef _WIN32
-    #define WIN32_LEAN_AND_MEAN
-    #define NOMINMAX
-    #include <windows.h>
-#endif
-
 namespace rct3::config::game
 {
 
@@ -26,10 +20,6 @@ namespace rct3::config::game
 
         // Folders present in every install of the game. Their absence means the path points somewhere else.
         constexpr std::array<std::string_view, 2> kRequiredFolders = { "gui", "Style" };
-
-        // The folder names the game's editions install to: the Complete Edition, then the older Platinum and
-        // first releases.
-        constexpr std::array<std::string_view, 3> kGameFolderNames = { "RollerCoaster Tycoon 3 Complete Edition", "RollerCoaster Tycoon 3 Platinum", "RollerCoaster Tycoon 3" };
 
         // The entry of `dir` named `name`: the exact name if it exists, otherwise the first that matches
         // without regard to case. Directory order is unspecified, so two entries differing only in case
@@ -81,18 +71,6 @@ namespace rct3::config::game
             }
             return libraries;
         }
-
-#ifdef _WIN32
-        // A text value from the registry, if it is there and fits.
-        std::optional<std::wstring> registry_text(HKEY key, const wchar_t* subkey, const wchar_t* value)
-        {
-            std::array<wchar_t, 1024> text { };
-            DWORD size = sizeof(text);
-            if (RegGetValueW(key, subkey, value, RRF_RT_REG_SZ, nullptr, text.data(), &size) != ERROR_SUCCESS)
-                return std::nullopt;
-            return std::wstring(text.data());
-        }
-#endif
 
     } // namespace
 
@@ -147,65 +125,6 @@ namespace rct3::config::game
                 return std::unexpected(InstallProblem { InstallError::MissingContent, root, std::string(folder), { } });
         }
         return GameInstall(root);
-    }
-
-    InstallPlaces usual_install_places([[maybe_unused]] const Environment& env)
-    {
-        InstallPlaces places;
-#ifdef _WIN32
-        std::wstring program(32768, L'\0'); // The longest path Windows allows
-        const DWORD length = GetModuleFileNameW(nullptr, program.data(), static_cast<DWORD>(program.size()));
-        if (length > 0 && length < program.size())
-            places.program_folder = fs::path(program.substr(0, length)).parent_path();
-
-        if (const auto steam = registry_text(HKEY_CURRENT_USER, L"Software\\Valve\\Steam", L"SteamPath"))
-            places.steam_roots.emplace_back(*steam);
-        places.steam_roots.emplace_back("C:\\Program Files (x86)\\Steam");
-
-        // GOG Galaxy and GOG's installers list each game under its own key, with its name and folder.
-        HKEY games = nullptr;
-        if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\WOW6432Node\\GOG.com\\Games", 0, KEY_READ, &games) == ERROR_SUCCESS)
-        {
-            constexpr DWORD kMaxGames = 10000; ///< Chosen by eye: far more games than anyone installs
-            for (DWORD index = 0; index < kMaxGames; ++index)
-            {
-                std::array<wchar_t, 256> id { };
-                DWORD id_length = static_cast<DWORD>(id.size());
-                const LSTATUS status = RegEnumKeyExW(games, index, id.data(), &id_length, nullptr, nullptr, nullptr, nullptr);
-                if (status == ERROR_NO_MORE_ITEMS)
-                    break;
-                if (status != ERROR_SUCCESS)
-                    continue;
-                const auto name = registry_text(games, id.data(), L"gameName");
-                if (!name || !name->contains(L"RollerCoaster Tycoon 3"))
-                    continue;
-                if (const auto path = registry_text(games, id.data(), L"path"))
-                    places.game_folders.emplace_back(*path);
-            }
-            RegCloseKey(games);
-        }
-        for (std::string_view name : kGameFolderNames)
-            places.game_folders.push_back(fs::path("C:\\GOG Games") / name);
-#else
-        std::error_code ec;
-        const fs::path program = fs::read_symlink("/proc/self/exe", ec);
-        if (!ec)
-            places.program_folder = program.parent_path();
-
-        if (const auto home = env.path(EnvVar::Home))
-        {
-            // The usual Steam, the one some distributions link to it, and the Flatpak one.
-            for (std::string_view steam : { ".steam/steam", ".local/share/Steam", ".var/app/com.valvesoftware.Steam/.local/share/Steam" })
-                places.steam_roots.push_back(*home / steam);
-            // GOG's Windows installers run through Heroic, or through Wine in its default prefix.
-            for (std::string_view name : kGameFolderNames)
-            {
-                places.game_folders.push_back(*home / "Games" / "Heroic" / name);
-                places.game_folders.push_back(*home / ".wine" / "drive_c" / "GOG Games" / name);
-            }
-        }
-#endif
-        return places;
     }
 
     std::expected<GameInstall, InstallProblem> find_game_install(const Environment& env, const Settings& settings, const InstallPlaces& places)

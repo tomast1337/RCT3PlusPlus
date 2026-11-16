@@ -28,7 +28,6 @@ namespace rct3::scene::park
         constexpr units::Radians kWheelTilt { 0.08f };    ///< Down per notch away, advanced's wheel in its first scheme
         constexpr units::Pace kFlySpeed { 80 };           ///< Free look flies at, times its speed option
         constexpr float kFlyDrag = 0.004f;                ///< Seconds of flight per pixel a middle drag goes
-        constexpr float kFlyAboveGround = 1.5f;           ///< Free look's eye stays this high over the ground
 
     } // namespace
 
@@ -194,7 +193,7 @@ namespace rct3::scene::park
                 kept.x = std::clamp(kept.x, scene.grid.origin_x, scene.grid.world_x(scene.grid.width) - rct3::park::kNear);
                 kept.z = std::clamp(kept.z, scene.grid.origin_z, scene.grid.world_z(scene.grid.height) - rct3::park::kNear);
                 if (const auto h = scene.grid.height_at(kept.x, kept.z))
-                    kept.y = std::max(kept.y, *h + kFlyAboveGround);
+                    kept.y = std::max(kept.y, *h + rct3::park::kEyeAboveGround);
             }
             c.target += kept - at;
             scene.camera = c;

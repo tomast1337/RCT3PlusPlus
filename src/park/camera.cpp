@@ -228,6 +228,22 @@ namespace rct3::park
         camera.target.z = std::clamp(camera.target.z, z0, z1);
         if (const auto h = grid.height_at(camera.target.x, camera.target.z))
             camera.target.y = lifted ? std::max(camera.target.y, *h) : *h;
+        // Tilting down brings the eye over ground nearer the target, which may be higher still, so it settles
+        // in a few steps; the tilt only grows, so it cannot swing back and forth.
+        constexpr int kSettleSteps = 4;
+        for (int step = 0; step < kSettleSteps; ++step)
+        {
+            const glm::vec3 at = eye(camera);
+            // The ground a near plane's width round the eye, so a steep bank beside it does not cut in either.
+            std::optional<float> ground;
+            for (const glm::vec2 by : { glm::vec2 { 0, 0 }, glm::vec2 { kNear, 0 }, glm::vec2 { -kNear, 0 }, glm::vec2 { 0, kNear }, glm::vec2 { 0, -kNear } })
+                if (const auto h = grid.height_at(std::clamp(at.x + by.x, x0, x1), std::clamp(at.z + by.y, z0, z1)))
+                    ground = std::max(ground.value_or(*h), *h);
+            if (!ground || at.y >= *ground + kEyeAboveGround)
+                break;
+            const float rise = (*ground + kEyeAboveGround - camera.target.y) / camera.distance;
+            camera.pitch = rise < std::sin(kMaxPitch) ? std::max(camera.pitch, std::asin(rise)) : kMaxPitch;
+        }
         return camera;
     }
 

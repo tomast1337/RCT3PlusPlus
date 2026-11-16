@@ -24,6 +24,7 @@ namespace rct3::ovl
         float damping = 0;  ///< Per second, how fast its swing dies down
         float centring = 0; ///< Per second, how fast it is drawn back to the trough's middle
         float friction = 0; ///< Of the car on the wall, held back as it swings by this much of the weight pressing it there
+        float pull = 0;     ///< Of a turn's pull, the share that swings it up the wall
     };
 
     struct RideCar
@@ -58,7 +59,7 @@ namespace rct3::ovl
         /// byte 16 it is mostly single-precision numbers and -1 markers. Their meanings are unconfirmed.
         std::span<const std::byte> record;
         /// Of a car that rides an open trough and can fly out of it (bit 0x200 of the word at byte 272, set in the
-        /// pool slides' cars), its swing in it; nothing for every other car.
+        /// pool slides' cars and the dinghy slide's), its swing in it; nothing for every other car.
         std::optional<TroughRide> trough;
     };
 

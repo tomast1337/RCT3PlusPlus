@@ -279,7 +279,8 @@ if (ring !== undefined) {
     await frames(10);
     expect(rides.setState(ring, "testing") == null, "the ring slide tested");
     await frames(10);
-    rides.setFixedSpeed(ring, 25);
+    const too_fast = 40; // m/s, past twice the most its drops give it
+    rides.setFixedSpeed(ring, too_fast);
     let most = 0;
     let car = 0;
     await park.advanceUntil(
@@ -295,7 +296,7 @@ if (ring !== undefined) {
         60,
         "the ring slide's car flying out of its trough",
     );
-    log("RingSlide at 25 m/s flew out at", info().trainsAt![car].front.toFixed(1), "swung", most.toFixed(2));
+    log(`RingSlide at ${too_fast} m/s flew out at`, info().trainsAt![car].front.toFixed(1), "swung", most.toFixed(2));
     const c = info().cars[car];
     if (c !== undefined) {
         camera.look(c, { col: c.col + 3, row: c.row + 3, up: (c.up ?? 0) + 4 });

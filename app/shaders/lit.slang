@@ -24,7 +24,8 @@ import common;
 
 // render::SceneLight, packed. sun_direction.w is 0 without a shadow, else 1 plus the older shadow's weight; sky.w
 // is 1 when the variation is given, plus 2 when the relief map is, plus 4 times the surface detail (0 to 2),
-// plus 16 when the lamps are, plus 32 for a ghost (render::SceneLight::ghost), plus as its fraction how far the texture is moved along v (a lift's chain); sun.w is the haze rate and ground.w the haze colour, 8 bits a channel, red highest.
+// plus 16 when the lamps are, plus 32 for a ghost (render::SceneLight::ghost), plus 64 to leave nearly clear pixels out (cut_clear), plus 128 for
+// depth only (depth_only), plus as its fraction how far the texture is moved along v (a lift's chain); sun.w is the haze rate and ground.w the haze colour, 8 bits a channel, red highest.
 struct Draw
 {
     float4x4 transform;
@@ -275,6 +276,17 @@ float4 fragment_main(LitVaryings f) : SV_Target
 {
     if (crossed_out(f))
         discard;
+    // The flags are small whole numbers, so their bits can be read straight.
+    const uint flags = uint(u_draw.sky.w);
+    static const float kClear = 0.25; // Chosen by eye: the faint rim of a path's edge still blends in
+    // Depth only: just the discards below, by the picture's alpha, as the software backend does.
+    if ((flags & 128u) != 0u)
+    {
+        const float alpha = (kMode == 4 ? 1.0 : u_texture.Sample(u_sampler, f.uv).a) * f.color.a;
+        if (((flags & 64u) != 0u && alpha < kClear) || (kMode == 1 && alpha < 0.5))
+            discard;
+        return float4(0.0, 0.0, 0.0, 1.0);
+    }
     // Layered, the v shift moves the first picture only: the second is read where the mesh puts it.
     float4 layer = float4(0.0);
     if (kMode == 2)
@@ -290,8 +302,6 @@ float4 fragment_main(LitVaryings f) : SV_Target
     duv1 = ddx(f.uv);
     duv2 = ddy(f.uv);
 
-    // The flags are small whole numbers, so their bits can be read straight.
-    const uint flags = uint(u_draw.sky.w);
     const int detail = int((flags >> 2) & 3u);
     const bool variation_given = kMode < 2 && (flags & 1u) != 0u;
     const bool relief_given = (flags & 2u) != 0u;
@@ -328,7 +338,6 @@ float4 fragment_main(LitVaryings f) : SV_Target
         color.rgb *= variation(f.world);
     if (detail >= 1)
         color.rgb *= grain(f.uv);
-    static const float kClear = 0.25; // Chosen by eye: the faint rim of a path's edge still blends in
     if ((flags & 64u) != 0u && color.a < kClear)
         discard;
     if (kMode == 1)

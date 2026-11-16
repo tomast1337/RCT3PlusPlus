@@ -340,7 +340,10 @@ namespace rct3::render::opengl
             const std::array<float, 4> colour { pass.clear_color.r, pass.clear_color.g, pass.clear_color.b, pass.clear_color.a };
             gl.ClearNamedFramebufferfv(framebuffer, GL_COLOR, 0, colour.data());
         }
-        if (pass.clear || target != nullptr)
+        const auto depth_from = textures_.find(pass.depth_from.id);
+        if (target != nullptr && pass.depth_from && depth_from != textures_.end() && depth_from->second.depth_id != 0 && target->depth_id != 0 && depth_from->second.extent.width == target->extent.width && depth_from->second.extent.height == target->extent.height)
+            gl.CopyImageSubData(depth_from->second.depth, GL_TEXTURE_2D, 0, 0, 0, 0, target->depth, GL_TEXTURE_2D, 0, 0, 0, 0, static_cast<GLsizei>(target->extent.width), static_cast<GLsizei>(target->extent.height), 1);
+        else if (pass.clear || target != nullptr)
             gl.ClearNamedFramebufferfv(framebuffer, GL_DEPTH, 0, &pass.clear_depth);
         const ScreenView area = target != nullptr ? ScreenView { 0, 0, target->extent } : screen_area();
         const auto x = static_cast<GLint>(area.x);

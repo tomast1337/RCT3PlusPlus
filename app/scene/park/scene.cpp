@@ -49,6 +49,7 @@
 #include "simulation/animals.hpp"
 #include "simulation/awards.hpp"
 #include "simulation/components.hpp"
+#include "simulation/enjoyment.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
 #include "simulation/import_park.hpp"
@@ -1640,6 +1641,11 @@ namespace rct3::scene::park
                     save::model::Guest& kept = scene.people.guests[p.saved];
                     if (const auto* wallet = scene.sim.registry.try_get<simulation::Wallet>(p.guest))
                         kept.cash = parkfile::kept_cash(*wallet);
+                    if (const auto* favourite = scene.sim.registry.try_get<simulation::Favourite>(p.guest); favourite != nullptr && favourite->saved != 0)
+                    {
+                        kept.favourite_ride = { favourite->saved };
+                        kept.favourite_ride_rating = favourite->score;
+                    }
                     if (const auto* mood = scene.sim.registry.try_get<simulation::Mood>(p.guest))
                     {
                         kept.mood_now.happiness = mood->happiness.value;

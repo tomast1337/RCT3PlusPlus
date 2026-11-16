@@ -1539,10 +1539,7 @@ namespace rct3::simulation
         {
             if (!at.open)
                 continue;
-            float worth = kTuning.arrivals.ride_worth.value * (ride.excitement.value + kTuning.arrivals.intensity_worth.value * ride.intensity.value);
-            if (ride.intensity.value > kTuning.arrivals.too_intense.value)
-                worth /= 2;
-            over += std::max<std::int64_t>(0, std::lround(worth) - at.price.value);
+            over += std::max<std::int64_t>(0, ride_worth(ride).value - at.price.value);
         }
         return { std::llround(static_cast<double>(over) * kTuning.arrivals.fair_fee.value) };
     }

@@ -247,4 +247,7 @@ namespace rct3::simulation
     /// and families less.
     [[nodiscard]] float felt_excitement(float excitement, bool coaster, AgeGroup age, bool night);
 
+    /// What a ride is worth to a guest, from its excitement and intensity; half that for one too intense for most.
+    [[nodiscard]] units::Money ride_worth(const CycleRide& ride);
+
 } // namespace rct3::simulation

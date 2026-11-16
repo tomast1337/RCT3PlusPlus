@@ -2,6 +2,7 @@
 #include "simulation/import_people.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/enjoyment.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/tuning.hpp"
@@ -52,6 +53,8 @@ namespace rct3::simulation
             r.emplace<Needs>(e, need(g.needs.food), need(g.needs.drink), std::clamp(g.needs.toilet, 0.0f, 1.0f));
             r.emplace<Mood>(e, g.mood_now.happiness, g.mood_now.energy, g.mood_now.nausea, kTuning.sickness.tolerance_per_saved_level.value * static_cast<float>(std::to_underlying(g.nausea_tolerance) + 1));
             const save::model::Cash& c = g.cash;
+            if (g.favourite_ride)
+                r.emplace<Favourite>(e, Favourite { .ride = entt::null, .saved = g.favourite_ride.id, .score = g.favourite_ride_rating });
             r.emplace<Wallet>(e, Wallet { .cash = { c.current }, .bank = { c.bank }, .withdrawn = { c.withdrawn }, .spent = { c.total_spent }, .spent_entry = { c.spent_park_entry }, .spent_rides = { c.spent_rides }, .spent_food = { c.spent_food }, .spent_drink = { c.spent_drink }, .spent_souvenirs = { c.spent_souvenirs }, .needs_cash = g.needs_cash });
             if (g.ride_preference.max > g.ride_preference.min || g.pool_preference)
             {

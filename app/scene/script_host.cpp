@@ -56,6 +56,8 @@ namespace rct3::scene
 
     namespace
     {
+        /// Each day mode's name, in simulation::DayMode's order.
+        constexpr std::array kDayModes { "hours", "day", "night" };
         /// Each path item kind's name, in PathItemKind's order.
         constexpr std::array kPathItemKinds { "bin", "bench", "sign", "sight", "photo spot", "fountain", "water cannon", "speaker", "passport post" };
         using scripting::Json;
@@ -392,6 +394,19 @@ namespace rct3::scene
             park_->day_clock.time = park_->day_clock.shown = time;
             park_->day_clock.fade = 0;
             return Json(nullptr);
+        });
+        engine_.define("park.setDayMode", [this](const Json& a) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            const auto named = a.size() == 1 && a[0].is_string() ? std::ranges::find(kDayModes, a[0].get<std::string>()) : kDayModes.end();
+            if (named == kDayModes.end())
+                throw std::invalid_argument("park.setDayMode takes \"hours\", \"day\" or \"night\"");
+            simulation::change_mode(park_->day_clock, static_cast<simulation::DayMode>(named - kDayModes.begin()));
+            return Json(nullptr);
+        });
+        engine_.define("park.dayClock", [this](const Json&) -> Json {
+            const simulation::DayClock& clock = park_of(park_).day_clock;
+            return Json { { "time", clock.time }, { "shown", clock.shown }, { "mode", kDayModes[std::to_underlying(clock.mode)] } };
         });
         engine_.define("park.guests", [this](const Json&) -> Json {
             if (park_ == nullptr)

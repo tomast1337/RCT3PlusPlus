@@ -94,23 +94,6 @@ namespace rct3::scene::park
             }
         }
 
-        /// Whether the box from `low` to `high` may be seen through `transform`: not when all its corners lie
-        /// beyond the same side of the view, or behind it.
-        bool box_in_view(const glm::mat4& transform, const glm::vec3& low, const glm::vec3& high)
-        {
-            std::array<int, 5> beyond { };
-            for (int k = 0; k < 8; ++k)
-            {
-                const glm::vec4 p = transform * glm::vec4((k & 1) != 0 ? high.x : low.x, (k & 2) != 0 ? high.y : low.y, (k & 4) != 0 ? high.z : low.z, 1.0f);
-                beyond[0] += p.x < -p.w ? 1 : 0;
-                beyond[1] += p.x > p.w ? 1 : 0;
-                beyond[2] += p.y < -p.w ? 1 : 0;
-                beyond[3] += p.y > p.w ? 1 : 0;
-                beyond[4] += p.w <= 0 ? 1 : 0;
-            }
-            return std::ranges::none_of(beyond, [](int n) { return n == 8; });
-        }
-
         /// Which of the things casting shadows a draw takes: the shadow keeps those standing still in a drawing of
         /// their own, and draws only the others each frame.
         enum class Casters : std::uint8_t
@@ -149,8 +132,7 @@ namespace rct3::scene::park
             // Before the ground, writing depth, so land reaching beyond the ring stays hidden behind it.
             if (parts.background)
                 profiling::section("Mountains", [&] { draw_transient(device, scene, scene.frame_uploads, scene.mountains, scene.sky_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.cutout_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
-            const auto pipeline_for = [&](const ShownObjects& shown, rct3::park::object::PartBlend blend, std::string_view texture = { }) {
-                const bool crossing = &shown != &scene.steady_objects;
+            const auto pipeline_for = [&](bool crossing, rct3::park::object::PartBlend blend, std::string_view texture = { }) {
                 if (texture == rct3::park::object::kChromePicture && blend != rct3::park::object::PartBlend::DepthOnly)
                     return crossing ? scene.crossing_chrome_pipeline : scene.chrome_pipeline;
                 if (blend == rct3::park::object::PartBlend::Opaque)
@@ -163,7 +145,7 @@ namespace rct3::scene::park
             };
             const auto sided = [&](render::PipelineHandle pipeline, const rct3::park::object::ObjectBatch& batch) { return batch.one_sided ? scene.front_only.at(pipeline.id) : pipeline; };
             // Depth-only parts are left to their own pass, after the solid ones.
-            const auto object_pipeline = [&](const rct3::park::object::ObjectBatch& b) { return b.blend == rct3::park::object::PartBlend::DepthOnly ? render::PipelineHandle { } : sided(pipeline_for(scene.steady_objects, b.blend, b.texture), b); };
+            const auto object_pipeline = [&](const rct3::park::object::ObjectBatch& b) { return b.blend == rct3::park::object::PartBlend::DepthOnly ? render::PipelineHandle { } : sided(pipeline_for(false, b.blend, b.texture), b); };
             const auto depth_pipeline = [&](const rct3::park::object::ObjectBatch& b) { return b.blend == rct3::park::object::PartBlend::DepthOnly ? sided(scene.depth_only_pipeline, b) : render::PipelineHandle { }; };
             // Slides' flowing water takes the water shader with the water, unless crossing a band of detail: those
             // objects' vertices carry the band too, which the water shader does not read.
@@ -171,20 +153,23 @@ namespace rct3::scene::park
             // Opaque and cut-out parts in the solid pass, the others in their own.
             const bool still = parts.casters != Casters::Moving;
             const bool moving = parts.casters != Casters::Still;
-            const auto draw_shown = [&](const ShownObjects& shown, std::optional<rct3::park::object::PartBlend> pass) {
-                if (!shown.indices)
-                    return;
-                for (const rct3::park::object::ObjectBatch& batch : shown.batches)
+            const auto draw_shown = [&](std::size_t set, std::optional<rct3::park::object::PartBlend> pass) {
+                const bool crossing = set != 0;
+                for (const ChunkBatch& at : scene.object_order[set])
                 {
+                    const ShownObjects& shown = scene.object_chunks[at.chunk].*kChunkSets[set];
+                    const rct3::park::object::ObjectBatch& batch = shown.batches[at.batch];
+                    if (scene.chunks_seen[at.chunk] == 0 || !shown.indices)
+                        continue;
                     if (pass ? batch.blend != *pass : batch.blend == rct3::park::object::PartBlend::Blended || batch.blend == rct3::park::object::PartBlend::DepthOnly)
                         continue;
-                    if (shaded_flow && &shown == &scene.steady_objects && batch.texture == rct3::park::water::kFlowPicture)
+                    if (shaded_flow && !crossing && batch.texture == rct3::park::water::kFlowPicture)
                         continue;
                     // Parts painted like the ground take the ground's pictures (see object/mesh.hpp).
                     const ui::UiTextures& textures = scene.object_textures.contains(batch.texture) ? scene.object_textures : scene.ground_textures;
                     const auto texture = textures.find(batch.texture);
                     render::DrawCommand draw;
-                    draw.pipeline = sided(pipeline_for(shown, batch.blend, batch.texture), batch);
+                    draw.pipeline = sided(pipeline_for(crossing, batch.blend, batch.texture), batch);
                     draw.vertices = { shown.vertices };
                     draw.indices = { shown.indices };
                     draw.index_type = render::IndexType::U32;
@@ -205,7 +190,7 @@ namespace rct3::scene::park
             const auto draw_ground = [&](render::PipelineHandle pipeline, auto&& wanted) {
                 for (const GroundChunk& chunk : scene.ground_chunks)
                 {
-                    if (!chunk.vertices || !box_in_view(transform, chunk.low, chunk.high))
+                    if (!chunk.vertices || !rct3::park::box_in_view(transform, chunk.low, chunk.high))
                         continue;
                     for (const rct3::park::GroundBatch& batch : chunk.batches)
                     {
@@ -239,9 +224,17 @@ namespace rct3::scene::park
                         draw_footpath_ghost(device, scene, transform, light);
                     draw_patrol(device, scene, transform, light);
                 });
+            // Only the chunks the view reaches: for a shadow map, those in the sun's box round the camera, so ones
+            // out of the camera's view still cast into it.
+            scene.chunks_seen.resize(scene.object_chunks.size());
+            for (std::size_t c = 0; c < scene.object_chunks.size(); ++c)
+            {
+                const rct3::park::object::ShapeBox& box = scene.object_chunks[c].box;
+                scene.chunks_seen[c] = !box.empty && rct3::park::box_in_view(transform, box.low, box.high) ? 1 : 0;
+            }
             const auto draw_objects = [&](std::optional<rct3::park::object::PartBlend> pass) {
-                for (const ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })
-                    draw_shown(*shown, pass);
+                for (std::size_t set = 0; set < kChunkSets.size(); ++set)
+                    draw_shown(set, pass);
             };
             if (scene.show_scenery && parts.scenery && still)
                 profiling::section("Objects", [&] {
@@ -250,16 +243,23 @@ namespace rct3::scene::park
                 });
             if (scene.show_scenery && parts.scenery && still)
                 profiling::section("Billboards", [&] {
-                    for (const ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })
+                    for (std::size_t c = 0; c < scene.object_chunks.size(); ++c)
                     {
-                        // shortcut: crossing billboards are built with their bands each frame; fine for the
-                        // few in bands, upgrade to a second vertex stream if many trees cross at once.
-                        if (!shown->billboards.mesh.indices.empty() && !std::ranges::contains(scene.frame_uploads, &shown->billboards.mesh, &FrameUpload::mesh))
+                        const ObjectChunk& chunk = scene.object_chunks[c];
+                        if (scene.chunks_seen[c] == 0)
+                            continue;
+                        for (const ShownObjects* shown : { &chunk.steady, &chunk.finer, &chunk.coarser })
                         {
-                            const std::vector<CrossingVertex> crossing = crossing_vertices(shown->billboards.mesh.vertices, shown->bands);
-                            upload_once(device, scene.frame_uploads, shown->billboards.mesh, std::as_bytes(std::span(crossing)));
+                            const bool crossing = shown != &chunk.steady;
+                            // shortcut: crossing billboards are built with their bands each frame; fine for the
+                            // few in bands, upgrade to a second vertex stream if many trees cross at once.
+                            if (!shown->billboards.mesh.indices.empty() && !std::ranges::contains(scene.frame_uploads, &shown->billboards.mesh, &FrameUpload::mesh))
+                            {
+                                crossing_vertices(scene.crossing_scratch, shown->billboards.mesh.vertices, shown->bands);
+                                upload_once(device, scene.frame_uploads, shown->billboards.mesh, std::as_bytes(std::span(scene.crossing_scratch)));
+                            }
+                            draw_transient(device, scene, scene.frame_uploads, shown->billboards.mesh, scene.object_textures, transform, light, [&](const rct3::park::object::ObjectBatch& b) { return sided(pipeline_for(crossing, b.blend), b); }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                         }
-                        draw_transient(device, scene, scene.frame_uploads, shown->billboards.mesh, scene.object_textures, transform, light, [&](const rct3::park::object::ObjectBatch& b) { return sided(pipeline_for(*shown, b.blend), b); }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                     }
                 });
             if (scene.show_people && parts.people && moving)
@@ -302,13 +302,15 @@ namespace rct3::scene::park
                 profiling::section("Water", [&] {
                     draw_park_water(device, scene.water, transform, light, parts.eye, scene.park_clock, parts.shaded_water);
                     const auto flow = scene.object_textures.find(rct3::park::water::kFlowPicture);
-                    if (!shaded_flow || !scene.steady_objects.indices || flow == scene.object_textures.end())
+                    if (!shaded_flow || flow == scene.object_textures.end())
                         return;
-                    for (const rct3::park::object::ObjectBatch& batch : scene.steady_objects.batches)
+                    for (const ChunkBatch& at : scene.object_order[0])
                     {
-                        if (batch.texture != rct3::park::water::kFlowPicture)
+                        const ObjectChunk& chunk = scene.object_chunks[at.chunk];
+                        const rct3::park::object::ObjectBatch& batch = chunk.steady.batches[at.batch];
+                        if (batch.texture != rct3::park::water::kFlowPicture || !chunk.steady.indices || scene.chunks_seen[at.chunk] == 0)
                             continue;
-                        render::DrawCommand draw { .pipeline = scene.water.shaded, .vertices = { scene.steady_objects.vertices }, .indices = { scene.steady_objects.indices }, .index_type = render::IndexType::U32, .count = batch.count, .first = batch.first, .transform = transform };
+                        render::DrawCommand draw { .pipeline = scene.water.shaded, .vertices = { chunk.steady.vertices }, .indices = { chunk.steady.indices }, .index_type = render::IndexType::U32, .count = batch.count, .first = batch.first, .transform = transform };
                         draw.texture = flow->second.handle;
                         draw.filter = render::Filter::Linear;
                         draw.address = render::AddressMode::Repeat;

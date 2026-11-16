@@ -33,6 +33,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <format>
@@ -44,6 +45,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -553,7 +555,10 @@ namespace rct3::scene::park
             if (shapes.mesh.indices.empty())
                 return;
             const profiling::Scope zone("Upload");
-            auto vertices = side != 0 ? upload(device, render::BufferUsage::Vertex, crossing_vertices(shapes.mesh.vertices, crossing_bands(scene, plan, shapes.mesh.owners, side)), "crossing object vertices") : upload(device, render::BufferUsage::Vertex, shapes.mesh.vertices, "object vertices");
+            std::vector<CrossingVertex> crossing;
+            if (side != 0)
+                crossing_vertices(crossing, shapes.mesh.vertices, crossing_bands(scene, plan, shapes.mesh.owners, side));
+            auto vertices = side != 0 ? upload(device, render::BufferUsage::Vertex, crossing, "crossing object vertices") : upload(device, render::BufferUsage::Vertex, shapes.mesh.vertices, "object vertices");
             auto indices = upload(device, render::BufferUsage::Index, shapes.mesh.indices, "object indices");
             if (!vertices || !indices)
             {
@@ -1251,15 +1256,12 @@ namespace rct3::scene::park
         }
     }
 
-    /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`; without the
-    /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
-    /// may run beside the frame.
     rct3::park::object::FlowFades flow_fades(const ParkScene& scene)
     {
         return rct3::park::water::flow_fades(scene.rides, scene.objects, scene.models, [&](save::model::RideIndex ride) { return ride.value < scene.track_rules.size() && scene.track_rules[ride.value].pool_ride; });
     }
 
-    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const rct3::park::object::LevelPlan& shown, float band, const rct3::park::object::LevelScales& scales, bool supports, const rct3::park::object::Broken& broken, const rct3::park::object::Chains& chains, const rct3::park::object::FlowFades& fades)
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const rct3::park::object::LevelPlan& shown, std::size_t shown_chunks, float band, const rct3::park::object::LevelScales& scales, bool supports, const rct3::park::object::Broken& broken, const rct3::park::object::Chains& chains, const rct3::park::object::FlowFades& fades)
     {
         ObjectBuild built;
         built.plan = profiling::section("Levels", [&] { return rct3::park::object::plan_levels(scene.objects, scene.models, scene.anchors, eye, band, scales); });
@@ -1282,35 +1284,111 @@ namespace rct3::scene::park
         }
         if (built.plan == shown)
             return std::nullopt;
-        for (auto [shapes, levels] : { std::pair { &built.steady, &built.plan.steady }, std::pair { &built.finer, &built.plan.finer }, std::pair { &built.coarser, &built.plan.coarser } })
+        // Only the chunks holding an object whose level changed are built again; all when the objects did.
+        const rct3::park::object::ChunkGrid grid = rct3::park::object::ChunkGrid::of(scene.grid.width, scene.grid.height, kGroundChunk);
+        const std::vector<std::vector<std::uint32_t>> members = rct3::park::object::chunk_members(scene.objects, grid);
+        const std::vector<bool> changed = rct3::park::object::changed_chunks(built.plan, shown, members);
+        built.chunk_count = grid.count();
+        built.whole = shown.steady.size() != built.plan.steady.size() || shown_chunks != built.chunk_count;
+        // The levels of one chunk's objects at a time, the others not drawn.
+        rct3::park::object::ObjectLevels only(scene.objects.size(), rct3::park::object::kNotDrawn);
+        for (std::size_t c = 0; c < members.size(); ++c)
         {
-            shapes->mesh = profiling::section("Mesh", [&] { return rct3::park::object::object_mesh(scene.objects, scene.models, scene.grid, *levels, { }, scene.leans, scene.fitted, broken, chains, fades); });
-            shapes->billboards = profiling::section("Gather", [&] { return rct3::park::object::gather_billboards(scene.objects, scene.models, scene.anchors, *levels); });
+            if (!built.whole && !changed[c])
+                continue;
+            ChunkShapes& chunk = built.chunks.emplace_back(ChunkShapes { .chunk = c });
+            for (auto [shapes, levels] : { std::pair { &chunk.steady, &built.plan.steady }, std::pair { &chunk.finer, &built.plan.finer }, std::pair { &chunk.coarser, &built.plan.coarser } })
+            {
+                for (const std::uint32_t i : members[c])
+                    only[i] = (*levels)[i];
+                shapes->mesh = profiling::section("Mesh", [&] { return rct3::park::object::object_mesh(scene.objects, scene.models, scene.grid, only, { }, scene.leans, scene.fitted, broken, chains, fades); });
+                shapes->billboards = profiling::section("Gather", [&] { return rct3::park::object::gather_billboards(scene.objects, scene.models, scene.anchors, only); });
+                for (const std::uint32_t i : members[c])
+                    only[i] = rct3::park::object::kNotDrawn;
+                chunk.box.take(shapes->mesh);
+                chunk.box.take(shapes->billboards);
+            }
         }
         return built;
     }
 
-    /// `vertices` with the bands of `bands`, for the crossing shaders.
-    std::vector<CrossingVertex> crossing_vertices(std::span<const rct3::park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands)
+    void crossing_vertices(std::vector<CrossingVertex>& out, std::span<const rct3::park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands)
     {
-        std::vector<CrossingVertex> out;
+        out.clear();
         out.reserve(vertices.size());
         for (std::size_t i = 0; i < vertices.size() && i < bands.size(); ++i)
             out.push_back({ vertices[i], bands[i].first, bands[i].second });
-        return out;
     }
 
-    /// Puts `built` in the object buffers.
-    void show_objects(render::Device& device, ParkScene& scene, ObjectBuild&& built)
+    void show_pending(render::Device& device, ParkScene& scene, std::optional<units::Seconds> budget)
     {
+        if (!scene.objects_pending)
+            return;
+        ObjectBuild& built = *scene.objects_pending;
+        // The park's objects changed since it was built (their levels were let go to build them all again).
+        if (!built.whole && scene.levels.steady.empty())
+        {
+            scene.objects_pending.reset();
+            return;
+        }
+        if (scene.object_chunks.size() != built.chunk_count)
+        {
+            for (const ObjectChunk& chunk : scene.object_chunks)
+                for (const ShownObjects* shown : { &chunk.steady, &chunk.finer, &chunk.coarser })
+                    for (const render::BufferHandle b : { shown->vertices, shown->indices })
+                        if (b)
+                            device.destroy_buffer(b);
+            scene.object_chunks.assign(built.chunk_count, { });
+        }
+        const auto started = std::chrono::steady_clock::now();
+        const float side = scene.tint_crossing ? 2.0f : 1.0f; // Twice as far tints them (lit.slang)
+        // A set of a chunk at a time, at least one a frame however slow.
+        for (bool first = true; !built.chunks.empty() && (first || built.whole || !budget || std::chrono::duration<float>(std::chrono::steady_clock::now() - started).count() < budget->value); first = false)
+        {
+            ChunkShapes& shapes = built.chunks.back();
+            ObjectChunk& chunk = scene.object_chunks[shapes.chunk];
+            // Round the old shapes and the new while it is half shown.
+            if (!shapes.box.empty)
+            {
+                chunk.box.take(shapes.box.low);
+                chunk.box.take(shapes.box.high);
+            }
+            const std::array sets { std::tuple { &chunk.steady, &shapes.steady, 0.0f }, std::tuple { &chunk.finer, &shapes.finer, -side }, std::tuple { &chunk.coarser, &shapes.coarser, side } };
+            const auto [shown, made, on] = sets[shapes.shown++];
+            show_shapes(device, scene, *shown, std::move(*made), built.plan, on);
+            if (shapes.shown < sets.size())
+                continue;
+            chunk.box = shapes.box;
+            built.chunks.pop_back();
+        }
+        scene.billboards_eye.reset();
+        for (std::size_t k = 0; k < kChunkSets.size(); ++k)
+        {
+            std::vector<ChunkBatch>& order = scene.object_order[k];
+            order.clear();
+            for (std::size_t c = 0; c < scene.object_chunks.size(); ++c)
+                for (std::size_t b = 0; b < (scene.object_chunks[c].*kChunkSets[k]).batches.size(); ++b)
+                    order.push_back({ .chunk = static_cast<std::uint32_t>(c), .batch = static_cast<std::uint32_t>(b) });
+            const auto key = [&](const ChunkBatch& at) {
+                const rct3::park::object::ObjectBatch& b = (scene.object_chunks[at.chunk].*kChunkSets[k]).batches[at.batch];
+                return std::tie(b.blend, b.texture, b.one_sided, b.chain, at.chunk);
+            };
+            std::ranges::sort(order, [&](const ChunkBatch& a, const ChunkBatch& b) { return key(a) < key(b); });
+        }
+        if (!built.chunks.empty())
+            return;
+        // The kept shadows are drawn again once all are in, not each frame some go in: a few frames of an
+        // object's shadow at the level before do not show, drawing them every frame does.
+        ++scene.still_changes;
         scene.objects_shown = built.plan.steady.size();
         scene.levels = std::move(built.plan);
-        show_shapes(device, scene, scene.steady_objects, std::move(built.steady), scene.levels);
-        const float side = scene.tint_crossing ? 2.0f : 1.0f; // Twice as far tints them (lit.slang)
-        show_shapes(device, scene, scene.finer_objects, std::move(built.finer), scene.levels, -side);
-        show_shapes(device, scene, scene.coarser_objects, std::move(built.coarser), scene.levels, side);
-        scene.billboards_eye.reset();
-        ++scene.still_changes;
+        scene.objects_pending.reset();
+    }
+
+    void show_objects(render::Device& device, ParkScene& scene, ObjectBuild&& built)
+    {
+        scene.objects_pending = std::move(built);
+        show_pending(device, scene, std::nullopt);
     }
 
     /// Takes on the objects' meshes once built, and looks at their levels again every
@@ -1320,8 +1398,10 @@ namespace rct3::scene::park
         if (ready(scene.object_build))
         {
             if (auto built = scene.object_build.get())
-                show_objects(device, scene, std::move(*built));
+                scene.objects_pending = std::move(*built);
         }
+        if (scene.objects_pending)
+            profiling::section("Show", [&] { show_pending(device, scene, kChunksShownBudget); });
         if (const std::array now { scene.objects_shown, scene.objects.size() }; scene.fresh_for != now)
         {
             const profiling::Scope zone("Fresh");
@@ -1344,12 +1424,12 @@ namespace rct3::scene::park
             ++scene.still_changes;
         }
         scene.since_rebuild += elapsed;
-        if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid() || scene.supports.stale)
+        if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid() || scene.objects_pending || scene.supports.stale)
             return; // Stale supports change the objects first (refresh_supports)
         scene.since_rebuild = { };
-        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, band = scene.blend_band, scales = scene.level_scales, supports = scene.show_supports, broken = scene.broken_objects, chains = rct3::park::chain_runs(scene.rides, scene.objects, scene.models), fades = flow_fades(scene)] {
+        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, shown_chunks = scene.object_chunks.size(), band = scene.blend_band, scales = scene.level_scales, supports = scene.show_supports, broken = scene.broken_objects, chains = rct3::park::chain_runs(scene.rides, scene.objects, scene.models), fades = flow_fades(scene)] {
             profiling::register_thread("ObjectWorker");
-            auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, band, scales, supports, broken, chains, fades); });
+            auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, shown_chunks, band, scales, supports, broken, chains, fades); });
             profiling::unregister_thread();
             return built;
         });

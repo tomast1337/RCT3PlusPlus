@@ -52,18 +52,23 @@ namespace rct3::scene::park
     /// changes. The still ones' levels are only taken on with them, so the moving ones keep to the same levels.
     void refresh_people(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, units::Seconds elapsed);
 
-    /// The objects' meshes at the levels seen from `eye`, or nothing when those are `shown`; without the
-    /// supports unless `supports`. Reads only what is set when the park loads besides its arguments, so it
-    /// may run beside the frame.
     /// The fades of the park's flowing water (park/water/flow.hpp), pool slides told by their kind's rules.
     [[nodiscard]] rct3::park::object::FlowFades flow_fades(const ParkScene& scene);
 
-    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const rct3::park::object::LevelPlan& shown, float band, const rct3::park::object::LevelScales& scales, bool supports, const rct3::park::object::Broken& broken = { }, const rct3::park::object::Chains& chains = { }, const rct3::park::object::FlowFades& fades = { });
+    /// The objects' meshes at the levels seen from `eye` for the chunks whose levels differ from `shown` (all
+    /// when `shown_chunks` is not the park's count), or nothing when none do; without the supports unless
+    /// `supports`. Reads only what is set when the park loads besides its arguments, so it may run beside the
+    /// frame.
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const rct3::park::object::LevelPlan& shown, std::size_t shown_chunks, float band, const rct3::park::object::LevelScales& scales, bool supports, const rct3::park::object::Broken& broken = { }, const rct3::park::object::Chains& chains = { }, const rct3::park::object::FlowFades& fades = { });
 
-    /// `vertices` with the bands of `bands`, for the crossing shaders.
-    std::vector<CrossingVertex> crossing_vertices(std::span<const rct3::park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands);
+    /// `vertices` with the bands of `bands` into `out`, for the crossing shaders.
+    void crossing_vertices(std::vector<CrossingVertex>& out, std::span<const rct3::park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands);
 
-    /// Puts `built` in the object buffers.
+    /// Puts the chunks of ParkScene::objects_pending in their buffers until `budget` is spent, or all of them
+    /// without one; the levels shown are the build's once all are in.
+    void show_pending(render::Device& device, ParkScene& scene, std::optional<units::Seconds> budget);
+
+    /// Puts `built` in the object buffers at once.
     void show_objects(render::Device& device, ParkScene& scene, ObjectBuild&& built);
 
     /// Takes on the objects' meshes once built, and looks at their levels again every

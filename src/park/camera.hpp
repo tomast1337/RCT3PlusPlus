@@ -87,6 +87,9 @@ namespace rct3::park
     /// World to clip space for a view `aspect` times as wide as it is tall.
     /// Riding, the view takes in `across` radians across the screen.
     [[nodiscard]] glm::mat4 view_projection(const ParkCamera& camera, float aspect, const Seat& seat = std::nullopt, float across = kRideWideView);
+    /// Whether the box from `low` to `high` may be seen through `transform`: not when all its corners lie
+    /// beyond the same side of the view, or behind it.
+    [[nodiscard]] bool box_in_view(const glm::mat4& transform, const glm::vec3& low, const glm::vec3& high);
     /// The part of view_projection after the camera's turn and place: from the eye's space, looking along +z.
     [[nodiscard]] glm::mat4 projection(float aspect, const Seat& seat = std::nullopt, float across = kRideWideView);
 

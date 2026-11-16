@@ -994,8 +994,9 @@ namespace rct3::scene::park
         if (scene.billboards_eye != viewer)
         {
             const profiling::Scope zone("Billboards");
-            for (ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })
-                rct3::park::object::face_billboards(shown->billboards, viewer);
+            for (ObjectChunk& chunk : scene.object_chunks)
+                for (ShownObjects* shown : { &chunk.steady, &chunk.finer, &chunk.coarser })
+                    rct3::park::object::face_billboards(shown->billboards, viewer);
             scene.billboards_eye = viewer;
         }
         scene.clock += elapsed.value;

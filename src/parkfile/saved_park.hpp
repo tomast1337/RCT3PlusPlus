@@ -130,6 +130,8 @@ namespace rct3::parkfile
         std::optional<SavedSwim> swim { };              ///< In a pool
         std::optional<simulation::Outside> outside { }; ///< On the way between a spawn point and the gate
         std::optional<simulation::Passport> passport { };
+        bool map = false;      ///< Carrying a park map
+        bool umbrella = false; ///< Holding an umbrella
     };
 
     /// A member of staff at work.

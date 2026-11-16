@@ -322,6 +322,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     r.emplace<Wallet>(ann, Wallet { .cash = { 500 }, .bank = { 4000 }, .spent = { 300 }, .spent_rides = { 300 } });
     r.emplace<Taste>(ann, 0.1f, 0.7f);
     r.emplace<Passport>(ann, Passport { .stamps = { { .post = 9, .colour = 3, .at = { 0.25f, 0.75f } } }, .gift = true });
+    r.emplace<ParkMap>(ann);
     const entt::entity bob = r.create();
     r.emplace<Visitor>(bob, Visitor { .name = "Bob" });
     r.emplace<Pose>(bob);
@@ -329,6 +330,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     r.emplace<Mood>(bob);
     r.emplace<Wallet>(bob);
     r.emplace<Outside>(bob); // Still on the road in from a spawn point
+    r.emplace<Umbrella>(bob);
     const entt::entity cy = r.create();
     r.emplace<Visitor>(cy);
     r.emplace<Pose>(cy);
@@ -397,6 +399,11 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     CHECK(l.get<Passport>(ann2).stamps[0].at == glm::vec2 { 0.25f, 0.75f });
     CHECK(l.get<Passport>(ann2).gift);
     CHECK_FALSE(l.all_of<Passport>(bob2));
+    // Ann's map, Bob's umbrella.
+    CHECK(l.all_of<ParkMap>(ann2));
+    CHECK_FALSE(l.all_of<Umbrella>(ann2));
+    CHECK(l.all_of<Umbrella>(bob2));
+    CHECK_FALSE(l.all_of<ParkMap>(bob2));
     CHECK(l.get<Visitor>(bob2).name == "Bob");
     REQUIRE(l.all_of<Outside>(bob2));
     CHECK(l.get<Outside>(bob2).way == Outside::Way::In);

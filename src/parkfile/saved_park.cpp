@@ -116,6 +116,8 @@ namespace rct3::parkfile
                 g.outside = Outside { Outside::Way::Home };
             if (const auto* passport = r.try_get<Passport>(e))
                 g.passport = *passport;
+            g.map = r.all_of<ParkMap>(e);
+            g.umbrella = r.all_of<Umbrella>(e);
             if (door != nullptr)
                 g.swim = SavedSwim { .room_col = door->col, .room_row = door->row, .swimmer = *swimmer };
             if (const auto* member = r.try_get<Member>(e); member != nullptr && r.valid(member->party))
@@ -168,6 +170,10 @@ namespace rct3::parkfile
                 r.emplace<Outside>(e, *g.outside);
             if (g.passport)
                 r.emplace<Passport>(e, *g.passport);
+            if (g.map)
+                r.emplace<ParkMap>(e);
+            if (g.umbrella)
+                r.emplace<Umbrella>(e);
         }
         return out;
     }
@@ -357,7 +363,7 @@ namespace rct3::parkfile
         write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
-            put_chunk(w, "PEOP", 5, *park.people);
+            put_chunk(w, "PEOP", 6, *park.people);
         if (!park.no_queue_signs.empty())
             put_chunk(w, "QSGN", 1, park.no_queue_signs);
         if (shows)
@@ -389,7 +395,7 @@ namespace rct3::parkfile
             std::expected<void, std::string> result;
             if (tag == "PEOP")
             {
-                if (park.people || version != 5) // 2 adds the swimmers, 3 those outside the park, 4 passports, 5 the gift
+                if (park.people || version != 6) // 2 adds the swimmers, 3 those outside the park, 4 passports, 5 the gift, 6 maps and umbrellas
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.people.emplace());
             }

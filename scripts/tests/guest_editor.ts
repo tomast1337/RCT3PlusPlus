@@ -20,6 +20,10 @@ await frames(2);
 const picked = editor.guest();
 expect(picked !== undefined, "the guest picked");
 log("picked", picked!.name, JSON.stringify(picked!.levels));
+expect(
+    picked!.name === people.list()[guest].name,
+    `the editor names the guest as their window does, not ${picked!.name}`,
+);
 
 expect(editor.set("happiness", 0.15), "happiness set");
 editor.hold("happiness", true);

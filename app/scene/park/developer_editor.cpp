@@ -106,13 +106,18 @@ namespace rct3::scene::park
                 Thirst,
                 Cash,
             };
-            constexpr ImGuiTableFlags kFlags = ImGuiTableFlags_Sortable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV;
+            // Hideable: a narrow dock shows name, doing and happiness; a right click on the header shows the rest.
+            constexpr ImGuiTableFlags kFlags = ImGuiTableFlags_Sortable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable | ImGuiTableFlags_BordersInnerV;
             if (!ImGui::BeginTable("guests", 9, kFlags, { 0, ImGui::GetTextLineHeightWithSpacing() * 8 }))
                 return;
             ImGui::TableSetupScrollFreeze(0, 1);
-            ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch);
-            for (const char* column : { "Age", "Doing", "Happy", "Energy", "Nausea", "Hunger", "Thirst", "Cash" })
-                ImGui::TableSetupColumn(column, column == std::string_view("Doing") ? ImGuiTableColumnFlags_WidthStretch : ImGuiTableColumnFlags_WidthFixed);
+            const float number_width = ImGui::CalcTextSize("Nausea").x;
+            ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoHide);
+            ImGui::TableSetupColumn("Age", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_DefaultHide, ImGui::CalcTextSize("adult").x);
+            ImGui::TableSetupColumn("Doing", ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Happy", ImGuiTableColumnFlags_WidthFixed, number_width);
+            for (const char* column : { "Energy", "Nausea", "Hunger", "Thirst", "Cash" })
+                ImGui::TableSetupColumn(column, ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_DefaultHide, number_width);
             ImGui::TableHeadersRow();
             if (const ImGuiTableSortSpecs* sort = ImGui::TableGetSortSpecs(); sort != nullptr && sort->SpecsCount > 0)
             {
@@ -164,7 +169,7 @@ namespace rct3::scene::park
                     for (const auto level : { simulation::GuestLevel::Happiness, simulation::GuestLevel::Energy, simulation::GuestLevel::Nausea, simulation::GuestLevel::Hunger, simulation::GuestLevel::Thirst })
                     {
                         ImGui::TableNextColumn();
-                        ImGui::Text("%.2f", static_cast<double>(simulation::level_of(r, e, level).value_or(units::Share { }).value));
+                        ImGui::Text("%3.0f%%", static_cast<double>(simulation::level_of(r, e, level).value_or(units::Share { }).value) * 100);
                     }
                     ImGui::TableNextColumn();
                     if (const auto* wallet = r.try_get<simulation::Wallet>(e))

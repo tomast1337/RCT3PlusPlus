@@ -8,7 +8,7 @@
 # actions/cache (one cache per job, so the sanitizer flags never share entries), turns that into
 # compiling only what changed. Pull requests read the caches that runs on main saved.
 #
-# Follow-ups, deliberately not covered yet: the Vulkan/GLFW viewer build, the libFuzzer
+# Follow-ups, deliberately not covered yet: the viewer build (Vulkan, windowing), the libFuzzer
 # targets (these need Clang), and a Windows runner.
 name: ci
 

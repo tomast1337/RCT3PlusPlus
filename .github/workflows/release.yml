@@ -1,7 +1,7 @@
 # Packages for players, made by `./nob package` (the same command runs locally):
 #
-#   rct3pp-VERSION-linux-x86_64.tar.gz       the game, README, LICENSE, CHANGELOG, the icons and GLFW
-#   rct3pp-VERSION-windows-x86_64.zip        the same for Windows, with the DLLs the game needs
+#   rct3pp-VERSION-linux-x86_64.tar.gz       the game (one binary), README, LICENSE, CHANGELOG and the icons
+#   rct3pp-VERSION-windows-x86_64.zip        the same for Windows
 #   rct3pp-tools-VERSION-PLATFORM.tar.gz/.zip  the command line tools (ovl-dump, sim-run, ...), shipped apart
 #
 # VERSION is what `git describe` says (src/core/version.hpp). A tag named v* publishes the packages as that
@@ -39,10 +39,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # The tags, for the version
 
-      - name: Install GLFW, Vulkan and slangc
+      # GLFW is vendored; its X11 and Wayland back ends need only these headers to build.
+      - name: Install the Vulkan and windowing headers and slangc
         run: |
           apt-get update -qq
-          apt-get install -y -qq --no-install-recommends libglfw3-dev libvulkan-dev
+          apt-get install -y -qq --no-install-recommends libvulkan-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libwayland-dev libxkbcommon-dev
           curl -fsSL -o slang.tar.gz https://github.com/shader-slang/slang/releases/download/v2026.18.2/slang-2026.18.2-linux-x86_64.tar.gz
           mkdir -p /opt/slang && tar -xzf slang.tar.gz -C /opt/slang
           echo "/opt/slang/bin" >> "$GITHUB_PATH"
@@ -54,6 +55,8 @@ jobs:
           g++ -std=c++26 -o nob nob.cpp
           ./nob package
           ldd build/release/rct3pp
+          # One binary: GLFW is built in and opens the windowing libraries at run time.
+          if ldd build/release/rct3pp | grep -E 'glfw|X11|Xrandr|Xcursor|Xi|wayland|xkbcommon|decor'; then exit 1; fi
           echo "newest glibc symbol: $(objdump -T build/release/rct3pp | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -n 1)"
 
       - uses: actions/upload-artifact@v4
@@ -81,7 +84,6 @@ jobs:
           install: >-
             git
             mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-glfw
             mingw-w64-ucrt-x86_64-vulkan-devel
             unzip
             zip
@@ -97,6 +99,8 @@ jobs:
           g++ -std=c++26 -o nob nob.cpp
           ./nob package
           ldd build/release/rct3pp.exe
+          # One .exe: no MSYS2 DLL (GLFW and the compiler's runtime are linked in).
+          if ldd build/release/rct3pp.exe | grep -i ucrt64; then exit 1; fi
 
       - uses: actions/upload-artifact@v4
         with:

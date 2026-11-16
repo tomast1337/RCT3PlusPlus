@@ -143,6 +143,34 @@ namespace rct3::simulation
         return count;
     }
 
+    std::size_t remove_animals(SimWorld& world)
+    {
+        entt::registry& r = world.registry;
+        const auto animals = r.view<Animal>();
+        const std::size_t count = animals.size();
+        for (auto [keeper, duty] : r.view<KeeperDuty>().each())
+            if (duty.job == KeeperJob::Catching)
+                duty = KeeperDuty { .house = duty.house };
+        r.destroy(animals.begin(), animals.end());
+        return count;
+    }
+
+    std::size_t refresh_animals(SimWorld& world)
+    {
+        std::size_t count = 0;
+        for (auto [e, animal] : world.registry.view<Animal>().each())
+        {
+            ++count;
+            animal.hunger = { };
+            animal.thirst = { };
+            animal.tiredness = { };
+            animal.loneliness = { };
+            animal.health = units::Share { 1 };
+            animal.empty_troughs = 0;
+        }
+        return count;
+    }
+
     std::size_t scatter_litter(SimWorld& world, random::RandomState& dice, std::span<const NodeId> spots, std::size_t count)
     {
         if (spots.empty())

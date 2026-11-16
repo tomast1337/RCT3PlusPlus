@@ -297,6 +297,8 @@ declare namespace debug {
             | "refresh_guests"
             | "break_rides"
             | "reset_rides"
+            | "remove_animals"
+            | "refresh_animals"
             | "drop_litter"
             | "clear_litter",
         amount?: number,

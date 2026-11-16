@@ -123,6 +123,23 @@ TEST_CASE("debug tools: rides break down all at once, and a reset repairs, empti
     park.run_seconds(30);
 }
 
+TEST_CASE("debug tools: animals are taken away, keepers after them go back to work, and needs are met")
+{
+    SimWorld world;
+    const entt::entity keeper = add_animal_house(world, { .object = 7, .enclosure = std::optional { 0 } }, { 1, 0, 1 });
+    const entt::entity animal = add_animal(world, { .species = "Lion", .enclosure = 0, .job = AnimalJob::Idle, .hunger = units::Share { 0.8f }, .health = units::Share { 0.3f } }, { 2, 0, 2 });
+    refresh_animals(world);
+    CHECK(world.registry.get<Animal>(animal).hunger.value == 0);
+    CHECK(world.registry.get<Animal>(animal).health.value == 1);
+
+    world.registry.get<KeeperDuty>(keeper).job = KeeperJob::Catching;
+    world.registry.get<KeeperDuty>(keeper).target = animal;
+    CHECK(remove_animals(world) == 1);
+    CHECK(world.registry.view<Animal>().empty());
+    CHECK(world.registry.get<KeeperDuty>(keeper).job == KeeperJob::Idle);
+    CHECK(world.registry.get<KeeperDuty>(keeper).target == entt::null);
+}
+
 TEST_CASE("debug tools: litter is dropped across the spots given and cleared again")
 {
     Sandbox park;

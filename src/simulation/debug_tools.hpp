@@ -43,6 +43,12 @@ namespace rct3::simulation
     /// Returns how many rides.
     std::size_t reset_rides(SimWorld& world);
 
+    /// Takes every zoo animal out of the park; keepers after one go back to their other work. Returns how many.
+    std::size_t remove_animals(SimWorld& world);
+
+    /// Meets every zoo animal's needs and makes it well again. Returns how many animals.
+    std::size_t refresh_animals(SimWorld& world);
+
     /// Drops `count` pieces of litter, each on a tile of `spots` picked with `dice`. Returns how many; none without
     /// spots.
     std::size_t scatter_litter(SimWorld& world, random::RandomState& dice, std::span<const NodeId> spots, std::size_t count);

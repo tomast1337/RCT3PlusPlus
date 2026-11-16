@@ -111,7 +111,9 @@ The command line wins over environment variables, which win over the file.
 export RCT3PP_GAME_PATH="/path/to/RollerCoaster Tycoon 3"
 ```
 
-File names inside the install are matched without regard to case, as on Windows.
+Without `RCT3PP_GAME_PATH` or `game_path` in the settings, the install is looked for in the folder the
+program runs from and the one above it, in the Steam libraries (with those `libraryfolders.vdf` lists) and in
+the usual GOG folders. File names inside the install are matched without regard to case, as on Windows.
 
 ### Scripts
 

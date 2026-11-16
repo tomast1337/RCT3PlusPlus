@@ -112,8 +112,8 @@ export RCT3PP_GAME_PATH="/path/to/RollerCoaster Tycoon 3"
 ```
 
 Without `RCT3PP_GAME_PATH` or `game_path` in the settings, the install is looked for in the folder the
-program runs from and the one above it, in the Steam libraries (with those `libraryfolders.vdf` lists) and in
-the usual GOG folders. File names inside the install are matched without regard to case, as on Windows.
+program runs from and the one above it, in the Steam libraries (with those `libraryfolders.vdf` lists), in
+Epic's installs (from the launcher's or Heroic's list), and in the usual GOG and disc install folders. File names inside the install are matched without regard to case, as on Windows.
 
 ### Scripts
 

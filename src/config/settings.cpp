@@ -17,7 +17,7 @@ namespace rct3::config
         namespace fs = std::filesystem;
 
         constexpr std::array<SettingInfo, kSettingCount> kSettings = { {
-            { Setting::GamePath, "game_path", SettingKind::Text, "Folder the original game is installed in (the one that contains gui/ and Style/). RCT3PP_GAME_PATH overrides it. Unset: looked for beside the program, in Steam and GOG.", "" },
+            { Setting::GamePath, "game_path", SettingKind::Text, "Folder the original game is installed in (the one that contains gui/ and Style/). RCT3PP_GAME_PATH overrides it. Unset: looked for beside the program, in Steam, Epic, GOG and the disc versions' folders.", "" },
             { Setting::SkipIntro, "skip_intro", SettingKind::Flag, "Start without the logos (true/false). --no-intro skips them too.", "no" },
             { Setting::InterfaceScale, "interface_scale", SettingKind::Scale, "Pixels per interface unit: auto, or a whole number from 1 to 8. auto picks one from the window height.", "auto" },
             { Setting::Language, "language", SettingKind::Text, "Interface language as the game names it (English, German, SChinese, ...). Unset: the locale's, else English. --language sets it too.", "" },

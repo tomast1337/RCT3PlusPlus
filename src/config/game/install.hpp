@@ -80,16 +80,25 @@ namespace rct3::config::game
     /// releases.
     inline constexpr std::array<std::string_view, 3> kGameFolderNames = { "RollerCoaster Tycoon 3 Complete Edition", "RollerCoaster Tycoon 3 Platinum", "RollerCoaster Tycoon 3" };
 
+    /// A folder that may hold the game itself, and how to name it in the log.
+    struct GameFolder
+    {
+        std::filesystem::path path { };
+        std::string_view source { }; ///< "GOG", "disc install", ...
+    };
+
     /// Where to look for an install that neither RCT3PP_GAME_PATH nor game_path names, in order.
     struct InstallPlaces
     {
-        std::filesystem::path program_folder { };            ///< The folder the program runs from; empty to skip
-        std::vector<std::filesystem::path> steam_roots { };  ///< Steam installs; each lists its libraries
-        std::vector<std::filesystem::path> game_folders { }; ///< Folders that may hold the game itself (GOG)
+        std::filesystem::path program_folder { };           ///< The folder the program runs from; empty to skip
+        std::vector<std::filesystem::path> steam_roots { }; ///< Steam installs; each lists its libraries
+        std::vector<std::filesystem::path> epic_lists { };  ///< Epic's lists of installs: a folder of .item files, or one JSON file
+        std::vector<GameFolder> game_folders { };           ///< GOG and disc install folders
     };
 
-    /// This machine's usual places: the program's folder, the default Steam installs and GOG folders. Each
-    /// platform has its own file: install_linux.cpp, install_windows.cpp.
+    /// This machine's usual places: the program's folder, the default Steam installs, Epic's lists of installs,
+    /// and the GOG and disc install folders. Each platform has its own file: install_linux.cpp,
+    /// install_windows.cpp.
     /// shortcut: no macOS file yet; add install_macos.cpp once there is a macOS build.
     [[nodiscard]] InstallPlaces usual_install_places(const Environment& env);
 

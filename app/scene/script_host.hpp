@@ -78,6 +78,9 @@
 //   editor.guest()      the picked guest as the simulation has them: { name, levels, held }, levels by name (0..1)
 //                       and the names of those held; undefined when none is picked
 //   editor.set(level, value), editor.hold(level, on)  as the picked guest's slider and hold switch for `level` do
+//   debug.open()        brings the developer windows' Debug tab to the front, once they are shown (keys.press("F12"))
+//   debug.use(tool, amount)  uses the Debug tab's tool named `tool` (scene/park/debug_tab.hpp) with `amount` (money in
+//                       hundredths, or how many guests or pieces of litter); returns how many things it changed
 //
 // With a report folder (rct3pp --script-report DIR), the script's screenshots and log, with how it ended, go
 // there for review; ./nob script gathers them into a report.
@@ -121,7 +124,7 @@ namespace rct3::scene
 
         /// Moves the script on a frame, seeing `park` (none while no park is open) and the front end `front`
         /// drawn by `device`.
-        void tick(const render::Device& device, park::ParkScene* park, FrontEndScene* front);
+        void tick(render::Device& device, park::ParkScene* park, FrontEndScene* front);
 
         /// The pointer the script holds, in the game view's pixels, and whether its button is down; none
         /// until the script first moves it.
@@ -198,7 +201,7 @@ namespace rct3::scene
         std::optional<CareerRequest> career_;
         std::optional<int> quit_;
         float advance_ = 0;
-        const render::Device* device_ = nullptr; ///< While a tick runs
+        render::Device* device_ = nullptr; ///< While a tick runs
         park::ParkScene* park_ = nullptr;
         FrontEndScene* front_ = nullptr;
     };

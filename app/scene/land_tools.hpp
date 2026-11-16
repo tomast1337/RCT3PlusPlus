@@ -172,6 +172,9 @@ namespace rct3::scene
     void buy_land_tool(park::ParkScene& scene, rct3::park::LandBuy what, const ui::InterfaceAssets& assets);
     void stop_land_tools(park::ParkScene& scene);
 
+    /// The fence round the park's land built again, and the staff kept to that land, after it changed.
+    void land_owned_changed(park::ParkScene& scene, const ui::InterfaceAssets& assets);
+
     /// Takes the lake holding `tile` away, its waterfalls with it, putting back the ground they cut.
     void remove_lake(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Tile tile);
 

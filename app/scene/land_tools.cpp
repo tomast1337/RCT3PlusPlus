@@ -655,32 +655,35 @@ namespace rct3::scene
             park::rebuild_ground(device, scene, assets);
         }
 
-        /// The fence round the park's land built again, and the staff kept to that land, after it changed.
-        /// shortcut: the old panels stay hidden among the objects; drop them when objects can be taken out.
-        void land_owned_changed(park::ParkScene& scene, const ui::InterfaceAssets& assets)
-        {
-            simulation::keep_staff_in(scene.sim, scene.grid);
-            wait_for_build(scene);
-            for (save::model::PlacedObject& o : scene.objects)
-                if (std::ranges::contains(scene.fence_panels, o.id))
-                    o.hidden = true;
-            scene.fence_panels.clear();
-            const save::model::Park& park = scene.park_model.park;
-            rct3::park::BoundaryFence fence = rct3::park::boundary_fence(park.fence_symbol, park.fence_overlay, scene.grid, scene.footpaths.paths, last_id(scene));
-            if (!fence.pieces.empty() && load_object_model(scene, scene.placing.models, assets, fence.pieces.front()))
-            {
-                const auto& colours = scene.models.at(rct3::park::object::model_key(fence.pieces.front())).default_colours;
-                for (save::model::PlacedObject& panel : fence.pieces)
-                {
-                    panel.colours = colours;
-                    scene.fence_panels.push_back(panel.id);
-                    scene.objects.push_back(std::move(panel));
-                }
-                scene.leans.merge(fence.leans);
-            }
-            objects_changed(scene);
-        }
+    } // namespace
 
+    /// shortcut: the old panels stay hidden among the objects; drop them when objects can be taken out.
+    void land_owned_changed(park::ParkScene& scene, const ui::InterfaceAssets& assets)
+    {
+        simulation::keep_staff_in(scene.sim, scene.grid);
+        wait_for_build(scene);
+        for (save::model::PlacedObject& o : scene.objects)
+            if (std::ranges::contains(scene.fence_panels, o.id))
+                o.hidden = true;
+        scene.fence_panels.clear();
+        const save::model::Park& park = scene.park_model.park;
+        rct3::park::BoundaryFence fence = rct3::park::boundary_fence(park.fence_symbol, park.fence_overlay, scene.grid, scene.footpaths.paths, last_id(scene));
+        if (!fence.pieces.empty() && load_object_model(scene, scene.placing.models, assets, fence.pieces.front()))
+        {
+            const auto& colours = scene.models.at(rct3::park::object::model_key(fence.pieces.front())).default_colours;
+            for (save::model::PlacedObject& panel : fence.pieces)
+            {
+                panel.colours = colours;
+                scene.fence_panels.push_back(panel.id);
+                scene.objects.push_back(std::move(panel));
+            }
+            scene.leans.merge(fence.leans);
+        }
+        objects_changed(scene);
+    }
+
+    namespace
+    {
         /// A press with the buying tool: buys what is on sale under the brush, once for each tile the pointer moves to.
         void buy(park::ParkScene& scene, const ui::InterfaceAssets& assets, ui::Point at, ui::Point size, bool over)
         {

@@ -12,6 +12,7 @@
 #include "scene/enclosure_tools.hpp"
 #include "scene/front_end_scene.hpp"
 #include "scene/park/attraction_state.hpp"
+#include "scene/park/debug_tab.hpp"
 #include "scene/park/poses.hpp"
 #include "scene/park/refresh.hpp"
 #include "scene/park/scene.hpp"
@@ -550,6 +551,17 @@ namespace rct3::scene
             for (int i = 0; i < std::clamp(static_cast<int>(number(a, 2)), 1, 50); ++i)
                 park_->sim.registry.emplace<simulation::Litter>(park_->sim.registry.create(), simulation::Litter { .node = *at });
             return Json(true);
+        });
+        engine_.define("debug.open", [this](const Json&) {
+            park_of(park_).debug_tab_asked = true;
+            return Json(nullptr);
+        });
+        engine_.define("debug.use", [this](const Json& a) -> Json {
+            const auto named = a.empty() || !a[0].is_string() ? park::kDebugToolNames.end() : std::ranges::find(park::kDebugToolNames, a[0].get<std::string>());
+            if (named == park::kDebugToolNames.end() || front_ == nullptr)
+                throw std::invalid_argument("debug.use takes the name of a Debug tab tool, such as \"add_money\", and an amount, with a park open");
+            const auto tool = static_cast<park::DebugTool>(named - park::kDebugToolNames.begin());
+            return Json(park::use_debug_tool(*device_, park_of(park_), front_->assets, tool, a.size() > 1 ? static_cast<std::int64_t>(number(a, 1)) : 0));
         });
         engine_.define("park.dryFlowerBeds", [this](const Json&) -> Json {
             if (park_ == nullptr)
@@ -1553,7 +1565,7 @@ namespace rct3::scene
         });
     }
 
-    void ScriptHost::tick(const render::Device& device, park::ParkScene* park, FrontEndScene* front)
+    void ScriptHost::tick(render::Device& device, park::ParkScene* park, FrontEndScene* front)
     {
         wheel_ = 0; // Turned for one frame only
         if (quit_)

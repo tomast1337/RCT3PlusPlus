@@ -20,11 +20,11 @@ TEST_CASE("the sun's view holds the square round its centre, nearer the sun shal
     const glm::vec3 to_sun = glm::normalize(glm::vec3(0.3f, 1.0f, -0.4f));
     const glm::vec3 centre(100, 20, 50);
     const SunView view = sun_view(to_sun, centre, 50, 2048);
-    CHECK(view.texel.value == doctest::Approx(100.0f / 2048));
+    CHECK(view.texel.value == doctest::Approx(100.0f / 2048 * kSunViewSteps / (kSunViewSteps - 1)));
 
     const glm::vec3 middle = project(view, centre);
-    CHECK(std::abs(middle.x) < 0.01f);
-    CHECK(std::abs(middle.y) < 0.01f);
+    CHECK(std::abs(middle.x) <= 1 / kSunViewSteps);
+    CHECK(std::abs(middle.y) <= 1 / kSunViewSteps);
     CHECK(middle.z == doctest::Approx(0.5f).epsilon(0.01));
     // Further along the sunlight lies deeper; a point towards the sun shallower.
     CHECK(project(view, centre - to_sun * 10.0f).z > middle.z);
@@ -42,6 +42,30 @@ TEST_CASE("the sun's view moves only in whole texels")
     const SunView a = sun_view(to_sun, { 10, 0, 10 }, 64, 2048);
     const SunView b = sun_view(to_sun, { 10.001f, 0, 10.001f }, 64, 2048);
     CHECK(a.view_projection == b.view_projection);
+}
+
+TEST_CASE("the sun's view stays put in steps while the camera pans, and holds the square round it in every one")
+{
+    // Straight down, the map's sides lie along the world's x and z.
+    constexpr float kRadius = 64;
+    std::size_t moves = 0;
+    glm::mat4 last = sun_view({ 0, 1, 0 }, { 0, 0, 0 }, kRadius, 2048).view_projection;
+    for (int i = 0; i <= 1000; ++i)
+    {
+        const glm::vec3 centre(static_cast<float>(i) * 0.1f, 0, static_cast<float>(i) * 0.07f);
+        const SunView view = sun_view({ 0, 1, 0 }, centre, kRadius, 2048);
+        moves += view.view_projection != last ? 1 : 0;
+        last = view.view_projection;
+        for (const glm::vec3 corner : { glm::vec3(-kRadius, 0, -kRadius), glm::vec3(kRadius, 0, kRadius), glm::vec3(-kRadius, 0, kRadius), glm::vec3(kRadius, 0, -kRadius) })
+        {
+            const glm::vec3 p = project(view, centre + corner);
+            CHECK(std::abs(p.x) <= 1.0001f); // The square's edge may fall on the map's
+            CHECK(std::abs(p.y) <= 1.0001f);
+        }
+    }
+    // 100 units along x, steps of a sixteenth of about 137: some twelve moves, and as many again along z.
+    CHECK(moves > 0);
+    CHECK(moves <= 30);
 }
 
 TEST_CASE("a straight-down sun still gives a view")

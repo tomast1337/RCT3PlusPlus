@@ -1310,6 +1310,7 @@ namespace rct3::scene::park
         show_shapes(device, scene, scene.finer_objects, std::move(built.finer), scene.levels, -side);
         show_shapes(device, scene, scene.coarser_objects, std::move(built.coarser), scene.levels, side);
         scene.billboards_eye.reset();
+        ++scene.still_changes;
     }
 
     /// Takes on the objects' meshes once built, and looks at their levels again every
@@ -1340,6 +1341,7 @@ namespace rct3::scene::park
             scene.fresh_objects = rct3::park::object::object_mesh(std::span(scene.objects).subspan(from), scene.models, scene.grid, levels, { }, scene.leans, scene.fitted, scene.broken_objects);
             add_textures(device, scene, scene.fresh_objects.batches);
             scene.fresh_for = now;
+            ++scene.still_changes;
         }
         scene.since_rebuild += elapsed;
         if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid() || scene.supports.stale)

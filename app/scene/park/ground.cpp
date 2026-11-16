@@ -154,6 +154,7 @@ namespace rct3::scene::park
         const profiling::Scope zone("RebuildGround");
         ParkFootpaths& f = scene.footpaths;
         scene.supports.stale = true; // Paths or the ground changed
+        ++scene.still_changes;
         const std::vector<rct3::park::ground::PavedTile> laid = profiling::section("Pavings", [&] { return rct3::park::ground::lay_pavings(f.paths, f.pavings, scene.grid); });
         std::vector<save::model::PathTile> with = f.paths;
         for (const rct3::park::ground::PavedTile& t : laid)

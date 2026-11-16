@@ -214,6 +214,14 @@ namespace rct3::scene::park
         glm::vec2 side { 0.0f };
     };
 
+    /// A mesh built for the frame, copied into the frame's memory once and drawn from there by every pass.
+    struct FrameUpload
+    {
+        const rct3::park::object::ObjectMesh* mesh = nullptr;
+        render::BufferSlice vertices { };
+        render::BufferSlice indices { };
+    };
+
     /// The enclosure list's fence tool out (scene/enclosure_tools.hpp): a drag marks tiles into an enclosure, or
     /// with the delete tool out of one. Or an animal from the animal list, put down where the button goes up.
     struct EnclosureTool
@@ -776,6 +784,7 @@ namespace rct3::scene::park
         std::vector<glm::vec3> stroke;                                                   ///< The pool water under the pointer while pressed: world x, z and scene.clock
         std::optional<ui::Point> right_press;                                            ///< Likewise the right button
         render::SceneLight light;                                                        ///< What the day clock shows, for this frame
+        std::vector<FrameUpload> frame_uploads;                                          ///< Meshes copied for this frame so far, cleared as it starts
         int shadows = 0;                                                                 ///< The Shadows option: none, static (drawn now and then), dynamic
         /// The shadow drawn at the sun's last kept direction, and the one before it, which fades out as the sun
         /// goes on towards its next step (rct3::park::sun_step_share).

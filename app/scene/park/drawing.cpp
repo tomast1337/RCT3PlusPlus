@@ -47,15 +47,31 @@ namespace rct3::scene::park
         constexpr std::uint32_t kPhotoWidth = 640;
         constexpr std::uint32_t kPhotoHeight = 480;
 
-        /// Draws `mesh` from buffers made for this frame, each batch with `pipeline_of(batch)`, none leaving it out;
-        /// with its vertices as `vertex_bytes` when given, for pipelines of another layout.
-        void draw_transient(render::Device& device, const ParkScene& scene, const rct3::park::object::ObjectMesh& mesh, const ui::UiTextures& textures, const glm::mat4& transform, const render::SceneLight& light, auto&& pipeline_of, auto&& address_of, std::span<const std::byte> vertex_bytes = { })
+        /// `mesh` in the frame's memory, with its vertices as `vertex_bytes` when given, for pipelines of another
+        /// layout. Copied there the first time the frame asks and kept in `uploads` for the passes after; copied each
+        /// time without them.
+        std::optional<FrameUpload> upload_once(render::Device& device, std::optional<std::vector<FrameUpload>&> uploads, const rct3::park::object::ObjectMesh& mesh, std::span<const std::byte> vertex_bytes = { })
         {
-            if (mesh.indices.empty())
-                return;
+            if (uploads)
+                if (const auto kept = std::ranges::find(*uploads, &mesh, &FrameUpload::mesh); kept != uploads->end())
+                    return *kept;
             const auto vertices = device.allocate_transient(vertex_bytes.empty() ? std::as_bytes(std::span(mesh.vertices)) : vertex_bytes);
             const auto indices = device.allocate_transient(std::as_bytes(std::span(mesh.indices)));
             if (!vertices || !indices)
+                return std::nullopt;
+            const FrameUpload made { .mesh = &mesh, .vertices = *vertices, .indices = *indices };
+            if (uploads)
+                uploads->push_back(made);
+            return made;
+        }
+
+        /// Draws `mesh` from the frame's memory (upload_once), each batch with `pipeline_of(batch)`, none leaving it out.
+        void draw_transient(render::Device& device, const ParkScene& scene, std::optional<std::vector<FrameUpload>&> uploads, const rct3::park::object::ObjectMesh& mesh, const ui::UiTextures& textures, const glm::mat4& transform, const render::SceneLight& light, auto&& pipeline_of, auto&& address_of)
+        {
+            if (mesh.indices.empty())
+                return;
+            const std::optional<FrameUpload> uploaded = upload_once(device, uploads, mesh);
+            if (!uploaded)
                 return;
             for (const rct3::park::object::ObjectBatch& batch : mesh.batches)
             {
@@ -64,8 +80,8 @@ namespace rct3::scene::park
                 draw.pipeline = pipeline_of(batch);
                 if (!draw.pipeline)
                     continue;
-                draw.vertices = *vertices;
-                draw.indices = *indices;
+                draw.vertices = uploaded->vertices;
+                draw.indices = uploaded->indices;
                 draw.index_type = render::IndexType::U32;
                 draw.first = batch.first;
                 draw.count = batch.count;
@@ -118,11 +134,11 @@ namespace rct3::scene::park
             {
                 const profiling::Scope zone("Sky");
                 // The dome reads one column of its picture, so it must not wrap into the next.
-                draw_transient(device, scene, scene.sky_mesh, scene.sky_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.sky_pipeline; }, [&](const rct3::park::object::ObjectBatch& b) { return b.texture == scene.sky.dome.texture ? render::AddressMode::Clamp : render::AddressMode::Repeat; });
+                draw_transient(device, scene, scene.frame_uploads, scene.sky_mesh, scene.sky_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.sky_pipeline; }, [&](const rct3::park::object::ObjectBatch& b) { return b.texture == scene.sky.dome.texture ? render::AddressMode::Clamp : render::AddressMode::Repeat; });
             }
             // Before the ground, writing depth, so land reaching beyond the ring stays hidden behind it.
             if (parts.background)
-                profiling::section("Mountains", [&] { draw_transient(device, scene, scene.mountains, scene.sky_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.cutout_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
+                profiling::section("Mountains", [&] { draw_transient(device, scene, scene.frame_uploads, scene.mountains, scene.sky_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.cutout_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
             const auto pipeline_for = [&](const ShownObjects& shown, rct3::park::object::PartBlend blend, std::string_view texture = { }) {
                 const bool crossing = &shown != &scene.steady_objects;
                 if (texture == rct3::park::object::kChromePicture && blend != rct3::park::object::PartBlend::DepthOnly)
@@ -218,51 +234,55 @@ namespace rct3::scene::park
             if (scene.show_scenery && parts.scenery)
                 profiling::section("Objects", [&] {
                     draw_objects(std::nullopt);
-                    draw_transient(device, scene, scene.fresh_objects, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                    draw_transient(device, scene, scene.frame_uploads, scene.fresh_objects, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                 });
             if (scene.show_scenery && parts.scenery)
                 profiling::section("Billboards", [&] {
                     for (const ShownObjects* shown : { &scene.steady_objects, &scene.finer_objects, &scene.coarser_objects })
                     {
-                        // shortcut: crossing billboards are copied with their bands each frame; fine for the
+                        // shortcut: crossing billboards are built with their bands each frame; fine for the
                         // few in bands, upgrade to a second vertex stream if many trees cross at once.
-                        const std::vector<CrossingVertex> crossing = crossing_vertices(shown->billboards.mesh.vertices, shown->bands);
-                        draw_transient(device, scene, shown->billboards.mesh, scene.object_textures, transform, light, [&](const rct3::park::object::ObjectBatch& b) { return sided(pipeline_for(*shown, b.blend), b); }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }, std::as_bytes(std::span(crossing)));
+                        if (!shown->billboards.mesh.indices.empty() && !std::ranges::contains(scene.frame_uploads, &shown->billboards.mesh, &FrameUpload::mesh))
+                        {
+                            const std::vector<CrossingVertex> crossing = crossing_vertices(shown->billboards.mesh.vertices, shown->bands);
+                            upload_once(device, scene.frame_uploads, shown->billboards.mesh, std::as_bytes(std::span(crossing)));
+                        }
+                        draw_transient(device, scene, scene.frame_uploads, shown->billboards.mesh, scene.object_textures, transform, light, [&](const rct3::park::object::ObjectBatch& b) { return sided(pipeline_for(*shown, b.blend), b); }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                     }
                 });
             if (scene.show_people && parts.people)
                 profiling::section("People", [&] {
-                    draw_transient(device, scene, scene.still_people, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
-                    draw_transient(device, scene, scene.moving_people, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
+                    draw_transient(device, scene, scene.frame_uploads, scene.still_people, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
+                    draw_transient(device, scene, scene.frame_uploads, scene.moving_people, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                     if (scene.simulate)
-                        draw_transient(device, scene, scene.riders.mesh, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
+                        draw_transient(device, scene, scene.frame_uploads, scene.riders.mesh, scene.people_textures, transform, light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
                 });
             if (parts.people)
-                profiling::section("ZooAnimals", [&] { draw_transient(device, scene, scene.drawn_animals.mesh, scene.drawn_animals.textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
+                profiling::section("ZooAnimals", [&] { draw_transient(device, scene, scene.frame_uploads, scene.drawn_animals.mesh, scene.drawn_animals.textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
             if (scene.show_scenery && parts.scenery)
                 profiling::section("LedSigns", [&] { draw_led_signs(device, scene, transform, light); });
             if (scene.show_scenery && parts.scenery)
                 profiling::section("Cars", [&] {
-                    draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                    draw_transient(device, scene, scene.frame_uploads, scene.car_meshes.mesh, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                     for (const ParkScene::BonedCar& boned : scene.boned_cars)
-                        draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                        draw_transient(device, scene, scene.frame_uploads, boned.mesh.mesh, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                 });
             if (scene.show_scenery && parts.scenery && !scene.drawn_animals.crated.empty())
-                profiling::section("Crates", [&] { draw_transient(device, scene, scene.drawn_animals.crates.mesh, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; }); });
+                profiling::section("Crates", [&] { draw_transient(device, scene, scene.frame_uploads, scene.drawn_animals.crates.mesh, scene.object_textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; }); });
             const auto draw_rides = [&](auto&& pipeline_of) {
                 for (const ParkScene::BonedRide& boned : scene.boned_rides)
                     if ((boned.ride != entt::null && !boned.gate) || maybe_in_view(transform, glm::vec3(boned.placed[3]), boned.reach))
-                        draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, pipeline_of, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                        draw_transient(device, scene, scene.frame_uploads, boned.mesh.mesh, scene.object_textures, transform, light, pipeline_of, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
             };
             profiling::section("Rides", [&] { draw_rides(object_pipeline); });
             // After everything solid, before the water and the see-through parts it is there to hide.
             if (scene.show_scenery && parts.scenery && parts.water)
                 profiling::section("DepthOnly", [&] {
                     draw_objects(rct3::park::object::PartBlend::DepthOnly);
-                    draw_transient(device, scene, scene.fresh_objects, scene.object_textures, transform, light, depth_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
-                    draw_transient(device, scene, scene.car_meshes.mesh, scene.object_textures, transform, light, depth_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                    draw_transient(device, scene, scene.frame_uploads, scene.fresh_objects, scene.object_textures, transform, light, depth_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                    draw_transient(device, scene, scene.frame_uploads, scene.car_meshes.mesh, scene.object_textures, transform, light, depth_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                     for (const ParkScene::BonedCar& boned : scene.boned_cars)
-                        draw_transient(device, scene, boned.mesh.mesh, scene.object_textures, transform, light, depth_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
+                        draw_transient(device, scene, scene.frame_uploads, boned.mesh.mesh, scene.object_textures, transform, light, depth_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Repeat; });
                     draw_rides(depth_pipeline);
                 });
             if (parts.water)
@@ -301,16 +321,15 @@ namespace rct3::scene::park
                     const rct3::park::object::ObjectMesh& mesh = scene.jet_mesh;
                     if (mesh.indices.empty())
                         return;
-                    const auto vertices = device.allocate_transient(std::as_bytes(std::span(mesh.vertices)));
-                    const auto indices = device.allocate_transient(std::as_bytes(std::span(mesh.indices)));
-                    if (!vertices || !indices)
+                    const std::optional<FrameUpload> uploaded = upload_once(device, scene.frame_uploads, mesh);
+                    if (!uploaded)
                         return;
                     for (const rct3::park::object::ObjectBatch& batch : mesh.batches)
                     {
                         const auto picture = std::ranges::find(rct3::park::water::kJetPictures, batch.texture, &rct3::park::water::JetPicture::key);
                         const auto texture = scene.object_textures.find(batch.texture);
                         const auto layer = scene.object_textures.find(picture->layer_key);
-                        render::DrawCommand draw { .pipeline = scene.jet_pipeline, .vertices = *vertices, .indices = *indices, .index_type = render::IndexType::U32, .count = batch.count, .first = batch.first, .transform = transform };
+                        render::DrawCommand draw { .pipeline = scene.jet_pipeline, .vertices = uploaded->vertices, .indices = uploaded->indices, .index_type = render::IndexType::U32, .count = batch.count, .first = batch.first, .transform = transform };
                         draw.texture = texture != scene.object_textures.end() ? texture->second.handle : scene.blank;
                         // Without its second picture, drawn alone.
                         if (layer != scene.object_textures.end())
@@ -539,7 +558,7 @@ namespace rct3::scene::park
             constexpr float kNoon = 0.5f; ///< Of a day from midnight
             const rct3::park::Daylight noon = rct3::park::daylight(kNoon);
             const render::SceneLight light { .sun_direction = noon.sun_direction, .sun = noon.sun, .sky = noon.sky, .ground = noon.ground };
-            draw_transient(device, scene, mesh, scene.people_textures, rct3::park::view_projection(camera, 1), light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
+            draw_transient(device, scene, std::nullopt, mesh, scene.people_textures, rct3::park::view_projection(camera, 1), light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
         }
 
         /// Draws the first photo waiting into the photo target and asks for its pixels, for the app to save.
@@ -582,6 +601,7 @@ namespace rct3::scene::park
 
     void draw_park_scene(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, bool interface)
     {
+        scene.frame_uploads.clear();
         // The ripples on the still water of objects (fountain basins, rct3::park::kWaterPicture) move on to now.
         if (const auto texture = scene.object_textures.find(rct3::park::object::kWaterPicture); texture != scene.object_textures.end())
         {

@@ -448,9 +448,10 @@ namespace rct3::scene::park
         /// How quickly far land fades into haze, per world unit beyond its start. The default leaves the hills
         /// round the park about half hidden; weather can raise it for misty or rainy days, or set 0 for none.
         float haze_rate = 0.0004f;
-        bool wireframe = false;     ///< Developer switch: outline the world's triangles
-        bool tint_crossing = false; ///< Developer switch: objects crossing levels show the finer blue, the coarser red
-        bool free_camera = false;   ///< Developer switch: no camera limits, and the camera leaves the ground
+        bool wireframe = false;       ///< Developer switch: outline the world's triangles
+        bool tint_crossing = false;   ///< Developer switch: objects crossing levels show the finer blue, the coarser red
+        bool free_camera = false;     ///< Developer switch: no camera limits, and the camera leaves the ground
+        bool debug_tab_asked = false; ///< A script asked to bring the developer windows' Debug tab to the front
         ui::UiTextures ground_textures;
         render::TextureHandle blank;     ///< For ground without a picture
         render::TextureHandle variation; ///< Noise the ground's shade wanders by (park/ground/variation.hpp)

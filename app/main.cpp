@@ -52,6 +52,7 @@
 #include "render/backend.hpp"
 #include "scene/front_end_scene.hpp"
 #include "scene/menu_audio.hpp"
+#include "scene/park/debug_tab.hpp"
 #include "scene/park/files_menu.hpp"
 #include "scene/park/loading.hpp"
 #include "scene/park/scene.hpp"
@@ -488,6 +489,7 @@ namespace
             ImGui::DockBuilderDockWindow("Interface", right_top);
             ImGui::DockBuilderDockWindow("Park", right_top);
             ImGui::DockBuilderDockWindow("Editor", right_top);
+            ImGui::DockBuilderDockWindow("Debug", right_top);
             ImGui::DockBuilderDockWindow("Widgets", right_bottom);
             ImGui::DockBuilderFinish(space);
         }
@@ -1196,6 +1198,9 @@ int main(int argc, char** argv)
                                 ImGui::SetNextWindowFocus();
                             developer_window("Editor", [&] { rct3::scene::park::draw_developer_editor(*park, *front->assets.strings); });
                             rct3::scene::park::mark_picked_guest(*park, view);
+                            if (std::exchange(park->debug_tab_asked, false))
+                                ImGui::SetNextWindowFocus();
+                            developer_window("Debug", [&] { rct3::scene::park::draw_debug_tab(*device, *park, front->assets); });
                         }
                         if (const rct3::ui::Desktop* desktop = park ? park->desktop.get() : widgets ? &widgets->desktop : front ? &front->live->desktop : nullptr)
                         {

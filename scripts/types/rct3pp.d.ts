@@ -282,6 +282,14 @@ interface MapPoint {
     up?: number;
 }
 
+declare namespace debug {
+    /** Brings the developer windows' Debug tab to the front, once they are shown (keys.press("F12")). */
+    function open(): void;
+    /** Uses the Debug tab's tool `tool` with `amount`: money to add in hundredths, or how many guests or pieces of
+     *  litter. Returns how many things it changed. */
+    function use(tool: "add_money" | "buy_all_land" | "finish_research", amount?: number): number;
+}
+
 declare namespace options {
     /** Sets the game option saved as `name` (such as "camera_mode") to `value`, kept in its range. */
     function set(name: string, value: number): void;

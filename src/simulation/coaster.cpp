@@ -294,7 +294,8 @@ namespace rct3::simulation
             switch (c.shuttle)
             {
                 case Shuttle::Back:
-                    return pass == 0 ? -full : 0.0f;
+                    // Without a launch, as up a reverse lift hill, eased off backwards for the chain to take it.
+                    return pass == 0 ? -c.launch_speed.value_or(c.station_speed) : 0.0f;
                 case Shuttle::Swing:
                     return std::copysign(full * std::min({ 1.0f, (k + 1) / kBuildUp, (static_cast<float>(c.passes) - k) / kBuildUp }), way);
                 case Shuttle::Tower:

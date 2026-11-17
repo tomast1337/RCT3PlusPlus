@@ -1078,3 +1078,44 @@ TEST_CASE("the park's spawn points come over on the path tiles they stand on")
     REQUIRE(spawns.size() == 1); // The one off the paths is left out
     CHECK(spawns.get<const simulation::GuestSpawn>(spawns.front()).node == *world.paths.find({ 3, 0, 0 }));
 }
+
+TEST_CASE("a reverse lift hill ride is pulled up its hill backwards, let go, and runs to the far end and home")
+{
+    // Along z: the hill's top 32 m up, a steep drop 30 m down to a 20 m station a metre at a time, 40 m level and a
+    // spike 45 m up at the far end. The hill's top piece ends 5 m in.
+    using enum park::track::CourseKind;
+    park::track::TrackCourse course;
+    course.points = { { 0, 32, 0 } };
+    for (int k = 0; k <= 30; ++k)
+        course.points.push_back({ 0, 30.0f - static_cast<float>(k), 5.0f + static_cast<float>(k) });
+    course.kinds.assign(course.points.size(), Plain);
+    course.kinds.back() = Station;
+    course.points.insert(course.points.end(), { { 0, 0, 55 }, { 0, 0, 95 }, { 0, 45, 140 } });
+    course.kinds.insert(course.kinds.end(), { Plain, Plain, Plain });
+    course.distance = { 0 };
+    for (std::size_t i = 1; i < course.points.size(); ++i)
+        course.distance.push_back(course.distance.back() + glm::distance(course.points[i - 1], course.points[i]));
+    course.reverse_lift = course.distance[1];
+    save::model::Ride ride;
+    ride.mode = save::model::OperatingMode::ReverseCableLiftHill;
+    ride.options.lift_speed = { 4 };
+    const auto c = simulation::coaster_of(course, ride);
+    REQUIRE(c);
+    CHECK(c->shuttle == simulation::Shuttle::Back);
+    CHECK(c->passes == 2);
+    // The cable reaches up till the train's back is at the hill's top piece, no further.
+    CHECK_FALSE(simulation::chain_at(*c, course.distance[1] + c->train_length - 1));
+    CHECK(simulation::chain_at(*c, course.distance[1] + c->train_length + 2));
+    simulation::Coaster train = *c;
+    train.running = true;
+    bool home = false;
+    float highest = 0;
+    for (int i = 0; i < 4000 && train.running; ++i)
+    {
+        home = simulation::drive(train, 0.05f);
+        highest = std::max(highest, simulation::track_point(train, train.at - train.train_length).y);
+    }
+    CHECK(home);
+    CHECK_FALSE(train.crashed);
+    CHECK(highest > 29); // Its back was pulled up to the top
+}

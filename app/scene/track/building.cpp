@@ -773,7 +773,7 @@ namespace rct3::scene::track
         b.raised.reset();
         b.lift.reset();
         b.tip = track_tip(scene, b);
-        b.arm = std::ranges::any_of(scene.arm_cars, [&](const park::ParkScene::ArmCar& a) { return scene.car_spots[a.car].ride == ride; });
+        b.arm = std::ranges::any_of(scene.arm_cars, [&](const park::ParkScene::ArmCar& a) { return !a.part && scene.car_spots[a.car].ride == ride; });
         b.arm_piece = 0;
         b.arm_back = 0;
         b.designs.clear();
@@ -1286,7 +1286,7 @@ namespace rct3::scene::track
                 t.meshes = rct3::park::moving_meshes(cars.pieces, scene.models, scene.grid);
                 for (std::size_t i = 0; i < cars.pieces.size(); ++i)
                     if (const auto model = scene.models.find(rct3::park::object::model_ref(cars.pieces[i])); model != scene.models.end())
-                        t.joints.insert(t.joints.end(), model->second.arm_joints.size(), i);
+                        t.joints.insert(t.joints.end(), rct3::park::object::pieces_apart(model->second), i);
                 for (auto* vertices : { &t.meshes.mesh.vertices, &t.meshes.own })
                     for (rct3::park::GroundVertex& v : *vertices)
                         v.colour *= kGhostTint;
@@ -1345,8 +1345,8 @@ namespace rct3::scene::track
                 }
                 places.push_back(place);
             }
-            // shortcut: the joints of cars on arms ride at rest with their car, upgrade if a test should swing them
-            // as the park does.
+            // shortcut: the joints of cars on arms and cars' parts held level ride at rest with their car, upgrade if a
+            // test should move them as the park does.
             for (const std::size_t car : t.joints)
             {
                 const glm::mat4 place = places[car];

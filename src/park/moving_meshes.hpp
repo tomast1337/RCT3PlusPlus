@@ -36,7 +36,8 @@ namespace rct3::park
     };
 
     /// The objects' shapes, each standing at the origin until moved. The joints of objects on arms (see
-    /// ObjectModel::arm_joints) come after all the objects, each object's from the base out, to be moved apart.
+    /// ObjectModel::arm_joints) and cars' parts drawn apart (ObjectModel::car_part) come after all the objects,
+    /// each object's from the base out, to be moved apart.
     [[nodiscard]] MovingMeshes moving_meshes(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
 
     /// Shapes already built, each in its own space, as one mesh: batches drawn alike are gathered.
@@ -56,6 +57,11 @@ namespace rct3::park
     /// once turned by `degrees`: model space, each joint carried by those before it. The first turns about its
     /// own up, the others about their own sideways.
     [[nodiscard]] std::vector<glm::mat4> arm_moves(std::span<const glm::mat4> joints, std::span<const float> degrees);
+
+    /// How a car's part held level moves what it carries, model space, with the car placed at `place` (model to
+    /// world): turned about its pivot's line as far as brings its up nearest the world's (+Y). Its heading follows
+    /// the car's.
+    [[nodiscard]] glm::mat4 level_move(const object::CarPart& part, const glm::mat4& place);
 
     /// Puts each object where `places` (model to world, by object) has it, leaving those already there.
     /// Moves and turns only: a stretched place leaves the normals off. Skinned meshes take a place by bone

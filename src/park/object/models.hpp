@@ -76,7 +76,8 @@ namespace rct3::park::object
         bool one_sided = false; ///< Only the side its triangles face is drawn; the file marks the rest as both
         std::vector<ModelVertex> vertices;
         std::vector<std::uint32_t> indices; ///< Three per triangle
-        /// Of a car on an arm, at every level: the arm's joint that carries it, or -1 for the car itself.
+        /// Of a car on an arm, at every level: the arm's joint that carries it; of a car whose moving part is drawn
+        /// apart (ObjectModel::car_part), 0 for that part; -1 for the car itself.
         std::int32_t bone = -1;
         bool board = false; ///< A board for words (ovl::kMeshFlagBoard)
         /// Its picture slides along it: a lift piece's chain as the lift runs (chain_lifts.hpp), or a slide's
@@ -86,6 +87,15 @@ namespace rct3::park::object
         /// water runs, 0 to 1, by the water's spline nodes; empty for other parts.
         std::vector<float> flow { };
         float flow_last = 0; ///< Of such a strip, the share of it from its last node but one to its end
+    };
+
+    /// A car's part that moves on it about a pivot, such as a tub or a hanging seat (ovl::RideCar::moves).
+    struct CarPart
+    {
+        ovl::PartMoves moves { };
+        glm::mat4 pivot { 1.0f };   ///< Car model space: the car's bone named "pivot", which the part's own lines up with
+        glm::vec3 axis { 1, 0, 0 }; ///< Pivot space: the line it turns about, for a part that turns about one
+        glm::vec3 up { 0, 1, 0 };   ///< Pivot space: the part's own up
     };
 
     /// A flat picture standing upright on the item's anchor, turned to face the viewer round the vertical.
@@ -245,6 +255,9 @@ namespace rct3::park::object
         /// Of a car whose riders sit on an arm: the arm's joints at rest, model space, from the base out. The
         /// first turns about its own up, the others about their own sideways.
         std::vector<glm::mat4> arm_joints;
+        /// Of a car whose moving part is held level, its moves letting it turn about one line but no way from rest:
+        /// that part, drawn apart.
+        std::optional<CarPart> car_part;
         /// Of a car with bones named "carfront" and "carrear" at its ends: how it sits on its track. Its wheels
         /// are its wheel bones, or both midway between its ends, on its own centre line, where it has none.
         std::optional<CarFit> car_fit;
@@ -291,6 +304,10 @@ namespace rct3::park::object
         /// named "vendor".
         std::optional<glm::mat4> vendor_place;
     };
+
+    /// How many pieces of `model` are drawn apart from it, each moved on its own: its arm's joints, or its car's
+    /// moving part.
+    [[nodiscard]] std::size_t pieces_apart(const ObjectModel& model);
 
     /// The colour slots any picture of `model` recolours, at any level (bit k: slot k).
     [[nodiscard]] std::uint32_t colour_slots(const ObjectModel& model);

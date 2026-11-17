@@ -171,6 +171,8 @@ namespace rct3::simulation
         StaffMiserable = 51,
         StaffUnderpaid = 52,
         GreatFireworks = 36,    ///< After watching a firework display
+        LasersGood = 185,       ///< After watching a display mostly of lasers
+        WaterShowGood = 187,    ///< After watching a fountain show
         GreatEntertainer = 38,  ///< After watching a good show
         BoringEntertainer = 39, ///< After watching a poor one
         StaffHappy = 56,

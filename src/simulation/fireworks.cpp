@@ -34,7 +34,7 @@ namespace rct3::simulation
                 if (!on_paths || glm::length(to) > kFireworksReach.value)
                     continue;
                 r.emplace<Linger>(g, Linger { .at = PathItemKind::Sight, .left = kWatchAtMost });
-                r.emplace<FireworkWatcher>(g, FireworkWatcher { .dark = show->dark });
+                r.emplace<FireworkWatcher>(g, FireworkWatcher { .dark = show->dark, .thought = show->thought });
                 // Turned at once: a guest standing still is drawn between two equal headings.
                 if (glm::length(to) > 0)
                     pose.heading = pose.was_heading = units::Radians { std::atan2(to.x, to.y) };
@@ -44,14 +44,14 @@ namespace rct3::simulation
         const auto watchers = r.view<const FireworkWatcher>();
         for (const entt::entity g : sorted(watchers))
         {
-            const bool dark = watchers.get<const FireworkWatcher>(g).dark;
+            const auto [dark, thought] = watchers.get<const FireworkWatcher>(g);
             if (const auto* linger = r.try_get<Linger>(g); linger != nullptr && linger->at == PathItemKind::Sight && linger->bench == entt::null)
                 r.remove<Linger>(g);
             if (auto* mood = r.try_get<Mood>(g); mood != nullptr && r.all_of<Stride>(g))
             {
                 mood->happiness.value = clamp01(mood->happiness.value + kFireworksLift.value * (dark ? 2.0f : 1.0f));
                 r.emplace_or_replace<Gesture>(g, GestureKind::Cheer, kTuning.gestures.shown.value);
-                think(r, g, ThoughtKind::GreatFireworks, entt::null, now);
+                think(r, g, thought, entt::null, now);
             }
             r.remove<FireworkWatcher>(g);
         }

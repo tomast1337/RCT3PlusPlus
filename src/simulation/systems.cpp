@@ -8,6 +8,7 @@
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/fireworks.hpp"
 #include "simulation/guest_edits.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
@@ -581,6 +582,9 @@ namespace rct3::simulation
 
         // Parties wait for and gather their members (simulation/parties.cpp).
         step_parties(world, phase);
+
+        // Guests near a firework display stop to watch it (simulation/fireworks.cpp).
+        watch_fireworks(world);
 
         phase.emplace("Tidy");
         tidy(world);

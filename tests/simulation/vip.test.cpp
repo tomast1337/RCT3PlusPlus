@@ -2,6 +2,7 @@
 #include "simulation/vip.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/fireworks.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/sandbox.hpp"
@@ -129,7 +130,7 @@ TEST_CASE("a VIP who saw what they came for and kept their patience meets the go
     auto& r = park.world().registry;
     const auto vip = the_vip(r);
     REQUIRE(vip);
-    r.ctx().emplace<Daylight>(Daylight { { 0.95f } }); // Night: fireworks, as far as rct3++ goes
+    r.ctx().emplace<FireworkShow>(); // A display going up
     std::int32_t asked_theme = -1;
     const VipSurroundings around { .themed = [&](glm::vec3, std::int32_t theme, std::int32_t) {
         asked_theme = theme;
@@ -138,6 +139,7 @@ TEST_CASE("a VIP who saw what they came for and kept their patience meets the go
     advance_vips(park.world(), set, 0.5f * kMonth, kTuning.vips.look.value, messages, around);
     CHECK(asked_theme == 4);
     CHECK(vip_opinion(r.get<Vip>(*vip), *set.conditions[0].vip, 0) == doctest::Approx(1));
+    r.ctx().erase<FireworkShow>(); // Over, so they may walk out
     advance_vips(park.world(), set, 1.1f * kMonth, kTuning.vips.look.value, messages, around);
     CHECK(r.get<Vip>(*vip).leaving);
     REQUIRE(park.run_until([&] { return r.all_of<Left>(*vip); }, 300));

@@ -24,6 +24,8 @@
 //                       not shown
 //   screenshot(name)    saved to the screenshots folder, or as NN_name.png in the report folder when there is
 //                       one; resolves once it is written
+//   args()              the script's own arguments, those after `--` on the command line
+//   report(file, text)  writes `text` to `file` in the report folder; false when there is none
 //   quit(code)          leaves the game with `code` (also when the script ends: 0, or 1 when it failed)
 //   park.open(path, { sandbox })  opens the park at `path` in the game's folder and waits until it shows;
 //                       played as a sandbox unless `sandbox` is false
@@ -60,6 +62,8 @@
 //                       looking for a way, how many pieces the way it found lays, the string key of why the track
 //                       was last not finished, whether a test train runs its unfinished track, how far along it
 //                       its front is, and how many of its cars, crashed off the track's end, are wrecks not yet gone
+//   build.designs()     the install's saved designs: { file, symbol, overlay }, overlay null when no ride is of
+//                       that kind
 //   build.stop()        puts the placing tool away, as Escape does
 //   build.placing()     { step, problem, affordable } while something is being placed: step "ride", "entrance",
 //                       "exit" or "scenery"; problem "none", "not owned", "path" or "blocked"
@@ -118,9 +122,9 @@ namespace rct3::scene
     class ScriptHost
     {
     public:
-        /// Reads and starts the script at `file`, reporting into the folder `report` when given, with the clipboard
-        /// of `window`; empty with the reason logged when it cannot be read.
-        [[nodiscard]] static std::unique_ptr<ScriptHost> start(const std::filesystem::path& file, std::optional<std::filesystem::path> report, platform::Window& window);
+        /// Reads and starts the script at `file`, reporting into the folder `report` when given, with its own
+        /// arguments `args` and the clipboard of `window`; empty with the reason logged when it cannot be read.
+        [[nodiscard]] static std::unique_ptr<ScriptHost> start(const std::filesystem::path& file, std::optional<std::filesystem::path> report, std::vector<std::string> args, platform::Window& window);
 
         /// Moves the script on a frame, seeing `park` (none while no park is open) and the front end `front`
         /// drawn by `device`.
@@ -196,6 +200,7 @@ namespace rct3::scene
         std::optional<std::filesystem::path> screenshot_;
         std::optional<std::filesystem::path> report_;
         std::ofstream report_log_;
+        std::vector<std::string> args_; ///< The script's own, from the command line
         int shots_ = 0;
         std::optional<ParkRequest> open_;
         std::optional<CareerRequest> career_;

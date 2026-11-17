@@ -32,6 +32,7 @@
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 #include "simulation/vip.hpp"
+#include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 #include "ui/key_combo.hpp"
 #include "ui/screens/info/attraction.hpp"
@@ -115,7 +116,7 @@ namespace rct3::scene
         }
     } // namespace
 
-    std::unique_ptr<ScriptHost> ScriptHost::start(const std::filesystem::path& file, std::optional<std::filesystem::path> report, platform::Window& window)
+    std::unique_ptr<ScriptHost> ScriptHost::start(const std::filesystem::path& file, std::optional<std::filesystem::path> report, std::vector<std::string> args, platform::Window& window)
     {
         std::ifstream in(file, std::ios::binary);
         if (!in)
@@ -127,6 +128,7 @@ namespace rct3::scene
         text << in.rdbuf();
         std::unique_ptr<ScriptHost> host(new ScriptHost());
         host->window_ = &window;
+        host->args_ = std::move(args);
         if (report)
         {
             std::error_code ec;
@@ -285,6 +287,18 @@ namespace rct3::scene
                 write(std::format("screenshot {}", screenshot_->filename().string()), false);
             }
             return Json(nullptr);
+        });
+        engine_.define("args", [this](const Json&) { return Json(args_); });
+        engine_.define("report", [this](const Json& a) {
+            if (a.size() < 2 || !a[0].is_string() || !a[1].is_string())
+                throw std::invalid_argument("report takes a file name and its text");
+            if (!report_)
+                return Json(false);
+            // Only a plain file name, as for screenshots.
+            std::string name = a[0].get<std::string>();
+            std::ranges::replace_if(name, [](char c) { return !std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '_' && c != '.'; }, '_');
+            std::ofstream(*report_ / name, std::ios::binary) << a[1].get<std::string>();
+            return Json(true);
         });
         engine_.define("quit", [this](const Json& a) {
             quit_ = a.empty() || !a[0].is_number() ? 0 : a[0].get<int>();
@@ -876,6 +890,23 @@ namespace rct3::scene
                     rides.push_back({ { "symbol", item.symbol }, { "overlay", item.overlay }, { "name", item.name_text }, { "width", item.width }, { "length", item.length }, { "price", item.price.value }, { "doors", !item.entrance.empty() && !item.exit.empty() }, { "water", item.water_only }, { "fence", item.fence } });
             return rides;
         });
+        engine_.define("build.designs", [this](const Json&) -> Json {
+            const park::ParkScene& park = park_of(park_);
+            const auto items = build_items(park);
+            if (!items || !park.build.designs.valid() || park.build.designs.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+                return nullptr;
+            Json designs = Json::array();
+            for (const DesignFile& d : park.build.designs.get())
+            {
+                // The install's only: the player's own are read from folders of other names.
+                if (!strings::equals_ignoring_case(d.path.parent_path().filename().string(), "Coaster Designs"))
+                    continue;
+                const std::string_view kind = std::string_view(d.summary.ride_symbol).substr(0, d.summary.ride_symbol.find(':'));
+                const auto item = std::ranges::find_if(*items, [&](const rct3::park::BuildItem& i) { return i.kind == rct3::park::BuildKind::TrackedRide && strings::equals_ignoring_case(i.symbol, kind); });
+                designs.push_back({ { "file", d.path.filename().string() }, { "symbol", item != items->end() ? item->symbol : std::string(kind) }, { "overlay", item != items->end() ? Json(item->overlay) : Json(nullptr) } });
+            }
+            return designs;
+        });
         engine_.define("build.facilities", [this](const Json&) -> Json {
             const auto items = build_items(park_of(park_));
             if (!items)
@@ -1006,6 +1037,7 @@ namespace rct3::scene
                      { "testAt", b.test ? Json(b.test->train.at) : Json(nullptr) },
                      { "testWrecks", b.test ? std::ranges::count_if(b.test->wrecks, [](const simulation::Wreck& w) { return w.state != simulation::WreckState::Gone; }) : 0 },
                      { "designs", std::move(designs) },
+                     { "shown", b.design_shown && *b.design_shown < b.designs.size() ? Json(b.designs[*b.design_shown].path.filename().string()) : Json(nullptr) },
                      { "selected", b.selected ? Json(*b.selected) : Json(nullptr) },
                      { "split", std::to_underlying(b.split) } };
         });

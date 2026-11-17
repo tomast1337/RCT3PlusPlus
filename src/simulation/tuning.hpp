@@ -437,8 +437,16 @@ namespace rct3::simulation::tuning
         units::RideScore intensity_range { 4 }; ///< How far above harsh a ride stops scoring at all
         float rides_for_variety = 3;            ///< About two thirds of the variety at this many rides
         float guests_for_busy = 300;            ///< About two thirds of the guests part at this many guests
-        std::int32_t per_litter = 3;
-        std::int32_t most_litter = 500;
+        // Fitted to saved parks' ratings (save-dump --rating): litter counting once it is as old as Litter::old,
+        // awards and fines over the months the park keeps. Saves hold few lost guests, so their weight is only the
+        // most the fit leaves room for, and none hold a recent crash, so its weight is chosen by eye.
+        std::int32_t per_litter = 5;
+        std::int32_t most_litter = 600;
+        std::int32_t per_lost_guest = 2;
+        std::int32_t most_lost_guests = 100;
+        units::RatingPoints crash { 100 }; ///< Chosen by eye: taken off just after a crash, less as the park forgets it
+        units::RatingPoints per_award { 20 };
+        units::RatingPoints per_fine { 40 };
         units::Share harder_share { 0.15f }; ///< Taken off the score by the harder rating
         units::Share weekly_move { 0.5f };   ///< Of the way the rating moves towards the week's score
     };

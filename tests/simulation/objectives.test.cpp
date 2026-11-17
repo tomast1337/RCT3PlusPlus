@@ -249,9 +249,9 @@ TEST_CASE("the rating prize lifts the rating at once and each week's score while
     CHECK(park.rating > 0.5f);
     const float bonus = park.rating_bonus;
     REQUIRE(bonus > 0);
-    simulation::park::rate_week(park, { }, { });
+    simulation::park::rate_week(park, { });
     CHECK(park.rating_bonus < bonus);
     for (int week = 0; week < 100 && park.rating_bonus > 0; ++week)
-        simulation::park::rate_week(park, { }, { });
+        simulation::park::rate_week(park, { });
     CHECK(park.rating_bonus == 0);
 }

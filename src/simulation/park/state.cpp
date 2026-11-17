@@ -69,16 +69,14 @@ namespace rct3::simulation::park
         return static_cast<std::int32_t>(std::max<std::int64_t>(0, week_of(state.time, state.zero_time) - before));
     }
 
-    void rate_week(ParkState& state, const save::model::PeopleModel& people, const save::model::RideModel& rides, std::optional<std::int32_t> old_litter)
+    void rate_week(ParkState& state, RatingInput input)
     {
-        RatingInput in = rating_input(people, rides, state.time);
-        if (old_litter)
-            in.old_litter = *old_litter;
-        in.harder = state.harder_rating;
-        in.guests = state.guests;
-        const RatingParts parts = rate_park(in);
+        input.harder = state.harder_rating;
+        input.guests = state.guests;
+        input.prize = state.rating_bonus;
+        const RatingParts parts = rate_park(input);
         state.rating_parts = parts;
-        state.rating = next_rating(state.rating, parts.total + static_cast<std::int32_t>(state.rating_bonus));
+        state.rating = next_rating(state.rating, parts.total);
         state.rating_bonus = std::max(0.0f, state.rating_bonus - kTuning.prizes.rating_bonus_fade.value);
     }
 

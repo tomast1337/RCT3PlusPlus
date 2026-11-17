@@ -91,7 +91,7 @@ TEST_CASE("weeks are counted from the calendar's start, and a new week rates the
     CHECK(simulation::park::pass_time(s, simulation::kSecondsPerHour) == 1);
 
     // An empty park scores half its happiness, less the harder rating's share; the rating moves half way there.
-    simulation::park::rate_week(s, save::model::PeopleModel { }, save::model::RideModel { });
+    simulation::park::rate_week(s, { });
     REQUIRE(s.rating_parts);
     CHECK(s.rating_parts->total == 250 - 38);
     REQUIRE(s.rating);

@@ -10,6 +10,8 @@
 #include "scene/park/waterfalls.hpp"
 #include "simulation/debug_tools.hpp"
 #include "simulation/guests.hpp"
+#include "strings/unicode.hpp"
+#include "ui/interface_assets.hpp"
 
 #include <algorithm>
 #include <utility>
@@ -30,6 +32,12 @@ namespace rct3::scene::park
                 if (const auto& t = nodes[n].tile; !nodes[n].queue && !nodes[n].removed && scene.grid.contains(t.col, t.row) && rct3::park::owned_outright(scene.grid.at(t.col, t.row)))
                     spots.push_back(simulation::NodeId { n });
             return spots;
+        }
+
+        /// Our text under `key`, as ImGui takes it.
+        std::string label(const ui::InterfaceAssets& assets, std::string_view key)
+        {
+            return strings::to_utf8(assets.strings->get(key));
         }
 
         void tool_button(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const char* label, DebugTool tool, std::int64_t amount = 0)
@@ -104,6 +112,9 @@ namespace rct3::scene::park
                 scene.jumps_ended = 0;
                 return jets;
             }
+            case DebugTool::UnlockDesigns:
+                // For this park only, as it was opened; a designs window open now shows it when opened again.
+                return std::exchange(scene.designs_unlocked, true) ? 0 : 1;
         }
         return 0;
     }
@@ -129,6 +140,10 @@ namespace rct3::scene::park
             ImGui::BeginDisabled(!scene.research_items);
             tool_button(device, scene, assets, "Finish all research", DebugTool::FinishResearch);
             ImGui::EndDisabled();
+            ImGui::BeginDisabled(scene.designs_unlocked);
+            tool_button(device, scene, assets, label(assets, "Rct3pp_Debug_UnlockDesigns").c_str(), DebugTool::UnlockDesigns);
+            ImGui::EndDisabled();
+            ImGui::SetItemTooltip("%s", label(assets, "Rct3pp_Debug_UnlockDesignsHelp").c_str());
         }
 
         if (ImGui::CollapsingHeader("Guests", ImGuiTreeNodeFlags_DefaultOpen))

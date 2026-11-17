@@ -45,6 +45,8 @@ if (argv.includes("--range")) expect(range != null, "--range written A-B");
 
 async function blank(): Promise<void> {
     await park.open("Campaigns/Base/BlankLandscape.dat");
+    // Some designs wait for a career scenario to be completed; with no career every one of them is tried.
+    debug.use("unlock_designs");
     await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
 }
 

@@ -456,6 +456,7 @@ namespace rct3::scene::park
         bool show_ground = true;            ///< Developer switch: off leaves the ground and the paths on it undrawn
         bool show_interface = true;         ///< Developer switch: off leaves the game's interface undrawn
         std::optional<float> rain_strength; ///< Developer switch: the rain falls this hard, 0 to 1, whatever the weather
+        bool designs_unlocked = false;      ///< Developer switch: every saved design builds, whatever the career has done
         /// Developer switch: the motion the person the info panel shows plays in place of their own, and `clock` when
         /// it began.
         struct HeldMotion

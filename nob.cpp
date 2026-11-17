@@ -12,7 +12,7 @@
 //   ./nob tidy [FILE...]                          writes the compile database, then runs clang-tidy over FILEs, or
 //                                                 over src, tools and fuzz
 //   ./nob format [--check]                        clang-format our sources (never third_party/), Prettier the
-//                                                 scripts (needs npx)
+//                                                 scripts (needs npx); --check also fails on bare int/long
 //   ./nob fetch                                   downloads optional assets (the fallback font) into downloads/
 //   ./nob package                                 release build of the viewer and the tools, packed for players
 //                                                 into build/dist/ (as the release workflow publishes them)
@@ -803,6 +803,97 @@ namespace
         for (const auto& f : files)
             cmd << f.string();
         bool ok = run(cmd);
+
+        // Bare int, unsigned, short and long, whose width depends on the compiler (AGENTS.md, "Number types").
+        // Comments, literals and preprocessor lines are skipped. Allowed: a line marked `// c-api`, `int main(int
+        // argc`, and `unsigned char` handed to a <cctype> function on the same line.
+        if (check)
+        {
+            const auto word_char = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_'; };
+            constexpr std::array<std::string_view, 11> kCctype { "std::isalnum(", "std::isalpha(", "std::isdigit(", "std::isspace(", "std::isupper(", "std::islower(", "std::isxdigit(", "std::ispunct(", "std::isprint(", "std::tolower(", "std::toupper(" };
+            for (const auto& f : files)
+            {
+                std::ifstream in(f, std::ios::binary);
+                const std::string text { std::istreambuf_iterator<char>(in), { } };
+
+                // 1. Blank out comments and literals, keeping the newlines so lines still line up.
+                std::string code = text;
+                std::size_t i = 0;
+                const auto blank_to = [&](std::size_t end) {
+                    for (end = std::min(end, text.size()); i < end; ++i)
+                        if (code[i] != '\n')
+                            code[i] = ' ';
+                };
+                while (i < text.size())
+                {
+                    const char c = text[i];
+                    if (text.compare(i, 2, "//") == 0)
+                        blank_to(text.find('\n', i));
+                    else if (text.compare(i, 2, "/*") == 0)
+                    {
+                        const std::size_t end = text.find("*/", i + 2);
+                        blank_to(end == std::string::npos ? end : end + 2);
+                    }
+                    else if (text.compare(i, 2, "R\"") == 0)
+                    {
+                        const std::size_t open = text.find('(', i);
+                        const std::string close = std::format("){}\"", text.substr(i + 2, open - i - 2));
+                        const std::size_t end = text.find(close, open);
+                        blank_to(end == std::string::npos ? end : end + close.size());
+                    }
+                    else if (c == '"' || c == '\'')
+                    {
+                        std::size_t end = i + 1;
+                        while (end < text.size() && text[end] != c && text[end] != '\n')
+                            end += text[end] == '\\' ? 2 : 1;
+                        blank_to(end + 1);
+                    }
+                    else if (std::isdigit(static_cast<unsigned char>(c)) != 0) // A number, with its digit separators
+                        while (i < text.size() && (word_char(text[i]) || text[i] == '\'' || text[i] == '.'))
+                            ++i;
+                    else if (word_char(c))
+                        while (i < text.size() && word_char(text[i]))
+                            ++i;
+                    else
+                        ++i;
+                }
+
+                // 2. Look for the words line by line.
+                std::size_t number = 0;
+                for (std::size_t start = 0; start < code.size(); ++number)
+                {
+                    const std::size_t end = std::min(code.find('\n', start), code.size());
+                    const std::string_view line = std::string_view(code).substr(start, end - start);
+                    const std::string_view original = std::string_view(text).substr(start, end - start);
+                    start = end + 1;
+                    if (original.contains("c-api") || line.contains("int main(int argc") || line.find_first_not_of(" \t") == std::string_view::npos || line[line.find_first_not_of(" \t")] == '#')
+                        continue;
+                    const bool cctype = std::ranges::any_of(kCctype, [&](std::string_view name) { return line.contains(name); });
+                    std::vector<std::string_view> words;
+                    for (std::size_t w = 0; w < line.size();)
+                    {
+                        if (!word_char(line[w]))
+                        {
+                            ++w;
+                            continue;
+                        }
+                        const std::size_t from = w;
+                        while (w < line.size() && word_char(line[w]))
+                            ++w;
+                        words.push_back(line.substr(from, w - from));
+                    }
+                    for (std::size_t w = 0; w < words.size(); ++w)
+                    {
+                        const bool bare = words[w] == "int" || words[w] == "unsigned" || words[w] == "short" || words[w] == "long";
+                        if (!bare || (cctype && words[w] == "unsigned" && w + 1 < words.size() && words[w + 1] == "char"))
+                            continue;
+                        log(Level::Error, "{}:{}: bare `{}`: use a fixed-width type from <cstdint>, or mark a C API line `// c-api` (AGENTS.md, \"Number types\")", f.string(), number + 1, words[w]);
+                        ok = false;
+                        break;
+                    }
+                }
+            }
+        }
 
         // The scripts and their prelude go through Prettier (.prettierrc.json), fetched by npx at the pinned
         // version: formatting differs between releases. Without npx they are skipped, as tsc is optional too.

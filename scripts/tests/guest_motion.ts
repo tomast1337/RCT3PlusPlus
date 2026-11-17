@@ -26,7 +26,7 @@ log(
 );
 expect(count(walkers, (p) => p.gait === "run") < walkers.length / 2, "most guests walking, not running");
 // Followed from behind (renamed with the game's cheat name, as the ride camera does), each pictured.
-async function behind(person: number, name: string): Promise<void> {
+async function behind(person: PersonIndex, name: string): Promise<void> {
     people.rename(person, "Jonny Watts");
     await until(() => camera.riding()?.eye !== undefined, 60, `the view from ${name}`);
     await ui.click("ride_camera/RidecamGUI_Type");
@@ -40,13 +40,18 @@ async function behind(person: number, name: string): Promise<void> {
     await frames(5);
 }
 await behind(
-    everyone.findIndex((p) => p.state === "walking" && p.gait === "run"),
+    must(
+        everyone.find((p) => p.state === "walking" && p.gait === "run"),
+        "a running guest",
+    ).index,
     "running guest",
 );
 
 // Riders on Vanilla Hills' Top Spin: their hands thrown up while it runs, held still for the picture.
-const spin = rides.list().findIndex((r) => r.symbol === "TopSpin:anr");
-expect(spin >= 0, "the Top Spin in the park");
+const spin = must(
+    rides.list().find((r) => r.symbol === "TopSpin:anr"),
+    "the Top Spin in the park",
+).index;
 await until(
     () => people.list().some((p) => p.state === "riding" && p.ride === spin && p.reaction === "hands up"),
     7200,
@@ -62,7 +67,10 @@ log(
 await ui.click("bar/Top_Pause");
 await frames(2);
 await behind(
-    people.list().findIndex((p) => p.state === "riding" && p.ride === spin && p.reaction === "hands up"),
+    must(
+        people.list().find((p) => p.state === "riding" && p.ride === spin && p.reaction === "hands up"),
+        "a hands-up rider",
+    ).index,
     "top spin rider with hands up",
 );
 
@@ -115,6 +123,8 @@ await until(
 );
 await ui.click("bar/Top_Pause");
 await frames(2);
-const rider = people.list().findIndex((p) => p.state === "riding" && p.reaction === "hands up");
-expect(rider >= 0, "the rider's hands still up once paused");
+const rider = must(
+    people.list().find((p) => p.state === "riding" && p.reaction === "hands up"),
+    "the rider's hands still up once paused",
+).index;
 await behind(rider, "rider with hands up");

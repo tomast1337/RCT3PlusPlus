@@ -13,8 +13,10 @@ try {
     await park.open("Campaigns/Base/VanillaHills.dat");
     await park.ready();
     await frames(30);
-    const ride = rides.list().findIndex((r) => r.joined);
-    expect(ride >= 0, "a ride");
+    const ride = must(
+        rides.list().find((r) => r.joined),
+        "a ride",
+    ).index;
     rides.show(ride);
     await frames(30);
     const box = "info/body/TT_AttractionDialogIconLabelButton";

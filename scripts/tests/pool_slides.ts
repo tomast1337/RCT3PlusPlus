@@ -14,8 +14,10 @@ await frames(10);
 park.setWeather("sunny");
 park.setTemperature(28);
 park.setTime(0.5);
-const slide = rides.list().findIndex((r) => !r.flat && !r.demolished && /(body|ring|pro)slide/i.test(r.symbol));
-expect(slide >= 0, "a pool slide in the park");
+const slide = must(
+    rides.list().find((r) => !r.flat && !r.demolished && /(body|ring|pro)slide/i.test(r.symbol)),
+    "a pool slide in the park",
+).index;
 const info = () => rides.list()[slide];
 log(
     "slide",

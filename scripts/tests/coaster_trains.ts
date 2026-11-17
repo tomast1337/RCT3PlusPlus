@@ -10,7 +10,7 @@
 export {};
 
 /** Lays the first saved design of the coaster `kind` on a new blank landscape, and gives its place in rides.list(). */
-async function lay(kind: string): Promise<number> {
+async function lay(kind: string): Promise<RideIndex> {
     await park.open("Campaigns/Base/BlankLandscape.dat");
     await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
     expect(build.pick(`tracks/coasters/${kind}/${kind}`, kind, "designs"), `a ${kind} coaster to build`);
@@ -41,7 +41,7 @@ async function lay(kind: string): Promise<number> {
 }
 
 /** Clicks the up or down arrow of the number box `key` on the vehicles tab of the ride's window. */
-async function step(ride: number, key: string, up: boolean): Promise<void> {
+async function step(ride: RideIndex, key: string, up: boolean): Promise<void> {
     rides.show(ride);
     await frames(5);
     await ui.click("info/Attraction_Vehicles");
@@ -53,7 +53,7 @@ async function step(ride: number, key: string, up: boolean): Promise<void> {
     await frames(10);
 }
 
-function shown(ride: number): string {
+function shown(ride: RideIndex): string {
     const r = tracked(rides.list()[ride], "the ride");
     return `${r.trains} trains of ${r.passengerCars} cars (${r.carsPerTrain} with links), ${r.running} run, ${r.moving} under way, ${r.cars.length} drawn`;
 }

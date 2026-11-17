@@ -29,7 +29,10 @@ const tileOf = (p: Person) => {
 
 // A guest walking the paths, shown in the park.
 await until(() => people.list().some((p) => !p.staff && p.state === "walking"), 600, "a guest walking");
-const who = people.list().findIndex((p) => !p.staff && p.state === "walking");
+const who = must(
+    people.list().find((p) => !p.staff && p.state === "walking"),
+    "a guest walking",
+).index;
 const state = () => people.list()[who].state;
 /** Back on their feet: walking on, or, one of a party, waiting for or walking back to it. */
 const onFoot = () => state() === "walking" || state() === "waiting" || state() === "lost";

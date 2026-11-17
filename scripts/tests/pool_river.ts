@@ -14,8 +14,10 @@ await frames(10);
 park.setWeather("sunny");
 park.setTemperature(28);
 park.setTime(0.5);
-const river = rides.list().findIndex((r) => !r.flat && !r.demolished && /lazyriver/i.test(r.symbol));
-expect(river >= 0, "a lazy river in the park");
+const river = must(
+    rides.list().find((r) => !r.flat && !r.demolished && /lazyriver/i.test(r.symbol)),
+    "a lazy river in the park",
+).index;
 const info = () => rides.list()[river];
 const complaints = () =>
     park

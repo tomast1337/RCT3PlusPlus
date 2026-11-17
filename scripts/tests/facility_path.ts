@@ -44,8 +44,10 @@ await pointer.click(...on_view(col, row));
 await frames(3);
 expect(build.placing() === undefined, "the tool put away once the toilet stands");
 if (ui.find("info") !== undefined) await ui.click("info/close");
-const at = rides.list().findIndex((r) => r.symbol === `${kind.symbol}:sat`);
-expect(at >= 0, `a ${kind.symbol}:sat among the rides, not ${JSON.stringify(rides.list().map((r) => r.symbol))}`);
+const at = must(
+    rides.list().find((r) => r.symbol === `${kind.symbol}:sat`),
+    `a ${kind.symbol}:sat among the rides, not ${JSON.stringify(rides.list().map((r) => r.symbol))}`,
+).index;
 const toilet = () => rides.list()[at];
 const site = toilet().site!;
 log("placed", JSON.stringify(site));
@@ -171,7 +173,10 @@ await look_down(col, row, 30);
 await screenshot("facility_path_loaded");
 
 // Pulled down from its window: the park no longer runs it.
-const index = rides.list().findIndex((r) => r.symbol === `${kind.symbol}:sat`);
+const index = must(
+    rides.list().find((r) => r.symbol === `${kind.symbol}:sat`),
+    "the facility",
+).index;
 rides.show(index);
 await frames(10);
 await ui.click("info/body/Attraction_General_Delete");

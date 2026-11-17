@@ -13,8 +13,10 @@ export {};
 await park.open("Campaigns/Base/VanillaHills.dat");
 await park.ready();
 await frames(60);
-const ride = rides.list().findIndex((r) => r.kind === "tracked" && r.trains > 0);
-expect(ride >= 0, "a ride with trains");
+const ride = must(
+    rides.list().find((r) => r.kind === "tracked" && r.trains > 0),
+    "a ride with trains",
+).index;
 rides.show(ride);
 await frames(30);
 expect(rides.list()[ride].open === true, "the ride open");
@@ -107,8 +109,10 @@ await frames(5);
 expect(camera.riding() === undefined, "the overhead view after the double click");
 
 // A flat ride is looked out from its riders' seats; the camera buttons step from seat to seat.
-const flat = rides.list().findIndex((r) => r.flat && r.joined);
-expect(flat >= 0, "a flat ride");
+const flat = must(
+    rides.list().find((r) => r.flat && r.joined),
+    "a flat ride",
+).index;
 rides.show(flat);
 await frames(30);
 await ui.click("info/body/RideCamGUI_Enabled");
@@ -128,8 +132,10 @@ expect(camera.riding() === undefined, "the overhead view after the flat ride");
 
 // Renaming a guest Jonny Watts, the game's cheat, goes with them from their eyes; the type button changes to
 // behind them and the train buttons to the next person. The wheel pulls the view back off its mount.
-const guest = people.list().findIndex((p) => !p.staff);
-expect(guest >= 0, "a guest");
+const guest = must(
+    people.list().find((p) => !p.staff),
+    "a guest",
+).index;
 people.rename(guest, "Jonny Watts");
 await until(() => camera.riding()?.eye !== undefined, 60, "the view from the guest");
 log("guest", JSON.stringify(camera.riding()));

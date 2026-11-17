@@ -12,9 +12,9 @@ await park.open("Campaigns/Base/VanillaHills.dat");
 await park.ready();
 await frames(60);
 const busy = () =>
-    rides.list().findIndex((r) => r.flat && !r.demolished && r.joined && ((r.queue ?? 0) > 0 || (r.riders ?? 0) > 0));
-await until(() => busy() >= 0, 3000, "a flat ride with guests on it or queueing");
-const ride = busy();
+    rides.list().find((r) => r.flat && !r.demolished && r.joined && ((r.queue ?? 0) > 0 || (r.riders ?? 0) > 0));
+await until(() => busy() !== undefined, 3000, "a flat ride with guests on it or queueing");
+const ride = busy()!.index;
 const before = rides.list()[ride];
 log("pulling down", JSON.stringify({ name: before.name, queue: before.queue, riders: before.riders }));
 const guests = park.guests();

@@ -85,8 +85,10 @@ await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined, 1200, "the sav
 await frames(30);
 
 // A coaster's lap run here replaces the graphs it was saved with.
-const coaster = rides.list().findIndex((r) => !r.flat && !r.demolished && r.open === true && r.graphSamples > 0);
-expect(coaster >= 0, "an open coaster with graphs");
+const coaster = must(
+    rides.list().find((r) => !r.flat && !r.demolished && r.open === true && r.graphSamples > 0),
+    "an open coaster with graphs",
+).index;
 const saved = rides.list()[coaster].graphSamples;
 await ui.click("bar/Top_SuperFastForward");
 await until(() => rides.list()[coaster].graphSamples !== saved, 3600, "a lap's graphs");
@@ -101,7 +103,7 @@ const list = rides.list();
 let shown = false;
 for (let i = 0; i < list.length && !shown; ++i) {
     if (list[i].flat || list[i].demolished) continue;
-    rides.show(i);
+    rides.show(list[i].index);
     await frames(5);
     if (ui.find("info/Attraction_Graphs") === undefined) continue;
     await ui.click("info/Attraction_Graphs");

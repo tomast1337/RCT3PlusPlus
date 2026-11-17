@@ -22,7 +22,7 @@ const thoughtful = () => {
     return best;
 };
 await park.advanceUntil(() => thoughtful() >= 0, 600, "a guest with three thoughts");
-const who = thoughtful();
+const who = people.list()[thoughtful()].index;
 log("thoughts", JSON.stringify(people.list()[who].thoughts));
 people.show(who);
 await until(() => ui.find("info/Guest_Thoughts") !== undefined, 120, "the guest's window");

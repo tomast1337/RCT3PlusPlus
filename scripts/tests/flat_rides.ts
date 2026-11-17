@@ -286,10 +286,10 @@ for (const queue of [true, false]) {
 await screenshot("rides");
 
 // Rides are built closed: each is tested a while, then opened, as a player would.
-for (const [i] of rides.list().entries()) rides.setState(i, "testing");
+for (const r of rides.list()) rides.setState(r.index, "testing");
 await ui.click("bar/Top_SuperFastForward");
 await frames(120);
-for (const [i] of rides.list().entries()) rides.setState(i, "open");
+for (const r of rides.list()) rides.setState(r.index, "open");
 log(
     "dropped",
     park.dropParties(dropped).reduce((n, p) => n + p.guests, 0),
@@ -354,8 +354,10 @@ await screenshot("park");
 
 // A ride with fixed cameras of its own, such as the pirate ship, is looked out from a rider's seat first, and
 // the type button changes to its fixed cameras, which the camera buttons step through.
-const ship = all.findIndex((r) => r.symbol.toLowerCase().startsWith("pirateship"));
-expect(ship >= 0, "a pirate ship among the rides");
+const ship = must(
+    all.find((r) => r.symbol.toLowerCase().startsWith("pirateship")),
+    "a pirate ship among the rides",
+).index;
 rides.show(ship);
 await frames(30);
 await ui.click("info/body/RideCamGUI_Enabled");

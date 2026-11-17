@@ -107,7 +107,10 @@ expect(
 );
 
 // Its window's items page takes items off the menu and puts them back. Bare, it cannot open.
-const at = stalls.list().findIndex((s) => s.symbol === `${kind.symbol}:sta`);
+const at = must(
+    stalls.list().find((s) => s.symbol === `${kind.symbol}:sta`),
+    "the stall",
+).index;
 const menu = () => stalls.list()[at];
 const selling = () => {
     const stall = menu();

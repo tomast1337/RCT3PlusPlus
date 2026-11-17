@@ -55,8 +55,10 @@ pointer.move(...on_view(beside.col, beside.row));
 await frames(3);
 expect(build.placing()?.problem === "none", `the stall placeable beside the road, not ${build.placing()?.problem}`);
 await click(beside.col, beside.row);
-const stall = stalls.list().findIndex((s) => s.symbol === `${kind.symbol}:sta`);
-expect(stall >= 0, "the stall placed");
+const stall = must(
+    stalls.list().find((s) => s.symbol === `${kind.symbol}:sta`),
+    "the stall placed",
+).index;
 await ui.click("info/close").catch(() => undefined);
 await frames(2);
 

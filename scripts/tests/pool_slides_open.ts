@@ -25,7 +25,7 @@ const kSteps: [number, number][] = [
 const pool_ride = (symbol: string) => /^(BodySlide|ProSlide|RingSlide|MasterBlaster|LazyRiver):/i.test(symbol);
 
 // 1. Each saved pool ride, closed and opened again, opens.
-const saved = rides.list().flatMap((r, i) => (!r.demolished && pool_ride(r.symbol) ? [i] : []));
+const saved = rides.list().flatMap((r) => (!r.demolished && pool_ride(r.symbol) ? [r.index] : []));
 expect(saved.length > 0, "a pool ride in the park");
 for (const i of saved) {
     const r = rides.list()[i];
@@ -141,7 +141,7 @@ if (spot && build.construction()!.refusal !== "") {
 expect(spot, "clear ground for the design");
 await pointer.click(...here);
 await frames(30);
-const built = rides.list().length - 1;
+const built = must(rides.list().at(-1), "the ride laid").index;
 const slide = () => tracked(rides.list()[built], "the new slide");
 expect(/ringslide/i.test(slide().symbol) && slide().pieces > 1, "the slide laid");
 build.stop();

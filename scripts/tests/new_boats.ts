@@ -34,7 +34,7 @@ for (let reach = 4; reach >= 1 && !middle; --reach)
 expect(middle !== undefined, "open water in the park");
 log("dock at", JSON.stringify(middle));
 
-const ride = rides.list().length;
+const ride = rides.list().length as RideIndex; // The next ride laid
 const boatRide = () => tracked(rides.list()[ride], "the boat ride");
 expect(build.pick("tracks/TrackedRides/RowingBoats/RowingBoats", "RowingBoats"), "rowing boats to build");
 await until(() => build.construction() !== undefined, 600, "the construction panel");

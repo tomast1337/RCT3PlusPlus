@@ -71,8 +71,10 @@ await pointer.click(stallSpot.x, stallSpot.y);
 await frames(3);
 build.stop();
 if (ui.find("info") !== undefined) await ui.click("info/close");
-const stall = stalls.list().findIndex((s) => s.symbol === `${drinks.symbol}:sta`);
-expect(stall >= 0, "the stall in the park");
+const stall = must(
+    stalls.list().find((s) => s.symbol === `${drinks.symbol}:sta`),
+    "the stall in the park",
+).index;
 expect(stalls.setState(stall, "open") == null, "the stall open");
 
 // The smallest cash machine (kind 12) east of the road, opening onto it.
@@ -86,8 +88,10 @@ const machine = must(
 const machineRow = gate.row - 11;
 expect(build.pick(machine.overlay, machine.symbol), `${machine.symbol} picked`);
 await place("the cash machine", gate.col + 1, machineRow);
-const cashMachine = rides.list().findIndex((r) => r.symbol === `${machine.symbol}:sat`);
-expect(cashMachine >= 0, "the cash machine in the park");
+const cashMachine = must(
+    rides.list().find((r) => r.symbol === `${machine.symbol}:sat`),
+    "the cash machine in the park",
+).index;
 expect(rides.setState(cashMachine, "open") == null, "the cash machine open");
 
 // A small fire on the grass west of the road.

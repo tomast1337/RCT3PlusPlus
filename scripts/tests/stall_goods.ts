@@ -50,8 +50,10 @@ for (let k = 0; k < wanted.length; ++k) {
     await pointer.click(spot.x, spot.y);
     await frames(3);
     if (ui.find("info") !== undefined) await ui.click("info/close");
-    const i = stalls.list().findIndex((s) => s.symbol === `${kind!.symbol}:sta`);
-    expect(i >= 0, `${kind!.symbol} in the park`);
+    const i = must(
+        stalls.list().find((s) => s.symbol === `${kind!.symbol}:sta`),
+        `${kind!.symbol} in the park`,
+    ).index;
     const stall = stalls.list()[i];
     expect(
         JSON.stringify(stall.items.map((x) => x.item)) === JSON.stringify(kind!.goods.map((g) => `${g.item}:cid`)),

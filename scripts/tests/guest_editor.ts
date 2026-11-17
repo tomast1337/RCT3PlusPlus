@@ -10,8 +10,10 @@ export {};
 
 await until(() => park.loaded(), 1200, "the park");
 await frames(10);
-const guest = people.list().findIndex((p) => !p.staff && p.state !== undefined);
-expect(guest >= 0, "a guest the simulation walks");
+const guest = must(
+    people.list().find((p) => !p.staff && p.state !== undefined),
+    "a guest the simulation walks",
+).index;
 
 keys.press("F12");
 await until(() => editor.shown(), 60, "the editor among the developer windows");

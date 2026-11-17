@@ -61,7 +61,7 @@ await place("ride", col + ((item.width - 1) >> 1), first + ((item.length - 1) >>
 await place("entrance", col, last + 1);
 await place("exit", right + 1, last);
 await ui.click("info/close");
-const ride = rides.list().length - 1;
+const ride = must(rides.list().at(-1), "the ride laid").index;
 
 // The stalls south of the road, and one away from it. Facings 0 to 3 put a stall's front towards -row, -col, +row
 // and +col.
@@ -71,7 +71,11 @@ const kFront: [number, number][] = [
     [0, 1],
     [1, 0],
 ];
-async function placeStall(named: string, c: number, r: number): Promise<{ index: number; front: [number, number] }> {
+async function placeStall(
+    named: string,
+    c: number,
+    r: number,
+): Promise<{ index: StallIndex; front: [number, number] }> {
     const kind = build
         .stalls()!
         .find((s) => s.overlay === "Style/Vanilla/Style" && s.symbol.toLowerCase().includes(named));
@@ -82,7 +86,7 @@ async function placeStall(named: string, c: number, r: number): Promise<{ index:
     await place("ride", c, r);
     if (ui.find("info") !== undefined) await ui.click("info/close");
     expect(stalls.list().length === before + 1, `the ${named} stall placed`);
-    const index = before;
+    const index = stalls.list()[before].index;
     const site = stalls.list()[index].site!;
     return { index, front: [site.col + kFront[site.direction & 3][0], site.row + kFront[site.direction & 3][1]] };
 }
@@ -144,7 +148,12 @@ await park.advanceUntil(
 );
 
 // The blank park's inspector has no tasks ticked: their window's tasks page ticks those to look at.
-people.show(people.list().findIndex((p) => p.staff && p.role === "inspector"));
+people.show(
+    must(
+        people.list().find((p) => p.staff && p.role === "inspector"),
+        "an inspector",
+    ).index,
+);
 await until(() => ui.find("info/Staff_Tools") !== undefined, 120, "the inspector's window");
 await ui.click("info/Staff_Tools");
 await frames(2);

@@ -56,7 +56,7 @@ await place("ride", col + ((item.width - 1) >> 1), first + ((item.length - 1) >>
 await place("entrance", col, last + 1);
 await place("exit", right + 1, last);
 await ui.click("info/close");
-const ride = rides.list().length - 1;
+const ride = must(rides.list().at(-1), "the ride laid").index;
 const exit = rides.list()[ride].exit!;
 log("ride", item.symbol, "exit", JSON.stringify(exit));
 expect(

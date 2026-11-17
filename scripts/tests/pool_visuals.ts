@@ -23,9 +23,9 @@ expect(stepped.length > 0, "a slide platform with steps where a pool's paving me
 
 // A pool ride's window: the pool path button in place of the doors and fence.
 let shown = false;
-for (const [i, r] of rides.list().entries()) {
+for (const r of rides.list()) {
     if (r.demolished) continue;
-    rides.show(i);
+    rides.show(r.index);
     await frames(10);
     if (ui.find("info/body/Pool_PathPanel") === undefined) continue;
     log("pool ride", r.name);

@@ -12,7 +12,7 @@
 export {};
 
 /** Lays the saved design `design` of the coaster `kind` on a new blank landscape, and gives its place in rides.list(). */
-async function lay(kind: string, design: string): Promise<number> {
+async function lay(kind: string, design: string): Promise<RideIndex> {
     await park.open("Campaigns/Base/BlankLandscape.dat");
     await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
     expect(build.pick(`tracks/coasters/${kind}/${kind}`, kind, "designs"), `a ${kind} coaster to build`);
@@ -77,7 +77,7 @@ async function build_by_hand(
     middles: number,
     falls: boolean,
     name: string,
-): Promise<number> {
+): Promise<RideIndex> {
     await park.open("Campaigns/Base/BlankLandscape.dat");
     await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
     expect(build.pick(`tracks/coasters/${kind}/${kind}`, kind, "designs"), `a ${kind} coaster to build`);
@@ -179,7 +179,7 @@ async function build_by_hand(
 type Lifted = { phase: string; aboard: number };
 
 /** The lift car of ride `ride`, as drawn now. */
-function lift_car(ride: number): MapPoint & { facing: number } {
+function lift_car(ride: RideIndex): MapPoint & { facing: number } {
     return must(
         tracked(rides.list()[ride], "the coaster").cars.find((c) => c.lift),
         "the lift car drawn",
@@ -187,7 +187,7 @@ function lift_car(ride: number): MapPoint & { facing: number } {
 }
 
 /** Takes the picture `name` of ride `ride`'s lift car, from a little off to its side. */
-async function picture(ride: number, name: string): Promise<void> {
+async function picture(ride: RideIndex, name: string): Promise<void> {
     const car = lift_car(ride);
     // The view looks at the ground, so it looks past the car at the ground beyond it, from a little above and
     // off to its side, the car on the line between.
@@ -203,13 +203,13 @@ async function picture(ride: number, name: string): Promise<void> {
     await screenshot(name);
 }
 
-function lifted(ride: number): Lifted | null {
+function lifted(ride: RideIndex): Lifted | null {
     return rides.list()[ride].trainsAt?.[0]?.lift ?? null;
 }
 
 /** Tests the ride `ride`, watching its first train up its first lift tower and round to it again, with a picture `name`
  * at the foot, half way up, at the top and on the way down. */
-async function ride_up(ride: number, name: string): Promise<void> {
+async function ride_up(ride: RideIndex, name: string): Promise<void> {
     const laid = tracked(rides.list()[ride], name);
     log(`${name}:`, laid.track.filter((p) => p.includes("Lift")).join(" "), `train ${laid.trainsAt?.[0]?.length}`);
     // Laid and not yet run, its lift's car already stands at the tower's foot.

@@ -21,7 +21,7 @@ await until(() => swimmers().length >= 3, 6000, "guests swimming");
 // Everyone in a pool in their swimwear, nobody outside one.
 const dressed = (state: PersonState) =>
     people.list().filter((p): p is WalkedPerson => !p.staff && p.state !== undefined && p.state === state);
-const guest = (i: number) => walked(people.list()[i], "the guest");
+const guest = (i: PersonIndex) => walked(people.list()[i], "the guest");
 expect(
     swimmers().every((p) => p.swimwear),
     "every swimmer in their swimwear",
@@ -46,7 +46,7 @@ for (const [k, at] of inWater.slice(0, 2).entries()) {
 }
 
 /** Finds the pick-up button wherever the window holds it. */
-const pickUp = async (who: number) => {
+const pickUp = async (who: PersonIndex) => {
     people.show(who);
     await until(() => under("info", "PickUp") !== undefined, 120, "the pick-up button");
     await ui.click(must(under("info", "PickUp"), "PickUp under info"));
@@ -62,14 +62,14 @@ const letGo = async (col: number, row: number, name: string) => {
     await pointer.click(at!.x, at!.y);
 };
 /** The puffs of sparkles alive round the guest. */
-const puffs = (who: number) => {
+const puffs = (who: PersonIndex) => {
     const at = guest(who);
     return map
         .effects()
         .filter((e) => e.effect === "magicsparkles" && Math.abs(e.col - at.col) + Math.abs(e.row - at.row) < 1.5);
 };
 /** A close look at the guest, from a little above. */
-const closeUp = async (who: number, name: string) => {
+const closeUp = async (who: PersonIndex, name: string) => {
     const at = guest(who);
     camera.look({ col: at.col, row: at.row, up: at.up + 0.5 }, { col: at.col + 2.5, row: at.row + 1, up: at.up + 2.5 });
     await frames(3);
@@ -82,7 +82,10 @@ const paths = map.paths().filter((p) => !p.queue);
 const distance = (a: { col: number; row: number }, b: { col: number; row: number }) =>
     Math.abs(a.col - b.col) + Math.abs(a.row - b.row);
 await until(() => dressed("walking").some((p) => distance(p, middle) < 25), 6000, "a guest walking near the pool");
-const who = people.list().findIndex((p) => !p.staff && p.state === "walking" && distance(p, middle) < 25);
+const who = must(
+    people.list().find((p) => !p.staff && p.state === "walking" && distance(p, middle) < 25),
+    "a guest walking near the pool",
+).index;
 const first = guest(who);
 const pool = water.reduce((a, b) => (distance(first, b) < distance(first, a) ? b : a));
 const near = (p: { col: number; row: number }) => distance(p, pool);

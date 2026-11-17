@@ -14,8 +14,10 @@ export {};
 await park.open("Tutorials/Tutorial7.dat");
 await park.ready();
 await frames(10);
-const who = people.list().findIndex((p) => p.staff && p.role === "mechanic");
-expect(who >= 0, "a mechanic in the park");
+const who = must(
+    people.list().find((p) => p.staff && p.role === "mechanic"),
+    "a mechanic in the park",
+).index;
 const own = () => (people.list()[who].thoughts ?? []).filter((t) => t >= 47 && t <= 58);
 expect(own().length === 0, "no worker's thought yet");
 await park.advance(40);
@@ -112,9 +114,9 @@ expect(
 expect(ui.find("info") === undefined, "their window closed");
 
 // A handyman's tasks: each a line with its toggle, pressed in while it is on.
-const sweeper = people.list().findIndex((p) => p.staff && p.role === "handyman");
-if (sweeper >= 0) {
-    people.show(sweeper);
+const sweeper = people.list().find((p) => p.staff && p.role === "handyman");
+if (sweeper !== undefined) {
+    people.show(sweeper.index);
     await until(() => ui.find("info") !== undefined, 120, "the handyman's window");
     await ui.click(`info/${info_tab("tools")}`);
     await frames(10);

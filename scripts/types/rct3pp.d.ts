@@ -2,11 +2,37 @@
 //
 // What rct3++ gives scripts run with `rct3pp --script FILE.js` (app/scene/script_host.hpp). Positions are
 // shares of the game's view, 0 to 1 from the top-left corner.
+//
+// Branded numbers: tsc checks the brand and erases it, so scripts still run on plain numbers.
+// - Places in a list (RideIndex, StallIndex, PersonIndex) and placed objects' ids (PlacedObjectId) are strict: take
+//   them from the API (each list item's `index`, pathItems()' `object`), or cast a literal (`3 as RideIndex`), which
+//   marks it as a magic number.
+// - Units (Money in hundredths, Tiles, WorldUnits, Seconds, Frames) are loose: plain numbers and sums pass, but a
+//   value the API gave in one unit is refused where another is meant.
+
+/** A ride's place in rides.list(), as its `index`. */
+type RideIndex = number & { readonly __brand: "RideIndex" };
+/** A stall's place in stalls.list(), as its `index`. */
+type StallIndex = number & { readonly __brand: "StallIndex" };
+/** A person's place in people.list(), as their `index`. */
+type PersonIndex = number & { readonly __brand: "PersonIndex" };
+/** A placed object's id, as park.pathItems() gives it. */
+type PlacedObjectId = number & { readonly __brand: "PlacedObjectId" };
+/** Hundredths of the currency. */
+type Money = number & { readonly __unit?: "Money" };
+/** Tiles across the map: col 3.5 is the middle of column 3. */
+type Tiles = number & { readonly __unit?: "Tiles" };
+/** World units, as heights above the ground and the camera's points are given. */
+type WorldUnits = number & { readonly __unit?: "WorldUnits" };
+/** Seconds of the park's own time. */
+type Seconds = number & { readonly __unit?: "Seconds" };
+/** Frames drawn. */
+type Frames = number & { readonly __unit?: "Frames" };
 
 /** Waits `count` frames (1 when left out). */
-declare function frames(count?: number): Promise<void>;
+declare function frames(count?: Frames): Promise<void>;
 /** Waits frame by frame until `check` returns true; throws, naming `what`, after `limit` frames (300). */
-declare function until(check: () => boolean, limit?: number, what?: string): Promise<void>;
+declare function until(check: () => boolean, limit?: Frames, what?: string): Promise<void>;
 /** Writes its arguments to the game's log, under "script". */
 declare function log(...values: unknown[]): void;
 /** Saves a screenshot, named `name` in the script's report; resolves once it is written. */
@@ -21,9 +47,9 @@ declare function must<T>(value: T | undefined | null, what: string): T;
 /** The path of the first widget named `name` anywhere below the one at `path`, or undefined. */
 declare function under(path: string, name: string): string | undefined;
 /** Where the middle of tile (col, row) is on screen; throws when it is not in sight. */
-declare function on_view(col: number, row: number): [number, number];
+declare function on_view(col: Tiles, row: Tiles): [number, number];
 /** Points the camera down at tile (col, row) from the south, `up` (30) above it, and waits for it to draw. */
-declare function look_down(col: number, row: number, up?: number): Promise<void>;
+declare function look_down(col: Tiles, row: Tiles, up?: WorldUnits): Promise<void>;
 /** Clicks the first button of the tool bar menu `tool` (such as "Land"), which opens or closes it. */
 declare function click_tool(tool: string): Promise<void>;
 /** Clicks `item` in the files menu, opening the menu first when it is shut. */
@@ -31,7 +57,7 @@ declare function files_menu(item: string): Promise<void>;
 /** The tab of the open info window whose name holds `part` (lower case), or undefined. */
 declare function info_tab(part: string): string | undefined;
 /** Whether a path lies on tile (col, row). */
-declare function has_path(col: number, row: number): boolean;
+declare function has_path(col: Tiles, row: Tiles): boolean;
 /** `person`, or throws "expected `what`" when it is missing or the simulation does not walk them. */
 declare function walked<P extends Person>(
     person: P | undefined | null,
@@ -60,7 +86,7 @@ declare namespace pointer {
     /** Moves to (x, y), presses and lets go; the right button with "right". */
     function click(x: number, y: number, button?: "right"): Promise<void>;
     /** Presses at `from`, moves to `to` over `count` frames and lets go; the right button with "right". */
-    function drag(from: [number, number], to: [number, number], count?: number, button?: "right"): Promise<void>;
+    function drag(from: [number, number], to: [number, number], count?: Frames, button?: "right"): Promise<void>;
 }
 
 declare namespace keys {
@@ -130,28 +156,28 @@ declare namespace park {
     function loaded(): boolean;
     /** Runs the park on `seconds` of its own time, whatever its speed, without drawing them: a step of its
      *  simulation at a time, as frames would run them; nothing while paused. Resolves a frame later, drawn as it is then. */
-    function advance(seconds: number): Promise<void>;
+    function advance(seconds: Seconds): Promise<void>;
     /** Runs the park on a second of its time a frame until `check` returns true; throws, naming `what`, after
      *  `seconds` park seconds (60). */
-    function advanceUntil(check: () => boolean, seconds?: number, what?: string): Promise<void>;
+    function advanceUntil(check: () => boolean, seconds?: Seconds, what?: string): Promise<void>;
     /** Waits until a park is open. */
     function ready(): Promise<void>;
     /** Hundredths of the currency; undefined in a park without money. */
-    function cash(): number | undefined;
+    function cash(): Money | undefined;
     /** The loan, in hundredths of the currency. */
-    function loan(): number;
+    function loan(): Money;
     /** Sets the cash, in hundredths of the currency, of a park with money. */
-    function setCash(hundredths: number): void;
+    function setCash(hundredths: Money): void;
     /** The building and research lines of the newest month's ledger, in hundredths: spending above zero, refunds below. */
-    function ledger(): { landPurchase: number; landscaping: number; rideConstruction: number; research: number };
+    function ledger(): { landPurchase: Money; landscaping: Money; rideConstruction: Money; research: Money };
     /** Research: the monthly budget and what is counted towards the current item (hundredths), the current item and
      *  those invented since the original park, by symbol, with the calendar time each was invented (as park.date()),
      *  the item research is focused on, the cheapest few of each area that may come next, how many items are left
      *  (null until the build lists are read), and the priority of each research area from 0 to 1, in the research
      *  window's order (areas past the end weigh 1). */
     function research(): {
-        budget: number;
-        spent: number;
+        budget: Money;
+        spent: Money;
         current: string | null;
         invented: (string | null)[];
         inventedAt: number[];
@@ -165,33 +191,33 @@ declare namespace park {
     function focusResearch(symbol: string | null): boolean;
     /** Sets the monthly research budget, in hundredths of the currency; nought stops research. `priorities` weighs
      *  each research area in the research window's order, as research() gives them. */
-    function setResearch(hundredths: number, priorities?: number[]): void;
+    function setResearch(hundredths: Money, priorities?: number[]): void;
     /** The weekly graphs' samples, newest first (money in hundredths), each ledger period's sum newest first, and
      *  the month, counted from the calendar's start, that the newest period is for (null before anything is booked). */
     function history(): {
-        cashLessLoan: number[];
-        companyValue: number[];
-        parkValue: number[];
-        income: number[];
-        expenditure: number[];
-        weeklyProfit: number[];
+        cashLessLoan: Money[];
+        companyValue: Money[];
+        parkValue: Money[];
+        income: Money[];
+        expenditure: Money[];
+        weeklyProfit: Money[];
         rating: number[];
         guests: number[];
         intake: number[];
-        ledger: number[];
+        ledger: Money[];
         ledgerMonth: number | null;
     };
     /** Guests in the park now. */
     function guests(): number;
     /** The path tiles under the park's entrances, where guests come in and go out. */
-    function gates(): { col: number; row: number }[];
+    function gates(): { col: Tiles; row: Tiles }[];
     /** The path tiles of the park's spawn points, where arriving guests appear and those going home walk off. */
-    function spawns(): { col: number; row: number }[];
+    function spawns(): { col: Tiles; row: Tiles }[];
     /** Brings `parties` parties of guests in at once, each on a path tile of the park picked at random from
      *  `seed` (1 by default), as if they had walked there from the gate. Where each landed and how many it holds. */
-    function dropParties(parties: number, seed?: number): { col: number; row: number; guests: number }[];
+    function dropParties(parties: number, seed?: number): { col: Tiles; row: Tiles; guests: number }[];
     /** The things guests use on the paths: benches, bins, signs and sights, by the placed object each stands as. */
-    function pathItems(): { object: number; kind: PathItemKind; broken: boolean }[];
+    function pathItems(): { object: PlacedObjectId; kind: PathItemKind; broken: boolean }[];
     /** The park's passport gift, which its passport posts' windows set: how many stamps a guest needs for it, the
      *  item given (by symbol, "" for none), and the items it may be (souvenirs). */
     function passport(): { stampsForGift: number; gift: string; gifts: string[] };
@@ -199,24 +225,24 @@ declare namespace park {
      *  left out; false, changing nothing, for a number or gift out of these. */
     function setPassport(stampsForGift: number, gift?: string): boolean;
     /** Opens the window of the placed object `object` (as pathItems() gives) on the next frame, as a click on it does. */
-    function showObject(object: number): void;
+    function showObject(object: PlacedObjectId): void;
     /** The litter and sick lying on the paths, each by the middle of the path tile it lies on, in tiles. */
-    function litter(): { col: number; row: number; sick: boolean }[];
+    function litter(): { col: Tiles; row: Tiles; sick: boolean }[];
     /** Breaks every bench, bin and sign at once, as vandals would; how many it broke. */
     function breakPathItems(): number;
     /** Sets the energy of every guest to `share` (0 to 1), as a long day would; how many guests. */
     function tireGuests(share: number): number;
     /** Sets the cash of every guest to `hundredths`, as a day of spending would; how many guests. */
-    function setGuestCash(hundredths: number): number;
+    function setGuestCash(hundredths: Money): number;
     /** Drops `pieces` pieces of litter (1 to 50) on the path nearest tile `col`, `row`; whether there was a path. */
-    function dropLitter(col: number, row: number, pieces: number): boolean;
+    function dropLitter(col: Tiles, row: Tiles, pieces: number): boolean;
     /** Empties every flower bed of its water; how many there are. */
     function dryFlowerBeds(): number;
     /** Sets a handyman walking from the path on tile `col`, `row`, who is not drawn; whether there was a path. */
-    function addHandyman(col: number, row: number): boolean;
+    function addHandyman(col: Tiles, row: Tiles): boolean;
     /** Posts a message with the text `key`, about ride `ride` of rides.list() if given, naming tab number `tab`
      *  for its camera to open (as saved messages number them). */
-    function postMessage(key: string, ride?: number, tab?: number): void;
+    function postMessage(key: string, ride?: RideIndex, tab?: number): void;
     /** The park's messages, oldest first: each one's text key, the name it was posted about, and for an award or a
      *  fine, its number as the park file keeps them. Text keys come from the game's string tables, an open set, so
      *  `award` cannot be told apart by `key` here and stays optional. */
@@ -266,20 +292,20 @@ declare namespace park {
      *  their place in people.list() once they are shown. */
     function vips(): {
         name: string;
-        col: number;
-        row: number;
+        col: Tiles;
+        row: Tiles;
         patience: number;
         leaving: boolean;
         gone: boolean;
-        shown: number | null;
+        shown: PersonIndex | null;
     }[];
 }
 
 /** A place on the map: tiles (col 3.5 is the middle of column 3) and world units above the ground. */
 interface MapPoint {
-    col: number;
-    row: number;
-    up?: number;
+    col: Tiles;
+    row: Tiles;
+    up?: WorldUnits;
 }
 
 declare namespace debug {
@@ -318,9 +344,9 @@ declare namespace camera {
     function view(): {
         yaw: number;
         pitch: number;
-        distance: number;
-        target: [number, number, number];
-        eye: [number, number, number];
+        distance: WorldUnits;
+        target: [WorldUnits, WorldUnits, WorldUnits];
+        eye: [WorldUnits, WorldUnits, WorldUnits];
     };
     /** Looks at `at` from `from`; without `from`, keeps the way it faces and how far back it is. */
     function look(at: MapPoint, from?: MapPoint): void;
@@ -331,10 +357,14 @@ declare namespace camera {
      *  from (a frame or so after it starts, which no field tells), the rider's eyes in world units and the way they
      *  look. Undefined while the view is overhead. */
     function riding():
-        | ({ turn: [number, number]; eye?: [number, number, number]; ahead?: [number, number, number] } & (
-              | { kind: "nose" | "front" | "rear"; ride: number; car: number }
-              | { kind: "seat" | "fixed"; ride: number; car: number }
-              | { kind: "guest" | "behind"; ride: -1; car: number }
+        | ({
+              turn: [number, number];
+              eye?: [WorldUnits, WorldUnits, WorldUnits];
+              ahead?: [WorldUnits, WorldUnits, WorldUnits];
+          } & (
+              | { kind: "nose" | "front" | "rear"; ride: RideIndex; car: number }
+              | { kind: "seat" | "fixed"; ride: RideIndex; car: number }
+              | { kind: "guest" | "behind"; ride: -1; car: PersonIndex }
           ))
         | undefined;
 }
@@ -358,8 +388,8 @@ interface Tile {
 
 /** A path tile: raised ones have a height, queue tiles on a ride's line its id. */
 type PathPiece = {
-    col: number;
-    row: number;
+    col: Tiles;
+    row: Tiles;
     /** The path style it is laid in, by the name the install gives it (an open set). */
     style: string;
 } & (
@@ -389,59 +419,59 @@ interface Lake {
 declare namespace map {
     function size(): { width: number; height: number };
     /** Undefined off the map. */
-    function tile(col: number, row: number): Tile | undefined;
+    function tile(col: Tiles, row: Tiles): Tile | undefined;
     /** The middle of a tile on the view (at `height` when given, else on a pool square at its surface), or with
      *  fractions that point of it; undefined when it is not in sight. */
-    function screen(col: number, row: number, height?: number): { x: number; y: number } | undefined;
+    function screen(col: Tiles, row: Tiles, height?: WorldUnits): { x: number; y: number } | undefined;
     function paths(): PathPiece[];
     /** The tiles the rides and stalls pave: their doors, floors and the ground under stalls, and the path style
      *  each is paved in (empty where a path covers it). */
-    function pavings(): { col: number; row: number; height: number; style: string }[];
+    function pavings(): { col: Tiles; row: Tiles; height: number; style: string }[];
     /** The tiles with support columns standing on them, and how many pieces each has. */
-    function supports(): { col: number; row: number; pieces: number }[];
+    function supports(): { col: Tiles; row: Tiles; pieces: number }[];
     /** The placed objects that are shown: scenery, rides' parts, supports, fences and the rest, with the whole-unit
      * height stored for each (null when unset), and the quarter turns of its model. */
     function objects(): {
         symbol: string;
         overlay: string;
-        col: number;
-        row: number;
+        col: Tiles;
+        row: Tiles;
         height: number | null;
         turn: number;
     }[];
     /** The pieces the pools' squares place now, their extras and changing rooms, shaped as `objects` gives them: what
      * the pool tool's work should leave shown. */
-    function poolPieces(): { symbol: string; overlay: string; col: number; row: number; height: number | null }[];
+    function poolPieces(): { symbol: string; overlay: string; col: Tiles; row: Tiles; height: number | null }[];
     /** The pools' squares as laid: kind, surface height, the side a slope's, steps' or staircase's foot or a high
      * board faces, and a staircase's or board's height over the surface; and the ramps among their extras, each by
      * its square, the side it climbs to and how many units; and the tiles of their changing rooms. Sides count as the pool tool's: 0 next row, 1 next
      * column, 2 row before, 3 column before. */
     function pools(): {
         squares: {
-            col: number;
-            row: number;
+            col: Tiles;
+            row: Tiles;
             kind: "water" | "tile" | "spa" | "high dive" | "stairs" | "path" | "slope" | "steps";
             surface: number;
             side: number;
             board: number;
         }[];
-        ramps: { col: number; row: number; side: number; step: number }[];
-        rooms: { col: number; row: number }[];
+        ramps: { col: Tiles; row: Tiles; side: number; step: number }[];
+        rooms: { col: Tiles; row: Tiles }[];
     };
     /** The particle effects shown now, those items keep running and those fired once: the effect's name, lower
      * case, where it is as a map point, and its particles alive. */
-    function effects(): { effect: string; col: number; row: number; up: number; live: number }[];
+    function effects(): { effect: string; col: Tiles; row: Tiles; up: WorldUnits; live: number }[];
     /** The rings spreading on the pools' water where people fell in: their middle as a map point, their water's
      * world height, seconds since they started (below 0 before) and their leading crest's height now. */
-    function rings(): { col: number; row: number; up: number; age: number; crest: number }[];
+    function rings(): { col: Tiles; row: Tiles; up: WorldUnits; age: Seconds; crest: number }[];
     function water(): Lake[];
     /** The waterfalls: the middle of the edge each pours over and where its water lands, in tiles, the levels of
      *  the lakes it joins and how wide it is in world units. */
     function waterfalls(): {
-        col: number;
-        row: number;
-        landCol: number;
-        landRow: number;
+        col: Tiles;
+        row: Tiles;
+        landCol: Tiles;
+        landRow: Tiles;
         top: number;
         bottom: number;
         width: number;
@@ -457,7 +487,7 @@ interface FlatRideItem {
     width: number;
     length: number;
     /** Hundredths of the currency. */
-    price: number;
+    price: Money;
     /** Whether it has an entrance and an exit to place. */
     doors: boolean;
     /** Whether it stands only on water. */
@@ -474,7 +504,7 @@ interface FacilityItem {
     width: number;
     length: number;
     /** Hundredths of the currency. */
-    price: number;
+    price: Money;
     /** What it does for guests; "other" for those the park does not run (information). */
     kind: "toilet" | "cash machine" | "first aid" | "other";
 }
@@ -487,9 +517,9 @@ interface StallItem {
     width: number;
     length: number;
     /** Hundredths of the currency. */
-    price: number;
+    price: Money;
     /** What a new one sells: each carried item's name and the price it starts at, in hundredths. */
-    goods: { item: string; price: number }[];
+    goods: { item: string; price: Money }[];
 }
 
 declare namespace build {
@@ -519,13 +549,13 @@ declare namespace build {
      * other rides. Undefined while the panel is shut. */
     function construction():
         | {
-              ride: number;
+              ride: RideIndex;
               offered: number;
               piece: string | null;
               ghost: boolean;
               arrows: boolean;
-              ghostAt: { col: number; row: number; height: number } | null;
-              cost: number;
+              ghostAt: { col: Tiles; row: Tiles; height: number } | null;
+              cost: Money;
               clashes: boolean;
               unowned: boolean;
               refusal:
@@ -536,7 +566,7 @@ declare namespace build {
                   | "PlaceObject_IntersectsGround"
                   | "PlaceObject_MustEndOnPoolEdge";
               turn: number;
-              poolSides: { col: number; row: number; height: number; side: number }[];
+              poolSides: { col: Tiles; row: Tiles; height: number; side: number }[];
               ghostDoors: number;
               ghostPlatform: string;
               completing: boolean;
@@ -558,14 +588,14 @@ declare namespace build {
      * and where, and whether the arrow over the next pool path piece shows; undefined while the tool is away. */
     function pooling():
         | ({ arrow: boolean } & (
-              { ghost: string; ghostAt: { col: number; row: number; height: number } } | { ghost: null }
+              { ghost: string; ghostAt: { col: Tiles; row: Tiles; height: number } } | { ghost: null }
           ))
         | undefined;
     /** Puts the placing tool, the enclosure tool or the pool tool away, as Escape does. */
     function stop(): void;
     /** While an enclosure drag is held: what letting go would cost in hundredths (below 0 when it pays back),
      * and how many tiles it would take in or out; undefined otherwise. */
-    function enclosing(): { cost: number; tiles: number } | undefined;
+    function enclosing(): { cost: Money; tiles: number } | undefined;
     /** What is being placed, what keeps it from where the pointer is, whether a stall's facing arrow shows, and
      * how the ground under a ride or stall is levelled and what that costs, in hundredths; undefined while nothing
      * is. */
@@ -584,18 +614,18 @@ declare namespace build {
                   | "into ground";
               affordable: boolean;
               flatten: "off" | "sharp" | "smooth";
-              levelling: number;
+              levelling: Money;
               ghost: boolean;
               arrow: boolean;
-              site?: { col: number; row: number; turns: number; height: number };
+              site?: { col: Tiles; row: Tiles; turns: number; height: number };
           }
         | undefined;
 }
 
 /** A place a ride's part stands: its lowest tile, and the quarter turn it faces. */
 interface Spot {
-    col: number;
-    row: number;
+    col: Tiles;
+    row: Tiles;
     direction: number;
 }
 
@@ -605,7 +635,7 @@ interface Spot {
 interface RideRun {
     customers?: number;
     /** A facility: the path tile it serves from. */
-    servedFrom?: { col: number; row: number };
+    servedFrom?: { col: Tiles; row: Tiles };
     /** How many of the simulation's attractions are this ride (1 unless taken on twice). */
     simulated?: number;
     /** On a track: the trains it runs, and how many are under way now. */
@@ -636,28 +666,28 @@ interface RideRun {
      *  pool path or stairs square beside each joined one, where swimmers get on and off. */
     riverStations?: number;
     riverJoined?: number;
-    riverSquares?: { col: number; row: number; up: number }[];
+    riverSquares?: { col: Tiles; row: Tiles; up: WorldUnits }[];
     /** A slide that swimmers climb on foot, as an inflatable ship: its ways up and down, and the foot of
      *  its steps, where swimmers get on. */
     climbWays?: number;
-    climbFoot?: { col: number; row: number; up: number };
+    climbFoot?: { col: Tiles; row: Tiles; up: WorldUnits };
     /** Hundredths of the currency. */
-    price?: number;
+    price?: Money;
     open?: boolean;
     /** Broken down, waiting for a mechanic. */
     broken?: boolean;
     /** Whether its entrance was found on the paths. */
     onPaths?: boolean;
     /** Where the guests walking to it are now. */
-    heading?: { col: number; row: number }[];
+    heading?: { col: Tiles; row: Tiles }[];
     capacity?: number;
-    cycleSeconds?: number;
+    cycleSeconds?: Seconds;
     queue?: number;
     queueLine?: number;
     /** Rides with several stations: the stations after the first its trains stop at for riders. */
     stops?: number;
     /** The path tile its first station lets riders out onto; absent while no path joins its exit. */
-    exitAt?: { col: number; row: number };
+    exitAt?: { col: Tiles; row: Tiles };
     riders?: number;
     /** Excitement, intensity and nausea, 0..1. */
     ratings?: [number, number, number];
@@ -669,6 +699,7 @@ interface RideRun {
 /** A ride, as rides.list() gives it: its kind says whether it has a track, and `joined` whether the simulation
  *  runs it. */
 type RideInfo = {
+    index: RideIndex;
     name: string;
     /** The fence round it, without its tag; empty when it has none. */
     fence: string;
@@ -707,7 +738,7 @@ type RideInfo = {
           platformColours: number[][];
           /** The squares its stations' platforms stand on, the height of their decks and the quarter turn of their
            *  pieces, in track order. */
-          platformSquares: { col: number; row: number; height: number; turn: number }[];
+          platformSquares: { col: Tiles; row: Tiles; height: number; turn: number }[];
           /** Each piece's arm angles in degrees, base first, or null where it holds none. */
           arms: (number[] | null)[];
           /** Where each of its cars stands now, and the way it faces (radians round the vertical, 0 along +row).
@@ -738,17 +769,18 @@ declare namespace rides {
     function list(): RideInfo[];
     /** Puts ride `i` of list() in `state`, as its window's open-or-close tab does. Null once changed, else the
      *  string key of why the ride stays as it was (a track without a station, a missing exit...). */
-    function setState(i: number, state: "closed" | "testing" | "open"): RideRefusal | null;
+    function setState(i: RideIndex, state: "closed" | "testing" | "open"): RideRefusal | null;
     /** Has every train of ride `i` (its place in list()) run at `speed` m/s all the way round, as a ride set to a
      *  fixed speed does; 0 or less lets them run free again. Throws for a ride the park runs no trains on. */
-    function setFixedSpeed(i: number, speed: number): void;
+    function setFixedSpeed(i: RideIndex, speed: number): void;
     /** Opens ride `i`'s window, as clicking the ride does, on the next frame. */
-    function show(i: number): void;
+    function show(i: RideIndex): void;
     /** The ride the info panel shows and its tab, by the tab's help key; undefined when it shows no ride. */
-    function shown(): { ride: number; tab?: string } | undefined;
+    function shown(): { ride: RideIndex; tab?: string } | undefined;
 }
 
 type StallInfo = {
+    index: StallIndex;
     name: string;
     /** With its tag, as "BurgerStall:sta". */
     symbol: string;
@@ -757,7 +789,7 @@ type StallInfo = {
     open: boolean;
     /** What it sells, in its menu's order: each item's symbol with its tag, as "Burger:cid", its price in
      *  hundredths, its name as kept ("%ME%" for the item's own) and which of its extras go on, a bit each. */
-    items: { item: string; price: number; name: string; extras: number }[];
+    items: { item: string; price: Money; name: string; extras: number }[];
     /** How much of each extra it puts on: 0 none up to 4 loads, 5 as the guest picks. */
     extras: { extra: string; level: number }[];
     /** Whether changes to its menu go to every stall of its kind. */
@@ -773,7 +805,7 @@ type StallInfo = {
           /** The simulation runs it, once a path runs past the tile it faces. */
           joined: true;
           /** The price it sells at, in hundredths, and whether it is open to guests there. */
-          price: number;
+          price: Money;
           selling: boolean;
           /** How many guests have bought from it. */
           customers: number;
@@ -786,14 +818,14 @@ type StallInfo = {
 declare namespace stalls {
     function list(): StallInfo[];
     /** Breaks stall `stall` of list() down at once, as wear would; whether it was run by the park and whole. */
-    function breakDown(stall: number): boolean;
+    function breakDown(stall: StallIndex): boolean;
     /** Opens stall `i` of list() in the info panel, as a click on it does. */
-    function show(i: number): void;
+    function show(i: StallIndex): void;
     /** Puts stall `i` of list() in `state`, as its window's open-or-close tab does. Null once changed, else the
      *  string key of why it stays as it was (nothing on its menu). */
-    function setState(i: number, state: "closed" | "open"): "CantOpenStallNoItems" | null;
+    function setState(i: StallIndex, state: "closed" | "open"): "CantOpenStallNoItems" | null;
     /** Sets the price of item `item` on stall `i`'s menu, in hundredths, as its window's items page does. */
-    function setPrice(i: number, item: number, hundredths: number): void;
+    function setPrice(i: StallIndex, item: number, hundredths: Money): void;
 }
 
 /** What a person is at, as people.list() gives it for those the simulation walks. */
@@ -816,9 +848,9 @@ type PersonState =
  *  what goes with it. The other fields do not follow from the state (a swimmer's fields hold in the water, on a
  *  river and held over the pool alike), so they stay optional. */
 type PersonOnPaths = {
-    col: number;
-    row: number;
-    up: number;
+    col: Tiles;
+    row: Tiles;
+    up: WorldUnits;
     /** Their party's number, shared by its members, while they are with it. */
     party?: number;
     /** On their way out of the park. */
@@ -882,14 +914,14 @@ type PersonOnPaths = {
         | {
               state: "sitting";
               /** The id of the bench's object, which of its seats, and whether they are getting up. */
-              bench: number;
+              bench: PlacedObjectId;
               seat: number;
               rising: boolean;
           }
         | {
               state: "riding";
               /** The ride's place in rides.list, once found. */
-              ride?: number;
+              ride?: RideIndex;
               /** Seated on a ride, how they react to it. */
               reaction?: "waiting" | "calm" | "hands up" | "covering eyes" | "strained";
               /** Round a lazy river, resting in their ring or paddling. */
@@ -908,16 +940,17 @@ type PersonOnPaths = {
 /** A guest's passport, once stamped: each stamp's post (as pathItems()' object), ink (0xAARRGGBB) and place on the
  *  page (0 to 1 across and down), and whether they were given the park's gift. */
 interface Passport {
-    stamps: { post: number; colour: number; x: number; y: number }[];
+    stamps: { post: PlacedObjectId; colour: number; x: number; y: number }[];
     gift: boolean;
 }
 
 /** A person shown in the park, as people.list() gives them: guest or staff, and, when the simulation walks them,
  *  where they are and what they are at (no `state` when it does not). */
 type Person = {
+    index: PersonIndex;
     name: string;
     /** The point of the map they stand on, in tiles. */
-    at: { col: number; row: number } | null;
+    at: { col: Tiles; row: Tiles } | null;
     /** The numbers of the thoughts their window lists. */
     thoughts: number[];
 } & (
@@ -930,7 +963,7 @@ type Person = {
     | ({
           staff: true;
           /** A seller: the id of the object of the stall or ride entrance they serve at. */
-          post?: number;
+          post?: PlacedObjectId;
       } & (
           | {
                 /** A worker the simulation runs: their job, and what their time at work goes on now. */
@@ -948,9 +981,9 @@ declare namespace people {
     /** The people shown in the park, guests and staff, in the order the park keeps them. */
     function list(): Person[];
     /** Opens the window of person `i` of list() on the next frame, as a click on them does. */
-    function show(i: number): void;
+    function show(i: PersonIndex): void;
     /** Renames person `i` of list() on the next frame, as typing in their window's name box does. */
-    function rename(i: number, name: string): void;
+    function rename(i: PersonIndex, name: string): void;
 }
 
 /** A level of a guest's feelings and needs, as the developer windows' editor names them. */
@@ -962,7 +995,7 @@ declare namespace editor {
     function shown(): boolean;
     /** Picks person `i` of people.list(), a guest the simulation walks, as a click on their row in the editor's
      *  guest list does. */
-    function pick(i: number): void;
+    function pick(i: PersonIndex): void;
     /** The picked guest as the simulation has them: their levels, 0 to 1, and those held. */
     function guest(): { name: string; levels: Partial<Record<GuestLevel, number>>; held: GuestLevel[] } | undefined;
     /** Sets the picked guest's `level`, as its slider does; false when they have none. */
@@ -979,11 +1012,11 @@ declare namespace structures {
               items: number;
               problem: "none" | "not owned" | "blocked" | "path";
               affordable: boolean;
-              cost: number;
+              cost: Money;
               turns: number;
               height: number;
               ghost: boolean;
-              at?: { col: number; row: number };
+              at?: { col: Tiles; row: Tiles };
           }
         | undefined;
     /** How many tiles the picking out tool has marked. */
@@ -1001,6 +1034,6 @@ declare namespace animals {
         crated: boolean;
         escaped: boolean;
         health: number;
-        at: { col: number; row: number };
+        at: { col: Tiles; row: Tiles };
     }[];
 }

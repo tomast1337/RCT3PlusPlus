@@ -3,8 +3,9 @@
 // Every saved design the install ships, each on a fresh blank landscape: picked from its kind's designs window,
 // laid in the middle of the map (with pool water across its pool sides first, for a slide that needs it), tested
 // with a time limit, and written as one row of designs.md and designs.json in the report: laid or refused and why,
-// closed round or not, the test finished, crashed or stuck and where, its ratings and the seconds it took. A
-// screenshot only of a design that fails.
+// closed round or not, the test finished, crashed or stuck and where, its ratings and the seconds it took. A kind
+// never tested is opened instead ("opens untested"), and one rated without a lap passes once the park runs it
+// ("runs, no lap"). A screenshot only of a design that fails.
 //
 // The table is the result: the script passes unless it breaks itself, or with --strict unless every design builds
 // and finishes its test. --range A-B runs designs A to B of the list only, counted from 0.
@@ -17,6 +18,8 @@ export {};
 const kTestSeconds = 600;
 /** Park seconds every train may stand still off its stations before it counts as stuck. */
 const kStuckSeconds = 30;
+/** Park seconds a ride with no lap to measure runs before its row is written. */
+const kNoLapSeconds = 10;
 const kPool = "Pool/Default/Default_Stub";
 const kSteps: [number, number][] = [
     [0, 1],
@@ -208,7 +211,9 @@ async function run(d: (typeof all)[number], row: Row): Promise<void> {
     if (build.construction() !== undefined) build.stop();
     await frames(5);
 
-    const refused = rides.setState(ride, "testing");
+    let refused = rides.setState(ride, "testing");
+    const untested = refused === "CannotTestTrackedRide";
+    if (untested) refused = rides.setState(ride, "open");
     row.closed = refused ?? "yes";
     if (refused != null) {
         row.test = "not run";
@@ -218,6 +223,13 @@ async function run(d: (typeof all)[number], row: Row): Promise<void> {
     const info = () => tracked(rides.list()[ride], "the ride");
     if (!info().joined) {
         row.test = "not run by the park";
+        return;
+    }
+    if (untested || !info().measured) {
+        await park.advance(kNoLapSeconds);
+        row.parkSeconds = kNoLapSeconds;
+        row.ratings = info().ratings ?? null;
+        row.test = !info().joined ? "stopped by the park" : untested ? "opens untested" : "runs, no lap";
         return;
     }
     let still = 0;
@@ -256,7 +268,8 @@ async function run(d: (typeof all)[number], row: Row): Promise<void> {
 }
 
 const rows: Row[] = [];
-const ok = (r: Row) => r.laid === "laid" && r.closed === "yes" && r.test === "finished";
+const ok = (r: Row) =>
+    r.laid === "laid" && r.closed === "yes" && ["finished", "opens untested", "runs, no lap"].includes(r.test);
 
 function write(): void {
     const fmt = (v: number) => (v * 10).toFixed(2);
@@ -268,7 +281,7 @@ function write(): void {
                 `| ${r.index} | ${r.design} | ${r.kind} | ${r.laid} | ${r.closed} | ${r.test} | ${r.parkSeconds} | ${r.where} | ${r.ratings ? r.ratings.map(fmt).join(" | ") : " | | "} | ${r.seconds.toFixed(0)} |`,
         ),
         "",
-        `${rows.filter(ok).length} of ${rows.length} built and tested.`,
+        `${rows.filter(ok).length} of ${rows.length} built and tested (or opened, for a kind never tested).`,
     ];
     report("designs.md", lines.join("\n") + "\n");
     report("designs.json", JSON.stringify(rows, null, 1));

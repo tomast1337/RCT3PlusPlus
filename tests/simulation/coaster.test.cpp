@@ -445,6 +445,21 @@ TEST_CASE("a launched train rolling back onto its launch stretch is slowed to a 
     CHECK(coming_in <= 2.01f);
 }
 
+TEST_CASE("a train standing on brakes is pushed on, as anywhere else it stalls")
+{
+    Coaster c = hill();
+    c.height = { 0, 0, 0, 0, 0 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::Brake, Stretch::Plain };
+    c.brake_speeds = { -1, -1, -1, 4, -1 };
+    c.running = true;
+    c.launched = true;
+    c.travelled = 45;
+    c.at = 55;
+    for (int i = 0; i < 20; ++i)
+        drive(c, 0.5f, 50); // Room ahead, as behind another train
+    CHECK(c.at > 60);
+}
+
 TEST_CASE("a reverse launched shuttle goes back up one spike, through the station up the other, and stops in it")
 {
     Coaster c = spikes(Shuttle::Back, 2);

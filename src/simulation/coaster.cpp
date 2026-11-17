@@ -433,11 +433,11 @@ namespace rct3::simulation
                         c.speed = std::clamp(c.speed, std::min(c.station_speed, most), most);
                     }
                 }
-                else if (under != Stretch::Brake)
+                else
                 {
-                    // shortcut: a train stalled in a dip is pushed on as if by tyres until it outruns them, upgrade if
-                    // valleys should roll it back for good. On a circuit one rolling back counts as stalled; on a track
-                    // with two ends rolling back is its way home to the station.
+                    // shortcut: a train stalled in a dip, or on brakes, is pushed on as if by tyres until it outruns
+                    // them, upgrade if valleys should roll it back for good. On a circuit one rolling back counts as
+                    // stalled; on a track with two ends rolling back is its way home to the station.
                     const float pace = two_ends(c) ? std::abs(c.speed) : c.speed;
                     if (pace < kCrawl.value)
                         c.slow.value += dt;

@@ -1353,7 +1353,11 @@ namespace rct3::scene::park
                 scene.sim.registry.ctx().insert_or_assign(simulation::park::guest_weather(scene.park));
                 scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day_clock.time });
                 if (scene.fireworks.playing)
-                    scene.sim.registry.ctx().insert_or_assign(simulation::FireworkShow { .centre = scene.fireworks.playing->centre, .dark = simulation::is_night(scene.day_clock.time) });
+                {
+                    const particles::ShotKind kind = particles::main_kind(scene.fireworks.displays[scene.fireworks.playing->display]);
+                    const simulation::ThoughtKind thought = kind == particles::ShotKind::WaterJet ? simulation::ThoughtKind::WaterShowGood : kind == particles::ShotKind::Laser ? simulation::ThoughtKind::LasersGood : simulation::ThoughtKind::GreatFireworks;
+                    scene.sim.registry.ctx().insert_or_assign(simulation::FireworkShow { .centre = scene.fireworks.playing->centre, .dark = simulation::is_night(scene.day_clock.time), .thought = thought });
+                }
                 else
                     scene.sim.registry.ctx().erase<simulation::FireworkShow>();
                 const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;

@@ -56,3 +56,20 @@ TEST_CASE("guests far from a display walk on")
 {
     CHECK_FALSE(lift_of_show({ kFireworksReach.value * 2, 0, 0 }, true));
 }
+
+TEST_CASE("watchers of a fountain show come away thinking of the water show")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 6, 0 });
+    const entt::entity g = park.guest({ 3, 0 });
+    auto& r = park.world().registry;
+    park.run(1);
+    r.ctx().emplace<FireworkShow>(FireworkShow { .centre = { 30, 0, 60 }, .thought = ThoughtKind::WaterShowGood });
+    park.run(1);
+    REQUIRE(r.all_of<FireworkWatcher>(g));
+    r.ctx().erase<FireworkShow>();
+    park.run(1);
+    const auto& recent = r.get<Thoughts>(g).recent;
+    REQUIRE_FALSE(recent.empty());
+    CHECK(recent.front().kind == ThoughtKind::WaterShowGood);
+}

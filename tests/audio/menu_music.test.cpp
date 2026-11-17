@@ -106,3 +106,9 @@ TEST_CASE("in a park the music is heard only with the camera well up, more the h
     CHECK(park_music_level(kParkMusicFull.value) == 1);
     CHECK(park_music_level(kParkMusicFull.value * 2) == 1);
 }
+
+TEST_CASE("the view from a ride keeps the music at zero however high the camera is")
+{
+    CHECK(park_music_level(kParkMusicFull.value * 2, true) == 0);
+    CHECK(park_music_level(kParkMusicFull.value * 2, false) == 1);
+}

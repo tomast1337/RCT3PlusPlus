@@ -70,8 +70,10 @@ namespace rct3::audio
         return menu;
     }
 
-    float park_music_level(float height)
+    float park_music_level(float height, bool riding)
     {
+        if (riding)
+            return 0;
         return std::clamp((height - kParkMusicQuiet.value) / (kParkMusicFull.value - kParkMusicQuiet.value), 0.0f, 1.0f);
     }
 

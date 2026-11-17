@@ -770,7 +770,9 @@ namespace rct3::scene::park
             return model != scene.models.end() && !model->second.lights.empty();
         });
         for (std::size_t i = first; i < scene.cars.size(); ++i)
-            if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[i])); model != scene.models.end() && !model->second.arm_joints.empty())
+            if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[i])); model != scene.models.end() && model->second.car_part)
+                scene.arm_cars.push_back({ .car = i, .joints = { model->second.car_part->pivot }, .part = model->second.car_part });
+            else if (model != scene.models.end() && !model->second.arm_joints.empty())
                 scene.arm_cars.push_back({ .car = i, .joints = model->second.arm_joints });
             else if (model != scene.models.end() && model->second.rowing)
             {

@@ -16,19 +16,20 @@ namespace rct3::park
 
     MovingMeshes moving_meshes(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid)
     {
-        // Each object alone at the origin, and the joints of those on arms after them.
+        // Each object alone at the origin, and the pieces of those drawn apart after them.
         std::vector<object::ObjectMesh> alone;
         std::vector<object::ObjectMesh> joints;
         alone.reserve(objects.size());
         for (const save::model::PlacedObject& o : objects)
         {
             const auto model = models.find(object::model_ref(o));
-            if (model == models.end() || model->second.arm_joints.empty())
+            const std::size_t apart = model == models.end() ? 0 : object::pieces_apart(model->second);
+            if (apart == 0)
             {
                 alone.push_back(object::object_mesh(std::span(&o, 1), models, grid, { }, { }, { }, { { o.id, glm::mat4(1.0f) } }));
                 continue;
             }
-            for (std::int32_t joint = -1; joint < std::ssize(model->second.arm_joints); ++joint)
+            for (std::int32_t joint = -1; joint < static_cast<std::int32_t>(apart); ++joint)
             {
                 object::ObjectModels one;
                 object::ObjectModel& piece = one[model->first] = model->second;
@@ -53,6 +54,20 @@ namespace rct3::park
             moves.push_back(carried);
         }
         return moves;
+    }
+
+    glm::mat4 level_move(const object::CarPart& part, const glm::mat4& place)
+    {
+        const glm::mat3 turned(place * part.pivot);
+        if (glm::determinant(turned) == 0)
+            return glm::mat4(1.0f); // A car out of sight stands nowhere
+        // The world's up and the part's in the pivot's space, each seen along the line it turns about; turned
+        // from the one to the other. Seen end on, either is nothing, and any turn is as level as none.
+        const glm::vec3 world_up = glm::inverse(turned) * glm::vec3(0, 1, 0);
+        const glm::vec3 to = world_up - part.axis * glm::dot(world_up, part.axis);
+        const glm::vec3 from = part.up - part.axis * glm::dot(part.up, part.axis);
+        const float turn = std::atan2(glm::dot(part.axis, glm::cross(from, to)), glm::dot(from, to));
+        return part.pivot * glm::rotate(glm::mat4(1.0f), turn, part.axis) * glm::inverse(part.pivot);
     }
 
     BonedMeshes boned_meshes(const save::model::PlacedObject& object, const object::ObjectModel& model, const save::model::TerrainGrid& grid)

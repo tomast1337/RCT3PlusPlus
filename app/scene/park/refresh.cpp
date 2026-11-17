@@ -897,7 +897,8 @@ namespace rct3::scene::park
             if (const auto under = down(glm::vec3(eye.x, eye.y + kGroundLook / 2, eye.z)); under && down(mount))
                 (*scene.seat)[3].y = std::max(eye.y, eye.y + kGroundLook / 2 - *under + kOverGround);
         }
-        // Arms take the angles their track holds where the car is, the joints at rest where it holds none.
+        // Arms take the angles their track holds where the car is, the joints at rest where it holds none; parts held
+        // level turn to the level.
         std::size_t joints = 0;
         for (const ParkScene::ArmCar& arm : scene.arm_cars)
             joints += arm.joints.size();
@@ -937,6 +938,12 @@ namespace rct3::scene::park
         auto joint_place = scene.car_mesh_places.begin() + static_cast<std::ptrdiff_t>(scene.car_places.size());
         for (ParkScene::ArmCar& arm : scene.arm_cars)
         {
+            if (arm.part)
+            {
+                arm.seats = rct3::park::level_move(*arm.part, scene.car_places[arm.car]);
+                *joint_place++ = scene.car_places[arm.car] * arm.seats;
+                continue;
+            }
             const rct3::park::ride::CarSpot spot = scene.car_spots[arm.car];
             std::optional<rct3::park::track::ArmAngles> angles;
             if (const save::model::Ride& ride = scene.rides.rides[spot.ride.value]; ride.track && scene.courses[spot.ride.value])

@@ -175,7 +175,15 @@
             "UnlockScenarios": "Unlock all scenarios",
             "UnlockScenariosHelp": "Every scenario of the career being played can be started; outside a career, of every career",
             "ResetItemNames": "Reset sold item names",
-            "ResetItemNamesHelp": "Every item the stalls sell goes back to the name of its kind"
+            "ResetItemNamesHelp": "Every item the stalls sell goes back to the name of its kind",
+            "SlowGuests": "Slow-motion guests",
+            "SlowGuestsHelp": "The guests walk, play their motions and grow hungry or tired four times slower than the park runs",
+            "PartiesHuddleOften": "Groups stand together often",
+            "PartiesHuddleOftenHelp": "A wandering group stops to stand together at every rest, not now and then",
+            "CycleMotions": "Cycle everyone's motions",
+            "CycleMotionsHelp": "Every person plays each motion in turn, a few seconds each, in place of their own",
+            "CyclePersonMotions": "Cycle",
+            "CyclePersonMotionsHelp": "The person whose window is open plays each motion in turn, a few seconds each"
         }
     }
 }

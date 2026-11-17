@@ -575,7 +575,9 @@ namespace rct3::simulation
     {
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;
-        constexpr float dt = kTickSeconds;
+        // shortcut: what counts in steps (rests, huddles, timers) runs at full speed in slow motion; upgrade if
+        // slow motion is ever more than a look.
+        const float dt = kTickSeconds / world.guest_slowdown;
         const float now = static_cast<float>(world.tick) * kTickSeconds;
 
         const auto shops = r.view<const Shop>();
@@ -885,7 +887,7 @@ namespace rct3::simulation
                             stride.to = at;
                             stride.progress.value = 1;
                         }
-                        else if (errand.kind == ErrandKind::Wandering && party != nullptr && errand.rest == ticks(kTuning.needs.idle.value) && random::chance(dice.state, kTuning.walking.huddle_chance.value))
+                        else if (errand.kind == ErrandKind::Wandering && party != nullptr && errand.rest == ticks(kTuning.needs.idle.value) && (world.parties_huddle_often || random::chance(dice.state, kTuning.walking.huddle_chance.value)))
                         {
                             party->huddle = ticks(static_cast<float>(random::between(dice.state, double { kTuning.walking.shortest_huddle.value }, double { kTuning.walking.longest_huddle.value })));
                             stride.to = at;

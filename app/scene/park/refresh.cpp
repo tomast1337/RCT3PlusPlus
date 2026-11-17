@@ -1247,7 +1247,7 @@ namespace rct3::scene::park
         if (!scene.moving_build.valid())
         {
             const profiling::Scope zone("Moving");
-            scene.moving_build = std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.moving_runs, placed = place_people(scene, scene.people_levels, scene.park_clock, true, view, scene.simulate)] { return rct3::park::person::person_mesh(library, placed, runs); });
+            scene.moving_build = std::async(std::launch::async, [&library = *scene.person_models, &runs = scene.moving_runs, placed = place_people(scene, scene.people_levels, scene.people_clock, true, view, scene.simulate)] { return rct3::park::person::person_mesh(library, placed, runs); });
         }
         if (ready(scene.riders_build))
         {

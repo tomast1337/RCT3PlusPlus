@@ -156,6 +156,29 @@ namespace rct3::scene::park
                         }
                 return renamed;
             }
+            case DebugTool::SlowGuests:
+            {
+                const float slowdown = static_cast<float>(std::max<std::int64_t>(amount, 1));
+                return std::exchange(scene.sim.guest_slowdown, slowdown) != slowdown ? 1 : 0;
+            }
+            case DebugTool::PartiesHuddleOften:
+                return std::exchange(scene.sim.parties_huddle_often, amount != 0) != (amount != 0) ? 1 : 0;
+            case DebugTool::CycleMotions:
+            case DebugTool::CyclePersonMotions:
+            {
+                const bool everyone = tool == DebugTool::CycleMotions;
+                const bool was = scene.held_motion && scene.held_motion->in_turn && scene.held_motion->everyone == everyone;
+                if (amount == 0)
+                {
+                    if (was)
+                        scene.held_motion.reset();
+                    return was ? 1 : 0;
+                }
+                if (was || (!everyone && !scene.shown_person))
+                    return 0;
+                scene.held_motion = ParkScene::HeldMotion { .since = scene.clock, .in_turn = true, .everyone = everyone };
+                return 1;
+            }
         }
         return 0;
     }
@@ -206,6 +229,16 @@ namespace rct3::scene::park
             ImGui::SameLine();
             tool_button(device, scene, assets, "Reset needs", DebugTool::RefreshGuests);
             ImGui::EndDisabled();
+            const auto switch_box = [&](std::string_view key, std::string_view help, bool on, DebugTool tool, std::int64_t amount_on) {
+                if (ImGui::Checkbox(label(assets, key).c_str(), &on))
+                    (void)use_debug_tool(device, scene, assets, tool, on ? amount_on : 0);
+                ImGui::SetItemTooltip("%s", label(assets, help).c_str());
+            };
+            constexpr std::int64_t kSlowMotion = 4; ///< Chosen by eye: slow enough to follow a step, quick enough to see one through
+            switch_box("Rct3pp_Debug_SlowGuests", "Rct3pp_Debug_SlowGuestsHelp", scene.sim.guest_slowdown > 1, DebugTool::SlowGuests, kSlowMotion);
+            ImGui::SameLine();
+            switch_box("Rct3pp_Debug_PartiesHuddleOften", "Rct3pp_Debug_PartiesHuddleOftenHelp", scene.sim.parties_huddle_often, DebugTool::PartiesHuddleOften, 1);
+            switch_box("Rct3pp_Debug_CycleMotions", "Rct3pp_Debug_CycleMotionsHelp", scene.held_motion && scene.held_motion->in_turn && scene.held_motion->everyone, DebugTool::CycleMotions, 1);
             // The person whose window is open plays the motion picked, from its start.
             static const std::vector<rct3::park::person::NamedMotion> kMotions = rct3::park::person::motions_by_number();
             if (scene.shown_person && !kMotions.empty())
@@ -219,7 +252,9 @@ namespace rct3::scene::park
                 if (ImGui::ArrowButton("##motion_on", ImGuiDir_Right))
                     play(scene.held_motion && now + 1 < kMotions.size() ? now + 1 : 0);
                 ImGui::SameLine();
-                if (scene.held_motion)
+                switch_box("Rct3pp_Debug_CyclePersonMotions", "Rct3pp_Debug_CyclePersonMotionsHelp", scene.held_motion && scene.held_motion->in_turn && !scene.held_motion->everyone, DebugTool::CyclePersonMotions, 1);
+                ImGui::SameLine();
+                if (scene.held_motion && !scene.held_motion->in_turn)
                 {
                     ImGui::Text("Motion %d: %.*s", scene.held_motion->motion, static_cast<int>(kMotions[now].name.size()), kMotions[now].name.data());
                     ImGui::SameLine();

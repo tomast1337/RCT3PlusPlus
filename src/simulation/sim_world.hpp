@@ -46,6 +46,8 @@ namespace rct3::simulation
         random::Seed seed;                            ///< Randomness of the whole run derives from it
         RatingModel ratings = builtin_rating_model(); ///< How rides untested in the park get rated
         StepBuffers buffers { };
+        float guest_slowdown = 1;          ///< Developer switch: guests live this many times slower than the park
+        bool parties_huddle_often = false; ///< Developer switch: a wandering party stands together at every rest
     };
 
 } // namespace rct3::simulation

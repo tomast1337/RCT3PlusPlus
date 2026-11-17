@@ -172,3 +172,4 @@ The width of every number is written in its type, the same on every compiler and
 - Exceptions: `int main(int argc, char** argv)`; `char` for text; `unsigned char` to pass a `char` to the
   `<cctype>` functions (`std::tolower`, `std::isdigit`, ...); and a type a C or library API fixes (a callback
   signature, an `int*` out-parameter, a printf-style argument). Mark such a line with a `// c-api` comment.
+- `./nob format --check` fails on a bare `int`, `unsigned`, `short` or `long` outside these exceptions.

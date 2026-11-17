@@ -234,6 +234,10 @@ namespace rct3::simulation
     /// The park's run of `ride`, a pool slide with no cars that swimmers climb on foot (TrackCourse::climbs of
     /// `course`); none for another ride.
     entt::entity import_climb_slide(SimWorld& world, const save::model::Ride& ride, const rct3::park::track::TrackCourse& course);
+    /// The park's run of `ride`, a walk-through (WalkThrough) along the track of `course`, with room for `crowd`
+    /// inside at once (its kind's guest record); none for another ride. Run whatever its state, and whether or not a
+    /// path reaches its doors yet (relink_attractions).
+    entt::entity import_walk_through(SimWorld& world, const save::model::Ride& ride, const rct3::park::track::TrackCourse& course, std::optional<std::uint32_t> crowd);
 
     std::vector<entt::entity> import_rides(SimWorld& world, const save::model::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters = { }, std::span<const std::optional<std::uint32_t>> guests = { });
 

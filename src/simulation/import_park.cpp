@@ -289,6 +289,16 @@ namespace rct3::simulation
             return links;
         }
 
+        /// A walk-through's doors as one station: its first station's entrance, and the exit it is walked on to,
+        /// at the first station that has one.
+        save::model::Station walked_doors(const save::model::Ride& ride)
+        {
+            save::model::Station doors = ride.stations.front();
+            if (const auto out = std::ranges::find_if(ride.stations, [](const save::model::Station& s) { return s.exit_spot.has_value(); }); out != ride.stations.end())
+                doors.exit_spot = out->exit_spot;
+            return doors;
+        }
+
         /// Of `platforms`, the one with track nearest `station`'s entrance, its points taken by `points`; none
         /// for a station without one.
         std::optional<std::size_t> nearest_platform(const PathNetwork& paths, const save::model::Station& station, const auto& platforms, auto points)
@@ -641,7 +651,7 @@ namespace rct3::simulation
                 for (Stop& stop : cycle->stops)
                     if (stop.saved && *stop.saved < ride->stations.size())
                         relink(ride->stations[*stop.saved], stop.entrance, stop.line, stop.exit, !stop.queue.empty());
-                relink(ride->stations.front(), attraction.entrance, cycle->line, cycle->exit, !cycle->queue.empty());
+                relink(r.all_of<WalkThrough>(e) ? walked_doors(*ride) : ride->stations.front(), attraction.entrance, cycle->line, cycle->exit, !cycle->queue.empty());
                 continue;
             }
             // A stall, or a facility standing on its own.
@@ -1347,6 +1357,31 @@ namespace rct3::simulation
         return e;
     }
 
+    entt::entity import_walk_through(SimWorld& world, const save::model::Ride& ride, const rct3::park::track::TrackCourse& course, std::optional<std::uint32_t> crowd)
+    {
+        if (ride.kind != save::model::RideKind::Tracked || ride.mode != save::model::OperatingMode::Aquarium || course.points.empty() || ride.stations.empty())
+            return entt::null;
+        const auto links = ride_links(world.paths, walked_doors(ride));
+        auto& r = world.registry;
+        const entt::entity e = r.create();
+        r.emplace<Attraction>(e, Attraction { .kind = AttractionKind::Ride, .name = ride.base.name, .entrance = links ? links->entrance : std::nullopt, .price = ride.ticket_price, .open = ride.base.state == save::model::AttractionState::Open, .testing = ride.base.state == save::model::AttractionState::Testing, .saved = ride.base.id, .running_cost = ride.base.running_cost });
+        // Rated as the park has it, else with nothing measured: there is no lap to measure.
+        const Ratings rated = ride.assessment.valid ? Ratings { ride.assessment.excitement, ride.assessment.intensity, ride.assessment.nausea } : rate(world.ratings, ride.base.symbol, { });
+        const std::uint32_t inside = crowd.value_or(kTuning.walk_throughs.crowd);
+        CycleRide cycle { .capacity = inside, .room = inside, .line = links ? links->line : std::vector<NodeId> { }, .exit = links ? links->exit : std::nullopt };
+        cycle.excitement.value = rating(rated.excitement);
+        cycle.intensity.value = rating(rated.intensity);
+        cycle.nausea.value = rating(rated.nausea);
+        if (ride.assessment.valid)
+            cycle.cover.value = std::clamp(ride.assessment.under_cover.value, 0.0f, 1.0f);
+        r.emplace<CycleRide>(e, std::move(cycle));
+        r.emplace<WalkThrough>(e, WalkThrough { .track = course.points, .circuit = course.closed });
+        r.emplace<Upkeep>(e, upkeep_of(ride));
+        if (r.get<Upkeep>(e).broken)
+            r.get<Attraction>(e).open = false;
+        return e;
+    }
+
     std::vector<entt::entity> import_rides(SimWorld& world, const save::model::RideModel& rides, std::span<const std::optional<RideTiming>> flat_timings, std::span<const std::optional<Coaster>> coasters, std::span<const std::optional<std::uint32_t>> guests)
     {
         std::vector<entt::entity> added(rides.rides.size(), entt::null);
@@ -1355,6 +1390,9 @@ namespace rct3::simulation
             const save::model::Ride& ride = rides.rides[i];
             std::optional<RideTiming> timing;
             const Coaster* coaster = i < coasters.size() && coasters[i] ? &*coasters[i] : nullptr;
+            // Walked through on foot (import_walk_through), its room made there.
+            if (ride.kind == save::model::RideKind::Tracked && ride.mode == save::model::OperatingMode::Aquarium)
+                continue;
             if (ride.kind == save::model::RideKind::Flat && i < flat_timings.size())
                 timing = flat_timings[i];
             else if (ride.kind == save::model::RideKind::Tracked && !ride.seats.empty() && (coaster || (ride.stats.last_lap && ride.stats.last_lap->ride_time.value > 0)))
@@ -1435,6 +1473,9 @@ namespace rct3::simulation
                 rated = rate(world.ratings, ride.base.symbol, *ride.stats.last_lap);
             else if (const auto test = coaster ? test_lap(*coaster) : std::nullopt)
                 rated = rate(world.ratings, ride.base.symbol, *test);
+            // Boats off their dock have no lap to measure: rated with nothing measured.
+            else if (coaster == nullptr)
+                rated = rate(world.ratings, ride.base.symbol, { });
             CycleRide cycle { .capacity = timing->seats, .start = { timing->start }, .run = { timing->run }, .stop = { timing->stop }, .loops = timing->loops, .line = std::move(line), .exit = exit };
             if (rated)
             {

@@ -179,6 +179,27 @@ namespace rct3::simulation
         return false;
     }
 
+    std::vector<glm::vec3> way_through(const WalkThrough& walk, glm::vec3 in, glm::vec3 out)
+    {
+        const std::vector<glm::vec3>& track = walk.track;
+        if (track.empty())
+            return { };
+        const auto nearest = [&](glm::vec3 to) { return static_cast<std::size_t>(std::ranges::min_element(track, { }, [&](const glm::vec3& p) { return glm::distance(p, to); }) - track.begin()); };
+        const std::size_t last = nearest(out);
+        std::vector<glm::vec3> way;
+        // A circuit's doors stand on its station, where the course starts: round past that start, so the whole
+        // course is walked whichever door comes first along it.
+        bool round = !walk.circuit;
+        for (std::size_t k = nearest(in);; k = (k + 1) % track.size())
+        {
+            way.push_back(track[k]);
+            if ((k == last && round) || (!walk.circuit && k + 1 == track.size()))
+                break;
+            round = round || k + 1 == track.size();
+        }
+        return way;
+    }
+
     void step_rides(SimWorld& world, const Weather& weather, bool night, std::optional<profiling::Scope>& phase)
     {
         entt::registry& r = world.registry;
@@ -291,6 +312,7 @@ namespace rct3::simulation
                 }
             }
             const auto* walks = r.try_get<RideWalks>(e);
+            const auto* through = r.try_get<WalkThrough>(e);
             // Those getting off at `station`: where they meant to, or back where they got on.
             // `shift`: from where the train stands at the station's end to where it stands now.
             // Of the step a pool slide's train ran off its end in, the time left after it got there.
@@ -671,6 +693,18 @@ namespace rct3::simulation
                 const RidePhase was = ride.phase;
                 if (advance_cycle(ride, dt, held || sailing))
                     unload(ride.riders, 0);
+                // Walked through to its end, out at the exit.
+                if (through != nullptr)
+                {
+                    const auto walked = [&](entt::entity g) { return !r.valid(g) || !r.all_of<RideWalk>(g); };
+                    std::vector<entt::entity> out;
+                    std::ranges::copy_if(ride.riders, std::back_inserter(out), walked);
+                    if (!out.empty())
+                    {
+                        unload(out, 0);
+                        std::erase_if(ride.riders, walked);
+                    }
+                }
                 // Its riders react to the ride while it runs.
                 for (const entt::entity guest : ride.riders)
                     if (const auto* mood = r.valid(guest) && !r.all_of<RideWalk>(guest) ? r.try_get<Mood>(guest) : nullptr)
@@ -714,7 +748,7 @@ namespace rct3::simulation
                 auto& queue = station == 0 ? ride.queue : ride.stops[station - 1].queue;
                 const auto& line = station == 0 ? ride.line : ride.stops[station - 1].line;
                 units::Seconds& timer = station == 0 ? ride.loading : ride.stops[station - 1].loading;
-                const bool walk_on = station == 0 && walks != nullptr && !walks->on.empty();
+                const bool walk_on = station == 0 && ((walks != nullptr && !walks->on.empty()) || through != nullptr);
                 const bool at_front = !queue.empty() && (line.empty() || !r.valid(queue.front()) || r.get<Stride>(queue.front()).along.value < 0.5f);
                 const bool ready = fleet != nullptr ? standing[station].has_value() : ride.phase == RidePhase::Loading;
                 auto* riders = !ready ? nullptr : fleet != nullptr ? &fleet->riders[*standing[station]] : &ride.riders;
@@ -776,7 +810,14 @@ namespace rct3::simulation
                         else if (r.get<Errand>(guest).queued.value >= kLongQueue.value)
                             tell(r, guest, Finding::LongQueue, e, now);
                         r.get<Errand>(guest).kind = ErrandKind::Riding;
-                        if (const std::size_t seat = riders->size(); walk_on && seat < walks->on.size())
+                        if (through != nullptr)
+                        {
+                            const std::optional<NodeId> out = exit_of(r, e);
+                            RideWalk walk { .points = way_through(*through, paths.centre(*entrance_of(r, e, 0)), paths.centre(*out)), .pause = kTuning.queues.ticket.value };
+                            walk.points.push_back(paths.centre(*out));
+                            r.emplace_or_replace<RideWalk>(guest, std::move(walk));
+                        }
+                        else if (const std::size_t seat = riders->size(); walk_on && seat < walks->on.size())
                         {
                             RideWalk walk { .points = { walks->ticket }, .pause = kTuning.queues.ticket.value };
                             walk.points.insert(walk.points.end(), walks->on[seat].begin(), walks->on[seat].end());
@@ -786,7 +827,8 @@ namespace rct3::simulation
                     }
                     queue.erase(queue.begin(), queue.begin() + static_cast<std::ptrdiff_t>(boarding));
                 }
-                if (riders != nullptr && !upkeep.broken)
+                // A walk-through never leaves: each walks out on their own.
+                if (riders != nullptr && !upkeep.broken && through == nullptr)
                 {
                     const auto* departure = r.try_get<Departure>(e);
                     // It waits for those still walking to their seats.

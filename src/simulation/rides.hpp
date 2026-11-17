@@ -103,6 +103,18 @@ namespace rct3::simulation
         std::vector<Stop> stops { };
     };
 
+    /// A ride walked through on foot, as an aquarium: no cars and no cycle. Guests go in one by one at its entrance
+    /// while there is room (CycleRide::capacity), walk along its track at their own pace to its exit, and leave.
+    struct WalkThrough
+    {
+        std::vector<glm::vec3> track { }; ///< Its track's middle line, in track order
+        bool circuit = false;             ///< The track's end joins its start
+    };
+
+    /// The way through `walk` on foot: along its track from the point nearest `in` on to the point nearest `out`;
+    /// on a circuit always round past its end, the whole course. Nothing for a track with no point.
+    [[nodiscard]] std::vector<glm::vec3> way_through(const WalkThrough& walk, glm::vec3 in, glm::vec3 out);
+
     /// How full a train must be to leave: Departure::wait_for, in the order the operating panel lists them.
     enum class LoadWait : std::uint8_t
     {

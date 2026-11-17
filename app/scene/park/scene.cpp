@@ -1066,6 +1066,8 @@ namespace rct3::scene::park
                 open_management_window(desktop, ui::screens::management::ManagementTopic::Objectives, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
             if (bar->take_finances())
                 open_management_window(desktop, ui::screens::management::ManagementTopic::Finances, 0, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
+            if (bar->rating_button().take_click())
+                open_management_window(desktop, ui::screens::management::ManagementTopic::ParkOperations, ui::screens::management::kRatingTab, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
         }
         for (const ui::PlayCommand c : input.commands)
         {

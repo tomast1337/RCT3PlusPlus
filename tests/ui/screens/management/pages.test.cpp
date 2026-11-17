@@ -101,6 +101,30 @@ TEST_CASE("without the park every value is a dash")
     CHECK(cash.columns.empty());
 }
 
+TEST_CASE("the rating breakdown lists each part with its sign, leaving out penalties that take nothing, then the score")
+{
+    StringTable s;
+    s.add("Graph_ParkRating", u"Park rating:");
+    s.add("Rct3pp_RatingHappiness", u"Happy:");
+    s.add("Rct3pp_RatingLostGuests", u"Lost:");
+    s.add("Rct3pp_RatingCrash", u"Crash:");
+    s.add("Rct3pp_RatingScore", u"Score:");
+    s.add("Rct3pp_RatingNotYet", u"Not yet");
+    simulation::park::ParkState state;
+    state.rating = 0.5f;
+    const ManagementPage before = management_page(ManagementTopic::ParkOperations, kRatingTab, { .state = &state }, s, kUnits);
+    CHECK(value_of(before, u"Park rating:") == u"500");
+    CHECK(before.note == u"Not yet");
+
+    state.rating_parts = simulation::park::RatingParts { .happiness = 400, .lost_guests = -20, .total = 380 };
+    const ManagementPage page = management_page(ManagementTopic::ParkOperations, kRatingTab, { .state = &state }, s, kUnits);
+    CHECK(value_of(page, u"Happy:") == u"+400");
+    CHECK(value_of(page, u"Lost:") == u"-20");
+    CHECK_FALSE(value_of(page, u"Crash:"));
+    CHECK(page.lines.back().value == u"380");
+    CHECK(page.lines.back().label == u"Score:");
+}
+
 TEST_CASE("the finances show the running cash and the ledger a month a column, this month first, money in above nought")
 {
     const StringTable s = test_strings();

@@ -25,14 +25,6 @@ namespace rct3::ui::screens::park_view
         constexpr std::string_view kDayModeHelp = "Toolbar_TT_DayNight";
         constexpr std::string_view kRatingHelp = "Toolbar_TT_ParkRating";
         constexpr std::string_view kHighlightHelp = "Toolbar_TT_AvatarHighlight";
-        // Our own labels: the parts are those of our rating model.
-        constexpr std::string_view kRatingHappiness = "Rct3pp_RatingHappiness";
-        constexpr std::string_view kRatingRides = "Rct3pp_RatingRides";
-        constexpr std::string_view kRatingReliability = "Rct3pp_RatingReliability";
-        constexpr std::string_view kRatingGuests = "Rct3pp_RatingGuests";
-        constexpr std::string_view kRatingLitter = "Rct3pp_RatingLitter";
-        constexpr std::string_view kRatingHarder = "Rct3pp_RatingHarder";
-        constexpr std::string_view kRatingTotal = "Rct3pp_RatingScore";
         constexpr std::array<std::string_view, 7> kWeatherHelp = { "WeatherType_Sunny_TT", "WeatherType_SunnyCloudy_TT", "WeatherType_Cloudy_TT", "WeatherType_LightRain_TT", "WeatherType_HeavyRain_TT", "WeatherType_Thunderstorm_TT", "WeatherType_Snowstorm_TT" };
 
         // Where things sit in the bar, left to right: each item's size and the room before it.
@@ -110,22 +102,17 @@ namespace rct3::ui::screens::park_view
         out += ascii(std::format(" {}", std::lround(rating * simulation::park::kMaxRating)));
         if (!parts)
             return out;
-        // One line a part, with its sign; parts that only ever take away are left out while they take nothing.
-        const auto line = [&](std::string_view label, std::int32_t value, bool always) {
-            if (!always && value == 0)
-                return;
+        for (const RatingLine& line : kRatingLines)
+        {
+            const std::int32_t value = (*parts).*line.part;
+            if (!line.always && value == 0)
+                continue;
             out += u'\n';
-            out += strings.get(label);
+            out += strings.get(line.label);
             out += ascii(std::format(" {:+}", value));
-        };
-        line(kRatingHappiness, parts->happiness, true);
-        line(kRatingRides, parts->rides, true);
-        line(kRatingReliability, parts->reliability, true);
-        line(kRatingGuests, parts->guests, true);
-        line(kRatingLitter, parts->litter, false);
-        line(kRatingHarder, parts->harder, false);
+        }
         out += u'\n';
-        out += strings.get(kRatingTotal);
+        out += strings.get(kRatingScore);
         out += ascii(std::format(" {}", parts->total));
         return out;
     }
@@ -200,7 +187,7 @@ namespace rct3::ui::screens::park_view
         guests_ = &label("guests", Align::Centre);
         guests_->tooltip = strings_.get(kGuestsHelp);
         thumb_down_ = &add<widgets::Panel>("thumb_down", style_.thumb_down);
-        rating_area_ = &add<widgets::Panel>("rating", std::string { });
+        rating_area_ = &add<widgets::Button>("rating", std::string { });
         thumb_up_ = &add<widgets::Panel>("thumb_up", style_.thumb_up);
         place_left();
 

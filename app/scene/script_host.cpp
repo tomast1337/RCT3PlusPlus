@@ -920,7 +920,7 @@ namespace rct3::scene
                 for (const save::model::StallExtra& extra : stall.extras)
                     extras.push_back({ { "extra", extra.kind_symbol }, { "level", extra.level } });
                 const bool shown = park.shown && park.shown->kind == rct3::park::AttractionRef::Kind::Stall && park.shown->index == i;
-                Json one { { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::model::AttractionState::Open }, { "items", std::move(items) }, { "extras", std::move(extras) }, { "sync", stall.sync }, { "shown", shown }, { "joined", false }, { "demolished", stall.base.demolished }, { "moving", false } };
+                Json one { { "index", i }, { "name", stall.base.name }, { "symbol", stall.base.symbol }, { "overlay", stall.base.overlay_path }, { "site", spot_json(stall.base.spot) }, { "open", stall.base.state == save::model::AttractionState::Open }, { "items", std::move(items) }, { "extras", std::move(extras) }, { "sync", stall.sync }, { "shown", shown }, { "joined", false }, { "demolished", stall.base.demolished }, { "moving", false } };
                 for (const park::ParkScene::BonedRide& boned : park.boned_rides)
                     if (const auto owner = boned.object.value < park.objects.size() ? park.attractions.find(park.objects[boned.object.value].id) : park.attractions.end(); owner != park.attractions.end() && owner->second == rct3::park::AttractionRef { rct3::park::AttractionRef::Kind::Stall, i })
                         one["moving"] = true;
@@ -1142,13 +1142,14 @@ namespace rct3::scene
         engine_.define("people.list", [this](const Json&) {
             const park::ParkScene& park = park_of(park_);
             Json out = Json::array();
-            for (const park::ShownPerson& p : park.shown_people)
+            for (std::size_t i = 0; i < park.shown_people.size(); ++i)
             {
+                const park::ShownPerson& p = park.shown_people[i];
                 const save::model::Person* saved = p.staff ? (p.saved < park.people.staff.size() ? &park.people.staff[p.saved].person : nullptr) : (p.saved < park.people.guests.size() ? &park.people.guests[p.saved].person : nullptr);
                 const glm::vec3 standing = park::standing_at(park, p);
                 const save::model::TerrainGrid& g = park.grid;
                 const Json tile = g.tile_size_x > 0 && g.tile_size_z > 0 ? Json { { "col", (standing.x - g.origin_x) / g.tile_size_x }, { "row", (standing.z - g.origin_z) / g.tile_size_z } } : Json(nullptr);
-                Json person { { "name", saved != nullptr ? saved->name : std::string { } }, { "staff", p.staff }, { "at", tile } };
+                Json person { { "index", i }, { "name", saved != nullptr ? saved->name : std::string { } }, { "staff", p.staff }, { "at", tile } };
                 // A seller's post: the object of the stall or ride entrance they serve at.
                 if (const auto* work = p.staff && p.saved < park.people.staff.size() ? std::get_if<save::model::VendorWork>(&park.people.staff[p.saved].work) : nullptr; work != nullptr)
                     person["post"] = work->scenery_item.id;
@@ -1380,8 +1381,8 @@ namespace rct3::scene
             {
                 const save::model::Ride& ride = park.rides.rides[i];
                 const save::model::Station* station = ride.stations.empty() ? nullptr : &ride.stations.front();
-                Json one { { "name", ride.base.name }, { "symbol", ride.base.symbol }, { "overlay", ride.base.overlay_path },  { "flat", ride.kind == save::model::RideKind::Flat }, { "kind", std::array { "tracked", "flat", "facility" }[std::to_underlying(ride.kind)] }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) },
-                           { "joined", false },        { "fence", ride.fence_symbol }, { "demolished", ride.base.demolished }, { "graphSamples", ride.graphs.speed.size() } };
+                Json one { { "index", i },      { "name", ride.base.name },     { "symbol", ride.base.symbol },         { "overlay", ride.base.overlay_path },       { "flat", ride.kind == save::model::RideKind::Flat }, { "kind", std::array { "tracked", "flat", "facility" }[std::to_underlying(ride.kind)] }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) },
+                           { "joined", false }, { "fence", ride.fence_symbol }, { "demolished", ride.base.demolished }, { "graphSamples", ride.graphs.speed.size() } };
                 Json stations = Json::array();
                 for (const save::model::Station& s : ride.stations)
                     stations.push_back({ { "entrance", spot_json(s.entrance_spot) }, { "exit", spot_json(s.exit_spot) } });

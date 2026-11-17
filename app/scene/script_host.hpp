@@ -63,14 +63,14 @@
 //   build.stop()        puts the placing tool away, as Escape does
 //   build.placing()     { step, problem, affordable } while something is being placed: step "ride", "entrance",
 //                       "exit" or "scenery"; problem "none", "not owned", "path" or "blocked"
-//   rides.list()        each ride: { name, symbol, overlay, flat, pieces, site, entrance, exit, joined }, places as
-//                       { col, row, direction }; joined when the simulation runs it, then also customers,
+//   rides.list()        each ride: { index, name, symbol, overlay, flat, pieces, site, entrance, exit, joined },
+//                       places as { col, row, direction }; joined when the simulation runs it, then also customers,
 //                       price, open, onPaths (its entrance found on the paths), capacity, cycleSeconds,
 //                       queue, queueLine (its tiles), riders and ratings ([excitement, intensity, nausea], 0..1)
 //   rides.setState(i, state)  puts ride `i` of rides.list() "closed", "testing" or "open", as its window does;
 //                       null once changed, else the string key of why it stays (a track without a station...)
 //   rides.show(i)       opens ride `i`'s window, as clicking the ride does
-//   people.list()       each person shown in the park: { name, staff, post? } (post: a seller's object)
+//   people.list()       each person shown in the park: { index, name, staff, post? } (post: a seller's object)
 //   people.rename(i, name)  renames person `i` of people.list(), as their window's name box does
 //   editor.shown()      whether the developer windows' editor (F12) was drawn on the last frame
 //   editor.pick(i)      picks person `i` of people.list(), a guest the simulation walks, in the editor, as a

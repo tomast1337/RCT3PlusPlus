@@ -26,6 +26,8 @@ namespace rct3::ovl
         std::array<float, 3> tangent_out { };
     };
 
+    constexpr std::size_t kLengthMarks = 14; ///< Evenly spaced lengths inside a segment whose parameter is stored
+
     struct Spline
     {
         /// Set in a few hundred splines. One more segment length is stored when it is set, so it most likely
@@ -35,6 +37,9 @@ namespace rct3::ovl
         float max_height = 0; ///< Largest Y of the nodes in nearly every item
         std::vector<SplineNode> nodes;
         std::vector<float> segment_lengths; ///< Length of each segment between consecutive nodes
+        /// For each segment, its curve parameter at 1/15, 2/15 ... 14/15 of the way along its length, as 0 to 255
+        /// for 0 to 1: a point a given length along is found between these. Empty when not stored.
+        std::vector<std::array<std::uint8_t, kLengthMarks>> segment_parameters;
     };
 
     /// The point a fraction `t` (0 to 1) of the way along segment `segment` of `spline`, by the curve's
@@ -47,8 +52,7 @@ namespace rct3::ovl
         std::optional<Spline> spline; ///< Nothing when any part of the structure is unreadable
     };
 
-    /// Splines of one part of an overlay: pointer symbols tagged "spl". A 28-byte block follows the segment
-    /// lengths in the file. Its purpose is not known and it is not read.
+    /// Splines of one part of an overlay: pointer symbols tagged "spl".
     [[nodiscard]] std::vector<SplineItem> read_splines(const Overlay& overlay, const Part& part);
 
 } // namespace rct3::ovl

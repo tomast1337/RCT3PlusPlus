@@ -218,7 +218,86 @@ namespace
         return b.v;
     }
 
+    /// A park's fountain show: two water jet shots (at 1 and 2 seconds) from one jet source and a firework (at 0.5).
+    /// The jets' pattern lasts 10 seconds; its pressure is a blender with two points in use (12 at 5 of 10, 16 at
+    /// 6) and a third past its count, and it has no elevation blender.
+    std::vector<std::byte> invented_fountain_show()
+    {
+        const Attr shot { "EntriesElement", "struct", 0, { { "EffectType", "int32", 4 }, { "Name", "string", 0 }, { "ParticleSourceRef", "reference", 8 }, { "SceneryItemRef", "reference", 8 }, { "Time", "float32", 4 } } };
+        const Attr point { "FixedPtsElement", "struct", 12, { { "BlenderElement", "reference", 8 }, { "PointTime", "float32", 4 } } };
+        const std::vector<std::pair<std::string, std::vector<Attr>>> classes {
+            { "FireworkDisplay", { { "Name", "string", 0 }, { "MonthMask", "int32", 4 }, { "StartTimeMinutes", "int32", 4 }, { "Entries", "array", 0, { shot } } } },
+            { "WaterJetSource", { { "WaterJetBaseDesc", "reference", 8 } } },
+            { "WaterJetBaseDesc", { { "Duration", "float32", 4 }, { "PressureBlender", "reference", 8 }, { "ElevationBlender", "reference", 8 } } },
+            { "Blender", { { "MaxTime", "float32", 4 }, { "NumPts", "int32", 4 }, { "FixedPts", "array", 0, { point } } } },
+            { "FloatBlenderElement", { { "Float", "float32", 4 } } },
+        };
+        Bytes b;
+        b.u32(static_cast<std::uint32_t>(classes.size()));
+        for (const auto& [name, attrs] : classes)
+        {
+            b.name(name).u32(static_cast<std::uint32_t>(attrs.size()));
+            for (const Attr& a : attrs)
+                write_attr(b, a);
+        }
+        const auto put_shot = [](Bytes& shots, std::uint32_t kind, const std::string& effect, std::uint64_t source, std::uint64_t launcher, float seconds) {
+            Bytes one;
+            one.u32(kind).field(text(effect)).u64(source).u64(launcher).f32(seconds);
+            shots.field(one);
+        };
+        Bytes shots;
+        shots.u32(3);
+        put_shot(shots, 2, "Jets\\Spray.wjt", 2, 40, 2.0f);
+        put_shot(shots, 0, "Fireworks\\Comet.frw", 0, 41, 0.5f);
+        put_shot(shots, 2, "Jets\\Spray.wjt", 2, 40, 1.0f);
+        Bytes points;
+        points.u32(3);
+        points.u64(5).f32(5.0f);
+        points.u64(6).f32(6.0f);
+        points.u64(5).f32(-1.0f); // Past the blender's count: not one of its points
+        b.u32(6);
+        b.u32(0).u64(1).field(text("Fountains")).u32(0xffff).u32(20 * 60).field(shots);
+        b.u32(1).u64(2).u64(3);
+        b.u32(2).u64(3).f32(10.0f).u64(4).u64(0);
+        b.u32(3).u64(4).f32(10.0f).u32(2).field(points);
+        b.u32(4).u64(5).f32(12.0f);
+        b.u32(4).u64(6).f32(16.0f);
+        return b.v;
+    }
+
 } // namespace
+
+TEST_CASE("a fountain show's water jets carry their patterns, and the show is mostly water")
+{
+    const std::vector<std::byte> park = invented_fountain_show();
+    const auto file = rct3::save::read_save(park, { .verify_checksum = false });
+    REQUIRE(file.has_value());
+    const auto displays = read_park_displays(*file);
+    REQUIRE(displays.has_value());
+    REQUIRE(displays->size() == 1);
+    const Display& d = displays->front();
+    REQUIRE(d.shots.size() == 3);
+    CHECK(d.shots[0].kind == ShotKind::Firework);
+    CHECK_FALSE(d.shots[0].jet.has_value());
+    CHECK(d.shots[1].kind == ShotKind::WaterJet);
+    CHECK(d.shots[1].effect == "Spray");
+    REQUIRE(d.shots[1].jet.has_value());
+    const JetPattern& jet = *d.shots[1].jet;
+    CHECK(jet.seconds == doctest::Approx(10));
+    CHECK(jet.pressure.times.size() == 2);
+    CHECK(jet.pressure.at(0.0f) == doctest::Approx(12));
+    CHECK(jet.pressure.at(0.55f) == doctest::Approx(14));
+    CHECK(jet.pressure.at(1.0f) == doctest::Approx(16));
+    CHECK(jet.elevation.values.empty());
+    CHECK(main_kind(d) == ShotKind::WaterJet);
+    CHECK(display_seconds(d) == doctest::Approx(12)); // The last jet shot at 2 runs its 10 seconds
+}
+
+TEST_CASE("a display with no shots is a firework display that ends at once")
+{
+    CHECK(main_kind(Display { }) == ShotKind::Firework);
+    CHECK(display_seconds(Display { }) == doctest::Approx(0));
+}
 
 TEST_CASE("a firework display reads its launchers and its shots, earliest first")
 {

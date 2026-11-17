@@ -5,6 +5,7 @@
 #include "save/value.hpp"
 
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <string_view>
 
@@ -90,7 +91,11 @@ namespace rct3::particles
             effect.erase(0, effect.find_last_of("\\/") + 1);
             if (const auto dot = effect.rfind('.'); dot != std::string::npos)
                 effect.resize(dot);
+            const std::int64_t kind = whole(entry, "EffectType");
             return {
+                .kind = kind == 1 ? ShotKind::Laser
+                    : kind == 2   ? ShotKind::WaterJet
+                                  : ShotKind::Firework,
                 .effect = std::move(effect),
                 .launcher = launcher,
                 .tube = static_cast<std::int32_t>(whole(entry, "SlotIndex")),
@@ -102,6 +107,51 @@ namespace rct3::particles
         bool of_class(const save::SaveFile& file, const save::Object& o, std::string_view name)
         {
             return o.class_index < file.classes.size() && file.classes[o.class_index].name == name;
+        }
+
+        /// The fields of the object `parent`'s reference `name` points to; none when it points nowhere.
+        std::optional<save::Value> referred(const save::SaveFile& file, const save::ObjectIndex& index, const save::Value& parent, std::string_view name)
+        {
+            const auto ref = parent.field(name);
+            if (!ref || ref->kind() != save::ValueKind::Reference)
+                return std::nullopt;
+            const auto o = index.find(ref->as_reference());
+            if (!o)
+                return std::nullopt;
+            auto decoded = save::decode_object(file, *o);
+            if (!decoded)
+                return std::nullopt;
+            return std::move(decoded->fields);
+        }
+
+        /// A blender of numbers: its first points, each a time up to its greatest and a number, as a curve over 0 to 1.
+        Curve blended(const save::SaveFile& file, const save::ObjectIndex& index, const save::Value& blender)
+        {
+            const float longest = number(blender, "MaxTime");
+            const auto points = list(blender, "FixedPts");
+            const std::size_t used = static_cast<std::size_t>(std::clamp<std::int64_t>(whole(blender, "NumPts"), 0, static_cast<std::int64_t>(points.size())));
+            Curve c;
+            for (const save::Value& point : points.first(used))
+                if (const auto element = referred(file, index, point, "BlenderElement"))
+                {
+                    c.times.push_back(longest > 0 ? number(point, "PointTime") / longest : 0.0f);
+                    c.values.push_back(number(*element, "Float"));
+                }
+            return c;
+        }
+
+        /// The pattern of a park's water jet shot: from the jet source the shot made, its description.
+        std::optional<JetPattern> jet_pattern(const save::SaveFile& file, const save::ObjectIndex& index, const save::Value& entry)
+        {
+            const auto source = referred(file, index, entry, "ParticleSourceRef");
+            const auto desc = source ? referred(file, index, *source, "WaterJetBaseDesc") : std::nullopt;
+            if (!desc)
+                return std::nullopt;
+            const auto curve = [&](std::string_view name) {
+                const auto blender = referred(file, index, *desc, name);
+                return blender ? blended(file, index, *blender) : Curve { };
+            };
+            return JetPattern { .seconds = number(*desc, "Duration"), .pressure = curve("PressureBlender"), .elevation = curve("ElevationBlender"), .widening = curve("DiameterDeltaBlender") };
         }
 
     } // namespace
@@ -177,12 +227,30 @@ namespace rct3::particles
                 auto launcher = std::ranges::find(display.launchers, std::optional(id), &Launcher::placed);
                 if (launcher == display.launchers.end())
                     launcher = display.launchers.insert(launcher, Launcher { .placed = id });
-                display.shots.push_back(shot_of(entry, static_cast<std::size_t>(launcher - display.launchers.begin())));
+                Shot& shot = display.shots.emplace_back(shot_of(entry, static_cast<std::size_t>(launcher - display.launchers.begin())));
+                if (shot.kind == ShotKind::WaterJet)
+                    shot.jet = jet_pattern(file, index, entry);
             }
             std::ranges::stable_sort(display.shots, { }, &Shot::seconds);
             displays.push_back(std::move(display));
         }
         return displays;
+    }
+
+    ShotKind main_kind(const Display& display)
+    {
+        std::array<std::size_t, 3> counts { };
+        for (const Shot& shot : display.shots)
+            ++counts[static_cast<std::size_t>(shot.kind)];
+        return static_cast<ShotKind>(std::ranges::max_element(counts) - counts.begin());
+    }
+
+    float display_seconds(const Display& display)
+    {
+        float last = 0;
+        for (const Shot& shot : display.shots)
+            last = std::max(last, shot.seconds + (shot.jet ? shot.jet->seconds : 0.0f));
+        return last;
     }
 
     bool display_due(const Display& display, std::int32_t month, float minutes)

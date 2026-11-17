@@ -344,7 +344,7 @@ namespace rct3::scene::park
                             for (const auto [g, linger] : r.view<const simulation::Linger>().each())
                                 if (linger.at == simulation::PathItemKind::WaterCannon && linger.bench == e)
                                     firing = linger;
-                    auto jet = std::ranges::find(scene.jets, boned.object, &ParkScene::Jet::object);
+                    auto jet = std::ranges::find_if(scene.jets, [&](const ParkScene::Jet& j) { return j.object == boned.object && !j.pattern; });
                     if (firing && jet == scene.jets.end())
                         jet = scene.jets.insert(scene.jets.end(), ParkScene::Jet { .object = boned.object });
                     if (jet != scene.jets.end())
@@ -524,7 +524,7 @@ namespace rct3::scene::park
                 jet.water.advance(seconds);
             }
             // A cannon keeps its own, to stay turned as it was left.
-            std::erase_if(scene.jets, [&](const ParkScene::Jet& jet) { return jet.water.finished() && (jet.to || !std::ranges::contains(scene.boned_rides, jet.object, &ParkScene::BonedRide::object)); });
+            std::erase_if(scene.jets, [&](const ParkScene::Jet& jet) { return jet.water.finished() && (jet.to || jet.pattern || !std::ranges::contains(scene.boned_rides, jet.object, &ParkScene::BonedRide::object)); });
         }
 
         /// The band and side of each of `owners`' vertices: `side` 0 for objects drawn whole.

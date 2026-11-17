@@ -555,7 +555,8 @@ namespace rct3::scene::park
         std::vector<SlidePour> slide_pours;
         std::size_t pours_found = 0;
         float pours_next = 0;
-        /// Water a park object shoots: a cannon a guest fires, or a jumping fountain at the next.
+        /// Water a park object shoots: a cannon a guest fires, a jumping fountain at the next, or a launcher in a
+        /// fountain show.
         struct Jet
         {
             save::model::PlacedObjectIndex object { };
@@ -569,6 +570,9 @@ namespace rct3::scene::park
             float pitch = 0.35f;                                            ///< And up
             float splashed = 0;                                             ///< park_clock at its last splash
             bool fed = false;                                               ///< Aimed this frame; one that is not stops
+            std::optional<particles::JetPattern> pattern;                   ///< Of a fountain show's shot, what it shoots
+            float shot_at = 0;                                              ///< And park_clock when it was shot
+            std::size_t tube = 0;                                           ///< Its launcher's firing point
         };
         std::vector<Jet> jets;
         float jets_clock = 0;                                 ///< park_clock when the jets last moved

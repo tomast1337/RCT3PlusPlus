@@ -364,7 +364,8 @@ declare namespace debug {
             | "drop_litter"
             | "clear_litter"
             | "rebuild_waterfalls"
-            | "reset_jets",
+            | "reset_jets"
+            | "unlock_designs",
         amount?: number,
     ): number;
 }
@@ -613,6 +614,8 @@ declare namespace build {
               testAt: number | null;
               testWrecks: number;
               designs: string[];
+              /** How many of the designs its window last listed as locked, waiting for a career scenario. */
+              locked: number;
               /** The file of the design whose details the designs window shows, or null. */
               shown: string | null;
               selected: number | null;

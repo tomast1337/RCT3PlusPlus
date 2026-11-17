@@ -1086,6 +1086,7 @@ namespace rct3::scene
                      { "testAt", b.test ? Json(b.test->train.at) : Json(nullptr) },
                      { "testWrecks", b.test ? std::ranges::count_if(b.test->wrecks, [](const simulation::Wreck& w) { return w.state != simulation::WreckState::Gone; }) : 0 },
                      { "designs", std::move(designs) },
+                     { "locked", std::ranges::count(b.designs_locked, true) },
                      { "shown", b.design_shown && *b.design_shown < b.designs.size() ? Json(b.designs[*b.design_shown].path.filename().string()) : Json(nullptr) },
                      { "selected", b.selected ? Json(*b.selected) : Json(nullptr) },
                      { "split", std::to_underlying(b.split) } };

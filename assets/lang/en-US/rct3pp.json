@@ -168,6 +168,10 @@
             "Month": "Month",
             "Year": "Year",
             "All": "All"
+        },
+        "Debug": {
+            "UnlockDesigns": "Unlock saved designs",
+            "UnlockDesignsHelp": "Every design the game ships builds in this park, whatever scenarios the careers have completed"
         }
     }
 }

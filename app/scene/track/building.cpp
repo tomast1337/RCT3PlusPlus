@@ -1410,7 +1410,7 @@ namespace rct3::scene::track
             {
                 const save::model::DesignSummary& d = b.designs[i].summary;
                 std::u16string text = design_title(strings, b.designs[i].path);
-                const bool locked = career::design_locked(d.scenario, d.level, careers);
+                const bool locked = !scene.designs_unlocked && career::design_locked(d.scenario, d.level, careers);
                 b.designs_locked.push_back(locked);
                 if (locked)
                     text += strings.get(kLockedSuffix);

@@ -182,12 +182,12 @@ namespace
     }
 
     /// A park (no other objects) scheduling one display at 21:00 in the third and fourth months, whose three shots
-    /// name two placed launchers, ids 40 and 41, the first twice.
+    /// name two placed launchers, ids 40 and 41, the first twice; and a show ride's own display, without shots.
     std::vector<std::byte> invented_park()
     {
         const Attr shot { "EntriesElement", "struct", 0, { { "Name", "string", 0 }, { "SceneryItemRef", "reference", 8 }, { "SlotIndex", "int32", 4 }, { "Time", "float32", 4 } } };
         const std::vector<std::pair<std::string, std::vector<Attr>>> classes {
-            { "FireworkDisplay", { { "Name", "string", 0 }, { "MusicSelection", "string", 0 }, { "MonthMask", "int32", 4 }, { "StartTimeMinutes", "int32", 4 }, { "Entries", "array", 0, { shot } } } },
+            { "FireworkDisplay", { { "Name", "string", 0 }, { "MusicSelection", "string", 0 }, { "MonthMask", "int32", 4 }, { "StartTimeMinutes", "int32", 4 }, { "Entries", "array", 0, { shot } }, { "ShowController", "reference", 8 } } },
         };
         Bytes b;
         b.u32(static_cast<std::uint32_t>(classes.size()));
@@ -207,8 +207,11 @@ namespace
         put_shot(shots, "Fireworks\\Peony.frw", 41, 3, 2.0f);
         put_shot(shots, "Fireworks\\Comet.frw", 40, 0, 0.5f);
         put_shot(shots, "Fireworks\\Willow.frw", 40, 1, 1.0f);
-        b.u32(1);
-        b.u32(0).u64(1).field(text("Evening Show")).field(text("Tune.wma")).u32(0b1100).u32(21 * 60).field(shots);
+        Bytes none;
+        none.u32(0);
+        b.u32(2);
+        b.u32(0).u64(1).field(text("Evening Show")).field(text("Tune.wma")).u32(0b1100).u32(21 * 60).field(shots).u64(0);
+        b.u32(0).u64(2).field(text("Whale Show")).field(text("")).u32(0xffff).u32(22 * 60).field(none).u64(9);
         return b.v;
     }
 
@@ -287,7 +290,7 @@ TEST_CASE("files without an effect, or with a reference to the wrong kind, are r
     CHECK(read_effect(invented_effect(1)).error() == EffectError::Unreferable); // The effect itself as a particle
 }
 
-TEST_CASE("a park's display fires from the launchers placed in the park")
+TEST_CASE("a park's display fires from the launchers placed in the park; a show ride's own is not one")
 {
     const std::vector<std::byte> park = invented_park(); // The file reads in place
     const auto file = rct3::save::read_save(park, { .verify_checksum = false });

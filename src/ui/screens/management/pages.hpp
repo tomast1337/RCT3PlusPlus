@@ -109,6 +109,8 @@ namespace rct3::ui::screens::management
 
     /// The park operations window's tab of the awards won and fines received.
     inline constexpr std::size_t kAwardsTab = 3;
+    /// And its tab of how the park rating is made up.
+    inline constexpr std::size_t kRatingTab = 4;
 
     /// The park operations window's first page's buttons, by their place among its buttons: opening or closing
     /// the park by the place of its choice (open first), taking the view to the next of its entrances, and

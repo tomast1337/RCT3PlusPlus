@@ -8,6 +8,7 @@
 #include "strings/unicode.hpp"
 #include "ui/save_text.hpp"
 #include "ui/screens/info/person.hpp"
+#include "ui/screens/park_view/top_bar.hpp"
 #include "ui/thought_text.hpp"
 #include "units/units.hpp"
 
@@ -34,11 +35,12 @@ namespace rct3::ui::screens::management
             std::string_view name; ///< String key
         };
 
-        constexpr std::array<TabSpec, 4> kParkTabs = { {
+        constexpr std::array<TabSpec, 5> kParkTabs = { {
             { "ParkInfoDialogIcon_View", "PID_TT_ViewTabPopUp" },
             { "ParkInfoDialogIcon_Graphs", "PID_TT_GraphsTabPopUp" },
             { "ParkInfoDialogIcon_Campaigns", "PID_TT_CampaignsTabPopUp" },
             { "ParkInfoDialogIcon_Awards", "PID_TT_AwardTabPopUp" },
+            { "Top_ThumbsUp", "Rct3pp_RatingBreakdownHelp" },
         } };
         struct FinanceTab
         {
@@ -337,6 +339,29 @@ namespace rct3::ui::screens::management
                 }
             if (page.lines.empty())
                 page.note = text(strings, "Award_No_Awards");
+        }
+
+        // Our own page: the parts of our rating model, each with what it adds or takes off, then the score they
+        // make, which the rating moves towards each week.
+        void park_rating(ManagementPage& page, const ManagementFacts& f, const StringTable& strings)
+        {
+            std::u16string rating(kDash);
+            if (f.state != nullptr && f.state->rating)
+                rating = whole(std::lround(*f.state->rating * save::model::kMaxParkRating));
+            page.lines.push_back({ text(strings, "Graph_ParkRating"), rating, false, "Graph_ParkRating" });
+            const auto* parts = f.state != nullptr && f.state->rating_parts ? &*f.state->rating_parts : nullptr;
+            if (parts == nullptr)
+            {
+                page.note = text(strings, "Rct3pp_RatingNotYet");
+                return;
+            }
+            for (const park_view::RatingLine& line : park_view::kRatingLines)
+            {
+                const std::int32_t value = parts->*line.part;
+                if (line.always || value != 0)
+                    page.lines.push_back({ text(strings, line.label), ascii(std::format("{:+}", value)), false, std::string(line.label) });
+            }
+            page.lines.push_back({ text(strings, park_view::kRatingScore), whole(parts->total), false, std::string(park_view::kRatingScore) });
         }
 
         // ----- finances -----
@@ -1168,8 +1193,10 @@ namespace rct3::ui::screens::management
                     park_graphs(page, facts, strings, units);
                 else if (tab == 2)
                     park_campaigns(page, strings);
-                else
+                else if (tab == kAwardsTab)
                     park_awards(page, facts, strings);
+                else
+                    park_rating(page, facts, strings);
                 break;
             case ManagementTopic::Finances:
                 switch (finance_page(tab, units.original_finances))

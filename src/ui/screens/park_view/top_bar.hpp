@@ -13,7 +13,7 @@
 // Where the player may choose how the day goes (in a sandbox), a button after the objectives button shows
 // the day's mode; pressing it opens the three modes in an arc below it, and picking one is a request the owner
 // takes with take_day_mode(). The money narrows to make room. A double click on the money asks for the
-// finances, taken with take_finances().
+// finances, taken with take_finances(); a click on the rating asks for its breakdown (rating_button()).
 //
 // At the bar's right end, a button turns on and off the labels floating over the people the player picked to
 // highlight; highlights() tells whether they show.
@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 
 namespace rct3::ui::screens::park_view
@@ -94,6 +95,29 @@ namespace rct3::ui::screens::park_view
         /// a half disc of this radius up from the bar's bottom edge, centred on the divider.
         inline constexpr float kNotchRadius = 18;
     } // namespace park_bar
+
+    /// A part of the park rating as the rating's tooltip and its breakdown list it: its label (string key, our
+    /// own: the parts are those of our rating model), its value, and whether it shows while it is nought.
+    struct RatingLine
+    {
+        std::string_view label;
+        std::int32_t simulation::park::RatingParts::* part = nullptr;
+        bool always = false;
+    };
+    inline constexpr std::array<RatingLine, 10> kRatingLines { {
+        { "Rct3pp_RatingHappiness", &simulation::park::RatingParts::happiness, true },
+        { "Rct3pp_RatingRides", &simulation::park::RatingParts::rides, true },
+        { "Rct3pp_RatingReliability", &simulation::park::RatingParts::reliability, true },
+        { "Rct3pp_RatingGuests", &simulation::park::RatingParts::guests, true },
+        { "Rct3pp_RatingLitter", &simulation::park::RatingParts::litter, false },
+        { "Rct3pp_RatingLostGuests", &simulation::park::RatingParts::lost_guests, false },
+        { "Rct3pp_RatingCrash", &simulation::park::RatingParts::crash, false },
+        { "Rct3pp_RatingAwards", &simulation::park::RatingParts::awards, false },
+        { "Rct3pp_RatingPrize", &simulation::park::RatingParts::prize, false },
+        { "Rct3pp_RatingHarder", &simulation::park::RatingParts::harder, false },
+    } };
+    /// Label of the parts added up.
+    inline constexpr std::string_view kRatingScore = "Rct3pp_RatingScore";
 
     /// "<Month>, Year <n>", two spaces, then the time: the bar's date. `month` counts from 0, `year` from 1.
     [[nodiscard]] std::u16string park_bar_date(const StringTable& strings, std::int32_t month, std::int64_t year, std::int32_t minutes, bool twelve_hour);
@@ -157,6 +181,11 @@ namespace rct3::ui::screens::park_view
         {
             return *money_;
         }
+        /// The rating's bar; a click asks for its breakdown.
+        [[nodiscard]] widgets::Button& rating_button() const
+        {
+            return *rating_area_;
+        }
         [[nodiscard]] widgets::Button& highlight_button() const
         {
             return *highlight_;
@@ -210,7 +239,7 @@ namespace rct3::ui::screens::park_view
         widgets::Button* money_ = nullptr;
         widgets::Label* guests_ = nullptr;
         widgets::Panel* thumb_down_ = nullptr;
-        widgets::Panel* rating_area_ = nullptr;
+        widgets::Button* rating_area_ = nullptr;
         widgets::Panel* thumb_up_ = nullptr;
         widgets::Label* temperature_ = nullptr;
         widgets::Panel* weather_ = nullptr;

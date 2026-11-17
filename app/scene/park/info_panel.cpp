@@ -225,7 +225,10 @@ namespace rct3::scene::park
             {
                 const auto& course = ref.index < scene.courses.size() ? scene.courses[ref.index] : std::nullopt;
                 f.station = !f.ride->stations.empty() || (course && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station));
-                f.pool_ride = ref.index < scene.track_rules.size() && scene.track_rules[ref.index].pool_ride;
+                const rct3::park::track::TrackRules no_rules;
+                const rct3::park::track::TrackRules& kind_rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : no_rules;
+                f.pool_ride = kind_rules.pool_ride;
+                f.rated_without_lap = rct3::park::track::rated_without_lap(kind_rules, f.ride->mode);
                 // Its trains can change while it is not open, as in the game, and while none of them has riders
                 // aboard (set_trains).
                 const entt::entity e = scene.simulate && ref.index < scene.ride_entities.size() ? scene.ride_entities[ref.index] : entt::null;
@@ -242,10 +245,9 @@ namespace rct3::scene::park
                     for (const save::model::Car& car : f.ride->trains.empty() ? std::vector<save::model::Car> { } : f.ride->trains.front().cars)
                         kept.push_back({ .length = car.length.value });
                     const auto fits = scene.car_fits.find(ref.ride());
-                    const rct3::park::track::TrackRules rules = ref.index < scene.track_rules.size() ? scene.track_rules[ref.index] : rct3::park::track::TrackRules { };
                     // A shuttle runs one (fit_trains).
                     const auto coaster = course ? simulation::coaster_of(*course, *f.ride) : std::nullopt;
-                    f.trains->most_trains = course && !(coaster && coaster->shuttle != simulation::Shuttle::None) ? rct3::park::track::trains_fitting(*course, fits != scene.car_fits.end() ? std::span<const rct3::park::object::CarFit>(fits->second) : kept, f.ride->options.block_sectioned, rules.most_trains) : 1;
+                    f.trains->most_trains = course && !(coaster && coaster->shuttle != simulation::Shuttle::None) ? rct3::park::track::trains_fitting(*course, fits != scene.car_fits.end() ? std::span<const rct3::park::object::CarFit>(fits->second) : kept, f.ride->options.block_sectioned, kind_rules.most_trains) : 1;
                 }
             }
         }

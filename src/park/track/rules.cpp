@@ -18,6 +18,7 @@ namespace rct3::park::track
     {
         // Bits of a ride file's attraction flags.
         constexpr std::uint32_t kNeverTested = 0x10 | 0x4000;
+        constexpr std::uint32_t kLapless = 0x10; ///< Of the two, the one golf, rivers and slides carry
         constexpr std::uint32_t kMayBeSplit = 0x200;
         constexpr std::uint32_t kOnePiece = 0x400;
         constexpr std::uint32_t kPoolRide = 0x1000;
@@ -51,6 +52,8 @@ namespace rct3::park::track
         const ovl::TrackRules& stored = ride.rules;
         TrackRules rules;
         rules.never_tested = (stored.flags & kNeverTested) != 0;
+        rules.lapless_kind = (stored.flags & kLapless) != 0;
+        rules.no_trains = ride.operating && ride.operating->trains.empty();
         rules.may_be_split = (stored.flags & kMayBeSplit) != 0;
         rules.one_piece = (stored.flags & kOnePiece) != 0;
         rules.min_pieces = stored.min_pieces;
@@ -75,6 +78,12 @@ namespace rct3::park::track
         if (const auto& d = ride.operating; d && !d->lift_car.empty())
             rules.lift_car = TrackRules::LiftCar { .train = std::string(d->lift_car), .up = { d->lift_car_up }, .down = { std::abs(d->lift_car_down) } };
         return rules;
+    }
+
+    bool rated_without_lap(const TrackRules& rules, save::model::OperatingMode mode)
+    {
+        using enum save::model::OperatingMode;
+        return rules.lapless_kind || rules.no_trains || mode == Boat || mode == Race || mode == MiniGolf || mode == Aquarium;
     }
 
     bool lists_piece(const TrackRules& rules, std::string_view piece)
@@ -140,7 +149,7 @@ namespace rct3::park::track
                 return "CannotOpenOrTestInsufficientPieces";
             if (rules.circuit_only && !circuit)
                 return "CannotOpenOrTestNotCircuit";
-            if (test && rules.never_tested)
+            if (test && (rules.never_tested || rules.no_trains))
                 return "CannotTestTrackedRide";
             if (!test && editing)
                 return "CannotOpenTrackedRideWhileEditing";

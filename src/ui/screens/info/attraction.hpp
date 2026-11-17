@@ -163,6 +163,8 @@ namespace rct3::ui::screens::info
         std::optional<bool> station { };
         /// Of a pool ride, which has no entrance or exit: its stations join a pool complex's paving.
         bool pool_ride = false;
+        /// Of a tracked ride, whether it is rated without a measured lap, so has only basic results.
+        bool rated_without_lap = false;
         /// Of a tracked ride whose trains can still be changed, how far.
         std::optional<TrainLimits> trains { };
         /// String key: why it was last not opened, tested or edited. Shown on its view and state pages.

@@ -2,6 +2,7 @@
 #include "simulation/swinging_part.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -87,7 +88,7 @@ TEST_CASE("a swinging part swings no further than its furthest angle, and turns 
     part.furthest = units::Radians { 0.3f };
     part.fastest = units::TurnRate { 0.5f };
     Swing swing;
-    for (int k = 0; k < 400; ++k)
+    for (std::int32_t k = 0; k < 400; ++k)
     {
         swing_on(swing, part, kLevel, { 20, 0, 0 }, 0.05f);
         CHECK(std::abs(swing.angle.value) <= 0.3f + 1e-6f);
@@ -118,7 +119,7 @@ TEST_CASE("a part swinging forward and back swings back as its car speeds up, an
     // Standing on a slope, its rest is level: it does not swing.
     Swing still;
     const glm::mat3 climbing(glm::rotate(glm::mat4(1.0f), -0.4f, glm::vec3(1, 0, 0)));
-    for (int k = 0; k < 100; ++k)
+    for (std::int32_t k = 0; k < 100; ++k)
         swing_on(still, part, climbing, glm::vec3(0.0f), 0.05f);
     CHECK(still.angle.value == doctest::Approx(0));
 }
@@ -129,7 +130,7 @@ TEST_CASE("a part sprung to its car rests on the car, banked with it")
     part.spring = 50;
     Swing swing;
     const glm::mat3 banked(glm::rotate(glm::mat4(1.0f), 0.5f, glm::vec3(0, 0, 1)));
-    for (int k = 0; k < 400; ++k)
+    for (std::int32_t k = 0; k < 400; ++k)
         swing_on(swing, part, banked, glm::vec3(0.0f), 0.05f);
     // Gravity pulls it towards straight down, half a radian off the car's own down; the spring holds it near the car.
     CHECK(std::abs(swing.angle.value) < 0.5f);

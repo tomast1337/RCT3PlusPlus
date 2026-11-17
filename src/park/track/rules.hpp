@@ -58,6 +58,12 @@ namespace rct3::park::track
     struct TrackRules
     {
         bool never_tested = false; ///< Opens without a test run
+        /// Rated without a measured lap whatever mode it runs in: the kinds whose riders putt, float or slide down by
+        /// themselves (rated_without_lap).
+        bool lapless_kind = false;
+        /// Its kind runs no train, so a test has nothing to run: it is refused, though offered, and the ride is
+        /// rated without a lap. A walk-through such as the aquarium.
+        bool no_trains = false;
         bool may_be_split = false; ///< Its track may be in several unjoined parts
         std::optional<std::uint32_t> min_pieces;
         bool circuit_only = false;
@@ -92,6 +98,11 @@ namespace rct3::park::track
         units::Money height_rate { };
     };
 
+    /// Whether a ride of `rules` running in `mode` is rated without a measured lap: its kind is, or its mode has
+    /// no lap to measure (boats, races, mini golf, walk-throughs). Such a ride is rated once tested or open, and
+    /// has only its basic results.
+    [[nodiscard]] bool rated_without_lap(const TrackRules& rules, save::model::OperatingMode mode);
+
     /// Whether `rules` let the ride build `piece`.
     [[nodiscard]] bool lists_piece(const TrackRules& rules, std::string_view piece);
 
@@ -113,7 +124,7 @@ namespace rct3::park::track
     /// Why `ride` cannot be put in `state` (open or testing) under `rules`, as a string key; nothing when it
     /// can. `editing`: its track is open in the construction panel. `course`: its track's course, when known,
     /// for the length of its stations and its reverse cable lift hill. Checked in the order the player meets them: an
-    /// unjoined track, no station, too few pieces, not a circuit, a ride never tested, the panel open, a
+    /// unjoined track, no station, too few pieces, not a circuit, a ride never tested or with no train, the panel open, a
     /// station shorter than a train, a cable lift ride without its lift, then, to open only, its entrances and
     /// exits and for a ride of one entrance and one exit on an open track, an exit before the entrance. A flat
     /// ride has only the door checks, so it may always be tested. A pool ride's doors are its `pool_joined`

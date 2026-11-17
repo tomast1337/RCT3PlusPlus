@@ -326,17 +326,11 @@ namespace rct3::ui::screens::info
             }
         }
 
-        /// Whether a ride's results go past the basic ones: only rides that run along a track and are measured
-        /// over a lap.
-        bool measured(const save::model::Ride& ride)
+        void tests(InfoPage& page, const AttractionFacts& f, std::size_t section, const StringTable& strings, const InfoUnits& units)
         {
-            using enum save::model::OperatingMode;
-            return ride.kind == save::model::RideKind::Tracked && ride.mode != Boat && ride.mode != Race && ride.mode != MiniGolf && ride.mode != Aquarium;
-        }
-
-        void tests(InfoPage& page, const save::model::Ride& ride, std::span<const save::model::Guest> guests, std::size_t section, const StringTable& strings, const InfoUnits& units)
-        {
-            if (measured(ride))
+            const save::model::Ride& ride = *f.ride;
+            // Results go past the basic ones only for rides that run along a track and are measured over a lap.
+            if (ride.kind == save::model::RideKind::Tracked && !f.rated_without_lap)
             {
                 for (const std::string_view key : kTestSections)
                     page.sections.push_back(text(strings, key));
@@ -384,7 +378,7 @@ namespace rct3::ui::screens::info
                 add(page, strings, "AttractionResultsDialogLabel_Intensity", rating(ride.assessment.intensity, strings));
                 add(page, strings, "AttractionResultsDialogLabel_Nausea", rating(ride.assessment.nausea, strings));
                 // Ours, under the game's three ratings.
-                if (const GuestsSuited s = guests_suited(ride.assessment.intensity, guests); s.in_park > 0)
+                if (const GuestsSuited s = guests_suited(ride.assessment.intensity, f.guests); s.in_park > 0)
                     add(page, strings, "Rct3pp_GuestsSuited", ascii(std::format("{} / {}", s.suited, s.in_park)));
             }
         }
@@ -1050,7 +1044,7 @@ namespace rct3::ui::screens::info
                 break;
             case AttractionTab::Tests:
                 if (f.ride)
-                    tests(page, *f.ride, f.guests, section, strings, units);
+                    tests(page, f, section, strings, units);
                 break;
             case AttractionTab::Vehicles:
                 if (f.ride)

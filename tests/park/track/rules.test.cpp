@@ -258,6 +258,33 @@ TEST_CASE("a ride its file marks as one building is set down in one piece")
     CHECK_FALSE(track_rules(house).one_piece);
 }
 
+TEST_CASE("a ride is rated without a lap by its kind's flag, its want of trains, or a mode with no lap")
+{
+    using enum save::model::OperatingMode;
+    ovl::TrackedRide coaster;
+    coaster.operating = ovl::RideOperatingDefaults { .trains = { "Train" } };
+    const TrackRules plain = track_rules(coaster);
+    CHECK_FALSE(rated_without_lap(plain, ContinuousCircuit));
+    for (const auto mode : { Boat, Race, MiniGolf, Aquarium })
+        CHECK(rated_without_lap(plain, mode));
+    SUBCASE("the flag golf, rivers and slides carry; not the other that keeps a ride from a test")
+    {
+        coaster.rules.flags = 0x10;
+        CHECK(rated_without_lap(track_rules(coaster), ContinuousCircuit));
+        coaster.rules.flags = 0x4000;
+        CHECK_FALSE(rated_without_lap(track_rules(coaster), ContinuousCircuit));
+    }
+    SUBCASE("no train to ride: offered a test, but refused it, with nothing to run")
+    {
+        coaster.operating->trains.clear();
+        const TrackRules walk = track_rules(coaster);
+        CHECK(rated_without_lap(walk, ContinuousCircuit));
+        CHECK_FALSE(walk.never_tested);
+        CHECK(open_refusal(built_ride(6), walk, kTest, false) == "CannotTestTrackedRide");
+        CHECK_FALSE(open_refusal(built_ride(6), walk, kOpen, false));
+    }
+}
+
 TEST_CASE("a walk-through opens only when its exit comes after its entrance")
 {
     const TrackRules walk = rules_with([](TrackRules& r) { r.entrances = r.exits = kOneDoor; });

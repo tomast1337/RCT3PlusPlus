@@ -70,7 +70,7 @@ namespace rct3::ovl
     /// defaults.
     struct TrackRules
     {
-        /// Bits: 0x10 and 0x4000 the ride is never tested, 0x200 its track may be in several pieces.
+        /// Bits: 0x10 and 0x4000 the ride is never tested (0x10 also rated without a measured lap), 0x200 its track may be in several pieces.
         std::uint32_t flags = 0;
         std::optional<std::uint32_t> min_pieces;  ///< Fewest pieces it opens with
         bool circuit_only = false;                ///< Opens only as a closed circuit

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/course.hpp"
 
+#include "ovl/spline.hpp"
+
 #include <algorithm>
 #include <array>
 #include <doctest/doctest.h>
@@ -259,6 +261,59 @@ TEST_CASE("a track in several stretches runs along the first one with a station"
     REQUIRE(bare);
     CHECK(bare->first_piece == 0);
     CHECK(!bare->closed);
+}
+
+TEST_CASE("a piece is as long along the course as the mean of its rails, and cars stand by that length")
+{
+    save::model::TerrainGrid grid;
+    grid.width = 8;
+    grid.height = 8;
+    grid.tile_size_x = 4;
+    grid.tile_size_z = 4;
+    grid.cells.resize(64);
+    // Straight rails 4 long along -X, a metre apart, whose stored lengths say 4.5 and 5.5, as rails rolling round the
+    // middle line would be.
+    const auto rail = [](float z, float length) {
+        ovl::Spline s;
+        s.length = length;
+        s.segment_lengths = { length };
+        s.nodes = { { .position = { 2, 0, z }, .tangent_out = { -4.0f / 3, 0, 0 } }, { .position = { -2, 0, z }, .tangent_in = { 4.0f / 3, 0, 0 } } };
+        return s;
+    };
+    const auto line = park::track::middle_line(rail(-0.5f, 4.5f), rail(0.5f, 5.5f));
+    REQUIRE(line);
+    CHECK(line->length == doctest::Approx(5));
+    park::track::PieceShape piece;
+    piece.line = *line;
+    save::model::Ride ride;
+    auto& track = ride.track.emplace();
+    std::vector<save::model::PlacedObject> objects;
+    for (std::uint64_t i = 0; i < 2; ++i)
+    {
+        save::model::PlacedObject& o = objects.emplace_back();
+        o.id = 100 + i;
+        o.col = static_cast<int>(i);
+        o.force_absolute_height = true;
+        save::model::TrackPiece& p = track.pieces.emplace_back();
+        p.symbol = "Rolled";
+        p.scenery = o.id;
+    }
+    const auto shape_of = [&](const save::model::TrackPiece&, const save::model::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return piece; };
+    const auto course = park::track::track_course(ride, objects, { }, grid, { }, shape_of);
+    REQUIRE(course);
+    REQUIRE(course->piece_starts.size() == 2);
+    CHECK(course->piece_starts[1] == doctest::Approx(5));
+    CHECK(course->length() == doctest::Approx(10));
+    // Halfway along the first piece by its length is halfway along its drawn line.
+    const glm::vec3 start = park::track::course_point(*course, 0);
+    const glm::vec3 end = park::track::course_point(*course, 5);
+    check_near(park::track::course_point(*course, 2.5f), (start + end) / 2.0f);
+    // A car with its wheels 1.25 either side of 2.5 along stands there.
+    save::model::Train train;
+    train.cars.resize(1);
+    const std::array fits { park::object::CarFit { .length = 3, .front_wheels = 0.25f, .rear_wheels = 2.75f } };
+    park::track::stand_train(*course, train, fits, 4);
+    check_near({ train.cars[0].position[0], train.cars[0].position[1], train.cars[0].position[2] }, (start + end) / 2.0f);
 }
 
 TEST_CASE("holding pieces end blocks, lift tops are lift, and a tower's chain-marked pieces are no lift")

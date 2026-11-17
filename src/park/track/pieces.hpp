@@ -139,6 +139,9 @@ namespace rct3::park::track
         /// Which way is up for the track at each point of `path`: square to the rails, so it leans with
         /// the bank. A unit vector.
         std::vector<glm::vec3> ups { };
+        /// How far cars go along it from start to end: the mean of its two rails' lengths, which is longer than
+        /// `path` where the rails roll round the middle line. 0 where unknown, and `path`'s own length is used.
+        float length = 0;
     };
 
     /// How one end of a piece meets the end of another, beyond their shape: by name, by the tags each offers

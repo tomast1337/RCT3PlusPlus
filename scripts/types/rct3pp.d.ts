@@ -365,7 +365,9 @@ declare namespace debug {
             | "clear_litter"
             | "rebuild_waterfalls"
             | "reset_jets"
-            | "unlock_designs",
+            | "unlock_designs"
+            | "unlock_scenarios"
+            | "reset_item_names",
         amount?: number,
     ): number;
 }

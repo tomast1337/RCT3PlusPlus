@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/debug_tab.hpp"
 
+#include "career/career_file.hpp"
 #include "imgui.h"
 #include "park/boundary_fence.hpp"
 #include "park/land_buying.hpp"
@@ -115,6 +116,46 @@ namespace rct3::scene::park
             case DebugTool::UnlockDesigns:
                 // For this park only, as it was opened; a designs window open now shows it when opened again.
                 return std::exchange(scene.designs_unlocked, true) ? 0 : 1;
+            case DebugTool::UnlockScenarios:
+            {
+                // The career being played, else every career of every game; written at once, as nothing else
+                // would save them.
+                if (!scene.saves.data)
+                    return 0;
+                std::size_t opened = 0;
+                const std::filesystem::path folder = scene.saves.data->folder(config::UserFolder::Careers);
+                for (int pack = 0; !career::pack_id(pack).empty(); ++pack)
+                    for (const career::CareerEntry& entry : career::list_careers(folder, pack, std::nullopt))
+                    {
+                        if (!scene.game.career.empty() && entry.path != scene.game.career)
+                            continue;
+                        std::size_t here = 0;
+                        const auto opened_all = [&](career::Career& c) {
+                            for (career::ScenarioProgress& s : c.scenarios)
+                                if (s.status == career::ScenarioStatus::Locked)
+                                {
+                                    s.status = career::ScenarioStatus::Open;
+                                    ++here;
+                                }
+                        };
+                        if (career::change_career(entry.path, opened_all))
+                            opened += here;
+                    }
+                return opened;
+            }
+            case DebugTool::ResetItemNames:
+            {
+                constexpr std::string_view kOwnName = "%ME%"; ///< How a stall item keeps the name of its kind
+                std::size_t renamed = 0;
+                for (save::model::Stall& stall : scene.rides.stalls)
+                    for (save::model::StallItem& item : stall.items)
+                        if (item.name != kOwnName)
+                        {
+                            item.name = kOwnName;
+                            ++renamed;
+                        }
+                return renamed;
+            }
         }
         return 0;
     }
@@ -144,6 +185,13 @@ namespace rct3::scene::park
             tool_button(device, scene, assets, label(assets, "Rct3pp_Debug_UnlockDesigns").c_str(), DebugTool::UnlockDesigns);
             ImGui::EndDisabled();
             ImGui::SetItemTooltip("%s", label(assets, "Rct3pp_Debug_UnlockDesignsHelp").c_str());
+            ImGui::SameLine();
+            ImGui::BeginDisabled(!scene.saves.data);
+            tool_button(device, scene, assets, label(assets, "Rct3pp_Debug_UnlockScenarios").c_str(), DebugTool::UnlockScenarios);
+            ImGui::EndDisabled();
+            ImGui::SetItemTooltip("%s", label(assets, "Rct3pp_Debug_UnlockScenariosHelp").c_str());
+            tool_button(device, scene, assets, label(assets, "Rct3pp_Debug_ResetItemNames").c_str(), DebugTool::ResetItemNames);
+            ImGui::SetItemTooltip("%s", label(assets, "Rct3pp_Debug_ResetItemNamesHelp").c_str());
         }
 
         if (ImGui::CollapsingHeader("Guests", ImGuiTreeNodeFlags_DefaultOpen))

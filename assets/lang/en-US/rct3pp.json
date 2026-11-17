@@ -171,7 +171,11 @@
         },
         "Debug": {
             "UnlockDesigns": "Unlock saved designs",
-            "UnlockDesignsHelp": "Every design the game ships builds in this park, whatever scenarios the careers have completed"
+            "UnlockDesignsHelp": "Every design the game ships builds in this park, whatever scenarios the careers have completed",
+            "UnlockScenarios": "Unlock all scenarios",
+            "UnlockScenariosHelp": "Every scenario of the career being played can be started; outside a career, of every career",
+            "ResetItemNames": "Reset sold item names",
+            "ResetItemNamesHelp": "Every item the stalls sell goes back to the name of its kind"
         }
     }
 }

@@ -2,7 +2,7 @@
 //
 // The developer windows' Debug tab on a busy park: shown beside the park, then its tools used one after another
 // and their effects checked: money added, guests added and sent home, every ride broken down and reset, litter
-// dropped and cleared, research finished. Keeps a screenshot of the tab and one with the tools used.
+// dropped and cleared, research finished, a stall item's name reset. Keeps a screenshot of the tab and one with the tools used.
 //
 //   ./nob script scripts/tests/debug_tab.ts -- --no-audio --park "<a busy park's save>"
 //
@@ -14,6 +14,34 @@ for (let frame = 0; frame < 3600 && !park.loaded(); ++frame) await frames(1);
 if (!park.loaded()) await park.open("Campaigns/Base/VanillaHills.dat", { sandbox: false });
 await park.ready();
 await frames(30);
+
+// A stall item renamed in its menu, then every item's name back to its kind's.
+const stall = stalls.list().find((st) => st.items.length > 0 && !st.demolished)?.index;
+if (stall !== undefined) {
+    stalls.show(stall);
+    await until(() => ui.find("info/Stall_ItemsIcon") !== undefined, 120, "the stall's window");
+    await ui.click("info/Stall_ItemsIcon");
+    await frames(2);
+    const nameBox = "info/body/StallMenu/menu/view/content/ItemName0";
+    await until(() => ui.find(nameBox) !== undefined, 60, "the item's name box");
+    await ui.click(nameBox);
+    keys.press("Ctrl+A");
+    keys.type("Debug Treat");
+    keys.press("Enter");
+    await frames(3);
+    expect(
+        stalls.list()[stall].items[0].name === "Debug Treat",
+        `a stall item renamed, not "${stalls.list()[stall].items[0].name}"`,
+    );
+    expect(debug.use("reset_item_names") >= 1, "the item's name reset");
+    expect(
+        stalls.list().every((st) => st.items.every((i) => i.name === "%ME%")),
+        "every sold item named after its kind",
+    );
+    expect(debug.use("reset_item_names") === 0, "nothing more to reset");
+    await ui.click("info/close");
+    await frames(2);
+} else log("no stall to rename an item in");
 
 keys.press("F12");
 await frames(2);

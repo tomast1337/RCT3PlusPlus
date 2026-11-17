@@ -82,6 +82,18 @@ namespace rct3::park::track
         return rules.pieces.empty() || std::ranges::any_of(rules.pieces, [&](const std::string& p) { return strings::equals_ignoring_case(p, piece); });
     }
 
+    void shape_for_ride(std::vector<PieceShape>& pieces, const TrackRules& rules)
+    {
+        std::vector<PieceRecord> records;
+        std::vector<PieceLine> lines;
+        for (PieceShape& p : pieces)
+        {
+            records.push_back(std::move(p.record));
+            lines.push_back(p.line);
+        }
+        pieces = shape_pieces(records, lines, [&](const PieceRecord& r) { return lists_piece(rules, r.name); });
+    }
+
     save::model::RideColours starting_colours(const TrackRules& rules, std::span<const PieceShape> pieces)
     {
         const auto first = std::ranges::find_if(pieces, [&](const PieceShape& p) { return rules.pieces.empty() || strings::equals_ignoring_case(p.record.name, rules.pieces.front()); });

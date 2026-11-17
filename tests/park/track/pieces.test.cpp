@@ -100,8 +100,6 @@ TEST_CASE("banks lean left when the right rail is higher, upside down at four st
     CHECK(measure_end(forward, glm::normalize(glm::vec3 { 0, -1, 1 })).bank == -1);
     CHECK(measure_end(forward, { 0, 0, -1 }).bank == kUpsideDown);
     CHECK(bank_degrees(forward, glm::normalize(glm::vec3 { 0, 1, 1 })) == doctest::Approx(45));
-    // A track that hangs below its rail counts from its own upside-down station.
-    CHECK(measure_end(forward, { 0, 0, -1 }, 180).bank == 0);
 }
 
 TEST_CASE("headings count eighths of a turn from -X, turning right positive")
@@ -159,6 +157,38 @@ TEST_CASE("each shape keeps one plain piece, the one with the fewest flags")
     CHECK(pieces[1].use == PieceUse::Plain);
     // A lift chain makes a shape of its own.
     CHECK(pieces[2].use == PieceUse::Plain);
+}
+
+TEST_CASE("a ride's banks count from the station it lists, and its plain pieces are the plainest it lists")
+{
+    // A set shared by a hanging coaster, whose pieces are drawn upside down, and an upright one, which has a twin
+    // of the straight that only a third kind lists.
+    PieceLine hanging = straight_line();
+    hanging.start_side = hanging.end_side = { 0, 0, -1 };
+    PieceLine tilting = straight_line();
+    tilting.end_side = { 0, 1, 0 };
+    const std::vector<PieceRecord> records { record("InvStation", kPieceStation), record("InvStraight"), record("Station", kPieceStation), record("StraightTwin"), record("Straight", kPieceStarts), record("StraightToTilt") };
+    const std::vector<PieceLine> lines { hanging, hanging, straight_line(), straight_line(), straight_line(), tilting };
+    const auto banks = [](const std::vector<PieceShape>& pieces) {
+        std::vector<std::pair<int, int>> out;
+        for (const PieceShape& p : pieces)
+            out.emplace_back(p.entry.bank, p.exit.bank);
+        return out;
+    };
+    const auto listing = [](std::vector<std::string_view> names) { return [names](const PieceRecord& r) { return std::ranges::contains(names, std::string_view(r.name)); }; };
+
+    const std::vector<PieceShape> upright = shape_pieces(records, lines, listing({ "Station", "Straight", "StraightToTilt" }));
+    CHECK(banks(upright) == std::vector<std::pair<int, int>> { { 4, 4 }, { 4, 4 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 2 } });
+    CHECK(upright[4].use == PieceUse::Plain);
+
+    const std::vector<PieceShape> under = shape_pieces(records, lines, listing({ "InvStation", "InvStraight" }));
+    CHECK(banks(under) == std::vector<std::pair<int, int>> { { 0, 0 }, { 0, 0 }, { 4, 4 }, { 4, 4 }, { 4, 4 }, { 4, -2 } });
+    CHECK(under[1].use == PieceUse::Plain);
+
+    // Listing everything, the plainer twin keeps the shape.
+    const std::vector<PieceShape> all = shape_pieces(records, lines);
+    CHECK(all[3].use == PieceUse::Plain);
+    CHECK(all[4].use == PieceUse::Special);
 }
 
 TEST_CASE("a piece fits after a tip with the same slope and bank on the same kind of line")

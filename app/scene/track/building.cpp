@@ -757,6 +757,7 @@ namespace rct3::scene::track
         TrackBuilding& b = scene.building;
         if (!load_catalogue(b, overlay, assets))
             return false;
+        rct3::park::track::shape_for_ride(b.catalogues.at(overlay).pieces, ride.value < scene.track_rules.size() ? scene.track_rules[ride.value] : rct3::park::track::TrackRules { });
         // Golf paths are never banked, and their pieces list the path's edges either way round, which reads as
         // upside down against the station.
         if (scene.rides.rides[ride.value].mode == save::model::OperatingMode::MiniGolf)

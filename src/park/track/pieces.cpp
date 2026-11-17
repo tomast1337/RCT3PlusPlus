@@ -337,19 +337,19 @@ namespace rct3::park::track
         return std::atan2(glm::dot(side, up), glm::dot(side, level)) * kDegrees;
     }
 
-    PieceEnd measure_end(const glm::vec3& direction, const glm::vec3& side, float base_bank)
+    PieceEnd measure_end(const glm::vec3& direction, const glm::vec3& side)
     {
         const glm::vec3 forward = glm::normalize(direction);
         PieceEnd end;
         end.slope = slope_steps(std::atan2(forward.y, std::hypot(forward.x, forward.z)) * kDegrees);
-        end.bank = wrap_bank(static_cast<int>(std::lround((bank_degrees(direction, side) - base_bank) / kStepDegrees)));
+        end.bank = wrap_bank(static_cast<int>(std::lround(bank_degrees(direction, side) / kStepDegrees)));
         // Straight up or down, the track's way across the ground is the rails' level line turned back.
         const glm::vec3 flat = std::abs(forward.y) > kUpright ? glm::cross(side, glm::vec3 { 0, 1, 0 }) : forward;
         end.heading = heading_steps(flat);
         return end;
     }
 
-    PieceShape shape_piece(PieceRecord record, const PieceLine& line, float base_bank)
+    PieceShape shape_piece(PieceRecord record, const PieceLine& line)
     {
         PieceShape shape;
         shape.line = line;
@@ -361,7 +361,7 @@ namespace rct3::park::track
             const auto steepness = [](const glm::vec3& d) { return glm::normalize(d).y; };
             if (record.join_line && std::abs(steepness(rails)) > kUpright && std::abs(steepness(direction)) > kClimbing)
                 direction = { 0, direction.y > 0 ? 1 : -1, 0 };
-            return measure_end(direction, side, base_bank);
+            return measure_end(direction, side);
         };
         shape.entry = meeting_end(meets.start_direction, meets.start_side, line.start_direction);
         shape.exit = meeting_end(meets.end_direction, meets.end_side, line.end_direction);
@@ -392,29 +392,25 @@ namespace rct3::park::track
         return shape;
     }
 
-    float station_bank(std::span<const PieceRecord> records, std::span<const PieceLine> lines)
+    std::vector<PieceShape> shape_pieces(std::span<const PieceRecord> records, std::span<const PieceLine> lines, std::function_ref<bool(const PieceRecord&)> listed)
     {
-        for (std::size_t i = 0; i < records.size() && i < lines.size(); ++i)
-        {
-            if ((records[i].flags & kPieceStation) != 0)
-                return std::abs(bank_degrees(lines[i].start_direction, lines[i].start_side)) > 2 * kStepDegrees ? 4 * kStepDegrees : 0;
-        }
-        return 0;
-    }
-
-    std::vector<PieceShape> shape_pieces(std::span<const PieceRecord> records, std::span<const PieceLine> lines)
-    {
-        const float base = station_bank(records, lines);
         std::vector<PieceShape> pieces;
         for (std::size_t i = 0; i < records.size() && i < lines.size(); ++i)
-            pieces.push_back(shape_piece(records[i], lines[i], base));
+            pieces.push_back(shape_piece(records[i], lines[i]));
+        const auto station = std::ranges::find_if(pieces, [&](const PieceShape& p) { return p.use == PieceUse::Station && listed(p.record); });
+        const int level = station != pieces.end() ? station->entry.bank : 0;
+        for (PieceShape& p : pieces)
+        {
+            p.entry.bank = wrap_bank(p.entry.bank - level);
+            p.exit.bank = wrap_bank(p.exit.bank - level);
+        }
         // One plain piece per shape: the plainest keeps it, the others are offered by name.
         using Key = std::tuple<int, int, int, int, int, int, int, std::uint8_t>;
         std::map<Key, std::size_t> plainest;
         for (std::size_t i = 0; i < pieces.size(); ++i)
         {
             const PieceShape& p = pieces[i];
-            if (p.use != PieceUse::Plain)
+            if (p.use != PieceUse::Plain || !listed(p.record))
                 continue;
             const Key key { p.entry.slope, p.entry.bank, p.entry.heading.value, p.exit.slope, p.exit.bank, p.exit.heading.value, p.curve, p.toggles };
             const auto [found, added] = plainest.try_emplace(key, i);

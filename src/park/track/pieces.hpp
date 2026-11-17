@@ -27,6 +27,7 @@
 #include <cstdint>
 #include <expected>
 #include <filesystem>
+#include <functional>
 #include <glm/glm.hpp>
 #include <optional>
 #include <span>
@@ -210,13 +211,13 @@ namespace rct3::park::track
     /// node stands in for it. Nothing when a rail has fewer than two nodes or an end has no direction.
     [[nodiscard]] std::optional<PieceLine> middle_line(const ovl::Spline& left, const ovl::Spline& right);
 
-    /// `line` measured in steps. Banks are counted from `base_bank`, in degrees.
-    [[nodiscard]] PieceEnd measure_end(const glm::vec3& direction, const glm::vec3& side, float base_bank = 0);
+    /// `line` measured in steps.
+    [[nodiscard]] PieceEnd measure_end(const glm::vec3& direction, const glm::vec3& side);
     /// The lean of an end in degrees, positive to the left.
     [[nodiscard]] float bank_degrees(const glm::vec3& direction, const glm::vec3& side);
 
-    /// A piece as its record and line make it. `base_bank` as in measure_end.
-    [[nodiscard]] PieceShape shape_piece(PieceRecord record, const PieceLine& line, float base_bank = 0);
+    /// A piece as its record and line make it.
+    [[nodiscard]] PieceShape shape_piece(PieceRecord record, const PieceLine& line);
 
     /// The pieces of one track overlay, as shape_piece makes them, in the overlay's order.
     struct PieceCatalogue
@@ -243,12 +244,11 @@ namespace rct3::park::track
     /// The piece of `catalogue` a track piece's symbol names, with or without its tag; nothing when not there.
     [[nodiscard]] std::optional<const PieceShape&> shape_named(const PieceCatalogue& catalogue, std::string_view symbol);
 
-    /// The bank the catalogue's pieces count from: that of its stations, in degrees (0 or 180).
-    [[nodiscard]] float station_bank(std::span<const PieceRecord> records, std::span<const PieceLine> lines);
-
-    /// Pieces made from records and lines side by side, counting banks from their stations'. Plain pieces
-    /// that share a shape with a plainer one become special, so each shape has one plain piece.
-    [[nodiscard]] std::vector<PieceShape> shape_pieces(std::span<const PieceRecord> records, std::span<const PieceLine> lines);
+    /// Pieces made from records and lines side by side, for a ride that builds the pieces `listed` accepts. Banks count
+    /// from its first listed station, so that station is level: a set shared by upright and hanging coasters draws
+    /// the level of one as the other's upside down. Listed plain pieces that share a shape with a plainer listed one
+    /// become special, so each shape has one plain piece the ride builds.
+    [[nodiscard]] std::vector<PieceShape> shape_pieces(std::span<const PieceRecord> records, std::span<const PieceLine> lines, std::function_ref<bool(const PieceRecord&)> listed = [](const PieceRecord&) { return true; });
 
     /// A piece laid one way or the other.
     struct LaidPiece

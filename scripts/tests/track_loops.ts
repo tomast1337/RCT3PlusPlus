@@ -85,5 +85,6 @@ async function loop_after_climb(kind: string): Promise<void> {
     build.stop();
 }
 
-// The looping coaster, and kinds on other track sets with loops.
-for (const kind of ["LoopingRC", "Corkscrew", "WoodenRC", "StandupCoaster"]) await loop_after_climb(kind);
+// The looping coaster, and kinds on other track sets with loops; the Twister shares its set with hanging coasters.
+for (const kind of ["LoopingRC", "Corkscrew", "WoodenRC", "StandupCoaster", "Twister", "InvertedRollerCoaster"])
+    await loop_after_climb(kind);

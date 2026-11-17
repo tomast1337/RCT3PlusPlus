@@ -161,6 +161,9 @@ namespace rct3::particles
             const auto o = save::decode_object(file, root);
             if (!o)
                 return std::unexpected(DisplayError::BadObject);
+            // A show ride keeps its show's timeline as a display too; the ride puts it on, not the calendar.
+            if (const auto show = o->fields.field("ShowController"); show && show->kind() == save::ValueKind::Reference && show->as_reference() != 0)
+                continue;
             Display display = display_of(o->fields);
             for (const save::Value& entry : list(o->fields, "Entries"))
             {

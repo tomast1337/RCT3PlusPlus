@@ -7,7 +7,8 @@
 //  - its shots: which firework effect, from which launcher and which of the launcher's tubes, when, and on which
 //    lane of the show's timeline.
 // A park keeps its scheduled displays the same way, but each shot names the launcher placed in the park it fires
-// from, rather than one of the display's own.
+// from, rather than one of the display's own. A show ride's timeline is saved as a display as well; it is the
+// ride's, not one the park schedules.
 //
 // A display starts on a day of a month it runs in, as the time of day reaches its start, and runs its shots at
 // their times from then on.
@@ -71,7 +72,8 @@ namespace rct3::particles
     /// The display in a firework display file.
     [[nodiscard]] std::expected<Display, DisplayError> read_display(std::span<const std::byte> data);
 
-    /// The displays `file`, a park, schedules; their launchers are the placed items their shots name.
+    /// The displays `file`, a park, schedules, leaving out show rides' own; their launchers are the placed items their
+    /// shots name.
     [[nodiscard]] std::expected<std::vector<Display>, DisplayError> read_park_displays(const save::SaveFile& file);
 
     /// Game minutes after its start time during which a display due that day still starts, so a clock run fast or

@@ -2,6 +2,7 @@
 #include "simulation/vip.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/fireworks.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/rides.hpp"
@@ -160,10 +161,8 @@ namespace rct3::simulation
                 if (const auto* cycle = r.try_get<CycleRide>(ride); cycle != nullptr && r.all_of<Trains>(ride) && cycle->excitement.value * 10.0f >= goal.min_excitement && !std::ranges::contains(vip.coasters, ride))
                     vip.coasters.push_back(ride);
             }
-            // shortcut: rct3++ has no firework shows yet, so a VIP who wants fireworks is pleased by being in the
-            // park after dark, when shows go up; judge them by a show they watch once shows are put on.
-            const auto* daylight = r.ctx().find<Daylight>();
-            if (is_night(daylight != nullptr ? daylight->time.value : Daylight { }.time.value))
+            // A display that goes up while they are in the park counts, wherever they are.
+            if (r.ctx().contains<FireworkShow>())
                 vip.fireworks = true;
             if ((goal.wishes & T::kThemedArea) != 0 && around.themed && r.all_of<Pose>(guest) && around.themed(r.get<Pose>(guest).position, goal.theme, tune.reach) >= goal.scenery_needed)
                 vip.themed = true;

@@ -170,6 +170,7 @@ namespace rct3::simulation
         StaffWantToQuit = 50,
         StaffMiserable = 51,
         StaffUnderpaid = 52,
+        GreatFireworks = 36,    ///< After watching a firework display
         GreatEntertainer = 38,  ///< After watching a good show
         BoringEntertainer = 39, ///< After watching a poor one
         StaffHappy = 56,

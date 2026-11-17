@@ -563,7 +563,7 @@ namespace rct3::scene::park
                 if (shown[k] >= scene.shown_people.size())
                     continue;
                 // Seated on a ride they stand idle instead.
-                rct3::park::person::PlacedPerson pose = pose_person(scene, shown[k], scene.park_clock, scene.simulate).value_or(rct3::park::person::PlacedPerson { .look = scene.shown_people[shown[k]].pose.look, .motion = rct3::park::person::motion::kIdle, .time = scene.clock });
+                rct3::park::person::PlacedPerson pose = pose_person(scene, shown[k], scene.people_clock, scene.simulate).value_or(rct3::park::person::PlacedPerson { .look = scene.shown_people[shown[k]].pose.look, .motion = rct3::park::person::motion::kIdle, .time = scene.clock });
                 pose.level = 0;
                 pose.world = glm::translate(glm::mat4(1.0f), glm::vec3(first + kGap * static_cast<float>(k), 0, 0));
                 placed.push_back(pose);

@@ -458,11 +458,13 @@ namespace rct3::scene::park
         std::optional<float> rain_strength; ///< Developer switch: the rain falls this hard, 0 to 1, whatever the weather
         bool designs_unlocked = false;      ///< Developer switch: every saved design builds, whatever the career has done
         /// Developer switch: the motion the person the info panel shows plays in place of their own, and `clock` when
-        /// it began.
+        /// it began; or every motion in turn, and for every person.
         struct HeldMotion
         {
             std::int32_t motion = 0;
             float since = 0;
+            bool in_turn = false;
+            bool everyone = false;
         };
         std::optional<HeldMotion> held_motion;
         bool debug_tab_asked = false; ///< A script asked to bring the developer windows' Debug tab to the front
@@ -587,6 +589,7 @@ namespace rct3::scene::park
         /// Park seconds the park has been shown: at the speed picked, stopped while paused. Everything in the
         /// park moves by it, so a pause freezes it all; the interface and its previews go by `clock`.
         float park_clock = 0;
+        float people_clock = 0;            ///< park_clock as the people live it, slower in slow motion
         std::vector<float> chain_shifts;   ///< By ride, how far its lift chain has moved (park/chain_lifts.hpp)
         simulation::park::ParkState park;  ///< Money, guests, rating, weather, date and speed as they are now
         BuildMenus build;                  ///< The lists of rides, shops and scenery to build

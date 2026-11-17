@@ -332,8 +332,9 @@ interface MapPoint {
 declare namespace debug {
     /** Brings the developer windows' Debug tab to the front, once they are shown (keys.press("F12")). */
     function open(): void;
-    /** Uses the Debug tab's tool `tool` with `amount`: money to add in hundredths, or how many guests or pieces of
-     *  litter. Returns how many things it changed. */
+    /** Uses the Debug tab's tool `tool` with `amount`: money to add in hundredths, how many guests or pieces of
+     *  litter, how many times slower the guests live (1 for their own pace), or 1 on and 0 off for the other
+     *  switches. Returns how many things it changed, or 1 for a switch turned. */
     function use(
         tool:
             | "add_money"
@@ -352,7 +353,11 @@ declare namespace debug {
             | "reset_jets"
             | "unlock_designs"
             | "unlock_scenarios"
-            | "reset_item_names",
+            | "reset_item_names"
+            | "slow_guests"
+            | "parties_huddle_often"
+            | "cycle_motions"
+            | "cycle_person_motions",
         amount?: number,
     ): number;
 }

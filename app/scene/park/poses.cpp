@@ -362,7 +362,7 @@ namespace rct3::scene::park
                         return next && next->kind == rct3::park::pools::PoolKind::Water && next->surface == square->surface;
                     };
                     const float room = rct3::park::pool_wall_room(scene.grid, at_xz - glm::vec2 { scene.grid.world_x(col), scene.grid.world_z(row) }, water);
-                    return at.position + glm::vec3(0.0f, rct3::park::pools::pool_wave_lift(rct3::park::pools::pool_wave_height(scene.water.pool_waves, at_xz, clock, at.position.y), room), 0.0f);
+                    return at.position + glm::vec3(0.0f, rct3::park::pools::pool_wave_lift(rct3::park::pools::pool_wave_height(scene.water.pool_waves, at_xz, scene.park_clock, at.position.y), room), 0.0f);
                 };
                 // Up a slide climbed on foot they walk, and slide down it on their backs.
                 if (const auto* climbing = r.try_get<simulation::Climbing>(shown.guest))
@@ -744,10 +744,19 @@ namespace rct3::scene::park
     std::optional<rct3::park::person::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate)
     {
         std::optional<rct3::park::person::PlacedPerson> pose = pose_as_playing(scene, i, clock, simulate);
-        if (pose && scene.held_motion && scene.shown_person == i)
+        if (pose && scene.held_motion && (scene.held_motion->everyone || scene.shown_person == i))
         {
+            const float played = scene.clock - scene.held_motion->since;
             pose->motion = scene.held_motion->motion;
-            pose->time = scene.clock - scene.held_motion->since;
+            pose->time = played;
+            if (scene.held_motion->in_turn)
+            {
+                constexpr float kTurnSeconds = 3; ///< Chosen by eye: long enough to see most motions through once
+                static const std::vector<rct3::park::person::NamedMotion> kMotions = rct3::park::person::motions_by_number();
+                if (!kMotions.empty())
+                    pose->motion = kMotions[static_cast<std::size_t>(played / kTurnSeconds) % kMotions.size()].number;
+                pose->time = std::fmod(played, kTurnSeconds);
+            }
         }
         return pose;
     }

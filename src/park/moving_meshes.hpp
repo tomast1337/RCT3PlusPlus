@@ -6,6 +6,7 @@
 #pragma once
 
 #include "park/object/mesh.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
@@ -58,10 +59,11 @@ namespace rct3::park
     /// own up, the others about their own sideways.
     [[nodiscard]] std::vector<glm::mat4> arm_moves(std::span<const glm::mat4> joints, std::span<const float> degrees);
 
-    /// How a car's part held level moves what it carries, model space, with the car placed at `place` (model to
-    /// world): turned about its pivot's line as far as brings its up nearest the world's (+Y). Its heading follows
-    /// the car's.
-    [[nodiscard]] glm::mat4 level_move(const object::CarPart& part, const glm::mat4& place);
+    /// How a car's moving part moves what it carries, model space, with the car placed at `place` (model to world):
+    /// turned about its pivot's line as far as brings its up nearest the world's (+Y), then on by `swung`, as
+    /// glm::rotate turns about that line. A part sprung to its car (CarPart::moves' spring) turns from where it sits
+    /// on it by `swung` alone. Its heading follows the car's.
+    [[nodiscard]] glm::mat4 part_move(const object::CarPart& part, const glm::mat4& place, units::Radians swung = { });
 
     /// Puts each object where `places` (model to world, by object) has it, leaving those already there.
     /// Moves and turns only: a stretched place leaves the normals off. Skinned meshes take a place by bone

@@ -100,15 +100,15 @@ TEST_CASE("in a park the picked music carries on and the menus' cycle stops")
 
 TEST_CASE("in a park the music is heard only with the camera well up, more the higher it is")
 {
-    CHECK(park_music_level(0) == 0);
-    CHECK(park_music_level(kParkMusicQuiet.value) == 0);
-    CHECK(park_music_level((kParkMusicQuiet.value + kParkMusicFull.value) / 2) == doctest::Approx(0.5f));
-    CHECK(park_music_level(kParkMusicFull.value) == 1);
-    CHECK(park_music_level(kParkMusicFull.value * 2) == 1);
+    CHECK(park_music_level(0, ParkView::Overhead) == 0);
+    CHECK(park_music_level(kParkMusicQuiet.value, ParkView::Overhead) == 0);
+    CHECK(park_music_level((kParkMusicQuiet.value + kParkMusicFull.value) / 2, ParkView::Overhead) == doctest::Approx(0.5f));
+    CHECK(park_music_level(kParkMusicFull.value, ParkView::Overhead) == 1);
+    CHECK(park_music_level(kParkMusicFull.value * 2, ParkView::Overhead) == 1);
 }
 
 TEST_CASE("the view from a ride keeps the music at zero however high the camera is")
 {
-    CHECK(park_music_level(kParkMusicFull.value * 2, true) == 0);
-    CHECK(park_music_level(kParkMusicFull.value * 2, false) == 1);
+    CHECK(park_music_level(kParkMusicFull.value * 2, ParkView::Riding) == 0);
+    CHECK(park_music_level(kParkMusicFull.value * 2, ParkView::Overhead) == 1);
 }

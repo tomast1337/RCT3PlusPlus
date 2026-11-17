@@ -46,9 +46,16 @@ namespace rct3::audio
     inline constexpr units::Distance kParkMusicFull { 240 }; ///< And above: at full
     inline constexpr float kMusicFadeSeconds = 2;            ///< To fade out, or in, all the way
 
+    /// Where the park view looks from.
+    enum class ParkView : std::uint8_t
+    {
+        Overhead, ///< The camera over the park
+        Riding,   ///< Out of a ride's car, seat or a person's eyes
+    };
+
     /// How much of the park's music is heard, 0..1, with the eye `height` above the point looked at;
-    /// none while the view is `riding` along a ride.
-    [[nodiscard]] float park_music_level(float height, bool riding = false);
+    /// none in the `Riding` view.
+    [[nodiscard]] float park_music_level(float height, ParkView view);
 
     struct MenuMusicPick
     {

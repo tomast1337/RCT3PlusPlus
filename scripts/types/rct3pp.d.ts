@@ -303,11 +303,14 @@ declare namespace park {
         gone: boolean;
         shown: PersonIndex | null;
     }[];
-    /** The park's firework displays: name, music file, the months they run in (a bit a month, the first lowest),
-     *  start time in minutes after midnight, launchers and shots, and whether one plays now, how far it is and
-     *  the middle of its launchers. */
+    /** The park's firework displays: name, what most of its shots are (a fountain show is mostly water jets), how
+     *  long it runs, music file, the months they run in (a bit a month, the first lowest), start time in minutes
+     *  after midnight, launchers and shots, and whether one plays now, how far it is and the middle of its
+     *  launchers. */
     function displays(): {
         name: string;
+        kind: "fireworks" | "lasers" | "water";
+        length: Seconds;
         music: string;
         months: number;
         start: number;
@@ -316,6 +319,18 @@ declare namespace park {
         playing: boolean;
         seconds: number;
         centre?: MapPoint;
+    }[];
+    /** The show rides' shows: the ride's place in rides.list() and name, the string keys of its tricks in the order
+     *  the show puts them on and how long they take, whether a show runs now (it starts as the ride sets off), how
+     *  far into it, and the trick going on (null between shows and after the last trick). */
+    function shows(): {
+        ride: RideIndex;
+        name: string;
+        tricks: string[];
+        seconds: Seconds;
+        running: boolean;
+        into: Seconds;
+        trick: string | null;
     }[];
     /** Starts display `index` at once, in place of any playing; false when there is no such display. */
     function startDisplay(index: number): boolean;

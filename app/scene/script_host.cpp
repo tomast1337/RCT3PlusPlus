@@ -5,6 +5,7 @@
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
+#include "park/ride/placement.hpp"
 #include "park/water/fill.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "platform/window.hpp"
@@ -629,13 +630,39 @@ namespace rct3::scene
             {
                 const particles::Display& d = fireworks.displays[i];
                 const bool playing = fireworks.playing && fireworks.playing->display == i;
-                out.push_back({ { "name", d.name }, { "music", d.music_file }, { "months", d.months }, { "start", d.start_minutes }, { "launchers", d.launchers.size() }, { "shots", d.shots.size() }, { "playing", playing }, { "seconds", playing ? fireworks.playing->run.seconds : 0.0f } });
+                const particles::ShotKind kind = particles::main_kind(d);
+                out.push_back({ { "name", d.name }, { "kind", kind == particles::ShotKind::WaterJet ? "water" : kind == particles::ShotKind::Laser ? "lasers" : "fireworks" }, { "length", particles::display_seconds(d) }, { "music", d.music_file }, { "months", d.months }, { "start", d.start_minutes }, { "launchers", d.launchers.size() }, { "shots", d.shots.size() }, { "playing", playing }, { "seconds", playing ? fireworks.playing->run.seconds : 0.0f } });
                 if (playing)
                 {
                     const save::model::TerrainGrid& g = grid_of(park_);
                     const glm::vec3 c = fireworks.playing->centre;
                     out.back()["centre"] = { { "col", (c.x - g.origin_x) / g.tile_size_x }, { "row", (c.z - g.origin_z) / g.tile_size_z } };
                 }
+            }
+            return out;
+        });
+        engine_.define("park.shows", [this](const Json&) {
+            const park::ParkScene& scene = park_of(park_);
+            Json out = Json::array();
+            for (const save::model::RideShow& show : scene.shows)
+            {
+                const auto ride = std::ranges::find(scene.rides.rides, show.ride, [](const save::model::Ride& r) { return r.base.id; });
+                if (ride == scene.rides.rides.end())
+                    continue;
+                const auto index = static_cast<std::size_t>(ride - scene.rides.rides.begin());
+                Json tricks = Json::array();
+                float seconds = 0;
+                for (const std::uint32_t t : show.order)
+                    if (t < show.tricks.size())
+                    {
+                        tricks.push_back(show.tricks[t].name);
+                        seconds += show.tricks[t].seconds;
+                    }
+                const entt::entity e = index < scene.ride_entities.size() ? scene.ride_entities[index] : entt::null;
+                const auto* cycle = e != entt::null ? scene.sim.registry.try_get<simulation::CycleRide>(e) : nullptr;
+                const std::optional<float> into = cycle != nullptr ? simulation::seconds_into_cycle(*cycle) : std::nullopt;
+                const auto moment = into ? rct3::park::ride::show_moment(show, *into) : std::nullopt;
+                out.push_back({ { "ride", index }, { "name", ride->base.name }, { "tricks", std::move(tricks) }, { "seconds", seconds }, { "running", into.has_value() }, { "into", into.value_or(0.0f) }, { "trick", moment ? Json(show.tricks[moment->trick].name) : Json(nullptr) } });
             }
             return out;
         });

@@ -64,9 +64,8 @@ namespace rct3::simulation::park
     /// how many new calendar weeks were started.
     std::int32_t pass_time(ParkState& state, float seconds);
 
-    /// Scores the park for a new week, from its people and rides as they stand, and moves the rating towards
-    /// the score.
-    /// `old_litter`, when given, counts the litter lying long enough to count instead of the saved litter.
-    void rate_week(ParkState& state, const save::model::PeopleModel& people, const save::model::RideModel& rides, std::optional<std::int32_t> old_litter = std::nullopt);
+    /// Scores the park for a new week from `input` (see rating_input), and moves the rating towards the score.
+    /// The guest count, the harder flag and the prize come from the state.
+    void rate_week(ParkState& state, RatingInput input);
 
 } // namespace rct3::simulation::park

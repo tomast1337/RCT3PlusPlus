@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park/rating.hpp"
 
+#include "simulation/awards.hpp"
+#include "simulation/park/state.hpp"
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
@@ -11,6 +13,9 @@ namespace rct3::simulation::park
 
     namespace
     {
+        /// How long a piece of litter must lie, in calendar units, before it counts against the rating: as long
+        /// as the running park counts it after.
+        constexpr float kLitterCountsAfter = kTuning.litter.old.value / kSecondsPerHour * kCalendarUnitsPerHour;
 
         std::int32_t whole(float v) noexcept
         {
@@ -51,16 +56,23 @@ namespace rct3::simulation::park
             p.reliability = whole(kTuning.rating.reliability_share.value * up_sum / count);
 
         p.guests = whole(kTuning.rating.guests_share.value * (1.0f - std::exp(-static_cast<float>(std::max(input.guests, 0)) / kTuning.rating.guests_for_busy)));
-        p.litter = -std::min(kTuning.rating.most_litter, kTuning.rating.per_litter * std::max(input.old_litter, 0));
+        const auto& t = kTuning.rating;
+        p.litter = -std::min(t.most_litter, t.per_litter * std::max(input.old_litter, 0));
+        p.lost_guests = -std::min(t.most_lost_guests, t.per_lost_guest * std::max(input.lost_guests, 0));
+        if (input.since_crash)
+            p.crash = -whole(t.crash.value * std::clamp(1.0f - input.since_crash->value / kTuning.crashes.forgotten.value, 0.0f, 1.0f));
+        p.awards = whole(t.per_award.value * static_cast<float>(input.awards) - t.per_fine.value * static_cast<float>(input.fines));
+        p.prize = whole(std::max(input.prize, 0.0f));
 
-        const std::int32_t sum = p.happiness + p.rides + p.reliability + p.guests + p.litter;
+        const std::int32_t sum = p.happiness + p.rides + p.reliability + p.guests + p.litter + p.lost_guests + p.crash + p.awards;
         if (input.harder)
-            p.harder = -whole(static_cast<float>(std::max(sum, 0)) * kTuning.rating.harder_share.value);
-        p.total = std::clamp(sum + p.harder, 0, kMaxRating);
+            p.harder = -whole(static_cast<float>(std::max(sum, 0)) * t.harder_share.value);
+        // The harder rating leaves a prize whole.
+        p.total = std::clamp(sum + p.harder + p.prize, 0, kMaxRating);
         return p;
     }
 
-    RatingInput rating_input(const save::model::PeopleModel& people, const save::model::RideModel& rides, float now)
+    RatingInput rating_input(const save::model::PeopleModel& people, const save::model::RideModel& rides, const save::model::Awards& awards, float now)
     {
         RatingInput in;
         for (const save::model::Guest& guest : people.guests)
@@ -68,6 +80,7 @@ namespace rct3::simulation::park
             if (!guest.in_park)
                 continue;
             ++in.guests_inside;
+            in.lost_guests += guest.person.state == save::model::PersonState::Lost ? 1 : 0;
             in.happiness += std::clamp(guest.mood_now.happiness, 0.0f, 1.0f);
         }
         for (const save::model::Ride& ride : rides.rides)
@@ -83,7 +96,12 @@ namespace rct3::simulation::park
                 r.intensity = ride.assessment.intensity;
             }
             in.rides.push_back(r);
+            if (ride.base.time_since_crash && ride.base.time_since_crash->value < kTuning.crashes.forgotten.value)
+                in.since_crash = std::min(in.since_crash.value_or(*ride.base.time_since_crash), *ride.base.time_since_crash);
         }
+        for (const auto& month : awards.earned)
+            for (const std::int32_t kind : month)
+                ++(simulation::award_is_fine(kind) ? in.fines : in.awards);
         const float before = now - kLitterCountsAfter;
         in.old_litter = static_cast<std::int32_t>(std::ranges::count_if(people.litter, [before](const save::model::Litter& l) { return l.create_time < before; }));
         return in;

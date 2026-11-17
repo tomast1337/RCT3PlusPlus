@@ -10,7 +10,11 @@
 //    ride is good when it is exciting without being too intense.
 //  - Reliability: how much of the time the rides are running.
 //  - Guests: a busy park scores more, with less to gain from each guest as the park fills.
-//  - Litter: litter left lying takes some off, up to a cap.
+//  - Litter: litter and vomit left lying take some off, up to a cap.
+//  - Lost guests: guests cut off from their party take some off, up to a cap.
+//  - Crash: a ride that crashed lately takes some off, less as the park forgets it.
+//  - Awards: each award of the last months adds some, each fine takes some off.
+//  - Prize: what a prize for winning a scenario level adds, fading week by week.
 //
 // A scenario that asks for a harder rating scales the score down.
 //
@@ -21,6 +25,7 @@
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
+#include "units/units.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -47,7 +52,12 @@ namespace rct3::simulation::park
         std::int32_t guests_inside = 0; ///< Guests walked through, counted one by one
         float happiness = 0;            ///< Their happiness, each 0..1, added up
         std::vector<RideRatingInput> rides;
-        std::int32_t old_litter = 0; ///< Pieces lying long enough to count
+        std::int32_t old_litter = 0; ///< Pieces lying long enough to count, vomit too
+        std::int32_t lost_guests = 0;
+        std::optional<units::Seconds> since_crash; ///< Since the park's latest crash; none once it is forgotten
+        std::int32_t awards = 0;                   ///< Given in the months the park keeps
+        std::int32_t fines = 0;
+        float prize = 0; ///< Points a prize adds (ParkState::rating_bonus)
     };
 
     /// The parts of a score, each already signed as it adds to the total.
@@ -57,21 +67,22 @@ namespace rct3::simulation::park
         std::int32_t rides = 0;
         std::int32_t reliability = 0;
         std::int32_t guests = 0;
-        std::int32_t litter = 0; ///< Zero or negative
+        std::int32_t litter = 0;      ///< Zero or negative
+        std::int32_t lost_guests = 0; ///< Zero or negative
+        std::int32_t crash = 0;       ///< Zero or negative
+        std::int32_t awards = 0;      ///< Awards less fines
+        std::int32_t prize = 0;
         std::int32_t harder = 0; ///< Zero or negative: what the harder rating took off
         std::int32_t total = 0;  ///< The parts added up, kept to 0..kMaxRating
 
         bool operator==(const RatingParts&) const = default;
     };
 
-    /// How long a piece of litter must lie, in calendar units, before it counts against the rating: a day.
-    inline constexpr float kLitterCountsAfter = save::model::GameClock::kUnitsPerWeek / 7;
-
     [[nodiscard]] RatingParts rate_park(const RatingInput& input);
 
-    /// The score's inputs gathered from the park's people and rides at calendar time `now`. The guest count
-    /// and the harder flag are left for the caller.
-    [[nodiscard]] RatingInput rating_input(const save::model::PeopleModel& people, const save::model::RideModel& rides, float now);
+    /// The score's inputs gathered from the park's people, rides and awards at calendar time `now`. The guest
+    /// count, the harder flag and the prize are left for the caller.
+    [[nodiscard]] RatingInput rating_input(const save::model::PeopleModel& people, const save::model::RideModel& rides, const save::model::Awards& awards, float now);
 
     /// The rating after a week: `before` (0..1, none for a park not rated yet) moved part of the way towards
     /// `score` (0..kMaxRating).

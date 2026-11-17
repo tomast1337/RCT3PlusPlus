@@ -577,14 +577,14 @@ int main(int argc, char** argv)
             const auto ride_model = load_rides(*file, index);
             if (!park || !people || !ride_model || !park->park.rating())
                 continue;
-            auto input = rct3::simulation::park::rating_input(*people, *ride_model, park->clock.time);
+            auto input = rct3::simulation::park::rating_input(*people, *ride_model, park->awards, park->clock.time);
             input.guests = static_cast<std::int32_t>(park->park.guests_in_park.latest().value_or(0.0f));
             input.harder = park->park.flags.has(ParkFlag::HarderRating);
             const auto p = rct3::simulation::park::rate_park(input);
             const float saved = *park->park.rating();
             error_sum += std::abs(static_cast<double>(p.total) - static_cast<double>(saved));
             ++compared;
-            out.info("{:<44} saved {:4.0f} ours {:4d}  happy {:3d} rides {:3d} up {:3d} guests {:3d} litter {:4d} harder {:4d}  ({:d} guests, {:d} rides)", std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), static_cast<double>(saved), p.total, p.happiness, p.rides, p.reliability, p.guests, p.litter, p.harder, input.guests, input.rides.size());
+            out.info("{:<44} saved {:4.0f} ours {:4d}  happy {:3d} rides {:3d} up {:3d} guests {:3d} litter {:4d} lost {:4d} crash {:4d} awards {:4d} harder {:4d}  ({:d} guests, {:d} rides)", std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), static_cast<double>(saved), p.total, p.happiness, p.rides, p.reliability, p.guests, p.litter, p.lost_guests, p.crash, p.awards, p.harder, input.guests, input.rides.size());
         }
         if (compared > 0)
             out.info("mean difference {:.0f} over {:d} saves", error_sum / static_cast<double>(compared), compared);

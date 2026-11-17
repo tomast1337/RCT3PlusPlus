@@ -1137,9 +1137,17 @@ namespace rct3::scene::park
             // Each new week rates the park again; weeks run through in one frame are rated once.
             if (weeks > 0)
             {
-                // While the park runs, its own litter counts, and much of it is told to the player.
+                // While the park runs, its own litter and lost guests count, and much litter is told to the player.
                 const std::optional<std::int32_t> old = scene.simulate ? std::optional(simulation::old_litter(scene.sim)) : std::nullopt;
-                profiling::section("Rating", [&] { simulation::park::rate_week(scene.park, scene.people, scene.rides, old); });
+                profiling::section("Rating", [&] {
+                    simulation::park::RatingInput in = simulation::park::rating_input(scene.people, scene.rides, scene.park_model.awards, scene.park.time);
+                    if (old)
+                    {
+                        in.old_litter = *old;
+                        in.lost_guests = static_cast<std::int32_t>(std::ranges::distance(scene.sim.registry.view<const simulation::Lost, const simulation::Visitor>()));
+                    }
+                    simulation::park::rate_week(scene.park, in);
+                });
                 if (old >= kLitterWarning)
                     simulation::park::post(scene.park.messages, { .text_key = "Thought_PI_Park_Litter1" });
                 {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path/decks.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <format>
 
@@ -10,7 +11,7 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::model::TerrainGrid flat_grid(int width, int height)
+    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -22,7 +23,7 @@ namespace
     }
 
     /// A raised path at `height` drawn by object `id + 100`.
-    save::model::PathTile raised(int col, int row, std::int32_t height, std::uint64_t id, std::uint8_t slope = 0, Side heading = Side::kNextRow)
+    save::model::PathTile raised(std::int32_t col, std::int32_t row, std::int32_t height, std::uint64_t id, std::uint8_t slope = 0, Side heading = Side::kNextRow)
     {
         save::model::PathTile p;
         p.id = id;
@@ -143,7 +144,7 @@ TEST_CASE("raised paths take the pieces their neighbours call for")
     CHECK(refresh_decks(paths, objects, g, styles, 0, 0, 4, 4) == 0);
 
     // A second row beside the first makes a wide path: edges along both.
-    for (int col = 1; col <= 3; ++col)
+    for (std::int32_t col = 1; col <= 3; ++col)
         paths.push_back(raised(col, 3, 2, static_cast<std::uint64_t>(10 + col)));
     for (std::size_t i = 3; i < paths.size(); ++i)
     {

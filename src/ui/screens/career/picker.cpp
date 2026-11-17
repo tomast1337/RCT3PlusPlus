@@ -5,6 +5,7 @@
 #include "ui/skin/library.hpp"
 #include "ui/widgets/panel.hpp"
 
+#include <cstdint>
 #include <cstdio>
 #include <format>
 
@@ -125,7 +126,7 @@ namespace rct3::ui::screens::career
 
     private:
         const CareerDialogStyle& style_;
-        int clicks_ = 0;
+        std::int32_t clicks_ = 0;
     };
 
     CareerDialog::CareerDialog(std::string name, const CareerDialogStyle& style, const StringTable& strings)

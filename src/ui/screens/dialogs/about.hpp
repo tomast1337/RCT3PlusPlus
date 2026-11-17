@@ -47,12 +47,12 @@ namespace rct3::ui::screens::dialogs
         Kind kind = Kind::Name;
         Align align = Align::Start; ///< Which edge the line is moved in from; Centre for headings
         float inset = 0;            ///< From that edge, as a fraction of the roll's width
-        int gaps = 0;               ///< Credit gaps above the line
-        int row = 0;                ///< Lines above the line
+        std::int32_t gaps = 0;      ///< Credit gaps above the line
+        std::int32_t row = 0;       ///< Lines above the line
     };
 
     /// Which add-on packs are installed, by the game's numbering (0 and 1).
-    using AddOnPacks = std::vector<int>;
+    using AddOnPacks = std::vector<std::int32_t>;
 
     /// The game's name and the copyright lines, as the info page shows them.
     [[nodiscard]] std::vector<std::u16string> about_info_lines(const StringTable& strings);
@@ -62,7 +62,7 @@ namespace rct3::ui::screens::dialogs
 
     /// Every credit line in order: the packs in `packs` that have credits, newest first, then the base game.
     /// The insets come from `random`.
-    [[nodiscard]] std::vector<CreditLine> credit_lines(const StringTable& strings, std::span<const int> packs, random::RandomState& random);
+    [[nodiscard]] std::vector<CreditLine> credit_lines(const StringTable& strings, std::span<const std::int32_t> packs, random::RandomState& random);
 
     struct AboutWindowStyle
     {

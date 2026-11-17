@@ -4,6 +4,7 @@
 #include "simulation/tuning.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <doctest/doctest.h>
 
@@ -138,7 +139,7 @@ TEST_CASE("the budget is paid in parts and booked as research spending")
     CHECK(lab.research.spent == units::Money { 667 });
     CHECK(lab.research.current.has_value());
     // A whole month comes to the budget.
-    for (int part = 1; part < 30; ++part)
+    for (std::int32_t part = 1; part < 30; ++part)
         lab.pass(12);
     CHECK(std::abs(lab.park.cash->value - (100000 - 20000)) <= 667);
 }
@@ -243,7 +244,7 @@ TEST_CASE("the next item is drawn from the areas the player cares for")
     }
     SUBCASE("both areas are drawn over many parks")
     {
-        int shops = 0;
+        std::int32_t shops = 0;
         for (std::uint64_t seed = 1; seed <= 200; ++seed)
         {
             Lab lab;

@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <charconv>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <expected>
@@ -314,16 +315,16 @@ namespace
             const std::uint8_t* pb = &b.pixels[i];
             if (is_background(pa) && is_background(pb))
                 continue;
-            int sum = 0;
+            std::int32_t sum = 0;
             for (std::size_t c = 0; c < 3; ++c)
-                sum += std::abs(int { pa[c] } - int { pb[c] });
+                sum += std::abs(std::int32_t { pa[c] } - std::int32_t { pb[c] });
             const double mean = sum / 3.0;
             total += mean;
             ++score.pixels;
             if (mean > 64)
                 ++far;
             // Brightened four times, red where the coded look is lighter, blue where darker, so the eye finds it.
-            const int signed_sum = (int { pb[0] } + pb[1] + pb[2]) - (int { pa[0] } + pa[1] + pa[2]);
+            const std::int32_t signed_sum = (std::int32_t { pb[0] } + pb[1] + pb[2]) - (std::int32_t { pa[0] } + pa[1] + pa[2]);
             const auto level = static_cast<std::uint8_t>(std::min(255.0, mean * 4));
             diff.pixels[i] = signed_sum > 0 ? level : level / 3;
             diff.pixels[i + 1] = level / 3;
@@ -391,7 +392,7 @@ namespace
         return error == std::errc { } && end == text.data() + text.size() && out > 0;
     }
 
-    int usage(const char* argv0)
+    std::int32_t usage(const char* argv0)
     {
         out.error("usage: {} [--out DIR] [--scale S] [--threshold T] [--game PATH] [--list] [PANEL...]", argv0);
         return 2;
@@ -409,7 +410,7 @@ int main(int argc, char** argv)
     std::vector<std::string_view> wanted;
     const std::vector<PanelCase> cases = panel_cases();
 
-    for (int i = 1; i < argc; ++i)
+    for (std::int32_t i = 1; i < argc; ++i)
     {
         const std::string_view arg = argv[i];
         const bool has_value = i + 1 < argc;

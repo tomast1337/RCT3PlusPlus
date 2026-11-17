@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <bit>
+#include <cstdint>
 #include <cstdlib>
 #include <tuple>
 #include <utility>
@@ -15,9 +16,9 @@ namespace rct3::park::track
         /// A plain candidate as the picks see it.
         struct Offer
         {
-            int curve = 0;
-            int slope = 0;
-            int bank = 0;
+            std::int32_t curve = 0;
+            std::int32_t slope = 0;
+            std::int32_t bank = 0;
             std::uint8_t toggles = 0;
             LaidPiece laid;
         };
@@ -52,16 +53,16 @@ namespace rct3::park::track
         }
 
         /// How many toggles an offer has other than asked.
-        int toggles_apart(const Offer& o, const TrackChoice& c)
+        std::int32_t toggles_apart(const Offer& o, const TrackChoice& c)
         {
-            return std::popcount(static_cast<unsigned>(o.toggles ^ c.toggles));
+            return std::popcount(static_cast<std::uint32_t>(o.toggles ^ c.toggles));
         }
 
         /// How far an offer is from the picks: steps on each pick, changed toggles counting less than any step,
         /// then picks nearer level and straight first.
         auto distance(const Offer& o, const TrackChoice& c)
         {
-            const int steps = std::abs(o.curve - c.curve) + std::abs(o.slope - c.slope) + std::abs(o.bank - c.bank);
+            const std::int32_t steps = std::abs(o.curve - c.curve) + std::abs(o.slope - c.slope) + std::abs(o.bank - c.bank);
             return std::make_tuple(steps, toggles_apart(o, c), std::abs(o.curve) + std::abs(o.slope) + std::abs(o.bank));
         }
 
@@ -111,7 +112,7 @@ namespace rct3::park::track
                     continue;
                 o.named.push_back(c);
             }
-            const auto apart = [&](const LaidPiece& c) { return std::popcount(static_cast<unsigned>(pieces[c.index].toggles ^ choice.toggles)); };
+            const auto apart = [&](const LaidPiece& c) { return std::popcount(static_cast<std::uint32_t>(pieces[c.index].toggles ^ choice.toggles)); };
             std::ranges::stable_sort(o.named.begin() + static_cast<std::ptrdiff_t>(from), o.named.end(), { }, apart);
         }
         return o;
@@ -131,10 +132,10 @@ namespace rct3::park::track
         return best != nullptr ? std::optional { best->laid } : std::nullopt;
     }
 
-    TrackChoice pick_value(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, ChoiceAxis axis, int value)
+    TrackChoice pick_value(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, ChoiceAxis axis, std::int32_t value)
     {
         choice.named.reset();
-        const auto on_axis = [axis](const auto& picks) -> int {
+        const auto on_axis = [axis](const auto& picks) -> std::int32_t {
             switch (axis)
             {
                 case ChoiceAxis::Slope:

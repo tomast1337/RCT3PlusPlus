@@ -14,6 +14,7 @@
 #include "core/maybe.hpp"
 #include "ui/string_table.hpp"
 
+#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <string>
@@ -26,7 +27,7 @@ namespace rct3::ui
     struct SourcePlace
     {
         std::string file; ///< Relative to the root scanned, '/' separated
-        int line = 0;
+        std::int32_t line = 0;
     };
 
     /// A key, and where the code names it.

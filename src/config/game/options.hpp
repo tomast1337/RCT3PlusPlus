@@ -161,7 +161,7 @@ namespace rct3::config::game
         { GameOption::RideDetail, GameOption::RideDistance },
     } };
 
-    inline constexpr int kCustomQuality = 5;
+    inline constexpr std::int32_t kCustomQuality = 5;
 
     class GameOptions
     {
@@ -178,9 +178,9 @@ namespace rct3::config::game
         {
             return get(option) != 0;
         }
-        [[nodiscard]] int choice(GameOption option) const
+        [[nodiscard]] std::int32_t choice(GameOption option) const
         {
-            return static_cast<int>(get(option));
+            return static_cast<std::int32_t>(get(option));
         }
         /// Sets the value, kept in range and snapped to a whole step.
         void set(GameOption option, float value);

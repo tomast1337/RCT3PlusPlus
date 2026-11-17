@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 
 namespace rct3::park::water
@@ -16,7 +17,7 @@ namespace rct3::park::water
     namespace
     {
 
-        constexpr int kSteps = 4; ///< Samples to each part of the splines
+        constexpr std::int32_t kSteps = 4; ///< Samples to each part of the splines
 
         glm::vec3 vec(const std::array<float, 3>& p)
         {
@@ -33,7 +34,7 @@ namespace rct3::park::water
         std::vector<glm::vec3> rights;
         for (std::size_t s = 0; s + 1 < left.nodes.size(); ++s)
         {
-            for (int k = s == 0 ? 0 : 1; k <= kSteps; ++k)
+            for (std::int32_t k = s == 0 ? 0 : 1; k <= kSteps; ++k)
             {
                 const float t = static_cast<float>(k) / kSteps;
                 lefts.push_back(vec(ovl::spline_point(left, s, t)));

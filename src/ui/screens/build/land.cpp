@@ -5,6 +5,7 @@
 #include "ui/shape.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <format>
 
 namespace rct3::ui::screens::build
@@ -37,7 +38,7 @@ namespace rct3::ui::screens::build
         visible = false;
     }
 
-    void LandPanel::show(std::vector<LandTab> tabs, LandPick chosen, int size, int largest)
+    void LandPanel::show(std::vector<LandTab> tabs, LandPick chosen, std::int32_t size, std::int32_t largest)
     {
         for (widgets::Button* b : tabs_)
             (void)remove(*b);

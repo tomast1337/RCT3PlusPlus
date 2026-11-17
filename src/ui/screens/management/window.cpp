@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 
 namespace rct3::ui::screens::management
@@ -368,7 +369,7 @@ namespace rct3::ui::screens::management
         shown_row_ = picked_row();
     }
 
-    std::optional<int> ManagementWindow::control_value(int id) const
+    std::optional<std::int32_t> ManagementWindow::control_value(std::int32_t id) const
     {
         for (const Control& c : controls_)
         {
@@ -377,7 +378,7 @@ namespace rct3::ui::screens::management
             if (const auto* n = dynamic_cast<const widgets::Spinner*>(c.widget))
                 return n->value();
             if (const auto* b = dynamic_cast<const widgets::Slider*>(c.widget))
-                return static_cast<int>(std::lround(b->value()));
+                return static_cast<std::int32_t>(std::lround(b->value()));
         }
         return std::nullopt;
     }
@@ -589,7 +590,7 @@ namespace rct3::ui::screens::management
             if (auto* n = dynamic_cast<widgets::Spinner*>(c.widget); n != nullptr && n->take_change())
                 change_now_ = info::InfoChange { c.control.id, n->value(), 0, { } };
             else if (auto* b = dynamic_cast<widgets::Slider*>(c.widget); b != nullptr && b->take_change())
-                change_now_ = info::InfoChange { c.control.id, static_cast<int>(std::lround(b->value())), 0, { } };
+                change_now_ = info::InfoChange { c.control.id, static_cast<std::int32_t>(std::lround(b->value())), 0, { } };
         }
         if (table_->take_activate() && table_->selected())
             row_now_ = table_->rows.at(*table_->selected()).id;

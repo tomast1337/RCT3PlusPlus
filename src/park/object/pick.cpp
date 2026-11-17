@@ -4,6 +4,7 @@
 #include "park/object/placement.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <string>
@@ -18,7 +19,7 @@ namespace rct3::park::object
         /// The length of the steps a line of sight is followed in over the ground, in park units.
         constexpr float kGroundStep = 0.5f;
         /// Halvings of the last step to find where the ground is met.
-        constexpr int kGroundRefinements = 12;
+        constexpr std::int32_t kGroundRefinements = 12;
 
         /// Above (true) or below the ground at `p`; off the map counts as above.
         bool above(const save::model::TerrainGrid& grid, glm::vec3 p)
@@ -50,15 +51,15 @@ namespace rct3::park::object
     {
         if (grid.empty() || !above(grid, ray.origin))
             return std::nullopt;
-        const auto steps = static_cast<int>(reach / kGroundStep);
-        for (int step = 1; step <= steps; ++step)
+        const auto steps = static_cast<std::int32_t>(reach / kGroundStep);
+        for (std::int32_t step = 1; step <= steps; ++step)
         {
             const float t = static_cast<float>(step) * kGroundStep;
             if (above(grid, ray.origin + ray.direction * t))
                 continue;
             float from = t - kGroundStep;
             float to = t;
-            for (int i = 0; i < kGroundRefinements; ++i)
+            for (std::int32_t i = 0; i < kGroundRefinements; ++i)
             {
                 const float middle = (from + to) / 2;
                 (above(grid, ray.origin + ray.direction * middle) ? from : to) = middle;
@@ -72,7 +73,7 @@ namespace rct3::park::object
     {
         float enter = 0;
         float leave = std::numeric_limits<float>::max();
-        for (int axis = 0; axis < 3; ++axis)
+        for (std::int32_t axis = 0; axis < 3; ++axis)
         {
             const float o = ray.origin[axis];
             const float d = ray.direction[axis];
@@ -136,7 +137,7 @@ namespace rct3::park::object
             box.high = shape->second->second;
             box.park_low = glm::vec3(std::numeric_limits<float>::max());
             box.park_high = glm::vec3(std::numeric_limits<float>::lowest());
-            for (int c = 0; c < 8; ++c)
+            for (std::int32_t c = 0; c < 8; ++c)
             {
                 const glm::vec3 corner { (c & 1) != 0 ? box.high.x : box.low.x, (c & 2) != 0 ? box.high.y : box.low.y, (c & 4) != 0 ? box.high.z : box.low.z };
                 const glm::vec3 at = glm::vec3(transform * glm::vec4(corner, 1.0f));
@@ -184,7 +185,7 @@ namespace rct3::park::object
         const auto own = fitted.find(object.id);
         const glm::mat4 transform = own != fitted.end() ? own->second : object_transform(object, static_cast<Positioning>(model->second.positioning), grid, model->second.squares, model->second.ground_height);
         std::vector<glm::vec3> corners;
-        for (int i = 0; i < 8; ++i)
+        for (std::int32_t i = 0; i < 8; ++i)
         {
             const glm::vec3 local { (i & 1) != 0 ? box->second.x : box->first.x, (i & 2) != 0 ? box->second.y : box->first.y, (i & 4) != 0 ? box->second.z : box->first.z };
             corners.emplace_back(transform * glm::vec4(local, 1.0f));

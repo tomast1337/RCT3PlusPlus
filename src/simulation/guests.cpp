@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <limits>
 #include <numeric>
@@ -963,7 +964,7 @@ namespace rct3::simulation
                     const units::Share energy = r.get<Mood>(followers[i]).energy;
                     stride.gait = behind || lead.gait == Gait::Run ? Gait::Run : Gait::Walk;
                     float left = (behind ? gait_pace(stride.speed, energy, Gait::Run).value : kTuning.walking.catch_up.value * stride.speed.value) * dt;
-                    for (int tiles = 0; tiles < 3 && left > 0; ++tiles)
+                    for (std::int32_t tiles = 0; tiles < 3 && left > 0; ++tiles)
                     {
                         const bool in_step = stride.from == lead.from && stride.to == lead.to;
                         if (in_step || (stride.from != stride.to && stride.progress.value < 1))
@@ -1022,7 +1023,7 @@ namespace rct3::simulation
             auto& bodies = world.buffers.bodies;
             auto& steps = world.buffers.steps;
             // Cells of one column in a row of keys, so a cell and those above and below it are one run.
-            const auto cell_key = [](int col, int row) { return std::int64_t { col } * (std::int64_t { 1 } << 32) + row; };
+            const auto cell_key = [](std::int32_t col, std::int32_t row) { return std::int64_t { col } * (std::int64_t { 1 } << 32) + row; };
             bodies.clear();
             for (const auto [e, errand, stride, pose] : r.view<const Errand, const Stride, const Pose>().each())
             {
@@ -1035,7 +1036,7 @@ namespace rct3::simulation
             std::ranges::sort(bodies, [](const auto& a, const auto& b) { return std::tie(a.cell, a.who) < std::tie(b.cell, b.who); });
             steps.assign(bodies.size(), glm::vec2 { 0.0f });
             const float most = 2 * kTuning.walking.step_aside.value * dt; // Every second tick
-            const int colour = static_cast<int>(world.tick % 2);
+            const std::int32_t colour = static_cast<std::int32_t>(world.tick % 2);
             share(workers, bodies.size(), [&](std::size_t begin, std::size_t end) {
                 for (std::size_t i = begin; i < end; ++i)
                 {
@@ -1044,7 +1045,7 @@ namespace rct3::simulation
                     if (((cell.x + cell.y) & 1) != colour)
                         continue;
                     glm::vec2 away { 0.0f };
-                    for (int dc = -1; dc <= 1; ++dc)
+                    for (std::int32_t dc = -1; dc <= 1; ++dc)
                     {
                         const std::int64_t last = cell_key(cell.x + dc, cell.y + 1);
                         for (auto it = std::ranges::lower_bound(bodies, cell_key(cell.x + dc, cell.y - 1), { }, &StepBuffers::Body::cell); it != bodies.end() && it->cell <= last; ++it)

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <glm/geometric.hpp>
 
 namespace rct3::park
@@ -19,7 +20,7 @@ namespace rct3::park
         }
 
         /// The tile's corners in world space, in the grid's corner order.
-        std::array<glm::vec3, 4> corners(const save::model::TerrainGrid& grid, int col, int row)
+        std::array<glm::vec3, 4> corners(const save::model::TerrainGrid& grid, std::int32_t col, std::int32_t row)
         {
             const save::model::TerrainCell& c = grid.at(col, row);
             const float x0 = grid.world_x(col), x1 = grid.world_x(col + 1), z0 = grid.world_z(row), z1 = grid.world_z(row + 1);
@@ -45,9 +46,9 @@ namespace rct3::park
     TerrainMesh grid_lines(const save::model::TerrainGrid& grid, glm::vec4 colour)
     {
         TerrainMesh mesh;
-        for (int row = 0; row < grid.height; ++row)
+        for (std::int32_t row = 0; row < grid.height; ++row)
         {
-            for (int col = 0; col < grid.width; ++col)
+            for (std::int32_t col = 0; col < grid.width; ++col)
             {
                 const auto c = corners(grid, col, row);
                 strip(mesh, c[0], c[1], colour);
@@ -67,9 +68,9 @@ namespace rct3::park
         TerrainMesh mesh;
         if (step <= 0)
             return mesh;
-        for (int row = 0; row < grid.height; ++row)
+        for (std::int32_t row = 0; row < grid.height; ++row)
         {
-            for (int col = 0; col < grid.width; ++col)
+            for (std::int32_t col = 0; col < grid.width; ++col)
             {
                 const auto c = corners(grid, col, row);
                 for (const std::array<glm::vec3, 3> t : { std::array { c[0], c[1], c[2] }, std::array { c[3], c[2], c[1] } })
@@ -78,7 +79,7 @@ namespace rct3::park
                     const float high = std::max({ t[0].y, t[1].y, t[2].y });
                     // Each level strictly between the lowest and highest corners. A corner on a level counts as
                     // under it, so a level crosses exactly two edges, and ground lying flat on one draws no line.
-                    for (auto k = static_cast<int>(std::floor(low / step + 1)); static_cast<float>(k) * step < high; ++k)
+                    for (auto k = static_cast<std::int32_t>(std::floor(low / step + 1)); static_cast<float>(k) * step < high; ++k)
                     {
                         const float level = static_cast<float>(k) * step;
                         std::array<glm::vec3, 2> ends { };

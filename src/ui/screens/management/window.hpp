@@ -28,6 +28,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <optional>
 #include <string>
@@ -164,7 +165,7 @@ namespace rct3::ui::screens::management
             return std::exchange(choice_now_, std::nullopt);
         }
         /// Where the page's control `id` stands now, a number's or a bar's, perhaps moved since the page came.
-        [[nodiscard]] std::optional<int> control_value(int id) const;
+        [[nodiscard]] std::optional<std::int32_t> control_value(std::int32_t id) const;
         /// The control the player changed since the last call, the last one.
         [[nodiscard]] std::optional<info::InfoChange> take_change()
         {

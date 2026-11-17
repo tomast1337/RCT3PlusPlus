@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scripting/script_engine.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::scripting;
@@ -36,9 +37,9 @@ TEST_CASE("helpers evaluated first are there for the script")
 TEST_CASE("a script waits the frames it asks for")
 {
     ScriptEngine engine;
-    int reached = 0;
+    std::int32_t reached = 0;
     engine.define("reach", [&](const Json& a) {
-        reached = a[0].get<int>();
+        reached = a[0].get<std::int32_t>();
         return Json(nullptr);
     });
     engine.run("reach(1); await frames(2); reach(2);", "wait.js");

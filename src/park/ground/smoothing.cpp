@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <glm/geometric.hpp>
 #include <optional>
 #include <utility>
@@ -43,9 +44,9 @@ namespace rct3::park::ground
     float mean_height(const save::model::TerrainGrid& grid, glm::vec2 middle, float reach)
     {
         float sum = 0;
-        int count = 0;
-        for (int r = 0; r < grid.height; ++r)
-            for (int c = 0; c < grid.width; ++c)
+        std::int32_t count = 0;
+        for (std::int32_t r = 0; r < grid.height; ++r)
+            for (std::int32_t c = 0; c < grid.width; ++c)
                 for (std::size_t k = 0; k < 4; ++k)
                     if (within(glm::vec2 { c, r } + kCornerAt[k], middle, reach))
                     {
@@ -66,16 +67,16 @@ namespace rct3::park::ground
             const float by = std::clamp((to - from) * std::min(weight * std::max(share, 0.0f), 1.0f), -weight * most, weight * most);
             return weight > 0 && std::abs(to - from - by) < kSettled ? to : from + by;
         };
-        const int c0 = std::max(static_cast<int>(std::floor(middle.x - reach)), 0);
-        const int c1 = std::min(static_cast<int>(std::ceil(middle.x + reach)), grid.width);
-        const int r0 = std::max(static_cast<int>(std::floor(middle.y - reach)), 0);
-        const int r1 = std::min(static_cast<int>(std::ceil(middle.y + reach)), grid.height);
+        const std::int32_t c0 = std::max(static_cast<std::int32_t>(std::floor(middle.x - reach)), 0);
+        const std::int32_t c1 = std::min(static_cast<std::int32_t>(std::ceil(middle.x + reach)), grid.width);
+        const std::int32_t r0 = std::max(static_cast<std::int32_t>(std::floor(middle.y - reach)), 0);
+        const std::int32_t r1 = std::min(static_cast<std::int32_t>(std::ceil(middle.y + reach)), grid.height);
         float moved = 0;
 
         if (tool == GroundSmoothing::TileEdges)
         {
-            for (int r = r0; r < r1; ++r)
-                for (int c = c0; c < c1; ++c)
+            for (std::int32_t r = r0; r < r1; ++r)
+                for (std::int32_t c = c0; c < c1; ++c)
                 {
                     const float weight = weight_at(glm::vec2 { c + 0.5f, r + 0.5f }, middle, reach);
                     if (!grid.contains(c, r) || !free({ c, r }) || weight <= 0)
@@ -92,39 +93,39 @@ namespace rct3::park::ground
             return moved;
         }
 
-        const auto corner = [&](int c, int r, int dc, int dr) -> std::optional<float&> {
+        const auto corner = [&](std::int32_t c, std::int32_t r, std::int32_t dc, std::int32_t dr) -> std::optional<float&> {
             // The tile whose corner (1 - dc, 1 - dr) is point (c, r).
             if (!grid.contains(c - 1 + dc, r - 1 + dr))
                 return std::nullopt;
             return grid.at(c - 1 + dc, r - 1 + dr).corners[static_cast<std::size_t>((1 - dc) + 2 * (1 - dr))];
         };
         // The tiles round the points worked on as they are, for averaging: a pass reads none of its own changes.
-        const int t0 = c0 - 2;
-        const int across = c1 - c0 + 4;
+        const std::int32_t t0 = c0 - 2;
+        const std::int32_t across = c1 - c0 + 4;
         std::vector<std::array<float, 4>> was;
         if (tool == GroundSmoothing::Average)
         {
             was.reserve(static_cast<std::size_t>(across) * static_cast<std::size_t>(r1 - r0 + 4));
-            for (int r = r0 - 2; r <= r1 + 1; ++r)
-                for (int c = t0; c <= c1 + 1; ++c)
+            for (std::int32_t r = r0 - 2; r <= r1 + 1; ++r)
+                for (std::int32_t c = t0; c <= c1 + 1; ++c)
                     was.push_back(grid.contains(c, r) ? grid.at(c, r).corners : std::array<float, 4> { });
         }
         // Tile (tc, tr)'s height at point (pc, pr), one of its corners.
-        const auto old = [&](int tc, int tr, int pc, int pr) { return was[static_cast<std::size_t>(tr - r0 + 2) * static_cast<std::size_t>(across) + static_cast<std::size_t>(tc - t0)][static_cast<std::size_t>((pc - tc) + 2 * (pr - tr))]; };
+        const auto old = [&](std::int32_t tc, std::int32_t tr, std::int32_t pc, std::int32_t pr) { return was[static_cast<std::size_t>(tr - r0 + 2) * static_cast<std::size_t>(across) + static_cast<std::size_t>(tc - t0)][static_cast<std::size_t>((pc - tc) + 2 * (pr - tr))]; };
         // The mean of the four points next to (pc, pr) as tile (tc, tr)'s ground has them: each from the tiles
         // round the point that agree with this one there and reach that way. Where none does, past a cliff, the
         // tile's own height stands in, so each side of a cliff is averaged by itself and stays in one piece.
-        const auto averaged = [&](int tc, int tr, int pc, int pr) {
+        const auto averaged = [&](std::int32_t tc, std::int32_t tr, std::int32_t pc, std::int32_t pr) {
             const float here = old(tc, tr, pc, pr);
             float sum = 0;
             for (const auto& [dc, dr] : { std::pair { -1, 0 }, std::pair { 1, 0 }, std::pair { 0, -1 }, std::pair { 0, 1 } })
             {
-                const int qc = pc + dc;
-                const int qr = pr + dr;
+                const std::int32_t qc = pc + dc;
+                const std::int32_t qr = pr + dr;
                 float side = 0;
-                int count = 0;
-                for (int nr = pr - 1; nr <= pr; ++nr)
-                    for (int nc = pc - 1; nc <= pc; ++nc)
+                std::int32_t count = 0;
+                for (std::int32_t nr = pr - 1; nr <= pr; ++nr)
+                    for (std::int32_t nc = pc - 1; nc <= pc; ++nc)
                         if (grid.contains(nc, nr) && qc >= nc && qc <= nc + 1 && qr >= nr && qr <= nr + 1 && std::abs(old(nc, nr, pc, pr) - here) < kSame)
                         {
                             side += old(nc, nr, qc, qr);
@@ -134,8 +135,8 @@ namespace rct3::park::ground
             }
             return sum / 4;
         };
-        for (int r = r0; r <= r1; ++r)
-            for (int c = c0; c <= c1; ++c)
+        for (std::int32_t r = r0; r <= r1; ++r)
+            for (std::int32_t c = c0; c <= c1; ++c)
             {
                 const float weight = weight_at(glm::vec2 { c, r }, middle, reach);
                 if (weight <= 0)
@@ -144,9 +145,9 @@ namespace rct3::park::ground
                 float low = 1e9f;
                 float high = -1e9f;
                 float sum = 0;
-                int count = 0;
-                for (int dr = 0; dr < 2; ++dr)
-                    for (int dc = 0; dc < 2; ++dc)
+                std::int32_t count = 0;
+                for (std::int32_t dr = 0; dr < 2; ++dr)
+                    for (std::int32_t dc = 0; dc < 2; ++dc)
                         if (const auto h = corner(c, r, dc, dr))
                         {
                             all_free = all_free && free({ c - 1 + dc, r - 1 + dr });
@@ -160,8 +161,8 @@ namespace rct3::park::ground
                 // Roughening moves the tiles' corners here by one amount, a cliff between them keeping its height.
                 std::uint64_t mix = seed * (grid.cells.size() + 1) + static_cast<std::size_t>(r) * static_cast<std::size_t>(grid.width + 1) + static_cast<std::size_t>(c); // One draw per point and pass
                 const float roll = static_cast<float>(random::split_mix(mix) >> 40) / static_cast<float>(1u << 24);
-                for (int dr = 0; dr < 2; ++dr)
-                    for (int dc = 0; dc < 2; ++dc)
+                for (std::int32_t dr = 0; dr < 2; ++dr)
+                    for (std::int32_t dc = 0; dc < 2; ++dc)
                     {
                         const auto h = corner(c, r, dc, dr);
                         if (!h)

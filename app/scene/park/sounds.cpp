@@ -15,6 +15,7 @@
 #include "simulation/swimming.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <format>
 #include <glm/geometric.hpp>
 #include <span>
@@ -339,7 +340,7 @@ namespace rct3::scene::park
         sounds.under = std::move(under);
 
         // Crashed trains' wrecks: heard landing, softer, and blowing up, and their fires burning where they lie.
-        std::map<std::tuple<entt::entity, std::size_t, std::size_t>, std::pair<int, simulation::WreckState>> wrecks_heard;
+        std::map<std::tuple<entt::entity, std::size_t, std::size_t>, std::pair<std::int32_t, simulation::WreckState>> wrecks_heard;
         std::map<entt::entity, audio::VoiceHandle> fires;
         const auto crash_heard = [&](glm::vec3 at, float level) { return audio::PlayParams { .volume = kCrashLevel * level, .at = at, .near = kCrashNear.value, .far = kCrashFar }; };
         // By ride, or none for the construction panel's test train, the wrecks of each train.

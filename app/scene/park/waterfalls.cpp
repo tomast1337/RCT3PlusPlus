@@ -4,6 +4,8 @@
 #include "logging/log.hpp"
 #include "park/camera.hpp"
 
+#include <cstdint>
+
 namespace rct3::scene::park
 {
 
@@ -80,7 +82,7 @@ namespace rct3::scene::park
             draw.light = light;
             if (behind)
                 draw.extra_textures = { render::TextureHandle { }, water.behind, device.depth_texture(water.behind), render::TextureHandle { } };
-            draw.water = { .eye = eye, .time = time, .near = rct3::park::kNear, .far = rct3::park::kFar, .refraction = behind, .fall_part = static_cast<int>(part), .fall_detail = static_cast<int>(falls.detail) };
+            draw.water = { .eye = eye, .time = time, .near = rct3::park::kNear, .far = rct3::park::kFar, .refraction = behind, .fall_part = static_cast<std::int32_t>(part), .fall_detail = static_cast<std::int32_t>(falls.detail) };
             device.draw(draw);
         }
     }

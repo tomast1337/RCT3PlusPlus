@@ -41,11 +41,11 @@ namespace rct3::park
 
     struct ModelLight
     {
-        glm::vec3 position { 0.0f };          ///< Model space
-        glm::vec3 colour { 1.0f };            ///< 0 to 1 a channel
-        std::optional<int> colour_slot;       ///< When set, the item's colour in this slot instead of `colour`
-        float radius = 0;                     ///< How far it reaches, world units
-        std::optional<std::int32_t> bone { }; ///< The bone that carries it, for a bone shape
+        glm::vec3 position { 0.0f };             ///< Model space
+        glm::vec3 colour { 1.0f };               ///< 0 to 1 a channel
+        std::optional<std::int32_t> colour_slot; ///< When set, the item's colour in this slot instead of `colour`
+        float radius = 0;                        ///< How far it reaches, world units
+        std::optional<std::int32_t> bone { };    ///< The bone that carries it, for a bone shape
     };
 
     /// The lights `places` mark, in light number order.

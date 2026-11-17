@@ -117,7 +117,7 @@ namespace
         Bytes p;
         p.u32(0xEFEFEFEFu);
         for (const char c : text)
-            p.u16(static_cast<std::uint16_t>(static_cast<unsigned char>(c)));
+            p.u16(static_cast<std::uint16_t>(static_cast<std::uint8_t>(c)));
         return { { n, "string", 0, { } }, Bytes().blob(p) };
     }
     Field fgraph(const std::string& n, const std::vector<float>& values, std::uint32_t capacity = 64)
@@ -443,14 +443,14 @@ TEST_CASE("park: series push drops the oldest beyond capacity")
 {
     Series s;
     s.capacity = 3;
-    for (int i = 1; i <= 5; ++i)
+    for (std::int32_t i = 1; i <= 5; ++i)
         s.push(static_cast<float>(i));
     REQUIRE(s.samples.size() == 3);
     CHECK(s.samples.front() == 5.0f); // Newest first
     CHECK(s.samples.back() == 3.0f);
     CHECK(s.latest().value() == 5.0f);
     Series unbounded;
-    for (int i = 0; i < 100; ++i)
+    for (std::int32_t i = 0; i < 100; ++i)
         unbounded.push(1.0f);
     CHECK(unbounded.samples.size() == 100);
 }

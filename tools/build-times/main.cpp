@@ -105,7 +105,7 @@ namespace
         const fs::path log_path = out_dir / "last_run.log";
         const auto start = std::chrono::system_clock::now();
         const auto t0 = std::chrono::steady_clock::now();
-        int status = 0;
+        std::int32_t status = 0;
         {
             std::jthread sampler([&] {
                 while (!done)
@@ -124,7 +124,7 @@ namespace
             std::println(stderr, "{} failed:\n{}", cmd, log.substr(log.size() > 4000 ? log.size() - 4000 : 0));
             std::exit(1);
         }
-        int compiles = 0;
+        std::int32_t compiles = 0;
         std::istringstream lines(log);
         for (std::string line; std::getline(lines, line);)
             compiles += line.contains("CMD:") && line.contains(" -c ") ? 1 : 0;
@@ -155,9 +155,9 @@ namespace
         std::ofstream(out_dir / "results.json") << results.dump(1) << "\n";
     }
 
-    std::vector<std::pair<std::string, int>> most_common(const std::map<std::string, int>& counts)
+    std::vector<std::pair<std::string, std::int32_t>> most_common(const std::map<std::string, std::int32_t>& counts)
     {
-        std::vector<std::pair<std::string, int>> sorted(counts.begin(), counts.end());
+        std::vector<std::pair<std::string, std::int32_t>> sorted(counts.begin(), counts.end());
         std::ranges::stable_sort(sorted, [](const auto& a, const auto& b) { return a.second > b.second; });
         return sorted;
     }
@@ -171,12 +171,12 @@ namespace
 int main(int argc, char** argv)
 {
     std::set<std::string> steps;
-    int jobs = 4;
-    int repeat = 2;
-    int ci_runs = 10;
+    std::int32_t jobs = 4;
+    std::int32_t repeat = 2;
+    std::int32_t ci_runs = 10;
     bool ci = true;
     fs::path out_dir = "build/build-times";
-    for (int i = 1; i < argc; ++i)
+    for (std::int32_t i = 1; i < argc; ++i)
     {
         const std::string_view a = argv[i];
         const bool has_value = i + 1 < argc;
@@ -233,7 +233,7 @@ int main(int argc, char** argv)
     }
 
     // 1. Clean builds. The app is also built from clean, so neither profits from the other's objects.
-    for (int i = 0; i < (steps.contains("clean") ? repeat : 0); ++i)
+    for (std::int32_t i = 0; i < (steps.contains("clean") ? repeat : 0); ++i)
         for (const std::string target : { "test", "app" })
         {
             fs::remove_all("build/debug");
@@ -274,10 +274,10 @@ int main(int argc, char** argv)
     //    of our files in the unit names. The .d files leave system headers out, so the standard headers only those pull
     //    in are not counted. Then how many of our files #include each own header by name.
     const auto own_file = [](std::string_view w) { return std::ranges::any_of(kOwnDirs, [&](std::string_view d) { return w.starts_with(d); }); };
-    std::map<std::string, int> own;
-    std::map<std::string, int> standard;
-    std::map<std::string, int> direct;
-    int tus = 0;
+    std::map<std::string, std::int32_t> own;
+    std::map<std::string, std::int32_t> standard;
+    std::map<std::string, std::int32_t> direct;
+    std::int32_t tus = 0;
     {
         const std::regex angled(R"(^\s*#\s*include\s*<([^>]+)>)", std::regex::multiline);
         std::map<std::string, std::set<std::string>> named; // own file -> standard headers it names

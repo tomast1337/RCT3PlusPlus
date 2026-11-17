@@ -154,7 +154,7 @@ namespace rct3::park::path
     /// its neighbours call for, changing the symbol and rotation of the object that draws it. The pieces come
     /// from the path's style among `styles`. A path does not join one across a wall of `walls`. Returns how many
     /// objects changed.
-    std::size_t refresh_decks(std::span<const save::model::PathTile> paths, std::vector<save::model::PlacedObject>& objects, const save::model::TerrainGrid& grid, std::span<const PathStyle> styles, int low_col, int low_row, int high_col, int high_row, std::optional<const EdgeWalls&> walls = std::nullopt);
+    std::size_t refresh_decks(std::span<const save::model::PathTile> paths, std::vector<save::model::PlacedObject>& objects, const save::model::TerrainGrid& grid, std::span<const PathStyle> styles, std::int32_t low_col, std::int32_t low_row, std::int32_t high_col, std::int32_t high_row, std::optional<const EdgeWalls&> walls = std::nullopt);
 
     /// The piece a raised path should have now, given the other paths and the walls between them.
     [[nodiscard]] Deck choose_deck(const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::optional<const EdgeWalls&> walls = std::nullopt);

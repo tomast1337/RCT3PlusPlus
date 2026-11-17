@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::park
 {
@@ -41,8 +42,8 @@ namespace rct3::park
             const glm::vec2 at { l.position.x, l.position.z };
             const glm::ivec2 from = glm::clamp(glm::ivec2(glm::floor((at - l.radius - low) / cell)), glm::ivec2(0), glm::ivec2(cells_x - 1, cells_z - 1));
             const glm::ivec2 to = glm::clamp(glm::ivec2(glm::floor((at + l.radius - low) / cell)), glm::ivec2(0), glm::ivec2(cells_x - 1, cells_z - 1));
-            for (int z = from.y; z <= to.y; ++z)
-                for (int x = from.x; x <= to.x; ++x)
+            for (std::int32_t z = from.y; z <= to.y; ++z)
+                for (std::int32_t x = from.x; x <= to.x; ++x)
                 {
                     // shortcut: a full cell takes no more lamps, so the later of crowded lamps go dark there;
                     // keep the brightest instead if crowded stations show it.

@@ -5,6 +5,7 @@
 #include <bit>
 #include <charconv>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <limits>
 
@@ -108,7 +109,7 @@ namespace rct3::random
 
     std::expected<Seed, std::string> parse_seed(std::string_view text)
     {
-        int base = 10;
+        std::int32_t base = 10;
         if (text.starts_with("0x") || text.starts_with("0X"))
         {
             text.remove_prefix(2);

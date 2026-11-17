@@ -18,6 +18,7 @@
 #include "simulation/import_people.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -85,7 +86,7 @@ int main(int argc, char** argv)
     const char* import = nullptr;
     const char* write = nullptr;
     const char* park = nullptr;
-    for (int i = 1; i < argc; ++i)
+    for (std::int32_t i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--import") == 0 && i + 1 < argc)
             import = argv[++i];

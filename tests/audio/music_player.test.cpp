@@ -4,6 +4,7 @@
 #include "sine_wma.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <filesystem>
 #include <fstream>
@@ -25,7 +26,7 @@ TEST_CASE("music plays round and round from its file")
     // Four times the file's length, a frame at a time.
     std::vector<float> frame(2 * 800);
     float late_peak = 0;
-    for (int i = 0; i < 60; ++i)
+    for (std::int32_t i = 0; i < 60; ++i)
     {
         REQUIRE(music->update(*engine));
         CHECK(engine->render(frame) == 800);
@@ -46,7 +47,7 @@ TEST_CASE("music plays round and round from its file")
     // Once, as a movie's sound: over by four times the file's length.
     auto once = MusicPlayer::start(*engine, path, 1.0f, false);
     REQUIRE(once);
-    for (int i = 0; i < 60; ++i)
+    for (std::int32_t i = 0; i < 60; ++i)
     {
         REQUIRE(once->update(*engine));
         (void)engine->render(frame);

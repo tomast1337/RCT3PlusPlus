@@ -44,29 +44,29 @@ namespace rct3::ui::screens::info
     };
 
     /// The ids of a changing room's controls.
-    inline constexpr int kPoolTicketControl = 2; ///< The ticket price, hundredths
-    inline constexpr int kPoolNameControl = 3;   ///< The complex's name, typed
-    inline constexpr int kPoolDeleteRoomControl = 4;
-    inline constexpr int kPoolDeleteComplexControl = 5;
-    inline constexpr int kPoolLocateControl = 6;
-    inline constexpr int kPoolMechanicControl = 7;
-    inline constexpr int kPoolFluidControl = 8;       ///< A choice: the cleaning fluid, mildest 0 to harshest 2
-    inline constexpr int kPoolWaveHeightControl = 9;  ///< The wave machines' wave height setting
-    inline constexpr int kPoolWaveLengthControl = 10; ///< Their wave length: kLeastWaveFrequency + kMostWaveFrequency less the frequency
-    inline constexpr int kPoolWaveOnControl = 11;     ///< Seconds they run for
-    inline constexpr int kPoolWaveEveryControl = 12;  ///< Minutes from one start of theirs to the next
-    inline constexpr int kPoolInspectionControl = 13; ///< A choice: the inspection interval, in the maintenance page's order
-    inline constexpr int kPoolSaveControl = 14;
+    inline constexpr std::int32_t kPoolTicketControl = 2; ///< The ticket price, hundredths
+    inline constexpr std::int32_t kPoolNameControl = 3;   ///< The complex's name, typed
+    inline constexpr std::int32_t kPoolDeleteRoomControl = 4;
+    inline constexpr std::int32_t kPoolDeleteComplexControl = 5;
+    inline constexpr std::int32_t kPoolLocateControl = 6;
+    inline constexpr std::int32_t kPoolMechanicControl = 7;
+    inline constexpr std::int32_t kPoolFluidControl = 8;       ///< A choice: the cleaning fluid, mildest 0 to harshest 2
+    inline constexpr std::int32_t kPoolWaveHeightControl = 9;  ///< The wave machines' wave height setting
+    inline constexpr std::int32_t kPoolWaveLengthControl = 10; ///< Their wave length: kLeastWaveFrequency + kMostWaveFrequency less the frequency
+    inline constexpr std::int32_t kPoolWaveOnControl = 11;     ///< Seconds they run for
+    inline constexpr std::int32_t kPoolWaveEveryControl = 12;  ///< Minutes from one start of theirs to the next
+    inline constexpr std::int32_t kPoolInspectionControl = 13; ///< A choice: the inspection interval, in the maintenance page's order
+    inline constexpr std::int32_t kPoolSaveControl = 14;
     /// Stamps a passport needs for the gift.
-    inline constexpr int kPassportStampsControl = 15;
+    inline constexpr std::int32_t kPassportStampsControl = 15;
     /// A choice: the gift, by its place in PassportFacts::gifts.
-    inline constexpr int kPassportGiftControl = 16;
-    inline constexpr int kMostWaveOn = 600;   ///< Chosen by eye
-    inline constexpr int kWaveOnStep = 10;    ///< Chosen by eye
-    inline constexpr int kMostWaveEvery = 30; ///< Chosen by eye: minutes
-    inline constexpr int kMostPoolTicket = 2000;
+    inline constexpr std::int32_t kPassportGiftControl = 16;
+    inline constexpr std::int32_t kMostWaveOn = 600;   ///< Chosen by eye
+    inline constexpr std::int32_t kWaveOnStep = 10;    ///< Chosen by eye
+    inline constexpr std::int32_t kMostWaveEvery = 30; ///< Chosen by eye: minutes
+    inline constexpr std::int32_t kMostPoolTicket = 2000;
     /// The inspection interval a room shows before one is picked for it: every 30 minutes.
-    inline constexpr int kPoolInspection = 2;
+    inline constexpr std::int32_t kPoolInspection = 2;
 
     /// The pool complex a changing room lets guests into, and the room itself.
     struct PoolComplexFacts
@@ -86,23 +86,23 @@ namespace rct3::ui::screens::info
         units::Money refill { };    ///< A full tank of its fluid, which a mechanic's inspection tops up
         float reliability = 1;      ///< 0 to 1
         units::Seconds since_inspection { };
-        int inspection = kPoolInspection;                    ///< As kPoolInspectionControl's value
+        std::int32_t inspection = kPoolInspection;           ///< As kPoolInspectionControl's value
         std::vector<save::model::ThoughtEntry> thoughts { }; ///< Guests' thoughts about the room
     };
 
     /// The park's passport rules, which every passport post's window sets.
     struct PassportFacts
     {
-        int stamps_for_gift = 0;
-        int most_stamps = 0;
+        std::int32_t stamps_for_gift = 0;
+        std::int32_t most_stamps = 0;
         std::vector<std::string_view> gifts { }; ///< What it may give, by the string keys of their names
-        int gift = 0;                            ///< Of `gifts`
+        std::int32_t gift = 0;                   ///< Of `gifts`
     };
 
     struct SceneryTabInfo
     {
         SceneryTab tab = SceneryTab::Destroy;
-        int slot = 0;                    ///< Its place on the ring
+        std::int32_t slot = 0;           ///< Its place on the ring
         std::string_view icon;           ///< Skin
         std::string_view help;           ///< String key
         bool action = false;             ///< Acts at once instead of opening a page

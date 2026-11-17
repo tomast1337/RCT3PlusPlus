@@ -2,6 +2,7 @@
 #include "park/land_buying.hpp"
 
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <initializer_list>
 #include <utility>
@@ -14,7 +15,7 @@ namespace
     save::model::TerrainGrid strip(std::initializer_list<std::uint8_t> flags)
     {
         save::model::TerrainGrid g;
-        g.width = static_cast<int>(flags.size());
+        g.width = static_cast<std::int32_t>(flags.size());
         g.height = 1;
         for (const std::uint8_t f : flags)
             g.cells.push_back({ .flags = f });

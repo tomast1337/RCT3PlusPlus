@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -84,7 +85,7 @@ namespace nob
         argv.push_back(nullptr);
 
         pid_t pid = 0;
-        if (int rc = posix_spawnp(&pid, argv[0], nullptr, nullptr, argv.data(), environ); rc != 0)
+        if (std::int32_t rc = posix_spawnp(&pid, argv[0], nullptr, nullptr, argv.data(), environ); rc != 0)
         {
             log(Level::Error, "cannot start {}: {}", cmd.args[0], std::strerror(rc));
             return std::nullopt;
@@ -94,7 +95,7 @@ namespace nob
 
     [[nodiscard]] inline bool wait(Proc pid)
     {
-        int status = 0;
+        int status = 0; // c-api
         while (waitpid(pid, &status, 0) < 0)
         {
             if (errno != EINTR)

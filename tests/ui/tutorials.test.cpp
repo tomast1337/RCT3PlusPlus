@@ -2,6 +2,7 @@
 #include "ui/tutorials.hpp"
 
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <format>
 
@@ -12,7 +13,7 @@ namespace
     StringTable eight_tutorials()
     {
         StringTable strings;
-        for (int n = 1; n <= 8; ++n)
+        for (std::int32_t n = 1; n <= 8; ++n)
         {
             const std::string number = std::to_string(n);
             strings.add(std::format("TutorialList_Name{}", number), u"Lesson");

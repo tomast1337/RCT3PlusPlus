@@ -16,6 +16,7 @@
 
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -36,7 +37,7 @@ namespace
 
     using rct3::audio::SoundBuffer;
 
-    int usage(const char* argv0)
+    std::int32_t usage(const char* argv0)
     {
         out.error(
             "usage: {} [--null] [--volume V] [--pan P] [--pitch P] PATH [NAME]\n"
@@ -82,7 +83,7 @@ int main(int argc, char** argv)
     rct3::audio::PlayParams params;
     std::vector<const char*> positional;
 
-    for (int i = 1; i < argc; ++i)
+    for (std::int32_t i = 1; i < argc; ++i)
     {
         const std::string_view a = argv[i];
         if (a == "--null")

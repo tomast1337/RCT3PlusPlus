@@ -4,6 +4,7 @@
 #include "logging/log.hpp"
 
 #include <GLFW/glfw3.h>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
@@ -22,7 +23,7 @@ namespace rct3::platform
     {
 
         // GLFW's shape for each standard cursor; none where this GLFW has no such shape or it is not a shape.
-        std::optional<int> glfw_shape(ui::StandardCursor shape)
+        std::optional<std::int32_t> glfw_shape(ui::StandardCursor shape)
         {
             switch (shape)
             {
@@ -69,7 +70,7 @@ namespace rct3::platform
         for (std::size_t i = 0; i < ui::kStandardCursors; ++i)
         {
             const auto shape = static_cast<ui::StandardCursor>(i);
-            const std::optional<int> glfw = glfw_shape(shape);
+            const std::optional<std::int32_t> glfw = glfw_shape(shape);
             if (!glfw)
                 continue;
             // Null when the platform or its cursor theme lacks the shape, or the GLFW library at run time is

@@ -4,6 +4,7 @@
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
+#include <cstdint>
 #include <cstdio>
 #include <format>
 #include <limits>
@@ -17,7 +18,7 @@ namespace rct3::career
 
         // Class and attribute names, as the format names them.
         constexpr std::string_view kClass = "ManagedPlayerProfile";
-        constexpr int kExpansions = 2;
+        constexpr std::int32_t kExpansions = 2;
 
         std::int32_t integer(std::optional<const save::Value&> v, std::int32_t fallback)
         {

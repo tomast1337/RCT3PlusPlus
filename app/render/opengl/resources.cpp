@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <cstring>
 #include <format>
 #include <tuple>
@@ -85,7 +86,7 @@ namespace rct3::render::opengl
         {
             const char* vertex = nullptr;
             const char* fragment = nullptr;
-            int mode = 0; ///< The fragment stage's specialisation constant 0 (lit.slang)
+            std::int32_t mode = 0; ///< The fragment stage's specialisation constant 0 (lit.slang)
         };
 
         // As the Vulkan backend's table (render/vulkan/resources.cpp).
@@ -145,7 +146,7 @@ namespace rct3::render::opengl
 
     // A program from the GLSL the build made, `mode` defined for its specialisation constant. Empty with the
     // compiler's or linker's complaint.
-    std::expected<GLuint, std::string> OpenGlDevice::compile_program(const char* vertex, const char* fragment, int mode)
+    std::expected<GLuint, std::string> OpenGlDevice::compile_program(const char* vertex, const char* fragment, std::int32_t mode)
     {
         const std::string head = std::format("#version 450\n#define SPECIALISATION_0 {}\n", mode);
         GLuint program = gl.CreateProgram();

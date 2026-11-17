@@ -4,6 +4,7 @@
 #include "../builder.hpp"
 
 #include <bit>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <string>
 #include <vector>
@@ -58,7 +59,7 @@ namespace
     std::vector<std::byte> structure(std::uint32_t table_value = 7, std::uint32_t cell = kBase + kCell, std::uint32_t node_address = kBase + kNode)
     {
         std::vector<std::byte> out;
-        for (int i = 0; i < 16; ++i)
+        for (std::int32_t i = 0; i < 16; ++i)
             append_u16(out, static_cast<std::uint16_t>(table_value));
         words(out, { 1, 8, 16, 0 });                                // parameters and the style field
         append_u16(out, 1);                                         // first

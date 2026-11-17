@@ -87,8 +87,8 @@ namespace rct3::park::ground
     /// The ground path styles of a park, and which one lies on each tile.
     struct GroundPathMap
     {
-        int width = 0;
-        int height = 0;
+        std::int32_t width = 0;
+        std::int32_t height = 0;
         std::vector<std::string> styles;                     ///< System names, in the order first met
         std::vector<std::int16_t> tiles;                     ///< Row by row: index into styles, or kNoPath
         std::map<std::size_t, std::vector<float>> raised;    ///< By tile index: heights the raised paths there end at
@@ -163,7 +163,7 @@ namespace rct3::park::ground
     /// or z): a ground path is there, a ground queue there is open towards this tile, or a raised path there
     /// ends level with this tile's ground at their shared edge; the two may join (may_join); and no wall of `map`
     /// stands between them, unless both are paving of one ride or stall.
-    [[nodiscard]] bool path_continues(const GroundPathMap& map, const save::model::TerrainGrid& grid, save::model::Tile tile, int dc, int dr);
+    [[nodiscard]] bool path_continues(const GroundPathMap& map, const save::model::TerrainGrid& grid, save::model::Tile tile, std::int32_t dc, std::int32_t dr);
 
     /// How far the path is lifted off the ground, in world units, so it never sinks into it.
     inline constexpr float kPathLift = 0.02f;

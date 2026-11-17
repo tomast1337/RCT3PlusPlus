@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/split.hpp"
 
+#include <cstdint>
+
 namespace rct3::park::track
 {
 
@@ -38,10 +40,10 @@ namespace rct3::park::track
     {
         if (now == SplitState::None)
             return now;
-        constexpr int kStates = 4;
-        for (int step = 1; step < kStates; ++step)
+        constexpr std::int32_t kStates = 4;
+        for (std::int32_t step = 1; step < kStates; ++step)
         {
-            const auto next = static_cast<SplitState>((static_cast<int>(now) - 1 + step) % kStates + 1);
+            const auto next = static_cast<SplitState>((static_cast<std::int32_t>(now) - 1 + step) % kStates + 1);
             if (!closed.at(split_side(next) - 1) && (!same_kind || split_joined(next) == split_joined(now)))
                 return next;
         }

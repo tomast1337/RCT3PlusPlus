@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::park::sky
 {
@@ -90,7 +91,7 @@ namespace rct3::park::sky
                 p[3] = 0;
                 continue;
             }
-            for (int c = 0; c < 3; ++c)
+            for (std::int32_t c = 0; c < 3; ++c)
                 p[c] = static_cast<std::uint8_t>(p[c] * 255 / brightest);
             p[3] = static_cast<std::uint8_t>(p[3] * brightest / 255);
         }

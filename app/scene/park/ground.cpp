@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <iterator>
 #include <set>
 #include <span>
@@ -125,9 +126,9 @@ namespace rct3::scene::park
             at.row = spot.row;
             at.rotation = spot.direction;
             const auto [xs, zs] = item.squares;
-            for (int z = 0; z < zs; ++z)
+            for (std::int32_t z = 0; z < zs; ++z)
             {
-                for (int x = 0; x < xs; ++x)
+                for (std::int32_t x = 0; x < xs; ++x)
                 {
                     // An irregular footprint paves only the squares it really stands on.
                     if (item.fence_outline.empty() || item.fence_outline[static_cast<std::size_t>(z) * static_cast<std::size_t>(xs) + static_cast<std::size_t>(x)])
@@ -294,8 +295,8 @@ namespace rct3::scene::park
         });
         // The ground is built in chunks, and only those the change reaches are built again: with the tile
         // round it, as the ground's shading, the walls between tiles and the paths' edges look at their neighbours.
-        const int across = (scene.grid.width + kGroundChunk - 1) / kGroundChunk;
-        const int down = (scene.grid.height + kGroundChunk - 1) / kGroundChunk;
+        const std::int32_t across = (scene.grid.width + kGroundChunk - 1) / kGroundChunk;
+        const std::int32_t down = (scene.grid.height + kGroundChunk - 1) / kGroundChunk;
         const std::size_t count = static_cast<std::size_t>(across) * static_cast<std::size_t>(down) + 1;
         if (scene.ground_chunks.size() != count)
         {
@@ -346,8 +347,8 @@ namespace rct3::scene::park
         std::optional<std::vector<rct3::park::ground::QueuePainting>> paintings;
         for (std::size_t i = 0; i + 1 < count; ++i)
         {
-            const int col = static_cast<int>(i % static_cast<std::size_t>(across)) * kGroundChunk;
-            const int row = static_cast<int>(i / static_cast<std::size_t>(across)) * kGroundChunk;
+            const std::int32_t col = static_cast<std::int32_t>(i % static_cast<std::size_t>(across)) * kGroundChunk;
+            const std::int32_t row = static_cast<std::int32_t>(i / static_cast<std::size_t>(across)) * kGroundChunk;
             const rct3::park::TileRect area { col, row, col + kGroundChunk, row + kGroundChunk };
             if (reach && (area.end_col <= reach->col || reach->end_col <= area.col || area.end_row <= reach->row || reach->end_row <= area.row))
                 continue;

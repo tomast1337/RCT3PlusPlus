@@ -5,6 +5,7 @@
 #include <array>
 #include <bit>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 
 namespace rct3::ovl::texture
@@ -43,7 +44,7 @@ namespace rct3::ovl::texture
         // 5-6-5 colour to 8 bits per channel, replicating the high bits into the low ones.
         std::array<std::uint8_t, 3> expand565(std::uint16_t c)
         {
-            const unsigned r = (c >> 11) & 31, g = (c >> 5) & 63, b = c & 31;
+            const std::uint32_t r = (c >> 11) & 31, g = (c >> 5) & 63, b = c & 31;
             return { static_cast<std::uint8_t>((r << 3) | (r >> 2)), static_cast<std::uint8_t>((g << 2) | (g >> 4)), static_cast<std::uint8_t>((b << 3) | (b >> 2)) };
         }
 
@@ -54,7 +55,7 @@ namespace rct3::ovl::texture
             const std::uint16_t c0 = u16_at(block, 0), c1 = u16_at(block, 2);
             const auto e0 = expand565(c0), e1 = expand565(c1);
             std::uint8_t palette[4][4];
-            for (int i = 0; i < 3; ++i)
+            for (std::int32_t i = 0; i < 3; ++i)
             {
                 palette[0][i] = e0[i];
                 palette[1][i] = e1[i];
@@ -62,7 +63,7 @@ namespace rct3::ovl::texture
             palette[0][3] = palette[1][3] = palette[2][3] = palette[3][3] = 255;
             if (c0 > c1 || !one_bit_alpha)
             {
-                for (int i = 0; i < 3; ++i)
+                for (std::int32_t i = 0; i < 3; ++i)
                 {
                     palette[2][i] = static_cast<std::uint8_t>((2 * e0[i] + e1[i]) / 3);
                     palette[3][i] = static_cast<std::uint8_t>((e0[i] + 2 * e1[i]) / 3);
@@ -70,17 +71,17 @@ namespace rct3::ovl::texture
             }
             else
             {
-                for (int i = 0; i < 3; ++i)
+                for (std::int32_t i = 0; i < 3; ++i)
                 {
                     palette[2][i] = static_cast<std::uint8_t>((e0[i] + e1[i]) / 2);
                     palette[3][i] = 0;
                 }
                 palette[3][3] = 0;
             }
-            for (int row = 0; row < 4; ++row)
+            for (std::int32_t row = 0; row < 4; ++row)
             {
-                const unsigned bits = u8(block, 4 + row);
-                for (int col = 0; col < 4; ++col)
+                const std::uint32_t bits = u8(block, 4 + row);
+                for (std::int32_t col = 0; col < 4; ++col)
                     std::memcpy(out[row * 4 + col], palette[(bits >> (2 * col)) & 3], 4);
             }
         }
@@ -121,7 +122,7 @@ namespace rct3::ovl::texture
                         std::memcpy(dst, px[i], 4);
                         if (explicit_alpha)
                         {
-                            const unsigned nibble = (u8(block, i / 2) >> ((i % 2) * 4)) & 15;
+                            const std::uint32_t nibble = (u8(block, i / 2) >> ((i % 2) * 4)) & 15;
                             dst[3] = static_cast<std::uint8_t>(nibble * 17);
                         }
                     }
@@ -251,10 +252,10 @@ namespace rct3::ovl::texture
 
         std::vector<std::byte> out;
         out.reserve(18 + image.pixels.size());
-        auto put = [&out](unsigned v) { out.push_back(static_cast<std::byte>(v)); };
+        auto put = [&out](std::uint32_t v) { out.push_back(static_cast<std::byte>(v)); };
         // Header: no id, no colour map, uncompressed true colour, then origin, size, 32 bits per pixel and the
         // descriptor with 8 alpha bits and a top-left origin.
-        for (int i = 0; i < 18; ++i)
+        for (std::int32_t i = 0; i < 18; ++i)
             put(0);
         out[2] = std::byte { 2 };
         out[12] = static_cast<std::byte>(image.width & 0xff);
@@ -273,18 +274,18 @@ namespace rct3::ovl::texture
         return out;
     }
 
-    int texture_halvings(float detail, std::uint32_t width, std::uint32_t height)
+    std::int32_t texture_halvings(float detail, std::uint32_t width, std::uint32_t height)
     {
         if (width == 0 || height == 0)
             return 0;
-        const int doublings = std::bit_width(std::max(width, height)) - 1;
-        const int kept = static_cast<int>(std::ceil(static_cast<float>(doublings) * std::clamp(detail, 0.0f, 1.0f)));
-        return std::min(doublings - kept, static_cast<int>(std::bit_width(std::min(width, height))) - 1);
+        const std::int32_t doublings = std::bit_width(std::max(width, height)) - 1;
+        const std::int32_t kept = static_cast<std::int32_t>(std::ceil(static_cast<float>(doublings) * std::clamp(detail, 0.0f, 1.0f)));
+        return std::min(doublings - kept, static_cast<std::int32_t>(std::bit_width(std::min(width, height))) - 1);
     }
 
-    RgbaImage halved(RgbaImage image, int times)
+    RgbaImage halved(RgbaImage image, std::int32_t times)
     {
-        for (int t = 0; t < times && image.width > 1 && image.height > 1 && image.pixels.size() == std::size_t { image.width } * image.height * 4; ++t)
+        for (std::int32_t t = 0; t < times && image.width > 1 && image.height > 1 && image.pixels.size() == std::size_t { image.width } * image.height * 4; ++t)
         {
             RgbaImage half { .width = image.width / 2, .height = image.height / 2, .pixels = std::vector<std::uint8_t>(std::size_t { image.width / 2 } * (image.height / 2) * 4) };
             for (std::uint32_t y = 0; y < half.height; ++y)

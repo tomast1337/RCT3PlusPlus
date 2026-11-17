@@ -4,6 +4,7 @@
 #include "builder.hpp"
 
 #include <bit>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <string>
 #include <vector>
@@ -116,7 +117,7 @@ namespace
                 out.push_back(std::byte { b });
             for (std::uint8_t w : { 200, 55, 0, 0 })
                 out.push_back(std::byte { w });
-            for (int k = 0; k < 4; ++k)
+            for (std::int32_t k = 0; k < 4; ++k)
                 out.push_back(std::byte { 255 }); // colour
             real(out, 0.25f * v);
             real(out, 0.5f);

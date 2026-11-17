@@ -13,6 +13,7 @@
 #include "ui/key_combo.hpp"
 #include "ui/widget.hpp"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -61,7 +62,7 @@ namespace rct3::ui::widgets
 
     private:
         bool waiting_ = false;
-        int changes_ = 0;
+        std::int32_t changes_ = 0;
     };
 
 } // namespace rct3::ui::widgets

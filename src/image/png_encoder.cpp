@@ -23,7 +23,7 @@ namespace rct3::image
             for (std::uint32_t n = 0; n < 256; ++n)
             {
                 std::uint32_t c = n;
-                for (int k = 0; k < 8; ++k)
+                for (std::int32_t k = 0; k < 8; ++k)
                     c = (c & 1) != 0 ? 0xedb88320u ^ (c >> 1) : c >> 1;
                 table[n] = c;
             }
@@ -40,7 +40,7 @@ namespace rct3::image
 
         void put_u32(std::vector<std::byte>& out, std::uint32_t v)
         {
-            for (int shift = 24; shift >= 0; shift -= 8)
+            for (std::int32_t shift = 24; shift >= 0; shift -= 8)
                 out.push_back(static_cast<std::byte>((v >> shift) & 0xff));
         }
 
@@ -159,7 +159,7 @@ namespace rct3::image
         if (ec)
             return std::unexpected(std::format("cannot read {}: {}", folder.string(), ec.message()));
         // A file made since the folder was read is passed over rather than replaced.
-        constexpr int kTries = 16;
+        constexpr std::int32_t kTries = 16;
         for (std::uint32_t n = highest + 1; n <= highest + kTries; ++n)
         {
             std::filesystem::path path = folder / std::format("{}{:04}.png", prefix, n);

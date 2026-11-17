@@ -61,7 +61,7 @@ TEST_CASE("a hand's socket is at the middle of its triangle as the motion poses 
     for (const auto& [x, y, z] : steps)
     {
         const std::uint32_t word = x << 21 | y << 11 | z;
-        for (int b = 0; b < 4; ++b)
+        for (std::int32_t b = 0; b < 4; ++b)
             motion.keys.push_back(static_cast<std::byte>(word >> (8 * b)));
     }
     motion.keys.resize(socket.mesh.key_size(), std::byte { 127 });
@@ -89,7 +89,7 @@ TEST_CASE("a walk's pace is how fast the foot on the ground slides back beneath 
         for (const auto& [x, y, z] : steps)
         {
             const std::uint32_t word = x << 21 | y << 11 | z;
-            for (int b = 0; b < 4; ++b)
+            for (std::int32_t b = 0; b < 4; ++b)
                 walk.keys.push_back(static_cast<std::byte>(word >> (8 * b)));
         }
         walk.keys.resize((k + 1) * legs.mesh.key_size(), std::byte { 127 });

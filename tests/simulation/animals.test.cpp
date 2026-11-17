@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <numbers>
 
@@ -71,7 +72,7 @@ TEST_CASE("animals: a keeper strolls about their own enclosure and nowhere else,
     const entt::entity keeper = add_animal_house(world, { .enclosure = std::optional { 1 }, .troughs = { 13, 0, 2 }, .low = { 10, 0 }, .high = { 12, 4 } }, { 12, 0, 2 });
     const glm::vec3 first = world.registry.get<Pose>(keeper).position;
     bool moved = false;
-    for (int i = 0; i < 400; ++i)
+    for (std::int32_t i = 0; i < 400; ++i)
     {
         run(world, ground, 1);
         const glm::vec3 at = world.registry.get<Pose>(keeper).position;
@@ -105,7 +106,7 @@ TEST_CASE("animals: an animal stays in its crate a while, then walks out about i
     CHECK(world.registry.get<Animal>(e).job == AnimalJob::Crated);
     CHECK(world.registry.get<Pose>(e).position == glm::vec3 { 1, 0, 1 });
     bool moved = false;
-    for (int i = 0; i < 120; ++i)
+    for (std::int32_t i = 0; i < 120; ++i)
     {
         run(world, ground, 1);
         const glm::vec3 at = world.registry.get<Pose>(e).position;
@@ -152,7 +153,7 @@ TEST_CASE("animals: an animal leaves dung now and then, which its keeper clears"
     auto& r = world.registry;
     const auto dung = [&] { return r.view<const Dung>().size(); };
     std::size_t most = 0;
-    for (int i = 0; i < static_cast<int>(kAnimalRates.dung.value) * 3; ++i)
+    for (std::int32_t i = 0; i < static_cast<std::int32_t>(kAnimalRates.dung.value) * 3; ++i)
     {
         run(world, ground, 1);
         most = std::max(most, dung());
@@ -281,7 +282,7 @@ TEST_CASE("animals: an inspector watching the galleries tells of an enclosure de
     (void)animal_at_home(world, ground);
     auto& r = world.registry;
     r.get<Staff>(r.view<KeeperDuty>().front()).tasks = 0;
-    for (int i = 0; i <= kAnimalRates.dung_limit; ++i)
+    for (std::int32_t i = 0; i <= kAnimalRates.dung_limit; ++i)
     {
         const entt::entity d = r.create();
         r.emplace<Dung>(d, Dung { .enclosure = 0 });
@@ -359,7 +360,7 @@ TEST_CASE("animals: a keeper crates an escaped animal and takes it back to their
     run(world, ground, kAnimalRates.crated.value + 1);
     REQUIRE(r.get<Animal>(e).escaped);
     bool caught = false;
-    for (int i = 0; i < 240 && !caught; ++i)
+    for (std::int32_t i = 0; i < 240 && !caught; ++i)
     {
         run(world, ground, 1);
         const Animal& animal = r.get<Animal>(e);

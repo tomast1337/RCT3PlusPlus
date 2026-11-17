@@ -5,6 +5,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <utility>
 
@@ -25,7 +26,7 @@ TEST_CASE("a level jet lands as far as a thrown stone would")
 {
     WaterJet jet(3, 0.1f, 0);
     jet.aim({ 0, 5, 0 }, { 6, 0, 0 });
-    for (int i = 0; i < 120; ++i)
+    for (std::int32_t i = 0; i < 120; ++i)
         jet.advance(1 / 60.0f);
     const auto land = jet.landing(flat);
     REQUIRE(land.has_value());

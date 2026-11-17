@@ -80,7 +80,7 @@ namespace
 
     // How many compilers run at once: `-j N` on the command line, else NOB_JOBS, else one per core, but no more
     // than the available memory holds, so a build cannot run the machine out of memory.
-    std::size_t job_count(int asked)
+    std::size_t job_count(std::int32_t asked)
     {
         if (asked > 0)
             return static_cast<std::size_t>(asked);
@@ -365,7 +365,7 @@ namespace
         std::string out;
         if (std::FILE* git = popen("git describe --tags --always --dirty", "r"))
         {
-            for (int c; (c = std::fgetc(git)) != EOF;)
+            for (std::int32_t c; (c = std::fgetc(git)) != EOF;)
                 out += static_cast<char>(c);
             if (pclose(git) != 0)
                 out.clear();
@@ -986,7 +986,7 @@ namespace
     }
 
     // Runs one fuzz target for `seconds`. New inputs land in the git-ignored local/ directory, crashes too.
-    bool run_fuzz(const fs::path& binary, int seconds)
+    bool run_fuzz(const fs::path& binary, std::int32_t seconds)
     {
         const std::string name = binary.filename().string();
         const fs::path corpus = fs::path("local") / "fuzz-corpus" / name;
@@ -1020,10 +1020,10 @@ int main(int argc, char** argv)
     std::string fuzz_target;
     std::string script;               ///< For ./nob script
     std::vector<fs::path> tidy_files; ///< For ./nob tidy; empty for all
-    int fuzz_seconds = 30;
-    int jobs = 0;
+    std::int32_t fuzz_seconds = 30;
+    std::int32_t jobs = 0;
 
-    for (int i = 1; i < argc; ++i)
+    for (std::int32_t i = 1; i < argc; ++i)
     {
         const std::string_view arg = argv[i];
         if (arg == "--release")

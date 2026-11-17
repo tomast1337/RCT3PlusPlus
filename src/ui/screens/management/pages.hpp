@@ -139,9 +139,9 @@ namespace rct3::ui::screens::management
     [[nodiscard]] FinancePage finance_page(std::size_t tab, bool original);
 
     /// The finances ledger's control picking the line its last column shows, by index of the summary's lines.
-    inline constexpr int kLedgerLineControl = 0;
+    inline constexpr std::int32_t kLedgerLineControl = 0;
     /// The finances loan page's bar setting the loan, in hundredths, a simulation::park::kLoanStep at a time.
-    inline constexpr int kLoanControl = 0;
+    inline constexpr std::int32_t kLoanControl = 0;
 
     /// The finances ledger's button writing it out (ledger_csv), by its place among the page's buttons.
     inline constexpr std::size_t kExportLedgerButton = 0;
@@ -153,12 +153,12 @@ namespace rct3::ui::screens::management
 
     /// The research window's controls (InfoControl::id): the monthly budget, then the priority of each research
     /// area (simulation::ResearchArea) in order, from 0 to 100.
-    inline constexpr int kResearchBudgetControl = 0;
-    inline constexpr int kFirstPriorityControl = 1;
+    inline constexpr std::int32_t kResearchBudgetControl = 0;
+    inline constexpr std::int32_t kFirstPriorityControl = 1;
     /// The research budget's step and most, in hundredths. Chosen by eye: steps of 50.00, up to five times the
     /// 200.00 a month scenarios usually set aside.
-    inline constexpr int kResearchBudgetStep = 5000;
-    inline constexpr int kMostResearchBudget = 100000;
+    inline constexpr std::int32_t kResearchBudgetStep = 5000;
+    inline constexpr std::int32_t kMostResearchBudget = 100000;
     /// The research window's tabs after the priorities: what has been invented and when, and what may come next.
     inline constexpr std::size_t kInventedTab = 1;
     inline constexpr std::size_t kComingTab = 2;

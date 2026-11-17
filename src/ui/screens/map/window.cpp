@@ -3,6 +3,7 @@
 
 #include "ui/shape.hpp"
 
+#include <cstdint>
 #include <format>
 #include <utility>
 
@@ -23,7 +24,7 @@ namespace rct3::ui::screens::map
         }
 
         bool shown;
-        int changes = 0;
+        std::int32_t changes = 0;
 
         [[nodiscard]] bool takes_pointer() const override
         {

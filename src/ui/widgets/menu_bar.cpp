@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 
 namespace rct3::ui::widgets
@@ -125,7 +126,7 @@ namespace rct3::ui::widgets
         {
             if (const auto item = menu_->take_choice())
                 choice_ = MenuChoice { open_, *item };
-            if (const int by = menu_->take_sideways(); by != 0 && !menus.empty())
+            if (const std::int32_t by = menu_->take_sideways(); by != 0 && !menus.empty())
             {
                 const auto n = static_cast<std::ptrdiff_t>(menus.size());
                 const auto next = ((static_cast<std::ptrdiff_t>(open_) + by) % n + n) % n;

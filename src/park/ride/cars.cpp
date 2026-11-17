@@ -2,17 +2,18 @@
 #include "park/ride/cars.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace rct3::park::ride
 {
 
-    std::vector<std::size_t> car_slots(int cars, const std::array<bool, 6>& filled)
+    std::vector<std::size_t> car_slots(std::int32_t cars, const std::array<bool, 6>& filled)
     {
         const std::size_t middle = filled[2] ? 2 : 0;
         std::vector<std::size_t> out;
-        for (int k = 0; k < cars; ++k)
+        for (std::int32_t k = 0; k < cars; ++k)
         {
             if (k > 0 && filled[5])
                 out.push_back(5);

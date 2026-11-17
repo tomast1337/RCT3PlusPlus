@@ -5,6 +5,7 @@
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -54,7 +55,7 @@ TEST_CASE("guests sick from a ride are sick by its exit, the mess upsets others 
     auto& r = park.world().registry;
     r.emplace<Upkeep>(ride, Upkeep { .inspect_every = std::nullopt });
     std::vector<entt::entity> riders;
-    for (int i = 0; i < 20; ++i)
+    for (std::int32_t i = 0; i < 20; ++i)
     {
         riders.push_back(park.guest({ 4, 0 }, { .nausea = 0.7f }));
         r.get<Mood>(riders.back()).tolerance.value = 0;

@@ -22,6 +22,7 @@
 #include "ui/string_table.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <vector>
@@ -51,7 +52,7 @@ namespace rct3::scene
 
     /// Starts scenario `index` of the first career of game `pack`, made when there is none, as its map's New
     /// does, the map shown under the park. False when the scenario is not there or not open.
-    bool start_career_scenario(CareerBrowser& browser, ui::screens::front::FrontEnd& front, int pack, std::size_t index, const ui::StringTable& strings, const config::game::GameInstall& install);
+    bool start_career_scenario(CareerBrowser& browser, ui::screens::front::FrontEnd& front, std::int32_t pack, std::size_t index, const ui::StringTable& strings, const config::game::GameInstall& install);
 
     void destroy_career_browser(render::Device& device, CareerBrowser& browser);
 

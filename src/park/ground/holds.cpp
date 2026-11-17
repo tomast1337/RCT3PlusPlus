@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::park::ground
 {
@@ -21,7 +22,7 @@ namespace rct3::park::ground
     {
         constexpr float kSame = 0.001f; ///< Heights closer than this have not moved
 
-        std::uint32_t key_of(int col, int row)
+        std::uint32_t key_of(std::int32_t col, std::int32_t row)
         {
             return static_cast<std::uint32_t>(row) << 16 | static_cast<std::uint16_t>(col);
         }

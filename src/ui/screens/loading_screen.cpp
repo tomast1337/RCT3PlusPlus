@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 
 namespace rct3::ui::screens::loading_screen
@@ -92,7 +93,7 @@ namespace rct3::ui::screens::loading_screen
         const float detail = static_cast<float>(parts.detail_lines) * std::round(kDetailHeight * s);
         const float gap = std::round(kGap * s);
         float total = 0;
-        int shown = 0;
+        std::int32_t shown = 0;
         for (const float h : { logo_h, heading, bar, stages, detail })
         {
             if (h > 0)

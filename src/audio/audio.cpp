@@ -7,6 +7,7 @@
 #include <array>
 #include <atomic>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 
 namespace rct3::audio
@@ -128,7 +129,7 @@ namespace rct3::audio
         {
             for (std::size_t i = 0; i < count; ++i)
             {
-                const auto v = static_cast<std::int16_t>((static_cast<int>(std::to_integer<unsigned>(src[i])) - 128) * 256);
+                const auto v = static_cast<std::int16_t>((static_cast<std::int32_t>(std::to_integer<std::uint32_t>(src[i])) - 128) * 256);
                 std::memcpy(out.data.data() + i * 2, &v, 2);
             }
         }

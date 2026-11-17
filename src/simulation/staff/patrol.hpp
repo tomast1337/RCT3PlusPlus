@@ -39,7 +39,7 @@ namespace rct3::simulation::staff
 
     /// Adds the square of tiles `across` wide round `at` to `staff`'s patrol area, or takes them away, and does
     /// the same to everyone sharing their zone. An area left with no tiles goes: the whole park again.
-    void paint_patrol(entt::registry& r, entt::entity staff, glm::ivec2 at, int across, bool add);
+    void paint_patrol(entt::registry& r, entt::entity staff, glm::ivec2 at, std::int32_t across, bool add);
 
     /// Empties `staff`'s patrol area and their zone's: the whole park again. They stay on their zone.
     void clear_patrol(entt::registry& r, entt::entity staff);

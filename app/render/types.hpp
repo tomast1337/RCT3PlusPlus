@@ -340,7 +340,7 @@ namespace rct3::render
         /// 2 also, near the eye, the surface lit as bumped by its texture's relief map, with its hollows dark,
         /// its bumps' short shadows and the texture shifted by the map's depth. Draws without a relief map get
         /// only the grain.
-        int surface_detail = 0;
+        std::int32_t surface_detail = 0;
         /// The Lit shaders only: a ghost's look. The vertex colour alone, times `sky`, with no other light and no
         /// haze; the texture gives only its alpha, and the surface shows more see-through where it faces the eye.
         bool ghost = false;
@@ -374,8 +374,8 @@ namespace rct3::render
         bool flow = false;
         /// For the Waterfall shader: which part of the falls is drawn (park::FallPart, as its number) and how much
         /// of their look is worked out (park::WaterfallDetail, as its number, 0 to 3).
-        int fall_part = 0;
-        int fall_detail = 0;
+        std::int32_t fall_part = 0;
+        std::int32_t fall_detail = 0;
     };
 
     /// What the Occlusion shader needs. Depths are as the depth buffer holds them, 0 near to 1 far.

@@ -5,6 +5,7 @@
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -14,12 +15,12 @@ namespace dice_rolls = rct3::random;
 namespace
 {
     /// Of `tries` picks for a guest of `age` with `energy`, the share running.
-    double running_share(AgeGroup age, float energy, int tries = 4000)
+    double running_share(AgeGroup age, float energy, std::int32_t tries = 4000)
     {
         auto dice = dice_rolls::seeded(dice_rolls::Seed { 7 });
         const Mood mood { .happiness = { 0.5f }, .energy = { energy } };
-        int runs = 0;
-        for (int i = 0; i < tries; ++i)
+        std::int32_t runs = 0;
+        for (std::int32_t i = 0; i < tries; ++i)
             runs += pick_gait(age, mood, Needs { }, dice) == Gait::Run;
         return static_cast<double>(runs) / tries;
     }
@@ -63,7 +64,7 @@ TEST_CASE("the guests walking a park do not all go at one pace")
     Sandbox park;
     park.path({ 0, 0 }, { 12, 0 });
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 30; ++i)
+    for (std::int32_t i = 0; i < 30; ++i)
         guests.push_back(park.guest({ 0, 0 }, { .energy = 0.3f + 0.02f * static_cast<float>(i) }));
     park.run_seconds(30);
     auto& r = park.world().registry;
@@ -89,7 +90,7 @@ TEST_CASE("thrilled riders throw their hands up and keep them up till the forces
 {
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 3 });
     RideReaction now = RideReaction::Calm;
-    for (int i = 0; i < 40 && now != RideReaction::HandsUp; ++i)
+    for (std::int32_t i = 0; i < 40 && now != RideReaction::HandsUp; ++i)
         now = react(now, kCruising, TrainRun::Free, { 1 }, 0, kKeen, CarPlace::Behind, dice, 0.25f);
     CHECK(now == RideReaction::HandsUp);
     CHECK(react(now, kCruising, TrainRun::Free, { 0.5f }, 0, kKeen, CarPlace::Behind, dice, 0.25f) == RideReaction::HandsUp);
@@ -99,8 +100,8 @@ TEST_CASE("thrilled riders throw their hands up and keep them up till the forces
 TEST_CASE("riders who are not thrilled raise their hands only floating over a hill")
 {
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 4 });
-    int cruising = 0, floating = 0;
-    for (int i = 0; i < 400; ++i)
+    std::int32_t cruising = 0, floating = 0;
+    for (std::int32_t i = 0; i < 400; ++i)
     {
         cruising += react(RideReaction::Calm, kCruising, TrainRun::Free, { 0.5f }, 0, kKeen, CarPlace::Behind, dice, 0.25f) == RideReaction::HandsUp;
         floating += react(RideReaction::Calm, Felt { .vertical = 0 }, TrainRun::Free, { 0.5f }, 0, kKeen, CarPlace::Behind, dice, 0.25f) == RideReaction::HandsUp;
@@ -112,11 +113,11 @@ TEST_CASE("riders who are not thrilled raise their hands only floating over a hi
 TEST_CASE("timid riders never raise their hands, and the front car has fewer of them")
 {
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 5 });
-    for (int i = 0; i < 200; ++i)
+    for (std::int32_t i = 0; i < 200; ++i)
         CHECK(react(RideReaction::Calm, kCruising, TrainRun::Free, { 1 }, 0, kTimid, CarPlace::Front, dice, 1) != RideReaction::HandsUp);
     const Leanings middling { .hands = 0.2f };
-    int front = 0, back = 0;
-    for (int i = 0; i < 200; ++i)
+    std::int32_t front = 0, back = 0;
+    for (std::int32_t i = 0; i < 200; ++i)
     {
         front += react(RideReaction::Calm, kCruising, TrainRun::Free, { 1 }, 0, middling, CarPlace::Front, dice, 1) == RideReaction::HandsUp;
         back += react(RideReaction::Calm, kCruising, TrainRun::Free, { 1 }, 0, middling, CarPlace::Behind, dice, 1) == RideReaction::HandsUp;
@@ -147,10 +148,10 @@ TEST_CASE("flat ride riders the ride suits throw their hands up and keep them up
 {
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 9 });
     RideReaction now = RideReaction::Calm;
-    for (int i = 0; i < 40 && now != RideReaction::HandsUp; ++i)
+    for (std::int32_t i = 0; i < 40 && now != RideReaction::HandsUp; ++i)
         now = react_flat(now, true, { 0.5f }, 0, kKeen, dice, 0.25f);
     CHECK(now == RideReaction::HandsUp);
     CHECK(react_flat(now, true, { 0.1f }, -1, kKeen, dice, 0.25f) == RideReaction::HandsUp);
-    for (int i = 0; i < 400; ++i)
+    for (std::int32_t i = 0; i < 400; ++i)
         CHECK(react_flat(RideReaction::Calm, true, { 0.5f }, -0.8f, kKeen, dice, 0.25f) == RideReaction::Calm);
 }

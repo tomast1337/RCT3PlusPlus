@@ -4,12 +4,13 @@
 #include "ui/language.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <format>
 
 namespace rct3::ui::font
 {
 
-    std::string font_overlay(std::string_view language, int width)
+    std::string font_overlay(std::string_view language, std::int32_t width)
     {
         const auto info = find_language(language);
         const std::string_view stem = info && info->cjk ? info->name : std::string_view("Resolution");

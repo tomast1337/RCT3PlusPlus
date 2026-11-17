@@ -25,6 +25,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <ranges>
 #include <utility>
 
@@ -223,7 +224,7 @@ namespace rct3::scene
                 return std::nullopt;
             const glm::vec3 hit = ray.origin + ray.direction * *nearest;
             const glm::vec2 spot { (hit.x - g.origin_x) / g.tile_size_x, (hit.z - g.origin_z) / g.tile_size_z };
-            return g.contains(static_cast<int>(std::floor(spot.x)), static_cast<int>(std::floor(spot.y))) ? std::optional(spot) : std::nullopt;
+            return g.contains(static_cast<std::int32_t>(std::floor(spot.x)), static_cast<std::int32_t>(std::floor(spot.y))) ? std::optional(spot) : std::nullopt;
         }
 
         /// Draws the marks over the area, at the pools' surface where squares are, and remembers them.
@@ -296,7 +297,7 @@ namespace rct3::scene
         {
             park::PoolTool& t = scene.pooling;
             const rct3::park::BuildItem& item = *t.item;
-            const auto tile = spot ? std::optional(save::model::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
+            const auto tile = spot ? std::optional(save::model::Tile { static_cast<std::int32_t>(std::floor(spot->x)), static_cast<std::int32_t>(std::floor(spot->y)) }) : std::nullopt;
             const rct3::park::pools::PoolExtraFit fit = rct3::park::pools::pool_extra_fit(item.pool_extra);
             const bool room = item.kind == rct3::park::BuildKind::PoolRoom;
             const auto fits_at = [&](rct3::park::Side side) { return tile && (room ? rct3::park::pools::pool_room_fits(scene.pools, tile->col, tile->row, side) : rct3::park::pools::pool_extra_fits(scene.pools, tile->col, tile->row, fit, side)); };
@@ -572,7 +573,7 @@ namespace rct3::scene
         std::optional<std::pair<save::model::Tile, std::int32_t>> deck_start;
         if (spot)
         {
-            const save::model::Tile on { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+            const save::model::Tile on { static_cast<std::int32_t>(std::floor(spot->x)), static_cast<std::int32_t>(std::floor(spot->y)) };
             const auto deck = scene.pools.at(on.col, on.row) ? decks.end() : std::ranges::find_if(decks, [&](const rct3::park::pools::SlidePlatform& d) { return d.col == on.col && d.row == on.row; });
             if (deck != decks.end())
                 if (const auto side = rct3::park::object::nearest_side(*spot - glm::vec2 { on.col, on.row }, [&](rct3::park::Side side) { return rct3::park::pools::slide_path_start(scene.pools, *deck, side).has_value(); }))
@@ -595,7 +596,7 @@ namespace rct3::scene
         {
             if (!t.lift && spot)
             {
-                const save::model::Tile tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) };
+                const save::model::Tile tile { static_cast<std::int32_t>(std::floor(spot->x)), static_cast<std::int32_t>(std::floor(spot->y)) };
                 const auto square = scene.pools.at(tile.col, tile.row);
                 t.lift = park::PoolTool::Lift { .spot = *spot, .surface = t.height.value_or(square ? square->surface : static_cast<std::int32_t>(std::lround(scene.grid.at(tile.col, tile.row).max_height()))) };
             }
@@ -626,7 +627,7 @@ namespace rct3::scene
             const std::string_view piece = s == rct3::park::kPoolDelete ? "" : s == rct3::park::kPoolTiles ? "SolidTop" : s == rct3::park::kPoolJacuzzi ? "Jacuzzi" : s == rct3::park::kPoolHighDive ? "DBTopBoard" : s == rct3::park::kPoolStairs ? "StairsBase" : s == rct3::park::kPoolPath ? "PathStraight" : s == rct3::park::kPoolPathSlope ? "PathSlope" : s == rct3::park::kPoolPathStairs ? "PathStairs" : "Base";
             turn_preview(device, scene, assets, piece, rct3::park::kPoolOverlay);
         }
-        const auto tile = spot ? std::optional(save::model::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
+        const auto tile = spot ? std::optional(save::model::Tile { static_cast<std::int32_t>(std::floor(spot->x)), static_cast<std::int32_t>(std::floor(spot->y)) }) : std::nullopt;
         // Pinned, the paths page starts a trail where pressed: at the side of the pool square nearest the pointer
         // that a trail may start from. The square it would lay first is marked, else the trail's next.
         if (const auto panel = panel_of(scene); t.item && laying_paths(*t.item) && panel && panel->pinned())
@@ -917,7 +918,7 @@ namespace rct3::scene
         const bool shown = put_back(scene);
         t.working.reset();
         const auto spot = pointed_spot(scene, at, size, { });
-        const auto tile = spot ? std::optional(save::model::Tile { static_cast<int>(std::floor(spot->x)), static_cast<int>(std::floor(spot->y)) }) : std::nullopt;
+        const auto tile = spot ? std::optional(save::model::Tile { static_cast<std::int32_t>(std::floor(spot->x)), static_cast<std::int32_t>(std::floor(spot->y)) }) : std::nullopt;
         const auto top = tile ? scene.pools.at(tile->col, tile->row) : std::nullopt;
         const auto& items = scene.build.items;
         const bool ready = items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready;

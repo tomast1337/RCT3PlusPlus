@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <utility>
 
@@ -96,7 +97,7 @@ namespace rct3::ui::screens::options
         } };
         constexpr float kFreelookMode = 1;
 
-        CameraLines camera_lines(int mode, int controls)
+        CameraLines camera_lines(std::int32_t mode, std::int32_t controls)
         {
             if (mode <= 0)
                 return kAdvancedCamera.at(static_cast<std::size_t>(std::clamp(controls, 0, 2)));
@@ -206,8 +207,8 @@ namespace rct3::ui::screens::options
                 rows.disable();
         }
         std::vector<std::u16string> currencies;
-        const int last_currency = static_cast<int>(config::game::game_option_info(O::Currency).maximum);
-        for (int n = 0; n <= last_currency; ++n)
+        const std::int32_t last_currency = static_cast<std::int32_t>(config::game::game_option_info(O::Currency).maximum);
+        for (std::int32_t n = 0; n <= last_currency; ++n)
         {
             const Currency c = currency(strings, n);
             std::u16string sign = trimmed(c.before + c.after);
@@ -402,7 +403,7 @@ namespace rct3::ui::screens::options
         auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(custom_->content(), style_.page_width - style_.scroll.thickness, style_.rows, options_, choices_.inert));
         custom_rows_ = &rows;
         std::vector<std::u16string> samples = { str(strings, "GameOptionsDialog_AntiAliasNone") };
-        for (const int level : choices_.anti_aliasing_levels)
+        for (const std::int32_t level : choices_.anti_aliasing_levels)
             samples.push_back(str(strings, "GameOptionsDialog_AntiAliasLevel") + u" " + ascii(std::to_string(level)));
         rows.choice(O::AntiAliasing, str(strings, "GameOptionsDialog_AntiAlias"), std::move(samples));
         rows.choice(O::Shadows, str(strings, "GameOptionsDialog_Shadows"), items(strings, { "GameOptionsDialog_ShadowsTypeNone", "GameOptionsDialog_ShadowsTypeStatic", "GameOptionsDialog_ShadowsTypeDynamic" }));
@@ -516,7 +517,7 @@ namespace rct3::ui::screens::options
 
     void OptionsDialog::update_camera_help()
     {
-        const CameraLines lines = camera_lines(static_cast<int>(options_.choice(O::CameraMode)), static_cast<int>(std::lround(options_.get(O::CameraControls))));
+        const CameraLines lines = camera_lines(static_cast<std::int32_t>(options_.choice(O::CameraMode)), static_cast<std::int32_t>(std::lround(options_.get(O::CameraControls))));
         for (std::size_t i = 0; i < camera_help_.size(); ++i)
         {
             const std::u16string& action = camera_actions_.at(static_cast<std::size_t>(lines.at(i)));

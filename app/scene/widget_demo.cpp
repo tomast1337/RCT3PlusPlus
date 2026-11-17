@@ -18,6 +18,7 @@
 #include "ui/widgets/window.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <format>
 #include <map>
 #include <string>
@@ -59,7 +60,7 @@ namespace rct3::scene
         constexpr std::size_t kNewWindowItem = 0;
         constexpr std::size_t kCloseWindowItem = 1;
         constexpr std::size_t kAutoScaleItem = 0; ///< Then one item for each whole scale from 1
-        constexpr int kScaleChoices = 4;
+        constexpr std::int32_t kScaleChoices = 4;
         constexpr std::size_t kCloseAllItem = 3;
         constexpr std::size_t kCloseAllYes = 0;
         constexpr units::Pixels kIconSwell { 2 }; ///< Of the confirm and cancel buttons
@@ -190,7 +191,7 @@ namespace rct3::scene
             void update(const ui::UpdateContext& context) override
             {
                 ui::widgets::Window::update(context);
-                volume_label_->text = strings::to_utf16(std::format("{}%", static_cast<int>(volume_->value())));
+                volume_label_->text = strings::to_utf16(std::format("{}%", static_cast<std::int32_t>(volume_->value())));
                 if (guests_->take_change())
                     guests_label_->text = guests_->value() == 1 ? u"guest" : u"guests";
                 if (name_->take_change())
@@ -242,7 +243,7 @@ namespace rct3::scene
         {
             std::vector<ui::widgets::MenuItem> items;
             items.push_back({ .text = u"Automatic", .checked = !chosen });
-            for (int s = 1; s <= kScaleChoices; ++s)
+            for (std::int32_t s = 1; s <= kScaleChoices; ++s)
                 items.push_back({ .text = strings::to_utf16(std::format("{}x", s)), .checked = chosen == static_cast<float>(s) });
             return items;
         }

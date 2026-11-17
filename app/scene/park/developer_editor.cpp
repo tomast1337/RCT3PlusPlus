@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <format>
 #include <limits>
@@ -28,7 +29,7 @@ namespace rct3::scene::park
 
         constexpr std::array<std::string_view, 8> kErrands { "wandering", "heading", "queueing", "riding", "following", "waiting", "buying", "swimming" };
         constexpr std::array<std::string_view, 3> kAges { "child", "teen", "adult" };
-        constexpr int kMinutesPerDay = 24 * 60;
+        constexpr std::int32_t kMinutesPerDay = 24 * 60;
 
         std::string guest_name(const entt::registry& r, entt::entity guest)
         {
@@ -71,7 +72,7 @@ namespace rct3::scene::park
             if (!now)
                 return;
             const std::string_view name = simulation::level_name(level);
-            ImGui::PushID(static_cast<int>(level));
+            ImGui::PushID(static_cast<int>(level)); // c-api
             bool held = simulation::level_held(r, guest, level);
             if (ImGui::Checkbox("hold", &held))
                 simulation::hold_level(r, guest, level, held);
@@ -94,7 +95,7 @@ namespace rct3::scene::park
             for (const entt::entity e : r.view<const simulation::Visitor, const simulation::Mood>(entt::exclude<simulation::Left>))
                 if (wanted.empty() || strings::search_folded(strings::to_utf16(guest_name(r, e))).contains(wanted))
                     ed.rows.push_back(e);
-            enum Column : int
+            enum Column : std::int32_t
             {
                 Name,
                 Age,
@@ -151,14 +152,14 @@ namespace rct3::scene::park
                 std::ranges::stable_sort(ed.rows, [&](entt::entity a, entt::entity b) { return descending ? less(b, a) : less(a, b); });
             }
             ImGuiListClipper clipper;
-            clipper.Begin(static_cast<int>(ed.rows.size()));
+            clipper.Begin(static_cast<std::int32_t>(ed.rows.size()));
             while (clipper.Step())
-                for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row)
+                for (std::int32_t row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row)
                 {
                     const entt::entity e = ed.rows[static_cast<std::size_t>(row)];
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
-                    ImGui::PushID(static_cast<int>(entt::to_integral(e)));
+                    ImGui::PushID(static_cast<int>(entt::to_integral(e))); // c-api
                     if (ImGui::Selectable(guest_name(r, e).c_str(), e == ed.guest, ImGuiSelectableFlags_SpanAllColumns))
                         pick_guest(scene, e);
                     ImGui::PopID();
@@ -323,7 +324,7 @@ namespace rct3::scene::park
                     for (const auto [e, attraction] : r.view<const simulation::Attraction>().each())
                         if (attraction.entrance)
                         {
-                            ImGui::PushID(static_cast<int>(entt::to_integral(e)));
+                            ImGui::PushID(static_cast<int>(entt::to_integral(e))); // c-api
                             if (ImGui::Selectable(attraction.name.c_str(), e == ed.send_to))
                                 ed.send_to = e;
                             ImGui::PopID();
@@ -365,7 +366,7 @@ namespace rct3::scene::park
                 if (money_input("Entrance fee", fee))
                     scene.park_model.finance.entrance_fee = static_cast<std::int32_t>(std::clamp<std::int64_t>(fee.value, 0, std::numeric_limits<std::int32_t>::max()));
             }
-            std::array<int, 2> hours { static_cast<int>(std::lround(scene.day_clock.park_hours.open * kMinutesPerDay)), static_cast<int>(std::lround(scene.day_clock.park_hours.close * kMinutesPerDay)) };
+            std::array<std::int32_t, 2> hours { static_cast<std::int32_t>(std::lround(scene.day_clock.park_hours.open * kMinutesPerDay)), static_cast<std::int32_t>(std::lround(scene.day_clock.park_hours.close * kMinutesPerDay)) };
             ImGui::SetNextItemWidth(160);
             if (ImGui::SliderInt2("Opening hours (minutes)", hours.data(), 0, kMinutesPerDay))
             {
@@ -376,7 +377,7 @@ namespace rct3::scene::park
             }
             for (auto [e, gate] : r.view<simulation::ParkGate>().each())
             {
-                ImGui::PushID(static_cast<int>(entt::to_integral(e)));
+                ImGui::PushID(static_cast<int>(entt::to_integral(e))); // c-api
                 ImGui::Checkbox("Gate closed", &gate.closed);
                 ImGui::PopID();
             }

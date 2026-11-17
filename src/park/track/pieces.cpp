@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <bit>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <fstream>
 #include <iterator>
@@ -42,17 +43,17 @@ namespace rct3::park::track
         constexpr std::uint32_t kLastCurveJoin = 6;
 
         /// `steps` wrapped to -3..4, upside down being 4.
-        int wrap_bank(int steps)
+        std::int32_t wrap_bank(std::int32_t steps)
         {
-            const int wrapped = ((steps + kBankSteps) & 7) - kBankSteps; // Eight steps round a whole turn
+            const std::int32_t wrapped = ((steps + kBankSteps) & 7) - kBankSteps; // Eight steps round a whole turn
             return wrapped == -kBankSteps ? kUpsideDown : wrapped;
         }
 
-        int slope_steps(float pitch)
+        std::int32_t slope_steps(float pitch)
         {
             const float a = std::abs(pitch);
-            int steps = kSlopeSteps;
-            for (int i = 0; i < kSlopeSteps; ++i)
+            std::int32_t steps = kSlopeSteps;
+            for (std::int32_t i = 0; i < kSlopeSteps; ++i)
             {
                 if (a < kSlopeLimits.at(static_cast<std::size_t>(i)))
                 {
@@ -65,7 +66,7 @@ namespace rct3::park::track
 
         Heading8 heading_steps(const glm::vec3& flat)
         {
-            return Heading8::from(static_cast<int>(std::lround(std::atan2(flat.z, -flat.x) * kDegrees / kStepDegrees)));
+            return Heading8::from(static_cast<std::int32_t>(std::lround(std::atan2(flat.z, -flat.x) * kDegrees / kStepDegrees)));
         }
 
         /// How plain a piece is: fewer flags first, then the shorter name.
@@ -338,17 +339,17 @@ namespace rct3::park::track
             if (const auto loop = splines.find(std::format("{}Loop", t.name)); loop != splines.end())
             {
                 const auto points = [](const ovl::Spline& spline) {
-                    constexpr int kPerPart = 4;
+                    constexpr std::int32_t kPerPart = 4;
                     std::vector<glm::vec3> out;
                     for (std::size_t i = 0; i + 1 < spline.nodes.size(); ++i)
-                        for (int k = 0; k < kPerPart; ++k)
+                        for (std::int32_t k = 0; k < kPerPart; ++k)
                             out.push_back(vec(ovl::spline_point(spline, i, static_cast<float>(k) / kPerPart)));
                     if (!spline.nodes.empty())
                         out.push_back(vec(spline.nodes.back().position));
                     return out;
                 };
                 std::vector<std::vector<glm::vec3>> paths;
-                for (int n = 1;; ++n)
+                for (std::int32_t n = 1;; ++n)
                 {
                     const auto path = splines.find(std::format("{}Path{:02}", t.name, n));
                     if (path == splines.end())
@@ -378,7 +379,7 @@ namespace rct3::park::track
         const glm::vec3 forward = glm::normalize(direction);
         PieceEnd end;
         end.slope = slope_steps(std::atan2(forward.y, std::hypot(forward.x, forward.z)) * kDegrees);
-        end.bank = wrap_bank(static_cast<int>(std::lround(bank_degrees(direction, side) / kStepDegrees)));
+        end.bank = wrap_bank(static_cast<std::int32_t>(std::lround(bank_degrees(direction, side) / kStepDegrees)));
         // Straight up or down, the track's way across the ground is the rails' level line turned back.
         const glm::vec3 flat = std::abs(forward.y) > kUpright ? glm::cross(side, glm::vec3 { 0, 1, 0 }) : forward;
         end.heading = heading_steps(flat);
@@ -408,7 +409,7 @@ namespace rct3::park::track
         }
         if (record.joins[1].width != 0)
             shape.toggles |= toggle_bit(PieceToggle::Wide);
-        const int turn = shape.exit.heading.eighths_from(shape.entry.heading);
+        const std::int32_t turn = shape.exit.heading.eighths_from(shape.entry.heading);
         const std::uint32_t join = record.join_a;
         if ((record.flags & kPieceStation) != 0)
             shape.use = PieceUse::Station;
@@ -419,7 +420,7 @@ namespace rct3::park::track
             shape.curve = 0;
         else if (join >= 1 && join <= kLastCurveJoin && turn != 0)
         {
-            const int size = static_cast<int>(join <= kCurveSizes ? join : join - kCurveSizes);
+            const std::int32_t size = static_cast<std::int32_t>(join <= kCurveSizes ? join : join - kCurveSizes);
             shape.curve = turn < 0 ? -size : size;
         }
         else
@@ -434,14 +435,14 @@ namespace rct3::park::track
         for (std::size_t i = 0; i < records.size() && i < lines.size(); ++i)
             pieces.push_back(shape_piece(records[i], lines[i]));
         const auto station = std::ranges::find_if(pieces, [&](const PieceShape& p) { return p.use == PieceUse::Station && listed(p.record); });
-        const int level = station != pieces.end() ? station->entry.bank : 0;
+        const std::int32_t level = station != pieces.end() ? station->entry.bank : 0;
         for (PieceShape& p : pieces)
         {
             p.entry.bank = wrap_bank(p.entry.bank - level);
             p.exit.bank = wrap_bank(p.exit.bank - level);
         }
         // One plain piece per shape: the plainest keeps it, the others are offered by name.
-        using Key = std::tuple<int, int, int, int, int, int, int, std::uint8_t>;
+        using Key = std::tuple<std::int32_t, std::int32_t, std::int32_t, std::int32_t, std::int32_t, std::int32_t, std::int32_t, std::uint8_t>;
         std::map<Key, std::size_t> plainest;
         for (std::size_t i = 0; i < pieces.size(); ++i)
         {
@@ -477,7 +478,7 @@ namespace rct3::park::track
         return { -shape.entry.slope, wrap_bank(-shape.entry.bank), shape.entry.heading.reversed() };
     }
 
-    int laid_curve(const PieceShape& shape, bool reversed)
+    std::int32_t laid_curve(const PieceShape& shape, bool reversed)
     {
         return reversed ? -shape.curve : shape.curve;
     }

@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 
 namespace rct3::ui::screens::management
@@ -388,7 +389,7 @@ namespace rct3::ui::screens::management
         for (Row& r : rows_)
         {
             const std::size_t who = r.line.index;
-            const auto change = [&](info::PersonControl control, int value = 0, int bit = 0) { asks_.change = { who, info::InfoChange { .id = info::person_control(control, bit), .value = value, .pot = 0, .text = { } } }; };
+            const auto change = [&](info::PersonControl control, std::int32_t value = 0, std::int32_t bit = 0) { asks_.change = { who, info::InfoChange { .id = info::person_control(control, bit), .value = value, .pot = 0, .text = { } } }; };
             if (r.expand->take_click())
             {
                 r.expanded = !r.expanded;
@@ -496,7 +497,7 @@ namespace rct3::ui::screens::management
         if (costumes_ != nullptr)
         {
             if (const auto picked = costumes_->take_choice(); picked && dressing_)
-                asks_.change = { *dressing_, info::InfoChange { .id = info::person_control(info::PersonControl::Costume), .value = static_cast<int>(*picked), .pot = 0, .text = { } } };
+                asks_.change = { *dressing_, info::InfoChange { .id = info::person_control(info::PersonControl::Costume), .value = static_cast<std::int32_t>(*picked), .pot = 0, .text = { } } };
             if (costumes_->closing())
                 costumes_ = nullptr;
         }

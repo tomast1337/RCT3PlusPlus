@@ -4,6 +4,7 @@
 // given an empty frame.
 #include "video/wmv/decoder.hpp"
 
+#include <cstdint>
 #include <ffmpeg/rct3_wmv.h>
 
 namespace rct3::video::wmv
@@ -32,10 +33,10 @@ namespace rct3::video::wmv
     std::optional<Decoder> Decoder::open(const Format& format)
     {
         const Rct3WmvFormat f {
-            .width = static_cast<int>(format.width),
-            .height = static_cast<int>(format.height),
+            .width = static_cast<int>(format.width),   // c-api
+            .height = static_cast<int>(format.height), // c-api
             .extra = reinterpret_cast<const std::uint8_t*>(format.extra.data()),
-            .extra_size = static_cast<int>(format.extra.size()),
+            .extra_size = static_cast<int>(format.extra.size()), // c-api
         };
         auto s = std::make_unique<State>();
         s->decoder.reset(rct3_wmv_open(&f));
@@ -47,10 +48,10 @@ namespace rct3::video::wmv
     std::optional<Picture> Decoder::decode(std::span<const std::byte> frame)
     {
         Rct3WmvPicture p { };
-        if (rct3_wmv_decode(state_->decoder.get(), frame.empty() ? nullptr : reinterpret_cast<const std::uint8_t*>(frame.data()), static_cast<int>(frame.size()), &p) != 1 || p.width <= 0 || p.height <= 0)
+        if (rct3_wmv_decode(state_->decoder.get(), frame.empty() ? nullptr : reinterpret_cast<const std::uint8_t*>(frame.data()), static_cast<int>(frame.size()), &p) != 1 || p.width <= 0 || p.height <= 0) // c-api
             return std::nullopt;
         Picture out { .width = static_cast<std::uint32_t>(p.width), .height = static_cast<std::uint32_t>(p.height) };
-        for (int i = 0; i < 3; ++i)
+        for (std::int32_t i = 0; i < 3; ++i)
         {
             const auto rows = static_cast<std::size_t>(i == 0 ? p.height : (p.height + 1) / 2);
             out.strides[i] = static_cast<std::size_t>(p.strides[i]);

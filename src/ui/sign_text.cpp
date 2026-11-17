@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::ui
 {
@@ -40,20 +41,20 @@ namespace rct3::ui
             if (g->page < pages.size() && g->box.width() > 0 && g->box.height() > 0)
             {
                 const ovl::texture::RgbaImage& page = pages[g->page];
-                const auto left = static_cast<int>(std::lround(pen + g->box.x0));
-                const auto top = static_cast<int>(std::lround(baseline + g->box.y0));
-                const auto wide = static_cast<int>(std::lround(g->box.width()));
-                const auto tall = static_cast<int>(std::lround(g->box.height()));
-                for (int y = 0; y < tall; ++y)
+                const auto left = static_cast<std::int32_t>(std::lround(pen + g->box.x0));
+                const auto top = static_cast<std::int32_t>(std::lround(baseline + g->box.y0));
+                const auto wide = static_cast<std::int32_t>(std::lround(g->box.width()));
+                const auto tall = static_cast<std::int32_t>(std::lround(g->box.height()));
+                for (std::int32_t y = 0; y < tall; ++y)
                 {
                     // Glyph texture coordinates may run either way down the page.
                     const float v = g->uv.y0 + (g->uv.y1 - g->uv.y0) * (static_cast<float>(y) + 0.5f) / static_cast<float>(tall);
                     const auto from_y = std::clamp(static_cast<std::int64_t>(v * static_cast<float>(page.height)), std::int64_t { 0 }, static_cast<std::int64_t>(page.height) - 1);
-                    for (int x = 0; x < wide; ++x)
+                    for (std::int32_t x = 0; x < wide; ++x)
                     {
-                        const int tx = left + x;
-                        const int ty = top + y;
-                        if (tx < 0 || ty < 0 || tx >= static_cast<int>(loop.width) || ty >= static_cast<int>(height))
+                        const std::int32_t tx = left + x;
+                        const std::int32_t ty = top + y;
+                        if (tx < 0 || ty < 0 || tx >= static_cast<std::int32_t>(loop.width) || ty >= static_cast<std::int32_t>(height))
                             continue;
                         const float u = g->uv.x0 + (g->uv.x1 - g->uv.x0) * (static_cast<float>(x) + 0.5f) / static_cast<float>(wide);
                         const auto from_x = std::clamp(static_cast<std::int64_t>(u * static_cast<float>(page.width)), std::int64_t { 0 }, static_cast<std::int64_t>(page.width) - 1);

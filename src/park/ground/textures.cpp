@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <format>
 #include <limits>
 #include <ranges>
@@ -242,7 +243,7 @@ namespace rct3::park::ground
         std::vector<std::array<float, 3>> colours;
         for (const TunnelPictures& s : styles)
             colours.push_back(mean_colour(s.wall));
-        for (int cliff = 0; cliff <= std::numeric_limits<std::uint8_t>::max(); ++cliff)
+        for (std::int32_t cliff = 0; cliff <= std::numeric_limits<std::uint8_t>::max(); ++cliff)
         {
             const auto face = images.find(ground_key(GroundPaint::Cliff, static_cast<std::uint8_t>(cliff)));
             if (face == images.end())

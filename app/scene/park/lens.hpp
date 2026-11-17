@@ -56,8 +56,8 @@ namespace rct3::scene::park
         glm::vec3 eye { };
         float aspect = 1;
         bool under_water = false;
-        int rain = 0;   ///< 0 none, 1 light, 2 heavy, 3 a storm
-        float wind = 0; ///< The park's wind, 0 calm to 1 strong
+        std::int32_t rain = 0; ///< 0 none, 1 light, 2 heavy, 3 a storm
+        float wind = 0;        ///< The park's wind, 0 calm to 1 strong
         /// The car ridden and the times it has splashed through water (rct3::park::CarWater::splashes); none while
         /// no car is ridden.
         std::optional<std::pair<std::size_t, std::uint32_t>> car_splashes;

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <ranges>
 #include <string>
@@ -118,7 +119,7 @@ namespace rct3::ui::screens::info
             for (std::size_t i = 0; i < f.members.size(); ++i)
             {
                 InfoControl& row = page.controls.emplace_back();
-                row.id = static_cast<int>(i);
+                row.id = static_cast<std::int32_t>(i);
                 row.name = std::format("member{}", i);
                 row.kind = InfoControlKind::Button;
                 row.label = person_doing(f.members[i], strings);

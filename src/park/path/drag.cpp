@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 
 namespace rct3::park::path
@@ -19,13 +20,13 @@ namespace rct3::park::path
     {
         std::vector<save::model::Tile> line { from };
         save::model::Tile at = from;
-        const int cols = std::abs(to.col - from.col);
-        const int rows = std::abs(to.row - from.row);
+        const std::int32_t cols = std::abs(to.col - from.col);
+        const std::int32_t rows = std::abs(to.row - from.row);
         // Steps along whichever way is further behind the straight line, one side at a time.
         while (at != to)
         {
-            const int done_cols = std::abs(at.col - from.col);
-            const int done_rows = std::abs(at.row - from.row);
+            const std::int32_t done_cols = std::abs(at.col - from.col);
+            const std::int32_t done_rows = std::abs(at.row - from.row);
             const bool along_cols = at.row == to.row || (at.col != to.col && (done_cols + 0.5f) * static_cast<float>(rows) <= (done_rows + 0.5f) * static_cast<float>(cols));
             if (along_cols)
                 at.col += to.col > at.col ? 1 : -1;
@@ -36,13 +37,13 @@ namespace rct3::park::path
         return line;
     }
 
-    std::vector<save::model::Tile> brush_square(save::model::Tile centre, int size)
+    std::vector<save::model::Tile> brush_square(save::model::Tile centre, std::int32_t size)
     {
         std::vector<save::model::Tile> square;
-        const int low = -(size - 1) / 2;
-        for (int row = low; row < low + size; ++row)
+        const std::int32_t low = -(size - 1) / 2;
+        for (std::int32_t row = low; row < low + size; ++row)
         {
-            for (int col = low; col < low + size; ++col)
+            for (std::int32_t col = low; col < low + size; ++col)
                 square.push_back({ centre.col + col, centre.row + row });
         }
         return square;
@@ -106,7 +107,7 @@ namespace rct3::park::path
             if (t <= 0 || t > nearest)
                 continue;
             const glm::vec3 hit = ray.origin + ray.direction * t;
-            if (static_cast<int>(std::floor((hit.x - grid.origin_x) / grid.tile_size_x)) != p.col || static_cast<int>(std::floor((hit.z - grid.origin_z) / grid.tile_size_z)) != p.row)
+            if (static_cast<std::int32_t>(std::floor((hit.x - grid.origin_x) / grid.tile_size_x)) != p.col || static_cast<std::int32_t>(std::floor((hit.z - grid.origin_z) / grid.tile_size_z)) != p.row)
                 continue;
             nearest = t;
             best = PathEdge { i, std::nullopt };

@@ -2,6 +2,7 @@
 #include "park/ground/shapes.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -11,7 +12,7 @@ using namespace rct3::park::ground;
 namespace
 {
     /// Flat at height 2, `size` tiles each way.
-    save::model::TerrainGrid flat(int size)
+    save::model::TerrainGrid flat(std::int32_t size)
     {
         save::model::TerrainGrid g;
         g.width = size;
@@ -22,7 +23,7 @@ namespace
         return g;
     }
 
-    float point(const save::model::TerrainGrid& g, int c, int r)
+    float point(const save::model::TerrainGrid& g, std::int32_t c, std::int32_t r)
     {
         return g.at(c, r).corners[0]; // The tile's own first corner is the point (c, r)
     }

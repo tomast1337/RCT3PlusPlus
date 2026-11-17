@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/id.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <type_traits>
 #include <unordered_set>
@@ -14,7 +15,7 @@ namespace
 TEST_CASE("an id is made from a number only by naming its type, and is no other kind of id")
 {
     static_assert(!std::is_convertible_v<std::size_t, AppleIndex>);
-    static_assert(!std::is_convertible_v<int, AppleIndex>);
+    static_assert(!std::is_convertible_v<std::int32_t, AppleIndex>);
     static_assert(!std::is_convertible_v<AppleIndex, std::size_t>);
     static_assert(!std::is_convertible_v<AppleIndex, PearIndex>);
     static_assert(!std::is_constructible_v<PearIndex, AppleIndex>);

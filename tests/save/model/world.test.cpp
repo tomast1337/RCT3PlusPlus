@@ -98,7 +98,7 @@ namespace
         return b;
     }
 
-    Bytes terrain_header(int w, int h, float ox = -8, float oz = -12, float tx = 4, float tz = 4)
+    Bytes terrain_header(std::int32_t w, std::int32_t h, float ox = -8, float oz = -12, float tx = 4, float tz = 4)
     {
         Bytes b;
         b.u8(static_cast<std::uint8_t>(w)).u8(static_cast<std::uint8_t>(h)).f32(ox).f32(oz).f32(tx).f32(tz);
@@ -109,11 +109,11 @@ namespace
     Bytes make_terrain_3x2(bool legacy = false)
     {
         Bytes b = terrain_header(3, 2);
-        for (int row = 0; row < 2; ++row)
+        for (std::int32_t row = 0; row < 2; ++row)
         {
-            for (int col = 0; col < 3; ++col)
+            for (std::int32_t col = 0; col < 3; ++col)
             {
-                const auto v = [&](int dx, int dz) { return static_cast<float>(col + dx + 10 * (row + dz)); };
+                const auto v = [&](std::int32_t dx, std::int32_t dz) { return static_cast<float>(col + dx + 10 * (row + dz)); };
                 const std::uint8_t flags = static_cast<std::uint8_t>(col == 0 ? 0x02 : col == 1 ? 0x05 : 0x40);
                 if (legacy)
                     cell20(b, v(0, 0), v(1, 0), v(0, 1), v(1, 1), static_cast<std::uint8_t>(col), 1, flags & 0x0f);
@@ -124,7 +124,7 @@ namespace
         return b;
     }
 
-    Bytes make_water(int w, int h, const std::vector<std::pair<float, std::vector<WaterTri>>>& bodies)
+    Bytes make_water(std::int32_t w, std::int32_t h, const std::vector<std::pair<float, std::vector<WaterTri>>>& bodies)
     {
         Bytes b;
         b.u8(static_cast<std::uint8_t>(w)).u8(static_cast<std::uint8_t>(h)).u32(static_cast<std::uint32_t>(bodies.size()));
@@ -430,7 +430,7 @@ TEST_CASE("terrain: 20-byte legacy cells")
 TEST_CASE("terrain: a few unused trailing bytes are tolerated and counted")
 {
     auto blob = make_terrain_3x2();
-    for (int i = 0; i < 8; ++i)
+    for (std::int32_t i = 0; i < 8; ++i)
         blob.u8(0xAA);
     const auto g = decode_terrain(blob.span());
     REQUIRE(g);
@@ -465,7 +465,7 @@ TEST_CASE("terrain: wrong sizes and hostile headers are errors")
     SUBCASE("a size that fits neither layout")
     {
         Bytes b = terrain_header(2, 2);
-        for (int i = 0; i < 4 * 24 + 9; ++i)
+        for (std::int32_t i = 0; i < 4 * 24 + 9; ++i)
             b.u8(0); // more than one layout plus slack
         CHECK(decode_terrain(b.span()).error() == Error::ImplausibleCount);
     }

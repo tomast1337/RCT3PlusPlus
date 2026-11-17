@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <numbers>
 #include <optional>
 #include <unordered_map>
@@ -23,8 +24,8 @@ namespace rct3::park
             const float row = (p.y - g.origin_z) / g.tile_size_z;
             tree.col = static_cast<std::int32_t>(std::floor(col));
             tree.row = static_cast<std::int32_t>(std::floor(row));
-            const int right = col - std::floor(col) >= 0.5f ? 1 : 0;
-            const int down = row - std::floor(row) >= 0.5f ? 1 : 0;
+            const std::int32_t right = col - std::floor(col) >= 0.5f ? 1 : 0;
+            const std::int32_t down = row - std::floor(row) >= 0.5f ? 1 : 0;
             tree.quadrant = right + 2 * down;
         }
 
@@ -89,7 +90,7 @@ namespace rct3::park
                 continue;
             const auto positioning = static_cast<object::Positioning>(models.find(object::model_ref(kind))->second.positioning);
             const glm::vec3 source = object::object_transform(kind, positioning, grid)[3];
-            for (int i = 0; i < kOffMapTries; ++i)
+            for (std::int32_t i = 0; i < kOffMapTries; ++i)
             {
                 // Squaring a uniform draw keeps more of them near their park tree.
                 const auto u = static_cast<float>(random::unit(scenery));

@@ -4,6 +4,7 @@
 #include "park/ground/paths.hpp"
 #include "park/path/decks.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -19,7 +20,7 @@ namespace
     constexpr std::uint8_t kMinusZ = 2;
     constexpr std::uint8_t kPlusZ = 3;
 
-    save::model::TerrainGrid flat_grid(int width, int height, float level = 0)
+    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height, float level = 0)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -34,7 +35,7 @@ namespace
         return g;
     }
 
-    save::model::PathTile queue(int col, int row, std::uint8_t start, std::uint8_t end, std::string style = "Lanes", std::array<std::int32_t, 3> colours = { 4, 5, 6 })
+    save::model::PathTile queue(std::int32_t col, std::int32_t row, std::uint8_t start, std::uint8_t end, std::string style = "Lanes", std::array<std::int32_t, 3> colours = { 4, 5, 6 })
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Queue;
@@ -76,7 +77,7 @@ TEST_CASE("a turn is turned so its open sides face the start and end")
     // Worked by hand: the picture's turns count from the row before towards the next column.
     const auto shape = [](std::uint8_t start, std::uint8_t end) {
         const QueueShape s = queue_shape(start, end);
-        return std::pair { s.cell, int { s.turns } };
+        return std::pair { s.cell, std::int32_t { s.turns } };
     };
     CHECK(shape(kMinusX, kMinusZ) == std::pair { QueueCell::TurnRightSide, 3 });
     CHECK(shape(kMinusX, kPlusZ) == std::pair { QueueCell::TurnLeftSide, 3 });

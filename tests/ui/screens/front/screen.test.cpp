@@ -3,6 +3,7 @@
 
 #include "ui/desktop.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
@@ -25,7 +26,7 @@ namespace
     // Updates until everything has arrived.
     void settle(Desktop& desktop)
     {
-        for (int i = 0; i < 300; ++i)
+        for (std::int32_t i = 0; i < 300; ++i)
             desktop.update({ }, { units::Seconds { 1.0f / 30 }, nullptr });
     }
 

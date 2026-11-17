@@ -48,7 +48,7 @@ namespace rct3::ui::screens::info
     struct PersonTabInfo
     {
         PersonTab tab = PersonTab::General;
-        int slot = 0;          ///< Its place on the ring
+        std::int32_t slot = 0; ///< Its place on the ring
         std::string_view icon; ///< Skin
         std::string_view help; ///< String key
         std::size_t pots = 0;  ///< Of a paint tab: the clothes it colours, upper first
@@ -67,7 +67,7 @@ namespace rct3::ui::screens::info
         /// clicks on the ground paint it. Empty for others.
         std::optional<std::size_t> patrol_tiles { };
         bool painting_patrol = false;
-        int patrol_brush = 0;            ///< Of kPatrolBrushes
+        std::int32_t patrol_brush = 0;   ///< Of kPatrolBrushes
         std::uint32_t patrol_zone = 0;   ///< The shared zone they are on, 0 none
         std::size_t uncovered_paths = 0; ///< Path tiles no one in their job has in a patrol, when any has one
         /// Of a handyman the simulation walks, the broken path items they have mended since the park was opened.
@@ -121,21 +121,21 @@ namespace rct3::ui::screens::info
         Task,        ///< The first task's tick; the task of flag bit b is this plus b
     };
 
-    [[nodiscard]] constexpr int person_control(PersonControl control, int bit = 0)
+    [[nodiscard]] constexpr std::int32_t person_control(PersonControl control, std::int32_t bit = 0)
     {
-        return static_cast<int>(control) + bit;
+        return static_cast<std::int32_t>(control) + bit;
     }
 
     /// Tiles across the patrol brush paints, by its choice.
-    inline constexpr std::array<int, 3> kPatrolBrushes { 1, 3, 5 };
+    inline constexpr std::array<std::int32_t, 3> kPatrolBrushes { 1, 3, 5 };
     /// Shared patrol zones a member of staff can be put on, besides none.
     inline constexpr std::uint32_t kPatrolZones = 8;
 
     /// Longest name the player may type, as in the game.
-    inline constexpr int kLongestName = 34;
+    inline constexpr std::int32_t kLongestName = 34;
     /// Warnings after which a member of staff cannot be warned again.
-    inline constexpr int kMostWarnings = 4;
-    inline constexpr int kMostTraining = 3; ///< Training levels, as the simulation has them
+    inline constexpr std::int32_t kMostWarnings = 4;
+    inline constexpr std::int32_t kMostTraining = 3; ///< Training levels, as the simulation has them
     /// Colours a uniform can be in.
     inline constexpr std::size_t kUniformColours = 16;
     /// Where the clothes' colours are among a person's palettes: the upper's, then the lower's.

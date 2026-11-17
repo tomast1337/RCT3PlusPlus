@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object/chunks.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -8,7 +9,7 @@ using namespace rct3::park::object;
 
 namespace
 {
-    save::model::PlacedObject at(int col, int row)
+    save::model::PlacedObject at(std::int32_t col, std::int32_t row)
     {
         save::model::PlacedObject o;
         o.col = col;

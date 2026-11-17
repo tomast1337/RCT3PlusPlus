@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <tuple>
 #include <unordered_map>
 
@@ -70,7 +71,7 @@ namespace rct3::park::path
                     by_tile_[key(p.col, p.row)].push_back(&p);
             }
 
-            std::span<const save::model::PathTile* const> at(int col, int row) const
+            std::span<const save::model::PathTile* const> at(std::int32_t col, std::int32_t row) const
             {
                 if (col < 0 || row < 0)
                     return { };
@@ -79,7 +80,7 @@ namespace rct3::park::path
             }
 
         private:
-            static std::uint32_t key(int col, int row) noexcept
+            static std::uint32_t key(std::int32_t col, std::int32_t row) noexcept
             {
                 return static_cast<std::uint32_t>(col) << 16 | static_cast<std::uint32_t>(row);
             }
@@ -272,16 +273,16 @@ namespace rct3::park::path
         return choose(path, TilePaths(paths), grid, walls);
     }
 
-    std::size_t refresh_decks(std::span<const save::model::PathTile> paths, std::vector<save::model::PlacedObject>& objects, const save::model::TerrainGrid& grid, std::span<const PathStyle> styles, int low_col, int low_row, int high_col, int high_row, std::optional<const EdgeWalls&> walls)
+    std::size_t refresh_decks(std::span<const save::model::PathTile> paths, std::vector<save::model::PlacedObject>& objects, const save::model::TerrainGrid& grid, std::span<const PathStyle> styles, std::int32_t low_col, std::int32_t low_row, std::int32_t high_col, std::int32_t high_row, std::optional<const EdgeWalls&> walls)
     {
         const TilePaths tiles(paths);
         std::unordered_map<std::uint64_t, save::model::PlacedObject*> by_id;
         for (save::model::PlacedObject& o : objects)
             by_id.emplace(o.id, &o);
         std::size_t changed = 0;
-        for (int col = low_col; col <= high_col; ++col)
+        for (std::int32_t col = low_col; col <= high_col; ++col)
         {
-            for (int row = low_row; row <= high_row; ++row)
+            for (std::int32_t row = low_row; row <= high_row; ++row)
             {
                 for (const save::model::PathTile* p : tiles.at(col, row))
                 {

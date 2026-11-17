@@ -15,6 +15,7 @@
 #include "ui/widgets/menu.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -92,7 +93,7 @@ namespace rct3::ui::widgets
         std::optional<std::size_t> selected_;
         Menu* menu_ = nullptr; // Valid until this widget's update sees it closing; the sweep comes after
         bool dragged_into_menu_ = false;
-        int changes_ = 0;
+        std::int32_t changes_ = 0;
     };
 
 } // namespace rct3::ui::widgets

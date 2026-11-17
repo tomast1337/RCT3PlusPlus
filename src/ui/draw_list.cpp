@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <numbers>
 #include <utility>
 
@@ -114,7 +115,7 @@ namespace rct3::ui
     void DrawList::disc_image(const Rect& rect, TextureId texture, const Rect& uv, Color tint)
     {
         // Enough sides that the edge looks round at the sizes the interface draws.
-        constexpr int kSides = 48;
+        constexpr std::int32_t kSides = 48;
         const Rect full = snapped(rect, scale_);
         if (full.empty())
             return;
@@ -128,7 +129,7 @@ namespace rct3::ui
         const auto at = [&](float fx, float fy) { return Vertex { lerp(full.x0, full.x1, fx), lerp(full.y0, full.y1, fy), colour, lerp(uv.x0, uv.x1, fx), lerp(uv.y0, uv.y1, fy) }; };
         const auto base = static_cast<std::uint32_t>(vertices_.size());
         vertices_.push_back(at(0.5f, 0.5f));
-        for (int i = 0; i < kSides; ++i)
+        for (std::int32_t i = 0; i < kSides; ++i)
         {
             const float angle = 2 * std::numbers::pi_v<float> * static_cast<float>(i) / kSides;
             vertices_.push_back(at(0.5f + 0.5f * std::cos(angle), 0.5f + 0.5f * std::sin(angle)));
@@ -188,7 +189,7 @@ namespace rct3::ui
         {
             // Cut by each side of the clip in turn, keeping the part inside it.
             const Rect& clip = clips_.back();
-            const auto cut = [&](int axis, float edge, bool keep_below) {
+            const auto cut = [&](std::int32_t axis, float edge, bool keep_below) {
                 std::vector<Corner> out;
                 const auto inside = [&](const Corner& c) { return keep_below ? c.at(axis) <= edge : c.at(axis) >= edge; };
                 for (std::size_t i = 0; i < kept.size(); ++i)

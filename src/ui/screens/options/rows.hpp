@@ -81,7 +81,7 @@ namespace rct3::ui::screens::options
         /// A name and a second text in the control column.
         widgets::Label& text(std::u16string name, std::u16string value, std::u16string tip = { });
         /// A line of text across the page, as tall as `lines` rows.
-        widgets::Label& note(std::u16string text, int lines = 1);
+        widgets::Label& note(std::u16string text, std::int32_t lines = 1);
         /// Key combinations the owner handles; `prompt` shows while it waits for keys.
         widgets::KeyBox& keys(std::u16string name, std::vector<KeyCombo> combos, std::u16string prompt, std::u16string tip = { });
 
@@ -164,7 +164,7 @@ namespace rct3::ui::screens::options
         std::vector<Row> rows_;
         float next_gap_ = 0;
         float height_ = 0;
-        int count_ = 0; // For unique names
+        std::int32_t count_ = 0; // For unique names
     };
 
 } // namespace rct3::ui::screens::options

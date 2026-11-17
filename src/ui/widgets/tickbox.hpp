@@ -6,6 +6,7 @@
 
 #include "ui/widget.hpp"
 
+#include <cstdint>
 #include <string>
 
 namespace rct3::ui::widgets
@@ -43,7 +44,7 @@ namespace rct3::ui::widgets
     private:
         void flip();
 
-        int changes_ = 0;
+        std::int32_t changes_ = 0;
     };
 
 } // namespace rct3::ui::widgets

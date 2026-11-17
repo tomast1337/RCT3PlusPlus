@@ -3,6 +3,7 @@
 
 #include "ui/desktop.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -81,10 +82,10 @@ TEST_CASE("the wheel zooms a plot in on its newest samples and out again, and th
     desktop.update({ .position = { 50, 10 }, .wheel = { 0, 1 } });
     CHECK(plot.take_zoom() == 81);
     CHECK_FALSE(plot.take_zoom());
-    for (int i = 0; i < 30; ++i)
+    for (std::int32_t i = 0; i < 30; ++i)
         desktop.update({ .position = { 50, 10 }, .wheel = { 0, 1 } });
     CHECK(plot.span() == plot.fewest_slots);
-    for (int i = 0; i < 30; ++i)
+    for (std::int32_t i = 0; i < 30; ++i)
         desktop.update({ .position = { 50, 10 }, .wheel = { 0, -1 } });
     CHECK(plot.span() == 101);
     desktop.update({ .position = { 300, 10 } });

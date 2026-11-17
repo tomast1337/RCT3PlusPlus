@@ -2,6 +2,7 @@
 #include "park/camera.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -10,7 +11,7 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid slope(int size)
+    save::model::TerrainGrid slope(std::int32_t size)
     {
         save::model::TerrainGrid g;
         g.width = size;
@@ -18,9 +19,9 @@ namespace
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(static_cast<std::size_t>(size * size));
-        for (int row = 0; row < size; ++row)
+        for (std::int32_t row = 0; row < size; ++row)
         {
-            for (int col = 0; col < size; ++col)
+            for (std::int32_t col = 0; col < size; ++col)
             {
                 // Rising one unit a tile towards +X.
                 const auto x0 = static_cast<float>(col);
@@ -131,7 +132,7 @@ TEST_CASE("a wheel zoom rolls in over its time, most of it early, all of it in t
 {
     float pending = 1;
     float taken = 0;
-    for (int frame = 0; frame < 15; ++frame) // A quarter second at 60 frames a second
+    for (std::int32_t frame = 0; frame < 15; ++frame) // A quarter second at 60 frames a second
     {
         const float step = zoom_step(pending, 1.0f / 60, 0.25f);
         if (frame == 0)
@@ -140,7 +141,7 @@ TEST_CASE("a wheel zoom rolls in over its time, most of it early, all of it in t
         taken += step;
     }
     CHECK(taken == doctest::Approx(0.95f).epsilon(0.01));
-    for (int frame = 0; frame < 120 && pending != 0; ++frame)
+    for (std::int32_t frame = 0; frame < 120 && pending != 0; ++frame)
         pending -= zoom_step(pending, 1.0f / 60, 0.25f);
     CHECK(pending == 0);
     CHECK(zoom_step(-2, 1, 0) == -2);
@@ -209,7 +210,7 @@ TEST_CASE("riding along looks at the track ahead, sways against the pull and sha
     float speed = 0;
     float along = 0;
     glm::mat4 seat;
-    for (int i = 0; i < 20; ++i)
+    for (std::int32_t i = 0; i < 20; ++i)
     {
         speed += 2;
         along += speed * 0.1f;
@@ -328,8 +329,8 @@ TEST_CASE("the eye stays above a hill behind the target, tilting down only as fa
     g.tile_size_x = 4;
     g.tile_size_z = 4;
     g.cells.resize(16 * 16);
-    for (int row = 0; row < 4; ++row)
-        for (int col = 0; col < 16; ++col)
+    for (std::int32_t row = 0; row < 4; ++row)
+        for (std::int32_t col = 0; col < 16; ++col)
             g.cells[static_cast<std::size_t>(row * 16 + col)].corners = { 20, 20, 20, 20 };
 
     ParkCamera low;

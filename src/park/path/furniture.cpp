@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 
 namespace rct3::park::path
@@ -23,7 +24,7 @@ namespace rct3::park::path
             return std::nullopt;
         const float fx = (hit.x - grid.origin_x) / grid.tile_size_x;
         const float fz = (hit.z - grid.origin_z) / grid.tile_size_z;
-        const save::model::Tile tile { static_cast<int>(std::floor(fx)), static_cast<int>(std::floor(fz)) };
+        const save::model::Tile tile { static_cast<std::int32_t>(std::floor(fx)), static_cast<std::int32_t>(std::floor(fz)) };
         if (!grid.contains(tile))
             return std::nullopt;
         // Of the paths on the tile, the one whose middle is nearest the pointer's height.
@@ -37,7 +38,7 @@ namespace rct3::park::path
                 continue;
             std::array<std::optional<float>, 4> e;
             float sum = 0;
-            int count = 0;
+            std::int32_t count = 0;
             for (const Side side : kSides)
             {
                 auto& edge = e[static_cast<std::size_t>(side.value)];
@@ -78,7 +79,7 @@ namespace rct3::park::path
             if (const auto edge = edge_height(p, grid, side))
                 return edge;
             float sum = 0;
-            int count = 0;
+            std::int32_t count = 0;
             for (const Side s : kSides)
                 if (const auto edge = edge_height(p, grid, s))
                 {

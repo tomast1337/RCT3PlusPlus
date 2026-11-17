@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/map_shapes.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -20,7 +21,7 @@ namespace
         return g;
     }
 
-    save::model::PlacedObject placed_object(std::uint64_t id, int col, int row)
+    save::model::PlacedObject placed_object(std::uint64_t id, std::int32_t col, std::int32_t row)
     {
         save::model::PlacedObject o;
         o.id = id;

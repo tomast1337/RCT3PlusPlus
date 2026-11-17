@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <limits>
 #include <map>
@@ -24,7 +25,7 @@ namespace rct3::park::support
         /// How far an item must be above the ground's lowest corner for a column to fit under it.
         constexpr float kLeastGap = 0.5f;
         /// Thirds of a tile across: support points sit on these.
-        constexpr int kCells = 3;
+        constexpr std::int32_t kCells = 3;
         /// How near the middle of its third a point must be, as a fraction of the third, for its column to
         /// stand right under it.
         constexpr float kStraightUnder = 0.2f;
@@ -123,7 +124,7 @@ namespace rct3::park::support
         /// track when `gap_over_track` and the set does not stand close; others leave no column. `cell` limits the
         /// items in the way to those that fill that third of the tile, when they say which thirds they fill. With
         /// nothing in the way the column stands on the ground, if no ground path is there and there is room.
-        std::optional<std::pair<std::int32_t, bool>> column_base(std::span<const Covered> below, const std::set<Tile>& ground_paths, const save::model::TerrainGrid& grid, const Tile& tile, const save::model::PlacedObject* self, float top, const SupportSet& set, std::optional<int> cell, bool gap_over_track)
+        std::optional<std::pair<std::int32_t, bool>> column_base(std::span<const Covered> below, const std::set<Tile>& ground_paths, const save::model::TerrainGrid& grid, const Tile& tile, const save::model::PlacedObject* self, float top, const SupportSet& set, std::optional<std::int32_t> cell, bool gap_over_track)
         {
             const bool known = grid.contains(tile.col, tile.row);
             const float ground = known ? grid.at(tile.col, tile.row).min_height() : 0.0f;
@@ -147,7 +148,7 @@ namespace rct3::park::support
 
         Tile tile_of(glm::vec2 tiles)
         {
-            return { static_cast<int>(std::floor(tiles.x)), static_cast<int>(std::floor(tiles.y)) };
+            return { static_cast<std::int32_t>(std::floor(tiles.x)), static_cast<std::int32_t>(std::floor(tiles.y)) };
         }
 
         /// Builds the pieces into placed objects.
@@ -199,7 +200,7 @@ namespace rct3::park::support
                 const glm::vec3 side = glm::normalize(glm::cross(along, glm::vec3 { 0, 1, 0 }));
                 const glm::vec3 up = glm::cross(side, along);
                 const glm::vec3 middle = (from + to) / 2.0f;
-                save::model::PlacedObject& o = add(held, piece, { static_cast<int>(std::floor((middle.x - grid.world_x(0)) / grid.tile_size_x)), static_cast<int>(std::floor((middle.z - grid.world_z(0)) / grid.tile_size_z)) }, static_cast<std::int32_t>(std::floor(middle.y)), ModelTurn::from(held.rotation));
+                save::model::PlacedObject& o = add(held, piece, { static_cast<std::int32_t>(std::floor((middle.x - grid.world_x(0)) / grid.tile_size_x)), static_cast<std::int32_t>(std::floor((middle.z - grid.world_z(0)) / grid.tile_size_z)) }, static_cast<std::int32_t>(std::floor(middle.y)), ModelTurn::from(held.rotation));
                 glm::mat4 m { 1.0f };
                 m[0] = glm::vec4(along * ((distance + 2 * overhang) / length), 0);
                 m[1] = glm::vec4(up, 0);
@@ -215,7 +216,7 @@ namespace rct3::park::support
     {
         const glm::vec2 x = object::turned_x(ModelTurn::from(object.rotation));
         const glm::vec2 z { -x.y, x.x };
-        const auto along = [&](int i) {
+        const auto along = [&](std::int32_t i) {
             const float within = fit == SpotFit::MiddleOfThird ? 0.5f : spot.within[static_cast<std::size_t>(i)];
             return static_cast<float>(spot.square[static_cast<std::size_t>(i)]) + (static_cast<float>(spot.cell[static_cast<std::size_t>(i)]) + within) / kCells;
         };
@@ -376,7 +377,7 @@ namespace rct3::park::support
             const float overhang = top_size ? (top_size->second.x - top_size->first.x) / 2 : 0.0f;
 
             std::set<std::uint32_t> groups_built;
-            std::set<std::pair<Tile, int>> thirds_built;
+            std::set<std::pair<Tile, std::int32_t>> thirds_built;
             const auto base_level = static_cast<float>(*object->base_height);
             for (const SupportPoint& p : f.points)
             {
@@ -389,7 +390,7 @@ namespace rct3::park::support
                 if (f.alternate_tiles && ((top_tile.col ^ top_tile.row) & 1) == 0)
                     continue;
                 const glm::vec2 third_in_tile = (column_spot - glm::vec2 { static_cast<float>(tile.col), static_cast<float>(tile.row) }) * static_cast<float>(kCells);
-                const int third = std::clamp(static_cast<int>(third_in_tile.x), 0, kCells - 1) + kCells * std::clamp(static_cast<int>(third_in_tile.y), 0, kCells - 1);
+                const std::int32_t third = std::clamp(static_cast<std::int32_t>(third_in_tile.x), 0, kCells - 1) + kCells * std::clamp(static_cast<std::int32_t>(third_in_tile.y), 0, kCells - 1);
 
                 const glm::vec2 off_middle { p.top.within[0] - 0.5f, p.top.within[1] - 0.5f };
                 const bool straight = !p.hanging && p.top.square == p.column.square && p.top.cell == p.column.cell && glm::dot(off_middle, off_middle) < kStraightUnder * kStraightUnder;

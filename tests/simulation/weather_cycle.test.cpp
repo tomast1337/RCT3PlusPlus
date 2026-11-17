@@ -3,6 +3,7 @@
 
 #include "simulation/park/state.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <numeric>
 
@@ -15,16 +16,16 @@ namespace
     constexpr float kHour = 24; // Calendar units in a game hour, about
 
     /// Kinds of weather seen over `months` months of `climate`, by save number.
-    std::array<int, kRolledWeathers> season(Climate climate, int months)
+    std::array<std::int32_t, kRolledWeathers> season(Climate climate, std::int32_t months)
     {
         ParkState s;
         s.climate = static_cast<std::int32_t>(climate);
         auto dice = random::seeded({ 7 });
-        std::array<int, kRolledWeathers> seen { };
-        for (int m = 0; m < months; ++m)
+        std::array<std::int32_t, kRolledWeathers> seen { };
+        for (std::int32_t m = 0; m < months; ++m)
         {
             s.date.month = m % 8;
-            for (int h = 0; h < 15 * 24; ++h) // About a month of game hours
+            for (std::int32_t h = 0; h < 15 * 24; ++h) // About a month of game hours
             {
                 advance_weather(s, kHour, dice, false);
                 ++seen.at(static_cast<std::size_t>(s.weather));
@@ -86,7 +87,7 @@ TEST_CASE("the temperature eases towards what the weather and month bring")
     advance_weather(s, 1, dice, false);
     CHECK(s.temperature->value > 0);
     CHECK(s.temperature->value < goal);
-    for (int i = 0; i < 1000; ++i)
+    for (std::int32_t i = 0; i < 1000; ++i)
         advance_weather(s, 1, dice, false);
     CHECK(s.temperature->value == doctest::Approx(goal));
     CHECK(s.wind >= 0);

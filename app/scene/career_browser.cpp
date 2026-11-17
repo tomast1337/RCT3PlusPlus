@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <cstring>
 #include <fstream>
 #include <iterator>
@@ -124,7 +125,7 @@ namespace rct3::scene
             return { strings::to_utf16(c.name), career::score(c), 0 };
         }
 
-        void list(render::Device& device, CareerBrowser& browser, ui::screens::career::CareerDialog& dialog, int pack, const ui::StringTable& strings)
+        void list(render::Device& device, CareerBrowser& browser, ui::screens::career::CareerDialog& dialog, std::int32_t pack, const ui::StringTable& strings)
         {
             free_pictures(device, browser);
             browser.scenario_ids = ui::career_scenario_ids(strings, pack);
@@ -270,7 +271,7 @@ namespace rct3::scene
             }
         }
 
-        void carry_out(CareerBrowser& browser, ui::screens::career::CareerDialog& dialog, ui::screens::front::FrontEnd& front, int pack, const ui::StringTable& strings)
+        void carry_out(CareerBrowser& browser, ui::screens::career::CareerDialog& dialog, ui::screens::front::FrontEnd& front, std::int32_t pack, const ui::StringTable& strings)
         {
             const auto log = logging::logger("ui");
             if (const auto rename = dialog.take_rename(); rename && rename->career < browser.careers.size())
@@ -354,7 +355,7 @@ namespace rct3::scene
         carry_out(browser, *dialog, front, front.career_pack(), strings);
     }
 
-    bool start_career_scenario(CareerBrowser& browser, ui::screens::front::FrontEnd& front, int pack, std::size_t index, const ui::StringTable& strings, const config::game::GameInstall& install)
+    bool start_career_scenario(CareerBrowser& browser, ui::screens::front::FrontEnd& front, std::int32_t pack, std::size_t index, const ui::StringTable& strings, const config::game::GameInstall& install)
     {
         const auto log = logging::logger("ui");
         if (!browser.data)

@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <span>
 
-extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
+extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) // c-api
 {
     const auto effect = rct3::particles::read_effect(std::as_bytes(std::span(data, size)));
     if (!effect)

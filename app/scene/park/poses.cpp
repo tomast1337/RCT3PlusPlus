@@ -24,6 +24,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <ranges>
 #include <string_view>
 #include <utility>
@@ -352,12 +353,12 @@ namespace rct3::scene::park
                 // In the water they ride the pool's waves up and down, as its surface shows them.
                 const auto bobbed = [&] {
                     const glm::vec2 at_xz { at.position.x, at.position.z };
-                    const int col = static_cast<int>(std::floor((at_xz.x - scene.grid.origin_x) / scene.grid.tile_size_x));
-                    const int row = static_cast<int>(std::floor((at_xz.y - scene.grid.origin_z) / scene.grid.tile_size_z));
+                    const std::int32_t col = static_cast<std::int32_t>(std::floor((at_xz.x - scene.grid.origin_x) / scene.grid.tile_size_x));
+                    const std::int32_t row = static_cast<std::int32_t>(std::floor((at_xz.y - scene.grid.origin_z) / scene.grid.tile_size_z));
                     const auto square = scene.pools.at(col, row);
                     if (!square || square->kind != rct3::park::pools::PoolKind::Water || scene.grid.tile_size_x <= 0 || scene.grid.tile_size_z <= 0)
                         return at.position;
-                    const auto water = [&](int dc, int dr) {
+                    const auto water = [&](std::int32_t dc, std::int32_t dr) {
                         const auto next = scene.pools.at(col + dc, row + dr);
                         return next && next->kind == rct3::park::pools::PoolKind::Water && next->surface == square->surface;
                     };
@@ -580,7 +581,7 @@ namespace rct3::scene::park
                 pose.motion = down < sitting ? kSitDownMotion : kSitMotion;
                 pose.time = down < sitting ? down : down - sitting;
                 // One on the seat to either side, sat down and not getting up: every other turn they talk.
-                const auto beside = [&](int side) {
+                const auto beside = [&](std::int32_t side) {
                     return std::ranges::any_of(r.view<const simulation::Linger>().each(), [&](const auto& other) {
                         const auto& [them, l] = other;
                         return them != shown.guest && l.bench == linger.bench && l.seat == linger.seat + side && !l.rising && l.sat.value > kStepToSeat.value;

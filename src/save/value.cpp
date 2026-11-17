@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cstdint>
 #include <cstring>
 #include <optional>
 #include <utility>
@@ -500,7 +501,7 @@ namespace rct3::save
                 s.reserve(bytes.size());
                 for (const std::byte b : bytes)
                 {
-                    const auto ch = static_cast<unsigned char>(b);
+                    const auto ch = static_cast<std::uint8_t>(b);
                     if (ch < 0x20 || ch > 0x7E)
                         return fallback(bytes, stats);
                     s += static_cast<char>(ch);

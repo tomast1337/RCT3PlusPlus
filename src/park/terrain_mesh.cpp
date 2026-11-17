@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <utility>
@@ -12,13 +13,13 @@
 namespace rct3::park
 {
 
-    float surface_share(const save::model::TerrainGrid& g, int x, int z, std::uint8_t surface)
+    float surface_share(const save::model::TerrainGrid& g, std::int32_t x, std::int32_t z, std::uint8_t surface)
     {
-        int touching = 0;
-        int with = 0;
-        for (int row = z - 1; row <= z; ++row)
+        std::int32_t touching = 0;
+        std::int32_t with = 0;
+        for (std::int32_t row = z - 1; row <= z; ++row)
         {
-            for (int col = x - 1; col <= x; ++col)
+            for (std::int32_t col = x - 1; col <= x; ++col)
             {
                 if (!g.contains(col, row))
                     continue;
@@ -73,13 +74,13 @@ namespace rct3::park
         /// A tile's ground, once per surface at its corners, lowest index first. Each layer goes over the
         /// ones before it with an opacity that leaves every corner showing its surfaces in proportion: the
         /// first is opaque, and a later one covers its share of all the layers so far.
-        void ground_layers(Builder& b, const save::model::TerrainGrid& g, int col, int row, const std::array<glm::vec3, 4>& c, const std::array<glm::vec3, 4>& n)
+        void ground_layers(Builder& b, const save::model::TerrainGrid& g, std::int32_t col, std::int32_t row, const std::array<glm::vec3, 4>& c, const std::array<glm::vec3, 4>& n)
         {
             std::array<std::uint8_t, 16> surfaces { };
             std::size_t count = 0;
-            for (int dr = -1; dr <= 1; ++dr)
+            for (std::int32_t dr = -1; dr <= 1; ++dr)
             {
-                for (int dc = -1; dc <= 1; ++dc)
+                for (std::int32_t dc = -1; dc <= 1; ++dc)
                 {
                     if (!g.contains(col + dc, row + dr))
                         continue;
@@ -94,7 +95,7 @@ namespace rct3::park
             for (std::size_t i = 0; i < count; ++i)
             {
                 std::array<float, 4> alpha { };
-                for (int k = 0; k < 4; ++k)
+                for (std::int32_t k = 0; k < 4; ++k)
                 {
                     const auto ku = static_cast<std::size_t>(k);
                     const float share = surface_share(g, col + k % 2, row + k / 2, surfaces[i]);
@@ -109,10 +110,10 @@ namespace rct3::park
             }
         }
 
-        glm::vec3 corner(const save::model::TerrainGrid& g, int col, int row, int c)
+        glm::vec3 corner(const save::model::TerrainGrid& g, std::int32_t col, std::int32_t row, std::int32_t c)
         {
-            const int dc = c % 2;
-            const int dr = c / 2;
+            const std::int32_t dc = c % 2;
+            const std::int32_t dr = c / 2;
             return { g.world_x(col + dc), g.at(col, row).corners.at(static_cast<std::size_t>(c)), g.world_z(row + dr) };
         }
 
@@ -153,20 +154,20 @@ namespace rct3::park
 
     } // namespace
 
-    glm::vec3 ground_normal(const save::model::TerrainGrid& g, save::model::Tile tile, int c)
+    glm::vec3 ground_normal(const save::model::TerrainGrid& g, save::model::Tile tile, std::int32_t c)
     {
         const auto [col, row] = tile;
-        const int x = col + c % 2;
-        const int z = row + c / 2;
+        const std::int32_t x = col + c % 2;
+        const std::int32_t z = row + c / 2;
         const float height = g.at(col, row).corners.at(static_cast<std::size_t>(c));
         glm::vec3 sum { 0.0f };
-        for (int r = z - 1; r <= z; ++r)
+        for (std::int32_t r = z - 1; r <= z; ++r)
         {
-            for (int q = x - 1; q <= x; ++q)
+            for (std::int32_t q = x - 1; q <= x; ++q)
             {
                 if (!g.contains(q, r))
                     continue;
-                const int k = (x - q) + 2 * (z - r); // That grid point as the neighbour's corner
+                const std::int32_t k = (x - q) + 2 * (z - r); // That grid point as the neighbour's corner
                 if (std::abs(g.at(q, r).corners.at(static_cast<std::size_t>(k)) - height) >= kFlat)
                     continue;
                 const std::array<glm::vec3, 4> p { corner(g, q, r, 0), corner(g, q, r, 1), corner(g, q, r, 2), corner(g, q, r, 3) };
@@ -185,11 +186,11 @@ namespace rct3::park
         TerrainMesh mesh;
         if (grid.empty() || grid.cells.size() != static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height))
             return mesh;
-        std::map<std::pair<int, int>, std::vector<std::pair<float, float>>> open_at;
+        std::map<std::pair<std::int32_t, std::int32_t>, std::vector<std::pair<float, float>>> open_at;
         for (const GroundOpening& o : openings)
             open_at[{ o.col, o.row }].emplace_back(o.low, o.high);
         // The bands open on the edge between two tiles: either tile's.
-        const auto open_between = [&](int col, int row, int other_col, int other_row) {
+        const auto open_between = [&](std::int32_t col, std::int32_t row, std::int32_t other_col, std::int32_t other_row) {
             std::vector<std::pair<float, float>> open;
             for (const auto& at : { std::pair { col, row }, std::pair { other_col, other_row } })
                 if (const auto found = open_at.find(at); found != open_at.end())
@@ -198,16 +199,16 @@ namespace rct3::park
         };
 
         const TileRect tiles = area.value_or(TileRect { 0, 0, grid.width, grid.height });
-        const int first_col = std::max(tiles.col, 0);
-        const int first_row = std::max(tiles.row, 0);
+        const std::int32_t first_col = std::max(tiles.col, 0);
+        const std::int32_t first_row = std::max(tiles.row, 0);
         if (first_col >= std::min(tiles.end_col, grid.width) || first_row >= std::min(tiles.end_row, grid.height))
             return mesh;
         Builder b;
         float low = grid.at(first_col, first_row).corners[0];
         float high = low;
-        for (int row = first_row; row < std::min(tiles.end_row, grid.height); ++row)
+        for (std::int32_t row = first_row; row < std::min(tiles.end_row, grid.height); ++row)
         {
-            for (int col = first_col; col < std::min(tiles.end_col, grid.width); ++col)
+            for (std::int32_t col = first_col; col < std::min(tiles.end_col, grid.width); ++col)
             {
                 const save::model::TerrainCell& cell = grid.at(col, row);
                 low = std::min(low, cell.min_height());
@@ -239,8 +240,8 @@ namespace rct3::park
             {
                 if (!grid.contains(t.col, t.row) || !tiles.contains(t.col, t.row) || t.triangle > 1)
                     continue;
-                const std::array<int, 3> corners = t.triangle == 0 ? std::array<int, 3> { 0, 1, 2 } : std::array<int, 3> { 3, 2, 1 };
-                for (const int c : corners)
+                const std::array<std::int32_t, 3> corners = t.triangle == 0 ? std::array<std::int32_t, 3> { 0, 1, 2 } : std::array<std::int32_t, 3> { 3, 2, 1 };
+                for (const std::int32_t c : corners)
                 {
                     glm::vec3 p = corner(grid, t.col, t.row, c);
                     const float depth = std::max(body.level - p.y, 0.0f);
@@ -263,8 +264,8 @@ namespace rct3::park
             glm::vec3 middle { 0.0f };
             for (std::size_t i = 0; i < 3; ++i)
                 middle += mesh.vertices[mesh.indices[first + i]].position / 3.0f;
-            const auto col = static_cast<int>(std::floor((middle.x - grid.origin_x) / grid.tile_size_x));
-            const auto row = static_cast<int>(std::floor((middle.z - grid.origin_z) / grid.tile_size_z));
+            const auto col = static_cast<std::int32_t>(std::floor((middle.x - grid.origin_x) / grid.tile_size_x));
+            const auto row = static_cast<std::int32_t>(std::floor((middle.z - grid.origin_z) / grid.tile_size_z));
             return grid.contains(col, row) && keep[static_cast<std::size_t>(row) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(col)];
         };
         for (GroundBatch batch : mesh.batches)
@@ -315,12 +316,12 @@ namespace rct3::park
             if (!grid.contains(pool.col, pool.row))
                 continue;
             // In small squares, so the waves in it can move the surface, each knowing how far its wall is.
-            const auto water = [&](int dc, int dr) { return std::ranges::any_of(pools, [&](const save::model::PoolWater& o) { return o.col == pool.col + dc && o.row == pool.row + dr && o.surface == pool.surface; }); };
+            const auto water = [&](std::int32_t dc, std::int32_t dr) { return std::ranges::any_of(pools, [&](const save::model::PoolWater& o) { return o.col == pool.col + dc && o.row == pool.row + dr && o.surface == pool.surface; }); };
             const float level = static_cast<float>(pool.surface) + kPoolBrim;
             const glm::vec3 low = corner(grid, pool.col, pool.row, 0);
             const glm::vec3 high = corner(grid, pool.col, pool.row, 3);
-            for (int i = 0; i < kPoolWaterSteps; ++i)
-                for (int j = 0; j < kPoolWaterSteps; ++j)
+            for (std::int32_t i = 0; i < kPoolWaterSteps; ++i)
+                for (std::int32_t j = 0; j < kPoolWaterSteps; ++j)
                     for (const auto& [di, dj] : { std::pair { 0, 0 }, { 1, 0 }, { 0, 1 }, { 1, 1 }, { 0, 1 }, { 1, 0 } })
                     {
                         const glm::vec2 t = glm::vec2 { i + di, j + dj } / static_cast<float>(kPoolWaterSteps);
@@ -331,16 +332,16 @@ namespace rct3::park
         return out;
     }
 
-    float pool_wall_room(const save::model::TerrainGrid& grid, glm::vec2 within, std::function_ref<bool(int dc, int dr)> water)
+    float pool_wall_room(const save::model::TerrainGrid& grid, glm::vec2 within, std::function_ref<bool(std::int32_t dc, std::int32_t dr)> water)
     {
         const glm::vec2 size { grid.tile_size_x, grid.tile_size_z };
         float room = std::max(size.x, size.y);
-        for (int dr = -1; dr <= 1; ++dr)
-            for (int dc = -1; dc <= 1; ++dc)
+        for (std::int32_t dr = -1; dr <= 1; ++dr)
+            for (std::int32_t dc = -1; dc <= 1; ++dc)
             {
                 if ((dc == 0 && dr == 0) || water(dc, dr))
                     continue;
-                const auto across = [](int d, float at, float side) { return d < 0 ? at : d > 0 ? side - at : 0.0f; };
+                const auto across = [](std::int32_t d, float at, float side) { return d < 0 ? at : d > 0 ? side - at : 0.0f; };
                 room = std::min(room, glm::length(glm::vec2 { across(dc, within.x, size.x), across(dr, within.y, size.y) }));
             }
         return room;

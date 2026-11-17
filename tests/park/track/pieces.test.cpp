@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <filesystem>
 #include <format>
@@ -53,7 +54,7 @@ namespace
     }
 
     /// A piece with the given ends and curve, as its line would measure.
-    PieceShape shape(PieceEnd entry, PieceEnd exit, int curve = 0, PieceUse use = PieceUse::Plain)
+    PieceShape shape(PieceEnd entry, PieceEnd exit, std::int32_t curve = 0, PieceUse use = PieceUse::Plain)
     {
         PieceShape s;
         s.entry = entry;
@@ -63,7 +64,7 @@ namespace
         return s;
     }
 
-    save::model::PlacedObject placed(int col, int row, int turns, int height)
+    save::model::PlacedObject placed(std::int32_t col, std::int32_t row, std::int32_t turns, std::int32_t height)
     {
         save::model::PlacedObject o;
         o.col = col;
@@ -170,7 +171,7 @@ TEST_CASE("a ride's banks count from the station it lists, and its plain pieces 
     const std::vector<PieceRecord> records { record("InvStation", kPieceStation), record("InvStraight"), record("Station", kPieceStation), record("StraightTwin"), record("Straight", kPieceStarts), record("StraightToTilt") };
     const std::vector<PieceLine> lines { hanging, hanging, straight_line(), straight_line(), straight_line(), tilting };
     const auto banks = [](const std::vector<PieceShape>& pieces) {
-        std::vector<std::pair<int, int>> out;
+        std::vector<std::pair<std::int32_t, std::int32_t>> out;
         for (const PieceShape& p : pieces)
             out.emplace_back(p.entry.bank, p.exit.bank);
         return out;
@@ -178,11 +179,11 @@ TEST_CASE("a ride's banks count from the station it lists, and its plain pieces 
     const auto listing = [](std::vector<std::string_view> names) { return [names](const PieceRecord& r) { return std::ranges::contains(names, std::string_view(r.name)); }; };
 
     const std::vector<PieceShape> upright = shape_pieces(records, lines, listing({ "Station", "Straight", "StraightToTilt" }));
-    CHECK(banks(upright) == std::vector<std::pair<int, int>> { { 4, 4 }, { 4, 4 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 2 } });
+    CHECK(banks(upright) == std::vector<std::pair<std::int32_t, std::int32_t>> { { 4, 4 }, { 4, 4 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 2 } });
     CHECK(upright[4].use == PieceUse::Plain);
 
     const std::vector<PieceShape> under = shape_pieces(records, lines, listing({ "InvStation", "InvStraight" }));
-    CHECK(banks(under) == std::vector<std::pair<int, int>> { { 0, 0 }, { 0, 0 }, { 4, 4 }, { 4, 4 }, { 4, 4 }, { 4, -2 } });
+    CHECK(banks(under) == std::vector<std::pair<std::int32_t, std::int32_t>> { { 0, 0 }, { 0, 0 }, { 4, 4 }, { 4, 4 }, { 4, 4 }, { 4, -2 } });
     CHECK(under[1].use == PieceUse::Plain);
 
     // Listing everything, the plainer twin keeps the shape.
@@ -275,7 +276,7 @@ TEST_CASE("a saved layout moved and turned keeps each piece where the one before
     REQUIRE(second);
     const auto third = place_after(second->next, s, false, g);
     REQUIRE(third);
-    for (int turns = 0; turns < 4; ++turns)
+    for (std::int32_t turns = 0; turns < 4; ++turns)
     {
         CAPTURE(turns);
         const save::model::PlacedObject to = placed(5, 4, turns, 7);
@@ -468,7 +469,7 @@ TEST_CASE("a piece's middle line pairs its rails by length, not by how fast each
             const float x = 2 - 4 * static_cast<float>(m + 1) / static_cast<float>(marks.size() + 1);
             float low = 0;
             float high = 1;
-            for (int i = 0; i < 30; ++i)
+            for (std::int32_t i = 0; i < 30; ++i)
                 (ovl::spline_point(left, 0, (low + high) / 2)[0] > x ? low : high) = (low + high) / 2;
             marks[m] = static_cast<std::uint8_t>(std::lround(low * 255));
         }

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::park
 {
@@ -136,8 +137,8 @@ namespace rct3::park
 
     bool box_in_view(const glm::mat4& transform, const glm::vec3& low, const glm::vec3& high)
     {
-        std::array<int, 5> beyond { };
-        for (int k = 0; k < 8; ++k)
+        std::array<std::int32_t, 5> beyond { };
+        for (std::int32_t k = 0; k < 8; ++k)
         {
             const glm::vec4 p = transform * glm::vec4((k & 1) != 0 ? high.x : low.x, (k & 2) != 0 ? high.y : low.y, (k & 4) != 0 ? high.z : low.z, 1.0f);
             beyond[0] += p.x < -p.w ? 1 : 0;
@@ -146,7 +147,7 @@ namespace rct3::park
             beyond[3] += p.y > p.w ? 1 : 0;
             beyond[4] += p.w <= 0 ? 1 : 0;
         }
-        return std::ranges::none_of(beyond, [](int n) { return n == 8; });
+        return std::ranges::none_of(beyond, [](std::int32_t n) { return n == 8; });
     }
 
     glm::mat4 projection(float aspect, const Seat& seat, float across)
@@ -246,8 +247,8 @@ namespace rct3::park
             camera.target.y = lifted ? std::max(camera.target.y, *h) : *h;
         // Tilting down brings the eye over ground nearer the target, which may be higher still, so it settles
         // in a few steps; the tilt only grows, so it cannot swing back and forth.
-        constexpr int kSettleSteps = 4;
-        for (int step = 0; step < kSettleSteps; ++step)
+        constexpr std::int32_t kSettleSteps = 4;
+        for (std::int32_t step = 0; step < kSettleSteps; ++step)
         {
             const glm::vec3 at = eye(camera);
             // The ground a near plane's width round the eye, so a steep bank beside it does not cut in either.
@@ -263,14 +264,14 @@ namespace rct3::park
         return camera;
     }
 
-    float isometric_yaw(int step)
+    float isometric_yaw(std::int32_t step)
     {
         return glm::quarter_pi<float>() + static_cast<float>(((step % 4) + 4) % 4) * glm::half_pi<float>();
     }
 
-    int isometric_step(float yaw)
+    std::int32_t isometric_step(float yaw)
     {
-        return static_cast<int>(std::lround((yaw - glm::quarter_pi<float>()) / glm::half_pi<float>()));
+        return static_cast<std::int32_t>(std::lround((yaw - glm::quarter_pi<float>()) / glm::half_pi<float>()));
     }
 
     float yaw_towards(float from, float to, float most)

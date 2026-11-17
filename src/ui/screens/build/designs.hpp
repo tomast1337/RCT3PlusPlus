@@ -21,6 +21,7 @@
 #include "ui/widgets/window.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
@@ -65,7 +66,7 @@ namespace rct3::ui::screens::build
             return std::exchange(picked_, std::nullopt);
         }
         /// -1 or 1 for each press of the train's arrows since the last call, the last one.
-        [[nodiscard]] std::optional<int> take_train_step()
+        [[nodiscard]] std::optional<std::int32_t> take_train_step()
         {
             return std::exchange(train_step_, std::nullopt);
         }
@@ -106,7 +107,7 @@ namespace rct3::ui::screens::build
         TextureId picture_ = 0;
         std::optional<std::size_t> shown_; ///< Id of the row the details are of
         std::optional<std::size_t> picked_;
-        std::optional<int> train_step_;
+        std::optional<std::int32_t> train_step_;
         std::optional<std::size_t> build_;
         bool cancel_ = false;
     };

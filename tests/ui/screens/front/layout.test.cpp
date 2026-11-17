@@ -2,6 +2,7 @@
 #include "ui/screens/front/layout.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
@@ -127,7 +128,7 @@ TEST_CASE("buttons ease round first, then out, and arrive")
     CHECK_FALSE(ease(p, goal, units::Seconds { 0.1f }));
     CHECK(p.angle > kStart.angle);
     CHECK(p.radius == kStart.radius); // Not while the angle is far
-    int frames = 0;
+    std::int32_t frames = 0;
     while (!ease(p, goal, units::Seconds { 1.0f / 60 }) && frames < 1000)
         ++frames;
     CHECK(frames < 1000);

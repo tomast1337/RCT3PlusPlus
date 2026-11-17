@@ -14,6 +14,7 @@
 
 #include "ui/widget.hpp"
 
+#include <cstdint>
 #include <string>
 
 namespace rct3::ui::widgets
@@ -83,7 +84,7 @@ namespace rct3::ui::widgets
 
         float value_ = 0;
         float grab_ = 0; // Pointer offset from the thumb's centre while dragging
-        int changes_ = 0;
+        std::int32_t changes_ = 0;
     };
 
 } // namespace rct3::ui::widgets

@@ -8,6 +8,7 @@
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -103,7 +104,7 @@ TEST_CASE("an angry guest breaks what stands by them unless a guard is near, and
     Sandbox park;
     park.path({ 0, 0 }, { 0, 0 });
     std::vector<entt::entity> benches;
-    for (int i = 0; i < 3; ++i)
+    for (std::int32_t i = 0; i < 3; ++i)
         benches.push_back(park.item(PathItemKind::Bench, { 0, 0 }));
     const auto vandal = park.guest({ 0, 0 }, { .happiness = 0 });
     auto& r = park.world().registry;
@@ -124,7 +125,7 @@ TEST_CASE("an angry guest breaks what stands by them unless a guard is near, and
 
 TEST_CASE("a handyman steps over to a broken bench beside them, whichever side")
 {
-    for (const int side : { -1, 1 })
+    for (const std::int32_t side : { -1, 1 })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 6, 0 });
@@ -194,7 +195,7 @@ TEST_CASE("a handyman given a patrol keeps to it and sweeps it, and leaves the l
     const auto handyman = park.staff(StaffRole::Handyman, { 0, 0 });
     r.emplace<staff::Patrol>(handyman, staff::Patrol { { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 3, 0 } } });
     const auto& nodes = park.world().paths.nodes();
-    int furthest = 0;
+    std::int32_t furthest = 0;
     park.run_until(
         [&] {
             furthest = std::max(furthest, nodes[r.get<Stride>(handyman).to.value].tile.col);

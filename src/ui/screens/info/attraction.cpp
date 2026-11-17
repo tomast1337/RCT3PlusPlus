@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <span>
 #include <tuple>
@@ -95,7 +96,7 @@ namespace rct3::ui::screens::info
         /// Our own ranges for the speeds the operating page sets, in metres a second.
         constexpr std::pair<float, float> kLaunchSpeeds { 4, 50 };
         constexpr std::pair<float, float> kLiftSpeeds { 1.5f, 5.5f };
-        constexpr int kMostTrackCircuits = 20;
+        constexpr std::int32_t kMostTrackCircuits = 20;
         constexpr float kMaintenancePageWidth = 440;
         constexpr float kModePageWidth = 680;
         constexpr float kSpeedWidth = 100;
@@ -105,7 +106,7 @@ namespace rct3::ui::screens::info
         constexpr float kKmhPerMs = 3.6f;
         constexpr float kMphPerMs = 2.2369363f;
         constexpr float kFeetPerMetre = 3.28084f;
-        constexpr int kSecondsPerMinute = 60;
+        constexpr std::int32_t kSecondsPerMinute = 60;
         using units::kPercent;
 
         std::u16string ascii(std::string_view s)
@@ -137,7 +138,7 @@ namespace rct3::ui::screens::info
 
         std::u16string duration(float seconds)
         {
-            const auto whole = static_cast<long>(std::lround(std::max(seconds, 0.0f)));
+            const auto whole = static_cast<std::int64_t>(std::llround(std::max(seconds, 0.0f)));
             return ascii(std::format("{}:{:02}", whole / kSecondsPerMinute, whole % kSecondsPerMinute));
         }
 
@@ -242,14 +243,14 @@ namespace rct3::ui::screens::info
             page.controls.push_back(std::move(c));
         }
 
-        InfoControl price(int id, std::string name, std::u16string label, std::int64_t value, int most, int step = kPriceStep)
+        InfoControl price(std::int32_t id, std::string name, std::u16string label, std::int64_t value, std::int32_t most, std::int32_t step = kPriceStep)
         {
             InfoControl c;
             c.id = id;
             c.name = std::move(name);
             c.kind = InfoControlKind::Number;
             c.label = std::move(label);
-            c.value = static_cast<int>(std::clamp<std::int64_t>(value, 0, most));
+            c.value = static_cast<std::int32_t>(std::clamp<std::int64_t>(value, 0, most));
             c.maximum = most;
             c.step = step;
             c.decimals = 2;
@@ -405,7 +406,7 @@ namespace rct3::ui::screens::info
             if (ride.kind == save::model::RideKind::Tracked && !ride.trains.empty())
             {
                 // Number boxes, greyed while the ride is open: then its trains stay as they are.
-                const auto number = [&](AttractionControl id, std::string_view key, int value, int fewest, int most) {
+                const auto number = [&](AttractionControl id, std::string_view key, std::int32_t value, std::int32_t fewest, std::int32_t most) {
                     InfoControl c;
                     c.id = control_id(id);
                     c.name = key;
@@ -416,9 +417,9 @@ namespace rct3::ui::screens::info
                     c.enabled = f.trains && c.minimum < c.maximum;
                     page.controls.push_back(std::move(c));
                 };
-                const int trains = static_cast<int>(ride.trains.size());
+                const std::int32_t trains = static_cast<std::int32_t>(ride.trains.size());
                 // Passenger cars, without the links between them.
-                const int cars = ride.cars_per_train > 0 ? *ride.cars_per_train : static_cast<int>(ride.trains.front().cars.size());
+                const std::int32_t cars = ride.cars_per_train > 0 ? *ride.cars_per_train : static_cast<std::int32_t>(ride.trains.front().cars.size());
                 number(AttractionControl::Cars, "AttractionVehicleDialogLabelNumCars", cars, f.trains ? f.trains->fewest_cars : cars, f.trains ? f.trains->most_cars : cars);
                 number(AttractionControl::Trains, "AttractionVehicleDialogLabelNumTrains", trains, f.trains ? 1 : trains, f.trains ? f.trains->most_trains : trains);
                 InfoControl kind;
@@ -493,7 +494,7 @@ namespace rct3::ui::screens::info
             for (const std::uint32_t t : offers)
                 c.items.push_back(text(strings, show.tricks[t].name));
             const auto at = adding ? offers.end() : std::ranges::find(offers, show.order[page.section]);
-            c.value = at == offers.end() ? -1 : static_cast<int>(at - offers.begin());
+            c.value = at == offers.end() ? -1 : static_cast<std::int32_t>(at - offers.begin());
             page.controls.push_back(std::move(c));
             if (adding)
                 return;
@@ -558,10 +559,10 @@ namespace rct3::ui::screens::info
                 c.id = control_id(launched ? AttractionControl::LaunchSpeed : AttractionControl::LiftSpeed);
                 c.name = key;
                 c.label = text(strings, key);
-                c.minimum = static_cast<int>(std::lround(low * scale));
-                c.maximum = static_cast<int>(std::lround(high * scale));
-                c.value = static_cast<int>(std::lround((launched ? o.launch_speed : o.lift_speed).value * scale));
-                c.step = static_cast<int>(std::lround(step * 100));
+                c.minimum = static_cast<std::int32_t>(std::lround(low * scale));
+                c.maximum = static_cast<std::int32_t>(std::lround(high * scale));
+                c.value = static_cast<std::int32_t>(std::lround((launched ? o.launch_speed : o.lift_speed).value * scale));
+                c.step = static_cast<std::int32_t>(std::lround(step * 100));
                 c.decimals = 2;
                 c.text = std::u16string(u" ") + std::u16string(speed_unit(units.distance));
                 c.width = kSpeedWidth;
@@ -966,7 +967,7 @@ namespace rct3::ui::screens::info
                     music.kind = InfoControlKind::Choice;
                     music.items.push_back(text(strings, "AttractionViewDialogNoMusic"));
                     music.items.insert(music.items.end(), f.music.begin(), f.music.end());
-                    music.value = static_cast<int>(f.tune < music.items.size() ? f.tune : 0);
+                    music.value = static_cast<std::int32_t>(f.tune < music.items.size() ? f.tune : 0);
                     music.width = kNameWidth;
                     music.beside = true;
                     music.help = text(strings, music.name);

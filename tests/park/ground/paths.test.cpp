@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground/paths.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <set>
 
@@ -11,7 +12,7 @@ using namespace rct3::park::ground;
 namespace
 {
 
-    save::model::TerrainGrid flat_grid(int width, int height, float level = 0)
+    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height, float level = 0)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -26,7 +27,7 @@ namespace
         return g;
     }
 
-    save::model::PathTile ground_tile(int col, int row, std::string style = "Gravel")
+    save::model::PathTile ground_tile(std::int32_t col, std::int32_t row, std::string style = "Gravel")
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Ground;
@@ -60,7 +61,7 @@ TEST_CASE("a quarter's look follows the path round its corner")
 
 TEST_CASE("every look has a cell of its own")
 {
-    std::set<std::pair<int, int>> seen;
+    std::set<std::pair<std::int32_t, std::int32_t>> seen;
     for (const PathLook look : { PathLook::Open, PathLook::Notched, PathLook::EdgeX, PathLook::EdgeXJoined, PathLook::EdgeZ, PathLook::EdgeZJoined, PathLook::Closed, PathLook::CornerOnly })
     {
         const PathCell c = path_cell(look);
@@ -178,7 +179,7 @@ TEST_CASE("a mesh cut down to some tiles keeps their triangles in their batches"
 
 namespace
 {
-    save::model::Ride flat_ride(int col, int row, std::uint8_t turns, std::int32_t height = 0)
+    save::model::Ride flat_ride(std::int32_t col, std::int32_t row, std::uint8_t turns, std::int32_t height = 0)
     {
         save::model::Ride ride;
         ride.kind = save::model::RideKind::Flat;

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <span>
 #include <string>
@@ -44,14 +45,14 @@ namespace rct3::ui::screens::info
         constexpr std::array<std::string_view, 7> kInspections { "RideInspectionIntervalEvery10Mins", "RideInspectionIntervalEvery20Mins", "RideInspectionIntervalEvery30Mins", "RideInspectionIntervalEvery45Mins", "RideInspectionIntervalEveryHour", "RideInspectionIntervalEvery2Hours", "RideInspectionIntervalNever" };
         // The wave machines' settings: label and help, by control from kPoolWaveHeightControl on.
         constexpr std::array<std::array<std::string_view, 2>, 4> kWaveSettings { { { "WaveHeightText", "WaveHeightToolTip" }, { "WaveLengthText", "WaveLengthToolTip" }, { "WaveOnPeriodText", "WaveOnPeriodToolTip" }, { "WaveTotalPeriodText", "WaveTotalPeriodToolTip" } } };
-        constexpr int kTicketStep = 10;
+        constexpr std::int32_t kTicketStep = 10;
         using units::kPercent;
-        constexpr int kSecondsPerMinute = 60;
+        constexpr std::int32_t kSecondsPerMinute = 60;
         constexpr float kMaintenanceWidth = 440; ///< As wide as a ride's maintenance page
         /// Slot 1 is the colours tab's, kept even when a prop takes no colours; what a prop does goes on from the next.
-        constexpr int kColourSlot = 1;
+        constexpr std::int32_t kColourSlot = 1;
         constexpr std::int32_t kColourCount = 32;
-        constexpr int kFirstBehaviourSlot = 2;
+        constexpr std::int32_t kFirstBehaviourSlot = 2;
 
         std::u16string ascii(std::string_view s)
         {
@@ -107,7 +108,7 @@ namespace rct3::ui::screens::info
                 colour.paints.push_back(c >= 0 && c < kColourCount ? static_cast<std::size_t>(c) : 0);
             }
         }
-        int slot = kFirstBehaviourSlot;
+        std::int32_t slot = kFirstBehaviourSlot;
         if (facts.bin != nullptr)
             tabs.push_back({ SceneryTab::Bin, slot++, "Guest_Stats", "Bin_Statistics", false, { } });
         if (facts.sign != nullptr)
@@ -168,8 +169,8 @@ namespace rct3::ui::screens::info
             const auto text = [&](std::string_view key) { return std::u16string(strings.get(key)); };
             const auto money = [&](std::int64_t amount) { return money_text(pool.currency, units::Money { amount }); };
             const auto line = [&](std::string_view key, std::u16string value) { page.lines.push_back({ text(key), std::move(value), false, std::string(key) }); };
-            const auto button = [&](int id, std::string_view icon, std::string_view help, bool beside, bool enabled = true) { page.controls.push_back({ .id = id, .name = std::string(icon), .kind = InfoControlKind::Button, .icon = std::string(icon), .enabled = enabled, .beside = beside, .help = text(help) }); };
-            const auto choice = [&](int id, std::string_view key, std::span<const std::string_view> items, int value, bool beside = false) {
+            const auto button = [&](std::int32_t id, std::string_view icon, std::string_view help, bool beside, bool enabled = true) { page.controls.push_back({ .id = id, .name = std::string(icon), .kind = InfoControlKind::Button, .icon = std::string(icon), .enabled = enabled, .beside = beside, .help = text(help) }); };
+            const auto choice = [&](std::int32_t id, std::string_view key, std::span<const std::string_view> items, std::int32_t value, bool beside = false) {
                 InfoControl& c = page.controls.emplace_back();
                 c.id = id;
                 c.name = key;
@@ -209,7 +210,7 @@ namespace rct3::ui::screens::info
                     const auto mark = words.find(u'#');
                     return mark == std::u16string::npos ? money(amount) : words.replace(mark, 1, money(amount));
                 };
-                const auto ticket = static_cast<int>(std::clamp<std::int64_t>(pool.ticket.value, 0, kMostPoolTicket));
+                const auto ticket = static_cast<std::int32_t>(std::clamp<std::int64_t>(pool.ticket.value, 0, kMostPoolTicket));
                 page.controls.push_back({ .id = kPoolTicketControl, .name = std::string(kTicket), .kind = InfoControlKind::Number, .label = text(kTicket), .value = ticket, .maximum = kMostPoolTicket, .step = kTicketStep, .decimals = 2, .shown = money(ticket) });
                 page.controls_after = 0;
                 line("AttractionFinancesDialogLabel_Income", per_hour(0));
@@ -229,22 +230,22 @@ namespace rct3::ui::screens::info
             {
                 // The wave's height and length on bars, and the machines' times, which only count with a machine in
                 // the pool, in words with their arrows.
-                const auto setting = [&](int id) { return kWaveSettings[static_cast<std::size_t>(id - kPoolWaveHeightControl)]; };
-                const auto bar = [&](int id, int value, int least, int most) {
+                const auto setting = [&](std::int32_t id) { return kWaveSettings[static_cast<std::size_t>(id - kPoolWaveHeightControl)]; };
+                const auto bar = [&](std::int32_t id, std::int32_t value, std::int32_t least, std::int32_t most) {
                     const auto [label, help] = setting(id);
                     page.controls.push_back({ .id = id, .name = std::string(label), .kind = InfoControlKind::Bar, .label = text(label), .value = std::clamp(value, least, most), .minimum = least, .maximum = most, .help = text(help) });
                 };
-                const auto timed = [&](int id, int value, int least, int most, int step, std::string_view one, std::string_view many) {
+                const auto timed = [&](std::int32_t id, std::int32_t value, std::int32_t least, std::int32_t most, std::int32_t step, std::string_view one, std::string_view many) {
                     const auto [label, help] = setting(id);
                     value = std::clamp(value, least, most);
                     page.controls.push_back({ .id = id, .name = std::string(label), .kind = InfoControlKind::Number, .label = text(label), .value = value, .minimum = least, .maximum = most, .step = step, .shown = numbered(strings.get(value == 1 ? one : many), value), .enabled = pool.machines, .help = text(help) });
                 };
-                const auto least_frequency = static_cast<int>(park::pools::kLeastWaveFrequency);
-                const auto most_frequency = static_cast<int>(park::pools::kMostWaveFrequency);
-                bar(kPoolWaveHeightControl, static_cast<int>(std::lround(pool.waves.height)), static_cast<int>(park::pools::kLeastWaveHeight), static_cast<int>(park::pools::kMostWaveHeight));
-                bar(kPoolWaveLengthControl, least_frequency + most_frequency - static_cast<int>(std::lround(pool.waves.frequency.value)), least_frequency, most_frequency);
-                timed(kPoolWaveOnControl, static_cast<int>(std::lround(pool.waves.on.value)), 0, kMostWaveOn, kWaveOnStep, "OneSecond", "ManySeconds");
-                timed(kPoolWaveEveryControl, static_cast<int>(std::lround(pool.waves.every.value / kSecondsPerMinute)), 1, kMostWaveEvery, 1, "OneMinute", "ManyMinutes");
+                const auto least_frequency = static_cast<std::int32_t>(park::pools::kLeastWaveFrequency);
+                const auto most_frequency = static_cast<std::int32_t>(park::pools::kMostWaveFrequency);
+                bar(kPoolWaveHeightControl, static_cast<std::int32_t>(std::lround(pool.waves.height)), static_cast<std::int32_t>(park::pools::kLeastWaveHeight), static_cast<std::int32_t>(park::pools::kMostWaveHeight));
+                bar(kPoolWaveLengthControl, least_frequency + most_frequency - static_cast<std::int32_t>(std::lround(pool.waves.frequency.value)), least_frequency, most_frequency);
+                timed(kPoolWaveOnControl, static_cast<std::int32_t>(std::lround(pool.waves.on.value)), 0, kMostWaveOn, kWaveOnStep, "OneSecond", "ManySeconds");
+                timed(kPoolWaveEveryControl, static_cast<std::int32_t>(std::lround(pool.waves.every.value / kSecondsPerMinute)), 1, kMostWaveEvery, 1, "OneMinute", "ManyMinutes");
             }
             else if (tab == SceneryTab::RoomCustomers)
             {

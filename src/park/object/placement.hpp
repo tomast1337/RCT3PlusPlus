@@ -94,7 +94,7 @@ namespace rct3::park::object
     [[nodiscard]] save::model::PlacedObject moved_with(save::model::PlacedObject object, std::array<std::int32_t, 2> squares, const save::model::PlacedObject& from, std::array<std::int32_t, 2> from_squares, const save::model::PlacedObject& to);
 
     /// The tile under square (x, z) of a footprint of `squares`, counted along the object's own X and Z.
-    [[nodiscard]] save::model::Tile square_tile(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, int x, int z);
+    [[nodiscard]] save::model::Tile square_tile(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, std::int32_t x, std::int32_t z);
 
     /// Whether `object` stands on the ground rather than at a height of its own.
     [[nodiscard]] bool on_ground(const save::model::PlacedObject& object);

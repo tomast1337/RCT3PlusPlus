@@ -2,6 +2,7 @@
 #include "ui/desktop.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <format>
 #include <initializer_list>
@@ -20,7 +21,7 @@ namespace
         using Widget::Widget;
         bool blocks = true;
         std::vector<std::string> events;
-        int updates = 0;
+        std::int32_t updates = 0;
 
         [[nodiscard]] bool takes_pointer() const override
         {
@@ -28,11 +29,11 @@ namespace
         }
         void on_press(Point p) override
         {
-            events.push_back(std::format("press {}", static_cast<int>(p.x)));
+            events.push_back(std::format("press {}", static_cast<std::int32_t>(p.x)));
         }
         void on_drag(Point p) override
         {
-            events.push_back(std::format("drag {}", static_cast<int>(p.x)));
+            events.push_back(std::format("drag {}", static_cast<std::int32_t>(p.x)));
         }
         void on_release(Point, bool inside) override
         {
@@ -383,7 +384,7 @@ TEST_CASE("a key that hides the focused widget sends the next keys to its parent
     {
         using Widget::Widget;
         Widget* target = nullptr;
-        int keys = 0;
+        std::int32_t keys = 0;
         [[nodiscard]] bool takes_focus() const override
         {
             return true;

@@ -17,7 +17,7 @@ namespace rct3::audio::wma
     /// The stream's format, as the ASF header gives it.
     struct Format
     {
-        int version = 0; ///< 1 or 2
+        std::int32_t version = 0; ///< 1 or 2
         std::uint32_t sample_rate = 0;
         std::uint16_t channels = 0;
         std::uint32_t bit_rate = 0;       ///< Bits per second
@@ -38,10 +38,10 @@ namespace rct3::audio::wma
         /// Decodes one packet of block_align bytes and returns the samples it gives for each channel, one
         /// plane a channel in `planes` (valid until the next call). 0 when the packet gives none yet, or cannot
         /// be read. An empty packet gives the last samples still held back.
-        int decode(std::span<const std::byte> packet, const float* const*& planes);
+        std::int32_t decode(std::span<const std::byte> packet, const float* const*& planes);
 
         /// Samples for each channel at the start of what decode() gives that come before the sound.
-        [[nodiscard]] int delay() const;
+        [[nodiscard]] std::int32_t delay() const;
 
         /// Forgets the data carried between packets, to start the stream again.
         void reset();

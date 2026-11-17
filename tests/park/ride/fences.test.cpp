@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <set>
 #include <tuple>
@@ -16,7 +17,7 @@ using namespace rct3::park::ride;
 namespace
 {
 
-    save::model::PlacementSpot spot(int col, int row, int height, std::uint8_t direction)
+    save::model::PlacementSpot spot(std::int32_t col, std::int32_t row, std::int32_t height, std::uint8_t direction)
     {
         save::model::PlacementSpot s;
         s.col = col;
@@ -37,7 +38,7 @@ namespace
         return r;
     }
 
-    object::ObjectModel footprint(int x_squares, int z_squares)
+    object::ObjectModel footprint(std::int32_t x_squares, std::int32_t z_squares)
     {
         object::ObjectModel m;
         m.squares = { x_squares, z_squares };
@@ -50,7 +51,7 @@ namespace
         return [model](std::uint64_t) { return model; };
     }
 
-    using Edge = std::tuple<int, int, int>; // Column, row and turn of a piece
+    using Edge = std::tuple<std::int32_t, std::int32_t, std::int32_t>; // Column, row and turn of a piece
 
     std::set<Edge> edges(const std::vector<save::model::PlacedObject>& pieces)
     {
@@ -60,10 +61,10 @@ namespace
         return out;
     }
 
-    std::array<int, 2> beyond(const Edge& e)
+    std::array<std::int32_t, 2> beyond(const Edge& e)
     {
         const glm::vec2 x = object::turned_x(ModelTurn::from(std::get<2>(e)));
-        return { std::get<0>(e) + static_cast<int>(std::lround(x.x)), std::get<1>(e) + static_cast<int>(std::lround(x.y)) };
+        return { std::get<0>(e) + static_cast<std::int32_t>(std::lround(x.x)), std::get<1>(e) + static_cast<std::int32_t>(std::lround(x.y)) };
     }
 
 } // namespace

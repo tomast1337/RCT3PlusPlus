@@ -11,20 +11,21 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <numbers>
 
 namespace rct3::ui::screens::info
 {
 
-    Point info_tab_offset(int slot)
+    Point info_tab_offset(std::int32_t slot)
     {
         const float degrees = info_panel::kFirstAngle + info_panel::kSlotAngle * static_cast<float>(slot);
         const float a = degrees * std::numbers::pi_v<float> / 180;
         return { std::round(info_panel::kRingRadius * std::cos(a)), std::round(-info_panel::kRingRadius * std::sin(a)) };
     }
 
-    Point info_choice_offset(int slot, std::size_t i, std::size_t count)
+    Point info_choice_offset(std::int32_t slot, std::size_t i, std::size_t count)
     {
         const float degrees = info_panel::kFirstAngle + info_panel::kSlotAngle * static_cast<float>(slot);
         float a = degrees * std::numbers::pi_v<float> / 180;
@@ -508,7 +509,7 @@ namespace rct3::ui::screens::info
             for (const auto& [line, pot] : menu_->pots())
             {
                 InfoControl c;
-                c.id = page.menu->ids[std::to_underlying(MenuAction::Colour)] + static_cast<int>(line);
+                c.id = page.menu->ids[std::to_underlying(MenuAction::Colour)] + static_cast<std::int32_t>(line);
                 c.kind = InfoControlKind::Paint;
                 c.paints = pot->colours;
                 controls_.emplace_back(std::move(c), pot);
@@ -645,7 +646,7 @@ namespace rct3::ui::screens::info
         }
     }
 
-    std::optional<Widget&> InfoPanel::control(int id) const
+    std::optional<Widget&> InfoPanel::control(std::int32_t id) const
     {
         const auto found = std::ranges::find_if(controls_, [&](const auto& c) { return c.first.id == id; });
         return found == controls_.end() ? std::nullopt : core::maybe(found->second);
@@ -656,7 +657,7 @@ namespace rct3::ui::screens::info
         if (menu_ != nullptr)
         {
             if (auto e = menu_->take_event())
-                change_now_ = InfoChange { menu_->view().ids[std::to_underlying(e->action)] + static_cast<int>(e->index), e->value, 0, std::move(e->text) };
+                change_now_ = InfoChange { menu_->view().ids[std::to_underlying(e->action)] + static_cast<std::int32_t>(e->index), e->value, 0, std::move(e->text) };
         }
         for (std::size_t i = 0; i < controls_.size(); ++i)
         {
@@ -669,7 +670,7 @@ namespace rct3::ui::screens::info
                     break;
                 case InfoControlKind::Choice:
                     if (auto* d = static_cast<widgets::Dropdown*>(w); d->take_change() && d->selected())
-                        change_now_ = InfoChange { c.id, static_cast<int>(*d->selected()), 0, { } };
+                        change_now_ = InfoChange { c.id, static_cast<std::int32_t>(*d->selected()), 0, { } };
                     break;
                 case InfoControlKind::Tick:
                     if (!c.icon.empty())
@@ -692,7 +693,7 @@ namespace rct3::ui::screens::info
                     break;
                 case InfoControlKind::Bar:
                     if (auto* b = static_cast<widgets::Slider*>(w); b->take_change())
-                        change_now_ = InfoChange { c.id, static_cast<int>(std::lround(b->value())), 0, { } };
+                        change_now_ = InfoChange { c.id, static_cast<std::int32_t>(std::lround(b->value())), 0, { } };
                     break;
                 case InfoControlKind::Paint:
                     if (const auto pot = static_cast<widgets::PaintButton*>(w)->take_pot())
@@ -748,7 +749,7 @@ namespace rct3::ui::screens::info
         const Rect v = view();
         view_text_->placement = top_left(v.x0 - r.x0, v.y0 - r.y0, v.width(), v.height());
         const Point middle { (d.x0 + d.x1) / 2 - r.x0, (d.y0 + d.y1) / 2 - r.y0 };
-        const auto tab_offset = [&](int slot) {
+        const auto tab_offset = [&](std::int32_t slot) {
             const Point at = info_tab_offset(slot);
             return style_.left ? Point { -at.x, at.y } : at;
         };
@@ -889,7 +890,7 @@ namespace rct3::ui::screens::info
             {
                 auto& pots = *static_cast<widgets::PaintButton*>(controls_[*painting_page_].second);
                 pots.colours.at(painting_pot_) = *colour;
-                change_now_ = InfoChange { controls_[*painting_page_].first.id, static_cast<int>(*colour), painting_pot_, { } };
+                change_now_ = InfoChange { controls_[*painting_page_].first.id, static_cast<std::int32_t>(*colour), painting_pot_, { } };
                 close_palette();
             }
         }

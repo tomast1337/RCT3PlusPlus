@@ -344,7 +344,7 @@ namespace
     // Ids used by the fixtures.
     constexpr std::uint64_t kRide = 10, kTrack = 11, kSeg = 12, kA = 20, kB = 21, kC = 22, kStale = 9999;
 
-    Obj piece(std::uint64_t id, const char16_t* sym, std::uint64_t next, std::uint64_t prev, int x, float dist)
+    Obj piece(std::uint64_t id, const char16_t* sym, std::uint64_t next, std::uint64_t prev, std::int32_t x, float dist)
     {
         Obj p { "TrackPiece", id, { } };
         p.s("SYMBOLNAME", sym).r("Next", next).r("Prev", prev).r("Segment", kSeg).f("StartDistance", dist);
@@ -540,7 +540,7 @@ TEST_CASE("trains and cars keep their stored indices and unknown states")
     t0.s("RideTrainSymbolName", u"Invented:rit").r("FrontTrackPiece", kB);
     Obj t1 { "RideTrainInstance", 51, { } };
     t1.r("TrackedRideInstance", kRide).refs("Cars", { 63 }).i("WhichTrain", 1).i("State", 22);
-    const auto car = [](std::uint64_t id, std::uint64_t train, int which, int count, int slot) {
+    const auto car = [](std::uint64_t id, std::uint64_t train, std::int32_t which, std::int32_t count, std::int32_t slot) {
         Obj c { "RideCarInstance", id, { } };
         c.r("RideTrainInstance", train).i("WhichCar", which).i("NCars", count).i("WhichRideTrainCar", slot).i("State", 1);
         return c;
@@ -554,7 +554,7 @@ TEST_CASE("trains and cars keep their stored indices and unknown states")
     const auto w = build(ride_schema(), objs);
     const auto& r = w->model.rides[0];
     REQUIRE(r.trains.size() == 2);
-    CHECK(static_cast<int>(r.trains[0].state) == 69); // An unnamed number survives
+    CHECK(static_cast<std::int32_t>(r.trains[0].state) == 69); // An unnamed number survives
     CHECK(r.trains[1].state == TrainState::Arriving);
     CHECK(r.trains[0].symbol == "Invented:rit");
     CHECK(r.trains[0].front_piece == kB);
@@ -758,7 +758,7 @@ TEST_CASE("placement records give where an attraction's parts stand, and fence e
     s.classes["SceneryItem"] = { i32("Unused") };
     s.classes["SIDDatabaseEntry"] = { str("SYMBOLNAME"), str("OVERLAYFILENAME") };
 
-    const auto placement = [](std::uint64_t id, std::uint64_t item, int col, int row, int height, int direction) {
+    const auto placement = [](std::uint64_t id, std::uint64_t item, std::int32_t col, std::int32_t row, std::int32_t height, std::int32_t direction) {
         Obj p { "Placement", id, { } };
         p.r("SceneryItem", item).raw("SceneryItemDataField", Bytes().u32(static_cast<std::uint32_t>(col)).u32(static_cast<std::uint32_t>(row)).u32(static_cast<std::uint32_t>(height)).u32(static_cast<std::uint32_t>(direction)).u32(0));
         return p;

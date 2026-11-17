@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/park_map.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -10,7 +11,7 @@ using namespace rct3::park;
 namespace
 {
     /// A park `width` by `height` tiles of 4 units, all owned, every corner at `height_at(col, row)`.
-    template<class Height> save::model::TerrainGrid grid(int width, int height, Height height_at)
+    template<class Height> save::model::TerrainGrid grid(std::int32_t width, std::int32_t height, Height height_at)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -20,9 +21,9 @@ namespace
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(static_cast<std::size_t>(width * height));
-        for (int row = 0; row < height; ++row)
+        for (std::int32_t row = 0; row < height; ++row)
         {
-            for (int col = 0; col < width; ++col)
+            for (std::int32_t col = 0; col < width; ++col)
             {
                 save::model::TerrainCell& c = g.cells[static_cast<std::size_t>(row * width + col)];
                 c.corners = { height_at(col, row), height_at(col + 1, row), height_at(col, row + 1), height_at(col + 1, row + 1) };
@@ -32,9 +33,9 @@ namespace
         return g;
     }
 
-    save::model::TerrainGrid flat(int width, int height)
+    save::model::TerrainGrid flat(std::int32_t width, std::int32_t height)
     {
-        return grid(width, height, [](int, int) { return 0.0f; });
+        return grid(width, height, [](std::int32_t, std::int32_t) { return 0.0f; });
     }
 
     MapLayers only(std::initializer_list<MapLayer> layers)
@@ -46,12 +47,12 @@ namespace
     }
 
     /// The pixel in the middle of tile (col, row).
-    MapRgba middle_of(const MapPicture& p, const save::model::TerrainGrid& g, std::int32_t scale, int col, int row)
+    MapRgba middle_of(const MapPicture& p, const save::model::TerrainGrid& g, std::int32_t scale, std::int32_t col, std::int32_t row)
     {
         return p.at(col * scale + scale / 2, (g.height - 1 - row) * scale + scale / 2);
     }
 
-    bool near(MapRgba a, MapRgba b, int by = 3)
+    bool near(MapRgba a, MapRgba b, std::int32_t by = 3)
     {
         return std::abs(a.r - b.r) <= by && std::abs(a.g - b.g) <= by && std::abs(a.b - b.b) <= by;
     }
@@ -164,9 +165,9 @@ TEST_CASE("paths, attractions and water show only with their layers")
 TEST_CASE("land outside the park is shaded and its edge drawn")
 {
     save::model::TerrainGrid g = flat(6, 6);
-    for (int col = 3; col < 6; ++col)
+    for (std::int32_t col = 3; col < 6; ++col)
     {
-        for (int row = 0; row < 6; ++row)
+        for (std::int32_t row = 0; row < 6; ++row)
             g.cells[static_cast<std::size_t>(row * 6 + col)].flags = 0;
     }
     const MapFeatures f;
@@ -182,10 +183,10 @@ TEST_CASE("land outside the park is shaded and its edge drawn")
 
 TEST_CASE("contour lines cross slopes and leave flat ground alone")
 {
-    const save::model::TerrainGrid slope = grid(8, 8, [](int col, int) { return static_cast<float>(col) * 2.0f; });
+    const save::model::TerrainGrid slope = grid(8, 8, [](std::int32_t col, std::int32_t) { return static_cast<float>(col) * 2.0f; });
     const MapFeatures f;
     const MapGround on_slope = map_ground(slope, f, 8);
-    int lines = 0;
+    std::int32_t lines = 0;
     for (std::int32_t x = 0; x < on_slope.contours.width; ++x)
         lines += on_slope.contours.at(x, 20).a > 40 ? 1 : 0;
     CHECK(lines >= 4);
@@ -204,8 +205,8 @@ TEST_CASE("surfaces colour the ground and relief lights slopes that face the nor
     CHECK(near(ground.flat.at(8, 8), { 200, 50, 50, 255 }));
 
     // Ground rising to the east faces west, towards the light; ground falling to the east faces away.
-    const save::model::TerrainGrid rising = grid(6, 6, [](int col, int) { return static_cast<float>(col) * 3.0f; });
-    const save::model::TerrainGrid falling = grid(6, 6, [](int col, int) { return static_cast<float>(6 - col) * 3.0f; });
+    const save::model::TerrainGrid rising = grid(6, 6, [](std::int32_t col, std::int32_t) { return static_cast<float>(col) * 3.0f; });
+    const save::model::TerrainGrid falling = grid(6, 6, [](std::int32_t col, std::int32_t) { return static_cast<float>(6 - col) * 3.0f; });
     const MapRgba facing = map_ground(rising, { }, 4).relief.at(12, 12);
     const MapRgba away = map_ground(falling, { }, 4).relief.at(12, 12);
     CHECK(facing.r + facing.g + facing.b > away.r + away.g + away.b);

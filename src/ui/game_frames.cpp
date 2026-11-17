@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <initializer_list>
 #include <utility>
 
@@ -464,7 +465,7 @@ namespace rct3::ui::game_frames
         f.width = kTile;
         f.height = kTile;
         f.layers.push_back({ inset_box(0, 0, 0, 0), solid(p.paper), { } });
-        for (int pair = 0; pair < static_cast<int>(kTile / kPeriod); ++pair)
+        for (std::int32_t pair = 0; pair < static_cast<std::int32_t>(kTile / kPeriod); ++pair)
         {
             const float y = static_cast<float>(pair) * kPeriod;
             f.layers.push_back({ corner_box(0, y + 1, kTile, 1), solid(p.paper_line), { } });

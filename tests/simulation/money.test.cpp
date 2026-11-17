@@ -53,7 +53,7 @@ TEST_CASE("guests bring cash and bank around the park's averages, or the tuning'
         rct3::random::RandomState dice = rct3::random::seeded({ 7 });
         double sum = 0;
         std::size_t count = 0;
-        for (int i = 0; i < 100; ++i)
+        for (std::int32_t i = 0; i < 100; ++i)
             for (const entt::entity g : admit_party(park.world(), dice, NodeId { 0 }))
             {
                 const Wallet& w = r.get<Wallet>(g);

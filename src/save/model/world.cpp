@@ -7,6 +7,7 @@
 #include <array>
 #include <bit>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <string_view>
 #include <unordered_map>
@@ -337,8 +338,8 @@ namespace rct3::save::model
         // Tile and in-tile fraction for a world coordinate; false when outside the grid.
         struct TilePos
         {
-            int col = 0;
-            int row = 0;
+            std::int32_t col = 0;
+            std::int32_t row = 0;
             float fx = 0;
             float fz = 0;
         };
@@ -351,8 +352,8 @@ namespace rct3::save::model
             const float tz = (z - g.origin_z) / g.tile_size_z;
             if (!(tx >= 0) || !(tz >= 0) || !(tx <= static_cast<float>(g.width)) || !(tz <= static_cast<float>(g.height)))
                 return std::nullopt;
-            const int col = std::min(static_cast<int>(tx), g.width - 1);
-            const int row = std::min(static_cast<int>(tz), g.height - 1);
+            const std::int32_t col = std::min(static_cast<std::int32_t>(tx), g.width - 1);
+            const std::int32_t row = std::min(static_cast<std::int32_t>(tz), g.height - 1);
             return TilePos { .col = col, .row = row, .fx = tx - static_cast<float>(col), .fz = tz - static_cast<float>(row) };
         }
 
@@ -403,8 +404,8 @@ namespace rct3::save::model
         const std::size_t stride = fits(24) ? 24 : 20;
 
         TerrainGrid g {
-            .width = static_cast<int>(w),
-            .height = static_cast<int>(h),
+            .width = static_cast<std::int32_t>(w),
+            .height = static_cast<std::int32_t>(h),
             .origin_x = origin_x,
             .origin_z = origin_z,
             .tile_size_x = tile_size_x,
@@ -460,7 +461,7 @@ namespace rct3::save::model
         return layer;
     }
 
-    std::optional<std::uint8_t> expected_water_mask(const TerrainGrid& grid, float level, Tile tile, int triangle) noexcept
+    std::optional<std::uint8_t> expected_water_mask(const TerrainGrid& grid, float level, Tile tile, std::int32_t triangle) noexcept
     {
         const auto [col, row] = tile;
         if (!grid.contains(col, row) || (triangle != 0 && triangle != 1))

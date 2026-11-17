@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <optional>
 
 namespace rct3::park
@@ -14,7 +15,7 @@ namespace rct3::park
     namespace
     {
 
-        constexpr int kRows = 12;                      ///< Rows down the sheet
+        constexpr std::int32_t kRows = 12;             ///< Rows down the sheet
         constexpr units::Distance kLeadIn { 1.5f };    ///< How far back over the upper lake the sheet starts
         constexpr units::Distance kMinReach { 1.0f };  ///< Least distance out from the edge the water lands
         constexpr units::Distance kFoamLift { 0.05f }; ///< Foam lies this high over the lower lake
@@ -28,10 +29,10 @@ namespace rct3::park
         constexpr float kMistPerDrop = 0.22f;               ///< Chosen by eye: a puff's size per unit of drop
         constexpr units::Distance kMistSize { 12.0f };      ///< Chosen by eye: and the most
         constexpr float kMistOut = 0.35f;                   ///< Chosen by eye: of its size, how far a puff stands out from the cliff, so it does not cut into it
-        constexpr int kMistMost = 10;                       ///< Puffs along one fall, in each row
+        constexpr std::int32_t kMistMost = 10;              ///< Puffs along one fall, in each row
         constexpr float kDropletsPerUnit = 1.5f;            ///< Chosen by eye: droplets thrown per unit of a fall's width
-        constexpr int kDropletsLeast = 8;                   ///< Chosen by eye: the fewest a fall throws
-        constexpr int kDropletsMost = 24;                   ///< Chosen by eye: and the most
+        constexpr std::int32_t kDropletsLeast = 8;          ///< Chosen by eye: the fewest a fall throws
+        constexpr std::int32_t kDropletsMost = 24;          ///< Chosen by eye: and the most
         constexpr units::Distance kDropletRise { 0.07f };   ///< Chosen by eye: how high a droplet is thrown, per unit of drop
         constexpr units::Distance kDropletLow { 0.4f };     ///< Chosen by eye: the least a small fall throws one
         constexpr units::Distance kDropletHigh { 2.5f };    ///< Chosen by eye: and the most a tall one does
@@ -168,7 +169,7 @@ namespace rct3::park
                     case FallPart::Sheet:
                     {
                         glm::vec3 last = s.lip - s.flow * kLeadIn.value;
-                        for (int k = -1; k <= kRows; ++k)
+                        for (std::int32_t k = -1; k <= kRows; ++k)
                         {
                             const float along = static_cast<float>(std::max(k, 0)) / kRows;
                             const glm::vec3 middle = k < 0 ? last : point(s, along);
@@ -190,9 +191,9 @@ namespace rct3::park
                         if (detail >= WaterfallDetail::Medium && thick > 0)
                         {
                             const float size = std::min(kMistPerDrop * s.drop, kMistSize.value);
-                            const int count = std::clamp(static_cast<int>(std::round(width / (0.5f * size))) + 1, 2, kMistMost);
-                            for (int row = 0; row < (detail >= WaterfallDetail::High ? 2 : 1); ++row)
-                                for (int k = 0; k < count; ++k)
+                            const std::int32_t count = std::clamp(static_cast<std::int32_t>(std::round(width / (0.5f * size))) + 1, 2, kMistMost);
+                            for (std::int32_t row = 0; row < (detail >= WaterfallDetail::High ? 2 : 1); ++row)
+                                for (std::int32_t k = 0; k < count; ++k)
                                 {
                                     const float across = (static_cast<float>(k) + 0.5f * static_cast<float>(row)) / static_cast<float>(count - 1) - 0.5f;
                                     const glm::vec3 middle = land + side * (across * width) + s.flow * (size * (kMistOut + 0.15f * static_cast<float>(row))) + kUp * (0.25f * size);
@@ -206,10 +207,10 @@ namespace rct3::park
                         if (detail < WaterfallDetail::Ultra)
                             break;
                         // Droplets thrown up and out where the water lands, each on a loop of its own.
-                        const int count = std::clamp(static_cast<int>(std::round(width * kDropletsPerUnit)), kDropletsLeast, kDropletsMost);
+                        const std::int32_t count = std::clamp(static_cast<std::int32_t>(std::round(width * kDropletsPerUnit)), kDropletsLeast, kDropletsMost);
                         const float rise = std::clamp(kDropletRise.value * s.drop, kDropletLow.value, kDropletHigh.value);
                         const float size = std::min(kDropletSize.value + kDropletPerDrop * s.drop, kDropletLargest.value);
-                        for (int k = 0; k < count; ++k)
+                        for (std::int32_t k = 0; k < count; ++k)
                         {
                             const auto n = static_cast<std::uint32_t>(k);
                             const auto salt = static_cast<std::uint32_t>(f) * 7;

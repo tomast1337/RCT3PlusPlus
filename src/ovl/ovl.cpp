@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <cstdint>
 #include <cstring>
 
 namespace rct3::ovl
@@ -168,7 +169,7 @@ namespace rct3::ovl
 
             RCT3_TRY(flags, c.read<std::uint8_t>());
             h.flags = *flags;
-            for (int i = 0; i < 3; ++i)
+            for (std::int32_t i = 0; i < 3; ++i)
             {
                 RCT3_TRY(pad, c.read<std::uint8_t>());
             }
@@ -316,7 +317,7 @@ namespace rct3::ovl
         // Post-block metadata.
         if (layout == OvlLayout::OneStream)
         {
-            for (int i = 0; i < 2; ++i)
+            for (std::int32_t i = 0; i < 2; ++i)
             {
                 RCT3_TRY(word, c.read<std::uint32_t>());
                 f.unknown_words.push_back(*word);
@@ -448,7 +449,7 @@ namespace rct3::ovl
             std::u16string out;
             for (std::size_t i = 0; i + 1 < rest.size(); i += 2)
             {
-                const auto unit = static_cast<char16_t>(std::to_integer<unsigned>(rest[i]) | (std::to_integer<unsigned>(rest[i + 1]) << 8));
+                const auto unit = static_cast<char16_t>(std::to_integer<std::uint32_t>(rest[i]) | (std::to_integer<std::uint32_t>(rest[i + 1]) << 8));
                 if (unit == 0)
                     return out;
                 out.push_back(unit);

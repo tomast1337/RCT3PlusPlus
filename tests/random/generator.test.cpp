@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <format>
 #include <limits>
@@ -26,7 +27,7 @@ TEST_CASE("a seed always gives the same numbers, and each stream its own")
 {
     RandomState a = seeded(Seed { 42 });
     RandomState b = seeded(Seed { 42 });
-    for (int i = 0; i < 10; ++i)
+    for (std::int32_t i = 0; i < 10; ++i)
         CHECK(next(a) == next(b));
     CHECK(seeded(Seed { 0 }) != RandomState { });
     CHECK(stream(Seed { 42 }, RandomStream::Gameplay) == stream(Seed { 42 }, RandomStream::Gameplay));
@@ -37,8 +38,8 @@ TEST_CASE("a seed always gives the same numbers, and each stream its own")
 TEST_CASE("draws stay in their ranges")
 {
     RandomState s = seeded(Seed { 7 });
-    std::array<int, 6> seen { };
-    for (int i = 0; i < 6000; ++i)
+    std::array<std::int32_t, 6> seen { };
+    for (std::int32_t i = 0; i < 6000; ++i)
     {
         const double u = unit(s);
         CHECK(u >= 0);
@@ -49,7 +50,7 @@ TEST_CASE("draws stay in their ranges")
         ++seen[static_cast<std::size_t>(face - 1)];
     }
     // Each face about a sixth of the time.
-    CHECK(std::ranges::all_of(seen, [](int n) { return n > 850 && n < 1150; }));
+    CHECK(std::ranges::all_of(seen, [](std::int32_t n) { return n > 850 && n < 1150; }));
     CHECK(below(s, 0) == 0);
     CHECK(below(s, 1) == 0);
     CHECK(between(s, std::int64_t { 5 }, std::int64_t { 2 }) == 5);

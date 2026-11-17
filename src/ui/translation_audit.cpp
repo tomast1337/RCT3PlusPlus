@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cstdint>
 #include <format>
 #include <fstream>
 #include <iterator>
@@ -97,7 +98,7 @@ namespace rct3::ui
 
         void scan_file(CodeKeys& out, std::string_view text, const std::string& file)
         {
-            int line = 1;
+            std::int32_t line = 1;
             std::size_t line_start = 0;
             for (std::size_t i = 0; i < text.size(); ++i)
             {
@@ -112,7 +113,7 @@ namespace rct3::ui
                 else if (text.substr(i).starts_with("/*"))
                 {
                     const std::size_t end = std::min(text.find("*/", i + 2), text.size());
-                    line += static_cast<int>(std::count(text.begin() + static_cast<std::ptrdiff_t>(i), text.begin() + static_cast<std::ptrdiff_t>(end), '\n'));
+                    line += static_cast<std::int32_t>(std::count(text.begin() + static_cast<std::ptrdiff_t>(i), text.begin() + static_cast<std::ptrdiff_t>(end), '\n'));
                     line_start = text.rfind('\n', end) + 1;
                     i = end + 1;
                 }
@@ -127,7 +128,7 @@ namespace rct3::ui
                     const std::size_t open = std::min(text.find('(', i), text.size());
                     const std::string close = std::format("){}\"", text.substr(i + 2, open - i - 2));
                     const std::size_t end = std::min(text.find(close, open), text.size());
-                    line += static_cast<int>(std::count(text.begin() + static_cast<std::ptrdiff_t>(i), text.begin() + static_cast<std::ptrdiff_t>(end), '\n'));
+                    line += static_cast<std::int32_t>(std::count(text.begin() + static_cast<std::ptrdiff_t>(i), text.begin() + static_cast<std::ptrdiff_t>(end), '\n'));
                     line_start = text.rfind('\n', end) + 1;
                     i = end + close.size() - 1;
                 }

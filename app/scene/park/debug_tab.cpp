@@ -15,6 +15,7 @@
 #include "ui/interface_assets.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <utility>
 #include <vector>
 
@@ -61,8 +62,8 @@ namespace rct3::scene::park
             case DebugTool::BuyAllLand:
             {
                 std::vector<save::model::Tile> tiles;
-                for (int row = 0; row < scene.grid.height; ++row)
-                    for (int col = 0; col < scene.grid.width; ++col)
+                for (std::int32_t row = 0; row < scene.grid.height; ++row)
+                    for (std::int32_t col = 0; col < scene.grid.width; ++col)
                         tiles.push_back({ col, row });
                 // Free: the tool is for setting a park up, not for its books.
                 const std::size_t bought = rct3::park::buy_land(scene.grid, tiles, rct3::park::LandBuy::Land, { }, std::nullopt).tiles + rct3::park::buy_land(scene.grid, tiles, rct3::park::LandBuy::Rights, { }, std::nullopt).tiles;
@@ -124,7 +125,7 @@ namespace rct3::scene::park
                     return 0;
                 std::size_t opened = 0;
                 const std::filesystem::path folder = scene.saves.data->folder(config::UserFolder::Careers);
-                for (int pack = 0; !career::pack_id(pack).empty(); ++pack)
+                for (std::int32_t pack = 0; !career::pack_id(pack).empty(); ++pack)
                     for (const career::CareerEntry& entry : career::list_careers(folder, pack, std::nullopt))
                     {
                         if (!scene.game.career.empty() && entry.path != scene.game.career)
@@ -186,9 +187,9 @@ namespace rct3::scene::park
     void draw_debug_tab(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         // What the tab's boxes hold between frames, as ImGui leaves them to the caller; one tab, one set.
-        static int money = 10000;
-        static int guests = 100;
-        static int litter = 200;
+        static std::int32_t money = 10000;
+        static std::int32_t guests = 100;
+        static std::int32_t litter = 200;
 
         if (ImGui::CollapsingHeader("Park and money", ImGuiTreeNodeFlags_DefaultOpen))
         {
@@ -256,7 +257,7 @@ namespace rct3::scene::park
                 ImGui::SameLine();
                 if (scene.held_motion && !scene.held_motion->in_turn)
                 {
-                    ImGui::Text("Motion %d: %.*s", scene.held_motion->motion, static_cast<int>(kMotions[now].name.size()), kMotions[now].name.data());
+                    ImGui::Text("Motion %d: %.*s", scene.held_motion->motion, static_cast<int>(kMotions[now].name.size()), kMotions[now].name.data()); // c-api
                     ImGui::SameLine();
                     if (ImGui::SmallButton("Again"))
                         play(now);

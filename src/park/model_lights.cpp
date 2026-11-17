@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <charconv>
+#include <cstdint>
 #include <ranges>
 #include <string>
 
@@ -14,7 +15,7 @@ namespace rct3::park
         /// A point named `key` and a number, and the words after the number.
         struct Mark
         {
-            int number = 0;
+            std::int32_t number = 0;
             std::string words; ///< Lower case, from the underscore after the number
         };
 
@@ -36,9 +37,9 @@ namespace rct3::park
         }
 
         /// The number at the start of `text`, and what follows it.
-        std::optional<std::pair<int, std::string_view>> leading_number(std::string_view text)
+        std::optional<std::pair<std::int32_t, std::string_view>> leading_number(std::string_view text)
         {
-            int value = 0;
+            std::int32_t value = 0;
             const auto [after, error] = std::from_chars(text.data(), text.data() + text.size(), value);
             if (error != std::errc { })
                 return std::nullopt;
@@ -48,7 +49,7 @@ namespace rct3::park
         struct Words
         {
             std::optional<glm::vec3> colour;
-            std::optional<int> slot;
+            std::optional<std::int32_t> slot;
             std::optional<float> radius;
         };
 
@@ -90,7 +91,7 @@ namespace rct3::park
 
     std::vector<ModelLight> model_lights(std::span<const NamedPlace> places)
     {
-        std::vector<std::pair<int, ModelLight>> lights;
+        std::vector<std::pair<std::int32_t, ModelLight>> lights;
         for (const NamedPlace& start : places)
         {
             const auto mark = mark_of(start.name, "lightstart");
@@ -114,7 +115,7 @@ namespace rct3::park
                 continue;
             lights.emplace_back(mark->number, ModelLight { .position = position_of(start), .colour = words.colour.value_or(glm::vec3(1.0f)), .colour_slot = words.slot, .radius = radius, .bone = start.bone });
         }
-        std::ranges::stable_sort(lights, { }, &std::pair<int, ModelLight>::first);
+        std::ranges::stable_sort(lights, { }, &std::pair<std::int32_t, ModelLight>::first);
         std::vector<ModelLight> out;
         for (auto& l : lights)
             out.push_back(l.second);
@@ -132,7 +133,7 @@ namespace rct3::park
         /// The points marked `start` N, each pointing at the point `end` N where there is one, in number order.
         std::vector<ModelEffect> marked(std::span<const NamedPlace> places, std::string_view start_key, std::string_view end_key, Naming naming)
         {
-            std::vector<std::pair<int, ModelEffect>> effects;
+            std::vector<std::pair<std::int32_t, ModelEffect>> effects;
             for (const NamedPlace& start : places)
             {
                 const auto mark = mark_of(start.name, start_key);
@@ -153,7 +154,7 @@ namespace rct3::park
                 }
                 effects.emplace_back(mark->number, std::move(effect));
             }
-            std::ranges::stable_sort(effects, { }, &std::pair<int, ModelEffect>::first);
+            std::ranges::stable_sort(effects, { }, &std::pair<std::int32_t, ModelEffect>::first);
             std::vector<ModelEffect> out;
             for (auto& e : effects)
                 out.push_back(std::move(e.second));

@@ -5,6 +5,7 @@
 #include "park/person/motions.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -38,7 +39,7 @@ namespace rct3::park::person
         {
             glm::vec3 n { 0.0f };
             for (glm::length_t c = 0; c < 3; ++c)
-                n[c] = (static_cast<float>(std::to_integer<int>(motion.keys[at + static_cast<std::size_t>(c)])) - 127.5f) / 127.5f;
+                n[c] = (static_cast<float>(std::to_integer<std::int32_t>(motion.keys[at + static_cast<std::size_t>(c)])) - 127.5f) / 127.5f;
             return n;
         }
 

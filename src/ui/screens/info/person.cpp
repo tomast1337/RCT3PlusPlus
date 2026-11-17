@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <span>
 #include <utility>
@@ -46,7 +47,7 @@ namespace rct3::ui::screens::info
         /// A job's task: its flag bit and words.
         struct Task
         {
-            int bit = 0;
+            std::int32_t bit = 0;
             std::string_view label;
             std::string_view help;
             std::string_view icon; ///< The toggle's skin family, pressed in while the task is on
@@ -139,7 +140,7 @@ namespace rct3::ui::screens::info
         /// Lines of rides gone on and of thoughts at most: as many as the page has room for.
         constexpr std::size_t kListLines = 6;
         using units::kPercent;
-        constexpr int kMinutesPerHour = 60;
+        constexpr std::int32_t kMinutesPerHour = 60;
 
         std::u16string ascii(std::string_view s)
         {
@@ -370,7 +371,7 @@ namespace rct3::ui::screens::info
             const auto liking = static_cast<std::size_t>(g.ride_preference.intensity);
             if (liking < kIntensityWords.size())
                 add(page, strings, "Guest_PreferredRideIntensity", text(strings, kIntensityWords[liking]));
-            add(page, strings, "Guest_NauseaTolerance", text(strings, std::format("{}{}", kToleranceWord, static_cast<int>(g.nausea_tolerance))));
+            add(page, strings, "Guest_NauseaTolerance", text(strings, std::format("{}{}", kToleranceWord, static_cast<std::int32_t>(g.nausea_tolerance))));
             add(page, strings, "Guest_TimeInPark", time_in_park(g.counters.minutes_in_park));
         }
 
@@ -469,7 +470,7 @@ namespace rct3::ui::screens::info
             brush.name = "Rct3pp_PatrolBrush";
             brush.kind = InfoControlKind::Choice;
             brush.label = text(strings, "Rct3pp_PatrolBrush");
-            for (const int across : kPatrolBrushes)
+            for (const std::int32_t across : kPatrolBrushes)
                 brush.items.push_back(ascii(std::format("{0} x {0}", across)));
             brush.value = facts.patrol_brush;
             brush.width = kPatrolChoiceWidth;
@@ -482,7 +483,7 @@ namespace rct3::ui::screens::info
             zone.items.push_back(text(strings, "Rct3pp_PatrolNoZone"));
             for (std::uint32_t z = 1; z <= kPatrolZones; ++z)
                 zone.items.push_back(ascii(std::to_string(z)));
-            zone.value = static_cast<int>(facts.patrol_zone);
+            zone.value = static_cast<std::int32_t>(facts.patrol_zone);
             zone.width = kPatrolChoiceWidth;
             zone.beside = true;
             page.controls.push_back(std::move(zone));
@@ -518,7 +519,7 @@ namespace rct3::ui::screens::info
                 button(PersonControl::Sack, "Staff_SackIconLarge", "StaffWindow_SackHelp");
             }
             // Its squares fill a level at a time, as the training is bought.
-            const int level = std::clamp(s.training, 0, kMostTraining);
+            const std::int32_t level = std::clamp(s.training, 0, kMostTraining);
             InfoControl& train = button(PersonControl::Train, kTrainingIcons[static_cast<std::size_t>(level)], "StaffWindow_TrainHelp", level < kMostTraining);
             train.name = "StaffWindow_TrainHelp";
             if (level < kMostTraining)
@@ -590,7 +591,7 @@ namespace rct3::ui::screens::info
             return { kGuestTabs.begin(), kGuestTabs.end() };
         std::vector<PersonTabInfo> tabs { kStaffTabs.begin(), kStaffTabs.end() };
         const save::model::StaffKind kind = facts.staff->kind;
-        int slot = 3;
+        std::int32_t slot = 3;
         if (!tasks(kind).empty())
             tabs.push_back({ PersonTab::Tasks, slot++, "Staff_Tools", "Staff_Tasks" });
         if (kind == save::model::StaffKind::Entertainer)

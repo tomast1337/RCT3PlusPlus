@@ -140,7 +140,7 @@ namespace
         Obj& matrix(const std::string& n, float x, float y, float z)
         {
             attrs.push_back({ n, "matrix44", 64, { } });
-            for (int i = 0; i < 12; ++i)
+            for (std::int32_t i = 0; i < 12; ++i)
                 payload.f32(i % 5 == 0 ? 1.0f : 0.0f);
             payload.f32(x).f32(y).f32(z).f32(1);
             return *this;

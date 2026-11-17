@@ -5,6 +5,7 @@
 #include "audio/wma/decoder.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <format>
 #include <fstream>
 #include <optional>
@@ -44,7 +45,7 @@ namespace rct3::audio::wma
         AsfAudioBlocks blocks { 0, 0 };
         std::uint64_t next_packet = 0;
         bool flushed = false;
-        int skip = 0;             ///< Samples per channel still to drop at the start
+        std::int32_t skip = 0;    ///< Samples per channel still to drop at the start
         std::vector<float> ready; ///< Decoded frames, interleaved
         std::size_t ready_at = 0; ///< In samples
 
@@ -60,14 +61,14 @@ namespace rct3::audio::wma
             return { };
         }
 
-        void take_samples(int count, const float* const* planes)
+        void take_samples(std::int32_t count, const float* const* planes)
         {
-            const int channels = header.audio.channels;
-            const int from = std::min(skip, count);
+            const std::int32_t channels = header.audio.channels;
+            const std::int32_t from = std::min(skip, count);
             skip -= from;
-            for (int i = from; i < count; ++i)
+            for (std::int32_t i = from; i < count; ++i)
             {
-                for (int ch = 0; ch < channels; ++ch)
+                for (std::int32_t ch = 0; ch < channels; ++ch)
                     ready.push_back(planes[ch][i]);
             }
         }
@@ -79,7 +80,7 @@ namespace rct3::audio::wma
             if (!blocks.empty())
             {
                 const auto block = blocks.take();
-                const int n = decoder->decode(block, planes);
+                const std::int32_t n = decoder->decode(block, planes);
                 if (n > 0)
                     take_samples(n, planes);
                 return true;
@@ -106,7 +107,7 @@ namespace rct3::audio::wma
             if (flushed)
                 return false;
             flushed = true;
-            const int n = decoder->decode({ }, planes);
+            const std::int32_t n = decoder->decode({ }, planes);
             if (n > 0)
                 take_samples(n, planes);
             return true;

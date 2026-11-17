@@ -5,6 +5,7 @@
 #include "tiny_wmv.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <span>
 #include <vector>
@@ -18,10 +19,10 @@ namespace
         return std::as_bytes(std::span(rct3::test::kSineWma));
     }
 
-    std::vector<std::byte> bytes(std::initializer_list<int> list)
+    std::vector<std::byte> bytes(std::initializer_list<std::int32_t> list)
     {
         std::vector<std::byte> out;
-        for (const int b : list)
+        for (const std::int32_t b : list)
             out.push_back(static_cast<std::byte>(b));
         return out;
     }

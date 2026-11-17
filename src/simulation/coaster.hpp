@@ -177,14 +177,14 @@ namespace rct3::simulation
         /// beyond holds another.
         bool blocks = false;
         float train_length = 10;
-        int cars = 1;    ///< In the train, each as long as the others
-        float start = 0; ///< Where the train's front waits to set off, at the station's end
+        std::int32_t cars = 1; ///< In the train, each as long as the others
+        float start = 0;       ///< Where the train's front waits to set off, at the station's end
         /// On a circuit with more than one station, how far on from `start` the train stops at each of the others,
         /// nearest first; it waits at each and goes on round
         std::vector<float> stops { };
         /// Not a circuit: the track has two ends and the train runs back and forth, its speed negative going backwards
         Shuttle shuttle = Shuttle::None;
-        int passes = 1; ///< On a shuttle, the times the train comes into the station before it stops there
+        std::int32_t passes = 1; ///< On a shuttle, the times the train comes into the station before it stops there
         /// The track's end joins its start. When it does not, as on one left unfinished, a train going round
         /// runs off its end.
         bool closed = true;
@@ -217,7 +217,7 @@ namespace rct3::simulation
         units::Radians lean { };       ///< Of a slide's car, it has swung up the trough's wall from the bottom, to its right
         units::TurnRate lean_rate { }; ///< How fast that swing is changing
         // A shuttle's train
-        int passed = 0;             ///< Times it has come into the station since it set off
+        std::int32_t passed = 0;    ///< Times it has come into the station since it set off
         float push = 0;             ///< The speed it is being pushed to, negative backwards; 0 when it is not
         units::Distance pushed { }; ///< It has moved under that push
         units::Seconds held { };    ///< It has been held at the top of its climb

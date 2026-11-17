@@ -28,7 +28,7 @@ namespace rct3::ui::screens::info
     struct PartyTabInfo
     {
         PartyTab tab = PartyTab::Members;
-        int slot = 0;          ///< Its place on the ring
+        std::int32_t slot = 0; ///< Its place on the ring
         std::string_view icon; ///< Skin
         std::string_view help; ///< String key
     };

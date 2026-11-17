@@ -96,6 +96,7 @@
 #include "units/units.hpp"
 
 #include <array>
+#include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <functional>
@@ -403,7 +404,7 @@ namespace rct3::scene::park
 
     /// Tiles across a square of the ground built and drawn on its own: a change builds again only the
     /// squares it reaches. Chosen by eye: small enough to build in a few milliseconds, few enough to draw.
-    inline constexpr int kGroundChunk = 32;
+    inline constexpr std::int32_t kGroundChunk = 32;
 
     /// One square of the ground, or the land round the park.
     struct GroundChunk
@@ -441,8 +442,8 @@ namespace rct3::scene::park
         bool bloom = false;                                     ///< The Bloom option: glow round bright parts
         bool light_shafts = false;                              ///< The Light shafts option
         ParkOcclusion occlusion;
-        bool ambient_occlusion = false; ///< The Ambient occlusion option
-        int surface_detail = 0;         ///< The Surface detail option (render::SceneLight::surface_detail)
+        bool ambient_occlusion = false;  ///< The Ambient occlusion option
+        std::int32_t surface_detail = 0; ///< The Surface detail option (render::SceneLight::surface_detail)
         /// Relief maps are made for the pictures loaded, as the Surface detail option was when the park loaded:
         /// they cost memory and loading time, so a park loaded without them gets them only when loaded again.
         bool relief_maps = false;
@@ -816,7 +817,7 @@ namespace rct3::scene::park
         std::vector<std::size_t> shown_party;                                            ///< Of shown_people, the party the info panel tells about instead, its leader first
         ui::screens::info::PartyTab party_tab = ui::screens::info::PartyTab::Members;    ///< The tab last opened on a party
         bool painting_patrol = false;                                                    ///< Strokes on the ground paint the shown staff member's patrol area
-        int patrol_brush = 0;                                                            ///< Of ui::screens::info::kPatrolBrushes
+        std::int32_t patrol_brush = 0;                                                   ///< Of ui::screens::info::kPatrolBrushes
         std::optional<bool> patrol_stroke;                                               ///< While a stroke goes on: whether it adds tiles, or takes them away
         std::optional<HeldPerson> holding;                                               ///< The person the player has picked up
         std::vector<save::model::BinState> bins;                                         ///< Of the litter bins among the objects
@@ -854,7 +855,7 @@ namespace rct3::scene::park
         render::SceneLight light;                                                        ///< What the day clock shows, for this frame
         std::vector<CrossingVertex> crossing_scratch;                                    ///< Crossing billboards' vertices, written into for each upload
         std::vector<FrameUpload> frame_uploads;                                          ///< Meshes copied for this frame so far, cleared as it starts
-        int shadows = 0;                                                                 ///< The Shadows option: none, static (drawn now and then), dynamic
+        std::int32_t shadows = 0;                                                        ///< The Shadows option: none, static (drawn now and then), dynamic
         /// The shadow drawn at the sun's last kept direction, and the one before it, which fades out as the sun
         /// goes on towards its next step (rct3::park::sun_step_share).
         std::array<ShadowDrawing, 2> shadow_drawings;
@@ -877,10 +878,10 @@ namespace rct3::scene::park
         bool dragging = false;                                                  ///< The camera is being slid by a drag
         DragButtons drag_buttons = DragButtons::None;                           ///< Of the drag moving the camera
         rct3::park::ControlMode control_mode = rct3::park::ControlMode::Normal; ///< The camera last moved in
-        int iso_step = 0;                                                       ///< Isometric's diagonal, any whole number taken round the four
+        std::int32_t iso_step = 0;                                              ///< Isometric's diagonal, any whole number taken round the four
         units::Pixels iso_drag { };                                             ///< Isometric: across the turning drag has gone since it last turned
         std::optional<glm::vec3> pivot;                                         ///< Advanced: what the drag turns round, picked when it started
-        int zooming = 0;                                                        ///< From the keys: 1 in, -1 out
+        std::int32_t zooming = 0;                                               ///< From the keys: 1 in, -1 out
         bool hover_pickable = false;                                            ///< A click would open a panel on what is under the pointer
         units::Seconds since_hover_pick;                                        ///< Since that was looked at
         bool leave = false;

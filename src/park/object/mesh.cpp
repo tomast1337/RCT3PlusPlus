@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <optional>
 #include <tuple>
@@ -48,8 +49,8 @@ namespace rct3::park::object
 
         std::string ground_texture(GroundPaint paint, const save::model::TerrainGrid& grid, glm::vec2 anchor)
         {
-            const int col = grid.tile_size_x != 0 ? static_cast<int>(std::floor((anchor.x - grid.origin_x) / grid.tile_size_x)) : -1;
-            const int row = grid.tile_size_z != 0 ? static_cast<int>(std::floor((anchor.y - grid.origin_z) / grid.tile_size_z)) : -1;
+            const std::int32_t col = grid.tile_size_x != 0 ? static_cast<std::int32_t>(std::floor((anchor.x - grid.origin_x) / grid.tile_size_x)) : -1;
+            const std::int32_t row = grid.tile_size_z != 0 ? static_cast<std::int32_t>(std::floor((anchor.y - grid.origin_z) / grid.tile_size_z)) : -1;
             if (!grid.contains(col, row))
                 return ground::ground_key(paint, 0);
             const save::model::TerrainCell& cell = grid.at(col, row);
@@ -98,7 +99,7 @@ namespace rct3::park::object
         {
             for (const std::string_view part : { ref.overlay, std::string_view("|"), ref.symbol })
             {
-                if (const int c = part.compare(key.substr(0, part.size())); c != 0)
+                if (const std::int32_t c = part.compare(key.substr(0, part.size())); c != 0)
                     return c <=> 0;
                 key.remove_prefix(part.size());
             }

@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <cstring>
 #include <optional>
 
@@ -101,7 +102,7 @@ namespace rct3::audio
                 return g;
             }
             /// A value whose size is given by a 2-bit length type: none, 1, 2 or 4 bytes.
-            std::uint32_t sized(unsigned type)
+            std::uint32_t sized(std::uint32_t type)
             {
                 static constexpr std::array<std::size_t, 4> kSizes = { 0, 1, 2, 4 };
                 return static_cast<std::uint32_t>(value(kSizes.at(type & 3)));
@@ -311,7 +312,7 @@ namespace rct3::audio
         const std::size_t end = length - padding;
 
         std::uint32_t count = 1;
-        unsigned length_type = 0;
+        std::uint32_t length_type = 0;
         if (multiple)
         {
             const std::uint8_t payload_flags = r.u8();

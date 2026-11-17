@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <iterator>
 #include <map>
@@ -627,8 +628,8 @@ namespace rct3::scene::park
                 if (!std::ranges::contains(gone, p.id))
                     return false;
                 taken.push_back(p);
-                low = { std::min<int>(low.col, p.col), std::min<int>(low.row, p.row) };
-                high = { std::max<int>(high.col, p.col), std::max<int>(high.row, p.row) };
+                low = { std::min<std::int32_t>(low.col, p.col), std::min<std::int32_t>(low.row, p.row) };
+                high = { std::max<std::int32_t>(high.col, p.col), std::max<std::int32_t>(high.row, p.row) };
                 return true;
             });
             if (high.col < 0)
@@ -1103,8 +1104,8 @@ namespace rct3::scene::park
             if (!distance)
                 return std::nullopt;
             const glm::vec3 hit = ray.origin + ray.direction * *distance;
-            const auto col = static_cast<int>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x));
-            const auto row = static_cast<int>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z));
+            const auto col = static_cast<std::int32_t>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x));
+            const auto row = static_cast<std::int32_t>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z));
             if (!scene.grid.contains(col, row))
                 return std::nullopt;
             return save::model::Tile { col, row };
@@ -1158,7 +1159,7 @@ namespace rct3::scene::park
                 f.lay_next = f.took_click = true;
             else
             {
-                const auto steps = static_cast<int>(std::lround((*f.slope_press - at.y) / rct3::park::kSlopeDragStep));
+                const auto steps = static_cast<std::int32_t>(std::lround((*f.slope_press - at.y) / rct3::park::kSlopeDragStep));
                 if (const rct3::park::PathSlope slope = rct3::park::stepped_slope(f.slope_before, steps); slope != f.builder.slope)
                 {
                     f.builder.slope = slope;

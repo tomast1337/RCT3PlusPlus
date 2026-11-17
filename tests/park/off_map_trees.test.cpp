@@ -3,6 +3,7 @@
 
 #include "park/object/placement.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -10,7 +11,7 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid flat(int size, float y)
+    save::model::TerrainGrid flat(std::int32_t size, float y)
     {
         save::model::TerrainGrid g;
         g.width = size;
@@ -132,7 +133,7 @@ TEST_CASE("planting a tree seeds trees beyond the edge round it alone")
     objects.insert(objects.end(), first.begin(), first.end());
     objects.push_back(placed(5, "Palm")); // In the corner, by two edges
     std::vector<save::model::PlacedObject> more;
-    for (int tries = 0; tries < 20 && more.empty(); ++tries)
+    for (std::int32_t tries = 0; tries < 20 && more.empty(); ++tries)
         more = off_map_trees(objects, objects.size() - 1, models, g, land, s);
     REQUIRE_FALSE(more.empty());
     for (const save::model::PlacedObject& t : more)

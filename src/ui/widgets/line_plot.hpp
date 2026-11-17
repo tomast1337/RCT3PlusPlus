@@ -15,6 +15,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <vector>
@@ -47,7 +48,7 @@ namespace rct3::ui::widgets
         std::size_t slots = 0; ///< Samples across the plot; 0 to stretch the longest series over it
         Color background = hex("#00000030");
         Color rule_colour = hex("#7f7f7f60"); ///< Of the level lines and the ticks
-        int rules = 8;                        ///< Spaces between level lines, top to bottom
+        std::int32_t rules = 8;               ///< Spaces between level lines, top to bottom
         float line = 1.5f;                    ///< Width of the series' lines
         float tick = 4;                       ///< Height of a tick; a major one is twice as tall
         std::size_t most_slots = 0;           ///< The wheel zooms out to this many slots at most; 0 for no zooming

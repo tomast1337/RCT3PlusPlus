@@ -5,6 +5,7 @@
 #include "ui/thought_text.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <utility>
 
@@ -500,7 +501,7 @@ TEST_CASE("the research window sets the budget and a priority an area")
     CHECK(page.controls[3].id == kFirstPriorityControl + 1);
     CHECK(page.controls[3].value == 25);
     CHECK(page.controls[3].shown == u"25 %");
-    CHECK(page.controls[5].id == kFirstPriorityControl + static_cast<int>(simulation::ResearchArea::GentleRides));
+    CHECK(page.controls[5].id == kFirstPriorityControl + static_cast<std::int32_t>(simulation::ResearchArea::GentleRides));
     CHECK(page.controls[5].value == 100); // Not set, so the most
 
     left.clear();

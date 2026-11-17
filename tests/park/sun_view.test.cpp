@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/sun_view.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -50,7 +51,7 @@ TEST_CASE("the sun's view stays put in steps while the camera pans, and holds th
     constexpr float kRadius = 64;
     std::size_t moves = 0;
     glm::mat4 last = sun_view({ 0, 1, 0 }, { 0, 0, 0 }, kRadius, 2048).view_projection;
-    for (int i = 0; i <= 1000; ++i)
+    for (std::int32_t i = 0; i <= 1000; ++i)
     {
         const glm::vec3 centre(static_cast<float>(i) * 0.1f, 0, static_cast<float>(i) * 0.07f);
         const SunView view = sun_view({ 0, 1, 0 }, centre, kRadius, 2048);

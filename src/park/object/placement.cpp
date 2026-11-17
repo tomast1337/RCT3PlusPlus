@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::park::object
 {
@@ -59,7 +60,7 @@ namespace rct3::park::object
         return object;
     }
 
-    save::model::Tile square_tile(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, int x, int z)
+    save::model::Tile square_tile(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, std::int32_t x, std::int32_t z)
     {
         const glm::vec2 middle = footprint_middle(object, squares);
         const ModelTurn turn = ModelTurn::from(object.rotation);
@@ -67,7 +68,7 @@ namespace rct3::park::object
         const glm::vec2 along_z = turned_x(turn.turned(3));
         // Square indices grow along the model's -X and -Z, from the footprint's far corner.
         const glm::vec2 centre = middle - (static_cast<float>(x) + 0.5f - static_cast<float>(squares[0]) / 2) * along_x - (static_cast<float>(z) + 0.5f - static_cast<float>(squares[1]) / 2) * along_z;
-        return { static_cast<int>(std::floor(centre.x)), static_cast<int>(std::floor(centre.y)) };
+        return { static_cast<std::int32_t>(std::floor(centre.x)), static_cast<std::int32_t>(std::floor(centre.y)) };
     }
 
     bool on_owned_land(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, const save::model::TerrainGrid& grid)
@@ -117,7 +118,7 @@ namespace rct3::park::object
                 break;
             case Positioning::Quarter:
             {
-                const int q = object.quadrant & 3;
+                const std::int32_t q = object.quadrant & 3;
                 anchor += glm::vec2 { q % 2 == 0 ? -kQuarterOffset : kQuarterOffset, q / 2 == 0 ? -kQuarterOffset : kQuarterOffset };
                 break;
             }

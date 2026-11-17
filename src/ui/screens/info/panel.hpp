@@ -117,7 +117,7 @@ namespace rct3::ui::screens::info
     {
         std::string icon;
         std::u16string help;
-        int slot = 0;
+        std::int32_t slot = 0;
         std::vector<InfoChoice> choices;
         bool action = false;
         /// A paint tab's pots, each with its colour; pressing a pot opens colours to pick for it. The tab's icon
@@ -245,15 +245,15 @@ namespace rct3::ui::screens::info
     /// the control in the value column. The owner tells the controls apart by their ids.
     struct InfoControl
     {
-        int id = 0;
+        std::int32_t id = 0;
         std::string name; ///< Its widget's name: a string key from where it is made, to find it by
         InfoControlKind kind = InfoControlKind::Number;
         std::u16string label { };
-        int value = 0; ///< The number, the item picked, whether ticked, or whether a button is held down
-        int minimum = 0;
-        int maximum = 0;
-        int step = 1;
-        int decimals = 0;                      ///< Of a number shown with a point, such as money in hundredths
+        std::int32_t value = 0; ///< The number, the item picked, whether ticked, or whether a button is held down
+        std::int32_t minimum = 0;
+        std::int32_t maximum = 0;
+        std::int32_t step = 1;
+        std::int32_t decimals = 0;             ///< Of a number shown with a point, such as money in hundredths
         std::vector<std::u16string> items { }; ///< Of a list
         std::u16string text { };               ///< On a button, typed, or a number's unit after it
         /// A number's value in words, such as money, in the value column with only the arrows after it, its row
@@ -264,7 +264,7 @@ namespace rct3::ui::screens::info
         bool enabled = true;
         /// On the row of the control before it, after it, instead of on a row of its own.
         bool beside = false;
-        int column = 0;                        ///< 0 the page's left, or all of it; 1 its right half
+        std::int32_t column = 0;               ///< 0 the page's left, or all of it; 1 its right half
         float width = 0;                       ///< Of the control itself; 0 for its kind's own
         std::u16string help { };               ///< Shown under the pointer
         std::optional<Color> colour { };       ///< Of its label, instead of the panel's text colour
@@ -275,8 +275,8 @@ namespace rct3::ui::screens::info
     /// one painted and `value` its colour.
     struct InfoChange
     {
-        int id = 0;
-        int value = 0;
+        std::int32_t id = 0;
+        std::int32_t value = 0;
         std::size_t pot = 0;
         std::u16string text; ///< Typed
     };
@@ -326,9 +326,9 @@ namespace rct3::ui::screens::info
     }
 
     /// The middle of the tab at `slot`, from the middle of the disc, with y down.
-    [[nodiscard]] Point info_tab_offset(int slot);
+    [[nodiscard]] Point info_tab_offset(std::int32_t slot);
     /// The middle of choice `i` of `count` round the tab at `slot`, from the tab's middle, with y down.
-    [[nodiscard]] Point info_choice_offset(int slot, std::size_t i, std::size_t count);
+    [[nodiscard]] Point info_choice_offset(std::int32_t slot, std::size_t i, std::size_t count);
 
     class InfoPanel : public Widget
     {
@@ -381,7 +381,7 @@ namespace rct3::ui::screens::info
             return std::exchange(change_now_, std::nullopt);
         }
         /// The widget of the page's control `id`, if the page has it.
-        [[nodiscard]] std::optional<Widget&> control(int id) const;
+        [[nodiscard]] std::optional<Widget&> control(std::int32_t id) const;
         /// The colour the player picked for a paint tab since the last call.
         [[nodiscard]] std::optional<InfoPaint> take_paint()
         {
@@ -495,7 +495,7 @@ namespace rct3::ui::screens::info
 
         InfoPanelStyle style_;
         std::vector<widgets::Button*> tabs_;
-        std::vector<int> slots_;
+        std::vector<std::int32_t> slots_;
         std::vector<std::vector<InfoChoice>> tab_choices_;
         std::vector<widgets::Button*> choices_;
         std::optional<std::size_t> choosing_;

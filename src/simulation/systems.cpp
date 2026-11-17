@@ -28,6 +28,7 @@
 #include <array>
 #include <bit>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <limits>
 #include <numbers>
@@ -167,7 +168,7 @@ namespace rct3::simulation
                 auto& next = buffers.next;
                 ring.assign(1, stride.to);
                 guarded[stride.to.value] = true;
-                for (int step = 0; step < kTuning.vandals.guard_reach; ++step)
+                for (std::int32_t step = 0; step < kTuning.vandals.guard_reach; ++step)
                 {
                     next.clear();
                     for (const NodeId n : ring)
@@ -185,7 +186,7 @@ namespace rct3::simulation
             const auto guests_view = r.view<const Errand, const Stride, Mood, Dice, const Needs>(entt::exclude<Staff>); // Not an inspector on a visit
             const bool pool_open = std::ranges::any_of(r.view<const PoolDoor, const Attraction>().each(), [](const auto& room) { return std::get<2>(room).open; });
             // Who sits on seat `seat` of bench `bench`, if anyone, and whether they are getting up.
-            const auto sitter = [&](entt::entity bench, int seat) -> std::optional<const Linger&> {
+            const auto sitter = [&](entt::entity bench, std::int32_t seat) -> std::optional<const Linger&> {
                 for (const auto [g, linger] : r.view<const Linger>().each())
                     if (linger.bench == bench && linger.seat == seat)
                         return linger;
@@ -277,7 +278,7 @@ namespace rct3::simulation
                     // Up once no longer worn out or sick and done eating, the more rested the sooner; someone beside them
                     // keeps them chatting.
                     const bool needy = mood.energy.value < kTuning.facilities.tired.value || mood.nausea.value >= kTuning.needs.want.value || munching(r, g);
-                    const auto mate = [&](int seat) { return r.valid(linger->bench) && seat >= 0 && sitter(linger->bench, seat) && !sitter(linger->bench, seat)->rising; };
+                    const auto mate = [&](std::int32_t seat) { return r.valid(linger->bench) && seat >= 0 && sitter(linger->bench, seat) && !sitter(linger->bench, seat)->rising; };
                     const float chat = mate(linger->seat - 1) || mate(linger->seat + 1) ? kTuning.facilities.chatting : 1;
                     if (linger->left.value <= 0 && !needy && random::chance(dice.state, kTuning.facilities.stand.value * dt * mood.energy.value / chat))
                     {

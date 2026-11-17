@@ -16,11 +16,11 @@ namespace rct3::park
     namespace
     {
         constexpr units::Distance kMinDrop { 8.0f };    ///< Least height the water must fall.
-        constexpr int kMaxReach = 6;                    ///< Most tiles out from the edge the lower lake may lie.
-        constexpr int kNarrowestEdge = 2;               ///< Fewest tiles of edge a waterfall needs.
+        constexpr std::int32_t kMaxReach = 6;           ///< Most tiles out from the edge the lower lake may lie.
+        constexpr std::int32_t kNarrowestEdge = 2;      ///< Fewest tiles of edge a waterfall needs.
         constexpr units::Distance kPickMargin { 1.0f }; ///< Round a waterfall, it can be picked.
 
-        save::model::Tile step(save::model::Tile t, save::model::Tile d, int n = 1)
+        save::model::Tile step(save::model::Tile t, save::model::Tile d, std::int32_t n = 1)
         {
             return { t.col + d.col * n, t.row + d.row * n };
         }
@@ -46,7 +46,7 @@ namespace rct3::park
             for (const save::model::WaterTri& tri : body->tris)
                 if (grid.contains(tri.col, tri.row))
                     holding[static_cast<std::size_t>(tri.row) * static_cast<std::size_t>(grid.width) + tri.col] |= bit;
-        const auto in = [&](save::model::Tile t, int bit) { return grid.contains(t.col, t.row) && (holding[static_cast<std::size_t>(t.row) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(t.col)] & bit) != 0; };
+        const auto in = [&](save::model::Tile t, std::int32_t bit) { return grid.contains(t.col, t.row) && (holding[static_cast<std::size_t>(t.row) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(t.col)] & bit) != 0; };
 
         // Where the player picked each lake, in tiles.
         const bool first_high = &high == &bodies[first];
@@ -60,7 +60,7 @@ namespace rct3::park
         {
             save::model::Tile from;
             save::model::Tile out;
-            int length = 0;
+            std::int32_t length = 0;
             glm::vec2 start { }; ///< Its two ends on the border, in tiles
             glm::vec2 end { };
             bool start_juts = false; ///< The border turns back round the lake there, rather than out into the bank
@@ -75,7 +75,7 @@ namespace rct3::park
                 const auto border = [&](save::model::Tile t) { return in(t, 1) && !in(step(t, out), 1); };
                 if (!border(from) || border(step(from, side, -1)))
                     continue; // Not a run's first tile
-                int length = 1;
+                std::int32_t length = 1;
                 while (border(step(from, side, length)))
                     ++length;
                 const glm::vec2 start = glm::vec2 { from.col, from.row } + 0.5f + (glm::vec2 { out.col, out.row } - glm::vec2 { side.col, side.row }) * 0.5f;
@@ -115,18 +115,18 @@ namespace rct3::park
         // The water pours between the edge's two end tiles, which slope up to the banks; an edge of two tiles
         // pours over its middle. It lands where the lower lake lies nearest straight out from there.
         const save::model::Tile side { -run.out.row, run.out.col };
-        const int from = 0;
-        const int to = run.length - 1;
-        const int inset = run.length > 2 ? 1 : 0;
+        const std::int32_t from = 0;
+        const std::int32_t to = run.length - 1;
+        const std::int32_t inset = run.length > 2 ? 1 : 0;
         struct Way
         {
             save::model::Tile from;
             save::model::Tile out;
-            int reach = 0;
+            std::int32_t reach = 0;
         };
         std::optional<Way> best;
-        for (int s = from + inset; s <= to - inset; ++s)
-            for (int k = 1; k <= kMaxReach; ++k)
+        for (std::int32_t s = from + inset; s <= to - inset; ++s)
+            for (std::int32_t k = 1; k <= kMaxReach; ++k)
             {
                 const save::model::Tile t = step(step(run.from, side, s), run.out, k);
                 if (!grid.contains(t.col, t.row) || in(t, 1))
@@ -139,8 +139,8 @@ namespace rct3::park
             }
         if (!best)
             return std::unexpected(kWaterfallTooFarApart);
-        for (int s = from; s <= to; ++s)
-            for (int k = 0; k <= best->reach; ++k)
+        for (std::int32_t s = from; s <= to; ++s)
+            for (std::int32_t k = 0; k <= best->reach; ++k)
             {
                 const save::model::Tile t = step(step(best->from, side, s), best->out, k);
                 if (!owned_outright(grid.at(t.col, t.row)))
@@ -151,8 +151,8 @@ namespace rct3::park
         // lower lake lies against the edge.
         std::vector<save::model::CarvedTile> carved;
         const bool spillway = best->reach > 1;
-        for (int s = from; spillway && s <= to; ++s)
-            for (int k = 0; k < best->reach; ++k)
+        for (std::int32_t s = from; spillway && s <= to; ++s)
+            for (std::int32_t k = 0; k < best->reach; ++k)
             {
                 const save::model::Tile t = step(step(best->from, side, s), best->out, k);
                 carved.push_back({ .tile = t, .corners = grid.at(t.col, t.row).corners });
@@ -185,7 +185,7 @@ namespace rct3::park
         // The edge's two ends, in tiles from its middle.
         float ends = 0;
         for (const save::model::CarvedTile& c : fall.carved)
-            for (int k = 0; k < 4; ++k)
+            for (std::int32_t k = 0; k < 4; ++k)
                 ends = std::max(ends, aside(grid.world_x(c.tile.col) + static_cast<float>(k % 2) * grid.tile_size_x, grid.world_z(c.tile.row) + static_cast<float>(k / 2) * grid.tile_size_z));
         for (const save::model::CarvedTile& c : fall.carved)
         {

@@ -9,6 +9,7 @@
 #include "simulation/systems.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <ranges>
 
@@ -108,7 +109,7 @@ TEST_CASE("litter on their path wears a VIP's patience down till they leave, and
     park.litter({ 0, 0 }, 5);
     for (const auto [e, l] : r.view<Litter>().each())
         l.node = stride.from;
-    for (int i = 0; i < 10 && !r.get<Vip>(*vip).leaving; ++i)
+    for (std::int32_t i = 0; i < 10 && !r.get<Vip>(*vip).leaving; ++i)
         advance_vips(park.world(), set, 1, kTuning.vips.look.value, messages, { });
     CHECK(r.get<Vip>(*vip).leaving);
     CHECK(r.get<Vip>(*vip).patience.value == 0);

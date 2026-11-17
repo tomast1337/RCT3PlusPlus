@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <utility>
 
 namespace rct3::simulation
@@ -168,7 +169,7 @@ namespace rct3::simulation
         if (steps > 0)
         {
             const float usual = kKindWind[kind_index(state.weather)];
-            for (int i = 0; i < static_cast<int>(steps); ++i)
+            for (std::int32_t i = 0; i < static_cast<std::int32_t>(steps); ++i)
             {
                 state.wind_change += static_cast<float>(random::between(dice, -1.0, 1.0)) * kGust - state.wind_change * kWindCalm;
                 state.wind = std::clamp(state.wind + state.wind_change + (usual - state.wind) * kWindPull, 0.0f, 1.0f);

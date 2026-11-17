@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <utility>
 
@@ -165,7 +166,7 @@ namespace rct3::ui::screens::info
             price.maximum = view_.most_price;
             price.step = view_.price_step;
             price.decimals = 2;
-            price.set_value(static_cast<int>(line.price.value));
+            price.set_value(static_cast<std::int32_t>(line.price.value));
             price.placement = { { 1, 0, 1, 0 }, { -extras_right, y, -right, y + h } };
             price.tooltip = line.help;
             w.price = &price;
@@ -386,7 +387,7 @@ namespace rct3::ui::screens::info
         if (drag_->moving)
             drop(p);
         else if (drag_->good)
-            event_ = MenuEvent { MenuAction::Add, *drag_->good, static_cast<int>(view_.lines.size()), { } };
+            event_ = MenuEvent { MenuAction::Add, *drag_->good, static_cast<std::int32_t>(view_.lines.size()), { } };
         else if (drag_->line)
             picked_ = picked_ == drag_->line ? std::nullopt : drag_->line;
         drag_.reset();
@@ -403,9 +404,9 @@ namespace rct3::ui::screens::info
         if (!before)
             return;
         if (drag_->good)
-            event_ = MenuEvent { MenuAction::Add, *drag_->good, static_cast<int>(*before), { } };
+            event_ = MenuEvent { MenuAction::Add, *drag_->good, static_cast<std::int32_t>(*before), { } };
         else if (const std::size_t to = drop_place(drag_->line, *before); to != *drag_->line)
-            event_ = MenuEvent { MenuAction::Move, *drag_->line, static_cast<int>(to), { } };
+            event_ = MenuEvent { MenuAction::Move, *drag_->line, static_cast<std::int32_t>(to), { } };
     }
 
     void StallMenu::update(const UpdateContext&)
@@ -426,7 +427,7 @@ namespace rct3::ui::screens::info
                     continue;
                 std::uint32_t& ticked = view_.lines[i].ticked;
                 ticked = w.ticks[k]->ticked ? ticked | 1U << k : ticked & ~(1U << k);
-                event_ = MenuEvent { MenuAction::Extras, i, static_cast<int>(ticked), { } };
+                event_ = MenuEvent { MenuAction::Extras, i, static_cast<std::int32_t>(ticked), { } };
             }
         }
     }

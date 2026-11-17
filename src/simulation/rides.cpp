@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <optional>
 #include <ranges>
@@ -59,7 +60,7 @@ namespace rct3::simulation
 
     float Upkeep::downtime_share() const
     {
-        int sum = 0;
+        std::int32_t sum = 0;
         for (const std::uint8_t w : downtime)
             sum += w;
         return static_cast<float>(sum) / static_cast<float>(downtime.size() * kDowntimeSamples);

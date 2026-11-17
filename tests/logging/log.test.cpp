@@ -4,6 +4,7 @@
 #include "logging/log.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <filesystem>
 #include <fstream>
@@ -48,7 +49,7 @@ TEST_CASE("the ring keeps only the newest entries, oldest first")
 {
     Log log(quiet(3));
     const auto l = log.for_category("ring");
-    for (int i = 1; i <= 7; ++i)
+    for (std::int32_t i = 1; i <= 7; ++i)
         l.info("m{}", i);
     const auto entries = log.recent_entries();
     REQUIRE(entries.size() == 3);
@@ -81,7 +82,7 @@ TEST_CASE("a reader that falls behind the ring sees what is left")
     const auto l = log.for_category("slow");
     l.info("1");
     const auto cursor = log.latest_sequence();
-    for (int i = 0; i < 5; ++i)
+    for (std::int32_t i = 0; i < 5; ++i)
         l.info("x{}", i);
     const auto fresh = log.entries_since(cursor);
     CHECK(fresh.size() == 2);
@@ -224,10 +225,10 @@ TEST_CASE("concurrent writers keep sequences unique")
     Log log(quiet(400));
     const auto l = log.for_category("mt");
     std::vector<std::thread> threads;
-    for (int t = 0; t < 4; ++t)
+    for (std::int32_t t = 0; t < 4; ++t)
     {
         threads.emplace_back([&l] {
-            for (int i = 0; i < 100; ++i)
+            for (std::int32_t i = 0; i < 100; ++i)
                 l.info("{}", i);
         });
     }

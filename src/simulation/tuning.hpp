@@ -344,7 +344,7 @@ namespace rct3::simulation::tuning
         units::PerSecond gloom = units::PerSecond::over({ 1200 });    ///< Happiness lost standing by something broken
         units::Share mood { 0.15f };                                  ///< Guests less happy than this may break things
         units::Frequency breaking = units::Frequency::every({ 120 }); ///< Such a guest breaking what is by them
-        int guard_reach = 3;                                          ///< Path tiles a guard keeps vandals off, walking out from theirs
+        std::int32_t guard_reach = 3;                                 ///< Path tiles a guard keeps vandals off, walking out from theirs
         units::Seconds fade { 3600 };                                 ///< Over which a break stops counting as recent
         float bad = 2.5f;                                             ///< Recent breaks that make the player be told: about three within the hour
         units::Seconds warning_every { 1200 };                        ///< At least, between telling them

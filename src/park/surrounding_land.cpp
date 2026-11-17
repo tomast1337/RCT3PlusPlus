@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <map>
 
@@ -17,21 +18,21 @@ namespace rct3::park
         /// column, back along -X at the last row, back along -Z at the first column.
         struct EdgePoint
         {
-            int x = 0;
-            int z = 0;
+            std::int32_t x = 0;
+            std::int32_t z = 0;
         };
 
         std::vector<EdgePoint> edge_points(const save::model::TerrainGrid& g)
         {
             std::vector<EdgePoint> out;
             out.reserve(static_cast<std::size_t>(2 * (g.width + g.height)));
-            for (int x = 0; x < g.width; ++x)
+            for (std::int32_t x = 0; x < g.width; ++x)
                 out.push_back({ x, 0 });
-            for (int z = 0; z < g.height; ++z)
+            for (std::int32_t z = 0; z < g.height; ++z)
                 out.push_back({ g.width, z });
-            for (int x = g.width; x > 0; --x)
+            for (std::int32_t x = g.width; x > 0; --x)
                 out.push_back({ x, g.height });
-            for (int z = g.height; z > 0; --z)
+            for (std::int32_t z = g.height; z > 0; --z)
                 out.push_back({ 0, z });
             return out;
         }
@@ -40,15 +41,15 @@ namespace rct3::park
         /// the land meets that tile's ground exactly.
         struct EdgeCorner
         {
-            int col = 0;
-            int row = 0;
-            int corner = 0;
+            std::int32_t col = 0;
+            std::int32_t row = 0;
+            std::int32_t corner = 0;
         };
 
         EdgeCorner edge_corner(const save::model::TerrainGrid& g, EdgePoint p)
         {
-            const int col = std::clamp(p.x, 0, g.width - 1);
-            const int row = std::clamp(p.z, 0, g.height - 1);
+            const std::int32_t col = std::clamp(p.x, 0, g.width - 1);
+            const std::int32_t row = std::clamp(p.z, 0, g.height - 1);
             return { col, row, (p.x - col) + 2 * (p.z - row) };
         }
 
@@ -68,9 +69,9 @@ namespace rct3::park
             return out;
         }
 
-        std::vector<float> smoothed(std::vector<float> h, int passes)
+        std::vector<float> smoothed(std::vector<float> h, std::int32_t passes)
         {
-            for (int pass = 0; pass < passes; ++pass)
+            for (std::int32_t pass = 0; pass < passes; ++pass)
                 h = smoothed(h);
             return h;
         }
@@ -99,7 +100,7 @@ namespace rct3::park
         /// NaN elsewhere.
         std::vector<float> sea_levels(const save::model::TerrainGrid& g, const std::vector<EdgePoint>& edge, const save::model::WaterLayer& water)
         {
-            std::map<std::pair<int, int>, float> on_edge; // Highest water on each edge tile
+            std::map<std::pair<std::int32_t, std::int32_t>, float> on_edge; // Highest water on each edge tile
             for (const save::model::WaterBody& body : water.bodies)
                 for (const save::model::WaterTri& t : body.tris)
                     if (g.contains(t.col, t.row) && (t.col == 0 || t.row == 0 || t.col == g.width - 1 || t.row == g.height - 1))

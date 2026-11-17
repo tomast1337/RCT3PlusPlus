@@ -2,6 +2,7 @@
 #include "park/pools/pools.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -88,8 +89,8 @@ TEST_CASE("pools: every way water lies round a square walls each dry side once a
         CAPTURE(mask);
         const auto water = static_cast<std::uint8_t>(mask);
         const auto wet = [&](std::int32_t turn) { return (water & (1u << (turn & 3))) != 0; };
-        std::array<int, 4> sides { };
-        std::array<int, 4> corners { };
+        std::array<std::int32_t, 4> sides { };
+        std::array<std::int32_t, 4> corners { };
         for (const PoolWallPiece& w : pool_walls(water))
             switch (w.shape)
             {
@@ -108,7 +109,7 @@ TEST_CASE("pools: every way water lies round a square walls each dry side once a
                         sides[static_cast<std::size_t>(turn)] += turn != ((w.side.value + 3) & 3) ? 1 : 0;
                     break;
                 case PoolWall::Full:
-                    for (int& side : sides)
+                    for (std::int32_t& side : sides)
                         ++side;
                     break;
             }

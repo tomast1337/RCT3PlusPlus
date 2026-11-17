@@ -4,6 +4,7 @@
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -280,8 +281,8 @@ TEST_CASE("rows of options nothing acts on show greyed and cannot be used")
     f.desktop.update({ });
     auto page = f.dialog->find("content/GameOptionsDialog_ScenicSettingsTabHelp");
     REQUIRE(page);
-    int usable = 0;
-    int greyed = 0;
+    std::int32_t usable = 0;
+    std::int32_t greyed = 0;
     for (const auto& c : page->children())
     {
         if (auto* tick = dynamic_cast<Tickbox*>(c.get()); tick != nullptr && tick->visible)

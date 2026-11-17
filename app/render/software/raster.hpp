@@ -103,10 +103,10 @@ namespace rct3::render::software
         {
             std::uint32_t draw = 0;
             std::uint32_t planes = 0; ///< Where its planes start in `planes`
-            int x0 = 0;               ///< The pixels it may cover, x0 <= x < x1
-            int y0 = 0;
-            int x1 = 0;
-            int y1 = 0;
+            std::int32_t x0 = 0;      ///< The pixels it may cover, x0 <= x < x1
+            std::int32_t y0 = 0;
+            std::int32_t x1 = 0;
+            std::int32_t y1 = 0;
             glm::vec2 origin { 0.0f };          ///< Its first corner; edges and planes are measured from it
             std::array<glm::vec3, 3> edges { }; ///< a, b, c of each: a x + b y + c, positive inside
             std::array<bool, 3> top_left { };   ///< Pixels exactly on the edge are its

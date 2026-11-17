@@ -28,6 +28,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <string>
@@ -94,7 +95,7 @@ namespace rct3::ui::screens::management
     /// A task's switch in a row: its flag bit, skin family and help.
     struct RosterTask
     {
-        int bit = 0;
+        std::int32_t bit = 0;
         std::string_view skin;
         std::string_view help;
         bool inverted = false; ///< The bit set means the task is off
@@ -153,9 +154,9 @@ namespace rct3::ui::screens::management
             widgets::Button* train = nullptr;
             widgets::Button* wage_up = nullptr;
             widgets::Button* wage_down = nullptr;
-            std::vector<std::pair<int, widgets::Button*>> tasks; ///< With their bit
-            std::vector<widgets::Button*> swatches;              ///< By pot
-            std::array<widgets::Button*, 2> choices { };         ///< Warn and sack, beside the discipline button while open
+            std::vector<std::pair<std::int32_t, widgets::Button*>> tasks; ///< With their bit
+            std::vector<widgets::Button*> swatches;                       ///< By pot
+            std::array<widgets::Button*, 2> choices { };                  ///< Warn and sack, beside the discipline button while open
         };
 
         /// Makes row `r`'s widgets again from its line.

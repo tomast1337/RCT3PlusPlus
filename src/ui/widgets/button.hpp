@@ -14,6 +14,7 @@
 
 #include "ui/widget.hpp"
 
+#include <cstdint>
 #include <string>
 
 namespace rct3::ui::widgets
@@ -76,7 +77,7 @@ namespace rct3::ui::widgets
         void draw(DrawContext& context) const override;
 
     private:
-        int clicks_ = 0;
+        std::int32_t clicks_ = 0;
         float grown_ = 0; // 0 to 1, how far into its swell
     };
 

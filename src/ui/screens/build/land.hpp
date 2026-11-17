@@ -20,6 +20,7 @@
 #include "ui/widgets/spinner.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
@@ -70,7 +71,7 @@ namespace rct3::ui::screens::build
     {
         std::string icon;
         std::u16string help;
-        int slot = 0; ///< On the ring, as footpath_tab_offset counts them
+        std::int32_t slot = 0; ///< On the ring, as footpath_tab_offset counts them
         std::vector<LandTool> tools;
         /// A tab of settings: its tools are a choice of their own, `on` the one in force. A pick there is told
         /// like any other but leaves the tool chosen as it is.
@@ -79,9 +80,9 @@ namespace rct3::ui::screens::build
         /// A number after its tools, when `number` names one: its widget's name, its help and its range.
         std::string number { };
         std::u16string number_help { };
-        int number_value = 1;
-        int number_least = 1;
-        int number_most = 1;
+        std::int32_t number_value = 1;
+        std::int32_t number_least = 1;
+        std::int32_t number_most = 1;
     };
 
     /// A tool chosen: its tab and its place there.
@@ -99,7 +100,7 @@ namespace rct3::ui::screens::build
 
         /// Opens the panel with `tabs`, the tab of `chosen` out and that tool marked, and the brush `size` of
         /// at most `largest`.
-        void show(std::vector<LandTab> tabs, LandPick chosen, int size, int largest);
+        void show(std::vector<LandTab> tabs, LandPick chosen, std::int32_t size, std::int32_t largest);
         void hide();
         [[nodiscard]] bool showing() const
         {
@@ -115,13 +116,13 @@ namespace rct3::ui::screens::build
         {
             return page_;
         }
-        [[nodiscard]] int brush() const
+        [[nodiscard]] std::int32_t brush() const
         {
             return size_->value();
         }
 
         /// The number on the tab named `tab`, as the player left it; that tab's own when it is not out.
-        [[nodiscard]] int number(std::size_t tab) const
+        [[nodiscard]] std::int32_t number(std::size_t tab) const
         {
             return data_.at(tab).number_value;
         }
@@ -179,7 +180,7 @@ namespace rct3::ui::screens::build
         std::optional<std::size_t> page_;
         LandPick chosen_;
         std::optional<LandPick> pick_now_;
-        int largest_ = 1;
+        std::int32_t largest_ = 1;
         bool closed_ = false;
     };
 

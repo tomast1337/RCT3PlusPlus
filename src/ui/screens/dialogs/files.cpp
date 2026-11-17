@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 
 namespace rct3::ui::screens::dialogs
@@ -189,7 +190,7 @@ namespace rct3::ui::screens::dialogs
 
     private:
         const FileDialogStyle& style_;
-        int clicks_ = 0;
+        std::int32_t clicks_ = 0;
     };
 
     FileDialog::FileDialog(std::string name, const FileDialogStyle& style, const StringTable& strings, FileDialogMode mode, bool twelve_hour)

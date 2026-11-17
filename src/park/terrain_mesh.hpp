@@ -64,17 +64,17 @@ namespace rct3::park
     /// The tiles from column `col` and row `row` up to, not including, `end_col` and `end_row`.
     struct TileRect
     {
-        int col = 0;
-        int row = 0;
-        int end_col = 0;
-        int end_row = 0;
+        std::int32_t col = 0;
+        std::int32_t row = 0;
+        std::int32_t end_col = 0;
+        std::int32_t end_row = 0;
 
-        [[nodiscard]] bool contains(int c, int r) const
+        [[nodiscard]] bool contains(std::int32_t c, std::int32_t r) const
         {
             return c >= col && c < end_col && r >= row && r < end_row;
         }
         /// This one with `n` more tiles round each side.
-        [[nodiscard]] TileRect grown(int n) const
+        [[nodiscard]] TileRect grown(std::int32_t n) const
         {
             return { col - n, row - n, end_col + n, end_row + n };
         }
@@ -108,8 +108,8 @@ namespace rct3::park
     /// A band of height on a tile that the walls along its edges leave open.
     struct GroundOpening
     {
-        int col = 0;
-        int row = 0;
+        std::int32_t col = 0;
+        std::int32_t row = 0;
         float low = 0;
         float high = 0;
     };
@@ -120,7 +120,7 @@ namespace rct3::park
     /// How far above the pool's surface height its water stands: just under the top of the rim piece there,
     /// which rises a fifth of a unit.
     inline constexpr float kPoolBrim = 0.1f;
-    inline constexpr int kPoolWaterSteps = 6; ///< Chosen by eye: a pool square's water is cut this many times each way, for the waves
+    inline constexpr std::int32_t kPoolWaterSteps = 6; ///< Chosen by eye: a pool square's water is cut this many times each way, for the waves
     /// Pool water is clearer and lighter than the lakes': its low alpha also has it mirror the sky less looking
     /// down, so swimmers show whole under the surface.
     inline constexpr glm::vec4 kPoolColour = math::unit(math::hex("#3c9ccc4c"));
@@ -133,16 +133,16 @@ namespace rct3::park
 
     /// World units from `within` (from a pool water square's least corner, in world units) to the nearest square
     /// round it that `water` (by column and row step to it) says holds no water, at most a square across.
-    [[nodiscard]] float pool_wall_room(const save::model::TerrainGrid& grid, glm::vec2 within, std::function_ref<bool(int dc, int dr)> water);
+    [[nodiscard]] float pool_wall_room(const save::model::TerrainGrid& grid, glm::vec2 within, std::function_ref<bool(std::int32_t dc, std::int32_t dr)> water);
 
     /// How much of the ground round grid point (x, z) has `surface`: the share of the tiles touching it,
     /// which is how much of that surface shows there.
-    [[nodiscard]] float surface_share(const save::model::TerrainGrid& grid, int x, int z, std::uint8_t surface);
+    [[nodiscard]] float surface_share(const save::model::TerrainGrid& grid, std::int32_t x, std::int32_t z, std::uint8_t surface);
 
     /// The normal (any length, pointing up) a tile's ground is lit by at its corner `corner`: the area-weighted sum of the
     /// faces of every tile meeting at that grid point at the same height, so the ground shades smoothly
     /// across tiles and stays sharp where a cliff splits it.
-    [[nodiscard]] glm::vec3 ground_normal(const save::model::TerrainGrid& grid, save::model::Tile tile, int corner);
+    [[nodiscard]] glm::vec3 ground_normal(const save::model::TerrainGrid& grid, save::model::Tile tile, std::int32_t corner);
 
     /// Adds `more`'s ground (not its water) after `mesh`'s, its batches after `mesh`'s, and grows the box.
     void add_ground(TerrainMesh& mesh, const TerrainMesh& more);

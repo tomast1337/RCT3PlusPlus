@@ -4,6 +4,7 @@
 #include "park/object/placement.hpp"
 
 #include <array>
+#include <cstdint>
 #include <optional>
 #include <string>
 
@@ -71,7 +72,7 @@ namespace rct3::park::ride
         {
             const auto [xs, zs] = item.squares;
             const bool outline = !item.fence_outline.empty();
-            const auto inside = [&](int x, int z) {
+            const auto inside = [&](std::int32_t x, std::int32_t z) {
                 if (x < 0 || z < 0 || x >= xs || z >= zs)
                     return false;
                 return !outline || item.fence_outline[static_cast<std::size_t>(z) * static_cast<std::size_t>(xs) + static_cast<std::size_t>(x)];
@@ -81,9 +82,9 @@ namespace rct3::park::ride
             placed.col = spot.col;
             placed.row = spot.row;
             placed.rotation = spot.direction;
-            for (int z = 0; z < zs; ++z)
+            for (std::int32_t z = 0; z < zs; ++z)
             {
-                for (int x = 0; x < xs; ++x)
+                for (std::int32_t x = 0; x < xs; ++x)
                 {
                     if (!inside(x, z))
                         continue;
@@ -94,7 +95,7 @@ namespace rct3::park::ride
                     // single square across); an outline wherever the neighbour is outside it.
                     struct SquareSide
                     {
-                        int dx, dz;
+                        std::int32_t dx, dz;
                         std::int32_t turns;
                     };
                     static constexpr std::array<SquareSide, 4> kSquareSides { SquareSide { -1, 0, 0 }, SquareSide { 0, 1, 1 }, SquareSide { 1, 0, 2 }, SquareSide { 0, -1, 3 } };

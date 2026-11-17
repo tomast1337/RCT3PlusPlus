@@ -4,6 +4,7 @@
 #include "simulation/sim_world.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -39,12 +40,12 @@ namespace rct3::simulation::staff
         }
     } // namespace
 
-    void paint_patrol(entt::registry& r, entt::entity staff, glm::ivec2 at, int across, bool add)
+    void paint_patrol(entt::registry& r, entt::entity staff, glm::ivec2 at, std::int32_t across, bool add)
     {
         const auto* patrol = r.try_get<Patrol>(staff);
         std::vector<glm::ivec2> tiles = patrol != nullptr ? patrol->tiles : std::vector<glm::ivec2> { };
-        for (int dc = -across / 2; dc <= across / 2; ++dc)
-            for (int dr = -across / 2; dr <= across / 2; ++dr)
+        for (std::int32_t dc = -across / 2; dc <= across / 2; ++dc)
+            for (std::int32_t dr = -across / 2; dr <= across / 2; ++dr)
             {
                 const glm::ivec2 t = at + glm::ivec2(dc, dr);
                 const auto in = std::ranges::find(tiles, t);
@@ -74,8 +75,8 @@ namespace rct3::simulation::staff
             high = glm::max(high, t);
         }
         std::vector<glm::ivec2> tiles;
-        for (int col = low.x; col <= high.x; ++col)
-            for (int row = low.y; row <= high.y; ++row)
+        for (std::int32_t col = low.x; col <= high.x; ++col)
+            for (std::int32_t row = low.y; row <= high.y; ++row)
                 tiles.emplace_back(col, row);
         set_tiles(r, staff, tiles);
     }

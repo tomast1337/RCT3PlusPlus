@@ -82,7 +82,7 @@ namespace rct3::ui::screens::build
         std::size_t item = 0;            ///< The owner's number for the item
         bool locked = false;             ///< Shown, but not to be picked until it is invented
         std::optional<float> progress;   ///< How far research has got with it, 0 to 1, while it is under way
-        int rank = 0;                    ///< Rows sort by this first, then by name
+        std::int32_t rank = 0;           ///< Rows sort by this first, then by name
         std::vector<PickerRow> children; ///< A heading's rows; a row with any is a heading
     };
 

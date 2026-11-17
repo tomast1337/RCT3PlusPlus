@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -51,7 +52,7 @@ namespace rct3::scene::park
             for (std::size_t i = 0; i < kPackFiles.size(); ++i)
             {
                 if (front.assets.install && front.assets.install->find(kPackFiles.at(i)))
-                    packs.push_back(static_cast<int>(i));
+                    packs.push_back(static_cast<std::int32_t>(i));
             }
             root.add<ui::screens::dialogs::GameInfoBox>(std::string(kAboutName), skins::about_window_style(front.assets.palette), *front.assets.strings, packs, park.seed);
         }

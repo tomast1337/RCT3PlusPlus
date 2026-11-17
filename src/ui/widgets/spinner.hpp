@@ -34,20 +34,20 @@ namespace rct3::ui::widgets
     public:
         Spinner(std::string name, SpinnerStyle style);
 
-        int minimum = 0;
-        int maximum = 100;
-        int step = 1;
+        std::int32_t minimum = 0;
+        std::int32_t maximum = 100;
+        std::int32_t step = 1;
         /// Places after the point the value is shown with: 2 shows 150 as 1.50, and reads 1.5 back as 150.
-        int decimals = 0;
+        std::int32_t decimals = 0;
         /// Shown after the number, as " mph"; typed text may keep it or leave it out.
         std::u16string unit;
 
-        [[nodiscard]] int value() const
+        [[nodiscard]] std::int32_t value() const
         {
             return value_;
         }
         /// Sets the value, kept in range. Not reported by take_change().
-        void set_value(int v);
+        void set_value(std::int32_t v);
 
         /// True once for each change by the user since the last call.
         [[nodiscard]] bool take_change();
@@ -82,12 +82,12 @@ namespace rct3::ui::widgets
 
         SpinnerStyle style_;
         EditBox* field_ = nullptr;
-        int value_ = 0;
-        int held_ = 0; // +1 while the up arrow is held, -1 for the down arrow
+        std::int32_t value_ = 0;
+        std::int32_t held_ = 0; // +1 while the up arrow is held, -1 for the down arrow
         units::Seconds held_time_;
         units::Seconds next_repeat_;
         bool typing_ = false; // The field has text not yet read back
-        int changes_ = 0;
+        std::int32_t changes_ = 0;
     };
 
 } // namespace rct3::ui::widgets

@@ -48,6 +48,7 @@
 #include <cctype>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <future>
 #include <map>
@@ -263,9 +264,9 @@ namespace rct3::scene
             return names;
         });
         engine_.define("career.start", [this](const Json& a) {
-            if (a.empty() || !a[0].is_number_integer() || a[0].get<int>() < 0 || (a.size() > 1 && !a[1].is_number_integer()))
+            if (a.empty() || !a[0].is_number_integer() || a[0].get<std::int32_t>() < 0 || (a.size() > 1 && !a[1].is_number_integer()))
                 throw std::invalid_argument("career.start takes a scenario's place in the list and a game");
-            career_ = CareerRequest { .game = a.size() > 1 ? a[1].get<int>() : 0, .scenario = a[0].get<std::size_t>() };
+            career_ = CareerRequest { .game = a.size() > 1 ? a[1].get<std::int32_t>() : 0, .scenario = a[0].get<std::size_t>() };
             return Json(nullptr);
         });
         engine_.define("career.map", [this](const Json&) { return Json(park_ == nullptr && front_ != nullptr && front_->live->front->career_board().has_value()); });
@@ -302,7 +303,7 @@ namespace rct3::scene
             return Json(true);
         });
         engine_.define("quit", [this](const Json& a) {
-            quit_ = a.empty() || !a[0].is_number() ? 0 : a[0].get<int>();
+            quit_ = a.empty() || !a[0].is_number() ? 0 : a[0].get<std::int32_t>();
             return Json(nullptr);
         });
         engine_.define("park.open", [this](const Json& a) {
@@ -464,7 +465,7 @@ namespace rct3::scene
                 return Json::array();
             auto dice = random::seeded({ static_cast<std::uint64_t>(a.size() > 1 ? number(a, 1) : 1) });
             Json dropped = Json::array();
-            for (auto n = static_cast<int>(number(a, 0)); n > 0; --n)
+            for (auto n = static_cast<std::int32_t>(number(a, 0)); n > 0; --n)
             {
                 const auto spot = spots[random::below(dice, spots.size())];
                 const auto party = simulation::admit_party(park_->sim, dice, spot);
@@ -563,7 +564,7 @@ namespace rct3::scene
             const auto at = paths.nearest(middle);
             if (!at)
                 return Json(false);
-            for (int i = 0; i < std::clamp(static_cast<int>(number(a, 2)), 1, 50); ++i)
+            for (std::int32_t i = 0; i < std::clamp(static_cast<std::int32_t>(number(a, 2)), 1, 50); ++i)
                 park_->sim.registry.emplace<simulation::Litter>(park_->sim.registry.create(), simulation::Litter { .node = *at });
             return Json(true);
         });
@@ -735,8 +736,8 @@ namespace rct3::scene
         });
         engine_.define("map.tile", [this](const Json& a) -> Json {
             const save::model::TerrainGrid& g = grid_of(park_);
-            const auto col = static_cast<int>(number(a, 0));
-            const auto row = static_cast<int>(number(a, 1));
+            const auto col = static_cast<std::int32_t>(number(a, 0));
+            const auto row = static_cast<std::int32_t>(number(a, 1));
             if (!g.contains(col, row))
                 return nullptr;
             const save::model::TerrainCell& c = g.at(col, row);
@@ -756,12 +757,12 @@ namespace rct3::scene
             const double col = at(0);
             const double row = at(1);
             const render::Extent view = device_->extent();
-            if (!g.contains(static_cast<int>(std::floor(col)), static_cast<int>(std::floor(row))) || view.width == 0 || view.height == 0)
+            if (!g.contains(static_cast<std::int32_t>(std::floor(col)), static_cast<std::int32_t>(std::floor(row))) || view.width == 0 || view.height == 0)
                 return nullptr;
             const float x = g.world_x(0) + static_cast<float>(col) * g.tile_size_x;
             const float z = g.world_z(0) + static_cast<float>(row) * g.tile_size_z;
             // At the height asked, else on a pool square, its surface: the ground under it is dug out of sight.
-            const auto pool = park_->pools.at(static_cast<int>(std::floor(col)), static_cast<int>(std::floor(row)));
+            const auto pool = park_->pools.at(static_cast<std::int32_t>(std::floor(col)), static_cast<std::int32_t>(std::floor(row)));
             const float height = a.size() > 2 && a[2].is_number() ? a[2].get<float>() : pool ? static_cast<float>(pool->surface) : g.height_at(x, z).value_or(0);
             const glm::vec4 clip = rct3::park::view_projection(park_->camera, static_cast<float>(view.width) / static_cast<float>(view.height)) * glm::vec4(x, height, z, 1);
             if (clip.w <= 0)
@@ -880,7 +881,7 @@ namespace rct3::scene
         });
         engine_.define("map.supports", [this](const Json&) {
             grid_of(park_);
-            std::map<save::model::Tile, int> pieces;
+            std::map<save::model::Tile, std::int32_t> pieces;
             for (const auto& [_, tile] : park_->columns)
                 ++pieces[tile];
             Json tiles = Json::array();
@@ -1489,7 +1490,7 @@ namespace rct3::scene
                     one["track"] = std::move(symbols);
                     Json track_colours = Json::array();
                     for (const save::model::TrackPiece& p : pieces)
-                        track_colours.push_back(std::vector<int>(p.colours.begin(), p.colours.end()));
+                        track_colours.push_back(std::vector<std::int32_t>(p.colours.begin(), p.colours.end()));
                     one["trackColours"] = std::move(track_colours);
                     Json platforms = Json::array();
                     Json platform_colours = Json::array();
@@ -1498,7 +1499,7 @@ namespace rct3::scene
                             if (o.owner_ref == p.platform->id && o.id != p.platform->id && !o.hidden)
                             {
                                 platforms.push_back(o.symbol);
-                                platform_colours.push_back(std::vector<int>(o.colours.begin(), o.colours.end()));
+                                platform_colours.push_back(std::vector<std::int32_t>(o.colours.begin(), o.colours.end()));
                             }
                     one["platforms"] = std::move(platforms);
                     Json decks = Json::array();

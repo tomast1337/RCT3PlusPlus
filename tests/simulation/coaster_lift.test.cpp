@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/coaster.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <limits>
 #include <vector>
@@ -108,7 +109,7 @@ TEST_CASE("a train waits short of a lift till its car is back down")
     second.travelled = 5;
     second.speed = 2;
     second.running = true;
-    for (int k = 0; k < 100; ++k)
+    for (std::int32_t k = 0; k < 100; ++k)
         drive(second, 0.1f, kOpen, cars);
     CHECK_FALSE(second.lifted);
     CHECK(second.at == doctest::Approx(10));

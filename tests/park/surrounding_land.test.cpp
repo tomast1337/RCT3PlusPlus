@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -11,7 +12,7 @@ using namespace rct3::park;
 namespace
 {
     /// A `w` by `h` map of flat tiles at height `y`, painted with surface 1.
-    save::model::TerrainGrid flat(int w, int h, float y)
+    save::model::TerrainGrid flat(std::int32_t w, std::int32_t h, float y)
     {
         save::model::TerrainGrid g;
         g.width = w;
@@ -27,7 +28,7 @@ namespace
         return g;
     }
 
-    save::model::TerrainCell& cell(save::model::TerrainGrid& g, int col, int row)
+    save::model::TerrainCell& cell(save::model::TerrainGrid& g, std::int32_t col, std::int32_t row)
     {
         return g.cells[static_cast<std::size_t>(row * g.width + col)];
     }
@@ -92,7 +93,7 @@ TEST_CASE("the edge shows the park's mix of surfaces")
 TEST_CASE("a stretch of paint at the edge goes on out to the horizon beside it, and only there")
 {
     save::model::TerrainGrid g = flat(16, 16, 0);
-    for (int col = 4; col < 12; ++col)
+    for (std::int32_t col = 4; col < 12; ++col)
         cell(g, col, 0).surface = 7;
     const TerrainMesh m = surrounding_land(g);
     REQUIRE(m.batches.size() == 2);

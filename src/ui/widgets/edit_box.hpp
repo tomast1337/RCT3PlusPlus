@@ -26,6 +26,7 @@
 #include "ui/widget.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -115,12 +116,12 @@ namespace rct3::ui::widgets
         units::Seconds blink_time_; // Since the last change or caret move
         bool pointer_pending_ = false;
         bool pointer_extends_ = false; // A drag, not a press
-        int presses_ = 0;              // In a row, each soon after the last and near it
+        std::int32_t presses_ = 0;     // In a row, each soon after the last and near it
         units::Seconds since_press_;
         Point last_press_;
         Point pointer_; // Placed at the next update, which has the font
-        int commits_ = 0;
-        int changes_ = 0;
+        std::int32_t commits_ = 0;
+        std::int32_t changes_ = 0;
         std::optional<std::u16string> copied_;
         Composition composition_; // Cleared when the focus goes
     };

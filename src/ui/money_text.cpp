@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/money_text.hpp"
 
+#include <cstdint>
 #include <format>
 
 namespace rct3::ui
@@ -15,7 +16,7 @@ namespace rct3::ui
         constexpr std::int64_t kHundredths = 100;
         constexpr std::size_t kGroup = 3;
 
-        std::u16string part(const StringTable& strings, int index, char letter)
+        std::u16string part(const StringTable& strings, std::int32_t index, char letter)
         {
             return std::u16string(strings.get(std::format("{}{}{}", kCurrencyPrefix, index, letter)));
         }
@@ -35,7 +36,7 @@ namespace rct3::ui
         }
     } // namespace
 
-    Currency currency(const StringTable& strings, int index)
+    Currency currency(const StringTable& strings, std::int32_t index)
     {
         return { part(strings, index, kBefore), part(strings, index, kAfter), part(strings, index, kDecimal) };
     }

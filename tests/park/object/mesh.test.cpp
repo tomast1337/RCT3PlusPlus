@@ -4,6 +4,7 @@
 #include "park/ground/textures.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -33,7 +34,7 @@ namespace
         return p;
     }
 
-    save::model::PlacedObject placed_object(std::string symbol, int col)
+    save::model::PlacedObject placed_object(std::string symbol, std::int32_t col)
     {
         save::model::PlacedObject o;
         o.id = 1;

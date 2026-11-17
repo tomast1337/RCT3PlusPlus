@@ -22,6 +22,7 @@
 #include "save/model/world.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <vector>
@@ -43,7 +44,7 @@ namespace rct3::park::path
 
     /// The tiles of the `size` by `size` square round `centre`; an even size reaches one tile further towards
     /// higher columns and rows than lower ones.
-    [[nodiscard]] std::vector<save::model::Tile> brush_square(save::model::Tile centre, int size);
+    [[nodiscard]] std::vector<save::model::Tile> brush_square(save::model::Tile centre, std::int32_t size);
 
     /// What a stroke over `area` would do among `paths` and, when given, what else fills the tiles.
     [[nodiscard]] DragPlan plan_drag(std::span<const save::model::Tile> area, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::optional<const SolidTiles&> solids = std::nullopt);

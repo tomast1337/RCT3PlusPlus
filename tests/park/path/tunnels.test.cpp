@@ -2,6 +2,7 @@
 #include "park/path/tunnels.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -10,7 +11,7 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::model::TerrainGrid flat(int width, int height)
+    save::model::TerrainGrid flat(std::int32_t width, std::int32_t height)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -21,14 +22,14 @@ namespace
         return g;
     }
 
-    void raise(save::model::TerrainGrid& g, int col, int row, float height, std::uint8_t cliff = 2)
+    void raise(save::model::TerrainGrid& g, std::int32_t col, std::int32_t row, float height, std::uint8_t cliff = 2)
     {
         save::model::TerrainCell& c = g.cells[static_cast<std::size_t>(row * g.width + col)];
         c.corners = { height, height, height, height };
         c.cliff_style = cliff;
     }
 
-    save::model::PathTile tunnel(int col, int row, std::int32_t height)
+    save::model::PathTile tunnel(std::int32_t col, std::int32_t row, std::int32_t height)
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Flying;
@@ -79,8 +80,8 @@ TEST_CASE("a tunnel is lined with a ceiling, a floor, and walls where earth lies
 {
     // Two tunnel tiles in a row under a plateau, the row's ends opening onto low ground.
     save::model::TerrainGrid g = flat(4, 3);
-    for (int col = 1; col <= 2; ++col)
-        for (int row = 0; row < 3; ++row)
+    for (std::int32_t col = 1; col <= 2; ++col)
+        for (std::int32_t row = 0; row < 3; ++row)
             raise(g, col, row, 6);
     const std::vector<GroundOpening> hollows { { 1, 1, 0, kTunnelHeight }, { 2, 1, 0, kTunnelHeight } };
     const TerrainMesh lining = tunnel_lining(hollows, g);
@@ -102,8 +103,8 @@ TEST_CASE("a tunnel is lined with a ceiling, a floor, and walls where earth lies
 TEST_CASE("neighbouring hollows at different heights wall the step between them")
 {
     save::model::TerrainGrid g = flat(4, 3);
-    for (int col = 0; col < 4; ++col)
-        for (int row = 0; row < 3; ++row)
+    for (std::int32_t col = 0; col < 4; ++col)
+        for (std::int32_t row = 0; row < 3; ++row)
             raise(g, col, row, 20);
     // The second tile's hollow lies 2 higher, as a slope's next piece does: each side of their shared edge walls
     // the part of its hollow the other leaves bare.

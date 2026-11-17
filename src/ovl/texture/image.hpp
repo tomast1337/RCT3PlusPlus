@@ -55,11 +55,11 @@ namespace rct3::ovl::texture
     /// How many times to halve an image `width` by `height` for a texture detail `detail` (0 to 1): the image
     /// keeps that share of the doublings its longest side is made of, rounded up, so 1 keeps it whole and 0.5
     /// takes 256 down to 16. Never so often that a side would go below one pixel.
-    [[nodiscard]] int texture_halvings(float detail, std::uint32_t width, std::uint32_t height);
+    [[nodiscard]] std::int32_t texture_halvings(float detail, std::uint32_t width, std::uint32_t height);
 
     /// The image halved `times` times, each pixel the average of the two by two it covers (the last row or
     /// column taken again where a side is odd), its colour weighted by alpha so clear pixels do not darken
     /// edges. The image itself for 0.
-    [[nodiscard]] RgbaImage halved(RgbaImage image, int times);
+    [[nodiscard]] RgbaImage halved(RgbaImage image, std::int32_t times);
 
 } // namespace rct3::ovl::texture

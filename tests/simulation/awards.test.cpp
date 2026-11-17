@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/awards.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -25,7 +26,7 @@ TEST_CASE("awards wait for the scenario to let them begin, then come once in fiv
     REQUIRE(awards.earned.size() == 6);
     CHECK(awards.earned.front() == std::vector { 11 });
     // Had lately, it is not given again until it has passed out of the last five months.
-    for (int month = 0; month < 5; ++month)
+    for (std::int32_t month = 0; month < 5; ++month)
         CHECK(simulation::award_month(awards, toilets(), dice).empty());
     CHECK(simulation::award_month(awards, toilets(), dice) == std::vector { 11 });
 

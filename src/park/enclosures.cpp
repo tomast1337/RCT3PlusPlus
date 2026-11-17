@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <bit>
+#include <cstdint>
 #include <format>
 #include <optional>
 #include <vector>
@@ -156,11 +157,11 @@ namespace rct3::park
                             out.leans.emplace(o.id, lean);
                 };
                 // Bit t: the side a piece turned t quarter turns fences faces out of the enclosure.
-                unsigned out_sides = 0;
+                std::uint32_t out_sides = 0;
                 for (std::int32_t t = 0; t < 4; ++t)
                     if (fenced(map, col, row, side_of(t)))
                         out_sides |= 1u << t;
-                const auto turns_of = [](unsigned bit) { return static_cast<std::int32_t>(std::countr_zero(bit)); };
+                const auto turns_of = [](std::uint32_t bit) { return static_cast<std::int32_t>(std::countr_zero(bit)); };
                 switch (std::popcount(out_sides))
                 {
                     case 1:

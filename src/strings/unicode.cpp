@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "strings/unicode.hpp"
 
+#include <cstdint>
+
 namespace rct3::strings
 {
 
@@ -11,8 +13,8 @@ namespace rct3::strings
         // past U+10FFFF are refused; a bad sequence is one replacement character for its first byte.
         std::pair<char32_t, std::size_t> decode_utf8(std::string_view text, std::size_t i)
         {
-            const auto byte = [&](std::size_t k) { return static_cast<unsigned char>(text[k]); };
-            const unsigned char lead = byte(i);
+            const auto byte = [&](std::size_t k) { return static_cast<std::uint8_t>(text[k]); };
+            const std::uint8_t lead = byte(i);
             if (lead < 0x80)
                 return { lead, 1 };
             std::size_t length = 0;

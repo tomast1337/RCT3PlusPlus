@@ -88,6 +88,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -118,7 +119,7 @@ namespace rct3::scene::park
         constexpr float kPhotoPersonTall = 1.8f;        ///< Framed from the feet up to this high
         /// Of the pointer between pressing and letting go, in interface units, beyond which it is no click.
         constexpr float kClickSlack = 4;
-        constexpr int kFahrenheit = 1;                            ///< The temperature units option's choice for Fahrenheit
+        constexpr std::int32_t kFahrenheit = 1;                   ///< The temperature units option's choice for Fahrenheit
         constexpr std::string_view kTapeFence = "KeepClearFence"; ///< Closes a broken ride off until it is fixed
         constexpr std::string_view kTapeFenceOverlay = "Style\\Vanilla\\style";
         constexpr std::string_view kOk = "SMB_Label_OK";
@@ -789,7 +790,7 @@ namespace rct3::scene::park
                 // The rules are the park's, whichever post's window sets them.
                 const auto gifts = simulation::passport_gifts(scene.carried);
                 if (change->id == ui::screens::info::kPassportStampsControl)
-                    rules->stamps_for_gift = static_cast<std::uint32_t>(std::clamp<int>(change->value, 1, static_cast<int>(simulation::kTuning.surroundings.most_stamps)));
+                    rules->stamps_for_gift = static_cast<std::uint32_t>(std::clamp<std::int32_t>(change->value, 1, static_cast<std::int32_t>(simulation::kTuning.surroundings.most_stamps)));
                 else if (change->value >= 0 && std::cmp_less(change->value, gifts.size()))
                     simulation::set_passport_gift(*rules, gifts[static_cast<std::size_t>(change->value)]->symbol, scene.carried);
                 open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
@@ -1329,7 +1330,7 @@ namespace rct3::scene::park
                             // In a career, the scenario is done at that level.
                             if (!scene.game.career.empty())
                             {
-                                const auto status = static_cast<career::ScenarioStatus>(static_cast<int>(career::ScenarioStatus::Apprentice) + prize - simulation::kApprenticePrize);
+                                const auto status = static_cast<career::ScenarioStatus>(static_cast<std::int32_t>(career::ScenarioStatus::Apprentice) + prize - simulation::kApprenticePrize);
                                 const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                                 if (auto changed = career::change_career(
                                         scene.game.career,
@@ -1406,7 +1407,7 @@ namespace rct3::scene::park
                     });
                 // The animals and their keepers walk the enclosures' tiles.
                 const save::model::TerrainGrid& g = scene.grid;
-                const auto tile_of = [&g](glm::vec2 p) { return glm::ivec2 { static_cast<int>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((p.y - g.origin_z) / g.tile_size_z)) }; };
+                const auto tile_of = [&g](glm::vec2 p) { return glm::ivec2 { static_cast<std::int32_t>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<std::int32_t>(std::floor((p.y - g.origin_z) / g.tile_size_z)) }; };
                 const simulation::AnimalGround animal_ground {
                     .height = [&g](glm::vec2 p) { return g.height_at(p.x, p.y).value_or(0.0f); },
                     .enclosure =
@@ -1452,7 +1453,7 @@ namespace rct3::scene::park
                     const save::model::TerrainGrid& g = scene.grid;
                     if (g.tile_size_x <= 0 || g.tile_size_z <= 0)
                         return 0;
-                    const glm::ivec2 tile { static_cast<int>(std::floor((at.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((at.z - g.origin_z) / g.tile_size_z)) };
+                    const glm::ivec2 tile { static_cast<std::int32_t>(std::floor((at.x - g.origin_x) / g.tile_size_x)), static_cast<std::int32_t>(std::floor((at.z - g.origin_z) / g.tile_size_z)) };
                     // shortcut: the theme numbers of a VIP goal are taken to be the build catalogue's; check them
                     // against a level whose VIP wants a theme if themed areas are never found.
                     return static_cast<std::int32_t>(std::ranges::count_if(scene.objects, [&](const save::model::PlacedObject& o) {
@@ -1582,7 +1583,7 @@ namespace rct3::scene::park
                         if (const auto fit = extra_fits.find(o.symbol); fit != extra_fits.end() && !o.hidden && !std::ranges::contains(scene.pool_pieces, o.id))
                             scene.scenery_pool_extras.push_back({ .symbol = o.symbol, .overlay = o.overlay, .col = o.col, .row = o.row, .side = rct3::park::ModelTurn::from(o.rotation).facing(), .fit = fit->second });
                     const save::model::TerrainGrid& g = scene.grid;
-                    const auto tile_of = [&g](glm::vec3 p) { return glm::ivec2 { static_cast<int>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((p.z - g.origin_z) / g.tile_size_z)) }; };
+                    const auto tile_of = [&g](glm::vec3 p) { return glm::ivec2 { static_cast<std::int32_t>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<std::int32_t>(std::floor((p.z - g.origin_z) / g.tile_size_z)) }; };
                     std::vector<std::size_t> chairs;
                     for (std::size_t i = 0; i < scene.objects.size(); ++i)
                         if (!scene.objects[i].hidden && chair_symbols.contains(scene.objects[i].symbol))
@@ -1978,7 +1979,7 @@ namespace rct3::scene::park
                 };
                 float before = 0;
                 float slide = 1;
-                for (int i = 0; i < 4 && screen.height() > 0; ++i)
+                for (std::int32_t i = 0; i < 4 && screen.height() > 0; ++i)
                 {
                     const float a = off(before);
                     const float b = off(slide);
@@ -2261,7 +2262,7 @@ namespace rct3::scene::park
             // A new file each time, beside those written before.
             auto folder = scene.saves.data->make_folder(config::UserFolder::Exports);
             std::filesystem::path path;
-            for (int n = 1; folder && (path.empty() || std::filesystem::exists(path)); ++n)
+            for (std::int32_t n = 1; folder && (path.empty() || std::filesystem::exists(path)); ++n)
                 path = *folder / std::format("ledger_{}.csv", n);
             std::ofstream out(path, std::ios::binary | std::ios::trunc);
             out << ui::screens::management::ledger_csv(facts, *assets.strings);

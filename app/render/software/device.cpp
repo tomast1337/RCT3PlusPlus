@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <format>
 #include <thread>
@@ -126,7 +127,7 @@ namespace rct3::render::software
     // The window's size, and the screen's at the render scale, as they are now.
     void SoftwareDevice::resize()
     {
-        int w = 0, h = 0;
+        std::int32_t w = 0, h = 0;
         glfwGetFramebufferSize(config_.window, &w, &h);
         const Extent window { static_cast<std::uint32_t>(std::max(w, 1)), static_cast<std::uint32_t>(std::max(h, 1)) };
         if (window.width != window_.extent.width || window.height != window_.extent.height)

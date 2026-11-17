@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 
 namespace rct3::park
@@ -120,7 +121,7 @@ namespace rct3::park
     save::model::Tile structure_tile(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::int32_t col, std::int32_t row)
     {
         const glm::vec2 p = corner(structure, at, turn) + turned({ static_cast<float>(col) + 0.5f, static_cast<float>(row) + 0.5f }, turn, structure);
-        return { static_cast<int>(std::floor(p.x)), static_cast<int>(std::floor(p.y)) };
+        return { static_cast<std::int32_t>(std::floor(p.x)), static_cast<std::int32_t>(std::floor(p.y)) };
     }
 
     std::vector<save::model::PlacedObject> structure_objects(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::int32_t height, const object::ObjectModels& models)

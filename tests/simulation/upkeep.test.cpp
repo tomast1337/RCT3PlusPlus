@@ -12,6 +12,7 @@
 #include "simulation/systems.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -22,7 +23,7 @@ TEST_CASE("a ride worn right down breaks now and then, and its queue gives up")
     Sandbox park;
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 4, .cycle_seconds = 10 });
-    for (int i = 0; i < 12; ++i)
+    for (std::int32_t i = 0; i < 12; ++i)
         park.guest({ i % 4, 0 });
     auto& r = park.world().registry;
     r.emplace<Upkeep>(ride, Upkeep { .reliability = 0, .inspect_every = std::nullopt });
@@ -225,7 +226,7 @@ TEST_CASE("a ride breaking down breaks in one of the ways its sort can, and a sa
     Sandbox park;
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 4, .cycle_seconds = 10 });
-    for (int i = 0; i < 8; ++i)
+    for (std::int32_t i = 0; i < 8; ++i)
         park.guest({ i % 4, 0 });
     auto& r = park.world().registry;
     r.emplace<Upkeep>(ride, Upkeep { .reliability = 0, .inspect_every = std::nullopt });

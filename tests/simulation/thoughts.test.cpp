@@ -6,6 +6,7 @@
 #include "simulation/systems.hpp"
 #include "ui/thought_text.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <utility>
 
@@ -57,7 +58,7 @@ TEST_CASE("riders think of the ride: enjoyed it, and the queue was long")
     park.path({ 0, 0 }, { 3, 0 });
     const auto ride = park.flat_ride("Twister", { 3, 0 }, 0, { .capacity = 1, .cycle_seconds = 200, .excitement = 0.9f });
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 4; ++i)
+    for (std::int32_t i = 0; i < 4; ++i)
         guests.push_back(park.guest({ 0, 0 }));
     auto& r = park.world().registry;
     park.run_seconds(900);

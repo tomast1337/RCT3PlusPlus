@@ -5,6 +5,7 @@
 #include "simulation/sandbox.hpp"
 #include "simulation/tuning.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -198,8 +199,8 @@ TEST_CASE("guests come with every strength of stomach, the middling ones most")
     park.path({ 0, 0 }, { 1, 0 });
     auto dice = rct3::random::seeded(rct3::random::Seed { 7 });
     const std::array<Newcomer, 1> one { { { .age = AgeGroup::Teen } } };
-    std::array<int, 4> by_level { };
-    for (int i = 0; i < 2000; ++i)
+    std::array<std::int32_t, 4> by_level { };
+    for (std::int32_t i = 0; i < 2000; ++i)
         for (const entt::entity g : admit_guests(park.world(), dice, park.world().paths.find({ 0, 0, 0 }).value(), one, kTuning.parties.middle))
             ++by_level[static_cast<std::size_t>(std::lround(park.world().registry.get<Mood>(g).tolerance.value / kTuning.sickness.tolerance_per_saved_level.value)) - 1];
     CHECK(by_level[0] > 0);

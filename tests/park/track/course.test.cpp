@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -185,7 +186,7 @@ TEST_CASE("several trains stand at the stations first, then queued behind them o
 {
     // A closed 100 m course: a station ending at 10, a lift ending at 40, a second station ending at 60.
     park::track::TrackCourse c;
-    for (int i = 0; i <= 10; ++i)
+    for (std::int32_t i = 0; i <= 10; ++i)
     {
         c.points.push_back({ static_cast<float>(i) * 10, 0, 0 });
         c.distance.push_back(static_cast<float>(i) * 10);
@@ -241,7 +242,7 @@ TEST_CASE("a track in several stretches runs along the first one with a station"
     {
         save::model::PlacedObject& o = objects.emplace_back();
         o.id = 100 + i;
-        o.col = static_cast<int>(i);
+        o.col = static_cast<std::int32_t>(i);
         o.force_absolute_height = true;
         save::model::TrackPiece& piece = track.pieces.emplace_back();
         piece.symbol = i == 2 ? "Station" : "Plain";
@@ -292,7 +293,7 @@ TEST_CASE("a piece is as long along the course as the mean of its rails, and car
     {
         save::model::PlacedObject& o = objects.emplace_back();
         o.id = 100 + i;
-        o.col = static_cast<int>(i);
+        o.col = static_cast<std::int32_t>(i);
         o.force_absolute_height = true;
         save::model::TrackPiece& p = track.pieces.emplace_back();
         p.symbol = "Rolled";
@@ -341,7 +342,7 @@ TEST_CASE("holding pieces end blocks, lift tops are lift, and a tower's chain-ma
     {
         save::model::PlacedObject& o = objects.emplace_back();
         o.id = 100 + i;
-        o.col = static_cast<int>(i);
+        o.col = static_cast<std::int32_t>(i);
         o.force_absolute_height = true;
         save::model::TrackPiece& piece = track.pieces.emplace_back();
         piece.symbol = symbols[i];
@@ -432,7 +433,7 @@ TEST_CASE("brakes and block brakes keep their own speed, 0 when they have none, 
     {
         save::model::PlacedObject& o = objects.emplace_back();
         o.id = 100 + i;
-        o.col = static_cast<int>(i);
+        o.col = static_cast<std::int32_t>(i);
         o.force_absolute_height = true;
         save::model::TrackPiece& piece = track.pieces.emplace_back();
         piece.symbol = symbols[i];
@@ -474,7 +475,7 @@ TEST_CASE("a pool slide's track ends open at a bowl, a funnel or an end piece, a
         {
             save::model::PlacedObject& o = objects.emplace_back();
             o.id = 100 + i;
-            o.col = static_cast<int>(i);
+            o.col = static_cast<std::int32_t>(i);
             o.force_absolute_height = true;
             save::model::TrackPiece& piece = track.pieces.emplace_back();
             piece.symbol = i == 0 ? "Plain" : "Last";

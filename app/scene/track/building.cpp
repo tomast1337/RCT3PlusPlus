@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <fstream>
 #include <iterator>
@@ -68,8 +69,8 @@ namespace rct3::scene::track
         constexpr std::string_view kPieceBackHelp = "ATE_TT_Back";
         constexpr std::string_view kPieceForwardHelp = "ATE_TT_Forward";
         /// How far each joint may be turned either way, degrees, and the spinners' step.
-        constexpr int kArmTurns = 360;
-        constexpr int kArmStep = 10;
+        constexpr std::int32_t kArmTurns = 360;
+        constexpr std::int32_t kArmStep = 10;
         /// In the order of rct3::park::track::PieceToggle.
         constexpr std::array<std::string_view, rct3::park::track::kPieceToggles> kToggleHelps { "ATE_TT_Chain", "ATE_TT_Enclosed", "ATE_TT_Water", "ATE_TT_Wide", "ATE_TT_Booster" };
         constexpr std::string_view kDemolishHelp = "ATE_TT_Demolish";
@@ -86,8 +87,8 @@ namespace rct3::scene::track
         };
         constexpr std::uint32_t kBrakesRole = 1;
         constexpr std::array<std::uint32_t, 3> kBrakeRoles { kBrakesRole, 2, kHoldingRole }; ///< Brakes, block brakes, holding brakes
-        constexpr int kMostHoldingTime = 30;                                                 ///< Seconds, as the game's box goes
-        constexpr int kMostCarTurn = 720;                                                    ///< Degrees either way, as the game's box goes
+        constexpr std::int32_t kMostHoldingTime = 30;                                        ///< Seconds, as the game's box goes
+        constexpr std::int32_t kMostCarTurn = 720;                                           ///< Degrees either way, as the game's box goes
         /// Metres a piece must end off to a side, or up or down, to be marked as going that way.
         constexpr float kMarkedRun = 0.5f;
         constexpr std::array<RoleIcon, 4> kRoleIcons { {
@@ -121,9 +122,9 @@ namespace rct3::scene::track
 
         /// The panel's bank buttons run from hardest left to hardest right, upside down last; banks count left
         /// as positive.
-        int panel_bank(std::size_t i)
+        std::int32_t panel_bank(std::size_t i)
         {
-            return i + 1 == ui::screens::build::construction_panel::kBanks ? rct3::park::track::kUpsideDown : kBankSteps - 1 - static_cast<int>(i);
+            return i + 1 == ui::screens::build::construction_panel::kBanks ? rct3::park::track::kUpsideDown : kBankSteps - 1 - static_cast<std::int32_t>(i);
         }
 
         /// A saved design: its ride, and the scenery placed with it, which is the ride's doors.
@@ -246,7 +247,7 @@ namespace rct3::scene::track
         }
 
         /// The panel's view of what the building offers now.
-        ui::screens::build::ConstructionView panel_view(const park::ParkScene& scene, const TrackBuilding& b, const ui::InterfaceAssets& assets, int currency, ui::screens::info::DistanceUnits units)
+        ui::screens::build::ConstructionView panel_view(const park::ParkScene& scene, const TrackBuilding& b, const ui::InterfaceAssets& assets, std::int32_t currency, ui::screens::info::DistanceUnits units)
         {
             ui::screens::build::ConstructionView v;
             v.curves.fill(ui::screens::build::IconState::Dis);
@@ -271,13 +272,13 @@ namespace rct3::scene::track
                 return v;
             const rct3::park::track::ChoiceOptions o = rct3::park::track::choice_options(c->pieces, b.candidates, b.choice);
             const bool by_shape = !b.choice.named.has_value();
-            for (int curve = -rct3::park::track::kCurveSizes; curve <= rct3::park::track::kCurveSizes; ++curve)
+            for (std::int32_t curve = -rct3::park::track::kCurveSizes; curve <= rct3::park::track::kCurveSizes; ++curve)
                 v.curves.at(rct3::park::track::curve_index(curve)) = state_of(by_shape && curve == b.choice.curve, o.curves.at(rct3::park::track::curve_index(curve)));
-            for (int slope = -rct3::park::track::kSlopeSteps; slope <= rct3::park::track::kSlopeSteps; ++slope)
+            for (std::int32_t slope = -rct3::park::track::kSlopeSteps; slope <= rct3::park::track::kSlopeSteps; ++slope)
                 v.slopes.at(rct3::park::track::slope_index(slope)) = state_of(by_shape && slope == b.choice.slope, o.slopes.at(rct3::park::track::slope_index(slope)));
             for (std::size_t i = 0; i < ui::screens::build::construction_panel::kBanks; ++i)
             {
-                const int bank = panel_bank(i);
+                const std::int32_t bank = panel_bank(i);
                 v.banks.at(i) = state_of(by_shape && bank == b.choice.bank, o.banks.at(rct3::park::track::bank_index(bank)));
             }
             for (std::size_t i = 0; i < rct3::park::track::kPieceToggles; ++i)
@@ -318,7 +319,7 @@ namespace rct3::scene::track
                 {
                     const float ride_speed = shape.record.role == rct3::park::track::kRoleBrakes ? ride.options.brake_speed.value : ride.options.block_brake_off_speed.value;
                     const float speed = b.brake_speed > 0 ? static_cast<float>(b.brake_speed) : std::round(ride_speed);
-                    const auto tenths = [&](float metres) { return static_cast<int>(std::lround(metres * ui::screens::info::speed_scale(units) * 10)); };
+                    const auto tenths = [&](float metres) { return static_cast<std::int32_t>(std::lround(metres * ui::screens::info::speed_scale(units) * 10)); };
                     v.params.at(std::to_underlying(Speed)) = ui::screens::build::ParamBox { .value = tenths(speed), .least = tenths(1), .most = tenths(kMostBrakeSpeed.value), .decimals = 1, .unit = std::u16string(ui::screens::info::speed_unit(units)), .step = std::max(tenths(1), 1) };
                 }
                 if (shape.record.role == kHoldingRole)
@@ -911,14 +912,14 @@ namespace rct3::scene::track
                     (*piece.arm_angles)[j] = static_cast<float>(spinner.value());
                 spinner.enabled = piece.arm_angles.has_value();
                 if (!shown)
-                    spinner.set_value(piece.arm_angles ? static_cast<int>(std::lround((*piece.arm_angles)[j])) : 0);
+                    spinner.set_value(piece.arm_angles ? static_cast<std::int32_t>(std::lround((*piece.arm_angles)[j])) : 0);
             }
             enable.ticked = piece.arm_angles.has_value();
             b.arm_piece = piece.id;
         }
     } // namespace
 
-    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands, units::Seconds elapsed)
+    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, std::int32_t currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands, units::Seconds elapsed)
     {
         TrackBuilding& b = scene.building;
         b.clock += elapsed;
@@ -1042,7 +1043,7 @@ namespace rct3::scene::track
                 ui::screens::info::InfoPage p;
                 ui::screens::info::InfoControl name { .id = ui::screens::info::control_id(ui::screens::info::AttractionControl::Name), .name = "TT_AttractionDialogIconLabelButton", .kind = ui::screens::info::InfoControlKind::Text, .maximum = ui::screens::info::kLongestAttractionName, .text = b.design_title, .width = ui::screens::info::kNameWidth, .help = std::u16string(assets.strings->get("TT_AttractionDialogIconLabelButton")) };
                 p.controls.push_back(std::move(name));
-                ui::screens::info::InfoControl music { .id = ui::screens::info::control_id(ui::screens::info::AttractionControl::Music), .name = "AttractionViewDialogMusicToolTip", .kind = ui::screens::info::InfoControlKind::Choice, .value = static_cast<int>(b.design_tune), .beside = true, .width = ui::screens::info::kNameWidth, .help = std::u16string(assets.strings->get("AttractionViewDialogMusicToolTip")) };
+                ui::screens::info::InfoControl music { .id = ui::screens::info::control_id(ui::screens::info::AttractionControl::Music), .name = "AttractionViewDialogMusicToolTip", .kind = ui::screens::info::InfoControlKind::Choice, .value = static_cast<std::int32_t>(b.design_tune), .beside = true, .width = ui::screens::info::kNameWidth, .help = std::u16string(assets.strings->get("AttractionViewDialogMusicToolTip")) };
                 music.items.emplace_back(assets.strings->get("AttractionViewDialogNoMusic"));
                 music.items.insert(music.items.end(), scene.tunes.begin(), scene.tunes.end());
                 p.controls.push_back(std::move(music));
@@ -1063,7 +1064,7 @@ namespace rct3::scene::track
                 // The turn, the page and the colours where the original's three are; the ground's two down the
                 // disc's outer side under them, clear of the page.
                 for (std::size_t i = 0; i < tabs.size(); ++i)
-                    tabs[i].slot = i < Smoothly ? static_cast<int>(i) : static_cast<int>(Smoothly) - 1 - static_cast<int>(i);
+                    tabs[i].slot = i < Smoothly ? static_cast<std::int32_t>(i) : static_cast<std::int32_t>(Smoothly) - 1 - static_cast<std::int32_t>(i);
                 design->show(std::move(tabs), Page);
                 design->show_page(page());
                 b.design_tabs_for = now;
@@ -1106,7 +1107,7 @@ namespace rct3::scene::track
             }
             for (std::size_t i = 0; i < tabs.size(); ++i)
             {
-                tabs[i].slot = static_cast<int>(i);
+                tabs[i].slot = static_cast<std::int32_t>(i);
                 tabs[i].action = tabs[i].choices.empty() && tabs[i].paints.empty();
             }
             const std::size_t none = tabs.size(); // No tab open: the strip holds the controls
@@ -1163,10 +1164,10 @@ namespace rct3::scene::track
             switch (event->action)
             {
                 case Curve:
-                    b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Curve, static_cast<int>(event->index) - rct3::park::track::kCurveSizes);
+                    b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Curve, static_cast<std::int32_t>(event->index) - rct3::park::track::kCurveSizes);
                     break;
                 case Slope:
-                    b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Slope, static_cast<int>(event->index) - rct3::park::track::kSlopeSteps);
+                    b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Slope, static_cast<std::int32_t>(event->index) - rct3::park::track::kSlopeSteps);
                     break;
                 case Bank:
                     b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Bank, panel_bank(event->index));
@@ -1204,7 +1205,7 @@ namespace rct3::scene::track
                             b.holding_time = event->value;
                             break;
                         case ui::screens::build::PieceParam::Speed:
-                            b.brake_speed = std::clamp(static_cast<int>(std::lround(static_cast<float>(event->value) / 10 / ui::screens::info::speed_scale(units))), 1, static_cast<int>(kMostBrakeSpeed.value));
+                            b.brake_speed = std::clamp(static_cast<std::int32_t>(std::lround(static_cast<float>(event->value) / 10 / ui::screens::info::speed_scale(units))), 1, static_cast<std::int32_t>(kMostBrakeSpeed.value));
                             break;
                     }
                     break;

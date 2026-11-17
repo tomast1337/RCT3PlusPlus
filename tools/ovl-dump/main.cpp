@@ -142,7 +142,7 @@ namespace
             std::uint64_t bytes = 0;
             for (const auto& b : type.blocks)
                 bytes += b.size;
-            out.info("  {:<4d} {:<7d} {:<10d} {:<10d} {:d}", t, type.blocks.size(), static_cast<unsigned long long>(bytes), type.unknown, type.extra);
+            out.info("  {:<4d} {:<7d} {:<10d} {:<10d} {:d}", t, type.blocks.size(), static_cast<std::uint64_t>(bytes), type.unknown, type.extra);
         }
         out.info("data size      {:d}", file.data_size);
         out.info("base           {:d}", part.base);
@@ -183,7 +183,7 @@ namespace
         std::uint64_t loader_symbols = 0;
         for (const auto& l : header.loaders)
             loader_symbols += l.symbol_count;
-        out.info("symbols        {:d} ({:d} unresolved names, {:d} without a tag, {:d} counted by loaders)", part.symbols.size(), unresolved, untagged, static_cast<unsigned long long>(loader_symbols));
+        out.info("symbols        {:d} ({:d} unresolved names, {:d} without a tag, {:d} counted by loaders)", part.symbols.size(), unresolved, untagged, static_cast<std::uint64_t>(loader_symbols));
 
         std::size_t chunks = 0;
         std::uint64_t chunk_bytes = 0;
@@ -207,7 +207,7 @@ namespace
                 ++unlinked;
         }
         out.info("loader rows    {:d} ({:d} bad type, {:d} with an unusable symbol address)", part.loaders.entries.size(), bad_type, unlinked);
-        out.info("extra chunks   {:d} ({:d} bytes)", chunks, static_cast<unsigned long long>(chunk_bytes));
+        out.info("extra chunks   {:d} ({:d} bytes)", chunks, static_cast<std::uint64_t>(chunk_bytes));
         out.info("trailing       {:d} bytes after relocations", part.bytes.size() - file.end_offset);
         out.info("unparsed tail  {:d} bytes", part.bytes.size() - part.loaders.end_offset);
 
@@ -1221,7 +1221,7 @@ namespace
                 out.info(
                     "  {:<32} v{:d}{} type {:d} positioning {:d} flags {:08x} squares {:d}x{:d} ({:d} without masks) masks {:d} cost {:d} visuals {:d} "
                     "sounds {:d} params {:d} nodes {:d} colours {} {} {}",
-                    name.c_str(), it.version, it.compact ? " compact" : "", it.type, static_cast<unsigned>(it.positioning), it.flags, it.x_squares, it.z_squares, without_masks, masks, it.cost, it.visuals.size(), it.sounds.size(), it.parameters.size(), it.nodes.size(), it.default_colours[0], it.default_colours[1], it.default_colours[2]);
+                    name.c_str(), it.version, it.compact ? " compact" : "", it.type, static_cast<std::uint32_t>(it.positioning), it.flags, it.x_squares, it.z_squares, without_masks, masks, it.cost, it.visuals.size(), it.sounds.size(), it.parameters.size(), it.nodes.size(), it.default_colours[0], it.default_colours[1], it.default_colours[2]);
                 for (const auto& sq : it.squares)
                     out.info("    square flags {:03x} levels {:d}..{:d}", sq.flags, sq.min_height, sq.max_height);
                 for (const auto& p : it.parameters)
@@ -1401,7 +1401,7 @@ int main(int argc, char** argv)
     Options opt;
     const char* path = nullptr;
     const char* obj_dir = nullptr; // mesh export directory
-    for (int i = 1; i < argc; ++i)
+    for (std::int32_t i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--symbols") == 0)
             opt.symbols = true;

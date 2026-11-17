@@ -78,7 +78,7 @@ namespace rct3::ui::screens::info
     {
         MenuAction action = MenuAction::Add;
         std::size_t index = 0;
-        int value = 0;
+        std::int32_t value = 0;
         std::u16string text;
 
         bool operator==(const MenuEvent&) const = default;
@@ -94,9 +94,9 @@ namespace rct3::ui::screens::info
         std::u16string bin_help;
         std::u16string handle_help;
         /// The page's control id of each action, by MenuAction; a line's or good's is that and its place.
-        std::array<int, kMenuActions> ids { };
-        int most_price = 0;
-        int price_step = 1;
+        std::array<std::int32_t, kMenuActions> ids { };
+        std::int32_t most_price = 0;
+        std::int32_t price_step = 1;
         std::size_t longest_name = 0; ///< In characters
     };
 

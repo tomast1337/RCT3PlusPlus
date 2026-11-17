@@ -10,6 +10,7 @@
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <limits>
 #include <map>
@@ -209,14 +210,14 @@ TEST_CASE("swimmers queueing for a pool slide stand apart in a line, never two o
     const auto slide = slide_by_pool(park);
     auto& r = park.world().registry;
     r.get<Attraction>(slide).entrance = r.get<CycleRide>(slide).exit = std::nullopt; // Only swimmers queue, from the pool
-    for (int i = 0; i < 20; ++i)
+    for (std::int32_t i = 0; i < 20; ++i)
         park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
     // The longest line, and the closest two in it came once both had been in it a few seconds: two joining on one
     // spot, or lines from two ways meeting, step apart.
     std::size_t most = 0;
     float closest = std::numeric_limits<float>::max();
-    std::map<entt::entity, int> joined;
-    for (int t = 0; t < 6000; ++t)
+    std::map<entt::entity, std::int32_t> joined;
+    for (std::int32_t t = 0; t < 6000; ++t)
     {
         park.run_seconds(0.1f);
         std::vector<glm::vec3> line;

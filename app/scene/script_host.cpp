@@ -1447,6 +1447,10 @@ namespace rct3::scene
                 if (ride.kind == save::model::RideKind::Tracked)
                 {
                     one["pieces"] = pieces.size();
+                    const rct3::park::track::TrackRules no_rules;
+                    const rct3::park::track::TrackRules& rules = i < park.track_rules.size() ? park.track_rules[i] : no_rules;
+                    one["tested"] = !rules.never_tested;
+                    one["measured"] = !rct3::park::track::rated_without_lap(rules, ride.mode);
                     one["trains"] = ride.trains.size();
                     one["carsPerTrain"] = ride.trains.empty() ? 0 : ride.trains.front().cars.size();
                     if (ride.cars_per_train)

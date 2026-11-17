@@ -749,6 +749,11 @@ type RideInfo = {
           kind: "tracked";
           /** How many pieces it has. */
           pieces: number;
+          /** Whether its kind offers a test; one never tested opens straight away. A kind with no trains offers one
+           *  but refuses it (greyed), as the aquarium. */
+          tested: boolean;
+          /** Whether it is rated from a measured lap; else it is rated once tested or open, and has no graphs. */
+          measured: boolean;
           /** How many trains it has, and cars in each. */
           trains: number;
           carsPerTrain: number;

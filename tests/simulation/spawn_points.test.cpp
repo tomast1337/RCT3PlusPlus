@@ -5,6 +5,7 @@
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <functional>
 #include <set>
@@ -117,7 +118,7 @@ TEST_CASE("a park with a second gate draws no more guests, who head for the gate
         }
         std::set<entt::entity> seen;
         std::size_t heading_near = 0;
-        for (int second = 0; second < 6000; ++second)
+        for (std::int32_t second = 0; second < 6000; ++second)
         {
             road.park.run_until([] { return false; }, 1);
             for (const entt::entity p : r.view<Party>())

@@ -4,6 +4,7 @@
 #include "core/maybe.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <format>
 #include <memory>
@@ -78,7 +79,7 @@ namespace rct3::ui
     {
         std::string name = typeid(w).name();
 #if __has_include(<cxxabi.h>)
-        int status = 0;
+        std::int32_t status = 0;
         const std::unique_ptr<char, void (*)(void*)> plain(abi::__cxa_demangle(name.c_str(), nullptr, nullptr, &status), std::free);
         if (status == 0)
             name = plain.get();

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path/drag.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -9,7 +10,7 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::model::TerrainGrid owned_grid(int width, int height)
+    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
     {
         save::model::TerrainGrid g;
         g.width = width;

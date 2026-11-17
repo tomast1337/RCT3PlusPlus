@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <format>
 #include <optional>
 #include <set>
@@ -114,7 +115,7 @@ namespace rct3::scene::park
         for (std::size_t i = 0; i < corners.size(); ++i)
         {
             if (i >= w.ground.size() || corners[i] != w.ground[i])
-                tiles.emplace(static_cast<int>(i % static_cast<std::size_t>(scene.grid.width)), static_cast<int>(i / static_cast<std::size_t>(scene.grid.width)));
+                tiles.emplace(static_cast<std::int32_t>(i % static_cast<std::size_t>(scene.grid.width)), static_cast<std::int32_t>(i / static_cast<std::size_t>(scene.grid.width)));
         }
         w.ground = std::move(corners);
         const rct3::park::support::SupportSets* sets = support_sets(scene, assets);

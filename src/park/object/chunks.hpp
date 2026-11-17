@@ -20,14 +20,14 @@ namespace rct3::park::object
     /// How a map `width` by `height` tiles is cut into chunks `tiles` square, row by row from the first tile.
     struct ChunkGrid
     {
-        int across = 0;
-        int down = 0;
-        int tiles = 1;
+        std::int32_t across = 0;
+        std::int32_t down = 0;
+        std::int32_t tiles = 1;
 
-        [[nodiscard]] static ChunkGrid of(int width, int height, int tiles);
+        [[nodiscard]] static ChunkGrid of(std::int32_t width, std::int32_t height, std::int32_t tiles);
         [[nodiscard]] std::size_t count() const;
         /// The chunk holding the tile at `col`, `row`; tiles off the map go to the nearest chunk along its edge.
-        [[nodiscard]] std::size_t at(int col, int row) const;
+        [[nodiscard]] std::size_t at(std::int32_t col, std::int32_t row) const;
     };
 
     /// By chunk, the indices of `objects` standing in it, rising.

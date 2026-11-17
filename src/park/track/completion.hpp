@@ -12,6 +12,7 @@
 #include "units/units.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <functional>
 #include <optional>
@@ -57,7 +58,7 @@ namespace rct3::park::track
         };
         std::vector<Step> steps;
         std::vector<std::pair<float, std::size_t>> open; ///< A heap of steps to carry on from, nearest the goal first
-        std::set<std::tuple<long, long, long, int, int, int, std::size_t, bool>> reached_ends;
+        std::set<std::tuple<std::int64_t, std::int64_t, std::int64_t, std::int32_t, std::int32_t, std::int32_t, std::size_t, bool>> reached_ends;
         std::size_t tried = 0;
         std::size_t nearest = 0; ///< The step tried that came nearest the goal
     };

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path/furniture.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -10,7 +11,7 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::model::TerrainGrid flat_grid(int width, int height)
+    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -21,7 +22,7 @@ namespace
         return g;
     }
 
-    save::model::PathTile ground(int col, int row)
+    save::model::PathTile ground(std::int32_t col, std::int32_t row)
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Ground;
@@ -31,7 +32,7 @@ namespace
     }
 
     /// A queue on the ground at `col`, `row`, its line running along the columns.
-    save::model::PathTile queue(int col, int row)
+    save::model::PathTile queue(std::int32_t col, std::int32_t row)
     {
         save::model::PathTile p = ground(col, row);
         p.kind = save::model::PathKind::Queue;
@@ -82,8 +83,8 @@ TEST_CASE("off the paths nothing goes, in a plaza only an edge tile's free side,
     CHECK_FALSE(furniture_spot(kLine, grid, at(-1, 1.5f), object::Positioning::PathSide, ModelTurn { 0 }));
 
     std::vector<save::model::PathTile> plaza;
-    for (int col = 1; col <= 3; ++col)
-        for (int row = 1; row <= 3; ++row)
+    for (std::int32_t col = 1; col <= 3; ++col)
+        for (std::int32_t row = 1; row <= 3; ++row)
             plaza.push_back(ground(col, row));
     // Every side of the middle tile is joined: refused. An edge tile keeps its outer side.
     CHECK(furniture_spot(plaza, grid, at(2.9f, 2.5f), object::Positioning::PathSide, ModelTurn { 0 })->refused);
@@ -186,7 +187,7 @@ TEST_CASE("between a road and the next lane of a queue a bench finds no side")
     const save::model::TerrainGrid grid = flat_grid(8, 8);
     // A road along row 0, and two queue lanes along rows 1 and 2.
     std::vector<save::model::PathTile> paths;
-    for (int col = 1; col <= 3; ++col)
+    for (std::int32_t col = 1; col <= 3; ++col)
         paths.insert(paths.end(), { ground(col, 0), queue(col, 1), queue(col, 2) });
     CHECK(furniture_spot(paths, grid, at(2.5f, 1.9f), object::Positioning::PathSide, ModelTurn { 0 })->refused);
     const auto outer = furniture_spot(paths, grid, at(2.5f, 2.1f), object::Positioning::PathSide, ModelTurn { 0 });

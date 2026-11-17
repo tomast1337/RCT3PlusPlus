@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <span>
 
@@ -16,15 +17,15 @@ namespace rct3::park
         constexpr units::Distance kMarkWidth { 0.15f }; ///< Across the marks.
         constexpr float kCrossReach = 0.6f;             ///< Of a corner's cross, from the corner along each edge.
 
-        bool inside(const TileStroke& s, int col, int row)
+        bool inside(const TileStroke& s, std::int32_t col, std::int32_t row)
         {
             return col >= s.col0 && col <= s.col1 && row >= s.row0 && row <= s.row1;
         }
 
         /// Corner `k` of tile (`col`, `row`) as the corner point it sits on.
-        glm::ivec2 point_of(int col, int row, std::size_t k)
+        glm::ivec2 point_of(std::int32_t col, std::int32_t row, std::size_t k)
         {
-            return { col + static_cast<int>(k & 1), row + static_cast<int>(k >> 1) };
+            return { col + static_cast<std::int32_t>(k & 1), row + static_cast<std::int32_t>(k >> 1) };
         }
 
         /// Of the heights `candidates` hold, the one nearest `wanted`, if within kSnapReach; else `wanted`.
@@ -43,7 +44,7 @@ namespace rct3::park
             return best;
         }
 
-        glm::vec3 corner_at(const save::model::TerrainGrid& grid, int col, int row, std::size_t k)
+        glm::vec3 corner_at(const save::model::TerrainGrid& grid, std::int32_t col, std::int32_t row, std::size_t k)
         {
             const glm::ivec2 p = point_of(col, row, k);
             return { grid.world_x(p.x), grid.at(col, row).corners[k], grid.world_z(p.y) };
@@ -80,8 +81,8 @@ namespace rct3::park
     {
         // -1 low edge, 0 middle, 1 high edge, along each axis.
         const auto side = [](float f) { return f < kPartEdge ? -1 : f > 1 - kPartEdge ? 1 : 0; };
-        const int x = side(within.x);
-        const int z = side(within.y);
+        const std::int32_t x = side(within.x);
+        const std::int32_t z = side(within.y);
         if (x == 0 && z == 0)
             return TilePart::Whole;
         if (z == 0)
@@ -93,15 +94,15 @@ namespace rct3::park
         return x < 0 ? TilePart::FarLeft : TilePart::FarRight;
     }
 
-    TileStroke begin_tile_stroke(const save::model::TerrainGrid& grid, int col0, int row0, int col1, int row1, TilePart part)
+    TileStroke begin_tile_stroke(const save::model::TerrainGrid& grid, std::int32_t col0, std::int32_t row0, std::int32_t col1, std::int32_t row1, TilePart part)
     {
         TileStroke s { std::max(col0, 0), std::max(row0, 0), std::min(col1, grid.width - 1), std::min(row1, grid.height - 1), part, { }, 0, 0 };
         s.low = std::numeric_limits<float>::infinity();
         s.high = -s.low;
         const auto picked = part_corners(part);
-        for (int r = s.row0; r <= s.row1; ++r)
+        for (std::int32_t r = s.row0; r <= s.row1; ++r)
         {
-            for (int c = s.col0; c <= s.col1; ++c)
+            for (std::int32_t c = s.col0; c <= s.col1; ++c)
             {
                 s.before.push_back(grid.at(c, r).corners);
                 for (std::size_t k = 0; k < 4; ++k)
@@ -123,11 +124,11 @@ namespace rct3::park
         const auto picked = part_corners(stroke.part);
         const bool up = amount >= 0;
         const float target = (up ? stroke.low : stroke.high) + amount;
-        const int columns = stroke.col1 - stroke.col0 + 1;
+        const std::int32_t columns = stroke.col1 - stroke.col0 + 1;
         float moved = 0;
-        for (int r = stroke.row0; r <= stroke.row1; ++r)
+        for (std::int32_t r = stroke.row0; r <= stroke.row1; ++r)
         {
-            for (int c = stroke.col0; c <= stroke.col1; ++c)
+            for (std::int32_t c = stroke.col0; c <= stroke.col1; ++c)
             {
                 const auto& before = stroke.before[static_cast<std::size_t>((r - stroke.row0) * columns + (c - stroke.col0))];
                 // A tile refused part of the way through a stroke stays where it had got to.
@@ -148,12 +149,12 @@ namespace rct3::park
                             // The heights the tiles round this point outside the stroke have, and its own.
                             std::vector<float> candidates { before[k] };
                             const glm::ivec2 p = point_of(c, r, k);
-                            for (int dr = 0; dr < 2; ++dr)
+                            for (std::int32_t dr = 0; dr < 2; ++dr)
                             {
-                                for (int dc = 0; dc < 2; ++dc)
+                                for (std::int32_t dc = 0; dc < 2; ++dc)
                                 {
-                                    const int tc = p.x - 1 + dc;
-                                    const int tr = p.y - 1 + dr;
+                                    const std::int32_t tc = p.x - 1 + dc;
+                                    const std::int32_t tr = p.y - 1 + dr;
                                     if (grid.contains(tc, tr) && !inside(stroke, tc, tr))
                                         candidates.push_back(grid.at(tc, tr).corners[static_cast<std::size_t>((1 - dc) + 2 * (1 - dr))]);
                                 }
@@ -171,7 +172,7 @@ namespace rct3::park
         return moved;
     }
 
-    void tile_marks(TerrainMesh& mesh, const save::model::TerrainGrid& grid, int col0, int row0, int col1, int row1, TilePart part, glm::vec4 colour)
+    void tile_marks(TerrainMesh& mesh, const save::model::TerrainGrid& grid, std::int32_t col0, std::int32_t row0, std::int32_t col1, std::int32_t row1, TilePart part, glm::vec4 colour)
     {
         col0 = std::max(col0, 0);
         row0 = std::max(row0, 0);
@@ -179,9 +180,9 @@ namespace rct3::park
         row1 = std::min(row1, grid.height - 1);
         const auto picked = part_corners(part);
         const auto count = std::ranges::count(picked, true);
-        for (int r = row0; r <= row1; ++r)
+        for (std::int32_t r = row0; r <= row1; ++r)
         {
-            for (int c = col0; c <= col1; ++c)
+            for (std::int32_t c = col0; c <= col1; ++c)
             {
                 const auto at = [&](std::size_t k) { return corner_at(grid, c, r, k); };
                 if (count == 1)

@@ -10,6 +10,7 @@
 #include "ui/interface_assets.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <format>
 #include <map>
 #include <set>
@@ -100,7 +101,7 @@ namespace rct3::scene
             // hold, below its folder (Rides/<ride>/, EntranceExit/<style>/) or, for some, below the folder above
             // it (a sibling Rides/<theme>Rides/): the last resort reads all of those, each folder once.
             std::string up = folder;
-            for (int level = 0; level < 2 && !model && !up.empty(); ++level, up = up.substr(0, up.rfind('/', up.size() - 2) + 1))
+            for (std::int32_t level = 0; level < 2 && !model && !up.empty(); ++level, up = up.substr(0, up.rfind('/', up.size() - 2) + 1))
             {
                 const auto dir = assets.install->find(up);
                 if (!dir || !m.folders_read.insert(up).second)

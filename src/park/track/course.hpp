@@ -133,19 +133,19 @@ namespace rct3::park::track
     /// kTrainGap apart, so they have room to run (our own rule), no more than `cap` where the ride's kind sets
     /// one, and when kept a block apart (`blocks`) one fewer than it has blocks, each ending at a station, lift
     /// or block brake; at least one.
-    [[nodiscard]] int trains_fitting(const TrackCourse& course, std::span<const object::CarFit> fits, bool blocks, std::optional<std::uint32_t> cap);
+    [[nodiscard]] std::int32_t trains_fitting(const TrackCourse& course, std::span<const object::CarFit> fits, bool blocks, std::optional<std::uint32_t> cap);
 
     /// Where the fronts of `count` trains `length` long stand on closed `course`, the first at `start` (a station's
     /// end): one at each station's end in turn on round the track, then more queued kTrainGap behind those, a station
     /// at a time; then likewise at the ends of its other blocks (lift tops, block brakes). Kept a block apart
     /// (`blocks`), each block takes one. Trains with no room behind a block's end before the next block back are left
     /// out, so there may be fewer than `count`; never none.
-    [[nodiscard]] std::vector<float> train_fronts(const TrackCourse& course, float start, float length, int count, bool blocks);
+    [[nodiscard]] std::vector<float> train_fronts(const TrackCourse& course, float start, float length, std::int32_t count, bool blocks);
 
     /// The most cars, `fewest` or more, a train may have and still stand along each station of `course`, where
     /// `lengths` holds by count the length of a train of one car, of two, and so on up to the most it may have:
     /// 0 when even `fewest` do not fit, the most when the course has no station.
-    [[nodiscard]] int cars_fitting(const TrackCourse& course, std::span<const float> lengths, int fewest);
+    [[nodiscard]] std::int32_t cars_fitting(const TrackCourse& course, std::span<const float> lengths, std::int32_t fewest);
 
     /// Stands `train`'s cars nose to tail back along `course` from `front`, each fitted as `fits` has it (by
     /// car; a car past its end fits as the last): its front `length` behind the car before, its wheels on the

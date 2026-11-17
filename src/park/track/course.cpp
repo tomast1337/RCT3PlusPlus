@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -365,17 +366,17 @@ namespace rct3::park::track
         return length;
     }
 
-    int trains_fitting(const TrackCourse& course, std::span<const object::CarFit> fits, bool blocks, std::optional<std::uint32_t> cap)
+    std::int32_t trains_fitting(const TrackCourse& course, std::span<const object::CarFit> fits, bool blocks, std::optional<std::uint32_t> cap)
     {
-        int most = static_cast<int>(course.length() / 2 / (train_length(fits) + kTrainGap));
+        std::int32_t most = static_cast<std::int32_t>(course.length() / 2 / (train_length(fits) + kTrainGap));
         if (cap)
-            most = std::min(most, static_cast<int>(*cap));
+            most = std::min(most, static_cast<std::int32_t>(*cap));
         if (blocks && course.kinds.size() > 1)
-            most = std::min(most, static_cast<int>(block_ends(course).size()) - 1);
+            most = std::min(most, static_cast<std::int32_t>(block_ends(course).size()) - 1);
         return std::max(most, 1);
     }
 
-    std::vector<float> train_fronts(const TrackCourse& course, float start, float length, int count, bool blocks)
+    std::vector<float> train_fronts(const TrackCourse& course, float start, float length, std::int32_t count, bool blocks)
     {
         const float whole = course.length();
         if (count < 1)
@@ -419,12 +420,12 @@ namespace rct3::park::track
         return fronts;
     }
 
-    int cars_fitting(const TrackCourse& course, std::span<const float> lengths, int fewest)
+    std::int32_t cars_fitting(const TrackCourse& course, std::span<const float> lengths, std::int32_t fewest)
     {
         const std::vector<float> runs = station_runs(course);
         const float shortest = runs.empty() ? std::numeric_limits<float>::max() : std::ranges::min(runs);
-        int fit = 0;
-        for (int cars = std::max(fewest, 1); cars <= static_cast<int>(lengths.size()); ++cars)
+        std::int32_t fit = 0;
+        for (std::int32_t cars = std::max(fewest, 1); cars <= static_cast<std::int32_t>(lengths.size()); ++cars)
             if (lengths[static_cast<std::size_t>(cars - 1)] <= shortest)
                 fit = cars;
         return fit;

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <numbers>
 
@@ -24,7 +25,7 @@ namespace rct3::ui::screens::build
 
     } // namespace
 
-    Point footpath_tab_offset(int slot)
+    Point footpath_tab_offset(std::int32_t slot)
     {
         const float degrees = footpath_panel::kFirstAngle + footpath_panel::kSlotAngle * static_cast<float>(slot);
         const float a = degrees * std::numbers::pi_v<float> / 180;
@@ -211,7 +212,7 @@ namespace rct3::ui::screens::build
         const Rect r = rect();
         const Rect d = disc();
         const Point centre { (d.x0 + d.x1) / 2 - r.x0, (d.y0 + d.y1) / 2 - r.y0 };
-        const auto put_tab = [&](widgets::Button& b, int slot) {
+        const auto put_tab = [&](widgets::Button& b, std::int32_t slot) {
             const Point at = footpath_tab_offset(slot);
             b.placement = top_left(centre.x + at.x - info::info_panel::kTabSize / 2, centre.y + at.y - info::info_panel::kTabSize / 2, info::info_panel::kTabSize, info::info_panel::kTabSize);
         };

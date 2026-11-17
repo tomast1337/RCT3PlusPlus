@@ -72,9 +72,9 @@ namespace rct3::park
             return 1u << (value & 3);
         }
         /// Columns and rows from a square to the one across this side.
-        [[nodiscard]] constexpr std::array<int, 2> step() const noexcept
+        [[nodiscard]] constexpr std::array<std::int32_t, 2> step() const noexcept
         {
-            constexpr std::array<std::array<int, 2>, 4> kSteps { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } };
+            constexpr std::array<std::array<std::int32_t, 2>, 4> kSteps { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } };
             return kSteps[static_cast<std::size_t>(value & 3)];
         }
         /// The tile across this side of `tile`.
@@ -84,7 +84,7 @@ namespace rct3::park
             return { tile.col + dc, tile.row + dr };
         }
         /// The side a step of (`dc`, `dr`) crosses; none unless it is one square to a side.
-        [[nodiscard]] static constexpr std::optional<Side> towards(int dc, int dr) noexcept
+        [[nodiscard]] static constexpr std::optional<Side> towards(std::int32_t dc, std::int32_t dr) noexcept
         {
             for (std::int32_t s = 0; s < 4; ++s)
                 if (Side { s }.step() == std::array { dc, dr })

@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -28,7 +29,7 @@ TEST_CASE("a route is a shortest walk, and enters a queue only at its end")
 {
     PathNetwork p;
     // A loop: along row 0 to column 3, and back along row 2, joined by columns 0 and 3.
-    for (int c = 0; c <= 3; ++c)
+    for (std::int32_t c = 0; c <= 3; ++c)
     {
         p.add({ c, 0, 0 });
         p.add({ c, 2, 0 });
@@ -51,10 +52,10 @@ TEST_CASE("a route is a shortest walk, and enters a queue only at its end")
 TEST_CASE("one search finds the nearest of several places, the first where several share a tile")
 {
     PathNetwork p;
-    for (int c = 0; c <= 6; ++c)
+    for (std::int32_t c = 0; c <= 6; ++c)
         p.add({ c, 0, 0 });
     const NodeId queue = p.add({ 7, 0, 0 }, true);
-    const auto at = [&](int c) { return *p.find({ c, 0, 0 }); };
+    const auto at = [&](std::int32_t c) { return *p.find({ c, 0, 0 }); };
     const std::array far_first { at(6), at(4), at(2), at(2) };
     const auto found = p.route_nearest(at(0), far_first);
     REQUIRE(found);
@@ -91,8 +92,8 @@ namespace
 TEST_CASE("a walk cuts across a plaza on the diagonal")
 {
     PathNetwork p;
-    for (int col = 0; col < 4; ++col)
-        for (int row = 0; row < 4; ++row)
+    for (std::int32_t col = 0; col < 4; ++col)
+        for (std::int32_t row = 0; row < 4; ++row)
             p.add({ col, row, 0 });
     const NodeId from = *p.find({ 0, 0, 0 });
     const NodeId to = *p.find({ 3, 3, 0 });
@@ -145,8 +146,8 @@ TEST_CASE("no diagonal round a corner, over a gap, across a step in height or th
 TEST_CASE("a tile taken away is joined to nothing and found by nothing; one laid there again is new")
 {
     PathNetwork p;
-    for (int col = 0; col < 2; ++col)
-        for (int row = 0; row < 2; ++row)
+    for (std::int32_t col = 0; col < 2; ++col)
+        for (std::int32_t row = 0; row < 2; ++row)
             p.add({ col, row, 0 });
     p.add({ 2, 0, 0 });
     const NodeId gone = *p.find({ 1, 0, 0 });
@@ -237,7 +238,7 @@ TEST_CASE("one standing in a queue walks out along its line, never through anoth
     const NodeId path = p.add({ 0, 0, 0 });
     const NodeId far = p.add({ 1, 0, 0 });
     std::array<NodeId, 3> line { };
-    for (int k = 0; k < 3; ++k)
+    for (std::int32_t k = 0; k < 3; ++k)
     {
         line[k] = p.add({ 0, k + 1, 0 }, true, std::nullopt, 7);
         p.set_corners(line[k], { 0.0f, 0.0f, 0.0f, 0.0f }, 0b1010);
@@ -309,8 +310,8 @@ TEST_CASE("a no-entry side keeps guests from coming in across it, but not from l
 TEST_CASE("a no-entry side also bars the cut across a square into its tile")
 {
     PathNetwork p;
-    for (int c = 0; c <= 1; ++c)
-        for (int r = 0; r <= 1; ++r)
+    for (std::int32_t c = 0; c <= 1; ++c)
+        for (std::int32_t r = 0; r <= 1; ++r)
             p.add({ c, r, 0 });
     const NodeId from = *p.find({ 0, 0, 0 });
     const NodeId to = *p.find({ 1, 1, 0 });
@@ -341,7 +342,7 @@ TEST_CASE("given a purse, a route takes a link through a queue when it is shorte
 {
     PathNetwork p;
     // A long path along row 0, with a queue tile off its start whose link ends near the far end.
-    for (int c = 0; c <= 20; ++c)
+    for (std::int32_t c = 0; c <= 20; ++c)
         p.add({ c, 0, 0 });
     const NodeId start = *p.find({ 0, 0, 0 });
     const NodeId far = *p.find({ 20, 0, 0 });

@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <span>
 
-extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
+extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) // c-api
 {
     const auto bytes = std::as_bytes(std::span(data, size));
     if (const auto park = rct3::parkfile::read_saved_park(bytes); park && !rct3::parkfile::read_saved_park(rct3::parkfile::write_saved_park(*park)))

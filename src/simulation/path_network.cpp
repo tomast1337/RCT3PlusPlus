@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <deque>
 #include <functional>
@@ -15,10 +16,10 @@ namespace rct3::simulation
 
     namespace
     {
-        constexpr std::array<std::array<int, 2>, 4> kSides { { { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } } };
+        constexpr std::array<std::array<std::int32_t, 2>, 4> kSides { { { 1, 0 }, { 0, 1 }, { -1, 0 }, { 0, -1 } } };
     }
 
-    std::uint64_t PathNetwork::key(int col, int row)
+    std::uint64_t PathNetwork::key(std::int32_t col, std::int32_t row)
     {
         return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(col)) << 32) | static_cast<std::uint32_t>(row);
     }
@@ -42,8 +43,8 @@ namespace rct3::simulation
         by_tile_.emplace(key(tile.col, tile.row), id);
         join_sides(id);
         // The squares the new tile closes, seen from each tile round it.
-        for (int dc = -1; dc <= 1; ++dc)
-            for (int dr = -1; dr <= 1; ++dr)
+        for (std::int32_t dc = -1; dc <= 1; ++dc)
+            for (std::int32_t dr = -1; dr <= 1; ++dr)
             {
                 const auto [first, last] = by_tile_.equal_range(key(tile.col + dc, tile.row + dr));
                 for (auto it = first; it != last; ++it)
@@ -69,8 +70,8 @@ namespace rct3::simulation
                 nodes_[other->value].next[(side + 2) % 4].reset();
         n.corner.fill(std::nullopt);
         n.removed = true;
-        for (int dc = -1; dc <= 1; ++dc)
-            for (int dr = -1; dr <= 1; ++dr)
+        for (std::int32_t dc = -1; dc <= 1; ++dc)
+            for (std::int32_t dr = -1; dr <= 1; ++dr)
             {
                 const auto [near_first, near_last] = by_tile_.equal_range(key(n.tile.col + dc, n.tile.row + dr));
                 for (auto it = near_first; it != near_last; ++it)
@@ -90,7 +91,7 @@ namespace rct3::simulation
             std::optional<NodeId> best;
             for (auto it = first; it != last; ++it)
             {
-                const int gap = std::abs(nodes_[it->second.value].tile.level - tile.level);
+                const std::int32_t gap = std::abs(nodes_[it->second.value].tile.level - tile.level);
                 if (gap <= max_step && (!best || gap < std::abs(nodes_[best->value].tile.level - tile.level)))
                     best = it->second;
             }
@@ -123,7 +124,7 @@ namespace rct3::simulation
         rejoin(n.tile.col, n.tile.row);
     }
 
-    void PathNetwork::rejoin(int col, int row)
+    void PathNetwork::rejoin(std::int32_t col, std::int32_t row)
     {
         const auto [first, last] = by_tile_.equal_range(key(col, row));
         for (auto it = first; it != last; ++it)
@@ -132,8 +133,8 @@ namespace rct3::simulation
                     nodes_[other->value].next[(side + 2) % 4].reset();
         for (auto it = first; it != last; ++it)
             join_sides(it->second);
-        for (int dc = -1; dc <= 1; ++dc)
-            for (int dr = -1; dr <= 1; ++dr)
+        for (std::int32_t dc = -1; dc <= 1; ++dc)
+            for (std::int32_t dr = -1; dr <= 1; ++dr)
             {
                 const auto [near_first, near_last] = by_tile_.equal_range(key(col + dc, row + dr));
                 for (auto it = near_first; it != near_last; ++it)
@@ -141,7 +142,7 @@ namespace rct3::simulation
             }
     }
 
-    void PathNetwork::add_wall(int col, int row, rct3::park::Side side, float low, float high)
+    void PathNetwork::add_wall(std::int32_t col, std::int32_t row, rct3::park::Side side, float low, float high)
     {
         const auto [across_col, across_row] = side.beyond({ col, row });
         walls_.emplace(key(col, row), Wall { network_side(side), low, high });
@@ -150,7 +151,7 @@ namespace rct3::simulation
         rejoin(across_col, across_row);
     }
 
-    void PathNetwork::remove_wall(int col, int row, rct3::park::Side side, float low, float high)
+    void PathNetwork::remove_wall(std::int32_t col, std::int32_t row, rct3::park::Side side, float low, float high)
     {
         const auto [across_col, across_row] = side.beyond({ col, row });
         for (const auto& [at, wall] : { std::pair { key(col, row), Wall { network_side(side), low, high } }, std::pair { key(across_col, across_row), Wall { network_side(side.opposite()), low, high } } })
@@ -181,8 +182,8 @@ namespace rct3::simulation
 
     std::optional<NodeId> PathNetwork::nearest(glm::vec3 at) const
     {
-        const int col = static_cast<int>(std::floor((at.x - origin.x) / tile_size));
-        const int row = static_cast<int>(std::floor((at.z - origin.y) / tile_size));
+        const std::int32_t col = static_cast<std::int32_t>(std::floor((at.x - origin.x) / tile_size));
+        const std::int32_t row = static_cast<std::int32_t>(std::floor((at.z - origin.y) / tile_size));
         const auto [first, last] = by_tile_.equal_range(key(col, row));
         std::optional<NodeId> best;
         float gap = std::numeric_limits<float>::max();
@@ -202,7 +203,7 @@ namespace rct3::simulation
     {
         const float x = (at.x - origin.x) / tile_size;
         const float z = (at.y - origin.y) / tile_size;
-        const PathTileSpot spot { static_cast<int>(std::floor(x)), static_cast<int>(std::floor(z)) };
+        const PathTileSpot spot { static_cast<std::int32_t>(std::floor(x)), static_cast<std::int32_t>(std::floor(z)) };
         const auto holds = [&](NodeId n) { return nodes_[n.value].tile.col == spot.col && nodes_[n.value].tile.row == spot.row; };
         NodeId on = holds(to) ? to : from;
         if (!holds(on))

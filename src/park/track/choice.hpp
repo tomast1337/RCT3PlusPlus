@@ -27,24 +27,24 @@ namespace rct3::park::track
     inline constexpr std::size_t kBankChoices = 2 * kBankSteps; ///< -3 to 4, upside down last
 
     /// Index of a curve, slope or bank among its choices: the leftmost or lowest first.
-    [[nodiscard]] constexpr std::size_t curve_index(int curve)
+    [[nodiscard]] constexpr std::size_t curve_index(std::int32_t curve)
     {
         return static_cast<std::size_t>(curve + kCurveSizes);
     }
-    [[nodiscard]] constexpr std::size_t slope_index(int slope)
+    [[nodiscard]] constexpr std::size_t slope_index(std::int32_t slope)
     {
         return static_cast<std::size_t>(slope + kSlopeSteps);
     }
-    [[nodiscard]] constexpr std::size_t bank_index(int bank)
+    [[nodiscard]] constexpr std::size_t bank_index(std::int32_t bank)
     {
         return static_cast<std::size_t>(bank + kBankSteps - 1);
     }
 
     struct TrackChoice
     {
-        int curve = 0;
-        int slope = 0;                  ///< That the piece ends at
-        int bank = 0;                   ///< That the piece ends at
+        std::int32_t curve = 0;
+        std::int32_t slope = 0;         ///< That the piece ends at
+        std::int32_t bank = 0;          ///< That the piece ends at
         std::uint8_t toggles = 0;       ///< Bits of the PieceToggle values asked for
         std::optional<LaidPiece> named; ///< A piece picked by name, standing for the picks above
 
@@ -79,7 +79,7 @@ namespace rct3::park::track
 
     /// The picks after picking `value` on `axis`: the other picks move to the nearest that have a piece
     /// with it when the picks as they are have none.
-    [[nodiscard]] TrackChoice pick_value(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, ChoiceAxis axis, int value);
+    [[nodiscard]] TrackChoice pick_value(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, ChoiceAxis axis, std::int32_t value);
 
     /// The picks with `toggle` turned over, when some piece of the picked curve, slope and bank comes the other way. A
     /// piece picked by name gives way to its twin with the toggle the other way (the same piece, open or enclosed),

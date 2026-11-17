@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::scene::park
 {
@@ -128,7 +129,7 @@ namespace rct3::scene::park
             {
                 // Three ways to share the buttons out, as the camera controls option picks; the middle
                 // button always turns and tilts.
-                const int scheme = options.choice(config::game::GameOption::CameraControls);
+                const std::int32_t scheme = options.choice(config::game::GameOption::CameraControls);
                 const bool turns = held == DragButtons::Middle || (scheme == 1 && held == DragButtons::Both) || (scheme == 2 && held == DragButtons::Right);
                 const bool slides = (scheme == 1 && held == DragButtons::Right) || (scheme != 1 && held == DragButtons::Both);
                 if (turns)
@@ -208,7 +209,7 @@ namespace rct3::scene::park
             // The turn keys and the game's isometric turn commands step a quarter, once the last turn is done.
             const float goal = rct3::park::isometric_yaw(scene.iso_step);
             const bool settled = std::abs(std::remainder(c.yaw - goal, glm::two_pi<float>())) < 1e-3f;
-            int keyed = settled ? static_cast<int>(yaw) : 0;
+            std::int32_t keyed = settled ? static_cast<std::int32_t>(yaw) : 0;
             for (const ui::PlayCommand command : input.commands)
                 if (command == ui::PlayCommand::RotateIsometric || command == ui::PlayCommand::ReverseIsometric)
                     keyed = command == ui::PlayCommand::ReverseIsometric ? -1 : 1;
@@ -225,7 +226,7 @@ namespace rct3::scene::park
         // Over a pool it settles on the surface, not on the ground dug out under it, so the view keeps still
         // while the pool tool shows its work there.
         const save::model::TerrainGrid& g = scene.grid;
-        const auto pool = free || g.empty() ? std::nullopt : scene.pools.at(static_cast<int>(std::floor((scene.camera.target.x - g.origin_x) / g.tile_size_x)), static_cast<int>(std::floor((scene.camera.target.z - g.origin_z) / g.tile_size_z)));
+        const auto pool = free || g.empty() ? std::nullopt : scene.pools.at(static_cast<std::int32_t>(std::floor((scene.camera.target.x - g.origin_x) / g.tile_size_x)), static_cast<std::int32_t>(std::floor((scene.camera.target.z - g.origin_z) / g.tile_size_z)));
         if (pool)
             scene.camera.target.y = std::max(scene.camera.target.y, static_cast<float>(pool->surface));
         swap_pool_work(scene);

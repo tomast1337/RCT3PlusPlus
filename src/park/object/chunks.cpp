@@ -2,11 +2,12 @@
 #include "park/object/chunks.hpp"
 
 #include <algorithm>
+#include <cstdint>
 
 namespace rct3::park::object
 {
 
-    ChunkGrid ChunkGrid::of(int width, int height, int tiles)
+    ChunkGrid ChunkGrid::of(std::int32_t width, std::int32_t height, std::int32_t tiles)
     {
         return { .across = std::max(1, (width + tiles - 1) / tiles), .down = std::max(1, (height + tiles - 1) / tiles), .tiles = tiles };
     }
@@ -16,10 +17,10 @@ namespace rct3::park::object
         return static_cast<std::size_t>(across) * static_cast<std::size_t>(down);
     }
 
-    std::size_t ChunkGrid::at(int col, int row) const
+    std::size_t ChunkGrid::at(std::int32_t col, std::int32_t row) const
     {
-        const int c = std::clamp(col / tiles, 0, across - 1);
-        const int r = std::clamp(row / tiles, 0, down - 1);
+        const std::int32_t c = std::clamp(col / tiles, 0, across - 1);
+        const std::int32_t r = std::clamp(row / tiles, 0, down - 1);
         return static_cast<std::size_t>(r) * static_cast<std::size_t>(across) + static_cast<std::size_t>(c);
     }
 

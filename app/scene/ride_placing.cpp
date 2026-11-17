@@ -37,6 +37,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <numbers>
 #include <tuple>
@@ -75,8 +76,8 @@ namespace rct3::scene
         const auto spot = ground_spot(scene, at, size);
         if (!spot)
             return std::nullopt;
-        const auto col = static_cast<int>(std::floor(spot->x));
-        const auto row = static_cast<int>(std::floor(spot->y));
+        const auto col = static_cast<std::int32_t>(std::floor(spot->x));
+        const auto row = static_cast<std::int32_t>(std::floor(spot->y));
         if (!scene.grid.contains(col, row))
             return std::nullopt;
         return save::model::Tile { col, row };
@@ -97,10 +98,10 @@ namespace rct3::scene
         constexpr std::int32_t kClimbReach = 24; ///< How far, in height units, an item raised with Shift climbs to find room
         constexpr std::int32_t kDigReach = 64;   ///< How far, in height units, a ride lowered with Shift goes under the ground. Chosen by eye
         /// The placing panel's tabs' places on its ring; the first is left for one that finds the item in its list.
-        constexpr int kTurnSlot = 1;
-        constexpr int kColourSlot = 2;
-        constexpr int kSmoothSlot = 3;
-        constexpr int kSharpSlot = 4;
+        constexpr std::int32_t kTurnSlot = 1;
+        constexpr std::int32_t kColourSlot = 2;
+        constexpr std::int32_t kSmoothSlot = 3;
+        constexpr std::int32_t kSharpSlot = 4;
 
         /// The object the ghost shows: the ride, or the entrance or exit pointed at.
         std::optional<save::model::PlacedObject> ghost_object(const RidePlacing& p)

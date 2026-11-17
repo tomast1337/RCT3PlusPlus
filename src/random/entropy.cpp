@@ -4,6 +4,7 @@
 #include "random/generator.hpp"
 
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <random>
 #include <thread>
@@ -63,7 +64,7 @@ namespace rct3::random
         mix(pool, static_cast<std::uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count()));
         mix(pool, process_id());
         mix(pool, std::hash<std::thread::id> { }(std::this_thread::get_id()));
-        const int on_stack = 0;
+        const std::int32_t on_stack = 0;
         mix(pool, reinterpret_cast<std::uintptr_t>(&on_stack));
         mix(pool, reinterpret_cast<std::uintptr_t>(&fresh_seed));
         // Two calls in one run still differ: the steady clock has moved on.

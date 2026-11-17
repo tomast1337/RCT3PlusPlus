@@ -17,6 +17,7 @@
 #include "ui/widgets/scroll_bar.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -106,8 +107,8 @@ namespace rct3::ui::widgets
         bool reveal_ = false;        // Scroll the selection into view at the next update
         units::Seconds since_press_; // Since the last press on a row
         std::optional<std::size_t> last_pressed_;
-        int changes_ = 0;
-        int activations_ = 0;
+        std::int32_t changes_ = 0;
+        std::int32_t activations_ = 0;
     };
 
 } // namespace rct3::ui::widgets

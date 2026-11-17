@@ -6,6 +6,7 @@
 #include "park/path/decks.hpp"
 #include "park/queue_fences.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -13,7 +14,7 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid owned_grid(int width, int height)
+    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -28,7 +29,7 @@ namespace
 
     /// One ride whose station's entrance stands on (`col`, `row`), turned `turn`: unturned, the ride is on the
     /// column before it and its back faces the next column.
-    save::model::RideModel ride_at(int col, int row, ModelTurn turn = { })
+    save::model::RideModel ride_at(std::int32_t col, std::int32_t row, ModelTurn turn = { })
     {
         save::model::RideModel rides;
         save::model::Station& station = rides.rides.emplace_back().stations.emplace_back();
@@ -37,14 +38,14 @@ namespace
     }
 
     /// Lays `count` ground queue tiles from `from` heading `heading`.
-    std::vector<save::model::PathTile> lay_queue(const save::model::TerrainGrid& g, save::model::Tile from, Side heading, int count)
+    std::vector<save::model::PathTile> lay_queue(const save::model::TerrainGrid& g, save::model::Tile from, Side heading, std::int32_t count)
     {
         FootpathBuilder b;
         b.queue = true;
         b.heading = heading;
         start_at(b, from);
         std::vector<save::model::PathTile> paths;
-        for (int i = 0; i < count; ++i)
+        for (std::int32_t i = 0; i < count; ++i)
             (void)lay_path(b, paths, *next_piece(b, g), "QueueSet", static_cast<std::uint64_t>(10 + i), 0);
         return paths;
     }

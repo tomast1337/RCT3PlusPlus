@@ -4,6 +4,7 @@
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -48,20 +49,20 @@ TEST_CASE("the ride camera panel hides once the pointer is still, and comes back
 {
     Fixture f;
     CHECK(f.panel->rect().y1 == doctest::Approx(700));
-    for (int i = 0; i < 10; ++i)
+    for (std::int32_t i = 0; i < 10; ++i)
         f.frame(0.5f);
     CHECK(f.panel->shown() == 0);
     f.frame(0);
     CHECK(f.panel->rect().y0 >= 700); // Out of sight below the screen
     f.panel->pointer_moved(50);
-    for (int i = 0; i < 10; ++i)
+    for (std::int32_t i = 0; i < 10; ++i)
         f.frame(0.1f);
     CHECK(f.panel->shown() == 1);
 
     // Pinned, it stays.
     f.click(f.panel->pin());
     CHECK(f.panel->pinned());
-    for (int i = 0; i < 10; ++i)
+    for (std::int32_t i = 0; i < 10; ++i)
         f.frame(1);
     CHECK(f.panel->shown() == 1);
 }

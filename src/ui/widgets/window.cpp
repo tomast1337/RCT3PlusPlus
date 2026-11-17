@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::ui::widgets
 {
@@ -184,13 +185,13 @@ namespace rct3::ui::widgets
                 // edges meet without a seam.
                 const bool coded = background->coded != nullptr;
                 const float top = coded ? std::floor(back.y0) : back.y0;
-                const int rows = static_cast<int>(std::ceil((back.y1 - top) / h));
-                const int columns = coded ? 1 : static_cast<int>(std::ceil(back.width() / w));
+                const std::int32_t rows = static_cast<std::int32_t>(std::ceil((back.y1 - top) / h));
+                const std::int32_t columns = coded ? 1 : static_cast<std::int32_t>(std::ceil(back.width() / w));
                 const float across = coded ? back.width() : w;
-                for (int row = 0; row < rows; ++row)
+                for (std::int32_t row = 0; row < rows; ++row)
                 {
                     const float y = top + static_cast<float>(row) * h;
-                    for (int column = 0; column < columns; ++column)
+                    for (std::int32_t column = 0; column < columns; ++column)
                     {
                         const float x = back.x0 + static_cast<float>(column) * w;
                         skin::draw_skin(context.list, background, { x, y, x + across, y + h });
@@ -221,9 +222,9 @@ namespace rct3::ui::widgets
             constexpr float kPitch = 4;
             const float x = r.x1 - style_.resize_band - kDot;
             const float y = r.y1 - style_.resize_band - kDot;
-            for (int row = 0; row < 3; ++row)
+            for (std::int32_t row = 0; row < 3; ++row)
             {
-                for (int col = 0; col <= row; ++col)
+                for (std::int32_t col = 0; col <= row; ++col)
                 {
                     const float px = x - static_cast<float>(col) * kPitch;
                     const float py = y - static_cast<float>(row - col) * kPitch;

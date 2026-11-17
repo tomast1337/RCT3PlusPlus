@@ -9,6 +9,7 @@
 #include "simulation/sandbox.hpp"
 
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <ranges>
 
@@ -60,7 +61,7 @@ TEST_CASE("debug tools: everyone goes home from the queues, the rides and their 
     Sandbox park;
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 2, .cycle_seconds = 30, .excitement = 1, .intensity = 0.3f });
-    for (int i = 0; i < 6; ++i)
+    for (std::int32_t i = 0; i < 6; ++i)
         park.guest({ i % 4, 0 }, { .happiness = 1 });
     (void)park.party({ park.guest({ 0, 0 }), park.guest({ 0, 0 }) });
     auto& r = park.world().registry;
@@ -95,7 +96,7 @@ TEST_CASE("debug tools: rides break down all at once, and a reset repairs, empti
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 2, .cycle_seconds = 30, .excitement = 1, .intensity = 0.3f });
     const auto other = park.flat_ride("Teacups", { 0, 0 }, 0);
-    for (int i = 0; i < 6; ++i)
+    for (std::int32_t i = 0; i < 6; ++i)
         park.guest({ 1 + i % 3, 0 }, { .happiness = 1 });
     auto& r = park.world().registry;
     REQUIRE(park.run_until([&] { return r.get<Attraction>(ride).customers > 0 && !r.get<CycleRide>(ride).queue.empty(); }, 120));

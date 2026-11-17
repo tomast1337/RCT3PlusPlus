@@ -167,7 +167,7 @@ TEST_CASE("vectors, orientation, matrix and references")
     Bytes p;
     p.f32(1).f32(2).f32(3);
     p.f32(0.25f).f32(0.5f).f32(0.75f);
-    for (int i = 0; i < 16; ++i)
+    for (std::int32_t i = 0; i < 16; ++i)
         p.f32(static_cast<float>(i));
     p.u64(101).u64(0);
     const auto d = decode_one(attrs, p);

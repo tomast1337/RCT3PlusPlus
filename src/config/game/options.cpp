@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 
 namespace rct3::config::game
@@ -215,7 +216,7 @@ namespace rct3::config::game
             if (value == info.default_value)
                 continue;
             if (value == std::trunc(value))
-                json[info.name] = static_cast<long long>(value);
+                json[info.name] = static_cast<std::int64_t>(value);
             else
                 json[info.name] = value;
         }

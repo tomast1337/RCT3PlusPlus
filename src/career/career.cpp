@@ -2,12 +2,13 @@
 #include "career/career.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <utility>
 
 namespace rct3::career
 {
 
-    std::size_t first_open(int pack)
+    std::size_t first_open(std::int32_t pack)
     {
         return pack == 0 ? 6 : 3;
     }
@@ -21,14 +22,14 @@ namespace rct3::career
     {
         if (!scenario)
             return false;
-        int best = -1;
+        std::int32_t best = -1;
         for (const Career& c : careers)
             if (static_cast<std::size_t>(*scenario) < c.scenarios.size())
-                best = std::max(best, static_cast<int>(c.scenarios[static_cast<std::size_t>(*scenario)].status));
-        return best < static_cast<int>(ScenarioStatus::Apprentice) + level;
+                best = std::max(best, static_cast<std::int32_t>(c.scenarios[static_cast<std::size_t>(*scenario)].status));
+        return best < static_cast<std::int32_t>(ScenarioStatus::Apprentice) + level;
     }
 
-    Career new_career(std::string name, int pack, std::span<const std::string> ids)
+    Career new_career(std::string name, std::int32_t pack, std::span<const std::string> ids)
     {
         Career career;
         career.name = std::move(name);
@@ -120,9 +121,9 @@ namespace rct3::career
         if (index >= career.scenarios.size())
             return;
         ScenarioProgress& p = career.scenarios[index];
-        for (int level = 0; level < 3; ++level)
+        for (std::int32_t level = 0; level < 3; ++level)
         {
-            const auto reached = static_cast<ScenarioStatus>(static_cast<int>(ScenarioStatus::Apprentice) + level);
+            const auto reached = static_cast<ScenarioStatus>(static_cast<std::int32_t>(ScenarioStatus::Apprentice) + level);
             if (status >= reached && p.status < reached)
                 p.reached[static_cast<std::size_t>(level)] = now;
         }

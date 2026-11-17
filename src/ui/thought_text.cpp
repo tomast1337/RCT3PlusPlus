@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <format>
 #include <utility>
 
@@ -14,7 +15,7 @@ namespace rct3::ui
         constexpr std::string_view kKeyPrefix = "Thought_";
         constexpr std::u16string_view kNameMark = u"%NAME%";
         /// Texts tried for one thought at most; no thought has nearly as many.
-        constexpr int kMostTexts = 32;
+        constexpr std::int32_t kMostTexts = 32;
 
         struct Thought
         {
@@ -329,7 +330,7 @@ namespace rct3::ui
         const std::string key = thought_key(id);
         if (key.empty())
             return { };
-        int count = 0;
+        std::int32_t count = 0;
         while (count < kMostTexts && strings.contains(std::format("{}{}", key, count + 1)))
             ++count;
         if (count == 0)

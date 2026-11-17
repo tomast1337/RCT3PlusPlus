@@ -10,6 +10,7 @@
 #include "save/model/rides.hpp"
 #include "save/save_file.hpp"
 
+#include <cstdint>
 #include <cstdio>
 #include <fstream>
 #include <iterator>
@@ -34,8 +35,8 @@ int main(int argc, char** argv)
         return 2;
     }
     out.info("save,type,excitement,intensity,nausea,max_speed,average_speed,ride_time,ride_length,max_positive_vertical,max_negative_vertical,max_lateral,air_time,drop_count,highest_drop,inversion_count,lift_hill_count");
-    int failed = 0;
-    for (int i = 1; i < argc; ++i)
+    std::int32_t failed = 0;
+    for (std::int32_t i = 1; i < argc; ++i)
     {
         std::ifstream in(argv[i], std::ios::binary);
         const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());

@@ -15,6 +15,7 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <format>
 #include <stdexcept>
@@ -33,7 +34,7 @@ namespace rct3::render::vulkan
         void check_imgui(VkResult result)
         {
             if (result != VK_SUCCESS)
-                throw std::runtime_error(std::format("ImGui Vulkan backend error {}", static_cast<int>(result)));
+                throw std::runtime_error(std::format("ImGui Vulkan backend error {}", static_cast<std::int32_t>(result)));
         }
 
         VKAPI_ATTR VkBool32 VKAPI_CALL on_debug_message(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* data, void*)
@@ -235,7 +236,7 @@ namespace rct3::render::vulkan
         std::vector<VkPhysicalDevice> devices(count);
         vkEnumeratePhysicalDevices(instance_, &count, devices.data());
 
-        int best_score = -1;
+        std::int32_t best_score = -1;
         for (VkPhysicalDevice device : devices)
         {
             VkPhysicalDeviceProperties props;
@@ -248,21 +249,21 @@ namespace rct3::render::vulkan
             vkGetPhysicalDeviceQueueFamilyProperties(device, &family_count, nullptr);
             std::vector<VkQueueFamilyProperties> families(family_count);
             vkGetPhysicalDeviceQueueFamilyProperties(device, &family_count, families.data());
-            int family = -1;
+            std::int32_t family = -1;
             for (std::uint32_t i = 0; i < family_count; ++i)
             {
                 VkBool32 present = VK_FALSE;
                 vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface_, &present);
                 if ((families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && present)
                 {
-                    family = static_cast<int>(i);
+                    family = static_cast<std::int32_t>(i);
                     break;
                 }
             }
             if (family < 0)
                 continue;
 
-            const int score = props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 2 : 1;
+            const std::int32_t score = props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 2 : 1;
             if (score > best_score)
             {
                 best_score = score;
@@ -330,7 +331,7 @@ namespace rct3::render::vulkan
         }
         else
         {
-            int w = 0, h = 0;
+            int w = 0, h = 0; // c-api
             glfwGetFramebufferSize(config_.window, &w, &h);
             extent_.width = std::clamp(static_cast<std::uint32_t>(w), caps.minImageExtent.width, caps.maxImageExtent.width);
             extent_.height = std::clamp(static_cast<std::uint32_t>(h), caps.minImageExtent.height, caps.maxImageExtent.height);
@@ -366,10 +367,10 @@ namespace rct3::render::vulkan
         frame_pace_ = 0;
         if (config_.vsync && present_mode == VK_PRESENT_MODE_MAILBOX_KHR)
         {
-            int count = 0;
+            int count = 0; // c-api
             GLFWmonitor** monitors = glfwGetMonitors(&count);
-            int fastest = 60;
-            for (int i = 0; i < count; ++i)
+            std::int32_t fastest = 60;
+            for (std::int32_t i = 0; i < count; ++i)
                 if (const GLFWvidmode* mode = glfwGetVideoMode(monitors[i]))
                     fastest = std::max(fastest, mode->refreshRate);
             frame_pace_ = 1.0 / fastest;
@@ -538,7 +539,7 @@ namespace rct3::render::vulkan
     void VulkanDevice::recreate_swapchain()
     {
         // A minimised window has no framebuffer; wait until it is back.
-        int w = 0, h = 0;
+        int w = 0, h = 0; // c-api
         glfwGetFramebufferSize(config_.window, &w, &h);
         while (w == 0 || h == 0)
         {
@@ -1289,7 +1290,7 @@ namespace rct3::render::vulkan
         state_ = State::Idle;
 
         // Not every platform reports a resize through the present result, so compare sizes as well.
-        int w = 0, h = 0;
+        int w = 0, h = 0; // c-api
         glfwGetFramebufferSize(config_.window, &w, &h);
         const bool resized = static_cast<std::uint32_t>(w) != extent_.width || static_cast<std::uint32_t>(h) != extent_.height;
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || resized)

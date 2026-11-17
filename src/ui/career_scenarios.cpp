@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
 #include <format>
 #include <utility>
@@ -16,13 +17,13 @@ namespace rct3::ui
     namespace
     {
         constexpr std::string_view kPlayer = "PlayerProfile_Player";
-        constexpr int kMostScenarios = 99; ///< The keys have two digits
+        constexpr std::int32_t kMostScenarios = 99; ///< The keys have two digits
         constexpr std::string_view kPackFolder = "AOP_FSName_";
         constexpr std::string_view kParks = "Campaigns/Base";
         constexpr std::string_view kSlideshow = "Slideshow";
 
         /// The expansion's own folder name, with a slash after it; empty for the original game.
-        std::string pack_folder(const StringTable& strings, int pack)
+        std::string pack_folder(const StringTable& strings, std::int32_t pack)
         {
             if (pack <= 0)
                 return { };
@@ -38,13 +39,13 @@ namespace rct3::ui
         }
     } // namespace
 
-    std::vector<std::string> career_scenario_ids(const StringTable& strings, int pack)
+    std::vector<std::string> career_scenario_ids(const StringTable& strings, std::int32_t pack)
     {
         std::vector<std::string> ids;
         if (pack < 0)
             return ids;
         const std::string prefix = pack == 0 ? std::string { } : std::format("AOP{}_", pack - 1);
-        for (int i = 1; i <= kMostScenarios; ++i)
+        for (std::int32_t i = 1; i <= kMostScenarios; ++i)
         {
             std::array<char, 32> key { };
             std::snprintf(key.data(), key.size(), "Scenario%02d_Lookup", i);
@@ -56,7 +57,7 @@ namespace rct3::ui
         return ids;
     }
 
-    CareerScenarioInfo career_scenario(const StringTable& strings, int pack, std::size_t index, std::string_view id)
+    CareerScenarioInfo career_scenario(const StringTable& strings, std::int32_t pack, std::size_t index, std::string_view id)
     {
         const std::string i = std::string(id);
         const std::string number = std::to_string(index + 1);
@@ -88,7 +89,7 @@ namespace rct3::ui
         return help;
     }
 
-    std::string career_park_folder(const StringTable& strings, int pack)
+    std::string career_park_folder(const StringTable& strings, std::int32_t pack)
     {
         std::string folder = std::format("{}/{}", kParks, pack_folder(strings, pack));
         if (folder.ends_with('/'))

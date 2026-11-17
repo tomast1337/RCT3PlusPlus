@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <ranges>
 #include <utility>
@@ -25,13 +26,13 @@ namespace rct3::ui::screens::dialogs
         constexpr std::array<std::string_view, 2> kPackNames = { "ContentPackName_SoakedAddOn", "ContentPackName_WildAddOn" };
 
         /// The credits under one key prefix, numbered from 0 until one is missing.
-        void add_credits(std::vector<CreditLine>& out, const StringTable& strings, std::u16string heading, const std::string& prefix, random::RandomState& random, int& gaps, int& row)
+        void add_credits(std::vector<CreditLine>& out, const StringTable& strings, std::u16string heading, const std::string& prefix, random::RandomState& random, std::int32_t& gaps, std::int32_t& row)
         {
             if (!strings.contains(std::format("{}0", prefix)))
                 return;
             ++gaps;
             out.push_back({ std::move(heading), CreditLine::Kind::Heading, Align::Centre, 0, gaps, row++ });
-            for (int k = 0;; ++k)
+            for (std::int32_t k = 0;; ++k)
             {
                 const std::string key = prefix + std::to_string(k);
                 if (!strings.contains(key))
@@ -51,9 +52,9 @@ namespace rct3::ui::screens::dialogs
         }
 
         /// Copies `prefix` + first, + first + 1, ... from `from` until one is missing.
-        void copy_numbered(StringTable& to, const StringTable& from, const std::string& prefix, int first)
+        void copy_numbered(StringTable& to, const StringTable& from, const std::string& prefix, std::int32_t first)
         {
-            for (int k = first; from.contains(prefix + std::to_string(k)); ++k)
+            for (std::int32_t k = first; from.contains(prefix + std::to_string(k)); ++k)
                 to.add(prefix + std::to_string(k), std::u16string(from.get(prefix + std::to_string(k))));
         }
 
@@ -70,7 +71,7 @@ namespace rct3::ui::screens::dialogs
     std::vector<std::u16string> about_info_lines(const StringTable& strings)
     {
         std::vector<std::u16string> lines { std::u16string(strings.get(kGameName)) };
-        for (int n = 1;; ++n)
+        for (std::int32_t n = 1;; ++n)
         {
             const std::string key = std::string(kCopyright) + std::to_string(n);
             if (!strings.contains(key))
@@ -80,14 +81,14 @@ namespace rct3::ui::screens::dialogs
         return lines;
     }
 
-    std::vector<CreditLine> credit_lines(const StringTable& strings, std::span<const int> packs, random::RandomState& random)
+    std::vector<CreditLine> credit_lines(const StringTable& strings, std::span<const std::int32_t> packs, random::RandomState& random)
     {
-        auto newest_first = packs | std::ranges::to<std::vector<int>>();
+        auto newest_first = packs | std::ranges::to<std::vector<std::int32_t>>();
         std::ranges::sort(newest_first, std::greater { });
         std::vector<CreditLine> out;
-        int gaps = 0;
-        int row = 0;
-        for (const int pack : newest_first)
+        std::int32_t gaps = 0;
+        std::int32_t row = 0;
+        for (const std::int32_t pack : newest_first)
         {
             if (pack < 0 || static_cast<std::size_t>(pack) >= kPackNames.size())
                 continue;

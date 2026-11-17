@@ -10,6 +10,7 @@
 #include "ui/key_combo.hpp"
 #include "ui/keyboard.hpp"
 
+#include <cstdint>
 #include <expected>
 #include <memory>
 #include <optional>
@@ -25,8 +26,8 @@ namespace rct3::platform
 
     struct WindowConfig
     {
-        int width = 1280;
-        int height = 720;
+        std::int32_t width = 1280;
+        std::int32_t height = 720;
         const char* title = "rct3++";
         bool headless = false; ///< GLFW's null platform: no display needed, nothing shown
     };
@@ -83,8 +84,8 @@ namespace rct3::platform
 
         struct Size
         {
-            int width = 0;
-            int height = 0;
+            int width = 0;  // c-api
+            int height = 0; // c-api
 
             friend bool operator==(const Size&, const Size&) = default;
         };

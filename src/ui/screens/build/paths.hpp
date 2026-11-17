@@ -26,6 +26,7 @@
 
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
@@ -73,13 +74,13 @@ namespace rct3::ui::screens::build
         /// middle, the others follow clockwise.
         inline constexpr float kFirstAngle = 128;
         inline constexpr float kSlotAngle = -32;
-        inline constexpr int kControlsSlot = 0;
-        inline constexpr int kFollowSlot = 1;
-        inline constexpr int kRouteSlot = 2;
-        inline constexpr int kRemoveSlot = 3;
-        inline constexpr int kPathsSlot = 4;
-        inline constexpr int kQueuesSlot = 5;
-        inline constexpr int kStraightSlot = 6;
+        inline constexpr std::int32_t kControlsSlot = 0;
+        inline constexpr std::int32_t kFollowSlot = 1;
+        inline constexpr std::int32_t kRouteSlot = 2;
+        inline constexpr std::int32_t kRemoveSlot = 3;
+        inline constexpr std::int32_t kPathsSlot = 4;
+        inline constexpr std::int32_t kQueuesSlot = 5;
+        inline constexpr std::int32_t kStraightSlot = 6;
         inline constexpr float kCloseLeft = 9; ///< From the screen's left edge
         inline constexpr float kCloseBottom = 9;
         /// From the strip's left edge to the page: the ring's tabs on the right of the disc stand over the room
@@ -111,12 +112,12 @@ namespace rct3::ui::screens::build
         inline constexpr float kStyleCell = 36; ///< A style's picture and the room round it
         inline constexpr float kStyleIcon = 40; ///< Of the styles' own pictures
         inline constexpr float kLineHeight = 15;
-        inline constexpr float kDiscIcon = 56;  ///< The chosen style's picture on the disc
-        inline constexpr int kLargestBrush = 5; ///< Tiles along each side of the widest stroke.
+        inline constexpr float kDiscIcon = 56;           ///< The chosen style's picture on the disc
+        inline constexpr std::int32_t kLargestBrush = 5; ///< Tiles along each side of the widest stroke.
     } // namespace footpath_panel
 
     /// The middle of the tab at `slot`, from the middle of the disc, with y down.
-    [[nodiscard]] Point footpath_tab_offset(int slot);
+    [[nodiscard]] Point footpath_tab_offset(std::int32_t slot);
 
     /// A style the player can choose.
     struct FootpathStyle
@@ -190,7 +191,7 @@ namespace rct3::ui::screens::build
             return straight_->on;
         }
         /// Tiles along each side of the square a stroke paints round the pointer's tile.
-        [[nodiscard]] int brush() const
+        [[nodiscard]] std::int32_t brush() const
         {
             return size_->value();
         }

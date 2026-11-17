@@ -6,6 +6,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <quickjs/quickjs.h>
 #include <vector>
@@ -68,7 +69,7 @@ namespace rct3::scripting
     {
         struct Wait
         {
-            int frames = 0;
+            std::int32_t frames = 0;
             JSValue resolve = JS_UNDEFINED;
             JSValue reject = JS_UNDEFINED;
         };
@@ -87,13 +88,13 @@ namespace rct3::scripting
             return *static_cast<Impl*>(JS_GetContextOpaque(ctx));
         }
 
-        static JSValue call_native(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int, JSValueConst* data)
+        static JSValue call_native(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int, JSValueConst* data) // c-api
         {
             Impl& self = of(ctx);
             std::int32_t index = 0;
             JS_ToInt32(ctx, &index, data[0]);
             Json arguments = Json::array();
-            for (int i = 0; i < argc; ++i)
+            for (std::int32_t i = 0; i < argc; ++i)
                 arguments.push_back(to_json(ctx, argv[i]));
             try
             {
@@ -106,7 +107,7 @@ namespace rct3::scripting
             }
         }
 
-        static JSValue frames(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv)
+        static JSValue frames(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) // c-api
         {
             double count = 1;
             if (argc > 0 && JS_ToFloat64(ctx, &count, argv[0]) != 0)
@@ -115,20 +116,20 @@ namespace rct3::scripting
             const JSValue promise = JS_NewPromiseCapability(ctx, resolving.data());
             if (JS_IsException(promise))
                 return promise;
-            of(ctx).waits.push_back({ std::max(0, static_cast<int>(std::lround(count))), resolving[0], resolving[1] });
+            of(ctx).waits.push_back({ std::max(0, static_cast<std::int32_t>(std::lround(count))), resolving[0], resolving[1] });
             return promise;
         }
 
-        static JSValue log(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv)
+        static JSValue log(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) // c-api
         {
             std::string line;
-            for (int i = 0; i < argc; ++i)
+            for (std::int32_t i = 0; i < argc; ++i)
                 line += (i > 0 ? " " : "") + to_text(ctx, argv[i]);
             logging::logger("script").info("{}", line);
             return JS_UNDEFINED;
         }
 
-        static int interrupt(JSRuntime*, void* opaque)
+        static int interrupt(JSRuntime*, void* opaque) // c-api
         {
             return std::chrono::steady_clock::now() > static_cast<Impl*>(opaque)->deadline ? 1 : 0;
         }
@@ -146,7 +147,7 @@ namespace rct3::scripting
             for (;;)
             {
                 JSContext* job_context = nullptr;
-                const int ran = JS_ExecutePendingJob(runtime, &job_context);
+                const std::int32_t ran = JS_ExecutePendingJob(runtime, &job_context);
                 if (ran == 0)
                     break;
                 if (ran < 0)

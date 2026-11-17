@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <numbers>
 
@@ -70,7 +71,7 @@ TEST_CASE("pool waves: the machines run for their time out of every period, and 
     const std::vector<PoolWave> waves = machine_waves(map, { }, grid());
     const auto largest = [&](glm::vec2 at, float from) {
         float most = 0;
-        for (int i = 0; i < 100; ++i)
+        for (std::int32_t i = 0; i < 100; ++i)
             most = std::max(most, std::abs(pool_wave_height(waves, at, from + static_cast<float>(i) * 0.05f)));
         return most;
     };
@@ -89,7 +90,7 @@ TEST_CASE("pool waves: a wave machine's front is its own square wide, widens a l
     std::vector<PoolWave> waves = machine_waves(map, { }, grid());
     const auto largest = [&](glm::vec2 at) {
         float most = 0;
-        for (int i = 0; i < 200; ++i)
+        for (std::int32_t i = 0; i < 200; ++i)
             most = std::max(most, std::abs(pool_wave_height(waves, at, 6 + static_cast<float>(i) * 0.05f)));
         return most;
     };
@@ -135,7 +136,7 @@ TEST_CASE("pool waves: a circle drawn round makes a whirlpool turning the way it
 {
     const PoolMap map = ringed();
     std::vector<glm::vec2> way;
-    for (int i = 0; i <= 24; ++i)
+    for (std::int32_t i = 0; i <= 24; ++i)
     {
         const float a = static_cast<float>(i) * std::numbers::pi_v<float> / 8; // One and a half turns
         way.push_back(glm::vec2 { 14, 12 } + 2.0f * glm::vec2 { std::cos(a), std::sin(a) });
@@ -170,10 +171,10 @@ TEST_CASE("pool waves: the surface they lift dies down at a wall and stays under
 {
     const save::model::TerrainGrid g = grid();
     // Water on the right and below only: walls on the left and above, and the corner square up and to the left.
-    const auto water = [](int dc, int dr) { return dc >= 0 && dr >= 0; };
+    const auto water = [](std::int32_t dc, std::int32_t dr) { return dc >= 0 && dr >= 0; };
     CHECK(pool_wall_room(g, { 0, 2 }, water) == 0);
     CHECK(pool_wall_room(g, { 1, 3 }, water) == doctest::Approx(1));
-    CHECK(pool_wall_room(g, { 2, 2 }, [](int, int) { return true; }) == 4); // Water all round: a square at most
+    CHECK(pool_wall_room(g, { 2, 2 }, [](std::int32_t, std::int32_t) { return true; }) == 4); // Water all round: a square at most
     CHECK(pool_wave_lift(1, 0) == 0);
     CHECK(pool_wave_lift(1, 0.1f) <= kPoolWaveLook.rim_room + kPoolWaveLook.rim_rise * 0.1f);
     CHECK(pool_wave_lift(0.1f, 4) == doctest::Approx(0.1f));

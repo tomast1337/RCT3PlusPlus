@@ -22,6 +22,7 @@
 #include <array>
 #include <bit>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <optional>
 #include <span>
@@ -357,9 +358,9 @@ namespace rct3::simulation::staff
             {
                 rounds->gap = kTuning.inspector.gap;
                 std::erase_if(rounds->seen, [&](const auto& seen) { return !r.valid(seen.what) || now - seen.when.value >= kTuning.inspector.again.value; });
-                constexpr int kTasks = 8;
+                constexpr std::int32_t kTasks = 8;
                 std::int32_t task = 0;
-                for (int k = 0; k < kTasks && task == 0; ++k)
+                for (std::int32_t k = 0; k < kTasks && task == 0; ++k)
                     if (const std::int32_t bit = 1 << ((rounds->task + k) % kTasks); (staff.tasks & bit) != 0)
                         task = bit;
                 if (task != 0)

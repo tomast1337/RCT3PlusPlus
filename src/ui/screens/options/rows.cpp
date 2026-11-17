@@ -2,6 +2,7 @@
 #include "ui/screens/options/rows.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <utility>
 
@@ -112,9 +113,9 @@ namespace rct3::ui::screens::options
         const config::game::GameOptionInfo& info = config::game::game_option_info(option);
         name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip, info.name);
         auto& s = page_.add<widgets::Spinner>(control_name(info.name, "number"), style_.spinner);
-        s.minimum = static_cast<int>(info.minimum);
-        s.maximum = static_cast<int>(info.maximum);
-        s.step = std::max(1, static_cast<int>(info.step));
+        s.minimum = static_cast<std::int32_t>(info.minimum);
+        s.maximum = static_cast<std::int32_t>(info.maximum);
+        s.step = std::max(1, static_cast<std::int32_t>(info.step));
         s.tooltip = std::move(tip);
         row.parts.push_back({ &s, style_.control_x, style_.number_width, 0 });
         bind(row, { option, Kind::Number, &s });
@@ -151,7 +152,7 @@ namespace rct3::ui::screens::options
         return name_label(row, std::move(value), style_.control_x, width_ - style_.control_x, std::move(tip));
     }
 
-    widgets::Label& OptionRows::note(std::u16string text, int lines)
+    widgets::Label& OptionRows::note(std::u16string text, std::int32_t lines)
     {
         Row& row = add_row();
         row.height = static_cast<float>(std::max(1, lines)) * style_.row_height;
@@ -235,7 +236,7 @@ namespace rct3::ui::screens::options
                 static_cast<widgets::Slider*>(b.control)->set_value(value);
                 break;
             case Kind::Number:
-                static_cast<widgets::Spinner*>(b.control)->set_value(static_cast<int>(std::lround(value)));
+                static_cast<widgets::Spinner*>(b.control)->set_value(static_cast<std::int32_t>(std::lround(value)));
                 break;
         }
     }

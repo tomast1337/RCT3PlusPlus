@@ -71,7 +71,7 @@ namespace rct3::simulation
     [[nodiscard]] DayWindow day_window(DayMode mode, DayWindow park_hours);
 
     /// The transition for the option's value; values out of range give the nearest.
-    [[nodiscard]] DayTransition day_transition(int option);
+    [[nodiscard]] DayTransition day_transition(std::int32_t option);
 
     /// True when `time` lies in the window, its opening included and its closing not.
     [[nodiscard]] bool in_window(DayWindow window, float time);

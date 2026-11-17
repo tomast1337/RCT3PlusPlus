@@ -8,6 +8,7 @@
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -60,7 +61,7 @@ TEST_CASE("a broken stall sells nothing")
     const auto stall = park.shop("Food", Product::Food, { 4, 0 }, 100);
     r.emplace<Upkeep>(stall, Upkeep { .inspect_every = std::nullopt, .break_in = rct3::units::Seconds { 1 } });
     park.run_seconds(2);
-    for (int i = 0; i < 4; ++i)
+    for (std::int32_t i = 0; i < 4; ++i)
         park.guest({ i, 0 }, { .hunger = 0.95f });
     park.run_seconds(120);
     CHECK(r.get<Attraction>(stall).customers == 0);
@@ -68,7 +69,7 @@ TEST_CASE("a broken stall sells nothing")
 
 TEST_CASE("guards slow how fast stalls wear, the more for their training")
 {
-    for (const int guards : { 0, 1 })
+    for (const std::int32_t guards : { 0, 1 })
     {
         CAPTURE(guards);
         Sandbox park;
@@ -130,13 +131,13 @@ TEST_CASE("a mechanic keeps to their patrol, and when every patrol leaves a brok
 
 TEST_CASE("an inspector tells of many attractions broken down at once")
 {
-    for (const int broken : { 1, 2 })
+    for (const std::int32_t broken : { 1, 2 })
     {
         CAPTURE(broken);
         Sandbox park;
         park.path({ 0, 0 }, { 6, 0 });
         auto& r = park.world().registry;
-        for (int i = 0; i < 3; ++i)
+        for (std::int32_t i = 0; i < 3; ++i)
         {
             const auto ride = park.flat_ride("Twister", { 2 + 2 * i, 0 }, 0);
             r.emplace<Upkeep>(ride, Upkeep { .broken = i < broken, .inspect_every = std::nullopt });

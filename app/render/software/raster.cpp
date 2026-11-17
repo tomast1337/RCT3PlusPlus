@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <limits>
 
@@ -13,8 +14,8 @@ namespace rct3::render::software
     namespace
     {
 
-        constexpr int kTileSize = 64; ///< Pixels along a tile's side
-        constexpr int kBlock = 8;     ///< Pixels a side of the blocks a triangle's box is tested in
+        constexpr std::int32_t kTileSize = 64; ///< Pixels along a tile's side
+        constexpr std::int32_t kBlock = 8;     ///< Pixels a side of the blocks a triangle's box is tested in
         /// Clip space is cut this many times the screen's half width out from its middle, so far corners keep
         /// enough of a float's precision.
         constexpr float kGuardBand = 4.0f;
@@ -63,7 +64,7 @@ namespace rct3::render::software
         using Corner = std::array<float, kMaxStride>;
 
         // How far `c` is inside plane `p` (0 to 5: near, far, left, right, top, bottom); negative outside.
-        float inside(const float* c, int p)
+        float inside(const float* c, std::int32_t p)
         {
             const float x = c[0];
             const float y = c[1];
@@ -90,7 +91,7 @@ namespace rct3::render::software
         std::size_t clip(std::array<Corner, kMaxCorners>& corners, std::size_t count, std::size_t stride)
         {
             std::array<Corner, kMaxCorners> out;
-            for (int p = 0; p < 6 && count >= 3; ++p)
+            for (std::int32_t p = 0; p < 6 && count >= 3; ++p)
             {
                 std::size_t kept = 0;
                 for (std::size_t i = 0; i < count; ++i)
@@ -140,10 +141,10 @@ namespace rct3::render::software
                 area = -area;
             }
             const ScreenView& s = draw.scissor;
-            const int x0 = std::max(static_cast<int>(s.x), static_cast<int>(std::ceil(std::min({ a.x, b.x, c.x }) - 0.5f)));
-            const int y0 = std::max(static_cast<int>(s.y), static_cast<int>(std::ceil(std::min({ a.y, b.y, c.y }) - 0.5f)));
-            const int x1 = std::min(static_cast<int>(s.x + s.size.width), static_cast<int>(std::floor(std::max({ a.x, b.x, c.x }) - 0.5f)) + 1);
-            const int y1 = std::min(static_cast<int>(s.y + s.size.height), static_cast<int>(std::floor(std::max({ a.y, b.y, c.y }) - 0.5f)) + 1);
+            const std::int32_t x0 = std::max(static_cast<std::int32_t>(s.x), static_cast<std::int32_t>(std::ceil(std::min({ a.x, b.x, c.x }) - 0.5f)));
+            const std::int32_t y0 = std::max(static_cast<std::int32_t>(s.y), static_cast<std::int32_t>(std::ceil(std::min({ a.y, b.y, c.y }) - 0.5f)));
+            const std::int32_t x1 = std::min(static_cast<std::int32_t>(s.x + s.size.width), static_cast<std::int32_t>(std::floor(std::max({ a.x, b.x, c.x }) - 0.5f)) + 1);
+            const std::int32_t y1 = std::min(static_cast<std::int32_t>(s.y + s.size.height), static_cast<std::int32_t>(std::floor(std::max({ a.y, b.y, c.y }) - 0.5f)) + 1);
             if (x0 >= x1 || y0 >= y1)
                 return false;
 
@@ -194,13 +195,13 @@ namespace rct3::render::software
             return src;
         }
 
-        void draw_tile(const Batch& batch, Texture& target, int tile)
+        void draw_tile(const Batch& batch, Texture& target, std::int32_t tile)
         {
-            const int across = (static_cast<int>(target.extent.width) + kTileSize - 1) / kTileSize;
-            const int tx0 = (tile % across) * kTileSize;
-            const int ty0 = (tile / across) * kTileSize;
-            const int tx1 = std::min(tx0 + kTileSize, static_cast<int>(target.extent.width));
-            const int ty1 = std::min(ty0 + kTileSize, static_cast<int>(target.extent.height));
+            const std::int32_t across = (static_cast<std::int32_t>(target.extent.width) + kTileSize - 1) / kTileSize;
+            const std::int32_t tx0 = (tile % across) * kTileSize;
+            const std::int32_t ty0 = (tile / across) * kTileSize;
+            const std::int32_t tx1 = std::min(tx0 + kTileSize, static_cast<std::int32_t>(target.extent.width));
+            const std::int32_t ty1 = std::min(ty0 + kTileSize, static_cast<std::int32_t>(target.extent.height));
             const bool has_depth = !target.depth.empty();
             std::array<float, kMaxVaryings> varyings;
             for (const std::uint32_t index : batch.tiles[static_cast<std::size_t>(tile)])
@@ -210,26 +211,26 @@ namespace rct3::render::software
                 const std::size_t n = d.program.varyings;
                 const float* planes = batch.planes.data() + t.planes;
                 const float* w = planes + n * 3;
-                const int x0 = std::max(t.x0, tx0);
-                const int x1 = std::min(t.x1, tx1);
-                const int y0 = std::max(t.y0, ty0);
-                const int y1 = std::min(t.y1, ty1);
+                const std::int32_t x0 = std::max(t.x0, tx0);
+                const std::int32_t x1 = std::min(t.x1, tx1);
+                const std::int32_t y0 = std::max(t.y0, ty0);
+                const std::int32_t y1 = std::min(t.y1, ty1);
                 // Blocks of pixels wholly outside an edge are skipped: an edge's value is lowest at a corner.
-                const auto edge_at = [&](std::size_t e, int x, int y) { return t.edges[e].x * (static_cast<float>(x) + 0.5f - t.origin.x) + t.edges[e].y * (static_cast<float>(y) + 0.5f - t.origin.y) + t.edges[e].z; };
-                for (int by = y0; by < y1; by += kBlock)
-                    for (int bx = x0; bx < x1; bx += kBlock)
+                const auto edge_at = [&](std::size_t e, std::int32_t x, std::int32_t y) { return t.edges[e].x * (static_cast<float>(x) + 0.5f - t.origin.x) + t.edges[e].y * (static_cast<float>(y) + 0.5f - t.origin.y) + t.edges[e].z; };
+                for (std::int32_t by = y0; by < y1; by += kBlock)
+                    for (std::int32_t bx = x0; bx < x1; bx += kBlock)
                     {
-                        const int bx1 = std::min(bx + kBlock, x1);
-                        const int by1 = std::min(by + kBlock, y1);
+                        const std::int32_t bx1 = std::min(bx + kBlock, x1);
+                        const std::int32_t by1 = std::min(by + kBlock, y1);
                         bool outside = false;
                         for (std::size_t e = 0; e < 3 && !outside; ++e)
                             outside = std::max({ edge_at(e, bx, by), edge_at(e, bx1 - 1, by), edge_at(e, bx, by1 - 1), edge_at(e, bx1 - 1, by1 - 1) }) < 0.0f;
                         if (outside)
                             continue;
-                        for (int y = by; y < by1; ++y)
+                        for (std::int32_t y = by; y < by1; ++y)
                         {
                             const float py = static_cast<float>(y) + 0.5f - t.origin.y;
-                            for (int x = bx; x < bx1; ++x)
+                            for (std::int32_t x = bx; x < bx1; ++x)
                             {
                                 const float px = static_cast<float>(x) + 0.5f - t.origin.x;
                                 bool in = true;
@@ -409,7 +410,7 @@ namespace rct3::render::software
                 }
             }
             bool all_inside = true;
-            for (int p = 0; p < 6 && all_inside; ++p)
+            for (std::int32_t p = 0; p < 6 && all_inside; ++p)
                 for (const float* c : v)
                     all_inside = all_inside && inside(c, p) >= 0.0f;
             if (all_inside)
@@ -431,8 +432,8 @@ namespace rct3::render::software
 
     void draw_batch(Batch& batch, Texture& target, WorkerPool& pool)
     {
-        const int across = (static_cast<int>(target.extent.width) + kTileSize - 1) / kTileSize;
-        const int down = (static_cast<int>(target.extent.height) + kTileSize - 1) / kTileSize;
+        const std::int32_t across = (static_cast<std::int32_t>(target.extent.width) + kTileSize - 1) / kTileSize;
+        const std::int32_t down = (static_cast<std::int32_t>(target.extent.height) + kTileSize - 1) / kTileSize;
         const auto tiles = static_cast<std::size_t>(across * down);
         if (batch.tiles.size() < tiles)
             batch.tiles.resize(tiles);
@@ -441,11 +442,11 @@ namespace rct3::render::software
         for (std::uint32_t i = 0; i < batch.triangles.size(); ++i)
         {
             const Batch::Triangle& t = batch.triangles[i];
-            for (int ty = t.y0 / kTileSize; ty <= (t.y1 - 1) / kTileSize && ty < down; ++ty)
-                for (int tx = t.x0 / kTileSize; tx <= (t.x1 - 1) / kTileSize && tx < across; ++tx)
+            for (std::int32_t ty = t.y0 / kTileSize; ty <= (t.y1 - 1) / kTileSize && ty < down; ++ty)
+                for (std::int32_t tx = t.x0 / kTileSize; tx <= (t.x1 - 1) / kTileSize && tx < across; ++tx)
                     batch.tiles[static_cast<std::size_t>(ty * across + tx)].push_back(i);
         }
-        pool.run(static_cast<std::uint32_t>(tiles), [&](std::uint32_t tile) { draw_tile(batch, target, static_cast<int>(tile)); });
+        pool.run(static_cast<std::uint32_t>(tiles), [&](std::uint32_t tile) { draw_tile(batch, target, static_cast<std::int32_t>(tile)); });
         batch.clear();
     }
 

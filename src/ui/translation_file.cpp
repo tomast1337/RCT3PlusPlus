@@ -6,6 +6,7 @@
 #include "strings/unicode.hpp"
 #include "ui/language.hpp"
 
+#include <cstdint>
 #include <format>
 
 namespace rct3::ui
@@ -14,7 +15,7 @@ namespace rct3::ui
     namespace
     {
 
-        std::expected<void, std::string> add_group(StringTable& table, const config::Json& group, const std::string& prefix, int depth)
+        std::expected<void, std::string> add_group(StringTable& table, const config::Json& group, const std::string& prefix, std::int32_t depth)
         {
             if (depth > kMaxTranslationDepth)
                 return std::unexpected(std::format("{}: groups nested too deep", prefix));

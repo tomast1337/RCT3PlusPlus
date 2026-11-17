@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -47,7 +48,7 @@ TEST_CASE("a refused spend tells the player, once in a while however often it is
     save::model::Finance money;
     std::optional<std::int64_t> kept;
     const auto told = [&] { return std::ranges::count(park.messages.list, kCannotPayKey, &ParkMessage::text_key); };
-    for (int i = 0; i < 10; ++i)
+    for (std::int32_t i = 0; i < 10; ++i)
         CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, Charge::IfAffordable));
     CHECK(told() == 1);
     age(park.messages, kCannotPayGap.value / 2);

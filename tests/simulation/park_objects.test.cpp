@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <utility>
 #include <vector>
@@ -123,11 +124,11 @@ TEST_CASE("tired guests sit on the benches they pass, as many as there are seats
     park.path({ 0, 0 }, { 1, 0 });
     park.item(PathItemKind::Bench, { 0, 0 });
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 6; ++i)
+    for (std::int32_t i = 0; i < 6; ++i)
         guests.push_back(park.guest({ 1, 0 }, { .energy = 0.1f }));
     auto& r = park.world().registry;
     std::size_t most = 0;
-    for (int t = 0; t < 400; ++t)
+    for (std::int32_t t = 0; t < 400; ++t)
     {
         park.run(1);
         most = std::max<std::size_t>(most, r.view<Linger>().size());
@@ -162,10 +163,10 @@ TEST_CASE("guests seldom stop at an effect or animatronic, far less than at a vi
         Sandbox park;
         park.path({ 0, 0 }, { 1, 0 });
         park.item(kind, { 0, 0 });
-        for (int i = 0; i < 10; ++i)
+        for (std::int32_t i = 0; i < 10; ++i)
             park.guest({ 1, 0 });
         auto& r = park.world().registry;
-        for (int t = 0; t < 2000; ++t)
+        for (std::int32_t t = 0; t < 2000; ++t)
         {
             park.run(1);
             stopped[kind == PathItemKind::PhotoSpot] += r.view<Linger>().size();
@@ -182,7 +183,7 @@ TEST_CASE("guests think the scenery round them great, or else the paths tidy")
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
         std::vector<rct3::save::model::PlacedObject> trees;
-        for (int i = 0; i < 30; ++i)
+        for (std::int32_t i = 0; i < 30; ++i)
             trees.push_back({ .id = static_cast<std::uint64_t>(i + 1), .col = i % 4, .row = 1 });
         import_scenery(park.world(), trees, [&](const rct3::save::model::PlacedObject&) { return planted ? 1.0f : 0.0f; });
         const auto g = park.guest({ 0, 0 });
@@ -272,12 +273,12 @@ TEST_CASE("guests passing jumping fountains turn to look, and some like them, wi
     park.path({ 0, 0 }, { 1, 0 });
     park.item(PathItemKind::Fountain, { 0, 0 });
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 6; ++i)
+    for (std::int32_t i = 0; i < 6; ++i)
         guests.push_back(park.guest({ 1, 0 }));
     auto& r = park.world().registry;
     bool glanced = false;
     bool walked_on = false; // A glancer still going, from one tick to the next
-    for (int t = 0; t < 600; ++t)
+    for (std::int32_t t = 0; t < 600; ++t)
     {
         std::vector<glm::vec3> was;
         for (const entt::entity g : guests)
@@ -304,12 +305,12 @@ TEST_CASE("a guest passing a free water cannon may fire it a while, one at a tim
     Sandbox park;
     park.path({ 0, 0 }, { 1, 0 });
     park.item(PathItemKind::WaterCannon, { 0, 0 });
-    for (int i = 0; i < 8; ++i)
+    for (std::int32_t i = 0; i < 8; ++i)
         park.guest({ 1, 0 });
     auto& r = park.world().registry;
     std::size_t most = 0;
     entt::entity firing = entt::null;
-    for (int t = 0; t < 3000; ++t)
+    for (std::int32_t t = 0; t < 3000; ++t)
     {
         park.run(1);
         std::size_t now = 0;
@@ -398,7 +399,7 @@ TEST_CASE("a party stops together at a view and likes it with scenery round it, 
         park.path({ 0, 0 }, { 1, 0 });
         park.item(PathItemKind::PhotoSpot, { 0, 0 });
         std::vector<rct3::save::model::PlacedObject> trees;
-        for (int i = 0; i < 30; ++i)
+        for (std::int32_t i = 0; i < 30; ++i)
             trees.push_back({ .id = static_cast<std::uint64_t>(i + 1), .col = i % 2, .row = 1 });
         import_scenery(park.world(), trees, [&](const rct3::save::model::PlacedObject&) { return planted ? 1.0f : 0.0f; });
         const auto leader = park.guest({ 1, 0 });
@@ -446,7 +447,7 @@ TEST_CASE("with enough stamps a guest is given the park's passport gift, paid fo
         Sandbox park;
         park.path({ 0, 0 }, { 1, 0 });
         auto& r = park.world().registry;
-        for (const int col : { 0, 1 })
+        for (const std::int32_t col : { 0, 1 })
             r.get<PathItem>(park.item(PathItemKind::PassportPost, { col, 0 })).object = static_cast<std::uint64_t>(col + 1);
         r.ctx().emplace<PassportRules>(PassportRules { .stamps_for_gift = 2, .gift_cost = { 150 }, .park_cash = units::Money { cash } });
         const auto g = park.guest({ 1, 0 }, { .happiness = 0.5f });

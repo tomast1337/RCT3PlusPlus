@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/choice.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -12,7 +13,7 @@ namespace
     constexpr std::uint8_t kChain = toggle_bit(PieceToggle::Chain);
     constexpr std::uint8_t kEnclosed = toggle_bit(PieceToggle::Enclosed);
 
-    PieceShape piece(PieceEnd exit, int curve = 0, PieceUse use = PieceUse::Plain, std::uint8_t toggles = 0)
+    PieceShape piece(PieceEnd exit, std::int32_t curve = 0, PieceUse use = PieceUse::Plain, std::uint8_t toggles = 0)
     {
         PieceShape s;
         s.exit = exit;
@@ -38,7 +39,7 @@ namespace
         };
     }
 
-    TrackChoice picks(int curve, int slope = 0, int bank = 0, std::uint8_t toggles = 0)
+    TrackChoice picks(std::int32_t curve, std::int32_t slope = 0, std::int32_t bank = 0, std::uint8_t toggles = 0)
     {
         TrackChoice c;
         c.curve = curve;

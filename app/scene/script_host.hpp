@@ -97,6 +97,7 @@
 #include "ui/keyboard.hpp"
 #include "ui/widget.hpp"
 
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -146,7 +147,7 @@ namespace rct3::scene
         [[nodiscard]] std::optional<Pointer> pointer(const render::Device& device) const;
         struct CareerRequest
         {
-            int game = 0;
+            std::int32_t game = 0;
             std::size_t scenario = 0; ///< Its place in the game's list
         };
         /// The career scenario the script asked to start, once.
@@ -174,7 +175,7 @@ namespace rct3::scene
         /// screenshots folder.
         [[nodiscard]] std::optional<std::filesystem::path> take_screenshot();
         /// The exit code once the script asked to quit, finished or failed.
-        [[nodiscard]] std::optional<int> quit() const
+        [[nodiscard]] std::optional<std::int32_t> quit() const
         {
             return quit_;
         }
@@ -201,10 +202,10 @@ namespace rct3::scene
         std::optional<std::filesystem::path> report_;
         std::ofstream report_log_;
         std::vector<std::string> args_; ///< The script's own, from the command line
-        int shots_ = 0;
+        std::int32_t shots_ = 0;
         std::optional<ParkRequest> open_;
         std::optional<CareerRequest> career_;
-        std::optional<int> quit_;
+        std::optional<std::int32_t> quit_;
         float advance_ = 0;
         render::Device* device_ = nullptr; ///< While a tick runs
         park::ParkScene* park_ = nullptr;

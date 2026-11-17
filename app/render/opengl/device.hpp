@@ -142,7 +142,7 @@ namespace rct3::render::opengl
         [[nodiscard]] std::expected<Texture, std::string> make_texture(const TextureDesc& desc);
         void destroy(const Texture& texture);
         [[nodiscard]] std::uint32_t make_transient_block(std::size_t size);
-        [[nodiscard]] std::expected<GLuint, std::string> compile_program(const char* vertex, const char* fragment, int mode);
+        [[nodiscard]] std::expected<GLuint, std::string> compile_program(const char* vertex, const char* fragment, std::int32_t mode);
         [[nodiscard]] std::expected<GLuint, std::string> program(Shader shader);
 
         Functions gl;

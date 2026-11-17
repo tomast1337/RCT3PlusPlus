@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <format>
 #include <map>
 #include <string_view>
@@ -25,7 +26,7 @@ namespace rct3::ui::screens::build
         constexpr std::u16string_view kNumber = u"%NUMBER%";
         /// The badge of items that came with an expansion, by the expansion's number less one.
         constexpr std::string_view kBadgePrefix = "ObjectSelectionWindow_AOPBadge_";
-        constexpr int kBadges = 2;
+        constexpr std::int32_t kBadges = 2;
 
         /// What each way of sitting on the grid is called, from 1; the rest give their footprint.
         constexpr std::array<std::string_view, 8> kPlacements = {
@@ -340,7 +341,7 @@ namespace rct3::ui::screens::build
                     row.size = placement_text(item, strings);
                     break;
                 case park::BuildKind::EnclosureFence:
-                    row.rank = static_cast<int>(item.strength * kStrengthRank);
+                    row.rank = static_cast<std::int32_t>(item.strength * kStrengthRank);
                     break;
                 case park::BuildKind::AnimalToy:
                     break;
@@ -372,14 +373,14 @@ namespace rct3::ui::screens::build
             // Enclosure items sit under the heading of their part, in the parts' order.
             std::string group_icon = item.group_icon;
             std::string group_text = item.group_text;
-            int heading_rank = 0;
+            std::int32_t heading_rank = 0;
             for (std::size_t p = 0; p < kEnclosureParts.size(); ++p)
             {
                 if (kEnclosureParts[p].part == item.part)
                 {
                     group_icon = kEnclosureParts[p].icon;
                     group_text = kEnclosureParts[p].text;
-                    heading_rank = static_cast<int>(p);
+                    heading_rank = static_cast<std::int32_t>(p);
                 }
             }
             if (group_icon.empty() && group_text.empty())

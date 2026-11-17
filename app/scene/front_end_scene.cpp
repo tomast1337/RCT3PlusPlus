@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <string_view>
 #include <utility>
 
@@ -158,7 +159,7 @@ namespace rct3::scene
                     logging::logger("ui").warning("front screen: the blank landscape is missing from the game's folder");
             }
             else
-                logging::logger("ui").info("front screen: choice {} (pack {}) does nothing yet", static_cast<int>(request->action), request->pack);
+                logging::logger("ui").info("front screen: choice {} (pack {}) does nothing yet", static_cast<std::int32_t>(request->action), request->pack);
         }
         return over;
     }

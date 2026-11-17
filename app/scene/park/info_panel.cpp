@@ -24,6 +24,7 @@
 #include "ui/game_style.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <utility>
 
@@ -113,7 +114,7 @@ namespace rct3::scene::park
             // Their passport as the simulation keeps it, the stamps in the inks their posts print in (0xAARRGGBB).
             if (const ShownPerson& p = scene.shown_people[shown]; !p.staff)
             {
-                const auto byte = [](std::int32_t c, unsigned shift) { return static_cast<std::uint8_t>(static_cast<std::uint32_t>(c) >> shift); };
+                const auto byte = [](std::int32_t c, std::uint32_t shift) { return static_cast<std::uint8_t>(static_cast<std::uint32_t>(c) >> shift); };
                 if (const auto* passport = p.guest != entt::null && r.valid(p.guest) ? r.try_get<simulation::Passport>(p.guest) : nullptr)
                 {
                     f.passport.gift = passport->gift;
@@ -318,11 +319,11 @@ namespace rct3::scene::park
                 return i.object == o.id && i.kind == simulation::PathItemKind::PassportPost;
             }))
         {
-            f.passport = ui::screens::info::PassportFacts { .stamps_for_gift = static_cast<int>(rules->stamps_for_gift), .most_stamps = static_cast<int>(simulation::kTuning.surroundings.most_stamps) };
+            f.passport = ui::screens::info::PassportFacts { .stamps_for_gift = static_cast<std::int32_t>(rules->stamps_for_gift), .most_stamps = static_cast<std::int32_t>(simulation::kTuning.surroundings.most_stamps) };
             for (const rct3::park::CarriedKind* gift : simulation::passport_gifts(scene.carried))
             {
                 if (gift->symbol == rules->gift)
-                    f.passport->gift = static_cast<int>(f.passport->gifts.size());
+                    f.passport->gift = static_cast<std::int32_t>(f.passport->gifts.size());
                 f.passport->gifts.push_back(gift->name_text);
             }
         }
@@ -351,7 +352,7 @@ namespace rct3::scene::park
                 f.pool->reliability = upkeep->reliability.value;
                 f.pool->since_inspection = upkeep->since_inspection;
                 if (const auto interval = std::ranges::find(simulation::kInspectionSeconds, upkeep->inspect_every); interval != simulation::kInspectionSeconds.end())
-                    f.pool->inspection = static_cast<int>(interval - simulation::kInspectionSeconds.begin());
+                    f.pool->inspection = static_cast<std::int32_t>(interval - simulation::kInspectionSeconds.begin());
             }
             for (const auto [g, thoughts] : r.view<const simulation::Thoughts>().each())
                 for (const simulation::Thought& t : thoughts.recent)

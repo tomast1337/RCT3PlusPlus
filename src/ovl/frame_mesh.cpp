@@ -2,6 +2,7 @@
 #include "ovl/frame_mesh.hpp"
 
 #include <bit>
+#include <cstdint>
 #include <cstring>
 
 namespace rct3::ovl
@@ -162,7 +163,7 @@ namespace rct3::ovl
         {
             std::array<float, 3> normal { };
             for (std::size_t c = 0; c < 3; ++c)
-                normal[c] = (static_cast<float>(std::to_integer<int>(data[normals + std::size_t { i } * 3 + c])) - 127.5f) / 127.5f;
+                normal[c] = (static_cast<float>(std::to_integer<std::int32_t>(data[normals + std::size_t { i } * 3 + c])) - 127.5f) / 127.5f;
             out.normals.push_back(normal);
         }
         return out;

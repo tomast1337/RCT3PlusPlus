@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <utility>
 
 namespace rct3::ui::widgets
@@ -93,7 +94,7 @@ namespace rct3::ui::widgets
     {
         const Rect r = rect();
         context.list.fill(r, background);
-        for (int i = 1; i < rules; ++i)
+        for (std::int32_t i = 1; i < rules; ++i)
         {
             const float y = std::round(r.y0 + r.height() * static_cast<float>(i) / static_cast<float>(rules));
             context.list.fill({ r.x0, y, r.x1, y + 1 }, rule_colour);

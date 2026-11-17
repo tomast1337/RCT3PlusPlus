@@ -8,6 +8,7 @@
 #include "park/support/columns.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <utility>
 
 namespace rct3::park::path
@@ -15,7 +16,7 @@ namespace rct3::park::path
 
     namespace
     {
-        std::uint32_t key_of(int col, int row)
+        std::uint32_t key_of(std::int32_t col, std::int32_t row)
         {
             return static_cast<std::uint32_t>(row) << 16 | static_cast<std::uint16_t>(col);
         }
@@ -90,8 +91,8 @@ namespace rct3::park::path
                         if ((m.supports->squares[i].cells & (1U << c)) == 0)
                             continue;
                         const glm::vec2 at = support::spot_in_tiles(o, *m.supports, { { lx, lz }, { c % 3, c / 3 } }, support::SpotFit::MiddleOfThird);
-                        const int x = std::clamp(static_cast<int>((at.x - std::floor(at.x)) * 3), 0, 2);
-                        const int z = std::clamp(static_cast<int>((at.y - std::floor(at.y)) * 3), 0, 2);
+                        const std::int32_t x = std::clamp(static_cast<std::int32_t>((at.x - std::floor(at.x)) * 3), 0, 2);
+                        const std::int32_t z = std::clamp(static_cast<std::int32_t>((at.y - std::floor(at.y)) * 3), 0, 2);
                         thirds |= static_cast<std::uint16_t>(1U << (3 * z + x));
                     }
                 }

@@ -106,9 +106,9 @@ namespace rct3::simulation
         units::Share tiredness { };
         units::Share loneliness { };
         units::Share health { 1 };
-        units::Seconds dung_in { }; ///< Till it next leaves dung
-        int empty_troughs = 0;      ///< Times in a row it went hungry to its house and found the food trough empty
-        bool escaped = false;       ///< Out of every enclosure
+        units::Seconds dung_in { };     ///< Till it next leaves dung
+        std::int32_t empty_troughs = 0; ///< Times in a row it went hungry to its house and found the food trough empty
+        bool escaped = false;           ///< Out of every enclosure
     };
 
     /// Dung an animal left in its enclosure.
@@ -133,17 +133,17 @@ namespace rct3::simulation
         units::Seconds sleeping { 20 };   ///< Beside them
         units::Share meal { 0.1f };       ///< Of a trough an animal empties as it eats or drinks
         units::Seconds dung { 120 };      ///< Between one dung and the next
-        int dung_limit = 3;               ///< Dung in an enclosure for each animal in it, beyond which it wears their health down
+        std::int32_t dung_limit = 3;      ///< Dung in an enclosure for each animal in it, beyond which it wears their health down
         units::Seconds sickening { 300 }; ///< From well to dead, starving, parched or among too much dung
         units::Seconds mending { 600 };   ///< From dying to well again, while nothing ails it
         units::Seconds feeding { 300 };   ///< Between the keeper's rounds filling the troughs
         units::Share refill { 0.3f };     ///< Either trough this low calls the keeper at once
         units::Seconds filling { 5 };     ///< The keeper at the troughs
         units::Seconds clearing { 3 };    ///< The keeper at a dung
-        int stroll_tries = 8;             ///< Spots picked for a stroll before giving up till later
+        std::int32_t stroll_tries = 8;    ///< Spots picked for a stroll before giving up till later
         units::Distance roam { 4 };       ///< Farthest an escaped animal wanders at a time
         units::Seconds catching { 4 };    ///< The keeper shutting an escaped animal in its crate
-        int empty_tries = 3;              ///< Times in a row an animal finds its food trough empty before the inspector tells
+        std::int32_t empty_tries = 3;     ///< Times in a row an animal finds its food trough empty before the inspector tells
     };
 
     inline constexpr AnimalRates kAnimalRates { };

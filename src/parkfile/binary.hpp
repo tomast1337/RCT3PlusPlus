@@ -341,7 +341,7 @@ namespace rct3::parkfile::detail
         std::uint64_t hash = 0xcbf29ce484222325;
         for (const char c : text)
         {
-            hash ^= static_cast<unsigned char>(c);
+            hash ^= static_cast<std::uint8_t>(c);
             hash *= 0x100000001b3;
         }
         return hash;

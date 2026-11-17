@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <string>
 
 namespace rct3::park
@@ -57,9 +58,9 @@ namespace rct3::park
 
     } // namespace
 
-    PathSlope stepped_slope(PathSlope from, int steps) noexcept
+    PathSlope stepped_slope(PathSlope from, std::int32_t steps) noexcept
     {
-        const int at = std::clamp(static_cast<int>(from) + steps, 0, static_cast<int>(kPathSlopeCount) - 1);
+        const std::int32_t at = std::clamp(static_cast<std::int32_t>(from) + steps, 0, static_cast<std::int32_t>(kPathSlopeCount) - 1);
         return static_cast<PathSlope>(at);
     }
 
@@ -76,7 +77,7 @@ namespace rct3::park
         for (std::size_t corner = 0; corner < 4; ++corner)
         {
             GroundVertex& v = mesh.vertices.emplace_back();
-            v.position = { grid.world_x(piece.spot.col + static_cast<int>(corner % 2)), heights[corner], grid.world_z(piece.spot.row + static_cast<int>(corner / 2)) };
+            v.position = { grid.world_x(piece.spot.col + static_cast<std::int32_t>(corner % 2)), heights[corner], grid.world_z(piece.spot.row + static_cast<std::int32_t>(corner / 2)) };
             v.uv = { std::ranges::contains(right, corner) ? 1.0f : 0.0f, std::ranges::contains(front, corner) ? 1.0f : 0.0f };
             v.normal = { 0, 1, 0 };
         }

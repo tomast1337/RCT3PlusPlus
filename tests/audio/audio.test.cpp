@@ -8,6 +8,7 @@
 #include "ovl/sound.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <doctest/doctest.h>
 #include <limits>
@@ -458,7 +459,7 @@ TEST_CASE("stereo sources keep their channels and float buffers play")
 {
     AudioEngine e = make_engine();
     std::vector<float> s;
-    for (int i = 0; i < 64; ++i)
+    for (std::int32_t i = 0; i < 64; ++i)
     {
         s.push_back(0.5f);
         s.push_back(-0.25f);
@@ -529,7 +530,7 @@ TEST_CASE("a sound item read from an overlay plays through the mixer")
     using namespace rct3::test;
     // 64 mono 16-bit samples of the value 0x2000 (0.25) after the name "Tone:snd".
     std::vector<std::byte> strings = bytes_of_string(std::string("Tone:snd\0", 9));
-    for (int i = 0; i < 64; ++i)
+    for (std::int32_t i = 0; i < 64; ++i)
         append_u16(strings, 0x2000);
 
     std::vector<std::byte> info;
@@ -539,7 +540,7 @@ TEST_CASE("a sound item read from an overlay plays through the mixer")
     append_u32(info, kRate * 2);
     append_u16(info, 2);
     append_u16(info, 16);
-    for (int i = 0; i < 2 + 9 + 1; ++i)
+    for (std::int32_t i = 0; i < 2 + 9 + 1; ++i)
         append_u32(info, 0);
     append_u32(info, 9);   // data address
     append_u32(info, 128); // data size

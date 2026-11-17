@@ -2,6 +2,7 @@
 #include "profiling/profiler.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <stdexcept>
 #include <string>
@@ -37,7 +38,7 @@ namespace
 TEST_CASE("profiler: nested lambda sections build slash separated paths")
 {
     Fresh fresh;
-    const int value = prof::section("Render", [] { return prof::section("Entities", [] { return 42; }); });
+    const std::int32_t value = prof::section("Render", [] { return prof::section("Entities", [] { return 42; }); });
     CHECK(value == 42);
 
     const auto all = prof::stats();
@@ -77,7 +78,7 @@ TEST_CASE("profiler: unregistered thread and disabled profiler record nothing")
 TEST_CASE("profiler: record, history and percentiles")
 {
     Fresh fresh;
-    for (int i = 1; i <= 100; ++i)
+    for (std::int32_t i = 1; i <= 100; ++i)
     {
         prof::record("Frame", static_cast<double>(i));
         prof::capture_frame();

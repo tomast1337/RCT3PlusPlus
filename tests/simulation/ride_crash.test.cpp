@@ -7,6 +7,7 @@
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -105,7 +106,7 @@ TEST_CASE("a guest near a crash thinks it a disaster, and one beside a wreck blo
     CHECK_FALSE(r.get<Attraction>(ride).testing);
     // Right by a wreck till it blows up.
     Wreck& wreck = r.get<Wrecks>(ride).trains[0][0];
-    for (int i = 0; i < 200 && wreck.state == WreckState::Flying; ++i)
+    for (std::int32_t i = 0; i < 200 && wreck.state == WreckState::Flying; ++i)
     {
         wreck.at.x = r.get<Pose>(near).position.x;
         wreck.at.z = r.get<Pose>(near).position.z;
@@ -162,7 +163,7 @@ TEST_CASE("a ghost train's crash flies its wrecks but hurts no one, closes nothi
     CHECK_FALSE(thought(r, near, ThoughtKind::Disaster));
     // Right by a wreck as it blows up, and still standing.
     Wreck& wreck = r.get<Wrecks>(ride).trains[0][0];
-    for (int i = 0; i < 200 && wreck.state == WreckState::Flying; ++i)
+    for (std::int32_t i = 0; i < 200 && wreck.state == WreckState::Flying; ++i)
     {
         wreck.at.x = r.get<Pose>(near).position.x;
         wreck.at.z = r.get<Pose>(near).position.z;

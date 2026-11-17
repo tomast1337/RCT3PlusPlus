@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <numbers>
 
 namespace rct3::park
@@ -32,13 +33,13 @@ namespace rct3::park
         // Out of the tile, in columns and rows.
         const auto [out_col, out_row] = side.step();
         TerrainMesh mesh;
-        for (int corner = 0; corner < 4; ++corner)
+        for (std::int32_t corner = 0; corner < 4; ++corner)
         {
-            const int c = corner % 2;
-            const int r = corner / 2;
+            const std::int32_t c = corner % 2;
+            const std::int32_t r = corner / 2;
             // From the quad's middle, in half tiles: the outer edge is +1 along the way out.
-            const int along = (2 * c - 1) * out_col + (2 * r - 1) * out_row;
-            const int across = (2 * c - 1) * out_row - (2 * r - 1) * out_col;
+            const std::int32_t along = (2 * c - 1) * out_col + (2 * r - 1) * out_row;
+            const std::int32_t across = (2 * c - 1) * out_row - (2 * r - 1) * out_col;
             GroundVertex& v = mesh.vertices.emplace_back();
             v.position = { grid.world_x(col) + (static_cast<float>(c) + 0.5f * static_cast<float>(out_col)) * grid.tile_size_x, height, grid.world_z(row) + (static_cast<float>(r) + 0.5f * static_cast<float>(out_row)) * grid.tile_size_z };
             v.uv = { across > 0 ? 1.0f : 0.0f, along > 0 ? 1.0f : 0.0f };

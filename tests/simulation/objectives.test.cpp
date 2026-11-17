@@ -5,6 +5,7 @@
 #include "simulation/research.hpp"
 #include "simulation/tuning.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <utility>
 
@@ -251,7 +252,7 @@ TEST_CASE("the rating prize lifts the rating at once and each week's score while
     REQUIRE(bonus > 0);
     simulation::park::rate_week(park, { });
     CHECK(park.rating_bonus < bonus);
-    for (int week = 0; week < 100 && park.rating_bonus > 0; ++week)
+    for (std::int32_t week = 0; week < 100 && park.rating_bonus > 0; ++week)
         simulation::park::rate_week(park, { });
     CHECK(park.rating_bonus == 0);
 }

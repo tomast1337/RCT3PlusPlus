@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <ranges>
 
@@ -36,7 +37,7 @@ namespace
             auto& staff = park.world().registry.get<Staff>(star);
             staff.happiness.value = happiness;
             staff.laziness.value = laziness;
-            for (const int col : { 3, 3, 5, 5, 4, 4 })
+            for (const std::int32_t col : { 3, 3, 5, 5, 4, 4 })
                 guests.push_back(park.guest({ col, 0 }));
         }
 
@@ -95,7 +96,7 @@ TEST_CASE("an untrained entertainer's short shows draw parties to watch")
     r.get<Staff>(stage.star).training = 0;
     stage.park.party({ stage.guests[0], stage.guests[1], stage.guests[2] });
     stage.park.party({ stage.guests[3], stage.guests[4], stage.guests[5] });
-    for (int show = 0; show < 5; ++show)
+    for (std::int32_t show = 0; show < 5; ++show)
     {
         CAPTURE(show);
         REQUIRE(stage.park.run_until([&] { return stage.performing(); }, 120));
@@ -109,7 +110,7 @@ TEST_CASE("an untrained entertainer's short shows draw parties to watch")
 TEST_CASE("a better trained entertainer's show has more moves and fancier dances; a miserable or lazy one's is worse")
 {
     random::RandomState dice = random::seeded(random::Seed { 3 });
-    for (int i = 0; i < 20; ++i)
+    for (std::int32_t i = 0; i < 20; ++i)
     {
         const auto plain = show_moves(0, false, dice);
         CHECK(plain.size() == static_cast<std::size_t>(kTuning.shows.moves));
@@ -139,7 +140,7 @@ TEST_CASE("a better trained entertainer's show has more moves and fancier dances
 TEST_CASE("a poor show has a fall in it, getting up after, and ends dejected")
 {
     random::RandomState dice = random::seeded(random::Seed { 5 });
-    for (int i = 0; i < 20; ++i)
+    for (std::int32_t i = 0; i < 20; ++i)
     {
         const auto moves = show_moves(1, true, dice);
         const auto fall = std::ranges::find(moves, ShowMove::FallOver);
@@ -254,7 +255,7 @@ TEST_CASE("fans gather round a VIP, who signs for them one at a time; each autog
     REQUIRE(vips.begin() != vips.end());
     const entt::entity vip = *vips.begin();
     std::vector<entt::entity> fans;
-    for (const int col : { 1, 1, 2, 2 })
+    for (const std::int32_t col : { 1, 1, 2, 2 })
         fans.push_back(park.guest({ col, 0 }));
     const auto signed_for = [&](entt::entity g) {
         const auto* got = r.try_get<Autographs>(g);

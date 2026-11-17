@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <map>
 #include <span>
@@ -499,7 +500,7 @@ namespace rct3::ui::screens::management
             // The last column shows the line picked: any but the total, which the profit already is.
             constexpr std::size_t kLines = kLedger.size() - 1;
             const std::size_t pick = std::min(f.ledger_line, kLines - 1);
-            page.controls.push_back({ .id = kLedgerLineControl, .name = std::string(kLedgerLine), .label = text(strings, kLedgerLine), .value = static_cast<int>(pick), .maximum = static_cast<int>(kLines - 1), .shown = text(strings, kLedger[pick].key), .help = text(strings, kLedgerLineHelp) });
+            page.controls.push_back({ .id = kLedgerLineControl, .name = std::string(kLedgerLine), .label = text(strings, kLedgerLine), .value = static_cast<std::int32_t>(pick), .maximum = static_cast<std::int32_t>(kLines - 1), .shown = text(strings, kLedger[pick].key), .help = text(strings, kLedgerLineHelp) });
             page.columns = {
                 { text(strings, kLedgerMonth), 0, Align::Start, true }, { text(strings, kIncome), 96, Align::End, true }, { text(strings, kSpending), 96, Align::End, true }, { text(strings, kProfit), 96, Align::End, true }, { text(strings, kLedger[pick].key), 150, Align::End, true },
             };
@@ -552,7 +553,7 @@ namespace rct3::ui::screens::management
             for (const auto& [key, months] : { std::pair { "Rct3pp_Loan_In1", 1 }, { "Rct3pp_Loan_In2", 2 }, { "Rct3pp_Loan_In3", 3 }, { "Rct3pp_Loan_In6", 6 } })
                 line(key, month ? money(units, *f.state->cash + units::Money { months * *month }) : std::u16string(kDash));
             const bool movable = f.state->cash.has_value() && m->max_loan > 0;
-            page.controls.push_back({ .id = kLoanControl, .name = "FinancialSummary_Loan", .kind = info::InfoControlKind::Bar, .label = text(strings, "FinancialSummary_Loan"), .value = static_cast<int>(loan.value), .maximum = static_cast<int>(m->max_loan), .step = static_cast<int>(simulation::park::kLoanStep.value), .shown = money(units, loan), .enabled = movable, .help = text(strings, "Rct3pp_Loan_BarHelp") });
+            page.controls.push_back({ .id = kLoanControl, .name = "FinancialSummary_Loan", .kind = info::InfoControlKind::Bar, .label = text(strings, "FinancialSummary_Loan"), .value = static_cast<std::int32_t>(loan.value), .maximum = static_cast<std::int32_t>(m->max_loan), .step = static_cast<std::int32_t>(simulation::park::kLoanStep.value), .shown = money(units, loan), .enabled = movable, .help = text(strings, "Rct3pp_Loan_BarHelp") });
             page.note = text(strings, "Rct3pp_Loan_Note");
         }
 
@@ -1003,7 +1004,7 @@ namespace rct3::ui::screens::management
                 return;
             }
 
-            page.controls.push_back({ .id = kResearchBudgetControl, .name = "Research_Label_Budget", .kind = info::InfoControlKind::Number, .label = text(strings, "Research_Label_Budget"), .value = static_cast<int>(std::clamp<std::int64_t>(r.budget.value, 0, kMostResearchBudget)), .maximum = kMostResearchBudget, .step = kResearchBudgetStep, .shown = money(units, r.budget), .help = text(strings, "Research_TT_AdjustBudget") });
+            page.controls.push_back({ .id = kResearchBudgetControl, .name = "Research_Label_Budget", .kind = info::InfoControlKind::Number, .label = text(strings, "Research_Label_Budget"), .value = static_cast<std::int32_t>(std::clamp<std::int64_t>(r.budget.value, 0, kMostResearchBudget)), .maximum = kMostResearchBudget, .step = kResearchBudgetStep, .shown = money(units, r.budget), .help = text(strings, "Research_TT_AdjustBudget") });
             page.controls.push_back({ .id = -1, .name = "Research_Label_TechTree", .kind = info::InfoControlKind::Words, .label = text(strings, "Research_Label_TechTree") });
             // The areas the park keeps a priority for, and any other that has something left to invent.
             for (std::size_t i = 0; i < kResearchAreas.size(); ++i)
@@ -1012,7 +1013,7 @@ namespace rct3::ui::screens::management
                 if (i >= r.priorities.size() && !left)
                     continue;
                 const float priority = i < r.priorities.size() ? std::clamp(r.priorities[i], 0.0f, 1.0f) : 1.0f;
-                page.controls.push_back({ .id = kFirstPriorityControl + static_cast<int>(i), .name = std::string(kResearchAreas.at(i)), .kind = info::InfoControlKind::Bar, .label = text(strings, kResearchAreas.at(i)), .value = static_cast<int>(std::lround(priority * 100)), .maximum = 100, .shown = share(priority), .help = text(strings, "Research_TT_PriorityBar") });
+                page.controls.push_back({ .id = kFirstPriorityControl + static_cast<std::int32_t>(i), .name = std::string(kResearchAreas.at(i)), .kind = info::InfoControlKind::Bar, .label = text(strings, kResearchAreas.at(i)), .value = static_cast<std::int32_t>(std::lround(priority * 100)), .maximum = 100, .shown = share(priority), .help = text(strings, "Research_TT_PriorityBar") });
             }
         }
 

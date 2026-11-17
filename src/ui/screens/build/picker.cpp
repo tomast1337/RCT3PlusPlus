@@ -5,6 +5,7 @@
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <utility>
 
 namespace rct3::ui::screens::build
@@ -167,8 +168,8 @@ namespace rct3::ui::screens::build
         // As many columns as fit; a heading takes a tile, and its open items follow it. While searching,
         // headings show their matching items as if open.
         laid_width_ = list_->content().rect().width();
-        const int columns = std::max(1, static_cast<int>(laid_width_ / kTile));
-        int column = 0;
+        const std::int32_t columns = std::max(1, static_cast<std::int32_t>(laid_width_ / kTile));
+        std::int32_t column = 0;
         float y = 0;
         for (BuildPickerRow* row : rows_)
         {

@@ -5,6 +5,7 @@
 #include "save/model/park.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -116,7 +117,7 @@ TEST_CASE("a changing room's window is an attraction's, its tabs round the ring 
     s.add("PoolComplexDefaultName", u"Pool complex");
     const auto tabs = scenery_tabs({ .pool = PoolComplexFacts { } });
     std::vector<SceneryTab> kinds;
-    std::vector<int> slots;
+    std::vector<std::int32_t> slots;
     for (const SceneryTabInfo& t : tabs)
     {
         kinds.push_back(t.tab);
@@ -143,7 +144,7 @@ TEST_CASE("a changing room's details name the room and the complex, tell its sta
     s.add("PeopleInPoolComplexX", u"# people inside");
     const auto details = [&](bool open, std::int64_t people) { return scenery_page(SceneryTab::RoomDetails, { .symbol = "Hut", .pool = PoolComplexFacts { .name = u"Lagoon", .number = 3, .open = open, .people = people } }, s); };
     const InfoPage page = details(false, 0);
-    std::vector<int> ids;
+    std::vector<std::int32_t> ids;
     for (const InfoControl& c : page.controls)
         ids.push_back(c.id);
     CHECK(ids == std::vector { 0, kPoolNameControl, 0, kPoolDeleteRoomControl, kPoolDeleteComplexControl, kPoolSaveControl, kPoolLocateControl });
@@ -195,7 +196,7 @@ TEST_CASE("a changing room sets its complex's waves on bars, the machines' times
     CHECK(page.controls[0].value == 5);
     CHECK(page.controls[1].id == kPoolWaveLengthControl);
     CHECK(page.controls[1].kind == InfoControlKind::Bar);
-    CHECK(page.controls[1].value == static_cast<int>(park::pools::kLeastWaveFrequency + park::pools::kMostWaveFrequency) - 4); // Longer for a lower frequency
+    CHECK(page.controls[1].value == static_cast<std::int32_t>(park::pools::kLeastWaveFrequency + park::pools::kMostWaveFrequency) - 4); // Longer for a lower frequency
     CHECK(page.controls[2].value == 40);
     CHECK(page.controls[2].shown == u"40 secs");
     CHECK(page.controls[3].value == 3);

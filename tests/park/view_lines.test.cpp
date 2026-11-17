@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -10,7 +11,7 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid flat_grid(int width, int height, float at)
+    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height, float at)
     {
         save::model::TerrainGrid g;
         g.width = width;

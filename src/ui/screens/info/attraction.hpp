@@ -79,7 +79,7 @@ namespace rct3::ui::screens::info
     struct AttractionTabInfo
     {
         AttractionTab tab = AttractionTab::View;
-        int slot = 0;          ///< Its place on the ring
+        std::int32_t slot = 0; ///< Its place on the ring
         std::string_view icon; ///< Skin
         std::string_view help; ///< String key
         bool action = false;   ///< Does something at once instead of opening a page
@@ -132,10 +132,10 @@ namespace rct3::ui::screens::info
     /// How many trains and cars a tracked ride may be given.
     struct TrainLimits
     {
-        int fewest_cars = 1;
-        int most_cars = 1;
-        int usual_cars = 1; ///< What a new ride's trains have
-        int most_trains = 1;
+        std::int32_t fewest_cars = 1;
+        std::int32_t most_cars = 1;
+        std::int32_t usual_cars = 1; ///< What a new ride's trains have
+        std::int32_t most_trains = 1;
     };
 
     /// The graph's series, as AttractionFacts::graph_series has them: speed alone at first.
@@ -255,15 +255,15 @@ namespace rct3::ui::screens::info
     [[nodiscard]] std::vector<std::uint32_t> show_offers(const save::model::RideShow& show);
 
     /// The id of `control` on a page, and of the control for item `item` in a family.
-    [[nodiscard]] constexpr int control_id(AttractionControl control, std::size_t item = 0)
+    [[nodiscard]] constexpr std::int32_t control_id(AttractionControl control, std::size_t item = 0)
     {
-        return static_cast<int>(control) + static_cast<int>(item);
+        return static_cast<std::int32_t>(control) + static_cast<std::int32_t>(item);
     }
 
     /// Which item of `family` the control `id` is for; none when it is not of that family.
-    [[nodiscard]] constexpr std::optional<std::size_t> listed(int id, AttractionControl family)
+    [[nodiscard]] constexpr std::optional<std::size_t> listed(std::int32_t id, AttractionControl family)
     {
-        const int item = id - static_cast<int>(family);
+        const std::int32_t item = id - static_cast<std::int32_t>(family);
         return item >= 0 && std::cmp_less(item, kMostListed) ? std::optional(static_cast<std::size_t>(item)) : std::nullopt;
     }
 
@@ -271,19 +271,19 @@ namespace rct3::ui::screens::info
     inline constexpr std::u16string_view kMissingValue = u"?";
 
     /// Most waiting time the operating mode page offers, and the step it goes in (seconds).
-    inline constexpr int kMostWait = 250;
-    inline constexpr int kWaitStep = 5;
+    inline constexpr std::int32_t kMostWait = 250;
+    inline constexpr std::int32_t kWaitStep = 5;
     /// Most times round a flat ride can be set to run each go.
-    inline constexpr int kMostCircuits = 10;
+    inline constexpr std::int32_t kMostCircuits = 10;
     /// Most letters in an attraction's name, and how wide its box and its tune's list are.
-    inline constexpr int kLongestAttractionName = 80;
+    inline constexpr std::int32_t kLongestAttractionName = 80;
     inline constexpr float kNameWidth = 180;
     /// Most admission price, for rides and for other attractions and items, and its step (hundredths).
-    inline constexpr int kMostRidePrice = 2000;
-    inline constexpr int kMostPrice = 1000;
-    inline constexpr int kPriceStep = 10;
+    inline constexpr std::int32_t kMostRidePrice = 2000;
+    inline constexpr std::int32_t kMostPrice = 1000;
+    inline constexpr std::int32_t kPriceStep = 10;
     /// A stall item's price goes up to the most a ride's admission does, in smaller steps.
-    inline constexpr int kItemPriceStep = 5;
+    inline constexpr std::int32_t kItemPriceStep = 5;
     /// The size of a stall's menu on its items page: our own width, and all the strip's height.
     inline constexpr float kMenuWidth = 380;
     inline constexpr float kMenuHeight = info_panel::kStripHeight - info_panel::kBodyTop - info_panel::kBodyBottom;

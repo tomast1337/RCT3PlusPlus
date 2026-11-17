@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -72,7 +73,7 @@ namespace rct3::logging
             const std::tm tm = local_time(std::chrono::system_clock::to_time_t(tp));
             char buf[32];
             std::strftime(buf, sizeof buf, "%Y-%m-%d %H:%M:%S", &tm);
-            return std::format("{}.{:03}", buf, static_cast<int>(((ms.count() % 1000) + 1000) % 1000));
+            return std::format("{}.{:03}", buf, static_cast<std::int32_t>(((ms.count() % 1000) + 1000) % 1000));
         }
 
         bool use_color(ColorMode mode, std::FILE* stream)

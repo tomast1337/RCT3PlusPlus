@@ -79,7 +79,7 @@ namespace rct3::ui::screens::front
         std::string_view icon;      ///< Skin
         FrontAction action = FrontAction::OpenMenu;
         FrontMenu menu = FrontMenu::Main; ///< For OpenMenu
-        int pack = 0;                     ///< For Campaign and Tutorial: 0 the original game, then each expansion
+        std::int32_t pack = 0;            ///< For Campaign and Tutorial: 0 the original game, then each expansion
     };
 
     struct FrontMenuInfo
@@ -92,13 +92,13 @@ namespace rct3::ui::screens::front
     /// Every menu, by FrontMenu.
     [[nodiscard]] const FrontMenuInfo& front_menu(FrontMenu menu);
 
-    inline constexpr int kExpansionCount = 2;
+    inline constexpr std::int32_t kExpansionCount = 2;
 
     /// What the owner is asked to do.
     struct FrontRequest
     {
         FrontAction action = FrontAction::Options;
-        int pack = 0;
+        std::int32_t pack = 0;
 
         friend bool operator==(const FrontRequest&, const FrontRequest&) = default;
     };

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <ranges>
 #include <span>
@@ -1255,7 +1256,7 @@ namespace rct3::save::model
     {
         if (saved_downtime_percent)
             return *saved_downtime_percent;
-        int sum = 0;
+        std::int32_t sum = 0;
         for (const auto w : downtime_windows)
             sum += w;
         return static_cast<float>(sum) * 100.0f / 160.0f;

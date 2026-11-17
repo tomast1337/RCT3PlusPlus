@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::park;
@@ -18,7 +19,7 @@ namespace
 
     void run(LensWater& water, const LensPush& push, float seconds)
     {
-        for (int i = 0; i < static_cast<int>(seconds * 60); ++i)
+        for (std::int32_t i = 0; i < static_cast<std::int32_t>(seconds * 60); ++i)
             run_lens_water(water, push, 1.0f / 60);
     }
 } // namespace

@@ -4,6 +4,7 @@
 #include "particles/library.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::particles;
@@ -32,7 +33,7 @@ namespace
     /// `seconds` of time in frames of a tenth, as the park would call it.
     void run_for(EffectRun& run, float seconds)
     {
-        for (int i = 0; i < static_cast<int>(seconds * 10 + 0.5f); ++i)
+        for (std::int32_t i = 0; i < static_cast<std::int32_t>(seconds * 10 + 0.5f); ++i)
             run.advance(0.1f);
     }
 
@@ -46,11 +47,11 @@ TEST_CASE("an emitter spreads its particles over its share of the owner's life")
     run.advance(0.2f);
     run.advance(0.1f);
     CHECK(run.particles().count() == 5);
-    for (int i = 0; i < 10; ++i)
+    for (std::int32_t i = 0; i < 10; ++i)
         run.advance(0.1f);
     CHECK(run.particles().count() == 10);
     CHECK_FALSE(run.finished());
-    for (int i = 0; i < 40; ++i)
+    for (std::int32_t i = 0; i < 40; ++i)
         run.advance(0.2f);
     CHECK(run.finished());
 }
@@ -60,7 +61,7 @@ TEST_CASE("a looping run starts its effect again")
     const Effect e = steady(4, 0.5f);
     EffectRun run(e, seeded(), true, 64);
     std::size_t most = 0;
-    for (int i = 0; i < 100; ++i)
+    for (std::int32_t i = 0; i < 100; ++i)
     {
         run.advance(0.05f);
         most = std::max(most, run.particles().count());

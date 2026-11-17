@@ -14,7 +14,7 @@ namespace rct3::scene::park
     namespace
     {
         constexpr std::uint32_t kWaveSize = 128;
-        constexpr int kWaveTrains = 14;
+        constexpr std::int32_t kWaveTrains = 14;
 
         /// A height picture that tiles: a sum of waves each fitting a whole number of times across it, running in
         /// scattered directions, longer ones stronger, as on open water.
@@ -31,7 +31,7 @@ namespace rct3::scene::park
                 return static_cast<float>(state >> 8) / static_cast<float>(1u << 24);
             };
             const float tau = 2 * std::numbers::pi_v<float>;
-            for (int i = 0; i < kWaveTrains; ++i)
+            for (std::int32_t i = 0; i < kWaveTrains; ++i)
             {
                 const float angle = next() * tau;
                 const float cycles = 1 + std::floor(next() * 7);

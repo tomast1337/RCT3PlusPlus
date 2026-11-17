@@ -30,6 +30,7 @@
 #include "ui/translation_file.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <format>
@@ -56,7 +57,7 @@ namespace
     {
         std::set<std::string, std::less<>> listed;            ///< The game's English text items, lower case
         std::map<std::string, std::string, std::less<>> data; ///< Text names other overlays hold, lower case, to the first overlay
-        int unread = 0;
+        std::int32_t unread = 0;
     };
 
     GameKeys read_game(const config::game::GameInstall& install)
@@ -118,7 +119,7 @@ int main(int argc, char** argv)
 {
     std::optional<std::filesystem::path> game_dir;
     std::optional<std::filesystem::path> report_path;
-    for (int i = 1; i < argc; ++i)
+    for (std::int32_t i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--game") == 0 && i + 1 < argc)
             game_dir = argv[++i];
@@ -173,7 +174,7 @@ int main(int argc, char** argv)
         std::println("no game install (--game DIR or RCT3PP_GAME_PATH): data and game-only stay empty");
 
     constexpr std::array<std::string_view, 6> kGroups = { "literal", "prefix", "data", "own-unused", "game-only", "unreached" };
-    std::map<std::string_view, std::map<std::string, int>> by_group; ///< Group, then the key up to its first '_'
+    std::map<std::string_view, std::map<std::string, std::int32_t>> by_group; ///< Group, then the key up to its first '_'
     std::ofstream report;
     if (report_path)
         report.open(*report_path);
@@ -214,8 +215,8 @@ int main(int argc, char** argv)
     for (const std::string_view group : kGroups)
     {
         const auto& heads = by_group[group];
-        int total = 0;
-        std::vector<std::pair<int, std::string>> top;
+        std::int32_t total = 0;
+        std::vector<std::pair<std::int32_t, std::string>> top;
         for (const auto& [head, count] : heads)
         {
             total += count;

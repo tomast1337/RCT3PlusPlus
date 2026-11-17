@@ -73,9 +73,9 @@ namespace rct3::simulation
 
     struct PathTileSpot
     {
-        int col = 0;
-        int row = 0;
-        int level = 0;
+        std::int32_t col = 0;
+        std::int32_t row = 0;
+        std::int32_t level = 0;
         bool operator==(const PathTileSpot&) const = default;
     };
 
@@ -119,7 +119,7 @@ namespace rct3::simulation
         float tile_size = 4;       ///< World units across a tile
         float level_height = 1;    ///< World units per level
         glm::vec2 origin { 0.0f }; ///< World x and z of the corner of tile (0, 0)
-        int max_step = 1;          ///< Most levels between tiles that join; set before adding tiles
+        std::int32_t max_step = 1; ///< Most levels between tiles that join; set before adding tiles
 
         /// Adds a path tile and joins it to its neighbours; an existing tile at the same spot is returned instead.
         /// The middle of the tile is at `height`, or at its level when not given; a queue tile belongs to `line`.
@@ -131,9 +131,9 @@ namespace rct3::simulation
 
         /// Stands a wall along `side` of tile (`col`, `row`), from world height `low` to `high`, and parts the
         /// tiles it stands between.
-        void add_wall(int col, int row, rct3::park::Side side, float low, float high);
+        void add_wall(std::int32_t col, std::int32_t row, rct3::park::Side side, float low, float high);
         /// Takes such a wall away again, and joins what it kept apart.
-        void remove_wall(int col, int row, rct3::park::Side side, float low, float high);
+        void remove_wall(std::int32_t col, std::int32_t row, rct3::park::Side side, float low, float high);
 
         [[nodiscard]] const std::vector<PathNode>& nodes() const
         {
@@ -147,7 +147,7 @@ namespace rct3::simulation
         }
         /// Moves a node to `level` with its middle at `height`, as when the ground under it rose or sank; set its
         /// corners after, which joins it again.
-        void set_height(NodeId node, int level, float height)
+        void set_height(NodeId node, std::int32_t level, float height)
         {
             nodes_[node.value].tile.level = level;
             nodes_[node.value].height = height;
@@ -208,12 +208,12 @@ namespace rct3::simulation
         [[nodiscard]] std::optional<std::vector<NodeId>> way_out(NodeId from) const;
 
     private:
-        static std::uint64_t key(int col, int row);
+        static std::uint64_t key(std::int32_t col, std::int32_t row);
         /// Joins a node to the tiles beside it that nothing keeps apart.
         void join_sides(NodeId id);
         void join_corners(NodeId id);
         /// Unjoins the nodes on a tile and joins them again, and the squares round it.
-        void rejoin(int col, int row);
+        void rejoin(std::int32_t col, std::int32_t row);
         struct Wall
         {
             std::size_t side = 0; ///< As `next` numbers them

@@ -14,6 +14,7 @@
 #include "ui/widgets/scroll_bar.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -120,7 +121,7 @@ namespace rct3::ui::widgets
         std::optional<std::size_t> sort_now_;
         units::Seconds since_press_; // Since the last press on a row
         std::optional<std::size_t> last_pressed_;
-        int activations_ = 0;
+        std::int32_t activations_ = 0;
     };
 
 } // namespace rct3::ui::widgets

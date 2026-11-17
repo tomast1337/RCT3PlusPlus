@@ -2,6 +2,7 @@
 #include "park/water/fill.hpp"
 
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -21,7 +22,7 @@ namespace
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(6);
-        for (int c = 0; c < 6; ++c)
+        for (std::int32_t c = 0; c < 6; ++c)
         {
             const bool low = c == 1 || c == 2 || c == 4;
             g.at(c, 0).corners = low ? std::array { 1.0f, 1.0f, 1.0f, 1.0f } : std::array { 4.0f, 4.0f, 4.0f, 4.0f };

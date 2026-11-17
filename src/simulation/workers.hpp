@@ -6,6 +6,7 @@
 
 #include <condition_variable>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <mutex>
 #include <thread>
@@ -18,7 +19,7 @@ namespace rct3::simulation
     {
     public:
         /// `threads` helpers besides the calling thread; 0 runs everything on the caller.
-        explicit Workers(unsigned threads = std::thread::hardware_concurrency() > 1 ? std::thread::hardware_concurrency() - 1 : 0);
+        explicit Workers(std::uint32_t threads = std::thread::hardware_concurrency() > 1 ? std::thread::hardware_concurrency() - 1 : 0);
         ~Workers();
         Workers(const Workers&) = delete;
         Workers& operator=(const Workers&) = delete;

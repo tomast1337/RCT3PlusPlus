@@ -131,9 +131,9 @@ namespace rct3::ui::screens::build
         inline constexpr float kCloseBottom = 9;
         /// Of the ring's slots (footpath_tab_offset), each tab's in the order of PoolPage, and the paths page's pin
         /// and camera follow switch.
-        inline constexpr std::array<int, 5> kTabSlots { 4, 2, 3, 5, 6 };
-        inline constexpr int kPinSlot = 0;
-        inline constexpr int kFollowSlot = 1;
+        inline constexpr std::array<std::int32_t, 5> kTabSlots { 4, 2, 3, 5, 6 };
+        inline constexpr std::int32_t kPinSlot = 0;
+        inline constexpr std::int32_t kFollowSlot = 1;
     } // namespace pool_panel
 
     class PoolPanel : public Widget

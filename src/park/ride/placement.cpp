@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <format>
 #include <numeric>
@@ -45,11 +46,11 @@ namespace rct3::park::ride
         template<typename Attraction> std::string lowest_free_name(std::span<const Attraction> attractions, std::string_view symbol)
         {
             constexpr std::string_view kNumbered = "%ME% ";
-            std::vector<int> taken;
+            std::vector<std::int32_t> taken;
             for (const Attraction& a : attractions)
                 if (strings::equals_ignoring_case(a.base.symbol, symbol) && a.base.name.starts_with(kNumbered))
                     taken.push_back(std::atoi(a.base.name.c_str() + kNumbered.size()));
-            int number = 1;
+            std::int32_t number = 1;
             while (std::ranges::contains(taken, number))
                 ++number;
             return std::format("{}{}", kNumbered, number);

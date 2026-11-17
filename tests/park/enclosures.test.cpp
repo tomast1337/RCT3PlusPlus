@@ -2,6 +2,7 @@
 #include "park/enclosures.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <map>
 
@@ -11,7 +12,7 @@ using namespace rct3::park;
 namespace
 {
 
-    save::model::TerrainGrid flat(int width, int height)
+    save::model::TerrainGrid flat(std::int32_t width, std::int32_t height)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -28,9 +29,9 @@ namespace
     }
 
     /// How many pieces of each kind `fence` has, by the end of their names.
-    std::map<std::string, int> kinds(const BoundaryFence& fence, std::string_view kind_of)
+    std::map<std::string, std::int32_t> kinds(const BoundaryFence& fence, std::string_view kind_of)
     {
-        std::map<std::string, int> out;
+        std::map<std::string, std::int32_t> out;
         for (const save::model::PlacedObject& o : fence.pieces)
             ++out[o.symbol.substr(kind_of.size())];
         return out;
@@ -54,7 +55,7 @@ TEST_CASE("enclosures: a fenced rectangle takes corner pieces at its corners and
     CHECK(fence.pieces.front().id == 101);
     CHECK(fence.pieces.front().overlay == "Enclosures/Fences/Wood/Wood_Stub");
     // Three by four: four corners, then 1 + 1 + 2 + 2 panels between.
-    CHECK(kinds(fence, "Wood") == std::map<std::string, int> { { "Corner", 4 }, { "Edge", 6 } });
+    CHECK(kinds(fence, "Wood") == std::map<std::string, std::int32_t> { { "Corner", 4 }, { "Edge", 6 } });
     CHECK(std::ranges::all_of(fence.pieces, [](const save::model::PlacedObject& o) { return o.fixture && o.col >= 1 && o.col <= 3 && o.row >= 1 && o.row <= 4; }));
     // Each corner piece is turned to a different corner.
     std::vector<std::int32_t> turns;
@@ -72,13 +73,13 @@ TEST_CASE("enclosures: one-tile pens, strips and L shapes take full, end, panel 
     {
         save::model::EnclosureMap map;
         (void)enclose(map, g, { 2, 2 }, { 2, 2 }, "Chain", any);
-        CHECK(kinds(enclosure_fences(map, g, 0), "Chain") == std::map<std::string, int> { { "Full", 1 } });
+        CHECK(kinds(enclosure_fences(map, g, 0), "Chain") == std::map<std::string, std::int32_t> { { "Full", 1 } });
     }
     SUBCASE("a strip one tile wide")
     {
         save::model::EnclosureMap map;
         (void)enclose(map, g, { 1, 2 }, { 4, 2 }, "Chain", any);
-        CHECK(kinds(enclosure_fences(map, g, 0), "Chain") == std::map<std::string, int> { { "End", 2 }, { "Edge", 4 } });
+        CHECK(kinds(enclosure_fences(map, g, 0), "Chain") == std::map<std::string, std::int32_t> { { "End", 2 }, { "Edge", 4 } });
     }
     SUBCASE("an L")
     {

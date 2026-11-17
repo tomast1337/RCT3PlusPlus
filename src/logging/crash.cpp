@@ -5,6 +5,7 @@
 #include "logging/log.hpp"
 
 #include <csignal>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -19,19 +20,19 @@ namespace rct3::logging
     {
         std::string g_file; ///< Where the report is appended too; empty for none
 
-        void report(int signal)
+        void report(int signal) // c-api
         {
             // shortcut: formats and allocates inside the handler, which is not async-signal-safe; it may hang
             // instead of reporting when the heap itself is broken. Upgrade to a pre-allocated writer if it does.
             std::signal(signal, SIG_DFL);
             const std::string stack = std::to_string(std::stacktrace::current(1));
             const std::string_view version = core::version();
-            std::fprintf(stderr, "\nrct3++ %.*s: fatal signal %d (%s); stack:\n%s\n", static_cast<int>(version.size()), version.data(), signal, strsignal(signal), stack.c_str());
+            std::fprintf(stderr, "\nrct3++ %.*s: fatal signal %d (%s); stack:\n%s\n", static_cast<int>(version.size()), version.data(), signal, strsignal(signal), stack.c_str()); // c-api
             if (!g_file.empty())
             {
                 if (std::FILE* out = std::fopen(g_file.c_str(), "a"))
                 {
-                    std::fprintf(out, "\nrct3++ %.*s: fatal signal %d (%s); stack:\n%s\n", static_cast<int>(version.size()), version.data(), signal, strsignal(signal), stack.c_str());
+                    std::fprintf(out, "\nrct3++ %.*s: fatal signal %d (%s); stack:\n%s\n", static_cast<int>(version.size()), version.data(), signal, strsignal(signal), stack.c_str()); // c-api
                     std::fclose(out);
                 }
                 std::fprintf(stderr, "report appended to %s\n", g_file.c_str());
@@ -44,7 +45,7 @@ namespace rct3::logging
     void install_crash_report(const std::filesystem::path& file)
     {
         g_file = file.string();
-        for (const int signal : { SIGABRT, SIGSEGV, SIGBUS, SIGFPE, SIGILL })
+        for (const std::int32_t signal : { SIGABRT, SIGSEGV, SIGBUS, SIGFPE, SIGILL })
             std::signal(signal, report);
     }
 

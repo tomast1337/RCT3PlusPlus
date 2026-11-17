@@ -7,6 +7,7 @@
 #include "simulation/stalls.hpp"
 #include "simulation/systems.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -51,7 +52,7 @@ TEST_CASE("in the rain an open-air ride's queue empties while a covered ride's d
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
         const auto ride = park.flat_ride("Twister", { 3, 0 }, 0, { .capacity = 1, .cycle_seconds = 600, .cover = cover });
-        for (int i = 0; i < 6; ++i)
+        for (std::int32_t i = 0; i < 6; ++i)
             park.guest({ 3, 0 });
         auto& r = park.world().registry;
         CHECK(park.run_until([&] { return r.get<CycleRide>(ride).queue.size() >= 3; }, 120));
@@ -64,7 +65,7 @@ TEST_CASE("in the rain an open-air ride's queue empties while a covered ride's d
 TEST_CASE("guests get thirsty faster on a hot day")
 {
     float thirst[2] { };
-    for (const int hot : { 0, 1 })
+    for (const std::int32_t hot : { 0, 1 })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
@@ -117,10 +118,10 @@ TEST_CASE("guests queueing under cover stay in an open-air ride's queue in the r
     park.path({ 0, 0 }, { 2, 0 }).queue({ 3, 0 }, { 6, 0 });
     const auto ride = park.flat_ride("Spinner", { 6, 0 }, 0, { .capacity = 1, .cycle_seconds = 600, .line = { { 6, 0 }, { 5, 0 }, { 4, 0 }, { 3, 0 } } });
     auto& paths = park.world().paths;
-    for (int col = 3; col <= 6; ++col)
+    for (std::int32_t col = 3; col <= 6; ++col)
         paths.cover(*paths.find({ col, 0, 0 }), Cover::Roof);
     auto& r = park.world().registry;
-    for (int i = 0; i < 4; ++i)
+    for (std::int32_t i = 0; i < 4; ++i)
         r.get<Errand>(park.guest({ 0, 0 })) = { ErrandKind::Heading, ride, 0 };
     REQUIRE(park.run_until([&] { return r.get<CycleRide>(ride).queue.size() == 3; }, 60));
     r.ctx().emplace<Weather>(Weather { .rain = true, .storm = true });

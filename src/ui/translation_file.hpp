@@ -16,6 +16,7 @@
 
 #include "ui/string_table.hpp"
 
+#include <cstdint>
 #include <expected>
 #include <string>
 #include <string_view>
@@ -27,7 +28,7 @@ namespace rct3::ui
     /// The language every string has, used for keys a translation lacks.
     inline constexpr std::string_view kOwnBaseLanguage = "English";
     /// How deep groups may go.
-    inline constexpr int kMaxTranslationDepth = 8;
+    inline constexpr std::int32_t kMaxTranslationDepth = 8;
 
     /// The strings in `text`. Fails when it is not a JSON object of strings and groups, saying where.
     [[nodiscard]] std::expected<StringTable, std::string> parse_translation(std::string_view text);

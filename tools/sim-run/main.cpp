@@ -50,6 +50,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -94,7 +95,7 @@ namespace
     /// How many rides are down with each kind of breakdown, as "kind:count ...".
     std::string breakdown_kinds(const entt::registry& r)
     {
-        std::map<int, std::size_t> kinds;
+        std::map<std::int32_t, std::size_t> kinds;
         for (const auto [_, upkeep] : r.view<const rct3::simulation::Upkeep>().each())
             if (upkeep.broken)
                 ++kinds[std::to_underlying(upkeep.kind)];
@@ -112,7 +113,7 @@ int main(int argc, char** argv)
     logging::install_crash_report();
     const char* path = nullptr;
     float seconds = 600;
-    unsigned threads = 0;
+    std::uint32_t threads = 0;
     std::uint64_t seed = 1;
     const char* game = nullptr;
     std::string_view weather;
@@ -121,12 +122,12 @@ int main(int argc, char** argv)
     bool profile = false;                            // Print the time each phase of a step took
     bool awards = false;                             // Print what the theme awards count
     std::optional<std::vector<CarPlace>> car_places; // With --car-places: each saved car stood by our track, then stop
-    for (int i = 1; i < argc; ++i)
+    for (std::int32_t i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--seconds") == 0 && i + 1 < argc)
             seconds = std::strtof(argv[++i], nullptr);
         else if (std::strcmp(argv[i], "--threads") == 0 && i + 1 < argc)
-            threads = static_cast<unsigned>(std::strtoul(argv[++i], nullptr, 10));
+            threads = static_cast<std::uint32_t>(std::strtoul(argv[++i], nullptr, 10));
         else if (std::strcmp(argv[i], "--seed") == 0 && i + 1 < argc)
             seed = std::strtoull(argv[++i], nullptr, 10);
         else if (std::strcmp(argv[i], "--game") == 0 && i + 1 < argc)
@@ -474,8 +475,8 @@ int main(int argc, char** argv)
                 continue;
             const simulation::PathTileSpot at = world.paths.nodes()[stride.to.value].tile;
             simulation::staff::Patrol area;
-            for (int col = -4; col <= 4; ++col)
-                for (int row = -4; row <= 4; ++row)
+            for (std::int32_t col = -4; col <= 4; ++col)
+                for (std::int32_t row = -4; row <= 4; ++row)
                     area.tiles.emplace_back(at.col + col, at.row + row);
             world.registry.emplace<simulation::staff::Patrol>(e, std::move(area));
             ++patrolled;
@@ -510,7 +511,7 @@ int main(int argc, char** argv)
     out.info("weather: {}{}{}, {:.0f} degrees; {:.1f} guests an hour come in", sky.rain ? "rain" : "dry", sky.storm ? " (storm)" : "", sky.sunny ? ", sunny" : "", static_cast<double>(sky.temperature.value), simulation::arrivals_per_second(sky) * 3600);
     const std::uint32_t ideal = simulation::ideal_guests(world);
     const units::Money fair = simulation::fair_entrance_fee(world);
-    out.info("room for {:d} guests; entrance fee {:d} against {:d} fair; arrivals x{:.2f} with the park empty", ideal, static_cast<long long>(fee), static_cast<long long>(fair.value), simulation::drawn(draw, 0, ideal, fair));
+    out.info("room for {:d} guests; entrance fee {:d} against {:d} fair; arrivals x{:.2f} with the park empty", ideal, static_cast<std::int64_t>(fee), static_cast<std::int64_t>(fair.value), simulation::drawn(draw, 0, ideal, fair));
     const auto broken_rides = std::ranges::count_if(world.registry.view<const simulation::Upkeep>(), [&](entt::entity e) { return world.registry.get<simulation::Upkeep>(e).broken; });
     out.info("breakdowns going on, by kind:{}", breakdown_kinds(world.registry).c_str());
     out.info("litter {:d}  path items {:d}  rides broken down {:d}  staff on the paths {:d} of {:d}", litter, items, broken_rides, static_cast<std::size_t>(std::ranges::count_if(staff, [](entt::entity e) { return e != entt::null; })), staff.size());
@@ -614,10 +615,10 @@ int main(int argc, char** argv)
         }
         for (const auto [e, staff, stride, area] : world.registry.view<const simulation::Staff, const simulation::Stride, const simulation::staff::Patrol>().each())
             strays += staff.ride == entt::null && stride.route.empty() && stride.from != stride.to && !area.covers(world.paths.nodes()[stride.to.value].tile);
-        const auto hour = static_cast<int>(day.time * simulation::kHoursPerDay);
+        const auto hour = static_cast<std::int32_t>(day.time * simulation::kHoursPerDay);
         simulation::advance(day, simulation::kTickSeconds);
         world.registry.ctx().insert_or_assign(simulation::Daylight { day.time });
-        if (const auto now = static_cast<int>(day.time * simulation::kHoursPerDay); now != hour)
+        if (const auto now = static_cast<std::int32_t>(day.time * simulation::kHoursPerDay); now != hour)
         {
             std::array<std::size_t, 3> in { };
             for (const auto [_, visitor] : world.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>).each())
@@ -780,14 +781,14 @@ int main(int argc, char** argv)
             // Parties waiting by rides: how many stand on an exit tile, and how many share a spot.
             std::size_t waiting = 0;
             std::size_t on_exits = 0;
-            std::map<std::pair<int, int>, std::size_t> spots; // Waiting guests by where they stand, to a tenth of a unit
+            std::map<std::pair<std::int32_t, std::int32_t>, std::size_t> spots; // Waiting guests by where they stand, to a tenth of a unit
             for (const auto [g, errand, stride, pose] : r.view<const simulation::Errand, const simulation::Stride, const simulation::Pose>().each())
             {
                 if (errand.kind != simulation::ErrandKind::Waiting || !stride.route.empty())
                     continue;
                 ++waiting;
                 on_exits += tally.exits.contains(stride.to);
-                ++spots[{ static_cast<int>(pose.position.x * 10), static_cast<int>(pose.position.z * 10) }];
+                ++spots[{ static_cast<std::int32_t>(pose.position.x * 10), static_cast<std::int32_t>(pose.position.z * 10) }];
             }
             const auto* boarding = r.ctx().find<simulation::PartyBoarding>();
             out.info("parties: held back to ride together {:d}, split over two loads {:d}; waiting by rides {:d}, on exit tiles {:d}, most on one spot {:d}", boarding ? boarding->held : 0, boarding ? boarding->split : 0, waiting, on_exits, spots.empty() ? 0 : std::ranges::max(spots | std::views::values));

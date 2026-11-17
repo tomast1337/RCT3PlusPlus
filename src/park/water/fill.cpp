@@ -39,7 +39,7 @@ namespace rct3::park::water
             // Each way to a neighbour: the step, and the corners of the shared edge on this side and on the far one.
             struct Way
             {
-                int dc, dr;
+                std::int32_t dc, dr;
                 std::size_t a, b, far_a, far_b;
             };
             constexpr std::array<Way, 4> kWays { {
@@ -49,13 +49,13 @@ namespace rct3::park::water
                 { 0, -1, 0, 1, 2, 3 },
             } };
             std::vector<bool> seen(grid.cells.size());
-            std::vector<std::pair<int, int>> open { { col, row } };
+            std::vector<std::pair<std::int32_t, std::int32_t>> open { { col, row } };
             seen[static_cast<std::size_t>(row * grid.width + col)] = true;
             while (!open.empty())
             {
                 const auto [c, r] = open.back();
                 open.pop_back();
-                for (int t = 0; t < 2; ++t)
+                for (std::int32_t t = 0; t < 2; ++t)
                 {
                     if (const auto mask = save::model::expected_water_mask(grid, level, { c, r }, t); mask && *mask != 0)
                         body.tris.push_back({ static_cast<std::uint8_t>(c), static_cast<std::uint8_t>(r), static_cast<std::uint8_t>(t), *mask });
@@ -63,8 +63,8 @@ namespace rct3::park::water
                 const save::model::TerrainCell& cell = grid.at(c, r);
                 for (const Way& w : kWays)
                 {
-                    const int nc = c + w.dc;
-                    const int nr = r + w.dr;
+                    const std::int32_t nc = c + w.dc;
+                    const std::int32_t nr = r + w.dr;
                     if (!grid.contains(nc, nr) || seen[static_cast<std::size_t>(nr * grid.width + nc)])
                         continue;
                     if (!below(cell, w.a, w.b, level) || !below(grid.at(nc, nr), w.far_a, w.far_b, level))
@@ -108,7 +108,7 @@ namespace rct3::park::water
         const auto lake = std::ranges::find_if(water.bodies, [&](const save::model::WaterBody& b) { return holds(b, tile); });
         if (lake == water.bodies.end())
             return false;
-        const auto on_lake = [&](const save::model::WorldPoint3& p) { return holds(*lake, { static_cast<int>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<int>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) }); };
+        const auto on_lake = [&](const save::model::WorldPoint3& p) { return holds(*lake, { static_cast<std::int32_t>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<std::int32_t>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) }); };
         std::erase_if(falls, [&](const save::model::Waterfall& f) {
             if (!on_lake(f.top) && !on_lake(f.bottom))
                 return false;
@@ -122,7 +122,7 @@ namespace rct3::park::water
     std::vector<std::size_t> flooded_falls(const save::model::WaterLayer& was, const save::model::WaterLayer& now, std::span<const save::model::Waterfall> falls, const save::model::TerrainGrid& grid)
     {
         const auto level = [&](const save::model::WaterLayer& water, const save::model::WorldPoint3& p) -> std::optional<float> {
-            const save::model::Tile tile { static_cast<int>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<int>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) };
+            const save::model::Tile tile { static_cast<std::int32_t>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<std::int32_t>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) };
             const auto lake = std::ranges::find_if(water.bodies, [&](const save::model::WaterBody& b) { return holds(b, tile); });
             return lake == water.bodies.end() ? std::nullopt : std::optional(lake->level);
         };
@@ -137,18 +137,18 @@ namespace rct3::park::water
 
     bool settle_water(save::model::WaterLayer& water, std::vector<save::model::Waterfall>& falls, const save::model::TerrainGrid& was, const save::model::TerrainGrid& grid)
     {
-        const auto at = [&](int col, int row) { return static_cast<std::size_t>(row * grid.width + col); };
+        const auto at = [&](std::int32_t col, std::int32_t row) { return static_cast<std::size_t>(row * grid.width + col); };
         std::vector<bool> moved(grid.cells.size(), false);
         bool any_moved = false;
-        for (int r = 0; r < grid.height; ++r)
-            for (int c = 0; c < grid.width; ++c)
+        for (std::int32_t r = 0; r < grid.height; ++r)
+            for (std::int32_t c = 0; c < grid.width; ++c)
             {
                 if (was.contains(c, r) && was.at(c, r).corners != grid.at(c, r).corners)
                     moved[at(c, r)] = any_moved = true;
             }
         if (!any_moved)
             return false;
-        const auto tile_of = [&](const save::model::WorldPoint3& p) { return save::model::Tile { static_cast<int>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<int>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) }; };
+        const auto tile_of = [&](const save::model::WorldPoint3& p) { return save::model::Tile { static_cast<std::int32_t>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<std::int32_t>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) }; };
         // The level of the water over a tile, to tell which waterfalls lost an end.
         const auto level_over = [&](save::model::Tile tile) -> std::optional<float> {
             const auto lake = std::ranges::find_if(water.bodies, [&](const save::model::WaterBody& b) { return holds(b, tile); });
@@ -230,8 +230,8 @@ namespace rct3::park::water
         // A waterfall goes when the ground at it moved, or the water at either end is gone or at another level.
         const auto beside = [&](const save::model::WorldPoint3& p) {
             const save::model::Tile t = tile_of(p);
-            for (int dr = -1; dr <= 1; ++dr)
-                for (int dc = -1; dc <= 1; ++dc)
+            for (std::int32_t dr = -1; dr <= 1; ++dr)
+                for (std::int32_t dc = -1; dc <= 1; ++dc)
                 {
                     if (grid.contains(t.col + dc, t.row + dr) && moved[at(t.col + dc, t.row + dr)])
                         return true;

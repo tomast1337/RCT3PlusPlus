@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object/pick.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <optional>
 #include <vector>
@@ -39,7 +40,7 @@ namespace
         return m;
     }
 
-    save::model::PlacedObject placed_object(std::uint64_t id, int col)
+    save::model::PlacedObject placed_object(std::uint64_t id, std::int32_t col)
     {
         save::model::PlacedObject o;
         o.id = id;

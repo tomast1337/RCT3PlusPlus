@@ -11,6 +11,7 @@
 #include <cctype>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <string_view>
@@ -40,7 +41,7 @@ namespace rct3::scene
             menu.folder = *folder;
             menu.files = music_files(install);
             const auto& files = menu.files;
-            const std::optional<int> place = options.flag(config::game::GameOption::CycleMenuMusic) ? std::optional(options.choice(config::game::GameOption::MenuTrack)) : std::nullopt;
+            const std::optional<std::int32_t> place = options.flag(config::game::GameOption::CycleMenuMusic) ? std::optional(options.choice(config::game::GameOption::MenuTrack)) : std::nullopt;
             const auto pick = audio::pick_menu_music(place, audio::is_halloween(std::chrono::system_clock::now()), files);
             if (pick.next_place)
                 options.set(config::game::GameOption::MenuTrack, static_cast<float>(*pick.next_place));

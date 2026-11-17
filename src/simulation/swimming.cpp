@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <numbers>
@@ -305,10 +306,10 @@ namespace rct3::simulation
         // In steps of the open water's marks, at most a few hundred squares' worth.
         constexpr float kMostSteps = 4096;
         const float mark = tile / static_cast<float>(kOpenSteps);
-        const int steps = static_cast<int>(std::min(std::ceil(glm::distance(from, to) / mark), kMostSteps));
+        const std::int32_t steps = static_cast<std::int32_t>(std::min(std::ceil(glm::distance(from, to) / mark), kMostSteps));
         bool inside = over(from);
         glm::vec2 last = from;
-        for (int i = 1; i <= steps; ++i)
+        for (std::int32_t i = 1; i <= steps; ++i)
         {
             const glm::vec2 at = glm::mix(from, to, static_cast<float>(i) / static_cast<float>(steps));
             const bool wet = over(at);

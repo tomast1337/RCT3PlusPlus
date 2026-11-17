@@ -45,6 +45,7 @@
 #include "units/units.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -86,9 +87,9 @@ namespace rct3::scene::track
         bool backward = false;
         bool heights = false; ///< The track's heights are shown while it is built
         /// Settings the next piece is built with, where it has them.
-        int holding_time = 5; ///< Seconds
-        int car_turn = 0;     ///< Degrees
-        int brake_speed = 0;  ///< Whole m/s for brakes and block brakes; 0 until set, so they take the ride's
+        std::int32_t holding_time = 5; ///< Seconds
+        std::int32_t car_turn = 0;     ///< Degrees
+        std::int32_t brake_speed = 0;  ///< Whole m/s for brakes and block brakes; 0 until set, so they take the ride's
         std::uint8_t facing = 0;
         std::optional<save::model::RideColours> colours; ///< Painted in the ring's colour tab; else as the piece before
         /// A track with no pieces yet starts on the tile the pointer was last over, turned `turn`.
@@ -230,7 +231,7 @@ namespace rct3::scene::track
     /// Handles the panel's events, and for a track with no pieces the pointer at `at` on a view of `size` (over
     /// the interface or not), the turn commands and Shift, held to raise or sink the first piece. Call once per
     /// update after the interface, `elapsed` after the last.
-    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, int currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands, units::Seconds elapsed);
+    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, std::int32_t currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands, units::Seconds elapsed);
 
     /// The arrows where the picked piece starts and ends (see park/build_arrows.hpp); empty while no piece is.
     [[nodiscard]] rct3::park::TerrainMesh track_arrows(const park::ParkScene& scene);

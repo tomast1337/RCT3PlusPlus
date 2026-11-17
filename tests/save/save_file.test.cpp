@@ -59,7 +59,7 @@ namespace
             u32(0xF11EDA2Au);
             u32(0x40);
             u32(version);
-            for (int i = 0; i < 15; ++i)
+            for (std::int32_t i = 0; i < 15; ++i)
                 u32(0);
         }
         /// The short form some effect files carry: its own magic, a 1, then twelve words.
@@ -70,7 +70,7 @@ namespace
             u32(0xF11EDA1Au);
             u32(1);
             u32(version);
-            for (int i = 0; i < 11; ++i)
+            for (std::int32_t i = 0; i < 11; ++i)
                 u32(0);
         }
         void checksum()

@@ -18,6 +18,7 @@
 #include "ui/screens/front/desktop.hpp"
 #include "units/units.hpp"
 
+#include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <memory>
@@ -37,7 +38,7 @@ namespace rct3::scene
         std::optional<std::filesystem::path> game_saves;   ///< The original game's folder of the player's games, if found
         std::vector<ui::screens::options::ScreenSize> screen_sizes;
         std::optional<std::size_t> screen_size;
-        std::vector<int> anti_aliasing_levels;              ///< Samples per pixel the device offers above 1
+        std::vector<std::int32_t> anti_aliasing_levels;     ///< Samples per pixel the device offers above 1
         ui::KeyMap keys;                                    ///< In use, for the options window to change
         std::vector<std::filesystem::path> picture_folders; ///< Of the slideshow behind the front screen, in order
         std::uint32_t picture_seed = 0;                     ///< Shuffles the slideshow

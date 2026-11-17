@@ -10,6 +10,7 @@
 #include "ovl/ride_train.hpp"
 #include "save/model/world.hpp"
 
+#include <cstdint>
 #include <optional>
 #include <span>
 
@@ -129,9 +130,9 @@ namespace rct3::park
 
     inline constexpr float kIsometricPitch = glm::quarter_pi<float>(); ///< Isometric's tilt, half way down
     /// Isometric's way to face for `step` (any whole number, taken round the four): along a diagonal of the map.
-    [[nodiscard]] float isometric_yaw(int step);
+    [[nodiscard]] float isometric_yaw(std::int32_t step);
     /// The nearest of isometric's steps to `yaw`.
-    [[nodiscard]] int isometric_step(float yaw);
+    [[nodiscard]] std::int32_t isometric_step(float yaw);
     /// `from` turned towards `to` by at most `most` radians, the shorter way round.
     [[nodiscard]] float yaw_towards(float from, float to, float most);
     /// Turned by `yaw` and tilted by `pitch` radians round its own eye, which stays put; only stopping short of

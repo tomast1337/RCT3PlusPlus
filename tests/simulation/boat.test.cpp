@@ -8,6 +8,7 @@
 #include "simulation/sandbox.hpp"
 
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -15,7 +16,7 @@ using namespace rct3;
 namespace
 {
     /// A made-up lake: water everywhere in a `cols` by `rows` grid of 4 m tiles but on the tiles `land` lists.
-    simulation::WaterTiles lake(int cols, int rows, std::initializer_list<glm::ivec2> land = { })
+    simulation::WaterTiles lake(std::int32_t cols, std::int32_t rows, std::initializer_list<glm::ivec2> land = { })
     {
         simulation::WaterTiles w { .cols = cols, .rows = rows };
         w.level.assign(static_cast<std::size_t>(cols * rows), 10.0f);
@@ -162,10 +163,10 @@ TEST_CASE("a boat slows in a hard turn and gains speed again once its mark lies 
     simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
     CHECK(boat.speed.value < 2.5f);
     CHECK(boat.turning.value == doctest::Approx(simulation::kMostBoats.turn_most));
-    for (int i = 0; i < 6; ++i)
+    for (std::int32_t i = 0; i < 6; ++i)
         simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
     const float lined_up = boat.speed.value;
-    for (int i = 0; i < 6; ++i)
+    for (std::int32_t i = 0; i < 6; ++i)
         simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
     CHECK(boat.speed.value > lined_up);
 }
@@ -182,11 +183,11 @@ TEST_CASE("a boat leans into its turn, no further than its handling lets it, and
     simulation::sail(boat, water, dock, ski, 3, 1e9f, 0.25f, dice);
     CHECK(boat.turning.value > 0);
     CHECK(boat.lean.value > 0);
-    for (int i = 0; i < 8; ++i)
+    for (std::int32_t i = 0; i < 8; ++i)
         simulation::sail(boat, water, dock, ski, 3, 1e9f, 0.25f, dice);
     CHECK(boat.lean.value <= ski.lean_most);
     boat.marks = { boat.at + boat.heading * 40.0f };
-    for (int i = 0; i < 12; ++i)
+    for (std::int32_t i = 0; i < 12; ++i)
         simulation::sail(boat, water, dock, ski, 3, 1e9f, 0.25f, dice);
     CHECK(std::abs(boat.lean.value) < 0.05f);
 }
@@ -213,7 +214,7 @@ TEST_CASE("two boats heading at each other steer round and never touch")
     fleet[1].marks = { { 10, 40 } };
     auto dice = random::seeded(random::Seed { 1 });
     float closest = 1e9f;
-    for (int i = 0; i < 160; ++i)
+    for (std::int32_t i = 0; i < 160; ++i)
     {
         for (auto& boat : fleet)
             simulation::sail(boat, water, dock, simulation::kMostBoats, 2, 1e9f, 0.25f, dice, fleet);
@@ -234,7 +235,7 @@ TEST_CASE("bumper boats run into each other and bounce off")
     fleet[0].marks = { { 70, 40 } };
     fleet[1].marks = { { 10, 40 } };
     auto dice = random::seeded(random::Seed { 1 });
-    for (int i = 0; i < 16; ++i)
+    for (std::int32_t i = 0; i < 16; ++i)
         for (auto& boat : fleet)
             simulation::sail(boat, water, dock, simulation::kMostBoats, 2, 1e9f, 0.25f, dice, fleet, true);
     CHECK(fleet[0].at.x < 40); // Thrown back the way it came

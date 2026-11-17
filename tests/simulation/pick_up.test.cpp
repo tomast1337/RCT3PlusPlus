@@ -7,6 +7,7 @@
 #include "simulation/systems.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -19,7 +20,7 @@ TEST_CASE("a guest picked up out of a queue leaves it, and those behind move up"
     const auto ride = park.flat_ride("Spinner", { 6, 0 }, 0, { .capacity = 1, .cycle_seconds = 60, .line = { { 6, 0 }, { 5, 0 }, { 4, 0 }, { 3, 0 } } });
     auto& r = park.world().registry;
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 3; ++i)
+    for (std::int32_t i = 0; i < 3; ++i)
     {
         guests.push_back(park.guest({ 2, 0 }));
         r.get<Errand>(guests.back()) = { ErrandKind::Heading, ride, 0 };

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <climits>
+#include <cstdint>
 #include <cstring>
 #include <format>
 #include <fstream>
@@ -33,10 +34,10 @@ namespace rct3::image
         if (data.empty() || data.size() > static_cast<std::size_t>(INT_MAX))
             return std::unexpected("not a picture");
         const auto* bytes = reinterpret_cast<const stbi_uc*>(data.data());
-        const int length = static_cast<int>(data.size());
-        int width = 0;
-        int height = 0;
-        int channels = 0;
+        const std::int32_t length = static_cast<std::int32_t>(data.size());
+        int width = 0;    // c-api
+        int height = 0;   // c-api
+        int channels = 0; // c-api
         // Checked before decoding, so a huge size in a header costs nothing.
         if (stbi_info_from_memory(bytes, length, &width, &height, &channels) == 0)
             return std::unexpected(std::string("not a picture: ") + stbi_failure_reason());

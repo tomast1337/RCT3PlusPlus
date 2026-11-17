@@ -38,7 +38,7 @@ namespace rct3::audio
     /// For 31 October, at even and odd places.
     inline constexpr std::array<std::string_view, 2> kHalloweenMenuTracks = { "Haunted House.wma", "Gothic Moon.wma" };
     /// Tracks tried before giving up for the quiet one.
-    inline constexpr int kMenuTrackTries = 10;
+    inline constexpr std::int32_t kMenuTrackTries = 10;
 
     inline constexpr float kMenuMusicLevel = 0.5f; ///< Of the music volume
 
@@ -60,8 +60,8 @@ namespace rct3::audio
     struct MenuMusicPick
     {
         std::string_view track;
-        std::optional<std::size_t> file; ///< Of the files given, the track's; nothing when it is missing too
-        std::optional<int> next_place;   ///< Where the cycle carries on next run; nothing without cycling
+        std::optional<std::size_t> file;        ///< Of the files given, the track's; nothing when it is missing too
+        std::optional<std::int32_t> next_place; ///< Where the cycle carries on next run; nothing without cycling
     };
 
     enum class MenuMusicSource : std::uint8_t
@@ -89,7 +89,7 @@ namespace rct3::audio
 
     /// Picks this run's track. `place` is where the cycle stands, nothing when it is off; `files` are the
     /// names in the music folder, matched in any case.
-    [[nodiscard]] MenuMusicPick pick_menu_music(std::optional<int> place, bool halloween, std::span<const std::string> files);
+    [[nodiscard]] MenuMusicPick pick_menu_music(std::optional<std::int32_t> place, bool halloween, std::span<const std::string> files);
 
     /// Whether `when` falls on 31 October, by the UTC calendar.
     [[nodiscard]] bool is_halloween(std::chrono::system_clock::time_point when);

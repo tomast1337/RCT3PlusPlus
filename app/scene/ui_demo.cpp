@@ -99,7 +99,7 @@ namespace rct3::scene
         if (list.push_clip(area))
         {
             const float scroll = std::fmod(t * 20.0f, 160.0f);
-            for (int row = 0; row < 12; ++row)
+            for (std::int32_t row = 0; row < 12; ++row)
             {
                 const float y = area.y0 + static_cast<float>(row) * 20.0f - scroll;
                 const auto shade = static_cast<std::uint8_t>(row % 2 == 0 ? 80 : 60);

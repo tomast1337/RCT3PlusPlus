@@ -13,7 +13,7 @@
 #include <unistd.h>
 #include <vector>
 
-extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
+extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) // c-api
 {
     static const std::filesystem::path path = std::filesystem::temp_directory_path() / std::format("rct3pp_fuzz_wma_{}", getpid());
     {
@@ -27,9 +27,9 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     // Bounded: a few chunks, a rewind, then a few more.
     std::vector<float> chunk(4096 * static_cast<std::size_t>(stream->channels()));
     volatile float sink = 0;
-    for (int round = 0; round < 2; ++round)
+    for (std::int32_t round = 0; round < 2; ++round)
     {
-        for (int i = 0; i < 16; ++i)
+        for (std::int32_t i = 0; i < 16; ++i)
         {
             const auto read = stream->read(chunk);
             if (!read || *read == 0)

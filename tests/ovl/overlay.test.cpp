@@ -51,7 +51,7 @@ namespace
         fs::path path;
         TempDir()
         {
-            static std::atomic<int> counter { 0 };
+            static std::atomic<std::int32_t> counter { 0 };
             path = fs::temp_directory_path() / std::format("rct3pp_overlay_test_{}_{}", counter++, reinterpret_cast<std::uintptr_t>(this));
             fs::create_directories(path);
         }

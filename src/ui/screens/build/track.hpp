@@ -112,12 +112,12 @@ namespace rct3::ui::screens::build
     /// One setting's box: its value and range, in units of `unit` shown with `decimals` places.
     struct ParamBox
     {
-        int value = 0;
-        int least = 0;
-        int most = 0;
-        int decimals = 0;
+        std::int32_t value = 0;
+        std::int32_t least = 0;
+        std::int32_t most = 0;
+        std::int32_t decimals = 0;
         std::u16string unit;
-        int step = 1;
+        std::int32_t step = 1;
     };
 
     /// What a picture button shows.
@@ -220,7 +220,7 @@ namespace rct3::ui::screens::build
     {
         ConstructionAction action = ConstructionAction::Build;
         std::size_t index = 0;
-        int value = 0;
+        std::int32_t value = 0;
 
         friend bool operator==(const ConstructionEvent&, const ConstructionEvent&) = default;
     };

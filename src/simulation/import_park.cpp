@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <format>
 #include <functional>
@@ -212,7 +213,7 @@ namespace rct3::simulation
                 const float z = paths.origin.y + (static_cast<float>(p.row) + 0.5f) * paths.tile_size;
                 height = grid.height_at(x, z).value_or(0.0f);
             }
-            return { { p.col, p.row, static_cast<int>(std::lround(height / paths.level_height)) }, height };
+            return { { p.col, p.row, static_cast<std::int32_t>(std::lround(height / paths.level_height)) }, height };
         }
 
         /// How a ride's station meets the paths.
@@ -229,14 +230,14 @@ namespace rct3::simulation
         /// beside it.
         std::optional<NodeId> path_at(const PathNetwork& paths, const save::model::PlacementSpot& spot, glm::vec2 way, bool queues)
         {
-            const int col = spot.col + static_cast<int>(way.x);
-            const int row = spot.row + static_cast<int>(way.y);
+            const std::int32_t col = spot.col + static_cast<std::int32_t>(way.x);
+            const std::int32_t row = spot.row + static_cast<std::int32_t>(way.y);
             std::optional<NodeId> found;
-            int gap = 0;
+            std::int32_t gap = 0;
             for (std::uint32_t n = 0; n < paths.nodes().size(); ++n)
             {
                 const PathNode& node = paths.nodes()[n];
-                const int g = std::abs(node.tile.level - spot.height);
+                const std::int32_t g = std::abs(node.tile.level - spot.height);
                 if (node.removed || node.queue != queues || node.tile.col != col || node.tile.row != row || static_cast<float>(g) > rct3::park::ground::kPavingReach)
                     continue;
                 if (!found || g < gap)
@@ -557,7 +558,7 @@ namespace rct3::simulation
 
     void follow_ground(SimWorld& world, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& was, const save::model::TerrainGrid& grid, save::model::Tile first, save::model::Tile last)
     {
-        const auto inside = [&](int col, int row) { return col >= first.col && col <= last.col && row >= first.row && row <= last.row; };
+        const auto inside = [&](std::int32_t col, std::int32_t row) { return col >= first.col && col <= last.col && row >= first.row && row <= last.row; };
         for (const save::model::PathTile& p : paths)
         {
             if (!inside(p.col, p.row) || !(rct3::park::ground::is_ground_queue(p) || (!p.elevation && p.kind == save::model::PathKind::Ground)))
@@ -600,8 +601,8 @@ namespace rct3::simulation
         // Keepers about their enclosures stand on the ground itself.
         for (const auto [e, duty, pose] : r.view<const KeeperDuty, Pose>().each())
         {
-            const int col = static_cast<int>(std::floor((pose.position.x - grid.origin_x) / grid.tile_size_x));
-            const int row = static_cast<int>(std::floor((pose.position.z - grid.origin_z) / grid.tile_size_z));
+            const std::int32_t col = static_cast<std::int32_t>(std::floor((pose.position.x - grid.origin_x) / grid.tile_size_x));
+            const std::int32_t row = static_cast<std::int32_t>(std::floor((pose.position.z - grid.origin_z) / grid.tile_size_z));
             if (!inside(col, row))
                 continue;
             if (const auto ground = grid.height_at(pose.position.x, pose.position.z))
@@ -954,7 +955,7 @@ namespace rct3::simulation
             // shortcut: a drop tower's car is pushed up like a launched tower's, not hauled up; plain shuttle mode
             // and the other modes run no train; upgrade when a park has them.
             using enum save::model::OperatingMode;
-            const int circuits = std::max(ride.options.circuits, 1);
+            const std::int32_t circuits = std::max(ride.options.circuits, 1);
             c.closed = false;
             c.splash_out = course.splash_end && ride.mode == ContinuousCircuit;
             switch (ride.mode)
@@ -1043,7 +1044,7 @@ namespace rct3::simulation
         if (!ride.trains.empty() && ride.trains[0].length.value > 0)
             c.train_length = ride.trains[0].length.value;
         if (!ride.trains.empty() && !ride.trains[0].cars.empty())
-            c.cars = static_cast<int>(ride.trains[0].cars.size());
+            c.cars = static_cast<std::int32_t>(ride.trains[0].cars.size());
         // Brakes hold each car over them back with the force the ride's file gives (every tracked ride the game
         // ships sets 5000 N), against the whole train's mass as the park keeps it.
         // shortcut: one brake force for every ride and a train built here weighs 500 kg a car, chosen by eye
@@ -1631,8 +1632,8 @@ namespace rct3::simulation
         constexpr float kSameLevel = 0.5f; // Metres apart that still count as one level
         struct Tile
         {
-            int col = 0;
-            int row = 0;
+            std::int32_t col = 0;
+            std::int32_t row = 0;
             float up = 0;
         };
         // The tiles of each ride's stations, by the middle of each stretch of them.
@@ -1649,7 +1650,7 @@ namespace rct3::simulation
                 if (course->kinds[k] != rct3::park::track::CourseKind::Station)
                     continue;
                 const glm::vec3 middle = (course->points[k] + course->points[k + 1]) / 2.0f;
-                stations[i].push_back({ static_cast<int>(std::floor((middle.x - grid.origin_x) / grid.tile_size_x)), static_cast<int>(std::floor((middle.z - grid.origin_z) / grid.tile_size_z)), middle.y });
+                stations[i].push_back({ static_cast<std::int32_t>(std::floor((middle.x - grid.origin_x) / grid.tile_size_x)), static_cast<std::int32_t>(std::floor((middle.z - grid.origin_z) / grid.tile_size_z)), middle.y });
             }
         }
         for (std::size_t i = 0; i < count; ++i)
@@ -1909,7 +1910,7 @@ namespace rct3::simulation
             if (auto* fleet = r.try_get<Trains>(ride->second))
             {
                 // A running train with room first, as most riders the park kept are out on the track.
-                for (int pass = 0; pass < 2 && riders == nullptr; ++pass)
+                for (std::int32_t pass = 0; pass < 2 && riders == nullptr; ++pass)
                     for (std::size_t t = 0; t < fleet->trains.size() && riders == nullptr; ++t)
                         if (fleet->riders[t].size() < cycle.capacity && (pass == 1 || fleet->trains[t].running))
                         {

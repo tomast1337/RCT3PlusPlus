@@ -57,7 +57,7 @@ namespace rct3::ovl
         void append_number(std::string& out, float v)
         {
             char buf[48];
-            const int n = std::snprintf(buf, sizeof buf, "%.6g", static_cast<double>(finite(v)));
+            const int n = std::snprintf(buf, sizeof buf, "%.6g", static_cast<double>(finite(v))); // c-api
             out.append(buf, n > 0 ? static_cast<std::size_t>(n) : 0);
         }
 

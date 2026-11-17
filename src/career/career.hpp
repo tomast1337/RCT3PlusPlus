@@ -48,7 +48,7 @@ namespace rct3::career
     struct Career
     {
         std::string name;
-        int pack = 0;                            ///< 0 the original game, then each expansion
+        std::int32_t pack = 0;                   ///< 0 the original game, then each expansion
         std::size_t current = 0;                 ///< The scenario last picked, in `scenarios`
         std::int64_t created = 0;                ///< Seconds since 1970; 0 when not known
         std::vector<ScenarioProgress> scenarios; ///< In the order of the game's list
@@ -64,10 +64,10 @@ namespace rct3::career
     };
 
     /// How many scenarios a new career has open.
-    [[nodiscard]] std::size_t first_open(int pack);
+    [[nodiscard]] std::size_t first_open(std::int32_t pack);
 
     /// A new career through the scenarios `ids`, in the list's order, the first ones open.
-    [[nodiscard]] Career new_career(std::string name, int pack, std::span<const std::string> ids);
+    [[nodiscard]] Career new_career(std::string name, std::int32_t pack, std::span<const std::string> ids);
 
     /// Fits the career to the game's list of scenarios `ids`: each keeps its progress by id, new ones come
     /// locked, ones no longer listed are kept apart, the scenario last picked stays picked if still listed,

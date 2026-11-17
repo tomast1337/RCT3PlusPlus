@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/money_floaters.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
@@ -25,7 +26,7 @@ TEST_CASE("a money float's letters bob in a wave, never below the line")
     const float line = 20;
     for (std::size_t letter = 0; letter < 6; ++letter)
     {
-        for (int step = 0; step < 25; ++step)
+        for (std::int32_t step = 0; step < 25; ++step)
         {
             const rct3::units::Seconds age { static_cast<float>(step) * 0.1f };
             CHECK(money_float_bob(letter, age, line) >= 0);

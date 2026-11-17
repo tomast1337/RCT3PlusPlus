@@ -27,14 +27,14 @@ namespace rct3::simulation
     /// Which tiles a boat can float on, and the surface's height there.
     struct WaterTiles
     {
-        int cols = 0;
-        int rows = 0;
+        std::int32_t cols = 0;
+        std::int32_t rows = 0;
         float origin_x = 0;
         float origin_z = 0;
         float tile_size = 4;
         std::vector<std::optional<float>> level { }; ///< Row-major; none where a boat cannot go
 
-        [[nodiscard]] std::optional<float> at(int col, int row) const;
+        [[nodiscard]] std::optional<float> at(std::int32_t col, std::int32_t row) const;
         [[nodiscard]] glm::ivec2 tile_of(glm::vec2 at) const;
         [[nodiscard]] glm::vec2 middle(glm::ivec2 tile) const;
     };

@@ -45,10 +45,10 @@ namespace rct3::ovl
 namespace rct3::park::track
 {
 
-    inline constexpr int kSlopeSteps = 3; ///< Up or down from level
-    inline constexpr int kBankSteps = 4;  ///< Eighths of a turn to upside down
-    inline constexpr int kCurveSizes = 3; ///< Loose, medium and tight
-    inline constexpr int kUpsideDown = kBankSteps;
+    inline constexpr std::int32_t kSlopeSteps = 3; ///< Up or down from level
+    inline constexpr std::int32_t kBankSteps = 4;  ///< Eighths of a turn to upside down
+    inline constexpr std::int32_t kCurveSizes = 3; ///< Loose, medium and tight
+    inline constexpr std::int32_t kUpsideDown = kBankSteps;
 
     // Bits of a section's flags, as seen across the game's track overlays: lift chain pieces all have the
     // first, station pieces the second, and nearly every piece of later files the third.
@@ -92,8 +92,8 @@ namespace rct3::park::track
     /// One end of a piece as a car passes it.
     struct PieceEnd
     {
-        int slope = 0;
-        int bank = 0;
+        std::int32_t slope = 0;
+        std::int32_t bank = 0;
         Heading8 heading;
 
         friend bool operator==(const PieceEnd&, const PieceEnd&) = default;
@@ -200,7 +200,7 @@ namespace rct3::park::track
         PieceLine line; ///< The way its cars go along it
         PieceEnd entry; ///< Laid as drawn, where it meets the piece before
         PieceEnd exit;
-        int curve = 0;
+        std::int32_t curve = 0;
         PieceUse use = PieceUse::Plain;
         std::uint8_t toggles = 0; ///< Bits of the PieceToggle values it has, laid as drawn
     };
@@ -266,7 +266,7 @@ namespace rct3::park::track
     /// The ends and curve of `shape` laid as `reversed` says.
     [[nodiscard]] PieceEnd laid_entry(const PieceShape& shape, bool reversed);
     [[nodiscard]] PieceEnd laid_exit(const PieceShape& shape, bool reversed);
-    [[nodiscard]] int laid_curve(const PieceShape& shape, bool reversed);
+    [[nodiscard]] std::int32_t laid_curve(const PieceShape& shape, bool reversed);
 
     /// Whether `end` points along a diagonal.
     [[nodiscard]] constexpr bool diagonal(const PieceEnd& end)

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/relief_maps.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::park;
@@ -26,7 +27,7 @@ namespace
         return picture;
     }
 
-    int texel(const RgbaImage& map, std::uint32_t x, std::uint32_t y, int channel)
+    std::int32_t texel(const RgbaImage& map, std::uint32_t x, std::uint32_t y, std::int32_t channel)
     {
         return map.pixels[(y * map.width + x) * 4 + static_cast<std::uint32_t>(channel)];
     }

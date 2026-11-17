@@ -133,7 +133,7 @@ namespace rct3::scene
         std::size_t surface = 0;                                    ///< Chosen, of `surfaces`
         std::vector<rct3::park::ground::GroundSurface> cliffs;      ///< The cliff faces, read with the surfaces
         std::optional<std::size_t> cliff;                           ///< Chosen, of `cliffs`, in place of a surface
-        int brush = rct3::park::ground::kDefaultBrush;              ///< The brushes' radius, in world units
+        std::int32_t brush = rct3::park::ground::kDefaultBrush;     ///< The brushes' radius, in world units
         std::optional<rct3::park::ground::GroundShape> shape;       ///< The raising or lowering brush chosen; none for the tile tool
         rct3::park::ground::GroundBefore before;                    ///< The ground as a brush stroke found it
         glm::vec2 middle { 0 };                                     ///< Of a brush stroke, in tile units
@@ -154,7 +154,7 @@ namespace rct3::scene
         std::optional<glm::vec3> cost_at; ///< Where the stroke's cost is shown, once it has paid
         float paid_for = 0;               ///< The most ground the stroke has moved, already paid for
         bool spray = true;                ///< The brushes spray while held, rather than follow a drag
-        int spray_speed = rct3::park::ground::kDefaultSpray;
+        std::int32_t spray_speed = rct3::park::ground::kDefaultSpray;
         std::optional<std::size_t> smoothing;              ///< The smoothing brush chosen, by its place in its tab
         float target = 0;                                  ///< Of a levelling stroke
         std::uint64_t passes = 0;                          ///< Of smoothing, the seed of each pass

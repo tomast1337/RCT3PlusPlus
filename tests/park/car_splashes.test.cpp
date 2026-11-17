@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/car_splashes.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -60,8 +61,8 @@ TEST_CASE("a car running on through water leaves a wake now and then")
 {
     const track::TrackCourse c = course();
     CarWater water { .wet = true };
-    int wakes = 0;
-    for (int i = 0; i < 20; ++i)
+    std::int32_t wakes = 0;
+    for (std::int32_t i = 0; i < 20; ++i)
         wakes += car_splash(water, c, 10.2f + 0.4f * static_cast<float>(i), false, { 4, 0, 0 }, kStep).wake ? 1 : 0;
     CHECK(wakes >= 3);
     CHECK(wakes <= 5);

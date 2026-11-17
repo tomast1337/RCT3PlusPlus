@@ -216,7 +216,7 @@ namespace rct3::park
     inline constexpr float kSlopeDragStep = 24;
 
     /// The slope `steps` steps up from `from` (down when negative), from steps down to steps up.
-    [[nodiscard]] PathSlope stepped_slope(PathSlope from, int steps) noexcept;
+    [[nodiscard]] PathSlope stepped_slope(PathSlope from, std::int32_t steps) noexcept;
 
     /// A square over `piece`'s tile, at the piece's height, whose pictures' bottom edge (v = 1) lies on the edge
     /// the piece leaves by in `heading`: the arrow showing where the trail goes. One batch.

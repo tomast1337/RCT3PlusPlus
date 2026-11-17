@@ -26,7 +26,7 @@ namespace rct3::ui
     };
 
     /// The currency at `index` in the game's list, from its strings.
-    [[nodiscard]] Currency currency(const StringTable& strings, int index);
+    [[nodiscard]] Currency currency(const StringTable& strings, std::int32_t index);
 
     [[nodiscard]] std::u16string money_text(const Currency& currency, units::Money amount);
 

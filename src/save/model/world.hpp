@@ -101,15 +101,15 @@ namespace rct3::save::model
     /// A tile of the park, by column and row: its own type, so a column and a row travel together and in order.
     struct Tile
     {
-        int col = 0;
-        int row = 0;
+        std::int32_t col = 0;
+        std::int32_t row = 0;
         friend auto operator<=>(const Tile&, const Tile&) = default;
     };
 
     struct TerrainGrid
     {
-        int width = 0;  ///< Tile columns, 0 when the save has no terrain
-        int height = 0; ///< Tile rows
+        std::int32_t width = 0;  ///< Tile columns, 0 when the save has no terrain
+        std::int32_t height = 0; ///< Tile rows
         float origin_x = 0;
         float origin_z = 0;
         float tile_size_x = 0;
@@ -122,7 +122,7 @@ namespace rct3::save::model
         {
             return cells.empty();
         }
-        [[nodiscard]] bool contains(int col, int row) const noexcept
+        [[nodiscard]] bool contains(std::int32_t col, std::int32_t row) const noexcept
         {
             return col >= 0 && row >= 0 && col < width && row < height;
         }
@@ -131,11 +131,11 @@ namespace rct3::save::model
             return contains(tile.col, tile.row);
         }
         /// Precondition: contains(col, row).
-        [[nodiscard]] const TerrainCell& at(int col, int row) const noexcept
+        [[nodiscard]] const TerrainCell& at(std::int32_t col, std::int32_t row) const noexcept
         {
             return cells[static_cast<std::size_t>(row) * static_cast<std::size_t>(width) + static_cast<std::size_t>(col)];
         }
-        [[nodiscard]] TerrainCell& at(int col, int row) noexcept
+        [[nodiscard]] TerrainCell& at(std::int32_t col, std::int32_t row) noexcept
         {
             return cells[static_cast<std::size_t>(row) * static_cast<std::size_t>(width) + static_cast<std::size_t>(col)];
         }
@@ -148,11 +148,11 @@ namespace rct3::save::model
             return at(tile.col, tile.row);
         }
         /// World X of the left edge of column `col`, and Z of the near edge of row `row`.
-        [[nodiscard]] float world_x(int col) const noexcept
+        [[nodiscard]] float world_x(std::int32_t col) const noexcept
         {
             return origin_x + static_cast<float>(col) * tile_size_x;
         }
-        [[nodiscard]] float world_z(int row) const noexcept
+        [[nodiscard]] float world_z(std::int32_t row) const noexcept
         {
             return origin_z + static_cast<float>(row) * tile_size_z;
         }
@@ -189,8 +189,8 @@ namespace rct3::save::model
 
     struct WaterLayer
     {
-        int width = 0; ///< Map size the layer was written for
-        int height = 0;
+        std::int32_t width = 0; ///< Map size the layer was written for
+        std::int32_t height = 0;
         std::vector<WaterBody> bodies { };
 
         [[nodiscard]] std::size_t triangle_count() const noexcept;
@@ -200,7 +200,7 @@ namespace rct3::save::model
 
     /// The submerged mask a triangle should have for a surface `level`: bit i set when the i-th corner of the
     /// triangle is strictly below it. Empty when the tile is outside the grid or `triangle` is not 0 or 1.
-    [[nodiscard]] std::optional<std::uint8_t> expected_water_mask(const TerrainGrid& grid, float level, Tile tile, int triangle) noexcept;
+    [[nodiscard]] std::optional<std::uint8_t> expected_water_mask(const TerrainGrid& grid, float level, Tile tile, std::int32_t triangle) noexcept;
 
     // ---- Skirt trees ---------------------------------------------------------------------------------------
 

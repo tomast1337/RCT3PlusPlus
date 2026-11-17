@@ -4,6 +4,7 @@
 #include "park/item_category.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <utility>
 
@@ -12,7 +13,7 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid owned_grid(int width, int height)
+    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
     {
         save::model::TerrainGrid g;
         g.width = width;

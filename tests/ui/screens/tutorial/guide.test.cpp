@@ -6,6 +6,7 @@
 #include "ui/game_style.hpp"
 
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -223,7 +224,7 @@ TEST_CASE("a long text makes the window taller, keeping it in its place")
 {
     save::model::TutorialScript s = lessons();
     s.name = "Long"; // Not the name the fixture's strings replace step one's text under
-    for (int i = 0; i < 40; ++i)
+    for (std::int32_t i = 0; i < 40; ++i)
         s.steps[0].text += "word word word word ";
     Fixture f(std::move(s));
     const Rect r = f.window->rect();

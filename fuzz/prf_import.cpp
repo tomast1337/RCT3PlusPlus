@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
+extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) // c-api
 {
     const auto prf = rct3::career::read_prf(std::as_bytes(std::span(data, size)));
     if (prf)

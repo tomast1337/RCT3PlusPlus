@@ -14,6 +14,7 @@
 #include "ui/widgets/button.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -40,14 +41,14 @@ namespace rct3::ui::widgets
         using Button::Button;
 
         /// -1 for each Left and +1 for each Right since the last call, added up.
-        [[nodiscard]] int take_turn()
+        [[nodiscard]] std::int32_t take_turn()
         {
             return std::exchange(turn_, 0);
         }
         bool on_key(const KeyPress& key) override;
 
     private:
-        int turn_ = 0;
+        std::int32_t turn_ = 0;
     };
 
     class Tabs : public Widget
@@ -86,14 +87,14 @@ namespace rct3::ui::widgets
         void update(const UpdateContext& context) override;
 
     private:
-        void turn(int by); // By the user, wrapping round
+        void turn(std::int32_t by); // By the user, wrapping round
 
         TabsStyle style_;
         Widget* bar_ = nullptr;
         std::vector<TabButton*> tabs_;
         std::vector<Widget*> pages_;
         std::size_t current_ = 0;
-        int changes_ = 0;
+        std::int32_t changes_ = 0;
     };
 
 } // namespace rct3::ui::widgets

@@ -4,6 +4,7 @@
 #include "ui/glyph_atlas.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <fstream>
 #include <iterator>
@@ -19,7 +20,7 @@ namespace rct3::ui
         {
             if (data.size() < 12)
                 return std::unexpected("not a TrueType file");
-            const int offset = stbtt_GetFontOffsetForIndex(data.data(), 0);
+            const int offset = stbtt_GetFontOffsetForIndex(data.data(), 0); // c-api
             stbtt_fontinfo info { };
             if (offset < 0 || stbtt_InitFont(&info, data.data(), offset) == 0)
                 return std::unexpected("not a TrueType file");
@@ -33,19 +34,19 @@ namespace rct3::ui
         const auto info = open(data);
         if (!info)
             return std::unexpected(info.error());
-        int ascent = 0;
-        int descent = 0;
-        int gap = 0;
+        std::int32_t ascent = 0;
+        std::int32_t descent = 0;
+        std::int32_t gap = 0;
         stbtt_GetFontVMetrics(&*info, &ascent, &descent, &gap);
         const float per_unit = stbtt_ScaleForMappingEmToPixels(&*info, 1);
         if (!(per_unit > 0) || ascent <= descent)
             return std::unexpected("TrueType file without usable line metrics");
         TrueTypeFile file { std::move(data), static_cast<float>(ascent) * per_unit, static_cast<float>(-descent) * per_unit, 0 };
         file.cap_per_em = file.ascent_per_em;
-        int x0 = 0;
-        int y0 = 0;
-        int x1 = 0;
-        int y1 = 0;
+        std::int32_t x0 = 0;
+        std::int32_t y0 = 0;
+        std::int32_t x1 = 0;
+        std::int32_t y1 = 0;
         if (stbtt_GetCodepointBox(&*info, 'H', &x0, &y0, &x1, &y1) != 0 && y1 > 0)
             file.cap_per_em = static_cast<float>(y1) * per_unit;
         return file;
@@ -79,16 +80,16 @@ namespace rct3::ui
         {
             for (std::uint32_t code = range.first; code <= range.last; ++code)
             {
-                const int index = stbtt_FindGlyphIndex(&*info, static_cast<int>(code));
+                const int index = stbtt_FindGlyphIndex(&*info, static_cast<int>(code)); // c-api
                 if (index == 0)
                     continue;
-                int advance = 0;
-                int bearing = 0;
+                std::int32_t advance = 0;
+                std::int32_t bearing = 0;
                 stbtt_GetGlyphHMetrics(&*info, index, &advance, &bearing);
-                int x0 = 0;
-                int y0 = 0;
-                int x1 = 0;
-                int y1 = 0;
+                std::int32_t x0 = 0;
+                std::int32_t y0 = 0;
+                std::int32_t x1 = 0;
+                std::int32_t y1 = 0;
                 stbtt_GetGlyphBitmapBox(&*info, index, scale, scale, &x0, &y0, &x1, &y1);
 
                 CoverageBitmap bitmap;

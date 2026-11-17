@@ -35,13 +35,13 @@ namespace
     };
 
     /// A bottom-up 24-bit BMP, its rows padded to 4 bytes.
-    std::vector<std::byte> bmp(int width, int height, std::uint8_t blue, std::uint8_t green, std::uint8_t red)
+    std::vector<std::byte> bmp(std::int32_t width, std::int32_t height, std::uint8_t blue, std::uint8_t green, std::uint8_t red)
     {
-        const int row = (width * 3 + 3) / 4 * 4;
-        const int size = 54 + row * height;
+        const std::int32_t row = (width * 3 + 3) / 4 * 4;
+        const std::int32_t size = 54 + row * height;
         std::vector<std::byte> out(static_cast<std::size_t>(size));
-        const auto put = [&](int at, std::uint32_t value, int count) {
-            for (int i = 0; i < count; ++i)
+        const auto put = [&](std::int32_t at, std::uint32_t value, std::int32_t count) {
+            for (std::int32_t i = 0; i < count; ++i)
                 out[static_cast<std::size_t>(at + i)] = static_cast<std::byte>((value >> (8 * i)) & 0xff);
         };
         put(0, 'B' | ('M' << 8), 2);
@@ -52,11 +52,11 @@ namespace
         put(22, static_cast<std::uint32_t>(height), 4);
         put(26, 1, 2);
         put(28, 24, 2);
-        for (int y = 0; y < height; ++y)
+        for (std::int32_t y = 0; y < height; ++y)
         {
-            for (int x = 0; x < width; ++x)
+            for (std::int32_t x = 0; x < width; ++x)
             {
-                const int at = 54 + y * row + x * 3;
+                const std::int32_t at = 54 + y * row + x * 3;
                 put(at, blue, 1);
                 put(at + 1, green, 1);
                 put(at + 2, red, 1);

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <deque>
 
 namespace rct3::simulation
@@ -18,8 +19,8 @@ namespace rct3::simulation
         constexpr units::Distance kReached { 2.5f };   ///< This near a mark counts as there
         constexpr units::Seconds kGiveUp { 12 };       ///< On one mark this long, it picks another
         constexpr units::Pace kSlowest { 1 };          ///< It keeps to this, however hard it turns
-        constexpr int kReach = 6;                      ///< Tiles away it may pick its next mark
-        constexpr int kTries = 20;                     ///< Picks before it settles for any water
+        constexpr std::int32_t kReach = 6;             ///< Tiles away it may pick its next mark
+        constexpr std::int32_t kTries = 20;            ///< Picks before it settles for any water
         constexpr units::Distance kSlowNear { 6 };     ///< This near its last mark it starts to brake
         constexpr units::Radians kAhead { 0.5f };      ///< Its mark may lie this far off its bow for it to speed up
         constexpr units::Distance kLookAhead { 4 };    ///< How far ahead it looks for water to go on in
@@ -57,7 +58,7 @@ namespace rct3::simulation
         }
     } // namespace
 
-    std::optional<float> WaterTiles::at(int col, int row) const
+    std::optional<float> WaterTiles::at(std::int32_t col, std::int32_t row) const
     {
         if (col < 0 || row < 0 || col >= cols || row >= rows)
             return std::nullopt;
@@ -66,7 +67,7 @@ namespace rct3::simulation
 
     glm::ivec2 WaterTiles::tile_of(glm::vec2 p) const
     {
-        return { static_cast<int>(std::floor((p.x - origin_x) / tile_size)), static_cast<int>(std::floor((p.y - origin_z) / tile_size)) };
+        return { static_cast<std::int32_t>(std::floor((p.x - origin_x) / tile_size)), static_cast<std::int32_t>(std::floor((p.y - origin_z) / tile_size)) };
     }
 
     glm::vec2 WaterTiles::middle(glm::ivec2 tile) const
@@ -95,7 +96,7 @@ namespace rct3::simulation
         constexpr units::Distance kClear { 1 }; ///< A boat needs this much room over the surface
         for (const auto& [key, spans] : solids.tiles)
         {
-            const int col = static_cast<int>(key & 0xFFFF), row = static_cast<int>(key >> 16);
+            const std::int32_t col = static_cast<std::int32_t>(key & 0xFFFF), row = static_cast<std::int32_t>(key >> 16);
             const auto level = w.at(col, row);
             if (level && std::ranges::any_of(spans, [&](const rct3::park::path::SolidSpan& s) { return (s.room & rct3::park::path::kWholeTile) != 0 && s.low < *level + kClear.value && *level - kUnder.value < s.high; }))
                 w.level[static_cast<std::size_t>(row) * static_cast<std::size_t>(w.cols) + static_cast<std::size_t>(col)] = std::nullopt;
@@ -111,9 +112,9 @@ namespace rct3::simulation
             return std::vector<glm::ivec2> { to };
         // Breadth first from the goal, so each tile knows its next step towards it.
         const auto index = [&](glm::ivec2 t) { return static_cast<std::size_t>(t.y) * static_cast<std::size_t>(water.cols) + static_cast<std::size_t>(t.x); };
-        std::vector<int> next(water.level.size(), -1);
+        std::vector<std::int32_t> next(water.level.size(), -1);
         std::deque<glm::ivec2> open { to };
-        next[index(to)] = static_cast<int>(index(to));
+        next[index(to)] = static_cast<std::int32_t>(index(to));
         constexpr std::array<glm::ivec2, 8> kSteps { { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } } };
         while (!open.empty() && next[index(from)] < 0)
         {
@@ -127,7 +128,7 @@ namespace rct3::simulation
                     continue;
                 if (step.x != 0 && step.y != 0 && (!water.at(t.x - step.x, t.y) || !water.at(t.x, t.y - step.y)))
                     continue;
-                next[index(n)] = static_cast<int>(index(t));
+                next[index(n)] = static_cast<std::int32_t>(index(t));
                 open.push_back(n);
             }
         }
@@ -136,7 +137,7 @@ namespace rct3::simulation
         std::vector<glm::ivec2> way;
         for (std::size_t at = static_cast<std::size_t>(next[index(from)]);; at = static_cast<std::size_t>(next[at]))
         {
-            way.push_back({ static_cast<int>(at % static_cast<std::size_t>(water.cols)), static_cast<int>(at / static_cast<std::size_t>(water.cols)) });
+            way.push_back({ static_cast<std::int32_t>(at % static_cast<std::size_t>(water.cols)), static_cast<std::int32_t>(at / static_cast<std::size_t>(water.cols)) });
             if (at == index(to))
                 break;
         }
@@ -185,8 +186,8 @@ namespace rct3::simulation
             const glm::ivec2 t = water.tile_of(p);
             return water.at(t.x, t.y).has_value();
         };
-        const int steps = static_cast<int>(std::ceil(seconds / kStep.value));
-        for (int step = 0; step < steps; ++step)
+        const std::int32_t steps = static_cast<std::int32_t>(std::ceil(seconds / kStep.value));
+        for (std::int32_t step = 0; step < steps; ++step)
         {
             const float dt = std::min(seconds - static_cast<float>(step) * kStep.value, kStep.value);
             boat.out.value += dt;
@@ -222,9 +223,9 @@ namespace rct3::simulation
                 // Somewhere ahead, near enough; any water near when nothing ahead is.
                 const glm::ivec2 here = water.tile_of(boat.at);
                 boat.marks.clear();
-                for (int k = 0; k < kTries && boat.marks.empty(); ++k)
+                for (std::int32_t k = 0; k < kTries && boat.marks.empty(); ++k)
                 {
-                    const glm::ivec2 pick = here + glm::ivec2 { static_cast<int>(random::between(dice, std::int64_t { -kReach }, std::int64_t { kReach })), static_cast<int>(random::between(dice, std::int64_t { -kReach }, std::int64_t { kReach })) };
+                    const glm::ivec2 pick = here + glm::ivec2 { static_cast<std::int32_t>(random::between(dice, std::int64_t { -kReach }, std::int64_t { kReach })), static_cast<std::int32_t>(random::between(dice, std::int64_t { -kReach }, std::int64_t { kReach })) };
                     if (pick == here || !water.at(pick.x, pick.y) || (k < kTries / 2 && glm::dot(water.middle(pick) - boat.at, boat.heading) <= 0))
                         continue;
                     boat.marks = marks_to(water, boat.at, water.middle(pick));

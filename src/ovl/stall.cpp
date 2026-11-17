@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/stall.hpp"
 
+#include <cstdint>
+
 namespace rct3::ovl
 {
 
@@ -48,7 +50,7 @@ namespace rct3::ovl
                 // the goods in the record, if the record reaches that far.
                 const std::size_t type_at = kLaterSize + count * kGoodsSize;
                 if (const auto whole = ItemRecord::open(space, refs, address, type_at + 4))
-                    stall.info = detail::read_attraction(*whole, { .type_id = static_cast<int>(type_at) }, layout);
+                    stall.info = detail::read_attraction(*whole, { .type_id = static_cast<std::int32_t>(type_at) }, layout);
             }
             stall.info.style = record.ref(0x28, "sid");
             stall.goods = read_goods(space, refs, count, record.u32(0x08));

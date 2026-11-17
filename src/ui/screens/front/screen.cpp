@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <utility>
 
@@ -225,7 +226,7 @@ namespace rct3::ui::screens::front
     std::array<bool, kExpansionCount> named_expansions(const StringTable& strings)
     {
         std::array<bool, kExpansionCount> named { };
-        for (int n = 0; n < kExpansionCount; ++n)
+        for (std::int32_t n = 0; n < kExpansionCount; ++n)
             named.at(static_cast<std::size_t>(n)) = !strings.get(std::string(kExpansionName) + std::to_string(n)).empty();
         return named;
     }

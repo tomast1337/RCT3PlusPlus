@@ -213,7 +213,7 @@ namespace rct3::park::object
         /// The bones named `kind` and a number, by their place in the shape, in number order.
         std::vector<std::int32_t> numbered_bones(const ovl::BoneShape& shape, std::string_view kind)
         {
-            std::vector<std::pair<int, std::int32_t>> found;
+            std::vector<std::pair<std::int32_t, std::int32_t>> found;
             for (std::size_t b = 0; b < shape.bones.size(); ++b)
                 if (is_numbered(shape.bones[b].name, kind))
                     found.emplace_back(std::stoi(std::string(shape.bones[b].name.substr(kind.size()))), static_cast<std::int32_t>(b));
@@ -365,10 +365,10 @@ namespace rct3::park::object
         ride::Walkways walkways_in(OpenFile& f)
         {
             const auto points = [](const ovl::Spline& spline) {
-                constexpr int kSteps = 4; // Points a curve
+                constexpr std::int32_t kSteps = 4; // Points a curve
                 std::vector<glm::vec3> out;
                 for (std::size_t s = 0; s + 1 < spline.nodes.size(); ++s)
-                    for (int k = 0; k < kSteps; ++k)
+                    for (std::int32_t k = 0; k < kSteps; ++k)
                     {
                         const auto p = ovl::spline_point(spline, s, static_cast<float>(k) / kSteps);
                         out.emplace_back(p[0], p[1], p[2]);
@@ -379,7 +379,7 @@ namespace rct3::park::object
             };
             const auto ends_with = [](std::string_view name, std::string_view end) { return name.size() >= end.size() && strings::equals_ignoring_case(name.substr(name.size() - end.size()), end); };
             ride::Walkways ways;
-            std::vector<std::pair<int, std::vector<glm::vec3>>> paths;
+            std::vector<std::pair<std::int32_t, std::vector<glm::vec3>>> paths;
             for (const auto& [name, spline] : entries(f.splines, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::Spline>(ovl::read_splines(o, p), &ovl::SplineItem::spline); }))
             {
                 const std::size_t digits = name.size() - std::min(name.size(), name.find_last_not_of("0123456789") + 1);
@@ -389,7 +389,7 @@ namespace rct3::park::object
                 else if (digits > 0 && ends_with(stem, "path") && !ends_with(stem, "mechpath"))
                     paths.emplace_back(std::stoi(std::string(name.substr(stem.size()))), points(spline));
             }
-            std::ranges::sort(paths, { }, &std::pair<int, std::vector<glm::vec3>>::first);
+            std::ranges::sort(paths, { }, &std::pair<std::int32_t, std::vector<glm::vec3>>::first);
             for (auto& path : paths)
                 ways.paths.push_back(std::move(path.second));
             return ways;
@@ -435,12 +435,12 @@ namespace rct3::park::object
         // run different ways.
         constexpr std::uint32_t kSize = 64;
         constexpr units::TurnRate kRun { 1.3f }; ///< Chosen by eye: the waves move on
-        constexpr int kShades = 16;
+        constexpr std::int32_t kShades = 16;
         PaletteImage picture;
         picture.width = kSize;
         picture.height = kSize;
         constexpr float kCrest = 0.25f; ///< How much lighter the crests are
-        for (int i = 0; i < kShades; ++i)
+        for (std::int32_t i = 0; i < kShades; ++i)
         {
             const glm::vec3 shade = glm::mix(glm::vec3(kWaterColour), glm::vec3(1.0f), kCrest * static_cast<float>(i) / (kShades - 1));
             picture.palette[i] = { static_cast<std::uint8_t>(shade.r * 255), static_cast<std::uint8_t>(shade.g * 255), static_cast<std::uint8_t>(shade.b * 255) };
@@ -678,11 +678,11 @@ namespace rct3::park::object
                 // A bench's seats, as points named and numbered as a ride's seat bones are, in number order.
                 if (model.seat_places.empty())
                 {
-                    std::vector<std::pair<int, glm::mat4>> seats;
+                    std::vector<std::pair<std::int32_t, glm::mat4>> seats;
                     for (const ovl::ShapeEffect& e : shape->effects)
-                        if (int number = 0; is_numbered(e.name, kSeat) && std::from_chars(e.name.data() + kSeat.size(), e.name.data() + e.name.size(), number).ec == std::errc { })
+                        if (std::int32_t number = 0; is_numbered(e.name, kSeat) && std::from_chars(e.name.data() + kSeat.size(), e.name.data() + e.name.size(), number).ec == std::errc { })
                             seats.emplace_back(number, column_matrix(e.transform));
-                    std::ranges::sort(seats, { }, &std::pair<int, glm::mat4>::first);
+                    std::ranges::sort(seats, { }, &std::pair<std::int32_t, glm::mat4>::first);
                     for (const auto& seat : seats)
                         model.seat_places.push_back(seat.second);
                 }
@@ -927,7 +927,7 @@ namespace rct3::park::object
         fit.on_track = (front_wheels + rear_wheels) / 2.0f;
         fit.link_front = points.link_front ? behind(*points.link_front) : 0;
         fit.link_rear = points.link_rear ? behind(*points.link_rear) : fit.length;
-        const int links = (points.link_front ? 1 : 0) + (points.link_rear ? 1 : 0);
+        const std::int32_t links = (points.link_front ? 1 : 0) + (points.link_rear ? 1 : 0);
         if (links > 0)
             fit.link_height = ((points.link_front ? points.link_front->y : 0) + (points.link_rear ? points.link_rear->y : 0)) / static_cast<float>(links) - fit.on_track.y;
         fit.link = points.link;
@@ -1102,7 +1102,7 @@ namespace rct3::park::object
             for (std::size_t i = 0; i < points.wheels.size(); ++i)
             {
                 glm::vec3 sum { 0.0f };
-                int found = 0;
+                std::int32_t found = 0;
                 const auto count = [&](std::string_view piece, std::string_view bone, const glm::mat4& place) {
                     if (const auto wheel = bone_of(piece, bone))
                     {
@@ -1169,8 +1169,8 @@ namespace rct3::park::object
         {
             if (const auto wake = bone_of(car->visual, std::format("wake{}01", kStrengths[strength])))
                 model.splash_points.push_back({ .position = glm::vec3((*wake)[3]), .strength = strength, .wake = true });
-            constexpr int kMostSplashes = 6; // Numbered from 01; seen up to 06
-            for (int n = 1; n <= kMostSplashes; ++n)
+            constexpr std::int32_t kMostSplashes = 6; // Numbered from 01; seen up to 06
+            for (std::int32_t n = 1; n <= kMostSplashes; ++n)
                 if (const auto splash = bone_of(car->visual, std::format("watersplash{}{:02}", kStrengths[strength], n)))
                     model.splash_points.push_back({ .position = glm::vec3((*splash)[3]), .strength = strength });
         }

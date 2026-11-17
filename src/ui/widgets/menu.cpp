@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::ui::widgets
 {
@@ -63,7 +64,7 @@ namespace rct3::ui::widgets
         highlighted_ = index && choosable(*index) ? index : std::nullopt;
     }
 
-    void Menu::move_highlight(int direction, std::size_t from)
+    void Menu::move_highlight(std::int32_t direction, std::size_t from)
     {
         const auto n = static_cast<std::ptrdiff_t>(items.size());
         for (std::ptrdiff_t i = static_cast<std::ptrdiff_t>(from); i >= 0 && i < n; i += direction)

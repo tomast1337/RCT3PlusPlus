@@ -8,6 +8,7 @@
 #include "simulation/swimming.hpp"
 #include "units/units.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <tuple>
 
@@ -493,7 +494,7 @@ TEST_CASE("a loaded swimmer heads for no slide, the one they were saved heading 
     SimWorld loaded;
     auto& l = loaded.registry;
     // The saved slide's number now names something else.
-    for (int i = 0; i < 3; ++i)
+    for (std::int32_t i = 0; i < 3; ++i)
         static_cast<void>(l.create());
     const entt::entity room2 = l.create();
     l.emplace<PoolDoor>(room2, PoolDoor { .col = 2, .row = 3 });

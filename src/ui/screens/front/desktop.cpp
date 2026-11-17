@@ -3,6 +3,7 @@
 
 #include "core/maybe.hpp"
 
+#include <cstdint>
 #include <utility>
 
 namespace rct3::ui::screens::front
@@ -74,7 +75,7 @@ namespace rct3::ui::screens::front
         return desktop_.root().find_as<career::CareerDialog>(kCareersName);
     }
 
-    void FrontEnd::open_careers(int pack)
+    void FrontEnd::open_careers(std::int32_t pack)
     {
         if (auto open = career_dialog())
         {
@@ -114,7 +115,7 @@ namespace rct3::ui::screens::front
         return desktop_.root().find_as<tutorial::TutorialPicker>(kTutorialsName);
     }
 
-    void FrontEnd::open_tutorials(int pack)
+    void FrontEnd::open_tutorials(std::int32_t pack)
     {
         if (auto open = tutorial_picker())
         {

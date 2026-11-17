@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <numbers>
 
 namespace rct3::simulation
@@ -294,7 +295,7 @@ namespace rct3::simulation
         const auto station_at = [&](float d) { return c.kinds[point_at(c, wrap(c, d))] == Stretch::Station; };
         // The push a shuttle's train gets as it sets off (pass 0) and on each pass after, before its last: going up
         // for a tower, the way it is moving for a swing.
-        const auto push_on = [&](int pass, float way) {
+        const auto push_on = [&](std::int32_t pass, float way) {
             const float full = c.launch_speed.value_or(0);
             const auto k = static_cast<float>(pass);
             switch (c.shuttle)
@@ -319,8 +320,8 @@ namespace rct3::simulation
             c.pushed = { };
             c.held = { };
         }
-        const int steps = static_cast<int>(std::ceil(seconds / kStep.value));
-        for (int step = 0; step < steps; ++step)
+        const std::int32_t steps = static_cast<std::int32_t>(std::ceil(seconds / kStep.value));
+        for (std::int32_t step = 0; step < steps; ++step)
         {
             const float dt = std::min(seconds - static_cast<float>(step) * kStep.value, kStep.value);
             // On a lift: rolled to a stop on its car's track, carried up, held at the top for the block ahead, then
@@ -467,7 +468,7 @@ namespace rct3::simulation
                 // down to it and no further, whichever way it goes; each over a block brake pushes it on while it is
                 // slower. A brake set to nothing lets it through. Each car over a booster is shoved on by its jets,
                 // much harder, while slower than the booster's speed.
-                const int cars = std::max(c.cars, 1);
+                const std::int32_t cars = std::max(c.cars, 1);
                 const float car = c.train_length / static_cast<float>(cars);
                 float pull = 0;
                 float push = 0;
@@ -476,7 +477,7 @@ namespace rct3::simulation
                 float jets = 0;
                 float jet_most = 0;
                 bool blocked = false;
-                for (int k = 0; k < cars; ++k)
+                for (std::int32_t k = 0; k < cars; ++k)
                 {
                     const std::size_t i = point_at(c, wrap(c, c.at - (static_cast<float>(k) + 0.5f) * car));
                     const bool block = c.kinds[i] == Stretch::BlockBrake;
@@ -744,7 +745,7 @@ namespace rct3::simulation
         c.speed = 0;
         constexpr float kTick = 0.25f;
         std::vector<Carriage> carriages = carriages_of(c);
-        for (int tick = 1; static_cast<float>(tick) * kTick <= most && c.running; ++tick)
+        for (std::int32_t tick = 1; static_cast<float>(tick) * kTick <= most && c.running; ++tick)
         {
             const float t = static_cast<float>(tick) * kTick;
             lower_carriages(c, carriages, kTick);

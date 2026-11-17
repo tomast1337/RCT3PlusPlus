@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <set>
 #include <utility>
@@ -58,7 +59,7 @@ namespace rct3::park
         // Contours: as many lines as reads well over the park's spread of heights, every fifth stronger.
         constexpr std::array kContourSteps { 1.0f, 2.0f, 4.0f, 5.0f, 10.0f, 20.0f };
         constexpr float kMostContours = 24;
-        constexpr int kMajorEvery = 5;
+        constexpr std::int32_t kMajorEvery = 5;
         constexpr units::Pixels kContourWidth { 1.0f };
         constexpr MapRgba kMajorContour { 0x3b, 0x2e, 0x1e, 200 };
 
@@ -359,7 +360,7 @@ namespace rct3::park
                 at.emplace(t.col, t.row);
             const float radius = std::max(1.0f, kPathRadius * static_cast<float>(scale));
             // Casings first, so where lines join the light parts run on without a seam.
-            for (int pass = 0; pass < 2; ++pass)
+            for (std::int32_t pass = 0; pass < 2; ++pass)
             {
                 for (const MapPathTile& t : paths)
                 {
@@ -597,7 +598,7 @@ namespace rct3::park
                     const float away = std::abs(lines - nearest) / per_pixel;
                     const float coverage = std::clamp(kContourWidth.value / 2 + 0.5f - away, 0.0f, 1.0f);
                     if (coverage > 0)
-                        blend(g.contours, x, y, static_cast<int>(nearest) % kMajorEvery == 0 ? kMajorContour : minor, coverage);
+                        blend(g.contours, x, y, static_cast<std::int32_t>(nearest) % kMajorEvery == 0 ? kMajorContour : minor, coverage);
                 }
 
                 const std::int32_t col = std::min(x / scale, grid.width - 1);

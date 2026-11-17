@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <utility>
 #include <vector>
@@ -61,10 +62,10 @@ namespace
     }
 
     /// The mist batch's puffs and droplets, by the sign of their normal's last value.
-    std::pair<int, int> puffs_and_droplets(const WaterfallMesh& mesh)
+    std::pair<std::int32_t, std::int32_t> puffs_and_droplets(const WaterfallMesh& mesh)
     {
         const FallBatch mist = mesh.parts[static_cast<std::size_t>(FallPart::Mist)];
-        std::pair<int, int> counted { };
+        std::pair<std::int32_t, std::int32_t> counted { };
         for (std::uint32_t i = mist.first; i < mist.first + mist.count; i += 6)
             ++(mesh.vertices[mesh.indices[i]].normal.z > 0 ? counted.first : counted.second);
         return counted;
@@ -88,10 +89,10 @@ TEST_CASE("waterfall_mesh: foam and sheet at every level, mist from Medium, more
     const std::vector<save::model::Waterfall> falls { fall(), tall };
     const std::vector<FallLakes> lakes(2);
     WaterfallMesh mesh;
-    std::array<std::pair<int, int>, 4> mist { };
+    std::array<std::pair<std::int32_t, std::int32_t>, 4> mist { };
     for (const WaterfallDetail detail : { WaterfallDetail::Low, WaterfallDetail::Medium, WaterfallDetail::High, WaterfallDetail::Ultra })
     {
-        CAPTURE(static_cast<int>(detail));
+        CAPTURE(static_cast<std::int32_t>(detail));
         waterfall_mesh(falls, lakes, detail, mesh);
         CHECK(part(mesh, FallPart::Foam) == 2 * 6);
         CHECK(part(mesh, FallPart::Sheet) == 2 * 13 * 6); // Twelve rows down and one behind the edge each

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <numbers>
 #include <utility>
 
@@ -20,7 +21,7 @@ namespace rct3::park::pools
         {
             if (grid.tile_size_x <= 0 || grid.tile_size_z <= 0)
                 return std::nullopt;
-            return save::model::Tile { static_cast<int>(std::floor((at.x - grid.origin_x) / grid.tile_size_x)), static_cast<int>(std::floor((at.y - grid.origin_z) / grid.tile_size_z)) };
+            return save::model::Tile { static_cast<std::int32_t>(std::floor((at.x - grid.origin_x) / grid.tile_size_x)), static_cast<std::int32_t>(std::floor((at.y - grid.origin_z) / grid.tile_size_z)) };
         }
 
         /// The box round the water squares joined side to side, at one surface, to the water square at `start`.
@@ -30,7 +31,7 @@ namespace rct3::park::pools
             for (std::size_t i = 0; i < body.size(); ++i)
                 for (const glm::vec2 side : kSide)
                 {
-                    const save::model::Tile next { body[i].col + static_cast<int>(side.x), body[i].row + static_cast<int>(side.y) };
+                    const save::model::Tile next { body[i].col + static_cast<std::int32_t>(side.x), body[i].row + static_cast<std::int32_t>(side.y) };
                     if (const auto square = map.at(next.col, next.row, start.surface); square && square->kind == PoolKind::Water && square->surface == start.surface && !std::ranges::contains(body, next))
                         body.push_back(next);
                 }

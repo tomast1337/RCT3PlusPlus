@@ -2,6 +2,7 @@
 #include "simulation/workers.hpp"
 
 #include <algorithm>
+#include <cstdint>
 
 namespace rct3::simulation
 {
@@ -11,9 +12,9 @@ namespace rct3::simulation
         constexpr std::size_t kMinChunk = 64; ///< Items below which sharing out costs more than it saves
     }
 
-    Workers::Workers(unsigned threads)
+    Workers::Workers(std::uint32_t threads)
     {
-        for (unsigned i = 0; i < threads; ++i)
+        for (std::uint32_t i = 0; i < threads; ++i)
             threads_.emplace_back([this] { work(); });
     }
 

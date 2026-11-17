@@ -28,9 +28,9 @@ namespace rct3::ui
     {
         /// What the interface asks for; set when the pointer is over a window or a widget holds it.
         std::optional<CursorKind> interface;
-        bool turning = false; ///< Turning and tilting the camera by the mouse
-        bool panning = false; ///< Dragging the ground along
-        int zooming = 0;      ///< Positive while zooming in from the keyboard, negative while zooming out
+        bool turning = false;     ///< Turning and tilting the camera by the mouse
+        bool panning = false;     ///< Dragging the ground along
+        std::int32_t zooming = 0; ///< Positive while zooming in from the keyboard, negative while zooming out
         PointerTool tool = PointerTool::None;
         bool over_pickable = false; ///< Something that opens a panel when clicked is under the pointer
         bool blocked = false;       ///< The tool cannot act where the pointer is

@@ -15,6 +15,7 @@
 #include "random/generator.hpp"
 #include "save/model/world.hpp"
 
+#include <cstdint>
 #include <span>
 #include <vector>
 
@@ -26,7 +27,7 @@ namespace rct3::park
     inline constexpr float kOffMapReachShare = 0.25f;
     /// How many places each park tree tries beyond the edge. Chosen by eye: as many trees as the
     /// shipped parks list, within a tenth or so.
-    inline constexpr int kOffMapTries = 8;
+    inline constexpr std::int32_t kOffMapTries = 8;
     /// The least upward share of the land's slope a tree stands on. Chosen by eye: hillsides yes, cliffs no.
     inline constexpr float kOffMapFlatness = 0.9f;
     /// How far each tree's foot sits below the land, so it never floats where the land curves.

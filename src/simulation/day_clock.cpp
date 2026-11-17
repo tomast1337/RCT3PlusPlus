@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::simulation
 {
@@ -55,9 +56,9 @@ namespace rct3::simulation
         return park_hours;
     }
 
-    DayTransition day_transition(int option)
+    DayTransition day_transition(std::int32_t option)
     {
-        return static_cast<DayTransition>(std::clamp(option, static_cast<int>(DayTransition::Instant), static_cast<int>(DayTransition::Cycle)));
+        return static_cast<DayTransition>(std::clamp(option, static_cast<std::int32_t>(DayTransition::Instant), static_cast<std::int32_t>(DayTransition::Cycle)));
     }
 
     bool in_window(DayWindow window, float time)

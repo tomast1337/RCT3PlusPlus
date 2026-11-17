@@ -69,10 +69,10 @@ namespace rct3::park
     /// The tiles from (`col0`, `row0`) to (`col1`, `row1`), both in, and their corners as a stroke found them.
     struct TileStroke
     {
-        int col0 = 0;
-        int row0 = 0;
-        int col1 = -1;
-        int row1 = -1;
+        std::int32_t col0 = 0;
+        std::int32_t row0 = 0;
+        std::int32_t col1 = -1;
+        std::int32_t row1 = -1;
         TilePart part = TilePart::Whole;
         std::vector<std::array<float, 4>> before; ///< Row by row
         float low = 0;                            ///< Of the picked corners
@@ -80,7 +80,7 @@ namespace rct3::park
     };
 
     /// Starts a stroke over the tiles from (`col0`, `row0`) to (`col1`, `row1`), clipped to the grid.
-    [[nodiscard]] TileStroke begin_tile_stroke(const save::model::TerrainGrid& grid, int col0, int row0, int col1, int row1, TilePart part);
+    [[nodiscard]] TileStroke begin_tile_stroke(const save::model::TerrainGrid& grid, std::int32_t col0, std::int32_t row0, std::int32_t col1, std::int32_t row1, TilePart part);
 
     /// Sets the stroke's tiles for a drag of `amount` height units (up positive) from where it began, on the
     /// tiles `free` allows. Returns the sum of how far every corner moved from where the stroke found it.
@@ -88,6 +88,6 @@ namespace rct3::park
 
     /// Adds strips on the ground that show what a stroke would move: the tiles' edges, the one edge, or a cross
     /// on the one corner.
-    void tile_marks(TerrainMesh& mesh, const save::model::TerrainGrid& grid, int col0, int row0, int col1, int row1, TilePart part, glm::vec4 colour);
+    void tile_marks(TerrainMesh& mesh, const save::model::TerrainGrid& grid, std::int32_t col0, std::int32_t row0, std::int32_t col1, std::int32_t row1, TilePart part, glm::vec4 colour);
 
 } // namespace rct3::park

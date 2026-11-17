@@ -12,6 +12,7 @@
 
 #include "ui/string_table.hpp"
 
+#include <cstdint>
 #include <span>
 #include <string>
 #include <vector>
@@ -29,6 +30,6 @@ namespace rct3::ui
 
     /// Game `pack`'s tutorials, in order: 0 the original game, then each expansion. `expansions` says
     /// which expansions are installed, by number.
-    [[nodiscard]] std::vector<TutorialInfo> tutorials(const StringTable& strings, int pack, std::span<const bool> expansions);
+    [[nodiscard]] std::vector<TutorialInfo> tutorials(const StringTable& strings, std::int32_t pack, std::span<const bool> expansions);
 
 } // namespace rct3::ui

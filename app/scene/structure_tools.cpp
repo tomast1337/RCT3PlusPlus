@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <fstream>
 #include <iterator>
 
@@ -47,8 +48,8 @@ namespace rct3::scene
             std::vector<save::model::Tile> out;
             if (t.marks.empty())
                 return out;
-            for (int row = 0; row < grid.height; ++row)
-                for (int col = 0; col < grid.width; ++col)
+            for (std::int32_t row = 0; row < grid.height; ++row)
+                for (std::int32_t col = 0; col < grid.width; ++col)
                     if (marked(t, grid, { col, row }))
                         out.push_back({ col, row });
             return out;

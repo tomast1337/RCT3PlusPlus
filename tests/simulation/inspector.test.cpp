@@ -12,6 +12,7 @@
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -208,7 +209,7 @@ TEST_CASE("an inspector looking at the food and drink says what many of the gues
     Sandbox park;
     park.path({ 0, 0 }, { 6, 0 });
     auto& r = park.world().registry;
-    for (int i = 0; i < 3; ++i)
+    for (std::int32_t i = 0; i < 3; ++i)
         park.guest({ 6, 0 }, { .hunger = 0.9f });
     park.guest({ 6, 0 }, { .thirst = 0.9f });
     const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });

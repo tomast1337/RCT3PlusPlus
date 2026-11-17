@@ -23,6 +23,7 @@
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
 
+#include <cstdint>
 #include <optional>
 #include <vector>
 
@@ -39,7 +40,7 @@ namespace rct3::park
     /// How much of its height above the average a ring keeps from the one inside it.
     inline constexpr float kSurroundKeep = 0.75f;
     /// How many times each ring's heights and surfaces are smoothed along it.
-    inline constexpr int kSurroundSmoothing = 3;
+    inline constexpr std::int32_t kSurroundSmoothing = 3;
     /// How far under the sea the land beyond the edge stays.
     inline constexpr float kSeaDepth = 3;
     /// How far from the edge the sea goes: past the far plane wherever the eye is over the map.

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::ui::widgets
 {
@@ -64,7 +65,7 @@ namespace rct3::ui::widgets
         return true;
     }
 
-    void Tabs::turn(int by)
+    void Tabs::turn(std::int32_t by)
     {
         if (pages_.empty())
             return;
@@ -97,7 +98,7 @@ namespace rct3::ui::widgets
         }
         for (TabButton* t : tabs_)
         {
-            if (const int by = t->take_turn(); by != 0)
+            if (const std::int32_t by = t->take_turn(); by != 0)
                 turn(by);
         }
         show(current_); // Also puts back a click on the current tab, which toggled it off

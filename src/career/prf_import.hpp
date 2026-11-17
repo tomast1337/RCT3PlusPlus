@@ -33,7 +33,7 @@ namespace rct3::career
     struct PrfCareer
     {
         std::string name;
-        int pack = 0; ///< Ours: 0 the original game, then each expansion
+        std::int32_t pack = 0; ///< Ours: 0 the original game, then each expansion
         std::int32_t current = 0;
         std::vector<PrfScenario> scenarios;
     };

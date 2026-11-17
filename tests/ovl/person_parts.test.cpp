@@ -4,6 +4,7 @@
 #include "builder.hpp"
 
 #include <bit>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <string>
 #include <vector>
@@ -79,7 +80,7 @@ namespace
         // Levels: one fixed and one optional piece; nothing, with a pointer that must not be followed; one fixed.
         words(out, { 0x0101, kBase + kList, 0, 12345, level_two_fixed, kBase + kList });
         words(out, { 0 }); // head reference
-        for (int i = 0; i < 6; ++i)
+        for (std::int32_t i = 0; i < 6; ++i)
             words(out, { 0 });
         words(out, { 0 }); // swimwear head
         REQUIRE(out.size() == kChances);

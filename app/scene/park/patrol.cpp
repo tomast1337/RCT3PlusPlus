@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <optional>
@@ -52,11 +53,11 @@ namespace rct3::scene::park
             if (!distance)
                 return std::nullopt;
             const glm::vec3 hit = ray.origin + ray.direction * *distance;
-            const glm::ivec2 tile { static_cast<int>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x)), static_cast<int>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z)) };
+            const glm::ivec2 tile { static_cast<std::int32_t>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x)), static_cast<std::int32_t>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z)) };
             return scene.grid.contains(tile.x, tile.y) ? std::optional(tile) : std::nullopt;
         }
 
-        using PathHeights = std::map<std::pair<int, int>, float>; ///< Of the highest path on each tile with paths
+        using PathHeights = std::map<std::pair<std::int32_t, std::int32_t>, float>; ///< Of the highest path on each tile with paths
 
         void add_area(rct3::park::TerrainMesh& mesh, const ParkScene& scene, const PathHeights& heights, const simulation::staff::Patrol& patrol, glm::vec4 colour)
         {
@@ -106,7 +107,7 @@ namespace rct3::scene::park
             const auto* patrol = scene.sim.registry.try_get<simulation::staff::Patrol>(staff);
             scene.patrol_stroke = patrol == nullptr || !std::ranges::contains(patrol->tiles, *tile);
         }
-        const int across = ui::screens::info::kPatrolBrushes.at(static_cast<std::size_t>(std::clamp(scene.patrol_brush, 0, static_cast<int>(ui::screens::info::kPatrolBrushes.size()) - 1)));
+        const std::int32_t across = ui::screens::info::kPatrolBrushes.at(static_cast<std::size_t>(std::clamp(scene.patrol_brush, 0, static_cast<std::int32_t>(ui::screens::info::kPatrolBrushes.size()) - 1)));
         simulation::staff::paint_patrol(scene.sim.registry, staff, *tile, across, *scene.patrol_stroke);
         return false;
     }

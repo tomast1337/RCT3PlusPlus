@@ -4,6 +4,7 @@
 #include "park/terrain_mesh.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <doctest/doctest.h>
 
@@ -32,9 +33,9 @@ TEST_CASE("the water picture is see-through, tiles and is never recoloured")
     CHECK(water.slots == 0);
     CHECK(std::ranges::all_of(water.alpha, [](std::uint8_t a) { return a > 0 && a < 255; }));
     // The edges meet: across the seam the shade steps no more than between neighbours inside the picture.
-    const auto at = [&](std::uint32_t x, std::uint32_t y) { return static_cast<int>(water.indices[y * water.width + x]); };
-    int inside = 0;
-    int seam = 0;
+    const auto at = [&](std::uint32_t x, std::uint32_t y) { return static_cast<std::int32_t>(water.indices[y * water.width + x]); };
+    std::int32_t inside = 0;
+    std::int32_t seam = 0;
     for (std::uint32_t y = 0; y < water.height; ++y)
     {
         for (std::uint32_t x = 1; x < water.width; ++x)

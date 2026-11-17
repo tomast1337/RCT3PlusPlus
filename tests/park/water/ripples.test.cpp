@@ -2,6 +2,7 @@
 #include "park/water/ripples.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -46,7 +47,7 @@ TEST_CASE("a ripple ends once it has died down, freeing its place")
 {
     Ripples r;
     start_ripple(r, { 0, 0 });
-    for (int i = 0; i < 200 && live_ripples(r) > 0; ++i)
+    for (std::int32_t i = 0; i < 200 && live_ripples(r) > 0; ++i)
         advance_ripples(r, 0.1f);
     CHECK(live_ripples(r) == 0);
     CHECK(ripple_height(r, { 0, 0 }) == 0);

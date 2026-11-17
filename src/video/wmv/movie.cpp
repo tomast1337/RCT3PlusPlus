@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <fstream>
 #include <optional>
@@ -18,7 +19,7 @@ namespace rct3::video::wmv
         constexpr std::uint32_t kWmv3 = 0x33564D57; ///< "WMV3", the first letter in the low byte
         constexpr std::uintmax_t kMaxFile = 256u << 20;
 
-        std::uint8_t clamp_byte(int value)
+        std::uint8_t clamp_byte(std::int32_t value)
         {
             return static_cast<std::uint8_t>(std::clamp(value, 0, 255));
         }
@@ -30,9 +31,9 @@ namespace rct3::video::wmv
         for (std::uint32_t row = 0; row < height; ++row)
             for (std::uint32_t col = 0; col < width; ++col)
             {
-                const int luma = 298 * (y[row * y_stride + col] - 16);
-                const int cb = u[row / 2 * u_stride + col / 2] - 128;
-                const int cr = v[row / 2 * v_stride + col / 2] - 128;
+                const std::int32_t luma = 298 * (y[row * y_stride + col] - 16);
+                const std::int32_t cb = u[row / 2 * u_stride + col / 2] - 128;
+                const std::int32_t cr = v[row / 2 * v_stride + col / 2] - 128;
                 std::uint8_t* out = &rgba[(static_cast<std::size_t>(row) * width + col) * 4];
                 out[0] = clamp_byte((luma + 409 * cr + 128) >> 8);
                 out[1] = clamp_byte((luma - 100 * cb - 208 * cr + 128) >> 8);

@@ -13,6 +13,7 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <format>
 #include <thread>
@@ -105,10 +106,10 @@ namespace rct3::render::opengl
         frame_pace_ = 0;
         if (config_.vsync && wayland)
         {
-            int count = 0;
+            int count = 0; // c-api
             GLFWmonitor** monitors = glfwGetMonitors(&count);
-            int fastest = 60;
-            for (int i = 0; i < count; ++i)
+            std::int32_t fastest = 60;
+            for (std::int32_t i = 0; i < count; ++i)
                 if (const GLFWvidmode* mode = glfwGetVideoMode(monitors[i]))
                     fastest = std::max(fastest, mode->refreshRate);
             frame_pace_ = 1.0 / fastest;
@@ -140,7 +141,7 @@ namespace rct3::render::opengl
         }
         present_program_ = *present;
 
-        int w = 0, h = 0;
+        int w = 0, h = 0; // c-api
         glfwGetFramebufferSize(config_.window, &w, &h);
         window_ = { static_cast<std::uint32_t>(std::max(w, 1)), static_cast<std::uint32_t>(std::max(h, 1)) };
         create_screen();
@@ -278,7 +279,7 @@ namespace rct3::render::opengl
     void OpenGlDevice::begin_frame()
     {
         assert(state_ == State::Idle);
-        int w = 0, h = 0;
+        int w = 0, h = 0; // c-api
         glfwGetFramebufferSize(config_.window, &w, &h);
         window_ = { static_cast<std::uint32_t>(std::max(w, 1)), static_cast<std::uint32_t>(std::max(h, 1)) };
         // A new window size or render scale makes the screen anew.

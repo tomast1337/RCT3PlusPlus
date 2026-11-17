@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <format>
 #include <iterator>
 #include <limits>
@@ -285,10 +286,10 @@ namespace rct3::scene::track
 
     save::model::PlacedObject moved_door(save::model::PlacedObject o, const save::model::TrackPiece& from, const save::model::TrackPiece& to)
     {
-        const int turns = (to.direction - from.direction + 4) % 4;
+        const std::int32_t turns = (to.direction - from.direction + 4) % 4;
         std::int32_t across = o.col - from.tile_x;
         std::int32_t along = o.row - from.tile_z;
-        for (int t = 0; t < turns; ++t)
+        for (std::int32_t t = 0; t < turns; ++t)
             std::tie(across, along) = std::pair { along, -across };
         o.col = to.tile_x + across;
         o.row = to.tile_z + along;

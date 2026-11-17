@@ -4,6 +4,7 @@
 #include "../builder.hpp"
 
 #include <bit>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <string>
 #include <vector>
@@ -69,10 +70,10 @@ namespace
         std::vector<std::byte> out;
         words(out, { 2, 0, 0, 0 });
         align(out);
-        for (int bone = 0; bone < 2; ++bone)
+        for (std::int32_t bone = 0; bone < 2; ++bone)
         {
             reals(out, { 0, static_cast<float>(bone), 0, 1, 0, 0, 0, 1 });
-            for (int k = 0; k < 16; ++k)
+            for (std::int32_t k = 0; k < 16; ++k)
                 reals(out, { k % 5 == 0 ? 1.0f : 0.0f });
         }
         append_u16(out, 0xFFFF), append_u16(out, 1);
@@ -91,7 +92,7 @@ namespace
         append_u16(out, 1), append_u16(out, 3);
         out.resize(out.size() + 20);
         align(out);
-        for (int v = 0; v < 3; ++v)
+        for (std::int32_t v = 0; v < 3; ++v)
         {
             reals(out, { static_cast<float>(v), 1, 2, 0, 1, 0 });
             out.push_back(std::byte { 0 }), out.push_back(std::byte { o.vertex_bone }), out.push_back(std::byte { 0 }), out.push_back(std::byte { 0 });

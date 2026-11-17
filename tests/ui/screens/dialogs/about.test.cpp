@@ -4,6 +4,7 @@
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -56,7 +57,7 @@ TEST_CASE("credits split into a role and its people, packs first, alternating si
 {
     const StringTable s = sample_strings();
     random::RandomState r = random::seeded(random::Seed { 7 });
-    const std::vector<int> packs { 0, 1 }; // Pack 0 has no credits here, so it has no heading either
+    const std::vector<std::int32_t> packs { 0, 1 }; // Pack 0 has no credits here, so it has no heading either
     const auto lines = credit_lines(s, packs, r);
     REQUIRE(lines.size() == 9);
     CHECK(lines[0].text == u"Second pack");

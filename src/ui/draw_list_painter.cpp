@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <utility>
 
 namespace rct3::ui
@@ -55,7 +56,7 @@ namespace rct3::ui
         // the centre's weights for the corners a, b and c.
         template<class Shade> void fill_triangle(ovl::texture::RgbaImage& target, std::array<Point2, 3> corners, Shade&& shade)
         {
-            std::array<int, 3> order { 0, 1, 2 };
+            std::array<std::int32_t, 3> order { 0, 1, 2 };
             if (edge(corners[0], corners[1], corners[2]) < 0)
                 std::swap(order[1], order[2]);
             const Point2 a = corners[order[0]];
@@ -64,13 +65,13 @@ namespace rct3::ui
             const float area = edge(a, b, c);
             if (area <= 0)
                 return;
-            const int x0 = std::max(0, static_cast<int>(std::floor(std::min({ a.x, b.x, c.x }))));
-            const int y0 = std::max(0, static_cast<int>(std::floor(std::min({ a.y, b.y, c.y }))));
-            const int x1 = std::min(static_cast<int>(target.width), static_cast<int>(std::ceil(std::max({ a.x, b.x, c.x }))));
-            const int y1 = std::min(static_cast<int>(target.height), static_cast<int>(std::ceil(std::max({ a.y, b.y, c.y }))));
-            for (int y = y0; y < y1; ++y)
+            const std::int32_t x0 = std::max(0, static_cast<std::int32_t>(std::floor(std::min({ a.x, b.x, c.x }))));
+            const std::int32_t y0 = std::max(0, static_cast<std::int32_t>(std::floor(std::min({ a.y, b.y, c.y }))));
+            const std::int32_t x1 = std::min(static_cast<std::int32_t>(target.width), static_cast<std::int32_t>(std::ceil(std::max({ a.x, b.x, c.x }))));
+            const std::int32_t y1 = std::min(static_cast<std::int32_t>(target.height), static_cast<std::int32_t>(std::ceil(std::max({ a.y, b.y, c.y }))));
+            for (std::int32_t y = y0; y < y1; ++y)
             {
-                for (int x = x0; x < x1; ++x)
+                for (std::int32_t x = x0; x < x1; ++x)
                 {
                     const Point2 p { static_cast<float>(x) + 0.5f, static_cast<float>(y) + 0.5f };
                     const float wa = edge(b, c, p);
@@ -89,7 +90,7 @@ namespace rct3::ui
             }
         }
 
-        void blend(ovl::texture::RgbaImage& target, int x, int y, const Colour4& c)
+        void blend(ovl::texture::RgbaImage& target, std::int32_t x, std::int32_t y, const Colour4& c)
         {
             std::uint8_t* px = target.pixels.data() + (static_cast<std::size_t>(y) * target.width + static_cast<std::size_t>(x)) * 4;
             const float a = std::clamp(c.a, 0.0f, 1.0f);
@@ -100,10 +101,10 @@ namespace rct3::ui
             px[3] = static_cast<std::uint8_t>(std::lround(std::clamp(a + static_cast<float>(px[3]) / 255 * (1 - a), 0.0f, 1.0f) * 255));
         }
 
-        Colour4 texel(const ovl::texture::RgbaImage& image, int x, int y)
+        Colour4 texel(const ovl::texture::RgbaImage& image, std::int32_t x, std::int32_t y)
         {
-            x = std::clamp(x, 0, static_cast<int>(image.width) - 1);
-            y = std::clamp(y, 0, static_cast<int>(image.height) - 1);
+            x = std::clamp(x, 0, static_cast<std::int32_t>(image.width) - 1);
+            y = std::clamp(y, 0, static_cast<std::int32_t>(image.height) - 1);
             const std::uint8_t* px = image.pixels.data() + (static_cast<std::size_t>(y) * image.width + static_cast<std::size_t>(x)) * 4;
             return unit({ px[0], px[1], px[2], px[3] });
         }
@@ -115,8 +116,8 @@ namespace rct3::ui
                 return { 1, 1, 1, 1 };
             const float fx = u * static_cast<float>(image->width) - 0.5f;
             const float fy = v * static_cast<float>(image->height) - 0.5f;
-            const auto ix = static_cast<int>(std::floor(fx));
-            const auto iy = static_cast<int>(std::floor(fy));
+            const auto ix = static_cast<std::int32_t>(std::floor(fx));
+            const auto iy = static_cast<std::int32_t>(std::floor(fy));
             const float tx = fx - static_cast<float>(ix);
             const float ty = fy - static_cast<float>(iy);
             const auto lerp = [](const Colour4& p, const Colour4& q, float t) { return Colour4 { p.r + (q.r - p.r) * t, p.g + (q.g - p.g) * t, p.b + (q.b - p.b) * t, p.a + (q.a - p.a) * t }; };
@@ -132,7 +133,7 @@ namespace rct3::ui
             for (std::size_t i = 0; i + 2 < indices.size(); i += 3)
             {
                 const std::array<Vertex, 3> v { vertices[indices[i]], vertices[indices[i + 1]], vertices[indices[i + 2]] };
-                fill_triangle(target, { { { v[0].x, v[0].y }, { v[1].x, v[1].y }, { v[2].x, v[2].y } } }, [&](const std::array<float, 3>& w, int x, int y) {
+                fill_triangle(target, { { { v[0].x, v[0].y }, { v[1].x, v[1].y }, { v[2].x, v[2].y } } }, [&](const std::array<float, 3>& w, std::int32_t x, std::int32_t y) {
                     Colour4 tint;
                     float u = 0;
                     float t = 0;
@@ -164,7 +165,7 @@ namespace rct3::ui
                 shape.outline = colour(s.outline);
                 shape.light = colour(s.light);
                 const ShapeMetrics m { s.local[2], s.local[3], { s.radii[0], s.radii[1], s.radii[2], s.radii[3] }, s.edge[0], s.edge[1], s.edge[2], s.edge[3], s.fill[0], s.fill[1], s.cut[0], s.cut[1], s.cut[2] };
-                fill_triangle(target, { { { v[0].x, v[0].y }, { v[1].x, v[1].y }, { v[2].x, v[2].y } } }, [&](const std::array<float, 3>& w, int x, int y) {
+                fill_triangle(target, { { { v[0].x, v[0].y }, { v[1].x, v[1].y }, { v[2].x, v[2].y } } }, [&](const std::array<float, 3>& w, std::int32_t x, std::int32_t y) {
                     const float lx = v[0].local[0] * w[0] + v[1].local[0] * w[1] + v[2].local[0] * w[2];
                     const float ly = v[0].local[1] * w[0] + v[1].local[1] * w[1] + v[2].local[1] * w[2];
                     const Color c = shade_shape(shape, m, lx, ly);

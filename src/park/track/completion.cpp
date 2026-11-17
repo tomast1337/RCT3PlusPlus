@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <functional>
 #include <set>
 #include <tuple>
@@ -23,7 +24,7 @@ namespace rct3::park::track
 
         auto key_of(const TrackTip& at, LaidPiece piece)
         {
-            return std::tuple { std::lround(at.position.x * 4), std::lround(at.position.y * 4), std::lround(at.position.z * 4), static_cast<int>(at.end.slope), static_cast<int>(at.end.bank), at.end.heading.value, piece.index, piece.reversed };
+            return std::tuple { std::llround(at.position.x * 4), std::llround(at.position.y * 4), std::llround(at.position.z * 4), static_cast<std::int32_t>(at.end.slope), static_cast<std::int32_t>(at.end.bank), at.end.heading.value, piece.index, piece.reversed };
         }
 
         std::vector<LaidPlacement> way_to(const CompletionSearch& search, std::size_t step)

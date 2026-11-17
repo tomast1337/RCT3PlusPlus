@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/flexi_colours.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -9,7 +10,7 @@ using namespace rct3::park;
 
 namespace
 {
-    int brightness(Rgb c)
+    std::int32_t brightness(Rgb c)
     {
         return c.r + c.g + c.b;
     }

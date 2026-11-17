@@ -37,6 +37,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <format>
 #include <future>
 #include <inplace_vector>
@@ -418,7 +419,7 @@ namespace rct3::scene::park
                             constexpr float kSplashWide = 0.5f;             ///< Chosen by eye
                             constexpr units::TurnRate kSplashTurn { 5 };    ///< The splashes round it turn
                             constexpr units::Radians kSplashApart { 2.1f }; ///< Between them
-                            for (int s = 0; s < 3; ++s)
+                            for (std::int32_t s = 0; s < 3; ++s)
                             {
                                 const float round = scene.park_clock * kSplashTurn.value + static_cast<float>(s) * kSplashApart.value;
                                 fire_park_particles(scene.particles, kCannonSplash, *land + (s == 0 ? glm::vec3(0) : glm::vec3(std::cos(round), 0, std::sin(round)) * kSplashWide), glm::vec3(0, 1, 0));

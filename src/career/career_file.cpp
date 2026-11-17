@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <bit>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <format>
@@ -26,7 +27,7 @@ namespace rct3::career
         constexpr std::array<char, 4> kEnd = { 'E', 'N', 'D', ' ' };
         constexpr std::array<std::string_view, 3> kPackIds = { "base", "soaked", "wild" };
         constexpr std::string_view kPrefix = "career_";
-        constexpr int kMostFiles = 10000;
+        constexpr std::int32_t kMostFiles = 10000;
 
         /// CRC-32 as zlib and PNG compute it (the reflected polynomial).
         std::uint32_t crc32(std::uint32_t crc, std::span<const std::byte> bytes)
@@ -36,7 +37,7 @@ namespace rct3::career
             for (const std::byte b : bytes)
             {
                 crc ^= std::to_integer<std::uint32_t>(b);
-                for (int bit = 0; bit < 8; ++bit)
+                for (std::int32_t bit = 0; bit < 8; ++bit)
                     crc = (crc >> 1) ^ ((crc & 1u) != 0 ? kReflected : 0u);
             }
             return ~crc;
@@ -162,7 +163,7 @@ namespace rct3::career
             return p;
         }
 
-        std::string file_name(int number)
+        std::string file_name(std::int32_t number)
         {
             std::array<char, 8> digits { };
             std::snprintf(digits.data(), digits.size(), "%04d", number);
@@ -200,17 +201,17 @@ namespace rct3::career
         return "unknown";
     }
 
-    std::string_view pack_id(int pack)
+    std::string_view pack_id(std::int32_t pack)
     {
         return pack >= 0 && static_cast<std::size_t>(pack) < kPackIds.size() ? kPackIds[static_cast<std::size_t>(pack)] : std::string_view { };
     }
 
-    std::optional<int> pack_from_id(std::string_view id)
+    std::optional<std::int32_t> pack_from_id(std::string_view id)
     {
         const auto it = std::ranges::find(kPackIds, id);
         if (it == kPackIds.end())
             return std::nullopt;
-        return static_cast<int>(it - kPackIds.begin());
+        return static_cast<std::int32_t>(it - kPackIds.begin());
     }
 
     std::vector<std::byte> write_career(const CareerData& data)
@@ -306,7 +307,7 @@ namespace rct3::career
         return data;
     }
 
-    std::vector<CareerEntry> list_careers(const fs::path& folder, int pack, std::optional<std::vector<config::FileProblem>&> problems)
+    std::vector<CareerEntry> list_careers(const fs::path& folder, std::int32_t pack, std::optional<std::vector<config::FileProblem>&> problems)
     {
         std::vector<fs::path> paths;
         std::error_code error;
@@ -336,7 +337,7 @@ namespace rct3::career
     fs::path free_career_path(const fs::path& folder)
     {
         std::error_code error;
-        for (int i = 0; i < kMostFiles; ++i)
+        for (std::int32_t i = 0; i < kMostFiles; ++i)
         {
             const fs::path path = folder / file_name(i);
             if (!fs::exists(path, error) && !fs::exists(fs::path(path).replace_extension(), error))

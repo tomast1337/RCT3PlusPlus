@@ -2,6 +2,7 @@
 #include "park/ground/smoothing.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -11,7 +12,7 @@ using namespace rct3::park::ground;
 namespace
 {
     /// Flat at height 2, `size` tiles each way, with a spike at corner point (5, 5).
-    save::model::TerrainGrid spiked(int size)
+    save::model::TerrainGrid spiked(std::int32_t size)
     {
         save::model::TerrainGrid g;
         g.width = size;
@@ -48,14 +49,14 @@ TEST_CASE("levelling goes to the target, a pad to one whole unit; random stays w
 
     // A pad: the whole brush goes to the one whole unit of the height it was levelled from, slopes and all.
     save::model::TerrainGrid w = spiked(10);
-    for (int c = 0; c < 10; ++c)
-        for (int r = 0; r < 10; ++r)
+    for (std::int32_t c = 0; c < 10; ++c)
+        for (std::int32_t r = 0; r < 10; ++r)
             w.at(c, r).corners = { c * 0.7f, (c + 1) * 0.7f, c * 0.7f, (c + 1) * 0.7f };
     CHECK(whole_level(3.4f) == 3);
     CHECK(whole_level(3.5f) == 4);
     CHECK(whole_level(-0.4f) == 0);
     smooth_ground(w, GroundSmoothing::Level, { 5, 5 }, 2, kAll, kAny, whole_level(3.4f), 1, anywhere);
-    for (int c = 4; c <= 5; ++c)
+    for (std::int32_t c = 4; c <= 5; ++c)
         for (const float h : w.at(c, 5).corners)
             CHECK(h == doctest::Approx(3));
 
@@ -112,7 +113,7 @@ TEST_CASE("joining edges takes cliffs away; squaring makes them, each tile flat 
     const float gap = eased.at(5, 5).corners[1] - eased.at(6, 5).corners[0];
     CHECK(gap > 0);
     CHECK(gap < 4);
-    for (int pass = 0; pass < 20; ++pass)
+    for (std::int32_t pass = 0; pass < 20; ++pass)
         smooth_ground(eased, GroundSmoothing::JoinEdges, { 5.5f, 5.5f }, 2, 0.5f, kAny, 0, 1, anywhere);
     CHECK(eased.at(5, 5).corners[1] == doctest::Approx(eased.at(6, 5).corners[0]));
 
@@ -141,7 +142,7 @@ TEST_CASE("a smoothing brush works strongest at its middle and falls off to noth
     smooth_ground(sprayed, GroundSmoothing::Level, { 6, 6 }, 4, 1, 0.5f, 8, 1, anywhere);
     CHECK(sprayed.at(6, 6).corners[0] == doctest::Approx(0.5f));
     CHECK(sprayed.at(8, 6).corners[0] == doctest::Approx(0.375f));
-    for (int pass = 0; pass < 40; ++pass)
+    for (std::int32_t pass = 0; pass < 40; ++pass)
         smooth_ground(sprayed, GroundSmoothing::Level, { 6, 6 }, 4, 1, 0.5f, 8, 1, anywhere);
     CHECK(sprayed.at(6, 6).corners[0] == 8);
     CHECK(sprayed.at(8, 6).corners[0] == 8);

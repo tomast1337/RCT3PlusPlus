@@ -41,7 +41,7 @@ namespace rct3::simulation
         glm::vec3 velocity { };
         glm::vec3 spin { };              ///< Its tumble: the axis, as long as the radians a second
         glm::quat turned { 1, 0, 0, 0 }; ///< From how it sat on the track
-        int landings = 0;                ///< Times it has come down on the ground
+        std::int32_t landings = 0;       ///< Times it has come down on the ground
         units::Seconds flying { };       ///< Since it was thrown
         units::Seconds burnt { };        ///< Since it blew up
         WreckState state = WreckState::Flying;

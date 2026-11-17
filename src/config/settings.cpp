@@ -6,6 +6,7 @@
 #include "strings/ascii.hpp"
 
 #include <charconv>
+#include <cstdint>
 #include <format>
 
 namespace rct3::config
@@ -35,7 +36,7 @@ namespace rct3::config
             return true;
         }());
 
-        constexpr int kMaxScale = 8;
+        constexpr std::int32_t kMaxScale = 8;
 
         constexpr std::size_t index(Setting setting)
         {
@@ -101,7 +102,7 @@ namespace rct3::config
             else if (info->kind == SettingKind::Flag && value.is_boolean())
                 settings.set(info->setting, value.get<bool>() ? "yes" : "no");
             else if (info->kind == SettingKind::Scale && value.is_number_integer())
-                settings.set(info->setting, std::to_string(value.get<long long>()));
+                settings.set(info->setting, std::to_string(value.get<std::int64_t>()));
             else
                 report(problems, std::format("{}: {}", name, info->kind == SettingKind::Flag ? "expected true or false" : info->kind == SettingKind::Scale ? "expected \"auto\" or a whole number" : "expected text"));
         }
@@ -166,7 +167,7 @@ namespace rct3::config
             Json& out = json[info.name];
             if (!value)
                 continue; // null
-            int scale = 0;
+            std::int32_t scale = 0;
             const auto [end, ec] = std::from_chars(value->data(), value->data() + value->size(), scale);
             if (info.kind == SettingKind::Flag)
                 out = flag_value(*value);
@@ -190,7 +191,7 @@ namespace rct3::config
         value = trimmed(value);
         if (value.empty() || strings::equals_ignoring_case(value, "auto"))
             return std::optional<float> { };
-        int scale = 0;
+        std::int32_t scale = 0;
         const auto [end, ec] = std::from_chars(value.data(), value.data() + value.size(), scale);
         if (ec != std::errc { } || end != value.data() + value.size() || scale < 1 || scale > kMaxScale)
             return std::unexpected(std::format("interface scale must be auto or a whole number from 1 to {}, not \"{}\"", kMaxScale, value));

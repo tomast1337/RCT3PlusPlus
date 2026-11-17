@@ -4,6 +4,7 @@
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -14,8 +15,8 @@ namespace
     /// `hours` of work at `load`, a minute at a time.
     void live(Staff& s, float load, float hours)
     {
-        for (int minute = 0; minute < static_cast<int>(hours * 60); ++minute)
-            care_for(s, (minute % 10) < static_cast<int>(load * 10), 60);
+        for (std::int32_t minute = 0; minute < static_cast<std::int32_t>(hours * 60); ++minute)
+            care_for(s, (minute % 10) < static_cast<std::int32_t>(load * 10), 60);
     }
 } // namespace
 
@@ -96,7 +97,7 @@ TEST_CASE("training goes up a level at a time, dearer each time, up to fully tra
 {
     Staff s { .training = 0 };
     rct3::units::Money last;
-    for (int level = 0; level < kMostTraining; ++level)
+    for (std::int32_t level = 0; level < kMostTraining; ++level)
     {
         CHECK(training_cost(s) > last);
         last = training_cost(s);
@@ -147,7 +148,7 @@ TEST_CASE("staff think about their work and how they feel")
     {
         Staff sad { .happiness = 0.1f, .load = 0.5f };
         CHECK(staff_thoughts(sad) == std::vector { StaffMiserable });
-        for (int i = 0; i < 100 && staff_thoughts(sad) != std::vector { StaffWantToQuit }; ++i)
+        for (std::int32_t i = 0; i < 100 && staff_thoughts(sad) != std::vector { StaffWantToQuit }; ++i)
             ;
         CHECK(sad.miserable > 1);
         sad.happiness.value = 0.6f;
@@ -160,11 +161,11 @@ TEST_CASE("a miserable worker thinks of quitting once a stretch, then quits once
 {
     using enum ThoughtKind;
     Staff sad { .happiness = 0.1f, .load = 0.5f };
-    int wanted = 0;
-    int quit = 0;
-    for (int i = 0; i < 200; ++i)
+    std::int32_t wanted = 0;
+    std::int32_t quit = 0;
+    for (std::int32_t i = 0; i < 200; ++i)
     {
-        wanted += static_cast<int>(std::ranges::count(staff_thoughts(sad), StaffWantToQuit));
+        wanted += static_cast<std::int32_t>(std::ranges::count(staff_thoughts(sad), StaffWantToQuit));
         quit += quits(sad) ? 1 : 0;
         CHECK(!(quit == 1 && wanted == 0)); // Thought of it before quitting
     }
@@ -176,8 +177,8 @@ TEST_CASE("a miserable worker thinks of quitting once a stretch, then quits once
         sad.happiness.value = 0.6f;
         (void)staff_thoughts(sad);
         sad.happiness.value = 0.1f;
-        for (int i = 0; i < 200; ++i)
-            wanted += static_cast<int>(std::ranges::count(staff_thoughts(sad), StaffWantToQuit));
+        for (std::int32_t i = 0; i < 200; ++i)
+            wanted += static_cast<std::int32_t>(std::ranges::count(staff_thoughts(sad), StaffWantToQuit));
         CHECK(wanted == 2);
     }
 }
@@ -185,7 +186,7 @@ TEST_CASE("a miserable worker thinks of quitting once a stretch, then quits once
 TEST_CASE("a park inspector keeps their mood, thinks nothing of it and never quits")
 {
     Staff inspector { .role = StaffRole::Inspector, .happiness = 0.5f, .load = 0 };
-    for (int i = 0; i < 200; ++i)
+    for (std::int32_t i = 0; i < 200; ++i)
     {
         care_for(inspector, false, 10);
         CHECK(staff_thoughts(inspector).empty());

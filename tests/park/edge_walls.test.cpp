@@ -6,6 +6,7 @@
 #include "park/object/placement.hpp"
 #include "park/path/decks.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <format>
 #include <vector>
@@ -15,7 +16,7 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid flat_grid(int width, int height)
+    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -26,7 +27,7 @@ namespace
         return g;
     }
 
-    save::model::PathTile ground_tile(int col, int row)
+    save::model::PathTile ground_tile(std::int32_t col, std::int32_t row)
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Ground;
@@ -91,7 +92,7 @@ TEST_CASE("paths on the ground and on decks do not join across a wall")
     CHECK(ground::path_continues(map, grid, { 2, 1 }, -1, 0));
 
     std::vector<save::model::PathTile> decks;
-    for (int col = 1; col <= 3; ++col)
+    for (std::int32_t col = 1; col <= 3; ++col)
     {
         save::model::PathTile p = ground_tile(col, 1);
         p.kind = save::model::PathKind::Flying;

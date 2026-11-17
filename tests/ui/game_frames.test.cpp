@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
@@ -47,7 +48,7 @@ TEST_CASE("the window frame leaves its middle empty for the window's background"
     DrawList list;
     draw_frame(list, game_frames::window(kGamePalette), { 0, 0, 300, 200 });
     // Shapes whose quads span the middle are outlines only: the middle point is outside every filled one.
-    int filled_over_middle = 0;
+    std::int32_t filled_over_middle = 0;
     const auto vertices = list.shape_vertices();
     for (std::size_t i = 0; i + 3 < vertices.size(); i += 4)
     {

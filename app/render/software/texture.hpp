@@ -45,7 +45,7 @@ namespace rct3::render::software
     }
 
     /// The texel at (x, y), kept inside the picture, as the shaders' Load reads it.
-    [[nodiscard]] glm::vec4 load(const Texture& texture, int x, int y);
+    [[nodiscard]] glm::vec4 load(const Texture& texture, std::int32_t x, std::int32_t y);
 
     /// What a sampler with `filter` and `address` reads at `uv` (0..1 across the picture), as the shaders' Sample.
     [[nodiscard]] glm::vec4 sample(const Texture& texture, glm::vec2 uv, Filter filter, AddressMode address);

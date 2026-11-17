@@ -5,6 +5,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <glm/geometric.hpp>
 #include <glm/mat4x4.hpp>
 #include <numbers>
@@ -71,7 +72,7 @@ namespace rct3::scene::park
         lens.was_under = around.under_water;
 
         // Rain lands on a lens looking out level or up into it, less the more it looks down, none straight down.
-        const int rain = std::clamp(around.rain, 0, 3);
+        const std::int32_t rain = std::clamp(around.rain, 0, 3);
         if (!around.under_water && rain > 0)
         {
             lens.rain_due += kRainPerSecond[rain] * std::clamp(1.0f + ahead.y * 1.5f, 0.0f, 1.0f) * seconds;

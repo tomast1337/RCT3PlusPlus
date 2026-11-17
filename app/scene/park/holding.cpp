@@ -13,6 +13,7 @@
 #include "simulation/systems.hpp"
 
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <optional>
 
@@ -95,8 +96,8 @@ namespace rct3::scene::park
             if (!spot && ground)
             {
                 spot = ray.origin + ray.direction * *ground;
-                const int col = static_cast<int>(std::floor((spot->x - scene.grid.origin_x) / scene.grid.tile_size_x));
-                const int row = static_cast<int>(std::floor((spot->z - scene.grid.origin_z) / scene.grid.tile_size_z));
+                const std::int32_t col = static_cast<std::int32_t>(std::floor((spot->x - scene.grid.origin_x) / scene.grid.tile_size_x));
+                const std::int32_t row = static_cast<std::int32_t>(std::floor((spot->z - scene.grid.origin_z) / scene.grid.tile_size_z));
                 // shortcut: the park's lakes never take them, as nobody treads water there yet; let them in once they do.
                 const auto water = rct3::park::water::water_hit(ray, scene.water.surface);
                 allowed = scene.grid.contains(col, row) && rct3::park::owned_outright(scene.grid.at(col, row)) && !(water && *water < *ground + 1e-3f);

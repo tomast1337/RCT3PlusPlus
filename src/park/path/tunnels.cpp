@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <map>
 #include <utility>
 
@@ -32,7 +33,7 @@ namespace rct3::park::path
     TerrainMesh tunnel_lining(std::span<const GroundOpening> hollows, const save::model::TerrainGrid& grid)
     {
         TerrainMesh mesh;
-        std::multimap<std::pair<int, int>, const GroundOpening*> by_tile;
+        std::multimap<std::pair<std::int32_t, std::int32_t>, const GroundOpening*> by_tile;
         for (const GroundOpening& h : hollows)
             by_tile.emplace(std::pair { h.col, h.row }, &h);
         std::map<std::pair<GroundPaint, std::uint8_t>, std::vector<GroundVertex>> by_paint;

@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <string_view>
 
-extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
+extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) // c-api
 {
     (void)rct3::ui::parse_translation(std::string_view(reinterpret_cast<const char*>(data), size));
     return 0;

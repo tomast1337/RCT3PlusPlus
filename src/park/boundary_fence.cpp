@@ -4,6 +4,7 @@
 #include "park/ground/queues.hpp"
 #include "park/queue_fences.hpp"
 
+#include <cstdint>
 #include <unordered_set>
 
 namespace rct3::park
@@ -27,15 +28,15 @@ namespace rct3::park
         BoundaryFence out;
         if (symbol.empty())
             return out;
-        const auto key = [&](int col, int row) { return static_cast<std::int64_t>(row) * grid.width + col; };
+        const auto key = [&](std::int32_t col, std::int32_t row) { return static_cast<std::int64_t>(row) * grid.width + col; };
         std::unordered_set<std::int64_t> path_tiles;
         for (const save::model::PathTile& p : paths)
             path_tiles.insert(key(p.col, p.row));
-        const auto owned = [&](int col, int row) { return grid.contains(col, row) && owned_outright(grid.at(col, row)); };
-        const auto has_path = [&](int col, int row) { return grid.contains(col, row) && path_tiles.contains(key(col, row)); };
-        for (int row = 0; row < grid.height; ++row)
+        const auto owned = [&](std::int32_t col, std::int32_t row) { return grid.contains(col, row) && owned_outright(grid.at(col, row)); };
+        const auto has_path = [&](std::int32_t col, std::int32_t row) { return grid.contains(col, row) && path_tiles.contains(key(col, row)); };
+        for (std::int32_t row = 0; row < grid.height; ++row)
         {
-            for (int col = 0; col < grid.width; ++col)
+            for (std::int32_t col = 0; col < grid.width; ++col)
             {
                 if (!owned(col, row))
                     continue;

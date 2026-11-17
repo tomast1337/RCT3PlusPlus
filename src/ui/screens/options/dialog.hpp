@@ -38,6 +38,7 @@
 #include <array>
 #include <bitset>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -48,8 +49,8 @@ namespace rct3::ui::screens::options
 
     struct ScreenSize
     {
-        int width = 0;
-        int height = 0;
+        std::int32_t width = 0;
+        std::int32_t height = 0;
 
         friend bool operator==(const ScreenSize&, const ScreenSize&) = default;
     };
@@ -60,9 +61,9 @@ namespace rct3::ui::screens::options
         std::vector<std::string> languages; ///< Installed, by the game's names; the row shows with two or more
         std::string language;               ///< The one in use
         std::vector<ScreenSize> screen_sizes;
-        std::optional<std::size_t> screen_size;    ///< The one in use, if it is in the list
-        std::vector<int> anti_aliasing_levels { }; ///< Offered after "none", e.g. 2, 4 and 8 samples
-        KeyMap keys { };                           ///< In use; the keys page changes a copy
+        std::optional<std::size_t> screen_size;             ///< The one in use, if it is in the list
+        std::vector<std::int32_t> anti_aliasing_levels { }; ///< Offered after "none", e.g. 2, 4 and 8 samples
+        KeyMap keys { };                                    ///< In use; the keys page changes a copy
         /// The music files the park can play when zoomed out; the row shows with any. The choice goes into the
         /// options.
         std::vector<std::string> background_music { };
@@ -228,7 +229,7 @@ namespace rct3::ui::screens::options
         std::array<std::u16string, 5> camera_buttons_; // The help lines' starts
         std::vector<std::u16string> camera_actions_;   // Each CameraAction's words
         OptionsPage page_ = OptionsPage::General;
-        int changes_ = 0;
+        std::int32_t changes_ = 0;
         std::optional<std::string> picked_language_;
         std::optional<std::size_t> picked_screen_size_;
         std::optional<KeyMap> picked_keys_;

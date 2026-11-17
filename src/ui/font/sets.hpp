@@ -16,6 +16,7 @@
 #include "ui/font/set.hpp"
 
 #include <array>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -25,14 +26,14 @@ namespace rct3::ui::font
 {
 
     /// The widths there are sets for, smallest first.
-    inline constexpr std::array<int, 3> kFontSetWidths = { 800, 1024, 1280 };
+    inline constexpr std::array<std::int32_t, 3> kFontSetWidths = { 800, 1024, 1280 };
     /// The set whose sizes windows use on every screen.
-    inline constexpr int kFixedFontSetWidth = 1024;
+    inline constexpr std::int32_t kFixedFontSetWidth = 1024;
 
     /// The width of the set for an interface `view_width` units wide.
-    [[nodiscard]] constexpr int font_set_width(float view_width)
+    [[nodiscard]] constexpr std::int32_t font_set_width(float view_width)
     {
-        for (const int w : kFontSetWidths)
+        for (const std::int32_t w : kFontSetWidths)
         {
             if (view_width <= static_cast<float>(w))
                 return w;
@@ -41,7 +42,7 @@ namespace rct3::ui::font
     }
 
     /// The overlay with the fonts for `language` at set `width`, relative to the install root.
-    [[nodiscard]] std::string font_overlay(std::string_view language, int width);
+    [[nodiscard]] std::string font_overlay(std::string_view language, std::int32_t width);
 
     /// The fonts of a set by role, as they are named in its overlays. The scaled roles take theirs from
     /// these by scaled_role().

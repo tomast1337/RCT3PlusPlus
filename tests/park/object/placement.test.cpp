@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -19,9 +20,9 @@ namespace
         g.height = 2;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        for (int row = 0; row < 2; ++row)
+        for (std::int32_t row = 0; row < 2; ++row)
         {
-            for (int col = 0; col < 2; ++col)
+            for (std::int32_t col = 0; col < 2; ++col)
             {
                 save::model::TerrainCell cell;
                 const auto c = static_cast<float>(col);
@@ -32,7 +33,7 @@ namespace
         return g;
     }
 
-    save::model::PlacedObject at(int col, int row, int turns, std::optional<std::int32_t> height = 3)
+    save::model::PlacedObject at(std::int32_t col, std::int32_t row, std::int32_t turns, std::optional<std::int32_t> height = 3)
     {
         save::model::PlacedObject o;
         o.id = 1;
@@ -100,7 +101,7 @@ TEST_CASE("an item raised above the ground or pinned keeps its stored height")
 TEST_CASE("turns keep a model's shape")
 {
     const save::model::TerrainGrid g = slope();
-    for (int turns = 0; turns < 4; ++turns)
+    for (std::int32_t turns = 0; turns < 4; ++turns)
     {
         const glm::mat4 m = object_transform(at(0, 1, turns), Positioning::Tile, g);
         CHECK(glm::determinant(glm::mat3(m)) == doctest::Approx(1));
@@ -189,7 +190,7 @@ TEST_CASE("a half-tile item goes to the half it faces")
 TEST_CASE("an item is on the park's land when every tile it covers is owned")
 {
     save::model::TerrainGrid g = slope();
-    const auto own = [&](int col, int row, save::model::TileFlag f) { g.cells[static_cast<std::size_t>(row * g.width + col)].flags = static_cast<std::uint8_t>(f); };
+    const auto own = [&](std::int32_t col, std::int32_t row, save::model::TileFlag f) { g.cells[static_cast<std::size_t>(row * g.width + col)].flags = static_cast<std::uint8_t>(f); };
     own(0, 0, save::model::TileFlag::Owned);
     own(1, 0, save::model::TileFlag::Owned);
     CHECK(on_owned_land(at(0, 0, 0), { 1, 1 }, g));

@@ -17,14 +17,14 @@ namespace rct3::park
     {
         constexpr float kCell = 4; ///< Park units across a cell objects are sorted into for a quick first look
 
-        std::uint64_t cell_key(int x, int z)
+        std::uint64_t cell_key(std::int32_t x, std::int32_t z)
         {
             return std::uint64_t { static_cast<std::uint32_t>(x) } << 32 | static_cast<std::uint32_t>(z);
         }
 
-        int cell_of(float v)
+        std::int32_t cell_of(float v)
         {
-            return static_cast<int>(std::floor(v / kCell));
+            return static_cast<std::int32_t>(std::floor(v / kCell));
         }
 
         /// How far along `ray` it meets the triangle a, b, c, if it does at all ahead.
@@ -87,8 +87,8 @@ namespace rct3::park
             if (o.hidden || (!tree && !is_roof(model.category)))
                 continue;
             shapes[b] = &model;
-            for (int x = cell_of(boxes[b].park_low.x); x <= cell_of(boxes[b].park_high.x); ++x)
-                for (int z = cell_of(boxes[b].park_low.z); z <= cell_of(boxes[b].park_high.z); ++z)
+            for (std::int32_t x = cell_of(boxes[b].park_low.x); x <= cell_of(boxes[b].park_high.x); ++x)
+                for (std::int32_t z = cell_of(boxes[b].park_low.z); z <= cell_of(boxes[b].park_high.z); ++z)
                     by_cell[cell_key(x, z)].push_back(b);
         }
         for (std::size_t p = 0; p < points.size(); ++p)

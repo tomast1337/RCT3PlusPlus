@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <span>
 
-extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
+extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) // c-api
 {
     const auto summary = rct3::save::read_summary(std::as_bytes(std::span(data, size)));
     if (!summary)

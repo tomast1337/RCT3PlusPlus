@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <format>
 #include <span>
 #include <string_view>
@@ -48,13 +49,13 @@ namespace rct3::scene::track
             for (const auto part : car_file ? std::array { core::maybe(&car_file->common()), car_file->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
                 for (const ovl::RideTrainItem& t : part ? ovl::read_ride_trains(*car_file, *part) : std::vector<ovl::RideTrainItem> { })
                     if (t.train && strings::equals_ignoring_case(t.name, train_name) && t.train->fewest_cars > 0 && t.train->fewest_cars <= t.train->most_cars)
-                        limits = { .fewest_cars = static_cast<int>(t.train->fewest_cars), .most_cars = static_cast<int>(t.train->most_cars), .usual_cars = static_cast<int>(std::clamp(t.train->usual_cars, t.train->fewest_cars, t.train->most_cars)) };
+                        limits = { .fewest_cars = static_cast<std::int32_t>(t.train->fewest_cars), .most_cars = static_cast<std::int32_t>(t.train->most_cars), .usual_cars = static_cast<std::int32_t>(std::clamp(t.train->usual_cars, t.train->fewest_cars, t.train->most_cars)) };
             return limits;
         }
 
     } // namespace
 
-    bool fit_trains(park::ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex index, int trains, int cars)
+    bool fit_trains(park::ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex index, std::int32_t trains, std::int32_t cars)
     {
         save::model::Ride& ride = scene.rides.rides[index.value];
         if (ride.trains.empty() || trains < 1 || cars < 1)
@@ -89,11 +90,11 @@ namespace rct3::scene::track
         if (course && ride.mode != save::model::OperatingMode::MiniGolf && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station))
         {
             const auto limits = scene.train_limits.find(index);
-            const int fewest = std::min(limits != scene.train_limits.end() ? limits->second.fewest_cars : 1, cars);
+            const std::int32_t fewest = std::min(limits != scene.train_limits.end() ? limits->second.fewest_cars : 1, cars);
             std::vector<float> lengths;
-            for (int n = 1; n <= cars; ++n)
+            for (std::int32_t n = 1; n <= cars; ++n)
                 lengths.push_back(rct3::park::track::train_length(fits_of(rct3::park::ride::car_slots(n, filled))));
-            const int fit = rct3::park::track::cars_fitting(*course, lengths, fewest);
+            const std::int32_t fit = rct3::park::track::cars_fitting(*course, lengths, fewest);
             cars = fit > 0 ? fit : fewest;
         }
         // No longer than the track a lift's car carries.
@@ -120,7 +121,7 @@ namespace rct3::scene::track
         ride.trains.assign(static_cast<std::size_t>(trains), save::model::Train { });
         ride.seats.clear();
         bool arm = false;
-        for (int t = 0; t < trains; ++t)
+        for (std::int32_t t = 0; t < trains; ++t)
         {
             save::model::Train& train = ride.trains[static_cast<std::size_t>(t)];
             train.symbol = symbol;
@@ -216,7 +217,7 @@ namespace rct3::scene::track
             return;
         }
         // Spread over its stations; those with no room are left out, as the game does.
-        const std::vector<float> fronts = rct3::park::track::train_fronts(*course, coaster->start, ride.trains.front().length.value, static_cast<int>(ride.trains.size()), ride.options.block_sectioned);
+        const std::vector<float> fronts = rct3::park::track::train_fronts(*course, coaster->start, ride.trains.front().length.value, static_cast<std::int32_t>(ride.trains.size()), ride.options.block_sectioned);
         const auto kept = static_cast<std::int32_t>(fronts.size());
         ride.trains.resize(fronts.size());
         std::erase_if(ride.seats, [&](const auto& seat) { return seat.train >= kept; });
@@ -246,7 +247,7 @@ namespace rct3::scene::track
                 boats->handling = model->second.boat_handling;
     }
 
-    bool set_trains(render::Device& device, park::ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex index, int trains, int cars)
+    bool set_trains(render::Device& device, park::ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex index, std::int32_t trains, std::int32_t cars)
     {
         save::model::Ride& ride = scene.rides.rides[index.value];
         const entt::entity e = index.value < scene.ride_entities.size() ? scene.ride_entities[index.value] : entt::null;

@@ -2,6 +2,7 @@
 #include "park/path/route.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -11,7 +12,7 @@ using rct3::units::Money;
 
 namespace
 {
-    save::model::TerrainGrid owned_grid(int width, int height)
+    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -24,15 +25,15 @@ namespace
         return g;
     }
 
-    save::model::TerrainCell& cell(save::model::TerrainGrid& g, int col, int row)
+    save::model::TerrainCell& cell(save::model::TerrainGrid& g, std::int32_t col, std::int32_t row)
     {
         return g.cells[static_cast<std::size_t>(row * g.width + col)];
     }
 
     /// A ridge across every row at column `col`, `height` high on its flat top.
-    void ridge(save::model::TerrainGrid& g, int col, float height)
+    void ridge(save::model::TerrainGrid& g, std::int32_t col, float height)
     {
-        for (int row = 0; row < g.height; ++row)
+        for (std::int32_t row = 0; row < g.height; ++row)
             cell(g, col, row).corners = { height, height, height, height };
     }
 
@@ -93,7 +94,7 @@ TEST_CASE("a route over flat ground lies on the ground, short and with one turn"
 TEST_CASE("a route goes round land the park does not own")
 {
     save::model::TerrainGrid g = owned_grid(8, 6);
-    for (int row = 0; row < 5; ++row)
+    for (std::int32_t row = 0; row < 5; ++row)
         cell(g, 4, row).flags = 0;
     const auto route = find_route(started_at({ 1, 0 }), { 7, 0 }, g, { }, Money { 1000 });
     REQUIRE(route);
@@ -125,7 +126,7 @@ TEST_CASE("across a ridge a route climbs over it, or cuts through when cutting i
 TEST_CASE("under a mountain a route tunnels rather than climb over or cut a trench")
 {
     save::model::TerrainGrid g = owned_grid(14, 3);
-    for (int col = 4; col <= 9; ++col)
+    for (std::int32_t col = 4; col <= 9; ++col)
         ridge(g, col, 12);
     for (const bool cut : { false, true })
     {
@@ -197,7 +198,7 @@ TEST_CASE("a queue route bridging a path leaves room to walk under it")
 {
     const save::model::TerrainGrid g = owned_grid(11, 3);
     std::vector<save::model::PathTile> paths;
-    for (int row = 0; row < 3; ++row)
+    for (std::int32_t row = 0; row < 3; ++row)
         paths.push_back(ground_path({ 5, row }, "Old", static_cast<std::uint64_t>(row + 1)));
     FootpathBuilder queue = started_at({ 1, 1 });
     queue.queue = true;
@@ -228,7 +229,7 @@ TEST_CASE("a straight route steps along the line to its goal, where the default 
 TEST_CASE("across a dip a route bridges it level rather than ramp down into it")
 {
     save::model::TerrainGrid g = owned_grid(12, 3);
-    for (int col = 4; col <= 7; ++col)
+    for (std::int32_t col = 4; col <= 7; ++col)
         ridge(g, col, -3);
     const auto route = find_route(started_at({ 1, 1 }), { 10, 1 }, g, { }, Money { 1000 });
     REQUIRE(route);

@@ -4,6 +4,7 @@
 #include "park/item_category.hpp"
 
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <utility>
 
@@ -13,7 +14,7 @@ using namespace rct3::park::ground;
 
 namespace
 {
-    save::model::TerrainGrid flat_grid(int width, int height)
+    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height)
     {
         save::model::TerrainGrid g;
         g.width = width;

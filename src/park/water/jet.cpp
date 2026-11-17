@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <numbers>
 
 namespace rct3::park::water
@@ -14,7 +15,7 @@ namespace rct3::park::water
     namespace
     {
         constexpr float kDropsPerSecond = 20;              ///< Chosen by eye: enough rings that a swinging jet still bends smoothly
-        constexpr int kRimSides = 8;                       ///< Chosen by eye: round enough close up
+        constexpr std::int32_t kRimSides = 8;              ///< Chosen by eye: round enough close up
         constexpr units::Distance kPictureLength { 3 };    ///< Chosen by eye: of jet, the picture covers
         constexpr float kPictureSpeed = 0.8f;              ///< Chosen by eye: pictures a second the water runs along it
         constexpr float kFlare = 1.0f;                     ///< Chosen by eye: how much wider than its spread broken water gets
@@ -85,7 +86,7 @@ namespace rct3::park::water
     {
         constexpr float kStep = 1 / kDropsPerSecond;
         pending_ += seconds;
-        for (int steps = 0; pending_ >= kStep && steps < 64; ++steps)
+        for (std::int32_t steps = 0; pending_ >= kStep && steps < 64; ++steps)
         {
             pending_ -= kStep;
             for (JetDrop& d : drops_)
@@ -166,7 +167,7 @@ namespace rct3::park::water
                     const glm::vec3 tint = spray ? kSpray : glm::mix(kWhole, kSpray, broken);
                     const float share = spray ? broken : 1 - kThinning * broken;
                     const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
-                    for (int k = 0; k <= kRimSides; ++k)
+                    for (std::int32_t k = 0; k <= kRimSides; ++k)
                     {
                         const float turn = 2 * std::numbers::pi_v<float> * static_cast<float>(k) / kRimSides;
                         const glm::vec3 out = side * std::cos(turn) + lift * std::sin(turn);

@@ -4,6 +4,7 @@
 #include "park/queue_fences.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -28,7 +29,7 @@ namespace
         return g;
     }
 
-    save::model::PathTile path_at(int col, int row)
+    save::model::PathTile path_at(std::int32_t col, std::int32_t row)
     {
         save::model::PathTile p;
         p.col = col;

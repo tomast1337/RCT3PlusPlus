@@ -10,6 +10,7 @@
 #include "simulation/tuning.hpp"
 
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <limits>
 #include <map>
@@ -260,7 +261,7 @@ TEST_CASE("swimmers sit in the spa pools and stand at the extras now and then")
     const auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool);
     REQUIRE(pool.extras.size() == 1);
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 8; ++i)
+    for (std::int32_t i = 0; i < 8; ++i)
         guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
     bool in_spa = false, at_extra = false;
     park.run_until(
@@ -303,10 +304,10 @@ TEST_CASE("swimmers lie on loungers and stand under showers, as many as they tak
         const std::size_t places = lounger ? kTuning.pools.lounger_places : kTuning.pools.shower_places;
         CHECK(spot.places == places);
         std::vector<entt::entity> guests;
-        for (int i = 0; i < 48; ++i)
+        for (std::int32_t i = 0; i < 48; ++i)
             guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
         std::size_t most = 0, waiting = 0;
-        for (int t = 0; t < 4 * static_cast<int>(kTuning.pools.stay.value); ++t)
+        for (std::int32_t t = 0; t < 4 * static_cast<std::int32_t>(kTuning.pools.stay.value); ++t)
         {
             park.run_seconds(0.25f);
             std::size_t using_it = 0, here = 0;
@@ -352,7 +353,7 @@ TEST_CASE("swimmers dirty the water, and the room's fluid cleans it while the ro
     const entt::entity room = room_of(r);
     auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room).pool);
     r.get<PoolTank>(room).left = { 0 }; // Nothing to clean with yet
-    for (int k = 0; k < 6; ++k)
+    for (std::int32_t k = 0; k < 6; ++k)
         park.guest({ k % 3, 0 }, { .swim = 0.9f, .cash = 1000 });
     REQUIRE(park.run_until([&] { return r.view<const Swimmer>().size() == 6; }, 60));
     park.run_seconds(200);
@@ -574,12 +575,12 @@ TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into t
     CHECK(board.high);
     CHECK(board.levels.size() == 2);
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 12; ++i)
+    for (std::int32_t i = 0; i < 12; ++i)
         guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
     std::vector<std::vector<DiveStep>> steps(guests.size());
     std::size_t most = 0;
     bool done = false;
-    for (int t = 0; t < 4 * static_cast<int>(kTuning.pools.stay.value) && !done; ++t)
+    for (std::int32_t t = 0; t < 4 * static_cast<std::int32_t>(kTuning.pools.stay.value) && !done; ++t)
     {
         park.run_seconds(0.1f);
         std::size_t on = 0;
@@ -607,7 +608,7 @@ TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into t
 
     // A small board built while someone climbs: the boards are laid out again, and the climber comes down.
     entt::entity climber = entt::null;
-    for (int t = 0; t < 4 * static_cast<int>(kTuning.pools.stay.value) && climber == entt::null; ++t)
+    for (std::int32_t t = 0; t < 4 * static_cast<std::int32_t>(kTuning.pools.stay.value) && climber == entt::null; ++t)
     {
         park.run_seconds(0.1f);
         for (const entt::entity g : guests)
@@ -637,13 +638,13 @@ TEST_CASE("swimmers spend a good part of their time out on the paving round the 
     import_pools(park.world(), pools);
     auto& r = park.world().registry;
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 30; ++i)
+    for (std::int32_t i = 0; i < 30; ++i)
         guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
     // Looks at swimmers free to go where they like: in the water, out on the paving, and of those walking.
-    int in = 0;
-    int out = 0;
-    int walking = 0;
-    for (int t = 0; t < static_cast<int>(kTuning.pools.stay.value); ++t)
+    std::int32_t in = 0;
+    std::int32_t out = 0;
+    std::int32_t walking = 0;
+    for (std::int32_t t = 0; t < static_cast<std::int32_t>(kTuning.pools.stay.value); ++t)
     {
         park.run_seconds(1);
         for (const entt::entity g : guests)
@@ -676,7 +677,7 @@ TEST_CASE("a high diving board whose end is past the water is a danger, and the 
     auto& r = park.world().registry;
     REQUIRE(r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).boards.size() == 1);
     park.staff(StaffRole::Inspector, { 0, 0 });
-    for (int i = 0; i < 12; ++i)
+    for (std::int32_t i = 0; i < 12; ++i)
         park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
     REQUIRE(park.run_until([&] { return r.ctx().find<PoolDangers>() != nullptr; }, 4 * kTuning.pools.stay.value));
     CHECK(r.ctx().get<PoolDangers>().landings >= 1);
@@ -703,13 +704,13 @@ TEST_CASE("swimmers waiting for a high diving board stand in a line behind its l
     import_pools(park.world(), pools);
     auto& r = park.world().registry;
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 60; ++i)
+    for (std::int32_t i = 0; i < 60; ++i)
         guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
     // The most waiting at once, standing at their places a while, and the closest two of them ever came.
     std::size_t most = 0;
     float closest = std::numeric_limits<float>::max();
-    int off = 0;
-    for (int t = 0; t < 2 * static_cast<int>(kTuning.pools.stay.value) * 10; ++t)
+    std::int32_t off = 0;
+    for (std::int32_t t = 0; t < 2 * static_cast<std::int32_t>(kTuning.pools.stay.value) * 10; ++t)
     {
         park.run_seconds(0.1f);
         std::vector<glm::vec3> waiting;
@@ -751,7 +752,7 @@ TEST_CASE("a small diving board on the pool's wall is walked out on and dived of
     // Behind the wall, on the paving the board and the ladder stand against.
     CHECK(pool.boards.front().foot.z < park.world().paths.origin.y + 3 * park.world().paths.tile_size);
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 8; ++i)
+    for (std::int32_t i = 0; i < 8; ++i)
         guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
     bool walked = false, dived = false, ladder_out = false, ladder_in = false;
     park.run_until(
@@ -794,7 +795,7 @@ TEST_CASE("swimmers walk up a ramp to a raised square and down it again, the ram
     const float tile = park.world().paths.tile_size;
     const float raised_col = park.world().paths.origin.x + 6 * tile;
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 8; ++i)
+    for (std::int32_t i = 0; i < 8; ++i)
         guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
     std::set<entt::entity> up;
     bool slope = false, down = false;
@@ -826,7 +827,7 @@ TEST_CASE("swimmers cross the water's edge only diving in or climbing out, in th
     pool_by_path(park);
     auto& r = park.world().registry;
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 8; ++i)
+    for (std::int32_t i = 0; i < 8; ++i)
         guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
     struct Seen
     {
@@ -839,7 +840,7 @@ TEST_CASE("swimmers cross the water's edge only diving in or climbing out, in th
     constexpr float kTick = 0.1f;
     // Fastest along the way: a walker, or the dive's reach over its time.
     const float most = std::max({ 2.0f, kTuning.pools.dive_reach.value / kTuning.pools.dive_in.value }) * kTick + 0.01f;
-    for (int t = 0; t < static_cast<int>(kTuning.pools.stay.value / kTick); ++t)
+    for (std::int32_t t = 0; t < static_cast<std::int32_t>(kTuning.pools.stay.value / kTick); ++t)
     {
         park.run_seconds(kTick);
         for (const entt::entity g : guests)
@@ -947,11 +948,11 @@ TEST_CASE("swimmers never go where no way over the pool leads, and keep to the p
     auto& r = park.world().registry;
     const auto& paths = park.world().paths;
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 8; ++i)
+    for (std::int32_t i = 0; i < 8; ++i)
         guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
     const auto tile = [&](float along, float origin) { return static_cast<std::int32_t>(std::floor((along - origin) / paths.tile_size)); };
     bool up = false;
-    for (int t = 0; t < static_cast<int>(2 * kTuning.pools.stay.value); ++t)
+    for (std::int32_t t = 0; t < static_cast<std::int32_t>(2 * kTuning.pools.stay.value); ++t)
     {
         park.run_seconds(1);
         for (const entt::entity g : guests)
@@ -989,11 +990,11 @@ TEST_CASE("swimmers spread over the three lanes each way across a square, not on
     auto& r = park.world().registry;
     const auto& paths = park.world().paths;
     std::vector<entt::entity> guests;
-    for (int i = 0; i < 12; ++i)
+    for (std::int32_t i = 0; i < 12; ++i)
         guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
     // How often a swimmer is on each lane, either way: left of the middle, on it, right of it.
-    std::array<int, 3> on { };
-    for (int t = 0; t < static_cast<int>(kTuning.pools.stay.value); ++t)
+    std::array<std::int32_t, 3> on { };
+    for (std::int32_t t = 0; t < static_cast<std::int32_t>(kTuning.pools.stay.value); ++t)
     {
         park.run_seconds(1);
         for (const entt::entity g : guests)

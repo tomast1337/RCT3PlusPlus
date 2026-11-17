@@ -50,7 +50,7 @@ namespace rct3::park::ride
     /// slots `filled`. The slots hold its front, second, middle, second-to-last and last car, then a link
     /// coupled between each two cars. A car whose slot is empty is a middle car, and one with no middle car the
     /// front car; with no link the cars are coupled straight.
-    [[nodiscard]] std::vector<std::size_t> car_slots(int cars, const std::array<bool, 6>& filled);
+    [[nodiscard]] std::vector<std::size_t> car_slots(std::int32_t cars, const std::array<bool, 6>& filled);
 
     /// The cars of `rides` whose place the park kept, with ids from `last_id` + 1.
     [[nodiscard]] RideCars ride_cars(std::span<const save::model::Ride> rides, std::uint64_t last_id);

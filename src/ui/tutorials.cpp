@@ -3,6 +3,7 @@
 
 #include "strings/unicode.hpp"
 
+#include <cstdint>
 #include <format>
 
 namespace rct3::ui
@@ -18,7 +19,7 @@ namespace rct3::ui
         constexpr std::string_view kFolder = "Tutorials/";
         constexpr std::string_view kAlternate = "_Alternate";
         constexpr std::string_view kExtension = ".dat";
-        constexpr int kMostTutorials = 99;
+        constexpr std::int32_t kMostTutorials = 99;
         constexpr std::size_t kExtras = 8;          ///< The original game's tutorial the expansions change
         constexpr std::size_t kAlternateExtras = 0; ///< The expansion that gives it another park
         constexpr std::size_t kWithoutExtras = 1;   ///< The one that leaves it out
@@ -29,11 +30,11 @@ namespace rct3::ui
         }
     } // namespace
 
-    std::vector<TutorialInfo> tutorials(const StringTable& strings, int pack, std::span<const bool> expansions)
+    std::vector<TutorialInfo> tutorials(const StringTable& strings, std::int32_t pack, std::span<const bool> expansions)
     {
         const std::string start = pack <= 0 ? std::string(kStart) : std::format("{}{}_", kExpansionStart, pack - 1);
         std::vector<TutorialInfo> out;
-        for (int n = 1; n <= kMostTutorials; ++n)
+        for (std::int32_t n = 1; n <= kMostTutorials; ++n)
         {
             const std::string number = std::to_string(n);
             const std::u16string_view name = strings.get(start + std::string(kName) + number);

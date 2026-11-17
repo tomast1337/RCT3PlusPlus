@@ -9,6 +9,7 @@
 #include "ui/widgets/scroll_bar.hpp"
 #include "units/units.hpp"
 
+#include <cstdint>
 #include <string>
 
 namespace rct3::ui::widgets
@@ -46,7 +47,7 @@ namespace rct3::ui::widgets
 
         ToolbarStyle style_;
         Orientation orientation_;
-        int separators_ = 0;
+        std::int32_t separators_ = 0;
     };
 
 } // namespace rct3::ui::widgets

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <map>
 #include <utility>
@@ -113,7 +114,7 @@ namespace rct3::park::ground
 
     std::vector<Paving> ride_pavings(const save::model::RideModel& rides, const FootprintOf& footprint_of, const FootprintOf& floor_of)
     {
-        const auto step = [](save::model::Tile tile, glm::vec2 way) { return save::model::Tile { tile.col + static_cast<int>(std::lround(way.x)), tile.row + static_cast<int>(std::lround(way.y)) }; };
+        const auto step = [](save::model::Tile tile, glm::vec2 way) { return save::model::Tile { tile.col + static_cast<std::int32_t>(std::lround(way.x)), tile.row + static_cast<std::int32_t>(std::lround(way.y)) }; };
         std::vector<Paving> out;
         for (const save::model::Ride& ride : rides.rides)
         {
@@ -316,7 +317,7 @@ namespace rct3::park::ground
         return map.tiles[static_cast<std::size_t>(row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col)] != kNoPath;
     }
 
-    bool path_continues(const GroundPathMap& map, const save::model::TerrainGrid& grid, save::model::Tile tile, int dc, int dr)
+    bool path_continues(const GroundPathMap& map, const save::model::TerrainGrid& grid, save::model::Tile tile, std::int32_t dc, std::int32_t dr)
     {
         const auto [col, row] = tile;
         if (!grid.contains(col, row) || !grid.contains(col + dc, row + dr))
@@ -382,13 +383,13 @@ namespace rct3::park::ground
                 const PathCell cell = path_cell(look);
                 auto& out = by_paint[{ cell.sheet == 0 ? GroundPaint::PathA : GroundPaint::PathB, style }];
                 std::array<GroundVertex, 4> q;
-                for (int k = 0; k < 4; ++k)
+                for (std::int32_t k = 0; k < 4; ++k)
                 {
                     const float u = (k & 1) != 0 ? u1 : u0;
                     const float v = (k & 2) != 0 ? v1 : v0;
                     q[static_cast<std::size_t>(k)] = { on_tile(corners, u, v) + glm::vec3(0.0f, kPathLift, 0.0f), glm::vec4(1.0f), cell_uv(cell.cell, u, v), on_tile(normals, u, v) };
                 }
-                for (const int k : { 0, 1, 2, 3, 2, 1 })
+                for (const std::int32_t k : { 0, 1, 2, 3, 2, 1 })
                     out.push_back(q[static_cast<std::size_t>(k)]);
             }
         };
@@ -404,25 +405,25 @@ namespace rct3::park::ground
         const TileRect tiles = area.value_or(TileRect { 0, 0, grid.width, grid.height });
         Builder b;
         bool any = false;
-        for (int row = std::max(tiles.row, 0); row < std::min(tiles.end_row, grid.height); ++row)
+        for (std::int32_t row = std::max(tiles.row, 0); row < std::min(tiles.end_row, grid.height); ++row)
         {
-            for (int col = std::max(tiles.col, 0); col < std::min(tiles.end_col, grid.width); ++col)
+            for (std::int32_t col = std::max(tiles.col, 0); col < std::min(tiles.end_col, grid.width); ++col)
             {
                 const std::int16_t style = map.tiles[static_cast<std::size_t>(row) * static_cast<std::size_t>(map.width) + static_cast<std::size_t>(col)];
                 if (style == kNoPath)
                     continue;
                 std::array<PathLook, 4> looks { };
-                for (int k = 0; k < 4; ++k)
+                for (std::int32_t k = 0; k < 4; ++k)
                 {
-                    const int dc = (k & 1) != 0 ? 1 : -1;
-                    const int dr = (k & 2) != 0 ? 1 : -1;
+                    const std::int32_t dc = (k & 1) != 0 ? 1 : -1;
+                    const std::int32_t dr = (k & 2) != 0 ? 1 : -1;
                     looks[static_cast<std::size_t>(k)] = quarter_look({ .along_x = path_continues(map, grid, { col, row }, dc, 0), .along_z = path_continues(map, grid, { col, row }, 0, dr), .across = has_ground_path(map, { col + dc, row + dr }) && may_join(map, { col, row }, { col + dc, row + dr }) && may_join(map, { col + dc, row }, { col + dc, row + dr }) && may_join(map, { col, row + dr }, { col + dc, row + dr }) });
                 }
 
                 const save::model::TerrainCell& cell = grid.at(col, row);
                 std::array<glm::vec3, 4> corners;
                 std::array<glm::vec3, 4> normals;
-                for (int c = 0; c < 4; ++c)
+                for (std::int32_t c = 0; c < 4; ++c)
                 {
                     const auto cu = static_cast<std::size_t>(c);
                     corners[cu] = { grid.world_x(col + c % 2), cell.corners[cu], grid.world_z(row + c / 2) };
@@ -435,7 +436,7 @@ namespace rct3::park::ground
                 }
                 else
                 {
-                    for (int k = 0; k < 4; ++k)
+                    for (std::int32_t k = 0; k < 4; ++k)
                     {
                         const float u = (k & 1) != 0 ? 0.5f : 0.0f;
                         const float v = (k & 2) != 0 ? 0.5f : 0.0f;

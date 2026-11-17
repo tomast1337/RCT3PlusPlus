@@ -2,6 +2,7 @@
 #include "park/track/completion.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <format>
 #include <vector>
@@ -39,7 +40,7 @@ namespace
         return shape_piece(r, l);
     }
 
-    save::model::PlacedObject at(int col, int row)
+    save::model::PlacedObject at(std::int32_t col, std::int32_t row)
     {
         save::model::PlacedObject o;
         o.col = col;
@@ -121,7 +122,7 @@ TEST_CASE("a search run a few tries at a time finds the way a whole search does,
     auto found = search_on(search, 1);
     REQUIRE_FALSE(found);
     CHECK(search.tried == 1);
-    for (int i = 0; i < 1000 && !found; ++i)
+    for (std::int32_t i = 0; i < 1000 && !found; ++i)
         found = search_on(search, 1);
     REQUIRE(found);
     REQUIRE(*found);

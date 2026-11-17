@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 
 namespace rct3::audio
 {
@@ -23,24 +24,24 @@ namespace rct3::audio
             return static_cast<std::size_t>(it - files.begin());
         }
 
-        std::string_view track_at(int place, bool halloween)
+        std::string_view track_at(std::int32_t place, bool halloween)
         {
             if (halloween)
                 return kHalloweenMenuTracks.at(static_cast<std::size_t>(place % 2));
-            if (place < static_cast<int>(kMenuTracks.size()))
+            if (place < static_cast<std::int32_t>(kMenuTracks.size()))
                 return kMenuTracks.at(static_cast<std::size_t>(place));
             return kQuietMenuTrack;
         }
 
     } // namespace
 
-    MenuMusicPick pick_menu_music(std::optional<int> place, bool halloween, std::span<const std::string> files)
+    MenuMusicPick pick_menu_music(std::optional<std::int32_t> place, bool halloween, std::span<const std::string> files)
     {
         if (!place || *place < 0)
             return { kQuietMenuTrack, find(kQuietMenuTrack, files), std::nullopt };
-        const int count = static_cast<int>(kMenuTracks.size());
-        int at = *place;
-        for (int tries = 0; tries < kMenuTrackTries; ++tries)
+        const std::int32_t count = static_cast<std::int32_t>(kMenuTracks.size());
+        std::int32_t at = *place;
+        for (std::int32_t tries = 0; tries < kMenuTrackTries; ++tries)
         {
             const std::string_view track = track_at(at, halloween);
             at = (at + 1) % count;

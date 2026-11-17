@@ -7,6 +7,7 @@
 #include "ui/sign_text.hpp"
 
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <utility>
 
@@ -15,7 +16,7 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid owned_grid(int width, int height)
+    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -30,14 +31,14 @@ namespace
 
     /// `count` ground queue tiles of line `line` laid from `from` heading `heading`: the line flows back
     /// towards the first, as a queue does until it reaches an entrance.
-    std::vector<save::model::PathTile> lay_line(const save::model::TerrainGrid& g, save::model::Tile from, std::uint8_t heading, int count, std::uint64_t line)
+    std::vector<save::model::PathTile> lay_line(const save::model::TerrainGrid& g, save::model::Tile from, std::uint8_t heading, std::int32_t count, std::uint64_t line)
     {
         FootpathBuilder b;
         b.queue = true;
         b.heading = Side::from(heading);
         start_at(b, from);
         std::vector<save::model::PathTile> paths;
-        for (int i = 0; i < count; ++i)
+        for (std::int32_t i = 0; i < count; ++i)
             (void)lay_path(b, paths, *next_piece(b, g), "QueueSet", line * 100 + static_cast<std::uint64_t>(i), 0);
         for (save::model::PathTile& p : paths)
             p.queue->queue_line_ref = line;

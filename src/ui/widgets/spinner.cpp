@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <charconv>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <limits>
 
@@ -18,9 +19,9 @@ namespace rct3::ui::widgets
         constexpr std::int64_t kPageSteps = 10;
         constexpr std::size_t kMaxDigits = 12; ///< Enough for any int with its sign and a point
 
-        std::u16string format(int v, int decimals)
+        std::u16string format(std::int32_t v, std::int32_t decimals)
         {
-            std::string text = std::to_string(std::abs(static_cast<long long>(v)));
+            std::string text = std::to_string(std::abs(static_cast<std::int64_t>(v)));
             if (decimals > 0)
             {
                 const auto places = static_cast<std::size_t>(decimals);
@@ -33,7 +34,7 @@ namespace rct3::ui::widgets
 
         /// `text` with its point taken out and `decimals` places after it, so it reads as a whole number;
         /// unchanged when it has no point. Empty when it has more places than that.
-        std::string without_point(std::string text, int decimals)
+        std::string without_point(std::string text, std::int32_t decimals)
         {
             const auto point = text.find('.');
             if (point == std::string::npos)
@@ -60,7 +61,7 @@ namespace rct3::ui::widgets
         show_value();
     }
 
-    void Spinner::set_value(int v)
+    void Spinner::set_value(std::int32_t v)
     {
         value_ = std::clamp(v, std::min(minimum, maximum), std::max(minimum, maximum));
         typing_ = false;
@@ -89,8 +90,8 @@ namespace rct3::ui::widgets
     {
         read_field();
         const std::int64_t wanted = static_cast<std::int64_t>(value_) + steps * step;
-        const int before = value_;
-        set_value(static_cast<int>(std::clamp<std::int64_t>(wanted, std::numeric_limits<int>::min(), std::numeric_limits<int>::max())));
+        const std::int32_t before = value_;
+        set_value(static_cast<std::int32_t>(std::clamp<std::int64_t>(wanted, std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max())));
         if (value_ != before)
             ++changes_;
     }
@@ -106,15 +107,15 @@ namespace rct3::ui::widgets
         while (typed.ends_with(u' '))
             typed.remove_suffix(1);
         const std::string digits = without_point(strings::to_utf8(typed), decimals);
-        long long parsed = 0;
+        std::int64_t parsed = 0;
         const auto [end, error] = std::from_chars(digits.data(), digits.data() + digits.size(), parsed);
         // Anything that is not a whole number puts the old value back.
         if (error == std::errc::result_out_of_range)
-            parsed = digits.starts_with('-') ? std::numeric_limits<long long>::min() : std::numeric_limits<long long>::max();
+            parsed = digits.starts_with('-') ? std::numeric_limits<std::int64_t>::min() : std::numeric_limits<std::int64_t>::max();
         else if (error != std::errc { } || end != digits.data() + digits.size())
             parsed = value_;
-        const int before = value_;
-        set_value(static_cast<int>(std::clamp<long long>(parsed, std::numeric_limits<int>::min(), std::numeric_limits<int>::max())));
+        const std::int32_t before = value_;
+        set_value(static_cast<std::int32_t>(std::clamp<std::int64_t>(parsed, std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max())));
         if (value_ != before)
             ++changes_;
         show_value();
@@ -201,7 +202,7 @@ namespace rct3::ui::widgets
 
     void Spinner::draw(DrawContext& context) const
     {
-        const auto arrow = [&](const std::string& skin, const Rect& box, int direction) {
+        const auto arrow = [&](const std::string& skin, const Rect& box, std::int32_t direction) {
             const bool at_end = direction > 0 ? value_ >= std::max(minimum, maximum) : value_ <= std::min(minimum, maximum);
             const skin::SkinState state = !enabled || at_end ? skin::SkinState::Disabled : held_ == direction && pressed() ? skin::SkinState::Pressed : skin::SkinState::Up;
             skin::draw_skin_state(context.list, context.skins, skin, state, box);

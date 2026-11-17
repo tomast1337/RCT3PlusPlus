@@ -112,19 +112,19 @@ namespace
         print_usage(stdout);
         std::printf("\nthe user's data (%s):\n", data ? data->root().string().c_str() : "no folder known");
         for (const auto& folder : rct3::config::user_folders_table())
-            std::printf("  %-20s %.*s\n", std::format("{}/", folder.name).c_str(), static_cast<int>(folder.description.size()), folder.description.data());
+            std::printf("  %-20s %.*s\n", std::format("{}/", folder.name).c_str(), static_cast<int>(folder.description.size()), folder.description.data()); // c-api
         std::printf("\nsettings (%s):\n", data ? data->file(rct3::config::UserFile::Settings).string().c_str() : "not kept");
         for (const auto& setting : rct3::config::settings_table())
-            std::printf("  %-20.*s %.*s\n", static_cast<int>(setting.name.size()), setting.name.data(), static_cast<int>(setting.description.size()), setting.description.data());
+            std::printf("  %-20.*s %.*s\n", static_cast<int>(setting.name.size()), setting.name.data(), static_cast<int>(setting.description.size()), setting.description.data()); // c-api
         std::printf("\nenvironment:\n");
         for (const auto& var : rct3::config::env_vars())
-            std::printf("  %-20.*s %.*s\n", static_cast<int>(var.name.size()), var.name.data(), static_cast<int>(var.description.size()), var.description.data());
+            std::printf("  %-20.*s %.*s\n", static_cast<int>(var.name.size()), var.name.data(), static_cast<int>(var.description.size()), var.description.data()); // c-api
     }
 
     // Set by SIGINT and SIGTERM, so a long run ends through the normal shutdown.
     volatile std::sig_atomic_t g_stop_requested = 0;
 
-    extern "C" void request_stop(int)
+    extern "C" void request_stop(int) // c-api
     {
         g_stop_requested = 1;
     }
@@ -142,8 +142,8 @@ namespace
     {
         const rct3::render::FrameStats stats = device.stats();
         ImGui::Text("%.1f fps", static_cast<double>(ImGui::GetIO().Framerate));
-        ImGui::Text("%s on %s: %u passes, %u draws, %llu primitives", std::string(rct3::render::backend_name(device.backend())).c_str(), std::string(device.device_name()).c_str(), stats.passes, stats.draws, static_cast<unsigned long long>(stats.primitives));
-        ImGui::Text("%llu bytes of per-frame vertex data", static_cast<unsigned long long>(stats.transient_bytes));
+        ImGui::Text("%s on %s: %u passes, %u draws, %llu primitives", std::string(rct3::render::backend_name(device.backend())).c_str(), std::string(device.device_name()).c_str(), stats.passes, stats.draws, static_cast<unsigned long long>(stats.primitives)); // c-api
+        ImGui::Text("%llu bytes of per-frame vertex data", static_cast<unsigned long long>(stats.transient_bytes));                                                                                                                                                // c-api
         // The graph shows the picked scope's recent frames; clicking a row picks another.
         static std::string graphed = "[Main] Frame";
         const std::vector<rct3::profiling::ScopeStats> scopes = rct3::profiling::stats();
@@ -151,7 +151,7 @@ namespace
         {
             const auto history = it->history | std::ranges::to<std::vector<float>>();
             const std::string label = std::format("{}: {:.2f} ms, peak {:.2f}", graphed, it->last, it->period_max);
-            ImGui::PlotLines("##graph", history.data(), static_cast<int>(history.size()), 0, label.c_str(), 0.0f, static_cast<float>(it->period_max * 1.2), { ImGui::GetContentRegionAvail().x, 80 });
+            ImGui::PlotLines("##graph", history.data(), static_cast<int>(history.size()), 0, label.c_str(), 0.0f, static_cast<float>(it->period_max * 1.2), { ImGui::GetContentRegionAvail().x, 80 }); // c-api
         }
         // Scopes as a tree: "[Thread] A/B" goes under "[Thread] A". Sibling rows sort by the picked column.
         std::vector<std::vector<std::size_t>> children(scopes.size() + 1); // The last list holds the roots
@@ -175,7 +175,7 @@ namespace
             ImGui::TableHeadersRow();
 
             const ImGuiTableSortSpecs* sort = ImGui::TableGetSortSpecs();
-            const int column = sort != nullptr && sort->SpecsCount > 0 ? sort->Specs[0].ColumnIndex : -1;
+            const std::int32_t column = sort != nullptr && sort->SpecsCount > 0 ? sort->Specs[0].ColumnIndex : -1;
             const bool descending = column >= 0 && sort->Specs[0].SortDirection == ImGuiSortDirection_Descending;
             const auto value = [&](std::size_t i) {
                 const auto& s = scopes[i];
@@ -258,7 +258,7 @@ namespace
             park.since_people_levels = rct3::scene::park::kObjectRebuildInterval;
         }
         ImGui::SetItemTooltip("Guests walk the paths and visit shops; the park as saved is left as it was");
-        ImGui::Text("Simulation tick %llu", static_cast<unsigned long long>(park.sim.tick));
+        ImGui::Text("Simulation tick %llu", static_cast<unsigned long long>(park.sim.tick)); // c-api
         const rct3::park::ParkCamera& c = park.camera;
         ImGui::Text("Target %.1f %.1f %.1f", static_cast<double>(c.target.x), static_cast<double>(c.target.y), static_cast<double>(c.target.z));
         ImGui::Text("Yaw %.2f, pitch %.2f, distance %.1f", static_cast<double>(c.yaw), static_cast<double>(c.pitch), static_cast<double>(c.distance));
@@ -278,7 +278,7 @@ namespace
         namespace logging = rct3::logging;
         static std::vector<logging::Entry> shown;
         static std::uint64_t cursor = 0;
-        static int minimum = static_cast<int>(logging::Level::Info);
+        static int minimum = static_cast<int>(logging::Level::Info); // c-api
         static bool follow = true;
 
         for (auto& e : logging::global().entries_since(cursor))
@@ -292,7 +292,7 @@ namespace
 
         static constexpr std::array<const char*, 5> kLevels = { "Debug", "Info", "Warning", "Error", "Critical" };
         ImGui::SetNextItemWidth(110);
-        ImGui::Combo("Minimum", &minimum, kLevels.data(), static_cast<int>(kLevels.size()));
+        ImGui::Combo("Minimum", &minimum, kLevels.data(), static_cast<int>(kLevels.size())); // c-api
         ImGui::SameLine();
         ImGui::Checkbox("Follow", &follow);
         ImGui::SameLine();
@@ -309,7 +309,7 @@ namespace
         ImGui::BeginChild("lines", { 0, 0 }, ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
         for (const auto& e : shown)
         {
-            const int level = static_cast<int>(e.level);
+            const std::int32_t level = static_cast<std::int32_t>(e.level);
             if (level < minimum)
                 continue;
             ImGui::PushStyleColor(ImGuiCol_Text, kColors[static_cast<std::size_t>(level)]);
@@ -393,7 +393,7 @@ namespace
             chain.insert(chain.begin(), w);
         for (std::size_t depth = 0; depth < chain.size(); ++depth)
         {
-            ImGui::Text("%*s%s", static_cast<int>(depth * 2), "", widget_label(*chain[depth]).c_str());
+            ImGui::Text("%*s%s", static_cast<int>(depth * 2), "", widget_label(*chain[depth]).c_str()); // c-api
             if (ImGui::IsItemHovered())
                 in.outlined = chain[depth];
         }
@@ -548,7 +548,7 @@ int main(int argc, char** argv)
     load_user_file(config::UserFile::Settings, settings);
 
     // Command-line options that are also settings go into `settings`, so --write-settings keeps them.
-    std::optional<int> max_frames;
+    std::optional<std::int32_t> max_frames;
     bool vsync = true;
     bool write_settings = false;
     bool widget_demo = false;
@@ -563,7 +563,7 @@ int main(int argc, char** argv)
     std::optional<rct3::random::Seed> seed;
     bool simulate = true;                         ///< The park starts with the simulation running
     std::optional<std::filesystem::path> profile; ///< Where to write the profiler's table on the way out
-    for (int i = 1; i < argc; ++i)
+    for (std::int32_t i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
         {
@@ -665,7 +665,7 @@ int main(int argc, char** argv)
         }
         else if (std::strcmp(argv[i], "--version") == 0)
         {
-            std::printf("rct3++ %.*s\n", static_cast<int>(rct3::core::version().size()), rct3::core::version().data());
+            std::printf("rct3++ %.*s\n", static_cast<int>(rct3::core::version().size()), rct3::core::version().data()); // c-api
             return 0;
         }
         else if (std::strcmp(argv[i], "--help") == 0)
@@ -684,7 +684,7 @@ int main(int argc, char** argv)
     {
         if (!settings_file)
         {
-            std::fprintf(stderr, "no folder for the user's data known; set %.*s\n", static_cast<int>(config::env_name(config::EnvVar::DataFolder).size()), config::env_name(config::EnvVar::DataFolder).data());
+            std::fprintf(stderr, "no folder for the user's data known; set %.*s\n", static_cast<int>(config::env_name(config::EnvVar::DataFolder).size()), config::env_name(config::EnvVar::DataFolder).data()); // c-api
             return 1;
         }
         if (auto saved = settings.save(*settings_file); !saved)
@@ -923,7 +923,7 @@ int main(int argc, char** argv)
             setup.screen_sizes.push_back({ s.width, s.height });
         }
         for (const std::uint32_t n : sample_levels)
-            setup.anti_aliasing_levels.push_back(static_cast<int>(n));
+            setup.anti_aliasing_levels.push_back(static_cast<std::int32_t>(n));
         setup.keys = key_map;
         // The game's pictures, then the user's screenshots, shuffled together.
         if (const auto pictures = install->find("Slideshow/Default"))
@@ -1056,7 +1056,7 @@ int main(int argc, char** argv)
     if (install && !startup)
         load_widgets(false);
 
-    int status = 0;
+    std::int32_t status = 0;
     std::unique_ptr<rct3::scene::ScriptHost> script;
     if (script_file)
     {
@@ -1100,7 +1100,7 @@ int main(int argc, char** argv)
             return p;
         };
         double last_time = start_time;
-        int frame = 0;
+        std::int32_t frame = 0;
         for (; !window->should_close() && !quit && frame != max_frames && g_stop_requested == 0; ++frame)
         {
             if (max_seconds && window->time() - start_time >= *max_seconds)

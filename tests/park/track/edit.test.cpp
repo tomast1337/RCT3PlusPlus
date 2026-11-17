@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/edit.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -44,7 +45,7 @@ namespace
         return g;
     }
 
-    save::model::PlacedObject placed(int col, int row)
+    save::model::PlacedObject placed(std::int32_t col, std::int32_t row)
     {
         save::model::PlacedObject o;
         o.col = col;

@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -21,8 +22,8 @@ TEST_CASE("an event happens about as often as its rate says")
     EventRates rates;
     rates[RandomEvent::RideBreakdown] = 2; // Twice an hour
     random::RandomState s = random::seeded(random::Seed { 5 });
-    int happened = 0;
-    for (int i = 0; i < 10000; ++i)
+    std::int32_t happened = 0;
+    for (std::int32_t i = 0; i < 10000; ++i)
         happened += roll_events(s, rates, 0.1).empty() ? 0 : 1;
     const double expected = 10000 * chance_in(2, 0.1);
     CHECK(std::abs(happened - expected) < 0.05 * expected);
@@ -45,8 +46,8 @@ TEST_CASE("a weighted pick follows the weights and skips the empty ones")
 {
     random::RandomState s = random::seeded(random::Seed { 11 });
     const std::array<double, 4> weights { 0, 1, -5, 3 };
-    std::array<int, 4> picked { };
-    for (int i = 0; i < 4000; ++i)
+    std::array<std::int32_t, 4> picked { };
+    for (std::int32_t i = 0; i < 4000; ++i)
     {
         const auto p = pick_weighted(s, weights);
         REQUIRE(p);

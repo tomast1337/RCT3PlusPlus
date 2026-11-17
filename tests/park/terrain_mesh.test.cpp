@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/terrain_mesh.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -9,7 +10,7 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid flat(int width, int height, float level = 0)
+    save::model::TerrainGrid flat(std::int32_t width, std::int32_t height, float level = 0)
     {
         save::model::TerrainGrid g;
         g.width = width;

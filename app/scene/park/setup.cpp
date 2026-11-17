@@ -82,6 +82,7 @@
 #include <charconv>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -482,7 +483,7 @@ namespace rct3::scene::park
                     {
                         // shortcut: a costume's number is read from the digits ending its name, as the install numbers them; read it from elsewhere if a costume ever lacks them.
                         const auto digits = std::ranges::find_if(c.name, [](char ch) { return ch >= '0' && ch <= '9'; });
-                        unsigned number = 0;
+                        std::uint32_t number = 0;
                         if (!c.costume || c.costume->sections.size() < 3 || std::from_chars(std::to_address(digits), c.name.data() + c.name.size(), number).ec != std::errc { } || number > 255)
                             continue;
                         for (std::uint8_t k = 0; k < 3; ++k)
@@ -632,7 +633,7 @@ namespace rct3::scene::park
         for (auto& [name, image] : images)
         {
             // Worked out first: the size cannot be read in the same call that moves the image away.
-            const int halvings = ovl::texture::texture_halvings(scene.texture_detail, image.width, image.height);
+            const std::int32_t halvings = ovl::texture::texture_halvings(scene.texture_detail, image.width, image.height);
             image = ovl::texture::halved(std::move(image), halvings);
         }
     }

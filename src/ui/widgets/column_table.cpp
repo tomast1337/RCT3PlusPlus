@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::ui::widgets
 {
@@ -24,7 +25,7 @@ namespace rct3::ui::widgets
         };
         std::ranges::stable_sort(rows, [&](const TableRow& a, const TableRow& b) {
             const bool both = key(a).has_value() == key(b).has_value();
-            const int o = order(a, b);
+            const std::int32_t o = order(a, b);
             return descending && both ? o > 0 : o < 0;
         });
     }
@@ -187,8 +188,8 @@ namespace rct3::ui::widgets
                     const float mark = style.sort_mark;
                     const float mid = std::round((head.y0 + head.y1) / 2);
                     const float right = columns[c].align == Align::End ? box.x0 + mark : box.x1;
-                    const int steps = static_cast<int>(std::ceil(mark / 2));
-                    for (int step = 0; step < steps; ++step)
+                    const std::int32_t steps = static_cast<std::int32_t>(std::ceil(mark / 2));
+                    for (std::int32_t step = 0; step < steps; ++step)
                     {
                         const auto i = static_cast<float>(step);
                         const float half = descending ? mark / 2 - i : i + 1;

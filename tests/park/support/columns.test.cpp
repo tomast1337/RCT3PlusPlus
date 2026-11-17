@@ -2,6 +2,7 @@
 #include "park/support/columns.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <format>
 #include <set>
@@ -29,7 +30,7 @@ namespace
         return sets;
     }
 
-    save::model::TerrainGrid flat_grid(int size, float level)
+    save::model::TerrainGrid flat_grid(std::int32_t size, float level)
     {
         save::model::TerrainGrid g;
         g.width = size;
@@ -67,7 +68,7 @@ namespace
             piece("LongBeam", { -1.5f, -0.1f, -0.2f }, { 1.5f, 0.1f, 0.2f });
         }
 
-        save::model::PlacedObject& add(std::string symbol, SupportFootprint footprint, int col, int row, std::int32_t base, std::int32_t rotation = 0)
+        save::model::PlacedObject& add(std::string symbol, SupportFootprint footprint, std::int32_t col, std::int32_t row, std::int32_t base, std::int32_t rotation = 0)
         {
             object::ObjectModel m;
             m.support_group = std::string(kGroup);
@@ -97,7 +98,7 @@ namespace
         return f;
     }
 
-    std::vector<std::pair<std::string, std::int32_t>> stack(const std::vector<save::model::PlacedObject>& pieces, int col, int row)
+    std::vector<std::pair<std::string, std::int32_t>> stack(const std::vector<save::model::PlacedObject>& pieces, std::int32_t col, std::int32_t row)
     {
         std::vector<std::pair<std::string, std::int32_t>> out;
         for (const save::model::PlacedObject& o : pieces)

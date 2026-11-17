@@ -2,6 +2,7 @@
 #include "park/lamp_grid.hpp"
 
 #include <array>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -15,18 +16,18 @@ namespace
     }
 
     /// The lamps the cell holding world point (x, z) lists, as the shader reads them.
-    std::vector<int> listed(const LampTexels& t, float x, float z)
+    std::vector<std::int32_t> listed(const LampTexels& t, float x, float z)
     {
         const glm::vec4 h0 = texel(t, 0);
         const glm::vec4 h1 = texel(t, 1);
-        const int cx = static_cast<int>(std::floor((x - h0.x) / h0.z));
-        const int cz = static_cast<int>(std::floor((z - h0.y) / h0.z));
-        std::vector<int> out;
-        if (cx < 0 || cz < 0 || cx >= static_cast<int>(h0.w) || cz >= static_cast<int>(h1.x))
+        const std::int32_t cx = static_cast<std::int32_t>(std::floor((x - h0.x) / h0.z));
+        const std::int32_t cz = static_cast<std::int32_t>(std::floor((z - h0.y) / h0.z));
+        std::vector<std::int32_t> out;
+        if (cx < 0 || cz < 0 || cx >= static_cast<std::int32_t>(h0.w) || cz >= static_cast<std::int32_t>(h1.x))
             return out;
-        const auto start = static_cast<std::uint32_t>(h1.z) + static_cast<std::uint32_t>(cz * static_cast<int>(h0.w) + cx) * (kLampsPerCell / 4);
+        const auto start = static_cast<std::uint32_t>(h1.z) + static_cast<std::uint32_t>(cz * static_cast<std::int32_t>(h0.w) + cx) * (kLampsPerCell / 4);
         for (std::uint32_t k = 0; k < kLampsPerCell && t.values[start * 4 + k] >= 0; ++k)
-            out.push_back(static_cast<int>(t.values[start * 4 + k]));
+            out.push_back(static_cast<std::int32_t>(t.values[start * 4 + k]));
         return out;
     }
 } // namespace
@@ -56,7 +57,7 @@ TEST_CASE("overlapping lamps share cells, up to the most a cell lists")
 {
     std::vector<Lamp> lamps(kLampsPerCell + 3, Lamp { .position = { 1, 0, 1 }, .radius = 1, .colour = { 1, 1, 1 } });
     const LampTexels t = lamp_texels(lamps, 8);
-    const std::vector<int> here = listed(t, 1, 1);
+    const std::vector<std::int32_t> here = listed(t, 1, 1);
     CHECK(here.size() == kLampsPerCell);
     CHECK(here.front() == 0);
 }

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <doctest/doctest.h>
 #include <format>
 
@@ -214,7 +215,7 @@ TEST_CASE("controls share a row when beside, and a page of halves stacks its rig
     fonts.set(FontRole::Small, test_font());
     InfoPage page;
     page.width = 400;
-    const auto control = [](std::string name, InfoControlKind kind, std::u16string label, int column, bool beside) {
+    const auto control = [](std::string name, InfoControlKind kind, std::u16string label, std::int32_t column, bool beside) {
         InfoControl c;
         c.name = std::move(name);
         c.kind = kind;
@@ -560,7 +561,7 @@ TEST_CASE("a page taller than the strip scrolls with the wheel, and its bar show
     Fixture f;
     f.panel->show(three(), 0);
     InfoPage page;
-    for (int i = 0; i < 20; ++i)
+    for (std::int32_t i = 0; i < 20; ++i)
         page.lines.push_back({ .label = u"line", .value = u"1", .name = std::format("row{}", i) });
     f.panel->show_page(page);
     f.desktop.update({ });

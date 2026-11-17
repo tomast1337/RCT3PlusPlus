@@ -3,6 +3,7 @@
 
 #include "builder.hpp"
 
+#include <cstdint>
 #include <cstring>
 #include <doctest/doctest.h>
 #include <string>
@@ -35,7 +36,7 @@ namespace
         append_u16(out, 16);
         append_u32(out, 0);
         append_u32(out, 0);
-        for (int i = 0; i < 9; ++i)
+        for (std::int32_t i = 0; i < 9; ++i)
             append_f32(out, 0.5f * static_cast<float>(i + 1));
         append_u32(out, flag);
         append_u32(out, data_address);

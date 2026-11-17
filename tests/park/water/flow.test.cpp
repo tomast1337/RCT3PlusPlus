@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/water/flow.hpp"
 
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -11,10 +12,10 @@ namespace
 {
 
     // A straight spline of `parts` parts from `from` along -X, `length` long.
-    ovl::Spline straight(std::array<float, 3> from, float length, int parts)
+    ovl::Spline straight(std::array<float, 3> from, float length, std::int32_t parts)
     {
         ovl::Spline s;
-        for (int i = 0; i <= parts; ++i)
+        for (std::int32_t i = 0; i <= parts; ++i)
         {
             ovl::SplineNode& n = s.nodes.emplace_back();
             n.position = { from[0] - length * i / parts, from[1], from[2] };

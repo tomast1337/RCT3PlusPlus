@@ -35,8 +35,8 @@ namespace rct3::park
     struct QueueSignSpot
     {
         std::uint64_t line = 0;
-        int col = 0;
-        int row = 0;
+        std::int32_t col = 0;
+        std::int32_t row = 0;
         float height = 0; ///< Of the head's start edge, in world units
         ModelTurn turn;   ///< Of the sign: as a railing on the head's start edge
         friend bool operator==(const QueueSignSpot&, const QueueSignSpot&) = default;

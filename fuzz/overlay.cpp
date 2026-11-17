@@ -47,7 +47,7 @@
 #include "ovl/tracked_ride.hpp"
 #include "park/build_catalogue.hpp"
 
-extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
+extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) // c-api
 {
     std::vector<std::byte> bytes(reinterpret_cast<const std::byte*>(data), reinterpret_cast<const std::byte*>(data) + size);
     const auto overlay = rct3::ovl::Overlay::from_bytes(std::move(bytes), std::nullopt);

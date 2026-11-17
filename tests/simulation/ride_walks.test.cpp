@@ -9,6 +9,7 @@
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3::simulation;
@@ -98,14 +99,14 @@ TEST_CASE("a load walks off abreast, each to a side of the way out within the wa
     const glm::vec3 entrance = park.world().paths.centre(*r.get<Attraction>(ride).entrance);
     const glm::vec3 bend = entrance + glm::vec3(6, 0, 4);
     std::vector<std::vector<glm::vec3>> on, off;
-    for (int seat = 0; seat < 3; ++seat)
+    for (std::int32_t seat = 0; seat < 3; ++seat)
     {
         on.push_back({ entrance + glm::vec3(6, 0, static_cast<float>(seat)) });
         off.push_back({ on.back().front(), bend, bend + glm::vec3(0, 0, 4) });
     }
     r.emplace<RideWalks>(ride, RideWalks { .ticket = entrance, .on = on, .off = off });
     std::vector<entt::entity> load;
-    for (int i = 0; i < 3; ++i)
+    for (std::int32_t i = 0; i < 3; ++i)
     {
         load.push_back(park.guest({ 4, 0 }, { .cash = 1000 }));
         r.get<Errand>(load.back()) = { ErrandKind::Heading, ride, 0 };

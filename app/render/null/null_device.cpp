@@ -60,8 +60,8 @@ namespace rct3::render::null
 
     Extent NullDevice::screen_extent() const
     {
-        int width = 0;
-        int height = 0;
+        int width = 0;  // c-api
+        int height = 0; // c-api
         if (config_.window != nullptr)
             glfwGetFramebufferSize(config_.window, &width, &height);
         return { static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height) };

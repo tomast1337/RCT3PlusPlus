@@ -10,6 +10,7 @@
 #include <array>
 #include <cctype>
 #include <cmath>
+#include <cstdint>
 #include <format>
 #include <limits>
 #include <span>
@@ -168,7 +169,7 @@ namespace rct3::simulation
             }
         };
         std::vector<Carriage> carriages = carriages_of(c);
-        for (int step = 1; static_cast<float>(step) * kStep <= most; ++step)
+        for (std::int32_t step = 1; static_cast<float>(step) * kStep <= most; ++step)
         {
             const float time = static_cast<float>(step) * kStep;
             lower_carriages(c, carriages, kStep);

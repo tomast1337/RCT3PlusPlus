@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include <string_view>
 
-extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size)
+extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) // c-api
 {
     const std::string_view text(reinterpret_cast<const char*>(data), size);
     if (const auto state = rct3::random::parse_state(text))

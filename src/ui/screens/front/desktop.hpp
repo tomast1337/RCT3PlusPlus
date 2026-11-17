@@ -30,6 +30,7 @@
 #include "ui/widgets/question_box.hpp"
 
 #include <array>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -92,7 +93,7 @@ namespace rct3::ui::screens::front
         /// The window picking a career, while it is open.
         [[nodiscard]] std::optional<career::CareerDialog&> career_dialog() const;
         /// The game whose careers it shows: 0 the original, then each expansion.
-        [[nodiscard]] int career_pack() const
+        [[nodiscard]] std::int32_t career_pack() const
         {
             return career_pack_;
         }
@@ -114,7 +115,7 @@ namespace rct3::ui::screens::front
         /// The tutorials shown over the screen, while they are.
         [[nodiscard]] std::optional<tutorial::TutorialPicker&> tutorial_picker() const;
         /// The game whose tutorials they are: 0 the original, then each expansion.
-        [[nodiscard]] int tutorial_pack() const
+        [[nodiscard]] std::int32_t tutorial_pack() const
         {
             return tutorial_pack_;
         }
@@ -154,8 +155,8 @@ namespace rct3::ui::screens::front
 
     private:
         void open_options();
-        void open_careers(int pack);
-        void open_tutorials(int pack);
+        void open_careers(std::int32_t pack);
+        void open_tutorials(std::int32_t pack);
         void ask_quit();
 
         Desktop& desktop_;
@@ -168,10 +169,10 @@ namespace rct3::ui::screens::front
         config::UserFolder file_folder_ = config::UserFolder::Parks;
         FrontAction file_action_ = FrontAction::LoadSandbox;
         std::size_t file_dialogs_opened_ = 0;
-        int career_pack_ = 0;
+        std::int32_t career_pack_ = 0;
         std::size_t career_dialogs_opened_ = 0;
         std::size_t career_boards_opened_ = 0;
-        int tutorial_pack_ = 0;
+        std::int32_t tutorial_pack_ = 0;
         std::size_t tutorial_pickers_opened_ = 0;
         bool quit_ = false;
         std::vector<FrontRequest> unhandled_;

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 
 namespace rct3::render::software
 {
@@ -17,7 +18,7 @@ namespace rct3::render::software
         using glm::vec3;
         using glm::vec4;
 
-        vec4 row(const glm::mat4& m, int r)
+        vec4 row(const glm::mat4& m, std::int32_t r)
         {
             return { m[0][r], m[1][r], m[2][r], m[3][r] };
         }
@@ -157,7 +158,7 @@ namespace rct3::render::software
         // How much of the sun reaches `world` by the shadow map in `shadow`, drawn as row `row` of the sun's view
         // says. shortcut: one blended 2 by 2 read where lit.slang averages 3 by 3 of them, so the shadow's edge is
         // harder; read more if the edges show stairs.
-        float sunlit(const DrawState& d, const Texture& shadow, int row, vec3 world, vec3 n)
+        float sunlit(const DrawState& d, const Texture& shadow, std::int32_t row, vec3 world, vec3 n)
         {
             const Texture& view_texels = extra(d, 1);
             const glm::mat4 view(load(view_texels, 0, row), load(view_texels, 1, row), load(view_texels, 2, row), load(view_texels, 3, row));
@@ -180,28 +181,28 @@ namespace rct3::render::software
             return glm::mix(sum, 1.0f, smooth(0.85f, 1.0f, edge));
         }
 
-        constexpr int kLampTexelsAcross = 256;
-        constexpr int kLampsPerCell = 16;
+        constexpr std::int32_t kLampTexelsAcross = 256;
+        constexpr std::int32_t kLampsPerCell = 16;
 
         vec3 lamplight(const DrawState& d, vec3 world, vec3 n)
         {
             const Texture& lamps = extra(d, 4);
-            const auto texel = [&](int i) { return load(lamps, i % kLampTexelsAcross, i / kLampTexelsAcross); };
+            const auto texel = [&](std::int32_t i) { return load(lamps, i % kLampTexelsAcross, i / kLampTexelsAcross); };
             const vec4 grid = texel(0);
             const vec4 more = texel(1);
             const glm::ivec2 cell { glm::floor((vec2(world.x, world.z) - vec2(grid)) / grid.z) };
-            if (cell.x < 0 || cell.y < 0 || cell.x >= static_cast<int>(grid.w) || cell.y >= static_cast<int>(more.x))
+            if (cell.x < 0 || cell.y < 0 || cell.x >= static_cast<std::int32_t>(grid.w) || cell.y >= static_cast<std::int32_t>(more.x))
                 return vec3(0.0f);
-            const int start = static_cast<int>(more.z) + (cell.y * static_cast<int>(grid.w) + cell.x) * (kLampsPerCell / 4);
+            const std::int32_t start = static_cast<std::int32_t>(more.z) + (cell.y * static_cast<std::int32_t>(grid.w) + cell.x) * (kLampsPerCell / 4);
             vec3 sum(0.0f);
-            for (int t = 0; t < kLampsPerCell / 4; ++t)
+            for (std::int32_t t = 0; t < kLampsPerCell / 4; ++t)
             {
                 const vec4 four = texel(start + t);
-                for (int k = 0; k < 4; ++k)
+                for (std::int32_t k = 0; k < 4; ++k)
                 {
                     if (four[k] < 0.0f)
                         return sum;
-                    const int lamp = static_cast<int>(four[k]);
+                    const std::int32_t lamp = static_cast<std::int32_t>(four[k]);
                     const vec4 place = texel(2 + 2 * lamp);
                     const vec3 to = vec3(place) - world;
                     const float d2 = glm::dot(to, to) / (place.w * place.w);
@@ -239,7 +240,7 @@ namespace rct3::render::software
 
         // kMode as lit.slang's: 1 cut out, 2 a second picture added, 4 chrome. shortcut: surface detail (the grain
         // and the relief map) is left out; add it when the software backend is used to compare detail.
-        template<int kMode> bool lit_fragment(const DrawState& d, const Fragment& f, vec4& out)
+        template<std::int32_t kMode> bool lit_fragment(const DrawState& d, const Fragment& f, vec4& out)
         {
             const std::span<const float> v = f.varyings;
             const vec4 vertex_colour = at4(v, 0);
@@ -250,8 +251,8 @@ namespace rct3::render::software
             const ShaderConstants& u = d.constants;
             if (cross.y != 0.0f)
             {
-                const int px = static_cast<int>(f.position.x) & 3;
-                const int py = static_cast<int>(f.position.y) & 3;
+                const std::int32_t px = static_cast<std::int32_t>(f.position.x) & 3;
+                const std::int32_t py = static_cast<std::int32_t>(f.position.y) & 3;
                 const bool coarser = kDither[static_cast<std::size_t>(py * 4 + px)] / 16.0f <= cross.x;
                 if (coarser != (cross.y > 0.0f))
                     return false;
@@ -502,8 +503,8 @@ namespace rct3::render::software
             const Texture& rings = extra(d, 3);
             vec2 slope(0.0f);
             float crest = 0.0f;
-            const int count = static_cast<int>(size_of(rings).x);
-            for (int i = 0; i < count; ++i)
+            const std::int32_t count = static_cast<std::int32_t>(size_of(rings).x);
+            for (std::int32_t i = 0; i < count; ++i)
             {
                 const vec4 ring = load(rings, i, 0);
                 if (ring.w <= 0.0f)
@@ -535,7 +536,7 @@ namespace rct3::render::software
                 return vec2(0.0f);
             float sum = 0.0f;
             float foam = 0.0f;
-            for (int i = 0; i < size.x; ++i)
+            for (std::int32_t i = 0; i < size.x; ++i)
             {
                 const vec4 shape = load(waves, i, 3);
                 if (shape.x < 0.5f)
@@ -692,8 +693,8 @@ namespace rct3::render::software
             const vec2 base = glm::floor(p);
             float first = 9.0f;
             float second = 9.0f;
-            for (int y = -1; y <= 1; ++y)
-                for (int x = -1; x <= 1; ++x)
+            for (std::int32_t y = -1; y <= 1; ++y)
+                for (std::int32_t x = -1; x <= 1; ++x)
                 {
                     const vec2 q = cell_point(base + vec2(x, y), time) - p;
                     const float d = glm::dot(q, q);
@@ -727,7 +728,7 @@ namespace rct3::render::software
         }
 
         // Sunlight the water scatters towards the eye along `dir` from `from` (water_shafts in water.slang).
-        vec3 water_shafts(const DrawState& d, vec3 from, vec3 dir, float span, float level, vec3 absorb, vec3 to_sun, vec3 sun, float time, int steps, float blur, float spread, vec2 pixel)
+        vec3 water_shafts(const DrawState& d, vec3 from, vec3 dir, float span, float level, vec3 absorb, vec3 to_sun, vec3 sun, float time, std::int32_t steps, float blur, float spread, vec2 pixel)
         {
             if (!has(d, kShafts) || !has(d, kWaves) || to_sun.y <= 0.0f || span <= 0.0f)
                 return vec3(0.0f);
@@ -735,7 +736,7 @@ namespace rct3::render::software
             const float stride = std::min(span, kShaftReach) / static_cast<float>(steps);
             const float jitter = frac(52.9829189f * frac(glm::dot(pixel, vec2(0.06711056f, 0.00583715f))));
             vec3 sum(0.0f);
-            for (int i = 0; i < steps; ++i)
+            for (std::int32_t i = 0; i < steps; ++i)
             {
                 const float t = (static_cast<float>(i) + jitter) * stride;
                 const vec3 q = from + dir * t;

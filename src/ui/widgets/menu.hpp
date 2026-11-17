@@ -16,6 +16,7 @@
 #include "ui/widget.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <utility>
@@ -77,7 +78,7 @@ namespace rct3::ui::widgets
             return std::exchange(choice_, std::nullopt);
         }
         /// -1 for Left and +1 for Right since the last call, added up.
-        [[nodiscard]] int take_sideways()
+        [[nodiscard]] std::int32_t take_sideways()
         {
             return std::exchange(sideways_, 0);
         }
@@ -106,14 +107,14 @@ namespace rct3::ui::widgets
 
     private:
         [[nodiscard]] bool choosable(std::size_t index) const;
-        void move_highlight(int direction, std::size_t from);
+        void move_highlight(std::int32_t direction, std::size_t from);
         void choose(std::size_t index);
 
         Point at_;
         float min_width_ = 0;
         std::optional<std::size_t> highlighted_;
         std::optional<std::size_t> choice_;
-        int sideways_ = 0;
+        std::int32_t sideways_ = 0;
     };
 
 } // namespace rct3::ui::widgets

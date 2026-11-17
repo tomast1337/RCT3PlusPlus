@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <vector>
 
 namespace rct3::simulation
@@ -38,7 +39,7 @@ namespace rct3::simulation
             if (!ground.somewhere)
                 return std::nullopt;
             const auto houses = r.view<const AnimalHouse>();
-            for (int i = 0; i < kRates.stroll_tries; ++i)
+            for (std::int32_t i = 0; i < kRates.stroll_tries; ++i)
             {
                 const auto spot = ground.somewhere(enclosure, dice);
                 if (!spot)

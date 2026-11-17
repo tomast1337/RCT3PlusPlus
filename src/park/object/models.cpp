@@ -1013,17 +1013,18 @@ namespace rct3::park::object
 
         // The part that spins or swings on the car, at rest: its pivot bone on the car's, each piece's origin
         // standing in for a pivot it lacks. Riders sit in it where it has the seats. One held level about one line
-        // (its furthest turn 0) is drawn apart, its pivot bone turned to the car's too, as the two may differ by a
-        // quarter turn, and turned about the pivot's sideways or forward line as the car goes.
+        // (its furthest turn 0) is drawn apart, set in the frame of the car's pivot bone, which may be a quarter turn
+        // from the car's own, and turned about that frame's sideways or forward line as the car goes. Its own pivot
+        // bone gives only the point it hangs from: that bone's turn would hang it on the far side of the track from
+        // the base it hangs on.
         // shortcut: other parts keep the car's way round, as their pivot bones differ in ways their shapes do not
         // show at rest; upgrade as swinging and spinning parts come.
         const glm::mat4 car_pivot = bone_of(car->visual, "pivot").value_or(rest);
-        const glm::mat4 own_pivot = bone_of(car->part, "pivot").value_or(rest);
         const glm::vec3 pivot { car_pivot[3] };
-        const glm::vec3 part_pivot { own_pivot[3] };
+        const glm::vec3 part_pivot { bone_of(car->part, "pivot").value_or(rest)[3] };
         const std::optional<ovl::PartMoves>& moves = car->moves[0];
         const bool held = moves && moves->furthest && moves->furthest->value == 0 && (moves->motion == ovl::PartMotion::SwingsForward || moves->motion == ovl::PartMotion::SwingsSideways);
-        const glm::mat4 part_place = held ? car_pivot * glm::inverse(own_pivot) : glm::translate(rest, pivot - part_pivot);
+        const glm::mat4 part_place = held ? glm::translate(car_pivot, -part_pivot) : glm::translate(rest, pivot - part_pivot);
         std::vector<std::size_t> parts_before;
         for (const ModelLevel& level : model.levels)
             parts_before.push_back(level.parts.size());
@@ -1039,7 +1040,6 @@ namespace rct3::park::object
                     .moves = *moves,
                     .pivot = car_pivot,
                     .axis = moves->motion == ovl::PartMotion::SwingsForward ? glm::vec3(1, 0, 0) : glm::vec3(0, 0, 1),
-                    .up = glm::normalize(glm::inverse(glm::mat3(own_pivot)) * glm::vec3(0, 1, 0)),
                 };
                 parts_before.resize(model.levels.size());
                 for (std::size_t i = 0; i < model.levels.size(); ++i)

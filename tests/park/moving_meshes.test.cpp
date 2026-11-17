@@ -109,12 +109,13 @@ TEST_CASE("a model moved by bones keeps its triangles whole, each corner followi
     CHECK(m.mesh.vertices[1].normal.x == doctest::Approx(-1));
 }
 
-TEST_CASE("a car's part held level stays level and on its pivot as its car pitches, heading as the car does")
+TEST_CASE("a car's part held level stays level and on its pivot as its car pitches, over the top too, heading as the car does")
 {
     // Hung from a pivot a metre over the car's origin, turning about the pivot's sideways line.
     const object::CarPart part { .moves = { }, .pivot = glm::translate(glm::mat4(1.0f), { 0, 1, 0 }), .axis = { 1, 0, 0 }, .up = { 0, 1, 0 } };
     constexpr float kHeading = 0.7f;
-    for (const float pitch : { -1.4f, -0.5f, 0.0f, 0.3f, 1.2f })
+    // Past a quarter turn either way the car is upside down, as over the top of a loop.
+    for (const float pitch : { -2.6f, -1.4f, -0.5f, 0.0f, 0.3f, 1.2f, 2.0f, glm::pi<float>(), 4.0f })
     {
         CAPTURE(pitch);
         const glm::mat4 place = glm::rotate(glm::rotate(glm::translate(glm::mat4(1.0f), { 5, 2, 3 }), kHeading, { 0, 1, 0 }), pitch, { 1, 0, 0 });
@@ -141,21 +142,27 @@ TEST_CASE("a car's part held level turns only about its own line: rolled, the ca
     CHECK(level_move(part, glm::mat4(0.0f)) == glm::mat4(1.0f));
 }
 
-TEST_CASE("a part held level on a car riding on its side stays upright up and down hills, its pivot a quarter turned")
+TEST_CASE("a part held level on a car riding on its side stays upright up, over the top and down, its pivot a quarter turned")
 {
     // The car's pivot is turned a quarter about the car's forward from the part's: its sideways line is the car's
     // down, and the part's up (the pivot's own up) is the car's left (-X). The car rides on its side, its left up.
     const glm::mat4 pivot { glm::vec4(0, -1, 0, 0), glm::vec4(-1, 0, 0, 0), glm::vec4(0, 0, -1, 0), glm::vec4(0, 0.5f, 0, 1) };
     const object::CarPart part { .moves = { }, .pivot = pivot, .axis = { 1, 0, 0 }, .up = { 0, 1, 0 } };
-    const glm::vec3 part_up = glm::mat3(pivot) * part.up;
     const glm::mat4 on_side = glm::rotate(glm::mat4(1.0f), -glm::half_pi<float>(), { 0, 0, 1 });
-    for (const float climb : { -1.2f, -0.3f, 0.0f, 0.6f, 1.5f })
+    // Past a quarter turn it goes over the top and back down, as on a ride over the top of a tower.
+    for (const float climb : { -2.5f, -1.2f, -0.3f, 0.0f, 0.6f, 1.5f, 2.2f, glm::pi<float>(), 4.0f })
     {
         CAPTURE(climb);
         const glm::mat4 place = glm::rotate(glm::mat4(1.0f), -climb, { 1, 0, 0 }) * on_side;
-        const glm::vec3 up = glm::mat3(place * level_move(part, place)) * part_up;
+        const glm::mat3 drawn(place * level_move(part, place) * pivot);
+        const glm::vec3 up = drawn * part.up;
         CHECK(up.x == doctest::Approx(0).epsilon(1e-5));
         CHECK(up.y == doctest::Approx(1));
         CHECK(up.z == doctest::Approx(0).epsilon(1e-5));
+        // It keeps the way it faces at the station, the car's back, upside down or not.
+        const glm::vec3 ahead = drawn * glm::vec3(0, 0, 1);
+        CHECK(ahead.x == doctest::Approx(0).epsilon(1e-5));
+        CHECK(ahead.y == doctest::Approx(0).epsilon(1e-5));
+        CHECK(ahead.z == doctest::Approx(-1));
     }
 }

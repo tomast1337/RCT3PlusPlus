@@ -50,6 +50,7 @@
 #include "scene/led_signs.hpp"
 #include "scene/park/deleting.hpp"
 #include "scene/park/developer_editor.hpp"
+#include "scene/park/fireworks.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/glow.hpp"
 #include "scene/park/holding.hpp"
@@ -432,6 +433,7 @@ namespace rct3::scene::park
         ParkGlow glow;
         ParkLens lens;                                          ///< Water on the camera's lens
         ParkParticles particles;                                ///< The effects scenery and rides show
+        ParkFireworks fireworks;                                ///< The park's firework displays
         ParkRain rain;                                          ///< Rain falling round the camera
         rct3::park::WeatherLook weather_look;                   ///< How the weather shows now
         random::RandomState weather_dice = random::seeded({ }); ///< Looks only: when lightning strikes

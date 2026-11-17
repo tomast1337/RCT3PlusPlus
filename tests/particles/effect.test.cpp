@@ -2,6 +2,7 @@
 #include "particles/effect.hpp"
 
 #include "particles/display.hpp"
+#include "save/save_file.hpp"
 
 #include <bit>
 #include <cstdint>
@@ -180,6 +181,37 @@ namespace
         return b.v;
     }
 
+    /// A park (no other objects) scheduling one display at 21:00 in the third and fourth months, whose three shots
+    /// name two placed launchers, ids 40 and 41, the first twice.
+    std::vector<std::byte> invented_park()
+    {
+        const Attr shot { "EntriesElement", "struct", 0, { { "Name", "string", 0 }, { "SceneryItemRef", "reference", 8 }, { "SlotIndex", "int32", 4 }, { "Time", "float32", 4 } } };
+        const std::vector<std::pair<std::string, std::vector<Attr>>> classes {
+            { "FireworkDisplay", { { "Name", "string", 0 }, { "MusicSelection", "string", 0 }, { "MonthMask", "int32", 4 }, { "StartTimeMinutes", "int32", 4 }, { "Entries", "array", 0, { shot } } } },
+        };
+        Bytes b;
+        b.u32(static_cast<std::uint32_t>(classes.size()));
+        for (const auto& [name, attrs] : classes)
+        {
+            b.name(name).u32(static_cast<std::uint32_t>(attrs.size()));
+            for (const Attr& a : attrs)
+                write_attr(b, a);
+        }
+        const auto put_shot = [](Bytes& shots, const std::string& effect, std::uint64_t launcher, std::uint32_t tube, float seconds) {
+            Bytes one;
+            one.field(text(effect)).u64(launcher).u32(tube).f32(seconds);
+            shots.field(one);
+        };
+        Bytes shots;
+        shots.u32(3);
+        put_shot(shots, "Fireworks\\Peony.frw", 41, 3, 2.0f);
+        put_shot(shots, "Fireworks\\Comet.frw", 40, 0, 0.5f);
+        put_shot(shots, "Fireworks\\Willow.frw", 40, 1, 1.0f);
+        b.u32(1);
+        b.u32(0).u64(1).field(text("Evening Show")).field(text("Tune.wma")).u32(0b1100).u32(21 * 60).field(shots);
+        return b.v;
+    }
+
 } // namespace
 
 TEST_CASE("a firework display reads its launchers and its shots, earliest first")
@@ -253,4 +285,60 @@ TEST_CASE("files without an effect, or with a reference to the wrong kind, are r
     const std::vector<std::byte> data = invented_effect();
     CHECK(read_effect(std::span(data).first(8)).error() == EffectError::Container);
     CHECK(read_effect(invented_effect(1)).error() == EffectError::Unreferable); // The effect itself as a particle
+}
+
+TEST_CASE("a park's display fires from the launchers placed in the park")
+{
+    const std::vector<std::byte> park = invented_park(); // The file reads in place
+    const auto file = rct3::save::read_save(park, { .verify_checksum = false });
+    REQUIRE(file.has_value());
+    const auto displays = read_park_displays(*file);
+    REQUIRE(displays.has_value());
+    REQUIRE(displays->size() == 1);
+    const Display& d = displays->front();
+    CHECK(d.name == "Evening Show");
+    CHECK(d.music_file == "Tune.wma");
+    CHECK(d.start_minutes == 21 * 60);
+    REQUIRE(d.launchers.size() == 2);
+    CHECK(d.launchers[0].placed == 41u);
+    CHECK(d.launchers[1].placed == 40u);
+    REQUIRE(d.shots.size() == 3);
+    CHECK(d.shots[0].effect == "Comet");
+    CHECK(d.shots[0].launcher == 1);
+    CHECK(d.shots[1].launcher == 1);
+    CHECK(d.shots[2].effect == "Peony");
+    CHECK(d.shots[2].launcher == 0);
+    CHECK(d.shots[2].tube == 3);
+}
+
+TEST_CASE("a display is due on its months only, from its start time for a short while")
+{
+    const Display d { .months = 0b1100, .start_minutes = 21 * 60 };
+    CHECK_FALSE(display_due(d, 2, 20 * 60 + 59));
+    CHECK(display_due(d, 2, 21 * 60));
+    CHECK(display_due(d, 3, 21 * 60 + kStartWindowMinutes - 1));
+    CHECK_FALSE(display_due(d, 3, 21 * 60 + kStartWindowMinutes));
+    SUBCASE("not in a month it does not run in")
+    {
+        CHECK_FALSE(display_due(d, 1, 21 * 60 + 5));
+        CHECK_FALSE(display_due(d, 4, 21 * 60 + 5));
+        CHECK_FALSE(display_due(d, -1, 21 * 60 + 5));
+    }
+}
+
+TEST_CASE("a display's shots go off once each, as its time reaches theirs")
+{
+    const Display d { .shots = { { .effect = "a", .seconds = 0 }, { .effect = "b", .seconds = 1 }, { .effect = "c", .seconds = 1 }, { .effect = "d", .seconds = 3 } } };
+    DisplayRun run;
+    const auto first = advance_display(run, d, 0.5f);
+    REQUIRE(first.size() == 1);
+    CHECK(first[0].effect == "a");
+    CHECK(advance_display(run, d, 0.25f).empty());
+    const auto both = advance_display(run, d, 0.25f);
+    REQUIRE(both.size() == 2);
+    CHECK(both[1].effect == "c");
+    // A long step fires all it passes.
+    CHECK(advance_display(run, d, 10).size() == 1);
+    CHECK(advance_display(run, d, 1).empty());
+    CHECK(run.next_shot == d.shots.size());
 }

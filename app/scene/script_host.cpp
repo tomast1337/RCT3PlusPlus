@@ -608,6 +608,28 @@ namespace rct3::scene
             }
             return out;
         });
+        engine_.define("park.displays", [this](const Json&) {
+            const park::ParkFireworks& fireworks = park_of(park_).fireworks;
+            Json out = Json::array();
+            for (std::size_t i = 0; i < fireworks.displays.size(); ++i)
+            {
+                const particles::Display& d = fireworks.displays[i];
+                const bool playing = fireworks.playing && fireworks.playing->display == i;
+                out.push_back({ { "name", d.name }, { "music", d.music_file }, { "months", d.months }, { "start", d.start_minutes }, { "launchers", d.launchers.size() }, { "shots", d.shots.size() }, { "playing", playing }, { "seconds", playing ? fireworks.playing->run.seconds : 0.0f } });
+                if (playing)
+                {
+                    const save::model::TerrainGrid& g = grid_of(park_);
+                    const glm::vec3 c = fireworks.playing->centre;
+                    out.back()["centre"] = { { "col", (c.x - g.origin_x) / g.tile_size_x }, { "row", (c.z - g.origin_z) / g.tile_size_z } };
+                }
+            }
+            return out;
+        });
+        engine_.define("park.startDisplay", [this](const Json& a) { return Json(park::start_park_display(park_of(park_), a.empty() ? 0 : a[0].get<std::size_t>())); });
+        engine_.define("park.stopDisplay", [this](const Json&) {
+            park::stop_park_display(park_of(park_));
+            return Json();
+        });
         engine_.define("park.date", [this](const Json&) { return Json(park_of(park_).park.time); });
         engine_.define("park.setDate", [this](const Json& a) -> Json {
             if (a.size() != 1 || !a[0].is_number())

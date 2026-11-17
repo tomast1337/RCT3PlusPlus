@@ -6,14 +6,25 @@
 //  - its own launchers: scenery items set out on tiles relative to the display, each by the item's name;
 //  - its shots: which firework effect, from which launcher and which of the launcher's tubes, when, and on which
 //    lane of the show's timeline.
+// A park keeps its scheduled displays the same way, but each shot names the launcher placed in the park it fires
+// from, rather than one of the display's own.
+//
+// A display starts on a day of a month it runs in, as the time of day reaches its start, and runs its shots at
+// their times from then on.
 #pragma once
 
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
+
+namespace rct3::save
+{
+    struct SaveFile;
+} // namespace rct3::save
 
 namespace rct3::particles
 {
@@ -23,8 +34,9 @@ namespace rct3::particles
         std::string item { }; ///< The scenery item's name
         std::int32_t col = 0;
         std::int32_t row = 0;
-        std::int32_t corner = 0;    ///< Which quarter of the tile, for items smaller than a tile
-        std::int32_t direction = 0; ///< Quarter turns
+        std::int32_t corner = 0;                 ///< Which quarter of the tile, for items smaller than a tile
+        std::int32_t direction = 0;              ///< Quarter turns
+        std::optional<std::uint64_t> placed { }; ///< In a park: the placed item it is, by object id; the rest is left 0
     };
 
     struct Shot
@@ -58,5 +70,26 @@ namespace rct3::particles
 
     /// The display in a firework display file.
     [[nodiscard]] std::expected<Display, DisplayError> read_display(std::span<const std::byte> data);
+
+    /// The displays `file`, a park, schedules; their launchers are the placed items their shots name.
+    [[nodiscard]] std::expected<std::vector<Display>, DisplayError> read_park_displays(const save::SaveFile& file);
+
+    /// Game minutes after its start time during which a display due that day still starts, so a clock run fast or
+    /// skipped on does not pass it by.
+    inline constexpr float kStartWindowMinutes = 30;
+
+    /// Whether `display` is due to start in `month` (0-based, as the calendar counts them) at `minutes` after
+    /// midnight: a month it runs in, and within the window after its start time.
+    [[nodiscard]] bool display_due(const Display& display, std::int32_t month, float minutes);
+
+    /// How far a display being played has got.
+    struct DisplayRun
+    {
+        float seconds = 0;         ///< Since it started
+        std::size_t next_shot = 0; ///< In Display::shots, the first not gone off yet
+    };
+
+    /// Moves `run` on by `seconds`; the shots due by then that had not gone off, earliest first.
+    [[nodiscard]] std::span<const Shot> advance_display(DisplayRun& run, const Display& display, float seconds);
 
 } // namespace rct3::particles

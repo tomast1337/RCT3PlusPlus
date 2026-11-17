@@ -273,6 +273,23 @@ declare namespace park {
         gone: boolean;
         shown: number | null;
     }[];
+    /** The park's firework displays: name, music file, the months they run in (a bit a month, the first lowest),
+     *  start time in minutes after midnight, launchers and shots, and whether one plays now, how far it is and
+     *  the middle of its launchers. */
+    function displays(): {
+        name: string;
+        music: string;
+        months: number;
+        start: number;
+        launchers: number;
+        shots: number;
+        playing: boolean;
+        seconds: number;
+        centre?: MapPoint;
+    }[];
+    /** Starts display `index` at once, in place of any playing; false when there is no such display. */
+    function startDisplay(index: number): boolean;
+    function stopDisplay(): void;
 }
 
 /** A place on the map: tiles (col 3.5 is the middle of column 3) and world units above the ground. */

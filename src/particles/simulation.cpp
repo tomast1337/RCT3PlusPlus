@@ -132,7 +132,9 @@ namespace rct3::particles
 
     void EffectRun::step(float dt)
     {
-        // The run's own emitters.
+        // The run's own emitters, and its own sound as it starts.
+        if (age_ == 0 && !effect_->sound.empty())
+            heard_.push_back({ .position = position_ });
         if (age_ < life_)
         {
             const float after = std::min(age_ + dt, life_);
@@ -150,12 +152,16 @@ namespace rct3::particles
         // Particles: age, move, emit, die. Ones born this step are moved from the next.
         const std::size_t count = live_.count();
         const glm::vec3 down(0, -kGravity.value, 0);
+        const std::size_t sounds_before = heard_.size();
         for (std::size_t i = 0; i < count; ++i)
         {
+            const bool unborn = live_.age[i] <= 0;
             live_.age[i] += dt;
             if (live_.age[i] <= 0)
                 continue;
             const Particle& kind = effect_->particles[live_.kind[i]];
+            if (unborn && !kind.sound.empty() && std::none_of(heard_.begin() + static_cast<std::ptrdiff_t>(sounds_before), heard_.end(), [&](const Heard& h) { return h.particle == live_.kind[i]; }))
+                heard_.push_back({ .position = live_.position[i], .particle = live_.kind[i] });
             live_.velocity[i] += down * kind.gravity * scale_ * dt;
             live_.velocity[i] *= std::max(0.0f, 1 - kind.drag * dt);
             live_.position[i] += live_.velocity[i] * dt;

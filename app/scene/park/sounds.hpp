@@ -3,7 +3,8 @@
 // The park's people heard from the camera, by the rules of audio/park_voices.hpp: the chatter of the crowd
 // about the point looked at, a guest's cheer, laugh or retching as they show how they feel, a diver's splash, and screams from
 // the riders of a train going fast or dropping, the trains themselves by the rules of audio/ride_sounds.hpp, and
-// the roar of each waterfall.
+// the roar of each waterfall, and a firework display's music while it plays. Particle effects are heard by the
+// sounds they name (fireworks launching and bursting), from where each began.
 // Building is heard too, not placed in the world: a thump each time something is put down (a ride, stall, piece of
 // track, scenery, structure or pool work), at most one in a short while; paths, fences and taking things away are
 // silent. A stroke shaping the ground rumbles once, as loud as land_tools.hpp says, until it ends.
@@ -12,19 +13,23 @@
 #pragma once
 
 #include "audio/audio.hpp"
+#include "audio/music_player.hpp"
 #include "audio/ride_sounds.hpp"
 #include "config/game/install.hpp"
 #include "simulation/crash.hpp"
 #include "simulation/entt.hpp"
+#include "strings/ascii.hpp"
 #include "units/units.hpp"
 
 #include <array>
 #include <cstdint>
+#include <filesystem>
 #include <glm/vec3.hpp>
 #include <map>
 #include <optional>
 #include <random>
 #include <set>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -82,6 +87,10 @@ namespace rct3::scene::park
         audio::VoiceHandle rumble;
         bool rumbling = false; ///< A stroke's rumble was started; one a stroke, though it ends first
         units::Seconds since_thump { 1 };
+        std::map<std::string, audio::SoundBuffer, strings::LessIgnoringCase> effect_sounds; ///< By the names effects give
+        std::filesystem::path music_folder;                                                 ///< The game's; empty without one
+        std::optional<audio::MusicPlayer> show_music;                                       ///< A firework display's
+        std::string show_track;                                                             ///< The file it was started from
         std::minstd_rand random;
     };
 

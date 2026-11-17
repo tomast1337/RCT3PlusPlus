@@ -103,6 +103,7 @@ namespace rct3::scene::park
 
     void advance_park_particles(ParkParticles& particles, units::Seconds elapsed, glm::vec3 eye, std::size_t budget)
     {
+        particles.heard.clear();
         std::erase_if(particles.fired, [](const ParkParticles::Shown& s) { return s.run.finished(); });
         std::vector<std::pair<float, ParkParticles::Shown*>> near;
         for (auto* list : { &particles.shown, &particles.fired })
@@ -121,6 +122,20 @@ namespace rct3::scene::park
             shown->run.advance(elapsed.value);
             shown->awake = true;
             alive += shown->run.particles().count();
+            const particles::Effect& effect = shown->run.effect();
+            for (const particles::Heard& h : shown->run.sounds())
+            {
+                if (h.particle)
+                {
+                    // A particle's sound without distances of its own carries as far as the effect's.
+                    const particles::Particle& kind = effect.particles[*h.particle];
+                    const bool own = kind.sound_far > 0;
+                    particles.heard.push_back({ .name = kind.sound, .position = h.position, .near = own ? kind.sound_near : effect.sound_near, .far = own ? kind.sound_far : effect.sound_far });
+                }
+                else
+                    particles.heard.push_back({ .name = effect.sound, .position = h.position, .near = effect.sound_near, .far = effect.sound_far });
+            }
+            shown->run.forget_sounds();
         }
     }
 

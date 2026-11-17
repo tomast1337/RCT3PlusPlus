@@ -385,3 +385,24 @@ TEST_CASE("parts painted like the ground take the pictures of the tile they stan
             CHECK(v.uv == glm::vec2 { v.position.x / kTextureSpan, -v.position.y / kTextureSpan });
     }
 }
+
+TEST_CASE("a shell leaves its tube of the launcher as placed, flying the way the tube points")
+{
+    rct3::park::object::ObjectModel launcher;
+    launcher.tubes = { { .position = { 1, 2, 0 }, .up = { 0, 1, 0 } }, { .position = { 0, 2, 0 }, .up = glm::normalize(glm::vec3(1, 1, 0)) } };
+    // Turned a quarter round the vertical, standing at (10, 0, 20).
+    const glm::mat4 placed = glm::rotate(glm::translate(glm::mat4(1.0f), { 10, 0, 20 }), glm::half_pi<float>(), glm::vec3(0, 1, 0));
+    const auto first = rct3::park::object::launch_point(placed, launcher, 0);
+    CHECK(first.position.x == doctest::Approx(10));
+    CHECK(first.position.y == doctest::Approx(2));
+    CHECK(first.position.z == doctest::Approx(19));
+    CHECK(first.axes[1].y == doctest::Approx(1));
+    const auto second = rct3::park::object::launch_point(placed, launcher, 1);
+    CHECK(second.axes[1].z == doctest::Approx(-std::sqrt(0.5f)));
+    // Past the last tube, the first again.
+    CHECK(rct3::park::object::launch_point(placed, launcher, 2).position == first.position);
+    // Without tubes, straight up from where it stands.
+    const auto bare = rct3::park::object::launch_point(placed, rct3::park::object::ObjectModel { }, 5);
+    CHECK(bare.position.x == doctest::Approx(10));
+    CHECK(bare.axes[1].y == doctest::Approx(1));
+}

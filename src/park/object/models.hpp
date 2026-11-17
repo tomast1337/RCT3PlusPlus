@@ -285,6 +285,8 @@ namespace rct3::park::object
         std::vector<ModelLight> lights;
         /// The particle effects it shows, found as its lamps are.
         std::vector<ModelEffect> effects;
+        /// Of a firework launcher, its tubes, found as its lamps are.
+        std::vector<ModelEffect> tubes;
         /// Of a stall or a ride's entrance, where its seller stands, model space, facing +Z: its point or bone
         /// named "vendor".
         std::optional<glm::mat4> vendor_place;

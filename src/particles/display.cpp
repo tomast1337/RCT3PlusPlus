@@ -154,6 +154,7 @@ namespace rct3::particles
     std::expected<std::vector<Display>, DisplayError> read_park_displays(const save::SaveFile& file)
     {
         std::vector<Display> displays;
+        const save::ObjectIndex index(file);
         for (const save::Object& root : file.objects)
         {
             if (!of_class(file, root, kParkDisplayClass))
@@ -161,9 +162,11 @@ namespace rct3::particles
             const auto o = save::decode_object(file, root);
             if (!o)
                 return std::unexpected(DisplayError::BadObject);
-            // A show ride keeps its show's timeline as a display too; the ride puts it on, not the calendar.
-            if (const auto show = o->fields.field("ShowController"); show && show->kind() == save::ValueKind::Reference && show->as_reference() != 0)
-                continue;
+            // A show ride keeps its show's timeline as a display too; the ride puts it on, not the calendar. A park's
+            // own display may name a show controller too, one no longer in the park.
+            if (const auto show = o->fields.field("ShowController"); show && show->kind() == save::ValueKind::Reference)
+                if (const auto controller = index.find(show->as_reference()); controller && of_class(file, *controller, "ShowController"))
+                    continue;
             Display display = display_of(o->fields);
             for (const save::Value& entry : list(o->fields, "Entries"))
             {

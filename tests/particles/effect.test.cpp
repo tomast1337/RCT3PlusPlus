@@ -188,6 +188,7 @@ namespace
         const Attr shot { "EntriesElement", "struct", 0, { { "Name", "string", 0 }, { "SceneryItemRef", "reference", 8 }, { "SlotIndex", "int32", 4 }, { "Time", "float32", 4 } } };
         const std::vector<std::pair<std::string, std::vector<Attr>>> classes {
             { "FireworkDisplay", { { "Name", "string", 0 }, { "MusicSelection", "string", 0 }, { "MonthMask", "int32", 4 }, { "StartTimeMinutes", "int32", 4 }, { "Entries", "array", 0, { shot } }, { "ShowController", "reference", 8 } } },
+            { "ShowController", { { "Display", "reference", 8 } } },
         };
         Bytes b;
         b.u32(static_cast<std::uint32_t>(classes.size()));
@@ -209,9 +210,11 @@ namespace
         put_shot(shots, "Fireworks\\Willow.frw", 40, 1, 1.0f);
         Bytes none;
         none.u32(0);
-        b.u32(2);
-        b.u32(0).u64(1).field(text("Evening Show")).field(text("Tune.wma")).u32(0b1100).u32(21 * 60).field(shots).u64(0);
+        b.u32(3);
+        // The park's own names a show controller the park no longer has.
+        b.u32(0).u64(1).field(text("Evening Show")).field(text("Tune.wma")).u32(0b1100).u32(21 * 60).field(shots).u64(7);
         b.u32(0).u64(2).field(text("Whale Show")).field(text("")).u32(0xffff).u32(22 * 60).field(none).u64(9);
+        b.u32(1).u64(9).u64(2);
         return b.v;
     }
 

@@ -8,6 +8,7 @@
 #include "park/object/pick.hpp"
 #include "park/person/motions.hpp"
 #include "park/ride/cars.hpp"
+#include "park/ride/placement.hpp"
 #include "park/water/flow.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/rides.hpp"
@@ -328,7 +329,13 @@ namespace rct3::scene::park
                     const float length = cycle != nullptr ? simulation::cycle_seconds(*cycle) : 0.0f;
                     // Scenery and stalls carry on from where the save left them, each at its own point in its loop.
                     const float idle = scene.park_clock + (boned.ride == entt::null ? scene.objects[boned.object.value].motion_time.value : 0.0f);
-                    playing = rct3::park::flat_ride_motion(seconds, length, into ? std::min(*into + scene.sim_time, length) : 0.0f, into.has_value(), idle);
+                    const std::optional<float> now = into ? std::optional(std::min(*into + scene.sim_time, length)) : std::nullopt;
+                    playing = rct3::park::flat_ride_motion(seconds, length, now.value_or(0.0f), now.has_value(), idle);
+                    // A show ride's performers do their show's tricks while it runs, and their idle between shows.
+                    if (const auto* a = cycle != nullptr ? scene.sim.registry.try_get<simulation::Attraction>(boned.ride) : nullptr)
+                        if (const auto show = std::ranges::find(scene.shows, a->saved, &save::model::RideShow::ride); show != scene.shows.end())
+                            if (const auto act = rct3::park::ride::show_motion(*show, model->second.animation_names, seconds, now, idle))
+                                playing = *act;
                 }
                 const auto [motion, time] = playing;
                 std::vector<glm::mat4> moves = rct3::park::bone_moves(*model->second.rig, motion, time);

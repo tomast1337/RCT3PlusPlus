@@ -347,6 +347,36 @@ TEST_CASE("a show ride knows the tricks named for its kind, its idle first, each
     CHECK(show_tricks("Carousel", names, bear, bear_seconds).empty());
 }
 
+TEST_CASE("a show ride's performers do the show's tricks in order, and their idle between shows")
+{
+    // The model's animations, by place: two tricks and a loop, as a show ride's model names them.
+    const std::vector<std::string> animations { "SealShowTrick01", "SealShowTrick02", "SealShowLoop" };
+    const std::vector<float> seconds { 10, 20, 4 };
+    const save::model::RideShow show {
+        .ride = 7,
+        .tricks = { { .name = "SealShowAnimIdle", .seconds = 4 }, { .name = "SealShowAnimTrick1", .seconds = 10 }, { .name = "SealShowAnimTrick2", .seconds = 20 } },
+        .order = { 2, 1, 2 },
+    };
+    // The show: the second trick, the first, the second again, 50 seconds in all.
+    CHECK(show_moment(show, 5)->trick == 2);
+    CHECK(show_moment(show, 25)->trick == 1);
+    CHECK(show_moment(show, 25)->into == doctest::Approx(5));
+    CHECK(show_moment(show, 31)->trick == 2);
+    CHECK_FALSE(show_moment(show, 50).has_value());
+    CHECK(show_motion(show, animations, seconds, 25.0f, 0) == MotionAt { 0, 5 });
+    CHECK(show_motion(show, animations, seconds, 45.0f, 0) == MotionAt { 1, 15 });
+    SUBCASE("between shows the idle loops, and after the last trick it runs on from there")
+    {
+        CHECK(show_motion(show, animations, seconds, std::nullopt, 9) == MotionAt { 2, 1 });
+        CHECK(show_motion(show, animations, seconds, 51.0f, 0) == MotionAt { 2, 1 });
+    }
+    SUBCASE("a model without the show's animations has none")
+    {
+        const std::vector<std::string> other { "Spin" };
+        CHECK_FALSE(show_motion(show, other, seconds, 25.0f, 0).has_value());
+    }
+}
+
 TEST_CASE("a synchronised stall gives its menu to the other stalls of its kind")
 {
     std::vector<save::model::Stall> stalls(3);

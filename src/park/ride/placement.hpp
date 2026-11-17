@@ -11,6 +11,7 @@
 // across one of the sides its track does not run through, at the piece's height and facing it.
 #pragma once
 
+#include "park/bone_poses.hpp"
 #include "park/carried_goods.hpp"
 #include "park/ground/holds.hpp"
 #include "park/object/placement.hpp"
@@ -61,7 +62,28 @@ namespace rct3::park::ride
     /// trick's does after that part, leaving out "Anim", case and leading zeros ("Trick1" or
     /// "KillerWhaleShowTrick01" for "WhaleShowAnimTrick1"); an idle without one lasts as the animation called a
     /// loop, and a trick with none lasts nothing. All are offered and researched.
+    /// Which of `animations` (a show ride model's animation names) trick `trick` plays: the one whose name ends the
+    /// way the trick's does after "Show", leaving out "Anim", case and leading zeros; none when none does.
+    [[nodiscard]] std::optional<std::size_t> trick_animation(std::string_view trick, std::span<const std::string> animations);
+
     [[nodiscard]] std::vector<save::model::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds);
+
+    /// A trick of a show going on: its place in RideShow::tricks and how far into it the show is.
+    struct ShowMoment
+    {
+        std::size_t trick = 0;
+        float into = 0; ///< Seconds
+    };
+
+    /// Where a show is `into` seconds after it began: its tricks come one after another in their order, each for its
+    /// length; none once the last is over.
+    [[nodiscard]] std::optional<ShowMoment> show_moment(const save::model::RideShow& show, float into);
+
+    /// What the performers of `show` do, by `animations` (the ride model's) and their lengths `seconds`: while a
+    /// show runs (`into` seconds into it) its tricks in order, and else their idle (the show's first trick, or the
+    /// animation called a loop) `idle` seconds on, round and round; after the last trick the idle runs on from
+    /// there. None when the model has no animation for it.
+    [[nodiscard]] std::optional<MotionAt> show_motion(const save::model::RideShow& show, std::span<const std::string> animations, std::span<const float> seconds, std::optional<float> into, float idle);
 
     /// The site of a ride of `squares` (along its own X and Z) turned `turn`, centred on `tile`, at the mean
     /// height of the corners of the tiles it covers, to the nearest whole unit.

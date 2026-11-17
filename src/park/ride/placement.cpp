@@ -118,10 +118,11 @@ namespace rct3::park::ride
             std::rotate(at + static_cast<std::ptrdiff_t>(to), at + static_cast<std::ptrdiff_t>(from), at + static_cast<std::ptrdiff_t>(from) + 1);
     }
 
-    std::vector<save::model::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds)
+    namespace
     {
-        // Lower case, without "anim" and the zeros that lead a number.
-        const auto plain = [](std::string_view text) {
+        /// Lower case, without "anim" and the zeros that lead a number.
+        std::string plain_name(std::string_view text)
+        {
             std::string out;
             for (std::size_t i = 0; i < text.size(); ++i)
             {
@@ -133,29 +134,78 @@ namespace rct3::park::ride
             for (std::size_t at; (at = out.find("anim")) != std::string::npos;)
                 out.erase(at, 4);
             return out;
-        };
-        const auto lasting = [&](std::string_view tail) -> std::optional<float> {
-            for (std::size_t i = 0; i < animations.size() && i < seconds.size(); ++i)
-                if (plain(animations[i]).ends_with(plain(tail)))
-                    return seconds[i];
-            return std::nullopt;
+        }
+    } // namespace
+
+    std::optional<std::size_t> trick_animation(std::string_view trick, std::span<const std::string> animations)
+    {
+        const std::size_t show = trick.find("Show");
+        const std::string tail = plain_name(show == std::string_view::npos ? trick : trick.substr(show + 4));
+        for (std::size_t i = 0; i < animations.size(); ++i)
+            if (plain_name(animations[i]).ends_with(tail))
+                return i;
+        return std::nullopt;
+    }
+
+    std::vector<save::model::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds)
+    {
+        const auto lasting = [&](std::string_view trick) -> std::optional<float> {
+            const auto a = trick_animation(trick, animations);
+            return a && *a < seconds.size() ? std::optional(seconds[*a]) : std::nullopt;
         };
         std::vector<std::string> known;
         for (const std::string& name : names)
-            if (const auto show = name.find("Show"); show != std::string::npos && plain(kind).ends_with(plain(std::string_view(name).substr(0, show + 4))))
+            if (const auto show = name.find("Show"); show != std::string::npos && plain_name(kind).ends_with(plain_name(std::string_view(name).substr(0, show + 4))))
                 known.push_back(name);
         std::ranges::sort(known);
-        std::stable_partition(known.begin(), known.end(), [&](const std::string& n) { return plain(n).contains("idle"); });
+        std::stable_partition(known.begin(), known.end(), [&](const std::string& n) { return plain_name(n).contains("idle"); });
         std::vector<save::model::ShowTrick> tricks;
         for (const std::string& name : known)
         {
-            const std::string_view tail = std::string_view(name).substr(name.find("Show") + 4);
-            auto lasts = lasting(tail);
+            auto lasts = lasting(name);
             if (!lasts && tricks.empty())
-                lasts = lasting("loop");
+                lasts = lasting("Loop");
             tricks.push_back({ .name = name, .seconds = lasts.value_or(0), .available = true, .invented = true });
         }
         return tricks;
+    }
+
+    std::optional<ShowMoment> show_moment(const save::model::RideShow& show, float into)
+    {
+        float start = 0;
+        for (const std::uint32_t t : show.order)
+        {
+            if (t >= show.tricks.size())
+                continue;
+            if (into < start + show.tricks[t].seconds)
+                return ShowMoment { .trick = t, .into = into - start };
+            start += show.tricks[t].seconds;
+        }
+        return std::nullopt;
+    }
+
+    std::optional<MotionAt> show_motion(const save::model::RideShow& show, std::span<const std::string> animations, std::span<const float> seconds, std::optional<float> into, float idle)
+    {
+        if (into)
+        {
+            if (const auto moment = show_moment(show, *into))
+                if (const auto a = trick_animation(show.tricks[moment->trick].name, animations))
+                    return MotionAt { *a, moment->into };
+            // Past its last trick the idle runs on from where the show ended.
+            float length = 0;
+            for (const std::uint32_t t : show.order)
+                length += t < show.tricks.size() ? show.tricks[t].seconds : 0.0f;
+            idle = std::max(*into - length, 0.0f);
+        }
+        if (show.tricks.empty())
+            return std::nullopt;
+        auto a = trick_animation(show.tricks.front().name, animations);
+        if (!a)
+            a = trick_animation("Loop", animations);
+        if (!a)
+            return std::nullopt;
+        const float length = *a < seconds.size() ? seconds[*a] : 0.0f;
+        return MotionAt { *a, length > 0 ? std::fmod(idle, length) : 0.0f };
     }
 
     RideSite ride_site(save::model::Tile tile, std::array<std::int32_t, 2> squares, ModelTurn turn, const save::model::TerrainGrid& grid)

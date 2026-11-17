@@ -1003,7 +1003,11 @@ namespace rct3::scene::park
                     scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters, guests_room);
                     for (std::size_t i = 0; i < scene.ride_entities.size(); ++i)
                         if (scene.ride_entities[i] == entt::null && scene.courses[i])
+                        {
                             scene.ride_entities[i] = simulation::import_climb_slide(scene.sim, scene.rides.rides[i], *scene.courses[i]);
+                            if (scene.ride_entities[i] == entt::null)
+                                scene.ride_entities[i] = simulation::import_walk_through(scene.sim, scene.rides.rides[i], *scene.courses[i], guests_room[i]);
+                        }
                     for (std::size_t i = 0; const auto seating : simulation::ride_seatings(scene.rides, [&](std::string_view path) { return install.find(path); }))
                         if (const entt::entity e = scene.ride_entities[i++]; seating && e != entt::null)
                             scene.ride_seatings[e] = static_cast<std::uint8_t>(*seating);

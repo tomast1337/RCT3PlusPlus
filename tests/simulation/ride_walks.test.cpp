@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/ride_walks.hpp"
 
+#include "simulation/enjoyment.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
@@ -125,4 +126,62 @@ TEST_CASE("a load walks off abreast, each to a side of the way out within the wa
     CHECK(sides[0] != sides[1]);
     CHECK(sides[1] != sides[2]);
     CHECK(sides[0] != sides[2]);
+}
+
+TEST_CASE("the way through a walk-through runs along its track from the entrance's end to the exit's")
+{
+    const WalkThrough open { .track = { { 0, 0, 0 }, { 1, 0, 0 }, { 2, 0, 0 }, { 3, 0, 0 } } };
+    CHECK(way_through(open, { 0.9f, 0, 1 }, { 2.9f, 0, 1 }) == std::vector<glm::vec3> { { 1, 0, 0 }, { 2, 0, 0 }, { 3, 0, 0 } });
+    // An open track ends where it ends; a circuit goes round past its end.
+    CHECK(way_through(open, { 2, 0, 0 }, { 1, 0, 0 }) == std::vector<glm::vec3> { { 2, 0, 0 }, { 3, 0, 0 } });
+    WalkThrough circuit = open;
+    circuit.circuit = true;
+    CHECK(way_through(circuit, { 2, 0, 0 }, { 1, 0, 0 }) == std::vector<glm::vec3> { { 2, 0, 0 }, { 3, 0, 0 }, { 0, 0, 0 }, { 1, 0, 0 } });
+    // Doors in course order on a circuit still send them round the whole of it.
+    CHECK(way_through(circuit, { 1, 0, 0 }, { 2, 0, 0 }) == std::vector<glm::vec3> { { 1, 0, 0 }, { 2, 0, 0 }, { 3, 0, 0 }, { 0, 0, 0 }, { 1, 0, 0 }, { 2, 0, 0 } });
+    CHECK(way_through(WalkThrough { }, { }, { }).empty());
+}
+
+TEST_CASE("a walk-through takes guests in one by one while there is room, walks each along its track and lets them out at its exit")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 }).path({ 4, 1 }, { 4, 3 });
+    const auto ride = park.flat_ride("Aquarium", { 4, 0 }, 100, { .capacity = 1, .cycle_seconds = 10, .exit = glm::ivec2 { 4, 3 } });
+    auto& r = park.world().registry;
+    const auto& paths = park.world().paths;
+    const glm::vec3 entrance = paths.centre(*r.get<Attraction>(ride).entrance);
+    const glm::vec3 exit = paths.centre(*r.get<CycleRide>(ride).exit);
+    const std::vector<glm::vec3> track { entrance + glm::vec3(2, 0, 0), entrance + glm::vec3(8, 0, 0), exit + glm::vec3(8, 0, 0), exit + glm::vec3(2, 0, 0) };
+    r.emplace<WalkThrough>(ride, WalkThrough { .track = track });
+    const auto a = park.guest({ 4, 0 }, { .cash = 1000 });
+    const auto b = park.guest({ 4, 0 }, { .cash = 1000 });
+    r.get<Errand>(a) = { ErrandKind::Heading, ride, 0 };
+    r.get<Errand>(b) = { ErrandKind::Heading, ride, 0 };
+
+    // In past the ticket spot at the track's start, along it and on to the exit's path.
+    REQUIRE(park.run_until([&] { return r.all_of<RideWalk>(a) || r.all_of<RideWalk>(b); }, 30));
+    const auto first = r.all_of<RideWalk>(a) ? a : b;
+    const auto second = first == a ? b : a;
+    CHECK(r.get<Wallet>(first).cash.value == 900);
+    const auto& points = r.get<RideWalk>(first).points;
+    REQUIRE(points.size() == track.size() + 1);
+    CHECK(near(points.front(), track.front()));
+    CHECK(near(points.back(), exit));
+
+    // The second waits outside while the first fills it; there is no cycle to start.
+    bool crowded = false;
+    REQUIRE(park.run_until(
+        [&] {
+            // The second may go in on the very step the first comes out.
+            if (r.get<Errand>(first).kind != ErrandKind::Riding)
+                return true;
+            crowded = crowded || r.all_of<RideWalk>(second);
+            return false;
+        },
+        120));
+    CHECK_FALSE(crowded);
+    CHECK(r.get<CycleRide>(ride).phase == RidePhase::Loading);
+    CHECK(std::ranges::contains(r.get<Ridden>(first).rides, ride));
+    CHECK(glm::distance(glm::vec2(r.get<Pose>(first).position.x, r.get<Pose>(first).position.z), glm::vec2(exit.x, exit.z)) < 1.0f);
+    CHECK(park.run_until([&] { return r.all_of<RideWalk>(second); }, 30));
 }

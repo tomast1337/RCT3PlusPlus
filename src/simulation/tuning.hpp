@@ -712,6 +712,12 @@ namespace rct3::simulation::tuning
         std::array<float, 3> rated { 3.0f, 1.5f, 0.5f };
     };
 
+    /// Rides walked through on foot, as an aquarium.
+    struct WalkThroughs
+    {
+        std::uint32_t crowd = 30; ///< Chosen by eye: inside at once when its ride file says nothing, as the smallest house takes
+    };
+
     /// Dives off a pool's boards.
     struct Dives
     {
@@ -811,6 +817,7 @@ namespace rct3::simulation::tuning
         Slides slides;
         Pools pools;
         Rivers rivers;
+        WalkThroughs walk_throughs;
         Climbs climbs;
         Dives dives;
         Surroundings surroundings;

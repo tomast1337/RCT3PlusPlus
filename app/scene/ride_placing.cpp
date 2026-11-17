@@ -236,6 +236,8 @@ namespace rct3::scene
                 auto added = simulation::import_rides(scene.sim, one, timings, coaster);
                 if (!added.empty() && added.front() == entt::null && course)
                     added.front() = simulation::import_climb_slide(scene.sim, ride, *course);
+                if (!added.empty() && added.front() == entt::null && course)
+                    added.front() = simulation::import_walk_through(scene.sim, ride, *course, assets.install ? simulation::ride_guests(one, [&](std::string_view path) { return assets.install->find(path); }).front() : std::nullopt);
                 if (added.empty() || added.front() == entt::null)
                     return false;
                 scene.ride_entities.resize(scene.rides.rides.size(), entt::null);

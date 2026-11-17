@@ -468,10 +468,11 @@ namespace rct3::scene::park
                 add_ride_cars(device, scene, *assets.install, ride, 1, RideCarsAdded::LiftsOnly);
             // Boats sail off a dock that is only station, which no train could run round.
             const bool boats = (r.mode == save::model::OperatingMode::Boat || r.mode == save::model::OperatingMode::WaterTransport) && course && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station);
-            if (!assets.install || r.base.demolished || r.base.state == save::model::AttractionState::Closed || r.mode == save::model::OperatingMode::MiniGolf || (!coaster && !boats && !(course && !course->climbs.empty())))
+            const bool on_foot = course && (!course->climbs.empty() || r.mode == save::model::OperatingMode::Aquarium);
+            if (!assets.install || r.base.demolished || r.base.state == save::model::AttractionState::Closed || r.mode == save::model::OperatingMode::MiniGolf || (!coaster && !boats && !on_foot))
                 continue;
             const bool ghosted = coaster && !coaster->closed && coaster->shuttle == simulation::Shuttle::None && scene.building.ride == ride;
-            // A lazy river has no trains: swimmers float round it; nor has a slide climbed on foot.
+            // A lazy river has no trains: swimmers float round it; nor has a slide climbed on foot, nor a walk-through.
             if ((r.mode == save::model::OperatingMode::LazyRiver || (!coaster && !boats) || track::set_trains(device, scene, *assets.install, ride, r.train_count.value_or(0), r.cars_per_train.value_or(0))) && !ghosted && (ride.value >= scene.ride_entities.size() || scene.ride_entities[ride.value] == entt::null) && !std::ranges::contains(scene.placing.unjoined, ride))
                 scene.placing.unjoined.push_back(ride);
             if (auto info = desktop.root().find_as<ui::screens::info::InfoPanel>(kInfoName); info && scene.shown == rct3::park::AttractionRef::of(ride))

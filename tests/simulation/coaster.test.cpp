@@ -396,6 +396,55 @@ TEST_CASE("a launched train that rolls back into the station stops there and is 
     CHECK(c.at == 10);
 }
 
+TEST_CASE("a train launched up a spike at the end of its track rolls all the way back into the station")
+{
+    // A 10 m station, 150 m level, then a 40 m spike up 40 m: the launch takes it about halfway up.
+    Coaster c;
+    c.distance = { 0, 10, 160, 200 };
+    c.height = { 0, 0, 0, 40 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::Plain };
+    c.closed = false;
+    c.train_length = 5;
+    c.start = 10;
+    c.at = 10;
+    c.launch_speed = 20;
+    c.running = true;
+    bool back = false;
+    for (int i = 0; i < 4000 && c.running; ++i)
+        back = drive(c, 0.05f);
+    CHECK(back);
+    CHECK_FALSE(c.crashed);
+    CHECK(c.at == 10);
+}
+
+TEST_CASE("a launched train rolling back onto its launch stretch is slowed to a creep, not launched again")
+{
+    // A 8 m station, a 40 m launch stretch, 12 m level and a 40 m spike up 40 m at the end.
+    Coaster c;
+    c.distance = { 0, 8, 48, 60, 100 };
+    c.height = { 0, 0, 0, 0, 40 };
+    c.kinds = { Stretch::Station, Stretch::Launch, Stretch::Plain, Stretch::Plain, Stretch::Plain };
+    c.closed = false;
+    c.train_length = 5;
+    c.start = 8;
+    c.at = 8;
+    c.launch_speed = 20;
+    c.station_speed = 2;
+    c.running = true;
+    bool back = false;
+    float coming_in = 0; // Fastest back along the first half of the launch stretch
+    for (int i = 0; i < 4000 && c.running; ++i)
+    {
+        back = drive(c, 0.05f);
+        if (c.speed < 0 && c.at < 28)
+            coming_in = std::max(coming_in, -c.speed);
+    }
+    CHECK(back);
+    CHECK_FALSE(c.crashed);
+    CHECK(coming_in > 0);
+    CHECK(coming_in <= 2.01f);
+}
+
 TEST_CASE("a reverse launched shuttle goes back up one spike, through the station up the other, and stops in it")
 {
     Coaster c = spikes(Shuttle::Back, 2);

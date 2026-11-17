@@ -148,7 +148,7 @@ for (const [kind, design, size] of kDesigns) {
     await frames(5);
     await ui.click("tools/Land/Land_Brush_Height");
     await frames(5);
-    const slide = rides.list().length - 1;
+    const slide = must(rides.list().at(-1), "the ride laid").index;
     const info = () => tracked(rides.list()[slide], "the slide");
     const track = info().track;
     const open_end = /^(EndStraight|Bowl|Funnel)/.test(track.at(-1) ?? "");

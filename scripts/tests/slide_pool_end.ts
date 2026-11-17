@@ -92,8 +92,10 @@ const missing = () => {
 };
 
 // The saved slide's end joins the pool: the one square across from it open.
-const slide = rides.list().findIndex((r) => !r.flat && !r.demolished && /(body|ring|pro)slide/i.test(r.symbol));
-expect(slide >= 0, "a pool slide in the park");
+const slide = must(
+    rides.list().find((r) => !r.flat && !r.demolished && /(body|ring|pro)slide/i.test(r.symbol)),
+    "a pool slide in the park",
+).index;
 const open_end = missing();
 log(
     "slide",
@@ -156,7 +158,7 @@ log("its way back runs through a pool beside tiles", JSON.stringify(box));
 expect(await byPool(pick), "the Undertow free beside its pool");
 await pointer.click(...here);
 await frames(30);
-const undertow = rides.list().length - 1;
+const undertow = must(rides.list().at(-1), "the ride laid").index;
 const info = () => tracked(rides.list()[undertow], "the Undertow");
 log("undertow", info().name, "pieces", info().pieces);
 expect(info().pieces === 56, `the Undertow laid whole, not ${info().pieces} pieces`);

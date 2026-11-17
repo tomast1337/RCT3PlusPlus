@@ -31,8 +31,10 @@ await frames(3);
 await pointer.click(...on_view(col, row));
 await frames(3);
 await ui.click("info/close");
-const at = stalls.list().findIndex((s) => s.symbol === `${kind!.symbol}:sta`);
-expect(at >= 0, "the stall placed");
+const at = must(
+    stalls.list().find((s) => s.symbol === `${kind!.symbol}:sta`),
+    "the stall placed",
+).index;
 const stall = () => stalls.list()[at];
 /** The stall once the park runs it. */
 const joined = () => {

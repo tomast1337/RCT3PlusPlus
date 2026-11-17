@@ -73,8 +73,8 @@ const kSlides = /^(BodySlide|RingSlide|ProSlide|MasterBlaster):/;
 const slides = () =>
     rides
         .list()
-        .flatMap((r, i) =>
-            r.kind === "tracked" && !r.demolished && r.pieces > 0 && kSlides.test(r.symbol) ? [i] : [],
+        .flatMap((r) =>
+            r.kind === "tracked" && !r.demolished && r.pieces > 0 && kSlides.test(r.symbol) ? [r.index] : [],
         );
 
 await frames(300);

@@ -76,7 +76,7 @@ async function byPool(pick: () => Promise<void>): Promise<boolean> {
 }
 
 const rivers = () =>
-    rides.list().flatMap((r, i) => (!r.flat && !r.demolished && /lazyriver/i.test(r.symbol) ? [i] : []));
+    rides.list().flatMap((r) => (!r.flat && !r.demolished && /lazyriver/i.test(r.symbol) ? [r.index] : []));
 const river = rivers()[0];
 expect(river !== undefined, "a lazy river in the park");
 const info = () => rides.list()[river];
@@ -202,7 +202,7 @@ expect(spot && (build.construction()!.refusal === "" || (await byPool(pick))), "
 await pointer.click(...here);
 await frames(30);
 await screenshot("slide_laid");
-const built = rides.list().length - 1;
+const built = must(rides.list().at(-1), "the ride laid").index;
 expect(
     /ringslide/i.test(rides.list()[built].symbol) && tracked(rides.list()[built], "the ride").pieces > 1,
     "the slide laid",

@@ -45,7 +45,7 @@ for (const [key, tab, want] of [
     ["RideBrokenMessage", 8, "AttractionDetails_RideMaintenanceHelp"],
     ["RideFixedMessage", -1, "AttractionDetails_RideMaintenanceHelp"],
 ] as const) {
-    park.postMessage(key, 0, tab);
+    park.postMessage(key, 0 as RideIndex, tab);
     await frames(10);
     await clickNewest();
     const shown = rides.shown();

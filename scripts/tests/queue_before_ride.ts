@@ -88,7 +88,7 @@ await place("ride", col + ((item.width - 1) >> 1), first + ((item.length - 1) >>
 await place("entrance", col, last + 1);
 await place("exit", right + 1, last);
 await ui.click("info/close");
-const ride = rides.list().length - 1;
+const ride = must(rides.list().at(-1), "the ride laid").index;
 const door = must(rides.list()[ride].entrance, "the ride's entrance");
 expect(door.col === col && door.row === last + 1, `the entrance in front of the queue, not ${JSON.stringify(door)}`);
 pointer.move(0.5, 0.95);

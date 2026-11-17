@@ -52,7 +52,7 @@ async function place(
 }
 
 /** Opens ship `i` and waits for the park to run it. */
-async function open(i: number): Promise<RideInfo> {
+async function open(i: RideIndex): Promise<RideInfo> {
     const refused = rides.setState(i, "open");
     expect(refused == null, `ship ${i} to open, not refused for ${refused}`);
     await until(() => rides.list()[i].climbWays !== undefined, 300, "the park to run the ship");
@@ -67,8 +67,7 @@ for (let row = maxRow + 10; row < maxRow + 20; row += 3)
     for (let col = minCol - 10; col < minCol + 30; col += 3) grass.push({ col, row });
 const first = await place(grass);
 expect(first !== undefined, "the first ship to go on open grass");
-const firstShip = rides.list().findIndex(isShip);
-expect(firstShip >= 0, "the first ship among the rides");
+const firstShip = must(rides.list().find(isShip), "the first ship among the rides").index;
 const opened = await open(firstShip);
 expect(opened.climbWays === 2, `two ways down the ship, not ${opened.climbWays}`);
 const foot = opened.climbFoot!;
@@ -85,10 +84,7 @@ const second = await place(shore, true);
 expect(second !== undefined, "a ship to go beside a pool");
 await screenshot("pool_ship_placed");
 expect(map.objects().filter((o) => o.symbol === "SinkingShip").length >= 2, "both ships drawn");
-const ship = rides
-    .list()
-    .map((r, i) => (isShip(r) ? i : -1))
-    .reduce((a, b) => Math.max(a, b), -1);
+const ship = must(rides.list().filter(isShip).at(-1), "a ship among the rides").index;
 expect(ship !== firstShip, "the second ship among the rides");
 const running = await open(ship);
 expect(

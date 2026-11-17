@@ -9,7 +9,7 @@
 export {};
 
 /** Lays the first saved design of the coaster `kind` on a new blank landscape, and gives its place in rides.list(). */
-async function lay(kind: string): Promise<number> {
+async function lay(kind: string): Promise<RideIndex> {
     await park.open("Campaigns/Base/BlankLandscape.dat");
     await until(() => ui.find("tools/Paths/Obj_Paths") !== undefined && build.flatRides() !== undefined, 1200, "tools");
     expect(build.pick(`tracks/coasters/${kind}/${kind}`, kind, "designs"), `a ${kind} coaster to build`);

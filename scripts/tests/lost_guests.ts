@@ -22,15 +22,15 @@ const clear = (col: number, row: number) => {
 const inParty = () =>
     people
         .list()
-        .findIndex(
+        .find(
             (p) =>
                 !p.staff &&
                 p.state === "walking" &&
                 p.party !== undefined &&
                 people.list().filter((q) => q.state !== undefined && q.party === p.party).length > 1,
         );
-await park.advanceUntil(() => inParty() >= 0, 10, "a party walking");
-const who = inParty();
+await park.advanceUntil(() => inParty() !== undefined, 10, "a party walking");
+const who = inParty()!.index;
 const me = () => walked(people.list()[who], "the guest");
 const party = must(me().party, "the guest's party");
 const others = () =>

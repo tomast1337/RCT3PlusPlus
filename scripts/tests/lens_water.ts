@@ -73,8 +73,10 @@ park.setWeather("sunny");
 // Riding Monster Lake's water coaster till it splashes the lens.
 await park.open("Campaigns/Base/Soaked/MonsterLake.dat");
 await park.ready();
-const ride = rides.list().findIndex((r) => /seaserpent/i.test(r.symbol) && r.kind === "tracked" && r.trains > 0);
-expect(ride >= 0, "the water coaster");
+const ride = must(
+    rides.list().find((r) => /seaserpent/i.test(r.symbol) && r.kind === "tracked" && r.trains > 0),
+    "the water coaster",
+).index;
 rides.setState(ride, "open");
 rides.show(ride);
 await frames(30);

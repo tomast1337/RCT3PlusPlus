@@ -65,8 +65,10 @@ expect(build.pick(kind.overlay, kind.symbol), `${kind.symbol} picked`);
 await frames(2);
 await ui.click("placing/IconAttractionEditorRotate");
 await place("ride", road.col + 1, road.row);
-const stall = stalls.list().findIndex((s) => s.symbol === `${kind.symbol}:sta`);
-expect(stall >= 0, "the stall placed");
+const stall = must(
+    stalls.list().find((s) => s.symbol === `${kind.symbol}:sta`),
+    "the stall placed",
+).index;
 await sellers_come(1, "once the stall stands");
 expect(
     seller_at(stalls.list()[stall].site) !== undefined,
@@ -102,9 +104,12 @@ await frames(2);
 await place("ride", first + ((ride_kind.width - 1) >> 1), last - ((ride_kind.length - 1) >> 1));
 await place("entrance", first, last + 1);
 await place("exit", right + 1, last);
-const ride = rides.list().findIndex((r) => r.symbol === `${ride_kind.symbol}:anr`);
+const ride = must(
+    rides.list().find((r) => r.symbol === `${ride_kind.symbol}:anr`),
+    "the ride placed",
+).index;
 expect(
-    ride >= 0 && rides.list()[ride].entrance !== null,
+    rides.list()[ride].entrance !== null,
     `the ride and its entrance placed (${JSON.stringify(rides.list()[ride])})`,
 );
 await sellers_come(2, "once the entrance stands");
@@ -177,7 +182,10 @@ expect(
     ) === JSON.stringify(posts),
     `the same sellers after loading (${JSON.stringify(posts)} then ${JSON.stringify(sellers())})`,
 );
-const again = stalls.list().findIndex((s) => s.symbol === `${kind.symbol}:sta`);
+const again = must(
+    stalls.list().find((s) => s.symbol === `${kind.symbol}:sta`),
+    "the stall loaded",
+).index;
 expect(seller_at(stalls.list()[again].site) !== undefined, "the stall's seller loaded in it");
 camera.look({ col: road.col + 2.5, row: road.row + 0.5 }, { col: road.col + 2.5, row: road.row + 6.5, up: 6 });
 await frames(30);

@@ -70,13 +70,13 @@ await ui.click("info/close");
 park.setWeather("sunny");
 park.setTime(0.4);
 park.dropParties(60, 3);
-const gifted = () => people.list().findIndex((p) => !p.staff && p.passport?.gift === true);
-for (let ran = 0; gifted() < 0; ran += 5) {
+const gifted = () => people.list().find((p) => !p.staff && p.passport?.gift === true);
+for (let ran = 0; gifted() === undefined; ran += 5) {
     expect(ran < 1800, "a guest given the gift within 1800 park seconds");
     park.setWeather("sunny");
     await park.advance(5);
 }
-const guest = people.list()[gifted()];
+const guest = gifted()!;
 const passport = must(!guest.staff ? guest.passport : undefined, "the gifted guest's passport");
 log(
     "gifted",
@@ -88,7 +88,7 @@ expect(new Set(passport.stamps.map((s) => s.post)).size === 2, "one stamp from e
 
 // The guest's passport.
 park.setTime(0.5);
-people.show(gifted());
+people.show(guest.index);
 await frames(3);
 await ui.click("info/Guest_Passport");
 await frames(5);

@@ -12,8 +12,10 @@ export {};
 await park.open("Campaigns/Base/VanillaHills.dat");
 await park.ready();
 await frames(30);
-const coaster = rides.list().findIndex((r) => r.symbol === "SuspendedSwinging:trr");
-expect(coaster >= 0, "the suspended coaster in the park");
+const coaster = must(
+    rides.list().find((r) => r.symbol === "SuspendedSwinging:trr"),
+    "the suspended coaster in the park",
+).index;
 const info = tracked(rides.list()[coaster], "the suspended coaster");
 log("coaster", info.trains, "trains of", info.passengerCars, "cars, seats", info.capacity);
 expect(

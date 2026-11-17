@@ -114,14 +114,14 @@ expect(ui.find("build_list") === undefined && open_menu() === "", "the list to c
 build.stop();
 
 // 3. A ride's window and a tool's panel take each other's place.
-rides.show(0);
+rides.show(0 as RideIndex);
 await until(() => ui.find("info") !== undefined, 120, "the ride's window");
 await press("Paths");
 expect(
     ui.find("footpaths") !== undefined && ui.find("info") === undefined,
     "the path panel to put the ride's window away",
 );
-rides.show(0);
+rides.show(0 as RideIndex);
 await until(() => ui.find("info") !== undefined, 120, "the ride's window again");
 expect(ui.find("footpaths") === undefined, "the ride's window to put the path panel away");
 await pick("Land", "Land_Brush_Height");
@@ -129,7 +129,7 @@ expect(
     ui.find("land_panel") !== undefined && ui.find("info") === undefined,
     "the land menu and its panel to put the ride's window away",
 );
-rides.show(0);
+rides.show(0 as RideIndex);
 await until(() => ui.find("info") !== undefined, 120, "the ride's window a third time");
 expect(ui.find("land_panel") === undefined, "the ride's window to put the shaping panel away");
 await screenshot("ride_window_alone");
@@ -225,7 +225,7 @@ await until(() => build.construction() !== undefined, 300, "the construction pan
 await escape();
 expect(build.construction() === undefined && ui.find(question) === undefined, "Escape to close track building");
 
-rides.show(0);
+rides.show(0 as RideIndex);
 await until(() => ui.find("info") !== undefined, 120, "the ride's window");
 await escape();
 expect(ui.find("info") === undefined && ui.find(question) === undefined, "Escape to close the ride's window");

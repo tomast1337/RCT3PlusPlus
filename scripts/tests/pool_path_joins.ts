@@ -25,8 +25,10 @@ const shape = (col: number, row: number) => {
     const o = path_at(col, row);
     return o ? `${o.symbol} ${o.turn} @${o.height}` : "none";
 };
-const slide = rides.list().findIndex((r) => !r.demolished && /(body|ring|pro)slide/i.test(r.symbol));
-expect(slide >= 0, "a pool slide in the park");
+const slide = must(
+    rides.list().find((r) => !r.demolished && /(body|ring|pro)slide/i.test(r.symbol)),
+    "a pool slide in the park",
+).index;
 const decks = tracked(rides.list()[slide], "the ride").platformSquares;
 log("platform squares", JSON.stringify(decks));
 expect(

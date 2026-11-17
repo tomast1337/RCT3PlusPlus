@@ -15,10 +15,12 @@ const turn = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - 
 await park.open("Campaigns/Base/VanillaHills.dat");
 await park.ready();
 await frames(60);
-const ride = rides.list().findIndex((r) => r.flat && r.site !== null);
-expect(ride >= 0, "a flat ride");
+const ride = must(
+    rides.list().find((r) => r.flat && r.site !== null),
+    "a flat ride",
+).index;
 const site = rides.list()[ride].site!;
-const other = ride === 0 ? 1 : 0; // Shown before each click, so the click must change it
+const other = (ride === 0 ? 1 : 0) as RideIndex; // Shown before each click, so the click must change it
 expect(rides.list().length > 1, "two rides");
 
 /** Drags with `buttons` from the middle of the view `by` shares across and down. */

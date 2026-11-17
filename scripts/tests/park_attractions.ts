@@ -108,9 +108,9 @@ await show(
 );
 
 const kNiceMusic = 29;
-const fan = () => people.list().findIndex((p) => !p.staff && (p.thoughts ?? []).includes(kNiceMusic));
-await park.advanceUntil(() => fan() >= 0, 1800, "a guest liking the speaker's music");
-people.show(fan());
+const fan = () => people.list().find((p) => !p.staff && (p.thoughts ?? []).includes(kNiceMusic));
+await park.advanceUntil(() => fan() !== undefined, 1800, "a guest liking the speaker's music");
+people.show(fan()!.index);
 await until(() => ui.find("info/Guest_Thoughts") !== undefined, 120, "the guest's window");
 await ui.click("info/Guest_Thoughts");
 await frames(5);

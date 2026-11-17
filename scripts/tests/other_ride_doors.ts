@@ -25,7 +25,7 @@ const panels = (fence: string, col: number, row: number) =>
 const paved = (col: number, row: number) => map.pavings().some((t) => t.col === col && t.row === row);
 
 /** Checks both doors of ride `i` are walled and paved, and shows them. */
-async function doorsDone(i: number, what: string): Promise<void> {
+async function doorsDone(i: RideIndex, what: string): Promise<void> {
     await frames(10);
     const ride = rides.list()[i];
     check(ride.fence !== "", `${what}: a fence for ${ride.name}`);
@@ -39,7 +39,7 @@ async function doorsDone(i: number, what: string): Promise<void> {
 }
 
 /** Places ride `i`'s entrance or exit from its window, trying across the middle of the view until one takes. */
-async function placeDoor(i: number, step: "entrance" | "exit"): Promise<void> {
+async function placeDoor(i: RideIndex, step: "entrance" | "exit"): Promise<void> {
     rides.show(i);
     await frames(5);
     await ui.click(`info/body/Attraction_General_${step === "entrance" ? "Entrance" : "Exit"}`);
@@ -118,7 +118,7 @@ pointer.move(0.5, 0.6);
 await frames(30);
 await pointer.click(0.5, 0.6);
 await frames(30);
-const tower = rides.list().length - 1;
+const tower = must(rides.list().at(-1), "the ride laid").index;
 expect(
     tracked(rides.list()[tower], "the tower").pieces === 1,
     `the tower set down, not ${JSON.stringify(rides.list()[tower])}`,

@@ -38,8 +38,10 @@ await pointer.click(spot.x, spot.y);
 await frames(3);
 build.stop();
 if (ui.find("info") !== undefined) await ui.click("info/close");
-const stall = stalls.list().findIndex((s) => s.symbol === `${kiosk.symbol}:sta`);
-expect(stall >= 0, "the kiosk in the park");
+const stall = must(
+    stalls.list().find((s) => s.symbol === `${kiosk.symbol}:sta`),
+    "the kiosk in the park",
+).index;
 expect(stalls.setState(stall, "open") == null, "the kiosk open");
 
 park.setTime(0.4);

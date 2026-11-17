@@ -3,7 +3,8 @@
 // The particle effects scenery and rides show (smoke, fire, spray), run and drawn. Each effect a placed
 // object's model marks runs on its own, looping; those far from the eye wait. Particles are drawn after the
 // opaque world as quads facing the eye, cut from the particle atlases: fire and sparks added to what is
-// behind them, smoke and spray mixed over it, farthest first.
+// behind them, smoke and spray mixed over it, farthest first. The sounds their effects name are gathered as they
+// begin, for the park's sounds to play.
 #pragma once
 
 #include "park/object/mesh.hpp"
@@ -37,9 +38,19 @@ namespace rct3::scene::park
             bool awake = false; ///< Ran in the last advance, so it is drawn
         };
 
+        /// A sound an effect began this frame, to be heard from where it began.
+        struct Sound
+        {
+            std::string_view name { }; ///< Into the effect, which the library keeps
+            glm::vec3 position { 0.0f };
+            float near = 0; ///< Heard fully within this
+            float far = 0;  ///< And not at all past this
+        };
+
         std::optional<particles::Library> library;
         std::vector<Shown> shown;
         std::vector<Shown> fired; ///< Effects set off once, such as fireworks; dropped when they end
+        std::vector<Sound> heard; ///< Since the last advance
         random::RandomState random;
         std::map<std::string, render::TextureHandle> atlases;
         render::PipelineHandle added;
@@ -55,7 +66,7 @@ namespace rct3::scene::park
     /// particles go and how big they are drawn. False when there is no such effect.
     bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up, float scale = 1);
     /// Moves time on for the effects near enough `eye` to be seen, nearest first, until `budget` particles are
-    /// alive; the rest wait and are not drawn.
+    /// alive; the rest wait and are not drawn. Gathers the sounds they began in `heard`, in place of the last.
     void advance_park_particles(ParkParticles& particles, units::Seconds elapsed, glm::vec3 eye, std::size_t budget);
     /// Draws them into the open pass, lit by `light` (smoke dims at night; fire does not).
     void draw_park_particles(render::Device& device, const ParkParticles& particles, const glm::mat4& view_projection, glm::vec3 eye, glm::vec3 target, const render::SceneLight& light);

@@ -4,7 +4,8 @@
 // same seed and the same calls give the same particles. Each emitter sends its particles out evenly over its
 // share of its owner's life; the owner is the run itself for the effect's own emitters, or a particle for a
 // particle's emitters. Particles fall with gravity, slow with drag and take their colour and size from their
-// curves.
+// curves. A sound the effect names starts as the run does, and one a kind of particle names as such a particle is
+// born, where it is born: a shell's bang is heard where it bursts.
 #pragma once
 
 #include "math/glm.hpp"
@@ -13,6 +14,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace rct3::particles
@@ -49,6 +51,13 @@ namespace rct3::particles
     /// How particle `i` of `particles` looks now.
     [[nodiscard]] Look look(const Effect& effect, const ParticleArrays& particles, std::size_t i);
 
+    /// A sound that began: the effect's own, or particle kind `particle`'s.
+    struct Heard
+    {
+        glm::vec3 position { 0.0f };
+        std::optional<std::size_t> particle { }; ///< In Effect::particles; none for the effect's own
+    };
+
     /// Steps a second.
     inline constexpr float kParticleSteps = 60;
 
@@ -75,6 +84,15 @@ namespace rct3::particles
         [[nodiscard]] const ParticleArrays& particles() const noexcept
         {
             return live_;
+        }
+        /// The sounds that began since forget_sounds, earliest first; one a kind of particle a step.
+        [[nodiscard]] const std::vector<Heard>& sounds() const noexcept
+        {
+            return heard_;
+        }
+        void forget_sounds() noexcept
+        {
+            heard_.clear();
         }
         [[nodiscard]] bool finished() const noexcept
         {
@@ -104,6 +122,7 @@ namespace rct3::particles
         /// Per pool slot, how many each emitter of the slot's particle has sent: `widest_` counters a slot.
         std::vector<float> emitted_;
         std::size_t widest_ = 0;
+        std::vector<Heard> heard_;
     };
 
 } // namespace rct3::particles

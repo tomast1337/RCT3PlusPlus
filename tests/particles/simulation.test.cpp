@@ -202,3 +202,29 @@ TEST_CASE("a sprite runs through its frames, or keeps the one a particle picks")
     CHECK(sprite.frame(1.1f, 0.9f) == 3);
     CHECK(rct3::particles::Sprite { }.frame(1, 1) == 0);
 }
+
+TEST_CASE("a shell rises from its tube and is heard launching there and bursting where it bursts")
+{
+    // An effect sending one shell up its tube at 30 a second, which bursts into a bang at the end of its second.
+    Effect e = steady(1, 1);
+    e.sound = "launch";
+    e.emitters[0].end = 0;
+    e.emitters[0].speed = 30;
+    e.emitters.push_back(Emitter { .start = 1, .end = 1, .count = 1, .particle = 1 });
+    e.particles[0].emitters = { 1 };
+    e.particles.push_back(Particle { .lifetime = 0.5f, .sound = "bang" });
+    EffectRun run(e, seeded(), false, 8);
+    run.place({ 5, 2, 0 });
+    run_for(run, 0.5f);
+    REQUIRE(run.sounds().size() == 1);
+    CHECK_FALSE(run.sounds()[0].particle);
+    CHECK(run.sounds()[0].position == glm::vec3(5, 2, 0));
+    REQUIRE(run.particles().count() == 1);
+    CHECK(run.particles().position[0].y == doctest::Approx(2 + 15).epsilon(0.05));
+    run.forget_sounds();
+    run_for(run, 0.7f);
+    REQUIRE(run.sounds().size() == 1);
+    CHECK(run.sounds()[0].particle == 1u);
+    CHECK(run.sounds()[0].position.y == doctest::Approx(2 + 30).epsilon(0.05));
+    CHECK(run.sounds()[0].position.x == doctest::Approx(5));
+}

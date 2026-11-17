@@ -150,6 +150,11 @@ namespace rct3::park::object
     /// shortcut: effects on bones stand where the bone rests, as lamps do.
     [[nodiscard]] std::vector<PlacedEffect> object_effects(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted = { }, std::span<const glm::mat4> places = { }, std::span<const ObjectModel* const> found = { });
 
+    /// Where a firework shell leaves tube `tube` of `model` standing at `placed`, its second axis the way the shell
+    /// flies. Tubes past the model's last start again at its first; a model with none fires straight up from its
+    /// origin.
+    [[nodiscard]] PlacedEffect launch_point(const glm::mat4& placed, const ObjectModel& model, std::size_t tube);
+
     /// The level of each object seen from `eye`, its models' distances scaled for its kind by `scales`.
     [[nodiscard]] ObjectLevels object_levels(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, const LevelScales& scales = { });
 

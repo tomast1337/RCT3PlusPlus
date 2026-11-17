@@ -15,6 +15,8 @@
 //
 // Particle effects are marked the same way: "particlestart" N, then an underscore and the effect's name (an
 // effect file's name, any case). A point "particleend" N, named or not, gives the way the effect points.
+// A firework launcher marks its tubes alike, unnamed: "fireworkstart" N where a shell leaves it, "fireworkend" N
+// the way it flies.
 #pragma once
 
 #include "math/glm.hpp"
@@ -56,6 +58,9 @@ namespace rct3::park
         glm::vec3 up { 0.0f, 1.0f, 0.0f };    ///< The way it points, model space, length 1
         std::optional<std::int32_t> bone { }; ///< The bone that carries it, for a bone shape
     };
+
+    /// The firework tubes `places` mark, in number order; their effects are left empty.
+    [[nodiscard]] std::vector<ModelEffect> model_tubes(std::span<const NamedPlace> places);
 
     /// The particle effects `places` mark, in number order.
     [[nodiscard]] std::vector<ModelEffect> model_effects(std::span<const NamedPlace> places);

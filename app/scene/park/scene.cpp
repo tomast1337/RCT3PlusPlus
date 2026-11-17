@@ -50,6 +50,7 @@
 #include "simulation/awards.hpp"
 #include "simulation/components.hpp"
 #include "simulation/enjoyment.hpp"
+#include "simulation/fireworks.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
 #include "simulation/import_park.hpp"
@@ -1006,6 +1007,7 @@ namespace rct3::scene::park
         scene.chain_shifts.resize(scene.rides.rides.size());
         for (std::size_t i = 0; i < scene.chain_shifts.size(); ++i)
             scene.chain_shifts[i] = rct3::park::chain_shift(scene.chain_shifts[i], scene.rides.rides[i].options.lift_speed.value, park_time.value);
+        update_park_fireworks(scene, park_time);
         advance_park_particles(scene.particles, park_time, viewer, static_cast<std::size_t>(options.get(config::game::GameOption::ParticleBudget)));
         // The software backend draws no screen-wide effects (glow, shafts in the air, occlusion, drops on the lens)
         // and no mirrored scene: its water mirrors only the sky's colour.
@@ -1338,6 +1340,10 @@ namespace rct3::scene::park
                 scene.sim_time = std::min(scene.sim_time + game_seconds, kMostSeconds);
                 scene.sim.registry.ctx().insert_or_assign(simulation::park::guest_weather(scene.park));
                 scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day_clock.time });
+                if (scene.fireworks.playing)
+                    scene.sim.registry.ctx().insert_or_assign(simulation::FireworkShow { .centre = scene.fireworks.playing->centre, .dark = simulation::is_night(scene.day_clock.time) });
+                else
+                    scene.sim.registry.ctx().erase<simulation::FireworkShow>();
                 const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
                 // The pools taken in again once built on, or their rooms opened, closed, priced or given another fluid or
                 // other waves.
@@ -1896,6 +1902,13 @@ namespace rct3::scene::park
                     shown[i].clickable = true;
                     continue;
                 }
+                // A display's shows the fireworks, while they last.
+                if (scene.park.messages.list[i].text_key == kDisplayMessage)
+                {
+                    shown[i].icon = "Firework_Icon";
+                    shown[i].clickable = scene.fireworks.playing.has_value();
+                    continue;
+                }
                 const auto& subject = scene.park.messages.list[i].subject;
                 const auto ref = subject ? attraction_with(scene, *subject) : std::nullopt;
                 if (!ref)
@@ -1912,7 +1925,9 @@ namespace rct3::scene::park
             const auto serial = messages->take_clicked();
             const auto message = serial ? std::ranges::find(scene.park.messages.list, *serial, &simulation::park::ParkMessage::serial) : scene.park.messages.list.end();
             // An award's icon opens the park's awards, as the game does.
-            if (message != scene.park.messages.list.end() && message->award)
+            if (const auto show = message != scene.park.messages.list.end() && message->text_key == kDisplayMessage ? park_display_view(scene, scene.camera.yaw) : std::nullopt)
+                scene.camera = *show;
+            else if (message != scene.park.messages.list.end() && message->award)
                 open_management_window(desktop, ui::screens::management::ManagementTopic::ParkOperations, ui::screens::management::kAwardsTab, management_facts(scene), *assets.strings, assets.palette, info_units(assets, options));
             // An invention's opens its build list with it marked, from the menu item that opens that list.
             else if (const auto tools = desktop.root().find_as<ui::screens::park_view::ToolRow>(kToolsName); message != scene.park.messages.list.end() && message->build_item && *message->build_item < items.size() && tools)

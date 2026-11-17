@@ -90,3 +90,17 @@ TEST_CASE("particle effects take their name from the start and their way from th
     CHECK(effects[1].position == glm::vec3(1, 0, 0));
     CHECK(effects[1].up == glm::vec3(0, 0, 1));
 }
+
+TEST_CASE("a launcher's tubes are its numbered firework points, aimed at their ends")
+{
+    const std::array places { at("fireworkstart02", { 2, 0, 0 }), at("fireworkend02", { 2, 1, 1 }), at("fireworkstart01", { 0, 1, 0 }), at("fireworkend01", { 0, 3, 0 }), at("fireworkstart03", { 4, 0, 0 }) };
+    const std::vector<ModelEffect> tubes = model_tubes(places);
+    REQUIRE(tubes.size() == 3);
+    CHECK(tubes[0].position == glm::vec3(0, 1, 0));
+    CHECK(tubes[0].up == glm::vec3(0, 1, 0));
+    CHECK(tubes[1].up.y == doctest::Approx(std::sqrt(0.5f)));
+    CHECK(tubes[1].up.z == doctest::Approx(std::sqrt(0.5f)));
+    CHECK(tubes[2].up == glm::vec3(0, 1, 0)); // No end: straight up
+    CHECK(tubes[0].effect.empty());
+    CHECK(model_effects(places).empty());
+}

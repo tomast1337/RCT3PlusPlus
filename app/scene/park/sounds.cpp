@@ -48,6 +48,8 @@ namespace rct3::scene::park
         constexpr float kThunderLevel = 0.9f;
         constexpr float kThumpLevel = 0.6f;          ///< Chosen by eye: clear over the park without drowning it
         constexpr units::Seconds kThumpGap { 0.4f }; ///< Chosen by eye: the wait before another thump, so a burst of pieces is one
+        constexpr float kEffectLevel = 0.9f;         ///< Chosen by ear: a firework's launch or bang, near it
+        constexpr float kShowMusicLevel = 0.8f;      ///< Chosen by ear: a firework display's music, over the park's sounds
 
         void silence_trains(audio::AudioEngine& engine, ParkSounds& sounds)
         {
@@ -92,6 +94,15 @@ namespace rct3::scene::park
     {
         ParkSounds s;
         s.random.seed(seed);
+        if (const auto folder = install.find("Music"))
+            s.music_folder = *folder;
+        // The sounds particle effects name, all in the particles' overlay.
+        if (const auto path = install.find("Particles/Particles.common.ovl"))
+            if (const auto overlay = ovl::Overlay::load(*path))
+                for (const ovl::SoundItem& item : ovl::read_sounds(*overlay, overlay->common()))
+                    if (item.info)
+                        if (auto buffer = audio::from_ovl_sound(*item.info))
+                            s.effect_sounds.emplace(item.name, std::move(*buffer));
         // Each of the main overlay's sounds by its name there.
         const auto main = [&](std::span<const std::string_view> names) { return load_named(install, "Main.common.ovl", names); };
         constexpr std::array<std::string_view, 3> kChatter { "CrowdMurmur1", "CrowdMurmur2", "CrowdMurmur3" };
@@ -164,6 +175,36 @@ namespace rct3::scene::park
         engine.set_listener(eye, glm::normalize(scene.camera.target - eye), glm::vec3(0.0f, 1.0f, 0.0f));
         engine.set_muffled(scene.water.eye_in.has_value());
 
+        // A firework display's music from its start, silent while the park is paused, and stopped with the display.
+        // shortcut: the music runs on while paused, so a long pause leaves it ahead of the shots; hold the stream
+        // once pausing a display matters.
+        {
+            const auto& playing = scene.fireworks.playing;
+            const std::string& track = playing ? scene.fireworks.displays[playing->display].music_file : std::string { };
+            if (track != sounds.show_track)
+            {
+                if (sounds.show_music)
+                    sounds.show_music->stop(engine);
+                sounds.show_music.reset();
+                sounds.show_track = track;
+                if (!track.empty() && !sounds.music_folder.empty())
+                {
+                    if (auto music = audio::MusicPlayer::start(engine, sounds.music_folder / track, kShowMusicLevel, false))
+                        sounds.show_music = std::move(*music);
+                    else
+                        logging::logger("audio").warning("no display music: {}", music.error());
+                }
+            }
+            if (sounds.show_music)
+            {
+                sounds.show_music->set_volume(engine, quiet ? 0.0f : kShowMusicLevel);
+                (void)sounds.show_music->update(engine);
+            }
+        }
+        // Particle effects' sounds, from where each began.
+        for (const ParkParticles::Sound& heard : scene.particles.heard)
+            if (const auto sound = sounds.effect_sounds.find(heard.name); sound != sounds.effect_sounds.end() && !quiet)
+                (void)engine.play(sound->second, { .volume = kEffectLevel, .at = heard.position, .near = heard.near, .far = heard.far });
         // Building, heard paused too, as the player builds then: a thump for what was put down.
         sounds.since_thump += elapsed;
         if (scene.built != std::exchange(sounds.built_heard, scene.built) && sounds.since_thump >= kThumpGap)
@@ -468,6 +509,10 @@ namespace rct3::scene::park
 
     void stop_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds)
     {
+        if (sounds.show_music)
+            sounds.show_music->stop(engine);
+        sounds.show_music.reset();
+        sounds.show_track.clear();
         for (const audio::VoiceHandle voice : sounds.chatter_voices)
             engine.stop(voice);
         for (const auto& [_, voice] : sounds.train_voices)

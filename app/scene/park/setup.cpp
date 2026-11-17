@@ -1587,6 +1587,7 @@ namespace rct3::scene::park
                 if (strings::equals_ignoring_case(file.path().extension().string(), ".wma"))
                     scene.tunes.push_back(file.path().stem().u16string());
             std::ranges::sort(scene.tunes);
+            load_park_fireworks(scene.fireworks, *file);
             show_park_particles(scene.particles, rct3::park::object::object_effects(scene.objects, scene.models, scene.grid, scene.fitted, scene.places.transforms, scene.places.models));
             const render::VertexLayout crossing_layout { sizeof(CrossingVertex), kCrossingAttributes };
             for (auto [pipeline, desc] : { std::pair { &scene.object_pipeline, render::PipelineDesc { .shader = render::Shader::Lit, .layout = ground_layout, .label = "objects" } }, std::pair { &scene.cutout_pipeline, render::PipelineDesc { .shader = render::Shader::LitCutout, .layout = ground_layout, .label = "object cut-outs" } },

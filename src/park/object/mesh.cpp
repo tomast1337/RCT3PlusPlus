@@ -228,6 +228,15 @@ namespace rct3::park::object
         return effects;
     }
 
+    PlacedEffect launch_point(const glm::mat4& placed, const ObjectModel& model, std::size_t tube)
+    {
+        const ModelEffect straight_up { };
+        const ModelEffect& t = model.tubes.empty() ? straight_up : model.tubes[tube % model.tubes.size()];
+        const glm::vec3 up = glm::normalize(glm::mat3(placed) * t.up);
+        const glm::vec3 side = glm::normalize(glm::cross(up, std::abs(up.y) < 0.9f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0)));
+        return { .position = glm::vec3(placed * glm::vec4(t.position, 1.0f)), .axes = glm::mat3(side, up, glm::cross(side, up)) };
+    }
+
     LevelPlan plan_levels(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, const LevelScales& scales)
     {
         LevelPlan plan { .steady = ObjectLevels(objects.size(), kNotDrawn), .finer = ObjectLevels(objects.size(), kNotDrawn), .coarser = ObjectLevels(objects.size(), kNotDrawn), .bands = std::vector<glm::vec2>(objects.size()) };

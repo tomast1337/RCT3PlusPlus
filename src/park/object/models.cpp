@@ -700,6 +700,8 @@ namespace rct3::park::object
                         model.lights = model_lights(places);
                     if (model.effects.empty())
                         model.effects = model_effects(places);
+                    if (model.tubes.empty())
+                        model.tubes = model_tubes(places);
                 }
             }
             else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape))
@@ -761,6 +763,8 @@ namespace rct3::park::object
                         model.lights = model_lights(places);
                     if (model.effects.empty())
                         model.effects = model_effects(places);
+                    if (model.tubes.empty())
+                        model.tubes = model_tubes(places);
                 }
                 if (rigged)
                 {

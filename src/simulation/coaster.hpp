@@ -22,6 +22,7 @@
 #include "random/generator.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/crash.hpp"
+#include "simulation/swinging_part.hpp"
 #include "units/units.hpp"
 
 #include <array>
@@ -196,6 +197,11 @@ namespace rct3::simulation
         bool ghost = false;
         /// Of a pool slide's car, how it swings in its trough; nothing for every other train.
         std::optional<Trough> trough;
+        /// Of a train whose cars have a part swinging on them, how it swings, alike on every car; nothing for every
+        /// other train.
+        std::optional<SwingingPart> swinging;
+        std::vector<Swing> swings { };               ///< By car, front first: where its swinging part is
+        float swung_speed = 0;                       ///< Its speed when its cars' parts last swung, for how fast it has sped up since
         std::vector<bool> covered { };               ///< By point: the stretch from it is a tube, which no car goes out of
         std::vector<bool> steady { };                ///< By point: on the stretch from it a slide's car swings by its weight alone
         std::vector<float> drop_offs { };            ///< As rct3::park::track::TrackCourse::drop_offs

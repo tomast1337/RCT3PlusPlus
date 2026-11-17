@@ -10,9 +10,15 @@
 // from, rather than one of the display's own. A show ride's timeline is saved as a display as well; it is the
 // ride's, not one the park schedules.
 //
+// A shot is a firework, a laser or a water jet, and a display mostly of water jets is a fountain show. In a park, a
+// water jet shot carries its pattern: how hard the jet shoots, how far it leans and how much it widens over its
+// time.
+//
 // A display starts on a day of a month it runs in, as the time of day reaches its start, and runs its shots at
 // their times from then on.
 #pragma once
+
+#include "particles/effect.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -40,13 +46,32 @@ namespace rct3::particles
         std::optional<std::uint64_t> placed { }; ///< In a park: the placed item it is, by object id; the rest is left 0
     };
 
+    /// What a shot puts up, by the number a park's display keeps for it.
+    enum class ShotKind : std::uint8_t
+    {
+        Firework = 0,
+        Laser = 1,
+        WaterJet = 2,
+    };
+
+    /// A water jet shot's pattern. Its curves run over its time, 0 at the start to 1 at the end.
+    struct JetPattern
+    {
+        float seconds = 0;
+        Curve pressure { };  ///< The speed the water leaves at, meters a second
+        Curve elevation { }; ///< Lean from straight up, radians, toward the launcher's front
+        Curve widening { };  ///< What the stream's width is multiplied by each second it flies
+    };
+
     struct Shot
     {
-        std::string effect { };   ///< The firework effect's name, without folder or extension
-        std::size_t launcher = 0; ///< In Display::launchers
-        std::int32_t tube = 0;    ///< Which of the launcher's firing points
-        float seconds = 0;        ///< From the start of the show
-        std::int32_t lane = 0;    ///< The timeline row it sits on in the editor
+        ShotKind kind = ShotKind::Firework;
+        std::string effect { };            ///< The effect's name, without folder or extension
+        std::size_t launcher = 0;          ///< In Display::launchers
+        std::int32_t tube = 0;             ///< Which of the launcher's firing points
+        float seconds = 0;                 ///< From the start of the show
+        std::int32_t lane = 0;             ///< The timeline row it sits on in the editor
+        std::optional<JetPattern> jet { }; ///< Of a water jet shot in a park
     };
 
     struct Display
@@ -75,6 +100,12 @@ namespace rct3::particles
     /// The displays `file`, a park, schedules, leaving out show rides' own; their launchers are the placed items their
     /// shots name.
     [[nodiscard]] std::expected<std::vector<Display>, DisplayError> read_park_displays(const save::SaveFile& file);
+
+    /// What most of `display`'s shots are; fireworks when it has none.
+    [[nodiscard]] ShotKind main_kind(const Display& display);
+
+    /// Seconds from a display's start to its last shot's end: a water jet's pattern runs on past its shot.
+    [[nodiscard]] float display_seconds(const Display& display);
 
     /// Game minutes after its start time during which a display due that day still starts, so a clock run fast or
     /// skipped on does not pass it by.

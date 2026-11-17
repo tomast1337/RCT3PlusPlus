@@ -9,6 +9,7 @@
 #include "simulation/park/messages.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 namespace rct3::scene::park
 {
@@ -21,6 +22,9 @@ namespace rct3::scene::park
         constexpr units::Distance kShowHeight { 60 };
         constexpr units::Radians kShowPitch { 0.2f };
         constexpr float kMinutesPerDay = simulation::kHoursPerDay * 60;
+        constexpr units::Distance kJetRadius { 0.06f }; ///< Chosen by eye: a show jet's stream at the nozzle, thinner than a cannon's
+        constexpr float kJetBreakup = 0.7f;             ///< Chosen by eye: how much it breaks into spray as it falls
+        constexpr units::Seconds kJetLinger { 0.5f };   ///< Its drops live this much past coming down to the nozzle's height
 
         /// Where launcher `launcher` of the display stands, by its place in the park's objects; none once it is gone.
         std::optional<std::size_t> launcher_object(const ParkScene& scene, const particles::Launcher& launcher)
@@ -41,14 +45,43 @@ namespace rct3::scene::park
             return rct3::park::object::placed_transform(scene.objects[i], model != scene.models.end() ? &model->second : nullptr, scene.grid, scene.fitted);
         }
 
+        /// Where launcher object `i` shoots from by tube `tube`, pointing the way the tube does.
+        rct3::park::object::PlacedEffect tube_of(const ParkScene& scene, std::size_t i, std::size_t tube)
+        {
+            const rct3::park::object::ObjectModel* model = i < scene.places.models.size() ? scene.places.models[i] : nullptr;
+            const rct3::park::object::ObjectModel none { };
+            return rct3::park::object::launch_point(object_place(scene, i), model != nullptr ? *model : none, tube);
+        }
+
+        /// A curve's value, 0 when it has no points.
+        float value_at(const particles::Curve& curve, float t)
+        {
+            return curve.values.empty() ? 0.0f : curve.at(t);
+        }
+
         void fire(ParkScene& scene, const particles::Display& display, const particles::Shot& shot)
         {
             const auto i = launcher_object(scene, display.launchers[shot.launcher]);
             if (!i)
                 return;
-            const rct3::park::object::ObjectModel* model = *i < scene.places.models.size() ? scene.places.models[*i] : nullptr;
-            const rct3::park::object::ObjectModel none { };
-            const rct3::park::object::PlacedEffect from = rct3::park::object::launch_point(object_place(scene, *i), model != nullptr ? *model : none, static_cast<std::size_t>(std::max(shot.tube, 0)));
+            const auto tube = static_cast<std::size_t>(std::max(shot.tube, 0));
+            // shortcut: laser shots are not drawn, draw them once the park draws laser beams.
+            if (shot.kind == particles::ShotKind::Laser)
+                return;
+            if (shot.kind == particles::ShotKind::WaterJet)
+            {
+                if (!shot.jet || shot.jet->seconds <= 0)
+                    return;
+                const auto& speeds = shot.jet->pressure.values;
+                // Its drops live long enough to come down from the highest it shoots, and a little to splash.
+                const float highest = speeds.empty() ? 0.0f : std::ranges::max(speeds);
+                const float life = 2 * highest / units::kGravity.value + kJetLinger.value;
+                // The pattern's widening, near 1, is read as what the stream's width is multiplied by each second.
+                const float spread = kJetRadius.value * std::max(value_at(shot.jet->widening, 0) - 1, 0.0f);
+                scene.jets.push_back(ParkScene::Jet { .object = save::model::PlacedObjectIndex { *i }, .water = rct3::park::water::WaterJet(life, kJetRadius.value, spread, kJetBreakup), .pattern = shot.jet, .shot_at = scene.park_clock, .tube = tube });
+                return;
+            }
+            const rct3::park::object::PlacedEffect from = tube_of(scene, *i, tube);
             if (!fire_park_particles(scene.particles, shot.effect, from.position, from.axes[1]))
                 logging::logger("fireworks").debug("no firework effect {}", shot.effect);
         }
@@ -121,15 +154,35 @@ namespace rct3::scene::park
                 start_park_display(scene, i);
             fireworks.was_due[i] = due ? 1 : 0;
         }
-        if (!fireworks.playing)
-            return;
-        ParkFireworks::Playing& playing = *fireworks.playing;
-        const particles::Display& display = fireworks.displays[playing.display];
-        for (const particles::Shot& shot : particles::advance_display(playing.run, display, park_time.value))
-            fire(scene, display, shot);
-        const float last = display.shots.empty() ? 0.0f : display.shots.back().seconds;
-        if (playing.run.next_shot >= display.shots.size() && playing.run.seconds > last + kAfterLastShot.value)
-            fireworks.playing.reset();
+        if (fireworks.playing)
+        {
+            ParkFireworks::Playing& playing = *fireworks.playing;
+            const particles::Display& display = fireworks.displays[playing.display];
+            for (const particles::Shot& shot : particles::advance_display(playing.run, display, park_time.value))
+                fire(scene, display, shot);
+            if (playing.run.next_shot >= display.shots.size() && playing.run.seconds > particles::display_seconds(display) + kAfterLastShot.value)
+                fireworks.playing.reset();
+        }
+        // The show's jets shoot as their patterns say, each from its start; past its end one is let be, and stops.
+        for (ParkScene::Jet& jet : scene.jets)
+        {
+            const float into = scene.park_clock - jet.shot_at;
+            if (!jet.pattern || into >= jet.pattern->seconds || jet.object.value >= scene.objects.size())
+                continue;
+            const float t = into / jet.pattern->seconds;
+            const rct3::park::object::PlacedEffect from = tube_of(scene, jet.object.value, jet.tube);
+            const glm::vec3 up = from.axes[1];
+            // Its lean, in radians, tips it toward the launcher's front, and back below 0: a guess, as the files do not
+            // say which way it leans.
+            const glm::vec3 ahead = glm::mat3(object_place(scene, jet.object.value)) * glm::vec3(0, 0, 1);
+            const glm::vec3 across = ahead - glm::dot(ahead, up) * up;
+            const glm::vec3 front = glm::length(across) > 1e-4f ? glm::normalize(across) : from.axes[2];
+            const float lean = value_at(jet.pattern->elevation, t);
+            // Its pressure is read as the speed the water leaves at, meters a second: a common pressure of 10 then
+            // rises five meters, about as high as the jets look in the game.
+            jet.water.aim(from.position, value_at(jet.pattern->pressure, t) * (std::cos(lean) * up + std::sin(lean) * front));
+            jet.fed = true;
+        }
     }
 
 } // namespace rct3::scene::park

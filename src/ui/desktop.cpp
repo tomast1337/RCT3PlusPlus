@@ -237,7 +237,7 @@ namespace rct3::ui
             held_ = under;
             if (Widget* window = top_level(*root_, under); window && !window->stays_behind)
                 root_->raise(*window);
-            for (Widget* w = core::as_pointer(deepest(pointer.position)); w && !focus_; w = w->parent())
+            for (Widget* w = under; w && !focus_; w = w->parent())
             {
                 if (w->takes_focus() && usable(*w))
                     focus_ = w;

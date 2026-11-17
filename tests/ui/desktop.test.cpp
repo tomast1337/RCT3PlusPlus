@@ -345,6 +345,18 @@ TEST_CASE("pressing gives the focus to the nearest widget that takes it")
     }
 }
 
+TEST_CASE("a drawing laid over a field that takes no pointer leaves the focus to the field")
+{
+    Fixture f;
+    KeyProbe& drawn_over = f.top.add<KeyProbe>("drawn_over");
+    drawn_over.placement = fill();
+    drawn_over.blocks = false;
+    f.desktop.layout(kView);
+    f.desktop.update(at(120, 20, true));
+    f.desktop.update(at(120, 20));
+    CHECK(rct3::core::as_pointer(f.desktop.keyboard_focus()) == &f.field);
+}
+
 TEST_CASE("a press moves the focus before keys of the same update")
 {
     Fixture f;

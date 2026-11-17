@@ -23,6 +23,9 @@ namespace rct3::simulation
         constexpr units::Seconds kTopHold { 3 };           ///< A drop tower's train is held at the top
         constexpr units::Acceleration kStationBrake { 3 }; ///< A station's brakes slow an arriving train by. Chosen by eye
         constexpr units::Pace kStationCreep { 0.5f };      ///< An arriving train is brought the last of the way in at. Chosen by eye
+        constexpr units::Distance kStationRamp { 4 };      ///< Over its last this, a train rolling back into the station slows in step with the room left. Approximation: a reverse coaster coming home, watched in the original game
+        constexpr float kStationLeast = 0.2f;              ///< Of the station's speed, the least it is slowed to on that ramp. Approximation, likewise
+        constexpr units::Acceleration kStationTyres { 4 }; ///< The station's tyres speed up a train slower than the station's speed by. Chosen by eye
         constexpr units::Pace kSlideLeave { 1 };           ///< A pool slide's car is eased off its platform at. Measured: a car setting off in a saved park
         constexpr units::Acceleration kSlideEase { 4 };    ///< It is eased up to that by. Chosen by eye
         constexpr units::Pace kWadeSpeed { 2.9f };         ///< A slide's car is carried through the pool at on its way back to its lift. Measured: a car of a tested slide in the original game
@@ -40,6 +43,9 @@ namespace rct3::simulation
         constexpr units::PerSecond kWaterDrag { 1.5f }; ///< How fast a car afloat slows. Chosen by eye
         constexpr units::Distance kSink { 1 };          ///< A car afloat sinks in its last second, out of sight. Chosen by eye
         constexpr units::Seconds kSettle { 0.5f };      ///< A car come down nose first takes to lie level afloat. Chosen by eye
+
+        constexpr float kRollBackHold = 1.5f;                               ///< A launch stretch slows a train rolling back this much harder than evenly to its launch speed's worth over the room left. Approximation: a reverse coaster coming home, watched in the original game
+        constexpr units::Acceleration kRollBackMost { 4 * kGravity.value }; ///< The hardest it does so, as that rule alone grows without end at the last. Chosen: about the most a rider takes, enough to bring a train down to the station's speed in time
 
         std::size_t point_at(const Coaster& c, float d)
         {
@@ -397,6 +403,8 @@ namespace rct3::simulation
             const bool chained = on_chain(c);
             // Its last time in, a shuttle's train is taken by the station's tyres as soon as either end is on it.
             const bool home = open && c.passed >= c.passes && (station_at(c.at) || station_at(c.at - c.train_length));
+            // Rolling back to where it set off with its tail on the platform: the station takes it from there.
+            const bool backing_in = !open && two_ends(c) && c.launched && c.speed < 0 && c.travelled < c.train_length && station_at(c.at - c.train_length);
             if (c.fixed_speed)
                 c.speed = *c.fixed_speed;
             else
@@ -416,6 +424,15 @@ namespace rct3::simulation
                     c.speed = open && c.speed < 0 ? std::min(c.speed, -c.lift_speed) : std::max(c.speed, c.lift_speed);
                 else if (home)
                     c.speed = std::copysign(c.station_speed, c.start - c.at);
+                else if (backing_in)
+                {
+                    // Braked to the station's speed, or carried up to it by the tyres; over the last few metres slowed
+                    // with the room left, to rest with its front where it set off.
+                    if (c.travelled > kStationRamp.value)
+                        c.speed = -c.speed > c.station_speed ? std::min(c.speed + kStationBrake.value * dt, -c.station_speed) : std::max(c.speed - kStationTyres.value * dt, -c.station_speed);
+                    else
+                        c.speed = -std::max(std::min(-c.speed, c.station_speed * std::clamp(c.travelled / kStationRamp.value, kStationLeast, 1.0f)), kStationCreep.value);
+                }
                 else if (c.splash_out && c.travelled < c.train_length)
                 {
                     // A pool slide's car is eased off its platform, no faster than a walk; the slope takes it from there.
@@ -522,10 +539,18 @@ namespace rct3::simulation
                 target = *c.launch_speed;
                 left -= platform ? c.travelled : 0;
             }
-            // Rolled back onto its launch stretch, it is not launched again: the stretch slows it as hard as it
-            // launches, to the station's speed, and it creeps back into the station.
+            // Rolled back onto its launch stretch, it is not launched again: faster than the station's speed, it is
+            // slowed the harder the faster and the nearer it is to where it set off, gently at first and hard just
+            // before the station. Held to a cap, raised only as far as it takes to be down to the station's speed
+            // where the station's last metres begin, so a short stretch does not hand it over too fast. Slower, it
+            // rolls on.
             else if (c.launch_speed && assisted && c.speed < -c.station_speed && !c.fixed_speed)
-                c.speed = std::min(c.speed + *c.launch_speed * *c.launch_speed / (2 * c.train_length) * dt, -c.station_speed);
+            {
+                const float full = *c.launch_speed;
+                const float hold = kRollBackHold * std::max(full * full - c.speed * c.speed, 0.0f) / (2 * std::max(c.travelled, kLaunchLeast.value));
+                const float needed = (c.speed * c.speed - c.station_speed * c.station_speed) / (2 * std::max(c.travelled - kStationRamp.value, kLaunchLeast.value));
+                c.speed = std::min(c.speed + std::min(hold, std::max(kRollBackMost.value, needed)) * dt, -c.station_speed);
+            }
             const float way = target < 0 ? -1.0f : 1.0f;
             if (target != 0 && !c.fixed_speed && c.speed * way < std::abs(target))
             {

@@ -417,32 +417,83 @@ TEST_CASE("a train launched up a spike at the end of its track rolls all the way
     CHECK(c.at == 10);
 }
 
-TEST_CASE("a launched train rolling back onto its launch stretch is slowed to a creep, not launched again")
+namespace
 {
-    // A 8 m station, a 40 m launch stretch, 12 m level and a 40 m spike up 40 m at the end.
-    Coaster c;
-    c.distance = { 0, 8, 48, 60, 100 };
-    c.height = { 0, 0, 0, 0, 40 };
-    c.kinds = { Stretch::Station, Stretch::Launch, Stretch::Plain, Stretch::Plain, Stretch::Plain };
-    c.closed = false;
-    c.train_length = 5;
-    c.start = 8;
-    c.at = 8;
-    c.launch_speed = 20;
-    c.station_speed = 2;
-    c.running = true;
+    /// An 8 m station, a 40 m launch stretch, 12 m level and a 40 m spike up 40 m at the end of the track.
+    Coaster spike_after_launch(float launch)
+    {
+        Coaster c;
+        c.distance = { 0, 8, 48, 60, 100 };
+        c.height = { 0, 0, 0, 0, 40 };
+        c.kinds = { Stretch::Station, Stretch::Launch, Stretch::Plain, Stretch::Plain, Stretch::Plain };
+        c.closed = false;
+        c.train_length = 5;
+        c.start = 8;
+        c.at = 8;
+        c.launch_speed = launch;
+        c.station_speed = 8;
+        c.running = true;
+        return c;
+    }
+} // namespace
+
+TEST_CASE("a train rolling back over its launch stretch is slowed harder the nearer the station, and comes to rest there")
+{
+    Coaster c = spike_after_launch(25);
     bool back = false;
-    float coming_in = 0; // Fastest back along the first half of the launch stretch
+    bool rolled_back = false;
+    float jolt = 0;      // Most speed lost or gained in one step on the way back
+    float first = 0;     // Slow-down in the first step back over the launch stretch
+    float hardest = 0;   // And the hardest there
+    float coming_in = 0; // Fastest with its tail on the platform
+    float last = 0;
     for (int i = 0; i < 4000 && c.running; ++i)
     {
+        last = c.speed;
         back = drive(c, 0.05f);
-        if (c.speed < 0 && c.at < 28)
+        rolled_back = rolled_back || c.speed < 0;
+        if (!rolled_back)
+            continue;
+        jolt = std::max(jolt, std::abs(c.speed - last));
+        if (c.at < 48 && c.at - c.train_length > 8 && last < 0)
+        {
+            const float slowed = (c.speed - last) / 0.05f;
+            if (first == 0)
+                first = slowed;
+            hardest = std::max(hardest, slowed);
+        }
+        if (c.at - c.train_length < 8)
             coming_in = std::max(coming_in, -c.speed);
     }
     CHECK(back);
     CHECK_FALSE(c.crashed);
-    CHECK(coming_in > 0);
-    CHECK(coming_in <= 2.01f);
+    CHECK(c.at == 8);
+    CHECK(c.speed == 0);
+    CHECK(first > 0);
+    CHECK(hardest > 2 * first);
+    CHECK(hardest <= 4 * 9.81f + 0.5f);
+    CHECK(coming_in <= 8.01f);
+    CHECK(jolt < 2.1f); // No more than the hardest the launch stretch slows it, over a step
+}
+
+TEST_CASE("a train rolling back over its launch stretch slower than the station's speed rolls on unslowed")
+{
+    Coaster c = spike_after_launch(7);
+    float onto = 0; // Speed as its front came onto the launch stretch going back
+    float off = 0;  // And as its tail reached the platform
+    for (int i = 0; i < 4000 && c.running; ++i)
+    {
+        const float was = c.at;
+        drive(c, 0.05f);
+        if (c.speed < 0 && was >= 48 && c.at < 48)
+            onto = -c.speed;
+        if (c.speed < 0 && off == 0 && c.at - c.train_length < 8)
+            off = -c.speed;
+    }
+    CHECK_FALSE(c.running);
+    CHECK(c.at == 8);
+    REQUIRE(onto > 0);
+    CHECK(off > onto - 0.2f); // Rolling only
 }
 
 TEST_CASE("a train standing on brakes is pushed on, as anywhere else it stalls")

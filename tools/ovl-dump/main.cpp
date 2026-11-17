@@ -572,6 +572,9 @@ namespace
                 out.info("  {:<32} kind {:d} visual {} refs {:d}", name.c_str(), item.car->kind, std::string(item.car->visual).c_str(), item.car->references.size());
                 for (const auto& ref : item.car->references)
                     out.info("    ref +{:d} {}:{}", ref.offset, std::string(ref.name).c_str(), std::string(ref.tag).c_str());
+                for (std::size_t i = 0; i < item.car->moves.size(); ++i)
+                    if (const auto& m = item.car->moves[i])
+                        out.info("    moving part {:d}: motion {:d} damping {:g} centring {:g} fastest {} pull {:g} spring {:g} friction {:g} furthest {}", i, std::to_underlying(m->motion), m->damping.value, m->centring.value, m->fastest ? std::format("{:g}", m->fastest->value) : "none", m->pull.value, m->spring, m->friction, m->furthest ? std::format("{:g}", m->furthest->value) : "none");
             }
         }
         if (opt.rit)

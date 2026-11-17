@@ -6,6 +6,7 @@
 
 #include "ovl/item_record.hpp"
 #include "ovl/overlay.hpp"
+#include "units/units.hpp"
 
 #include <array>
 #include <cstddef>
@@ -27,6 +28,29 @@ namespace rct3::ovl
         float pull = 0;     ///< Of a turn's pull, the share that swings it up the wall
     };
 
+    /// How a part of a car moves on the car: the word at byte 24 of its block (see RideCar::moves).
+    enum class PartMotion : std::uint32_t
+    {
+        Swings = 1,         ///< Swings both forward and back and side to side
+        SwingsForward = 2,  ///< Forward and back only, about the car's right
+        SwingsSideways = 3, ///< Side to side only, about the car's forward
+        Spins = 4,          ///< Round the car's up
+    };
+
+    /// How a part of a car swings or spins on it, from its block of the record.
+    struct PartMoves
+    {
+        PartMotion motion = PartMotion::Swings;
+        units::PerSecond damping { };               ///< How fast its motion dies down
+        units::PerSecond centring { };              ///< How fast it is drawn back to rest
+        std::optional<units::TurnRate> fastest { }; ///< The fastest it turns, where it is held to one
+        units::Share pull { };                      ///< Of the car's speeding up and slowing, the share it feels
+        float spring = 0;                           ///< How hard it is pulled back to rest, the further the harder
+        float friction = 0;                         ///< Of the weight on its bearing, the share holding it back as it turns
+        /// The furthest it turns from rest, where it is held to that; 0 keeps it at rest
+        std::optional<units::Radians> furthest { };
+    };
+
     struct RideCar
     {
         std::string_view name;         ///< Name string stored in the item. Empty in some version 4 and 5 files.
@@ -41,6 +65,13 @@ namespace rct3::ovl
         /// "svd" item of the part of the car that spins or swings on it, such as a spinning tub or a hanging
         /// seat; empty when the car is one piece. The two line up where each has a bone named "pivot".
         std::string_view part;
+        /// How its moving parts move, nothing where it has none: the first from the block at byte 20 (`part` the
+        /// item that draws it), the second from the same fields in the block at byte 216 of version 4 and 5 records.
+        /// Each block holds the part's "svd" reference, its motion, its weight (`mass` for the first), damping and
+        /// centring a second, its fastest turn in radians a second (-1 none), pull share, spring, friction, and its
+        /// furthest turn in radians (-1 none). A car with no moving part holds 0 for its motion. Some cars name a
+        /// motion and no item: the whole car moves.
+        std::array<std::optional<PartMoves>, 2> moves { };
         /// "svd" items of the wheels: front right, front left, rear right, rear left; empty where it has none.
         std::array<std::string_view, 4> wheels;
         /// By wheel, whether its piece is drawn turned half round about the car's up, as where one side's wheel

@@ -1270,8 +1270,8 @@ int main(int argc, char** argv)
                         auto sounds = park->desktop->take_sounds();
                         if (rct3::scene::park::take_park_alert(*park))
                             sounds.push_back(rct3::ui::InterfaceSound::Message);
-                        // shortcut: heard by the camera's height alone, there being no view from a ride yet; silence it there once there is.
-                        const float music_level = rct3::audio::park_music_level(rct3::park::eye(park->camera).y - park->camera.target.y);
+                        const bool riding_along = park->riding || park->riding_flat || park->riding_person;
+                        const float music_level = rct3::audio::park_music_level(rct3::park::eye(park->camera).y - park->camera.target.y, riding_along);
                         if (audio && menu_audio)
                             prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true, music_level); });
                         if (audio && park_sounds)

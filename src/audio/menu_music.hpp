@@ -46,8 +46,9 @@ namespace rct3::audio
     inline constexpr units::Distance kParkMusicFull { 240 }; ///< And above: at full
     inline constexpr float kMusicFadeSeconds = 2;            ///< To fade out, or in, all the way
 
-    /// How much of the park's music is heard, 0..1, with the eye `height` above the point looked at.
-    [[nodiscard]] float park_music_level(float height);
+    /// How much of the park's music is heard, 0..1, with the eye `height` above the point looked at;
+    /// none while the view is `riding` along a ride.
+    [[nodiscard]] float park_music_level(float height, bool riding = false);
 
     struct MenuMusicPick
     {

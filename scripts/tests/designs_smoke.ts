@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Every saved design the install ships, each on a fresh blank landscape: picked from its kind's designs window,
-// laid in the middle of the map (with pool water across its pool sides first, for a slide that needs it), tested
-// with a time limit, and written as one row of designs.md and designs.json in the report: laid or refused and why,
+// laid in the middle of the map (with pool water across its pool sides first, for a slide that needs it; with a
+// paved square and a changing room beside its station after, for a lazy river, which opens only joined to a pool),
+// tested with a time limit, and written as one row of designs.md and designs.json in the report: laid or refused and why,
 // closed round or not, the test finished, crashed or stuck and where, its ratings and the seconds it took. A kind
 // never tested is opened instead ("opens untested"), and one rated without a lap passes once the park runs it
 // ("runs, no lap"). A screenshot only of a design that fails.
@@ -129,6 +130,27 @@ async function aim(goal: { col: number; row: number }): Promise<boolean> {
     return false;
 }
 
+/** Opens the pool panel with `tool` of the pool list in hand. */
+async function poolTool(tool: string): Promise<void> {
+    const ridesTab = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
+    if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(ridesTab);
+    await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
+    await ui.click("tools/Rides/Obj_Pools");
+    await until(() => ui.find("pool_panel/body/editor/Pool_PlaceWater") !== undefined, 120, "the pool panel");
+    await frames(2); // The panel opens with the water in hand
+    expect(build.pick(kPool, tool), `${tool} in the pool list`);
+    await frames(2);
+}
+
+/** Lays the pool tool in hand on tile `t`. */
+async function layPool(t: { col: number; row: number }): Promise<void> {
+    camera.look({ col: t.col, row: t.row }, { col: t.col, row: t.row + 30, up: 45 });
+    await frames(4);
+    const p = must(map.screen(t.col, t.row), `tile ${t.col}, ${t.row} in sight`);
+    await pointer.drag([p.x, p.y], [p.x, p.y], 4);
+    await frames(3);
+}
+
 /** With a slide in hand at `at` where only its pool sides keep it from standing: water laid across them, then the
  * design picked and aimed again. Why it still may not stand, or "". */
 async function byPool(d: (typeof all)[number], at: { col: number; row: number }): Promise<string> {
@@ -138,19 +160,8 @@ async function byPool(d: (typeof all)[number], at: { col: number; row: number })
     }));
     await ui.click("design_placing/close");
     await frames(5);
-    const ridesTab = `tools/Rides/${must(ui.children("tools/Rides"), "tools/Rides shown")[0]}`;
-    if (!ui.find("tools/Rides/Obj_Pools")) await ui.click(ridesTab);
-    await until(() => ui.find("tools/Rides/Obj_Pools") !== undefined, 120, "the rides menu");
-    await ui.click("tools/Rides/Obj_Pools");
-    await until(() => ui.find("pool_panel/body/editor/Pool_PlaceWater") !== undefined, 120, "the pool panel");
-    expect(build.pick(kPool, "Pool_DepthNormal"), "the water in the pool list");
-    for (const t of across) {
-        camera.look({ col: t.col, row: t.row }, { col: t.col, row: t.row + 30, up: 45 });
-        await frames(4);
-        const p = must(map.screen(t.col, t.row), `tile ${t.col}, ${t.row} in sight`);
-        await pointer.drag([p.x, p.y], [p.x, p.y], 4);
-        await frames(3);
-    }
+    await poolTool("Pool_DepthNormal");
+    for (const t of across) await layPool(t);
     build.stop();
     await frames(5);
     const again = await pick(d);
@@ -214,6 +225,41 @@ async function run(d: (typeof all)[number], row: Row): Promise<void> {
     let refused = rides.setState(ride, "testing");
     const untested = refused === "CannotTestTrackedRide";
     if (untested) refused = rides.setState(ride, "open");
+    // A pool ride with no platform (a lazy river) opens once a station joins a pool complex: beside its first piece,
+    // a station's, a paved square raised to the track, two units over the ground, then one on the ground and a
+    // changing room, which makes the three a complex. Tried on each side in turn, the script not knowing which way
+    // the station runs.
+    if (refused?.startsWith("CantOpenPoolRide")) {
+        await poolTool("Pool_PlaceTiles");
+        for (const [dc, dr] of kSteps) {
+            const out = (n: number) => ({ col: middle.col + dc * n, row: middle.row + dr * n });
+            await layPool(out(2));
+            const ground = map.pools().squares.find((q) => q.col === out(2).col && q.row === out(2).row)?.surface;
+            if (ground === undefined) continue;
+            await ui.click("pool_panel/body/editor/Pool_Height");
+            await ui.click("pool_panel/body/editor/height/field");
+            keys.press("Ctrl+A");
+            keys.type(`${ground + 2}`);
+            keys.press("Enter");
+            await frames(2);
+            await layPool(out(1));
+            await ui.click("pool_panel/body/editor/Pool_Height");
+            await ui.click("pool_panel/Pool_ChangingRoomPanel");
+            await frames(2);
+            await ui.click(`pool_panel/body/${must(ui.children("pool_panel/body"), "pool_panel/body shown")[0]}`);
+            const p = must(map.screen(out(3).col + 0.5, out(3).row + 0.5), "the changing room's tile in sight");
+            await pointer.click(p.x, p.y);
+            await frames(5);
+            refused = rides.setState(ride, "open");
+            if (refused == null) break;
+            await ui.click("pool_panel/Pool_PoolPanel");
+            await frames(2);
+            await ui.click("pool_panel/body/editor/Pool_PlaceTiles");
+            await frames(2);
+        }
+        build.stop();
+        await frames(5);
+    }
     row.closed = refused ?? "yes";
     if (refused != null) {
         row.test = "not run";

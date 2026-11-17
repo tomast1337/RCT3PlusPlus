@@ -119,7 +119,7 @@ TEST_CASE("a car's part held level stays level and on its pivot as its car pitch
     {
         CAPTURE(pitch);
         const glm::mat4 place = glm::rotate(glm::rotate(glm::translate(glm::mat4(1.0f), { 5, 2, 3 }), kHeading, { 0, 1, 0 }), pitch, { 1, 0, 0 });
-        const glm::mat4 drawn = place * level_move(part, place);
+        const glm::mat4 drawn = place * part_move(part, place);
         const glm::vec3 up = glm::mat3(drawn) * glm::vec3(0, 1, 0);
         CHECK(up.x == doctest::Approx(0).epsilon(1e-5));
         CHECK(up.y == doctest::Approx(1));
@@ -137,9 +137,9 @@ TEST_CASE("a car's part held level turns only about its own line: rolled, the ca
 {
     const object::CarPart part { .moves = { }, .pivot = glm::mat4(1.0f), .axis = { 1, 0, 0 }, .up = { 0, 1, 0 } };
     const glm::mat4 rolled = glm::rotate(glm::mat4(1.0f), 0.4f, { 0, 0, 1 });
-    CHECK(level_move(part, rolled) == glm::mat4(1.0f));
+    CHECK(part_move(part, rolled) == glm::mat4(1.0f));
     // Out of sight, a car stands nowhere, and its part stays at rest.
-    CHECK(level_move(part, glm::mat4(0.0f)) == glm::mat4(1.0f));
+    CHECK(part_move(part, glm::mat4(0.0f)) == glm::mat4(1.0f));
 }
 
 TEST_CASE("a part held level on a car riding on its side stays upright up, over the top and down, its pivot a quarter turned")
@@ -154,7 +154,7 @@ TEST_CASE("a part held level on a car riding on its side stays upright up, over 
     {
         CAPTURE(climb);
         const glm::mat4 place = glm::rotate(glm::mat4(1.0f), -climb, { 1, 0, 0 }) * on_side;
-        const glm::mat3 drawn(place * level_move(part, place) * pivot);
+        const glm::mat3 drawn(place * part_move(part, place) * pivot);
         const glm::vec3 up = drawn * part.up;
         CHECK(up.x == doctest::Approx(0).epsilon(1e-5));
         CHECK(up.y == doctest::Approx(1));
@@ -165,4 +165,25 @@ TEST_CASE("a part held level on a car riding on its side stays upright up, over 
         CHECK(ahead.y == doctest::Approx(0).epsilon(1e-5));
         CHECK(ahead.z == doctest::Approx(-1));
     }
+}
+
+TEST_CASE("a car's swinging part is drawn swung from level by its angle, about its line, on its pivot")
+{
+    // Hung from a pivot a metre over the car's origin, swinging about the car's forward line, the car banked.
+    const object::CarPart part { .moves = { }, .pivot = glm::translate(glm::mat4(1.0f), { 0, 1, 0 }), .axis = { 0, 0, 1 }, .up = { 0, 1, 0 } };
+    const glm::mat4 banked = glm::rotate(glm::translate(glm::mat4(1.0f), { 5, 2, 3 }), 0.3f, { 0, 0, 1 });
+    for (const float swung : { -0.6f, 0.0f, 0.4f })
+    {
+        CAPTURE(swung);
+        const glm::mat4 drawn = banked * part_move(part, banked, units::Radians { swung });
+        const glm::vec3 up = glm::mat3(drawn) * glm::vec3(0, 1, 0);
+        CHECK(up.x == doctest::Approx(-std::sin(swung)).epsilon(1e-5));
+        CHECK(up.y == doctest::Approx(std::cos(swung)));
+        const glm::vec3 pivot = drawn * glm::vec4(0, 1, 0, 1);
+        CHECK(glm::distance(pivot, glm::vec3(banked * glm::vec4(0, 1, 0, 1))) == doctest::Approx(0).epsilon(1e-5));
+    }
+    // Sprung to its car, it rests banked with the car and swings from there.
+    object::CarPart sprung = part;
+    sprung.moves.spring = 100;
+    CHECK(part_move(sprung, banked) == glm::mat4(1.0f));
 }

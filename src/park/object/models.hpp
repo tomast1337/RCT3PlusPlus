@@ -255,8 +255,8 @@ namespace rct3::park::object
         /// Of a car whose riders sit on an arm: the arm's joints at rest, model space, from the base out. The
         /// first turns about its own up, the others about their own sideways.
         std::vector<glm::mat4> arm_joints;
-        /// Of a car whose moving part is held level, its moves letting it turn about one line but no way from rest:
-        /// that part, drawn apart.
+        /// Of a car whose moving part swings about one line, or is held level about it (its furthest turn 0): that
+        /// part, drawn apart.
         std::optional<CarPart> car_part;
         /// Of a car with bones named "carfront" and "carrear" at its ends: how it sits on its track. Its wheels
         /// are its wheel bones, or both midway between its ends, on its own centre line, where it has none.

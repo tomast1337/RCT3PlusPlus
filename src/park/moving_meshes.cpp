@@ -56,17 +56,22 @@ namespace rct3::park
         return moves;
     }
 
-    glm::mat4 level_move(const object::CarPart& part, const glm::mat4& place)
+    glm::mat4 part_move(const object::CarPart& part, const glm::mat4& place, units::Radians swung)
     {
         const glm::mat3 turned(place * part.pivot);
         if (glm::determinant(turned) == 0)
             return glm::mat4(1.0f); // A car out of sight stands nowhere
         // The world's up and the part's in the pivot's space, each seen along the line it turns about; turned
-        // from the one to the other. Seen end on, either is nothing, and any turn is as level as none.
-        const glm::vec3 world_up = glm::inverse(turned) * glm::vec3(0, 1, 0);
-        const glm::vec3 to = world_up - part.axis * glm::dot(world_up, part.axis);
-        const glm::vec3 from = part.up - part.axis * glm::dot(part.up, part.axis);
-        const float turn = std::atan2(glm::dot(part.axis, glm::cross(from, to)), glm::dot(from, to));
+        // from the one to the other. Seen end on, either is nothing, and any turn is as level as none. A part sprung
+        // to its car rests as it sits on it.
+        float turn = swung.value;
+        if (part.moves.spring <= 0)
+        {
+            const glm::vec3 world_up = glm::inverse(turned) * glm::vec3(0, 1, 0);
+            const glm::vec3 to = world_up - part.axis * glm::dot(world_up, part.axis);
+            const glm::vec3 from = part.up - part.axis * glm::dot(part.up, part.axis);
+            turn += std::atan2(glm::dot(part.axis, glm::cross(from, to)), glm::dot(from, to));
+        }
         return part.pivot * glm::rotate(glm::mat4(1.0f), turn, part.axis) * glm::inverse(part.pivot);
     }
 

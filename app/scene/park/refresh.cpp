@@ -899,7 +899,7 @@ namespace rct3::scene::park
                 (*scene.seat)[3].y = std::max(eye.y, eye.y + kGroundLook / 2 - *under + kOverGround);
         }
         // Arms take the angles their track holds where the car is, the joints at rest where it holds none; parts held
-        // level turn to the level.
+        // level turn to the level, and swinging parts swing from there.
         std::size_t joints = 0;
         for (const ParkScene::ArmCar& arm : scene.arm_cars)
             joints += arm.joints.size();
@@ -941,7 +941,23 @@ namespace rct3::scene::park
         {
             if (arm.part)
             {
-                arm.seats = rct3::park::level_move(*arm.part, scene.car_places[arm.car]);
+                // A swinging part swings as the simulation has its car's, between its last step's ends: the car the
+                // same way behind its train's front as where the park kept it.
+                const rct3::park::ride::CarSpot spot = scene.car_spots[arm.car];
+                const entt::entity ride = scene.simulate && spot.ride.value < scene.ride_entities.size() ? scene.ride_entities[spot.ride.value] : entt::null;
+                const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
+                units::Radians swung { };
+                if (fleet && !spot.lift && spot.train < fleet->trains.size() && !fleet->trains[spot.train].swings.empty())
+                {
+                    const simulation::Coaster& train = fleet->trains[spot.train];
+                    float behind = scene.rides.rides[spot.ride.value].trains[spot.train].distance.value - (spot.front_wheels + spot.rear_wheels) / 2;
+                    if (behind < 0)
+                        behind += train.length();
+                    const std::size_t k = std::min(static_cast<std::size_t>(std::max(behind, 0.0f) / train.train_length * static_cast<float>(train.swings.size())), train.swings.size() - 1);
+                    const simulation::Swing& swing = train.swings[k];
+                    swung = { std::lerp(swing.was.value, swing.angle.value, std::clamp(scene.sim_time / simulation::kTickSeconds, 0.0f, 1.0f)) };
+                }
+                arm.seats = rct3::park::part_move(*arm.part, scene.car_places[arm.car], swung);
                 *joint_place++ = scene.car_places[arm.car] * arm.seats;
                 continue;
             }

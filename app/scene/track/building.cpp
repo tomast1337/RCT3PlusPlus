@@ -1357,7 +1357,7 @@ namespace rct3::scene::track
                 }
                 places.push_back(place);
             }
-            // shortcut: the joints of cars on arms and cars' parts held level ride at rest with their car, upgrade if a
+            // shortcut: the joints of cars on arms and cars' moving parts ride at rest with their car, upgrade if a
             // test should move them as the park does.
             for (const std::size_t car : t.joints)
             {

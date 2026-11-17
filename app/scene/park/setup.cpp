@@ -832,6 +832,26 @@ namespace rct3::scene::park
     void fit_car(simulation::Coaster& train, const rct3::park::object::ObjectModel& model, const rct3::park::track::TrackRules* rules)
     {
         train.trough = model.trough ? std::optional(simulation::Trough { .damping = { model.trough->damping }, .centring = { model.trough->centring }, .friction = model.trough->friction, .pull = model.trough->pull, .length = model.swing_arm > 0 ? units::Distance { model.swing_arm } : simulation::Trough { }.length, .pivot = { model.swing_pivot } }) : std::nullopt;
+        // A part held level stays level as it is drawn; one that swings swings as its car file has it, on an arm as
+        // long as its shape's pivot is high, or a metre (chosen by eye) where its shape gives none.
+        train.swinging.reset();
+        train.swings.clear();
+        if (const auto& part = model.car_part; part && !(part->moves.furthest && part->moves.furthest->value == 0))
+        {
+            const ovl::PartMoves& m = part->moves;
+            train.swinging = simulation::SwingingPart {
+                .line = glm::normalize(glm::mat3(part->pivot) * part->axis),
+                .up = glm::normalize(glm::mat3(part->pivot) * part->up),
+                .arm = { model.swing_arm > 0 ? model.swing_arm : 1.0f },
+                .damping = m.damping,
+                .centring = m.centring,
+                .pull = m.pull,
+                .spring = model.mass > 0 ? m.spring / model.mass : 0.0f,
+                .friction = m.friction,
+                .fastest = m.fastest,
+                .furthest = m.furthest,
+            };
+        }
         // shortcut: other trains keep the losses fitted to saved parks' test times, upgrade when their laps are
         // checked against their files' losses.
         // shortcut: the air is taken on one empty car, as every pool slide's train is; upgrade with riders' weight.

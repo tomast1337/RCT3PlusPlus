@@ -636,9 +636,9 @@ namespace rct3::scene::park
         std::vector<std::string> hidden_for_ride;                                    ///< The windows put away while riding, to show again after
         bool paused_for_ride = false;                                                ///< The park was paused, so riding set it going
         rct3::park::MovingMeshes car_meshes;                                         ///< At car_mesh_places
-        /// A car whose riders sit on an arm or in a part held level on it: its place in `cars`, its arm's joints at
-        /// rest or the part's pivot, the part, and how the last joint or the part, the riders' seat, is moved now in
-        /// the car's own space.
+        /// A car whose riders sit on an arm or in a part swinging or held level on it: its place in `cars`, its arm's
+        /// joints at rest or the part's pivot, the part, and how the last joint or the part, the riders' seat, is
+        /// moved now in the car's own space.
         struct ArmCar
         {
             std::size_t car = 0;

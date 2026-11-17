@@ -95,6 +95,9 @@ namespace rct3::park::track
     /// Whether `rules` let the ride build `piece`.
     [[nodiscard]] bool lists_piece(const TrackRules& rules, std::string_view piece);
 
+    /// `pieces` shaped again, as shape_pieces does, for a ride of `rules`.
+    void shape_for_ride(std::vector<PieceShape>& pieces, const TrackRules& rules);
+
     /// The colours a new ride's track starts in: the default colours of the first piece its kind lists, or of the
     /// first of `pieces` when it lists none.
     [[nodiscard]] save::model::RideColours starting_colours(const TrackRules& rules, std::span<const PieceShape> pieces);

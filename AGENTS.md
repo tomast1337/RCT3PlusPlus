@@ -156,3 +156,19 @@ behaviour identical: `sim-run` output must not change.
   it (`std::size_t next_file = 0;`, not `std::size_t next = 0; ///< The next file to read`), or split a condition
   into a named local, then delete the comment. A comment stays when it says why: a reason, a source, a surprise,
   a rule of the game, a range or edge case, or a unit no type carries yet.
+
+## Number types
+
+The width of every number is written in its type, the same on every compiler and platform.
+
+- Whole numbers use the fixed-width types from `<cstdint>`: `std::int32_t`, `std::uint8_t`, `std::int64_t` and
+  so on, at the width the value needs. Not bare `int`, `unsigned`, `short` or `long`: their width depends on
+  the compiler (`long` is 64-bit on Linux and macOS, 32-bit on Windows).
+- Counts, sizes and indexes into containers are `std::size_t`.
+- `float` is 32-bit and `double` 64-bit IEEE 754; `units/units.hpp` checks this at compile time. Do not use
+  `std::float32_t` / `std::float64_t` until Clang and MSVC have them.
+- A measured quantity (distance, speed, angle, time, money) uses its unit type from `units/units.hpp`.
+- A field read from or written to a file uses the width the format has (`std::uint16_t` for a 2-byte field).
+- Exceptions: `int main(int argc, char** argv)`; `char` for text; `unsigned char` to pass a `char` to the
+  `<cctype>` functions (`std::tolower`, `std::isdigit`, ...); and a type a C or library API fixes (a callback
+  signature, an `int*` out-parameter, a printf-style argument). Mark such a line with a `// c-api` comment.

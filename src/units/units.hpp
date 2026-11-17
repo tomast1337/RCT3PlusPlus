@@ -7,6 +7,12 @@
 
 #include <compare>
 #include <cstdint>
+#include <limits>
+
+// The code reads `float` as a 32-bit IEEE 754 number and `double` as a 64-bit one; a platform where that does
+// not hold fails to build here.
+static_assert(std::numeric_limits<float>::is_iec559 && sizeof(float) == 4, "float must be 32-bit IEEE 754");
+static_assert(std::numeric_limits<double>::is_iec559 && sizeof(double) == 8, "double must be 64-bit IEEE 754");
 
 namespace rct3::units
 {

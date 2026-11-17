@@ -11,7 +11,7 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kSplineTag = "spl";
-        constexpr std::size_t kHeaderSize = 32; // count, nodes, flag, length, 1/length, lengths, trailer, height
+        constexpr std::size_t kHeaderSize = 32; // count, nodes, flag, length, 1/length, lengths, parameters, height
         constexpr std::size_t kNodeSize = 36;   // nine floats
         constexpr std::uint32_t kMaxCount = 1u << 20;
 
@@ -70,6 +70,11 @@ namespace rct3::ovl
                 spline.segment_lengths.reserve(segments);
                 for (std::uint32_t i = 0; i < segments; ++i)
                     spline.segment_lengths.push_back(f32_at(*lengths, i * 4));
+                if (const auto marks = space.bytes_at(u32_at(*header, 24), std::size_t { segments } * kLengthMarks))
+                {
+                    spline.segment_parameters.resize(segments);
+                    std::memcpy(spline.segment_parameters.data(), marks->data(), marks->size());
+                }
             }
             return spline;
         }

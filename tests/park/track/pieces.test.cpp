@@ -442,6 +442,48 @@ TEST_CASE("a piece's middle line follows its rails even when they are split into
     CHECK(line->path[line->path.size() / 2].x == doctest::Approx(0));
 }
 
+TEST_CASE("a piece's middle line pairs its rails by length, not by how fast each runs along its curve")
+{
+    // Straight rails 4 long along -X, a metre apart. The right one moves evenly along its curve; the left one
+    // starts slowly and finishes fast, so at the same share of their curves the two are far from abreast.
+    const auto rail = [](float z, float out, float in) {
+        ovl::Spline s;
+        s.length = 4;
+        s.segment_lengths = { 4 };
+        s.nodes = { { .position = { 2, 0, z }, .tangent_out = { -out, 0, 0 } }, { .position = { -2, 0, z }, .tangent_in = { in, 0, 0 } } };
+        return s;
+    };
+    ovl::Spline left = rail(-0.5f, 0.3f, 3);
+    float within = 0.001f;
+    SUBCASE("measured along the rails")
+    {
+    }
+    SUBCASE("read from the curve parameter each rail stores at marks along its length")
+    {
+        // Rounded to 1/255 of the parameter as stored, which moves a point up to a couple of centimetres.
+        within = 0.02f;
+        auto& marks = left.segment_parameters.emplace_back();
+        for (std::size_t m = 0; m < marks.size(); ++m)
+        {
+            const float x = 2 - 4 * static_cast<float>(m + 1) / static_cast<float>(marks.size() + 1);
+            float low = 0;
+            float high = 1;
+            for (int i = 0; i < 30; ++i)
+                (ovl::spline_point(left, 0, (low + high) / 2)[0] > x ? low : high) = (low + high) / 2;
+            marks[m] = static_cast<std::uint8_t>(std::lround(low * 255));
+        }
+    }
+    const auto line = middle_line(left, rail(0.5f, 4.0f / 3, 4.0f / 3));
+    REQUIRE(line);
+    CHECK(line->length == doctest::Approx(4));
+    REQUIRE(line->path.size() > 2);
+    for (std::size_t k = 0; k < line->path.size(); ++k)
+    {
+        const float share = static_cast<float>(k) / static_cast<float>(line->path.size() - 1);
+        CHECK(glm::distance(line->path[k], glm::vec3 { 2 - 4 * share, 0, 0 }) < within);
+    }
+}
+
 namespace
 {
     /// A lift tower of invented shape: a foot two tiles long whose train's track comes in level two above its base

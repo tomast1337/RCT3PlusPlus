@@ -134,7 +134,8 @@ namespace rct3::park::track
         glm::vec3 end_direction { -1, 0, 0 };
         glm::vec3 start_side { 0, 0, 1 };
         glm::vec3 end_side { 0, 0, 1 };
-        /// Points along the middle line from start to end, a few to each part of the rails' splines.
+        /// Points along the middle line from start to end, a few to each part of the rails' splines: each halfway
+        /// between the rails at the same share of each rail's length, the shares evenly spaced.
         std::vector<glm::vec3> path { };
         /// Which way is up for the track at each point of `path`: square to the rails, so it leans with
         /// the bank. A unit vector.

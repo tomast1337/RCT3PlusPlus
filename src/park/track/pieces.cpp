@@ -117,20 +117,55 @@ namespace rct3::park::track
         line.start_side = vec(r.front().position) - vec(l.front().position);
         line.end_side = vec(r.back().position) - vec(l.back().position);
         std::vector<glm::vec3> sides; // From the left rail to the right, at each point of the path
-        // Each rail is walked by the same share of its parts, so rails split into a different number of parts
-        // (as a funnel's are, one part apart) still pair up point by point.
-        const auto rail_at = [](const ovl::Spline& rail, float share) {
-            const float along = share * static_cast<float>(rail.nodes.size() - 1);
-            const std::size_t part = std::min(static_cast<std::size_t>(along), rail.nodes.size() - 2);
-            return vec(ovl::spline_point(rail, part, along - static_cast<float>(part)));
+        // Each rail is walked by the same share of its own length, so the points paired are abreast even where one
+        // rail runs faster along its curve than the other (round a roll or a tilt), or the rails are split into a
+        // different number of parts (as a funnel's are, one part apart). A rail that stores its curve parameter
+        // at marks along each part is read between those marks, as the park places cars; any other rail's length
+        // is measured over many short chords.
+        struct Walked
+        {
+            std::vector<glm::vec3> points { };
+            std::vector<float> lengths { }; ///< From the rail's start to each point
         };
+        const auto marked = [](const ovl::Spline& rail) { return rail.length > 0 && rail.segment_parameters.size() == rail.nodes.size() - 1 && rail.segment_lengths.size() == rail.nodes.size() - 1; };
+        const auto walk = [&](const ovl::Spline& rail) {
+            constexpr std::size_t kFine = 64; ///< Chords per part, so a chord's sag is a fraction of a millimetre
+            Walked w { .points = { vec(rail.nodes.front().position) }, .lengths = { 0 } };
+            for (std::size_t part = 0; !marked(rail) && part + 1 < rail.nodes.size(); ++part)
+                for (std::size_t i = 1; i <= kFine; ++i)
+                {
+                    w.points.push_back(vec(ovl::spline_point(rail, part, static_cast<float>(i) / kFine)));
+                    w.lengths.push_back(w.lengths.back() + glm::distance(w.points[w.points.size() - 2], w.points.back()));
+                }
+            return w;
+        };
+        const auto rail_at = [&](const ovl::Spline& rail, const Walked& walked, float share) {
+            if (marked(rail))
+            {
+                float along = share * rail.length;
+                std::size_t part = 0;
+                while (part + 1 < rail.segment_lengths.size() && along > rail.segment_lengths[part])
+                    along -= rail.segment_lengths[part++];
+                constexpr auto kSpans = static_cast<float>(ovl::kLengthMarks + 1); // Between the part's ends and its marks
+                const float mark = std::clamp(rail.segment_lengths[part] > 0 ? along / rail.segment_lengths[part] : 0.0f, 0.0f, 1.0f) * kSpans;
+                const auto parameter = [&](std::size_t m) { return m == 0 ? 0.0f : m > ovl::kLengthMarks ? 1.0f : static_cast<float>(rail.segment_parameters[part][m - 1]) / 255.0f; };
+                const std::size_t below = std::min(static_cast<std::size_t>(mark), ovl::kLengthMarks);
+                return vec(ovl::spline_point(rail, part, glm::mix(parameter(below), parameter(below + 1), mark - static_cast<float>(below))));
+            }
+            const float along = share * walked.lengths.back();
+            const std::size_t i = std::clamp<std::size_t>(static_cast<std::size_t>(std::ranges::upper_bound(walked.lengths, along) - walked.lengths.begin()), 1, walked.lengths.size() - 1);
+            const float chord = walked.lengths[i] - walked.lengths[i - 1];
+            return glm::mix(walked.points[i - 1], walked.points[i], chord > 0 ? (along - walked.lengths[i - 1]) / chord : 0.0f);
+        };
+        const Walked walked_left = walk(left);
+        const Walked walked_right = walk(right);
         constexpr std::size_t kPerPart = 8;
         const std::size_t steps = (std::max(l.size(), r.size()) - 1) * kPerPart;
         for (std::size_t k = 0; k < steps; ++k)
         {
             const float share = static_cast<float>(k) / static_cast<float>(steps);
-            const glm::vec3 a = rail_at(left, share);
-            const glm::vec3 b = rail_at(right, share);
+            const glm::vec3 a = rail_at(left, walked_left, share);
+            const glm::vec3 b = rail_at(right, walked_right, share);
             line.path.push_back((a + b) / 2.0f);
             sides.push_back(b - a);
         }

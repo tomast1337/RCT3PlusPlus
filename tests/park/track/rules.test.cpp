@@ -232,7 +232,7 @@ TEST_CASE("a ride whose cable lift is missing does not open; one whose station i
     r.mode = save::model::OperatingMode::ReverseCableLiftHill;
     r.trains[0].length = { 5 };
     CHECK(open_refusal(r, TrackRules { }, kOpen, false, course) == "CannotOpenOrTestNoReverseCableLiftHill");
-    course.reverse_lift = true;
+    course.reverse_lift = 0.0f;
     CHECK_FALSE(open_refusal(r, TrackRules { }, kOpen, false, course));
 }
 

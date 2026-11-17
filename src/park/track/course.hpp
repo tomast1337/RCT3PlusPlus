@@ -56,7 +56,7 @@ namespace rct3::park::track
         std::vector<bool> covered;                         ///< By piece, as piece_starts: in a tube or tunnel
         std::vector<bool> steady;                          ///< By piece: a slide's car's swing is not pushed by its turns
         bool closed = false;                               ///< The end joins the start, so cars go round
-        bool reverse_lift = false;                         ///< Has the hill a reverse cable lift pulls the train up
+        std::optional<float> reverse_lift { };             ///< Where the hill a reverse cable lift pulls the train up backwards ends; none without one
         bool splash_end = false;                           ///< Its last piece is a pool slide's open end
         std::size_t first_piece = 0;                       ///< Of the track's pieces, the one the course starts on
         std::vector<glm::vec3> other_stations { };         ///< Where the track's other stretches with a station start, in their order

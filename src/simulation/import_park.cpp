@@ -962,7 +962,15 @@ namespace rct3::simulation
                 case ContinuousCircuit:
                 case PoweredLaunch:
                 case Race:
+                    break;
                 case ReverseCableLiftHill:
+                    // Eased off backwards, its cable pulls it up the hill behind the station; let go at the top, it
+                    // runs forward through the station to the far end and back, as a train launched backwards does.
+                    if (course.reverse_lift)
+                    {
+                        c.shuttle = Shuttle::Back;
+                        c.passes = 2 * circuits;
+                    }
                     break;
                 case ReverseInclinedLaunch:
                     c.shuttle = Shuttle::Back;
@@ -982,7 +990,7 @@ namespace rct3::simulation
                 default:
                     return std::nullopt;
             }
-            if (c.shuttle != Shuttle::None && !launch_of(ride))
+            if (c.shuttle != Shuttle::None && ride.mode != ReverseCableLiftHill && !launch_of(ride))
                 return std::nullopt;
         }
         c.distance = course.distance;
@@ -1046,6 +1054,11 @@ namespace rct3::simulation
         const float mass = !ride.trains.empty() && ride.trains[0].mass > 0 ? ride.trains[0].mass : kCarMass * static_cast<float>(c.cars);
         c.brake_pull = kBrakeForce * static_cast<float>(c.cars) / mass;
         c.boost_pull = kBoostForce * static_cast<float>(c.cars) / mass;
+        // The cable up a reverse lift hill pulls as a chain does, from the station till the train's back reaches the
+        // hill's top: a chain pulls a train till its last car is off, and here that is its front.
+        if (c.shuttle == Shuttle::Back && ride.mode == save::model::OperatingMode::ReverseCableLiftHill)
+            for (auto i = static_cast<std::size_t>(std::ranges::lower_bound(c.distance, *course.reverse_lift + c.train_length) - c.distance.begin()); i + 1 < c.kinds.size() && c.kinds[i] != Stretch::Station; ++i)
+                c.kinds[i] = Stretch::Chain;
         return c;
     }
 

@@ -67,6 +67,25 @@ namespace rct3::ovl
                 car.axles = { record->ref(0xC4, "svd"), record->ref(0xC8, "svd") };
                 for (std::size_t i = 0; i < car.rowing.size(); ++i)
                     car.rowing[i] = core::none_if_negative(record->i32(0x7C + 4 * i));
+                // Each moving part's block: the second's fields lie at the first's plus this.
+                constexpr std::array<std::size_t, 2> kPartBlocks { 0, 0xC4 };
+                for (std::size_t i = 0; i < car.moves.size(); ++i)
+                {
+                    const std::size_t at = kPartBlocks[i];
+                    const std::uint32_t motion = record->u32(at + 0x18);
+                    if (motion < std::to_underlying(PartMotion::Swings) || motion > std::to_underlying(PartMotion::Spins))
+                        continue;
+                    car.moves[i] = PartMoves {
+                        .motion = static_cast<PartMotion>(motion),
+                        .damping = { record->real(at + 0x20) },
+                        .centring = { record->real(at + 0x24) },
+                        .fastest = core::none_if_negative(record->real(at + 0x28)).transform([](float v) { return units::TurnRate { v }; }),
+                        .pull = { record->real(at + 0x2C) },
+                        .spring = record->real(at + 0x30),
+                        .friction = record->real(at + 0x34),
+                        .furthest = core::none_if_negative(record->real(at + 0x38)).transform([](float v) { return units::Radians { v }; }),
+                    };
+                }
                 car.references = record->references(static_cast<std::uint32_t>(size));
                 car.record = record->bytes();
                 if ((record->u32(0x110) & 0x200) != 0)

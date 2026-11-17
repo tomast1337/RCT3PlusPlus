@@ -116,7 +116,8 @@ namespace rct3::scene::park
             if (o == placed.end())
                 return tiles;
             const auto model = scene.models.find(rct3::park::object::model_ref(*o->second));
-            if (model == scene.models.end() || (piece && !model->second.paved_under))
+            // A ride standing on water brings its own deck, and paving would close over the water in its pool.
+            if (model == scene.models.end() || (piece && !model->second.paved_under) || model->second.water_only)
                 return tiles;
             const rct3::park::object::ObjectModel& item = model->second;
             save::model::PlacedObject at;

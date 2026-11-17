@@ -22,6 +22,7 @@
 //   --script FILE     run the JavaScript FILE, which plays the game through its pointer (scene/script_host.hpp);
 //                     the game exits when it ends, with 1 when it failed
 //   --script-report DIR  put the script's screenshots and log in DIR for review
+//   -- ARGS...        the rest are the script's own arguments, as its args() gives them
 //   --seed N          the seed of every park's random numbers, decimal or 0x hex, so a run repeats; by
 //                     default each park gets a fresh one (random/entropy.hpp), shown in the log
 //   --frames N        exit after N frames (smoke test)
@@ -103,7 +104,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|opengl|software|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--version] [--help]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|opengl|software|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--version] [--help] [-- SCRIPT ARGS...]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)
@@ -558,6 +559,7 @@ int main(int argc, char** argv)
     std::optional<std::filesystem::path> park_file;
     std::optional<std::filesystem::path> script_file;
     std::optional<std::filesystem::path> script_report;
+    std::vector<std::string> script_args;
     std::optional<rct3::random::Seed> seed;
     bool simulate = true;                         ///< The park starts with the simulation running
     std::optional<std::filesystem::path> profile; ///< Where to write the profiler's table on the way out
@@ -590,6 +592,11 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--script-report") == 0 && i + 1 < argc)
         {
             script_report = argv[++i];
+        }
+        else if (std::strcmp(argv[i], "--") == 0)
+        {
+            script_args.assign(argv + i + 1, argv + argc);
+            break;
         }
         else if (std::strcmp(argv[i], "--no-simulate") == 0)
         {
@@ -1053,7 +1060,7 @@ int main(int argc, char** argv)
     std::unique_ptr<rct3::scene::ScriptHost> script;
     if (script_file)
     {
-        script = rct3::scene::ScriptHost::start(*script_file, script_report, *window);
+        script = rct3::scene::ScriptHost::start(*script_file, script_report, std::move(script_args), *window);
         if (!script)
             return 1;
     }

@@ -37,6 +37,10 @@ declare function until(check: () => boolean, limit?: Frames, what?: string): Pro
 declare function log(...values: unknown[]): void;
 /** Saves a screenshot, named `name` in the script's report; resolves once it is written. */
 declare function screenshot(name?: string): Promise<void>;
+/** The script's own arguments: those after a second `--`, as in `./nob script FILE -- --no-audio -- --strict`. */
+declare function args(): string[];
+/** Writes `text` to the file named `file` in the script's report; false when the run has no report. */
+declare function report(file: string, text: string): boolean;
 /** Leaves the game with `code` (0 when left out). */
 declare function quit(code?: number): void;
 
@@ -594,6 +598,8 @@ declare namespace build {
               testAt: number | null;
               testWrecks: number;
               designs: string[];
+              /** The file of the design whose details the designs window shows, or null. */
+              shown: string | null;
               selected: number | null;
               split: 0 | 1 | 2 | 3 | 4;
           }
@@ -608,6 +614,9 @@ declare namespace build {
               { ghost: string; ghostAt: { col: Tiles; row: Tiles; height: number } } | { ghost: null }
           ))
         | undefined;
+    /** The install's saved designs, by file, with the symbol and overlay that build.pick() takes for their kind
+     * (overlay null when the install has no ride of that kind); undefined while the lists are still being read. */
+    function designs(): { file: string; symbol: string; overlay: string | null }[] | undefined;
     /** Puts the placing tool, the enclosure tool or the pool tool away, as Escape does. */
     function stop(): void;
     /** While an enclosure drag is held: what letting go would cost in hundredths (below 0 when it pays back),

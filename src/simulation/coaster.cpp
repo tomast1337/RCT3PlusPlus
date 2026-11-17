@@ -435,8 +435,9 @@ namespace rct3::simulation
                 else if (under != Stretch::Brake)
                 {
                     // shortcut: a train stalled in a dip is pushed on as if by tyres until it outruns them, upgrade if
-                    // valleys should roll it back for good.
-                    const float pace = open ? std::abs(c.speed) : c.speed;
+                    // valleys should roll it back for good. On a circuit one rolling back counts as stalled; on a track
+                    // with two ends rolling back is its way home to the station.
+                    const float pace = two_ends(c) ? std::abs(c.speed) : c.speed;
                     if (pace < kCrawl.value)
                         c.slow.value += dt;
                     if (c.slow > kStuck)
@@ -515,11 +516,15 @@ namespace rct3::simulation
                 target = c.push;
                 left -= c.pushed.value;
             }
-            else if (c.launch_speed && (platform || assisted))
+            else if (c.launch_speed && (platform || (assisted && c.speed >= 0)))
             {
                 target = *c.launch_speed;
                 left -= platform ? c.travelled : 0;
             }
+            // Rolled back onto its launch stretch, it is not launched again: the stretch slows it as hard as it
+            // launches, to the station's speed, and it creeps back into the station.
+            else if (c.launch_speed && assisted && c.speed < -c.station_speed && !c.fixed_speed)
+                c.speed = std::min(c.speed + *c.launch_speed * *c.launch_speed / (2 * c.train_length) * dt, -c.station_speed);
             const float way = target < 0 ? -1.0f : 1.0f;
             if (target != 0 && !c.fixed_speed && c.speed * way < std::abs(target))
             {

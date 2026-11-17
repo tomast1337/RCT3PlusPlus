@@ -125,6 +125,11 @@ namespace rct3::park::track
                         placed.push_back(glm::vec3(to_world * glm::vec4(p, 1.0f)));
                 }
                 std::vector<glm::vec3> path = shape->line.path;
+                // Distances along the piece are stretched so that it is as long as its line says.
+                float drawn = 0;
+                for (std::size_t k = 1; k < path.size(); ++k)
+                    drawn += glm::distance(path[k - 1], path[k]);
+                const float stretch = shape->line.length > 0 && drawn > 0 ? shape->line.length / drawn : 1.0f;
                 std::vector<glm::vec3> ups = shape->line.ups;
                 ups.resize(path.size(), glm::vec3 { 0, 1, 0 });
                 if (piece.reversed)
@@ -156,7 +161,8 @@ namespace rct3::park::track
                 for (std::size_t k = course.points.empty() || lift_foot ? 0 : 1; k < path.size(); ++k)
                 {
                     const glm::vec3 at = glm::vec3(to_world * glm::vec4(path[k], 1.0f));
-                    course.distance.push_back(course.points.empty() ? 0 : course.distance.back() + glm::distance(course.points.back(), at));
+                    // The step onto a tower's foot is not along the piece, so it is not stretched.
+                    course.distance.push_back(course.points.empty() ? 0 : course.distance.back() + glm::distance(course.points.back(), at) * (k > 0 ? stretch : 1.0f));
                     course.points.push_back(at);
                     course.ups.push_back(glm::normalize(glm::mat3(to_world) * ups[k]));
                     course.kinds.push_back(kind);

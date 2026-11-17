@@ -113,6 +113,7 @@ namespace rct3::park::track
             line.end_direction = line.end - middle(l[l.size() - 2], r[r.size() - 2]);
         if (glm::length(line.start_direction) < kNone || glm::length(line.end_direction) < kNone)
             return std::nullopt;
+        line.length = (left.length + right.length) / 2;
         line.start_side = vec(r.front().position) - vec(l.front().position);
         line.end_side = vec(r.back().position) - vec(l.back().position);
         std::vector<glm::vec3> sides; // From the left rail to the right, at each point of the path

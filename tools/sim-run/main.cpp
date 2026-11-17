@@ -2,13 +2,15 @@
 //
 // sim-run: run the simulation headless on an original save and report what happened.
 //
-//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--awards]
+//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--awards] [--car-places]
 //
 // Brings over the save's paths, stalls, rides and guests, runs N seconds of park time (default 600) and prints
 // what each shop and ride took and how the guests are doing, with how long the run took. --profile adds the
 // time each phase of a step took, as the profiler's table. --awards (with --game) adds how many rides and stalls
-// carry each theme, as the theme awards count them. Flat rides take their timing from their models, so they come
-// over only with --game, the game's folder.
+// carry each theme, as the theme awards count them. --car-places (with --game) stands each car the save keeps at
+// its saved wheel distances on our track, prints how far that is from where the save has it, by track piece, with
+// each piece's length against the park's, and stops without running. Flat rides take their timing from their
+// models, so they come over only with --game, the game's folder.
 #include "config/game/install.hpp"
 #include "logging/crash.hpp"
 #include "logging/log.hpp"
@@ -55,6 +57,7 @@
 #include <format>
 #include <fstream>
 #include <functional>
+#include <glm/gtc/quaternion.hpp>
 #include <iterator>
 #include <limits>
 #include <map>
@@ -70,6 +73,20 @@ namespace
 {
     // Reports go out as plain lines, problems to standard error.
     const rct3::logging::Logger out = rct3::logging::logger("sim-run");
+
+    /// A saved car stood on our track at its saved wheel distances, against where the save has it. In metres and degrees.
+    struct CarPlace
+    {
+        std::string piece; ///< Its front wheels' piece shape
+        std::string ride;
+        float at = 0;            ///< Its front wheels' saved distance
+        float off = 0;           ///< From its saved place
+        float along = 0;         ///< Of `off`, along the track: ahead of its saved place above 0
+        float across = 0;        ///< Of `off`, square to the track
+        float anchored = 0;      ///< From its saved place, stood from our start of its front piece rather than ours of the track
+        float turn = 0;          ///< From its saved turn
+        float anchored_turn = 0; ///< As `turn`, stood as `anchored`
+    };
 } // namespace
 
 namespace
@@ -99,10 +116,11 @@ int main(int argc, char** argv)
     std::uint64_t seed = 1;
     const char* game = nullptr;
     std::string_view weather;
-    bool whole_day = false; // Run the clock through the night, whatever the park's day mode
-    bool patrol = false;    // Give each handyman and mechanic a patrol: the tiles round where they start
-    bool profile = false;   // Print the time each phase of a step took
-    bool awards = false;    // Print what the theme awards count
+    bool whole_day = false;                          // Run the clock through the night, whatever the park's day mode
+    bool patrol = false;                             // Give each handyman and mechanic a patrol: the tiles round where they start
+    bool profile = false;                            // Print the time each phase of a step took
+    bool awards = false;                             // Print what the theme awards count
+    std::optional<std::vector<CarPlace>> car_places; // With --car-places: each saved car stood by our track, then stop
     for (int i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--seconds") == 0 && i + 1 < argc)
@@ -121,14 +139,16 @@ int main(int argc, char** argv)
             profile = true;
         else if (std::strcmp(argv[i], "--awards") == 0)
             awards = true;
+        else if (std::strcmp(argv[i], "--car-places") == 0)
+            car_places.emplace();
         else if (std::strcmp(argv[i], "--weather") == 0 && i + 1 < argc)
             weather = argv[++i];
         else
             path = argv[i];
     }
-    if (!path)
+    if (!path || (car_places && !game))
     {
-        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--awards]");
+        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--awards] [--car-places]");
         return 2;
     }
     std::ifstream in(path, std::ios::binary);
@@ -200,6 +220,11 @@ int main(int argc, char** argv)
         }
         const auto views = folders | std::ranges::to<std::vector<std::string_view>>();
         park::AssetIndex assets = park::AssetIndex::scan(install->root(), views);
+        if (car_places) // Trains' files, for their cars' models
+            for (const save::model::Ride& ride : rides->rides)
+                for (const save::model::Train& train : ride.trains)
+                    if (const auto file = install->find(std::format("{}.common.ovl", train.overlay_path)))
+                        (void)assets.add_file(*file);
         std::set<std::string, std::less<>> tried_files;
         for (auto missing = assets.missing_references(); !missing.empty(); missing = assets.missing_references())
         {
@@ -269,6 +294,78 @@ int main(int argc, char** argv)
                         ++cars;
                     }
             out.info("course {} closed {:d}: {:.1f} m (lap tested {:.1f} m), {:d} points; {:d} cars, farthest {:.2f} m off", ride.base.symbol.c_str(), course->closed, static_cast<double>(course->length()), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_length.value : 0), course->points.size(), cars, static_cast<double>(worst));
+            if (car_places)
+            {
+                // Each piece's length on our course against the park's (from where it starts to where the next does).
+                std::vector<std::pair<float, std::string>> longer;
+                const auto& pieces = ride.track->pieces;
+                for (std::size_t k = 0; k + 1 < course->piece_starts.size(); ++k)
+                {
+                    const save::model::TrackPiece& piece = pieces[course->first_piece + k];
+                    const float ours = course->piece_starts[k + 1] - course->piece_starts[k];
+                    const float saved = pieces[course->first_piece + k + 1].start_distance.value - piece.start_distance.value;
+                    longer.emplace_back(ours - saved, piece.symbol.substr(0, piece.symbol.find(':')));
+                }
+                std::ranges::sort(longer, std::greater { }, [](const auto& l) { return std::abs(l.first); });
+                std::string worst_pieces;
+                for (const auto& [by, shape] : longer | std::views::take(3))
+                    worst_pieces += std::format(" {} {:+.1f} cm", shape, static_cast<double>(by * 100));
+                float total = 0;
+                for (const auto& l : longer)
+                    total += l.first;
+                out.info("  pieces {:d}: ours longer than the park's by {:+.1f} cm in all; most{}", longer.size() + 1, static_cast<double>(total * 100), worst_pieces);
+                for (const save::model::Train& train : ride.trains)
+                {
+                    std::string name = train.symbol;
+                    if (name.ends_with(":rit"))
+                        name.resize(name.size() - 4);
+                    for (const save::model::Car& car : train.cars)
+                    {
+                        if (!car.position_valid || car.design_slot < 0)
+                            continue;
+                        auto [model, added] = models.try_emplace(std::format("{}#{}", name, car.design_slot));
+                        if (added)
+                            model->second = loader.load_car(name, train.overlay_path, static_cast<std::size_t>(car.design_slot));
+                        const auto piece = std::ranges::find(pieces, car.front_piece, &save::model::TrackPiece::id);
+                        const auto on = static_cast<std::size_t>(piece - pieces.begin());
+                        if (!model->second || !model->second->car_fit || model->second->car_fit->link || piece == pieces.end() || on < course->first_piece || on - course->first_piece >= course->piece_starts.size())
+                            continue;
+                        // Stood by our track at the car's saved wheel distances, as given and moved by how far our
+                        // start of its front piece is from the park's (which takes out the length gained before it).
+                        const float shift = course->piece_starts[on - course->first_piece] - piece->start_distance.value;
+                        const auto stood = [&](float by) {
+                            park::object::CarFit fit = *model->second->car_fit;
+                            fit.front_wheels = car.distance.value - car.front_wheel_distance;
+                            fit.rear_wheels = car.distance.value - car.rear_wheel_distance;
+                            save::model::Train one;
+                            one.cars = { car };
+                            park::track::stand_train(*course, one, std::span(&fit, 1), car.distance.value + by);
+                            return one.cars.front();
+                        };
+                        const auto turn_of = [](const std::array<float, 3>& v) {
+                            const glm::vec3 axis { v[0], v[1], v[2] };
+                            const float angle = glm::length(axis);
+                            return angle > 1e-6f ? glm::angleAxis(angle, axis / angle) : glm::quat(1, 0, 0, 0);
+                        };
+                        const glm::vec3 saved { car.position[0], car.position[1], car.position[2] };
+                        const save::model::Car ours = stood(0);
+                        const save::model::Car anchored = stood(shift);
+                        const glm::vec3 off = glm::vec3 { ours.position[0], ours.position[1], ours.position[2] } - saved;
+                        const glm::vec3 way = park::track::course_direction(*course, (car.front_wheel_distance + car.rear_wheel_distance) / 2);
+                        const float along = glm::dot(off, way);
+                        CarPlace& place = car_places->emplace_back();
+                        place.piece = piece->symbol.substr(0, piece->symbol.find(':'));
+                        place.ride = ride.base.symbol.substr(0, ride.base.symbol.find(':'));
+                        place.at = car.front_wheel_distance;
+                        place.off = glm::length(off);
+                        place.along = along;
+                        place.across = glm::length(off - along * way);
+                        place.anchored = glm::distance(glm::vec3 { anchored.position[0], anchored.position[1], anchored.position[2] }, saved);
+                        place.turn = glm::degrees(2 * std::acos(std::min(1.0f, std::abs(glm::dot(turn_of(ours.orientation), turn_of(car.orientation))))));
+                        place.anchored_turn = glm::degrees(2 * std::acos(std::min(1.0f, std::abs(glm::dot(turn_of(anchored.orientation), turn_of(car.orientation))))));
+                    }
+                }
+            }
             coasters[index] = simulation::coaster_of(*course, ride);
             courses[index] = *course;
             const auto lap = coasters[index] ? simulation::lap_seconds(*coasters[index]) : std::nullopt;
@@ -280,6 +377,35 @@ int main(int argc, char** argv)
             out.info(
                 "  lap {:.1f} s (tested {:.1f} s); train {:.1f} m mass {:.0f} friction {:.3f} / {:.3f}", static_cast<double>(lap.value_or(-1)), static_cast<double>(ride.stats.last_lap ? ride.stats.last_lap->ride_time.value : 0), static_cast<double>(coasters[index] ? coasters[index]->train_length : 0), static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].mass), static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].static_friction),
                 static_cast<double>(ride.trains.empty() ? 0 : ride.trains[0].dynamic_friction));
+        }
+        if (car_places)
+        {
+            // By piece shape, then all together: how far each car stands from where the park has it, in cm and degrees.
+            std::map<std::string, std::vector<const CarPlace*>> by_piece;
+            if (car_places->empty())
+            {
+                out.error("car places: no saved car stands on a course");
+                return 1;
+            }
+            for (const CarPlace& place : *car_places)
+            {
+                by_piece[place.piece].push_back(&place);
+                by_piece["(all)"].push_back(&place);
+            }
+            const auto spread = [](std::vector<const CarPlace*> places, float CarPlace::* field, float scale) {
+                std::ranges::sort(places, { }, [&](const CarPlace* p) { return std::abs(p->*field); });
+                return std::format("{:7.2f} {:7.2f}", std::abs(places[places.size() / 2]->*field) * scale, std::abs(places.back()->*field) * scale);
+            };
+            out.info("car places: piece, cars, then median and max of: cm off, along, across, cm off from the piece's start, deg turned, deg turned from the piece's start");
+            for (const auto& [piece, places] : by_piece)
+                out.info("  {:40} {:4d}  {}  {}  {}  {}  {}  {}", piece, places.size(), spread(places, &CarPlace::off, 100), spread(places, &CarPlace::along, 100), spread(places, &CarPlace::across, 100), spread(places, &CarPlace::anchored, 100), spread(places, &CarPlace::turn, 1), spread(places, &CarPlace::anchored_turn, 1));
+            for (const CarPlace& p : *car_places)
+                out.info("  car {} {} {:.2f} m: {:.2f} {:.2f} {:.2f} {:.2f} cm {:.2f} {:.2f} deg", p.ride, p.piece, static_cast<double>(p.at), static_cast<double>(p.off * 100), static_cast<double>(p.along * 100), static_cast<double>(p.across * 100), static_cast<double>(p.anchored * 100), static_cast<double>(p.turn), static_cast<double>(p.anchored_turn));
+            std::vector<const CarPlace*> worst = by_piece["(all)"];
+            std::ranges::sort(worst, std::greater { }, &CarPlace::anchored);
+            for (const CarPlace* p : worst | std::views::take(10))
+                out.info("  worst from the piece's start: {} on {} at {:.1f} m: {:.2f} cm, {:.2f} deg ({:.2f} cm off as given)", p->ride, p->piece, static_cast<double>(p->at), static_cast<double>(p->anchored * 100), static_cast<double>(p->anchored_turn), static_cast<double>(p->off * 100));
+            return 0;
         }
         for (std::size_t i = 0; i < timings.size(); ++i)
             if (timings[i])

@@ -262,6 +262,45 @@ TEST_CASE("guests come with every strength of stomach, the middling ones most")
     CHECK(by_level[0] < by_level[1]);
 }
 
+TEST_CASE("guests come some needing the toilet, liking pools anywhere from least to most, and wishing for a swim however much")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 1, 0 });
+    auto dice = rct3::random::seeded(rct3::random::Seed { 7 });
+    const std::array<Newcomer, 1> one { { { .age = AgeGroup::Adult } } };
+    std::int32_t needing = 0;
+    std::int32_t least = 0;
+    std::int32_t most = 0;
+    float swim_liking_most = 0; // Wish to swim of those liking pools most, summed, against those liking them least
+    float swim_liking_least = 0;
+    constexpr std::int32_t kGuests = 2000;
+    auto& r = park.world().registry;
+    for (std::int32_t i = 0; i < kGuests; ++i)
+        for (const entt::entity g : admit_guests(park.world(), dice, park.world().paths.find({ 0, 0, 0 }).value(), one, kTuning.parties.middle))
+        {
+            const Needs& needs = r.get<Needs>(g);
+            const float liking = r.get<Taste>(g).pools.value;
+            CHECK(needs.bladder.value <= kTuning.arrivals.bladder.value);
+            needing += needs.bladder.value > 0;
+            if (liking == kTuning.pools.least_liking.value)
+            {
+                ++least;
+                swim_liking_least += needs.swim.value;
+            }
+            if (liking == kTuning.pools.most_liking.value)
+            {
+                ++most;
+                swim_liking_most += needs.swim.value;
+            }
+        }
+    CHECK(needing > kGuests * 9 / 10);
+    CHECK(least > kGuests / 20);
+    CHECK(least < kGuests / 5);
+    CHECK(most > kGuests / 20);
+    CHECK(most < kGuests / 5);
+    CHECK(swim_liking_least / static_cast<float>(least) == doctest::Approx(swim_liking_most / static_cast<float>(most)).epsilon(0.25));
+}
+
 TEST_CASE("a ride that delights a guest leaves them liking wilder ones")
 {
     Sandbox park;
@@ -272,7 +311,6 @@ TEST_CASE("a ride that delights a guest leaves them liking wilder ones")
     r.emplace_or_replace<Taste>(guest, Taste { .least = { 0.2f }, .most = { 0.5f } });
     REQUIRE(park.run_until([&] { return r.all_of<Ridden>(guest); }, 600));
     CHECK(r.get<Taste>(guest).most.value > 0.5f);
-}
 
     SUBCASE("however bold they came, up to the boldest any guest gets")
     {
@@ -307,3 +345,4 @@ TEST_CASE("only a delighted, settled guest thinks they enjoyed a thrilling ride 
     CHECK(enjoyed(delighted));
     CHECK_FALSE(enjoyed(at_their_limit));
     CHECK_FALSE(enjoyed(queasy));
+}

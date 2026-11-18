@@ -1690,9 +1690,10 @@ namespace rct3::simulation
             const entt::entity guest = members.emplace_back(r.create());
             r.emplace<Visitor>(guest, age, is_female, std::string { }, world.tick);
             r.emplace<Pose>(guest, paths.centre(at), 0.0f);
-            // Some come wishing for a swim already, the more the more they like pools.
-            const auto liking = static_cast<float>(random::between(dice, double { kTuning.pools.least_liking.value }, double { kTuning.pools.most_liking.value }));
-            r.emplace<Needs>(guest, Needs { .swim = { liking * static_cast<float>(random::unit(dice)) } });
+            // Some come wishing for a swim already, however much they like pools, and some needing the toilet.
+            const auto liking = std::clamp(static_cast<float>(random::unit(dice)), kTuning.pools.least_liking.value, kTuning.pools.most_liking.value);
+            const auto swim = static_cast<float>(random::unit(dice)) * kTuning.pools.arrival_wish.value;
+            r.emplace<Needs>(guest, Needs { .bladder = { static_cast<float>(random::unit(dice)) * kTuning.arrivals.bladder.value }, .swim = { swim } });
             double stomach = random::unit(dice);
             std::size_t level = 0;
             for (; level + 1 < kTuning.arrivals.stomachs.size() && stomach >= kTuning.arrivals.stomachs[level].value; ++level)

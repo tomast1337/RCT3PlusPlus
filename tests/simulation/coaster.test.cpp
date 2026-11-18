@@ -8,6 +8,8 @@
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <numbers>
+#include <optional>
+#include <utility>
 #include <vector>
 
 using namespace rct3::simulation;
@@ -170,6 +172,42 @@ TEST_CASE("a train with no chain to lift it is pushed on rather than left stuck 
     Coaster c = hill();
     c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::Plain, Stretch::Plain };
     CHECK(lap_seconds(c));
+}
+
+TEST_CASE("a train that cannot crest a hill raises one stall at that place, and a normal lap none")
+{
+    // Where its stalls were found over a few laps, taking each as the owner of the train would.
+    const auto stalls = [](Coaster c) {
+        std::vector<float> found;
+        c.running = true;
+        c.speed = c.station_speed; // Sent off by the station
+        for (std::int32_t t = 0; t < 4000; ++t)
+        {
+            if (drive(c, 0.25f))
+                c.running = true; // Round again, as a ride in testing sets it off again
+            if (const auto at = std::exchange(c.stalled, std::nullopt))
+                found.push_back(*at);
+        }
+        return found;
+    };
+    CHECK(stalls(hill()).empty());
+
+    Coaster dry = hill();
+    dry.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::Plain, Stretch::Plain };
+    dry.distance = { 0, 10, 50, 100, 130 }; // A flat run from the station, so the climb starts well clear of its platform
+    dry.height = { 0, 0, 0, 15, 0 };
+    const std::vector<float> found = stalls(dry);
+    REQUIRE(found.size() == 1); // Laps after the first stall at the same place and are not told again
+    CHECK(found.front() > 40);
+    CHECK(found.front() < 100); // On the way up to the crest
+
+    // On a track with two ends, as one being built, rolling back down the climb is a stall too.
+    Coaster open = dry;
+    open.closed = false;
+    const std::vector<float> rolled = stalls(open);
+    REQUIRE(rolled.size() == 1);
+    CHECK(rolled.front() > 40);
+    CHECK(rolled.front() < 100);
 }
 
 TEST_CASE("a test run finds the coaster's speed, time and drops")

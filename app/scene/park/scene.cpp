@@ -1750,6 +1750,11 @@ namespace rct3::scene::park
                     ride.base.mechanic_asked = upkeep->called;
                     ride.base.flags = upkeep->broken ? ride.base.flags | save::model::AttractionCommon::kBrokenDown : ride.base.flags & ~save::model::AttractionCommon::kBrokenDown;
                 }
+                // A train that stalled in testing is told to the player.
+                for (std::size_t i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
+                    if (auto* stalls = scene.ride_entities[i] != entt::null ? scene.sim.registry.try_get<simulation::TrainStalls>(scene.ride_entities[i]) : nullptr)
+                        for (const glm::vec3& at : std::exchange(stalls->found, { }))
+                            track::tell_stall(scene, assets, scene.rides.rides[i], at);
                 // A crash closes its ride, counts as dangerous for the awards, and is remembered a while.
                 for (std::size_t i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
                 {
@@ -1957,6 +1962,13 @@ namespace rct3::scene::park
                     if (ui::screens::build::build_list(item) == items[*message->build_item].list && open_build_list(scene.build, desktop.root(), item, tools->item(item), *tools, *assets.strings, assets.palette, ui::currency(*assets.strings, options.choice(config::game::GameOption::Currency)), message->build_item))
                         break;
                 }
+            }
+            // One that points out a spot takes the view there.
+            else if (message != scene.park.messages.list.end() && message->place)
+            {
+                scene.camera.target = *message->place;
+                scene.camera.distance = std::min(scene.camera.distance, kFocusClosest * kFocusZoomOut);
+                scene.camera = rct3::park::on_ground(scene.camera, scene.grid);
             }
             // An attraction's takes the view to it and opens the info panel on it.
             else if (const auto ref = message != scene.park.messages.list.end() && message->subject ? attraction_with(scene, *message->subject) : std::nullopt; ref && info)

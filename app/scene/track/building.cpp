@@ -414,6 +414,15 @@ namespace rct3::scene::track
         return cost;
     }
 
+    void tell_stall(park::ParkScene& scene, const ui::InterfaceAssets& assets, const save::model::Ride& ride, glm::vec3 at)
+    {
+        // The game has no text for this, so ours goes under a key of its own, in English whatever the language.
+        constexpr std::string_view kKey = "RideTestStalled";
+        if (assets.strings->get(kKey).empty())
+            assets.strings->add(std::string(kKey), u"%NAME% stalled in testing: its train ground to a halt or rolled back on a rise. Click to see where.");
+        simulation::park::post(scene.park.messages, { .text_key = std::string(kKey), .subject = ride.base.id, .place = at });
+    }
+
     bool new_tracked_ride(park::ParkScene& scene, const rct3::park::BuildItem& item, const ui::InterfaceAssets& assets)
     {
         if (item.kind != rct3::park::BuildKind::TrackedRide || !assets.install)
@@ -1297,6 +1306,8 @@ namespace rct3::scene::track
         if (b.test)
         {
             TrackBuilding::GhostTrain& t = *b.test;
+            if (const auto at = std::exchange(t.train.stalled, std::nullopt))
+                tell_stall(scene, assets, tested, simulation::track_point(t.train, *at));
             if (!t.train.crashed && simulation::drive(t.train, elapsed.value) && t.train.splashed)
             {
                 // Off a pool slide's end, its car flies on down to the ground there.

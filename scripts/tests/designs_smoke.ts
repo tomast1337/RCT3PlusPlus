@@ -4,7 +4,7 @@
 // laid in the middle of the map (with pool water across its pool sides first, for a slide that needs it; with a
 // paved square and a changing room beside its station after, for a lazy river, which opens only joined to a pool),
 // tested with a time limit, and written as one row of designs.md and designs.json in the report: laid or refused and why,
-// closed round or not, the test finished, crashed or stuck and where, its ratings and the seconds it took. A kind
+// closed round or not, the test finished (or finished with a stall told on the way), crashed or stuck and where, its ratings and the seconds it took. A kind
 // never tested is opened instead ("opens untested"), and one rated without a lap passes once the park runs it
 // ("runs, no lap"). A screenshot only of a design that fails.
 //
@@ -35,7 +35,7 @@ interface Row {
     kind: string;
     laid: string; // "laid", or why not
     closed: string; // "yes", or why not
-    test: string; // "finished", "crashed", "stuck", "unfinished", or why it did not run
+    test: string; // "finished", "finished, stalled", "crashed", "stuck", "unfinished", or why it did not run
     where: string;
     ratings: [number, number, number] | null;
     seconds: number;
@@ -293,7 +293,8 @@ async function run(d: (typeof all)[number], row: Row): Promise<void> {
             return;
         }
         if (now.graphSamples > 0) {
-            row.test = "finished";
+            // A lap with a stall told on the way is no clean test.
+            row.test = park.messages().some((m) => m.key === "RideTestStalled") ? "finished, stalled" : "finished";
             return;
         }
         const trains = now.trainsAt ?? [];

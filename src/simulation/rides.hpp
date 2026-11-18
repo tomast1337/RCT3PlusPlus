@@ -182,6 +182,13 @@ namespace rct3::simulation
         std::uint32_t injured = 0; ///< Riders hurt in its crashes since the run began
     };
 
+    /// Where a ride's trains stalled while it was tested, for the player to be told: the track's points in the
+    /// park, oldest first. The one who tells empties it.
+    struct TrainStalls
+    {
+        std::vector<glm::vec3> found { };
+    };
+
     /// Keeps a train this far behind the back of the one in front, metres; our own figure.
     inline constexpr float kBlockGap = 4.0f;
 

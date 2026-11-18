@@ -5,8 +5,10 @@
 #include "units/units.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <numbers>
 
 namespace rct3::simulation
@@ -17,6 +19,9 @@ namespace rct3::simulation
         using units::kGravity;
         constexpr units::Seconds kStep { 0.05f };          ///< A part step, short enough for the steepest drops
         constexpr units::Pace kCrawl { 0.1f };             ///< Under this a train is all but stopped
+        constexpr units::Distance kStallSame { 15 };       ///< Chosen by eye: stalls this close along the track count as one place
+        constexpr units::Distance kSetOff { 1 };           ///< Chosen by eye: a stall is this far or more past where trains set off, which a train waiting to leave the station is not
+        constexpr units::Distance kRolledBack { 1 };       ///< Chosen by eye: a train rolled back this far from a rise has failed it, where a crest's creep is a few centimetres
         constexpr units::Seconds kStuck { 4 };             ///< All but stopped this long, the track's tyres take over
         constexpr units::Distance kLaunchLeast { 0.5f };   ///< Of platform left, that a launch is still sized over
         constexpr float kBuildUp = 3;                      ///< Passes a swinging train's pushes take to build up to full, and to die down
@@ -271,7 +276,10 @@ namespace rct3::simulation
     bool drive(Coaster& c, float seconds, float room, std::span<Carriage> carriages)
     {
         if (!c.running || c.distance.size() < 2 || c.length() <= 0)
+        {
+            c.rolled_from.reset(); // Set down at its start again by its owner, it has not rolled back from where it was
             return false;
+        }
         // How far on round the track `to` is from `from`.
         const auto ahead_of = [&](float from, float to) { return std::fmod(std::fmod(to - from, c.length()) + c.length(), c.length()); };
         // A lift with a car of its own: one known, and long enough to carry a train.
@@ -406,6 +414,27 @@ namespace rct3::simulation
             const bool home = open && c.passed >= c.passes && (station_at(c.at) || station_at(c.at - c.train_length));
             // Rolling back to where it set off with its tail on the platform: the station takes it from there.
             const bool backing_in = !open && two_ends(c) && c.launched && c.speed < 0 && c.travelled < c.train_length && station_at(c.at - c.train_length);
+            // Told once for each place, and only on plain track the train is free to move on: brakes, launches and a
+            // train held up by the one ahead are no fault of the track's shape.
+            const auto stall_at = [&](float at) {
+                // Plain track a train's length either way: a train waiting by a platform, brake or lift stands still too. A stall is a place past where trains set off.
+                if (ahead_of(c.start, at) > kSetOff.value && room > kArrived && std::ranges::all_of(std::array { -1.0f, -0.5f, 0.0f, 0.5f, 1.0f }, [&](float k) { return c.kinds[point_at(c, wrap(c, at + k * c.train_length))] == Stretch::Plain; }) && std::ranges::none_of(c.stalls_told, [&](float d) { return std::abs(d - at) < kStallSame.value; }))
+                {
+                    c.stalled = at;
+                    c.stalls_told.push_back(at);
+                }
+            };
+            // A stall is also a train rolled back a metre from a rise it could not top. Rolling back is a
+            // shuttle's and a launched train's way home, but no other's.
+            if (c.speed >= 0 || c.shuttle != Shuttle::None || c.launch_speed)
+                c.rolled_from.reset();
+            else if (c.speed < -kCrawl.value && !c.rolled_from)
+                c.rolled_from = c.at;
+            if (c.rolled_from && *c.rolled_from - c.at > kRolledBack.value)
+            {
+                stall_at(*c.rolled_from);
+                c.rolled_from = -std::numeric_limits<float>::infinity(); // Told for this roll back, none more till it stops
+            }
             if (c.fixed_speed)
                 c.speed = *c.fixed_speed;
             else
@@ -457,6 +486,18 @@ namespace rct3::simulation
                     // them, upgrade if valleys should roll it back for good. On a circuit one rolling back counts as
                     // stalled; on a track with two ends rolling back is its way home to the station.
                     const float pace = two_ends(c) ? std::abs(c.speed) : c.speed;
+                    // A stall is all but stopped for a while without a break, the place being where it stopped.
+                    const bool was_crawling = c.crawling > kStuck;
+                    if (pace < kCrawl.value)
+                    {
+                        if (c.crawling.value == 0)
+                            c.crawl_at = c.at;
+                        c.crawling.value += dt;
+                    }
+                    else
+                        c.crawling = { };
+                    if (!was_crawling && c.crawling > kStuck)
+                        stall_at(c.crawl_at);
                     if (pace < kCrawl.value)
                         c.slow.value += dt;
                     if (c.slow > kStuck)

@@ -8,6 +8,7 @@
 // A saved park keeps its messages with their ages; the list starts from them.
 #pragma once
 
+#include "math/glm.hpp"
 #include "save/model/park.hpp"
 #include "units/units.hpp"
 
@@ -36,6 +37,7 @@ namespace rct3::simulation::park
         std::optional<std::int32_t> award { };     ///< Award messages: which award
         std::string field_key { };                 ///< Text key filling its other field, such as a breakdown's kind; none drops the field
         std::optional<std::int64_t> number { };    ///< Fills the %d in its text, such as how many a crash hurt
+        std::optional<glm::vec3> place { };        ///< A spot in the park it points out, such as where a test train stalled; its camera goes there
         std::optional<std::size_t> build_item { }; ///< An item of the build lists it is about, such as an invention, by its place in them
     };
 

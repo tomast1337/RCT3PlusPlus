@@ -552,6 +552,11 @@ namespace rct3::simulation
                     }
                     const bool was_running = train.running;
                     const bool round = drive(train, dt, room_ahead(fleet->trains, t), fleet->carriages);
+                    // A stall while the ride is tested is told, once for each place in a test.
+                    if (!attraction.testing)
+                        train.stalls_told.clear();
+                    if (const auto at = std::exchange(train.stalled, std::nullopt); at && attraction.testing)
+                        r.get_or_emplace<TrainStalls>(e).found.push_back(track_point(train, *at));
                     // The first train's laps, while tested or open, make the ride's graphs; a test train's on
                     // unfinished track never comes round.
                     if (t == 0 && (train.running || round))

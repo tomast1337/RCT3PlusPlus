@@ -829,12 +829,14 @@ namespace rct3::scene::park
         board_tracked_ride(device, scene, install, ride_index);
     }
 
-    void fit_car(simulation::Coaster& train, const rct3::park::object::ObjectModel& model, bool pool_slide)
+    void fit_car(simulation::Coaster& train, const rct3::park::object::ObjectModel& model, const rct3::park::track::TrackRules* rules)
     {
         train.trough = model.trough ? std::optional(simulation::Trough { .damping = { model.trough->damping }, .centring = { model.trough->centring }, .friction = model.trough->friction, .pull = model.trough->pull, .length = model.swing_arm > 0 ? units::Distance { model.swing_arm } : simulation::Trough { }.length, .pivot = { model.swing_pivot } }) : std::nullopt;
         // shortcut: other trains keep the losses fitted to saved parks' test times, upgrade when their laps are
         // checked against their files' losses.
         // shortcut: the air is taken on one empty car, as every pool slide's train is; upgrade with riders' weight.
+        const bool pool_slide = rules != nullptr && rules->pool_ride;
+        train.stalls_by_design = rules != nullptr && rules->trains_stall_by_design();
         if (pool_slide && model.mass > 0)
         {
             train.rolling = model.rolling;
@@ -865,7 +867,7 @@ namespace rct3::scene::park
         if (fleet != nullptr && !cars.empty())
             if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[cars.front()])); model != scene.models.end())
                 for (simulation::Coaster& train : fleet->trains)
-                    fit_car(train, model->second, ride_index.value < scene.track_rules.size() && scene.track_rules[ride_index.value].pool_ride);
+                    fit_car(train, model->second, ride_index.value < scene.track_rules.size() ? &scene.track_rules[ride_index.value] : nullptr);
         // Each lift's car carries a train as long as its track, at its kind's speeds, letting it go as steeply as
         // that track points down at the top.
         const auto& lift_car = ride_index.value < scene.track_rules.size() ? scene.track_rules[ride_index.value].lift_car : std::nullopt;

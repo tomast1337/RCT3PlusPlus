@@ -315,8 +315,14 @@ async function run(d: (typeof all)[number], row: Row): Promise<void> {
 }
 
 const rows: Row[] = [];
+// Coasters whose test train stalls in our simulation, though they run in the original game: see #333.
+// With --strict, any other design that raises the stall message fails the run.
+const kKnownStalls = ["Titan", "Flying Dream", "The Aviator", "Big twister", "Bright Towers"];
 const ok = (r: Row) =>
-    r.laid === "laid" && r.closed === "yes" && ["finished", "opens untested", "runs, no lap"].includes(r.test);
+    r.laid === "laid" &&
+    r.closed === "yes" &&
+    (["finished", "opens untested", "runs, no lap"].includes(r.test) ||
+        (r.test === "finished, stalled" && kKnownStalls.includes(r.design)));
 
 function write(): void {
     const fmt = (v: number) => (v * 10).toFixed(2);

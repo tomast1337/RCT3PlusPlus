@@ -218,6 +218,7 @@ namespace rct3::simulation
         std::optional<float> rolled_from; ///< Where it began to roll back, while it does
         /// Where along the track it stalled since its owner last took it (see `stalls_told`), a place at a time.
         std::optional<float> stalled;
+        bool stalls_by_design = false;      ///< Its kind's trains crawl or roll back as a matter of course: never told as a stall
         std::vector<float> stalls_told { }; ///< The places it has stalled at, no two close, so a lap is not told again
         bool launched = false;              ///< Its tail has left the platform since it set off, so it is pushed no more there
         units::Radians lean { };            ///< Of a slide's car, it has swung up the trough's wall from the bottom, to its right

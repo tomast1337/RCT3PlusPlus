@@ -995,7 +995,7 @@ namespace rct3::scene::park
 
     /// Has `train`, of cars of `model`, swing in a pool slide's trough as the car does (not at all for a car that
     /// does not) and, on a pool slide, be held back as its train's file has it.
-    void fit_car(simulation::Coaster& train, const rct3::park::object::ObjectModel& model, bool pool_slide);
+    void fit_car(simulation::Coaster& train, const rct3::park::object::ObjectModel& model, const rct3::park::track::TrackRules* rules);
 
     /// Loads the models of `cars` the scene does not have yet, and their pictures.
     void load_car_models(ParkScene& scene, const config::game::GameInstall& install, const rct3::park::ride::RideCars& cars);

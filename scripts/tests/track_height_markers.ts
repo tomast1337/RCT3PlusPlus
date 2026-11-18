@@ -52,6 +52,15 @@ camera.look({ col: at.col + 6, row: at.row + 0.5, up: 3 }, { col: at.col + 6, ro
 await frames(10);
 await screenshot("height_markers"); // Heights at each piece's ends, ticks to the ground, and the ghost's
 
+// Close to the climb, the ghost piece beyond the last built one with its own label and tick.
+const ghost = must(build.construction()?.ghostAt, "the ghost piece");
+camera.look(
+    { col: ghost.col - 2, row: ghost.row + 0.5, up: ghost.height + 1 },
+    { col: ghost.col - 2, row: ghost.row + 9, up: ghost.height + 5 },
+);
+await frames(10);
+await screenshot("height_markers_close");
+
 build.stop();
 await frames(5);
 rides.show(ride);

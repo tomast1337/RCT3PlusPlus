@@ -38,14 +38,11 @@ namespace rct3::simulation
         constexpr units::Acceleration kSlideEase { 4 };    ///< It is eased up to that by. Chosen by eye
         constexpr units::Pace kWadeSpeed { 2.9f };         ///< A slide's car is carried through the pool at on its way back to its lift. Measured: a car of a tested slide in the original game
         constexpr units::Acceleration kWadeDrag { 40 };    ///< The water slows a faster car by, down to that. Measured likewise: 13 m/s down to 3 in 2 m
-        /// A boat floating along a water channel is carried at. Fitted to the rapids designs the game ships, whose
-        /// saved tests average about this over a lap spent almost all afloat.
-        constexpr units::Pace kFlow { 2.4f };
-        constexpr units::Acceleration kJetPull { 15 };  ///< Booster jets push a car over them by. Chosen by eye
-        constexpr units::Seconds kLiftPause { 2 };      ///< A lift's car stands before it sets off, and before it lets its train go. Chosen by eye
-        constexpr units::Distance kBoardShort { 0.5f }; ///< Short of the far end of a lift car's track, a train boarding it stops. Chosen by eye
-        constexpr units::Acceleration kLiftEase { 2 };  ///< A lift's car speeds up by from either end of its climb, and slows by to it. Chosen by eye
-        constexpr units::Pace kLiftCreep { 0.3f };      ///< A lift's car keeps up at its ends. Chosen by eye
+        constexpr units::Acceleration kJetPull { 15 };     ///< Booster jets push a car over them by. Chosen by eye
+        constexpr units::Seconds kLiftPause { 2 };         ///< A lift's car stands before it sets off, and before it lets its train go. Chosen by eye
+        constexpr units::Distance kBoardShort { 0.5f };    ///< Short of the far end of a lift car's track, a train boarding it stops. Chosen by eye
+        constexpr units::Acceleration kLiftEase { 2 };     ///< A lift's car speeds up by from either end of its climb, and slows by to it. Chosen by eye
+        constexpr units::Pace kLiftCreep { 0.3f };         ///< A lift's car keeps up at its ends. Chosen by eye
         /// Radians a slide's car swings up its trough's wall to go over a rim. The rims are the piece's rails,
         /// level with the track's line the car swings from, so it goes over once swung out level with them.
         // shortcut: every piece's rims are taken as level with its line, upgrade when each piece's own rails are read.
@@ -493,7 +490,35 @@ namespace rct3::simulation
                 for (std::int32_t k = 0; k < pressing; ++k)
                     press += std::abs(track_up(c, c.at - (static_cast<float>(k) + 0.5f) * c.train_length / static_cast<float>(pressing)).y);
                 const float grip = kGravity.value * (c.ups.empty() ? std::sqrt(1 - slope * slope) : press / static_cast<float>(pressing));
-                const float downhill = -kGravity.value * slope;
+                // Each car on plain track is pushed as its piece gives while the train's speed is in the push's range;
+                // over level water, faster than the flow, held back by it. A ride's own flow pushes and holds alike on
+                // all its water.
+                float pushed = 0;
+                for (std::int32_t k = 0; k < pressing && c.mass.value > 0; ++k)
+                {
+                    const float x = wrap(c, c.at - (static_cast<float>(k) + 0.5f) * c.train_length / static_cast<float>(pressing));
+                    const auto piece = std::ranges::upper_bound(c.piece_starts, x) - c.piece_starts.begin() - 1;
+                    if (piece < 0 || static_cast<std::size_t>(piece) >= c.pushes.size() || c.kinds[point_at(c, x)] != Stretch::Plain)
+                        continue;
+                    const auto at = static_cast<std::size_t>(piece);
+                    const bool flowing = c.flow && at < c.water.size() && c.water[at];
+                    if (flowing && c.speed < c.flow->speed)
+                        pushed += c.flow->force / c.mass.value;
+                    if (flowing && at < c.level.size() && c.level[at] && std::abs(c.speed) > c.flow->speed)
+                        pushed -= std::copysign(c.flow->hold, c.speed) / c.mass.value;
+                    if (flowing && c.flow->alone)
+                        continue;
+                    for (const Push& p : c.pushes[at])
+                    {
+                        if (x < p.from || x > p.to)
+                            continue;
+                        if (c.speed >= p.least && c.speed <= p.most)
+                            pushed += p.force / c.mass.value;
+                        if (p.hold > 0 && !flowing && std::abs(c.speed) > c.water_pace * p.most)
+                            pushed -= std::copysign(c.water_hold * p.hold, c.speed) / c.mass.value;
+                    }
+                }
+                const float downhill = -kGravity.value * slope + pushed;
                 const bool held = std::abs(downhill) <= c.resting * grip;
                 const float losses = c.rolling * grip + (c.mass.value > 0 ? c.drag / c.mass.value : 0) * c.speed * c.speed;
                 const float rolled = c.speed + downhill * dt;
@@ -506,10 +531,6 @@ namespace rct3::simulation
                 // pool joined is known.
                 if (std::ranges::any_of(c.wades, [&](const std::array<float, 2>& w) { return c.at >= w[0] && c.at < w[1]; }))
                     c.speed = std::max(c.speed - kWadeDrag.value * dt, kWadeSpeed.value);
-                // Afloat, a boat goes with the flow: carried on at its pace, and slowed to it by the water as brakes
-                // would, faster.
-                else if (const std::size_t i = point_at(c, c.at); i < c.afloat.size() && c.afloat[i])
-                    c.speed = std::max(c.speed - c.brake_pull * dt, kFlow.value);
                 // A shuttle's chain carries the train either way, the way it is going.
                 else if (chained)
                     c.speed = open && c.speed < 0 ? std::min(c.speed, -c.lift_speed) : std::max(c.speed, c.lift_speed);

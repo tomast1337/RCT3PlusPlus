@@ -77,6 +77,13 @@ namespace rct3::park::track
             rules.height_rate = units::Money { ride.operating->height_cost };
         if (ride.operating && ride.operating->station_speed > 0)
             rules.station_speed = units::Pace { ride.operating->station_speed };
+        if (ride.operating)
+        {
+            rules.water_pace = ride.operating->water_pace;
+            rules.water_hold = ride.operating->water_hold;
+            if (const auto& d = *ride.operating; d.flow_speed > 0)
+                rules.flow = TrackRules::Flow { .speed = { d.flow_speed }, .force = d.flow_force, .hold = d.flow_hold, .alone = d.flow_alone };
+        }
         if (const auto& d = ride.operating; d && !d->lift_car.empty())
             rules.lift_car = TrackRules::LiftCar { .train = std::string(d->lift_car), .up = { d->lift_car_up }, .down = { std::abs(d->lift_car_down) } };
         return rules;

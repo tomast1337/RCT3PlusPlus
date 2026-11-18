@@ -95,6 +95,17 @@ namespace rct3::park::track
         std::optional<LiftCar> lift_car { };
         /// Its stations send trains off at, and bring them in to stop at; nothing when its file gives none.
         std::optional<units::Pace> station_speed { };
+        float water_pace = 1; ///< As ovl::RideOperatingDefaults::water_pace
+        float water_hold = 1; ///< As ovl::RideOperatingDefaults::water_hold
+        /// As ovl::RideOperatingDefaults::flow_speed and the rest; nothing on rides without one.
+        struct Flow
+        {
+            units::Pace speed { };
+            float force = 0;
+            float hold = 0;
+            bool alone = false;
+        };
+        std::optional<Flow> flow { };
         /// What its track costs for height over the ground (ground.hpp, raised_cost); nothing on kinds whose track
         /// costs the same at any height.
         units::Money height_rate { };

@@ -155,6 +155,17 @@ namespace rct3::simulation
     /// way while it flies, level once afloat.
     [[nodiscard]] glm::mat4 flown(const Flight& flight, const glm::mat4& place);
 
+    /// A push a piece gives each car on a stretch of the track while the train goes at a speed within a range.
+    struct Push
+    {
+        float from = 0;  ///< Along the track
+        float to = 0;    ///< Along the track
+        float least = 0; ///< Metres a second
+        float most = 0;  ///< Metres a second
+        float force = 0; ///< Newtons on each car, the way the train goes
+        float hold = 0;  ///< As rct3::park::track::PiecePush::hold
+    };
+
     struct Coaster
     {
         std::vector<float> distance;     ///< Along the track to each point, from 0
@@ -168,6 +179,10 @@ namespace rct3::simulation
         float brake_pull = 10;
         /// How hard block brakes push a train wholly on them, in m/s², while it is slower than their speed.
         float boost_pull = 20;
+        /// Over water: the share of a piece's flow a car may go before the water holds it back, and the share of the
+        /// flow's push it is held back with, as the ride's file gives them.
+        float water_pace = 1;
+        float water_hold = 1;
         float lift_speed = 2;
         float station_speed = 2;
         std::optional<float> fixed_speed;
@@ -203,10 +218,23 @@ namespace rct3::simulation
         float swung_speed = 0;                       ///< Its speed when its cars' parts last swung, for how fast it has sped up since
         std::vector<Swing> swings { };               ///< By car, front first: where its swinging part is
         std::vector<bool> covered { };               ///< By point: the stretch from it is a tube, which no car goes out of
-        std::vector<bool> afloat { };                ///< By point: the stretch from it is a water channel, whose flow carries boats on
         std::vector<bool> steady { };                ///< By point: on the stretch from it a slide's car swings by its weight alone
         std::vector<float> drop_offs { };            ///< As rct3::park::track::TrackCourse::drop_offs
         std::vector<std::array<float, 2>> wades { }; ///< As rct3::park::track::TrackCourse::wades: in them the pool's water carries the car on slowly
+        std::vector<float> piece_starts { };         ///< Along the track to where each of its pieces starts
+        std::vector<std::vector<Push>> pushes { };   ///< By piece, as piece_starts: on plain track, the pushes it gives each car
+        std::vector<bool> water { };                 ///< By piece, as piece_starts: water runs along it
+        std::vector<bool> level { };                 ///< By piece, as piece_starts: its ends are at one height
+        /// Of a ride whose water flows all along it, on every water piece: pushes each car on up to its speed, and on
+        /// level water holds back a faster one. Nothing on other rides.
+        struct Flow
+        {
+            float speed = 0;
+            float force = 0;    ///< Newtons on each car
+            float hold = 0;     ///< Newtons on each car
+            bool alone = false; ///< In place of its pieces' own pushes
+        };
+        std::optional<Flow> flow { };
         /// What holds it back, as its train's file gives it (these, most coaster trains'): rolling, as this much of
         /// the weight pressing it onto the rails, all of it upright or upside down and none on its side; standing
         /// still, up to `resting` of it; and the air, `drag` newtons for each (m/s)² of its speed, on its `mass`.

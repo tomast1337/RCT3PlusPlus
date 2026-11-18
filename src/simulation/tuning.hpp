@@ -57,6 +57,7 @@ namespace rct3::simulation::tuning
         units::Share stomach_margin { 0.1f };   ///< ...and over it
         units::Share delighted { 0.8f };        ///< Happiness a ride leaves a guest at that makes them braver
         units::Share braver { 0.02f };          ///< How much wilder the rides they like then get
+        units::Share boldest { 1.4f };          ///< Fitted to saves: no saved guest likes rides wilder than about 14 on the rating scale; none grow braver past it
     };
 
     /// How much a guest wants to go on a ride they think of.

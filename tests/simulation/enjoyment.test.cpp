@@ -274,6 +274,18 @@ TEST_CASE("a ride that delights a guest leaves them liking wilder ones")
     CHECK(r.get<Taste>(guest).most.value > 0.5f);
 }
 
+    SUBCASE("however bold they came, up to the boldest any guest gets")
+    {
+        const auto bold = park.guest({ 0, 0 }, { .happiness = 0.9f });
+        r.emplace_or_replace<Taste>(bold, Taste { .least = { 0.2f }, .most = { 1.2f } });
+        const auto boldest = park.guest({ 0, 0 }, { .happiness = 0.9f });
+        r.emplace_or_replace<Taste>(boldest, Taste { .least = { 0.2f }, .most = kTuning.enjoyment.boldest });
+        REQUIRE(park.run_until([&] { return r.all_of<Ridden>(bold) && r.all_of<Ridden>(boldest); }, 600));
+        CHECK(r.get<Taste>(bold).most.value > 1.2f);
+        CHECK(r.get<Taste>(boldest).most.value == kTuning.enjoyment.boldest.value);
+    }
+}
+
 TEST_CASE("only a delighted, settled guest thinks they enjoyed a thrilling ride well within what they take")
 {
     Sandbox park;
@@ -295,4 +307,3 @@ TEST_CASE("only a delighted, settled guest thinks they enjoyed a thrilling ride 
     CHECK(enjoyed(delighted));
     CHECK_FALSE(enjoyed(at_their_limit));
     CHECK_FALSE(enjoyed(queasy));
-}

@@ -418,7 +418,7 @@ namespace rct3::simulation
             // train held up by the one ahead are no fault of the track's shape.
             const auto stall_at = [&](float at) {
                 // Plain track a train's length either way: a train waiting by a platform, brake or lift stands still too. A stall is a place past where trains set off.
-                if (ahead_of(c.start, at) > kSetOff.value && room > kArrived && std::ranges::all_of(std::array { -1.0f, -0.5f, 0.0f, 0.5f, 1.0f }, [&](float k) { return c.kinds[point_at(c, wrap(c, at + k * c.train_length))] == Stretch::Plain; }) && std::ranges::none_of(c.stalls_told, [&](float d) { return std::abs(d - at) < kStallSame.value; }))
+                if (!c.stalls_by_design && ahead_of(c.start, at) > kSetOff.value && room > kArrived && std::ranges::all_of(std::array { -1.0f, -0.5f, 0.0f, 0.5f, 1.0f }, [&](float k) { return c.kinds[point_at(c, wrap(c, at + k * c.train_length))] == Stretch::Plain; }) && std::ranges::none_of(c.stalls_told, [&](float d) { return std::abs(d - at) < kStallSame.value; }))
                 {
                     c.stalled = at;
                     c.stalls_told.push_back(at);

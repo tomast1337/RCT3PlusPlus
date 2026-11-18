@@ -96,6 +96,12 @@ namespace rct3::park::track
         /// What its track costs for height over the ground (ground.hpp, raised_cost); nothing on kinds whose track
         /// costs the same at any height.
         units::Money height_rate { };
+        /// Its trains crawl, hang or roll back as a matter of course (slides and rafts in water, rides on lift towers,
+        /// kinds whose track is in several parts), so a train that all but stops on it is no fault of the track.
+        [[nodiscard]] bool trains_stall_by_design() const
+        {
+            return pool_ride || lapless_kind || lift_car.has_value() || may_be_split;
+        }
     };
 
     /// Whether a ride of `rules` running in `mode` is rated without a measured lap: its kind is, or its mode has

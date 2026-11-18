@@ -1044,3 +1044,15 @@ TEST_CASE("a car off a slide's end is stopped by its pool's far wall, and flies 
     CHECK(glm::distance(stepped.at, whole.at) < 1e-3f);
     CHECK(stepped.velocity.z == 0);
 }
+
+TEST_CASE("a standing train's swinging parts only hang, whatever speed it was left with")
+{
+    Coaster c = hill();
+    c.cars = 2;
+    c.speed = 10; // As a crashed train keeps the speed it left the track with
+    c.swinging = SwingingPart { .line = { 1, 0, 0 }, .pull = { 1 } };
+    drive(c, 1);
+    REQUIRE(c.swings.size() == 2);
+    for (const Swing& swing : c.swings)
+        CHECK(swing.angle.value == doctest::Approx(0));
+}

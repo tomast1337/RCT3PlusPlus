@@ -275,13 +275,21 @@ namespace rct3::simulation
 
     namespace
     {
+        enum class Going : std::uint8_t
+        {
+            Standing, ///< Its cars' parts are thrown no way, whatever speed it kept: they only hang
+            Moving,
+        };
+
         /// Swings each car's part on by `dt`, from how its car turns where it is in the train and how the train has
         /// sped up since they last swung.
-        void swing_cars(Coaster& c, float dt)
+        void swing_cars(Coaster& c, float dt, Going going)
         {
+            const bool moving = going == Going::Moving;
             constexpr float kReach = 2; // Either side the bend is taken over, as in felt()
-            const float along = dt > 0 ? (c.speed - c.swung_speed) / dt : 0.0f;
-            c.swung_speed = c.speed;
+            const float speed = moving ? c.speed : 0.0f;
+            const float along = moving && dt > 0 ? (speed - c.swung_speed) / dt : 0.0f;
+            c.swung_speed = speed;
             c.swings.resize(static_cast<std::size_t>(std::max(c.cars, 1)));
             const float spacing = c.train_length / static_cast<float>(c.swings.size());
             for (std::size_t k = 0; k < c.swings.size(); ++k)
@@ -294,7 +302,7 @@ namespace rct3::simulation
                 const glm::vec3 bend = (ahead - 2.0f * here + behind) / (kReach * kReach);
                 const glm::vec3 side = glm::cross(track_up(c, d), way);
                 const glm::vec3 x = glm::length(side) > 1e-6f ? glm::normalize(side) : glm::vec3(1, 0, 0);
-                swing_on(c.swings[k], *c.swinging, glm::mat3(x, glm::cross(way, x), way), bend * c.speed * c.speed + way * along, dt);
+                swing_on(c.swings[k], *c.swinging, glm::mat3(x, glm::cross(way, x), way), bend * speed * speed + way * along, dt);
             }
         }
     } // namespace
@@ -306,7 +314,7 @@ namespace rct3::simulation
             c.rolled_from.reset(); // Set down at its start again by its owner, it has not rolled back from where it was
             // Standing, its cars' parts swing down to rest.
             for (float left = seconds; c.swinging && c.distance.size() >= 2 && left > 0; left -= kStep.value)
-                swing_cars(c, std::min(left, kStep.value));
+                swing_cars(c, std::min(left, kStep.value), Going::Standing);
             return false;
         }
         // How far on round the track `to` is from `from`.
@@ -362,7 +370,7 @@ namespace rct3::simulation
         {
             const float dt = std::min(seconds - static_cast<float>(step) * kStep.value, kStep.value);
             if (c.swinging)
-                swing_cars(c, dt);
+                swing_cars(c, dt, Going::Moving);
             // On a lift: rolled to a stop on its car's track, carried up, held at the top for the block ahead, then
             // let go to roll off under gravity, till its front is off the car's track and the track takes it.
             if (c.lifted && c.lifted->lift < c.lifts.size() && carried(c.lifted->lift))

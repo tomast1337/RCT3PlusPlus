@@ -99,6 +99,11 @@ namespace rct3::park::track
                 const std::uint32_t role = shape->record.role;
                 if (kind == CourseKind::Chain && role >= kRoleTowerFirst && role <= kRoleTowerLast)
                     kind = CourseKind::Plain;
+                // shortcut: a transfer carries the car along its rails as a chain would, not stopping it to move the
+                // rails between levels; give it its own stretch kind when its motion is drawn
+                const bool transfer = role >= kRoleTransferFirst && role <= kRoleTransferLast;
+                if (kind == CourseKind::Plain && (transfer || (role >= kRoleSpiralLiftFirst && role <= kRoleSpiralLiftLast)))
+                    kind = CourseKind::Chain;
                 if ((shape->record.flags & kPieceCableLift) != 0)
                     kind = CourseKind::Cable;
                 // shortcut: holding pieces in a row make one block, not one each, split them when a ride has them so
@@ -145,6 +150,7 @@ namespace rct3::park::track
                 const bool water = (shape->record.flags & kPieceWater) != 0 || (model != models.end() && model->second.flows);
                 course.wet.push_back(water && (shape->record.flags & kPieceEnclosed) == 0);
                 course.covered.push_back((shape->record.flags & kPieceEnclosed) != 0);
+                course.afloat.push_back((shape->record.flags & kPieceAfloat) != 0);
                 course.steady.push_back(shape->record.role >= kRoleSlideToLiftFirst && shape->record.role <= kRoleSlideToLiftLast);
                 std::ranges::copy(piece_pool_openings(object, shape->record), std::back_inserter(course.pool_openings));
                 if (shape->record.drop_off)

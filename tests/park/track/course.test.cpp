@@ -317,7 +317,7 @@ TEST_CASE("a piece is as long along the course as the mean of its rails, and car
     check_near({ train.cars[0].position[0], train.cars[0].position[1], train.cars[0].position[2] }, (start + end) / 2.0f);
 }
 
-TEST_CASE("holding pieces end blocks, lift tops are lift, and a tower's chain-marked pieces are no lift")
+TEST_CASE("holding pieces end blocks, lift tops are lift, a tower's chain-marked pieces are no lift and a spiral lift is chain")
 {
     save::model::TerrainGrid grid;
     grid.width = 8;
@@ -334,10 +334,12 @@ TEST_CASE("holding pieces end blocks, lift tops are lift, and a tower's chain-ma
     park::track::PieceShape tower = plain;
     tower.toggles = park::track::toggle_bit(park::track::PieceToggle::Chain);
     tower.record.role = park::track::kRoleTowerFirst;
+    park::track::PieceShape spiral = plain;
+    spiral.record.role = park::track::kRoleSpiralLiftFirst;
     save::model::Ride ride;
     auto& track = ride.track.emplace();
     std::vector<save::model::PlacedObject> objects;
-    const std::array<std::string, 4> symbols { "Holds", "Top", "Tower", "Plain" };
+    const std::array<std::string, 4> symbols { "Holds", "Top", "Tower", "Spiral" };
     for (std::uint64_t i = 0; i < symbols.size(); ++i)
     {
         save::model::PlacedObject& o = objects.emplace_back();
@@ -349,7 +351,7 @@ TEST_CASE("holding pieces end blocks, lift tops are lift, and a tower's chain-ma
         piece.scenery = o.id;
     }
     track.segments = { { .first_piece = 0, .piece_count = 4 } };
-    const auto shape_of = [&](const save::model::TrackPiece& p, const save::model::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Holds" ? holds : p.symbol == "Top" ? top : p.symbol == "Tower" ? tower : plain; };
+    const auto shape_of = [&](const save::model::TrackPiece& p, const save::model::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Holds" ? holds : p.symbol == "Top" ? top : p.symbol == "Tower" ? tower : p.symbol == "Spiral" ? spiral : plain; };
     const auto course = park::track::track_course(ride, objects, { }, grid, { }, shape_of);
     REQUIRE(course);
     REQUIRE(course->piece_starts.size() == 4);
@@ -360,6 +362,7 @@ TEST_CASE("holding pieces end blocks, lift tops are lift, and a tower's chain-ma
     CHECK(kind_of(0) == park::track::CourseKind::BlockBrake);
     CHECK(kind_of(1) == park::track::CourseKind::Lift);
     CHECK(kind_of(2) == park::track::CourseKind::Plain);
+    CHECK(kind_of(3) == park::track::CourseKind::Chain);
 }
 
 TEST_CASE("a lift tower's foot, middle and top make one lift run, its foot keeping the start of the car's rails")

@@ -63,12 +63,19 @@ namespace rct3::park::track
     /// The pieces taking a slide's end round onto its lift, where the car's swing is not pushed by the turn.
     inline constexpr std::uint32_t kRoleSlideToLiftFirst = 86;
     inline constexpr std::uint32_t kRoleSlideToLiftLast = 87;
+    /// Roles of a transfer track's upper and lower piece, which carry the car between two levels of track
+    inline constexpr std::uint32_t kRoleTransferFirst = 30;
+    inline constexpr std::uint32_t kRoleTransferLast = 31;
+    /// Roles of a spiral lift hill's pieces (foot, middles, top): a lift, though not marked as chain
+    inline constexpr std::uint32_t kRoleSpiralLiftFirst = 74;
+    inline constexpr std::uint32_t kRoleSpiralLiftLast = 76;
     /// Roles of a rotating tower's pieces (base, shaft, caps): marked as chain, though nothing pulls a train up them
     inline constexpr std::uint32_t kRoleTowerFirst = 91;
     inline constexpr std::uint32_t kRoleTowerLast = 95;
     inline constexpr std::uint32_t kPieceChain = 0x2;
     inline constexpr std::uint32_t kPieceEnclosed = 0x8;      ///< A tube or tunnel round the track
     inline constexpr std::uint32_t kPieceWater = 0x1000;      ///< The track runs through water
+    inline constexpr std::uint32_t kPieceAfloat = 0x20000;    ///< A level water channel, which boats float along, carried by its flow
     inline constexpr std::uint32_t kPieceBooster = 0x1000000; ///< Speeds the cars up
     inline constexpr std::uint32_t kPieceStation = 0x40;
     inline constexpr std::uint32_t kPiecePlatformAlone = 0x80; ///< Its platform is capped at both ends, whatever stands beside it

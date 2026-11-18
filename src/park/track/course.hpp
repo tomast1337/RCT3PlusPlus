@@ -54,6 +54,7 @@ namespace rct3::park::track
         std::vector<float> piece_starts;                   ///< Distance at the start of each of the track's pieces
         std::vector<bool> wet;                             ///< By piece, as piece_starts: runs through open water, not in a tube
         std::vector<bool> covered;                         ///< By piece, as piece_starts: in a tube or tunnel
+        std::vector<bool> afloat;                          ///< By piece, as piece_starts: a water channel boats float along
         std::vector<bool> steady;                          ///< By piece: a slide's car's swing is not pushed by its turns
         bool closed = false;                               ///< The end joins the start, so cars go round
         std::optional<float> reverse_lift { };             ///< Where the hill a reverse cable lift pulls the train up backwards ends; none without one

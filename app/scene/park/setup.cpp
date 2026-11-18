@@ -852,16 +852,17 @@ namespace rct3::scene::park
                 .furthest = m.furthest,
             };
         }
-        // shortcut: other trains keep the losses fitted to saved parks' test times, upgrade when their laps are
-        // checked against their files' losses.
-        // shortcut: the air is taken on one empty car, as every pool slide's train is; upgrade with riders' weight.
-        const bool pool_slide = rules != nullptr && rules->pool_ride;
+        // shortcut: the train weighs as many empty cars as its front one, upgrade with riders' weight and each car's own.
         train.stalls_by_design = rules != nullptr && rules->trains_stall_by_design();
-        if (pool_slide && model.mass > 0)
+        if (model.mass > 0)
         {
             train.rolling = model.rolling;
-            train.air = model.air / model.mass;
+            train.resting = model.resting;
+            train.drag = model.air;
+            train.mass = units::Mass { model.mass * static_cast<float>(std::max(train.cars, 1)) };
         }
+        if (rules != nullptr && rules->station_speed)
+            train.station_speed = rules->station_speed->value;
     }
 
     void load_car_models(ParkScene& scene, const config::game::GameInstall& install, const rct3::park::ride::RideCars& cars)

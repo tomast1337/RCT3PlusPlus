@@ -203,14 +203,17 @@ namespace rct3::simulation
         float swung_speed = 0;                       ///< Its speed when its cars' parts last swung, for how fast it has sped up since
         std::vector<Swing> swings { };               ///< By car, front first: where its swinging part is
         std::vector<bool> covered { };               ///< By point: the stretch from it is a tube, which no car goes out of
+        std::vector<bool> afloat { };                ///< By point: the stretch from it is a water channel, whose flow carries boats on
         std::vector<bool> steady { };                ///< By point: on the stretch from it a slide's car swings by its weight alone
         std::vector<float> drop_offs { };            ///< As rct3::park::track::TrackCourse::drop_offs
         std::vector<std::array<float, 2>> wades { }; ///< As rct3::park::track::TrackCourse::wades: in them the pool's water carries the car on slowly
-        /// What holds it back as it goes: rolling, as this much of its weight on the track, and the air, as this
-        /// much of its speed squared, in m/s² for each (m/s)². Those of a train in saved parks' tested coasters
-        /// unless its train's file gives its own.
-        float rolling = 0.003f;
-        float air = 0.0004f;
+        /// What holds it back, as its train's file gives it (these, most coaster trains'): rolling, as this much of
+        /// the weight pressing it onto the rails, all of it upright or upside down and none on its side; standing
+        /// still, up to `resting` of it; and the air, `drag` newtons for each (m/s)² of its speed, on its `mass`.
+        float rolling = 0.04f;
+        float resting = 0.06f;
+        float drag = 0.02f;
+        units::Mass mass { 2000 }; ///< Of the train, empty. Chosen: about a five-car coaster train in saved parks
         // The train
         bool running = false;
         float at = 0;                ///< Distance of the front of the train
@@ -225,6 +228,7 @@ namespace rct3::simulation
         /// Where along the track it stalled since its owner last took it (see `stalls_told`), a place at a time.
         std::optional<float> stalled;
         bool stalls_by_design = false;      ///< Its kind's trains crawl or roll back as a matter of course: never told as a stall
+        bool held_up = false;               ///< Slowed behind the train in front since it last went faster than its station's speed: its stalls are not told
         std::vector<float> stalls_told { }; ///< The places it has stalled at, no two close, so a lap is not told again
         bool launched = false;              ///< Its tail has left the platform since it set off, so it is pushed no more there
         units::Radians lean { };            ///< Of a slide's car, it has swung up the trough's wall from the bottom, to its right

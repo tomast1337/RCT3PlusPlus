@@ -1006,6 +1006,7 @@ namespace rct3::simulation
             const auto piece = std::ranges::upper_bound(course.piece_starts, d) - course.piece_starts.begin() - 1;
             c.covered.push_back(piece >= 0 && static_cast<std::size_t>(piece) < course.covered.size() && course.covered[static_cast<std::size_t>(piece)]);
             c.steady.push_back(piece >= 0 && static_cast<std::size_t>(piece) < course.steady.size() && course.steady[static_cast<std::size_t>(piece)]);
+            c.afloat.push_back(piece >= 0 && static_cast<std::size_t>(piece) < course.afloat.size() && course.afloat[static_cast<std::size_t>(piece)]);
         }
         for (const rct3::park::track::CourseKind k : course.kinds)
         {
@@ -1053,6 +1054,13 @@ namespace rct3::simulation
         constexpr float kBoostForce = 10000; ///< A block brake's push on each car, as every ride file gives it
         constexpr float kCarMass = 500;
         const float mass = !ride.trains.empty() && ride.trains[0].mass > 0 ? ride.trains[0].mass : kCarMass * static_cast<float>(c.cars);
+        c.mass = units::Mass { mass };
+        // A saved train keeps how it grips the rails; how the air holds it back is its file's alone.
+        if (!ride.trains.empty() && ride.trains[0].dynamic_friction > 0)
+        {
+            c.rolling = ride.trains[0].dynamic_friction;
+            c.resting = ride.trains[0].static_friction;
+        }
         c.brake_pull = kBrakeForce * static_cast<float>(c.cars) / mass;
         c.boost_pull = kBoostForce * static_cast<float>(c.cars) / mass;
         // The cable up a reverse lift hill pulls as a chain does, from the station till the train's back reaches the

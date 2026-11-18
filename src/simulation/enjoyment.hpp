@@ -6,6 +6,7 @@
 
 #include "simulation/guests.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -88,5 +89,10 @@ namespace rct3::simulation
     /// for the one they just got off. An untested ride has only a small, flat appeal in place of its ratings and
     /// price. They go only on a ride that reaches the bar in the tuning.
     [[nodiscard]] float ride_appeal(const RideInMind& ride, const Taste& taste, const Mood& mood);
+
+    /// How likely a guest is to pick, among the rides they would go on, one they want as much as `appeal`, `near`
+    /// of the way from the edge of their reach to them (1 right here), with `queued` guests waiting for it: likelier
+    /// the more they want it and the nearer it is, less likely the longer its queue.
+    [[nodiscard]] float ride_pull(float appeal, float near, std::size_t queued);
 
 } // namespace rct3::simulation

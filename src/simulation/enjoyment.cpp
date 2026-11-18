@@ -74,4 +74,9 @@ namespace rct3::simulation
         return k.excitement * ride.excitement.value + k.suits * suits + k.bargain * bargain - k.sickening * sickening + known;
     }
 
+    float ride_pull(float appeal, float near, std::size_t queued)
+    {
+        return appeal * near * near / (1 + static_cast<float>(queued) / kTuning.choosing.queue_halves);
+    }
+
 } // namespace rct3::simulation

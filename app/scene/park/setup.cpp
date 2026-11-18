@@ -859,7 +859,11 @@ namespace rct3::scene::park
             train.rolling = model.rolling;
             train.resting = model.resting;
             train.drag = model.air;
-            train.mass = units::Mass { model.mass * static_cast<float>(std::max(train.cars, 1)) };
+            const units::Mass mass { model.mass * static_cast<float>(std::max(train.cars, 1)) };
+            // Brakes and block brakes push each car as hard whatever it weighs: the heavier train, the less it is slowed.
+            train.brake_pull *= train.mass.value / mass.value;
+            train.boost_pull *= train.mass.value / mass.value;
+            train.mass = mass;
         }
         if (rules != nullptr && rules->station_speed)
             train.station_speed = rules->station_speed->value;

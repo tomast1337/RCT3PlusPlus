@@ -233,6 +233,9 @@ namespace rct3::scene::track
     /// update after the interface, `elapsed` after the last.
     void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, std::int32_t currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands, units::Seconds elapsed);
 
+    /// Posts the message that a test train of `ride` stalled at `at`, a point of its track: clicking it looks there.
+    void tell_stall(park::ParkScene& scene, const ui::InterfaceAssets& assets, const save::model::Ride& ride, glm::vec3 at);
+
     /// The arrows where the picked piece starts and ends (see park/build_arrows.hpp); empty while no piece is.
     [[nodiscard]] rct3::park::TerrainMesh track_arrows(const park::ParkScene& scene);
 

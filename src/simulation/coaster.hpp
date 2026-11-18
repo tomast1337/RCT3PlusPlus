@@ -207,15 +207,21 @@ namespace rct3::simulation
         float air = 0.0004f;
         // The train
         bool running = false;
-        float at = 0;                  ///< Distance of the front of the train
-        float was_at = 0;              ///< Where the front was when the last step began, for drawing between steps
-        float travelled = 0;           ///< Since it set off
-        std::size_t next_stop = 0;     ///< Of `stops`, the next it comes to; past one, it stands there until set off
-        float speed = 0;               ///< Along the track
-        units::Seconds slow { };       ///< It has been all but stopped away from a chain or station
-        bool launched = false;         ///< Its tail has left the platform since it set off, so it is pushed no more there
-        units::Radians lean { };       ///< Of a slide's car, it has swung up the trough's wall from the bottom, to its right
-        units::TurnRate lean_rate { }; ///< How fast that swing is changing
+        float at = 0;                ///< Distance of the front of the train
+        float was_at = 0;            ///< Where the front was when the last step began, for drawing between steps
+        float travelled = 0;         ///< Since it set off
+        std::size_t next_stop = 0;   ///< Of `stops`, the next it comes to; past one, it stands there until set off
+        float speed = 0;             ///< Along the track
+        units::Seconds slow { };     ///< It has been all but stopped away from a chain or station
+        units::Seconds crawling { }; ///< It has been all but stopped on plain track without a break, from `crawl_at`
+        float crawl_at = 0;
+        std::optional<float> rolled_from; ///< Where it began to roll back, while it does
+        /// Where along the track it stalled since its owner last took it (see `stalls_told`), a place at a time.
+        std::optional<float> stalled;
+        std::vector<float> stalls_told { }; ///< The places it has stalled at, no two close, so a lap is not told again
+        bool launched = false;              ///< Its tail has left the platform since it set off, so it is pushed no more there
+        units::Radians lean { };            ///< Of a slide's car, it has swung up the trough's wall from the bottom, to its right
+        units::TurnRate lean_rate { };      ///< How fast that swing is changing
         // A shuttle's train
         std::int32_t passed = 0;    ///< Times it has come into the station since it set off
         float push = 0;             ///< The speed it is being pushed to, negative backwards; 0 when it is not

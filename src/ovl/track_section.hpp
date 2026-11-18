@@ -40,6 +40,16 @@ namespace rct3::ovl
         static constexpr std::uint32_t kOverPool = 0x400;  ///< As where a slide's track swings out over the pool beside
     };
 
+    /// A push the piece gives each car on it while the train's speed is within a range.
+    struct SpeedPush
+    {
+        float least = 0; ///< Metres a second
+        float most = 0;  ///< Metres a second
+        float force = 0; ///< Newtons, along the track
+        float from = 0;  ///< Metres along the piece the car must be past
+        float to = -1;   ///< Metres along the piece the car must be short of, below 0 for its end
+    };
+
     struct TrackSection
     {
         std::string_view name; ///< Name string stored in the item, the same as the symbol name in all files
@@ -93,6 +103,9 @@ namespace rct3::ovl
         /// Of a pool slide's end that runs on back to its lift: how far along it, in metres, its riders are let off
         /// into the pool. None on other pieces, whose files keep a number below 0. Version 4 and 5 files only.
         std::optional<float> drop_off { };
+        /// Pushes along the piece by the train's speed: a water channel's flow carrying boats on, or tyres
+        /// carrying a train through a station. Empty on most pieces.
+        std::vector<SpeedPush> pushes;
         /// Squares of its footprint that meet things beside them. Version 4 and 5 files only.
         std::vector<TrackSquare> squares;
         /// Join tags of the start and of the end.

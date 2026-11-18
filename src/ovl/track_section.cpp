@@ -85,6 +85,16 @@ namespace rct3::ovl
                     s.end_join = record->text(0x6C);
                     s.widths = { record->u32(0x114), record->u32(0x118) };
                 }
+                // Entries of the least and most speed and the force, and with the layout below a span of the piece too.
+                const bool spans = (s.flags[0] & 0x400000) != 0 && (layout != OvlLayout::NoStream ? record->u32(0xE4) : 0) >= 2;
+                const std::size_t entry = spans ? 20 : 12;
+                const std::uint32_t pushes = record->u32(0x70);
+                if (const auto list = pushes == 0 ? std::nullopt : ItemRecord::open(space, refs, record->u32(0x74), std::size_t { pushes } * entry))
+                    for (std::uint32_t i = 0; i < pushes; ++i)
+                    {
+                        const std::size_t at = i * entry;
+                        s.pushes.push_back({ list->real(at), list->real(at + 4), list->real(at + 8), spans ? list->real(at + 12) : 0, spans ? list->real(at + 16) : -1 });
+                    }
                 // Later records number their own layout, 2 in one-stream files and 3 in many-stream files: the group and
                 // tags come with 2, the side and the other half with 3.
                 const std::uint32_t record_layout = layout != OvlLayout::NoStream ? record->u32(0xE4) : 0;

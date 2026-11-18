@@ -343,8 +343,8 @@ namespace rct3::simulation
                         ridden.push_back(e);
                     const RideTaken taken { .excitement = { felt }, .intensity = ride.intensity, .nausea = ride.nausea, .price = attraction.price, .worth = ride_worth(ride), .waited = riding.queued, .new_to_them = new_to_them, .eating = eating(r, guest) };
                     take_ride(mood, r.get_or_emplace<Favourite>(guest), e, attraction.saved, taken, enjoyment_points(taken, taste_of(r, guest), mood));
-                    if (auto* taste = r.try_get<Taste>(guest); taste != nullptr && mood.happiness.value >= kTuning.enjoyment.delighted.value)
-                        taste->most.value = std::min(1.0f, taste->most.value + kTuning.enjoyment.braver.value);
+                    if (auto* taste = r.try_get<Taste>(guest); taste != nullptr && mood.happiness.value >= kTuning.enjoyment.delighted.value && taste->most.value < kTuning.enjoyment.boldest.value)
+                        taste->most.value += kTuning.enjoyment.braver.value;
                     // shortcut: soaked as they get off, not the moment their car splashes (park/car_splashes.hpp);
                     // upgrade when the simulation follows its cars through the water.
                     if (ride.splash)

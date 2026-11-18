@@ -277,6 +277,9 @@ namespace rct3::simulation::tuning
         /// Fitted to saves: how many guests have each of the four saved stomach tolerances, weakest first, among
         /// 14,500 guests of nine parks; the same at every age.
         std::array<units::Chance, 4> stomachs { { { 0.117 }, { 0.251 }, { 0.375 }, { 0.258 } } };
+        /// Fitted to saves: guests at most ten minutes into their visit with nothing eaten or drunk yet need the
+        /// toilet evenly from not at all to this much.
+        units::Share bladder { 0.22f };
         units::Money cash { 5000 };        ///< What a guest brings in, where the park sets no average
         units::Money bank { 10000 };       ///< What cash machines can give a guest, where the park sets no average
         units::Share cash_spread { 0.2f }; ///< How far either side of the average a guest's cash and bank lie
@@ -634,9 +637,13 @@ namespace rct3::simulation::tuning
         units::PerSecond longing = units::PerSecond::over({ 300 }); ///< Wish to swim grown in a guest who likes pools fully; slower as they like them less
         // Fitted to saves: big parks with many guests wishing for a swim hold 1.4 to 1.6 swimmers a square of water
         // in their pools, the fullest saved pool 2.4.
-        float crowd = 2.0f;                 ///< Swimmers a pool takes for each square of its water, counting those on their way, changing and on its rides; no more set out for it
-        units::Share least_liking { 0.1f }; ///< Guests like pools from this much to `most_liking`, as saved guests do
+        float crowd = 2.0f; ///< Swimmers a pool takes for each square of its water, counting those on their way, changing and on its rides; no more set out for it
+        // Fitted to saves: of 14,000 saved guests a tenth like pools exactly the least, a tenth exactly the most, and
+        // the rest evenly between.
+        units::Share least_liking { 0.1f };
         units::Share most_liking { 0.9f };
+        // Fitted to saves: the wish to swim of saved guests just in has nothing to do with how much they like pools.
+        units::Share arrival_wish { 0.5f }; ///< Chosen by eye: the most a guest comes in with; evenly spread under it
         units::Degrees cool { 20 };         ///< Chosen by eye: under which a guest must wish for a swim the more before going
         units::Share chill { 0.03f };       ///< Chosen by eye: more wish for each degree under `cool`; on a cold enough day none is enough
         units::Degrees warm { 25 };         ///< Chosen by eye: over which a guest goes for a swim with less wish for one

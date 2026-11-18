@@ -95,6 +95,7 @@ namespace rct3::simulation
             float nausea = 0;
             units::Money worth { };
             bool untested = false;
+            std::size_t queued = 0; ///< Guests in the queue at this entrance
         };
 
         /// Whether the guest, or anyone in their party, carries a park map.
@@ -140,10 +141,10 @@ namespace rct3::simulation
                 else if (const auto* ride = r.try_get<CycleRide>(e))
                 {
                     // A ride with more than one station is on offer at each, guests going to the nearest.
-                    out.push_back({ e, AttractionKind::Ride, Product::Drink, *a.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride), ride->untested });
+                    out.push_back({ e, AttractionKind::Ride, Product::Drink, *a.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride), ride->untested, ride->queue.size() });
                     for (const Stop& stop : ride->stops)
                         if (stop.entrance)
-                            out.push_back({ e, AttractionKind::Ride, Product::Drink, *stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride), ride->untested });
+                            out.push_back({ e, AttractionKind::Ride, Product::Drink, *stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride), ride->untested, stop.queue.size() });
                 }
                 else if (const auto* door = r.try_get<PoolDoor>(e))
                 {
@@ -252,8 +253,8 @@ namespace rct3::simulation
             const float least_cover = rained_on ? kTuning.weather.covered.value : 0;
             const glm::vec3 here = paths.centre(at);
             const float reach = (with_map ? kTuning.choosing.map_reach : kTuning.choosing.reach) * paths.tile_size;
-            // Any ride in reach that suits them and that they want enough, the likelier the more they want it and
-            // the nearer it is.
+            // Any ride in reach that suits them and that they want enough, the likelier the more they want it, the
+            // nearer it is and the shorter its queue.
             const auto ride = [&](bool splash) -> std::optional<std::pair<entt::entity, std::vector<NodeId>>> {
                 std::vector<std::pair<const Offer*, float>> weighed;
                 float total = 0;
@@ -267,7 +268,7 @@ namespace rct3::simulation
                     const float near = 1 - glm::distance(here, paths.centre(o.entrance)) / reach;
                     if (wants < kTuning.choosing.bar || near <= 0)
                         continue;
-                    weighed.emplace_back(&o, wants * near * near);
+                    weighed.emplace_back(&o, ride_pull(wants, near, o.queued));
                     total += weighed.back().second;
                 }
                 float roll = static_cast<float>(random::unit(dice.state)) * total;

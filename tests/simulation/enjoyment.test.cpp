@@ -215,6 +215,15 @@ TEST_CASE("of two rides alike, guests mostly take the tested one")
     CHECK(r.get<Attraction>(untested).customers * 2 < r.get<Attraction>(tested).customers);
 }
 
+TEST_CASE("a guest picks a ride the likelier the more they want it, the nearer it is and the shorter its queue")
+{
+    CHECK(ride_pull(0.6f, 1, 0) > ride_pull(0.3f, 1, 0));
+    CHECK(ride_pull(0.6f, 1, 0) > ride_pull(0.6f, 0.5f, 0));
+    CHECK(ride_pull(0.6f, 1, 0) > ride_pull(0.6f, 1, 5));
+    CHECK(ride_pull(0.6f, 1, 40) > 0);
+    CHECK(ride_pull(0.6f, 1, static_cast<std::size_t>(kTuning.choosing.queue_halves)) == doctest::Approx(ride_pull(0.6f, 1, 0) / 2));
+}
+
 TEST_CASE("a guest walks past a dull ride far dearer than it is worth")
 {
     Sandbox park;

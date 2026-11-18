@@ -411,7 +411,7 @@ TEST_CASE("a lift tower's foot, middle and top make one lift run, its foot keepi
     CHECK(course->kinds[1] == park::track::CourseKind::Lift);
 }
 
-TEST_CASE("brakes and block brakes keep their own speed, 0 when they have none, and other pieces none at all")
+TEST_CASE("brakes and block brakes keep their own speed, else the piece's speed, and other pieces none at all")
 {
     save::model::TerrainGrid grid;
     grid.width = 8;
@@ -442,6 +442,7 @@ TEST_CASE("brakes and block brakes keep their own speed, 0 when they have none, 
         piece.symbol = symbols[i];
         piece.scenery = o.id;
         piece.brake_speed = speeds[i];
+        piece.speed_class = 5; // Where the game keeps a brake's speed: the piece's own brake speed comes first
     }
     track.segments = { { .first_piece = 0, .piece_count = 4 } };
     const auto shape_of = [&](const save::model::TrackPiece& p, const save::model::PlacedObject&) -> std::optional<const park::track::PieceShape&> { return p.symbol == "Brakes" ? brakes : p.symbol == "Block" ? block : p.symbol == "Holds" ? holds : plain; };
@@ -453,7 +454,7 @@ TEST_CASE("brakes and block brakes keep their own speed, 0 when they have none, 
         return course->brake_speeds[static_cast<std::size_t>(after - course->distance.begin() - 1)];
     };
     CHECK(speed_of(0) == 6);
-    CHECK(speed_of(1) == 0);
+    CHECK(speed_of(1) == 5);
     CHECK(speed_of(2) < 0);
     CHECK(speed_of(3) < 0);
 }

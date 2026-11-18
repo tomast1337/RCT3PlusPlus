@@ -3,6 +3,7 @@
 
 #include "core/minus_one.hpp"
 
+#include <algorithm>
 #include <utility>
 
 namespace rct3::ovl
@@ -56,7 +57,8 @@ namespace rct3::ovl
                 car.name = record->text(0x00);
                 car.display_name = record->text(0x04);
                 car.kind = record->u32(0x08);
-                car.mass = record->real(0x1C);
+                // The body's weight, and each moving part's where the car has one (-1 where not).
+                car.mass = record->real(0x10) + std::max(record->real(0x1C), 0.0f) + std::max(record->real(0xE0), 0.0f);
                 car.visual = record->ref(0x0C, "svd");
                 car.part = record->ref(0x14, "svd");
                 for (std::size_t i = 0; i < car.wheels.size(); ++i)

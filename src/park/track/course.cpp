@@ -120,9 +120,9 @@ namespace rct3::park::track
                 else if (kind == CourseKind::Plain && (shape->record.flags & kPieceBooster) != 0)
                     kind = CourseKind::Booster;
                 // A brake's or block brake's own speed, 0 when it has none; below 0 on other pieces. A booster's is the
-                // speed the player set it to push the cars up to.
+                // speed the player set it to push the cars up to. The game keeps a brake's in the piece's speed too.
                 const bool brakes = kind == CourseKind::Brake || (kind == CourseKind::BlockBrake && role == kRoleBlockBrake);
-                const auto brake_speed = brakes ? static_cast<float>(piece.brake_speed.value_or(0)) : kind == CourseKind::Booster ? static_cast<float>(piece.speed_class.value_or(0)) : -1.0f;
+                const auto brake_speed = brakes ? static_cast<float>(piece.brake_speed.or_else([&] { return piece.speed_class; }).value_or(0)) : kind == CourseKind::Booster ? static_cast<float>(piece.speed_class.value_or(0)) : -1.0f;
                 course.splash_end = role >= kRoleSlideBowl && role <= kRoleSlideEnd;
                 for (const auto& climb : shape->record.climbs)
                 {

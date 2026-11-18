@@ -75,7 +75,6 @@ namespace rct3::park::track
     inline constexpr std::uint32_t kPieceChain = 0x2;
     inline constexpr std::uint32_t kPieceEnclosed = 0x8;      ///< A tube or tunnel round the track
     inline constexpr std::uint32_t kPieceWater = 0x1000;      ///< The track runs through water
-    inline constexpr std::uint32_t kPieceAfloat = 0x20000;    ///< A level water channel, which boats float along, carried by its flow
     inline constexpr std::uint32_t kPieceBooster = 0x1000000; ///< Speeds the cars up
     inline constexpr std::uint32_t kPieceStation = 0x40;
     inline constexpr std::uint32_t kPiecePlatformAlone = 0x80; ///< Its platform is capped at both ends, whatever stands beside it
@@ -173,6 +172,20 @@ namespace rct3::park::track
         Side side { };           ///< As the piece stands unturned
     };
 
+    /// A push a piece gives each car on it while the train goes at a speed within a range, as
+    /// ovl::SpeedPush: a water channel's flow carrying boats on, say.
+    struct PiecePush
+    {
+        float least = 0; ///< Metres a second, along the way the train goes
+        float most = 0;
+        float force = 0; ///< Newtons on each car, along the way the train goes
+        float from = 0;  ///< Metres along the piece the car is past, as drawn
+        float to = -1;   ///< Metres along the piece the car is short of, as drawn; below 0 for its end
+        /// Of a water piece's flow, the push a standing car gets: the Newtons the water holds back a car going faster
+        /// than the flow with. 0 for every other push.
+        float hold = 0;
+    };
+
     struct PieceRecord
     {
         std::string name; ///< Of the section
@@ -195,6 +208,8 @@ namespace rct3::park::track
         std::vector<std::vector<glm::vec3>> climbs { };
         std::vector<PieceOpening> pool_sides { }; ///< Where it joins a pool beside: a slide's end, or its track out over the water
         std::optional<float> drop_off { };        ///< As ovl::TrackSection::drop_off
+        std::vector<PiecePush> pushes { };        ///< As ovl::TrackSection::pushes
+        bool water = false;                       ///< Water runs along it: it has water edges, or runs through water
         /// Of a lift tower's pieces, whose line is its car's way up the tower: the middle line of its second pair of
         /// rails, where the train's track joins it (at the foot from level some way before the tower, at the top
         /// pointing down past it). Its ends stand for the piece's own wherever pieces meet. None on other pieces.

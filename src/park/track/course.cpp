@@ -150,7 +150,7 @@ namespace rct3::park::track
                 const bool water = (shape->record.flags & kPieceWater) != 0 || (model != models.end() && model->second.flows);
                 course.wet.push_back(water && (shape->record.flags & kPieceEnclosed) == 0);
                 course.covered.push_back((shape->record.flags & kPieceEnclosed) != 0);
-                course.afloat.push_back((shape->record.flags & kPieceAfloat) != 0);
+                course.water.push_back(shape->record.water);
                 course.steady.push_back(shape->record.role >= kRoleSlideToLiftFirst && shape->record.role <= kRoleSlideToLiftLast);
                 std::ranges::copy(piece_pool_openings(object, shape->record), std::back_inserter(course.pool_openings));
                 if (shape->record.drop_off)
@@ -178,6 +178,23 @@ namespace rct3::park::track
                 }
                 if (wade_from)
                     course.wades.push_back({ *wade_from, course.length() });
+                // A push's span turns round with its piece. The water holds cars back only where it runs level: pieces
+                // climb in whole steps, so a centimetre tells (chosen by eye).
+                auto& pushes = course.pushes.emplace_back();
+                const float start = course.piece_starts.back();
+                const float span = course.length() - start;
+                const bool level = std::abs(path.back().y - path.front().y) < 0.01f;
+                course.level.push_back(level);
+                for (PiecePush p : shape->record.pushes)
+                {
+                    if (!level)
+                        p.hold = 0;
+                    const float from = std::max(p.from, 0.0f);
+                    const float to = p.to < 0 ? span : std::min(p.to, span);
+                    p.from = start + (piece.reversed ? span - to : from);
+                    p.to = start + (piece.reversed ? span - from : to);
+                    pushes.push_back(p);
+                }
                 if (lift_foot)
                     course.lifts.back().from = course.distance[course.distance.size() - path.size()];
                 if (kind == CourseKind::Lift && !course.lifts.empty())

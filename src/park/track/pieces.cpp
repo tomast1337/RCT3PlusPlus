@@ -321,6 +321,9 @@ namespace rct3::park::track
             r.group = section.group;
             r.platform_run = section.platform_run;
             r.drop_off = section.drop_off;
+            r.water = (section.flags[0] & kPieceWater) != 0 || !section.water_splines[0].empty();
+            for (const ovl::SpeedPush& p : section.pushes)
+                r.pushes.push_back({ p.least, p.most, p.force, p.from, p.to, r.water && p.least <= 0 && p.most > 0 ? p.force : 0 });
             if ((r.flags & kPieceLift) != 0)
             {
                 const auto join_left = splines.find(section.splines[2]);

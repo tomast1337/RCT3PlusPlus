@@ -997,6 +997,15 @@ namespace rct3::simulation
         c.distance = course.distance;
         c.drop_offs = course.drop_offs;
         c.wades = course.wades;
+        c.piece_starts = course.piece_starts;
+        c.water = course.water;
+        c.level = course.level;
+        for (const auto& pushes : course.pushes)
+        {
+            auto& out = c.pushes.emplace_back();
+            for (const rct3::park::track::PiecePush& p : pushes)
+                out.push_back({ .from = p.from, .to = p.to, .least = p.least, .most = p.most, .force = p.force, .hold = p.hold });
+        }
         c.points = course.points;
         c.ups = course.ups;
         for (const glm::vec3& p : course.points)
@@ -1006,7 +1015,6 @@ namespace rct3::simulation
             const auto piece = std::ranges::upper_bound(course.piece_starts, d) - course.piece_starts.begin() - 1;
             c.covered.push_back(piece >= 0 && static_cast<std::size_t>(piece) < course.covered.size() && course.covered[static_cast<std::size_t>(piece)]);
             c.steady.push_back(piece >= 0 && static_cast<std::size_t>(piece) < course.steady.size() && course.steady[static_cast<std::size_t>(piece)]);
-            c.afloat.push_back(piece >= 0 && static_cast<std::size_t>(piece) < course.afloat.size() && course.afloat[static_cast<std::size_t>(piece)]);
         }
         for (const rct3::park::track::CourseKind k : course.kinds)
         {

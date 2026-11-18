@@ -1065,22 +1065,42 @@ TEST_CASE("a stopped train stays put on a slope its grip on the rails outholds, 
     CHECK(steep.speed < 0);
 }
 
-TEST_CASE("a boat on a water channel is carried on by the flow, and slowed to its pace when faster")
+TEST_CASE("a water piece pushes a boat on up to its flow, and on the level holds back a faster one")
 {
+    // Pieces from 0, 10, 40 and 70 m; the third one's water flows at 4 m/s.
     Coaster still = level(0);
-    still.afloat = { false, true, true, true, false };
+    still.at = 45;
+    still.mass = { 500 };
     still.rolling = 0.04f;
-    drive(still, 1);
-    CHECK(still.speed > 2);
-    CHECK(still.at > 41);
+    still.piece_starts = { 0, 10, 40, 70 };
+    still.pushes = { { }, { }, { { .from = 40, .to = 70, .least = -100, .most = 4, .force = 1000, .hold = 1000 } }, { } };
+    still.water = { false, false, true, false };
+    still.level = { true, true, true, true };
+    drive(still, 4);
+    CHECK(still.speed == doctest::Approx(4).epsilon(0.05));
     Coaster fast = still;
-    fast.at = 40;
-    fast.speed = 10;
+    fast.at = 45;
+    fast.speed = 8;
     fast.rolling = 0; // The water alone
-    drive(fast, 0.2f);
-    CHECK(fast.speed == doctest::Approx(10 - 0.2f * fast.brake_pull));
-    drive(fast, 1);
-    CHECK(fast.speed == doctest::Approx(still.speed));
+    drive(fast, 0.1f);
+    CHECK(fast.speed == doctest::Approx(8 - 0.1f * 1000 / 500));
+    // A ride's own flow pushes on all its water in place of its pieces, and holds back on the level only.
+    Coaster flowing = still;
+    flowing.at = 45;
+    flowing.speed = 0;
+    flowing.flow = Coaster::Flow { .speed = 3, .force = 1000, .hold = 2000, .alone = true };
+    drive(flowing, 4);
+    CHECK(flowing.speed == doctest::Approx(3).epsilon(0.05));
+    flowing.rolling = 0;
+    flowing.at = 45;
+    flowing.speed = 8;
+    drive(flowing, 0.1f);
+    CHECK(flowing.speed == doctest::Approx(8 - 0.1f * 2000 / 500));
+    flowing.level[2] = false;
+    flowing.at = 45;
+    flowing.speed = 8;
+    drive(flowing, 0.1f);
+    CHECK(flowing.speed == doctest::Approx(8));
 }
 
 TEST_CASE("a car off a slide's end flies on, comes down on its water ahead and floats till it is gone ten seconds on")

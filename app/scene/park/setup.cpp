@@ -867,6 +867,13 @@ namespace rct3::scene::park
         }
         if (rules != nullptr && rules->station_speed)
             train.station_speed = rules->station_speed->value;
+        if (rules != nullptr)
+        {
+            train.water_pace = rules->water_pace;
+            train.water_hold = rules->water_hold;
+            if (rules->flow)
+                train.flow = simulation::Coaster::Flow { .speed = rules->flow->speed.value, .force = rules->flow->force, .hold = rules->flow->hold, .alone = rules->flow->alone };
+        }
     }
 
     void load_car_models(ParkScene& scene, const config::game::GameInstall& install, const rct3::park::ride::RideCars& cars)

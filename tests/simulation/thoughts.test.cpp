@@ -59,7 +59,7 @@ TEST_CASE("riders think of the ride: enjoyed it, and the queue was long")
     const auto ride = park.flat_ride("Twister", { 3, 0 }, 0, { .capacity = 1, .cycle_seconds = 200, .excitement = 0.9f });
     std::vector<entt::entity> guests;
     for (std::int32_t i = 0; i < 4; ++i)
-        guests.push_back(park.guest({ 0, 0 }));
+        guests.push_back(park.guest({ 0, 0 }, { .happiness = 0.95f })); // Only a delighted rider thinks they enjoyed it
     auto& r = park.world().registry;
     park.run_seconds(900);
     CHECK(std::ranges::any_of(guests, [&](entt::entity g) { return times(park, g, ThoughtKind::Enjoyed) > 0 && r.get<Thoughts>(g).recent.front().about == ride; }));

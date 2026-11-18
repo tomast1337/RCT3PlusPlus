@@ -12,7 +12,7 @@ namespace rct3::simulation
 
     Fit fit(float rating, float least, float most, float slack)
     {
-        const float off = std::max({ least - rating, rating - most, 0.0f });
+        const float off = std::max({ (least - rating) / static_cast<float>(kTuning.enjoyment.tame_reach.value), rating - most, 0.0f });
         return off == 0 ? Fit::Within : off <= slack ? Fit::Near : off <= 2 * slack ? Fit::Far : Fit::WayOff;
     }
 
@@ -46,14 +46,16 @@ namespace rct3::simulation
     bool take_ride(Mood& mood, Favourite& favourite, entt::entity ride, std::uint64_t saved, const RideTaken& taken, std::int32_t points)
     {
         const auto& k = kTuning.enjoyment;
+        // Judged in the mood they got on in: a ride does not become the favourite of a guest it only cheered up.
+        const float score = favourite_score(taken.excitement, points);
+        const bool has_one = favourite.ride != entt::null || favourite.saved != 0;
+        const bool best = mood.happiness.value >= k.content.value && (!has_one || score >= favourite.score);
         mood.happiness.value = clamp01(mood.happiness.value + static_cast<float>(points) * k.happiness_per_point);
         // Scaled so a guest left middling feels the ride's plain nausea.
         const float queasy = std::clamp(1 - mood.happiness.value, k.least_queasy.value, k.most_queasy.value) * 2;
         const float stomach = taken.eating ? static_cast<float>(kTuning.sickness.full_stomach.value) : 1;
         mood.nausea.value = clamp01(mood.nausea.value + taken.nausea.value * kTuning.sickness.ride_nausea * (kTuning.sickness.tolerance_ceiling - mood.tolerance.value) * stomach * queasy);
-        const float score = favourite_score(taken.excitement, points);
-        const bool has_one = favourite.ride != entt::null || favourite.saved != 0;
-        if (mood.happiness.value < k.content.value || (has_one && score < favourite.score))
+        if (!best)
             return false;
         favourite = { .ride = ride, .saved = saved, .score = score };
         return true;

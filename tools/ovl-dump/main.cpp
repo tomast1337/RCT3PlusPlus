@@ -550,6 +550,8 @@ namespace
                     out.info("    +0x{:02x} {}:{}", r.offset, std::string(r.name).c_str(), std::string(r.tag).c_str());
                 if (s.drop_off)
                     out.info("    drop off {:.2f}", *s.drop_off);
+                for (const auto& p : s.pushes)
+                    out.info("    push {:g} N at {:g} to {:g} m/s, from {:g} to {:g} m", p.force, p.least, p.most, p.from, p.to);
                 for (const auto& q : s.squares)
                     out.info("    square {:d} {:d} height {:d} flags {:#x}", q.x, q.z, q.height, q.flags);
             }
@@ -617,7 +619,9 @@ namespace
                 out.info("  {:<32} type {:d} text {} splines {} sections {}", name.c_str(), r.info.type_id, std::string(r.info.name_text).c_str(), std::string(r.splines[0]).c_str(), std::string(r.track_sections[0]).c_str());
                 out.info("    car rotation {} car facing {} most trains {}", r.rules.car_rotation, r.rules.car_facing, r.rules.most_trains ? std::format("{}", *r.rules.most_trains) : "any");
                 if (const auto& d = r.operating)
-                    out.info("    mode {:d} allowed 0x{:x} station {:g} launch {:g} [{:g}, {:g}] lift {:g} [{:g}, {:g}] brake {:g} ({:g} N) block {:g} ({:g} N) fixed {:g} cost {:d} height cost {:d}", d->mode, d->allowed_modes, d->station_speed, d->launch_speed, d->launch_min, d->launch_max, d->lift_speed, d->lift_min, d->lift_max, d->brake_speed, d->brake_force, d->block_brake_speed, d->block_brake_force, d->fixed_speed.value_or(-1), d->cost, d->height_cost);
+                    out.info(
+                        "    mode {:d} allowed 0x{:x} station {:g} launch {:g} [{:g}, {:g}] lift {:g} [{:g}, {:g}] brake {:g} ({:g} N) block {:g} ({:g} N) fixed {:g} water {:g} {:g} flow {:g} ({:g} N, held {:g} N{}) cost {:d} height cost {:d}", d->mode, d->allowed_modes, d->station_speed, d->launch_speed, d->launch_min, d->launch_max, d->lift_speed, d->lift_min, d->lift_max, d->brake_speed, d->brake_force, d->block_brake_speed, d->block_brake_force, d->fixed_speed.value_or(-1), d->water_pace, d->water_hold,
+                        d->flow_speed, d->flow_force, d->flow_hold, d->flow_alone ? ", alone" : "", d->cost, d->height_cost);
                 if (const auto& d = r.operating)
                     for (const std::string_view train : d->trains)
                         out.info("    train {}", train);

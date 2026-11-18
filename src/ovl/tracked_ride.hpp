@@ -21,6 +21,16 @@ namespace rct3::ovl
         std::uint32_t mode = 0;          ///< Operating mode, numbered as the save's ride operating mode
         std::uint32_t allowed_modes = 0; ///< Bit (1 << mode) for each mode the player may pick
         float station_speed = 0;         ///< Trains are sent off a platform at, and brought in to stop at
+        /// Over water pieces that push the cars on: the share of the speed a piece pushes up to that a car may go
+        /// before the water holds it back, and the share of the push it is held back with. 1 and 1 in files without them.
+        float water_pace = 1;
+        float water_hold = 1;
+        /// Of a ride whose water flows all along it, the same on every water piece: the speed it pushes each car on up
+        /// to, 0 or less for none, the push in Newtons, and what it holds back a car going faster with on level water.
+        float flow_speed = 0;
+        float flow_force = 0;
+        float flow_hold = 0;
+        bool flow_alone = false; ///< The ride's flow stands in for its pieces' own pushes
         float launch_speed = 0;
         float lift_speed = 0;                 ///< Lift chain speed
         float brake_speed = 0;                ///< Speed brakes slow trains to

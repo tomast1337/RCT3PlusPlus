@@ -276,6 +276,7 @@ namespace rct3::park::object
         ovl::BoatHandling boat_handling; ///< How it handles out on open water, as the car's train sets it
         float mass = 0;                  ///< Of a car, kilograms, empty
         float rolling = 0;               ///< Of a car, how its train is held back, as the train's file has it (ovl::RideTrain)
+        float resting = 0;
         float air = 0;
         /// Of a pool slide's car, how it swings in the trough, how far up from the car's origin its shape's
         /// pivot stands, the point it is drawn swung about, and how far the swinging shape hangs under it: the

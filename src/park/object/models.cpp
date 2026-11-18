@@ -1159,6 +1159,7 @@ namespace rct3::park::object
         model.boat_handling = found->boat;
         model.mass = car->mass;
         model.rolling = found->rolling;
+        model.resting = found->resting;
         model.air = found->air;
         model.trough = car->trough;
         model.swing_pivot = pivot.y;

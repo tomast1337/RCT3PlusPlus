@@ -79,11 +79,13 @@ namespace rct3::simulation
         units::Money worth { }; ///< What a ride like it is worth to a guest
         bool favourite = false;
         bool just_been = false; ///< The ride they got off last
+        bool untested = false;  ///< Its ratings not known yet: only its kind and price to go by
     };
 
     /// How much a guest in `mood` with `taste` wants to go on `ride`: for its excitement, how well its intensity
     /// suits them, its price against its worth, and whether it would sicken them; more for their favourite, less
-    /// for the one they just got off. They go only on a ride that reaches the bar in the tuning.
+    /// for the one they just got off. An untested ride has only a small, flat appeal in place of its ratings and
+    /// price. They go only on a ride that reaches the bar in the tuning.
     [[nodiscard]] float ride_appeal(const RideInMind& ride, const Taste& taste, const Mood& mood);
 
 } // namespace rct3::simulation

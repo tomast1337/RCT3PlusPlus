@@ -94,6 +94,7 @@ namespace rct3::simulation
             float excitement = 0;
             float nausea = 0;
             units::Money worth { };
+            bool untested = false;
         };
 
         /// Whether the guest, or anyone in their party, carries a park map.
@@ -139,10 +140,10 @@ namespace rct3::simulation
                 else if (const auto* ride = r.try_get<CycleRide>(e))
                 {
                     // A ride with more than one station is on offer at each, guests going to the nearest.
-                    out.push_back({ e, AttractionKind::Ride, Product::Drink, *a.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride) });
+                    out.push_back({ e, AttractionKind::Ride, Product::Drink, *a.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride), ride->untested });
                     for (const Stop& stop : ride->stops)
                         if (stop.entrance)
-                            out.push_back({ e, AttractionKind::Ride, Product::Drink, *stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride) });
+                            out.push_back({ e, AttractionKind::Ride, Product::Drink, *stop.entrance, a.price.value, ride->intensity.value, ride->cover.value, Serve::Any, ride->splash, ride->excitement.value, ride->nausea.value, ride_worth(*ride), ride->untested });
                 }
                 else if (const auto* door = r.try_get<PoolDoor>(e))
                 {
@@ -258,9 +259,10 @@ namespace rct3::simulation
                 float total = 0;
                 for (const Offer& o : offers)
                 {
-                    if (o.kind != AttractionKind::Ride || o.price > wallet.cash.value || o.intensity > wildest || o.intensity < taste.least.value || o.cover < least_cover || (splash && !o.splash))
+                    // An untested ride's intensity is not known yet, so it puts no one off.
+                    if (o.kind != AttractionKind::Ride || o.price > wallet.cash.value || (!o.untested && (o.intensity > wildest || o.intensity < taste.least.value)) || o.cover < least_cover || (splash && !o.splash))
                         continue;
-                    const RideInMind in_mind { .excitement = { o.excitement }, .intensity = { o.intensity }, .nausea = { o.nausea }, .price = { o.price }, .worth = o.worth, .favourite = o.entity == favourite, .just_been = o.entity == last_ridden };
+                    const RideInMind in_mind { .excitement = { o.excitement }, .intensity = { o.intensity }, .nausea = { o.nausea }, .price = { o.price }, .worth = o.worth, .favourite = o.entity == favourite, .just_been = o.entity == last_ridden, .untested = o.untested };
                     const float wants = ride_appeal(in_mind, taste, mood);
                     const float near = 1 - glm::distance(here, paths.centre(o.entrance)) / reach;
                     if (wants < kTuning.choosing.bar || near <= 0)

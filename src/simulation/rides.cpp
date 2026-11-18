@@ -562,7 +562,10 @@ namespace rct3::simulation
                     if (t == 0 && (train.running || round))
                         record(fleet->lap, train, dt);
                     if (t == 0 && round)
+                    {
                         fleet->lap_done = end_lap(fleet->lap);
+                        ride.untested = false;
+                    }
                     if (t == 0 && train.crashed)
                         fleet->lap = { };
                     // On a slide's way back to its lift, its riders are let off into the pool and the car goes on empty.

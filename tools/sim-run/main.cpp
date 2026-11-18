@@ -24,6 +24,7 @@
 #include "park/pools/pools.hpp"
 #include "park/track/course.hpp"
 #include "park/track/pieces.hpp"
+#include "park/track/rules.hpp"
 #include "profiling/profiler.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
@@ -185,11 +186,12 @@ int main(int argc, char** argv)
     std::vector<std::optional<simulation::Coaster>> coasters(rides->rides.size());
     std::vector<std::optional<park::track::TrackCourse>> courses(rides->rides.size());
     std::vector<std::optional<std::uint32_t>> guests_room;
-    std::map<std::uint64_t, simulation::PathItemKind> sights;   // Placed objects guests stop at
-    std::map<std::uint64_t, std::array<std::int32_t, 2>> gates; // Park entrances, with the tiles each covers
-    std::map<std::uint64_t, float> scenery;                     // What each placed object adds to the scenery round the paths
-    std::map<std::uint64_t, std::uint32_t> facility_kinds;      // Special attractions' kinds, by attraction
-    park::CarriedKinds carried;                                 // What guests carry, telling empties from the rest
+    std::map<std::uint64_t, simulation::PathItemKind> sights;                             // Placed objects guests stop at
+    std::map<std::uint64_t, std::array<std::int32_t, 2>> gates;                           // Park entrances, with the tiles each covers
+    std::map<std::uint64_t, float> scenery;                                               // What each placed object adds to the scenery round the paths
+    std::map<std::uint64_t, std::uint32_t> facility_kinds;                                // Special attractions' kinds, by attraction
+    park::CarriedKinds carried;                                                           // What guests carry, telling empties from the rest
+    std::vector<std::optional<park::track::TrackRules>> track_rules(rides->rides.size()); // Tracked rides' kinds' rules
     if (game)
     {
         const auto install = config::game::open_game_install(game);
@@ -255,6 +257,9 @@ int main(int argc, char** argv)
                         facility_kinds[ride.base.id] = *kind;
         std::map<std::string, std::optional<park::object::ObjectModel>, std::less<>> models;
         guests_room = simulation::ride_guests(*rides, [&](std::string_view path) { return install->find(path); });
+        for (std::size_t i = 0; i < rides->rides.size(); ++i)
+            if (const auto file = rides->rides[i].kind == save::model::RideKind::Tracked ? install->find(std::format("{}.common.ovl", rides->rides[i].base.overlay_path)) : std::nullopt)
+                track_rules[i] = park::track::load_track_rules(*file, rides->rides[i].base.symbol);
         timings = simulation::flat_ride_timings(*rides, world_model->objects, [&](const save::model::PlacedObject& o) -> const park::object::ObjectModel* {
             auto [at, added] = models.try_emplace(o.symbol);
             if (added)
@@ -413,6 +418,13 @@ int main(int argc, char** argv)
                 out.info("flat ride {}: {:d} seats, {:.1f} s", rides->rides[i].base.symbol.c_str(), timings[i]->seats, static_cast<double>(timings[i]->start + static_cast<float>(timings[i]->loops) * timings[i]->run + timings[i]->stop));
     }
     const auto ride_entities = simulation::import_rides(world, *rides, timings, coasters, guests_room);
+    std::size_t untested = 0;
+    for (std::size_t i = 0; i < ride_entities.size(); ++i)
+        if (auto* cycle = ride_entities[i] == entt::null || !track_rules[i] ? nullptr : world.registry.try_get<simulation::CycleRide>(ride_entities[i]))
+        {
+            cycle->untested = park::track::awaits_first_lap(*track_rules[i], rides->rides[i]);
+            untested += cycle->untested;
+        }
     simulation::import_boats(world, *rides, ride_entities, courses, world_model->terrain, world_model->water.bodies);
     simulation::link_stations(world, ride_entities, courses, world_model->terrain);
     const auto ride_count = static_cast<std::size_t>(std::ranges::count_if(ride_entities, [](entt::entity e) { return e != entt::null; }));
@@ -518,7 +530,7 @@ int main(int argc, char** argv)
     for (const auto& stall : rides->stalls)
         for (const auto& item : stall.items)
             out.info("stall {} [{}] sells {} ({})", stall.base.name.c_str(), stall.base.symbol.c_str(), item.name.c_str(), item.kind_symbol.c_str());
-    out.info("paths {:d}  shops {:d}  rides {:d}  guests walking {:d}  seated {:d}  swimming {:d}  parties {:d}", world.paths.nodes().size(), shops, ride_count, walking, seated, swimmers, parties);
+    out.info("paths {:d}  shops {:d}  rides {:d} ({:d} untested)  guests walking {:d}  seated {:d}  swimming {:d}  parties {:d}", world.paths.nodes().size(), shops, ride_count, untested, walking, seated, swimmers, parties);
     {
         // Groups of path tiles joined to each other, to spot paths the import failed to join.
         const auto& nodes = world.paths.nodes();

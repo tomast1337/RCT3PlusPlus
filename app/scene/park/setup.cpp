@@ -1040,6 +1040,9 @@ namespace rct3::scene::park
                         }
                         scene.track_rules.push_back(kinds.contains(key) ? kinds[key] : rct3::park::track::TrackRules { });
                     }
+                    for (std::size_t i = 0; i < scene.ride_entities.size(); ++i)
+                        if (auto* cycle = scene.ride_entities[i] == entt::null ? nullptr : scene.sim.registry.try_get<simulation::CycleRide>(scene.ride_entities[i]))
+                            cycle->untested = rct3::park::track::awaits_first_lap(scene.track_rules[i], scene.rides.rides[i]);
                     for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
                     {
                         const save::model::RideIndex ride { i };

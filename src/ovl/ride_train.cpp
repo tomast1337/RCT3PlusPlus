@@ -38,6 +38,7 @@ namespace rct3::ovl
                 train.most_cars = record->u32(0x24);
                 train.usual_cars = record->u32(0x28);
                 train.rolling = record->real(0x2C);
+                train.resting = record->real(0x30);
                 train.air = record->real(0x34);
                 train.references = record->references(static_cast<std::uint32_t>(kFixedSize));
                 train.record = record->bytes();

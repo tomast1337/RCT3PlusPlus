@@ -65,10 +65,11 @@ namespace rct3::ovl
         std::uint32_t fewest_cars = 0;
         std::uint32_t most_cars = 0;
         std::uint32_t usual_cars = 0;
-        /// What holds it back: rolling, as this much of its weight on the track, and the air, as this much of
-        /// its speed squared, in newtons. Bytes 44 and 52 of the record; every pool slide's train has 0.06 and
-        /// 0.005.
+        /// What holds it back: rolling, as this much of its weight on the track; standing still, up to this much
+        /// of it; and the air, as this much of its speed squared, in newtons. Bytes 44, 48 and 52 of the record;
+        /// most coaster trains have 0.04, 0.06 and 0.02, every pool slide's 0.06, 0.04 and 0.005.
         float rolling = 0;
+        float resting = 0;
         float air = 0;
         /// The fixed part of the record, 184 bytes. Bytes 32 to 43 are the car counts above; from byte 44 it is
         /// single-precision numbers, the ride camera's among them, whose meanings are unconfirmed. More data follows it in the file: pointers to arrays of per-car data and

@@ -20,6 +20,7 @@ namespace rct3::ovl
     {
         std::uint32_t mode = 0;          ///< Operating mode, numbered as the save's ride operating mode
         std::uint32_t allowed_modes = 0; ///< Bit (1 << mode) for each mode the player may pick
+        float station_speed = 0;         ///< Trains are sent off a platform at, and brought in to stop at
         float launch_speed = 0;
         float lift_speed = 0;                 ///< Lift chain speed
         float brake_speed = 0;                ///< Speed brakes slow trains to

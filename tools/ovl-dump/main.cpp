@@ -569,7 +569,7 @@ namespace
                     out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
-                out.info("  {:<32} kind {:d} visual {} refs {:d}", name.c_str(), item.car->kind, std::string(item.car->visual).c_str(), item.car->references.size());
+                out.info("  {:<32} kind {:d} visual {} refs {:d} mass {:g}", name.c_str(), item.car->kind, std::string(item.car->visual).c_str(), item.car->references.size(), item.car->mass);
                 for (const auto& ref : item.car->references)
                     out.info("    ref +{:d} {}:{}", ref.offset, std::string(ref.name).c_str(), std::string(ref.tag).c_str());
                 for (std::size_t i = 0; i < item.car->moves.size(); ++i)
@@ -595,7 +595,7 @@ namespace
                 std::string line = std::format("  {:<32} cars", name);
                 for (const auto car : item.train->cars)
                     line += std::format(" {}", car.empty() ? std::string_view("-") : car);
-                out.info("{} platform {}", line, item.train->platform.empty() ? std::string_view("-") : item.train->platform);
+                out.info("{} platform {} rolling {:g} resting {:g} air {:g}", line, item.train->platform.empty() ? std::string_view("-") : item.train->platform, item.train->rolling, item.train->resting, item.train->air);
             }
         }
         if (opt.trr)
@@ -617,7 +617,7 @@ namespace
                 out.info("  {:<32} type {:d} text {} splines {} sections {}", name.c_str(), r.info.type_id, std::string(r.info.name_text).c_str(), std::string(r.splines[0]).c_str(), std::string(r.track_sections[0]).c_str());
                 out.info("    car rotation {} car facing {} most trains {}", r.rules.car_rotation, r.rules.car_facing, r.rules.most_trains ? std::format("{}", *r.rules.most_trains) : "any");
                 if (const auto& d = r.operating)
-                    out.info("    mode {:d} allowed 0x{:x} launch {:g} [{:g}, {:g}] lift {:g} [{:g}, {:g}] brake {:g} ({:g} N) block {:g} ({:g} N) fixed {:g} cost {:d} height cost {:d}", d->mode, d->allowed_modes, d->launch_speed, d->launch_min, d->launch_max, d->lift_speed, d->lift_min, d->lift_max, d->brake_speed, d->brake_force, d->block_brake_speed, d->block_brake_force, d->fixed_speed.value_or(-1), d->cost, d->height_cost);
+                    out.info("    mode {:d} allowed 0x{:x} station {:g} launch {:g} [{:g}, {:g}] lift {:g} [{:g}, {:g}] brake {:g} ({:g} N) block {:g} ({:g} N) fixed {:g} cost {:d} height cost {:d}", d->mode, d->allowed_modes, d->station_speed, d->launch_speed, d->launch_min, d->launch_max, d->lift_speed, d->lift_min, d->lift_max, d->brake_speed, d->brake_force, d->block_brake_speed, d->block_brake_force, d->fixed_speed.value_or(-1), d->cost, d->height_cost);
                 if (const auto& d = r.operating)
                     for (const std::string_view train : d->trains)
                         out.info("    train {}", train);

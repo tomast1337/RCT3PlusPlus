@@ -35,6 +35,7 @@ namespace rct3::ovl
             RideOperatingDefaults d;
             d.mode = r->u32(0x48);
             d.allowed_modes = r->u32(0x4C);
+            d.station_speed = r->real(0x54);
             d.launch_speed = r->real(0x5C);
             d.lift_speed = r->real(0x64);
             d.brake_speed = r->real(0x6C);

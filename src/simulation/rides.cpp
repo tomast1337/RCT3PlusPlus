@@ -354,7 +354,10 @@ namespace rct3::simulation
                     }
                     auto& dice = r.get<Dice>(guest).state;
                     std::optional<GestureKind> gesture;
-                    if (felt >= kTuning.thoughts.enjoyed.value)
+                    const Taste taste = taste_of(r, guest);
+                    // Delighted, settled and well within what they take, they think they enjoyed it, the surer the more it thrilled them.
+                    const auto& enjoyed = kTuning.thoughts;
+                    if (mood.happiness.value >= kTuning.enjoyment.delighted.value && mood.nausea.value <= enjoyed.settled.value && ride.intensity.value <= taste.most.value - enjoyed.headroom.value && random::chance(dice, felt / enjoyed.sure_thrill.value))
                     {
                         think(r, guest, ThoughtKind::Enjoyed, e, now);
                         constexpr std::array kGlad { GestureKind::Cheer, GestureKind::Cheer, GestureKind::Laugh };
@@ -362,7 +365,6 @@ namespace rct3::simulation
                     }
                     else if (felt >= kTuning.gestures.liked.value)
                         gesture = GestureKind::Nod;
-                    const Taste taste = taste_of(r, guest);
                     if (ride.intensity.value > std::min(mood.tolerance.value + kTuning.sickness.wildest.value, taste.most.value))
                     {
                         think(r, guest, ThoughtKind::TooIntense, e, now);

@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/enjoyment.hpp"
 
+#include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/tuning.hpp"
 
+#include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -29,8 +32,14 @@ TEST_CASE("a rating fits a range within it, near it, far off it or way off")
 {
     CHECK(fit(0.5f, 0.3f, 0.6f, 0.1f) == Fit::Within);
     CHECK(fit(0.65f, 0.3f, 0.6f, 0.1f) == Fit::Near);
-    CHECK(fit(0.15f, 0.3f, 0.6f, 0.1f) == Fit::Far);
+    CHECK(fit(0.75f, 0.3f, 0.6f, 0.1f) == Fit::Far);
     CHECK(fit(0.95f, 0.3f, 0.6f, 0.1f) == Fit::WayOff);
+}
+
+TEST_CASE("a ride too tame for a guest is borne further off their range than one too wild")
+{
+    CHECK(fit(0.15f, 0.3f, 0.6f, 0.1f) == Fit::Near);
+    CHECK(fit(0.75f, 0.3f, 0.6f, 0.1f) == Fit::Far);
 }
 
 TEST_CASE("a ride that suits a guest in every way scores best, one that suits them in none worst")
@@ -105,6 +114,14 @@ TEST_CASE("after a ride a guest is happier by its points and its best one is the
         Mood glum { .happiness = { 0.1f } };
         Favourite none { };
         CHECK_FALSE(take_ride(glum, none, second, 0, suiting(), 20));
+        CHECK(none.ride == entt::null);
+    }
+    SUBCASE("nor does one it only cheered up")
+    {
+        Mood glum { .happiness = { 0.3f } };
+        Favourite none { };
+        CHECK_FALSE(take_ride(glum, none, second, 0, suiting(), 125));
+        CHECK(glum.happiness.value > kTuning.enjoyment.content.value);
         CHECK(none.ride == entt::null);
     }
 }
@@ -246,4 +263,27 @@ TEST_CASE("a ride that delights a guest leaves them liking wilder ones")
     r.emplace_or_replace<Taste>(guest, Taste { .least = { 0.2f }, .most = { 0.5f } });
     REQUIRE(park.run_until([&] { return r.all_of<Ridden>(guest); }, 600));
     CHECK(r.get<Taste>(guest).most.value > 0.5f);
+}
+
+TEST_CASE("only a delighted, settled guest thinks they enjoyed a thrilling ride well within what they take")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 3, 0 });
+    const auto ride = park.flat_ride("Carousel", { 3, 0 }, 0, { .capacity = 4, .cycle_seconds = 10, .excitement = 0.8f, .intensity = 0.3f, .nausea = 0.1f });
+    auto& r = park.world().registry;
+    const auto enjoyed = [&](entt::entity g) {
+        const auto* had = r.try_get<Thoughts>(g);
+        return had != nullptr && std::ranges::any_of(had->recent, [&](const Thought& t) { return t.kind == ThoughtKind::Enjoyed && t.about == ride; });
+    };
+    const auto delighted = park.guest({ 0, 0 }, { .happiness = 0.95f });
+    r.emplace_or_replace<Taste>(delighted, Taste { .least = { 0.2f }, .most = { 0.7f } });
+    // As wild as the most they like: it was enough for them.
+    const auto at_their_limit = park.guest({ 0, 0 }, { .happiness = 0.95f });
+    r.emplace_or_replace<Taste>(at_their_limit, Taste { .least = { 0.2f }, .most = { 0.3f } });
+    const auto queasy = park.guest({ 0, 0 }, { .happiness = 0.95f, .nausea = 0.5f });
+    r.emplace_or_replace<Taste>(queasy, Taste { .least = { 0.2f }, .most = { 0.7f } });
+    REQUIRE(park.run_until([&] { return r.all_of<Ridden>(delighted) && r.all_of<Ridden>(at_their_limit) && r.all_of<Ridden>(queasy); }, 600));
+    CHECK(enjoyed(delighted));
+    CHECK_FALSE(enjoyed(at_their_limit));
+    CHECK_FALSE(enjoyed(queasy));
 }

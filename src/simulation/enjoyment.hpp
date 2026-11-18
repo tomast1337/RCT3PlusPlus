@@ -49,7 +49,8 @@ namespace rct3::simulation
         Within,
     };
 
-    /// Where `rating` sits against the range `least`..`most`: near it within `slack` either side, far within twice that.
+    /// Where `rating` sits against the range `least`..`most`: near it within `slack` over it, far within twice that;
+    /// under it a guest takes a tame ride further in their stride than a wild one over it.
     [[nodiscard]] Fit fit(float rating, float least, float most, float slack);
 
     /// The nausea ratings a guest of stomach `tolerance` takes in comfort: none but the mildest for a weak one,
@@ -66,7 +67,7 @@ namespace rct3::simulation
 
     /// What a ride the guest gave `points` does to them: happier (or gloomier) by its points, sicker by its
     /// nausea, the less so the happier it left them; and it is their favourite from now on when it beats the one
-    /// they have, unless they are in too low a mood to think so. Returns whether it became their favourite.
+    /// they have, unless they got on in too low a mood to think so. Returns whether it became their favourite.
     bool take_ride(Mood& mood, Favourite& favourite, entt::entity ride, std::uint64_t saved, const RideTaken& taken, std::int32_t points);
 
     /// A ride a guest thinks of going on.

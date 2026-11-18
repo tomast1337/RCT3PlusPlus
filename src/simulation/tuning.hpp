@@ -38,6 +38,7 @@ namespace rct3::simulation::tuning
         /// guests of eight parks. So a favourite scores this for each share of excitement, plus its points.
         float favourite_per_excitement = 250;
         units::Share slack { 0.1f };            ///< How far past their range a ride still nearly suits a guest
+        units::Factor tame_reach { 1.5 };       ///< Chosen by eye: so much further under their range, a tame ride being easier to bear than a wild one
         units::Share happy_slack { 0.2f };      ///< And more, at full happiness: a happy guest takes more in their stride
         std::int32_t suited = 60;               ///< For a ride whose intensity and nausea both suit them
         std::int32_t per_miss = 12;             ///< Less for each step either is from suiting them
@@ -49,7 +50,7 @@ namespace rct3::simulation::tuning
         std::int32_t longest_wait = -30;        ///< The least any wait gives
         std::int32_t new_ride = 15;             ///< For a ride they have not been on before
         float happiness_per_point = 1.0f / 300; ///< Happiness for each point
-        units::Share content { 0.45f };         ///< Happiness below which a guest takes no ride for their favourite
+        units::Share content { 0.45f };         ///< Happiness getting on below which a guest takes no ride for their favourite
         units::Share least_queasy { 0.2f };     ///< A ride sickens a guest it left happy only this much of their unhappiness
         units::Share most_queasy { 0.8f };      ///< And a miserable one this much
         units::Share stomach_reach { 0.6f };    ///< Nausea a stomach takes in comfort, under its tolerance...
@@ -325,7 +326,10 @@ namespace rct3::simulation::tuning
     {
         std::size_t kept = 6;           ///< As many as saved parks keep
         units::Seconds rethink { 300 }; ///< Before the same thought about the same thing comes back
-        units::Share enjoyed { 0.5f };  ///< How much riders must feel a ride to enjoy it
+        // A ride that leaves a guest delighted (Enjoyment::delighted) may leave them thinking they enjoyed it.
+        units::Share settled { 0.4f };     ///< Chosen by eye: nausea past which they are too queasy to think so
+        units::Share headroom { 0.05f };   ///< Chosen by eye: how far under the wildest they like it must stay
+        units::Share sure_thrill { 0.4f }; ///< Chosen by eye: excitement from which they always do; under it the likelier the more
     };
 
     /// Litter and bins.

@@ -2212,7 +2212,7 @@ namespace rct3::scene::park
         if (auto heights = desktop.root().find_as<ui::widgets::WorldLabels>(kHeightsName))
         {
             const ui::Rect view = desktop.root().rect();
-            heights->labels = height_labels(scene, { view.width(), view.height() });
+            heights->labels = height_labels(scene, { view.width(), view.height() }, info_units(assets, options).distance);
             // While the park bar's highlights are on, the people the player picked have their name and what
             // they are doing floating over them.
             if (const auto bar = desktop.root().find_as<ui::screens::park_view::ParkBar>(kBarName); bar && bar->highlights() && view.width() > 0 && view.height() > 0)

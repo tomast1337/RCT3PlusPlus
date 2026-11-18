@@ -527,3 +527,10 @@ TEST_CASE("saved messages name tabs by number: a breakdown opens maintenance, a 
     CHECK(message_panel(AttractionTab::Items) == 4);
     CHECK(message_panel(AttractionTab::Thoughts) == 10);
 }
+
+TEST_CASE("a distance shows in whole metres, or whole feet in imperial units")
+{
+    CHECK(distance_text(12.4f, DistanceUnits::Metric) == u"12 m");
+    CHECK(distance_text(12.4f, DistanceUnits::SI) == u"12 m");
+    CHECK(distance_text(10.0f, DistanceUnits::Imperial) == u"33 ft");
+}

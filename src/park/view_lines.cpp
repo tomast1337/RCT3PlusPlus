@@ -43,6 +43,33 @@ namespace rct3::park
             mesh.indices.push_back(first + i);
     }
 
+    std::vector<HeightMark> height_marks(std::span<const glm::vec3> points, const save::model::TerrainGrid& grid)
+    {
+        constexpr float kSame = 0.01f; ///< World units
+        std::vector<HeightMark> marks;
+        for (const glm::vec3 p : points)
+        {
+            if (!marks.empty() && glm::distance(marks.back().at, p) < kSame)
+                continue;
+            marks.push_back({ p, p.y - grid.height_at(p.x, p.z).value_or(p.y) });
+        }
+        return marks;
+    }
+
+    void height_tick(TerrainMesh& mesh, const HeightMark& mark, glm::vec4 colour, float width)
+    {
+        const glm::vec3 foot { mark.at.x, mark.at.y - mark.above, mark.at.z };
+        const float half = width / 2;
+        for (const glm::vec3 side : { glm::vec3 { half, 0, 0 }, glm::vec3 { 0, 0, half } })
+        {
+            const auto first = static_cast<std::uint32_t>(mesh.vertices.size());
+            for (const glm::vec3 p : { foot + side, foot - side, mark.at - side, mark.at + side })
+                mesh.vertices.push_back({ .position = p, .colour = colour, .normal = { 0, 1, 0 } });
+            for (const std::uint32_t i : { 0u, 1u, 2u, 0u, 2u, 3u, 0u, 2u, 1u, 0u, 3u, 2u })
+                mesh.indices.push_back(first + i);
+        }
+    }
+
     TerrainMesh grid_lines(const save::model::TerrainGrid& grid, glm::vec4 colour)
     {
         TerrainMesh mesh;

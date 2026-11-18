@@ -518,10 +518,12 @@ namespace
     }
 
     // The app's flags: ImGui, Vulkan and OpenGL headers, app/ and the shaders slangc writes to build/<mode>/gen.
+    // GLFW_INCLUDE_NONE (here and for ImGui) keeps glfw3.h from including the system's GL/gl.h, which the release
+    // image does not have; the OpenGL renderer takes its declarations from the vendored glcorearb.h.
     Config app_config(const Config& cfg)
     {
         Config app = cfg;
-        app.compile_flags.insert(app.compile_flags.end(), { "-Wno-missing-field-initializers", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-isystem", "third_party/opengl", "-isystem", "third_party/glfw/include", "-Iapp", std::format("-I{}", (cfg.out_dir() / "gen").string()) });
+        app.compile_flags.insert(app.compile_flags.end(), { "-Wno-missing-field-initializers", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-isystem", "third_party/opengl", "-isystem", "third_party/glfw/include", "-DGLFW_INCLUDE_NONE", "-Iapp", std::format("-I{}", (cfg.out_dir() / "gen").string()) });
         return app;
     }
 
@@ -696,7 +698,7 @@ namespace
 
         // Dear ImGui is vendored as-is; its warnings are not ours.
         Config third_party = cfg;
-        third_party.compile_flags.insert(third_party.compile_flags.end(), { "-w", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-isystem", "third_party/glfw/include" });
+        third_party.compile_flags.insert(third_party.compile_flags.end(), { "-w", "-isystem", "third_party/imgui", "-isystem", "third_party/vulkan", "-isystem", "third_party/glfw/include", "-DGLFW_INCLUDE_NONE" });
         std::vector<fs::path> imgui_sources = find_files("third_party/imgui", ".cpp");
         std::vector<fs::path> objects;
         if (!compile(third_party, imgui_sources, objects, ignored))

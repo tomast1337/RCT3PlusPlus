@@ -66,10 +66,11 @@ namespace rct3::simulation::tuning
         float bargain = 0.2f;    ///< For a free ride; none for one at its worth, as much off at twice that
         float sickening = 0.6f;  ///< Off for each share of nausea past what their stomach takes in comfort
         float favourite = 0.3f;
-        float again = 0.25f;  ///< Off for the ride they just got off: they would rather try another
-        float bar = 0.15f;    ///< Below this a guest does not go on a ride at all
-        float reach = 25;     ///< Tiles away, as the crow flies, past which a guest does not think of a ride
-        float map_reach = 60; ///< And with a park map in hand
+        float again = 0.25f;    ///< Off for the ride they just got off: they would rather try another
+        float untested = 0.16f; ///< For a ride not yet round a lap, in place of its ratings and price. Chosen by eye: over the bar, so a daring few try it
+        float bar = 0.15f;      ///< Below this a guest does not go on a ride at all
+        float reach = 25;       ///< Tiles away, as the crow flies, past which a guest does not think of a ride
+        float map_reach = 60;   ///< And with a park map in hand
     };
 
     /// Guests showing how a ride left them as they step off.

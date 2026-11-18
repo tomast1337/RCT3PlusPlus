@@ -285,6 +285,28 @@ TEST_CASE("a ride is rated without a lap by its kind's flag, its want of trains,
     }
 }
 
+TEST_CASE("guests know a ride's ratings only after a lap, unless its kind is rated without one")
+{
+    ovl::TrackedRide coaster;
+    coaster.operating = ovl::RideOperatingDefaults { .trains = { "Train" } };
+    const save::model::Ride fresh = built_ride(6);
+    CHECK(awaits_first_lap(track_rules(coaster), fresh));
+    save::model::Ride rated = fresh;
+    rated.assessment.valid = true;
+    CHECK_FALSE(awaits_first_lap(track_rules(coaster), rated));
+    save::model::Ride lapped = fresh;
+    lapped.stats.last_lap = save::model::TestResults { };
+    CHECK_FALSE(awaits_first_lap(track_rules(coaster), lapped));
+    save::model::Ride race = fresh;
+    race.mode = save::model::OperatingMode::Race;
+    CHECK_FALSE(awaits_first_lap(track_rules(coaster), race));
+    for (const std::uint32_t never_tested : { 0x10u, 0x4000u })
+    {
+        coaster.rules.flags = never_tested;
+        CHECK_FALSE(awaits_first_lap(track_rules(coaster), fresh));
+    }
+}
+
 TEST_CASE("a walk-through opens only when its exit comes after its entrance")
 {
     const TrackRules walk = rules_with([](TrackRules& r) { r.entrances = r.exits = kOneDoor; });

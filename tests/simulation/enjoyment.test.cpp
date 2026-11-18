@@ -2,6 +2,7 @@
 #include "simulation/enjoyment.hpp"
 
 #include "simulation/guests.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/tuning.hpp"
 
@@ -169,6 +170,32 @@ TEST_CASE("a guest wants a ride the more for its thrills, a fair price and suiti
     awful.price = Money { 900 };
     awful.intensity = Share { 1 };
     CHECK(ride_appeal(awful, kMiddling, mood) < kTuning.choosing.bar);
+}
+
+TEST_CASE("an untested ride appeals just enough for a few, far less than the same ride tested")
+{
+    const Mood mood { .happiness = { 0.5f } };
+    RideInMind untested = fair_ride();
+    untested.untested = true;
+    CHECK(ride_appeal(untested, kMiddling, mood) >= kTuning.choosing.bar);
+    CHECK(ride_appeal(untested, kMiddling, mood) * 2 < ride_appeal(fair_ride(), kMiddling, mood));
+}
+
+TEST_CASE("of two rides alike, guests mostly take the tested one")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    // Both entered from the same path tile.
+    const RideSetup alike { .capacity = 16, .cycle_seconds = 20, .excitement = 0.6f, .intensity = 0.45f, .nausea = 0.2f };
+    const auto tested = park.flat_ride("Tested", { 4, 0 }, 0, alike);
+    const auto untested = park.flat_ride("Untested", { 4, 0 }, 0, alike);
+    auto& r = park.world().registry;
+    r.get<CycleRide>(untested).untested = true;
+    for (std::int32_t i = 0; i < 12; ++i)
+        park.guest({ 0, 0 }, { .cash = 1000 });
+    park.run_seconds(900);
+    CHECK(r.get<Attraction>(untested).customers > 0);
+    CHECK(r.get<Attraction>(untested).customers * 2 < r.get<Attraction>(tested).customers);
 }
 
 TEST_CASE("a guest walks past a dull ride far dearer than it is worth")

@@ -87,6 +87,7 @@ namespace rct3::simulation
         units::Share nausea { 0.3f };        ///< How sick it makes them
         units::Share cover { };              ///< How much of it is under cover
         bool splash = false;                 ///< Rides through water, splashing its riders
+        bool untested = false;               ///< Not yet round a whole lap, so guests do not know its ratings
         std::vector<entt::entity> queue { }; ///< Guests waiting, first in line first
         /// The queue line's tiles from the entrance back to where it meets the paths; empty when guests walk
         /// straight in from a path.

@@ -243,6 +243,8 @@ namespace rct3::scene
                     return false;
                 scene.ride_entities.resize(scene.rides.rides.size(), entt::null);
                 scene.ride_entities[i] = added.front();
+                if (auto* cycle = scene.sim.registry.try_get<simulation::CycleRide>(added.front()); cycle != nullptr && i < scene.track_rules.size())
+                    cycle->untested = rct3::park::track::awaits_first_lap(scene.track_rules[i], ride);
                 if (const auto seating = assets.install ? simulation::ride_seatings(one, [&](std::string_view path) { return assets.install->find(path); }).front() : std::nullopt)
                     scene.ride_seatings[added.front()] = static_cast<std::uint8_t>(*seating);
                 if (const auto show = std::ranges::find(scene.shows, ride.base.id, &save::model::RideShow::ride); show != scene.shows.end())

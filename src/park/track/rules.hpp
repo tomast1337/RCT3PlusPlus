@@ -109,6 +109,10 @@ namespace rct3::park::track
     /// has only its basic results.
     [[nodiscard]] bool rated_without_lap(const TrackRules& rules, save::model::OperatingMode mode);
 
+    /// Whether guests do not yet know `ride`'s ratings: its kind is rated over a measured lap, and it has neither
+    /// ratings nor a lap's results. It has them once a train goes round a whole lap, tested or open.
+    [[nodiscard]] bool awaits_first_lap(const TrackRules& rules, const save::model::Ride& ride);
+
     /// Whether `rules` let the ride build `piece`.
     [[nodiscard]] bool lists_piece(const TrackRules& rules, std::string_view piece);
 

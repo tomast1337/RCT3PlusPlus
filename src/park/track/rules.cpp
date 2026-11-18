@@ -86,6 +86,11 @@ namespace rct3::park::track
         return rules.lapless_kind || rules.no_trains || mode == Boat || mode == Race || mode == MiniGolf || mode == Aquarium;
     }
 
+    bool awaits_first_lap(const TrackRules& rules, const save::model::Ride& ride)
+    {
+        return ride.kind == save::model::RideKind::Tracked && !rules.never_tested && !rated_without_lap(rules, ride.mode) && !ride.assessment.valid && !ride.stats.last_lap;
+    }
+
     bool lists_piece(const TrackRules& rules, std::string_view piece)
     {
         return rules.pieces.empty() || std::ranges::any_of(rules.pieces, [&](const std::string& p) { return strings::equals_ignoring_case(p, piece); });

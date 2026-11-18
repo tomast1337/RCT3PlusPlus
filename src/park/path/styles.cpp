@@ -17,8 +17,10 @@ namespace rct3::park::path
 
         constexpr std::size_t kGroundNames = 2;
         constexpr std::size_t kNamesPerPiece = 4;
-        /// The longer layout names more pieces after these, which only one style fills.
         constexpr std::size_t kPieces = 19;
+        /// The longer layout's next four slots name no piece; the capped pieces follow them, in DeckPiece's order.
+        constexpr std::size_t kCappedNamesAt = kGroundNames + (kPieces + 1) * kNamesPerPiece;
+        constexpr std::size_t kCappedPieces = 16;
         constexpr std::string_view kCommonEnding = ".common.ovl";
 
         units::Money first_cost(const std::vector<ovl::SceneryItem>& items)
@@ -39,6 +41,8 @@ namespace rct3::park::path
         PathStyle style { std::string(type.name), std::string(type.name_text), std::string(type.icon), first_cost(type.items), false, { }, { }, first_group(type.items) };
         style.names_category = !type.research.empty();
         for (std::size_t at = kGroundNames; at < type.piece_names.size() && style.pieces.size() < kPieces; at += kNamesPerPiece)
+            style.pieces.emplace_back(type.piece_names[at]);
+        for (std::size_t at = kCappedNamesAt; at < type.piece_names.size() && style.pieces.size() < kPieces + kCappedPieces; at += kNamesPerPiece)
             style.pieces.emplace_back(type.piece_names[at]);
         return style;
     }

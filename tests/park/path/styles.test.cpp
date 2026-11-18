@@ -37,6 +37,23 @@ TEST_CASE("a path type and a queue type become styles with their first item's pr
     CHECK(q.pieces.size() == 7);
 }
 
+TEST_CASE("the longer layout's capped pieces follow the base ones")
+{
+    ovl::PathType path;
+    path.name = "Tube";
+    // Two ground pictures, nineteen pieces four times each, four slots naming no piece, then the capped pieces.
+    path.piece_names = { "GroundA", "GroundB" };
+    for (std::size_t piece = 0; piece < 19; ++piece)
+        path.piece_names.insert(path.piece_names.end(), 4, "Base");
+    path.piece_names.insert(path.piece_names.end(), { "", "", "", "Other" });
+    for (const std::string_view name : { "FlatCapped", "SlopeCapped" })
+        path.piece_names.insert(path.piece_names.end(), 4, name);
+    const PathStyle p = path_style(path);
+    REQUIRE(p.pieces.size() == 21);
+    CHECK(p.pieces[19] == "FlatCapped");
+    CHECK(p.pieces[20] == "SlopeCapped");
+}
+
 TEST_CASE("style overlays are told by their ending, whatever its case")
 {
     CHECK(is_style_overlay("Gravel_Stub.common.ovl"));

@@ -43,6 +43,10 @@ namespace rct3::scene::track
     /// The open end of the ride's track: past its last piece, unless the track closes on itself.
     std::optional<rct3::park::track::TrackTip> track_tip(const park::ParkScene& scene, const TrackBuilding& b);
 
+    /// Where the ride's built pieces start and end, in track order, and the picked piece's ghost after them; a
+    /// piece's end and the next piece's start come twice.
+    std::vector<glm::vec3> track_end_points(const park::ParkScene& scene, const TrackBuilding& b);
+
     /// The colours the next piece is built in: as painted, else as the last piece, else as a new track starts.
     save::model::RideColours next_colours(const park::ParkScene& scene, const TrackBuilding& b);
 

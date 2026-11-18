@@ -12,6 +12,7 @@
 #include "render/device.hpp"
 #include "save/model/world.hpp"
 #include "ui/money_text.hpp"
+#include "ui/screens/info/attraction.hpp"
 #include "ui/widgets/money_floaters.hpp"
 #include "ui/widgets/world_labels.hpp"
 #include "units/units.hpp"
@@ -54,8 +55,8 @@ namespace rct3::scene::park
 
     void drop_view_lines(render::Device& device, ParkScene& scene);
 
-    /// The height labels the view menu shows, on a view `size` across (interface units), farthest first.
-    [[nodiscard]] std::vector<ui::widgets::WorldLabel> height_labels(const ParkScene& scene, ui::Point size);
+    /// The height labels the view menu shows, and those over the track being built, on a view `size` across (interface units), farthest first.
+    [[nodiscard]] std::vector<ui::widgets::WorldLabel> height_labels(const ParkScene& scene, ui::Point size, ui::screens::info::DistanceUnits units);
 
     /// The ground in the middle of `tile`.
     [[nodiscard]] glm::vec3 tile_point(const save::model::TerrainGrid& grid, save::model::Tile tile);

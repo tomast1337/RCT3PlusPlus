@@ -598,6 +598,8 @@ declare namespace build {
               piece: string | null;
               ghost: boolean;
               arrows: boolean;
+              /** The height markers are on. */
+              heights: boolean;
               ghostAt: { col: Tiles; row: Tiles; height: number } | null;
               cost: Money;
               clashes: boolean;

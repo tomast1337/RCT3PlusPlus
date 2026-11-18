@@ -156,13 +156,6 @@ namespace rct3::ui::screens::info
             return ascii(std::format("{:.1f} km/h", metres_per_second * kKmhPerMs));
         }
 
-        std::u16string length(float metres, DistanceUnits units)
-        {
-            if (units == DistanceUnits::Imperial)
-                return ascii(std::format("{:.0f} ft", metres * kFeetPerMetre));
-            return ascii(std::format("{:.0f} m", metres));
-        }
-
         std::u16string rating(float value, const StringTable& strings)
         {
             return ascii(std::format("{:.2f} (", value)) + rating_word(value, strings) + u")";
@@ -353,7 +346,7 @@ namespace rct3::ui::screens::info
                         add(page, strings, "AttractionResultsDialogLabel_MaxSpeed", speed(lap->max_speed, units.distance));
                         add(page, strings, "AttractionResultsDialogLabel_AverageSpeed", speed(lap->average_speed, units.distance));
                         add(page, strings, "AttractionResultsDialogLabel_RideTime", duration(lap->ride_time.value));
-                        add(page, strings, "AttractionResultsDialogLabel_RideLength", length(lap->ride_length.value, units.distance));
+                        add(page, strings, "AttractionResultsDialogLabel_RideLength", distance_text(lap->ride_length.value, units.distance));
                         break;
                     case TestSection::Force:
                         add(page, strings, "AttractionResultsDialogLabel_MaxPositiveVerticalG", force(lap->max_positive_vertical));
@@ -363,7 +356,7 @@ namespace rct3::ui::screens::info
                     case TestSection::Drop:
                         add(page, strings, "AttractionResultsDialogLabel_TotalAirTime", duration(lap->air_time.value));
                         add(page, strings, "AttractionResultsDialogLabel_NumberOfDrops", ascii(std::to_string(lap->drop_count)));
-                        add(page, strings, "AttractionResultsDialogLabel_HighestDropHeight", length(lap->highest_drop.value, units.distance));
+                        add(page, strings, "AttractionResultsDialogLabel_HighestDropHeight", distance_text(lap->highest_drop.value, units.distance));
                         add(page, strings, "AttractionResultsDialogLabel_NumberOfInversion", ascii(std::to_string(lap->inversion_count)));
                         break;
                     case TestSection::Basic:
@@ -846,6 +839,13 @@ namespace rct3::ui::screens::info
         return status(attraction, strings);
     }
 
+    std::u16string distance_text(float metres, DistanceUnits units)
+    {
+        if (units == DistanceUnits::Imperial)
+            return ascii(std::format("{:.0f} ft", metres * kFeetPerMetre));
+        return ascii(std::format("{:.0f} m", metres));
+    }
+
     float speed_scale(DistanceUnits units)
     {
         return units == DistanceUnits::Imperial ? kMphPerMs : units == DistanceUnits::SI ? 1.0f : kKmhPerMs;
@@ -897,13 +897,13 @@ namespace rct3::ui::screens::info
             add(page, strings, "AttractionResultsDialogLabel_MaxSpeed", speed(lap->max_speed, units.distance));
             add(page, strings, "AttractionResultsDialogLabel_AverageSpeed", speed(lap->average_speed, units.distance));
             add(page, strings, "AttractionResultsDialogLabel_RideTime", duration(lap->ride_time.value));
-            add(page, strings, "AttractionResultsDialogLabel_RideLength", length(lap->ride_length.value, units.distance));
+            add(page, strings, "AttractionResultsDialogLabel_RideLength", distance_text(lap->ride_length.value, units.distance));
             add(page, strings, "AttractionResultsDialogLabel_MaxPositiveVerticalG", force(lap->max_positive_vertical));
             add(page, strings, "AttractionResultsDialogLabel_MaxNegativeVerticalG", force(lap->max_negative_vertical));
             add(page, strings, "AttractionResultsDialogLabel_MaxLateralG", force(lap->max_lateral));
             add(page, strings, "AttractionResultsDialogLabel_TotalAirTime", duration(lap->air_time.value));
             add(page, strings, "AttractionResultsDialogLabel_NumberOfDrops", ascii(std::to_string(lap->drop_count)));
-            add(page, strings, "AttractionResultsDialogLabel_HighestDropHeight", length(lap->highest_drop.value, units.distance));
+            add(page, strings, "AttractionResultsDialogLabel_HighestDropHeight", distance_text(lap->highest_drop.value, units.distance));
             add(page, strings, "AttractionResultsDialogLabel_NumberOfInversion", ascii(std::to_string(lap->inversion_count)));
         }
         return std::move(page.lines);

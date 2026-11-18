@@ -842,6 +842,7 @@ namespace rct3::scene::park
         ViewLines delete_marks;                                                          ///< The tiles the area delete tool marked
         ViewLines enclosure_marks;                                                       ///< The tiles the enclosure tool marks
         ViewLines pool_marks;                                                            ///< The squares the pool tool marks
+        ViewLines height_ticks;                                                          ///< Down from each end of the track being built to the ground
         ViewLines land_marks;                                                            ///< What the land tool out would work on
         rct3::park::ParkCamera view_camera;                                              ///< Of the info panel's round view, turning slowly round the attraction
         render::TextureHandle view_target;                                               ///< The round view is drawn into

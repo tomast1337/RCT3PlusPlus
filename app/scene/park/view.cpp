@@ -5,6 +5,7 @@
 #include "park/camera.hpp"
 #include "park/view_lines.hpp"
 #include "scene/park/scene.hpp"
+#include "scene/track/laying.hpp"
 #include "simulation/components.hpp"
 
 #include <algorithm>
@@ -23,7 +24,9 @@ namespace rct3::scene::park
         /// How far from the middle of the view heights are labelled, in world units: farther, they crowd. Our
         /// own value.
         constexpr float kLabelReach = 48.0f;
-        constexpr float kLabelLift = 0.6f; ///< Over the path or track, so the label stands above it.
+        constexpr glm::vec4 kTickColour { 1.0f, 1.0f, 1.0f, 0.8f };
+        constexpr float kTickWidth = 0.08f; ///< World units
+        constexpr float kLabelLift = 0.6f;  ///< Over the path or track, so the label stands above it.
         /// A float younger than this, and this near, in world units, takes another amount rather than
         /// a new float beginning. A held brush shows a sum a few times a second, while pieces
         /// laid one after another on neighbouring tiles each show their own.
@@ -83,13 +86,24 @@ namespace rct3::scene::park
 
     void update_view_lines(render::Device& device, ParkScene& scene)
     {
+        // The track under construction: a tick down to the ground at each end of each piece, the ghost's too. The
+        // ghost moves with the pointer, so these are made again each time.
+        if (scene.building.heights && scene.building.ride)
+        {
+            rct3::park::TerrainMesh ticks;
+            for (const rct3::park::HeightMark& m : rct3::park::height_marks(track::track_end_points(scene, scene.building), scene.grid))
+                rct3::park::height_tick(ticks, m, kTickColour, kTickWidth);
+            set_view_lines(device, scene.height_ticks, ticks);
+        }
+        else
+            drop(device, scene.height_ticks);
         update(device, scene.grid_lines, scene.show_grid, [&] { return rct3::park::grid_lines(scene.grid, kGridColour); });
         update(device, scene.contour_lines, scene.show_contours, [&] { return rct3::park::contour_lines(scene.grid, rct3::park::kContourStep, kContourColour); });
     }
 
     void draw_view_lines(render::Device& device, const ParkScene& scene, const glm::mat4& transform, const render::SceneLight& light)
     {
-        for (const ViewLines* lines : { &scene.grid_lines, &scene.contour_lines, &scene.land_marks, &scene.delete_marks, &scene.enclosure_marks, &scene.pool_marks })
+        for (const ViewLines* lines : { &scene.grid_lines, &scene.contour_lines, &scene.land_marks, &scene.delete_marks, &scene.enclosure_marks, &scene.pool_marks, &scene.height_ticks })
         {
             if (lines->count == 0)
                 continue;
@@ -113,6 +127,7 @@ namespace rct3::scene::park
         drop(device, scene.contour_lines);
         drop(device, scene.land_marks);
         drop(device, scene.pool_marks);
+        drop(device, scene.height_ticks);
     }
 
     glm::vec3 tile_point(const save::model::TerrainGrid& grid, save::model::Tile tile)
@@ -175,7 +190,7 @@ namespace rct3::scene::park
         return shown;
     }
 
-    std::vector<ui::widgets::WorldLabel> height_labels(const ParkScene& scene, ui::Point size)
+    std::vector<ui::widgets::WorldLabel> height_labels(const ParkScene& scene, ui::Point size, ui::screens::info::DistanceUnits units)
     {
         // The construction panel shows the heights of the ride it builds, the view menu every ride's.
         const std::optional<save::model::RideIndex> built = scene.building.heights ? scene.building.ride : std::nullopt;
@@ -184,7 +199,7 @@ namespace rct3::scene::park
         const glm::mat4 view = rct3::park::view_projection(scene.camera, size.x / size.y);
         const glm::vec3 middle = scene.camera.target;
         std::vector<std::pair<float, ui::widgets::WorldLabel>> found;
-        const auto add = [&](glm::vec3 at, float height) {
+        const auto add = [&](glm::vec3 at, std::u16string text) {
             if (glm::distance(glm::vec2(at.x, at.z), glm::vec2(middle.x, middle.z)) > kLabelReach)
                 return;
             const glm::vec4 clip = view * glm::vec4(at.x, at.y + kLabelLift, at.z, 1.0f);
@@ -193,7 +208,7 @@ namespace rct3::scene::park
             const glm::vec2 ndc = glm::vec2(clip) / clip.w;
             if (std::abs(ndc.x) > 1 || std::abs(ndc.y) > 1)
                 return;
-            found.push_back({ clip.w, { { (ndc.x + 1) / 2 * size.x, (1 - ndc.y) / 2 * size.y }, whole(height) } });
+            found.push_back({ clip.w, { { (ndc.x + 1) / 2 * size.x, (1 - ndc.y) / 2 * size.y }, std::move(text) } });
         };
         const save::model::TerrainGrid& g = scene.grid;
         if (scene.show_path_heights)
@@ -201,22 +216,28 @@ namespace rct3::scene::park
             for (const simulation::PathNode& n : scene.sim.paths.nodes())
             {
                 if (!n.removed)
-                    add({ g.world_x(n.tile.col) + g.tile_size_x / 2, n.height, g.world_z(n.tile.row) + g.tile_size_z / 2 }, n.height);
+                    add({ g.world_x(n.tile.col) + g.tile_size_x / 2, n.height, g.world_z(n.tile.row) + g.tile_size_z / 2 }, whole(n.height));
             }
         }
-        if (scene.show_ride_heights || built)
+        if (scene.show_ride_heights)
         {
             for (std::size_t r = 0; r < scene.rides.rides.size(); ++r)
             {
                 const save::model::Ride& ride = scene.rides.rides[r];
-                if (!ride.track || ride.base.demolished || (!scene.show_ride_heights && save::model::RideIndex { r } != built))
+                if (!ride.track || ride.base.demolished || save::model::RideIndex { r } == built)
                     continue;
                 for (const save::model::TrackPiece& p : ride.track->pieces)
                 {
                     const auto height = static_cast<float>(p.height);
-                    add({ g.world_x(p.tile_x) + g.tile_size_x / 2, height, g.world_z(p.tile_z) + g.tile_size_z / 2 }, height);
+                    add({ g.world_x(p.tile_x) + g.tile_size_x / 2, height, g.world_z(p.tile_z) + g.tile_size_z / 2 }, whole(height));
                 }
             }
+        }
+        // The ride under construction: the height over the ground at each end of each piece, and of the ghost.
+        if (built)
+        {
+            for (const rct3::park::HeightMark& m : rct3::park::height_marks(track::track_end_points(scene, scene.building), g))
+                add(m.at, ui::screens::info::distance_text(m.above, units));
         }
         std::ranges::sort(found, std::greater { }, &std::pair<float, ui::widgets::WorldLabel>::first);
         std::vector<ui::widgets::WorldLabel> labels;

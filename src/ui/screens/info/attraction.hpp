@@ -110,6 +110,9 @@ namespace rct3::ui::screens::info
         SI,       ///< m/s and metres
     };
 
+    /// `metres` as a whole number of metres, or of feet in imperial units.
+    [[nodiscard]] std::u16string distance_text(float metres, DistanceUnits units);
+
     /// How the player asked to see amounts and distances, and the windows that show them.
     struct InfoUnits
     {

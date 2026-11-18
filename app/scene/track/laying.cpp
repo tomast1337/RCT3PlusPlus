@@ -117,6 +117,29 @@ namespace rct3::scene::track
         return rct3::park::track::tip_of(scene.objects[object->second.value], *shape, last.reversed, scene.grid);
     }
 
+    std::vector<glm::vec3> track_end_points(const park::ParkScene& scene, const TrackBuilding& b)
+    {
+        std::vector<glm::vec3> points;
+        const rct3::park::track::PieceCatalogue* c = catalogue(b);
+        if (c == nullptr || !b.ride || !scene.rides.rides.at(b.ride->value).track)
+            return points;
+        const auto both = [&](const save::model::PlacedObject& object, const rct3::park::track::PieceShape& shape, bool reversed) {
+            points.push_back(rct3::park::track::start_of(object, shape, reversed, scene.grid).position);
+            points.push_back(rct3::park::track::tip_of(object, shape, reversed, scene.grid).position);
+        };
+        const auto objects = object_indices(scene);
+        for (const save::model::TrackPiece& p : scene.rides.rides.at(b.ride->value).track->pieces)
+        {
+            const auto object = objects.find(p.scenery);
+            const auto shape = rct3::park::track::shape_named(*c, p.symbol);
+            if (object != objects.end() && shape)
+                both(scene.objects[object->second.value], *shape, p.reversed);
+        }
+        if (b.ghost && b.picked)
+            both(b.ghost->object, c->pieces[b.picked->index], b.picked->reversed);
+        return points;
+    }
+
     namespace
     {
 

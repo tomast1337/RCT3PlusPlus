@@ -165,9 +165,53 @@ TEST_CASE("a gentle slope beside another takes the wide pieces")
 {
     const save::model::TerrainGrid g = flat_grid(5, 5);
     const std::vector<save::model::PathTile> paths { raised(1, 2, 0, 1, 4), raised(2, 2, 0, 2, 4), raised(3, 2, 0, 3, 4) };
-    CHECK(choose_deck(paths[0], paths, g).piece == DeckPiece::SlopeStraightLeft);
-    CHECK(choose_deck(paths[1], paths, g).piece == DeckPiece::SlopeMid);
-    CHECK(choose_deck(paths[2], paths, g).piece == DeckPiece::SlopeStraightRight);
+    CHECK(uncapped(choose_deck(paths[0], paths, g).piece) == DeckPiece::SlopeStraightLeft);
+    CHECK(uncapped(choose_deck(paths[1], paths, g).piece) == DeckPiece::SlopeMid);
+    CHECK(uncapped(choose_deck(paths[2], paths, g).piece) == DeckPiece::SlopeStraightRight);
+}
+
+TEST_CASE("a lone flat tile takes the piece closed all round")
+{
+    const save::model::TerrainGrid g = flat_grid(5, 5);
+    std::vector<save::model::PathTile> paths { raised(2, 2, 2, 1) };
+    CHECK(choose_deck(paths[0], paths, g).piece == DeckPiece::FlatCapped);
+    paths.push_back(raised(3, 2, 2, 2));
+    CHECK(choose_deck(paths[0], paths, g).piece == DeckPiece::TurnU);
+}
+
+TEST_CASE("a ramp takes the piece closed at each end that joins no path")
+{
+    const save::model::TerrainGrid g = flat_grid(5, 5);
+    // Climbing two from height 2 towards higher rows: its bottom on row 1's side, its top on row 3's.
+    const save::model::PathTile ramp = raised(2, 2, 2, 1, 1);
+    const save::model::PathTile below = raised(2, 1, 2, 2);
+    const save::model::PathTile above = raised(2, 3, 4, 3);
+    const Deck open = slope_deck(1, Side::kNextRow, { });
+    const auto deck = [&](std::vector<save::model::PathTile> paths) { return choose_deck(paths[0], paths, g); };
+    CHECK(deck({ ramp }) == Deck { DeckPiece::SlopeCapped, open.turn });
+    CHECK(deck({ ramp, above }) == Deck { DeckPiece::SlopeCappedBottom, open.turn });
+    CHECK(deck({ ramp, below }) == Deck { DeckPiece::SlopeCappedTop, open.turn });
+    CHECK(deck({ ramp, below, above }) == open);
+    // A path at another height does not close the gap.
+    CHECK(deck({ ramp, raised(2, 1, 3, 4) }).piece == DeckPiece::SlopeCapped);
+
+    // Going down the same ramp, its top is where it is entered.
+    const save::model::PathTile down = raised(2, 3, 4, 1, 2, Side::kRowBefore);
+    CHECK(deck({ down, raised(2, 4, 4, 2) }) == Deck { DeckPiece::SlopeCappedBottom, slope_deck(2, Side::kRowBefore, { }).turn });
+    CHECK(deck({ down, raised(2, 2, 2, 2) }).piece == DeckPiece::SlopeCappedTop);
+
+    // The wide gentle pieces have their own caps.
+    const save::model::PathTile gentle = raised(2, 2, 2, 1, 4);
+    CHECK(deck({ gentle, raised(1, 2, 2, 2, 4), raised(3, 2, 2, 3, 4), raised(2, 3, 3, 4) }).piece == DeckPiece::SlopeMidCappedBottom);
+}
+
+TEST_CASE("a style without capped pieces draws the open one")
+{
+    PathStyle plain = gravel();
+    plain.pieces.resize(static_cast<std::size_t>(DeckPiece::FlatCapped));
+    CHECK(deck_symbol(plain, DeckPiece::FlatCapped) == deck_symbol(plain, DeckPiece::Flat));
+    CHECK(deck_symbol(plain, DeckPiece::SlopeStraightLeftCappedTop) == deck_symbol(plain, DeckPiece::SlopeStraightLeft));
+    CHECK(deck_symbol(gravel(), DeckPiece::SlopeMidCappedTop) == "Gravel_34");
 }
 
 TEST_CASE("a raised queue's piece follows its line")

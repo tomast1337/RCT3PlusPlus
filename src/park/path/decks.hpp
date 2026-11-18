@@ -28,6 +28,10 @@
 // climbing the same way from the same height, takes the wide pieces instead: the middle one with slopes on
 // both sides, else the left or right edge, as the parks store them.
 //
+// A style may name capped pieces too, closed at the ends where the path stops. A lone flat tile takes the flat
+// one closed all round. A sloping tile whose bottom or top end joins no path takes its piece closed at that end,
+// or at both, keeping its turn. A style without them draws the open piece. This matches the parks that store them.
+//
 // A raised queue tile's piece follows its own line, not its neighbours. Level, it is the straight piece when its
 // start and end sides face apart, else a turn: the left turn when the end side is a quarter turn clockwise
 // from the start side, the right turn otherwise; the piece is turned one more quarter than its start side.
@@ -73,8 +77,29 @@ namespace rct3::park::path
         SlopeStraightLeft,
         SlopeStraightRight,
         SlopeMid,
+        // The capped pieces, which only some styles have: a lone flat tile closed all round, then each slope
+        // piece closed at both ends, at its bottom only and at its top only.
+        FlatCapped,
+        SlopeCapped,
+        SlopeCappedBottom,
+        SlopeCappedTop,
+        SlopeStraightCapped,
+        SlopeStraightCappedBottom,
+        SlopeStraightCappedTop,
+        SlopeStraightLeftCapped,
+        SlopeStraightLeftCappedBottom,
+        SlopeStraightLeftCappedTop,
+        SlopeStraightRightCapped,
+        SlopeStraightRightCappedBottom,
+        SlopeStraightRightCappedTop,
+        SlopeMidCapped,
+        SlopeMidCappedBottom,
+        SlopeMidCappedTop,
     };
-    inline constexpr std::size_t kDeckPieceCount = 19;
+    inline constexpr std::size_t kDeckPieceCount = 35;
+
+    /// The piece without its caps: the piece itself when it has none.
+    [[nodiscard]] DeckPiece uncapped(DeckPiece piece) noexcept;
 
     /// A queue style's pieces, in the order its description names them.
     enum class QueuePiece : std::uint8_t
@@ -127,7 +152,7 @@ namespace rct3::park::path
     /// reach that edge.
     [[nodiscard]] std::optional<float> edge_height(const save::model::PathTile& path, const save::model::TerrainGrid& grid, Side side);
 
-    /// The deck piece of a raised path of `style` on a tile.
+    /// The deck piece of a raised path of `style` on a tile; the open piece when the style has no capped one.
     [[nodiscard]] std::string deck_symbol(const PathStyle& style, DeckPiece piece);
 
     /// The piece of a raised queue tile and its turn.

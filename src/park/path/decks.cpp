@@ -110,6 +110,15 @@ namespace rct3::park::path
         {
             const save::model::PathElevation& e = *path.elevation;
             const auto height = static_cast<float>(e.quantised_height);
+            const save::model::Tile tile { path.col, path.row };
+            // Whether a path across `side` meets this one's edge there at `at`.
+            const auto joined = [&](Side side, float at) {
+                const auto [col, row] = side.beyond(tile);
+                return std::ranges::any_of(tiles.at(col, row), [&](const save::model::PathTile* p) {
+                    const auto edge = edge_height(*p, grid, side.opposite());
+                    return edge && meets(*edge, at) && (p->kind == save::model::PathKind::Queue || !walls || !walled(*walls, tile, side, at));
+                });
+            };
             if (e.slope != 0)
             {
                 const Side heading = stored_heading_or_bare(path.direction);
@@ -118,21 +127,27 @@ namespace rct3::park::path
                     const auto [col, row] = side.beyond({ path.col, path.row });
                     return std::ranges::any_of(tiles.at(col, row), [&](const save::model::PathTile* p) { return p->kind != save::model::PathKind::Queue && p->elevation && p->elevation->slope == e.slope && p->direction == path.direction && p->elevation->quantised_height == e.quantised_height; });
                 };
-                return slope_deck(e.slope, heading, { .left = beside(heading.left()), .right = beside(heading.right()) });
+                const Deck deck = slope_deck(e.slope, heading, { .left = beside(heading.left()), .right = beside(heading.right()) });
+                // Entered at its own height, left risen or fallen.
+                const bool falls = slope_falls(e.slope);
+                const bool entered = joined(heading.opposite(), height);
+                const bool left = joined(heading, height + (falls ? -ground::path_rise(e.slope) : ground::path_rise(e.slope)));
+                const bool bottom = falls ? left : entered;
+                const bool top = falls ? entered : left;
+                if (bottom && top)
+                    return deck;
+                // The capped pieces follow their open one in threes: closed at both ends, at the bottom, at the top.
+                const auto first = static_cast<std::uint8_t>(DeckPiece::SlopeCapped) + (static_cast<std::uint8_t>(deck.piece) - static_cast<std::uint8_t>(DeckPiece::Slope)) * 3;
+                return { static_cast<DeckPiece>(first + (top ? 1 : bottom ? 2 : 0)), deck.turn };
             }
-            const save::model::Tile tile { path.col, path.row };
             std::uint8_t sides = 0;
             for (const Side side : kSides)
             {
-                const auto [col, row] = side.beyond(tile);
-                const Side facing = side.opposite();
-                const bool joined = std::ranges::any_of(tiles.at(col, row), [&](const save::model::PathTile* p) {
-                    const auto edge = edge_height(*p, grid, facing);
-                    return edge && meets(*edge, height) && (p->kind == save::model::PathKind::Queue || !walls || !walled(*walls, tile, side, height));
-                });
-                if (joined)
+                if (joined(side, height))
                     sides = static_cast<std::uint8_t>(sides | side.bit());
             }
+            if (sides == 0)
+                return { DeckPiece::FlatCapped, flat_deck(0, 0).turn };
             // Corner k lies between side k and the side after it, so it shares side k's bit.
             std::uint8_t corners = 0;
             for (const Side corner : kSides)
@@ -231,10 +246,21 @@ namespace rct3::park::path
         return std::nullopt;
     }
 
+    DeckPiece uncapped(DeckPiece piece) noexcept
+    {
+        if (piece < DeckPiece::FlatCapped)
+            return piece;
+        if (piece == DeckPiece::FlatCapped)
+            return DeckPiece::Flat;
+        return static_cast<DeckPiece>(static_cast<std::uint8_t>(DeckPiece::Slope) + (static_cast<std::uint8_t>(piece) - static_cast<std::uint8_t>(DeckPiece::SlopeCapped)) / 3);
+    }
+
     std::string deck_symbol(const PathStyle& style, DeckPiece piece)
     {
         const auto at = static_cast<std::size_t>(piece);
-        return at < style.pieces.size() ? style.pieces[at] : std::string();
+        if (at < style.pieces.size() && !style.pieces[at].empty())
+            return style.pieces[at];
+        return piece != uncapped(piece) ? deck_symbol(style, uncapped(piece)) : std::string();
     }
 
     QueueDeck queue_deck(const save::model::PathTile& queue)

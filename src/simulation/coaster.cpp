@@ -19,6 +19,8 @@ namespace rct3::simulation
         using units::kGravity;
         constexpr units::Seconds kStep { 0.05f };          ///< A part step, short enough for the steepest drops
         constexpr units::Pace kCrawl { 0.1f };             ///< Under this a train is all but stopped
+        constexpr units::Pace kAtRest { 0.01f };           ///< Chosen by eye: under this a train held by its grip on the rails stays stopped
+        constexpr units::Pace kCoast { 1 };                ///< Chosen by eye: rolling and the air alone never slow a moving train below this, so one over level track creeps on, as in the original game
         constexpr units::Distance kStallSame { 15 };       ///< Chosen by eye: stalls this close along the track count as one place
         constexpr units::Distance kSetOff { 1 };           ///< Chosen by eye: a stall is this far or more past where trains set off, which a train waiting to leave the station is not
         constexpr units::Distance kRolledBack { 1 };       ///< Chosen by eye: a train rolled back this far from a rise has failed it, where a crest's creep is a few centimetres
@@ -36,11 +38,14 @@ namespace rct3::simulation
         constexpr units::Acceleration kSlideEase { 4 };    ///< It is eased up to that by. Chosen by eye
         constexpr units::Pace kWadeSpeed { 2.9f };         ///< A slide's car is carried through the pool at on its way back to its lift. Measured: a car of a tested slide in the original game
         constexpr units::Acceleration kWadeDrag { 40 };    ///< The water slows a faster car by, down to that. Measured likewise: 13 m/s down to 3 in 2 m
-        constexpr units::Acceleration kJetPull { 15 };     ///< Booster jets push a car over them by. Chosen by eye
-        constexpr units::Seconds kLiftPause { 2 };         ///< A lift's car stands before it sets off, and before it lets its train go. Chosen by eye
-        constexpr units::Distance kBoardShort { 0.5f };    ///< Short of the far end of a lift car's track, a train boarding it stops. Chosen by eye
-        constexpr units::Acceleration kLiftEase { 2 };     ///< A lift's car speeds up by from either end of its climb, and slows by to it. Chosen by eye
-        constexpr units::Pace kLiftCreep { 0.3f };         ///< A lift's car keeps up at its ends. Chosen by eye
+        /// A boat floating along a water channel is carried at. Fitted to the rapids designs the game ships, whose
+        /// saved tests average about this over a lap spent almost all afloat.
+        constexpr units::Pace kFlow { 2.4f };
+        constexpr units::Acceleration kJetPull { 15 };  ///< Booster jets push a car over them by. Chosen by eye
+        constexpr units::Seconds kLiftPause { 2 };      ///< A lift's car stands before it sets off, and before it lets its train go. Chosen by eye
+        constexpr units::Distance kBoardShort { 0.5f }; ///< Short of the far end of a lift car's track, a train boarding it stops. Chosen by eye
+        constexpr units::Acceleration kLiftEase { 2 };  ///< A lift's car speeds up by from either end of its climb, and slows by to it. Chosen by eye
+        constexpr units::Pace kLiftCreep { 0.3f };      ///< A lift's car keeps up at its ends. Chosen by eye
         /// Radians a slide's car swings up its trough's wall to go over a rim. The rims are the piece's rails,
         /// level with the track's line the car swings from, so it goes over once swung out level with them.
         // shortcut: every piece's rims are taken as level with its line, upgrade when each piece's own rails are read.
@@ -457,7 +462,7 @@ namespace rct3::simulation
             // train held up by the one ahead are no fault of the track's shape.
             const auto stall_at = [&](float at) {
                 // Plain track a train's length either way: a train waiting by a platform, brake or lift stands still too. A stall is a place past where trains set off.
-                if (!c.stalls_by_design && ahead_of(c.start, at) > kSetOff.value && room > kArrived && std::ranges::all_of(std::array { -1.0f, -0.5f, 0.0f, 0.5f, 1.0f }, [&](float k) { return c.kinds[point_at(c, wrap(c, at + k * c.train_length))] == Stretch::Plain; }) && std::ranges::none_of(c.stalls_told, [&](float d) { return std::abs(d - at) < kStallSame.value; }))
+                if (!c.stalls_by_design && !c.held_up && ahead_of(c.start, at) > kSetOff.value && room > kArrived && std::ranges::all_of(std::array { -1.0f, -0.5f, 0.0f, 0.5f, 1.0f }, [&](float k) { return c.kinds[point_at(c, wrap(c, at + k * c.train_length))] == Stretch::Plain; }) && std::ranges::none_of(c.stalls_told, [&](float d) { return std::abs(d - at) < kStallSame.value; }))
                 {
                     c.stalled = at;
                     c.stalls_told.push_back(at);
@@ -478,16 +483,33 @@ namespace rct3::simulation
                 c.speed = *c.fixed_speed;
             else
             {
-                // Pulled down the slope between the train's ends, held back by rolling, as much as it presses on the
-                // track, and by the air.
+                // Pulled down the slope between the train's ends; held back, the way it goes, by rolling, as much as
+                // its cars press on the rails, and by the air. Stopped, or stopping, it stays so while its grip on the
+                // rails outholds the slope's pull: friction never turns a train round, nor stops one on its own.
                 const float back = c.at - c.train_length;
                 const float slope = std::clamp((height_at(c, c.at) - height_at(c, back)) / c.train_length, -1.0f, 1.0f);
-                c.speed += (-kGravity.value * slope - kGravity.value * c.rolling * std::sqrt(1 - slope * slope) - c.air * c.speed * std::abs(c.speed)) * dt;
+                const std::int32_t pressing = std::max(c.cars, 1);
+                float press = 0;
+                for (std::int32_t k = 0; k < pressing; ++k)
+                    press += std::abs(track_up(c, c.at - (static_cast<float>(k) + 0.5f) * c.train_length / static_cast<float>(pressing)).y);
+                const float grip = kGravity.value * (c.ups.empty() ? std::sqrt(1 - slope * slope) : press / static_cast<float>(pressing));
+                const float downhill = -kGravity.value * slope;
+                const bool held = std::abs(downhill) <= c.resting * grip;
+                const float losses = c.rolling * grip + (c.mass.value > 0 ? c.drag / c.mass.value : 0) * c.speed * c.speed;
+                const float rolled = c.speed + downhill * dt;
+                float sped = rolled - std::copysign(losses, c.speed != 0 ? c.speed : downhill) * dt;
+                if (const float least = std::min(std::abs(rolled), kCoast.value); rolled * c.speed > 0 && std::abs(sped) < least)
+                    sped = std::copysign(least, rolled);
+                c.speed = held && (std::abs(c.speed) < kAtRest.value || sped * c.speed < 0) ? 0 : sped;
                 // A slide's way back to its lift has a chain under the water too, which the water's pace overrides.
                 // shortcut: slowed so whether or not a pool is there; upgrade once a run in the original game with no
                 // pool joined is known.
                 if (std::ranges::any_of(c.wades, [&](const std::array<float, 2>& w) { return c.at >= w[0] && c.at < w[1]; }))
                     c.speed = std::max(c.speed - kWadeDrag.value * dt, kWadeSpeed.value);
+                // Afloat, a boat goes with the flow: carried on at its pace, and slowed to it by the water as brakes
+                // would, faster.
+                else if (const std::size_t i = point_at(c, c.at); i < c.afloat.size() && c.afloat[i])
+                    c.speed = std::max(c.speed - c.brake_pull * dt, kFlow.value);
                 // A shuttle's chain carries the train either way, the way it is going.
                 else if (chained)
                     c.speed = open && c.speed < 0 ? std::min(c.speed, -c.lift_speed) : std::max(c.speed, c.lift_speed);
@@ -542,7 +564,10 @@ namespace rct3::simulation
                     if (c.slow > kStuck)
                         c.speed = std::max(c.speed, c.station_speed);
                     if (pace > c.station_speed)
+                    {
                         c.slow = { };
+                        c.held_up = false;
+                    }
                 }
                 // Each car over a brake or block brake slows the train while it is faster than that brake's speed,
                 // down to it and no further, whichever way it goes; each over a block brake pushes it on while it is
@@ -646,9 +671,12 @@ namespace rct3::simulation
             float moved = c.speed * dt;
             if (moved > room)
             {
-                // Held up behind the train in front until it moves on.
+                // Held up behind the train in front: stopped in a station, where its riders may get off; elsewhere
+                // creeping after it to go on once it moves away. Slowed so, it may fail a rise further on, which is no
+                // fault of the track's.
                 moved = std::max(room, 0.0f);
-                c.speed = 0;
+                c.speed = under == Stretch::Station ? 0 : std::min(c.speed, kCoast.value);
+                c.held_up = true;
             }
             room -= moved;
             // A slide's car swings in its trough as a weight hung from the middle of the swing: gravity, less the

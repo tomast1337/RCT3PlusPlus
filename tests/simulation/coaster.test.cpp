@@ -196,6 +196,7 @@ TEST_CASE("a train that cannot crest a hill raises one stall at that place, and 
     dry.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::Plain, Stretch::Plain };
     dry.distance = { 0, 10, 50, 100, 130 }; // A flat run from the station, so the climb starts well clear of its platform
     dry.height = { 0, 0, 0, 15, 0 };
+    dry.station_speed = 8; // Fast enough to roll the flat to the climb
     const std::vector<float> found = stalls(dry);
     REQUIRE(found.size() == 1); // Laps after the first stall at the same place and are not told again
     CHECK(found.front() > 40);
@@ -227,6 +228,7 @@ TEST_CASE("brakes slow a train down along them to their speed and no further")
     Coaster c = hill();
     c.kinds[3] = Stretch::Brake;
     c.brake_speeds = { -1, -1, -1, 4, -1 };
+    c.rolling = 0; // The brakes alone
     c.running = true;
     while (c.at < 71)
         drive(c, 0.05f);
@@ -518,6 +520,7 @@ TEST_CASE("a train rolling back over its launch stretch is slowed harder the nea
 TEST_CASE("a train rolling back over its launch stretch slower than the station's speed rolls on unslowed")
 {
     Coaster c = spike_after_launch(7);
+    c.rolling = 0;  // Unslowed by its wheels either, to see the launch stretch leaves it be
     float onto = 0; // Speed as its front came onto the launch stretch going back
     float off = 0;  // And as its tail reached the platform
     for (std::int32_t i = 0; i < 4000 && c.running; ++i)
@@ -532,7 +535,7 @@ TEST_CASE("a train rolling back over its launch stretch slower than the station'
     CHECK_FALSE(c.running);
     CHECK(c.at == 8);
     REQUIRE(onto > 0);
-    CHECK(off > onto - 0.2f); // Rolling only
+    CHECK(off == doctest::Approx(onto).epsilon(0.02));
 }
 
 TEST_CASE("a train standing on brakes is pushed on, as anywhere else it stalls")
@@ -582,7 +585,7 @@ TEST_CASE("a shuttle's chain carries the train up it going backwards too")
     c.kinds = { Stretch::Plain, Stretch::Chain, Stretch::Plain, Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::Plain };
     c.start = c.at = 70;
     c.lift_speed = 3;
-    c.launch_speed = 4; // Too slow to climb far up the spike on its own
+    c.launch_speed = 6; // Too slow to climb far up the spike on its own
     float lowest = c.at;
     bool back = false;
     for (std::int32_t i = 0; i < 4000 && !back; ++i)
@@ -598,6 +601,7 @@ TEST_CASE("a shuttle's chain carries the train up it going backwards too")
 TEST_CASE("a swinging shuttle is pushed each pass, building up and dying down, and stops after its passes")
 {
     Coaster c = spikes(Shuttle::Swing, 8);
+    c.launch_speed = 20;              // Its first, gentlest push still carries it clear of the station
     std::vector<float> fastest(9, 0); // On each pass
     bool back = false;
     for (std::int32_t i = 0; i < 20000 && !back; ++i)
@@ -979,24 +983,104 @@ TEST_CASE("a slide's car on the straight stays in the middle of its trough")
     }
 }
 
-TEST_CASE("a car on the level is slowed by rolling as much of its weight as it is given, and by the air with speed")
+namespace
 {
-    Coaster c = hill();
-    c.kinds[1] = Stretch::Plain;
-    c.height = { 0, 0, 0, 0, 0 };
-    c.running = true;
-    c.launched = true;
-    c.at = 40;
-    c.speed = 10;
-    c.rolling = 0.06f;
-    c.air = 0;
+    /// `hill()` laid level throughout, its train running at `speed` 40 m along, with no air holding it back.
+    Coaster level(float speed)
+    {
+        Coaster c = hill();
+        c.kinds[1] = Stretch::Plain;
+        c.height = { 0, 0, 0, 0, 0 };
+        c.running = true;
+        c.launched = true;
+        c.at = 40;
+        c.speed = speed;
+        c.drag = 0;
+        return c;
+    }
+} // namespace
+
+TEST_CASE("a train on the level is slowed by rolling as much of its weight as it is given")
+{
+    Coaster c = level(10);
+    c.rolling = 0.04f;
     drive(c, 1);
-    CHECK(c.speed == doctest::Approx(10 - 0.06f * 9.81f).epsilon(0.01));
-    Coaster windy = c;
-    windy.speed = 10;
-    windy.air = 0.01f;
-    drive(windy, 0.1f);
-    CHECK(windy.speed == doctest::Approx(10 - (0.06f * 9.81f + 0.01f * 100) * 0.1f).epsilon(0.01));
+    CHECK(c.speed == doctest::Approx(10 - 0.04f * 9.81f).epsilon(0.01));
+}
+
+TEST_CASE("rolling alone does not stop a train on the level: it creeps on")
+{
+    Coaster c = level(3);
+    c.rolling = 0.04f;
+    drive(c, 20);
+    CHECK(c.speed > 0.5f);
+    CHECK(c.speed < 3);
+}
+
+TEST_CASE("a train held up behind the one in front creeps after it, and goes on once it moves away")
+{
+    Coaster c = level(10);
+    c.rolling = 0;
+    drive(c, 0.5f, 0.2f);
+    CHECK(c.at == doctest::Approx(40.2f));
+    CHECK(c.speed > 0);
+    CHECK(c.speed <= 1);
+    CHECK(c.held_up);
+    drive(c, 1);
+    CHECK(c.at > 40.5f);
+}
+
+TEST_CASE("the air slows a train with its speed squared, a heavier one less")
+{
+    Coaster light = level(10);
+    light.rolling = 0;
+    light.drag = 20;
+    light.mass = { 1000 };
+    Coaster heavy = light;
+    heavy.mass = { 2000 };
+    drive(light, 0.1f);
+    drive(heavy, 0.1f);
+    CHECK(light.speed == doctest::Approx(10 - 20.0f * 100 / 1000 * 0.1f).epsilon(0.01));
+    CHECK(heavy.speed == doctest::Approx(10 - 20.0f * 100 / 2000 * 0.1f).epsilon(0.01));
+}
+
+TEST_CASE("a stopped train stays put on a slope its grip on the rails outholds, and rolls down a steeper one")
+{
+    // From 40 m the track climbs 1 m over the next 30, gently, then 9 m over the 30 after that.
+    Coaster c = level(0);
+    c.height = { 0, 0, 0, 1, 10 };
+    c.at = 50;
+    c.resting = 0.06f;
+    drive(c, 1);
+    CHECK(c.speed == 0);
+    CHECK(c.at == 50);
+    // Rolling to a stop up the gentle slope, it stops there and does not roll back.
+    c.speed = 1;
+    drive(c, 4);
+    CHECK(c.speed == 0);
+    CHECK(c.at > 50);
+    Coaster steep = c;
+    steep.at = 85;
+    drive(steep, 0.5f);
+    CHECK(steep.speed < 0);
+}
+
+TEST_CASE("a boat on a water channel is carried on by the flow, and slowed to its pace when faster")
+{
+    Coaster still = level(0);
+    still.afloat = { false, true, true, true, false };
+    still.rolling = 0.04f;
+    drive(still, 1);
+    CHECK(still.speed > 2);
+    CHECK(still.at > 41);
+    Coaster fast = still;
+    fast.at = 40;
+    fast.speed = 10;
+    fast.rolling = 0; // The water alone
+    drive(fast, 0.2f);
+    CHECK(fast.speed == doctest::Approx(10 - 0.2f * fast.brake_pull));
+    drive(fast, 1);
+    CHECK(fast.speed == doctest::Approx(still.speed));
 }
 
 TEST_CASE("a car off a slide's end flies on, comes down on its water ahead and floats till it is gone ten seconds on")

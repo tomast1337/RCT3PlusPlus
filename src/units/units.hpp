@@ -163,6 +163,13 @@ namespace rct3::units
         float value = 0;
     };
 
+    /// Kilograms.
+    struct Mass
+    {
+        static constexpr bool kUnit = true;
+        float value = 0;
+    };
+
     /// How fast something turns: radians a second.
     struct TurnRate
     {

@@ -22,7 +22,7 @@ namespace rct3::ui::skin
             {
                 case ovl::GuiSkinKind::Rect:
                     return Lines { 2, 2 };
-                case ovl::GuiSkinKind::Solid:
+                case ovl::GuiSkinKind::WholeTexture:
                     return Lines { 0, 0 };
                 case ovl::GuiSkinKind::NinePatch:
                 case ovl::GuiSkinKind::Frame:

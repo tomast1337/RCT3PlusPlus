@@ -148,12 +148,12 @@ TEST_CASE("a train setting off onto level track past the platform is carried off
     c.start = 10;
     c.at = 10;
     c.running = true;
-    for (std::int32_t t = 0; t < 8; ++t)
+    for (i32 t = 0; t < 8; ++t)
         CHECK_FALSE(drive(c, 0.25f));
     CHECK(c.travelled > 1); // Under way within 2 s
     CHECK(c.speed <= c.station_speed);
     // Wholly off the platform, it rolls on as the level track lets it, slowing: no longer pushed.
-    for (std::int32_t t = 0; t < 200 && c.travelled < c.train_length + 3; ++t)
+    for (i32 t = 0; t < 200 && c.travelled < c.train_length + 3; ++t)
         drive(c, 0.05f);
     CHECK(c.travelled >= c.train_length + 3);
     CHECK(c.speed < c.station_speed - 0.5f);
@@ -253,7 +253,7 @@ TEST_CASE("a train standing on a block brake shorter than itself is waiting ther
     c.launched = true;
     c.running = true;
     bool told = false;
-    for (std::int32_t t = 0; t < 40; ++t)
+    for (i32 t = 0; t < 40; ++t)
     {
         drive(c, 0.25f, 30); // The block ahead is not yet clear
         told = told || std::exchange(c.stalled, std::nullopt).has_value();
@@ -424,11 +424,11 @@ TEST_CASE("the last piece of a block brake run brakes a car over it harder than 
     c.at = 74;
     c.speed = 12;
     drive(c, 0.1f);
-    const float first = 12 - c.speed;
+    const f32 first = 12 - c.speed;
     c.at = 84;
     c.speed = 12;
     drive(c, 0.1f);
-    const float last = 12 - c.speed;
+    const f32 last = 12 - c.speed;
     CHECK(first > 0);
     CHECK(last == doctest::Approx(2 * first).epsilon(0.05));
 }

@@ -587,7 +587,7 @@ namespace rct3::simulation
                     // The first train's laps, while tested or open, make the ride's graphs; a test train's on
                     // unfinished track never comes round. A lap ends at the first station it comes to, so on a
                     // circuit with more than one, the run on from there back to the start is left out.
-                    const bool lap_end = train.stops.empty() ? round : was_running && standing_at(train) == std::optional<std::size_t> { 1 };
+                    const bool lap_end = train.stops.empty() ? round : was_running && standing_at(train) == std::optional<usize> { 1 };
                     if (t == 0 && ((train.running && train.next_stop == 0) || lap_end))
                         record(fleet->lap, train, dt);
                     if (t == 0 && lap_end)

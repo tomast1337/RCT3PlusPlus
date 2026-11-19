@@ -7,6 +7,7 @@
 #include "park/land_buying.hpp"
 #include "park/person/motions.hpp"
 #include "scene/land_tools.hpp"
+#include "scene/park/fireworks.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/waterfalls.hpp"
 #include "simulation/debug_tools.hpp"
@@ -180,6 +181,14 @@ namespace rct3::scene::park
                 scene.held_motion = ParkScene::HeldMotion { .since = scene.clock, .in_turn = true, .everyone = everyone };
                 return 1;
             }
+            case DebugTool::StartDisplay:
+                return start_park_display(scene, count) ? 1 : 0;
+            case DebugTool::StopDisplay:
+            {
+                const bool playing = scene.fireworks.playing.has_value();
+                stop_park_display(scene);
+                return playing ? 1 : 0;
+            }
         }
         return 0;
     }
@@ -341,6 +350,25 @@ namespace rct3::scene::park
             ImGui::SameLine();
             ImGui::Checkbox("Ground", &scene.show_ground);
             ImGui::SetItemTooltip("The land and the paths on it; the render statistics are in the Profiler");
+        }
+
+        if (ImGui::CollapsingHeader("Firework displays", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            const ParkFireworks& fireworks = scene.fireworks;
+            if (fireworks.displays.empty())
+                ImGui::TextDisabled("The park has no displays");
+            for (std::size_t i = 0; i < fireworks.displays.size(); ++i)
+            {
+                ImGui::PushID(static_cast<int>(i)); // c-api
+                tool_button(device, scene, assets, "Start", DebugTool::StartDisplay, static_cast<std::int64_t>(i));
+                ImGui::SameLine();
+                const bool playing = fireworks.playing && fireworks.playing->display == i;
+                ImGui::Text("%s%s", fireworks.displays[i].name.c_str(), playing ? " (playing)" : "");
+                ImGui::PopID();
+            }
+            ImGui::BeginDisabled(!fireworks.playing);
+            tool_button(device, scene, assets, "Stop the display", DebugTool::StopDisplay);
+            ImGui::EndDisabled();
         }
     }
 

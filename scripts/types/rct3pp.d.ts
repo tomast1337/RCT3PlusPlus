@@ -292,8 +292,9 @@ declare namespace park {
         met: boolean;
         toldMonth: boolean;
     }[];
-    /** The VIPs who came in: name, where they are in tiles, patience 0 to 1, whether heading home or gone, and
-     *  their place in people.list() once they are shown. */
+    /** The VIPs who came in: name, where they are in tiles, patience 0 to 1, whether heading home or gone, their
+     *  bodyguards still in the park, how many stops they came to see and which is next, the attraction they walk
+     *  to now (empty when none), and their place in people.list() once they are shown. */
     function vips(): {
         name: string;
         col: Tiles;
@@ -301,6 +302,10 @@ declare namespace park {
         patience: number;
         leaving: boolean;
         gone: boolean;
+        guards: number;
+        stops: number;
+        nextStop: number;
+        heading: string;
         shown: PersonIndex | null;
     }[];
     /** The park's firework displays: name, what most of its shots are (a fountain show is mostly water jets), how

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/holding.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/crash.hpp"
 #include "simulation/guests.hpp"
@@ -31,7 +32,7 @@ namespace rct3::simulation
         auto& pose = r.get<Pose>(person);
         pose.position = pose.was = at;
         const auto* surroundings = r.ctx().find<WreckSurroundings>();
-        const float ground = surroundings != nullptr && surroundings->ground ? surroundings->ground({ at.x, at.z }) : 0.0f;
+        const f32 ground = surroundings != nullptr && surroundings->ground ? surroundings->ground({ at.x, at.z }) : 0.0f;
         r.emplace<Dropped>(person, Dropped { .ground = ground, .fall = { -velocity.y }, .drift = { velocity.x, velocity.z }, .thrown = true, .node = node });
     }
 
@@ -75,9 +76,9 @@ namespace rct3::simulation
         if (node && !nodes[node->value].queue && !nodes[node->value].removed && std::abs(nodes[node->value].height - ground.y) <= 1)
             return node;
         node.reset();
-        float best = std::numeric_limits<float>::max();
-        for (std::uint32_t k = 0; k < nodes.size(); ++k)
-            if (const float d = glm::distance(paths.centre(NodeId { k }), ground); !nodes[k].queue && !nodes[k].removed && d < best)
+        f32 best = std::numeric_limits<f32>::max();
+        for (u32 k = 0; k < nodes.size(); ++k)
+            if (const f32 d = glm::distance(paths.centre(NodeId { k }), ground); !nodes[k].queue && !nodes[k].removed && d < best)
             {
                 best = d;
                 node = NodeId { k };
@@ -97,11 +98,11 @@ namespace rct3::simulation
         step_out(r, person);
         auto& dice = r.get<Dice>(person).state;
         const auto& holding = kTuning.holding;
-        const Held held { .height = { static_cast<float>(random::between(dice, holding.lowest.value, holding.highest.value)) }, .happy = random::chance(dice, holding.happy.value), .swimwear = in_swimwear(r, person) };
+        const Held held { .height = { static_cast<f32>(random::between(dice, holding.lowest.value, holding.highest.value)) }, .happy = random::chance(dice, holding.happy.value), .swimwear = in_swimwear(r, person) };
         if (r.all_of<Visitor>(person))
         {
             constexpr std::array kSay { ThoughtKind::PickedUpHappy, ThoughtKind::PickedUpNeutral, ThoughtKind::PickedUpSad };
-            think(r, person, kSay[random::below(dice, kSay.size())], entt::null, static_cast<float>(world.tick) * kTickSeconds);
+            think(r, person, kSay[random::below(dice, kSay.size())], entt::null, static_cast<f32>(world.tick) * kTickSeconds);
         }
         r.remove<Errand, Stride, Linger, Gesture, Watching, Swimmer, PoolRoute>(person);
         r.emplace<Held>(person, held);
@@ -131,7 +132,7 @@ namespace rct3::simulation
             return std::nullopt;
         const glm::vec3 gate = world.paths.centre(gates.get<const ParkGate>(gates.front()).node);
         std::optional<glm::vec3> best;
-        for (std::uint32_t k = 0; k < world.paths.nodes().size(); ++k)
+        for (u32 k = 0; k < world.paths.nodes().size(); ++k)
         {
             const NodeId n { k };
             const PathNode& node = world.paths.nodes()[k];
@@ -167,7 +168,7 @@ namespace rct3::simulation
     {
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;
-        constexpr float dt = kTickSeconds;
+        constexpr f32 dt = kTickSeconds;
 
         phase.emplace("Let go");
         // Those the player let go of fall to the ground, then walk straight to the path they go on from. Those
@@ -182,12 +183,12 @@ namespace rct3::simulation
             if (drop.sliding)
             {
                 const auto& slides = kTuning.slides;
-                const float gravity = kTuning.holding.gravity.value;
+                const f32 gravity = kTuning.holding.gravity.value;
                 const glm::vec2 rise = surroundings != nullptr ? slope(surroundings->ground, { pose.position.x, pose.position.z }) : glm::vec2 { };
-                const float lean = 1 + glm::dot(rise, rise); // The steeper, the less of their weight presses on the ground
+                const f32 lean = 1 + glm::dot(rise, rise); // The steeper, the less of their weight presses on the ground
                 drop.drift -= rise * (gravity / lean * dt);
-                const float speed = glm::length(drop.drift);
-                const float rub = slides.grip * gravity / lean * dt;
+                const f32 speed = glm::length(drop.drift);
+                const f32 rub = slides.grip * gravity / lean * dt;
                 drop.drift = speed > rub ? drop.drift * (1 - rub / speed) : glm::vec2 { };
                 pose.position += glm::vec3 { drop.drift.x, 0, drop.drift.y } * dt;
                 drop.ground = surroundings != nullptr && surroundings->ground ? surroundings->ground({ pose.position.x, pose.position.z }) : pose.position.y;
@@ -254,11 +255,11 @@ namespace rct3::simulation
                 continue;
             }
             const glm::vec3 to = paths.centre(*drop.node) - pose.position;
-            const float left = glm::length(glm::vec2(to.x, to.z));
+            const f32 left = glm::length(glm::vec2(to.x, to.z));
             if (left > kLaneReach)
             {
                 const auto* visitor = r.try_get<Visitor>(e);
-                const float pace = (visitor != nullptr ? kTuning.walking.speed[std::to_underlying(visitor->age)] : Stride { }.speed).value * dt;
+                const f32 pace = (visitor != nullptr ? kTuning.walking.speed[std::to_underlying(visitor->age)] : Stride { }.speed).value * dt;
                 pose.heading.value = std::atan2(to.x, to.z);
                 pose.position += glm::vec3 { to.x, 0, to.z } * (std::min(pace, left) / left); // Over the ground they landed on
                 continue;

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/edit.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
@@ -11,16 +13,16 @@ using namespace rct3::park::track;
 
 namespace
 {
-    constexpr float kTile = 4;
+    constexpr f32 kTile = 4;
 
     /// A track of pieces with ids 1 to `count`, in stretches of the sizes `stretches` gives, closed as they say.
-    save::model::Track stretched_track(std::vector<std::pair<std::size_t, bool>> stretches)
+    save::model::Track stretched_track(std::vector<std::pair<usize, bool>> stretches)
     {
         save::model::Track t;
         for (const auto& [count, closed] : stretches)
         {
             t.segments.push_back({ .first_piece = t.pieces.size(), .piece_count = count, .closed = closed });
-            for (std::size_t i = 0; i < count; ++i)
+            for (usize i = 0; i < count; ++i)
                 t.pieces.push_back({ .id = t.pieces.size() + 1 });
         }
         return t;
@@ -45,7 +47,7 @@ namespace
         return g;
     }
 
-    save::model::PlacedObject placed(std::int32_t col, std::int32_t row)
+    save::model::PlacedObject placed(i32 col, i32 row)
     {
         save::model::PlacedObject o;
         o.col = col;

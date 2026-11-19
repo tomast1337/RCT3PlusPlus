@@ -7,6 +7,7 @@
 // middle of its edge and leans with the edge, as the railings of queues on the ground do.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "save/model/world.hpp"
 
@@ -32,6 +33,6 @@ namespace rct3::park
 
     /// The fence `symbol` from `overlay` round the land the park owns in `grid`, open where `paths` cross its
     /// edge. None when `symbol` is empty. New objects take ids after `last_id`.
-    [[nodiscard]] BoundaryFence boundary_fence(const std::string& symbol, const std::string& overlay, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::uint64_t last_id);
+    [[nodiscard]] BoundaryFence boundary_fence(const std::string& symbol, const std::string& overlay, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, u64 last_id);
 
 } // namespace rct3::park

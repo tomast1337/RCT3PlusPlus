@@ -2,6 +2,7 @@
 #include "scene/menu_audio.hpp"
 
 #include "audio/menu_music.hpp"
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/sound.hpp"
@@ -41,10 +42,10 @@ namespace rct3::scene
             menu.folder = *folder;
             menu.files = music_files(install);
             const auto& files = menu.files;
-            const std::optional<std::int32_t> place = options.flag(config::game::GameOption::CycleMenuMusic) ? std::optional(options.choice(config::game::GameOption::MenuTrack)) : std::nullopt;
+            const std::optional<i32> place = options.flag(config::game::GameOption::CycleMenuMusic) ? std::optional(options.choice(config::game::GameOption::MenuTrack)) : std::nullopt;
             const auto pick = audio::pick_menu_music(place, audio::is_halloween(std::chrono::system_clock::now()), files);
             if (pick.next_place)
-                options.set(config::game::GameOption::MenuTrack, static_cast<float>(*pick.next_place));
+                options.set(config::game::GameOption::MenuTrack, static_cast<f32>(*pick.next_place));
             if (!pick.file)
                 log.warning("no menu music: {} is missing", pick.track);
             menu.cycle_file = pick.file;
@@ -65,7 +66,7 @@ namespace rct3::scene
             menu.music.reset();
             menu.music_volume.reset();
             menu.music_level.reset();
-            std::optional<std::size_t> file;
+            std::optional<usize> file;
             switch (wish.source)
             {
                 case audio::MenuMusicSource::Cycle:
@@ -76,7 +77,7 @@ namespace rct3::scene
                     break;
                 case audio::MenuMusicSource::Shuffle:
                     if (!menu.files.empty())
-                        file = std::uniform_int_distribution<std::size_t>(0, menu.files.size() - 1)(menu.random);
+                        file = std::uniform_int_distribution<usize>(0, menu.files.size() - 1)(menu.random);
                     break;
                 case audio::MenuMusicSource::Silent:
                     break;
@@ -117,11 +118,11 @@ namespace rct3::scene
                 log.warning("click sounds missing from {}", kClickOverlay);
         }
 
-        void play_one(audio::AudioEngine& engine, std::span<const audio::SoundBuffer> sounds, std::minstd_rand& random, float volume)
+        void play_one(audio::AudioEngine& engine, std::span<const audio::SoundBuffer> sounds, std::minstd_rand& random, f32 volume)
         {
             if (sounds.empty() || volume <= 0)
                 return;
-            std::uniform_int_distribution<std::size_t> pick(0, sounds.size() - 1);
+            std::uniform_int_distribution<usize> pick(0, sounds.size() - 1);
             if (auto played = engine.play(sounds[pick(random)], { .volume = volume }); !played)
                 logging::logger("audio").debug("click: {}", audio::to_string(played.error()));
         }
@@ -163,7 +164,7 @@ namespace rct3::scene
         return names;
     }
 
-    MenuAudio start_menu_audio(audio::AudioEngine& engine, const config::game::GameInstall& install, config::game::GameOptions& options, std::uint32_t seed)
+    MenuAudio start_menu_audio(audio::AudioEngine& engine, const config::game::GameInstall& install, config::game::GameOptions& options, u32 seed)
     {
         MenuAudio menu;
         menu.random.seed(seed);
@@ -173,15 +174,15 @@ namespace rct3::scene
         return menu;
     }
 
-    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::game::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park, float level)
+    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::game::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park, f32 level)
     {
         follow_choice(engine, menu, options, in_park);
         // The game volume is the master: it scales every sound, the music and the interface's too.
-        if (const float master = options.get(config::game::GameOption::GameVolume); master != engine.master_volume())
+        if (const f32 master = options.get(config::game::GameOption::GameVolume); master != engine.master_volume())
             engine.set_master_volume(master);
         if (menu.music)
         {
-            const float volume = audio::kMenuMusicLevel * options.get(config::game::GameOption::MusicVolume);
+            const f32 volume = audio::kMenuMusicLevel * options.get(config::game::GameOption::MusicVolume);
             if (volume != menu.music_volume)
             {
                 menu.music->set_volume(engine, volume);
@@ -196,7 +197,7 @@ namespace rct3::scene
             if (auto fed = menu.music->update(engine); !fed)
                 logging::logger("audio").warning("menu music: {}", fed.error());
         }
-        const float clicks = options.get(config::game::GameOption::InterfaceVolume);
+        const f32 clicks = options.get(config::game::GameOption::InterfaceVolume);
         for (const auto sound : sounds)
         {
             switch (sound)

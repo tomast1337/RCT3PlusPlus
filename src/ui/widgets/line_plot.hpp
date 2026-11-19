@@ -11,6 +11,7 @@
 // the pointer.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widget.hpp"
 
 #include <array>
@@ -25,16 +26,16 @@ namespace rct3::ui::widgets
 
     struct PlotSeries
     {
-        std::vector<float> values; ///< Oldest first
+        std::vector<f32> values; ///< Oldest first
         Color colour = kWhite;
-        float full = 0;       ///< Of its scale, top of the plot; 0 to work it out from its values
+        f32 full = 0;         ///< Of its scale, top of the plot; 0 to work it out from its values
         bool centred = false; ///< Zero across the middle, for a series that goes below it
     };
 
     /// A mark along the bottom of a plot: `back` samples before the newest one, a longer mark when `major`.
     struct PlotTick
     {
-        float back = 0;
+        f32 back = 0;
         bool major = false;
     };
 
@@ -45,14 +46,14 @@ namespace rct3::ui::widgets
 
         std::vector<PlotSeries> series;
         std::vector<PlotTick> ticks;
-        std::size_t slots = 0; ///< Samples across the plot; 0 to stretch the longest series over it
+        usize slots = 0; ///< Samples across the plot; 0 to stretch the longest series over it
         Color background = hex("#00000030");
         Color rule_colour = hex("#7f7f7f60"); ///< Of the level lines and the ticks
-        std::int32_t rules = 8;               ///< Spaces between level lines, top to bottom
-        float line = 1.5f;                    ///< Width of the series' lines
-        float tick = 4;                       ///< Height of a tick; a major one is twice as tall
-        std::size_t most_slots = 0;           ///< The wheel zooms out to this many slots at most; 0 for no zooming
-        std::size_t fewest_slots = 4;         ///< And in to this many at least
+        i32 rules = 8;                        ///< Spaces between level lines, top to bottom
+        f32 line = 1.5f;                      ///< Width of the series' lines
+        f32 tick = 4;                         ///< Height of a tick; a major one is twice as tall
+        usize most_slots = 0;                 ///< The wheel zooms out to this many slots at most; 0 for no zooming
+        usize fewest_slots = 4;               ///< And in to this many at least
 
         [[nodiscard]] bool takes_pointer() const override
         {
@@ -63,34 +64,34 @@ namespace rct3::ui::widgets
         void draw(DrawContext& context) const override;
 
         /// The sample under the pointer, by how many samples before the newest; none when it is not over the plot.
-        [[nodiscard]] std::optional<std::size_t> pointed() const;
+        [[nodiscard]] std::optional<usize> pointed() const;
         /// The slots the wheel zoomed to since the last call.
-        [[nodiscard]] std::optional<std::size_t> take_zoom()
+        [[nodiscard]] std::optional<usize> take_zoom()
         {
             return std::exchange(zoomed_, std::nullopt);
         }
 
         /// Samples across the plot: its slots, or as many as the longest series has.
-        [[nodiscard]] std::size_t span() const;
+        [[nodiscard]] usize span() const;
 
     private:
-        std::size_t under_ = 0;
-        std::optional<std::size_t> zoomed_;
+        usize under_ = 0;
+        std::optional<usize> zoomed_;
     };
 
     /// The full value of a scale for `values`: the smallest 1, 2 or 5 times a power of ten at least as large as
     /// the largest of them either side of zero. 1 for no values or only zeros.
-    [[nodiscard]] float full_scale(std::span<const float> values);
+    [[nodiscard]] f32 full_scale(std::span<const f32> values);
 
     /// The values at the top, three quarters, half, a quarter and the bottom of a scale up to `full`.
-    [[nodiscard]] std::array<float, 5> axis_values(float full, bool centred);
+    [[nodiscard]] std::array<f32, 5> axis_values(f32 full, bool centred);
 
     /// Where in a plot `height` units tall a sample `value` sits, with y down, on a scale up to `full`: zero at
     /// the bottom, or in the middle for a `centred` scale that goes down to -full.
-    [[nodiscard]] float plot_y(float value, float full, bool centred, float height);
+    [[nodiscard]] f32 plot_y(f32 value, f32 full, bool centred, f32 height);
 
     /// Where across a plot `width` units wide, spanning `span` samples, the sample `back` before the newest
     /// sits; the newest at the right edge.
-    [[nodiscard]] float plot_x(float back, std::size_t span, float width);
+    [[nodiscard]] f32 plot_x(f32 back, usize span, f32 width);
 
 } // namespace rct3::ui::widgets

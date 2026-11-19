@@ -11,6 +11,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/cursor.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/font/set.hpp"
@@ -33,8 +34,8 @@ namespace rct3::ui
 
     struct Point
     {
-        float x = 0;
-        float y = 0;
+        f32 x = 0;
+        f32 y = 0;
     };
 
     [[nodiscard]] inline bool contains(const Rect& rect, Point p)

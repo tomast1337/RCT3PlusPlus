@@ -17,6 +17,7 @@
 // update() override that calls Window::update() first.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/font/set.hpp"
 #include "ui/widget.hpp"
 #include "ui/widgets/button.hpp"
@@ -35,19 +36,19 @@ namespace rct3::ui::widgets
         std::string background;
         std::string title_button; ///< Skin family of the title bar buttons
         std::string close_icon;
-        float title_height = 20;               ///< Band along the top that drags the window
+        f32 title_height = 20;                 ///< Band along the top that drags the window
         Rect background_inset { 6, 6, 6, 6 };  ///< Background drawn this far in from the frame's outer edges
         bool tile_background = false;          ///< Repeat the background skin at its own size instead of stretching it
         std::string content_background;        ///< Stretched over the content, on the background; none when empty
         Rect icon_box { 6, 17, 52, 63 };       ///< From the top-left corner: the icon is centred in it at its own size
         Rect content_inset { 12, 28, 12, 12 }; ///< Content area in from the left, top, right and bottom edges
-        float title_button_size = 14;
+        f32 title_button_size = 14;
         Point title_button_margin { 10, 6 }; ///< From the top-right corner
         font::FontRole title_font = font::FontRole::Medium;
         Rect title_box { 12, 2, 40, 20 }; ///< Title text: left inset, top, right inset, bottom; tops and bottoms from the top edge
         Color title_colour = hex("#000000");
-        float resize_band = 6;                ///< Inside each edge of a resizable window, the part that drags it
-        float resize_corner = 16;             ///< Along each edge from a corner, the part that drags both edges
+        f32 resize_band = 6;                  ///< Inside each edge of a resizable window, the part that drags it
+        f32 resize_corner = 16;               ///< Along each edge from a corner, the part that drags both edges
         Color grip_colour = hex("#00000060"); ///< Marks in the bottom-right corner of a resizable window
     };
 
@@ -55,7 +56,7 @@ namespace rct3::ui::widgets
     {
     public:
         /// Centred on the desktop at `width` x `height`.
-        Window(std::string name, const WindowStyle& style, float width, float height);
+        Window(std::string name, const WindowStyle& style, f32 width, f32 height);
 
         std::u16string title;
         std::string icon; ///< Skin in the frame's top-left corner, if any
@@ -71,7 +72,7 @@ namespace rct3::ui::widgets
         }
 
         /// Makes the window `height` tall, keeping its top edge where it is.
-        void set_height(float height);
+        void set_height(f32 height);
 
         [[nodiscard]] Widget& content()
         {
@@ -104,7 +105,7 @@ namespace rct3::ui::widgets
         }
 
     private:
-        enum Edge : std::uint8_t
+        enum Edge : u8
         {
             Left = 1,
             Top = 2,
@@ -113,9 +114,9 @@ namespace rct3::ui::widgets
         };
 
         /// The edges a press at `p` takes hold of, as Edge bits; 0 when none.
-        [[nodiscard]] std::uint8_t edges_at(Point p) const;
+        [[nodiscard]] u8 edges_at(Point p) const;
         /// The resize arrow for a set of Edge bits; the arrow for none.
-        [[nodiscard]] static CursorKind edge_cursor(std::uint8_t edges);
+        [[nodiscard]] static CursorKind edge_cursor(u8 edges);
         void resize_to(Point p);
 
         WindowStyle style_;
@@ -123,7 +124,7 @@ namespace rct3::ui::widgets
         Button* close_ = nullptr;
         bool dragging_ = false;
         Point grab_;
-        std::uint8_t edges_ = 0;
+        u8 edges_ = 0;
         Rect start_rect_; // Of a resize, so limits do not make the edge drift from the pointer
     };
 

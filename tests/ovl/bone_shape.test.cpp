@@ -2,6 +2,7 @@
 #include "ovl/bone_shape.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <cstdint>
@@ -18,40 +19,40 @@ namespace
 
     // Name block, 32 bytes: "B:bsh" 0, "Tex:ftx" 6, "Sty:txs" 14, "root" 22, "arm" 27. The structure block
     // follows at address 32.
-    constexpr std::uint32_t kBase = 32;
-    constexpr std::uint32_t kNameShape = 0;
-    constexpr std::uint32_t kNameTexture = 6;
-    constexpr std::uint32_t kNameStyle = 14;
-    constexpr std::uint32_t kNameRoot = 22;
-    constexpr std::uint32_t kNameArm = 27;
+    constexpr u32 kBase = 32;
+    constexpr u32 kNameShape = 0;
+    constexpr u32 kNameTexture = 6;
+    constexpr u32 kNameStyle = 14;
+    constexpr u32 kNameRoot = 22;
+    constexpr u32 kNameArm = 27;
 
     // Offsets inside the structure block.
-    constexpr std::uint32_t kMeshArray = 0;  // 1 pointer
-    constexpr std::uint32_t kMesh = 4;       // 40 bytes
-    constexpr std::uint32_t kHeader = 44;    // 60 bytes
-    constexpr std::uint32_t kBones = 104;    // 2 * 8
-    constexpr std::uint32_t kLocals = 120;   // 2 * 64
-    constexpr std::uint32_t kWorlds = 248;   // 2 * 64
-    constexpr std::uint32_t kVertices = 376; // 3 * 44
-    constexpr std::uint32_t kIndices = 508;  // 3 * 2
-    constexpr std::uint32_t kEnd = 514;
+    constexpr u32 kMeshArray = 0;  // 1 pointer
+    constexpr u32 kMesh = 4;       // 40 bytes
+    constexpr u32 kHeader = 44;    // 60 bytes
+    constexpr u32 kBones = 104;    // 2 * 8
+    constexpr u32 kLocals = 120;   // 2 * 64
+    constexpr u32 kWorlds = 248;   // 2 * 64
+    constexpr u32 kVertices = 376; // 3 * 44
+    constexpr u32 kIndices = 508;  // 3 * 2
+    constexpr u32 kEnd = 514;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    void real(std::vector<std::byte>& out, float v)
+    void real(std::vector<std::byte>& out, f32 v)
     {
-        append_u32(out, std::bit_cast<std::uint32_t>(v));
+        append_u32(out, std::bit_cast<u32>(v));
     }
 
-    void matrix(std::vector<std::byte>& out, float x, float y, float z)
+    void matrix(std::vector<std::byte>& out, f32 x, f32 y, f32 z)
     {
-        for (std::size_t r = 0; r < 4; ++r)
+        for (usize r = 0; r < 4; ++r)
         {
-            for (std::size_t c = 0; c < 4; ++c)
+            for (usize c = 0; c < 4; ++c)
                 real(out, r == c ? 1.0f : 0.0f);
         }
         // Translation lives in the last row.
@@ -78,7 +79,7 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> reference_rows(std::uint32_t second_name = kNameStyle)
+    std::vector<std::byte> reference_rows(u32 second_name = kNameStyle)
     {
         std::vector<std::byte> out;
         words(out, { kBase + kMesh + 4, kNameTexture, 0, 0 });
@@ -88,10 +89,10 @@ namespace
 
     struct Options
     {
-        std::uint32_t mesh_count = 1;
-        std::uint32_t bone_count = 2;
-        std::uint32_t arm_parent = 0;
-        std::uint32_t indices = kBase + kIndices;
+        u32 mesh_count = 1;
+        u32 bone_count = 2;
+        u32 arm_parent = 0;
+        u32 indices = kBase + kIndices;
     };
 
     std::vector<std::byte> structure(const Options& o = { })
@@ -99,7 +100,7 @@ namespace
         std::vector<std::byte> out;
         words(out, { kBase + kMesh }); // mesh array
         words(out, { 0xFFFFFFFF, 0, 0, 1, 12, 3, 3, 3, kBase + kVertices, o.indices });
-        for (float f : { -1.0f, -2.0f, -3.0f, 1.0f, 2.0f, 3.0f })
+        for (f32 f : { -1.0f, -2.0f, -3.0f, 1.0f, 2.0f, 3.0f })
             real(out, f); // bounds
         words(out, { 3, 3, 1, o.mesh_count, kBase + kMeshArray, o.bone_count, kBase + kBones, kBase + kLocals, kBase + kWorlds });
         words(out, { kNameRoot, 0xFFFFFFFF, kNameArm, o.arm_parent });
@@ -107,17 +108,17 @@ namespace
         matrix(out, 1, 0, 0);
         matrix(out, 0, 1, 0); // worlds
         matrix(out, 1, 1, 0);
-        for (std::uint8_t v = 0; v < 3; ++v)
+        for (u8 v = 0; v < 3; ++v)
         {
-            for (std::size_t k = 0; k < 3; ++k)
-                real(out, static_cast<float>(v + k)); // position
-            for (float f : { 0.0f, 1.0f, 0.0f })
+            for (usize k = 0; k < 3; ++k)
+                real(out, static_cast<f32>(v + k)); // position
+            for (f32 f : { 0.0f, 1.0f, 0.0f })
                 real(out, f); // normal
-            for (std::uint8_t b : { v, std::uint8_t { 1 }, std::uint8_t { 0 }, std::uint8_t { 0 } })
+            for (u8 b : { v, u8 { 1 }, u8 { 0 }, u8 { 0 } })
                 out.push_back(std::byte { b });
-            for (std::uint8_t w : { 200, 55, 0, 0 })
+            for (u8 w : { 200, 55, 0, 0 })
                 out.push_back(std::byte { w });
-            for (std::int32_t k = 0; k < 4; ++k)
+            for (i32 k = 0; k < 4; ++k)
                 out.push_back(std::byte { 255 }); // colour
             real(out, 0.25f * v);
             real(out, 0.5f);

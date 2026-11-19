@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/special_attraction.hpp"
 
+#include "core/types.hpp"
+
 namespace rct3::ovl
 {
 
@@ -17,7 +19,7 @@ namespace rct3::ovl
         const ReferenceIndex refs(part, space);
         const OvlLayout layout = part.file.header.layout;
         const bool first = layout == OvlLayout::NoStream;
-        const std::size_t size = first ? 52 : 80;
+        const usize size = first ? 52 : 80;
         const detail::AttractionLayout at = first ? detail::AttractionLayout { .type_id = 0x00, .name_text = 0x04, .description_text = 0x08, .icon = 0x0C, .style = 0x30, .spline = 0x24, .value_a = 0x10, .value_b = 0x14, .value_c = 0x20 } : detail::AttractionLayout { .type_id = 0x0C, .name_text = 0x10, .description_text = 0x14, .icon = 0x18, .style = 0x08, .spline = 0x30, .value_a = 0x1C, .value_b = 0x20, .value_c = 0x2C };
 
         std::vector<SpecialAttractionItem> items;

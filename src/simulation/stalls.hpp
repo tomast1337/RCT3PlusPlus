@@ -4,6 +4,7 @@
 // with time. The components here, and that step.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "profiling/profiler.hpp"
 #include "units/units.hpp"
@@ -20,7 +21,7 @@ namespace rct3::simulation
     struct SimWorld;
 
     /// What a shop sells, or what a facility does for its guests.
-    enum class Product : std::uint8_t
+    enum class Product : u8
     {
         Drink,
         Food,
@@ -32,7 +33,7 @@ namespace rct3::simulation
     };
 
     /// Whether a shop's food or drink is cold (ice cream, a slush), hot (coffee, soup) or neither.
-    enum class Serve : std::uint8_t
+    enum class Serve : u8
     {
         Any,
         Cold, ///< Cools a guest down; wanted most on hot days
@@ -45,11 +46,11 @@ namespace rct3::simulation
         Product product = Product::Drink;
         Serve serve = Serve::Any;
         units::Money price { };
-        std::string symbol { };  ///< Of the item a guest carries away, as `Burger:cid`; empty when not known
-        std::uint8_t extras = 0; ///< How many extras (toppings, sauces, ice) its item can take
-        std::uint8_t topped = 0; ///< How many of those go on it
+        std::string symbol { }; ///< Of the item a guest carries away, as `Burger:cid`; empty when not known
+        u8 extras = 0;          ///< How many extras (toppings, sauces, ice) its item can take
+        u8 topped = 0;          ///< How many of those go on it
         /// What those add to how much it feeds, quenches and sickens, each by how much of it goes on.
-        std::array<float, 3> topping { };
+        std::array<f32, 3> topping { };
         units::Money cost { }; ///< Of its stock, with the extras going on, to the park for each one sold
         /// Most a guest pays for it, with those extras, in mild weather, the cold and the heat; none when not known.
         std::array<units::Money, 3> worth { };

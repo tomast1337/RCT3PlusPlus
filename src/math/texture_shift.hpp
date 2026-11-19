@@ -4,6 +4,8 @@
 // slide of a whole number of lengths looks the same as none: only the fraction is kept.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cmath>
 
 namespace rct3::math
@@ -12,10 +14,10 @@ namespace rct3::math
     /// A slide along a texture's v, in texture lengths, always from 0 up to (not including) 1.
     struct TextureShift
     {
-        float lengths = 0;
+        f32 lengths = 0;
 
         /// The slide of `lengths` texture lengths, either way, kept as its fraction.
-        [[nodiscard]] static TextureShift by(float lengths)
+        [[nodiscard]] static TextureShift by(f32 lengths)
         {
             return { lengths - std::floor(lengths) };
         }

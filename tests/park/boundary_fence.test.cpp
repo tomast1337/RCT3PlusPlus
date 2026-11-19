@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/boundary_fence.hpp"
 
+#include "core/types.hpp"
 #include "park/queue_fences.hpp"
 
 #include <algorithm>
@@ -29,7 +30,7 @@ namespace
         return g;
     }
 
-    save::model::PathTile path_at(std::int32_t col, std::int32_t row)
+    save::model::PathTile path_at(i32 col, i32 row)
     {
         save::model::PathTile p;
         p.col = col;

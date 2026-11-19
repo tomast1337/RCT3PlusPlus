@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/ghosts.hpp"
 
+#include "core/types.hpp"
 #include "park/object/models.hpp"
 #include "park/relief_maps.hpp"
 #include "scene/park/scene.hpp"
@@ -45,7 +46,7 @@ namespace rct3::scene
             if (batch.blend != rct3::park::object::PartBlend::Opaque || painted == pictures.end())
                 continue;
             ovl::texture::RgbaImage filled = painted->second;
-            for (std::size_t i = 3; i < filled.pixels.size(); i += 4)
+            for (usize i = 3; i < filled.pixels.size(); i += 4)
                 filled.pixels[i] = 255;
             pictures.insert_or_assign(ghost_texture(batch), std::move(filled));
         }
@@ -58,13 +59,13 @@ namespace rct3::scene
             scene.object_textures.merge(*uploaded);
     }
 
-    render::SceneLight ghost_light(render::SceneLight light, float clock)
+    render::SceneLight ghost_light(render::SceneLight light, f32 clock)
     {
         // The strength swings between these, rising and falling evenly, this many times a second.
-        constexpr float kDimmest = 0.7f;
-        constexpr float kBrightest = 1.1f;
-        constexpr float kPulses = 0.6f;
-        const float wave = 2 * std::abs(clock * kPulses - std::floor(clock * kPulses) - 0.5f); // 1 to 0 and back
+        constexpr f32 kDimmest = 0.7f;
+        constexpr f32 kBrightest = 1.1f;
+        constexpr f32 kPulses = 0.6f;
+        const f32 wave = 2 * std::abs(clock * kPulses - std::floor(clock * kPulses) - 0.5f); // 1 to 0 and back
         light.sky = glm::vec3(std::lerp(kDimmest, kBrightest, wave));
         light.ghost = true;
         light.haze_rate = 0;

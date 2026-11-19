@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/research.hpp"
 
+#include "core/types.hpp"
 #include "simulation/tuning.hpp"
 
 #include <cmath>
@@ -14,7 +15,7 @@ namespace units = rct3::units;
 
 namespace
 {
-    constexpr float kMonth = save::model::GameClock::kUnitsPerMonth;
+    constexpr f32 kMonth = save::model::GameClock::kUnitsPerMonth;
 
     struct Lab
     {
@@ -22,10 +23,10 @@ namespace
         std::vector<ResearchItem> items { { .id = 1, .area = ResearchArea::ThrillRides, .cost = units::Money { 16000 } }, { .id = 2, .area = ResearchArea::Shops, .cost = units::Money { 10000 } } };
         simulation::park::ParkState park;
         save::model::Finance money;
-        std::optional<std::int64_t> kept;
+        std::optional<i64> kept;
         random::RandomState dice = random::seeded(random::Seed { 7 });
 
-        void pass(float units)
+        void pass(f32 units)
         {
             step_research(research, units, items, park, money, kept, dice);
         }
@@ -50,7 +51,7 @@ TEST_CASE("the items to research are the attractions made available and not yet 
     using rct3::park::BuildKind;
     using rct3::park::BuildList;
     std::vector<BuildItem> catalogue(3);
-    const auto offer = [&](std::size_t at, BuildList list, BuildKind kind, std::string symbol, std::string overlay) {
+    const auto offer = [&](usize at, BuildList list, BuildKind kind, std::string symbol, std::string overlay) {
         catalogue[at].list = list;
         catalogue[at].kind = kind;
         catalogue[at].symbol = std::move(symbol);
@@ -60,7 +61,7 @@ TEST_CASE("the items to research are the attractions made available and not yet 
     offer(1, BuildList::GentleRides, BuildKind::FlatRide, "Carousel", "style/plain/style");
     offer(2, BuildList::DrinkShops, BuildKind::Shop, "Drinks", "style/plain/style");
     save::model::RequiredContent content;
-    const auto entry = [&](std::uint64_t id, std::string symbol, std::string overlay, bool available, bool invented) { content.entries.push_back({ .kind = save::model::AssetKind::Attraction, .overlay_stem = std::move(overlay), .symbol = std::move(symbol), .available = available, .invented = invented, .id = id }); };
+    const auto entry = [&](u64 id, std::string symbol, std::string overlay, bool available, bool invented) { content.entries.push_back({ .kind = save::model::AssetKind::Attraction, .overlay_stem = std::move(overlay), .symbol = std::move(symbol), .available = available, .invented = invented, .id = id }); };
     entry(1, "looper", "Tracks/Looper/Looper", true, false); // Case does not matter
     entry(2, "Carousel", "style/plain/style", true, true);   // Invented already
     entry(3, "Drinks", "style/plain/style", true, false);
@@ -84,7 +85,7 @@ TEST_CASE("researchable scenery and path styles join research, scenery costing b
     using rct3::park::BuildKind;
     using save::model::AssetKind;
     std::vector<BuildItem> catalogue(3);
-    const auto scenery = [&](std::size_t at, std::string symbol, std::uint32_t category, std::int32_t price) {
+    const auto scenery = [&](usize at, std::string symbol, u32 category, i32 price) {
         catalogue[at].kind = BuildKind::Scenery;
         catalogue[at].overlay = "style/plain/style";
         catalogue[at].symbol = std::move(symbol);
@@ -101,7 +102,7 @@ TEST_CASE("researchable scenery and path styles join research, scenery costing b
     paths[2].name = "Gold";
     paths[2].queue = true;
     save::model::RequiredContent content;
-    const auto entry = [&](std::uint64_t id, AssetKind kind, std::string symbol, bool available) { content.entries.push_back({ .kind = kind, .overlay_stem = kind == AssetKind::Scenery ? "style/plain/style" : "", .symbol = std::move(symbol), .available = available, .id = id }); };
+    const auto entry = [&](u64 id, AssetKind kind, std::string symbol, bool available) { content.entries.push_back({ .kind = kind, .overlay_stem = kind == AssetKind::Scenery ? "style/plain/style" : "", .symbol = std::move(symbol), .available = available, .id = id }); };
     entry(1, AssetKind::Scenery, "Bench", true);
     entry(2, AssetKind::Scenery, "Volcano", true);
     entry(3, AssetKind::Scenery, "Column", true);
@@ -139,7 +140,7 @@ TEST_CASE("the budget is paid in parts and booked as research spending")
     CHECK(lab.research.spent == units::Money { 667 });
     CHECK(lab.research.current.has_value());
     // A whole month comes to the budget.
-    for (std::int32_t part = 1; part < 30; ++part)
+    for (i32 part = 1; part < 30; ++part)
         lab.pass(12);
     CHECK(std::abs(lab.park.cash->value - (100000 - 20000)) <= 667);
 }
@@ -150,14 +151,14 @@ TEST_CASE("an item whose cost is covered is invented and the rest carries over")
     lab.park.cash = units::Money { 100000 };
     lab.research.current = 1;
     lab.pass(kMonth); // 20000 against a cost of 16000
-    CHECK(lab.research.invented == std::vector<std::uint64_t> { 1 });
+    CHECK(lab.research.invented == std::vector<u64> { 1 });
     CHECK(lab.research.previous == 1);
     CHECK(lab.research.current == 2);
     CHECK(lab.research.spent == units::Money { 4000 });
     REQUIRE(lab.items.size() == 1);
     CHECK(lab.items[0].id == 2);
     lab.pass(kMonth); // 24000 against 10000: the last item, with nothing to carry the rest to
-    CHECK(lab.research.invented == std::vector<std::uint64_t> { 1, 2 });
+    CHECK(lab.research.invented == std::vector<u64> { 1, 2 });
     CHECK(lab.items.empty());
     CHECK_FALSE(lab.research.current);
     // Nothing left to invent, nothing is paid.
@@ -187,7 +188,7 @@ TEST_CASE("a park whose money never runs out researches for free")
     lab.pass(kMonth);
     CHECK_FALSE(lab.park.cash.has_value());
     CHECK(lab.money.ledger.empty());
-    CHECK(lab.research.invented == std::vector<std::uint64_t> { 2 });
+    CHECK(lab.research.invented == std::vector<u64> { 2 });
 }
 
 TEST_CASE("no budget, no research")
@@ -210,7 +211,7 @@ TEST_CASE("a boost counts with the next part paid")
     lab.pass(12); // 667 paid, 10167 counted against 10000
     CHECK(lab.park.cash == units::Money { 100000 - 667 });
     CHECK(lab.research.boost == units::Money { 0 });
-    CHECK(lab.research.invented == std::vector<std::uint64_t> { 2 });
+    CHECK(lab.research.invented == std::vector<u64> { 2 });
     CHECK(lab.research.spent == units::Money { 167 });
 }
 
@@ -218,12 +219,12 @@ TEST_CASE("the next item is drawn from the areas the player cares for")
 {
     SUBCASE("an area weighing nothing is passed over while another has items")
     {
-        for (std::uint64_t seed = 1; seed <= 20; ++seed)
+        for (u64 seed = 1; seed <= 20; ++seed)
         {
             Lab lab;
             lab.dice = random::seeded(random::Seed { seed });
             lab.research.priorities.assign(kResearchAreas, 0.0f);
-            lab.research.priorities[static_cast<std::size_t>(ResearchArea::Shops)] = 1.0f;
+            lab.research.priorities[static_cast<usize>(ResearchArea::Shops)] = 1.0f;
             lab.pass(12);
             CHECK(lab.research.current == 2);
         }
@@ -244,13 +245,13 @@ TEST_CASE("the next item is drawn from the areas the player cares for")
     }
     SUBCASE("both areas are drawn over many parks")
     {
-        std::int32_t shops = 0;
-        for (std::uint64_t seed = 1; seed <= 200; ++seed)
+        i32 shops = 0;
+        for (u64 seed = 1; seed <= 200; ++seed)
         {
             Lab lab;
             lab.dice = random::seeded(random::Seed { seed });
             lab.research.priorities.assign(kResearchAreas, 0.5f);
-            lab.research.priorities[static_cast<std::size_t>(ResearchArea::Shops)] = 1.5f;
+            lab.research.priorities[static_cast<usize>(ResearchArea::Shops)] = 1.5f;
             lab.pass(12);
             shops += lab.research.current == 2 ? 1 : 0;
         }
@@ -299,8 +300,8 @@ TEST_CASE("an invention keeps the calendar's time it was made at")
     lab.park.time = 4321;
     lab.research.current = 2;
     lab.pass(kMonth);
-    CHECK(lab.research.invented == std::vector<std::uint64_t> { 2 });
-    CHECK(lab.research.invented_at == std::vector<float> { 4321 });
+    CHECK(lab.research.invented == std::vector<u64> { 2 });
+    CHECK(lab.research.invented_at == std::vector<f32> { 4321 });
 }
 
 TEST_CASE("a focused item is worked on at once, costs more, and what it replaced is taken up again")
@@ -318,7 +319,7 @@ TEST_CASE("a focused item is worked on at once, costs more, and what it replaced
     CHECK(research_cost(lab.items[1], lab.research.focus == lab.items[1].id) == units::Money { 15000 }); // 100.00 half as much again
     CHECK(research_cost(lab.items[0], lab.research.focus == lab.items[0].id) == units::Money { 16000 });
     lab.pass(kMonth); // 20000 against 15000
-    CHECK(lab.research.invented == std::vector<std::uint64_t> { 2 });
+    CHECK(lab.research.invented == std::vector<u64> { 2 });
     CHECK_FALSE(lab.research.focus);
     CHECK(lab.research.current == 1);
     CHECK(lab.research.spent == units::Money { 4000 + 5000 }); // What it had, and what was left over
@@ -360,8 +361,8 @@ TEST_CASE("the preview shows the cheapest few of each area, leaving out the item
     };
     const Research r { .current = 3 };
     const std::vector<ResearchItem> next = research_preview(r, items, 2);
-    std::vector<std::uint64_t> ids;
+    std::vector<u64> ids;
     for (const ResearchItem& i : next)
         ids.push_back(i.id);
-    CHECK(ids == std::vector<std::uint64_t> { 5, 2, 4, 1 });
+    CHECK(ids == std::vector<u64> { 5, 2, 4, 1 });
 }

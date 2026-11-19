@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/save_file.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
@@ -13,54 +15,54 @@ namespace rct3::save
     {
 
         // Prefix of a headered file: two zero words, then the magic, then the size of the header's body.
-        constexpr std::uint32_t kMagic = 0xF11EDA2Au;
-        constexpr std::uint32_t kHeaderBodySize = 0x40;
+        constexpr u32 kMagic = 0xF11EDA2Au;
+        constexpr u32 kHeaderBodySize = 0x40;
         // The short form, seen in some effect files: its own magic, then 1, then twelve words.
-        constexpr std::uint32_t kShortMagic = 0xF11EDA1Au;
-        constexpr std::uint32_t kShortMark = 1;
-        constexpr std::size_t kShortHeaderSize = 0x40;
-        constexpr std::size_t kPrefixSize = 16;
-        constexpr std::uint32_t kMinVersion = 1;
-        constexpr std::uint32_t kMaxVersion = 2;
+        constexpr u32 kShortMagic = 0xF11EDA1Au;
+        constexpr u32 kShortMark = 1;
+        constexpr usize kShortHeaderSize = 0x40;
+        constexpr usize kPrefixSize = 16;
+        constexpr u32 kMinVersion = 1;
+        constexpr u32 kMaxVersion = 2;
 
         // Smallest encodings, used to reject counts that cannot fit in the remaining bytes before allocating.
-        constexpr std::size_t kMinClassBytes = 2 + 4;         // name length, attribute count
-        constexpr std::size_t kMinAttributeBytes = 2 + 2 + 8; // name length, type length, size, child count
-        constexpr std::size_t kObjectPrefixBytes = 12;        // class index, id
+        constexpr usize kMinClassBytes = 2 + 4;         // name length, attribute count
+        constexpr usize kMinAttributeBytes = 2 + 2 + 8; // name length, type length, size, child count
+        constexpr usize kObjectPrefixBytes = 12;        // class index, id
 
         // Bounds-checked little-endian reader over a byte span.
         class Reader
         {
         public:
-            explicit Reader(std::span<const std::byte> data, std::size_t pos = 0)
+            explicit Reader(std::span<const std::byte> data, usize pos = 0)
                 : data_(data)
                 , pos_(pos)
             {
             }
 
-            [[nodiscard]] std::size_t pos() const noexcept
+            [[nodiscard]] usize pos() const noexcept
             {
                 return pos_;
             }
-            [[nodiscard]] std::size_t remaining() const noexcept
+            [[nodiscard]] usize remaining() const noexcept
             {
                 return data_.size() - pos_;
             }
 
-            bool read_u16(std::uint16_t& out)
+            bool read_u16(u16& out)
             {
                 return fixed(out);
             }
-            bool read_u32(std::uint32_t& out)
+            bool read_u32(u32& out)
             {
                 return fixed(out);
             }
-            bool read_u64(std::uint64_t& out)
+            bool read_u64(u64& out)
             {
                 return fixed(out);
             }
 
-            bool skip(std::size_t n)
+            bool skip(usize n)
             {
                 if (n > remaining())
                     return false;
@@ -68,7 +70,7 @@ namespace rct3::save
                 return true;
             }
 
-            bool text(std::size_t n, std::string_view& out)
+            bool text(usize n, std::string_view& out)
             {
                 if (n > remaining())
                     return false;
@@ -88,17 +90,17 @@ namespace rct3::save
             }
 
             std::span<const std::byte> data_;
-            std::size_t pos_;
+            usize pos_;
         };
 
-        std::expected<Attribute, Error> read_attribute(Reader& r, std::size_t depth)
+        std::expected<Attribute, Error> read_attribute(Reader& r, usize depth)
         {
             if (depth > kMaxAttributeDepth)
                 return std::unexpected(Error::BadClassTable);
             Attribute a;
-            std::uint16_t name_len = 0;
-            std::uint16_t type_len = 0;
-            std::uint32_t child_count = 0;
+            u16 name_len = 0;
+            u16 type_len = 0;
+            u32 child_count = 0;
             if (!r.read_u16(name_len) || !r.text(name_len, a.name))
                 return std::unexpected(Error::Truncated);
             if (!r.read_u16(type_len) || !r.text(type_len, a.type))
@@ -108,7 +110,7 @@ namespace rct3::save
             if (child_count > r.remaining() / kMinAttributeBytes)
                 return std::unexpected(Error::ImplausibleCount);
             a.children.reserve(child_count);
-            for (std::uint32_t i = 0; i < child_count; ++i)
+            for (u32 i = 0; i < child_count; ++i)
             {
                 auto child = read_attribute(r, depth + 1);
                 if (!child)
@@ -120,18 +122,18 @@ namespace rct3::save
 
         std::expected<std::vector<Class>, Error> read_class_table(Reader& r)
         {
-            std::uint32_t count = 0;
+            u32 count = 0;
             if (!r.read_u32(count))
                 return std::unexpected(Error::Truncated);
             if (count > kMaxClasses || count > r.remaining() / kMinClassBytes)
                 return std::unexpected(Error::ImplausibleCount);
             std::vector<Class> classes;
             classes.reserve(count);
-            for (std::uint32_t i = 0; i < count; ++i)
+            for (u32 i = 0; i < count; ++i)
             {
                 Class c;
-                std::uint16_t name_len = 0;
-                std::uint32_t attribute_count = 0;
+                u16 name_len = 0;
+                u32 attribute_count = 0;
                 if (!r.read_u16(name_len) || !r.text(name_len, c.name))
                     return std::unexpected(Error::Truncated);
                 if (!r.read_u32(attribute_count))
@@ -139,7 +141,7 @@ namespace rct3::save
                 if (attribute_count > r.remaining() / kMinAttributeBytes)
                     return std::unexpected(Error::ImplausibleCount);
                 c.attributes.reserve(attribute_count);
-                for (std::uint32_t j = 0; j < attribute_count; ++j)
+                for (u32 j = 0; j < attribute_count; ++j)
                 {
                     auto a = read_attribute(r, 1);
                     if (!a)
@@ -165,7 +167,7 @@ namespace rct3::save
                 }
                 else
                 {
-                    std::uint32_t length = 0;
+                    u32 length = 0;
                     if (!r.read_u32(length) || !r.skip(length))
                         return false;
                 }
@@ -219,16 +221,16 @@ namespace rct3::save
         return "unknown";
     }
 
-    std::uint32_t compute_checksum(std::span<const std::byte> data) noexcept
+    u32 compute_checksum(std::span<const std::byte> data) noexcept
     {
         // 16-bit state seeded with 55665; per byte: cipher = byte ^ (state >> 8), state = (cipher + state) *
         // 52845 + 22719 (mod 2^16). The cipher bytes are summed.
-        std::uint16_t state = 55665;
-        std::uint32_t sum = 0;
+        u16 state = 55665;
+        u32 sum = 0;
         for (const std::byte b : data)
         {
-            const auto cipher = static_cast<std::uint8_t>(static_cast<std::uint8_t>(b) ^ (state >> 8));
-            state = static_cast<std::uint16_t>((cipher + state) * 52845u + 22719u);
+            const auto cipher = static_cast<u8>(static_cast<u8>(b) ^ (state >> 8));
+            state = static_cast<u16>((cipher + state) * 52845u + 22719u);
             sum += cipher;
         }
         return sum;
@@ -237,21 +239,21 @@ namespace rct3::save
     std::expected<SaveFile, Error> read_save(std::span<const std::byte> data, const ReadOptions& options)
     {
         SaveFile file;
-        std::size_t body_start = 0;
+        usize body_start = 0;
 
         // A header is present when the first two words are zero and the third is the magic. Anything else is
         // treated as a headerless file whose class table starts at offset 0.
         if (data.size() >= kPrefixSize)
         {
-            std::uint32_t prefix[4] = { };
+            u32 prefix[4] = { };
             std::memcpy(prefix, data.data(), sizeof(prefix));
             const bool full = prefix[2] == kMagic;
             if (prefix[0] == 0 && prefix[1] == 0 && (full || prefix[2] == kShortMagic))
             {
                 if (prefix[3] != (full ? kHeaderBodySize : kShortMark))
                     return std::unexpected(Error::BadHeader);
-                const std::size_t size = full ? kHeaderSize : kShortHeaderSize;
-                if (data.size() < size + sizeof(std::uint32_t))
+                const usize size = full ? kHeaderSize : kShortHeaderSize;
+                if (data.size() < size + sizeof(u32))
                     return std::unexpected(Error::Truncated);
                 std::memcpy(file.header.words.data(), data.data() + kPrefixSize, size - kPrefixSize);
                 if (file.header.version() < kMinVersion || file.header.version() > kMaxVersion)
@@ -263,7 +265,7 @@ namespace rct3::save
         }
 
         // With a header, the last four bytes are the checksum and objects may not reach into them.
-        const std::size_t body_end = file.has_header ? data.size() - sizeof(std::uint32_t) : data.size();
+        const usize body_end = file.has_header ? data.size() - sizeof(u32) : data.size();
         const auto body = data.first(body_end);
 
         Reader r(body, body_start);
@@ -273,16 +275,16 @@ namespace rct3::save
         file.classes = std::move(*classes);
         file.sections.push_back({ SectionKind::ClassTable, body_start, r.pos() - body_start });
 
-        const std::size_t object_table_start = r.pos();
-        std::uint32_t object_count = 0;
+        const usize object_table_start = r.pos();
+        u32 object_count = 0;
         if (!r.read_u32(object_count))
             return std::unexpected(Error::Truncated);
         if (object_count > r.remaining() / kObjectPrefixBytes)
             return std::unexpected(Error::ImplausibleCount);
         file.objects.reserve(object_count);
-        for (std::uint32_t i = 0; i < object_count; ++i)
+        for (u32 i = 0; i < object_count; ++i)
         {
-            const std::size_t start = r.pos();
+            const usize start = r.pos();
             Object o;
             if (!r.read_u32(o.class_index) || !r.read_u64(o.id))
                 return std::unexpected(Error::BadObjectTable);
@@ -302,9 +304,9 @@ namespace rct3::save
         if (file.has_header)
         {
             file.has_checksum = true;
-            std::memcpy(&file.stored_checksum, data.data() + body_end, sizeof(std::uint32_t));
+            std::memcpy(&file.stored_checksum, data.data() + body_end, sizeof(u32));
             file.computed_checksum = compute_checksum(body);
-            file.sections.push_back({ SectionKind::Checksum, body_end, sizeof(std::uint32_t) });
+            file.sections.push_back({ SectionKind::Checksum, body_end, sizeof(u32) });
             if (options.verify_checksum && file.stored_checksum != file.computed_checksum)
                 return std::unexpected(Error::ChecksumMismatch);
         }
@@ -322,7 +324,7 @@ namespace rct3::save
         const auto text = [&](std::string_view s) {
             if (s.size() > UINT16_MAX)
                 return false;
-            put(static_cast<std::uint16_t>(s.size()));
+            put(static_cast<u16>(s.size()));
             const auto at = out.size();
             out.resize(at + s.size());
             std::memcpy(out.data() + at, s.data(), s.size());
@@ -332,29 +334,29 @@ namespace rct3::save
             if (!text(a.name) || !text(a.type))
                 return false;
             put(a.size);
-            put(static_cast<std::uint32_t>(a.children.size()));
+            put(static_cast<u32>(a.children.size()));
             return std::ranges::all_of(a.children, [&](const Attribute& child) { return self(child); });
         };
 
         if (header)
         {
-            for (const std::uint32_t w : { 0u, 0u, kMagic, kHeaderBodySize })
+            for (const u32 w : { 0u, 0u, kMagic, kHeaderBodySize })
                 put(w);
-            for (const std::uint32_t w : header->words)
+            for (const u32 w : header->words)
                 put(w);
         }
         if (classes.size() > kMaxClasses)
             return std::unexpected(Error::ImplausibleCount);
-        put(static_cast<std::uint32_t>(classes.size()));
+        put(static_cast<u32>(classes.size()));
         for (const Class& c : classes)
         {
             if (!text(c.name))
                 return std::unexpected(Error::ValueMismatch);
-            put(static_cast<std::uint32_t>(c.attributes.size()));
+            put(static_cast<u32>(c.attributes.size()));
             if (!std::ranges::all_of(c.attributes, attribute))
                 return std::unexpected(Error::ValueMismatch);
         }
-        put(static_cast<std::uint32_t>(objects.size()));
+        put(static_cast<u32>(objects.size()));
         for (const ObjectRecord& o : objects)
         {
             if (o.class_index >= classes.size())

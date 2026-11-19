@@ -2,6 +2,7 @@
 #include "ui/desktop.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/inspect.hpp"
 #include "ui/keyboard_focus.hpp"
 
@@ -36,8 +37,8 @@ namespace rct3::ui
             {
                 // Move the placement too, so the widget stays where it was put back.
                 const Rect inside = moved_inside(r, parent);
-                const float dx = inside.x0 - r.x0;
-                const float dy = inside.y0 - r.y0;
+                const f32 dx = inside.x0 - r.x0;
+                const f32 dy = inside.y0 - r.y0;
                 Rect& o = w.placement.offsets;
                 o = { o.x0 + dx, o.y0 + dy, o.x1 + dx, o.y1 + dy };
                 r = inside;
@@ -94,7 +95,7 @@ namespace rct3::ui
         {
             w.update(context);
             // By index: an update may add widgets here, e.g. a window opening another beside it.
-            for (std::size_t i = 0; i < w.children().size(); ++i)
+            for (usize i = 0; i < w.children().size(); ++i)
                 update_tree(*w.children()[i], context);
         }
 
@@ -138,10 +139,10 @@ namespace rct3::ui
         place_tree(*root_, view);
     }
 
-    std::optional<std::size_t> Desktop::top_modal() const
+    std::optional<usize> Desktop::top_modal() const
     {
         const auto& tops = root_->children();
-        for (std::size_t i = tops.size(); i-- > 0;)
+        for (usize i = tops.size(); i-- > 0;)
         {
             if (tops[i]->modal && tops[i]->visible && !tops[i]->closing())
                 return i;
@@ -151,12 +152,12 @@ namespace rct3::ui
 
     void Desktop::drop_shut_out_focus()
     {
-        const std::size_t from = top_modal().value_or(0);
+        const usize from = top_modal().value_or(0);
         if (focus_ == nullptr || from == 0)
             return;
         const Widget* top = top_level(*root_, focus_);
         const auto& tops = root_->children();
-        for (std::size_t i = 0; i < from; ++i)
+        for (usize i = 0; i < from; ++i)
         {
             if (tops[i].get() == top)
             {
@@ -177,8 +178,8 @@ namespace rct3::ui
         if (!root_->visible || (root_->clip_children && !contains(root_->rect(), p)))
             return std::nullopt;
         const auto& tops = root_->children();
-        const std::size_t from = top_modal().value_or(0);
-        for (std::size_t i = tops.size(); i-- > from;)
+        const usize from = top_modal().value_or(0);
+        for (usize i = tops.size(); i-- > from;)
         {
             if (Widget* w = hit_tree(*tops[i], p))
                 return *w;
@@ -189,8 +190,8 @@ namespace rct3::ui
     std::optional<Widget&> Desktop::deepest(Point p) const
     {
         const auto& tops = root_->children();
-        const std::size_t from = top_modal().value_or(0);
-        for (std::size_t i = tops.size(); i-- > from;)
+        const usize from = top_modal().value_or(0);
+        for (usize i = tops.size(); i-- > from;)
         {
             if (Widget* w = deepest_tree(*tops[i], p))
                 return *w;
@@ -317,7 +318,7 @@ namespace rct3::ui
         layout(view_);
         under = pointer.present ? core::as_pointer(hit(pointer.position)) : nullptr;
         const auto& tops = root_->children();
-        for (std::size_t i = 0; i < tops.size(); ++i)
+        for (usize i = 0; i < tops.size(); ++i)
             set_flags_tree(*tops[i], under, held_, i + 1 == tops.size(), focus_);
         if (under && (!held_ || held_ == under))
             under->on_hover(pointer.position);
@@ -394,7 +395,7 @@ namespace rct3::ui
             // The root draws nothing of its own and does not clip; the shade goes between its children.
             root_->draw(context);
             const auto& tops = root_->children();
-            for (std::size_t i = 0; i < tops.size(); ++i)
+            for (usize i = 0; i < tops.size(); ++i)
             {
                 if (i == *shaded)
                     context.list.fill(view_, modal_shade);

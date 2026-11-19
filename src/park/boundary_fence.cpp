@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/boundary_fence.hpp"
 
+#include "core/types.hpp"
 #include "park/ground/queues.hpp"
 #include "park/queue_fences.hpp"
 
@@ -23,20 +24,20 @@ namespace rct3::park
         return { };
     }
 
-    BoundaryFence boundary_fence(const std::string& symbol, const std::string& overlay, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::uint64_t last_id)
+    BoundaryFence boundary_fence(const std::string& symbol, const std::string& overlay, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, u64 last_id)
     {
         BoundaryFence out;
         if (symbol.empty())
             return out;
-        const auto key = [&](std::int32_t col, std::int32_t row) { return static_cast<std::int64_t>(row) * grid.width + col; };
-        std::unordered_set<std::int64_t> path_tiles;
+        const auto key = [&](i32 col, i32 row) { return static_cast<i64>(row) * grid.width + col; };
+        std::unordered_set<i64> path_tiles;
         for (const save::model::PathTile& p : paths)
             path_tiles.insert(key(p.col, p.row));
-        const auto owned = [&](std::int32_t col, std::int32_t row) { return grid.contains(col, row) && owned_outright(grid.at(col, row)); };
-        const auto has_path = [&](std::int32_t col, std::int32_t row) { return grid.contains(col, row) && path_tiles.contains(key(col, row)); };
-        for (std::int32_t row = 0; row < grid.height; ++row)
+        const auto owned = [&](i32 col, i32 row) { return grid.contains(col, row) && owned_outright(grid.at(col, row)); };
+        const auto has_path = [&](i32 col, i32 row) { return grid.contains(col, row) && path_tiles.contains(key(col, row)); };
+        for (i32 row = 0; row < grid.height; ++row)
         {
-            for (std::int32_t col = 0; col < grid.width; ++col)
+            for (i32 col = 0; col < grid.width; ++col)
             {
                 if (!owned(col, row))
                     continue;

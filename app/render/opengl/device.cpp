@@ -4,6 +4,7 @@
 #include "render/opengl/device.hpp"
 
 #include "backends/imgui_impl_opengl3.h"
+#include "core/types.hpp"
 #include "imgui.h"
 #include "logging/log.hpp"
 #include "render/shader_inputs.hpp"
@@ -108,8 +109,8 @@ namespace rct3::render::opengl
         {
             int count = 0; // c-api
             GLFWmonitor** monitors = glfwGetMonitors(&count);
-            std::int32_t fastest = 60;
-            for (std::int32_t i = 0; i < count; ++i)
+            i32 fastest = 60;
+            for (i32 i = 0; i < count; ++i)
                 if (const GLFWvidmode* mode = glfwGetVideoMode(monitors[i]))
                     fastest = std::max(fastest, mode->refreshRate);
             frame_pace_ = 1.0 / fastest;
@@ -121,7 +122,7 @@ namespace rct3::render::opengl
         gl.FrontFace(GL_CW);
         gl.DepthFunc(GL_LEQUAL);
         gl.CreateSamplers(kSamplerCount, samplers_.data());
-        for (std::size_t i = 0; i < kSamplerCount; ++i)
+        for (usize i = 0; i < kSamplerCount; ++i)
         {
             const GLint filter = i / 2 == 0 ? GL_NEAREST : GL_LINEAR;
             const GLint address = i % 2 == 0 ? GL_CLAMP_TO_EDGE : GL_REPEAT;
@@ -143,7 +144,7 @@ namespace rct3::render::opengl
 
         int w = 0, h = 0; // c-api
         glfwGetFramebufferSize(config_.window, &w, &h);
-        window_ = { static_cast<std::uint32_t>(std::max(w, 1)), static_cast<std::uint32_t>(std::max(h, 1)) };
+        window_ = { static_cast<u32>(std::max(w, 1)), static_cast<u32>(std::max(h, 1)) };
         create_screen();
         if (screen_.framebuffer == 0)
         {
@@ -207,7 +208,7 @@ namespace rct3::render::opengl
     {
         GLint largest = 0;
         gl.GetIntegerv(GL_MAX_TEXTURE_SIZE, &largest);
-        const auto scaled = [&](std::uint32_t side) { return std::clamp(static_cast<std::uint32_t>(std::lround(static_cast<float>(side) * render_scale_)), 1u, static_cast<std::uint32_t>(largest)); };
+        const auto scaled = [&](u32 side) { return std::clamp(static_cast<u32>(std::lround(static_cast<f32>(side) * render_scale_)), 1u, static_cast<u32>(largest)); };
         // Left empty when it cannot be made, which init reports.
         const auto made = make_texture({ .width = scaled(window_.width), .height = scaled(window_.height), .target = true });
         screen_ = made ? *made : Texture { };
@@ -245,20 +246,20 @@ namespace rct3::render::opengl
         multi_framebuffer_ = multi_color_ = multi_depth_ = 0;
     }
 
-    std::vector<std::uint32_t> OpenGlDevice::sample_levels() const
+    std::vector<u32> OpenGlDevice::sample_levels() const
     {
         if (state_ == State::Off)
             return { };
         GLint most = 0;
         gl.GetIntegerv(GL_MAX_SAMPLES, &most);
-        std::vector<std::uint32_t> levels;
-        for (const std::uint32_t n : { 2u, 4u, 8u })
-            if (n <= static_cast<std::uint32_t>(most))
+        std::vector<u32> levels;
+        for (const u32 n : { 2u, 4u, 8u })
+            if (n <= static_cast<u32>(most))
                 levels.push_back(n);
         return levels;
     }
 
-    void OpenGlDevice::set_samples(std::uint32_t samples)
+    void OpenGlDevice::set_samples(u32 samples)
     {
         assert(state_ == State::Idle);
         if (samples != 1 && !std::ranges::contains(sample_levels(), samples))
@@ -281,9 +282,9 @@ namespace rct3::render::opengl
         assert(state_ == State::Idle);
         int w = 0, h = 0; // c-api
         glfwGetFramebufferSize(config_.window, &w, &h);
-        window_ = { static_cast<std::uint32_t>(std::max(w, 1)), static_cast<std::uint32_t>(std::max(h, 1)) };
+        window_ = { static_cast<u32>(std::max(w, 1)), static_cast<u32>(std::max(h, 1)) };
         // A new window size or render scale makes the screen anew.
-        if (const auto side = [&](std::uint32_t s) { return std::max(1u, static_cast<std::uint32_t>(std::lround(static_cast<float>(s) * render_scale_))); }; side(window_.width) != screen_.extent.width || side(window_.height) != screen_.extent.height)
+        if (const auto side = [&](u32 s) { return std::max(1u, static_cast<u32>(std::lround(static_cast<f32>(s) * render_scale_))); }; side(window_.width) != screen_.extent.width || side(window_.height) != screen_.extent.height)
         {
             destroy_screen();
             create_screen();
@@ -312,8 +313,8 @@ namespace rct3::render::opengl
         if (!view())
             return { 0, 0, screen };
         // Kept inside the screen, which may have shrunk since the view was set.
-        const std::uint32_t x = std::min(view()->x, screen.width);
-        const std::uint32_t y = std::min(view()->y, screen.height);
+        const u32 x = std::min(view()->x, screen.width);
+        const u32 y = std::min(view()->y, screen.height);
         return { x, y, { std::min(view()->size.width, screen.width - x), std::min(view()->size.height, screen.height - y) } };
     }
 
@@ -340,7 +341,7 @@ namespace rct3::render::opengl
         bound_ = { };
         if (pass.clear)
         {
-            const std::array<float, 4> colour { pass.clear_color.r, pass.clear_color.g, pass.clear_color.b, pass.clear_color.a };
+            const std::array<f32, 4> colour { pass.clear_color.r, pass.clear_color.g, pass.clear_color.b, pass.clear_color.a };
             gl.ClearNamedFramebufferfv(framebuffer, GL_COLOR, 0, colour.data());
         }
         const auto depth_from = textures_.find(pass.depth_from.id);
@@ -367,7 +368,7 @@ namespace rct3::render::opengl
         const bool wire_before = std::exchange(applied_wire_, wire);
         const PipelineDesc& d = pipeline.desc;
         if (!before || before->shader != pipeline.shader)
-            gl.UseProgram(programs_.at(static_cast<std::size_t>(pipeline.shader)));
+            gl.UseProgram(programs_.at(static_cast<usize>(pipeline.shader)));
         gl.BindVertexArray(pipeline.vertex_array);
         if (!before || before->desc.cull != d.cull)
         {
@@ -451,7 +452,7 @@ namespace rct3::render::opengl
             units.fill(texture->second.texture);
             units[1] = 0;
             const std::array<TextureHandle, kExtraTextures> extras = bound_extra_textures(command, p.shader);
-            for (std::size_t i = 0; i < kExtraTextures; ++i)
+            for (usize i = 0; i < kExtraTextures; ++i)
             {
                 if (const auto found = textures_.find(extras[i].id); extras[i] && found != textures_.end())
                     units[2 + i] = found->second.texture;
@@ -462,7 +463,7 @@ namespace rct3::render::opengl
                 bound_.textures = units;
                 bound_.has_textures = true;
             }
-            if (const GLuint sampler = samplers_[static_cast<std::size_t>(command.filter) * 2 + static_cast<std::size_t>(command.address)]; sampler != bound_.sampler)
+            if (const GLuint sampler = samplers_[static_cast<usize>(command.filter) * 2 + static_cast<usize>(command.address)]; sampler != bound_.sampler)
             {
                 std::array<GLuint, kUnits> samplers { };
                 samplers.fill(sampler);
@@ -553,9 +554,9 @@ namespace rct3::render::opengl
         if (found == textures_.end() || !found->second.target)
             return false;
         const Texture& t = found->second;
-        ScreenPixels pixels { t.extent, std::vector<std::uint8_t>(texture_bytes(t.extent.width, t.extent.height, TextureFormat::Rgba8)) };
+        ScreenPixels pixels { t.extent, std::vector<u8>(texture_bytes(t.extent.width, t.extent.height, TextureFormat::Rgba8)) };
         gl.GetTextureImage(t.texture, 0, GL_RGBA, GL_UNSIGNED_BYTE, static_cast<GLsizei>(pixels.rgba.size()), pixels.rgba.data());
-        for (std::size_t i = 3; i < pixels.rgba.size(); i += 4)
+        for (usize i = 3; i < pixels.rgba.size(); i += 4)
             pixels.rgba[i] = 255;
         reading_ = std::move(pixels);
         return true;
@@ -580,7 +581,7 @@ namespace rct3::render::opengl
         gl.PolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         gl.UseProgram(present_program_);
         gl.BindVertexArray(empty_vertex_array_);
-        const GLuint sampler = samplers_[static_cast<std::size_t>(smooth_scaling_ ? Filter::Linear : Filter::Nearest) * 2 + static_cast<std::size_t>(AddressMode::Clamp)];
+        const GLuint sampler = samplers_[static_cast<usize>(smooth_scaling_ ? Filter::Linear : Filter::Nearest) * 2 + static_cast<usize>(AddressMode::Clamp)];
         gl.BindTextures(0, 1, &screen_.texture);
         gl.BindSamplers(0, 1, &sampler);
         // Curve: each channel raised to a power, 1 at the middle setting, from 2 (darker) to 1/2 (lighter).
@@ -593,13 +594,13 @@ namespace rct3::render::opengl
         {
             // shortcut: reads on the spot, a hitch per screenshot; read through a buffer a frame later when shots
             // come often (photos, video).
-            ScreenPixels pixels { window_, std::vector<std::uint8_t>(texture_bytes(window_.width, window_.height, TextureFormat::Rgba8)) };
+            ScreenPixels pixels { window_, std::vector<u8>(texture_bytes(window_.width, window_.height, TextureFormat::Rgba8)) };
             gl.ReadPixels(0, 0, static_cast<GLsizei>(window_.width), static_cast<GLsizei>(window_.height), GL_RGBA, GL_UNSIGNED_BYTE, pixels.rgba.data());
             // The window's first row is its bottom one.
-            const std::size_t row = std::size_t { window_.width } * 4;
-            for (std::size_t top = 0, bottom = window_.height - 1; top < bottom; ++top, --bottom)
+            const usize row = usize { window_.width } * 4;
+            for (usize top = 0, bottom = window_.height - 1; top < bottom; ++top, --bottom)
                 std::swap_ranges(pixels.rgba.begin() + static_cast<std::ptrdiff_t>(top * row), pixels.rgba.begin() + static_cast<std::ptrdiff_t>((top + 1) * row), pixels.rgba.begin() + static_cast<std::ptrdiff_t>(bottom * row));
-            for (std::size_t i = 3; i < pixels.rgba.size(); i += 4)
+            for (usize i = 3; i < pixels.rgba.size(); i += 4)
                 pixels.rgba[i] = 255;
             reading_ = std::move(pixels);
         }
@@ -610,16 +611,16 @@ namespace rct3::render::opengl
         if (frame_pace_ > 0)
         {
             // Wait out what is left of the frame; a late frame starts the pace again from now.
-            const double due = last_present_ + frame_pace_;
-            if (const double wait = due - glfwGetTime(); wait > 0)
-                std::this_thread::sleep_for(std::chrono::duration<double>(wait));
+            const f64 due = last_present_ + frame_pace_;
+            if (const f64 wait = due - glfwGetTime(); wait > 0)
+                std::this_thread::sleep_for(std::chrono::duration<f64>(wait));
             last_present_ = std::max(due, glfwGetTime());
         }
         glfwSwapBuffers(config_.window);
 
-        frame_stats_.buffers = static_cast<std::uint32_t>(buffers_.size());
-        frame_stats_.pipelines = static_cast<std::uint32_t>(pipelines_.size());
-        frame_stats_.textures = static_cast<std::uint32_t>(textures_.size());
+        frame_stats_.buffers = static_cast<u32>(buffers_.size());
+        frame_stats_.pipelines = static_cast<u32>(pipelines_.size());
+        frame_stats_.textures = static_cast<u32>(textures_.size());
         last_stats_ = frame_stats_;
         frame_index_ = (frame_index_ + 1) % kFramesInFlight;
         state_ = State::Idle;

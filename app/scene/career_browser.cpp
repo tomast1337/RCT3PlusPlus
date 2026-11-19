@@ -2,6 +2,7 @@
 #include "scene/career_browser.hpp"
 
 #include "career/prf_import.hpp"
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "save/summary.hpp"
 #include "strings/unicode.hpp"
@@ -27,7 +28,7 @@ namespace rct3::scene
         constexpr std::string_view kPrfExtension = ".prf";
         constexpr std::string_view kImported = "imported";
 
-        std::int64_t now()
+        i64 now()
         {
             return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         }
@@ -51,14 +52,14 @@ namespace rct3::scene
         }
 
         /// The number in a career file's name plus one, as the game numbers its careers' default names.
-        std::size_t career_number(const fs::path& path)
+        usize career_number(const fs::path& path)
         {
             const std::string stem = path.stem().string();
-            std::size_t n = 0;
+            usize n = 0;
             for (const char c : stem)
             {
                 if (c >= '0' && c <= '9')
-                    n = n * 10 + static_cast<std::size_t>(c - '0');
+                    n = n * 10 + static_cast<usize>(c - '0');
             }
             return n + 1;
         }
@@ -125,7 +126,7 @@ namespace rct3::scene
             return { strings::to_utf16(c.name), career::score(c), 0 };
         }
 
-        void list(render::Device& device, CareerBrowser& browser, ui::screens::career::CareerDialog& dialog, std::int32_t pack, const ui::StringTable& strings)
+        void list(render::Device& device, CareerBrowser& browser, ui::screens::career::CareerDialog& dialog, i32 pack, const ui::StringTable& strings)
         {
             free_pictures(device, browser);
             browser.scenario_ids = ui::career_scenario_ids(strings, pack);
@@ -154,7 +155,7 @@ namespace rct3::scene
         {
             if (browser.next_picture >= browser.careers.size())
                 return;
-            const std::size_t index = browser.next_picture++;
+            const usize index = browser.next_picture++;
             const career::CareerEntry& entry = browser.careers[index];
             const career::Career& c = entry.data.career;
             if (c.current >= c.scenarios.size() || c.scenarios[c.current].last_save.empty())
@@ -175,7 +176,7 @@ namespace rct3::scene
             dialog.set_career(index, std::move(row));
         }
 
-        bool can_resume(const career::CareerEntry& entry, std::size_t index)
+        bool can_resume(const career::CareerEntry& entry, usize index)
         {
             const career::Career& c = entry.data.career;
             if (index >= c.scenarios.size() || c.scenarios[index].last_save.empty())
@@ -193,7 +194,7 @@ namespace rct3::scene
             browser.playing = std::move(entry);
             const career::Career& c = browser.playing->data.career;
             std::vector<ui::screens::career::CareerBoardScenario> scenarios;
-            for (std::size_t i = 0; i < c.scenarios.size(); ++i)
+            for (usize i = 0; i < c.scenarios.size(); ++i)
             {
                 ui::screens::career::CareerBoardScenario s;
                 s.info = ui::career_scenario(strings, c.pack, i, c.scenarios[i].id);
@@ -209,13 +210,13 @@ namespace rct3::scene
         }
 
         /// How a park of scenario `index` of the career is played: its games in the scenario's folder.
-        ParkGame career_game(const career::CareerEntry& entry, std::size_t index)
+        ParkGame career_game(const career::CareerEntry& entry, usize index)
         {
             return { .folder = config::UserFolder::Careers, .career = entry.path, .scenario = entry.data.career.scenarios.at(index).id, .games = fs::path(entry.path).replace_extension() / career::prf_scenario_folder(index), .sandbox = false };
         }
 
         /// The park file scenario `index` of the career starts from, if the game has it.
-        std::optional<fs::path> scenario_park(const career::Career& c, std::size_t index, const ui::StringTable& strings, const config::game::GameInstall& install)
+        std::optional<fs::path> scenario_park(const career::Career& c, usize index, const ui::StringTable& strings, const config::game::GameInstall& install)
         {
             const auto folder = install.find(ui::career_park_folder(strings, c.pack));
             if (!folder || index >= c.scenarios.size())
@@ -233,7 +234,7 @@ namespace rct3::scene
         }
 
         /// Plays scenario `index` of the career whose map is shown, from `park`, as the current scenario.
-        void play(CareerBrowser& browser, std::size_t index, std::optional<fs::path> park)
+        void play(CareerBrowser& browser, usize index, std::optional<fs::path> park)
         {
             career::CareerEntry& entry = *browser.playing;
             if (!park)
@@ -271,7 +272,7 @@ namespace rct3::scene
             }
         }
 
-        void carry_out(CareerBrowser& browser, ui::screens::career::CareerDialog& dialog, ui::screens::front::FrontEnd& front, std::int32_t pack, const ui::StringTable& strings)
+        void carry_out(CareerBrowser& browser, ui::screens::career::CareerDialog& dialog, ui::screens::front::FrontEnd& front, i32 pack, const ui::StringTable& strings)
         {
             const auto log = logging::logger("ui");
             if (const auto rename = dialog.take_rename(); rename && rename->career < browser.careers.size())
@@ -355,7 +356,7 @@ namespace rct3::scene
         carry_out(browser, *dialog, front, front.career_pack(), strings);
     }
 
-    bool start_career_scenario(CareerBrowser& browser, ui::screens::front::FrontEnd& front, std::int32_t pack, std::size_t index, const ui::StringTable& strings, const config::game::GameInstall& install)
+    bool start_career_scenario(CareerBrowser& browser, ui::screens::front::FrontEnd& front, i32 pack, usize index, const ui::StringTable& strings, const config::game::GameInstall& install)
     {
         const auto log = logging::logger("ui");
         if (!browser.data)

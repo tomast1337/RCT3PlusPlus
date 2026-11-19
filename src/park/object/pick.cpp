@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object/pick.hpp"
 
+#include "core/types.hpp"
 #include "park/object/placement.hpp"
 
 #include <algorithm>
@@ -17,9 +18,9 @@ namespace rct3::park::object
     {
 
         /// The length of the steps a line of sight is followed in over the ground, in park units.
-        constexpr float kGroundStep = 0.5f;
+        constexpr f32 kGroundStep = 0.5f;
         /// Halvings of the last step to find where the ground is met.
-        constexpr std::int32_t kGroundRefinements = 12;
+        constexpr i32 kGroundRefinements = 12;
 
         /// Above (true) or below the ground at `p`; off the map counts as above.
         bool above(const save::model::TerrainGrid& grid, glm::vec3 p)
@@ -30,8 +31,8 @@ namespace rct3::park::object
 
         std::optional<std::pair<glm::vec3, glm::vec3>> shape_box(const ObjectModel& model)
         {
-            glm::vec3 low { std::numeric_limits<float>::max() };
-            glm::vec3 high { std::numeric_limits<float>::lowest() };
+            glm::vec3 low { std::numeric_limits<f32>::max() };
+            glm::vec3 high { std::numeric_limits<f32>::lowest() };
             for (const ModelPart& part : model.levels.front().parts)
             {
                 for (const ModelVertex& v : part.vertices)
@@ -47,21 +48,21 @@ namespace rct3::park::object
 
     } // namespace
 
-    std::optional<float> ground_hit(const Ray& ray, const save::model::TerrainGrid& grid, float reach)
+    std::optional<f32> ground_hit(const Ray& ray, const save::model::TerrainGrid& grid, f32 reach)
     {
         if (grid.empty() || !above(grid, ray.origin))
             return std::nullopt;
-        const auto steps = static_cast<std::int32_t>(reach / kGroundStep);
-        for (std::int32_t step = 1; step <= steps; ++step)
+        const auto steps = static_cast<i32>(reach / kGroundStep);
+        for (i32 step = 1; step <= steps; ++step)
         {
-            const float t = static_cast<float>(step) * kGroundStep;
+            const f32 t = static_cast<f32>(step) * kGroundStep;
             if (above(grid, ray.origin + ray.direction * t))
                 continue;
-            float from = t - kGroundStep;
-            float to = t;
-            for (std::int32_t i = 0; i < kGroundRefinements; ++i)
+            f32 from = t - kGroundStep;
+            f32 to = t;
+            for (i32 i = 0; i < kGroundRefinements; ++i)
             {
-                const float middle = (from + to) / 2;
+                const f32 middle = (from + to) / 2;
                 (above(grid, ray.origin + ray.direction * middle) ? from : to) = middle;
             }
             return to;
@@ -69,22 +70,22 @@ namespace rct3::park::object
         return std::nullopt;
     }
 
-    std::optional<float> box_hit(const Ray& ray, glm::vec3 low, glm::vec3 high)
+    std::optional<f32> box_hit(const Ray& ray, glm::vec3 low, glm::vec3 high)
     {
-        float enter = 0;
-        float leave = std::numeric_limits<float>::max();
-        for (std::int32_t axis = 0; axis < 3; ++axis)
+        f32 enter = 0;
+        f32 leave = std::numeric_limits<f32>::max();
+        for (i32 axis = 0; axis < 3; ++axis)
         {
-            const float o = ray.origin[axis];
-            const float d = ray.direction[axis];
+            const f32 o = ray.origin[axis];
+            const f32 d = ray.direction[axis];
             if (d == 0)
             {
                 if (o < low[axis] || o > high[axis])
                     return std::nullopt;
                 continue;
             }
-            float a = (low[axis] - o) / d;
-            float b = (high[axis] - o) / d;
+            f32 a = (low[axis] - o) / d;
+            f32 b = (high[axis] - o) / d;
             if (a > b)
                 std::swap(a, b);
             enter = std::max(enter, a);
@@ -103,14 +104,14 @@ namespace rct3::park::object
         return boxes;
     }
 
-    void update_pick_boxes(std::vector<PickBox>& boxes, const ObjectPlaces& places, std::span<const std::size_t> changed)
+    void update_pick_boxes(std::vector<PickBox>& boxes, const ObjectPlaces& places, std::span<const usize> changed)
     {
         std::vector<PickBox> out;
         out.reserve(boxes.size() + changed.size());
         std::map<const ObjectModel*, std::optional<std::pair<glm::vec3, glm::vec3>>> shapes;
         auto kept = boxes.begin();
         auto next = changed.begin();
-        for (std::size_t i = 0; i < places.models.size(); ++i)
+        for (usize i = 0; i < places.models.size(); ++i)
         {
             while (kept != boxes.end() && kept->object_index < i)
                 ++kept;
@@ -135,9 +136,9 @@ namespace rct3::park::object
             box.back = glm::inverse(transform);
             box.low = shape->second->first;
             box.high = shape->second->second;
-            box.park_low = glm::vec3(std::numeric_limits<float>::max());
-            box.park_high = glm::vec3(std::numeric_limits<float>::lowest());
-            for (std::int32_t c = 0; c < 8; ++c)
+            box.park_low = glm::vec3(std::numeric_limits<f32>::max());
+            box.park_high = glm::vec3(std::numeric_limits<f32>::lowest());
+            for (i32 c = 0; c < 8; ++c)
             {
                 const glm::vec3 corner { (c & 1) != 0 ? box.high.x : box.low.x, (c & 2) != 0 ? box.high.y : box.low.y, (c & 4) != 0 ? box.high.z : box.low.z };
                 const glm::vec3 at = glm::vec3(transform * glm::vec4(corner, 1.0f));
@@ -148,10 +149,10 @@ namespace rct3::park::object
         boxes = std::move(out);
     }
 
-    std::optional<PickHit> pick_object(const Ray& ray, std::span<const PickBox> boxes, const save::model::TerrainGrid& grid, const std::function<bool(std::size_t)>& wanted)
+    std::optional<PickHit> pick_object(const Ray& ray, std::span<const PickBox> boxes, const save::model::TerrainGrid& grid, const std::function<bool(usize)>& wanted)
     {
         std::optional<PickHit> best;
-        float nearest = ground_hit(ray, grid).value_or(kFar);
+        f32 nearest = ground_hit(ray, grid).value_or(kFar);
         for (const PickBox& box : boxes)
         {
             // The park box holds the turned one, so missing it, or meeting it past the nearest hit, rules it out.
@@ -171,7 +172,7 @@ namespace rct3::park::object
 
     std::optional<PickHit> pick_object(const Ray& ray, std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted, const std::function<bool(const save::model::PlacedObject&)>& wanted)
     {
-        return pick_object(ray, pick_boxes(objects, models, grid, fitted), grid, [&](std::size_t i) { return !objects[i].hidden && wanted(objects[i]); });
+        return pick_object(ray, pick_boxes(objects, models, grid, fitted), grid, [&](usize i) { return !objects[i].hidden && wanted(objects[i]); });
     }
 
     std::vector<glm::vec3> object_corners(const save::model::PlacedObject& object, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted)
@@ -185,7 +186,7 @@ namespace rct3::park::object
         const auto own = fitted.find(object.id);
         const glm::mat4 transform = own != fitted.end() ? own->second : object_transform(object, static_cast<Positioning>(model->second.positioning), grid, model->second.squares, model->second.ground_height);
         std::vector<glm::vec3> corners;
-        for (std::int32_t i = 0; i < 8; ++i)
+        for (i32 i = 0; i < 8; ++i)
         {
             const glm::vec3 local { (i & 1) != 0 ? box->second.x : box->first.x, (i & 2) != 0 ? box->second.y : box->first.y, (i & 4) != 0 ? box->second.z : box->first.z };
             corners.emplace_back(transform * glm::vec4(local, 1.0f));
@@ -196,8 +197,8 @@ namespace rct3::park::object
     std::optional<PickHit> pick_person(const Ray& ray, std::span<const glm::mat4> placements, const save::model::TerrainGrid& grid)
     {
         std::optional<PickHit> best;
-        float nearest = ground_hit(ray, grid).value_or(kFar);
-        for (std::size_t i = 0; i < placements.size(); ++i)
+        f32 nearest = ground_hit(ray, grid).value_or(kFar);
+        for (usize i = 0; i < placements.size(); ++i)
         {
             // Far from the line, the box cannot be hit: no need to turn the line into the person's space.
             const glm::vec3 to = glm::vec3(placements[i][3]) - ray.origin;

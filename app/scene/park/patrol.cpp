@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/patrol.hpp"
 
+#include "core/types.hpp"
 #include "park/camera.hpp"
 #include "park/object/pick.hpp"
 #include "park/terrain_mesh.hpp"
@@ -24,9 +25,9 @@ namespace rct3::scene::park
 
     namespace
     {
-        constexpr float kShownAlpha = 0.45f;
-        constexpr float kOthersAlpha = 0.25f;
-        constexpr float kPatrolLift = 0.05f; ///< Over the ground or the path, so the tint is not lost in it
+        constexpr f32 kShownAlpha = 0.45f;
+        constexpr f32 kOthersAlpha = 0.25f;
+        constexpr f32 kPatrolLift = 0.05f; ///< Over the ground or the path, so the tint is not lost in it
 
         glm::vec3 role_colour(simulation::StaffRole role)
         {
@@ -53,11 +54,11 @@ namespace rct3::scene::park
             if (!distance)
                 return std::nullopt;
             const glm::vec3 hit = ray.origin + ray.direction * *distance;
-            const glm::ivec2 tile { static_cast<std::int32_t>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x)), static_cast<std::int32_t>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z)) };
+            const glm::ivec2 tile { static_cast<i32>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x)), static_cast<i32>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z)) };
             return scene.grid.contains(tile.x, tile.y) ? std::optional(tile) : std::nullopt;
         }
 
-        using PathHeights = std::map<std::pair<std::int32_t, std::int32_t>, float>; ///< Of the highest path on each tile with paths
+        using PathHeights = std::map<std::pair<i32, i32>, f32>; ///< Of the highest path on each tile with paths
 
         void add_area(rct3::park::TerrainMesh& mesh, const ParkScene& scene, const PathHeights& heights, const simulation::staff::Patrol& patrol, glm::vec4 colour)
         {
@@ -65,16 +66,16 @@ namespace rct3::scene::park
             {
                 // Over the highest path on the tile, else over the ground at each corner.
                 const auto on = heights.find({ tile.x, tile.y });
-                const float path = on != heights.end() ? on->second : -std::numeric_limits<float>::infinity();
-                const auto first = static_cast<std::uint32_t>(mesh.vertices.size());
+                const f32 path = on != heights.end() ? on->second : -std::numeric_limits<f32>::infinity();
+                const auto first = static_cast<u32>(mesh.vertices.size());
                 for (const glm::vec2 corner : { glm::vec2 { 0, 0 }, glm::vec2 { 1, 0 }, glm::vec2 { 1, 1 }, glm::vec2 { 0, 1 } })
                 {
-                    const float x = scene.grid.origin_x + (static_cast<float>(tile.x) + corner.x) * scene.grid.tile_size_x;
-                    const float z = scene.grid.origin_z + (static_cast<float>(tile.y) + corner.y) * scene.grid.tile_size_z;
-                    const float y = std::max(scene.grid.height_at(x, z).value_or(0.0f), path) + kPatrolLift;
+                    const f32 x = scene.grid.origin_x + (static_cast<f32>(tile.x) + corner.x) * scene.grid.tile_size_x;
+                    const f32 z = scene.grid.origin_z + (static_cast<f32>(tile.y) + corner.y) * scene.grid.tile_size_z;
+                    const f32 y = std::max(scene.grid.height_at(x, z).value_or(0.0f), path) + kPatrolLift;
                     mesh.vertices.push_back({ .position = { x, y, z }, .colour = colour, .normal = { 0, 1, 0 } });
                 }
-                for (const std::uint32_t i : { 0u, 2u, 1u, 0u, 3u, 2u })
+                for (const u32 i : { 0u, 2u, 1u, 0u, 3u, 2u })
                     mesh.indices.push_back(first + i);
             }
         }
@@ -107,7 +108,7 @@ namespace rct3::scene::park
             const auto* patrol = scene.sim.registry.try_get<simulation::staff::Patrol>(staff);
             scene.patrol_stroke = patrol == nullptr || !std::ranges::contains(patrol->tiles, *tile);
         }
-        const std::int32_t across = ui::screens::info::kPatrolBrushes.at(static_cast<std::size_t>(std::clamp(scene.patrol_brush, 0, static_cast<std::int32_t>(ui::screens::info::kPatrolBrushes.size()) - 1)));
+        const i32 across = ui::screens::info::kPatrolBrushes.at(static_cast<usize>(std::clamp(scene.patrol_brush, 0, static_cast<i32>(ui::screens::info::kPatrolBrushes.size()) - 1)));
         simulation::staff::paint_patrol(scene.sim.registry, staff, *tile, across, *scene.patrol_stroke);
         return false;
     }
@@ -162,7 +163,7 @@ namespace rct3::scene::park
         draw.indices = *indices;
         draw.index_type = render::IndexType::U32;
         draw.first = 0;
-        draw.count = static_cast<std::uint32_t>(mesh.indices.size());
+        draw.count = static_cast<u32>(mesh.indices.size());
         draw.transform = transform;
         draw.texture = scene.blank;
         draw.light = light;

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/sun_view.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -48,12 +50,12 @@ TEST_CASE("the sun's view moves only in whole texels")
 TEST_CASE("the sun's view stays put in steps while the camera pans, and holds the square round it in every one")
 {
     // Straight down, the map's sides lie along the world's x and z.
-    constexpr float kRadius = 64;
-    std::size_t moves = 0;
+    constexpr f32 kRadius = 64;
+    usize moves = 0;
     glm::mat4 last = sun_view({ 0, 1, 0 }, { 0, 0, 0 }, kRadius, 2048).view_projection;
-    for (std::int32_t i = 0; i <= 1000; ++i)
+    for (i32 i = 0; i <= 1000; ++i)
     {
-        const glm::vec3 centre(static_cast<float>(i) * 0.1f, 0, static_cast<float>(i) * 0.07f);
+        const glm::vec3 centre(static_cast<f32>(i) * 0.1f, 0, static_cast<f32>(i) * 0.07f);
         const SunView view = sun_view({ 0, 1, 0 }, centre, kRadius, 2048);
         moves += view.view_projection != last ? 1 : 0;
         last = view.view_projection;
@@ -98,9 +100,9 @@ TEST_CASE("the shadows' sun moves only once it has moved enough")
 
 TEST_CASE("the sun's share of its next shadow step grows with its angle from where shadows were drawn")
 {
-    const float step = glm::radians(0.5f);
+    const f32 step = glm::radians(0.5f);
     const glm::vec3 kept = glm::normalize(glm::vec3(0.3f, 0.8f, 0.1f));
-    const auto turned = [&](float angle) { return glm::vec3(glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 0, 1)) * glm::vec4(kept, 0)); };
+    const auto turned = [&](f32 angle) { return glm::vec3(glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 0, 1)) * glm::vec4(kept, 0)); };
     CHECK(sun_step_share(kept, kept, step) == 0);
     CHECK(sun_step_share(kept, turned(step * 0.25f), step) == doctest::Approx(0.25f).epsilon(0.01));
     CHECK(sun_step_share(kept, turned(step * 0.75f), step) == doctest::Approx(0.75f).epsilon(0.01));

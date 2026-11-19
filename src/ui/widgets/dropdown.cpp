@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/dropdown.hpp"
 
+#include "core/types.hpp"
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
@@ -35,7 +36,7 @@ namespace rct3::ui::widgets
             menu_->close();
     }
 
-    void Dropdown::select(std::optional<std::size_t> index)
+    void Dropdown::select(std::optional<usize> index)
     {
         selected_ = index && *index < items.size() ? index : std::nullopt;
     }
@@ -48,7 +49,7 @@ namespace rct3::ui::widgets
         return true;
     }
 
-    void Dropdown::pick(std::size_t index)
+    void Dropdown::pick(usize index)
     {
         if (index >= items.size())
             return;
@@ -64,7 +65,7 @@ namespace rct3::ui::widgets
             return;
         std::vector<MenuItem> rows;
         rows.reserve(items.size());
-        for (std::size_t i = 0; i < items.size(); ++i)
+        for (usize i = 0; i < items.size(); ++i)
             rows.push_back({ .text = items[i], .checked = selected_ == i });
         menu_ = &root.add<Menu>(std::format("{}.menu", name()), style.menu, std::move(rows));
         menu_->place_at({ rect().x0 - root.rect().x0, rect().y1 - root.rect().y0 }, rect().width());
@@ -103,7 +104,7 @@ namespace rct3::ui::widgets
     {
         if (items.empty())
             return false;
-        const std::size_t at = selected_.value_or(0);
+        const usize at = selected_.value_or(0);
         switch (key.key)
         {
             case Key::Up:
@@ -150,10 +151,10 @@ namespace rct3::ui::widgets
         if (!back.empty())
             skin::draw_skin(context.list, context.skins.find(back), r);
 
-        const float size = std::min(style.opener_width, r.height());
-        const float y = std::round(r.y0 + (r.height() - size) / 2);
-        const float inset = style.opener_in_corner ? 0 : std::round((r.height() - size) / 2);
-        const float top = style.opener_in_corner ? r.y0 : y;
+        const f32 size = std::min(style.opener_width, r.height());
+        const f32 y = std::round(r.y0 + (r.height() - size) / 2);
+        const f32 inset = style.opener_in_corner ? 0 : std::round((r.height() - size) / 2);
+        const f32 top = style.opener_in_corner ? r.y0 : y;
         const Rect arrow { r.x1 - size - inset, top, r.x1 - inset, top + size };
         const skin::SkinState state = !enabled ? skin::SkinState::Disabled : menu_ != nullptr || pressed() ? skin::SkinState::Pressed : hovered() ? skin::SkinState::UpOver : skin::SkinState::Up;
         skin::draw_skin_state(context.list, context.skins, style.opener, state, arrow);

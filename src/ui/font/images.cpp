@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/font/images.hpp"
 
+#include "core/types.hpp"
 #include "ovl/texture/pixels.hpp"
 #include "ovl/texture/texture.hpp"
 
@@ -42,8 +43,8 @@ namespace rct3::ui::font
             const auto texture = textures.find(f.font.texture);
             if (texture == textures.end())
                 continue;
-            const std::size_t count = pixels.frame_count(texture->second);
-            for (std::size_t i = 0; i < count; ++i)
+            const usize count = pixels.frame_count(texture->second);
+            for (usize i = 0; i < count; ++i)
                 f.pages.push_back(pixels.frame(texture->second, i).value_or(ovl::texture::RgbaImage { }));
             if (f.pages.empty())
                 continue;

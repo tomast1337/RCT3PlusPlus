@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/boat.hpp"
 
+#include "core/types.hpp"
 #include "park/water/fill.hpp"
 
 #include <algorithm>
@@ -19,28 +20,28 @@ namespace rct3::simulation
         constexpr units::Distance kReached { 2.5f };   ///< This near a mark counts as there
         constexpr units::Seconds kGiveUp { 12 };       ///< On one mark this long, it picks another
         constexpr units::Pace kSlowest { 1 };          ///< It keeps to this, however hard it turns
-        constexpr std::int32_t kReach = 6;             ///< Tiles away it may pick its next mark
-        constexpr std::int32_t kTries = 20;            ///< Picks before it settles for any water
+        constexpr i32 kReach = 6;                      ///< Tiles away it may pick its next mark
+        constexpr i32 kTries = 20;                     ///< Picks before it settles for any water
         constexpr units::Distance kSlowNear { 6 };     ///< This near its last mark it starts to brake
         constexpr units::Radians kAhead { 0.5f };      ///< Its mark may lie this far off its bow for it to speed up
         constexpr units::Distance kLookAhead { 4 };    ///< How far ahead it looks for water to go on in
         constexpr units::Radians kLookWide { 0.5f };   ///< And this far either side of its bow
         constexpr units::Distance kBeam { 2 };         ///< How far to its side it looks for water to turn round in
-        constexpr float kTurnedRound = 0.75f;          ///< Of a half turn, its mark this far off its bow has it turn round
+        constexpr f32 kTurnedRound = 0.75f;            ///< Of a half turn, its mark this far off its bow has it turn round
         constexpr units::Seconds kLeanSettle { 0.5f }; ///< For its lean to follow its turn
         constexpr units::Distance kHull { 2 };         ///< Two boats' middles this close touch
         constexpr units::Distance kKeepClear { 10 };   ///< Another boat this far ahead, it starts to steer round it
         constexpr units::Radians kDodge { 2 };         ///< The most it steers off its mark to keep clear
-        constexpr float kBounce = 0.6f;                ///< Of its speed a bumping boat keeps through a bump
+        constexpr f32 kBounce = 0.6f;                  ///< Of its speed a bumping boat keeps through a bump
 
-        float angle_between(glm::vec2 from, glm::vec2 to)
+        f32 angle_between(glm::vec2 from, glm::vec2 to)
         {
             return std::atan2(from.x * to.y - from.y * to.x, glm::dot(from, to));
         }
 
-        glm::vec2 turned(glm::vec2 v, float angle)
+        glm::vec2 turned(glm::vec2 v, f32 angle)
         {
-            const float c = std::cos(angle), s = std::sin(angle);
+            const f32 c = std::cos(angle), s = std::sin(angle);
             return { v.x * c - v.y * s, v.x * s + v.y * c };
         }
 
@@ -51,42 +52,42 @@ namespace rct3::simulation
             if (!way)
                 return { };
             std::vector<glm::vec2> marks;
-            for (std::size_t i = 0; i + 1 < way->size(); ++i)
+            for (usize i = 0; i + 1 < way->size(); ++i)
                 marks.push_back(water.middle((*way)[i]));
             marks.push_back(goal);
             return marks;
         }
     } // namespace
 
-    std::optional<float> WaterTiles::at(std::int32_t col, std::int32_t row) const
+    std::optional<f32> WaterTiles::at(i32 col, i32 row) const
     {
         if (col < 0 || row < 0 || col >= cols || row >= rows)
             return std::nullopt;
-        return level[static_cast<std::size_t>(row) * static_cast<std::size_t>(cols) + static_cast<std::size_t>(col)];
+        return level[static_cast<usize>(row) * static_cast<usize>(cols) + static_cast<usize>(col)];
     }
 
     glm::ivec2 WaterTiles::tile_of(glm::vec2 p) const
     {
-        return { static_cast<std::int32_t>(std::floor((p.x - origin_x) / tile_size)), static_cast<std::int32_t>(std::floor((p.y - origin_z) / tile_size)) };
+        return { static_cast<i32>(std::floor((p.x - origin_x) / tile_size)), static_cast<i32>(std::floor((p.y - origin_z) / tile_size)) };
     }
 
     glm::vec2 WaterTiles::middle(glm::ivec2 tile) const
     {
-        return { origin_x + (static_cast<float>(tile.x) + 0.5f) * tile_size, origin_z + (static_cast<float>(tile.y) + 0.5f) * tile_size };
+        return { origin_x + (static_cast<f32>(tile.x) + 0.5f) * tile_size, origin_z + (static_cast<f32>(tile.y) + 0.5f) * tile_size };
     }
 
     WaterTiles water_tiles(const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> bodies, const rct3::park::path::SolidTiles& solids)
     {
         WaterTiles w { .cols = grid.width, .rows = grid.height, .origin_x = grid.origin_x, .origin_z = grid.origin_z, .tile_size = grid.tile_size_x > 0 ? grid.tile_size_x : 4 };
-        w.level.assign(static_cast<std::size_t>(std::max(grid.width, 0)) * static_cast<std::size_t>(std::max(grid.height, 0)), std::nullopt);
+        w.level.assign(static_cast<usize>(std::max(grid.width, 0)) * static_cast<usize>(std::max(grid.height, 0)), std::nullopt);
         for (const save::model::WaterBody& body : bodies)
         {
             // Both triangles with all three corners under the surface.
-            std::vector<std::uint8_t> under(w.level.size(), 0);
+            std::vector<u8> under(w.level.size(), 0);
             for (const save::model::WaterTri& t : body.tris)
                 if (t.col < w.cols && t.row < w.rows && t.mask == 0b111)
-                    under[static_cast<std::size_t>(t.row) * static_cast<std::size_t>(w.cols) + t.col] |= static_cast<std::uint8_t>(1u << (t.triangle & 1));
-            for (std::size_t i = 0; i < under.size(); ++i)
+                    under[static_cast<usize>(t.row) * static_cast<usize>(w.cols) + t.col] |= static_cast<u8>(1u << (t.triangle & 1));
+            for (usize i = 0; i < under.size(); ++i)
                 if (under[i] == 0b11)
                     w.level[i] = body.level;
         }
@@ -96,10 +97,10 @@ namespace rct3::simulation
         constexpr units::Distance kClear { 1 }; ///< A boat needs this much room over the surface
         for (const auto& [key, spans] : solids.tiles)
         {
-            const std::int32_t col = static_cast<std::int32_t>(key & 0xFFFF), row = static_cast<std::int32_t>(key >> 16);
+            const i32 col = static_cast<i32>(key & 0xFFFF), row = static_cast<i32>(key >> 16);
             const auto level = w.at(col, row);
             if (level && std::ranges::any_of(spans, [&](const rct3::park::path::SolidSpan& s) { return (s.room & rct3::park::path::kWholeTile) != 0 && s.low < *level + kClear.value && *level - kUnder.value < s.high; }))
-                w.level[static_cast<std::size_t>(row) * static_cast<std::size_t>(w.cols) + static_cast<std::size_t>(col)] = std::nullopt;
+                w.level[static_cast<usize>(row) * static_cast<usize>(w.cols) + static_cast<usize>(col)] = std::nullopt;
         }
         return w;
     }
@@ -111,10 +112,10 @@ namespace rct3::simulation
         if (from == to)
             return std::vector<glm::ivec2> { to };
         // Breadth first from the goal, so each tile knows its next step towards it.
-        const auto index = [&](glm::ivec2 t) { return static_cast<std::size_t>(t.y) * static_cast<std::size_t>(water.cols) + static_cast<std::size_t>(t.x); };
-        std::vector<std::int32_t> next(water.level.size(), -1);
+        const auto index = [&](glm::ivec2 t) { return static_cast<usize>(t.y) * static_cast<usize>(water.cols) + static_cast<usize>(t.x); };
+        std::vector<i32> next(water.level.size(), -1);
         std::deque<glm::ivec2> open { to };
-        next[index(to)] = static_cast<std::int32_t>(index(to));
+        next[index(to)] = static_cast<i32>(index(to));
         constexpr std::array<glm::ivec2, 8> kSteps { { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 1, 1 }, { 1, -1 }, { -1, 1 }, { -1, -1 } } };
         while (!open.empty() && next[index(from)] < 0)
         {
@@ -128,25 +129,25 @@ namespace rct3::simulation
                     continue;
                 if (step.x != 0 && step.y != 0 && (!water.at(t.x - step.x, t.y) || !water.at(t.x, t.y - step.y)))
                     continue;
-                next[index(n)] = static_cast<std::int32_t>(index(t));
+                next[index(n)] = static_cast<i32>(index(t));
                 open.push_back(n);
             }
         }
         if (next[index(from)] < 0)
             return std::nullopt;
         std::vector<glm::ivec2> way;
-        for (std::size_t at = static_cast<std::size_t>(next[index(from)]);; at = static_cast<std::size_t>(next[at]))
+        for (usize at = static_cast<usize>(next[index(from)]);; at = static_cast<usize>(next[at]))
         {
-            way.push_back({ static_cast<std::int32_t>(at % static_cast<std::size_t>(water.cols)), static_cast<std::int32_t>(at / static_cast<std::size_t>(water.cols)) });
+            way.push_back({ static_cast<i32>(at % static_cast<usize>(water.cols)), static_cast<i32>(at / static_cast<usize>(water.cols)) });
             if (at == index(to))
                 break;
         }
         return way;
     }
 
-    BoatPose between_sails(const Boat& boat, float along)
+    BoatPose between_sails(const Boat& boat, f32 along)
     {
-        const float turn = angle_between(boat.was_heading, boat.heading);
+        const f32 turn = angle_between(boat.was_heading, boat.heading);
         return { glm::mix(boat.was, boat.at, along), turned(boat.was_heading, turn * along), { glm::mix(boat.was_lean.value, boat.lean.value, along) } };
     }
 
@@ -175,7 +176,7 @@ namespace rct3::simulation
         boat.was_lean = { };
     }
 
-    bool sail(Boat& boat, const WaterTiles& water, const Dock& dock, const ovl::BoatHandling& handling, float top, float roam, float seconds, random::RandomState& dice, std::span<const Boat> fleet, bool bumps)
+    bool sail(Boat& boat, const WaterTiles& water, const Dock& dock, const ovl::BoatHandling& handling, f32 top, f32 roam, f32 seconds, random::RandomState& dice, std::span<const Boat> fleet, bool bumps)
     {
         if (boat.state == Sailing::Docked)
             return false;
@@ -186,10 +187,10 @@ namespace rct3::simulation
             const glm::ivec2 t = water.tile_of(p);
             return water.at(t.x, t.y).has_value();
         };
-        const std::int32_t steps = static_cast<std::int32_t>(std::ceil(seconds / kStep.value));
-        for (std::int32_t step = 0; step < steps; ++step)
+        const i32 steps = static_cast<i32>(std::ceil(seconds / kStep.value));
+        for (i32 step = 0; step < steps; ++step)
         {
-            const float dt = std::min(seconds - static_cast<float>(step) * kStep.value, kStep.value);
+            const f32 dt = std::min(seconds - static_cast<f32>(step) * kStep.value, kStep.value);
             boat.out.value += dt;
             boat.on_mark.value += dt;
             if (boat.state == Sailing::Out && boat.out.value >= roam)
@@ -223,9 +224,9 @@ namespace rct3::simulation
                 // Somewhere ahead, near enough; any water near when nothing ahead is.
                 const glm::ivec2 here = water.tile_of(boat.at);
                 boat.marks.clear();
-                for (std::int32_t k = 0; k < kTries && boat.marks.empty(); ++k)
+                for (i32 k = 0; k < kTries && boat.marks.empty(); ++k)
                 {
-                    const glm::ivec2 pick = here + glm::ivec2 { static_cast<std::int32_t>(random::between(dice, std::int64_t { -kReach }, std::int64_t { kReach })), static_cast<std::int32_t>(random::between(dice, std::int64_t { -kReach }, std::int64_t { kReach })) };
+                    const glm::ivec2 pick = here + glm::ivec2 { static_cast<i32>(random::between(dice, i64 { -kReach }, i64 { kReach })), static_cast<i32>(random::between(dice, i64 { -kReach }, i64 { kReach })) };
                     if (pick == here || !water.at(pick.x, pick.y) || (k < kTries / 2 && glm::dot(water.middle(pick) - boat.at, boat.heading) <= 0))
                         continue;
                     boat.marks = marks_to(water, boat.at, water.middle(pick));
@@ -233,18 +234,18 @@ namespace rct3::simulation
                 boat.on_mark = { };
             }
             // Steer for the mark, turning only so fast; turned round, the long way when only that side has water.
-            float off = 0;
+            f32 off = 0;
             if (!boat.marks.empty() && boat.marks.front() != boat.at)
             {
                 off = angle_between(boat.heading, glm::normalize(boat.marks.front() - boat.at));
-                const glm::vec2 left = turned(boat.heading, glm::half_pi<float>());
-                if (std::abs(off) > kTurnedRound * glm::pi<float>())
+                const glm::vec2 left = turned(boat.heading, glm::half_pi<f32>());
+                if (std::abs(off) > kTurnedRound * glm::pi<f32>())
                 {
                     const bool wet_left = wet(boat.at + left * kBeam.value), wet_right = wet(boat.at - left * kBeam.value);
                     if (off > 0 && !wet_left && wet_right)
-                        off -= glm::two_pi<float>();
+                        off -= glm::two_pi<f32>();
                     else if (off < 0 && !wet_right && wet_left)
-                        off += glm::two_pi<float>();
+                        off += glm::two_pi<f32>();
                 }
             }
             // Another boat close ahead: it steers off to the side away from it, the harder the closer.
@@ -252,25 +253,25 @@ namespace rct3::simulation
                 for (const Boat& other : fleet)
                 {
                     const glm::vec2 to = other.at - boat.at;
-                    const float apart = glm::length(to);
+                    const f32 apart = glm::length(to);
                     if (&other == &boat || other.state == Sailing::Docked || apart >= kKeepClear.value || apart <= 0 || glm::dot(to, boat.heading) <= 0)
                         continue;
-                    const float side = boat.heading.x * to.y - boat.heading.y * to.x; // Over 0 on its left
+                    const f32 side = boat.heading.x * to.y - boat.heading.y * to.x; // Over 0 on its left
                     off += (side > 0 ? -kDodge.value : kDodge.value) * (1 - apart / kKeepClear.value);
                 }
-            const float turning = std::clamp(handling.turn_gain * off, -handling.turn_most, handling.turn_most);
-            const float lean = std::clamp(handling.lean_gain * turning, -handling.lean_most, handling.lean_most);
+            const f32 turning = std::clamp(handling.turn_gain * off, -handling.turn_most, handling.turn_most);
+            const f32 lean = std::clamp(handling.lean_gain * turning, -handling.lean_most, handling.lean_most);
             boat.turning = { turning };
             boat.heading = glm::normalize(turned(boat.heading, turning * dt));
             boat.lean.value += (lean - boat.lean.value) * std::min(dt / kLeanSettle.value, 1.0f);
             // It gains speed only with its mark ahead, loses it the more it must turn, and brakes near its last mark
             // and for each way ahead that runs out of water.
-            const float want = boat.marks.empty() ? 0.0f : top;
-            float push = std::abs(off) < kAhead.value ? (want - boat.speed.value) * handling.speed_gain : 0.0f;
+            const f32 want = boat.marks.empty() ? 0.0f : top;
+            f32 push = std::abs(off) < kAhead.value ? (want - boat.speed.value) * handling.speed_gain : 0.0f;
             push = std::clamp(push - handling.turn_slow * std::abs(off), -2 * handling.speed_up, handling.speed_up);
             if (boat.marks.size() == 1 && glm::distance(boat.at, boat.marks.front()) < kSlowNear.value)
                 push -= handling.brake;
-            for (const float side : { -kLookWide.value, 0.0f, kLookWide.value })
+            for (const f32 side : { -kLookWide.value, 0.0f, kLookWide.value })
                 if (!wet(boat.at + turned(boat.heading, side) * kLookAhead.value))
                     push -= handling.brake;
             boat.speed.value = std::max(boat.speed.value + push * dt, boat.marks.empty() ? 0.0f : kSlowest.value);
@@ -279,11 +280,11 @@ namespace rct3::simulation
             for (const Boat& other : fleet)
             {
                 const glm::vec2 away = boat.at - other.at;
-                const float apart = glm::length(away);
+                const f32 apart = glm::length(away);
                 if (&other == &boat || other.state == Sailing::Docked || apart >= kHull.value)
                     continue;
                 // Two boats on the very same spot, as they are leaving the dock together, part to either side.
-                const glm::vec2 out = apart > 0.01f ? away / apart : turned(boat.heading, &boat < &other ? glm::half_pi<float>() : -glm::half_pi<float>());
+                const glm::vec2 out = apart > 0.01f ? away / apart : turned(boat.heading, &boat < &other ? glm::half_pi<f32>() : -glm::half_pi<f32>());
                 if (const glm::vec2 to = boat.at + out * (kHull.value - apart) / 2.0f; wet(to))
                     boat.at = to;
                 if (bumps && glm::dot(boat.heading, out) < 0)

@@ -5,6 +5,7 @@
 // beds, guards keep watch, inspectors go on their rounds, and all of them keep to their patrols.
 #pragma once
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/entt.hpp"
 #include "units/units.hpp"
@@ -27,7 +28,7 @@ namespace rct3::simulation::staff
     /// guests' code walks, queues and rides them; let go, they are staff again.
     struct Rounds
     {
-        std::uint8_t task = 0;  ///< The next of their tasks to look at, by its bit among the task flags
+        u8 task = 0;            ///< The next of their tasks to look at, by its bit among the task flags
         units::Seconds gap { }; ///< Before they next look for somewhere to go
         struct Seen
         {
@@ -35,9 +36,9 @@ namespace rct3::simulation::staff
             units::Seconds when { };        ///< Into the run
         };
         std::vector<Seen> seen { };
-        entt::entity watching = entt::null;    ///< The worker they are after, or watching
-        float chased_from = 0;                 ///< When they set off after them
-        std::optional<float> watched_from { }; ///< When they came close enough to watch; none yet
+        entt::entity watching = entt::null;  ///< The worker they are after, or watching
+        f32 chased_from = 0;                 ///< When they set off after them
+        std::optional<f32> watched_from { }; ///< When they came close enough to watch; none yet
         struct Told
         {
             entt::entity about = entt::null;

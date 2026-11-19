@@ -39,6 +39,7 @@
 #include "config/settings.hpp"
 #include "config/text_file.hpp"
 #include "config/user_data.hpp"
+#include "core/types.hpp"
 #include "core/version.hpp"
 #include "image/png_encoder.hpp"
 #include "imgui.h"
@@ -141,7 +142,7 @@ namespace
     void draw_profiler(const rct3::render::Device& device)
     {
         const rct3::render::FrameStats stats = device.stats();
-        ImGui::Text("%.1f fps", static_cast<double>(ImGui::GetIO().Framerate));
+        ImGui::Text("%.1f fps", static_cast<f64>(ImGui::GetIO().Framerate));
         ImGui::Text("%s on %s: %u passes, %u draws, %llu primitives", std::string(rct3::render::backend_name(device.backend())).c_str(), std::string(device.device_name()).c_str(), stats.passes, stats.draws, static_cast<unsigned long long>(stats.primitives)); // c-api
         ImGui::Text("%llu bytes of per-frame vertex data", static_cast<unsigned long long>(stats.transient_bytes));                                                                                                                                                // c-api
         // The graph shows the picked scope's recent frames; clicking a row picks another.
@@ -149,18 +150,18 @@ namespace
         const std::vector<rct3::profiling::ScopeStats> scopes = rct3::profiling::stats();
         if (const auto it = std::ranges::find(scopes, graphed, &rct3::profiling::ScopeStats::name); it != scopes.end() && !it->history.empty())
         {
-            const auto history = it->history | std::ranges::to<std::vector<float>>();
+            const auto history = it->history | std::ranges::to<std::vector<f32>>();
             const std::string label = std::format("{}: {:.2f} ms, peak {:.2f}", graphed, it->last, it->period_max);
             ImGui::PlotLines("##graph", history.data(), static_cast<int>(history.size()), 0, label.c_str(), 0.0f, static_cast<float>(it->period_max * 1.2), { ImGui::GetContentRegionAvail().x, 80 }); // c-api
         }
         // Scopes as a tree: "[Thread] A/B" goes under "[Thread] A". Sibling rows sort by the picked column.
-        std::vector<std::vector<std::size_t>> children(scopes.size() + 1); // The last list holds the roots
-        for (std::size_t i = 0; i < scopes.size(); ++i)
+        std::vector<std::vector<usize>> children(scopes.size() + 1); // The last list holds the roots
+        for (usize i = 0; i < scopes.size(); ++i)
         {
             const std::string& name = scopes[i].name;
-            const std::size_t slash = name.rfind('/');
+            const usize slash = name.rfind('/');
             const auto parent = slash == std::string::npos ? scopes.end() : std::ranges::find(scopes, std::string_view(name).substr(0, slash), &rct3::profiling::ScopeStats::name);
-            children[parent == scopes.end() ? scopes.size() : static_cast<std::size_t>(parent - scopes.begin())].push_back(i);
+            children[parent == scopes.end() ? scopes.size() : static_cast<usize>(parent - scopes.begin())].push_back(i);
         }
         constexpr ImGuiTableFlags kTable = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Sortable | ImGuiTableFlags_SortTristate | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
         if (ImGui::BeginTable("scopes", 6, kTable))
@@ -175,9 +176,9 @@ namespace
             ImGui::TableHeadersRow();
 
             const ImGuiTableSortSpecs* sort = ImGui::TableGetSortSpecs();
-            const std::int32_t column = sort != nullptr && sort->SpecsCount > 0 ? sort->Specs[0].ColumnIndex : -1;
+            const i32 column = sort != nullptr && sort->SpecsCount > 0 ? sort->Specs[0].ColumnIndex : -1;
             const bool descending = column >= 0 && sort->Specs[0].SortDirection == ImGuiSortDirection_Descending;
-            const auto value = [&](std::size_t i) {
+            const auto value = [&](usize i) {
                 const auto& s = scopes[i];
                 switch (column)
                 {
@@ -193,13 +194,13 @@ namespace
                         return s.average; // "% parent" orders siblings like the average
                 }
             };
-            const auto draw = [&](this const auto& self, std::size_t i, double parent_ms) -> void {
+            const auto draw = [&](this const auto& self, usize i, f64 parent_ms) -> void {
                 const auto& s = scopes[i];
-                std::vector<std::size_t> kids = children[i];
+                std::vector<usize> kids = children[i];
                 if (column == 0)
-                    std::ranges::sort(kids, [&](std::size_t x, std::size_t y) { return descending ? scopes[y].name < scopes[x].name : scopes[x].name < scopes[y].name; });
+                    std::ranges::sort(kids, [&](usize x, usize y) { return descending ? scopes[y].name < scopes[x].name : scopes[x].name < scopes[y].name; });
                 else if (column > 0)
-                    std::ranges::sort(kids, [&](std::size_t x, std::size_t y) { return descending ? value(y) < value(x) : value(x) < value(y); });
+                    std::ranges::sort(kids, [&](usize x, usize y) { return descending ? value(y) < value(x) : value(x) < value(y); });
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
                 ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_SpanAllColumns | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_DefaultOpen;
@@ -207,12 +208,12 @@ namespace
                     flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
                 if (s.name == graphed)
                     flags |= ImGuiTreeNodeFlags_Selected;
-                const std::size_t slash = s.name.rfind('/');
+                const usize slash = s.name.rfind('/');
                 const char* label = slash == std::string::npos ? s.name.c_str() : s.name.c_str() + slash + 1;
                 const bool open = ImGui::TreeNodeEx(s.name.c_str(), flags, "%s", label);
                 if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
                     graphed = s.name;
-                for (const double ms : { s.last, s.average, s.p95, s.period_max })
+                for (const f64 ms : { s.last, s.average, s.p95, s.period_max })
                 {
                     ImGui::TableNextColumn();
                     ImGui::Text("%.3f", ms);
@@ -223,17 +224,17 @@ namespace
                     ImGui::Text("%.0f%%", 100 * s.average / parent_ms);
                 if (open && !kids.empty())
                 {
-                    for (const std::size_t k : kids)
+                    for (const usize k : kids)
                         self(k, s.average);
                     ImGui::TreePop();
                 }
             };
-            std::vector<std::size_t> roots = children[scopes.size()];
+            std::vector<usize> roots = children[scopes.size()];
             if (column > 0)
-                std::ranges::sort(roots, [&](std::size_t x, std::size_t y) { return descending ? value(y) < value(x) : value(x) < value(y); });
+                std::ranges::sort(roots, [&](usize x, usize y) { return descending ? value(y) < value(x) : value(x) < value(y); });
             else if (column == 0 && descending)
                 std::ranges::reverse(roots);
-            for (const std::size_t r : roots)
+            for (const usize r : roots)
                 draw(r, 0);
             ImGui::EndTable();
         }
@@ -260,8 +261,8 @@ namespace
         ImGui::SetItemTooltip("Guests walk the paths and visit shops; the park as saved is left as it was");
         ImGui::Text("Simulation tick %llu", static_cast<unsigned long long>(park.sim.tick)); // c-api
         const rct3::park::ParkCamera& c = park.camera;
-        ImGui::Text("Target %.1f %.1f %.1f", static_cast<double>(c.target.x), static_cast<double>(c.target.y), static_cast<double>(c.target.z));
-        ImGui::Text("Yaw %.2f, pitch %.2f, distance %.1f", static_cast<double>(c.yaw), static_cast<double>(c.pitch), static_cast<double>(c.distance));
+        ImGui::Text("Target %.1f %.1f %.1f", static_cast<f64>(c.target.x), static_cast<f64>(c.target.y), static_cast<f64>(c.target.z));
+        ImGui::Text("Yaw %.2f, pitch %.2f, distance %.1f", static_cast<f64>(c.yaw), static_cast<f64>(c.pitch), static_cast<f64>(c.distance));
     }
 
     // Recent log entries, coloured like the console. The ring is polled with a sequence cursor, so each frame
@@ -277,7 +278,7 @@ namespace
     {
         namespace logging = rct3::logging;
         static std::vector<logging::Entry> shown;
-        static std::uint64_t cursor = 0;
+        static u64 cursor = 0;
         static int minimum = static_cast<int>(logging::Level::Info); // c-api
         static bool follow = true;
 
@@ -286,7 +287,7 @@ namespace
             cursor = e.sequence;
             shown.push_back(std::move(e));
         }
-        constexpr std::size_t kKeep = 2000;
+        constexpr usize kKeep = 2000;
         if (shown.size() > kKeep)
             shown.erase(shown.begin(), shown.begin() + static_cast<std::ptrdiff_t>(shown.size() - kKeep));
 
@@ -309,10 +310,10 @@ namespace
         ImGui::BeginChild("lines", { 0, 0 }, ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
         for (const auto& e : shown)
         {
-            const std::int32_t level = static_cast<std::int32_t>(e.level);
+            const i32 level = static_cast<i32>(e.level);
             if (level < minimum)
                 continue;
-            ImGui::PushStyleColor(ImGuiCol_Text, kColors[static_cast<std::size_t>(level)]);
+            ImGui::PushStyleColor(ImGuiCol_Text, kColors[static_cast<usize>(level)]);
             ImGui::Text("[%s]", std::string(logging::level_tag(e.level)).c_str());
             ImGui::PopStyleColor();
             ImGui::SameLine();
@@ -332,7 +333,7 @@ namespace
         const rct3::ui::Widget* picked = nullptr;
         const rct3::ui::Widget* outlined = nullptr;
         bool newly_picked = false; ///< The tree opens down to it
-        float scale = 1;           ///< Framebuffer pixels per interface unit
+        f32 scale = 1;             ///< Framebuffer pixels per interface unit
     };
     WidgetInspector g_inspector;
 
@@ -357,11 +358,11 @@ namespace
     {
         WidgetInspector& in = g_inspector;
         const rct3::ui::Rect root = desktop.root().rect();
-        in.scale = root.width() > 0 ? static_cast<float>(view.size.width) / root.width() : 1;
-        const float x = p.x - static_cast<float>(view.x);
-        const float y = p.y - static_cast<float>(view.y);
+        in.scale = root.width() > 0 ? static_cast<f32>(view.size.width) / root.width() : 1;
+        const f32 x = p.x - static_cast<f32>(view.x);
+        const f32 y = p.y - static_cast<f32>(view.y);
         const rct3::ui::Widget* before = in.picked;
-        if (!ImGui::GetIO().KeyCtrl && p.inside && x >= 0 && y >= 0 && x < static_cast<float>(view.size.width) && y < static_cast<float>(view.size.height))
+        if (!ImGui::GetIO().KeyCtrl && p.inside && x >= 0 && y >= 0 && x < static_cast<f32>(view.size.width) && y < static_cast<f32>(view.size.height))
             in.picked = rct3::core::as_pointer(rct3::ui::widget_at(desktop.root(), { x / in.scale, y / in.scale }));
         if (!rct3::ui::in_tree(desktop.root(), in.picked)) // Gone since: a window closed, or another screen
             in.picked = nullptr;
@@ -391,7 +392,7 @@ namespace
         std::vector<const ui::Widget*> chain;
         for (const ui::Widget* w = in.picked; w != nullptr; w = w->parent())
             chain.insert(chain.begin(), w);
-        for (std::size_t depth = 0; depth < chain.size(); ++depth)
+        for (usize depth = 0; depth < chain.size(); ++depth)
         {
             ImGui::Text("%*s%s", static_cast<int>(depth * 2), "", widget_label(*chain[depth]).c_str()); // c-api
             if (ImGui::IsItemHovered())
@@ -440,7 +441,7 @@ namespace
         if (in.outlined == nullptr)
             return;
         const ImVec2 to_ui = ImGui::GetIO().DisplayFramebufferScale;
-        const auto corner = [&](float cx, float cy) { return ImVec2 { (static_cast<float>(view.x) + cx * in.scale) / to_ui.x, (static_cast<float>(view.y) + cy * in.scale) / to_ui.y }; };
+        const auto corner = [&](f32 cx, f32 cy) { return ImVec2 { (static_cast<f32>(view.x) + cx * in.scale) / to_ui.x, (static_cast<f32>(view.y) + cy * in.scale) / to_ui.y }; };
         ImDrawList& draw = *ImGui::GetForegroundDrawList();
         // The nearest holder smaller than the screen; full-screen frames and the desktop would only outline the game.
         // The widget itself is outlined where it stops the pointer, so panels spanning the screen show their parts.
@@ -498,7 +499,7 @@ namespace
         const ImGuiDockNode* central = ImGui::DockBuilderGetCentralNode(space);
         const ImVec2 pos = central != nullptr ? central->Pos : ImVec2 { };
         const ImVec2 size = central != nullptr ? central->Size : ImGui::GetMainViewport()->Size;
-        return { static_cast<std::uint32_t>(std::max(0.0f, pos.x * to_px.x)), static_cast<std::uint32_t>(std::max(0.0f, pos.y * to_px.y)), { static_cast<std::uint32_t>(std::max(1.0f, size.x * to_px.x)), static_cast<std::uint32_t>(std::max(1.0f, size.y * to_px.y)) } };
+        return { static_cast<u32>(std::max(0.0f, pos.x * to_px.x)), static_cast<u32>(std::max(0.0f, pos.y * to_px.y)), { static_cast<u32>(std::max(1.0f, size.x * to_px.x)), static_cast<u32>(std::max(1.0f, size.y * to_px.y)) } };
     }
 
 } // namespace
@@ -548,14 +549,14 @@ int main(int argc, char** argv)
     load_user_file(config::UserFile::Settings, settings);
 
     // Command-line options that are also settings go into `settings`, so --write-settings keeps them.
-    std::optional<std::int32_t> max_frames;
+    std::optional<i32> max_frames;
     bool vsync = true;
     bool write_settings = false;
     bool widget_demo = false;
     bool headless = false;
     std::optional<bool> sound_this_run;
-    std::optional<double> max_seconds;
-    std::optional<double> max_fps;
+    std::optional<f64> max_seconds;
+    std::optional<f64> max_fps;
     std::optional<std::filesystem::path> park_file;
     std::optional<std::filesystem::path> script_file;
     std::optional<std::filesystem::path> script_report;
@@ -563,7 +564,7 @@ int main(int argc, char** argv)
     std::optional<rct3::random::Seed> seed;
     bool simulate = true;                         ///< The park starts with the simulation running
     std::optional<std::filesystem::path> profile; ///< Where to write the profiler's table on the way out
-    for (std::int32_t i = 1; i < argc; ++i)
+    for (i32 i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
         {
@@ -699,10 +700,10 @@ int main(int argc, char** argv)
     if (headless)
         vsync = false;
     // Without vsync or a window to show, a headless run would otherwise keep a core busy.
-    const double frame_limit = max_fps.value_or(headless ? 60.0 : 0.0);
+    const f64 frame_limit = max_fps.value_or(headless ? 60.0 : 0.0);
     const bool sound = !headless && sound_this_run.value_or(!settings.flag(config::Setting::NoAudio));
     const bool intro = !headless && !settings.flag(config::Setting::SkipIntro);
-    std::optional<float> scale;
+    std::optional<f32> scale;
     if (const auto parsed = config::parse_interface_scale(settings.get(config::Setting::InterfaceScale).value_or(std::string_view { })))
         scale = *parsed;
     else
@@ -778,7 +779,7 @@ int main(int argc, char** argv)
     // Behind everything that does not cover the window.
     constexpr render::Color kBackground = render::hex("#0d0f14");
     log.info("rendering with {} on {}", render::backend_name(backend), device->device_name());
-    const std::vector<std::uint32_t> sample_levels = device->sample_levels();
+    const std::vector<u32> sample_levels = device->sample_levels();
 
     auto ui_demo = rct3::scene::create_ui_demo(*device);
     if (!ui_demo)
@@ -788,7 +789,7 @@ int main(int argc, char** argv)
     }
     // With the game installed: logos, then the loading screen while the skins load, then the front screen
     // (or the widget demo) in place of the generated demo.
-    enum class Phase : std::uint8_t
+    enum class Phase : u8
     {
         Intro,
         Loading,
@@ -801,7 +802,7 @@ int main(int argc, char** argv)
     std::optional<rct3::scene::park::ParkScene> park; ///< Played over the front end, which lends it the interface
     std::optional<std::filesystem::path> park_to_load = park_file;
     rct3::scene::ParkGame park_game; ///< What that park is played as
-    std::uint64_t park_log_from = 0; ///< The log's last entry before the park loading now began; 0 before ///< Asked for this frame; its loading screen shows first
+    u64 park_log_from = 0;           ///< The log's last entry before the park loading now began; 0 before ///< Asked for this frame; its loading screen shows first
     bool quit = false;
     bool screenshot = false;           ///< Asked for this frame; read from the screen as the frame ends. The player's show the park without its interface
     std::filesystem::path script_shot; ///< Where the screenshot a script asked for goes; empty for the user's folder
@@ -922,8 +923,8 @@ int main(int argc, char** argv)
                 setup.screen_size = setup.screen_sizes.size();
             setup.screen_sizes.push_back({ s.width, s.height });
         }
-        for (const std::uint32_t n : sample_levels)
-            setup.anti_aliasing_levels.push_back(static_cast<std::int32_t>(n));
+        for (const u32 n : sample_levels)
+            setup.anti_aliasing_levels.push_back(static_cast<i32>(n));
         setup.keys = key_map;
         // The game's pictures, then the user's screenshots, shuffled together.
         if (const auto pictures = install->find("Slideshow/Default"))
@@ -992,9 +993,9 @@ int main(int argc, char** argv)
     const auto load_park = [&](const std::filesystem::path& path) {
         const prof::Scope zone("LoadingScreen");
         auto shown = rct3::scene::park::ParkLoadStage::ReadFile; // The frame before loading began drew it
-        const std::uint64_t log_from = park_log_from != 0 ? park_log_from : rct3::logging::global().latest_sequence();
-        const double started = window->time();
-        double stage_started = started;
+        const u64 log_from = park_log_from != 0 ? park_log_from : rct3::logging::global().latest_sequence();
+        const f64 started = window->time();
+        f64 stage_started = started;
         log.info("loading park {}", path.string());
         const auto report = [&](rct3::scene::park::ParkLoadStage stage) {
             window->poll_events();
@@ -1002,7 +1003,7 @@ int main(int argc, char** argv)
                 rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, { }, false, 0);
             if (stage == shown)
                 return;
-            const double now = window->time();
+            const f64 now = window->time();
             log.info("park loading: {} took {:.2f} s", rct3::scene::park::park_load_name(shown), now - stage_started);
             stage_started = now;
             shown = stage;
@@ -1013,7 +1014,7 @@ int main(int argc, char** argv)
             device->end_frame();
         };
         auto loaded = rct3::scene::park::create_park_scene(*device, *install, *front->assets.strings, front->assets.palette, front->live->options, path, seed.value_or(rct3::random::fresh_seed()), ride_ratings, report);
-        const double now = window->time();
+        const f64 now = window->time();
         if (loaded)
         {
             log.info("park loading: {} took {:.2f} s; loaded in {:.2f} s", rct3::scene::park::park_load_name(shown), now - stage_started, now - started);
@@ -1058,7 +1059,7 @@ int main(int argc, char** argv)
     if (install && !startup)
         load_widgets(false);
 
-    std::int32_t status = 0;
+    i32 status = 0;
     std::unique_ptr<rct3::scene::ScriptHost> script;
     if (script_file)
     {
@@ -1071,7 +1072,7 @@ int main(int argc, char** argv)
         prof::register_thread("Main");
         std::signal(SIGINT, request_stop);
         std::signal(SIGTERM, request_stop);
-        const double start_time = window->time();
+        const f64 start_time = window->time();
         // The pointer from the corner of where the game draws, which the developer panels may have moved.
         const auto game_pointer = [&] {
             auto p = window->pointer();
@@ -1095,31 +1096,31 @@ int main(int argc, char** argv)
             p.y *= device->render_scale();
             if (const auto& v = device->view())
             {
-                p.x -= static_cast<float>(v->x);
-                p.y -= static_cast<float>(v->y);
-                p.inside = p.inside && p.x >= 0 && p.y >= 0 && p.x < static_cast<float>(v->size.width) && p.y < static_cast<float>(v->size.height);
+                p.x -= static_cast<f32>(v->x);
+                p.y -= static_cast<f32>(v->y);
+                p.inside = p.inside && p.x >= 0 && p.y >= 0 && p.x < static_cast<f32>(v->size.width) && p.y < static_cast<f32>(v->size.height);
             }
             return p;
         };
-        double last_time = start_time;
-        std::int32_t frame = 0;
+        f64 last_time = start_time;
+        i32 frame = 0;
         for (; !window->should_close() && !quit && frame != max_frames && g_stop_requested == 0; ++frame)
         {
             if (max_seconds && window->time() - start_time >= *max_seconds)
                 break;
             if (frame_limit > 0)
             {
-                const double wait = last_time + 1 / frame_limit - window->time();
+                const f64 wait = last_time + 1 / frame_limit - window->time();
                 if (wait > 0)
-                    std::this_thread::sleep_for(std::chrono::duration<double>(wait));
+                    std::this_thread::sleep_for(std::chrono::duration<f64>(wait));
             }
             window->poll_events();
 
-            const double now = window->time();
+            const f64 now = window->time();
             prof::update(now - last_time);
             // A script's frame is always a sixtieth of a second, so what it waits for in frames is the same game time
             // however fast the machine draws them.
-            const rct3::units::Seconds elapsed { static_cast<float>(script ? 1.0 / 60 : now - last_time) };
+            const rct3::units::Seconds elapsed { static_cast<f32>(script ? 1.0 / 60 : now - last_time) };
             last_time = now;
 
             prof::section("Frame", [&] {
@@ -1194,7 +1195,7 @@ int main(int argc, char** argv)
                     {
                         const prof::Scope zone("DeveloperWindows");
                         const render::ScreenView view = dock_developer_windows();
-                        const auto scaled = [&](std::uint32_t n) { return static_cast<std::uint32_t>(std::lround(static_cast<float>(n) * device->render_scale())); };
+                        const auto scaled = [&](u32 n) { return static_cast<u32>(std::lround(static_cast<f32>(n) * device->render_scale())); };
                         device->set_view(render::ScreenView { scaled(view.x), scaled(view.y), { scaled(view.size.width), scaled(view.size.height) } });
                         developer_window("Profiler", [&] { draw_profiler(*device); });
                         developer_window("Log", draw_log);
@@ -1255,12 +1256,12 @@ int main(int argc, char** argv)
                         const rct3::ui::KeyboardState no_keys;
                         // A script running the park on: a step of its simulation an update, each as a frame that is
                         // not drawn, with the pointer still and no keys.
-                        if (const float ahead = script ? script->take_advance() : 0; ahead > 0)
+                        if (const f32 ahead = script ? script->take_advance() : 0; ahead > 0)
                         {
                             rct3::scene::park::ParkInput still = input;
                             still.pointer.wheel = { };
                             still.commands.clear();
-                            for (float left = ahead; left > 0 && rct3::simulation::time_factor(park->park.speed) > 0; left -= rct3::simulation::kTickSeconds)
+                            for (f32 left = ahead; left > 0 && rct3::simulation::time_factor(park->park.speed) > 0; left -= rct3::simulation::kTickSeconds)
                                 rct3::scene::park::update_park_scene(*device, *park, front->assets, front->live->options, still, no_keys, rct3::units::Seconds { std::min(left, rct3::simulation::kTickSeconds) / rct3::simulation::time_factor(park->park.speed) });
                         }
                         prof::section("Park", [&] { rct3::scene::park::update_park_scene(*device, *park, front->assets, front->live->options, input, ImGui::GetIO().WantCaptureKeyboard ? no_keys : keys, elapsed); });
@@ -1273,7 +1274,7 @@ int main(int argc, char** argv)
                         if (rct3::scene::park::take_park_alert(*park))
                             sounds.push_back(rct3::ui::InterfaceSound::Message);
                         const auto view = park->riding || park->riding_flat || park->riding_person ? rct3::audio::ParkView::Riding : rct3::audio::ParkView::Overhead;
-                        const float music_level = rct3::audio::park_music_level(rct3::park::eye(park->camera).y - park->camera.target.y, view);
+                        const f32 music_level = rct3::audio::park_music_level(rct3::park::eye(park->camera).y - park->camera.target.y, view);
                         if (audio && menu_audio)
                             prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true, music_level); });
                         if (audio && park_sounds)
@@ -1341,7 +1342,7 @@ int main(int argc, char** argv)
                     // The anti-aliasing option picks among the levels the device offers, after none.
                     if (front)
                     {
-                        const auto level = static_cast<std::size_t>(front->live->options.choice(config::game::GameOption::AntiAliasing));
+                        const auto level = static_cast<usize>(front->live->options.choice(config::game::GameOption::AntiAliasing));
                         device->set_samples(level > 0 && level <= sample_levels.size() ? sample_levels[level - 1] : 1);
                         device->set_render_scale(front->live->options.get(config::game::GameOption::RenderScale) / 100);
                         device->set_smooth_scaling(front->live->options.get(config::game::GameOption::SmoothScaling) != 0);
@@ -1421,7 +1422,7 @@ int main(int argc, char** argv)
             });
             prof::capture_frame();
         }
-        const double ran = window->time() - start_time;
+        const f64 ran = window->time() - start_time;
         log.info("ran {} frames in {:.1f} s, {:.2f} ms a frame{}", frame, ran, frame > 0 ? 1000 * ran / frame : 0.0, g_stop_requested != 0 ? ", stopped by a signal" : "");
         if (device)
         {

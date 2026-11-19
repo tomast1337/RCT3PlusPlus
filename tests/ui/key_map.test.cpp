@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/key_map.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
@@ -24,8 +26,8 @@ TEST_CASE("the table follows the commands")
 {
     const auto table = commands_table();
     REQUIRE(table.size() == kCommandCount);
-    for (std::size_t i = 0; i < table.size(); ++i)
-        CHECK(static_cast<std::size_t>(table[i].command) == i);
+    for (usize i = 0; i < table.size(); ++i)
+        CHECK(static_cast<usize>(table[i].command) == i);
 }
 
 TEST_CASE("the usual keys arrive as the presses the widgets know")

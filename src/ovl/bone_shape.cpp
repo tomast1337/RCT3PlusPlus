@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/bone_shape.hpp"
 
+#include "core/types.hpp"
 #include "ovl/reference_names.hpp"
 
 #include <cstring>
@@ -14,27 +15,27 @@ namespace rct3::ovl
         constexpr std::string_view kShapeTag = "bsh";
         constexpr std::string_view kFlexiTag = "ftx";
         constexpr std::string_view kStyleTag = "txs";
-        constexpr std::size_t kHeaderSize = 60; // fifteen 32-bit words
-        constexpr std::size_t kMeshSize = 40;   // ten 32-bit words
-        constexpr std::size_t kBoneSize = 8;    // name pointer and parent index
-        constexpr std::size_t kMatrixSize = 64; // sixteen floats
-        constexpr std::uint32_t kMaxCount = 1u << 16;
+        constexpr usize kHeaderSize = 60; // fifteen 32-bit words
+        constexpr usize kMeshSize = 40;   // ten 32-bit words
+        constexpr usize kBoneSize = 8;    // name pointer and parent index
+        constexpr usize kMatrixSize = 64; // sixteen floats
+        constexpr u32 kMaxCount = 1u << 16;
 
-        std::uint32_t u32_at(std::span<const std::byte> b, std::size_t at)
+        u32 u32_at(std::span<const std::byte> b, usize at)
         {
-            std::uint32_t v = 0;
+            u32 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
 
-        float f32_at(std::span<const std::byte> b, std::size_t at)
+        f32 f32_at(std::span<const std::byte> b, usize at)
         {
-            float v = 0;
+            f32 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
 
-        std::optional<BoneMesh> read_mesh(const AddressSpace& space, const ReferenceNames& refs, std::uint32_t address)
+        std::optional<BoneMesh> read_mesh(const AddressSpace& space, const ReferenceNames& refs, u32 address)
         {
             const auto raw = space.bytes_at(address, kMeshSize);
             if (!raw)
@@ -50,35 +51,35 @@ namespace rct3::ovl
             mesh.vertex_count = u32_at(*raw, 24);
             mesh.index_count = u32_at(*raw, 28);
 
-            const auto vertices = space.bytes_at(u32_at(*raw, 32), std::size_t { mesh.vertex_count } * kBoneVertexSize);
+            const auto vertices = space.bytes_at(u32_at(*raw, 32), usize { mesh.vertex_count } * kBoneVertexSize);
             if (!vertices)
                 return std::nullopt;
             mesh.vertices = *vertices;
 
-            const auto indices = space.bytes_at(u32_at(*raw, 36), std::size_t { mesh.index_count } * 2);
+            const auto indices = space.bytes_at(u32_at(*raw, 36), usize { mesh.index_count } * 2);
             if (!indices)
                 return std::nullopt;
             mesh.indices = *indices;
             return mesh;
         }
 
-        bool read_matrix(std::span<const std::byte> raw, std::size_t at, std::array<float, 16>& out)
+        bool read_matrix(std::span<const std::byte> raw, usize at, std::array<f32, 16>& out)
         {
             if (raw.size() < at + kMatrixSize)
                 return false;
-            for (std::size_t k = 0; k < 16; ++k)
+            for (usize k = 0; k < 16; ++k)
                 out[k] = f32_at(raw, at + k * 4);
             return true;
         }
 
-        std::optional<BoneShape> read_shape(const AddressSpace& space, const ReferenceNames& refs, std::uint32_t address)
+        std::optional<BoneShape> read_shape(const AddressSpace& space, const ReferenceNames& refs, u32 address)
         {
             const auto header = space.bytes_at(address, kHeaderSize);
             if (!header)
                 return std::nullopt;
 
             BoneShape shape;
-            for (std::size_t i = 0; i < 3; ++i)
+            for (usize i = 0; i < 3; ++i)
             {
                 shape.bounds_min[i] = f32_at(*header, i * 4);
                 shape.bounds_max[i] = f32_at(*header, 12 + i * 4);
@@ -86,24 +87,24 @@ namespace rct3::ovl
             shape.vertex_total = u32_at(*header, 24);
             shape.index_total = u32_at(*header, 28);
             // Word at 32 repeats the mesh count in every file seen.
-            const std::uint32_t mesh_count = u32_at(*header, 36);
-            const std::uint32_t mesh_array = u32_at(*header, 40);
-            const std::uint32_t bone_count = u32_at(*header, 44);
-            const std::uint32_t bone_array = u32_at(*header, 48);
-            const std::uint32_t local_array = u32_at(*header, 52);
-            const std::uint32_t world_array = u32_at(*header, 56);
+            const u32 mesh_count = u32_at(*header, 36);
+            const u32 mesh_array = u32_at(*header, 40);
+            const u32 bone_count = u32_at(*header, 44);
+            const u32 bone_array = u32_at(*header, 48);
+            const u32 local_array = u32_at(*header, 52);
+            const u32 world_array = u32_at(*header, 56);
 
             if (mesh_count > kMaxCount || bone_count > kMaxCount)
                 return std::nullopt;
             if (mesh_count != 0)
             {
-                const auto pointers = space.bytes_at(mesh_array, std::size_t { mesh_count } * 4);
+                const auto pointers = space.bytes_at(mesh_array, usize { mesh_count } * 4);
                 if (!pointers)
                     return std::nullopt;
                 shape.meshes.reserve(mesh_count);
-                for (std::uint32_t i = 0; i < mesh_count; ++i)
+                for (u32 i = 0; i < mesh_count; ++i)
                 {
-                    auto mesh = read_mesh(space, refs, u32_at(*pointers, std::size_t { i } * 4));
+                    auto mesh = read_mesh(space, refs, u32_at(*pointers, usize { i } * 4));
                     if (!mesh)
                         return std::nullopt;
                     shape.meshes.push_back(*mesh);
@@ -112,25 +113,25 @@ namespace rct3::ovl
 
             if (bone_count != 0)
             {
-                const auto rows = space.bytes_at(bone_array, std::size_t { bone_count } * kBoneSize);
-                const auto locals = space.bytes_at(local_array, std::size_t { bone_count } * kMatrixSize);
-                const auto worlds = space.bytes_at(world_array, std::size_t { bone_count } * kMatrixSize);
+                const auto rows = space.bytes_at(bone_array, usize { bone_count } * kBoneSize);
+                const auto locals = space.bytes_at(local_array, usize { bone_count } * kMatrixSize);
+                const auto worlds = space.bytes_at(world_array, usize { bone_count } * kMatrixSize);
                 if (!rows || !locals || !worlds)
                     return std::nullopt;
                 shape.bones.reserve(bone_count);
-                for (std::uint32_t i = 0; i < bone_count; ++i)
+                for (u32 i = 0; i < bone_count; ++i)
                 {
                     Bone bone;
-                    if (const auto name = space.cstring_at(u32_at(*rows, std::size_t { i } * kBoneSize)))
+                    if (const auto name = space.cstring_at(u32_at(*rows, usize { i } * kBoneSize)))
                         bone.name = *name;
-                    const auto parent = static_cast<std::int32_t>(u32_at(*rows, std::size_t { i } * kBoneSize + 4));
-                    if (parent < -1 || parent >= static_cast<std::int64_t>(bone_count))
+                    const auto parent = static_cast<i32>(u32_at(*rows, usize { i } * kBoneSize + 4));
+                    if (parent < -1 || parent >= static_cast<i64>(bone_count))
                         return std::nullopt;
                     if (parent >= 0)
-                        bone.parent = BoneIndex { static_cast<std::size_t>(parent) };
-                    if (!read_matrix(*locals, std::size_t { i } * kMatrixSize, bone.local))
+                        bone.parent = BoneIndex { static_cast<usize>(parent) };
+                    if (!read_matrix(*locals, usize { i } * kMatrixSize, bone.local))
                         return std::nullopt;
-                    if (!read_matrix(*worlds, std::size_t { i } * kMatrixSize, bone.world))
+                    if (!read_matrix(*worlds, usize { i } * kMatrixSize, bone.world))
                         return std::nullopt;
                     shape.bones.push_back(bone);
                 }
@@ -140,29 +141,29 @@ namespace rct3::ovl
 
     } // namespace
 
-    BoneVertex BoneMesh::vertex(std::size_t i) const
+    BoneVertex BoneMesh::vertex(usize i) const
     {
         BoneVertex v;
         const auto raw = vertices.subspan(i * kBoneVertexSize, kBoneVertexSize);
-        for (std::size_t k = 0; k < 3; ++k)
+        for (usize k = 0; k < 3; ++k)
         {
             v.position[k] = f32_at(raw, k * 4);
             v.normal[k] = f32_at(raw, 12 + k * 4);
         }
-        for (std::size_t k = 0; k < 4; ++k)
+        for (usize k = 0; k < 4; ++k)
         {
-            v.bones[k] = static_cast<std::uint8_t>(raw[24 + k]);
-            v.weights[k] = static_cast<std::uint8_t>(raw[28 + k]);
-            v.colour[k] = static_cast<std::uint8_t>(raw[32 + k]);
+            v.bones[k] = static_cast<u8>(raw[24 + k]);
+            v.weights[k] = static_cast<u8>(raw[28 + k]);
+            v.colour[k] = static_cast<u8>(raw[32 + k]);
         }
         v.texcoord[0] = f32_at(raw, 36);
         v.texcoord[1] = f32_at(raw, 40);
         return v;
     }
 
-    std::uint16_t BoneMesh::index(std::size_t i) const
+    u16 BoneMesh::index(usize i) const
     {
-        std::uint16_t v = 0;
+        u16 v = 0;
         std::memcpy(&v, indices.data() + i * 2, sizeof v);
         return v;
     }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/enclosure_tools.hpp"
 
+#include "core/types.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/enclosures.hpp"
 #include "park/item_category.hpp"
@@ -39,7 +40,7 @@ namespace rct3::scene
         }
 
         /// The area marked, as its least and greatest column and row.
-        std::array<std::int32_t, 4> marked(save::model::Tile a, save::model::Tile b)
+        std::array<i32, 4> marked(save::model::Tile a, save::model::Tile b)
         {
             return { std::min(a.col, b.col), std::min(a.row, b.row), std::max(a.col, b.col), std::max(a.row, b.row) };
         }
@@ -58,7 +59,7 @@ namespace rct3::scene
 
         /// Whether an item of `category` keeps enclosures off the tiles under it: rides, shops, park entrances
         /// and the floors and roofs of buildings do; plants, scenery, fences and what stands on paths do not.
-        bool keeps_out(std::uint32_t category) noexcept
+        bool keeps_out(u32 category) noexcept
         {
             using rct3::park::ItemCategory;
             return std::ranges::contains(std::array { ItemCategory::TrackPiece, ItemCategory::ParkEntrance, ItemCategory::Ride, ItemCategory::RideEntrance, ItemCategory::RideExit, ItemCategory::Stall, ItemCategory::Floor, ItemCategory::Roof }, category, [](ItemCategory c) { return std::to_underlying(c); });
@@ -72,12 +73,12 @@ namespace rct3::scene
         std::vector<bool> kept_tiles(const park::ParkScene& scene, bool deleting)
         {
             const save::model::TerrainGrid& g = scene.grid;
-            std::vector<bool> kept(static_cast<std::size_t>(g.width) * static_cast<std::size_t>(g.height));
-            const auto keep = [&](std::int32_t col, std::int32_t row) {
+            std::vector<bool> kept(static_cast<usize>(g.width) * static_cast<usize>(g.height));
+            const auto keep = [&](i32 col, i32 row) {
                 if (g.contains(col, row))
-                    kept[static_cast<std::size_t>(row * g.width + col)] = true;
+                    kept[static_cast<usize>(row * g.width + col)] = true;
             };
-            const auto keep_at = [&](float x, float z) { keep(static_cast<std::int32_t>(std::floor((x - g.origin_x) / g.tile_size_x)), static_cast<std::int32_t>(std::floor((z - g.origin_z) / g.tile_size_z))); };
+            const auto keep_at = [&](f32 x, f32 z) { keep(static_cast<i32>(std::floor((x - g.origin_x) / g.tile_size_x)), static_cast<i32>(std::floor((z - g.origin_z) / g.tile_size_z))); };
             for (const save::model::PlacedObject& o : scene.objects)
             {
                 const auto model = scene.models.find(rct3::park::object::model_key(o));
@@ -93,15 +94,15 @@ namespace rct3::scene
             if (deleting)
             {
                 for (const auto [e, house] : r.view<const simulation::AnimalHouse>().each())
-                    for (float z = house.low.y + g.tile_size_z / 2; z < house.high.y; z += g.tile_size_z)
-                        for (float x = house.low.x + g.tile_size_x / 2; x < house.high.x; x += g.tile_size_x)
+                    for (f32 z = house.low.y + g.tile_size_z / 2; z < house.high.y; z += g.tile_size_z)
+                        for (f32 x = house.low.x + g.tile_size_x / 2; x < house.high.x; x += g.tile_size_x)
                             keep_at(x, z);
                 for (const auto [e, animal, pose] : r.view<const simulation::Animal, const simulation::Pose>().each())
                     keep_at(pose.position.x, pose.position.z);
                 return kept;
             }
-            for (std::int32_t row = 0; row < g.height; ++row)
-                for (std::int32_t col = 0; col < g.width; ++col)
+            for (i32 row = 0; row < g.height; ++row)
+                for (i32 col = 0; col < g.width; ++col)
                     if (!rct3::park::owned_outright(g.at(col, row)))
                         keep(col, row);
             for (const save::model::PathTile& p : scene.footpaths.paths)
@@ -117,7 +118,7 @@ namespace rct3::scene
             if (t.marked && t.marked->area == area)
                 return *t.marked;
             save::model::EnclosureMap map = scene.enclosures;
-            const auto free = [&](save::model::Tile at) { return scene.grid.contains(at.col, at.row) && !t.kept[static_cast<std::size_t>(at.row * scene.grid.width + at.col)]; };
+            const auto free = [&](save::model::Tile at) { return scene.grid.contains(at.col, at.row) && !t.kept[static_cast<usize>(at.row * scene.grid.width + at.col)]; };
             if (deleting(t))
                 rct3::park::unenclose(map, *t.corner, *t.other, free);
             else
@@ -211,7 +212,7 @@ namespace rct3::scene
         }
         // The marks: the tiles letting go would take in or out, red when the park cannot pay; else the tile
         // under the pointer.
-        std::optional<std::array<std::int32_t, 4>> marks;
+        std::optional<std::array<i32, 4>> marks;
         if (animal && (t.other || tile))
         {
             const save::model::Tile spot = t.other ? *t.other : *tile;
@@ -232,8 +233,8 @@ namespace rct3::scene
             {
                 const park::EnclosureTool::Marked& m = marked_now(scene);
                 const glm::vec4 colour = affordable(scene, m.cost) ? kMarkColour : kRefusedColour;
-                for (std::int32_t row = m.area[1]; row <= m.area[3]; ++row)
-                    for (std::int32_t col = m.area[0]; col <= m.area[2]; ++col)
+                for (i32 row = m.area[1]; row <= m.area[3]; ++row)
+                    for (i32 col = m.area[0]; col <= m.area[2]; ++col)
                         if (m.enclosures.at(col, row).has_value() != scene.enclosures.at(col, row).has_value())
                             rct3::park::tile_marks(mesh, scene.grid, col, row, col, row, rct3::park::TilePart::Whole, colour);
             }
@@ -246,19 +247,19 @@ namespace rct3::scene
 
     void house_placed(park::ParkScene& scene, const ui::InterfaceAssets& assets, const save::model::PlacedObject& house, const rct3::park::BuildItem& item, const rct3::park::ride::RideSite& site)
     {
-        const std::optional<std::int32_t> enclosure = rct3::park::enclosure_under(scene.enclosures, { site.col, site.row }, site.span);
+        const std::optional<i32> enclosure = rct3::park::enclosure_under(scene.enclosures, { site.col, site.row }, site.span);
         // The hut goes on a tile beside the house in the same enclosure that nothing stands on, the side it
         // faces first.
         // shortcut: a tile is taken when an object's corner is on it; check the hut's footprint against solid
         // items if huts end up inside large ones.
         const auto free = [&](save::model::Tile t) { return scene.enclosures.at(t.col, t.row) == enclosure && std::ranges::none_of(scene.objects, [&](const save::model::PlacedObject& o) { return !o.hidden && !o.fixture && o.col == t.col && o.row == t.row; }); };
         std::optional<save::model::Tile> spot;
-        for (std::int32_t side = 0; side < 4 && !spot; ++side)
+        for (i32 side = 0; side < 4 && !spot; ++side)
         {
             // The house's turn counted as sides from the next row, as a pool piece's is.
             const rct3::park::Side way = site.turn.facing().turned(side);
-            const std::int32_t across = way.on_columns() ? site.span[1] : site.span[0];
-            for (std::int32_t i = across / 2, n = 0; n < across && !spot; ++n, i = (i + 1) % across)
+            const i32 across = way.on_columns() ? site.span[1] : site.span[0];
+            for (i32 i = across / 2, n = 0; n < across && !spot; ++n, i = (i + 1) % across)
             {
                 const save::model::Tile t = way == rct3::park::Side::kNextRow ? save::model::Tile { site.col + i, site.row + site.span[1] } : way == rct3::park::Side::kNextCol ? save::model::Tile { site.col + site.span[0], site.row + i } : way == rct3::park::Side::kRowBefore ? save::model::Tile { site.col + i, site.row - 1 } : save::model::Tile { site.col - 1, site.row + i };
                 if (free(t))
@@ -268,7 +269,7 @@ namespace rct3::scene
         const save::model::Tile middle { site.col + site.span[0] / 2, site.row + site.span[1] / 2 };
         const save::model::TerrainGrid& g = scene.grid;
         const glm::vec2 low { g.world_x(site.col), g.world_z(site.row) };
-        const glm::vec2 high = low + glm::vec2 { static_cast<float>(site.span[0]) * g.tile_size_x, static_cast<float>(site.span[1]) * g.tile_size_z };
+        const glm::vec2 high = low + glm::vec2 { static_cast<f32>(site.span[0]) * g.tile_size_x, static_cast<f32>(site.span[1]) * g.tile_size_z };
         simulation::AnimalHouse home { .object = house.id, .enclosure = enclosure, .troughs = park::tile_point(g, middle), .low = low, .high = high };
         if (spot && !item.scenery.empty())
         {
@@ -314,7 +315,7 @@ namespace rct3::scene
         // Enclosures joined or cut in two may have moved to other places in the map: the houses and dung take
         // the place of the ground under them now. The animals do so as they next move.
         const save::model::TerrainGrid& g = scene.grid;
-        const auto under = [&](float x, float z) { return scene.enclosures.at(static_cast<std::int32_t>(std::floor((x - g.origin_x) / g.tile_size_x)), static_cast<std::int32_t>(std::floor((z - g.origin_z) / g.tile_size_z))); };
+        const auto under = [&](f32 x, f32 z) { return scene.enclosures.at(static_cast<i32>(std::floor((x - g.origin_x) / g.tile_size_x)), static_cast<i32>(std::floor((z - g.origin_z) / g.tile_size_z))); };
         auto& r = scene.sim.registry;
         for (const auto [e, house] : r.view<simulation::AnimalHouse>().each())
             house.enclosure = under((house.low.x + house.high.x) / 2, (house.low.y + house.high.y) / 2);

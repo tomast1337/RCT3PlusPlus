@@ -10,6 +10,7 @@
 // activated a row. Changing the rows or the sort is never reported.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/text_layout.hpp"
 #include "ui/widgets/scroll_bar.hpp"
 
@@ -35,8 +36,8 @@ namespace rct3::ui::widgets
     struct TableRow
     {
         std::vector<std::u16string> cells;
-        std::vector<std::optional<double>> keys;
-        std::size_t id = 0;   ///< The owner's, to know which thing the row is about after sorting
+        std::vector<std::optional<f64>> keys;
+        usize id = 0;         ///< The owner's, to know which thing the row is about after sorting
         std::string icon { }; ///< Skin before the first column's text, such as a guest's mood
     };
 
@@ -51,17 +52,17 @@ namespace rct3::ui::widgets
         Color stripe_colour = hex("#00000010"); ///< Over every other row
         font::FontRole font = font::FontRole::Small;
         font::FontRole heading_font = font::FontRole::Small;
-        float heading_height = 18;
-        float row_height = 16;
+        f32 heading_height = 18;
+        f32 row_height = 16;
         Rect padding { 3, 3, 3, 3 };          ///< Between the edges and the headings, rows and bar
-        float cell_indent = 4;                ///< Inside each cell, on the side its text keeps to
-        float sort_mark = 7;                  ///< Width of the triangle that marks the sorted column
+        f32 cell_indent = 4;                  ///< Inside each cell, on the side its text keeps to
+        f32 sort_mark = 7;                    ///< Width of the triangle that marks the sorted column
         units::Seconds double_click { 0.4f }; ///< A second press this soon activates
     };
 
     /// Sorts `rows` by `column`, by its numbers where both rows have one and by its text otherwise, rows with a
     /// number first; ties keep their order. Lowest first, or highest first when `descending`.
-    void sort_table_rows(std::vector<TableRow>& rows, std::size_t column, bool descending);
+    void sort_table_rows(std::vector<TableRow>& rows, usize column, bool descending);
 
     class ColumnTable : public Widget
     {
@@ -71,34 +72,34 @@ namespace rct3::ui::widgets
         ColumnTableStyle style;
         std::vector<TableColumn> columns;
         std::vector<TableRow> rows;
-        std::optional<std::size_t> sorted_by; ///< Marked in its heading
+        std::optional<usize> sorted_by; ///< Marked in its heading
         bool descending = false;
 
         /// Where a column starts and ends, from the table's left edge.
         struct ColumnEdges
         {
-            float left { };
-            float right { };
+            f32 left { };
+            f32 right { };
         };
         /// Of each column.
         [[nodiscard]] std::vector<ColumnEdges> column_edges() const;
 
-        [[nodiscard]] std::optional<std::size_t> selected() const
+        [[nodiscard]] std::optional<usize> selected() const
         {
             return selected_;
         }
-        void select(std::optional<std::size_t> index);
+        void select(std::optional<usize> index);
         [[nodiscard]] ScrollBar& bar()
         {
             return *bar_;
         }
         /// The row at `p`, if `p` is over one.
-        [[nodiscard]] std::optional<std::size_t> row_at(Point p) const;
+        [[nodiscard]] std::optional<usize> row_at(Point p) const;
         /// The heading at `p`, if `p` is over one.
-        [[nodiscard]] std::optional<std::size_t> heading_at(Point p) const;
+        [[nodiscard]] std::optional<usize> heading_at(Point p) const;
 
         /// The column whose heading the user pressed, once.
-        [[nodiscard]] std::optional<std::size_t> take_sort();
+        [[nodiscard]] std::optional<usize> take_sort();
         /// True once for each row activated since the last call.
         [[nodiscard]] bool take_activate();
 
@@ -117,11 +118,11 @@ namespace rct3::ui::widgets
         [[nodiscard]] Rect rows_box() const;
 
         ScrollBar* bar_ = nullptr;
-        std::optional<std::size_t> selected_;
-        std::optional<std::size_t> sort_now_;
+        std::optional<usize> selected_;
+        std::optional<usize> sort_now_;
         units::Seconds since_press_; // Since the last press on a row
-        std::optional<std::size_t> last_pressed_;
-        std::int32_t activations_ = 0;
+        std::optional<usize> last_pressed_;
+        i32 activations_ = 0;
     };
 
 } // namespace rct3::ui::widgets

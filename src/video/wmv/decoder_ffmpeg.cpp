@@ -2,6 +2,7 @@
 //
 // The WMV3 decoder as FFmpeg's, built in (third_party/ffmpeg). It may hold the last picture back until it is
 // given an empty frame.
+#include "core/types.hpp"
 #include "video/wmv/decoder.hpp"
 
 #include <cstdint>
@@ -35,7 +36,7 @@ namespace rct3::video::wmv
         const Rct3WmvFormat f {
             .width = static_cast<int>(format.width),   // c-api
             .height = static_cast<int>(format.height), // c-api
-            .extra = reinterpret_cast<const std::uint8_t*>(format.extra.data()),
+            .extra = reinterpret_cast<const u8*>(format.extra.data()),
             .extra_size = static_cast<int>(format.extra.size()), // c-api
         };
         auto s = std::make_unique<State>();
@@ -50,11 +51,11 @@ namespace rct3::video::wmv
         Rct3WmvPicture p { };
         if (rct3_wmv_decode(state_->decoder.get(), frame.empty() ? nullptr : reinterpret_cast<const std::uint8_t*>(frame.data()), static_cast<int>(frame.size()), &p) != 1 || p.width <= 0 || p.height <= 0) // c-api
             return std::nullopt;
-        Picture out { .width = static_cast<std::uint32_t>(p.width), .height = static_cast<std::uint32_t>(p.height) };
-        for (std::int32_t i = 0; i < 3; ++i)
+        Picture out { .width = static_cast<u32>(p.width), .height = static_cast<u32>(p.height) };
+        for (i32 i = 0; i < 3; ++i)
         {
-            const auto rows = static_cast<std::size_t>(i == 0 ? p.height : (p.height + 1) / 2);
-            out.strides[i] = static_cast<std::size_t>(p.strides[i]);
+            const auto rows = static_cast<usize>(i == 0 ? p.height : (p.height + 1) / 2);
+            out.strides[i] = static_cast<usize>(p.strides[i]);
             out.planes[i] = std::span(p.planes[i], out.strides[i] * rows);
         }
         return out;

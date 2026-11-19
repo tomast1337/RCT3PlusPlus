@@ -14,6 +14,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "math/hex_colour.hpp"
 
 #include <array>
@@ -27,10 +28,10 @@ namespace rct3::ui
 
     struct Color
     {
-        std::uint8_t r = 255;
-        std::uint8_t g = 255;
-        std::uint8_t b = 255;
-        std::uint8_t a = 255;
+        u8 r = 255;
+        u8 g = 255;
+        u8 b = 255;
+        u8 a = 255;
         bool operator==(const Color&) const = default;
     };
 
@@ -46,16 +47,16 @@ namespace rct3::ui
     /// Axis-aligned rectangle from (x0, y0) to (x1, y1). Empty when x1 <= x0 or y1 <= y0.
     struct Rect
     {
-        float x0 = 0;
-        float y0 = 0;
-        float x1 = 0;
-        float y1 = 0;
+        f32 x0 = 0;
+        f32 y0 = 0;
+        f32 x1 = 0;
+        f32 y1 = 0;
 
-        [[nodiscard]] float width() const
+        [[nodiscard]] f32 width() const
         {
             return x1 - x0;
         }
-        [[nodiscard]] float height() const
+        [[nodiscard]] f32 height() const
         {
             return y1 - y0;
         }
@@ -70,36 +71,36 @@ namespace rct3::ui
 
     /// Renderer texture the quads sample. 0 means none: the quad is drawn in its colour alone (the renderer
     /// binds a white texture for it).
-    using TextureId = std::uint32_t;
+    using TextureId = u32;
 
     /// The vertex the renderer receives. 20 bytes: position, colour (r, g, b, a), texture coordinate.
     struct Vertex
     {
-        float x = 0;
-        float y = 0;
-        std::array<std::uint8_t, 4> color { };
-        float u = 0;
-        float v = 0;
+        f32 x = 0;
+        f32 y = 0;
+        std::array<u8, 4> color { };
+        f32 u = 0;
+        f32 v = 0;
     };
 
     /// The vertex of a shape's quad (shape.hpp), 96 bytes. The shape's measures repeat on each corner so one draw
     /// can hold many shapes. Lengths are in pixels.
     struct ShapeVertex
     {
-        float x = 0;
-        float y = 0;
-        std::array<float, 4> local { }; ///< From the shape's middle; then its half width and half height
-        std::array<float, 4> radii { }; ///< Of the corners, clockwise from the top-left
-        std::array<float, 4> edge { };  ///< Softness, outline width, light width, ring width
-        std::array<std::uint8_t, 4> top { };
-        std::array<std::uint8_t, 4> bottom { };
-        std::array<std::uint8_t, 4> outline { };
-        std::array<std::uint8_t, 4> light { };
-        std::array<float, 4> cut { };  ///< Centre of the disc cut out, from the shape's middle; its radius; unused
-        std::array<float, 2> fill { }; ///< Shares of the height where the fill starts and stops changing
+        f32 x = 0;
+        f32 y = 0;
+        std::array<f32, 4> local { }; ///< From the shape's middle; then its half width and half height
+        std::array<f32, 4> radii { }; ///< Of the corners, clockwise from the top-left
+        std::array<f32, 4> edge { };  ///< Softness, outline width, light width, ring width
+        std::array<u8, 4> top { };
+        std::array<u8, 4> bottom { };
+        std::array<u8, 4> outline { };
+        std::array<u8, 4> light { };
+        std::array<f32, 4> cut { };  ///< Centre of the disc cut out, from the shape's middle; its radius; unused
+        std::array<f32, 2> fill { }; ///< Shares of the height where the fill starts and stops changing
     };
 
-    enum class BatchKind : std::uint8_t
+    enum class BatchKind : u8
     {
         Quads,  ///< Indices into vertices(), drawn with the batch's texture
         Shapes, ///< Indices into shape_vertices(), drawn with the shape shader
@@ -109,8 +110,8 @@ namespace rct3::ui
     struct Batch
     {
         TextureId texture = 0;
-        std::uint32_t first_index = 0;
-        std::uint32_t index_count = 0;
+        u32 first_index = 0;
+        u32 index_count = 0;
         BatchKind kind = BatchKind::Quads;
     };
 
@@ -132,11 +133,11 @@ namespace rct3::ui
         void clear();
 
         /// Pixels per logical unit, applied to every rectangle drawn or clipped after this. Default 1.
-        void set_scale(float scale)
+        void set_scale(f32 scale)
         {
             scale_ = scale;
         }
-        [[nodiscard]] float scale() const
+        [[nodiscard]] f32 scale() const
         {
             return scale_;
         }
@@ -153,7 +154,7 @@ namespace rct3::ui
         void shape(const Shape& shape);
         /// A convex polygon in one colour, its corners (x, y) in order either way round, cut to the clip. Its
         /// edges are not smoothed; for outlines and markers over pictures, such as a view drawn on a map.
-        void polygon(std::span<const std::array<float, 2>> corners, Color color);
+        void polygon(std::span<const std::array<f32, 2>> corners, Color color);
 
         /// Narrows drawing to `rect` within the current clip until the matching pop_clip. Returns false when
         /// nothing would be visible, so the caller may skip what it was about to draw (it still has to pop).
@@ -166,7 +167,7 @@ namespace rct3::ui
         {
             return vertices_;
         }
-        [[nodiscard]] std::span<const std::uint32_t> indices() const
+        [[nodiscard]] std::span<const u32> indices() const
         {
             return indices_;
         }
@@ -180,14 +181,14 @@ namespace rct3::ui
         }
 
     private:
-        void add_indices(BatchKind kind, TextureId texture, std::uint32_t base, std::span<const std::uint32_t> corners);
+        void add_indices(BatchKind kind, TextureId texture, u32 base, std::span<const u32> corners);
 
         std::vector<Vertex> vertices_;
         std::vector<ShapeVertex> shape_vertices_;
-        std::vector<std::uint32_t> indices_;
+        std::vector<u32> indices_;
         std::vector<Batch> batches_;
         std::vector<Rect> clips_;
-        float scale_ = 1;
+        f32 scale_ = 1;
     };
 
 } // namespace rct3::ui

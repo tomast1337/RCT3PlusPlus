@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/party.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <doctest/doctest.h>
 
@@ -62,7 +64,7 @@ namespace
         return p;
     }
 
-    PartyFacts party(const Park& p, std::optional<std::int32_t> kind = std::nullopt)
+    PartyFacts party(const Park& p, std::optional<i32> kind = std::nullopt)
     {
         PartyFacts f { .kind = kind };
         for (const save::model::Guest& g : p.people.guests)
@@ -108,7 +110,7 @@ TEST_CASE("party_page: cash adds up the members' money, row by row as one guest'
     // The same rows, in the same order and halves, as the guest window's Cash tab.
     const InfoPage one = person_page(PersonTab::Cash, party(p).members.front(), table(), units);
     REQUIRE(one.lines.size() == page.lines.size());
-    for (std::size_t i = 0; i < one.lines.size(); ++i)
+    for (usize i = 0; i < one.lines.size(); ++i)
     {
         CHECK(one.lines[i].name == page.lines[i].name);
         CHECK(one.lines[i].half == page.lines[i].half);

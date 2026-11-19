@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path/route.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -14,22 +16,22 @@ namespace rct3::park::path
     {
         struct Node
         {
-            save::model::Tile spot;  ///< Where the last piece is
-            std::int32_t height = 0; ///< Where it ends
+            save::model::Tile spot; ///< Where the last piece is
+            i32 height = 0;         ///< Where it ends
             Side heading { };
             bool on_slope = false;
             bool started = true; ///< False for the first node of a trail that has laid nothing yet
-            std::int64_t cost = 0;
-            std::size_t parent = 0;
+            i64 cost = 0;
+            usize parent = 0;
             RouteStep step;
         };
 
-        std::uint64_t key_of(const Node& n)
+        u64 key_of(const Node& n)
         {
-            const auto col = static_cast<std::uint64_t>(static_cast<std::uint16_t>(n.spot.col));
-            const auto row = static_cast<std::uint64_t>(static_cast<std::uint16_t>(n.spot.row));
-            const auto height = static_cast<std::uint64_t>(static_cast<std::uint32_t>(n.height));
-            return col | row << 16 | height << 32 | static_cast<std::uint64_t>(n.heading.value) << 60 | std::uint64_t { n.on_slope } << 62;
+            const auto col = static_cast<u64>(static_cast<u16>(n.spot.col));
+            const auto row = static_cast<u64>(static_cast<u16>(n.spot.row));
+            const auto height = static_cast<u64>(static_cast<u32>(n.height));
+            return col | row << 16 | height << 32 | static_cast<u64>(n.heading.value) << 60 | u64 { n.on_slope } << 62;
         }
 
         /// The builder as it stands after `node`.
@@ -56,16 +58,16 @@ namespace rct3::park::path
         }
 
         /// kRouteCutCost for each started unit the ground of `piece`'s tile is cut down by.
-        std::int64_t cut_cost(const NextPiece& piece, const save::model::TerrainGrid& grid)
+        i64 cut_cost(const NextPiece& piece, const save::model::TerrainGrid& grid)
         {
             if (!piece.cut)
                 return 0;
-            const float depth = grid.at(piece.spot.col, piece.spot.row).max_height() - static_cast<float>(std::min(piece.start, piece.end));
-            return kRouteCutCost * std::max<std::int64_t>(1, static_cast<std::int64_t>(std::ceil(depth)));
+            const f32 depth = grid.at(piece.spot.col, piece.spot.row).max_height() - static_cast<f32>(std::min(piece.start, piece.end));
+            return kRouteCutCost * std::max<i64>(1, static_cast<i64>(std::ceil(depth)));
         }
     } // namespace
 
-    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::model::Tile goal, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, units::Money ground_cost, std::optional<std::int32_t> goal_height, std::optional<const SolidTiles&> solids, bool straight)
+    std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::model::Tile goal, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, units::Money ground_cost, std::optional<i32> goal_height, std::optional<const SolidTiles&> solids, bool straight)
     {
         if (!from.start || !grid.contains(goal.col, goal.row) || grid.at(goal.col, goal.row).ownership() != save::model::Ownership::Owned)
             return std::nullopt;
@@ -86,20 +88,20 @@ namespace rct3::park::path
         nodes.push_back(first);
 
         // Each piece is checked only against the paths on its own tile.
-        std::unordered_map<std::uint32_t, std::vector<save::model::PathTile>> by_tile;
+        std::unordered_map<u32, std::vector<save::model::PathTile>> by_tile;
         for (const save::model::PathTile& p : paths)
-            by_tile[static_cast<std::uint32_t>(p.row) << 16 | p.col].push_back(p);
+            by_tile[static_cast<u32>(p.row) << 16 | p.col].push_back(p);
         const std::vector<save::model::PathTile> none;
         const auto paths_at = [&](save::model::Tile spot) -> std::span<const save::model::PathTile> {
-            const auto found = by_tile.find(static_cast<std::uint32_t>(spot.row) << 16 | static_cast<std::uint16_t>(spot.col));
+            const auto found = by_tile.find(static_cast<u32>(spot.row) << 16 | static_cast<u16>(spot.col));
             return found == by_tile.end() ? std::span<const save::model::PathTile>(none) : std::span<const save::model::PathTile>(found->second);
         };
 
         // A piece keeps the same room from the route's own earlier pieces on its tile as from other paths.
-        const auto crosses_route = [&](std::size_t at, const NextPiece& piece) {
+        const auto crosses_route = [&](usize at, const NextPiece& piece) {
             const auto low = std::min(piece.start, piece.end);
             const auto high = std::max(piece.start, piece.end);
-            for (std::size_t i = at; i != 0; i = nodes[i].parent)
+            for (usize i = at; i != 0; i = nodes[i].parent)
             {
                 const NextPiece& laid = nodes[i].step.piece;
                 if (laid.spot == piece.spot && std::min(laid.start, laid.end) < high + kPathHeadroom && low < std::max(laid.start, laid.end) + kPathHeadroom)
@@ -108,37 +110,37 @@ namespace rct3::park::path
             return false;
         };
         // How far a tile's middle stands off the line from the first tile's middle to the goal's, in tiles.
-        const auto line_dx = static_cast<float>(goal.col - first.spot.col);
-        const auto line_dy = static_cast<float>(goal.row - first.spot.row);
-        const float line_length = std::hypot(line_dx, line_dy);
+        const auto line_dx = static_cast<f32>(goal.col - first.spot.col);
+        const auto line_dy = static_cast<f32>(goal.row - first.spot.row);
+        const f32 line_length = std::hypot(line_dx, line_dy);
         const auto off_line = [&](save::model::Tile at) {
             if (line_length == 0)
                 return 0.0F;
-            return std::abs(static_cast<float>(at.col - first.spot.col) * line_dy - static_cast<float>(at.row - first.spot.row) * line_dx) / line_length;
+            return std::abs(static_cast<f32>(at.col - first.spot.col) * line_dy - static_cast<f32>(at.row - first.spot.row) * line_dx) / line_length;
         };
         // The lower end of the route: where its first piece starts, or the goal's height.
         FootpathBuilder at_goal;
         start_at(at_goal, goal);
         const auto start_piece = first.started ? std::nullopt : next_piece(from, grid);
-        const std::int32_t first_height = first.started ? first.height : start_piece ? start_piece->start : 0;
-        const std::int32_t floor = std::min(first_height, goal_height.value_or(next_piece(at_goal, grid)->start));
+        const i32 first_height = first.started ? first.height : start_piece ? start_piece->start : 0;
+        const i32 floor = std::min(first_height, goal_height.value_or(next_piece(at_goal, grid)->start));
         const auto dip_cost = [&](const NextPiece& piece) { return kRouteDipCost * std::max(0, floor - std::min(piece.start, piece.end)); };
-        const std::int64_t least_step = std::max<std::int64_t>(ground_cost.value, 0) + kRouteStepCost;
+        const i64 least_step = std::max<i64>(ground_cost.value, 0) + kRouteStepCost;
         const auto estimate = [&](save::model::Tile at) { return (std::abs(at.col - goal.col) + std::abs(at.row - goal.row)) * least_step; };
-        using Open = std::pair<std::int64_t, std::size_t>;
+        using Open = std::pair<i64, usize>;
         std::priority_queue<Open, std::vector<Open>, std::greater<>> open;
-        std::unordered_map<std::uint64_t, std::int64_t> best;
+        std::unordered_map<u64, i64> best;
         open.push({ estimate(first.spot), 0 });
-        std::size_t looked = 0;
+        usize looked = 0;
         while (!open.empty() && looked < kRouteSearchLimit)
         {
-            const std::size_t at = open.top().second;
+            const usize at = open.top().second;
             open.pop();
             const Node node = nodes[at];
             if (node.started && node.spot == goal && at != 0)
             {
                 std::vector<RouteStep> route;
-                for (std::size_t i = at; i != 0; i = nodes[i].parent)
+                for (usize i = at; i != 0; i = nodes[i].parent)
                     route.push_back(nodes[i].step);
                 std::ranges::reverse(route);
                 return route;
@@ -151,7 +153,7 @@ namespace rct3::park::path
                 const bool turn = heading != node.heading;
                 if (node.started && (turn && node.on_slope || heading == node.heading.opposite()))
                     continue;
-                for (std::size_t s = 0; s < kPathSlopeCount; ++s)
+                for (usize s = 0; s < kPathSlopeCount; ++s)
                 {
                     FootpathBuilder b = builder_at(from, node);
                     b.heading = heading;
@@ -178,7 +180,7 @@ namespace rct3::park::path
                     next.parent = at;
                     next.step = { heading, b.slope, *piece };
                     next.cost = node.cost + price_of(*piece, b, grid, here, ground_cost).value + kRouteStepCost + (node.started && turn && !straight ? kRouteTurnCost : 0) + (straight ? std::llround(kRouteLineCost * off_line(piece->spot)) : 0) + cut_cost(*piece, grid) + dip_cost(*piece) + (b.slope != PathSlope::Flat ? kRouteSlopeCost : 0);
-                    const std::uint64_t key = key_of(next);
+                    const u64 key = key_of(next);
                     if (const auto known = best.find(key); known != best.end() && known->second <= next.cost)
                         continue;
                     best[key] = next.cost;

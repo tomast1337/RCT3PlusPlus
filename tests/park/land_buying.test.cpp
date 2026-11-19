@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/land_buying.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -12,12 +14,12 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid strip(std::initializer_list<std::uint8_t> flags)
+    save::model::TerrainGrid strip(std::initializer_list<u8> flags)
     {
         save::model::TerrainGrid g;
-        g.width = static_cast<std::int32_t>(flags.size());
+        g.width = static_cast<i32>(flags.size());
         g.height = 1;
-        for (const std::uint8_t f : flags)
+        for (const u8 f : flags)
             g.cells.push_back({ .flags = f });
         return g;
     }

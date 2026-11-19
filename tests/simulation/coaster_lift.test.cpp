@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/coaster.hpp"
 
 #include <cstdint>
@@ -10,7 +11,7 @@ using namespace rct3::simulation;
 
 namespace
 {
-    constexpr float kOpen = std::numeric_limits<float>::infinity();
+    constexpr f32 kOpen = std::numeric_limits<f32>::infinity();
 
     /// A 100 m circuit: a 10 m station, a lift tower whose car carries 20 m of track from the station's end to 26 m
     /// of rails going up from 14 m on, then a 30 m drop and level back home.
@@ -31,9 +32,9 @@ namespace
 
     /// Drives `c` in tenths of a second, its lift's car going back down between, till `until` holds or `most`
     /// seconds pass; the seconds it took.
-    float drive_until(Coaster& c, std::vector<Carriage>& cars, auto until, float most = 120, float room = kOpen)
+    f32 drive_until(Coaster& c, std::vector<Carriage>& cars, auto until, f32 most = 120, f32 room = kOpen)
     {
-        float t = 0;
+        f32 t = 0;
         for (; t < most && !until(); t += 0.1f)
         {
             lower_carriages(c, cars, 0.1f);
@@ -58,7 +59,7 @@ TEST_CASE("a train boards a lift's car, is carried up, let go at the top, and th
     CHECK(c.lifted->phase == LiftPhase::Engaging);
     CHECK(c.lifted->aboard.value == doctest::Approx(19.5f));
     CHECK(c.at == doctest::Approx(10));
-    const float standing = drive_until(c, cars, [&] { return c.lifted->phase != LiftPhase::Engaging; });
+    const f32 standing = drive_until(c, cars, [&] { return c.lifted->phase != LiftPhase::Engaging; });
     CHECK(standing == doctest::Approx(2).epsilon(0.1));
     // Carried up, no faster than the car climbs.
     drive_until(c, cars, [&] { return c.lifted->phase != LiftPhase::Rising; });
@@ -109,7 +110,7 @@ TEST_CASE("a train waits short of a lift till its car is back down")
     second.travelled = 5;
     second.speed = 2;
     second.running = true;
-    for (std::int32_t k = 0; k < 100; ++k)
+    for (i32 k = 0; k < 100; ++k)
         drive(second, 0.1f, kOpen, cars);
     CHECK_FALSE(second.lifted);
     CHECK(second.at == doctest::Approx(10));
@@ -123,7 +124,7 @@ TEST_CASE("without its car known, a lift tower pulls a train up as a chain does"
 {
     Coaster c = tower_lift();
     c.running = true;
-    float t = 0;
+    f32 t = 0;
     for (; t < 120 && c.running; t += 0.1f)
         drive(c, 0.1f);
     CHECK_FALSE(c.lifted);

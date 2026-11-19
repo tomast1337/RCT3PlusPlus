@@ -12,6 +12,7 @@
 // screen again whenever something changes.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/font/font.hpp"
 
@@ -42,19 +43,19 @@ namespace rct3::ui::screens::loading_screen
     inline constexpr Color kEdge = hex("#3578ac"); ///< Round the bar, and the stages' markers
 
     // Our own measures, in screen units at a scale of 1 (a 1280 by 720 screen).
-    inline constexpr float kColumn = 560;     ///< The column's width, at most
-    inline constexpr float kMargin = 24;      ///< Kept clear round the column
-    inline constexpr float kLogoHeight = 220; ///< The logo's height, at most
-    inline constexpr float kHeadingHeight = 34;
-    inline constexpr float kBarHeight = 16;
-    inline constexpr float kRowHeight = 26; ///< A stage's row
-    inline constexpr float kMarker = 10;    ///< A stage's disc
-    inline constexpr float kDetailHeight = 22;
-    inline constexpr float kGap = 14; ///< Between the parts
-    inline constexpr float kLineHeight = 2;
-    inline constexpr float kLineAbove = 5; ///< From the line's bottom to the band
+    inline constexpr f32 kColumn = 560;     ///< The column's width, at most
+    inline constexpr f32 kMargin = 24;      ///< Kept clear round the column
+    inline constexpr f32 kLogoHeight = 220; ///< The logo's height, at most
+    inline constexpr f32 kHeadingHeight = 34;
+    inline constexpr f32 kBarHeight = 16;
+    inline constexpr f32 kRowHeight = 26; ///< A stage's row
+    inline constexpr f32 kMarker = 10;    ///< A stage's disc
+    inline constexpr f32 kDetailHeight = 22;
+    inline constexpr f32 kGap = 14; ///< Between the parts
+    inline constexpr f32 kLineHeight = 2;
+    inline constexpr f32 kLineAbove = 5; ///< From the line's bottom to the band
 
-    enum class StageState : std::uint8_t
+    enum class StageState : u8
     {
         Waiting,
         Current,
@@ -70,8 +71,8 @@ namespace rct3::ui::screens::loading_screen
     struct Picture
     {
         TextureId texture = 0;
-        float width = 0;
-        float height = 0;
+        f32 width = 0;
+        f32 height = 0;
     };
 
     struct Look
@@ -87,23 +88,23 @@ namespace rct3::ui::screens::loading_screen
         std::u16string_view heading;
         std::span<const Stage> stages;
         std::u16string_view detail;
-        std::u16string_view warning;   ///< Shown under the detail, in its own colour
-        std::optional<float> progress; ///< 0..1; without it there is no bar and no share
+        std::u16string_view warning; ///< Shown under the detail, in its own colour
+        std::optional<f32> progress; ///< 0..1; without it there is no bar and no share
     };
 
     /// Where everything goes on one screen, in the screen's units. Parts that are left out are empty.
     struct Layout
     {
-        float scale = 1; ///< Of the measures above
-        Rect dark;       ///< The backdrop above the split
-        Rect light;      ///< And below
-        Rect band;       ///< Across the screen behind the logo; empty without one
+        f32 scale = 1; ///< Of the measures above
+        Rect dark;     ///< The backdrop above the split
+        Rect light;    ///< And below
+        Rect band;     ///< Across the screen behind the logo; empty without one
         Rect line;
         Rect logo;
         Rect heading;
         Rect bar;
         Rect stages; ///< All the rows
-        float row = 0;
+        f32 row = 0;
         Rect detail; ///< The detail and the warning, one over the other
     };
 
@@ -111,24 +112,24 @@ namespace rct3::ui::screens::loading_screen
     /// there is text, a bar, how many stages and detail lines.
     struct Parts
     {
-        float logo_width = 0;
-        float logo_height = 0;
+        f32 logo_width = 0;
+        f32 logo_height = 0;
         bool heading = false;
         bool bar = false;
-        std::size_t stages = 0;
-        std::size_t detail_lines = 0;
+        usize stages = 0;
+        usize detail_lines = 0;
     };
     [[nodiscard]] Layout layout_for(const Rect& screen, const Parts& parts);
 
     /// The bar's filled part for `progress`: from its left end, never narrower than it is tall, so both ends
     /// stay round; empty at 0.
-    [[nodiscard]] Rect bar_fill(const Rect& bar, float progress);
+    [[nodiscard]] Rect bar_fill(const Rect& bar, f32 progress);
 
     /// How far a load made of `total` stages of about equal size has got once `done` of them are done.
-    [[nodiscard]] float stage_progress(std::size_t done, std::size_t total);
+    [[nodiscard]] f32 stage_progress(usize done, usize total);
 
     /// The progress in whole percent, as in "25%".
-    [[nodiscard]] std::u16string percent_text(float progress);
+    [[nodiscard]] std::u16string percent_text(f32 progress);
 
     /// Draws the whole screen over `screen`, in the list's units.
     void draw(DrawList& list, const Rect& screen, const Look& look, const Content& content);

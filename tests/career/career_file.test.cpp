@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "career/career_file.hpp"
 
+#include "core/types.hpp"
+
 #include <cstring>
 #include <doctest/doctest.h>
 #include <filesystem>
@@ -42,9 +44,9 @@ namespace
         return d;
     }
 
-    std::size_t find(const std::vector<std::byte>& bytes, std::string_view tag)
+    usize find(const std::vector<std::byte>& bytes, std::string_view tag)
     {
-        for (std::size_t i = 0; i + tag.size() <= bytes.size(); ++i)
+        for (usize i = 0; i + tag.size() <= bytes.size(); ++i)
         {
             if (std::memcmp(bytes.data() + i, tag.data(), tag.size()) == 0)
                 return i;
@@ -101,7 +103,7 @@ TEST_CASE("files that do not check out are not read")
     damaged[find(damaged, "Someone")] = std::byte { 's' };
     CHECK(read_career(damaged).error() == CareerFileError::BadChecksum);
 
-    const std::size_t end = find(bytes, "END ");
+    const usize end = find(bytes, "END ");
     CHECK(read_career(std::span(bytes).first(end)).error() == CareerFileError::Truncated);
     CHECK(read_career(std::span(bytes).first(bytes.size() - 1)).error() == CareerFileError::Truncated);
 }

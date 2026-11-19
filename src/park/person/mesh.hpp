@@ -13,6 +13,7 @@
 // with the socket's turn too, as its track has it.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/moving_meshes.hpp"
 #include "park/object/mesh.hpp"
 #include "park/person/models.hpp"
@@ -35,18 +36,18 @@ namespace rct3::park::person
         const PartSet* head = nullptr;
         const PartSet* body = nullptr;
         const PartSet* legs = nullptr;
-        bool swimwear = false;                      ///< Draw the sets' swimwear pieces and head
-        std::array<std::uint8_t, 3> colours { };    ///< Skin, top and bottom, each 0..15
-        std::array<std::uint32_t, 3> optionals { }; ///< Bit k turns on optional piece k of head, body, legs
+        bool swimwear = false;            ///< Draw the sets' swimwear pieces and head
+        std::array<u8, 3> colours { };    ///< Skin, top and bottom, each 0..15
+        std::array<u32, 3> optionals { }; ///< Bit k turns on optional piece k of head, body, legs
     };
 
     /// One person to draw.
     struct PlacedPerson
     {
         PersonLook look { };
-        std::size_t level = 0;                     ///< Of detail, 0 the finest
-        std::int32_t motion = 0;                   ///< By number (see person/motions.hpp)
-        float time = 0;                            ///< Seconds into the motion
+        usize level = 0;                           ///< Of detail, 0 the finest
+        i32 motion = 0;                            ///< By number (see person/motions.hpp)
+        f32 time = 0;                              ///< Seconds into the motion
         glm::mat4 world { 1.0f };                  ///< Model to park
         const object::ObjectModel* held = nullptr; ///< Held in the left hand, drawn at its finest level in its own picture;
                                                    ///< with no body, lying on its own at `world` (litter on a path)
@@ -55,7 +56,7 @@ namespace rct3::park::person
     };
 
     /// How far a person's texture coordinates move to reach cell `colour`.
-    [[nodiscard]] glm::vec2 colour_cell(std::uint8_t colour);
+    [[nodiscard]] glm::vec2 colour_cell(u8 colour);
 
     /// The middle of socket piece `socket` (see PieceModel::left_hand) in `person`'s motion, in their own space;
     /// nothing when the motion has no keys.
@@ -69,19 +70,19 @@ namespace rct3::park::person
     [[nodiscard]] std::optional<glm::mat4> hand_place(const PersonLibrary& library, const PlacedPerson& person);
 
     /// How long `person`'s motion lasts, played once through, seconds; 0 when their body has none.
-    [[nodiscard]] float motion_seconds(const PersonLibrary& library, const PlacedPerson& person);
+    [[nodiscard]] f32 motion_seconds(const PersonLibrary& library, const PlacedPerson& person);
 
     /// How fast the walk of `legs` (a legs piece), or its other way of going on foot `motion` (a run, a tired
     /// walk), carries a walker along, in park units for each second of the motion: the speed at which a foot
     /// on the ground slides back beneath them. Played at this pace the feet stay put. Nothing when the piece
     /// has no such motion to measure.
-    [[nodiscard]] std::optional<float> walk_pace(const PieceModel& legs, std::int32_t motion);
+    [[nodiscard]] std::optional<f32> walk_pace(const PieceModel& legs, i32 motion);
 
     /// The triangles of people gathered for one picture.
     struct PersonRun
     {
         std::vector<GroundVertex> vertices { };
-        std::vector<std::uint32_t> indices { };
+        std::vector<u32> indices { };
     };
     /// Those of every picture, by picture. Kept by a caller that builds mesh after mesh and passed to each, so
     /// the lists' memory is reused.

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/edge_walls.hpp"
 
+#include "core/types.hpp"
 #include "park/item_category.hpp"
 #include "park/object/placement.hpp"
 #include "park/path/furniture.hpp"
@@ -14,13 +15,13 @@ namespace rct3::park
     namespace
     {
         /// How high a fence that says nothing of its own height stands, in world units.
-        constexpr float kFenceHeight = 2;
+        constexpr f32 kFenceHeight = 2;
         /// How far below its base a wall still meets a path's edge, for a path on ground that falls along it.
-        constexpr float kBelow = 0.5f;
+        constexpr f32 kBelow = 0.5f;
 
-        std::uint64_t key(save::model::Tile tile, Side side)
+        u64 key(save::model::Tile tile, Side side)
         {
-            return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(tile.row)) << 16 | static_cast<std::uint32_t>(tile.col)) << 2 | static_cast<std::uint32_t>(side.value);
+            return (static_cast<u64>(static_cast<u32>(tile.row)) << 16 | static_cast<u32>(tile.col)) << 2 | static_cast<u32>(side.value);
         }
     } // namespace
 
@@ -34,11 +35,11 @@ namespace rct3::park
         const object::ObjectModel& m = model->second;
         if (static_cast<object::Positioning>(m.positioning) != object::Positioning::Edge || (m.category != std::to_underlying(ItemCategory::Fence) && m.category != std::to_underlying(ItemCategory::Wall)))
             return std::nullopt;
-        const float base = object::object_transform(o, object::Positioning::Edge, grid, m.squares, m.ground_height)[3].y;
-        std::int32_t top = 0;
+        const f32 base = object::object_transform(o, object::Positioning::Edge, grid, m.squares, m.ground_height)[3].y;
+        i32 top = 0;
         for (const auto& levels : m.solid)
             top = std::max(top, levels ? (*levels)[1] + 1 : 0);
-        return EdgeWall { .tile = { o.col, o.row }, .side = object::faced_side(ModelTurn::from(o.rotation)), .low = base - kBelow, .high = base + (top > 0 ? static_cast<float>(top) : kFenceHeight) };
+        return EdgeWall { .tile = { o.col, o.row }, .side = object::faced_side(ModelTurn::from(o.rotation)), .low = base - kBelow, .high = base + (top > 0 ? static_cast<f32>(top) : kFenceHeight) };
     }
 
     EdgeWalls edge_walls(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid)
@@ -57,7 +58,7 @@ namespace rct3::park
         return walls;
     }
 
-    bool walled(const EdgeWalls& walls, save::model::Tile tile, Side side, float height)
+    bool walled(const EdgeWalls& walls, save::model::Tile tile, Side side, f32 height)
     {
         const auto [first, last] = walls.equal_range(key(tile, side));
         return std::any_of(first, last, [&](const auto& w) { return height >= w.second.low && height < w.second.high; });

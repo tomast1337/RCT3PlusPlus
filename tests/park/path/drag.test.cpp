@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path/drag.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -10,16 +12,16 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid owned_grid(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         for (save::model::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
+            c.flags = static_cast<u8>(save::model::TileFlag::Owned);
         return g;
     }
 } // namespace
@@ -30,7 +32,7 @@ TEST_CASE("a brush stroke fills the tiles between two looks at the pointer, side
     CHECK(brush_line({ 1, 1 }, { 1, 1 }) == std::vector<save::model::Tile> { { 1, 1 } });
     const std::vector<save::model::Tile> diagonal = brush_line({ 0, 0 }, { 2, 2 });
     CHECK(diagonal.size() == 5);
-    for (std::size_t i = 1; i < diagonal.size(); ++i)
+    for (usize i = 1; i < diagonal.size(); ++i)
         CHECK(std::abs(diagonal[i].col - diagonal[i - 1].col) + std::abs(diagonal[i].row - diagonal[i - 1].row) == 1);
     CHECK(diagonal.back() == save::model::Tile { 2, 2 });
     // A shallow line stays near the straight one.
@@ -130,7 +132,7 @@ TEST_CASE("a trail from a door heads out of its back, away from the ride, wherev
     const save::model::TerrainGrid g = owned_grid(5, 5);
     // By the door's turn, the tile beyond its back.
     const std::array<save::model::Tile, 4> behind { { { 3, 2 }, { 2, 1 }, { 1, 2 }, { 2, 3 } } };
-    for (std::uint8_t turn = 0; turn < 4; ++turn)
+    for (u8 turn = 0; turn < 4; ++turn)
     {
         CAPTURE(turn);
         const std::vector<save::model::PlacementSpot> doors { { .col = 2, .row = 2, .height = 2, .direction = turn } };

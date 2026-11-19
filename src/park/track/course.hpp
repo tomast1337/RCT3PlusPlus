@@ -6,6 +6,7 @@
 // its trains and cars finds a point on the line.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "park/pools/pools.hpp"
 #include "park/track/pieces.hpp"
@@ -22,7 +23,7 @@ namespace rct3::park::track
 {
 
     /// What the stretch of track from a point to the next is.
-    enum class CourseKind : std::uint8_t
+    enum class CourseKind : u8
     {
         Plain,
         Chain,      ///< A lift chain pulls the cars up
@@ -39,19 +40,19 @@ namespace rct3::park::track
     /// takes it up the rails from `from` to `to` and lets it go there. Distances along the course.
     struct LiftRun
     {
-        float entry = 0; ///< The start of the tower's foot, where the track before it ends
-        float from = 0;  ///< The bottom of the car's rails up the tower
-        float to = 0;    ///< The end of the tower's top
+        f32 entry = 0; ///< The start of the tower's foot, where the track before it ends
+        f32 from = 0;  ///< The bottom of the car's rails up the tower
+        f32 to = 0;    ///< The end of the tower's top
     };
 
     struct TrackCourse
     {
         std::vector<glm::vec3> points;
         std::vector<glm::vec3> ups;                        ///< Up for the track at each point, leaning with its bank; none is straight up
-        std::vector<float> distance;                       ///< From the start to each point
+        std::vector<f32> distance;                         ///< From the start to each point
         std::vector<CourseKind> kinds;                     ///< Of the stretch from each point to the next; the last is unused
-        std::vector<float> brake_speeds;                   ///< Of the brake or block brake from each point, in m/s: 0 where it has none of its own, below 0 off them; of a booster, the speed it pushes up to
-        std::vector<float> piece_starts;                   ///< Distance at the start of each of the track's pieces
+        std::vector<f32> brake_speeds;                     ///< Of the brake or block brake from each point, in m/s: 0 where it has none of its own, below 0 off them; of a booster, the speed it pushes up to
+        std::vector<f32> piece_starts;                     ///< Distance at the start of each of the track's pieces
         std::vector<bool> wet;                             ///< By piece, as piece_starts: runs through open water, not in a tube
         std::vector<bool> covered;                         ///< By piece, as piece_starts: in a tube or tunnel
         std::vector<bool> water;                           ///< By piece, as piece_starts: PieceRecord::water
@@ -59,18 +60,18 @@ namespace rct3::park::track
         std::vector<bool> steady;                          ///< By piece: a slide's car's swing is not pushed by its turns
         std::vector<std::vector<PiecePush>> pushes;        ///< By piece, as piece_starts: from and to along the course
         bool closed = false;                               ///< The end joins the start, so cars go round
-        std::optional<float> reverse_lift { };             ///< Where the hill a reverse cable lift pulls the train up backwards ends; none without one
+        std::optional<f32> reverse_lift { };               ///< Where the hill a reverse cable lift pulls the train up backwards ends; none without one
         bool splash_end = false;                           ///< Its last piece is a pool slide's open end
-        std::size_t first_piece = 0;                       ///< Of the track's pieces, the one the course starts on
+        usize first_piece = 0;                             ///< Of the track's pieces, the one the course starts on
         std::vector<glm::vec3> other_stations { };         ///< Where the track's other stretches with a station start, in their order
         std::vector<std::vector<glm::vec3>> climbs { };    ///< Of a slide climbed on foot, its pieces' ways up and down (PieceRecord::climbs)
         std::vector<pools::PoolOpening> pool_openings { }; ///< Where its pieces join a pool beside them (PieceRecord::pool_sides)
-        std::vector<float> drop_offs { };                  ///< Distances where a slide's riders are let off into the pool, on the way back to its lift
+        std::vector<f32> drop_offs { };                    ///< Distances where a slide's riders are let off into the pool, on the way back to its lift
         /// Stretches, from and to a distance, where a slide's car on its way back to its lift is down in the pool's
         /// water: from where its path first falls below the height its piece starts at, to that piece's end.
-        std::vector<std::array<float, 2>> wades { };
+        std::vector<std::array<f32, 2>> wades { };
         std::vector<LiftRun> lifts { }; ///< Its lift towers, in order along it
-        [[nodiscard]] float length() const
+        [[nodiscard]] f32 length() const
         {
             return distance.empty() ? 0 : distance.back();
         }
@@ -87,38 +88,38 @@ namespace rct3::park::track
 
     /// The point `distance` along `course`, going round again past the end of a closed course and held at the
     /// ends of an open one. The course must have a point.
-    [[nodiscard]] glm::vec3 course_point(const TrackCourse& course, float distance);
+    [[nodiscard]] glm::vec3 course_point(const TrackCourse& course, f32 distance);
 
     /// Which way the track runs at `distance`, as course_point finds it; a unit vector.
-    [[nodiscard]] glm::vec3 course_direction(const TrackCourse& course, float distance);
+    [[nodiscard]] glm::vec3 course_direction(const TrackCourse& course, f32 distance);
 
     /// Which way is up for the track at `distance`, as course_point finds it; a unit vector.
-    [[nodiscard]] glm::vec3 course_up(const TrackCourse& course, float distance);
+    [[nodiscard]] glm::vec3 course_up(const TrackCourse& course, f32 distance);
 
     /// How long each run of station stretches of `course` is, in the order they start; on a closed course a
     /// run over the end goes on from the start.
-    [[nodiscard]] std::vector<float> station_runs(const TrackCourse& course);
+    [[nodiscard]] std::vector<f32> station_runs(const TrackCourse& course);
 
     /// Where a car's front and rear wheels stand on a course, as distances along it. A car without wheels of
     /// its own has both at one point.
     struct Axles
     {
-        float front = 0;
-        float rear = 0;
+        f32 front = 0;
+        f32 rear = 0;
     };
 
     /// Where a car the park kept at `saved`, its wheels at `saved_at` along `course`, stands once both are
     /// moved on by `by`: it points from its rear wheels to its front ones, leans with the track's bank
     /// between them, and keeps the place and turn it had against the track.
-    [[nodiscard]] glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, float by);
+    [[nodiscard]] glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, f32 by);
 
     /// How long the track a lift's car, `model`, carries is; 0 for a model carrying none.
-    [[nodiscard]] float carried_length(const object::ObjectModel& model);
+    [[nodiscard]] f32 carried_length(const object::ObjectModel& model);
 
     /// Where a lift's car, `model`, stands `at` along `course` up `run`, from the run's `from` at the bottom to its
     /// `to`: its wheels on the tower's rails, turned so that at the bottom the track it carries starts on the
     /// side trains come from.
-    [[nodiscard]] glm::mat4 lift_car_place(const TrackCourse& course, const LiftRun& run, const object::ObjectModel& model, float at);
+    [[nodiscard]] glm::mat4 lift_car_place(const TrackCourse& course, const LiftRun& run, const object::ObjectModel& model, f32 at);
 
     /// Where a car the park kept at `saved`, its wheels at `saved_at` along `course`, stands with its wheels
     /// `on` along the track of the lift's car `lift` (`model`, standing at `lift_place`): a wheel short of that
@@ -126,29 +127,29 @@ namespace rct3::park::track
     [[nodiscard]] glm::mat4 moved_on_lift(const TrackCourse& course, const LiftRun& lift, const object::ObjectModel& model, const glm::mat4& lift_place, const glm::mat4& saved, Axles saved_at, Axles on);
 
     /// Track left clear between trains queued one behind another, in metres.
-    inline constexpr float kTrainGap = 2;
+    inline constexpr f32 kTrainGap = 2;
 
     /// How long a train of cars fitted as `fits` (by car) is, front to rear: its cars' lengths, a link's being the
     /// track from the rear of the car ahead of it to the front of the car behind, as stand_train stands them.
-    [[nodiscard]] float train_length(std::span<const object::CarFit> fits);
+    [[nodiscard]] f32 train_length(std::span<const object::CarFit> fits);
 
     /// How many trains of cars fitted as `fits` (by car) `course` takes: as many as fill half of it queued
     /// kTrainGap apart, so they have room to run (our own rule), no more than `cap` where the ride's kind sets
     /// one, and when kept a block apart (`blocks`) one fewer than it has blocks, each ending at a station, lift
     /// or block brake; at least one.
-    [[nodiscard]] std::int32_t trains_fitting(const TrackCourse& course, std::span<const object::CarFit> fits, bool blocks, std::optional<std::uint32_t> cap);
+    [[nodiscard]] i32 trains_fitting(const TrackCourse& course, std::span<const object::CarFit> fits, bool blocks, std::optional<u32> cap);
 
     /// Where the fronts of `count` trains `length` long stand on closed `course`, the first at `start` (a station's
     /// end): one at each station's end in turn on round the track, then more queued kTrainGap behind those, a station
     /// at a time; then likewise at the ends of its other blocks (lift tops, block brakes). Kept a block apart
     /// (`blocks`), each block takes one. Trains with no room behind a block's end before the next block back are left
     /// out, so there may be fewer than `count`; never none.
-    [[nodiscard]] std::vector<float> train_fronts(const TrackCourse& course, float start, float length, std::int32_t count, bool blocks);
+    [[nodiscard]] std::vector<f32> train_fronts(const TrackCourse& course, f32 start, f32 length, i32 count, bool blocks);
 
     /// The most cars, `fewest` or more, a train may have and still stand along each station of `course`, where
     /// `lengths` holds by count the length of a train of one car, of two, and so on up to the most it may have:
     /// 0 when even `fewest` do not fit, the most when the course has no station.
-    [[nodiscard]] std::int32_t cars_fitting(const TrackCourse& course, std::span<const float> lengths, std::int32_t fewest);
+    [[nodiscard]] i32 cars_fitting(const TrackCourse& course, std::span<const f32> lengths, i32 fewest);
 
     /// Stands `train`'s cars nose to tail back along `course` from `front`, each fitted as `fits` has it (by
     /// car; a car past its end fits as the last): its front `length` behind the car before, its wheels on the
@@ -156,14 +157,14 @@ namespace rct3::park::track
     /// rear wheels to its front ones. A link between two cars reaches its length back along the track from where
     /// the car ahead couples on, at the height they couple at, and the car behind couples on where it ends. Sets each car's distance (its front), length, wheels and place and turn
     /// as the park keeps them, and the train's distance (its front) and length. Nothing without fits.
-    void stand_train(const TrackCourse& course, save::model::Train& train, std::span<const object::CarFit> fits, float front);
+    void stand_train(const TrackCourse& course, save::model::Train& train, std::span<const object::CarFit> fits, f32 front);
 
-    using ArmAngles = std::array<float, 4>; ///< An arm's joint angles, degrees, from its base out
+    using ArmAngles = std::array<f32, 4>; ///< An arm's joint angles, degrees, from its base out
 
     /// The arm angles of a car `distance` along `course`, whose pieces hold `held` (by piece) at their middles.
     /// Between the middles of a piece and the one before or after, each joint turns evenly from one's angle to
     /// the other's, round the end of a closed course; where only one of the two holds angles the car takes
     /// those. Nothing where neither does.
-    [[nodiscard]] std::optional<ArmAngles> arm_angles_at(const TrackCourse& course, std::span<const std::optional<ArmAngles>> held, float distance);
+    [[nodiscard]] std::optional<ArmAngles> arm_angles_at(const TrackCourse& course, std::span<const std::optional<ArmAngles>> held, f32 distance);
 
 } // namespace rct3::park::track

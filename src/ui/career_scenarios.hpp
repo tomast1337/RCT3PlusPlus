@@ -14,6 +14,7 @@
 // scenario has a folder "Scenario<n>", numbered from 1.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/string_table.hpp"
 
 #include <cstddef>
@@ -28,7 +29,7 @@ namespace rct3::ui
 {
 
     /// The ids of game `pack`'s career scenarios: 0 the original game, then each expansion.
-    [[nodiscard]] std::vector<std::string> career_scenario_ids(const StringTable& strings, std::int32_t pack);
+    [[nodiscard]] std::vector<std::string> career_scenario_ids(const StringTable& strings, i32 pack);
 
     struct CareerScenarioInfo
     {
@@ -43,20 +44,20 @@ namespace rct3::ui
     };
 
     /// Scenario `index` of game `pack`, whose id is `id`.
-    [[nodiscard]] CareerScenarioInfo career_scenario(const StringTable& strings, std::int32_t pack, std::size_t index, std::string_view id);
+    [[nodiscard]] CareerScenarioInfo career_scenario(const StringTable& strings, i32 pack, usize index, std::string_view id);
 
     /// What a design locked behind base game scenario `scenario` (by place) says: the scenario to complete there
     /// and the level, 0 apprentice to 2 tycoon, to reach.
-    [[nodiscard]] std::u16string locked_design_help(const StringTable& strings, std::optional<std::int32_t> scenario, std::int32_t level);
+    [[nodiscard]] std::u16string locked_design_help(const StringTable& strings, std::optional<i32> scenario, i32 level);
 
     /// The folder of game `pack`'s career parks, relative to the game.
-    [[nodiscard]] std::string career_park_folder(const StringTable& strings, std::int32_t pack);
+    [[nodiscard]] std::string career_park_folder(const StringTable& strings, i32 pack);
 
     /// The first file in `files` (names, in any order) whose name holds `part`, ignoring case, as the game
     /// finds a scenario's park; the order is the list's.
-    [[nodiscard]] std::optional<std::size_t> find_career_park(std::span<const std::filesystem::path> files, std::string_view part);
+    [[nodiscard]] std::optional<usize> find_career_park(std::span<const std::filesystem::path> files, std::string_view part);
 
     /// "Player 3" for `number` 3, in the language.
-    [[nodiscard]] std::u16string default_career_name(const StringTable& strings, std::size_t number);
+    [[nodiscard]] std::u16string default_career_name(const StringTable& strings, usize number);
 
 } // namespace rct3::ui

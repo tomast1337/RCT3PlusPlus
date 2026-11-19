@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "render/null/null_device.hpp"
 
+#include "core/types.hpp"
 #include "imgui.h"
 
 #include <GLFW/glfw3.h>
@@ -64,7 +65,7 @@ namespace rct3::render::null
         int height = 0; // c-api
         if (config_.window != nullptr)
             glfwGetFramebufferSize(config_.window, &width, &height);
-        return { static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height) };
+        return { static_cast<u32>(width), static_cast<u32>(height) };
     }
 
     std::expected<BufferHandle, std::string> NullDevice::create_buffer(const BufferDesc& desc)
@@ -72,7 +73,7 @@ namespace rct3::render::null
         assert(state_ != State::Off);
         if (desc.data.empty())
             return std::unexpected("empty buffer");
-        const std::uint32_t id = next_id_++;
+        const u32 id = next_id_++;
         buffers_.emplace(id, Buffer { desc.usage, desc.data.size() });
         return BufferHandle { id };
     }
@@ -89,11 +90,11 @@ namespace rct3::render::null
             return std::unexpected("empty texture");
         if (desc.target ? !desc.pixels.empty() : desc.pixels.size() != texture_bytes(desc.width, desc.height, desc.format))
             return std::unexpected("pixel data does not match the texture size");
-        const std::uint32_t id = next_id_++;
+        const u32 id = next_id_++;
         textures_.emplace(id, Extent { desc.width, desc.height });
         if (desc.target && desc.readable_depth)
         {
-            const std::uint32_t depth = next_id_++;
+            const u32 depth = next_id_++;
             textures_.emplace(depth, Extent { desc.width, desc.height });
             depths_.emplace(id, depth);
         }
@@ -156,10 +157,10 @@ namespace rct3::render::null
             transient_id_ = next_id_++;
             buffers_.emplace(transient_id_, Buffer { BufferUsage::Vertex, 0 });
         }
-        const std::uint64_t offset = (transient_used_ + 15) & ~std::uint64_t { 15 };
+        const u64 offset = (transient_used_ + 15) & ~u64 { 15 };
         transient_used_ = offset + data.size();
         frame_stats_.transient_bytes += data.size();
-        return BufferSlice { BufferHandle { transient_id_ }, static_cast<std::uint32_t>(offset) };
+        return BufferSlice { BufferHandle { transient_id_ }, static_cast<u32>(offset) };
     }
 
     std::expected<PipelineHandle, std::string> NullDevice::create_pipeline(const PipelineDesc& desc)
@@ -167,7 +168,7 @@ namespace rct3::render::null
         assert(state_ != State::Off);
         if (desc.layout.attributes.size() > kMaxVertexAttributes)
             return std::unexpected("too many vertex attributes");
-        const std::uint32_t id = next_id_++;
+        const u32 id = next_id_++;
         pipelines_.emplace(id, desc.topology);
         return PipelineHandle { id };
     }
@@ -215,16 +216,16 @@ namespace rct3::render::null
     void NullDevice::end_frame()
     {
         assert(state_ == State::InFrame);
-        frame_stats_.buffers = static_cast<std::uint32_t>(buffers_.size());
-        frame_stats_.pipelines = static_cast<std::uint32_t>(pipelines_.size());
-        frame_stats_.textures = static_cast<std::uint32_t>(textures_.size());
+        frame_stats_.buffers = static_cast<u32>(buffers_.size());
+        frame_stats_.pipelines = static_cast<u32>(pipelines_.size());
+        frame_stats_.textures = static_cast<u32>(textures_.size());
         last_stats_ = frame_stats_;
         state_ = State::Idle;
         // Nothing is drawn, so the screen reads as black.
         if (const auto size = std::exchange(reading_, std::nullopt))
         {
-            read_ = ScreenPixels { *size, std::vector<std::uint8_t>(std::size_t { size->width } * size->height * 4, 0) };
-            for (std::size_t i = 3; i < read_->rgba.size(); i += 4)
+            read_ = ScreenPixels { *size, std::vector<u8>(usize { size->width } * size->height * 4, 0) };
+            for (usize i = 3; i < read_->rgba.size(); i += 4)
                 read_->rgba[i] = 255;
         }
     }

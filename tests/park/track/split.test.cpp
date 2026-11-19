@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/split.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3::park;
@@ -8,7 +10,7 @@ using namespace rct3::park::track;
 
 namespace
 {
-    PieceRecord piece(std::uint32_t side, std::string partner = "")
+    PieceRecord piece(u32 side, std::string partner = "")
     {
         PieceRecord r;
         r.side = side;

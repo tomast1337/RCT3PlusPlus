@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/guest_edits.hpp"
 
+#include "core/types.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/sandbox.hpp"
@@ -12,7 +13,7 @@ using namespace rct3::simulation;
 
 TEST_CASE("each guest level is named, and found by its name")
 {
-    for (std::size_t k = 0; k < kGuestLevels; ++k)
+    for (usize k = 0; k < kGuestLevels; ++k)
         CHECK(level_named(level_name(static_cast<GuestLevel>(k))) == static_cast<GuestLevel>(k));
     CHECK_FALSE(level_named("courage"));
 }

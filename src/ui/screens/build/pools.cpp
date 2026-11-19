@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/pools.hpp"
 
+#include "core/types.hpp"
 #include "ui/screens/build/paths.hpp"
 #include "ui/shape.hpp"
 #include "ui/skin/library.hpp"
@@ -19,7 +20,7 @@ namespace rct3::ui::screens::build
         constexpr std::array<bool, 5> kTabBuilt { true, true, true, true, false };
         /// The pictures of the editor's tools, in the order of PoolMode.
         constexpr std::array<std::string_view, 3> kModes { "Pool_PlaceWater", "Pool_PlaceTiles", "Pool_DeleteArea" };
-        constexpr std::size_t kPathRemove = 8; ///< Of the path controls, the one taking the last piece away
+        constexpr usize kPathRemove = 8; ///< Of the path controls, the one taking the last piece away
         constexpr std::array<std::string_view, 3> kDepths { "Pool_DepthShallow", "Pool_DepthNormal", "Pool_DepthDeep" };
         constexpr std::array<std::string_view, 4> kEdges { "Pool_CurveStraight", "Pool_CurveDiagonal", "Pool_CurveSmall", "Pool_CurveLarge" };
 
@@ -42,7 +43,7 @@ namespace rct3::ui::screens::build
         status_->style.vertical = Align::Centre;
         close_ = &add<widgets::Button>("close", std::string { }, style_.close_icon);
         close_->placement = bottom_left(pool_panel::kCloseLeft, style_.bottom - info::info_panel::kDiscMargin + pool_panel::kCloseBottom, info::info_panel::kCloseSize, info::info_panel::kCloseSize);
-        for (std::size_t i = 0; i < tabs_.size(); ++i)
+        for (usize i = 0; i < tabs_.size(); ++i)
         {
             widgets::Button& b = add<widgets::Button>(std::string(kTabIcons[i]), style_.tab_face, std::string(kTabIcons[i]));
             b.tooltip = std::u16string(strings_.get(kTabHelp[i]));
@@ -71,11 +72,11 @@ namespace rct3::ui::screens::build
             b.icon_scale = pool_panel::kButton / info::info_panel::kIconSize;
             return b;
         };
-        for (std::size_t i = 0; i < modes_.size(); ++i)
+        for (usize i = 0; i < modes_.size(); ++i)
             modes_[i] = &button(kModes[i], kModes[i]);
-        for (std::size_t i = 0; i < depths_.size(); ++i)
+        for (usize i = 0; i < depths_.size(); ++i)
             depths_[i] = &button(kDepths[i], kDepths[i]);
-        for (std::size_t i = 0; i < edges_.size(); ++i)
+        for (usize i = 0; i < edges_.size(); ++i)
         {
             edges_[i] = &button(kEdges[i], kEdges[i]);
             edges_[i]->icon_scale = pool_panel::kEdgeWidth / 37;
@@ -87,7 +88,7 @@ namespace rct3::ui::screens::build
         height_->maximum = pool_panel::kHeightHighest;
         height_->tooltip = std::u16string(strings_.get("Pool_Height"));
         paths_page_ = &body_->add<Widget>("paths");
-        for (std::size_t i = 0; i < path_controls_.size(); ++i)
+        for (usize i = 0; i < path_controls_.size(); ++i)
         {
             widgets::Button& b = paths_page_->add<widgets::Button>(style_.path_help.at(i), std::string { });
             b.tooltip = std::u16string(strings_.get(style_.path_help.at(i)));
@@ -134,7 +135,7 @@ namespace rct3::ui::screens::build
             b.swell = { 2 };
             choices_.push_back(&b);
         }
-        for (std::size_t i = 0; i < tabs_.size(); ++i)
+        for (usize i = 0; i < tabs_.size(); ++i)
             tabs_[i]->on = page_ == static_cast<PoolPage>(i);
         place();
     }
@@ -148,14 +149,14 @@ namespace rct3::ui::screens::build
         if (choices_.empty())
             return { 0, 0 };
         const auto columns = (choices_.size() + pool_panel::kRows - 1) / pool_panel::kRows;
-        return { std::max(pool_panel::kCell * static_cast<float>(columns), pool_panel::kChoicesNarrowest), pool_panel::kCell * static_cast<float>(pool_panel::kRows) };
+        return { std::max(pool_panel::kCell * static_cast<f32>(columns), pool_panel::kChoicesNarrowest), pool_panel::kCell * static_cast<f32>(pool_panel::kRows) };
     }
 
     Rect PoolPanel::disc() const
     {
         const Rect r = rect();
-        const float left = r.x0 + info::info_panel::kDiscMargin;
-        const float bottom = r.y1 - style_.bottom;
+        const f32 left = r.x0 + info::info_panel::kDiscMargin;
+        const f32 bottom = r.y1 - style_.bottom;
         return { left, bottom - info::info_panel::kDisc, left + info::info_panel::kDisc, bottom };
     }
 
@@ -163,8 +164,8 @@ namespace rct3::ui::screens::build
     {
         const Point body = body_size();
         const Rect d = disc();
-        const float left = d.x1 - info::info_panel::kStripOverlap;
-        const float width = std::max(pool_panel::kBodyLeft + body.x + pool_panel::kBodyRight + style_.coded.strip_shadow, info::info_panel::kStripNarrowest);
+        const f32 left = d.x1 - info::info_panel::kStripOverlap;
+        const f32 width = std::max(pool_panel::kBodyLeft + body.x + pool_panel::kBodyRight + style_.coded.strip_shadow, info::info_panel::kStripNarrowest);
         return { left, d.y0, left + width, d.y0 + info::info_panel::kStripHeight };
     }
 
@@ -173,7 +174,7 @@ namespace rct3::ui::screens::build
         const Rect r = rect();
         const Rect d = disc();
         const Point centre { (d.x0 + d.x1) / 2 - r.x0, (d.y0 + d.y1) / 2 - r.y0 };
-        for (std::size_t i = 0; i < tabs_.size(); ++i)
+        for (usize i = 0; i < tabs_.size(); ++i)
         {
             const Point at = footpath_tab_offset(pool_panel::kTabSlots[i]);
             tabs_[i]->placement = top_left(centre.x + at.x - info::info_panel::kTabSize / 2, centre.y + at.y - info::info_panel::kTabSize / 2, info::info_panel::kTabSize, info::info_panel::kTabSize);
@@ -186,14 +187,14 @@ namespace rct3::ui::screens::build
         const Rect s = strip();
         const Point body = body_size();
         body_->placement = top_left(s.x0 - r.x0 + pool_panel::kBodyLeft, s.y0 - r.y0 + pool_panel::kBodyTop, body.x, body.y);
-        const float status_left = info::info_panel::kStripOverlap + pool_panel::kStatusGap;
+        const f32 status_left = info::info_panel::kStripOverlap + pool_panel::kStatusGap;
         status_->placement = top_left(s.x0 - r.x0 + status_left, s.y0 - r.y0, std::max(0.0f, s.width() - status_left - pool_panel::kBodyRight), style_.coded.band_height);
         status_->visible = page_.has_value();
 
         // The editor: depths and the surface height on top, the edges under them, the tools at the foot.
         using namespace pool_panel;
         editor_page_->placement = top_left(0, 0, kEditorWidth, body.y);
-        float x = 0;
+        f32 x = 0;
         for (widgets::Button* b : depths_)
         {
             b->placement = top_left(x, 0, kButton, kButton);
@@ -202,16 +203,16 @@ namespace rct3::ui::screens::build
         x += kGroupGap;
         snap_->placement = top_left(x, 0, kButton, kButton);
         height_->placement = top_left(x + kButton + 4, (kButton - kHeightHeight) / 2, kHeightWidth, kHeightHeight);
-        for (std::size_t i = 0; i < edges_.size(); ++i)
-            edges_[i]->placement = top_left(static_cast<float>(i) * (kEdgeWidth + 2), kButton + kRowGap, kEdgeWidth, kEdgeHeight);
-        const float foot = kButton + kEdgeHeight + 2 * kRowGap;
+        for (usize i = 0; i < edges_.size(); ++i)
+            edges_[i]->placement = top_left(static_cast<f32>(i) * (kEdgeWidth + 2), kButton + kRowGap, kEdgeWidth, kEdgeHeight);
+        const f32 foot = kButton + kEdgeHeight + 2 * kRowGap;
         modes_[0]->placement = top_left(0, foot, kButton, kButton);
         modes_[1]->placement = top_left(kButton, foot, kButton, kButton);
         grid_->placement = top_left(2 * kButton + kGroupGap, foot, kButton, kButton);
         modes_[2]->placement = top_left(kEditorWidth - kButton, foot, kButton, kButton);
         // The path controls where the path panel has them.
         paths_page_->placement = top_left(0, 0, body.x, body.y);
-        for (std::size_t i = 0; i < path_controls_.size(); ++i)
+        for (usize i = 0; i < path_controls_.size(); ++i)
         {
             const Rect& c = footpath_panel::kControlRects.at(i);
             path_controls_[i]->placement = top_left(c.x0, c.y0, c.width(), c.height());
@@ -219,15 +220,15 @@ namespace rct3::ui::screens::build
 
         // Down the columns, so the first two pictures stand one over the other; the paths page's in one column at
         // its right end.
-        for (std::size_t i = 0; i < choices_.size(); ++i)
+        for (usize i = 0; i < choices_.size(); ++i)
         {
             if (page_ == PoolPage::Paths)
             {
-                choices_[i]->placement = top_left(body.x - kStairCell + 2, static_cast<float>(i) * kStairCell + 2, kStairCell - 4, kStairCell - 4);
+                choices_[i]->placement = top_left(body.x - kStairCell + 2, static_cast<f32>(i) * kStairCell + 2, kStairCell - 4, kStairCell - 4);
                 continue;
             }
-            const auto column = static_cast<float>(i / kRows);
-            const auto row = static_cast<float>(i % kRows);
+            const auto column = static_cast<f32>(i / kRows);
+            const auto row = static_cast<f32>(i % kRows);
             choices_[i]->placement = top_left(column * kCell + 2, row * kCell + 2, kCell - 4, kCell - 4);
         }
     }
@@ -235,9 +236,9 @@ namespace rct3::ui::screens::build
     bool PoolPanel::covers(Point p) const
     {
         const Point m = middle_of(disc());
-        const float radius = info::info_panel::kDisc / 2;
-        const float dx = p.x - m.x;
-        const float dy = p.y - m.y;
+        const f32 radius = info::info_panel::kDisc / 2;
+        const f32 dx = p.x - m.x;
+        const f32 dy = p.y - m.y;
         return dx * dx + dy * dy <= radius * radius || (page_ && contains(strip(), p));
     }
 
@@ -251,7 +252,7 @@ namespace rct3::ui::screens::build
             closed_ = true;
             return;
         }
-        for (std::size_t i = 0; i < tabs_.size(); ++i)
+        for (usize i = 0; i < tabs_.size(); ++i)
             if (tabs_[i]->take_click())
             {
                 const auto page = static_cast<PoolPage>(i);
@@ -281,14 +282,14 @@ namespace rct3::ui::screens::build
             return;
         }
         const PoolEditor before = editor_;
-        for (std::size_t i = 0; i < modes_.size(); ++i)
+        for (usize i = 0; i < modes_.size(); ++i)
             if (modes_[i]->take_click())
             {
                 editor_.mode = static_cast<PoolMode>(i);
                 placing_.reset();
                 changed_ = true;
             }
-        for (std::size_t i = 0; i < path_controls_.size(); ++i)
+        for (usize i = 0; i < path_controls_.size(); ++i)
         {
             widgets::Button& b = *path_controls_[i];
             b.enabled = path_usable_[i];
@@ -302,13 +303,13 @@ namespace rct3::ui::screens::build
                 placing_.reset();
             }
         }
-        for (std::size_t i = 0; i < depths_.size(); ++i)
+        for (usize i = 0; i < depths_.size(); ++i)
             if (depths_[i]->take_click())
-                editor_.depth = static_cast<std::int32_t>(i) + 1;
-        for (std::size_t i = 0; i < edges_.size(); ++i)
+                editor_.depth = static_cast<i32>(i) + 1;
+        for (usize i = 0; i < edges_.size(); ++i)
             if (edges_[i]->take_click())
             {
-                editor_.edge = static_cast<std::int32_t>(i);
+                editor_.edge = static_cast<i32>(i);
                 editor_.mode = PoolMode::Water;
                 placing_.reset();
                 changed_ = true;
@@ -324,13 +325,13 @@ namespace rct3::ui::screens::build
 
         status_->text.clear();
         if (page_)
-            status_->text = std::u16string(strings_.get(kTabHelp[static_cast<std::size_t>(*page_)]));
+            status_->text = std::u16string(strings_.get(kTabHelp[static_cast<usize>(*page_)]));
         if (page_ == PoolPage::Editor || page_ == PoolPage::Paths)
             for (const auto& w : (page_ == PoolPage::Editor ? editor_page_ : paths_page_)->children())
                 if (w->hovered())
                     status_->text = w->tooltip;
         const std::vector<PoolChoice>& shown = choices_of(page_);
-        for (std::size_t i = 0; i < choices_.size(); ++i)
+        for (usize i = 0; i < choices_.size(); ++i)
         {
             if (choices_[i]->hovered())
                 status_->text = shown[i].help;
@@ -351,7 +352,7 @@ namespace rct3::ui::screens::build
             return placing_->choice < from.size() ? std::string_view(from[placing_->choice].icon) : std::string_view { };
         }
         if (editor_.mode == PoolMode::Water)
-            return kDepths[static_cast<std::size_t>(std::clamp(editor_.depth, 1, 3) - 1)];
+            return kDepths[static_cast<usize>(std::clamp(editor_.depth, 1, 3) - 1)];
         if (editor_.mode == PoolMode::Path)
             return path_slope_ < style_.path_icons.size() ? std::string_view(style_.path_icons[path_slope_]) : std::string_view { };
         return kModes[std::to_underlying(editor_.mode)];
@@ -367,7 +368,7 @@ namespace rct3::ui::screens::build
     {
         DrawList& list = context.list;
         const info::CodedInfoPanel& c = style_.coded;
-        const auto shifted = [](Rect r, float by) { return Rect { r.x0 + by, r.y0 + by, r.x1 + by, r.y1 + by }; };
+        const auto shifted = [](Rect r, f32 by) { return Rect { r.x0 + by, r.y0 + by, r.x1 + by, r.y1 + by }; };
         const auto plain = [&](Rect r, Corners corners, Color colour) {
             Shape s;
             s.rect = r;
@@ -379,7 +380,7 @@ namespace rct3::ui::screens::build
         const auto lit = [&](const widgets::Button* b) { plain(b->rect(), round_corners(4), style_.chosen); };
 
         const Rect d = disc();
-        const float half = d.width() / 2;
+        const f32 half = d.width() / 2;
         plain(shifted(d, info::info_panel::kShadowOffset), round_corners(half), c.shadow);
         if (page_)
         {
@@ -393,8 +394,8 @@ namespace rct3::ui::screens::build
             {
                 if (!placing_ && editor_.mode < PoolMode::Path)
                     lit(modes_[std::to_underlying(editor_.mode)]);
-                lit(depths_[static_cast<std::size_t>(std::clamp(editor_.depth, 1, 3) - 1)]);
-                lit(edges_[static_cast<std::size_t>(std::clamp(editor_.edge, 0, 3))]);
+                lit(depths_[static_cast<usize>(std::clamp(editor_.depth, 1, 3) - 1)]);
+                lit(edges_[static_cast<usize>(std::clamp(editor_.edge, 0, 3))]);
                 if (editor_.grid)
                     lit(grid_);
                 if (editor_.snap)
@@ -420,13 +421,13 @@ namespace rct3::ui::screens::build
         plain(back, round_corners(back.width() / 2), c.view_back);
         if (view_ != 0 && (placing_ || editor_.mode != PoolMode::Delete))
         {
-            const float inset = (info::info_panel::kDisc - info::info_panel::kView) / 2;
+            const f32 inset = (info::info_panel::kDisc - info::info_panel::kView) / 2;
             list.disc_image({ d.x0 + inset, d.y0 + inset, d.x1 - inset, d.y1 - inset }, view_, { 0, 0, 1, 1 });
         }
         else if (const std::string_view icon = preview(); !icon.empty())
         {
             const Point m = middle_of(d);
-            const float h = pool_panel::kDiscIcon / 2;
+            const f32 h = pool_panel::kDiscIcon / 2;
             skin::draw_skin(list, context.skins.find(icon), { m.x - h, m.y - h, m.x + h, m.y + h });
         }
     }

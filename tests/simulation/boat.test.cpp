@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/boat.hpp"
 
+#include "core/types.hpp"
 #include "park/path/clearance.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
@@ -16,12 +17,12 @@ using namespace rct3;
 namespace
 {
     /// A made-up lake: water everywhere in a `cols` by `rows` grid of 4 m tiles but on the tiles `land` lists.
-    simulation::WaterTiles lake(std::int32_t cols, std::int32_t rows, std::initializer_list<glm::ivec2> land = { })
+    simulation::WaterTiles lake(i32 cols, i32 rows, std::initializer_list<glm::ivec2> land = { })
     {
         simulation::WaterTiles w { .cols = cols, .rows = rows };
-        w.level.assign(static_cast<std::size_t>(cols * rows), 10.0f);
+        w.level.assign(static_cast<usize>(cols * rows), 10.0f);
         for (const glm::ivec2 t : land)
-            w.level[static_cast<std::size_t>(t.y * cols + t.x)] = std::nullopt;
+            w.level[static_cast<usize>(t.y * cols + t.x)] = std::nullopt;
         return w;
     }
 } // namespace
@@ -40,7 +41,7 @@ TEST_CASE("a rock in the water or a low bridge over it closes its tile to boats,
 {
     save::model::TerrainGrid grid { .width = 5, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
     save::model::WaterBody body { .level = 5 };
-    for (std::uint8_t col = 0; col < 5; ++col)
+    for (u8 col = 0; col < 5; ++col)
         body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
     park::path::SolidTiles solids;
     solids.tiles[0] = { { .low = 2, .high = 6 } };                                                       // A rock standing up out of it
@@ -60,9 +61,9 @@ TEST_CASE("a path bridge low over the water closes its tiles to boats, a high on
     save::model::TerrainGrid grid { .width = 3, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
     grid.cells.resize(3);
     save::model::WaterBody body { .level = 2 };
-    for (std::uint8_t col = 0; col < 3; ++col)
+    for (u8 col = 0; col < 3; ++col)
         body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
-    const auto bridge = [](std::uint8_t col, std::int32_t height) { return save::model::PathTile { .kind = save::model::PathKind::Flying, .col = col, .row = 0, .elevation = save::model::PathElevation { .quantised_height = height } }; };
+    const auto bridge = [](u8 col, i32 height) { return save::model::PathTile { .kind = save::model::PathKind::Flying, .col = col, .row = 0, .elevation = save::model::PathElevation { .quantised_height = height } }; };
     const std::array paths { bridge(0, 2), bridge(1, 6) };
     park::path::SolidTiles solids;
     park::path::add_path_decks(solids, paths, grid);
@@ -90,7 +91,7 @@ TEST_CASE("a boat roams the lake, keeps to the water and docks once its time is 
     simulation::cast_off(boat, dock);
     auto dice = random::seeded(random::Seed { 7 });
     bool docked = false;
-    float seconds = 0;
+    f32 seconds = 0;
     for (; seconds < 300 && !docked; seconds += 0.5f)
     {
         docked = simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 40, 0.5f, dice);
@@ -134,13 +135,13 @@ TEST_CASE("a transport boat makes straight for each dock in turn and home, witho
     simulation::cast_off(boat, dock, false, calls);
     CHECK(boat.state == simulation::Sailing::Home);
     auto dice = random::seeded(random::Seed { 3 });
-    std::array<float, 2> nearest { 1e9f, 1e9f };
+    std::array<f32, 2> nearest { 1e9f, 1e9f };
     bool docked = false;
-    float seconds = 0;
+    f32 seconds = 0;
     for (; seconds < 600 && !docked; seconds += 0.5f)
     {
         docked = simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
-        for (std::size_t k = 0; k < calls.size(); ++k)
+        for (usize k = 0; k < calls.size(); ++k)
             nearest[k] = std::min(nearest[k], glm::distance(boat.at, calls[k]));
         // Round the island, not over it, though a wide turn may graze a corner.
         CHECK(glm::distance(boat.at, glm::vec2 { 24, 24 }) > 4);
@@ -163,10 +164,10 @@ TEST_CASE("a boat slows in a hard turn and gains speed again once its mark lies 
     simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
     CHECK(boat.speed.value < 2.5f);
     CHECK(boat.turning.value == doctest::Approx(simulation::kMostBoats.turn_most));
-    for (std::int32_t i = 0; i < 6; ++i)
+    for (i32 i = 0; i < 6; ++i)
         simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
-    const float lined_up = boat.speed.value;
-    for (std::int32_t i = 0; i < 6; ++i)
+    const f32 lined_up = boat.speed.value;
+    for (i32 i = 0; i < 6; ++i)
         simulation::sail(boat, water, dock, simulation::kMostBoats, 3, 1e9f, 0.5f, dice);
     CHECK(boat.speed.value > lined_up);
 }
@@ -183,11 +184,11 @@ TEST_CASE("a boat leans into its turn, no further than its handling lets it, and
     simulation::sail(boat, water, dock, ski, 3, 1e9f, 0.25f, dice);
     CHECK(boat.turning.value > 0);
     CHECK(boat.lean.value > 0);
-    for (std::int32_t i = 0; i < 8; ++i)
+    for (i32 i = 0; i < 8; ++i)
         simulation::sail(boat, water, dock, ski, 3, 1e9f, 0.25f, dice);
     CHECK(boat.lean.value <= ski.lean_most);
     boat.marks = { boat.at + boat.heading * 40.0f };
-    for (std::int32_t i = 0; i < 12; ++i)
+    for (i32 i = 0; i < 12; ++i)
         simulation::sail(boat, water, dock, ski, 3, 1e9f, 0.25f, dice);
     CHECK(std::abs(boat.lean.value) < 0.05f);
 }
@@ -213,8 +214,8 @@ TEST_CASE("two boats heading at each other steer round and never touch")
     fleet[0].marks = { { 70, 40 } };
     fleet[1].marks = { { 10, 40 } };
     auto dice = random::seeded(random::Seed { 1 });
-    float closest = 1e9f;
-    for (std::int32_t i = 0; i < 160; ++i)
+    f32 closest = 1e9f;
+    for (i32 i = 0; i < 160; ++i)
     {
         for (auto& boat : fleet)
             simulation::sail(boat, water, dock, simulation::kMostBoats, 2, 1e9f, 0.25f, dice, fleet);
@@ -235,7 +236,7 @@ TEST_CASE("bumper boats run into each other and bounce off")
     fleet[0].marks = { { 70, 40 } };
     fleet[1].marks = { { 10, 40 } };
     auto dice = random::seeded(random::Seed { 1 });
-    for (std::int32_t i = 0; i < 16; ++i)
+    for (i32 i = 0; i < 16; ++i)
         for (auto& boat : fleet)
             simulation::sail(boat, water, dock, simulation::kMostBoats, 2, 1e9f, 0.25f, dice, fleet, true);
     CHECK(fleet[0].at.x < 40); // Thrown back the way it came
@@ -263,7 +264,7 @@ TEST_CASE("a boat ride given boats again has them all back at its dock, as many 
     const park::track::TrackCourse course { .points = { { 4, 5, 2 }, { 8, 5, 2 } }, .distance = { 0, 4 }, .kinds = { park::track::CourseKind::Station, park::track::CourseKind::Station } };
     const save::model::TerrainGrid grid { .width = 3, .height = 1, .tile_size_x = 4, .tile_size_z = 4 };
     save::model::WaterBody body { .level = 5 };
-    for (std::uint8_t col = 0; col < 2; ++col)
+    for (u8 col = 0; col < 2; ++col)
         body.tris.insert(body.tris.end(), { { col, 0, 0, 0b111 }, { col, 0, 1, 0b111 } });
     const std::optional<park::track::TrackCourse> courses[] { course };
     simulation::import_boats(world, rides, std::span(&ride, 1), courses, grid, std::span(&body, 1));

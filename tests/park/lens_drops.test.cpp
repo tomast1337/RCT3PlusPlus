@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/lens_drops.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -17,9 +19,9 @@ namespace
         return water;
     }
 
-    void run(LensWater& water, const LensPush& push, float seconds)
+    void run(LensWater& water, const LensPush& push, f32 seconds)
     {
-        for (std::int32_t i = 0; i < static_cast<std::int32_t>(seconds * 60); ++i)
+        for (i32 i = 0; i < static_cast<i32>(seconds * 60); ++i)
             run_lens_water(water, push, 1.0f / 60);
     }
 } // namespace

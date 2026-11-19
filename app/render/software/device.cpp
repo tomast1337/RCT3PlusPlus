@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "render/software/device.hpp"
 
+#include "core/types.hpp"
 #include "imgui.h"
 #include "render/software/shaders.hpp"
 
@@ -21,28 +22,28 @@ namespace rct3::render::software
     {
 
         /// Triangles a batch takes before it is drawn, within a pass; bounds the batch's memory (about 20 MB).
-        constexpr std::size_t kBatchTriangles = 65536;
+        constexpr usize kBatchTriangles = 65536;
         /// The most threads that draw, the caller's among them: tiles are small, so more add little.
-        constexpr std::uint32_t kMostThreads = 8;
-        constexpr std::uint32_t kLargestSide = 16384;
+        constexpr u32 kMostThreads = 8;
+        constexpr u32 kLargestSide = 16384;
 
         Texture make_target(Extent extent)
         {
-            const std::size_t pixels = std::size_t { extent.width } * extent.height;
-            return { .extent = extent, .texels = std::vector<std::uint32_t>(pixels, 0u), .depth = std::vector<float>(pixels, 1.0f), .target = true };
+            const usize pixels = usize { extent.width } * extent.height;
+            return { .extent = extent, .texels = std::vector<u32>(pixels, 0u), .depth = std::vector<f32>(pixels, 1.0f), .target = true };
         }
 
         void copy_pixels(Texture& t, std::span<const std::byte> pixels)
         {
             if (t.format == TextureFormat::Rgba32Float)
             {
-                t.floats.resize(std::size_t { t.extent.width } * t.extent.height);
+                t.floats.resize(usize { t.extent.width } * t.extent.height);
                 std::memcpy(t.floats.data(), pixels.data(), std::min(pixels.size(), t.floats.size() * sizeof(glm::vec4)));
                 return;
             }
-            t.texels.resize(std::size_t { t.extent.width } * t.extent.height);
+            t.texels.resize(usize { t.extent.width } * t.extent.height);
             // Rgba8 bytes in memory order are the texel with red lowest, on the little-endian machines we build for.
-            std::memcpy(t.texels.data(), pixels.data(), std::min(pixels.size(), t.texels.size() * sizeof(std::uint32_t)));
+            std::memcpy(t.texels.data(), pixels.data(), std::min(pixels.size(), t.texels.size() * sizeof(u32)));
         }
 
     } // namespace
@@ -75,7 +76,7 @@ namespace rct3::render::software
                 return std::unexpected("the window's OpenGL context cannot draw pixels");
             glfwSwapInterval(config_.vsync ? 1 : 0);
         }
-        const std::uint32_t threads = std::clamp(std::thread::hardware_concurrency() / 2, 1u, kMostThreads);
+        const u32 threads = std::clamp(std::thread::hardware_concurrency() / 2, 1u, kMostThreads);
         pool_ = std::make_unique<WorkerPool>(threads - 1);
         device_name_ = std::format("CPU, {} threads", threads);
         transient_id_ = next_id_++;
@@ -127,12 +128,12 @@ namespace rct3::render::software
     // The window's size, and the screen's at the render scale, as they are now.
     void SoftwareDevice::resize()
     {
-        std::int32_t w = 0, h = 0;
+        i32 w = 0, h = 0;
         glfwGetFramebufferSize(config_.window, &w, &h);
-        const Extent window { static_cast<std::uint32_t>(std::max(w, 1)), static_cast<std::uint32_t>(std::max(h, 1)) };
+        const Extent window { static_cast<u32>(std::max(w, 1)), static_cast<u32>(std::max(h, 1)) };
         if (window.width != window_.extent.width || window.height != window_.extent.height)
-            window_ = { .extent = window, .texels = std::vector<std::uint32_t>(std::size_t { window.width } * window.height, 0u) };
-        const auto scaled = [&](std::uint32_t side) { return std::clamp(static_cast<std::uint32_t>(std::lround(static_cast<float>(side) * render_scale_)), 1u, kLargestSide); };
+            window_ = { .extent = window, .texels = std::vector<u32>(usize { window.width } * window.height, 0u) };
+        const auto scaled = [&](u32 side) { return std::clamp(static_cast<u32>(std::lround(static_cast<f32>(side) * render_scale_)), 1u, kLargestSide); };
         if (const Extent screen { scaled(window.width), scaled(window.height) }; screen.width != screen_.extent.width || screen.height != screen_.extent.height)
             screen_ = make_target(screen);
     }
@@ -142,7 +143,7 @@ namespace rct3::render::software
         assert(state_ != State::Off);
         if (desc.data.empty())
             return std::unexpected("empty buffer");
-        const std::uint32_t id = next_id_++;
+        const u32 id = next_id_++;
         buffers_.emplace(id, std::vector<std::byte>(desc.data.begin(), desc.data.end()));
         return BufferHandle { id };
     }
@@ -159,7 +160,7 @@ namespace rct3::render::software
         assert(state_ != State::Off);
         if (desc.width == 0 || desc.height == 0 || desc.width > kLargestSide || desc.height > kLargestSide)
             return std::unexpected(std::format("texture size {}x{} out of range", desc.width, desc.height));
-        const std::uint32_t id = next_id_++;
+        const u32 id = next_id_++;
         if (desc.target)
         {
             Texture& made = textures_.emplace(id, make_target({ desc.width, desc.height })).first->second;
@@ -213,7 +214,7 @@ namespace rct3::render::software
         assert(state_ != State::Off);
         if (desc.layout.attributes.size() > kMaxVertexAttributes)
             return std::unexpected("too many vertex attributes");
-        const std::uint32_t id = next_id_++;
+        const u32 id = next_id_++;
         Pipeline& p = pipelines_.emplace(id, Pipeline { .program = program(desc.shader), .desc = desc, .attributes = { desc.layout.attributes.begin(), desc.layout.attributes.end() } }).first->second;
         p.desc.label = { };
         p.desc.layout.attributes = p.attributes;
@@ -230,11 +231,11 @@ namespace rct3::render::software
     {
         assert(state_ == State::InFrame || state_ == State::InPass);
         std::vector<std::byte>& memory = buffers_.at(transient_id_);
-        const std::size_t offset = (memory.size() + 15) & ~std::size_t { 15 };
+        const usize offset = (memory.size() + 15) & ~usize { 15 };
         memory.resize(offset + data.size());
         std::memcpy(memory.data() + offset, data.data(), data.size());
         frame_stats_.transient_bytes += data.size();
-        return BufferSlice { BufferHandle { transient_id_ }, static_cast<std::uint32_t>(offset) };
+        return BufferSlice { BufferHandle { transient_id_ }, static_cast<u32>(offset) };
     }
 
     void SoftwareDevice::begin_frame()
@@ -252,8 +253,8 @@ namespace rct3::render::software
         const Extent screen = screen_.extent;
         if (!view())
             return { 0, 0, screen };
-        const std::uint32_t x = std::min(view()->x, screen.width);
-        const std::uint32_t y = std::min(view()->y, screen.height);
+        const u32 x = std::min(view()->x, screen.width);
+        const u32 y = std::min(view()->y, screen.height);
         return { x, y, { std::min(view()->size.width, screen.width - x), std::min(view()->size.height, screen.height - y) } };
     }
 
@@ -331,7 +332,7 @@ namespace rct3::render::software
             .target = pass_target_->extent,
         };
         const std::array<TextureHandle, kExtraTextures> extras = bound_extra_textures(command, p.desc.shader);
-        for (std::size_t i = 0; i < kExtraTextures; ++i)
+        for (usize i = 0; i < kExtraTextures; ++i)
             state.extras[i] = find_texture(extras[i]);
         std::span<const std::byte> indices;
         if (command.indices.buffer)
@@ -378,10 +379,10 @@ namespace rct3::render::software
             return false;
         Texture& t = found->second;
         const ScreenView area = screen_area();
-        for (std::uint32_t y = 0; y < t.extent.height; ++y)
+        for (u32 y = 0; y < t.extent.height; ++y)
         {
-            const std::size_t from = std::size_t { area.y + y } * screen_.extent.width + area.x;
-            const std::size_t to = std::size_t { y } * t.extent.width;
+            const usize from = usize { area.y + y } * screen_.extent.width + area.x;
+            const usize to = usize { y } * t.extent.width;
             std::copy_n(screen_.texels.begin() + static_cast<std::ptrdiff_t>(from), t.extent.width, t.texels.begin() + static_cast<std::ptrdiff_t>(to));
             std::copy_n(screen_.depth.begin() + static_cast<std::ptrdiff_t>(from), t.extent.width, t.depth.begin() + static_cast<std::ptrdiff_t>(to));
         }
@@ -403,9 +404,9 @@ namespace rct3::render::software
             return false;
         Texture& t = found->second;
         t.colour_read = true;
-        ScreenPixels pixels { t.extent, std::vector<std::uint8_t>(t.texels.size() * 4) };
+        ScreenPixels pixels { t.extent, std::vector<u8>(t.texels.size() * 4) };
         std::memcpy(pixels.rgba.data(), t.texels.data(), pixels.rgba.size());
-        for (std::size_t i = 3; i < pixels.rgba.size(); i += 4)
+        for (usize i = 3; i < pixels.rgba.size(); i += 4)
             pixels.rgba[i] = 255;
         reading_ = std::move(pixels);
         return true;
@@ -419,21 +420,21 @@ namespace rct3::render::software
     // The screen stretched over the window through the brightness curve (present.slang), opaque.
     void SoftwareDevice::compose_window()
     {
-        const float power = std::exp2(1.0f - 2.0f * std::clamp(brightness_, 0.0f, 1.0f));
-        std::array<std::uint32_t, 256> curve { };
-        for (std::uint32_t i = 0; i < 256; ++i)
-            curve[i] = static_cast<std::uint32_t>(std::lround(std::pow(static_cast<float>(i) / 255.0f, power) * 255.0f));
+        const f32 power = std::exp2(1.0f - 2.0f * std::clamp(brightness_, 0.0f, 1.0f));
+        std::array<u32, 256> curve { };
+        for (u32 i = 0; i < 256; ++i)
+            curve[i] = static_cast<u32>(std::lround(std::pow(static_cast<f32>(i) / 255.0f, power) * 255.0f));
         const Extent w = window_.extent;
         const Extent s = screen_.extent;
         const bool same = w.width == s.width && w.height == s.height;
         const Filter filter = smooth_scaling_ ? Filter::Linear : Filter::Nearest;
-        constexpr std::uint32_t kRows = 16; ///< Rows a job
-        pool_->run((w.height + kRows - 1) / kRows, [&](std::uint32_t job) {
-            for (std::uint32_t y = job * kRows; y < std::min(w.height, (job + 1) * kRows); ++y)
-                for (std::uint32_t x = 0; x < w.width; ++x)
+        constexpr u32 kRows = 16; ///< Rows a job
+        pool_->run((w.height + kRows - 1) / kRows, [&](u32 job) {
+            for (u32 y = job * kRows; y < std::min(w.height, (job + 1) * kRows); ++y)
+                for (u32 x = 0; x < w.width; ++x)
                 {
-                    const std::uint32_t c = same ? screen_.texels[std::size_t { y } * s.width + x] : pack(sample(screen_, { (static_cast<float>(x) + 0.5f) / static_cast<float>(w.width), (static_cast<float>(y) + 0.5f) / static_cast<float>(w.height) }, filter, AddressMode::Clamp));
-                    window_.texels[std::size_t { y } * w.width + x] = curve[c & 255u] | (curve[(c >> 8) & 255u] << 8) | (curve[(c >> 16) & 255u] << 16) | 0xff000000u;
+                    const u32 c = same ? screen_.texels[usize { y } * s.width + x] : pack(sample(screen_, { (static_cast<f32>(x) + 0.5f) / static_cast<f32>(w.width), (static_cast<f32>(y) + 0.5f) / static_cast<f32>(w.height) }, filter, AddressMode::Clamp));
+                    window_.texels[usize { y } * w.width + x] = curve[c & 255u] | (curve[(c >> 8) & 255u] << 8) | (curve[(c >> 16) & 255u] << 16) | 0xff000000u;
                 }
         });
     }
@@ -446,20 +447,20 @@ namespace rct3::render::software
             if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates)
             {
                 // The whole picture each time: it changes seldom, when the font atlas grows.
-                std::uint32_t id = static_cast<std::uint32_t>(tex->TexID);
+                u32 id = static_cast<u32>(tex->TexID);
                 if (tex->TexID == ImTextureID_Invalid)
                 {
                     id = next_id_++;
                     tex->SetTexID(id);
                 }
                 Texture& t = textures_[id];
-                t = Texture { .extent = { static_cast<std::uint32_t>(tex->Width), static_cast<std::uint32_t>(tex->Height) } };
-                const auto* pixels = static_cast<const std::uint8_t*>(tex->GetPixels());
-                t.texels.resize(std::size_t { t.extent.width } * t.extent.height);
-                for (std::size_t i = 0; i < t.texels.size(); ++i)
+                t = Texture { .extent = { static_cast<u32>(tex->Width), static_cast<u32>(tex->Height) } };
+                const auto* pixels = static_cast<const u8*>(tex->GetPixels());
+                t.texels.resize(usize { t.extent.width } * t.extent.height);
+                for (usize i = 0; i < t.texels.size(); ++i)
                 {
                     if (tex->Format == ImTextureFormat_Alpha8)
-                        t.texels[i] = 0x00ffffffu | (std::uint32_t { pixels[i] } << 24);
+                        t.texels[i] = 0x00ffffffu | (u32 { pixels[i] } << 24);
                     else
                         std::memcpy(&t.texels[i], pixels + i * 4, 4);
                 }
@@ -467,7 +468,7 @@ namespace rct3::render::software
             }
             else if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0)
             {
-                textures_.erase(static_cast<std::uint32_t>(tex->TexID));
+                textures_.erase(static_cast<u32>(tex->TexID));
                 tex->SetTexID(ImTextureID_Invalid);
                 tex->SetStatus(ImTextureStatus_Destroyed);
             }
@@ -480,8 +481,8 @@ namespace rct3::render::software
             VertexAttribute { .location = 1, .format = VertexFormat::UByte4Norm, .offset = offsetof(ImDrawVert, col) },
             VertexAttribute { .location = 2, .format = VertexFormat::Float2, .offset = offsetof(ImDrawVert, uv) },
         };
-        const float width = static_cast<float>(window_.extent.width);
-        const float height = static_cast<float>(window_.extent.height);
+        const f32 width = static_cast<f32>(window_.extent.width);
+        const f32 height = static_cast<f32>(window_.extent.height);
         const ImVec2 origin = data->DisplayPos;
         const ImVec2 scale = data->FramebufferScale;
         // ImGui's points to clip space, y up as every program has it.
@@ -493,23 +494,23 @@ namespace rct3::render::software
         DrawState state { .program = program(Shader::Textured), .blend = BlendMode::Alpha, .depth_test = false, .depth_write = false, .constants = { .transform = transform }, .filter = Filter::Linear, .viewport = { 0, 0, window_.extent }, .target = window_.extent };
         for (const ImDrawList* list : data->CmdLists)
         {
-            const std::span<const std::byte> vertices = std::as_bytes(std::span(list->VtxBuffer.Data, static_cast<std::size_t>(list->VtxBuffer.Size)));
-            const std::span<const std::byte> indices = std::as_bytes(std::span(list->IdxBuffer.Data, static_cast<std::size_t>(list->IdxBuffer.Size)));
+            const std::span<const std::byte> vertices = std::as_bytes(std::span(list->VtxBuffer.Data, static_cast<usize>(list->VtxBuffer.Size)));
+            const std::span<const std::byte> indices = std::as_bytes(std::span(list->IdxBuffer.Data, static_cast<usize>(list->IdxBuffer.Size)));
             for (const ImDrawCmd& cmd : list->CmdBuffer)
             {
                 if (cmd.UserCallback != nullptr)
                     continue; // Only ImGui's own state reset; nothing to reset here
-                state.texture = find_texture({ static_cast<std::uint32_t>(cmd.GetTexID()) });
-                const float x0 = std::clamp((cmd.ClipRect.x - origin.x) * scale.x, 0.0f, width);
-                const float y0 = std::clamp((cmd.ClipRect.y - origin.y) * scale.y, 0.0f, height);
-                const float x1 = std::clamp((cmd.ClipRect.z - origin.x) * scale.x, 0.0f, width);
-                const float y1 = std::clamp((cmd.ClipRect.w - origin.y) * scale.y, 0.0f, height);
+                state.texture = find_texture({ static_cast<u32>(cmd.GetTexID()) });
+                const f32 x0 = std::clamp((cmd.ClipRect.x - origin.x) * scale.x, 0.0f, width);
+                const f32 y0 = std::clamp((cmd.ClipRect.y - origin.y) * scale.y, 0.0f, height);
+                const f32 x1 = std::clamp((cmd.ClipRect.z - origin.x) * scale.x, 0.0f, width);
+                const f32 y1 = std::clamp((cmd.ClipRect.w - origin.y) * scale.y, 0.0f, height);
                 if (!state.texture || x1 <= x0 || y1 <= y0)
                     continue;
-                const auto left = static_cast<std::uint32_t>(x0);
-                const auto top = static_cast<std::uint32_t>(y0);
-                state.scissor = { left, top, { static_cast<std::uint32_t>(x1) - left, static_cast<std::uint32_t>(y1) - top } };
-                add_triangles(batch_, state, { .vertices = vertices, .indices = indices, .index_type = sizeof(ImDrawIdx) == 2 ? IndexType::U16 : IndexType::U32, .count = cmd.ElemCount, .first = cmd.IdxOffset, .vertex_offset = static_cast<std::int32_t>(cmd.VtxOffset), .layout = { .stride = sizeof(ImDrawVert), .attributes = kAttributes } }, CullMode::None);
+                const auto left = static_cast<u32>(x0);
+                const auto top = static_cast<u32>(y0);
+                state.scissor = { left, top, { static_cast<u32>(x1) - left, static_cast<u32>(y1) - top } };
+                add_triangles(batch_, state, { .vertices = vertices, .indices = indices, .index_type = sizeof(ImDrawIdx) == 2 ? IndexType::U16 : IndexType::U32, .count = cmd.ElemCount, .first = cmd.IdxOffset, .vertex_offset = static_cast<i32>(cmd.VtxOffset), .layout = { .stride = sizeof(ImDrawVert), .attributes = kAttributes } }, CullMode::None);
             }
         }
         if (!batch_.empty())
@@ -524,7 +525,7 @@ namespace rct3::render::software
             draw_imgui();
         if (std::exchange(reading_window_, false))
         {
-            ScreenPixels pixels { window_.extent, std::vector<std::uint8_t>(window_.texels.size() * 4) };
+            ScreenPixels pixels { window_.extent, std::vector<u8>(window_.texels.size() * 4) };
             std::memcpy(pixels.rgba.data(), window_.texels.data(), pixels.rgba.size());
             reading_ = std::move(pixels);
         }
@@ -539,9 +540,9 @@ namespace rct3::render::software
             present_.draw_pixels(static_cast<GLsizei>(window_.extent.width), static_cast<GLsizei>(window_.extent.height), GL_RGBA, GL_UNSIGNED_BYTE, window_.texels.data());
             glfwSwapBuffers(config_.window);
         }
-        frame_stats_.buffers = static_cast<std::uint32_t>(buffers_.size());
-        frame_stats_.pipelines = static_cast<std::uint32_t>(pipelines_.size());
-        frame_stats_.textures = static_cast<std::uint32_t>(textures_.size());
+        frame_stats_.buffers = static_cast<u32>(buffers_.size());
+        frame_stats_.pipelines = static_cast<u32>(pipelines_.size());
+        frame_stats_.textures = static_cast<u32>(textures_.size());
         last_stats_ = frame_stats_;
         state_ = State::Idle;
     }

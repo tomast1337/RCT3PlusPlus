@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/rows.hpp"
 
+#include "core/types.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 
@@ -26,7 +27,7 @@ namespace rct3::ui::screens::build
         constexpr std::u16string_view kNumber = u"%NUMBER%";
         /// The badge of items that came with an expansion, by the expansion's number less one.
         constexpr std::string_view kBadgePrefix = "ObjectSelectionWindow_AOPBadge_";
-        constexpr std::int32_t kBadges = 2;
+        constexpr i32 kBadges = 2;
 
         /// What each way of sitting on the grid is called, from 1; the rest give their footprint.
         constexpr std::array<std::string_view, 8> kPlacements = {
@@ -50,7 +51,7 @@ namespace rct3::ui::screens::build
         constexpr std::string_view kShelterNeeded = "WildAnimal_ShelterRequired";
         constexpr std::string_view kShelterName = "%SHELTERNAME%";
         /// Fences sort by strength; this keeps two places of it.
-        constexpr float kStrengthRank = 100;
+        constexpr f32 kStrengthRank = 100;
 
         /// Rows by rank, then in name order whatever the case; headings among them by their own.
         void sort_rows(std::vector<PickerRow>& rows)
@@ -72,7 +73,7 @@ namespace rct3::ui::screens::build
         }
 
         /// The weakest offered fence at least as strong as `strength`; nothing when none is.
-        const park::BuildItem* fence_for(float strength, std::span<const park::BuildItem> items, const park::BuildOffer& offer)
+        const park::BuildItem* fence_for(f32 strength, std::span<const park::BuildItem> items, const park::BuildOffer& offer)
         {
             const park::BuildItem* best = nullptr;
             for (const park::BuildItem& f : items)
@@ -146,7 +147,7 @@ namespace rct3::ui::screens::build
 
     std::vector<PickerTheme> picker_themes(std::span<const park::BuildItem> items)
     {
-        std::map<std::int32_t, PickerTheme> by_number;
+        std::map<i32, PickerTheme> by_number;
         for (const park::BuildItem& item : items)
         {
             if (item.style_index && !item.style.empty())
@@ -226,11 +227,11 @@ namespace rct3::ui::screens::build
         }
     }
 
-    std::string_view rarity_text(float rarity) noexcept
+    std::string_view rarity_text(f32 rarity) noexcept
     {
-        constexpr float kEndangered = 0.79f; ///< Rarity past which an animal reads as endangered
-        constexpr float kRare = 0.64f;       ///< Past which as rare
-        constexpr float kModerate = 0.40f;   ///< From which as neither rare nor common
+        constexpr f32 kEndangered = 0.79f; ///< Rarity past which an animal reads as endangered
+        constexpr f32 kRare = 0.64f;       ///< Past which as rare
+        constexpr f32 kModerate = 0.40f;   ///< From which as neither rare nor common
         if (rarity > kEndangered)
             return "WildAnimalRarity_Endangered";
         if (rarity > kRare)
@@ -305,11 +306,11 @@ namespace rct3::ui::screens::build
         return strings::to_utf16(std::format("{} x {}", item.width, item.length));
     }
 
-    std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, std::size_t, strings::LessIgnoringCase>& design_counts, std::optional<std::pair<std::size_t, float>> researching)
+    std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, usize, strings::LessIgnoringCase>& design_counts, std::optional<std::pair<usize, f32>> researching)
     {
         std::vector<PickerRow> rows;
-        std::map<std::pair<std::string, std::string>, std::size_t> headings; // by set icon and name
-        for (std::size_t i = 0; i < items.size(); ++i)
+        std::map<std::pair<std::string, std::string>, usize> headings; // by set icon and name
+        for (usize i = 0; i < items.size(); ++i)
         {
             const park::BuildItem& item = items[i];
             const park::BuildOffer::State state = offer.state(item);
@@ -341,7 +342,7 @@ namespace rct3::ui::screens::build
                     row.size = placement_text(item, strings);
                     break;
                 case park::BuildKind::EnclosureFence:
-                    row.rank = static_cast<std::int32_t>(item.strength * kStrengthRank);
+                    row.rank = static_cast<i32>(item.strength * kStrengthRank);
                     break;
                 case park::BuildKind::AnimalToy:
                     break;
@@ -373,14 +374,14 @@ namespace rct3::ui::screens::build
             // Enclosure items sit under the heading of their part, in the parts' order.
             std::string group_icon = item.group_icon;
             std::string group_text = item.group_text;
-            std::int32_t heading_rank = 0;
-            for (std::size_t p = 0; p < kEnclosureParts.size(); ++p)
+            i32 heading_rank = 0;
+            for (usize p = 0; p < kEnclosureParts.size(); ++p)
             {
                 if (kEnclosureParts[p].part == item.part)
                 {
                     group_icon = kEnclosureParts[p].icon;
                     group_text = kEnclosureParts[p].text;
-                    heading_rank = static_cast<std::int32_t>(p);
+                    heading_rank = static_cast<i32>(p);
                 }
             }
             if (group_icon.empty() && group_text.empty())

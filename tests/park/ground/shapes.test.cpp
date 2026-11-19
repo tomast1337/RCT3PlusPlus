@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground/shapes.hpp"
 
+#include "core/types.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -12,25 +14,25 @@ using namespace rct3::park::ground;
 namespace
 {
     /// Flat at height 2, `size` tiles each way.
-    save::model::TerrainGrid flat(std::int32_t size)
+    save::model::TerrainGrid flat(i32 size)
     {
         save::model::TerrainGrid g;
         g.width = size;
         g.height = size;
-        g.cells.resize(static_cast<std::size_t>(size * size));
+        g.cells.resize(static_cast<usize>(size * size));
         for (save::model::TerrainCell& c : g.cells)
             c.corners = { 2, 2, 2, 2 };
         return g;
     }
 
-    float point(const save::model::TerrainGrid& g, std::int32_t c, std::int32_t r)
+    f32 point(const save::model::TerrainGrid& g, i32 c, i32 r)
     {
         return g.at(c, r).corners[0]; // The tile's own first corner is the point (c, r)
     }
 
     const auto anywhere = [](save::model::Tile) { return true; };
 
-    bool near(float value, float wanted, float slack)
+    bool near(f32 value, f32 wanted, f32 slack)
     {
         return std::abs(value - wanted) <= slack + 1e-4f;
     }
@@ -71,7 +73,7 @@ TEST_CASE("a hill raises the corner points round its middle, shared by the tiles
 {
     save::model::TerrainGrid g = flat(10);
     const GroundBefore before = ground_before(g, anywhere);
-    const float moved = shape_ground(g, before, GroundShape::Hill, { 5, 5 }, 3, { 1, 0 }, 4, 1);
+    const f32 moved = shape_ground(g, before, GroundShape::Hill, { 5, 5 }, 3, { 1, 0 }, 4, 1);
     CHECK(moved > 0);
     CHECK(near(point(g, 5, 5), 6, 0.5f * shape_roughness(GroundShape::Hill) * 4));
     CHECK(g.at(4, 4).corners[3] == point(g, 5, 5)); // The same point, as the tile up and left holds it
@@ -88,7 +90,7 @@ TEST_CASE("a negative amount turns the shape over: a mountain digs a pit, a crat
 {
     save::model::TerrainGrid g = flat(10);
     const GroundBefore before = ground_before(g, anywhere);
-    const float dug = shape_ground(g, before, GroundShape::Mountain, { 5, 5 }, 3, { 1, 0 }, -2, 1);
+    const f32 dug = shape_ground(g, before, GroundShape::Mountain, { 5, 5 }, 3, { 1, 0 }, -2, 1);
     CHECK(near(point(g, 5, 5), 0, 0.5f * shape_roughness(GroundShape::Mountain) * 2));
     CHECK(dug == doctest::Approx(shape_ground(g, before, GroundShape::Mountain, { 5, 5 }, 3, { 1, 0 }, 2, 1))); // Paid alike
 
@@ -111,9 +113,9 @@ TEST_CASE("a cliff under a brush rides with the ground and keeps its height")
     save::model::TerrainGrid g = flat(10);
     g.at(5, 5).corners = { 4, 4, 4, 4 }; // A raised tile, with cliffs two units high all round
     const GroundBefore before = ground_before(g, anywhere);
-    const float moved = shape_ground(g, before, GroundShape::Mesa, { 5.5f, 5.5f }, 4, { 1, 0 }, 3, 1);
-    const float slack = 0.5f * shape_roughness(GroundShape::Mesa) * 3;
-    for (const float h : g.at(5, 5).corners)
+    const f32 moved = shape_ground(g, before, GroundShape::Mesa, { 5.5f, 5.5f }, 4, { 1, 0 }, 3, 1);
+    const f32 slack = 0.5f * shape_roughness(GroundShape::Mesa) * 3;
+    for (const f32 h : g.at(5, 5).corners)
         CHECK(near(h, 7, slack));                                               // The top went up with the mesa
     CHECK(near(g.at(6, 5).corners[0], 5, slack));                               // And so did the foot beside it
     CHECK(g.at(5, 5).corners[1] - g.at(6, 5).corners[0] == doctest::Approx(2)); // The cliff as high as it was
@@ -128,8 +130,8 @@ TEST_CASE("no shape is quite smooth: each corner point is a little off it, the s
     const GroundBefore before = ground_before(g, anywhere);
     shape_ground(g, before, GroundShape::Mountain, { 6, 6 }, 4, { 1, 0 }, 10, 1);
     // Two points the same distance out differ, within the shape's roughness.
-    const float east = point(g, 7, 6);
-    const float west = point(g, 5, 6);
+    const f32 east = point(g, 7, 6);
+    const f32 west = point(g, 5, 6);
     CHECK(east != west);
     CHECK(std::abs(east - west) <= shape_roughness(GroundShape::Mountain) * 10);
     // The tiles round a point still agree on it.

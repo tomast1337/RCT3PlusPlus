@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path/decks.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <format>
@@ -11,25 +13,25 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid flat_grid(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         return g;
     }
 
     /// A raised path at `height` drawn by object `id + 100`.
-    save::model::PathTile raised(std::int32_t col, std::int32_t row, std::int32_t height, std::uint64_t id, std::uint8_t slope = 0, Side heading = Side::kNextRow)
+    save::model::PathTile raised(i32 col, i32 row, i32 height, u64 id, u8 slope = 0, Side heading = Side::kNextRow)
     {
         save::model::PathTile p;
         p.id = id;
         p.kind = save::model::PathKind::Flying;
-        p.col = static_cast<std::uint8_t>(col);
-        p.row = static_cast<std::uint8_t>(row);
+        p.col = static_cast<u8>(col);
+        p.row = static_cast<u8>(row);
         p.direction = stored_direction(heading);
         p.surface_name = "Gravel";
         p.elevation = save::model::PathElevation { };
@@ -43,7 +45,7 @@ namespace
     {
         PathStyle s;
         s.name = "Gravel";
-        for (std::size_t i = 0; i < kDeckPieceCount; ++i)
+        for (usize i = 0; i < kDeckPieceCount; ++i)
             s.pieces.push_back(std::format("Gravel_{}", i));
         return s;
     }
@@ -144,9 +146,9 @@ TEST_CASE("raised paths take the pieces their neighbours call for")
     CHECK(refresh_decks(paths, objects, g, styles, 0, 0, 4, 4) == 0);
 
     // A second row beside the first makes a wide path: edges along both.
-    for (std::int32_t col = 1; col <= 3; ++col)
-        paths.push_back(raised(col, 3, 2, static_cast<std::uint64_t>(10 + col)));
-    for (std::size_t i = 3; i < paths.size(); ++i)
+    for (i32 col = 1; col <= 3; ++col)
+        paths.push_back(raised(col, 3, 2, static_cast<u64>(10 + col)));
+    for (usize i = 3; i < paths.size(); ++i)
     {
         save::model::PlacedObject& o = objects.emplace_back();
         o.id = paths[i].elevation->scenery_ref;
@@ -208,7 +210,7 @@ TEST_CASE("a ramp takes the piece closed at each end that joins no path")
 TEST_CASE("a style without capped pieces draws the open one")
 {
     PathStyle plain = gravel();
-    plain.pieces.resize(static_cast<std::size_t>(DeckPiece::FlatCapped));
+    plain.pieces.resize(static_cast<usize>(DeckPiece::FlatCapped));
     CHECK(deck_symbol(plain, DeckPiece::FlatCapped) == deck_symbol(plain, DeckPiece::Flat));
     CHECK(deck_symbol(plain, DeckPiece::SlopeStraightLeftCappedTop) == deck_symbol(plain, DeckPiece::SlopeStraightLeft));
     CHECK(deck_symbol(gravel(), DeckPiece::SlopeMidCappedTop) == "Gravel_34");

@@ -3,6 +3,7 @@
 // Internal helper for item readers: which item name a reference field holds.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <cstdint>
@@ -31,7 +32,7 @@ namespace rct3::ovl
 
         /// Name, without the tag, of the item the field at `location` refers to. Empty when the field has no
         /// reference or the reference names an item of another type than `tag`.
-        [[nodiscard]] std::string_view find(std::uint32_t location, std::string_view tag) const noexcept
+        [[nodiscard]] std::string_view find(u32 location, std::string_view tag) const noexcept
         {
             const auto it = names_.find(location);
             if (it == names_.end() || it->second.tag != tag)
@@ -40,7 +41,7 @@ namespace rct3::ovl
         }
 
     private:
-        std::unordered_map<std::uint32_t, SymbolName> names_;
+        std::unordered_map<u32, SymbolName> names_;
     };
 
 } // namespace rct3::ovl

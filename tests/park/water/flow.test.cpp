@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/water/flow.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -12,10 +14,10 @@ namespace
 {
 
     // A straight spline of `parts` parts from `from` along -X, `length` long.
-    ovl::Spline straight(std::array<float, 3> from, float length, std::int32_t parts)
+    ovl::Spline straight(std::array<f32, 3> from, f32 length, i32 parts)
     {
         ovl::Spline s;
-        for (std::int32_t i = 0; i <= parts; ++i)
+        for (i32 i = 0; i <= parts; ++i)
         {
             ovl::SplineNode& n = s.nodes.emplace_back();
             n.position = { from[0] - length * i / parts, from[1], from[2] };
@@ -67,7 +69,7 @@ TEST_CASE("water listed from the track's far end still runs its picture the way 
 
 TEST_CASE("flowing water slides its picture on along v, and back along it on pieces laid the other way round")
 {
-    const float quarter = kFlowRepeat / kFlowSpeed / 4;
+    const f32 quarter = kFlowRepeat / kFlowSpeed / 4;
     CHECK(flow_scroll(0, 1).lengths == 0);
     // Adding 0.75 to v reads the picture a quarter further back: it has moved on a quarter.
     CHECK(flow_scroll(quarter, 1).lengths == doctest::Approx(0.75f));
@@ -81,8 +83,8 @@ TEST_CASE("a piece's own water sheet flows as a strip does, its picture turned r
     object::ModelPart sheet;
     sheet.texture = "water";
     sheet.blend = object::PartBlend::Cutout;
-    for (const float x : { -4.0f, 0.0f })
-        for (const float z : { -1.0f, 1.0f })
+    for (const f32 x : { -4.0f, 0.0f })
+        for (const f32 z : { -1.0f, 1.0f })
             sheet.vertices.push_back({ .position = { x, 0.5f, z }, .uv = { z > 0 ? 1.0f : 0.0f, x == 0 ? 1.0f : 0.0f } });
     object::ModelPart turned = sheet;
     flowing_sheet(turned, straight({ 0, 0, 0 }, 4, 1), "flow");

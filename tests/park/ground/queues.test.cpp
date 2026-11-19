@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground/queues.hpp"
 
+#include "core/types.hpp"
 #include "park/ground/paths.hpp"
 #include "park/path/decks.hpp"
 
@@ -15,12 +16,12 @@ namespace
 {
 
     // Stored directions.
-    constexpr std::uint8_t kMinusX = 0;
-    constexpr std::uint8_t kPlusX = 1;
-    constexpr std::uint8_t kMinusZ = 2;
-    constexpr std::uint8_t kPlusZ = 3;
+    constexpr u8 kMinusX = 0;
+    constexpr u8 kPlusX = 1;
+    constexpr u8 kMinusZ = 2;
+    constexpr u8 kPlusZ = 3;
 
-    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height, float level = 0)
+    save::model::TerrainGrid flat_grid(i32 width, i32 height, f32 level = 0)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -29,18 +30,18 @@ namespace
         g.origin_z = 8;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         for (save::model::TerrainCell& c : g.cells)
             c.corners = { level, level, level, level };
         return g;
     }
 
-    save::model::PathTile queue(std::int32_t col, std::int32_t row, std::uint8_t start, std::uint8_t end, std::string style = "Lanes", std::array<std::int32_t, 3> colours = { 4, 5, 6 })
+    save::model::PathTile queue(i32 col, i32 row, u8 start, u8 end, std::string style = "Lanes", std::array<i32, 3> colours = { 4, 5, 6 })
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Queue;
-        p.col = static_cast<std::uint8_t>(col);
-        p.row = static_cast<std::uint8_t>(row);
+        p.col = static_cast<u8>(col);
+        p.row = static_cast<u8>(row);
         p.surface_name = std::move(style);
         p.surface_colours = colours;
         p.elevation = save::model::PathElevation { };
@@ -75,9 +76,9 @@ TEST_CASE("a queue tile open on opposite sides is straight, turned to their axis
 TEST_CASE("a turn is turned so its open sides face the start and end")
 {
     // Worked by hand: the picture's turns count from the row before towards the next column.
-    const auto shape = [](std::uint8_t start, std::uint8_t end) {
+    const auto shape = [](u8 start, u8 end) {
         const QueueShape s = queue_shape(start, end);
-        return std::pair { s.cell, std::int32_t { s.turns } };
+        return std::pair { s.cell, i32 { s.turns } };
     };
     CHECK(shape(kMinusX, kMinusZ) == std::pair { QueueCell::TurnRightSide, 3 });
     CHECK(shape(kMinusX, kPlusZ) == std::pair { QueueCell::TurnLeftSide, 3 });

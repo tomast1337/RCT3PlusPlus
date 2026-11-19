@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "audio/park_voices.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 
 namespace rct3::audio
@@ -15,21 +17,21 @@ namespace rct3::audio
         constexpr units::Frequency kMostScreams { 1.5 }; ///< On the wildest stretch
     } // namespace
 
-    PlayParams heard(glm::vec3 at, float volume)
+    PlayParams heard(glm::vec3 at, f32 volume)
     {
         return { .volume = std::max(volume, 0.0f), .at = at, .near = kNearVoice.value, .far = kFarVoice.value };
     }
 
-    float chatter_level(std::size_t people)
+    f32 chatter_level(usize people)
     {
-        return people < 2 ? 0.0f : std::min(static_cast<float>(people) / static_cast<float>(kCrowd), 1.0f);
+        return people < 2 ? 0.0f : std::min(static_cast<f32>(people) / static_cast<f32>(kCrowd), 1.0f);
     }
 
-    float screams_per_second(float speed, float drop)
+    f32 screams_per_second(f32 speed, f32 drop)
     {
-        const float fast = std::clamp((speed - kThrillSpeed.value) / (kWildSpeed.value - kThrillSpeed.value), 0.0f, 1.0f);
-        const float falling = std::clamp((drop - kThrillDrop.value) / (kWildDrop.value - kThrillDrop.value), 0.0f, 1.0f);
-        return static_cast<float>(kMostScreams.value) * std::min(fast + falling, 1.0f);
+        const f32 fast = std::clamp((speed - kThrillSpeed.value) / (kWildSpeed.value - kThrillSpeed.value), 0.0f, 1.0f);
+        const f32 falling = std::clamp((drop - kThrillDrop.value) / (kWildDrop.value - kThrillDrop.value), 0.0f, 1.0f);
+        return static_cast<f32>(kMostScreams.value) * std::min(fast + falling, 1.0f);
     }
 
 } // namespace rct3::audio

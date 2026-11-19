@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/tutorials.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -13,7 +15,7 @@ namespace
     StringTable eight_tutorials()
     {
         StringTable strings;
-        for (std::int32_t n = 1; n <= 8; ++n)
+        for (i32 n = 1; n <= 8; ++n)
         {
             const std::string number = std::to_string(n);
             strings.add(std::format("TutorialList_Name{}", number), u"Lesson");

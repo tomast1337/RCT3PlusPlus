@@ -5,6 +5,7 @@
 // here, the helpers the other systems share, and those steps.
 #pragma once
 
+#include "core/types.hpp"
 #include "profiling/profiler.hpp"
 #include "simulation/components.hpp"
 
@@ -33,7 +34,7 @@ namespace rct3::simulation
     class Workers;
     struct Ware;
 
-    enum class AgeGroup : std::uint8_t
+    enum class AgeGroup : u8
     {
         Child,
         Teen,
@@ -45,8 +46,8 @@ namespace rct3::simulation
         AgeGroup age = AgeGroup::Adult;
         bool female = false;
         std::string name;
-        std::uint64_t arrived = 0; ///< Tick the visitor entered the park
-        bool avatar = false;       ///< Made by the player, who keeps the photos taken of them
+        u64 arrived = 0;     ///< Tick the visitor entered the park
+        bool avatar = false; ///< Made by the player, who keeps the photos taken of them
     };
 
     struct Needs
@@ -77,7 +78,7 @@ namespace rct3::simulation
     /// A guest on the paths outside the park, between a spawn point and the gate.
     struct Outside
     {
-        enum class Way : std::uint8_t
+        enum class Way : u8
         {
             In,         ///< Walking to the gate, not paid yet
             TurnedAway, ///< Could not pay at the gate, walking back
@@ -89,9 +90,9 @@ namespace rct3::simulation
     /// Guests in and out of the gate so far, in the registry's context, by AgeGroup.
     struct Turnstile
     {
-        std::array<std::uint32_t, 3> in { };
-        std::array<std::uint32_t, 3> out { };
-        std::uint32_t turned_away = 0; ///< Parties that could not pay to come in
+        std::array<u32, 3> in { };
+        std::array<u32, 3> out { };
+        u32 turned_away = 0; ///< Parties that could not pay to come in
     };
 
     /// The intensity of rides a guest likes, 0..1 as rides are rated; any when they have none.
@@ -116,17 +117,17 @@ namespace rct3::simulation
     /// held as an empty (a wrapper, a cup) until they are rid of it: in a bin, in a pocket, or on the path.
     struct Carried
     {
-        static constexpr std::uint8_t kPockets = 2; ///< As saved guests have: a left and a right one
+        static constexpr u8 kPockets = 2; ///< As saved guests have: a left and a right one
 
         entt::entity stall = entt::null; ///< Where it came from, for what it looks like
-        std::uint8_t ware = 0;           ///< Its place on that stall's menu
-        std::uint8_t kind = 0;           ///< As Litter::kind, once dropped
+        u8 ware = 0;                     ///< Its place on that stall's menu
+        u8 kind = 0;                     ///< As Litter::kind, once dropped
         bool food = true;                ///< Else drink
-        std::uint8_t bites = 0;          ///< Left; none once it is an empty
+        u8 bites = 0;                    ///< Left; none once it is an empty
         units::Share fill { };           ///< Of their hunger or thirst each bite takes away
         units::Seconds since { };        ///< Since the last bite, or since it was finished
         bool held = true;                ///< In hand; else only empties in their pockets are left
-        std::uint8_t pocketed = 0;       ///< Empties in their pockets, up to kPockets
+        u8 pocketed = 0;                 ///< Empties in their pockets, up to kPockets
     };
 
     /// A look a guest gives something they walk on past, their head turned towards it a moment.
@@ -141,17 +142,17 @@ namespace rct3::simulation
     struct Draw
     {
         units::Money entrance_fee { };
-        std::uint32_t pool_squares = 0;
-        std::optional<float> rating { }; ///< The park's, 0..1; none before it has one
-        units::Money guest_cash { };     ///< What guests bring in on average; none for the tuning's
-        units::Money guest_bank { };     ///< What cash machines can give them on average; none for the tuning's
+        u32 pool_squares = 0;
+        std::optional<f32> rating { }; ///< The park's, 0..1; none before it has one
+        units::Money guest_cash { };   ///< What guests bring in on average; none for the tuning's
+        units::Money guest_bank { };   ///< What cash machines can give them on average; none for the tuning's
     };
 
     /// Room in the park, in the registry's context, made by open rides that are not simulated yet (water
     /// slides, lazy rivers, rides with no timing): guests still come for them.
     struct RoomElsewhere
     {
-        std::uint32_t guests = 0;
+        u32 guests = 0;
     };
 
     struct Wallet
@@ -170,14 +171,14 @@ namespace rct3::simulation
     };
 
     /// `v` kept within 0..1.
-    [[nodiscard]] float clamp01(float v);
+    [[nodiscard]] f32 clamp01(f32 v);
 
     /// How much a guest must wish for a swim to go for one: more the cooler the day, less the hotter.
-    [[nodiscard]] float swim_wish_needed(float temperature);
+    [[nodiscard]] f32 swim_wish_needed(f32 temperature);
 
     /// Most a guest pays for `ware`: its item's worth for the weather, more in the cold for a hot drink and in
     /// the heat for an ice cream; `flat` where that is not known.
-    [[nodiscard]] units::Money worth_of(const Ware& ware, units::Money flat, float temperature);
+    [[nodiscard]] units::Money worth_of(const Ware& ware, units::Money flat, f32 temperature);
 
     /// The guest pays the park `price`, counted in all and under `on` (none: in all only), whether they
     /// could. The rest of their party makes up what they are short of, the richest first. The park takes it in
@@ -192,15 +193,15 @@ namespace rct3::simulation
     [[nodiscard]] glm::vec2 new_lane(Dice& dice, glm::vec2 was, glm::vec2 slot = { });
 
     /// How far a walker on `s` goes from tile to tile, lane to lane.
-    [[nodiscard]] float step_length(const PathNetwork& paths, const Stride& s);
+    [[nodiscard]] f32 step_length(const PathNetwork& paths, const Stride& s);
 
     /// Takes a step just begun `left` world units along, what the tick's walk had left past the tile, so
     /// walkers keep their pace through tiles.
-    void walk_on(const PathNetwork& paths, Stride& s, float left);
+    void walk_on(const PathNetwork& paths, Stride& s, f32 left);
 
     /// Walkers turn half way towards the way they moved this tick, so a step aside every other tick does not
     /// swing them to and fro, and no faster than turn_rate.
-    void face_moved(Pose& pose, float dt);
+    void face_moved(Pose& pose, f32 dt);
 
     /// Whether a guest is still eating what they bought.
     [[nodiscard]] bool eating(const entt::registry& r, entt::entity guest);
@@ -226,14 +227,14 @@ namespace rct3::simulation
     [[nodiscard]] Taste taste_of(const entt::registry& r, entt::entity guest);
 
     /// The time of day the guests feel, from the Daylight in the registry's context.
-    [[nodiscard]] float time_of_day(const entt::registry& r);
+    [[nodiscard]] f32 time_of_day(const entt::registry& r);
 
     /// The weather the guests feel, from the registry's context.
     [[nodiscard]] Weather weather_in(const entt::registry& r);
 
     /// How far right of a line's middle a guest stands: to the other side from `ahead`, the one before them,
     /// so a line of people fills its width two abreast.
-    [[nodiscard]] float side_after(random::RandomState& dice, float ahead);
+    [[nodiscard]] f32 side_after(random::RandomState& dice, f32 ahead);
 
     /// One tick of the guests: needs and moods, walking, followers keeping to their leader, spacing out on the
     /// paths and in queues, and arriving where they headed. Times each phase on `phase`.
@@ -253,12 +254,12 @@ namespace rct3::simulation
     [[nodiscard]] units::Pace gait_pace(units::Pace walk, units::Share energy, Gait gait);
 
     /// Guests a second coming in at a gate in `weather`: fewer in rain, storms and the cold, more on sunny days.
-    [[nodiscard]] double arrivals_per_second(const Weather& weather);
+    [[nodiscard]] f64 arrivals_per_second(const Weather& weather);
 
     /// Guests the park has room for, with some to spare: what its open rides that are not broken down make
     /// room for (or a share for each seat, where a ride's data does not say), and a share for each square of
     /// pool water, and the room of rides not simulated (RoomElsewhere).
-    [[nodiscard]] std::uint32_t ideal_guests(const SimWorld& world);
+    [[nodiscard]] u32 ideal_guests(const SimWorld& world);
 
     /// The entrance fee guests think fair: what the open rides are worth to them over what they
     /// charge.
@@ -266,7 +267,7 @@ namespace rct3::simulation
 
     /// How many guests come in against a plain park, from the park's rating, how crowded it is (`guests`
     /// against `ideal`) and its entrance fee against `fair_fee`.
-    [[nodiscard]] double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, units::Money fair_fee);
+    [[nodiscard]] f64 drawn(const Draw& draw, u32 guests, u32 ideal, units::Money fair_fee);
 
     /// Gives guest `guest` what it needs to walk, standing on path node `at` with nothing to do. Its dice are
     /// seeded from the world's seed and its id, so the same park always plays out the same way.

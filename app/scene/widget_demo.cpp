@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/widget_demo.hpp"
 
+#include "core/types.hpp"
 #include "strings/unicode.hpp"
 #include "ui/game_style.hpp"
 #include "ui/scale.hpp"
@@ -33,11 +34,11 @@ namespace rct3::scene
         namespace skins = ui::game_skins;
 
         constexpr std::string_view kToggleFamily = "Staff_TaskButtonBins";
-        constexpr float kWidth = 340;
-        constexpr float kHeight = 300;
-        constexpr float kMinWidth = 320; ///< Room for the button row
-        constexpr float kMinHeight = 280;
-        constexpr float kCascade = 28; ///< How far each new window opens from the last
+        constexpr f32 kWidth = 340;
+        constexpr f32 kHeight = 300;
+        constexpr f32 kMinWidth = 320; ///< Room for the button row
+        constexpr f32 kMinHeight = 280;
+        constexpr f32 kCascade = 28; ///< How far each new window opens from the last
 
         // Game string keys the demo shows.
         constexpr std::string_view kTitleKey = "GameOptionsDialog_Title";
@@ -45,24 +46,24 @@ namespace rct3::scene
         constexpr std::array<std::string_view, 3> kOptionKeys = { "GameOptionsDialog_AutoScrollAtEdge", "GameOptionsDialog_BackgroundMusic", "GameOptionsDialog_Bloom" };
         constexpr std::array<std::string_view, 3> kOptionTips = { "GameOptionsDialog_AutoScrollAtEdgeHelp", "GameOptionsDialog_BackgroundMusicTT", "GameOptionsDialog_Bloom_TT" };
         constexpr std::array<std::string_view, 3> kTextButtonKeys = { "SMB_Label_OK", "SMB_Label_Cancel", "SMB_Label_Help" };
-        constexpr float kTextButtonWidth = 70;
-        constexpr float kTextButtonHeight = 26;
-        constexpr std::size_t kNameLength = 40;
-        constexpr float kButtonRow = 36; ///< Below the tabs
-        constexpr float kRowHeight = 18; ///< Of the controls page
+        constexpr f32 kTextButtonWidth = 70;
+        constexpr f32 kTextButtonHeight = 26;
+        constexpr usize kNameLength = 40;
+        constexpr f32 kButtonRow = 36; ///< Below the tabs
+        constexpr f32 kRowHeight = 18; ///< Of the controls page
         constexpr std::array<std::u16string_view, 3> kDetailLevels = { u"Low detail", u"Medium detail", u"High detail" };
-        constexpr float kMenuBarHeight = 20;
+        constexpr f32 kMenuBarHeight = 20;
         constexpr std::array<std::string_view, 4> kToolIcons = { "File_GameOptions_Game", "File_GameOptions_Graphics", "File_GameOptions_Camera", "File_GameOptions_Keyboard" };
         constexpr std::array<std::u16string_view, 4> kToolTips = { u"Open a window", u"Graphics", u"Camera", u"Keyboard" };
         // The menus, by index in the bar.
-        constexpr std::size_t kWindowMenu = 0;
-        constexpr std::size_t kScaleMenu = 1;
-        constexpr std::size_t kNewWindowItem = 0;
-        constexpr std::size_t kCloseWindowItem = 1;
-        constexpr std::size_t kAutoScaleItem = 0; ///< Then one item for each whole scale from 1
-        constexpr std::int32_t kScaleChoices = 4;
-        constexpr std::size_t kCloseAllItem = 3;
-        constexpr std::size_t kCloseAllYes = 0;
+        constexpr usize kWindowMenu = 0;
+        constexpr usize kScaleMenu = 1;
+        constexpr usize kNewWindowItem = 0;
+        constexpr usize kCloseWindowItem = 1;
+        constexpr usize kAutoScaleItem = 0; ///< Then one item for each whole scale from 1
+        constexpr i32 kScaleChoices = 4;
+        constexpr usize kCloseAllItem = 3;
+        constexpr usize kCloseAllYes = 0;
         constexpr units::Pixels kIconSwell { 2 }; ///< Of the confirm and cancel buttons
         constexpr std::array<std::u16string_view, 12> kRideNames = { u"Bumper Cars", u"Carousel", u"Chairlift", u"Drop Tower", u"Ferris Wheel", u"Ghost Train", u"Go Karts", u"Log Flume", u"Monorail", u"Spiral Slide", u"Swinging Ship", u"Wooden Coaster" };
         // Characters the game fonts lack, to show the fallback font: "hello world" in Greek and Russian,
@@ -72,7 +73,7 @@ namespace rct3::scene
         class DemoWindow : public ui::widgets::Window
         {
         public:
-            DemoWindow(std::string name, float cascade, const ui::StringTable& strings, const ui::Palette& palette)
+            DemoWindow(std::string name, f32 cascade, const ui::StringTable& strings, const ui::Palette& palette)
                 : ui::widgets::Window(std::move(name), skins::window_style(palette), kWidth, kHeight)
                 , strings_(strings)
                 , palette_(palette)
@@ -98,12 +99,12 @@ namespace rct3::scene
 
                 // Text buttons: OK opens another window like confirm, Cancel closes this one, Help is disabled.
                 std::array<ui::widgets::Button*, kTextButtonKeys.size()> text_buttons { };
-                for (std::size_t i = 0; i < kTextButtonKeys.size(); ++i)
+                for (usize i = 0; i < kTextButtonKeys.size(); ++i)
                 {
                     auto& b = body.add<ui::widgets::Button>(std::string(kTextButtonKeys[i]), std::string(skins::kTextButton));
                     b.text = strings.get(kTextButtonKeys[i]);
                     b.text_inset = skins::kLozengeInset;
-                    b.placement = ui::bottom_left(static_cast<float>(i) * (kTextButtonWidth + 6), 6, kTextButtonWidth, kTextButtonHeight);
+                    b.placement = ui::bottom_left(static_cast<f32>(i) * (kTextButtonWidth + 6), 6, kTextButtonWidth, kTextButtonHeight);
                     text_buttons[i] = &b;
                 }
                 ok_ = text_buttons[0];
@@ -148,9 +149,9 @@ namespace rct3::scene
 
             void build_controls_page(ui::Widget& page, const ui::StringTable& strings)
             {
-                for (std::size_t i = 0; i < kOptionKeys.size(); ++i)
+                for (usize i = 0; i < kOptionKeys.size(); ++i)
                 {
-                    const float y = static_cast<float>(i) * kRowHeight;
+                    const f32 y = static_cast<f32>(i) * kRowHeight;
                     auto& tick = page.add<ui::widgets::Tickbox>(std::string(kOptionKeys[i]), std::string(skins::kTickbox), std::string(skins::kTick));
                     tick.placement = ui::top_left(0, y + 3, 12, 12);
                     tick.ticked = i == 0;
@@ -164,7 +165,7 @@ namespace rct3::scene
                 toggle.placement = ui::top_right(0, 0, 20, 20);
 
                 // A slider and a spinner, each showing its value beside it.
-                const float y = static_cast<float>(kOptionKeys.size()) * kRowHeight + 8;
+                const f32 y = static_cast<f32>(kOptionKeys.size()) * kRowHeight + 8;
                 volume_ = &page.add<ui::widgets::Slider>("volume", skins::slider_style(palette_));
                 volume_->maximum = 100;
                 volume_->set_value(70);
@@ -191,7 +192,7 @@ namespace rct3::scene
             void update(const ui::UpdateContext& context) override
             {
                 ui::widgets::Window::update(context);
-                volume_label_->text = strings::to_utf16(std::format("{}%", static_cast<std::int32_t>(volume_->value())));
+                volume_label_->text = strings::to_utf16(std::format("{}%", static_cast<i32>(volume_->value())));
                 if (guests_->take_change())
                     guests_label_->text = guests_->value() == 1 ? u"guest" : u"guests";
                 if (name_->take_change())
@@ -207,7 +208,7 @@ namespace rct3::scene
                 const bool open = confirm_->take_click() || ok_->take_click();
                 if (open && parent() != nullptr)
                 {
-                    const auto n = static_cast<float>(parent()->children().size());
+                    const auto n = static_cast<f32>(parent()->children().size());
                     parent()->add<DemoWindow>(std::format("window{}", parent()->children().size()), n * kCascade, strings_, palette_);
                 }
             }
@@ -236,15 +237,15 @@ namespace rct3::scene
         {
             ui::Widget& root = demo.desktop.root();
             const auto n = std::ranges::count_if(root.children(), [](const auto& c) { return is_demo_window(*c); });
-            root.add<DemoWindow>(std::format("window{}", root.children().size()), static_cast<float>(n) * kCascade, *demo.assets.strings, demo.assets.palette);
+            root.add<DemoWindow>(std::format("window{}", root.children().size()), static_cast<f32>(n) * kCascade, *demo.assets.strings, demo.assets.palette);
         }
 
-        std::vector<ui::widgets::MenuItem> scale_items(std::optional<float> chosen)
+        std::vector<ui::widgets::MenuItem> scale_items(std::optional<f32> chosen)
         {
             std::vector<ui::widgets::MenuItem> items;
             items.push_back({ .text = u"Automatic", .checked = !chosen });
-            for (std::int32_t s = 1; s <= kScaleChoices; ++s)
-                items.push_back({ .text = strings::to_utf16(std::format("{}x", s)), .checked = chosen == static_cast<float>(s) });
+            for (i32 s = 1; s <= kScaleChoices; ++s)
+                items.push_back({ .text = strings::to_utf16(std::format("{}x", s)), .checked = chosen == static_cast<f32>(s) });
             return items;
         }
 
@@ -261,7 +262,7 @@ namespace rct3::scene
             demo.menu_bar->menus = { { u"Window", std::move(window_items) }, { u"Scale", scale_items(demo.scale) } };
 
             demo.toolbar = &root.add<ui::widgets::Toolbar>("toolbar", skins::toolbar_style(demo.assets.palette), ui::widgets::Orientation::Vertical);
-            for (std::size_t i = 0; i < kToolIcons.size(); ++i)
+            for (usize i = 0; i < kToolIcons.size(); ++i)
                 demo.toolbar->add_button(std::format("tool{}", i), std::string(kToolIcons[i]), std::u16string(kToolTips[i]));
             demo.toolbar->placement = ui::top_left(0, kMenuBarHeight + 4, 38, demo.toolbar->length());
         }
@@ -283,7 +284,7 @@ namespace rct3::scene
                     demo.question = &demo.desktop.root().add<ui::widgets::QuestionBox>("question", skins::question_box_style(demo.assets.palette), u"Close every window? A new one opens in their place.", std::vector<ui::widgets::QuestionAnswer> { { u"Yes", std::string(skins::kConfirmIcon) }, { u"No", std::string(skins::kCancelIcon) } });
                 if (choice->menu == kScaleMenu)
                 {
-                    demo.scale = choice->item == kAutoScaleItem ? std::nullopt : std::optional(static_cast<float>(choice->item));
+                    demo.scale = choice->item == kAutoScaleItem ? std::nullopt : std::optional(static_cast<f32>(choice->item));
                     demo.menu_bar->menus[kScaleMenu].items = scale_items(demo.scale);
                 }
             }
@@ -306,9 +307,9 @@ namespace rct3::scene
                 open_window(demo);
         }
 
-        float scale_for(const render::Device& device, const WidgetDemo& demo)
+        f32 scale_for(const render::Device& device, const WidgetDemo& demo)
         {
-            return ui::interface_scale(static_cast<float>(device.extent().height), demo.scale, device.render_scale());
+            return ui::interface_scale(static_cast<f32>(device.extent().height), demo.scale, device.render_scale());
         }
 
     } // namespace
@@ -328,9 +329,9 @@ namespace rct3::scene
 
     bool update_widget_demo(render::Device& device, WidgetDemo& demo, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, units::Seconds elapsed)
     {
-        const float scale = scale_for(device, demo);
+        const f32 scale = scale_for(device, demo);
         const render::Extent extent = device.extent();
-        demo.desktop.layout({ 0, 0, static_cast<float>(extent.width) / scale, static_cast<float>(extent.height) / scale });
+        demo.desktop.layout({ 0, 0, static_cast<f32>(extent.width) / scale, static_cast<f32>(extent.height) / scale });
 
         // Something to show again once every window is closed.
         if (std::ranges::none_of(demo.desktop.root().children(), [](const auto& c) { return is_demo_window(*c); }))

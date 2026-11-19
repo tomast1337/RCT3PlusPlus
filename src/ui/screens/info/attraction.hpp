@@ -11,6 +11,7 @@
 // and colours) comes as the page's controls.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/carried_goods.hpp"
 #include "save/model/design.hpp"
 #include "save/model/people.hpp"
@@ -33,7 +34,7 @@
 namespace rct3::ui::screens::info
 {
 
-    enum class AttractionKind : std::uint8_t
+    enum class AttractionKind : u8
     {
         Tracked,
         Flat,
@@ -41,7 +42,7 @@ namespace rct3::ui::screens::info
         Stall,
     };
 
-    enum class AttractionTab : std::uint8_t
+    enum class AttractionTab : u8
     {
         View,
         Finances,
@@ -65,21 +66,21 @@ namespace rct3::ui::screens::info
     };
 
     /// The tab a message's number names, if any.
-    [[nodiscard]] constexpr std::optional<AttractionTab> message_tab(std::int32_t panel)
+    [[nodiscard]] constexpr std::optional<AttractionTab> message_tab(i32 panel)
     {
-        return panel >= 0 && static_cast<std::size_t>(panel) < kMessageTabs.size() ? std::optional(kMessageTabs[static_cast<std::size_t>(panel)]) : std::nullopt;
+        return panel >= 0 && static_cast<usize>(panel) < kMessageTabs.size() ? std::optional(kMessageTabs[static_cast<usize>(panel)]) : std::nullopt;
     }
 
     /// The number a message names `tab` by.
-    [[nodiscard]] constexpr std::int32_t message_panel(AttractionTab tab)
+    [[nodiscard]] constexpr i32 message_panel(AttractionTab tab)
     {
-        return static_cast<std::int32_t>(std::ranges::find(kMessageTabs, tab) - kMessageTabs.begin());
+        return static_cast<i32>(std::ranges::find(kMessageTabs, tab) - kMessageTabs.begin());
     }
 
     struct AttractionTabInfo
     {
         AttractionTab tab = AttractionTab::View;
-        std::int32_t slot = 0; ///< Its place on the ring
+        i32 slot = 0;          ///< Its place on the ring
         std::string_view icon; ///< Skin
         std::string_view help; ///< String key
         bool action = false;   ///< Does something at once instead of opening a page
@@ -101,9 +102,9 @@ namespace rct3::ui::screens::info
     [[nodiscard]] std::string_view breakdown_key(save::model::BreakdownKind kind);
 
     /// The word for a rating of `value` (excitement, intensity or nausea): low, medium, high and so on.
-    [[nodiscard]] std::u16string rating_word(float value, const StringTable& strings);
+    [[nodiscard]] std::u16string rating_word(f32 value, const StringTable& strings);
 
-    enum class DistanceUnits : std::uint8_t
+    enum class DistanceUnits : u8
     {
         Metric,   ///< km/h and metres
         Imperial, ///< mph and feet
@@ -111,7 +112,7 @@ namespace rct3::ui::screens::info
     };
 
     /// `metres` as a whole number of metres, or of feet in imperial units.
-    [[nodiscard]] std::u16string distance_text(float metres, DistanceUnits units);
+    [[nodiscard]] std::u16string distance_text(f32 metres, DistanceUnits units);
 
     /// How the player asked to see amounts and distances, and the windows that show them.
     struct InfoUnits
@@ -126,23 +127,23 @@ namespace rct3::ui::screens::info
     /// hour (0 before it has measured).
     struct RideFlow
     {
-        std::uint32_t seats = 0;
-        std::size_t queued = 0;
-        float per_hour = 0;
-        std::size_t riding = 0; ///< On it now
+        u32 seats = 0;
+        usize queued = 0;
+        f32 per_hour = 0;
+        usize riding = 0; ///< On it now
     };
 
     /// How many trains and cars a tracked ride may be given.
     struct TrainLimits
     {
-        std::int32_t fewest_cars = 1;
-        std::int32_t most_cars = 1;
-        std::int32_t usual_cars = 1; ///< What a new ride's trains have
-        std::int32_t most_trains = 1;
+        i32 fewest_cars = 1;
+        i32 most_cars = 1;
+        i32 usual_cars = 1; ///< What a new ride's trains have
+        i32 most_trains = 1;
     };
 
     /// The graph's series, as AttractionFacts::graph_series has them: speed alone at first.
-    inline constexpr std::uint8_t kSpeedOnly = 1;
+    inline constexpr u8 kSpeedOnly = 1;
 
     struct AttractionFacts
     {
@@ -150,7 +151,7 @@ namespace rct3::ui::screens::info
         const save::model::Ride* ride = nullptr;
         const save::model::Stall* stall = nullptr;
         /// The colours it is painted in, one for each pot it offers; none when it cannot be painted.
-        std::vector<std::size_t> colours { };
+        std::vector<usize> colours { };
         /// While the park runs; the pages show these over what the save kept.
         std::optional<RideFlow> flow { };
         /// The park's guests, to tell how many the ride suits.
@@ -174,13 +175,13 @@ namespace rct3::ui::screens::info
         std::string_view refusal { };
         /// Of a ride, the tunes it may play, and which it plays: 0 for none, k for music[k - 1].
         std::span<const std::u16string> music { };
-        std::size_t tune = 0;
+        usize tune = 0;
         /// Of a tracked ride whose trains can still be changed, whether its kind runs other kinds of train.
         bool other_cars = false;
         /// Of a tracked ride, whether its track is greased.
         bool low_friction = false;
         /// Which of the graph's series show, a bit each: speed, altitude, vertical and lateral forces.
-        std::uint8_t graph_series = kSpeedOnly;
+        u8 graph_series = kSpeedOnly;
         /// Of a stall, the carried items its kind may sell, by symbol as `Burger:cid`.
         std::vector<std::string> offers { };
         /// The carried items and extras the install has, for their names, pictures and extras.
@@ -190,15 +191,15 @@ namespace rct3::ui::screens::info
 
     struct GuestsSuited
     {
-        std::size_t suited = 0; ///< Whose preferred intensity takes in the ride's
-        std::size_t in_park = 0;
+        usize suited = 0; ///< Whose preferred intensity takes in the ride's
+        usize in_park = 0;
     };
 
     /// How many of the guests in the park like rides of `intensity` (as saved, about 0 to 10).
-    [[nodiscard]] GuestsSuited guests_suited(float intensity, std::span<const save::model::Guest> guests);
+    [[nodiscard]] GuestsSuited guests_suited(f32 intensity, std::span<const save::model::Guest> guests);
 
     /// Ids of the controls on an attraction's pages (InfoControl::id).
-    enum class AttractionControl : std::uint16_t
+    enum class AttractionControl : u16
     {
         Price,          ///< A ride's admission, in hundredths
         Colours,        ///< Its pots
@@ -251,52 +252,52 @@ namespace rct3::ui::screens::info
         ItemName = 256,   ///< An item's new name, as typed
         ItemColour = 288, ///< An item's colour
     };
-    inline constexpr std::size_t kMostListed = 32;
+    inline constexpr usize kMostListed = 32;
 
     /// The tricks the player may put in `show`, by place in its tricks: not the first, which the performers do
     /// between shows, nor hidden ones, nor ones not yet offered or researched.
-    [[nodiscard]] std::vector<std::uint32_t> show_offers(const save::model::RideShow& show);
+    [[nodiscard]] std::vector<u32> show_offers(const save::model::RideShow& show);
 
     /// The id of `control` on a page, and of the control for item `item` in a family.
-    [[nodiscard]] constexpr std::int32_t control_id(AttractionControl control, std::size_t item = 0)
+    [[nodiscard]] constexpr i32 control_id(AttractionControl control, usize item = 0)
     {
-        return static_cast<std::int32_t>(control) + static_cast<std::int32_t>(item);
+        return static_cast<i32>(control) + static_cast<i32>(item);
     }
 
     /// Which item of `family` the control `id` is for; none when it is not of that family.
-    [[nodiscard]] constexpr std::optional<std::size_t> listed(std::int32_t id, AttractionControl family)
+    [[nodiscard]] constexpr std::optional<usize> listed(i32 id, AttractionControl family)
     {
-        const std::int32_t item = id - static_cast<std::int32_t>(family);
-        return item >= 0 && std::cmp_less(item, kMostListed) ? std::optional(static_cast<std::size_t>(item)) : std::nullopt;
+        const i32 item = id - static_cast<i32>(family);
+        return item >= 0 && std::cmp_less(item, kMostListed) ? std::optional(static_cast<usize>(item)) : std::nullopt;
     }
 
     /// The text shown for a value the save does not hold.
     inline constexpr std::u16string_view kMissingValue = u"?";
 
     /// Most waiting time the operating mode page offers, and the step it goes in (seconds).
-    inline constexpr std::int32_t kMostWait = 250;
-    inline constexpr std::int32_t kWaitStep = 5;
+    inline constexpr i32 kMostWait = 250;
+    inline constexpr i32 kWaitStep = 5;
     /// Most times round a flat ride can be set to run each go.
-    inline constexpr std::int32_t kMostCircuits = 10;
+    inline constexpr i32 kMostCircuits = 10;
     /// Most letters in an attraction's name, and how wide its box and its tune's list are.
-    inline constexpr std::int32_t kLongestAttractionName = 80;
-    inline constexpr float kNameWidth = 180;
+    inline constexpr i32 kLongestAttractionName = 80;
+    inline constexpr f32 kNameWidth = 180;
     /// Most admission price, for rides and for other attractions and items, and its step (hundredths).
-    inline constexpr std::int32_t kMostRidePrice = 2000;
-    inline constexpr std::int32_t kMostPrice = 1000;
-    inline constexpr std::int32_t kPriceStep = 10;
+    inline constexpr i32 kMostRidePrice = 2000;
+    inline constexpr i32 kMostPrice = 1000;
+    inline constexpr i32 kPriceStep = 10;
     /// A stall item's price goes up to the most a ride's admission does, in smaller steps.
-    inline constexpr std::int32_t kItemPriceStep = 5;
+    inline constexpr i32 kItemPriceStep = 5;
     /// The size of a stall's menu on its items page: our own width, and all the strip's height.
-    inline constexpr float kMenuWidth = 380;
-    inline constexpr float kMenuHeight = info_panel::kStripHeight - info_panel::kBodyTop - info_panel::kBodyBottom;
+    inline constexpr f32 kMenuWidth = 380;
+    inline constexpr f32 kMenuHeight = info_panel::kStripHeight - info_panel::kBodyTop - info_panel::kBodyBottom;
 
     /// Speeds as the player reads them: so many of their unit to a metre a second, and the unit after a number.
-    [[nodiscard]] float speed_scale(DistanceUnits units);
+    [[nodiscard]] f32 speed_scale(DistanceUnits units);
     [[nodiscard]] std::u16string_view speed_unit(DistanceUnits units);
 
     /// The page of `tab`, at `section` when the page has several.
-    [[nodiscard]] InfoPage attraction_page(AttractionTab tab, const AttractionFacts& facts, const StringTable& strings, const InfoUnits& units, std::size_t section = 0);
+    [[nodiscard]] InfoPage attraction_page(AttractionTab tab, const AttractionFacts& facts, const StringTable& strings, const InfoUnits& units, usize section = 0);
 
     /// The latest of the thoughts `all` on `page`, newest first, as many as it has room for, each with its mood's face.
     void add_thoughts(InfoPage& page, std::span<const save::model::ThoughtEntry> all, const StringTable& strings);

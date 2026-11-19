@@ -10,6 +10,8 @@
 // here so the lowest item stands at 0, and placing adds the height of the ground it goes on.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -26,25 +28,25 @@ namespace rct3::save::model
     {
         std::string symbol { };  ///< Of the scenery entry
         std::string overlay { }; ///< The overlay that holds it, as placed objects name it (world.hpp)
-        std::int32_t col = 0;    ///< Counted from the box's first column
-        std::int32_t row = 0;    ///< ... and row
-        std::int32_t height = 0; ///< Above the structure's lowest item
-        std::int32_t rotation = 0;
-        std::int32_t quadrant = 0;
-        std::array<std::int32_t, 3> colours { };
+        i32 col = 0;             ///< Counted from the box's first column
+        i32 row = 0;             ///< ... and row
+        i32 height = 0;          ///< Above the structure's lowest item
+        i32 rotation = 0;
+        i32 quadrant = 0;
+        std::array<i32, 3> colours { };
     };
 
     struct Structure
     {
         std::string name { };
-        std::int32_t cols = 0;
-        std::int32_t rows = 0;
-        std::vector<std::uint8_t> tiles { }; ///< cols x rows, row after row: 1 where the tile belongs to it
+        i32 cols = 0;
+        i32 rows = 0;
+        std::vector<u8> tiles { }; ///< cols x rows, row after row: 1 where the tile belongs to it
         std::vector<StructurePiece> pieces { };
 
-        [[nodiscard]] bool has_tile(std::int32_t col, std::int32_t row) const noexcept
+        [[nodiscard]] bool has_tile(i32 col, i32 row) const noexcept
         {
-            return col >= 0 && row >= 0 && col < cols && row < rows && tiles[static_cast<std::size_t>(row) * static_cast<std::size_t>(cols) + static_cast<std::size_t>(col)] != 0;
+            return col >= 0 && row >= 0 && col < cols && row < rows && tiles[static_cast<usize>(row) * static_cast<usize>(cols) + static_cast<usize>(col)] != 0;
         }
     };
 

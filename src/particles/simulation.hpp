@@ -8,6 +8,7 @@
 // born, where it is born: a shell's bang is heard where it bursts.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "particles/effect.hpp"
 #include "random/generator.hpp"
@@ -27,14 +28,14 @@ namespace rct3::particles
         std::vector<glm::vec3> position { };
         std::vector<glm::vec3> velocity { };
         /// Seconds; below 0 it is not born yet (an emitter's time spread) and is not drawn
-        std::vector<float> age { };
-        std::vector<float> life { };
-        std::vector<float> scale { };           ///< Its share of the particle's size, from the size spread
-        std::vector<float> roll { };            ///< Radians on screen
-        std::vector<std::uint32_t> kind { };    ///< In Effect::particles
-        std::vector<std::uint8_t> relative { }; ///< Moves along when the run is moved
+        std::vector<f32> age { };
+        std::vector<f32> life { };
+        std::vector<f32> scale { };   ///< Its share of the particle's size, from the size spread
+        std::vector<f32> roll { };    ///< Radians on screen
+        std::vector<u32> kind { };    ///< In Effect::particles
+        std::vector<u8> relative { }; ///< Moves along when the run is moved
 
-        [[nodiscard]] std::size_t count() const noexcept
+        [[nodiscard]] usize count() const noexcept
         {
             return age.size();
         }
@@ -44,22 +45,22 @@ namespace rct3::particles
     struct Look
     {
         glm::vec4 colour { 1.0f };
-        float size = 1;
+        f32 size = 1;
         glm::vec3 stretch { 0.0f }; ///< How much longer it is drawn along its motion, as a world vector
     };
 
     /// How particle `i` of `particles` looks now.
-    [[nodiscard]] Look look(const Effect& effect, const ParticleArrays& particles, std::size_t i);
+    [[nodiscard]] Look look(const Effect& effect, const ParticleArrays& particles, usize i);
 
     /// A sound that began: the effect's own, or particle kind `particle`'s.
     struct Heard
     {
         glm::vec3 position { 0.0f };
-        std::optional<std::size_t> particle { }; ///< In Effect::particles; none for the effect's own
+        std::optional<usize> particle { }; ///< In Effect::particles; none for the effect's own
     };
 
     /// Steps a second.
-    inline constexpr float kParticleSteps = 60;
+    inline constexpr f32 kParticleSteps = 60;
 
     class EffectRun
     {
@@ -68,14 +69,14 @@ namespace rct3::particles
         /// otherwise it ends once the effect and its last particle have. `strength` 0 to 1 scales the emitters
         /// whose count follows it. `scale` shrinks or grows the whole effect in space, keeping its timing: how far
         /// its particles go and how fast, and how far they fall (their sizes are the drawing's, Look::size).
-        EffectRun(const Effect& effect, random::RandomState random, bool loops, std::size_t capacity, float strength = 1, float scale = 1);
+        EffectRun(const Effect& effect, random::RandomState random, bool loops, usize capacity, f32 strength = 1, f32 scale = 1);
 
         /// Where the run is: position, its axes (columns; the second is its up) and its speed. Particles
         /// that move with it are carried along.
         void place(glm::vec3 position, const glm::mat3& axes = glm::mat3(1.0f), glm::vec3 velocity = glm::vec3(0.0f));
 
         /// Moves time on by `seconds`, in whole fixed steps; the rest waits for the next call.
-        void advance(float seconds);
+        void advance(f32 seconds);
 
         [[nodiscard]] const Effect& effect() const noexcept
         {
@@ -100,28 +101,28 @@ namespace rct3::particles
         }
 
     private:
-        void step(float dt);
+        void step(f32 dt);
         /// Emits what `emitter`, having sent `emitted`, owes once its owner is `age` into its `life`; returns how
         /// many it has sent then. Taken by value: emitting can move the counters.
-        float emit(const Emitter& emitter, float emitted, float age, float life, glm::vec3 position, glm::vec3 velocity);
+        f32 emit(const Emitter& emitter, f32 emitted, f32 age, f32 life, glm::vec3 position, glm::vec3 velocity);
 
         const Effect* effect_;
         random::RandomState random_;
         bool loops_;
-        std::size_t capacity_;
-        float strength_;
-        float scale_;
+        usize capacity_;
+        f32 strength_;
+        f32 scale_;
         glm::vec3 position_ { 0.0f };
         glm::mat3 axes_ { 1.0f };
         glm::vec3 velocity_ { 0.0f };
-        float age_ = 0;
-        float life_ = 1;
-        float pending_ = 0;
-        std::vector<float> root_emitted_;
+        f32 age_ = 0;
+        f32 life_ = 1;
+        f32 pending_ = 0;
+        std::vector<f32> root_emitted_;
         ParticleArrays live_;
         /// Per pool slot, how many each emitter of the slot's particle has sent: `widest_` counters a slot.
-        std::vector<float> emitted_;
-        std::size_t widest_ = 0;
+        std::vector<f32> emitted_;
+        usize widest_ = 0;
         std::vector<Heard> heard_;
     };
 

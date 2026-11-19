@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/developer_editor.hpp"
 
+#include "core/types.hpp"
 #include "imgui.h"
 #include "park/camera.hpp"
 #include "scene/park/scene.hpp"
@@ -29,7 +30,7 @@ namespace rct3::scene::park
 
         constexpr std::array<std::string_view, 8> kErrands { "wandering", "heading", "queueing", "riding", "following", "waiting", "buying", "swimming" };
         constexpr std::array<std::string_view, 3> kAges { "child", "teen", "adult" };
-        constexpr std::int32_t kMinutesPerDay = 24 * 60;
+        constexpr i32 kMinutesPerDay = 24 * 60;
 
         std::string guest_name(const entt::registry& r, entt::entity guest)
         {
@@ -58,7 +59,7 @@ namespace rct3::scene::park
         /// Money as an input box in currency units; true when changed.
         bool money_input(const char* label, units::Money& money)
         {
-            double units = static_cast<double>(money.value) / 100;
+            f64 units = static_cast<f64>(money.value) / 100;
             if (!ImGui::InputDouble(label, &units, 1, 100, "%.2f", ImGuiInputTextFlags_EnterReturnsTrue))
                 return false;
             money.value = std::llround(units * 100);
@@ -78,7 +79,7 @@ namespace rct3::scene::park
                 simulation::hold_level(r, guest, level, held);
             ImGui::SetItemTooltip("Kept at this level while the park runs on; not saved with the park");
             ImGui::SameLine();
-            float value = now->value;
+            f32 value = now->value;
             if (ImGui::SliderFloat(std::string(name).c_str(), &value, 0, 1, "%.2f"))
                 (void)simulation::set_level(r, guest, level, { value });
             ImGui::PopID();
@@ -95,7 +96,7 @@ namespace rct3::scene::park
             for (const entt::entity e : r.view<const simulation::Visitor, const simulation::Mood>(entt::exclude<simulation::Left>))
                 if (wanted.empty() || strings::search_folded(strings::to_utf16(guest_name(r, e))).contains(wanted))
                     ed.rows.push_back(e);
-            enum Column : std::int32_t
+            enum Column : i32
             {
                 Name,
                 Age,
@@ -112,7 +113,7 @@ namespace rct3::scene::park
             if (!ImGui::BeginTable("guests", 9, kFlags, { 0, ImGui::GetTextLineHeightWithSpacing() * 8 }))
                 return;
             ImGui::TableSetupScrollFreeze(0, 1);
-            const float number_width = ImGui::CalcTextSize("Nausea").x;
+            const f32 number_width = ImGui::CalcTextSize("Nausea").x;
             ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoHide);
             ImGui::TableSetupColumn("Age", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_DefaultHide, ImGui::CalcTextSize("adult").x);
             ImGui::TableSetupColumn("Doing", ImGuiTableColumnFlags_WidthStretch);
@@ -152,11 +153,11 @@ namespace rct3::scene::park
                 std::ranges::stable_sort(ed.rows, [&](entt::entity a, entt::entity b) { return descending ? less(b, a) : less(a, b); });
             }
             ImGuiListClipper clipper;
-            clipper.Begin(static_cast<std::int32_t>(ed.rows.size()));
+            clipper.Begin(static_cast<i32>(ed.rows.size()));
             while (clipper.Step())
-                for (std::int32_t row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row)
+                for (i32 row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row)
                 {
-                    const entt::entity e = ed.rows[static_cast<std::size_t>(row)];
+                    const entt::entity e = ed.rows[static_cast<usize>(row)];
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
                     ImGui::PushID(static_cast<int>(entt::to_integral(e))); // c-api
@@ -170,11 +171,11 @@ namespace rct3::scene::park
                     for (const auto level : { simulation::GuestLevel::Happiness, simulation::GuestLevel::Energy, simulation::GuestLevel::Nausea, simulation::GuestLevel::Hunger, simulation::GuestLevel::Thirst })
                     {
                         ImGui::TableNextColumn();
-                        ImGui::Text("%3.0f%%", static_cast<double>(simulation::level_of(r, e, level).value_or(units::Share { }).value) * 100);
+                        ImGui::Text("%3.0f%%", static_cast<f64>(simulation::level_of(r, e, level).value_or(units::Share { }).value) * 100);
                     }
                     ImGui::TableNextColumn();
                     if (const auto* wallet = r.try_get<simulation::Wallet>(e))
-                        ImGui::Text("%.2f", static_cast<double>(wallet->cash.value) / 100);
+                        ImGui::Text("%.2f", static_cast<f64>(wallet->cash.value) / 100);
                 }
             ImGui::EndTable();
         }
@@ -226,8 +227,8 @@ namespace rct3::scene::park
                     const save::model::TerrainGrid& g = scene.grid;
                     ImGui::Text("At tile %.0f, %.0f", std::floor((pose->position.x - g.origin_x) / g.tile_size_x), std::floor((pose->position.z - g.origin_z) / g.tile_size_z));
                 }
-                const float hours = static_cast<float>(scene.sim.tick - std::min(scene.sim.tick, visitor.arrived)) * simulation::kTickSeconds / simulation::kSecondsPerHour;
-                ImGui::Text("In the park %.1f hours (since the park was opened here)", static_cast<double>(hours));
+                const f32 hours = static_cast<f32>(scene.sim.tick - std::min(scene.sim.tick, visitor.arrived)) * simulation::kTickSeconds / simulation::kSecondsPerHour;
+                ImGui::Text("In the park %.1f hours (since the park was opened here)", static_cast<f64>(hours));
                 if (page != nullptr)
                     ImGui::Text("Rides %d, food %d, drinks %d, souvenirs %d (as their page keeps them)", page->counters.rides, page->counters.food_items, page->counters.drinks, page->counters.souvenirs);
                 std::string carries;
@@ -253,13 +254,13 @@ namespace rct3::scene::park
                     (void)money_input("Cash", wallet->cash);
                     ImGui::SetNextItemWidth(160);
                     (void)money_input("Bank", wallet->bank);
-                    const auto at = [](units::Money m) { return static_cast<double>(m.value) / 100; };
+                    const auto at = [](units::Money m) { return static_cast<f64>(m.value) / 100; };
                     ImGui::Text("Spent %.2f: entry %.2f, rides %.2f, food %.2f, drink %.2f, souvenirs %.2f", at(wallet->spent), at(wallet->spent_entry), at(wallet->spent_rides), at(wallet->spent_food), at(wallet->spent_drink), at(wallet->spent_souvenirs));
                 }
             }
             if (ImGui::CollapsingHeader("Feelings and needs", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                for (std::size_t k = 0; k < simulation::kGuestLevels; ++k)
+                for (usize k = 0; k < simulation::kGuestLevels; ++k)
                     if (static_cast<simulation::GuestLevel>(k) != simulation::GuestLevel::Tolerance)
                         level_row(r, guest, static_cast<simulation::GuestLevel>(k));
             }
@@ -302,7 +303,7 @@ namespace rct3::scene::park
                 ImGui::SetItemTooltip("With their party; only while they walk the paths");
 
                 if (ed.thoughts.empty())
-                    for (std::int32_t id = 1; id < 256; ++id)
+                    for (i32 id = 1; id < 256; ++id)
                         if (const std::u16string words = ui::thought_text(strings, id, 0, u"..."); !words.empty())
                             ed.thoughts.push_back({ .id = id, .text = std::format("{}: {}", id, strings::to_utf8(words)) });
                 const auto thought = std::ranges::find(ed.thoughts, ed.thought, &DeveloperEditor::ThoughtText::id);
@@ -316,7 +317,7 @@ namespace rct3::scene::park
                 }
                 ImGui::SameLine();
                 if (ImGui::Button("Give thought") && thought != ed.thoughts.end() && r.all_of<simulation::Dice>(guest))
-                    simulation::think(r, guest, static_cast<simulation::ThoughtKind>(ed.thought), entt::null, static_cast<float>(scene.sim.tick) * simulation::kTickSeconds);
+                    simulation::think(r, guest, static_cast<simulation::ThoughtKind>(ed.thought), entt::null, static_cast<f32>(scene.sim.tick) * simulation::kTickSeconds);
 
                 ImGui::SetNextItemWidth(260);
                 if (ImGui::BeginCombo("##send", r.valid(ed.send_to) ? std::string(attraction_name(r, ed.send_to)).c_str() : "a ride or shop"))
@@ -345,7 +346,7 @@ namespace rct3::scene::park
             auto& r = scene.sim.registry;
 
             ImGui::SeparatorText("Live values");
-            float rating = park.rating.value_or(0);
+            f32 rating = park.rating.value_or(0);
             if (ImGui::SliderFloat("Rating", &rating, 0, 1, "%.3f"))
                 park.rating = rating;
             ImGui::Text("Guests in the park: %d", park.guests);
@@ -355,7 +356,7 @@ namespace rct3::scene::park
                 (void)money_input("Cash", *park.cash);
                 ImGui::SetNextItemWidth(160);
                 if (money_input("Loan", park.loan))
-                    park.loan.value = std::max<std::int64_t>(park.loan.value, 0);
+                    park.loan.value = std::max<i64>(park.loan.value, 0);
             }
             else
                 ImGui::TextDisabled("Money never runs out in this park");
@@ -364,9 +365,9 @@ namespace rct3::scene::park
                 units::Money fee { scene.park_model.finance.entrance_fee };
                 ImGui::SetNextItemWidth(160);
                 if (money_input("Entrance fee", fee))
-                    scene.park_model.finance.entrance_fee = static_cast<std::int32_t>(std::clamp<std::int64_t>(fee.value, 0, std::numeric_limits<std::int32_t>::max()));
+                    scene.park_model.finance.entrance_fee = static_cast<i32>(std::clamp<i64>(fee.value, 0, std::numeric_limits<i32>::max()));
             }
-            std::array<std::int32_t, 2> hours { static_cast<std::int32_t>(std::lround(scene.day_clock.park_hours.open * kMinutesPerDay)), static_cast<std::int32_t>(std::lround(scene.day_clock.park_hours.close * kMinutesPerDay)) };
+            std::array<i32, 2> hours { static_cast<i32>(std::lround(scene.day_clock.park_hours.open * kMinutesPerDay)), static_cast<i32>(std::lround(scene.day_clock.park_hours.close * kMinutesPerDay)) };
             ImGui::SetNextItemWidth(160);
             if (ImGui::SliderInt2("Opening hours (minutes)", hours.data(), 0, kMinutesPerDay))
             {
@@ -389,7 +390,7 @@ namespace rct3::scene::park
             ImGui::SameLine();
             const auto gates = r.view<const simulation::ParkGate>();
             if (ImGui::Button("Let groups in at the gate") && !gates.empty())
-                for (std::int32_t k = 0; k < ed.groups; ++k)
+                for (i32 k = 0; k < ed.groups; ++k)
                     (void)simulation::admit_party(scene.sim, scene.looks, r.get<const simulation::ParkGate>(gates.front()).node);
             ImGui::SetItemTooltip("Free of the entrance fee");
 
@@ -444,13 +445,13 @@ namespace rct3::scene::park
         const auto& r = scene.sim.registry;
         if (!scene.editor.shown || !r.valid(scene.editor.guest) || !r.all_of<simulation::Pose>(scene.editor.guest) || view.size.width == 0 || view.size.height == 0)
             return;
-        constexpr float kOverHead = 2.2f; ///< World units over their feet the marker points down at, chosen by eye
+        constexpr f32 kOverHead = 2.2f; ///< World units over their feet the marker points down at, chosen by eye
         const glm::vec3 feet = r.get<simulation::Pose>(scene.editor.guest).position;
-        const glm::vec4 clip = rct3::park::view_projection(scene.camera, static_cast<float>(view.size.width) / static_cast<float>(view.size.height)) * glm::vec4(feet + glm::vec3(0, kOverHead, 0), 1);
+        const glm::vec4 clip = rct3::park::view_projection(scene.camera, static_cast<f32>(view.size.width) / static_cast<f32>(view.size.height)) * glm::vec4(feet + glm::vec3(0, kOverHead, 0), 1);
         if (clip.w <= 0)
             return;
         const ImVec2 to_ui = ImGui::GetIO().DisplayFramebufferScale;
-        const ImVec2 at { (static_cast<float>(view.x) + (clip.x / clip.w + 1) / 2 * static_cast<float>(view.size.width)) / to_ui.x, (static_cast<float>(view.y) + (1 - clip.y / clip.w) / 2 * static_cast<float>(view.size.height)) / to_ui.y };
+        const ImVec2 at { (static_cast<f32>(view.x) + (clip.x / clip.w + 1) / 2 * static_cast<f32>(view.size.width)) / to_ui.x, (static_cast<f32>(view.y) + (1 - clip.y / clip.w) / 2 * static_cast<f32>(view.size.height)) / to_ui.y };
         ImDrawList& draw = *ImGui::GetForegroundDrawList();
         draw.AddTriangleFilled({ at.x - 9, at.y - 16 }, { at.x + 9, at.y - 16 }, at, IM_COL32(255, 200, 40, 230));
         draw.AddTriangle({ at.x - 9, at.y - 16 }, { at.x + 9, at.y - 16 }, at, IM_COL32(20, 20, 20, 255), 1.5f);

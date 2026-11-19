@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "random/entropy.hpp"
 
+#include "core/types.hpp"
 #include "random/generator.hpp"
 
 #include <chrono>
@@ -22,30 +23,30 @@ namespace rct3::random
     {
 
         /// Folds `value` into `pool`, so every source changes every bit of the result.
-        void mix(std::uint64_t& pool, std::uint64_t value)
+        void mix(u64& pool, u64 value)
         {
             pool ^= value;
             pool = split_mix(pool);
         }
 
-        std::uint64_t process_id()
+        u64 process_id()
         {
 #if defined(_WIN32)
-            return static_cast<std::uint64_t>(_getpid());
+            return static_cast<u64>(_getpid());
 #else
-            return static_cast<std::uint64_t>(getpid());
+            return static_cast<u64>(getpid());
 #endif
         }
 
         /// Two draws from the system's random device. Constructing or reading it may fail (no device, a
         /// sandbox); then it adds nothing.
-        void mix_device(std::uint64_t& pool)
+        void mix_device(u64& pool)
         {
             try
             {
                 std::random_device device;
-                const std::uint64_t high = device();
-                const std::uint64_t low = device();
+                const u64 high = device();
+                const u64 low = device();
                 mix(pool, (high << 32) ^ low);
             }
             catch (...)
@@ -58,17 +59,17 @@ namespace rct3::random
 
     Seed fresh_seed()
     {
-        std::uint64_t pool = 0;
+        u64 pool = 0;
         mix_device(pool);
-        mix(pool, static_cast<std::uint64_t>(std::chrono::system_clock::now().time_since_epoch().count()));
-        mix(pool, static_cast<std::uint64_t>(std::chrono::steady_clock::now().time_since_epoch().count()));
+        mix(pool, static_cast<u64>(std::chrono::system_clock::now().time_since_epoch().count()));
+        mix(pool, static_cast<u64>(std::chrono::steady_clock::now().time_since_epoch().count()));
         mix(pool, process_id());
         mix(pool, std::hash<std::thread::id> { }(std::this_thread::get_id()));
-        const std::int32_t on_stack = 0;
+        const i32 on_stack = 0;
         mix(pool, reinterpret_cast<std::uintptr_t>(&on_stack));
         mix(pool, reinterpret_cast<std::uintptr_t>(&fresh_seed));
         // Two calls in one run still differ: the steady clock has moved on.
-        mix(pool, static_cast<std::uint64_t>(std::chrono::high_resolution_clock::now().time_since_epoch().count()));
+        mix(pool, static_cast<u64>(std::chrono::high_resolution_clock::now().time_since_epoch().count()));
         return Seed { pool };
     }
 

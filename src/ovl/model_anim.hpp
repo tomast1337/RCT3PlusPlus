@@ -3,6 +3,7 @@
 // Model animations: per-frame bone positions and rotations for a skinned model at a fixed frame rate.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -16,17 +17,17 @@ namespace rct3::ovl
 
     struct ModelAnim
     {
-        float duration = 0; ///< Seconds. Equals (frame_count - 1) / 30 in every item seen.
-        std::uint32_t frame_count = 0;
+        f32 duration = 0; ///< Seconds. Equals (frame_count - 1) / 30 in every item seen.
+        u32 frame_count = 0;
         /// Bones that move. Names are strings in the item's extra data chunk (views into the part's bytes).
         std::vector<std::string_view> position_bones;
         /// Bones that turn. In files seen this lists every bone of the model.
         std::vector<std::string_view> rotation_bones;
         /// frame_count * position_bones.size() translations, all bones of the first frame, then the next.
-        std::vector<std::array<float, 3>> positions;
+        std::vector<std::array<f32, 3>> positions;
         /// frame_count * rotation_bones.size() rotations in the same order. Four floats of unit length, so
         /// most likely a quaternion. The component order is not confirmed.
-        std::vector<std::array<float, 4>> rotations;
+        std::vector<std::array<f32, 4>> rotations;
     };
 
     struct ModelAnimItem

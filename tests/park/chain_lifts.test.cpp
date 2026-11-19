@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/chain_lifts.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <doctest/doctest.h>
 #include <vector>
@@ -42,7 +44,7 @@ TEST_CASE("a section that lays its piece from the far end takes the chain and th
     // One curve piece, laid by its own section turning left and by a right-hand curve that runs it from its far
     // end; each laid forwards and backwards, as built on from a station and built back from it.
     std::vector<save::model::PlacedObject> objects;
-    for (std::uint64_t id = 1; id <= 4; ++id)
+    for (u64 id = 1; id <= 4; ++id)
         objects.push_back({ .id = id, .symbol = "curve", .overlay = "tracks/flume" });
     object::ObjectModels models;
     models[object::model_key(objects[0])].runs_back = { "CurveRight" };

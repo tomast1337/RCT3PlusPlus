@@ -2,6 +2,7 @@
 #include "ui/inspect.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -57,14 +58,14 @@ namespace rct3::ui
         return std::nullopt;
     }
 
-    Rect covered_bounds(const Widget& w, float step)
+    Rect covered_bounds(const Widget& w, f32 step)
     {
         const Rect r = w.rect();
         if (!w.takes_pointer())
             return r;
         Rect found { r.x1, r.y1, r.x0, r.y0 };
-        for (float y = r.y0 + step / 2; y < r.y1; y += step)
-            for (float x = r.x0 + step / 2; x < r.x1; x += step)
+        for (f32 y = r.y0 + step / 2; y < r.y1; y += step)
+            for (f32 x = r.x0 + step / 2; x < r.x1; x += step)
             {
                 if (!w.covers({ x, y }))
                     continue;
@@ -79,12 +80,12 @@ namespace rct3::ui
     {
         std::string name = typeid(w).name();
 #if __has_include(<cxxabi.h>)
-        std::int32_t status = 0;
+        i32 status = 0;
         const std::unique_ptr<char, void (*)(void*)> plain(abi::__cxa_demangle(name.c_str(), nullptr, nullptr, &status), std::free);
         if (status == 0)
             name = plain.get();
 #endif
-        const std::size_t colons = name.rfind("::");
+        const usize colons = name.rfind("::");
         return colons == std::string::npos ? name : name.substr(colons + 2);
     }
 

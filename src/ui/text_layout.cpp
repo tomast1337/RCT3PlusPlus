@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/text_layout.hpp"
 
+#include "core/types.hpp"
+
 #include <cstddef>
 
 namespace rct3::ui
@@ -9,13 +11,13 @@ namespace rct3::ui
     namespace
     {
 
-        float advance(const font::Font& font, char16_t c)
+        f32 advance(const font::Font& font, char16_t c)
         {
             const auto g = font.find(c);
             return !g ? 0 : g->advance;
         }
 
-        float offset(Align align, float space, float used)
+        f32 offset(Align align, f32 space, f32 used)
         {
             switch (align)
             {
@@ -67,36 +69,36 @@ namespace rct3::ui
 
     } // namespace
 
-    float text_width(const font::Font& font, std::u16string_view text)
+    f32 text_width(const font::Font& font, std::u16string_view text)
     {
-        float width = 0;
+        f32 width = 0;
         for (const char16_t c : text)
             width += advance(font, c);
         return width;
     }
 
-    std::vector<TextLine> break_lines(const font::Font& font, std::u16string_view text, float max_width)
+    std::vector<TextLine> break_lines(const font::Font& font, std::u16string_view text, f32 max_width)
     {
         std::vector<TextLine> lines;
-        std::size_t start = 0;
+        usize start = 0;
         while (true)
         {
-            const std::size_t feed = text.find(u'\n', start);
+            const usize feed = text.find(u'\n', start);
             const std::u16string_view paragraph = text.substr(start, feed == std::u16string_view::npos ? std::u16string_view::npos : feed - start);
 
             // Greedy fill: remember the last place a break is allowed and go back to it when the line is full.
-            std::size_t line = 0;
-            std::size_t last_break = std::u16string_view::npos; // Index where the next line would start
-            float width = 0;
-            for (std::size_t i = 0; i < paragraph.size(); ++i)
+            usize line = 0;
+            usize last_break = std::u16string_view::npos; // Index where the next line would start
+            f32 width = 0;
+            for (usize i = 0; i < paragraph.size(); ++i)
             {
                 const char16_t c = paragraph[i];
-                const float a = advance(font, c);
+                const f32 a = advance(font, c);
                 if (i > line && breaks_between(paragraph[i - 1], c))
                     last_break = i;
                 if (max_width > 0 && width + a > max_width && c != u' ' && i > line)
                 {
-                    const std::size_t next = last_break != std::u16string_view::npos && last_break > line ? last_break : i;
+                    const usize next = last_break != std::u16string_view::npos && last_break > line ? last_break : i;
                     lines.push_back(trimmed(font, paragraph.substr(line, next - line)));
                     line = next;
                     while (line < paragraph.size() && paragraph[line] == u' ')
@@ -120,12 +122,12 @@ namespace rct3::ui
     void draw_text(DrawList& list, const font::Font& font, std::u16string_view text, const Rect& box, const TextStyle& style)
     {
         const std::vector<TextLine> lines = break_lines(font, text, style.wrap ? box.width() : 0);
-        const float height = font.line_height() * static_cast<float>(lines.size());
-        float top = box.y0 + offset(style.vertical, box.height(), height);
+        const f32 height = font.line_height() * static_cast<f32>(lines.size());
+        f32 top = box.y0 + offset(style.vertical, box.height(), height);
         for (const TextLine& line : lines)
         {
-            const float baseline = top + font.ascent();
-            float pen = box.x0 + offset(style.horizontal, box.width(), line.width);
+            const f32 baseline = top + font.ascent();
+            f32 pen = box.x0 + offset(style.horizontal, box.width(), line.width);
             for (const char16_t c : line.text)
             {
                 const auto g = font.find(c);

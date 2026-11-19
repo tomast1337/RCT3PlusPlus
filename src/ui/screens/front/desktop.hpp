@@ -19,6 +19,7 @@
 #include "config/game/options.hpp"
 #include "config/user_data.hpp"
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/screens/career/map.hpp"
 #include "ui/screens/career/picker.hpp"
@@ -93,39 +94,39 @@ namespace rct3::ui::screens::front
         /// The window picking a career, while it is open.
         [[nodiscard]] std::optional<career::CareerDialog&> career_dialog() const;
         /// The game whose careers it shows: 0 the original, then each expansion.
-        [[nodiscard]] std::int32_t career_pack() const
+        [[nodiscard]] i32 career_pack() const
         {
             return career_pack_;
         }
         /// Counts the windows picking a career opened, so the owner tells a new one from the last.
-        [[nodiscard]] std::size_t career_dialogs_opened() const
+        [[nodiscard]] usize career_dialogs_opened() const
         {
             return career_dialogs_opened_;
         }
         /// Shows the career map of `scenarios` in place of the front screen, `picked` first, and closes the
         /// window picking a career.
-        career::CareerBoard& open_career_board(std::vector<career::CareerBoardScenario> scenarios, std::size_t picked);
+        career::CareerBoard& open_career_board(std::vector<career::CareerBoardScenario> scenarios, usize picked);
         /// The career map, while it is shown.
         [[nodiscard]] std::optional<career::CareerBoard&> career_board() const;
         /// Counts the career maps opened, so the owner tells a new one from the last.
-        [[nodiscard]] std::size_t career_boards_opened() const
+        [[nodiscard]] usize career_boards_opened() const
         {
             return career_boards_opened_;
         }
         /// The tutorials shown over the screen, while they are.
         [[nodiscard]] std::optional<tutorial::TutorialPicker&> tutorial_picker() const;
         /// The game whose tutorials they are: 0 the original, then each expansion.
-        [[nodiscard]] std::int32_t tutorial_pack() const
+        [[nodiscard]] i32 tutorial_pack() const
         {
             return tutorial_pack_;
         }
         /// Counts the tutorial menus opened, so the owner tells a new one from the last.
-        [[nodiscard]] std::size_t tutorial_pickers_opened() const
+        [[nodiscard]] usize tutorial_pickers_opened() const
         {
             return tutorial_pickers_opened_;
         }
         /// Counts the windows loading a game opened, so the owner tells a new one from the last.
-        [[nodiscard]] std::size_t file_dialogs_opened() const
+        [[nodiscard]] usize file_dialogs_opened() const
         {
             return file_dialogs_opened_;
         }
@@ -139,7 +140,7 @@ namespace rct3::ui::screens::front
         /// True once after the options window has closed: time to save the options.
         [[nodiscard]] bool take_options_closed();
         [[nodiscard]] std::optional<std::string> take_language();
-        [[nodiscard]] std::optional<std::size_t> take_screen_size();
+        [[nodiscard]] std::optional<usize> take_screen_size();
         [[nodiscard]] std::optional<KeyMap> take_keys();
         /// True while the options window waits for keys, which should then do nothing else.
         [[nodiscard]] bool waiting_for_keys() const;
@@ -155,8 +156,8 @@ namespace rct3::ui::screens::front
 
     private:
         void open_options();
-        void open_careers(std::int32_t pack);
-        void open_tutorials(std::int32_t pack);
+        void open_careers(i32 pack);
+        void open_tutorials(i32 pack);
         void ask_quit();
 
         Desktop& desktop_;
@@ -168,12 +169,12 @@ namespace rct3::ui::screens::front
         widgets::QuestionBox* question_ = nullptr; // Only closes when take_answer() closes it
         config::UserFolder file_folder_ = config::UserFolder::Parks;
         FrontAction file_action_ = FrontAction::LoadSandbox;
-        std::size_t file_dialogs_opened_ = 0;
-        std::int32_t career_pack_ = 0;
-        std::size_t career_dialogs_opened_ = 0;
-        std::size_t career_boards_opened_ = 0;
-        std::int32_t tutorial_pack_ = 0;
-        std::size_t tutorial_pickers_opened_ = 0;
+        usize file_dialogs_opened_ = 0;
+        i32 career_pack_ = 0;
+        usize career_dialogs_opened_ = 0;
+        usize career_boards_opened_ = 0;
+        i32 tutorial_pack_ = 0;
+        usize tutorial_pickers_opened_ = 0;
         bool quit_ = false;
         std::vector<FrontRequest> unhandled_;
     };

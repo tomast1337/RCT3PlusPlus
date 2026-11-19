@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/park_view/messages.hpp"
 
+#include "core/types.hpp"
 #include "simulation/awards.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
@@ -35,18 +36,18 @@ namespace
         }
 
         /// Runs the desktop for `seconds` in steps, the pointer away from everything.
-        void run(float seconds, float step = 0.1f)
+        void run(f32 seconds, f32 step = 0.1f)
         {
-            for (float t = 0; t < seconds; t += step)
+            for (f32 t = 0; t < seconds; t += step)
             {
                 desktop.layout({ 0, 0, 1000, 700 });
                 desktop.update({ { 900, 650 }, false }, { }, { units::Seconds { step }, nullptr });
             }
         }
 
-        void post(std::size_t count)
+        void post(usize count)
         {
-            for (std::size_t i = 0; i < count; ++i)
+            for (usize i = 0; i < count; ++i)
                 messages.push_back({ messages.size() + 1, u"news" });
             drawer->show(messages);
         }
@@ -125,7 +126,7 @@ TEST_CASE("every message has an icon for its kind; only an award's leads somewhe
     CHECK(shown[1].icon == style.objective);
     CHECK(shown[2].icon == style.inspector);
     CHECK(shown[3].icon == style.locate);
-    for (std::size_t i = 1; i < shown.size(); ++i)
+    for (usize i = 1; i < shown.size(); ++i)
         CHECK_FALSE(shown[i].clickable);
 }
 
@@ -152,7 +153,7 @@ TEST_CASE("the drawer hides behind the bar, reached through the notch in its mid
     CHECK(d.y1 <= b.y1);
     CHECK(d.x0 > b.x0);
     CHECK(d.x1 < b.x1);
-    const float notch = b.x0 + park_bar::kLeftWidth + 19;
+    const f32 notch = b.x0 + park_bar::kLeftWidth + 19;
     CHECK(rct3::core::as_pointer(f.desktop.hit({ notch, b.y1 - 4 })) == f.drawer);
     CHECK(rct3::core::as_pointer(f.desktop.hit({ notch - 40, b.y1 - 4 })) == f.bar);
     CHECK(rct3::core::as_pointer(f.desktop.hit({ notch, b.y0 + 1 })) == f.bar);
@@ -170,7 +171,7 @@ TEST_CASE("messages the drawer starts with are not new; later ones slide it down
     CHECK(f.drawer->take_alert());
     CHECK_FALSE(f.drawer->take_alert());
     f.run(2);
-    const float shown = f.drawer->height();
+    const f32 shown = f.drawer->height();
     CHECK(shown > message_drawer::kClosed);
     CHECK(shown < message_drawer::kOpen);
     f.run(message_drawer::kHold.value - 2);
@@ -188,7 +189,7 @@ TEST_CASE("dragging sets where the drawer rests; a double press opens or closes 
     f.desktop.update({ notch, true }, { }, { units::Seconds { 1 }, nullptr });
     f.desktop.update({ { notch.x, notch.y + 100 }, true }, { }, { units::Seconds { 0.1f }, nullptr });
     f.desktop.update({ { notch.x, notch.y + 100 }, false }, { }, { units::Seconds { 0.1f }, nullptr });
-    const float dragged = f.drawer->height();
+    const f32 dragged = f.drawer->height();
     CHECK(dragged == doctest::Approx(message_drawer::kClosed + 100).epsilon(0.05));
     f.post(1);
     f.run(15);

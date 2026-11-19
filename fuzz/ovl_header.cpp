@@ -3,6 +3,7 @@
 // libFuzzer target: parse_header must return a value or an error for any input, never crash,
 // read out of bounds or trip a sanitizer. Run with `./nob fuzz ovl_header`.
 // Exercises the whole structure parser, which includes the header.
+#include "core/types.hpp"
 #include "ovl/ovl.hpp"
 
 #include <cstddef>
@@ -21,7 +22,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         __builtin_trap();
     using rct3::ovl::OvlLayout;
     const auto layout = file->header.layout;
-    const std::size_t streams = layout == OvlLayout::OneStream ? 1 : layout == OvlLayout::ManyStreams ? static_cast<std::size_t>(file->header.stream_count) : 0;
+    const usize streams = layout == OvlLayout::OneStream ? 1 : layout == OvlLayout::ManyStreams ? static_cast<usize>(file->header.stream_count) : 0;
     if (file->stream_relocations.size() != streams)
         __builtin_trap();
     for (const auto& type : file->block_types)

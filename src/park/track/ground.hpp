@@ -17,6 +17,7 @@
 // may not move is left as it is.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/ground/holds.hpp"
 #include "park/object/mesh.hpp"
 #include "park/terrain_mesh.hpp"
@@ -30,10 +31,10 @@ namespace rct3::park::track
 {
 
     /// Ground over a solid square's top, in world units, that leaves it wholly under the ground, as a tunnel.
-    inline constexpr float kGroundCover = 1; ///< Chosen by eye: a unit of ground holds over a coaster's cars
+    inline constexpr f32 kGroundCover = 1; ///< Chosen by eye: a unit of ground holds over a coaster's cars
 
     /// Units of height over the ground, summed over a piece's solid squares, that cost its ride's whole height rate.
-    inline constexpr float kHeightPerRate = 4;
+    inline constexpr f32 kHeightPerRate = 4;
 
     /// What track piece `piece` (its model loaded) costs to lay where it stands, priced `ground_cost` by its file,
     /// on a ride whose kind charges `height_rate` (TrackRules::height_rate) for height. Each solid square adds the

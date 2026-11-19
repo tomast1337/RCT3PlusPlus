@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park/finance.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park/messages.hpp"
@@ -16,18 +17,18 @@
 namespace rct3::simulation::park
 {
 
-    save::model::LedgerPeriod& ledger_month(save::model::Finance& finance, std::optional<std::int64_t>& kept, const save::model::CalendarDate& date)
+    save::model::LedgerPeriod& ledger_month(save::model::Finance& finance, std::optional<i64>& kept, const save::model::CalendarDate& date)
     {
-        constexpr auto kMonthsPerYear = static_cast<std::int64_t>(save::model::GameClock::kUnitsPerYear / save::model::GameClock::kUnitsPerMonth);
-        const std::int64_t month = date.year * kMonthsPerYear + date.month;
+        constexpr auto kMonthsPerYear = static_cast<i64>(save::model::GameClock::kUnitsPerYear / save::model::GameClock::kUnitsPerMonth);
+        const i64 month = date.year * kMonthsPerYear + date.month;
         auto& ledger = finance.ledger;
         if (ledger.empty())
             ledger.emplace_back();
-        for (std::int64_t n = std::min<std::int64_t>(month - kept.value_or(month), save::model::kKeptMonths); n > 0; --n)
+        for (i64 n = std::min<i64>(month - kept.value_or(month), save::model::kKeptMonths); n > 0; --n)
         {
             // The counters only some parks have stay shown in the months that follow.
             const save::model::LedgerPeriod& before = ledger.front();
-            const auto zero = [](std::int32_t) { return 0; };
+            const auto zero = [](i32) { return 0; };
             const save::model::LedgerPeriod next { .pool_tickets = before.pool_tickets.transform(zero), .billboards = before.billboards.transform(zero), .viewing_gallery_tickets = before.viewing_gallery_tickets.transform(zero), .other_animal_spending = before.other_animal_spending.transform(zero) };
             ledger.insert(ledger.begin(), next);
             if (ledger.size() > save::model::kKeptMonths)
@@ -43,7 +44,7 @@ namespace rct3::simulation::park
             post(park.messages, { .text_key = std::string(kCannotPayKey) });
     }
 
-    bool book(ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, units::Money cost, LedgerLine line, Charge charge)
+    bool book(ParkState& park, save::model::Finance& finance, std::optional<i64>& kept, units::Money cost, LedgerLine line, Charge charge)
     {
         if (!park.cash)
             return true;
@@ -54,7 +55,7 @@ namespace rct3::simulation::park
         }
         *park.cash -= cost;
         save::model::LedgerPeriod& p = ledger_month(finance, kept, park.date);
-        const auto c = static_cast<std::int32_t>(cost.value); // The ledger keeps 32-bit counters, as the park file does
+        const auto c = static_cast<i32>(cost.value); // The ledger keeps 32-bit counters, as the park file does
         switch (line)
         {
             case LedgerLine::FoodDrinkSales:
@@ -144,28 +145,28 @@ namespace rct3::simulation::park
         return true;
     }
 
-    units::Money park_value(std::int32_t guests, const save::model::RideModel& rides)
+    units::Money park_value(i32 guests, const save::model::RideModel& rides)
     {
-        float worth = 0;
+        f32 worth = 0;
         for (const save::model::Ride& ride : rides.rides)
             if (ride.kind != save::model::RideKind::Special && !ride.base.demolished && ride.base.state == save::model::AttractionState::Open && ride.assessment.valid)
                 worth += ride.assessment.excitement * ride.assessment.excitement;
-        return { std::max(guests, 0) * kTuning.park_value.per_guest.value + std::llround(worth * static_cast<float>(kTuning.park_value.per_excitement.value)) };
+        return { std::max(guests, 0) * kTuning.park_value.per_guest.value + std::llround(worth * static_cast<f32>(kTuning.park_value.per_excitement.value)) };
     }
 
-    units::Money weekly_interest(units::Money loan, float rate_percent)
+    units::Money weekly_interest(units::Money loan, f32 rate_percent)
     {
-        return { std::llround(static_cast<double>(loan.value) * static_cast<double>(rate_percent) / 100 / kTuning.charges.interest_weeks) };
+        return { std::llround(static_cast<f64>(loan.value) * static_cast<f64>(rate_percent) / 100 / kTuning.charges.interest_weeks) };
     }
 
     units::Money running_cost(units::Money build_cost, bool tracked)
     {
-        return { std::llround(static_cast<double>(build_cost.value) * (tracked ? kTuning.charges.tracked_running_share : kTuning.charges.flat_running_share)) };
+        return { std::llround(static_cast<f64>(build_cost.value) * (tracked ? kTuning.charges.tracked_running_share : kTuning.charges.flat_running_share)) };
     }
 
     void step_charges(SimWorld& world)
     {
-        constexpr float kSecondsPerWeek = kSecondsPerHour * save::model::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
+        constexpr f32 kSecondsPerWeek = kSecondsPerHour * save::model::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
         entt::registry& r = world.registry;
         auto& charges = r.ctx().emplace<Charges>();
         for (charges.week.value += kTickSeconds; charges.week.value >= kSecondsPerWeek; charges.week.value -= kSecondsPerWeek)

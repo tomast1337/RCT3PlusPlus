@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/tracked_ride.hpp"
 
+#include "core/types.hpp"
 #include "record_file.hpp"
 
 #include <algorithm>
@@ -19,7 +20,7 @@ TEST_CASE("version 1 tracked rides start with the attraction fields")
     pool.add("CoasterIcon:gsi");
     pool.add("CoasterSpline:spl");
     std::vector<std::byte> bytes;
-    put(bytes, { 3, 0, 0, 0, 10000, static_cast<std::uint32_t>(-7500), 0, 0, 2500, 0 });
+    put(bytes, { 3, 0, 0, 0, 10000, static_cast<u32>(-7500), 0, 0, 2500, 0 });
     bytes.resize(0x28 + 8, std::byte { 0 });
     const auto overlay = make_record_overlay(1, pool, "Coaster:trr", bytes, { { 4, "CoasterName:txt" }, { 8, "CoasterDescription:txt" }, { 0xC, "CoasterIcon:gsi" }, { 0x24, "CoasterSpline:spl" } });
     const auto items = read_tracked_rides(overlay, overlay.common());
@@ -43,7 +44,7 @@ TEST_CASE("version 5 tracked rides give the pieces they list, track sections and
     pool.add("Lift:tks");
     pool.add("Straight:tks");
     pool.add("Path:spl");
-    constexpr std::uint32_t list = 0x140; // within the record, past its fixed part
+    constexpr u32 list = 0x140; // within the record, past its fixed part
     std::vector<std::byte> bytes;
     put(bytes, { 0xFFFFFFFF, pool.base() + list });
     bytes.resize(0x130, std::byte { 0 });
@@ -63,20 +64,20 @@ TEST_CASE("version 5 tracked rides give the pieces they list, track sections and
 
 TEST_CASE("later tracked rides point to their attraction fields")
 {
-    for (const std::uint32_t version : { 4u, 5u })
+    for (const u32 version : { 4u, 5u })
     {
         CAPTURE(version);
         Pool pool;
         pool.add("Coaster:trr");
         pool.add("CoasterName:txt");
         pool.add("CoasterIcon:gsi");
-        const std::uint32_t skip = version == 4 ? 0x3C : 0x44; // from the pointed-at block to the fields
-        const std::uint32_t block = 0x140;                     // within the record, past its fixed part
+        const u32 skip = version == 4 ? 0x3C : 0x44; // from the pointed-at block to the fields
+        const u32 block = 0x140;                     // within the record, past its fixed part
         std::vector<std::byte> bytes(block + skip, std::byte { 0 });
         put(bytes, { version == 4 ? 512u + 3 : 768u + 3, 0, 0, 0 });
         bytes.resize(block + skip + 0x3C, std::byte { 0 });
-        const std::uint32_t at = pool.base();
-        auto word = [&](std::size_t offset, std::uint32_t value) {
+        const u32 at = pool.base();
+        auto word = [&](usize offset, u32 value) {
             std::vector<std::byte> w;
             put(w, { value });
             std::copy(w.begin(), w.end(), bytes.begin() + static_cast<std::ptrdiff_t>(offset));
@@ -100,19 +101,19 @@ TEST_CASE("later tracked rides point to their attraction fields")
 
 TEST_CASE("tracked rides give their operating defaults, 0x50 bytes further in in version 1 items")
 {
-    for (const std::uint32_t version : { 1u, 5u })
+    for (const u32 version : { 1u, 5u })
     {
         CAPTURE(version);
         Pool pool;
         pool.add("Ride:trr");
-        const std::size_t base = version == 1 ? 0x50 : 0;
+        const usize base = version == 1 ? 0x50 : 0;
         std::vector<std::byte> bytes(base + 0x130, std::byte { 0 });
-        auto word = [&](std::size_t offset, std::uint32_t value) {
+        auto word = [&](usize offset, u32 value) {
             std::vector<std::byte> w;
             put(w, { value });
             std::copy(w.begin(), w.end(), bytes.begin() + static_cast<std::ptrdiff_t>(base + offset));
         };
-        auto real = [&](std::size_t offset, float value) { word(offset, std::bit_cast<std::uint32_t>(value)); };
+        auto real = [&](usize offset, f32 value) { word(offset, std::bit_cast<u32>(value)); };
         word(0x48, 2);
         word(0x4C, 0b101);
         real(0x5C, 12.5f);
@@ -160,11 +161,11 @@ TEST_CASE("later tracked rides give their track rules and piece patterns")
     const auto group = pool.add("station");
     pool.add("Ride:trr");
     pool.add("End:tks");
-    const std::uint32_t at = pool.base();
+    const u32 at = pool.base();
     // The record, the doors block, the attraction fields, one pattern of two entries.
-    const std::uint32_t doors = 0x184, fields = doors + 0x44, list = fields + 0x34, entries = list + 8;
+    const u32 doors = 0x184, fields = doors + 0x44, list = fields + 0x34, entries = list + 8;
     std::vector<std::byte> bytes(entries + 32, std::byte { 0 });
-    auto word = [&](std::size_t offset, std::uint32_t value) {
+    auto word = [&](usize offset, u32 value) {
         std::vector<std::byte> w;
         put(w, { value });
         std::copy(w.begin(), w.end(), bytes.begin() + static_cast<std::ptrdiff_t>(offset));

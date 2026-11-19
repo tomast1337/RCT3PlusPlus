@@ -11,6 +11,7 @@
 // stepped over.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/track/pieces.hpp"
 
 #include <array>
@@ -19,7 +20,7 @@
 namespace rct3::park::track
 {
 
-    enum class SplitState : std::uint8_t
+    enum class SplitState : u8
     {
         None, ///< The ride has one track
         JoinedLeft,
@@ -29,7 +30,7 @@ namespace rct3::park::track
     };
 
     /// The track a state builds on: 1 the left, 2 the right; 0 for None.
-    [[nodiscard]] std::uint32_t split_side(SplitState state);
+    [[nodiscard]] u32 split_side(SplitState state);
 
     /// Whether a state lays joined pieces.
     [[nodiscard]] bool split_joined(SplitState state);

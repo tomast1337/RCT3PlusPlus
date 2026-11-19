@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/surrounding_land.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -12,14 +14,14 @@ using namespace rct3::park;
 namespace
 {
     /// A `w` by `h` map of flat tiles at height `y`, painted with surface 1.
-    save::model::TerrainGrid flat(std::int32_t w, std::int32_t h, float y)
+    save::model::TerrainGrid flat(i32 w, i32 h, f32 y)
     {
         save::model::TerrainGrid g;
         g.width = w;
         g.height = h;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(w * h));
+        g.cells.resize(static_cast<usize>(w * h));
         for (auto& c : g.cells)
         {
             c.corners = { y, y, y, y };
@@ -28,9 +30,9 @@ namespace
         return g;
     }
 
-    save::model::TerrainCell& cell(save::model::TerrainGrid& g, std::int32_t col, std::int32_t row)
+    save::model::TerrainCell& cell(save::model::TerrainGrid& g, i32 col, i32 row)
     {
-        return g.cells[static_cast<std::size_t>(row * g.width + col)];
+        return g.cells[static_cast<usize>(row * g.width + col)];
     }
 } // namespace
 
@@ -54,7 +56,7 @@ TEST_CASE("the land round a flat map stays at its height and fades out")
     CHECK(edge_level(g) == doctest::Approx(5));
     // Every index is in range, in whole triangles.
     CHECK(m.indices.size() % 3 == 0);
-    CHECK(std::ranges::all_of(m.indices, [&](std::uint32_t i) { return i < m.vertices.size(); }));
+    CHECK(std::ranges::all_of(m.indices, [&](u32 i) { return i < m.vertices.size(); }));
 }
 
 TEST_CASE("a hill at the edge rolls on and settles at the edge's mean height")
@@ -63,15 +65,15 @@ TEST_CASE("a hill at the edge rolls on and settles at the edge's mean height")
     // Raise the corner at the middle of the first row's edge.
     cell(g, 1, 0).corners[1] = 40;
     cell(g, 2, 0).corners[0] = 40;
-    const float level = edge_level(g);
+    const f32 level = edge_level(g);
     CHECK(level == doctest::Approx(40.0f / 16));
     const TerrainMesh m = surrounding_land(g);
     REQUIRE_FALSE(m.vertices.empty());
     // The edge point itself is the hill's top; the last ring is near the mean.
-    const float top = std::ranges::max(m.vertices, { }, [](const GroundVertex& v) { return v.position.y; }).position.y;
+    const f32 top = std::ranges::max(m.vertices, { }, [](const GroundVertex& v) { return v.position.y; }).position.y;
     CHECK(top == doctest::Approx(40));
-    const std::size_t ring = 16; // Points round a 4 by 4 map's edge
-    for (std::size_t i = m.vertices.size() - ring; i < m.vertices.size(); ++i)
+    const usize ring = 16; // Points round a 4 by 4 map's edge
+    for (usize i = m.vertices.size() - ring; i < m.vertices.size(); ++i)
         CHECK(m.vertices[i].position.y == doctest::Approx(level).epsilon(0.05));
 }
 
@@ -83,7 +85,7 @@ TEST_CASE("the edge shows the park's mix of surfaces")
     REQUIRE(m.batches.size() == 2);
     CHECK(m.batches[0].index == 1);
     CHECK(m.batches[1].index == 7);
-    const std::size_t points = m.vertices.size() / 2; // Each layer has every point
+    const usize points = m.vertices.size() / 2; // Each layer has every point
     // Edge point 1 touches tiles 0 and 1 of the first row: half of each. The upper layer covers half of
     // the lower, which is opaque.
     CHECK(m.vertices[1].colour.a == doctest::Approx(1));
@@ -93,14 +95,14 @@ TEST_CASE("the edge shows the park's mix of surfaces")
 TEST_CASE("a stretch of paint at the edge goes on out to the horizon beside it, and only there")
 {
     save::model::TerrainGrid g = flat(16, 16, 0);
-    for (std::int32_t col = 4; col < 12; ++col)
+    for (i32 col = 4; col < 12; ++col)
         cell(g, col, 0).surface = 7;
     const TerrainMesh m = surrounding_land(g);
     REQUIRE(m.batches.size() == 2);
-    const std::size_t points = m.vertices.size() / 2;
-    const std::size_t ring = 64; // Points round a 16 by 16 map's edge
+    const usize points = m.vertices.size() / 2;
+    const usize ring = 64; // Points round a 16 by 16 map's edge
     // The last ring before the land fades.
-    std::size_t k = 1;
+    usize k = 1;
     while (m.vertices[(k + 1) * ring].position.z > -kSurroundFadeStart)
         ++k;
     REQUIRE(k > 5);
@@ -177,8 +179,8 @@ TEST_CASE("water over the ground at the edge goes on out as a sea, with the land
     save::model::WaterLayer water;
     save::model::WaterBody& lake = water.bodies.emplace_back();
     lake.level = 3;
-    for (std::uint8_t c = 0; c < 16; ++c)
-        for (std::uint8_t t = 0; t < 2; ++t)
+    for (u8 c = 0; c < 16; ++c)
+        for (u8 t = 0; t < 2; ++t)
             lake.tris.push_back({ .col = c, .row = 0, .triangle = t });
     const LandRings rings = land_rings(g, water);
     CHECK(rings.sea[1] == 3);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "particles/effect.hpp"
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -19,7 +20,7 @@ namespace rct3::particles
         constexpr std::string_view kEmitterClass = "ParticleEmitterDesc";
         constexpr std::string_view kParticleClass = "ParticleDesc";
 
-        float number(const save::DecodedObject& o, std::string_view name, float fallback)
+        f32 number(const save::DecodedObject& o, std::string_view name, f32 fallback)
         {
             const auto v = o.find(name);
             if (!v)
@@ -27,7 +28,7 @@ namespace rct3::particles
             if (v->kind() == save::ValueKind::Float)
                 return v->as_float();
             if (v->kind() == save::ValueKind::Integer)
-                return static_cast<float>(v->as_integer());
+                return static_cast<f32>(v->as_integer());
             return fallback;
         }
 
@@ -37,9 +38,9 @@ namespace rct3::particles
             return v && v->kind() == save::ValueKind::String ? std::string(v->text()) : std::string { };
         }
 
-        std::vector<std::uint64_t> references(const save::DecodedObject& o, std::string_view name)
+        std::vector<u64> references(const save::DecodedObject& o, std::string_view name)
         {
-            std::vector<std::uint64_t> out;
+            std::vector<u64> out;
             if (const auto v = o.find(name); v && v->kind() == save::ValueKind::List)
                 for (const save::Value& item : v->items())
                     if (item.kind() == save::ValueKind::Reference)
@@ -47,9 +48,9 @@ namespace rct3::particles
             return out;
         }
 
-        std::vector<float> floats(const save::Value& list)
+        std::vector<f32> floats(const save::Value& list)
         {
-            std::vector<float> out;
+            std::vector<f32> out;
             if (list.kind() == save::ValueKind::List)
                 for (const save::Value& item : list.items())
                     if (item.kind() == save::ValueKind::Float)
@@ -70,7 +71,7 @@ namespace rct3::particles
                 c.values = floats(*values);
             if (const auto w = v->field("wrap"); w && w->kind() == save::ValueKind::Bool)
                 c.wrap = w->as_bool();
-            const std::size_t n = std::min(c.times.size(), c.values.size());
+            const usize n = std::min(c.times.size(), c.values.size());
             c.times.resize(n);
             c.values.resize(n);
             return c;
@@ -78,7 +79,7 @@ namespace rct3::particles
 
     } // namespace
 
-    float Curve::at(float t) const noexcept
+    f32 Curve::at(f32 t) const noexcept
     {
         if (values.empty())
             return 1;
@@ -92,11 +93,11 @@ namespace rct3::particles
         {
             if (!wrap || times.size() < 2)
                 return values.back();
-            const float gap = times.front() + 1 - times.back();
+            const f32 gap = times.front() + 1 - times.back();
             return gap > 0 ? std::lerp(values.back(), values.front(), std::clamp((t - times.back()) / gap, 0.0f, 1.0f)) : values.front();
         }
-        const auto after = static_cast<std::size_t>(std::ranges::upper_bound(times, t) - times.begin());
-        const float span = times[after] - times[after - 1];
+        const auto after = static_cast<usize>(std::ranges::upper_bound(times, t) - times.begin());
+        const f32 span = times[after] - times[after - 1];
         return span > 0 ? std::lerp(values[after - 1], values[after], (t - times[after - 1]) / span) : values[after];
     }
 
@@ -128,11 +129,11 @@ namespace rct3::particles
             return std::unexpected(EffectError::NoEffect);
 
         Effect effect;
-        std::map<std::uint64_t, std::size_t> emitter_at;
-        std::map<std::uint64_t, std::size_t> particle_at;
+        std::map<u64, usize> emitter_at;
+        std::map<u64, usize> particle_at;
         // Objects found but not yet read, by kind, so shared and circular references are read once.
-        std::vector<std::pair<std::uint64_t, bool>> pending; // id, is a particle
-        const auto emitter_index = [&](std::uint64_t id) -> std::optional<std::size_t> {
+        std::vector<std::pair<u64, bool>> pending; // id, is a particle
+        const auto emitter_index = [&](u64 id) -> std::optional<usize> {
             const auto o = index.find(id);
             if (!o || class_of(*o) != kEmitterClass)
                 return std::nullopt;
@@ -144,7 +145,7 @@ namespace rct3::particles
             }
             return at->second;
         };
-        const auto particle_index = [&](std::uint64_t id) -> std::optional<std::size_t> {
+        const auto particle_index = [&](u64 id) -> std::optional<usize> {
             const auto o = index.find(id);
             if (!o || class_of(*o) != kParticleClass)
                 return std::nullopt;
@@ -167,7 +168,7 @@ namespace rct3::particles
         effect.sound = text(*base, "SoundName");
         effect.sound_near = number(*base, "SoundMinDist", 0);
         effect.sound_far = number(*base, "SoundMaxDist", 0);
-        for (const std::uint64_t id : references(*base, "ParticleEmitterDescs"))
+        for (const u64 id : references(*base, "ParticleEmitterDescs"))
         {
             const auto at = emitter_index(id);
             if (!at)
@@ -189,7 +190,7 @@ namespace rct3::particles
                     .start = number(*o, "StartTime", 0),
                     .end = number(*o, "EndTime", 1),
                     .time_random = number(*o, "TimeRandom", 0),
-                    .count = static_cast<std::int32_t>(number(*o, "NumParticles", 0)),
+                    .count = static_cast<i32>(number(*o, "NumParticles", 0)),
                     .count_scaled = number(*o, "NumParticlesModifierEnable", 0) != 0,
                     .speed = number(*o, "ParticleSpeed", 0),
                     .speed_random = number(*o, "SpeedRandom", 0),
@@ -222,7 +223,7 @@ namespace rct3::particles
                 .up_scale = number(*o, "UpScale", 0),
                 .roll = number(*o, "CameraSpinRate", 0),
                 .spin_rate = { number(*o, "SpinRateX", 0), number(*o, "SpinRateY", 0) },
-                .burn_length = static_cast<std::int32_t>(number(*o, "BurnLength", 0)),
+                .burn_length = static_cast<i32>(number(*o, "BurnLength", 0)),
                 .burn_size = number(*o, "BurnSize", 0),
                 .skin = text(*o, "TextureNameReduced"),
                 .colour = { curve(*o, 'R'), curve(*o, 'G'), curve(*o, 'B'), curve(*o, 'A') },
@@ -231,7 +232,7 @@ namespace rct3::particles
                 .sound_near = number(*o, "SoundMinDist", 0),
                 .sound_far = number(*o, "SoundMaxDist", 0),
             };
-            for (const std::uint64_t child : references(*o, "ParticleEmitterDescs"))
+            for (const u64 child : references(*o, "ParticleEmitterDescs"))
             {
                 const auto at = emitter_index(child);
                 if (!at)

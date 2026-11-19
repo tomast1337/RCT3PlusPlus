@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/model_lights.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <charconv>
 #include <cstdint>
@@ -15,7 +17,7 @@ namespace rct3::park
         /// A point named `key` and a number, and the words after the number.
         struct Mark
         {
-            std::int32_t number = 0;
+            i32 number = 0;
             std::string words; ///< Lower case, from the underscore after the number
         };
 
@@ -23,7 +25,7 @@ namespace rct3::park
         {
             std::string lower(name);
             std::ranges::transform(lower, lower.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-            const std::size_t at = lower.find(key);
+            const usize at = lower.find(key);
             if (at == std::string::npos)
                 return std::nullopt;
             const char* first = lower.data() + at + key.size();
@@ -37,20 +39,20 @@ namespace rct3::park
         }
 
         /// The number at the start of `text`, and what follows it.
-        std::optional<std::pair<std::int32_t, std::string_view>> leading_number(std::string_view text)
+        std::optional<std::pair<i32, std::string_view>> leading_number(std::string_view text)
         {
-            std::int32_t value = 0;
+            i32 value = 0;
             const auto [after, error] = std::from_chars(text.data(), text.data() + text.size(), value);
             if (error != std::errc { })
                 return std::nullopt;
-            return std::pair { value, text.substr(static_cast<std::size_t>(after - text.data())) };
+            return std::pair { value, text.substr(static_cast<usize>(after - text.data())) };
         }
 
         struct Words
         {
             std::optional<glm::vec3> colour;
-            std::optional<std::int32_t> slot;
-            std::optional<float> radius;
+            std::optional<i32> slot;
+            std::optional<f32> radius;
         };
 
         Words read_words(std::string_view words)
@@ -64,7 +66,7 @@ namespace rct3::park
                 if (word.starts_with("radius"))
                 {
                     if (const auto n = leading_number(word.substr(6)))
-                        out.radius = n->second.starts_with("cm") ? static_cast<float>(n->first) / 100 : static_cast<float>(n->first);
+                        out.radius = n->second.starts_with("cm") ? static_cast<f32>(n->first) / 100 : static_cast<f32>(n->first);
                 }
                 else if (word.starts_with("flexi"))
                 {
@@ -77,7 +79,7 @@ namespace rct3::park
                     const auto g = r && r->second.starts_with('g') ? leading_number(r->second.substr(1)) : std::nullopt;
                     const auto b = g && g->second.starts_with('b') ? leading_number(g->second.substr(1)) : std::nullopt;
                     if (b)
-                        out.colour = glm::clamp(glm::vec3(static_cast<float>(r->first), static_cast<float>(g->first), static_cast<float>(b->first)) / 255.0f, 0.0f, 1.0f);
+                        out.colour = glm::clamp(glm::vec3(static_cast<f32>(r->first), static_cast<f32>(g->first), static_cast<f32>(b->first)) / 255.0f, 0.0f, 1.0f);
                 }
             }
             return out;
@@ -91,14 +93,14 @@ namespace rct3::park
 
     std::vector<ModelLight> model_lights(std::span<const NamedPlace> places)
     {
-        std::vector<std::pair<std::int32_t, ModelLight>> lights;
+        std::vector<std::pair<i32, ModelLight>> lights;
         for (const NamedPlace& start : places)
         {
             const auto mark = mark_of(start.name, "lightstart");
             if (!mark)
                 continue;
             Words words = read_words(mark->words);
-            std::optional<float> reach;
+            std::optional<f32> reach;
             for (const NamedPlace& other : places)
             {
                 if (const auto end = mark_of(other.name, "lightend"); end && end->number == mark->number && !reach)
@@ -110,12 +112,12 @@ namespace rct3::park
                     words.slot = named.slot;
                 }
             }
-            const float radius = reach.value_or(words.radius.value_or(0));
+            const f32 radius = reach.value_or(words.radius.value_or(0));
             if (radius <= 0)
                 continue;
             lights.emplace_back(mark->number, ModelLight { .position = position_of(start), .colour = words.colour.value_or(glm::vec3(1.0f)), .colour_slot = words.slot, .radius = radius, .bone = start.bone });
         }
-        std::ranges::stable_sort(lights, { }, &std::pair<std::int32_t, ModelLight>::first);
+        std::ranges::stable_sort(lights, { }, &std::pair<i32, ModelLight>::first);
         std::vector<ModelLight> out;
         for (auto& l : lights)
             out.push_back(l.second);
@@ -124,7 +126,7 @@ namespace rct3::park
 
     namespace
     {
-        enum class Naming : std::uint8_t
+        enum class Naming : u8
         {
             Named,   ///< Only points with "_name" after their number, the effect's name
             Unnamed, ///< Every point, its name left empty
@@ -133,7 +135,7 @@ namespace rct3::park
         /// The points marked `start` N, each pointing at the point `end` N where there is one, in number order.
         std::vector<ModelEffect> marked(std::span<const NamedPlace> places, std::string_view start_key, std::string_view end_key, Naming naming)
         {
-            std::vector<std::pair<std::int32_t, ModelEffect>> effects;
+            std::vector<std::pair<i32, ModelEffect>> effects;
             for (const NamedPlace& start : places)
             {
                 const auto mark = mark_of(start.name, start_key);
@@ -154,7 +156,7 @@ namespace rct3::park
                 }
                 effects.emplace_back(mark->number, std::move(effect));
             }
-            std::ranges::stable_sort(effects, { }, &std::pair<std::int32_t, ModelEffect>::first);
+            std::ranges::stable_sort(effects, { }, &std::pair<i32, ModelEffect>::first);
             std::vector<ModelEffect> out;
             for (auto& e : effects)
                 out.push_back(std::move(e.second));

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/day_clock.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -8,13 +10,13 @@ using namespace rct3::simulation;
 
 namespace
 {
-    constexpr float hours(float h)
+    constexpr f32 hours(f32 h)
     {
         return h / kHoursPerDay;
     }
 
     /// Real seconds that move the clock on by `h` game hours.
-    constexpr float seconds_for(float h)
+    constexpr f32 seconds_for(f32 h)
     {
         return h * kSecondsPerHour;
     }
@@ -142,8 +144,8 @@ TEST_CASE("cycle runs the shown time on through the skipped hours")
     CHECK(c.fade == 0);
 
     // It catches up within the skipped hours' worth of seconds at its rate.
-    const float skipped = 12.0f;
-    float waited = 0;
+    const f32 skipped = 12.0f;
+    f32 waited = 0;
     while (c.shown != c.time && waited < skipped / kCatchUpHoursPerSecond + 1)
     {
         advance(c, 0.1f);
@@ -179,7 +181,7 @@ TEST_CASE("changing the mode moves the clock into the new window")
     {
         change_mode(clock, DayMode::AlwaysDay);
         advance(clock, seconds_for(2));
-        const float before = clock.time;
+        const f32 before = clock.time;
         change_mode(clock, DayMode::ParkHours);
         CHECK(clock.window == park);
         CHECK(clock.time == doctest::Approx(before));

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/bone_poses.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <numbers>
 
@@ -16,7 +18,7 @@ namespace
 
 TEST_CASE("a rotation key turns about its direction by its length")
 {
-    const glm::mat4 turn = key_turn({ 0, 0, std::numbers::pi_v<float> / 2 });
+    const glm::mat4 turn = key_turn({ 0, 0, std::numbers::pi_v<f32> / 2 });
     CHECK(near(glm::vec3(turn * glm::vec4(1, 0, 0, 1)), { 0, 1, 0 }));
     CHECK(near(glm::vec3(key_turn({ 0, 0, 0 }) * glm::vec4(1, 2, 3, 1)), { 1, 2, 3 }));
 }
@@ -32,13 +34,13 @@ TEST_CASE("a bone carries the bones hung from it, between its keys")
     turn.seconds = 2;
     turn.positions.resize(2);
     turn.rotations.resize(2);
-    turn.rotations[1] = { { 0, 2 }, { { 0, 0, 0 }, { 0, std::numbers::pi_v<float> / 2, 0 } } };
+    turn.rotations[1] = { { 0, 2 }, { { 0, 0, 0 }, { 0, std::numbers::pi_v<f32> / 2, 0 } } };
     rig.motions = { turn };
 
     const auto standing = bone_moves(rig, 0, 0);
     CHECK(near(glm::vec3(standing[0] * glm::vec4(1, 0, 0, 1)), { 1, 0, 0 }));
     // Halfway, an eighth of a turn: the hung bone has swung from +x towards -z, and its up stays up.
-    const float r = std::numbers::sqrt2_v<float> / 2;
+    const f32 r = std::numbers::sqrt2_v<f32> / 2;
     const auto halfway = bone_moves(rig, 0, 1);
     CHECK(near(glm::vec3(halfway[0] * glm::vec4(1, 0, 0, 1)), { r, 0, -r }));
     CHECK(near(glm::vec3(halfway[0] * glm::vec4(1, 1, 0, 1)), { r, 1, -r }));
@@ -49,7 +51,7 @@ TEST_CASE("a bone carries the bones hung from it, between its keys")
 
 TEST_CASE("a flat ride starts, runs round and stops within its ride, and stands between rides")
 {
-    const float seconds[] = { 5, 2, 3, 1 }; // Standing, starting, running, stopping
+    const f32 seconds[] = { 5, 2, 3, 1 }; // Standing, starting, running, stopping
     CHECK(flat_ride_motion(seconds, 10, 1, true, 0) == MotionAt { kRideStarting, 1.0f });
     CHECK(flat_ride_motion(seconds, 10, 7, true, 0) == MotionAt { kRideRunning, 2.0f });
     CHECK(flat_ride_motion(seconds, 10, 9.5f, true, 0) == MotionAt { kRideStopping, 0.5f });

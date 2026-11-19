@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "profiling/profiler.hpp"
 
 #include <algorithm>
@@ -38,7 +39,7 @@ namespace
 TEST_CASE("profiler: nested lambda sections build slash separated paths")
 {
     Fresh fresh;
-    const std::int32_t value = prof::section("Render", [] { return prof::section("Entities", [] { return 42; }); });
+    const i32 value = prof::section("Render", [] { return prof::section("Entities", [] { return 42; }); });
     CHECK(value == 42);
 
     const auto all = prof::stats();
@@ -78,9 +79,9 @@ TEST_CASE("profiler: unregistered thread and disabled profiler record nothing")
 TEST_CASE("profiler: record, history and percentiles")
 {
     Fresh fresh;
-    for (std::int32_t i = 1; i <= 100; ++i)
+    for (i32 i = 1; i <= 100; ++i)
     {
-        prof::record("Frame", static_cast<double>(i));
+        prof::record("Frame", static_cast<f64>(i));
         prof::capture_frame();
     }
     const auto all = prof::stats();
@@ -99,9 +100,9 @@ TEST_CASE("profiler: record, history and percentiles")
 TEST_CASE("profiler: history is a ring of the latest samples")
 {
     Fresh fresh;
-    for (std::size_t i = 0; i < prof::kHistoryLength + 10; ++i)
+    for (usize i = 0; i < prof::kHistoryLength + 10; ++i)
     {
-        prof::record("Ring", static_cast<double>(i));
+        prof::record("Ring", static_cast<f64>(i));
         prof::capture_frame();
     }
     const auto all = prof::stats();

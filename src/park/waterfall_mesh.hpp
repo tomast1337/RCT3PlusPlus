@@ -9,6 +9,7 @@
 // clock, so the mesh is built again only when the falls, their lakes or the Waterfall detail option change.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
 #include "units/units.hpp"
@@ -22,7 +23,7 @@ namespace rct3::park
 {
 
     /// How much of a waterfall's look is drawn: the Waterfall detail option, as its value counts.
-    enum class WaterfallDetail : std::uint8_t
+    enum class WaterfallDetail : u8
     {
         Low,    ///< Sheet and foam, the fewest reads
         Medium, ///< With the lip's glint, rings in the foam, the sun's shadow and one row of mist
@@ -31,7 +32,7 @@ namespace rct3::park
     };
 
     /// The parts of a waterfall, each one draw for all the falls, in the order they are drawn.
-    enum class FallPart : std::uint8_t
+    enum class FallPart : u8
     {
         Sheet, ///< The falling water
         Foam,  ///< Lying on the lower lake, over the foot of the sheet
@@ -48,8 +49,8 @@ namespace rct3::park
     /// Where in the mesh's indices a part lies.
     struct FallBatch
     {
-        std::uint32_t first = 0;
-        std::uint32_t count = 0;
+        u32 first = 0;
+        u32 count = 0;
     };
 
     /// The waterfalls' water. Vertices, by part:
@@ -64,12 +65,12 @@ namespace rct3::park
     struct WaterfallMesh
     {
         std::vector<GroundVertex> vertices;
-        std::vector<std::uint32_t> indices;
+        std::vector<u32> indices;
         std::array<FallBatch, 3> parts { }; ///< By FallPart
     };
 
     /// Where the water of `fall` is after running `along` (0 at the edge, 1 where it lands), halfway across.
-    [[nodiscard]] glm::vec3 waterfall_point(const save::model::Waterfall& fall, float along);
+    [[nodiscard]] glm::vec3 waterfall_point(const save::model::Waterfall& fall, f32 along);
 
     /// How long water takes to fall `drop`, from rest.
     [[nodiscard]] units::Seconds fall_seconds(units::Distance drop);

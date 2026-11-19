@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/park.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -247,24 +249,24 @@ namespace rct3::save::model
             return v && (v->kind() == ValueKind::Integer || v->kind() == ValueKind::Bool);
         }
 
-        [[nodiscard]] std::int64_t int_of(std::optional<const Value&> v, std::int64_t def) noexcept
+        [[nodiscard]] i64 int_of(std::optional<const Value&> v, i64 def) noexcept
         {
             return is_numeric(v) ? v->as_integer() : def;
         }
 
-        [[nodiscard]] std::int32_t i32_of(std::optional<const Value&> v, std::int32_t def) noexcept
+        [[nodiscard]] i32 i32_of(std::optional<const Value&> v, i32 def) noexcept
         {
-            return is_numeric(v) ? static_cast<std::int32_t>(v->as_integer()) : def;
+            return is_numeric(v) ? static_cast<i32>(v->as_integer()) : def;
         }
 
-        [[nodiscard]] float float_of(std::optional<const Value&> v, float def) noexcept
+        [[nodiscard]] f32 float_of(std::optional<const Value&> v, f32 def) noexcept
         {
             if (!v)
                 return def;
             if (v->kind() == ValueKind::Float)
                 return v->as_float();
             if (v->kind() == ValueKind::Integer)
-                return static_cast<float>(v->as_integer());
+                return static_cast<f32>(v->as_integer());
             return def;
         }
 
@@ -287,7 +289,7 @@ namespace rct3::save::model
         }
 
         /// The object id a reference points at, when it is non-null and present in the file.
-        [[nodiscard]] std::optional<std::uint64_t> ref_of(std::optional<const Value&> v, const ObjectIndex& index) noexcept
+        [[nodiscard]] std::optional<u64> ref_of(std::optional<const Value&> v, const ObjectIndex& index) noexcept
         {
             if (!v || v->kind() != ValueKind::Reference || v->as_reference() == 0)
                 return std::nullopt;
@@ -297,27 +299,27 @@ namespace rct3::save::model
         }
 
         /// An integer that is either the item itself or the named field of a one-field struct.
-        [[nodiscard]] std::optional<std::int32_t> item_int(const Value& item, std::string_view field) noexcept
+        [[nodiscard]] std::optional<i32> item_int(const Value& item, std::string_view field) noexcept
         {
             if (is_numeric(item))
-                return static_cast<std::int32_t>(item.as_integer());
+                return static_cast<i32>(item.as_integer());
             if (item.kind() == ValueKind::Struct)
             {
                 if (const auto f = item.field(field); is_numeric(f))
-                    return static_cast<std::int32_t>(f->as_integer());
+                    return static_cast<i32>(f->as_integer());
             }
             return std::nullopt;
         }
 
-        [[nodiscard]] float load_f32(const std::byte* p) noexcept
+        [[nodiscard]] f32 load_f32(const std::byte* p) noexcept
         {
-            float f;
+            f32 f;
             std::memcpy(&f, p, 4);
             return f;
         }
-        [[nodiscard]] std::uint32_t load_u32(const std::byte* p) noexcept
+        [[nodiscard]] u32 load_u32(const std::byte* p) noexcept
         {
-            std::uint32_t u;
+            u32 u;
             std::memcpy(&u, p, 4);
             return u;
         }
@@ -337,7 +339,7 @@ namespace rct3::save::model
                 const auto f = values->floats();
                 s.samples.assign(f.begin(), f.end());
                 const auto cap = int_of(v->field(names::kGraphCapacity), 0);
-                s.capacity = cap > 0 && cap <= 0xFFFFFFFFLL ? static_cast<std::uint32_t>(cap) : 0;
+                s.capacity = cap > 0 && cap <= 0xFFFFFFFFLL ? static_cast<u32>(cap) : 0;
             }
             else if (v->kind() == ValueKind::Raw)
             {
@@ -346,11 +348,11 @@ namespace rct3::save::model
                     return s;
                 const auto cap = load_u32(raw.data());
                 const auto count = load_u32(raw.data() + 4);
-                if (count > (raw.size() - 8) / 4 || 8 + std::size_t { count } * 4 != raw.size())
+                if (count > (raw.size() - 8) / 4 || 8 + usize { count } * 4 != raw.size())
                     return s;
                 s.samples.resize(count);
-                for (std::uint32_t i = 0; i < count; ++i)
-                    s.samples[i] = load_f32(raw.data() + 8 + std::size_t { i } * 4);
+                for (u32 i = 0; i < count; ++i)
+                    s.samples[i] = load_f32(raw.data() + 8 + usize { i } * 4);
                 s.capacity = cap;
             }
             return s;
@@ -369,7 +371,7 @@ namespace rct3::save::model
                 .scenario_description = string_of(o.find(kScenarioDescription)),
                 .objective_text = string_of(o.find(kObjectiveText)),
                 .flags = {
-                    .raw = static_cast<std::uint32_t>(i32_of(o.find(kFlags), 0)),
+                    .raw = static_cast<u32>(i32_of(o.find(kFlags), 0)),
                 },
                 .opening_minutes = i32_of(o.find(kOpening), 0),
                 .closing_minutes = i32_of(o.find(kClosing), 0),
@@ -409,12 +411,12 @@ namespace rct3::save::model
         struct RequiredCounter
         {
             std::string_view name;
-            std::int32_t LedgerPeriod::* member;
+            i32 LedgerPeriod::* member;
         };
         struct OptionalCounter
         {
             std::string_view name;
-            std::optional<std::int32_t> LedgerPeriod::* member;
+            std::optional<i32> LedgerPeriod::* member;
         };
 
         constexpr std::array kRequiredCounters = {
@@ -454,7 +456,7 @@ namespace rct3::save::model
             for (const auto& c : kOptionalCounters)
             {
                 if (const auto f = v.field(c.name); is_numeric(f))
-                    p.*c.member = static_cast<std::int32_t>(f->as_integer());
+                    p.*c.member = static_cast<i32>(f->as_integer());
             }
             return p;
         }
@@ -474,7 +476,7 @@ namespace rct3::save::model
                 .rights_sell_cost = i32_of(o.find(kRightsSell), 0),
                 .average_guest_cash = i32_of(o.find(kGuestCash), 0),
                 .average_guest_bank_funds = i32_of(o.find(kGuestBank), 0),
-                .flags = static_cast<std::uint32_t>(i32_of(o.find(kFlags), 0)),
+                .flags = static_cast<u32>(i32_of(o.find(kFlags), 0)),
                 .cash_less_loan = series_of(o.find(kCashLessLoan)),
                 .company_value = series_of(o.find(kCompanyValue)),
                 .expenditure = series_of(o.find(kExpenditure)),
@@ -486,7 +488,7 @@ namespace rct3::save::model
             if (const auto l = o.find(kLedger); l && l->kind() == ValueKind::List)
             {
                 const auto items = l->items();
-                for (std::size_t i = 0; i < std::min(items.size(), kLedgerPeriods); ++i)
+                for (usize i = 0; i < std::min(items.size(), kLedgerPeriods); ++i)
                     f.ledger.push_back(ledger_of(items[i]));
             }
             if (const auto c = o.find(kCumulative); c && c->kind() == ValueKind::Struct)
@@ -494,11 +496,11 @@ namespace rct3::save::model
             return f;
         }
 
-        [[nodiscard]] std::optional<float> unset_if_negative(std::optional<const Value&> v) noexcept
+        [[nodiscard]] std::optional<f32> unset_if_negative(std::optional<const Value&> v) noexcept
         {
             if (!v || v->kind() != ValueKind::Float)
                 return std::nullopt;
-            const float f = v->as_float();
+            const f32 f = v->as_float();
             if (!(f >= 0.0f))
                 return std::nullopt; // negative sentinel, also rejects NaN
             return f;
@@ -512,7 +514,7 @@ namespace rct3::save::model
                 .time = float_of(o.find(kTime), 0.0f),
                 .zero_time = float_of(o.find(kZeroTime), 0.0f),
                 .day_night_phase = unset_if_negative(o.find(kDayNight)),
-                .day_night_mode = is_numeric(mode) ? std::optional(static_cast<std::int32_t>(mode->as_integer())) : std::nullopt,
+                .day_night_mode = is_numeric(mode) ? std::optional(static_cast<i32>(mode->as_integer())) : std::nullopt,
                 .day_night_rendered_phase = unset_if_negative(o.find(kDayNightRendered)),
             };
         }
@@ -523,7 +525,7 @@ namespace rct3::save::model
             if (!o.find(kGroupWeights[0]))
                 return std::nullopt;
             GroupMix mix { .single_parent = float_of(o.find(kSingleParent), 0.0f) };
-            for (std::size_t k = 0; k < mix.weights.size(); ++k)
+            for (usize k = 0; k < mix.weights.size(); ++k)
                 mix.weights[k] = std::max(float_of(o.find(kGroupWeights[k]), 0.0f), 0.0f);
             return mix;
         }
@@ -531,13 +533,13 @@ namespace rct3::save::model
         void load_awards_object(const DecodedObject& o, Awards& a)
         {
             using namespace names;
-            a.available_mask = static_cast<std::uint32_t>(i32_of(o.find(kAwardsAvailable), 0));
+            a.available_mask = static_cast<u32>(i32_of(o.find(kAwardsAvailable), 0));
             a.months_before_start = i32_of(o.find(kMonthsBeforeAwards), 0);
             if (const auto arr = o.find(kAwardsArray); arr && arr->kind() == ValueKind::List)
             {
                 for (const auto& cat : arr->items())
                 {
-                    std::vector<std::int32_t> ids;
+                    std::vector<i32> ids;
                     std::optional<const Value&> list = cat;
                     if (cat.kind() == ValueKind::Struct)
                         list = cat.field(kAwardTypes);
@@ -588,7 +590,7 @@ namespace rct3::save::model
                 .months_to_hold = i32_of(o.find(kConsistant), 0),
                 .start_time = float_of(o.find(kStartTime), 0.0f),
                 .next_check_time = float_of(o.find(kNextCheckTime), 0.0f),
-                .consistency_flags = static_cast<std::uint32_t>(i32_of(o.find(kConsistantFlags), 0)),
+                .consistency_flags = static_cast<u32>(i32_of(o.find(kConsistantFlags), 0)),
             };
             for (const auto& [name, kind] : kConditionKinds)
             {
@@ -600,11 +602,11 @@ namespace rct3::save::model
             if (const auto v = o.find(kGreaterThan); v && v->kind() == ValueKind::Bool)
                 c.greater_than = v->as_bool();
             if (c.kind == ConditionKind::Coaster)
-                c.coaster = CoasterTarget { .value = float_of(o.find(kCompareValue), 0.0f), .flags = static_cast<std::uint32_t>(i32_of(o.find(kConditionFlags), 0)), .rides = i32_of(o.find(kRidesRequired), 0) };
+                c.coaster = CoasterTarget { .value = float_of(o.find(kCompareValue), 0.0f), .flags = static_cast<u32>(i32_of(o.find(kConditionFlags), 0)), .rides = i32_of(o.find(kRidesRequired), 0) };
             if (c.kind == ConditionKind::Vip)
                 c.vip = VipTarget {
-                    .wishes = static_cast<std::uint32_t>(i32_of(o.find(kVipWishes), 0)),
-                    .who = static_cast<std::uint8_t>(i32_of(o.find(kVipWho), 0)),
+                    .wishes = static_cast<u32>(i32_of(o.find(kVipWishes), 0)),
+                    .who = static_cast<u8>(i32_of(o.find(kVipWho), 0)),
                     .first_visit = float_of(o.find(kVipFirst), 0.0f),
                     .next_visit = float_of(o.find(kVipNext), 0.0f),
                     .retry_months = i32_of(o.find(kVipRetry), 0),
@@ -695,7 +697,7 @@ namespace rct3::save::model
             if (s.size() < suffix.size())
                 return false;
             const auto tail = s.substr(s.size() - suffix.size());
-            for (std::size_t i = 0; i < suffix.size(); ++i)
+            for (usize i = 0; i < suffix.size(); ++i)
             {
                 if (std::tolower(static_cast<unsigned char>(tail[i])) != std::tolower(static_cast<unsigned char>(suffix[i])))
                 {
@@ -720,7 +722,7 @@ namespace rct3::save::model
             return AssetKind::Other;
         }
 
-        enum class Role : std::uint8_t
+        enum class Role : u8
         {
             None,
             Park,
@@ -850,16 +852,16 @@ namespace rct3::save::model
     // Public helpers
     // ---------------------------------------------------------------------------------------------------------
 
-    void Series::push(float v)
+    void Series::push(f32 v)
     {
         samples.insert(samples.begin(), v);
         if (capacity > 0 && samples.size() > capacity)
             samples.resize(capacity);
     }
 
-    std::int64_t LedgerPeriod::raw_sum() const noexcept
+    i64 LedgerPeriod::raw_sum() const noexcept
     {
-        std::int64_t sum = 0;
+        i64 sum = 0;
         for (const auto& c : kRequiredCounters)
             sum += this->*c.member;
         for (const auto& c : kOptionalCounters)
@@ -867,25 +869,25 @@ namespace rct3::save::model
         return sum;
     }
 
-    CalendarDate GameClock::split(float units) noexcept
+    CalendarDate GameClock::split(f32 units) noexcept
     {
         if (!(units > 0.0f) || !std::isfinite(units))
             return { };
-        const double u = units;
-        const double years = std::floor(u / kUnitsPerYear);
-        const double in_year = std::fmod(u, static_cast<double>(kUnitsPerYear));
-        const double in_month = std::fmod(in_year, static_cast<double>(kUnitsPerMonth));
-        const auto month = std::min(static_cast<std::int32_t>(in_year / kUnitsPerMonth), 7);
+        const f64 u = units;
+        const f64 years = std::floor(u / kUnitsPerYear);
+        const f64 in_year = std::fmod(u, static_cast<f64>(kUnitsPerYear));
+        const f64 in_month = std::fmod(in_year, static_cast<f64>(kUnitsPerMonth));
+        const auto month = std::min(static_cast<i32>(in_year / kUnitsPerMonth), 7);
         return CalendarDate {
-            .year = years >= 9.0e18 ? std::int64_t { 9'000'000'000'000'000'000 } : static_cast<std::int64_t>(years),
+            .year = years >= 9.0e18 ? i64 { 9'000'000'000'000'000'000 } : static_cast<i64>(years),
             .month = month,
-            .week = static_cast<std::int32_t>(in_month / kUnitsPerWeek),
-            .into_week = static_cast<float>(std::fmod(in_month, static_cast<double>(kUnitsPerWeek))),
-            .day = static_cast<std::int32_t>(in_month * kDaysInMonth[static_cast<std::size_t>(month)] / kUnitsPerMonth) + 1,
+            .week = static_cast<i32>(in_month / kUnitsPerWeek),
+            .into_week = static_cast<f32>(std::fmod(in_month, static_cast<f64>(kUnitsPerWeek))),
+            .day = static_cast<i32>(in_month * kDaysInMonth[static_cast<usize>(month)] / kUnitsPerMonth) + 1,
         };
     }
 
-    std::vector<const Condition*> ObjectiveSet::conditions_for(std::int32_t difficulty, std::int32_t objective_id) const
+    std::vector<const Condition*> ObjectiveSet::conditions_for(i32 difficulty, i32 objective_id) const
     {
         std::vector<const Condition*> out;
         for (const auto& c : conditions)
@@ -897,30 +899,30 @@ namespace rct3::save::model
         return out;
     }
 
-    std::vector<std::size_t> ring_order(std::size_t count, std::int64_t next_write)
+    std::vector<usize> ring_order(usize count, i64 next_write)
     {
-        std::vector<std::size_t> out;
+        std::vector<usize> out;
         if (count == 0)
             return out;
-        const std::size_t start = next_write >= 0 && static_cast<std::uint64_t>(next_write) < count ? static_cast<std::size_t>(next_write) : 0;
+        const usize start = next_write >= 0 && static_cast<u64>(next_write) < count ? static_cast<usize>(next_write) : 0;
         out.reserve(count);
-        for (std::size_t i = 0; i < count; ++i)
+        for (usize i = 0; i < count; ++i)
             out.push_back((start + i) % count);
         return out;
     }
 
-    std::size_t RequiredContent::invented_count() const noexcept
+    usize RequiredContent::invented_count() const noexcept
     {
-        return static_cast<std::size_t>(std::count_if(entries.begin(), entries.end(), [](const AssetRequirement& r) { return r.invented; }));
+        return static_cast<usize>(std::count_if(entries.begin(), entries.end(), [](const AssetRequirement& r) { return r.invented; }));
     }
 
     std::optional<std::string> normalise_overlay_stem(std::string_view raw)
     {
         std::string out;
-        std::size_t i = 0;
+        usize i = 0;
         while (i < raw.size())
         {
-            std::size_t j = i;
+            usize j = i;
             while (j < raw.size() && raw[j] != '/' && raw[j] != '\\')
                 ++j;
             const auto part = raw.substr(i, j - i);
@@ -1029,7 +1031,7 @@ namespace rct3::save::model
         if (!norm)
             return std::nullopt;
         std::vector<std::string_view> parts;
-        for (std::size_t i = 0; i <= norm->size();)
+        for (usize i = 0; i <= norm->size();)
         {
             const auto j = norm->find('/', i);
             const auto end = j == std::string::npos ? norm->size() : j;
@@ -1080,7 +1082,7 @@ namespace rct3::save::model
     std::expected<ParkModel, Error> load_park(const SaveFile& file, const ObjectIndex& index)
     {
         std::vector<Role> roles(file.classes.size());
-        for (std::size_t i = 0; i < file.classes.size(); ++i)
+        for (usize i = 0; i < file.classes.size(); ++i)
             roles[i] = role_of(file.classes[i]);
 
         ParkModel m;
@@ -1189,7 +1191,7 @@ namespace rct3::save::model
         const auto check_series = [&](const char* label, const Series& s) {
             if (s.capacity > 0 && s.samples.size() > s.capacity)
                 add(std::format("{}: more samples than capacity", label));
-            for (const float v : s.samples)
+            for (const f32 v : s.samples)
             {
                 if (!std::isfinite(v))
                 {
@@ -1206,7 +1208,7 @@ namespace rct3::save::model
             add("no game time object");
 
         const Park& p = m.park;
-        for (const float v : p.park_rating.samples)
+        for (const f32 v : p.park_rating.samples)
         {
             if (std::isfinite(v) && (v < 0.0f || v > kMaxParkRating))
             {

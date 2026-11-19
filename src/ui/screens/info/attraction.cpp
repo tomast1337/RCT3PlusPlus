@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/attraction.hpp"
 
+#include "core/types.hpp"
 #include "simulation/tuning.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
@@ -60,10 +61,10 @@ namespace rct3::ui::screens::info
         constexpr std::string_view kStallSuffix = "stall"; ///< Left off a stall's asset name as well
 
         /// The highest rating each word is used up to, then the word for anything higher.
-        constexpr std::array<float, 6> kRatingSteps = { 2.55f, 5.11f, 7.67f, 10.23f, 12.79f, 30.0f };
+        constexpr std::array<f32, 6> kRatingSteps = { 2.55f, 5.11f, 7.67f, 10.23f, 12.79f, 30.0f };
         constexpr std::string_view kRatingWord = "RideRating";
         /// Thoughts shown at most, the latest first: as many as the page has room for.
-        constexpr std::size_t kThoughtLines = 6;
+        constexpr usize kThoughtLines = 6;
 
         constexpr std::array<StateChoice, 3> kStateChoices { {
             { save::model::AttractionState::Open, "Attraction_Button_Open", "Attraction_Button_Open_Disabled", "TT_AttractionDialogIconOpenButton" },
@@ -72,7 +73,7 @@ namespace rct3::ui::screens::info
         } };
 
         constexpr std::array<std::string_view, 4> kTestSections = { "RideTest_Basic", "RideTest_Speed", "RideTest_Force", "RideTest_Drop" };
-        enum class TestSection : std::uint8_t
+        enum class TestSection : u8
         {
             Basic,
             Speed,
@@ -94,19 +95,19 @@ namespace rct3::ui::screens::info
         /// save numbers them in.
         constexpr std::array<std::string_view, 5> kLoads = { "RideOpModeDialog_FullLoad", "RideOpModeDialog_3_4Load", "RideOpModeDialog_1_2Load", "RideOpModeDialog_1_4Load", "RideOpModeDialog_AnyLoad" };
         /// Our own ranges for the speeds the operating page sets, in metres a second.
-        constexpr std::pair<float, float> kLaunchSpeeds { 4, 50 };
-        constexpr std::pair<float, float> kLiftSpeeds { 1.5f, 5.5f };
-        constexpr std::int32_t kMostTrackCircuits = 20;
-        constexpr float kMaintenancePageWidth = 440;
-        constexpr float kModePageWidth = 680;
-        constexpr float kSpeedWidth = 100;
+        constexpr std::pair<f32, f32> kLaunchSpeeds { 4, 50 };
+        constexpr std::pair<f32, f32> kLiftSpeeds { 1.5f, 5.5f };
+        constexpr i32 kMostTrackCircuits = 20;
+        constexpr f32 kMaintenancePageWidth = 440;
+        constexpr f32 kModePageWidth = 680;
+        constexpr f32 kSpeedWidth = 100;
         constexpr std::string_view kSoldName = "%NAME%";
 
         using units::kGravity;
-        constexpr float kKmhPerMs = 3.6f;
-        constexpr float kMphPerMs = 2.2369363f;
-        constexpr float kFeetPerMetre = 3.28084f;
-        constexpr std::int32_t kSecondsPerMinute = 60;
+        constexpr f32 kKmhPerMs = 3.6f;
+        constexpr f32 kMphPerMs = 2.2369363f;
+        constexpr f32 kFeetPerMetre = 3.28084f;
+        constexpr i32 kSecondsPerMinute = 60;
         using units::kPercent;
 
         std::u16string ascii(std::string_view s)
@@ -136,13 +137,13 @@ namespace rct3::ui::screens::info
             return { };
         }
 
-        std::u16string duration(float seconds)
+        std::u16string duration(f32 seconds)
         {
-            const auto whole = static_cast<std::int64_t>(std::llround(std::max(seconds, 0.0f)));
+            const auto whole = static_cast<i64>(std::llround(std::max(seconds, 0.0f)));
             return ascii(std::format("{}:{:02}", whole / kSecondsPerMinute, whole % kSecondsPerMinute));
         }
 
-        std::u16string speed(float metres_per_second, DistanceUnits units)
+        std::u16string speed(f32 metres_per_second, DistanceUnits units)
         {
             switch (units)
             {
@@ -156,17 +157,17 @@ namespace rct3::ui::screens::info
             return ascii(std::format("{:.1f} km/h", metres_per_second * kKmhPerMs));
         }
 
-        std::u16string rating(float value, const StringTable& strings)
+        std::u16string rating(f32 value, const StringTable& strings)
         {
             return ascii(std::format("{:.2f} (", value)) + rating_word(value, strings) + u")";
         }
 
-        std::u16string force(float acceleration)
+        std::u16string force(f32 acceleration)
         {
             return ascii(std::format("{:.2f} g", acceleration / kGravity.value));
         }
 
-        std::u16string percent(float value)
+        std::u16string percent(f32 value)
         {
             return ascii(std::format("{} %", std::lround(value)));
         }
@@ -209,13 +210,13 @@ namespace rct3::ui::screens::info
             return std::u16string(kMissingValue);
         }
 
-        std::u16string count(std::int64_t n)
+        std::u16string count(i64 n)
         {
             return ascii(std::to_string(n));
         }
 
         /// `words` with its number mark standing for `n`.
-        std::u16string with_number(std::u16string words, std::int64_t n)
+        std::u16string with_number(std::u16string words, i64 n)
         {
             if (const auto at = words.find(u"%NUMBER%"); at != std::u16string::npos)
                 words.replace(at, std::u16string_view(u"%NUMBER%").size(), count(n));
@@ -236,14 +237,14 @@ namespace rct3::ui::screens::info
             page.controls.push_back(std::move(c));
         }
 
-        InfoControl price(std::int32_t id, std::string name, std::u16string label, std::int64_t value, std::int32_t most, std::int32_t step = kPriceStep)
+        InfoControl price(i32 id, std::string name, std::u16string label, i64 value, i32 most, i32 step = kPriceStep)
         {
             InfoControl c;
             c.id = id;
             c.name = std::move(name);
             c.kind = InfoControlKind::Number;
             c.label = std::move(label);
-            c.value = static_cast<std::int32_t>(std::clamp<std::int64_t>(value, 0, most));
+            c.value = static_cast<i32>(std::clamp<i64>(value, 0, most));
             c.maximum = most;
             c.step = step;
             c.decimals = 2;
@@ -298,13 +299,13 @@ namespace rct3::ui::screens::info
             add_half(page, strings, "AttractionCustomersDialogLabel_AgeYears", missing());
             if (f.ride && !f.ride->stations.empty())
             {
-                float longest = 0;
+                f32 longest = 0;
                 for (const save::model::Station& s : f.ride->stations)
                     longest = std::max(longest, s.queue_time.value);
                 // Running, the wait the queue now has at the rate the ride takes riders; unknown until measured.
                 const bool unknown = f.flow && !measured && f.flow->queued > 0;
                 if (f.flow)
-                    longest = measured ? static_cast<float>(f.flow->queued) * units::kHour.value / f.flow->per_hour : 0;
+                    longest = measured ? static_cast<f32>(f.flow->queued) * units::kHour.value / f.flow->per_hour : 0;
                 add_half(page, strings, "AttractionCustomersDialogLabel_QueueTime", unknown ? missing() : duration(longest));
                 add_half(page, strings, "AttractionCustomersDialogLabel_FavouriteRide", missing());
             }
@@ -320,7 +321,7 @@ namespace rct3::ui::screens::info
             }
         }
 
-        void tests(InfoPage& page, const AttractionFacts& f, std::size_t section, const StringTable& strings, const InfoUnits& units)
+        void tests(InfoPage& page, const AttractionFacts& f, usize section, const StringTable& strings, const InfoUnits& units)
         {
             const save::model::Ride& ride = *f.ride;
             // Results go past the basic ones only for rides that run along a track and are measured over a lap.
@@ -394,12 +395,12 @@ namespace rct3::ui::screens::info
             if (ride.kind == save::model::RideKind::Tracked && per_car > 0)
                 capacity = with_number(text(strings, "AttractionVehicleDialogLabelPassengersPerCar"), per_car);
             else if (f.flow)
-                capacity = with_number(text(strings, "AttractionVehicleDialogLabelPassengersPerRide"), static_cast<std::int64_t>(f.flow->seats));
+                capacity = with_number(text(strings, "AttractionVehicleDialogLabelPassengersPerRide"), static_cast<i64>(f.flow->seats));
             add(page, strings, "AttractionVehicleDialogLabelCapacity", capacity);
             if (ride.kind == save::model::RideKind::Tracked && !ride.trains.empty())
             {
                 // Number boxes, greyed while the ride is open: then its trains stay as they are.
-                const auto number = [&](AttractionControl id, std::string_view key, std::int32_t value, std::int32_t fewest, std::int32_t most) {
+                const auto number = [&](AttractionControl id, std::string_view key, i32 value, i32 fewest, i32 most) {
                     InfoControl c;
                     c.id = control_id(id);
                     c.name = key;
@@ -410,9 +411,9 @@ namespace rct3::ui::screens::info
                     c.enabled = f.trains && c.minimum < c.maximum;
                     page.controls.push_back(std::move(c));
                 };
-                const std::int32_t trains = static_cast<std::int32_t>(ride.trains.size());
+                const i32 trains = static_cast<i32>(ride.trains.size());
                 // Passenger cars, without the links between them.
-                const std::int32_t cars = ride.cars_per_train > 0 ? *ride.cars_per_train : static_cast<std::int32_t>(ride.trains.front().cars.size());
+                const i32 cars = ride.cars_per_train > 0 ? *ride.cars_per_train : static_cast<i32>(ride.trains.front().cars.size());
                 number(AttractionControl::Cars, "AttractionVehicleDialogLabelNumCars", cars, f.trains ? f.trains->fewest_cars : cars, f.trains ? f.trains->most_cars : cars);
                 number(AttractionControl::Trains, "AttractionVehicleDialogLabelNumTrains", trains, f.trains ? 1 : trains, f.trains ? f.trains->most_trains : trains);
                 InfoControl kind;
@@ -445,7 +446,7 @@ namespace rct3::ui::screens::info
         }
 
         /// A waiting time: its tick, and its seconds beside it while ticked.
-        void wait_controls(InfoPage& page, AttractionControl on, AttractionControl seconds, std::string_view key, const StringTable& strings, std::optional<std::int32_t> value)
+        void wait_controls(InfoPage& page, AttractionControl on, AttractionControl seconds, std::string_view key, const StringTable& strings, std::optional<i32> value)
         {
             InfoControl t = tick(on, key, text(strings, key), value.has_value());
             t.column = 1;
@@ -467,27 +468,27 @@ namespace rct3::ui::screens::info
         }
 
         /// A show ride's show, one section for each place in it and one more to add a trick at the end.
-        void show(InfoPage& page, const save::model::RideShow& show, std::size_t section, const StringTable& strings)
+        void show(InfoPage& page, const save::model::RideShow& show, usize section, const StringTable& strings)
         {
-            float seconds = 0;
-            for (const std::uint32_t t : show.order)
+            f32 seconds = 0;
+            for (const u32 t : show.order)
                 seconds += show.tricks.at(t).seconds;
-            for (std::size_t i = 0; i < show.order.size(); ++i)
+            for (usize i = 0; i < show.order.size(); ++i)
                 page.sections.push_back(ascii(std::to_string(i + 1)));
             page.sections.push_back(u"+");
             page.section = std::min(section, show.order.size());
             add(page, strings, "FireworkMaster_Timeline_TT", duration(seconds));
             const bool adding = page.section == show.order.size();
-            const std::vector<std::uint32_t> offers = show_offers(show);
+            const std::vector<u32> offers = show_offers(show);
             InfoControl c;
             c.id = control_id(AttractionControl::ShowTrick);
             c.name = "FireworkMaster_ClickToAdd_TT";
             c.kind = InfoControlKind::Choice;
             c.label = adding ? text(strings, "FireworkMaster_ClickToAdd_TT") : duration(show.tricks.at(show.order[page.section]).seconds);
-            for (const std::uint32_t t : offers)
+            for (const u32 t : offers)
                 c.items.push_back(text(strings, show.tricks[t].name));
             const auto at = adding ? offers.end() : std::ranges::find(offers, show.order[page.section]);
-            c.value = at == offers.end() ? -1 : static_cast<std::int32_t>(at - offers.begin());
+            c.value = at == offers.end() ? -1 : static_cast<i32>(at - offers.begin());
             page.controls.push_back(std::move(c));
             if (adding)
                 return;
@@ -502,7 +503,7 @@ namespace rct3::ui::screens::info
 
         void mode(InfoPage& page, const save::model::Ride& ride, bool low_friction, const StringTable& strings, const InfoUnits& units)
         {
-            const auto m = static_cast<std::size_t>(ride.mode);
+            const auto m = static_cast<usize>(ride.mode);
             if (ride.kind != save::model::RideKind::Tracked)
             {
                 if (m < kModeNames.size())
@@ -545,17 +546,17 @@ namespace rct3::ui::screens::info
             if (launched || o.lift_speed.value > 0)
             {
                 // In hundredths of the player's unit, over a range of our own.
-                const float scale = speed_scale(units.distance) * 100;
+                const f32 scale = speed_scale(units.distance) * 100;
                 const auto [low, high, step] = launched ? std::tuple { kLaunchSpeeds.first, kLaunchSpeeds.second, 1.0f } : std::tuple { kLiftSpeeds.first, kLiftSpeeds.second, 0.1f };
                 const std::string_view key = launched ? "RideOpModeDialog_LaunchSpeed" : "RideOpModeDialog_LiftChainSpeed";
                 InfoControl c;
                 c.id = control_id(launched ? AttractionControl::LaunchSpeed : AttractionControl::LiftSpeed);
                 c.name = key;
                 c.label = text(strings, key);
-                c.minimum = static_cast<std::int32_t>(std::lround(low * scale));
-                c.maximum = static_cast<std::int32_t>(std::lround(high * scale));
-                c.value = static_cast<std::int32_t>(std::lround((launched ? o.launch_speed : o.lift_speed).value * scale));
-                c.step = static_cast<std::int32_t>(std::lround(step * 100));
+                c.minimum = static_cast<i32>(std::lround(low * scale));
+                c.maximum = static_cast<i32>(std::lround(high * scale));
+                c.value = static_cast<i32>(std::lround((launched ? o.launch_speed : o.lift_speed).value * scale));
+                c.step = static_cast<i32>(std::lround(step * 100));
                 c.decimals = 2;
                 c.text = std::u16string(u" ") + std::u16string(speed_unit(units.distance));
                 c.width = kSpeedWidth;
@@ -592,7 +593,7 @@ namespace rct3::ui::screens::info
             }
         }
 
-        void graphs(InfoPage& page, const save::model::Ride& ride, std::uint8_t shown, const StringTable& strings, const InfoUnits& units)
+        void graphs(InfoPage& page, const save::model::Ride& ride, u8 shown, const StringTable& strings, const InfoUnits& units)
         {
             const save::model::RideGraphs& g = ride.graphs;
             if (g.speed.empty() && g.altitude.empty() && g.vertical_g.empty() && g.lateral_g.empty())
@@ -603,25 +604,25 @@ namespace rct3::ui::screens::info
             // In the player's units: speeds as they set them, heights in metres or feet, forces in g.
             const bool feet = units.distance == DistanceUnits::Imperial;
             const std::u16string speed_words = std::u16string(speed_unit(units.distance));
-            const std::array<std::tuple<std::string_view, const std::vector<float>*, float, std::u16string, AttractionControl>, 4> all { {
+            const std::array<std::tuple<std::string_view, const std::vector<f32>*, f32, std::u16string, AttractionControl>, 4> all { {
                 { "Graph_Speed", &g.speed, speed_scale(units.distance), speed_words, AttractionControl::SpeedSeries },
                 { "Graph_Altitude", &g.altitude, feet ? kFeetPerMetre : 1.0f, feet ? u"ft" : u"m", AttractionControl::AltitudeSeries },
                 { "Graph_VerticalG", &g.vertical_g, 1 / kGravity.value, u"g", AttractionControl::VerticalSeries },
                 { "Graph_LateralG", &g.lateral_g, 1 / kGravity.value, u"g", AttractionControl::LateralSeries },
             } };
             std::array<InfoControl, 4> ticks;
-            for (std::size_t i = 0; i < all.size(); ++i)
+            for (usize i = 0; i < all.size(); ++i)
             {
                 const auto& [key, values, scale, unit, id] = all[i];
                 // Saved newest first; drawn oldest first.
                 InfoSeries series { .name = text(strings, key), .values = { values->rbegin(), values->rend() }, .key = std::string(key), .shown = (shown >> i & 1) != 0 };
-                for (float& v : series.values)
+                for (f32& v : series.values)
                     v *= scale;
                 series.full = widgets::full_scale(series.values);
-                series.centred = std::ranges::any_of(series.values, [](float v) { return v < 0; });
+                series.centred = std::ranges::any_of(series.values, [](f32 v) { return v < 0; });
                 // The numbers up the left follow the first series shown; whole numbers on a scale of ten or more.
                 if (series.shown && page.graph_axis.empty() && !series.values.empty())
-                    for (const float v : widgets::axis_values(series.full, series.centred))
+                    for (const f32 v : widgets::axis_values(series.full, series.centred))
                         page.graph_axis.push_back(ascii(series.full >= 10 ? std::format("{:.0f} ", v) : std::format("{:.1f} ", v)) + unit);
                 ticks[i] = tick(id, key, series.name, series.shown);
                 ticks[i].series = i;
@@ -629,7 +630,7 @@ namespace rct3::ui::screens::info
                 page.graph.push_back(std::move(series));
             }
             // In each column by name, as the game lists them: altitude over speed, lateral over vertical.
-            for (const std::size_t i : { 1, 0, 3, 2 })
+            for (const usize i : { 1, 0, 3, 2 })
                 page.controls.push_back(std::move(ticks[i]));
             // With none ticked, the left holds no numbers but the names still go to the ticks.
             if (page.graph_axis.empty())
@@ -637,11 +638,11 @@ namespace rct3::ui::screens::info
             // A mark each second of the lap, and every five the time from the graph's start.
             // shortcut: a saved graph that kept only the end of a long lap is timed from where it starts; time it
             // from the lap's start once the save's count of the lap's samples is read.
-            const std::size_t samples = std::ranges::max({ g.speed.size(), g.altitude.size(), g.vertical_g.size(), g.lateral_g.size() });
-            for (std::size_t at = 0; at < samples; at += save::model::kGraphSamplesPerSecond)
+            const usize samples = std::ranges::max({ g.speed.size(), g.altitude.size(), g.vertical_g.size(), g.lateral_g.size() });
+            for (usize at = 0; at < samples; at += save::model::kGraphSamplesPerSecond)
             {
-                const std::size_t second = at / save::model::kGraphSamplesPerSecond;
-                page.graph_ticks.push_back({ static_cast<float>(samples - 1 - at), second % 5 == 0 ? ascii(std::format("{}:{:02}", second / 60, second % 60)) : std::u16string { } });
+                const usize second = at / save::model::kGraphSamplesPerSecond;
+                page.graph_ticks.push_back({ static_cast<f32>(samples - 1 - at), second % 5 == 0 ? ascii(std::format("{}:{:02}", second / 60, second % 60)) : std::u16string { } });
             }
         }
 
@@ -666,7 +667,7 @@ namespace rct3::ui::screens::info
             c.label = text(strings, "RideMaintenanceDialogLabel_Inspection");
             for (const std::string_view key : kInspectionIntervals)
                 c.items.push_back(text(strings, key));
-            const std::int32_t interval = ride.breakdown.inspection_interval;
+            const i32 interval = ride.breakdown.inspection_interval;
             c.value = interval >= 0 && std::cmp_less(interval, kInspectionIntervals.size()) ? interval : -1;
             page.controls.push_back(std::move(c));
             InfoControl mechanic;
@@ -715,7 +716,7 @@ namespace rct3::ui::screens::info
             m.longest_name = kLongestAttractionName;
             using enum AttractionControl;
             m.ids = { control_id(ItemAdd), control_id(ItemRemove), control_id(ItemMove), control_id(ItemPrice), control_id(ItemExtras), control_id(ItemName), control_id(SyncStalls), control_id(ItemColour) };
-            for (std::size_t i = 0; i < f.offers.size() && i < kMostListed; ++i)
+            for (usize i = 0; i < f.offers.size() && i < kMostListed; ++i)
             {
                 const std::u16string name = name_of(f.carried, f.offers[i]);
                 m.goods.push_back({ name, icon_of(f.carried, f.offers[i]), filled(text(strings, "StallItemsWindow_DragOn"), u"%ITEM%", name) });
@@ -723,32 +724,32 @@ namespace rct3::ui::screens::info
             // Each extra's picture over its ticks says how much of it goes on, as its own page sets.
             for (const save::model::StallExtra& e : stall.extras)
             {
-                const std::u16string level = e.level >= 0 && std::cmp_less(e.level, kExtraLevels.size()) ? text(strings, kExtraLevels[static_cast<std::size_t>(e.level)]) : missing();
+                const std::u16string level = e.level >= 0 && std::cmp_less(e.level, kExtraLevels.size()) ? text(strings, kExtraLevels[static_cast<usize>(e.level)]) : missing();
                 const std::u16string name = name_of(f.carried_extras, e.kind_symbol);
                 m.extras.push_back({ name, icon_of(f.carried_extras, e.kind_symbol), name + u" : " + level });
             }
-            for (std::size_t i = 0; i < stall.items.size() && i < kMostListed; ++i)
+            for (usize i = 0; i < stall.items.size() && i < kMostListed; ++i)
             {
                 const save::model::StallItem& item = stall.items[i];
                 const park::CarriedKind* k = carried(f.carried, item.kind_symbol);
                 MenuLine l;
                 l.name = item_name(item, stall, strings, f.carried);
                 l.icon = k != nullptr ? k->icon : std::string { };
-                l.price = { std::clamp<std::int64_t>(item.price.value, 0, kMostRidePrice) };
+                l.price = { std::clamp<i64>(item.price.value, 0, kMostRidePrice) };
                 l.ticked = item.extras;
                 // Each one sold makes its price less its own cost and that of the extras going on it, by how much
                 // of each goes on.
-                std::optional<std::int64_t> cost = k != nullptr ? std::optional(k->cost) : std::nullopt;
+                std::optional<i64> cost = k != nullptr ? std::optional(k->cost) : std::nullopt;
                 if (k != nullptr)
                 {
-                    for (std::size_t x = 0; x < k->extras.size(); ++x)
+                    for (usize x = 0; x < k->extras.size(); ++x)
                     {
                         const std::string& extra = k->extras[x];
                         const auto offered = std::ranges::find_if(stall.extras, [&](const save::model::StallExtra& e) { return strings::equals_ignoring_case(e.kind_symbol, extra); });
                         const park::CarriedKind* added = carried(f.carried_extras, extra);
                         if (offered != stall.extras.end() && added != nullptr && offered->level > save::model::StallExtra::kNone && std::cmp_less(offered->level, simulation::kTuning.eating.extra_amounts.size()) && (offered->level == save::model::StallExtra::kGuestChoice || (x < 32 && (item.extras >> x & 1) != 0)))
-                            *cost += std::llround(static_cast<double>(added->cost) * simulation::kTuning.eating.extra_amounts[static_cast<std::size_t>(offered->level)]);
-                        l.extras.push_back(offered == stall.extras.end() ? std::nullopt : std::optional(static_cast<std::size_t>(offered - stall.extras.begin())));
+                            *cost += std::llround(static_cast<f64>(added->cost) * simulation::kTuning.eating.extra_amounts[static_cast<usize>(offered->level)]);
+                        l.extras.push_back(offered == stall.extras.end() ? std::nullopt : std::optional(static_cast<usize>(offered - stall.extras.begin())));
                         l.tick_help.push_back(filled(filled(text(strings, "StallItemLine_Check"), u"%EXTRA%", name_of(f.carried_extras, extra)), u"%ITEM%", l.name));
                     }
                     // shortcut: one pot, its first colour, for every item that takes the player's colours; upgrade
@@ -787,7 +788,7 @@ namespace rct3::ui::screens::info
         constexpr std::array<std::string_view, 9> kKeys = {
             "RideBreakdownTypeNone", "RideBreakdownTypeEmergencyStop", "RideBreakdownTypeCarRestraintsFailToOpen", "RideBreakdownTypeCarRestraintsFailToClose", "RideBreakdownTypeCarDoorsFailToOpen", "RideBreakdownTypeCarDoorsFailToClose", "RideBreakdownTypeTrainStuckLeavingStation", "RideBreakdownTypeStationBrakesFail", "RideBreakdownTypeControlFailure",
         };
-        const auto i = static_cast<std::size_t>(kind);
+        const auto i = static_cast<usize>(kind);
         return i < kKeys.size() ? kKeys[i] : std::string_view { };
     }
 
@@ -839,14 +840,14 @@ namespace rct3::ui::screens::info
         return status(attraction, strings);
     }
 
-    std::u16string distance_text(float metres, DistanceUnits units)
+    std::u16string distance_text(f32 metres, DistanceUnits units)
     {
         if (units == DistanceUnits::Imperial)
             return ascii(std::format("{:.0f} ft", metres * kFeetPerMetre));
         return ascii(std::format("{:.0f} m", metres));
     }
 
-    float speed_scale(DistanceUnits units)
+    f32 speed_scale(DistanceUnits units)
     {
         return units == DistanceUnits::Imperial ? kMphPerMs : units == DistanceUnits::SI ? 1.0f : kKmhPerMs;
     }
@@ -909,13 +910,13 @@ namespace rct3::ui::screens::info
         return std::move(page.lines);
     }
 
-    std::u16string rating_word(float value, const StringTable& strings)
+    std::u16string rating_word(f32 value, const StringTable& strings)
     {
-        const auto step = std::ranges::find_if(kRatingSteps, [&](float top) { return value < top; });
+        const auto step = std::ranges::find_if(kRatingSteps, [&](f32 top) { return value < top; });
         return text(strings, std::format("{}{}", kRatingWord, step - kRatingSteps.begin()));
     }
 
-    GuestsSuited guests_suited(float intensity, std::span<const save::model::Guest> guests)
+    GuestsSuited guests_suited(f32 intensity, std::span<const save::model::Guest> guests)
     {
         GuestsSuited s;
         for (const save::model::Guest& g : guests)
@@ -928,16 +929,16 @@ namespace rct3::ui::screens::info
         return s;
     }
 
-    std::vector<std::uint32_t> show_offers(const save::model::RideShow& show)
+    std::vector<u32> show_offers(const save::model::RideShow& show)
     {
-        std::vector<std::uint32_t> offers;
-        for (std::uint32_t t = 1; t < show.tricks.size(); ++t)
+        std::vector<u32> offers;
+        for (u32 t = 1; t < show.tricks.size(); ++t)
             if (!show.tricks[t].hidden && show.tricks[t].available && show.tricks[t].invented)
                 offers.push_back(t);
         return offers;
     }
 
-    InfoPage attraction_page(AttractionTab tab, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units, std::size_t section)
+    InfoPage attraction_page(AttractionTab tab, const AttractionFacts& f, const StringTable& strings, const InfoUnits& units, usize section)
     {
         InfoPage page;
         if (f.common == nullptr)
@@ -967,7 +968,7 @@ namespace rct3::ui::screens::info
                     music.kind = InfoControlKind::Choice;
                     music.items.push_back(text(strings, "AttractionViewDialogNoMusic"));
                     music.items.insert(music.items.end(), f.music.begin(), f.music.end());
-                    music.value = static_cast<std::int32_t>(f.tune < music.items.size() ? f.tune : 0);
+                    music.value = static_cast<i32>(f.tune < music.items.size() ? f.tune : 0);
                     music.width = kNameWidth;
                     music.beside = true;
                     music.help = text(strings, music.name);
@@ -982,7 +983,7 @@ namespace rct3::ui::screens::info
                 {
                     std::u16string on = text(strings, f.flow->riding == 1 ? "PeopleOnRide1" : "PeopleOnRide0");
                     if (const auto mark = on.find(u'#'); mark != std::u16string::npos)
-                        on.replace(mark, 1, count(static_cast<std::int64_t>(f.flow->riding)));
+                        on.replace(mark, 1, count(static_cast<i64>(f.flow->riding)));
                     words.label += u", " + on;
                 }
                 page.controls.push_back(std::move(words));
@@ -1066,7 +1067,7 @@ namespace rct3::ui::screens::info
                     page.note = text(strings, "GUITextSymbol_ShopExtras_NoItemsRequireExtras");
                 else if (f.stall)
                 {
-                    for (std::size_t i = 0; i < f.stall->extras.size() && i < kMostListed; ++i)
+                    for (usize i = 0; i < f.stall->extras.size() && i < kMostListed; ++i)
                     {
                         InfoControl c;
                         c.id = control_id(AttractionControl::ExtraLevel, i);

@@ -5,6 +5,8 @@
 // number only by naming the type (`RideIndex { k }`); `.value` is the plain number, to index the list with.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <compare>
 #include <cstddef>
 #include <functional>
@@ -12,7 +14,7 @@
 namespace rct3::core
 {
 
-    template<typename Tag, typename T = std::size_t> struct Id
+    template<typename Tag, typename T = usize> struct Id
     {
         T value { };
 
@@ -29,7 +31,7 @@ namespace rct3::core
 
 template<typename Tag, typename T> struct std::hash<rct3::core::Id<Tag, T>>
 {
-    std::size_t operator()(rct3::core::Id<Tag, T> id) const noexcept
+    usize operator()(rct3::core::Id<Tag, T> id) const noexcept
     {
         return std::hash<T> { }(id.value);
     }

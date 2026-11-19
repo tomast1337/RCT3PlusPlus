@@ -4,6 +4,7 @@
 // the exit. The components here, and the step that moves them.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "profiling/profiler.hpp"
 #include "units/units.hpp"
@@ -17,7 +18,7 @@ namespace rct3::simulation
 {
 
     struct SimWorld;
-    enum class GestureKind : std::uint8_t;
+    enum class GestureKind : u8;
 
     /// The ways riders walk on and off a ride, in the park's space, worked out from the ride's models where it
     /// is drawn. Seats are counted as a load fills them: a ride's riders, or a train's. A ride without one lets
@@ -37,7 +38,7 @@ namespace rct3::simulation
     struct RideWalk
     {
         std::vector<glm::vec3> points;
-        std::size_t next = 0; ///< The point walked to now
+        usize next = 0; ///< The point walked to now
         units::Seconds pause { };
         bool off = false;
         std::optional<GestureKind> gesture { }; ///< Shown once off, on the paths

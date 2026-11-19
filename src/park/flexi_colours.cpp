@@ -2,6 +2,7 @@
 #include "park/flexi_colours.hpp"
 
 #include "core/hash.hpp"
+#include "core/types.hpp"
 #include "math/hex_colour.hpp"
 #include "strings/ascii.hpp"
 
@@ -52,54 +53,54 @@ namespace rct3::park
         } };
 
         /// How pale the lightest shade is: the share of white mixed into the colour there.
-        constexpr float kPalest = 0.85f;
+        constexpr f32 kPalest = 0.85f;
         /// How dark the darkest shade is: the share of the colour left there.
-        constexpr float kDarkest = 0.15f;
+        constexpr f32 kDarkest = 0.15f;
 
-        std::uint8_t channel(float v)
+        u8 channel(f32 v)
         {
-            return static_cast<std::uint8_t>(std::clamp(std::lround(v), 0L, 255L));
+            return static_cast<u8>(std::clamp(std::lround(v), 0L, 255L));
         }
 
     } // namespace
 
-    Rgb flexi_colour(std::size_t index)
+    Rgb flexi_colour(usize index)
     {
         const math::HexColour c = kColours[index % kFlexiColourCount];
         return { c.r, c.g, c.b };
     }
 
-    Rgb flexi_shade(Rgb c, std::size_t shade)
+    Rgb flexi_shade(Rgb c, usize shade)
     {
         shade = std::min(shade, kFlexiShades - 1);
-        float keep = 1;  // Share of the colour
-        float white = 0; // Share of white added
+        f32 keep = 1;  // Share of the colour
+        f32 white = 0; // Share of white added
         if (shade < kFlexiFullShade)
         {
-            white = kPalest * static_cast<float>(kFlexiFullShade - shade) / static_cast<float>(kFlexiFullShade);
+            white = kPalest * static_cast<f32>(kFlexiFullShade - shade) / static_cast<f32>(kFlexiFullShade);
             keep = 1 - white;
         }
         else
         {
-            const float t = static_cast<float>(shade - kFlexiFullShade) / static_cast<float>(kFlexiShades - 1 - kFlexiFullShade);
+            const f32 t = static_cast<f32>(shade - kFlexiFullShade) / static_cast<f32>(kFlexiShades - 1 - kFlexiFullShade);
             keep = 1 - (1 - kDarkest) * t;
         }
-        const auto mix = [&](std::uint8_t v) { return channel(static_cast<float>(v) * keep + 255 * white); };
+        const auto mix = [&](u8 v) { return channel(static_cast<f32>(v) * keep + 255 * white); };
         return { mix(c.r), mix(c.g), mix(c.b) };
     }
 
-    FlexiColours flexi_colours(const std::array<std::int32_t, kFlexiSlotCount>& stored)
+    FlexiColours flexi_colours(const std::array<i32, kFlexiSlotCount>& stored)
     {
         FlexiColours out { };
-        for (std::size_t k = 0; k < kFlexiSlotCount; ++k)
-            out[k] = flexi_colour(stored[k] >= 0 && static_cast<std::size_t>(stored[k]) < kFlexiColourCount ? static_cast<std::size_t>(stored[k]) : 0);
+        for (usize k = 0; k < kFlexiSlotCount; ++k)
+            out[k] = flexi_colour(stored[k] >= 0 && static_cast<usize>(stored[k]) < kFlexiColourCount ? static_cast<usize>(stored[k]) : 0);
         return out;
     }
 
-    std::array<std::int32_t, kFlexiSlotCount> name_colours(std::string_view name)
+    std::array<i32, kFlexiSlotCount> name_colours(std::string_view name)
     {
         // Our own schemes, as indices of kColours: main, accent, trim.
-        constexpr std::array<std::array<std::int32_t, kFlexiSlotCount>, 12> kSchemes { {
+        constexpr std::array<std::array<i32, kFlexiSlotCount>, 12> kSchemes { {
             { 28, 17, 1 },  // bright red, yellow, grey
             { 6, 18, 2 },   // royal blue, gold, pale grey
             { 11, 17, 0 },  // green, yellow, charcoal
@@ -113,40 +114,40 @@ namespace rct3::park
             { 14, 3, 2 },   // bright green, indigo, pale grey
             { 29, 8, 0 },   // crimson, pale blue, charcoal
         } };
-        std::uint32_t hash = core::kFnv32Offset;
+        u32 hash = core::kFnv32Offset;
         for (const char c : name)
-            hash = (hash ^ static_cast<std::uint8_t>(strings::ascii_lower(c))) * core::kFnv32Prime;
+            hash = (hash ^ static_cast<u8>(strings::ascii_lower(c))) * core::kFnv32Prime;
         return kSchemes[hash % kSchemes.size()];
     }
 
-    std::optional<PaletteImage> palette_image(const ovl::FlexiFrame& frame, std::uint32_t slots)
+    std::optional<PaletteImage> palette_image(const ovl::FlexiFrame& frame, u32 slots)
     {
-        const std::size_t count = static_cast<std::size_t>(frame.width) * frame.height;
+        const usize count = static_cast<usize>(frame.width) * frame.height;
         if (count == 0 || frame.width > ovl::texture::kMaxImageSide || frame.height > ovl::texture::kMaxImageSide || frame.palette.size() < ovl::kFlexiPaletteSize || frame.pixels.size() < count || (frame.alpha && frame.alpha->size() < count))
             return std::nullopt;
         PaletteImage image;
         image.width = frame.width;
         image.height = frame.height;
         image.slots = slots & 7u;
-        for (std::size_t i = 0; i < image.palette.size(); ++i)
+        for (usize i = 0; i < image.palette.size(); ++i)
         {
             // Stored blue, green, red, unused.
-            const auto at = [&](std::size_t k) { return std::to_integer<std::uint8_t>(frame.palette[i * 4 + k]); };
+            const auto at = [&](usize k) { return std::to_integer<u8>(frame.palette[i * 4 + k]); };
             image.palette[i] = { at(2), at(1), at(0) };
         }
         image.indices.resize(count);
-        std::ranges::transform(frame.pixels.first(count), image.indices.begin(), [](std::byte b) { return std::to_integer<std::uint8_t>(b); });
+        std::ranges::transform(frame.pixels.first(count), image.indices.begin(), [](std::byte b) { return std::to_integer<u8>(b); });
         if (frame.alpha)
         {
             image.alpha.resize(count);
-            std::ranges::transform(frame.alpha->first(count), image.alpha.begin(), [](std::byte b) { return std::to_integer<std::uint8_t>(b); });
+            std::ranges::transform(frame.alpha->first(count), image.alpha.begin(), [](std::byte b) { return std::to_integer<u8>(b); });
         }
         return image;
     }
 
-    FlexiColours used_colours(std::uint32_t slots, FlexiColours colours)
+    FlexiColours used_colours(u32 slots, FlexiColours colours)
     {
-        for (std::size_t k = 0; k < kFlexiSlotCount; ++k)
+        for (usize k = 0; k < kFlexiSlotCount; ++k)
         {
             if ((slots & (1u << k)) == 0)
                 colours[k] = { };
@@ -157,18 +158,18 @@ namespace rct3::park
     ovl::texture::RgbaImage paint(const PaletteImage& image, FlexiColours colours)
     {
         std::array<Rgb, 256> palette = image.palette;
-        for (std::size_t k = 0; k < kFlexiSlotCount; ++k)
+        for (usize k = 0; k < kFlexiSlotCount; ++k)
         {
             if ((image.slots & (1u << k)) == 0)
                 continue;
-            for (std::size_t s = 0; s < kFlexiShades; ++s)
+            for (usize s = 0; s < kFlexiShades; ++s)
                 palette[1 + k * kFlexiShades + s] = flexi_shade(colours[k], s);
         }
         ovl::texture::RgbaImage out;
         out.width = image.width;
         out.height = image.height;
         out.pixels.resize(image.indices.size() * 4);
-        for (std::size_t i = 0; i < image.indices.size(); ++i)
+        for (usize i = 0; i < image.indices.size(); ++i)
         {
             const Rgb c = palette[image.indices[i]];
             out.pixels[i * 4 + 0] = c.r;
@@ -179,7 +180,7 @@ namespace rct3::park
         return out;
     }
 
-    std::string painted_name(std::string_view texture, std::uint32_t slots, FlexiColours colours)
+    std::string painted_name(std::string_view texture, u32 slots, FlexiColours colours)
     {
         std::string name(texture);
         if ((slots & 7u) == 0)

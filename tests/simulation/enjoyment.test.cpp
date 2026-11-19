@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/enjoyment.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/rides.hpp"
@@ -161,7 +162,7 @@ namespace
 TEST_CASE("a guest wants a ride the more for its thrills, a fair price and suiting them")
 {
     const Mood mood { .happiness = { 0.5f } };
-    const float plain = ride_appeal(fair_ride(), kMiddling, mood);
+    const f32 plain = ride_appeal(fair_ride(), kMiddling, mood);
     CHECK(plain >= kTuning.choosing.bar);
 
     RideInMind dull = fair_ride();
@@ -208,7 +209,7 @@ TEST_CASE("of two rides alike, guests mostly take the tested one")
     const auto untested = park.flat_ride("Untested", { 4, 0 }, 0, alike);
     auto& r = park.world().registry;
     r.get<CycleRide>(untested).untested = true;
-    for (std::int32_t i = 0; i < 12; ++i)
+    for (i32 i = 0; i < 12; ++i)
         park.guest({ 0, 0 }, { .cash = 1000 });
     park.run_seconds(900);
     CHECK(r.get<Attraction>(untested).customers > 0);
@@ -221,7 +222,7 @@ TEST_CASE("a guest picks a ride the likelier the more they want it, the nearer i
     CHECK(ride_pull(0.6f, 1, 0) > ride_pull(0.6f, 0.5f, 0));
     CHECK(ride_pull(0.6f, 1, 0) > ride_pull(0.6f, 1, 5));
     CHECK(ride_pull(0.6f, 1, 40) > 0);
-    CHECK(ride_pull(0.6f, 1, static_cast<std::size_t>(kTuning.choosing.queue_halves)) == doctest::Approx(ride_pull(0.6f, 1, 0) / 2));
+    CHECK(ride_pull(0.6f, 1, static_cast<usize>(kTuning.choosing.queue_halves)) == doctest::Approx(ride_pull(0.6f, 1, 0) / 2));
 }
 
 TEST_CASE("a guest walks past a dull ride far dearer than it is worth")
@@ -252,10 +253,10 @@ TEST_CASE("guests come with every strength of stomach, the middling ones most")
     park.path({ 0, 0 }, { 1, 0 });
     auto dice = rct3::random::seeded(rct3::random::Seed { 7 });
     const std::array<Newcomer, 1> one { { { .age = AgeGroup::Teen } } };
-    std::array<std::int32_t, 4> by_level { };
-    for (std::int32_t i = 0; i < 2000; ++i)
+    std::array<i32, 4> by_level { };
+    for (i32 i = 0; i < 2000; ++i)
         for (const entt::entity g : admit_guests(park.world(), dice, park.world().paths.find({ 0, 0, 0 }).value(), one, kTuning.parties.middle))
-            ++by_level[static_cast<std::size_t>(std::lround(park.world().registry.get<Mood>(g).tolerance.value / kTuning.sickness.tolerance_per_saved_level.value)) - 1];
+            ++by_level[static_cast<usize>(std::lround(park.world().registry.get<Mood>(g).tolerance.value / kTuning.sickness.tolerance_per_saved_level.value)) - 1];
     CHECK(by_level[0] > 0);
     CHECK(by_level[2] > by_level[1]);
     CHECK(by_level[2] > by_level[3]);
@@ -268,18 +269,18 @@ TEST_CASE("guests come some needing the toilet, liking pools anywhere from least
     park.path({ 0, 0 }, { 1, 0 });
     auto dice = rct3::random::seeded(rct3::random::Seed { 7 });
     const std::array<Newcomer, 1> one { { { .age = AgeGroup::Adult } } };
-    std::int32_t needing = 0;
-    std::int32_t least = 0;
-    std::int32_t most = 0;
-    float swim_liking_most = 0; // Wish to swim of those liking pools most, summed, against those liking them least
-    float swim_liking_least = 0;
-    constexpr std::int32_t kGuests = 2000;
+    i32 needing = 0;
+    i32 least = 0;
+    i32 most = 0;
+    f32 swim_liking_most = 0; // Wish to swim of those liking pools most, summed, against those liking them least
+    f32 swim_liking_least = 0;
+    constexpr i32 kGuests = 2000;
     auto& r = park.world().registry;
-    for (std::int32_t i = 0; i < kGuests; ++i)
+    for (i32 i = 0; i < kGuests; ++i)
         for (const entt::entity g : admit_guests(park.world(), dice, park.world().paths.find({ 0, 0, 0 }).value(), one, kTuning.parties.middle))
         {
             const Needs& needs = r.get<Needs>(g);
-            const float liking = r.get<Taste>(g).pools.value;
+            const f32 liking = r.get<Taste>(g).pools.value;
             CHECK(needs.bladder.value <= kTuning.arrivals.bladder.value);
             needing += needs.bladder.value > 0;
             if (liking == kTuning.pools.least_liking.value)
@@ -298,7 +299,7 @@ TEST_CASE("guests come some needing the toilet, liking pools anywhere from least
     CHECK(least < kGuests / 5);
     CHECK(most > kGuests / 20);
     CHECK(most < kGuests / 5);
-    CHECK(swim_liking_least / static_cast<float>(least) == doctest::Approx(swim_liking_most / static_cast<float>(most)).epsilon(0.25));
+    CHECK(swim_liking_least / static_cast<f32>(least) == doctest::Approx(swim_liking_most / static_cast<f32>(most)).epsilon(0.25));
 }
 
 TEST_CASE("a ride that delights a guest leaves them liking wilder ones")

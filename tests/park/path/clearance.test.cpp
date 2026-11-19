@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path/clearance.hpp"
 
+#include "core/types.hpp"
 #include "park/item_category.hpp"
 #include "park/object/placement.hpp"
 #include "park/path/drag.hpp"
@@ -17,16 +18,16 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid owned_grid(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         for (save::model::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
+            c.flags = static_cast<u8>(save::model::TileFlag::Owned);
         return g;
     }
 
@@ -36,7 +37,7 @@ namespace
         object::ObjectModel model;
         model.category = std::to_underlying(category);
         model.ground_height = false;
-        model.solid = { std::array<std::int32_t, 2> { 0, 4 } };
+        model.solid = { std::array<i32, 2> { 0, 4 } };
         model.levels = { { 100, { }, { } } };
         save::model::PlacedObject o;
         o.id = 1;
@@ -153,7 +154,7 @@ TEST_CASE("an item clashes with one in the same room of a tile, not with one bes
 TEST_CASE("pieces of track filling other thirds of a tile pass each other, turned as they stand")
 {
     const save::model::TerrainGrid g = owned_grid(5, 3);
-    const auto piece = [&](std::uint32_t cells, std::int32_t rotation) {
+    const auto piece = [&](u32 cells, i32 rotation) {
         auto [objects, models] = one_item(ItemCategory::TrackPiece);
         support::SupportFootprint f;
         f.x_squares = 1;
@@ -165,7 +166,7 @@ TEST_CASE("pieces of track filling other thirds of a tile pass each other, turne
         return solid_tiles(objects, models, g);
     };
     const SolidTiles corner = piece(0b011'000'000, 0); // Two thirds along one side
-    const std::uint32_t round = 0b111'011'001;         // Takes the same two, unless turned half round
+    const u32 round = 0b111'011'001;                   // Takes the same two, unless turned half round
     CHECK(clash(piece(round, 2), corner, { }, g) == Clash::None);
     CHECK(clash(piece(round, 0), corner, { }, g) == Clash::Solid);
 }
@@ -176,8 +177,8 @@ TEST_CASE("a group of items is refused whole by its first item in the way, and p
     const auto [standing, models] = one_item(ItemCategory::Stall); // On tile (2, 1)
     const SolidTiles solids = solid_tiles(standing, models, g);
     std::vector<save::model::PlacedObject> group(3, standing.front());
-    for (std::size_t i = 0; i < group.size(); ++i)
-        group[i].col = static_cast<std::int32_t>(i);
+    for (usize i = 0; i < group.size(); ++i)
+        group[i].col = static_cast<i32>(i);
     const auto refused = first_refused(group, models, solids, { }, g);
     REQUIRE(refused.has_value());
     CHECK(refused->item == 2);
@@ -204,7 +205,7 @@ TEST_CASE("a group of items is refused whole by one off land the park owns; boug
     group[1].col = 9; // Off the map
     CHECK(first_refused(group, models, { }, { }, g)->unowned);
     group[1].col = 4;
-    g.at(4, 1).flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned) | static_cast<std::uint8_t>(save::model::TileFlag::RightsOnly);
+    g.at(4, 1).flags = static_cast<u8>(save::model::TileFlag::Owned) | static_cast<u8>(save::model::TileFlag::RightsOnly);
     CHECK(first_refused(group, models, { }, { }, g).has_value()); // On the ground
     group[1].base_height = 2;
     group[1].force_absolute_height = true;

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "builder.hpp"
+#include "core/types.hpp"
 #include "ovl/ovl.hpp"
 
 #include <cstdint>
@@ -15,7 +16,7 @@ using rct3::ovl::read_loaders;
 namespace
 {
 
-    std::vector<std::byte> loader_row(std::uint32_t type, std::uint32_t data, std::uint32_t extra, std::uint32_t symbol, std::uint32_t resolve)
+    std::vector<std::byte> loader_row(u32 type, u32 data, u32 extra, u32 symbol, u32 resolve)
     {
         std::vector<std::byte> row;
         for (auto v : { type, data, extra, symbol, resolve })
@@ -30,7 +31,7 @@ namespace
     }
 
     // A chunk: u32 size, then `size` marker bytes.
-    std::vector<std::byte> chunk(std::uint32_t size)
+    std::vector<std::byte> chunk(u32 size)
     {
         std::vector<std::byte> out;
         append_u32(out, size);

@@ -23,6 +23,7 @@
 // the caret and selection are kept inside it.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widget.hpp"
 
 #include <cstddef>
@@ -49,16 +50,16 @@ namespace rct3::ui::widgets
         Color selection_colour = hex("#007fff50");
         Color composition_colour = hex("#007fff33"); ///< Behind text being composed
         Rect padding { 3, 2, 3, 2 };                 ///< Between the edges and the text
-        std::size_t max_length = 0;                  ///< In characters; 0 for no limit
+        usize max_length = 0;                        ///< In characters; 0 for no limit
         std::u16string allowed;                      ///< Characters that may be typed; any printable one when empty
         bool upper_case = false;                     ///< Typed letters a to z become capitals
 
-        [[nodiscard]] std::size_t caret() const
+        [[nodiscard]] usize caret() const
         {
             return caret_;
         }
         /// The other end of the selection; equal to caret() when nothing is selected.
-        [[nodiscard]] std::size_t anchor() const
+        [[nodiscard]] usize anchor() const
         {
             return anchor_;
         }
@@ -67,7 +68,7 @@ namespace rct3::ui::widgets
             return caret_ != anchor_;
         }
         /// Moves the caret to `position` (snapped to the text), selecting from the anchor when `extend`.
-        void set_caret(std::size_t position, bool extend = false);
+        void set_caret(usize position, bool extend = false);
         void select_all();
 
         /// True once for each Enter since the last call.
@@ -110,18 +111,18 @@ namespace rct3::ui::widgets
         void changed();
         [[nodiscard]] Rect text_box() const;
 
-        std::size_t caret_ = 0;
-        std::size_t anchor_ = 0;
-        float scroll_ = 0;          // Units the text is moved left by
+        usize caret_ = 0;
+        usize anchor_ = 0;
+        f32 scroll_ = 0;            // Units the text is moved left by
         units::Seconds blink_time_; // Since the last change or caret move
         bool pointer_pending_ = false;
         bool pointer_extends_ = false; // A drag, not a press
-        std::int32_t presses_ = 0;     // In a row, each soon after the last and near it
+        i32 presses_ = 0;              // In a row, each soon after the last and near it
         units::Seconds since_press_;
         Point last_press_;
         Point pointer_; // Placed at the next update, which has the font
-        std::int32_t commits_ = 0;
-        std::int32_t changes_ = 0;
+        i32 commits_ = 0;
+        i32 changes_ = 0;
         std::optional<std::u16string> copied_;
         Composition composition_; // Cleared when the focus goes
     };

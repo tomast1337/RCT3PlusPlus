@@ -10,6 +10,7 @@
 // the like) are picked by name instead and stay picked until a curve, slope or bank is picked again.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/track/pieces.hpp"
 
 #include <array>
@@ -22,30 +23,30 @@
 namespace rct3::park::track
 {
 
-    inline constexpr std::size_t kCurveChoices = 2 * kCurveSizes + 1;
-    inline constexpr std::size_t kSlopeChoices = 2 * kSlopeSteps + 1;
-    inline constexpr std::size_t kBankChoices = 2 * kBankSteps; ///< -3 to 4, upside down last
+    inline constexpr usize kCurveChoices = 2 * kCurveSizes + 1;
+    inline constexpr usize kSlopeChoices = 2 * kSlopeSteps + 1;
+    inline constexpr usize kBankChoices = 2 * kBankSteps; ///< -3 to 4, upside down last
 
     /// Index of a curve, slope or bank among its choices: the leftmost or lowest first.
-    [[nodiscard]] constexpr std::size_t curve_index(std::int32_t curve)
+    [[nodiscard]] constexpr usize curve_index(i32 curve)
     {
-        return static_cast<std::size_t>(curve + kCurveSizes);
+        return static_cast<usize>(curve + kCurveSizes);
     }
-    [[nodiscard]] constexpr std::size_t slope_index(std::int32_t slope)
+    [[nodiscard]] constexpr usize slope_index(i32 slope)
     {
-        return static_cast<std::size_t>(slope + kSlopeSteps);
+        return static_cast<usize>(slope + kSlopeSteps);
     }
-    [[nodiscard]] constexpr std::size_t bank_index(std::int32_t bank)
+    [[nodiscard]] constexpr usize bank_index(i32 bank)
     {
-        return static_cast<std::size_t>(bank + kBankSteps - 1);
+        return static_cast<usize>(bank + kBankSteps - 1);
     }
 
     struct TrackChoice
     {
-        std::int32_t curve = 0;
-        std::int32_t slope = 0;         ///< That the piece ends at
-        std::int32_t bank = 0;          ///< That the piece ends at
-        std::uint8_t toggles = 0;       ///< Bits of the PieceToggle values asked for
+        i32 curve = 0;
+        i32 slope = 0;                  ///< That the piece ends at
+        i32 bank = 0;                   ///< That the piece ends at
+        u8 toggles = 0;                 ///< Bits of the PieceToggle values asked for
         std::optional<LaidPiece> named; ///< A piece picked by name, standing for the picks above
 
         friend bool operator==(const TrackChoice&, const TrackChoice&) = default;
@@ -57,13 +58,13 @@ namespace rct3::park::track
         std::array<bool, kCurveChoices> curves { };
         std::array<bool, kSlopeChoices> slopes { };
         std::array<bool, kBankChoices> banks { };
-        std::uint8_t any_toggles = 0; ///< Bits of the toggles some fitting piece has
-        std::uint8_t toggles = 0;     ///< Bits of the toggles some piece of the picked curve, slope and bank has
+        u8 any_toggles = 0;           ///< Bits of the toggles some fitting piece has
+        u8 toggles = 0;               ///< Bits of the toggles some piece of the picked curve, slope and bank has
         std::vector<LaidPiece> named; ///< Pieces of their own use that fit, stations first, each kind nearest the picked toggles first
     };
 
     /// The three picks a piece is chosen by.
-    enum class ChoiceAxis : std::uint8_t
+    enum class ChoiceAxis : u8
     {
         Curve,
         Slope,
@@ -79,7 +80,7 @@ namespace rct3::park::track
 
     /// The picks after picking `value` on `axis`: the other picks move to the nearest that have a piece
     /// with it when the picks as they are have none.
-    [[nodiscard]] TrackChoice pick_value(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, ChoiceAxis axis, std::int32_t value);
+    [[nodiscard]] TrackChoice pick_value(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, ChoiceAxis axis, i32 value);
 
     /// The picks with `toggle` turned over, when some piece of the picked curve, slope and bank comes the other way. A
     /// piece picked by name gives way to its twin with the toggle the other way (the same piece, open or enclosed),

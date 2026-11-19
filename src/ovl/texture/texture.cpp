@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/texture/texture.hpp"
 
+#include "core/types.hpp"
 #include "ovl/reference_names.hpp"
 
 #include <cstring>
@@ -13,44 +14,44 @@ namespace rct3::ovl::texture
 
         constexpr std::string_view kTextureTag = "tex";
         constexpr std::string_view kStyleTag = "txs";
-        constexpr std::size_t kHeaderSize = 0x38; // up to and including the node pointer
-        constexpr std::size_t kTableOffset = 0;
-        constexpr std::size_t kParametersOffset = 0x20;
-        constexpr std::size_t kStyleOffset = 0x2c;
-        constexpr std::size_t kCountsOffset = 0x30;
-        constexpr std::size_t kNodeOffset = 0x34;
-        constexpr std::size_t kNodeSize = 12;
-        constexpr std::uint16_t kTableValue = 7;
+        constexpr usize kHeaderSize = 0x38; // up to and including the node pointer
+        constexpr usize kTableOffset = 0;
+        constexpr usize kParametersOffset = 0x20;
+        constexpr usize kStyleOffset = 0x2c;
+        constexpr usize kCountsOffset = 0x30;
+        constexpr usize kNodeOffset = 0x34;
+        constexpr usize kNodeSize = 12;
+        constexpr u16 kTableValue = 7;
 
-        std::uint32_t u32_at(std::span<const std::byte> b, std::size_t at)
+        u32 u32_at(std::span<const std::byte> b, usize at)
         {
-            std::uint32_t v = 0;
+            u32 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
 
-        std::uint16_t u16_at(std::span<const std::byte> b, std::size_t at)
+        u16 u16_at(std::span<const std::byte> b, usize at)
         {
-            std::uint16_t v = 0;
+            u16 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
 
-        std::optional<Texture> read_texture(const AddressSpace& space, const ReferenceNames& refs, std::uint32_t address)
+        std::optional<Texture> read_texture(const AddressSpace& space, const ReferenceNames& refs, u32 address)
         {
             const auto raw = space.bytes_at(address, kHeaderSize);
             if (!raw)
                 return std::nullopt;
 
             Texture texture;
-            for (std::size_t i = 0; i < texture.table.size(); ++i)
+            for (usize i = 0; i < texture.table.size(); ++i)
             {
                 texture.table[i] = u16_at(*raw, kTableOffset + i * 2);
                 // The one other record seen starts with bytes of a different value and is laid out differently.
                 if (texture.table[i] != kTableValue)
                     return std::nullopt;
             }
-            for (std::size_t i = 0; i < texture.parameters.size(); ++i)
+            for (usize i = 0; i < texture.parameters.size(); ++i)
             {
                 texture.parameters[i] = u32_at(*raw, kParametersOffset + i * 4);
             }
@@ -59,7 +60,7 @@ namespace rct3::ovl::texture
             texture.count = u16_at(*raw, kCountsOffset + 2);
 
             // A pointer to a cell that holds the address of the node, or 0.
-            if (const std::uint32_t cell_address = u32_at(*raw, kNodeOffset); cell_address != 0)
+            if (const u32 cell_address = u32_at(*raw, kNodeOffset); cell_address != 0)
             {
                 const auto cell = space.bytes_at(cell_address, 4);
                 if (!cell)

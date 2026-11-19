@@ -18,6 +18,7 @@
 // even headings are whole quarter turns or sides of a square, so those conversions give nothing for the others.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/world.hpp"
 
 #include <array>
@@ -30,7 +31,7 @@ namespace rct3::park
     struct Side
     {
         static constexpr bool kUnit = true;
-        std::int32_t value = 0; ///< 0 to 3
+        i32 value = 0; ///< 0 to 3
 
         static const Side kNextRow;
         static const Side kNextCol;
@@ -38,12 +39,12 @@ namespace rct3::park
         static const Side kColBefore;
 
         /// The side `quarter_turns` clockwise from side 0, any whole number of turns: the edge from a raw count.
-        [[nodiscard]] static constexpr Side from(std::int32_t quarter_turns) noexcept
+        [[nodiscard]] static constexpr Side from(i32 quarter_turns) noexcept
         {
             return { quarter_turns & 3 };
         }
         /// The side `quarter_turns` clockwise from this one (anticlockwise when negative).
-        [[nodiscard]] constexpr Side turned(std::int32_t quarter_turns) const noexcept
+        [[nodiscard]] constexpr Side turned(i32 quarter_turns) const noexcept
         {
             return from(value + quarter_turns);
         }
@@ -67,15 +68,15 @@ namespace rct3::park
             return (value & 1) != 0;
         }
         /// This side's bit in a set of sides kept as bits, side 0 the lowest.
-        [[nodiscard]] constexpr std::uint32_t bit() const noexcept
+        [[nodiscard]] constexpr u32 bit() const noexcept
         {
             return 1u << (value & 3);
         }
         /// Columns and rows from a square to the one across this side.
-        [[nodiscard]] constexpr std::array<std::int32_t, 2> step() const noexcept
+        [[nodiscard]] constexpr std::array<i32, 2> step() const noexcept
         {
-            constexpr std::array<std::array<std::int32_t, 2>, 4> kSteps { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } };
-            return kSteps[static_cast<std::size_t>(value & 3)];
+            constexpr std::array<std::array<i32, 2>, 4> kSteps { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } };
+            return kSteps[static_cast<usize>(value & 3)];
         }
         /// The tile across this side of `tile`.
         [[nodiscard]] constexpr save::model::Tile beyond(save::model::Tile tile) const noexcept
@@ -84,9 +85,9 @@ namespace rct3::park
             return { tile.col + dc, tile.row + dr };
         }
         /// The side a step of (`dc`, `dr`) crosses; none unless it is one square to a side.
-        [[nodiscard]] static constexpr std::optional<Side> towards(std::int32_t dc, std::int32_t dr) noexcept
+        [[nodiscard]] static constexpr std::optional<Side> towards(i32 dc, i32 dr) noexcept
         {
-            for (std::int32_t s = 0; s < 4; ++s)
+            for (i32 s = 0; s < 4; ++s)
                 if (Side { s }.step() == std::array { dc, dr })
                     return Side { s };
             return std::nullopt;
@@ -104,10 +105,10 @@ namespace rct3::park
     struct ModelTurn
     {
         static constexpr bool kUnit = true;
-        std::int32_t value = 0; ///< Quarter turns, 0 to 3
+        i32 value = 0; ///< Quarter turns, 0 to 3
 
         /// The turn of `quarter_turns`, any whole number of them.
-        [[nodiscard]] static constexpr ModelTurn from(std::int32_t quarter_turns) noexcept
+        [[nodiscard]] static constexpr ModelTurn from(i32 quarter_turns) noexcept
         {
             return { quarter_turns & 3 };
         }
@@ -123,7 +124,7 @@ namespace rct3::park
             return Side::from(value);
         }
         /// This turn and `quarter_turns` more.
-        [[nodiscard]] constexpr ModelTurn turned(std::int32_t quarter_turns) const noexcept
+        [[nodiscard]] constexpr ModelTurn turned(i32 quarter_turns) const noexcept
         {
             return from(value + quarter_turns);
         }
@@ -133,15 +134,15 @@ namespace rct3::park
     struct Heading8
     {
         static constexpr bool kUnit = true;
-        std::int32_t value = 0; ///< Eighths of a turn, 0 to 7
+        i32 value = 0; ///< Eighths of a turn, 0 to 7
 
         /// The heading of `eighths`, any whole number of them.
-        [[nodiscard]] static constexpr Heading8 from(std::int32_t eighths) noexcept
+        [[nodiscard]] static constexpr Heading8 from(i32 eighths) noexcept
         {
             return { eighths & 7 };
         }
         /// The heading `eighths` clockwise from this one (anticlockwise when negative).
-        [[nodiscard]] constexpr Heading8 turned(std::int32_t eighths) const noexcept
+        [[nodiscard]] constexpr Heading8 turned(i32 eighths) const noexcept
         {
             return from(value + eighths);
         }
@@ -160,7 +161,7 @@ namespace rct3::park
             return (value & 1) != 0;
         }
         /// The eighths from `from` to this heading, -4 to 3, turning right positive.
-        [[nodiscard]] constexpr std::int32_t eighths_from(Heading8 from) const noexcept
+        [[nodiscard]] constexpr i32 eighths_from(Heading8 from) const noexcept
         {
             return ((value - from.value + 4) & 7) - 4;
         }

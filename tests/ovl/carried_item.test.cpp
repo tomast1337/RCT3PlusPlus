@@ -2,6 +2,7 @@
 #include "ovl/carried_item.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -20,13 +21,13 @@ namespace
     constexpr char kNameData[] = "Snack:cid\0Wrapper:cid\0Sauce:ced\0Relish:ced\0Dip:ced\0SnackName:txt\0SnackPlural:txt\0SnackIcon:gsi\0"
                                  "SnackShape:shs\0Tex:ftx\0Palette\0PartA\0SauceName:txt\0SauceIcon:gsi\0Odd:cid";
     const std::string kNames(kNameData, sizeof kNameData);
-    const std::uint32_t kBase = (static_cast<std::uint32_t>(sizeof kNameData) + 3) & ~3u;
+    const u32 kBase = (static_cast<u32>(sizeof kNameData) + 3) & ~3u;
 
-    std::uint32_t name_at(const std::string& needle)
+    u32 name_at(const std::string& needle)
     {
         const auto at = kNames.find(needle);
         REQUIRE(at != std::string::npos);
-        return static_cast<std::uint32_t>(at);
+        return static_cast<u32>(at);
     }
 
     std::vector<std::byte> names()
@@ -36,7 +37,7 @@ namespace
         return bytes_of_string(text);
     }
 
-    std::vector<std::byte> symbol(const std::string& full, std::uint32_t data)
+    std::vector<std::byte> symbol(const std::string& full, u32 data)
     {
         std::vector<std::byte> out;
         append_u32(out, name_at(full));
@@ -47,10 +48,10 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> reference(std::uint32_t location, const std::string& name)
+    std::vector<std::byte> reference(u32 location, const std::string& name)
     {
         std::vector<std::byte> out;
-        for (auto v : { location, name_at(name), std::uint32_t { 0 }, std::uint32_t { 0 } })
+        for (auto v : { location, name_at(name), u32 { 0 }, u32 { 0 } })
             append_u32(out, v);
         return out;
     }
@@ -65,18 +66,18 @@ namespace
 
     struct Words
     {
-        std::vector<std::uint32_t> w;
-        explicit Words(std::size_t bytes)
+        std::vector<u32> w;
+        explicit Words(usize bytes)
             : w(bytes / 4, 0)
         {
         }
-        void set(std::size_t at, std::uint32_t v)
+        void set(usize at, u32 v)
         {
             w.at(at / 4) = v;
         }
-        void real(std::size_t at, float v)
+        void real(usize at, f32 v)
         {
-            set(at, std::bit_cast<std::uint32_t>(v));
+            set(at, std::bit_cast<u32>(v));
         }
         std::vector<std::byte> bytes() const
         {
@@ -89,11 +90,11 @@ namespace
 
     // Layout of the block: item "Snack" at 0 (156 bytes), its two extra slots, item "Wrapper" at 164
     // (156 bytes, no extras), then three 28-byte extras.
-    constexpr std::uint32_t kSnack = 0;
-    constexpr std::uint32_t kSlots = 156;
-    constexpr std::uint32_t kWrapper = 164;
-    constexpr std::uint32_t kExtras = 320;
-    constexpr std::uint32_t kEnd = kExtras + 3 * 28;
+    constexpr u32 kSnack = 0;
+    constexpr u32 kSlots = 156;
+    constexpr u32 kWrapper = 164;
+    constexpr u32 kExtras = 320;
+    constexpr u32 kEnd = kExtras + 3 * 28;
 
     std::vector<std::byte> block()
     {
@@ -168,7 +169,7 @@ TEST_CASE("carried items expose their fields and extras")
     CHECK(it.effects[0] == 0.25f);
     CHECK(it.effects[1] == -0.5f);
     CHECK(it.cost == 50);
-    CHECK(it.worth == std::array<std::uint32_t, 3> { 0, 0, 170 });
+    CHECK(it.worth == std::array<u32, 3> { 0, 0, 170 });
     CHECK(it.unknown_50 == 0.01f);
     CHECK(it.unknown_54 == -1);
     REQUIRE(it.extras.size() == 2);
@@ -215,7 +216,7 @@ TEST_CASE("carried item edge cases")
     SUBCASE("a huge extras count is refused")
     {
         auto data = block();
-        for (std::size_t i = 0; i < 4; ++i)
+        for (usize i = 0; i < 4; ++i)
             data[0x5c + i] = std::byte { 0xFF };
         const auto overlay = make(data, symbol("Snack:cid", kSnack));
         const auto items = read_carried_items(overlay, overlay.common());

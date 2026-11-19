@@ -2,6 +2,7 @@
 #include "ovl/research_category.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -17,13 +18,13 @@ namespace
 
     constexpr char kNameData[] = "Alpha:rcg\0Beta:rcg\0Gamma:rcg\0AlphaText:txt\0Beta\0Label:txt";
     const std::string kNames(kNameData, sizeof kNameData);
-    const std::uint32_t kBase = (static_cast<std::uint32_t>(sizeof kNameData) + 3) & ~3u;
+    const u32 kBase = (static_cast<u32>(sizeof kNameData) + 3) & ~3u;
 
-    std::uint32_t name_at(const std::string& needle)
+    u32 name_at(const std::string& needle)
     {
         const auto at = kNames.find(needle);
         REQUIRE(at != std::string::npos);
-        return static_cast<std::uint32_t>(at);
+        return static_cast<u32>(at);
     }
 
     std::vector<std::byte> names()
@@ -33,7 +34,7 @@ namespace
         return bytes_of_string(text);
     }
 
-    std::vector<std::byte> symbol(const std::string& full, std::uint32_t data)
+    std::vector<std::byte> symbol(const std::string& full, u32 data)
     {
         std::vector<std::byte> out;
         append_u32(out, name_at(full));
@@ -44,25 +45,25 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> reference(std::uint32_t location, const std::string& name)
+    std::vector<std::byte> reference(u32 location, const std::string& name)
     {
         std::vector<std::byte> out;
-        for (auto v : { location, name_at(name), std::uint32_t { 0 }, std::uint32_t { 0 } })
+        for (auto v : { location, name_at(name), u32 { 0 }, u32 { 0 } })
             append_u32(out, v);
         return out;
     }
 
     // Three 40-byte categories and two 12-byte prerequisite rows after them.
-    constexpr std::uint32_t kSlots = 120;
+    constexpr u32 kSlots = 120;
 
     std::vector<std::byte> block()
     {
-        std::vector<std::uint32_t> w(kSlots / 4 + 6, 0);
+        std::vector<u32> w(kSlots / 4 + 6, 0);
         // Alpha: kind 1, name pointer, two weights, no prerequisites.
         w[0] = 1;
         w[1] = name_at("Beta");
-        w[3] = std::bit_cast<std::uint32_t>(25.0f);
-        w[4] = std::bit_cast<std::uint32_t>(10.0f);
+        w[3] = std::bit_cast<u32>(25.0f);
+        w[4] = std::bit_cast<u32>(10.0f);
         // Beta: needs Alpha at 50 and Gamma at 25.
         w[10 + 0] = 0;
         w[10 + 1] = name_at("Beta");
@@ -71,12 +72,12 @@ namespace
         // Gamma: kind 2.
         w[20] = 2;
         w[20 + 1] = name_at("Beta");
-        w[20 + 4] = std::bit_cast<std::uint32_t>(1.0f);
+        w[20 + 4] = std::bit_cast<u32>(1.0f);
         // Beta's rows: category, -1, level.
         w[30 + 1] = ~0u;
-        w[30 + 2] = std::bit_cast<std::uint32_t>(50.0f);
+        w[30 + 2] = std::bit_cast<u32>(50.0f);
         w[30 + 4] = ~0u;
-        w[30 + 5] = std::bit_cast<std::uint32_t>(25.0f);
+        w[30 + 5] = std::bit_cast<u32>(25.0f);
         std::vector<std::byte> out;
         for (auto v : w)
             append_u32(out, v);
@@ -154,7 +155,7 @@ TEST_CASE("research category edge cases")
     SUBCASE("a huge prerequisite count is refused without allocating")
     {
         auto data = block();
-        for (std::size_t i = 0; i < 4; ++i)
+        for (usize i = 0; i < 4; ++i)
             data[10 * 4 + 20 + i] = std::byte { 0xFF };
         const auto overlay = make(data, references());
         const auto categories = read_research_categories(overlay, overlay.common());

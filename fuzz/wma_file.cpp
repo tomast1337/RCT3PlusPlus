@@ -3,6 +3,7 @@
 // libFuzzer target: a music file through the ASF reader and the built-in WMA decoder, as the music player
 // reads it. The stream reads from a file, so each input is written to a temporary one first.
 #include "audio/wma/stream.hpp"
+#include "core/types.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -25,11 +26,11 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         return 0;
 
     // Bounded: a few chunks, a rewind, then a few more.
-    std::vector<float> chunk(4096 * static_cast<std::size_t>(stream->channels()));
-    volatile float sink = 0;
-    for (std::int32_t round = 0; round < 2; ++round)
+    std::vector<f32> chunk(4096 * static_cast<usize>(stream->channels()));
+    volatile f32 sink = 0;
+    for (i32 round = 0; round < 2; ++round)
     {
-        for (std::int32_t i = 0; i < 16; ++i)
+        for (i32 i = 0; i < 16; ++i)
         {
             const auto read = stream->read(chunk);
             if (!read || *read == 0)

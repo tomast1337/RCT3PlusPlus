@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/completion.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -13,7 +15,7 @@ using namespace rct3::park::track;
 
 namespace
 {
-    constexpr float kTile = 4;
+    constexpr f32 kTile = 4;
 
     save::model::TerrainGrid flat()
     {
@@ -40,7 +42,7 @@ namespace
         return shape_piece(r, l);
     }
 
-    save::model::PlacedObject at(std::int32_t col, std::int32_t row)
+    save::model::PlacedObject at(i32 col, i32 row)
     {
         save::model::PlacedObject o;
         o.col = col;
@@ -122,11 +124,11 @@ TEST_CASE("a search run a few tries at a time finds the way a whole search does,
     auto found = search_on(search, 1);
     REQUIRE_FALSE(found);
     CHECK(search.tried == 1);
-    for (std::int32_t i = 0; i < 1000 && !found; ++i)
+    for (i32 i = 0; i < 1000 && !found; ++i)
         found = search_on(search, 1);
     REQUIRE(found);
     REQUIRE(*found);
     REQUIRE((*found)->size() == whole->size());
-    for (std::size_t i = 0; i < whole->size(); ++i)
+    for (usize i = 0; i < whole->size(); ++i)
         CHECK((*found)->at(i).piece.index == whole->at(i).piece.index);
 }

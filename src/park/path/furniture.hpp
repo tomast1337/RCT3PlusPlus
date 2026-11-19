@@ -15,6 +15,7 @@
 // the land, as other scenery does.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "park/object/placement.hpp"
 #include "park/turns.hpp"
@@ -39,7 +40,7 @@ namespace rct3::park::path
     {
         save::model::Tile tile;
         ModelTurn turn;
-        std::int32_t height = 0; ///< Whole units; the deck's on a raised path, the land's middle on the ground
+        i32 height = 0; ///< Whole units; the deck's on a raised path, the land's middle on the ground
         bool raised = false;
         bool refused = false; ///< On a path, but not where the item may stand: no side suits, or its rules forbid the path
     };

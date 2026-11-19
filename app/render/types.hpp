@@ -9,6 +9,7 @@
 //  - Colours are linear floats 0..1.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "math/hex_colour.hpp"
 #include "math/texture_shift.hpp"
@@ -26,16 +27,16 @@ namespace rct3::render
 
     struct Extent
     {
-        std::uint32_t width = 0;
-        std::uint32_t height = 0;
+        u32 width = 0;
+        u32 height = 0;
     };
 
     struct Color
     {
-        float r = 0;
-        float g = 0;
-        float b = 0;
-        float a = 1;
+        f32 r = 0;
+        f32 g = 0;
+        f32 b = 0;
+        f32 a = 1;
     };
 
     /// The colour `text` ("#rrggbb" or "#rrggbbaa") names, as floats; see math/hex_colour.hpp.
@@ -49,7 +50,7 @@ namespace rct3::render
     // value-initialised handle means "none".
     struct BufferHandle
     {
-        std::uint32_t id = 0;
+        u32 id = 0;
         explicit operator bool() const
         {
             return id != 0;
@@ -59,7 +60,7 @@ namespace rct3::render
 
     struct PipelineHandle
     {
-        std::uint32_t id = 0;
+        u32 id = 0;
         explicit operator bool() const
         {
             return id != 0;
@@ -69,7 +70,7 @@ namespace rct3::render
 
     struct TextureHandle
     {
-        std::uint32_t id = 0;
+        u32 id = 0;
         explicit operator bool() const
         {
             return id != 0;
@@ -77,7 +78,7 @@ namespace rct3::render
         auto operator<=>(const TextureHandle&) const = default;
     };
 
-    enum class BufferUsage : std::uint8_t
+    enum class BufferUsage : u8
     {
         Vertex,
         Index,
@@ -95,10 +96,10 @@ namespace rct3::render
     struct BufferSlice
     {
         BufferHandle buffer;
-        std::uint32_t offset = 0; ///< Bytes from the start of the buffer
+        u32 offset = 0; ///< Bytes from the start of the buffer
     };
 
-    enum class TextureFormat : std::uint8_t
+    enum class TextureFormat : u8
     {
         Rgba8,       ///< 4 bytes per pixel, R first, unsigned normalised
         Rgba32Float, ///< 16 bytes per pixel, R first, 32-bit floats; for data shaders read back exactly
@@ -107,8 +108,8 @@ namespace rct3::render
     /// Pixels are copied at creation, rows top to bottom, tightly packed.
     struct TextureDesc
     {
-        std::uint32_t width = 0;
-        std::uint32_t height = 0;
+        u32 width = 0;
+        u32 height = 0;
         TextureFormat format = TextureFormat::Rgba8;
         std::span<const std::byte> pixels;
         std::string_view label;
@@ -120,30 +121,30 @@ namespace rct3::render
         bool readable_depth = false;
     };
 
-    [[nodiscard]] constexpr std::size_t texture_bytes(std::uint32_t width, std::uint32_t height, TextureFormat format)
+    [[nodiscard]] constexpr usize texture_bytes(u32 width, u32 height, TextureFormat format)
     {
-        return std::size_t { width } * height * (format == TextureFormat::Rgba32Float ? 16 : 4);
+        return usize { width } * height * (format == TextureFormat::Rgba32Float ? 16 : 4);
     }
 
-    enum class Filter : std::uint8_t
+    enum class Filter : u8
     {
         Nearest,
         Linear,
     };
 
-    enum class AddressMode : std::uint8_t
+    enum class AddressMode : u8
     {
         Clamp,
         Repeat,
     };
 
-    enum class IndexType : std::uint8_t
+    enum class IndexType : u8
     {
         U16,
         U32,
     };
 
-    enum class VertexFormat : std::uint8_t
+    enum class VertexFormat : u8
     {
         Float2,
         Float3,
@@ -153,23 +154,23 @@ namespace rct3::render
 
     struct VertexAttribute
     {
-        std::uint32_t location = 0;
+        u32 location = 0;
         VertexFormat format = VertexFormat::Float3;
-        std::uint32_t offset = 0;
+        u32 offset = 0;
     };
 
-    inline constexpr std::size_t kMaxVertexAttributes = 16; ///< The least Vulkan promises
+    inline constexpr usize kMaxVertexAttributes = 16; ///< The least Vulkan promises
 
     /// One interleaved vertex stream.
     struct VertexLayout
     {
-        std::uint32_t stride = 0;
+        u32 stride = 0;
         std::span<const VertexAttribute> attributes;
     };
 
     /// Shader programs are chosen by what they do, not supplied as code: each backend implements every
     /// program in its own shading language (SPIR-V, Slang, C++ for a software rasteriser).
-    enum class Shader : std::uint8_t
+    enum class Shader : u8
     {
         /// Inputs: location 0 position (Float3), location 1 colour (Float4). Output: the colour, untextured.
         VertexColor,
@@ -252,20 +253,20 @@ namespace rct3::render
         return shader == Shader::Lit || shader == Shader::LitCutout || shader == Shader::LitCrossing || shader == Shader::LitCrossingCutout || shader == Shader::LitLayerAdded || shader == Shader::LitChrome || shader == Shader::LitCrossingChrome;
     }
 
-    enum class Topology : std::uint8_t
+    enum class Topology : u8
     {
         Triangles,
         Lines,
     };
 
-    enum class CullMode : std::uint8_t
+    enum class CullMode : u8
     {
         None,
         Back,
         Front,
     };
 
-    enum class BlendMode : std::uint8_t
+    enum class BlendMode : u8
     {
         Opaque,
         Alpha, ///< Straight (non-premultiplied) alpha
@@ -273,7 +274,7 @@ namespace rct3::render
         Faded, ///< Over what is there at PipelineDesc::fade of its strength, whatever its own alpha
     };
 
-    [[nodiscard]] constexpr std::uint32_t primitive_count(Topology topology, std::uint32_t vertices)
+    [[nodiscard]] constexpr u32 primitive_count(Topology topology, u32 vertices)
     {
         return topology == Topology::Triangles ? vertices / 3 : vertices / 2;
     }
@@ -288,7 +289,7 @@ namespace rct3::render
         bool depth_test = true;
         bool depth_write = true;
         bool colour_write = true; ///< Without it, only depth is drawn
-        float fade = 1;           ///< For BlendMode::Faded
+        f32 fade = 1;             ///< For BlendMode::Faded
         std::string_view label;
     };
 
@@ -296,7 +297,7 @@ namespace rct3::render
     {
         bool clear = true; ///< Without it, the pass keeps what earlier passes of the frame drew
         Color clear_color = hex("#000000");
-        float clear_depth = 1.0f;
+        f32 clear_depth = 1.0f;
         /// A texture made as a target to draw into instead of the screen. It can be drawn with in later passes
         /// of the frame, and keeps what was drawn until it is drawn into again.
         TextureHandle target;
@@ -321,7 +322,7 @@ namespace rct3::render
         /// The Lit shaders only: an older shadow, drawn as the second row of `shadow_view` says, mixed in with
         /// `shadow_before` (0 to 1) of the weight, so the shadow moves smoothly between two drawings of it.
         TextureHandle shadow_map_before;
-        float shadow_before = 0;
+        f32 shadow_before = 0;
         /// The Lit shaders only: lamps, each lighting what is round it, fading to nothing at its reach. An
         /// Rgba32Float texture `park::kLampTexelsAcross` texels wide, read as one run of texels row after row (see
         /// park/lamp_grid.hpp, which fills it):
@@ -335,12 +336,12 @@ namespace rct3::render
         /// Haze: far surfaces fade towards this colour (each channel 0 to 1), more the further they are from the
         /// eye. None when `haze_rate` is 0.
         glm::vec3 haze { 0.0f };
-        float haze_rate = 0; ///< How quickly, per world unit beyond the haze's start
+        f32 haze_rate = 0; ///< How quickly, per world unit beyond the haze's start
         /// The Lit shaders only: 0 the textures as they are; 1 a fine grain where a texel spans several pixels;
         /// 2 also, near the eye, the surface lit as bumped by its texture's relief map, with its hollows dark,
         /// its bumps' short shadows and the texture shifted by the map's depth. Draws without a relief map get
         /// only the grain.
-        std::int32_t surface_detail = 0;
+        i32 surface_detail = 0;
         /// The Lit shaders only: a ghost's look. The vertex colour alone, times `sky`, with no other light and no
         /// haze; the texture gives only its alpha, and the surface shows more see-through where it faces the eye.
         bool ghost = false;
@@ -356,9 +357,9 @@ namespace rct3::render
     struct WaterView
     {
         glm::vec3 eye { 0.0f }; ///< Where the surface is seen from, in world space
-        float time = 0;         ///< Seconds; moves the waves
-        float near = 1;         ///< Of the projection in `DrawCommand::transform`, to read depth back as distance
-        float far = 2;
+        f32 time = 0;           ///< Seconds; moves the waves
+        f32 near = 1;           ///< Of the projection in `DrawCommand::transform`, to read depth back as distance
+        f32 far = 2;
         bool reflection = false; ///< The mirrored scene is given
         bool refraction = false; ///< The scene behind and its depth are given
         bool waves = false;      ///< Ruffle the surface with the wave picture
@@ -374,14 +375,14 @@ namespace rct3::render
         bool flow = false;
         /// For the Waterfall shader: which part of the falls is drawn (park::FallPart, as its number) and how much
         /// of their look is worked out (park::WaterfallDetail, as its number, 0 to 3).
-        std::int32_t fall_part = 0;
-        std::int32_t fall_detail = 0;
+        i32 fall_part = 0;
+        i32 fall_detail = 0;
     };
 
     /// What the Occlusion shader needs. Depths are as the depth buffer holds them, 0 near to 1 far.
     struct OcclusionStep
     {
-        enum class Kind : std::uint8_t
+        enum class Kind : u8
         {
             /// How open to the sky each pixel is (1 open, 0 shut in), from the depth in `DrawCommand::texture`,
             /// by looking for the horizon round it in a few directions on the screen (ground truth ambient
@@ -399,16 +400,16 @@ namespace rct3::render
             Apply,
         };
         Kind kind = Kind::Trace;
-        std::uint32_t frame = 0;
-        float radius = 1;   ///< Trace: how far round a point is looked at, in world units
-        float strength = 1; ///< Apply: 0 none to 1 full
-        float history = 0;  ///< Blend: the last frame's share; 0 when there is none
+        u32 frame = 0;
+        f32 radius = 1;   ///< Trace: how far round a point is looked at, in world units
+        f32 strength = 1; ///< Apply: 0 none to 1 full
+        f32 history = 0;  ///< Blend: the last frame's share; 0 when there is none
         /// The two numbers of the projection that give depth from the eye: depth = b / (stored - a).
         glm::vec2 depth_terms { 0.0f, 1.0f };
     };
 
     /// How many pictures a draw can take besides DrawCommand::texture.
-    inline constexpr std::size_t kExtraTextures = 6;
+    inline constexpr usize kExtraTextures = 6;
 
     /// One draw. With `indices` set, `count` and `first` count indices, otherwise vertices.
     struct DrawCommand
@@ -417,11 +418,11 @@ namespace rct3::render
         BufferSlice vertices;
         BufferSlice indices;
         IndexType index_type = IndexType::U16;
-        std::uint32_t count = 0;
-        std::uint32_t first = 0;
-        std::int32_t vertex_offset = 0; ///< Added to each index; indexed draws only
-        glm::mat4 transform { 1.0f };   ///< Object to clip space
-        TextureHandle texture;          ///< For shaders that sample one
+        u32 count = 0;
+        u32 first = 0;
+        i32 vertex_offset = 0;        ///< Added to each index; indexed draws only
+        glm::mat4 transform { 1.0f }; ///< Object to clip space
+        TextureHandle texture;        ///< For shaders that sample one
         Filter filter = Filter::Nearest;
         AddressMode address = AddressMode::Clamp;
         SceneLight light;           ///< For the Lit shaders
@@ -438,19 +439,19 @@ namespace rct3::render
     struct ScreenPixels
     {
         Extent size;
-        std::vector<std::uint8_t> rgba;
+        std::vector<u8> rgba;
     };
 
     /// Counters for one finished frame.
     struct FrameStats
     {
-        std::uint32_t passes = 0;
-        std::uint32_t draws = 0;
-        std::uint64_t primitives = 0;
-        std::uint64_t transient_bytes = 0; ///< Allocated with `allocate_transient`
-        std::uint32_t buffers = 0;         ///< Alive as the frame ended
-        std::uint32_t pipelines = 0;
-        std::uint32_t textures = 0;
+        u32 passes = 0;
+        u32 draws = 0;
+        u64 primitives = 0;
+        u64 transient_bytes = 0; ///< Allocated with `allocate_transient`
+        u32 buffers = 0;         ///< Alive as the frame ended
+        u32 pipelines = 0;
+        u32 textures = 0;
     };
 
 } // namespace rct3::render

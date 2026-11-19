@@ -4,6 +4,7 @@
 // created before the render device and destroyed after it.
 #pragma once
 
+#include "core/types.hpp"
 #include "platform/glfw_cursors.hpp"
 #include "render/device.hpp"
 #include "ui/cursor.hpp"
@@ -26,8 +27,8 @@ namespace rct3::platform
 
     struct WindowConfig
     {
-        std::int32_t width = 1280;
-        std::int32_t height = 720;
+        i32 width = 1280;
+        i32 height = 720;
         const char* title = "rct3++";
         bool headless = false; ///< GLFW's null platform: no display needed, nothing shown
     };
@@ -51,17 +52,17 @@ namespace rct3::platform
         [[nodiscard]] bool should_close() const;
         void poll_events();
         /// Seconds since GLFW was initialised.
-        [[nodiscard]] double time() const;
+        [[nodiscard]] f64 time() const;
 
         struct Pointer
         {
-            float x = 0; ///< Framebuffer pixels from the top-left corner, the units the device draws in
-            float y = 0;
+            f32 x = 0; ///< Framebuffer pixels from the top-left corner, the units the device draws in
+            f32 y = 0;
             bool left = false;
             bool right = false;
             bool middle = false;
-            float wheel_x = 0;    ///< Notches turned sideways since the last poll_events, positive to the left
-            float wheel_y = 0;    ///< Notches turned since the last poll_events, positive away from the user
+            f32 wheel_x = 0;      ///< Notches turned sideways since the last poll_events, positive to the left
+            f32 wheel_y = 0;      ///< Notches turned since the last poll_events, positive away from the user
             bool inside = false;  ///< Over the window's content, with the window focused
             bool shift = false;   ///< Either Shift key held down
             bool control = false; ///< Either Control key held down
@@ -102,8 +103,8 @@ namespace rct3::platform
         // user pointer stays valid when the Window moves; public so the callbacks can reach it.
         struct Collected
         {
-            double wheel_x = 0;
-            double wheel_y = 0;
+            f64 wheel_x = 0;
+            f64 wheel_y = 0;
             ui::KeyboardState keyboard;
         };
 

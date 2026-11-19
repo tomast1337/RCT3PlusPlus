@@ -16,6 +16,7 @@
 // positioned on a path.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/footpath_builder.hpp"
 #include "park/object/mesh.hpp"
 #include "park/turns.hpp"
@@ -34,49 +35,49 @@ namespace rct3::park::path
     /// The room of a tile an item takes, as bits: one per quarter, as save::model::PlacedObject::quadrant counts them,
     /// then one per edge, as the item's quarter turns count them. Items whose rooms share no bit stand side by
     /// side on one tile, as small props in different quarters do, or a wall along an edge over a floor.
-    inline constexpr std::uint8_t kWholeTile = 0x0F;
-    [[nodiscard]] constexpr std::uint8_t quarter_room(std::int32_t quadrant) noexcept
+    inline constexpr u8 kWholeTile = 0x0F;
+    [[nodiscard]] constexpr u8 quarter_room(i32 quadrant) noexcept
     {
-        return static_cast<std::uint8_t>(1U << (quadrant & 3));
+        return static_cast<u8>(1U << (quadrant & 3));
     }
     /// The two quarters on the side an item's +X faces after `turn` (see turned_x).
-    [[nodiscard]] constexpr std::uint8_t half_room(ModelTurn turn) noexcept
+    [[nodiscard]] constexpr u8 half_room(ModelTurn turn) noexcept
     {
-        constexpr std::array<std::uint8_t, 4> kHalves { 0b0101, 0b1100, 0b1010, 0b0011 }; // -X, +Z, +X, -Z
-        return kHalves[static_cast<std::size_t>(turn.value & 3)];
+        constexpr std::array<u8, 4> kHalves { 0b0101, 0b1100, 0b1010, 0b0011 }; // -X, +Z, +X, -Z
+        return kHalves[static_cast<usize>(turn.value & 3)];
     }
-    [[nodiscard]] constexpr std::uint8_t edge_room(ModelTurn turn) noexcept
+    [[nodiscard]] constexpr u8 edge_room(ModelTurn turn) noexcept
     {
-        return static_cast<std::uint8_t>(0x10U << (turn.value & 3));
+        return static_cast<u8>(0x10U << (turn.value & 3));
     }
 
     /// Room kept clear past a track piece's levels for its riders, in world units: a quarter of a plain piece's
     /// three levels, so paths and scenery keep off the cars and a tunnel's roof clears them.
-    inline constexpr float kRiderRoom = 0.75f;
+    inline constexpr f32 kRiderRoom = 0.75f;
 
     /// Every third of a tile, as bits 3 * row + column in the park's own directions.
-    inline constexpr std::uint16_t kAllThirds = 0x1FF;
+    inline constexpr u16 kAllThirds = 0x1FF;
 
     /// Levels filled on one tile, in world units, the room of the tile they fill and, for items whose squares
     /// say so, which thirds of it.
     struct SolidSpan
     {
-        float low = 0;
-        float high = 0;
-        std::uint8_t room = kWholeTile;
-        std::uint16_t thirds = kAllThirds;
-        float below = 0; ///< Room kept clear under `low`, for riders (kRiderRoom)
-        float above = 0; ///< Over `high`
+        f32 low = 0;
+        f32 high = 0;
+        u8 room = kWholeTile;
+        u16 thirds = kAllThirds;
+        f32 below = 0; ///< Room kept clear under `low`, for riders (kRiderRoom)
+        f32 above = 0; ///< Over `high`
     };
 
     /// What fills each tile, by tile (row << 16 | column).
     struct SolidTiles
     {
-        std::unordered_map<std::uint32_t, std::vector<SolidSpan>> tiles;
+        std::unordered_map<u32, std::vector<SolidSpan>> tiles;
     };
 
     /// Whether an item of `category` may stand in a path's way.
-    [[nodiscard]] bool blocks_paths(std::uint32_t category) noexcept;
+    [[nodiscard]] bool blocks_paths(u32 category) noexcept;
 
     /// The solid squares of `objects` that are shown and block paths, by the tile under each.
     [[nodiscard]] SolidTiles solid_tiles(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
@@ -87,9 +88,9 @@ namespace rct3::park::path
 
     /// Whether something in `solids` fills `spot` between `low` and `high` and the headroom over it. What
     /// stands only along the tile's edges never does.
-    [[nodiscard]] bool blocked(const SolidTiles& solids, save::model::Tile spot, float low, float high);
+    [[nodiscard]] bool blocked(const SolidTiles& solids, save::model::Tile spot, f32 low, f32 high);
 
-    enum class Clash : std::uint8_t
+    enum class Clash : u8
     {
         None,
         Solid, ///< A solid item takes some of the same room
@@ -104,7 +105,7 @@ namespace rct3::park::path
     /// Which of a group of items may not stand, and why.
     struct Refused
     {
-        std::size_t item = 0;
+        usize item = 0;
         bool unowned = false; ///< Off land the park owns, rather than in something's way
     };
 

@@ -6,6 +6,7 @@
 // box round a tree. Track, paths, supports, effects and things lying about are no roof.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "save/model/world.hpp"
 
@@ -22,10 +23,10 @@ namespace rct3::park
     };
 
     /// Whether an item of `category` keeps the rain off what is under it.
-    [[nodiscard]] bool is_roof(std::uint32_t category) noexcept;
+    [[nodiscard]] bool is_roof(u32 category) noexcept;
 
-    inline constexpr float kHeadroom = 2.2f;   ///< Above a point, where the line starts: over people's heads
-    inline constexpr float kRoofReach = 15.0f; ///< Above a point, where it ends: higher is sky
+    inline constexpr f32 kHeadroom = 2.2f;   ///< Above a point, where the line starts: over people's heads
+    inline constexpr f32 kRoofReach = 15.0f; ///< Above a point, where it ends: higher is sky
 
     /// What is over each of `points`, on a line up from kHeadroom above it to kRoofReach above it.
     /// shortcut: trees drawn only as flat pictures have no box and give no shade; upgrade by sizing them from

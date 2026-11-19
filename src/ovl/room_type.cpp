@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/room_type.hpp"
 
+#include "core/types.hpp"
 #include "ovl/field_values.hpp"
 #include "ovl/reference_names.hpp"
 
@@ -12,10 +13,10 @@ namespace rct3::ovl
 
         constexpr std::string_view kRoomTag = "chg";
         constexpr std::string_view kGalleryTag = "vwg";
-        constexpr std::size_t kRoomSize = 76;
-        constexpr std::size_t kGallerySize = 72;
+        constexpr usize kRoomSize = 76;
+        constexpr usize kGallerySize = 72;
 
-        std::optional<ChangingRoom> read_room(const AddressSpace& space, const ReferenceNames& refs, std::uint32_t address)
+        std::optional<ChangingRoom> read_room(const AddressSpace& space, const ReferenceNames& refs, u32 address)
         {
             const auto raw = space.bytes_at(address, kRoomSize);
             if (!raw)
@@ -33,13 +34,13 @@ namespace rct3::ovl
             r.unknown_40 = fields::read_i32(b, 0x40);
             r.unknown_44 = fields::read_u32(b, 0x44);
             r.unknown_48 = fields::read_u32(b, 0x48);
-            std::size_t i = 0;
-            for (std::size_t at : { 0x1c, 0x20, 0x24, 0x28, 0x34, 0x38, 0x3c })
+            usize i = 0;
+            for (usize at : { 0x1c, 0x20, 0x24, 0x28, 0x34, 0x38, 0x3c })
                 r.reserved[i++] = fields::read_u32(b, at);
             return r;
         }
 
-        std::optional<ViewingGallery> read_gallery(const AddressSpace& space, const ReferenceNames& refs, std::uint32_t address)
+        std::optional<ViewingGallery> read_gallery(const AddressSpace& space, const ReferenceNames& refs, u32 address)
         {
             const auto raw = space.bytes_at(address, kGallerySize);
             if (!raw)
@@ -54,8 +55,8 @@ namespace rct3::ovl
             g.spline = refs.find(address + 0x28, "spl");
             g.unknown_38 = fields::read_i32(b, 0x38);
             g.unknown_3c = fields::read_u32(b, 0x3c);
-            std::size_t i = 0;
-            for (std::size_t at : { 0x14, 0x18, 0x1c, 0x20, 0x2c, 0x30, 0x34, 0x40, 0x44 })
+            usize i = 0;
+            for (usize at : { 0x14, 0x18, 0x1c, 0x20, 0x2c, 0x30, 0x34, 0x40, 0x44 })
                 g.reserved[i++] = fields::read_u32(b, at);
             return g;
         }

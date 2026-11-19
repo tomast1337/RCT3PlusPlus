@@ -25,6 +25,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "save/summary.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/string_table.hpp"
@@ -45,7 +46,7 @@
 namespace rct3::ui::screens::dialogs
 {
 
-    enum class FileDialogMode : std::uint8_t
+    enum class FileDialogMode : u8
     {
         Load,
         Save,
@@ -71,27 +72,27 @@ namespace rct3::ui::screens::dialogs
         Color selected_colour = hex("#efe8ef");
         Color faded_colour = hex("#ffffff"); ///< What the end of the reading fades to
 
-        float width = 410;
-        float height = 296;
-        float list_x = 6;
-        float list_right = 408;
-        float list_top = 3;
-        float gap = 4; ///< Between the list, the save box, the line and the buttons
-        float line_height = 18;
-        float line_x = 8;
-        float button_size = 30;
-        float bottom = 1; ///< Under the buttons
-        std::array<float, 3> button_x { 300, 334, 368 };
-        float row_width = 385;
-        float row_height = 78;
+        f32 width = 410;
+        f32 height = 296;
+        f32 list_x = 6;
+        f32 list_right = 408;
+        f32 list_top = 3;
+        f32 gap = 4; ///< Between the list, the save box, the line and the buttons
+        f32 line_height = 18;
+        f32 line_x = 8;
+        f32 button_size = 30;
+        f32 bottom = 1; ///< Under the buttons
+        std::array<f32, 3> button_x { 300, 334, 368 };
+        f32 row_width = 385;
+        f32 row_height = 78;
         Rect picture { 8, 7, 88, 71 }; ///< In a row, with its border
-        float picture_inset = 3;
+        f32 picture_inset = 3;
         Rect name_box_rect { 91, 9, 371, 23 }; ///< In a row
-        float lines_x = 96;
-        float lines_width = 200;
-        float lines_top = 23;                 ///< In a row, each line `line_height - 4` below the last
-        std::size_t name_length = 39;         ///< In the save box
-        std::size_t rename_length = 80;       ///< In a row's box
+        f32 lines_x = 96;
+        f32 lines_width = 200;
+        f32 lines_top = 23;                   ///< In a row, each line `line_height - 4` below the last
+        usize name_length = 39;               ///< In the save box
+        usize rename_length = 80;             ///< In a row's box
         units::Seconds double_click { 0.4f }; ///< Between the clicks of a double click (ours)
         units::Seconds complete_time { 3 };   ///< The end of the reading shows this long, the last second fading
     };
@@ -118,13 +119,13 @@ namespace rct3::ui::screens::dialogs
         {
             return can_save_;
         }
-        [[nodiscard]] bool kept(std::size_t index) const
+        [[nodiscard]] bool kept(usize index) const
         {
             return index < kept_.size() && kept_[index];
         }
         /// What file `index` holds, read: nothing when it is not a save; `picture` 0 for none. The texture
         /// stays the owner's, used until the files are set again or the window goes.
-        void set_summary(std::size_t index, const std::optional<save::SaveSummary>& summary, TextureId picture);
+        void set_summary(usize index, const std::optional<save::SaveSummary>& summary, TextureId picture);
 
         [[nodiscard]] FileDialogMode mode() const
         {
@@ -134,11 +135,11 @@ namespace rct3::ui::screens::dialogs
         {
             return files_;
         }
-        [[nodiscard]] std::optional<std::size_t> selected() const
+        [[nodiscard]] std::optional<usize> selected() const
         {
             return selected_;
         }
-        void select(std::size_t index);
+        void select(usize index);
 
         [[nodiscard]] std::optional<std::u16string> take_open();
         [[nodiscard]] std::optional<std::u16string> take_delete();
@@ -169,8 +170,8 @@ namespace rct3::ui::screens::dialogs
         {
             return core::maybe(name_box_);
         }
-        [[nodiscard]] widgets::EditBox& row_name_box(std::size_t index) const;
-        [[nodiscard]] const std::array<std::u16string, 3>& row_lines(std::size_t index) const;
+        [[nodiscard]] widgets::EditBox& row_name_box(usize index) const;
+        [[nodiscard]] const std::array<std::u16string, 3>& row_lines(usize index) const;
         [[nodiscard]] const widgets::Label& status() const
         {
             return *status_;
@@ -185,13 +186,13 @@ namespace rct3::ui::screens::dialogs
             return core::maybe(question_);
         }
         /// Clicks row `index`, as the pointer does.
-        void click_row(std::size_t index);
+        void click_row(usize index);
 
         void update(const UpdateContext& context) override;
 
     private:
         class Row;
-        enum class Asking : std::uint8_t
+        enum class Asking : u8
         {
             Nothing,
             Delete,
@@ -200,7 +201,7 @@ namespace rct3::ui::screens::dialogs
             Message,
         };
         /// The buttons a question box offers.
-        enum class Answers : std::uint8_t
+        enum class Answers : u8
         {
             Ok,
             YesNo,
@@ -209,7 +210,7 @@ namespace rct3::ui::screens::dialogs
         [[nodiscard]] std::u16string text(std::string_view key) const;
         void ask(Asking asking, std::u16string text, Answers answers);
         void open_chosen();
-        void answer(std::size_t answer);
+        void answer(usize answer);
         void show_status();
 
         FileDialogStyle style_;
@@ -222,7 +223,7 @@ namespace rct3::ui::screens::dialogs
         std::vector<bool> kept_;
         bool can_save_ = true;
         std::u16string save_extension_;
-        std::optional<std::size_t> selected_;
+        std::optional<usize> selected_;
         widgets::ScrollArea* list_ = nullptr;
         widgets::Label* status_ = nullptr;
         widgets::Label* hover_ = nullptr;
@@ -232,15 +233,15 @@ namespace rct3::ui::screens::dialogs
         widgets::EditBox* name_box_ = nullptr;
         widgets::QuestionBox* question_ = nullptr;
         Asking asking_ = Asking::Nothing;
-        std::u16string pending_;              // The file a question is about
-        std::u16string pending_new_;          // A rename's new name
-        std::optional<std::size_t> renaming_; // Row whose name a rename changes
+        std::u16string pending_;        // The file a question is about
+        std::u16string pending_new_;    // A rename's new name
+        std::optional<usize> renaming_; // Row whose name a rename changes
         std::optional<std::u16string> open_out_;
         std::optional<std::u16string> delete_out_;
         std::optional<Rename> rename_out_;
         std::optional<units::Seconds> since_complete_; // Since every file was read; none while reading
         units::Seconds since_click_;
-        std::optional<std::size_t> last_clicked_;
+        std::optional<usize> last_clicked_;
     };
 
     /// The file name without ".park", ".dat" or ".trk", as a row shows it.

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/crowds.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
@@ -21,10 +22,10 @@
 namespace rct3::simulation
 {
 
-    float show_chance(const Staff& staff)
+    f32 show_chance(const Staff& staff)
     {
         const auto& t = kTuning.shows;
-        const float keen = t.keen.value + t.keen_per_training.value * static_cast<float>(staff.training) + (staff.happiness.value - 0.5f) / 2 - staff.laziness.value / 2;
+        const f32 keen = t.keen.value + t.keen_per_training.value * static_cast<f32>(staff.training) + (staff.happiness.value - 0.5f) / 2 - staff.laziness.value / 2;
         return std::clamp(keen, t.least_keen.value, 1.0f);
     }
 
@@ -33,23 +34,23 @@ namespace rct3::simulation
         return staff.happiness.value < kTuning.staff.miserable.value || staff.laziness.value >= kTuning.shows.poor_lazy.value;
     }
 
-    std::int32_t show_quality(const Staff& staff)
+    i32 show_quality(const Staff& staff)
     {
-        const std::int32_t less = (staff.happiness.value < kTuning.staff.miserable.value ? 1 : 0) + (staff.laziness.value >= kTuning.staff.tired.value ? 1 : 0);
+        const i32 less = (staff.happiness.value < kTuning.staff.miserable.value ? 1 : 0) + (staff.laziness.value >= kTuning.staff.tired.value ? 1 : 0);
         return std::clamp(staff.training - less, 0, staff::kMostTraining);
     }
 
-    std::vector<ShowMove> show_moves(std::int32_t quality, bool poor, random::RandomState& dice)
+    std::vector<ShowMove> show_moves(i32 quality, bool poor, random::RandomState& dice)
     {
         using enum ShowMove;
         quality = std::clamp(quality, 0, staff::kMostTraining);
-        const auto count = static_cast<std::size_t>(kTuning.shows.moves + quality);
+        const auto count = static_cast<usize>(kTuning.shows.moves + quality);
         std::vector<ShowMove> moves;
         if (poor)
         {
             constexpr std::array kTired { Idle, IdleTwo, Wave };
-            const std::size_t fall = random::below(dice, count - 1);
-            for (std::size_t i = 0; moves.size() < count; ++i)
+            const usize fall = random::below(dice, count - 1);
+            for (usize i = 0; moves.size() < count; ++i)
             {
                 if (i == fall)
                 {
@@ -66,15 +67,15 @@ namespace rct3::simulation
         // Better shows have more moves on offer, the fancier last.
         constexpr std::array kOffered { Wave, Idle, DanceOne, IdleTwo, DanceTwo, DanceThree };
         constexpr std::array kHeight { Wave, DanceOne, DanceTwo, DanceThree };
-        const std::size_t height = random::below(dice, count);
-        for (std::size_t i = 0; i < count; ++i)
-            moves.push_back(i == height ? kHeight[static_cast<std::size_t>(quality)] : kOffered[random::below(dice, static_cast<std::size_t>(quality) + 3)]);
+        const usize height = random::below(dice, count);
+        for (usize i = 0; i < count; ++i)
+            moves.push_back(i == height ? kHeight[static_cast<usize>(quality)] : kOffered[random::below(dice, static_cast<usize>(quality) + 3)]);
         return moves;
     }
 
-    float show_seconds(std::span<const ShowMove> moves)
+    f32 show_seconds(std::span<const ShowMove> moves)
     {
-        float seconds = 0;
+        f32 seconds = 0;
         for (const ShowMove m : moves)
             seconds += kTuning.shows.move_length[std::to_underlying(m)].value;
         return seconds;
@@ -82,10 +83,10 @@ namespace rct3::simulation
 
     ShowMoment show_move_at(const Show& show)
     {
-        float into = show.into.value;
+        f32 into = show.into.value;
         for (const ShowMove m : show.moves)
         {
-            const float length = kTuning.shows.move_length[std::to_underlying(m)].value;
+            const f32 length = kTuning.shows.move_length[std::to_underlying(m)].value;
             if (into < length || &m == &show.moves.back())
                 return { m, units::Seconds { std::min(into, length) } };
             into -= length;
@@ -97,8 +98,8 @@ namespace rct3::simulation
     {
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;
-        constexpr float dt = kTickSeconds;
-        const float now = static_cast<float>(world.tick) * kTickSeconds;
+        constexpr f32 dt = kTickSeconds;
+        const f32 now = static_cast<f32>(world.tick) * kTickSeconds;
         if (paths.nodes().empty())
             return;
         const auto staff_view = r.view<Staff, Stride, Pose, Dice>();
@@ -106,12 +107,12 @@ namespace rct3::simulation
         // Crowds: guests stopped round an entertainer's show or a VIP (see crowds.hpp).
         const auto flat = [](glm::vec3 v) { return glm::vec2 { v.x, v.z }; };
         // Guests walking free within `reach` of `star` (alone, or leading their party), each with their party.
-        const auto free_near = [&](entt::entity star, float reach) {
+        const auto free_near = [&](entt::entity star, f32 reach) {
             std::vector<entt::entity> found;
             const glm::vec2 at = flat(r.get<Pose>(star).position);
             for (const auto [g, visitor, errand, stride, pose] : r.view<const Visitor, const Errand, const Stride, const Pose>(entt::exclude<Staff, Vip, Watching, Linger, Gesture, Left, Held, Dropped, RideWalk, Crossing>).each())
             {
-                const float d = glm::distance(flat(pose.position), at);
+                const f32 d = glm::distance(flat(pose.position), at);
                 if (errand.kind != ErrandKind::Wandering || stride.from.value >= paths.nodes().size() || d > reach || d < kTuning.shows.near.value)
                     continue;
                 if (const auto* member = r.try_get<Member>(g); member != nullptr && (r.get<Party>(member->party).leader != g || r.get<Party>(member->party).huddle > 0))
@@ -127,10 +128,10 @@ namespace rct3::simulation
             const auto* member = r.try_get<Member>(guest);
             const std::vector<entt::entity> who = member != nullptr && !autograph ? r.get<Party>(member->party).members : std::vector { guest };
             const glm::vec2 off = flat(r.get<Pose>(guest).position) - flat(r.get<Pose>(star).position);
-            const float angle = std::atan2(off.x, off.y);
-            for (std::size_t k = 0; k < who.size(); ++k)
+            const f32 angle = std::atan2(off.x, off.y);
+            for (usize k = 0; k < who.size(); ++k)
                 if (r.all_of<Stride, Pose, Mood>(who[k]) && !r.any_of<Gesture, Linger, Watching>(who[k]))
-                    r.emplace<Watching>(who[k], Watching { .star = star, .angle = { angle + kTuning.shows.crowd_spread.value * (static_cast<float>(k) - static_cast<float>(who.size() - 1) / 2) }, .autograph = autograph });
+                    r.emplace<Watching>(who[k], Watching { .star = star, .angle = { angle + kTuning.shows.crowd_spread.value * (static_cast<f32>(k) - static_cast<f32>(who.size() - 1) / 2) }, .autograph = autograph });
         };
         // Done watching `star`: the crowd shows what they made of it, a good show or a poor one.
         const auto show_over = [&](entt::entity star, std::optional<bool> poor) {
@@ -184,7 +185,7 @@ namespace rct3::simulation
                 {
                     const auto* member = r.try_get<Member>(g);
                     const auto many = member != nullptr ? r.get<Party>(member->party).members.size() : 1;
-                    if (random::chance(r.get<Dice>(e).state, kTuning.shows.join.value * dt / static_cast<double>(many)))
+                    if (random::chance(r.get<Dice>(e).state, kTuning.shows.join.value * dt / static_cast<f64>(many)))
                         draw_in(e, g, false);
                 }
                 continue;
@@ -228,7 +229,7 @@ namespace rct3::simulation
                     const auto* member = r.try_get<Member>(g);
                     const auto many = member != nullptr ? r.get<Party>(member->party).members.size() : 1;
                     const auto* got = r.try_get<Autographs>(g);
-                    if ((got == nullptr || !std::ranges::contains(got->from, v)) && random::chance(dice, kTuning.fans.keen.value / static_cast<double>(many)))
+                    if ((got == nullptr || !std::ranges::contains(got->from, v)) && random::chance(dice, kTuning.fans.keen.value / static_cast<f64>(many)))
                         draw_in(v, g, true);
                 }
             }
@@ -263,7 +264,7 @@ namespace rct3::simulation
             watching.waited.value += dt;
             const bool gone = !r.valid(watching.star) || r.any_of<Left>(watching.star) || !r.all_of<Pose>(watching.star);
             const auto* vip = gone ? nullptr : r.try_get<Vip>(watching.star);
-            const float apart = gone ? 0.0f : glm::distance(flat(pose.position), flat(r.get<Pose>(watching.star).position));
+            const f32 apart = gone ? 0.0f : glm::distance(flat(pose.position), flat(r.get<Pose>(watching.star).position));
             const bool tired = watching.waited.value >= kTuning.fans.give_up.value || apart >= kTuning.fans.far.value;
             if (gone || (watching.autograph && (vip == nullptr || vip->leaving || tired)) || (!watching.autograph && r.get_or_emplace<Show>(watching.star).moves.empty()) || stride.from.value >= paths.nodes().size() || stride.to.value >= paths.nodes().size())
             {
@@ -297,18 +298,18 @@ namespace rct3::simulation
                 ++r.get<Vip>(watching.star).fans;
             }
             const glm::vec2 star = flat(r.get<Pose>(watching.star).position);
-            const float ring = watching.autograph ? kTuning.fans.ring.value : kTuning.shows.ring.value;
+            const f32 ring = watching.autograph ? kTuning.fans.ring.value : kTuning.shows.ring.value;
             const glm::vec2 want = star + ring * glm::vec2 { std::sin(watching.angle.value), std::cos(watching.angle.value) };
             // The spot kept on the path: on whichever of their own tiles or the star's comes nearest to it.
             glm::vec2 spot = want;
-            float best = std::numeric_limits<float>::infinity();
+            f32 best = std::numeric_limits<f32>::infinity();
             const auto* star_stride = r.try_get<Stride>(watching.star);
             for (const std::optional<NodeId> n : { std::optional(stride.from), std::optional(stride.to), star_stride != nullptr ? std::optional(star_stride->from) : std::nullopt, star_stride != nullptr ? std::optional(star_stride->to) : std::nullopt })
                 if (n && n->value < paths.nodes().size())
                 {
                     const glm::vec2 centre = flat(paths.centre(*n));
                     const glm::vec2 kept = centre + glm::clamp(want - centre, -kLaneReach, kLaneReach);
-                    if (const float d = glm::distance(kept, want); d < best)
+                    if (const f32 d = glm::distance(kept, want); d < best)
                     {
                         best = d;
                         spot = kept;
@@ -320,7 +321,7 @@ namespace rct3::simulation
             const glm::vec2 lane = spot - middle;
             const glm::vec2 was = glm::mix(stride.lane_from, stride.lane_to, stride.progress.value);
             const glm::vec2 step = lane - was;
-            const float most = kTuning.walking.lane_drift.value * 4 * dt;
+            const f32 most = kTuning.walking.lane_drift.value * 4 * dt;
             const glm::vec2 now_lane = was + (glm::length(step) > most ? step * (most / glm::length(step)) : step);
             stride.lane_from = stride.lane_to = now_lane;
             place(paths, stride, pose);

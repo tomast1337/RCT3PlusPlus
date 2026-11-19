@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/model_lights.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <doctest/doctest.h>
 
@@ -9,7 +11,7 @@ using namespace rct3::park;
 
 namespace
 {
-    NamedPlace at(std::string_view name, glm::vec3 position, std::optional<std::int32_t> bone = std::nullopt)
+    NamedPlace at(std::string_view name, glm::vec3 position, std::optional<i32> bone = std::nullopt)
     {
         return { .name = name, .place = glm::translate(glm::mat4(1.0f), position), .bone = bone };
     }

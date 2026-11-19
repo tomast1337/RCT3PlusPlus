@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/asset_index.hpp"
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <algorithm>
@@ -31,9 +32,9 @@ namespace rct3::park
         }
 
         /// Characters two overlay paths share from the start, compared without case.
-        std::size_t shared_start(std::string_view a, std::string_view b)
+        usize shared_start(std::string_view a, std::string_view b)
         {
-            std::size_t n = 0;
+            usize n = 0;
             while (n < a.size() && n < b.size() && std::tolower(static_cast<unsigned char>(a[n])) == std::tolower(static_cast<unsigned char>(b[n])))
                 ++n;
             return n;
@@ -47,7 +48,7 @@ namespace rct3::park
         const auto walk = [&](std::string_view path, bool keep_last) {
             while (!path.empty())
             {
-                const std::size_t cut = path.find_first_of("/\\");
+                const usize cut = path.find_first_of("/\\");
                 const std::string_view step = path.substr(0, cut);
                 path = cut == std::string_view::npos ? std::string_view { } : path.substr(cut + 1);
                 if (!keep_last && cut == std::string_view::npos)

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/sandbox.hpp"
@@ -17,7 +18,7 @@ namespace units = rct3::units;
 
 namespace
 {
-    std::size_t litter(Sandbox& park)
+    usize litter(Sandbox& park)
     {
         return park.world().registry.view<Litter>().size();
     }
@@ -32,7 +33,7 @@ TEST_CASE("a guest drinks up a bite at a time, then holds their cup a while befo
     auto& r = park.world().registry;
     CHECK(park.run_until([&] { return r.all_of<Carried>(g); }, 5));
     CHECK(r.get<Needs>(g).thirst.value > 0.8f); // Not drunk yet
-    const float drinking = static_cast<float>(kTuning.eating.bites) * kTuning.eating.bite.value;
+    const f32 drinking = static_cast<f32>(kTuning.eating.bites) * kTuning.eating.bite.value;
     park.run_seconds(drinking / 2);
     CHECK(r.get<Needs>(g).thirst.value < 0.8f);
     CHECK(r.get<Needs>(g).thirst.value > 0.1f);
@@ -46,7 +47,7 @@ TEST_CASE("a guest drinks up a bite at a time, then holds their cup a while befo
 
 TEST_CASE("an empty in hand goes in a pocket when buying more, and on the path once both are full")
 {
-    for (const std::uint8_t pocketed : { std::uint8_t { 0 }, Carried::kPockets })
+    for (const u8 pocketed : { u8 { 0 }, Carried::kPockets })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 0, 0 });
@@ -62,7 +63,7 @@ TEST_CASE("an empty in hand goes in a pocket when buying more, and on the path o
 
 TEST_CASE("a guest puts every empty they have in a bin on their tile, while it has room")
 {
-    for (const float room : { 40.0f, 2.0f, 0.0f })
+    for (const f32 room : { 40.0f, 2.0f, 0.0f })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 0, 0 });
@@ -104,7 +105,7 @@ TEST_CASE("an angry guest breaks what stands by them unless a guard is near, and
     Sandbox park;
     park.path({ 0, 0 }, { 0, 0 });
     std::vector<entt::entity> benches;
-    for (std::int32_t i = 0; i < 3; ++i)
+    for (i32 i = 0; i < 3; ++i)
         benches.push_back(park.item(PathItemKind::Bench, { 0, 0 }));
     const auto vandal = park.guest({ 0, 0 }, { .happiness = 0 });
     auto& r = park.world().registry;
@@ -125,7 +126,7 @@ TEST_CASE("an angry guest breaks what stands by them unless a guard is near, and
 
 TEST_CASE("a handyman steps over to a broken bench beside them, whichever side")
 {
-    for (const std::int32_t side : { -1, 1 })
+    for (const i32 side : { -1, 1 })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 6, 0 });
@@ -143,7 +144,7 @@ TEST_CASE("a handyman told to leave broken things does, and still sweeps; replac
     park.path({ 0, 0 }, { 0, 0 });
     auto& r = park.world().registry;
     std::vector<entt::entity> benches;
-    for (std::uint64_t i = 1; i <= 3; ++i)
+    for (u64 i = 1; i <= 3; ++i)
     {
         benches.push_back(park.item(PathItemKind::Bench, { 0, 0 }));
         r.get<PathItem>(benches.back()).broken = true;
@@ -157,12 +158,12 @@ TEST_CASE("a handyman told to leave broken things does, and still sweeps; replac
     CHECK(std::ranges::all_of(benches, [&](entt::entity b) { return r.get<PathItem>(b).broken; }));
     CHECK(r.get<Staff>(handyman).mended == 0);
 
-    const Replacement due = replacement(park.world(), [](std::uint64_t object) { return units::Money { static_cast<std::int64_t>(object) * 100 }; });
+    const Replacement due = replacement(park.world(), [](u64 object) { return units::Money { static_cast<i64>(object) * 100 }; });
     CHECK(due.items == 3);
     CHECK(due.cost == units::Money { 600 });
     replace_broken(park.world());
     CHECK(std::ranges::none_of(benches, [&](entt::entity b) { return r.get<PathItem>(b).broken; }));
-    CHECK(replacement(park.world(), [](std::uint64_t) { return units::Money { 1 }; }).items == 0);
+    CHECK(replacement(park.world(), [](u64) { return units::Money { 1 }; }).items == 0);
 }
 
 TEST_CASE("a dirty path spoils the mood of the guests on it")
@@ -195,7 +196,7 @@ TEST_CASE("a handyman given a patrol keeps to it and sweeps it, and leaves the l
     const auto handyman = park.staff(StaffRole::Handyman, { 0, 0 });
     r.emplace<staff::Patrol>(handyman, staff::Patrol { { { 0, 0 }, { 1, 0 }, { 2, 0 }, { 3, 0 } } });
     const auto& nodes = park.world().paths.nodes();
-    std::int32_t furthest = 0;
+    i32 furthest = 0;
     park.run_until(
         [&] {
             furthest = std::max(furthest, nodes[r.get<Stride>(handyman).to.value].tile.col);

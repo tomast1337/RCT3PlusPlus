@@ -4,6 +4,7 @@
 // whether it becomes their favourite ride.
 #pragma once
 
+#include "core/types.hpp"
 #include "simulation/guests.hpp"
 
 #include <cstddef>
@@ -17,8 +18,8 @@ namespace rct3::simulation
     struct Favourite
     {
         entt::entity ride = entt::null;
-        std::uint64_t saved = 0; ///< The saved park's own id of it; 0 when it is not from a save
-        float score = 0;
+        u64 saved = 0; ///< The saved park's own id of it; 0 when it is not from a save
+        f32 score = 0;
     };
 
     /// The rides a guest has been on, each once, and the one they were on last.
@@ -42,7 +43,7 @@ namespace rct3::simulation
     };
 
     /// How well a ride's rating sits with what a guest likes, from right inside their range to way off it.
-    enum class Fit : std::uint8_t
+    enum class Fit : u8
     {
         WayOff,
         Far,
@@ -52,7 +53,7 @@ namespace rct3::simulation
 
     /// Where `rating` sits against the range `least`..`most`: near it within `slack` over it, far within twice that;
     /// under it a guest takes a tame ride further in their stride than a wild one over it.
-    [[nodiscard]] Fit fit(float rating, float least, float most, float slack);
+    [[nodiscard]] Fit fit(f32 rating, f32 least, f32 most, f32 slack);
 
     /// The nausea ratings a guest of stomach `tolerance` takes in comfort: none but the mildest for a weak one,
     /// and a strong one finds a gentle ride dull.
@@ -61,15 +62,15 @@ namespace rct3::simulation
     /// Points a guest in `mood` with `taste` gives the ride they took: for how well its intensity and nausea suit
     /// them, what they paid against its worth, how long they waited and whether it was new to them. A ride that
     /// suits them in every way scores 125, one that does in none -122.
-    [[nodiscard]] std::int32_t enjoyment_points(const RideTaken& ride, const Taste& taste, const Mood& mood);
+    [[nodiscard]] i32 enjoyment_points(const RideTaken& ride, const Taste& taste, const Mood& mood);
 
     /// A guest's score for a ride they gave `points`, to compare with their favourite's.
-    [[nodiscard]] float favourite_score(units::Share excitement, std::int32_t points);
+    [[nodiscard]] f32 favourite_score(units::Share excitement, i32 points);
 
     /// What a ride the guest gave `points` does to them: happier (or gloomier) by its points, sicker by its
     /// nausea, the less so the happier it left them; and it is their favourite from now on when it beats the one
     /// they have, unless they got on in too low a mood to think so. Returns whether it became their favourite.
-    bool take_ride(Mood& mood, Favourite& favourite, entt::entity ride, std::uint64_t saved, const RideTaken& taken, std::int32_t points);
+    bool take_ride(Mood& mood, Favourite& favourite, entt::entity ride, u64 saved, const RideTaken& taken, i32 points);
 
     /// A ride a guest thinks of going on.
     struct RideInMind
@@ -88,11 +89,11 @@ namespace rct3::simulation
     /// suits them, its price against its worth, and whether it would sicken them; more for their favourite, less
     /// for the one they just got off. An untested ride has only a small, flat appeal in place of its ratings and
     /// price. They go only on a ride that reaches the bar in the tuning.
-    [[nodiscard]] float ride_appeal(const RideInMind& ride, const Taste& taste, const Mood& mood);
+    [[nodiscard]] f32 ride_appeal(const RideInMind& ride, const Taste& taste, const Mood& mood);
 
     /// How likely a guest is to pick, among the rides they would go on, one they want as much as `appeal`, `near`
     /// of the way from the edge of their reach to them (1 right here), with `queued` guests waiting for it: likelier
     /// the more they want it and the nearer it is, less likely the longer its queue.
-    [[nodiscard]] float ride_pull(float appeal, float near, std::size_t queued);
+    [[nodiscard]] f32 ride_pull(f32 appeal, f32 near, usize queued);
 
 } // namespace rct3::simulation

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ride/cars.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <numbers>
 
@@ -20,14 +22,14 @@ TEST_CASE("ride cars stand where the park kept them, turned as it kept them")
     car.position = { 10, 2, -4 };
     car.position_valid = true;
     // A half turn about the vertical.
-    car.orientation = { 0, std::numbers::pi_v<float>, 0 };
+    car.orientation = { 0, std::numbers::pi_v<f32>, 0 };
     train.cars.emplace_back(); // no kept place: left out
 
     const RideCars cars = ride_cars(std::span(&ride, 1), 100);
     REQUIRE(cars.pieces.size() == 1);
     const save::model::PlacedObject& piece = cars.pieces[0];
     CHECK(piece.id == 101);
-    CHECK(piece.colours == std::array<std::int32_t, 3> { 3, 4, 5 });
+    CHECK(piece.colours == std::array<i32, 3> { 3, 4, 5 });
     CHECK(cars.designs[0].train == "Coaster");
     CHECK(cars.designs[0].slot == 2);
     const glm::mat4& placed = cars.fitted.at(101);
@@ -39,7 +41,7 @@ TEST_CASE("ride cars stand where the park kept them, turned as it kept them")
 
 TEST_CASE("a train's cars take the front, second, middle, second-to-last and last designs, with links between")
 {
-    using S = std::vector<std::size_t>;
+    using S = std::vector<usize>;
     CHECK(car_slots(4, { true, false, true, false, true, true }) == S { 0, 5, 2, 5, 2, 5, 4 });
     CHECK(car_slots(5, { true, true, true, true, true, false }) == S { 0, 1, 2, 3, 4 });
     CHECK(car_slots(3, { true, false, false, false, true, true }) == S { 0, 5, 0, 5, 4 });

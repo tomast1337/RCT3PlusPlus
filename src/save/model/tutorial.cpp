@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/tutorial.hpp"
 
+#include "core/types.hpp"
+
 namespace rct3::save::model
 {
 
@@ -25,9 +27,9 @@ namespace rct3::save::model
             return v && v->kind() == ValueKind::String ? std::string(v->text()) : std::string { };
         }
 
-        std::int32_t int_of(std::optional<const Value&> v)
+        i32 int_of(std::optional<const Value&> v)
         {
-            return v && v->kind() == ValueKind::Integer ? static_cast<std::int32_t>(v->as_integer()) : 0;
+            return v && v->kind() == ValueKind::Integer ? static_cast<i32>(v->as_integer()) : 0;
         }
 
         std::span<const Value> list_of(std::optional<const Value&> v)

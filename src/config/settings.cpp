@@ -3,6 +3,7 @@
 
 #include "config/flag.hpp"
 #include "config/json_text.hpp"
+#include "core/types.hpp"
 #include "strings/ascii.hpp"
 
 #include <charconv>
@@ -28,19 +29,19 @@ namespace rct3::config
 
         // The table is indexed by Setting, so its order must follow the enum.
         static_assert([] {
-            for (std::size_t i = 0; i < kSettings.size(); ++i)
+            for (usize i = 0; i < kSettings.size(); ++i)
             {
-                if (static_cast<std::size_t>(kSettings[i].setting) != i)
+                if (static_cast<usize>(kSettings[i].setting) != i)
                     return false;
             }
             return true;
         }());
 
-        constexpr std::int32_t kMaxScale = 8;
+        constexpr i32 kMaxScale = 8;
 
-        constexpr std::size_t index(Setting setting)
+        constexpr usize index(Setting setting)
         {
-            return static_cast<std::size_t>(setting);
+            return static_cast<usize>(setting);
         }
 
         constexpr bool is_space(char c)
@@ -102,7 +103,7 @@ namespace rct3::config
             else if (info->kind == SettingKind::Flag && value.is_boolean())
                 settings.set(info->setting, value.get<bool>() ? "yes" : "no");
             else if (info->kind == SettingKind::Scale && value.is_number_integer())
-                settings.set(info->setting, std::to_string(value.get<std::int64_t>()));
+                settings.set(info->setting, std::to_string(value.get<i64>()));
             else
                 report(problems, std::format("{}: {}", name, info->kind == SettingKind::Flag ? "expected true or false" : info->kind == SettingKind::Scale ? "expected \"auto\" or a whole number" : "expected text"));
         }
@@ -167,7 +168,7 @@ namespace rct3::config
             Json& out = json[info.name];
             if (!value)
                 continue; // null
-            std::int32_t scale = 0;
+            i32 scale = 0;
             const auto [end, ec] = std::from_chars(value->data(), value->data() + value->size(), scale);
             if (info.kind == SettingKind::Flag)
                 out = flag_value(*value);
@@ -186,16 +187,16 @@ namespace rct3::config
         return write_text_file(path, text());
     }
 
-    std::expected<std::optional<float>, std::string> parse_interface_scale(std::string_view value)
+    std::expected<std::optional<f32>, std::string> parse_interface_scale(std::string_view value)
     {
         value = trimmed(value);
         if (value.empty() || strings::equals_ignoring_case(value, "auto"))
-            return std::optional<float> { };
-        std::int32_t scale = 0;
+            return std::optional<f32> { };
+        i32 scale = 0;
         const auto [end, ec] = std::from_chars(value.data(), value.data() + value.size(), scale);
         if (ec != std::errc { } || end != value.data() + value.size() || scale < 1 || scale > kMaxScale)
             return std::unexpected(std::format("interface scale must be auto or a whole number from 1 to {}, not \"{}\"", kMaxScale, value));
-        return std::optional<float>(static_cast<float>(scale));
+        return std::optional<f32>(static_cast<f32>(scale));
     }
 
 } // namespace rct3::config

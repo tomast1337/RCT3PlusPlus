@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "park/pools/pools.hpp"
 #include "simulation/coaster.hpp"
 #include "simulation/guests.hpp"
@@ -29,8 +30,8 @@ namespace
         park.path({ 0, 0 }, { 5, 0 });
         rct3::park::pools::PoolMap pools;
         pools.squares.push_back({ .col = 5, .row = 2, .kind = rct3::park::pools::PoolKind::Tile });
-        for (std::int32_t row = 3; row < 5; ++row)
-            for (std::int32_t col = 4; col < 7; ++col)
+        for (i32 row = 3; row < 5; ++row)
+            for (i32 col = 4; col < 7; ++col)
                 pools.squares.push_back({ .col = col, .row = row });
         pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
         import_pools(park.world(), pools);
@@ -69,7 +70,7 @@ TEST_CASE("a swimmer goes up a slide ending in their pool, rides it free in thei
     auto& r = park.world().registry;
     const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
     REQUIRE(park.run_until([&] { return r.get<Errand>(guest).kind == ErrandKind::Swimming && in_swimwear(r, guest); }, 120));
-    const std::int64_t cash = r.get<Wallet>(guest).cash.value;
+    const i64 cash = r.get<Wallet>(guest).cash.value;
     // At the station they queue, and board the waiting car at once.
     REQUIRE(park.run_until([&] { return r.get<Errand>(guest).kind == ErrandKind::Riding; }, 600));
     CHECK(r.get<Errand>(guest).target == slide);
@@ -82,7 +83,7 @@ TEST_CASE("a swimmer goes up a slide ending in their pool, rides it free in thei
     CHECK(r.get<Dropped>(guest).drift.y > 0); // On down the slide's way
     // Its car flies on with them, onto the water.
     REQUIRE(r.get<Trains>(slide).trains.front().flight.has_value());
-    const float water = r.get<Trains>(slide).trains.front().flight->water;
+    const f32 water = r.get<Trains>(slide).trains.front().flight->water;
     CHECK(park.run_until(
         [&] {
             const auto& f = r.get<Trains>(slide).trains.front().flight;
@@ -113,10 +114,10 @@ TEST_CASE("a fast slide's car and rider thrown at a small pool's far wall stop a
     auto& r = park.world().registry;
     r.get<Trains>(slide).trains.front().fixed_speed = 20; // Far past the far wall, two squares on
     const SwimPool& pool = r.get<SwimPool>(r.get<PoolDoor>(r.view<const PoolDoor>().front()).pool);
-    const float wall = std::ranges::max(pool.water, { }, &glm::vec3::z).z + park.world().paths.tile_size / 2;
+    const f32 wall = std::ranges::max(pool.water, { }, &glm::vec3::z).z + park.world().paths.tile_size / 2;
     const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
     REQUIRE(park.run_until([&] { return r.all_of<Dropped>(guest); }, 900));
-    float furthest = 0;
+    f32 furthest = 0;
     REQUIRE(park.run_until(
         [&] {
             if (const auto& f = r.get<Trains>(slide).trains.front().flight)
@@ -168,7 +169,7 @@ TEST_CASE("a pool slide's train kept past its open end is out of sight there, an
     CHECK(trains.trains[0].at == doctest::Approx(2));
     CHECK_FALSE(trains.trains[0].running);
     CHECK_FALSE(trains.trains[0].splashed);
-    for (std::size_t t = 1; t < 3; ++t)
+    for (usize t = 1; t < 3; ++t)
     {
         CHECK(trains.trains[t].splashed);
         CHECK_FALSE(trains.trains[t].running);
@@ -191,7 +192,7 @@ TEST_CASE("a mechanic mends a broken pool slide from its complex's changing room
     attraction.open = false;
     r.emplace_or_replace<Upkeep>(slide, Upkeep { .broken = true, .inspect_every = std::nullopt });
     const auto mechanic = park.staff(StaffRole::Mechanic, { 0, 0 });
-    const float pool_edge = park.world().paths.tile_size; // Row 0's far side; the complex starts past it
+    const f32 pool_edge = park.world().paths.tile_size; // Row 0's far side; the complex starts past it
     bool kept_out = true;
     CHECK(park.run_until(
         [&] {
@@ -210,14 +211,14 @@ TEST_CASE("swimmers queueing for a pool slide stand apart in a line, never two o
     const auto slide = slide_by_pool(park);
     auto& r = park.world().registry;
     r.get<Attraction>(slide).entrance = r.get<CycleRide>(slide).exit = std::nullopt; // Only swimmers queue, from the pool
-    for (std::int32_t i = 0; i < 20; ++i)
+    for (i32 i = 0; i < 20; ++i)
         park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
     // The longest line, and the closest two in it came once both had been in it a few seconds: two joining on one
     // spot, or lines from two ways meeting, step apart.
-    std::size_t most = 0;
-    float closest = std::numeric_limits<float>::max();
-    std::map<entt::entity, std::int32_t> joined;
-    for (std::int32_t t = 0; t < 6000; ++t)
+    usize most = 0;
+    f32 closest = std::numeric_limits<f32>::max();
+    std::map<entt::entity, i32> joined;
+    for (i32 t = 0; t < 6000; ++t)
     {
         park.run_seconds(0.1f);
         std::vector<glm::vec3> line;
@@ -226,8 +227,8 @@ TEST_CASE("swimmers queueing for a pool slide stand apart in a line, never two o
                 line.push_back(r.get<Pose>(g).position);
         std::erase_if(joined, [&](const auto& j) { return !std::ranges::contains(r.get<CycleRide>(slide).queue, j.first); });
         most = std::max(most, line.size());
-        for (std::size_t i = 0; i < line.size(); ++i)
-            for (std::size_t j = i + 1; j < line.size(); ++j)
+        for (usize i = 0; i < line.size(); ++i)
+            for (usize j = i + 1; j < line.size(); ++j)
                 closest = std::min(closest, glm::distance(line[i], line[j]));
     }
     CAPTURE(most);

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/random_events.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 
@@ -29,19 +31,19 @@ namespace rct3::simulation
         return "unknown";
     }
 
-    double chance_in(double rate, double hours)
+    f64 chance_in(f64 rate, f64 hours)
     {
         if (!(rate > 0) || !(hours > 0))
             return 0;
         return 1 - std::exp(-rate * hours);
     }
 
-    std::vector<RandomEvent> roll_events(random::RandomState& gameplay, const EventRates& rates, double hours)
+    std::vector<RandomEvent> roll_events(random::RandomState& gameplay, const EventRates& rates, f64 hours)
     {
         std::vector<RandomEvent> out;
-        for (std::size_t i = 0; i < kRandomEventCount; ++i)
+        for (usize i = 0; i < kRandomEventCount; ++i)
         {
-            const double p = chance_in(rates.per_hour[i], hours);
+            const f64 p = chance_in(rates.per_hour[i], hours);
             // No draw for an event that cannot happen, so turning one on later does not shift the others'
             // rolls in parks that never use it.
             if (p > 0 && random::chance(gameplay, p))
@@ -50,16 +52,16 @@ namespace rct3::simulation
         return out;
     }
 
-    std::optional<std::size_t> pick_weighted(random::RandomState& state, std::span<const double> weights)
+    std::optional<usize> pick_weighted(random::RandomState& state, std::span<const f64> weights)
     {
-        double total = 0;
-        for (const double w : weights)
+        f64 total = 0;
+        for (const f64 w : weights)
             total += std::max(w, 0.0);
         if (!(total > 0))
             return std::nullopt;
-        double at = random::between(state, 0.0, total);
-        std::optional<std::size_t> last;
-        for (std::size_t i = 0; i < weights.size(); ++i)
+        f64 at = random::between(state, 0.0, total);
+        std::optional<usize> last;
+        for (usize i = 0; i < weights.size(); ++i)
         {
             if (!(weights[i] > 0))
                 continue;

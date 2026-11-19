@@ -17,6 +17,8 @@
 //   cp build/debug/build-times build/ && systemd-run --user --scope build/build-times
 // CPU time and peak memory come from the cgroup the tool runs in, hence the scope of its own. The load average before
 // and after each step shows how busy the machine was.
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -55,24 +57,24 @@ namespace
         return { std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>() };
     }
 
-    double round1(double v)
+    f64 round1(f64 v)
     {
-        return static_cast<double>(std::llround(v * 10.0)) / 10.0;
+        return static_cast<f64>(std::llround(v * 10.0)) / 10.0;
     }
-    double round2(double v)
+    f64 round2(f64 v)
     {
-        return static_cast<double>(std::llround(v * 100.0)) / 100.0;
+        return static_cast<f64>(std::llround(v * 100.0)) / 100.0;
     }
 
     // The value after `key ` in a cgroup stat file, 0 when missing.
-    std::int64_t cgroup_stat(const std::optional<fs::path>& cgroup, std::string_view file, std::string_view key)
+    i64 cgroup_stat(const std::optional<fs::path>& cgroup, std::string_view file, std::string_view key)
     {
         if (!cgroup)
             return 0;
         std::istringstream lines(read_file(*cgroup / file));
         for (std::string name; lines >> name;)
         {
-            std::int64_t value = 0;
+            i64 value = 0;
             lines >> value;
             if (name == key)
                 return value;
@@ -80,10 +82,10 @@ namespace
         return 0;
     }
 
-    double load_average()
+    f64 load_average()
     {
         std::ifstream in("/proc/loadavg");
-        double load = 0;
+        f64 load = 0;
         in >> load;
         return load;
     }
@@ -98,14 +100,14 @@ namespace
     // Exits on failure.
     Json run(const std::string& cmd, const std::optional<fs::path>& cgroup, const fs::path& out_dir)
     {
-        const double load_before = load_average();
-        const std::int64_t cpu_before = cgroup_stat(cgroup, "cpu.stat", "usage_usec");
-        std::atomic<std::int64_t> peak = 0;
+        const f64 load_before = load_average();
+        const i64 cpu_before = cgroup_stat(cgroup, "cpu.stat", "usage_usec");
+        std::atomic<i64> peak = 0;
         std::atomic<bool> done = false;
         const fs::path log_path = out_dir / "last_run.log";
         const auto start = std::chrono::system_clock::now();
         const auto t0 = std::chrono::steady_clock::now();
-        std::int32_t status = 0;
+        i32 status = 0;
         {
             std::jthread sampler([&] {
                 while (!done)
@@ -117,20 +119,20 @@ namespace
             status = std::system(std::format("{} > '{}' 2>&1", cmd, log_path.string()).c_str());
             done = true;
         }
-        const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+        const f64 wall = std::chrono::duration<f64>(std::chrono::steady_clock::now() - t0).count();
         const std::string log = read_file(log_path);
         if (status != 0)
         {
             std::println(stderr, "{} failed:\n{}", cmd, log.substr(log.size() > 4000 ? log.size() - 4000 : 0));
             std::exit(1);
         }
-        std::int32_t compiles = 0;
+        i32 compiles = 0;
         std::istringstream lines(log);
         for (std::string line; std::getline(lines, line);)
             compiles += line.contains("CMD:") && line.contains(" -c ") ? 1 : 0;
         Json r = { { "cmd", cmd }, { "wall", round1(wall) } };
-        r["cpu"] = cgroup ? Json(round1(static_cast<double>(cgroup_stat(cgroup, "cpu.stat", "usage_usec") - cpu_before) / 1e6)) : Json(nullptr);
-        r["peak_mib"] = cgroup ? Json(std::llround(static_cast<double>(peak.load()) / (1 << 20))) : Json(nullptr);
+        r["cpu"] = cgroup ? Json(round1(static_cast<f64>(cgroup_stat(cgroup, "cpu.stat", "usage_usec") - cpu_before) / 1e6)) : Json(nullptr);
+        r["peak_mib"] = cgroup ? Json(std::llround(static_cast<f64>(peak.load()) / (1 << 20))) : Json(nullptr);
         r["tus"] = compiles;
         r["load"] = { round2(load_before), round2(load_average()) };
         r["start"] = clock_time(start);
@@ -155,9 +157,9 @@ namespace
         std::ofstream(out_dir / "results.json") << results.dump(1) << "\n";
     }
 
-    std::vector<std::pair<std::string, std::int32_t>> most_common(const std::map<std::string, std::int32_t>& counts)
+    std::vector<std::pair<std::string, i32>> most_common(const std::map<std::string, i32>& counts)
     {
-        std::vector<std::pair<std::string, std::int32_t>> sorted(counts.begin(), counts.end());
+        std::vector<std::pair<std::string, i32>> sorted(counts.begin(), counts.end());
         std::ranges::stable_sort(sorted, [](const auto& a, const auto& b) { return a.second > b.second; });
         return sorted;
     }
@@ -171,12 +173,12 @@ namespace
 int main(int argc, char** argv)
 {
     std::set<std::string> steps;
-    std::int32_t jobs = 4;
-    std::int32_t repeat = 2;
-    std::int32_t ci_runs = 10;
+    i32 jobs = 4;
+    i32 repeat = 2;
+    i32 ci_runs = 10;
     bool ci = true;
     fs::path out_dir = "build/build-times";
-    for (std::int32_t i = 1; i < argc; ++i)
+    for (i32 i = 1; i < argc; ++i)
     {
         const std::string_view a = argv[i];
         const bool has_value = i + 1 < argc;
@@ -233,7 +235,7 @@ int main(int argc, char** argv)
     }
 
     // 1. Clean builds. The app is also built from clean, so neither profits from the other's objects.
-    for (std::int32_t i = 0; i < (steps.contains("clean") ? repeat : 0); ++i)
+    for (i32 i = 0; i < (steps.contains("clean") ? repeat : 0); ++i)
         for (const std::string target : { "test", "app" })
         {
             fs::remove_all("build/debug");
@@ -274,10 +276,10 @@ int main(int argc, char** argv)
     //    of our files in the unit names. The .d files leave system headers out, so the standard headers only those pull
     //    in are not counted. Then how many of our files #include each own header by name.
     const auto own_file = [](std::string_view w) { return std::ranges::any_of(kOwnDirs, [&](std::string_view d) { return w.starts_with(d); }); };
-    std::map<std::string, std::int32_t> own;
-    std::map<std::string, std::int32_t> standard;
-    std::map<std::string, std::int32_t> direct;
-    std::int32_t tus = 0;
+    std::map<std::string, i32> own;
+    std::map<std::string, i32> standard;
+    std::map<std::string, i32> direct;
+    i32 tus = 0;
     {
         const std::regex angled(R"(^\s*#\s*include\s*<([^>]+)>)", std::regex::multiline);
         std::map<std::string, std::set<std::string>> named; // own file -> standard headers it names
@@ -286,7 +288,7 @@ int main(int argc, char** argv)
             if (entry.path().extension() != ".d")
                 continue;
             std::string text = read_file(entry.path());
-            for (std::size_t at = 0; (at = text.find("\\\n", at)) != std::string::npos;)
+            for (usize at = 0; (at = text.find("\\\n", at)) != std::string::npos;)
                 text.replace(at, 2, " ");
             std::istringstream split(text);
             std::vector<std::string> words;
@@ -335,9 +337,9 @@ int main(int argc, char** argv)
     if (ci)
     {
         const Json listed = Json::parse(capture(std::format("gh run list --workflow ci.yml --status success --limit {} --json databaseId", ci_runs), out_dir));
-        std::map<std::string, std::vector<double>> minutes;
+        std::map<std::string, std::vector<f64>> minutes;
         for (const Json& r : listed)
-            for (const Json& job : Json::parse(capture(std::format("gh run view {} --json jobs", r["databaseId"].get<std::int64_t>()), out_dir))["jobs"])
+            for (const Json& job : Json::parse(capture(std::format("gh run view {} --json jobs", r["databaseId"].get<i64>()), out_dir))["jobs"])
             {
                 if (!job.value("startedAt", Json()).is_string() || !job.value("completedAt", Json()).is_string() || job.value("conclusion", "") != "success")
                     continue;
@@ -347,30 +349,30 @@ int main(int argc, char** argv)
                     in >> std::chrono::parse("%Y-%m-%dT%H:%M:%SZ", t);
                     return t;
                 };
-                minutes[job["name"].get<std::string>()].push_back(std::chrono::duration<double>(parse(job["completedAt"]) - parse(job["startedAt"])).count() / 60);
+                minutes[job["name"].get<std::string>()].push_back(std::chrono::duration<f64>(parse(job["completedAt"]) - parse(job["startedAt"])).count() / 60);
             }
         Json table = Json::object();
         for (auto& [name, m] : minutes)
         {
             std::ranges::sort(m);
-            const double median = m.size() % 2 ? m[m.size() / 2] : (m[m.size() / 2 - 1] + m[m.size() / 2]) / 2;
+            const f64 median = m.size() % 2 ? m[m.size() / 2] : (m[m.size() / 2 - 1] + m[m.size() / 2]) / 2;
             table[name] = { { "median", round1(median) }, { "min", round1(m.front()) }, { "max", round1(m.back()) }, { "runs", m.size() } };
         }
         results["ci"] = table;
     }
 
     // 5. Report.
-    std::map<std::string, std::size_t> best; // target -> index of its fastest clean build
-    for (std::size_t i = 0; i < results["clean"].size(); ++i)
+    std::map<std::string, usize> best; // target -> index of its fastest clean build
+    for (usize i = 0; i < results["clean"].size(); ++i)
     {
         const Json& c = results["clean"][i];
         const std::string target = c["target"];
-        if (!best.contains(target) || c["wall"].get<double>() < results["clean"][best[target]]["wall"].get<double>())
+        if (!best.contains(target) || c["wall"].get<f64>() < results["clean"][best[target]]["wall"].get<f64>())
             best[target] = i;
     }
     std::string md = std::format("Build times at {}, {}, `-j {}`, debug.\n\n| step | wall s | CPU s | peak MiB | TUs | load before/after |\n|---|---|---|---|---|---|\n", results["commit"].get<std::string>(), results["date"].get<std::string>(), jobs);
     const auto row = [&](std::string_view step, const Json& r) { md += std::format("| {} | {} | {} | {} | {} | {} / {} |\n", step, r["wall"].dump(), r["cpu"].is_null() ? "-" : r["cpu"].dump(), cell(r["peak_mib"]), r["tus"].dump(), r["load"][0].dump(), r["load"][1].dump()); };
-    for (std::size_t i = 0; i < results["clean"].size(); ++i)
+    for (usize i = 0; i < results["clean"].size(); ++i)
     {
         const Json& c = results["clean"][i];
         row(std::format("clean `nob {}`{}", c["target"].get<std::string>(), best[c["target"]] == i ? " (best)" : ""), c);
@@ -378,14 +380,14 @@ int main(int argc, char** argv)
     for (const Json& t : results["touch"])
         row(std::format("touch `{}`, `nob {}`", t["file"].get<std::string>(), t["target"].get<std::string>()), t);
     md += std::format("\nTranslation units including each header ({} TUs, from the .d files), and direct `#include`s of it:\n\n| own header | TUs | direct |\n|---|---|---|\n", tus);
-    for (std::size_t i = 0; i < std::min<std::size_t>(25, own_sorted.size()); ++i)
+    for (usize i = 0; i < std::min<usize>(25, own_sorted.size()); ++i)
     {
         const auto& [h, n] = own_sorted[i];
         const std::string short_name = h.starts_with("src/") ? h.substr(4) : h;
         md += std::format("| `{}` | {} | {} |\n", h, n, direct.contains(short_name) ? direct[short_name] : direct[h]);
     }
     md += "\n| standard header (named by our files) | TUs |\n|---|---|\n";
-    for (std::size_t i = 0; i < std::min<std::size_t>(15, standard_sorted.size()); ++i)
+    for (usize i = 0; i < std::min<usize>(15, standard_sorted.size()); ++i)
         md += std::format("| `<{}>` | {} |\n", standard_sorted[i].first, standard_sorted[i].second);
     if (results.contains("ci"))
     {

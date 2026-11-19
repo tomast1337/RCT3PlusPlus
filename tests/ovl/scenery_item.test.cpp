@@ -2,6 +2,7 @@
 #include "ovl/scenery_item.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -19,44 +20,44 @@ namespace
 
     constexpr char kNameData[] = "Item:sid\0Group\0Path\0Key\0Val\0Icon:gsi\0GIcon:gsi\0GText:txt\0NameT:txt\0V0:svd\0V1:svd\0"
                                  "S0:snd\0S1:snd\0Cat:rcg";
-    const std::string kNames(kNameData, sizeof kNameData);                                // includes the final terminator
-    const std::uint32_t kBase = (static_cast<std::uint32_t>(sizeof kNameData) + 3) & ~3u; // padded for the builder
+    const std::string kNames(kNameData, sizeof kNameData);            // includes the final terminator
+    const u32 kBase = (static_cast<u32>(sizeof kNameData) + 3) & ~3u; // padded for the builder
 
-    std::uint32_t name_at(const std::string& needle)
+    u32 name_at(const std::string& needle)
     {
         const auto at = kNames.find(needle);
         REQUIRE(at != std::string::npos);
-        return static_cast<std::uint32_t>(at);
+        return static_cast<u32>(at);
     }
 
     // Offsets inside the structure block.
-    constexpr std::uint32_t kItem = 0;
-    constexpr std::uint32_t kSquares = 240;     // 2 x 20 bytes
-    constexpr std::uint32_t kMasks = 280;       // 3 words
-    constexpr std::uint32_t kNodes = 292;       // 88 bytes
-    constexpr std::uint32_t kParams = 380;      // 1 x 8 bytes
-    constexpr std::uint32_t kSounds = 388;      // 1 x 16 bytes
-    constexpr std::uint32_t kSoundSlots = 404;  // 2 words
-    constexpr std::uint32_t kScripts = 412;     // 1 word
-    constexpr std::uint32_t kVisualSlots = 416; // 2 words
-    constexpr std::uint32_t kResearch = 424;    // 12 bytes
-    constexpr std::uint32_t kScript = 436;      // 8 words
-    constexpr std::uint32_t kEnd = 468;
+    constexpr u32 kItem = 0;
+    constexpr u32 kSquares = 240;     // 2 x 20 bytes
+    constexpr u32 kMasks = 280;       // 3 words
+    constexpr u32 kNodes = 292;       // 88 bytes
+    constexpr u32 kParams = 380;      // 1 x 8 bytes
+    constexpr u32 kSounds = 388;      // 1 x 16 bytes
+    constexpr u32 kSoundSlots = 404;  // 2 words
+    constexpr u32 kScripts = 412;     // 1 word
+    constexpr u32 kVisualSlots = 416; // 2 words
+    constexpr u32 kResearch = 424;    // 12 bytes
+    constexpr u32 kScript = 436;      // 8 words
+    constexpr u32 kEnd = 468;
 
     struct Words
     {
-        std::vector<std::uint32_t> w;
-        explicit Words(std::size_t n)
+        std::vector<u32> w;
+        explicit Words(usize n)
             : w(n, 0)
         {
         }
-        void set(std::size_t byte_offset, std::uint32_t v)
+        void set(usize byte_offset, u32 v)
         {
             w.at(byte_offset / 4) = v;
         }
-        void real(std::size_t byte_offset, float v)
+        void real(usize byte_offset, f32 v)
         {
-            set(byte_offset, std::bit_cast<std::uint32_t>(v));
+            set(byte_offset, std::bit_cast<u32>(v));
         }
     };
 
@@ -78,10 +79,10 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> reference_row(std::uint32_t location, const std::string& name)
+    std::vector<std::byte> reference_row(u32 location, const std::string& name)
     {
         std::vector<std::byte> out;
-        for (auto v : { location, name_at(name), std::uint32_t { 0 }, std::uint32_t { 0 } })
+        for (auto v : { location, name_at(name), u32 { 0 }, u32 { 0 } })
             append_u32(out, v);
         return out;
     }
@@ -100,7 +101,7 @@ namespace
     }
 
     // A second-expansion item (240 bytes) followed by the data it points at.
-    std::vector<std::byte> structure(std::uint32_t version = 2, std::uint32_t x = 2, std::uint32_t z = 1)
+    std::vector<std::byte> structure(u32 version = 2, u32 x = 2, u32 z = 1)
     {
         Words w(kEnd / 4);
         w.set(4, 0x1041);
@@ -118,7 +119,7 @@ namespace
         w.set(0x34, 1);
         w.set(0x38, kBase + kNodes);
         w.set(0x3c, 1500);
-        w.set(0x40, static_cast<std::uint32_t>(-500));
+        w.set(0x40, static_cast<u32>(-500));
         w.set(0x44, 5);
         w.set(0x48, 18);
         w.set(0x4c, name_at("Group"));
@@ -150,7 +151,7 @@ namespace
         w.set(kSquares + 12, kBase + kMasks);
         w.set(kSquares + 16, 2);
         w.set(kSquares + 20, 0);
-        w.set(kSquares + 24, static_cast<std::uint32_t>(-1));
+        w.set(kSquares + 24, static_cast<u32>(-1));
         w.set(kSquares + 28, 0);
         w.set(kSquares + 32, 0);
         w.set(kSquares + 36, 0);
@@ -176,7 +177,7 @@ namespace
         w.real(kScript + 20, 2.0f);
         w.real(kScript + 24, 3.0f);
         w.set(kScript + 28, 0);
-        w.set(kResearch + 4, static_cast<std::uint32_t>(-1));
+        w.set(kResearch + 4, static_cast<u32>(-1));
         w.real(kResearch + 8, 10.0f);
 
         std::vector<std::byte> out;
@@ -186,7 +187,7 @@ namespace
         return out;
     }
 
-    Overlay make(const std::vector<std::byte>& block, const std::vector<std::byte>& refs = all_references(), const std::vector<std::uint32_t>& relocations = { })
+    Overlay make(const std::vector<std::byte>& block, const std::vector<std::byte>& refs = all_references(), const std::vector<u32>& relocations = { })
     {
         auto overlay = Overlay::from_bytes(build_file(5, { { names() }, { block }, { symbol_row(), { }, refs } }, relocations), std::nullopt);
         REQUIRE(overlay.has_value());
@@ -225,7 +226,7 @@ TEST_CASE("scenery items expose every decoded field")
     CHECK(it.name_text == "NameT");
     CHECK(it.unknown_84[0] == 1440);
     CHECK(it.unknown_84[1] == 2880);
-    CHECK(it.default_colours == std::array<std::uint32_t, 3> { 3, 4, 5 });
+    CHECK(it.default_colours == std::array<u32, 3> { 3, 4, 5 });
     CHECK(it.late_words[(0xb8 - 0x98) / 4] == 7);
     CHECK(it.has_ride_data);
     CHECK(it.addon == 2);
@@ -311,7 +312,7 @@ TEST_CASE("scenery items in the compact form")
     w.set(20, 1);
     w.set(24, kBase + 164); // one square follows
     w.set(0x24, 2500);
-    w.set(0x28, static_cast<std::uint32_t>(-1000));
+    w.set(0x28, static_cast<u32>(-1000));
     w.set(0x2c, 5);
     w.set(0x30, 22);
     w.set(0x34, name_at("Group"));
@@ -321,7 +322,7 @@ TEST_CASE("scenery items in the compact form")
     std::vector<std::byte> block;
     for (auto v : w.w)
         append_u32(block, v);
-    for (auto v : { std::uint32_t { 1 }, std::uint32_t { 0 }, std::uint32_t { 2 }, std::uint32_t { 0 }, std::uint32_t { 0 } })
+    for (auto v : { u32 { 1 }, u32 { 0 }, u32 { 2 }, u32 { 0 }, u32 { 0 } })
         append_u32(block, v);
     append_u32(block, 0); // the visual slot
 
@@ -357,7 +358,7 @@ TEST_CASE("scenery item edge cases")
     {
         auto block = structure();
         // x_squares = 0xFFFFFFFF (offset 16)
-        for (std::size_t i = 0; i < 4; ++i)
+        for (usize i = 0; i < 4; ++i)
             block[16 + i] = std::byte { 0xFF };
         const auto overlay = make(block);
         const auto items = read_scenery_items(overlay, overlay.common());
@@ -370,8 +371,8 @@ TEST_CASE("scenery item edge cases")
         auto block = structure();
         // First square's mask pointer (offset 240 + 12) points at the last word of all data, count 2.
         const auto refs = all_references();
-        const std::uint32_t at = kBase + kEnd + static_cast<std::uint32_t>(symbol_row().size() + refs.size()) - 4;
-        for (std::size_t i = 0; i < 4; ++i)
+        const u32 at = kBase + kEnd + static_cast<u32>(symbol_row().size() + refs.size()) - 4;
+        for (usize i = 0; i < 4; ++i)
             block[kSquares + 12 + i] = static_cast<std::byte>((at >> (8 * i)) & 0xFF);
         const auto overlay = make(block);
         const auto items = read_scenery_items(overlay, overlay.common());
@@ -405,8 +406,8 @@ TEST_CASE("scenery item edge cases")
         auto block = structure();
         const auto refs = all_references();
         // The array starts at the last word of the common file's data and has two words.
-        const std::uint32_t at = kBase + kEnd + static_cast<std::uint32_t>(symbol_row().size() + refs.size()) - 4;
-        for (std::size_t i = 0; i < 4; ++i)
+        const u32 at = kBase + kEnd + static_cast<u32>(symbol_row().size() + refs.size()) - 4;
+        for (usize i = 0; i < 4; ++i)
             block[kSquares + 20 + 12 + i] = static_cast<std::byte>((at >> (8 * i)) & 0xFF);
         block[kSquares + 20 + 16] = std::byte { 2 };
         std::vector<std::byte> unique;
@@ -422,7 +423,7 @@ TEST_CASE("scenery item edge cases")
     SUBCASE("an enormous node count is refused")
     {
         auto block = structure();
-        for (std::size_t i = 0; i < 4; ++i)
+        for (usize i = 0; i < 4; ++i)
             block[0x34 + i] = std::byte { 0xFF };
         const auto overlay = make(block);
         const auto items = read_scenery_items(overlay, overlay.common());

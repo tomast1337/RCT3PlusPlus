@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/picker.hpp"
 
+#include "core/types.hpp"
 #include "strings/unicode.hpp"
 #include "ui/text_layout.hpp"
 
@@ -21,7 +22,7 @@ namespace rct3::ui::screens::build
         constexpr std::string_view kPackPrefix = "pack";
 
         /// The kinds and add-on packs of `rows`.
-        void collect(const std::vector<PickerRow>& rows, std::set<std::string, std::less<>>& kinds, std::set<std::uint32_t>& packs)
+        void collect(const std::vector<PickerRow>& rows, std::set<std::string, std::less<>>& kinds, std::set<u32>& packs)
         {
             for (const PickerRow& r : rows)
             {
@@ -63,7 +64,7 @@ namespace rct3::ui::screens::build
     void BuildPicker::add_filters(const std::vector<PickerTheme>& themes)
     {
         std::set<std::string, std::less<>> kinds;
-        std::set<std::uint32_t> packs;
+        std::set<u32> packs;
         collect(data_, kinds, packs);
         const auto add = [&](FilterKey key, std::u16string help) -> widgets::Button& {
             auto& b = content().add<widgets::Button>(key.group == FilterKey::Group::Pack ? std::string(kPackPrefix) + std::to_string(key.pack - 1) : key.name, std::string { });
@@ -85,7 +86,7 @@ namespace rct3::ui::screens::build
             for (const PickerTheme& theme : themes)
                 add({ FilterKey::Group::Theme, theme.name }, theme.title + u'\n' + help);
         }
-        for (const std::uint32_t pack : packs)
+        for (const u32 pack : packs)
         {
             const std::string number = std::to_string(pack - 1);
             widgets::Button& b = add({ FilterKey::Group::Pack, { }, pack }, std::u16string(strings_.get(style_.pack_name + number)));
@@ -94,12 +95,12 @@ namespace rct3::ui::screens::build
         }
     }
 
-    void BuildPicker::wrap_filters(float width)
+    void BuildPicker::wrap_filters(f32 width)
     {
         laid_filter_width_ = width;
-        float x = 0;
-        float y = kBarHeight + kGap;
-        for (std::size_t i = 0; i < filters_.size(); ++i)
+        f32 x = 0;
+        f32 y = kBarHeight + kGap;
+        for (usize i = 0; i < filters_.size(); ++i)
         {
             if (i > 0 && keys_[i].group != keys_[i - 1].group)
                 x += kGroupGap;
@@ -124,7 +125,7 @@ namespace rct3::ui::screens::build
         }
     }
 
-    std::optional<std::size_t> BuildPicker::take_picked()
+    std::optional<usize> BuildPicker::take_picked()
     {
         return std::exchange(picked_out_, std::nullopt);
     }
@@ -139,7 +140,7 @@ namespace rct3::ui::screens::build
         return widgets::Window::on_key(key);
     }
 
-    void BuildPicker::show_item(std::size_t item)
+    void BuildPicker::show_item(usize item)
     {
         for (BuildPickerRow* row : rows_)
         {
@@ -168,9 +169,9 @@ namespace rct3::ui::screens::build
         // As many columns as fit; a heading takes a tile, and its open items follow it. While searching,
         // headings show their matching items as if open.
         laid_width_ = list_->content().rect().width();
-        const std::int32_t columns = std::max(1, static_cast<std::int32_t>(laid_width_ / kTile));
-        std::int32_t column = 0;
-        float y = 0;
+        const i32 columns = std::max(1, static_cast<i32>(laid_width_ / kTile));
+        i32 column = 0;
+        f32 y = 0;
         for (BuildPickerRow* row : rows_)
         {
             bool shown = shows(row->row());
@@ -179,7 +180,7 @@ namespace rct3::ui::screens::build
             row->visible = shown;
             if (!shown)
                 continue;
-            const float x = static_cast<float>(column) * kTile;
+            const f32 x = static_cast<f32>(column) * kTile;
             row->placement = top_left(x, y, kTile, kTile);
             if (++column == columns)
             {
@@ -193,7 +194,7 @@ namespace rct3::ui::screens::build
     void BuildPicker::update(const UpdateContext& context)
     {
         widgets::Window::update(context);
-        if (const float width = content().rect().width(); width > 0 && width != laid_filter_width_)
+        if (const f32 width = content().rect().width(); width > 0 && width != laid_filter_width_)
             wrap_filters(width);
         if (list_->content().rect().width() != laid_width_ || note.empty() == laid_note_)
             dirty_ = true;
@@ -202,7 +203,7 @@ namespace rct3::ui::screens::build
             query_ = std::move(query);
             dirty_ = true;
         }
-        for (std::size_t i = 0; i < filters_.size(); ++i)
+        for (usize i = 0; i < filters_.size(); ++i)
         {
             widgets::Button& b = *filters_[i];
             const FilterKey& key = keys_[i];
@@ -252,7 +253,7 @@ namespace rct3::ui::screens::build
     void BuildPicker::draw(DrawContext& context) const
     {
         widgets::Window::draw(context);
-        for (std::size_t i = 0; i < filters_.size(); ++i)
+        for (usize i = 0; i < filters_.size(); ++i)
         {
             if (keys_[i].group == FilterKey::Group::Pack && filters_[i]->on)
                 context.list.fill(filters_[i]->rect(), style_.pack_on_colour);
@@ -298,7 +299,7 @@ namespace rct3::ui::screens::build
         const Rect& r = rect();
         if (picked || hovered())
             context.list.fill(r, picked ? style_.picked_colour : style_.hover_colour);
-        const float inset = (kTile - kTileIcon) / 2;
+        const f32 inset = (kTile - kTileIcon) / 2;
         if (const auto skin = context.skins.find(row_.icon))
             skin::draw_skin(context.list, skin, { r.x0 + inset, r.y0 + inset, r.x0 + inset + kTileIcon, r.y0 + inset + kTileIcon });
         const std::string& corner = is_heading() ? (open ? style_.open_heading : style_.closed_heading) : row_.badge;

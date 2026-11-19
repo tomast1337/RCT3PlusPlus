@@ -15,6 +15,7 @@
 // at the picture's width, and two zero bytes end it (a zero followed by anything else is skipped with it).
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
@@ -32,17 +33,17 @@ namespace rct3::save::model
     struct DesignSummary
     {
         std::string ride_symbol; ///< Of the ride kind, as a park's rides name it ("Giga:trr")
-        std::int32_t width = 0;  ///< Tiles the design covers across
-        std::int32_t length = 0; ///< ... and along
+        i32 width = 0;           ///< Tiles the design covers across
+        i32 length = 0;          ///< ... and along
         units::Money cost { };
-        Assessment assessment;                    ///< Not valid when the design was never rated
-        std::optional<TestResults> results;       ///< None when it was never tested
-        std::optional<std::int32_t> scenario { }; ///< The career scenario to complete first, by place in the list
-        std::int32_t level = 0;                   ///< ... at this level or better: 0 apprentice, 1 entrepreneur, 2 tycoon
-        std::int32_t train = 0;                   ///< The train it suggests, by place in its kind's list of trains
-        std::uint32_t picture_width = 0;
-        std::uint32_t picture_height = 0;
-        std::vector<std::uint8_t> picture; ///< RGBA, top row first, grey levels; empty when absent
+        Assessment assessment;              ///< Not valid when the design was never rated
+        std::optional<TestResults> results; ///< None when it was never tested
+        std::optional<i32> scenario { };    ///< The career scenario to complete first, by place in the list
+        i32 level = 0;                      ///< ... at this level or better: 0 apprentice, 1 entrepreneur, 2 tycoon
+        i32 train = 0;                      ///< The train it suggests, by place in its kind's list of trains
+        u32 picture_width = 0;
+        u32 picture_height = 0;
+        std::vector<u8> picture; ///< RGBA, top row first, grey levels; empty when absent
     };
 
     enum class DesignError
@@ -60,7 +61,7 @@ namespace rct3::save::model
 
     /// The picture `width` by `height` from its packed bytes, or from its unpacked ones when there are no
     /// packed; RGBA as DesignSummary::picture. Empty when neither fits the size.
-    [[nodiscard]] std::vector<std::uint8_t> design_picture(std::uint32_t width, std::uint32_t height, std::span<const std::uint8_t> packed, std::span<const std::uint8_t> unpacked);
+    [[nodiscard]] std::vector<u8> design_picture(u32 width, u32 height, std::span<const u8> packed, std::span<const u8> unpacked);
 
     /// A design file of `ride`, as it stands among `objects` (the placed objects its pieces, platforms and
     /// doors are), with the header `summary` says: read back, read_design_summary gives `summary` again, its
@@ -69,6 +70,6 @@ namespace rct3::save::model
     [[nodiscard]] std::expected<std::vector<std::byte>, DesignError> write_design(const Ride& ride, std::span<const PlacedObject> objects, const DesignSummary& summary);
 
     /// The packed form of an RGBA picture as DesignSummary::picture holds it, which design_picture unpacks.
-    [[nodiscard]] std::vector<std::uint8_t> pack_design_picture(std::span<const std::uint8_t> rgba);
+    [[nodiscard]] std::vector<u8> pack_design_picture(std::span<const u8> rgba);
 
 } // namespace rct3::save::model

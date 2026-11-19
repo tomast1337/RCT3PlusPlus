@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/build_arrows.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -13,35 +15,35 @@ namespace rct3::park
     {
 
         constexpr units::Distance kStripWidth { 0.08f }; ///< Of each strip of a track arrow
-        constexpr float kAboveRails = 0.2f;              ///< How far the track arrows float over the rails
+        constexpr f32 kAboveRails = 0.2f;                ///< How far the track arrows float over the rails
 
         /// Adds the strip from `from` to `to`, `up` being the arrow's own up: both faces, so it shows from below.
         void add_strip(TerrainMesh& mesh, glm::vec3 from, glm::vec3 to, glm::vec3 up, glm::vec4 colour)
         {
             const glm::vec3 side = glm::normalize(glm::cross(to - from, up)) * (kStripWidth.value / 2);
-            const auto first = static_cast<std::uint32_t>(mesh.vertices.size());
+            const auto first = static_cast<u32>(mesh.vertices.size());
             for (const glm::vec3 p : { from - side, from + side, to - side, to + side })
                 mesh.vertices.push_back({ .position = p, .colour = colour, .uv = { 0, 0 }, .normal = { 0, 1, 0 } });
-            for (const std::uint32_t i : { 0u, 1u, 2u, 3u, 2u, 1u, 0u, 2u, 1u, 3u, 1u, 2u })
+            for (const u32 i : { 0u, 1u, 2u, 3u, 2u, 1u, 0u, 2u, 1u, 3u, 1u, 2u })
                 mesh.indices.push_back(first + i);
         }
 
     } // namespace
 
-    TerrainMesh facing_arrow(std::int32_t col, std::int32_t row, float height, Side side, const save::model::TerrainGrid& grid)
+    TerrainMesh facing_arrow(i32 col, i32 row, f32 height, Side side, const save::model::TerrainGrid& grid)
     {
         // Out of the tile, in columns and rows.
         const auto [out_col, out_row] = side.step();
         TerrainMesh mesh;
-        for (std::int32_t corner = 0; corner < 4; ++corner)
+        for (i32 corner = 0; corner < 4; ++corner)
         {
-            const std::int32_t c = corner % 2;
-            const std::int32_t r = corner / 2;
+            const i32 c = corner % 2;
+            const i32 r = corner / 2;
             // From the quad's middle, in half tiles: the outer edge is +1 along the way out.
-            const std::int32_t along = (2 * c - 1) * out_col + (2 * r - 1) * out_row;
-            const std::int32_t across = (2 * c - 1) * out_row - (2 * r - 1) * out_col;
+            const i32 along = (2 * c - 1) * out_col + (2 * r - 1) * out_row;
+            const i32 across = (2 * c - 1) * out_row - (2 * r - 1) * out_col;
             GroundVertex& v = mesh.vertices.emplace_back();
-            v.position = { grid.world_x(col) + (static_cast<float>(c) + 0.5f * static_cast<float>(out_col)) * grid.tile_size_x, height, grid.world_z(row) + (static_cast<float>(r) + 0.5f * static_cast<float>(out_row)) * grid.tile_size_z };
+            v.position = { grid.world_x(col) + (static_cast<f32>(c) + 0.5f * static_cast<f32>(out_col)) * grid.tile_size_x, height, grid.world_z(row) + (static_cast<f32>(r) + 0.5f * static_cast<f32>(out_row)) * grid.tile_size_z };
             v.uv = { across > 0 ? 1.0f : 0.0f, along > 0 ? 1.0f : 0.0f };
             v.normal = { 0, 1, 0 };
         }
@@ -54,10 +56,10 @@ namespace rct3::park
     {
         // The pitch of each slope step, near the middle of the pitches the step takes.
         // shortcut: the track's bank is not followed, upgrade if the arrows are seen to cut through banked rails.
-        constexpr std::array<float, 4> kPitch { 0, 27, 63, 90 };
+        constexpr std::array<f32, 4> kPitch { 0, 27, 63, 90 };
         const auto frame = [&](const track::TrackTip& tip) {
-            const float heading = static_cast<float>(tip.end.heading.value) * std::numbers::pi_v<float> / 4;
-            const float pitch = std::copysign(kPitch[static_cast<std::size_t>(std::min(std::abs(tip.end.slope), 3))], static_cast<float>(tip.end.slope)) * std::numbers::pi_v<float> / 180;
+            const f32 heading = static_cast<f32>(tip.end.heading.value) * std::numbers::pi_v<f32> / 4;
+            const f32 pitch = std::copysign(kPitch[static_cast<usize>(std::min(std::abs(tip.end.slope), 3))], static_cast<f32>(tip.end.slope)) * std::numbers::pi_v<f32> / 180;
             const glm::vec3 level { std::cos(heading), 0, -std::sin(heading) }; // Heading 0 along +x, 2 along -z
             const glm::vec3 forward_way = level * std::cos(pitch) + glm::vec3 { 0, std::sin(pitch), 0 };
             const glm::vec3 right = glm::normalize(glm::cross(level, glm::vec3 { 0, 1, 0 }));
@@ -81,7 +83,7 @@ namespace rct3::park
             add_strip(mesh, right, left, u, colour);
             add_strip(mesh, left, b, u, colour);
         }
-        mesh.batches.push_back({ GroundPaint::Surface, 0, 0, static_cast<std::uint32_t>(mesh.indices.size()) });
+        mesh.batches.push_back({ GroundPaint::Surface, 0, 0, static_cast<u32>(mesh.indices.size()) });
         return mesh;
     }
 

@@ -5,6 +5,7 @@
 #include "config/game/saves.hpp"
 #include "core/hash.hpp"
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
 #include "park/chain_lifts.hpp"
@@ -111,15 +112,15 @@ namespace rct3::scene::park
         namespace skins = ui::game_skins;
 
         constexpr units::TurnRate kViewTurn { 0.15f }; ///< The round view turns round its attraction at
-        constexpr float kFocusZoomOut = 2;             ///< A message's camera looks from this many times the round view's distance (ours)
-        constexpr float kFocusClosest = 20;            ///< But no closer, so a small stall shows with what is round it (ours)
+        constexpr f32 kFocusZoomOut = 2;               ///< A message's camera looks from this many times the round view's distance (ours)
+        constexpr f32 kFocusClosest = 20;              ///< But no closer, so a small stall shows with what is round it (ours)
         // Values for photos at photo spots.
         constexpr units::Radians kPhotoPitch { 0.15f }; ///< Down: near eye level
-        constexpr float kPhotoClosest = 3;              ///< Of the eye from the party
-        constexpr float kPhotoPersonTall = 1.8f;        ///< Framed from the feet up to this high
+        constexpr f32 kPhotoClosest = 3;                ///< Of the eye from the party
+        constexpr f32 kPhotoPersonTall = 1.8f;          ///< Framed from the feet up to this high
         /// Of the pointer between pressing and letting go, in interface units, beyond which it is no click.
-        constexpr float kClickSlack = 4;
-        constexpr std::int32_t kFahrenheit = 1;                   ///< The temperature units option's choice for Fahrenheit
+        constexpr f32 kClickSlack = 4;
+        constexpr i32 kFahrenheit = 1;                            ///< The temperature units option's choice for Fahrenheit
         constexpr std::string_view kTapeFence = "KeepClearFence"; ///< Closes a broken ride off until it is fixed
         constexpr std::string_view kTapeFenceOverlay = "Style\\Vanilla\\style";
         constexpr std::string_view kOk = "SMB_Label_OK";
@@ -134,9 +135,9 @@ namespace rct3::scene::park
             const simulation::DayClock& day = scene.day_clock;
             const rct3::park::Daylight light = rct3::park::mixed(rct3::park::daylight(day.shown), rct3::park::daylight(day.faded), day.fade);
             scene.light = { .sun_direction = light.sun_direction, .sun = light.sun, .sky = light.sky, .ground = light.ground };
-            const float column = rct3::park::sky::sky_column(day.shown);
-            const float faded = rct3::park::sky::sky_column(day.faded);
-            const float night = glm::mix(rct3::park::sky::sky_darkness(day.shown), rct3::park::sky::sky_darkness(day.faded), day.fade);
+            const f32 column = rct3::park::sky::sky_column(day.shown);
+            const f32 faded = rct3::park::sky::sky_column(day.faded);
+            const f32 night = glm::mix(rct3::park::sky::sky_darkness(day.shown), rct3::park::sky::sky_darkness(day.faded), day.fade);
             scene.darkness = night;
             scene.sky_mesh = rct3::park::sky::sky_mesh(scene.sky, { .eye = viewer, .radius = kSkyRadius, .day = column, .faded_day = faded, .fade = day.fade, .night = night, .time = { scene.park_clock }, .tint = rct3::park::weathered(glm::vec3(1.0f), scene.weather_look, 0.6f), .overcast = scene.weather_look.gloom });
             if (!scene.horizon_band.empty())
@@ -152,7 +153,7 @@ namespace rct3::scene::park
             const glm::vec3 horizon = rct3::park::weathered({ scene.horizon.r, scene.horizon.g, scene.horizon.b }, weather, 0.5f);
             scene.horizon = { horizon.r, horizon.g, horizon.b, scene.horizon.a };
             // Far land fades into the horizon's colour, sooner in rain. Chosen by eye.
-            constexpr float kRainHaze = 2.5f;
+            constexpr f32 kRainHaze = 2.5f;
             scene.light.haze = horizon;
             scene.light.haze_rate = scene.haze_rate * (1 + kRainHaze * weather.rain);
             scene.light.surface_detail = scene.surface_detail;
@@ -163,8 +164,8 @@ namespace rct3::scene::park
     namespace
     {
 
-        constexpr float kRidePullPerNotch = 0.5f; ///< Of the ride camera's pull back, per wheel notch
-        constexpr float kRidePullMost = 3;        ///< The most it pulls back, which is squared into metres
+        constexpr f32 kRidePullPerNotch = 0.5f; ///< Of the ride camera's pull back, per wheel notch
+        constexpr f32 kRidePullMost = 3;        ///< The most it pulls back, which is squared into metres
 
         /// Whether the object is one of the park's entrances, which a click opens the park's window on.
         bool park_entrance(const ParkScene& scene, const save::model::PlacedObject& o)
@@ -174,7 +175,7 @@ namespace rct3::scene::park
         }
 
         /// What putting a broken path item back new costs: the price of the object it stands as.
-        units::Money replace_price(const ParkScene& scene, std::uint64_t object)
+        units::Money replace_price(const ParkScene& scene, u64 object)
         {
             const auto o = std::ranges::find(scene.objects, object, &save::model::PlacedObject::id);
             const auto model = o != scene.objects.end() ? scene.models.find(rct3::park::object::model_ref(*o)) : scene.models.end();
@@ -183,19 +184,19 @@ namespace rct3::scene::park
 
         /// The build lists' item that the park's content entry `id` names, by its place in them; none before they
         /// are read or when they lack it.
-        std::optional<std::size_t> content_item(const ParkScene& scene, std::uint64_t id)
+        std::optional<usize> content_item(const ParkScene& scene, u64 id)
         {
             const auto entry = std::ranges::find(scene.park_model.content.entries, id, &save::model::AssetRequirement::id);
             if (entry == scene.park_model.content.entries.end() || !scene.build.items.valid() || scene.build.items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
                 return std::nullopt;
             const std::vector<rct3::park::BuildItem>& catalogue = scene.build.items.get();
             const auto item = std::ranges::find_if(catalogue, [&](const rct3::park::BuildItem& b) { return strings::equals_ignoring_case(b.symbol, entry->symbol) && strings::equals_ignoring_case(b.overlay, entry->overlay_stem); });
-            return item != catalogue.end() ? std::optional(static_cast<std::size_t>(item - catalogue.begin())) : std::nullopt;
+            return item != catalogue.end() ? std::optional(static_cast<usize>(item - catalogue.begin())) : std::nullopt;
         }
 
         /// The string key of the name of the park's content entry `id`, as its build list or path style names it;
         /// empty when neither is known.
-        std::string_view content_name(const ParkScene& scene, std::uint64_t id)
+        std::string_view content_name(const ParkScene& scene, u64 id)
         {
             if (const auto item = content_item(scene, id))
                 return scene.build.items.get()[*item].name_text;
@@ -208,7 +209,7 @@ namespace rct3::scene::park
 
         ui::screens::management::ManagementFacts management_facts(const ParkScene& scene)
         {
-            const auto broken = simulation::replacement(scene.sim, [&](std::uint64_t object) { return replace_price(scene, object); });
+            const auto broken = simulation::replacement(scene.sim, [&](u64 object) { return replace_price(scene, object); });
             return {
                 .park = &scene.park_model,
                 .state = &scene.park,
@@ -222,9 +223,9 @@ namespace rct3::scene::park
                 .zero_time = scene.park.zero_time,
                 .research = &scene.research,
                 .research_left = scene.research_items ? std::optional(std::span<const simulation::ResearchItem>(*scene.research_items)) : std::nullopt,
-                .research_name = [&scene](std::uint64_t id) { return content_name(scene, id); },
+                .research_name = [&scene](u64 id) { return content_name(scene, id); },
                 .takings =
-                    [&scene](std::uint64_t id) {
+                    [&scene](u64 id) {
                         ui::screens::management::AttractionTakings t;
                         for (const auto [e, a] : scene.sim.registry.view<simulation::Attraction>().each())
                             if (id != 0 && a.saved == id)
@@ -239,20 +240,20 @@ namespace rct3::scene::park
         // on placing too if players notice.
         void judge_themes(ParkScene& scene)
         {
-            const std::vector<std::uint64_t> off = simulation::off_theme_attractions(scene.rides, scene.objects, scene.build.items.get());
+            const std::vector<u64> off = simulation::off_theme_attractions(scene.rides, scene.objects, scene.build.items.get());
             for (auto [e, attraction] : scene.sim.registry.view<simulation::Attraction>().each())
                 attraction.off_theme = attraction.saved != 0 && std::ranges::contains(off, attraction.saved);
             scene.themes_judged = true;
         }
 
         /// The attraction whose saved id is `id`, as messages name their subject.
-        std::optional<rct3::park::AttractionRef> attraction_with(const ParkScene& scene, std::uint64_t id)
+        std::optional<rct3::park::AttractionRef> attraction_with(const ParkScene& scene, u64 id)
         {
             using Kind = rct3::park::AttractionRef::Kind;
             if (const auto ride = std::ranges::find(scene.rides.rides, id, [](const save::model::Ride& r) { return r.base.id; }); ride != scene.rides.rides.end())
-                return rct3::park::AttractionRef { Kind::Ride, static_cast<std::size_t>(ride - scene.rides.rides.begin()) };
+                return rct3::park::AttractionRef { Kind::Ride, static_cast<usize>(ride - scene.rides.rides.begin()) };
             if (const auto stall = std::ranges::find(scene.rides.stalls, id, [](const save::model::Stall& s) { return s.base.id; }); stall != scene.rides.stalls.end())
-                return rct3::park::AttractionRef { Kind::Stall, static_cast<std::size_t>(stall - scene.rides.stalls.begin()) };
+                return rct3::park::AttractionRef { Kind::Stall, static_cast<usize>(stall - scene.rides.stalls.begin()) };
             return std::nullopt;
         }
 
@@ -260,7 +261,7 @@ namespace rct3::scene::park
         struct Picked
         {
             std::optional<rct3::park::AttractionRef> attraction;
-            std::optional<std::size_t> person;
+            std::optional<usize> person;
             std::optional<save::model::PlacedObjectIndex> prop;
         };
 
@@ -275,7 +276,7 @@ namespace rct3::scene::park
             // What is hidden cannot be clicked.
             if (scene.pick_boxes_of != scene.objects.size())
                 place_objects(scene);
-            const auto object = rct3::park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) {
+            const auto object = rct3::park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](usize i) {
                 const save::model::PlacedObject& o = scene.objects[i];
                 return scene.show_scenery && !o.hidden && (scene.attractions.contains(o.id) || o.fixture || clickable_prop(scene, o) || park_entrance(scene, o));
             });
@@ -314,13 +315,13 @@ namespace rct3::scene::park
         /// The running totals the weekly graphs are counted from: guests come in at the gates and what the
         /// attractions have taken, both since the park was opened, as the simulation counts them. Where money
         /// never runs out the park books nothing, so its takings count nought.
-        std::pair<std::int64_t, std::int64_t> week_totals(const ParkScene& scene)
+        std::pair<i64, i64> week_totals(const ParkScene& scene)
         {
-            std::int64_t intake = 0;
+            i64 intake = 0;
             if (const auto* gate = scene.sim.registry.ctx().find<simulation::Turnstile>())
-                for (const std::uint32_t n : gate->in)
+                for (const u32 n : gate->in)
                     intake += n;
-            std::int64_t income = 0;
+            i64 income = 0;
             if (scene.park.cash)
                 for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
                     income += attraction.income.value;
@@ -398,10 +399,10 @@ namespace rct3::scene::park
         if (scene.footpaths.pavings_stale)
             profiling::section("Ground", [&] { rebuild_ground(device, scene, assets); });
         profiling::section("LedSigns", [&] { update_led_signs(device, scene, assets); });
-        const float scale = scale_for(device, scene);
+        const f32 scale = scale_for(device, scene);
         const render::Extent extent = device.extent();
         ui::Desktop& desktop = *scene.desktop;
-        desktop.layout({ 0, 0, static_cast<float>(extent.width) / scale, static_cast<float>(extent.height) / scale });
+        desktop.layout({ 0, 0, static_cast<f32>(extent.width) / scale, static_cast<f32>(extent.height) / scale });
 
         // Escape closes what is on top, one thing a press: a person held is put down and a ride left; then the window
         // on top (an item list empties its search first), the open menu, a path trail going on, the tool out with
@@ -499,7 +500,7 @@ namespace rct3::scene::park
             else if (scene.ride_dragging)
             {
                 const glm::vec2 screen(desktop.root().rect().width() * scale, desktop.root().rect().height() * scale);
-                const float pitch = options.flag(config::game::GameOption::InvertRideCameraY) ? -1.0f : 1.0f;
+                const f32 pitch = options.flag(config::game::GameOption::InvertRideCameraY) ? -1.0f : 1.0f;
                 scene.ride_turn = rct3::park::look_round_limited(scene.ride_turn + glm::vec2(-moved.x / screen.x, -pitch * moved.y / screen.y) * rct3::park::kRideLookPerScreen);
             }
             if (!over_interface)
@@ -577,7 +578,7 @@ namespace rct3::scene::park
                     deleting.other.reset();
                 }
             }
-            std::optional<std::array<std::int32_t, 4>> marks;
+            std::optional<std::array<i32, 4>> marks;
             if (area && deleting.corner && deleting.other)
                 marks = std::array { std::min(deleting.corner->col, deleting.other->col), std::min(deleting.corner->row, deleting.other->row), std::max(deleting.corner->col, deleting.other->col), std::max(deleting.corner->row, deleting.other->row) };
             else if (tile)
@@ -641,7 +642,7 @@ namespace rct3::scene::park
                     // With no tool out, a line or a circle drawn on a pool's water makes waves or a whirlpool there.
                     if (auto wave = rct3::park::pools::drawn_wave(scene.pools, scene.grid, scene.stroke, scene.park_clock))
                     {
-                        constexpr std::size_t kMostDrawn = rct3::park::pools::kMaxPoolWaves / 2; ///< Chosen by eye: the rest are the machines'
+                        constexpr usize kMostDrawn = rct3::park::pools::kMaxPoolWaves / 2; ///< Chosen by eye: the rest are the machines'
                         if (scene.drawn_waves.size() >= kMostDrawn)
                             scene.drawn_waves.erase(scene.drawn_waves.begin());
                         scene.drawn_waves.push_back(*wave);
@@ -792,9 +793,9 @@ namespace rct3::scene::park
                 // The rules are the park's, whichever post's window sets them.
                 const auto gifts = simulation::passport_gifts(scene.carried);
                 if (change->id == ui::screens::info::kPassportStampsControl)
-                    rules->stamps_for_gift = static_cast<std::uint32_t>(std::clamp<std::int32_t>(change->value, 1, static_cast<std::int32_t>(simulation::kTuning.surroundings.most_stamps)));
+                    rules->stamps_for_gift = static_cast<u32>(std::clamp<i32>(change->value, 1, static_cast<i32>(simulation::kTuning.surroundings.most_stamps)));
                 else if (change->value >= 0 && std::cmp_less(change->value, gifts.size()))
-                    simulation::set_passport_gift(*rules, gifts[static_cast<std::size_t>(change->value)]->symbol, scene.carried);
+                    simulation::set_passport_gift(*rules, gifts[static_cast<usize>(change->value)]->symbol, scene.carried);
                 open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
             }
             else if (const auto room = change && scene.shown_prop ? pool_room(scene, scene.objects[scene.shown_prop->value]) : std::nullopt)
@@ -818,7 +819,7 @@ namespace rct3::scene::park
                 {
                     // Each room is inspected on its own, as each ride is.
                     if (const entt::entity e = room_entity(scene, *room); e != entt::null && change->value >= 0 && std::cmp_less(change->value, simulation::kInspectionSeconds.size()))
-                        scene.sim.registry.get_or_emplace<simulation::Upkeep>(e).inspect_every = simulation::kInspectionSeconds[static_cast<std::size_t>(change->value)];
+                        scene.sim.registry.get_or_emplace<simulation::Upkeep>(e).inspect_every = simulation::kInspectionSeconds[static_cast<usize>(change->value)];
                 }
                 else if (change->id == ui::screens::info::kPoolLocateControl)
                 {
@@ -829,20 +830,20 @@ namespace rct3::scene::park
                 {
                     // The whole complex is opened or closed, takes the ticket price, the name and the wave
                     // settings, all its rooms alike. A blank name keeps the old one, as an attraction's does.
-                    for (const std::size_t r : rct3::park::pools::pool_complex_rooms(scene.pools, *room))
+                    for (const usize r : rct3::park::pools::pool_complex_rooms(scene.pools, *room))
                     {
                         if (change->id == ui::screens::info::kPoolTicketControl)
                             scene.pools.rooms[r].ticket = change->value;
                         else if (change->id == ui::screens::info::kPoolFluidControl)
-                            scene.pools.rooms[r].fluid = static_cast<std::uint8_t>(std::clamp(change->value, 0, 2));
+                            scene.pools.rooms[r].fluid = static_cast<u8>(std::clamp(change->value, 0, 2));
                         else if (change->id == ui::screens::info::kPoolWaveHeightControl)
-                            scene.pools.rooms[r].waves.height = static_cast<float>(change->value);
+                            scene.pools.rooms[r].waves.height = static_cast<f32>(change->value);
                         else if (change->id == ui::screens::info::kPoolWaveLengthControl)
-                            scene.pools.rooms[r].waves.frequency = { rct3::park::pools::kLeastWaveFrequency + rct3::park::pools::kMostWaveFrequency - static_cast<float>(change->value) };
+                            scene.pools.rooms[r].waves.frequency = { rct3::park::pools::kLeastWaveFrequency + rct3::park::pools::kMostWaveFrequency - static_cast<f32>(change->value) };
                         else if (change->id == ui::screens::info::kPoolWaveOnControl)
-                            scene.pools.rooms[r].waves.on = { static_cast<float>(change->value) };
+                            scene.pools.rooms[r].waves.on = { static_cast<f32>(change->value) };
                         else if (change->id == ui::screens::info::kPoolWaveEveryControl)
-                            scene.pools.rooms[r].waves.every = { static_cast<float>(change->value) * 60 };
+                            scene.pools.rooms[r].waves.every = { static_cast<f32>(change->value) * 60 };
                         else if (change->id == ui::screens::info::kPoolNameControl && change->text.find_first_not_of(u' ') != std::u16string::npos)
                             scene.pools.rooms[r].complex_name = strings::to_utf8(change->text);
                     }
@@ -851,7 +852,7 @@ namespace rct3::scene::park
             }
             else if (change && !scene.shown_party.empty())
             {
-                if (const auto member = static_cast<std::size_t>(change->id); member < scene.shown_party.size())
+                if (const auto member = static_cast<usize>(change->id); member < scene.shown_party.size())
                     open_person(scene, *info, scene.shown_party[member], assets, options);
             }
             else if (change && scene.shown_person)
@@ -881,9 +882,9 @@ namespace rct3::scene::park
             if (paint && scene.shown_prop)
             {
                 // Pot k paints the k-th slot the prop takes; free, as in the game.
-                const std::vector<std::size_t> slots = ui::screens::info::scenery_paint_slots(prop_facts(scene, *scene.shown_prop));
+                const std::vector<usize> slots = ui::screens::info::scenery_paint_slots(prop_facts(scene, *scene.shown_prop));
                 if (paint->pot < slots.size())
-                    paint_prop(device, scene, *scene.shown_prop, slots[paint->pot], static_cast<std::int32_t>(paint->colour));
+                    paint_prop(device, scene, *scene.shown_prop, slots[paint->pot], static_cast<i32>(paint->colour));
             }
             if (const auto tab = info->take_picked(); tab && scene.shown_prop)
             {
@@ -928,7 +929,7 @@ namespace rct3::scene::park
                 // The whole complex opened or closed, all its rooms alike; then shown again for the flag's new look.
                 const std::vector<ui::screens::info::StateChoice> states = ui::screens::info::state_choices(ui::screens::info::AttractionKind::Stall);
                 if (choice->choice < states.size())
-                    for (const std::size_t r : rct3::park::pools::pool_complex_rooms(scene.pools, *room))
+                    for (const usize r : rct3::park::pools::pool_complex_rooms(scene.pools, *room))
                         scene.pools.rooms[r].open = states[choice->choice].state == save::model::AttractionState::Open;
                 open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
             }
@@ -964,7 +965,7 @@ namespace rct3::scene::park
             open_person(scene, *info, *asked, assets, options);
         if (const auto asked = std::exchange(scene.prop_requested, std::nullopt); asked && info)
             if (const auto found = std::ranges::find(scene.objects, *asked, &save::model::PlacedObject::id); found != scene.objects.end())
-                open_prop(scene, *info, save::model::PlacedObjectIndex { static_cast<std::size_t>(found - scene.objects.begin()) }, assets, options);
+                open_prop(scene, *info, save::model::PlacedObjectIndex { static_cast<usize>(found - scene.objects.begin()) }, assets, options);
         // The Construction tab has no page: it opens the panel that builds the ride's track. One asked for as the
         // last was closed waits until that has gone.
         const auto old_panel = scene.desktop->root().find("placing/body/construction");
@@ -1012,10 +1013,10 @@ namespace rct3::scene::park
         scene.park_clock += park_time.value;
         scene.people_clock += park_time.value / scene.sim.guest_slowdown;
         scene.chain_shifts.resize(scene.rides.rides.size());
-        for (std::size_t i = 0; i < scene.chain_shifts.size(); ++i)
+        for (usize i = 0; i < scene.chain_shifts.size(); ++i)
             scene.chain_shifts[i] = rct3::park::chain_shift(scene.chain_shifts[i], scene.rides.rides[i].options.lift_speed.value, park_time.value);
         update_park_fireworks(scene, park_time);
-        advance_park_particles(scene.particles, park_time, viewer, static_cast<std::size_t>(options.get(config::game::GameOption::ParticleBudget)));
+        advance_park_particles(scene.particles, park_time, viewer, static_cast<usize>(options.get(config::game::GameOption::ParticleBudget)));
         // The software backend draws no screen-wide effects (glow, shafts in the air, occlusion, drops on the lens)
         // and no mirrored scene: its water mirrors only the sky's colour.
         const bool software = device.backend() == render::Backend::Software;
@@ -1044,7 +1045,7 @@ namespace rct3::scene::park
         profiling::section("LensWater", [&] {
             using save::model::WeatherType;
             const WeatherType w = scene.park.weather;
-            std::optional<std::pair<std::size_t, std::uint32_t>> splashes;
+            std::optional<std::pair<usize, u32>> splashes;
             if (scene.riding && *scene.riding < scene.car_waters.size())
                 splashes = std::pair { *scene.riding, scene.car_waters[*scene.riding].splashes };
             const LensSurroundings around {
@@ -1101,10 +1102,10 @@ namespace rct3::scene::park
         }
         profiling::section("Simulation", [&] {
             // The park's day, its calendar and its messages' ages run at the speed picked, and stop while paused.
-            const float game_seconds = elapsed.value * simulation::time_factor(scene.park.speed);
+            const f32 game_seconds = elapsed.value * simulation::time_factor(scene.park.speed);
             simulation::advance(scene.day_clock, game_seconds);
-            const float before = scene.park.time;
-            const std::int32_t weeks = simulation::park::pass_time(scene.park, game_seconds);
+            const f32 before = scene.park.time;
+            const i32 weeks = simulation::park::pass_time(scene.park, game_seconds);
             simulation::advance_weather(scene.park, scene.park.time - before, scene.gameplay, options.flag(config::game::GameOption::DisableWeather));
             scene.thunder = rct3::park::advance_weather_look(scene.weather_look, scene.park.weather, scene.park.speed.paused ? 0.0f : elapsed.value, scene.weather_dice);
             if (scene.rain_strength)
@@ -1119,10 +1120,10 @@ namespace rct3::scene::park
                     read_path_styles(scene.footpaths, assets);
                     scene.research_items = simulation::research_items(scene.park_model.content, catalogue, scene.footpaths.styles);
                 }
-                const std::size_t had = scene.research.invented.size();
+                const usize had = scene.research.invented.size();
                 simulation::step_research(scene.research, scene.park.time - scene.research_time.value_or(scene.park.time), *scene.research_items, scene.park, scene.park_model.finance, scene.ledger_month, scene.gameplay);
                 // Each new invention can be built from now on, and the player is told.
-                for (std::size_t i = had; i < scene.research.invented.size(); ++i)
+                for (usize i = had; i < scene.research.invented.size(); ++i)
                 {
                     const auto entry = std::ranges::find(scene.park_model.content.entries, scene.research.invented[i], &save::model::AssetRequirement::id);
                     if (entry == scene.park_model.content.entries.end())
@@ -1150,13 +1151,13 @@ namespace rct3::scene::park
             if (weeks > 0)
             {
                 // While the park runs, its own litter and lost guests count, and much litter is told to the player.
-                const std::optional<std::int32_t> old = scene.simulate ? std::optional(simulation::old_litter(scene.sim)) : std::nullopt;
+                const std::optional<i32> old = scene.simulate ? std::optional(simulation::old_litter(scene.sim)) : std::nullopt;
                 profiling::section("Rating", [&] {
                     simulation::park::RatingInput in = simulation::park::rating_input(scene.people, scene.rides, scene.park_model.awards, scene.park.time);
                     if (old)
                     {
                         in.old_litter = *old;
-                        in.lost_guests = static_cast<std::int32_t>(std::ranges::distance(scene.sim.registry.view<const simulation::Lost, const simulation::Visitor>()));
+                        in.lost_guests = static_cast<i32>(std::ranges::distance(scene.sim.registry.view<const simulation::Lost, const simulation::Visitor>()));
                     }
                     simulation::park::rate_week(scene.park, in);
                 });
@@ -1164,21 +1165,21 @@ namespace rct3::scene::park
                     simulation::park::post(scene.park.messages, { .text_key = "Thought_PI_Park_Litter1" });
                 {
                     // The week's figures for the park's graphs.
-                    std::array<std::int32_t, 3> ages { };
+                    std::array<i32, 3> ages { };
                     for (const auto [e, visitor] : scene.sim.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>).each())
-                        ++ages[static_cast<std::size_t>(visitor.age)];
+                        ++ages[static_cast<usize>(visitor.age)];
                     const auto [intake, income] = week_totals(scene);
-                    const std::int64_t cash = scene.park.cash.value_or(units::Money { }).value;
+                    const i64 cash = scene.park.cash.value_or(units::Money { }).value;
                     auto& began = scene.week_began;
                     simulation::park::close_week(
                         scene.park_model,
                         {
-                            .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
+                            .rating = static_cast<i32>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
                             .guests = scene.park.guests,
-                            .adults = ages[static_cast<std::size_t>(simulation::AgeGroup::Adult)],
-                            .teenagers = ages[static_cast<std::size_t>(simulation::AgeGroup::Teen)],
-                            .children = ages[static_cast<std::size_t>(simulation::AgeGroup::Child)],
-                            .intake = static_cast<std::int32_t>(intake - began.intake),
+                            .adults = ages[static_cast<usize>(simulation::AgeGroup::Adult)],
+                            .teenagers = ages[static_cast<usize>(simulation::AgeGroup::Teen)],
+                            .children = ages[static_cast<usize>(simulation::AgeGroup::Child)],
+                            .intake = static_cast<i32>(intake - began.intake),
                             .cash_less_loan = units::Money { cash } - scene.park.loan,
                             .income = units::Money { income - began.income },
                             .profit = units::Money { cash - began.cash },
@@ -1195,7 +1196,7 @@ namespace rct3::scene::park
                     const save::model::Finance& money = scene.park_model.finance;
                     simulation::AwardFigures f {
                         .guests = scene.park.guests,
-                        .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
+                        .rating = static_cast<i32>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
                         .money = scene.park.cash.has_value(),
                         .fee_charged = scene.park.cash.has_value() && !money.unlimited() && !money.entrance_fee_fixed(),
                         .entrance_fee = money.entrance_fee,
@@ -1224,8 +1225,8 @@ namespace rct3::scene::park
                         if (stall != scene.rides.stalls.end() && !std::ranges::contains(foods, std::string_view(stall->base.symbol)))
                             foods.push_back(stall->base.symbol);
                     }
-                    f.food_kinds = static_cast<std::int32_t>(foods.size());
-                    for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
+                    f.food_kinds = static_cast<i32>(foods.size());
+                    for (usize i = 0; i < scene.rides.rides.size(); ++i)
                     {
                         if (scene.rides.rides[i].base.demolished)
                             continue;
@@ -1243,7 +1244,7 @@ namespace rct3::scene::park
                         f.running += attraction != nullptr && attraction->open && !attraction->testing && !upkeep.broken ? 1 : 0;
                     }
                     // Rides whose last crash the park still remembers.
-                    f.crashed = static_cast<std::int32_t>(std::ranges::count_if(scene.rides.rides, [](const save::model::Ride& ride) { return ride.base.time_since_crash.has_value(); }));
+                    f.crashed = static_cast<i32>(std::ranges::count_if(scene.rides.rides, [](const save::model::Ride& ride) { return ride.base.time_since_crash.has_value(); }));
                     f.coaster_dangers = scene.park_model.awards.dangerous_coaster_events.value_or(0);
                     f.pool_dangers = scene.park_model.awards.dangerous_pool_events.value_or(0);
                     const bool listed = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
@@ -1258,8 +1259,8 @@ namespace rct3::scene::park
                         if (animal.job == simulation::AnimalJob::Crated)
                             continue;
                         // The catalogue lists each kind's adult male, adult female, young male and young female in turn.
-                        float rarity = 0;
-                        std::size_t nth = (animal.adult ? 0 : 2) + (animal.male ? 0 : 1);
+                        f32 rarity = 0;
+                        usize nth = (animal.adult ? 0 : 2) + (animal.male ? 0 : 1);
                         for (const rct3::park::BuildItem& item : catalogue)
                             if (item.kind == rct3::park::BuildKind::Animal && strings::equals_ignoring_case(item.symbol, animal.species) && nth-- == 0)
                             {
@@ -1269,7 +1270,7 @@ namespace rct3::scene::park
                         f.animals.push_back({ .rarity = rarity, .health = animal.health.value, .young = !animal.adult });
                     }
                     if (!f.downtime.empty())
-                        f.reliability /= static_cast<float>(f.downtime.size());
+                        f.reliability /= static_cast<f32>(f.downtime.size());
                     std::array<bool, 4> kinds { };
                     for (const auto [e, staff] : r.view<const simulation::Staff>().each())
                     {
@@ -1278,9 +1279,9 @@ namespace rct3::scene::park
                             kinds[role] = true;
                     }
                     f.every_staff_kind = std::ranges::all_of(kinds, std::identity { });
-                    for (const std::int32_t kind : simulation::award_month(scene.park_model.awards, f, scene.gameplay))
+                    for (const i32 kind : simulation::award_month(scene.park_model.awards, f, scene.gameplay))
                     {
-                        const auto slot = static_cast<std::size_t>(kind);
+                        const auto slot = static_cast<usize>(kind);
                         if (slot < scene.park_model.awards.prize_money.size())
                             simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { -scene.park_model.awards.prize_money[slot] }, simulation::park::LedgerLine::PrizeMoney, simulation::park::Charge::Always);
                         simulation::park::post(scene.park.messages, { .text_key = std::string(simulation::award_message(kind)), .award = kind });
@@ -1288,15 +1289,15 @@ namespace rct3::scene::park
                 }
             }
             // The scenario's goals, checked as each day begins.
-            if (const auto day = static_cast<std::int64_t>(std::floor(scene.park.time / (save::model::GameClock::kUnitsPerWeek / 7))); day != scene.goals_day)
+            if (const auto day = static_cast<i64>(std::floor(scene.park.time / (save::model::GameClock::kUnitsPerWeek / 7))); day != scene.goals_day)
             {
                 scene.goals_day = day;
                 std::vector<simulation::GoalRide> goal_rides;
-                for (std::size_t i = 0; i < scene.ride_groups.size() && i < scene.rides.rides.size(); ++i)
+                for (usize i = 0; i < scene.ride_groups.size() && i < scene.rides.rides.size(); ++i)
                     if (!scene.rides.rides[i].base.demolished)
                         goal_rides.push_back({ scene.ride_groups[i], &scene.rides.rides[i] });
-                float health = 0;
-                std::int32_t animals = 0;
+                f32 health = 0;
+                i32 animals = 0;
                 for (const auto [e, animal] : scene.sim.registry.view<const simulation::Animal>().each())
                 {
                     health += animal.health.value;
@@ -1309,11 +1310,11 @@ namespace rct3::scene::park
                 const simulation::ParkFigures figures {
                     .park_value = simulation::park::park_value(scene.park.guests, scene.rides).value,
                     .guests = scene.park.guests,
-                    .rating = static_cast<std::int32_t>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
+                    .rating = static_cast<i32>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
                     .loan = scene.park.loan,
                     .last_month = last_month,
-                    .animal_health = animals > 0 ? static_cast<std::int32_t>(std::floor(health / static_cast<float>(animals) * units::kPercent)) : 0,
-                    .dung = static_cast<std::int32_t>(scene.sim.registry.view<const simulation::Dung>().size()),
+                    .animal_health = animals > 0 ? static_cast<i32>(std::floor(health / static_cast<f32>(animals) * units::kPercent)) : 0,
+                    .dung = static_cast<i32>(scene.sim.registry.view<const simulation::Dung>().size()),
                     .rides = goal_rides,
                 };
                 scene.goal_readings.clear();
@@ -1321,7 +1322,7 @@ namespace rct3::scene::park
                     scene.goal_readings.push_back(simulation::read_goal(c, figures));
                 if (const auto won = simulation::check_goals(scene.park_model.objectives, figures, scene.park.time, scene.park.messages))
                 {
-                    for (const std::int32_t prize : *won)
+                    for (const i32 prize : *won)
                     {
                         if (prize == 0)
                             continue;
@@ -1335,13 +1336,13 @@ namespace rct3::scene::park
                             // In a career, the scenario is done at that level.
                             if (!scene.game.career.empty())
                             {
-                                const auto status = static_cast<career::ScenarioStatus>(static_cast<std::int32_t>(career::ScenarioStatus::Apprentice) + prize - simulation::kApprenticePrize);
+                                const auto status = static_cast<career::ScenarioStatus>(static_cast<i32>(career::ScenarioStatus::Apprentice) + prize - simulation::kApprenticePrize);
                                 const auto now = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
                                 if (auto changed = career::change_career(
                                         scene.game.career,
                                         [&](career::Career& c) {
                                             if (const auto s = std::ranges::find(c.scenarios, scene.game.scenario, &career::ScenarioProgress::id); s != c.scenarios.end())
-                                                career::complete(c, static_cast<std::size_t>(s - c.scenarios.begin()), status, now);
+                                                career::complete(c, static_cast<usize>(s - c.scenarios.begin()), status, now);
                                         });
                                     !changed)
                                     logging::logger("park").warning("careers: {}", changed.error());
@@ -1356,7 +1357,7 @@ namespace rct3::scene::park
             if (scene.simulate)
             {
                 // A long frame steps at most a few seconds, so the park catches up rather than stalls.
-                constexpr float kMostSeconds = 2;
+                constexpr f32 kMostSeconds = 2;
                 scene.sim_time = std::min(scene.sim_time + game_seconds, kMostSeconds);
                 scene.sim.registry.ctx().insert_or_assign(simulation::park::guest_weather(scene.park));
                 scene.sim.registry.ctx().insert_or_assign(simulation::Daylight { scene.day_clock.time });
@@ -1368,24 +1369,24 @@ namespace rct3::scene::park
                 }
                 else
                     scene.sim.registry.ctx().erase<simulation::FireworkShow>();
-                const std::int64_t fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
+                const i64 fee = scene.park_model.has_finance ? scene.park_model.finance.entrance_fee : 0;
                 // The pools taken in again once built on, or their rooms opened, closed, priced or given another fluid or
                 // other waves.
-                std::size_t pools = core::kFnv64Offset;
-                const auto mix = [&](std::int64_t v) { pools = (pools ^ static_cast<std::size_t>(v)) * core::kFnv64Prime; };
+                usize pools = core::kFnv64Offset;
+                const auto mix = [&](i64 v) { pools = (pools ^ static_cast<usize>(v)) * core::kFnv64Prime; };
                 for (const rct3::park::pools::PoolSquare& s : scene.pools.squares)
-                    for (const std::int64_t v : { std::int64_t { s.col }, std::int64_t { s.row }, std::int64_t { std::to_underlying(s.kind) }, std::int64_t { s.surface } })
+                    for (const i64 v : { i64 { s.col }, i64 { s.row }, i64 { std::to_underlying(s.kind) }, i64 { s.surface } })
                         mix(v);
                 for (const rct3::park::pools::PoolRoom& room : scene.pools.rooms)
-                    for (const std::int64_t v : { std::int64_t { room.col }, std::int64_t { room.row }, std::int64_t { room.side.value }, room.ticket, std::int64_t { room.open }, std::int64_t { room.fluid }, static_cast<std::int64_t>(std::llround(room.waves.height * 100)), static_cast<std::int64_t>(std::llround(room.waves.frequency.value * 100)), static_cast<std::int64_t>(std::llround(room.waves.on.value)), static_cast<std::int64_t>(std::llround(room.waves.every.value)) })
+                    for (const i64 v : { i64 { room.col }, i64 { room.row }, i64 { room.side.value }, room.ticket, i64 { room.open }, i64 { room.fluid }, static_cast<i64>(std::llround(room.waves.height * 100)), static_cast<i64>(std::llround(room.waves.frequency.value * 100)), static_cast<i64>(std::llround(room.waves.on.value)), static_cast<i64>(std::llround(room.waves.every.value)) })
                         mix(v);
-                mix(static_cast<std::int64_t>(scene.pools.extras.size() + scene.scenery_pool_extras.size()));
+                mix(static_cast<i64>(scene.pools.extras.size() + scene.scenery_pool_extras.size()));
                 if (std::exchange(scene.pools_seen, pools) != pools)
                 {
                     simulation::import_pools(scene.sim, scene.pools, scene.scenery_pool_extras);
                     scene.machine_waves = rct3::park::pools::machine_waves(scene.pools, scene.scenery_pool_extras, scene.grid);
                 }
-                scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<std::uint32_t>(scene.footpaths.pools.size()), .rating = scene.park.rating, .guest_cash = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_cash : 0 }, .guest_bank = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_bank_funds : 0 } });
+                scene.sim.registry.ctx().insert_or_assign(simulation::Draw { .entrance_fee = { fee }, .pool_squares = static_cast<u32>(scene.footpaths.pools.size()), .rating = scene.park.rating, .guest_cash = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_cash : 0 }, .guest_bank = { scene.park_model.has_finance ? scene.park_model.finance.average_guest_bank_funds : 0 } });
                 if (auto* passports = scene.sim.registry.ctx().find<simulation::PassportRules>())
                     passports->park_cash = scene.park.cash;
                 // What a crashed train's wrecks fly over and into: the ground, and the scenery, stalls and flat rides
@@ -1412,7 +1413,7 @@ namespace rct3::scene::park
                     });
                 // The animals and their keepers walk the enclosures' tiles.
                 const save::model::TerrainGrid& g = scene.grid;
-                const auto tile_of = [&g](glm::vec2 p) { return glm::ivec2 { static_cast<std::int32_t>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<std::int32_t>(std::floor((p.y - g.origin_z) / g.tile_size_z)) }; };
+                const auto tile_of = [&g](glm::vec2 p) { return glm::ivec2 { static_cast<i32>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<i32>(std::floor((p.y - g.origin_z) / g.tile_size_z)) }; };
                 const simulation::AnimalGround animal_ground {
                     .height = [&g](glm::vec2 p) { return g.height_at(p.x, p.y).value_or(0.0f); },
                     .enclosure =
@@ -1420,15 +1421,15 @@ namespace rct3::scene::park
                             const glm::ivec2 t = tile_of(p);
                             return scene.enclosures.at(t.x, t.y);
                         },
-                    .somewhere = [&](std::optional<std::int32_t> which, random::RandomState& dice) -> std::optional<glm::vec2> {
-                        const auto tiles = static_cast<std::uint64_t>(rct3::park::enclosure_size(scene.enclosures, which));
+                    .somewhere = [&](std::optional<i32> which, random::RandomState& dice) -> std::optional<glm::vec2> {
+                        const auto tiles = static_cast<u64>(rct3::park::enclosure_size(scene.enclosures, which));
                         if (tiles == 0)
                             return std::nullopt;
-                        for (std::uint64_t i = 0, pick = random::below(dice, tiles); i < scene.enclosures.tiles.size(); ++i)
+                        for (u64 i = 0, pick = random::below(dice, tiles); i < scene.enclosures.tiles.size(); ++i)
                             if (scene.enclosures.tiles[i] == which && pick-- == 0)
                             {
-                                const auto col = static_cast<float>(i % static_cast<std::size_t>(scene.enclosures.cols)) + static_cast<float>(random::unit(dice));
-                                const auto row = static_cast<float>(i / static_cast<std::size_t>(scene.enclosures.cols)) + static_cast<float>(random::unit(dice));
+                                const auto col = static_cast<f32>(i % static_cast<usize>(scene.enclosures.cols)) + static_cast<f32>(random::unit(dice));
+                                const auto row = static_cast<f32>(i / static_cast<usize>(scene.enclosures.cols)) + static_cast<f32>(random::unit(dice));
                                 return glm::vec2 { g.origin_x + col * g.tile_size_x, g.origin_z + row * g.tile_size_z };
                             }
                         return std::nullopt;
@@ -1444,15 +1445,15 @@ namespace rct3::scene::park
                     }
                 });
                 // A coaster's lap just run becomes its graphs.
-                for (std::size_t i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
+                for (usize i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
                     if (auto* fleet = scene.ride_entities[i] == entt::null ? nullptr : scene.sim.registry.try_get<simulation::Trains>(scene.ride_entities[i]); fleet != nullptr && fleet->lap_done)
                     {
                         scene.rides.rides[i].graphs = std::move(*fleet->lap_done);
                         fleet->lap_done.reset();
                     }
                 // The scenario's VIPs: told of, let in, looking round and judging the park as they go.
-                std::map<std::string_view, std::int32_t, std::less<>> theme_of; // Of each themed item, by symbol
-                const auto themed = [&](glm::vec3 at, std::int32_t theme, std::int32_t reach) {
+                std::map<std::string_view, i32, std::less<>> theme_of; // Of each themed item, by symbol
+                const auto themed = [&](glm::vec3 at, i32 theme, i32 reach) {
                     if (theme_of.empty() && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
                         for (const rct3::park::BuildItem& item : scene.build.items.get())
                             if (item.style_index)
@@ -1460,25 +1461,25 @@ namespace rct3::scene::park
                     const save::model::TerrainGrid& g = scene.grid;
                     if (g.tile_size_x <= 0 || g.tile_size_z <= 0)
                         return 0;
-                    const glm::ivec2 tile { static_cast<std::int32_t>(std::floor((at.x - g.origin_x) / g.tile_size_x)), static_cast<std::int32_t>(std::floor((at.z - g.origin_z) / g.tile_size_z)) };
+                    const glm::ivec2 tile { static_cast<i32>(std::floor((at.x - g.origin_x) / g.tile_size_x)), static_cast<i32>(std::floor((at.z - g.origin_z) / g.tile_size_z)) };
                     // shortcut: the theme numbers of a VIP goal are taken to be the build catalogue's; check them
                     // against a level whose VIP wants a theme if themed areas are never found.
-                    return static_cast<std::int32_t>(std::ranges::count_if(scene.objects, [&](const save::model::PlacedObject& o) {
+                    return static_cast<i32>(std::ranges::count_if(scene.objects, [&](const save::model::PlacedObject& o) {
                         const auto found = theme_of.find(o.symbol);
                         return found != theme_of.end() && found->second == theme && std::abs(o.col - tile.x) <= reach && std::abs(o.row - tile.y) <= reach;
                     }));
                 };
-                const auto name = [&](std::uint8_t who) { return strings::to_utf8(assets.strings->get(simulation::vip_name_key(who))); };
+                const auto name = [&](u8 who) { return strings::to_utf8(assets.strings->get(simulation::vip_name_key(who))); };
                 simulation::advance_vips(scene.sim, scene.park_model.objectives, scene.park.time, game_seconds, scene.park.messages, { .name = name, .themed = themed });
                 // The guests in the park now, coming in at the gate and going home, for the bar and the rating.
                 const auto inside = scene.sim.registry.view<const simulation::Visitor>(entt::exclude<simulation::Left>);
-                scene.park.guests = static_cast<std::int32_t>(std::ranges::distance(inside.begin(), inside.end()));
+                scene.park.guests = static_cast<i32>(std::ranges::distance(inside.begin(), inside.end()));
                 // Each thing broken costs the park some rating, and bad runs of it are told to the player.
                 if (const auto* vandalism = scene.sim.registry.ctx().find<simulation::Vandalism>())
                 {
-                    const auto broken = static_cast<float>(vandalism->broken - scene.vandalism_seen);
+                    const auto broken = static_cast<f32>(vandalism->broken - scene.vandalism_seen);
                     if (scene.park.rating)
-                        *scene.park.rating = std::max(0.0f, *scene.park.rating - kVandalismPenalty * broken / static_cast<float>(simulation::park::kMaxRating));
+                        *scene.park.rating = std::max(0.0f, *scene.park.rating - kVandalismPenalty * broken / static_cast<f32>(simulation::park::kMaxRating));
                     scene.vandalism_seen = vandalism->broken;
                     for (; scene.vandalism_warnings_seen < vandalism->warnings; ++scene.vandalism_warnings_seen)
                         simulation::park::post(scene.park.messages, { .text_key = "Thought_PI_Park_Vandalism1" });
@@ -1562,7 +1563,7 @@ namespace rct3::scene::park
                     for (const entt::entity e : quitting)
                         if (const auto shown = std::ranges::find(scene.shown_people, e, &ShownPerson::guest); shown != scene.shown_people.end())
                         {
-                            const auto i = static_cast<std::size_t>(shown - scene.shown_people.begin());
+                            const auto i = static_cast<usize>(shown - scene.shown_people.begin());
                             if (auto panel = scene.desktop->root().find_as<ui::screens::info::InfoPanel>(kInfoName); panel && scene.shown_person == i)
                                 panel->hide();
                             fire(scene, i);
@@ -1590,9 +1591,9 @@ namespace rct3::scene::park
                         if (const auto fit = extra_fits.find(o.symbol); fit != extra_fits.end() && !o.hidden && !std::ranges::contains(scene.pool_pieces, o.id))
                             scene.scenery_pool_extras.push_back({ .symbol = o.symbol, .overlay = o.overlay, .col = o.col, .row = o.row, .side = rct3::park::ModelTurn::from(o.rotation).facing(), .fit = fit->second });
                     const save::model::TerrainGrid& g = scene.grid;
-                    const auto tile_of = [&g](glm::vec3 p) { return glm::ivec2 { static_cast<std::int32_t>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<std::int32_t>(std::floor((p.z - g.origin_z) / g.tile_size_z)) }; };
-                    std::vector<std::size_t> chairs;
-                    for (std::size_t i = 0; i < scene.objects.size(); ++i)
+                    const auto tile_of = [&g](glm::vec3 p) { return glm::ivec2 { static_cast<i32>(std::floor((p.x - g.origin_x) / g.tile_size_x)), static_cast<i32>(std::floor((p.z - g.origin_z) / g.tile_size_z)) }; };
+                    std::vector<usize> chairs;
+                    for (usize i = 0; i < scene.objects.size(); ++i)
                         if (!scene.objects[i].hidden && chair_symbols.contains(scene.objects[i].symbol))
                             chairs.push_back(i);
                     auto& r = scene.sim.registry;
@@ -1600,14 +1601,14 @@ namespace rct3::scene::park
                     for (const auto [e, staff] : r.view<const simulation::Staff>(entt::exclude<simulation::Stride>).each())
                         if (staff.role == simulation::StaffRole::Other)
                             lifeguards.push_back(e);
-                    const auto seated = [&](entt::entity e, std::size_t chair) { return tile_of(r.get<simulation::Pose>(e).position) == glm::ivec2 { scene.objects[chair].col, scene.objects[chair].row }; };
+                    const auto seated = [&](entt::entity e, usize chair) { return tile_of(r.get<simulation::Pose>(e).position) == glm::ivec2 { scene.objects[chair].col, scene.objects[chair].row }; };
                     for (const entt::entity e : lifeguards)
                     {
-                        if (std::ranges::any_of(chairs, [&](std::size_t c) { return seated(e, c); }))
+                        if (std::ranges::any_of(chairs, [&](usize c) { return seated(e, c); }))
                             continue;
                         if (const auto shown = std::ranges::find(scene.shown_people, e, &ShownPerson::guest); shown != scene.shown_people.end())
                         {
-                            const auto i = static_cast<std::size_t>(shown - scene.shown_people.begin());
+                            const auto i = static_cast<usize>(shown - scene.shown_people.begin());
                             if (auto panel = scene.desktop->root().find_as<ui::screens::info::InfoPanel>(kInfoName); panel && scene.shown_person == i)
                                 panel->hide();
                             fire(scene, i);
@@ -1616,7 +1617,7 @@ namespace rct3::scene::park
                             r.destroy(e);
                     }
                     // Saved lifeguards too: their saved heading is wherever they were looking about at the time.
-                    for (const std::size_t c : chairs)
+                    for (const usize c : chairs)
                     {
                         // Facing out over the front of the chair, which its model has along -Z.
                         const glm::mat4& m = scene.places.transforms[c];
@@ -1660,7 +1661,7 @@ namespace rct3::scene::park
                             std::ranges::for_each(r.get<simulation::Party>(member->party).members, frame);
                         else
                             frame(photo.guest);
-                        const float yaw = r.get<simulation::Pose>(photo.guest).heading.value + glm::pi<float>();
+                        const f32 yaw = r.get<simulation::Pose>(photo.guest).heading.value + glm::pi<f32>();
                         const std::string& name = r.get<simulation::Visitor>(photo.guest).name;
                         scene.photos.push_back({ rct3::park::framed(points, yaw, kPhotoPitch.value, kPhotoClosest), std::format("{} at photo spot_", name.empty() ? "Guest" : name) });
                     }
@@ -1693,7 +1694,7 @@ namespace rct3::scene::park
                         continue;
                     save::model::Person& person = p.staff ? scene.people.staff[p.saved].person : scene.people.guests[p.saved].person;
                     auto& slots = person.thoughts;
-                    for (std::size_t k = std::min<std::size_t>(thoughts->had - p.thoughts_seen, thoughts->recent.size()); k-- > 0;)
+                    for (usize k = std::min<usize>(thoughts->had - p.thoughts_seen, thoughts->recent.size()); k-- > 0;)
                     {
                         const simulation::Thought& t = thoughts->recent[k];
                         const auto newest = std::ranges::max(slots, { }, &save::model::Thought::time).time;
@@ -1701,7 +1702,7 @@ namespace rct3::scene::park
                         std::shift_right(slots.begin(), slots.end(), 1);
                         // A thought about a path item is about the placed object it stands as.
                         const auto* item = about == nullptr && scene.sim.registry.valid(t.about) ? scene.sim.registry.try_get<simulation::PathItem>(t.about) : nullptr;
-                        slots[0] = { .about = { about != nullptr ? about->saved : item != nullptr ? item->object : 0 }, .id = std::to_underlying(t.kind), .time = std::optional { newest ? *newest + 1 : 0.0f }, .variant = static_cast<std::int32_t>(t.variant) };
+                        slots[0] = { .about = { about != nullptr ? about->saved : item != nullptr ? item->object : 0 }, .id = std::to_underlying(t.kind), .time = std::optional { newest ? *newest + 1 : 0.0f }, .variant = static_cast<i32>(t.variant) };
                         // shortcut: the message names what they thought about but cannot take the view to the
                         // person; add it once messages open people.
                         if (std::string key = ui::thought_text_key(*assets.strings, slots[0].id, slots[0].variant); person.thoughts_to_console && !key.empty())
@@ -1720,8 +1721,8 @@ namespace rct3::scene::park
                 // file never had it.
                 const auto* supplies = scene.sim.registry.ctx().find<simulation::Supplies>();
                 const auto* receipts = scene.sim.registry.ctx().find<simulation::Receipts>();
-                for (std::size_t line = 0; line < simulation::park::kLedgerLines; ++line)
-                    if (const std::int64_t cost = (supplies ? supplies->paid[line].value - scene.supplies_seen.paid[line].value : 0) - (receipts ? receipts->paid[line].value - scene.receipts_seen.paid[line].value : 0); cost != 0)
+                for (usize line = 0; line < simulation::park::kLedgerLines; ++line)
+                    if (const i64 cost = (supplies ? supplies->paid[line].value - scene.supplies_seen.paid[line].value : 0) - (receipts ? receipts->paid[line].value - scene.receipts_seen.paid[line].value : 0); cost != 0)
                         simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { cost }, static_cast<simulation::park::LedgerLine>(line), simulation::park::Charge::Always);
                 if (supplies)
                     scene.supplies_seen = *supplies;
@@ -1740,7 +1741,7 @@ namespace rct3::scene::park
                     if (const auto* staff = p.staff && p.saved < scene.people.staff.size() && scene.sim.registry.valid(p.guest) ? scene.sim.registry.try_get<simulation::Staff>(p.guest) : nullptr)
                         copy_mood(*staff, scene.people.staff[p.saved]);
                 // The rides' upkeep into the saved rides, for their windows to show.
-                for (std::size_t i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
+                for (usize i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
                 {
                     const auto* upkeep = scene.ride_entities[i] != entt::null ? scene.sim.registry.try_get<simulation::Upkeep>(scene.ride_entities[i]) : nullptr;
                     if (upkeep == nullptr)
@@ -1758,12 +1759,12 @@ namespace rct3::scene::park
                     ride.base.flags = upkeep->broken ? ride.base.flags | save::model::AttractionCommon::kBrokenDown : ride.base.flags & ~save::model::AttractionCommon::kBrokenDown;
                 }
                 // A train that stalled in testing is told to the player.
-                for (std::size_t i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
+                for (usize i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
                     if (auto* stalls = scene.ride_entities[i] != entt::null ? scene.sim.registry.try_get<simulation::TrainStalls>(scene.ride_entities[i]) : nullptr)
                         for (const glm::vec3& at : std::exchange(stalls->found, { }))
                             track::tell_stall(scene, assets, scene.rides.rides[i], at);
                 // A crash closes its ride, counts as dangerous for the awards, and is remembered a while.
-                for (std::size_t i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
+                for (usize i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
                 {
                     const auto* wrecks = scene.ride_entities[i] != entt::null ? scene.sim.registry.try_get<simulation::Wrecks>(scene.ride_entities[i]) : nullptr;
                     if (wrecks == nullptr)
@@ -1771,8 +1772,8 @@ namespace rct3::scene::park
                     save::model::Ride& ride = scene.rides.rides[i];
                     ride.base.time_since_crash = wrecks->since;
                     // Each wreck goes up in flames and smoke as it blows up.
-                    for (std::size_t t = 0; t < wrecks->trains.size(); ++t)
-                        for (std::size_t k = 0; k < wrecks->trains[t].size(); ++k)
+                    for (usize t = 0; t < wrecks->trains.size(); ++t)
+                        for (usize k = 0; k < wrecks->trains[t].size(); ++k)
                         {
                             const simulation::Wreck& wreck = wrecks->trains[t][k];
                             const auto key = std::tuple { scene.ride_entities[i], t, k };
@@ -1786,24 +1787,24 @@ namespace rct3::scene::park
                     if (wrecks->crashes == crashes)
                         continue;
                     crashes = wrecks->crashes;
-                    const std::uint32_t hurt = wrecks->injured - std::exchange(injured, wrecks->injured);
+                    const u32 hurt = wrecks->injured - std::exchange(injured, wrecks->injured);
                     simulation::park::post(scene.park.messages, { .text_key = hurt > 0 ? "Thought_PI_Ride_Crashed_Injuries1" : "Thought_PI_Ride_Crashed1", .subject = ride.base.id, .number = hurt });
                     ride.base.state = save::model::AttractionState::Closed;
                     scene.shown_closed = scene.shown_closed || (scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && scene.shown->index == i);
                     auto& events = scene.park_model.awards.dangerous_coaster_events;
-                    events = events.value_or(0) + static_cast<std::int32_t>(wrecks->dangers - dangers);
+                    events = events.value_or(0) + static_cast<i32>(wrecks->dangers - dangers);
                     dangers = wrecks->dangers;
                 }
                 // Each hard landing off a pool slide or a diving board is dangerous for the awards too.
                 if (auto* pool = scene.sim.registry.ctx().find<simulation::PoolDangers>(); pool != nullptr && pool->landings > 0)
                 {
                     auto& events = scene.park_model.awards.dangerous_pool_events;
-                    events = events.value_or(0) + static_cast<std::int32_t>(std::exchange(pool->landings, 0));
+                    events = events.value_or(0) + static_cast<i32>(std::exchange(pool->landings, 0));
                 }
                 for (const auto [e, upkeep, attraction] : scene.sim.registry.view<const simulation::Upkeep, const simulation::Attraction>().each())
                 {
                     const auto at = std::ranges::find(scene.ride_entities, e);
-                    const auto index = static_cast<std::size_t>(at - scene.ride_entities.begin());
+                    const auto index = static_cast<usize>(at - scene.ride_entities.begin());
                     // Stalls and cash machines break with time and have no maintenance page: their messages open
                     // the window, and the window shows the state.
                     const bool stall = upkeep.break_in.has_value();
@@ -1861,7 +1862,7 @@ namespace rct3::scene::park
                     }
                     // Each kind of breakdown has its own message, in the order the kinds are numbered.
                     constexpr std::array<std::string_view, 9> kBroken = { "RideBrokenMessage", "RideBrokenMessageEmergencyStop", "RideBrokenMessageRestraintsFailOpen", "RideBrokenMessageRestraintsFailClose", "RideBrokenMessageDoorsFailOpen", "RideBrokenMessageDoorsFailClose", "RideBrokenMessageStuckLeavingStation", "RideBrokenMessageBrakesFail", "RideBrokenMessageControlFail" };
-                    const auto kind = static_cast<std::size_t>(std::to_underlying(upkeep.kind));
+                    const auto kind = static_cast<usize>(std::to_underlying(upkeep.kind));
                     tell(!upkeep.broken ? "RideFixedMessage" : kind < kBroken.size() ? kBroken[kind] : kBroken[0]);
                     // A broken ride is taped off and gets its own fence back once fixed: the tape panels stand where
                     // the fence's do, so each panel only changes its model.
@@ -1923,7 +1924,7 @@ namespace rct3::scene::park
             // A message about an attraction shows the attraction's own icon, the one it has in the build lists, and
             // the camera when it has none.
             const auto items = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready ? std::span(scene.build.items.get()) : std::span<const rct3::park::BuildItem> { };
-            for (std::size_t i = 0; i < shown.size(); ++i)
+            for (usize i = 0; i < shown.size(); ++i)
             {
                 // An invention shows the item's icon and leads to it in its build list.
                 if (const auto& b = scene.park.messages.list[i].build_item; b && *b < items.size())
@@ -1991,17 +1992,17 @@ namespace rct3::scene::park
                 // It shows in the middle of what the drawer leaves of the screen, not behind the drawer: the view
                 // slides on along the ground until it does, found by the secant method from no slide.
                 const ui::Rect screen = desktop.root().rect();
-                const float want = (messages->rect().y1 + screen.y1) / 2;
-                const auto off = [&](float slide) {
+                const f32 want = (messages->rect().y1 + screen.y1) / 2;
+                const auto off = [&](f32 slide) {
                     const glm::vec4 clip = rct3::park::view_projection(rct3::park::panned(scene.camera, 0, slide), screen.width() / screen.height()) * glm::vec4(at, 1.0f);
                     return clip.w > 0 ? (1 - clip.y / clip.w) / 2 * screen.height() - want : 0.0f;
                 };
-                float before = 0;
-                float slide = 1;
-                for (std::int32_t i = 0; i < 4 && screen.height() > 0; ++i)
+                f32 before = 0;
+                f32 slide = 1;
+                for (i32 i = 0; i < 4 && screen.height() > 0; ++i)
                 {
-                    const float a = off(before);
-                    const float b = off(slide);
+                    const f32 a = off(before);
+                    const f32 b = off(slide);
                     if (std::abs(b - a) < 1e-3f)
                         break;
                     before = std::exchange(slide, slide - b * (slide - before) / (b - a));
@@ -2281,7 +2282,7 @@ namespace rct3::scene::park
             // A new file each time, beside those written before.
             auto folder = scene.saves.data->make_folder(config::UserFolder::Exports);
             std::filesystem::path path;
-            for (std::int32_t n = 1; folder && (path.empty() || std::filesystem::exists(path)); ++n)
+            for (i32 n = 1; folder && (path.empty() || std::filesystem::exists(path)); ++n)
                 path = *folder / std::format("ledger_{}.csv", n);
             std::ofstream out(path, std::ios::binary | std::ios::trunc);
             out << ui::screens::management::ledger_csv(facts, *assets.strings);
@@ -2299,9 +2300,9 @@ namespace rct3::scene::park
                 scene.holding->from = simulation::entrance_drop(scene.sim).value_or(scene.holding->from);
         }
         // The staff window names workers by their place in the park's staff; the scene by the person shown.
-        const auto shown_worker = [&](std::size_t staff) -> std::optional<std::size_t> {
+        const auto shown_worker = [&](usize staff) -> std::optional<usize> {
             const auto p = std::ranges::find_if(scene.shown_people, [&](const ShownPerson& p) { return p.staff && p.saved == staff; });
-            return p != scene.shown_people.end() ? std::optional(static_cast<std::size_t>(p - scene.shown_people.begin())) : std::nullopt;
+            return p != scene.shown_people.end() ? std::optional(static_cast<usize>(p - scene.shown_people.begin())) : std::nullopt;
         };
         // A worker's patrol button in the list opens their details, where painting their area is done.
         if (asks.staff.change && asks.staff.change->what.id == ui::screens::info::person_control(ui::screens::info::PersonControl::PatrolPaint))
@@ -2318,7 +2319,7 @@ namespace rct3::scene::park
             paint_person(scene, *shown_worker(paint->staff), paint->pot, paint->colour);
         if (const auto change = asks.staff.change; change && shown_worker(change->staff))
         {
-            const std::size_t who = *shown_worker(change->staff);
+            const usize who = *shown_worker(change->staff);
             if (change->what.id == ui::screens::info::person_control(ui::screens::info::PersonControl::Sack))
             {
                 if (info && scene.shown_person == who)
@@ -2358,8 +2359,8 @@ namespace rct3::scene::park
         // Each press goes to the next entrance, round to the first.
         if (asks.centre_entrance)
         {
-            std::vector<std::size_t> entrances;
-            for (std::size_t i = 0; i < scene.objects.size(); ++i)
+            std::vector<usize> entrances;
+            for (usize i = 0; i < scene.objects.size(); ++i)
                 if (park_entrance(scene, scene.objects[i]))
                     entrances.push_back(i);
             if (!entrances.empty())
@@ -2461,7 +2462,7 @@ namespace rct3::scene::park
     {
         static_assert(config::game::kDetailPairs.size() == rct3::park::kDetailKinds); // In the same order
         rct3::park::object::LevelScales scales;
-        for (std::size_t i = 0; i < scales.size(); ++i)
+        for (usize i = 0; i < scales.size(); ++i)
             scales[i] = { .detail = options.get(config::game::kDetailPairs[i].detail), .distance = options.get(config::game::kDetailPairs[i].distance) };
         return scales;
     }
@@ -2511,10 +2512,10 @@ namespace rct3::scene::park
             saved.summary = std::move(*summary);
         // shortcut: the picture stays the original park's and the day is the week's first; draw the park and
         // count days when the calendar does.
-        saved.summary.year = static_cast<std::int32_t>(scene.park.date.year) + 1;
+        saved.summary.year = static_cast<i32>(scene.park.date.year) + 1;
         saved.summary.month = scene.park.date.month;
         saved.summary.day = scene.park.date.week * 7 + 1;
-        saved.summary.minutes = static_cast<std::int32_t>(scene.day_clock.time * 24 * 60);
+        saved.summary.minutes = static_cast<i32>(scene.day_clock.time * 24 * 60);
         saved.summary.guests = scene.park.guests;
         // The pool tool's work shown is not built: the park is saved as it was before it.
         saved.grid = scene.grid;
@@ -2567,11 +2568,11 @@ namespace rct3::scene::park
             p.week_cash = scene.week_began.cash;
         }
         saved.camera = scene.camera;
-        std::unordered_map<entt::entity, std::int32_t> looks;
+        std::unordered_map<entt::entity, i32> looks;
         for (const ShownPerson& p : scene.shown_people)
         {
             if (p.guest != entt::null)
-                looks.emplace(p.guest, static_cast<std::int32_t>(p.saved));
+                looks.emplace(p.guest, static_cast<i32>(p.saved));
         }
         saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
         saved.no_queue_signs.assign(scene.led_signs.hidden.begin(), scene.led_signs.hidden.end());

@@ -4,6 +4,7 @@
 // and what the interface asks for. Kept apart from the scene so the choice can be checked without a park.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/cursor.hpp"
 
 #include <cstdint>
@@ -13,7 +14,7 @@ namespace rct3::ui
 {
 
     /// The kind of tool acting on the park, for its pointer.
-    enum class PointerTool : std::uint8_t
+    enum class PointerTool : u8
     {
         None,   ///< Looking and clicking on things
         Place,  ///< Putting down an object held by the pointer
@@ -28,9 +29,9 @@ namespace rct3::ui
     {
         /// What the interface asks for; set when the pointer is over a window or a widget holds it.
         std::optional<CursorKind> interface;
-        bool turning = false;     ///< Turning and tilting the camera by the mouse
-        bool panning = false;     ///< Dragging the ground along
-        std::int32_t zooming = 0; ///< Positive while zooming in from the keyboard, negative while zooming out
+        bool turning = false; ///< Turning and tilting the camera by the mouse
+        bool panning = false; ///< Dragging the ground along
+        i32 zooming = 0;      ///< Positive while zooming in from the keyboard, negative while zooming out
         PointerTool tool = PointerTool::None;
         bool over_pickable = false; ///< Something that opens a panel when clicked is under the pointer
         bool blocked = false;       ///< The tool cannot act where the pointer is

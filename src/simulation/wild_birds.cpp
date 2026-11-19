@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/wild_birds.hpp"
 
+#include "core/types.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/systems.hpp"
 
@@ -18,17 +19,17 @@ namespace rct3::simulation
 
         /// Gives a gull at an empty park no litter to come down at, and the park a spacing between gulls: the more
         /// litter, the sooner the next gull. Chosen by eye.
-        constexpr float kLeastGullWait = 0.1f;
-        constexpr float kGullWait = 4.0f;
+        constexpr f32 kLeastGullWait = 0.1f;
+        constexpr f32 kGullWait = 4.0f;
         /// This much litter makes a gull sure to come down at some of it. Chosen by eye.
-        constexpr float kLitterSure = 6.0f;
+        constexpr f32 kLitterSure = 6.0f;
 
         glm::vec2 flat(glm::vec3 p)
         {
             return { p.x, p.z };
         }
 
-        float ground_at(const BirdGround& ground, glm::vec2 p)
+        f32 ground_at(const BirdGround& ground, glm::vec2 p)
         {
             return ground.height ? ground.height(p) : 0.0f;
         }
@@ -39,52 +40,52 @@ namespace rct3::simulation
         }
 
         /// Where a bird stands at `p`: the water's surface over a lake, else the ground.
-        float surface_at(const BirdGround& ground, glm::vec2 p)
+        f32 surface_at(const BirdGround& ground, glm::vec2 p)
         {
             const auto water = ground.water ? ground.water(p) : std::nullopt;
             return water ? *water : ground_at(ground, p);
         }
 
         /// The height a bird flies at over `p`.
-        float flying_height(const BirdGround& ground, glm::vec2 p)
+        f32 flying_height(const BirdGround& ground, glm::vec2 p)
         {
             return surface_at(ground, p) + kRates.cruise_above.value;
         }
 
-        glm::vec2 forward_of(float heading)
+        glm::vec2 forward_of(f32 heading)
         {
             return { std::sin(heading), std::cos(heading) };
         }
 
-        glm::vec2 right_of(float heading)
+        glm::vec2 right_of(f32 heading)
         {
             return { std::cos(heading), -std::sin(heading) };
         }
 
-        float heading_towards(glm::vec2 from, glm::vec2 to, float otherwise)
+        f32 heading_towards(glm::vec2 from, glm::vec2 to, f32 otherwise)
         {
             return glm::distance(from, to) > 0.01f ? std::atan2(to.x - from.x, to.y - from.y) : otherwise;
         }
 
         /// A point out of the park on the compass at `angle`, at flying height.
-        glm::vec3 outside(const BirdGround& ground, float angle)
+        glm::vec3 outside(const BirdGround& ground, f32 angle)
         {
             const glm::vec2 middle = (ground.low + ground.high) * 0.5f;
-            const float reach = glm::distance(ground.low, ground.high) * 0.5f + kRates.beyond.value;
+            const f32 reach = glm::distance(ground.low, ground.high) * 0.5f + kRates.beyond.value;
             const glm::vec2 at = middle + forward_of(angle) * reach;
             return { at.x, flying_height(ground, at), at.y };
         }
 
-        float random_angle(random::RandomState& dice)
+        f32 random_angle(random::RandomState& dice)
         {
-            return static_cast<float>(random::unit(dice) * 2.0 * std::numbers::pi);
+            return static_cast<f32>(random::unit(dice) * 2.0 * std::numbers::pi);
         }
 
         /// A point picked in a disc of radius `radius` about the origin.
-        glm::vec2 in_disc(random::RandomState& dice, float radius)
+        glm::vec2 in_disc(random::RandomState& dice, f32 radius)
         {
-            const float turn = random_angle(dice);
-            return forward_of(turn) * radius * std::sqrt(static_cast<float>(random::unit(dice)));
+            const f32 turn = random_angle(dice);
+            return forward_of(turn) * radius * std::sqrt(static_cast<f32>(random::unit(dice)));
         }
 
         WildBirds& birds_of(SimWorld& world)
@@ -94,7 +95,7 @@ namespace rct3::simulation
             return world.registry.ctx().emplace<WildBirds>(WildBirds { .dice = random::stream(world.seed, random::RandomStream::Effects) });
         }
 
-        entt::entity make_bird(SimWorld& world, const WildBird& bird, glm::vec3 at, float heading)
+        entt::entity make_bird(SimWorld& world, const WildBird& bird, glm::vec3 at, f32 heading)
         {
             const entt::entity e = world.registry.create();
             world.registry.emplace<Pose>(e, Pose { .position = at, .heading = { heading }, .was = at, .was_heading = { heading } });
@@ -106,10 +107,10 @@ namespace rct3::simulation
         void choose_gull_goal(SimWorld& world, const BirdGround& ground, random::RandomState& dice, WildBird& bird)
         {
             const auto litter = world.registry.view<const Litter>();
-            const double wants = bird.visits == 0 ? std::min(1.0, static_cast<double>(litter.size()) / kLitterSure) : kRates.gull_again.value;
+            const f64 wants = bird.visits == 0 ? std::min(1.0, static_cast<f64>(litter.size()) / kLitterSure) : kRates.gull_again.value;
             if (bird.visits < kRates.gull_visits && !litter.empty() && random::chance(dice, wants))
             {
-                std::size_t pick = random::below(dice, litter.size());
+                usize pick = random::below(dice, litter.size());
                 for (const auto [e, piece] : litter.each())
                     if (pick-- == 0)
                     {
@@ -123,11 +124,11 @@ namespace rct3::simulation
         }
 
         /// Moves `pose` towards `to` over the park at `pace` for `dt`, turning to face the way; true once there.
-        bool move_towards(Pose& pose, glm::vec2 to, float pace, float dt)
+        bool move_towards(Pose& pose, glm::vec2 to, f32 pace, f32 dt)
         {
             const glm::vec2 from = flat(pose.position);
-            const float left = glm::distance(from, to);
-            const float step = pace * dt;
+            const f32 left = glm::distance(from, to);
+            const f32 step = pace * dt;
             pose.heading.value = heading_towards(from, to, pose.heading.value);
             const glm::vec2 at = left <= step ? to : from + (to - from) * (step / left);
             pose.position.x = at.x;
@@ -136,19 +137,19 @@ namespace rct3::simulation
         }
 
         /// Takes `pose` up or down towards height `to`, at most `climb` a second.
-        void change_height(Pose& pose, float to, float dt)
+        void change_height(Pose& pose, f32 to, f32 dt)
         {
-            const float most = kRates.climb.value * dt;
+            const f32 most = kRates.climb.value * dt;
             pose.position.y += std::clamp(to - pose.position.y, -most, most);
         }
 
-        float eased(float t)
+        f32 eased(f32 t)
         {
             return t * t * (3.0f - 2.0f * t);
         }
     } // namespace
 
-    std::size_t add_ducks(SimWorld& world, const BirdGround& ground, std::size_t count)
+    usize add_ducks(SimWorld& world, const BirdGround& ground, usize count)
     {
         WildBirds& state = birds_of(world);
         const auto spot = ground.water_spot ? ground.water_spot(state.dice) : std::nullopt;
@@ -156,14 +157,14 @@ namespace rct3::simulation
             return 0;
         const glm::vec3 goal { spot->x, surface_at(ground, *spot), spot->y };
         const glm::vec3 start = outside(ground, random_angle(state.dice));
-        const float heading = heading_towards(flat(start), flat(goal), 0.0f);
+        const f32 heading = heading_towards(flat(start), flat(goal), 0.0f);
         entt::entity leader = entt::null;
-        for (std::size_t i = 0; i < count; ++i)
+        for (usize i = 0; i < count; ++i)
         {
-            const float rank = static_cast<float>((i + 1) / 2);
+            const f32 rank = static_cast<f32>((i + 1) / 2);
             const glm::vec2 slot { (i % 2 == 1 ? -1.0f : 1.0f) * rank * kRates.side.value, rank * kRates.behind.value };
             const glm::vec2 at = flat(start) + right_of(heading) * slot.x - forward_of(heading) * slot.y;
-            const entt::entity e = make_bird(world, { .kind = BirdKind::Duck, .palette = static_cast<std::uint8_t>(random::below(state.dice, 4)), .goal = goal, .leader = leader, .slot = slot }, { at.x, start.y, at.y }, heading);
+            const entt::entity e = make_bird(world, { .kind = BirdKind::Duck, .palette = static_cast<u8>(random::below(state.dice, 4)), .goal = goal, .leader = leader, .slot = slot }, { at.x, start.y, at.y }, heading);
             if (leader == entt::null)
             {
                 leader = e;
@@ -173,26 +174,26 @@ namespace rct3::simulation
         return count;
     }
 
-    std::size_t add_gulls(SimWorld& world, const BirdGround& ground, std::size_t count)
+    usize add_gulls(SimWorld& world, const BirdGround& ground, usize count)
     {
         WildBirds& state = birds_of(world);
         const glm::vec3 start = outside(ground, random_angle(state.dice));
-        for (std::size_t i = 0; i < count; ++i)
+        for (usize i = 0; i < count; ++i)
         {
-            WildBird bird { .kind = BirdKind::Gull, .palette = static_cast<std::uint8_t>(random::below(state.dice, 4)) };
+            WildBird bird { .kind = BirdKind::Gull, .palette = static_cast<u8>(random::below(state.dice, 4)) };
             choose_gull_goal(world, ground, state.dice, bird);
             const glm::vec2 at = flat(start) + in_disc(state.dice, 3.0f);
-            const float heading = heading_towards(at, flat(bird.goal), 0.0f);
+            const f32 heading = heading_towards(at, flat(bird.goal), 0.0f);
             const entt::entity e = make_bird(world, bird, { at.x, start.y, at.y }, heading);
             world.registry.get<WildBird>(e).leader = e;
         }
         return count;
     }
 
-    std::size_t remove_wild_birds(SimWorld& world)
+    usize remove_wild_birds(SimWorld& world)
     {
         const auto birds = world.registry.view<WildBird>();
-        const std::size_t count = birds.size();
+        const usize count = birds.size();
         world.registry.destroy(birds.begin(), birds.end());
         return count;
     }
@@ -205,7 +206,7 @@ namespace rct3::simulation
         // ----- 1. birds come in -----
         if (state.automatic)
         {
-            std::int32_t flocks = 0, gulls = 0;
+            i32 flocks = 0, gulls = 0;
             for (const auto [e, bird] : r.view<const WildBird>().each())
             {
                 flocks += bird.kind == BirdKind::Duck && bird.leader == e;
@@ -213,13 +214,13 @@ namespace rct3::simulation
             }
             if ((state.duck_in -= dt) <= units::Seconds { })
             {
-                state.duck_in = { static_cast<float>(random::between(state.dice, static_cast<double>(kRates.flocks_every_least.value), static_cast<double>(kRates.flocks_every_most.value))) };
+                state.duck_in = { static_cast<f32>(random::between(state.dice, static_cast<f64>(kRates.flocks_every_least.value), static_cast<f64>(kRates.flocks_every_most.value))) };
                 if (flocks < kRates.flocks_at_once)
-                    add_ducks(world, ground, static_cast<std::size_t>(random::between(state.dice, std::int64_t { kRates.flock_least }, std::int64_t { kRates.flock_most })));
+                    add_ducks(world, ground, static_cast<usize>(random::between(state.dice, i64 { kRates.flock_least }, i64 { kRates.flock_most })));
             }
             if ((state.gull_in -= dt) <= units::Seconds { })
             {
-                const auto litter = static_cast<float>(r.view<const Litter>().size());
+                const auto litter = static_cast<f32>(r.view<const Litter>().size());
                 state.gull_in = { kRates.gull_spacing.value * (kLeastGullWait + kGullWait / std::sqrt(litter + 1.0f)) };
                 if (gulls < kRates.gulls_at_once)
                     add_gulls(world, ground, 1);
@@ -230,7 +231,7 @@ namespace rct3::simulation
         std::vector<glm::vec2> guests;
         for (const auto [g, visitor, pose] : r.view<const Visitor, const Pose>(entt::exclude<Left>).each())
             guests.push_back(flat(pose.position));
-        const auto frightened = [&](glm::vec3 at, float reach) { return std::ranges::any_of(guests, [&](glm::vec2 g) { return glm::distance(g, flat(at)) < reach; }); };
+        const auto frightened = [&](glm::vec3 at, f32 reach) { return std::ranges::any_of(guests, [&](glm::vec2 g) { return glm::distance(g, flat(at)) < reach; }); };
 
         // ----- 3. each bird, in the order they came -----
         std::vector<entt::entity> gone;
@@ -250,7 +251,7 @@ namespace rct3::simulation
                 {
                     // In the V, a duck takes its leader's goal and keeps its place by the leader's side.
                     glm::vec2 aim = flat(bird.goal);
-                    float pace = kRates.flight.value;
+                    f32 pace = kRates.flight.value;
                     if (lead != nullptr)
                     {
                         bird.goal = lead->goal;
@@ -263,7 +264,7 @@ namespace rct3::simulation
                         }
                     }
                     const glm::vec2 goal = flat(bird.goal);
-                    const float heading = pose.heading.value;
+                    const f32 heading = pose.heading.value;
                     const bool near_place = lead_pose != nullptr && lead->job == BirdJob::Flying && glm::distance(flat(pose.position), aim) < 1.0f;
                     move_towards(pose, aim, pace, dt.value);
                     if (near_place)
@@ -271,7 +272,7 @@ namespace rct3::simulation
                     else if (lead != nullptr && lead->job != BirdJob::Flying)
                         pose.heading.value = heading_towards(flat(pose.position), aim, heading);
                     change_height(pose, flying_height(ground, flat(pose.position)), dt.value);
-                    const float to_goal = glm::distance(flat(pose.position), goal);
+                    const f32 to_goal = glm::distance(flat(pose.position), goal);
                     if (bird.leaving && to_goal <= kRates.arrived.value)
                         gone.push_back(e);
                     else if (!bird.leaving && to_goal <= kRates.approach.value)
@@ -281,7 +282,7 @@ namespace rct3::simulation
                         if (lead != nullptr)
                         {
                             const glm::vec2 about = lead->job == BirdJob::Flying || lead->job == BirdJob::TakingOff ? flat(lead->goal) : flat(lead_pose->position);
-                            for (std::int32_t i = 0; i < kRates.tries; ++i)
+                            for (i32 i = 0; i < kRates.tries; ++i)
                             {
                                 const glm::vec2 try_at = about + in_disc(state.dice, kRates.huddle.value);
                                 if (over_water(ground, try_at))
@@ -302,14 +303,14 @@ namespace rct3::simulation
                 case BirdJob::Landing:
                 {
                     bird.busy += dt;
-                    const float t = std::min(1.0f, bird.busy.value / kRates.landing.value);
+                    const f32 t = std::min(1.0f, bird.busy.value / kRates.landing.value);
                     const glm::vec2 at = glm::mix(flat(bird.from), flat(bird.goal), t);
                     pose.heading.value = heading_towards(flat(pose.position), flat(bird.goal), pose.heading.value);
                     pose.position = { at.x, glm::mix(bird.from.y, bird.goal.y, eased(t)), at.y };
                     if (t >= 1.0f)
                     {
                         bird.job = BirdJob::Resting;
-                        bird.busy = duck ? units::Seconds { static_cast<float>(random::between(state.dice, static_cast<double>(kRates.stay_least.value), static_cast<double>(kRates.stay_most.value))) } : units::Seconds { static_cast<float>(random::between(state.dice, static_cast<double>(kRates.gull_stands_least.value), static_cast<double>(kRates.gull_stands_most.value))) };
+                        bird.busy = duck ? units::Seconds { static_cast<f32>(random::between(state.dice, static_cast<f64>(kRates.stay_least.value), static_cast<f64>(kRates.stay_most.value))) } : units::Seconds { static_cast<f32>(random::between(state.dice, static_cast<f64>(kRates.gull_stands_least.value), static_cast<f64>(kRates.gull_stands_most.value))) };
                     }
                     break;
                 }
@@ -362,8 +363,8 @@ namespace rct3::simulation
                     if (glm::distance(flat(pose.position), flat(bird.goal)) < 0.3f || !over_water(ground, flat(bird.goal)))
                     {
                         const glm::vec2 about = flat(lead != nullptr ? lead_pose->position : pose.position);
-                        const float reach = lead != nullptr ? kRates.huddle.value : kRates.wander.value;
-                        for (std::int32_t i = 0; i < kRates.tries; ++i)
+                        const f32 reach = lead != nullptr ? kRates.huddle.value : kRates.wander.value;
+                        for (i32 i = 0; i < kRates.tries; ++i)
                         {
                             const glm::vec2 try_at = about + in_disc(state.dice, reach);
                             if (over_water(ground, try_at) && over_water(ground, (try_at + flat(pose.position)) * 0.5f))
@@ -388,7 +389,7 @@ namespace rct3::simulation
                 case BirdJob::TakingOff:
                 {
                     bird.busy += dt;
-                    const float t = std::min(1.0f, bird.busy.value / kRates.taking_off.value);
+                    const f32 t = std::min(1.0f, bird.busy.value / kRates.taking_off.value);
                     move_towards(pose, flat(bird.goal), kRates.flight.value * 0.5f, dt.value);
                     pose.position.y = glm::mix(bird.from.y, flying_height(ground, flat(pose.position)), eased(t));
                     if (t >= 1.0f)

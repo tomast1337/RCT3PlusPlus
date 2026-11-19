@@ -2,6 +2,7 @@
 #include "scene/script_host.hpp"
 
 #include "assets/embedded_files.hpp"
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
@@ -71,11 +72,11 @@ namespace rct3::scene
         // The helpers scripts get that only wait on the natives below, in assets/scripting/helpers.js.
         constexpr std::string_view kHelpersPath = "scripting/helpers.js";
 
-        float number(const Json& arguments, std::size_t i)
+        f32 number(const Json& arguments, usize i)
         {
             if (i >= arguments.size() || !arguments[i].is_number())
                 throw std::invalid_argument(std::format("argument {} must be a number", i + 1));
-            return arguments[i].get<float>();
+            return arguments[i].get<f32>();
         }
 
         /// A script's map point, { col, row, up }: a place in tiles (fractions between them) and how far above
@@ -84,9 +85,9 @@ namespace rct3::scene
         {
             if (!p.is_object() || !p.contains("col") || !p.contains("row") || !p["col"].is_number() || !p["row"].is_number())
                 throw std::invalid_argument("a map point is { col, row, up }");
-            const float x = g.origin_x + p["col"].get<float>() * g.tile_size_x;
-            const float z = g.origin_z + p["row"].get<float>() * g.tile_size_z;
-            const float up = p.contains("up") && p["up"].is_number() ? p["up"].get<float>() : 0;
+            const f32 x = g.origin_x + p["col"].get<f32>() * g.tile_size_x;
+            const f32 z = g.origin_z + p["row"].get<f32>() * g.tile_size_z;
+            const f32 up = p.contains("up") && p["up"].is_number() ? p["up"].get<f32>() : 0;
             return { x, g.height_at(x, z).value_or(0) + up, z };
         }
 
@@ -203,7 +204,7 @@ namespace rct3::scene
             if (a.empty() || !a[0].is_string())
                 throw std::invalid_argument("keys.type takes text");
             const std::u16string text = strings::to_utf16(a[0].get<std::string>());
-            for (std::size_t i = 0; i < text.size(); ++i)
+            for (usize i = 0; i < text.size(); ++i)
             {
                 char32_t c = text[i];
                 if (strings::is_high_surrogate(c) && i + 1 < text.size())
@@ -229,10 +230,10 @@ namespace rct3::scene
             const render::Extent view = device_->extent();
             if (!w || !w->visible || view.width == 0 || view.height == 0)
                 return nullptr;
-            const float scale = root->second;
+            const f32 scale = root->second;
             const ui::Rect& r = w->rect();
-            const float across = scale / static_cast<float>(view.width);
-            const float down = scale / static_cast<float>(view.height);
+            const f32 across = scale / static_cast<f32>(view.width);
+            const f32 down = scale / static_cast<f32>(view.height);
             Json found { { "x", (r.x0 + r.x1) / 2 * across }, { "y", (r.y0 + r.y1) / 2 * down }, { "left", r.x0 * across }, { "top", r.y0 * down }, { "right", r.x1 * across }, { "bottom", r.y1 * down } };
             if (const auto* b = dynamic_cast<const ui::widgets::Button*>(core::as_pointer(w)); b != nullptr && b->toggle)
                 found["on"] = b->on;
@@ -265,9 +266,9 @@ namespace rct3::scene
             return names;
         });
         engine_.define("career.start", [this](const Json& a) {
-            if (a.empty() || !a[0].is_number_integer() || a[0].get<std::int32_t>() < 0 || (a.size() > 1 && !a[1].is_number_integer()))
+            if (a.empty() || !a[0].is_number_integer() || a[0].get<i32>() < 0 || (a.size() > 1 && !a[1].is_number_integer()))
                 throw std::invalid_argument("career.start takes a scenario's place in the list and a game");
-            career_ = CareerRequest { .game = a.size() > 1 ? a[1].get<std::int32_t>() : 0, .scenario = a[0].get<std::size_t>() };
+            career_ = CareerRequest { .game = a.size() > 1 ? a[1].get<i32>() : 0, .scenario = a[0].get<usize>() };
             return Json(nullptr);
         });
         engine_.define("career.map", [this](const Json&) { return Json(park_ == nullptr && front_ != nullptr && front_->live->front->career_board().has_value()); });
@@ -304,7 +305,7 @@ namespace rct3::scene
             return Json(true);
         });
         engine_.define("quit", [this](const Json& a) {
-            quit_ = a.empty() || !a[0].is_number() ? 0 : a[0].get<std::int32_t>();
+            quit_ = a.empty() || !a[0].is_number() ? 0 : a[0].get<i32>();
             return Json(nullptr);
         });
         engine_.define("park.open", [this](const Json& a) {
@@ -342,12 +343,12 @@ namespace rct3::scene
             const park::ParkScene& scene = park_of(park_);
             const simulation::Research& r = scene.research;
             // Items are told by their symbols, which a park saved and opened again keeps.
-            const auto symbol = [&](std::uint64_t id) -> Json {
+            const auto symbol = [&](u64 id) -> Json {
                 const auto entry = std::ranges::find(scene.park_model.content.entries, id, &save::model::AssetRequirement::id);
                 return entry != scene.park_model.content.entries.end() ? Json(entry->symbol) : Json(nullptr);
             };
             Json invented = Json::array();
-            for (const std::uint64_t id : r.invented)
+            for (const u64 id : r.invented)
                 invented.push_back(symbol(id));
             Json next = Json::array();
             if (scene.research_items)
@@ -372,12 +373,12 @@ namespace rct3::scene
             return Json(item != scene.research_items->end() && simulation::focus_research(scene.research, item->id, *scene.research_items));
         });
         engine_.define("park.setResearch", [this](const Json& a) -> Json {
-            if (a.empty() || a.size() > 2 || !a[0].is_number_integer() || a[0].get<std::int64_t>() < 0 || (a.size() == 2 && !a[1].is_array()))
+            if (a.empty() || a.size() > 2 || !a[0].is_number_integer() || a[0].get<i64>() < 0 || (a.size() == 2 && !a[1].is_array()))
                 throw std::invalid_argument("park.setResearch takes a monthly budget in hundredths and optional priorities");
             simulation::Research& r = park_of(park_).research;
-            r.budget = units::Money { a[0].get<std::int64_t>() };
+            r.budget = units::Money { a[0].get<i64>() };
             if (a.size() == 2)
-                r.priorities = a[1].get<std::vector<float>>();
+                r.priorities = a[1].get<std::vector<f32>>();
             return Json(nullptr);
         });
         engine_.define("park.history", [this](const Json&) -> Json {
@@ -400,7 +401,7 @@ namespace rct3::scene
                 throw std::runtime_error("no park with money is open");
             if (a.size() != 1 || !a[0].is_number_integer())
                 throw std::invalid_argument("park.setCash takes hundredths of the currency");
-            park_->park.cash = units::Money { a[0].get<std::int64_t>() };
+            park_->park.cash = units::Money { a[0].get<i64>() };
             return Json(nullptr);
         });
         engine_.define("park.setTime", [this](const Json& a) -> Json {
@@ -409,7 +410,7 @@ namespace rct3::scene
             if (a.size() != 1 || !a[0].is_number())
                 throw std::invalid_argument("park.setTime takes a fraction of a day from midnight");
             // Shown at once, without a blend; the clock runs on from there, into the park's hours if outside.
-            const float time = a[0].get<float>();
+            const f32 time = a[0].get<f32>();
             park_->day_clock.time = park_->day_clock.shown = time;
             park_->day_clock.fade = 0;
             return Json(nullptr);
@@ -459,14 +460,14 @@ namespace rct3::scene
             const save::model::TerrainGrid& g = park_->grid;
             std::vector<simulation::NodeId> spots;
             const auto& nodes = park_->sim.paths.nodes();
-            for (std::uint32_t n = 0; n < nodes.size(); ++n)
+            for (u32 n = 0; n < nodes.size(); ++n)
                 if (const auto& t = nodes[n].tile; !nodes[n].queue && !nodes[n].removed && g.contains(t.col, t.row) && rct3::park::owned_outright(g.at(t.col, t.row)))
                     spots.push_back(simulation::NodeId { n });
             if (spots.empty())
                 return Json::array();
-            auto dice = random::seeded({ static_cast<std::uint64_t>(a.size() > 1 ? number(a, 1) : 1) });
+            auto dice = random::seeded({ static_cast<u64>(a.size() > 1 ? number(a, 1) : 1) });
             Json dropped = Json::array();
-            for (auto n = static_cast<std::int32_t>(number(a, 0)); n > 0; --n)
+            for (auto n = static_cast<i32>(number(a, 0)); n > 0; --n)
             {
                 const auto spot = spots[random::below(dice, spots.size())];
                 const auto party = simulation::admit_party(park_->sim, dice, spot);
@@ -497,16 +498,16 @@ namespace rct3::scene
             auto* rules = park_->sim.registry.ctx().find<simulation::PassportRules>();
             const auto gifts = simulation::passport_gifts(park_->carried);
             const std::string gift = a.size() > 1 && a[1].is_string() ? a[1].get<std::string>() : std::string { };
-            const auto stamps = static_cast<std::int64_t>(number(a, 0));
+            const auto stamps = static_cast<i64>(number(a, 0));
             if (rules == nullptr || stamps < 1 || std::cmp_greater(stamps, simulation::kTuning.surroundings.most_stamps) || (!gift.empty() && std::ranges::none_of(gifts, [&](const rct3::park::CarriedKind* g) { return g->symbol == gift; })))
                 return Json(false);
-            rules->stamps_for_gift = static_cast<std::uint32_t>(stamps);
+            rules->stamps_for_gift = static_cast<u32>(stamps);
             if (!gift.empty())
                 simulation::set_passport_gift(*rules, gift, park_->carried);
             return Json(true);
         });
         engine_.define("park.showObject", [this](const Json& a) -> Json {
-            park_of(park_).prop_requested = static_cast<std::uint64_t>(number(a, 0));
+            park_of(park_).prop_requested = static_cast<u64>(number(a, 0));
             return Json(nullptr);
         });
         engine_.define("park.litter", [this](const Json&) -> Json {
@@ -535,7 +536,7 @@ namespace rct3::scene
         engine_.define("park.breakPathItems", [this](const Json&) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
-            std::size_t broke = 0;
+            usize broke = 0;
             for (auto [e, item] : park_->sim.registry.view<simulation::PathItem>().each())
                 if (!item.broken && simulation::breakable(item.kind))
                 {
@@ -547,10 +548,10 @@ namespace rct3::scene
         engine_.define("park.tireGuests", [this](const Json& a) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
-            std::size_t tired = 0;
+            usize tired = 0;
             for (auto [e, mood] : park_->sim.registry.view<simulation::Mood>(entt::exclude<simulation::Staff>).each())
             {
-                mood.energy.value = std::clamp(static_cast<float>(number(a, 0)), 0.0f, 1.0f);
+                mood.energy.value = std::clamp(static_cast<f32>(number(a, 0)), 0.0f, 1.0f);
                 ++tired;
             }
             return Json(tired);
@@ -558,10 +559,10 @@ namespace rct3::scene
         engine_.define("park.setGuestCash", [this](const Json& a) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
-            std::size_t set = 0;
+            usize set = 0;
             for (auto [e, wallet] : park_->sim.registry.view<simulation::Wallet>(entt::exclude<simulation::Staff>).each())
             {
-                wallet.cash.value = std::max<std::int64_t>(static_cast<std::int64_t>(number(a, 0)), 0);
+                wallet.cash.value = std::max<i64>(static_cast<i64>(number(a, 0)), 0);
                 ++set;
             }
             return Json(set);
@@ -570,11 +571,11 @@ namespace rct3::scene
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
             const simulation::PathNetwork& paths = park_->sim.paths;
-            const glm::vec3 middle { paths.origin.x + (static_cast<float>(number(a, 0)) + 0.5f) * paths.tile_size, 0, paths.origin.y + (static_cast<float>(number(a, 1)) + 0.5f) * paths.tile_size };
+            const glm::vec3 middle { paths.origin.x + (static_cast<f32>(number(a, 0)) + 0.5f) * paths.tile_size, 0, paths.origin.y + (static_cast<f32>(number(a, 1)) + 0.5f) * paths.tile_size };
             const auto at = paths.nearest(middle);
             if (!at)
                 return Json(false);
-            for (std::int32_t i = 0; i < std::clamp(static_cast<std::int32_t>(number(a, 2)), 1, 50); ++i)
+            for (i32 i = 0; i < std::clamp(static_cast<i32>(number(a, 2)), 1, 50); ++i)
                 park_->sim.registry.emplace<simulation::Litter>(park_->sim.registry.create(), simulation::Litter { .node = *at });
             return Json(true);
         });
@@ -587,7 +588,7 @@ namespace rct3::scene
             if (named == park::kDebugToolNames.end() || front_ == nullptr)
                 throw std::invalid_argument("debug.use takes the name of a Debug tab tool, such as \"add_money\", and an amount, with a park open");
             const auto tool = static_cast<park::DebugTool>(named - park::kDebugToolNames.begin());
-            return Json(park::use_debug_tool(*device_, park_of(park_), front_->assets, tool, a.size() > 1 ? static_cast<std::int64_t>(number(a, 1)) : 0));
+            return Json(park::use_debug_tool(*device_, park_of(park_), front_->assets, tool, a.size() > 1 ? static_cast<i64>(number(a, 1)) : 0));
         });
         engine_.define("park.dryFlowerBeds", [this](const Json&) -> Json {
             if (park_ == nullptr)
@@ -601,7 +602,7 @@ namespace rct3::scene
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");
             const simulation::PathNetwork& paths = park_->sim.paths;
-            const glm::vec3 middle { paths.origin.x + (static_cast<float>(number(a, 0)) + 0.5f) * paths.tile_size, 0, paths.origin.y + (static_cast<float>(number(a, 1)) + 0.5f) * paths.tile_size };
+            const glm::vec3 middle { paths.origin.x + (static_cast<f32>(number(a, 0)) + 0.5f) * paths.tile_size, 0, paths.origin.y + (static_cast<f32>(number(a, 1)) + 0.5f) * paths.tile_size };
             const auto at = paths.nearest(middle);
             if (!at)
                 return Json(false);
@@ -616,10 +617,10 @@ namespace rct3::scene
             if (a.empty() || !a[0].is_string())
                 throw std::invalid_argument("park.postMessage takes a text key, and may take a ride's place in rides.list() and a tab number");
             simulation::park::ParkMessage message { .text_key = a[0].get<std::string>() };
-            if (a.size() > 1 && a[1].is_number_unsigned() && a[1].get<std::size_t>() < park.rides.rides.size())
-                message.subject = park.rides.rides[a[1].get<std::size_t>()].base.id;
+            if (a.size() > 1 && a[1].is_number_unsigned() && a[1].get<usize>() < park.rides.rides.size())
+                message.subject = park.rides.rides[a[1].get<usize>()].base.id;
             if (a.size() > 2 && a[2].is_number_integer())
-                message.panel = a[2].get<std::int32_t>();
+                message.panel = a[2].get<i32>();
             simulation::park::post(park.park.messages, std::move(message));
             return Json(nullptr);
         });
@@ -637,7 +638,7 @@ namespace rct3::scene
         engine_.define("park.displays", [this](const Json&) {
             const park::ParkFireworks& fireworks = park_of(park_).fireworks;
             Json out = Json::array();
-            for (std::size_t i = 0; i < fireworks.displays.size(); ++i)
+            for (usize i = 0; i < fireworks.displays.size(); ++i)
             {
                 const particles::Display& d = fireworks.displays[i];
                 const bool playing = fireworks.playing && fireworks.playing->display == i;
@@ -660,10 +661,10 @@ namespace rct3::scene
                 const auto ride = std::ranges::find(scene.rides.rides, show.ride, [](const save::model::Ride& r) { return r.base.id; });
                 if (ride == scene.rides.rides.end())
                     continue;
-                const auto index = static_cast<std::size_t>(ride - scene.rides.rides.begin());
+                const auto index = static_cast<usize>(ride - scene.rides.rides.begin());
                 Json tricks = Json::array();
-                float seconds = 0;
-                for (const std::uint32_t t : show.order)
+                f32 seconds = 0;
+                for (const u32 t : show.order)
                     if (t < show.tricks.size())
                     {
                         tricks.push_back(show.tricks[t].name);
@@ -671,13 +672,13 @@ namespace rct3::scene
                     }
                 const entt::entity e = index < scene.ride_entities.size() ? scene.ride_entities[index] : entt::null;
                 const auto* cycle = e != entt::null ? scene.sim.registry.try_get<simulation::CycleRide>(e) : nullptr;
-                const std::optional<float> into = cycle != nullptr ? simulation::seconds_into_cycle(*cycle) : std::nullopt;
+                const std::optional<f32> into = cycle != nullptr ? simulation::seconds_into_cycle(*cycle) : std::nullopt;
                 const auto moment = into ? rct3::park::ride::show_moment(show, *into) : std::nullopt;
                 out.push_back({ { "ride", index }, { "name", ride->base.name }, { "tricks", std::move(tricks) }, { "seconds", seconds }, { "running", into.has_value() }, { "into", into.value_or(0.0f) }, { "trick", moment ? Json(show.tricks[moment->trick].name) : Json(nullptr) } });
             }
             return out;
         });
-        engine_.define("park.startDisplay", [this](const Json& a) { return Json(park::start_park_display(park_of(park_), a.empty() ? 0 : a[0].get<std::size_t>())); });
+        engine_.define("park.startDisplay", [this](const Json& a) { return Json(park::start_park_display(park_of(park_), a.empty() ? 0 : a[0].get<usize>())); });
         engine_.define("park.stopDisplay", [this](const Json&) {
             park::stop_park_display(park_of(park_));
             return Json();
@@ -686,7 +687,7 @@ namespace rct3::scene
         engine_.define("park.setDate", [this](const Json& a) -> Json {
             if (a.size() != 1 || !a[0].is_number())
                 throw std::invalid_argument("park.setDate takes calendar units");
-            park_of(park_).park.time = a[0].get<float>();
+            park_of(park_).park.time = a[0].get<f32>();
             return Json(nullptr);
         });
         engine_.define("park.levelsWon", [this](const Json&) { return Json(park_of(park_).levels_won); });
@@ -694,20 +695,20 @@ namespace rct3::scene
             if (a.size() != 1 || !a[0].is_number_integer())
                 throw std::invalid_argument("park.givePrize takes a prize number");
             park::ParkScene& scene = park_of(park_);
-            simulation::give_prize(scene.park, scene.park_model.finance, scene.ledger_month, scene.grid, scene.research, a[0].get<std::int32_t>());
-            scene.prizes.emplace_back(simulation::prize_message(a[0].get<std::int32_t>()));
+            simulation::give_prize(scene.park, scene.park_model.finance, scene.ledger_month, scene.grid, scene.research, a[0].get<i32>());
+            scene.prizes.emplace_back(simulation::prize_message(a[0].get<i32>()));
             scene.map.stale = true;
             return Json(nullptr);
         });
         engine_.define("park.setTemperature", [this](const Json& a) -> Json {
             if (a.size() != 1 || !a[0].is_number())
                 throw std::invalid_argument("park.setTemperature takes degrees");
-            park_of(park_).park.temperature = units::Degrees { a[0].get<float>() };
+            park_of(park_).park.temperature = units::Degrees { a[0].get<f32>() };
             return Json(nullptr);
         });
         engine_.define("park.weather", [this](const Json&) { return Json(save::model::to_string(park_of(park_).park.weather)); });
         engine_.define("park.setWeather", [this](const Json& a) -> Json {
-            for (std::int32_t raw = 0; a.size() == 1 && a[0].is_string() && raw <= 6; ++raw)
+            for (i32 raw = 0; a.size() == 1 && a[0].is_string() && raw <= 6; ++raw)
                 if (const save::model::WeatherType w = save::model::weather_type_from(raw); a[0].get<std::string>() == save::model::to_string(w))
                 {
                     park_of(park_).park.weather = w;
@@ -759,8 +760,8 @@ namespace rct3::scene
         });
         engine_.define("map.tile", [this](const Json& a) -> Json {
             const save::model::TerrainGrid& g = grid_of(park_);
-            const auto col = static_cast<std::int32_t>(number(a, 0));
-            const auto row = static_cast<std::int32_t>(number(a, 1));
+            const auto col = static_cast<i32>(number(a, 0));
+            const auto row = static_cast<i32>(number(a, 1));
             if (!g.contains(col, row))
                 return nullptr;
             const save::model::TerrainCell& c = g.at(col, row);
@@ -773,21 +774,21 @@ namespace rct3::scene
         engine_.define("map.screen", [this](const Json& a) -> Json {
             const save::model::TerrainGrid& g = grid_of(park_);
             // A whole tile means its middle; a fraction, that point of it.
-            const auto at = [&](std::size_t i) {
-                const double v = number(a, i);
+            const auto at = [&](usize i) {
+                const f64 v = number(a, i);
                 return v == std::floor(v) ? v + 0.5 : v;
             };
-            const double col = at(0);
-            const double row = at(1);
+            const f64 col = at(0);
+            const f64 row = at(1);
             const render::Extent view = device_->extent();
-            if (!g.contains(static_cast<std::int32_t>(std::floor(col)), static_cast<std::int32_t>(std::floor(row))) || view.width == 0 || view.height == 0)
+            if (!g.contains(static_cast<i32>(std::floor(col)), static_cast<i32>(std::floor(row))) || view.width == 0 || view.height == 0)
                 return nullptr;
-            const float x = g.world_x(0) + static_cast<float>(col) * g.tile_size_x;
-            const float z = g.world_z(0) + static_cast<float>(row) * g.tile_size_z;
+            const f32 x = g.world_x(0) + static_cast<f32>(col) * g.tile_size_x;
+            const f32 z = g.world_z(0) + static_cast<f32>(row) * g.tile_size_z;
             // At the height asked, else on a pool square, its surface: the ground under it is dug out of sight.
-            const auto pool = park_->pools.at(static_cast<std::int32_t>(std::floor(col)), static_cast<std::int32_t>(std::floor(row)));
-            const float height = a.size() > 2 && a[2].is_number() ? a[2].get<float>() : pool ? static_cast<float>(pool->surface) : g.height_at(x, z).value_or(0);
-            const glm::vec4 clip = rct3::park::view_projection(park_->camera, static_cast<float>(view.width) / static_cast<float>(view.height)) * glm::vec4(x, height, z, 1);
+            const auto pool = park_->pools.at(static_cast<i32>(std::floor(col)), static_cast<i32>(std::floor(row)));
+            const f32 height = a.size() > 2 && a[2].is_number() ? a[2].get<f32>() : pool ? static_cast<f32>(pool->surface) : g.height_at(x, z).value_or(0);
+            const glm::vec4 clip = rct3::park::view_projection(park_->camera, static_cast<f32>(view.width) / static_cast<f32>(view.height)) * glm::vec4(x, height, z, 1);
             if (clip.w <= 0)
                 return nullptr;
             const glm::vec2 share { (clip.x / clip.w + 1) / 2, (1 - clip.y / clip.w) / 2 };
@@ -819,13 +820,13 @@ namespace rct3::scene
             const auto info = std::ranges::find(table, a[0].get<std::string>(), &config::game::GameOptionInfo::name);
             if (info == table.end())
                 throw std::invalid_argument(std::format("options.set: no option {}", a[0].get<std::string>()));
-            front_->live->options.set(info->option, a[1].get<float>());
+            front_->live->options.set(info->option, a[1].get<f32>());
             return Json(nullptr);
         });
         engine_.define("camera.lens", [this](const Json&) -> Json {
             const auto& drops = park_of(park_).lens.water.drops;
             const auto sheets = std::ranges::count(drops, true, &rct3::park::LensDrop::sheet);
-            return { { "drops", static_cast<std::int64_t>(drops.size()) - sheets }, { "sheets", sheets } };
+            return { { "drops", static_cast<i64>(drops.size()) - sheets }, { "sheets", sheets } };
         });
         engine_.define("camera.riding", [this](const Json&) -> Json {
             const park::ParkScene& park = park_of(park_);
@@ -904,7 +905,7 @@ namespace rct3::scene
         });
         engine_.define("map.supports", [this](const Json&) {
             grid_of(park_);
-            std::map<save::model::Tile, std::int32_t> pieces;
+            std::map<save::model::Tile, i32> pieces;
             for (const auto& [_, tile] : park_->columns)
                 ++pieces[tile];
             Json tiles = Json::array();
@@ -1014,7 +1015,7 @@ namespace rct3::scene
         engine_.define("stalls.list", [this](const Json&) {
             const park::ParkScene& park = park_of(park_);
             Json stalls = Json::array();
-            for (std::size_t i = 0; i < park.rides.stalls.size(); ++i)
+            for (usize i = 0; i < park.rides.stalls.size(); ++i)
             {
                 const save::model::Stall& stall = park.rides.stalls[i];
                 Json items = Json::array();
@@ -1126,53 +1127,53 @@ namespace rct3::scene
             park::ParkScene& park = park_of(park_);
             constexpr std::array<std::pair<std::string_view, save::model::AttractionState>, 3> kStates { { { "closed", save::model::AttractionState::Closed }, { "testing", save::model::AttractionState::Testing }, { "open", save::model::AttractionState::Open } } };
             const auto state = a.size() == 2 && a[1].is_string() ? std::ranges::find(kStates, a[1].get<std::string>(), &std::pair<std::string_view, save::model::AttractionState>::first) : kStates.end();
-            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.rides.size() || state == kStates.end())
+            if (!a.at(0).is_number_unsigned() || a[0].get<usize>() >= park.rides.rides.size() || state == kStates.end())
                 throw std::invalid_argument("rides.setState takes a ride's place in rides.list() and \"closed\", \"testing\" or \"open\"");
             // The reason it stays as it was, as a string key; null once changed.
-            const auto refused = park::change_ride_state(park, save::model::RideIndex { a[0].get<std::size_t>() }, state->second);
+            const auto refused = park::change_ride_state(park, save::model::RideIndex { a[0].get<usize>() }, state->second);
             return refused ? Json(*refused) : Json(nullptr);
         });
         engine_.define("rides.setFixedSpeed", [this](const Json& a) {
             park::ParkScene& park = park_of(park_);
-            const std::size_t i = a.size() == 2 && a[0].is_number_unsigned() && a[1].is_number() ? a[0].get<std::size_t>() : park.ride_entities.size();
+            const usize i = a.size() == 2 && a[0].is_number_unsigned() && a[1].is_number() ? a[0].get<usize>() : park.ride_entities.size();
             auto* fleet = i < park.ride_entities.size() && park.ride_entities[i] != entt::null ? park.sim.registry.try_get<simulation::Trains>(park.ride_entities[i]) : nullptr;
             if (fleet == nullptr)
                 throw std::invalid_argument("rides.setFixedSpeed takes the place in rides.list() of a ride the park runs trains on, and a speed in m/s");
             for (simulation::Coaster& train : fleet->trains)
-                train.fixed_speed = a[1].get<float>() > 0 ? std::optional(a[1].get<float>()) : std::nullopt;
+                train.fixed_speed = a[1].get<f32>() > 0 ? std::optional(a[1].get<f32>()) : std::nullopt;
             return Json(nullptr);
         });
         engine_.define("stalls.setState", [this](const Json& a) {
             park::ParkScene& park = park_of(park_);
             const bool open = a.size() == 2 && a[1] == "open";
-            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size() || !(open || (a.size() == 2 && a[1] == "closed")))
+            if (!a.at(0).is_number_unsigned() || a[0].get<usize>() >= park.rides.stalls.size() || !(open || (a.size() == 2 && a[1] == "closed")))
                 throw std::invalid_argument("stalls.setState takes a stall's place in stalls.list() and \"closed\" or \"open\"");
-            const auto refused = park::change_stall_state(park, save::model::StallIndex { a[0].get<std::size_t>() }, open ? save::model::AttractionState::Open : save::model::AttractionState::Closed);
+            const auto refused = park::change_stall_state(park, save::model::StallIndex { a[0].get<usize>() }, open ? save::model::AttractionState::Open : save::model::AttractionState::Closed);
             return refused ? Json(*refused) : Json(nullptr);
         });
         engine_.define("stalls.setPrice", [this](const Json& a) {
             park::ParkScene& park = park_of(park_);
-            if (a.size() != 3 || !a[0].is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size() || !a[1].is_number_unsigned() || a[1].get<std::size_t>() >= park.rides.stalls[a[0].get<std::size_t>()].items.size() || !a[2].is_number_integer())
+            if (a.size() != 3 || !a[0].is_number_unsigned() || a[0].get<usize>() >= park.rides.stalls.size() || !a[1].is_number_unsigned() || a[1].get<usize>() >= park.rides.stalls[a[0].get<usize>()].items.size() || !a[2].is_number_integer())
                 throw std::invalid_argument("stalls.setPrice takes a stall's place in stalls.list(), an item's place in its menu and hundredths");
-            save::model::Stall& stall = park.rides.stalls[a[0].get<std::size_t>()];
-            stall.items[a[1].get<std::size_t>()].price = { a[2].get<std::int64_t>() };
+            save::model::Stall& stall = park.rides.stalls[a[0].get<usize>()];
+            stall.items[a[1].get<usize>()].price = { a[2].get<i64>() };
             simulation::restock(park.sim, stall, park.carried);
             return Json(nullptr);
         });
         engine_.define("rides.show", [this](const Json& a) {
             park::ParkScene& park = park_of(park_);
-            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.rides.size())
+            if (!a.at(0).is_number_unsigned() || a[0].get<usize>() >= park.rides.rides.size())
                 throw std::invalid_argument("rides.show takes a ride's place in rides.list()");
-            park.info_requested = rct3::park::AttractionRef::of(save::model::RideIndex { a[0].get<std::size_t>() });
+            park.info_requested = rct3::park::AttractionRef::of(save::model::RideIndex { a[0].get<usize>() });
             return Json(nullptr);
         });
         engine_.define("stalls.breakDown", [this](const Json& a) -> Json {
             park::ParkScene& park = park_of(park_);
-            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size())
+            if (!a.at(0).is_number_unsigned() || a[0].get<usize>() >= park.rides.stalls.size())
                 throw std::invalid_argument("stalls.breakDown takes a stall's place in stalls.list()");
             auto& r = park.sim.registry;
             for (auto [e, attraction, upkeep] : r.view<simulation::Attraction, simulation::Upkeep>().each())
-                if (attraction.saved == park.rides.stalls[a[0].get<std::size_t>()].base.id && upkeep.break_in && !upkeep.broken)
+                if (attraction.saved == park.rides.stalls[a[0].get<usize>()].base.id && upkeep.break_in && !upkeep.broken)
                 {
                     upkeep.broken = true;
                     attraction.open = false;
@@ -1182,32 +1183,32 @@ namespace rct3::scene
         });
         engine_.define("stalls.show", [this](const Json& a) {
             park::ParkScene& park = park_of(park_);
-            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.rides.stalls.size())
+            if (!a.at(0).is_number_unsigned() || a[0].get<usize>() >= park.rides.stalls.size())
                 throw std::invalid_argument("stalls.show takes a stall's place in stalls.list()");
-            park.info_requested = rct3::park::AttractionRef::of(save::model::StallIndex { a[0].get<std::size_t>() });
+            park.info_requested = rct3::park::AttractionRef::of(save::model::StallIndex { a[0].get<usize>() });
             return Json(nullptr);
         });
         engine_.define("people.rename", [this](const Json& a) {
             park::ParkScene& park = park_of(park_);
-            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.shown_people.size() || !a.at(1).is_string())
+            if (!a.at(0).is_number_unsigned() || a[0].get<usize>() >= park.shown_people.size() || !a.at(1).is_string())
                 throw std::invalid_argument("people.rename takes a person's place in people.list() and a name");
-            park.rename_requested = std::pair { a[0].get<std::size_t>(), strings::to_utf16(a[1].get<std::string>()) };
+            park.rename_requested = std::pair { a[0].get<usize>(), strings::to_utf16(a[1].get<std::string>()) };
             return Json(nullptr);
         });
         engine_.define("people.show", [this](const Json& a) {
             park::ParkScene& park = park_of(park_);
-            if (!a.at(0).is_number_unsigned() || a[0].get<std::size_t>() >= park.shown_people.size())
+            if (!a.at(0).is_number_unsigned() || a[0].get<usize>() >= park.shown_people.size())
                 throw std::invalid_argument("people.show takes a person's place in people.list()");
-            park.person_requested = a[0].get<std::size_t>();
+            park.person_requested = a[0].get<usize>();
             return Json(nullptr);
         });
         engine_.define("editor.shown", [this](const Json&) { return Json(park_ != nullptr && park_->editor.shown); });
         engine_.define("editor.pick", [this](const Json& a) {
             park::ParkScene& park = park_of(park_);
-            const bool walked = a.at(0).is_number_unsigned() && a[0].get<std::size_t>() < park.shown_people.size() && !park.shown_people[a[0].get<std::size_t>()].staff && park.sim.registry.valid(park.shown_people[a[0].get<std::size_t>()].guest);
+            const bool walked = a.at(0).is_number_unsigned() && a[0].get<usize>() < park.shown_people.size() && !park.shown_people[a[0].get<usize>()].staff && park.sim.registry.valid(park.shown_people[a[0].get<usize>()].guest);
             if (!walked)
                 throw std::invalid_argument("editor.pick takes the place in people.list() of a guest the simulation walks");
-            park::pick_guest(park, park.shown_people[a[0].get<std::size_t>()].guest);
+            park::pick_guest(park, park.shown_people[a[0].get<usize>()].guest);
             return Json(nullptr);
         });
         engine_.define("editor.guest", [this](const Json&) -> Json {
@@ -1218,7 +1219,7 @@ namespace rct3::scene
                 return nullptr;
             Json levels = Json::object();
             Json held = Json::array();
-            for (std::size_t k = 0; k < simulation::kGuestLevels; ++k)
+            for (usize k = 0; k < simulation::kGuestLevels; ++k)
             {
                 const auto level = static_cast<simulation::GuestLevel>(k);
                 if (const auto at = simulation::level_of(r, guest, level))
@@ -1239,7 +1240,7 @@ namespace rct3::scene
             const auto [park, level] = picked_level(a, "editor.set");
             if (!a.at(1).is_number())
                 throw std::invalid_argument("editor.set takes a level's name and a value from 0 to 1");
-            return Json(simulation::set_level(park.sim.registry, park.editor.guest, level, { a[1].get<float>() }));
+            return Json(simulation::set_level(park.sim.registry, park.editor.guest, level, { a[1].get<f32>() }));
         });
         engine_.define("editor.hold", [picked_level](const Json& a) {
             const auto [park, level] = picked_level(a, "editor.hold");
@@ -1249,7 +1250,7 @@ namespace rct3::scene
         engine_.define("people.list", [this](const Json&) {
             const park::ParkScene& park = park_of(park_);
             Json out = Json::array();
-            for (std::size_t i = 0; i < park.shown_people.size(); ++i)
+            for (usize i = 0; i < park.shown_people.size(); ++i)
             {
                 const park::ShownPerson& p = park.shown_people[i];
                 const save::model::Person* saved = p.staff ? (p.saved < park.people.staff.size() ? &park.people.staff[p.saved].person : nullptr) : (p.saved < park.people.guests.size() ? &park.people.guests[p.saved].person : nullptr);
@@ -1390,7 +1391,7 @@ namespace rct3::scene
                         person["diving"] = kDiveSteps[std::to_underlying(swimmer->dive)];
                         const auto* door = errand != nullptr && r.valid(errand->target) ? r.try_get<simulation::PoolDoor>(errand->target) : nullptr;
                         const auto* pool = door != nullptr && r.valid(door->pool) ? r.try_get<simulation::SwimPool>(door->pool) : nullptr;
-                        person["high_board"] = pool != nullptr && swimmer->board && static_cast<std::size_t>(*swimmer->board) < pool->boards.size() && pool->boards[static_cast<std::size_t>(*swimmer->board)].high;
+                        person["high_board"] = pool != nullptr && swimmer->board && static_cast<usize>(*swimmer->board) < pool->boards.size() && pool->boards[static_cast<usize>(*swimmer->board)].high;
                     }
                     // Stopped at a path item: on a bench, at a view, firing a water cannon.
                     if (const auto* linger = r.try_get<simulation::Linger>(p.guest))
@@ -1442,7 +1443,7 @@ namespace rct3::scene
             constexpr std::array<std::string_view, 4> kSteps { "ride", "entrance", "exit", "scenery" };
             constexpr std::array<std::string_view, 9> kProblems { "none", "not owned", "path", "blocked", "off water", "under water", "off path", "off enclosure", "into ground" };
             constexpr std::array<std::string_view, 3> kFlattens { "off", "sharp", "smooth" };
-            Json placing { { "step", kSteps.at(static_cast<std::size_t>(p.step)) }, { "problem", kProblems.at(static_cast<std::size_t>(p.problem)) }, { "affordable", p.affordable }, { "flatten", kFlattens.at(static_cast<std::size_t>(p.flatten)) }, { "levelling", p.levelling_cost.value }, { "ghost", !p.ghost_mesh.vertices.empty() }, { "arrow", !stall_arrow(park_of(park_)).vertices.empty() } };
+            Json placing { { "step", kSteps.at(static_cast<usize>(p.step)) }, { "problem", kProblems.at(static_cast<usize>(p.problem)) }, { "affordable", p.affordable }, { "flatten", kFlattens.at(static_cast<usize>(p.flatten)) }, { "levelling", p.levelling_cost.value }, { "ghost", !p.ghost_mesh.vertices.empty() }, { "arrow", !stall_arrow(park_of(park_)).vertices.empty() } };
             if (p.site)
                 placing["site"] = { { "col", p.site->col }, { "row", p.site->row }, { "turns", p.site->turn.value }, { "height", p.site->height } };
             return placing;
@@ -1462,8 +1463,8 @@ namespace rct3::scene
             const auto& m = scene.enclosing.marked;
             if (!scene.enclosing.corner || !m)
                 return nullptr;
-            std::int64_t tiles = 0;
-            for (std::size_t i = 0; i < m->enclosures.tiles.size(); ++i)
+            i64 tiles = 0;
+            for (usize i = 0; i < m->enclosures.tiles.size(); ++i)
                 tiles += m->enclosures.tiles[i].has_value() != (i < scene.enclosures.tiles.size() && scene.enclosures.tiles[i].has_value()) ? 1 : 0;
             return Json { { "cost", m->cost.value }, { "tiles", tiles } };
         });
@@ -1472,19 +1473,19 @@ namespace rct3::scene
             if (t.tool != StructureTools::Tool::Place || !t.structure)
                 return nullptr;
             constexpr std::array<std::string_view, 4> kProblems { "none", "not owned", "blocked", "path" };
-            Json placing { { "name", t.structure->name }, { "items", t.ghost_items.size() }, { "problem", kProblems.at(static_cast<std::size_t>(t.problem)) }, { "affordable", t.affordable }, { "cost", t.cost.value }, { "turns", t.turn.value }, { "height", t.height }, { "ghost", !t.ghost_mesh.vertices.empty() } };
+            Json placing { { "name", t.structure->name }, { "items", t.ghost_items.size() }, { "problem", kProblems.at(static_cast<usize>(t.problem)) }, { "affordable", t.affordable }, { "cost", t.cost.value }, { "turns", t.turn.value }, { "height", t.height }, { "ghost", !t.ghost_mesh.vertices.empty() } };
             if (t.pointed_tile)
                 placing["at"] = { { "col", t.pointed_tile->col }, { "row", t.pointed_tile->row } };
             return placing;
         });
         engine_.define("structures.marked", [this](const Json&) -> Json {
             const StructureTools& t = park_of(park_).structures;
-            return std::ranges::count(t.marks, std::uint8_t { 1 });
+            return std::ranges::count(t.marks, u8 { 1 });
         });
         engine_.define("rides.list", [this](const Json&) {
             const park::ParkScene& park = park_of(park_);
             Json rides = Json::array();
-            for (std::size_t i = 0; i < park.rides.rides.size(); ++i)
+            for (usize i = 0; i < park.rides.rides.size(); ++i)
             {
                 const save::model::Ride& ride = park.rides.rides[i];
                 const save::model::Station* station = ride.stations.empty() ? nullptr : &ride.stations.front();
@@ -1514,7 +1515,7 @@ namespace rct3::scene
                     one["track"] = std::move(symbols);
                     Json track_colours = Json::array();
                     for (const save::model::TrackPiece& p : pieces)
-                        track_colours.push_back(std::vector<std::int32_t>(p.colours.begin(), p.colours.end()));
+                        track_colours.push_back(std::vector<i32>(p.colours.begin(), p.colours.end()));
                     one["trackColours"] = std::move(track_colours);
                     Json platforms = Json::array();
                     Json platform_colours = Json::array();
@@ -1523,7 +1524,7 @@ namespace rct3::scene
                             if (o.owner_ref == p.platform->id && o.id != p.platform->id && !o.hidden)
                             {
                                 platforms.push_back(o.symbol);
-                                platform_colours.push_back(std::vector<std::int32_t>(o.colours.begin(), o.colours.end()));
+                                platform_colours.push_back(std::vector<i32>(o.colours.begin(), o.colours.end()));
                             }
                     one["platforms"] = std::move(platforms);
                     Json decks = Json::array();
@@ -1534,17 +1535,17 @@ namespace rct3::scene
                     one["platformColours"] = std::move(platform_colours);
                     Json arms = Json::array();
                     for (const save::model::TrackPiece& p : pieces)
-                        arms.push_back(p.arm_angles ? Json(std::vector<float>(p.arm_angles->begin(), p.arm_angles->end())) : Json(nullptr));
+                        arms.push_back(p.arm_angles ? Json(std::vector<f32>(p.arm_angles->begin(), p.arm_angles->end())) : Json(nullptr));
                     one["arms"] = std::move(arms);
                     // Where its cars stand now, as map points above the ground.
                     Json cars = Json::array();
-                    for (std::size_t k = 0; k < park.car_spots.size() && k < park.car_places.size(); ++k)
+                    for (usize k = 0; k < park.car_spots.size() && k < park.car_places.size(); ++k)
                     {
                         if (park.car_spots[k].ride != save::model::RideIndex { i })
                             continue;
                         const glm::vec3 at = park.car_places[k][3];
-                        const float col = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
-                        const float row = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
+                        const f32 col = (at.x - park.grid.origin_x) / park.grid.tile_size_x;
+                        const f32 row = (at.z - park.grid.origin_z) / park.grid.tile_size_z;
                         // Facing: radians round the vertical its +Z points, 0 along +Z.
                         Json car = { { "col", col }, { "row", row }, { "up", at.y - park.grid.height_at(at.x, at.z).value_or(0) }, { "facing", std::atan2(park.car_places[k][2].x, park.car_places[k][2].z) } };
                         if (park.car_spots[k].lift)
@@ -1571,7 +1572,7 @@ namespace rct3::scene
                 {
                     one["joined"] = true;
                     // How many of the simulation's attractions are this ride: one, unless it was taken on twice.
-                    std::size_t simulated = 0;
+                    usize simulated = 0;
                     for (const auto [_, a] : registry.view<const simulation::Attraction>().each())
                         simulated += a.saved == ride.base.id ? 1 : 0;
                     one["simulated"] = simulated;
@@ -1580,7 +1581,7 @@ namespace rct3::scene
                         one["running"] = fleet->trains.size();
                         one["moving"] = std::ranges::count_if(fleet->trains, [](const simulation::Coaster& c) { return c.running; });
                         Json at = Json::array();
-                        for (std::size_t t = 0; t < fleet->trains.size(); ++t)
+                        for (usize t = 0; t < fleet->trains.size(); ++t)
                         {
                             const simulation::Coaster& c = fleet->trains[t];
                             const auto standing = simulation::standing_at(c);
@@ -1624,7 +1625,7 @@ namespace rct3::scene
                         if (c->exit)
                             one["exitAt"] = { { "col", park.sim.paths.nodes()[c->exit->value].tile.col }, { "row", park.sim.paths.nodes()[c->exit->value].tile.row } };
                         // A tracked ride's riders are aboard its trains.
-                        std::size_t riders = c->riders.size();
+                        usize riders = c->riders.size();
                         if (const auto* fleet = registry.try_get<simulation::Trains>(e))
                             for (const auto& aboard : fleet->riders)
                                 riders += aboard.size();
@@ -1677,8 +1678,8 @@ namespace rct3::scene
             for (const save::model::Waterfall& f : park_->footpaths.waterfalls)
             {
                 const glm::vec3 land = rct3::park::waterfall_point(f, 1.0f);
-                const float x = (f.lip_left.x + f.lip_right.x) / 2;
-                const float z = (f.lip_left.z + f.lip_right.z) / 2;
+                const f32 x = (f.lip_left.x + f.lip_right.x) / 2;
+                const f32 z = (f.lip_left.z + f.lip_right.z) / 2;
                 falls.push_back({ { "col", (x - g.origin_x) / g.tile_size_x }, { "row", (z - g.origin_z) / g.tile_size_z }, { "landCol", (land.x - g.origin_x) / g.tile_size_x }, { "landRow", (land.z - g.origin_z) / g.tile_size_z }, { "top", f.top.y }, { "bottom", f.bottom.y }, { "width", std::hypot(f.lip_right.x - f.lip_left.x, f.lip_right.z - f.lip_left.z) } });
             }
             return falls;
@@ -1708,7 +1709,7 @@ namespace rct3::scene
         if (!at_)
             return std::nullopt;
         const render::Extent view = device.extent();
-        return Pointer { at_->x * static_cast<float>(view.width), at_->y * static_cast<float>(view.height), down_, right_, middle_, shift_, control_, wheel_ };
+        return Pointer { at_->x * static_cast<f32>(view.width), at_->y * static_cast<f32>(view.height), down_, right_, middle_, shift_, control_, wheel_ };
     }
 
     void ScriptHost::write(const std::string& line, bool error)
@@ -1727,14 +1728,14 @@ namespace rct3::scene
         quit_ = 1;
     }
 
-    std::optional<std::pair<ui::Widget&, float>> ScriptHost::shown_root() const
+    std::optional<std::pair<ui::Widget&, f32>> ScriptHost::shown_root() const
     {
         if (device_ == nullptr)
             return std::nullopt;
         if (park_ != nullptr)
-            return std::pair<ui::Widget&, float> { park_->desktop->root(), park::park_interface_scale(*device_, *park_) };
+            return std::pair<ui::Widget&, f32> { park_->desktop->root(), park::park_interface_scale(*device_, *park_) };
         if (front_ != nullptr)
-            return std::pair<ui::Widget&, float> { front_->live->desktop.root(), front_end_scale(*device_, *front_) };
+            return std::pair<ui::Widget&, f32> { front_->live->desktop.root(), front_end_scale(*device_, *front_) };
         return std::nullopt;
     }
 

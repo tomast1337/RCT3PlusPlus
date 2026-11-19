@@ -2,6 +2,7 @@
 #include "ui/screens/front/screen.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/game_frames.hpp"
 #include "ui/skin/library.hpp"
 #include "ui/text_layout.hpp"
@@ -92,8 +93,8 @@ namespace rct3::ui::screens::front
         constexpr std::string_view kExpansionName = "AOP_Name_";
         constexpr std::string_view kExpansionInstalled = "AOP_InstalledMessage";
 
-        constexpr float kDisabledAlpha = 0.6f;
-        constexpr float kDisabledBoxAlpha = 0.5f; // A disabled button's box and name
+        constexpr f32 kDisabledAlpha = 0.6f;
+        constexpr f32 kDisabledBoxAlpha = 0.5f; // A disabled button's box and name
         constexpr Color kLabelColour = hex("#000000");
         constexpr Color kHelpColour = hex("#000000");
 
@@ -128,15 +129,15 @@ namespace rct3::ui::screens::front
             skin::draw_skin(context.list, skin, frame.stretched({ corner.x, corner.y, corner.x + w, corner.y + h }));
         }
 
-        Color faded(Color c, float alpha)
+        Color faded(Color c, f32 alpha)
         {
-            c.a = static_cast<std::uint8_t>(std::lround(static_cast<float>(c.a) * std::clamp(alpha, 0.0f, 1.0f)));
+            c.a = static_cast<u8>(std::lround(static_cast<f32>(c.a) * std::clamp(alpha, 0.0f, 1.0f)));
             return c;
         }
 
-        std::size_t index(FrontMenu menu)
+        usize index(FrontMenu menu)
         {
-            return static_cast<std::size_t>(menu);
+            return static_cast<usize>(menu);
         }
 
         Placement placed(const Rect& r, const Rect& parent)
@@ -181,9 +182,9 @@ namespace rct3::ui::screens::front
             return;
         }
         const auto [w, h] = picture->size();
-        const float k = icon_scale * (rect().width() > 0 ? r.width() / rect().width() : 1);
-        const float cx = (r.x0 + r.x1) / 2;
-        const float cy = (r.y0 + r.y1) / 2;
+        const f32 k = icon_scale * (rect().width() > 0 ? r.width() / rect().width() : 1);
+        const f32 cx = (r.x0 + r.x1) / 2;
+        const f32 cy = (r.y0 + r.y1) / 2;
         skin::draw_skin(context.list, picture, { cx - w * k / 2, cy - h * k / 2, cx + w * k / 2, cy + h * k / 2 }, tint);
     }
 
@@ -226,8 +227,8 @@ namespace rct3::ui::screens::front
     std::array<bool, kExpansionCount> named_expansions(const StringTable& strings)
     {
         std::array<bool, kExpansionCount> named { };
-        for (std::int32_t n = 0; n < kExpansionCount; ++n)
-            named.at(static_cast<std::size_t>(n)) = !strings.get(std::string(kExpansionName) + std::to_string(n)).empty();
+        for (i32 n = 0; n < kExpansionCount; ++n)
+            named.at(static_cast<usize>(n)) = !strings.get(std::string(kExpansionName) + std::to_string(n)).empty();
         return named;
     }
 
@@ -236,17 +237,17 @@ namespace rct3::ui::screens::front
         , strings_(strings)
         , logo_(front_logo(language))
     {
-        for (std::size_t m = 0; m < kFrontMenuCount; ++m)
+        for (usize m = 0; m < kFrontMenuCount; ++m)
         {
             // Each menu holds its buttons, named by their icons; it covers the screen and lets the pointer through.
             const auto& entries = kMenus[m].entries;
             Widget& menu = add<Widget>(std::string(kMenus[m].title_key));
             menu.placement = fill();
-            for (std::size_t i = 0; i < entries.size(); ++i)
+            for (usize i = 0; i < entries.size(); ++i)
             {
                 const FrontEntry& e = entries[i];
                 auto& b = menu.add<FrontButton>(std::string(e.icon), std::string(kButtonSkin), std::string(e.icon));
-                b.enabled = e.pack == 0 || expansions.at(static_cast<std::size_t>(e.pack - 1));
+                b.enabled = e.pack == 0 || expansions.at(static_cast<usize>(e.pack - 1));
                 // Only the main menu's buttons fly in at first; the others wait out of sight.
                 const bool main = m == index(FrontMenu::Main);
                 b.visible = main;
@@ -256,7 +257,7 @@ namespace rct3::ui::screens::front
         back_ = &add<FrontButton>("back", std::string(kSmallButtonSkin), std::string(kBackIcon));
         quit_ = &add<FrontButton>("quit", std::string(kSmallButtonSkin), std::string(kQuitIcon));
         back_->visible = false;
-        for (std::size_t p = 0; p < expansions.size(); ++p)
+        for (usize p = 0; p < expansions.size(); ++p)
         {
             if (!expansions[p])
                 continue;
@@ -290,18 +291,18 @@ namespace rct3::ui::screens::front
         return r;
     }
 
-    std::optional<FrontButton&> FrontScreen::button(FrontMenu menu, std::size_t index_in_menu) const
+    std::optional<FrontButton&> FrontScreen::button(FrontMenu menu, usize index_in_menu) const
     {
         const auto& list = buttons_.at(index(menu));
         return index_in_menu < list.size() ? core::maybe(list[index_in_menu].button) : std::nullopt;
     }
 
-    std::u16string_view FrontScreen::label(std::size_t i) const
+    std::u16string_view FrontScreen::label(usize i) const
     {
         return i < labels_.size() ? std::u16string_view(labels_[i]) : std::u16string_view { };
     }
 
-    float FrontScreen::label_alpha(std::size_t i) const
+    f32 FrontScreen::label_alpha(usize i) const
     {
         return i < label_alpha_.size() ? label_alpha_[i] : 0;
     }
@@ -324,7 +325,7 @@ namespace rct3::ui::screens::front
         return true;
     }
 
-    fs::Polar FrontScreen::goal(FrontMenu menu, std::size_t i) const
+    fs::Polar FrontScreen::goal(FrontMenu menu, usize i) const
     {
         const fs::Polar home { fs::menu_angle(i), fs::kMenuRadius };
         if (menu == current_)
@@ -336,9 +337,9 @@ namespace rct3::ui::screens::front
 
     void FrontScreen::settle()
     {
-        for (std::size_t m = 0; m < kFrontMenuCount; ++m)
+        for (usize m = 0; m < kFrontMenuCount; ++m)
         {
-            for (std::size_t i = 0; i < buttons_[m].size(); ++i)
+            for (usize i = 0; i < buttons_[m].size(); ++i)
             {
                 MenuButton& mb = buttons_[m][i];
                 mb.at = goal(static_cast<FrontMenu>(m), i);
@@ -346,7 +347,7 @@ namespace rct3::ui::screens::front
             }
         }
         // The labels' text comes with the next update.
-        for (std::size_t i = 0; i < buttons_[index(current_)].size() && i < label_alpha_.size(); ++i)
+        for (usize i = 0; i < buttons_[index(current_)].size() && i < label_alpha_.size(); ++i)
             label_alpha_[i] = 1;
     }
 
@@ -360,7 +361,7 @@ namespace rct3::ui::screens::front
     void FrontScreen::update(const UpdateContext& context)
     {
         const fs::Frame frame = fs::frame_for(rect(), round);
-        const float size = fs::kMenuButtonSize * frame.round;
+        const f32 size = fs::kMenuButtonSize * frame.round;
 
         // Clicks first, so a menu opened now starts moving this frame.
         for (const MenuButton& mb : buttons_[index(current_)])
@@ -383,10 +384,10 @@ namespace rct3::ui::screens::front
         if (quit_->take_click())
             requests_.push_back({ FrontAction::Quit, 0 });
 
-        for (std::size_t m = 0; m < kFrontMenuCount; ++m)
+        for (usize m = 0; m < kFrontMenuCount; ++m)
         {
             const auto menu = static_cast<FrontMenu>(m);
-            for (std::size_t i = 0; i < buttons_[m].size(); ++i)
+            for (usize i = 0; i < buttons_[m].size(); ++i)
             {
                 MenuButton& mb = buttons_[m][i];
                 mb.arrived = fs::ease(mb.at, goal(menu, i), context.elapsed);
@@ -405,13 +406,13 @@ namespace rct3::ui::screens::front
         }
 
         const std::array<FrontButton*, 2> small = { back_, quit_ };
-        for (std::size_t i = 0; i < small.size(); ++i)
+        for (usize i = 0; i < small.size(); ++i)
         {
-            const float angle = fs::kSmallAngles.at(i);
+            const f32 angle = fs::kSmallAngles.at(i);
             small[i]->placement = placed(fs::button_rect(frame, fs::on_ring(angle, fs::kSmallRadius), fs::kSmallButtonSize), rect());
         }
         back_->visible = current_ != FrontMenu::Main;
-        for (std::size_t i = 0; i < badges_.size(); ++i)
+        for (usize i = 0; i < badges_.size(); ++i)
             badges_[i].widget->placement = placed(fs::badge_rect(frame, badges_.size() - 1 - i), rect());
 
         // The help lines follow the pointer; without a button under it, the menu's name.
@@ -441,11 +442,11 @@ namespace rct3::ui::screens::front
         // under its name and on under the arc, then the name. The arc comes after and covers the band's end.
         const auto& current = buttons_[index(current_)];
         const auto label_font = context.fonts.get(font::FontRole::ScaledLarge);
-        for (std::size_t i = 0; i < current.size() && i < labels_.size(); ++i)
+        for (usize i = 0; i < current.size() && i < labels_.size(); ++i)
         {
             if (label_alpha_[i] <= 0)
                 continue;
-            const float alpha = current[i].button->enabled ? label_alpha_[i] : label_alpha_[i] * kDisabledBoxAlpha;
+            const f32 alpha = current[i].button->enabled ? label_alpha_[i] : label_alpha_[i] * kDisabledBoxAlpha;
             const fs::LabelBox box = fs::label_box(frame, i);
             context.list.fill(box.band, faded(kBandColour, alpha));
             skin::draw_skin(context.list, context.skins.find(kBandEndSkin), box.end, faded(kWhite, alpha));

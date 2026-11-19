@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/desktop.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -21,7 +23,7 @@ namespace
         using Widget::Widget;
         bool blocks = true;
         std::vector<std::string> events;
-        std::int32_t updates = 0;
+        i32 updates = 0;
 
         [[nodiscard]] bool takes_pointer() const override
         {
@@ -29,11 +31,11 @@ namespace
         }
         void on_press(Point p) override
         {
-            events.push_back(std::format("press {}", static_cast<std::int32_t>(p.x)));
+            events.push_back(std::format("press {}", static_cast<i32>(p.x)));
         }
         void on_drag(Point p) override
         {
-            events.push_back(std::format("drag {}", static_cast<std::int32_t>(p.x)));
+            events.push_back(std::format("drag {}", static_cast<i32>(p.x)));
         }
         void on_release(Point, bool inside) override
         {
@@ -47,7 +49,7 @@ namespace
 
     constexpr Rect kView { 0, 0, 200, 100 };
 
-    PointerState at(float x, float y, bool down = false)
+    PointerState at(f32 x, f32 y, bool down = false)
     {
         return { { x, y }, down, true };
     }
@@ -384,7 +386,7 @@ TEST_CASE("a key that hides the focused widget sends the next keys to its parent
     {
         using Widget::Widget;
         Widget* target = nullptr;
-        std::int32_t keys = 0;
+        i32 keys = 0;
         [[nodiscard]] bool takes_focus() const override
         {
             return true;

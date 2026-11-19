@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/window.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 
 #include <doctest/doctest.h>
@@ -12,7 +13,7 @@ using namespace rct3::ui::font;
 
 namespace
 {
-    PointerState at(float x, float y, bool down = false)
+    PointerState at(f32 x, f32 y, bool down = false)
     {
         return { { x, y }, down, true };
     }
@@ -139,7 +140,7 @@ TEST_CASE("the title is drawn in the title font, clipped to the title box")
     desktop.draw(context);
     REQUIRE(list.batches().size() == 1);
     CHECK(list.batches()[0].texture == 9);
-    const float right = w.rect().x1 - style().title_box.x1;
+    const f32 right = w.rect().x1 - style().title_box.x1;
     for (const Vertex& v : list.vertices())
         CHECK(v.x <= right);
     CHECK(!list.clip());

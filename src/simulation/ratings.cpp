@@ -3,6 +3,7 @@
 
 #include "assets/embedded_files.hpp"
 #include "config/json_text.hpp"
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "units/units.hpp"
 
@@ -26,10 +27,10 @@ namespace rct3::simulation
         constexpr std::string_view kFallbackFamily = "default";
         constexpr std::array<std::string_view, 3> kRatingNames { "excitement", "intensity", "nausea" };
 
-        std::optional<std::size_t> feature_index(std::string_view name)
+        std::optional<usize> feature_index(std::string_view name)
         {
             const auto at = std::ranges::find(kRatingFeatures, name);
-            return at == kRatingFeatures.end() ? std::nullopt : std::optional(static_cast<std::size_t>(at - kRatingFeatures.begin()));
+            return at == kRatingFeatures.end() ? std::nullopt : std::optional(static_cast<usize>(at - kRatingFeatures.begin()));
         }
 
         /// The features named in `object`, as numbers; an error for a name the model does not know.
@@ -45,7 +46,7 @@ namespace rct3::simulation
                     return std::unexpected(std::format("{}: no feature {}", what, name));
                 if (!value.is_number())
                     return std::unexpected(std::format("{}: {} is not a number", what, name));
-                out[*at] = value.get<float>();
+                out[*at] = value.get<f32>();
             }
             return out;
         }
@@ -65,7 +66,7 @@ namespace rct3::simulation
         if (!root->contains("features") || !root->contains("families"))
             return std::unexpected("needs features and families");
         // Every feature has a cap; one left out reads as no cap.
-        model.caps.fill(std::numeric_limits<float>::max());
+        model.caps.fill(std::numeric_limits<f32>::max());
         const auto caps = read_features((*root)["features"], "features");
         if (!caps)
             return std::unexpected(caps.error());
@@ -76,7 +77,7 @@ namespace rct3::simulation
             const auto& penalty = (*root)["intensity_penalty"];
             for (const auto& bound : penalty.value("bounds", config::Json::array()))
                 if (bound.is_number())
-                    model.penalty_bounds.push_back(bound.get<float>());
+                    model.penalty_bounds.push_back(bound.get<f32>());
             model.penalty_keep = penalty.value("keep", 1.0f);
         }
         const auto& families = (*root)["families"];
@@ -89,7 +90,7 @@ namespace rct3::simulation
             for (const auto& type : family.value("types", config::Json::array()))
                 if (type.is_string())
                     out.types.push_back(type.get<std::string>());
-            for (std::size_t k = 0; k < kRatingNames.size(); ++k)
+            for (usize k = 0; k < kRatingNames.size(); ++k)
             {
                 if (!family.contains(kRatingNames[k]))
                     continue;
@@ -118,7 +119,7 @@ namespace rct3::simulation
     RatingFeatures rating_features(const save::model::TestResults& t)
     {
         return {
-            1, t.max_speed, t.average_speed, t.ride_time.value, t.ride_length.value, std::max(t.max_positive_vertical / kGravity.value - 1, 0.0f), std::abs(t.max_negative_vertical) / kGravity.value, std::abs(t.max_lateral) / kGravity.value, t.air_time.value, static_cast<float>(t.drop_count), t.highest_drop.value, static_cast<float>(t.inversion_count), static_cast<float>(t.lift_hill_count),
+            1, t.max_speed, t.average_speed, t.ride_time.value, t.ride_length.value, std::max(t.max_positive_vertical / kGravity.value - 1, 0.0f), std::abs(t.max_negative_vertical) / kGravity.value, std::abs(t.max_lateral) / kGravity.value, t.air_time.value, static_cast<f32>(t.drop_count), t.highest_drop.value, static_cast<f32>(t.inversion_count), static_cast<f32>(t.lift_hill_count),
         };
     }
 
@@ -133,32 +134,32 @@ namespace rct3::simulation
         if (family == model.families.end())
             return { };
         const RatingFeatures raw = rating_features(test);
-        std::array<float, 3> sums { };
-        for (std::size_t k = 0; k < sums.size(); ++k)
-            for (std::size_t i = 0; i < raw.size(); ++i)
+        std::array<f32, 3> sums { };
+        for (usize k = 0; k < sums.size(); ++k)
+            for (usize i = 0; i < raw.size(); ++i)
                 sums[k] += family->weights[k][i] * std::min(raw[i], model.caps[i]);
         Ratings r { std::max(sums[0], 0.0f), std::max(sums[1], 0.0f), std::max(sums[2], 0.0f) };
-        for (const float bound : model.penalty_bounds)
+        for (const f32 bound : model.penalty_bounds)
             if (r.intensity >= bound)
                 r.excitement *= model.penalty_keep;
         return r;
     }
 
-    std::optional<save::model::TestResults> test_lap(Coaster c, float most)
+    std::optional<save::model::TestResults> test_lap(Coaster c, f32 most)
     {
         c.running = true;
         c.at = c.start;
         c.travelled = 0;
         c.speed = 0;
         save::model::TestResults t;
-        constexpr float kStep = 0.25f;
+        constexpr f32 kStep = 0.25f;
         // The drop going on: from the highest point since the track last rose.
-        float top = 0;
-        float last = 0;
+        f32 top = 0;
+        f32 last = 0;
         bool first = true;
         const auto height = [&] {
             const auto after = std::ranges::upper_bound(c.distance, c.at);
-            const auto i = static_cast<std::size_t>(std::clamp<std::ptrdiff_t>(after - c.distance.begin() - 1, 0, static_cast<std::ptrdiff_t>(c.distance.size()) - 1));
+            const auto i = static_cast<usize>(std::clamp<std::ptrdiff_t>(after - c.distance.begin() - 1, 0, static_cast<std::ptrdiff_t>(c.distance.size()) - 1));
             return c.height[i];
         };
         const auto end_drop = [&] {
@@ -169,13 +170,13 @@ namespace rct3::simulation
             }
         };
         std::vector<Carriage> carriages = carriages_of(c);
-        for (std::int32_t step = 1; static_cast<float>(step) * kStep <= most; ++step)
+        for (i32 step = 1; static_cast<f32>(step) * kStep <= most; ++step)
         {
-            const float time = static_cast<float>(step) * kStep;
+            const f32 time = static_cast<f32>(step) * kStep;
             lower_carriages(c, carriages, kStep);
-            const bool back = drive(c, kStep, std::numeric_limits<float>::infinity(), carriages);
+            const bool back = drive(c, kStep, std::numeric_limits<f32>::infinity(), carriages);
             t.max_speed = std::max(t.max_speed, std::abs(c.speed));
-            const float h = height();
+            const f32 h = height();
             if (first || h > last)
             {
                 if (!first)

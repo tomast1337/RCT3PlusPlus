@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/research_category.hpp"
 
+#include "core/types.hpp"
 #include "ovl/field_values.hpp"
 #include "ovl/reference_names.hpp"
 
@@ -12,12 +13,12 @@ namespace rct3::ovl
 
         constexpr std::string_view kCategoryTag = "rcg";
         constexpr std::string_view kTextTag = "txt";
-        constexpr std::size_t kSize = 40;
-        constexpr std::size_t kRowSize = 12;
+        constexpr usize kSize = 40;
+        constexpr usize kRowSize = 12;
         // Real categories have at most two prerequisites.
-        constexpr std::uint32_t kMaxPrerequisites = 1u << 8;
+        constexpr u32 kMaxPrerequisites = 1u << 8;
 
-        std::optional<ResearchCategory> read_category(const AddressSpace& space, const ReferenceNames& refs, const PointerFields& pointers, std::uint32_t address)
+        std::optional<ResearchCategory> read_category(const AddressSpace& space, const ReferenceNames& refs, const PointerFields& pointers, u32 address)
         {
             const auto raw = space.bytes_at(address, kSize);
             if (!raw)
@@ -31,21 +32,21 @@ namespace rct3::ovl
             c.start_level = fields::read_f32(b, 0x0c);
             c.develop_cost = fields::read_f32(b, 0x10);
 
-            const std::uint32_t count = fields::read_u32(b, 0x14);
+            const u32 count = fields::read_u32(b, 0x14);
             if (count > kMaxPrerequisites)
                 return std::nullopt;
             if (count != 0)
             {
                 // Each row: the category, a word that is -1 in files seen, and the level as a float.
-                const std::uint32_t rows = fields::read_u32(b, 0x18);
-                const auto all = space.bytes_at(rows, std::size_t { count } * kRowSize);
+                const u32 rows = fields::read_u32(b, 0x18);
+                const auto all = space.bytes_at(rows, usize { count } * kRowSize);
                 if (!all)
                     return std::nullopt;
                 c.prerequisites.reserve(count);
-                for (std::uint32_t i = 0; i < count; ++i)
+                for (u32 i = 0; i < count; ++i)
                 {
-                    const std::uint32_t at = rows + i * static_cast<std::uint32_t>(kRowSize);
-                    const std::size_t off = std::size_t { i } * kRowSize;
+                    const u32 at = rows + i * static_cast<u32>(kRowSize);
+                    const usize off = usize { i } * kRowSize;
                     c.prerequisites.push_back(
                         {
                             .category = refs.find(at, kCategoryTag),

@@ -3,6 +3,7 @@
 
 #include "config/json_text.hpp"
 #include "config/text_file.hpp"
+#include "core/types.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -50,14 +51,14 @@ namespace rct3::config::game
                 return libraries;
             constexpr std::string_view kKey = "\"path\"";
             std::string_view rest = **text;
-            for (std::size_t at = rest.find(kKey); at != std::string_view::npos; at = rest.find(kKey))
+            for (usize at = rest.find(kKey); at != std::string_view::npos; at = rest.find(kKey))
             {
                 rest.remove_prefix(at + kKey.size());
-                const std::size_t open = rest.find_first_not_of(" \t\r\n");
+                const usize open = rest.find_first_not_of(" \t\r\n");
                 if (open == std::string_view::npos || rest[open] != '"')
                     continue;
                 std::string value;
-                std::size_t i = open + 1;
+                usize i = open + 1;
                 for (; i < rest.size() && rest[i] != '"'; ++i)
                 {
                     if (rest[i] == '\\' && i + 1 < rest.size())
@@ -79,7 +80,7 @@ namespace rct3::config::game
         // wrote: anything not shaped so is skipped.
         std::vector<fs::path> epic_installs(const fs::path& list)
         {
-            constexpr std::size_t kMaxFiles = 1000; ///< Chosen by eye: far more games than anyone installs
+            constexpr usize kMaxFiles = 1000; ///< Chosen by eye: far more games than anyone installs
             std::vector<fs::path> files;
             std::error_code ec;
             if (fs::is_directory(list, ec))
@@ -146,7 +147,7 @@ namespace rct3::config::game
         fs::path current = root_;
         while (!relative.empty())
         {
-            const std::size_t cut = relative.find_first_of("/\\");
+            const usize cut = relative.find_first_of("/\\");
             const std::string_view part = relative.substr(0, cut);
             relative = cut == std::string_view::npos ? std::string_view { } : relative.substr(cut + 1);
             if (part.empty() || part == ".")

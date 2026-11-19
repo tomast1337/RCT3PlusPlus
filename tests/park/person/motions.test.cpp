@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/person/motions.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -87,7 +89,7 @@ TEST_CASE("the motions listed by number name each number once, in order")
 {
     const auto motions = park::person::motions_by_number();
     REQUIRE_FALSE(motions.empty());
-    for (std::size_t i = 1; i < motions.size(); ++i)
+    for (usize i = 1; i < motions.size(); ++i)
         CHECK(motions[i - 1].number < motions[i].number);
     for (const park::person::NamedMotion& m : motions)
         CHECK(park::person::motion_number(m.name) == m.number);

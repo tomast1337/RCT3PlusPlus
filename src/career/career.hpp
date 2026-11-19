@@ -15,6 +15,8 @@
 // three at tycoon, out of three for each scenario.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -26,7 +28,7 @@
 namespace rct3::career
 {
 
-    enum class ScenarioStatus : std::uint8_t
+    enum class ScenarioStatus : u8
     {
         Locked,
         Open,
@@ -41,33 +43,33 @@ namespace rct3::career
         ScenarioStatus status = ScenarioStatus::Locked;
         std::string last_save { }; ///< The game last saved in this scenario, in the career's folder; empty for none
         /// When each level was first reached: apprentice, entrepreneur, tycoon; seconds since 1970, 0 not yet.
-        std::array<std::int64_t, 3> reached { };
-        std::uint64_t play_seconds = 0;
+        std::array<i64, 3> reached { };
+        u64 play_seconds = 0;
     };
 
     struct Career
     {
         std::string name;
-        std::int32_t pack = 0;                   ///< 0 the original game, then each expansion
-        std::size_t current = 0;                 ///< The scenario last picked, in `scenarios`
-        std::int64_t created = 0;                ///< Seconds since 1970; 0 when not known
+        i32 pack = 0;                            ///< 0 the original game, then each expansion
+        usize current = 0;                       ///< The scenario last picked, in `scenarios`
+        i64 created = 0;                         ///< Seconds since 1970; 0 when not known
         std::vector<ScenarioProgress> scenarios; ///< In the order of the game's list
         std::vector<ScenarioProgress> unlisted;  ///< Of scenarios the game's list no longer has, kept as they were
     };
 
     struct CareerScore
     {
-        std::size_t completed = 0;    ///< At any level
-        std::size_t entrepreneur = 0; ///< At entrepreneur or better
-        std::size_t tycoon = 0;
-        float percent = 0; ///< Of the most there is
+        usize completed = 0;    ///< At any level
+        usize entrepreneur = 0; ///< At entrepreneur or better
+        usize tycoon = 0;
+        f32 percent = 0; ///< Of the most there is
     };
 
     /// How many scenarios a new career has open.
-    [[nodiscard]] std::size_t first_open(std::int32_t pack);
+    [[nodiscard]] usize first_open(i32 pack);
 
     /// A new career through the scenarios `ids`, in the list's order, the first ones open.
-    [[nodiscard]] Career new_career(std::string name, std::int32_t pack, std::span<const std::string> ids);
+    [[nodiscard]] Career new_career(std::string name, i32 pack, std::span<const std::string> ids);
 
     /// Fits the career to the game's list of scenarios `ids`: each keeps its progress by id, new ones come
     /// locked, ones no longer listed are kept apart, the scenario last picked stays picked if still listed,
@@ -78,14 +80,14 @@ namespace rct3::career
 
     /// Records scenario `index` done at `status`, if that is better than before, at `now` (seconds since
     /// 1970), and opens what it earns.
-    void complete(Career& career, std::size_t index, ScenarioStatus status, std::int64_t now);
+    void complete(Career& career, usize index, ScenarioStatus status, i64 now);
 
     [[nodiscard]] CareerScore score(const Career& career);
 
     /// What a locked scenario waits for.
     struct Lock
     {
-        enum class Kind : std::uint8_t
+        enum class Kind : u8
         {
             Open,         ///< Not locked
             Levels,       ///< `levels` more scenarios completed at any level
@@ -93,15 +95,15 @@ namespace rct3::career
             Tycoon,       ///< Tycoon on all the others
         };
         Kind kind = Kind::Open;
-        std::size_t levels = 0;
+        usize levels = 0;
     };
-    [[nodiscard]] Lock lock(const Career& career, std::size_t index);
+    [[nodiscard]] Lock lock(const Career& career, usize index);
 
     [[nodiscard]] bool is_open(ScenarioStatus status);
 
     /// Whether a saved design that asks for scenario `scenario` (by place in the list), if any, to be
     /// completed at `level` (0 apprentice, 1 entrepreneur, 2 tycoon) is still locked, by the best any of
     /// `careers` has done there. With no career it is locked.
-    [[nodiscard]] bool design_locked(std::optional<std::int32_t> scenario, std::int32_t level, std::span<const Career> careers);
+    [[nodiscard]] bool design_locked(std::optional<i32> scenario, i32 level, std::span<const Career> careers);
 
 } // namespace rct3::career

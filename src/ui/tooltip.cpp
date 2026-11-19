@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/tooltip.hpp"
 
+#include "core/types.hpp"
 #include "ui/placement.hpp"
 #include "ui/text_layout.hpp"
 
@@ -36,8 +37,8 @@ namespace rct3::ui
             blocked_ = true;
         }
 
-        const float dx = pointer.x - last_.x;
-        const float dy = pointer.y - last_.y;
+        const f32 dx = pointer.x - last_.x;
+        const f32 dy = pointer.y - last_.y;
         last_ = pointer;
         if (dx * dx + dy * dy > style.still_distance * style.still_distance)
             rested_ = { };
@@ -56,14 +57,14 @@ namespace rct3::ui
         const auto font = fonts.get(style.font);
         if (!font)
             return { };
-        float width = 0;
+        f32 width = 0;
         const auto lines = break_lines(*font, text_, style.max_width);
         for (const TextLine& line : lines)
             width = std::max(width, line.width);
-        const float w = std::ceil(width) + style.padding.x0 + style.padding.x1;
-        const float h = std::ceil(static_cast<float>(lines.size()) * font->line_height()) + style.padding.y0 + style.padding.y1;
-        const float x = std::round(anchor_.x + style.offset.x);
-        const float y = std::round(anchor_.y + style.offset.y);
+        const f32 w = std::ceil(width) + style.padding.x0 + style.padding.x1;
+        const f32 h = std::ceil(static_cast<f32>(lines.size()) * font->line_height()) + style.padding.y0 + style.padding.y1;
+        const f32 x = std::round(anchor_.x + style.offset.x);
+        const f32 y = std::round(anchor_.y + style.offset.y);
         return moved_inside({ x, y, x + w, y + h }, view);
     }
 

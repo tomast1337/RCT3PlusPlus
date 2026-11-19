@@ -31,6 +31,7 @@
 // its height it is a raised deck instead.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/edge_walls.hpp"
 #include "park/terrain_mesh.hpp"
 #include "save/model/rides.hpp"
@@ -52,7 +53,7 @@ namespace rct3::park::ground
 {
 
     /// How one quarter of a ground path tile looks.
-    enum class PathLook : std::uint8_t
+    enum class PathLook : u8
     {
         Open,        ///< Path on both sides and across the corner
         Notched,     ///< Path on both sides, grass in the corner
@@ -67,8 +68,8 @@ namespace rct3::park::ground
     /// Which picture (0 for A, 1 for B) and which cell of it (0 to 3, row by row) shows a look.
     struct PathCell
     {
-        std::uint8_t sheet = 0;
-        std::uint8_t cell = 0;
+        u8 sheet = 0;
+        u8 cell = 0;
     };
 
     [[nodiscard]] PathCell path_cell(PathLook look) noexcept;
@@ -87,24 +88,24 @@ namespace rct3::park::ground
     /// The ground path styles of a park, and which one lies on each tile.
     struct GroundPathMap
     {
-        std::int32_t width = 0;
-        std::int32_t height = 0;
-        std::vector<std::string> styles;                     ///< System names, in the order first met
-        std::vector<std::int16_t> tiles;                     ///< Row by row: index into styles, or kNoPath
-        std::map<std::size_t, std::vector<float>> raised;    ///< By tile index: heights the raised paths there end at
-        std::map<std::size_t, std::uint8_t> queues;          ///< By tile index: ground queue's open sides, as Side::bit
-        EdgeWalls walls;                                     ///< That paths do not join across; set by the caller
-        std::vector<std::uint16_t> pavings;                  ///< Row by row: 1 + the paving a tile is laid by, 0 for a path of the park; empty when none
-        std::set<std::pair<std::size_t, std::size_t>> links; ///< Tile index pairs, both ways, that paving joins across
+        i32 width = 0;
+        i32 height = 0;
+        std::vector<std::string> styles;          ///< System names, in the order first met
+        std::vector<i16> tiles;                   ///< Row by row: index into styles, or kNoPath
+        std::map<usize, std::vector<f32>> raised; ///< By tile index: heights the raised paths there end at
+        std::map<usize, u8> queues;               ///< By tile index: ground queue's open sides, as Side::bit
+        EdgeWalls walls;                          ///< That paths do not join across; set by the caller
+        std::vector<u16> pavings;                 ///< Row by row: 1 + the paving a tile is laid by, 0 for a path of the park; empty when none
+        std::set<std::pair<usize, usize>> links;  ///< Tile index pairs, both ways, that paving joins across
     };
 
-    inline constexpr std::int16_t kNoPath = -1;
+    inline constexpr i16 kNoPath = -1;
 
     /// How much a raised path piece climbs over its tile, from its stored slope: none when flat or unknown.
-    [[nodiscard]] float path_rise(std::uint8_t slope) noexcept;
+    [[nodiscard]] f32 path_rise(u8 slope) noexcept;
 
     /// How close an end of a raised path must be to the ground to meet a ground path, in world units.
-    inline constexpr float kPathMeets = 0.25f;
+    inline constexpr f32 kPathMeets = 0.25f;
 
     /// The ground paths among `paths` on a grid of the terrain's size, and the ends of the raised ones. Paths
     /// off the grid and ground paths without a style are left out.
@@ -116,18 +117,18 @@ namespace rct3::park::ground
     struct Paving
     {
         std::vector<save::model::Tile> tiles { };
-        std::int32_t height = 0;                     ///< Whole units, as placement spots store it
+        i32 height = 0;                              ///< Whole units, as placement spots store it
         std::optional<save::model::Tile> source { }; ///< The tile whose path sets the style
         bool entrance = false;                       ///< A queue at `source` runs on through it, straight
         std::vector<save::model::Tile> links { };    ///< The tiles beside it that it joins
-        std::uint64_t owner = 0;                     ///< The placed object that paves it, whose columns take its style's supports
+        u64 owner = 0;                               ///< The placed object that paves it, whose columns take its style's supports
     };
 
     /// The path style paving takes while its source holds no path: the first of the game's path styles.
     inline constexpr std::string_view kPavingStyle = "Asphalt";
 
     /// How far from a paving's height a path at its source may lie and still set its style, in whole units.
-    inline constexpr float kPavingReach = 1;
+    inline constexpr f32 kPavingReach = 1;
 
     /// The tiles a placed footprint stands on.
     using FootprintOf = std::function<std::vector<save::model::Tile>(const save::model::PlacementSpot& spot)>;
@@ -142,7 +143,7 @@ namespace rct3::park::ground
     struct PavedTile
     {
         save::model::PathTile path { };
-        std::size_t paving = 0;
+        usize paving = 0;
     };
 
     /// The paths `pavings` lay: one per tile that holds no path of `paths` yet. A tile whose ground lies level at
@@ -163,10 +164,10 @@ namespace rct3::park::ground
     /// or z): a ground path is there, a ground queue there is open towards this tile, or a raised path there
     /// ends level with this tile's ground at their shared edge; the two may join (may_join); and no wall of `map`
     /// stands between them, unless both are paving of one ride or stall.
-    [[nodiscard]] bool path_continues(const GroundPathMap& map, const save::model::TerrainGrid& grid, save::model::Tile tile, std::int32_t dc, std::int32_t dr);
+    [[nodiscard]] bool path_continues(const GroundPathMap& map, const save::model::TerrainGrid& grid, save::model::Tile tile, i32 dc, i32 dr);
 
     /// How far the path is lifted off the ground, in world units, so it never sinks into it.
-    inline constexpr float kPathLift = 0.02f;
+    inline constexpr f32 kPathLift = 0.02f;
 
     /// The ground paths as triangles over the terrain. Batches use GroundPaint::PathA or PathB with the style
     /// index; they go over the ground with the same blending, after it.

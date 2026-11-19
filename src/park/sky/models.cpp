@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/sky/models.hpp"
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/static_shape.hpp"
 #include "ovl/texture/pixels.hpp"
@@ -45,18 +46,18 @@ namespace rct3::park::sky
         /// Adds `mesh`'s vertices and whole triangles to `out`.
         void add_mesh(SkyShape& out, const ovl::ShapeMesh& mesh)
         {
-            const auto base = static_cast<std::uint32_t>(out.vertices.size());
-            for (std::size_t i = 0; i < mesh.vertex_count; ++i)
+            const auto base = static_cast<u32>(out.vertices.size());
+            for (usize i = 0; i < mesh.vertex_count; ++i)
             {
                 const auto v = mesh.vertex(i);
                 out.vertices.push_back({ { v.position[0], v.position[1], v.position[2] }, { v.normal[0], v.normal[1], v.normal[2] }, { v.texcoord[0], v.texcoord[1] } });
             }
-            for (std::size_t i = 0; i + 2 < mesh.index_count; i += 3)
+            for (usize i = 0; i + 2 < mesh.index_count; i += 3)
             {
-                const std::array<std::uint32_t, 3> t { mesh.index(i), mesh.index(i + 1), mesh.index(i + 2) };
+                const std::array<u32, 3> t { mesh.index(i), mesh.index(i + 1), mesh.index(i + 2) };
                 if (t[0] >= mesh.vertex_count || t[1] >= mesh.vertex_count || t[2] >= mesh.vertex_count)
                     continue;
-                for (const std::uint32_t k : t)
+                for (const u32 k : t)
                     out.indices.push_back(base + k);
             }
         }
@@ -82,18 +83,18 @@ namespace rct3::park::sky
 
     void glowing(ovl::texture::RgbaImage& image)
     {
-        for (std::size_t i = 0; i + 3 < image.pixels.size(); i += 4)
+        for (usize i = 0; i + 3 < image.pixels.size(); i += 4)
         {
-            std::uint8_t* p = &image.pixels[i];
-            const std::uint8_t brightest = std::max({ p[0], p[1], p[2] });
+            u8* p = &image.pixels[i];
+            const u8 brightest = std::max({ p[0], p[1], p[2] });
             if (brightest == 0)
             {
                 p[3] = 0;
                 continue;
             }
-            for (std::int32_t c = 0; c < 3; ++c)
-                p[c] = static_cast<std::uint8_t>(p[c] * 255 / brightest);
-            p[3] = static_cast<std::uint8_t>(p[3] * brightest / 255);
+            for (i32 c = 0; c < 3; ++c)
+                p[c] = static_cast<u8>(p[c] * 255 / brightest);
+            p[3] = static_cast<u8>(p[3] * brightest / 255);
         }
     }
 
@@ -119,7 +120,7 @@ namespace rct3::park::sky
                 }
                 if (item.shape && item.name == kMountainShape)
                 {
-                    for (std::size_t m = 0; m < sky.mountains.size() && m < item.shape->meshes.size(); ++m)
+                    for (usize m = 0; m < sky.mountains.size() && m < item.shape->meshes.size(); ++m)
                         sky.mountains[m] = mesh_of(item.shape->meshes[m], key(panels[m]));
                 }
             }
@@ -150,14 +151,14 @@ namespace rct3::park::sky
             return { };
         const ovl::texture::RgbaImage& picture = image->second;
         const auto lowest = std::ranges::min_element(dome.vertices, { }, [](const object::ModelVertex& v) { return v.position.y; });
-        const float down = lowest->uv.y - std::floor(lowest->uv.y);
-        const auto row = std::min(static_cast<std::size_t>(down * static_cast<float>(picture.height)), static_cast<std::size_t>(picture.height) - 1);
-        const std::size_t start = row * picture.width * 4;
-        if (start + static_cast<std::size_t>(picture.width) * 4 > picture.pixels.size())
+        const f32 down = lowest->uv.y - std::floor(lowest->uv.y);
+        const auto row = std::min(static_cast<usize>(down * static_cast<f32>(picture.height)), static_cast<usize>(picture.height) - 1);
+        const usize start = row * picture.width * 4;
+        if (start + static_cast<usize>(picture.width) * 4 > picture.pixels.size())
             return { };
         std::vector<glm::vec4> band;
         band.reserve(picture.width);
-        for (std::size_t at = start; at < start + static_cast<std::size_t>(picture.width) * 4; at += 4)
+        for (usize at = start; at < start + static_cast<usize>(picture.width) * 4; at += 4)
             band.push_back(glm::vec4(picture.pixels[at], picture.pixels[at + 1], picture.pixels[at + 2], 255) / 255.0f);
         return band;
     }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/front/layout.hpp"
 
+#include "core/types.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -41,7 +43,7 @@ TEST_CASE("a frame at one scale keeps circles round, the design held to the bott
         const Rect b = button_rect(f, on_ring(1, kMenuRadius), 20);
         CHECK(b.width() == doctest::Approx(b.height()).epsilon(0.05));
         const Point c = f.at(kRingCentre);
-        for (const float angle : { 0.5f, 2.0f, 3.5f })
+        for (const f32 angle : { 0.5f, 2.0f, 3.5f })
         {
             const Point p = f.at(on_ring(angle, kMenuRadius));
             CHECK(std::hypot(p.x - c.x, p.y - c.y) == doctest::Approx(kMenuRadius * f.round));
@@ -82,8 +84,8 @@ TEST_CASE("angles turn anticlockwise from the right")
 TEST_CASE("menu buttons run down the left edge, each label box beside its button")
 {
     const Frame f = frame_for({ 0, 0, kDesignWidth, kDesignHeight });
-    float last_y = -1;
-    for (std::size_t i = 0; i < kMaxMenuEntries; ++i)
+    f32 last_y = -1;
+    for (usize i = 0; i < kMaxMenuEntries; ++i)
     {
         const Point p = on_ring(menu_angle(i), kMenuRadius);
         CHECK(p.x > 0);
@@ -128,7 +130,7 @@ TEST_CASE("buttons ease round first, then out, and arrive")
     CHECK_FALSE(ease(p, goal, units::Seconds { 0.1f }));
     CHECK(p.angle > kStart.angle);
     CHECK(p.radius == kStart.radius); // Not while the angle is far
-    std::int32_t frames = 0;
+    i32 frames = 0;
     while (!ease(p, goal, units::Seconds { 1.0f / 60 }) && frames < 1000)
         ++frames;
     CHECK(frames < 1000);
@@ -140,7 +142,7 @@ TEST_CASE("on a wide screen the ring round a menu button stays round and the ban
 {
     const Frame square = frame_for({ 0, 0, kDesignWidth, kDesignHeight });
     const Frame wide = frame_for({ 0, 0, 2 * kDesignWidth, kDesignHeight });
-    for (std::size_t i = 0; i < kMaxMenuEntries; ++i)
+    for (usize i = 0; i < kMaxMenuEntries; ++i)
     {
         const LabelBox box = label_box(wide, i);
         CHECK(box.patch.width() / box.patch.height() == doctest::Approx(kLabelPatch.width() / kLabelPatch.height()));

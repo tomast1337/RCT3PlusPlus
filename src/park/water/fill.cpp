@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/water/fill.hpp"
 
+#include "core/types.hpp"
 #include "park/waterfall_making.hpp"
 
 #include <algorithm>
@@ -16,12 +17,12 @@ namespace rct3::park::water
 
     namespace
     {
-        bool below(const save::model::TerrainCell& cell, std::size_t a, std::size_t b, float level)
+        bool below(const save::model::TerrainCell& cell, usize a, usize b, f32 level)
         {
             return cell.corners[a] < level || cell.corners[b] < level;
         }
 
-        enum class Crossing : std::uint8_t
+        enum class Crossing : u8
         {
             Flows,
             Stops, ///< As at higher ground
@@ -29,7 +30,7 @@ namespace rct3::park::water
         };
 
         /// The flood of fill_water, asking `crossing` before the water goes from one tile to the next.
-        template<typename Cross> std::optional<save::model::WaterBody> flood(const save::model::TerrainGrid& grid, save::model::Tile tile, float level, Cross&& crossing)
+        template<typename Cross> std::optional<save::model::WaterBody> flood(const save::model::TerrainGrid& grid, save::model::Tile tile, f32 level, Cross&& crossing)
         {
             const auto [col, row] = tile;
             save::model::WaterBody body;
@@ -39,8 +40,8 @@ namespace rct3::park::water
             // Each way to a neighbour: the step, and the corners of the shared edge on this side and on the far one.
             struct Way
             {
-                std::int32_t dc, dr;
-                std::size_t a, b, far_a, far_b;
+                i32 dc, dr;
+                usize a, b, far_a, far_b;
             };
             constexpr std::array<Way, 4> kWays { {
                 { 1, 0, 1, 3, 0, 2 },
@@ -49,23 +50,23 @@ namespace rct3::park::water
                 { 0, -1, 0, 1, 2, 3 },
             } };
             std::vector<bool> seen(grid.cells.size());
-            std::vector<std::pair<std::int32_t, std::int32_t>> open { { col, row } };
-            seen[static_cast<std::size_t>(row * grid.width + col)] = true;
+            std::vector<std::pair<i32, i32>> open { { col, row } };
+            seen[static_cast<usize>(row * grid.width + col)] = true;
             while (!open.empty())
             {
                 const auto [c, r] = open.back();
                 open.pop_back();
-                for (std::int32_t t = 0; t < 2; ++t)
+                for (i32 t = 0; t < 2; ++t)
                 {
                     if (const auto mask = save::model::expected_water_mask(grid, level, { c, r }, t); mask && *mask != 0)
-                        body.tris.push_back({ static_cast<std::uint8_t>(c), static_cast<std::uint8_t>(r), static_cast<std::uint8_t>(t), *mask });
+                        body.tris.push_back({ static_cast<u8>(c), static_cast<u8>(r), static_cast<u8>(t), *mask });
                 }
                 const save::model::TerrainCell& cell = grid.at(c, r);
                 for (const Way& w : kWays)
                 {
-                    const std::int32_t nc = c + w.dc;
-                    const std::int32_t nr = r + w.dr;
-                    if (!grid.contains(nc, nr) || seen[static_cast<std::size_t>(nr * grid.width + nc)])
+                    const i32 nc = c + w.dc;
+                    const i32 nr = r + w.dr;
+                    if (!grid.contains(nc, nr) || seen[static_cast<usize>(nr * grid.width + nc)])
                         continue;
                     if (!below(cell, w.a, w.b, level) || !below(grid.at(nc, nr), w.far_a, w.far_b, level))
                         continue;
@@ -74,7 +75,7 @@ namespace rct3::park::water
                         return std::nullopt;
                     if (way == Crossing::Stops)
                         continue;
-                    seen[static_cast<std::size_t>(nr * grid.width + nc)] = true;
+                    seen[static_cast<usize>(nr * grid.width + nc)] = true;
                     open.emplace_back(nc, nr);
                 }
             }
@@ -82,14 +83,14 @@ namespace rct3::park::water
         }
     } // namespace
 
-    std::optional<save::model::WaterBody> fill_water(const save::model::TerrainGrid& grid, save::model::Tile tile, float level, const std::function<bool(save::model::Tile)>& allowed)
+    std::optional<save::model::WaterBody> fill_water(const save::model::TerrainGrid& grid, save::model::Tile tile, f32 level, const std::function<bool(save::model::Tile)>& allowed)
     {
         if (grid.contains(tile.col, tile.row) && grid.at(tile.col, tile.row).min_height() < level && !allowed(tile))
             return std::nullopt;
         return flood(grid, tile, level, [&](save::model::Tile, save::model::Tile to) { return allowed(to) ? Crossing::Flows : Crossing::Leaks; });
     }
 
-    std::optional<save::model::WaterLayer> pour_water(const save::model::WaterLayer& water, const save::model::TerrainGrid& grid, save::model::Tile tile, float level, const std::function<bool(save::model::Tile)>& allowed)
+    std::optional<save::model::WaterLayer> pour_water(const save::model::WaterLayer& water, const save::model::TerrainGrid& grid, save::model::Tile tile, f32 level, const std::function<bool(save::model::Tile)>& allowed)
     {
         const auto lake = fill_water(grid, tile, std::ceil(level), allowed);
         if (!lake || lake->tris.empty())
@@ -108,7 +109,7 @@ namespace rct3::park::water
         const auto lake = std::ranges::find_if(water.bodies, [&](const save::model::WaterBody& b) { return holds(b, tile); });
         if (lake == water.bodies.end())
             return false;
-        const auto on_lake = [&](const save::model::WorldPoint3& p) { return holds(*lake, { static_cast<std::int32_t>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<std::int32_t>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) }); };
+        const auto on_lake = [&](const save::model::WorldPoint3& p) { return holds(*lake, { static_cast<i32>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<i32>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) }); };
         std::erase_if(falls, [&](const save::model::Waterfall& f) {
             if (!on_lake(f.top) && !on_lake(f.bottom))
                 return false;
@@ -119,15 +120,15 @@ namespace rct3::park::water
         return true;
     }
 
-    std::vector<std::size_t> flooded_falls(const save::model::WaterLayer& was, const save::model::WaterLayer& now, std::span<const save::model::Waterfall> falls, const save::model::TerrainGrid& grid)
+    std::vector<usize> flooded_falls(const save::model::WaterLayer& was, const save::model::WaterLayer& now, std::span<const save::model::Waterfall> falls, const save::model::TerrainGrid& grid)
     {
-        const auto level = [&](const save::model::WaterLayer& water, const save::model::WorldPoint3& p) -> std::optional<float> {
-            const save::model::Tile tile { static_cast<std::int32_t>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<std::int32_t>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) };
+        const auto level = [&](const save::model::WaterLayer& water, const save::model::WorldPoint3& p) -> std::optional<f32> {
+            const save::model::Tile tile { static_cast<i32>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<i32>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) };
             const auto lake = std::ranges::find_if(water.bodies, [&](const save::model::WaterBody& b) { return holds(b, tile); });
             return lake == water.bodies.end() ? std::nullopt : std::optional(lake->level);
         };
-        std::vector<std::size_t> out;
-        for (std::size_t i = 0; i < falls.size(); ++i)
+        std::vector<usize> out;
+        for (usize i = 0; i < falls.size(); ++i)
         {
             if (level(was, falls[i].top) != level(now, falls[i].top) || level(was, falls[i].bottom) != level(now, falls[i].bottom))
                 out.push_back(i);
@@ -137,24 +138,24 @@ namespace rct3::park::water
 
     bool settle_water(save::model::WaterLayer& water, std::vector<save::model::Waterfall>& falls, const save::model::TerrainGrid& was, const save::model::TerrainGrid& grid)
     {
-        const auto at = [&](std::int32_t col, std::int32_t row) { return static_cast<std::size_t>(row * grid.width + col); };
+        const auto at = [&](i32 col, i32 row) { return static_cast<usize>(row * grid.width + col); };
         std::vector<bool> moved(grid.cells.size(), false);
         bool any_moved = false;
-        for (std::int32_t r = 0; r < grid.height; ++r)
-            for (std::int32_t c = 0; c < grid.width; ++c)
+        for (i32 r = 0; r < grid.height; ++r)
+            for (i32 c = 0; c < grid.width; ++c)
             {
                 if (was.contains(c, r) && was.at(c, r).corners != grid.at(c, r).corners)
                     moved[at(c, r)] = any_moved = true;
             }
         if (!any_moved)
             return false;
-        const auto tile_of = [&](const save::model::WorldPoint3& p) { return save::model::Tile { static_cast<std::int32_t>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<std::int32_t>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) }; };
+        const auto tile_of = [&](const save::model::WorldPoint3& p) { return save::model::Tile { static_cast<i32>(std::floor((p.x - grid.origin_x) / grid.tile_size_x)), static_cast<i32>(std::floor((p.z - grid.origin_z) / grid.tile_size_z)) }; };
         // The level of the water over a tile, to tell which waterfalls lost an end.
-        const auto level_over = [&](save::model::Tile tile) -> std::optional<float> {
+        const auto level_over = [&](save::model::Tile tile) -> std::optional<f32> {
             const auto lake = std::ranges::find_if(water.bodies, [&](const save::model::WaterBody& b) { return holds(b, tile); });
             return lake == water.bodies.end() ? std::nullopt : std::optional(lake->level);
         };
-        std::vector<std::array<std::optional<float>, 2>> ends;
+        std::vector<std::array<std::optional<f32>, 2>> ends;
         for (const save::model::Waterfall& f : falls)
             ends.push_back({ level_over(tile_of(f.top)), level_over(tile_of(f.bottom)) });
 
@@ -169,7 +170,7 @@ namespace rct3::park::water
             for (const save::model::WaterTri& t : lake.tris)
                 held[at(t.col, t.row)] = true;
             bool touched = false;
-            float floor = lake.level;
+            f32 floor = lake.level;
             for (const save::model::WaterTri& t : lake.tris)
             {
                 floor = std::min(floor, grid.at(t.col, t.row).min_height());
@@ -195,7 +196,7 @@ namespace rct3::park::water
             // The highest whole level from its own down that runs out nowhere, in as many parts as the ground
             // now splits it into.
             std::vector<save::model::WaterBody> parts;
-            for (float level = lake.level; level > floor; level = std::ceil(level) - 1)
+            for (f32 level = lake.level; level > floor; level = std::ceil(level) - 1)
             {
                 parts.clear();
                 std::ranges::fill(covered, false);
@@ -230,16 +231,16 @@ namespace rct3::park::water
         // A waterfall goes when the ground at it moved, or the water at either end is gone or at another level.
         const auto beside = [&](const save::model::WorldPoint3& p) {
             const save::model::Tile t = tile_of(p);
-            for (std::int32_t dr = -1; dr <= 1; ++dr)
-                for (std::int32_t dc = -1; dc <= 1; ++dc)
+            for (i32 dr = -1; dr <= 1; ++dr)
+                for (i32 dc = -1; dc <= 1; ++dc)
                 {
                     if (grid.contains(t.col + dc, t.row + dr) && moved[at(t.col + dc, t.row + dr)])
                         return true;
                 }
             return false;
         };
-        std::size_t next = 0;
-        const std::size_t falls_before = falls.size();
+        usize next = 0;
+        const usize falls_before = falls.size();
         std::erase_if(falls, [&](const save::model::Waterfall& f) {
             const auto& [top, bottom] = ends[next++];
             return beside(f.lip_left) || beside(f.lip_right) || beside(f.top) || beside(f.bottom) || level_over(tile_of(f.top)) != top || level_over(tile_of(f.bottom)) != bottom;
@@ -258,12 +259,12 @@ namespace rct3::park::water
         return std::ranges::any_of(bodies, [&](const save::model::WaterBody& b) { return holds(b, tile); });
     }
 
-    std::optional<std::int32_t> water_surface(std::span<const save::model::WaterBody> bodies, save::model::Tile tile)
+    std::optional<i32> water_surface(std::span<const save::model::WaterBody> bodies, save::model::Tile tile)
     {
         const auto lake = std::ranges::find_if(bodies, [&](const save::model::WaterBody& b) { return holds(b, tile); });
         if (lake == bodies.end())
             return std::nullopt;
-        return static_cast<std::int32_t>(std::ceil(lake->level));
+        return static_cast<i32>(std::ceil(lake->level));
     }
 
 } // namespace rct3::park::water

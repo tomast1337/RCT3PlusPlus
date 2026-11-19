@@ -2,6 +2,7 @@
 #include "scene/track/building.hpp"
 
 #include "career/career_file.hpp"
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "park/build_arrows.hpp"
@@ -69,8 +70,8 @@ namespace rct3::scene::track
         constexpr std::string_view kPieceBackHelp = "ATE_TT_Back";
         constexpr std::string_view kPieceForwardHelp = "ATE_TT_Forward";
         /// How far each joint may be turned either way, degrees, and the spinners' step.
-        constexpr std::int32_t kArmTurns = 360;
-        constexpr std::int32_t kArmStep = 10;
+        constexpr i32 kArmTurns = 360;
+        constexpr i32 kArmStep = 10;
         /// In the order of rct3::park::track::PieceToggle.
         constexpr std::array<std::string_view, rct3::park::track::kPieceToggles> kToggleHelps { "ATE_TT_Chain", "ATE_TT_Enclosed", "ATE_TT_Water", "ATE_TT_Wide", "ATE_TT_Booster" };
         constexpr std::string_view kDemolishHelp = "ATE_TT_Demolish";
@@ -82,15 +83,15 @@ namespace rct3::scene::track
         /// construction panel, and the picture.
         struct RoleIcon
         {
-            std::uint32_t role = 0;
+            u32 role = 0;
             std::string_view skin;
         };
-        constexpr std::uint32_t kBrakesRole = 1;
-        constexpr std::array<std::uint32_t, 3> kBrakeRoles { kBrakesRole, 2, kHoldingRole }; ///< Brakes, block brakes, holding brakes
-        constexpr std::int32_t kMostHoldingTime = 30;                                        ///< Seconds, as the game's box goes
-        constexpr std::int32_t kMostCarTurn = 720;                                           ///< Degrees either way, as the game's box goes
+        constexpr u32 kBrakesRole = 1;
+        constexpr std::array<u32, 3> kBrakeRoles { kBrakesRole, 2, kHoldingRole }; ///< Brakes, block brakes, holding brakes
+        constexpr i32 kMostHoldingTime = 30;                                       ///< Seconds, as the game's box goes
+        constexpr i32 kMostCarTurn = 720;                                          ///< Degrees either way, as the game's box goes
         /// Metres a piece must end off to a side, or up or down, to be marked as going that way.
-        constexpr float kMarkedRun = 0.5f;
+        constexpr f32 kMarkedRun = 0.5f;
         constexpr std::array<RoleIcon, 4> kRoleIcons { {
             { 3, "TrackSpecialIcon_StationMiddle" },
             { 4, "TrackSpecialIcon_PhotoSection" },
@@ -102,29 +103,29 @@ namespace rct3::scene::track
         constexpr std::string_view kNewSegmentHelp = "ATE_TT_NewTrackSegment";
         constexpr std::string_view kSplitHelp = "ATE_TT_Split";
         /// Ends tried before finishing a track gives up, and each frame, a few seconds at most.
-        constexpr std::size_t kCompletionTries = 20000;
-        constexpr std::size_t kCompletionTriesPerFrame = 300;
+        constexpr usize kCompletionTries = 20000;
+        constexpr usize kCompletionTriesPerFrame = 300;
         constexpr units::Seconds kFlash { 0.4f };          ///< The found way's button is lit, then dim, this long
         constexpr units::Seconds kTestWait { 3 };          ///< A test train stands stuck this long before it sets off again
         constexpr std::string_view kPieceNames = "Track_"; ///< Followed by the section's name
         /// Above the tool row, so the two never overlap.
         /// Of the round panel's top, from the screen's bottom edge: its disc stands as the path panel does.
-        constexpr float kPanelTop = ui::game_skins::kOverToolRow + ui::screens::info::info_panel::kDisc;
+        constexpr f32 kPanelTop = ui::game_skins::kOverToolRow + ui::screens::info::info_panel::kDisc;
         /// The controls' room in the strip: from a little left of their rows to a little right of their pager,
         /// as high as the strip holds.
-        constexpr float kControlsLeft = ui::screens::build::construction_panel::kRowLeft - 8;
-        constexpr float kControlsTop = 4;
-        constexpr float kControlsWidth = ui::screens::build::construction_panel::kListRight + 4 - kControlsLeft;
-        constexpr float kControlsHeight = ui::screens::build::construction_panel::kHeight - kControlsTop;
+        constexpr f32 kControlsLeft = ui::screens::build::construction_panel::kRowLeft - 8;
+        constexpr f32 kControlsTop = 4;
+        constexpr f32 kControlsWidth = ui::screens::build::construction_panel::kListRight + 4 - kControlsLeft;
+        constexpr f32 kControlsHeight = ui::screens::build::construction_panel::kHeight - kControlsTop;
         /// The ghost's tint and how much of what is behind it shows through.
 
         using rct3::park::track::kBankSteps;
 
         /// The panel's bank buttons run from hardest left to hardest right, upside down last; banks count left
         /// as positive.
-        std::int32_t panel_bank(std::size_t i)
+        i32 panel_bank(usize i)
         {
-            return i + 1 == ui::screens::build::construction_panel::kBanks ? rct3::park::track::kUpsideDown : kBankSteps - 1 - static_cast<std::int32_t>(i);
+            return i + 1 == ui::screens::build::construction_panel::kBanks ? rct3::park::track::kUpsideDown : kBankSteps - 1 - static_cast<i32>(i);
         }
 
         /// A saved design: its ride, and the scenery placed with it, which is the ride's doors.
@@ -154,7 +155,7 @@ namespace rct3::scene::track
         std::string design_name(const std::filesystem::path& file)
         {
             const std::string stem = file.stem().string();
-            const std::size_t close = stem.find(']');
+            const usize close = stem.find(']');
             return stem.substr(close == std::string::npos ? 0 : close + 1);
         }
 
@@ -217,7 +218,7 @@ namespace rct3::scene::track
                 // as the player sees it: an upside-down piece's rails swap sides.
                 const glm::vec3 run = p.line.end - p.line.start;
                 const glm::vec3 level = glm::cross(glm::vec3(0, 1, 0), p.line.start_direction);
-                const float sideways = glm::dot(run, glm::length(level) > 0.1f ? glm::normalize(level) : p.line.start_side);
+                const f32 sideways = glm::dot(run, glm::length(level) > 0.1f ? glm::normalize(level) : p.line.start_side);
                 n.marks[0] = sideways > kMarkedRun ? "TrackSpecial_Right" : sideways < -kMarkedRun ? "TrackSpecial_Left" : run.y > kMarkedRun ? "TrackSpecial_Up" : run.y < -kMarkedRun ? "TrackSpecial_Down" : "";
                 return n;
             };
@@ -247,7 +248,7 @@ namespace rct3::scene::track
         }
 
         /// The panel's view of what the building offers now.
-        ui::screens::build::ConstructionView panel_view(const park::ParkScene& scene, const TrackBuilding& b, const ui::InterfaceAssets& assets, std::int32_t currency, ui::screens::info::DistanceUnits units)
+        ui::screens::build::ConstructionView panel_view(const park::ParkScene& scene, const TrackBuilding& b, const ui::InterfaceAssets& assets, i32 currency, ui::screens::info::DistanceUnits units)
         {
             ui::screens::build::ConstructionView v;
             v.curves.fill(ui::screens::build::IconState::Dis);
@@ -272,18 +273,18 @@ namespace rct3::scene::track
                 return v;
             const rct3::park::track::ChoiceOptions o = rct3::park::track::choice_options(c->pieces, b.candidates, b.choice);
             const bool by_shape = !b.choice.named.has_value();
-            for (std::int32_t curve = -rct3::park::track::kCurveSizes; curve <= rct3::park::track::kCurveSizes; ++curve)
+            for (i32 curve = -rct3::park::track::kCurveSizes; curve <= rct3::park::track::kCurveSizes; ++curve)
                 v.curves.at(rct3::park::track::curve_index(curve)) = state_of(by_shape && curve == b.choice.curve, o.curves.at(rct3::park::track::curve_index(curve)));
-            for (std::int32_t slope = -rct3::park::track::kSlopeSteps; slope <= rct3::park::track::kSlopeSteps; ++slope)
+            for (i32 slope = -rct3::park::track::kSlopeSteps; slope <= rct3::park::track::kSlopeSteps; ++slope)
                 v.slopes.at(rct3::park::track::slope_index(slope)) = state_of(by_shape && slope == b.choice.slope, o.slopes.at(rct3::park::track::slope_index(slope)));
-            for (std::size_t i = 0; i < ui::screens::build::construction_panel::kBanks; ++i)
+            for (usize i = 0; i < ui::screens::build::construction_panel::kBanks; ++i)
             {
-                const std::int32_t bank = panel_bank(i);
+                const i32 bank = panel_bank(i);
                 v.banks.at(i) = state_of(by_shape && bank == b.choice.bank, o.banks.at(rct3::park::track::bank_index(bank)));
             }
-            for (std::size_t i = 0; i < rct3::park::track::kPieceToggles; ++i)
+            for (usize i = 0; i < rct3::park::track::kPieceToggles; ++i)
             {
-                const std::uint8_t bit = rct3::park::track::toggle_bit(static_cast<rct3::park::track::PieceToggle>(i));
+                const u8 bit = rct3::park::track::toggle_bit(static_cast<rct3::park::track::PieceToggle>(i));
                 if ((o.any_toggles & bit) != 0)
                     v.toggles.at(i) = state_of((b.choice.toggles & o.toggles & bit) != 0, (o.toggles & bit) != 0);
             }
@@ -317,9 +318,9 @@ namespace rct3::scene::track
                 using enum ui::screens::build::PieceParam;
                 if (shape.record.role == rct3::park::track::kRoleBrakes || shape.record.role == rct3::park::track::kRoleBlockBrake)
                 {
-                    const float ride_speed = shape.record.role == rct3::park::track::kRoleBrakes ? ride.options.brake_speed.value : ride.options.block_brake_off_speed.value;
-                    const float speed = b.brake_speed > 0 ? static_cast<float>(b.brake_speed) : std::round(ride_speed);
-                    const auto tenths = [&](float metres) { return static_cast<std::int32_t>(std::lround(metres * ui::screens::info::speed_scale(units) * 10)); };
+                    const f32 ride_speed = shape.record.role == rct3::park::track::kRoleBrakes ? ride.options.brake_speed.value : ride.options.block_brake_off_speed.value;
+                    const f32 speed = b.brake_speed > 0 ? static_cast<f32>(b.brake_speed) : std::round(ride_speed);
+                    const auto tenths = [&](f32 metres) { return static_cast<i32>(std::lround(metres * ui::screens::info::speed_scale(units) * 10)); };
                     v.params.at(std::to_underlying(Speed)) = ui::screens::build::ParamBox { .value = tenths(speed), .least = tenths(1), .most = tenths(kMostBrakeSpeed.value), .decimals = 1, .unit = std::u16string(ui::screens::info::speed_unit(units)), .step = std::max(tenths(1), 1) };
                 }
                 if (shape.record.role == kHoldingRole)
@@ -462,7 +463,7 @@ namespace rct3::scene::track
         ride.base.symbol = std::format("{}:trr", item.symbol);
         ride.base.overlay_path = item.overlay;
         const auto colours = rct3::park::name_colours(item.symbol);
-        ride.car_colours = { static_cast<std::uint8_t>(colours[0]), static_cast<std::uint8_t>(colours[1]), static_cast<std::uint8_t>(colours[2]) };
+        ride.car_colours = { static_cast<u8>(colours[0]), static_cast<u8>(colours[1]), static_cast<u8>(colours[2]) };
         // Its kind's name and a number, as the game names a new ride.
         ride.base.name = rct3::park::ride::numbered_name(scene.rides.rides, ride.base.symbol);
         // Built closed, as in the game: the player tests it and opens it from its window.
@@ -488,7 +489,7 @@ namespace rct3::scene::track
                     ride.options.lift_speed = { o.lift_speed };
                     ride.options.brake_speed = { o.brake_speed };
                     ride.options.block_brake_off_speed = { o.block_brake_speed };
-                    ride.options.fixed_speed = o.fixed_speed.transform([](float speed) { return units::Pace { speed }; });
+                    ride.options.fixed_speed = o.fixed_speed.transform([](f32 speed) { return units::Pace { speed }; });
                 }
         // Its riders sit on arms.
         const bool arm = !train_name.empty() && use_train(scene, *assets.install, index, train_name).value_or(false);
@@ -530,19 +531,19 @@ namespace rct3::scene::track
         std::vector<rct3::park::ride::DoorSpot> doors = kit->doors;
         if (ride_index.value < scene.track_rules.size() && scene.track_rules[ride_index.value].pool_ride)
             for (const save::model::TrackPiece& p : pieces)
-                for (std::int32_t q = 0; q < 4; ++q)
+                for (i32 q = 0; q < 4; ++q)
                     if (const rct3::park::Side side = rct3::park::Side::from(q); rct3::park::pools::slide_platform_joined(scene.pools, { .col = p.tile_x, .row = p.tile_z, .height = p.height, .turn = rct3::park::ModelTurn::from(p.direction) }, side))
                     {
                         const auto [dc, dr] = side.step();
                         doors.push_back({ .col = p.tile_x + dc, .row = p.tile_z + dr, .turn = rct3::park::object::turn_facing(side.opposite()), .height = p.height });
                     }
-        const auto station = [&](std::size_t i) {
+        const auto station = [&](usize i) {
             const auto shape = rct3::park::track::shape_named(*c, pieces[i].symbol);
             return pieces[i].platform.has_value() || (shape && has_platform(*shape));
         };
         wait_for_build(scene);
         bool changed = false;
-        for (std::size_t i = 0; i < pieces.size(); ++i)
+        for (usize i = 0; i < pieces.size(); ++i)
         {
             if (!station(i))
                 continue;
@@ -569,7 +570,7 @@ namespace rct3::scene::track
                     continue;
                 // Stands where its piece does.
                 save::model::PlacedObject o = scene.objects[piece_object->second.value];
-                const std::uint64_t id = last_id(scene) + 1;
+                const u64 id = last_id(scene) + 1;
                 pieces[i].platform = save::model::TrackPlatform { .id = id, .tile_x = pieces[i].tile_x, .tile_z = pieces[i].tile_z, .height = pieces[i].height, .direction = pieces[i].direction };
                 o.id = id + 1;
                 o.owner_ref = id;
@@ -610,16 +611,16 @@ namespace rct3::scene::track
             if (scene.pick_boxes_of != scene.objects.size())
                 place_objects(scene);
             // Only its pieces, not its doors or platforms.
-            std::unordered_set<std::uint64_t> pieces;
+            std::unordered_set<u64> pieces;
             for (const save::model::TrackPiece& p : ride.track->pieces)
                 pieces.insert(p.scenery);
-            const auto hit = rct3::park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return !scene.objects[i].hidden && pieces.contains(scene.objects[i].id); });
+            const auto hit = rct3::park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](usize i) { return !scene.objects[i].hidden && pieces.contains(scene.objects[i].id); });
             const auto piece = hit ? std::ranges::find(ride.track->pieces, scene.objects[hit->index].id, &save::model::TrackPiece::scenery) : ride.track->pieces.end();
             if (piece == ride.track->pieces.end())
                 return false;
             // A piece at an open end goes back to building at the track's open end.
             // shortcut: only the last stretch's far end is built on, upgrade by building on from the end clicked.
-            const std::size_t index = static_cast<std::size_t>(piece - ride.track->pieces.begin());
+            const usize index = static_cast<usize>(piece - ride.track->pieces.begin());
             const auto laid = laid_piece(*c, *piece);
             b.selected = laid && rct3::park::track::piece_neighbours(*ride.track, index) ? std::optional(index) : std::nullopt;
             b.complaint.clear();
@@ -667,15 +668,15 @@ namespace rct3::scene::track
         // A design of two tracks side by side holds both halves of each joined piece, laid as they come rather
         // than each laying its other half.
         const rct3::park::track::SplitState split = design.empty() ? b.split : std::exchange(b.split, rct3::park::track::SplitState::None);
-        const std::size_t floating_before = scene.money.size();
-        for (std::size_t i = 0; i < std::max<std::size_t>(design.size(), 1); ++i)
+        const usize floating_before = scene.money.size();
+        for (usize i = 0; i < std::max<usize>(design.size(), 1); ++i)
         {
             if (i > 0)
             {
                 auto placed = design_piece(*c, design, i, first, scene.grid);
                 if (!placed || !load_object_model(scene, b.models, assets, placed->object))
                     break;
-                b.picked = rct3::park::track::LaidPiece { static_cast<std::size_t>(&*rct3::park::track::shape_named(*c, design[i].symbol) - c->pieces.data()), design[i].reversed };
+                b.picked = rct3::park::track::LaidPiece { static_cast<usize>(&*rct3::park::track::shape_named(*c, design[i].symbol) - c->pieces.data()), design[i].reversed };
                 // Laid in the design's own order, even on a ride built back from its station.
                 b.backward = false;
                 // Refused where it would clash with what stands, as a piece built by hand is; the flag left by the
@@ -683,7 +684,7 @@ namespace rct3::scene::track
                 b.clashes = clashes(scene, standing, placed->object);
                 b.ghost = std::move(*placed);
             }
-            const std::size_t laid = ride.track->pieces.size();
+            const usize laid = ride.track->pieces.size();
             build(scene, b, assets, design.empty() ? simulation::park::Charge::IfAffordable : simulation::park::Charge::Always);
             if (ride.track->pieces.size() == laid)
                 break;
@@ -719,7 +720,7 @@ namespace rct3::scene::track
                 track.segments = settings->track->segments;
                 for (save::model::TrackSegment& stretch : track.segments)
                     stretch.id = 0;
-                for (std::size_t i = 0; i < design.size(); ++i)
+                for (usize i = 0; i < design.size(); ++i)
                     track.pieces[i].segment = design[i].segment;
                 if (!std::exchange(track.circuit, settings->track->circuit) && track.circuit && !(b.ride->value < scene.track_rules.size() && scene.track_rules[b.ride->value].pool_ride))
                     scene.doors_requested = *b.ride;
@@ -849,8 +850,8 @@ namespace rct3::scene::track
                     strip->close();
                 return;
             }
-            constexpr float kRow = 24;
-            constexpr float kSpinner = 64;
+            constexpr f32 kRow = 24;
+            constexpr f32 kSpinner = 64;
             if (!strip)
             {
                 strip = scene.desktop->root().add<ui::widgets::Panel>(std::string(kArmName), std::string(skins::kCurvedStrip));
@@ -860,7 +861,7 @@ namespace rct3::scene::track
                 enable.placement = ui::top_left(8, 6, 20, 20);
                 auto& label = strip->add<ui::widgets::Label>("enable_label", std::u16string(assets.strings->get(kArmEnable)));
                 label.placement = ui::top_left(30, 6, 60, 20);
-                float left = 92;
+                f32 left = 92;
                 for (const auto& [name, text, help] : { std::tuple { "zero", u"0", kArmZeroHelp }, { "copy_prev", u"<", kArmPrevHelp }, { "copy_next", u">", kArmNextHelp } })
                 {
                     auto& button = strip->add<ui::widgets::Button>(name, std::string(skins::kTextButton));
@@ -897,13 +898,13 @@ namespace rct3::scene::track
             if (strip->find_as<ui::widgets::Button>("piece_forward")->take_click() && b.arm_back > 0)
                 --b.arm_back;
             b.arm_back = std::min(b.arm_back, pieces.size() - 1);
-            const std::size_t index = pieces.size() - 1 - b.arm_back;
+            const usize index = pieces.size() - 1 - b.arm_back;
             save::model::TrackPiece& piece = pieces[index];
             strip->find_as<ui::widgets::Label>("piece_label")->text = strings::to_utf16(std::format("{}/{}", index + 1, pieces.size()));
             auto& enable = *strip->find_as<ui::widgets::Tickbox>("enable");
             // The nearest piece before or after this one (round a circuit) with angles of its own.
             const auto nearest = [&](bool before) -> std::optional<rct3::park::track::ArmAngles> {
-                for (std::size_t k = 1; k < pieces.size(); ++k)
+                for (usize k = 1; k < pieces.size(); ++k)
                     if (const auto& other = pieces[before ? (index + pieces.size() - k) % pieces.size() : (index + k) % pieces.size()]; other.arm_angles)
                         return other.arm_angles;
                 return std::nullopt;
@@ -926,21 +927,21 @@ namespace rct3::scene::track
                 piece.arm_angles = rct3::park::track::ArmAngles { };
                 shown = false;
             }
-            for (std::size_t j = 0; j < kArmJoints.size(); ++j)
+            for (usize j = 0; j < kArmJoints.size(); ++j)
             {
                 auto& spinner = *strip->find_as<ui::widgets::Spinner>(kArmJoints[j]);
                 if (spinner.take_change() && piece.arm_angles)
-                    (*piece.arm_angles)[j] = static_cast<float>(spinner.value());
+                    (*piece.arm_angles)[j] = static_cast<f32>(spinner.value());
                 spinner.enabled = piece.arm_angles.has_value();
                 if (!shown)
-                    spinner.set_value(piece.arm_angles ? static_cast<std::int32_t>(std::lround((*piece.arm_angles)[j])) : 0);
+                    spinner.set_value(piece.arm_angles ? static_cast<i32>(std::lround((*piece.arm_angles)[j])) : 0);
             }
             enable.ticked = piece.arm_angles.has_value();
             b.arm_piece = piece.id;
         }
     } // namespace
 
-    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, std::int32_t currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands, units::Seconds elapsed)
+    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, i32 currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands, units::Seconds elapsed)
     {
         TrackBuilding& b = scene.building;
         b.clock += elapsed;
@@ -965,7 +966,7 @@ namespace rct3::scene::track
         // The round panel's ring, in this order: the ride's window, turning the first piece, the construction
         // strip, its state, the colours of the pieces built next, and cutting the ground smoothly or sharply, one
         // of the two always lit. The turn shows greyed while it does nothing.
-        enum Tab : std::size_t
+        enum Tab : usize
         {
             Info,
             Rotate,
@@ -998,7 +999,7 @@ namespace rct3::scene::track
         if (const auto paint = placing->take_paint(); paint && paint->pot < std::tuple_size_v<save::model::RideColours>)
         {
             save::model::RideColours colours = next_colours(scene, b);
-            colours.at(paint->pot) = static_cast<std::uint8_t>(paint->colour);
+            colours.at(paint->pot) = static_cast<u8>(paint->colour);
             b.colours = colours;
             b.tabs_for.reset();
         }
@@ -1017,7 +1018,7 @@ namespace rct3::scene::track
         auto design = scene.desktop->root().find_as<ui::screens::info::InfoPanel>(park::kDesignPlacingName);
         if (design && holding)
         {
-            enum DesignTab : std::size_t
+            enum DesignTab : usize
             {
                 Turn,
                 Page,
@@ -1050,7 +1051,7 @@ namespace rct3::scene::track
             if (const auto paint = design->take_paint(); paint && paint->pot < std::tuple_size_v<save::model::RideColours>)
             {
                 save::model::RideColours colours = next_colours(scene, b);
-                colours.at(paint->pot) = static_cast<std::uint8_t>(paint->colour);
+                colours.at(paint->pot) = static_cast<u8>(paint->colour);
                 b.colours = colours;
             }
             if (const auto change = design->take_change())
@@ -1058,13 +1059,13 @@ namespace rct3::scene::track
                 if (change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Name))
                     b.design_title = change->text;
                 else if (change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Music))
-                    b.design_tune = static_cast<std::size_t>(std::max(change->value, 0));
+                    b.design_tune = static_cast<usize>(std::max(change->value, 0));
             }
             const auto page = [&] {
                 ui::screens::info::InfoPage p;
                 ui::screens::info::InfoControl name { .id = ui::screens::info::control_id(ui::screens::info::AttractionControl::Name), .name = "TT_AttractionDialogIconLabelButton", .kind = ui::screens::info::InfoControlKind::Text, .maximum = ui::screens::info::kLongestAttractionName, .text = b.design_title, .width = ui::screens::info::kNameWidth, .help = std::u16string(assets.strings->get("TT_AttractionDialogIconLabelButton")) };
                 p.controls.push_back(std::move(name));
-                ui::screens::info::InfoControl music { .id = ui::screens::info::control_id(ui::screens::info::AttractionControl::Music), .name = "AttractionViewDialogMusicToolTip", .kind = ui::screens::info::InfoControlKind::Choice, .value = static_cast<std::int32_t>(b.design_tune), .beside = true, .width = ui::screens::info::kNameWidth, .help = std::u16string(assets.strings->get("AttractionViewDialogMusicToolTip")) };
+                ui::screens::info::InfoControl music { .id = ui::screens::info::control_id(ui::screens::info::AttractionControl::Music), .name = "AttractionViewDialogMusicToolTip", .kind = ui::screens::info::InfoControlKind::Choice, .value = static_cast<i32>(b.design_tune), .beside = true, .width = ui::screens::info::kNameWidth, .help = std::u16string(assets.strings->get("AttractionViewDialogMusicToolTip")) };
                 music.items.emplace_back(assets.strings->get("AttractionViewDialogNoMusic"));
                 music.items.insert(music.items.end(), scene.tunes.begin(), scene.tunes.end());
                 p.controls.push_back(std::move(music));
@@ -1084,8 +1085,8 @@ namespace rct3::scene::track
                     tabs[tab] = { .icon = std::format("TerrainFlattener_{}{}", name, b.cut_ground && b.smooth_cuts == smooth ? "On" : "Off"), .help = std::u16string(assets.strings->get(std::format("TerrainFlattener_{}_ToolTip", name))), .action = true };
                 // The turn, the page and the colours where the original's three are; the ground's two down the
                 // disc's outer side under them, clear of the page.
-                for (std::size_t i = 0; i < tabs.size(); ++i)
-                    tabs[i].slot = i < Smoothly ? static_cast<std::int32_t>(i) : static_cast<std::int32_t>(Smoothly) - 1 - static_cast<std::int32_t>(i);
+                for (usize i = 0; i < tabs.size(); ++i)
+                    tabs[i].slot = i < Smoothly ? static_cast<i32>(i) : static_cast<i32>(Smoothly) - 1 - static_cast<i32>(i);
                 design->show(std::move(tabs), Page);
                 design->show_page(page());
                 b.design_tabs_for = now;
@@ -1126,12 +1127,12 @@ namespace rct3::scene::track
                 tabs[tab].icon = std::format("TerrainFlattener_{}{}", name, lit ? "On" : "Off");
                 tabs[tab].help = assets.strings->get(std::format("TerrainFlattener_{}_ToolTip", name));
             }
-            for (std::size_t i = 0; i < tabs.size(); ++i)
+            for (usize i = 0; i < tabs.size(); ++i)
             {
-                tabs[i].slot = static_cast<std::int32_t>(i);
+                tabs[i].slot = static_cast<i32>(i);
                 tabs[i].action = tabs[i].choices.empty() && tabs[i].paints.empty();
             }
-            const std::size_t none = tabs.size(); // No tab open: the strip holds the controls
+            const usize none = tabs.size(); // No tab open: the strip holds the controls
             placing->show(std::move(tabs), none);
             placing->set_body_size(whole ? 0 : kControlsWidth, whole ? 0 : kControlsHeight);
             placing->set_paper(!whole);
@@ -1185,10 +1186,10 @@ namespace rct3::scene::track
             switch (event->action)
             {
                 case Curve:
-                    b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Curve, static_cast<std::int32_t>(event->index) - rct3::park::track::kCurveSizes);
+                    b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Curve, static_cast<i32>(event->index) - rct3::park::track::kCurveSizes);
                     break;
                 case Slope:
-                    b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Slope, static_cast<std::int32_t>(event->index) - rct3::park::track::kSlopeSteps);
+                    b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Slope, static_cast<i32>(event->index) - rct3::park::track::kSlopeSteps);
                     break;
                 case Bank:
                     b.choice = rct3::park::track::pick_value(c->pieces, b.candidates, b.choice, rct3::park::track::ChoiceAxis::Bank, panel_bank(event->index));
@@ -1226,12 +1227,12 @@ namespace rct3::scene::track
                             b.holding_time = event->value;
                             break;
                         case ui::screens::build::PieceParam::Speed:
-                            b.brake_speed = std::clamp(static_cast<std::int32_t>(std::lround(static_cast<float>(event->value) / 10 / ui::screens::info::speed_scale(units))), 1, static_cast<std::int32_t>(kMostBrakeSpeed.value));
+                            b.brake_speed = std::clamp(static_cast<i32>(std::lround(static_cast<f32>(event->value) / 10 / ui::screens::info::speed_scale(units))), 1, static_cast<i32>(kMostBrakeSpeed.value));
                             break;
                     }
                     break;
                 case Facing:
-                    b.facing = static_cast<std::uint8_t>((b.facing + 1) % ui::screens::build::construction_panel::kFacings);
+                    b.facing = static_cast<u8>((b.facing + 1) % ui::screens::build::construction_panel::kFacings);
                     break;
                 case NewSegment:
                 {
@@ -1306,7 +1307,7 @@ namespace rct3::scene::track
                 for (const save::model::PlacedObject& car : cars.pieces)
                     t.stood.push_back(cars.fitted.at(car.id));
                 t.meshes = rct3::park::moving_meshes(cars.pieces, scene.models, scene.grid);
-                for (std::size_t i = 0; i < cars.pieces.size(); ++i)
+                for (usize i = 0; i < cars.pieces.size(); ++i)
                     if (const auto model = scene.models.find(rct3::park::object::model_ref(cars.pieces[i])); model != scene.models.end())
                         t.joints.insert(t.joints.end(), rct3::park::object::pieces_apart(model->second), i);
                 for (auto* vertices : { &t.meshes.mesh.vertices, &t.meshes.own })
@@ -1356,7 +1357,7 @@ namespace rct3::scene::track
                 t.waited = { };
             }
             std::vector<glm::mat4> places;
-            for (std::size_t i = 0; i < t.stood.size(); ++i)
+            for (usize i = 0; i < t.stood.size(); ++i)
             {
                 glm::mat4 place = rct3::park::track::moved_along(*course, t.stood[i], { t.spots[i].front_wheels, t.spots[i].rear_wheels }, t.train.at - t.stood_at);
                 if (t.train.splashed)
@@ -1371,7 +1372,7 @@ namespace rct3::scene::track
             }
             // shortcut: the joints of cars on arms and cars' moving parts ride at rest with their car, upgrade if a
             // test should move them as the park does.
-            for (const std::size_t car : t.joints)
+            for (const usize car : t.joints)
             {
                 const glm::mat4 place = places[car];
                 places.push_back(place);
@@ -1430,7 +1431,7 @@ namespace rct3::scene::track
             std::vector<ui::widgets::TableColumn> columns { { .heading = heading("Staff_ColumnHeader_Name") }, { .heading = heading("AttractionResultsDialogLabel_Excitement"), .width = { 120 }, .align = ui::Align::End }, { .heading = heading("AttractionResultsDialogLabel_Intensity"), .width = { 120 }, .align = ui::Align::End } };
             std::vector<ui::widgets::TableRow> rows { { .cells = { std::u16string(strings.get(kCustomTrack)), { }, { } }, .keys = { }, .id = 0 } };
             b.designs_locked.clear();
-            for (std::size_t i = 0; i < b.designs.size(); ++i)
+            for (usize i = 0; i < b.designs.size(); ++i)
             {
                 const save::model::DesignSummary& d = b.designs[i].summary;
                 std::u16string text = design_title(strings, b.designs[i].path);
@@ -1438,8 +1439,8 @@ namespace rct3::scene::track
                 b.designs_locked.push_back(locked);
                 if (locked)
                     text += strings.get(kLockedSuffix);
-                const auto rated = [&](float v) { return d.assessment.valid ? strings::to_utf16(std::format("{:.2f}", v)) : std::u16string { }; };
-                const auto key_of = [&](float v) { return d.assessment.valid ? std::optional<double>(v) : std::nullopt; };
+                const auto rated = [&](f32 v) { return d.assessment.valid ? strings::to_utf16(std::format("{:.2f}", v)) : std::u16string { }; };
+                const auto key_of = [&](f32 v) { return d.assessment.valid ? std::optional<f64>(v) : std::nullopt; };
                 rows.push_back({ .cells = { std::move(text), rated(d.assessment.excitement), rated(d.assessment.intensity) }, .keys = { std::nullopt, key_of(d.assessment.excitement), key_of(d.assessment.intensity) }, .id = i + 1 });
             }
             browser = scene.desktop->root().add<ui::screens::build::DesignBrowser>(std::string(kBrowserName), ui::game_skins::design_browser_style(assets.palette), std::u16string(strings.get("TrackBrowser_Title")), "Ride_Coaster", std::move(columns), std::move(rows), std::u16string(strings.get("TrackBrowser_BuildThis")), std::u16string(strings.get("TrackBrowser_Cancel")));
@@ -1494,7 +1495,7 @@ namespace rct3::scene::track
                 locked = b.designs_locked.at(*b.design_shown);
                 if (locked)
                     lines.push_back({ .label = ui::locked_design_help(*assets.strings, summary.scenario, summary.level), .name = std::string(kLockedHelp) });
-                b.design_train = trains.empty() ? 0 : static_cast<std::size_t>(std::clamp<std::int32_t>(summary.train, 0, static_cast<std::int32_t>(trains.size()) - 1));
+                b.design_train = trains.empty() ? 0 : static_cast<usize>(std::clamp<i32>(summary.train, 0, static_cast<i32>(trains.size()) - 1));
             }
             browser->show_design(picture, std::move(lines), !locked);
             if (b.design_shown)
@@ -1526,11 +1527,11 @@ namespace rct3::scene::track
             b.design_tune = 0;
             b.cut_ground = false;
             b.design_doors.clear();
-            for (std::size_t i = 0; design && i < design->ride.stations.size(); ++i)
+            for (usize i = 0; design && i < design->ride.stations.size(); ++i)
             {
                 for (const bool exit : { false, true })
                 {
-                    const std::uint64_t id = exit ? design->ride.stations[i].exit : design->ride.stations[i].entrance;
+                    const u64 id = exit ? design->ride.stations[i].exit : design->ride.stations[i].entrance;
                     if (const auto door = std::ranges::find(design->scenery, id, &save::model::PlacedObject::id); id != 0 && door != design->scenery.end())
                         b.design_doors.push_back({ i, exit, *door });
                 }

@@ -2,6 +2,7 @@
 #include "ui/screens/options/session.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 
 #include <utility>
 
@@ -75,7 +76,7 @@ namespace rct3::ui::screens::options
         return std::exchange(language_, std::nullopt);
     }
 
-    std::optional<std::size_t> OptionsSession::take_screen_size()
+    std::optional<usize> OptionsSession::take_screen_size()
     {
         return std::exchange(screen_size_, std::nullopt);
     }

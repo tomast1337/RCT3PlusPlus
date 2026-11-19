@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/extra_skins.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "ui/skin/set.hpp"
 #include "ui/ui_textures.hpp"
@@ -10,10 +11,10 @@
 namespace rct3::ui
 {
 
-    std::size_t add_extra_skins(render::Device& device, InterfaceAssets& assets, std::span<const std::string_view> files)
+    usize add_extra_skins(render::Device& device, InterfaceAssets& assets, std::span<const std::string_view> files)
     {
         const auto log = logging::logger("ui");
-        std::size_t added = 0;
+        usize added = 0;
         for (const std::string_view name : files)
         {
             const auto path = assets.install ? assets.install->find(name) : std::nullopt;

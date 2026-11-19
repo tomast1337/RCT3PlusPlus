@@ -2,6 +2,7 @@
 #include "ovl/texture/texture.hpp"
 
 #include "../builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <cstdint>
@@ -17,16 +18,16 @@ namespace
 {
 
     // Name block, 16 bytes: "T:tex" 0, "Sty:txs" 6. The structure block follows at address 16.
-    constexpr std::uint32_t kBase = 16;
-    constexpr std::uint32_t kNameStyle = 6;
+    constexpr u32 kBase = 16;
+    constexpr u32 kNameStyle = 6;
 
     // Offsets inside the structure block.
-    constexpr std::uint32_t kHeader = 0; // 56 bytes, the last word is the node cell pointer
-    constexpr std::uint32_t kCell = 56;  // pointer to the node
-    constexpr std::uint32_t kNode = 60;  // 12 bytes
-    constexpr std::uint32_t kEnd = 72;
+    constexpr u32 kHeader = 0; // 56 bytes, the last word is the node cell pointer
+    constexpr u32 kCell = 56;  // pointer to the node
+    constexpr u32 kNode = 60;  // 12 bytes
+    constexpr u32 kEnd = 72;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
@@ -56,17 +57,17 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> structure(std::uint32_t table_value = 7, std::uint32_t cell = kBase + kCell, std::uint32_t node_address = kBase + kNode)
+    std::vector<std::byte> structure(u32 table_value = 7, u32 cell = kBase + kCell, u32 node_address = kBase + kNode)
     {
         std::vector<std::byte> out;
-        for (std::int32_t i = 0; i < 16; ++i)
-            append_u16(out, static_cast<std::uint16_t>(table_value));
-        words(out, { 1, 8, 16, 0 });                                // parameters and the style field
-        append_u16(out, 1);                                         // first
-        append_u16(out, 2);                                         // count
-        words(out, { cell });                                       // node cell pointer
-        words(out, { node_address });                               // the cell
-        words(out, { 0, 12, std::bit_cast<std::uint32_t>(30.0f) }); // the node
+        for (i32 i = 0; i < 16; ++i)
+            append_u16(out, static_cast<u16>(table_value));
+        words(out, { 1, 8, 16, 0 });                      // parameters and the style field
+        append_u16(out, 1);                               // first
+        append_u16(out, 2);                               // count
+        words(out, { cell });                             // node cell pointer
+        words(out, { node_address });                     // the cell
+        words(out, { 0, 12, std::bit_cast<u32>(30.0f) }); // the node
         REQUIRE(out.size() == kEnd);
         return out;
     }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management/window.hpp"
 
+#include "core/types.hpp"
 #include "ui/widgets/panel.hpp"
 
 #include <algorithm>
@@ -14,22 +15,22 @@ namespace rct3::ui::screens::management
     namespace
     {
         /// A text button's width for `text`, without measuring: enough for the small font's letters.
-        constexpr float kLetterWidth = 7; // A long text of 6 a letter ran past its button
-        constexpr float kTextButtonMargin = 24;
-        constexpr float kNarrowestTextButton = 70;
-        constexpr std::size_t kSeriesPerRow = 4; ///< Names of a graph's series in a row under it, at most
+        constexpr f32 kLetterWidth = 7; // A long text of 6 a letter ran past its button
+        constexpr f32 kTextButtonMargin = 24;
+        constexpr f32 kNarrowestTextButton = 70;
+        constexpr usize kSeriesPerRow = 4; ///< Names of a graph's series in a row under it, at most
         /// Words under a graph's marks, at most; the rest are left out, evenly. Chosen by eye: a year of months
         /// fits the window without the words running into each other.
-        constexpr std::size_t kMostMarkWords = 8;
+        constexpr usize kMostMarkWords = 8;
 
-        Placement band(float x0, float x1, float y, float height)
+        Placement band(f32 x0, f32 x1, f32 y, f32 height)
         {
             // From fraction x0 to fraction x1 of the page's width.
             return { { x0, 0, x1, 0 }, { 0, y, 0, y + height } };
         }
     } // namespace
 
-    ManagementWindow::ManagementWindow(std::string name, const ManagementWindowStyle& style, float width, float height, std::vector<ManagementTab> tabs, std::size_t picked)
+    ManagementWindow::ManagementWindow(std::string name, const ManagementWindowStyle& style, f32 width, f32 height, std::vector<ManagementTab> tabs, usize picked)
         : widgets::Window(std::move(name), style.window, width, height)
         , style_(style)
     {
@@ -37,14 +38,14 @@ namespace rct3::ui::screens::management
         caption_ = &body.add<widgets::Label>("caption", std::u16string { }, style.caption_font);
         caption_->style.vertical = Align::Centre;
         caption_->style.colour = style.caption_colour;
-        const float tabs_width = tabs.empty() ? 0 : style.tab_step * static_cast<float>(tabs.size() - 1) + style.tab_size;
+        const f32 tabs_width = tabs.empty() ? 0 : style.tab_step * static_cast<f32>(tabs.size() - 1) + style.tab_size;
         caption_->placement = { { 0, 0, 1, 0 }, { style.caption_x, 0, -tabs_width - style.gap, style.caption_height } };
-        for (std::size_t i = 0; i < tabs.size(); ++i)
+        for (usize i = 0; i < tabs.size(); ++i)
         {
             auto& tab = body.add<widgets::Button>(tabs[i].icon, tabs[i].icon);
             tab.toggle = true;
             tab.tooltip = tabs[i].name;
-            const float right = tabs_width - style.tab_step * static_cast<float>(i) - style.tab_size;
+            const f32 right = tabs_width - style.tab_step * static_cast<f32>(i) - style.tab_size;
             tab.placement = top_right(right, 0, style.tab_size, style.tab_size);
             tabs_.push_back(&tab);
             names_.push_back(std::move(tabs[i].name));
@@ -64,7 +65,7 @@ namespace rct3::ui::screens::management
         open_tab(std::min(picked, tabs_.empty() ? 0 : tabs_.size() - 1));
     }
 
-    void ManagementWindow::open_tab(std::size_t i)
+    void ManagementWindow::open_tab(usize i)
     {
         if (i >= tabs_.size())
         {
@@ -72,7 +73,7 @@ namespace rct3::ui::screens::management
             return;
         }
         tab_ = i;
-        for (std::size_t t = 0; t < tabs_.size(); ++t)
+        for (usize t = 0; t < tabs_.size(); ++t)
             tabs_[t]->on = t == i;
         caption_->text = names_[i];
     }
@@ -81,7 +82,7 @@ namespace rct3::ui::screens::management
     {
         page_age_ = { };
         // The fan goes with the buttons, and comes back beside the same button if it is still there.
-        const std::optional<std::size_t> choosing = choosing_;
+        const std::optional<usize> choosing = choosing_;
         close_choices();
         while (!lines_->children().empty())
             (void)lines_->remove(*lines_->children().back());
@@ -90,7 +91,7 @@ namespace rct3::ui::screens::management
         marks_.clear();
         ranges_.clear();
 
-        float y = 0;
+        f32 y = 0;
         const auto label = [&](std::string name, const std::u16string& text, Placement placement, Color colour, Align align = Align::Start) {
             widgets::Label& l = lines_->add<widgets::Label>(std::move(name), text, font::FontRole::Small);
             l.placement = placement;
@@ -98,12 +99,12 @@ namespace rct3::ui::screens::management
             l.style.horizontal = align;
         };
         bool right = false; // Whether the row has a half line on its left, waiting for one on its right
-        for (std::size_t i = 0; i < shown.lines.size(); ++i)
+        for (usize i = 0; i < shown.lines.size(); ++i)
         {
             const info::InfoLine& l = shown.lines[i];
             if (l.half)
             {
-                const float x0 = right ? 0.5f : 0;
+                const f32 x0 = right ? 0.5f : 0;
                 label(info::keyed_name(l.name, "label", i), l.label, { { x0, 0, x0 + 0.5f, 0 }, { right ? style_.pair_gap / 2 : 0, y, -style_.pair_gap / 2 - 60, y + style_.line_height } }, style_.text_colour);
                 label(info::keyed_name(l.name, "value", i), l.value, { { x0 + 0.5f, 0, x0 + 0.5f, 0 }, { -style_.pair_gap / 2 - 60, y, -style_.pair_gap / 2, y + style_.line_height } }, style_.text_colour, Align::End);
                 if (right)
@@ -156,7 +157,7 @@ namespace rct3::ui::screens::management
             while (!controls_box_->children().empty())
                 (void)controls_box_->remove(*controls_box_->children().back());
             controls_.clear();
-            for (std::size_t i = 0; i < shown.controls.size(); ++i)
+            for (usize i = 0; i < shown.controls.size(); ++i)
             {
                 const info::InfoControl& c = shown.controls[i];
                 Control made { .control = c };
@@ -177,7 +178,7 @@ namespace rct3::ui::screens::management
                 controls_.push_back(made);
             }
         }
-        for (std::size_t i = 0; i < controls_.size(); ++i)
+        for (usize i = 0; i < controls_.size(); ++i)
         {
             const info::InfoControl& c = shown.controls[i];
             Control& at = controls_[i];
@@ -192,7 +193,7 @@ namespace rct3::ui::screens::management
             if (!words)
             {
                 // The arrows or the bar in the value column, the value in words after them.
-                const float width = c.kind == info::InfoControlKind::Number ? style_.spinner.arrow_width : style_.bar_width;
+                const f32 width = c.kind == info::InfoControlKind::Number ? style_.spinner.arrow_width : style_.bar_width;
                 at.widget->placement = { { style_.value_column, 0, style_.value_column, 0 }, { 0, y, width, y + style_.line_height } };
                 at.widget->enabled = c.enabled;
                 at.widget->tooltip = c.help;
@@ -205,10 +206,10 @@ namespace rct3::ui::screens::management
                 }
                 else if (auto* b = dynamic_cast<widgets::Slider*>(at.widget))
                 {
-                    b->minimum = static_cast<float>(c.minimum);
-                    b->maximum = static_cast<float>(c.maximum);
-                    b->step = static_cast<float>(c.step);
-                    b->set_value(static_cast<float>(c.value));
+                    b->minimum = static_cast<f32>(c.minimum);
+                    b->maximum = static_cast<f32>(c.maximum);
+                    b->step = static_cast<f32>(c.step);
+                    b->set_value(static_cast<f32>(c.value));
                 }
                 at.shown->text = c.shown;
                 at.shown->style.colour = style_.text_colour;
@@ -218,7 +219,7 @@ namespace rct3::ui::screens::management
         }
 
         // Room the buttons take from the page's bottom.
-        float bottom = 0;
+        f32 bottom = 0;
         for (const ManagementButton& b : shown.buttons)
             bottom = std::max(bottom, (b.text.empty() ? style_.icon_button_size : style_.button_height) + style_.gap);
         plot_ = nullptr;
@@ -234,14 +235,14 @@ namespace rct3::ui::screens::management
             if (y > 0)
                 y += style_.gap;
             // The spans to pick, in a row at the right above the plot.
-            float right = 0;
-            for (std::size_t i = shown.graph_ranges.size(); i-- > 0;)
+            f32 right = 0;
+            for (usize i = shown.graph_ranges.size(); i-- > 0;)
             {
                 const GraphRange& range = shown.graph_ranges[i];
                 widgets::Button& button = lines_->add<widgets::Button>(std::format("range{}", i), style_.button);
                 button.text = range.name;
                 button.text_inset = style_.button_inset;
-                const float width = std::max(kNarrowestTextButton, static_cast<float>(range.name.size()) * kLetterWidth + kTextButtonMargin);
+                const f32 width = std::max(kNarrowestTextButton, static_cast<f32>(range.name.size()) * kLetterWidth + kTextButtonMargin);
                 button.placement = top_right(right, y, width, style_.button_height);
                 right += width + style_.gap / 2;
                 ranges_.insert(ranges_.begin(), &button);
@@ -250,19 +251,19 @@ namespace rct3::ui::screens::management
                 y += style_.button_height + style_.gap / 2;
             // The series' ticks and names under the plot, a few to a row, and under the plot the marks' words. A
             // page with nothing under its graph gives the graph all the room down to the buttons.
-            const std::size_t n = shown.graph.size();
-            const std::size_t per_row = n <= kSeriesPerRow ? n : (n + 1) / 2;
-            const std::size_t name_rows = (n + per_row - 1) / per_row;
+            const usize n = shown.graph.size();
+            const usize per_row = n <= kSeriesPerRow ? n : (n + 1) / 2;
+            const usize name_rows = (n + per_row - 1) / per_row;
             const bool marked = std::ranges::any_of(shown.graph_ticks, [](const info::InfoTick& t) { return !t.label.empty(); });
-            const float names = static_cast<float>(name_rows) * style_.line_height + (marked ? style_.line_height : 0);
+            const f32 names = static_cast<f32>(name_rows) * style_.line_height + (marked ? style_.line_height : 0);
             const bool fill = shown.columns.empty() && shown.note.empty();
             // Half a line above for the top number's upper half; the plot's top and bottom, each an anchor and an
             // offset down the page.
-            const float top = y + style_.line_height / 2;
-            const float bottom_anchor = fill ? 1 : 0;
-            const float plot_bottom = fill ? -bottom - names - 1 : top + style_.plot_height;
+            const f32 top = y + style_.line_height / 2;
+            const f32 bottom_anchor = fill ? 1 : 0;
+            const f32 plot_bottom = fill ? -bottom - names - 1 : top + style_.plot_height;
             // A share of the way down the plot, as an anchor and an offset.
-            const auto down = [&](float share) { return std::pair(share * bottom_anchor, top + share * (plot_bottom - top)); };
+            const auto down = [&](f32 share) { return std::pair(share * bottom_anchor, top + share * (plot_bottom - top)); };
             widgets::LinePlot& plot = lines_->add<widgets::LinePlot>("graph");
             plot.placement = { { 0, 0, 1, bottom_anchor }, { style_.axis_width, top, 0, plot_bottom } };
             plot.background = style_.plot_background;
@@ -272,9 +273,9 @@ namespace rct3::ui::screens::management
             for (const info::InfoTick& t : shown.graph_ticks)
                 plot.ticks.push_back({ t.back, !t.label.empty() });
             plot_ = &plot;
-            for (std::size_t k = 0; k < axis_.size(); ++k)
+            for (usize k = 0; k < axis_.size(); ++k)
             {
-                const auto [anchor, offset] = down(static_cast<float>(k) / 4);
+                const auto [anchor, offset] = down(static_cast<f32>(k) / 4);
                 widgets::Label& number = lines_->add<widgets::Label>(std::format("axis{}", k), std::u16string { }, font::FontRole::Tiny);
                 number.placement = { { 0, anchor, 0, anchor }, { 0, offset - style_.line_height / 2, style_.axis_width - style_.gap / 2, offset + style_.line_height / 2 } };
                 number.style.colour = style_.text_colour;
@@ -286,14 +287,14 @@ namespace rct3::ui::screens::management
             const auto [under_anchor, under] = down(1);
             marks_top_ = { under_anchor, under + 1 };
             span_graph();
-            const float names_top = under + 1 + (marked ? style_.line_height : 0);
-            for (std::size_t i = 0; i < n; ++i)
+            const f32 names_top = under + 1 + (marked ? style_.line_height : 0);
+            for (usize i = 0; i < n; ++i)
             {
                 const Color colour = style_.series_colours.empty() ? style_.text_colour : style_.series_colours[i % style_.series_colours.size()];
-                const float column = static_cast<float>(i % per_row);
-                const float row = static_cast<float>(i / per_row);
-                const float across = static_cast<float>(per_row);
-                const float row_top = names_top + row * style_.line_height;
+                const f32 column = static_cast<f32>(i % per_row);
+                const f32 row = static_cast<f32>(i / per_row);
+                const f32 across = static_cast<f32>(per_row);
+                const f32 row_top = names_top + row * style_.line_height;
                 const std::string key = info::keyed_name(shown.graph[i].key, shown.graph[i].key.empty() ? "series" : "", i);
                 widgets::Tickbox& tick = lines_->add<widgets::Tickbox>(std::format("{}_tick", key), style_.tick_box, style_.tick);
                 tick.placement = { { column / across, under_anchor, column / across, under_anchor }, { 0, row_top + (style_.line_height - style_.tick_size) / 2, style_.tick_size, row_top + (style_.line_height + style_.tick_size) / 2 } };
@@ -320,8 +321,8 @@ namespace rct3::ui::screens::management
 
         if (!shown.buttons.empty())
         {
-            float x = 0;
-            for (std::size_t i = 0; i < shown.buttons.size(); ++i)
+            f32 x = 0;
+            for (usize i = 0; i < shown.buttons.size(); ++i)
             {
                 const ManagementButton& b = shown.buttons[i];
                 widgets::Button& button = lines_->add<widgets::Button>(!b.key.empty() ? b.key : b.icon.empty() ? std::format("button{}", i) : b.icon, style_.button, b.icon);
@@ -330,8 +331,8 @@ namespace rct3::ui::screens::management
                 button.tooltip = b.help;
                 button.enabled = b.enabled;
                 const bool icon = b.text.empty();
-                const float width = icon ? style_.icon_button_size : std::max(kNarrowestTextButton, static_cast<float>(b.text.size()) * kLetterWidth + kTextButtonMargin);
-                const float height = icon ? style_.icon_button_size : style_.button_height;
+                const f32 width = icon ? style_.icon_button_size : std::max(kNarrowestTextButton, static_cast<f32>(b.text.size()) * kLetterWidth + kTextButtonMargin);
+                const f32 height = icon ? style_.icon_button_size : style_.button_height;
                 button.placement = bottom_left(x, 0, width, height);
                 x += width + style_.gap / 2;
                 buttons_.push_back(&button);
@@ -364,12 +365,12 @@ namespace rct3::ui::screens::management
         {
             const auto found = std::ranges::find(table_->rows, *selected, &widgets::TableRow::id);
             if (found != table_->rows.end())
-                table_->select(static_cast<std::size_t>(found - table_->rows.begin()));
+                table_->select(static_cast<usize>(found - table_->rows.begin()));
         }
         shown_row_ = picked_row();
     }
 
-    std::optional<std::int32_t> ManagementWindow::control_value(std::int32_t id) const
+    std::optional<i32> ManagementWindow::control_value(i32 id) const
     {
         for (const Control& c : controls_)
         {
@@ -378,24 +379,24 @@ namespace rct3::ui::screens::management
             if (const auto* n = dynamic_cast<const widgets::Spinner*>(c.widget))
                 return n->value();
             if (const auto* b = dynamic_cast<const widgets::Slider*>(c.widget))
-                return static_cast<std::int32_t>(std::lround(b->value()));
+                return static_cast<i32>(std::lround(b->value()));
         }
         return std::nullopt;
     }
 
-    std::optional<std::size_t> ManagementWindow::picked_row() const
+    std::optional<usize> ManagementWindow::picked_row() const
     {
         return table_->visible && table_->selected() ? std::optional(table_->rows.at(*table_->selected()).id) : std::nullopt;
     }
 
-    void ManagementWindow::open_choices(std::size_t i)
+    void ManagementWindow::open_choices(usize i)
     {
         close_choices();
         // Our own layout: a row of small buttons after the button, level with its middle.
         const Rect at = buttons_[i]->placement.offsets;
-        const float middle = (at.y0 + at.y1) / 2;
-        float x = at.x1 + style_.gap / 2;
-        for (std::size_t j = 0; j < button_choices_[i].size(); ++j)
+        const f32 middle = (at.y0 + at.y1) / 2;
+        f32 x = at.x1 + style_.gap / 2;
+        for (usize j = 0; j < button_choices_[i].size(); ++j)
         {
             const info::InfoChoice& c = button_choices_[i][j];
             widgets::Button& b = lines_->add<widgets::Button>(c.icon.empty() ? std::format("choice{}", j) : c.icon, std::string { }, c.icon);
@@ -415,7 +416,7 @@ namespace rct3::ui::screens::management
             return;
         plot_->series.clear();
         const info::InfoSeries* focus = nullptr;
-        for (std::size_t i = 0; i < graph_.size(); ++i)
+        for (usize i = 0; i < graph_.size(); ++i)
         {
             const info::InfoSeries& s = graph_[i];
             if (std::ranges::contains(hidden_, s.key))
@@ -425,7 +426,7 @@ namespace rct3::ui::screens::management
             if (focus == nullptr || s.key == focus_)
                 focus = &s;
         }
-        for (std::size_t k = 0; k < axis_.size(); ++k)
+        for (usize k = 0; k < axis_.size(); ++k)
             if (axis_[k] != nullptr)
                 axis_[k]->text = focus != nullptr && k < focus->axis.size() ? focus->axis[k] : std::u16string { };
     }
@@ -440,24 +441,24 @@ namespace rct3::ui::screens::management
         // shortcut: zoomed in, each series keeps the scale of all its samples; fit it to those in sight if small
         // changes get lost.
         plot_->slots = graph_span_ && graph_slots_ > 0 ? std::min(*graph_span_, graph_slots_) : graph_slots_;
-        for (std::size_t i = 0; i < ranges_.size(); ++i)
+        for (usize i = 0; i < ranges_.size(); ++i)
         {
-            const std::size_t slots = graph_ranges_[i].slots;
+            const usize slots = graph_ranges_[i].slots;
             ranges_[i]->kept_down = slots == 0 ? !graph_span_ : graph_span_ == slots;
         }
-        const std::size_t span = plot_->span();
-        const auto fits = [&](const info::InfoTick& t) { return !t.label.empty() && t.back + 1 <= static_cast<float>(span); };
-        const auto named = static_cast<std::size_t>(std::ranges::count_if(graph_ticks_, fits));
-        const std::size_t every = std::max<std::size_t>(1, (named + kMostMarkWords - 1) / kMostMarkWords);
-        std::size_t seen = 0;
-        for (std::size_t k = 0; k < graph_ticks_.size(); ++k)
+        const usize span = plot_->span();
+        const auto fits = [&](const info::InfoTick& t) { return !t.label.empty() && t.back + 1 <= static_cast<f32>(span); };
+        const auto named = static_cast<usize>(std::ranges::count_if(graph_ticks_, fits));
+        const usize every = std::max<usize>(1, (named + kMostMarkWords - 1) / kMostMarkWords);
+        usize seen = 0;
+        for (usize k = 0; k < graph_ticks_.size(); ++k)
         {
             const info::InfoTick& t = graph_ticks_[k];
             if (!fits(t) || seen++ % every != 0)
                 continue;
             // Across the plot, which starts axis_width in from the page's left.
-            const float across = widgets::plot_x(t.back, span, 1);
-            const float x = style_.axis_width * (1 - across);
+            const f32 across = widgets::plot_x(t.back, span, 1);
+            const f32 x = style_.axis_width * (1 - across);
             widgets::Label& word = lines_->add<widgets::Label>(std::format("mark{}", k), t.label, font::FontRole::Tiny);
             const auto [anchor, top] = marks_top_;
             word.placement = { { across, anchor, across, anchor }, { x - 30, top, x + 30, top + style_.line_height } };
@@ -492,7 +493,7 @@ namespace rct3::ui::screens::management
     {
         widgets::Window::update(context);
         page_age_ += context.elapsed;
-        for (std::size_t i = 0; i < tabs_.size(); ++i)
+        for (usize i = 0; i < tabs_.size(); ++i)
         {
             if (!tabs_[i]->take_click())
                 continue;
@@ -505,7 +506,7 @@ namespace rct3::ui::screens::management
             }
             tabs_[i]->on = true; // Pressing the open tab leaves it open
         }
-        for (std::size_t i = 0; i < series_ticks_.size() && i < graph_.size(); ++i)
+        for (usize i = 0; i < series_ticks_.size() && i < graph_.size(); ++i)
         {
             if (!series_ticks_[i]->take_change())
                 continue;
@@ -517,11 +518,11 @@ namespace rct3::ui::screens::management
                 hidden_.push_back(key);
             fill_graph();
         }
-        for (std::size_t i = 0; i < ranges_.size(); ++i)
+        for (usize i = 0; i < ranges_.size(); ++i)
         {
             if (!ranges_[i]->take_click())
                 continue;
-            const std::size_t slots = graph_ranges_[i].slots;
+            const usize slots = graph_ranges_[i].slots;
             graph_span_ = slots == 0 || slots >= graph_slots_ ? std::nullopt : std::optional(slots);
             span_graph();
             break;
@@ -550,7 +551,7 @@ namespace rct3::ui::screens::management
             }
             plot_->tooltip = std::move(readout);
         }
-        for (std::size_t j = 0; j < choices_.size(); ++j)
+        for (usize j = 0; j < choices_.size(); ++j)
         {
             if (choices_[j]->take_click() && choosing_)
             {
@@ -559,7 +560,7 @@ namespace rct3::ui::screens::management
                 break;
             }
         }
-        for (std::size_t i = 0; i < buttons_.size(); ++i)
+        for (usize i = 0; i < buttons_.size(); ++i)
         {
             if (!buttons_[i]->take_click())
                 continue;
@@ -582,7 +583,7 @@ namespace rct3::ui::screens::management
             if (selected)
             {
                 const auto found = std::ranges::find(table_->rows, *selected, &widgets::TableRow::id);
-                table_->select(found != table_->rows.end() ? std::optional(static_cast<std::size_t>(found - table_->rows.begin())) : std::nullopt);
+                table_->select(found != table_->rows.end() ? std::optional(static_cast<usize>(found - table_->rows.begin())) : std::nullopt);
             }
         }
         for (const Control& c : controls_)
@@ -590,7 +591,7 @@ namespace rct3::ui::screens::management
             if (auto* n = dynamic_cast<widgets::Spinner*>(c.widget); n != nullptr && n->take_change())
                 change_now_ = info::InfoChange { c.control.id, n->value(), 0, { } };
             else if (auto* b = dynamic_cast<widgets::Slider*>(c.widget); b != nullptr && b->take_change())
-                change_now_ = info::InfoChange { c.control.id, static_cast<std::int32_t>(std::lround(b->value())), 0, { } };
+                change_now_ = info::InfoChange { c.control.id, static_cast<i32>(std::lround(b->value())), 0, { } };
         }
         if (table_->take_activate() && table_->selected())
             row_now_ = table_->rows.at(*table_->selected()).id;

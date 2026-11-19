@@ -2,6 +2,7 @@
 #include "park/water/jet.hpp"
 
 #include "core/hash.hpp"
+#include "core/types.hpp"
 #include "units/units.hpp"
 
 #include <algorithm>
@@ -14,32 +15,32 @@ namespace rct3::park::water
 
     namespace
     {
-        constexpr float kDropsPerSecond = 20;              ///< Chosen by eye: enough rings that a swinging jet still bends smoothly
-        constexpr std::int32_t kRimSides = 8;              ///< Chosen by eye: round enough close up
+        constexpr f32 kDropsPerSecond = 20;                ///< Chosen by eye: enough rings that a swinging jet still bends smoothly
+        constexpr i32 kRimSides = 8;                       ///< Chosen by eye: round enough close up
         constexpr units::Distance kPictureLength { 3 };    ///< Chosen by eye: of jet, the picture covers
-        constexpr float kPictureSpeed = 0.8f;              ///< Chosen by eye: pictures a second the water runs along it
-        constexpr float kFlare = 1.0f;                     ///< Chosen by eye: how much wider than its spread broken water gets
-        constexpr float kRagged = 0.9f;                    ///< Chosen by eye: of its radius, how far broken water's edge wanders
-        constexpr float kGaps = 0.85f;                     ///< Chosen by eye: most of broken water's opacity its gaps take
-        constexpr float kThinning = 0.6f;                  ///< Chosen by eye: of the clear tube's opacity, how much is gone where the water is all broken
-        constexpr float kSprayWider = 1.15f;               ///< Chosen by eye: the frothy tube round the clear one
-        constexpr float kFading = 0.3f;                    ///< Chosen by eye: last share of its life over which broken water fades
+        constexpr f32 kPictureSpeed = 0.8f;                ///< Chosen by eye: pictures a second the water runs along it
+        constexpr f32 kFlare = 1.0f;                       ///< Chosen by eye: how much wider than its spread broken water gets
+        constexpr f32 kRagged = 0.9f;                      ///< Chosen by eye: of its radius, how far broken water's edge wanders
+        constexpr f32 kGaps = 0.85f;                       ///< Chosen by eye: most of broken water's opacity its gaps take
+        constexpr f32 kThinning = 0.6f;                    ///< Chosen by eye: of the clear tube's opacity, how much is gone where the water is all broken
+        constexpr f32 kSprayWider = 1.15f;                 ///< Chosen by eye: the frothy tube round the clear one
+        constexpr f32 kFading = 0.3f;                      ///< Chosen by eye: last share of its life over which broken water fades
         constexpr units::Radians kLeastAngle { 0.002f };   ///< Chosen by eye: the tube's radius spans at least this, seen from afar
         constexpr glm::vec3 kWhole { 1.5f, 1.65f, 1.85f }; ///< Chosen by eye: tint of whole water, bright and a little blue
         constexpr glm::vec3 kSpray { 2.6f, 2.6f, 2.6f };   ///< Chosen by eye: of broken water, white
 
         /// A steady number 0 to 1 for a drop's ring corner.
-        float noise(std::uint32_t serial, std::uint32_t corner)
+        f32 noise(u32 serial, u32 corner)
         {
-            std::uint32_t h = (serial * 9 + corner) * core::kGoldenSpread;
+            u32 h = (serial * 9 + corner) * core::kGoldenSpread;
             h ^= h >> 15;
             h *= 2246822519U;
             h ^= h >> 13;
-            return static_cast<float>(h & 0xffffU) / 65535.0f;
+            return static_cast<f32>(h & 0xffffU) / 65535.0f;
         }
     } // namespace
 
-    WaterJet::WaterJet(float life, float radius, float spread, float breakup)
+    WaterJet::WaterJet(f32 life, f32 radius, f32 spread, f32 breakup)
         : life_(life)
         , radius_(radius)
         , spread_(spread)
@@ -47,19 +48,19 @@ namespace rct3::park::water
     {
     }
 
-    float WaterJet::aged(const JetDrop& drop) const noexcept
+    f32 WaterJet::aged(const JetDrop& drop) const noexcept
     {
         return std::clamp(drop.age.value / life_, 0.0f, 1.0f);
     }
 
-    float WaterJet::broken(const JetDrop& drop) const noexcept
+    f32 WaterJet::broken(const JetDrop& drop) const noexcept
     {
         return breakup_ * aged(drop);
     }
 
-    float WaterJet::radius(const JetDrop& drop) const noexcept
+    f32 WaterJet::radius(const JetDrop& drop) const noexcept
     {
-        const float b = broken(drop);
+        const f32 b = broken(drop);
         return (radius_ + spread_ * drop.age.value) * (1 + kFlare * b * b);
     }
 
@@ -82,11 +83,11 @@ namespace rct3::park::water
         shooting_ = false;
     }
 
-    void WaterJet::advance(float seconds)
+    void WaterJet::advance(f32 seconds)
     {
-        constexpr float kStep = 1 / kDropsPerSecond;
+        constexpr f32 kStep = 1 / kDropsPerSecond;
         pending_ += seconds;
-        for (std::int32_t steps = 0; pending_ >= kStep && steps < 64; ++steps)
+        for (i32 steps = 0; pending_ >= kStep && steps < 64; ++steps)
         {
             pending_ -= kStep;
             for (JetDrop& d : drops_)
@@ -102,53 +103,53 @@ namespace rct3::park::water
         pending_ = std::min(pending_, kStep);
     }
 
-    std::optional<glm::vec3> WaterJet::landing(const std::function<float(glm::vec2)>& ground) const
+    std::optional<glm::vec3> WaterJet::landing(const std::function<f32(glm::vec2)>& ground) const
     {
-        for (std::size_t i = 1; i < drops_.size(); ++i)
+        for (usize i = 1; i < drops_.size(); ++i)
         {
             const glm::vec3 a = drops_[i - 1].position;
             const glm::vec3 b = drops_[i].position;
-            const float below = ground({ b.x, b.z }) - b.y;
+            const f32 below = ground({ b.x, b.z }) - b.y;
             if (below < 0)
                 continue;
-            const float above = a.y - ground({ a.x, a.z });
+            const f32 above = a.y - ground({ a.x, a.z });
             return glm::mix(a, b, above + below > 0 ? std::clamp(above / (above + below), 0.0f, 1.0f) : 1.0f);
         }
         return std::nullopt;
     }
 
-    std::optional<Throw> throw_to(glm::vec3 from, glm::vec3 to, float angle)
+    std::optional<Throw> throw_to(glm::vec3 from, glm::vec3 to, f32 angle)
     {
         const glm::vec2 level { to.x - from.x, to.z - from.z };
-        const float across = glm::length(level);
-        const float rise = across * std::tan(angle) - (to.y - from.y);
+        const f32 across = glm::length(level);
+        const f32 rise = across * std::tan(angle) - (to.y - from.y);
         if (across < 1e-3f || rise <= 0)
             return std::nullopt;
         // Thrown at speed v, it falls g t^2 / 2 below its straight line by the time t it is `across` along.
-        const float level_speed = across * std::sqrt(units::kGravity.value / (2 * rise));
+        const f32 level_speed = across * std::sqrt(units::kGravity.value / (2 * rise));
         const glm::vec2 way = level / across;
         return Throw { .velocity = { way.x * level_speed, level_speed * std::tan(angle), way.y * level_speed }, .seconds = across / level_speed };
     }
 
-    math::TextureShift jet_layer_scroll(const JetPicture& picture, float seconds)
+    math::TextureShift jet_layer_scroll(const JetPicture& picture, f32 seconds)
     {
         return math::TextureShift::by(-seconds * picture.layer_lag); // v falls as the water runs
     }
 
-    void jet_mesh(std::span<const WaterJet* const> jets, glm::vec3 eye, float seconds, object::ObjectMesh& mesh)
+    void jet_mesh(std::span<const WaterJet* const> jets, glm::vec3 eye, f32 seconds, object::ObjectMesh& mesh)
     {
         // Water breaking up shows through a second, frothy tube, as the clear water in the first thins.
         for (const std::string_view picture : { kJetPicture, kJetSpray })
         {
             const bool spray = picture == kJetSpray;
-            const auto first = static_cast<std::uint32_t>(mesh.indices.size());
+            const auto first = static_cast<u32>(mesh.indices.size());
             for (const WaterJet* jet : jets)
             {
                 const std::span<const JetDrop> drops = jet->drops();
                 if (drops.size() < 2 || (spray && jet->broken(drops.back()) == 0))
                     continue;
-                float run = 0;
-                for (std::size_t i = 0; i < drops.size(); ++i)
+                f32 run = 0;
+                for (usize i = 0; i < drops.size(); ++i)
                 {
                     const glm::vec3 p = drops[i].position;
                     const glm::vec3 step = i + 1 < drops.size() ? drops[i + 1].position - p : p - drops[i - 1].position;
@@ -157,41 +158,41 @@ namespace rct3::park::water
                     const glm::vec3 lift = glm::cross(side, way);
                     const glm::vec3 view = glm::normalize(eye - p);
                     // Thin at the oldest end; water that breaks up also fades away over the last of its life.
-                    const float tail = std::clamp((static_cast<float>(drops.size() - 1 - i)) / 3.0f, 0.0f, 1.0f);
-                    const float broken = jet->broken(drops[i]);
-                    const float fade = std::min(tail, broken > 0 ? std::clamp((1 - jet->aged(drops[i])) / kFading, 0.0f, 1.0f) : 1.0f);
+                    const f32 tail = std::clamp((static_cast<f32>(drops.size() - 1 - i)) / 3.0f, 0.0f, 1.0f);
+                    const f32 broken = jet->broken(drops[i]);
+                    const f32 fade = std::min(tail, broken > 0 ? std::clamp((1 - jet->aged(drops[i])) / kFading, 0.0f, 1.0f) : 1.0f);
                     // Too thin to cover a pixel from afar, it is drawn wider and fainter, so it neither flickers nor vanishes.
-                    const float radius = jet->radius(drops[i]) * tail;
-                    const float least = glm::distance(eye, p) * kLeastAngle.value;
-                    const float thin = radius < least ? std::max(radius / least, 0.5f) : 1.0f;
+                    const f32 radius = jet->radius(drops[i]) * tail;
+                    const f32 least = glm::distance(eye, p) * kLeastAngle.value;
+                    const f32 thin = radius < least ? std::max(radius / least, 0.5f) : 1.0f;
                     const glm::vec3 tint = spray ? kSpray : glm::mix(kWhole, kSpray, broken);
-                    const float share = spray ? broken : 1 - kThinning * broken;
-                    const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
-                    for (std::int32_t k = 0; k <= kRimSides; ++k)
+                    const f32 share = spray ? broken : 1 - kThinning * broken;
+                    const auto base = static_cast<u32>(mesh.vertices.size());
+                    for (i32 k = 0; k <= kRimSides; ++k)
                     {
-                        const float turn = 2 * std::numbers::pi_v<float> * static_cast<float>(k) / kRimSides;
+                        const f32 turn = 2 * std::numbers::pi_v<f32> * static_cast<f32>(k) / kRimSides;
                         const glm::vec3 out = side * std::cos(turn) + lift * std::sin(turn);
-                        const float wander = noise(drops[i].serial, static_cast<std::uint32_t>(k % kRimSides));
-                        const float gap = noise(drops[i].serial, static_cast<std::uint32_t>(k % kRimSides) + kRimSides);
+                        const f32 wander = noise(drops[i].serial, static_cast<u32>(k % kRimSides));
+                        const f32 gap = noise(drops[i].serial, static_cast<u32>(k % kRimSides) + kRimSides);
                         // Seen edge on, water looks thicker; broken water lets more through face on, and has gaps.
-                        const float rim = 1 - std::abs(glm::dot(out, view));
-                        const float alpha = glm::mix(0.85f + 0.15f * rim * rim, 0.25f + 0.5f * rim * rim, broken) * (1 - kGaps * broken * gap) * fade * thin * share;
-                        mesh.vertices.push_back({ .position = p + out * std::max(radius, least) * (spray ? kSprayWider : 1.0f) * (1 + kRagged * broken * (wander - 0.5f)), .colour = { tint, alpha }, .uv = { static_cast<float>(k) / kRimSides, (run - seconds * kPictureSpeed * kPictureLength.value) / kPictureLength.value }, .normal = out });
+                        const f32 rim = 1 - std::abs(glm::dot(out, view));
+                        const f32 alpha = glm::mix(0.85f + 0.15f * rim * rim, 0.25f + 0.5f * rim * rim, broken) * (1 - kGaps * broken * gap) * fade * thin * share;
+                        mesh.vertices.push_back({ .position = p + out * std::max(radius, least) * (spray ? kSprayWider : 1.0f) * (1 + kRagged * broken * (wander - 0.5f)), .colour = { tint, alpha }, .uv = { static_cast<f32>(k) / kRimSides, (run - seconds * kPictureSpeed * kPictureLength.value) / kPictureLength.value }, .normal = out });
                         mesh.owners.push_back(0);
                     }
                     if (i + 1 < drops.size())
                     {
                         run += glm::distance(p, drops[i + 1].position);
-                        for (std::uint32_t k = 0; k < kRimSides; ++k)
+                        for (u32 k = 0; k < kRimSides; ++k)
                         {
-                            const std::uint32_t a = base + k;
-                            const std::uint32_t b = a + kRimSides + 1;
+                            const u32 a = base + k;
+                            const u32 b = a + kRimSides + 1;
                             mesh.indices.insert(mesh.indices.end(), { a, b, a + 1, a + 1, b, b + 1 });
                         }
                     }
                 }
             }
-            const auto count = static_cast<std::uint32_t>(mesh.indices.size()) - first;
+            const auto count = static_cast<u32>(mesh.indices.size()) - first;
             if (count != 0)
                 mesh.batches.push_back({ .texture = std::string(picture), .picture = std::string(picture), .blend = object::PartBlend::Blended, .first = first, .count = count });
         }

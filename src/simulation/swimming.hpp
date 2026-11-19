@@ -4,6 +4,7 @@
 // round and the slides they climb on foot. The components here, and the step that moves them.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "park/pools/score.hpp"
 #include "profiling/profiler.hpp"
@@ -24,7 +25,7 @@ namespace rct3::simulation
     struct SimWorld;
 
     /// What swimmers do at a pool extra.
-    enum class PoolUse : std::uint8_t
+    enum class PoolUse : u8
     {
         Stand,  ///< Stand by it a while
         Lounge, ///< Lie on a sun lounger
@@ -37,17 +38,17 @@ namespace rct3::simulation
         glm::vec3 at { 0.0f };
         units::Radians heading { };
         PoolUse use = PoolUse::Stand;
-        std::uint8_t places = 1; ///< Swimmers it takes at once; more wait their turn beside it
+        u8 places = 1; ///< Swimmers it takes at once; more wait their turn beside it
     };
 
     /// A diving board of a pool complex, small on the pool's edge or high on a paved square: where swimmers
     /// step on, the boards they may dive from, and the way it faces.
     struct PoolBoard
     {
-        glm::vec3 foot { 0.0f };       ///< On the paving: a high board's ladder foot, a small board's back
-        units::Radians heading { };    ///< Out over the water, the way they dive
-        std::vector<float> levels { }; ///< The boards' tops they may walk out on, lowest first, in world units; one for a small board
-        units::Distance reach { };     ///< From the foot to the boards' end, the way it faces
+        glm::vec3 foot { 0.0f };     ///< On the paving: a high board's ladder foot, a small board's back
+        units::Radians heading { };  ///< Out over the water, the way they dive
+        std::vector<f32> levels { }; ///< The boards' tops they may walk out on, lowest first, in world units; one for a small board
+        units::Distance reach { };   ///< From the foot to the boards' end, the way it faces
         bool high = false;
     };
 
@@ -60,7 +61,7 @@ namespace rct3::simulation
     };
 
     /// A pool's open water is marked in this many steps across a square, each way.
-    inline constexpr std::size_t kOpenSteps = 16;
+    inline constexpr usize kOpenSteps = 16;
 
     /// A square of a pool complex swimmers may be on, and the squares they may go on to from it: where paving meets
     /// paving or the coping round water at the same height, water meets water, a slope or steps meet at their foot
@@ -70,7 +71,7 @@ namespace rct3::simulation
     {
         struct Join
         {
-            std::size_t to = 0;
+            usize to = 0;
             std::vector<glm::vec3> via { }; ///< Walked through on the way, from this square: where the two meet, or a ramp's or staircase's ends
         };
         glm::vec3 at { 0.0f }; ///< Its middle, at its paving's height or, for water, its water's surface
@@ -98,26 +99,26 @@ namespace rct3::simulation
     };
 
     /// How dirty a pool looks, in the six steps the pool's window names, cleanest first.
-    [[nodiscard]] std::size_t dirt_step(const SwimPool& pool);
+    [[nodiscard]] usize dirt_step(const SwimPool& pool);
 
     /// Whether `at` is over the open water of the square `square` of `pool`'s water, `tile` across.
-    [[nodiscard]] bool open_water(const SwimPool& pool, std::size_t square, glm::vec3 at, float tile);
+    [[nodiscard]] bool open_water(const SwimPool& pool, usize square, glm::vec3 at, f32 tile);
 
     /// Where something going straight across `pool` (its squares `tile` across) from `from` to `to` is stopped by
     /// its walls: once over its open water, at the last of it on the way; `to` if it never comes out of it.
-    [[nodiscard]] glm::vec2 pool_stop(const SwimPool& pool, glm::vec2 from, glm::vec2 to, float tile);
+    [[nodiscard]] glm::vec2 pool_stop(const SwimPool& pool, glm::vec2 from, glm::vec2 to, f32 tile);
 
     /// The walk of `pool` (its squares `tile` across) that `at` is on, the one nearest its height where squares are
     /// stacked; off them, the nearest whose middle is within kTuning.pools.platform squares across and two height
     /// units `level` high, as a slide's station is from the path beside its platform. None further off.
-    [[nodiscard]] std::optional<std::size_t> pool_walk_at(const SwimPool& pool, glm::vec3 at, float tile, float level);
+    [[nodiscard]] std::optional<usize> pool_walk_at(const SwimPool& pool, glm::vec3 at, f32 tile, f32 level);
 
     /// Of each walk of `pool`, the one before it on the shortest way there from `from` over the joins, crossing no
     /// square that is only gone to; `from` for itself, none where it cannot be reached.
-    [[nodiscard]] std::vector<std::optional<std::size_t>> pool_ways(const SwimPool& pool, std::size_t from);
+    [[nodiscard]] std::vector<std::optional<usize>> pool_ways(const SwimPool& pool, usize from);
 
     /// The cleaning fluids a changing room may keep its pool clean with, mildest first.
-    enum class PoolFluid : std::uint8_t
+    enum class PoolFluid : u8
     {
         Mild,
         Strong,
@@ -136,14 +137,14 @@ namespace rct3::simulation
     struct PoolDoor
     {
         entt::entity pool = entt::null; ///< Its SwimPool
-        std::int32_t col = 0;           ///< Its tile
-        std::int32_t row = 0;
+        i32 col = 0;                    ///< Its tile
+        i32 row = 0;
         glm::vec3 room { 0.0f };     ///< The middle of its tile, at the pool's surface
         glm::vec3 poolside { 0.0f }; ///< The middle of the paved square it opens on
     };
 
     /// How far a swimmer is with a dive off one of the pool's boards.
-    enum class DiveStep : std::uint8_t
+    enum class DiveStep : u8
     {
         None,    ///< Not diving; on the way to a board's foot when they have one
         Climb,   ///< Up a high board's ladder
@@ -155,7 +156,7 @@ namespace rct3::simulation
 
     /// How a swimmer crosses the water's edge: each way a motion of its own, played where they stand while it
     /// carries them over.
-    enum class PoolEdge : std::uint8_t
+    enum class PoolEdge : u8
     {
         None,
         DiveIn,    ///< Off the edge, head first
@@ -167,31 +168,31 @@ namespace rct3::simulation
     /// A guest at a pool, from paying at its changing room until they come out of it again.
     struct Swimmer
     {
-        units::Seconds changing { };           ///< Still to spend changing, out of sight in the room
-        bool changed = false;                  ///< Into their swimwear
-        units::Seconds left { };               ///< In the pool still; then they go back to change
-        glm::vec3 goal { 0.0f };               ///< Where they swim or walk to next
-        bool in_water = false;                 ///< Swimming, or sitting in a spa pool; else on the paved squares round the water
-        bool to_spa = false;                   ///< The goal is a seat in a spa pool
-        units::Seconds idle { };               ///< Floating, or standing, before going on
-        std::optional<std::int32_t> spot { };  ///< The extra of the pool's they head for, wait at or use
-        std::optional<std::int32_t> place { }; ///< Their place on it while they use it; none on the way or waiting
-        PoolUse use = PoolUse::Stand;          ///< What they do there
-        units::Seconds waited { };             ///< For a place on it so far
-        units::Seconds stayed { };             ///< At their goal so far
-        entt::entity slide = entt::null;       ///< The pool slide they head for, to queue at its station
+        units::Seconds changing { };     ///< Still to spend changing, out of sight in the room
+        bool changed = false;            ///< Into their swimwear
+        units::Seconds left { };         ///< In the pool still; then they go back to change
+        glm::vec3 goal { 0.0f };         ///< Where they swim or walk to next
+        bool in_water = false;           ///< Swimming, or sitting in a spa pool; else on the paved squares round the water
+        bool to_spa = false;             ///< The goal is a seat in a spa pool
+        units::Seconds idle { };         ///< Floating, or standing, before going on
+        std::optional<i32> spot { };     ///< The extra of the pool's they head for, wait at or use
+        std::optional<i32> place { };    ///< Their place on it while they use it; none on the way or waiting
+        PoolUse use = PoolUse::Stand;    ///< What they do there
+        units::Seconds waited { };       ///< For a place on it so far
+        units::Seconds stayed { };       ///< At their goal so far
+        entt::entity slide = entt::null; ///< The pool slide they head for, to queue at its station
         /// The changing room of the complex whose slide they queue for or ride, to swim on in after
         entt::entity room = entt::null;
-        std::optional<std::int32_t> board { };  ///< The pool's diving board they head for or dive off
-        DiveStep dive = DiveStep::None;         ///< How far they are with it
-        float height = 0;                       ///< The board's top they climb to and walk out on, in world units
-        units::Pace fall { };                   ///< Their speed down, falling
-        units::Seconds diving { };              ///< In this step so far
-        std::optional<std::int32_t> ladder { }; ///< The pool's ladder they head for, to climb out or in by
-        PoolEdge edge = PoolEdge::None;         ///< Over the water's edge now
-        glm::vec3 edge_from { 0.0f };           ///< Where they stand for it, the motion carrying them on from there
-        glm::vec3 edge_to { 0.0f };             ///< Where the motion leaves them
-        units::Seconds edging { };              ///< Into it so far
+        std::optional<i32> board { };   ///< The pool's diving board they head for or dive off
+        DiveStep dive = DiveStep::None; ///< How far they are with it
+        f32 height = 0;                 ///< The board's top they climb to and walk out on, in world units
+        units::Pace fall { };           ///< Their speed down, falling
+        units::Seconds diving { };      ///< In this step so far
+        std::optional<i32> ladder { };  ///< The pool's ladder they head for, to climb out or in by
+        PoolEdge edge = PoolEdge::None; ///< Over the water's edge now
+        glm::vec3 edge_from { 0.0f };   ///< Where they stand for it, the motion carrying them on from there
+        glm::vec3 edge_to { 0.0f };     ///< Where the motion leaves them
+        units::Seconds edging { };      ///< Into it so far
     };
 
     /// A swimmer's way to their goal over the squares of their pool joined to the one they are on; not kept in saves,
@@ -213,7 +214,7 @@ namespace rct3::simulation
     {
         struct Station
         {
-            float at = 0;                      ///< Along the course, the middle of the station, where riders get on and off
+            f32 at = 0;                        ///< Along the course, the middle of the station, where riders get on and off
             std::vector<glm::vec3> points { }; ///< Of the course along it
             entt::entity pool = entt::null;    ///< The complex it joins (its SwimPool); none till one does
             glm::vec3 square { 0.0f };         ///< The square beside it that joins it, where swimmers come and go
@@ -226,10 +227,10 @@ namespace rct3::simulation
     struct Floating
     {
         entt::entity river = entt::null;
-        float along = 0;           ///< Where they are along the course
-        float travelled = 0;       ///< Since they got on
-        float stay = 0;            ///< How far they float before getting off at the next station on
-        float lane = -1;           ///< Across the channel, -1 to 1
+        f32 along = 0;             ///< Where they are along the course
+        f32 travelled = 0;         ///< Since they got on
+        f32 stay = 0;              ///< How far they float before getting off at the next station on
+        f32 lane = -1;             ///< Across the channel, -1 to 1
         units::Radians facing { }; ///< In their ring, from along the current
         units::TurnRate spin { };  ///< Their ring turns while they rest
         units::Pace paddle { };    ///< How fast they paddle, the way they face
@@ -243,7 +244,7 @@ namespace rct3::simulation
         struct Way
         {
             Coaster course { }; ///< From its foot in the water, up on foot, then down the slide
-            float top = 0;      ///< Along the course, where the climb ends and the slide begins
+            f32 top = 0;        ///< Along the course, where the climb ends and the slide begins
         };
         std::vector<Way> ways { };
     };
@@ -252,8 +253,8 @@ namespace rct3::simulation
     struct Climbing
     {
         entt::entity slide = entt::null;
-        std::uint8_t way = 0;
-        float along = 0;
+        u8 way = 0;
+        f32 along = 0;
         units::Pace speed { }; ///< Along the way
     };
 
@@ -271,7 +272,7 @@ namespace rct3::simulation
     /// pool path or path stairs lie on a square along one of the station's sides, at its level, the nearest when
     /// several do, the track standing up to `raised` over it (a slide's over its platform's deck). Pool rides have no
     /// entrance or exit: their guests board from that square and get off onto it.
-    [[nodiscard]] std::optional<PoolJoin> pool_beside(const SimWorld& world, std::span<const glm::vec3> station, float raised = 0);
+    [[nodiscard]] std::optional<PoolJoin> pool_beside(const SimWorld& world, std::span<const glm::vec3> station, f32 raised = 0);
 
     /// The pool complex (its SwimPool) a pool ride belongs to: a lazy river by its joined stations, a slide climbed
     /// on foot by its foot, a slide ending in a pool by that pool, and a slide with no entrance of its own going

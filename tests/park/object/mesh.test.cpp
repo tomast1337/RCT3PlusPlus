@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object/mesh.hpp"
 
+#include "core/types.hpp"
 #include "park/ground/textures.hpp"
 
 #include <algorithm>
@@ -34,7 +35,7 @@ namespace
         return p;
     }
 
-    save::model::PlacedObject placed_object(std::string symbol, std::int32_t col)
+    save::model::PlacedObject placed_object(std::string symbol, i32 col)
     {
         save::model::PlacedObject o;
         o.id = 1;
@@ -136,8 +137,8 @@ TEST_CASE("objects in other colours get their own batches and paintings")
     const auto painted = paint_batches(m.batches, pictures);
     REQUIRE(painted.size() == 3);
     const Rgb want = flexi_colour(27);
-    CHECK(painted.at(m.batches[2].texture).pixels == std::vector<std::uint8_t> { want.r, want.g, want.b, 255 });
-    CHECK(painted.at(m.batches[0].texture).pixels == std::vector<std::uint8_t> { 0x12, 0x34, 0x56, 255 });
+    CHECK(painted.at(m.batches[2].texture).pixels == std::vector<u8> { want.r, want.g, want.b, 255 });
+    CHECK(painted.at(m.batches[0].texture).pixels == std::vector<u8> { 0x12, 0x34, 0x56, 255 });
 }
 
 namespace
@@ -183,12 +184,12 @@ TEST_CASE("detail stretches the finer levels and draw distance the last, which b
 
 TEST_CASE("each item counts as one kind for its detail and draw distance")
 {
-    CHECK(detail_kind(static_cast<std::uint32_t>(ItemCategory::Tree)) == DetailKind::Vegetation);
-    CHECK(detail_kind(static_cast<std::uint32_t>(ItemCategory::Fence)) == DetailKind::Fences);
-    CHECK(detail_kind(static_cast<std::uint32_t>(ItemCategory::Bench)) == DetailKind::Paths);
+    CHECK(detail_kind(static_cast<u32>(ItemCategory::Tree)) == DetailKind::Vegetation);
+    CHECK(detail_kind(static_cast<u32>(ItemCategory::Fence)) == DetailKind::Fences);
+    CHECK(detail_kind(static_cast<u32>(ItemCategory::Bench)) == DetailKind::Paths);
     CHECK(detail_kind(14) == DetailKind::Supports);
-    CHECK(detail_kind(static_cast<std::uint32_t>(ItemCategory::RideExit)) == DetailKind::Rides);
-    CHECK(detail_kind(static_cast<std::uint32_t>(ItemCategory::SmallScenery)) == DetailKind::Scenery);
+    CHECK(detail_kind(static_cast<u32>(ItemCategory::RideExit)) == DetailKind::Rides);
+    CHECK(detail_kind(static_cast<u32>(ItemCategory::SmallScenery)) == DetailKind::Scenery);
 }
 
 TEST_CASE("objects are drawn at the level their distance calls for")
@@ -229,7 +230,7 @@ TEST_CASE("billboards stand on their anchor facing the viewer")
     REQUIRE(m.vertices.size() == 4);
     REQUIRE(m.indices.size() == 6);
     // Seen from +Z the quad spans X, two wide and three tall, the top at the picture's top.
-    float low = 1e9f, high = -1e9f;
+    f32 low = 1e9f, high = -1e9f;
     for (const GroundVertex& v : m.vertices)
     {
         CHECK(v.position.z == doctest::Approx(2));
@@ -257,7 +258,7 @@ TEST_CASE("gathered billboards turn again to each new viewer")
         face_billboards(boards, eye);
         const ObjectMesh once = billboard_mesh(objects, models, anchors, ObjectLevels { 2, 2 }, eye);
         REQUIRE(once.vertices.size() == boards.mesh.vertices.size());
-        for (std::size_t i = 0; i < once.vertices.size(); ++i)
+        for (usize i = 0; i < once.vertices.size(); ++i)
         {
             CHECK(boards.mesh.vertices[i].position.x == doctest::Approx(once.vertices[i].position.x));
             CHECK(boards.mesh.vertices[i].position.z == doctest::Approx(once.vertices[i].position.z));
@@ -280,7 +281,7 @@ TEST_CASE("a leaning object's points rise with their distance from its anchor")
     const glm::vec3 anchor = m.vertices[0].position;
     for (const GroundVertex& v : m.vertices)
     {
-        const float level = v.position.y - 0.25f * (v.position.x - anchor.x) - 0.5f * (v.position.z - anchor.z);
+        const f32 level = v.position.y - 0.25f * (v.position.x - anchor.x) - 0.5f * (v.position.z - anchor.z);
         CHECK((level == doctest::Approx(0.0f) || level == doctest::Approx(1.0f)));
     }
     CHECK(m.vertices[2].position.y == doctest::Approx(0.5f * (m.vertices[2].position.z - anchor.z)));
@@ -294,12 +295,12 @@ TEST_CASE("objects near the edge of a level are drawn at both levels, crossing o
     models.emplace("Things/Things|Tree", three_levels()); // Levels reach 10, 50 and 200
     const std::vector<save::model::PlacedObject> objects { placed_object("Tree", 0) };
     const std::vector<glm::vec3> anchors = object_anchors(objects, models, flat());
-    const auto plan = [&](float distance) { return plan_levels(objects, models, anchors, anchors[0] + glm::vec3(0, 0, distance), 0.2f); };
+    const auto plan = [&](f32 distance) { return plan_levels(objects, models, anchors, anchors[0] + glm::vec3(0, 0, distance), 0.2f); };
 
     CHECK(plan(5).steady == ObjectLevels { 0 });
     CHECK(plan(5).finer == ObjectLevels { kNotDrawn });
     // In the band before the first level's edge, and just past it: both levels, crossing from 8 to 10.
-    for (const float d : { 9.0f, 10.5f })
+    for (const f32 d : { 9.0f, 10.5f })
     {
         const LevelPlan p = plan(d);
         CHECK(p.steady == ObjectLevels { kNotDrawn });
@@ -315,10 +316,10 @@ TEST_CASE("objects near the edge of a level are drawn at both levels, crossing o
     CHECK(plan(300).finer == ObjectLevels { kNotDrawn });
     // Each kind's own scales: a tree's are the vegetation ones.
     LevelScales far { };
-    far[static_cast<std::size_t>(DetailKind::Vegetation)].distance = 2;
+    far[static_cast<usize>(DetailKind::Vegetation)].distance = 2;
     CHECK(plan_levels(objects, models, anchors, anchors[0] + glm::vec3(0, 0, 250), 0.2f, far).steady == ObjectLevels { 2 });
     far = { };
-    far[static_cast<std::size_t>(DetailKind::Scenery)].distance = 2;
+    far[static_cast<usize>(DetailKind::Scenery)].distance = 2;
     CHECK(plan_levels(objects, models, anchors, anchors[0] + glm::vec3(0, 0, 250), 0.2f, far).steady == ObjectLevels { kNotDrawn });
     // Without a band, objects jump.
     CHECK(plan_levels(objects, models, anchors, anchors[0] + glm::vec3(0, 0, 9), 0).steady == ObjectLevels { 0 });
@@ -330,9 +331,9 @@ TEST_CASE("each vertex of a mesh knows the object it belongs to")
     models.emplace("Things/Things|Tree", three_levels());
     const std::vector<save::model::PlacedObject> objects { placed_object("Rock", 0), placed_object("Tree", 0), placed_object("Tree", 1) };
     const ObjectMesh mesh = object_mesh(objects, models, flat());
-    CHECK(mesh.owners == std::vector<std::uint32_t> { 1, 1, 1, 2, 2, 2 });
+    CHECK(mesh.owners == std::vector<u32> { 1, 1, 1, 2, 2, 2 });
     const std::vector<glm::vec3> anchors = object_anchors(objects, models, flat());
-    CHECK(gather_billboards(objects, models, anchors, ObjectLevels { kNotDrawn, kNotDrawn, 2 }).mesh.owners == std::vector<std::uint32_t> { 2, 2, 2, 2 });
+    CHECK(gather_billboards(objects, models, anchors, ObjectLevels { kNotDrawn, kNotDrawn, 2 }).mesh.owners == std::vector<u32> { 2, 2, 2, 2 });
 }
 
 TEST_CASE("one-sided parts get batches of their own, apart from two-sided ones in the same picture")
@@ -376,7 +377,7 @@ TEST_CASE("parts painted like the ground take the pictures of the tile they stan
     CHECK(textures == std::vector<std::string> { ground::ground_key(GroundPaint::Cliff, 0), ground::ground_key(GroundPaint::Cliff, 2), ground::ground_key(GroundPaint::Surface, 3), ground::ground_key(GroundPaint::Surface, 5) });
 
     // Laid by place, not by the model's own coordinates: a top by x and z, a side by x and height.
-    for (std::size_t i = 0; i < m.vertices.size(); ++i)
+    for (usize i = 0; i < m.vertices.size(); ++i)
     {
         const GroundVertex& v = m.vertices[i];
         CAPTURE(i);
@@ -392,7 +393,7 @@ TEST_CASE("a shell leaves its tube of the launcher as placed, flying the way the
     rct3::park::object::ObjectModel launcher;
     launcher.tubes = { { .position = { 1, 2, 0 }, .up = { 0, 1, 0 } }, { .position = { 0, 2, 0 }, .up = glm::normalize(glm::vec3(1, 1, 0)) } };
     // Turned a quarter round the vertical, standing at (10, 0, 20).
-    const glm::mat4 placed = glm::rotate(glm::translate(glm::mat4(1.0f), { 10, 0, 20 }), glm::half_pi<float>(), glm::vec3(0, 1, 0));
+    const glm::mat4 placed = glm::rotate(glm::translate(glm::mat4(1.0f), { 10, 0, 20 }), glm::half_pi<f32>(), glm::vec3(0, 1, 0));
     const auto first = rct3::park::object::launch_point(placed, launcher, 0);
     CHECK(first.position.x == doctest::Approx(10));
     CHECK(first.position.y == doctest::Approx(2));

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/fireworks.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/sandbox.hpp"
@@ -16,7 +17,7 @@ namespace
 {
     /// How much happier a guest walking a path comes out of watching a show from `centre`, in the dark or not;
     /// none when they never stopped for it.
-    std::optional<float> lift_of_show(glm::vec3 centre, bool dark)
+    std::optional<f32> lift_of_show(glm::vec3 centre, bool dark)
     {
         Sandbox park;
         park.path({ 0, 0 }, { 6, 0 });
@@ -30,9 +31,9 @@ namespace
             return std::nullopt;
         // Facing the show.
         const glm::vec3 at = r.get<Pose>(g).position;
-        const float heading = r.get<Pose>(g).heading.value;
+        const f32 heading = r.get<Pose>(g).heading.value;
         CHECK(std::sin(heading) * (centre.z - at.z) - std::cos(heading) * (centre.x - at.x) == doctest::Approx(0).epsilon(1e-3));
-        const float before = r.get<Mood>(g).happiness.value;
+        const f32 before = r.get<Mood>(g).happiness.value;
         r.ctx().erase<FireworkShow>();
         park.run(1);
         CHECK_FALSE(r.all_of<FireworkWatcher>(g));

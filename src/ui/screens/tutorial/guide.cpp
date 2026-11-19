@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/tutorial/guide.hpp"
 
+#include "core/types.hpp"
 #include "strings/unicode.hpp"
 #include "ui/text_layout.hpp"
 
@@ -21,8 +22,8 @@ namespace rct3::ui::screens::tutorial
         constexpr std::string_view kQuit = "TutorialWindow_Quit";
 
         // The numbers a step stores for its window's place.
-        constexpr std::int32_t kStoredTopRight = 1;
-        constexpr std::int32_t kStoredBottomRight = 2;
+        constexpr i32 kStoredTopRight = 1;
+        constexpr i32 kStoredBottomRight = 2;
 
         std::u16string in_language(const StringTable& strings, const std::string& key, const std::string& stored)
         {
@@ -31,7 +32,7 @@ namespace rct3::ui::screens::tutorial
         }
     } // namespace
 
-    TutorialStepText tutorial_step_text(const StringTable& strings, const save::model::TutorialScript& script, std::size_t index)
+    TutorialStepText tutorial_step_text(const StringTable& strings, const save::model::TutorialScript& script, usize index)
     {
         if (index >= script.steps.size())
             return { };
@@ -45,7 +46,7 @@ namespace rct3::ui::screens::tutorial
         return in_language(strings, std::string(kKeyStart) + script.name + std::string(kTutorialTitleEnd), script.title);
     }
 
-    TutorialGuidePlace tutorial_guide_place(std::int32_t stored)
+    TutorialGuidePlace tutorial_guide_place(i32 stored)
     {
         switch (stored)
         {
@@ -58,22 +59,22 @@ namespace rct3::ui::screens::tutorial
         }
     }
 
-    TutorialGuideSize tutorial_guide_size(const TutorialGuideStyle& style, float stored_width, float text_height)
+    TutorialGuideSize tutorial_guide_size(const TutorialGuideStyle& style, f32 stored_width, f32 text_height)
     {
         const Rect& in = style.window.content_inset;
-        const float page_width = std::max(style.min_page_width, stored_width);
-        const float page_height = std::max(style.min_page_height, style.text_top + text_height + style.text_gap + style.button_size.y);
+        const f32 page_width = std::max(style.min_page_width, stored_width);
+        const f32 page_height = std::max(style.min_page_height, style.text_top + text_height + style.text_gap + style.button_size.y);
         return { { page_width, page_height }, { std::max(style.min_width, page_width + in.x0 + in.x1), page_height + in.y0 + in.y1 } };
     }
 
-    float tutorial_guide_text_width(const TutorialGuideStyle& style, float page_width)
+    f32 tutorial_guide_text_width(const TutorialGuideStyle& style, f32 page_width)
     {
         return std::max(0.0f, page_width - 2 * style.text_side);
     }
 
     Placement tutorial_guide_placement(const TutorialGuideStyle& style, TutorialGuidePlace place, Point size)
     {
-        const float m = style.screen_margin;
+        const f32 m = style.screen_margin;
         switch (place)
         {
             case TutorialGuidePlace::TopRight:
@@ -122,7 +123,7 @@ namespace rct3::ui::screens::tutorial
         show(0);
     }
 
-    void TutorialGuide::show(std::size_t index)
+    void TutorialGuide::show(usize index)
     {
         step_ = index;
         TutorialStepText t = tutorial_step_text(strings_, script_, index);
@@ -133,9 +134,9 @@ namespace rct3::ui::screens::tutorial
         fit(0, false);
     }
 
-    void TutorialGuide::fit(float text_height, bool measured)
+    void TutorialGuide::fit(f32 text_height, bool measured)
     {
-        const float stored = step_ < script_.steps.size() ? static_cast<float>(script_.steps[step_].window_width) : 0;
+        const f32 stored = step_ < script_.steps.size() ? static_cast<f32>(script_.steps[step_].window_width) : 0;
         const TutorialGuideSize size = tutorial_guide_size(style_, stored, text_height);
         text_->placement = top_left(style_.text_side, style_.text_top, tutorial_guide_text_width(style_, size.page.x), size.page.y - style_.text_top - style_.button_size.y);
         if (to_place_)
@@ -173,10 +174,10 @@ namespace rct3::ui::screens::tutorial
             fit(0, false);
             return;
         }
-        const float stored = step_ < script_.steps.size() ? static_cast<float>(script_.steps[step_].window_width) : 0;
-        const float page_width = tutorial_guide_size(style_, stored, 0).page.x;
+        const f32 stored = step_ < script_.steps.size() ? static_cast<f32>(script_.steps[step_].window_width) : 0;
+        const f32 page_width = tutorial_guide_size(style_, stored, 0).page.x;
         const auto lines = break_lines(*f, text_->text, tutorial_guide_text_width(style_, page_width));
-        fit(static_cast<float>(lines.size()) * f->line_height(), true);
+        fit(static_cast<f32>(lines.size()) * f->line_height(), true);
     }
 
 } // namespace rct3::ui::screens::tutorial

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/save_text.hpp"
 
+#include "core/types.hpp"
 #include "strings/unicode.hpp"
 
 #include <algorithm>
@@ -16,7 +17,7 @@ namespace rct3::ui
         constexpr std::string_view kShortMonth = "ShortMonth"; ///< Followed by the month's number from 0
         /// The guests line by count; more than four take the last.
         constexpr std::array<std::string_view, 6> kGuests = { "ZeroGuests", "OneGuest", "TwoGuests", "ThreeGuests", "FourGuests", "ManyGuests" };
-        constexpr std::int32_t kMinutesPerDay = 24 * 60;
+        constexpr i32 kMinutesPerDay = 24 * 60;
 
         std::u16string ascii(const std::string& s)
         {
@@ -25,21 +26,21 @@ namespace rct3::ui
 
     } // namespace
 
-    std::u16string clock_text(std::int32_t minutes, bool twelve_hour)
+    std::u16string clock_text(i32 minutes, bool twelve_hour)
     {
-        const std::int32_t m = ((minutes % kMinutesPerDay) + kMinutesPerDay) % kMinutesPerDay;
-        const std::int32_t hour = m / 60;
+        const i32 m = ((minutes % kMinutesPerDay) + kMinutesPerDay) % kMinutesPerDay;
+        const i32 hour = m / 60;
         if (!twelve_hour)
             return ascii(std::format("{}:{:02}", hour, m % 60));
         return ascii(std::format("{}:{:02} {}m", (hour + 11) % 12 + 1, m % 60, hour < 12 ? 'a' : 'p'));
     }
 
-    std::u16string short_month(const StringTable& strings, std::int32_t month)
+    std::u16string short_month(const StringTable& strings, i32 month)
     {
         return std::u16string(strings.get(std::format("{}{}", kShortMonth, month)));
     }
 
-    std::u16string date_text(const StringTable& strings, std::int32_t day, std::int32_t month, std::int32_t year)
+    std::u16string date_text(const StringTable& strings, i32 day, i32 month, i32 year)
     {
         std::u16string out;
         if (day > 0)
@@ -51,9 +52,9 @@ namespace rct3::ui
         return out;
     }
 
-    std::u16string guests_text(const StringTable& strings, std::int32_t guests)
+    std::u16string guests_text(const StringTable& strings, i32 guests)
     {
-        const auto which = static_cast<std::size_t>(std::clamp(guests, 0, static_cast<std::int32_t>(kGuests.size() - 1)));
+        const auto which = static_cast<usize>(std::clamp(guests, 0, static_cast<i32>(kGuests.size() - 1)));
         std::u16string out;
         const std::u16string number = ascii(std::to_string(guests));
         for (const char16_t c : strings.get(kGuests.at(which)))

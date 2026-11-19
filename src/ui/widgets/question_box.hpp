@@ -12,6 +12,7 @@
 // closes with it.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/window.hpp"
 
@@ -31,13 +32,13 @@ namespace rct3::ui::widgets
         font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
         Color hover_colour = hex("#2484be"); ///< Of the hovered answer's name
-        float min_width = 282;               ///< Of the window
-        float text_width = 239;              ///< Where the text wraps
-        float margin = 8;                    ///< Around the text and the buttons, inside the content
-        float button_size = 30;
-        float text_button_width = 70; ///< Of answers without an icon
-        float button_gap = 8;
-        float hover_width = 128;
+        f32 min_width = 282;                 ///< Of the window
+        f32 text_width = 239;                ///< Where the text wraps
+        f32 margin = 8;                      ///< Around the text and the buttons, inside the content
+        f32 button_size = 30;
+        f32 text_button_width = 70; ///< Of answers without an icon
+        f32 button_gap = 8;
+        f32 hover_width = 128;
         std::string confirm_icon; ///< For owners: the icons of answers that go ahead and that back out
         std::string cancel_icon;
     };
@@ -68,21 +69,21 @@ namespace rct3::ui::widgets
         }
 
         /// The index of the answer given, once; the box closes with it.
-        [[nodiscard]] std::optional<std::size_t> take_answer();
+        [[nodiscard]] std::optional<usize> take_answer();
 
         /// Fits the box to its text, shows the hovered answer's name, and keeps the close button from closing
         /// the box before take_answer() reads it.
         void update(const UpdateContext& context) override;
 
     private:
-        void fit(float text_height);
+        void fit(f32 text_height);
 
         QuestionBoxStyle style_;
         Label* text_ = nullptr;
         Label* hover_ = nullptr;
         std::vector<Button*> buttons_;
         std::vector<std::u16string> names_;
-        float row_width_ = 0;
+        f32 row_width_ = 0;
         bool answered_ = false;
     };
 

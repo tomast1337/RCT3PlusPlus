@@ -2,6 +2,7 @@
 #include "save/model/people.hpp"
 
 #include "core/minus_one.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 #include <bit>
@@ -330,8 +331,8 @@ namespace rct3::save::model
 
         // ---- tolerant scalar readers over possibly-null attribute values ----
 
-        constexpr std::uint32_t kFillBits = 0xCDCDCDCDu;
-        constexpr std::size_t kMaxVisited = 4096; // upper bound on list lengths kept in the model
+        constexpr u32 kFillBits = 0xCDCDCDCDu;
+        constexpr usize kMaxVisited = 4096; // upper bound on list lengths kept in the model
 
         std::optional<const Value&> sub(std::optional<const Value&> v, std::string_view n) noexcept
         {
@@ -339,16 +340,16 @@ namespace rct3::save::model
         }
 
         /// The 32 bits of a numeric slot, whichever way it was declared.
-        std::optional<std::uint32_t> bits32(std::optional<const Value&> v) noexcept
+        std::optional<u32> bits32(std::optional<const Value&> v) noexcept
         {
             if (!v)
                 return std::nullopt;
             switch (v->kind())
             {
                 case ValueKind::Float:
-                    return std::bit_cast<std::uint32_t>(v->as_float());
+                    return std::bit_cast<u32>(v->as_float());
                 case ValueKind::Integer:
-                    return static_cast<std::uint32_t>(v->as_integer());
+                    return static_cast<u32>(v->as_integer());
                 case ValueKind::Bool:
                     return v->as_bool() ? 1u : 0u;
                 default:
@@ -356,39 +357,39 @@ namespace rct3::save::model
             }
         }
 
-        std::optional<float> opt_f32(std::optional<const Value&> v) noexcept
+        std::optional<f32> opt_f32(std::optional<const Value&> v) noexcept
         {
             const auto b = bits32(v);
             if (!b || *b == kFillBits)
                 return std::nullopt;
-            const auto f = std::bit_cast<float>(*b);
+            const auto f = std::bit_cast<f32>(*b);
             if (!std::isfinite(f))
                 return std::nullopt;
             return f;
         }
-        float read_f32(std::optional<const Value&> v, float def = 0) noexcept
+        f32 read_f32(std::optional<const Value&> v, f32 def = 0) noexcept
         {
             return opt_f32(v).value_or(def);
         }
 
-        std::optional<std::int32_t> opt_i32(std::optional<const Value&> v) noexcept
+        std::optional<i32> opt_i32(std::optional<const Value&> v) noexcept
         {
             const auto b = bits32(v);
             if (!b || *b == kFillBits)
                 return std::nullopt;
-            return static_cast<std::int32_t>(*b);
+            return static_cast<i32>(*b);
         }
-        std::int32_t read_i32(std::optional<const Value&> v, std::int32_t def = 0) noexcept
+        i32 read_i32(std::optional<const Value&> v, i32 def = 0) noexcept
         {
             return opt_i32(v).value_or(def);
         }
 
-        std::uint8_t read_u8(std::optional<const Value&> v, std::uint8_t def = 0) noexcept
+        u8 read_u8(std::optional<const Value&> v, u8 def = 0) noexcept
         {
             const auto b = bits32(v);
             if (!b || *b == kFillBits)
                 return def;
-            return static_cast<std::uint8_t>(*b);
+            return static_cast<u8>(*b);
         }
 
         bool flag(std::optional<const Value&> v, bool def = false) noexcept
@@ -410,19 +411,19 @@ namespace rct3::save::model
         {
             if (!v)
                 return { };
-            std::uint64_t id = 0;
+            u64 id = 0;
             if (v->kind() == ValueKind::Reference)
                 id = v->as_reference();
             else if (v->kind() == ValueKind::Integer && v->as_integer() > 0)
-                id = static_cast<std::uint64_t>(v->as_integer());
+                id = static_cast<u64>(v->as_integer());
             if (id == 0 || !index.find(id))
                 return { };
             return { id };
         }
 
-        float vec_component(float f) noexcept
+        f32 vec_component(f32 f) noexcept
         {
-            if (!std::isfinite(f) || std::bit_cast<std::uint32_t>(f) == kFillBits)
+            if (!std::isfinite(f) || std::bit_cast<u32>(f) == kFillBits)
                 return 0;
             return f;
         }
@@ -448,14 +449,14 @@ namespace rct3::save::model
             return { vec_component(f[12]), vec_component(f[13]), vec_component(f[14]) };
         }
 
-        std::vector<PeopleRef> ref_list(std::optional<const Value&> v, const ObjectIndex& index, std::size_t cap)
+        std::vector<PeopleRef> ref_list(std::optional<const Value&> v, const ObjectIndex& index, usize cap)
         {
             std::vector<PeopleRef> out;
             if (!v || v->kind() != ValueKind::List)
                 return out;
             const auto items = v->items();
             out.reserve(std::min(items.size(), cap));
-            for (std::size_t i = 0; i < items.size() && i < cap; ++i)
+            for (usize i = 0; i < items.size() && i < cap; ++i)
                 out.push_back(ref(items[i], index));
             return out;
         }
@@ -466,7 +467,7 @@ namespace rct3::save::model
             if (!v || v->kind() != ValueKind::List)
                 return out;
             const auto items = v->items();
-            for (std::size_t i = 0; i < items.size() && i < kThoughtSlots; ++i)
+            for (usize i = 0; i < items.size() && i < kThoughtSlots; ++i)
             {
                 std::optional<const Value&> t = items[i];
                 out[i].about = ref(sub(t, at::thought_about), index);
@@ -504,7 +505,7 @@ namespace rct3::save::model
             const auto mask = [&](std::string_view n) { return bits32(get(n)).value_or(0); };
             Person p {
                 .id = o.id,
-                .type = static_cast<PersonType>(read_u8(get(at::person_type), static_cast<std::uint8_t>(default_type))),
+                .type = static_cast<PersonType>(read_u8(get(at::person_type), static_cast<u8>(default_type))),
                 .sub_type = read_u8(get(at::sub_type)),
                 .name = str(get(at::name)),
                 .position = matrix_position(get(at::world_matrix)),
@@ -728,15 +729,15 @@ namespace rct3::save::model
 
     std::optional<GuestState> Person::guest_state() const noexcept
     {
-        const auto v = static_cast<std::int32_t>(state);
+        const auto v = static_cast<i32>(state);
         if (v < 12 || v > 20)
             return std::nullopt;
         return static_cast<GuestState>(v);
     }
 
-    std::size_t GuestGroup::live_members() const noexcept
+    usize GuestGroup::live_members() const noexcept
     {
-        return static_cast<std::size_t>(std::count_if(members.begin(), members.end(), [](const PeopleRef& r) { return !r.is_none(); }));
+        return static_cast<usize>(std::count_if(members.begin(), members.end(), [](const PeopleRef& r) { return !r.is_none(); }));
     }
 
     // ---- builders ----
@@ -802,7 +803,7 @@ namespace rct3::save::model
             .leaving_due_to_closed_park = flag(get(at::leaving_closed)),
             .pool_need = opt_f32(get(at::pool_need)),
             .pool_preference = opt_f32(get(at::pool_preference)),
-            .time_in_pool = opt_f32(get(at::time_in_pool)).transform([](float s) { return units::Seconds { s }; }),
+            .time_in_pool = opt_f32(get(at::time_in_pool)).transform([](f32 s) { return units::Seconds { s }; }),
             .price_modifier = opt_f32(get(at::price_modifier)),
         };
     }
@@ -830,7 +831,7 @@ namespace rct3::save::model
             .thinks_since_happy = core::none_if_negative(read_i32(get(at::thinks_happy), -1)),
             .patrol = { read_u8(get(at::start_col)), read_u8(get(at::start_row)), read_u8(get(at::grid_x)), read_u8(get(at::grid_y)), flag(get(at::start_state)) },
             .task_flags = read_i32(get(at::task_flags)),
-            .time_in_pool = opt_f32(get(at::time_in_pool)).transform([](float s) { return units::Seconds { s }; }),
+            .time_in_pool = opt_f32(get(at::time_in_pool)).transform([](f32 s) { return units::Seconds { s }; }),
         };
         switch (c->kind)
         {
@@ -1033,7 +1034,7 @@ namespace rct3::save::model
         if (const auto pos = get(at::g_sp_pos); pos && pos->kind() == ValueKind::List)
         {
             const auto items = pos->items();
-            for (std::size_t i = 0; i < items.size() && i < kMaxGroupMembers; ++i)
+            for (usize i = 0; i < items.size() && i < kMaxGroupMembers; ++i)
                 g.set_piece_positions.push_back(vec3(items[i]));
         }
         g.set_piece_take_photo = flag(get(at::g_sp_photo));
@@ -1149,7 +1150,7 @@ namespace rct3::save::model
     {
         PeopleModel m;
         // Decide once per class which builder applies, so unrelated objects are never decoded.
-        enum class Slot : std::uint8_t
+        enum class Slot : u8
         {
             None,
             Guest,
@@ -1166,7 +1167,7 @@ namespace rct3::save::model
             Passport,
         };
         std::vector<Slot> slot(file.classes.size(), Slot::None);
-        for (std::size_t i = 0; i < file.classes.size(); ++i)
+        for (usize i = 0; i < file.classes.size(); ++i)
         {
             const auto n = file.classes[i].name;
             if (n == cls::guest)
@@ -1295,7 +1296,7 @@ namespace rct3::save::model
             else
                 owners.insert(h.owner.id);
         }
-        const auto level = [&](float v, PeopleObjectId id) {
+        const auto level = [&](f32 v, PeopleObjectId id) {
             if (!std::isfinite(v) || v < -0.001f || v > 1.001f)
                 out.push_back({ IssueKind::StatOutOfRange, id });
         };
@@ -1319,7 +1320,7 @@ namespace rct3::save::model
             }
             level(g.consuming_amount, id);
             const auto& c = g.cash;
-            const std::int64_t sum = std::int64_t { c.spent_drink } + c.spent_food + c.spent_park_entry + c.spent_rides + c.spent_souvenirs;
+            const i64 sum = i64 { c.spent_drink } + c.spent_food + c.spent_park_entry + c.spent_rides + c.spent_souvenirs;
             if (c.total_spent < sum)
                 out.push_back({ IssueKind::SpendingBelowCategories, id });
         }
@@ -1335,7 +1336,7 @@ namespace rct3::save::model
             for (const auto& member : g.members)
                 if (!member.is_none() && !guest_ids.contains(member.id))
                     out.push_back({ IssueKind::GroupMemberNotGuest, g.id });
-            if (g.num_members < 0 || static_cast<std::size_t>(g.num_members) != g.live_members())
+            if (g.num_members < 0 || static_cast<usize>(g.num_members) != g.live_members())
                 out.push_back({ IssueKind::GroupMemberCountMismatch, g.id });
         }
         for (const auto& z : m.zoo_animals)

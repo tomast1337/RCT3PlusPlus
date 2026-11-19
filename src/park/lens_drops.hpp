@@ -10,6 +10,7 @@
 // nothing here is saved.
 #pragma once
 
+#include "core/types.hpp"
 #include "random/generator.hpp"
 #include "units/units.hpp"
 
@@ -20,16 +21,16 @@
 namespace rct3::park
 {
 
-    inline constexpr std::size_t kMostLensDrops = 96; ///< Drops on the lens at once
-    inline constexpr std::size_t kMostLensSheets = 6; ///< Sheets of water at once
-    inline constexpr std::size_t kSoakingDrops = 80;  ///< Drops a soaking leaves, coming up out of water
-    inline constexpr std::size_t kSoakingSheets = 4;
+    inline constexpr usize kMostLensDrops = 96; ///< Drops on the lens at once
+    inline constexpr usize kMostLensSheets = 6; ///< Sheets of water at once
+    inline constexpr usize kSoakingDrops = 80;  ///< Drops a soaking leaves, coming up out of water
+    inline constexpr usize kSoakingSheets = 4;
 
     struct LensDrop
     {
         glm::vec2 at { };
         glm::vec2 velocity { };      ///< Screen heights a second
-        float radius = 0;            ///< Screen heights
+        f32 radius = 0;              ///< Screen heights
         units::Seconds clinging { }; ///< It holds still before it may slide again
         units::Seconds age { };      ///< On the lens
         units::Seconds life { };     ///< It lasts before it has dried away
@@ -45,7 +46,7 @@ namespace rct3::park
     /// What pushes the water on the lens this frame, in screen heights a second unless said.
     struct LensPush
     {
-        float aspect = 1;        ///< The screen's width over its height
+        f32 aspect = 1;          ///< The screen's width over its height
         glm::vec2 down { 0, 1 }; ///< Down in the world as seen on screen; shorter the more the view looks down
         glm::vec2 wind { };      ///< The wind across the screen
         glm::vec2 turn { };      ///< How fast the world sweeps across the screen as the view turns
@@ -53,8 +54,8 @@ namespace rct3::park
     };
 
     /// Lands `drops` drops and `sheets` sheets at random over the lens, as many as there is room for.
-    void wet_lens(LensWater& water, std::size_t drops, std::size_t sheets, float aspect);
+    void wet_lens(LensWater& water, usize drops, usize sheets, f32 aspect);
     /// Moves the water on the lens on by `seconds`: drops slide, run together, dry and run off the screen.
-    void run_lens_water(LensWater& water, const LensPush& push, float seconds);
+    void run_lens_water(LensWater& water, const LensPush& push, f32 seconds);
 
 } // namespace rct3::park

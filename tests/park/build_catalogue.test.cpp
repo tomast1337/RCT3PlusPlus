@@ -2,6 +2,7 @@
 #include "park/build_catalogue.hpp"
 
 #include "../ovl/record_file.hpp"
+#include "core/types.hpp"
 
 #include <doctest/doctest.h>
 
@@ -13,13 +14,13 @@ TEST_CASE("rides go in the list of their attraction kind")
     CHECK(ride_list(21) == BuildList::TransportRides);
     CHECK(ride_list(1) == BuildList::GentleRides);
     CHECK(ride_list(2) == BuildList::WaterRides);
-    for (const std::uint32_t coaster : { 3u, 15u, 16u, 17u })
+    for (const u32 coaster : { 3u, 15u, 16u, 17u })
         CHECK(ride_list(coaster) == BuildList::Coasters);
     CHECK(ride_list(4) == BuildList::ThrillRides);
     CHECK(ride_list(5) == BuildList::OtherRides);
     CHECK(ride_list(6) == BuildList::JuniorRides);
     CHECK(ride_list(19) == BuildList::PoolRides);
-    for (const std::uint32_t none : { 7u, 10u, 14u, 18u, 20u, 22u })
+    for (const u32 none : { 7u, 10u, 14u, 18u, 20u, 22u })
         CHECK_FALSE(ride_list(none).has_value());
 }
 
@@ -28,7 +29,7 @@ TEST_CASE("shops go in the list of their attraction kind")
     CHECK(shop_list(7) == BuildList::FoodShops);
     CHECK(shop_list(8) == BuildList::DrinkShops);
     CHECK(shop_list(9) == BuildList::Stalls);
-    for (const std::uint32_t facility : { 11u, 12u, 13u, 14u })
+    for (const u32 facility : { 11u, 12u, 13u, 14u })
         CHECK(shop_list(facility) == BuildList::Facilities);
     CHECK_FALSE(shop_list(10).has_value());
     CHECK_FALSE(shop_list(3).has_value());
@@ -45,7 +46,7 @@ TEST_CASE("scenery goes in the list of its category")
     CHECK(scenery_list(28) == BuildList::RideEvents);
     CHECK(scenery_list(41) == BuildList::Fireworks);
     CHECK(scenery_list(43) == BuildList::GroundSurfaces);
-    for (const std::uint32_t none : { 11u, 18u, 23u, 24u, 27u, 39u })
+    for (const u32 none : { 11u, 18u, 23u, 24u, 27u, 39u })
         CHECK_FALSE(scenery_list(none).has_value());
 }
 
@@ -136,12 +137,12 @@ TEST_CASE("a species gives an animal item for each animal, under the species")
 {
     using namespace rct3::test;
     Pool pool;
-    const std::uint32_t shelter = pool.add("burrow");
+    const u32 shelter = pool.add("burrow");
     pool.add("wombat:was");
     pool.add("WombatName:txt");
     pool.add("WombatIcon:gsi");
     pool.add("BigWombat:txt");
-    const std::uint32_t at = pool.base();
+    const u32 at = pool.base();
     std::vector<std::byte> bytes;
     put(bytes, { 0, 0, 0, 0, 0, 0, at + 0x40, 0, 0, 0, 0, 0, shelter, 0, bits(2.0f) });
     bytes.resize(0x40 + 0x34, std::byte { 0 });
@@ -198,7 +199,7 @@ TEST_CASE("a park offers scenery by its kind: what research invents once invente
 {
     using rct3::save::model::AssetKind;
     using rct3::save::model::AssetRequirement;
-    const auto item = [](std::string symbol, std::uint32_t category, std::int32_t price, bool names_category = false) {
+    const auto item = [](std::string symbol, u32 category, i32 price, bool names_category = false) {
         BuildItem i;
         i.overlay = "Style/Plain/Style";
         i.symbol = std::move(symbol);

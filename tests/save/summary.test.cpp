@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/summary.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <optional>
@@ -17,25 +19,25 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& put(const void* p, std::size_t n)
+        Bytes& put(const void* p, usize n)
         {
             const auto* b = static_cast<const std::byte*>(p);
             v.insert(v.end(), b, b + n);
             return *this;
         }
-        Bytes& put_u8(std::uint8_t x)
+        Bytes& put_u8(u8 x)
         {
             return put(&x, 1);
         }
-        Bytes& put_u16(std::uint16_t x)
+        Bytes& put_u16(u16 x)
         {
             return put(&x, 2);
         }
-        Bytes& put_u32(std::uint32_t x)
+        Bytes& put_u32(u32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put_u64(std::uint64_t x)
+        Bytes& put_u64(u64 x)
         {
             return put(&x, 8);
         }
@@ -46,14 +48,14 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            put_u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<u16>(s.size()));
             for (const char c : s)
-                put_u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<u8>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            put_u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<u32>(payload.v.size()));
             return cat(payload);
         }
         Bytes& text(const std::u16string& s)
@@ -69,13 +71,13 @@ namespace
     struct Attr
     {
         std::string name, type;
-        std::uint32_t size = 0;
+        u32 size = 0;
         std::vector<Attr> children { };
     };
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<u32>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -87,8 +89,8 @@ namespace
     struct Summary
     {
         std::u16string name = u"Tea Gardens";
-        std::uint32_t day = 3, month = 2, year = 4, minutes = 600, guests = 75, kind = 0;
-        std::uint32_t pixels = kPreviewWidth * kPreviewHeight;
+        u32 day = 3, month = 2, year = 4, minutes = 600, guests = 75, kind = 0;
+        u32 pixels = kPreviewWidth * kPreviewHeight;
         std::vector<std::u16string> packs;
     };
 
@@ -96,10 +98,10 @@ namespace
     {
         Bytes preview;
         preview.put_u32(s.pixels);
-        for (std::uint32_t i = 0; i < s.pixels; ++i)
-            preview.put_u8(static_cast<std::uint8_t>(i)).put_u8(20).put_u8(30); // B, G, R
+        for (u32 i = 0; i < s.pixels; ++i)
+            preview.put_u8(static_cast<u8>(i)).put_u8(20).put_u8(30); // B, G, R
         Bytes packs;
-        packs.put_u32(static_cast<std::uint32_t>(s.packs.size()));
+        packs.put_u32(static_cast<u32>(s.packs.size()));
         for (const auto& p : s.packs)
             packs.text(p).put_u32(1);
         Bytes b;
@@ -109,21 +111,21 @@ namespace
 
     /// A save with the summaries given (ids 10, 11, ...) and, when `current` is set, the object naming the
     /// save's own.
-    std::vector<std::byte> make_save(const std::vector<Summary>& summaries, std::optional<std::uint64_t> current)
+    std::vector<std::byte> make_save(const std::vector<Summary>& summaries, std::optional<u64> current)
     {
         Bytes b;
         b.put_u32(3);
         b.name("Other").put_u32(1);
         write_attr(b, { "Number", "int32", 4 });
-        b.name("GUI2_DatDesc").put_u32(static_cast<std::uint32_t>(kSummaryAttrs.size()));
+        b.name("GUI2_DatDesc").put_u32(static_cast<u32>(kSummaryAttrs.size()));
         for (const auto& a : kSummaryAttrs)
             write_attr(b, a);
         b.name("GUI2_CurrentDatDesc").put_u32(1);
         write_attr(b, { "CurrDatDesc", "reference", 8 });
 
-        b.put_u32(static_cast<std::uint32_t>(summaries.size() + 1 + (current ? 1 : 0)));
+        b.put_u32(static_cast<u32>(summaries.size() + 1 + (current ? 1 : 0)));
         b.put_u32(0).put_u64(1).put_u32(7);
-        std::uint64_t id = 10;
+        u64 id = 10;
         for (const auto& s : summaries)
             b.put_u32(1).put_u64(id++).cat(summary_payload(s));
         if (current)
@@ -147,7 +149,7 @@ TEST_CASE("the summary gives the park's name, date, guests, picture and packs")
     CHECK(read->minutes == 600);
     CHECK(read->guests == 75);
     CHECK(read->kind == 0);
-    REQUIRE(read->preview.size() == std::size_t { kPreviewWidth } * kPreviewHeight * 4);
+    REQUIRE(read->preview.size() == usize { kPreviewWidth } * kPreviewHeight * 4);
     // Stored blue, green, red; given red, green, blue, opaque.
     CHECK(read->preview[4 * 5 + 0] == 30);
     CHECK(read->preview[4 * 5 + 1] == 20);

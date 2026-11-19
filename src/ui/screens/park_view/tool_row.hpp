@@ -14,6 +14,7 @@
 // picked through take_item(), and decides what they do.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
 #include "units/units.hpp"
@@ -29,10 +30,10 @@
 namespace rct3::ui::screens::park_view
 {
 
-    enum class ToolItem : std::uint8_t;
+    enum class ToolItem : u8;
 
     /// The row's buttons, left to right.
-    enum class ParkTool : std::uint8_t
+    enum class ParkTool : u8
     {
         Delete,
         Land,
@@ -46,7 +47,7 @@ namespace rct3::ui::screens::park_view
         View,
         Map,
     };
-    inline constexpr std::size_t kParkToolCount = 11;
+    inline constexpr usize kParkToolCount = 11;
 
     struct ToolRowStyle
     {
@@ -60,17 +61,17 @@ namespace rct3::ui::screens::park_view
 
     namespace tool_row
     {
-        inline constexpr float kMargin = 8;      ///< From the screen's bottom edge, and the least from its sides
-        inline constexpr float kButtonSize = 40; ///< And the step between buttons on wide screens
-        inline constexpr float kItemWidth = 32;  ///< Of a menu item's face
-        inline constexpr float kItemHeight = 33;
-        inline constexpr float kItemStep = 40; ///< From one menu item to the next
-        inline constexpr float kItemGap = 7;   ///< Between the tool button and its menu's nearest item
-        inline constexpr float kItemIconScale = 0.7f;
+        inline constexpr f32 kMargin = 8;      ///< From the screen's bottom edge, and the least from its sides
+        inline constexpr f32 kButtonSize = 40; ///< And the step between buttons on wide screens
+        inline constexpr f32 kItemWidth = 32;  ///< Of a menu item's face
+        inline constexpr f32 kItemHeight = 33;
+        inline constexpr f32 kItemStep = 40; ///< From one menu item to the next
+        inline constexpr f32 kItemGap = 7;   ///< Between the tool button and its menu's nearest item
+        inline constexpr f32 kItemIconScale = 0.7f;
     } // namespace tool_row
 
     /// The step between buttons on a screen `width` units wide.
-    [[nodiscard]] float tool_row_step(float width);
+    [[nodiscard]] f32 tool_row_step(f32 width);
 
     class ToolRow : public Widget
     {
@@ -82,7 +83,7 @@ namespace rct3::ui::screens::park_view
 
         [[nodiscard]] widgets::Button& button(ParkTool tool) const
         {
-            return *buttons_.at(static_cast<std::size_t>(tool));
+            return *buttons_.at(static_cast<usize>(tool));
         }
         [[nodiscard]] std::optional<ParkTool> take_pressed()
         {
@@ -116,11 +117,11 @@ namespace rct3::ui::screens::park_view
             ParkTool tool;
             bool on = false;                   ///< Switches only
             std::optional<ToolItem> under { }; ///< The item whose smaller menu it is in
-            float x = 0;                       ///< Where it was last placed: its left edge
-            float bottom = 0;                  ///< And its bottom, up from the screen's
+            f32 x = 0;                         ///< Where it was last placed: its left edge
+            f32 bottom = 0;                    ///< And its bottom, up from the screen's
         };
 
-        void place(float width);
+        void place(f32 width);
         void place_menu(ParkTool tool);
         void place_submenu(ToolItem item);
         void show_switch(MenuItem& item);
@@ -135,7 +136,7 @@ namespace rct3::ui::screens::park_view
         std::optional<ToolItem> sub_open_;
         std::optional<ParkTool> pressed_;
         std::optional<ToolItem> picked_;
-        std::optional<float> placed_for_ { }; ///< The width the buttons were last placed for; none before the first time
+        std::optional<f32> placed_for_ { }; ///< The width the buttons were last placed for; none before the first time
     };
 
 } // namespace rct3::ui::screens::park_view

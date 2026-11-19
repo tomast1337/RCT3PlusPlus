@@ -4,6 +4,7 @@
 // extras it can take, read from the carried items' overlays.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -24,11 +25,11 @@ namespace rct3::park
         std::vector<std::string> extras { }; ///< Of an item, with their tags, in its own order
         bool paintable = false;              ///< Of an item, whether it takes the player's colours
         /// How much it feeds, quenches and sickens; of an extra, what it adds to an item's at the usual amount.
-        std::array<float, 3> effects { };
-        std::int64_t cost = 0;                 ///< In hundredths, to the stall: of an item each one sold, of an extra each one it goes on
-        std::array<std::int64_t, 3> worth { }; ///< Of an item, most a guest pays for it, mild, cold and hot; in hundredths
-        bool empty = false;                    ///< Of an item, what is left once eaten or drunk: a wrapper, a cup
-        bool map = false;                      ///< Of an item, a park map
+        std::array<f32, 3> effects { };
+        i64 cost = 0;                 ///< In hundredths, to the stall: of an item each one sold, of an extra each one it goes on
+        std::array<i64, 3> worth { }; ///< Of an item, most a guest pays for it, mild, cold and hot; in hundredths
+        bool empty = false;           ///< Of an item, what is left once eaten or drunk: a wrapper, a cup
+        bool map = false;             ///< Of an item, a park map
     };
 
     struct CarriedKinds

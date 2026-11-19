@@ -4,6 +4,7 @@
 // their own. Used for tuning values such as sizes and offsets.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <string_view>
@@ -15,7 +16,7 @@ namespace rct3::ovl
     struct FloatItem
     {
         std::string_view name; ///< Symbol name without the tag, a view into the part's bytes
-        float value = 0;
+        f32 value = 0;
     };
 
     /// Float values of one part of an overlay: the symbols tagged "flt" that hold a value rather than a

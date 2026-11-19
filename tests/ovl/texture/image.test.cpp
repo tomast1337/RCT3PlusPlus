@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/texture/image.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
@@ -13,37 +15,37 @@ namespace
 
     // All values here are invented. Nothing is taken from real files.
 
-    void push(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void push(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             out.push_back(static_cast<std::byte>(v));
     }
 
-    void word(std::vector<std::byte>& out, std::uint32_t v)
+    void word(std::vector<std::byte>& out, u32 v)
     {
-        for (std::int32_t i = 0; i < 4; ++i)
+        for (i32 i = 0; i < 4; ++i)
             out.push_back(static_cast<std::byte>((v >> (8 * i)) & 0xFF));
     }
 
     struct Px
     {
-        std::uint32_t r, g, b, a;
+        u32 r, g, b, a;
         bool operator==(const Px&) const = default;
     };
 
-    Px at(const RgbaImage& image, std::size_t x, std::size_t y)
+    Px at(const RgbaImage& image, usize x, usize y)
     {
-        const std::size_t i = (y * image.width + x) * 4;
+        const usize i = (y * image.width + x) * 4;
         return { image.pixels[i], image.pixels[i + 1], image.pixels[i + 2], image.pixels[i + 3] };
     }
 
     // A colour block: endpoints, then four rows of index bits (two bits per pixel, first pixel lowest).
-    void colour_block(std::vector<std::byte>& out, std::uint32_t c0, std::uint32_t c1, std::uint32_t row0, std::uint32_t row1 = 0, std::uint32_t row2 = 0, std::uint32_t row3 = 0)
+    void colour_block(std::vector<std::byte>& out, u32 c0, u32 c1, u32 row0, u32 row1 = 0, u32 row2 = 0, u32 row3 = 0)
     {
         push(out, { c0 & 0xFF, c0 >> 8, c1 & 0xFF, c1 >> 8, row0, row1, row2, row3 });
     }
 
-    std::vector<std::byte> palette_with(std::uint32_t index, std::uint32_t blue, std::uint32_t green, std::uint32_t red, std::uint32_t extra)
+    std::vector<std::byte> palette_with(u32 index, u32 blue, u32 green, u32 red, u32 extra)
     {
         std::vector<std::byte> palette(kFlexiPaletteSize, std::byte { 0 });
         palette[index * 4 + 0] = static_cast<std::byte>(blue);
@@ -219,10 +221,10 @@ TEST_CASE("bitmap mip levels follow each other, largest first")
 {
     // An 8 x 8 raw bitmap with four levels, each filled with its own byte value.
     std::vector<std::byte> data;
-    for (std::uint32_t level = 0; level < 4; ++level)
+    for (u32 level = 0; level < 4; ++level)
     {
-        const std::size_t side = 8u >> level;
-        for (std::size_t i = 0; i < side * side * 4; ++i)
+        const usize side = 8u >> level;
+        for (usize i = 0; i < side * side * 4; ++i)
             data.push_back(static_cast<std::byte>(10 + level));
     }
     Bitmap bitmap;
@@ -239,7 +241,7 @@ TEST_CASE("bitmap mip levels follow each other, largest first")
     CHECK(levels[2].width == 2);
     CHECK(levels[3].width == 1);
     CHECK(levels[3].height == 1);
-    for (std::uint32_t level = 0; level < 4; ++level)
+    for (u32 level = 0; level < 4; ++level)
         CHECK(at(levels[level], 0, 0).r == 10 + level);
 
     SUBCASE("short data fails the whole chain")
@@ -252,7 +254,7 @@ TEST_CASE("bitmap mip levels follow each other, largest first")
     {
         std::vector<std::byte> blocks;
         // 8 x 8 with three levels: 4 blocks, then 1, then 1 for the 2 x 2 level.
-        for (std::uint32_t i = 0; i < 6; ++i)
+        for (u32 i = 0; i < 6; ++i)
             colour_block(blocks, i % 2 ? 0x07E0 : 0xF800, 0, 0);
         Bitmap b;
         b.format = 18;
@@ -281,17 +283,17 @@ TEST_CASE("flic images store later levels behind a small size record")
     SUBCASE("raw levels go down to one pixel")
     {
         std::vector<std::byte> chunk;
-        for (std::uint32_t v : { 2u, 4u, 4u, 3u, 4u, 4u, 16u, 4u })
+        for (u32 v : { 2u, 4u, 4u, 3u, 4u, 4u, 16u, 4u })
             word(chunk, v);
-        for (std::int32_t i = 0; i < 16 * 4; ++i)
+        for (i32 i = 0; i < 16 * 4; ++i)
             chunk.push_back(std::byte { 0x21 }); // 4 x 4
-        for (std::uint32_t v : { 2u, 2u, 8u, 2u })
+        for (u32 v : { 2u, 2u, 8u, 2u })
             word(chunk, v);
-        for (std::int32_t i = 0; i < 2 * 2 * 4; ++i)
+        for (i32 i = 0; i < 2 * 2 * 4; ++i)
             chunk.push_back(std::byte { 0x32 });
-        for (std::uint32_t v : { 1u, 1u, 4u, 1u })
+        for (u32 v : { 1u, 1u, 4u, 1u })
             word(chunk, v);
-        for (std::int32_t i = 0; i < 4; ++i)
+        for (i32 i = 0; i < 4; ++i)
             chunk.push_back(std::byte { 0x43 });
         chunk.resize(chunk.size() + 16, std::byte { 0 }); // padding
 
@@ -312,11 +314,11 @@ TEST_CASE("flic images store later levels behind a small size record")
     SUBCASE("block levels stop at 4 x 4 and the declared count may be larger")
     {
         std::vector<std::byte> chunk;
-        for (std::uint32_t v : { 18u, 8u, 8u, 4u, 8u, 8u, 16u, 2u })
+        for (u32 v : { 18u, 8u, 8u, 4u, 8u, 8u, 16u, 2u })
             word(chunk, v);
-        for (std::int32_t i = 0; i < 4; ++i)
+        for (i32 i = 0; i < 4; ++i)
             colour_block(chunk, 0xF800, 0, 0); // 8 x 8, four blocks
-        for (std::uint32_t v : { 4u, 4u, 8u, 1u })
+        for (u32 v : { 4u, 4u, 8u, 1u })
             word(chunk, v);
         colour_block(chunk, 0x07E0, 0, 0); // 4 x 4, one block
         chunk.resize(chunk.size() + 16, std::byte { 0 });
@@ -354,14 +356,14 @@ TEST_CASE("TGA output is an uncompressed 32-bit image with the top row first")
 
     const auto tga = encode_tga(image);
     REQUIRE(tga.size() == 18 + 8);
-    CHECK(tga[0] == std::byte { 0 });                         // no image id
-    CHECK(tga[1] == std::byte { 0 });                         // no colour map
-    CHECK(tga[2] == std::byte { 2 });                         // uncompressed true colour
-    CHECK(tga[12] == std::byte { 2 });                        // width, low byte
-    CHECK(tga[14] == std::byte { 1 });                        // height, low byte
-    CHECK(tga[16] == std::byte { 32 });                       // bits per pixel
-    CHECK((static_cast<std::uint32_t>(tga[17]) & 0x20) != 0); // top-left origin
-    CHECK(tga[18] == std::byte { 3 });                        // blue first
+    CHECK(tga[0] == std::byte { 0 });               // no image id
+    CHECK(tga[1] == std::byte { 0 });               // no colour map
+    CHECK(tga[2] == std::byte { 2 });               // uncompressed true colour
+    CHECK(tga[12] == std::byte { 2 });              // width, low byte
+    CHECK(tga[14] == std::byte { 1 });              // height, low byte
+    CHECK(tga[16] == std::byte { 32 });             // bits per pixel
+    CHECK((static_cast<u32>(tga[17]) & 0x20) != 0); // top-left origin
+    CHECK(tga[18] == std::byte { 3 });              // blue first
     CHECK(tga[19] == std::byte { 2 });
     CHECK(tga[20] == std::byte { 1 });
     CHECK(tga[21] == std::byte { 4 }); // alpha last
@@ -387,8 +389,8 @@ TEST_CASE("halving averages each two by two, weighting colour by alpha")
     const RgbaImage half = halved(image, 1);
     REQUIRE(half.width == 1);
     REQUIRE(half.height == 1);
-    CHECK(half.pixels == std::vector<std::uint8_t> { 150, 0, 0, 128 });
+    CHECK(half.pixels == std::vector<u8> { 150, 0, 0, 128 });
     CHECK(halved(image, 0).pixels == image.pixels);
-    RgbaImage odd { .width = 3, .height = 1, .pixels = std::vector<std::uint8_t>(12, 255) };
+    RgbaImage odd { .width = 3, .height = 1, .pixels = std::vector<u8>(12, 255) };
     CHECK(halved(odd, 1).width == 3); // A side of one pixel is not halved
 }

@@ -1,19 +1,21 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/attraction_objects.hpp"
 
+#include "core/types.hpp"
+
 namespace rct3::park
 {
 
     AttractionObjects attraction_objects(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects)
     {
         // Placements first, then every object hanging from one takes its attraction.
-        std::unordered_map<std::uint64_t, AttractionRef> placements;
+        std::unordered_map<u64, AttractionRef> placements;
         AttractionObjects out;
-        const auto own = [&](std::uint64_t placement, AttractionRef ref) {
+        const auto own = [&](u64 placement, AttractionRef ref) {
             if (placement != 0)
                 placements.emplace(placement, ref);
         };
-        for (std::size_t i = 0; i < rides.rides.size(); ++i)
+        for (usize i = 0; i < rides.rides.size(); ++i)
         {
             const save::model::Ride& r = rides.rides[i];
             const AttractionRef ref { AttractionRef::Kind::Ride, i };
@@ -32,7 +34,7 @@ namespace rct3::park
                 }
             }
         }
-        for (std::size_t i = 0; i < rides.stalls.size(); ++i)
+        for (usize i = 0; i < rides.stalls.size(); ++i)
             own(rides.stalls[i].base.placement, { AttractionRef::Kind::Stall, i });
         for (const save::model::PlacedObject& o : objects)
         {
@@ -42,12 +44,12 @@ namespace rct3::park
         return out;
     }
 
-    std::vector<std::size_t> twins(std::span<const save::model::PlacedObject> objects, std::span<const std::size_t> of)
+    std::vector<usize> twins(std::span<const save::model::PlacedObject> objects, std::span<const usize> of)
     {
         // By id, each of `of` and the id it hangs from.
-        std::unordered_map<std::uint64_t, std::size_t> by_id;
-        std::unordered_map<std::uint64_t, std::size_t> by_owner;
-        for (const std::size_t i : of)
+        std::unordered_map<u64, usize> by_id;
+        std::unordered_map<u64, usize> by_owner;
+        for (const usize i : of)
         {
             if (i < objects.size())
             {
@@ -55,8 +57,8 @@ namespace rct3::park
                 by_owner.emplace(objects[i].owner_ref, i);
             }
         }
-        std::vector<std::size_t> out;
-        for (std::size_t i = 0; i < objects.size(); ++i)
+        std::vector<usize> out;
+        for (usize i = 0; i < objects.size(); ++i)
         {
             const save::model::PlacedObject& o = objects[i];
             const auto child = by_id.find(o.owner_ref);

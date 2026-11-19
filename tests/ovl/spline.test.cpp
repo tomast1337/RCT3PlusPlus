@@ -2,6 +2,7 @@
 #include "ovl/spline.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -16,25 +17,25 @@ namespace
 {
 
     // Name block: "A:spl" at 0, padded to 16. The structure block follows at address 16.
-    constexpr std::uint32_t kBase = 16;
-    constexpr std::uint32_t kHeader = 0; // 32 bytes
-    constexpr std::uint32_t kNodes = 32; // 3 * 36
-    constexpr std::uint32_t kLengths = 140;
+    constexpr u32 kBase = 16;
+    constexpr u32 kHeader = 0; // 32 bytes
+    constexpr u32 kNodes = 32; // 3 * 36
+    constexpr u32 kLengths = 140;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    void real(std::vector<std::byte>& out, float v)
+    void real(std::vector<std::byte>& out, f32 v)
     {
-        append_u32(out, std::bit_cast<std::uint32_t>(v));
+        append_u32(out, std::bit_cast<u32>(v));
     }
 
-    void node(std::vector<std::byte>& out, float x, float y, float z, float in, float out_t)
+    void node(std::vector<std::byte>& out, f32 x, f32 y, f32 z, f32 in, f32 out_t)
     {
-        for (float f : { x, y, z, in, 0.0f, 0.0f, out_t, 0.0f, 0.0f })
+        for (f32 f : { x, y, z, in, 0.0f, 0.0f, out_t, 0.0f, 0.0f })
             real(out, f);
     }
 
@@ -55,7 +56,7 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> structure(std::uint32_t count = 3, std::uint32_t closed = 0)
+    std::vector<std::byte> structure(u32 count = 3, u32 closed = 0)
     {
         std::vector<std::byte> out;
         words(out, { count, kBase + kNodes, closed });
@@ -147,8 +148,8 @@ TEST_CASE("a spline segment is a cubic Bezier curve through its nodes' offsets")
     s.nodes[0].tangent_out = { 1, 0, 0 };
     s.nodes[1].position = { 3, 0, 0 };
     s.nodes[1].tangent_in = { 0, 3, 0 }; // Pulls the middle up
-    CHECK(rct3::ovl::spline_point(s, 0, 0) == std::array<float, 3> { 0, 0, 0 });
-    CHECK(rct3::ovl::spline_point(s, 0, 1) == std::array<float, 3> { 3, 0, 0 });
+    CHECK(rct3::ovl::spline_point(s, 0, 0) == std::array<f32, 3> { 0, 0, 0 });
+    CHECK(rct3::ovl::spline_point(s, 0, 1) == std::array<f32, 3> { 3, 0, 0 });
     const auto mid = rct3::ovl::spline_point(s, 0, 0.5f);
     // 3/8 of each inner control point and 1/8 of each end.
     CHECK(mid[0] == doctest::Approx(0.375f * 1 + 0.375f * 3 + 0.125f * 3));

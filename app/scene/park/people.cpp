@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/people.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/person/motions.hpp"
 #include "scene/park/patrol.hpp"
@@ -65,7 +66,7 @@ namespace rct3::scene::park
         }
     }
 
-    std::optional<std::size_t> hire(ParkScene& scene, save::model::StaffKind kind)
+    std::optional<usize> hire(ParkScene& scene, save::model::StaffKind kind)
     {
         using enum save::model::StaffKind;
         if (!scene.simulate || kind == Vendor || kind == LifeGuard || kind == ParkInspector)
@@ -85,19 +86,19 @@ namespace rct3::scene::park
         const auto type = kind == Handyman ? save::model::PersonType::Handyman : kind == Mechanic ? save::model::PersonType::Mechanic : kind == SecurityGuard ? save::model::PersonType::SecurityGuard : save::model::PersonType::Entertainer;
         const auto role = simulation::staff::staff_role(kind);
         // Each entertainer the next costume in turn, as the game gives them out.
-        std::vector<std::uint8_t> costumes;
+        std::vector<u8> costumes;
         for (const Outfit& o : scene.wardrobe)
             if (o.type == type && !std::ranges::contains(costumes, o.costume))
                 costumes.push_back(o.costume);
         std::ranges::sort(costumes);
-        const std::uint8_t costume = costumes.empty() ? 0 : costumes[scene.costumes_given++ % costumes.size()];
+        const u8 costume = costumes.empty() ? 0 : costumes[scene.costumes_given++ % costumes.size()];
         std::array<const Outfit*, 3> worn { };
         for (const Outfit& o : scene.wardrobe)
             if (o.type == type && o.costume == costume && !o.swim && o.section < worn.size() && worn[o.section] == nullptr)
                 worn[o.section] = &o;
         // On a walkway picked at random, as the game puts them on one of the park's paths.
         std::vector<simulation::NodeId> walkways;
-        for (std::uint32_t n = 0; n < scene.sim.paths.nodes().size(); ++n)
+        for (u32 n = 0; n < scene.sim.paths.nodes().size(); ++n)
             if (const simulation::PathNode& node = scene.sim.paths.nodes()[n]; !node.removed && !node.queue && !node.staff_kept_off)
                 walkways.push_back(simulation::NodeId { n });
         if (std::ranges::contains(worn, nullptr) || walkways.empty())
@@ -106,7 +107,7 @@ namespace rct3::scene::park
         r.get<simulation::Staff>(e).training = simulation::staff::hired_training(scene.park.cash.has_value());
         scene.known_guests.insert(e);
         change_people(scene);
-        std::int32_t number = 0;
+        i32 number = 0;
         for (const save::model::Staff& s : scene.people.staff)
             if (s.kind == kind)
                 number = std::max(number, s.type_id);
@@ -136,20 +137,20 @@ namespace rct3::scene::park
         shown.pose.look.head = worn[0]->set;
         shown.pose.look.body = worn[1]->set;
         shown.pose.look.legs = worn[2]->set;
-        for (std::size_t i = 0; i < shown.pose.look.colours.size(); ++i)
-            shown.pose.look.colours[i] = a.palettes[i] = static_cast<std::uint8_t>(random::below(scene.looks, kColourCells));
+        for (usize i = 0; i < shown.pose.look.colours.size(); ++i)
+            shown.pose.look.colours[i] = a.palettes[i] = static_cast<u8>(random::below(scene.looks, kColourCells));
         shown.pose.motion = rct3::park::person::motion::kWalk;
         shown.pose.world = glm::translate(glm::mat4(1.0f), at);
         return scene.shown_people.size() - 1;
     }
 
-    void name_cheats(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t shown, std::u16string_view name)
+    void name_cheats(ParkScene& scene, const ui::InterfaceAssets& assets, usize shown, std::u16string_view name)
     {
         if (strings::equals_ignoring_case(strings::to_utf8(name), strings::to_utf8(assets.strings->get("CheatPeepName_PeepCam"))))
             ride_person(scene, assets, shown, false);
     }
 
-    bool change_person(ParkScene& scene, std::size_t shown, const ui::screens::info::InfoChange& change)
+    bool change_person(ParkScene& scene, usize shown, const ui::screens::info::InfoChange& change)
     {
         using enum ui::screens::info::PersonControl;
         if (shown >= scene.shown_people.size())
@@ -203,7 +204,7 @@ namespace rct3::scene::park
         }
         else if (e != entt::null && change.id == ui::screens::info::person_control(PatrolZone))
         {
-            simulation::staff::join_zone(scene.sim.registry, e, static_cast<std::uint32_t>(std::max(change.value, 0)));
+            simulation::staff::join_zone(scene.sim.registry, e, static_cast<u32>(std::max(change.value, 0)));
             return true;
         }
         if (change.id == ui::screens::info::person_control(PatrolBrush))
@@ -246,7 +247,7 @@ namespace rct3::scene::park
         }
         else if (change.id == ui::screens::info::person_control(Costume))
         {
-            person->sub_type = static_cast<std::uint8_t>(change.value);
+            person->sub_type = static_cast<u8>(change.value);
             // They change into it, where the install has it.
             std::array<const Outfit*, 3> worn { };
             for (const Outfit& o : scene.wardrobe)
@@ -268,22 +269,22 @@ namespace rct3::scene::park
         return false;
     }
 
-    void paint_person(ParkScene& scene, std::size_t shown, std::size_t pot, std::size_t colour)
+    void paint_person(ParkScene& scene, usize shown, usize pot, usize colour)
     {
         if (shown >= scene.shown_people.size() || ui::screens::info::kUpperPalette + pot >= rct3::park::person::PersonLook { }.colours.size())
             return;
         change_people(scene);
         ShownPerson& p = scene.shown_people[shown];
-        const auto c = static_cast<std::uint8_t>(colour);
+        const auto c = static_cast<u8>(colour);
         p.pose.look.colours.at(ui::screens::info::kUpperPalette + pot) = c;
         save::model::Person* person = p.staff ? &scene.people.staff.at(p.saved).person : &scene.people.guests.at(p.saved).person;
         person->appearance.palettes.at(ui::screens::info::kUpperPalette + pot) = c;
     }
 
-    void fire(ParkScene& scene, std::size_t shown)
+    void fire(ParkScene& scene, usize shown)
     {
         change_people(scene);
-        const std::size_t saved = scene.shown_people.at(shown).saved;
+        const usize saved = scene.shown_people.at(shown).saved;
         if (const entt::entity walker = scene.shown_people[shown].guest; walker != entt::null)
             scene.sim.registry.destroy(walker);
         scene.shown_people.erase(scene.shown_people.begin() + static_cast<std::ptrdiff_t>(shown));
@@ -294,7 +295,7 @@ namespace rct3::scene::park
                 --p.saved;
         }
         // Those the view and the window follow keep to them; one gone takes them away.
-        for (std::optional<std::size_t>* followed : { &scene.shown_person, &scene.riding_person })
+        for (std::optional<usize>* followed : { &scene.shown_person, &scene.riding_person })
         {
             if (*followed == shown)
                 followed->reset();

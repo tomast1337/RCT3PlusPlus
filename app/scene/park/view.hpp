@@ -8,6 +8,7 @@
 // rides and stalls floats up from their entrances when the view menu asks for that too.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/terrain_mesh.hpp"
 #include "render/device.hpp"
 #include "save/model/world.hpp"
@@ -32,7 +33,7 @@ namespace rct3::scene::park
     {
         render::BufferHandle vertices;
         render::BufferHandle indices;
-        std::uint32_t count = 0;
+        u32 count = 0;
         bool stale = true; ///< The ground changed since they were made
     };
 

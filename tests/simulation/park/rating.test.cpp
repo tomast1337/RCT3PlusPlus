@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park/rating.hpp"
 
+#include "core/types.hpp"
 #include "simulation/awards.hpp"
 #include "simulation/tuning.hpp"
 
@@ -127,14 +128,14 @@ TEST_CASE("lost guests take some off each, up to a cap")
 
 TEST_CASE("a crash takes most off just after, less as the park forgets it")
 {
-    const float crash = simulation::kTuning.rating.crash.value;
-    const float forgotten = simulation::kTuning.crashes.forgotten.value;
+    const f32 crash = simulation::kTuning.rating.crash.value;
+    const f32 forgotten = simulation::kTuning.crashes.forgotten.value;
     RatingInput in;
     CHECK(simulation::park::rate_park(in).crash == 0);
     in.since_crash = units::Seconds { 0 };
-    CHECK(simulation::park::rate_park(in).crash == -static_cast<std::int32_t>(std::lround(crash)));
+    CHECK(simulation::park::rate_park(in).crash == -static_cast<i32>(std::lround(crash)));
     in.since_crash = units::Seconds { forgotten / 2 };
-    CHECK(simulation::park::rate_park(in).crash == -static_cast<std::int32_t>(std::lround(crash / 2)));
+    CHECK(simulation::park::rate_park(in).crash == -static_cast<i32>(std::lround(crash / 2)));
     in.since_crash = units::Seconds { forgotten };
     CHECK(simulation::park::rate_park(in).crash == 0);
 }
@@ -148,10 +149,10 @@ TEST_CASE("awards add, fines take off, and a prize adds what is left of it untou
     in.prize = 40;
     in.harder = true;
     const RatingParts p = simulation::park::rate_park(in);
-    CHECK(p.awards == static_cast<std::int32_t>(std::lround(2 * t.per_award.value - t.per_fine.value)));
+    CHECK(p.awards == static_cast<i32>(std::lround(2 * t.per_award.value - t.per_fine.value)));
     CHECK(p.prize == 40);
-    const std::int32_t sum = p.happiness + p.awards;
-    CHECK(p.harder == -static_cast<std::int32_t>(std::lround(static_cast<float>(sum) * t.harder_share.value)));
+    const i32 sum = p.happiness + p.awards;
+    CHECK(p.harder == -static_cast<i32>(std::lround(static_cast<f32>(sum) * t.harder_share.value)));
     CHECK(p.total == sum + p.harder + 40);
 }
 
@@ -170,9 +171,9 @@ TEST_CASE("lost guests, crashes and awards are gathered from the park")
     rides.rides[2].base.time_since_crash = units::Seconds { 100 };
     rides.rides[2].base.demolished = true;
 
-    constexpr std::int32_t kFine = 30; // Neglected animals
+    constexpr i32 kFine = 30; // Neglected animals
     REQUIRE(simulation::award_is_fine(kFine));
-    std::int32_t award = 0;
+    i32 award = 0;
     while (simulation::award_is_fine(award) || simulation::award_name(award).empty())
         ++award;
     save::model::Awards awards;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/build_menus.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
@@ -52,7 +53,7 @@ namespace rct3::scene
                             std::vector<DesignFile> designs;
                             for (const std::filesystem::path& folder : folders)
                             {
-                                const std::size_t first = designs.size();
+                                const usize first = designs.size();
                                 std::error_code error;
                                 for (auto it = std::filesystem::directory_iterator(folder, error); !error && it != std::filesystem::directory_iterator(); it.increment(error))
                                 {
@@ -101,14 +102,14 @@ namespace rct3::scene
         }
     } // namespace
 
-    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::screens::park_view::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency, std::optional<std::size_t> marked)
+    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::screens::park_view::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency, std::optional<usize> marked)
     {
         const auto list = ui::screens::build::build_list(item);
         if (!list || !menus.items.valid())
             return false;
         close_build_list(root);
         // How many saved designs each tracked ride kind has, once they are read.
-        std::map<std::string, std::size_t, strings::LessIgnoringCase> design_counts;
+        std::map<std::string, usize, strings::LessIgnoringCase> design_counts;
         if (menus.designs.valid() && menus.designs.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
             for (const DesignFile& d : menus.designs.get())
                 ++design_counts[std::string(design_kind(d))];
@@ -128,8 +129,8 @@ namespace rct3::scene
         ui::Rect shown = button.rect();
         take_in_shown(bar, shown);
         const ui::Point size = menus.size.value_or(ui::Point { ui::screens::build::build_picker::kWidth, ui::screens::build::build_picker::kHeight });
-        const float x = (shown.x0 + shown.x1) / 2 - size.x / 2 - r.x0;
-        const float y = shown.y0 - ui::screens::build::build_picker::kGap - size.y - r.y0;
+        const f32 x = (shown.x0 + shown.x1) / 2 - size.x / 2 - r.x0;
+        const f32 y = shown.y0 - ui::screens::build::build_picker::kGap - size.y - r.y0;
         picker.placement = ui::top_left(x, y, size.x, size.y);
         return true;
     }

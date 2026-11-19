@@ -11,6 +11,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/panel_look.hpp"
 #include "ui/screens/info/stall_menu.hpp"
 #include "ui/widgets/button.hpp"
@@ -44,10 +45,10 @@ namespace rct3::ui::screens::info
         Color disc = hex("#56abe5");      ///< Of the disc and its rim
         Color view_back = hex("#7f7f7f"); ///< In the round view when it shows nothing
         Color shadow = hex("#00000080");
-        float band_height = 18;
-        float corner = 11;      ///< Of the strip's top corners
-        float rim = 10.5f;      ///< Of the ring round the view; what it holds is a touch wider than the view
-        float strip_shadow = 3; ///< Of the strip's own rectangle, taken by its shadow on the right and bottom
+        f32 band_height = 18;
+        f32 corner = 11;      ///< Of the strip's top corners
+        f32 rim = 10.5f;      ///< Of the ring round the view; what it holds is a touch wider than the view
+        f32 strip_shadow = 3; ///< Of the strip's own rectangle, taken by its shadow on the right and bottom
         /// Behind a page of lines, a line below the band and from the strip's open end to the ring's tabs: a
         /// notebook's margin at the open end, then the lines in a box ruled on its margin side and below, every other
         /// one striped.
@@ -56,9 +57,9 @@ namespace rct3::ui::screens::info
         Color margin = hex("#fff7ff");
         Color rule = hex("#d6d6d6");    ///< The box's lines, two on the margin's side
         Color divider = hex("#a3a3a3"); ///< Between the parts of a page of tools
-        float paper_margin = 16;
-        float paper_bottom = 9;  ///< Of the strip left below the paper
-        float paper_corner = 16; ///< Of its bottom corner by the tabs
+        f32 paper_margin = 16;
+        f32 paper_bottom = 9;  ///< Of the strip left below the paper
+        f32 paper_corner = 16; ///< Of its bottom corner by the tabs
     };
 
     struct InfoPanelStyle
@@ -75,8 +76,8 @@ namespace rct3::ui::screens::info
         std::string tab_face;                ///< Behind each tab's icon
         widgets::PaintButtonStyle paint;     ///< Of a paint tab; its face is tab_face
         widgets::ColourPaletteStyle palette; ///< Of the colours a paint tab opens
-        std::size_t palette_count = 32;
-        std::size_t palette_columns = 8;
+        usize palette_count = 32;
+        usize palette_columns = 8;
         widgets::SpinnerStyle spinner;                                                                                            ///< Of a page's number controls
         widgets::SliderStyle bar { .rail = { }, .thumb = { }, .thumb_width = 0, .bar = true, .bar_back_colour = hex("#ece8f0") }; ///< Of its bars set by pressing along them; colours chosen by eye
         std::string stamp;                                                                                                        ///< A passport stamp's skin, tinted in its ink
@@ -88,11 +89,11 @@ namespace rct3::ui::screens::info
         Color section_colour = hex("#b8d8f0");        ///< Of a section button's text
         Color picked_section_colour = hex("#ffffff"); ///< Of the shown section's
         Color bar_back = hex("#00000040");            ///< Of a line's bar, behind its filled part
-        float glass_alpha = 0.15f;
+        f32 glass_alpha = 0.15f;
         /// In the bottom-left corner instead, turned the other way: tabs mirrored, the strip on the right.
         /// Drawn only in code.
         bool left = false;
-        float raise = 0; ///< Of the disc and its close button, clear of what stands below them
+        f32 raise = 0; ///< Of the disc and its close button, clear of what stands below them
         Color text_colour = hex("#ffffff");
         Color paper_text_colour = hex("#000000"); ///< Of a page on paper
         /// On the button in the band that puts the strip away, pointing at the disc: the right-hand panel's and the
@@ -117,82 +118,82 @@ namespace rct3::ui::screens::info
     {
         std::string icon;
         std::u16string help;
-        std::int32_t slot = 0;
+        i32 slot = 0;
         std::vector<InfoChoice> choices;
         bool action = false;
         /// A paint tab's pots, each with its colour; pressing a pot opens colours to pick for it. The tab's icon
         /// is the pots'.
-        std::vector<std::size_t> paints;
-        std::size_t colours = 0; ///< To pick from for its pots; 0 for the panel's own count
+        std::vector<usize> paints;
+        usize colours = 0; ///< To pick from for its pots; 0 for the panel's own count
     };
 
     /// A colour the player picked for a paint tab's pot.
     struct InfoPaint
     {
-        std::size_t tab = 0;
-        std::size_t pot = 0;
-        std::size_t colour = 0;
+        usize tab = 0;
+        usize pot = 0;
+        usize colour = 0;
     };
 
     namespace info_panel
     {
-        inline constexpr float kDisc = 128;       ///< Width and height of the disc
-        inline constexpr float kDiscMargin = 18;  ///< From the screen's right and bottom edges to the disc
-        inline constexpr float kShadowOffset = 3; ///< Of the shadows, right and down
+        inline constexpr f32 kDisc = 128;       ///< Width and height of the disc
+        inline constexpr f32 kDiscMargin = 18;  ///< From the screen's right and bottom edges to the disc
+        inline constexpr f32 kShadowOffset = 3; ///< Of the shadows, right and down
         /// Across the round view of the thing, centred on the disc, within the disc's plain middle.
-        inline constexpr float kView = 106;
+        inline constexpr f32 kView = 106;
         inline constexpr units::Seconds kDoubleClick { 0.4f }; ///< Between two presses on the view that make a double click
-        inline constexpr float kRingRadius = 72;               ///< From the disc's middle to the tabs' middles
-        inline constexpr float kFirstAngle = 42;               ///< Degrees up from the right, of slot 0
-        inline constexpr float kSlotAngle = 32;                ///< Between neighbouring slots, going round to the left
-        inline constexpr float kTabSize = 28;                  ///< A tab's face at rest
-        inline constexpr float kTabGrown = 40;                 ///< Under the pointer
-        inline constexpr float kIconSize = 40;                 ///< Of the tab icons' own pictures
-        inline constexpr float kCloseSize = 14;
-        inline constexpr float kHideSize = 12;     ///< The button that puts the strip away
-        inline constexpr float kHideInset = 4;     ///< From the strip's open end and the band's top
-        inline constexpr float kTitleLeft = 20;    ///< Of the title, clear of that button
-        inline constexpr float kCloseRight = 9;    ///< From the screen's right edge
-        inline constexpr float kCloseBottom = 9;   ///< From the screen's bottom edge
-        inline constexpr float kStripOverlap = 13; ///< Of the strip under the disc
-        inline constexpr float kStripExtra = 40;   ///< Of the strip's width beyond its content's
-        inline constexpr float kStripNarrowest = 136;
-        inline constexpr float kStripHeight = 130;                                ///< Of the strip, whatever its content
-        inline constexpr float kBodyLeft = 24;                                    ///< Of the content, from the strip's left edge, past the paper's margin
-        inline constexpr float kBodyTop = 22;                                     ///< From the strip's top edge, below its band
-        inline constexpr float kBodyBottom = 12;                                  ///< From the strip's bottom edge
-        inline constexpr float kBodyView = kStripHeight - kBodyTop - kBodyBottom; ///< Of the content in sight
-        inline constexpr float kPageWidth = 360;                                  ///< Of a page of lines
-        inline constexpr float kLineHeight = 15;
-        inline constexpr float kBarWidth = 130;     ///< Of a line's bar
-        inline constexpr float kValueColumn = 185;  ///< From the page's left edge to where values start
-        inline constexpr float kSectionHeight = 15; ///< Of the row of section buttons
-        inline constexpr float kPlotHeight = 64;
-        inline constexpr float kAxisWidth = 76;      ///< Of the numbers left of a graph
-        inline constexpr float kAxisPlotHeight = 48; ///< Of a graph with numbers, leaving room for two rows of controls
-        inline constexpr float kPairGap = 6;         ///< Between the two half lines of a row
-        inline constexpr float kRingReach = 30;      ///< Of the page's right end, under the ring's tabs
-        inline constexpr float kChoiceSize = 22;     ///< A choice button
-        inline constexpr float kChoiceIconScale = 0.7f;
-        inline constexpr float kChoiceRadius = 26; ///< From the tab's middle to its choices'
+        inline constexpr f32 kRingRadius = 72;                 ///< From the disc's middle to the tabs' middles
+        inline constexpr f32 kFirstAngle = 42;                 ///< Degrees up from the right, of slot 0
+        inline constexpr f32 kSlotAngle = 32;                  ///< Between neighbouring slots, going round to the left
+        inline constexpr f32 kTabSize = 28;                    ///< A tab's face at rest
+        inline constexpr f32 kTabGrown = 40;                   ///< Under the pointer
+        inline constexpr f32 kIconSize = 40;                   ///< Of the tab icons' own pictures
+        inline constexpr f32 kCloseSize = 14;
+        inline constexpr f32 kHideSize = 12;     ///< The button that puts the strip away
+        inline constexpr f32 kHideInset = 4;     ///< From the strip's open end and the band's top
+        inline constexpr f32 kTitleLeft = 20;    ///< Of the title, clear of that button
+        inline constexpr f32 kCloseRight = 9;    ///< From the screen's right edge
+        inline constexpr f32 kCloseBottom = 9;   ///< From the screen's bottom edge
+        inline constexpr f32 kStripOverlap = 13; ///< Of the strip under the disc
+        inline constexpr f32 kStripExtra = 40;   ///< Of the strip's width beyond its content's
+        inline constexpr f32 kStripNarrowest = 136;
+        inline constexpr f32 kStripHeight = 130;                                ///< Of the strip, whatever its content
+        inline constexpr f32 kBodyLeft = 24;                                    ///< Of the content, from the strip's left edge, past the paper's margin
+        inline constexpr f32 kBodyTop = 22;                                     ///< From the strip's top edge, below its band
+        inline constexpr f32 kBodyBottom = 12;                                  ///< From the strip's bottom edge
+        inline constexpr f32 kBodyView = kStripHeight - kBodyTop - kBodyBottom; ///< Of the content in sight
+        inline constexpr f32 kPageWidth = 360;                                  ///< Of a page of lines
+        inline constexpr f32 kLineHeight = 15;
+        inline constexpr f32 kBarWidth = 130;     ///< Of a line's bar
+        inline constexpr f32 kValueColumn = 185;  ///< From the page's left edge to where values start
+        inline constexpr f32 kSectionHeight = 15; ///< Of the row of section buttons
+        inline constexpr f32 kPlotHeight = 64;
+        inline constexpr f32 kAxisWidth = 76;      ///< Of the numbers left of a graph
+        inline constexpr f32 kAxisPlotHeight = 48; ///< Of a graph with numbers, leaving room for two rows of controls
+        inline constexpr f32 kPairGap = 6;         ///< Between the two half lines of a row
+        inline constexpr f32 kRingReach = 30;      ///< Of the page's right end, under the ring's tabs
+        inline constexpr f32 kChoiceSize = 22;     ///< A choice button
+        inline constexpr f32 kChoiceIconScale = 0.7f;
+        inline constexpr f32 kChoiceRadius = 26; ///< From the tab's middle to its choices'
         /// Radians either side of the line out from the disc through the tab, for two and for three choices.
-        inline constexpr float kTwoChoiceSpread = 0.38f;
-        inline constexpr float kThreeChoiceSpread = 0.76f;
-        inline constexpr float kPaletteGap = 4;     ///< Between a paint tab and the colours it opens
-        inline constexpr float kScreenMargin = 4;   ///< Kept between the colours and the screen's edges
-        inline constexpr float kControlHeight = 15; ///< Of a row holding a control
-        inline constexpr float kTickSize = 13;
-        inline constexpr float kPaintSize = 26;               ///< Of a page's pots
-        inline constexpr float kNumberWidth = 70;             ///< Of a page's spinners
-        inline constexpr float kChoiceWidth = 140;            ///< Of a page's lists
-        inline constexpr float kLineIcon = 12;                ///< Of the picture before a line, such as a thought's face
-        inline constexpr float kLineIconGap = 4;              ///< Between that picture and the line's text
-        inline constexpr float kToggleSize = 20;              ///< A task's toggle, at its pictures' own size, over its line
-        inline constexpr float kToggleInset = 40;             ///< Chosen by eye: a task's toggle short of the page's end, as the game's sits
-        inline constexpr float kScrollStep = 2 * kLineHeight; ///< Down the page for a notch of the wheel
-        inline constexpr float kScrollGap = 2;                ///< Between the scroll bar and the paper's end
-        inline constexpr float kStampSize = 38;               ///< Of a passport stamp, its picture's own size
-        inline constexpr float kStampPage = 80;               ///< Chosen by eye: of the page the stamps sit on, two stamps high
+        inline constexpr f32 kTwoChoiceSpread = 0.38f;
+        inline constexpr f32 kThreeChoiceSpread = 0.76f;
+        inline constexpr f32 kPaletteGap = 4;     ///< Between a paint tab and the colours it opens
+        inline constexpr f32 kScreenMargin = 4;   ///< Kept between the colours and the screen's edges
+        inline constexpr f32 kControlHeight = 15; ///< Of a row holding a control
+        inline constexpr f32 kTickSize = 13;
+        inline constexpr f32 kPaintSize = 26;               ///< Of a page's pots
+        inline constexpr f32 kNumberWidth = 70;             ///< Of a page's spinners
+        inline constexpr f32 kChoiceWidth = 140;            ///< Of a page's lists
+        inline constexpr f32 kLineIcon = 12;                ///< Of the picture before a line, such as a thought's face
+        inline constexpr f32 kLineIconGap = 4;              ///< Between that picture and the line's text
+        inline constexpr f32 kToggleSize = 20;              ///< A task's toggle, at its pictures' own size, over its line
+        inline constexpr f32 kToggleInset = 40;             ///< Chosen by eye: a task's toggle short of the page's end, as the game's sits
+        inline constexpr f32 kScrollStep = 2 * kLineHeight; ///< Down the page for a notch of the wheel
+        inline constexpr f32 kScrollGap = 2;                ///< Between the scroll bar and the paper's end
+        inline constexpr f32 kStampSize = 38;               ///< Of a passport stamp, its picture's own size
+        inline constexpr f32 kStampPage = 80;               ///< Chosen by eye: of the page the stamps sit on, two stamps high
     } // namespace info_panel
 
     struct InfoLine
@@ -201,7 +202,7 @@ namespace rct3::ui::screens::info
         std::u16string value;
         bool half = false;                 ///< Short enough to share its row with the next half line
         std::string name = { };            ///< Its widgets' name: the label's string key, to find where it is made by
-        std::optional<float> bar { };      ///< 0 to 1: its value sits on a bar filled that far
+        std::optional<f32> bar { };        ///< 0 to 1: its value sits on a bar filled that far
         Color bar_colour = hex("#40c040"); ///< The bar's filled part
         std::string icon = { };            ///< Skin before the label, such as a thought's face
         std::string value_icon = { };      ///< Skin in the value column, such as a mood's face
@@ -210,11 +211,11 @@ namespace rct3::ui::screens::info
     struct InfoSeries
     {
         std::u16string name;
-        std::vector<float> values; ///< Oldest first
-        std::string key = { };     ///< Its name's string key, which its widget is named by
-        bool shown = true;         ///< Drawn, or left out while keeping its colour
-        float full = 0;            ///< Top of its scale; 0 to work it out from its values (see LinePlot)
-        bool centred = false;      ///< Its scale has zero across the middle
+        std::vector<f32> values; ///< Oldest first
+        std::string key = { };   ///< Its name's string key, which its widget is named by
+        bool shown = true;       ///< Drawn, or left out while keeping its colour
+        f32 full = 0;            ///< Top of its scale; 0 to work it out from its values (see LinePlot)
+        bool centred = false;    ///< Its scale has zero across the middle
         /// Numbers up the graph's left, top first, when it is the series in focus.
         std::vector<std::u16string> axis = { };
         /// Each value in words, oldest first, read out when the pointer is over it; none for a graph without a
@@ -225,11 +226,11 @@ namespace rct3::ui::screens::info
     /// A mark along the bottom of a graph, `back` samples before the newest one; one with a label is longer.
     struct InfoTick
     {
-        float back = 0;
+        f32 back = 0;
         std::u16string label = { };
     };
 
-    enum class InfoControlKind : std::uint8_t
+    enum class InfoControlKind : u8
     {
         Number, ///< A spinner
         Choice, ///< A list to pick from
@@ -245,39 +246,39 @@ namespace rct3::ui::screens::info
     /// the control in the value column. The owner tells the controls apart by their ids.
     struct InfoControl
     {
-        std::int32_t id = 0;
+        i32 id = 0;
         std::string name; ///< Its widget's name: a string key from where it is made, to find it by
         InfoControlKind kind = InfoControlKind::Number;
         std::u16string label { };
-        std::int32_t value = 0; ///< The number, the item picked, whether ticked, or whether a button is held down
-        std::int32_t minimum = 0;
-        std::int32_t maximum = 0;
-        std::int32_t step = 1;
-        std::int32_t decimals = 0;             ///< Of a number shown with a point, such as money in hundredths
+        i32 value = 0; ///< The number, the item picked, whether ticked, or whether a button is held down
+        i32 minimum = 0;
+        i32 maximum = 0;
+        i32 step = 1;
+        i32 decimals = 0;                      ///< Of a number shown with a point, such as money in hundredths
         std::vector<std::u16string> items { }; ///< Of a list
         std::u16string text { };               ///< On a button, typed, or a number's unit after it
         /// A number's value in words, such as money, in the value column with only the arrows after it, its row
         /// a line high like the lines'; empty to type the number in a field.
         std::u16string shown { };
-        std::string icon { };                ///< A button's picture, instead of text
-        std::vector<std::size_t> paints { }; ///< The colour of each pot
+        std::string icon { };          ///< A button's picture, instead of text
+        std::vector<usize> paints { }; ///< The colour of each pot
         bool enabled = true;
         /// On the row of the control before it, after it, instead of on a row of its own.
         bool beside = false;
-        std::int32_t column = 0;               ///< 0 the page's left, or all of it; 1 its right half
-        float width = 0;                       ///< Of the control itself; 0 for its kind's own
-        std::u16string help { };               ///< Shown under the pointer
-        std::optional<Color> colour { };       ///< Of its label, instead of the panel's text colour
-        std::optional<std::size_t> series { }; ///< The graph's series whose colour its label takes
+        i32 column = 0;                  ///< 0 the page's left, or all of it; 1 its right half
+        f32 width = 0;                   ///< Of the control itself; 0 for its kind's own
+        std::u16string help { };         ///< Shown under the pointer
+        std::optional<Color> colour { }; ///< Of its label, instead of the panel's text colour
+        std::optional<usize> series { }; ///< The graph's series whose colour its label takes
     };
 
     /// A change the player made to a page's control: the control's id and its new value. For pots, `pot` is the
     /// one painted and `value` its colour.
     struct InfoChange
     {
-        std::int32_t id = 0;
-        std::int32_t value = 0;
-        std::size_t pot = 0;
+        i32 id = 0;
+        i32 value = 0;
+        usize pot = 0;
         std::u16string text; ///< Typed
     };
 
@@ -285,8 +286,8 @@ namespace rct3::ui::screens::info
     struct InfoStamp
     {
         Color colour { };
-        float x = 0;
-        float y = 0;
+        f32 x = 0;
+        f32 y = 0;
     };
 
     /// A tab's content: a title, a row of buttons for its sections when it has more than one, lines of a
@@ -296,7 +297,7 @@ namespace rct3::ui::screens::info
         std::u16string title;
         std::u16string heading; ///< Under the title, such as what kind of thing it is
         std::vector<std::u16string> sections;
-        std::size_t section = 0;   ///< The one shown
+        usize section = 0;         ///< The one shown
         bool section_list = false; ///< Picked from a list instead of a row of words
         std::vector<InfoLine> lines;
 
@@ -307,18 +308,18 @@ namespace rct3::ui::screens::info
         /// under the graph are left to the controls.
         std::vector<std::u16string> graph_axis;
         std::vector<InfoTick> graph_ticks;
-        std::vector<InfoControl> controls;             ///< Under the note
-        std::optional<std::size_t> controls_after { }; ///< How many lines go over the controls; all when empty
-        float width = 0;                               ///< Of the page; 0 for info_panel::kPageWidth
+        std::vector<InfoControl> controls;       ///< Under the note
+        std::optional<usize> controls_after { }; ///< How many lines go over the controls; all when empty
+        f32 width = 0;                           ///< Of the page; 0 for info_panel::kPageWidth
         /// A stall's menu, under the controls; its changes come as the controls' do, by StallMenuView::ids.
         std::optional<StallMenuView> menu { };
-        float menu_height = 0;
+        f32 menu_height = 0;
         bool bare = false; ///< Straight on the strip, with no paper under it, as a worker's details are
     };
 
     /// A widget's name from the string key of what it shows and its part, such as "Park_Name_value", so a search
     /// for the key finds where it is made; by its place, such as "value3", for what has no key.
-    [[nodiscard]] inline std::string keyed_name(std::string_view key, std::string_view part, std::size_t index)
+    [[nodiscard]] inline std::string keyed_name(std::string_view key, std::string_view part, usize index)
     {
         if (key.empty())
             return std::format("{}{}", part, index);
@@ -326,9 +327,9 @@ namespace rct3::ui::screens::info
     }
 
     /// The middle of the tab at `slot`, from the middle of the disc, with y down.
-    [[nodiscard]] Point info_tab_offset(std::int32_t slot);
+    [[nodiscard]] Point info_tab_offset(i32 slot);
     /// The middle of choice `i` of `count` round the tab at `slot`, from the tab's middle, with y down.
-    [[nodiscard]] Point info_choice_offset(std::int32_t slot, std::size_t i, std::size_t count);
+    [[nodiscard]] Point info_choice_offset(i32 slot, usize i, usize count);
 
     class InfoPanel : public Widget
     {
@@ -336,7 +337,7 @@ namespace rct3::ui::screens::info
         InfoPanel(std::string name, InfoPanelStyle style);
 
         /// Opens the panel with `tabs`, the one at `picked` open; none when `picked` is past them.
-        void show(std::vector<InfoTab> tabs, std::size_t picked);
+        void show(std::vector<InfoTab> tabs, usize picked);
         void hide();
         [[nodiscard]] bool showing() const
         {
@@ -344,25 +345,25 @@ namespace rct3::ui::screens::info
         }
 
         /// The tab the player opened since the last call.
-        [[nodiscard]] std::optional<std::size_t> take_picked()
+        [[nodiscard]] std::optional<usize> take_picked()
         {
             return std::exchange(picked_now_, std::nullopt);
         }
         /// The section of the page the player asked for since the last call.
-        [[nodiscard]] std::optional<std::size_t> take_section()
+        [[nodiscard]] std::optional<usize> take_section()
         {
             return std::exchange(section_now_, std::nullopt);
         }
         /// The action tab the player pressed since the last call.
-        [[nodiscard]] std::optional<std::size_t> take_action()
+        [[nodiscard]] std::optional<usize> take_action()
         {
             return std::exchange(action_now_, std::nullopt);
         }
         /// A choice picked on one of the tabs.
         struct TabChoice
         {
-            std::size_t tab { };
-            std::size_t choice { }; ///< Among the tab's own
+            usize tab { };
+            usize choice { }; ///< Among the tab's own
         };
         /// The choice the player made since the last call.
         [[nodiscard]] std::optional<TabChoice> take_choice()
@@ -381,14 +382,14 @@ namespace rct3::ui::screens::info
             return std::exchange(change_now_, std::nullopt);
         }
         /// The widget of the page's control `id`, if the page has it.
-        [[nodiscard]] std::optional<Widget&> control(std::int32_t id) const;
+        [[nodiscard]] std::optional<Widget&> control(i32 id) const;
         /// The colour the player picked for a paint tab since the last call.
         [[nodiscard]] std::optional<InfoPaint> take_paint()
         {
             return std::exchange(paint_now_, std::nullopt);
         }
         /// The paint tab whose colours are out, if any.
-        [[nodiscard]] std::optional<std::size_t> painting() const
+        [[nodiscard]] std::optional<usize> painting() const
         {
             return painting_;
         }
@@ -400,11 +401,11 @@ namespace rct3::ui::screens::info
         void close_palette();
 
         /// The tab whose choices are out, if any.
-        [[nodiscard]] std::optional<std::size_t> choosing() const
+        [[nodiscard]] std::optional<usize> choosing() const
         {
             return choosing_;
         }
-        [[nodiscard]] widgets::Button& choice(std::size_t i) const
+        [[nodiscard]] widgets::Button& choice(usize i) const
         {
             return *choices_.at(i);
         }
@@ -413,7 +414,7 @@ namespace rct3::ui::screens::info
         {
             return std::exchange(closed_, false);
         }
-        [[nodiscard]] std::size_t picked() const
+        [[nodiscard]] usize picked() const
         {
             return picked_;
         }
@@ -424,7 +425,7 @@ namespace rct3::ui::screens::info
             return *body_;
         }
         /// The size of the open tab's content; the strip fits round it.
-        void set_body_size(float width, float height);
+        void set_body_size(f32 width, f32 height);
         /// Lays plain paper behind the body the owner fills, from just before it to the strip's end, rounded on
         /// the side towards the disc, as the game's tool pages sit on.
         void set_paper(bool on)
@@ -453,11 +454,11 @@ namespace rct3::ui::screens::info
         {
             return body_width_ > 0 && !tucked_;
         }
-        [[nodiscard]] widgets::Button& tab(std::size_t i) const
+        [[nodiscard]] widgets::Button& tab(usize i) const
         {
             return *tabs_.at(i);
         }
-        [[nodiscard]] std::size_t tab_count() const
+        [[nodiscard]] usize tab_count() const
         {
             return tabs_.size();
         }
@@ -475,7 +476,7 @@ namespace rct3::ui::screens::info
 
     private:
         void place();
-        [[nodiscard]] Color series_colour(std::size_t i) const
+        [[nodiscard]] Color series_colour(usize i) const
         {
             return style_.series_colours.empty() ? style_.text_colour : style_.series_colours[i % style_.series_colours.size()];
         }
@@ -485,30 +486,30 @@ namespace rct3::ui::screens::info
         void draw_skins(DrawContext& context) const;
         void draw_coded(DrawList& list) const;
         void mark_picked();
-        void open_choices(std::size_t tab);
+        void open_choices(usize tab);
         void close_choices();
-        void open_palette(std::size_t tab, std::size_t pot);
-        void open_page_palette(std::size_t control, std::size_t pot);
+        void open_palette(usize tab, usize pot);
+        void open_page_palette(usize control, usize pot);
         void read_controls();
         /// Moves the page's widgets up by `by`, on from where they are.
-        void scroll_by(float by);
+        void scroll_by(f32 by);
 
         InfoPanelStyle style_;
         std::vector<widgets::Button*> tabs_;
-        std::vector<std::int32_t> slots_;
+        std::vector<i32> slots_;
         std::vector<std::vector<InfoChoice>> tab_choices_;
         std::vector<widgets::Button*> choices_;
-        std::optional<std::size_t> choosing_;
+        std::optional<usize> choosing_;
         std::vector<widgets::PaintButton*> paints_; ///< Of each tab, its pots when it is a paint tab
-        std::vector<std::size_t> paint_colours_;    ///< Of each tab, InfoTab::colours
+        std::vector<usize> paint_colours_;          ///< Of each tab, InfoTab::colours
         widgets::ColourPalette* palette_ = nullptr;
-        std::optional<std::size_t> painting_;
-        std::size_t painting_pot_ = 0;
+        std::optional<usize> painting_;
+        usize painting_pot_ = 0;
         std::optional<InfoPaint> paint_now_;
         /// The page's controls, with their widgets; the colours are out for a page's pots when painting_page_ is
         /// set (the control) instead of painting_.
         std::vector<std::pair<InfoControl, Widget*>> controls_;
-        std::optional<std::size_t> painting_page_;
+        std::optional<usize> painting_page_;
         std::optional<InfoChange> change_now_;
         StallMenu* menu_ = nullptr;
         std::optional<units::Seconds> since_view_press_; ///< Since the first press of a pair on the round view
@@ -523,43 +524,43 @@ namespace rct3::ui::screens::info
             widgets::Label* value = nullptr;
             Widget* bar = nullptr; ///< Under the value when it has one, with its filled part
             Widget* filled = nullptr;
-            float fill = 0;
+            f32 fill = 0;
         };
         std::vector<ValueRow> value_rows_;
         /// Where each of controls_ sits down the page, set as the page is filled; across is set by place_page.
         struct ControlRow
         {
             widgets::Label* label = nullptr;
-            std::size_t column = 0;
-            float y = 0;
-            float height = 0;
+            usize column = 0;
+            f32 y = 0;
+            f32 height = 0;
             widgets::Label* shown = nullptr; ///< InfoControl::shown, when it has one
         };
         std::vector<Widget*> value_icons_; ///< InfoLine::value_icon's, put in the value column by place_page
         std::vector<ControlRow> control_rows_;
-        float page_width_ = 0;
+        f32 page_width_ = 0;
         bool measured_ = false; ///< Whether place_page has run with the fonts since the page was shown
-        std::optional<std::size_t> section_now_;
+        std::optional<usize> section_now_;
         widgets::Button* close_ = nullptr;
         widgets::Button* hide_ = nullptr;
         bool tucked_ = false; ///< The strip put away by the player
         bool paper_ = false;  ///< The page sits on paper
         bool plain_paper_ = false;
         bool striped_ = false;              ///< Its lines are striped; a note alone sits in a plain box down the paper
-        float scroll_ = 0;                  ///< How far the page's widgets are moved up; the bar's position, once followed
+        f32 scroll_ = 0;                    ///< How far the page's widgets are moved up; the bar's position, once followed
         widgets::ScrollBar* bar_ = nullptr; ///< Beside a page taller than the strip
         Widget* body_ = nullptr;
         widgets::Label* title_ = nullptr; ///< The page's, in the band
         widgets::Label* view_text_ = nullptr;
 
-        std::size_t picked_ = 0;
-        std::optional<std::size_t> picked_now_;
-        std::optional<std::size_t> action_now_;
+        usize picked_ = 0;
+        std::optional<usize> picked_now_;
+        std::optional<usize> action_now_;
         std::vector<bool> actions_; ///< Of each tab, whether it acts at once
         bool closed_ = false;
-        float body_width_ = 0;
+        f32 body_width_ = 0;
         TextureId view_ = 0;
-        float body_height_ = 0;
+        f32 body_height_ = 0;
     };
 
 } // namespace rct3::ui::screens::info

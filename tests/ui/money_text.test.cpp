@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/money_text.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <limits>
 
@@ -46,5 +48,5 @@ TEST_CASE("a currency without hundredths writes the stored number whole")
 TEST_CASE("the smallest amount is written without overflow")
 {
     const Currency c { u"", u"", u"" };
-    CHECK(money_text(c, units::Money { std::numeric_limits<std::int64_t>::min() }) == u"-9,223,372,036,854,775,808");
+    CHECK(money_text(c, units::Money { std::numeric_limits<i64>::min() }) == u"-9,223,372,036,854,775,808");
 }

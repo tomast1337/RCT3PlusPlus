@@ -11,6 +11,7 @@
 // an end piece for three and a closed pen for all four; a post fills each inside corner of the area.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/boundary_fence.hpp"
 #include "save/model/world.hpp"
 #include "units/units.hpp"
@@ -35,7 +36,7 @@ namespace rct3::park
     /// run through enclosures.
     /// shortcut: always the plain look; the pieces also have a taller look for a step in the ground at the
     /// fence and worn looks for fences that wear out, add them with fence wear.
-    [[nodiscard]] BoundaryFence enclosure_fences(const save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, std::uint64_t last_id);
+    [[nodiscard]] BoundaryFence enclosure_fences(const save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, u64 last_id);
 
     /// How enclosure fence piece `piece` leans with the ground under it as it is now.
     [[nodiscard]] glm::vec2 fence_piece_lean(const save::model::TerrainGrid& grid, const save::model::PlacedObject& piece);
@@ -43,7 +44,7 @@ namespace rct3::park
     /// Makes the tiles from `a` to `b` an enclosure fenced with `fence`: those `takeable` allows and in no
     /// enclosure yet; the rest are left as they are. A map with no grid yet takes `grid`'s size. Returns the
     /// place in the map of the enclosure the new tiles ended up in, none when none were taken.
-    std::optional<std::int32_t> enclose(save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, save::model::Tile a, save::model::Tile b, const std::string& fence, std::function_ref<bool(save::model::Tile)> takeable);
+    std::optional<i32> enclose(save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, save::model::Tile a, save::model::Tile b, const std::string& fence, std::function_ref<bool(save::model::Tile)> takeable);
 
     /// Takes the tiles from `a` to `b` that `removable` allows out of their enclosures.
     void unenclose(save::model::EnclosureMap& map, save::model::Tile a, save::model::Tile b, std::function_ref<bool(save::model::Tile)> removable);
@@ -60,9 +61,9 @@ namespace rct3::park
     [[nodiscard]] units::Money fence_cost(const save::model::EnclosureMap& before, const save::model::EnclosureMap& after, std::function_ref<FencePrice(std::string_view fence)> price);
 
     /// The enclosure all `span` tiles from `corner` are in; none when they are not all in the same one.
-    [[nodiscard]] std::optional<std::int32_t> enclosure_under(const save::model::EnclosureMap& map, save::model::Tile corner, std::array<std::int32_t, 2> span) noexcept;
+    [[nodiscard]] std::optional<i32> enclosure_under(const save::model::EnclosureMap& map, save::model::Tile corner, std::array<i32, 2> span) noexcept;
 
     /// How many tiles enclosure `region` has; with none, how many are in no enclosure.
-    [[nodiscard]] std::int32_t enclosure_size(const save::model::EnclosureMap& map, std::optional<std::int32_t> region) noexcept;
+    [[nodiscard]] i32 enclosure_size(const save::model::EnclosureMap& map, std::optional<i32> region) noexcept;
 
 } // namespace rct3::park

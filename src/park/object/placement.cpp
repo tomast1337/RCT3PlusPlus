@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object/placement.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -12,7 +14,7 @@ namespace rct3::park::object
     {
         // Unturned facing -X, then a quarter clockwise each: -X, +Z, +X, -Z.
         const auto [dc, dr] = faced_side(turn).step();
-        return { static_cast<float>(dc), static_cast<float>(dr) };
+        return { static_cast<f32>(dc), static_cast<f32>(dr) };
     }
 
     std::optional<ModelTurn> snapped_turn(Positioning positioning, glm::vec2 at)
@@ -34,16 +36,16 @@ namespace rct3::park::object
         }
     }
 
-    glm::vec2 footprint_middle(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares)
+    glm::vec2 footprint_middle(const save::model::PlacedObject& object, std::array<i32, 2> squares)
     {
         // A quarter turn either way lays the model's X along the park's Z.
         const bool across = (object.rotation & 1) != 0;
-        const auto span_x = static_cast<float>(squares[across ? 1 : 0]);
-        const auto span_z = static_cast<float>(squares[across ? 0 : 1]);
-        return { static_cast<float>(object.col) + span_x / 2, static_cast<float>(object.row) + span_z / 2 };
+        const auto span_x = static_cast<f32>(squares[across ? 1 : 0]);
+        const auto span_z = static_cast<f32>(squares[across ? 0 : 1]);
+        return { static_cast<f32>(object.col) + span_x / 2, static_cast<f32>(object.row) + span_z / 2 };
     }
 
-    save::model::PlacedObject moved_with(save::model::PlacedObject object, std::array<std::int32_t, 2> squares, const save::model::PlacedObject& from, std::array<std::int32_t, 2> from_squares, const save::model::PlacedObject& to)
+    save::model::PlacedObject moved_with(save::model::PlacedObject object, std::array<i32, 2> squares, const save::model::PlacedObject& from, std::array<i32, 2> from_squares, const save::model::PlacedObject& to)
     {
         const ModelTurn turn = ModelTurn::from(to.rotation - from.rotation);
         // The offset from `from`'s middle, along the park's X and Z, turned as a model's X and Z are.
@@ -53,32 +55,32 @@ namespace rct3::park::object
         const glm::vec2 middle = footprint_middle(to, from_squares) + d.x * x + d.y * z;
         object.rotation = (object.rotation + turn.value) % 4;
         const bool across = (object.rotation & 1) != 0;
-        object.col = static_cast<std::int32_t>(std::lround(middle.x - static_cast<float>(squares[across ? 1 : 0]) / 2));
-        object.row = static_cast<std::int32_t>(std::lround(middle.y - static_cast<float>(squares[across ? 0 : 1]) / 2));
+        object.col = static_cast<i32>(std::lround(middle.x - static_cast<f32>(squares[across ? 1 : 0]) / 2));
+        object.row = static_cast<i32>(std::lround(middle.y - static_cast<f32>(squares[across ? 0 : 1]) / 2));
         object.base_height = object.base_height.value_or(0) - from.base_height.value_or(0) + to.base_height.value_or(0);
         object.force_absolute_height = true;
         return object;
     }
 
-    save::model::Tile square_tile(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, std::int32_t x, std::int32_t z)
+    save::model::Tile square_tile(const save::model::PlacedObject& object, std::array<i32, 2> squares, i32 x, i32 z)
     {
         const glm::vec2 middle = footprint_middle(object, squares);
         const ModelTurn turn = ModelTurn::from(object.rotation);
         const glm::vec2 along_x = turned_x(turn);
         const glm::vec2 along_z = turned_x(turn.turned(3));
         // Square indices grow along the model's -X and -Z, from the footprint's far corner.
-        const glm::vec2 centre = middle - (static_cast<float>(x) + 0.5f - static_cast<float>(squares[0]) / 2) * along_x - (static_cast<float>(z) + 0.5f - static_cast<float>(squares[1]) / 2) * along_z;
-        return { static_cast<std::int32_t>(std::floor(centre.x)), static_cast<std::int32_t>(std::floor(centre.y)) };
+        const glm::vec2 centre = middle - (static_cast<f32>(x) + 0.5f - static_cast<f32>(squares[0]) / 2) * along_x - (static_cast<f32>(z) + 0.5f - static_cast<f32>(squares[1]) / 2) * along_z;
+        return { static_cast<i32>(std::floor(centre.x)), static_cast<i32>(std::floor(centre.y)) };
     }
 
-    bool on_owned_land(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, const save::model::TerrainGrid& grid)
+    bool on_owned_land(const save::model::PlacedObject& object, std::array<i32, 2> squares, const save::model::TerrainGrid& grid)
     {
         const bool across = (object.rotation & 1) != 0;
-        const std::int32_t span_x = squares[across ? 1 : 0];
-        const std::int32_t span_z = squares[across ? 0 : 1];
-        for (std::int32_t col = object.col; col < object.col + span_x; ++col)
+        const i32 span_x = squares[across ? 1 : 0];
+        const i32 span_z = squares[across ? 0 : 1];
+        for (i32 col = object.col; col < object.col + span_x; ++col)
         {
-            for (std::int32_t row = object.row; row < object.row + span_z; ++row)
+            for (i32 row = object.row; row < object.row + span_z; ++row)
             {
                 if (!grid.contains(col, row))
                     return false;
@@ -95,7 +97,7 @@ namespace rct3::park::object
         return !object.base_height || (object.height_offset == 0 && !object.force_absolute_height);
     }
 
-    glm::mat4 object_transform(const save::model::PlacedObject& object, Positioning positioning, const save::model::TerrainGrid& grid, std::array<std::int32_t, 2> squares, bool ground_height)
+    glm::mat4 object_transform(const save::model::PlacedObject& object, Positioning positioning, const save::model::TerrainGrid& grid, std::array<i32, 2> squares, bool ground_height)
     {
         const glm::vec2 x = turned_x(ModelTurn::from(object.rotation));
         const glm::vec2 z { -x.y, x.x }; // The model's +Z, a quarter turn on from its +X
@@ -118,7 +120,7 @@ namespace rct3::park::object
                 break;
             case Positioning::Quarter:
             {
-                const std::int32_t q = object.quadrant & 3;
+                const i32 q = object.quadrant & 3;
                 anchor += glm::vec2 { q % 2 == 0 ? -kQuarterOffset : kQuarterOffset, q / 2 == 0 ? -kQuarterOffset : kQuarterOffset };
                 break;
             }
@@ -126,7 +128,7 @@ namespace rct3::park::object
                 break;
         }
 
-        float y = static_cast<float>(object.base_height.value_or(0));
+        f32 y = static_cast<f32>(object.base_height.value_or(0));
         if (!object.base_height || (ground_height && on_ground(object)))
         {
             if (const auto ground = grid.height_at(anchor.x, anchor.y))

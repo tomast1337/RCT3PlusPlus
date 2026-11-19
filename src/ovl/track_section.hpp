@@ -4,6 +4,7 @@
 // so on). Each ties a piece to its scenery item and to the splines the cars follow along it.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/item_record.hpp"
 #include "ovl/overlay.hpp"
 
@@ -29,25 +30,25 @@ namespace rct3::ovl
     /// A square of a piece's footprint that meets things beside it, in the piece's own squares and heights.
     struct TrackSquare
     {
-        std::int32_t x = 0;
-        std::int32_t z = 0;
-        std::int32_t height = 0;
+        i32 x = 0;
+        i32 z = 0;
+        i32 height = 0;
         /// Low four bits: the sides of the square it meets things on, as the piece is drawn: 0x1 its +X side, 0x4 its
         /// -X side, 0x8 its +Z side and 0x2 its -Z side. With kJoinsPool or kOverPool it joins a pool square across
         /// those sides. Others unconfirmed.
-        std::uint32_t flags = 0;
-        static constexpr std::uint32_t kJoinsPool = 0x200; ///< As at a pool slide's open end
-        static constexpr std::uint32_t kOverPool = 0x400;  ///< As where a slide's track swings out over the pool beside
+        u32 flags = 0;
+        static constexpr u32 kJoinsPool = 0x200; ///< As at a pool slide's open end
+        static constexpr u32 kOverPool = 0x400;  ///< As where a slide's track swings out over the pool beside
     };
 
     /// A push the piece gives each car on it while the train's speed is within a range.
     struct SpeedPush
     {
-        float least = 0; ///< Metres a second
-        float most = 0;  ///< Metres a second
-        float force = 0; ///< Newtons, along the track
-        float from = 0;  ///< Metres along the piece the car must be past
-        float to = -1;   ///< Metres along the piece the car must be short of, below 0 for its end
+        f32 least = 0; ///< Metres a second
+        f32 most = 0;  ///< Metres a second
+        f32 force = 0; ///< Newtons, along the track
+        f32 from = 0;  ///< Metres along the piece the car must be past
+        f32 to = -1;   ///< Metres along the piece the car must be short of, below 0 for its end
     };
 
     struct TrackSection
@@ -58,16 +59,16 @@ namespace rct3::ovl
         std::string_view scenery_item;
         /// Two small numbers that go together: both 0, both 7, or a value of 1 to 6 with the other being the
         /// value three steps on (1 and 4, 2 and 5, 3 and 6, then back). Meaning unconfirmed.
-        std::uint32_t join_a = 0;
-        std::uint32_t join_b = 0;
+        u32 join_a = 0;
+        u32 join_b = 0;
         /// What the piece does on its ride: 1 brakes, 2 block brakes, 3 a station platform; other values name
         /// the piece within its own file.
-        std::uint32_t role = 0;
+        u32 role = 0;
         /// Bit sets. Version 1 files use small numbers, later files have 0x400000 set in nearly all items.
         /// Bits of the first: 0x1 the piece may start a track, 0x2000 laid backwards too; 0x2 it has a lift
         /// chain; 0x40 it is a station; 0x80 a station platform ends at it, whatever its neighbours; 0x4 a
         /// piece pattern never lays it backwards. Others unconfirmed.
-        std::array<std::uint32_t, 2> flags { };
+        std::array<u32, 2> flags { };
         /// "spl" items in file order. Named like `<Piece>L_spline` and `<Piece>R_spline`, so left, right, left,
         /// right. The second pair repeats the first in all but a few items.
         std::array<std::string_view, 4> splines;
@@ -76,7 +77,7 @@ namespace rct3::ovl
         /// "spl" items, left then right, named `<Piece>L_WaterSpline` and `<Piece>R_WaterSpline`: the edges of
         /// the water running down the piece, on slides and water rides. Empty on dry pieces.
         std::array<std::string_view, 2> water_splines;
-        std::array<float, 3> scale { }; ///< 1, 1, 1 in nearly all items
+        std::array<f32, 3> scale { }; ///< 1, 1, 1 in nearly all items
         /// Names the run part of its station platform's name in place of the start, middle or end its place in
         /// the station gives it. Empty in nearly all items.
         std::string_view platform_run;
@@ -86,10 +87,10 @@ namespace rct3::ovl
         std::string_view start_join;
         std::string_view end_join;
         /// 1 at an end as wide as the wide water rides' channel, 0 for the rest. Version 4 and 5 files only.
-        std::array<std::uint32_t, 2> widths { };
+        std::array<u32, 2> widths { };
         /// Pieces of side by side tracks: 1 for the left track's, 2 for the right's, 0 for the rest. Ends
         /// only meet ends of the same side. Version 5 files only.
-        std::uint32_t side = 0;
+        u32 side = 0;
         /// Of side by side tracks: the section of the other half of a joined piece, laid with it on the same
         /// tiles on the other track; empty for a piece of one track alone. Version 5 files only.
         std::string_view partner;
@@ -97,12 +98,12 @@ namespace rct3::ovl
         std::string_view group;
         /// What a piece standing on ground of its own (a tower's or a house's base) does with that ground:
         /// kFencedRound, kPavedUnder. 0 for every other piece. Version 4 and 5 files only.
-        std::uint32_t ground = 0;
-        static constexpr std::uint32_t kPavedUnder = 0x8;   ///< Its footprint is paved as a flat ride's floor is
-        static constexpr std::uint32_t kFencedRound = 0x10; ///< Its footprint is fenced round as a flat ride's is
+        u32 ground = 0;
+        static constexpr u32 kPavedUnder = 0x8;   ///< Its footprint is paved as a flat ride's floor is
+        static constexpr u32 kFencedRound = 0x10; ///< Its footprint is fenced round as a flat ride's is
         /// Of a pool slide's end that runs on back to its lift: how far along it, in metres, its riders are let off
         /// into the pool. None on other pieces, whose files keep a number below 0. Version 4 and 5 files only.
-        std::optional<float> drop_off { };
+        std::optional<f32> drop_off { };
         /// Pushes along the piece by the train's speed: a water channel's flow carrying boats on, or tyres
         /// carrying a train through a station. Empty on most pieces.
         std::vector<SpeedPush> pushes;

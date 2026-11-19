@@ -5,6 +5,7 @@
 // positive, as the park file does.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/park.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/park/ledger_line.hpp"
@@ -26,7 +27,7 @@ namespace rct3::simulation::park
     /// starts a new period in front of the older ones, dropping the oldest past save::model::kKeptMonths. `kept` is the month,
     /// counted from the calendar's start, that the newest period stands for: none at first, when the newest is taken
     /// as this month's (as a park file leaves it).
-    [[nodiscard]] save::model::LedgerPeriod& ledger_month(save::model::Finance& finance, std::optional<std::int64_t>& kept, const save::model::CalendarDate& date);
+    [[nodiscard]] save::model::LedgerPeriod& ledger_month(save::model::Finance& finance, std::optional<i64>& kept, const save::model::CalendarDate& date);
 
     /// The message telling the player the park cannot pay for something: the game's own text.
     inline constexpr std::string_view kCannotPayKey = "PlaceObject_NotEnoughMoney";
@@ -38,7 +39,7 @@ namespace rct3::simulation::park
     void cannot_pay(ParkState& park);
 
     /// Whether a spend goes through when the park cannot afford it.
-    enum class Charge : std::uint8_t
+    enum class Charge : u8
     {
         IfAffordable, ///< Refused, and the player told
         Always,       ///< Paid anyway, which may leave the cash below nought
@@ -48,12 +49,12 @@ namespace rct3::simulation::park
     /// month's ledger in `finance` (see ledger_month). A park whose money never runs out books nothing. A spend
     /// the park cannot afford is refused when `charge` is IfAffordable: the money and ledger stay as they were,
     /// the player is told (see cannot_pay) and false comes back.
-    bool book(ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, units::Money cost, LedgerLine line, Charge charge);
+    bool book(ParkState& park, save::model::Finance& finance, std::optional<i64>& kept, units::Money cost, LedgerLine line, Charge charge);
 
     /// How much the loan moves at a time: 1,000.00. Chosen by eye: a few presses buy a ride.
     inline constexpr units::Money kLoanStep { 100'000 };
 
-    enum class LoanMove : std::uint8_t
+    enum class LoanMove : u8
     {
         Borrow,
         Repay,
@@ -72,11 +73,11 @@ namespace rct3::simulation::park
     /// thrilling ride worth many gentle ones. Facilities, rides not yet rated, scenery, paths and land count for
     /// nothing. The company is worth this and its cash less its loan; where money never runs out, the cash counts
     /// for nothing.
-    [[nodiscard]] units::Money park_value(std::int32_t guests, const save::model::RideModel& rides);
+    [[nodiscard]] units::Money park_value(i32 guests, const save::model::RideModel& rides);
 
     /// A week's interest on `loan` at a yearly rate of `rate_percent`: the year's interest spread
     /// over kTuning.charges.interest_weeks weeks, rounded to the hundredth.
-    [[nodiscard]] units::Money weekly_interest(units::Money loan, float rate_percent);
+    [[nodiscard]] units::Money weekly_interest(units::Money loan, f32 rate_percent);
 
     /// What a ride built here costs to run each week, from what it cost to build: a set share of it,
     /// larger for a `tracked` ride's track than for a flat ride.

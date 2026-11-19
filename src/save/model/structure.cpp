@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/structure.hpp"
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -17,14 +18,14 @@ namespace rct3::save::model
 
         // Names of the structure's class and attributes, as the format names them.
         constexpr std::string_view kStructureClass = "SavedSelection";
-        constexpr std::int32_t kLargestSide = 4096; ///< A bound on the box a file may claim
+        constexpr i32 kLargestSide = 4096; ///< A bound on the box a file may claim
 
-        std::int32_t integer(const Value& v, std::string_view name)
+        i32 integer(const Value& v, std::string_view name)
         {
             const auto f = v.field(name);
             if (!f || f->kind() != ValueKind::Integer)
                 return 0;
-            return static_cast<std::int32_t>(std::clamp<std::int64_t>(f->as_integer(), std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max()));
+            return static_cast<i32>(std::clamp<i64>(f->as_integer(), std::numeric_limits<i32>::min(), std::numeric_limits<i32>::max()));
         }
 
         std::string text(const Value& v, std::string_view name)
@@ -51,7 +52,7 @@ namespace rct3::save::model
     {
         if (structure.pieces.empty())
             return;
-        const std::int32_t lowest = std::ranges::min(structure.pieces, { }, &StructurePiece::height).height;
+        const i32 lowest = std::ranges::min(structure.pieces, { }, &StructurePiece::height).height;
         for (StructurePiece& p : structure.pieces)
             p.height -= lowest;
     }
@@ -61,10 +62,10 @@ namespace rct3::save::model
         const auto file = read_save(data, { .verify_checksum = false });
         if (!file)
             return std::unexpected(StructureError::NotASave);
-        std::optional<std::uint32_t> cls;
-        for (std::size_t i = 0; i < file->classes.size() && !cls; ++i)
+        std::optional<u32> cls;
+        for (usize i = 0; i < file->classes.size() && !cls; ++i)
             if (file->classes[i].name == kStructureClass)
-                cls = static_cast<std::uint32_t>(i);
+                cls = static_cast<u32>(i);
         const auto object = cls ? std::ranges::find(file->objects, *cls, &Object::class_index) : file->objects.end();
         if (object == file->objects.end())
             return std::unexpected(StructureError::NoStructure);
@@ -79,12 +80,12 @@ namespace rct3::save::model
         out.rows = integer(s, "Rows");
         if (out.cols <= 0 || out.rows <= 0 || out.cols > kLargestSide || out.rows > kLargestSide)
             return std::unexpected(StructureError::NoStructure);
-        const std::size_t tiles = static_cast<std::size_t>(out.cols) * static_cast<std::size_t>(out.rows);
+        const usize tiles = static_cast<usize>(out.cols) * static_cast<usize>(out.rows);
         out.tiles.assign(tiles, 0);
         if (const auto selected = s.field("Selected"); selected && selected->kind() == ValueKind::List)
         {
             const auto items = selected->items();
-            for (std::size_t i = 0; i < std::min(tiles, items.size()); ++i)
+            for (usize i = 0; i < std::min(tiles, items.size()); ++i)
                 out.tiles[i] = items[i].as_bool() ? 1 : 0;
         }
 

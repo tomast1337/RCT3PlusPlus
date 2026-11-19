@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/land.hpp"
 
+#include "core/types.hpp"
 #include "ui/screens/build/paths.hpp"
 #include "ui/shape.hpp"
 
@@ -38,7 +39,7 @@ namespace rct3::ui::screens::build
         visible = false;
     }
 
-    void LandPanel::show(std::vector<LandTab> tabs, LandPick chosen, std::int32_t size, std::int32_t largest)
+    void LandPanel::show(std::vector<LandTab> tabs, LandPick chosen, i32 size, i32 largest)
     {
         for (widgets::Button* b : tabs_)
             (void)remove(*b);
@@ -67,7 +68,7 @@ namespace rct3::ui::screens::build
         visible = false;
     }
 
-    void LandPanel::open(std::optional<std::size_t> page)
+    void LandPanel::open(std::optional<usize> page)
     {
         page_ = page;
         for (widgets::Button* b : tools_)
@@ -100,7 +101,7 @@ namespace rct3::ui::screens::build
 
     void LandPanel::mark()
     {
-        for (std::size_t i = 0; i < tabs_.size(); ++i)
+        for (usize i = 0; i < tabs_.size(); ++i)
             tabs_[i]->on = page_ == i;
     }
 
@@ -109,15 +110,15 @@ namespace rct3::ui::screens::build
         if (!page_)
             return { 0, 0 };
         const auto columns = (tools_.size() + land_panel::kRows - 1) / land_panel::kRows;
-        const float number = number_ ? land_panel::kNumberGap + land_panel::kSizeWidth : 0;
-        return { land_panel::kToolCell * static_cast<float>(std::max<std::size_t>(columns, 1)) + number, land_panel::kToolCell * static_cast<float>(land_panel::kRows) };
+        const f32 number = number_ ? land_panel::kNumberGap + land_panel::kSizeWidth : 0;
+        return { land_panel::kToolCell * static_cast<f32>(std::max<usize>(columns, 1)) + number, land_panel::kToolCell * static_cast<f32>(land_panel::kRows) };
     }
 
     Rect LandPanel::disc() const
     {
         const Rect r = rect();
-        const float left = r.x0 + info::info_panel::kDiscMargin;
-        const float bottom = r.y1 - style_.bottom;
+        const f32 left = r.x0 + info::info_panel::kDiscMargin;
+        const f32 bottom = r.y1 - style_.bottom;
         return { left, bottom - info::info_panel::kDisc, left + info::info_panel::kDisc, bottom };
     }
 
@@ -125,8 +126,8 @@ namespace rct3::ui::screens::build
     {
         const Point body = body_size();
         const Rect d = disc();
-        const float left = d.x1 - info::info_panel::kStripOverlap;
-        const float width = std::max(land_panel::kBodyLeft + body.x + land_panel::kBodyRight + style_.coded.strip_shadow, info::info_panel::kStripNarrowest);
+        const f32 left = d.x1 - info::info_panel::kStripOverlap;
+        const f32 width = std::max(land_panel::kBodyLeft + body.x + land_panel::kBodyRight + style_.coded.strip_shadow, info::info_panel::kStripNarrowest);
         return { left, d.y0, left + width, d.y0 + info::info_panel::kStripHeight };
     }
 
@@ -135,7 +136,7 @@ namespace rct3::ui::screens::build
         const Rect r = rect();
         const Rect d = disc();
         const Point centre { (d.x0 + d.x1) / 2 - r.x0, (d.y0 + d.y1) / 2 - r.y0 };
-        for (std::size_t i = 0; i < tabs_.size(); ++i)
+        for (usize i = 0; i < tabs_.size(); ++i)
         {
             const Point at = footpath_tab_offset(data_[i].slot);
             tabs_[i]->placement = top_left(centre.x + at.x - info::info_panel::kTabSize / 2, centre.y + at.y - info::info_panel::kTabSize / 2, info::info_panel::kTabSize, info::info_panel::kTabSize);
@@ -145,15 +146,15 @@ namespace rct3::ui::screens::build
         const Rect s = strip();
         const Point body = body_size();
         body_->placement = top_left(s.x0 - r.x0 + land_panel::kBodyLeft, s.y0 - r.y0 + land_panel::kBodyTop, body.x, body.y);
-        const float status_left = info::info_panel::kStripOverlap + land_panel::kStatusGap;
+        const f32 status_left = info::info_panel::kStripOverlap + land_panel::kStatusGap;
         status_->placement = top_left(s.x0 - r.x0 + status_left, s.y0 - r.y0, std::max(0.0f, s.width() - status_left - land_panel::kBodyRight), style_.coded.band_height);
         status_->visible = page_.has_value();
         // Down the columns, so the first two tools stand one over the other, as in the game.
-        const float cell = land_panel::kToolCell;
-        for (std::size_t i = 0; i < tools_.size(); ++i)
+        const f32 cell = land_panel::kToolCell;
+        for (usize i = 0; i < tools_.size(); ++i)
         {
-            const auto column = static_cast<float>(i / land_panel::kRows);
-            const auto row = static_cast<float>(i % land_panel::kRows);
+            const auto column = static_cast<f32>(i / land_panel::kRows);
+            const auto row = static_cast<f32>(i % land_panel::kRows);
             tools_[i]->placement = top_left(column * cell + 2, row * cell + 2, cell - 4, cell - 4);
         }
         if (number_)
@@ -163,9 +164,9 @@ namespace rct3::ui::screens::build
     bool LandPanel::covers(Point p) const
     {
         const Point m = middle_of(disc());
-        const float radius = info::info_panel::kDisc / 2;
-        const float dx = p.x - m.x;
-        const float dy = p.y - m.y;
+        const f32 radius = info::info_panel::kDisc / 2;
+        const f32 dx = p.x - m.x;
+        const f32 dy = p.y - m.y;
         return dx * dx + dy * dy <= radius * radius || (page_ && contains(strip(), p));
     }
 
@@ -179,7 +180,7 @@ namespace rct3::ui::screens::build
             closed_ = true;
             return;
         }
-        for (std::size_t i = 0; i < tabs_.size(); ++i)
+        for (usize i = 0; i < tabs_.size(); ++i)
             if (tabs_[i]->take_click())
             {
                 open(page_ == i ? std::nullopt : std::optional(i));
@@ -194,7 +195,7 @@ namespace rct3::ui::screens::build
         status_->text.clear();
         if (page_)
             status_->text = data_[*page_].help;
-        for (std::size_t i = 0; i < tools_.size(); ++i)
+        for (usize i = 0; i < tools_.size(); ++i)
         {
             if (tools_[i]->hovered())
                 status_->text = data_[*page_].tools[i].help;
@@ -213,7 +214,7 @@ namespace rct3::ui::screens::build
     {
         DrawList& list = context.list;
         const info::CodedInfoPanel& c = style_.coded;
-        const auto shifted = [](Rect r, float by) { return Rect { r.x0 + by, r.y0 + by, r.x1 + by, r.y1 + by }; };
+        const auto shifted = [](Rect r, f32 by) { return Rect { r.x0 + by, r.y0 + by, r.x1 + by, r.y1 + by }; };
         const auto plain = [&](Rect r, Corners corners, Color colour) {
             Shape s;
             s.rect = r;
@@ -224,7 +225,7 @@ namespace rct3::ui::screens::build
         };
 
         const Rect d = disc();
-        const float half = d.width() / 2;
+        const f32 half = d.width() / 2;
         plain(shifted(d, info::info_panel::kShadowOffset), round_corners(half), c.shadow);
         if (page_)
         {
@@ -235,7 +236,7 @@ namespace rct3::ui::screens::build
             plain(slab, top, c.body);
             plain({ slab.x0, slab.y0, slab.x1, slab.y0 + c.band_height }, top, c.band);
             const LandTab& tab = data_[*page_];
-            if (const std::size_t marked = tab.setting ? tab.on : chosen_.tool; (tab.setting || chosen_.tab == *page_) && marked < tools_.size())
+            if (const usize marked = tab.setting ? tab.on : chosen_.tool; (tab.setting || chosen_.tab == *page_) && marked < tools_.size())
                 plain(tools_[marked]->rect(), round_corners((land_panel::kToolCell - 4) / 2), style_.chosen);
         }
 
@@ -253,8 +254,8 @@ namespace rct3::ui::screens::build
         const Rect back { d.x0 + c.rim, d.y0 + c.rim, d.x1 - c.rim, d.y1 - c.rim };
         plain(back, round_corners(back.width() / 2), c.view_back);
         const Point m = middle_of(d);
-        const float most = back.width() / 2 - 6;
-        const float r = std::max(most * static_cast<float>(size_->value()) / static_cast<float>(largest_), 6.0f);
+        const f32 most = back.width() / 2 - 6;
+        const f32 r = std::max(most * static_cast<f32>(size_->value()) / static_cast<f32>(largest_), 6.0f);
         plain({ m.x - r, m.y - r, m.x + r, m.y + r }, round_corners(r), style_.brush);
         plain({ m.x - 3, m.y - 3, m.x + 3, m.y + 3 }, round_corners(3), style_.brush_dot);
     }

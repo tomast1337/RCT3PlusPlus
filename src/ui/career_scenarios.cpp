@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/career_scenarios.hpp"
 
+#include "core/types.hpp"
 #include "strings/unicode.hpp"
 
 #include <algorithm>
@@ -17,13 +18,13 @@ namespace rct3::ui
     namespace
     {
         constexpr std::string_view kPlayer = "PlayerProfile_Player";
-        constexpr std::int32_t kMostScenarios = 99; ///< The keys have two digits
+        constexpr i32 kMostScenarios = 99; ///< The keys have two digits
         constexpr std::string_view kPackFolder = "AOP_FSName_";
         constexpr std::string_view kParks = "Campaigns/Base";
         constexpr std::string_view kSlideshow = "Slideshow";
 
         /// The expansion's own folder name, with a slash after it; empty for the original game.
-        std::string pack_folder(const StringTable& strings, std::int32_t pack)
+        std::string pack_folder(const StringTable& strings, i32 pack)
         {
             if (pack <= 0)
                 return { };
@@ -39,13 +40,13 @@ namespace rct3::ui
         }
     } // namespace
 
-    std::vector<std::string> career_scenario_ids(const StringTable& strings, std::int32_t pack)
+    std::vector<std::string> career_scenario_ids(const StringTable& strings, i32 pack)
     {
         std::vector<std::string> ids;
         if (pack < 0)
             return ids;
         const std::string prefix = pack == 0 ? std::string { } : std::format("AOP{}_", pack - 1);
-        for (std::int32_t i = 1; i <= kMostScenarios; ++i)
+        for (i32 i = 1; i <= kMostScenarios; ++i)
         {
             std::array<char, 32> key { };
             std::snprintf(key.data(), key.size(), "Scenario%02d_Lookup", i);
@@ -57,7 +58,7 @@ namespace rct3::ui
         return ids;
     }
 
-    CareerScenarioInfo career_scenario(const StringTable& strings, std::int32_t pack, std::size_t index, std::string_view id)
+    CareerScenarioInfo career_scenario(const StringTable& strings, i32 pack, usize index, std::string_view id)
     {
         const std::string i = std::string(id);
         const std::string number = std::to_string(index + 1);
@@ -73,23 +74,23 @@ namespace rct3::ui
         return info;
     }
 
-    std::u16string locked_design_help(const StringTable& strings, std::optional<std::int32_t> scenario, std::int32_t level)
+    std::u16string locked_design_help(const StringTable& strings, std::optional<i32> scenario, i32 level)
     {
         std::u16string help(strings.get("TrackBrowser_LockedHelp"));
         const auto ids = career_scenario_ids(strings, 0);
-        const auto index = static_cast<std::size_t>(scenario.value_or(0));
+        const auto index = static_cast<usize>(scenario.value_or(0));
         const std::u16string title = scenario >= 0 && index < ids.size() ? career_scenario(strings, 0, index, ids[index]).title : std::u16string { };
         constexpr std::array<std::string_view, 3> kLevels = { "Difficulty_Apprentice", "Difficulty_Entrepreneur", "Difficulty_Tycoon" };
-        const std::u16string reach(level >= 0 && level < static_cast<std::int32_t>(kLevels.size()) ? strings.get(kLevels[static_cast<std::size_t>(level)]) : std::u16string_view { });
+        const std::u16string reach(level >= 0 && level < static_cast<i32>(kLevels.size()) ? strings.get(kLevels[static_cast<usize>(level)]) : std::u16string_view { });
         for (const auto& [mark, value] : { std::pair { std::u16string_view(u"%SCENARIO%"), &title }, std::pair { std::u16string_view(u"%LEVEL%"), &reach } })
         {
-            for (std::size_t at = help.find(mark); at != std::u16string::npos; at = help.find(mark, at + value->size()))
+            for (usize at = help.find(mark); at != std::u16string::npos; at = help.find(mark, at + value->size()))
                 help.replace(at, mark.size(), *value);
         }
         return help;
     }
 
-    std::string career_park_folder(const StringTable& strings, std::int32_t pack)
+    std::string career_park_folder(const StringTable& strings, i32 pack)
     {
         std::string folder = std::format("{}/{}", kParks, pack_folder(strings, pack));
         if (folder.ends_with('/'))
@@ -97,12 +98,12 @@ namespace rct3::ui
         return folder;
     }
 
-    std::optional<std::size_t> find_career_park(std::span<const std::filesystem::path> files, std::string_view part)
+    std::optional<usize> find_career_park(std::span<const std::filesystem::path> files, std::string_view part)
     {
         if (part.empty())
             return std::nullopt;
         const std::string wanted = lower(part);
-        for (std::size_t i = 0; i < files.size(); ++i)
+        for (usize i = 0; i < files.size(); ++i)
         {
             if (lower(files[i].filename().string()).find(wanted) != std::string::npos)
                 return i;
@@ -110,7 +111,7 @@ namespace rct3::ui
         return std::nullopt;
     }
 
-    std::u16string default_career_name(const StringTable& strings, std::size_t number)
+    std::u16string default_career_name(const StringTable& strings, usize number)
     {
         return std::u16string(strings.get(kPlayer)) + u" " + strings::to_utf16(std::to_string(number));
     }

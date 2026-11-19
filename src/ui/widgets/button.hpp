@@ -12,6 +12,7 @@
 // and out, while the part that takes the pointer stays put.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widget.hpp"
 
 #include <cstdint>
@@ -27,8 +28,8 @@ namespace rct3::ui::widgets
 
         std::string skin;                   ///< Family base name
         std::string icon;                   ///< Optional skin drawn on top
-        float icon_scale = 1;               ///< Of the icon's own size
-        float icon_fit = 0;                 ///< Above 0: units the icon's longer side is drawn at, whatever its own size
+        f32 icon_scale = 1;                 ///< Of the icon's own size
+        f32 icon_fit = 0;                   ///< Above 0: units the icon's longer side is drawn at, whatever its own size
         Color icon_colour = hex("#ffffff"); ///< Multiplies the icon while enabled
         std::u16string text;
         font::FontRole font = font::FontRole::Small;
@@ -77,8 +78,8 @@ namespace rct3::ui::widgets
         void draw(DrawContext& context) const override;
 
     private:
-        std::int32_t clicks_ = 0;
-        float grown_ = 0; // 0 to 1, how far into its swell
+        i32 clicks_ = 0;
+        f32 grown_ = 0; // 0 to 1, how far into its swell
     };
 
 } // namespace rct3::ui::widgets

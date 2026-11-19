@@ -11,6 +11,7 @@
 // groups of alternatives, of which one is built.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/turns.hpp"
 
 #include <array>
@@ -28,7 +29,7 @@ namespace rct3::park::support
 
     /// Which way a column faces under a square: none, any way, one of four diagonal turns, or along either
     /// axis, numbered as scenery items store it.
-    using SupportKind = std::uint32_t;
+    using SupportKind = u32;
     inline constexpr SupportKind kNoSupport = 0;
     inline constexpr SupportKind kRoundSupport = 1;
     inline constexpr SupportKind kFirstDiagonal = 2; ///< 2 to 5, a quarter turn apart
@@ -40,36 +41,36 @@ namespace rct3::park::support
 
     struct SupportSquare
     {
-        std::int32_t low = 0;  ///< Lowest level the item takes on this square, from its base
-        std::int32_t high = 0; ///< Highest
+        i32 low = 0;  ///< Lowest level the item takes on this square, from its base
+        i32 high = 0; ///< Highest
         SupportKind kind = kNoSupport;
         bool wants_column = false;
-        std::uint32_t cells = 0; ///< Bit 3 * z + x: the thirds of the square, across and along, the item fills
+        u32 cells = 0; ///< Bit 3 * z + x: the thirds of the square, across and along, the item fills
     };
 
     /// A spot on an item, as a square of its footprint, a third of that square and a place in that third.
     struct SupportSpot
     {
-        std::array<std::int32_t, 2> square { }; ///< May lie outside the footprint, for a column beside it
-        std::array<std::int32_t, 2> cell { };   ///< 0 to 2 across and along
-        std::array<float, 2> within { 0.5f, 0.5f };
+        std::array<i32, 2> square { }; ///< May lie outside the footprint, for a column beside it
+        std::array<i32, 2> cell { };   ///< 0 to 2 across and along
+        std::array<f32, 2> within { 0.5f, 0.5f };
     };
 
     struct SupportPoint
     {
         SupportSpot top;            ///< Where the column meets the item
-        float top_height = 0;       ///< Levels above the item's base
+        f32 top_height = 0;         ///< Levels above the item's base
         SupportSpot column;         ///< Where it stands, at the middle of the third
-        float column_height = 0;    ///< How high it reaches when a beam joins it to the item
+        f32 column_height = 0;      ///< How high it reaches when a beam joins it to the item
         bool hanging = false;       ///< The item hangs below the beam, as inverted coasters do
         bool straight_only = false; ///< Built only when the column can stand right under the spot
-        std::uint32_t group = 0;    ///< Points of one group are alternatives
+        u32 group = 0;              ///< Points of one group are alternatives
     };
 
     struct SupportFootprint
     {
-        std::int32_t x_squares = 0;
-        std::int32_t z_squares = 0;
+        i32 x_squares = 0;
+        i32 z_squares = 0;
         std::vector<SupportSquare> squares; ///< Row by row along z
         std::vector<SupportPoint> points;   ///< Empty for items that want a column per square
         bool wants_supports = false;

@@ -16,32 +16,34 @@
 // Every rate and window here is ours to tune.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <optional>
 
 namespace rct3::simulation
 {
 
-    inline constexpr float kHoursPerDay = 24.0f;
+    inline constexpr f32 kHoursPerDay = 24.0f;
     /// Real seconds a game hour lasts at normal speed.
-    inline constexpr float kSecondsPerHour = 40.0f;
+    inline constexpr f32 kSecondsPerHour = 40.0f;
     /// Blend: real seconds the look of closing time takes to fade into the look of opening time.
-    inline constexpr float kBlendSeconds = 4.0f;
+    inline constexpr f32 kBlendSeconds = 4.0f;
     /// Cycle: game hours per real second the shown time runs through the skipped hours.
-    inline constexpr float kCatchUpHoursPerSecond = 6.0f;
+    inline constexpr f32 kCatchUpHoursPerSecond = 6.0f;
 
     /// The part of the day the park keeps, as fractions of a day. It may run past midnight, closing before
     /// it opens. A window that opens when it closes is the whole day: nothing is skipped.
     struct DayWindow
     {
-        float open = 0;
-        float close = 0;
+        f32 open = 0;
+        f32 close = 0;
 
         friend bool operator==(const DayWindow&, const DayWindow&) = default;
     };
 
     /// What the park file asks the day to do, in the order the file numbers the modes.
-    enum class DayMode : std::uint8_t
+    enum class DayMode : u8
     {
         ParkHours,   ///< From opening time to closing time
         AlwaysDay,   ///< Round the middle of the day
@@ -49,7 +51,7 @@ namespace rct3::simulation
     };
 
     /// How the look follows the clock when the window starts again, in the order of the game option.
-    enum class DayTransition : std::uint8_t
+    enum class DayTransition : u8
     {
         Instant,
         Blend,
@@ -62,19 +64,19 @@ namespace rct3::simulation
 
     /// The window from opening to closing time, in minutes since midnight. Minutes outside a day are taken
     /// round the clock, so closing at 24:00 is closing at midnight.
-    [[nodiscard]] DayWindow opening_hours(std::int32_t opening_minutes, std::int32_t closing_minutes);
+    [[nodiscard]] DayWindow opening_hours(i32 opening_minutes, i32 closing_minutes);
 
     /// The mode a park file stores. Nothing, or a number with no mode, is ParkHours.
-    [[nodiscard]] DayMode day_mode(std::optional<std::int32_t> stored);
+    [[nodiscard]] DayMode day_mode(std::optional<i32> stored);
 
     /// The window `mode` keeps, given the park's opening hours.
     [[nodiscard]] DayWindow day_window(DayMode mode, DayWindow park_hours);
 
     /// The transition for the option's value; values out of range give the nearest.
-    [[nodiscard]] DayTransition day_transition(std::int32_t option);
+    [[nodiscard]] DayTransition day_transition(i32 option);
 
     /// True when `time` lies in the window, its opening included and its closing not.
-    [[nodiscard]] bool in_window(DayWindow window, float time);
+    [[nodiscard]] bool in_window(DayWindow window, f32 time);
 
     struct DayClock
     {
@@ -82,21 +84,21 @@ namespace rct3::simulation
         DayMode mode = DayMode::ParkHours; ///< Which window `window` is
         DayWindow park_hours;              ///< The park's opening hours, the window of ParkHours
         DayTransition transition = DayTransition::Instant;
-        float time = 0.5f;  ///< Where the park is in its day
-        float shown = 0.5f; ///< What the sky and the light show; behind `time` while Cycle catches up
-        float faded = 0;    ///< Blend: the time whose look is fading out
-        float fade = 0;     ///< Blend: how much of that look still shows, 1 down to 0
+        f32 time = 0.5f;  ///< Where the park is in its day
+        f32 shown = 0.5f; ///< What the sky and the light show; behind `time` while Cycle catches up
+        f32 faded = 0;    ///< Blend: the time whose look is fading out
+        f32 fade = 0;     ///< Blend: how much of that look still shows, 1 down to 0
     };
 
     /// A clock at `time` (a stored value; anything outside 0..1 is ignored), moved into the window when it
     /// lies outside it, showing the time it is at.
-    [[nodiscard]] DayClock start_day(std::optional<float> time, DayWindow window, DayTransition transition);
+    [[nodiscard]] DayClock start_day(std::optional<f32> time, DayWindow window, DayTransition transition);
 
     /// Switches the clock to `mode`'s window. The Day and Night modes start their window from the beginning;
     /// the park's hours keep the time when it lies in them. The look gets there as the transition says.
     void change_mode(DayClock& clock, DayMode mode);
 
     /// Moves the clock on by `seconds` of real time at normal speed.
-    void advance(DayClock& clock, float seconds);
+    void advance(DayClock& clock, f32 seconds);
 
 } // namespace rct3::simulation

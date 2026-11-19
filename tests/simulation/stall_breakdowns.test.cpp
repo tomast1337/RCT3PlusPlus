@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/sandbox.hpp"
@@ -15,16 +16,16 @@ using namespace rct3::simulation;
 
 namespace
 {
-    std::size_t times_found(const entt::registry& r, Finding finding, entt::entity at)
+    usize times_found(const entt::registry& r, Finding finding, entt::entity at)
     {
         const auto* findings = r.ctx().find<Findings>();
-        return findings == nullptr ? 0 : static_cast<std::size_t>(std::ranges::count(findings->found, Findings::Found { finding, at }));
+        return findings == nullptr ? 0 : static_cast<usize>(std::ranges::count(findings->found, Findings::Found { finding, at }));
     }
 
     std::optional<NodeId> node_at(Sandbox& park, glm::ivec2 tile)
     {
         const auto& nodes = park.world().paths.nodes();
-        for (std::uint32_t n = 0; n < nodes.size(); ++n)
+        for (u32 n = 0; n < nodes.size(); ++n)
             if (nodes[n].tile.col == tile.x && nodes[n].tile.row == tile.y)
                 return NodeId { n };
         return std::nullopt;
@@ -48,7 +49,7 @@ TEST_CASE("a stall wears with time, breaks down and shuts, and a mechanic mends 
     CHECK(r.get<Staff>(mechanic).fixed == 1);
     CHECK(r.get<Staff>(mechanic).inspected == 0);
     park.run(1);
-    const float next = r.get<Upkeep>(stall).break_in->value;
+    const f32 next = r.get<Upkeep>(stall).break_in->value;
     CHECK(next >= kTuning.wear.stall_shortest.value - 1);
     CHECK(next <= kTuning.wear.stall_longest.value);
 }
@@ -61,7 +62,7 @@ TEST_CASE("a broken stall sells nothing")
     const auto stall = park.shop("Food", Product::Food, { 4, 0 }, 100);
     r.emplace<Upkeep>(stall, Upkeep { .inspect_every = std::nullopt, .break_in = rct3::units::Seconds { 1 } });
     park.run_seconds(2);
-    for (std::int32_t i = 0; i < 4; ++i)
+    for (i32 i = 0; i < 4; ++i)
         park.guest({ i, 0 }, { .hunger = 0.95f });
     park.run_seconds(120);
     CHECK(r.get<Attraction>(stall).customers == 0);
@@ -69,7 +70,7 @@ TEST_CASE("a broken stall sells nothing")
 
 TEST_CASE("guards slow how fast stalls wear, the more for their training")
 {
-    for (const std::int32_t guards : { 0, 1 })
+    for (const i32 guards : { 0, 1 })
     {
         CAPTURE(guards);
         Sandbox park;
@@ -131,13 +132,13 @@ TEST_CASE("a mechanic keeps to their patrol, and when every patrol leaves a brok
 
 TEST_CASE("an inspector tells of many attractions broken down at once")
 {
-    for (const std::int32_t broken : { 1, 2 })
+    for (const i32 broken : { 1, 2 })
     {
         CAPTURE(broken);
         Sandbox park;
         park.path({ 0, 0 }, { 6, 0 });
         auto& r = park.world().registry;
-        for (std::int32_t i = 0; i < 3; ++i)
+        for (i32 i = 0; i < 3; ++i)
         {
             const auto ride = park.flat_ride("Twister", { 2 + 2 * i, 0 }, 0);
             r.emplace<Upkeep>(ride, Upkeep { .broken = i < broken, .inspect_every = std::nullopt });

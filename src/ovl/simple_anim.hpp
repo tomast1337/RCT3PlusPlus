@@ -4,6 +4,7 @@
 // small parts.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -20,14 +21,14 @@ namespace rct3::ovl
     /// the cross product of the first two. Position and axes are relative to the bone it hangs from.
     struct SimpleAnimSample
     {
-        std::array<float, 3> vector { };
-        std::array<std::int16_t, 6> packed { };
+        std::array<f32, 3> vector { };
+        std::array<i16, 6> packed { };
     };
 
     struct SimpleAnim
     {
-        std::uint32_t channels = 0; ///< 2, 3 or 4 in files seen
-        std::vector<float> times;   ///< Key times in seconds, one per key
+        u32 channels = 0;       ///< 2, 3 or 4 in files seen
+        std::vector<f32> times; ///< Key times in seconds, one per key
         /// times.size() * channels samples, all channels of the first key, then the second key, and so on.
         std::vector<SimpleAnimSample> samples;
     };

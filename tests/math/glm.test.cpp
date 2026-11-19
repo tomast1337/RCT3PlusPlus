@@ -3,6 +3,8 @@
 // Pins the GLM conventions the rest of the code relies on, with invented matrices.
 #include "math/glm.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstring>
 #include <doctest/doctest.h>
@@ -10,7 +12,7 @@
 TEST_CASE("row-major row-vector matrices copy into glm as the same transform")
 {
     // Row-vector convention: translation lives in the fourth row (elements 12..14).
-    const std::array<float, 16> rows = {
+    const std::array<f32, 16> rows = {
         1, 0, 0, 0, //
         0, 1, 0, 0, //
         0, 0, 1, 0, //

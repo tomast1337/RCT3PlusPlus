@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path/tunnels.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -11,30 +13,30 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::model::TerrainGrid flat(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid flat(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         return g;
     }
 
-    void raise(save::model::TerrainGrid& g, std::int32_t col, std::int32_t row, float height, std::uint8_t cliff = 2)
+    void raise(save::model::TerrainGrid& g, i32 col, i32 row, f32 height, u8 cliff = 2)
     {
-        save::model::TerrainCell& c = g.cells[static_cast<std::size_t>(row * g.width + col)];
+        save::model::TerrainCell& c = g.cells[static_cast<usize>(row * g.width + col)];
         c.corners = { height, height, height, height };
         c.cliff_style = cliff;
     }
 
-    save::model::PathTile tunnel(std::int32_t col, std::int32_t row, std::int32_t height)
+    save::model::PathTile tunnel(i32 col, i32 row, i32 height)
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Flying;
-        p.col = static_cast<std::uint8_t>(col);
-        p.row = static_cast<std::uint8_t>(row);
+        p.col = static_cast<u8>(col);
+        p.row = static_cast<u8>(row);
         p.elevation = save::model::PathElevation { };
         p.elevation->quantised_height = height;
         p.elevation->underground = true;
@@ -46,7 +48,7 @@ namespace
         std::vector<glm::vec3> out;
         for (const GroundBatch& b : m.batches)
             if (b.paint == GroundPaint::Cliff)
-                for (std::uint32_t i = b.first; i < b.first + b.count; ++i)
+                for (u32 i = b.first; i < b.first + b.count; ++i)
                     out.push_back(m.vertices[m.indices[i]].position);
         return out;
     }
@@ -80,8 +82,8 @@ TEST_CASE("a tunnel is lined with a ceiling, a floor, and walls where earth lies
 {
     // Two tunnel tiles in a row under a plateau, the row's ends opening onto low ground.
     save::model::TerrainGrid g = flat(4, 3);
-    for (std::int32_t col = 1; col <= 2; ++col)
-        for (std::int32_t row = 0; row < 3; ++row)
+    for (i32 col = 1; col <= 2; ++col)
+        for (i32 row = 0; row < 3; ++row)
             raise(g, col, row, 6);
     const std::vector<GroundOpening> hollows { { 1, 1, 0, kTunnelHeight }, { 2, 1, 0, kTunnelHeight } };
     const TerrainMesh lining = tunnel_lining(hollows, g);
@@ -103,21 +105,21 @@ TEST_CASE("a tunnel is lined with a ceiling, a floor, and walls where earth lies
 TEST_CASE("neighbouring hollows at different heights wall the step between them")
 {
     save::model::TerrainGrid g = flat(4, 3);
-    for (std::int32_t col = 0; col < 4; ++col)
-        for (std::int32_t row = 0; row < 3; ++row)
+    for (i32 col = 0; col < 4; ++col)
+        for (i32 row = 0; row < 3; ++row)
             raise(g, col, row, 20);
     // The second tile's hollow lies 2 higher, as a slope's next piece does: each side of their shared edge walls
     // the part of its hollow the other leaves bare.
     const std::vector<GroundOpening> hollows { { 1, 1, 0, 4 }, { 2, 1, 2, 6 } };
     const TerrainMesh lining = tunnel_lining(hollows, g);
-    std::vector<std::pair<float, float>> shared;
-    for (std::size_t i = 0; i < lining.indices.size(); i += 6)
+    std::vector<std::pair<f32, f32>> shared;
+    for (usize i = 0; i < lining.indices.size(); i += 6)
     {
         const GroundVertex& v = lining.vertices[lining.indices[i]];
         if (v.normal.y != 0 || v.position.x != 8 || v.normal.x == 0)
             continue;
-        float low = v.position.y, high = v.position.y;
-        for (std::size_t k = i; k < i + 6; ++k)
+        f32 low = v.position.y, high = v.position.y;
+        for (usize k = i; k < i + 6; ++k)
         {
             low = std::min(low, lining.vertices[lining.indices[k]].position.y);
             high = std::max(high, lining.vertices[lining.indices[k]].position.y);
@@ -125,5 +127,5 @@ TEST_CASE("neighbouring hollows at different heights wall the step between them"
         shared.emplace_back(low, high);
     }
     std::ranges::sort(shared);
-    CHECK(shared == std::vector<std::pair<float, float>> { { 0, 2 }, { 4, 6 } });
+    CHECK(shared == std::vector<std::pair<f32, f32>> { { 0, 2 }, { 4, 6 } });
 }

@@ -2,6 +2,7 @@
 #include "scene/park/files_menu.hpp"
 
 #include "career/career_file.hpp"
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "parkfile/structure_file.hpp"
 #include "scene/track/design_file.hpp"
@@ -51,10 +52,10 @@ namespace rct3::scene::park
                 return;
             }
             ui::screens::dialogs::AddOnPacks packs;
-            for (std::size_t i = 0; i < kPackFiles.size(); ++i)
+            for (usize i = 0; i < kPackFiles.size(); ++i)
             {
                 if (front.assets.install && front.assets.install->find(kPackFiles.at(i)))
-                    packs.push_back(static_cast<std::int32_t>(i));
+                    packs.push_back(static_cast<i32>(i));
             }
             root.add<ui::screens::dialogs::GameInfoBox>(std::string(kAboutName), skins::about_window_style(front.assets.palette), *front.assets.strings, packs, park.seed);
         }

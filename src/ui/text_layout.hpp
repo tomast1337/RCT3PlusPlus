@@ -7,6 +7,7 @@
 // not shaped or kerned: each code unit is one glyph. Text is laid out again every time it is drawn.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/font/font.hpp"
 
@@ -17,7 +18,7 @@
 namespace rct3::ui
 {
 
-    enum class Align : std::uint8_t
+    enum class Align : u8
     {
         Start, ///< Left or top
         Centre,
@@ -35,15 +36,15 @@ namespace rct3::ui
     struct TextLine
     {
         std::u16string_view text; ///< Without the line feed or the space it broke at
-        float width = 0;
+        f32 width = 0;
     };
 
     /// The pen movement of `text` on one line.
-    [[nodiscard]] float text_width(const font::Font& font, std::u16string_view text);
+    [[nodiscard]] f32 text_width(const font::Font& font, std::u16string_view text);
 
     /// Splits `text` into lines no wider than `max_width` where possible. A `max_width` of 0 or less breaks
     /// only at line feeds.
-    [[nodiscard]] std::vector<TextLine> break_lines(const font::Font& font, std::u16string_view text, float max_width);
+    [[nodiscard]] std::vector<TextLine> break_lines(const font::Font& font, std::u16string_view text, f32 max_width);
 
     /// Draws `text` inside `box`, aligned by `style`. Lines that do not fit spill out of the box; push a
     /// clip first to cut them.

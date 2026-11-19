@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/shape.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
@@ -10,7 +12,7 @@ namespace
     constexpr Color kRed { 255, 0, 0, 255 };
     constexpr Color kBlue { 0, 0, 255, 255 };
 
-    Shape square(float side, float radius)
+    Shape square(f32 side, f32 radius)
     {
         Shape s;
         s.rect = { 0, 0, side, side };

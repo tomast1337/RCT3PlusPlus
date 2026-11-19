@@ -10,6 +10,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ovl/font.hpp"
 #include "ui/draw_list.hpp"
 
@@ -27,7 +28,7 @@ namespace rct3::ui::font
         Rect box; ///< Relative to the pen on the baseline, y down. Empty for glyphs that draw nothing.
         Rect uv;  ///< In the page texture, 0..1, top row first
         TextureId page = 0;
-        float advance = 0; ///< Pen movement, spacing included
+        f32 advance = 0; ///< Pen movement, spacing included
     };
 
     struct CodedGlyph
@@ -46,8 +47,8 @@ namespace rct3::ui::font
         struct Page
         {
             TextureId texture = 0;
-            float width = 0;
-            float height = 0;
+            f32 width = 0;
+            f32 height = 0;
         };
 
         Font() = default;
@@ -56,7 +57,7 @@ namespace rct3::ui::font
         /// The same, for a font item whose face is no longer at hand: `face` names it.
         [[nodiscard]] static Font from(const ovl::Font& font, std::span<const Page> pages, std::string_view face);
         /// A font from ready glyphs; the first glyph with a code wins. `line_height` is also the cell.
-        [[nodiscard]] static Font from_glyphs(std::span<const CodedGlyph> glyphs, float line_height, float descent);
+        [[nodiscard]] static Font from_glyphs(std::span<const CodedGlyph> glyphs, f32 line_height, f32 descent);
 
         /// This font with the glyphs of `fallback` added for every code it does not have.
         [[nodiscard]] Font with_fallback(const Font& fallback) const;
@@ -65,18 +66,18 @@ namespace rct3::ui::font
         /// font does not have; such units draw nothing and do not advance.
         [[nodiscard]] std::optional<const Glyph&> find(char16_t code) const;
 
-        [[nodiscard]] float cell() const
+        [[nodiscard]] f32 cell() const
         {
             return cell_;
         }
         /// Distance between the tops of consecutive lines: the font's line height and its descent, the
         /// descent twice for kRoomyFace.
-        [[nodiscard]] float line_height() const
+        [[nodiscard]] f32 line_height() const
         {
             return line_height_;
         }
         /// Distance from the baseline up to the top of a line.
-        [[nodiscard]] float ascent() const
+        [[nodiscard]] f32 ascent() const
         {
             return line_height_ - descent_;
         }
@@ -84,11 +85,11 @@ namespace rct3::ui::font
     private:
         void sort_index();
 
-        float cell_ = 0;
-        float line_height_ = 0;
-        float descent_ = 0;
+        f32 cell_ = 0;
+        f32 line_height_ = 0;
+        f32 descent_ = 0;
         std::vector<Glyph> glyphs_;
-        std::vector<std::pair<char16_t, std::uint32_t>> index_; ///< Code to glyph, sorted by code
+        std::vector<std::pair<char16_t, u32>> index_; ///< Code to glyph, sorted by code
     };
 
 } // namespace rct3::ui::font

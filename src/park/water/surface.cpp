@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/water/surface.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -11,17 +13,17 @@ namespace rct3::park::water
 
     WaterSurface water_surface(std::span<const WaterVertex> water)
     {
-        std::map<float, std::vector<GroundVertex>> by_level;
-        for (std::size_t i = 0; i + 3 <= water.size(); i += 3)
+        std::map<f32, std::vector<GroundVertex>> by_level;
+        for (usize i = 0; i + 3 <= water.size(); i += 3)
         {
             std::vector<GroundVertex>& run = by_level[water[i].position.y];
-            for (std::size_t k = i; k < i + 3; ++k)
+            for (usize k = i; k < i + 3; ++k)
                 run.push_back({ .position = water[k].position, .colour = water[k].colour, .uv = { water[k].depth, water[k].room } });
         }
         WaterSurface surface;
         for (const auto& [level, run] : by_level)
         {
-            WaterBatch batch { level, static_cast<std::uint32_t>(surface.vertices.size()), static_cast<std::uint32_t>(run.size()), run.front().position, run.front().position };
+            WaterBatch batch { level, static_cast<u32>(surface.vertices.size()), static_cast<u32>(run.size()), run.front().position, run.front().position };
             for (const GroundVertex& v : run)
             {
                 batch.low = glm::min(batch.low, v.position);
@@ -37,11 +39,11 @@ namespace rct3::park::water
     {
         /// How much of the view a triangle covers, in units of the whole view. One with a corner behind the eye
         /// is near and large, so it counts as the whole view.
-        float view_share(const glm::mat4& view_projection, const glm::vec3& a, const glm::vec3& b, const glm::vec3& c)
+        f32 view_share(const glm::mat4& view_projection, const glm::vec3& a, const glm::vec3& b, const glm::vec3& c)
         {
             std::array<glm::vec2, 3> p;
             const std::array<glm::vec3, 3> corners { a, b, c };
-            for (std::size_t i = 0; i < 3; ++i)
+            for (usize i = 0; i < 3; ++i)
             {
                 const glm::vec4 clip = view_projection * glm::vec4(corners[i], 1.0f);
                 if (clip.w <= 0)
@@ -58,19 +60,19 @@ namespace rct3::park::water
         }
 
         /// The first vertex of the triangle of `batch` that `at` (x, z) lies in, if any.
-        std::optional<std::uint32_t> triangle_at(const WaterSurface& surface, const WaterBatch& batch, glm::vec2 at)
+        std::optional<u32> triangle_at(const WaterSurface& surface, const WaterBatch& batch, glm::vec2 at)
         {
             if (at.x < batch.low.x || at.x > batch.high.x || at.y < batch.low.z || at.y > batch.high.z)
                 return std::nullopt;
             const auto side = [](glm::vec2 from, glm::vec2 to, glm::vec2 q) { return (to.x - from.x) * (q.y - from.y) - (to.y - from.y) * (q.x - from.x); };
-            for (std::uint32_t i = batch.first; i + 3 <= batch.first + batch.count; i += 3)
+            for (u32 i = batch.first; i + 3 <= batch.first + batch.count; i += 3)
             {
                 const glm::vec2 a { surface.vertices[i].position.x, surface.vertices[i].position.z };
                 const glm::vec2 b { surface.vertices[i + 1].position.x, surface.vertices[i + 1].position.z };
                 const glm::vec2 c { surface.vertices[i + 2].position.x, surface.vertices[i + 2].position.z };
-                const float s0 = side(a, b, at);
-                const float s1 = side(b, c, at);
-                const float s2 = side(c, a, at);
+                const f32 s0 = side(a, b, at);
+                const f32 s1 = side(b, c, at);
+                const f32 s2 = side(c, a, at);
                 if ((s0 >= 0 && s1 >= 0 && s2 >= 0) || (s0 <= 0 && s1 <= 0 && s2 <= 0))
                     return i;
             }
@@ -78,26 +80,26 @@ namespace rct3::park::water
         }
     } // namespace
 
-    std::vector<float> reflection_levels(const WaterSurface& surface, const glm::mat4& view_projection, glm::vec3 eye, std::size_t count)
+    std::vector<f32> reflection_levels(const WaterSurface& surface, const glm::mat4& view_projection, glm::vec3 eye, usize count)
     {
         struct Scored
         {
-            float level;
-            float share;
+            f32 level;
+            f32 share;
         };
         std::vector<Scored> scored;
         for (const WaterBatch& batch : surface.batches)
         {
             if (batch.level >= eye.y)
                 continue;
-            float share = 0;
-            for (std::uint32_t i = batch.first; i + 3 <= batch.first + batch.count; i += 3)
+            f32 share = 0;
+            for (u32 i = batch.first; i + 3 <= batch.first + batch.count; i += 3)
                 share += view_share(view_projection, surface.vertices[i].position, surface.vertices[i + 1].position, surface.vertices[i + 2].position);
             if (share > 0)
                 scored.push_back({ batch.level, share });
         }
         std::ranges::stable_sort(scored, [](const Scored& a, const Scored& b) { return a.share > b.share; });
-        std::vector<float> levels;
+        std::vector<f32> levels;
         for (const Scored& s : scored)
         {
             if (levels.size() == count)
@@ -109,19 +111,19 @@ namespace rct3::park::water
         return levels;
     }
 
-    std::optional<std::size_t> reflection_for(float level, std::span<const float> levels)
+    std::optional<usize> reflection_for(f32 level, std::span<const f32> levels)
     {
-        std::optional<std::size_t> best;
-        for (std::size_t i = 0; i < levels.size(); ++i)
+        std::optional<usize> best;
+        for (usize i = 0; i < levels.size(); ++i)
         {
-            const float gap = std::abs(levels[i] - level);
+            const f32 gap = std::abs(levels[i] - level);
             if (gap <= kReflectionReach && (!best || gap < std::abs(levels[*best] - level)))
                 best = i;
         }
         return best;
     }
 
-    glm::mat4 mirror(float level)
+    glm::mat4 mirror(f32 level)
     {
         glm::mat4 m(1.0f);
         m[1][1] = -1;
@@ -145,20 +147,20 @@ namespace rct3::park::water
         return m;
     }
 
-    glm::mat4 reflection_transform(const glm::mat4& view_projection, float level)
+    glm::mat4 reflection_transform(const glm::mat4& view_projection, f32 level)
     {
         return oblique_clip(view_projection * mirror(level), { 0.0f, 1.0f, 0.0f, -(level - kReflectionClipBias) });
     }
 
-    std::optional<float> water_hit(const Ray& ray, const WaterSurface& surface)
+    std::optional<f32> water_hit(const Ray& ray, const WaterSurface& surface)
     {
-        std::optional<float> nearest;
+        std::optional<f32> nearest;
         for (const WaterBatch& batch : surface.batches)
         {
             // The surface is level, so the ray meets each batch's plane once at most.
             if (std::abs(ray.direction.y) < 1e-6f)
                 continue;
-            const float t = (batch.level - ray.origin.y) / ray.direction.y;
+            const f32 t = (batch.level - ray.origin.y) / ray.direction.y;
             if (t < 0 || (nearest && t >= *nearest))
                 continue;
             const glm::vec3 at = ray.origin + ray.direction * t;

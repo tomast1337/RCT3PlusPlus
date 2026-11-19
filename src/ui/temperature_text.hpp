@@ -4,11 +4,13 @@
 // picked in the options. Saves keep it in degrees Celsius.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <string>
 
 namespace rct3::ui
 {
 
-    [[nodiscard]] std::u16string temperature_text(float celsius, bool fahrenheit);
+    [[nodiscard]] std::u16string temperature_text(f32 celsius, bool fahrenheit);
 
 } // namespace rct3::ui

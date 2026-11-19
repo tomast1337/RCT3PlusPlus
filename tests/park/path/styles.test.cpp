@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path/styles.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -43,7 +45,7 @@ TEST_CASE("the longer layout's capped pieces follow the base ones")
     path.name = "Tube";
     // Two ground pictures, nineteen pieces four times each, four slots naming no piece, then the capped pieces.
     path.piece_names = { "GroundA", "GroundB" };
-    for (std::size_t piece = 0; piece < 19; ++piece)
+    for (usize piece = 0; piece < 19; ++piece)
         path.piece_names.insert(path.piece_names.end(), 4, "Base");
     path.piece_names.insert(path.piece_names.end(), { "", "", "", "Other" });
     for (const std::string_view name : { "FlatCapped", "SlopeCapped" })

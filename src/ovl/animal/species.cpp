@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/animal/species.hpp"
 
+#include "core/types.hpp"
 #include "ovl/item_record.hpp"
 
 namespace rct3::ovl::animal
@@ -10,22 +11,22 @@ namespace rct3::ovl::animal
     {
 
         constexpr std::string_view kTag = "was";
-        constexpr std::size_t kSize = 0x3C; // up to and including the fence strength
-        constexpr std::size_t kName = 0x08;
-        constexpr std::size_t kDescription = 0x0C;
-        constexpr std::size_t kIcon = 0x10;
-        constexpr std::size_t kVariants = 0x18;
-        constexpr std::size_t kShelter = 0x30;
-        constexpr std::size_t kFenceStrength = 0x38;
+        constexpr usize kSize = 0x3C; // up to and including the fence strength
+        constexpr usize kName = 0x08;
+        constexpr usize kDescription = 0x0C;
+        constexpr usize kIcon = 0x10;
+        constexpr usize kVariants = 0x18;
+        constexpr usize kShelter = 0x30;
+        constexpr usize kFenceStrength = 0x38;
 
         // An animal's own block.
-        constexpr std::size_t kVariantSize = 0x34;
-        constexpr std::size_t kVariantModel = 0x00;
-        constexpr std::size_t kVariantMotions = 0x04;
-        constexpr std::size_t kVariantPrice = 0x14;
-        constexpr std::size_t kVariantRarity = 0x18;
-        constexpr std::size_t kVariantDescription = 0x1C;
-        constexpr std::size_t kVariantIcon = 0x30;
+        constexpr usize kVariantSize = 0x34;
+        constexpr usize kVariantModel = 0x00;
+        constexpr usize kVariantMotions = 0x04;
+        constexpr usize kVariantPrice = 0x14;
+        constexpr usize kVariantRarity = 0x18;
+        constexpr usize kVariantDescription = 0x1C;
+        constexpr usize kVariantIcon = 0x30;
 
     } // namespace
 
@@ -50,9 +51,9 @@ namespace rct3::ovl::animal
                 s.icon = record->ref(kIcon, "gsi");
                 s.shelter = record->text(kShelter);
                 s.fence_strength = record->real(kFenceStrength);
-                for (std::size_t i = 0; i < s.variants.size(); ++i)
+                for (usize i = 0; i < s.variants.size(); ++i)
                 {
-                    const std::uint32_t at = record->read_u32(kVariants + 4 * i);
+                    const u32 at = record->read_u32(kVariants + 4 * i);
                     if (at == 0)
                         continue;
                     if (const auto v = ItemRecord::open(space, refs, at, kVariantSize))

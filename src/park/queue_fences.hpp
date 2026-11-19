@@ -10,6 +10,7 @@
 // stands at the height halfway up and leans as the deck rises.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/ground/queues.hpp"
 #include "park/object/mesh.hpp"
 #include "save/model/world.hpp"
@@ -27,7 +28,7 @@ namespace rct3::park
     [[nodiscard]] glm::vec2 edge_lean(const save::model::TerrainGrid& grid, save::model::Tile tile, Side side);
 
     /// True for the slopes of path pieces that fall from their start towards their end.
-    [[nodiscard]] bool slope_falls(std::uint8_t slope) noexcept;
+    [[nodiscard]] bool slope_falls(u8 slope) noexcept;
 
     struct QueueFences
     {
@@ -36,6 +37,6 @@ namespace rct3::park
     };
 
     /// Placed fence pieces along the queues among `paths`. New objects take ids after `last_id`.
-    [[nodiscard]] QueueFences queue_fences(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::uint64_t last_id);
+    [[nodiscard]] QueueFences queue_fences(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, u64 last_id);
 
 } // namespace rct3::park

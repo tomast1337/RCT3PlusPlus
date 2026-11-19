@@ -6,6 +6,7 @@
 // (ui::hex, render::hex) built on this one.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 
 #include <cstdint>
@@ -17,10 +18,10 @@ namespace rct3::math
     /// Eight bits per channel, alpha 255 when the text gives none.
     struct HexColour
     {
-        std::uint8_t r = 0;
-        std::uint8_t g = 0;
-        std::uint8_t b = 0;
-        std::uint8_t a = 255;
+        u8 r = 0;
+        u8 g = 0;
+        u8 b = 0;
+        u8 a = 255;
 
         friend constexpr bool operator==(const HexColour&, const HexColour&) = default;
     };
@@ -32,21 +33,21 @@ namespace rct3::math
         {
         }
 
-        consteval std::uint8_t hex_digit(char c)
+        consteval u8 hex_digit(char c)
         {
             if (c >= '0' && c <= '9')
-                return static_cast<std::uint8_t>(c - '0');
+                return static_cast<u8>(c - '0');
             if (c >= 'a' && c <= 'f')
-                return static_cast<std::uint8_t>(c - 'a' + 10);
+                return static_cast<u8>(c - 'a' + 10);
             if (c >= 'A' && c <= 'F')
-                return static_cast<std::uint8_t>(c - 'A' + 10);
+                return static_cast<u8>(c - 'A' + 10);
             malformed_hex_colour();
             return 0;
         }
 
-        consteval std::uint8_t hex_byte(std::string_view text, std::size_t at)
+        consteval u8 hex_byte(std::string_view text, usize at)
         {
-            return static_cast<std::uint8_t>(hex_digit(text[at]) * 16 + hex_digit(text[at + 1]));
+            return static_cast<u8>(hex_digit(text[at]) * 16 + hex_digit(text[at + 1]));
         }
     } // namespace detail
 
@@ -55,7 +56,7 @@ namespace rct3::math
     {
         if ((text.size() != 7 && text.size() != 9) || text[0] != '#')
             detail::malformed_hex_colour();
-        return { detail::hex_byte(text, 1), detail::hex_byte(text, 3), detail::hex_byte(text, 5), text.size() == 9 ? detail::hex_byte(text, 7) : std::uint8_t { 255 } };
+        return { detail::hex_byte(text, 1), detail::hex_byte(text, 3), detail::hex_byte(text, 5), text.size() == 9 ? detail::hex_byte(text, 7) : u8 { 255 } };
     }
 
     /// The colour as floats 0..1 in red, green, blue, alpha order.

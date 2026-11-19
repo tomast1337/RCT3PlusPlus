@@ -8,6 +8,7 @@
 #pragma once
 
 #include "config/game/install.hpp"
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "scene/park/scene.hpp"
 #include "ui/draw_list.hpp"
@@ -31,6 +32,6 @@ namespace rct3::scene::park
     /// Records the loading screen with `stage` under way into the current pass, over the whole target. Its
     /// detail comes from the log's entries after `log_from` (logging::global().latest_sequence() when the
     /// load began).
-    void draw_park_loading(render::Device& device, ui::InterfaceAssets& assets, ui::DrawList& list, ParkLoadStage stage, std::uint64_t log_from);
+    void draw_park_loading(render::Device& device, ui::InterfaceAssets& assets, ui::DrawList& list, ParkLoadStage stage, u64 log_from);
 
 } // namespace rct3::scene::park

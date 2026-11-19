@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/line_plot.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -15,48 +17,48 @@ namespace rct3::ui::widgets
     {
     }
 
-    float full_scale(std::span<const float> values)
+    f32 full_scale(std::span<const f32> values)
     {
-        float most = 0;
-        for (const float v : values)
+        f32 most = 0;
+        for (const f32 v : values)
             if (std::isfinite(v))
                 most = std::max(most, std::abs(v));
         if (most <= 0)
             return 1;
-        const float power = std::pow(10.0f, std::floor(std::log10(most)));
-        for (const float step : { 1.0f, 2.0f, 5.0f, 10.0f })
+        const f32 power = std::pow(10.0f, std::floor(std::log10(most)));
+        for (const f32 step : { 1.0f, 2.0f, 5.0f, 10.0f })
             if (most <= step * power * 1.0001f) // Slack for a value that is a round number to start with
                 return step * power;
         return 10 * power;
     }
 
-    std::array<float, 5> axis_values(float full, bool centred)
+    std::array<f32, 5> axis_values(f32 full, bool centred)
     {
-        const float low = centred ? -full : 0;
-        std::array<float, 5> out { };
-        for (std::size_t i = 0; i < out.size(); ++i)
-            out[i] = full - (full - low) * static_cast<float>(i) / 4;
+        const f32 low = centred ? -full : 0;
+        std::array<f32, 5> out { };
+        for (usize i = 0; i < out.size(); ++i)
+            out[i] = full - (full - low) * static_cast<f32>(i) / 4;
         return out;
     }
 
-    float plot_y(float value, float full, bool centred, float height)
+    f32 plot_y(f32 value, f32 full, bool centred, f32 height)
     {
-        const float share = centred ? 0.5f + value / (2 * full) : value / full;
+        const f32 share = centred ? 0.5f + value / (2 * full) : value / full;
         return height * (1 - std::clamp(share, 0.0f, 1.0f));
     }
 
-    float plot_x(float back, std::size_t span, float width)
+    f32 plot_x(f32 back, usize span, f32 width)
     {
         if (span < 2)
             return width;
-        return width * (1 - back / static_cast<float>(span - 1));
+        return width * (1 - back / static_cast<f32>(span - 1));
     }
 
-    std::size_t LinePlot::span() const
+    usize LinePlot::span() const
     {
         if (slots > 0)
             return slots;
-        std::size_t most = 0;
+        usize most = 0;
         for (const PlotSeries& s : series)
             most = std::max(most, s.values.size());
         return most;
@@ -65,11 +67,11 @@ namespace rct3::ui::widgets
     void LinePlot::on_hover(Point p)
     {
         const Rect r = rect();
-        const std::size_t across = span();
+        const usize across = span();
         if (r.width() <= 0 || across < 2)
             under_ = 0;
         else
-            under_ = static_cast<std::size_t>(std::lround(std::clamp((r.x1 - p.x) / r.width(), 0.0f, 1.0f) * static_cast<float>(across - 1)));
+            under_ = static_cast<usize>(std::lround(std::clamp((r.x1 - p.x) / r.width(), 0.0f, 1.0f) * static_cast<f32>(across - 1)));
     }
 
     bool LinePlot::on_wheel(Point notches)
@@ -77,13 +79,13 @@ namespace rct3::ui::widgets
         if (most_slots == 0 || notches.y == 0)
             return false;
         // Chosen by eye: a fifth more or less a notch, quick across twenty years of weeks without jumping past a few.
-        const float scaled = static_cast<float>(span()) * std::pow(1.25f, -notches.y);
-        slots = std::clamp(static_cast<std::size_t>(std::lround(scaled)), std::min(fewest_slots, most_slots), most_slots);
+        const f32 scaled = static_cast<f32>(span()) * std::pow(1.25f, -notches.y);
+        slots = std::clamp(static_cast<usize>(std::lround(scaled)), std::min(fewest_slots, most_slots), most_slots);
         zoomed_ = slots;
         return true;
     }
 
-    std::optional<std::size_t> LinePlot::pointed() const
+    std::optional<usize> LinePlot::pointed() const
     {
         if (!hovered())
             return std::nullopt;
@@ -94,18 +96,18 @@ namespace rct3::ui::widgets
     {
         const Rect r = rect();
         context.list.fill(r, background);
-        for (std::int32_t i = 1; i < rules; ++i)
+        for (i32 i = 1; i < rules; ++i)
         {
-            const float y = std::round(r.y0 + r.height() * static_cast<float>(i) / static_cast<float>(rules));
+            const f32 y = std::round(r.y0 + r.height() * static_cast<f32>(i) / static_cast<f32>(rules));
             context.list.fill({ r.x0, y, r.x1, y + 1 }, rule_colour);
         }
-        const std::size_t across = span();
+        const usize across = span();
         for (const PlotTick& t : ticks)
         {
             // Ticks before the span, zoomed in, are off the plot.
-            if (t.back + 1 > static_cast<float>(across))
+            if (t.back + 1 > static_cast<f32>(across))
                 continue;
-            const float x = std::round(r.x0 + plot_x(t.back, across, r.width()));
+            const f32 x = std::round(r.x0 + plot_x(t.back, across, r.width()));
             context.list.fill({ x, r.y1 - (t.major ? 2 * tick : tick), x + 1, r.y1 }, rule_colour);
         }
         if (!context.list.push_clip(r))
@@ -117,9 +119,9 @@ namespace rct3::ui::widgets
         {
             if (s.values.empty())
                 continue;
-            const float full = s.full > 0 ? s.full : full_scale(s.values);
-            const auto at = [&](std::size_t i) {
-                const float back = static_cast<float>(s.values.size() - 1 - i);
+            const f32 full = s.full > 0 ? s.full : full_scale(s.values);
+            const auto at = [&](usize i) {
+                const f32 back = static_cast<f32>(s.values.size() - 1 - i);
                 return std::array { r.x0 + plot_x(back, across, r.width()), r.y0 + plot_y(s.values[i], full, s.centred, r.height()) };
             };
             if (s.values.size() == 1)
@@ -129,24 +131,24 @@ namespace rct3::ui::widgets
                 continue;
             }
             // Each step a band `line` wide from one sample to the next, square across its ends.
-            for (std::size_t i = 0; i + 1 < s.values.size(); ++i)
+            for (usize i = 0; i + 1 < s.values.size(); ++i)
             {
                 const auto [x0, y0] = at(i);
                 const auto [x1, y1] = at(i + 1);
-                const float dx = x1 - x0;
-                const float dy = y1 - y0;
-                const float length = std::hypot(dx, dy);
+                const f32 dx = x1 - x0;
+                const f32 dy = y1 - y0;
+                const f32 length = std::hypot(dx, dy);
                 if (length <= 0)
                     continue;
-                const float nx = -dy / length * line / 2;
-                const float ny = dx / length * line / 2;
-                const std::array<std::array<float, 2>, 4> band { { { x0 + nx, y0 + ny }, { x1 + nx, y1 + ny }, { x1 - nx, y1 - ny }, { x0 - nx, y0 - ny } } };
+                const f32 nx = -dy / length * line / 2;
+                const f32 ny = dx / length * line / 2;
+                const std::array<std::array<f32, 2>, 4> band { { { x0 + nx, y0 + ny }, { x1 + nx, y1 + ny }, { x1 - nx, y1 - ny }, { x0 - nx, y0 - ny } } };
                 context.list.polygon(band, s.colour);
             }
         }
         if (const auto back = pointed())
         {
-            const float x = std::round(r.x0 + plot_x(static_cast<float>(*back), across, r.width()));
+            const f32 x = std::round(r.x0 + plot_x(static_cast<f32>(*back), across, r.width()));
             context.list.fill({ x, r.y0, x + 1, r.y1 }, rule_colour);
         }
         context.list.pop_clip();

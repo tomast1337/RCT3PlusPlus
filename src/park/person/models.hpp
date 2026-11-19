@@ -14,6 +14,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ovl/bone_index.hpp"
 #include "ovl/frame_mesh.hpp"
 #include "ovl/simple_anim.hpp"
@@ -38,9 +39,9 @@ namespace rct3::park::person
     /// Which two keys of a motion to blend at some time, and how far from the first to the second.
     struct KeyBlend
     {
-        std::size_t from = 0;
-        std::size_t to = 0;
-        float along = 0;
+        usize from = 0;
+        usize to = 0;
+        f32 along = 0;
 
         bool operator==(const KeyBlend&) const = default;
     };
@@ -48,7 +49,7 @@ namespace rct3::park::person
     /// The keys to blend `time` seconds into a motion whose keys after the first come at `times`, the last
     /// time being its length. A repeating motion starts again at its length, blending its last key back into
     /// its first on the way; one that plays once holds its last key from then on.
-    [[nodiscard]] KeyBlend blend_keys(std::span<const float> times, float time, bool repeats);
+    [[nodiscard]] KeyBlend blend_keys(std::span<const f32> times, f32 time, bool repeats);
 
     /// For each motion number, which of a model's motions plays it. Numbers a model has no motion for play its
     /// first one.
@@ -59,18 +60,18 @@ namespace rct3::park::person
         /// Ties each of `names` (a model's motions, in its order) to the number it is known by.
         explicit MotionIndex(std::span<const std::string_view> names);
 
-        [[nodiscard]] std::size_t operator[](std::int32_t number) const noexcept;
+        [[nodiscard]] usize operator[](i32 number) const noexcept;
 
     private:
-        std::vector<std::uint16_t> by_number_;
+        std::vector<u16> by_number_;
     };
 
     /// One mesh of a person's section.
     struct PieceModel
     {
-        std::string texture;       ///< Key of its picture, empty for none
-        std::uint32_t channel = 0; ///< Which of the person's colours picks the picture's cell
-        ovl::FrameMesh mesh;       ///< Its motions' names are not kept
+        std::string texture; ///< Key of its picture, empty for none
+        u32 channel = 0;     ///< Which of the person's colours picks the picture's cell
+        ovl::FrameMesh mesh; ///< Its motions' names are not kept
         MotionIndex motions;
         bool left_hand = false; ///< A socket for what the left (or only) hand holds, its one triangle at the hand; not drawn
     };
@@ -80,7 +81,7 @@ namespace rct3::park::person
     {
         std::string texture;
         std::vector<std::optional<ovl::BoneIndex>> parents; ///< Of each bone
-        std::size_t turns = 0;                              ///< The bone that turns the head to look about: the one its name calls the head
+        usize turns = 0;                                    ///< The bone that turns the head to look about: the one its name calls the head
         std::vector<std::optional<ovl::SimpleAnim>> motions;
         MotionIndex motion_index;
         std::array<std::optional<ovl::SimpleSkin>, 2> skins; ///< The plain face at each level
@@ -88,19 +89,19 @@ namespace rct3::park::person
 
     struct PartLevel
     {
-        std::vector<std::size_t> fixed;                   ///< Pieces of the library
-        std::vector<std::optional<std::size_t>> optional; ///< Each drawn when its bit of the person's choice is set; none when it could not be read
+        std::vector<usize> fixed;                   ///< Pieces of the library
+        std::vector<std::optional<usize>> optional; ///< Each drawn when its bit of the person's choice is set; none when it could not be read
     };
 
-    inline constexpr std::size_t kPersonLevels = 3;
+    inline constexpr usize kPersonLevels = 3;
 
     /// A head, body or legs set.
     struct PartSet
     {
         std::array<PartLevel, kPersonLevels> levels;
-        std::optional<std::size_t> head; ///< Of the library, used at the two finer levels
+        std::optional<usize> head; ///< Of the library, used at the two finer levels
         std::array<PartLevel, kPersonLevels> swim_levels;
-        std::optional<std::size_t> swim_head;
+        std::optional<usize> swim_head;
     };
 
     class PersonLibrary
@@ -116,11 +117,11 @@ namespace rct3::park::person
         /// Nothing when no file holds it or it cannot be read.
         [[nodiscard]] std::optional<const PartSet&> part_set(std::string_view symbol);
 
-        [[nodiscard]] const PieceModel& piece(std::size_t index) const
+        [[nodiscard]] const PieceModel& piece(usize index) const
         {
             return pieces_[index];
         }
-        [[nodiscard]] const HeadModel& head(std::size_t index) const
+        [[nodiscard]] const HeadModel& head(usize index) const
         {
             return heads_[index];
         }
@@ -140,14 +141,14 @@ namespace rct3::park::person
         std::vector<PieceModel> pieces_;
         std::vector<HeadModel> heads_;
         std::map<std::string, std::optional<PartSet>, std::less<>> sets_; ///< Lower-case names
-        std::map<std::string, std::optional<std::size_t>, std::less<>> loaded_pieces_;
-        std::map<std::string, std::optional<std::size_t>, std::less<>> loaded_heads_;
+        std::map<std::string, std::optional<usize>, std::less<>> loaded_pieces_;
+        std::map<std::string, std::optional<usize>, std::less<>> loaded_heads_;
         std::map<std::string, ovl::texture::RgbaImage, std::less<>> pictures_;
 
         std::optional<PartSet> read_set(std::string_view symbol);
         std::optional<PartLevel> read_level(std::span<const std::string_view> fixed, std::span<const std::string_view> optional, std::string_view near);
-        std::optional<std::size_t> read_piece(std::string_view name, std::string_view near);
-        std::optional<std::size_t> read_head(std::string_view name, std::string_view near);
+        std::optional<usize> read_piece(std::string_view name, std::string_view near);
+        std::optional<usize> read_head(std::string_view name, std::string_view near);
         std::string read_picture(std::string_view name, std::string_view near);
     };
 

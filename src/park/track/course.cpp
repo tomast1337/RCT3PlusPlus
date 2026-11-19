@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/course.hpp"
 
+#include "core/types.hpp"
 #include "park/design_placement.hpp"
 
 #include <algorithm>
@@ -20,20 +21,20 @@ namespace rct3::park::track
     namespace
     {
         /// The stretch `distance` falls in, and the distance taken back inside the course.
-        std::pair<std::size_t, float> stretch_at(const TrackCourse& course, float distance)
+        std::pair<usize, f32> stretch_at(const TrackCourse& course, f32 distance)
         {
-            const float length = course.length();
+            const f32 length = course.length();
             if (course.closed && length > 0)
                 distance = std::fmod(std::fmod(distance, length) + length, length);
             distance = std::clamp(distance, 0.0f, length);
             const auto after = std::ranges::upper_bound(course.distance, distance);
-            const auto i = static_cast<std::size_t>(std::max<std::ptrdiff_t>(after - course.distance.begin() - 1, 0));
+            const auto i = static_cast<usize>(std::max<std::ptrdiff_t>(after - course.distance.begin() - 1, 0));
             return { std::min(i, course.points.size() - 1), distance };
         }
 
         struct BlockEnd
         {
-            float at = 0;         ///< Along the course
+            f32 at = 0;           ///< Along the course
             bool station = false; ///< A station's run ends it
         };
 
@@ -45,8 +46,8 @@ namespace rct3::park::track
             if (course.kinds.size() < 2)
                 return ends;
             const auto ends_block = [](CourseKind k) { return k != CourseKind::Plain && k != CourseKind::Launch && k != CourseKind::Brake && k != CourseKind::Booster; };
-            const std::size_t last = course.kinds.size() - 1; // The last kind is past the track's end
-            for (std::size_t i = 0; i < last; ++i)
+            const usize last = course.kinds.size() - 1; // The last kind is past the track's end
+            for (usize i = 0; i < last; ++i)
             {
                 const CourseKind next = i + 1 < last ? course.kinds[i + 1] : course.kinds.front();
                 if (ends_block(course.kinds[i]) && next != course.kinds[i])
@@ -60,7 +61,7 @@ namespace rct3::park::track
     {
         if (!ride.track || ride.track->pieces.empty())
             return std::nullopt;
-        std::unordered_map<std::uint64_t, const save::model::PlacedObject*> by_id;
+        std::unordered_map<u64, const save::model::PlacedObject*> by_id;
         for (const save::model::PlacedObject& o : objects)
             by_id.emplace(o.id, &o);
         const auto& segments = ride.track->segments;
@@ -68,11 +69,11 @@ namespace rct3::park::track
         std::optional<TrackCourse> first;
         std::optional<TrackCourse> stopping;
         std::vector<glm::vec3> others;
-        for (std::size_t s = 0; s < std::max<std::size_t>(segments.size(), 1); ++s)
+        for (usize s = 0; s < std::max<usize>(segments.size(), 1); ++s)
         {
             const bool whole = segments.size() <= 1;
-            const std::size_t from = whole ? 0 : segments[s].first_piece;
-            const std::size_t to = whole ? ride.track->pieces.size() : std::min(from + segments[s].piece_count, ride.track->pieces.size());
+            const usize from = whole ? 0 : segments[s].first_piece;
+            const usize to = whole ? ride.track->pieces.size() : std::min(from + segments[s].piece_count, ride.track->pieces.size());
             if (from >= to)
                 continue;
             TrackCourse course;
@@ -96,7 +97,7 @@ namespace rct3::park::track
                 const auto model = models.find(object::model_ref(object));
                 const glm::mat4 to_world = object::placed_transform(object, model != models.end() ? &model->second : nullptr, grid, fitted);
                 CourseKind kind = shape->use == PieceUse::Station ? CourseKind::Station : (shape->toggles & toggle_bit(PieceToggle::Chain)) != 0 ? CourseKind::Chain : CourseKind::Plain;
-                const std::uint32_t role = shape->record.role;
+                const u32 role = shape->record.role;
                 if (kind == CourseKind::Chain && role >= kRoleTowerFirst && role <= kRoleTowerLast)
                     kind = CourseKind::Plain;
                 // shortcut: a transfer carries the car along its rails as a chain would, not stopping it to move the
@@ -122,7 +123,7 @@ namespace rct3::park::track
                 // A brake's or block brake's own speed, 0 when it has none; below 0 on other pieces. A booster's is the
                 // speed the player set it to push the cars up to. The game keeps a brake's in the piece's speed too.
                 const bool brakes = kind == CourseKind::Brake || (kind == CourseKind::BlockBrake && role == kRoleBlockBrake);
-                const auto brake_speed = brakes ? static_cast<float>(piece.brake_speed.or_else([&] { return piece.speed_class; }).value_or(0)) : kind == CourseKind::Booster ? static_cast<float>(piece.speed_class.value_or(0)) : -1.0f;
+                const auto brake_speed = brakes ? static_cast<f32>(piece.brake_speed.or_else([&] { return piece.speed_class; }).value_or(0)) : kind == CourseKind::Booster ? static_cast<f32>(piece.speed_class.value_or(0)) : -1.0f;
                 course.splash_end = role >= kRoleSlideBowl && role <= kRoleSlideEnd;
                 for (const auto& climb : shape->record.climbs)
                 {
@@ -132,7 +133,7 @@ namespace rct3::park::track
                 }
                 std::vector<glm::vec3> path = shape->line.path;
                 // A line with a length has its points at even shares of it, so each step along it is the same.
-                const std::optional<float> step = shape->line.length > 0 ? std::optional(shape->line.length / static_cast<float>(path.size() - 1)) : std::nullopt;
+                const std::optional<f32> step = shape->line.length > 0 ? std::optional(shape->line.length / static_cast<f32>(path.size() - 1)) : std::nullopt;
                 std::vector<glm::vec3> ups = shape->line.ups;
                 ups.resize(path.size(), glm::vec3 { 0, 1, 0 });
                 if (piece.reversed)
@@ -155,19 +156,19 @@ namespace rct3::park::track
                 std::ranges::copy(piece_pool_openings(object, shape->record), std::back_inserter(course.pool_openings));
                 if (shape->record.drop_off)
                     course.drop_offs.push_back(course.length() + *shape->record.drop_off);
-                const float top = glm::vec3(to_world * glm::vec4(path.front(), 1.0f)).y;
-                std::optional<float> wade_from;
+                const f32 top = glm::vec3(to_world * glm::vec4(path.front(), 1.0f)).y;
+                std::optional<f32> wade_from;
                 // A tower's foot starts up the tower, not where the track before it ends: the way between is the
                 // length of track its car carries, so that point is kept.
                 const bool lift_foot = (shape->record.flags & kPieceLiftBottom) != 0;
                 if (lift_foot)
                     course.lifts.push_back({ .entry = course.length(), .from = course.length(), .to = course.length() });
-                for (std::size_t k = course.points.empty() || lift_foot ? 0 : 1; k < path.size(); ++k)
+                for (usize k = course.points.empty() || lift_foot ? 0 : 1; k < path.size(); ++k)
                 {
                     const glm::vec3 at = glm::vec3(to_world * glm::vec4(path[k], 1.0f));
                     // The step onto a tower's foot is not along the piece. Even steps count from the piece's first
                     // point, as summing them one by one rounds away centimetres over a long course.
-                    course.distance.push_back(course.points.empty() ? 0 : k > 0 && step ? course.distance[course.distance.size() - k] + static_cast<float>(k) * *step : course.distance.back() + glm::distance(course.points.back(), at));
+                    course.distance.push_back(course.points.empty() ? 0 : k > 0 && step ? course.distance[course.distance.size() - k] + static_cast<f32>(k) * *step : course.distance.back() + glm::distance(course.points.back(), at));
                     course.points.push_back(at);
                     course.ups.push_back(glm::normalize(glm::mat3(to_world) * ups[k]));
                     course.kinds.push_back(kind);
@@ -181,16 +182,16 @@ namespace rct3::park::track
                 // A push's span turns round with its piece. The water holds cars back only where it runs level: pieces
                 // climb in whole steps, so a centimetre tells (chosen by eye).
                 auto& pushes = course.pushes.emplace_back();
-                const float start = course.piece_starts.back();
-                const float span = course.length() - start;
+                const f32 start = course.piece_starts.back();
+                const f32 span = course.length() - start;
                 const bool level = std::abs(path.back().y - path.front().y) < 0.01f;
                 course.level.push_back(level);
                 for (PiecePush p : shape->record.pushes)
                 {
                     if (!level)
                         p.hold = 0;
-                    const float from = std::max(p.from, 0.0f);
-                    const float to = p.to < 0 ? span : std::min(p.to, span);
+                    const f32 from = std::max(p.from, 0.0f);
+                    const f32 to = p.to < 0 ? span : std::min(p.to, span);
                     p.from = start + (piece.reversed ? span - to : from);
                     p.to = start + (piece.reversed ? span - from : to);
                     pushes.push_back(p);
@@ -226,13 +227,13 @@ namespace rct3::park::track
         return stopping;
     }
 
-    std::vector<float> station_runs(const TrackCourse& course)
+    std::vector<f32> station_runs(const TrackCourse& course)
     {
-        std::vector<float> runs;
+        std::vector<f32> runs;
         bool in_run = false;
-        for (std::size_t k = 0; k + 1 < course.points.size(); ++k)
+        for (usize k = 0; k + 1 < course.points.size(); ++k)
         {
-            const float stretch = course.distance[k + 1] - course.distance[k];
+            const f32 stretch = course.distance[k + 1] - course.distance[k];
             if (course.kinds[k] != CourseKind::Station)
                 in_run = false;
             else if (in_run)
@@ -253,34 +254,34 @@ namespace rct3::park::track
         return runs;
     }
 
-    glm::vec3 course_point(const TrackCourse& course, float distance)
+    glm::vec3 course_point(const TrackCourse& course, f32 distance)
     {
         const auto [i, d] = stretch_at(course, distance);
         if (i + 1 >= course.points.size())
             return course.points[i];
-        const float span = course.distance[i + 1] - course.distance[i];
+        const f32 span = course.distance[i + 1] - course.distance[i];
         return glm::mix(course.points[i], course.points[i + 1], span > 0 ? (d - course.distance[i]) / span : 0.0f);
     }
 
-    glm::vec3 course_direction(const TrackCourse& course, float distance)
+    glm::vec3 course_direction(const TrackCourse& course, f32 distance)
     {
         const auto [i, _] = stretch_at(course, distance);
-        const std::size_t a = std::min(i, course.points.size() - 2);
+        const usize a = std::min(i, course.points.size() - 2);
         const glm::vec3 way = course.points[a + 1] - course.points[a];
-        const float l = glm::length(way);
+        const f32 l = glm::length(way);
         return l > 0 ? way / l : glm::vec3 { 1, 0, 0 };
     }
 
-    glm::vec3 course_up(const TrackCourse& course, float distance)
+    glm::vec3 course_up(const TrackCourse& course, f32 distance)
     {
         if (course.ups.size() != course.points.size())
             return { 0, 1, 0 };
         const auto [i, d] = stretch_at(course, distance);
         if (i + 1 >= course.points.size())
             return course.ups[i];
-        const float span = course.distance[i + 1] - course.distance[i];
+        const f32 span = course.distance[i + 1] - course.distance[i];
         const glm::vec3 up = glm::mix(course.ups[i], course.ups[i + 1], span > 0 ? (d - course.distance[i]) / span : 0.0f);
-        const float l = glm::length(up);
+        const f32 l = glm::length(up);
         return l > 1e-6f ? up / l : course.ups[i];
     }
 
@@ -293,7 +294,7 @@ namespace rct3::park::track
         glm::mat4 frame_between(const glm::vec3& front, const glm::vec3& rear, glm::vec3 up, const glm::vec3& alone)
         {
             glm::vec3 way = front - rear;
-            constexpr float kOnePoint = 1e-3f;
+            constexpr f32 kOnePoint = 1e-3f;
             way = glm::length(way) > kOnePoint ? glm::normalize(way) : alone;
             up -= glm::dot(up, way) * way;
             if (glm::length(up) < 1e-6f) // Up along the way: any square to it will do
@@ -320,34 +321,34 @@ namespace rct3::park::track
         /// Track from the rear of the car ahead of `link` to the front of the car behind it: from where the one couples
         /// on, the link's reach on, less how far back from its front the other couples on. Below zero where the cars'
         /// ends overlap.
-        float link_gap(const object::CarFit& ahead, const object::CarFit& link, const object::CarFit& behind)
+        f32 link_gap(const object::CarFit& ahead, const object::CarFit& link, const object::CarFit& behind)
         {
             return ahead.link_rear - ahead.length + link.length - behind.link_front;
         }
     } // namespace
 
-    glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, float by)
+    glm::mat4 moved_along(const TrackCourse& course, const glm::mat4& saved, Axles saved_at, f32 by)
     {
         return frame_at(course, { saved_at.front + by, saved_at.rear + by }) * undone(frame_at(course, saved_at)) * saved;
     }
 
-    float carried_length(const object::ObjectModel& model)
+    f32 carried_length(const object::ObjectModel& model)
     {
-        float length = 0;
-        for (std::size_t k = 1; k < model.carried.size(); ++k)
+        f32 length = 0;
+        for (usize k = 1; k < model.carried.size(); ++k)
             length += glm::distance(model.carried[k - 1], model.carried[k]);
         return length;
     }
 
-    glm::mat4 lift_car_place(const TrackCourse& course, const LiftRun& run, const object::ObjectModel& model, float at)
+    glm::mat4 lift_car_place(const TrackCourse& course, const LiftRun& run, const object::ObjectModel& model, f32 at)
     {
         const object::CarFit fit = model.car_fit.value_or(object::CarFit { });
-        const float span = std::max(fit.rear_wheels - fit.front_wheels, 0.0f);
+        const f32 span = std::max(fit.rear_wheels - fit.front_wheels, 0.0f);
         // Its front wheels go from a wheelbase up the rails to their top, as it goes from the bottom to the top.
-        const float climb = std::max(run.to - run.from, 1e-3f);
-        const auto place_at = [&](float d, bool turned) {
-            const float front = run.from + span + (std::clamp(d, run.from, run.to) - run.from) * std::max(run.to - run.from - span, 0.0f) / climb;
-            const glm::mat4 half = turned ? glm::rotate(glm::mat4(1.0f), glm::pi<float>(), glm::vec3(0, 0, 1)) : glm::mat4(1.0f);
+        const f32 climb = std::max(run.to - run.from, 1e-3f);
+        const auto place_at = [&](f32 d, bool turned) {
+            const f32 front = run.from + span + (std::clamp(d, run.from, run.to) - run.from) * std::max(run.to - run.from - span, 0.0f) / climb;
+            const glm::mat4 half = turned ? glm::rotate(glm::mat4(1.0f), glm::pi<f32>(), glm::vec3(0, 0, 1)) : glm::mat4(1.0f);
             return frame_at(course, { front, front - span }) * half * glm::translate(glm::mat4(1.0f), -fit.on_track);
         };
         if (model.carried.empty())
@@ -359,19 +360,19 @@ namespace rct3::park::track
 
     glm::mat4 moved_on_lift(const TrackCourse& course, const LiftRun& lift, const object::ObjectModel& model, const glm::mat4& lift_place, const glm::mat4& saved, Axles saved_at, Axles on)
     {
-        const float carried = carried_length(model);
+        const f32 carried = carried_length(model);
         // A wheel `x` along the car's track: where it is, and up there.
-        const auto wheel = [&](float x) -> std::pair<glm::vec3, glm::vec3> {
+        const auto wheel = [&](f32 x) -> std::pair<glm::vec3, glm::vec3> {
             if (x < 0 || model.carried.size() < 2)
                 return { course_point(course, lift.entry + x), course_up(course, lift.entry + x) };
             if (x > carried)
                 return { course_point(course, lift.to + x - carried), course_up(course, lift.to + x - carried) };
-            std::size_t k = 1;
-            float before = 0;
+            usize k = 1;
+            f32 before = 0;
             for (; k + 1 < model.carried.size() && before + glm::distance(model.carried[k - 1], model.carried[k]) < x; ++k)
                 before += glm::distance(model.carried[k - 1], model.carried[k]);
-            const float step = glm::distance(model.carried[k - 1], model.carried[k]);
-            const float t = step > 0 ? std::clamp((x - before) / step, 0.0f, 1.0f) : 0.0f;
+            const f32 step = glm::distance(model.carried[k - 1], model.carried[k]);
+            const f32 t = step > 0 ? std::clamp((x - before) / step, 0.0f, 1.0f) : 0.0f;
             const glm::vec3 up = k < model.carried_ups.size() ? glm::mix(model.carried_ups[k - 1], model.carried_ups[k], t) : glm::vec3(0, 1, 0);
             return { glm::vec3(lift_place * glm::vec4(glm::mix(model.carried[k - 1], model.carried[k], t), 1)), glm::mat3(lift_place) * up };
         };
@@ -381,27 +382,27 @@ namespace rct3::park::track
         return frame_between(front, rear, front_up + rear_up, alone) * undone(frame_at(course, saved_at)) * saved;
     }
 
-    float train_length(std::span<const object::CarFit> fits)
+    f32 train_length(std::span<const object::CarFit> fits)
     {
-        float length = 0;
-        for (std::size_t k = 0; k < fits.size(); ++k)
+        f32 length = 0;
+        for (usize k = 0; k < fits.size(); ++k)
             length += k > 0 && k + 1 < fits.size() && fits[k].link ? link_gap(fits[k - 1], fits[k], fits[k + 1]) : fits[k].length;
         return length;
     }
 
-    std::int32_t trains_fitting(const TrackCourse& course, std::span<const object::CarFit> fits, bool blocks, std::optional<std::uint32_t> cap)
+    i32 trains_fitting(const TrackCourse& course, std::span<const object::CarFit> fits, bool blocks, std::optional<u32> cap)
     {
-        std::int32_t most = static_cast<std::int32_t>(course.length() / 2 / (train_length(fits) + kTrainGap));
+        i32 most = static_cast<i32>(course.length() / 2 / (train_length(fits) + kTrainGap));
         if (cap)
-            most = std::min(most, static_cast<std::int32_t>(*cap));
+            most = std::min(most, static_cast<i32>(*cap));
         if (blocks && course.kinds.size() > 1)
-            most = std::min(most, static_cast<std::int32_t>(block_ends(course).size()) - 1);
+            most = std::min(most, static_cast<i32>(block_ends(course).size()) - 1);
         return std::max(most, 1);
     }
 
-    std::vector<float> train_fronts(const TrackCourse& course, float start, float length, std::int32_t count, bool blocks)
+    std::vector<f32> train_fronts(const TrackCourse& course, f32 start, f32 length, i32 count, bool blocks)
     {
-        const float whole = course.length();
+        const f32 whole = course.length();
         if (count < 1)
             return { };
         if (whole <= 0)
@@ -409,22 +410,22 @@ namespace rct3::park::track
         // Each block end by how far on from `start` it is; the start is a station's end, whether found or not.
         struct Spot
         {
-            float ahead = 0;
+            f32 ahead = 0;
             bool station = false;
-            float room = 0; ///< Track behind it, back to the block end before
-            float used = 0; ///< Of that, taken by trains queued there
+            f32 room = 0; ///< Track behind it, back to the block end before
+            f32 used = 0; ///< Of that, taken by trains queued there
         };
-        constexpr float kSame = 0.01f; // Metres apart that count as one place
+        constexpr f32 kSame = 0.01f; // Metres apart that count as one place
         std::vector<Spot> spots { { .ahead = 0, .station = true } };
         for (const BlockEnd& end : block_ends(course))
-            if (const float ahead = std::fmod(std::fmod(end.at - start, whole) + whole, whole); ahead > kSame && ahead < whole - kSame)
+            if (const f32 ahead = std::fmod(std::fmod(end.at - start, whole) + whole, whole); ahead > kSame && ahead < whole - kSame)
                 spots.push_back({ .ahead = ahead, .station = end.station });
         std::ranges::sort(spots, { }, &Spot::ahead);
-        for (std::size_t i = 0; i < spots.size(); ++i)
+        for (usize i = 0; i < spots.size(); ++i)
             spots[i].room = i == 0 ? whole - spots.back().ahead : spots[i].ahead - spots[i - 1].ahead;
         // Stations first, a train at each in turn going on round the track, then queued behind those there; then the
         // other block ends the same way. Kept a block apart, a block takes one. A train with room nowhere is left out.
-        std::vector<float> fronts;
+        std::vector<f32> fronts;
         for (const bool stations : { true, false })
             for (bool placed = true; placed && std::cmp_less(fronts.size(), count);)
             {
@@ -443,26 +444,26 @@ namespace rct3::park::track
         return fronts;
     }
 
-    std::int32_t cars_fitting(const TrackCourse& course, std::span<const float> lengths, std::int32_t fewest)
+    i32 cars_fitting(const TrackCourse& course, std::span<const f32> lengths, i32 fewest)
     {
-        const std::vector<float> runs = station_runs(course);
-        const float shortest = runs.empty() ? std::numeric_limits<float>::max() : std::ranges::min(runs);
-        std::int32_t fit = 0;
-        for (std::int32_t cars = std::max(fewest, 1); cars <= static_cast<std::int32_t>(lengths.size()); ++cars)
-            if (lengths[static_cast<std::size_t>(cars - 1)] <= shortest)
+        const std::vector<f32> runs = station_runs(course);
+        const f32 shortest = runs.empty() ? std::numeric_limits<f32>::max() : std::ranges::min(runs);
+        i32 fit = 0;
+        for (i32 cars = std::max(fewest, 1); cars <= static_cast<i32>(lengths.size()); ++cars)
+            if (lengths[static_cast<usize>(cars - 1)] <= shortest)
                 fit = cars;
         return fit;
     }
 
-    void stand_train(const TrackCourse& course, save::model::Train& train, std::span<const object::CarFit> fits, float front)
+    void stand_train(const TrackCourse& course, save::model::Train& train, std::span<const object::CarFit> fits, f32 front)
     {
         if (fits.empty())
             return;
         train.distance = { front };
         train.length = { };
-        float at = front;
-        const auto fit_of = [&](std::size_t k) -> const object::CarFit& { return fits[std::min(k, fits.size() - 1)]; };
-        for (std::size_t k = 0; k < train.cars.size(); ++k)
+        f32 at = front;
+        const auto fit_of = [&](usize k) -> const object::CarFit& { return fits[std::min(k, fits.size() - 1)]; };
+        for (usize k = 0; k < train.cars.size(); ++k)
         {
             save::model::Car& car = train.cars[k];
             const object::CarFit& fit = fit_of(k);
@@ -496,20 +497,20 @@ namespace rct3::park::track
         }
     }
 
-    std::optional<ArmAngles> arm_angles_at(const TrackCourse& course, std::span<const std::optional<ArmAngles>> held, float distance)
+    std::optional<ArmAngles> arm_angles_at(const TrackCourse& course, std::span<const std::optional<ArmAngles>> held, f32 distance)
     {
-        const std::size_t n = std::min(course.piece_starts.size(), held.size());
-        const float length = course.length();
+        const usize n = std::min(course.piece_starts.size(), held.size());
+        const f32 length = course.length();
         if (n == 0 || length <= 0)
             return std::nullopt;
         if (course.closed)
             distance = std::fmod(std::fmod(distance, length) + length, length);
-        const auto middle = [&](std::size_t i) { return (course.piece_starts[i] + (i + 1 < course.piece_starts.size() ? course.piece_starts[i + 1] : length)) / 2; };
+        const auto middle = [&](usize i) { return (course.piece_starts[i] + (i + 1 < course.piece_starts.size() ? course.piece_starts[i + 1] : length)) / 2; };
         // The piece the car is on, and the one whose middle is on the other side of it.
-        const std::size_t on = static_cast<std::size_t>(std::ranges::upper_bound(course.piece_starts.begin(), course.piece_starts.begin() + static_cast<std::ptrdiff_t>(n), distance) - course.piece_starts.begin()) - 1;
-        const std::size_t piece = std::min(on, n - 1);
+        const usize on = static_cast<usize>(std::ranges::upper_bound(course.piece_starts.begin(), course.piece_starts.begin() + static_cast<std::ptrdiff_t>(n), distance) - course.piece_starts.begin()) - 1;
+        const usize piece = std::min(on, n - 1);
         const bool behind = distance < middle(piece);
-        std::optional<std::size_t> other;
+        std::optional<usize> other;
         if (behind && piece > 0)
             other = piece - 1;
         else if (!behind && piece + 1 < n)
@@ -521,18 +522,18 @@ namespace rct3::park::track
         if (!here || !there)
             return here ? here : there;
         // From the earlier middle to the later one, a whole course further on where they wrap round.
-        float from = behind ? middle(*other) : middle(piece);
-        float to = behind ? middle(piece) : middle(*other);
+        f32 from = behind ? middle(*other) : middle(piece);
+        f32 to = behind ? middle(piece) : middle(*other);
         if (to < from)
             (behind ? from : to) += behind ? -length : length;
-        float at = distance;
+        f32 at = distance;
         if (at < from)
             at += length;
-        const float t = to > from ? std::clamp((at - from) / (to - from), 0.0f, 1.0f) : 0.0f;
+        const f32 t = to > from ? std::clamp((at - from) / (to - from), 0.0f, 1.0f) : 0.0f;
         const ArmAngles& a = behind ? *there : *here;
         const ArmAngles& b = behind ? *here : *there;
         ArmAngles out;
-        for (std::size_t j = 0; j < out.size(); ++j)
+        for (usize j = 0; j < out.size(); ++j)
             out[j] = a[j] + (b[j] - a[j]) * t;
         return out;
     }

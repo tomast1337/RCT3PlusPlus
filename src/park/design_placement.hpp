@@ -6,6 +6,7 @@
 // that run into a pool, as a slide's way back to its lift does, are not on a pool's edge.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/pools/pools.hpp"
 #include "park/track/pieces.hpp"
 #include "save/model/world.hpp"
@@ -18,7 +19,7 @@
 namespace rct3::park
 {
 
-    enum class DesignRefusal : std::uint8_t
+    enum class DesignRefusal : u8
     {
         None,
         NotOwned,
@@ -32,11 +33,11 @@ namespace rct3::park
     [[nodiscard]] std::string_view refusal_key(DesignRefusal refusal) noexcept;
 
     /// How far, in whole units, a design's lowest piece may stand over the ground under any of its pieces.
-    inline constexpr float kDesignRaise = 12; ///< Chosen by eye: a gentle valley is spanned, a design lifted high is not
+    inline constexpr f32 kDesignRaise = 12; ///< Chosen by eye: a gentle valley is spanned, a design lifted high is not
 
     /// Whether a design whose lowest piece stands at `lowest` stands too high over `grounds`, the ground under each
     /// of its pieces. On level ground a design stands as it was built and is never too high.
-    [[nodiscard]] bool stands_too_high(float lowest, std::span<const float> grounds) noexcept;
+    [[nodiscard]] bool stands_too_high(f32 lowest, std::span<const f32> grounds) noexcept;
 
     /// Where the piece `object`, built of `record`, joins a pool beside it.
     [[nodiscard]] std::vector<pools::PoolOpening> piece_pool_openings(const save::model::PlacedObject& object, const track::PieceRecord& record);

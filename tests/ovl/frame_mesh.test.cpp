@@ -2,6 +2,7 @@
 #include "ovl/frame_mesh.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -16,27 +17,27 @@ namespace
 {
 
     const std::string kNames("M:mms\0Wave\0", 11);
-    constexpr std::uint32_t kBase = 16; // names padded
+    constexpr u32 kBase = 16; // names padded
 
     // Offsets inside the structure block: a mesh of two points, one normal, two corners and one animation
     // of two keys.
-    constexpr std::uint32_t kCorners = 40;
-    constexpr std::uint32_t kIndices = 64;
-    constexpr std::uint32_t kAnimation = 72;
-    constexpr std::uint32_t kTimes = 136;
-    constexpr std::uint32_t kKeys = 144;
-    constexpr std::uint32_t kKeySize = 12; // two point words, three normal bytes padded to four
-    constexpr std::uint32_t kEnd = kKeys + 2 * kKeySize;
+    constexpr u32 kCorners = 40;
+    constexpr u32 kIndices = 64;
+    constexpr u32 kAnimation = 72;
+    constexpr u32 kTimes = 136;
+    constexpr u32 kKeys = 144;
+    constexpr u32 kKeySize = 12; // two point words, three normal bytes padded to four
+    constexpr u32 kEnd = kKeys + 2 * kKeySize;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    void real(std::vector<std::byte>& out, float v)
+    void real(std::vector<std::byte>& out, f32 v)
     {
-        append_u32(out, std::bit_cast<std::uint32_t>(v));
+        append_u32(out, std::bit_cast<u32>(v));
     }
 
     std::vector<std::byte> names()
@@ -56,12 +57,12 @@ namespace
         return out;
     }
 
-    constexpr std::uint32_t point_word(std::uint32_t x, std::uint32_t y, std::uint32_t z)
+    constexpr u32 point_word(u32 x, u32 y, u32 z)
     {
         return x << 21 | y << 11 | z;
     }
 
-    std::vector<std::byte> structure(std::uint32_t tracks = 0, std::uint32_t keys = 2)
+    std::vector<std::byte> structure(u32 tracks = 0, u32 keys = 2)
     {
         std::vector<std::byte> out;
         words(out, { 2, 3, 2, 1, tracks, 1, kBase + kCorners, kBase + kIndices, 0, kBase + kAnimation });
@@ -72,9 +73,9 @@ namespace
         words(out, { 1 });
         real(out, 0.25f);
         real(out, 0.75f);
-        for (std::uint16_t i : { 0, 1, 1, 0 })
+        for (u16 i : { 0, 1, 1, 0 })
             append_u16(out, i);
-        for (float f : { 1.0f, 2.0f, 3.0f, 0.0f, 0.5f, 0.25f, 2.0f, 0.0f })
+        for (f32 f : { 1.0f, 2.0f, 3.0f, 0.0f, 0.5f, 0.25f, 2.0f, 0.0f })
             real(out, f);
         words(out, { 6, keys, kBase + kTimes, kBase + kKeys, 0, 0, 0, 0 });
         real(out, 0.5f);
@@ -112,11 +113,11 @@ TEST_CASE("frame meshes expose corners, triangles and their motions")
     CHECK(mesh.corners[1].point == 1);
     CHECK(mesh.corners[1].normal == 0);
     CHECK(mesh.corners[1].uv[1] == 0.75f);
-    CHECK(mesh.indices == std::vector<std::uint16_t> { 0, 1, 1 });
+    CHECK(mesh.indices == std::vector<u16> { 0, 1, 1 });
     REQUIRE(mesh.animations.size() == 1);
     const auto& wave = mesh.animations[0];
     CHECK(wave.name == "Wave");
-    CHECK(wave.times == std::vector<float> { 0.5f, 1.0f });
+    CHECK(wave.times == std::vector<f32> { 0.5f, 1.0f });
     CHECK(wave.keys.size() == 2 * kKeySize);
 }
 

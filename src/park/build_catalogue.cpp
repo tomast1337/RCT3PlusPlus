@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/build_catalogue.hpp"
 
+#include "core/types.hpp"
 #include "ovl/animal/items.hpp"
 #include "ovl/animal/species.hpp"
 #include "ovl/animated_ride.hpp"
@@ -269,7 +270,7 @@ namespace rct3::park
 
     } // namespace
 
-    std::optional<BuildList> ride_list(std::uint32_t kind) noexcept
+    std::optional<BuildList> ride_list(u32 kind) noexcept
     {
         switch (kind)
         {
@@ -298,7 +299,7 @@ namespace rct3::park
         }
     }
 
-    std::optional<BuildList> shop_list(std::uint32_t kind) noexcept
+    std::optional<BuildList> shop_list(u32 kind) noexcept
     {
         switch (kind)
         {
@@ -318,7 +319,7 @@ namespace rct3::park
         }
     }
 
-    std::optional<BuildList> scenery_list(std::uint32_t category) noexcept
+    std::optional<BuildList> scenery_list(u32 category) noexcept
     {
         switch (category)
         {
@@ -363,7 +364,7 @@ namespace rct3::park
         }
     }
 
-    std::optional<std::uint32_t> special_attraction_kind(const std::filesystem::path& file, std::string_view name)
+    std::optional<u32> special_attraction_kind(const std::filesystem::path& file, std::string_view name)
     {
         const auto overlay = ovl::Overlay::load(file);
         if (!overlay)
@@ -389,7 +390,7 @@ namespace rct3::park
             std::ranges::move(more, std::back_inserter(scenery));
         }
         const auto placed = by_name(scenery);
-        const std::size_t first = items.size();
+        const usize first = items.size();
         // The scenery item an attraction is placed as: the one it names, or, in files where that is not read,
         // the one of the same name.
         const auto placed_as = [&](std::string_view named, std::string_view symbol) -> const ovl::SceneryItem* {
@@ -449,8 +450,8 @@ namespace rct3::park
                     item.pool_prices.assign(e.pool->prices.begin(), e.pool->prices.end());
                     return item;
                 };
-                for (std::int32_t depth = 1; depth <= 3; ++depth)
-                    tool(kPoolWater[static_cast<std::size_t>(depth - 1)], pools::PoolSquare { .kind = pools::PoolKind::Water, .depth = depth });
+                for (i32 depth = 1; depth <= 3; ++depth)
+                    tool(kPoolWater[static_cast<usize>(depth - 1)], pools::PoolSquare { .kind = pools::PoolKind::Water, .depth = depth });
                 tool(kPoolTiles, pools::PoolSquare { .kind = pools::PoolKind::Tile, .depth = 2 });
                 tool(kPoolDelete, std::nullopt);
                 tool(kPoolPath, pools::PoolSquare { .kind = pools::PoolKind::Path, .depth = 0 });
@@ -534,7 +535,7 @@ namespace rct3::park
         const std::string entrance = first_of(ItemCategory::RideEntrance);
         const std::string exit = first_of(ItemCategory::RideExit);
         // Everything a theme's overlay offers is of that theme.
-        std::optional<std::int32_t> style_index;
+        std::optional<i32> style_index;
         std::string style, style_title, fence;
         for (const ovl::Part* part : parts)
         {
@@ -553,7 +554,7 @@ namespace rct3::park
                     fence = strings::to_utf8(*t.value);
             }
         }
-        for (std::size_t i = first; i < items.size(); ++i)
+        for (usize i = first; i < items.size(); ++i)
         {
             items[i].style_index = style_index;
             items[i].style = style;
@@ -573,7 +574,7 @@ namespace rct3::park
 
     void name_styles(std::vector<BuildItem>& items)
     {
-        std::map<std::int32_t, std::pair<std::string, std::string>> named;
+        std::map<i32, std::pair<std::string, std::string>> named;
         for (const BuildItem& item : items)
         {
             if (item.style_index && !item.style.empty())
@@ -664,7 +665,7 @@ namespace rct3::park
         // rides of no theme for their fence. A theme may name a fence another theme's overlay holds.
         const auto plain = std::ranges::find_if(items, [](const BuildItem& i) { return !i.entrance.empty() && strings::equals_ignoring_case(i.door_overlay, kPlainStyle); });
         const auto plain_fence = std::ranges::find_if(items, [](const BuildItem& i) { return !i.fence.empty() && strings::equals_ignoring_case(i.overlay, kPlainStyle); });
-        std::map<std::int32_t, std::string> theme_fences;
+        std::map<i32, std::string> theme_fences;
         for (const BuildItem& item : items)
             if (item.style_index && !item.fence.empty())
                 theme_fences.try_emplace(*item.style_index, item.fence);
@@ -689,8 +690,8 @@ namespace rct3::park
     bool researchable(const BuildItem& item) noexcept
     {
         using C = ItemCategory;
-        const auto in = [&](C low, C high) { return item.type >= static_cast<std::uint32_t>(low) && item.type <= static_cast<std::uint32_t>(high); };
-        const auto is = [&](C c) { return item.type == static_cast<std::uint32_t>(c); };
+        const auto in = [&](C low, C high) { return item.type >= static_cast<u32>(low) && item.type <= static_cast<u32>(high); };
+        const auto is = [&](C c) { return item.type == static_cast<u32>(c); };
         const bool for_looks = in(C::Tree, C::Animatronic) || in(C::LitterBin, C::WallCorner) || in(C::RideEntrance, C::RideExit) || is(C::ParkEntrance) || is(C::RideEvent) || is(C::Effect);
         return item.kind == BuildKind::Scenery && for_looks && item.price > units::Money { } && !item.names_category;
     }

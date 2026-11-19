@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/queue_lines.hpp"
 
+#include "core/types.hpp"
 #include "park/footpath_builder.hpp"
 #include "park/led_signs.hpp"
 #include "park/path/decks.hpp"
@@ -14,39 +15,39 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid owned_grid(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         for (save::model::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
+            c.flags = static_cast<u8>(save::model::TileFlag::Owned);
         return g;
     }
 
     /// One ride whose station's entrance stands on (`col`, `row`), turned `turn`: unturned, the ride is on the
     /// column before it and its back faces the next column.
-    save::model::RideModel ride_at(std::int32_t col, std::int32_t row, ModelTurn turn = { })
+    save::model::RideModel ride_at(i32 col, i32 row, ModelTurn turn = { })
     {
         save::model::RideModel rides;
         save::model::Station& station = rides.rides.emplace_back().stations.emplace_back();
-        station.entrance_spot = save::model::PlacementSpot { .col = col, .row = row, .direction = static_cast<std::uint8_t>(turn.value) };
+        station.entrance_spot = save::model::PlacementSpot { .col = col, .row = row, .direction = static_cast<u8>(turn.value) };
         return rides;
     }
 
     /// Lays `count` ground queue tiles from `from` heading `heading`.
-    std::vector<save::model::PathTile> lay_queue(const save::model::TerrainGrid& g, save::model::Tile from, Side heading, std::int32_t count)
+    std::vector<save::model::PathTile> lay_queue(const save::model::TerrainGrid& g, save::model::Tile from, Side heading, i32 count)
     {
         FootpathBuilder b;
         b.queue = true;
         b.heading = heading;
         start_at(b, from);
         std::vector<save::model::PathTile> paths;
-        for (std::int32_t i = 0; i < count; ++i)
-            (void)lay_path(b, paths, *next_piece(b, g), "QueueSet", static_cast<std::uint64_t>(10 + i), 0);
+        for (i32 i = 0; i < count; ++i)
+            (void)lay_path(b, paths, *next_piece(b, g), "QueueSet", static_cast<u64>(10 + i), 0);
         return paths;
     }
 } // namespace
@@ -72,7 +73,7 @@ TEST_CASE("an entrance's back turns with it")
         { { 2, 3 }, Side::kNextCol },
         { { 3, 4 }, Side::kRowBefore },
     } };
-    for (std::int32_t turn = 0; turn < 4; ++turn)
+    for (i32 turn = 0; turn < 4; ++turn)
     {
         CAPTURE(turn);
         const save::model::RideModel rides = ride_at(3, 3, ModelTurn { turn });
@@ -80,8 +81,8 @@ TEST_CASE("an entrance's back turns with it")
         {
             const save::model::Tile tile = side.beyond({ 3, 3 });
             const auto found = entrance_beside(rides, tile, 0);
-            if (tile == behind[static_cast<std::size_t>(turn)].first)
-                CHECK(found == EntranceBeside { save::model::RideIndex { 0 }, 0, behind[static_cast<std::size_t>(turn)].second });
+            if (tile == behind[static_cast<usize>(turn)].first)
+                CHECK(found == EntranceBeside { save::model::RideIndex { 0 }, 0, behind[static_cast<usize>(turn)].second });
             else
                 CHECK_FALSE(found);
         }
@@ -94,7 +95,7 @@ TEST_CASE("a queue laid away from an entrance joins the station's line")
     save::model::RideModel rides = ride_at(0, 1);
     // Heading +col from the tile beside the entrance.
     std::vector<save::model::PathTile> paths = lay_queue(g, { 1, 1 }, Side::kNextCol, 3);
-    CHECK(tiles_behind(paths, g, 2) == std::vector<std::size_t> { 1, 0 });
+    CHECK(tiles_behind(paths, g, 2) == std::vector<usize> { 1, 0 });
     const auto entrance = entrance_beside(rides, { 1, 1 }, 0);
     REQUIRE(entrance);
     rides.rides[0].fence_symbol = "Picket";
@@ -157,7 +158,7 @@ TEST_CASE("a queue laid on towards a line's open end joins it, turned round to l
     const save::model::TerrainGrid g = owned_grid(8, 4);
     save::model::RideModel rides = ride_at(5, 1, ModelTurn { 2 });
     std::vector<save::model::PathTile> paths = lay_queue(g, { 2, 1 }, Side::kNextCol, 3); // (2..4, 1), the entrance beyond
-    const std::uint64_t line = join_entrance(rides, paths, g, 2, *entrance_beside(rides, { 4, 1 }, 0), 99);
+    const u64 line = join_entrance(rides, paths, g, 2, *entrance_beside(rides, { 4, 1 }, 0), 99);
     // A second stroke from (0, 1) up to the line's open end at (2, 1).
     for (save::model::PathTile p : lay_queue(g, { 0, 1 }, Side::kNextCol, 2))
     {
@@ -199,13 +200,13 @@ TEST_CASE("a queue over steps laid towards the entrance turns round whole, its s
         p.queue->fence_overlay = "Fences/Rail";
     }
     const QueueFences fenced = queue_fences(paths, g, 0);
-    std::vector<std::array<std::optional<float>, 4>> before;
+    std::vector<std::array<std::optional<f32>, 4>> before;
     for (const save::model::PathTile& p : paths)
         before.push_back({ path::edge_height(p, g, Side { 0 }), path::edge_height(p, g, Side { 1 }), path::edge_height(p, g, Side { 2 }), path::edge_height(p, g, Side { 3 }) });
 
     join_entrance(rides, paths, g, 3, *entrance_beside(rides, { 4, 1 }, std::nullopt), 99);
     // The sloping pieces' ends stay where they were.
-    for (const std::size_t i : { 1u, 3u })
+    for (const usize i : { 1u, 3u })
     {
         CHECK(path::edge_height(paths[i], g, Side { 1 }) == before[i][1]);
         CHECK(path::edge_height(paths[i], g, Side { 3 }) == before[i][3]);

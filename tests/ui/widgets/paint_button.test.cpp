@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/paint_button.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 
 #include <doctest/doctest.h>
@@ -31,7 +32,7 @@ namespace
         Desktop desktop;
         PaintButton& button;
 
-        explicit Fixture(std::vector<std::size_t> colours)
+        explicit Fixture(std::vector<usize> colours)
             : button(desktop.root().add<PaintButton>("paint", style(), std::move(colours)))
         {
             button.placement = top_left(100, 100, 20, 20);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/sky/look.hpp"
 
+#include "core/types.hpp"
 #include "park/sky/mesh.hpp"
 #include "park/sun.hpp"
 
@@ -16,8 +17,8 @@ namespace rct3::park::sky
 
         struct ColumnAt
         {
-            float height; ///< The sun's, in degrees
-            float column;
+            f32 height; ///< The sun's, in degrees
+            f32 column;
         };
 
         // By the sun's height, from low to high. Lower than the first and higher than the last hold those.
@@ -36,15 +37,15 @@ namespace rct3::park::sky
             { 40.0f, kMiddayColumn },
         } };
 
-        float column_for(std::span<const ColumnAt> points, float height)
+        f32 column_for(std::span<const ColumnAt> points, f32 height)
         {
             if (height <= points.front().height)
                 return points.front().column;
-            for (std::size_t i = 1; i < points.size(); ++i)
+            for (usize i = 1; i < points.size(); ++i)
             {
                 if (height <= points[i].height)
                 {
-                    const float t = (height - points[i - 1].height) / (points[i].height - points[i - 1].height);
+                    const f32 t = (height - points[i - 1].height) / (points[i].height - points[i - 1].height);
                     return glm::mix(points[i - 1].column, points[i].column, t);
                 }
             }
@@ -53,26 +54,26 @@ namespace rct3::park::sky
 
     } // namespace
 
-    float sky_column(float time)
+    f32 sky_column(f32 time)
     {
-        const float height = glm::degrees(sun_elevation(time));
-        const float day = time - std::floor(time);
+        const f32 height = glm::degrees(sun_elevation(time));
+        const f32 day = time - std::floor(time);
         return column_for(day < 0.5f ? std::span<const ColumnAt>(kMorning) : std::span<const ColumnAt>(kEvening), height);
     }
 
-    float sky_darkness(float time)
+    f32 sky_darkness(f32 time)
     {
-        const float height = glm::degrees(sun_elevation(time));
-        const float t = std::clamp((kStarsAppear - height) / (kStarsAppear - kStarsFull), 0.0f, 1.0f);
+        const f32 height = glm::degrees(sun_elevation(time));
+        const f32 t = std::clamp((kStarsAppear - height) / (kStarsAppear - kStarsFull), 0.0f, 1.0f);
         return t * t * (3 - 2 * t);
     }
 
-    glm::vec4 band_colour(std::span<const glm::vec4> band, float column)
+    glm::vec4 band_colour(std::span<const glm::vec4> band, f32 column)
     {
         if (band.empty())
             return glm::vec4(0.0f);
-        const float wrapped = column - std::floor(column);
-        const auto at = std::min(static_cast<std::size_t>(wrapped * static_cast<float>(band.size())), band.size() - 1);
+        const f32 wrapped = column - std::floor(column);
+        const auto at = std::min(static_cast<usize>(wrapped * static_cast<f32>(band.size())), band.size() - 1);
         return band[at];
     }
 

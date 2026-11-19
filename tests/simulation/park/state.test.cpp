@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park/state.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -62,13 +64,13 @@ TEST_CASE("the calendar runs on with game time, a whole day of the clock taking 
     CHECK(s.date.month == 0);
 
     // A whole day of the clock is longer than a month of the calendar, shorter than two.
-    const float before = s.time;
+    const f32 before = s.time;
     simulation::park::pass_time(s, simulation::kSecondsPerHour * simulation::kHoursPerDay);
     CHECK(s.time - before > save::model::GameClock::kUnitsPerMonth);
     CHECK(s.time - before < 2 * save::model::GameClock::kUnitsPerMonth);
 
     // Paused, nothing moves.
-    const float paused = s.time;
+    const f32 paused = s.time;
     CHECK(simulation::park::pass_time(s, 0) == 0);
     CHECK(s.time == paused);
 }
@@ -81,7 +83,7 @@ TEST_CASE("weeks are counted from the calendar's start, and a new week rates the
     park.clock.time = 50 + save::model::GameClock::kUnitsPerWeek - 10;
     park.has_park = true;
     park.park.park_rating.samples = { 900.0f };
-    park.park.flags.raw = static_cast<std::uint32_t>(save::model::ParkFlag::HarderRating);
+    park.park.flags.raw = static_cast<u32>(save::model::ParkFlag::HarderRating);
     simulation::park::ParkState s = simulation::park::park_state(&park, save::model::WorldModel { });
     CHECK(s.harder_rating);
     CHECK_FALSE(s.rating_parts);

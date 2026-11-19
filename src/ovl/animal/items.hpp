@@ -4,6 +4,7 @@
 // to follow, and toys the animals play with.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <cstdint>
@@ -31,7 +32,7 @@ namespace rct3::ovl::animal
         std::string_view description_text; ///< "txt" item
         std::string_view icon;             ///< "gsi" item
         std::string_view shape;            ///< "shs" item it is drawn with
-        std::int32_t price = 0;            ///< Hundredths of the currency unit
+        i32 price = 0;                     ///< Hundredths of the currency unit
     };
 
     struct AnimalToyItem

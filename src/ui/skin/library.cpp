@@ -2,6 +2,7 @@
 #include "ui/skin/library.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 
 #include <span>
 #include <utility>
@@ -9,7 +10,7 @@
 namespace rct3::ui::skin
 {
 
-    std::array<float, 2> SkinRef::size() const
+    std::array<f32, 2> SkinRef::size() const
     {
         if (layout.x_count == 0 || layout.y_count == 0)
         {

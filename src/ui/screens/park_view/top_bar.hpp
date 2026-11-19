@@ -19,6 +19,7 @@
 // highlight; highlights() tells whether they show.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/world.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park/rating.hpp"
@@ -73,8 +74,8 @@ namespace rct3::ui::screens::park_view
         std::u16string money_help;      ///< Last month's profit; empty before a month has ended
         std::optional<bool> money_rose; ///< Whether last month made money; nothing for an even month or none yet
         std::u16string guests;
-        std::optional<float> rating; ///< 0 to 1; no bar without one
-        std::u16string rating_help;  ///< The rating's tooltip: its number, and its parts once a week has been rated
+        std::optional<f32> rating;  ///< 0 to 1; no bar without one
+        std::u16string rating_help; ///< The rating's tooltip: its number, and its parts once a week has been rated
         std::u16string temperature;
         save::model::WeatherType weather = save::model::WeatherType::Unknown;
         /// The weather on its way, shown after an arrow; nothing when it stays the same.
@@ -86,14 +87,14 @@ namespace rct3::ui::screens::park_view
 
     namespace park_bar
     {
-        inline constexpr float kWidth = 680;
-        inline constexpr float kHeight = 28;
-        inline constexpr float kLeftWidth = 304; ///< Of the left part; the divider starts there
-        inline constexpr float kDividerWidth = 38;
-        inline constexpr float kLowerEdge = 3; ///< The frame's border along the bottom; items centre above it
+        inline constexpr f32 kWidth = 680;
+        inline constexpr f32 kHeight = 28;
+        inline constexpr f32 kLeftWidth = 304; ///< Of the left part; the divider starts there
+        inline constexpr f32 kDividerWidth = 38;
+        inline constexpr f32 kLowerEdge = 3; ///< The frame's border along the bottom; items centre above it
         /// The notch in the middle of the bar that lets the pointer through to the message drawer behind it:
         /// a half disc of this radius up from the bar's bottom edge, centred on the divider.
-        inline constexpr float kNotchRadius = 18;
+        inline constexpr f32 kNotchRadius = 18;
     } // namespace park_bar
 
     /// A part of the park rating as the rating's tooltip and its breakdown list it: its label (string key, our
@@ -101,7 +102,7 @@ namespace rct3::ui::screens::park_view
     struct RatingLine
     {
         std::string_view label;
-        std::int32_t simulation::park::RatingParts::* part = nullptr;
+        i32 simulation::park::RatingParts::* part = nullptr;
         bool always = false;
     };
     inline constexpr std::array<RatingLine, 10> kRatingLines { {
@@ -120,7 +121,7 @@ namespace rct3::ui::screens::park_view
     inline constexpr std::string_view kRatingScore = "Rct3pp_RatingScore";
 
     /// "<Month>, Year <n>", two spaces, then the time: the bar's date. `month` counts from 0, `year` from 1.
-    [[nodiscard]] std::u16string park_bar_date(const StringTable& strings, std::int32_t month, std::int64_t year, std::int32_t minutes, bool twelve_hour);
+    [[nodiscard]] std::u16string park_bar_date(const StringTable& strings, i32 month, i64 year, i32 minutes, bool twelve_hour);
 
     /// How the player asked to see amounts, temperatures and times.
     struct ParkBarUnits
@@ -133,9 +134,9 @@ namespace rct3::ui::screens::park_view
     /// The bar's values for the park's state at `day_time` (a fraction of the day), with the profit of the last
     /// month that ended (hundredths), when one has.
     /// The rating's tooltip: the rating out of the most there is, then a line for each of its parts when known.
-    [[nodiscard]] std::u16string park_rating_help(const StringTable& strings, float rating, const std::optional<simulation::park::RatingParts>& parts);
+    [[nodiscard]] std::u16string park_rating_help(const StringTable& strings, f32 rating, const std::optional<simulation::park::RatingParts>& parts);
 
-    [[nodiscard]] ParkBarValues park_bar_values(const simulation::park::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units, std::optional<std::int64_t> last_month_profit = std::nullopt);
+    [[nodiscard]] ParkBarValues park_bar_values(const simulation::park::ParkState& state, f32 day_time, const StringTable& strings, const ParkBarUnits& units, std::optional<i64> last_month_profit = std::nullopt);
 
     class ParkBar : public Widget
     {
@@ -164,7 +165,7 @@ namespace rct3::ui::screens::park_view
             return *objective_;
         }
         /// Pause, play, fast and fastest.
-        [[nodiscard]] widgets::Button& speed_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& speed_button(usize i) const
         {
             return *speeds_.at(i);
         }
@@ -173,7 +174,7 @@ namespace rct3::ui::screens::park_view
             return *day_mode_;
         }
         /// Of the arc below the day mode button, in the order of simulation::DayMode.
-        [[nodiscard]] widgets::Button& day_mode_choice(std::size_t i) const
+        [[nodiscard]] widgets::Button& day_mode_choice(usize i) const
         {
             return *day_choices_.at(i);
         }
@@ -230,7 +231,7 @@ namespace rct3::ui::screens::park_view
         std::optional<simulation::DayMode> asked_day_;
         bool asked_finances_ = false;
         std::optional<units::Seconds> since_money_click_; ///< Since the first click of a pair on the money
-        std::optional<float> rating_;
+        std::optional<f32> rating_;
         widgets::Button* objective_ = nullptr;
         widgets::Button* day_mode_ = nullptr;
         std::array<widgets::Button*, 3> day_choices_ { };

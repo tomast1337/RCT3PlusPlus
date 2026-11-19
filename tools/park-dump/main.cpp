@@ -8,6 +8,7 @@
 //                                       and with --write also store them as our park file
 //
 // Exit status is 0 when everything read and wrote.
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "nlohmann/json.hpp"
 #include "parkfile/park_file.hpp"
@@ -86,7 +87,7 @@ int main(int argc, char** argv)
     const char* import = nullptr;
     const char* write = nullptr;
     const char* park = nullptr;
-    for (std::int32_t i = 1; i < argc; ++i)
+    for (i32 i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--import") == 0 && i + 1 < argc)
             import = argv[++i];

@@ -2,6 +2,7 @@
 #include "ovl/room_type.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <doctest/doctest.h>
 #include <string>
@@ -15,13 +16,13 @@ namespace
 
     constexpr char kNameData[] = "Cabin:chg\0Deck:vwg\0Piece:sid\0Path:spl\0Label:txt\0Icon:gsi";
     const std::string kNames(kNameData, sizeof kNameData);
-    const std::uint32_t kBase = (static_cast<std::uint32_t>(sizeof kNameData) + 3) & ~3u;
+    const u32 kBase = (static_cast<u32>(sizeof kNameData) + 3) & ~3u;
 
-    std::uint32_t name_at(const std::string& needle)
+    u32 name_at(const std::string& needle)
     {
         const auto at = kNames.find(needle);
         REQUIRE(at != std::string::npos);
-        return static_cast<std::uint32_t>(at);
+        return static_cast<u32>(at);
     }
 
     std::vector<std::byte> names()
@@ -42,17 +43,17 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> reference(std::uint32_t location, const std::string& name)
+    std::vector<std::byte> reference(u32 location, const std::string& name)
     {
         std::vector<std::byte> out;
-        for (auto v : { location, name_at(name), std::uint32_t { 0 }, std::uint32_t { 0 } })
+        for (auto v : { location, name_at(name), u32 { 0 }, u32 { 0 } })
             append_u32(out, v);
         return out;
     }
 
-    std::vector<std::byte> words(std::size_t bytes, std::initializer_list<std::pair<std::size_t, std::uint32_t>> set)
+    std::vector<std::byte> words(usize bytes, std::initializer_list<std::pair<usize, u32>> set)
     {
-        std::vector<std::uint32_t> w(bytes / 4, 0);
+        std::vector<u32> w(bytes / 4, 0);
         for (auto [at, v] : set)
             w.at(at / 4) = v;
         std::vector<std::byte> out;

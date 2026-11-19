@@ -10,6 +10,7 @@
 // A park inspector stays as content and as keen as they came, thinks only their reports and never quits.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/people.hpp"
 #include "simulation/components.hpp"
 #include "units/units.hpp"
@@ -20,8 +21,8 @@
 namespace rct3::simulation::staff
 {
 
-    inline constexpr std::int32_t kMostTraining = 3;
-    inline constexpr std::int32_t kMostWageLevel = 2;
+    inline constexpr i32 kMostTraining = 3;
+    inline constexpr i32 kMostWageLevel = 2;
 
     /// The job a saved staff member of `kind` does in the simulation.
     [[nodiscard]] StaffRole staff_role(save::model::StaffKind kind);
@@ -31,17 +32,17 @@ namespace rct3::simulation::staff
     [[nodiscard]] bool walks_paths(StaffRole role);
 
     /// Hundredths a month for `role` at `level`, 0 to 2.
-    [[nodiscard]] std::int64_t wage_at(StaffRole role, std::int32_t level);
+    [[nodiscard]] i64 wage_at(StaffRole role, i32 level);
 
     /// Sets the wage level, clamped to 0 to 2, and the wage with it.
-    void set_wage_level(Staff& staff, std::int32_t level);
+    void set_wage_level(Staff& staff, i32 level);
 
     /// What their next level of training costs; nothing once fully trained.
     [[nodiscard]] units::Money training_cost(const Staff& staff);
 
     /// The training a new hire comes with: in a park without money, such as a sandbox, all of it; where money
     /// counts, none, and the park buys each level.
-    [[nodiscard]] std::int32_t hired_training(bool park_has_money);
+    [[nodiscard]] i32 hired_training(bool park_has_money);
 
     /// Trains them one level up; false when they already are fully trained.
     bool train(Staff& staff);
@@ -51,13 +52,13 @@ namespace rct3::simulation::staff
 
     /// `seconds` more of their mood: `working` whether they were at a job then, or for an entertainer, whether there
     /// were guests near to entertain; with none, an entertainer only grows glummer, the less so the better trained.
-    void care_for(Staff& staff, bool working, float seconds);
+    void care_for(Staff& staff, bool working, f32 seconds);
 
     /// How many times as long a job takes them.
-    [[nodiscard]] float work_slowdown(const Staff& staff);
+    [[nodiscard]] f32 work_slowdown(const Staff& staff);
 
     /// The chance, a second, that they stop to rest while they have nothing to do.
-    [[nodiscard]] float rest_chance(const Staff& staff);
+    [[nodiscard]] f32 rest_chance(const Staff& staff);
 
     /// Takes up the work the saved worker `saved` had done.
     void take_saved_work(Staff& staff, const save::model::Staff& saved);
@@ -69,8 +70,8 @@ namespace rct3::simulation::staff
     /// Whether their last thought was the one that made them quit: true once, however long they stay miserable.
     [[nodiscard]] bool quits(const Staff& staff);
 
-    inline constexpr float kRestSeconds = 20;   ///< A rest a lazy staff member takes
-    inline constexpr float kWatchSeconds = 6;   ///< Chosen by eye: how long a guard stops on their rounds to keep watch
-    inline constexpr float kWatchChance = 0.1f; ///< Chosen by eye: how often a guard stops so, at each path node
+    inline constexpr f32 kRestSeconds = 20;   ///< A rest a lazy staff member takes
+    inline constexpr f32 kWatchSeconds = 6;   ///< Chosen by eye: how long a guard stops on their rounds to keep watch
+    inline constexpr f32 kWatchChance = 0.1f; ///< Chosen by eye: how often a guard stops so, at each path node
 
 } // namespace rct3::simulation::staff

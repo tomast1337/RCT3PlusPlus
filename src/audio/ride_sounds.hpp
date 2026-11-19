@@ -9,6 +9,7 @@
 // goes, silent when it stands. The chain loop plays while any of the train is on a lift.
 #pragma once
 
+#include "core/types.hpp"
 #include "units/units.hpp"
 
 #include <cstddef>
@@ -18,7 +19,7 @@
 namespace rct3::audio
 {
 
-    enum class TrackSoundSet : std::uint8_t
+    enum class TrackSoundSet : u8
     {
         None, ///< Silent
         Steel,
@@ -32,10 +33,10 @@ namespace rct3::audio
         SafariTransport,
         ElephantTransport,
     };
-    inline constexpr std::size_t kTrackSoundSets = 11;
+    inline constexpr usize kTrackSoundSets = 11;
 
     /// The sounds of a set, as the set's overlay names them.
-    enum class TrackSound : std::uint8_t
+    enum class TrackSound : u8
     {
         Slow,
         Med,
@@ -48,11 +49,11 @@ namespace rct3::audio
         WaterSplash,
         WaterPlume,
     };
-    inline constexpr std::size_t kTrackSounds = 8;
+    inline constexpr usize kTrackSounds = 8;
 
     inline constexpr units::Distance kRideNear { 15 }; ///< A train's sounds are full loud this close
     inline constexpr units::Distance kRideFar { 180 }; ///< And gone this far
-    inline constexpr std::size_t kHeardTrains = 4;     ///< Nearest trains whose loops play, to spare voices
+    inline constexpr usize kHeardTrains = 4;           ///< Nearest trains whose loops play, to spare voices
 
     /// The overlay name of `set`, as in tracks/TrackSounds/<name>.common.ovl; empty for None.
     [[nodiscard]] std::string_view file_of(TrackSoundSet set);
@@ -69,7 +70,7 @@ namespace rct3::audio
     /// either its slow one.
     struct RunningMix
     {
-        float slow = 0, med = 0, fast = 0;
+        f32 slow = 0, med = 0, fast = 0;
     };
     /// Which running loops beside the slow one a set has.
     struct RunningLoops
@@ -77,14 +78,14 @@ namespace rct3::audio
         bool med = false;
         bool fast = false;
     };
-    [[nodiscard]] RunningMix running_mix(float speed, RunningLoops loops);
+    [[nodiscard]] RunningMix running_mix(f32 speed, RunningLoops loops);
 
     inline constexpr units::Distance kMusicNear { 15 }; ///< Chosen by ear: a ride's music is full loud this close to its entrance
     inline constexpr units::Distance kMusicFar { 90 };  ///< And gone this far, so a path between rides hears the nearer
-    inline constexpr std::size_t kHeardTracks = 3;      ///< Chosen by ear: the loudest tracks played at once, more is noise
+    inline constexpr usize kHeardTracks = 3;            ///< Chosen by ear: the loudest tracks played at once, more is noise
 
     /// How loud a ride's music is heard `away` from it, 0..1: full near, then falling off steeply at first and ever
     /// more gently to nothing far, as the square of the share of the way still to go.
-    [[nodiscard]] float ride_music_level(units::Distance away);
+    [[nodiscard]] f32 ride_music_level(units::Distance away);
 
 } // namespace rct3::audio

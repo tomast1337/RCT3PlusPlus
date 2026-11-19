@@ -2,6 +2,7 @@
 #include "ui/draw_list.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/shape.hpp"
 
 #include <algorithm>
@@ -17,40 +18,40 @@ namespace rct3::ui
     namespace
     {
 
-        float snap(float v)
+        f32 snap(f32 v)
         {
             return std::floor(v + 0.5f);
         }
 
-        Rect snapped(const Rect& r, float scale)
+        Rect snapped(const Rect& r, f32 scale)
         {
             return { snap(r.x0 * scale), snap(r.y0 * scale), snap(r.x1 * scale), snap(r.y1 * scale) };
         }
 
-        float lerp(float a, float b, float t)
+        f32 lerp(f32 a, f32 b, f32 t)
         {
             return a + (b - a) * t;
         }
 
-        Color lerp(Color a, Color b, float t)
+        Color lerp(Color a, Color b, f32 t)
         {
-            const auto mix = [t](std::uint8_t x, std::uint8_t y) { return static_cast<std::uint8_t>(std::lround(lerp(static_cast<float>(x), static_cast<float>(y), t))); };
+            const auto mix = [t](u8 x, u8 y) { return static_cast<u8>(std::lround(lerp(static_cast<f32>(x), static_cast<f32>(y), t))); };
             return { mix(a.r, b.r), mix(a.g, b.g), mix(a.b, b.b), mix(a.a, b.a) };
         }
 
         // Colour of the gradient at fractions (fx, fy) of the rectangle, measured from the top-left.
-        Color sample(const CornerColors& c, float fx, float fy)
+        Color sample(const CornerColors& c, f32 fx, f32 fy)
         {
             return lerp(lerp(c.top_left, c.top_right, fx), lerp(c.bottom_left, c.bottom_right, fx), fy);
         }
 
-        std::array<std::uint8_t, 4> packed(Color c)
+        std::array<u8, 4> packed(Color c)
         {
             return { c.r, c.g, c.b, c.a };
         }
 
         // Two triangles over a quad's corners, clockwise from the top-left.
-        constexpr std::array<std::uint32_t, 6> kQuadCorners = { 0, 1, 2, 0, 2, 3 };
+        constexpr std::array<u32, 6> kQuadCorners = { 0, 1, 2, 0, 2, 3 };
 
     } // namespace
 
@@ -94,16 +95,16 @@ namespace rct3::ui
 
         // Where the visible part starts and ends as fractions of the whole rectangle; texture coordinates
         // and colours are cut at the same fractions so the visible part looks as it did uncut.
-        const float fx0 = (visible.x0 - full.x0) / full.width();
-        const float fx1 = (visible.x1 - full.x0) / full.width();
-        const float fy0 = (visible.y0 - full.y0) / full.height();
-        const float fy1 = (visible.y1 - full.y0) / full.height();
-        const float u0 = lerp(uv.x0, uv.x1, fx0);
-        const float u1 = lerp(uv.x0, uv.x1, fx1);
-        const float v0 = lerp(uv.y0, uv.y1, fy0);
-        const float v1 = lerp(uv.y0, uv.y1, fy1);
+        const f32 fx0 = (visible.x0 - full.x0) / full.width();
+        const f32 fx1 = (visible.x1 - full.x0) / full.width();
+        const f32 fy0 = (visible.y0 - full.y0) / full.height();
+        const f32 fy1 = (visible.y1 - full.y0) / full.height();
+        const f32 u0 = lerp(uv.x0, uv.x1, fx0);
+        const f32 u1 = lerp(uv.x0, uv.x1, fx1);
+        const f32 v0 = lerp(uv.y0, uv.y1, fy0);
+        const f32 v1 = lerp(uv.y0, uv.y1, fy1);
 
-        const auto base = static_cast<std::uint32_t>(vertices_.size());
+        const auto base = static_cast<u32>(vertices_.size());
         vertices_.push_back({ visible.x0, visible.y0, packed(sample(colors, fx0, fy0)), u0, v0 });
         vertices_.push_back({ visible.x1, visible.y0, packed(sample(colors, fx1, fy0)), u1, v0 });
         vertices_.push_back({ visible.x1, visible.y1, packed(sample(colors, fx1, fy1)), u1, v1 });
@@ -115,7 +116,7 @@ namespace rct3::ui
     void DrawList::disc_image(const Rect& rect, TextureId texture, const Rect& uv, Color tint)
     {
         // Enough sides that the edge looks round at the sizes the interface draws.
-        constexpr std::int32_t kSides = 48;
+        constexpr i32 kSides = 48;
         const Rect full = snapped(rect, scale_);
         if (full.empty())
             return;
@@ -126,16 +127,16 @@ namespace rct3::ui
                 return;
         }
         const auto colour = packed(tint);
-        const auto at = [&](float fx, float fy) { return Vertex { lerp(full.x0, full.x1, fx), lerp(full.y0, full.y1, fy), colour, lerp(uv.x0, uv.x1, fx), lerp(uv.y0, uv.y1, fy) }; };
-        const auto base = static_cast<std::uint32_t>(vertices_.size());
+        const auto at = [&](f32 fx, f32 fy) { return Vertex { lerp(full.x0, full.x1, fx), lerp(full.y0, full.y1, fy), colour, lerp(uv.x0, uv.x1, fx), lerp(uv.y0, uv.y1, fy) }; };
+        const auto base = static_cast<u32>(vertices_.size());
         vertices_.push_back(at(0.5f, 0.5f));
-        for (std::int32_t i = 0; i < kSides; ++i)
+        for (i32 i = 0; i < kSides; ++i)
         {
-            const float angle = 2 * std::numbers::pi_v<float> * static_cast<float>(i) / kSides;
+            const f32 angle = 2 * std::numbers::pi_v<f32> * static_cast<f32>(i) / kSides;
             vertices_.push_back(at(0.5f + 0.5f * std::cos(angle), 0.5f + 0.5f * std::sin(angle)));
         }
-        std::array<std::uint32_t, 3 * kSides> fan { };
-        for (std::uint32_t i = 0; i < kSides; ++i)
+        std::array<u32, 3 * kSides> fan { };
+        for (u32 i = 0; i < kSides; ++i)
         {
             fan[3 * i] = 0;
             fan[3 * i + 1] = 1 + i;
@@ -149,10 +150,10 @@ namespace rct3::ui
         const ShapeMetrics m = shape_metrics(shape, scale_);
         if (m.half_width <= 0 || m.half_height <= 0)
             return;
-        const float cx = (shape.rect.x0 + shape.rect.x1) / 2 * scale_;
-        const float cy = (shape.rect.y0 + shape.rect.y1) / 2 * scale_;
+        const f32 cx = (shape.rect.x0 + shape.rect.x1) / 2 * scale_;
+        const f32 cy = (shape.rect.y0 + shape.rect.y1) / 2 * scale_;
         // Out to whole pixels past the soft edge, so no coloured pixel is cut off.
-        const float margin = shape_margin(m);
+        const f32 margin = shape_margin(m);
         const Rect full { std::floor(cx - m.half_width - margin), std::floor(cy - m.half_height - margin), std::ceil(cx + m.half_width + margin), std::ceil(cy + m.half_height + margin) };
         const Rect visible = clips_.empty() ? full : intersect(full, clips_.back());
         if (visible.empty())
@@ -167,7 +168,7 @@ namespace rct3::ui
         v.light = packed(shape.light);
         v.cut = { m.cut_x, m.cut_y, m.cut_radius, 0 };
         v.fill = { m.fill_from, m.fill_to };
-        const auto base = static_cast<std::uint32_t>(shape_vertices_.size());
+        const auto base = static_cast<u32>(shape_vertices_.size());
         for (const auto& [x, y] : { std::pair { visible.x0, visible.y0 }, { visible.x1, visible.y0 }, { visible.x1, visible.y1 }, { visible.x0, visible.y1 } })
         {
             v.x = x;
@@ -178,9 +179,9 @@ namespace rct3::ui
         add_indices(BatchKind::Shapes, 0, base, kQuadCorners);
     }
 
-    void DrawList::polygon(std::span<const std::array<float, 2>> corners, Color color)
+    void DrawList::polygon(std::span<const std::array<f32, 2>> corners, Color color)
     {
-        using Corner = std::array<float, 2>;
+        using Corner = std::array<f32, 2>;
         std::vector<Corner> kept;
         kept.reserve(corners.size());
         for (const Corner& c : corners)
@@ -189,10 +190,10 @@ namespace rct3::ui
         {
             // Cut by each side of the clip in turn, keeping the part inside it.
             const Rect& clip = clips_.back();
-            const auto cut = [&](std::int32_t axis, float edge, bool keep_below) {
+            const auto cut = [&](i32 axis, f32 edge, bool keep_below) {
                 std::vector<Corner> out;
                 const auto inside = [&](const Corner& c) { return keep_below ? c.at(axis) <= edge : c.at(axis) >= edge; };
-                for (std::size_t i = 0; i < kept.size(); ++i)
+                for (usize i = 0; i < kept.size(); ++i)
                 {
                     const Corner& a = kept[i];
                     const Corner& b = kept[(i + 1) % kept.size()];
@@ -200,7 +201,7 @@ namespace rct3::ui
                         out.push_back(a);
                     if (inside(a) != inside(b))
                     {
-                        const float t = (edge - a.at(axis)) / (b.at(axis) - a.at(axis));
+                        const f32 t = (edge - a.at(axis)) / (b.at(axis) - a.at(axis));
                         out.push_back({ lerp(a[0], b[0], t), lerp(a[1], b[1], t) });
                     }
                 }
@@ -213,23 +214,23 @@ namespace rct3::ui
         }
         if (kept.size() < 3)
             return;
-        const auto base = static_cast<std::uint32_t>(vertices_.size());
+        const auto base = static_cast<u32>(vertices_.size());
         for (const Corner& c : kept)
             vertices_.push_back({ c[0], c[1], packed(color), 0, 0 });
         // A fan from the first corner covers a convex polygon.
-        std::vector<std::uint32_t> fan;
-        for (std::uint32_t i = 1; i + 1 < kept.size(); ++i)
+        std::vector<u32> fan;
+        for (u32 i = 1; i + 1 < kept.size(); ++i)
             fan.insert(fan.end(), { 0, i, i + 1 });
         add_indices(BatchKind::Quads, 0, base, fan);
     }
 
-    void DrawList::add_indices(BatchKind kind, TextureId texture, std::uint32_t base, std::span<const std::uint32_t> corners)
+    void DrawList::add_indices(BatchKind kind, TextureId texture, u32 base, std::span<const u32> corners)
     {
         if (batches_.empty() || batches_.back().texture != texture || batches_.back().kind != kind)
-            batches_.push_back({ texture, static_cast<std::uint32_t>(indices_.size()), 0, kind });
-        for (const std::uint32_t i : corners)
+            batches_.push_back({ texture, static_cast<u32>(indices_.size()), 0, kind });
+        for (const u32 i : corners)
             indices_.push_back(base + i);
-        batches_.back().index_count += static_cast<std::uint32_t>(corners.size());
+        batches_.back().index_count += static_cast<u32>(corners.size());
     }
 
     bool DrawList::push_clip(const Rect& rect)

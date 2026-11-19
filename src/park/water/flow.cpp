@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/water/flow.hpp"
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/texture/pixels.hpp"
 #include "ovl/texture/texture.hpp"
@@ -17,9 +18,9 @@ namespace rct3::park::water
     namespace
     {
 
-        constexpr std::int32_t kSteps = 4; ///< Samples to each part of the splines
+        constexpr i32 kSteps = 4; ///< Samples to each part of the splines
 
-        glm::vec3 vec(const std::array<float, 3>& p)
+        glm::vec3 vec(const std::array<f32, 3>& p)
         {
             return { p[0], p[1], p[2] };
         }
@@ -32,48 +33,48 @@ namespace rct3::park::water
             return std::nullopt;
         std::vector<glm::vec3> lefts;
         std::vector<glm::vec3> rights;
-        for (std::size_t s = 0; s + 1 < left.nodes.size(); ++s)
+        for (usize s = 0; s + 1 < left.nodes.size(); ++s)
         {
-            for (std::int32_t k = s == 0 ? 0 : 1; k <= kSteps; ++k)
+            for (i32 k = s == 0 ? 0 : 1; k <= kSteps; ++k)
             {
-                const float t = static_cast<float>(k) / kSteps;
+                const f32 t = static_cast<f32>(k) / kSteps;
                 lefts.push_back(vec(ovl::spline_point(left, s, t)));
                 rights.push_back(vec(ovl::spline_point(right, s, t)));
             }
         }
-        std::vector<float> along(lefts.size(), 0.0f);
-        for (std::size_t i = 1; i < lefts.size(); ++i)
+        std::vector<f32> along(lefts.size(), 0.0f);
+        for (usize i = 1; i < lefts.size(); ++i)
             along[i] = along[i - 1] + glm::distance((lefts[i] + rights[i]) / 2.0f, (lefts[i - 1] + rights[i - 1]) / 2.0f);
         if (along.back() <= 0)
             return std::nullopt;
         // A whole number of repeats, so the picture meets the next piece's.
-        const float repeats = std::max(1.0f, std::round(along.back() / kFlowRepeat));
+        const f32 repeats = std::max(1.0f, std::round(along.back() / kFlowRepeat));
         // Files list the water of some pieces from the track's far end (all right-hand curves, among others).
         const bool backwards = !track.nodes.empty() && glm::distance(lefts.back(), vec(track.nodes.front().position)) < glm::distance(lefts.front(), vec(track.nodes.front().position));
         object::ModelPart part;
         part.texture = std::move(texture);
         part.blend = object::PartBlend::Blended;
         part.chain = true;
-        for (std::size_t i = 0; i < lefts.size(); ++i)
+        for (usize i = 0; i < lefts.size(); ++i)
         {
-            const std::size_t next = std::min(i + 1, lefts.size() - 1);
-            const std::size_t back = next == i ? i - 1 : i;
+            const usize next = std::min(i + 1, lefts.size() - 1);
+            const usize back = next == i ? i - 1 : i;
             glm::vec3 normal = glm::cross(lefts[next] + rights[next] - lefts[back] - rights[back], rights[i] - lefts[i]);
             if (glm::length(normal) > 0)
                 normal = glm::normalize(normal);
             if (normal.y < 0)
                 normal = -normal;
-            const float v = (backwards ? along.back() - along[i] : along[i]) / along.back() * repeats;
+            const f32 v = (backwards ? along.back() - along[i] : along[i]) / along.back() * repeats;
             part.vertices.push_back({ lefts[i], normal, { 0.0f, v } });
             part.vertices.push_back({ rights[i], normal, { 1.0f, v } });
             // Samples are spaced evenly between nodes, so a sample's place counts nodes.
-            const float node = static_cast<float>(i) / static_cast<float>(lefts.size() - 1);
+            const f32 node = static_cast<f32>(i) / static_cast<f32>(lefts.size() - 1);
             part.flow.insert(part.flow.end(), 2, backwards ? 1 - node : node);
         }
-        part.flow_last = 1.0f / static_cast<float>(left.nodes.size() - 1);
-        for (std::uint32_t i = 0; i + 1 < lefts.size(); ++i)
+        part.flow_last = 1.0f / static_cast<f32>(left.nodes.size() - 1);
+        for (u32 i = 0; i + 1 < lefts.size(); ++i)
         {
-            const std::uint32_t a = i * 2;
+            const u32 a = i * 2;
             part.indices.insert(part.indices.end(), { a, a + 1, a + 2, a + 1, a + 3, a + 2 });
         }
         return part;
@@ -90,14 +91,14 @@ namespace rct3::park::water
         const glm::vec3 start = vec(track.nodes.front().position);
         if (glm::distance(high->position, start) >= glm::distance(low->position, start))
             return;
-        const float ends = low->uv.y + high->uv.y;
+        const f32 ends = low->uv.y + high->uv.y;
         for (object::ModelVertex& v : sheet.vertices)
             v.uv.y = ends - v.uv.y;
     }
 
     object::FlowFades flow_fades(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const std::function<bool(save::model::RideIndex)>& pool_slides)
     {
-        std::map<std::uint64_t, bool> wet;
+        std::map<u64, bool> wet;
         for (const save::model::Ride& ride : rides.rides)
             if (ride.track)
                 for (const save::model::TrackPiece& piece : ride.track->pieces)
@@ -107,14 +108,14 @@ namespace rct3::park::water
                 if (const auto model = models.find(object::model_ref(o)); model != models.end())
                     at->second = model->second.flows;
         object::FlowFades fades;
-        for (std::size_t r = 0; r < rides.rides.size(); ++r)
+        for (usize r = 0; r < rides.rides.size(); ++r)
         {
             if (!rides.rides[r].track)
                 continue;
             const save::model::Track& track = *rides.rides[r].track;
-            const std::size_t count = track.pieces.size();
-            const auto wet_at = [&](std::size_t i) { return track.pieces[i].scenery != 0 && wet[track.pieces[i].scenery]; };
-            for (std::size_t i = 0; i < count; ++i)
+            const usize count = track.pieces.size();
+            const auto wet_at = [&](usize i) { return track.pieces[i].scenery != 0 && wet[track.pieces[i].scenery]; };
+            for (usize i = 0; i < count; ++i)
             {
                 if (!wet_at(i))
                     continue;
@@ -133,9 +134,9 @@ namespace rct3::park::water
         return fades;
     }
 
-    float flow_alpha(const object::FlowFade& fade, float along, float last)
+    f32 flow_alpha(const object::FlowFade& fade, f32 along, f32 last)
     {
-        float alpha = 1;
+        f32 alpha = 1;
         if (fade.in && fade.out)
             alpha = 1 - std::abs(2 * along - 1);
         else if (fade.in)
@@ -147,7 +148,7 @@ namespace rct3::park::water
         return alpha;
     }
 
-    math::TextureShift flow_scroll(float seconds, std::int32_t run)
+    math::TextureShift flow_scroll(f32 seconds, i32 run)
     {
         // The picture's v goes down by the distance flowed, so it is read further back and moves on along v.
         return math::TextureShift::by(seconds * kFlowSpeed / kFlowRepeat * (run < 0 ? 1.0f : -1.0f));

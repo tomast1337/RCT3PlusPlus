@@ -2,6 +2,7 @@
 #include "ovl/flic.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -15,7 +16,7 @@ using rct3::ovl::read_flics;
 namespace
 {
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
@@ -23,18 +24,18 @@ namespace
 
     void text(std::vector<std::byte>& out, const std::string& s)
     {
-        append_u16(out, static_cast<std::uint16_t>(s.size()));
+        append_u16(out, static_cast<u16>(s.size()));
         for (char c : s)
             out.push_back(static_cast<std::byte>(c));
     }
 
     // A v1 file with one loader declared in its header, whose rows `rows` are in the loader table, an item
     // block at address 0 and `chunks` after the relocation table.
-    std::vector<std::byte> make_file(std::uint32_t revision, const std::vector<std::byte>& item, const std::vector<std::byte>& rows, const std::vector<std::byte>& chunks, const std::string& tag = "flic")
+    std::vector<std::byte> make_file(u32 revision, const std::vector<std::byte>& item, const std::vector<std::byte>& rows, const std::vector<std::byte>& chunks, const std::string& tag = "flic")
     {
         auto file = build_file(1, { { item }, { }, { { }, rows } }, { }, chunks);
         // Header: magic, flags and padding, version, two empty reference lists, then the loader count.
-        constexpr std::size_t kLoaderCount = 20;
+        constexpr usize kLoaderCount = 20;
         file[kLoaderCount] = std::byte { 1 };
         std::vector<std::byte> declaration;
         text(declaration, "FGDK");
@@ -45,7 +46,7 @@ namespace
         return file;
     }
 
-    std::vector<std::byte> row(std::uint32_t data, std::uint32_t chunk_count = 1)
+    std::vector<std::byte> row(u32 data, u32 chunk_count = 1)
     {
         std::vector<std::byte> out;
         words(out, { 0, data, chunk_count, 0, 0 });
@@ -55,15 +56,15 @@ namespace
     std::vector<std::byte> chunk(const std::vector<std::byte>& payload)
     {
         std::vector<std::byte> out;
-        append_u32(out, static_cast<std::uint32_t>(payload.size()));
+        append_u32(out, static_cast<u32>(payload.size()));
         out.insert(out.end(), payload.begin(), payload.end());
         return out;
     }
 
-    std::vector<std::byte> item(std::uint32_t frames, float rate)
+    std::vector<std::byte> item(u32 frames, f32 rate)
     {
         std::vector<std::byte> out;
-        words(out, { 0, frames, std::bit_cast<std::uint32_t>(rate) });
+        words(out, { 0, frames, std::bit_cast<u32>(rate) });
         return out;
     }
 
@@ -75,7 +76,7 @@ namespace
     }
 
     // A 16 x 8 block compressed image with 16-byte blocks, one level: header, 4 x 2 blocks and trailing padding.
-    std::vector<std::byte> image_chunk(std::uint32_t format = 19, std::uint32_t row_bytes = 64)
+    std::vector<std::byte> image_chunk(u32 format = 19, u32 row_bytes = 64)
     {
         std::vector<std::byte> out;
         words(out, { format, 16, 8, 1, 16, 8, row_bytes, 2 });

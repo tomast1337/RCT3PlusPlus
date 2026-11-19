@@ -12,6 +12,7 @@
 #pragma once
 
 #include "config/game/install.hpp"
+#include "core/types.hpp"
 #include "park/build_catalogue.hpp"
 #include "save/model/design.hpp"
 #include "save/model/park.hpp"
@@ -44,16 +45,16 @@ namespace rct3::scene
     {
         std::shared_future<std::vector<rct3::park::BuildItem>> items;
         rct3::park::BuildOffer offer;
-        std::optional<ui::Point> size;                            ///< Of the last list resized, for the next one opened
-        std::set<std::string, std::less<>> kinds_off;             ///< Object filters turned off; the lists share them
-        std::set<std::string, std::less<>> styles_off;            ///< Theme filters turned off
-        std::set<std::uint32_t> packs_only;                       ///< Pack filters turned on
-        std::optional<rct3::park::BuildItem> asked;               ///< Picked by a script, taken as a pick from a list
-        bool asked_designs = false;                               ///< The script asks for the saved designs, as a list does
-        bool offer_designs = false;                               ///< The last pick offers the ride's saved designs
-        std::shared_future<std::vector<DesignFile>> designs;      ///< In the order of their folders, then their names
-        bool kinds_named = false;                                 ///< Whether the strings know each kind's name by its symbol
-        std::optional<std::pair<std::size_t, float>> researching; ///< The item under research, by its index, and how far it has got
+        std::optional<ui::Point> size;                       ///< Of the last list resized, for the next one opened
+        std::set<std::string, std::less<>> kinds_off;        ///< Object filters turned off; the lists share them
+        std::set<std::string, std::less<>> styles_off;       ///< Theme filters turned off
+        std::set<u32> packs_only;                            ///< Pack filters turned on
+        std::optional<rct3::park::BuildItem> asked;          ///< Picked by a script, taken as a pick from a list
+        bool asked_designs = false;                          ///< The script asks for the saved designs, as a list does
+        bool offer_designs = false;                          ///< The last pick offers the ride's saved designs
+        std::shared_future<std::vector<DesignFile>> designs; ///< In the order of their folders, then their names
+        bool kinds_named = false;                            ///< Whether the strings know each kind's name by its symbol
+        std::optional<std::pair<usize, f32>> researching;    ///< The item under research, by its index, and how far it has got
     };
 
     /// Starts reading the install's items. `content`: what the park records of the items it offers, if
@@ -70,7 +71,7 @@ namespace rct3::scene
     /// Opens the list of `item` above `bar`, the tool bar, in the middle of its shown buttons, in place of any
     /// list open before, titled with the help of `button`, the menu button that asked for it, with the item
     /// numbered `marked` among the items marked (BuildPicker::show_item). False for an item that has no list.
-    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::screens::park_view::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency, std::optional<std::size_t> marked = std::nullopt);
+    bool open_build_list(BuildMenus& menus, ui::Widget& root, ui::screens::park_view::ToolItem item, const ui::Widget& button, const ui::Widget& bar, const ui::StringTable& strings, const ui::Palette& palette, const ui::Currency& currency, std::optional<usize> marked = std::nullopt);
 
     /// Closes the open list, if one is.
     void close_build_list(ui::Widget& root);

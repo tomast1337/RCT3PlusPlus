@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/skin/set.hpp"
 
+#include "core/types.hpp"
 #include "ovl/gui_skin.hpp"
 #include "ovl/texture/pixels.hpp"
 #include "ovl/texture/texture.hpp"
@@ -72,8 +73,8 @@ namespace rct3::ui::skin
                 ++set.skipped;
                 continue;
             }
-            const auto w = static_cast<float>(it->second.width);
-            const auto h = static_cast<float>(it->second.height);
+            const auto w = static_cast<f32>(it->second.width);
+            const auto h = static_cast<f32>(it->second.height);
             set.skins.emplace(std::string(name), NamedSkin { { ovl::GuiSkinKind::Rect, { 0, w }, { 0, h }, 2, 2 }, std::string(name) });
         }
         return set;

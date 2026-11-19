@@ -2,6 +2,7 @@
 #include "ovl/piece_set.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -17,13 +18,13 @@ namespace
     constexpr char kNameData[] = "Road:ptd\0Lane:qtd\0Bath:pty\0Pen:enc\0Own\0PieceA\0PieceB\0Label:txt\0Icon:gsi\0Ground:ftx\0Cat:rcg\0"
                                  "Spl1:spl\0Spl2:spl\0V0:svd\0V1:svd\0ItemName:txt";
     const std::string kNames(kNameData, sizeof kNameData);
-    const std::uint32_t kBase = (static_cast<std::uint32_t>(sizeof kNameData) + 3) & ~3u;
+    const u32 kBase = (static_cast<u32>(sizeof kNameData) + 3) & ~3u;
 
-    std::uint32_t name_at(const std::string& needle)
+    u32 name_at(const std::string& needle)
     {
         const auto at = kNames.find(needle);
         REQUIRE(at != std::string::npos);
-        return static_cast<std::uint32_t>(at);
+        return static_cast<u32>(at);
     }
 
     std::vector<std::byte> names()
@@ -44,10 +45,10 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> reference(std::uint32_t location, const std::string& name)
+    std::vector<std::byte> reference(u32 location, const std::string& name)
     {
         std::vector<std::byte> out;
-        for (auto v : { location, name_at(name), std::uint32_t { 0 }, std::uint32_t { 0 } })
+        for (auto v : { location, name_at(name), u32 { 0 }, u32 { 0 } })
             append_u32(out, v);
         return out;
     }
@@ -62,18 +63,18 @@ namespace
 
     struct Words
     {
-        std::vector<std::uint32_t> w;
-        explicit Words(std::size_t bytes)
+        std::vector<u32> w;
+        explicit Words(usize bytes)
             : w(bytes / 4, 0)
         {
         }
-        void set(std::size_t at, std::uint32_t v)
+        void set(usize at, u32 v)
         {
             w.at(at / 4) = v;
         }
-        void real(std::size_t at, float v)
+        void real(usize at, f32 v)
         {
-            set(at, std::bit_cast<std::uint32_t>(v));
+            set(at, std::bit_cast<u32>(v));
         }
         std::vector<std::byte> bytes() const
         {
@@ -86,12 +87,12 @@ namespace
 
     // A scenery item structure of the base size with the given number of visual references. Item `at`
     // starts at byte offset `at` of the block. A second reference is stored right after the structure.
-    void put_item(Words& w, std::size_t at, std::uint32_t flags, std::uint32_t visuals, std::uint32_t version = 0)
+    void put_item(Words& w, usize at, u32 flags, u32 visuals, u32 version = 0)
     {
         w.set(at + 4, flags);
         w.set(at + 8, version << 16);
         w.set(at + 0x50, visuals);
-        w.set(at + 0x54, kBase + static_cast<std::uint32_t>(at) + 0xd4);
+        w.set(at + 0x54, kBase + static_cast<u32>(at) + 0xd4);
     }
 
     Overlay make(const std::vector<std::byte>& data, const std::string& symbol_name, const std::vector<std::byte>& refs)
@@ -106,9 +107,9 @@ namespace
 TEST_CASE("path types in the base layout")
 {
     // Header 0x150, one research row (12 bytes), item with two visuals (220 bytes), plain item (216 bytes).
-    constexpr std::size_t kRow = 0x150;
-    constexpr std::size_t kFirst = kRow + 12;
-    constexpr std::size_t kSecond = kFirst + 216 + 4;
+    constexpr usize kRow = 0x150;
+    constexpr usize kFirst = kRow + 12;
+    constexpr usize kSecond = kFirst + 216 + 4;
     Words w(kSecond + 216);
     w.set(0, 1);
     w.set(4, name_at("Own"));
@@ -148,7 +149,7 @@ TEST_CASE("path types in the base layout")
 
 TEST_CASE("path types in the longer layout have no research table")
 {
-    constexpr std::size_t kHeader = 0x25c;
+    constexpr usize kHeader = 0x25c;
     Words w(kHeader + 232);
     w.set(0, 0x01000003u);
     w.set(4, name_at("Own"));
@@ -171,7 +172,7 @@ TEST_CASE("path types in the longer layout have no research table")
 
 TEST_CASE("queue types")
 {
-    constexpr std::size_t kItems = 0x34;
+    constexpr usize kItems = 0x34;
     Words w(kItems + 216);
     w.set(0, name_at("Own"));
     w.set(0x10, name_at("PieceA"));
@@ -195,13 +196,13 @@ TEST_CASE("queue types")
 
 TEST_CASE("pool types")
 {
-    constexpr std::size_t kItems = 0x258;
+    constexpr usize kItems = 0x258;
     Words w(kItems + 232);
     w.set(0, name_at("Own"));
     w.set(0xc, name_at("PieceA"));
     w.set(0xc + 88 * 4, name_at("PieceB"));
     w.set(0x170 + 3 * 4, 2000);
-    w.set(0x170 + 5 * 4, static_cast<std::uint32_t>(-2000));
+    w.set(0x170 + 5 * 4, static_cast<u32>(-2000));
     w.real(0x1b8, 0.5f);
     put_item(w, kItems, 0x40, 1, 1);
     const auto refs = concat({ reference(kBase + 0x1c8, "Spl1:spl"), reference(kBase + 0x1cc, "Spl2:spl"), reference(kBase + 4, "Label:txt") });
@@ -227,13 +228,13 @@ TEST_CASE("pool types")
 
 TEST_CASE("enclosure types")
 {
-    constexpr std::size_t kItems = 0x5c;
+    constexpr usize kItems = 0x5c;
     Words w(kItems + 240);
     w.set(0, name_at("Own"));
     w.set(0xc, name_at("PieceA"));
     w.set(0x2c, name_at("PieceB"));
     w.set(0x30, 2000);
-    w.set(0x34, static_cast<std::uint32_t>(-1700));
+    w.set(0x34, static_cast<u32>(-1700));
     w.real(0x50, 3.0f);
     put_item(w, kItems, 0x2040, 1, 2);
     const auto refs = concat({ reference(kBase + 0x40, "Spl1:spl"), reference(kBase + 0x4c, "Spl2:spl") });

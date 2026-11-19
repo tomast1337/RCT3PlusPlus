@@ -15,6 +15,7 @@
 // round it. Quit and Escape only ask: the owner confirms and leaves the tutorial.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/tutorial.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/label.hpp"
@@ -33,7 +34,7 @@ namespace rct3::ui::screens::tutorial
         std::u16string title;
         std::u16string text;
     };
-    [[nodiscard]] TutorialStepText tutorial_step_text(const StringTable& strings, const save::model::TutorialScript& script, std::size_t index);
+    [[nodiscard]] TutorialStepText tutorial_step_text(const StringTable& strings, const save::model::TutorialScript& script, usize index);
 
     /// The tutorial's own name, in the language where the strings have it.
     [[nodiscard]] std::u16string tutorial_title(const StringTable& strings, const save::model::TutorialScript& script);
@@ -48,18 +49,18 @@ namespace rct3::ui::screens::tutorial
         font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
         Rect step_line { 67, 46, 13, 21 }; ///< Left inset, top from the window's top, right inset, height
-        float min_width = 282;             ///< Of the window
-        float min_page_width = 281;        ///< A step may ask for a wider page, not a narrower one
-        float min_page_height = 220;
-        float text_top = 5;  ///< From the page's top to its text
-        float text_side = 3; ///< Each side of the text inside the page
-        float text_gap = 15; ///< Between the text's last line and the buttons
+        f32 min_width = 282;               ///< Of the window
+        f32 min_page_width = 281;          ///< A step may ask for a wider page, not a narrower one
+        f32 min_page_height = 220;
+        f32 text_top = 5;  ///< From the page's top to its text
+        f32 text_side = 3; ///< Each side of the text inside the page
+        f32 text_gap = 15; ///< Between the text's last line and the buttons
         Point button_size { 90, 30 };
-        float screen_margin = 24; ///< From the desktop's edges, for steps that go in a corner
+        f32 screen_margin = 24; ///< From the desktop's edges, for steps that go in a corner
     };
 
     /// Where a step's window goes on the desktop.
-    enum class TutorialGuidePlace : std::uint8_t
+    enum class TutorialGuidePlace : u8
     {
         Centre,
         TopRight,
@@ -67,7 +68,7 @@ namespace rct3::ui::screens::tutorial
     };
 
     /// The place a step stores as a number; numbers without a meaning go in the middle.
-    [[nodiscard]] TutorialGuidePlace tutorial_guide_place(std::int32_t stored);
+    [[nodiscard]] TutorialGuidePlace tutorial_guide_place(i32 stored);
 
     /// Sizes of the window for one step: the page holds the text and the buttons.
     struct TutorialGuideSize
@@ -77,9 +78,9 @@ namespace rct3::ui::screens::tutorial
     };
     /// For a step that asks for a page `stored_width` wide (0 or less when it does not say) whose text is
     /// `text_height` tall when wrapped at the page's text width.
-    [[nodiscard]] TutorialGuideSize tutorial_guide_size(const TutorialGuideStyle& style, float stored_width, float text_height);
+    [[nodiscard]] TutorialGuideSize tutorial_guide_size(const TutorialGuideStyle& style, f32 stored_width, f32 text_height);
     /// Where the text of a page `page_width` wide wraps.
-    [[nodiscard]] float tutorial_guide_text_width(const TutorialGuideStyle& style, float page_width);
+    [[nodiscard]] f32 tutorial_guide_text_width(const TutorialGuideStyle& style, f32 page_width);
 
     /// A window of `size` at `place` on the desktop.
     [[nodiscard]] Placement tutorial_guide_placement(const TutorialGuideStyle& style, TutorialGuidePlace place, Point size);
@@ -90,11 +91,11 @@ namespace rct3::ui::screens::tutorial
         /// Shows step one of `script`.
         TutorialGuide(std::string name, const TutorialGuideStyle& style, const StringTable& strings, save::model::TutorialScript script);
 
-        [[nodiscard]] std::size_t step() const
+        [[nodiscard]] usize step() const
         {
             return step_;
         }
-        [[nodiscard]] std::size_t steps() const
+        [[nodiscard]] usize steps() const
         {
             return script_.steps.size();
         }
@@ -125,8 +126,8 @@ namespace rct3::ui::screens::tutorial
         void update(const UpdateContext& context) override;
 
     private:
-        void show(std::size_t index);
-        void fit(float text_height, bool measured);
+        void show(usize index);
+        void fit(f32 text_height, bool measured);
 
         TutorialGuideStyle style_;
         const StringTable& strings_;
@@ -135,7 +136,7 @@ namespace rct3::ui::screens::tutorial
         widgets::Label* text_ = nullptr;
         widgets::Button* continue_ = nullptr;
         widgets::Button* quit_ = nullptr;
-        std::size_t step_ = 0;
+        usize step_ = 0;
         Point size_;            // Of the window as last fitted
         bool to_place_ = false; // A new step goes to its place once its text has been measured
         bool quit_out_ = false;

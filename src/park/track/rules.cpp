@@ -2,6 +2,7 @@
 #include "park/track/rules.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "strings/ascii.hpp"
@@ -17,11 +18,11 @@ namespace rct3::park::track
     namespace
     {
         // Bits of a ride file's attraction flags.
-        constexpr std::uint32_t kNeverTested = 0x10 | 0x4000;
-        constexpr std::uint32_t kLapless = 0x10; ///< Of the two, the one golf, rivers and slides carry
-        constexpr std::uint32_t kMayBeSplit = 0x200;
-        constexpr std::uint32_t kOnePiece = 0x400;
-        constexpr std::uint32_t kPoolRide = 0x1000;
+        constexpr u32 kNeverTested = 0x10 | 0x4000;
+        constexpr u32 kLapless = 0x10; ///< Of the two, the one golf, rivers and slides carry
+        constexpr u32 kMayBeSplit = 0x200;
+        constexpr u32 kOnePiece = 0x400;
+        constexpr u32 kPoolRide = 0x1000;
 
         PieceTest piece_test(const ovl::PieceTest& t)
         {
@@ -30,7 +31,7 @@ namespace rct3::park::track
         }
 
         /// Whether the piece at `at` of `track` passes `test`.
-        bool passes(std::span<const PieceShape> pieces, std::span<const LaidPiece> track, std::size_t at, const PieceTest& test, bool circuit)
+        bool passes(std::span<const PieceShape> pieces, std::span<const LaidPiece> track, usize at, const PieceTest& test, bool circuit)
         {
             const PieceRecord& r = pieces[track[at].index].record;
             bool named = true;
@@ -143,7 +144,7 @@ namespace rct3::park::track
         return { };
     }
 
-    std::optional<std::string> open_refusal(const save::model::Ride& ride, const TrackRules& rules, save::model::AttractionState state, bool editing, std::optional<const TrackCourse&> course, std::size_t pool_joined)
+    std::optional<std::string> open_refusal(const save::model::Ride& ride, const TrackRules& rules, save::model::AttractionState state, bool editing, std::optional<const TrackCourse&> course, usize pool_joined)
     {
         if (state == save::model::AttractionState::Closed || ride.kind == save::model::RideKind::Special)
             return std::nullopt;
@@ -153,7 +154,7 @@ namespace rct3::park::track
         const bool climbed = course && !course->climbs.empty();
         if (ride.kind == save::model::RideKind::Tracked)
         {
-            const std::size_t pieces = ride.track ? ride.track->pieces.size() : 0;
+            const usize pieces = ride.track ? ride.track->pieces.size() : 0;
             if (ride.track && ride.track->segments.size() > 1 && !rules.may_be_split && ride.mode != save::model::OperatingMode::WaterTransport)
                 return "TrackedRideIsDisjoint";
             // A track being built has its station pieces before the park keeps its stations.
@@ -177,10 +178,10 @@ namespace rct3::park::track
         // A test run carries no riders, so only opening wants the doors.
         if (test || climbed)
             return std::nullopt;
-        const auto door = [&](std::uint32_t rule, auto built, std::string_view which) -> std::optional<std::string> {
-            const auto placed = rules.pool_ride ? pool_joined : static_cast<std::size_t>(std::ranges::count_if(ride.stations, built));
+        const auto door = [&](u32 rule, auto built, std::string_view which) -> std::optional<std::string> {
+            const auto placed = rules.pool_ride ? pool_joined : static_cast<usize>(std::ranges::count_if(ride.stations, built));
             // A station built with no door yet is kept with the track's course, not among the ride's stations.
-            const std::size_t stations = std::max(ride.stations.size(), course ? station_runs(*course).size() + course->other_stations.size() : 0);
+            const usize stations = std::max(ride.stations.size(), course ? station_runs(*course).size() + course->other_stations.size() : 0);
             const bool enough = rule == 0 ? placed >= stations : rule == 2 || rule == 3 ? placed > 0 : true;
             if (enough)
                 return std::nullopt;
@@ -203,12 +204,12 @@ namespace rct3::park::track
     {
         for (const PiecePattern& pattern : patterns)
         {
-            for (std::size_t start = 0; !pattern.empty() && start + pattern.size() <= track.size(); ++start)
+            for (usize start = 0; !pattern.empty() && start + pattern.size() <= track.size(); ++start)
             {
-                const bool matches = std::ranges::all_of(std::views::iota(std::size_t { 0 }, pattern.size()), [&](std::size_t k) { return passes(pieces, track, start + k, pattern[k].when, circuit); });
+                const bool matches = std::ranges::all_of(std::views::iota(usize { 0 }, pattern.size()), [&](usize k) { return passes(pieces, track, start + k, pattern[k].when, circuit); });
                 if (!matches)
                     continue;
-                for (std::size_t k = 0; k < pattern.size(); ++k)
+                for (usize k = 0; k < pattern.size(); ++k)
                 {
                     const PieceTest& becomes = pattern[k].becomes;
                     if (becomes.kind != PieceTest::Kind::Piece || passes(pieces, track, start + k, becomes, circuit))
@@ -216,7 +217,7 @@ namespace rct3::park::track
                     // A piece that keeps its way is never laid backwards by a pattern.
                     const auto found = std::ranges::find_if(pieces, [&](const PieceShape& p) { return strings::equals_ignoring_case(p.record.name, becomes.name) && !(becomes.backward && (p.record.flags & kPieceKeepsWay) != 0); });
                     if (found != pieces.end())
-                        track[start + k] = { static_cast<std::size_t>(found - pieces.begin()), becomes.backward };
+                        track[start + k] = { static_cast<usize>(found - pieces.begin()), becomes.backward };
                 }
             }
         }

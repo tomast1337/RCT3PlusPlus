@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "park/pools/pools.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/coaster.hpp"
@@ -25,21 +26,21 @@ namespace
     /// by two squares of water below that and a square `beside` at (7, 3) next to the water, pool path stairs unless
     /// told, their foot towards the river and their top at `surface` towards the water; and an open lazy river round a
     /// loop from column 8 to 12 and row 2 to 5, its station along column 8.
-    entt::entity river_by_pool(Sandbox& park, rct3::park::pools::PoolKind beside = rct3::park::pools::PoolKind::PathStairs, std::int32_t surface = 0)
+    entt::entity river_by_pool(Sandbox& park, rct3::park::pools::PoolKind beside = rct3::park::pools::PoolKind::PathStairs, i32 surface = 0)
     {
         park.path({ 0, 0 }, { 5, 0 });
         rct3::park::pools::PoolMap pools;
         pools.squares.push_back({ .col = 5, .row = 2, .kind = rct3::park::pools::PoolKind::Tile });
-        for (std::int32_t row = 3; row < 5; ++row)
-            for (std::int32_t col = 4; col < 7; ++col)
+        for (i32 row = 3; row < 5; ++row)
+            for (i32 col = 4; col < 7; ++col)
                 pools.squares.push_back({ .col = col, .row = row });
         pools.squares.push_back({ .col = 7, .row = 3, .kind = beside, .surface = surface - (beside == rct3::park::pools::PoolKind::PathStairs ? rct3::park::pools::kPathStairsRise : 0), .side = rct3::park::Side { 1 } });
         pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
         import_pools(park.world(), pools);
         const auto& paths = park.world().paths;
-        const auto middle = [&](float col, float row) { return glm::vec3 { paths.origin.x + (col + 0.5f) * paths.tile_size, 0, paths.origin.y + (row + 0.5f) * paths.tile_size }; };
+        const auto middle = [&](f32 col, f32 row) { return glm::vec3 { paths.origin.x + (col + 0.5f) * paths.tile_size, 0, paths.origin.y + (row + 0.5f) * paths.tile_size }; };
         Coaster course;
-        for (const auto [col, row, kind] : std::array<std::tuple<float, float, Stretch>, 5> { { { 8.0f, 2.0f, Stretch::Station }, { 8.0f, 5.0f, Stretch::Plain }, { 12.0f, 5.0f, Stretch::Plain }, { 12.0f, 2.0f, Stretch::Plain }, { 8.0f, 2.0f, Stretch::Plain } } })
+        for (const auto [col, row, kind] : std::array<std::tuple<f32, f32, Stretch>, 5> { { { 8.0f, 2.0f, Stretch::Station }, { 8.0f, 5.0f, Stretch::Plain }, { 12.0f, 5.0f, Stretch::Plain }, { 12.0f, 2.0f, Stretch::Plain }, { 8.0f, 2.0f, Stretch::Plain } } })
         {
             const glm::vec3 p = middle(col, row);
             course.distance.push_back(course.points.empty() ? 0 : course.distance.back() + glm::distance(course.points.back(), p));
@@ -67,7 +68,7 @@ TEST_CASE("a swimmer floats round a lazy river joined to their pool, free, and g
     CHECK(r.get<CycleRide>(river).excitement.value > 0);
     const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
     REQUIRE(park.run_until([&] { return r.get<Errand>(guest).kind == ErrandKind::Swimming && in_swimwear(r, guest); }, 120));
-    const std::int64_t cash = r.get<Wallet>(guest).cash.value;
+    const i64 cash = r.get<Wallet>(guest).cash.value;
     REQUIRE(park.run_until([&] { return r.all_of<Floating>(guest); }, 900));
     CHECK(r.get<River>(river).stations.front().pool == r.get<PoolDoor>(r.get<Swimmer>(guest).room).pool);
     CHECK(r.get<Errand>(guest).kind == ErrandKind::Riding);
@@ -77,14 +78,14 @@ TEST_CASE("a swimmer floats round a lazy river joined to their pool, free, and g
     CHECK(r.get<Attraction>(river).customers == 1);
     CHECK(r.get<CycleRide>(river).riders == std::vector { guest });
     // Along the course, carried round by the current.
-    const float along = r.get<Floating>(guest).along;
+    const f32 along = r.get<Floating>(guest).along;
     const glm::vec3 was = r.get<Pose>(guest).position;
     park.run_seconds(2);
     REQUIRE(r.all_of<Floating>(guest));
     CHECK(r.get<Floating>(guest).along != along);
     CHECK(glm::distance(r.get<Pose>(guest).position, was) > 1.0f);
     // Off after half a lap to two, up the stairs into the pool they came from.
-    const float lap = r.get<River>(river).course.length();
+    const f32 lap = r.get<River>(river).course.length();
     REQUIRE(park.run_until([&] { return !r.all_of<Floating>(guest); }, (kTuning.rivers.most_stay * lap + lap) / (kTuning.rivers.flow.value - kTuning.rivers.most_paddle.value / 2) + 60));
     CHECK(r.get<Errand>(guest).kind == ErrandKind::Swimming);
     CHECK(r.get<CycleRide>(river).riders.empty());
@@ -100,7 +101,7 @@ TEST_CASE("paddling along a lazy river's current speeds a rider up, and against 
     auto& r = park.world().registry;
     park.run(1); // Joins the station to the pool
     const entt::entity room = r.view<const PoolDoor>().front();
-    const auto float_one = [&](float facing) {
+    const auto float_one = [&](f32 facing) {
         const auto guest = park.guest({ 0, 0 });
         r.emplace_or_replace<Swimmer>(guest, Swimmer { .changed = true, .left = { 300 }, .in_water = true, .room = room });
         r.get<Errand>(guest) = { .kind = ErrandKind::Riding, .target = river };
@@ -108,9 +109,9 @@ TEST_CASE("paddling along a lazy river's current speeds a rider up, and against 
         return guest;
     };
     const auto along = float_one(0);
-    const auto against = float_one(std::numbers::pi_v<float>);
+    const auto against = float_one(std::numbers::pi_v<f32>);
     park.run(1);
-    const float flow = kTuning.rivers.flow.value * kTickSeconds;
+    const f32 flow = kTuning.rivers.flow.value * kTickSeconds;
     CHECK(r.get<Floating>(along).along == doctest::Approx(flow + kTickSeconds).epsilon(0.01));
     CHECK(r.get<Floating>(against).along == doctest::Approx(flow - kTickSeconds).epsilon(0.01));
 }
@@ -132,7 +133,7 @@ TEST_CASE("a lazy river's station joins the pool paving or pool path along its s
         // A swimmer gets on from that square and, far enough round, off onto it.
         const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
         REQUIRE(park.run_until([&] { return r.all_of<Floating>(guest); }, 900));
-        const float lap = r.get<River>(river).course.length();
+        const f32 lap = r.get<River>(river).course.length();
         REQUIRE(park.run_until([&] { return !r.all_of<Floating>(guest); }, (kTuning.rivers.most_stay * lap + lap) / (kTuning.rivers.flow.value - kTuning.rivers.most_paddle.value / 2) + 60));
         CHECK(glm::distance(r.get<Pose>(guest).position, station.square) < 0.01f);
     }
@@ -147,7 +148,7 @@ TEST_CASE("a lazy river's station joins the pool paving or pool path along its s
     // square further off, does join it.
     Sandbox park;
     const auto river = river_by_pool(park, K::Tile);
-    const float tile = park.world().paths.tile_size;
+    const f32 tile = park.world().paths.tile_size;
     std::vector<glm::vec3> points = park.world().registry.get<River>(river).stations.front().points;
     REQUIRE(pool_beside(park.world(), points));
     const auto moved = [&](glm::vec3 by) {

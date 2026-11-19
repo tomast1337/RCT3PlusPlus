@@ -8,6 +8,7 @@
 // A pick is a click on a swatch; the owner asks for it with take_pick().
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widgets/button.hpp"
 #include "units/units.hpp"
 
@@ -21,37 +22,37 @@ namespace rct3::ui::widgets
 
     struct ColourPaletteStyle
     {
-        std::string back;            ///< Behind the swatches, stretched in nine parts
-        std::string swatch_prefix;   ///< A swatch's picture is this followed by the colour's number
-        std::string ring;            ///< Behind each swatch
-        std::string current_ring;    ///< Behind the colour picked before
-        float swatch = 16;           ///< A swatch's size
-        float pitch = 18;            ///< From one swatch to the next, across and down
-        float picture_scale = 0.75f; ///< Of the colour's picture, of its own size
-        units::Pixels swell { 4 };   ///< A swatch grows by on each side under the pointer
-        float margin = 9;            ///< From the board's edge to the swatches
+        std::string back;          ///< Behind the swatches, stretched in nine parts
+        std::string swatch_prefix; ///< A swatch's picture is this followed by the colour's number
+        std::string ring;          ///< Behind each swatch
+        std::string current_ring;  ///< Behind the colour picked before
+        f32 swatch = 16;           ///< A swatch's size
+        f32 pitch = 18;            ///< From one swatch to the next, across and down
+        f32 picture_scale = 0.75f; ///< Of the colour's picture, of its own size
+        units::Pixels swell { 4 }; ///< A swatch grows by on each side under the pointer
+        f32 margin = 9;            ///< From the board's edge to the swatches
     };
 
     class ColourPalette : public Widget
     {
     public:
         /// `count` colours in rows of `columns`, `current` marked.
-        ColourPalette(std::string name, ColourPaletteStyle style, std::size_t count, std::size_t columns, std::size_t current);
+        ColourPalette(std::string name, ColourPaletteStyle style, usize count, usize columns, usize current);
 
         /// The board's size for `count` colours in rows of `columns`.
-        [[nodiscard]] static Point size(const ColourPaletteStyle& style, std::size_t count, std::size_t columns);
+        [[nodiscard]] static Point size(const ColourPaletteStyle& style, usize count, usize columns);
 
         /// The colour the player picked since the last call.
-        [[nodiscard]] std::optional<std::size_t> take_pick();
-        [[nodiscard]] std::size_t current() const
+        [[nodiscard]] std::optional<usize> take_pick();
+        [[nodiscard]] usize current() const
         {
             return current_;
         }
-        [[nodiscard]] Button& swatch(std::size_t i) const
+        [[nodiscard]] Button& swatch(usize i) const
         {
             return *swatches_.at(i);
         }
-        [[nodiscard]] std::size_t count() const
+        [[nodiscard]] usize count() const
         {
             return swatches_.size();
         }
@@ -66,7 +67,7 @@ namespace rct3::ui::widgets
     private:
         ColourPaletteStyle style_;
         std::vector<Button*> swatches_;
-        std::size_t current_ = 0;
+        usize current_ = 0;
     };
 
 } // namespace rct3::ui::widgets

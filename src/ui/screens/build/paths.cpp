@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/paths.hpp"
 
+#include "core/types.hpp"
 #include "ui/screens/build/land.hpp"
 #include "ui/shape.hpp"
 
@@ -16,7 +17,7 @@ namespace rct3::ui::screens::build
     namespace
     {
 
-        constexpr std::size_t kCutControl = 9;
+        constexpr usize kCutControl = 9;
 
         Point middle_of(const Rect& r)
         {
@@ -25,10 +26,10 @@ namespace rct3::ui::screens::build
 
     } // namespace
 
-    Point footpath_tab_offset(std::int32_t slot)
+    Point footpath_tab_offset(i32 slot)
     {
-        const float degrees = footpath_panel::kFirstAngle + footpath_panel::kSlotAngle * static_cast<float>(slot);
-        const float a = degrees * std::numbers::pi_v<float> / 180;
+        const f32 degrees = footpath_panel::kFirstAngle + footpath_panel::kSlotAngle * static_cast<f32>(slot);
+        const f32 a = degrees * std::numbers::pi_v<f32> / 180;
         return { std::round(info::info_panel::kRingRadius * std::cos(a)), std::round(-info::info_panel::kRingRadius * std::sin(a)) };
     }
 
@@ -40,7 +41,7 @@ namespace rct3::ui::screens::build
         // Spans the screen so its parts can sit by its corner; it lets the pointer through elsewhere.
         placement = fill();
         body_ = &add<Widget>("body");
-        const auto tab = [&](std::string tab_name, const std::string& icon, std::size_t help) -> widgets::Button& {
+        const auto tab = [&](std::string tab_name, const std::string& icon, usize help) -> widgets::Button& {
             widgets::Button& b = add<widgets::Button>(std::move(tab_name), style_.tab_face, icon);
             b.tooltip = std::u16string(strings_.get(style_.tab_help.at(help)));
             b.toggle = true;
@@ -61,7 +62,7 @@ namespace rct3::ui::screens::build
         size_->maximum = footpath_panel::kLargestBrush;
         size_->set_value(1);
         size_->tooltip = std::u16string(strings_.get("Land_Brush_RadiusHelp"));
-        for (std::size_t i = 0; i < kFootpathControls; ++i)
+        for (usize i = 0; i < kFootpathControls; ++i)
         {
             widgets::Button& b = body_->add<widgets::Button>(style_.control_help.at(i).empty() ? std::format("control{}", i) : style_.control_help.at(i), std::string { });
             if (i >= 8)
@@ -107,7 +108,7 @@ namespace rct3::ui::screens::build
         mark();
     }
 
-    void FootpathPanel::set_controls(const std::array<bool, kFootpathControls>& usable, std::size_t slope_control, bool cut)
+    void FootpathPanel::set_controls(const std::array<bool, kFootpathControls>& usable, usize slope_control, bool cut)
     {
         usable_ = usable;
         slope_ = slope_control;
@@ -150,7 +151,7 @@ namespace rct3::ui::screens::build
         if (page_ != FootpathPage::Paths && !queue)
             return;
         const std::vector<FootpathStyle>& list = queue ? queues_ : paths_;
-        for (std::size_t i = 0; i < list.size(); ++i)
+        for (usize i = 0; i < list.size(); ++i)
         {
             widgets::Button& b = body_->add<widgets::Button>(list[i].icon, std::string { }, list[i].icon);
             b.tooltip = list[i].name;
@@ -166,7 +167,7 @@ namespace rct3::ui::screens::build
         paths_tab_->on = page_ == FootpathPage::Paths;
         queues_tab_->on = page_ == FootpathPage::Queues;
         const bool controls = page_ == FootpathPage::Controls;
-        for (std::size_t i = 0; i < kFootpathControls; ++i)
+        for (usize i = 0; i < kFootpathControls; ++i)
         {
             widgets::Button& b = *controls_.at(i);
             b.visible = controls;
@@ -187,14 +188,14 @@ namespace rct3::ui::screens::build
         if (page_ == FootpathPage::None)
             return { 0, 0 };
         const auto rows = (styles_.size() + footpath_panel::kStyleColumns - 1) / footpath_panel::kStyleColumns;
-        return { footpath_panel::kStyleCell * static_cast<float>(footpath_panel::kStyleColumns), footpath_panel::kStyleCell * static_cast<float>(rows) + footpath_panel::kLineHeight };
+        return { footpath_panel::kStyleCell * static_cast<f32>(footpath_panel::kStyleColumns), footpath_panel::kStyleCell * static_cast<f32>(rows) + footpath_panel::kLineHeight };
     }
 
     Rect FootpathPanel::disc() const
     {
         const Rect r = rect();
-        const float left = r.x0 + info::info_panel::kDiscMargin;
-        const float bottom = r.y1 - style_.bottom;
+        const f32 left = r.x0 + info::info_panel::kDiscMargin;
+        const f32 bottom = r.y1 - style_.bottom;
         return { left, bottom - info::info_panel::kDisc, left + info::info_panel::kDisc, bottom };
     }
 
@@ -202,8 +203,8 @@ namespace rct3::ui::screens::build
     {
         const Point body = body_size();
         const Rect d = disc();
-        const float left = d.x1 - info::info_panel::kStripOverlap;
-        const float width = std::max(footpath_panel::kBodyLeft + body.x + footpath_panel::kBodyRight + style_.coded.strip_shadow, info::info_panel::kStripNarrowest);
+        const f32 left = d.x1 - info::info_panel::kStripOverlap;
+        const f32 width = std::max(footpath_panel::kBodyLeft + body.x + footpath_panel::kBodyRight + style_.coded.strip_shadow, info::info_panel::kStripNarrowest);
         return { left, d.y0, left + width, d.y0 + info::info_panel::kStripHeight };
     }
 
@@ -212,7 +213,7 @@ namespace rct3::ui::screens::build
         const Rect r = rect();
         const Rect d = disc();
         const Point centre { (d.x0 + d.x1) / 2 - r.x0, (d.y0 + d.y1) / 2 - r.y0 };
-        const auto put_tab = [&](widgets::Button& b, std::int32_t slot) {
+        const auto put_tab = [&](widgets::Button& b, i32 slot) {
             const Point at = footpath_tab_offset(slot);
             b.placement = top_left(centre.x + at.x - info::info_panel::kTabSize / 2, centre.y + at.y - info::info_panel::kTabSize / 2, info::info_panel::kTabSize, info::info_panel::kTabSize);
         };
@@ -229,22 +230,22 @@ namespace rct3::ui::screens::build
         const Point body = body_size();
         body_->placement = top_left(s.x0 - r.x0 + footpath_panel::kBodyLeft, s.y0 - r.y0 + footpath_panel::kBodyTop, body.x, body.y);
         // Along the band from just past the disc, which covers the strip's first units.
-        const float status_left = info::info_panel::kStripOverlap + footpath_panel::kStatusGap;
+        const f32 status_left = info::info_panel::kStripOverlap + footpath_panel::kStatusGap;
         status_line_->placement = top_left(s.x0 - r.x0 + status_left, s.y0 - r.y0, std::max(0.0f, s.width() - status_left - footpath_panel::kBodyRight), style_.coded.band_height);
         // A style page has its own line for the style's name and price, and may be narrower than the status.
         status_line_->visible = page_ == FootpathPage::Controls;
-        for (std::size_t i = 0; i < kFootpathControls; ++i)
+        for (usize i = 0; i < kFootpathControls; ++i)
         {
             const Rect& c = footpath_panel::kControlRects.at(i);
             controls_.at(i)->placement = top_left(c.x0, c.y0, c.width(), c.height());
         }
         const Rect& t = footpath_panel::kTextRect;
         text_->placement = top_left(t.x0, t.y0, t.width(), t.height());
-        const float cell = footpath_panel::kStyleCell;
-        for (std::size_t i = 0; i < styles_.size(); ++i)
+        const f32 cell = footpath_panel::kStyleCell;
+        for (usize i = 0; i < styles_.size(); ++i)
         {
-            const auto column = static_cast<float>(i % footpath_panel::kStyleColumns);
-            const auto row = static_cast<float>(i / footpath_panel::kStyleColumns);
+            const auto column = static_cast<f32>(i % footpath_panel::kStyleColumns);
+            const auto row = static_cast<f32>(i / footpath_panel::kStyleColumns);
             styles_[i]->placement = top_left(column * cell + 2, row * cell + 2, cell - 4, cell - 4);
         }
         style_name_->placement = top_left(0, body.y - footpath_panel::kLineHeight, body.x, footpath_panel::kLineHeight);
@@ -254,9 +255,9 @@ namespace rct3::ui::screens::build
     {
         const Rect d = disc();
         const Point m = middle_of(d);
-        const float radius = info::info_panel::kDisc / 2;
-        const float dx = p.x - m.x;
-        const float dy = p.y - m.y;
+        const f32 radius = info::info_panel::kDisc / 2;
+        const f32 dx = p.x - m.x;
+        const f32 dy = p.y - m.y;
         return dx * dx + dy * dy <= radius * radius || (page_ != FootpathPage::None && contains(strip(), p));
     }
 
@@ -282,15 +283,15 @@ namespace rct3::ui::screens::build
             if (button->take_click())
                 open_page(page_ == page ? FootpathPage::None : page);
         }
-        for (std::size_t i = 0; i < kFootpathControls; ++i)
+        for (usize i = 0; i < kFootpathControls; ++i)
         {
             if (controls_.at(i)->take_click())
                 control_now_ = i;
         }
         const bool queue = page_ == FootpathPage::Queues;
         const std::vector<FootpathStyle>& list = queue ? queues_ : paths_;
-        std::optional<std::size_t> hovered;
-        for (std::size_t i = 0; i < styles_.size(); ++i)
+        std::optional<usize> hovered;
+        for (usize i = 0; i < styles_.size(); ++i)
         {
             if (styles_[i]->hovered())
                 hovered = i;
@@ -303,7 +304,7 @@ namespace rct3::ui::screens::build
             }
         }
         // The style under the pointer, else the chosen one when it is on this page.
-        std::optional<std::size_t> named = hovered;
+        std::optional<usize> named = hovered;
         if (!named && chosen_ && chosen_->queue == queue)
             named = chosen_->index;
         if (named && *named < list.size())
@@ -313,7 +314,7 @@ namespace rct3::ui::screens::build
         // The control under the pointer tells what it does.
         status_line_->text = status_;
         text_->text.clear();
-        for (std::size_t i = 0; i < kFootpathControls; ++i)
+        for (usize i = 0; i < kFootpathControls; ++i)
         {
             if (controls_.at(i)->hovered())
                 text_->text = std::u16string(strings_.get(style_.control_help.at(i)));
@@ -324,7 +325,7 @@ namespace rct3::ui::screens::build
     {
         DrawList& list = context.list;
         const info::CodedInfoPanel& c = style_.coded;
-        const auto shifted = [](Rect r, float by) { return Rect { r.x0 + by, r.y0 + by, r.x1 + by, r.y1 + by }; };
+        const auto shifted = [](Rect r, f32 by) { return Rect { r.x0 + by, r.y0 + by, r.x1 + by, r.y1 + by }; };
         const auto plain = [&](Rect r, Corners corners, Color colour) {
             Shape s;
             s.rect = r;
@@ -336,7 +337,7 @@ namespace rct3::ui::screens::build
 
         // The disc's shadow falls on the strip, so it goes down first.
         const Rect d = disc();
-        const float half = d.width() / 2;
+        const f32 half = d.width() / 2;
         const Corners flat_right { half, 0, 0, half };
         plain(shifted(d, info::info_panel::kShadowOffset), round_corners(half), c.shadow);
         if (page_ != FootpathPage::None)
@@ -351,12 +352,12 @@ namespace rct3::ui::screens::build
             // margin behind a line at the open end; on the controls page a line parts the arrows from the tools below.
             const Rect paper { slab.x0 + footpath_panel::kBodyLeft - footpath_panel::kPaperLeft, slab.y0 + c.band_height + 1, slab.x1, slab.y1 - c.paper_bottom };
             plain(paper, { 0, 0, 0, c.paper_corner }, c.stripe);
-            const float rule = paper.x1 - c.paper_margin - 2;
+            const f32 rule = paper.x1 - c.paper_margin - 2;
             plain({ rule + 2, paper.y0, paper.x1, paper.y1 }, { }, c.margin);
             plain({ rule, paper.y0, rule + 1, paper.y1 }, { }, c.divider);
             if (page_ == FootpathPage::Controls)
             {
-                const float y = body_->rect().y0 + footpath_panel::kDividerY;
+                const f32 y = body_->rect().y0 + footpath_panel::kDividerY;
                 plain({ paper.x0, y, rule, y + 1 }, { }, c.divider);
             }
             // Behind the picked slope and the chosen style.
@@ -389,7 +390,7 @@ namespace rct3::ui::screens::build
             if (chosen_->index < styles.size())
             {
                 const Point m = middle_of(d);
-                const float h = footpath_panel::kDiscIcon / 2;
+                const f32 h = footpath_panel::kDiscIcon / 2;
                 skin::draw_skin(list, context.skins.find(styles[chosen_->index].icon), { m.x - h, m.y - h, m.x + h, m.y + h });
             }
         }

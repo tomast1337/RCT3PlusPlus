@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/money_floaters.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -23,12 +25,12 @@ TEST_CASE("a money float rises steadily and fades out by the end of its life")
 
 TEST_CASE("a money float's letters bob in a wave, never below the line")
 {
-    const float line = 20;
-    for (std::size_t letter = 0; letter < 6; ++letter)
+    const f32 line = 20;
+    for (usize letter = 0; letter < 6; ++letter)
     {
-        for (std::int32_t step = 0; step < 25; ++step)
+        for (i32 step = 0; step < 25; ++step)
         {
-            const rct3::units::Seconds age { static_cast<float>(step) * 0.1f };
+            const rct3::units::Seconds age { static_cast<f32>(step) * 0.1f };
             CHECK(money_float_bob(letter, age, line) >= 0);
             CHECK(money_float_bob(letter, age, line) <= line);
         }

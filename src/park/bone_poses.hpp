@@ -4,6 +4,7 @@
 // them, and where each bone is at some time into a motion.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "ovl/bone_index.hpp"
 
@@ -20,14 +21,14 @@ namespace rct3::park
     /// Keys of one bone in one motion: times in seconds, and a value at each.
     struct BoneKeys
     {
-        std::vector<float> times;
+        std::vector<f32> times;
         std::vector<glm::vec3> values;
     };
 
     /// How one motion moves each bone of a rig; a bone with no keys keeps where it stands.
     struct BoneMotion
     {
-        float seconds = 0;
+        f32 seconds = 0;
         std::vector<BoneKeys> positions; ///< By bone: offsets from the parent bone
         std::vector<BoneKeys> rotations; ///< By bone: turns from the parent bone, axis times angle in radians
     };
@@ -46,34 +47,34 @@ namespace rct3::park
     /// By bone of `rig`: how `time` seconds into motion `motion` moves the bone and everything it carries,
     /// from where it stands to where it is (model space). Times outside the motion hold its ends; a motion the
     /// rig lacks leaves every bone standing.
-    [[nodiscard]] std::vector<glm::mat4> bone_moves(const BoneRig& rig, std::size_t motion, float time);
+    [[nodiscard]] std::vector<glm::mat4> bone_moves(const BoneRig& rig, usize motion, f32 time);
 
     /// Flat rides' motions: standing, starting, running and stopping.
-    inline constexpr std::size_t kRideStanding = 0;
-    inline constexpr std::size_t kRideStarting = 1;
-    inline constexpr std::size_t kRideRunning = 2;
-    inline constexpr std::size_t kRideStopping = 3;
+    inline constexpr usize kRideStanding = 0;
+    inline constexpr usize kRideStarting = 1;
+    inline constexpr usize kRideRunning = 2;
+    inline constexpr usize kRideStopping = 3;
 
     /// A motion playing, and how far into it.
     struct MotionAt
     {
-        std::size_t motion { };
-        float seconds { }; ///< Into it
+        usize motion { };
+        f32 seconds { }; ///< Into it
         friend bool operator==(const MotionAt&, const MotionAt&) = default;
     };
 
     /// Which of a flat ride's motions (with lengths `seconds`) plays: `into` seconds into a ride of `cycle`
     /// seconds (start, running round as many times as fit, stop), or standing `idle` seconds when not riding.
-    [[nodiscard]] MotionAt flat_ride_motion(std::span<const float> seconds, float cycle, float into, bool riding, float idle);
+    [[nodiscard]] MotionAt flat_ride_motion(std::span<const f32> seconds, f32 cycle, f32 into, bool riding, f32 idle);
 
     /// A ride entrance's or exit's gate motions: shut, opening, open and shutting.
-    inline constexpr std::size_t kGateShut = 0;
-    inline constexpr std::size_t kGateOpening = 1;
-    inline constexpr std::size_t kGateOpen = 2;
-    inline constexpr std::size_t kGateShutting = 3;
+    inline constexpr usize kGateShut = 0;
+    inline constexpr usize kGateOpening = 1;
+    inline constexpr usize kGateOpen = 2;
+    inline constexpr usize kGateShutting = 3;
 
     /// The gate motion to play once `playing` has played through, as the gate should be `open` or not. A gate
     /// changes only between motions, so it never jumps; shut and open play again while it stays so.
-    [[nodiscard]] std::size_t next_gate_motion(std::size_t playing, bool open);
+    [[nodiscard]] usize next_gate_motion(usize playing, bool open);
 
 } // namespace rct3::park

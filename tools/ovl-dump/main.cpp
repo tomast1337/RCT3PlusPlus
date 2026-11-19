@@ -5,6 +5,7 @@
 //   ovl-dump [--symbols] [--loaders] [--text] [--sound] [--ftx] [--shs] [--svd] [--ban] [--bsh] [--flt] [--btbl] [--gsi] [--psi] [--tex] [--fct] [--flic] [--int] [--spl] [--san] [--modelanim] [--mdl] [--wad] [--ssk] [--mam] [--tks] [--trr] [--ric] [--rit] [--anr] [--sta] [--sat] [--tex-export DIR|-] [--obj DIR] PATH
 //
 // PATH names either file of the pair (X.common.ovl or X.unique.ovl) or the stem X.
+#include "core/types.hpp"
 #include "logging/log.hpp"
 
 #include <algorithm>
@@ -136,13 +137,13 @@ namespace
 
         out.info("block types");
         out.info("  {:<4} {:<7} {:<10} {:<10} {}", "type", "blocks", "bytes", "unknown", "extra");
-        for (std::size_t t = 0; t < file.block_types.size(); ++t)
+        for (usize t = 0; t < file.block_types.size(); ++t)
         {
             const auto& type = file.block_types[t];
-            std::uint64_t bytes = 0;
+            u64 bytes = 0;
             for (const auto& b : type.blocks)
                 bytes += b.size;
-            out.info("  {:<4d} {:<7d} {:<10d} {:<10d} {:d}", t, type.blocks.size(), static_cast<std::uint64_t>(bytes), type.unknown, type.extra);
+            out.info("  {:<4d} {:<7d} {:<10d} {:<10d} {:d}", t, type.blocks.size(), static_cast<u64>(bytes), type.unknown, type.extra);
         }
         out.info("data size      {:d}", file.data_size);
         out.info("base           {:d}", part.base);
@@ -150,8 +151,8 @@ namespace
         out.info("unknown words  {:d}", file.unknown_words.size());
 
         // A relocation names the location of a 32-bit pointer, so all four bytes must lie in one block.
-        std::size_t misplaced = 0;
-        std::size_t leaving = 0; // stored pointer values past the end of the shared address space
+        usize misplaced = 0;
+        usize leaving = 0; // stored pointer values past the end of the shared address space
         for (const auto address : file.relocations)
         {
             const auto at = file.locate(address, part.base);
@@ -160,19 +161,19 @@ namespace
                 ++misplaced;
                 continue;
             }
-            std::uint32_t value = 0;
+            u32 value = 0;
             std::memcpy(&value, part.bytes.data() + file.block_types[at->type].blocks[at->index].file_offset + at->offset, 4);
             if (value >= part.base + file.data_size)
                 ++leaving;
         }
         out.info("relocations    {:d} ({:d} outside blocks, {:d} pointing past own data)", file.relocations.size(), misplaced, leaving);
-        std::size_t stream_pairs = 0;
+        usize stream_pairs = 0;
         for (const auto& table : file.stream_relocations)
             stream_pairs += table.size();
         out.info("streams        {:d} ({:d} relocation pairs)", file.stream_relocations.size(), stream_pairs);
 
-        std::size_t unresolved = 0;
-        std::size_t untagged = 0;
+        usize unresolved = 0;
+        usize untagged = 0;
         for (const auto& sym : part.symbols)
         {
             if (sym.name.empty())
@@ -180,22 +181,22 @@ namespace
             else if (rct3::ovl::split_symbol_name(sym.name).tag.empty())
                 ++untagged;
         }
-        std::uint64_t loader_symbols = 0;
+        u64 loader_symbols = 0;
         for (const auto& l : header.loaders)
             loader_symbols += l.symbol_count;
-        out.info("symbols        {:d} ({:d} unresolved names, {:d} without a tag, {:d} counted by loaders)", part.symbols.size(), unresolved, untagged, static_cast<std::uint64_t>(loader_symbols));
+        out.info("symbols        {:d} ({:d} unresolved names, {:d} without a tag, {:d} counted by loaders)", part.symbols.size(), unresolved, untagged, static_cast<u64>(loader_symbols));
 
-        std::size_t chunks = 0;
-        std::uint64_t chunk_bytes = 0;
+        usize chunks = 0;
+        u64 chunk_bytes = 0;
         for (const auto& list : part.loaders.extra)
         {
             chunks += list.size();
             for (const auto& ch : list)
                 chunk_bytes += ch.size;
         }
-        std::size_t bad_type = 0;
-        std::size_t unlinked = 0; // rows whose symbol address does not land on a symbol table row
-        const std::size_t stride = header.layout == rct3::ovl::OvlLayout::NoStream ? 12 : 16;
+        usize bad_type = 0;
+        usize unlinked = 0; // rows whose symbol address does not land on a symbol table row
+        const usize stride = header.layout == rct3::ovl::OvlLayout::NoStream ? 12 : 16;
         for (const auto& e : part.loaders.entries)
         {
             if (e.loader_type >= header.loaders.size())
@@ -207,7 +208,7 @@ namespace
                 ++unlinked;
         }
         out.info("loader rows    {:d} ({:d} bad type, {:d} with an unusable symbol address)", part.loaders.entries.size(), bad_type, unlinked);
-        out.info("extra chunks   {:d} ({:d} bytes)", chunks, static_cast<std::uint64_t>(chunk_bytes));
+        out.info("extra chunks   {:d} ({:d} bytes)", chunks, static_cast<u64>(chunk_bytes));
         out.info("trailing       {:d} bytes after relocations", part.bytes.size() - file.end_offset);
         out.info("unparsed tail  {:d} bytes", part.bytes.size() - part.loaders.end_offset);
 
@@ -221,7 +222,7 @@ namespace
         if (opt.ftx)
         {
             const auto textures = rct3::ovl::read_flexi_textures(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : textures)
             {
                 if (!item.texture)
@@ -237,7 +238,7 @@ namespace
                     continue;
                 }
                 const auto& t = *item.texture;
-                std::size_t alpha = 0;
+                usize alpha = 0;
                 for (const auto& f : t.frames)
                     alpha += f.alpha.has_value();
                 out.info("  {:<32} {:d}x{:d} frames {:d} sequence {:d} alpha {:d} animation {:d} flags {:d}", name.c_str(), t.width, t.height, t.frames.size(), t.sequence.size(), alpha, t.animation, t.flags);
@@ -246,7 +247,7 @@ namespace
         if (opt.shs)
         {
             const auto shapes = rct3::ovl::read_static_shapes(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : shapes)
             {
                 if (!item.shape)
@@ -262,7 +263,7 @@ namespace
                     continue;
                 }
                 const auto& sh = *item.shape;
-                std::size_t untextured = 0;
+                usize untextured = 0;
                 for (const auto& m : sh.meshes)
                     untextured += m.texture.empty();
                 out.info("  {:<32} meshes {:d} vertices {:d} indices {:d} effects {:d} untextured {:d}", name.c_str(), sh.meshes.size(), sh.vertex_total, sh.index_total, sh.effects.size(), untextured);
@@ -273,7 +274,7 @@ namespace
         if (opt.svd)
         {
             const auto visuals = rct3::ovl::read_scenery_visuals(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : visuals)
             {
                 if (!item.visual)
@@ -302,7 +303,7 @@ namespace
         if (opt.ban)
         {
             const auto anims = rct3::ovl::read_bone_anims(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : anims)
             {
                 if (!item.anim)
@@ -317,7 +318,7 @@ namespace
                     out.info("  {} <unreadable>", name.c_str());
                     continue;
                 }
-                std::size_t keys = 0;
+                usize keys = 0;
                 for (const auto& b : item.anim->bones)
                     keys += b.positions.size() + b.rotations.size();
                 out.info("  {:<32} bones {:d} keyframes {:d} duration {:g}", name.c_str(), item.anim->bones.size(), keys, item.anim->duration);
@@ -326,7 +327,7 @@ namespace
         if (opt.bsh)
         {
             const auto shapes = rct3::ovl::read_bone_shapes(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : shapes)
             {
                 if (!item.shape)
@@ -342,7 +343,7 @@ namespace
                     continue;
                 }
                 const auto& sh = *item.shape;
-                std::size_t untextured = 0;
+                usize untextured = 0;
                 for (const auto& m : sh.meshes)
                     untextured += m.texture.empty();
                 out.info("  {:<32} meshes {:d} vertices {:d} indices {:d} bones {:d} untextured {:d}", name.c_str(), sh.meshes.size(), sh.vertex_total, sh.index_total, sh.bones.size(), untextured);
@@ -371,7 +372,7 @@ namespace
         if (opt.spl)
         {
             const auto splines = rct3::ovl::read_splines(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : splines)
             {
                 if (!item.spline)
@@ -394,7 +395,7 @@ namespace
         if (opt.san)
         {
             const auto anims = rct3::ovl::read_simple_anims(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : anims)
             {
                 if (!item.anim)
@@ -415,7 +416,7 @@ namespace
         if (opt.modelanim)
         {
             const auto anims = rct3::ovl::read_model_anims(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : anims)
             {
                 if (!item.anim)
@@ -449,7 +450,7 @@ namespace
                 std::string levels;
                 for (const auto& level : item.model->levels)
                 {
-                    std::size_t vertices = 0;
+                    usize vertices = 0;
                     for (const auto& mesh : level)
                         vertices += mesh.vertex_count;
                     levels += std::format(" {}/{}", level.size(), vertices);
@@ -472,7 +473,7 @@ namespace
                     continue;
                 }
                 out.info("  {:<32} slots {:d}", name.c_str(), item.motions->animations.size());
-                for (std::size_t slot = 0; slot < item.motions->animations.size(); ++slot)
+                for (usize slot = 0; slot < item.motions->animations.size(); ++slot)
                 {
                     if (!item.motions->animations[slot].empty())
                         out.info("    {:>2} {} {:g}s", slot, item.motions->animations[slot], item.motions->seconds[slot]);
@@ -482,7 +483,7 @@ namespace
         if (opt.ssk)
         {
             const auto skins = rct3::ovl::read_simple_skins(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : skins)
             {
                 if (!item.skin)
@@ -497,7 +498,7 @@ namespace
                     out.info("  {:<32} <unreadable>", name.c_str());
                     continue;
                 }
-                std::size_t outside = 0;
+                usize outside = 0;
                 for (const auto index : item.skin->indices)
                 {
                     if (index >= item.skin->vertices.size())
@@ -509,7 +510,7 @@ namespace
         if (opt.mam)
         {
             const auto meshes = rct3::ovl::read_manifold_meshes(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : meshes)
             {
                 if (!item.mesh)
@@ -530,7 +531,7 @@ namespace
         if (opt.tks)
         {
             const auto items = rct3::ovl::read_track_sections(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : items)
                 bad += !item.section;
             out.info("track sections {:d} ({:d} unreadable)", items.size(), bad);
@@ -559,7 +560,7 @@ namespace
         if (opt.ric)
         {
             const auto items = rct3::ovl::read_ride_cars(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : items)
                 bad += !item.car;
             out.info("ride cars      {:d} ({:d} unreadable)", items.size(), bad);
@@ -574,7 +575,7 @@ namespace
                 out.info("  {:<32} kind {:d} visual {} refs {:d} mass {:g}", name.c_str(), item.car->kind, std::string(item.car->visual).c_str(), item.car->references.size(), item.car->mass);
                 for (const auto& ref : item.car->references)
                     out.info("    ref +{:d} {}:{}", ref.offset, std::string(ref.name).c_str(), std::string(ref.tag).c_str());
-                for (std::size_t i = 0; i < item.car->moves.size(); ++i)
+                for (usize i = 0; i < item.car->moves.size(); ++i)
                     if (const auto& m = item.car->moves[i])
                         out.info("    moving part {:d}: motion {:d} damping {:g} centring {:g} fastest {} pull {:g} spring {:g} friction {:g} furthest {}", i, std::to_underlying(m->motion), m->damping.value, m->centring.value, m->fastest ? std::format("{:g}", m->fastest->value) : "none", m->pull.value, m->spring, m->friction, m->furthest ? std::format("{:g}", m->furthest->value) : "none");
             }
@@ -582,7 +583,7 @@ namespace
         if (opt.rit)
         {
             const auto items = rct3::ovl::read_ride_trains(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : items)
                 bad += !item.train;
             out.info("ride trains    {:d} ({:d} unreadable)", items.size(), bad);
@@ -603,7 +604,7 @@ namespace
         if (opt.trr)
         {
             const auto items = rct3::ovl::read_tracked_rides(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : items)
                 bad += !item.ride;
             out.info("tracked rides  {:d} ({:d} unreadable)", items.size(), bad);
@@ -640,7 +641,7 @@ namespace
         if (opt.anr)
         {
             const auto items = rct3::ovl::read_animated_rides(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : items)
                 bad += !item.ride;
             out.info("animated rides {:d} ({:d} unreadable)", items.size(), bad);
@@ -659,7 +660,7 @@ namespace
         if (opt.sta)
         {
             const auto items = rct3::ovl::read_stalls(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : items)
                 bad += !item.stall;
             out.info("stalls         {:d} ({:d} unreadable)", items.size(), bad);
@@ -680,7 +681,7 @@ namespace
         if (opt.sat)
         {
             const auto items = rct3::ovl::read_special_attractions(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : items)
                 bad += !item.attraction;
             out.info("special attrs  {:d} ({:d} unreadable)", items.size(), bad);
@@ -699,7 +700,7 @@ namespace
         if (opt.btbl)
         {
             const auto tables = rct3::ovl::read_bitmap_tables(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : tables)
             {
                 if (!item.table)
@@ -713,7 +714,7 @@ namespace
                     out.info("  row {:d} <unreadable>", item.row);
                     continue;
                 }
-                std::size_t bytes = 0;
+                usize bytes = 0;
                 for (const auto& b : item.table->bitmaps)
                     bytes += b.data.size();
                 out.info("  row {:<6d} bitmaps {:d} bytes {:d}", item.row, item.table->bitmaps.size(), bytes);
@@ -722,7 +723,7 @@ namespace
         if (opt.gsi)
         {
             const auto skins = rct3::ovl::read_gui_skins(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : skins)
             {
                 if (!item.skin)
@@ -752,13 +753,13 @@ namespace
                     continue;
                 }
                 const auto& s = *item.skin;
-                out.info("  {:<24} frames {:<3d} {} {} loop {:.2f} texture {}", name.c_str(), s.frames.size(), s.blended ? "blended " : "additive", s.animated ? "animated" : "single  ", static_cast<double>(s.loop_time), s.texture.empty() ? "<none>" : std::string(s.texture).c_str());
+                out.info("  {:<24} frames {:<3d} {} {} loop {:.2f} texture {}", name.c_str(), s.frames.size(), s.blended ? "blended " : "additive", s.animated ? "animated" : "single  ", static_cast<f64>(s.loop_time), s.texture.empty() ? "<none>" : std::string(s.texture).c_str());
             }
         }
         if (opt.tex)
         {
             const auto textures = rct3::ovl::texture::read_textures(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : textures)
             {
                 if (!item.texture)
@@ -781,7 +782,7 @@ namespace
         if (opt.fct)
         {
             const auto fonts = rct3::ovl::read_fonts(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : fonts)
             {
                 if (!item.font)
@@ -803,7 +804,7 @@ namespace
         if (opt.flic)
         {
             const auto flics = rct3::ovl::read_flics(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : flics)
             {
                 if (!item.flic)
@@ -829,8 +830,8 @@ namespace
         if (opt.sound)
         {
             const auto sounds = rct3::ovl::read_sounds(overlay, part);
-            std::size_t bad = 0;
-            std::size_t no_samples = 0;
+            usize bad = 0;
+            usize no_samples = 0;
             for (const auto& item : sounds)
             {
                 if (!item.info)
@@ -854,7 +855,7 @@ namespace
         if (opt.text)
         {
             const auto texts = rct3::ovl::read_texts(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : texts)
             {
                 if (!item.value)
@@ -878,7 +879,7 @@ namespace
         }
         if (opt.loaders)
         {
-            for (std::size_t i = 0; i < part.loaders.entries.size(); ++i)
+            for (usize i = 0; i < part.loaders.entries.size(); ++i)
             {
                 const auto& e = part.loaders.entries[i];
                 out.info("  type {:<3d} data {:08x} symbol {:08x} resolve {:<3d} chunks {:d}", e.loader_type, e.data, e.symbol_address, e.symbols_to_resolve, part.loaders.extra[i].size());
@@ -944,7 +945,7 @@ namespace
         if (g_scenery.cid)
         {
             const auto items = rct3::ovl::read_carried_items(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& entry : items)
                 bad += entry.item ? 0 : 1;
             out.info("carried items ({}) {:d} ({:d} unreadable)", title, items.size(), bad);
@@ -964,7 +965,7 @@ namespace
         if (g_scenery.ced)
         {
             const auto extras = rct3::ovl::read_carried_item_extras(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& entry : extras)
                 bad += entry.extra ? 0 : 1;
             out.info("carried item extras ({}) {:d} ({:d} unreadable)", title, extras.size(), bad);
@@ -1008,7 +1009,7 @@ namespace
         if (g_scenery.rcg)
         {
             const auto categories = rct3::ovl::read_research_categories(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& entry : categories)
                 bad += entry.category ? 0 : 1;
             out.info("research categories ({}) {:d} ({:d} unreadable)", title, categories.size(), bad);
@@ -1028,7 +1029,7 @@ namespace
         if (g_scenery.ter)
         {
             const auto types = rct3::ovl::read_terrain_types(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& entry : types)
                 bad += entry.terrain ? 0 : 1;
             out.info("terrain types ({}) {:d} ({:d} unreadable)", title, types.size(), bad);
@@ -1061,7 +1062,7 @@ namespace
         if (g_scenery.ptd)
         {
             const auto types = rct3::ovl::read_path_types(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& entry : types)
                 bad += entry.path ? 0 : 1;
             out.info("path types ({}) {:d} ({:d} unreadable)", title, types.size(), bad);
@@ -1085,7 +1086,7 @@ namespace
         if (g_scenery.qtd)
         {
             const auto types = rct3::ovl::read_queue_types(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& entry : types)
                 bad += entry.queue ? 0 : 1;
             out.info("queue types ({}) {:d} ({:d} unreadable)", title, types.size(), bad);
@@ -1109,7 +1110,7 @@ namespace
         if (g_scenery.pty)
         {
             const auto types = rct3::ovl::read_pool_types(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& entry : types)
                 bad += entry.pool ? 0 : 1;
             out.info("pool types ({}) {:d} ({:d} unreadable)", title, types.size(), bad);
@@ -1129,7 +1130,7 @@ namespace
         if (g_scenery.enc)
         {
             const auto types = rct3::ovl::read_enclosure_types(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& entry : types)
                 bad += entry.enclosure ? 0 : 1;
             out.info("enclosure types ({}) {:d} ({:d} unreadable)", title, types.size(), bad);
@@ -1153,7 +1154,7 @@ namespace
         if (g_scenery.chg)
         {
             const auto rooms = rct3::ovl::read_changing_rooms(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& entry : rooms)
                 bad += entry.room ? 0 : 1;
             out.info("changing rooms ({}) {:d} ({:d} unreadable)", title, rooms.size(), bad);
@@ -1172,7 +1173,7 @@ namespace
         if (g_scenery.vwg)
         {
             const auto galleries = rct3::ovl::read_viewing_galleries(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& entry : galleries)
                 bad += entry.gallery ? 0 : 1;
             out.info("viewing galleries ({}) {:d} ({:d} unreadable)", title, galleries.size(), bad);
@@ -1199,7 +1200,7 @@ namespace
         if (g_scenery.sid)
         {
             const auto items = rct3::ovl::read_scenery_items(overlay, part);
-            std::size_t bad = 0;
+            usize bad = 0;
             for (const auto& item : items)
             {
                 if (!item.item)
@@ -1215,7 +1216,7 @@ namespace
                     continue;
                 }
                 const auto& it = *entry.item;
-                std::size_t masks = 0, without_masks = 0;
+                usize masks = 0, without_masks = 0;
                 for (const auto& sq : it.squares)
                 {
                     masks += sq.height_masks.size();
@@ -1225,7 +1226,7 @@ namespace
                 out.info(
                     "  {:<32} v{:d}{} type {:d} positioning {:d} flags {:08x} squares {:d}x{:d} ({:d} without masks) masks {:d} cost {:d} visuals {:d} "
                     "sounds {:d} params {:d} nodes {:d} colours {} {} {}",
-                    name.c_str(), it.version, it.compact ? " compact" : "", it.type, static_cast<std::uint32_t>(it.positioning), it.flags, it.x_squares, it.z_squares, without_masks, masks, it.cost, it.visuals.size(), it.sounds.size(), it.parameters.size(), it.nodes.size(), it.default_colours[0], it.default_colours[1], it.default_colours[2]);
+                    name.c_str(), it.version, it.compact ? " compact" : "", it.type, static_cast<u32>(it.positioning), it.flags, it.x_squares, it.z_squares, without_masks, masks, it.cost, it.visuals.size(), it.sounds.size(), it.parameters.size(), it.nodes.size(), it.default_colours[0], it.default_colours[1], it.default_colours[2]);
                 for (const auto& sq : it.squares)
                     out.info("    square flags {:03x} levels {:d}..{:d}", sq.flags, sq.min_height, sq.max_height);
                 for (const auto& p : it.parameters)
@@ -1248,8 +1249,8 @@ namespace
     {
         namespace ovl = rct3::ovl;
         const bool write = std::strcmp(g_tex_export_dir, "-") != 0;
-        std::size_t frames = 0, frames_bad = 0, bitmaps = 0, bitmaps_bad = 0, flics = 0, flics_bad = 0, images = 0;
-        std::size_t by_format[32] = { };
+        usize frames = 0, frames_bad = 0, bitmaps = 0, bitmaps_bad = 0, flics = 0, flics_bad = 0, images = 0;
+        usize by_format[32] = { };
 
         auto save = [&](const ovl::texture::RgbaImage& image, const std::string& name) {
             ++images;
@@ -1270,7 +1271,7 @@ namespace
             }
         };
         auto save_levels = [&](const std::vector<ovl::texture::RgbaImage>& levels, const std::string& name) {
-            for (std::size_t m = 0; m < levels.size(); ++m)
+            for (usize m = 0; m < levels.size(); ++m)
                 save(levels[m], std::format("{}_m{}", name, m));
         };
 
@@ -1278,7 +1279,7 @@ namespace
         {
             if (!item.texture)
                 continue;
-            for (std::size_t i = 0; i < item.texture->frames.size(); ++i)
+            for (usize i = 0; i < item.texture->frames.size(); ++i)
             {
                 ++frames;
                 const auto image = ovl::texture::decode_flexi_frame(item.texture->frames[i]);
@@ -1294,7 +1295,7 @@ namespace
         {
             if (!item.table)
                 continue;
-            for (std::size_t i = 0; i < item.table->bitmaps.size(); ++i)
+            for (usize i = 0; i < item.table->bitmaps.size(); ++i)
             {
                 const auto& b = item.table->bitmaps[i];
                 ++bitmaps;
@@ -1325,7 +1326,7 @@ namespace
             save_levels(levels, std::format("flic{}", item.address));
         }
         out.info("tex export     {}: frames {:d} ({:d} failed) bitmaps {:d} ({:d} failed) flics {:d} ({:d} failed) images {:d}", title, frames, frames_bad, bitmaps, bitmaps_bad, flics, flics_bad, images);
-        for (std::size_t f = 0; f < 32; ++f)
+        for (usize f = 0; f < 32; ++f)
         {
             if (by_format[f])
                 out.info("tex format     {}: {:d} x format {:d}", title, by_format[f], f);
@@ -1364,7 +1365,7 @@ namespace
         return write_text_file(dir / std::format("{}.obj", base), rct3::ovl::write_obj(mesh, std::format("{}.mtl", base))) && write_text_file(dir / std::format("{}.mtl", base), rct3::ovl::write_mtl(mesh));
     }
 
-    bool export_part_meshes(const std::filesystem::path& dir, std::string_view prefix, const rct3::ovl::Overlay& overlay, const Part& part, std::size_t& written, std::size_t& failed)
+    bool export_part_meshes(const std::filesystem::path& dir, std::string_view prefix, const rct3::ovl::Overlay& overlay, const Part& part, usize& written, usize& failed)
     {
         bool ok = true;
         for (const auto& item : rct3::ovl::read_static_shapes(overlay, part))
@@ -1405,7 +1406,7 @@ int main(int argc, char** argv)
     Options opt;
     const char* path = nullptr;
     const char* obj_dir = nullptr; // mesh export directory
-    for (std::int32_t i = 1; i < argc; ++i)
+    for (i32 i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--symbols") == 0)
             opt.symbols = true;
@@ -1539,7 +1540,7 @@ int main(int argc, char** argv)
                 break;
             }
         }
-        std::size_t written = 0, failed = 0;
+        usize written = 0, failed = 0;
         bool ok = export_part_meshes(obj_dir, std::format("{}_c", stem), *overlay, overlay->common(), written, failed);
         if (const auto unique = overlay->unique())
             ok = export_part_meshes(obj_dir, std::format("{}_u", stem), *overlay, *unique, written, failed) && ok;

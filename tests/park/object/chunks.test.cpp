@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object/chunks.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -9,7 +11,7 @@ using namespace rct3::park::object;
 
 namespace
 {
-    save::model::PlacedObject at(std::int32_t col, std::int32_t row)
+    save::model::PlacedObject at(i32 col, i32 row)
     {
         save::model::PlacedObject o;
         o.col = col;
@@ -19,7 +21,7 @@ namespace
 
     LevelPlan plan(ObjectLevels steady)
     {
-        const std::size_t n = steady.size();
+        const usize n = steady.size();
         return { .steady = std::move(steady), .finer = ObjectLevels(n, kNotDrawn), .coarser = ObjectLevels(n, kNotDrawn), .bands = std::vector<glm::vec2>(n) };
     }
 } // namespace
@@ -40,15 +42,15 @@ TEST_CASE("objects fall in the chunk of their tile, those off the map in the nea
     const std::vector objects { at(40, 5), at(1, 1), at(40, 35), at(33, 2) };
     const auto members = chunk_members(objects, grid);
     REQUIRE(members.size() == 6);
-    CHECK(members[0] == std::vector<std::uint32_t> { 1 });
-    CHECK(members[1] == std::vector<std::uint32_t> { 0, 3 });
-    CHECK(members[4] == std::vector<std::uint32_t> { 2 });
+    CHECK(members[0] == std::vector<u32> { 1 });
+    CHECK(members[1] == std::vector<u32> { 0, 3 });
+    CHECK(members[4] == std::vector<u32> { 2 });
     CHECK(members[2].empty());
 }
 
 TEST_CASE("only the chunks holding an object planned differently have changed, all when the objects did")
 {
-    const std::vector<std::vector<std::uint32_t>> members { { 0, 2 }, { 1 }, { } };
+    const std::vector<std::vector<u32>> members { { 0, 2 }, { 1 }, { } };
     const LevelPlan shown = plan({ 0, 1, 2 });
     CHECK(changed_chunks(shown, shown, members) == std::vector { false, false, false });
     CHECK(changed_chunks(plan({ 0, 2, 2 }), shown, members) == std::vector { false, true, false });

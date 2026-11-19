@@ -3,6 +3,7 @@
 // The rows of the build lists (picker.hpp), made from the items the install offers.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/build_catalogue.hpp"
 #include "strings/ascii.hpp"
 #include "ui/money_text.hpp"
@@ -24,7 +25,7 @@ namespace rct3::ui::screens::build
     [[nodiscard]] std::optional<park::BuildList> build_list(park_view::ToolItem item) noexcept;
 
     /// The string key of the word for an animal's rarity, from 0 (common) to 1 (endangered).
-    [[nodiscard]] std::string_view rarity_text(float rarity) noexcept;
+    [[nodiscard]] std::string_view rarity_text(f32 rarity) noexcept;
 
     /// The object filter `item` falls under, by its kind of ride or category of scenery: the name its
     /// pictures and help are known by ("Coaster_Steel"). Empty for items under none.
@@ -44,6 +45,6 @@ namespace rct3::ui::screens::build
     /// ride's row tells how many saved designs `design_counts` gives its kind, by symbol, when it has any.
     /// Items still to be invented show locked; `researching` is the one under way, by its index, and how far
     /// it has got.
-    [[nodiscard]] std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, std::size_t, strings::LessIgnoringCase>& design_counts = { }, std::optional<std::pair<std::size_t, float>> researching = std::nullopt);
+    [[nodiscard]] std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, usize, strings::LessIgnoringCase>& design_counts = { }, std::optional<std::pair<usize, f32>> researching = std::nullopt);
 
 } // namespace rct3::ui::screens::build

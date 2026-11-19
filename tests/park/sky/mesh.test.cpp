@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/sky/mesh.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -9,7 +11,7 @@ using namespace rct3::park::sky;
 
 namespace
 {
-    SkyShape triangle(std::string texture, float size)
+    SkyShape triangle(std::string texture, f32 size)
     {
         SkyShape s;
         s.texture = std::move(texture);
@@ -51,7 +53,7 @@ TEST_CASE("the sky is centred on the eye, its farthest point at the radius")
 TEST_CASE("the dome reads one column of its picture, for the time of day")
 {
     const object::ObjectMesh m = sky_mesh(sky_models(), { .radius = 1, .day = 0.8f });
-    for (std::uint32_t i = 0; i < m.batches[0].count; ++i)
+    for (u32 i = 0; i < m.batches[0].count; ++i)
         CHECK(m.vertices[m.indices[m.batches[0].first + i]].uv.x == doctest::Approx(0.8f));
     CHECK(m.vertices[m.indices[1]].uv.y == doctest::Approx(1));
 }

@@ -2,6 +2,7 @@
 #include "ovl/static_shape.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -17,34 +18,34 @@ namespace
 
     // Name block, 28 bytes: "T:shs" 0, "Tex:ftx" 6, "Sty:txs" 14, "hook" 22. The structure block follows
     // at address 28.
-    constexpr std::uint32_t kBase = 28;
-    constexpr std::uint32_t kNameShape = 0;
-    constexpr std::uint32_t kNameTexture = 6;
-    constexpr std::uint32_t kNameStyle = 14;
-    constexpr std::uint32_t kNameHook = 22;
+    constexpr u32 kBase = 28;
+    constexpr u32 kNameShape = 0;
+    constexpr u32 kNameTexture = 6;
+    constexpr u32 kNameStyle = 14;
+    constexpr u32 kNameHook = 22;
 
     // Offsets inside the structure block.
-    constexpr std::uint32_t kMeshArray = 0;     // 2 pointers
-    constexpr std::uint32_t kMesh0 = 8;         // 40 bytes
-    constexpr std::uint32_t kMesh1 = 48;        // 40 bytes
-    constexpr std::uint32_t kHeader = 88;       // 56 bytes
-    constexpr std::uint32_t kEffectNames = 144; // 1 pointer
-    constexpr std::uint32_t kMatrix = 148;      // 64 bytes
-    constexpr std::uint32_t kVertices0 = 212;   // 3 * 36
-    constexpr std::uint32_t kIndices0 = 320;    // 3 * 4
-    constexpr std::uint32_t kVertices1 = 332;   // 3 * 36
-    constexpr std::uint32_t kIndices1 = 440;    // 6 * 4
-    constexpr std::uint32_t kEnd = 464;
+    constexpr u32 kMeshArray = 0;     // 2 pointers
+    constexpr u32 kMesh0 = 8;         // 40 bytes
+    constexpr u32 kMesh1 = 48;        // 40 bytes
+    constexpr u32 kHeader = 88;       // 56 bytes
+    constexpr u32 kEffectNames = 144; // 1 pointer
+    constexpr u32 kMatrix = 148;      // 64 bytes
+    constexpr u32 kVertices0 = 212;   // 3 * 36
+    constexpr u32 kIndices0 = 320;    // 3 * 4
+    constexpr u32 kVertices1 = 332;   // 3 * 36
+    constexpr u32 kIndices1 = 440;    // 6 * 4
+    constexpr u32 kEnd = 464;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    void real(std::vector<std::byte>& out, float v)
+    void real(std::vector<std::byte>& out, f32 v)
     {
-        append_u32(out, std::bit_cast<std::uint32_t>(v));
+        append_u32(out, std::bit_cast<u32>(v));
     }
 
     std::vector<std::byte> names()
@@ -64,7 +65,7 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> reference_rows(std::uint32_t second_name = kNameStyle)
+    std::vector<std::byte> reference_rows(u32 second_name = kNameStyle)
     {
         std::vector<std::byte> out;
         words(out, { kBase + kMesh0 + 4, kNameTexture, 0, 0 });
@@ -72,26 +73,26 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> structure(std::uint32_t mesh_count = 2, std::uint32_t indices1 = kBase + kIndices1)
+    std::vector<std::byte> structure(u32 mesh_count = 2, u32 indices1 = kBase + kIndices1)
     {
         std::vector<std::byte> out;
         words(out, { kBase + kMesh0, kBase + kMesh1 });                                          // mesh array
         words(out, { 0xFFFFFFFF, 0, 0, 1, 12, 3, 3, 3, kBase + kVertices0, kBase + kIndices0 }); // mesh 0
         words(out, { 4, 0, 0, 0, 0, 1, 3, 6, kBase + kVertices1, indices1 });                    // mesh 1
-        for (float f : { -1.0f, -2.0f, -3.0f, 1.0f, 2.0f, 3.0f })
+        for (f32 f : { -1.0f, -2.0f, -3.0f, 1.0f, 2.0f, 3.0f })
             real(out, f); // bounds
         words(out, { 6, 9, 1, mesh_count, kBase + kMeshArray, 1, kBase + kMatrix, kBase + kEffectNames });
         words(out, { kNameHook }); // effect name pointer
-        for (std::size_t i = 0; i < 16; ++i)
+        for (usize i = 0; i < 16; ++i)
             real(out, i % 5 == 0 ? 1.0f : 0.0f); // identity matrix
-        const auto vertices = [&out](std::size_t first) {
-            for (std::size_t v = first; v < first + 3; ++v)
+        const auto vertices = [&out](usize first) {
+            for (usize v = first; v < first + 3; ++v)
             {
-                for (std::size_t k = 0; k < 6; ++k)
-                    real(out, static_cast<float>(v * 10 + k));
+                for (usize k = 0; k < 6; ++k)
+                    real(out, static_cast<f32>(v * 10 + k));
                 words(out, { 0xFF030201u }); // colour bytes 01 02 03 FF
-                real(out, static_cast<float>(v * 10 + 7));
-                real(out, static_cast<float>(v * 10 + 8));
+                real(out, static_cast<f32>(v * 10 + 7));
+                real(out, static_cast<f32>(v * 10 + 8));
             }
         };
         vertices(0);
@@ -140,7 +141,7 @@ TEST_CASE("static shapes expose meshes, references and effects")
     const auto v = m0.vertex(1);
     CHECK(v.position[0] == 10.0f);
     CHECK(v.normal[2] == 15.0f);
-    CHECK(v.colour == std::array<std::uint8_t, 4> { 0x01, 0x02, 0x03, 0xFF });
+    CHECK(v.colour == std::array<u8, 4> { 0x01, 0x02, 0x03, 0xFF });
     CHECK(v.texcoord[0] == 17.0f);
     CHECK(v.texcoord[1] == 18.0f);
     CHECK(m0.index(2) == 2);

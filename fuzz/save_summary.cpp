@@ -2,6 +2,7 @@
 //
 // libFuzzer target: read_summary must return a summary or an error for any input, never crash, read out of
 // bounds or trip a sanitizer. Run with `./nob fuzz save_summary`.
+#include "core/types.hpp"
 #include "save/summary.hpp"
 
 #include <cstddef>
@@ -14,7 +15,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     if (!summary)
         return 0;
     // A picture is whole or absent.
-    if (!summary->preview.empty() && summary->preview.size() != std::size_t { rct3::save::kPreviewWidth } * rct3::save::kPreviewHeight * 4)
+    if (!summary->preview.empty() && summary->preview.size() != usize { rct3::save::kPreviewWidth } * rct3::save::kPreviewHeight * 4)
         __builtin_trap();
     return 0;
 }

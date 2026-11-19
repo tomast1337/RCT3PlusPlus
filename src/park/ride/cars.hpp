@@ -5,6 +5,7 @@
 // its train's design names for its slot, in the ride's car colours.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "save/model/rides.hpp"
 
@@ -23,19 +24,19 @@ namespace rct3::park::ride
     struct CarDesign
     {
         std::string train; ///< The ride train's name, without its tag
-        std::size_t slot = 0;
+        usize slot = 0;
     };
 
     /// Where a car piece's car is: its ride, and how far along the track the park kept its wheels.
     struct CarSpot
     {
         save::model::RideIndex ride { };
-        std::size_t train = 0; ///< Of the ride's trains
-        float front_wheels = 0;
-        float rear_wheels = 0;
+        usize train = 0; ///< Of the ride's trains
+        f32 front_wheels = 0;
+        f32 rear_wheels = 0;
         /// Of a lift's car, which of its course's lifts it carries trains up; its `train` is then numbered past the
         /// ride's trains.
-        std::optional<std::size_t> lift { };
+        std::optional<usize> lift { };
     };
 
     struct RideCars
@@ -50,9 +51,9 @@ namespace rct3::park::ride
     /// slots `filled`. The slots hold its front, second, middle, second-to-last and last car, then a link
     /// coupled between each two cars. A car whose slot is empty is a middle car, and one with no middle car the
     /// front car; with no link the cars are coupled straight.
-    [[nodiscard]] std::vector<std::size_t> car_slots(std::int32_t cars, const std::array<bool, 6>& filled);
+    [[nodiscard]] std::vector<usize> car_slots(i32 cars, const std::array<bool, 6>& filled);
 
     /// The cars of `rides` whose place the park kept, with ids from `last_id` + 1.
-    [[nodiscard]] RideCars ride_cars(std::span<const save::model::Ride> rides, std::uint64_t last_id);
+    [[nodiscard]] RideCars ride_cars(std::span<const save::model::Ride> rides, u64 last_id);
 
 } // namespace rct3::park::ride

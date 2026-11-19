@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/objectives.hpp"
 
+#include "core/types.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/research.hpp"
 #include "simulation/tuning.hpp"
@@ -13,9 +14,9 @@ using namespace rct3;
 
 namespace
 {
-    constexpr float kMonth = save::model::GameClock::kUnitsPerMonth;
+    constexpr f32 kMonth = save::model::GameClock::kUnitsPerMonth;
 
-    save::model::Condition goal(std::int32_t level, save::model::ConditionKind kind, std::int64_t value, std::int32_t months = 0)
+    save::model::Condition goal(i32 level, save::model::ConditionKind kind, i64 value, i32 months = 0)
     {
         return { .kind = kind, .difficulty = level, .months_to_hold = months, .value = value };
     }
@@ -101,7 +102,7 @@ TEST_CASE("prizes pay out, their cash booked as prize money")
     park.rating = 0.99f;
     save::model::Finance finance { .max_loan = 1000, .interest_rate_percent = 8 };
     save::model::TerrainGrid land { .width = 2, .height = 1, .cells = { { .flags = std::to_underlying(save::model::TileFlag::HeldBack) }, { } } };
-    std::optional<std::int64_t> kept;
+    std::optional<i64> kept;
     simulation::Research research;
     simulation::give_prize(park, finance, kept, land, research, 1);
     simulation::give_prize(park, finance, kept, land, research, 2);
@@ -125,7 +126,7 @@ TEST_CASE("a park whose money never runs out gets nothing from a cash prize")
     simulation::park::ParkState park; // No cash kept
     save::model::Finance finance;
     save::model::TerrainGrid land;
-    std::optional<std::int64_t> kept;
+    std::optional<i64> kept;
     simulation::Research research;
     simulation::give_prize(park, finance, kept, land, research, 1);
     CHECK_FALSE(park.cash);
@@ -138,7 +139,7 @@ TEST_CASE("the research prize is free progress at the next part of the budget pa
     park.cash = units::Money { 100000 };
     save::model::Finance finance;
     save::model::TerrainGrid land;
-    std::optional<std::int64_t> kept;
+    std::optional<i64> kept;
     simulation::Research research { .budget = 30000, .current = 1 };
     std::vector<simulation::ResearchItem> items { { .id = 1, .cost = units::Money { 100000 } } };
     random::RandomState dice = random::seeded(random::Seed { 1 });
@@ -152,8 +153,8 @@ TEST_CASE("the research prize is free progress at the next part of the budget pa
 
 TEST_CASE("a dated goal warns a month and a week before, is judged on its date, and a miss moves it a year on")
 {
-    constexpr float kWeek = save::model::GameClock::kUnitsPerWeek;
-    constexpr float kYear = save::model::GameClock::kUnitsPerYear;
+    constexpr f32 kWeek = save::model::GameClock::kUnitsPerWeek;
+    constexpr f32 kYear = save::model::GameClock::kUnitsPerYear;
     save::model::ObjectiveSet set;
     set.objectives = { { .difficulty = 0 } };
     save::model::Condition dated = goal(0, save::model::ConditionKind::ParkGuests, 300);
@@ -244,15 +245,15 @@ TEST_CASE("the rating prize lifts the rating at once and each week's score while
     park.rating = 0.5f;
     save::model::Finance finance;
     save::model::TerrainGrid land;
-    std::optional<std::int64_t> kept;
+    std::optional<i64> kept;
     simulation::Research research;
     simulation::give_prize(park, finance, kept, land, research, 4);
     CHECK(park.rating > 0.5f);
-    const float bonus = park.rating_bonus;
+    const f32 bonus = park.rating_bonus;
     REQUIRE(bonus > 0);
     simulation::park::rate_week(park, { });
     CHECK(park.rating_bonus < bonus);
-    for (std::int32_t week = 0; week < 100 && park.rating_bonus > 0; ++week)
+    for (i32 week = 0; week < 100 && park.rating_bonus > 0; ++week)
         simulation::park::rate_week(park, { });
     CHECK(park.rating_bonus == 0);
 }

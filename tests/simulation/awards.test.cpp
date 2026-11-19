@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/awards.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -26,7 +28,7 @@ TEST_CASE("awards wait for the scenario to let them begin, then come once in fiv
     REQUIRE(awards.earned.size() == 6);
     CHECK(awards.earned.front() == std::vector { 11 });
     // Had lately, it is not given again until it has passed out of the last five months.
-    for (std::int32_t month = 0; month < 5; ++month)
+    for (i32 month = 0; month < 5; ++month)
         CHECK(simulation::award_month(awards, toilets(), dice).empty());
     CHECK(simulation::award_month(awards, toilets(), dice) == std::vector { 11 });
 
@@ -61,7 +63,7 @@ TEST_CASE("litter on guests' minds makes the park untidy")
 TEST_CASE("a big park with reliable rides that never crashed is the safest")
 {
     random::RandomState dice = random::seeded({ });
-    simulation::AwardFigures park { .guests = 1000, .downtime = std::vector<float>(20, 0.0f), .reliability = 95 };
+    simulation::AwardFigures park { .guests = 1000, .downtime = std::vector<f32>(20, 0.0f), .reliability = 95 };
     CHECK(simulation::award_earned(9, park, 0, dice));
     CHECK_FALSE(simulation::award_earned(9, park, 1u << 23, dice)); // Fined for danger lately
     park.crashed = 1;
@@ -74,7 +76,7 @@ TEST_CASE("a big park with reliable rides that never crashed is the safest")
 TEST_CASE("best reliability needs many rides running and none out of action long")
 {
     random::RandomState dice = random::seeded({ });
-    simulation::AwardFigures park { .downtime = std::vector<float>(30, 2.0f), .reliability = 90, .running = 30 };
+    simulation::AwardFigures park { .downtime = std::vector<f32>(30, 2.0f), .reliability = 90, .running = 30 };
     CHECK(simulation::award_earned(14, park, 0, dice));
     CHECK_FALSE(simulation::award_earned(14, park, 1u << 15, dice));
     park.downtime.back() = 50;
@@ -103,13 +105,13 @@ TEST_CASE("a ride or stall carries a theme when enough of its scenery stands rou
 {
     const std::vector<park::BuildItem> catalogue { { .symbol = "Grave", .overlay = "Style/Themed/Gloom/Style", .width = 4, .length = 4, .style_index = 9, .style = "Gloom" } };
     save::model::RideModel rides;
-    for (const std::int32_t col : { 10, 90 })
+    for (const i32 col : { 10, 90 })
         rides.stalls.push_back({ .base = { .id = static_cast<save::model::ObjectId>(col), .overlay_path = "Style\\Themed\\Gloom\\Style", .spot = save::model::PlacementSpot { .col = col, .row = 10 } } });
     std::vector<save::model::PlacedObject> objects;
-    for (std::int32_t i = 0; i < 6; ++i)
-        objects.push_back({ .id = 100 + static_cast<std::uint64_t>(i), .symbol = "Grave:svd", .overlay = "Style\\Themed\\Gloom\\Style", .col = 12 + i % 2, .row = 8 + i });
+    for (i32 i = 0; i < 6; ++i)
+        objects.push_back({ .id = 100 + static_cast<u64>(i), .symbol = "Grave:svd", .overlay = "Style\\Themed\\Gloom\\Style", .col = 12 + i % 2, .row = 8 + i });
     // Only the stall among the graves carries the theme.
-    CHECK(simulation::themed_attractions(rides, objects, catalogue) == std::map<std::string, std::int32_t, std::less<>> { { "Gloom", 1 } });
+    CHECK(simulation::themed_attractions(rides, objects, catalogue) == std::map<std::string, i32, std::less<>> { { "Gloom", 1 } });
     objects.pop_back();
     CHECK(simulation::themed_attractions(rides, objects, catalogue).empty());
 

@@ -12,6 +12,7 @@
 // The owner asks with take_change() whether the user moved it.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widget.hpp"
 
 #include <cstdint>
@@ -26,9 +27,9 @@ namespace rct3::ui::widgets
         std::string thumb; ///< Family base name (see SkinLibrary), drawn at thumb_size
         Color rail_colour = hex("#286eaa");
         Color thumb_colour = hex("#3caa3c"); ///< When there is no thumb skin
-        float rail_thickness = 3;
-        float thumb_width = 18;
-        float thumb_height = 13;
+        f32 rail_thickness = 3;
+        f32 thumb_width = 18;
+        f32 thumb_height = 13;
         bool bar = false; ///< A filled bar with no thumb, over the slider's whole rectangle; give thumb_width 0
         Color bar_colour = hex("#44c7ff");
         Color bar_back_colour = hex("#7f7f7f");
@@ -40,16 +41,16 @@ namespace rct3::ui::widgets
         Slider(std::string name, SliderStyle style);
 
         SliderStyle style;
-        float minimum = 0;
-        float maximum = 1;
-        float step = 0; ///< 0 for any value
+        f32 minimum = 0;
+        f32 maximum = 1;
+        f32 step = 0; ///< 0 for any value
 
-        [[nodiscard]] float value() const
+        [[nodiscard]] f32 value() const
         {
             return value_;
         }
         /// Sets the value, snapped and kept in range. Not reported by take_change().
-        void set_value(float v);
+        void set_value(f32 v);
 
         /// True once for each move by the user since the last call.
         [[nodiscard]] bool take_change();
@@ -78,13 +79,13 @@ namespace rct3::ui::widgets
         void draw(DrawContext& context) const override;
 
     private:
-        [[nodiscard]] float snapped(float v) const;
-        void move_to(float v); // By the user
-        [[nodiscard]] float key_step() const;
+        [[nodiscard]] f32 snapped(f32 v) const;
+        void move_to(f32 v); // By the user
+        [[nodiscard]] f32 key_step() const;
 
-        float value_ = 0;
-        float grab_ = 0; // Pointer offset from the thumb's centre while dragging
-        std::int32_t changes_ = 0;
+        f32 value_ = 0;
+        f32 grab_ = 0; // Pointer offset from the thumb's centre while dragging
+        i32 changes_ = 0;
     };
 
 } // namespace rct3::ui::widgets

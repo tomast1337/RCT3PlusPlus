@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground/smoothing.hpp"
 
+#include "core/types.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -12,12 +14,12 @@ using namespace rct3::park::ground;
 namespace
 {
     /// Flat at height 2, `size` tiles each way, with a spike at corner point (5, 5).
-    save::model::TerrainGrid spiked(std::int32_t size)
+    save::model::TerrainGrid spiked(i32 size)
     {
         save::model::TerrainGrid g;
         g.width = size;
         g.height = size;
-        g.cells.resize(static_cast<std::size_t>(size * size));
+        g.cells.resize(static_cast<usize>(size * size));
         for (save::model::TerrainCell& c : g.cells)
             c.corners = { 2, 2, 2, 2 };
         g.at(5, 5).corners[0] = g.at(4, 5).corners[1] = g.at(5, 4).corners[2] = g.at(4, 4).corners[3] = 6;
@@ -25,14 +27,14 @@ namespace
     }
 
     const auto anywhere = [](save::model::Tile) { return true; };
-    constexpr float kAny = 1e9f; ///< No limit on how far a corner moves in a pass
-    constexpr float kAll = 1e6f; ///< All of the way, out to the brush's very edge
+    constexpr f32 kAny = 1e9f; ///< No limit on how far a corner moves in a pass
+    constexpr f32 kAll = 1e6f; ///< All of the way, out to the brush's very edge
 } // namespace
 
 TEST_CASE("averaging pulls a spike down, a little each pass, and only inside the reach")
 {
     save::model::TerrainGrid g = spiked(10);
-    const float moved = smooth_ground(g, GroundSmoothing::Average, { 5, 5 }, 2, 0.5f, kAny, 0, 1, anywhere);
+    const f32 moved = smooth_ground(g, GroundSmoothing::Average, { 5, 5 }, 2, 0.5f, kAny, 0, 1, anywhere);
     CHECK(moved > 0);
     CHECK(g.at(5, 5).corners[0] == doctest::Approx(4)); // Half the way to its neighbours' 2
     CHECK(g.at(4, 4).corners[3] == doctest::Approx(4)); // Shared
@@ -49,22 +51,22 @@ TEST_CASE("levelling goes to the target, a pad to one whole unit; random stays w
 
     // A pad: the whole brush goes to the one whole unit of the height it was levelled from, slopes and all.
     save::model::TerrainGrid w = spiked(10);
-    for (std::int32_t c = 0; c < 10; ++c)
-        for (std::int32_t r = 0; r < 10; ++r)
+    for (i32 c = 0; c < 10; ++c)
+        for (i32 r = 0; r < 10; ++r)
             w.at(c, r).corners = { c * 0.7f, (c + 1) * 0.7f, c * 0.7f, (c + 1) * 0.7f };
     CHECK(whole_level(3.4f) == 3);
     CHECK(whole_level(3.5f) == 4);
     CHECK(whole_level(-0.4f) == 0);
     smooth_ground(w, GroundSmoothing::Level, { 5, 5 }, 2, kAll, kAny, whole_level(3.4f), 1, anywhere);
-    for (std::int32_t c = 4; c <= 5; ++c)
-        for (const float h : w.at(c, 5).corners)
+    for (i32 c = 4; c <= 5; ++c)
+        for (const f32 h : w.at(c, 5).corners)
             CHECK(h == doctest::Approx(3));
 
     save::model::TerrainGrid r = spiked(10);
     smooth_ground(r, GroundSmoothing::Random, { 2, 2 }, 2, kAll, kAny, 0, 7, anywhere);
     bool changed = false;
     for (const save::model::TerrainCell& c : r.cells)
-        for (const float h : c.corners)
+        for (const f32 h : c.corners)
         {
             CHECK((std::abs(h - 2) <= 0.5f || h == 6));
             changed = changed || (h != 2 && h != 6);
@@ -79,7 +81,7 @@ TEST_CASE("averaging and levelling move both sides of a cliff")
     g.at(5, 5).corners = { 6, 6, 6, 6 };                                                               // A raised tile with cliffs four units high round it
     g.at(7, 5).corners[0] = g.at(6, 5).corners[1] = g.at(7, 4).corners[2] = g.at(6, 4).corners[3] = 4; // A bump at the cliff's foot
     smooth_ground(g, GroundSmoothing::Average, { 6, 5.5f }, 1.2f, kAll, kAny, 0, 1, anywhere);
-    for (const float h : g.at(5, 5).corners)
+    for (const f32 h : g.at(5, 5).corners)
         CHECK(h == doctest::Approx(6));                    // The flat top is its own ground: the lower ground beside it does not pull it
     CHECK(g.at(6, 5).corners[0] == doctest::Approx(2.5f)); // The foot follows the bump beside it, not the top
     CHECK(g.at(6, 5).corners[1] < 4);                      // The bump on the lower ground wears down
@@ -102,7 +104,7 @@ TEST_CASE("joining edges takes cliffs away; squaring makes them, each tile flat 
 
     save::model::TerrainGrid s = spiked(10);
     smooth_ground(s, GroundSmoothing::TileEdges, { 5, 5 }, 1, kAll, kAny, 0, 1, anywhere);
-    for (const float h : s.at(5, 5).corners)
+    for (const f32 h : s.at(5, 5).corners)
         CHECK(h == doctest::Approx(3)); // The mean of 6, 2, 2, 2 to the nearest unit
     CHECK(s.at(4, 4).corners[0] == doctest::Approx(3));
 
@@ -110,10 +112,10 @@ TEST_CASE("joining edges takes cliffs away; squaring makes them, each tile flat 
     save::model::TerrainGrid eased = spiked(10);
     eased.at(5, 5).corners = { 6, 6, 6, 6 };
     smooth_ground(eased, GroundSmoothing::JoinEdges, { 5.5f, 5.5f }, 2, 0.5f, kAny, 0, 1, anywhere);
-    const float gap = eased.at(5, 5).corners[1] - eased.at(6, 5).corners[0];
+    const f32 gap = eased.at(5, 5).corners[1] - eased.at(6, 5).corners[0];
     CHECK(gap > 0);
     CHECK(gap < 4);
-    for (std::int32_t pass = 0; pass < 20; ++pass)
+    for (i32 pass = 0; pass < 20; ++pass)
         smooth_ground(eased, GroundSmoothing::JoinEdges, { 5.5f, 5.5f }, 2, 0.5f, kAny, 0, 1, anywhere);
     CHECK(eased.at(5, 5).corners[1] == doctest::Approx(eased.at(6, 5).corners[0]));
 
@@ -142,7 +144,7 @@ TEST_CASE("a smoothing brush works strongest at its middle and falls off to noth
     smooth_ground(sprayed, GroundSmoothing::Level, { 6, 6 }, 4, 1, 0.5f, 8, 1, anywhere);
     CHECK(sprayed.at(6, 6).corners[0] == doctest::Approx(0.5f));
     CHECK(sprayed.at(8, 6).corners[0] == doctest::Approx(0.375f));
-    for (std::int32_t pass = 0; pass < 40; ++pass)
+    for (i32 pass = 0; pass < 40; ++pass)
         smooth_ground(sprayed, GroundSmoothing::Level, { 6, 6 }, 4, 1, 0.5f, 8, 1, anywhere);
     CHECK(sprayed.at(6, 6).corners[0] == 8);
     CHECK(sprayed.at(8, 6).corners[0] == 8);

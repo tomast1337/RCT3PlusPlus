@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/import_park.hpp"
 
+#include "core/types.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
@@ -29,7 +30,7 @@ TEST_CASE("a show ride's go lasts as long as the tricks of its show")
 
 TEST_CASE("a flat ride's timing is its starting, running and stopping animations, running as many times as set")
 {
-    const std::array<float, 4> seconds { 0, 10, 20, 5 }; // Standing, starting, running, stopping
+    const std::array<f32, 4> seconds { 0, 10, 20, 5 }; // Standing, starting, running, stopping
     const auto timing = simulation::flat_ride_timing(seconds, 16, 3);
     REQUIRE(timing);
     CHECK(timing->seats == 16);
@@ -57,10 +58,10 @@ TEST_CASE("a ride without a starting, running and stopping cycle runs once for i
 TEST_CASE("a stall sells what its items are named, or their kinds are, or its own kind is when neither tells")
 {
     simulation::SimWorld world;
-    for (std::int32_t c = 0; c <= 4; ++c)
+    for (i32 c = 0; c <= 4; ++c)
         world.paths.add({ c, 0, 0 });
     save::model::RideModel rides;
-    const auto stall = [&](std::string symbol, std::string item, std::int32_t col, std::string kind = { }) {
+    const auto stall = [&](std::string symbol, std::string item, i32 col, std::string kind = { }) {
         save::model::Stall& s = rides.stalls.emplace_back();
         s.base.symbol = std::move(symbol);
         s.base.spot = save::model::PlacementSpot { .col = col, .row = 1 };
@@ -106,7 +107,7 @@ TEST_CASE("a stall's item is food or drink by what its kind feeds or quenches, w
 TEST_CASE("a stall's food and drink is cold or hot by its name, and plain otherwise")
 {
     simulation::SimWorld world;
-    for (std::int32_t c = 0; c <= 3; ++c)
+    for (i32 c = 0; c <= 3; ++c)
         world.paths.add({ c, 0, 0 });
     save::model::RideModel rides;
     for (const auto& [item, col] : { std::pair { "Ice Cream", 0 }, std::pair { "Hot Chocolate", 1 }, std::pair { "Steak", 2 }, std::pair { "Milk Shake", 3 } })
@@ -146,7 +147,7 @@ TEST_CASE("a stall's ware takes the extras ticked on it or left to the guest, as
     CHECK(w.topping[0] == doctest::Approx(0.2f * amount[4] + 0.4f * amount[5]));
     CHECK(w.topping[1] == doctest::Approx(-0.1f * amount[4]));
     // The cheese costs the stall, and is worth that much more to guests.
-    const std::int64_t cheese = std::llround(4 * amount[4]);
+    const i64 cheese = std::llround(4 * amount[4]);
     CHECK(w.cost.value == 50 + cheese);
     CHECK(w.worth[0].value == 200 + cheese);
     CHECK(w.worth[1].value == 240 + cheese);
@@ -158,11 +159,11 @@ TEST_CASE("a stall's ware takes the extras ticked on it or left to the guest, as
 TEST_CASE("a ride comes over with its queue line, from the entrance back to the paths, and its exit")
 {
     simulation::SimWorld world;
-    for (std::int32_t c = 0; c <= 2; ++c)
+    for (i32 c = 0; c <= 2; ++c)
         world.paths.add({ c, 0, 0 });
     world.paths.add({ 4, 2, 0 });
     // Line 7 runs from (5, 0) by the entrance back to (3, 0) beside the path; line 8 is another ride's.
-    for (std::int32_t c = 3; c <= 5; ++c)
+    for (i32 c = 3; c <= 5; ++c)
         world.paths.add({ c, 0, 0 }, true, std::nullopt, 7);
     world.paths.add({ 5, 1, 0 }, true, std::nullopt, 8);
 
@@ -186,7 +187,7 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
     REQUIRE(world.registry.valid(e));
     const auto& cycle = world.registry.get<simulation::CycleRide>(e);
     CHECK(cycle.splash);
-    const auto at = [&](std::int32_t c, std::int32_t r) { return *world.paths.find({ c, r, 0 }); };
+    const auto at = [&](i32 c, i32 r) { return *world.paths.find({ c, r, 0 }); };
     CHECK(cycle.line == std::vector { at(5, 0), at(4, 0), at(3, 0) });
     CHECK(world.registry.get<simulation::Attraction>(e).entrance == at(3, 0));
     CHECK(cycle.exit == at(4, 2));
@@ -201,15 +202,15 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
 TEST_CASE("a ride's door joins only the path on the tile behind it, near its height")
 {
     // Facings 0 to 3 put a door's back towards +col, -row, -col and +row.
-    constexpr std::array<std::array<std::int32_t, 2>, 4> kBehind { { { 1, 0 }, { 0, -1 }, { -1, 0 }, { 0, 1 } } };
-    for (std::uint8_t facing = 0; facing < 4; ++facing)
+    constexpr std::array<std::array<i32, 2>, 4> kBehind { { { 1, 0 }, { 0, -1 }, { -1, 0 }, { 0, 1 } } };
+    for (u8 facing = 0; facing < 4; ++facing)
     {
         CAPTURE(facing);
         const auto [bc, br] = kBehind[facing];
         simulation::SimWorld world;
         world.paths.add({ 2 + bc, 2 + br, 0 });
         // Round the exit at (8, 8): paths on its other three sides, and one behind it three levels up.
-        for (std::uint8_t side = 1; side < 4; ++side)
+        for (u8 side = 1; side < 4; ++side)
             world.paths.add({ 8 + kBehind[(facing + side) % 4][0], 8 + kBehind[(facing + side) % 4][1], 0 });
         world.paths.add({ 8 + bc, 8 + br, 3 });
 
@@ -236,14 +237,14 @@ TEST_CASE("a ride's door joins only the path on the tile behind it, near its hei
 TEST_CASE("a stall joins only the path on the tile in front of it, near its height")
 {
     // Facings 0 to 3 put a stall's front towards -row, -col, +row and +col.
-    constexpr std::array<std::array<std::int32_t, 2>, 4> kFront { { { 0, -1 }, { -1, 0 }, { 0, 1 }, { 1, 0 } } };
-    for (std::uint8_t facing = 0; facing < 4; ++facing)
+    constexpr std::array<std::array<i32, 2>, 4> kFront { { { 0, -1 }, { -1, 0 }, { 0, 1 }, { 1, 0 } } };
+    for (u8 facing = 0; facing < 4; ++facing)
     {
         CAPTURE(facing);
         const auto [fc, fr] = kFront[facing];
         simulation::SimWorld world;
         // Paths on its other three sides, and one in front three levels up.
-        for (std::uint8_t side = 1; side < 4; ++side)
+        for (u8 side = 1; side < 4; ++side)
             world.paths.add({ 5 + kFront[(facing + side) % 4][0], 5 + kFront[(facing + side) % 4][1], 0 });
         world.paths.add({ 5 + fc, 5 + fr, 3 });
         save::model::RideModel rides;
@@ -274,7 +275,7 @@ TEST_CASE("a toilet or other facility joins a path on any side of it, near its h
         save::model::Ride& toilet = rides.rides.emplace_back();
         toilet.kind = save::model::RideKind::Special;
         toilet.base.spot = save::model::PlacementSpot { .col = 5, .row = 5 };
-        const auto kind_of = [](const save::model::Ride&) -> std::optional<std::uint32_t> { return 11; };
+        const auto kind_of = [](const save::model::Ride&) -> std::optional<u32> { return 11; };
         CHECK(simulation::import_facilities(world, rides, kind_of) == 0);
         world.paths.add({ 5 + dc, 5 + dr, 0 });
         CHECK(simulation::import_facilities(world, rides, kind_of) == 1);
@@ -290,7 +291,7 @@ TEST_CASE("a facility follows the paths beside it as they change; one pulled dow
     toilet.kind = save::model::RideKind::Special;
     toilet.base.id = 9;
     toilet.base.spot = save::model::PlacementSpot { .col = 5, .row = 5 };
-    const auto kind_of = [](const save::model::Ride&) -> std::optional<std::uint32_t> { return 11; };
+    const auto kind_of = [](const save::model::Ride&) -> std::optional<u32> { return 11; };
     REQUIRE(simulation::import_facilities(world, rides, kind_of) == 1);
     const auto e = world.registry.view<simulation::Shop>().front();
     CHECK(world.registry.get<simulation::Attraction>(e).entrance == west);
@@ -355,7 +356,7 @@ TEST_CASE("a tracked ride leaves the station as its saved operating settings say
 TEST_CASE("boats for hire carry their riders out and back, though their dock is no circuit")
 {
     simulation::SimWorld world;
-    for (std::int32_t c = 0; c <= 3; ++c)
+    for (i32 c = 0; c <= 3; ++c)
         world.paths.add({ c, 0, 0 });
     save::model::RideModel rides;
     save::model::Ride& ride = rides.rides.emplace_back();
@@ -412,7 +413,7 @@ TEST_CASE("a coaster tested with no path to its doors runs its train, and takes 
 TEST_CASE("guests the park had on a ride are put back on it, as many as it seats")
 {
     simulation::SimWorld world;
-    for (std::int32_t c = 0; c <= 3; ++c)
+    for (i32 c = 0; c <= 3; ++c)
         world.paths.add({ c, 0, 0 });
     save::model::RideModel rides;
     save::model::Ride& ride = rides.rides.emplace_back();
@@ -425,7 +426,7 @@ TEST_CASE("guests the park had on a ride are put back on it, as many as it seats
 
     // Three up in the air on the ride, far from any path, and one walking by on the path.
     save::model::PeopleModel people;
-    for (std::int32_t k = 0; k < 4; ++k)
+    for (i32 k = 0; k < 4; ++k)
     {
         save::model::Guest& g = people.guests.emplace_back();
         g.in_park = true;
@@ -487,7 +488,7 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     CHECK(piece.age.value == doctest::Approx(40)); // A game hour of the calendar
 
     save::model::WorldModel w;
-    for (std::uint64_t id = 1; id <= 4; ++id)
+    for (u64 id = 1; id <= 4; ++id)
         w.objects.push_back({ .id = id, .col = id == 4 ? 9 : 2, .row = 1 });
     w.bins.push_back({ .object_ref = 1, .capacity = 0.4f, .contents = 0.03f });
     w.benches = { 2, 4 }; // The second stands off the paths
@@ -533,7 +534,7 @@ TEST_CASE("guests the park had on a bench, at a view, a water cannon or a show g
     const glm::vec3 middle = world.paths.centre(tile);
     auto& r = world.registry;
     save::model::WorldModel w;
-    for (std::uint64_t id = 1; id <= 3; ++id)
+    for (u64 id = 1; id <= 3; ++id)
         w.objects.push_back({ .id = id, .col = 2, .row = 1 });
     const entt::entity bench = simulation::add_path_item(world, w.objects[0], simulation::PathItemKind::Bench);
     const entt::entity view = simulation::add_path_item(world, w.objects[1], simulation::PathItemKind::PhotoSpot);
@@ -547,8 +548,8 @@ TEST_CASE("guests the park had on a bench, at a view, a water cannon or a show g
     star.person.position = { middle.x, 0, middle.z };
     // Seated, getting up, at the view, firing the cannon, watching the entertainer, and two walking by carrying
     // things: a drink half drunk with an empty in a pocket, and an empty in a pocket only.
-    const std::array<std::pair<std::int32_t, save::model::PeopleObjectId>, 7> uses { { { 12, 101 }, { 12, 101 }, { 17, 102 }, { 17, 103 }, { 20, 500 }, { 4, 0 }, { 4, 0 } } };
-    for (std::size_t k = 0; k < uses.size(); ++k)
+    const std::array<std::pair<i32, save::model::PeopleObjectId>, 7> uses { { { 12, 101 }, { 12, 101 }, { 17, 102 }, { 17, 103 }, { 20, 500 }, { 4, 0 }, { 4, 0 } } };
+    for (usize k = 0; k < uses.size(); ++k)
     {
         save::model::Guest& g = people.guests.emplace_back();
         g.in_park = true;
@@ -767,12 +768,12 @@ TEST_CASE("paths laid and taken away come and go from the network; walkers and r
     simulation::import_paths(world, model.paths, model.terrain);
     // A row of paths along row 0, and a ride whose entrance at (5, 1) has no path beside it yet.
     std::vector<save::model::PathTile> laid;
-    for (std::int32_t c = 0; c <= 3; ++c)
+    for (i32 c = 0; c <= 3; ++c)
     {
         save::model::PathTile& p = laid.emplace_back();
         p.kind = save::model::PathKind::Ground;
-        p.col = static_cast<std::uint8_t>(c);
-        p.id = static_cast<std::uint64_t>(c + 1);
+        p.col = static_cast<u8>(c);
+        p.id = static_cast<u64>(c + 1);
         CHECK(simulation::add_path(world, p, grid).has_value());
     }
     save::model::RideModel rides;
@@ -781,7 +782,7 @@ TEST_CASE("paths laid and taken away come and go from the network; walkers and r
     ride.base.id = 42;
     ride.stations.emplace_back().entrance_spot = save::model::PlacementSpot { .col = 5, .row = 1, .direction = 1 }; // Its back to (5, 0)
     const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 4, .run = 30 } };
-    const auto at = [&](std::int32_t c) { return *world.paths.find({ c, 0, 0 }); };
+    const auto at = [&](i32 c) { return *world.paths.find({ c, 0, 0 }); };
     // Imported while a stub path reaches the entrance, then the stub goes and a path is laid to it later.
     save::model::PathTile stub;
     stub.kind = save::model::PathKind::Ground;
@@ -835,14 +836,14 @@ TEST_CASE("paths on the ground and the people on them follow the ground when it 
     model.terrain = grid;
     simulation::import_paths(world, model.paths, model.terrain);
     std::vector<save::model::PathTile> laid;
-    for (std::int32_t c = 0; c <= 2; ++c)
+    for (i32 c = 0; c <= 2; ++c)
     {
         save::model::PathTile& p = laid.emplace_back();
         p.kind = save::model::PathKind::Ground;
-        p.col = static_cast<std::uint8_t>(c);
+        p.col = static_cast<u8>(c);
         (void)simulation::add_path(world, p, grid);
     }
-    const auto at = [&](std::int32_t c, std::int32_t level) { return *world.paths.find({ c, 0, level }); };
+    const auto at = [&](i32 c, i32 level) { return *world.paths.find({ c, 0, level }); };
     auto& r = world.registry;
     // One guest stands on (1, 0), another reels already, a third rides and is left be.
     const auto guest = [&](simulation::NodeId on) {
@@ -899,15 +900,15 @@ TEST_CASE("people on foot whose ground the land tips too steep start sliding dow
     model.terrain = grid;
     simulation::import_paths(world, model.paths, model.terrain);
     std::vector<save::model::PathTile> laid;
-    for (std::int32_t c = 0; c <= 2; ++c)
+    for (i32 c = 0; c <= 2; ++c)
     {
         save::model::PathTile& p = laid.emplace_back();
         p.kind = save::model::PathKind::Ground;
-        p.col = static_cast<std::uint8_t>(c);
+        p.col = static_cast<u8>(c);
         (void)simulation::add_path(world, p, grid);
     }
     auto& r = world.registry;
-    const auto person = [&](std::int32_t col) {
+    const auto person = [&](i32 col) {
         const simulation::NodeId on = *world.paths.find({ col, 0, 0 });
         const entt::entity g = r.create();
         r.emplace<simulation::Visitor>(g);
@@ -977,7 +978,7 @@ TEST_CASE("a queue joins the paths beside it only at its open ends, not along it
     save::model::WorldModel model;
     model.terrain = grid;
     simulation::import_paths(world, model.paths, model.terrain);
-    const auto lay = [&](std::uint8_t col, std::uint8_t row) {
+    const auto lay = [&](u8 col, u8 row) {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Ground;
         p.col = col;
@@ -1007,7 +1008,7 @@ TEST_CASE("rides whose stations stand side by side on one level are linked, othe
     const std::array<entt::entity, 4> rides { r.create(), r.create(), r.create(), r.create() };
     const save::model::TerrainGrid grid { .tile_size_x = 4, .tile_size_z = 4 };
     // A station two tiles long running along the rows, in column `col`, at height `up`.
-    const auto station = [](float col, float up) {
+    const auto station = [](f32 col, f32 up) {
         park::track::TrackCourse c;
         c.points = { { col * 4 + 2, up, 0 }, { col * 4 + 2, up, 8 }, { col * 4 + 2, up, 20 } };
         c.kinds = { park::track::CourseKind::Station, park::track::CourseKind::Plain, park::track::CourseKind::Plain };
@@ -1031,22 +1032,22 @@ TEST_CASE("a no-entry sign bars the side its front faces; staff are kept off lan
     grid.tile_size_x = 4;
     grid.tile_size_z = 4;
     grid.cells.resize(5);
-    for (std::int32_t c = 0; c < 4; ++c)
-        grid.cells[static_cast<std::size_t>(c)].flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
-    for (std::int32_t c = 0; c < 5; ++c)
+    for (i32 c = 0; c < 4; ++c)
+        grid.cells[static_cast<usize>(c)].flags = static_cast<u8>(save::model::TileFlag::Owned);
+    for (i32 c = 0; c < 5; ++c)
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Ground;
-        p.col = static_cast<std::uint8_t>(c);
+        p.col = static_cast<u8>(c);
         (void)simulation::add_path(world, p, grid);
     }
-    const auto at = [&](std::int32_t c) { return *world.paths.find({ c, 0, 0 }); };
+    const auto at = [&](i32 c) { return *world.paths.find({ c, 0, 0 }); };
     CHECK(world.paths.nodes()[at(4).value].staff_kept_off); // Not the park's
     CHECK_FALSE(world.paths.nodes()[at(3).value].staff_kept_off);
 
     // An entrance two tiles across its own X, turned a quarter so they lie along the row: columns 2 and 3.
     const std::array<save::model::PlacedObject, 2> objects { save::model::PlacedObject { .id = 1, .col = 2, .row = 0, .rotation = 1 }, save::model::PlacedObject { .id = 2, .col = 1, .row = 0 } };
-    REQUIRE(simulation::import_gate(world, objects, [](const save::model::PlacedObject& o) { return o.id == 1 ? std::optional(std::array<std::int32_t, 2> { 1, 2 }) : std::nullopt; }) != entt::null);
+    REQUIRE(simulation::import_gate(world, objects, [](const save::model::PlacedObject& o) { return o.id == 1 ? std::optional(std::array<i32, 2> { 1, 2 }) : std::nullopt; }) != entt::null);
     simulation::keep_staff_in(world, grid);
     CHECK(world.paths.nodes()[at(2).value].staff_kept_off);
     CHECK(world.paths.nodes()[at(3).value].staff_kept_off);
@@ -1069,15 +1070,15 @@ TEST_CASE("the park's spawn points come over on the path tiles they stand on")
     grid.tile_size_x = 4;
     grid.tile_size_z = 4;
     grid.cells.resize(4);
-    for (std::int32_t c = 0; c < 4; ++c)
+    for (i32 c = 0; c < 4; ++c)
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Ground;
-        p.col = static_cast<std::uint8_t>(c);
+        p.col = static_cast<u8>(c);
         (void)simulation::add_path(world, p, grid);
     }
     const std::array<save::model::PlacedObject, 3> objects { save::model::PlacedObject { .id = 1, .col = 0, .row = 0 }, save::model::PlacedObject { .id = 2, .symbol = "InjectionPoint", .col = 3, .row = 0, .hidden = true }, save::model::PlacedObject { .id = 3, .symbol = "InjectionPoint", .col = 3, .row = 5, .hidden = true } };
-    REQUIRE(simulation::import_gate(world, objects, [](const save::model::PlacedObject& o) { return o.id == 1 ? std::optional(std::array<std::int32_t, 2> { 1, 1 }) : std::nullopt; }) != entt::null);
+    REQUIRE(simulation::import_gate(world, objects, [](const save::model::PlacedObject& o) { return o.id == 1 ? std::optional(std::array<i32, 2> { 1, 1 }) : std::nullopt; }) != entt::null);
     const auto spawns = world.registry.view<const simulation::GuestSpawn>();
     REQUIRE(spawns.size() == 1); // The one off the paths is left out
     CHECK(spawns.get<const simulation::GuestSpawn>(spawns.front()).node == *world.paths.find({ 3, 0, 0 }));
@@ -1090,14 +1091,14 @@ TEST_CASE("a reverse lift hill ride is pulled up its hill backwards, let go, and
     using enum park::track::CourseKind;
     park::track::TrackCourse course;
     course.points = { { 0, 32, 0 } };
-    for (std::int32_t k = 0; k <= 30; ++k)
-        course.points.push_back({ 0, 30.0f - static_cast<float>(k), 5.0f + static_cast<float>(k) });
+    for (i32 k = 0; k <= 30; ++k)
+        course.points.push_back({ 0, 30.0f - static_cast<f32>(k), 5.0f + static_cast<f32>(k) });
     course.kinds.assign(course.points.size(), Plain);
     course.kinds.back() = Station;
     course.points.insert(course.points.end(), { { 0, 0, 55 }, { 0, 0, 95 }, { 0, 45, 140 } });
     course.kinds.insert(course.kinds.end(), { Plain, Plain, Plain });
     course.distance = { 0 };
-    for (std::size_t i = 1; i < course.points.size(); ++i)
+    for (usize i = 1; i < course.points.size(); ++i)
         course.distance.push_back(course.distance.back() + glm::distance(course.points[i - 1], course.points[i]));
     course.reverse_lift = course.distance[1];
     save::model::Ride ride;
@@ -1113,8 +1114,8 @@ TEST_CASE("a reverse lift hill ride is pulled up its hill backwards, let go, and
     simulation::Coaster train = *c;
     train.running = true;
     bool home = false;
-    float highest = 0;
-    for (std::int32_t i = 0; i < 4000 && train.running; ++i)
+    f32 highest = 0;
+    for (i32 i = 0; i < 4000 && train.running; ++i)
     {
         home = simulation::drive(train, 0.05f);
         highest = std::max(highest, simulation::track_point(train, train.at - train.train_length).y);

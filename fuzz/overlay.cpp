@@ -7,6 +7,7 @@
 #include <vector>
 
 // --- scenery and placement item types (feat/ovl-scenery-types) ---
+#include "core/types.hpp"
 #include "ovl/carried_item.hpp"
 #include "ovl/piece_set.hpp"
 #include "ovl/research_category.hpp"
@@ -55,7 +56,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         return 0;
 
     const auto& part = overlay->common();
-    volatile std::size_t sink = 0;
+    volatile usize sink = 0;
     sink += rct3::ovl::read_texts(*overlay, part).size();
     sink += rct3::ovl::read_sounds(*overlay, part).size();
     sink += rct3::ovl::read_flexi_textures(*overlay, part).size();
@@ -94,9 +95,9 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
             continue;
         for (const auto& mesh : item.shape->meshes)
         {
-            for (std::size_t i = 0; i < mesh.vertex_count; ++i)
+            for (usize i = 0; i < mesh.vertex_count; ++i)
                 sink += mesh.vertex(i).colour[3];
-            for (std::size_t i = 0; i < mesh.index_count; ++i)
+            for (usize i = 0; i < mesh.index_count; ++i)
                 sink += mesh.index(i);
         }
     }
@@ -118,9 +119,9 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
             continue;
         for (const auto& mesh : item.shape->meshes)
         {
-            for (std::size_t i = 0; i < mesh.vertex_count; ++i)
+            for (usize i = 0; i < mesh.vertex_count; ++i)
                 sink += mesh.vertex(i).weights[0];
-            for (std::size_t i = 0; i < mesh.index_count; ++i)
+            for (usize i = 0; i < mesh.index_count; ++i)
                 sink += mesh.index(i);
         }
     }
@@ -275,7 +276,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     {
         if (!entry.pool)
             continue;
-        sink += entry.pool->items.size() + entry.pool->splines.size() + static_cast<std::size_t>(entry.pool->prices[3] > 0);
+        sink += entry.pool->items.size() + entry.pool->splines.size() + static_cast<usize>(entry.pool->prices[3] > 0);
     }
     for (const auto& entry : rct3::ovl::read_enclosure_types(*overlay, part))
     {
@@ -296,7 +297,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     // --- mesh conversion (feat/mesh-semantics) ---
     // Convert bounded numbers of shapes; sinks are sizes and indices only, never floats cast to integers.
     {
-        std::size_t budget = 64;
+        usize budget = 64;
         for (const auto& item : rct3::ovl::read_static_shapes(*overlay, part))
         {
             if (!item.shape || budget == 0)

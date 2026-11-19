@@ -18,6 +18,7 @@
 // their times from then on.
 #pragma once
 
+#include "core/types.hpp"
 #include "particles/effect.hpp"
 
 #include <cstddef>
@@ -39,15 +40,15 @@ namespace rct3::particles
     struct Launcher
     {
         std::string item { }; ///< The scenery item's name
-        std::int32_t col = 0;
-        std::int32_t row = 0;
-        std::int32_t corner = 0;                 ///< Which quarter of the tile, for items smaller than a tile
-        std::int32_t direction = 0;              ///< Quarter turns
-        std::optional<std::uint64_t> placed { }; ///< In a park: the placed item it is, by object id; the rest is left 0
+        i32 col = 0;
+        i32 row = 0;
+        i32 corner = 0;                ///< Which quarter of the tile, for items smaller than a tile
+        i32 direction = 0;             ///< Quarter turns
+        std::optional<u64> placed { }; ///< In a park: the placed item it is, by object id; the rest is left 0
     };
 
     /// What a shot puts up, by the number a park's display keeps for it.
-    enum class ShotKind : std::uint8_t
+    enum class ShotKind : u8
     {
         Firework = 0,
         Laser = 1,
@@ -57,7 +58,7 @@ namespace rct3::particles
     /// A water jet shot's pattern. Its curves run over its time, 0 at the start to 1 at the end.
     struct JetPattern
     {
-        float seconds = 0;
+        f32 seconds = 0;
         Curve pressure { };  ///< The speed the water leaves at, meters a second
         Curve elevation { }; ///< Lean from straight up, radians, toward the launcher's front
         Curve widening { };  ///< What the stream's width is multiplied by each second it flies
@@ -67,10 +68,10 @@ namespace rct3::particles
     {
         ShotKind kind = ShotKind::Firework;
         std::string effect { };            ///< The effect's name, without folder or extension
-        std::size_t launcher = 0;          ///< In Display::launchers
-        std::int32_t tube = 0;             ///< Which of the launcher's firing points
-        float seconds = 0;                 ///< From the start of the show
-        std::int32_t lane = 0;             ///< The timeline row it sits on in the editor
+        usize launcher = 0;                ///< In Display::launchers
+        i32 tube = 0;                      ///< Which of the launcher's firing points
+        f32 seconds = 0;                   ///< From the start of the show
+        i32 lane = 0;                      ///< The timeline row it sits on in the editor
         std::optional<JetPattern> jet { }; ///< Of a water jet shot in a park
     };
 
@@ -78,13 +79,13 @@ namespace rct3::particles
     {
         std::string name { };
         std::string music_file { };
-        std::uint32_t months = 0;       ///< One bit a month the display runs in, the first month lowest
-        std::int32_t start_minutes = 0; ///< Time of day it starts, minutes after midnight
+        u32 months = 0;        ///< One bit a month the display runs in, the first month lowest
+        i32 start_minutes = 0; ///< Time of day it starts, minutes after midnight
         std::vector<Launcher> launchers { };
         std::vector<Shot> shots { }; ///< Earliest first
     };
 
-    enum class DisplayError : std::uint8_t
+    enum class DisplayError : u8
     {
         Container,   ///< Not a readable save container
         NoDisplay,   ///< It holds no display object
@@ -105,24 +106,24 @@ namespace rct3::particles
     [[nodiscard]] ShotKind main_kind(const Display& display);
 
     /// Seconds from a display's start to its last shot's end: a water jet's pattern runs on past its shot.
-    [[nodiscard]] float display_seconds(const Display& display);
+    [[nodiscard]] f32 display_seconds(const Display& display);
 
     /// Game minutes after its start time during which a display due that day still starts, so a clock run fast or
     /// skipped on does not pass it by.
-    inline constexpr float kStartWindowMinutes = 30;
+    inline constexpr f32 kStartWindowMinutes = 30;
 
     /// Whether `display` is due to start in `month` (0-based, as the calendar counts them) at `minutes` after
     /// midnight: a month it runs in, and within the window after its start time.
-    [[nodiscard]] bool display_due(const Display& display, std::int32_t month, float minutes);
+    [[nodiscard]] bool display_due(const Display& display, i32 month, f32 minutes);
 
     /// How far a display being played has got.
     struct DisplayRun
     {
-        float seconds = 0;         ///< Since it started
-        std::size_t next_shot = 0; ///< In Display::shots, the first not gone off yet
+        f32 seconds = 0;     ///< Since it started
+        usize next_shot = 0; ///< In Display::shots, the first not gone off yet
     };
 
     /// Moves `run` on by `seconds`; the shots due by then that had not gone off, earliest first.
-    [[nodiscard]] std::span<const Shot> advance_display(DisplayRun& run, const Display& display, float seconds);
+    [[nodiscard]] std::span<const Shot> advance_display(DisplayRun& run, const Display& display, f32 seconds);
 
 } // namespace rct3::particles

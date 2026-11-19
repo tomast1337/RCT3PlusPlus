@@ -23,6 +23,7 @@
 #pragma once
 
 #include "config/game/install.hpp"
+#include "core/types.hpp"
 #include "park/build_catalogue.hpp"
 #include "park/design_placement.hpp"
 #include "park/moving_meshes.hpp"
@@ -88,22 +89,22 @@ namespace rct3::scene::track
         bool backward = false;
         bool heights = false; ///< The track's heights are shown while it is built
         /// Settings the next piece is built with, where it has them.
-        std::int32_t holding_time = 5; ///< Seconds
-        std::int32_t car_turn = 0;     ///< Degrees
-        std::int32_t brake_speed = 0;  ///< Whole m/s for brakes and block brakes; 0 until set, so they take the ride's
-        std::uint8_t facing = 0;
+        i32 holding_time = 5; ///< Seconds
+        i32 car_turn = 0;     ///< Degrees
+        i32 brake_speed = 0;  ///< Whole m/s for brakes and block brakes; 0 until set, so they take the ride's
+        u8 facing = 0;
         std::optional<save::model::RideColours> colours; ///< Painted in the ring's colour tab; else as the piece before
         /// A track with no pieces yet starts on the tile the pointer was last over, turned `turn`.
         std::optional<save::model::Tile> aim;
         rct3::park::ModelTurn turn;
         /// The height Shift raised the first piece to, which it keeps once Shift is let go; never under the ground.
-        std::optional<std::int32_t> raised;
+        std::optional<i32> raised;
         /// While Shift is held over the first piece: where the pointer met the ground when it went down, and the
         /// piece's height then. The piece stays on its tile meanwhile.
         struct Lift
         {
             glm::vec3 at { 0.0f };
-            std::int32_t height = 0;
+            i32 height = 0;
         };
         std::optional<Lift> lift;
         std::vector<rct3::park::track::LaidPiece> candidates;
@@ -114,23 +115,23 @@ namespace rct3::scene::track
         /// A piece between two others clicked in the park, by place in the ride's track: the panel offers what
         /// may stand in its place, and building steps on along the track to the piece after it, or before it
         /// when `selected_back`. None while building at the track's open end.
-        std::optional<std::size_t> selected;
+        std::optional<usize> selected;
         bool selected_back = false;
         /// On a ride of two tracks side by side, which open end is built on and with which pieces.
         rct3::park::track::SplitState split = rct3::park::track::SplitState::None;
         rct3::park::object::ObjectMesh ghost_mesh;
-        bool off_water = false;      ///< The ghost's piece stands only on water, and some of it is on dry land
-        bool clashes = false;        ///< The ghost's piece (or any of a design) takes room a solid item or a path takes, or is off owned land
-        bool unowned = false;        ///< Of those, it stands off land the park owns
-        bool in_ground = false;      ///< Of those, it cuts into the ground
-        std::size_t ghost_doors = 0; ///< The design's doors the ghost shows with its track
-        units::Money ghost_cost;     ///< What laying the picked piece, or the design, where the ghost shows it costs
-        std::string ghost_platform;  ///< The platform piece the ghost shows beside its station piece, if any
-        std::string complaint;       ///< String key: why the track was last not finished; cleared by the next action
-        bool arm = false;            ///< The ride's riders sit on arms, whose angles its pieces hold
+        bool off_water = false;     ///< The ghost's piece stands only on water, and some of it is on dry land
+        bool clashes = false;       ///< The ghost's piece (or any of a design) takes room a solid item or a path takes, or is off owned land
+        bool unowned = false;       ///< Of those, it stands off land the park owns
+        bool in_ground = false;     ///< Of those, it cuts into the ground
+        usize ghost_doors = 0;      ///< The design's doors the ghost shows with its track
+        units::Money ghost_cost;    ///< What laying the picked piece, or the design, where the ghost shows it costs
+        std::string ghost_platform; ///< The platform piece the ghost shows beside its station piece, if any
+        std::string complaint;      ///< String key: why the track was last not finished; cleared by the next action
+        bool arm = false;           ///< The ride's riders sit on arms, whose angles its pieces hold
         /// The piece whose arm angles the arm strip shows, by id; it shows them again when this changes.
-        std::uint64_t arm_piece = 0;
-        std::size_t arm_back = 0; ///< The piece the arm strip sets, counted back from the last
+        u64 arm_piece = 0;
+        usize arm_back = 0; ///< The piece the arm strip sets, counted back from the last
         /// Saved designs of the ride's kind, offered in their window before its track has pieces.
         std::vector<DesignFile> designs;
         bool offer_designs = false; ///< Their window is to open
@@ -138,8 +139,8 @@ namespace rct3::scene::track
         /// The picture of the design their window shows, the train of its kind it shows (by place in the ride's
         /// train choices), and the design (by place in designs).
         std::optional<render::TextureHandle> design_picture;
-        std::size_t design_train = 0;
-        std::optional<std::size_t> design_shown;
+        usize design_train = 0;
+        std::optional<usize> design_shown;
         std::vector<bool> designs_locked; ///< By place in designs: waiting for a career scenario
         /// The pieces of the design picked, in track order, laid whole by the first click; empty for a track
         /// built piece by piece.
@@ -147,7 +148,7 @@ namespace rct3::scene::track
         /// A door the design places with its track: of which station, whether the exit, and where it stood.
         struct DesignDoor
         {
-            std::size_t station = 0;
+            usize station = 0;
             bool exit = false;
             save::model::PlacedObject object;
         };
@@ -160,7 +161,7 @@ namespace rct3::scene::track
         rct3::park::DesignRefusal refusal = rct3::park::DesignRefusal::None;
         std::vector<rct3::park::pools::PoolOpening> pool_openings; ///< Where the design's ghost meets a pool beside it
         std::u16string design_title;
-        std::size_t design_tune = 0;
+        usize design_tune = 0;
         bool cut_ground = false;
         /// What the design's panel was last shown for: the ground choice and the colours.
         std::optional<std::tuple<bool, bool, save::model::RideColours>> design_tabs_for;
@@ -183,12 +184,12 @@ namespace rct3::scene::track
             simulation::Coaster train;
             std::vector<rct3::park::ride::CarSpot> spots;
             std::vector<glm::mat4> stood;                   ///< Where each car stood, by car
-            float stood_at = 0;                             ///< Where the train's front stood
+            f32 stood_at = 0;                               ///< Where the train's front stood
             units::Seconds waited;                          ///< It has stood still short of the open end
             std::vector<simulation::Wreck> wrecks;          ///< Its cars, once crashed, front to back
             random::RandomState dice = random::seeded({ }); ///< How its wrecks tumble
             rct3::park::MovingMeshes meshes;                ///< The cars, then the joints of those on arms
-            std::vector<std::size_t> joints;                ///< The car each joint rides with, in the order of the meshes
+            std::vector<usize> joints;                      ///< The car each joint rides with, in the order of the meshes
         };
         std::optional<GhostTrain> test;
     };
@@ -232,7 +233,7 @@ namespace rct3::scene::track
     /// Handles the panel's events, and for a track with no pieces the pointer at `at` on a view of `size` (over
     /// the interface or not), the turn commands and Shift, held to raise or sink the first piece. Call once per
     /// update after the interface, `elapsed` after the last.
-    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, std::int32_t currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands, units::Seconds elapsed);
+    void update_track_building(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, i32 currency, ui::screens::info::DistanceUnits units, ui::Point at, ui::Point size, ToolInput input, std::span<const ui::PlayCommand> commands, units::Seconds elapsed);
 
     /// Posts the message that a test train of `ride` stalled at `at`, a point of its track: clicking it looks there.
     void tell_stall(park::ParkScene& scene, const ui::InterfaceAssets& assets, const save::model::Ride& ride, glm::vec3 at);

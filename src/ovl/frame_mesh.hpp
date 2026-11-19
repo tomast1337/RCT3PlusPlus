@@ -14,6 +14,7 @@
 // vector along its axis as long as its angle in radians, then where the socket is, packed as a point is.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -28,26 +29,26 @@ namespace rct3::ovl
 
     struct FrameCorner
     {
-        std::uint16_t point = 0;
-        std::uint16_t normal = 0;
-        std::array<float, 2> uv { };
+        u16 point = 0;
+        u16 normal = 0;
+        std::array<f32, 2> uv { };
     };
 
     /// Where a socket is at one key, and how it is turned.
     struct SocketKey
     {
-        std::array<float, 3> turn { }; ///< Along the turn's axis, as long as its angle in radians
-        std::array<float, 3> at { };
+        std::array<f32, 3> turn { }; ///< Along the turn's axis, as long as its angle in radians
+        std::array<f32, 3> at { };
     };
 
     struct FrameAnimation
     {
         std::string_view name;
-        std::array<float, 3> offset { };
-        std::array<float, 3> scale { };
+        std::array<f32, 3> offset { };
+        std::array<f32, 3> scale { };
         /// The time each key after the first is reached; the first key is at time 0 and the last time is
         /// the animation's length, where a repeating animation comes back to its first key.
-        std::vector<float> times;
+        std::vector<f32> times;
         std::vector<std::byte> keys; ///< `times.size()` keys, back to back, copied out of the file
         /// For a socket, its first track's key at each of `times`; empty for other meshes.
         std::vector<SocketKey> sockets;
@@ -56,16 +57,16 @@ namespace rct3::ovl
     struct FrameMesh
     {
         std::vector<FrameCorner> corners;
-        std::vector<std::uint16_t> indices; ///< Three corners per triangle
-        std::uint32_t points = 0;
-        std::uint32_t normals = 0;
-        std::uint32_t tracks = 0; ///< Above 0 for sockets, which are not drawn
+        std::vector<u16> indices; ///< Three corners per triangle
+        u32 points = 0;
+        u32 normals = 0;
+        u32 tracks = 0; ///< Above 0 for sockets, which are not drawn
         std::vector<FrameAnimation> animations;
 
         /// Bytes of one key.
-        [[nodiscard]] std::size_t key_size() const noexcept
+        [[nodiscard]] usize key_size() const noexcept
         {
-            return std::size_t { points } * 4 + ((std::size_t { normals } + 1) * 3 & ~std::size_t { 3 });
+            return usize { points } * 4 + ((usize { normals } + 1) * 3 & ~usize { 3 });
         }
     };
 
@@ -81,9 +82,9 @@ namespace rct3::ovl
     /// The points and normals of key `key` of `animation`. Empty when the key is out of range.
     struct FrameKey
     {
-        std::vector<std::array<float, 3>> points;
-        std::vector<std::array<float, 3>> normals;
+        std::vector<std::array<f32, 3>> points;
+        std::vector<std::array<f32, 3>> normals;
     };
-    [[nodiscard]] FrameKey decode_key(const FrameMesh& mesh, const FrameAnimation& animation, std::size_t key);
+    [[nodiscard]] FrameKey decode_key(const FrameMesh& mesh, const FrameAnimation& animation, usize key);
 
 } // namespace rct3::ovl

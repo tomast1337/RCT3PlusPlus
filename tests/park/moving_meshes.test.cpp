@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/moving_meshes.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -17,7 +19,7 @@ namespace
         return p;
     }
 
-    save::model::PlacedObject car(std::uint64_t id)
+    save::model::PlacedObject car(u64 id)
     {
         save::model::PlacedObject o;
         o.id = id;
@@ -39,7 +41,7 @@ TEST_CASE("moving shapes are built once, drawn alike in one batch, and then only
     REQUIRE(m.mesh.batches.size() == 1);
     CHECK(m.mesh.batches[0].count == 6);
     CHECK(m.mesh.vertices.size() == 6);
-    CHECK(m.ends == std::vector<std::uint32_t> { 3, 6 });
+    CHECK(m.ends == std::vector<u32> { 3, 6 });
 
     // The second car moved to (10, 0, 0) and turned a quarter about y: its +x edge now points to -z.
     const std::vector places { glm::mat4(1.0f), glm::rotate(glm::translate(glm::mat4(1.0f), { 10, 0, 0 }), glm::radians(90.0f), glm::vec3(0, 1, 0)) };
@@ -65,7 +67,7 @@ TEST_CASE("a car on an arm has its joints' parts apart, after every car, and eac
     const std::vector objects { car(1), car(2) };
     const MovingMeshes m = moving_meshes(objects, models, { });
     // Each car's body, then each car's two joints, the first carrying nothing.
-    CHECK(m.ends == std::vector<std::uint32_t> { 3, 6, 6, 9, 9, 12 });
+    CHECK(m.ends == std::vector<u32> { 3, 6, 6, 9, 9, 12 });
 
     // The base turned a quarter about up, the next joint a quarter about sideways, about its own place.
     const std::vector<glm::mat4> moves = arm_moves(model.arm_joints, std::vector { 90.0f, 90.0f });
@@ -92,7 +94,7 @@ TEST_CASE("a model moved by bones keeps its triangles whole, each corner followi
     model.levels = { { 100, { part }, { } } };
     model.rig = BoneRig { .parents = { std::nullopt, ovl::BoneIndex { 0 } }, .rest_local = { }, .rest_world = { }, .motions = { } };
     auto [m, bones] = boned_meshes(car(1), model, { });
-    CHECK(bones == std::vector<std::int32_t> { 0, 1 });
+    CHECK(bones == std::vector<i32> { 0, 1 });
     REQUIRE(m.mesh.vertices.size() == 3);
     CHECK(m.mesh.indices.size() == 3); // One triangle, not cut apart by bone
 
@@ -113,9 +115,9 @@ TEST_CASE("a car's part held level stays level and on its pivot as its car pitch
 {
     // Hung from a pivot a metre over the car's origin, turning about the pivot's sideways line.
     const object::CarPart part { .moves = { }, .pivot = glm::translate(glm::mat4(1.0f), { 0, 1, 0 }), .axis = { 1, 0, 0 }, .up = { 0, 1, 0 } };
-    constexpr float kHeading = 0.7f;
+    constexpr f32 kHeading = 0.7f;
     // Past a quarter turn either way the car is upside down, as over the top of a loop.
-    for (const float pitch : { -2.6f, -1.4f, -0.5f, 0.0f, 0.3f, 1.2f, 2.0f, glm::pi<float>(), 4.0f })
+    for (const f32 pitch : { -2.6f, -1.4f, -0.5f, 0.0f, 0.3f, 1.2f, 2.0f, glm::pi<f32>(), 4.0f })
     {
         CAPTURE(pitch);
         const glm::mat4 place = glm::rotate(glm::rotate(glm::translate(glm::mat4(1.0f), { 5, 2, 3 }), kHeading, { 0, 1, 0 }), pitch, { 1, 0, 0 });
@@ -148,9 +150,9 @@ TEST_CASE("a part held level on a car riding on its side stays upright up, over 
     // down, and the part's up (the pivot's own up) is the car's left (-X). The car rides on its side, its left up.
     const glm::mat4 pivot { glm::vec4(0, -1, 0, 0), glm::vec4(-1, 0, 0, 0), glm::vec4(0, 0, -1, 0), glm::vec4(0, 0.5f, 0, 1) };
     const object::CarPart part { .moves = { }, .pivot = pivot, .axis = { 1, 0, 0 }, .up = { 0, 1, 0 } };
-    const glm::mat4 on_side = glm::rotate(glm::mat4(1.0f), -glm::half_pi<float>(), { 0, 0, 1 });
+    const glm::mat4 on_side = glm::rotate(glm::mat4(1.0f), -glm::half_pi<f32>(), { 0, 0, 1 });
     // Past a quarter turn it goes over the top and back down, as on a ride over the top of a tower.
-    for (const float climb : { -2.5f, -1.2f, -0.3f, 0.0f, 0.6f, 1.5f, 2.2f, glm::pi<float>(), 4.0f })
+    for (const f32 climb : { -2.5f, -1.2f, -0.3f, 0.0f, 0.6f, 1.5f, 2.2f, glm::pi<f32>(), 4.0f })
     {
         CAPTURE(climb);
         const glm::mat4 place = glm::rotate(glm::mat4(1.0f), -climb, { 1, 0, 0 }) * on_side;
@@ -172,7 +174,7 @@ TEST_CASE("a car's swinging part is drawn swung from level by its angle, about i
     // Hung from a pivot a metre over the car's origin, swinging about the car's forward line, the car banked.
     const object::CarPart part { .moves = { }, .pivot = glm::translate(glm::mat4(1.0f), { 0, 1, 0 }), .axis = { 0, 0, 1 }, .up = { 0, 1, 0 } };
     const glm::mat4 banked = glm::rotate(glm::translate(glm::mat4(1.0f), { 5, 2, 3 }), 0.3f, { 0, 0, 1 });
-    for (const float swung : { -0.6f, 0.0f, 0.4f })
+    for (const f32 swung : { -0.6f, 0.0f, 0.4f })
     {
         CAPTURE(swung);
         const glm::mat4 drawn = banked * part_move(part, banked, units::Radians { swung });

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/designs.hpp"
 
+#include "core/types.hpp"
 #include "ui/skin/library.hpp"
 
 #include <algorithm>
@@ -10,7 +11,7 @@ namespace rct3::ui::screens::build
 
     namespace
     {
-        constexpr std::size_t kCustomRow = 0; ///< Id of the row that builds a custom track; it stays first
+        constexpr usize kCustomRow = 0; ///< Id of the row that builds a custom track; it stays first
     } // namespace
 
     DesignBrowser::DesignBrowser(std::string name, const DesignBrowserStyle& style, std::u16string title, std::string icon, std::vector<widgets::TableColumn> columns, std::vector<widgets::TableRow> rows, std::u16string build_text, std::u16string cancel_text)
@@ -20,7 +21,7 @@ namespace rct3::ui::screens::build
         this->title = std::move(title);
         this->icon = std::move(icon);
         Widget& body = content();
-        const float bottom = style.button_height + style.gap;
+        const f32 bottom = style.button_height + style.gap;
         table_ = &body.add<widgets::ColumnTable>("list", style.table, style.scroll);
         table_->placement = { { 0, 0, style.list_share, 1 }, { 0, 0, -style.gap / 2, -bottom } };
         table_->columns = std::move(columns);
@@ -65,8 +66,8 @@ namespace rct3::ui::screens::build
         picture_ = picture;
         while (!lines_->children().empty())
             (void)lines_->remove(*lines_->children().back());
-        float y = 0;
-        for (std::size_t i = 0; i < lines.size(); ++i)
+        f32 y = 0;
+        for (usize i = 0; i < lines.size(); ++i)
         {
             info::InfoLine& l = lines[i];
             const bool both = !l.value.empty();
@@ -104,7 +105,7 @@ namespace rct3::ui::screens::build
             table_->sorted_by = column;
             table_->descending = descending;
             const auto found = selected ? std::ranges::find(table_->rows, *selected, &widgets::TableRow::id) : table_->rows.end();
-            table_->select(found == table_->rows.end() ? std::nullopt : std::optional(static_cast<std::size_t>(found - table_->rows.begin())));
+            table_->select(found == table_->rows.end() ? std::nullopt : std::optional(static_cast<usize>(found - table_->rows.begin())));
         }
         const auto selected = table_->selected() ? std::optional(table_->rows.at(*table_->selected()).id) : std::nullopt;
         if (selected != shown_)

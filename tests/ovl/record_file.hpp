@@ -5,6 +5,7 @@
 #pragma once
 
 #include "builder.hpp"
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <bit>
@@ -23,20 +24,20 @@ namespace rct3::test
     class Pool
     {
     public:
-        std::uint32_t add(std::string_view text)
+        u32 add(std::string_view text)
         {
             if (const auto at = text_.find(std::string(text) + '\0'); at != std::string::npos)
             {
-                return static_cast<std::uint32_t>(at);
+                return static_cast<u32>(at);
             }
-            const auto at = static_cast<std::uint32_t>(text_.size());
+            const auto at = static_cast<u32>(text_.size());
             text_.append(text);
             text_.push_back('\0');
             return at;
         }
-        [[nodiscard]] std::uint32_t base() const
+        [[nodiscard]] u32 base() const
         {
-            return static_cast<std::uint32_t>((text_.size() + 3) & ~std::size_t { 3 });
+            return static_cast<u32>((text_.size() + 3) & ~usize { 3 });
         }
         [[nodiscard]] std::vector<std::byte> bytes() const
         {
@@ -52,16 +53,16 @@ namespace rct3::test
     /// A reference field of the record: its byte offset in the record and the symbol name it holds.
     struct FieldReference
     {
-        std::uint32_t offset;
+        u32 offset;
         std::string name;
     };
 
     /// Builds an overlay of the given file version with one pointer symbol `symbol` ("Name:tag") that
     /// points at the start of `record`. `pool` must hold the symbol and every reference name already.
-    inline rct3::ovl::Overlay make_record_overlay(std::uint32_t version, Pool& pool, const std::string& symbol, const std::vector<std::byte>& record, const std::vector<FieldReference>& references = { })
+    inline rct3::ovl::Overlay make_record_overlay(u32 version, Pool& pool, const std::string& symbol, const std::vector<std::byte>& record, const std::vector<FieldReference>& references = { })
     {
-        const std::uint32_t base = pool.base();
-        const std::uint32_t symbol_name = pool.add(symbol);
+        const u32 base = pool.base();
+        const u32 symbol_name = pool.add(symbol);
         const bool wide = version != 1;
 
         std::vector<std::byte> symbols;
@@ -95,14 +96,14 @@ namespace rct3::test
     }
 
     /// Appends 32-bit words, a float as its bit pattern.
-    inline void put(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    inline void put(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
-    inline std::uint32_t bits(float v)
+    inline u32 bits(f32 v)
     {
-        return std::bit_cast<std::uint32_t>(v);
+        return std::bit_cast<u32>(v);
     }
 
 } // namespace rct3::test

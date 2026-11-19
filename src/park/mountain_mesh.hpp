@@ -6,6 +6,7 @@
 // theme. Unlike the sky, the ring stays put round the middle of the map, so the camera moves against it.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "park/sky/mesh.hpp"
 
@@ -23,25 +24,25 @@ namespace rct3::park
     /// The landscape themes, in the order of the number a park file stores for its background.
     inline constexpr std::array<std::string_view, 8> kBackgroundThemes { "Mountain", "Desert", "Snow", "Hill", "Island", "Spooky", "Space", "City" };
     /// For a park that stores no background, or one out of range.
-    inline constexpr std::size_t kDefaultBackground = 0;
+    inline constexpr usize kDefaultBackground = 0;
 
     /// The theme for a park's stored background number.
-    [[nodiscard]] std::string_view background_theme(std::optional<std::int32_t> stored);
+    [[nodiscard]] std::string_view background_theme(std::optional<i32> stored);
 
     /// Names of the two pictures of `theme`, for mesh 0 and mesh 1.
     [[nodiscard]] std::array<std::string, 2> mountain_pictures(std::string_view theme);
 
     /// How many times its own size the ring is drawn, whatever the map's size.
-    inline constexpr float kMountainScale = 4;
+    inline constexpr f32 kMountainScale = 4;
 
     /// How far below height 0 each theme's ring stands, in kBackgroundThemes order, so its land meets the
     /// park's.
-    inline constexpr std::array<float, 8> kMountainDrop { 10, 80, 0, 10, 0, 0, 30, 30 };
+    inline constexpr std::array<f32, 8> kMountainDrop { 10, 80, 0, 10, 0, 0, 30, 30 };
 
     struct MountainPlace
     {
         glm::vec3 centre { 0.0f }; ///< The ring's middle; the shape's height 0 lands at its height
-        float scale = 1;           ///< Times the shape's own size
+        f32 scale = 1;             ///< Times the shape's own size
     };
 
     /// Where the ring of `theme` stands round `grid`: on the middle of the map, at kMountainScale, its height 0

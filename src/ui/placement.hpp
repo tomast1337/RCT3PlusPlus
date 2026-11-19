@@ -6,6 +6,7 @@
 // to different fractions stretches the widget with the parent.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/draw_list.hpp"
 
 namespace rct3::ui
@@ -20,19 +21,19 @@ namespace rct3::ui
     [[nodiscard]] Rect place(const Placement& placement, const Rect& parent);
 
     /// Fills the parent, `margin` in from every edge.
-    [[nodiscard]] Placement fill(float margin = 0);
+    [[nodiscard]] Placement fill(f32 margin = 0);
     /// A fixed size whose top-left corner is at (x, y) from the parent's top-left.
-    [[nodiscard]] Placement top_left(float x, float y, float width, float height);
+    [[nodiscard]] Placement top_left(f32 x, f32 y, f32 width, f32 height);
     /// A fixed size whose top-right corner is `right` in from the parent's right edge and `y` down.
-    [[nodiscard]] Placement top_right(float right, float y, float width, float height);
+    [[nodiscard]] Placement top_right(f32 right, f32 y, f32 width, f32 height);
     /// A fixed size whose bottom-left corner is `x` in and `bottom` up from the parent's bottom-left.
-    [[nodiscard]] Placement bottom_left(float x, float bottom, float width, float height);
+    [[nodiscard]] Placement bottom_left(f32 x, f32 bottom, f32 width, f32 height);
     /// A fixed size whose bottom-right corner is `right` and `bottom` in from the parent's bottom-right.
-    [[nodiscard]] Placement bottom_right(float right, float bottom, float width, float height);
+    [[nodiscard]] Placement bottom_right(f32 right, f32 bottom, f32 width, f32 height);
     /// A fixed size centred in the parent, moved by (dx, dy).
-    [[nodiscard]] Placement centred(float width, float height, float dx = 0, float dy = 0);
+    [[nodiscard]] Placement centred(f32 width, f32 height, f32 dx = 0, f32 dy = 0);
     /// Stretches across the parent's width, `margin` in from the sides, `height` tall, `y` down from the top.
-    [[nodiscard]] Placement top_band(float y, float height, float margin = 0);
+    [[nodiscard]] Placement top_band(f32 y, f32 height, f32 margin = 0);
 
     /// Moves `rect` the least distance that puts it inside `bounds`. A rectangle larger than `bounds` is
     /// lined up with its top-left corner, so a window's title bar stays reachable.

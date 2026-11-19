@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/attraction_objects.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -48,7 +50,7 @@ TEST_CASE("an object kept twice, one hanging from the other at the same place, i
     objects[1] = { .id = 6, .symbol = "Wheel", .col = 3, .row = 4, .owner_ref = 5 }; // Its twin
     objects[2] = { .id = 7, .symbol = "Wheel", .col = 9, .row = 4, .owner_ref = 5 }; // Elsewhere
     objects[3] = { .id = 8, .symbol = "Gate", .col = 3, .row = 4, .owner_ref = 6 };  // Another thing
-    CHECK(twins(objects, std::vector<std::size_t> { 1 }) == std::vector<std::size_t> { 0 });
-    CHECK(twins(objects, std::vector<std::size_t> { 0 }) == std::vector<std::size_t> { 1 });
-    CHECK(twins(objects, std::vector<std::size_t> { 3 }).empty());
+    CHECK(twins(objects, std::vector<usize> { 1 }) == std::vector<usize> { 0 });
+    CHECK(twins(objects, std::vector<usize> { 0 }) == std::vector<usize> { 1 });
+    CHECK(twins(objects, std::vector<usize> { 3 }).empty());
 }

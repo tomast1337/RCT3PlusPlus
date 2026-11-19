@@ -11,6 +11,7 @@
 // across one of the sides its track does not run through, at the piece's height and facing it.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/bone_poses.hpp"
 #include "park/carried_goods.hpp"
 #include "park/ground/holds.hpp"
@@ -33,11 +34,11 @@ namespace rct3::park::ride
     /// Where a ride placed whole stands.
     struct RideSite
     {
-        std::int32_t col = 0; ///< Lowest column and row of the footprint, as the park stores placed objects
-        std::int32_t row = 0;
+        i32 col = 0; ///< Lowest column and row of the footprint, as the park stores placed objects
+        i32 row = 0;
         ModelTurn turn;
-        std::int32_t height = 0;                   ///< Whole units
-        std::array<std::int32_t, 2> span { 1, 1 }; ///< Columns and rows covered, after the turn
+        i32 height = 0;                   ///< Whole units
+        std::array<i32, 2> span { 1, 1 }; ///< Columns and rows covered, after the turn
     };
 
     /// The name a new ride of `symbol` takes: its kind's name and the lowest number no other ride of its kind
@@ -48,12 +49,12 @@ namespace rct3::park::ride
     /// Gives every other stall of the kind of `stalls[from]` its menu, as its synchronise tick does: the same
     /// items in the same order at the same prices, names, colours and extras, and the same level of each extra
     /// both offer. An item a stall already sold keeps its takings.
-    void copy_menu(std::span<save::model::Stall> stalls, std::size_t from);
+    void copy_menu(std::span<save::model::Stall> stalls, usize from);
     /// Adds to `stall`'s extras each one an item on its menu can take and it does not offer yet, at the usual
     /// amount, by the item kinds of `items` (of carried items, as CarriedKinds holds them).
     void offer_extras(save::model::Stall& stall, std::span<const CarriedKind> items);
     /// Moves item `from` of `stall`'s menu to place `to` among the others, the last place when past them.
-    void move_item(save::model::Stall& stall, std::size_t from, std::size_t to);
+    void move_item(save::model::Stall& stall, usize from, usize to);
 
     /// The tricks a show ride of kind `kind` (its symbol without the tag, as "KillerWhaleShow") knows: of
     /// `names` (every show trick the game names, as "WhaleShowAnimTrick1" or "LionShowFireHoop"), those whose
@@ -64,32 +65,32 @@ namespace rct3::park::ride
     /// loop, and a trick with none lasts nothing. All are offered and researched.
     /// Which of `animations` (a show ride model's animation names) trick `trick` plays: the one whose name ends the
     /// way the trick's does after "Show", leaving out "Anim", case and leading zeros; none when none does.
-    [[nodiscard]] std::optional<std::size_t> trick_animation(std::string_view trick, std::span<const std::string> animations);
+    [[nodiscard]] std::optional<usize> trick_animation(std::string_view trick, std::span<const std::string> animations);
 
-    [[nodiscard]] std::vector<save::model::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds);
+    [[nodiscard]] std::vector<save::model::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const f32> seconds);
 
     /// A trick of a show going on: its place in RideShow::tricks and how far into it the show is.
     struct ShowMoment
     {
-        std::size_t trick = 0;
-        float into = 0; ///< Seconds
+        usize trick = 0;
+        f32 into = 0; ///< Seconds
     };
 
     /// Where a show is `into` seconds after it began: its tricks come one after another in their order, each for its
     /// length; none once the last is over.
-    [[nodiscard]] std::optional<ShowMoment> show_moment(const save::model::RideShow& show, float into);
+    [[nodiscard]] std::optional<ShowMoment> show_moment(const save::model::RideShow& show, f32 into);
 
     /// What the performers of `show` do, by `animations` (the ride model's) and their lengths `seconds`: while a
     /// show runs (`into` seconds into it) its tricks in order, and else their idle (the show's first trick, or the
     /// animation called a loop) `idle` seconds on, round and round; after the last trick the idle runs on from
     /// there. None when the model has no animation for it.
-    [[nodiscard]] std::optional<MotionAt> show_motion(const save::model::RideShow& show, std::span<const std::string> animations, std::span<const float> seconds, std::optional<float> into, float idle);
+    [[nodiscard]] std::optional<MotionAt> show_motion(const save::model::RideShow& show, std::span<const std::string> animations, std::span<const f32> seconds, std::optional<f32> into, f32 idle);
 
     /// The site of a ride of `squares` (along its own X and Z) turned `turn`, centred on `tile`, at the mean
     /// height of the corners of the tiles it covers, to the nearest whole unit.
-    [[nodiscard]] RideSite ride_site(save::model::Tile tile, std::array<std::int32_t, 2> squares, ModelTurn turn, const save::model::TerrainGrid& grid);
+    [[nodiscard]] RideSite ride_site(save::model::Tile tile, std::array<i32, 2> squares, ModelTurn turn, const save::model::TerrainGrid& grid);
 
-    enum class SiteProblem : std::uint8_t
+    enum class SiteProblem : u8
     {
         None,
         NotOwned, ///< Off the map, or land the park does not own outright
@@ -117,7 +118,7 @@ namespace rct3::park::ride
     /// How the ground under a ride being placed is levelled for it: not at all, the ride raised to stand clear of
     /// it; sharply, only the footprint's own tiles, leaving cliffs round it; or smoothly, the tiles round it
     /// sloping down or up to it.
-    enum class Flatten : std::uint8_t
+    enum class Flatten : u8
     {
         Off,
         Sharp,
@@ -125,7 +126,7 @@ namespace rct3::park::ride
     };
 
     /// The whole-unit height a ride on `site` stands clear of the ground at: its footprint's highest corner.
-    [[nodiscard]] std::int32_t clear_height(const RideSite& site, const save::model::TerrainGrid& grid);
+    [[nodiscard]] i32 clear_height(const RideSite& site, const save::model::TerrainGrid& grid);
 
     /// The ground under `site` levelled to its height, as the tiles that change: the footprint's own tiles, each
     /// corner at the height, and, levelling smoothly, the tiles round it, those of their corners on the
@@ -137,7 +138,7 @@ namespace rct3::park::ride
 
     /// The whole-unit height one step of the shape ground tool takes a tile to: a sloped tile is flattened to
     /// its highest corner going `up` (its lowest going down), a flat one moves one unit.
-    [[nodiscard]] std::int32_t shaped_height(const save::model::TerrainCell& cell, bool up);
+    [[nodiscard]] i32 shaped_height(const save::model::TerrainCell& cell, bool up);
 
     /// The turn of the object a placement record holds, which the record keeps as a bare number.
     [[nodiscard]] constexpr ModelTurn spot_turn(const save::model::PlacementSpot& spot) noexcept
@@ -163,10 +164,10 @@ namespace rct3::park::ride
     /// tile the ride is on (faced_side).
     struct DoorSpot
     {
-        std::int32_t col = 0;
-        std::int32_t row = 0;
+        i32 col = 0;
+        i32 row = 0;
         ModelTurn turn;
-        std::int32_t height = 0; ///< Whole units; set for a tracked ride's, a flat ride's stand at the ride's
+        i32 height = 0; ///< Whole units; set for a tracked ride's, a flat ride's stand at the ride's
 
         /// The door a placement record holds.
         [[nodiscard]] static constexpr DoorSpot of(const save::model::PlacementSpot& spot) noexcept
@@ -188,7 +189,7 @@ namespace rct3::park::ride
     /// in track order), belongs to: the one that has a door beside the same run of station pieces, else the first
     /// without doors, else a new one after the last (its index is the count). A run reaching the end of a circuit
     /// goes on from its start. The first station given a door stays the first, where trains set off.
-    [[nodiscard]] std::size_t door_station(std::span<const save::model::TrackPiece> stations, std::span<const save::model::Station> saved, const DoorSpot& door);
+    [[nodiscard]] usize door_station(std::span<const save::model::TrackPiece> stations, std::span<const save::model::Station> saved, const DoorSpot& door);
 
     /// Where a station piece stands, as the name of its platform piece tells.
     struct PlatformPlace
@@ -198,7 +199,7 @@ namespace rct3::park::ride
         bool track_before = false;
         bool track_after = false;
         std::string_view run { }; ///< Its section's own word for its place in the station; mostly empty
-        std::uint32_t side = 0;   ///< Of side by side tracks: 1 the left track, 2 the right
+        u32 side = 0;             ///< Of side by side tracks: 1 the left track, 2 the right
     };
 
     /// The platform piece of `names` (the "sid" names in the platform type `type`'s file, matched ignoring case) a

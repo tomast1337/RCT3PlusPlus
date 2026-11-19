@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/debug_tools.hpp"
 
+#include "core/types.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
@@ -17,7 +18,7 @@
 namespace rct3::simulation
 {
 
-    void invent_everything(Research& research, std::vector<ResearchItem>& items, float time)
+    void invent_everything(Research& research, std::vector<ResearchItem>& items, f32 time)
     {
         for (const ResearchItem& item : items)
         {
@@ -34,15 +35,15 @@ namespace rct3::simulation
         research.set_aside.clear();
     }
 
-    std::size_t add_guests(SimWorld& world, random::RandomState& dice, std::span<const NodeId> spots, std::size_t count)
+    usize add_guests(SimWorld& world, random::RandomState& dice, std::span<const NodeId> spots, usize count)
     {
-        std::size_t came = 0;
+        usize came = 0;
         while (!spots.empty() && came < count)
             came += admit_party(world, dice, spots[random::below(dice, spots.size())]).size();
         return came;
     }
 
-    std::size_t send_guests_home(SimWorld& world)
+    usize send_guests_home(SimWorld& world)
     {
         entt::registry& r = world.registry;
         for (auto [e, ride] : r.view<CycleRide>().each())
@@ -60,7 +61,7 @@ namespace rct3::simulation
         const auto guests = r.view<Visitor>(entt::exclude<Left, Staff>) | std::ranges::to<std::vector<entt::entity>>();
         for (const entt::entity guest : guests)
         {
-            ++r.ctx().emplace<Turnstile>().out[static_cast<std::size_t>(age_of(r, guest))];
+            ++r.ctx().emplace<Turnstile>().out[static_cast<usize>(age_of(r, guest))];
             // What a guest who walked out of the gate has lost, and what only one in the middle of something has.
             r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Lost, Linger, Gesture, Glance, Watching, Carried, RideWalk, Crossing, Swimmer, PoolRoute, Floating, Climbing, Outside, Thrill, Held, Dropped>(guest);
             r.emplace<Left>(guest);
@@ -68,9 +69,9 @@ namespace rct3::simulation
         return guests.size();
     }
 
-    std::size_t refresh_guests(SimWorld& world)
+    usize refresh_guests(SimWorld& world)
     {
-        std::size_t count = 0;
+        usize count = 0;
         for (auto [e, needs, mood] : world.registry.view<Needs, Mood>(entt::exclude<Left, Staff>).each())
         {
             ++count;
@@ -84,10 +85,10 @@ namespace rct3::simulation
         return count;
     }
 
-    std::size_t break_down_rides(SimWorld& world)
+    usize break_down_rides(SimWorld& world)
     {
         entt::registry& r = world.registry;
-        std::size_t broke = 0;
+        usize broke = 0;
         for (const entt::entity e : r.view<Attraction, CycleRide>())
         {
             Attraction& attraction = r.get<Attraction>(e);
@@ -104,10 +105,10 @@ namespace rct3::simulation
         return broke;
     }
 
-    std::size_t reset_rides(SimWorld& world)
+    usize reset_rides(SimWorld& world)
     {
         entt::registry& r = world.registry;
-        std::size_t count = 0;
+        usize count = 0;
         for (auto [e, attraction, ride] : r.view<Attraction, CycleRide>().each())
         {
             ++count;
@@ -143,11 +144,11 @@ namespace rct3::simulation
         return count;
     }
 
-    std::size_t remove_animals(SimWorld& world)
+    usize remove_animals(SimWorld& world)
     {
         entt::registry& r = world.registry;
         const auto animals = r.view<Animal>();
-        const std::size_t count = animals.size();
+        const usize count = animals.size();
         for (auto [keeper, duty] : r.view<KeeperDuty>().each())
             if (duty.job == KeeperJob::Catching)
                 duty = KeeperDuty { .house = duty.house };
@@ -155,9 +156,9 @@ namespace rct3::simulation
         return count;
     }
 
-    std::size_t refresh_animals(SimWorld& world)
+    usize refresh_animals(SimWorld& world)
     {
-        std::size_t count = 0;
+        usize count = 0;
         for (auto [e, animal] : world.registry.view<Animal>().each())
         {
             ++count;
@@ -171,19 +172,19 @@ namespace rct3::simulation
         return count;
     }
 
-    std::size_t scatter_litter(SimWorld& world, random::RandomState& dice, std::span<const NodeId> spots, std::size_t count)
+    usize scatter_litter(SimWorld& world, random::RandomState& dice, std::span<const NodeId> spots, usize count)
     {
         if (spots.empty())
             return 0;
-        for (std::size_t i = 0; i < count; ++i)
-            world.registry.emplace<Litter>(world.registry.create(), Litter { .node = spots[random::below(dice, spots.size())], .kind = static_cast<std::uint8_t>(random::below(dice, 2)) });
+        for (usize i = 0; i < count; ++i)
+            world.registry.emplace<Litter>(world.registry.create(), Litter { .node = spots[random::below(dice, spots.size())], .kind = static_cast<u8>(random::below(dice, 2)) });
         return count;
     }
 
-    std::size_t clear_litter(SimWorld& world)
+    usize clear_litter(SimWorld& world)
     {
         const auto litter = world.registry.view<Litter>();
-        const std::size_t count = litter.size();
+        const usize count = litter.size();
         world.registry.destroy(litter.begin(), litter.end());
         return count;
     }

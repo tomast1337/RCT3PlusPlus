@@ -7,6 +7,7 @@
 #pragma once
 
 #include "config/game/install.hpp"
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "ui/desktop.hpp"
 #include "ui/draw_list.hpp"
@@ -34,7 +35,7 @@ namespace rct3::scene
         ui::widgets::Toolbar* toolbar = nullptr;
         ui::widgets::QuestionBox* question = nullptr; ///< While it is shown
         ui::DrawList list;
-        std::optional<float> scale; ///< Chosen interface scale; nothing picks one from the window height
+        std::optional<f32> scale; ///< Chosen interface scale; nothing picks one from the window height
     };
 
     /// Where `./nob fetch` puts the fallback font, from the repository root.

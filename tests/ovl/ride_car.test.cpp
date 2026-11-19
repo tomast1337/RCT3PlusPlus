@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/ride_car.hpp"
 
+#include "core/types.hpp"
 #include "record_file.hpp"
 
 #include <doctest/doctest.h>
@@ -10,8 +11,8 @@ using rct3::ovl::read_ride_cars;
 
 TEST_CASE("ride cars expose their names, kind, visual, moving part, wheels, wheel turns and axles")
 {
-    constexpr std::uint32_t sizes[] = { 0, 240, 0, 0, 292, 336 };
-    for (std::uint32_t version : { 1u, 4u, 5u })
+    constexpr u32 sizes[] = { 0, 240, 0, 0, 292, 336 };
+    for (u32 version : { 1u, 4u, 5u })
     {
         CAPTURE(version);
         Pool pool;

@@ -10,6 +10,7 @@
 // null backend (no device needed, nothing audible). Without it the default playback device is used, and
 // the null backend takes over when there is none. Prints the sound's format, length and the backend used.
 #include "audio/audio.hpp"
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/sound.hpp"
@@ -37,7 +38,7 @@ namespace
 
     using rct3::audio::SoundBuffer;
 
-    std::int32_t usage(const char* argv0)
+    i32 usage(const char* argv0)
     {
         out.error(
             "usage: {} [--null] [--volume V] [--pan P] [--pitch P] PATH [NAME]\n"
@@ -60,14 +61,14 @@ namespace
         return "?";
     }
 
-    SoundBuffer make_tone(float hz)
+    SoundBuffer make_tone(f32 hz)
     {
-        constexpr std::uint32_t kRate = 22050;
-        std::vector<std::int16_t> s(kRate / 2);
-        for (std::size_t i = 0; i < s.size(); ++i)
+        constexpr u32 kRate = 22050;
+        std::vector<i16> s(kRate / 2);
+        for (usize i = 0; i < s.size(); ++i)
         {
-            const double t = static_cast<double>(i) / kRate;
-            s[i] = static_cast<std::int16_t>(12000.0 * std::sin(2.0 * std::numbers::pi * hz * t));
+            const f64 t = static_cast<f64>(i) / kRate;
+            s[i] = static_cast<i16>(12000.0 * std::sin(2.0 * std::numbers::pi * hz * t));
         }
         return rct3::audio::make_pcm16(s, 1, kRate);
     }
@@ -79,11 +80,11 @@ int main(int argc, char** argv)
     rct3::logging::configure({ .memory_capacity = 0, .plain = true });
     bool use_null = false;
     bool tone = false;
-    float tone_hz = 440.0f;
+    f32 tone_hz = 440.0f;
     rct3::audio::PlayParams params;
     std::vector<const char*> positional;
 
-    for (std::int32_t i = 1; i < argc; ++i)
+    for (i32 i = 1; i < argc; ++i)
     {
         const std::string_view a = argv[i];
         if (a == "--null")
@@ -106,7 +107,7 @@ int main(int argc, char** argv)
     }
     if (!rct3::audio::is_valid(params))
     {
-        out.error("volume must be 0..{:g}, pan -1..1, pitch above 0 and at most {:g}", static_cast<double>(rct3::audio::kMaxVolume), static_cast<double>(rct3::audio::kMaxPitch));
+        out.error("volume must be 0..{:g}, pan -1..1, pitch above 0 and at most {:g}", static_cast<f64>(rct3::audio::kMaxVolume), static_cast<f64>(rct3::audio::kMaxPitch));
         return 2;
     }
 
@@ -187,7 +188,7 @@ int main(int argc, char** argv)
         out.error("play: {}", rct3::audio::to_string(voice.error()));
         return 1;
     }
-    const double seconds = buffer.duration_seconds() / static_cast<double>(params.pitch);
+    const f64 seconds = buffer.duration_seconds() / static_cast<f64>(params.pitch);
     out.info("playing {:d} frames, {:d} ch, {:d} Hz, {:.3f} s on the {} ({:d} Hz mix)", buffer.frame_count(), buffer.channels, buffer.sample_rate, seconds, backend_name(engine->backend()), engine->sample_rate());
 
     while (engine->is_playing(*voice))

@@ -2,6 +2,7 @@
 #include "ovl/animal/species.hpp"
 
 #include "../record_file.hpp"
+#include "core/types.hpp"
 
 #include <doctest/doctest.h>
 
@@ -11,7 +12,7 @@ using rct3::ovl::animal::read_animal_species;
 TEST_CASE("an animal species points to its animals and names its shelter")
 {
     Pool pool;
-    const std::uint32_t shelter = pool.add("burrow");
+    const u32 shelter = pool.add("burrow");
     pool.add("wombat:was");
     pool.add("WombatName:txt");
     pool.add("WombatDesc:txt");
@@ -22,14 +23,14 @@ TEST_CASE("an animal species points to its animals and names its shelter")
     pool.add("WombatYoung:gsi");
     pool.add("BigWombat:mdl");
     pool.add("wombat:wad");
-    const std::uint32_t at = pool.base();
+    const u32 at = pool.base();
     // The species, then two animal blocks; the female slots are null.
     std::vector<std::byte> bytes;
     put(bytes, { 0, 0, 0, 0, 0, 0, at + 0x40, 0, at + 0x74, 0, 0, 0, shelter, 0, bits(1.5f) });
     bytes.resize(0x40, std::byte { 0 });
-    for (const std::uint32_t price : { 12500u, 16000u })
+    for (const u32 price : { 12500u, 16000u })
     {
-        const std::size_t start = bytes.size();
+        const usize start = bytes.size();
         bytes.resize(start + 0x34, std::byte { 0 });
         std::vector<std::byte> p;
         put(p, { price, bits(0.7f) });

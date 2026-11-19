@@ -12,6 +12,7 @@
 // park can pay what they cost together, and the tool stays out for another. A right click or Escape puts it away.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "park/path/clearance.hpp"
 #include "park/structure_placement.hpp"
@@ -41,7 +42,7 @@ namespace rct3::scene
 
     struct StructureTools
     {
-        enum class Tool : std::uint8_t
+        enum class Tool : u8
         {
             None,
             Grab,
@@ -49,7 +50,7 @@ namespace rct3::scene
         };
         Tool tool = Tool::None;
         // Picking out
-        std::vector<std::uint8_t> marks;         ///< Of every tile of the park, row after row: 1 where marked
+        std::vector<u8> marks;                   ///< Of every tile of the park, row after row: 1 where marked
         std::optional<save::model::Tile> corner; ///< Of the drag going on, where it began
         std::optional<save::model::Tile> other;  ///< And where it is now
         bool unmarking = false;                  ///< The drag began on a marked tile
@@ -58,10 +59,10 @@ namespace rct3::scene
         std::optional<save::model::Structure> structure; ///< Picked out to save, or being placed
         rct3::park::ModelTurn turn;
         std::optional<save::model::Tile> pointed_tile;
-        std::int32_t ground = 0; ///< The ground's height there
-        std::int32_t height = 0; ///< The lowest item's, the ground's unless raised with Shift
+        i32 ground = 0; ///< The ground's height there
+        i32 height = 0; ///< The lowest item's, the ground's unless raised with Shift
         std::optional<glm::vec3> lift_at;
-        std::int32_t lift_height = 0;
+        i32 lift_height = 0;
         std::vector<save::model::PlacedObject> ghost_items;
         rct3::park::StructureProblem problem = rct3::park::StructureProblem::None;
         units::Money cost; ///< Of all the items
@@ -69,11 +70,11 @@ namespace rct3::scene
         rct3::park::object::ObjectMesh ghost_mesh;
         std::map<std::string, TrackModels, std::less<>> models;
         rct3::park::path::SolidTiles solids;
-        std::optional<std::size_t> solids_of; ///< The scene's object count when worked out
+        std::optional<usize> solids_of; ///< The scene's object count when worked out
         // The windows that save and load them
         std::optional<ui::screens::dialogs::FileDialogMode> asked; ///< A window to open, until the owner opens it
         SaveBrowser browser;
-        std::size_t windows_opened = 0;
+        usize windows_opened = 0;
     };
 
     /// Takes out the tool, or puts it away when it is out.

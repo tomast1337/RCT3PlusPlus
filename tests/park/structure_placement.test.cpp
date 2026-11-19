@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/structure_placement.hpp"
 
+#include "core/types.hpp"
 #include "park/item_category.hpp"
 
 #include <algorithm>
@@ -13,20 +14,20 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid owned_grid(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         for (save::model::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
+            c.flags = static_cast<u8>(save::model::TileFlag::Owned);
         return g;
     }
 
-    save::model::PlacedObject item(const char* symbol, std::int32_t col, std::int32_t row, std::int32_t height)
+    save::model::PlacedObject item(const char* symbol, i32 col, i32 row, i32 height)
     {
         save::model::PlacedObject o;
         o.symbol = symbol;
@@ -45,7 +46,7 @@ namespace
         object::ObjectModel tree;
         tree.category = std::to_underlying(ItemCategory::Tree);
         tree.ground_height = false;
-        tree.solid = { std::array<std::int32_t, 2> { 0, 4 } };
+        tree.solid = { std::array<i32, 2> { 0, 4 } };
         tree.levels = { { 100, { }, { } } };
         m.emplace(object::model_key(item("tree", 0, 0, 0)), tree);
         object::ObjectModel bench;
@@ -61,7 +62,7 @@ namespace
 
 TEST_CASE("a structure turns about its middle tile, and four turns bring every tile back")
 {
-    const save::model::Structure s { .cols = 3, .rows = 2, .tiles = std::vector<std::uint8_t>(6, 1) };
+    const save::model::Structure s { .cols = 3, .rows = 2, .tiles = std::vector<u8>(6, 1) };
     for (const ModelTurn turn : { ModelTurn { 0 }, ModelTurn { 1 }, ModelTurn { 2 }, ModelTurn { 3 } })
         CHECK(structure_tile(s, { 10, 10 }, turn, 1, 1) == save::model::Tile { 10, 10 });
     CHECK(structure_tile(s, { 10, 10 }, ModelTurn { 0 }, 0, 0) == save::model::Tile { 9, 9 });
@@ -83,12 +84,12 @@ TEST_CASE("picking takes the scenery on the marked tiles, its box round them, it
     const save::model::Structure s = pick_structure(marked, objects, m, g);
     CHECK(s.cols == 2);
     CHECK(s.rows == 2);
-    CHECK(s.tiles == std::vector<std::uint8_t> { 1, 0, 0, 1 });
+    CHECK(s.tiles == std::vector<u8> { 1, 0, 0, 1 });
     REQUIRE(s.pieces.size() == 2); // The bench stays with the path it would stand on
     CHECK(s.pieces[0].height == 0);
     CHECK(s.pieces[0].rotation == 2);
     CHECK(s.pieces[0].quadrant == 3);
-    CHECK(s.pieces[0].colours == std::array<std::int32_t, 3> { 1, 2, 3 });
+    CHECK(s.pieces[0].colours == std::array<i32, 3> { 1, 2, 3 });
     CHECK(s.pieces[1].col == 1);
     CHECK(s.pieces[1].row == 1);
     CHECK(s.pieces[1].height == 2);
@@ -122,7 +123,7 @@ TEST_CASE("built turned, each item keeps its tiles, quarter and facing in the bo
     // Turned all the way round, the same items come back.
     const auto again = structure_objects(s, { 5, 5 }, ModelTurn::from(4), 10, m);
     const auto plain = structure_objects(s, { 5, 5 }, ModelTurn { 0 }, 10, m);
-    for (std::size_t i = 0; i < plain.size(); ++i)
+    for (usize i = 0; i < plain.size(); ++i)
     {
         CHECK(again[i].col == plain[i].col);
         CHECK(again[i].row == plain[i].row);

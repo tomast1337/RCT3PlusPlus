@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/led_signs.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/scenery_item.hpp"
@@ -70,18 +71,18 @@ namespace rct3::scene
 
         /// Paints the board parts of `model` with kBoardPicture, their texture running once along the board, and
         /// returns the board's width over its height; 0 for a model without a board.
-        float prepare_board(rct3::park::object::ObjectModel& model)
+        f32 prepare_board(rct3::park::object::ObjectModel& model)
         {
-            float aspect = 0;
+            f32 aspect = 0;
             for (rct3::park::object::ModelLevel& level : model.levels)
             {
                 for (rct3::park::object::ModelPart& part : level.parts)
                 {
                     if (!part.board || part.vertices.empty())
                         continue;
-                    glm::vec3 low(std::numeric_limits<float>::max());
-                    glm::vec3 high(std::numeric_limits<float>::lowest());
-                    float across = 0;
+                    glm::vec3 low(std::numeric_limits<f32>::max());
+                    glm::vec3 high(std::numeric_limits<f32>::lowest());
+                    f32 across = 0;
                     for (const rct3::park::object::ModelVertex& v : part.vertices)
                     {
                         low = glm::min(low, v.position);
@@ -95,7 +96,7 @@ namespace rct3::scene
                     }
                     part.texture = std::string(kBoardPicture);
                     part.slots = 0;
-                    const float tall = high.y - low.y;
+                    const f32 tall = high.y - low.y;
                     if (tall > 0 && aspect == 0)
                         aspect = std::max(high.x - low.x, high.z - low.z) / tall;
                 }
@@ -124,8 +125,8 @@ namespace rct3::scene
             LedSigns& q = scene.led_signs;
             ui::destroy_textures(device, q.board_textures);
             q.signs.clear();
-            std::map<std::uint64_t, save::model::RideIndex> ride_of_line;
-            for (std::size_t r = 0; r < scene.rides.rides.size(); ++r)
+            std::map<u64, save::model::RideIndex> ride_of_line;
+            for (usize r = 0; r < scene.rides.rides.size(); ++r)
             {
                 const save::model::Ride& ride = scene.rides.rides[r];
                 if (q.hidden.contains(ride.base.id) || ride.base.demolished)
@@ -138,10 +139,10 @@ namespace rct3::scene
             }
             // Writes `sign`'s board into its mesh and gives it a blank picture; false when `model` has no board.
             const auto hang = [&](LedSign& sign, rct3::park::object::ObjectModels& model) {
-                const float aspect = prepare_board(model.begin()->second);
+                const f32 aspect = prepare_board(model.begin()->second);
                 if (aspect <= 0)
                     return false;
-                sign.width = std::max<std::uint32_t>(static_cast<std::uint32_t>(std::lround(aspect * rct3::park::kSignTextHeight / rct3::park::kSignLamp)), 1) * rct3::park::kSignLamp;
+                sign.width = std::max<u32>(static_cast<u32>(std::lround(aspect * rct3::park::kSignTextHeight / rct3::park::kSignLamp)), 1) * rct3::park::kSignLamp;
                 sign.board = std::format("LED sign {}", q.signs.size());
                 sign.mesh = rct3::park::object::object_mesh(std::span(&sign.object, 1), model, scene.grid);
                 for (rct3::park::object::ObjectBatch& batch : sign.mesh.batches)
@@ -152,7 +153,7 @@ namespace rct3::scene
                 ovl::texture::RgbaImage blank;
                 blank.width = sign.width;
                 blank.height = rct3::park::kSignTextHeight;
-                blank.pixels.assign(static_cast<std::size_t>(blank.width) * blank.height * 4, rct3::park::kSignDark);
+                blank.pixels.assign(static_cast<usize>(blank.width) * blank.height * 4, rct3::park::kSignDark);
                 auto made = ui::upload_textures(device, { { sign.board, std::move(blank) } });
                 if (!made)
                     return false;
@@ -160,8 +161,8 @@ namespace rct3::scene
                 return true;
             };
             // Only reads the models and objects, as the build beside the frame does, so it need not wait for it.
-            std::map<std::uint64_t, std::size_t> placed;
-            for (std::size_t s = 0; s < scene.signs.size(); ++s)
+            std::map<u64, usize> placed;
+            for (usize s = 0; s < scene.signs.size(); ++s)
                 placed.emplace(scene.signs[s].object_ref, s);
             for (const save::model::PlacedObject& o : scene.objects)
             {
@@ -194,13 +195,13 @@ namespace rct3::scene
                 LedSign sign;
                 sign.ride = ride->second;
                 save::model::PlacedObject& o = sign.object;
-                o.id = std::numeric_limits<std::uint64_t>::max() - q.signs.size();
+                o.id = std::numeric_limits<u64>::max() - q.signs.size();
                 o.owner_ref = o.id;
                 o.symbol = symbol;
                 o.overlay = theme;
                 o.col = spot.col;
                 o.row = spot.row;
-                o.base_height = static_cast<std::int32_t>(std::lround(spot.height));
+                o.base_height = static_cast<i32>(std::lround(spot.height));
                 o.rotation = spot.turn.value;
                 if (!load_object_model(scene, q.models, assets, o))
                     continue;
@@ -227,8 +228,8 @@ namespace rct3::scene
                     if (f.name != kBoardFont)
                         continue;
                     std::vector<ui::font::Font::Page> pages;
-                    for (std::size_t i = 0; i < f.pages.size(); ++i)
-                        pages.push_back({ static_cast<ui::TextureId>(i), static_cast<float>(f.pages[i].width), static_cast<float>(f.pages[i].height) });
+                    for (usize i = 0; i < f.pages.size(); ++i)
+                        pages.push_back({ static_cast<ui::TextureId>(i), static_cast<f32>(f.pages[i].width), static_cast<f32>(f.pages[i].height) });
                     q.font = ui::font::Font::from(f.font, pages, f.face);
                     q.font_pages = std::move(f.pages);
                 }
@@ -294,7 +295,7 @@ namespace rct3::scene
         bool in_pass = true;
         for (LedSign& sign : scene.led_signs.signs)
         {
-            const std::uint32_t shift = rct3::park::sign_shift(scene.park_clock, sign.loop.width);
+            const u32 shift = rct3::park::sign_shift(scene.park_clock, sign.loop.width);
             const auto texture = scene.led_signs.board_textures.find(sign.board);
             if (shift == sign.shift || sign.loop.width == 0 || texture == scene.led_signs.board_textures.end())
                 continue;

@@ -3,6 +3,8 @@
 // OVL container parser: header, reference lists, loader table, block layout and relocation table.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -19,16 +21,16 @@ namespace rct3::ovl
     /// One entry of the loader metadata (type section).
     struct Loader
     {
-        std::string loader;             ///< SDK namespace, e.g. "FGDK", "RCT3"
-        std::string name;               ///< Type name, e.g. "FlexiTexture"
-        std::uint32_t loader_type;      ///< Numeric type id of the item's loader
-        std::string tag;                ///< File extension, e.g. "ftx"
-        std::uint32_t symbol_count = 0; ///< v5 only; 0 otherwise
+        std::string loader;   ///< SDK namespace, e.g. "FGDK", "RCT3"
+        std::string name;     ///< Type name, e.g. "FlexiTexture"
+        u32 loader_type;      ///< Numeric type id of the item's loader
+        std::string tag;      ///< File extension, e.g. "ftx"
+        u32 symbol_count = 0; ///< v5 only; 0 otherwise
     };
 
     /// OVL file layout, by how its data is split into streams; the header stores it as a version number.
     /// Later layouts also grow item records.
-    enum class OvlLayout : std::uint32_t
+    enum class OvlLayout : u32
     {
         NoStream = 1,    ///< data only, no extra streams
         OneStream = 4,   ///< one extra data stream
@@ -37,15 +39,15 @@ namespace rct3::ovl
 
     struct Header
     {
-        std::uint8_t flags = 0;
+        u8 flags = 0;
         OvlLayout layout = OvlLayout::NoStream;
-        std::int16_t stream_count = 0; ///< ManyStreams only: number of data streams
-        std::int16_t extra_flag = 0;   ///< ManyStreams only, purpose unknown
-        std::string stream_tag;        ///< ManyStreams with streams only; may be empty
+        i16 stream_count = 0;   ///< ManyStreams only: number of data streams
+        i16 extra_flag = 0;     ///< ManyStreams only, purpose unknown
+        std::string stream_tag; ///< ManyStreams with streams only; may be empty
         std::vector<std::string> external_refs;
         std::vector<std::string> secondary_refs;
         std::vector<Loader> loaders;
-        std::size_t end_offset = 0; ///< Stream position after the loader (and v5 symbol count) tables
+        usize end_offset = 0; ///< Stream position after the loader (and v5 symbol count) tables
     };
 
     enum class Error
@@ -69,38 +71,38 @@ namespace rct3::ovl
     [[nodiscard]] std::expected<Header, Error> parse_header(std::span<const std::byte> data);
 
     /// Block types are always 0..8. Type 0 holds the string table, type 2 the symbol table.
-    inline constexpr std::size_t kBlockTypeCount = 9;
+    inline constexpr usize kBlockTypeCount = 9;
 
     /// One data block. Offsets are positions in the file's own relative address space, which starts at 0 at
     /// the first block of type 0 and grows in type then block order.
     struct Block
     {
-        std::uint32_t size = 0;
-        std::uint32_t relative_offset = 0; ///< Start of the block in the relative address space
-        std::size_t file_offset = 0;       ///< Start of the block bytes in the file
+        u32 size = 0;
+        u32 relative_offset = 0; ///< Start of the block in the relative address space
+        usize file_offset = 0;   ///< Start of the block bytes in the file
     };
 
     struct BlockType
     {
-        std::uint32_t unknown = 0; ///< Present for version > 1, purpose unknown
-        std::uint32_t extra = 0;   ///< v5 with a sub-version block only, purpose unknown
+        u32 unknown = 0; ///< Present for version > 1, purpose unknown
+        u32 extra = 0;   ///< v5 with a sub-version block only, purpose unknown
         std::vector<Block> blocks;
     };
 
     /// Where a relative address falls.
     struct BlockLocation
     {
-        std::size_t type;
-        std::size_t index;
-        std::uint32_t offset; ///< Byte offset inside the block
+        usize type;
+        usize index;
+        u32 offset; ///< Byte offset inside the block
     };
 
     /// A relocation of a streamed data section: the 32-bit pointer at `location` is set to `value`. Both are
     /// addresses in the shared address space.
     struct StreamRelocation
     {
-        std::uint32_t location = 0;
-        std::uint32_t value = 0;
+        u32 location = 0;
+        u32 value = 0;
     };
 
     /// Everything up to and including the relocation tables. Loader extra data chunks that follow are not
@@ -112,19 +114,19 @@ namespace rct3::ovl
 
         /// Post-block metadata: v4 has two words, v5 has a byte run and a word list. Purpose unknown.
         std::vector<std::byte> unknown_bytes;
-        std::vector<std::uint32_t> unknown_words;
+        std::vector<u32> unknown_words;
 
-        std::uint32_t data_size = 0;            ///< Total bytes of all blocks, the size of the relative address space
-        std::vector<std::uint32_t> relocations; ///< Relative addresses of 32-bit pointers to patch
+        u32 data_size = 0;            ///< Total bytes of all blocks, the size of the relative address space
+        std::vector<u32> relocations; ///< Relative addresses of 32-bit pointers to patch
         /// One table per data stream (v4: one, v5: `header.stream_count`, v1: none).
         std::vector<std::vector<StreamRelocation>> stream_relocations;
-        std::size_t end_offset = 0; ///< Stream position after the last relocation table
+        usize end_offset = 0; ///< Stream position after the last relocation table
 
         /// Finds the block holding `address`, or nothing when it is outside every block.
         ///
         /// A unique file shares one address space with its common file and starts where the common file's
         /// data ends. Pass the common file's `data_size` as `base` to locate addresses of the unique file.
-        [[nodiscard]] std::optional<BlockLocation> locate(std::uint32_t address, std::uint32_t base = 0) const noexcept;
+        [[nodiscard]] std::optional<BlockLocation> locate(u32 address, u32 base = 0) const noexcept;
     };
 
     /// Parses a whole OVL file's structure. Block bytes are not copied, use `Block::file_offset`.
@@ -137,24 +139,24 @@ namespace rct3::ovl
     {
     public:
         /// Registers `file`, whose first block sits at address `base`.
-        void add(const File& file, std::span<const std::byte> bytes, std::uint32_t base);
+        void add(const File& file, std::span<const std::byte> bytes, u32 base);
 
         /// `length` bytes at `address`, if they lie inside a single block.
-        [[nodiscard]] std::optional<std::span<const std::byte>> bytes_at(std::uint32_t address, std::size_t length) const noexcept;
+        [[nodiscard]] std::optional<std::span<const std::byte>> bytes_at(u32 address, usize length) const noexcept;
 
         /// NUL-terminated string at `address`, if it ends inside its block.
-        [[nodiscard]] std::optional<std::string_view> cstring_at(std::uint32_t address) const noexcept;
+        [[nodiscard]] std::optional<std::string_view> cstring_at(u32 address) const noexcept;
 
         /// UTF-16 little-endian string at `address`, up to a 16-bit NUL that must lie inside the same block.
         /// The terminator is not part of the result. Code units are not validated.
-        [[nodiscard]] std::optional<std::u16string> utf16_at(std::uint32_t address) const;
+        [[nodiscard]] std::optional<std::u16string> utf16_at(u32 address) const;
 
     private:
         struct Entry
         {
             const File* file;
             std::span<const std::byte> bytes;
-            std::uint32_t base;
+            u32 base;
         };
         std::vector<Entry> entries_;
     };
@@ -162,12 +164,12 @@ namespace rct3::ovl
     /// One row of the symbol table (block type 2, block 0).
     struct Symbol
     {
-        std::uint32_t name_address = 0;
-        std::uint32_t data = 0; ///< Address of the data when `is_pointer`, otherwise the value itself
+        u32 name_address = 0;
+        u32 data = 0; ///< Address of the data when `is_pointer`, otherwise the value itself
         bool is_pointer = false;
-        std::uint16_t unknown = 0; ///< v4/v5 only
-        std::uint32_t hash = 0;    ///< v4/v5 only
-        std::string_view name;     ///< Full stored text, e.g. "Something:ftx". Empty if the pointer is bad.
+        u16 unknown = 0;       ///< v4/v5 only
+        u32 hash = 0;          ///< v4/v5 only
+        std::string_view name; ///< Full stored text, e.g. "Something:ftx". Empty if the pointer is bad.
     };
 
     /// Splits "Name:tag" at the last colon. A name without a colon has an empty tag.
@@ -187,11 +189,11 @@ namespace rct3::ovl
     /// that another file or another part of this one provides, by symbol name (for example "Wall:ftx").
     struct Reference
     {
-        std::uint32_t location = 0;     ///< Address of the field that holds the reference
-        std::uint32_t name_address = 0; ///< Address of the referenced item's full symbol name
-        std::uint32_t owner = 0;        ///< Address next to the loader row of the item the field belongs to
-        std::uint32_t hash = 0;         ///< v4/v5 only
-        std::string_view name;          ///< Full symbol name. Empty if the pointer is bad.
+        u32 location = 0;      ///< Address of the field that holds the reference
+        u32 name_address = 0;  ///< Address of the referenced item's full symbol name
+        u32 owner = 0;         ///< Address next to the loader row of the item the field belongs to
+        u32 hash = 0;          ///< v4/v5 only
+        std::string_view name; ///< Full symbol name. Empty if the pointer is bad.
     };
 
     /// Reads `file`'s reference table. Rows are 12 bytes in v1 and 16 bytes later. A file without the table
@@ -201,26 +203,26 @@ namespace rct3::ovl
     /// One row of the loader table (block type 2, block 1): ties a loaded item to its type handler.
     struct LoaderEntry
     {
-        std::uint32_t loader_type = 0;    ///< Index into Header::loaders
-        std::uint32_t data = 0;           ///< Address of the item's data
-        std::uint32_t extra_count = 0;    ///< Number of extra data chunks that follow the relocations
-        std::uint16_t unknown = 0;        ///< v5 only: upper half of the field holding extra_count
-        std::uint32_t symbol_address = 0; ///< Address of the item's symbol row, or 0
-        std::uint32_t symbols_to_resolve = 0;
+        u32 loader_type = 0;    ///< Index into Header::loaders
+        u32 data = 0;           ///< Address of the item's data
+        u32 extra_count = 0;    ///< Number of extra data chunks that follow the relocations
+        u16 unknown = 0;        ///< v5 only: upper half of the field holding extra_count
+        u32 symbol_address = 0; ///< Address of the item's symbol row, or 0
+        u32 symbols_to_resolve = 0;
     };
 
     /// An extra data chunk: `size` bytes at `file_offset`.
     struct Chunk
     {
-        std::size_t file_offset = 0;
-        std::uint32_t size = 0;
+        usize file_offset = 0;
+        u32 size = 0;
     };
 
     struct LoaderTable
     {
         std::vector<LoaderEntry> entries;
         std::vector<std::vector<Chunk>> extra; ///< Chunks per entry, same order as `entries`
-        std::size_t end_offset = 0;            ///< First byte after the chunk stream
+        usize end_offset = 0;                  ///< First byte after the chunk stream
     };
 
     /// Reads the loader table and the extra data chunk stream that follows the relocation table.

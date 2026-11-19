@@ -43,6 +43,7 @@
 // The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/camera.hpp"
 #include "park/pools/pools.hpp"
 #include "save/model/park.hpp"
@@ -79,53 +80,53 @@ namespace rct3::parkfile
     {
         std::optional<units::Money> cash; ///< None when money never runs out
         units::Money loan { };
-        std::optional<float> rating;
+        std::optional<f32> rating;
         std::optional<simulation::park::RatingParts> rating_parts;
-        float time = 0;
-        float zero_time = 0;
+        f32 time = 0;
+        f32 zero_time = 0;
         save::model::CalendarDate date;
         save::model::WeatherType weather = save::model::WeatherType::Unknown;
         std::optional<save::model::WeatherType> forecast;
         std::optional<units::Degrees> temperature;
-        float day_time = 0;
-        std::int32_t climate = 0; ///< simulation::Climate
-        float weather_hold = 0;   ///< Calendar units before the forecast arrives
-        float wind = 0;
-        float wind_change = 0;
+        f32 day_time = 0;
+        i32 climate = 0;      ///< simulation::Climate
+        f32 weather_hold = 0; ///< Calendar units before the forecast arrives
+        f32 wind = 0;
+        f32 wind_change = 0;
         std::vector<save::model::LedgerPeriod> ledger; ///< The months' accounts, newest first
         /// Hundredths; goal prizes may have raised it. Kept 32-bit while the park file layout may still change;
         /// once it is settled, this can become units::Money (64-bit) like the cash and loan.
-        std::int32_t max_loan = 0;
-        float interest_rate_percent = 0;          ///< Goal prizes may have lowered it
-        std::optional<std::int64_t> ledger_month; ///< The month the newest ledger period is for (simulation::park::ledger_month)
+        i32 max_loan = 0;
+        f32 interest_rate_percent = 0;   ///< Goal prizes may have lowered it
+        std::optional<i64> ledger_month; ///< The month the newest ledger period is for (simulation::park::ledger_month)
         /// The weekly graphs (simulation/park/graphs.hpp), the money's then the park's, as the models keep them.
         save::model::Series cash_less_loan, company_value, expenditure, income, park_value, share_price, weekly_profit;
         save::model::Series park_rating, guests_in_park, adults_in_park, teenagers_in_park, children_in_park, guest_intake, publicity_level;
         /// The week still running, for the graphs to count it whole: guests come in and attractions' takings so
         /// far, and the cash as it began (hundredths).
-        std::int64_t week_intake = 0, week_income = 0, week_cash = 0;
+        i64 week_intake = 0, week_income = 0, week_cash = 0;
     };
 
     /// A guest in a pool: the tile of the changing room they came in by, and how far they are with their swim.
     struct SavedSwim
     {
-        std::int32_t room_col = 0;
-        std::int32_t room_row = 0;
+        i32 room_col = 0;
+        i32 room_row = 0;
         simulation::Swimmer swimmer { };
     };
 
     /// A guest in the park.
     struct SavedGuest
     {
-        std::optional<std::int32_t> look { }; ///< Place in SavedPeople::model.guests of the guest drawn for them
+        std::optional<i32> look { }; ///< Place in SavedPeople::model.guests of the guest drawn for them
         simulation::Visitor visitor;
         glm::vec3 position { 0.0f };
-        float heading = 0;
+        f32 heading = 0;
         simulation::Needs needs;
         simulation::Mood mood;
-        std::int64_t cash = 0;
+        i64 cash = 0;
         std::optional<simulation::Taste> taste { };
-        std::optional<std::int32_t> party { }; ///< Guests with the same number go round together; none alone
+        std::optional<i32> party { }; ///< Guests with the same number go round together; none alone
         bool leader = false;
         std::optional<SavedSwim> swim { };              ///< In a pool
         std::optional<simulation::Outside> outside { }; ///< On the way between a spawn point and the gate
@@ -137,20 +138,20 @@ namespace rct3::parkfile
     /// A member of staff at work.
     struct SavedWorker
     {
-        std::optional<std::int32_t> look { }; ///< Place in SavedPeople::model.staff
+        std::optional<i32> look { }; ///< Place in SavedPeople::model.staff
         simulation::StaffRole role = simulation::StaffRole::Other;
-        std::int64_t wage = 0;
-        std::int32_t wage_level = 2;
-        std::int32_t training = 0;
-        std::int32_t warnings = 0;
-        float happiness = 1;
-        float laziness = 0;
+        i64 wage = 0;
+        i32 wage_level = 2;
+        i32 training = 0;
+        i32 warnings = 0;
+        f32 happiness = 1;
+        f32 laziness = 0;
         glm::vec3 position { 0.0f };
-        float heading = 0;
+        f32 heading = 0;
         std::optional<simulation::staff::Patrol> patrol { };
-        std::uint32_t mended = 0;    ///< Broken path items mended
-        units::Seconds think { };    ///< To their next thought
-        std::uint32_t miserable = 0; ///< Thoughts in a row had while miserable, towards quitting
+        u32 mended = 0;           ///< Broken path items mended
+        units::Seconds think { }; ///< To their next thought
+        u32 miserable = 0;        ///< Thoughts in a row had while miserable, towards quitting
     };
 
     struct SavedPeople
@@ -171,10 +172,10 @@ namespace rct3::parkfile
     struct SavedAnimalHouse
     {
         simulation::AnimalHouse house { };
-        std::optional<std::int32_t> keeper { };
+        std::optional<i32> keeper { };
         simulation::KeeperJob job = simulation::KeeperJob::Idle;
         glm::vec3 goal { 0.0f };
-        std::optional<std::int32_t> target { }; ///< Of SavedAnimals::dung while clearing, ::animals while catching, ::houses while filling
+        std::optional<i32> target { }; ///< Of SavedAnimals::dung while clearing, ::animals while catching, ::houses while filling
         units::Seconds busy { };
     };
 
@@ -183,13 +184,13 @@ namespace rct3::parkfile
     {
         simulation::Animal animal { };
         glm::vec3 position { 0.0f };
-        float heading = 0;
+        f32 heading = 0;
     };
 
     /// Dung left lying.
     struct SavedDung
     {
-        std::optional<std::int32_t> enclosure { };
+        std::optional<i32> enclosure { };
         glm::vec3 position { 0.0f };
     };
 
@@ -218,7 +219,7 @@ namespace rct3::parkfile
         std::optional<std::vector<save::model::RideShow>> shows;
         std::optional<SavedGoals> goals;
         std::optional<simulation::Research> research;                  ///< None in saves made before research was kept
-        std::vector<std::uint64_t> broken_items;                       ///< Path items vandals have broken, by object id
+        std::vector<u64> broken_items;                                 ///< Path items vandals have broken, by object id
         std::optional<std::vector<save::model::Waterfall>> waterfalls; ///< None in saves made before waterfalls were kept
         std::optional<simulation::DayMode> day_mode;                   ///< None in saves made before the mode was kept
         std::optional<SavedAnimals> animals;                           ///< None in saves made before animals were kept
@@ -231,7 +232,7 @@ namespace rct3::parkfile
 
     /// The guests and staff of `world` as a save keeps them; `looks` gives the place in `model` of each one
     /// drawn (guests in model.guests, staff in model.staff).
-    [[nodiscard]] SavedPeople keep_people(const simulation::SimWorld& world, save::model::PeopleModel model, const std::unordered_map<entt::entity, std::int32_t>& looks);
+    [[nodiscard]] SavedPeople keep_people(const simulation::SimWorld& world, save::model::PeopleModel model, const std::unordered_map<entt::entity, i32>& looks);
 
     /// Adds the saved guests to `world`, standing where they stood; returns them in the order of people.guests.
     /// Call after import_paths in place of import_guests, then start_guests, then place_parties.
@@ -243,7 +244,7 @@ namespace rct3::parkfile
 
     /// Puts the saved swimmers back in the pools of their changing rooms, as they were; `guests` being
     /// place_guests's answer. Call after import_pools and start_guests. Returns how many.
-    std::size_t place_swimmers(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests);
+    usize place_swimmers(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests);
 
     /// Adds the saved staff to `world`, walking; returns them in the order of people.staff, null for those not
     /// on a path. In place of import_staff.
@@ -260,7 +261,7 @@ namespace rct3::parkfile
     /// The objects a save keeps: the first `own` (the park's own), the scenery the player `placed`, and those a
     /// path, a track piece or a ride placed whole stands on, with its entrance and exit (the player's); not
     /// those made by the park itself (supports, railings, fences, cars, trees beyond the edge).
-    [[nodiscard]] std::vector<save::model::PlacedObject> kept_objects(std::span<const save::model::PlacedObject> objects, std::size_t own, const std::unordered_set<std::uint64_t>& placed, std::span<const save::model::PathTile> paths, const save::model::RideModel& rides);
+    [[nodiscard]] std::vector<save::model::PlacedObject> kept_objects(std::span<const save::model::PlacedObject> objects, usize own, const std::unordered_set<u64>& placed, std::span<const save::model::PathTile> paths, const save::model::RideModel& rides);
 
     [[nodiscard]] std::vector<std::byte> write_saved_park(const SavedPark& park);
 

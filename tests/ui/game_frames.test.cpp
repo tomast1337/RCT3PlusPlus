@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "ui/draw_list_painter.hpp"
 #include "ui/game_style.hpp"
 
@@ -48,9 +49,9 @@ TEST_CASE("the window frame leaves its middle empty for the window's background"
     DrawList list;
     draw_frame(list, game_frames::window(kGamePalette), { 0, 0, 300, 200 });
     // Shapes whose quads span the middle are outlines only: the middle point is outside every filled one.
-    std::int32_t filled_over_middle = 0;
+    i32 filled_over_middle = 0;
     const auto vertices = list.shape_vertices();
-    for (std::size_t i = 0; i + 3 < vertices.size(); i += 4)
+    for (usize i = 0; i + 3 < vertices.size(); i += 4)
     {
         const ShapeVertex& a = vertices[i];
         const ShapeVertex& c = vertices[i + 2];
@@ -64,9 +65,9 @@ TEST_CASE("the window frame leaves its middle empty for the window's background"
 
 namespace
 {
-    Color pixel(const rct3::ovl::texture::RgbaImage& image, std::uint32_t x, std::uint32_t y)
+    Color pixel(const rct3::ovl::texture::RgbaImage& image, u32 x, u32 y)
     {
-        const std::uint8_t* p = &image.pixels[(std::size_t { y } * image.width + x) * 4];
+        const u8* p = &image.pixels[(usize { y } * image.width + x) * 4];
         return { p[0], p[1], p[2], p[3] };
     }
 } // namespace
@@ -86,8 +87,8 @@ TEST_CASE("a layer cut along its diagonal keeps the half below it, however its b
         CAPTURE(target.width());
         DrawList list;
         draw_frame(list, frame, target);
-        const auto w = static_cast<std::uint32_t>(target.width());
-        const auto h = static_cast<std::uint32_t>(target.height());
+        const auto w = static_cast<u32>(target.width());
+        const auto h = static_cast<u32>(target.height());
         auto picture = blank_picture(w, h, hex("#000000"));
         paint_draw_list(list, { }, picture);
         // Well below the line from the top-left to the bottom-right, and well above it.
@@ -109,7 +110,7 @@ TEST_CASE("an arrow button's arrow points its way, with no seam down its middle"
         paint_draw_list(list, { }, picture);
         return picture;
     };
-    const auto white = [](const auto& picture, std::uint32_t x, std::uint32_t y) { return pixel(picture, x, y).r == 255; };
+    const auto white = [](const auto& picture, u32 x, u32 y) { return pixel(picture, x, y).r == 255; };
     const auto up = drawn(game_frames::Arrow::Up);
     CHECK(white(up, 30, 30));
     CHECK(white(up, 30, 37)); // On the line the halves meet along
@@ -126,7 +127,7 @@ TEST_CASE("an arrow button's arrow points its way, with no seam down its middle"
 TEST_CASE("the front backdrop stays round on a wide screen and its strip reaches the right edge")
 {
     // A design drawn at a fifth of its size on a screen far wider than it.
-    constexpr float kScale = 0.2f;
+    constexpr f32 kScale = 0.2f;
     const Rect screen { 0, 0, 400, 768 * kScale };
     const Rect design_screen { 0, 0, screen.x1 / kScale, 768 };
     DrawList list;
@@ -136,7 +137,7 @@ TEST_CASE("the front backdrop stays round on a wide screen and its strip reaches
         if (v.edge[3] > 0) // Rings are round
             CHECK(v.local[2] == doctest::Approx(v.local[3]));
     }
-    auto picture = blank_picture(400, static_cast<std::uint32_t>(screen.y1), hex("#000000"));
+    auto picture = blank_picture(400, static_cast<u32>(screen.y1), hex("#000000"));
     paint_draw_list(list, { }, picture);
     const Color right = pixel(picture, 399, 150);
     CHECK(right.b > 100);                // The strip's blue, at the far right

@@ -3,6 +3,8 @@
 // Builds synthetic OVL bytes for tests. Values are invented and only shaped like the format.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
@@ -17,26 +19,26 @@ namespace rct3::test
     {
         std::vector<std::byte> bytes;
 
-        void raw(const void* p, std::size_t n)
+        void raw(const void* p, usize n)
         {
             const auto* b = static_cast<const std::byte*>(p);
             bytes.insert(bytes.end(), b, b + n);
         }
-        void put_u8(std::uint8_t v)
+        void put_u8(u8 v)
         {
             raw(&v, 1);
         }
-        void put_u16(std::uint16_t v)
+        void put_u16(u16 v)
         {
             raw(&v, 2);
         }
-        void put_u32(std::uint32_t v)
+        void put_u32(u32 v)
         {
             raw(&v, 4);
         }
         void str(const std::string& s)
         {
-            put_u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<u16>(s.size()));
             raw(s.data(), s.size());
         }
     };
@@ -44,7 +46,7 @@ namespace rct3::test
     /// Bytes of every block, per block type (index 0..8). Missing types are empty.
     using BlockBytes = std::vector<std::vector<std::vector<std::byte>>>;
 
-    inline std::vector<std::byte> bytes_of(std::initializer_list<std::uint8_t> values)
+    inline std::vector<std::byte> bytes_of(std::initializer_list<u8> values)
     {
         std::vector<std::byte> out;
         for (auto v : values)
@@ -60,13 +62,13 @@ namespace rct3::test
         return out;
     }
 
-    inline void append_u32(std::vector<std::byte>& out, std::uint32_t v)
+    inline void append_u32(std::vector<std::byte>& out, u32 v)
     {
         const auto* p = reinterpret_cast<const std::byte*>(&v);
         out.insert(out.end(), p, p + 4);
     }
 
-    inline void append_u16(std::vector<std::byte>& out, std::uint16_t v)
+    inline void append_u16(std::vector<std::byte>& out, u16 v)
     {
         const auto* p = reinterpret_cast<const std::byte*>(&v);
         out.insert(out.end(), p, p + 2);
@@ -76,11 +78,11 @@ namespace rct3::test
     /// post-block metadata (v4: two zero words, v5: bytes {1,2,3} and words {7,8}), block data, relocations,
     /// then `tail` verbatim.
     /// (location, value) relocation pairs of each data stream.
-    using StreamTables = std::vector<std::vector<std::pair<std::uint32_t, std::uint32_t>>>;
+    using StreamTables = std::vector<std::vector<std::pair<u32, u32>>>;
 
     /// `streams` gives each data stream's relocation pairs. v4 always has one table (empty when not given),
     /// v5 has as many streams as there are tables, v1 has none.
-    inline std::vector<std::byte> build_file(std::uint32_t version, const BlockBytes& blocks, const std::vector<std::uint32_t>& relocations, const std::vector<std::byte>& tail = { }, const StreamTables& streams = { })
+    inline std::vector<std::byte> build_file(u32 version, const BlockBytes& blocks, const std::vector<u32>& relocations, const std::vector<std::byte>& tail = { }, const StreamTables& streams = { })
     {
         Builder b;
         b.raw("FGRK", 4);
@@ -92,7 +94,7 @@ namespace rct3::test
         const bool streamed = version == 5 && !streams.empty();
         if (version == 5)
         {
-            b.put_u16(static_cast<std::uint16_t>(streams.size())), b.put_u16(0);
+            b.put_u16(static_cast<u16>(streams.size())), b.put_u16(0);
             if (streamed)
                 b.put_u32(16), b.put_u32(0), b.put_u32(0), b.put_u32(0); // stream block: size, 2 reserved, empty tag
         }
@@ -101,17 +103,17 @@ namespace rct3::test
         b.put_u32(0); // loaders
 
         static const std::vector<std::vector<std::byte>> none;
-        for (std::size_t t = 0; t < 9; ++t)
+        for (usize t = 0; t < 9; ++t)
         {
             const auto& type = t < blocks.size() ? blocks[t] : none;
-            b.put_u32(static_cast<std::uint32_t>(type.size()));
+            b.put_u32(static_cast<u32>(type.size()));
             if (version > 1)
             {
                 b.put_u32(0); // unknown
                 if (streamed)
                     b.put_u32(0);
                 for (const auto& block : type)
-                    b.put_u32(static_cast<std::uint32_t>(block.size()));
+                    b.put_u32(static_cast<u32>(block.size()));
             }
         }
 
@@ -128,21 +130,21 @@ namespace rct3::test
             for (const auto& block : type)
             {
                 if (version == 1)
-                    b.put_u32(static_cast<std::uint32_t>(block.size()));
+                    b.put_u32(static_cast<u32>(block.size()));
                 b.bytes.insert(b.bytes.end(), block.begin(), block.end());
             }
         }
 
-        b.put_u32(static_cast<std::uint32_t>(relocations.size()));
+        b.put_u32(static_cast<u32>(relocations.size()));
         for (auto r : relocations)
             b.put_u32(r);
         if (version == 4 || streamed)
         {
-            for (std::size_t i = 0; i < (version == 4 ? 1 : streams.size()); ++i)
+            for (usize i = 0; i < (version == 4 ? 1 : streams.size()); ++i)
             {
                 const auto empty = StreamTables::value_type { };
                 const auto& table = i < streams.size() ? streams[i] : empty;
-                b.put_u32(static_cast<std::uint32_t>(table.size()));
+                b.put_u32(static_cast<u32>(table.size()));
                 for (const auto& [location, value] : table)
                     b.put_u32(location), b.put_u32(value);
             }

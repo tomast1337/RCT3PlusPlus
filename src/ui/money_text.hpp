@@ -9,6 +9,7 @@
 // not grouped. A minus goes in front of everything else.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/string_table.hpp"
 #include "units/units.hpp"
 
@@ -26,7 +27,7 @@ namespace rct3::ui
     };
 
     /// The currency at `index` in the game's list, from its strings.
-    [[nodiscard]] Currency currency(const StringTable& strings, std::int32_t index);
+    [[nodiscard]] Currency currency(const StringTable& strings, i32 index);
 
     [[nodiscard]] std::u16string money_text(const Currency& currency, units::Money amount);
 

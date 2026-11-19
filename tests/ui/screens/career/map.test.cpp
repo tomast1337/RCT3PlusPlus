@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/career/map.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -21,7 +22,7 @@ namespace
         Desktop desktop;
         CareerBoard* map = nullptr;
 
-        explicit Fixture(std::size_t picked = 1)
+        explicit Fixture(usize picked = 1)
         {
             strings.add("CareerMap_ScenarioDD", u"No. %NUMBER%");
             strings.add("CareerMap_MustCompleteNLevels", u"Finish %NUMBER% more");
@@ -33,7 +34,7 @@ namespace
             c.scenarios[0].status = ScenarioStatus::Tycoon;
             rct3::career::open_earned(c);
             std::vector<CareerBoardScenario> scenarios;
-            for (std::size_t i = 0; i < c.scenarios.size(); ++i)
+            for (usize i = 0; i < c.scenarios.size(); ++i)
             {
                 CareerBoardScenario s;
                 s.info.id = c.scenarios[i].id;
@@ -48,7 +49,7 @@ namespace
             tick();
         }
 
-        void tick(float seconds = 0)
+        void tick(f32 seconds = 0)
         {
             desktop.update({ }, { }, { units::Seconds { seconds }, nullptr });
         }

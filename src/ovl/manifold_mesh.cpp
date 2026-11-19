@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/manifold_mesh.hpp"
 
+#include "core/types.hpp"
+
 #include <cstring>
 #include <span>
 
@@ -11,25 +13,25 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kMeshTag = "mam";
-        constexpr std::size_t kHeaderSize = 48; // two padded vectors, vertex count, triangle count, two pointers
-        constexpr std::size_t kVertexSize = 16;
-        constexpr std::uint32_t kMaxElements = 1u << 24;
+        constexpr usize kHeaderSize = 48; // two padded vectors, vertex count, triangle count, two pointers
+        constexpr usize kVertexSize = 16;
+        constexpr u32 kMaxElements = 1u << 24;
 
-        std::uint32_t u32_at(std::span<const std::byte> b, std::size_t at)
+        u32 u32_at(std::span<const std::byte> b, usize at)
         {
-            std::uint32_t v = 0;
+            u32 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
 
-        std::optional<ManifoldMesh> read_mesh(const AddressSpace& space, std::uint32_t address)
+        std::optional<ManifoldMesh> read_mesh(const AddressSpace& space, u32 address)
         {
             const auto header = space.bytes_at(address, kHeaderSize);
             if (!header)
                 return std::nullopt;
 
-            const std::uint32_t vertex_count = u32_at(*header, 32);
-            const std::uint32_t triangle_count = u32_at(*header, 36);
+            const u32 vertex_count = u32_at(*header, 32);
+            const u32 triangle_count = u32_at(*header, 36);
             if (vertex_count > kMaxElements || triangle_count > kMaxElements)
                 return std::nullopt;
 
@@ -39,19 +41,19 @@ namespace rct3::ovl
 
             if (vertex_count != 0)
             {
-                const auto raw = space.bytes_at(u32_at(*header, 40), std::size_t { vertex_count } * kVertexSize);
+                const auto raw = space.bytes_at(u32_at(*header, 40), usize { vertex_count } * kVertexSize);
                 if (!raw)
                     return std::nullopt;
                 mesh.vertices.resize(vertex_count);
-                for (std::uint32_t i = 0; i < vertex_count; ++i)
+                for (u32 i = 0; i < vertex_count; ++i)
                 {
-                    std::memcpy(mesh.vertices[i].data(), raw->data() + std::size_t { i } * kVertexSize, 12);
+                    std::memcpy(mesh.vertices[i].data(), raw->data() + usize { i } * kVertexSize, 12);
                 }
             }
 
             if (triangle_count != 0)
             {
-                const std::size_t count = std::size_t { triangle_count } * 3;
+                const usize count = usize { triangle_count } * 3;
                 const auto raw = space.bytes_at(u32_at(*header, 44), count * 2);
                 if (!raw)
                     return std::nullopt;

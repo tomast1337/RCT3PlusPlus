@@ -4,6 +4,7 @@
 // electric), naming the scenery pieces a fence is made of and what it costs.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -25,12 +26,12 @@ namespace rct3::ovl
         /// Hundredths of the currency unit. Building a length of fence costs `fence_cost`; the refund for
         /// taking it down is stored as a negative amount. The gate pair is read the same way. [The split into
         /// cost and refund is inferred from the values: the refunds are a little under the costs.]
-        std::int32_t fence_cost = 0;
-        std::int32_t fence_refund = 0;
-        std::int32_t gate_cost = 0;
-        std::int32_t gate_refund = 0;
+        i32 fence_cost = 0;
+        i32 fence_refund = 0;
+        i32 gate_cost = 0;
+        i32 gate_refund = 0;
         /// How strong the fence is: a species needs a fence at least as strong as it says.
-        float strength = 0;
+        f32 strength = 0;
     };
 
     struct EnclosureFenceItem

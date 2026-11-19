@@ -3,6 +3,7 @@
 // Synthetic saves only: class and attribute identifiers are the format's own, every number is invented.
 #include "save/model/people.hpp"
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -25,28 +26,28 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& put_u8(std::uint8_t x)
+        Bytes& put_u8(u8 x)
         {
             v.push_back(static_cast<std::byte>(x));
             return *this;
         }
-        Bytes& put_u16(std::uint16_t x)
+        Bytes& put_u16(u16 x)
         {
             return put(&x, 2);
         }
-        Bytes& put_u32(std::uint32_t x)
+        Bytes& put_u32(u32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put_u64(std::uint64_t x)
+        Bytes& put_u64(u64 x)
         {
             return put(&x, 8);
         }
-        Bytes& put_f32(float x)
+        Bytes& put_f32(f32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put(const void* p, std::size_t n)
+        Bytes& put(const void* p, usize n)
         {
             const auto* b = static_cast<const std::byte*>(p);
             v.insert(v.end(), b, b + n);
@@ -59,30 +60,30 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            put_u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<u16>(s.size()));
             for (const char c : s)
-                put_u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<u8>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            put_u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<u32>(payload.v.size()));
             return cat(payload);
         }
     };
 
-    constexpr std::uint32_t kFill = 0xCDCDCDCDu;
+    constexpr u32 kFill = 0xCDCDCDCDu;
 
     struct Attr
     {
         std::string name, type;
-        std::uint32_t size = 0;
+        u32 size = 0;
         std::vector<Attr> children;
     };
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<u32>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -91,29 +92,29 @@ namespace
     struct Obj
     {
         std::string cls;
-        std::uint64_t id;
+        u64 id;
         std::vector<Attr> attrs;
         Bytes payload;
 
-        Obj(std::string c, std::uint64_t i)
+        Obj(std::string c, u64 i)
             : cls(std::move(c))
             , id(i)
         {
         }
 
-        Obj& put_i32(const std::string& n, std::int32_t x)
+        Obj& put_i32(const std::string& n, i32 x)
         {
             attrs.push_back({ n, "int32", 4, { } });
-            payload.put_u32(static_cast<std::uint32_t>(x));
+            payload.put_u32(static_cast<u32>(x));
             return *this;
         }
-        Obj& put_u8(const std::string& n, std::uint8_t x)
+        Obj& put_u8(const std::string& n, u8 x)
         {
             attrs.push_back({ n, "uint8", 1, { } });
             payload.put_u8(x);
             return *this;
         }
-        Obj& put_f32(const std::string& n, float x)
+        Obj& put_f32(const std::string& n, f32 x)
         {
             attrs.push_back({ n, "float32", 4, { } });
             payload.put_f32(x);
@@ -125,22 +126,22 @@ namespace
             payload.put_u8(x ? 1 : 0);
             return *this;
         }
-        Obj& ref(const std::string& n, std::uint64_t x)
+        Obj& ref(const std::string& n, u64 x)
         {
             attrs.push_back({ n, "reference", 8, { } });
             payload.put_u64(x);
             return *this;
         }
-        Obj& vec3(const std::string& n, float x, float y, float z)
+        Obj& vec3(const std::string& n, f32 x, f32 y, f32 z)
         {
             attrs.push_back({ n, "vector3", 12, { } });
             payload.put_f32(x).put_f32(y).put_f32(z);
             return *this;
         }
-        Obj& matrix(const std::string& n, float x, float y, float z)
+        Obj& matrix(const std::string& n, f32 x, f32 y, f32 z)
         {
             attrs.push_back({ n, "matrix44", 64, { } });
-            for (std::int32_t i = 0; i < 12; ++i)
+            for (i32 i = 0; i < 12; ++i)
                 payload.put_f32(i % 5 == 0 ? 1.0f : 0.0f);
             payload.put_f32(x).put_f32(y).put_f32(z).put_f32(1);
             return *this;
@@ -155,18 +156,18 @@ namespace
             payload.blob(p);
             return *this;
         }
-        Obj& refs(const std::string& n, const std::vector<std::uint64_t>& ids)
+        Obj& refs(const std::string& n, const std::vector<u64>& ids)
         {
             attrs.push_back({ n, "list", 0, { { "r", "reference", 8, { } } } });
             Bytes p;
-            p.put_u32(static_cast<std::uint32_t>(ids.size()));
+            p.put_u32(static_cast<u32>(ids.size()));
             for (const auto id_ : ids)
                 p.put_u64(id_);
             payload.blob(p);
             return *this;
         }
         /// A list that claims `count` elements but carries no data.
-        Obj& hostile_refs(const std::string& n, std::uint32_t count)
+        Obj& hostile_refs(const std::string& n, u32 count)
         {
             attrs.push_back({ n, "list", 0, { { "r", "reference", 8, { } } } });
             Bytes p;
@@ -178,7 +179,7 @@ namespace
         {
             attrs.push_back({ n, "list", 0, { { "p", "vector3", 12, { } } } });
             Bytes p;
-            p.put_u32(static_cast<std::uint32_t>(pts.size()));
+            p.put_u32(static_cast<u32>(pts.size()));
             for (const auto& q : pts)
                 p.put_f32(q.x).put_f32(q.y).put_f32(q.z);
             payload.blob(p);
@@ -186,18 +187,18 @@ namespace
         }
         struct T
         {
-            std::uint64_t about = 0, other = 0;
-            std::int32_t id = 0;
-            float time = -1;
-            std::int32_t variant = 0;
+            u64 about = 0, other = 0;
+            i32 id = 0;
+            f32 time = -1;
+            i32 variant = 0;
         };
         Obj& thoughts(const std::string& n, const std::vector<T>& ts)
         {
             attrs.push_back({ n, "list", 0, { { "About", "reference", 8, { } }, { "GuestReference", "reference", 8, { } }, { "Thought", "int32", 4, { } }, { "Time", "float32", 4, { } }, { "Variant", "int32", 4, { } } } });
             Bytes p;
-            p.put_u32(static_cast<std::uint32_t>(ts.size()));
+            p.put_u32(static_cast<u32>(ts.size()));
             for (const auto& t : ts)
-                p.put_u64(t.about).put_u64(t.other).put_u32(static_cast<std::uint32_t>(t.id)).put_f32(t.time).put_u32(static_cast<std::uint32_t>(t.variant));
+                p.put_u64(t.about).put_u64(t.other).put_u32(static_cast<u32>(t.id)).put_f32(t.time).put_u32(static_cast<u32>(t.variant));
             payload.blob(p);
             return *this;
         }
@@ -206,15 +207,15 @@ namespace
         {
             std::string name;
             bool is_float;
-            std::uint32_t bits;
+            u32 bits;
         };
-        static Field fi(const std::string& n, std::int32_t v)
+        static Field fi(const std::string& n, i32 v)
         {
-            return { n, false, static_cast<std::uint32_t>(v) };
+            return { n, false, static_cast<u32>(v) };
         }
-        static Field ff(const std::string& n, float v)
+        static Field ff(const std::string& n, f32 v)
         {
-            return { n, true, std::bit_cast<std::uint32_t>(v) };
+            return { n, true, std::bit_cast<u32>(v) };
         }
         static Field ffill(const std::string& n)
         {
@@ -222,7 +223,7 @@ namespace
         }
         Obj& group(const std::string& n, const std::vector<Field>& fs)
         {
-            Attr a { n, "struct", static_cast<std::uint32_t>(fs.size() * 4), { } };
+            Attr a { n, "struct", static_cast<u32>(fs.size() * 4), { } };
             for (const auto& f : fs)
             {
                 a.children.push_back({ f.name, f.is_float ? "float32" : "int32", 4, { } });
@@ -248,19 +249,19 @@ namespace
             if (!std::ranges::contains(names, o.cls))
                 names.push_back(o.cls);
         Bytes b;
-        b.put_u32(static_cast<std::uint32_t>(names.size()));
+        b.put_u32(static_cast<u32>(names.size()));
         for (const auto& n : names)
         {
             const auto first = std::find_if(objs.begin(), objs.end(), [&](const Obj& o) { return o.cls == n; });
-            b.name(n).put_u32(static_cast<std::uint32_t>(first->attrs.size()));
+            b.name(n).put_u32(static_cast<u32>(first->attrs.size()));
             for (const auto& a : first->attrs)
                 write_attr(b, a);
         }
-        b.put_u32(static_cast<std::uint32_t>(objs.size()));
+        b.put_u32(static_cast<u32>(objs.size()));
         for (const auto& o : objs)
         {
             const auto idx = std::find(names.begin(), names.end(), o.cls) - names.begin();
-            b.put_u32(static_cast<std::uint32_t>(idx)).put_u64(o.id).cat(o.payload);
+            b.put_u32(static_cast<u32>(idx)).put_u64(o.id).cat(o.payload);
         }
         auto w = std::make_unique<World>();
         w->bytes = std::move(b.v);
@@ -272,7 +273,7 @@ namespace
     }
 
     /// Decodes the object with this id and runs `builder` on it.
-    template<class F> auto build(const World& w, std::uint64_t id, F builder)
+    template<class F> auto build(const World& w, u64 id, F builder)
     {
         const auto o = w.index->find(id);
         REQUIRE(o);
@@ -281,7 +282,7 @@ namespace
         return builder(*d, *w.index);
     }
 
-    Obj blank(const std::string& cls, std::uint64_t id)
+    Obj blank(const std::string& cls, u64 id)
     {
         return Obj(cls, id);
     }
@@ -310,7 +311,7 @@ TEST_CASE("a minimal guest decodes into typed fields")
     const auto& p = guest->person;
     CHECK(p.id == 10);
     CHECK(p.type == PersonType::Teen);
-    CHECK(p.sub_type == static_cast<std::uint8_t>(Sex::Female));
+    CHECK(p.sub_type == static_cast<u8>(Sex::Female));
     CHECK(p.name == "Ann B");
     CHECK(p.state == static_cast<PersonState>(16));
     CHECK(p.guest_state() == GuestState::FollowingGroup);
@@ -382,11 +383,11 @@ TEST_CASE("missing attributes take defaults")
 TEST_CASE("uninitialised fill becomes the default or none")
 {
     Obj g("Guest", 1);
-    g.put_f32("FacingAngle", std::bit_cast<float>(kFill)).put_i32("NumRidesDone", static_cast<std::int32_t>(kFill));
+    g.put_f32("FacingAngle", std::bit_cast<f32>(kFill)).put_i32("NumRidesDone", static_cast<i32>(kFill));
     g.group("Consumption", { Obj::ffill("FoodF"), Obj::ff("DrinkF", 0.25f), Obj::ffill("ToiletF") });
-    g.put_f32("PoolNeed", std::bit_cast<float>(kFill)).put_f32("PriceModifier", 1.5f);
-    g.matrix("WorldMatrix", std::bit_cast<float>(kFill), 2, 3);
-    g.put_f32("MoveSpeed", std::numeric_limits<float>::quiet_NaN());
+    g.put_f32("PoolNeed", std::bit_cast<f32>(kFill)).put_f32("PriceModifier", 1.5f);
+    g.matrix("WorldMatrix", std::bit_cast<f32>(kFill), 2, 3);
+    g.put_f32("MoveSpeed", std::numeric_limits<f32>::quiet_NaN());
     const auto w = make_world({ g });
     const auto guest = build(*w, 1, make_guest);
     REQUIRE(guest);
@@ -421,9 +422,9 @@ TEST_CASE("dangling references are none, live ones kept")
 TEST_CASE("values stored under the wrong declared type are reinterpreted")
 {
     Obj g("Guest", 1);
-    g.put_i32("TimeToNextThink", std::bit_cast<std::int32_t>(2.5f));             // float seconds in an int slot
-    g.put_f32("ThinksToNextBigThink", std::bit_cast<float>(std::int32_t { 7 })); // small count in a float slot
-    g.put_i32("IsInPark", 0).put_i32("PersonType", 2).put_i32("LookAtExtra", std::bit_cast<std::int32_t>(0.5f));
+    g.put_i32("TimeToNextThink", std::bit_cast<i32>(2.5f));           // float seconds in an int slot
+    g.put_f32("ThinksToNextBigThink", std::bit_cast<f32>(i32 { 7 })); // small count in a float slot
+    g.put_i32("IsInPark", 0).put_i32("PersonType", 2).put_i32("LookAtExtra", std::bit_cast<i32>(0.5f));
     g.put_i32("NameS", 5).put_f32("StateTarget", 1.0f).str("PhotosTaken", u"x");
     const auto w = make_world({ g });
     const auto guest = build(*w, 1, make_guest);
@@ -432,7 +433,7 @@ TEST_CASE("values stored under the wrong declared type are reinterpreted")
     CHECK(guest->person.thinks_to_big_think == 7);
     CHECK_FALSE(guest->in_park);
     CHECK(guest->person.type == PersonType::Adult);
-    CHECK(guest->person.look_at.extra_bits == std::bit_cast<std::uint32_t>(0.5f));
+    CHECK(guest->person.look_at.extra_bits == std::bit_cast<u32>(0.5f));
     CHECK(guest->person.name.empty());           // not a string: ignored
     CHECK(guest->person.state_target.is_none()); // not a reference: ignored
     CHECK(guest->counters.photos == 0);
@@ -445,12 +446,12 @@ TEST_CASE("unknown enumeration values are kept")
     const auto w = make_world({ g });
     const auto guest = build(*w, 1, make_guest);
     REQUIRE(guest);
-    CHECK(static_cast<std::int32_t>(guest->person.state) == 9999);
+    CHECK(static_cast<i32>(guest->person.state) == 9999);
     CHECK(guest->person.sub_state == -3);
     CHECK_FALSE(guest->person.guest_state().has_value());
-    CHECK(static_cast<std::uint8_t>(guest->person.type) == 77);
-    CHECK(static_cast<std::uint8_t>(guest->ride_preference.intensity) == 9);
-    CHECK(static_cast<std::uint8_t>(guest->nausea_tolerance) == 200);
+    CHECK(static_cast<u8>(guest->person.type) == 77);
+    CHECK(static_cast<u8>(guest->ride_preference.intensity) == 9);
+    CHECK(static_cast<u8>(guest->nausea_tolerance) == 200);
     CHECK(std::string(to_string(guest->person.state)) == "other");
     CHECK(std::string(to_string(PersonState::Lost)) == "lost");
 }
@@ -562,7 +563,7 @@ TEST_CASE("animals of each kind")
     d.vec3("TargetPos", 1, 2, 3);
     Obj f("Fish", 2);
     f.put_i32("FishType", 2).put_f32("SwimRadius", 0.5f).ref("LeftFish", 1).put_f32("SwimSpeedPerStep", 0.25f).put_f32("NormalSwimSpeed", 3);
-    f.put_f32("SwimSlowAtTarget", std::bit_cast<float>(kFill));
+    f.put_f32("SwimSlowAtTarget", std::bit_cast<f32>(kFill));
     Obj g("Seagull", 3);
     g.ref("Victim", 1).put_i32("LitterPecked", 4).put_i32("GuestsAttacked", 1);
     const auto w = make_world({ d, f, g });
@@ -729,7 +730,7 @@ TEST_CASE("hostile list counts do not allocate or fail")
 
 TEST_CASE("oversized member lists are truncated")
 {
-    std::vector<std::uint64_t> many(kMaxGroupMembers + 20, 2);
+    std::vector<u64> many(kMaxGroupMembers + 20, 2);
     Obj g("GuestGroup", 1);
     g.refs("Members", many);
     const auto w = make_world({ g, blank("Guest", 2) });
@@ -740,7 +741,7 @@ TEST_CASE("oversized member lists are truncated")
 
 namespace
 {
-    Obj consistent_guest(std::uint64_t id, std::uint64_t group, std::uint64_t holder, float food = 0.5f, std::int32_t drink_spent = 10, std::int32_t total = 10)
+    Obj consistent_guest(u64 id, u64 group, u64 holder, f32 food = 0.5f, i32 drink_spent = 10, i32 total = 10)
     {
         Obj g("Guest", id);
         g.put_i32("PersonType", 2).ref("GuestGroup", group).ref("MyHolders", holder);
@@ -785,7 +786,7 @@ TEST_CASE("validation reports broken invariants")
     const auto model = load_people(w->file, *w->index);
     REQUIRE(model);
     const auto issues = validate(*model);
-    const auto has = [&](IssueKind k, std::uint64_t id) { return std::any_of(issues.begin(), issues.end(), [&](const Issue& i) { return i.kind == k && i.id == id; }); };
+    const auto has = [&](IssueKind k, u64 id) { return std::any_of(issues.begin(), issues.end(), [&](const Issue& i) { return i.kind == k && i.id == id; }); };
     CHECK(has(IssueKind::GuestWithoutGroup, 1));
     CHECK(has(IssueKind::PersonWithoutHolder, 2));
     CHECK(has(IssueKind::StatOutOfRange, 2));

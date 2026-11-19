@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/texture/image.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <bit>
@@ -14,48 +16,48 @@ namespace rct3::ovl::texture
     namespace
     {
 
-        constexpr std::size_t kFlicHeaderSize = 32;      // eight header words, the first level's pixels follow
-        constexpr std::size_t kFlicLevelHeaderSize = 16; // width, height, row bytes and row count of a later level
+        constexpr usize kFlicHeaderSize = 32;      // eight header words, the first level's pixels follow
+        constexpr usize kFlicLevelHeaderSize = 16; // width, height, row bytes and row count of a later level
 
-        std::uint8_t read_u8(std::span<const std::byte> b, std::size_t at)
+        u8 read_u8(std::span<const std::byte> b, usize at)
         {
-            return static_cast<std::uint8_t>(b[at]);
+            return static_cast<u8>(b[at]);
         }
 
-        std::uint16_t u16_at(std::span<const std::byte> b, std::size_t at)
+        u16 u16_at(std::span<const std::byte> b, usize at)
         {
-            return static_cast<std::uint16_t>(read_u8(b, at) | (read_u8(b, at + 1) << 8));
+            return static_cast<u16>(read_u8(b, at) | (read_u8(b, at + 1) << 8));
         }
 
-        bool side_ok(std::uint32_t side)
+        bool side_ok(u32 side)
         {
             return side != 0 && side <= kMaxImageSide;
         }
 
-        RgbaImage blank(std::uint32_t width, std::uint32_t height)
+        RgbaImage blank(u32 width, u32 height)
         {
             RgbaImage image;
             image.width = width;
             image.height = height;
-            image.pixels.assign(std::size_t { width } * height * 4, 0);
+            image.pixels.assign(usize { width } * height * 4, 0);
             return image;
         }
 
         // 5-6-5 colour to 8 bits per channel, replicating the high bits into the low ones.
-        std::array<std::uint8_t, 3> expand565(std::uint16_t c)
+        std::array<u8, 3> expand565(u16 c)
         {
-            const std::uint32_t r = (c >> 11) & 31, g = (c >> 5) & 63, b = c & 31;
-            return { static_cast<std::uint8_t>((r << 3) | (r >> 2)), static_cast<std::uint8_t>((g << 2) | (g >> 4)), static_cast<std::uint8_t>((b << 3) | (b >> 2)) };
+            const u32 r = (c >> 11) & 31, g = (c >> 5) & 63, b = c & 31;
+            return { static_cast<u8>((r << 3) | (r >> 2)), static_cast<u8>((g << 2) | (g >> 4)), static_cast<u8>((b << 3) | (b >> 2)) };
         }
 
         // Decodes the 8-byte colour part of a block into 16 pixels (alpha 255 or, for the 1-bit alpha mode,
         // 0 for the transparent colour). `one_bit_alpha` allows the transparent entry of the 3-colour mode.
-        void decode_colour_block(std::span<const std::byte> block, bool one_bit_alpha, std::uint8_t out[16][4])
+        void decode_colour_block(std::span<const std::byte> block, bool one_bit_alpha, u8 out[16][4])
         {
-            const std::uint16_t c0 = u16_at(block, 0), c1 = u16_at(block, 2);
+            const u16 c0 = u16_at(block, 0), c1 = u16_at(block, 2);
             const auto e0 = expand565(c0), e1 = expand565(c1);
-            std::uint8_t palette[4][4];
-            for (std::int32_t i = 0; i < 3; ++i)
+            u8 palette[4][4];
+            for (i32 i = 0; i < 3; ++i)
             {
                 palette[0][i] = e0[i];
                 palette[1][i] = e1[i];
@@ -63,34 +65,34 @@ namespace rct3::ovl::texture
             palette[0][3] = palette[1][3] = palette[2][3] = palette[3][3] = 255;
             if (c0 > c1 || !one_bit_alpha)
             {
-                for (std::int32_t i = 0; i < 3; ++i)
+                for (i32 i = 0; i < 3; ++i)
                 {
-                    palette[2][i] = static_cast<std::uint8_t>((2 * e0[i] + e1[i]) / 3);
-                    palette[3][i] = static_cast<std::uint8_t>((e0[i] + 2 * e1[i]) / 3);
+                    palette[2][i] = static_cast<u8>((2 * e0[i] + e1[i]) / 3);
+                    palette[3][i] = static_cast<u8>((e0[i] + 2 * e1[i]) / 3);
                 }
             }
             else
             {
-                for (std::int32_t i = 0; i < 3; ++i)
+                for (i32 i = 0; i < 3; ++i)
                 {
-                    palette[2][i] = static_cast<std::uint8_t>((e0[i] + e1[i]) / 2);
+                    palette[2][i] = static_cast<u8>((e0[i] + e1[i]) / 2);
                     palette[3][i] = 0;
                 }
                 palette[3][3] = 0;
             }
-            for (std::int32_t row = 0; row < 4; ++row)
+            for (i32 row = 0; row < 4; ++row)
             {
-                const std::uint32_t bits = read_u8(block, 4 + row);
-                for (std::int32_t col = 0; col < 4; ++col)
+                const u32 bits = read_u8(block, 4 + row);
+                for (i32 col = 0; col < 4; ++col)
                     std::memcpy(out[row * 4 + col], palette[(bits >> (2 * col)) & 3], 4);
             }
         }
 
-        std::optional<RgbaImage> decode_raw(std::uint32_t width, std::uint32_t height, std::span<const std::byte> data)
+        std::optional<RgbaImage> decode_raw(u32 width, u32 height, std::span<const std::byte> data)
         {
             RgbaImage image = blank(width, height);
-            const std::size_t count = std::size_t { width } * height;
-            for (std::size_t i = 0; i < count; ++i)
+            const usize count = usize { width } * height;
+            for (usize i = 0; i < count; ++i)
             {
                 image.pixels[i * 4 + 0] = read_u8(data, i * 4 + 2);
                 image.pixels[i * 4 + 1] = read_u8(data, i * 4 + 1);
@@ -100,30 +102,30 @@ namespace rct3::ovl::texture
             return image;
         }
 
-        std::optional<RgbaImage> decode_blocks(std::uint32_t width, std::uint32_t height, std::span<const std::byte> data, bool explicit_alpha)
+        std::optional<RgbaImage> decode_blocks(u32 width, u32 height, std::span<const std::byte> data, bool explicit_alpha)
         {
             RgbaImage image = blank(width, height);
-            const std::size_t block_bytes = explicit_alpha ? 16 : 8;
-            const std::size_t blocks_wide = (std::size_t { width } + 3) / 4;
-            const std::size_t blocks_high = (std::size_t { height } + 3) / 4;
-            for (std::size_t by = 0; by < blocks_high; ++by)
+            const usize block_bytes = explicit_alpha ? 16 : 8;
+            const usize blocks_wide = (usize { width } + 3) / 4;
+            const usize blocks_high = (usize { height } + 3) / 4;
+            for (usize by = 0; by < blocks_high; ++by)
             {
-                for (std::size_t bx = 0; bx < blocks_wide; ++bx)
+                for (usize bx = 0; bx < blocks_wide; ++bx)
                 {
                     const auto block = data.subspan((by * blocks_wide + bx) * block_bytes, block_bytes);
-                    std::uint8_t px[16][4];
+                    u8 px[16][4];
                     decode_colour_block(explicit_alpha ? block.subspan(8) : block, !explicit_alpha, px);
-                    for (std::size_t i = 0; i < 16; ++i)
+                    for (usize i = 0; i < 16; ++i)
                     {
-                        const std::size_t x = bx * 4 + i % 4, y = by * 4 + i / 4;
+                        const usize x = bx * 4 + i % 4, y = by * 4 + i / 4;
                         if (x >= width || y >= height)
                             continue;
-                        std::uint8_t* dst = &image.pixels[(y * width + x) * 4];
+                        u8* dst = &image.pixels[(y * width + x) * 4];
                         std::memcpy(dst, px[i], 4);
                         if (explicit_alpha)
                         {
-                            const std::uint32_t nibble = (read_u8(block, i / 2) >> ((i % 2) * 4)) & 15;
-                            dst[3] = static_cast<std::uint8_t>(nibble * 17);
+                            const u32 nibble = (read_u8(block, i / 2) >> ((i % 2) * 4)) & 15;
+                            dst[3] = static_cast<u8>(nibble * 17);
                         }
                     }
                 }
@@ -137,16 +139,16 @@ namespace rct3::ovl::texture
     {
         if (!side_ok(frame.width) || !side_ok(frame.height))
             return std::nullopt;
-        const std::size_t count = std::size_t { frame.width } * frame.height;
+        const usize count = usize { frame.width } * frame.height;
         if (frame.palette.size() < kFlexiPaletteSize || frame.pixels.size() < count)
             return std::nullopt;
         if (frame.alpha && frame.alpha->size() < count)
             return std::nullopt;
 
         RgbaImage image = blank(frame.width, frame.height);
-        for (std::size_t i = 0; i < count; ++i)
+        for (usize i = 0; i < count; ++i)
         {
-            const std::size_t entry = std::size_t { read_u8(frame.pixels, i) } * 4;
+            const usize entry = usize { read_u8(frame.pixels, i) } * 4;
             image.pixels[i * 4 + 0] = read_u8(frame.palette, entry + 2);
             image.pixels[i * 4 + 1] = read_u8(frame.palette, entry + 1);
             image.pixels[i * 4 + 2] = read_u8(frame.palette, entry + 0);
@@ -155,7 +157,7 @@ namespace rct3::ovl::texture
         return image;
     }
 
-    std::optional<RgbaImage> decode_pixels(std::uint32_t format, std::uint32_t width, std::uint32_t height, std::span<const std::byte> data)
+    std::optional<RgbaImage> decode_pixels(u32 format, u32 width, u32 height, std::span<const std::byte> data)
     {
         if (!side_ok(width) || !side_ok(height))
             return std::nullopt;
@@ -177,15 +179,15 @@ namespace rct3::ovl::texture
     namespace
     {
 
-        std::vector<RgbaImage> decode_chain(std::uint32_t format, std::uint32_t width, std::uint32_t height, std::uint32_t levels, std::span<const std::byte> data)
+        std::vector<RgbaImage> decode_chain(u32 format, u32 width, u32 height, u32 levels, std::span<const std::byte> data)
         {
             std::vector<RgbaImage> out;
             if (levels == 0 || levels > 16 || width == 0 || height == 0)
                 return out;
-            for (std::uint32_t level = 0; level < levels; ++level)
+            for (u32 level = 0; level < levels; ++level)
             {
-                const std::uint32_t w = std::max<std::uint32_t>(1, width >> level);
-                const std::uint32_t h = std::max<std::uint32_t>(1, height >> level);
+                const u32 w = std::max<u32>(1, width >> level);
+                const u32 h = std::max<u32>(1, height >> level);
                 const auto size = bitmap_data_size(format, w, h, 1);
                 if (!size || data.size() < *size)
                     return { };
@@ -193,7 +195,7 @@ namespace rct3::ovl::texture
                 if (!image)
                     return { };
                 out.push_back(std::move(*image));
-                data = data.subspan(static_cast<std::size_t>(*size));
+                data = data.subspan(static_cast<usize>(*size));
             }
             return out;
         }
@@ -219,10 +221,10 @@ namespace rct3::ovl::texture
         // whole block in each direction, smaller levels are not stored. The remaining bytes are padding.
         std::vector<RgbaImage> out;
         std::span<const std::byte> rest = flic.data.subspan(kFlicHeaderSize);
-        for (std::uint32_t level = 0; level < h.level_count; ++level)
+        for (u32 level = 0; level < h.level_count; ++level)
         {
-            const std::uint32_t w = std::max<std::uint32_t>(1, h.width >> level);
-            const std::uint32_t ht = std::max<std::uint32_t>(1, h.height >> level);
+            const u32 w = std::max<u32>(1, h.width >> level);
+            const u32 ht = std::max<u32>(1, h.height >> level);
             if (*layout != BitmapLayout::Pixels32 && (w < 4 || ht < 4))
                 break;
             if (level != 0)
@@ -238,7 +240,7 @@ namespace rct3::ovl::texture
             if (!image)
                 return { };
             out.push_back(std::move(*image));
-            rest = rest.subspan(static_cast<std::size_t>(*size));
+            rest = rest.subspan(static_cast<usize>(*size));
         }
         return out;
     }
@@ -247,15 +249,15 @@ namespace rct3::ovl::texture
     {
         if (image.width == 0 || image.height == 0 || image.width > 0xffff || image.height > 0xffff)
             return { };
-        if (image.pixels.size() != std::size_t { image.width } * image.height * 4)
+        if (image.pixels.size() != usize { image.width } * image.height * 4)
             return { };
 
         std::vector<std::byte> out;
         out.reserve(18 + image.pixels.size());
-        auto put = [&out](std::uint32_t v) { out.push_back(static_cast<std::byte>(v)); };
+        auto put = [&out](u32 v) { out.push_back(static_cast<std::byte>(v)); };
         // Header: no id, no colour map, uncompressed true colour, then origin, size, 32 bits per pixel and the
         // descriptor with 8 alpha bits and a top-left origin.
-        for (std::int32_t i = 0; i < 18; ++i)
+        for (i32 i = 0; i < 18; ++i)
             put(0);
         out[2] = std::byte { 2 };
         out[12] = static_cast<std::byte>(image.width & 0xff);
@@ -264,7 +266,7 @@ namespace rct3::ovl::texture
         out[15] = static_cast<std::byte>(image.height >> 8);
         out[16] = std::byte { 32 };
         out[17] = std::byte { 0x28 };
-        for (std::size_t i = 0; i < image.pixels.size(); i += 4)
+        for (usize i = 0; i < image.pixels.size(); i += 4)
         {
             put(image.pixels[i + 2]);
             put(image.pixels[i + 1]);
@@ -274,39 +276,39 @@ namespace rct3::ovl::texture
         return out;
     }
 
-    std::int32_t texture_halvings(float detail, std::uint32_t width, std::uint32_t height)
+    i32 texture_halvings(f32 detail, u32 width, u32 height)
     {
         if (width == 0 || height == 0)
             return 0;
-        const std::int32_t doublings = std::bit_width(std::max(width, height)) - 1;
-        const std::int32_t kept = static_cast<std::int32_t>(std::ceil(static_cast<float>(doublings) * std::clamp(detail, 0.0f, 1.0f)));
-        return std::min(doublings - kept, static_cast<std::int32_t>(std::bit_width(std::min(width, height))) - 1);
+        const i32 doublings = std::bit_width(std::max(width, height)) - 1;
+        const i32 kept = static_cast<i32>(std::ceil(static_cast<f32>(doublings) * std::clamp(detail, 0.0f, 1.0f)));
+        return std::min(doublings - kept, static_cast<i32>(std::bit_width(std::min(width, height))) - 1);
     }
 
-    RgbaImage halved(RgbaImage image, std::int32_t times)
+    RgbaImage halved(RgbaImage image, i32 times)
     {
-        for (std::int32_t t = 0; t < times && image.width > 1 && image.height > 1 && image.pixels.size() == std::size_t { image.width } * image.height * 4; ++t)
+        for (i32 t = 0; t < times && image.width > 1 && image.height > 1 && image.pixels.size() == usize { image.width } * image.height * 4; ++t)
         {
-            RgbaImage half { .width = image.width / 2, .height = image.height / 2, .pixels = std::vector<std::uint8_t>(std::size_t { image.width / 2 } * (image.height / 2) * 4) };
-            for (std::uint32_t y = 0; y < half.height; ++y)
+            RgbaImage half { .width = image.width / 2, .height = image.height / 2, .pixels = std::vector<u8>(usize { image.width / 2 } * (image.height / 2) * 4) };
+            for (u32 y = 0; y < half.height; ++y)
             {
-                for (std::uint32_t x = 0; x < half.width; ++x)
+                for (u32 x = 0; x < half.width; ++x)
                 {
-                    std::array<std::uint32_t, 4> sum { };
-                    for (const std::uint32_t sy : { 2 * y, std::min(2 * y + 1, image.height - 1) })
+                    std::array<u32, 4> sum { };
+                    for (const u32 sy : { 2 * y, std::min(2 * y + 1, image.height - 1) })
                     {
-                        for (const std::uint32_t sx : { 2 * x, std::min(2 * x + 1, image.width - 1) })
+                        for (const u32 sx : { 2 * x, std::min(2 * x + 1, image.width - 1) })
                         {
-                            const std::uint8_t* p = &image.pixels[(std::size_t { sy } * image.width + sx) * 4];
-                            for (std::size_t c = 0; c < 3; ++c)
+                            const u8* p = &image.pixels[(usize { sy } * image.width + sx) * 4];
+                            for (usize c = 0; c < 3; ++c)
                                 sum[c] += p[c] * p[3];
                             sum[3] += p[3];
                         }
                     }
-                    std::uint8_t* out = &half.pixels[(std::size_t { y } * half.width + x) * 4];
-                    for (std::size_t c = 0; c < 3; ++c)
-                        out[c] = static_cast<std::uint8_t>(sum[3] > 0 ? (sum[c] + sum[3] / 2) / sum[3] : 0);
-                    out[3] = static_cast<std::uint8_t>((sum[3] + 2) / 4);
+                    u8* out = &half.pixels[(usize { y } * half.width + x) * 4];
+                    for (usize c = 0; c < 3; ++c)
+                        out[c] = static_cast<u8>(sum[3] > 0 ? (sum[c] + sum[3] / 2) / sum[3] : 0);
+                    out[3] = static_cast<u8>((sum[3] + 2) / 4);
                 }
             }
             image = std::move(half);

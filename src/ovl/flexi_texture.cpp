@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/flexi_texture.hpp"
 
+#include "core/types.hpp"
+
 #include <cstring>
 
 namespace rct3::ovl
@@ -10,12 +12,12 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kFlexiTag = "ftx";
-        constexpr std::size_t kHeaderSize = 36; // nine 32-bit words
-        constexpr std::size_t kFrameSize = 28;  // seven 32-bit words
+        constexpr usize kHeaderSize = 36; // nine 32-bit words
+        constexpr usize kFrameSize = 28;  // seven 32-bit words
 
-        std::uint32_t u32_at(std::span<const std::byte> b, std::size_t at)
+        u32 u32_at(std::span<const std::byte> b, usize at)
         {
-            std::uint32_t v = 0;
+            u32 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
@@ -33,18 +35,18 @@ namespace rct3::ovl
                 return std::nullopt;
             frame.palette = *palette;
 
-            const std::uint64_t plane = static_cast<std::uint64_t>(frame.width) * frame.height;
+            const u64 plane = static_cast<u64>(frame.width) * frame.height;
             if (plane > UINT32_MAX)
                 return std::nullopt;
 
-            const auto pixels = space.bytes_at(u32_at(raw, 20), static_cast<std::size_t>(plane));
+            const auto pixels = space.bytes_at(u32_at(raw, 20), static_cast<usize>(plane));
             if (!pixels)
                 return std::nullopt;
             frame.pixels = *pixels;
 
-            if (const std::uint32_t alpha_address = u32_at(raw, 24); alpha_address != 0)
+            if (const u32 alpha_address = u32_at(raw, 24); alpha_address != 0)
             {
-                const auto alpha = space.bytes_at(alpha_address, static_cast<std::size_t>(plane));
+                const auto alpha = space.bytes_at(alpha_address, static_cast<usize>(plane));
                 if (!alpha)
                     return std::nullopt;
                 frame.alpha = *alpha;
@@ -52,7 +54,7 @@ namespace rct3::ovl
             return frame;
         }
 
-        std::optional<FlexiTexture> read_texture(const AddressSpace& space, std::uint32_t address)
+        std::optional<FlexiTexture> read_texture(const AddressSpace& space, u32 address)
         {
             const auto header = space.bytes_at(address, kHeaderSize);
             if (!header)
@@ -64,10 +66,10 @@ namespace rct3::ovl
             texture.height = u32_at(*header, 8);
             texture.animation = u32_at(*header, 12);
             texture.flags = u32_at(*header, 16);
-            const std::uint32_t sequence_count = u32_at(*header, 20);
-            const std::uint32_t sequence_address = u32_at(*header, 24);
-            const std::uint32_t frame_count = u32_at(*header, 28);
-            const std::uint32_t frame_address = u32_at(*header, 32);
+            const u32 sequence_count = u32_at(*header, 20);
+            const u32 sequence_address = u32_at(*header, 24);
+            const u32 frame_count = u32_at(*header, 28);
+            const u32 frame_address = u32_at(*header, 32);
 
             // Counts are checked through the size of the block that must hold the array.
             if (sequence_count > UINT32_MAX / 4 || frame_count > UINT32_MAX / kFrameSize)
@@ -75,13 +77,13 @@ namespace rct3::ovl
 
             if (sequence_count != 0)
             {
-                const auto raw = space.bytes_at(sequence_address, std::size_t { sequence_count } * 4);
+                const auto raw = space.bytes_at(sequence_address, usize { sequence_count } * 4);
                 if (!raw)
                     return std::nullopt;
                 texture.sequence.reserve(sequence_count);
-                for (std::uint32_t i = 0; i < sequence_count; ++i)
+                for (u32 i = 0; i < sequence_count; ++i)
                 {
-                    const std::uint32_t index = u32_at(*raw, std::size_t { i } * 4);
+                    const u32 index = u32_at(*raw, usize { i } * 4);
                     if (index >= frame_count)
                         return std::nullopt;
                     texture.sequence.push_back(index);
@@ -90,13 +92,13 @@ namespace rct3::ovl
 
             if (frame_count != 0)
             {
-                const auto raw = space.bytes_at(frame_address, std::size_t { frame_count } * kFrameSize);
+                const auto raw = space.bytes_at(frame_address, usize { frame_count } * kFrameSize);
                 if (!raw)
                     return std::nullopt;
                 texture.frames.reserve(frame_count);
-                for (std::uint32_t i = 0; i < frame_count; ++i)
+                for (u32 i = 0; i < frame_count; ++i)
                 {
-                    auto frame = read_frame(space, raw->subspan(std::size_t { i } * kFrameSize, kFrameSize));
+                    auto frame = read_frame(space, raw->subspan(usize { i } * kFrameSize, kFrameSize));
                     if (!frame)
                         return std::nullopt;
                     texture.frames.push_back(*frame);

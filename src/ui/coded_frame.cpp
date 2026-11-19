@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/coded_frame.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -13,25 +15,25 @@ namespace rct3::ui
 
         /// How many times the box's diagonal the disc that cuts along a line is: its edge then bows by under a
         /// thousandth of the diagonal, while staying small enough to measure in single precision.
-        constexpr float kStraightCut = 256;
+        constexpr f32 kStraightCut = 256;
 
         struct Scale
         {
-            float x = 1;
-            float y = 1;
-            float length = 1; ///< For radii and widths: the smaller of the two, so round things stay round
+            f32 x = 1;
+            f32 y = 1;
+            f32 length = 1; ///< For radii and widths: the smaller of the two, so round things stay round
         };
 
-        Scale frame_scale(const Rect& target, float width, float height)
+        Scale frame_scale(const Rect& target, f32 width, f32 height)
         {
             if (width <= 0 || height <= 0)
                 return { };
-            const float x = target.width() / width;
-            const float y = target.height() / height;
+            const f32 x = target.width() / width;
+            const f32 y = target.height() / height;
             return { x, y, std::min(x, y) };
         }
 
-        float edge(const FrameEdge& e, float start, float size, float scale)
+        f32 edge(const FrameEdge& e, f32 start, f32 size, f32 scale)
         {
             return start + e.share * size + e.offset * scale;
         }
@@ -48,13 +50,13 @@ namespace rct3::ui
 
         Color times(Color c, Color tint)
         {
-            const auto channel = [](std::uint8_t a, std::uint8_t b) { return static_cast<std::uint8_t>((a * b + 127) / 255); };
+            const auto channel = [](u8 a, u8 b) { return static_cast<u8>((a * b + 127) / 255); };
             return { channel(c.r, tint.r), channel(c.g, tint.g), channel(c.b, tint.b), channel(c.a, tint.a) };
         }
 
     } // namespace
 
-    Rect frame_rect(const FrameBox& box, const Rect& target, float width, float height)
+    Rect frame_rect(const FrameBox& box, const Rect& target, f32 width, f32 height)
     {
         return place(box, target, frame_scale(target, width, height));
     }
@@ -68,7 +70,7 @@ namespace rct3::ui
             shape.rect = place(layer.box, target, s);
             if (shape.rect.empty())
                 continue;
-            const float r = s.length;
+            const f32 r = s.length;
             shape.corners = { shape.corners.top_left * r, shape.corners.top_right * r, shape.corners.bottom_right * r, shape.corners.bottom_left * r };
             shape.ring *= r;
             shape.outline_width *= r;
@@ -80,15 +82,15 @@ namespace rct3::ui
             if (layer.cut_line)
             {
                 // A disc so large that its edge is straight along the line, lying over its left-hand side.
-                const auto at = [&](std::array<float, 2> p) { return std::array { shape.rect.x0 + p[0] * shape.rect.width(), shape.rect.y0 + p[1] * shape.rect.height() }; };
+                const auto at = [&](std::array<f32, 2> p) { return std::array { shape.rect.x0 + p[0] * shape.rect.width(), shape.rect.y0 + p[1] * shape.rect.height() }; };
                 const auto [ax, ay] = at(layer.cut_line->from);
                 const auto [bx, by] = at(layer.cut_line->to);
-                const float dx = bx - ax;
-                const float dy = by - ay;
-                const float length = std::hypot(dx, dy);
+                const f32 dx = bx - ax;
+                const f32 dy = by - ay;
+                const f32 length = std::hypot(dx, dy);
                 if (length <= 0)
                     continue;
-                const float radius = kStraightCut * std::hypot(shape.rect.width(), shape.rect.height());
+                const f32 radius = kStraightCut * std::hypot(shape.rect.width(), shape.rect.height());
                 shape.cut_x = (ax + bx) / 2 + dy / length * radius;
                 shape.cut_y = (ay + by) / 2 - dx / length * radius;
                 shape.cut_radius = radius;

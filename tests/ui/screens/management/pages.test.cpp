@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management/pages.hpp"
 
+#include "core/types.hpp"
 #include "simulation/park/finance.hpp"
 #include "ui/thought_text.hpp"
 
@@ -22,7 +23,7 @@ namespace
 {
     const InfoUnits kUnits;
 
-    std::u16string money(std::int64_t amount)
+    std::u16string money(i64 amount)
     {
         return money_text(kUnits.currency, units::Money { amount });
     }
@@ -64,7 +65,7 @@ namespace
         return s;
     }
 
-    save::model::Guest guest(std::string name, float happiness, bool in_park = true)
+    save::model::Guest guest(std::string name, f32 happiness, bool in_park = true)
     {
         save::model::Guest g;
         g.person.name = std::move(name);
@@ -81,7 +82,7 @@ TEST_CASE("each management menu item opens its own window, and only those")
     CHECK(management_topic(ToolItem::Challenges) == ManagementTopic::Challenges);
     CHECK_FALSE(management_topic(ToolItem::People));
     // The staff window keeps one list of its own (staff_roster.hpp), without tabs.
-    for (std::size_t t = 0; t < kManagementTopicCount; ++t)
+    for (usize t = 0; t < kManagementTopicCount; ++t)
         CHECK(management_tabs(static_cast<ManagementTopic>(t), test_strings(), kUnits).empty() == (static_cast<ManagementTopic>(t) == ManagementTopic::Staff));
 }
 
@@ -232,7 +233,7 @@ TEST_CASE("the finances' attractions tab lists each ride and stall with its taki
     rides.stalls.push_back({ });
     rides.stalls[1].base.demolished = true;
     // Taken since the park was opened, on top of what the park file kept.
-    const auto takings = [](std::uint64_t id) { return id == 7 ? AttractionTakings { .income = units::Money { 1000 }, .customers = 5 } : AttractionTakings { }; };
+    const auto takings = [](u64 id) { return id == 7 ? AttractionTakings { .income = units::Money { 1000 }, .customers = 5 } : AttractionTakings { }; };
     const ManagementPage page = management_page(ManagementTopic::Finances, 4, { .rides = &rides, .takings = takings }, s, kUnits);
     REQUIRE(page.rows.size() == 2);
     CHECK(page.sort == 3);
@@ -329,7 +330,7 @@ TEST_CASE("a weekly graph leaves out the week still running, oldest first, with 
     REQUIRE(page.graph.size() == 2);
     const auto guests = std::ranges::find(page.graph, std::string("Graph_Guests"), &InfoSeries::key);
     REQUIRE(guests != page.graph.end());
-    CHECK(guests->values == std::vector<float> { 20, 40 });
+    CHECK(guests->values == std::vector<f32> { 20, 40 });
     // The guests by age read on the scale of all of them.
     CHECK(guests->full == doctest::Approx(50));
     CHECK(page.graph[0].key == "Graph_AdultsInPark");
@@ -400,7 +401,7 @@ TEST_CASE("the families tab lists the player's groups with their leader and memb
     const StringTable s = test_strings();
     save::model::PeopleModel people;
     people.guests = { guest("Ann", 0.5f), guest("Bob", 0.5f), guest("Cy", 0.5f) };
-    for (std::size_t i = 0; i < people.guests.size(); ++i)
+    for (usize i = 0; i < people.guests.size(); ++i)
         people.guests[i].person.id = 100 + i;
     save::model::GuestGroup family;
     family.group_type = 10;
@@ -487,7 +488,7 @@ TEST_CASE("the research window sets the budget and a priority an area")
     s.add("Carousel_Name", u"Carousel");
     simulation::Research research { .budget = 5000, .spent = 4000, .current = 7, .priorities = { 0.5f, 0.25f, 1.0f } };
     std::vector<simulation::ResearchItem> left { { .id = 7, .area = simulation::ResearchArea::GentleRides, .cost = units::Money { 16000 } } };
-    ManagementPage page = management_page(ManagementTopic::Research, 0, { .research = &research, .research_left = left, .research_name = [](std::uint64_t) { return std::string_view("Carousel_Name"); } }, s, kUnits);
+    ManagementPage page = management_page(ManagementTopic::Research, 0, { .research = &research, .research_left = left, .research_name = [](u64) { return std::string_view("Carousel_Name"); } }, s, kUnits);
     CHECK(value_of(page, u"Researching:") == u"Carousel");
     REQUIRE(page.lines.size() == 2);
     CHECK(page.lines[1].label == u"About 3 months left"); // 120.00 left at 50.00 a month
@@ -501,7 +502,7 @@ TEST_CASE("the research window sets the budget and a priority an area")
     CHECK(page.controls[3].id == kFirstPriorityControl + 1);
     CHECK(page.controls[3].value == 25);
     CHECK(page.controls[3].shown == u"25 %");
-    CHECK(page.controls[5].id == kFirstPriorityControl + static_cast<std::int32_t>(simulation::ResearchArea::GentleRides));
+    CHECK(page.controls[5].id == kFirstPriorityControl + static_cast<i32>(simulation::ResearchArea::GentleRides));
     CHECK(page.controls[5].value == 100); // Not set, so the most
 
     left.clear();
@@ -517,7 +518,7 @@ TEST_CASE("the research window lists what was invented, newest first, with its d
     save::model::ParkModel park;
     park.content.entries = { { .id = 7 }, { .id = 8 } };
     const simulation::Research research { .invented = { 7, 8 }, .invented_at = { 0, 8 * save::model::GameClock::kUnitsPerMonth } }; // A year apart
-    const ManagementPage page = management_page(ManagementTopic::Research, kInventedTab, { .park = &park, .research = &research, .research_name = [](std::uint64_t id) { return std::string_view(id == 7 ? "Carousel_Name" : ""); } }, s, kUnits);
+    const ManagementPage page = management_page(ManagementTopic::Research, kInventedTab, { .park = &park, .research = &research, .research_name = [](u64 id) { return std::string_view(id == 7 ? "Carousel_Name" : ""); } }, s, kUnits);
     REQUIRE(page.rows.size() == 2);
     CHECK(page.sort == 1);
     CHECK(page.sort_descending);

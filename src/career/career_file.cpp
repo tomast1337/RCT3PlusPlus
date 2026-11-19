@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "career/career_file.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <bit>
 #include <cstdint>
@@ -21,23 +23,23 @@ namespace rct3::career
         namespace fs = std::filesystem;
 
         constexpr std::array<char, 4> kMagic = { 'R', 'C', '3', 'C' };
-        constexpr std::uint16_t kVersion = 1;
+        constexpr u16 kVersion = 1;
         constexpr std::array<char, 4> kHead = { 'H', 'E', 'A', 'D' };
         constexpr std::array<char, 4> kScenario = { 'S', 'C', 'E', 'N' };
         constexpr std::array<char, 4> kEnd = { 'E', 'N', 'D', ' ' };
         constexpr std::array<std::string_view, 3> kPackIds = { "base", "soaked", "wild" };
         constexpr std::string_view kPrefix = "career_";
-        constexpr std::int32_t kMostFiles = 10000;
+        constexpr i32 kMostFiles = 10000;
 
         /// CRC-32 as zlib and PNG compute it (the reflected polynomial).
-        std::uint32_t crc32(std::uint32_t crc, std::span<const std::byte> bytes)
+        u32 crc32(u32 crc, std::span<const std::byte> bytes)
         {
-            constexpr std::uint32_t kReflected = 0xEDB8'8320u;
+            constexpr u32 kReflected = 0xEDB8'8320u;
             crc = ~crc;
             for (const std::byte b : bytes)
             {
-                crc ^= std::to_integer<std::uint32_t>(b);
-                for (std::int32_t bit = 0; bit < 8; ++bit)
+                crc ^= std::to_integer<u32>(b);
+                for (i32 bit = 0; bit < 8; ++bit)
                     crc = (crc >> 1) ^ ((crc & 1u) != 0 ? kReflected : 0u);
             }
             return ~crc;
@@ -63,7 +65,7 @@ namespace rct3::career
             }
             void text(std::string_view s)
             {
-                put(static_cast<std::uint32_t>(s.size()));
+                put(static_cast<u32>(s.size()));
                 const auto b = std::as_bytes(std::span(s));
                 bytes.insert(bytes.end(), b.begin(), b.end());
             }
@@ -71,7 +73,7 @@ namespace rct3::career
             {
                 const auto t = tag_bytes(tag);
                 bytes.insert(bytes.end(), t.begin(), t.end());
-                put(static_cast<std::uint32_t>(payload.size()));
+                put(static_cast<u32>(payload.size()));
                 bytes.insert(bytes.end(), payload.begin(), payload.end());
                 put(crc32(crc32(0, t), payload));
             }
@@ -85,7 +87,7 @@ namespace rct3::career
             {
             }
 
-            [[nodiscard]] std::size_t left() const
+            [[nodiscard]] usize left() const
             {
                 return bytes_.size() - at_;
             }
@@ -101,7 +103,7 @@ namespace rct3::career
                 at_ += sizeof(T);
                 return std::bit_cast<T>(raw);
             }
-            std::optional<std::span<const std::byte>> take(std::size_t n)
+            std::optional<std::span<const std::byte>> take(usize n)
             {
                 if (left() < n)
                     return std::nullopt;
@@ -111,7 +113,7 @@ namespace rct3::career
             }
             std::optional<std::string> text()
             {
-                const auto n = get<std::uint32_t>();
+                const auto n = get<u32>();
                 if (!n)
                     return std::nullopt;
                 const auto b = take(*n);
@@ -122,16 +124,16 @@ namespace rct3::career
 
         private:
             std::span<const std::byte> bytes_;
-            std::size_t at_ = 0;
+            usize at_ = 0;
         };
 
         std::vector<std::byte> scenario_payload(const ScenarioProgress& p)
         {
             Writer w;
             w.text(p.id);
-            w.put(static_cast<std::uint8_t>(p.status));
+            w.put(static_cast<u8>(p.status));
             w.text(p.last_save);
-            for (const std::int64_t t : p.reached)
+            for (const i64 t : p.reached)
                 w.put(t);
             w.put(p.play_seconds);
             return w.bytes;
@@ -142,28 +144,28 @@ namespace rct3::career
             Reader r(payload);
             ScenarioProgress p;
             auto id = r.text();
-            const auto status = r.get<std::uint8_t>();
+            const auto status = r.get<u8>();
             auto last_save = r.text();
-            if (!id || !status || *status > static_cast<std::uint8_t>(ScenarioStatus::Tycoon) || !last_save)
+            if (!id || !status || *status > static_cast<u8>(ScenarioStatus::Tycoon) || !last_save)
                 return std::nullopt;
             p.id = std::move(*id);
             p.status = static_cast<ScenarioStatus>(*status);
             p.last_save = std::move(*last_save);
-            for (std::int64_t& t : p.reached)
+            for (i64& t : p.reached)
             {
-                const auto v = r.get<std::int64_t>();
+                const auto v = r.get<i64>();
                 if (!v)
                     return std::nullopt;
                 t = *v;
             }
-            const auto played = r.get<std::uint64_t>();
+            const auto played = r.get<u64>();
             if (!played)
                 return std::nullopt;
             p.play_seconds = *played;
             return p;
         }
 
-        std::string file_name(std::int32_t number)
+        std::string file_name(i32 number)
         {
             std::array<char, 8> digits { };
             std::snprintf(digits.data(), digits.size(), "%04d", number);
@@ -201,17 +203,17 @@ namespace rct3::career
         return "unknown";
     }
 
-    std::string_view pack_id(std::int32_t pack)
+    std::string_view pack_id(i32 pack)
     {
-        return pack >= 0 && static_cast<std::size_t>(pack) < kPackIds.size() ? kPackIds[static_cast<std::size_t>(pack)] : std::string_view { };
+        return pack >= 0 && static_cast<usize>(pack) < kPackIds.size() ? kPackIds[static_cast<usize>(pack)] : std::string_view { };
     }
 
-    std::optional<std::int32_t> pack_from_id(std::string_view id)
+    std::optional<i32> pack_from_id(std::string_view id)
     {
         const auto it = std::ranges::find(kPackIds, id);
         if (it == kPackIds.end())
             return std::nullopt;
-        return static_cast<std::int32_t>(it - kPackIds.begin());
+        return static_cast<i32>(it - kPackIds.begin());
     }
 
     std::vector<std::byte> write_career(const CareerData& data)
@@ -221,7 +223,7 @@ namespace rct3::career
         const auto magic = tag_bytes(kMagic);
         w.bytes.insert(w.bytes.end(), magic.begin(), magic.end());
         w.put(kVersion);
-        w.put(std::uint16_t { 0 });
+        w.put(u16 { 0 });
 
         Writer head;
         head.text(c.name);
@@ -246,8 +248,8 @@ namespace rct3::career
         const auto magic = r.take(kMagic.size());
         if (!magic || !std::ranges::equal(*magic, tag_bytes(kMagic)))
             return std::unexpected(CareerFileError::NotACareer);
-        const auto version = r.get<std::uint16_t>();
-        const auto flags = r.get<std::uint16_t>();
+        const auto version = r.get<u16>();
+        const auto flags = r.get<u16>();
         if (!version || !flags)
             return std::unexpected(CareerFileError::Truncated);
         if (*version > kVersion)
@@ -260,11 +262,11 @@ namespace rct3::career
         while (true)
         {
             const auto tag = r.take(4);
-            const auto length = r.get<std::uint32_t>();
+            const auto length = r.get<u32>();
             if (!tag || !length)
                 return std::unexpected(CareerFileError::Truncated);
             const auto payload = r.take(*length);
-            const auto crc = r.get<std::uint32_t>();
+            const auto crc = r.get<u32>();
             if (!payload || !crc)
                 return std::unexpected(CareerFileError::Truncated);
             if (crc32(crc32(0, *tag), *payload) != *crc)
@@ -280,7 +282,7 @@ namespace rct3::career
                 auto career_name = h.text();
                 const auto pack = h.text();
                 auto picked = h.text();
-                const auto created = h.get<std::int64_t>();
+                const auto created = h.get<i64>();
                 const auto pack_number = pack ? pack_from_id(*pack) : std::nullopt;
                 if (head || !career_name || !pack_number || !picked || !created)
                     return std::unexpected(CareerFileError::Malformed);
@@ -303,11 +305,11 @@ namespace rct3::career
         if (!head)
             return std::unexpected(CareerFileError::Malformed);
         const auto picked = std::ranges::find(c.scenarios, current, &ScenarioProgress::id);
-        c.current = picked != c.scenarios.end() ? static_cast<std::size_t>(picked - c.scenarios.begin()) : 0;
+        c.current = picked != c.scenarios.end() ? static_cast<usize>(picked - c.scenarios.begin()) : 0;
         return data;
     }
 
-    std::vector<CareerEntry> list_careers(const fs::path& folder, std::int32_t pack, std::optional<std::vector<config::FileProblem>&> problems)
+    std::vector<CareerEntry> list_careers(const fs::path& folder, i32 pack, std::optional<std::vector<config::FileProblem>&> problems)
     {
         std::vector<fs::path> paths;
         std::error_code error;
@@ -337,7 +339,7 @@ namespace rct3::career
     fs::path free_career_path(const fs::path& folder)
     {
         std::error_code error;
-        for (std::int32_t i = 0; i < kMostFiles; ++i)
+        for (i32 i = 0; i < kMostFiles; ++i)
         {
             const fs::path path = folder / file_name(i);
             if (!fs::exists(path, error) && !fs::exists(fs::path(path).replace_extension(), error))

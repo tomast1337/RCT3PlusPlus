@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ride/placement.hpp"
 
+#include "core/types.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/water/fill.hpp"
 #include "strings/ascii.hpp"
@@ -22,12 +23,12 @@ namespace rct3::park::ride
 
     namespace
     {
-        bool has_path(std::span<const save::model::PathTile> paths, std::int32_t col, std::int32_t row)
+        bool has_path(std::span<const save::model::PathTile> paths, i32 col, i32 row)
         {
             return std::ranges::any_of(paths, [&](const save::model::PathTile& p) { return p.col == col && p.row == row; });
         }
 
-        SiteProblem tile_problem(std::int32_t col, std::int32_t row, std::int32_t height, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const path::SolidTiles& solids)
+        SiteProblem tile_problem(i32 col, i32 row, i32 height, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const path::SolidTiles& solids)
         {
             if (!grid.contains(col, row) || !owned_outright(grid.at(col, row)))
                 return SiteProblem::NotOwned;
@@ -35,9 +36,9 @@ namespace rct3::park::ride
                 return SiteProblem::Path;
             // shortcut: anything solid reaching over the base blocks, however high; give rides a height to
             // check against once their models' heights are read.
-            if (const auto spans = solids.tiles.find(static_cast<std::uint32_t>(row) << 16 | static_cast<std::uint32_t>(col)); spans != solids.tiles.end())
+            if (const auto spans = solids.tiles.find(static_cast<u32>(row) << 16 | static_cast<u32>(col)); spans != solids.tiles.end())
             {
-                if (std::ranges::any_of(spans->second, [&](const path::SolidSpan& s) { return s.high > static_cast<float>(height); }))
+                if (std::ranges::any_of(spans->second, [&](const path::SolidSpan& s) { return s.high > static_cast<f32>(height); }))
                     return SiteProblem::Blocked;
             }
             return SiteProblem::None;
@@ -46,11 +47,11 @@ namespace rct3::park::ride
         template<typename Attraction> std::string lowest_free_name(std::span<const Attraction> attractions, std::string_view symbol)
         {
             constexpr std::string_view kNumbered = "%ME% ";
-            std::vector<std::int32_t> taken;
+            std::vector<i32> taken;
             for (const Attraction& a : attractions)
                 if (strings::equals_ignoring_case(a.base.symbol, symbol) && a.base.name.starts_with(kNumbered))
                     taken.push_back(std::atoi(a.base.name.c_str() + kNumbered.size()));
-            std::int32_t number = 1;
+            i32 number = 1;
             while (std::ranges::contains(taken, number))
                 ++number;
             return std::format("{}{}", kNumbered, number);
@@ -67,12 +68,12 @@ namespace rct3::park::ride
         return lowest_free_name(stalls, symbol);
     }
 
-    void copy_menu(std::span<save::model::Stall> stalls, std::size_t from)
+    void copy_menu(std::span<save::model::Stall> stalls, usize from)
     {
         if (from >= stalls.size())
             return;
         const save::model::Stall& source = stalls[from];
-        for (std::size_t i = 0; i < stalls.size(); ++i)
+        for (usize i = 0; i < stalls.size(); ++i)
         {
             save::model::Stall& to = stalls[i];
             if (i == from || to.base.symbol != source.base.symbol || to.base.overlay_path != source.base.overlay_path)
@@ -107,7 +108,7 @@ namespace rct3::park::ride
         }
     }
 
-    void move_item(save::model::Stall& stall, std::size_t from, std::size_t to)
+    void move_item(save::model::Stall& stall, usize from, usize to)
     {
         if (from >= stall.items.size())
             return;
@@ -125,32 +126,32 @@ namespace rct3::park::ride
         std::string plain_name(std::string_view text)
         {
             std::string out;
-            for (std::size_t i = 0; i < text.size(); ++i)
+            for (usize i = 0; i < text.size(); ++i)
             {
                 const char c = strings::ascii_lower(text[i]);
                 if (c == '0' && (out.empty() || !std::isdigit(static_cast<unsigned char>(out.back()))) && i + 1 < text.size() && std::isdigit(static_cast<unsigned char>(text[i + 1])))
                     continue;
                 out.push_back(c);
             }
-            for (std::size_t at; (at = out.find("anim")) != std::string::npos;)
+            for (usize at; (at = out.find("anim")) != std::string::npos;)
                 out.erase(at, 4);
             return out;
         }
     } // namespace
 
-    std::optional<std::size_t> trick_animation(std::string_view trick, std::span<const std::string> animations)
+    std::optional<usize> trick_animation(std::string_view trick, std::span<const std::string> animations)
     {
-        const std::size_t show = trick.find("Show");
+        const usize show = trick.find("Show");
         const std::string tail = plain_name(show == std::string_view::npos ? trick : trick.substr(show + 4));
-        for (std::size_t i = 0; i < animations.size(); ++i)
+        for (usize i = 0; i < animations.size(); ++i)
             if (plain_name(animations[i]).ends_with(tail))
                 return i;
         return std::nullopt;
     }
 
-    std::vector<save::model::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const float> seconds)
+    std::vector<save::model::ShowTrick> show_tricks(std::string_view kind, std::span<const std::string> names, std::span<const std::string> animations, std::span<const f32> seconds)
     {
-        const auto lasting = [&](std::string_view trick) -> std::optional<float> {
+        const auto lasting = [&](std::string_view trick) -> std::optional<f32> {
             const auto a = trick_animation(trick, animations);
             return a && *a < seconds.size() ? std::optional(seconds[*a]) : std::nullopt;
         };
@@ -171,10 +172,10 @@ namespace rct3::park::ride
         return tricks;
     }
 
-    std::optional<ShowMoment> show_moment(const save::model::RideShow& show, float into)
+    std::optional<ShowMoment> show_moment(const save::model::RideShow& show, f32 into)
     {
-        float start = 0;
-        for (const std::uint32_t t : show.order)
+        f32 start = 0;
+        for (const u32 t : show.order)
         {
             if (t >= show.tricks.size())
                 continue;
@@ -185,7 +186,7 @@ namespace rct3::park::ride
         return std::nullopt;
     }
 
-    std::optional<MotionAt> show_motion(const save::model::RideShow& show, std::span<const std::string> animations, std::span<const float> seconds, std::optional<float> into, float idle)
+    std::optional<MotionAt> show_motion(const save::model::RideShow& show, std::span<const std::string> animations, std::span<const f32> seconds, std::optional<f32> into, f32 idle)
     {
         if (into)
         {
@@ -193,8 +194,8 @@ namespace rct3::park::ride
                 if (const auto a = trick_animation(show.tricks[moment->trick].name, animations))
                     return MotionAt { *a, moment->into };
             // Past its last trick the idle runs on from where the show ended.
-            float length = 0;
-            for (const std::uint32_t t : show.order)
+            f32 length = 0;
+            for (const u32 t : show.order)
                 length += t < show.tricks.size() ? show.tricks[t].seconds : 0.0f;
             idle = std::max(*into - length, 0.0f);
         }
@@ -205,11 +206,11 @@ namespace rct3::park::ride
             a = trick_animation("Loop", animations);
         if (!a)
             return std::nullopt;
-        const float length = *a < seconds.size() ? seconds[*a] : 0.0f;
+        const f32 length = *a < seconds.size() ? seconds[*a] : 0.0f;
         return MotionAt { *a, length > 0 ? std::fmod(idle, length) : 0.0f };
     }
 
-    RideSite ride_site(save::model::Tile tile, std::array<std::int32_t, 2> squares, ModelTurn turn, const save::model::TerrainGrid& grid)
+    RideSite ride_site(save::model::Tile tile, std::array<i32, 2> squares, ModelTurn turn, const save::model::TerrainGrid& grid)
     {
         const auto [col, row] = tile;
         RideSite site;
@@ -217,11 +218,11 @@ namespace rct3::park::ride
         site.span = site.turn.value % 2 == 0 ? squares : std::array { squares[1], squares[0] };
         site.col = col - (site.span[0] - 1) / 2;
         site.row = row - (site.span[1] - 1) / 2;
-        float sum = 0;
-        std::int32_t corners = 0;
-        for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
+        f32 sum = 0;
+        i32 corners = 0;
+        for (i32 r = site.row; r < site.row + site.span[1]; ++r)
         {
-            for (std::int32_t c = site.col; c < site.col + site.span[0]; ++c)
+            for (i32 c = site.col; c < site.col + site.span[0]; ++c)
             {
                 if (!grid.contains(c, r))
                     continue;
@@ -231,15 +232,15 @@ namespace rct3::park::ride
             }
         }
         if (corners > 0)
-            site.height = static_cast<std::int32_t>(std::floor(sum / static_cast<float>(corners) + 0.5f));
+            site.height = static_cast<i32>(std::floor(sum / static_cast<f32>(corners) + 0.5f));
         return site;
     }
 
     SiteProblem site_problem(const RideSite& site, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, const path::SolidTiles& solids)
     {
-        for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
+        for (i32 r = site.row; r < site.row + site.span[1]; ++r)
         {
-            for (std::int32_t c = site.col; c < site.col + site.span[0]; ++c)
+            for (i32 c = site.col; c < site.col + site.span[0]; ++c)
             {
                 if (const SiteProblem p = tile_problem(c, r, site.height, grid, paths, solids); p != SiteProblem::None)
                     return p;
@@ -250,14 +251,14 @@ namespace rct3::park::ride
 
     SiteProblem water_problem(const RideSite& site, bool water_only, std::span<const save::model::WaterBody> bodies)
     {
-        for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
+        for (i32 r = site.row; r < site.row + site.span[1]; ++r)
         {
-            for (std::int32_t c = site.col; c < site.col + site.span[0]; ++c)
+            for (i32 c = site.col; c < site.col + site.span[0]; ++c)
             {
                 const auto lake = std::ranges::find_if(bodies, [&](const save::model::WaterBody& b) { return water::holds(b, { c, r }); });
                 if (water_only && lake == bodies.end())
                     return SiteProblem::OffWater;
-                if (!water_only && lake != bodies.end() && lake->level > static_cast<float>(site.height))
+                if (!water_only && lake != bodies.end() && lake->level > static_cast<f32>(site.height))
                     return SiteProblem::UnderWater;
             }
         }
@@ -266,27 +267,27 @@ namespace rct3::park::ride
 
     SiteProblem ground_problem(const RideSite& site, const save::model::TerrainGrid& grid)
     {
-        constexpr float kSlack = 0.05f; // Ground at the base is under it
-        for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
+        constexpr f32 kSlack = 0.05f; // Ground at the base is under it
+        for (i32 r = site.row; r < site.row + site.span[1]; ++r)
         {
-            for (std::int32_t c = site.col; c < site.col + site.span[0]; ++c)
+            for (i32 c = site.col; c < site.col + site.span[0]; ++c)
             {
-                if (grid.contains(c, r) && grid.at(c, r).max_height() > static_cast<float>(site.height) + kSlack)
+                if (grid.contains(c, r) && grid.at(c, r).max_height() > static_cast<f32>(site.height) + kSlack)
                     return SiteProblem::IntoGround;
             }
         }
         return SiteProblem::None;
     }
 
-    std::int32_t clear_height(const RideSite& site, const save::model::TerrainGrid& grid)
+    i32 clear_height(const RideSite& site, const save::model::TerrainGrid& grid)
     {
-        constexpr float kSlack = 0.01f; // Heights read back as floats sit a hair off whole units
-        float top = static_cast<float>(site.height);
-        for (std::int32_t r = site.row; r < site.row + site.span[1]; ++r)
-            for (std::int32_t c = site.col; c < site.col + site.span[0]; ++c)
+        constexpr f32 kSlack = 0.01f; // Heights read back as floats sit a hair off whole units
+        f32 top = static_cast<f32>(site.height);
+        for (i32 r = site.row; r < site.row + site.span[1]; ++r)
+            for (i32 c = site.col; c < site.col + site.span[0]; ++c)
                 if (grid.contains(c, r))
                     top = std::max(top, grid.at(c, r).max_height());
-        return static_cast<std::int32_t>(std::ceil(top - kSlack));
+        return static_cast<i32>(std::ceil(top - kSlack));
     }
 
     ground::GroundCuts levelled_ground(const RideSite& site, Flatten flatten, const save::model::TerrainGrid& grid)
@@ -294,11 +295,11 @@ namespace rct3::park::ride
         ground::GroundCuts out;
         if (flatten == Flatten::Off)
             return out;
-        const auto height = static_cast<float>(site.height);
-        const std::int32_t reach = flatten == Flatten::Smooth ? 1 : 0;
-        for (std::int32_t r = site.row - reach; r < site.row + site.span[1] + reach; ++r)
+        const auto height = static_cast<f32>(site.height);
+        const i32 reach = flatten == Flatten::Smooth ? 1 : 0;
+        for (i32 r = site.row - reach; r < site.row + site.span[1] + reach; ++r)
         {
-            for (std::int32_t c = site.col - reach; c < site.col + site.span[0] + reach; ++c)
+            for (i32 c = site.col - reach; c < site.col + site.span[0] + reach; ++c)
             {
                 if (!grid.contains(c, r))
                     continue;
@@ -306,10 +307,10 @@ namespace rct3::park::ride
                 ground::GroundCut cut { { c, r }, grid.at(c, r).corners };
                 // Corners go (col,row), (col+1,row), (col,row+1), (col+1,row+1); a tile round the footprint
                 // moves those on its edge.
-                for (std::size_t k = 0; k < 4; ++k)
+                for (usize k = 0; k < 4; ++k)
                 {
-                    const std::int32_t x = c + static_cast<std::int32_t>(k & 1);
-                    const std::int32_t z = r + static_cast<std::int32_t>(k >> 1);
+                    const i32 x = c + static_cast<i32>(k & 1);
+                    const i32 z = r + static_cast<i32>(k >> 1);
                     if (inside || (x >= site.col && x <= site.col + site.span[0] && z >= site.row && z <= site.row + site.span[1]))
                         cut.corners[k] = height;
                 }
@@ -322,56 +323,56 @@ namespace rct3::park::ride
 
     void level_ground(save::model::TerrainGrid& grid, const RideSite& site)
     {
-        const auto height = static_cast<float>(site.height);
+        const auto height = static_cast<f32>(site.height);
         // Every corner point of the footprint, in each of the up to four tiles that share it.
-        for (std::int32_t r = site.row; r <= site.row + site.span[1]; ++r)
+        for (i32 r = site.row; r <= site.row + site.span[1]; ++r)
         {
-            for (std::int32_t c = site.col; c <= site.col + site.span[0]; ++c)
+            for (i32 c = site.col; c <= site.col + site.span[0]; ++c)
             {
-                for (std::int32_t dr = 0; dr < 2; ++dr)
+                for (i32 dr = 0; dr < 2; ++dr)
                 {
-                    for (std::int32_t dc = 0; dc < 2; ++dc)
+                    for (i32 dc = 0; dc < 2; ++dc)
                     {
                         // The tile whose corner (1 - dc, 1 - dr) is this point; corners go (col,row),
                         // (col+1,row), (col,row+1), (col+1,row+1).
-                        const std::int32_t tc = c - 1 + dc;
-                        const std::int32_t tr = r - 1 + dr;
+                        const i32 tc = c - 1 + dc;
+                        const i32 tr = r - 1 + dr;
                         if (grid.contains(tc, tr))
-                            grid.at(tc, tr).corners[static_cast<std::size_t>((1 - dc) + 2 * (1 - dr))] = height;
+                            grid.at(tc, tr).corners[static_cast<usize>((1 - dc) + 2 * (1 - dr))] = height;
                     }
                 }
             }
         }
     }
 
-    std::int32_t shaped_height(const save::model::TerrainCell& cell, bool up)
+    i32 shaped_height(const save::model::TerrainCell& cell, bool up)
     {
-        constexpr float kSlack = 0.01f; // Heights read back as floats sit a hair off whole units
+        constexpr f32 kSlack = 0.01f; // Heights read back as floats sit a hair off whole units
         if (up)
         {
-            const auto top = static_cast<std::int32_t>(std::ceil(cell.max_height() - kSlack));
-            return cell.min_height() >= static_cast<float>(top) - kSlack ? top + 1 : top;
+            const auto top = static_cast<i32>(std::ceil(cell.max_height() - kSlack));
+            return cell.min_height() >= static_cast<f32>(top) - kSlack ? top + 1 : top;
         }
-        const auto bottom = static_cast<std::int32_t>(std::floor(cell.min_height() + kSlack));
-        return cell.max_height() <= static_cast<float>(bottom) + kSlack ? bottom - 1 : bottom;
+        const auto bottom = static_cast<i32>(std::floor(cell.min_height() + kSlack));
+        return cell.max_height() <= static_cast<f32>(bottom) + kSlack ? bottom - 1 : bottom;
     }
 
     DoorSpot door_spot(const RideSite& site, save::model::Tile tile)
     {
         const auto [col, row] = tile;
-        const std::int32_t last_col = site.col + site.span[0] - 1;
-        const std::int32_t last_row = site.row + site.span[1] - 1;
-        const std::int32_t c = std::clamp(col, site.col, last_col);
-        const std::int32_t r = std::clamp(row, site.row, last_row);
+        const i32 last_col = site.col + site.span[0] - 1;
+        const i32 last_row = site.row + site.span[1] - 1;
+        const i32 c = std::clamp(col, site.col, last_col);
+        const i32 r = std::clamp(row, site.row, last_row);
         // How far the tile is past (or, inside, short of) each side; the nearest side takes the door, on the tile
         // across it from the rim, facing back.
-        const std::array<std::pair<std::int32_t, Side>, 4> past { {
+        const std::array<std::pair<i32, Side>, 4> past { {
             { site.col - col, Side::kColBefore },
             { row - last_row, Side::kNextRow },
             { col - last_col, Side::kNextCol },
             { site.row - row, Side::kRowBefore },
         } };
-        const Side side = std::ranges::max_element(past, { }, &std::pair<std::int32_t, Side>::first)->second;
+        const Side side = std::ranges::max_element(past, { }, &std::pair<i32, Side>::first)->second;
         const save::model::Tile rim = side == Side::kColBefore ? save::model::Tile { site.col, r } : side == Side::kNextRow ? save::model::Tile { c, last_row } : side == Side::kNextCol ? save::model::Tile { last_col, r } : save::model::Tile { c, site.row };
         const save::model::Tile at = side.beyond(rim);
         return { at.col, at.row, object::turn_facing(side.opposite()) };
@@ -386,7 +387,7 @@ namespace rct3::park::ride
             // A track turned 0 or 2 runs along x, so its sides are across z; turned 1 or 3 the other way.
             const bool along_x = p.direction % 2 == 0;
             std::array<DoorSpot, 2> spots;
-            for (std::size_t i = 0; i < 2; ++i)
+            for (usize i = 0; i < 2; ++i)
             {
                 const Side side = along_x ? std::array { Side::kRowBefore, Side::kNextRow }[i] : std::array { Side::kColBefore, Side::kNextCol }[i];
                 const save::model::Tile at = side.beyond({ p.tile_x, p.tile_z });
@@ -399,12 +400,12 @@ namespace rct3::park::ride
     std::optional<DoorSpot> station_door_spot(std::span<const save::model::TrackPiece> stations, save::model::Tile tile)
     {
         std::optional<DoorSpot> best;
-        std::int64_t nearest = 0;
+        i64 nearest = 0;
         for (const save::model::TrackPiece& p : stations)
         {
             for (const DoorSpot& spot : beside_station(p))
             {
-                const std::int64_t dc = spot.col - tile.col, dr = spot.row - tile.row;
+                const i64 dc = spot.col - tile.col, dr = spot.row - tile.row;
                 if (!best || dc * dc + dr * dr < nearest)
                 {
                     best = spot;
@@ -415,17 +416,17 @@ namespace rct3::park::ride
         return best;
     }
 
-    std::size_t door_station(std::span<const save::model::TrackPiece> stations, std::span<const save::model::Station> saved, const DoorSpot& door)
+    usize door_station(std::span<const save::model::TrackPiece> stations, std::span<const save::model::Station> saved, const DoorSpot& door)
     {
         // A piece goes on from the one before when it stands on the next tile along that one's track.
         const auto follows = [](const save::model::TrackPiece& a, const save::model::TrackPiece& b) {
             const bool along_x = a.direction % 2 == 0;
             return a.height == b.height && std::abs(b.tile_x - a.tile_x) == (along_x ? 1 : 0) && std::abs(b.tile_z - a.tile_z) == (along_x ? 0 : 1);
         };
-        const auto run_of = [&](std::int32_t col, std::int32_t row, ModelTurn turn) -> std::optional<std::size_t> {
-            std::size_t run = 0;
-            std::optional<std::size_t> found;
-            for (std::size_t k = 0; k < stations.size(); ++k)
+        const auto run_of = [&](i32 col, i32 row, ModelTurn turn) -> std::optional<usize> {
+            usize run = 0;
+            std::optional<usize> found;
+            for (usize k = 0; k < stations.size(); ++k)
             {
                 if (k > 0 && !follows(stations[k - 1], stations[k]))
                     ++run;
@@ -439,10 +440,10 @@ namespace rct3::park::ride
         };
         const auto run = run_of(door.col, door.row, door.turn);
         const auto at_run = [&](const std::optional<save::model::PlacementSpot>& spot) { return spot && run_of(spot->col, spot->row, spot_turn(*spot)) == run; };
-        for (std::size_t k = 0; k < saved.size(); ++k)
+        for (usize k = 0; k < saved.size(); ++k)
             if (at_run(saved[k].entrance_spot) || at_run(saved[k].exit_spot))
                 return k;
-        return static_cast<std::size_t>(std::ranges::find_if(saved, [](const save::model::Station& s) { return !s.entrance_spot && !s.exit_spot; }) - saved.begin());
+        return static_cast<usize>(std::ranges::find_if(saved, [](const save::model::Station& s) { return !s.entrance_spot && !s.exit_spot; }) - saved.begin());
     }
 
     std::optional<std::string_view> platform_symbol(std::string_view type, const save::model::TrackPiece& piece, const PlatformPlace& place, std::span<const DoorSpot> doors, std::span<const std::string> names)

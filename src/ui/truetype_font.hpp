@@ -8,6 +8,7 @@
 // or user content.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/texture/image.hpp"
 #include "ui/font/font.hpp"
 
@@ -24,13 +25,13 @@ namespace rct3::ui
     /// A TrueType file read into memory and checked to be one.
     struct TrueTypeFile
     {
-        std::vector<std::uint8_t> data;
-        float ascent_per_em = 0;  ///< Baseline to the top of a line, as a fraction of the em
-        float descent_per_em = 0; ///< Baseline to the bottom of a line, as a fraction of the em
-        float cap_per_em = 0;     ///< Height of a capital H, as a fraction of the em; the ascent without one
+        std::vector<u8> data;
+        f32 ascent_per_em = 0;  ///< Baseline to the top of a line, as a fraction of the em
+        f32 descent_per_em = 0; ///< Baseline to the bottom of a line, as a fraction of the em
+        f32 cap_per_em = 0;     ///< Height of a capital H, as a fraction of the em; the ascent without one
     };
 
-    [[nodiscard]] std::expected<TrueTypeFile, std::string> read_truetype(std::vector<std::uint8_t> data);
+    [[nodiscard]] std::expected<TrueTypeFile, std::string> read_truetype(std::vector<u8> data);
     [[nodiscard]] std::expected<TrueTypeFile, std::string> load_truetype(const std::filesystem::path& path);
 
     /// Inclusive range of UTF-16 code units.
@@ -45,21 +46,21 @@ namespace rct3::ui
         char16_t code = 0;
         Rect box; ///< Relative to the pen on the baseline, y down, whole pixels
         Rect uv;  ///< In its page, top row first
-        std::uint32_t page = 0;
-        float advance = 0; ///< Whole pixels
+        u32 page = 0;
+        f32 advance = 0; ///< Whole pixels
     };
 
     struct BakedFont
     {
-        float line_height = 0;
-        float descent = 0;
+        f32 line_height = 0;
+        f32 descent = 0;
         std::vector<BakedGlyph> glyphs;
         std::vector<ovl::texture::RgbaImage> pages; ///< White, coverage in alpha, rows from the top
     };
 
     struct BakeOptions
     {
-        std::uint32_t page_side = 1024; ///< Pages are square
+        u32 page_side = 1024; ///< Pages are square
         /// Pixels are either covered or not (half coverage or more), with no smoothing. For pixel fonts drawn
         /// at sizes their grid does not divide: blocky but sharp instead of blurred.
         bool hard_edges = false;
@@ -67,7 +68,7 @@ namespace rct3::ui
 
     /// Renders the codes in `ranges` the font has, with the em `em_pixels` tall. Codes the font lacks are
     /// left out.
-    [[nodiscard]] std::expected<BakedFont, std::string> bake_truetype(const TrueTypeFile& file, float em_pixels, std::span<const CodeRange> ranges, const BakeOptions& options = { });
+    [[nodiscard]] std::expected<BakedFont, std::string> bake_truetype(const TrueTypeFile& file, f32 em_pixels, std::span<const CodeRange> ranges, const BakeOptions& options = { });
 
     /// The baked font on its uploaded pages, in the order of BakedFont::pages.
     [[nodiscard]] font::Font font_from_baked(const BakedFont& baked, std::span<const font::Font::Page> pages);

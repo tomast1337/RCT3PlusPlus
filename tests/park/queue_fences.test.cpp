@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/queue_fences.hpp"
 
+#include "core/types.hpp"
 #include "park/object/placement.hpp"
 #include "park/path/furniture.hpp"
 
@@ -23,7 +24,7 @@ namespace
         return g;
     }
 
-    save::model::PathTile queue(std::uint8_t start, std::uint8_t end, std::uint8_t slope)
+    save::model::PathTile queue(u8 start, u8 end, u8 slope)
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Queue;
@@ -50,8 +51,8 @@ TEST_CASE("an edge piece is turned to face out of its side")
     {
         const glm::vec2 x = object::turned_x(edge_turns(side));
         const auto [dc, dr] = side.step();
-        CHECK(x.x == doctest::Approx(static_cast<float>(dc)));
-        CHECK(x.y == doctest::Approx(static_cast<float>(dr)));
+        CHECK(x.x == doctest::Approx(static_cast<f32>(dc)));
+        CHECK(x.y == doctest::Approx(static_cast<f32>(dr)));
         CHECK(edge_turns(side) == object::turn_facing(side)); // An edge piece counts its turns as path furniture does
     }
 }
@@ -68,7 +69,7 @@ TEST_CASE("a ground queue is fenced on every side but its two open ones, standin
         CHECK(f.symbol == "Rail");
         CHECK(f.fixture);
         CHECK(f.overlay == "Fences/Rail");
-        CHECK(f.colours == std::array<std::int32_t, 3> { 3, 2, 1 });
+        CHECK(f.colours == std::array<i32, 3> { 3, 2, 1 });
         CHECK(f.col == 4);
         CHECK(f.row == 7);
         CHECK_FALSE(f.base_height.has_value());

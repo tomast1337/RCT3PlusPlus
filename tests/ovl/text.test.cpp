@@ -2,6 +2,7 @@
 #include "ovl/text.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 #include "strings/unicode.hpp"
 
 #include <doctest/doctest.h>
@@ -20,13 +21,13 @@ namespace
     {
         std::vector<std::byte> out;
         for (char16_t c : text)
-            append_u16(out, static_cast<std::uint16_t>(c));
+            append_u16(out, static_cast<u16>(c));
         if (terminate)
             append_u16(out, 0);
         return out;
     }
 
-    std::vector<std::byte> row(std::uint32_t name, std::uint32_t data, std::uint16_t is_pointer)
+    std::vector<std::byte> row(u32 name, u32 data, u16 is_pointer)
     {
         std::vector<std::byte> out;
         append_u32(out, name);

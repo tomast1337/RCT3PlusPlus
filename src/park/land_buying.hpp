@@ -5,6 +5,7 @@
 // brush that reaches more than the park can pay for buys what it can and leaves the rest on sale.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/world.hpp"
 #include "units/units.hpp"
 
@@ -17,7 +18,7 @@ namespace rct3::park
 {
 
     /// What is bought of a tile on sale.
-    enum class LandBuy : std::uint8_t
+    enum class LandBuy : u8
     {
         Land,   ///< The land itself, sold outright
         Rights, ///< Only the right to build on it
@@ -26,7 +27,7 @@ namespace rct3::park
     struct LandBought
     {
         units::Money spent { };
-        std::size_t tiles = 0;
+        usize tiles = 0;
         bool short_of_cash = false; ///< A tile on sale was left for want of money
     };
 

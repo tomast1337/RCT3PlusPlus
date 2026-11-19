@@ -19,6 +19,7 @@
 // goes after it, shuts it in a crate where it stands and takes it back to their own enclosure, where the crate
 // opens again. Guests keep to the paths, where a loose animal does not scare them off. All the rates are our own.
 
+#include "core/types.hpp"
 #include "save/model/people.hpp"
 #include "simulation/components.hpp"
 #include "simulation/park/messages.hpp"
@@ -39,20 +40,20 @@ namespace rct3::simulation
     /// What the animals and their keepers walk over.
     struct AnimalGround
     {
-        std::function<float(glm::vec2)> height;                          ///< Of the ground, at a point across the park
-        std::function<std::optional<std::int32_t>(glm::vec2)> enclosure; ///< The enclosure a point is in
+        std::function<f32(glm::vec2)> height;                   ///< Of the ground, at a point across the park
+        std::function<std::optional<i32>(glm::vec2)> enclosure; ///< The enclosure a point is in
         /// A point picked at random in enclosure `which`, or with none outside every enclosure; nothing when it
         /// has no ground.
-        std::function<std::optional<glm::vec2>(std::optional<std::int32_t> which, random::RandomState&)> somewhere;
+        std::function<std::optional<glm::vec2>(std::optional<i32> which, random::RandomState&)> somewhere;
     };
 
     /// An animal house, standing in an enclosure.
     struct AnimalHouse
     {
-        std::uint64_t object = 0;                  ///< The house as placed
-        std::uint64_t hut = 0;                     ///< Its keeper's hut as placed; 0 for none
-        std::optional<std::int32_t> enclosure { }; ///< The one it stands in
-        glm::vec3 troughs { 0.0f };                ///< Where its animals eat, drink and sleep, beside it
+        u64 object = 0;                   ///< The house as placed
+        u64 hut = 0;                      ///< Its keeper's hut as placed; 0 for none
+        std::optional<i32> enclosure { }; ///< The one it stands in
+        glm::vec3 troughs { 0.0f };       ///< Where its animals eat, drink and sleep, beside it
         /// The ground the house stands on, across the park from its least corner to its greatest; nobody
         /// strolls to a spot on it.
         glm::vec2 low { 0.0f }, high { 0.0f };
@@ -61,7 +62,7 @@ namespace rct3::simulation
         units::Seconds since_fed { }; ///< Since its keeper last filled the troughs
     };
 
-    enum class KeeperJob : std::uint8_t
+    enum class KeeperJob : u8
     {
         Idle,      ///< Stands about
         Strolling, ///< On the way to `goal`, about the enclosure
@@ -80,7 +81,7 @@ namespace rct3::simulation
         units::Seconds busy { };          ///< Left at the job in hand where it is done, or standing about
     };
 
-    enum class AnimalJob : std::uint8_t
+    enum class AnimalJob : u8
     {
         Crated,    ///< Still in the crate it came in
         Idle,      ///< Stands about
@@ -97,7 +98,7 @@ namespace rct3::simulation
         std::string name { };    ///< As the park's messages call it
         bool adult = true;
         bool male = false;
-        std::optional<std::int32_t> enclosure { }; ///< The one it lives in
+        std::optional<i32> enclosure { }; ///< The one it lives in
         AnimalJob job = AnimalJob::Crated;
         glm::vec3 goal { 0.0f };
         units::Seconds busy { }; ///< Left in its crate, at what it is doing, or standing about
@@ -106,15 +107,15 @@ namespace rct3::simulation
         units::Share tiredness { };
         units::Share loneliness { };
         units::Share health { 1 };
-        units::Seconds dung_in { };     ///< Till it next leaves dung
-        std::int32_t empty_troughs = 0; ///< Times in a row it went hungry to its house and found the food trough empty
-        bool escaped = false;           ///< Out of every enclosure
+        units::Seconds dung_in { }; ///< Till it next leaves dung
+        i32 empty_troughs = 0;      ///< Times in a row it went hungry to its house and found the food trough empty
+        bool escaped = false;       ///< Out of every enclosure
     };
 
     /// Dung an animal left in its enclosure.
     struct Dung
     {
-        std::optional<std::int32_t> enclosure { };
+        std::optional<i32> enclosure { };
     };
 
     /// Values for how animals and keepers live.
@@ -133,17 +134,17 @@ namespace rct3::simulation
         units::Seconds sleeping { 20 };   ///< Beside them
         units::Share meal { 0.1f };       ///< Of a trough an animal empties as it eats or drinks
         units::Seconds dung { 120 };      ///< Between one dung and the next
-        std::int32_t dung_limit = 3;      ///< Dung in an enclosure for each animal in it, beyond which it wears their health down
+        i32 dung_limit = 3;               ///< Dung in an enclosure for each animal in it, beyond which it wears their health down
         units::Seconds sickening { 300 }; ///< From well to dead, starving, parched or among too much dung
         units::Seconds mending { 600 };   ///< From dying to well again, while nothing ails it
         units::Seconds feeding { 300 };   ///< Between the keeper's rounds filling the troughs
         units::Share refill { 0.3f };     ///< Either trough this low calls the keeper at once
         units::Seconds filling { 5 };     ///< The keeper at the troughs
         units::Seconds clearing { 3 };    ///< The keeper at a dung
-        std::int32_t stroll_tries = 8;    ///< Spots picked for a stroll before giving up till later
+        i32 stroll_tries = 8;             ///< Spots picked for a stroll before giving up till later
         units::Distance roam { 4 };       ///< Farthest an escaped animal wanders at a time
         units::Seconds catching { 4 };    ///< The keeper shutting an escaped animal in its crate
-        std::int32_t empty_tries = 3;     ///< Times in a row an animal finds its food trough empty before the inspector tells
+        i32 empty_tries = 3;              ///< Times in a row an animal finds its food trough empty before the inspector tells
     };
 
     inline constexpr AnimalRates kAnimalRates { };
@@ -167,7 +168,7 @@ namespace rct3::simulation
     struct KeeperPost
     {
         entt::entity keeper = entt::null;
-        std::int32_t enclosure { };
+        i32 enclosure { };
     };
 
     /// A park's own animal houses, and its keepers: each keeper, with the enclosure the park gave them, keeps
@@ -176,7 +177,7 @@ namespace rct3::simulation
     void import_animal_houses(SimWorld& world, std::span<const AnimalHouse> houses, std::span<const KeeperPost> keepers);
 
     /// The zoo animals a park was saved with, where they stood, each in the enclosure `enclosure` says its spot is in.
-    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::optional<std::int32_t>(glm::vec2)>& enclosure);
+    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::optional<i32>(glm::vec2)>& enclosure);
 
     /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape, and leaving what the
     /// park's inspector finds among the Findings.

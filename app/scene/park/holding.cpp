@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/holding.hpp"
 
+#include "core/types.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/camera.hpp"
 #include "park/object/pick.hpp"
@@ -20,7 +21,7 @@
 namespace rct3::scene::park
 {
 
-    bool pick_up_person(ParkScene& scene, std::size_t shown)
+    bool pick_up_person(ParkScene& scene, usize shown)
     {
         if (!scene.simulate || shown >= scene.shown_people.size())
             return false;
@@ -63,12 +64,12 @@ namespace rct3::scene::park
             if (const auto under = rct3::park::path::path_under(ray, scene.footpaths.paths, scene.grid); under && std::abs(ray.direction.y) > 1e-6f)
             {
                 const save::model::PathTile& p = scene.footpaths.paths[under->path_index];
-                float nearest = std::numeric_limits<float>::max();
+                f32 nearest = std::numeric_limits<f32>::max();
                 for (const simulation::PathNode& n : scene.sim.paths.nodes())
                 {
-                    const float t = (n.height - ray.origin.y) / ray.direction.y;
+                    const f32 t = (n.height - ray.origin.y) / ray.direction.y;
                     const glm::vec3 hit = ray.origin + ray.direction * t;
-                    if (n.removed || n.tile.col != p.col || n.tile.row != p.row || t <= 0 || t >= nearest || std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x) != static_cast<float>(p.col) || std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z) != static_cast<float>(p.row))
+                    if (n.removed || n.tile.col != p.col || n.tile.row != p.row || t <= 0 || t >= nearest || std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x) != static_cast<f32>(p.col) || std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z) != static_cast<f32>(p.row))
                         continue;
                     nearest = t;
                     spot = hit;
@@ -78,13 +79,13 @@ namespace rct3::scene::park
             // A guest over a pool complex's water, paving or spa pool, nearer than any path: let go, they swim there.
             if (r.all_of<simulation::Visitor>(held.who) && std::abs(ray.direction.y) > 1e-6f)
             {
-                const float half = scene.sim.paths.tile_size / 2;
-                float nearest = spot ? glm::distance(ray.origin, *spot) / glm::length(ray.direction) : std::numeric_limits<float>::max();
+                const f32 half = scene.sim.paths.tile_size / 2;
+                f32 nearest = spot ? glm::distance(ray.origin, *spot) / glm::length(ray.direction) : std::numeric_limits<f32>::max();
                 for (const auto [e, pool] : r.view<const simulation::SwimPool>().each())
                     for (const auto* squares : { &pool.water, &pool.paved, &pool.spa })
                         for (const glm::vec3& square : *squares)
                         {
-                            const float t = (square.y - ray.origin.y) / ray.direction.y;
+                            const f32 t = (square.y - ray.origin.y) / ray.direction.y;
                             const glm::vec3 hit = ray.origin + ray.direction * t;
                             if (t <= 0 || t >= nearest || std::abs(hit.x - square.x) > half || std::abs(hit.z - square.z) > half || !simulation::pool_door_at(scene.sim, hit))
                                 continue;
@@ -96,8 +97,8 @@ namespace rct3::scene::park
             if (!spot && ground)
             {
                 spot = ray.origin + ray.direction * *ground;
-                const std::int32_t col = static_cast<std::int32_t>(std::floor((spot->x - scene.grid.origin_x) / scene.grid.tile_size_x));
-                const std::int32_t row = static_cast<std::int32_t>(std::floor((spot->z - scene.grid.origin_z) / scene.grid.tile_size_z));
+                const i32 col = static_cast<i32>(std::floor((spot->x - scene.grid.origin_x) / scene.grid.tile_size_x));
+                const i32 row = static_cast<i32>(std::floor((spot->z - scene.grid.origin_z) / scene.grid.tile_size_z));
                 // shortcut: the park's lakes never take them, as nobody treads water there yet; let them in once they do.
                 const auto water = rct3::park::water::water_hit(ray, scene.water.surface);
                 allowed = scene.grid.contains(col, row) && rct3::park::owned_outright(scene.grid.at(col, row)) && !(water && *water < *ground + 1e-3f);

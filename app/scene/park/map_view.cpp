@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/map_view.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/special_attraction.hpp"
@@ -37,7 +38,7 @@ namespace rct3::scene::park
         constexpr units::Seconds kPeopleInterval { 0.5f };
         /// The ground the camera sees is cut off this many times its distance from the eye: far enough to
         /// show where it looks, near enough that the horizon does not cover the map.
-        constexpr float kFarthestSeen = 3.0f;
+        constexpr f32 kFarthestSeen = 3.0f;
 
         /// A legend row: the layer, the game's text for it where the game has one, else our own words.
         struct LayerText
@@ -101,18 +102,18 @@ namespace rct3::scene::park
             {
             }
 
-            std::optional<std::uint32_t> of(const save::model::AttractionCommon& a, bool stall)
+            std::optional<u32> of(const save::model::AttractionCommon& a, bool stall)
             {
                 const std::string key = std::format("{}|{}", a.overlay_path, a.symbol);
                 if (const auto known = types_.find(key); known != types_.end())
                     return known->second;
-                const std::optional<std::uint32_t> type = read(a, stall);
+                const std::optional<u32> type = read(a, stall);
                 types_.emplace(key, type);
                 return type;
             }
 
         private:
-            std::optional<std::uint32_t> read(const save::model::AttractionCommon& a, bool stall)
+            std::optional<u32> read(const save::model::AttractionCommon& a, bool stall)
             {
                 const ovl::Overlay* overlay = open(a.overlay_path);
                 if (overlay == nullptr)
@@ -157,15 +158,15 @@ namespace rct3::scene::park
 
             const config::game::GameInstall& install_;
             std::map<std::string, std::unique_ptr<ovl::Overlay>, std::less<>> overlays_;
-            std::map<std::string, std::optional<std::uint32_t>, std::less<>> types_;
+            std::map<std::string, std::optional<u32>, std::less<>> types_;
         };
 
         /// The ground the camera sees, as map points round it: where the lines through the view's corners
         /// meet the level of the point it looks at, cut off towards the horizon.
-        std::vector<ui::Point> seen_ground(const rct3::park::ParkCamera& camera, float aspect, const rct3::park::MapFrame& frame)
+        std::vector<ui::Point> seen_ground(const rct3::park::ParkCamera& camera, f32 aspect, const rct3::park::MapFrame& frame)
         {
             const glm::vec3 eye = rct3::park::eye(camera);
-            const float farthest = kFarthestSeen * camera.distance;
+            const f32 farthest = kFarthestSeen * camera.distance;
             std::vector<ui::Point> corners;
             for (const glm::vec2 at : { glm::vec2 { -1, -1 }, glm::vec2 { 1, -1 }, glm::vec2 { 1, 1 }, glm::vec2 { -1, 1 } })
             {
@@ -174,10 +175,10 @@ namespace rct3::scene::park
                 const glm::vec2 from { eye.x, eye.z };
                 if (ray.direction.y < -1e-4f)
                 {
-                    const float t = (camera.target.y - ray.origin.y) / ray.direction.y;
+                    const f32 t = (camera.target.y - ray.origin.y) / ray.direction.y;
                     ground = glm::vec2 { ray.origin.x + ray.direction.x * t, ray.origin.z + ray.direction.z * t } - from;
                 }
-                const float length = glm::length(ground);
+                const f32 length = glm::length(ground);
                 if (length < 1e-4f)
                     continue;
                 if (length > farthest || ray.direction.y >= -1e-4f)
@@ -192,21 +193,21 @@ namespace rct3::scene::park
         std::vector<std::optional<rct3::park::MapRgba>> surface_colours(const rct3::park::ground::GroundImages& images)
         {
             std::vector<std::optional<rct3::park::MapRgba>> colours;
-            for (std::size_t index = 0; index <= std::numeric_limits<std::uint8_t>::max(); ++index)
+            for (usize index = 0; index <= std::numeric_limits<u8>::max(); ++index)
             {
-                const auto image = images.find(rct3::park::ground::ground_key(rct3::park::GroundPaint::Surface, static_cast<std::uint8_t>(index)));
+                const auto image = images.find(rct3::park::ground::ground_key(rct3::park::GroundPaint::Surface, static_cast<u8>(index)));
                 if (image == images.end() || image->second.pixels.empty())
                 {
                     colours.emplace_back();
                     continue;
                 }
-                std::array<double, 3> sum { };
-                double weight = 0;
-                const std::vector<std::uint8_t>& px = image->second.pixels;
-                for (std::size_t i = 0; i + 3 < px.size(); i += 4)
+                std::array<f64, 3> sum { };
+                f64 weight = 0;
+                const std::vector<u8>& px = image->second.pixels;
+                for (usize i = 0; i + 3 < px.size(); i += 4)
                 {
-                    const double a = px[i + 3] / 255.0;
-                    for (std::size_t c = 0; c < 3; ++c)
+                    const f64 a = px[i + 3] / 255.0;
+                    for (usize c = 0; c < 3; ++c)
                         sum.at(c) += px[i + c] * a;
                     weight += a;
                 }
@@ -215,7 +216,7 @@ namespace rct3::scene::park
                     colours.emplace_back();
                     continue;
                 }
-                const auto mean = [&](std::size_t c) { return static_cast<std::uint8_t>(std::lround(sum.at(c) / weight)); };
+                const auto mean = [&](usize c) { return static_cast<u8>(std::lround(sum.at(c) / weight)); };
                 colours.push_back(rct3::park::MapRgba { mean(0), mean(1), mean(2), 255 });
             }
             return colours;
@@ -229,7 +230,7 @@ namespace rct3::scene::park
             if (picture.rgba.empty())
                 return;
             const auto bytes = std::as_bytes(std::span(picture.rgba));
-            auto made = device.create_texture({ static_cast<std::uint32_t>(picture.width), static_cast<std::uint32_t>(picture.height), render::TextureFormat::Rgba8, bytes, label });
+            auto made = device.create_texture({ static_cast<u32>(picture.width), static_cast<u32>(picture.height), render::TextureFormat::Rgba8, bytes, label });
             if (made)
                 texture = *made;
             else
@@ -262,12 +263,12 @@ namespace rct3::scene::park
         };
         map.features.shapes = rct3::park::map_shapes(objects, models, grid, fitted, layer_of);
         map.features.surfaces = surface_colours(images);
-        std::array<std::size_t, rct3::park::kMapLayerCount> counts { };
+        std::array<usize, rct3::park::kMapLayerCount> counts { };
         for (const rct3::park::MapShape& shape : map.features.shapes)
-            ++counts.at(static_cast<std::size_t>(shape.layer));
+            ++counts.at(static_cast<usize>(shape.layer));
         logging::logger("map").info(
-            "{} path tiles; shapes: {} scenery, {} rides, {} food, {} drinks, {} souvenirs, {} information, {} first aid, {} cash, {} toilets", map.features.paths.size(), counts[static_cast<std::size_t>(rct3::park::MapLayer::Scenery)], counts[static_cast<std::size_t>(rct3::park::MapLayer::Rides)], counts[static_cast<std::size_t>(rct3::park::MapLayer::Food)], counts[static_cast<std::size_t>(rct3::park::MapLayer::Drinks)], counts[static_cast<std::size_t>(rct3::park::MapLayer::Souvenirs)],
-            counts[static_cast<std::size_t>(rct3::park::MapLayer::Information)], counts[static_cast<std::size_t>(rct3::park::MapLayer::FirstAid)], counts[static_cast<std::size_t>(rct3::park::MapLayer::CashMachines)], counts[static_cast<std::size_t>(rct3::park::MapLayer::Toilets)]);
+            "{} path tiles; shapes: {} scenery, {} rides, {} food, {} drinks, {} souvenirs, {} information, {} first aid, {} cash, {} toilets", map.features.paths.size(), counts[static_cast<usize>(rct3::park::MapLayer::Scenery)], counts[static_cast<usize>(rct3::park::MapLayer::Rides)], counts[static_cast<usize>(rct3::park::MapLayer::Food)], counts[static_cast<usize>(rct3::park::MapLayer::Drinks)], counts[static_cast<usize>(rct3::park::MapLayer::Souvenirs)],
+            counts[static_cast<usize>(rct3::park::MapLayer::Information)], counts[static_cast<usize>(rct3::park::MapLayer::FirstAid)], counts[static_cast<usize>(rct3::park::MapLayer::CashMachines)], counts[static_cast<usize>(rct3::park::MapLayer::Toilets)]);
         return map;
     }
 
@@ -290,7 +291,7 @@ namespace rct3::scene::park
         map.since_people.reset();
     }
 
-    std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::model::TerrainGrid& grid, const rct3::park::ParkCamera& camera, float aspect, const std::function<rct3::park::MapPeople()>& people, units::Seconds elapsed)
+    std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::model::TerrainGrid& grid, const rct3::park::ParkCamera& camera, f32 aspect, const std::function<rct3::park::MapPeople()>& people, units::Seconds elapsed)
     {
         auto panel = desktop.root().find_as<ui::screens::map::MapPanel>(kMapName);
         if (!panel || panel->closing() || grid.empty())
@@ -298,8 +299,8 @@ namespace rct3::scene::park
 
         if (panel->take_change())
         {
-            for (std::size_t i = 0; i < kLayerTexts.size(); ++i)
-                map.layers.set(static_cast<std::size_t>(kLayerTexts[i].layer), panel->shown(i));
+            for (usize i = 0; i < kLayerTexts.size(); ++i)
+                map.layers.set(static_cast<usize>(kLayerTexts[i].layer), panel->shown(i));
             map.stale = true;
             map.since_people.reset();
         }

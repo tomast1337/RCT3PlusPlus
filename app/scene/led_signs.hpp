@@ -14,6 +14,7 @@
 // the text scrolls. It is drawn unlit, as the game's data asks for the board.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/led_signs.hpp"
 #include "park/object/mesh.hpp"
 #include "render/device.hpp"
@@ -43,15 +44,15 @@ namespace rct3::scene
     struct LedSign
     {
         std::optional<save::model::RideIndex> ride; ///< For a queue sign
-        std::optional<std::size_t> placed;          ///< Of the scene's signs, for a sign placed as scenery
+        std::optional<usize> placed;                ///< Of the scene's signs, for a sign placed as scenery
         save::model::PlacedObject object;
         rct3::park::object::ObjectMesh mesh;                    ///< Its board's batch painted with `board`
         std::string board;                                      ///< Key of the board's picture in LedSigns::board_textures
-        std::uint32_t width = 0;                                ///< Of the board's picture, whole lamps
+        u32 width = 0;                                          ///< Of the board's picture, whole lamps
         rct3::park::LampColour colour = rct3::park::kSignWhite; ///< Of its lamps
         std::u16string shown;
         ovl::texture::RgbaImage loop;
-        std::uint32_t shift = UINT32_MAX; ///< Of the loop the board shows; UINT32_MAX before it shows any
+        u32 shift = UINT32_MAX; ///< Of the loop the board shows; UINT32_MAX before it shows any
     };
 
     struct LedSigns
@@ -68,7 +69,7 @@ namespace rct3::scene
         /// The counts of paths, rides and objects the signs were put up for.
         /// shortcut: a path raised or changed in place keeps the counts, so its sign stays; upgrade to a change
         /// counter on the paths if signs float.
-        std::array<std::size_t, 3> counted { };
+        std::array<usize, 3> counted { };
     };
 
     /// Puts the signs up again from the paths and rides as they are now, when they changed; sets each board's

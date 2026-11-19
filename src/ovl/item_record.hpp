@@ -4,6 +4,7 @@
 // checked access to the record and to the references stored in it.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <algorithm>
@@ -22,7 +23,7 @@ namespace rct3::ovl
     /// A reference field found inside an item: the field at `offset` names the item `name` of type `tag`.
     struct ItemReference
     {
-        std::uint32_t offset = 0; ///< Byte offset of the field from the start of the item
+        u32 offset = 0; ///< Byte offset of the field from the start of the item
         std::string_view tag;
         std::string_view name;
     };
@@ -52,7 +53,7 @@ namespace rct3::ovl
         }
 
         /// Name of the item the field at `location` refers to, when it is of type `tag`. Empty otherwise.
-        [[nodiscard]] std::string_view name_at(std::uint32_t location, std::string_view tag) const noexcept
+        [[nodiscard]] std::string_view name_at(u32 location, std::string_view tag) const noexcept
         {
             const auto it = std::ranges::lower_bound(rows_, location, { }, &Row::location);
             if (it == rows_.end() || it->location != location || it->name.tag != tag)
@@ -61,7 +62,7 @@ namespace rct3::ovl
         }
 
         /// References whose field lies in `[address, address + size)`, with offsets relative to `address`.
-        [[nodiscard]] std::vector<ItemReference> within(std::uint32_t address, std::uint32_t size) const
+        [[nodiscard]] std::vector<ItemReference> within(u32 address, u32 size) const
         {
             std::vector<ItemReference> out;
             auto it = std::ranges::lower_bound(rows_, address, { }, &Row::location);
@@ -75,7 +76,7 @@ namespace rct3::ovl
     private:
         struct Row
         {
-            std::uint32_t location;
+            u32 location;
             SymbolName name;
         };
         std::vector<Row> rows_;
@@ -87,7 +88,7 @@ namespace rct3::ovl
     {
     public:
         /// Opens `size` bytes at `address`. Nothing when they do not lie inside one block.
-        [[nodiscard]] static std::optional<ItemRecord> open(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, std::size_t size)
+        [[nodiscard]] static std::optional<ItemRecord> open(const AddressSpace& space, const ReferenceIndex& refs, u32 address, usize size)
         {
             const auto bytes = space.bytes_at(address, size);
             if (!bytes)
@@ -97,9 +98,9 @@ namespace rct3::ovl
 
         /// Opens as many bytes as lie inside the block, at most `size` and at least `minimum`. For items whose
         /// last fields are missing from some files.
-        [[nodiscard]] static std::optional<ItemRecord> open_up_to(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, std::size_t size, std::size_t minimum)
+        [[nodiscard]] static std::optional<ItemRecord> open_up_to(const AddressSpace& space, const ReferenceIndex& refs, u32 address, usize size, usize minimum)
         {
-            for (std::size_t n = size; n >= minimum; n -= 4)
+            for (usize n = size; n >= minimum; n -= 4)
             {
                 if (auto record = open(space, refs, address, n))
                     return record;
@@ -114,47 +115,47 @@ namespace rct3::ovl
             return bytes_;
         }
 
-        [[nodiscard]] std::uint32_t read_u32(std::size_t offset) const noexcept
+        [[nodiscard]] u32 read_u32(usize offset) const noexcept
         {
-            std::uint32_t v = 0;
+            u32 v = 0;
             if (offset + 4 <= bytes_.size())
                 std::memcpy(&v, bytes_.data() + offset, sizeof v);
             return v;
         }
-        [[nodiscard]] std::int32_t read_i32(std::size_t offset) const noexcept
+        [[nodiscard]] i32 read_i32(usize offset) const noexcept
         {
-            return static_cast<std::int32_t>(read_u32(offset));
+            return static_cast<i32>(read_u32(offset));
         }
-        [[nodiscard]] float real(std::size_t offset) const noexcept
+        [[nodiscard]] f32 real(usize offset) const noexcept
         {
-            return std::bit_cast<float>(read_u32(offset));
+            return std::bit_cast<f32>(read_u32(offset));
         }
 
         /// The string the pointer field at `offset` points at. Empty for a null or bad pointer.
-        [[nodiscard]] std::string_view text(std::size_t offset) const noexcept
+        [[nodiscard]] std::string_view text(usize offset) const noexcept
         {
-            const std::uint32_t pointer = read_u32(offset);
+            const u32 pointer = read_u32(offset);
             if (pointer == 0)
                 return { };
             return space_->cstring_at(pointer).value_or(std::string_view { });
         }
 
         /// Name of the item the reference field at `offset` holds, when it is of type `tag`.
-        [[nodiscard]] std::string_view ref(std::size_t offset, std::string_view tag) const noexcept
+        [[nodiscard]] std::string_view ref(usize offset, std::string_view tag) const noexcept
         {
             if (offset + 4 > bytes_.size())
                 return { };
-            return refs_->name_at(address_ + static_cast<std::uint32_t>(offset), tag);
+            return refs_->name_at(address_ + static_cast<u32>(offset), tag);
         }
 
         /// Every reference stored in the first `size` bytes.
-        [[nodiscard]] std::vector<ItemReference> references(std::uint32_t size) const
+        [[nodiscard]] std::vector<ItemReference> references(u32 size) const
         {
-            return refs_->within(address_, std::min<std::uint32_t>(size, static_cast<std::uint32_t>(bytes_.size())));
+            return refs_->within(address_, std::min<u32>(size, static_cast<u32>(bytes_.size())));
         }
 
     private:
-        ItemRecord(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address, std::span<const std::byte> bytes)
+        ItemRecord(const AddressSpace& space, const ReferenceIndex& refs, u32 address, std::span<const std::byte> bytes)
             : space_(&space)
             , refs_(&refs)
             , address_(address)
@@ -164,7 +165,7 @@ namespace rct3::ovl
 
         const AddressSpace* space_;
         const ReferenceIndex* refs_;
-        std::uint32_t address_;
+        u32 address_;
         std::span<const std::byte> bytes_;
     };
 

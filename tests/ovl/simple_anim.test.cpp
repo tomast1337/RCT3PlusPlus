@@ -2,6 +2,7 @@
 #include "ovl/simple_anim.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -16,19 +17,19 @@ namespace
 {
 
     // Name block: "A:san" at 0, padded to 16. The structure block follows at address 16.
-    constexpr std::uint32_t kBase = 16;
-    constexpr std::uint32_t kTimes = 16;   // 3 keys * 4
-    constexpr std::uint32_t kSamples = 28; // 3 keys * 2 channels * 24
+    constexpr u32 kBase = 16;
+    constexpr u32 kTimes = 16;   // 3 keys * 4
+    constexpr u32 kSamples = 28; // 3 keys * 2 channels * 24
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    void real(std::vector<std::byte>& out, float v)
+    void real(std::vector<std::byte>& out, f32 v)
     {
-        append_u32(out, std::bit_cast<std::uint32_t>(v));
+        append_u32(out, std::bit_cast<u32>(v));
     }
 
     std::vector<std::byte> names()
@@ -48,17 +49,17 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> structure(std::uint32_t keys = 3, std::uint32_t channels = 2)
+    std::vector<std::byte> structure(u32 keys = 3, u32 channels = 2)
     {
         std::vector<std::byte> out;
         words(out, { keys, channels, kBase + kTimes, kBase + kSamples });
-        for (float t : { 0.5f, 1.0f, 1.5f })
+        for (f32 t : { 0.5f, 1.0f, 1.5f })
             real(out, t);
-        for (std::uint32_t i = 0; i < 6; ++i)
+        for (u32 i = 0; i < 6; ++i)
         {
-            for (float v : { float(i), float(i) + 0.5f, -float(i) })
+            for (f32 v : { f32(i), f32(i) + 0.5f, -f32(i) })
                 real(out, v);
-            for (std::uint16_t p : { std::uint16_t(i), std::uint16_t(0x7FFF), std::uint16_t(0x8001), std::uint16_t(0), std::uint16_t(0), std::uint16_t(0) })
+            for (u16 p : { u16(i), u16(0x7FFF), u16(0x8001), u16(0), u16(0), u16(0) })
             {
                 append_u16(out, p);
             }

@@ -4,6 +4,7 @@
 // names the pieces, followed by one scenery item structure per piece, stored back to back.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/scenery_item.hpp"
 
@@ -22,7 +23,7 @@ namespace rct3::ovl
     {
         /// Top byte 0 for the base layout and 1 for the longer one. The low byte is 1 or 3 (unconfirmed
         /// meaning).
-        std::uint32_t header_word = 0;
+        u32 header_word = 0;
         std::string_view name;      ///< The type's own name as stored in the structure
         std::string_view name_text; ///< "txt" item
         std::string_view icon;      ///< "gsi" item
@@ -73,10 +74,10 @@ namespace rct3::ovl
         /// a spa pool's, a ramp's and a high dive's), plus 7 per unit of depth; 8 and 9 their refund; 10 a
         /// square of pool path, 11 its refund; 12 a spa pool on top of its paved square, 13 its refund; 14 a
         /// ramp for each step it climbs, 15 its refund; 16 a high dive for each step, 17 its refund.
-        std::array<std::int32_t, 18> prices { };
-        std::array<float, 4> unknown_floats { }; ///< 0.1, 0.2, 1.0, 0.9 in the only file seen. Unconfirmed.
-        std::vector<std::string_view> splines;   ///< 36 "spl" items, some repeated
-        std::vector<SceneryItem> items;          ///< 58 seen
+        std::array<i32, 18> prices { };
+        std::array<f32, 4> unknown_floats { }; ///< 0.1, 0.2, 1.0, 0.9 in the only file seen. Unconfirmed.
+        std::vector<std::string_view> splines; ///< 36 "spl" items, some repeated
+        std::vector<SceneryItem> items;        ///< 58 seen
     };
 
     struct PoolTypeEntry
@@ -94,9 +95,9 @@ namespace rct3::ovl
         std::string_view icon;      ///< "gsi" item
         std::array<std::string_view, 9> piece_names;
         /// Four integers that look like two price and refund pairs. Unconfirmed.
-        std::array<std::int32_t, 4> unknown_values { };
+        std::array<i32, 4> unknown_values { };
         std::array<std::string_view, 4> splines; ///< "spl" items
-        std::array<float, 3> unknown_floats { }; ///< Unconfirmed.
+        std::array<f32, 3> unknown_floats { };   ///< Unconfirmed.
         std::vector<SceneryItem> items;          ///< 9 seen
     };
 

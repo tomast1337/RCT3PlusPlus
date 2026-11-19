@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/tabs.hpp"
 
+#include "core/types.hpp"
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
@@ -35,7 +36,7 @@ namespace rct3::ui::widgets
         tab.text_inset = style_.text_inset;
         tab.font = style_.font;
         tab.toggle = true;
-        tab.placement = top_left(static_cast<float>(tabs_.size()) * (style_.min_tab_width + style_.gap), 0, style_.min_tab_width, style_.bar_height);
+        tab.placement = top_left(static_cast<f32>(tabs_.size()) * (style_.min_tab_width + style_.gap), 0, style_.min_tab_width, style_.bar_height);
         tabs_.push_back(&tab);
 
         Widget& page = add<Widget>(std::move(name));
@@ -45,12 +46,12 @@ namespace rct3::ui::widgets
         return page;
     }
 
-    void Tabs::show(std::size_t index)
+    void Tabs::show(usize index)
     {
         if (index >= pages_.size())
             return;
         current_ = index;
-        for (std::size_t i = 0; i < pages_.size(); ++i)
+        for (usize i = 0; i < pages_.size(); ++i)
         {
             pages_[i]->visible = i == current_;
             tabs_[i]->on = i == current_;
@@ -65,15 +66,15 @@ namespace rct3::ui::widgets
         return true;
     }
 
-    void Tabs::turn(std::int32_t by)
+    void Tabs::turn(i32 by)
     {
         if (pages_.empty())
             return;
         const auto n = static_cast<std::ptrdiff_t>(pages_.size());
         const auto next = ((static_cast<std::ptrdiff_t>(current_) + by) % n + n) % n;
-        if (static_cast<std::size_t>(next) != current_)
+        if (static_cast<usize>(next) != current_)
             ++changes_;
-        show(static_cast<std::size_t>(next));
+        show(static_cast<usize>(next));
     }
 
     bool Tabs::on_key(const KeyPress& key)
@@ -88,7 +89,7 @@ namespace rct3::ui::widgets
 
     void Tabs::update(const UpdateContext& context)
     {
-        for (std::size_t i = 0; i < tabs_.size(); ++i)
+        for (usize i = 0; i < tabs_.size(); ++i)
         {
             if (tabs_[i]->take_click() && i != current_)
             {
@@ -98,18 +99,18 @@ namespace rct3::ui::widgets
         }
         for (TabButton* t : tabs_)
         {
-            if (const std::int32_t by = t->take_turn(); by != 0)
+            if (const i32 by = t->take_turn(); by != 0)
                 turn(by);
         }
         show(current_); // Also puts back a click on the current tab, which toggled it off
 
         // Each tab as wide as its label, once there are fonts to measure it with.
         const auto f = context.fonts ? context.fonts->get(style_.font) : std::nullopt;
-        float x = 0;
+        f32 x = 0;
         for (TabButton* t : tabs_)
         {
-            const float text = f ? std::ceil(text_width(*f, t->text)) : 0;
-            const float w = std::max(style_.min_tab_width, text + style_.text_room + style_.text_inset.x0 + style_.text_inset.x1);
+            const f32 text = f ? std::ceil(text_width(*f, t->text)) : 0;
+            const f32 w = std::max(style_.min_tab_width, text + style_.text_room + style_.text_inset.x0 + style_.text_inset.x1);
             t->placement = top_left(x, 0, w, style_.bar_height);
             x += w + style_.gap;
         }

@@ -18,6 +18,7 @@
 // Units are metres and seconds.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "random/generator.hpp"
 #include "save/model/rides.hpp"
@@ -36,7 +37,7 @@
 namespace rct3::simulation
 {
 
-    enum class Stretch : std::uint8_t
+    enum class Stretch : u8
     {
         Plain,
         Chain,
@@ -52,20 +53,20 @@ namespace rct3::simulation
     /// tower, tips it over at the top and lets it go into the track beyond. Distances are along the track.
     struct Lift
     {
-        float entry = 0; ///< Where a train rolls onto the car's track, at the tower's foot
-        float from = 0;  ///< Where the car's own rails up the tower start
-        float to = 0;    ///< And end, at its top, where the train is let go
+        f32 entry = 0; ///< Where a train rolls onto the car's track, at the tower's foot
+        f32 from = 0;  ///< Where the car's own rails up the tower start
+        f32 to = 0;    ///< And end, at its top, where the train is let go
         /// Of the track the car carries. None while the car is not known, and then a chain pulls trains up the
         /// tower instead.
         units::Distance carried { };
         units::Pace up { };   ///< The car climbs at
         units::Pace down { }; ///< And comes back down empty at
         /// How steeply the car's track points down once tipped over at the top: 0 level, 1 straight down.
-        float drop = 1;
+        f32 drop = 1;
     };
 
     /// Where a lift's car is: waiting empty at the bottom, taken by a train, or on its way back down.
-    enum class CarriageState : std::uint8_t
+    enum class CarriageState : u8
     {
         Waiting,
         Taken,
@@ -81,7 +82,7 @@ namespace rct3::simulation
     };
 
     /// How far a train has come on a lift.
-    enum class LiftPhase : std::uint8_t
+    enum class LiftPhase : u8
     {
         Boarding,  ///< Rolling onto the car's track, to a stop near its far end
         Engaging,  ///< Standing a moment before the car sets off
@@ -94,7 +95,7 @@ namespace rct3::simulation
     /// A train on a lift, from the moment its front rolls onto the car's track till its last car has left it.
     struct LiftRide
     {
-        std::size_t lift = 0; ///< Of Coaster::lifts
+        usize lift = 0; ///< Of Coaster::lifts
         LiftPhase phase = LiftPhase::Boarding;
         units::Distance aboard { };     ///< Its front is along the car's track, from where trains board it
         units::Distance was_aboard { }; ///< Where its front was when the last step began, for drawing between steps
@@ -102,7 +103,7 @@ namespace rct3::simulation
     };
 
     /// How a train on a track with two ends runs back and forth through its station.
-    enum class Shuttle : std::uint8_t
+    enum class Shuttle : u8
     {
         None,  ///< The track is a circuit, gone round once
         Back,  ///< Pushed off backwards, through the station and back to it
@@ -117,8 +118,8 @@ namespace rct3::simulation
     {
         units::PerSecond damping { };  ///< How fast its swing dies down
         units::PerSecond centring { }; ///< How fast it is drawn back to the trough's middle
-        float friction = 0;            ///< Of the car on the wall, held back as it swings by this much of the weight pressing it there
-        float pull = 1;                ///< Of a turn's pull, the share that swings it up the wall
+        f32 friction = 0;              ///< Of the car on the wall, held back as it swings by this much of the weight pressing it there
+        f32 pull = 1;                  ///< Of a turn's pull, the share that swings it up the wall
         /// From the middle of its swing, on the track's line, down to the car: its shape's pivot height. A body
         /// slide's car's, matching one under way in a saved park, unless the car's shape gives its own.
         units::Distance length { 0.77f };
@@ -133,13 +134,13 @@ namespace rct3::simulation
         glm::vec3 way { };                        ///< The track's way there
         glm::vec3 at { };                         ///< Where it is now
         glm::vec3 velocity { };                   ///< Metres a second
-        float water = 0;                          ///< Height it comes down at: the pool's water, or the ground with no pool under it
+        f32 water = 0;                            ///< Height it comes down at: the pool's water, or the ground with no pool under it
         std::optional<units::Seconds> afloat { }; ///< Since it came down; empty while it flies
         units::Seconds off { };                   ///< Since it left the track
         units::Pace speed { };                    ///< It left the track at, along `way`
         /// Across the ground from `from` it goes at most: where the far wall of the pool it comes down in stops it,
         /// going on only down.
-        units::Distance reach { std::numeric_limits<float>::infinity() };
+        units::Distance reach { std::numeric_limits<f32>::infinity() };
     };
 
     /// After it left the track, a car off a slide's end is gone. Measured: a capture of the original game, where
@@ -150,7 +151,7 @@ namespace rct3::simulation
     /// and sinks in its last second. False once kGone seconds have passed since it left the track and it is gone.
     /// Where it is comes out the same however its time is cut into steps, so a flight can be flown again from its
     /// start to any moment of it.
-    bool fly(Flight& flight, float seconds);
+    bool fly(Flight& flight, f32 seconds);
 
     /// Moves a car drawn at `flight`'s start, as it left the track, to where the flight has it: nose along its
     /// way while it flies, level once afloat.
@@ -159,49 +160,49 @@ namespace rct3::simulation
     /// A push a piece gives each car on a stretch of the track while the train goes at a speed within a range.
     struct Push
     {
-        float from = 0;  ///< Along the track
-        float to = 0;    ///< Along the track
-        float least = 0; ///< Metres a second
-        float most = 0;  ///< Metres a second
-        float force = 0; ///< Newtons on each car, the way the train goes
-        float hold = 0;  ///< As rct3::park::track::PiecePush::hold
+        f32 from = 0;  ///< Along the track
+        f32 to = 0;    ///< Along the track
+        f32 least = 0; ///< Metres a second
+        f32 most = 0;  ///< Metres a second
+        f32 force = 0; ///< Newtons on each car, the way the train goes
+        f32 hold = 0;  ///< As rct3::park::track::PiecePush::hold
     };
 
     struct Coaster
     {
-        std::vector<float> distance;     ///< Along the track to each point, from 0
-        std::vector<float> height;       ///< Of each point
-        std::vector<glm::vec3> points;   ///< Where each point is; may be empty, when only the heights are known
-        std::vector<glm::vec3> ups;      ///< Up for the track at each point, leaning with its bank; empty for straight up
-        std::vector<Stretch> kinds;      ///< Of the stretch from each point to the next
-        std::vector<float> brake_speeds; ///< Of each brake stretch, by its first point; 0 or less elsewhere
+        std::vector<f32> distance;     ///< Along the track to each point, from 0
+        std::vector<f32> height;       ///< Of each point
+        std::vector<glm::vec3> points; ///< Where each point is; may be empty, when only the heights are known
+        std::vector<glm::vec3> ups;    ///< Up for the track at each point, leaning with its bank; empty for straight up
+        std::vector<Stretch> kinds;    ///< Of the stretch from each point to the next
+        std::vector<f32> brake_speeds; ///< Of each brake stretch, by its first point; 0 or less elsewhere
         /// How hard brakes slow a train that is wholly on them, in m/s²: their force over the train's mass. A
         /// train partly on them is slowed as much less as it has fewer cars over them.
-        float brake_pull = 10;
+        f32 brake_pull = 10;
         /// How hard block brakes push a train wholly on them, in m/s², while it is slower than their speed.
-        float boost_pull = 20;
+        f32 boost_pull = 20;
         /// Over water: the share of a piece's flow a car may go before the water holds it back, and the share of the
         /// flow's push it is held back with, as the ride's file gives them.
-        float water_pace = 1;
-        float water_hold = 1;
-        float lift_speed = 2;
-        float station_speed = 2;
-        std::optional<float> fixed_speed;
+        f32 water_pace = 1;
+        f32 water_hold = 1;
+        f32 lift_speed = 2;
+        f32 station_speed = 2;
+        std::optional<f32> fixed_speed;
         /// In a launch mode, the speed the train is pushed up to by the time its last car leaves the platform,
         /// and on along any launch stretches while it is still slower.
-        std::optional<float> launch_speed;
+        std::optional<f32> launch_speed;
         /// Trains keep a block apart: one waits at the end of a station, lift or block brake while the block
         /// beyond holds another.
         bool blocks = false;
-        float train_length = 10;
-        std::int32_t cars = 1; ///< In the train, each as long as the others
-        float start = 0;       ///< Where the train's front waits to set off, at the station's end
+        f32 train_length = 10;
+        i32 cars = 1;  ///< In the train, each as long as the others
+        f32 start = 0; ///< Where the train's front waits to set off, at the station's end
         /// On a circuit with more than one station, how far on from `start` the train stops at each of the others,
         /// nearest first; it waits at each and goes on round
-        std::vector<float> stops { };
+        std::vector<f32> stops { };
         /// Not a circuit: the track has two ends and the train runs back and forth, its speed negative going backwards
         Shuttle shuttle = Shuttle::None;
-        std::int32_t passes = 1; ///< On a shuttle, the times the train comes into the station before it stops there
+        i32 passes = 1; ///< On a shuttle, the times the train comes into the station before it stops there
         /// The track's end joins its start. When it does not, as on one left unfinished, a train going round
         /// runs off its end.
         bool closed = true;
@@ -216,24 +217,24 @@ namespace rct3::simulation
         /// Of a train whose cars have a part swinging on them, how it swings, alike on every car; nothing for every
         /// other train.
         std::optional<SwingingPart> swinging;
-        float swung_speed = 0;                       ///< Its speed when its cars' parts last swung, for how fast it has sped up since
-        std::vector<Swing> swings { };               ///< By car, front first: where its swinging part is
-        std::vector<Spin> spins { };                 ///< By car, front first: where its spinning part is
-        std::vector<bool> covered { };               ///< By point: the stretch from it is a tube, which no car goes out of
-        std::vector<bool> steady { };                ///< By point: on the stretch from it a slide's car swings by its weight alone
-        std::vector<float> drop_offs { };            ///< As rct3::park::track::TrackCourse::drop_offs
-        std::vector<std::array<float, 2>> wades { }; ///< As rct3::park::track::TrackCourse::wades: in them the pool's water carries the car on slowly
-        std::vector<float> piece_starts { };         ///< Along the track to where each of its pieces starts
-        std::vector<std::vector<Push>> pushes { };   ///< By piece, as piece_starts: on plain track, the pushes it gives each car
-        std::vector<bool> water { };                 ///< By piece, as piece_starts: water runs along it
-        std::vector<bool> level { };                 ///< By piece, as piece_starts: its ends are at one height
+        f32 swung_speed = 0;                       ///< Its speed when its cars' parts last swung, for how fast it has sped up since
+        std::vector<Swing> swings { };             ///< By car, front first: where its swinging part is
+        std::vector<Spin> spins { };               ///< By car, front first: where its spinning part is
+        std::vector<bool> covered { };             ///< By point: the stretch from it is a tube, which no car goes out of
+        std::vector<bool> steady { };              ///< By point: on the stretch from it a slide's car swings by its weight alone
+        std::vector<f32> drop_offs { };            ///< As rct3::park::track::TrackCourse::drop_offs
+        std::vector<std::array<f32, 2>> wades { }; ///< As rct3::park::track::TrackCourse::wades: in them the pool's water carries the car on slowly
+        std::vector<f32> piece_starts { };         ///< Along the track to where each of its pieces starts
+        std::vector<std::vector<Push>> pushes { }; ///< By piece, as piece_starts: on plain track, the pushes it gives each car
+        std::vector<bool> water { };               ///< By piece, as piece_starts: water runs along it
+        std::vector<bool> level { };               ///< By piece, as piece_starts: its ends are at one height
         /// Of a ride whose water flows all along it, on every water piece: pushes each car on up to its speed, and on
         /// level water holds back a faster one. Nothing on other rides.
         struct Flow
         {
-            float speed = 0;
-            float force = 0;    ///< Newtons on each car
-            float hold = 0;     ///< Newtons on each car
+            f32 speed = 0;
+            f32 force = 0;      ///< Newtons on each car
+            f32 hold = 0;       ///< Newtons on each car
             bool alone = false; ///< In place of its pieces' own pushes
         };
         std::optional<Flow> flow { };
@@ -243,32 +244,32 @@ namespace rct3::simulation
         /// What holds it back, as its train's file gives it (these, most coaster trains'): rolling, as this much of
         /// the weight pressing it onto the rails, all of it upright or upside down and none on its side; standing
         /// still, up to `resting` of it; and the air, `drag` newtons for each (m/s)² of its speed, on its `mass`.
-        float rolling = 0.04f;
-        float resting = 0.06f;
-        float drag = 0.02f;
+        f32 rolling = 0.04f;
+        f32 resting = 0.06f;
+        f32 drag = 0.02f;
         units::Mass mass { 2000 }; ///< Of the train, empty. Chosen: about a five-car coaster train in saved parks
         // The train
         bool running = false;
-        float at = 0;                ///< Distance of the front of the train
-        float was_at = 0;            ///< Where the front was when the last step began, for drawing between steps
-        float travelled = 0;         ///< Since it set off
-        std::size_t next_stop = 0;   ///< Of `stops`, the next it comes to; past one, it stands there until set off
-        float speed = 0;             ///< Along the track
+        f32 at = 0;                  ///< Distance of the front of the train
+        f32 was_at = 0;              ///< Where the front was when the last step began, for drawing between steps
+        f32 travelled = 0;           ///< Since it set off
+        usize next_stop = 0;         ///< Of `stops`, the next it comes to; past one, it stands there until set off
+        f32 speed = 0;               ///< Along the track
         units::Seconds slow { };     ///< It has been all but stopped away from a chain or station
         units::Seconds crawling { }; ///< It has been all but stopped on plain track without a break, from `crawl_at`
-        float crawl_at = 0;
-        std::optional<float> rolled_from; ///< Where it began to roll back, while it does
+        f32 crawl_at = 0;
+        std::optional<f32> rolled_from; ///< Where it began to roll back, while it does
         /// Where along the track it stalled since its owner last took it (see `stalls_told`), a place at a time.
-        std::optional<float> stalled;
-        bool stalls_by_design = false;      ///< Its kind's trains crawl or roll back as a matter of course: never told as a stall
-        bool held_up = false;               ///< Slowed behind the train in front since it last went faster than its station's speed: its stalls are not told
-        std::vector<float> stalls_told { }; ///< The places it has stalled at, no two close, so a lap is not told again
-        bool launched = false;              ///< Its tail has left the platform since it set off, so it is pushed no more there
-        units::Radians lean { };            ///< Of a slide's car, it has swung up the trough's wall from the bottom, to its right
-        units::TurnRate lean_rate { };      ///< How fast that swing is changing
+        std::optional<f32> stalled;
+        bool stalls_by_design = false;    ///< Its kind's trains crawl or roll back as a matter of course: never told as a stall
+        bool held_up = false;             ///< Slowed behind the train in front since it last went faster than its station's speed: its stalls are not told
+        std::vector<f32> stalls_told { }; ///< The places it has stalled at, no two close, so a lap is not told again
+        bool launched = false;            ///< Its tail has left the platform since it set off, so it is pushed no more there
+        units::Radians lean { };          ///< Of a slide's car, it has swung up the trough's wall from the bottom, to its right
+        units::TurnRate lean_rate { };    ///< How fast that swing is changing
         // A shuttle's train
-        std::int32_t passed = 0;    ///< Times it has come into the station since it set off
-        float push = 0;             ///< The speed it is being pushed to, negative backwards; 0 when it is not
+        i32 passed = 0;             ///< Times it has come into the station since it set off
+        f32 push = 0;               ///< The speed it is being pushed to, negative backwards; 0 when it is not
         units::Distance pushed { }; ///< It has moved under that push
         units::Seconds held { };    ///< It has been held at the top of its climb
         /// Run off an end of its track, or a slide's car over its trough's rim: stopped running, where it left the
@@ -280,7 +281,7 @@ namespace rct3::simulation
         std::vector<Lift> lifts { };  ///< Its track's lift towers, in order along it
         std::optional<LiftRide> lifted { };
 
-        [[nodiscard]] float length() const
+        [[nodiscard]] f32 length() const
         {
             return distance.empty() ? 0 : distance.back();
         }
@@ -291,23 +292,23 @@ namespace rct3::simulation
 
     /// Brings the lifts' cars of `coaster`'s track that have let their train go back down by `seconds`, to wait at
     /// the bottom.
-    void lower_carriages(const Coaster& coaster, std::span<Carriage> carriages, float seconds);
+    void lower_carriages(const Coaster& coaster, std::span<Carriage> carriages, f32 seconds);
 
     /// Whether either end of `coaster`'s train is on a lift chain or up a lift tower.
     [[nodiscard]] bool on_chain(const Coaster& coaster);
 
     /// Whether the stretch `at` along `coaster`'s track, round again past either end, is a lift chain or tower.
-    [[nodiscard]] bool chain_at(const Coaster& coaster, float at);
+    [[nodiscard]] bool chain_at(const Coaster& coaster, f32 at);
 
     /// The point `d` along `coaster`'s track, round again past the end of a circuit and held at the ends of a
     /// track with two; under its points, at the height, when only that is known.
-    [[nodiscard]] glm::vec3 track_point(const Coaster& coaster, float d);
+    [[nodiscard]] glm::vec3 track_point(const Coaster& coaster, f32 d);
 
     /// Up for `coaster`'s track `d` along it, leaning with its bank, a unit vector; straight up when not known.
-    [[nodiscard]] glm::vec3 track_up(const Coaster& coaster, float d);
+    [[nodiscard]] glm::vec3 track_up(const Coaster& coaster, f32 d);
 
     /// The way `coaster`'s track runs `d` along it, a unit vector; +z when it is not known.
-    [[nodiscard]] glm::vec3 track_way(const Coaster& coaster, float d);
+    [[nodiscard]] glm::vec3 track_way(const Coaster& coaster, f32 d);
 
     /// The wrecks of `coaster`'s crashed train, a car each from the front back, thrown on from where each left the
     /// track at the train's speed, tumbling as `dice` has them.
@@ -319,15 +320,15 @@ namespace rct3::simulation
     /// but this gives false. A train that runs off an end of a track with two ends is left crashed instead, or
     /// off the end of a pool slide left splashed, which counts as coming round. The cars of its track's lifts are
     /// `carriages`, by lift, shared with the other trains; without them a chain pulls it up each lift tower.
-    bool drive(Coaster& coaster, float seconds, float room = std::numeric_limits<float>::infinity(), std::span<Carriage> carriages = { });
+    bool drive(Coaster& coaster, f32 seconds, f32 room = std::numeric_limits<f32>::infinity(), std::span<Carriage> carriages = { });
 
     /// What riders of a train feel at its front, from the bend of the track at its speed and gravity: in g, up
     /// through their seats and across them, and the track's way there (1 straight up, -1 straight down).
     struct Felt
     {
-        float vertical = 1;
-        float lateral = 0;
-        float slope = 0;
+        f32 vertical = 1;
+        f32 lateral = 0;
+        f32 slope = 0;
     };
     [[nodiscard]] Felt felt(const Coaster& coaster);
 
@@ -336,39 +337,39 @@ namespace rct3::simulation
     /// banked turn presses riders into their seats rather than sideways.
     struct LapRecorder
     {
-        float seconds = 0; ///< Into the sample being taken
-        float speed_sum = 0, height_sum = 0, vertical_sum = 0, lateral_sum = 0;
-        std::vector<float> speed, altitude, vertical, lateral; ///< Oldest first
+        f32 seconds = 0; ///< Into the sample being taken
+        f32 speed_sum = 0, height_sum = 0, vertical_sum = 0, lateral_sum = 0;
+        std::vector<f32> speed, altitude, vertical, lateral; ///< Oldest first
     };
 
     /// Samples a ride's graphs keep in a park file, the lap's last ones.
-    inline constexpr std::size_t kLapSamples = 200;
+    inline constexpr usize kLapSamples = 200;
 
     /// Adds `seconds` of the run of `coaster`'s train, as it is now, to `lap`.
-    void record(LapRecorder& lap, const Coaster& coaster, float seconds);
+    void record(LapRecorder& lap, const Coaster& coaster, f32 seconds);
 
     /// The lap recorded into `lap`, newest sample first as saved and no more than kLapSamples, and starts the
     /// next.
     [[nodiscard]] save::model::RideGraphs end_lap(LapRecorder& lap);
 
     /// Where `coaster`'s front is drawn `along` (0 to 1) through its last step, between where it began and ended it.
-    [[nodiscard]] float between_drives(const Coaster& coaster, float along);
+    [[nodiscard]] f32 between_drives(const Coaster& coaster, f32 along);
 
     /// Metres short of a place on the track that a train's front counts as there: so a train held up by the block
     /// ahead right at the station's end has come in, lets its riders off and loads, and a block's end is reached.
-    inline constexpr float kArrived = 0.01f;
+    inline constexpr f32 kArrived = 0.01f;
 
     /// The station `coaster`'s train stands at, if it stands at one: 0 at its start, k at the k-th of its stops.
-    [[nodiscard]] std::optional<std::size_t> standing_at(const Coaster& coaster);
+    [[nodiscard]] std::optional<usize> standing_at(const Coaster& coaster);
 
     /// The station `coaster`'s running train is held up in by the train ahead, short of where it stops there, as
     /// standing_at numbers them. Its riders get off there, as they would at its end. Nothing while it moves, or when
     /// held anywhere else.
-    [[nodiscard]] std::optional<std::size_t> held_in_station(const Coaster& coaster);
+    [[nodiscard]] std::optional<usize> held_in_station(const Coaster& coaster);
 
     /// How long a lap of `coaster` takes from a standing start, without stopping on the way, by driving a copy of
     /// it; nothing if the train
     /// does not come round within `most` seconds.
-    [[nodiscard]] std::optional<float> lap_seconds(Coaster coaster, float most = 1200);
+    [[nodiscard]] std::optional<f32> lap_seconds(Coaster coaster, f32 most = 1200);
 
 } // namespace rct3::simulation

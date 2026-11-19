@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "config/game/options.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <filesystem>
 #include <set>
@@ -15,9 +17,9 @@ TEST_CASE("every game option is registered once, in id order, its default in ran
     REQUIRE(table.size() == kGameOptionCount);
     std::set<std::string_view> names;
     const GameOptions defaults;
-    for (std::size_t i = 0; i < table.size(); ++i)
+    for (usize i = 0; i < table.size(); ++i)
     {
-        CHECK(static_cast<std::size_t>(table[i].option) == i);
+        CHECK(static_cast<usize>(table[i].option) == i);
         CHECK(names.insert(table[i].name).second);
         CHECK(table[i].minimum <= table[i].default_value);
         CHECK(table[i].default_value <= table[i].maximum);

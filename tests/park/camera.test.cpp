@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/camera.hpp"
 
+#include "core/types.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -11,21 +13,21 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid slope(std::int32_t size)
+    save::model::TerrainGrid slope(i32 size)
     {
         save::model::TerrainGrid g;
         g.width = size;
         g.height = size;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(size * size));
-        for (std::int32_t row = 0; row < size; ++row)
+        g.cells.resize(static_cast<usize>(size * size));
+        for (i32 row = 0; row < size; ++row)
         {
-            for (std::int32_t col = 0; col < size; ++col)
+            for (i32 col = 0; col < size; ++col)
             {
                 // Rising one unit a tile towards +X.
-                const auto x0 = static_cast<float>(col);
-                g.cells[static_cast<std::size_t>(row * size + col)].corners = { x0, x0 + 1, x0, x0 + 1 };
+                const auto x0 = static_cast<f32>(col);
+                g.cells[static_cast<usize>(row * size + col)].corners = { x0, x0 + 1, x0, x0 + 1 };
             }
         }
         return g;
@@ -79,13 +81,13 @@ TEST_CASE("the line of sight through a point of the view passes through what is 
     ParkCamera c;
     c.target = { 10, 2, 10 };
     c.yaw = 0.7f;
-    const float aspect = 1.6f;
+    const f32 aspect = 1.6f;
     const glm::vec3 thing { 14, 3, 8 };
     const glm::vec4 clip = view_projection(c, aspect) * glm::vec4(thing, 1);
     const Ray r = view_ray(c, aspect, { clip.x / clip.w, clip.y / clip.w });
     CHECK(glm::length(r.direction) == doctest::Approx(1));
     const glm::vec3 to = thing - r.origin;
-    const float along = glm::dot(to, r.direction);
+    const f32 along = glm::dot(to, r.direction);
     CHECK(along > 0);
     CHECK(glm::length(to - r.direction * along) == doctest::Approx(0).epsilon(0.001));
     // Through the middle of the view it passes through the target.
@@ -130,18 +132,18 @@ TEST_CASE("the pointer pushes the view only near the screen's edges, hardest at 
 
 TEST_CASE("a wheel zoom rolls in over its time, most of it early, all of it in the end")
 {
-    float pending = 1;
-    float taken = 0;
-    for (std::int32_t frame = 0; frame < 15; ++frame) // A quarter second at 60 frames a second
+    f32 pending = 1;
+    f32 taken = 0;
+    for (i32 frame = 0; frame < 15; ++frame) // A quarter second at 60 frames a second
     {
-        const float step = zoom_step(pending, 1.0f / 60, 0.25f);
+        const f32 step = zoom_step(pending, 1.0f / 60, 0.25f);
         if (frame == 0)
             CHECK(step == doctest::Approx(0.18f).epsilon(0.05));
         pending -= step;
         taken += step;
     }
     CHECK(taken == doctest::Approx(0.95f).epsilon(0.01));
-    for (std::int32_t frame = 0; frame < 120 && pending != 0; ++frame)
+    for (i32 frame = 0; frame < 120 && pending != 0; ++frame)
         pending -= zoom_step(pending, 1.0f / 60, 0.25f);
     CHECK(pending == 0);
     CHECK(zoom_step(-2, 1, 0) == -2);
@@ -165,7 +167,7 @@ TEST_CASE("riding a car looks out ahead of it and leans as it banks")
 {
     const ParkCamera c;
     // Its eyes at (5, 3, 0), facing +Z, banked a quarter turn so its up is the world's -X.
-    const Seat seat = glm::translate(glm::mat4(1.0f), glm::vec3(5, 3, 0)) * glm::rotate(glm::mat4(1.0f), glm::half_pi<float>(), glm::vec3(0, 0, 1));
+    const Seat seat = glm::translate(glm::mat4(1.0f), glm::vec3(5, 3, 0)) * glm::rotate(glm::mat4(1.0f), glm::half_pi<f32>(), glm::vec3(0, 0, 1));
     CHECK(eye(c, seat) == glm::vec3(5, 3, 0));
     const glm::mat4 view = view_projection(c, 1, seat);
     const auto screen = [&](glm::vec3 p) {
@@ -182,7 +184,7 @@ TEST_CASE("riding a car looks out ahead of it and leans as it banks")
 TEST_CASE("riding, the view takes in the same width across any screen, and its height follows the screen's shape")
 {
     const Seat seat = glm::mat4(1.0f);
-    for (const float aspect : { 1.0f, 16.0f / 9.0f, 0.5f })
+    for (const f32 aspect : { 1.0f, 16.0f / 9.0f, 0.5f })
     {
         const glm::mat4 p = projection(aspect, seat, kRideNarrowView);
         CHECK(p[0][0] == doctest::Approx(1 / std::tan(kRideNarrowView / 2)));
@@ -207,10 +209,10 @@ TEST_CASE("riding along looks at the track ahead, sways against the pull and sha
 
     // Speeding up along +Z: the head sways back, up to the most it may.
     view = { };
-    float speed = 0;
-    float along = 0;
+    f32 speed = 0;
+    f32 along = 0;
     glm::mat4 seat;
-    for (std::int32_t i = 0; i < 20; ++i)
+    for (i32 i = 0; i < 20; ++i)
     {
         speed += 2;
         along += speed * 0.1f;
@@ -235,21 +237,21 @@ TEST_CASE("riding along looks at the track ahead, sways against the pull and sha
 TEST_CASE("a rider looks round from their seat, the way the seat is turned")
 {
     // Banked a quarter turn, its up the world's -X.
-    const glm::mat4 seat = glm::rotate(glm::mat4(1.0f), glm::half_pi<float>(), glm::vec3(0, 0, 1));
-    const glm::mat4 left = looked_round(seat, { glm::half_pi<float>(), 0 });
+    const glm::mat4 seat = glm::rotate(glm::mat4(1.0f), glm::half_pi<f32>(), glm::vec3(0, 0, 1));
+    const glm::mat4 left = looked_round(seat, { glm::half_pi<f32>(), 0 });
     // A quarter turn about the seat's up, from looking along +Z.
     CHECK(std::abs(left[2].z) < 1e-5f);
     CHECK(glm::length(glm::vec3(left[1]) - glm::vec3(seat[1])) < 1e-5f);
     const glm::mat4 up = looked_round(glm::mat4(1.0f), { 0, 0.5f });
     CHECK(up[2].y > 0.4f); // Pitching up looks up
     CHECK(look_round_limited({ 7, 3 }).y == doctest::Approx(kRideLookMostPitch));
-    CHECK(look_round_limited({ 7, 0 }).x == doctest::Approx(7 - glm::two_pi<float>()));
+    CHECK(look_round_limited({ 7, 0 }).x == doctest::Approx(7 - glm::two_pi<f32>()));
 }
 
 TEST_CASE("isometric faces along the four diagonals, any step taken round them")
 {
-    CHECK(isometric_yaw(0) == doctest::Approx(glm::quarter_pi<float>()));
-    CHECK(isometric_yaw(1) - isometric_yaw(0) == doctest::Approx(glm::half_pi<float>()));
+    CHECK(isometric_yaw(0) == doctest::Approx(glm::quarter_pi<f32>()));
+    CHECK(isometric_yaw(1) - isometric_yaw(0) == doctest::Approx(glm::half_pi<f32>()));
     CHECK(isometric_yaw(4) == doctest::Approx(isometric_yaw(0)));
     CHECK(isometric_yaw(-1) == doctest::Approx(isometric_yaw(3)));
     CHECK(((isometric_step(isometric_yaw(2) + 0.3f) % 4) + 4) % 4 == 2);
@@ -299,10 +301,10 @@ TEST_CASE("turning round a pivot keeps it where it was on the view, and round th
 
 TEST_CASE("what is dragged up an upright plane stays under the pointer, near and far")
 {
-    for (const float distance : { 30.0f, 240.0f })
+    for (const f32 distance : { 30.0f, 240.0f })
     {
         ParkCamera c { .target = { 40, 0, 40 }, .yaw = 0.4f, .pitch = 0.7f, .distance = distance };
-        const float aspect = 16.0f / 9;
+        const f32 aspect = 16.0f / 9;
         const glm::vec3 pressed { 44, 1, 38 };
         // Where a point six units over the one pressed shows on the view: the pointer there reads six units up.
         const glm::vec4 clip = view_projection(c, aspect) * glm::vec4 { pressed + glm::vec3 { 0, 6, 0 }, 1 };
@@ -329,9 +331,9 @@ TEST_CASE("the eye stays above a hill behind the target, tilting down only as fa
     g.tile_size_x = 4;
     g.tile_size_z = 4;
     g.cells.resize(16 * 16);
-    for (std::int32_t row = 0; row < 4; ++row)
-        for (std::int32_t col = 0; col < 16; ++col)
-            g.cells[static_cast<std::size_t>(row * 16 + col)].corners = { 20, 20, 20, 20 };
+    for (i32 row = 0; row < 4; ++row)
+        for (i32 col = 0; col < 16; ++col)
+            g.cells[static_cast<usize>(row * 16 + col)].corners = { 20, 20, 20, 20 };
 
     ParkCamera low;
     low.target = { 32, 0, 40 };

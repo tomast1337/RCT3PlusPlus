@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/startup_sequence.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <utility>
 
@@ -57,8 +59,8 @@ namespace rct3::ui
     {
         if (finished())
             return std::nullopt;
-        const float fade_in = std::min(elapsed_.value / kStartupFade.value, 1.0f);
-        const float fade_out = 1.0f - std::max((elapsed_ - steps_[step_].shown).value, 0.0f) / kStartupFade.value;
+        const f32 fade_in = std::min(elapsed_.value / kStartupFade.value, 1.0f);
+        const f32 fade_out = 1.0f - std::max((elapsed_ - steps_[step_].shown).value, 0.0f) / kStartupFade.value;
         return StartupFrame { steps_[step_].image, std::clamp(std::min(fade_in, fade_out), 0.0f, 1.0f), elapsed_ };
     }
 

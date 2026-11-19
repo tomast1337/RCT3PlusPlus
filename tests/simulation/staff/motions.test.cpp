@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/staff/motions.hpp"
 
+#include "core/types.hpp"
 #include "park/person/motions.hpp"
 
 #include <cstdint>
@@ -13,13 +14,13 @@ using simulation::StaffJob;
 
 TEST_CASE("every motion a worker plays at work is a known one")
 {
-    for (std::int32_t job = 0; job <= static_cast<std::int32_t>(StaffJob::Rest); ++job)
-        for (std::int32_t kind = 0; kind <= static_cast<std::int32_t>(Breakdown::ControlFailure); ++kind)
+    for (i32 job = 0; job <= static_cast<i32>(StaffJob::Rest); ++job)
+        for (i32 kind = 0; kind <= static_cast<i32>(Breakdown::ControlFailure); ++kind)
         {
             const simulation::staff::WorkLook look = simulation::staff::work_look(static_cast<StaffJob>(job), static_cast<Breakdown>(kind));
             for (const std::string_view name : { look.start, look.loop, look.finish })
                 CHECK_MESSAGE((name.empty() || park::person::motion_number(name).has_value()), name);
-            CHECK((job == static_cast<std::int32_t>(StaffJob::None)) == look.loop.empty());
+            CHECK((job == static_cast<i32>(StaffJob::None)) == look.loop.empty());
         }
     for (const KeeperJob job : { KeeperJob::Idle, KeeperJob::Strolling, KeeperJob::Filling, KeeperJob::Clearing, KeeperJob::Catching })
         for (const bool walking : { false, true })

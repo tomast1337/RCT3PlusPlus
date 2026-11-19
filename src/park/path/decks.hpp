@@ -39,6 +39,7 @@
 // parks store.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/edge_walls.hpp"
 #include "park/path/styles.hpp"
 #include "park/turns.hpp"
@@ -56,7 +57,7 @@
 namespace rct3::park::path
 {
 
-    enum class DeckPiece : std::uint8_t
+    enum class DeckPiece : u8
     {
         Flat,
         StraightA,
@@ -96,13 +97,13 @@ namespace rct3::park::path
         SlopeMidCappedBottom,
         SlopeMidCappedTop,
     };
-    inline constexpr std::size_t kDeckPieceCount = 35;
+    inline constexpr usize kDeckPieceCount = 35;
 
     /// The piece without its caps: the piece itself when it has none.
     [[nodiscard]] DeckPiece uncapped(DeckPiece piece) noexcept;
 
     /// A queue style's pieces, in the order its description names them.
-    enum class QueuePiece : std::uint8_t
+    enum class QueuePiece : u8
     {
         Straight,
         TurnLeft,
@@ -121,7 +122,7 @@ namespace rct3::park::path
 
     /// The piece of a flat tile joined on the sides set in `sides` (bit k for side k) with the corners set in
     /// `corners` filled. Corners whose two sides are not both joined are ignored.
-    [[nodiscard]] Deck flat_deck(std::uint8_t sides, std::uint8_t corners) noexcept;
+    [[nodiscard]] Deck flat_deck(u8 sides, u8 corners) noexcept;
 
     /// Which sides of a sloped path tile, as seen heading along it, have a gentle slope beside them.
     struct SlopesBeside
@@ -132,25 +133,25 @@ namespace rct3::park::path
 
     /// The piece of a tile of stored slope `slope` (1 or 2 steep, 4 or 5 gentle) entered heading `heading`,
     /// with gentle slopes `beside` it.
-    [[nodiscard]] Deck slope_deck(std::uint8_t slope, Side heading, SlopesBeside beside) noexcept;
+    [[nodiscard]] Deck slope_deck(u8 slope, Side heading, SlopesBeside beside) noexcept;
 
     /// A heading as a park stores a path's direction: 0 towards lower columns, 1 higher columns, 2 lower rows,
     /// 3 higher rows.
-    [[nodiscard]] std::uint8_t stored_direction(Side heading) noexcept;
+    [[nodiscard]] u8 stored_direction(Side heading) noexcept;
 
     /// The heading a park's stored path direction names; nothing for kNoDirection or any other value past 3.
-    [[nodiscard]] std::optional<Side> stored_heading(std::uint8_t direction) noexcept;
+    [[nodiscard]] std::optional<Side> stored_heading(u8 direction) noexcept;
 
     /// The heading a stored direction names, where a value past 3 is taken as its bare count of quarter turns,
     /// so a path or queue without a direction keeps the piece it has always been drawn with.
-    [[nodiscard]] Side stored_heading_or_bare(std::uint8_t direction) noexcept;
+    [[nodiscard]] Side stored_heading_or_bare(u8 direction) noexcept;
 
     /// The two corners of a tile (in the terrain's corner order) on its edge on `side`.
-    [[nodiscard]] std::array<std::size_t, 2> edge_corners(Side side) noexcept;
+    [[nodiscard]] std::array<usize, 2> edge_corners(Side side) noexcept;
 
     /// The height at which `path` on its tile of `grid` meets the tile's edge on `side`; nothing when it does not
     /// reach that edge.
-    [[nodiscard]] std::optional<float> edge_height(const save::model::PathTile& path, const save::model::TerrainGrid& grid, Side side);
+    [[nodiscard]] std::optional<f32> edge_height(const save::model::PathTile& path, const save::model::TerrainGrid& grid, Side side);
 
     /// The deck piece of a raised path of `style` on a tile; the open piece when the style has no capped one.
     [[nodiscard]] std::string deck_symbol(const PathStyle& style, DeckPiece piece);
@@ -179,7 +180,7 @@ namespace rct3::park::path
     /// its neighbours call for, changing the symbol and rotation of the object that draws it. The pieces come
     /// from the path's style among `styles`. A path does not join one across a wall of `walls`. Returns how many
     /// objects changed.
-    std::size_t refresh_decks(std::span<const save::model::PathTile> paths, std::vector<save::model::PlacedObject>& objects, const save::model::TerrainGrid& grid, std::span<const PathStyle> styles, std::int32_t low_col, std::int32_t low_row, std::int32_t high_col, std::int32_t high_row, std::optional<const EdgeWalls&> walls = std::nullopt);
+    usize refresh_decks(std::span<const save::model::PathTile> paths, std::vector<save::model::PlacedObject>& objects, const save::model::TerrainGrid& grid, std::span<const PathStyle> styles, i32 low_col, i32 low_row, i32 high_col, i32 high_row, std::optional<const EdgeWalls&> walls = std::nullopt);
 
     /// The piece a raised path should have now, given the other paths and the walls between them.
     [[nodiscard]] Deck choose_deck(const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::optional<const EdgeWalls&> walls = std::nullopt);

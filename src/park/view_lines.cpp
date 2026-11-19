@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/view_lines.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -12,7 +14,7 @@ namespace rct3::park
 
     namespace
     {
-        constexpr float kLift = 0.03f; ///< Over the ground, so the line is not lost in it.
+        constexpr f32 kLift = 0.03f; ///< Over the ground, so the line is not lost in it.
 
         void strip(TerrainMesh& mesh, glm::vec3 a, glm::vec3 b, glm::vec4 colour)
         {
@@ -20,32 +22,32 @@ namespace rct3::park
         }
 
         /// The tile's corners in world space, in the grid's corner order.
-        std::array<glm::vec3, 4> corners(const save::model::TerrainGrid& grid, std::int32_t col, std::int32_t row)
+        std::array<glm::vec3, 4> corners(const save::model::TerrainGrid& grid, i32 col, i32 row)
         {
             const save::model::TerrainCell& c = grid.at(col, row);
-            const float x0 = grid.world_x(col), x1 = grid.world_x(col + 1), z0 = grid.world_z(row), z1 = grid.world_z(row + 1);
+            const f32 x0 = grid.world_x(col), x1 = grid.world_x(col + 1), z0 = grid.world_z(row), z1 = grid.world_z(row + 1);
             return { glm::vec3 { x0, c.corners[0], z0 }, glm::vec3 { x1, c.corners[1], z0 }, glm::vec3 { x0, c.corners[2], z1 }, glm::vec3 { x1, c.corners[3], z1 } };
         }
     } // namespace
 
-    void ground_strip(TerrainMesh& mesh, glm::vec3 a, glm::vec3 b, glm::vec4 colour, float width)
+    void ground_strip(TerrainMesh& mesh, glm::vec3 a, glm::vec3 b, glm::vec4 colour, f32 width)
     {
         const glm::vec2 along { b.x - a.x, b.z - a.z };
-        const float length = glm::length(along);
+        const f32 length = glm::length(along);
         if (length <= 0)
             return;
         const glm::vec3 side = glm::vec3 { -along.y, 0, along.x } * (width / 2 / length);
         const glm::vec3 up { 0, kLift, 0 };
-        const auto first = static_cast<std::uint32_t>(mesh.vertices.size());
+        const auto first = static_cast<u32>(mesh.vertices.size());
         for (const glm::vec3 p : { a + up + side, a + up - side, b + up - side, b + up + side })
             mesh.vertices.push_back({ .position = p, .colour = colour, .normal = { 0, 1, 0 } });
-        for (const std::uint32_t i : { 0u, 1u, 2u, 0u, 2u, 3u, 0u, 2u, 1u, 0u, 3u, 2u })
+        for (const u32 i : { 0u, 1u, 2u, 0u, 2u, 3u, 0u, 2u, 1u, 0u, 3u, 2u })
             mesh.indices.push_back(first + i);
     }
 
     std::vector<HeightMark> height_marks(std::span<const glm::vec3> points, const save::model::TerrainGrid& grid)
     {
-        constexpr float kSame = 0.01f; ///< World units
+        constexpr f32 kSame = 0.01f; ///< World units
         std::vector<HeightMark> marks;
         for (const glm::vec3 p : points)
         {
@@ -56,16 +58,16 @@ namespace rct3::park
         return marks;
     }
 
-    void height_tick(TerrainMesh& mesh, const HeightMark& mark, glm::vec4 colour, float width)
+    void height_tick(TerrainMesh& mesh, const HeightMark& mark, glm::vec4 colour, f32 width)
     {
         const glm::vec3 foot { mark.at.x, mark.at.y - mark.above, mark.at.z };
-        const float half = width / 2;
+        const f32 half = width / 2;
         for (const glm::vec3 side : { glm::vec3 { half, 0, 0 }, glm::vec3 { 0, 0, half } })
         {
-            const auto first = static_cast<std::uint32_t>(mesh.vertices.size());
+            const auto first = static_cast<u32>(mesh.vertices.size());
             for (const glm::vec3 p : { foot + side, foot - side, mark.at - side, mark.at + side })
                 mesh.vertices.push_back({ .position = p, .colour = colour, .normal = { 0, 1, 0 } });
-            for (const std::uint32_t i : { 0u, 1u, 2u, 0u, 2u, 3u, 0u, 2u, 1u, 0u, 3u, 2u })
+            for (const u32 i : { 0u, 1u, 2u, 0u, 2u, 3u, 0u, 2u, 1u, 0u, 3u, 2u })
                 mesh.indices.push_back(first + i);
         }
     }
@@ -73,9 +75,9 @@ namespace rct3::park
     TerrainMesh grid_lines(const save::model::TerrainGrid& grid, glm::vec4 colour)
     {
         TerrainMesh mesh;
-        for (std::int32_t row = 0; row < grid.height; ++row)
+        for (i32 row = 0; row < grid.height; ++row)
         {
-            for (std::int32_t col = 0; col < grid.width; ++col)
+            for (i32 col = 0; col < grid.width; ++col)
             {
                 const auto c = corners(grid, col, row);
                 strip(mesh, c[0], c[1], colour);
@@ -90,28 +92,28 @@ namespace rct3::park
         return mesh;
     }
 
-    TerrainMesh contour_lines(const save::model::TerrainGrid& grid, float step, glm::vec4 colour)
+    TerrainMesh contour_lines(const save::model::TerrainGrid& grid, f32 step, glm::vec4 colour)
     {
         TerrainMesh mesh;
         if (step <= 0)
             return mesh;
-        for (std::int32_t row = 0; row < grid.height; ++row)
+        for (i32 row = 0; row < grid.height; ++row)
         {
-            for (std::int32_t col = 0; col < grid.width; ++col)
+            for (i32 col = 0; col < grid.width; ++col)
             {
                 const auto c = corners(grid, col, row);
                 for (const std::array<glm::vec3, 3> t : { std::array { c[0], c[1], c[2] }, std::array { c[3], c[2], c[1] } })
                 {
-                    const float low = std::min({ t[0].y, t[1].y, t[2].y });
-                    const float high = std::max({ t[0].y, t[1].y, t[2].y });
+                    const f32 low = std::min({ t[0].y, t[1].y, t[2].y });
+                    const f32 high = std::max({ t[0].y, t[1].y, t[2].y });
                     // Each level strictly between the lowest and highest corners. A corner on a level counts as
                     // under it, so a level crosses exactly two edges, and ground lying flat on one draws no line.
-                    for (auto k = static_cast<std::int32_t>(std::floor(low / step + 1)); static_cast<float>(k) * step < high; ++k)
+                    for (auto k = static_cast<i32>(std::floor(low / step + 1)); static_cast<f32>(k) * step < high; ++k)
                     {
-                        const float level = static_cast<float>(k) * step;
+                        const f32 level = static_cast<f32>(k) * step;
                         std::array<glm::vec3, 2> ends { };
-                        std::size_t found = 0;
-                        for (std::size_t e = 0; e < 3; ++e)
+                        usize found = 0;
+                        for (usize e = 0; e < 3; ++e)
                         {
                             const glm::vec3 a = t[e], b = t[(e + 1) % 3];
                             if ((a.y <= level) == (b.y <= level) || found == 2)

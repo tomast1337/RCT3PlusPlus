@@ -11,6 +11,7 @@
 // The same section is listed a second time for swimwear.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -23,7 +24,7 @@ namespace rct3::ovl
 {
 
     /// Which part of a person a section dresses.
-    enum class SectionKind : std::uint8_t
+    enum class SectionKind : u8
     {
         Head = 0,
         Body = 1,
@@ -37,14 +38,14 @@ namespace rct3::ovl
         std::vector<std::string_view> optional; ///< Pieces drawn when their bit is set, first piece bit 0
     };
 
-    inline constexpr std::size_t kSectionLevels = 3;
+    inline constexpr usize kSectionLevels = 3;
 
     struct BodySection
     {
-        std::uint8_t age_group = 0;          ///< Same numbers as the save's person types: child, teen, adult, staff
-        std::uint8_t sex = 0;                ///< 0 male, 1 female
-        std::uint8_t kind = 0;               ///< A `SectionKind` value, others kept as read
-        std::vector<float> optional_chances; ///< For each optional piece, how likely a new person wears it
+        u8 age_group = 0;                  ///< Same numbers as the save's person types: child, teen, adult, staff
+        u8 sex = 0;                        ///< 0 male, 1 female
+        u8 kind = 0;                       ///< A `SectionKind` value, others kept as read
+        std::vector<f32> optional_chances; ///< For each optional piece, how likely a new person wears it
         std::array<SectionLevel, kSectionLevels> levels;
         std::string_view head; ///< "phd" item for the finer levels, empty when the pieces are all there is
         std::array<SectionLevel, kSectionLevels> swim_levels;
@@ -58,7 +59,7 @@ namespace rct3::ovl
     };
 
     /// Which of the person's colours picks a piece's cell.
-    enum class ColourChannel : std::uint8_t
+    enum class ColourChannel : u8
     {
         Skin = 0,
         Top = 1,
@@ -67,9 +68,9 @@ namespace rct3::ovl
 
     struct BodyPiece
     {
-        std::string_view texture;  ///< "tex" item, empty for pieces that are never painted
-        std::string_view mesh;     ///< "mms" item
-        std::uint32_t channel = 0; ///< A `ColourChannel` value, others kept as read
+        std::string_view texture; ///< "tex" item, empty for pieces that are never painted
+        std::string_view mesh;    ///< "mms" item
+        u32 channel = 0;          ///< A `ColourChannel` value, others kept as read
     };
 
     struct BodyPieceItem
@@ -79,8 +80,8 @@ namespace rct3::ovl
     };
 
     /// Faces a head can pull, in the order the head lists its skins for each level.
-    inline constexpr std::size_t kHeadFaces = 6;
-    inline constexpr std::size_t kHeadLevels = 2;
+    inline constexpr usize kHeadFaces = 6;
+    inline constexpr usize kHeadLevels = 2;
 
     struct HeadRig
     {

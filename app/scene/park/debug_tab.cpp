@@ -2,6 +2,7 @@
 #include "scene/park/debug_tab.hpp"
 
 #include "career/career_file.hpp"
+#include "core/types.hpp"
 #include "imgui.h"
 #include "park/boundary_fence.hpp"
 #include "park/land_buying.hpp"
@@ -28,8 +29,8 @@ namespace rct3::scene::park
     {
         /// Ducks in a flock, and gulls, that the buttons add. Chosen by eye: a flock the size of a natural one, and
         /// a few gulls to see them cross.
-        constexpr std::size_t kDebugFlock = 12;
-        constexpr std::size_t kDebugGulls = 3;
+        constexpr usize kDebugFlock = 12;
+        constexpr usize kDebugGulls = 3;
 
         /// The park's own walkable tiles, not its queues nor the road out to the gate: where guests and litter are
         /// dropped.
@@ -37,7 +38,7 @@ namespace rct3::scene::park
         {
             std::vector<simulation::NodeId> spots;
             const auto& nodes = scene.sim.paths.nodes();
-            for (std::uint32_t n = 0; n < nodes.size(); ++n)
+            for (u32 n = 0; n < nodes.size(); ++n)
                 if (const auto& t = nodes[n].tile; !nodes[n].queue && !nodes[n].removed && scene.grid.contains(t.col, t.row) && rct3::park::owned_outright(scene.grid.at(t.col, t.row)))
                     spots.push_back(simulation::NodeId { n });
             return spots;
@@ -49,16 +50,16 @@ namespace rct3::scene::park
             return strings::to_utf8(assets.strings->get(key));
         }
 
-        void tool_button(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const char* label, DebugTool tool, std::int64_t amount = 0)
+        void tool_button(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, const char* label, DebugTool tool, i64 amount = 0)
         {
             if (ImGui::Button(label))
                 (void)use_debug_tool(device, scene, assets, tool, amount);
         }
     } // namespace
 
-    std::size_t use_debug_tool(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, DebugTool tool, std::int64_t amount)
+    usize use_debug_tool(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, DebugTool tool, i64 amount)
     {
-        const auto count = static_cast<std::size_t>(std::max<std::int64_t>(amount, 0));
+        const auto count = static_cast<usize>(std::max<i64>(amount, 0));
         switch (tool)
         {
             case DebugTool::AddMoney:
@@ -69,11 +70,11 @@ namespace rct3::scene::park
             case DebugTool::BuyAllLand:
             {
                 std::vector<save::model::Tile> tiles;
-                for (std::int32_t row = 0; row < scene.grid.height; ++row)
-                    for (std::int32_t col = 0; col < scene.grid.width; ++col)
+                for (i32 row = 0; row < scene.grid.height; ++row)
+                    for (i32 col = 0; col < scene.grid.width; ++col)
                         tiles.push_back({ col, row });
                 // Free: the tool is for setting a park up, not for its books.
-                const std::size_t bought = rct3::park::buy_land(scene.grid, tiles, rct3::park::LandBuy::Land, { }, std::nullopt).tiles + rct3::park::buy_land(scene.grid, tiles, rct3::park::LandBuy::Rights, { }, std::nullopt).tiles;
+                const usize bought = rct3::park::buy_land(scene.grid, tiles, rct3::park::LandBuy::Land, { }, std::nullopt).tiles + rct3::park::buy_land(scene.grid, tiles, rct3::park::LandBuy::Rights, { }, std::nullopt).tiles;
                 if (bought > 0)
                     land_owned_changed(scene, assets);
                 return bought;
@@ -83,9 +84,9 @@ namespace rct3::scene::park
                 // The list of what is left comes once the build lists are read.
                 if (!scene.research_items)
                     return 0;
-                const std::size_t had = scene.research.invented.size();
+                const usize had = scene.research.invented.size();
                 simulation::invent_everything(scene.research, *scene.research_items, scene.park.time);
-                for (std::size_t i = had; i < scene.research.invented.size(); ++i)
+                for (usize i = had; i < scene.research.invented.size(); ++i)
                     if (const auto entry = std::ranges::find(scene.park_model.content.entries, scene.research.invented[i], &save::model::AssetRequirement::id); entry != scene.park_model.content.entries.end())
                         entry->invented = true;
                 scene.build.offer = rct3::park::BuildOffer(scene.park_model.content);
@@ -121,7 +122,7 @@ namespace rct3::scene::park
                 return scene.footpaths.waterfalls.size();
             case DebugTool::ResetJets:
             {
-                const std::size_t jets = scene.jets.size();
+                const usize jets = scene.jets.size();
                 scene.jets.clear();
                 // The jumping fountains start again at once rather than after their rest.
                 scene.jumps_ended = 0;
@@ -136,14 +137,14 @@ namespace rct3::scene::park
                 // would save them.
                 if (!scene.saves.data)
                     return 0;
-                std::size_t opened = 0;
+                usize opened = 0;
                 const std::filesystem::path folder = scene.saves.data->folder(config::UserFolder::Careers);
-                for (std::int32_t pack = 0; !career::pack_id(pack).empty(); ++pack)
+                for (i32 pack = 0; !career::pack_id(pack).empty(); ++pack)
                     for (const career::CareerEntry& entry : career::list_careers(folder, pack, std::nullopt))
                     {
                         if (!scene.game.career.empty() && entry.path != scene.game.career)
                             continue;
-                        std::size_t here = 0;
+                        usize here = 0;
                         const auto opened_all = [&](career::Career& c) {
                             for (career::ScenarioProgress& s : c.scenarios)
                                 if (s.status == career::ScenarioStatus::Locked)
@@ -160,7 +161,7 @@ namespace rct3::scene::park
             case DebugTool::ResetItemNames:
             {
                 constexpr std::string_view kOwnName = "%ME%"; ///< How a stall item keeps the name of its kind
-                std::size_t renamed = 0;
+                usize renamed = 0;
                 for (save::model::Stall& stall : scene.rides.stalls)
                     for (save::model::StallItem& item : stall.items)
                         if (item.name != kOwnName)
@@ -172,7 +173,7 @@ namespace rct3::scene::park
             }
             case DebugTool::SlowGuests:
             {
-                const float slowdown = static_cast<float>(std::max<std::int64_t>(amount, 1));
+                const f32 slowdown = static_cast<f32>(std::max<i64>(amount, 1));
                 return std::exchange(scene.sim.guest_slowdown, slowdown) != slowdown ? 1 : 0;
             }
             case DebugTool::PartiesHuddleOften:
@@ -208,9 +209,9 @@ namespace rct3::scene::park
     void draw_debug_tab(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets)
     {
         // What the tab's boxes hold between frames, as ImGui leaves them to the caller; one tab, one set.
-        static std::int32_t money = 10000;
-        static std::int32_t guests = 100;
-        static std::int32_t litter = 200;
+        static i32 money = 10000;
+        static i32 guests = 100;
+        static i32 litter = 200;
 
         if (ImGui::CollapsingHeader("Park and money", ImGuiTreeNodeFlags_DefaultOpen))
         {
@@ -218,7 +219,7 @@ namespace rct3::scene::park
             ImGui::InputInt("##money", &money, 1000, 10000);
             ImGui::SameLine();
             ImGui::BeginDisabled(!scene.park.cash);
-            tool_button(device, scene, assets, "Add money", DebugTool::AddMoney, std::int64_t { money } * 100);
+            tool_button(device, scene, assets, "Add money", DebugTool::AddMoney, i64 { money } * 100);
             ImGui::EndDisabled();
             tool_button(device, scene, assets, "Buy all land", DebugTool::BuyAllLand);
             ImGui::SetItemTooltip("Every tile on sale becomes the park's, for nothing");
@@ -251,12 +252,12 @@ namespace rct3::scene::park
             ImGui::SameLine();
             tool_button(device, scene, assets, "Reset needs", DebugTool::RefreshGuests);
             ImGui::EndDisabled();
-            const auto switch_box = [&](std::string_view key, std::string_view help, bool on, DebugTool tool, std::int64_t amount_on) {
+            const auto switch_box = [&](std::string_view key, std::string_view help, bool on, DebugTool tool, i64 amount_on) {
                 if (ImGui::Checkbox(label(assets, key).c_str(), &on))
                     (void)use_debug_tool(device, scene, assets, tool, on ? amount_on : 0);
                 ImGui::SetItemTooltip("%s", label(assets, help).c_str());
             };
-            constexpr std::int64_t kSlowMotion = 4; ///< Chosen by eye: slow enough to follow a step, quick enough to see one through
+            constexpr i64 kSlowMotion = 4; ///< Chosen by eye: slow enough to follow a step, quick enough to see one through
             switch_box("Rct3pp_Debug_SlowGuests", "Rct3pp_Debug_SlowGuestsHelp", scene.sim.guest_slowdown > 1, DebugTool::SlowGuests, kSlowMotion);
             ImGui::SameLine();
             switch_box("Rct3pp_Debug_PartiesHuddleOften", "Rct3pp_Debug_PartiesHuddleOftenHelp", scene.sim.parties_huddle_often, DebugTool::PartiesHuddleOften, 1);
@@ -266,8 +267,8 @@ namespace rct3::scene::park
             if (scene.shown_person && !kMotions.empty())
             {
                 const auto at = scene.held_motion ? std::ranges::find(kMotions, scene.held_motion->motion, &rct3::park::person::NamedMotion::number) : kMotions.end();
-                const std::size_t now = at == kMotions.end() ? 0 : static_cast<std::size_t>(at - kMotions.begin());
-                const auto play = [&](std::size_t i) { scene.held_motion = ParkScene::HeldMotion { .motion = kMotions[i].number, .since = scene.clock }; };
+                const usize now = at == kMotions.end() ? 0 : static_cast<usize>(at - kMotions.begin());
+                const auto play = [&](usize i) { scene.held_motion = ParkScene::HeldMotion { .motion = kMotions[i].number, .since = scene.clock }; };
                 if (ImGui::ArrowButton("##motion_back", ImGuiDir_Left))
                     play(scene.held_motion && now > 0 ? now - 1 : kMotions.size() - 1);
                 ImGui::SameLine();
@@ -329,10 +330,10 @@ namespace rct3::scene::park
 
         if (ImGui::CollapsingHeader("Time and weather", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            const std::int32_t weather = std::to_underlying(scene.park.weather);
+            const i32 weather = std::to_underlying(scene.park.weather);
             if (ImGui::BeginCombo("Weather", save::model::to_string(scene.park.weather)))
             {
-                for (std::int32_t raw = 0; raw <= std::to_underlying(save::model::WeatherType::Snowstorm); ++raw)
+                for (i32 raw = 0; raw <= std::to_underlying(save::model::WeatherType::Snowstorm); ++raw)
                 {
                     const save::model::WeatherType type = save::model::weather_type_from(raw);
                     if (ImGui::Selectable(save::model::to_string(type), raw == weather))
@@ -344,7 +345,7 @@ namespace rct3::scene::park
                 ImGui::EndCombo();
             }
             ImGui::SetItemTooltip("Holds till the next forecast; the Disable weather option holds it for good");
-            float hour = scene.day_clock.time * 24;
+            f32 hour = scene.day_clock.time * 24;
             if (ImGui::SliderFloat("Time of day", &hour, 0, 24, "%.1f h"))
             {
                 // Shown at once, without a blend; the clock runs on from there, into the park's hours if outside.
@@ -356,7 +357,7 @@ namespace rct3::scene::park
                 scene.rain_strength = rain ? std::optional(scene.weather_look.rain) : std::nullopt;
             ImGui::SameLine();
             ImGui::BeginDisabled(!rain);
-            float strength = scene.rain_strength.value_or(scene.weather_look.rain);
+            f32 strength = scene.rain_strength.value_or(scene.weather_look.rain);
             if (ImGui::SliderFloat("Rain strength", &strength, 0, 1) && rain)
                 scene.rain_strength = strength;
             ImGui::EndDisabled();
@@ -378,10 +379,10 @@ namespace rct3::scene::park
             const ParkFireworks& fireworks = scene.fireworks;
             if (fireworks.displays.empty())
                 ImGui::TextDisabled("The park has no displays");
-            for (std::size_t i = 0; i < fireworks.displays.size(); ++i)
+            for (usize i = 0; i < fireworks.displays.size(); ++i)
             {
                 ImGui::PushID(static_cast<int>(i)); // c-api
-                tool_button(device, scene, assets, "Start", DebugTool::StartDisplay, static_cast<std::int64_t>(i));
+                tool_button(device, scene, assets, "Start", DebugTool::StartDisplay, static_cast<i64>(i));
                 ImGui::SameLine();
                 const bool playing = fireworks.playing && fireworks.playing->display == i;
                 ImGui::Text("%s%s", fireworks.displays[i].name.c_str(), playing ? " (playing)" : "");

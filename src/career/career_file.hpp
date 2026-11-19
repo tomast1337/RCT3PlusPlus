@@ -16,6 +16,7 @@
 
 #include "career/career.hpp"
 #include "config/text_file.hpp"
+#include "core/types.hpp"
 
 #include <array>
 #include <cstddef>
@@ -44,7 +45,7 @@ namespace rct3::career
         std::vector<CareerChunk> unknown;
     };
 
-    enum class CareerFileError : std::uint8_t
+    enum class CareerFileError : u8
     {
         NotACareer,   ///< Wrong magic
         NewerVersion, ///< Written by a later version this one cannot read
@@ -68,7 +69,7 @@ namespace rct3::career
 
     /// The careers of game `pack` in `folder`, in the order of their file names. Files that do not read are
     /// reported and left out.
-    [[nodiscard]] std::vector<CareerEntry> list_careers(const std::filesystem::path& folder, std::int32_t pack, std::optional<std::vector<config::FileProblem>&> problems);
+    [[nodiscard]] std::vector<CareerEntry> list_careers(const std::filesystem::path& folder, i32 pack, std::optional<std::vector<config::FileProblem>&> problems);
 
     /// The first file name "career_NNNN" in `folder` that neither a career nor its folder of games uses.
     [[nodiscard]] std::filesystem::path free_career_path(const std::filesystem::path& folder);
@@ -83,7 +84,7 @@ namespace rct3::career
     [[nodiscard]] std::expected<void, std::string> delete_career(const std::filesystem::path& path);
 
     /// The game's id for pack `pack` in the file, and back; nothing for one it does not know.
-    [[nodiscard]] std::string_view pack_id(std::int32_t pack);
-    [[nodiscard]] std::optional<std::int32_t> pack_from_id(std::string_view id);
+    [[nodiscard]] std::string_view pack_id(i32 pack);
+    [[nodiscard]] std::optional<i32> pack_from_id(std::string_view id);
 
 } // namespace rct3::career

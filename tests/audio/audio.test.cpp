@@ -4,6 +4,7 @@
 #include "audio/audio.hpp"
 
 #include "../ovl/builder.hpp"
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/sound.hpp"
 
@@ -19,9 +20,9 @@ using namespace rct3::audio;
 namespace
 {
 
-    constexpr std::uint32_t kRate = 48000;
+    constexpr u32 kRate = 48000;
 
-    EngineConfig offline(std::uint32_t voices = 8)
+    EngineConfig offline(u32 voices = 8)
     {
         EngineConfig c;
         c.backend = Backend::Offline;
@@ -39,27 +40,27 @@ namespace
     }
 
     // `frames` of a constant mono 16-bit signal. 16384 is exactly 0.5 in float.
-    SoundBuffer constant_mono(std::int16_t value, std::size_t frames, std::uint32_t rate = kRate)
+    SoundBuffer constant_mono(i16 value, usize frames, u32 rate = kRate)
     {
-        const std::vector<std::int16_t> s(frames, value);
+        const std::vector<i16> s(frames, value);
         return make_pcm16(s, 1, rate);
     }
 
     // The mixer's pitch stage delays the signal by one frame, so assertions look at frame 4 (indices
     // kF, kF + 1) rather than frame 0.
-    constexpr std::size_t kF = 8;
+    constexpr usize kF = 8;
 
-    std::vector<float> render_frames(AudioEngine& e, std::size_t frames)
+    std::vector<f32> render_frames(AudioEngine& e, usize frames)
     {
-        std::vector<float> out(frames * e.channels(), -7.0f);
+        std::vector<f32> out(frames * e.channels(), -7.0f);
         CHECK(e.render(out) == frames);
         return out;
     }
 
-    std::size_t count_nonzero_frames(const std::vector<float>& stereo)
+    usize count_nonzero_frames(const std::vector<f32>& stereo)
     {
-        std::size_t n = 0;
-        for (std::size_t i = 0; i + 1 < stereo.size(); i += 2)
+        usize n = 0;
+        for (usize i = 0; i + 1 < stereo.size(); i += 2)
         {
             if (std::fabs(stereo[i]) > 1e-4f || std::fabs(stereo[i + 1]) > 1e-4f)
                 ++n;
@@ -71,7 +72,7 @@ namespace
 
 TEST_CASE("buffers report frames and duration, and validate their shape")
 {
-    const std::vector<std::int16_t> s(960, 0);
+    const std::vector<i16> s(960, 0);
     const SoundBuffer mono = make_pcm16(s, 1, 48000);
     CHECK(mono.valid());
     CHECK(mono.frame_count() == 960);
@@ -80,7 +81,7 @@ TEST_CASE("buffers report frames and duration, and validate their shape")
     const SoundBuffer stereo = make_pcm16(s, 2, 48000);
     CHECK(stereo.frame_count() == 480);
 
-    const std::vector<float> f(10, 0.0f);
+    const std::vector<f32> f(10, 0.0f);
     const SoundBuffer fb = make_float(f, 2, 22050);
     CHECK(fb.valid());
     CHECK(fb.frame_count() == 5);
@@ -125,7 +126,7 @@ TEST_CASE("sound items convert to playable buffers")
         CHECK(b->channels == 2);
         CHECK(b->sample_rate == 22050);
         CHECK(b->frame_count() == 2);
-        std::int16_t last = 0;
+        i16 last = 0;
         std::memcpy(&last, b->data.data() + 6, 2);
         CHECK(last == 32767);
     }
@@ -139,7 +140,7 @@ TEST_CASE("sound items convert to playable buffers")
         const auto b = from_ovl_sound(info);
         REQUIRE(b.has_value());
         REQUIRE(b->frame_count() == 3);
-        std::int16_t v[3];
+        i16 v[3];
         std::memcpy(v, b->data.data(), 6);
         CHECK(v[0] == 0);
         CHECK(v[1] == 127 * 256);
@@ -186,8 +187,8 @@ TEST_CASE("play parameters are range checked")
     CHECK_FALSE(is_valid(PlayParams { 1.0f, 1.5f, 1.0f }));
     CHECK_FALSE(is_valid(PlayParams { 1.0f, 0.0f, 0.0f }));
     CHECK_FALSE(is_valid(PlayParams { 1.0f, 0.0f, kMaxPitch + 1.0f }));
-    CHECK_FALSE(is_valid(PlayParams { std::numeric_limits<float>::quiet_NaN(), 0.0f, 1.0f }));
-    CHECK_FALSE(is_valid(PlayParams { 1.0f, std::numeric_limits<float>::infinity(), 1.0f }));
+    CHECK_FALSE(is_valid(PlayParams { std::numeric_limits<f32>::quiet_NaN(), 0.0f, 1.0f }));
+    CHECK_FALSE(is_valid(PlayParams { 1.0f, std::numeric_limits<f32>::infinity(), 1.0f }));
 }
 
 TEST_CASE("engine configuration is validated")
@@ -220,7 +221,7 @@ TEST_CASE("play rejects bad input without starting a voice")
 TEST_CASE("an idle engine renders silence")
 {
     AudioEngine e = make_engine();
-    for (float v : render_frames(e, 64))
+    for (f32 v : render_frames(e, 64))
         CHECK(v == 0.0f);
 }
 
@@ -276,7 +277,7 @@ TEST_CASE("a placed sound is heard from the listener: on its side, and fading to
     e.set_listener({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 1.0f, 0.0f });
     const auto at = [](glm::vec3 where) { return PlayParams { .at = where, .near = 2.0f, .far = 10.0f }; };
     // The mixer smooths a placed sound's gains over its first frames, so look further in.
-    constexpr std::size_t kLate = 2 * 400;
+    constexpr usize kLate = 2 * 400;
 
     SUBCASE("to the right")
     {
@@ -295,7 +296,7 @@ TEST_CASE("a placed sound is heard from the listener: on its side, and fading to
     {
         const auto near = e.play(constant_mono(16384, 1024), at({ 0.0f, 0.0f, -1.0f }));
         REQUIRE(near.has_value());
-        const float loud = render_frames(e, 512)[kLate];
+        const f32 loud = render_frames(e, 512)[kLate];
         e.stop(*near);
         REQUIRE(e.play(constant_mono(16384, 1024), at({ 0.0f, 0.0f, -6.0f })).has_value());
         CHECK(render_frames(e, 512)[kLate] == doctest::Approx(loud / 2).epsilon(0.05));
@@ -320,8 +321,8 @@ TEST_CASE("muffled, placed sounds lose their highs as through water, and unplace
     AudioEngine e = make_engine();
     e.set_listener({ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 1.0f, 0.0f });
     // A shrill tone, 8 frames a wave: far above the muffled band, well under the clear one.
-    std::vector<std::int16_t> shrill(2048);
-    for (std::size_t i = 0; i < shrill.size(); ++i)
+    std::vector<i16> shrill(2048);
+    for (usize i = 0; i < shrill.size(); ++i)
         shrill[i] = i % 8 < 4 ? 16384 : -16384;
     const SoundBuffer tone = make_pcm16(shrill, 1, kRate);
     // How loud the left channel is over frames 400..511, once filters and smoothing settle.
@@ -329,13 +330,13 @@ TEST_CASE("muffled, placed sounds lose their highs as through water, and unplace
         REQUIRE(e.play(tone, params).has_value());
         const auto out = render_frames(e, 512);
         e.stop_all();
-        float sum = 0;
-        for (std::size_t f = 400; f < 512; ++f)
+        f32 sum = 0;
+        for (usize f = 400; f < 512; ++f)
             sum += std::fabs(out[2 * f]);
         return sum / 112;
     };
     const PlayParams placed { .at = glm::vec3 { 0.0f, 0.0f, -1.0f }, .near = 2.0f, .far = 10.0f };
-    const float clear = loudness(placed);
+    const f32 clear = loudness(placed);
     CHECK(clear > 0.1f);
     e.set_muffled(true);
     CHECK(loudness(placed) < clear / 10);
@@ -435,7 +436,7 @@ TEST_CASE("stop silences a voice and invalidates its handle")
 
     e.stop_all();
     CHECK(e.active_voices() == 0);
-    for (float v : render_frames(e, 8))
+    for (f32 v : render_frames(e, 8))
         CHECK(v == 0.0f);
     CHECK_FALSE(e.stop(VoiceHandle { }));
 }
@@ -458,8 +459,8 @@ TEST_CASE("per-voice volume and pan change while playing")
 TEST_CASE("stereo sources keep their channels and float buffers play")
 {
     AudioEngine e = make_engine();
-    std::vector<float> s;
-    for (std::int32_t i = 0; i < 64; ++i)
+    std::vector<f32> s;
+    for (i32 i = 0; i < 64; ++i)
     {
         s.push_back(0.5f);
         s.push_back(-0.25f);
@@ -476,7 +477,7 @@ TEST_CASE("a source at another rate plays for the right time")
     // 1000 frames at half the mixing rate last 2000 mixed frames.
     REQUIRE(e.play(constant_mono(16384, 1000, kRate / 2)).has_value());
     const auto out = render_frames(e, 4000);
-    const std::size_t n = count_nonzero_frames(out);
+    const usize n = count_nonzero_frames(out);
     CHECK(n >= 1990);
     CHECK(n <= 2010);
 }
@@ -488,7 +489,7 @@ TEST_CASE("pitch changes the playing time")
     p.pitch = 2.0f;
     REQUIRE(e.play(constant_mono(16384, 2000), p).has_value());
     const auto out = render_frames(e, 4000);
-    const std::size_t n = count_nonzero_frames(out);
+    const usize n = count_nonzero_frames(out);
     CHECK(n >= 990);
     CHECK(n <= 1010);
 }
@@ -503,7 +504,7 @@ TEST_CASE("the null backend runs without a device and cannot be rendered by hand
     const auto h = e->play(constant_mono(1000, 480));
     REQUIRE(h.has_value());
     CHECK(e->stop(*h));
-    std::vector<float> scratch(16);
+    std::vector<f32> scratch(16);
     CHECK(e->render(scratch) == 0);
 }
 
@@ -530,7 +531,7 @@ TEST_CASE("a sound item read from an overlay plays through the mixer")
     using namespace rct3::test;
     // 64 mono 16-bit samples of the value 0x2000 (0.25) after the name "Tone:snd".
     std::vector<std::byte> strings = bytes_of_string(std::string("Tone:snd\0", 9));
-    for (std::int32_t i = 0; i < 64; ++i)
+    for (i32 i = 0; i < 64; ++i)
         append_u16(strings, 0x2000);
 
     std::vector<std::byte> info;
@@ -540,7 +541,7 @@ TEST_CASE("a sound item read from an overlay plays through the mixer")
     append_u32(info, kRate * 2);
     append_u16(info, 2);
     append_u16(info, 16);
-    for (std::int32_t i = 0; i < 2 + 9 + 1; ++i)
+    for (i32 i = 0; i < 2 + 9 + 1; ++i)
         append_u32(info, 0);
     append_u32(info, 9);   // data address
     append_u32(info, 128); // data size
@@ -550,7 +551,7 @@ TEST_CASE("a sound item read from an overlay plays through the mixer")
 
     std::vector<std::byte> row;
     append_u32(row, 0);
-    append_u32(row, static_cast<std::uint32_t>(strings.size()));
+    append_u32(row, static_cast<u32>(strings.size()));
     append_u16(row, 1);
     append_u16(row, 0xFFFF);
     append_u32(row, 0);
@@ -580,7 +581,7 @@ TEST_CASE("a stream plays what it is fed, is silent when dry and ends when told"
     REQUIRE(h.has_value());
     CHECK(e.stream_space(*h) == 512);
 
-    const std::vector<float> half(2 * 600, 0.5f);
+    const std::vector<f32> half(2 * 600, 0.5f);
     CHECK(e.feed(*h, half) == 512); // As much as fits
     CHECK(e.stream_space(*h) == 0);
     auto out = render_frames(e, 256);

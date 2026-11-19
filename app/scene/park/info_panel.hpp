@@ -6,6 +6,7 @@
 #pragma once
 
 #include "config/game/options.hpp"
+#include "core/types.hpp"
 #include "park/attraction_objects.hpp"
 #include "park/camera.hpp"
 #include "render/device.hpp"
@@ -33,10 +34,10 @@ namespace rct3::scene::park
     [[nodiscard]] ui::screens::info::InfoUnits info_units(const ui::InterfaceAssets& assets, const config::game::GameOptions& options);
 
     /// The changing room (of the pools') the object `o` draws, if it draws one.
-    [[nodiscard]] std::optional<std::size_t> pool_room(const ParkScene& scene, const save::model::PlacedObject& o);
+    [[nodiscard]] std::optional<usize> pool_room(const ParkScene& scene, const save::model::PlacedObject& o);
 
     /// The simulated changing room of `room`, if the simulation has it.
-    [[nodiscard]] entt::entity room_entity(const ParkScene& scene, std::size_t room);
+    [[nodiscard]] entt::entity room_entity(const ParkScene& scene, usize room);
 
     /// What the info panel shows of the prop `index`.
     [[nodiscard]] ui::screens::info::SceneryFacts prop_facts(const ParkScene& scene, save::model::PlacedObjectIndex index);
@@ -49,14 +50,14 @@ namespace rct3::scene::park
     void show_info_page(ParkScene& scene, ui::screens::info::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);
 
     /// The round view of a person: looking at them from where the player looks from, turning from there.
-    [[nodiscard]] rct3::park::ParkCamera person_view(const ParkScene& scene, std::size_t shown, float yaw);
+    [[nodiscard]] rct3::park::ParkCamera person_view(const ParkScene& scene, usize shown, f32 yaw);
 
     /// Opens the panel on the person `shown` (of the shown people), at the tab last opened on a person if
     /// they have it.
-    void open_person(ParkScene& scene, ui::screens::info::InfoPanel& panel, std::size_t shown, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);
+    void open_person(ParkScene& scene, ui::screens::info::InfoPanel& panel, usize shown, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);
 
     /// Opens the panel on the party shown person `shown` goes round with, at the tab last opened on a party.
-    void open_party(ParkScene& scene, ui::screens::info::InfoPanel& panel, std::size_t shown, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);
+    void open_party(ParkScene& scene, ui::screens::info::InfoPanel& panel, usize shown, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);
 
     /// Opens the panel on the attraction `ref`, at `tab`, else the tab last opened, if it has one.
     void open_info(ParkScene& scene, ui::screens::info::InfoPanel& panel, rct3::park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, std::optional<ui::screens::info::AttractionTab> tab = std::nullopt);
@@ -65,7 +66,7 @@ namespace rct3::scene::park
     void open_prop(ParkScene& scene, ui::screens::info::InfoPanel& panel, save::model::PlacedObjectIndex index, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, std::optional<ui::screens::info::SceneryTab> open = std::nullopt);
 
     /// Paints colour slot `slot` of the prop `index` in colour `colour` of the 32.
-    void paint_prop(render::Device& device, ParkScene& scene, save::model::PlacedObjectIndex index, std::size_t slot, std::int32_t colour);
+    void paint_prop(render::Device& device, ParkScene& scene, save::model::PlacedObjectIndex index, usize slot, i32 colour);
 
     /// Writes a change the player made on an attraction's page into the save. Nothing is shown again, so a
     /// spinner held down keeps stepping; a page that looks different after the change is set up here.

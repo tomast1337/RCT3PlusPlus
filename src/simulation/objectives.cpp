@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/objectives.hpp"
 
+#include "core/types.hpp"
 #include "simulation/park/finance.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/research.hpp"
@@ -15,21 +16,21 @@ namespace rct3::simulation
 {
     namespace
     {
-        constexpr std::int32_t kLevels = 3;
+        constexpr i32 kLevels = 3;
 
         // Prizes by number: none, the nine a scenario may give for a level, then the levels' own.
         constexpr std::array<std::string_view, 13> kPrizeKeys = {
             "", "Prize_LargeCash", "Prize_SmallCash", "Prize_Lollipop", "Prize_ParkRatingBonus", "Prize_InterestRateDrop", "Prize_LoanIncrease", "Prize_ConstructionRights", "Prize_CSCoaster", "Prize_ResearchCatagory", "Prize_Apprentice", "Prize_Entrepreneur", "Prize_Tycoon",
         };
 
-        std::optional<save::model::Objective&> objective_of(save::model::ObjectiveSet& set, std::int32_t level)
+        std::optional<save::model::Objective&> objective_of(save::model::ObjectiveSet& set, i32 level)
         {
             const auto found = std::ranges::find_if(set.objectives, [&](const save::model::Objective& o) { return o.difficulty == level && o.objective_id == 0; });
             return found != set.objectives.end() ? std::optional<save::model::Objective&>(*found) : std::nullopt;
         }
 
         /// The figure of a tested ride a coaster goal names, in the units the goal's value is kept in.
-        std::optional<float> ride_figure(const save::model::Ride& ride, std::uint32_t figure)
+        std::optional<f32> ride_figure(const save::model::Ride& ride, u32 figure)
         {
             using units::kGravity;
             if (!ride.stats.last_lap || !ride.stats.last_lap->valid)
@@ -64,7 +65,7 @@ namespace rct3::simulation
                 case 9:
                     return t.air_time.value;
                 case 10:
-                    return static_cast<float>(t.inversion_count);
+                    return static_cast<f32>(t.inversion_count);
                 case 11:
                     return t.highest_drop.value;
                 default:
@@ -73,15 +74,15 @@ namespace rct3::simulation
         }
 
         /// How many rides of the group a coaster goal names reach its figure; none when one that must does not.
-        std::optional<std::int32_t> coasters_passing(const save::model::CoasterTarget& target, std::span<const GoalRide> rides)
+        std::optional<i32> coasters_passing(const save::model::CoasterTarget& target, std::span<const GoalRide> rides)
         {
             const RideGroup group = (target.flags & save::model::CoasterTarget::kPoolSlides) != 0 ? RideGroup::PoolSlide : RideGroup::Coaster;
-            std::int32_t passing = 0;
+            i32 passing = 0;
             for (const GoalRide& r : rides)
             {
                 if (r.group != group || r.ride == nullptr)
                     continue;
-                const std::optional<float> v = ride_figure(*r.ride, target.flags & save::model::CoasterTarget::kFigure);
+                const std::optional<f32> v = ride_figure(*r.ride, target.flags & save::model::CoasterTarget::kFigure);
                 if (!v)
                     continue;
                 const bool passes = (target.flags & save::model::CoasterTarget::kAtMost) != 0 ? *v <= target.value : *v >= target.value;
@@ -126,7 +127,7 @@ namespace rct3::simulation
 
     GoalReading read_goal(const save::model::Condition& c, const ParkFigures& f)
     {
-        const auto compare = [&](std::int64_t now) { return GoalReading { now, c.value && (c.greater_than.value_or(true) ? now >= *c.value : now <= *c.value) }; };
+        const auto compare = [&](i64 now) { return GoalReading { now, c.value && (c.greater_than.value_or(true) ? now >= *c.value : now <= *c.value) }; };
         switch (c.kind)
         {
             case save::model::ConditionKind::ParkValue:
@@ -136,9 +137,9 @@ namespace rct3::simulation
             case save::model::ConditionKind::ParkRating:
                 return compare(f.rating);
             case save::model::ConditionKind::RideIncome:
-                return compare(-std::int64_t { f.last_month.ride_tickets }); // Income is kept below nought
+                return compare(-i64 { f.last_month.ride_tickets }); // Income is kept below nought
             case save::model::ConditionKind::ShopProfit:
-                return compare(-(std::int64_t { f.last_month.shop_sales } + f.last_month.food_drink_sales + f.last_month.shop_stock + f.last_month.food_drink_stock));
+                return compare(-(i64 { f.last_month.shop_sales } + f.last_month.food_drink_sales + f.last_month.shop_stock + f.last_month.food_drink_stock));
             case save::model::ConditionKind::AnimalHealth:
                 return compare(f.animal_health);
             case save::model::ConditionKind::Dung:
@@ -149,7 +150,7 @@ namespace rct3::simulation
             {
                 if (!c.coaster)
                     return { };
-                const std::optional<std::int32_t> passing = coasters_passing(*c.coaster, f.rides);
+                const std::optional<i32> passing = coasters_passing(*c.coaster, f.rides);
                 return { passing.value_or(0), passing >= c.coaster->rides };
             }
             case save::model::ConditionKind::Vip:
@@ -159,12 +160,12 @@ namespace rct3::simulation
         }
     }
 
-    float months_held(const save::model::Condition& c, float time) noexcept
+    f32 months_held(const save::model::Condition& c, f32 time) noexcept
     {
         return c.has(save::model::ConditionFlag::TimerRunning) ? std::max(0.0f, time - c.start_time) / save::model::GameClock::kUnitsPerMonth : 0.0f;
     }
 
-    RideGroup ride_group(std::uint32_t kind) noexcept
+    RideGroup ride_group(u32 kind) noexcept
     {
         switch (kind)
         {
@@ -182,9 +183,9 @@ namespace rct3::simulation
         }
     }
 
-    std::int32_t level_playing(const save::model::ObjectiveSet& set)
+    i32 level_playing(const save::model::ObjectiveSet& set)
     {
-        for (std::int32_t level = 0; level < kLevels - 1; ++level)
+        for (i32 level = 0; level < kLevels - 1; ++level)
         {
             const bool won = std::ranges::any_of(set.objectives, [&](const save::model::Objective& o) { return o.difficulty == level && o.objective_id == 0 && o.success; });
             if (!won)
@@ -193,14 +194,14 @@ namespace rct3::simulation
         return kLevels - 1;
     }
 
-    std::optional<std::array<std::int32_t, 2>> check_goals(save::model::ObjectiveSet& set, const ParkFigures& figures, float time, std::optional<park::ParkMessages&> messages)
+    std::optional<std::array<i32, 2>> check_goals(save::model::ObjectiveSet& set, const ParkFigures& figures, f32 time, std::optional<park::ParkMessages&> messages)
     {
         using enum save::model::ConditionFlag;
         const auto tell = [&](const save::model::Condition& c, std::string_view key) {
             if (messages)
                 park::post(*messages, { .text_key = std::string(key), .field_key = std::string(condition_name(c.kind)) });
         };
-        const std::int32_t level = level_playing(set);
+        const i32 level = level_playing(set);
         std::optional<save::model::Objective&> objective = objective_of(set, level);
         if (!objective || objective->success)
             return std::nullopt;
@@ -221,11 +222,11 @@ namespace rct3::simulation
                 c.consistency_flags |= std::to_underlying(TimerRunning);
                 c.start_time = time;
             }
-            const std::int32_t months = c.months_to_hold - (counts_last_month(c.kind) ? 1 : 0);
-            const bool held = met && time - c.start_time >= static_cast<float>(std::max(months, 0)) * save::model::GameClock::kUnitsPerMonth;
+            const i32 months = c.months_to_hold - (counts_last_month(c.kind) ? 1 : 0);
+            const bool held = met && time - c.start_time >= static_cast<f32>(std::max(months, 0)) * save::model::GameClock::kUnitsPerMonth;
             if (c.has(HasDeadline) && judged(c.kind))
             {
-                const float deadline = c.next_check_time;
+                const f32 deadline = c.next_check_time;
                 // The week's warning first: given, the month's is past telling.
                 if (!c.has(WarnedTwice) && time >= deadline - save::model::GameClock::kUnitsPerWeek && time < deadline)
                 {
@@ -263,7 +264,7 @@ namespace rct3::simulation
         if (!any || !all)
             return std::nullopt;
         objective->success = true;
-        const std::int32_t prize = objective->prize_id > 0 && objective->prize_id < kApprenticePrize ? objective->prize_id : 0;
+        const i32 prize = objective->prize_id > 0 && objective->prize_id < kApprenticePrize ? objective->prize_id : 0;
         return std::array { prize, kApprenticePrize + level };
     }
 
@@ -316,7 +317,7 @@ namespace rct3::simulation
         return { };
     }
 
-    void give_prize(park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, save::model::TerrainGrid& land, Research& research, std::int32_t id)
+    void give_prize(park::ParkState& park, save::model::Finance& finance, std::optional<i64>& kept, save::model::TerrainGrid& land, Research& research, i32 id)
     {
         const tuning::Prizes& p = kTuning.prizes;
         switch (id)
@@ -328,7 +329,7 @@ namespace rct3::simulation
             case 4:
                 park.rating_bonus += p.rating_bonus.value;
                 if (park.rating)
-                    *park.rating = std::min(*park.rating + p.rating_bonus.value / static_cast<float>(park::kMaxRating), 1.0f);
+                    *park.rating = std::min(*park.rating + p.rating_bonus.value / static_cast<f32>(park::kMaxRating), 1.0f);
                 break;
             case 5:
                 finance.interest_rate_percent /= 2;
@@ -353,17 +354,17 @@ namespace rct3::simulation
         }
     }
 
-    std::string_view prize_name(std::int32_t id)
+    std::string_view prize_name(i32 id)
     {
-        return id > 0 && std::cmp_less(id, kPrizeKeys.size()) ? kPrizeKeys[static_cast<std::size_t>(id)] : std::string_view("Prize_Invalid");
+        return id > 0 && std::cmp_less(id, kPrizeKeys.size()) ? kPrizeKeys[static_cast<usize>(id)] : std::string_view("Prize_Invalid");
     }
 
-    std::string_view prize_message(std::int32_t id)
+    std::string_view prize_message(i32 id)
     {
         constexpr std::array<std::string_view, 13> kAwardKeys = {
             "", "Prize_LargeCashAward", "Prize_SmallCashAward", "Prize_LollipopAward", "Prize_ParkRatingBonusAward", "Prize_InterestRateDropAward", "Prize_LoanIncreaseAward", "Prize_ConstructionRightsAward", "Prize_CSCoasterAward", "Prize_ResearchCatagoryAward", "Prize_ApprenticeAward", "Prize_EntrepreneurAward", "Prize_TycoonAward",
         };
-        return id > 0 && std::cmp_less(id, kAwardKeys.size()) ? kAwardKeys[static_cast<std::size_t>(id)] : std::string_view("Prize_InvalidAward");
+        return id > 0 && std::cmp_less(id, kAwardKeys.size()) ? kAwardKeys[static_cast<usize>(id)] : std::string_view("Prize_InvalidAward");
     }
 
 } // namespace rct3::simulation

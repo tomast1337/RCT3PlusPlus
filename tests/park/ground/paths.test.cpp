@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground/paths.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <set>
@@ -12,7 +14,7 @@ using namespace rct3::park::ground;
 namespace
 {
 
-    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height, float level = 0)
+    save::model::TerrainGrid flat_grid(i32 width, i32 height, f32 level = 0)
     {
         save::model::TerrainGrid g;
         g.width = width;
@@ -21,25 +23,25 @@ namespace
         g.origin_z = 2;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         for (save::model::TerrainCell& c : g.cells)
             c.corners = { level, level, level, level };
         return g;
     }
 
-    save::model::PathTile ground_tile(std::int32_t col, std::int32_t row, std::string style = "Gravel")
+    save::model::PathTile ground_tile(i32 col, i32 row, std::string style = "Gravel")
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Ground;
-        p.col = static_cast<std::uint8_t>(col);
-        p.row = static_cast<std::uint8_t>(row);
+        p.col = static_cast<u8>(col);
+        p.row = static_cast<u8>(row);
         p.surface_name = std::move(style);
         return p;
     }
 
-    std::size_t vertices_of(const TerrainMesh& m, GroundPaint paint)
+    usize vertices_of(const TerrainMesh& m, GroundPaint paint)
     {
-        std::size_t n = 0;
+        usize n = 0;
         for (const GroundBatch& b : m.batches)
             n += b.paint == paint ? b.count : 0;
         return n;
@@ -61,7 +63,7 @@ TEST_CASE("a quarter's look follows the path round its corner")
 
 TEST_CASE("every look has a cell of its own")
 {
-    std::set<std::pair<std::int32_t, std::int32_t>> seen;
+    std::set<std::pair<i32, i32>> seen;
     for (const PathLook look : { PathLook::Open, PathLook::Notched, PathLook::EdgeX, PathLook::EdgeXJoined, PathLook::EdgeZ, PathLook::EdgeZJoined, PathLook::Closed, PathLook::CornerOnly })
     {
         const PathCell c = path_cell(look);
@@ -179,7 +181,7 @@ TEST_CASE("a mesh cut down to some tiles keeps their triangles in their batches"
 
 namespace
 {
-    save::model::Ride flat_ride(std::int32_t col, std::int32_t row, std::uint8_t turns, std::int32_t height = 0)
+    save::model::Ride flat_ride(i32 col, i32 row, u8 turns, i32 height = 0)
     {
         save::model::Ride ride;
         ride.kind = save::model::RideKind::Flat;
@@ -272,7 +274,7 @@ TEST_CASE("a stall paves its footprint and opens onto the side it faces")
     stall.base.spot = save::model::PlacementSpot { 7, 4, 4, 0, 0 };
     for (const auto& [facing, front] : { std::pair { 0, std::vector { save::model::Tile { 4, 3 }, save::model::Tile { 5, 3 } } }, { 1, { save::model::Tile { 3, 4 } } }, { 2, { save::model::Tile { 4, 5 }, save::model::Tile { 5, 5 } } }, { 3, { save::model::Tile { 6, 4 } } } })
     {
-        stall.base.facing = static_cast<std::uint8_t>(facing);
+        stall.base.facing = static_cast<u8>(facing);
         const std::vector<Paving> pavings = ride_pavings(rides, two_wide, nothing);
         REQUIRE(pavings.size() == 1);
         CHECK(pavings[0].tiles.size() == 2);
@@ -331,7 +333,7 @@ TEST_CASE("paving looks like the path at its source; only an entrance takes a qu
 TEST_CASE("paving off level ground is raised at its height, and tiles holding a path keep it")
 {
     save::model::TerrainGrid g = flat_grid(6, 6);
-    g.cells[static_cast<std::size_t>(2 * 6 + 3)].corners = { 0, 1, 0, 1 };
+    g.cells[static_cast<usize>(2 * 6 + 3)].corners = { 0, 1, 0, 1 };
     const Paving stall { .tiles = { { 2, 2 }, { 3, 2 }, { 4, 2 }, { 9, 9 } }, .height = 0 };
     const std::array paths { ground_tile(4, 2) };
     const std::vector<PavedTile> laid = lay_pavings(paths, std::span(&stall, 1), g);

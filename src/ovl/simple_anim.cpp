@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/simple_anim.hpp"
 
+#include "core/types.hpp"
+
 #include <cstring>
 #include <span>
 
@@ -11,25 +13,25 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kAnimTag = "san";
-        constexpr std::size_t kHeaderSize = 16; // key count, channel count, times, samples
-        constexpr std::size_t kSampleSize = 24;
-        constexpr std::uint32_t kMaxKeys = 1u << 20;
-        constexpr std::uint32_t kMaxChannels = 64;
+        constexpr usize kHeaderSize = 16; // key count, channel count, times, samples
+        constexpr usize kSampleSize = 24;
+        constexpr u32 kMaxKeys = 1u << 20;
+        constexpr u32 kMaxChannels = 64;
 
-        std::uint32_t u32_at(std::span<const std::byte> b, std::size_t at)
+        u32 u32_at(std::span<const std::byte> b, usize at)
         {
-            std::uint32_t v = 0;
+            u32 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
 
-        std::optional<SimpleAnim> read_anim(const AddressSpace& space, std::uint32_t address)
+        std::optional<SimpleAnim> read_anim(const AddressSpace& space, u32 address)
         {
             const auto header = space.bytes_at(address, kHeaderSize);
             if (!header)
                 return std::nullopt;
 
-            const std::uint32_t keys = u32_at(*header, 0);
+            const u32 keys = u32_at(*header, 0);
             SimpleAnim anim;
             anim.channels = u32_at(*header, 4);
             if (keys > kMaxKeys || anim.channels > kMaxChannels)
@@ -37,21 +39,21 @@ namespace rct3::ovl
 
             if (keys != 0)
             {
-                const auto times = space.bytes_at(u32_at(*header, 8), std::size_t { keys } * 4);
+                const auto times = space.bytes_at(u32_at(*header, 8), usize { keys } * 4);
                 if (!times)
                     return std::nullopt;
                 anim.times.resize(keys);
                 std::memcpy(anim.times.data(), times->data(), times->size());
             }
 
-            const std::size_t sample_count = std::size_t { keys } * anim.channels;
+            const usize sample_count = usize { keys } * anim.channels;
             if (sample_count != 0)
             {
                 const auto raw = space.bytes_at(u32_at(*header, 12), sample_count * kSampleSize);
                 if (!raw)
                     return std::nullopt;
                 anim.samples.resize(sample_count);
-                for (std::size_t i = 0; i < sample_count; ++i)
+                for (usize i = 0; i < sample_count; ++i)
                 {
                     const std::byte* p = raw->data() + i * kSampleSize;
                     std::memcpy(anim.samples[i].vector.data(), p, 12);

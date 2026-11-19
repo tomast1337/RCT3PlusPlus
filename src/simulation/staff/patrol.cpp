@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/staff/patrol.hpp"
 
+#include "core/types.hpp"
 #include "simulation/sim_world.hpp"
 
 #include <algorithm>
@@ -40,12 +41,12 @@ namespace rct3::simulation::staff
         }
     } // namespace
 
-    void paint_patrol(entt::registry& r, entt::entity staff, glm::ivec2 at, std::int32_t across, bool add)
+    void paint_patrol(entt::registry& r, entt::entity staff, glm::ivec2 at, i32 across, bool add)
     {
         const auto* patrol = r.try_get<Patrol>(staff);
         std::vector<glm::ivec2> tiles = patrol != nullptr ? patrol->tiles : std::vector<glm::ivec2> { };
-        for (std::int32_t dc = -across / 2; dc <= across / 2; ++dc)
-            for (std::int32_t dr = -across / 2; dr <= across / 2; ++dr)
+        for (i32 dc = -across / 2; dc <= across / 2; ++dc)
+            for (i32 dr = -across / 2; dr <= across / 2; ++dr)
             {
                 const glm::ivec2 t = at + glm::ivec2(dc, dr);
                 const auto in = std::ranges::find(tiles, t);
@@ -75,13 +76,13 @@ namespace rct3::simulation::staff
             high = glm::max(high, t);
         }
         std::vector<glm::ivec2> tiles;
-        for (std::int32_t col = low.x; col <= high.x; ++col)
-            for (std::int32_t row = low.y; row <= high.y; ++row)
+        for (i32 col = low.x; col <= high.x; ++col)
+            for (i32 row = low.y; row <= high.y; ++row)
                 tiles.emplace_back(col, row);
         set_tiles(r, staff, tiles);
     }
 
-    void join_zone(entt::registry& r, entt::entity staff, std::uint32_t zone)
+    void join_zone(entt::registry& r, entt::entity staff, u32 zone)
     {
         if (zone == 0)
         {
@@ -103,7 +104,7 @@ namespace rct3::simulation::staff
             patrol.tiles = std::move(*tiles);
     }
 
-    std::size_t uncovered_paths(const SimWorld& world, StaffRole role)
+    usize uncovered_paths(const SimWorld& world, StaffRole role)
     {
         std::vector<const Patrol*> areas;
         for (const auto [e, staff] : world.registry.view<const Staff>().each())
@@ -117,7 +118,7 @@ namespace rct3::simulation::staff
         }
         if (areas.empty())
             return 0;
-        return static_cast<std::size_t>(std::ranges::count_if(world.paths.nodes(), [&](const PathNode& n) { return !n.queue && !n.removed && std::ranges::none_of(areas, [&](const Patrol* a) { return a->covers(n.tile); }); }));
+        return static_cast<usize>(std::ranges::count_if(world.paths.nodes(), [&](const PathNode& n) { return !n.queue && !n.removed && std::ranges::none_of(areas, [&](const Patrol* a) { return a->covers(n.tile); }); }));
     }
 
 } // namespace rct3::simulation::staff

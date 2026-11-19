@@ -9,6 +9,7 @@
 #pragma once
 
 #include "config/game/install.hpp"
+#include "core/types.hpp"
 #include "park/attraction_objects.hpp"
 #include "park/camera.hpp"
 #include "park/ground/textures.hpp"
@@ -51,7 +52,7 @@ namespace rct3::scene::park
     /// Brings the open window up to date: its pictures, the people (`people` is asked only when they are
     /// drawn again) and the camera, seen in a view `aspect` times as wide as it is tall. Returns the park
     /// point (x, z) the player picked on the map since the last frame, if any.
-    [[nodiscard]] std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::model::TerrainGrid& grid, const rct3::park::ParkCamera& camera, float aspect, const std::function<rct3::park::MapPeople()>& people, units::Seconds elapsed);
+    [[nodiscard]] std::optional<glm::vec2> update_park_map(render::Device& device, ParkMap& map, ui::Desktop& desktop, const save::model::TerrainGrid& grid, const rct3::park::ParkCamera& camera, f32 aspect, const std::function<rct3::park::MapPeople()>& people, units::Seconds elapsed);
 
     void destroy_park_map(render::Device& device, ParkMap& map);
 

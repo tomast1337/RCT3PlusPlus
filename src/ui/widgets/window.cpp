@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/window.hpp"
 
+#include "core/types.hpp"
 #include "ui/keyboard_focus.hpp"
 #include "ui/text_layout.hpp"
 
@@ -16,7 +17,7 @@ namespace rct3::ui::widgets
         constexpr Point kDefaultMinSize { 160, 120 };
     } // namespace
 
-    Window::Window(std::string name, const WindowStyle& style, float width, float height)
+    Window::Window(std::string name, const WindowStyle& style, f32 width, f32 height)
         : Widget(std::move(name))
         , style_(style)
     {
@@ -32,19 +33,19 @@ namespace rct3::ui::widgets
         close_->placement = top_right(style_.title_button_margin.x, style_.title_button_margin.y, style_.title_button_size, style_.title_button_size);
     }
 
-    std::uint8_t Window::edges_at(Point p) const
+    u8 Window::edges_at(Point p) const
     {
         if (!resizable)
             return 0;
         const Rect& r = rect();
-        const float band = style_.resize_band;
-        const float corner = style_.resize_corner;
+        const f32 band = style_.resize_band;
+        const f32 corner = style_.resize_corner;
         // Near a corner, the band widens along both edges so corners are easy to hit.
         const bool near_left = p.x < r.x0 + corner;
         const bool near_right = p.x >= r.x1 - corner;
         const bool near_top = p.y < r.y0 + corner;
         const bool near_bottom = p.y >= r.y1 - corner;
-        std::uint8_t edges = 0;
+        u8 edges = 0;
         if (p.x < r.x0 + band || (near_left && (p.y < r.y0 + band || p.y >= r.y1 - band)))
             edges |= Left;
         if (p.x >= r.x1 - band || (near_right && (p.y < r.y0 + band || p.y >= r.y1 - band)))
@@ -56,7 +57,7 @@ namespace rct3::ui::widgets
         return edges;
     }
 
-    CursorKind Window::edge_cursor(std::uint8_t edges)
+    CursorKind Window::edge_cursor(u8 edges)
     {
         const bool horizontal = (edges & (Left | Right)) != 0;
         const bool vertical = (edges & (Top | Bottom)) != 0;
@@ -86,11 +87,11 @@ namespace rct3::ui::widgets
     void Window::resize_to(Point p)
     {
         const Rect& s = start_rect_;
-        const float dx = p.x - grab_.x;
-        const float dy = p.y - grab_.y;
+        const f32 dx = p.x - grab_.x;
+        const f32 dy = p.y - grab_.y;
         const Rect bounds = parent() ? parent()->rect() : s;
-        const float min_w = std::min(min_size.x, s.width());
-        const float min_h = std::min(min_size.y, s.height());
+        const f32 min_w = std::min(min_size.x, s.width());
+        const f32 min_h = std::min(min_size.y, s.height());
 
         Rect r = s;
         if ((edges_ & Left) != 0)
@@ -108,7 +109,7 @@ namespace rct3::ui::widgets
         o = { o.x0 + r.x0 - now.x0, o.y0 + r.y0 - now.y0, o.x1 + r.x1 - now.x1, o.y1 + r.y1 - now.y1 };
     }
 
-    void Window::set_height(float height)
+    void Window::set_height(f32 height)
     {
         // Both vertical edges hang from the same fraction of the desktop, as a window's do.
         placement.offsets.y1 = placement.offsets.y0 + height + (placement.anchors.y0 - placement.anchors.y1) * (parent() ? parent()->rect().height() : 0);
@@ -132,8 +133,8 @@ namespace rct3::ui::widgets
         if (!dragging_)
             return;
         Rect& o = placement.offsets;
-        const float dx = p.x - grab_.x;
-        const float dy = p.y - grab_.y;
+        const f32 dx = p.x - grab_.x;
+        const f32 dy = p.y - grab_.y;
         o = { o.x0 + dx, o.y0 + dy, o.x1 + dx, o.y1 + dy };
         grab_ = p;
     }
@@ -184,16 +185,16 @@ namespace rct3::ui::widgets
                 // across: far fewer shapes than tile by tile. Its rows start on a whole unit, so their smoothed
                 // edges meet without a seam.
                 const bool coded = background->coded != nullptr;
-                const float top = coded ? std::floor(back.y0) : back.y0;
-                const std::int32_t rows = static_cast<std::int32_t>(std::ceil((back.y1 - top) / h));
-                const std::int32_t columns = coded ? 1 : static_cast<std::int32_t>(std::ceil(back.width() / w));
-                const float across = coded ? back.width() : w;
-                for (std::int32_t row = 0; row < rows; ++row)
+                const f32 top = coded ? std::floor(back.y0) : back.y0;
+                const i32 rows = static_cast<i32>(std::ceil((back.y1 - top) / h));
+                const i32 columns = coded ? 1 : static_cast<i32>(std::ceil(back.width() / w));
+                const f32 across = coded ? back.width() : w;
+                for (i32 row = 0; row < rows; ++row)
                 {
-                    const float y = top + static_cast<float>(row) * h;
-                    for (std::int32_t column = 0; column < columns; ++column)
+                    const f32 y = top + static_cast<f32>(row) * h;
+                    for (i32 column = 0; column < columns; ++column)
                     {
-                        const float x = back.x0 + static_cast<float>(column) * w;
+                        const f32 x = back.x0 + static_cast<f32>(column) * w;
                         skin::draw_skin(context.list, background, { x, y, x + across, y + h });
                     }
                 }
@@ -210,24 +211,24 @@ namespace rct3::ui::widgets
         {
             const auto [w, h] = skin->size();
             const Rect& b = style_.icon_box;
-            const float x = std::round(r.x0 + (b.x0 + b.x1 - w) / 2);
-            const float y = std::round(r.y0 + (b.y0 + b.y1 - h) / 2);
+            const f32 x = std::round(r.x0 + (b.x0 + b.x1 - w) / 2);
+            const f32 y = std::round(r.y0 + (b.y0 + b.y1 - h) / 2);
             skin::draw_skin(context.list, skin, { x, y, x + w, y + h });
         }
 
         // Three steps of small squares along the diagonal of the bottom-right corner.
         if (resizable)
         {
-            constexpr float kDot = 2;
-            constexpr float kPitch = 4;
-            const float x = r.x1 - style_.resize_band - kDot;
-            const float y = r.y1 - style_.resize_band - kDot;
-            for (std::int32_t row = 0; row < 3; ++row)
+            constexpr f32 kDot = 2;
+            constexpr f32 kPitch = 4;
+            const f32 x = r.x1 - style_.resize_band - kDot;
+            const f32 y = r.y1 - style_.resize_band - kDot;
+            for (i32 row = 0; row < 3; ++row)
             {
-                for (std::int32_t col = 0; col <= row; ++col)
+                for (i32 col = 0; col <= row; ++col)
                 {
-                    const float px = x - static_cast<float>(col) * kPitch;
-                    const float py = y - static_cast<float>(row - col) * kPitch;
+                    const f32 px = x - static_cast<f32>(col) * kPitch;
+                    const f32 py = y - static_cast<f32>(row - col) * kPitch;
                     context.list.fill({ px, py, px + kDot, py + kDot }, style_.grip_colour);
                 }
             }

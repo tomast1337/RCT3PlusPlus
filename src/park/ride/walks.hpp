@@ -17,6 +17,7 @@
 // other way to the exit.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 
 #include <expected>
@@ -41,12 +42,12 @@ namespace rct3::park::ride
     /// A station platform as its type's file sets it, in units across from the middle of the entrance's tile.
     struct Platform
     {
-        float height = 0;       ///< Of the platform's top over the entrance's floor
-        float offset = 0;       ///< How far past the entrance tile's edge the platform's edge is
+        f32 height = 0;         ///< Of the platform's top over the entrance's floor
+        f32 offset = 0;         ///< How far past the entrance tile's edge the platform's edge is
         bool walk_along = true; ///< Riders walk along the edge to beside their seat; else they board at the top of the step
-        float step_depth = 0.25f;
-        float step_start = 2; ///< Where the step up begins
-        float inside = 0;     ///< Where guests stand inside the entrance or exit building
+        f32 step_depth = 0.25f;
+        f32 step_start = 2; ///< Where the step up begins
+        f32 inside = 0;     ///< Where guests stand inside the entrance or exit building
     };
 
     /// The platform a station platform type's file (`tracks/Platforms/<style>/<type>.common.ovl`) sets, by its
@@ -58,7 +59,7 @@ namespace rct3::park::ride
     struct RideWays
     {
         glm::vec3 ticket { 0.0f };               ///< Where a guest hands over their ticket
-        float ticket_heading = 0;                ///< Facing there, round the vertical, 0 along +Z
+        f32 ticket_heading = 0;                  ///< Facing there, round the vertical, 0 along +Z
         std::vector<std::vector<glm::vec3>> on;  ///< By seat, from the ticket spot to beside the seat
         std::vector<std::vector<glm::vec3>> off; ///< By seat, from beside the seat to outside the exit
     };

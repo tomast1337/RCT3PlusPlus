@@ -2,6 +2,7 @@
 #include "video/wmv/movie.hpp"
 
 #include "audio/asf_file.hpp"
+#include "core/types.hpp"
 #include "video/wmv/decoder.hpp"
 
 #include <algorithm>
@@ -16,25 +17,25 @@ namespace rct3::video::wmv
 
     namespace
     {
-        constexpr std::uint32_t kWmv3 = 0x33564D57; ///< "WMV3", the first letter in the low byte
+        constexpr u32 kWmv3 = 0x33564D57; ///< "WMV3", the first letter in the low byte
         constexpr std::uintmax_t kMaxFile = 256u << 20;
 
-        std::uint8_t clamp_byte(std::int32_t value)
+        u8 clamp_byte(i32 value)
         {
-            return static_cast<std::uint8_t>(std::clamp(value, 0, 255));
+            return static_cast<u8>(std::clamp(value, 0, 255));
         }
     } // namespace
 
-    void yuv_to_rgba(std::uint32_t width, std::uint32_t height, std::span<const std::uint8_t> y, std::size_t y_stride, std::span<const std::uint8_t> u, std::size_t u_stride, std::span<const std::uint8_t> v, std::size_t v_stride, std::span<std::uint8_t> rgba)
+    void yuv_to_rgba(u32 width, u32 height, std::span<const u8> y, usize y_stride, std::span<const u8> u, usize u_stride, std::span<const u8> v, usize v_stride, std::span<u8> rgba)
     {
         // In 1/256ths: the usual BT.601 limited-range matrix.
-        for (std::uint32_t row = 0; row < height; ++row)
-            for (std::uint32_t col = 0; col < width; ++col)
+        for (u32 row = 0; row < height; ++row)
+            for (u32 col = 0; col < width; ++col)
             {
-                const std::int32_t luma = 298 * (y[row * y_stride + col] - 16);
-                const std::int32_t cb = u[row / 2 * u_stride + col / 2] - 128;
-                const std::int32_t cr = v[row / 2 * v_stride + col / 2] - 128;
-                std::uint8_t* out = &rgba[(static_cast<std::size_t>(row) * width + col) * 4];
+                const i32 luma = 298 * (y[row * y_stride + col] - 16);
+                const i32 cb = u[row / 2 * u_stride + col / 2] - 128;
+                const i32 cr = v[row / 2 * v_stride + col / 2] - 128;
+                u8* out = &rgba[(static_cast<usize>(row) * width + col) * 4];
                 out[0] = clamp_byte((luma + 409 * cr + 128) >> 8);
                 out[1] = clamp_byte((luma - 100 * cb - 208 * cr + 128) >> 8);
                 out[2] = clamp_byte((luma + 516 * cb + 128) >> 8);
@@ -48,17 +49,17 @@ namespace rct3::video::wmv
         audio::AsfHeader header;
         std::optional<Decoder> decoder;
         audio::AsfObjects frames { 0 };
-        std::size_t next_packet = 0; ///< In the file
+        usize next_packet = 0; ///< In the file
         std::optional<audio::AsfObject> due;
         bool drained = false;
-        std::vector<std::uint8_t> picture;
+        std::vector<u8> picture;
 
         /// The next frame's data, reading packets as needed; none at the end.
         std::optional<audio::AsfObject> next()
         {
             while (frames.empty())
             {
-                const std::size_t at = header.first_packet + next_packet * header.packet_size;
+                const usize at = header.first_packet + next_packet * header.packet_size;
                 if (at + header.packet_size > file.size() || (header.packet_count > 0 && next_packet >= header.packet_count))
                     return std::nullopt;
                 ++next_packet;
@@ -76,8 +77,8 @@ namespace rct3::video::wmv
             const auto p = decoder->decode(frame);
             if (!p)
                 return false;
-            const std::uint32_t w = std::min(p->width, header.video->width);
-            const std::uint32_t h = std::min(p->height, header.video->height);
+            const u32 w = std::min(p->width, header.video->width);
+            const u32 h = std::min(p->height, header.video->height);
             yuv_to_rgba(w, h, p->planes[0], p->strides[0], p->planes[1], p->strides[1], p->planes[2], p->strides[2], picture);
             return true;
         }
@@ -99,7 +100,7 @@ namespace rct3::video::wmv
             return std::unexpected(std::format("{}: {}", path.string(), error.message()));
         if (size > kMaxFile)
             return std::unexpected(std::format("{}: too big for a movie", path.string()));
-        std::vector<std::byte> bytes(static_cast<std::size_t>(size));
+        std::vector<std::byte> bytes(static_cast<usize>(size));
         std::ifstream in(path, std::ios::binary);
         if (!in.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size())))
             return std::unexpected(std::format("{}: cannot read", path.string()));
@@ -113,7 +114,7 @@ namespace rct3::video::wmv
     {
         auto s = std::make_unique<State>();
         s->file = std::move(file);
-        const auto size = audio::asf_header_size(std::span(s->file).first(std::min<std::size_t>(s->file.size(), 30)));
+        const auto size = audio::asf_header_size(std::span(s->file).first(std::min<usize>(s->file.size(), 30)));
         if (!size)
             return std::unexpected(size.error());
         if (*size > s->file.size())
@@ -131,31 +132,31 @@ namespace rct3::video::wmv
         if (!s->decoder)
             return std::unexpected(std::format("the decoder cannot take this stream ({} by {})", f.width, f.height));
         s->frames = audio::AsfObjects(s->header.video_stream);
-        s->picture.assign(static_cast<std::size_t>(f.width) * f.height * 4, 0);
+        s->picture.assign(static_cast<usize>(f.width) * f.height * 4, 0);
         s->due = s->next();
         return WmvMovie(std::move(s));
     }
 
-    std::uint32_t WmvMovie::width() const
+    u32 WmvMovie::width() const
     {
         return state_->header.video->width;
     }
 
-    std::uint32_t WmvMovie::height() const
+    u32 WmvMovie::height() const
     {
         return state_->header.video->height;
     }
 
-    double WmvMovie::seconds() const
+    f64 WmvMovie::seconds() const
     {
         return state_->header.seconds;
     }
 
-    bool WmvMovie::advance(double seconds)
+    bool WmvMovie::advance(f64 seconds)
     {
         State& s = *state_;
         bool changed = false;
-        while (s.due && (static_cast<double>(s.due->time) - s.header.preroll) / 1000 <= seconds)
+        while (s.due && (static_cast<f64>(s.due->time) - s.header.preroll) / 1000 <= seconds)
         {
             changed = s.show(s.due->data) || changed;
             s.due = s.next();
@@ -169,7 +170,7 @@ namespace rct3::video::wmv
         return changed;
     }
 
-    std::span<const std::uint8_t> WmvMovie::picture() const
+    std::span<const u8> WmvMovie::picture() const
     {
         return state_->picture;
     }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/systems.hpp"
 
+#include "core/types.hpp"
 #include "park/terrain_mesh.hpp"
 #include "profiling/profiler.hpp"
 #include "simulation/animals.hpp"
@@ -47,12 +48,12 @@
 namespace rct3::simulation
 {
 
-    void think(entt::registry& r, entt::entity guest, ThoughtKind kind, entt::entity about, float now)
+    void think(entt::registry& r, entt::entity guest, ThoughtKind kind, entt::entity about, f32 now)
     {
         auto& thoughts = r.get_or_emplace<Thoughts>(guest);
         if (std::ranges::any_of(thoughts.recent, [&](const Thought& t) { return t.kind == kind && t.about == about && now - t.time.value < kTuning.thoughts.rethink.value; }))
             return;
-        const auto variant = static_cast<std::uint32_t>(random::next(r.get<Dice>(guest).state));
+        const auto variant = static_cast<u32>(random::next(r.get<Dice>(guest).state));
         thoughts.recent.insert(thoughts.recent.begin(), Thought { kind, about, now, variant });
         if (thoughts.recent.size() > kTuning.thoughts.kept)
             thoughts.recent.pop_back();
@@ -68,7 +69,7 @@ namespace rct3::simulation
         place(paths, stride, pose);
     }
 
-    void tell(entt::registry& r, entt::entity inspector, Finding finding, entt::entity about, float now)
+    void tell(entt::registry& r, entt::entity inspector, Finding finding, entt::entity about, f32 now)
     {
         auto& told = r.get_or_emplace<staff::Rounds>(inspector).told;
         std::erase_if(told, [&](const auto& t) { return now - t.when.value >= kTuning.inspector.quiet.value; });
@@ -78,29 +79,29 @@ namespace rct3::simulation
         r.ctx().emplace<Findings>().found.emplace_back(finding, about);
     }
 
-    Pose between_steps(const Pose& pose, float along)
+    Pose between_steps(const Pose& pose, f32 along)
     {
-        const float turn = std::remainder(pose.heading.value - pose.was_heading.value, 2 * glm::pi<float>());
-        const float walked = pose.walked.value + along * glm::distance(glm::vec2(pose.was.x, pose.was.z), glm::vec2(pose.position.x, pose.position.z));
+        const f32 turn = std::remainder(pose.heading.value - pose.was_heading.value, 2 * glm::pi<f32>());
+        const f32 walked = pose.walked.value + along * glm::distance(glm::vec2(pose.was.x, pose.was.z), glm::vec2(pose.position.x, pose.position.z));
         return { glm::mix(pose.was, pose.position, along), pose.was_heading.value + turn * along, pose.was, pose.was_heading.value, walked };
     }
 
-    std::optional<float> cannon_turn(float heading, glm::vec2 way, float most)
+    std::optional<f32> cannon_turn(f32 heading, glm::vec2 way, f32 most)
     {
-        const float turn = std::remainder(std::atan2(way.x, way.y) - heading, 2 * glm::pi<float>());
+        const f32 turn = std::remainder(std::atan2(way.x, way.y) - heading, 2 * glm::pi<f32>());
         if (std::abs(turn) > most)
             return std::nullopt;
         return turn;
     }
 
-    bool is_night(float time)
+    bool is_night(f32 time)
     {
         return time >= kTuning.night.dusk.value || time < kTuning.night.dawn.value;
     }
 
-    std::uint32_t ticks(float seconds)
+    u32 ticks(f32 seconds)
     {
-        return static_cast<std::uint32_t>(std::ceil(std::max(seconds, 0.0f) / kTickSeconds));
+        return static_cast<u32>(std::ceil(std::max(seconds, 0.0f) / kTickSeconds));
     }
 
     namespace
@@ -117,8 +118,8 @@ namespace rct3::simulation
         {
             entt::registry& r = world.registry;
             const PathNetwork& paths = world.paths;
-            constexpr float dt = kTickSeconds;
-            const float now = static_cast<float>(world.tick) * kTickSeconds;
+            constexpr f32 dt = kTickSeconds;
+            const f32 now = static_cast<f32>(world.tick) * kTickSeconds;
             const Weather weather = weather_in(r);
             auto& vandalism = r.ctx().emplace<Vandalism>();
             // Guests outside the park walk to the gate, and new parties come (simulation/guests.cpp).
@@ -168,7 +169,7 @@ namespace rct3::simulation
                 auto& next = buffers.next;
                 ring.assign(1, stride.to);
                 guarded[stride.to.value] = true;
-                for (std::int32_t step = 0; step < kTuning.vandals.guard_reach; ++step)
+                for (i32 step = 0; step < kTuning.vandals.guard_reach; ++step)
                 {
                     next.clear();
                     for (const NodeId n : ring)
@@ -186,7 +187,7 @@ namespace rct3::simulation
             const auto guests_view = r.view<const Errand, const Stride, Mood, Dice, const Needs>(entt::exclude<Staff>); // Not an inspector on a visit
             const bool pool_open = std::ranges::any_of(r.view<const PoolDoor, const Attraction>().each(), [](const auto& room) { return std::get<2>(room).open; });
             // Who sits on seat `seat` of bench `bench`, if anyone, and whether they are getting up.
-            const auto sitter = [&](entt::entity bench, std::int32_t seat) -> std::optional<const Linger&> {
+            const auto sitter = [&](entt::entity bench, i32 seat) -> std::optional<const Linger&> {
                 for (const auto [g, linger] : r.view<const Linger>().each())
                     if (linger.bench == bench && linger.seat == seat)
                         return linger;
@@ -200,9 +201,9 @@ namespace rct3::simulation
                 // Every so often, once the park has run a while, a guest takes in what is round them, walking or
                 // stopped, unless taken up with a show: plenty of scenery, or else a tidy, unspoilt path. Each at
                 // their own moment, by who they are.
-                const float look = kTuning.surroundings.look.value;
-                constexpr std::uint32_t kPhases = 101; ///< Moments of the interval their looks are spread over, by id
-                const float phase = static_cast<float>(entt::to_integral(g) % kPhases) / kPhases * look;
+                const f32 look = kTuning.surroundings.look.value;
+                constexpr u32 kPhases = 101; ///< Moments of the interval their looks are spread over, by id
+                const f32 phase = static_cast<f32>(entt::to_integral(g) % kPhases) / kPhases * look;
                 if (now > look && r.all_of<Visitor>(g) && !r.any_of<Watching, Gesture>(g) && std::floor((now + phase) / look) != std::floor((now - dt + phase) / look))
                 {
                     const NodeId here = stride.from;
@@ -232,7 +233,7 @@ namespace rct3::simulation
                         if (linger->at == PathItemKind::WaterCannon && r.all_of<Pose>(g))
                         {
                             const glm::vec3 from = r.get<Pose>(g).position;
-                            const float reach = kTuning.surroundings.cannon_reach.value;
+                            const f32 reach = kTuning.surroundings.cannon_reach.value;
                             // Only those in front of it: it turns so far, and never back on its firer. Not riders in
                             // cars: their Pose stays where they boarded while the car is away. Swimmers riding a slide
                             // or a river move with it, so they may be hit.
@@ -278,8 +279,8 @@ namespace rct3::simulation
                     // Up once no longer worn out or sick and done eating, the more rested the sooner; someone beside them
                     // keeps them chatting.
                     const bool needy = mood.energy.value < kTuning.facilities.tired.value || mood.nausea.value >= kTuning.needs.want.value || munching(r, g);
-                    const auto mate = [&](std::int32_t seat) { return r.valid(linger->bench) && seat >= 0 && sitter(linger->bench, seat) && !sitter(linger->bench, seat)->rising; };
-                    const float chat = mate(linger->seat - 1) || mate(linger->seat + 1) ? kTuning.facilities.chatting : 1;
+                    const auto mate = [&](i32 seat) { return r.valid(linger->bench) && seat >= 0 && sitter(linger->bench, seat) && !sitter(linger->bench, seat)->rising; };
+                    const f32 chat = mate(linger->seat - 1) || mate(linger->seat + 1) ? kTuning.facilities.chatting : 1;
                     if (linger->left.value <= 0 && !needy && random::chance(dice.state, kTuning.facilities.stand.value * dt * mood.energy.value / chat))
                     {
                         linger->rising = true;
@@ -338,8 +339,8 @@ namespace rct3::simulation
                     {
                         const auto* colour = r.try_get<StampColour>(*post);
                         const auto& ink = kTuning.surroundings.stamp_inks[r.get<PathItem>(*post).object % kTuning.surroundings.stamp_inks.size()];
-                        const auto inked = static_cast<std::int32_t>(0xFFU << 24U | std::uint32_t { ink[0] } << 16U | std::uint32_t { ink[1] } << 8U | ink[2]);
-                        passport.stamps.push_back({ .post = r.get<PathItem>(*post).object, .colour = colour != nullptr ? colour->value : inked, .at = { static_cast<float>(random::unit(dice.state)), static_cast<float>(random::unit(dice.state)) } });
+                        const auto inked = static_cast<i32>(0xFFU << 24U | u32 { ink[0] } << 16U | u32 { ink[1] } << 8U | ink[2]);
+                        passport.stamps.push_back({ .post = r.get<PathItem>(*post).object, .colour = colour != nullptr ? colour->value : inked, .at = { static_cast<f32>(random::unit(dice.state)), static_cast<f32>(random::unit(dice.state)) } });
                         r.emplace_or_replace<Gesture>(g, Gesture { .kind = GestureKind::HandOver, .left = kTuning.gestures.shown, .at = *post });
                         mood.happiness.value = clamp01(mood.happiness.value + kTuning.surroundings.stamp_cheer.value);
                         if (auto* rules = r.ctx().find<PassportRules>(); rules != nullptr && rules->stamps_for_gift > 0 && passport.stamps.size() >= rules->stamps_for_gift)
@@ -383,10 +384,10 @@ namespace rct3::simulation
                         continue;
                     }
                     // The first free seat of a whole bench on their tile.
-                    const auto seat = [&]() -> std::optional<std::pair<entt::entity, std::uint8_t>> {
+                    const auto seat = [&]() -> std::optional<std::pair<entt::entity, u8>> {
                         for (const entt::entity i : items(here))
                             if (const auto& item = r.get<PathItem>(i); item.kind == PathItemKind::Bench && !item.broken)
-                                for (std::uint8_t s = 0; s < item.seats; ++s)
+                                for (u8 s = 0; s < item.seats; ++s)
                                     if (!sitter(i, s))
                                         return std::pair { i, s };
                         return std::nullopt;
@@ -503,7 +504,7 @@ namespace rct3::simulation
         }
     } // namespace
 
-    Replacement replacement(const SimWorld& world, const std::function<units::Money(std::uint64_t object)>& price)
+    Replacement replacement(const SimWorld& world, const std::function<units::Money(u64 object)>& price)
     {
         Replacement out;
         for (const auto [e, item] : world.registry.view<const PathItem>().each())
@@ -551,10 +552,10 @@ namespace rct3::simulation
         r.destroy(attraction);
     }
 
-    std::int32_t old_litter(const SimWorld& world)
+    i32 old_litter(const SimWorld& world)
     {
         const auto view = world.registry.view<const Litter>();
-        return static_cast<std::int32_t>(std::ranges::count_if(view, [&](entt::entity e) { return view.get<const Litter>(e).age.value >= kTuning.litter.old.value; }));
+        return static_cast<i32>(std::ranges::count_if(view, [&](entt::entity e) { return view.get<const Litter>(e).age.value >= kTuning.litter.old.value; }));
     }
 
     void step(SimWorld& world, std::optional<Workers&> workers)

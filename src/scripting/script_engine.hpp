@@ -12,6 +12,8 @@
 // that runs on for too long in one tick is stopped.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <expected>
 #include <functional>
@@ -27,7 +29,7 @@ namespace rct3::scripting
     /// A native function given to scripts. Throwing std::exception throws a JavaScript error in the script.
     using Native = std::function<Json(const Json& arguments)>;
 
-    enum class ScriptState : std::uint8_t
+    enum class ScriptState : u8
     {
         Running, ///< Waiting on frames or something else to happen
         Finished,

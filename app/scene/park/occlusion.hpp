@@ -8,6 +8,7 @@
 // make up the rest. The result darkens the screen.
 #pragma once
 
+#include "core/types.hpp"
 #include "render/device.hpp"
 
 #include <array>
@@ -25,7 +26,7 @@ namespace rct3::scene::park
         render::TextureHandle blurred;
         std::array<render::TextureHandle, 2> results; ///< This frame's and the last's
         render::Extent size;
-        std::uint32_t frame = 0;
+        u32 frame = 0;
         bool before = false;       ///< The last frame's result and screen hold the frame before; clear it when skipping one
         glm::mat4 last_view { 1 }; ///< The last frame's world to clip space
     };

@@ -2,6 +2,7 @@
 #include "ovl/bone_anim.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -16,31 +17,31 @@ namespace
 {
 
     // Name block: "A:ban" 0, "arm" 6, "leg" 10, padded to 16. The structure block follows at address 16.
-    constexpr std::uint32_t kBase = 16;
-    constexpr std::uint32_t kNameArm = 6;
-    constexpr std::uint32_t kNameLeg = 10;
+    constexpr u32 kBase = 16;
+    constexpr u32 kNameArm = 6;
+    constexpr u32 kNameLeg = 10;
 
     // Offsets inside the structure block.
-    constexpr std::uint32_t kHeader = 0;     // 12 bytes
-    constexpr std::uint32_t kBones = 12;     // 2 * 20
-    constexpr std::uint32_t kPositions = 52; // 2 keyframes * 16
-    constexpr std::uint32_t kRotations = 84; // 3 keyframes * 16
-    constexpr std::uint32_t kEnd = 132;
+    constexpr u32 kHeader = 0;     // 12 bytes
+    constexpr u32 kBones = 12;     // 2 * 20
+    constexpr u32 kPositions = 52; // 2 keyframes * 16
+    constexpr u32 kRotations = 84; // 3 keyframes * 16
+    constexpr u32 kEnd = 132;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    void real(std::vector<std::byte>& out, float v)
+    void real(std::vector<std::byte>& out, f32 v)
     {
-        append_u32(out, std::bit_cast<std::uint32_t>(v));
+        append_u32(out, std::bit_cast<u32>(v));
     }
 
-    void key(std::vector<std::byte>& out, float time, float x, float y, float z)
+    void key(std::vector<std::byte>& out, f32 time, f32 x, f32 y, f32 z)
     {
-        for (float f : { time, x, y, z })
+        for (f32 f : { time, x, y, z })
             real(out, f);
     }
 
@@ -61,7 +62,7 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> structure(std::uint32_t bone_count = 2, std::uint32_t rotation_count = 3)
+    std::vector<std::byte> structure(u32 bone_count = 2, u32 rotation_count = 3)
     {
         std::vector<std::byte> out;
         words(out, { bone_count, kBase + kBones });

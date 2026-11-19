@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park/finance.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/park/state.hpp"
@@ -21,7 +22,7 @@ TEST_CASE("a park whose money never runs out books nothing")
 {
     ParkState park;
     save::model::Finance money;
-    std::optional<std::int64_t> kept;
+    std::optional<i64> kept;
     CHECK(book(park, money, kept, units::Money { 5000 }, LedgerLine::StaffTraining, Charge::IfAffordable));
     CHECK_FALSE(park.cash.has_value());
     CHECK(money.ledger.empty());
@@ -32,7 +33,7 @@ TEST_CASE("a spend the park cannot afford is refused and changes nothing")
     ParkState park;
     park.cash = units::Money { 4000 };
     save::model::Finance money;
-    std::optional<std::int64_t> kept;
+    std::optional<i64> kept;
     CHECK_FALSE(book(park, money, kept, units::Money { 5000 }, LedgerLine::StaffTraining, Charge::IfAffordable));
     CHECK(park.cash == units::Money { 4000 });
     CHECK(money.ledger.empty());
@@ -46,9 +47,9 @@ TEST_CASE("a refused spend tells the player, once in a while however often it is
     ParkState park;
     park.cash = units::Money { 100 };
     save::model::Finance money;
-    std::optional<std::int64_t> kept;
+    std::optional<i64> kept;
     const auto told = [&] { return std::ranges::count(park.messages.list, kCannotPayKey, &ParkMessage::text_key); };
-    for (std::int32_t i = 0; i < 10; ++i)
+    for (i32 i = 0; i < 10; ++i)
         CHECK_FALSE(book(park, money, kept, units::Money { 300 }, LedgerLine::Landscaping, Charge::IfAffordable));
     CHECK(told() == 1);
     age(park.messages, kCannotPayGap.value / 2);
@@ -69,7 +70,7 @@ TEST_CASE("a forced spend may take the cash below nought")
     ParkState park;
     park.cash = units::Money { 100 };
     save::model::Finance money;
-    std::optional<std::int64_t> kept;
+    std::optional<i64> kept;
     CHECK(book(park, money, kept, units::Money { 300 }, LedgerLine::StaffWages, Charge::Always));
     CHECK(park.cash == units::Money { -200 });
     CHECK(money.ledger[0].staff_wages == 300);
@@ -80,7 +81,7 @@ TEST_CASE("money coming in adds to the cash and books negative")
     ParkState park;
     park.cash = units::Money { -200 };
     save::model::Finance money;
-    std::optional<std::int64_t> kept;
+    std::optional<i64> kept;
     CHECK(book(park, money, kept, units::Money { -250 }, LedgerLine::RideTickets, Charge::IfAffordable));
     CHECK(park.cash == units::Money { 50 });
     CHECK(money.ledger[0].ride_tickets == -250);
@@ -94,7 +95,7 @@ TEST_CASE("the ledger books into this month's period and starts a new one as eac
     save::model::Finance money;
     // This month so far, as the park file left it, and the month before.
     money.ledger = { { .staff_wages = 700, .pool_tickets = -50 }, { .staff_wages = 900 } };
-    std::optional<std::int64_t> kept;
+    std::optional<i64> kept;
     ledger_month(money, kept, { .year = 1, .month = 3 }).staff_wages += 100;
     CHECK(money.ledger[0].staff_wages == 800);
     CHECK(money.ledger.size() == 2);
@@ -121,7 +122,7 @@ TEST_CASE("the ledger books into this month's period and starts a new one as eac
 TEST_CASE("a park whose file kept no ledger starts one at its first booking")
 {
     save::model::Finance money;
-    std::optional<std::int64_t> kept;
+    std::optional<i64> kept;
     ledger_month(money, kept, { }).staff_wages += 875;
     CHECK(money.ledger.size() == 1);
     CHECK(money.ledger[0].staff_wages == 875);
@@ -169,7 +170,7 @@ TEST_CASE("a park whose money never runs out has no loan to change")
 
 TEST_CASE("a park is worth its guests and its open rides by their excitement")
 {
-    const auto ride = [](save::model::RideKind kind, save::model::AttractionState state, float excitement) {
+    const auto ride = [](save::model::RideKind kind, save::model::AttractionState state, f32 excitement) {
         save::model::Ride r { .kind = kind };
         r.base.state = state;
         r.assessment = { .valid = true, .excitement = excitement };
@@ -196,7 +197,7 @@ TEST_CASE("a park is worth its guests and its open rides by their excitement")
 
 namespace
 {
-    constexpr float kWeek = kSecondsPerHour * save::model::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
+    constexpr f32 kWeek = kSecondsPerHour * save::model::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
 } // namespace
 
 TEST_CASE("a loan is charged a week's interest as each week ends, and no loan none")
@@ -265,7 +266,7 @@ TEST_CASE("a park whose money never runs out pays no interest or running costs")
 {
     ParkState park;
     save::model::Finance money;
-    std::optional<std::int64_t> kept;
+    std::optional<i64> kept;
     CHECK(book(park, money, kept, weekly_interest(units::Money { 1'000'000 }, 6), LedgerLine::LoanInterest, Charge::Always));
     CHECK(book(park, money, kept, units::Money { 500 }, LedgerLine::RideRunningCosts, Charge::Always));
     CHECK(money.ledger.empty());

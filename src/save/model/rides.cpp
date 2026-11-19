@@ -2,6 +2,7 @@
 #include "save/model/rides.hpp"
 
 #include "core/minus_one.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -296,7 +297,7 @@ namespace rct3::save::model
         // ---------------------------------------------------------------------------------------------------------
         // Null-safe typed access to a decoded value.
 
-        constexpr float kFloatLimit = 1.0e8f; // larger magnitudes are uninitialised fill, not data
+        constexpr f32 kFloatLimit = 1.0e8f; // larger magnitudes are uninitialised fill, not data
 
         class View
         {
@@ -316,7 +317,7 @@ namespace rct3::save::model
                 return v_.has_value();
             }
 
-            [[nodiscard]] std::int64_t integer(std::int64_t def = 0) const
+            [[nodiscard]] i64 integer(i64 def = 0) const
             {
                 if (!v_)
                     return def;
@@ -328,28 +329,28 @@ namespace rct3::save::model
                         return v_->as_bool() ? 1 : 0;
                     case ValueKind::Float:
                     {
-                        const float f = v_->as_float();
+                        const f32 f = v_->as_float();
                         if (!std::isfinite(f) || std::fabs(f) > kFloatLimit)
                             return def;
-                        return static_cast<std::int64_t>(f);
+                        return static_cast<i64>(f);
                     }
                     default:
                         return def;
                 }
             }
-            [[nodiscard]] std::int32_t read_i32(std::int32_t def = 0) const
+            [[nodiscard]] i32 read_i32(i32 def = 0) const
             {
-                return static_cast<std::int32_t>(integer(def));
+                return static_cast<i32>(integer(def));
             }
-            [[nodiscard]] float number(float def = 0) const
+            [[nodiscard]] f32 number(f32 def = 0) const
             {
                 if (!v_)
                     return def;
-                float f = def;
+                f32 f = def;
                 if (v_->kind() == ValueKind::Float)
                     f = v_->as_float();
                 else if (v_->kind() == ValueKind::Integer)
-                    f = static_cast<float>(v_->as_integer());
+                    f = static_cast<f32>(v_->as_integer());
                 else
                     return def;
                 if (!std::isfinite(f) || std::fabs(f) > kFloatLimit)
@@ -368,7 +369,7 @@ namespace rct3::save::model
                     return { };
                 return std::string(v_->text());
             }
-            [[nodiscard]] std::uint64_t ref() const
+            [[nodiscard]] u64 ref() const
             {
                 return (v_ && v_->kind() == ValueKind::Reference) ? v_->as_reference() : 0;
             }
@@ -378,7 +379,7 @@ namespace rct3::save::model
                     return { };
                 return v_->items();
             }
-            [[nodiscard]] std::span<const float> floats() const
+            [[nodiscard]] std::span<const f32> floats() const
             {
                 if (!v_)
                     return { };
@@ -400,7 +401,7 @@ namespace rct3::save::model
 
         [[nodiscard]] RideColours colours_of(View v, std::string_view a, std::string_view b, std::string_view c)
         {
-            return { static_cast<std::uint8_t>(v[a].integer()), static_cast<std::uint8_t>(v[b].integer()), static_cast<std::uint8_t>(v[c].integer()) };
+            return { static_cast<u8>(v[a].integer()), static_cast<u8>(v[b].integer()), static_cast<u8>(v[c].integer()) };
         }
         [[nodiscard]] RideColours colours_of(View v)
         {
@@ -410,7 +411,7 @@ namespace rct3::save::model
         // ---------------------------------------------------------------------------------------------------------
         // Load context
 
-        enum class Role : std::uint8_t
+        enum class Role : u8
         {
             Other,
             TrackedRide,
@@ -504,8 +505,8 @@ namespace rct3::save::model
 
             std::unordered_map<ObjectId, PieceRecord> pieces_;
             std::unordered_map<ObjectId, PlatformRecord> platforms_;
-            std::unordered_map<ObjectId, std::int32_t> queue_tiles_;
-            std::unordered_map<ObjectId, std::size_t> segment_owned_;
+            std::unordered_map<ObjectId, i32> queue_tiles_;
+            std::unordered_map<ObjectId, usize> segment_owned_;
             std::unordered_set<ObjectId> reached_; // pieces reached by some track
             std::unordered_set<ObjectId> taken_;   // trains, cars, items and extras already attached
 
@@ -562,8 +563,8 @@ namespace rct3::save::model
                                 .tile_z = at[id::kPosZ].read_i32(),
                                 .height = at[id::kHeight].read_i32(),
                                 .height_adjust = at[id::kHeightAdjust].number(),
-                                .direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer()),
-                                .corner = static_cast<std::uint8_t>(at[id::kPieceCorner].integer()),
+                                .direction = static_cast<u8>(at[id::kPieceDirection].integer()),
+                                .corner = static_cast<u8>(at[id::kPieceCorner].integer()),
                                 .reversed = f[id::kReversed].boolean(),
                                 .start_distance = units::Distance { f[id::kStartDistance].number() },
                                 .reverse_start_distance = units::Distance { f[id::kStartDistanceBack].number() },
@@ -580,8 +581,8 @@ namespace rct3::save::model
                         if (const View arm = f[id::kArmAngles]; arm[id::kArmAnglesSet].boolean())
                         {
                             const auto angles = arm[id::kArmAnglesList].items();
-                            std::array<float, 4> held { };
-                            for (std::size_t j = 0; j < held.size() && j < angles.size(); ++j)
+                            std::array<f32, 4> held { };
+                            for (usize j = 0; j < held.size() && j < angles.size(); ++j)
                                 held[j] = View(angles[j]).number();
                             rec.piece.arm_angles = held;
                         }
@@ -598,9 +599,9 @@ namespace rct3::save::model
                                 .tile_x = at[id::kPosX].read_i32(),
                                 .tile_z = at[id::kPosZ].read_i32(),
                                 .height = at[id::kHeight].read_i32(),
-                                .direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer()),
-                                .corner = static_cast<std::uint8_t>(at[id::kPieceCorner].integer()),
-                                .flags = static_cast<std::uint32_t>(f[id::kFlags].integer()),
+                                .direction = static_cast<u8>(at[id::kPieceDirection].integer()),
+                                .corner = static_cast<u8>(at[id::kPieceCorner].integer()),
+                                .flags = static_cast<u32>(f[id::kFlags].integer()),
                                 .colours = colours_of(f[id::kPieceColours]),
                             },
                             .piece_ref = f[id::kPlatformPiece].ref(),
@@ -633,7 +634,7 @@ namespace rct3::save::model
                     .col = at[id::kPosX].read_i32(),
                     .row = at[id::kPosZ].read_i32(),
                     .height = at[id::kHeight].read_i32(),
-                    .direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer() & 3),
+                    .direction = static_cast<u8>(at[id::kPieceDirection].integer() & 3),
                 };
             }
 
@@ -661,7 +662,7 @@ namespace rct3::save::model
                     .overlay_path = f[overlay_key].text(),
                     .name = f[id::kName].text(),
                     .state = static_cast<AttractionState>(f[id::kState].read_i32()),
-                    .flags = static_cast<std::uint32_t>(f[id::kFlags].integer()),
+                    .flags = static_cast<u32>(f[id::kFlags].integer()),
                     .build_time = units::Seconds { f[id::kBuildTime].number() },
                     .total_guests = f[id::kTotalGuests].integer(),
                     .total_profit = units::Money { f[id::kTotalProfit].integer() },
@@ -674,7 +675,7 @@ namespace rct3::save::model
                     .time_since_crash = core::none_if_negative(units::Seconds { f[id::kSinceCrash].number(-1) }),
                     .placement = placement,
                     .spot = spot_of(placement),
-                    .facing = static_cast<std::uint8_t>(f[id::kDirection].integer()),
+                    .facing = static_cast<u8>(f[id::kDirection].integer()),
                 };
             }
 
@@ -705,7 +706,7 @@ namespace rct3::save::model
 
             static TestResults read_results(View r)
             {
-                const auto corners = [](View c) { return std::array<std::int32_t, 4> { c[id::kCorner90].read_i32(), c[id::kCorner180].read_i32(), c[id::kCorner270].read_i32(), c[id::kCorner360].read_i32() }; };
+                const auto corners = [](View c) { return std::array<i32, 4> { c[id::kCorner90].read_i32(), c[id::kCorner180].read_i32(), c[id::kCorner270].read_i32(), c[id::kCorner360].read_i32() }; };
                 TestResults t {
                     .max_speed = r[id::kMaxSpeed].number(),
                     .average_speed = r[id::kAverageSpeed].number(),
@@ -723,16 +724,16 @@ namespace rct3::save::model
                     .corners_banked = corners(r[id::kBankedCorners]),
                     .corners_sloped = corners(r[id::kSlopedCorners]),
                 };
-                for (std::size_t i = 0; i < 7; ++i)
+                for (usize i = 0; i < 7; ++i)
                     t.special_sections[i] = r[id::kSections][id::kSectionNames[i]].read_i32();
                 t.valid = (r[id::kValid].integer() & 1) != 0; // upper bytes are uninitialised memory
                 return t;
             }
 
-            static std::vector<float> read_graph(View g)
+            static std::vector<f32> read_graph(View g)
             {
                 const auto fl = g[id::kGraphValues].floats();
-                auto out = fl | std::ranges::to<std::vector<float>>();
+                auto out = fl | std::ranges::to<std::vector<f32>>();
                 for (auto& x : out)
                 {
                     if (!std::isfinite(x) || std::fabs(x) > kFloatLimit)
@@ -798,8 +799,8 @@ namespace rct3::save::model
                 if (const View a = f[id::kAssessment]; a[id::kAssessValid].boolean())
                 {
                     const auto r = a[id::kAssessRatings].floats();
-                    const auto at = [&](std::size_t i) {
-                        const float x = i < r.size() ? r[i] : 0;
+                    const auto at = [&](usize i) {
+                        const f32 x = i < r.size() ? r[i] : 0;
                         return (std::isfinite(x) && std::fabs(x) <= kFloatLimit) ? x : 0.0f;
                     };
                     ride.assessment = Assessment {
@@ -842,13 +843,13 @@ namespace rct3::save::model
                 Breakdown& b = ride.breakdown;
                 if (f[id::kDowntimePercent].present())
                     b.saved_downtime_percent = std::clamp(f[id::kDowntimePercent].number(), 0.0f, 100.0f);
-                std::size_t i = 0;
+                usize i = 0;
                 for (const auto& item : f[id::kDowntime].items())
                 {
                     if (i >= b.downtime_windows.size())
                         break;
-                    const std::int64_t w = View(item).integer();
-                    b.downtime_windows[i++] = static_cast<std::uint8_t>(w < 0 ? 0 : (w > 20 ? 20 : w));
+                    const i64 w = View(item).integer();
+                    b.downtime_windows[i++] = static_cast<u8>(w < 0 ? 0 : (w > 20 ? 20 : w));
                 }
 
                 ride.options = OperatingOptions {
@@ -961,7 +962,7 @@ namespace rct3::save::model
                 Track t {
                     .id = d.id,
                     .ride = live(f[id::kTrackRide]),
-                    .facing = static_cast<std::uint8_t>(f[id::kDirection].integer()),
+                    .facing = static_cast<u8>(f[id::kDirection].integer()),
                     .prototype = f[id::kPrototype].boolean(),
                     .colours = colours_of(f[id::kTrackColours]),
                 };
@@ -991,7 +992,7 @@ namespace rct3::save::model
                     };
                     if (const auto it = segment_owned_.find(seg_id); it != segment_owned_.end())
                         seg.owned_pieces = it->second;
-                    const std::uint32_t seg_index = static_cast<std::uint32_t>(t.segments.size());
+                    const u32 seg_index = static_cast<u32>(t.segments.size());
                     const ObjectId seg_last = sf[id::kLastPiece].ref();
                     ObjectId p = sf[id::kFirstPiece].ref();
                     while (p != 0)
@@ -1065,10 +1066,10 @@ namespace rct3::save::model
 
             void load_trains(Ride& ride, View f)
             {
-                std::int32_t position = 0;
+                i32 position = 0;
                 for (const auto& item : f[id::kTrains].items())
                 {
-                    const std::int32_t at = position++;
+                    const i32 at = position++;
                     const ObjectId tid = View(item).ref();
                     if (tid == 0)
                         continue;
@@ -1113,10 +1114,10 @@ namespace rct3::save::model
                         ++model_.diagnostics.train_index_mismatch;
 
                     const auto car_list = tf[id::kCars].items();
-                    std::int32_t cpos = 0;
+                    i32 cpos = 0;
                     for (const auto& citem : car_list)
                     {
-                        const std::int32_t cat = cpos++;
+                        const i32 cat = cpos++;
                         const ObjectId cid = View(citem).ref();
                         if (cid == 0)
                             continue;
@@ -1154,21 +1155,21 @@ namespace rct3::save::model
                         };
                         if (car.position_valid)
                         {
-                            for (std::size_t i = 0; i < 3; ++i)
+                            for (usize i = 0; i < 3; ++i)
                             {
                                 car.position[i] = (std::isfinite(pos[i]) && std::fabs(pos[i]) <= kFloatLimit) ? pos[i] : 0.0f;
                             }
                         }
                         if (const auto turn = st[id::kStatOrient].floats(); turn.size() == 3)
                         {
-                            for (std::size_t i = 0; i < 3; ++i)
+                            for (usize i = 0; i < 3; ++i)
                                 car.orientation[i] = (std::isfinite(turn[i]) && std::fabs(turn[i]) <= kFloatLimit) ? turn[i] : 0.0f;
                         }
                         if (cf[id::kCarTrain].ref() != t.id)
                             ++model_.diagnostics.car_back_link_mismatch;
                         if (car.index != cat)
                             ++model_.diagnostics.car_index_mismatch;
-                        if (static_cast<std::size_t>(car.car_count) != car_list.size())
+                        if (static_cast<usize>(car.car_count) != car_list.size())
                             ++model_.diagnostics.car_count_mismatch;
                         t.cars.push_back(car);
                     }
@@ -1215,8 +1216,8 @@ namespace rct3::save::model
                         .name = v[id::kName].text(),
                         .stall = v[id::kItemStall].ref(),
                         .sale_item = live(v[id::kSaleItem]),
-                        .colours = { static_cast<std::uint8_t>(v[id::kItemColours[0]].integer()), static_cast<std::uint8_t>(v[id::kItemColours[1]].integer()), static_cast<std::uint8_t>(v[id::kItemColours[2]].integer()) },
-                        .extras = static_cast<std::uint32_t>(v[id::kItemExtras].integer()),
+                        .colours = { static_cast<u8>(v[id::kItemColours[0]].integer()), static_cast<u8>(v[id::kItemColours[1]].integer()), static_cast<u8>(v[id::kItemColours[2]].integer()) },
+                        .extras = static_cast<u32>(v[id::kItemExtras].integer()),
                     };
                     if (std::optional<const Object&> kind = si.item_asset != 0 ? index_.find(si.item_asset) : std::nullopt)
                         if (auto k = decode(*kind))
@@ -1254,14 +1255,14 @@ namespace rct3::save::model
 
     } // namespace
 
-    float Breakdown::downtime_percent() const noexcept
+    f32 Breakdown::downtime_percent() const noexcept
     {
         if (saved_downtime_percent)
             return *saved_downtime_percent;
-        std::int32_t sum = 0;
+        i32 sum = 0;
         for (const auto w : downtime_windows)
             sum += w;
-        return static_cast<float>(sum) * 100.0f / 160.0f;
+        return static_cast<f32>(sum) * 100.0f / 160.0f;
     }
 
     std::expected<std::vector<RideShow>, Error> load_shows(const SaveFile& file, const ObjectIndex& index)
@@ -1299,7 +1300,7 @@ namespace rct3::save::model
             }
             for (const Value& item : f[id::kShowOrder].items())
                 if (const auto at = std::ranges::find(known, View(item).ref()); at != known.end())
-                    out.order.push_back(static_cast<std::uint32_t>(at - known.begin()));
+                    out.order.push_back(static_cast<u32>(at - known.begin()));
             if (out.ride != 0 && !out.tricks.empty())
                 shows.push_back(std::move(out));
         }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/draw_list.hpp"
 
+#include "core/types.hpp"
 #include "ui/shape.hpp"
 
 #include <doctest/doctest.h>
@@ -32,7 +33,7 @@ TEST_CASE("a quad becomes four vertices and two triangles in screen order")
     CHECK(v[2].y == 60);
     CHECK(v[2].u == 0.75f);
     CHECK(v[2].v == 1.0f);
-    CHECK(v[1].color == std::array<std::uint8_t, 4> { 255, 0, 0, 255 });
+    CHECK(v[1].color == std::array<u8, 4> { 255, 0, 0, 255 });
 }
 
 TEST_CASE("consecutive quads with the same texture share a batch, others start a new one")
@@ -81,8 +82,8 @@ TEST_CASE("clipping cuts geometry, texture coordinates and colours at the same p
     CHECK(v[0].x == 5);
     CHECK(v[0].u == doctest::Approx(0.5f));
     CHECK(v[1].u == doctest::Approx(1.0f));
-    CHECK(v[0].color == std::array<std::uint8_t, 4> { 128, 0, 128, 255 });
-    CHECK(v[1].color == std::array<std::uint8_t, 4> { 0, 0, 255, 255 });
+    CHECK(v[0].color == std::array<u8, 4> { 128, 0, 128, 255 });
+    CHECK(v[1].color == std::array<u8, 4> { 0, 0, 255, 255 });
 }
 
 TEST_CASE("nested clips intersect and fully clipped drawing produces nothing")
@@ -176,10 +177,10 @@ TEST_CASE("a shape becomes a quad of its own vertices, wide enough for its soft 
     CHECK(v[0].y == 18);
     CHECK(v[2].x == 32);
     CHECK(v[2].y == 42);
-    CHECK(v[0].local == std::array<float, 4> { -12, -12, 10, 10 });
-    CHECK(v[0].radii == std::array<float, 4> { 4, 4, 4, 4 });
+    CHECK(v[0].local == std::array<f32, 4> { -12, -12, 10, 10 });
+    CHECK(v[0].radii == std::array<f32, 4> { 4, 4, 4, 4 });
     CHECK(v[0].edge[0] == 2);
-    CHECK(v[3].top == std::array<std::uint8_t, 4> { 255, 0, 0, 255 });
+    CHECK(v[3].top == std::array<u8, 4> { 255, 0, 0, 255 });
 }
 
 TEST_CASE("shapes are measured in pixels and cut by the clip like quads")
@@ -224,7 +225,7 @@ TEST_CASE("quads and shapes keep painter's order in separate batches")
 TEST_CASE("a polygon is a fan of triangles in its colour, cut to the clip")
 {
     DrawList list;
-    const std::array<std::array<float, 2>, 4> square { { { 0, 0 }, { 10, 0 }, { 10, 10 }, { 0, 10 } } };
+    const std::array<std::array<f32, 2>, 4> square { { { 0, 0 }, { 10, 0 }, { 10, 10 }, { 0, 10 } } };
     list.polygon(square, kRed);
     REQUIRE(list.vertices().size() == 4);
     REQUIRE(list.indices().size() == 6);

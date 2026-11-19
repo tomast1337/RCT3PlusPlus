@@ -6,6 +6,7 @@
 // needs no graphics device, so tools and tests can look at what the interface draws.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/texture/image.hpp"
 #include "ui/draw_list.hpp"
 
@@ -19,7 +20,7 @@ namespace rct3::ui
     using PainterTextures = std::map<TextureId, ovl::texture::RgbaImage>;
 
     /// A picture `width` by `height` filled with `background`.
-    [[nodiscard]] ovl::texture::RgbaImage blank_picture(std::uint32_t width, std::uint32_t height, Color background);
+    [[nodiscard]] ovl::texture::RgbaImage blank_picture(u32 width, u32 height, Color background);
 
     /// Draws `list` over `target`. The list's coordinates are the target's pixels.
     void paint_draw_list(const DrawList& list, const PainterTextures& textures, ovl::texture::RgbaImage& target);

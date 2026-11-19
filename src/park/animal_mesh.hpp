@@ -4,6 +4,7 @@
 // motion at its time, and every vertex follows the bones it is weighted to.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/animal_models.hpp"
 #include "park/object/mesh.hpp"
 #include "units/units.hpp"
@@ -21,7 +22,7 @@ namespace rct3::park
     struct PlacedAnimal
     {
         const AnimalBody* body = nullptr;
-        std::size_t level = 0; ///< Of detail, 0 the finest; past the coarsest drawn level, that one
+        usize level = 0; ///< Of detail, 0 the finest; past the coarsest drawn level, that one
         ovl::animal::AnimalMotion motion = ovl::animal::AnimalMotion::Stand;
         units::Seconds time { };  ///< Into the motion
         glm::mat4 world { 1.0f }; ///< Model to park
@@ -31,7 +32,7 @@ namespace rct3::park
     struct AnimalRun
     {
         std::vector<GroundVertex> vertices { };
-        std::vector<std::uint32_t> indices { };
+        std::vector<u32> indices { };
         object::PartBlend blend = object::PartBlend::Opaque;
         bool one_sided = true;
     };

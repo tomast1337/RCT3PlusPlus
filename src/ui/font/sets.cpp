@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/font/sets.hpp"
 
+#include "core/types.hpp"
 #include "ui/language.hpp"
 
 #include <algorithm>
@@ -10,7 +11,7 @@
 namespace rct3::ui::font
 {
 
-    std::string font_overlay(std::string_view language, std::int32_t width)
+    std::string font_overlay(std::string_view language, i32 width)
     {
         const auto info = find_language(language);
         const std::string_view stem = info && info->cjk ? info->name : std::string_view("Resolution");

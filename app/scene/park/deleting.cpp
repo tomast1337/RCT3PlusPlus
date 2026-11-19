@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/deleting.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/demolish_refund.hpp"
 #include "park/edge_walls.hpp"
@@ -37,7 +38,7 @@ namespace rct3::scene::park
                 simulation::add_scenery(scene.sim, scene.objects[index.value], -simulation::scenery_weight(model->second.category, model->second.feature));
             change_object(device, scene, index, [](save::model::PlacedObject& o) { o.hidden = true; });
             // Guests stop using what stood on the path, and the park keeps no bin or sign for it.
-            const std::uint64_t id = scene.objects[index.value].id;
+            const u64 id = scene.objects[index.value].id;
             auto& r = scene.sim.registry;
             std::vector<entt::entity> gone;
             const auto sign = std::ranges::find(scene.signs, id, &save::model::SignState::object_ref);
@@ -103,15 +104,15 @@ namespace rct3::scene::park
         return cost;
     }
 
-    void delete_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids)
+    void delete_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const u64> ids)
     {
-        std::vector<std::pair<std::int32_t, std::int32_t>> tiles;
+        std::vector<std::pair<i32, i32>> tiles;
         for (const save::model::PathTile& p : scene.footpaths.paths)
             if (std::ranges::contains(ids, p.id))
                 tiles.emplace_back(p.col, p.row);
         std::ranges::sort(tiles);
         std::vector<save::model::PlacedObjectIndex> extras;
-        for (std::size_t i = 0; i < scene.objects.size(); ++i)
+        for (usize i = 0; i < scene.objects.size(); ++i)
         {
             const save::model::PlacedObject& o = scene.objects[i];
             if (o.hidden || !std::ranges::binary_search(tiles, std::pair { o.col, o.row }))
@@ -141,7 +142,7 @@ namespace rct3::scene::park
         const bool tracked = ride && scene.rides.rides[ref.index].kind == save::model::RideKind::Tracked;
         const units::Money value = tracked ? track::track_cost(scene, ref.ride(), assets) : units::Money { model != scene.models.end() ? model->second.price : 0 };
         const units::Money back = rct3::park::demolish_refund(value, (base->flags & save::model::AttractionCommon::kNeverOpened) == 0);
-        std::set<std::uint64_t> parts;
+        std::set<u64> parts;
         // Its fence, which the park built round it, goes with it.
         if (const auto fence = scene.ride_fence_pieces.find(base->id); ride && fence != scene.ride_fence_pieces.end())
         {
@@ -156,7 +157,7 @@ namespace rct3::scene::park
                 if (piece.platform)
                     parts.insert(piece.platform->id);
         std::optional<glm::vec3> at;
-        for (std::size_t i = 0; i < scene.objects.size(); ++i)
+        for (usize i = 0; i < scene.objects.size(); ++i)
         {
             save::model::PlacedObject& o = scene.objects[i];
             if (o.hidden || !(parts.contains(o.id) || parts.contains(o.owner_ref)))
@@ -165,7 +166,7 @@ namespace rct3::scene::park
             at = at.value_or(tile_point(scene.grid, { o.col, o.row }));
             std::erase_if(scene.boned_rides, [&](const ParkScene::BonedRide& b) { return b.object.value == i; });
         }
-        for (const std::uint64_t id : parts)
+        for (const u64 id : parts)
             scene.attractions.erase(id);
         for (const auto [e, a] : scene.sim.registry.view<const simulation::Attraction>().each())
             if (a.saved == base->id)
@@ -204,10 +205,10 @@ namespace rct3::scene::park
 
     void delete_area(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Tile a, save::model::Tile b)
     {
-        const auto inside = [&](std::int32_t col, std::int32_t row) { return col >= std::min(a.col, b.col) && col <= std::max(a.col, b.col) && row >= std::min(a.row, b.row) && row <= std::max(a.row, b.row); };
+        const auto inside = [&](i32 col, i32 row) { return col >= std::min(a.col, b.col) && col <= std::max(a.col, b.col) && row >= std::min(a.row, b.row) && row <= std::max(a.row, b.row); };
         std::vector<save::model::PlacedObjectIndex> props;
         std::vector<rct3::park::AttractionRef> attractions;
-        for (std::size_t i = 0; i < scene.objects.size(); ++i)
+        for (usize i = 0; i < scene.objects.size(); ++i)
         {
             const save::model::PlacedObject& o = scene.objects[i];
             if (o.hidden || !inside(o.col, o.row))
@@ -220,7 +221,7 @@ namespace rct3::scene::park
             else if (clickable_prop(scene, o))
                 props.emplace_back(i);
         }
-        std::vector<std::uint64_t> paths;
+        std::vector<u64> paths;
         for (const save::model::PathTile& p : scene.footpaths.paths)
             if (inside(p.col, p.row))
                 paths.push_back(p.id);

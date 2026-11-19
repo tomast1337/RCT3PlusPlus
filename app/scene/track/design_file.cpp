@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/track/design_file.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/track/top_view.hpp"
 #include "save/model/design.hpp"
@@ -35,15 +36,15 @@ namespace rct3::scene::track
         // shortcut: on a track of several stretches the course runs along the first only, so the others' pieces
         // keep no distance; measure each stretch once the course does.
         if (course && ride.track)
-            for (std::size_t k = 0; k < course->piece_starts.size() && course->first_piece + k < ride.track->pieces.size(); ++k)
+            for (usize k = 0; k < course->piece_starts.size() && course->first_piece + k < ride.track->pieces.size(); ++k)
                 ride.track->pieces[course->first_piece + k].start_distance = units::Distance { course->piece_starts[k] };
 
         // The tiles it covers across and along.
         // shortcut: from the tiles its pieces and doors stand on, not every tile a long piece reaches over; count
         // those once a piece's footprint is known here.
-        std::int32_t low_col = std::numeric_limits<std::int32_t>::max(), high_col = std::numeric_limits<std::int32_t>::min();
-        std::int32_t low_row = low_col, high_row = high_col;
-        const auto cover = [&](std::int32_t col, std::int32_t row) {
+        i32 low_col = std::numeric_limits<i32>::max(), high_col = std::numeric_limits<i32>::min();
+        i32 low_row = low_col, high_row = high_col;
+        const auto cover = [&](i32 col, i32 row) {
             low_col = std::min(low_col, col);
             high_col = std::max(high_col, col);
             low_row = std::min(low_row, row);
@@ -57,8 +58,8 @@ namespace rct3::scene::track
                     cover(door->col, door->row);
         const bool covers = low_col <= high_col;
 
-        std::vector<std::uint8_t> picture = course ? rct3::park::track::top_view(course->points) : std::vector<std::uint8_t> { };
-        const std::uint32_t side = picture.empty() ? 0 : rct3::park::track::kTopViewSize;
+        std::vector<u8> picture = course ? rct3::park::track::top_view(course->points) : std::vector<u8> { };
+        const u32 side = picture.empty() ? 0 : rct3::park::track::kTopViewSize;
         const save::model::DesignSummary summary {
             .ride_symbol = ride.base.symbol,
             .width = covers ? high_col - low_col + 1 : 0,

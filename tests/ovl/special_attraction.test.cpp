@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/special_attraction.hpp"
 
+#include "core/types.hpp"
 #include "record_file.hpp"
 
 #include <doctest/doctest.h>
@@ -18,7 +19,7 @@ TEST_CASE("version 1 special attractions are 13 words")
     pool.add("Toilet01:sid");
     pool.add("ToiletSpline:spl");
     std::vector<std::byte> bytes;
-    put(bytes, { 12, 0, 0, 0, 10000, static_cast<std::uint32_t>(-7500), 0, 0, 2500, 0, 0, 0, 0 });
+    put(bytes, { 12, 0, 0, 0, 10000, static_cast<u32>(-7500), 0, 0, 2500, 0, 0, 0, 0 });
     const auto overlay = make_record_overlay(1, pool, "Toilet:sat", bytes, { { 4, "ToiletName:txt" }, { 8, "ToiletDescription:txt" }, { 0xC, "ToiletIcon:gsi" }, { 0x24, "ToiletSpline:spl" }, { 0x30, "Toilet01:sid" } });
     const auto items = read_special_attractions(overlay, overlay.common());
     REQUIRE(items.size() == 1);

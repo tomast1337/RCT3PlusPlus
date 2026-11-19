@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/design_placement.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <doctest/doctest.h>
 
@@ -14,8 +16,8 @@ namespace
     pools::PoolMap pool()
     {
         pools::PoolMap map;
-        for (std::int32_t row = 10; row < 14; ++row)
-            for (std::int32_t col = 10; col < 14; ++col)
+        for (i32 row = 10; row < 14; ++row)
+            for (i32 col = 10; col < 14; ++col)
                 map.squares.push_back({ .col = col, .row = row, .surface = 6 });
         return map;
     }

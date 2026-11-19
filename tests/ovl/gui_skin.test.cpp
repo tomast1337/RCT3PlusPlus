@@ -2,6 +2,7 @@
 #include "ovl/gui_skin.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <doctest/doctest.h>
 #include <string>
@@ -16,15 +17,15 @@ namespace
 {
 
     // Name block, 12 bytes: "S:gsi" 0, "Img:tex" 6 (list ends with NUL, padded). Structure block at address 16.
-    constexpr std::uint32_t kBase = 16;
-    constexpr std::uint32_t kNameTexture = 6;
+    constexpr u32 kBase = 16;
+    constexpr u32 kNameTexture = 6;
 
     // Offsets inside the structure block: item (16 bytes), then eight coordinates.
-    constexpr std::uint32_t kItem = 0;
-    constexpr std::uint32_t kCoordinates = 16;
-    constexpr std::uint32_t kEnd = 48;
+    constexpr u32 kItem = 0;
+    constexpr u32 kCoordinates = 16;
+    constexpr u32 kEnd = 48;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
@@ -47,19 +48,19 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> reference_row(std::uint32_t name = kNameTexture)
+    std::vector<std::byte> reference_row(u32 name = kNameTexture)
     {
         std::vector<std::byte> out;
         words(out, { kBase + kItem + 4, name, 0, 0 });
         return out;
     }
 
-    std::vector<std::byte> structure(std::uint32_t kind, std::uint32_t coordinates = kBase + kCoordinates)
+    std::vector<std::byte> structure(u32 kind, u32 coordinates = kBase + kCoordinates)
     {
         std::vector<std::byte> out;
         words(out, { kind, 0, coordinates, 0 });
         words(out, { 10, 20, 30, 40 });
-        words(out, { static_cast<std::uint32_t>(-5), 60, 70, 80 });
+        words(out, { static_cast<u32>(-5), 60, 70, 80 });
         REQUIRE(out.size() == kEnd);
         return out;
     }
@@ -80,7 +81,7 @@ TEST_CASE("gui skins expose kind, texture and coordinates")
 {
     SUBCASE("a rectangle has four coordinates")
     {
-        const auto overlay = make(structure(static_cast<std::uint32_t>(GuiSkinKind::Rect)));
+        const auto overlay = make(structure(static_cast<u32>(GuiSkinKind::Rect)));
         const auto items = read_gui_skins(overlay, overlay.common());
         REQUIRE(items.size() == 1);
         CHECK(items[0].name == "S");
@@ -95,7 +96,7 @@ TEST_CASE("gui skins expose kind, texture and coordinates")
 
     SUBCASE("a nine patch has eight coordinates, negatives kept")
     {
-        const auto overlay = make(structure(static_cast<std::uint32_t>(GuiSkinKind::NinePatch)));
+        const auto overlay = make(structure(static_cast<u32>(GuiSkinKind::NinePatch)));
         const auto items = read_gui_skins(overlay, overlay.common());
         REQUIRE(items[0].skin.has_value());
         REQUIRE(items[0].skin->coordinates.size() == 8);
@@ -106,7 +107,7 @@ TEST_CASE("gui skins expose kind, texture and coordinates")
     {
         for (auto kind : { GuiSkinKind::HorizontalThree, GuiSkinKind::VerticalThree })
         {
-            const auto overlay = make(structure(static_cast<std::uint32_t>(kind)));
+            const auto overlay = make(structure(static_cast<u32>(kind)));
             const auto items = read_gui_skins(overlay, overlay.common());
             REQUIRE(items[0].skin.has_value());
             CHECK(items[0].skin->coordinates.size() == 6);
@@ -115,7 +116,7 @@ TEST_CASE("gui skins expose kind, texture and coordinates")
 
     SUBCASE("a whole-texture item has none and needs no pointer")
     {
-        const auto overlay = make(structure(static_cast<std::uint32_t>(GuiSkinKind::WholeTexture), 0));
+        const auto overlay = make(structure(static_cast<u32>(GuiSkinKind::WholeTexture), 0));
         const auto items = read_gui_skins(overlay, overlay.common());
         REQUIRE(items[0].skin.has_value());
         CHECK(items[0].skin->coordinates.empty());
@@ -134,7 +135,7 @@ TEST_CASE("gui skin edge cases")
 
     SUBCASE("coordinates that leave the block make the item unreadable")
     {
-        const auto overlay = make(structure(static_cast<std::uint32_t>(GuiSkinKind::NinePatch), kBase + kEnd - 8));
+        const auto overlay = make(structure(static_cast<u32>(GuiSkinKind::NinePatch), kBase + kEnd - 8));
         const auto items = read_gui_skins(overlay, overlay.common());
         REQUIRE(items.size() == 1);
         CHECK_FALSE(items[0].skin.has_value());
@@ -142,7 +143,7 @@ TEST_CASE("gui skin edge cases")
 
     SUBCASE("a missing reference leaves the texture empty")
     {
-        const auto overlay = make(structure(static_cast<std::uint32_t>(GuiSkinKind::Rect)), false);
+        const auto overlay = make(structure(static_cast<u32>(GuiSkinKind::Rect)), false);
         const auto items = read_gui_skins(overlay, overlay.common());
         REQUIRE(items[0].skin.has_value());
         CHECK(items[0].skin->texture.empty());

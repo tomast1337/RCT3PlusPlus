@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/ground.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/enclosures.hpp"
 #include "park/ground/paths.hpp"
@@ -41,7 +42,7 @@ namespace rct3::scene::park
     {
         ParkFootpaths& f = scene.footpaths;
         rct3::park::ground::GroundImages images;
-        for (std::size_t i = 0; i < styles.size(); ++i)
+        for (usize i = 0; i < styles.size(); ++i)
         {
             if (i < f.pictured.size() && f.pictured[i] == styles[i])
                 continue;
@@ -52,7 +53,7 @@ namespace rct3::scene::park
                 logging::logger("park").warning("{}: not found", file);
                 continue;
             }
-            if (const auto added = rct3::park::ground::add_path_images(images, *found, styles[i], static_cast<std::uint8_t>(i)); !added)
+            if (const auto added = rct3::park::ground::add_path_images(images, *found, styles[i], static_cast<u8>(i)); !added)
                 logging::logger("park").warning("{}: {}", file, added.error());
         }
         f.pictured = styles;
@@ -63,13 +64,13 @@ namespace rct3::scene::park
     {
         ParkFootpaths& f = scene.footpaths;
         rct3::park::ground::GroundImages images;
-        for (std::size_t i = 0; i < paintings.size(); ++i)
+        for (usize i = 0; i < paintings.size(); ++i)
         {
             if (i < f.queues_pictured.size() && f.queues_pictured[i] == paintings[i])
                 continue;
             const std::string file = rct3::park::ground::queue_texture_file(paintings[i].style);
             const auto found = assets.install ? assets.install->find(file) : std::nullopt;
-            const auto added = found ? rct3::park::ground::add_queue_image(images, *found, paintings[i], static_cast<std::uint8_t>(i)) : std::expected<bool, std::string>(std::unexpected("not found"));
+            const auto added = found ? rct3::park::ground::add_queue_image(images, *found, paintings[i], static_cast<u8>(i)) : std::expected<bool, std::string>(std::unexpected("not found"));
             if (!added)
                 logging::logger("park").warning("{}: {}", file, added.error());
         }
@@ -107,7 +108,7 @@ namespace rct3::scene::park
 
     void refresh_pavings(ParkScene& scene)
     {
-        std::unordered_map<std::uint64_t, const save::model::PlacedObject*> placed;
+        std::unordered_map<u64, const save::model::PlacedObject*> placed;
         for (const save::model::PlacedObject& o : scene.objects)
             placed.emplace(o.id, &o);
         // A track piece's footprint is paved only under a base that asks for it.
@@ -126,12 +127,12 @@ namespace rct3::scene::park
             at.row = spot.row;
             at.rotation = spot.direction;
             const auto [xs, zs] = item.squares;
-            for (std::int32_t z = 0; z < zs; ++z)
+            for (i32 z = 0; z < zs; ++z)
             {
-                for (std::int32_t x = 0; x < xs; ++x)
+                for (i32 x = 0; x < xs; ++x)
                 {
                     // An irregular footprint paves only the squares it really stands on.
-                    if (item.fence_outline.empty() || item.fence_outline[static_cast<std::size_t>(z) * static_cast<std::size_t>(xs) + static_cast<std::size_t>(x)])
+                    if (item.fence_outline.empty() || item.fence_outline[static_cast<usize>(z) * static_cast<usize>(xs) + static_cast<usize>(x)])
                         tiles.push_back(rct3::park::object::square_tile(at, item.squares, x, z));
                 }
             }
@@ -190,10 +191,10 @@ namespace rct3::scene::park
         };
         // Once placed, a ride, stall or door stands on the supports of the style it is paved in, as the path it
         // opens onto does; only its ghost shows the set its own item names.
-        std::unordered_map<std::uint64_t, std::string> sets;
+        std::unordered_map<u64, std::string> sets;
         for (const rct3::park::ground::PavedTile& t : laid)
         {
-            const std::uint64_t owner = f.pavings[t.paving].owner;
+            const u64 owner = f.pavings[t.paving].owner;
             if (const rct3::park::path::PathStyle* style = owner != 0 ? style_named(t.path.surface_name) : nullptr)
                 sets.try_emplace(owner, style->support_group);
         }
@@ -202,7 +203,7 @@ namespace rct3::scene::park
             if (const auto set = sets.find(o.id); set != sets.end())
                 o.support_set = set->second;
         }
-        std::uint64_t id = 0;
+        u64 id = 0;
         for (const save::model::PathTile& p : f.paths)
             id = std::max(id, p.id);
         for (const save::model::PlacedObject& o : scene.objects)
@@ -231,8 +232,8 @@ namespace rct3::scene::park
                         if (std::abs(other.col - t.path.col) + std::abs(other.row - t.path.row) != 1 || !scene.grid.contains(other.col, other.row))
                             continue;
                         save::model::PathTile& o = around.emplace_back(t.path);
-                        o.col = static_cast<std::uint8_t>(other.col);
-                        o.row = static_cast<std::uint8_t>(other.row);
+                        o.col = static_cast<u8>(other.col);
+                        o.row = static_cast<u8>(other.row);
                         // A raised path of the park it links to opens towards it in turn.
                         const auto joined = std::ranges::find_if(f.paths, [&](const save::model::PathTile& p) { return p.col == other.col && p.row == other.row && p.elevation && !rct3::park::ground::is_ground_queue(p) && p.elevation->slope == 0 && p.elevation->quantised_height == paving.height; });
                         const rct3::park::path::PathStyle* own = joined != f.paths.end() && std::ranges::contains(paving.links, other) ? style_named(joined->surface_name) : nullptr;
@@ -269,9 +270,9 @@ namespace rct3::scene::park
         f.pavings_stale = false;
         // The fences round the park and the enclosures lean with the ground as it is now.
         profiling::section("Leans", [&] {
-            const std::set<std::uint64_t> panels(scene.fence_panels.begin(), scene.fence_panels.end());
-            const std::set<std::uint64_t> pieces(scene.enclosure_panels.begin(), scene.enclosure_panels.end());
-            std::vector<std::pair<std::uint64_t, glm::vec2>> leaning;
+            const std::set<u64> panels(scene.fence_panels.begin(), scene.fence_panels.end());
+            const std::set<u64> pieces(scene.enclosure_panels.begin(), scene.enclosure_panels.end());
+            std::vector<std::pair<u64, glm::vec2>> leaning;
             for (const save::model::PlacedObject& o : scene.objects)
             {
                 if (!panels.contains(o.id) && !pieces.contains(o.id))
@@ -295,9 +296,9 @@ namespace rct3::scene::park
         });
         // The ground is built in chunks, and only those the change reaches are built again: with the tile
         // round it, as the ground's shading, the walls between tiles and the paths' edges look at their neighbours.
-        const std::int32_t across = (scene.grid.width + kGroundChunk - 1) / kGroundChunk;
-        const std::int32_t down = (scene.grid.height + kGroundChunk - 1) / kGroundChunk;
-        const std::size_t count = static_cast<std::size_t>(across) * static_cast<std::size_t>(down) + 1;
+        const i32 across = (scene.grid.width + kGroundChunk - 1) / kGroundChunk;
+        const i32 down = (scene.grid.height + kGroundChunk - 1) / kGroundChunk;
+        const usize count = static_cast<usize>(across) * static_cast<usize>(down) + 1;
         if (scene.ground_chunks.size() != count)
         {
             touched.reset();
@@ -345,10 +346,10 @@ namespace rct3::scene::park
             chunk.indices = *indices;
         };
         std::optional<std::vector<rct3::park::ground::QueuePainting>> paintings;
-        for (std::size_t i = 0; i + 1 < count; ++i)
+        for (usize i = 0; i + 1 < count; ++i)
         {
-            const std::int32_t col = static_cast<std::int32_t>(i % static_cast<std::size_t>(across)) * kGroundChunk;
-            const std::int32_t row = static_cast<std::int32_t>(i / static_cast<std::size_t>(across)) * kGroundChunk;
+            const i32 col = static_cast<i32>(i % static_cast<usize>(across)) * kGroundChunk;
+            const i32 row = static_cast<i32>(i / static_cast<usize>(across)) * kGroundChunk;
             const rct3::park::TileRect area { col, row, col + kGroundChunk, row + kGroundChunk };
             if (reach && (area.end_col <= reach->col || reach->end_col <= area.col || area.end_row <= reach->row || reach->end_row <= area.row))
                 continue;

@@ -8,6 +8,7 @@
 // and a fastest turn. Some are held still on a lift chain. At a station it squares up, turning slowly to the nearest
 // of the ways it may stop at, or, as a raft does, slows to a stop wherever it faces.
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "units/units.hpp"
 
@@ -18,7 +19,7 @@ namespace rct3::simulation
 {
 
     /// How a spinning part comes to rest at a station.
-    enum class SpinRest : std::uint8_t
+    enum class SpinRest : u8
     {
         Squares, ///< Turns slowly on to the nearest of its stops, and stops facing it
         Settles, ///< Slows to a stop wherever it faces
@@ -32,17 +33,17 @@ namespace rct3::simulation
         units::PerSecond damping { };               ///< How fast its spin dies down
         units::Share pull { };                      ///< Of the car's acceleration, the share it feels
         units::Share gravity { 1 };                 ///< Of gravity, the share it feels
-        float spring = 0;                           ///< Its spring's strength over its weight: drawn back to face ahead by this times its angle
-        float friction = 0;                         ///< Of the weight on its bearing, the share holding it back as it turns
+        f32 spring = 0;                             ///< Its spring's strength over its weight: drawn back to face ahead by this times its angle
+        f32 friction = 0;                           ///< Of the weight on its bearing, the share holding it back as it turns
         std::optional<units::TurnRate> fastest { }; ///< The fastest it spins, where it is held to one
         std::optional<units::Radians> furthest { }; ///< The furthest it turns from facing ahead, where it is held to that
-        std::uint32_t stops = 1;                    ///< The ways round it may stop at a station, evenly spaced from facing ahead
+        u32 stops = 1;                              ///< The ways round it may stop at a station, evenly spaced from facing ahead
         SpinRest rest = SpinRest::Squares;
         bool held_on_chains = false; ///< It is held from spinning on a lift chain
     };
 
     /// What a spinning part's car is on.
-    enum class SpinGround : std::uint8_t
+    enum class SpinGround : u8
     {
         Track,
         Chain,
@@ -50,7 +51,7 @@ namespace rct3::simulation
     };
 
     /// Where a spinning part is in coming to rest at a station.
-    enum class Squaring : std::uint8_t
+    enum class Squaring : u8
     {
         Free,    ///< Away from a station
         Turning, ///< Turning on to a stop
@@ -78,6 +79,6 @@ namespace rct3::simulation
     };
 
     /// Steps `spin` of `part` on by `seconds`, its car moving as `car` has it.
-    void spin_on(Spin& spin, const SpinningPart& part, const SpinCar& car, float seconds);
+    void spin_on(Spin& spin, const SpinningPart& part, const SpinCar& car, f32 seconds);
 
 } // namespace rct3::simulation

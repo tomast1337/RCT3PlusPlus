@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/sky/mesh.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -12,40 +14,40 @@ namespace rct3::park::sky
     {
 
         /// How much the clouds darken at night.
-        constexpr float kNightClouds = 0.7f;
+        constexpr f32 kNightClouds = 0.7f;
 
-        float farthest(const SkyShape& shape)
+        f32 farthest(const SkyShape& shape)
         {
-            float out = 0;
+            f32 out = 0;
             for (const object::ModelVertex& v : shape.vertices)
                 out = std::max(out, glm::length(v.position));
             return out;
         }
 
         /// Keeps a drifting offset small, as the picture repeats every whole unit.
-        float wrapped(float offset)
+        f32 wrapped(f32 offset)
         {
             return offset - std::floor(offset);
         }
 
-        void add(object::ObjectMesh& mesh, const SkyShape& shape, object::PartBlend blend, glm::vec3 eye, float scale, glm::vec4 colour, auto&& uv_of)
+        void add(object::ObjectMesh& mesh, const SkyShape& shape, object::PartBlend blend, glm::vec3 eye, f32 scale, glm::vec4 colour, auto&& uv_of)
         {
             if (shape.vertices.empty() || shape.indices.empty() || colour.a <= 0)
                 return;
-            const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
+            const auto base = static_cast<u32>(mesh.vertices.size());
             for (const object::ModelVertex& v : shape.vertices)
                 mesh.vertices.push_back({ eye + v.position * scale, colour, uv_of(v.uv) });
             object::ObjectBatch batch;
             batch.texture = shape.texture;
             batch.picture = shape.texture;
             batch.blend = blend;
-            batch.first = static_cast<std::uint32_t>(mesh.indices.size());
-            for (const std::uint32_t i : shape.indices)
+            batch.first = static_cast<u32>(mesh.indices.size());
+            for (const u32 i : shape.indices)
             {
                 if (i < shape.vertices.size())
                     mesh.indices.push_back(base + i);
             }
-            batch.count = static_cast<std::uint32_t>(mesh.indices.size()) - batch.first;
+            batch.count = static_cast<u32>(mesh.indices.size()) - batch.first;
             mesh.batches.push_back(std::move(batch));
         }
 
@@ -54,16 +56,16 @@ namespace rct3::park::sky
     object::ObjectMesh sky_mesh(const SkyModels& sky, const SkyView& view)
     {
         object::ObjectMesh mesh;
-        float reach = 0;
+        f32 reach = 0;
         for (const SkyShape* shape : { &sky.dome, &sky.stars, &sky.milky_way, &sky.clouds })
             reach = std::max(reach, farthest(*shape));
         if (reach <= 0)
             return mesh;
         // One scale for all, so the domes keep their sizes against each other.
-        const float scale = view.radius / reach;
-        const float night = std::clamp(view.night, 0.0f, 1.0f);
+        const f32 scale = view.radius / reach;
+        const f32 night = std::clamp(view.night, 0.0f, 1.0f);
 
-        const float overcast = std::clamp(view.overcast, 0.0f, 1.0f);
+        const f32 overcast = std::clamp(view.overcast, 0.0f, 1.0f);
         add(mesh, sky.dome, object::PartBlend::Opaque, view.eye, scale, glm::vec4(view.tint, 1.0f), [&](glm::vec2 uv) { return glm::vec2(view.day, uv.y); });
         const glm::vec4 fading { view.tint, std::clamp(view.fade, 0.0f, 1.0f) };
         add(mesh, sky.dome, object::PartBlend::Blended, view.eye, scale, fading, [&](glm::vec2 uv) { return glm::vec2(view.faded_day, uv.y); });
@@ -73,11 +75,11 @@ namespace rct3::park::sky
         add(mesh, sky.milky_way, object::PartBlend::Blended, view.eye, scale, starlight, same);
 
         // Rain clouds are darker than fair ones, and thicker. Chosen by eye.
-        constexpr float kRainCloudShade = 0.45f;
-        const float shade = (1 - kNightClouds * night) * (1 - kRainCloudShade * overcast);
+        constexpr f32 kRainCloudShade = 0.45f;
+        const f32 shade = (1 - kNightClouds * night) * (1 - kRainCloudShade * overcast);
         const glm::vec4 cloud { view.tint * shade, glm::mix(kCloudCover, 1.0f, overcast) };
-        const float low = wrapped(view.time.value * kCloudDrift);
-        const float high = wrapped(view.time.value * kHighCloudDrift);
+        const f32 low = wrapped(view.time.value * kCloudDrift);
+        const f32 high = wrapped(view.time.value * kHighCloudDrift);
         add(mesh, sky.clouds, object::PartBlend::Blended, view.eye, scale, cloud, [&](glm::vec2 uv) { return uv + glm::vec2(low, 0.0f); });
         add(mesh, sky.clouds, object::PartBlend::Blended, view.eye, scale, cloud, [&](glm::vec2 uv) { return uv * 2.0f + glm::vec2(high, high * 0.5f); });
         mesh.drawn = mesh.batches.size();

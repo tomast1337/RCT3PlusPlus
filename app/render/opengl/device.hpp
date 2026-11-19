@@ -7,6 +7,7 @@
 // scale) stretched over the window as each frame ends, two frames of per-frame memory, each fenced.
 #pragma once
 
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "render/opengl/functions.hpp"
 #include "render/shader_inputs.hpp"
@@ -62,8 +63,8 @@ namespace rct3::render::opengl
             wireframe_ = on;
         }
         void end_frame() override;
-        [[nodiscard]] std::vector<std::uint32_t> sample_levels() const override;
-        void set_samples(std::uint32_t samples) override;
+        [[nodiscard]] std::vector<u32> sample_levels() const override;
+        void set_samples(u32 samples) override;
         [[nodiscard]] FrameStats stats() const override
         {
             return last_stats_;
@@ -73,16 +74,16 @@ namespace rct3::render::opengl
         void draw_ui() override;
 
     private:
-        static constexpr std::uint32_t kFramesInFlight = 2;
+        static constexpr u32 kFramesInFlight = 2;
         /// Texture units a draw binds: the texture, an unused one where Vulkan has the sampler, then the extras.
-        static constexpr std::size_t kUnits = 2 + kExtraTextures;
-        static constexpr std::size_t kShaderCount = static_cast<std::size_t>(Shader::LensDrops) + 1;
+        static constexpr usize kUnits = 2 + kExtraTextures;
+        static constexpr usize kShaderCount = static_cast<usize>(Shader::LensDrops) + 1;
 
         struct Buffer
         {
             GLuint buffer = 0;
             std::byte* mapped = nullptr; ///< Transient blocks only, mapped for their whole life
-            std::size_t size = 0;
+            usize size = 0;
         };
 
         struct Texture
@@ -95,7 +96,7 @@ namespace rct3::render::opengl
             GLuint depth = 0;
             GLuint framebuffer = 0;
             /// Readable depth only: the id its depth is drawn with under, an entry that owns nothing.
-            std::uint32_t depth_id = 0;
+            u32 depth_id = 0;
             bool owned = true;
         };
 
@@ -116,11 +117,11 @@ namespace rct3::render::opengl
             GLsync done = nullptr; ///< Signalled once the GPU has finished the frame that last used the slot
             // Filled front to back each frame; a full block gets a successor, and the next use of the slot
             // merges them into one block big enough for the whole frame (as the Vulkan backend does).
-            std::vector<std::uint32_t> transient;
-            std::size_t transient_used = 0; ///< In the last block
+            std::vector<u32> transient;
+            usize transient_used = 0; ///< In the last block
         };
 
-        enum class State : std::uint8_t
+        enum class State : u8
         {
             Off,
             Idle,
@@ -141,23 +142,23 @@ namespace rct3::render::opengl
         // Resources (resources.cpp)
         [[nodiscard]] std::expected<Texture, std::string> make_texture(const TextureDesc& desc);
         void destroy(const Texture& texture);
-        [[nodiscard]] std::uint32_t make_transient_block(std::size_t size);
-        [[nodiscard]] std::expected<GLuint, std::string> compile_program(const char* vertex, const char* fragment, std::int32_t mode);
+        [[nodiscard]] u32 make_transient_block(usize size);
+        [[nodiscard]] std::expected<GLuint, std::string> compile_program(const char* vertex, const char* fragment, i32 mode);
         [[nodiscard]] std::expected<GLuint, std::string> program(Shader shader);
 
         Functions gl;
         DeviceConfig config_;
         State state_ = State::Off;
         std::string device_name_;
-        Extent window_;           ///< The window's framebuffer, in pixels
-        double frame_pace_ = 0;   ///< Seconds between presents when the device paces frames itself, else 0
-        double last_present_ = 0; ///< When the last paced frame was presented, in GLFW's time
+        Extent window_;        ///< The window's framebuffer, in pixels
+        f64 frame_pace_ = 0;   ///< Seconds between presents when the device paces frames itself, else 0
+        f64 last_present_ = 0; ///< When the last paced frame was presented, in GLFW's time
 
         // The screen the passes draw into: a target the window's size times the render scale, not in textures_.
         Texture screen_;
         // With more than one sample, the screen's passes draw into these and are resolved into screen_ as each
         // ends, so later passes and copy_screen find the screen as without.
-        std::uint32_t samples_ = 1;
+        u32 samples_ = 1;
         GLuint multi_framebuffer_ = 0;
         GLuint multi_color_ = 0;
         GLuint multi_depth_ = 0;
@@ -168,7 +169,7 @@ namespace rct3::render::opengl
         GLuint empty_vertex_array_ = 0; ///< The core profile draws only with one bound
         GLuint constants_ = 0;          ///< Uniform block 0: the draw's ShaderConstants
         std::array<GLuint, kShaderCount> programs_ { };
-        static constexpr std::size_t kSamplerCount = 4; // Filter x AddressMode, at filter * 2 + address
+        static constexpr usize kSamplerCount = 4; // Filter x AddressMode, at filter * 2 + address
         std::array<GLuint, kSamplerCount> samplers_ { };
         std::optional<const Pipeline&> applied_; ///< The pipeline whose state is set, none after anything else changed it
         bool applied_wire_ = false;
@@ -192,12 +193,12 @@ namespace rct3::render::opengl
         std::optional<ScreenPixels> read_;    ///< Until taken
 
         std::array<Frame, kFramesInFlight> frames_ { };
-        std::uint32_t frame_index_ = 0;
+        u32 frame_index_ = 0;
 
-        std::uint32_t next_id_ = 1;
-        std::unordered_map<std::uint32_t, Buffer> buffers_;
-        std::unordered_map<std::uint32_t, Pipeline> pipelines_;
-        std::unordered_map<std::uint32_t, Texture> textures_;
+        u32 next_id_ = 1;
+        std::unordered_map<u32, Buffer> buffers_;
+        std::unordered_map<u32, Pipeline> pipelines_;
+        std::unordered_map<u32, Texture> textures_;
 
         FrameStats frame_stats_;
         FrameStats last_stats_;

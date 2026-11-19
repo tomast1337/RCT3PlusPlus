@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/wild_birds.hpp"
 
+#include "core/types.hpp"
 #include "simulation/guests.hpp"
 
 #include <algorithm>
@@ -20,16 +21,16 @@ namespace
         const auto in_pond = [](glm::vec2 p) { return p.x >= 80 && p.x <= 120 && p.y >= 80 && p.y <= 120; };
         return {
             .height = [](glm::vec2) { return 0.0f; },
-            .water = [=](glm::vec2 p) -> std::optional<float> { return in_pond(p) ? std::optional { -0.5f } : std::nullopt; },
-            .water_spot = [](random::RandomState& dice) -> std::optional<glm::vec2> { return glm::vec2 { static_cast<float>(random::between(dice, 82.0, 118.0)), static_cast<float>(random::between(dice, 82.0, 118.0)) }; },
+            .water = [=](glm::vec2 p) -> std::optional<f32> { return in_pond(p) ? std::optional { -0.5f } : std::nullopt; },
+            .water_spot = [](random::RandomState& dice) -> std::optional<glm::vec2> { return glm::vec2 { static_cast<f32>(random::between(dice, 82.0, 118.0)), static_cast<f32>(random::between(dice, 82.0, 118.0)) }; },
             .low = { 0, 0 },
             .high = { 200, 200 },
         };
     }
 
-    void run(SimWorld& world, const BirdGround& ground, float seconds)
+    void run(SimWorld& world, const BirdGround& ground, f32 seconds)
     {
-        for (float t = 0; t < seconds; t += kStep.value)
+        for (f32 t = 0; t < seconds; t += kStep.value)
             step_wild_birds(world, ground, kStep);
     }
 
@@ -49,7 +50,7 @@ TEST_CASE("a flock of ducks comes down on the pond and stays on it")
     run(world, ground, 60);
     CHECK(world.registry.view<WildBird>().size() == 12);
     CHECK(all_in(world, BirdJob::Resting));
-    for (std::int32_t i = 0; i < 40; ++i)
+    for (i32 i = 0; i < 40; ++i)
     {
         run(world, ground, 1);
         // Whenever it is down, a duck is over the pond; in the air on the way off it need not be.

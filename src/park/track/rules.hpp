@@ -5,6 +5,7 @@
 // station's ends or a waterfall's parts are always the right pieces without the player picking them.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/track/course.hpp"
 #include "park/track/pieces.hpp"
 #include "save/model/rides.hpp"
@@ -29,7 +30,7 @@ namespace rct3::park::track
     /// Which piece of a track a pattern step takes.
     struct PieceTest
     {
-        enum class Kind : std::uint8_t
+        enum class Kind : u8
         {
             Group, ///< A piece of the group `name`; an empty name takes pieces of no group
             Piece, ///< The piece `name`
@@ -65,13 +66,13 @@ namespace rct3::park::track
         /// rated without a lap. A walk-through such as the aquarium.
         bool no_trains = false;
         bool may_be_split = false; ///< Its track may be in several unjoined parts
-        std::optional<std::uint32_t> min_pieces;
+        std::optional<u32> min_pieces;
         bool circuit_only = false;
-        std::optional<std::uint32_t> most_trains; ///< Most trains it may run at once; none when its file sets no limit
+        std::optional<u32> most_trains; ///< Most trains it may run at once; none when its file sets no limit
         /// Entrances and exits it needs: 0 one per station, 1 any number, 2 exactly one (placing another
         /// moves it), 3 at least one, 4 none.
-        std::uint32_t entrances = 3;
-        std::uint32_t exits = 3;
+        u32 entrances = 3;
+        u32 exits = 3;
         /// A pool ride (slides, lazy river): its stations join a pool complex's paving and pool paths instead of
         /// having entrances and exits, a joined station counting as both.
         bool pool_ride = false;
@@ -95,14 +96,14 @@ namespace rct3::park::track
         std::optional<LiftCar> lift_car { };
         /// Its stations send trains off at, and bring them in to stop at; nothing when its file gives none.
         std::optional<units::Pace> station_speed { };
-        float water_pace = 1; ///< As ovl::RideOperatingDefaults::water_pace
-        float water_hold = 1; ///< As ovl::RideOperatingDefaults::water_hold
+        f32 water_pace = 1; ///< As ovl::RideOperatingDefaults::water_pace
+        f32 water_hold = 1; ///< As ovl::RideOperatingDefaults::water_hold
         /// As ovl::RideOperatingDefaults::flow_speed and the rest; nothing on rides without one.
         struct Flow
         {
             units::Pace speed { };
-            float force = 0;
-            float hold = 0;
+            f32 force = 0;
+            f32 hold = 0;
             bool alone = false;
         };
         std::optional<Flow> flow { };
@@ -145,7 +146,7 @@ namespace rct3::park::track
     [[nodiscard]] TrackRules load_track_rules(const std::filesystem::path& file, std::string_view symbol);
 
     /// The door rule that wants exactly one, which placing another of that door moves instead of adding.
-    inline constexpr std::uint32_t kOneDoor = 2;
+    inline constexpr u32 kOneDoor = 2;
 
     /// Why `ride` cannot be put in `state` (open or testing) under `rules`, as a string key; nothing when it
     /// can. `editing`: its track is open in the construction panel. `course`: its track's course, when known,
@@ -155,7 +156,7 @@ namespace rct3::park::track
     /// exits and for a ride of one entrance and one exit on an open track, an exit before the entrance. A flat
     /// ride has only the door checks, so it may always be tested. A pool ride's doors are its `pool_joined`
     /// stations, those joined to a pool complex.
-    [[nodiscard]] std::optional<std::string> open_refusal(const save::model::Ride& ride, const TrackRules& rules, save::model::AttractionState state, bool editing, std::optional<const TrackCourse&> course = std::nullopt, std::size_t pool_joined = 0);
+    [[nodiscard]] std::optional<std::string> open_refusal(const save::model::Ride& ride, const TrackRules& rules, save::model::AttractionState state, bool editing, std::optional<const TrackCourse&> course = std::nullopt, usize pool_joined = 0);
 
     /// `track` (pieces of `pieces` laid in order) after every pattern of `patterns` has swapped what it
     /// matches: each pattern is tried at each piece in turn, its steps taking that piece and those after.

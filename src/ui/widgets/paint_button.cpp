@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/paint_button.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <format>
 #include <utility>
@@ -8,15 +10,15 @@
 namespace rct3::ui::widgets
 {
 
-    PaintButton::PaintButton(std::string name, PaintButtonStyle style, std::vector<std::size_t> colours)
+    PaintButton::PaintButton(std::string name, PaintButtonStyle style, std::vector<usize> colours)
         : Button(std::move(name), style.face)
         , colours(std::move(colours))
         , style_(std::move(style))
     {
-        this->colours.resize(std::clamp<std::size_t>(this->colours.size(), 1, kMaxPots));
+        this->colours.resize(std::clamp<usize>(this->colours.size(), 1, kMaxPots));
     }
 
-    std::optional<std::size_t> PaintButton::take_pot()
+    std::optional<usize> PaintButton::take_pot()
     {
         if (!take_click())
             return std::nullopt;
@@ -24,32 +26,32 @@ namespace rct3::ui::widgets
         return std::exchange(clicked_on_, std::nullopt).value_or(0);
     }
 
-    Rect PaintButton::spot(std::size_t i) const
+    Rect PaintButton::spot(usize i) const
     {
         const std::vector<PaintSpot>& spots = style_.spots[colours.size() - 1];
         if (i >= spots.size())
             return { };
         // As the icon is drawn: centred on the face, growing with it.
         const Rect f = face();
-        const float scale = (rect().width() > 0 ? f.width() / rect().width() : 1.0f) * icon_scale;
-        const float x0 = (f.x0 + f.x1) / 2 - style_.icon_size * scale / 2;
-        const float y0 = (f.y0 + f.y1) / 2 - style_.icon_size * scale / 2;
-        const float half = spots[i].size * scale / 2;
-        const float cx = x0 + spots[i].centre.x * scale;
-        const float cy = y0 + spots[i].centre.y * scale;
+        const f32 scale = (rect().width() > 0 ? f.width() / rect().width() : 1.0f) * icon_scale;
+        const f32 x0 = (f.x0 + f.x1) / 2 - style_.icon_size * scale / 2;
+        const f32 y0 = (f.y0 + f.y1) / 2 - style_.icon_size * scale / 2;
+        const f32 half = spots[i].size * scale / 2;
+        const f32 cx = x0 + spots[i].centre.x * scale;
+        const f32 cy = y0 + spots[i].centre.y * scale;
         return { cx - half, cy - half, cx + half, cy + half };
     }
 
-    std::size_t PaintButton::pot_at(Point p) const
+    usize PaintButton::pot_at(Point p) const
     {
-        std::size_t best = 0;
-        float nearest = 0;
-        for (std::size_t i = 0; i < colours.size(); ++i)
+        usize best = 0;
+        f32 nearest = 0;
+        for (usize i = 0; i < colours.size(); ++i)
         {
             const Rect s = spot(i);
-            const float dx = p.x - (s.x0 + s.x1) / 2;
-            const float dy = p.y - (s.y0 + s.y1) / 2;
-            const float d = dx * dx + dy * dy;
+            const f32 dx = p.x - (s.x0 + s.x1) / 2;
+            const f32 dy = p.y - (s.y0 + s.y1) / 2;
+            const f32 d = dx * dx + dy * dy;
             if (i == 0 || d < nearest)
             {
                 best = i;
@@ -59,7 +61,7 @@ namespace rct3::ui::widgets
         return best;
     }
 
-    std::optional<std::size_t> PaintButton::lit() const
+    std::optional<usize> PaintButton::lit() const
     {
         if (held)
             return held;
@@ -85,15 +87,15 @@ namespace rct3::ui::widgets
     void PaintButton::update(const UpdateContext& context)
     {
         Button::update(context);
-        const std::size_t n = colours.size() - 1;
-        const std::optional<std::size_t> l = lit();
+        const usize n = colours.size() - 1;
+        const std::optional<usize> l = lit();
         icon = l && *l < kMaxPots ? style_.lit[n][*l] : style_.pots[n];
     }
 
     void PaintButton::draw(DrawContext& context) const
     {
         Button::draw(context);
-        for (std::size_t i = 0; i < colours.size(); ++i)
+        for (usize i = 0; i < colours.size(); ++i)
         {
             const Rect s = spot(i);
             if (s.width() > 0)

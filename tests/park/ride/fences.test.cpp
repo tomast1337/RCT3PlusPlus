@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ride/fences.hpp"
 
+#include "core/types.hpp"
 #include "park/object/placement.hpp"
 
 #include <algorithm>
@@ -17,7 +18,7 @@ using namespace rct3::park::ride;
 namespace
 {
 
-    save::model::PlacementSpot spot(std::int32_t col, std::int32_t row, std::int32_t height, std::uint8_t direction)
+    save::model::PlacementSpot spot(i32 col, i32 row, i32 height, u8 direction)
     {
         save::model::PlacementSpot s;
         s.col = col;
@@ -38,7 +39,7 @@ namespace
         return r;
     }
 
-    object::ObjectModel footprint(std::int32_t x_squares, std::int32_t z_squares)
+    object::ObjectModel footprint(i32 x_squares, i32 z_squares)
     {
         object::ObjectModel m;
         m.squares = { x_squares, z_squares };
@@ -48,10 +49,10 @@ namespace
     /// Every object's model is `model`.
     ModelOf only(const object::ObjectModel* model)
     {
-        return [model](std::uint64_t) { return model; };
+        return [model](u64) { return model; };
     }
 
-    using Edge = std::tuple<std::int32_t, std::int32_t, std::int32_t>; // Column, row and turn of a piece
+    using Edge = std::tuple<i32, i32, i32>; // Column, row and turn of a piece
 
     std::set<Edge> edges(const std::vector<save::model::PlacedObject>& pieces)
     {
@@ -61,10 +62,10 @@ namespace
         return out;
     }
 
-    std::array<std::int32_t, 2> beyond(const Edge& e)
+    std::array<i32, 2> beyond(const Edge& e)
     {
         const glm::vec2 x = object::turned_x(ModelTurn::from(std::get<2>(e)));
-        return { std::get<0>(e) + static_cast<std::int32_t>(std::lround(x.x)), std::get<1>(e) + static_cast<std::int32_t>(std::lround(x.y)) };
+        return { std::get<0>(e) + static_cast<i32>(std::lround(x.x)), std::get<1>(e) + static_cast<i32>(std::lround(x.y)) };
     }
 
 } // namespace
@@ -105,7 +106,7 @@ TEST_CASE("an entrance and an exit are walled on the two sides beside the way th
         CHECK(p.base_height == (p.col == 3 ? 7 : 2));
         CHECK(p.force_absolute_height);
         CHECK(p.symbol == "Hedge");
-        CHECK(p.colours == std::array<std::int32_t, 3> { 4, 5, 6 });
+        CHECK(p.colours == std::array<i32, 3> { 4, 5, 6 });
         CHECK(p.id > 50);
         CHECK(p.free_standing());
     }
@@ -175,7 +176,7 @@ TEST_CASE("a tracked ride's base is fenced round as a flat ride is, and its othe
     object::ObjectModel base = footprint(2, 2);
     base.fenced_round = true;
     const object::ObjectModel section = footprint(2, 2);
-    const auto pieces = ride_fences(r, [&](std::uint64_t object) { return object == 20 ? &base : &section; }, 0);
+    const auto pieces = ride_fences(r, [&](u64 object) { return object == 20 ? &base : &section; }, 0);
     const std::set<Edge> fenced = edges(pieces);
     CHECK(fenced.size() == 9); // Eight round the rim, less the door, and two beside the door
     CHECK_FALSE(fenced.contains({ 11, 20, 2 }));

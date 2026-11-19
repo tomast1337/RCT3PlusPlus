@@ -11,6 +11,7 @@
 // The owner asks with take_change() whether the user changed the page.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widgets/button.hpp"
 
 #include <cstddef>
@@ -27,11 +28,11 @@ namespace rct3::ui::widgets
         std::string tab; ///< Family base name for the tab buttons (see SkinLibrary)
         Rect text_inset; ///< Taken off each tab before centring its label
         font::FontRole font = font::FontRole::Small;
-        float bar_height = 24;
-        float gap = 4;        ///< Between tabs
-        float text_room = 20; ///< Added to the label's width
-        float min_tab_width = 50;
-        float page_gap = 6; ///< Between the tabs and the pages
+        f32 bar_height = 24;
+        f32 gap = 4;        ///< Between tabs
+        f32 text_room = 20; ///< Added to the label's width
+        f32 min_tab_width = 50;
+        f32 page_gap = 6; ///< Between the tabs and the pages
     };
 
     /// A tab: a button that also takes Left and Right, for its Tabs to turn the page by.
@@ -41,14 +42,14 @@ namespace rct3::ui::widgets
         using Button::Button;
 
         /// -1 for each Left and +1 for each Right since the last call, added up.
-        [[nodiscard]] std::int32_t take_turn()
+        [[nodiscard]] i32 take_turn()
         {
             return std::exchange(turn_, 0);
         }
         bool on_key(const KeyPress& key) override;
 
     private:
-        std::int32_t turn_ = 0;
+        i32 turn_ = 0;
     };
 
     class Tabs : public Widget
@@ -60,22 +61,22 @@ namespace rct3::ui::widgets
         /// shows.
         Widget& add_page(std::string name, std::u16string label);
 
-        [[nodiscard]] std::size_t count() const
+        [[nodiscard]] usize count() const
         {
             return pages_.size();
         }
-        [[nodiscard]] std::size_t current() const
+        [[nodiscard]] usize current() const
         {
             return current_;
         }
         /// Shows page `index`; nothing when out of range. Not reported by take_change().
-        void show(std::size_t index);
+        void show(usize index);
 
-        [[nodiscard]] Widget& page(std::size_t index)
+        [[nodiscard]] Widget& page(usize index)
         {
             return *pages_.at(index);
         }
-        [[nodiscard]] TabButton& tab(std::size_t index)
+        [[nodiscard]] TabButton& tab(usize index)
         {
             return *tabs_.at(index);
         }
@@ -87,14 +88,14 @@ namespace rct3::ui::widgets
         void update(const UpdateContext& context) override;
 
     private:
-        void turn(std::int32_t by); // By the user, wrapping round
+        void turn(i32 by); // By the user, wrapping round
 
         TabsStyle style_;
         Widget* bar_ = nullptr;
         std::vector<TabButton*> tabs_;
         std::vector<Widget*> pages_;
-        std::size_t current_ = 0;
-        std::int32_t changes_ = 0;
+        usize current_ = 0;
+        i32 changes_ = 0;
     };
 
 } // namespace rct3::ui::widgets

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/sun.hpp"
 
+#include "core/types.hpp"
 #include "simulation/day_clock.hpp"
 
 #include <doctest/doctest.h>
@@ -10,7 +11,7 @@ using namespace rct3::park;
 
 namespace
 {
-    constexpr float hours(float h)
+    constexpr f32 hours(f32 h)
     {
         return h / simulation::kHoursPerDay;
     }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/footpath_builder.hpp"
 
+#include "core/types.hpp"
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
 #include "park/path/clearance.hpp"
@@ -20,26 +21,26 @@ namespace rct3::park
     {
 
         /// Where a trail picked on `spot` starts: on flat ground, else just above the tile's highest corner.
-        std::int32_t ground_start(const save::model::TerrainGrid& grid, save::model::Tile spot)
+        i32 ground_start(const save::model::TerrainGrid& grid, save::model::Tile spot)
         {
             const save::model::TerrainCell& cell = grid.at(spot.col, spot.row);
             if (cell.max_height() - cell.min_height() <= kFlat)
-                return static_cast<std::int32_t>(std::lround(cell.min_height()));
-            return static_cast<std::int32_t>(std::ceil(cell.max_height() - ground::kPathMeets));
+                return static_cast<i32>(std::lround(cell.min_height()));
+            return static_cast<i32>(std::ceil(cell.max_height() - ground::kPathMeets));
         }
 
         /// The lowest and highest heights `path` takes on its tile.
-        std::pair<float, float> span_of(const save::model::PathTile& path, const save::model::TerrainGrid& grid)
+        std::pair<f32, f32> span_of(const save::model::PathTile& path, const save::model::TerrainGrid& grid)
         {
             if (path.elevation && !ground::is_ground_queue(path))
             {
                 const save::model::PathElevation& e = *path.elevation;
-                const float rise = ground::path_rise(e.slope);
-                const float low = static_cast<float>(e.quantised_height) - (slope_falls(e.slope) ? rise : 0);
+                const f32 rise = ground::path_rise(e.slope);
+                const f32 low = static_cast<f32>(e.quantised_height) - (slope_falls(e.slope) ? rise : 0);
                 return { low, low + rise };
             }
             if (path.elevation)
-                return { static_cast<float>(path.elevation->quantised_height), static_cast<float>(path.elevation->quantised_height) };
+                return { static_cast<f32>(path.elevation->quantised_height), static_cast<f32>(path.elevation->quantised_height) };
             const save::model::TerrainCell& cell = grid.at(path.col, path.row);
             return { cell.min_height(), cell.max_height() };
         }
@@ -49,18 +50,18 @@ namespace rct3::park
         template<typename Visit> void piece_corners(const NextPiece& piece, Side heading, Visit visit)
         {
             const auto exit = path::edge_corners(heading);
-            for (std::size_t corner = 0; corner < 4; ++corner)
+            for (usize corner = 0; corner < 4; ++corner)
             {
                 const bool leaving = corner == exit[0] || corner == exit[1];
-                visit(corner, static_cast<float>(leaving ? piece.end : piece.start));
+                visit(corner, static_cast<f32>(leaving ? piece.end : piece.start));
             }
         }
 
     } // namespace
 
-    PathSlope stepped_slope(PathSlope from, std::int32_t steps) noexcept
+    PathSlope stepped_slope(PathSlope from, i32 steps) noexcept
     {
-        const std::int32_t at = std::clamp(static_cast<std::int32_t>(from) + steps, 0, static_cast<std::int32_t>(kPathSlopeCount) - 1);
+        const i32 at = std::clamp(static_cast<i32>(from) + steps, 0, static_cast<i32>(kPathSlopeCount) - 1);
         return static_cast<PathSlope>(at);
     }
 
@@ -69,15 +70,15 @@ namespace rct3::park
         TerrainMesh mesh;
         if (!grid.contains(piece.spot.col, piece.spot.row))
             return mesh;
-        std::array<float, 4> heights = grid.at(piece.spot.col, piece.spot.row).corners;
+        std::array<f32, 4> heights = grid.at(piece.spot.col, piece.spot.row).corners;
         if (!piece.ground || piece.cut)
-            piece_corners(piece, heading, [&](std::size_t corner, float height) { heights[corner] = height; });
+            piece_corners(piece, heading, [&](usize corner, f32 height) { heights[corner] = height; });
         const auto front = path::edge_corners(heading);
         const auto right = path::edge_corners(heading.right());
-        for (std::size_t corner = 0; corner < 4; ++corner)
+        for (usize corner = 0; corner < 4; ++corner)
         {
             GroundVertex& v = mesh.vertices.emplace_back();
-            v.position = { grid.world_x(piece.spot.col + static_cast<std::int32_t>(corner % 2)), heights[corner], grid.world_z(piece.spot.row + static_cast<std::int32_t>(corner / 2)) };
+            v.position = { grid.world_x(piece.spot.col + static_cast<i32>(corner % 2)), heights[corner], grid.world_z(piece.spot.row + static_cast<i32>(corner / 2)) };
             v.uv = { std::ranges::contains(right, corner) ? 1.0f : 0.0f, std::ranges::contains(front, corner) ? 1.0f : 0.0f };
             v.normal = { 0, 1, 0 };
         }
@@ -114,17 +115,17 @@ namespace rct3::park
         NextPiece piece;
         piece.spot = *spot;
         piece.start = builder.trail.empty() ? builder.start_height.value_or(ground_start(grid, *spot)) : builder.trail.back().height;
-        piece.end = piece.start + static_cast<std::int32_t>(slope_rise(builder.slope));
+        piece.end = piece.start + static_cast<i32>(slope_rise(builder.slope));
         bool level = builder.slope == PathSlope::Flat;
         const auto& corners = grid.at(spot->col, spot->row).corners;
-        piece_corners(piece, builder.heading, [&](std::size_t corner, float height) {
+        piece_corners(piece, builder.heading, [&](usize corner, f32 height) {
             piece.cut = piece.cut || corners[corner] > height + ground::kPathMeets;
             // Once cut, a corner in the way stands at the piece.
-            const float ground = builder.cut_into_ground ? std::min(corners[corner], height) : corners[corner];
+            const f32 ground = builder.cut_into_ground ? std::min(corners[corner], height) : corners[corner];
             level = level && std::abs(ground - height) <= kFlat;
         });
-        const auto top = static_cast<float>(std::max(piece.start, piece.end));
-        piece.tunnel = std::ranges::all_of(corners, [&](float corner) { return corner >= top + kTunnelCover; });
+        const auto top = static_cast<f32>(std::max(piece.start, piece.end));
+        piece.tunnel = std::ranges::all_of(corners, [&](f32 corner) { return corner >= top + kTunnelCover; });
         if (piece.tunnel)
             piece.cut = false;
         piece.ground = !piece.tunnel && level && (builder.cut_into_ground || !piece.cut);
@@ -145,8 +146,8 @@ namespace rct3::park
             return LayProblem::Underground;
         if (same_piece_at(paths, *piece, builder))
             return LayProblem::None;
-        const auto low = static_cast<float>(std::min(piece->start, piece->end));
-        const auto high = static_cast<float>(std::max(piece->start, piece->end));
+        const auto low = static_cast<f32>(std::min(piece->start, piece->end));
+        const auto high = static_cast<f32>(std::max(piece->start, piece->end));
         for (const save::model::PathTile& p : paths)
         {
             if (p.col != piece->spot.col || p.row != piece->spot.row)
@@ -164,43 +165,43 @@ namespace rct3::park
     {
         if (!grid.contains(piece.spot.col, piece.spot.row))
             return;
-        auto& corners = grid.cells[static_cast<std::size_t>(piece.spot.row) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(piece.spot.col)].corners;
-        piece_corners(piece, heading, [&](std::size_t corner, float height) { corners[corner] = std::min(corners[corner], height); });
+        auto& corners = grid.cells[static_cast<usize>(piece.spot.row) * static_cast<usize>(grid.width) + static_cast<usize>(piece.spot.col)].corners;
+        piece_corners(piece, heading, [&](usize corner, f32 height) { corners[corner] = std::min(corners[corner], height); });
     }
 
-    float height_above_ground(const NextPiece& piece, const save::model::TerrainGrid& grid)
+    f32 height_above_ground(const NextPiece& piece, const save::model::TerrainGrid& grid)
     {
         if (!grid.contains(piece.spot.col, piece.spot.row))
             return 0;
         const auto& corners = grid.at(piece.spot.col, piece.spot.row).corners;
-        const float ground = (corners[0] + corners[1] + corners[2] + corners[3]) / 4;
-        return static_cast<float>(piece.start + piece.end) / 2 - ground;
+        const f32 ground = (corners[0] + corners[1] + corners[2] + corners[3]) / 4;
+        return static_cast<f32>(piece.start + piece.end) / 2 - ground;
     }
 
-    std::optional<std::size_t> ground_path_at(std::span<const save::model::PathTile> paths, save::model::Tile spot)
+    std::optional<usize> ground_path_at(std::span<const save::model::PathTile> paths, save::model::Tile spot)
     {
         const auto found = std::ranges::find_if(paths, [&](const save::model::PathTile& p) { return p.kind == save::model::PathKind::Ground && p.col == spot.col && p.row == spot.row; });
         if (found == paths.end())
             return std::nullopt;
-        return static_cast<std::size_t>(found - paths.begin());
+        return static_cast<usize>(found - paths.begin());
     }
 
-    save::model::PathTile ground_path(save::model::Tile spot, std::string_view style, std::uint64_t id)
+    save::model::PathTile ground_path(save::model::Tile spot, std::string_view style, u64 id)
     {
         save::model::PathTile p;
         p.id = id;
         p.kind = save::model::PathKind::Ground;
-        p.col = static_cast<std::uint8_t>(spot.col);
-        p.row = static_cast<std::uint8_t>(spot.row);
+        p.col = static_cast<u8>(spot.col);
+        p.row = static_cast<u8>(spot.row);
         p.surface_name = std::string(style);
         return p;
     }
 
-    std::optional<std::size_t> same_piece_at(std::span<const save::model::PathTile> paths, const NextPiece& piece, const FootpathBuilder& builder)
+    std::optional<usize> same_piece_at(std::span<const save::model::PathTile> paths, const NextPiece& piece, const FootpathBuilder& builder)
     {
         if (piece.ground && !builder.queue)
             return ground_path_at(paths, piece.spot);
-        const std::uint8_t stored = piece.ground ? save::model::kSlopeOnGround : stored_slope(builder.slope);
+        const u8 stored = piece.ground ? save::model::kSlopeOnGround : stored_slope(builder.slope);
         const auto found = std::ranges::find_if(paths, [&](const save::model::PathTile& p) {
             if (p.col != piece.spot.col || p.row != piece.spot.row || (p.kind == save::model::PathKind::Queue) != builder.queue || !p.elevation)
                 return false;
@@ -210,14 +211,14 @@ namespace rct3::park
         });
         if (found == paths.end())
             return std::nullopt;
-        return static_cast<std::size_t>(found - paths.begin());
+        return static_cast<usize>(found - paths.begin());
     }
 
-    bool lay_path(FootpathBuilder& builder, std::vector<save::model::PathTile>& paths, const NextPiece& piece, std::string_view style, std::uint64_t id, std::uint64_t deck)
+    bool lay_path(FootpathBuilder& builder, std::vector<save::model::PathTile>& paths, const NextPiece& piece, std::string_view style, u64 id, u64 deck)
     {
         builder.on_slope = builder.slope != PathSlope::Flat;
         const bool there = same_piece_at(paths, piece, builder).has_value();
-        const std::uint64_t before = builder.trail.empty() ? 0 : builder.trail.back().laid;
+        const u64 before = builder.trail.empty() ? 0 : builder.trail.back().laid;
         builder.trail.push_back({ piece.spot, there ? 0 : id, piece.end });
         if (there)
             return false;
@@ -278,7 +279,7 @@ namespace rct3::park
         return removed;
     }
 
-    std::vector<save::model::PathTile> remove_paths(FootpathBuilder& builder, std::vector<save::model::PathTile>& paths, std::span<const std::uint64_t> ids)
+    std::vector<save::model::PathTile> remove_paths(FootpathBuilder& builder, std::vector<save::model::PathTile>& paths, std::span<const u64> ids)
     {
         std::vector<save::model::PathTile> out;
         while (!builder.trail.empty() && builder.trail.back().laid != 0 && std::ranges::contains(ids, builder.trail.back().laid))
@@ -288,7 +289,7 @@ namespace rct3::park
         }
         if (std::ranges::any_of(builder.trail, [&](const TrailStep& s) { return s.laid != 0 && std::ranges::contains(ids, s.laid); }))
             builder = FootpathBuilder { .heading = builder.heading, .slope = builder.slope, .cut_into_ground = builder.cut_into_ground, .queue = builder.queue };
-        for (const std::uint64_t id : ids)
+        for (const u64 id : ids)
         {
             if (const auto at = std::ranges::find(paths, id, &save::model::PathTile::id); at != paths.end())
             {
@@ -311,14 +312,14 @@ namespace rct3::park
 
     PathControl slope_control(PathSlope slope) noexcept
     {
-        return static_cast<PathControl>(static_cast<std::uint8_t>(PathControl::SteepDown) + static_cast<std::uint8_t>(slope));
+        return static_cast<PathControl>(static_cast<u8>(PathControl::SteepDown) + static_cast<u8>(slope));
     }
 
     PathSlope control_slope(PathControl control) noexcept
     {
         if (!picks_slope(control))
             return PathSlope::Flat;
-        return static_cast<PathSlope>(static_cast<std::uint8_t>(control) - static_cast<std::uint8_t>(PathControl::SteepDown));
+        return static_cast<PathSlope>(static_cast<u8>(control) - static_cast<u8>(PathControl::SteepDown));
     }
 
     std::array<bool, kPathControlCount> fitting_controls(const FootpathBuilder& builder, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::optional<const path::SolidTiles&> solids)
@@ -333,7 +334,7 @@ namespace rct3::park
         const auto some_slope = [&](Side heading) { return std::ranges::any_of(kSlopes, [&](PathControl c) { return fits(heading, control_slope(c)); }); };
 
         std::array<bool, kPathControlCount> out { };
-        const auto at = [&](PathControl c) -> bool& { return out.at(static_cast<std::size_t>(c)); };
+        const auto at = [&](PathControl c) -> bool& { return out.at(static_cast<usize>(c)); };
         if (can_turn(builder))
         {
             at(PathControl::TurnLeft) = some_slope(builder.heading.left());
@@ -376,7 +377,7 @@ namespace rct3::park
         return PathStep::None;
     }
 
-    std::uint8_t stored_slope(PathSlope slope) noexcept
+    u8 stored_slope(PathSlope slope) noexcept
     {
         // The codes parks store: flat, steep up, steep down, (3 is a queue on the ground), up, down.
         switch (slope)
@@ -395,17 +396,17 @@ namespace rct3::park
         return 0;
     }
 
-    float slope_rise(PathSlope slope) noexcept
+    f32 slope_rise(PathSlope slope) noexcept
     {
-        const float rise = ground::path_rise(stored_slope(slope));
+        const f32 rise = ground::path_rise(stored_slope(slope));
         return slope == PathSlope::Down || slope == PathSlope::SteepDown ? -rise : rise;
     }
 
-    units::Money piece_cost(units::Money ground_cost, bool raised, float height) noexcept
+    units::Money piece_cost(units::Money ground_cost, bool raised, f32 height) noexcept
     {
         if (!raised || height <= 0)
             return ground_cost;
-        return ground_cost + units::Money { kRaisedPieceCost.value * static_cast<std::int64_t>(std::ceil(height)) };
+        return ground_cost + units::Money { kRaisedPieceCost.value * static_cast<i64>(std::ceil(height)) };
     }
 
     units::Money piece_price(const NextPiece& piece, const save::model::TerrainGrid& grid, units::Money ground_cost)
@@ -419,10 +420,10 @@ namespace rct3::park
     {
         if (!path.elevation || ground::is_ground_queue(path))
             return ground_cost;
-        const std::uint8_t slope = path.elevation->slope;
+        const u8 slope = path.elevation->slope;
         const bool down = slope == stored_slope(PathSlope::Down) || slope == stored_slope(PathSlope::SteepDown);
-        const auto rise = static_cast<std::int32_t>(std::lround(ground::path_rise(slope)));
-        const std::int32_t start = path.elevation->quantised_height;
+        const auto rise = static_cast<i32>(std::lround(ground::path_rise(slope)));
+        const i32 start = path.elevation->quantised_height;
         return piece_price(NextPiece { { path.col, path.row }, start, down ? start - rise : start + rise, false, false, path.elevation->underground }, grid, ground_cost);
     }
 

@@ -13,6 +13,7 @@
 #pragma once
 
 #include "career/career.hpp"
+#include "core/types.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -26,19 +27,19 @@ namespace rct3::career
 
     struct PrfScenario
     {
-        std::int32_t status = 0;
+        i32 status = 0;
         std::string last_save;
     };
 
     struct PrfCareer
     {
         std::string name;
-        std::int32_t pack = 0; ///< Ours: 0 the original game, then each expansion
-        std::int32_t current = 0;
+        i32 pack = 0; ///< Ours: 0 the original game, then each expansion
+        i32 current = 0;
         std::vector<PrfScenario> scenarios;
     };
 
-    enum class PrfError : std::uint8_t
+    enum class PrfError : u8
     {
         NotASave,    ///< The container does not read
         NoCareer,    ///< No career object in it
@@ -53,6 +54,6 @@ namespace rct3::career
     [[nodiscard]] Career career_from_prf(const PrfCareer& prf, std::span<const std::string> ids);
 
     /// Where the game kept scenario `index`'s games, in the career's folder: "Scenario01" and on.
-    [[nodiscard]] std::string prf_scenario_folder(std::size_t index);
+    [[nodiscard]] std::string prf_scenario_folder(usize index);
 
 } // namespace rct3::career

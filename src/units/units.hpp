@@ -18,7 +18,7 @@ namespace rct3::units
     struct Seconds
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
         friend constexpr auto operator<=>(Seconds, Seconds) noexcept = default;
         friend constexpr Seconds operator+(Seconds a, Seconds b) noexcept
         {
@@ -45,7 +45,7 @@ namespace rct3::units
     struct PerSecond
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
         /// The rate that takes the whole scale in `whole`.
         static constexpr PerSecond over(Seconds whole) noexcept
         {
@@ -57,7 +57,7 @@ namespace rct3::units
     struct Frequency
     {
         static constexpr bool kUnit = true;
-        double value = 0;
+        f64 value = 0;
         /// Once every `gap`, on average.
         static constexpr Frequency every(Seconds gap) noexcept
         {
@@ -69,21 +69,21 @@ namespace rct3::units
     struct Chance
     {
         static constexpr bool kUnit = true;
-        double value = 0;
+        f64 value = 0;
     };
 
     /// A part of a whole, 0 to 1: of a scale (happiness, a rating), or of a group of guests.
     struct Share
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// A multiplier: 1 changes nothing, 0.5 halves.
     struct Factor
     {
         static constexpr bool kUnit = true;
-        double value = 1;
+        f64 value = 1;
     };
 
     /// Money, in hundredths of the currency unit. Sums of money add, take away and compare as they are; scaling one
@@ -91,7 +91,7 @@ namespace rct3::units
     struct Money
     {
         static constexpr bool kUnit = true;
-        std::int64_t value = 0;
+        i64 value = 0;
         friend constexpr auto operator<=>(Money, Money) noexcept = default;
         friend constexpr Money operator+(Money a, Money b) noexcept
         {
@@ -121,35 +121,35 @@ namespace rct3::units
     struct Degrees
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// A distance in world units.
     struct Distance
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// A distance along a path, in tiles.
     struct Tiles
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// An angle, in radians.
     struct Radians
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// World units a second. Speeds compare as they are.
     struct Pace
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
         friend constexpr auto operator<=>(Pace, Pace) noexcept = default;
     };
 
@@ -157,56 +157,56 @@ namespace rct3::units
     struct Acceleration
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// Kilograms.
     struct Mass
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// How fast something turns: radians a second.
     struct TurnRate
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// How fast a turning speeds up or slows: radians a second, each second.
     struct TurnAcceleration
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// A length on screen or across a picture, in pixels; in the interface, in its units (pixels at a scale of one).
     struct Pixels
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// How fast something moves on screen or across a picture: pixels a second, as `Pixels` counts them.
     struct PixelPace
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// A ride's excitement, intensity or nausea, on the 0 to 10 scale rides are rated on.
     struct RideScore
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// Points of the park rating, out of 1000.
     struct RatingPoints
     {
         static constexpr bool kUnit = true;
-        float value = 0;
+        f32 value = 0;
     };
 
     /// How fast things fall near the ground; also one g.
@@ -216,6 +216,6 @@ namespace rct3::units
     inline constexpr Seconds kHour { 3600 };
 
     /// A whole in percent: a share times this is shown as a percent.
-    inline constexpr float kPercent = 100;
+    inline constexpr f32 kPercent = 100;
 
 } // namespace rct3::units

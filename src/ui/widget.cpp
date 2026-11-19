@@ -2,6 +2,7 @@
 #include "ui/widget.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 
@@ -46,7 +47,7 @@ namespace rct3::ui
 
     std::optional<Widget&> Widget::find(std::string_view path) const
     {
-        const std::size_t slash = path.find('/');
+        const usize slash = path.find('/');
         const std::string_view head = path.substr(0, slash);
         for (const auto& c : children_)
         {

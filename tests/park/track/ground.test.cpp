@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/ground.hpp"
 
+#include "core/types.hpp"
 #include "park/demolish_refund.hpp"
 #include "park/item_category.hpp"
 
@@ -15,16 +16,16 @@ using namespace rct3::park::track;
 
 namespace
 {
-    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid owned_grid(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         for (save::model::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
+            c.flags = static_cast<u8>(save::model::TileFlag::Owned);
         return g;
     }
 
@@ -34,7 +35,7 @@ namespace
         object::ObjectModel model;
         model.category = std::to_underlying(ItemCategory::TrackPiece);
         model.ground_height = false;
-        model.solid = { std::array<std::int32_t, 2> { 0, 4 } };
+        model.solid = { std::array<i32, 2> { 0, 4 } };
         model.levels = { { 100, { }, { } } };
         save::model::PlacedObject o;
         o.id = 1;
@@ -169,7 +170,7 @@ TEST_CASE("an item lies buried only under enough ground on every tile it fills")
     CHECK_FALSE(lies_buried(pieces, models, g));
     // Two squares, one of them under too little ground.
     g.at(2, 1).corners.fill(4 + path::kRiderRoom + kGroundCover);
-    models.begin()->second.solid.push_back(std::array<std::int32_t, 2> { 0, 4 });
+    models.begin()->second.solid.push_back(std::array<i32, 2> { 0, 4 });
     models.begin()->second.squares = { 1, 2 };
     CHECK_FALSE(lies_buried(pieces, models, g));
     for (save::model::TerrainCell& c : g.cells)

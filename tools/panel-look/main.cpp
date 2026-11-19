@@ -16,6 +16,7 @@
 // The tool also prints the share of those pixels that differ by more than a quarter. A panel scoring above
 // T (default 12) is flagged, and the tool then exits with 1. The pictures hold game art: keep them out of git.
 #include "config/game/install.hpp"
+#include "core/types.hpp"
 #include "image/png_encoder.hpp"
 #include "logging/log.hpp"
 #include "ui/desktop.hpp"
@@ -68,8 +69,8 @@ namespace
     struct PanelCase
     {
         std::string_view name;
-        float width;
-        float height;
+        f32 width;
+        f32 height;
         std::function<void(ui::DrawContext&, PanelLook, ui::Rect view)> draw;
     };
 
@@ -133,7 +134,7 @@ namespace
         draw_skin_at(context, "HScrollBar_RiderUp", { { 60, 48, 100, 63 } });
         draw_skin_at(context, kScrollLeft, { { 32, 48, 47, 63 } });
         draw_skin_at(context, kScrollRight, { { 117, 48, 132, 63 } });
-        float x = 32;
+        f32 x = 32;
         for (const std::string_view name : { "SquareArrowUp", "SquareArrowDown", "SquareArrowLeft", "SquareArrowRight", "SquareArrowUpDisabled", "SquareArrowDownDisabled" })
         {
             draw_skin_at(context, name, { { x, 72, x + 17, 89 } });
@@ -151,9 +152,9 @@ namespace
     // rings and back.
     void draw_small_parts(ui::DrawContext& context, PanelLook, ui::Rect)
     {
-        float x = 8;
-        float y = 8;
-        float row = 0;
+        f32 x = 8;
+        f32 y = 8;
+        f32 row = 0;
         for (const std::string_view name : { ui::game_skins::kSliderThumb.data(), ui::game_skins::kOpenHeading.data(), ui::game_skins::kClosedHeading.data(), "FlexiColourHighlightBlue", "FlexiColourHighlightWhite", "FlexiColourSurround" })
         {
             const auto skin = context.skins.find(name);
@@ -179,7 +180,7 @@ namespace
     // pictures carry an arrow under the icon, which the coded disc leaves out.
     void draw_title_buttons(ui::DrawContext& context, PanelLook, ui::Rect)
     {
-        float x = 8;
+        f32 x = 8;
         for (const std::string_view name : { "GUI2Dialog_TitleButtonUp", "GUI2Dialog_TitleButtonUpOver", "GUI2Dialog_TitleButtonPressed" })
         {
             draw_skin_at(context, name, { { x, 8, x + 14, 22 } });
@@ -191,8 +192,8 @@ namespace
     void draw_park_bar(ui::DrawContext& context, PanelLook, ui::Rect)
     {
         // A short bar: the left part, the divider with its notch, the right part.
-        constexpr float kTop = 8;
-        constexpr float kBottom = kTop + ui::screens::park_view::park_bar::kHeight;
+        constexpr f32 kTop = 8;
+        constexpr f32 kBottom = kTop + ui::screens::park_view::park_bar::kHeight;
         draw_skin_at(context, "Top_WindowFrame_Left", { { 8, kTop, 128, kBottom } });
         draw_skin_at(context, "Top_WindowFrame_Middle", { { 128, kTop, 128 + ui::screens::park_view::park_bar::kDividerWidth, kBottom } });
         draw_skin_at(context, "Top_WindowFrame_Right", { { 128 + ui::screens::park_view::park_bar::kDividerWidth, kTop, 260, kBottom } });
@@ -206,8 +207,8 @@ namespace
     void draw_tutorial_disc(ui::DrawContext& context, PanelLook, ui::Rect)
     {
         // The four quarters at half their size, put together into the disc.
-        constexpr float kW = 162;
-        constexpr float kH = 161;
+        constexpr f32 kW = 162;
+        constexpr f32 kH = 161;
         const auto& q = ui::game_skins::kQuarterCircles;
         draw_skin_at(context, q[0], { { 8, 8, 8 + kW, 8 + kH } });
         draw_skin_at(context, q[1], { { 8 + kW, 8, 8 + 2 * kW, 8 + kH } });
@@ -293,12 +294,12 @@ namespace
 
     struct Score
     {
-        double mean = 0; // 0..255
-        double far = 0;  // Share of pixels off by more than a quarter
-        std::size_t pixels = 0;
+        f64 mean = 0; // 0..255
+        f64 far = 0;  // Share of pixels off by more than a quarter
+        usize pixels = 0;
     };
 
-    bool is_background(const std::uint8_t* p)
+    bool is_background(const u8* p)
     {
         return p[0] == kBackground.r && p[1] == kBackground.g && p[2] == kBackground.b;
     }
@@ -306,39 +307,39 @@ namespace
     Score compare(const ovl::texture::RgbaImage& a, const ovl::texture::RgbaImage& b, ovl::texture::RgbaImage& diff)
     {
         Score score;
-        double total = 0;
-        std::size_t far = 0;
+        f64 total = 0;
+        usize far = 0;
         diff = ui::blank_picture(a.width, a.height, ui::hex("#000000"));
-        for (std::size_t i = 0; i < a.pixels.size(); i += 4)
+        for (usize i = 0; i < a.pixels.size(); i += 4)
         {
-            const std::uint8_t* pa = &a.pixels[i];
-            const std::uint8_t* pb = &b.pixels[i];
+            const u8* pa = &a.pixels[i];
+            const u8* pb = &b.pixels[i];
             if (is_background(pa) && is_background(pb))
                 continue;
-            std::int32_t sum = 0;
-            for (std::size_t c = 0; c < 3; ++c)
-                sum += std::abs(std::int32_t { pa[c] } - std::int32_t { pb[c] });
-            const double mean = sum / 3.0;
+            i32 sum = 0;
+            for (usize c = 0; c < 3; ++c)
+                sum += std::abs(i32 { pa[c] } - i32 { pb[c] });
+            const f64 mean = sum / 3.0;
             total += mean;
             ++score.pixels;
             if (mean > 64)
                 ++far;
             // Brightened four times, red where the coded look is lighter, blue where darker, so the eye finds it.
-            const std::int32_t signed_sum = (std::int32_t { pb[0] } + pb[1] + pb[2]) - (std::int32_t { pa[0] } + pa[1] + pa[2]);
-            const auto level = static_cast<std::uint8_t>(std::min(255.0, mean * 4));
+            const i32 signed_sum = (i32 { pb[0] } + pb[1] + pb[2]) - (i32 { pa[0] } + pa[1] + pa[2]);
+            const auto level = static_cast<u8>(std::min(255.0, mean * 4));
             diff.pixels[i] = signed_sum > 0 ? level : level / 3;
             diff.pixels[i + 1] = level / 3;
             diff.pixels[i + 2] = signed_sum > 0 ? level / 3 : level;
         }
         if (score.pixels > 0)
         {
-            score.mean = total / static_cast<double>(score.pixels);
-            score.far = static_cast<double>(far) / static_cast<double>(score.pixels);
+            score.mean = total / static_cast<f64>(score.pixels);
+            score.far = static_cast<f64>(far) / static_cast<f64>(score.pixels);
         }
         return score;
     }
 
-    ovl::texture::RgbaImage render(const PanelCase& panel, PanelLook look, const Assets& assets, float scale)
+    ovl::texture::RgbaImage render(const PanelCase& panel, PanelLook look, const Assets& assets, f32 scale)
     {
         // The coded look draws this panel's skins in code, whatever the game's look has them on.
         ui::skin::SkinLibrary skins = assets.skins;
@@ -354,7 +355,7 @@ namespace
         list.set_scale(scale);
         ui::DrawContext context { list, skins, assets.fonts };
         panel.draw(context, look, { 0, 0, panel.width, panel.height });
-        auto picture = ui::blank_picture(static_cast<std::uint32_t>(std::lround(panel.width * scale)), static_cast<std::uint32_t>(std::lround(panel.height * scale)), kBackground);
+        auto picture = ui::blank_picture(static_cast<u32>(std::lround(panel.width * scale)), static_cast<u32>(std::lround(panel.height * scale)), kBackground);
         ui::paint_draw_list(list, assets.textures, picture);
         return picture;
     }
@@ -381,18 +382,18 @@ namespace
             if (id == ids.end())
                 continue;
             const ovl::texture::RgbaImage& image = assets.textures.at(id->second);
-            assets.skins.add(name, { skin.layout, id->second, static_cast<float>(image.width), static_cast<float>(image.height), nullptr });
+            assets.skins.add(name, { skin.layout, id->second, static_cast<f32>(image.width), static_cast<f32>(image.height), nullptr });
         }
         return assets;
     }
 
-    bool parse_float(std::string_view text, float& out)
+    bool parse_float(std::string_view text, f32& out)
     {
         const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), out);
         return error == std::errc { } && end == text.data() + text.size() && out > 0;
     }
 
-    std::int32_t usage(const char* argv0)
+    i32 usage(const char* argv0)
     {
         out.error("usage: {} [--out DIR] [--scale S] [--threshold T] [--game PATH] [--list] [PANEL...]", argv0);
         return 2;
@@ -404,13 +405,13 @@ int main(int argc, char** argv)
 {
     rct3::logging::configure({ .memory_capacity = 0, .plain = true });
     std::filesystem::path out_dir = "build/panel-look";
-    float scale = 1;
-    float threshold = 12;
+    f32 scale = 1;
+    f32 threshold = 12;
     std::optional<std::filesystem::path> game;
     std::vector<std::string_view> wanted;
     const std::vector<PanelCase> cases = panel_cases();
 
-    for (std::int32_t i = 1; i < argc; ++i)
+    for (i32 i = 1; i < argc; ++i)
     {
         const std::string_view arg = argv[i];
         const bool has_value = i + 1 < argc;

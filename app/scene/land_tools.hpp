@@ -72,6 +72,7 @@
 // A shaping stroke rumbles from press to release, softly while the ground stays still and loudest as it moves.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/camera.hpp"
 #include "park/ground/brush.hpp"
 #include "park/ground/holds.hpp"
@@ -107,7 +108,7 @@ namespace rct3::scene
 
     struct LandTools
     {
-        enum class Tool : std::uint8_t
+        enum class Tool : u8
         {
             None,
             Shape,
@@ -118,29 +119,29 @@ namespace rct3::scene
         };
         Tool tool = Tool::None;
         std::optional<save::model::Tile> tile;                   ///< Being shaped, or last painted, while the button is held
-        float press_y = 0;                                       ///< Of a brush stroke, on the view
+        f32 press_y = 0;                                         ///< Of a brush stroke, on the view
         glm::vec3 press_at { 0 };                                ///< Of a tile tool's stroke: the point of the ground pressed on
         rct3::park::ParkCamera press_camera;                     ///< The view as the stroke began
-        float press_height = 0;                                  ///< What the pointer read there as the stroke began
-        std::size_t tile_tool = 0;                               ///< The tile tool chosen, by its place in its tab
+        f32 press_height = 0;                                    ///< What the pointer read there as the stroke began
+        usize tile_tool = 0;                                     ///< The tile tool chosen, by its place in its tab
         rct3::park::TileStroke stroke;                           ///< Of a tile tool
         std::vector<glm::vec3> marked;                           ///< Where the marks on the ground were made, to make them again only on a change
         rct3::park::ground::GroundHolds holds;                   ///< Gathered as a stroke starts
-        std::unordered_set<std::uint32_t> refused;               ///< Tiles the stroke may not move, as GroundHolds keys them
+        std::unordered_set<u32> refused;                         ///< Tiles the stroke may not move, as GroundHolds keys them
         std::optional<std::array<save::model::Tile, 2>> stirred; ///< The first and last tiles the stroke moved
         std::vector<rct3::park::ground::GroundSurface> surfaces; ///< Read once, the first time the paint tool opens
         bool surfaces_read = false;
-        std::size_t surface = 0;                                    ///< Chosen, of `surfaces`
+        usize surface = 0;                                          ///< Chosen, of `surfaces`
         std::vector<rct3::park::ground::GroundSurface> cliffs;      ///< The cliff faces, read with the surfaces
-        std::optional<std::size_t> cliff;                           ///< Chosen, of `cliffs`, in place of a surface
-        std::int32_t brush = rct3::park::ground::kDefaultBrush;     ///< The brushes' radius, in world units
+        std::optional<usize> cliff;                                 ///< Chosen, of `cliffs`, in place of a surface
+        i32 brush = rct3::park::ground::kDefaultBrush;              ///< The brushes' radius, in world units
         std::optional<rct3::park::ground::GroundShape> shape;       ///< The raising or lowering brush chosen; none for the tile tool
         rct3::park::ground::GroundBefore before;                    ///< The ground as a brush stroke found it
         glm::vec2 middle { 0 };                                     ///< Of a brush stroke, in tile units
         glm::vec2 along { 1, 0 };                                   ///< Of a ridge or a canyon: the way it runs
         std::optional<glm::vec2> travel;                            ///< The way the pointer last went over the ground, in tile units
         std::optional<std::pair<glm::vec2, glm::vec2>> travel_from; ///< Where that was last read: on the view, and on the ground
-        float amount = 0;                                           ///< Of the brush stroke so far, in height units
+        f32 amount = 0;                                             ///< Of the brush stroke so far, in height units
         /// The ground, lakes and waterfalls as the stroke found them. The water settles from these onto the ground
         /// as it is now, so a lake a drag lowered or dried comes back when the drag does, within the stroke.
         /// Later: with the ground now, all an undo of the stroke needs.
@@ -152,18 +153,18 @@ namespace rct3::scene
         };
         std::optional<Start> start;
         std::optional<glm::vec3> cost_at; ///< Where the stroke's cost is shown, once it has paid
-        float paid_for = 0;               ///< The most ground the stroke has moved, already paid for
+        f32 paid_for = 0;                 ///< The most ground the stroke has moved, already paid for
         bool spray = true;                ///< The brushes spray while held, rather than follow a drag
-        std::int32_t spray_speed = rct3::park::ground::kDefaultSpray;
-        std::optional<std::size_t> smoothing;              ///< The smoothing brush chosen, by its place in its tab
-        float target = 0;                                  ///< Of a levelling stroke
-        std::uint64_t passes = 0;                          ///< Of smoothing, the seed of each pass
-        std::optional<std::size_t> upper_lake;             ///< Of a waterfall: the lake picked first, of the park's water
+        i32 spray_speed = rct3::park::ground::kDefaultSpray;
+        std::optional<usize> smoothing;                    ///< The smoothing brush chosen, by its place in its tab
+        f32 target = 0;                                    ///< Of a levelling stroke
+        u64 passes = 0;                                    ///< Of smoothing, the seed of each pass
+        std::optional<usize> upper_lake;                   ///< Of a waterfall: the lake picked first, of the park's water
         save::model::Tile upper_tile;                      ///< Where it was picked
         std::optional<save::model::Tile> lake_asked;       ///< A tile of the lake the player was asked whether to remove, waterfalls and all
         std::vector<save::model::WorldPoint3> falls_asked; ///< Where the waterfalls pour from that the player was asked whether to remove, to raise a lake
         rct3::park::LandBuy buying = rct3::park::LandBuy::Land;
-        std::optional<float> rumble; ///< While a shaping stroke goes: how loud its ground is heard moving, 0..1
+        std::optional<f32> rumble; ///< While a shaping stroke goes: how loud its ground is heard moving, 0..1
     };
 
     /// Picks `tool` from the land menu, or puts it away when it is already out.

@@ -16,6 +16,7 @@
 #pragma once
 
 #include "config/game/options.hpp"
+#include "core/types.hpp"
 #include "park/camera.hpp"
 #include "park/pools/waves.hpp"
 #include "park/terrain_mesh.hpp"
@@ -37,7 +38,7 @@ namespace rct3::scene::park
 {
 
     /// At most this many heights of water get a reflection of their own each frame.
-    inline constexpr std::size_t kWaterReflections = 2;
+    inline constexpr usize kWaterReflections = 2;
 
     /// What the game options ask of the water.
     struct WaterLook
@@ -71,7 +72,7 @@ namespace rct3::scene::park
         rct3::park::water::Ripples ripples;
         std::vector<rct3::park::pools::PoolWave> pool_waves; ///< The wave machines', then those drawn on the water, for the shader
         WaterLook look;
-        std::vector<float> levels;                           ///< With a reflection this frame, by index in `reflections`
+        std::vector<f32> levels;                             ///< With a reflection this frame, by index in `reflections`
         std::optional<rct3::park::water::WaterAbove> eye_in; ///< The water the eye is under this frame
     };
 
@@ -88,7 +89,7 @@ namespace rct3::scene::park
     bool ripple_park_water(ParkWater& water, const rct3::park::Ray& ray, const save::model::TerrainGrid& grid);
 
     /// Draws the world mirrored by the transform given in the water at the level given, without its water.
-    using MirroredDraw = std::function<void(const glm::mat4& transform, float level)>;
+    using MirroredDraw = std::function<void(const glm::mat4& transform, f32 level)>;
 
     /// Call inside the screen pass before anything of the world is drawn; it ends the pass and begins it again
     /// keeping what was drawn.
@@ -96,6 +97,6 @@ namespace rct3::scene::park
 
     /// Call inside the screen pass after the opaque world, before what is see-through. With `shaded` false
     /// (the info panel's view, or no water shader) it draws the simple surface only.
-    void draw_park_water(render::Device& device, ParkWater& water, const glm::mat4& transform, const render::SceneLight& light, glm::vec3 eye, float time, bool shaded);
+    void draw_park_water(render::Device& device, ParkWater& water, const glm::mat4& transform, const render::SceneLight& light, glm::vec3 eye, f32 time, bool shaded);
 
 } // namespace rct3::scene::park

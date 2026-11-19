@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/top_view.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -11,12 +13,12 @@ namespace rct3::park::track
 
     namespace
     {
-        constexpr float kMargin = 8;         ///< Chosen by eye: pixels kept clear round the line
-        constexpr std::uint8_t kLowest = 96; ///< Chosen by eye: the level of the lowest track, still plain on black
-        constexpr float kStepsPerPixel = 2;  ///< Dots along each stretch, so the line has no gaps
+        constexpr f32 kMargin = 8;        ///< Chosen by eye: pixels kept clear round the line
+        constexpr u8 kLowest = 96;        ///< Chosen by eye: the level of the lowest track, still plain on black
+        constexpr f32 kStepsPerPixel = 2; ///< Dots along each stretch, so the line has no gaps
     } // namespace
 
-    std::vector<std::uint8_t> top_view(std::span<const glm::vec3> points, std::uint32_t size)
+    std::vector<u8> top_view(std::span<const glm::vec3> points, u32 size)
     {
         if (points.empty() || size == 0)
             return { };
@@ -26,21 +28,21 @@ namespace rct3::park::track
             low = glm::min(low, p);
             high = glm::max(high, p);
         }
-        const float room = std::max(static_cast<float>(size) - 2 * kMargin, 1.0f);
-        const float scale = room / std::max({ high.x - low.x, high.z - low.z, 1e-3f });
+        const f32 room = std::max(static_cast<f32>(size) - 2 * kMargin, 1.0f);
+        const f32 scale = room / std::max({ high.x - low.x, high.z - low.z, 1e-3f });
         // Centred both ways.
-        const float left = kMargin + (room - (high.x - low.x) * scale) / 2;
-        const float top = kMargin + (room - (high.z - low.z) * scale) / 2;
-        const float rise = high.y - low.y;
+        const f32 left = kMargin + (room - (high.x - low.x) * scale) / 2;
+        const f32 top = kMargin + (room - (high.z - low.z) * scale) / 2;
+        const f32 rise = high.y - low.y;
 
-        std::vector<std::uint8_t> rgba(std::size_t { size } * size * 4, 0);
+        std::vector<u8> rgba(usize { size } * size * 4, 0);
         const auto dot = [&](glm::vec3 p) {
-            const auto x = static_cast<std::int64_t>(std::floor(left + (p.x - low.x) * scale));
-            const auto y = static_cast<std::int64_t>(std::floor(top + (p.z - low.z) * scale));
+            const auto x = static_cast<i64>(std::floor(left + (p.x - low.x) * scale));
+            const auto y = static_cast<i64>(std::floor(top + (p.z - low.z) * scale));
             if (x < 0 || y < 0 || x >= size || y >= size)
                 return;
-            const auto level = static_cast<std::uint8_t>(kLowest + std::lround((255 - kLowest) * (rise > 0 ? (p.y - low.y) / rise : 1.0f)));
-            const std::size_t at = (static_cast<std::size_t>(y) * size + static_cast<std::size_t>(x)) * 4;
+            const auto level = static_cast<u8>(kLowest + std::lround((255 - kLowest) * (rise > 0 ? (p.y - low.y) / rise : 1.0f)));
+            const usize at = (static_cast<usize>(y) * size + static_cast<usize>(x)) * 4;
             // Where the track passes over itself, the higher stretch shows.
             if (rgba[at + 3] != 0 && rgba[at] >= level)
                 return;
@@ -48,13 +50,13 @@ namespace rct3::park::track
             rgba[at + 3] = 255;
         };
         dot(points.front());
-        for (std::size_t i = 1; i < points.size(); ++i)
+        for (usize i = 1; i < points.size(); ++i)
         {
             const glm::vec3 a = points[i - 1], b = points[i];
-            const float pixels = std::hypot(b.x - a.x, b.z - a.z) * scale;
-            const auto steps = static_cast<std::size_t>(std::ceil(pixels * kStepsPerPixel)) + 1;
-            for (std::size_t s = 1; s <= steps; ++s)
-                dot(a + (b - a) * (static_cast<float>(s) / static_cast<float>(steps)));
+            const f32 pixels = std::hypot(b.x - a.x, b.z - a.z) * scale;
+            const auto steps = static_cast<usize>(std::ceil(pixels * kStepsPerPixel)) + 1;
+            for (usize s = 1; s <= steps; ++s)
+                dot(a + (b - a) * (static_cast<f32>(s) / static_cast<f32>(steps)));
         }
         return rgba;
     }

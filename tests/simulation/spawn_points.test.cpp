@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
@@ -21,7 +22,7 @@ namespace
         entt::entity gate = entt::null;
         entt::entity spawn = entt::null;
 
-        explicit Road(std::int64_t fee)
+        explicit Road(i64 fee)
         {
             park.path({ 0, 0 }, { 6, 0 });
             auto& r = park.world().registry;
@@ -42,7 +43,7 @@ namespace
             return entt::null;
         }
 
-        [[nodiscard]] float from(entt::entity guest, entt::entity place)
+        [[nodiscard]] f32 from(entt::entity guest, entt::entity place)
         {
             auto& r = park.world().registry;
             const NodeId node = r.all_of<ParkGate>(place) ? r.get<ParkGate>(place).node : r.get<GuestSpawn>(place).node;
@@ -117,8 +118,8 @@ TEST_CASE("a park with a second gate draws no more guests, who head for the gate
             r.emplace<ParkGate>(near, ParkGate { road.park.world().paths.find({ 4, 0, 0 }).value() });
         }
         std::set<entt::entity> seen;
-        std::size_t heading_near = 0;
-        for (std::int32_t second = 0; second < 6000; ++second)
+        usize heading_near = 0;
+        for (i32 second = 0; second < 6000; ++second)
         {
             road.park.run_until([] { return false; }, 1);
             for (const entt::entity p : r.view<Party>())
@@ -131,6 +132,6 @@ TEST_CASE("a park with a second gate draws no more guests, who head for the gate
     const auto [with_second, near] = parties_in(true);
     REQUIRE(alone > 0);
     // Not to the party: who leaves when, and so how many more the park draws, shifts with the nearer gate.
-    CHECK(static_cast<double>(with_second) < 1.25 * static_cast<double>(alone) + 1);
+    CHECK(static_cast<f64>(with_second) < 1.25 * static_cast<f64>(alone) + 1);
     CHECK(near == with_second);
 }

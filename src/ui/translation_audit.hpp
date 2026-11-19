@@ -12,6 +12,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/string_table.hpp"
 
 #include <cstdint>
@@ -27,7 +28,7 @@ namespace rct3::ui
     struct SourcePlace
     {
         std::string file; ///< Relative to the root scanned, '/' separated
-        std::int32_t line = 0;
+        i32 line = 0;
     };
 
     /// A key, and where the code names it.

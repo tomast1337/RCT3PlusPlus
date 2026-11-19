@@ -3,6 +3,8 @@
 // The lines of the park's ledger, apart from the ledger itself so that what counts money by line needs no more.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstddef>
 #include <utility>
 
@@ -36,6 +38,6 @@ namespace rct3::simulation::park
     };
 
     /// How many lines LedgerLine has.
-    inline constexpr std::size_t kLedgerLines = std::to_underlying(LedgerLine::OtherAnimalSpending) + 1;
+    inline constexpr usize kLedgerLines = std::to_underlying(LedgerLine::OtherAnimalSpending) + 1;
 
 } // namespace rct3::simulation::park

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "park/pools/pools.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
@@ -26,10 +27,10 @@ namespace
         return findings != nullptr && std::ranges::contains(findings->found, Findings::Found { finding, at });
     }
 
-    std::size_t times_found(const entt::registry& r, Finding finding)
+    usize times_found(const entt::registry& r, Finding finding)
     {
         const auto* findings = r.ctx().find<Findings>();
-        return findings == nullptr ? 0 : static_cast<std::size_t>(std::ranges::count(findings->found, finding, &Findings::Found::finding));
+        return findings == nullptr ? 0 : static_cast<usize>(std::ranges::count(findings->found, finding, &Findings::Found::finding));
     }
 } // namespace
 
@@ -89,11 +90,11 @@ TEST_CASE("an inspector judges a stall's prices against what guests pay, then st
 {
     struct Case
     {
-        std::int64_t price;
+        i64 price;
         bool dear;
         bool cheap;
     };
-    const std::int64_t worth = kTuning.eating.food_worth.value;
+    const i64 worth = kTuning.eating.food_worth.value;
     for (const Case c : { Case { worth + 100, true, false }, Case { worth - 100, false, false }, Case { 10, false, true } })
     {
         CAPTURE(c.price);
@@ -183,8 +184,8 @@ TEST_CASE("an inspector swims free in a pool and tells how dirty it is")
     park.path({ 0, 0 }, { 5, 0 });
     rct3::park::pools::PoolMap pools;
     pools.squares.push_back({ .col = 5, .row = 2, .kind = rct3::park::pools::PoolKind::Tile });
-    for (std::int32_t row = 3; row < 5; ++row)
-        for (std::int32_t col = 4; col < 7; ++col)
+    for (i32 row = 3; row < 5; ++row)
+        for (i32 col = 4; col < 7; ++col)
             pools.squares.push_back({ .col = col, .row = row });
     pools.rooms.push_back({ .col = 5, .row = 1, .side = rct3::park::Side { 0 }, .ticket = 200, .open = true });
     import_pools(park.world(), pools);
@@ -209,7 +210,7 @@ TEST_CASE("an inspector looking at the food and drink says what many of the gues
     Sandbox park;
     park.path({ 0, 0 }, { 6, 0 });
     auto& r = park.world().registry;
-    for (std::int32_t i = 0; i < 3; ++i)
+    for (i32 i = 0; i < 3; ++i)
         park.guest({ 6, 0 }, { .hunger = 0.9f });
     park.guest({ 6, 0 }, { .thirst = 0.9f });
     const auto inspector = park.staff(StaffRole::Inspector, { 0, 0 });

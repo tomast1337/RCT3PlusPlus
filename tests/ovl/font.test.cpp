@@ -2,6 +2,7 @@
 #include "ovl/font.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -19,24 +20,24 @@ namespace
 {
 
     // Name block: "F:fct" 0, "Tx:tex" 6, padded to 16. The structure block follows at address 16.
-    constexpr std::uint32_t kBase = 16;
-    constexpr std::uint32_t kNameTexture = 6;
+    constexpr u32 kBase = 16;
+    constexpr u32 kNameTexture = 6;
 
     // Offsets inside the structure block.
-    constexpr std::uint32_t kItem = 0;     // 112 bytes
-    constexpr std::uint32_t kGlyphs = 112; // 3 * 36
-    constexpr std::uint32_t kCodes = 220;  // 3 * 2, padded to 8
-    constexpr std::uint32_t kEnd = 228;
+    constexpr u32 kItem = 0;     // 112 bytes
+    constexpr u32 kGlyphs = 112; // 3 * 36
+    constexpr u32 kCodes = 220;  // 3 * 2, padded to 8
+    constexpr u32 kEnd = 228;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    void real(std::vector<std::byte>& out, float v)
+    void real(std::vector<std::byte>& out, f32 v)
     {
-        append_u32(out, std::bit_cast<std::uint32_t>(v));
+        append_u32(out, std::bit_cast<u32>(v));
     }
 
     std::vector<std::byte> names()
@@ -56,7 +57,7 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> reference_row(std::uint32_t location = kBase + kItem + 20)
+    std::vector<std::byte> reference_row(u32 location = kBase + kItem + 20)
     {
         std::vector<std::byte> out;
         words(out, { location, kNameTexture, 0, 0 });
@@ -64,10 +65,10 @@ namespace
     }
 
     // `glyph_count` is how many glyph rows the item claims, the table itself always has 3.
-    std::vector<std::byte> structure(std::uint32_t glyph_count = 3, std::uint32_t code_address = kBase + kCodes, std::uint32_t glyph_address = kBase + kGlyphs, std::uint32_t first_char = 0)
+    std::vector<std::byte> structure(u32 glyph_count = 3, u32 code_address = kBase + kCodes, u32 glyph_address = kBase + kGlyphs, u32 first_char = 0)
     {
         std::vector<std::byte> out;
-        for (float f : { 0.25f, 0.75f, 0.125f })
+        for (f32 f : { 0.25f, 0.75f, 0.125f })
             real(out, f);
         words(out, { first_char, first_char + glyph_count, 0, 0x10001, 1, 0, 700 });
         std::string face("Face");
@@ -76,12 +77,12 @@ namespace
         const auto raw = bytes_of_string(face);
         out.insert(out.end(), raw.begin(), raw.end());
         words(out, { glyph_address, code_address });
-        for (std::uint32_t g = 0; g < 3; ++g)
+        for (u32 g = 0; g < 3; ++g)
         {
             real(out, 0.5f + 0.25f * g); // advance
             real(out, 0.0625f);          // lead
             words(out, { 0xDEADBEEF });  // leftover bytes
-            for (float f : { 0.1f * g, 0.2f, 0.1f * g + 0.05f, 0.3f })
+            for (f32 f : { 0.1f * g, 0.2f, 0.1f * g + 0.05f, 0.3f })
                 real(out, f);
             real(out, 1.0f);
             real(out, -2.0f);
@@ -184,7 +185,7 @@ TEST_CASE("font edge cases")
     SUBCASE("a face name without a terminator is unreadable")
     {
         auto block = structure();
-        for (std::size_t i = 40; i < 104; ++i)
+        for (usize i = 40; i < 104; ++i)
             block[i] = std::byte { 'x' };
         const auto overlay = make(block);
         const auto items = read_fonts(overlay, overlay.common());
@@ -205,16 +206,16 @@ TEST_CASE("font edge cases")
 namespace
 {
 
-    Font synthetic_font(bool table, std::uint32_t first, std::initializer_list<std::uint32_t> codes)
+    Font synthetic_font(bool table, u32 first, std::initializer_list<u32> codes)
     {
         Font font;
         font.first_char = first;
         font.has_code_table = table;
-        for (std::uint32_t c : codes)
+        for (u32 c : codes)
         {
             FontGlyph g;
             g.code = c;
-            g.advance = static_cast<float>(c); // lets the tests tell rows apart
+            g.advance = static_cast<f32>(c); // lets the tests tell rows apart
             font.glyphs.push_back(g);
         }
         return font;

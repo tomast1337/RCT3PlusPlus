@@ -6,6 +6,7 @@
 // their favourite ride and their time in the park.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/screens/info/person.hpp"
 
 #include <array>
@@ -17,7 +18,7 @@
 namespace rct3::ui::screens::info
 {
 
-    enum class PartyTab : std::uint8_t
+    enum class PartyTab : u8
     {
         Rides,
         Stats,
@@ -28,7 +29,7 @@ namespace rct3::ui::screens::info
     struct PartyTabInfo
     {
         PartyTab tab = PartyTab::Members;
-        std::int32_t slot = 0; ///< Its place on the ring
+        i32 slot = 0;          ///< Its place on the ring
         std::string_view icon; ///< Skin
         std::string_view help; ///< String key
     };
@@ -46,7 +47,7 @@ namespace rct3::ui::screens::info
     {
         std::vector<PersonFacts> members { };
         /// The kind of party, by the save's numbering of the GuestGroupType_ names; nothing when not known.
-        std::optional<std::int32_t> kind { };
+        std::optional<i32> kind { };
     };
 
     /// The page of `tab`. On the members page, each member is a button whose id is their place in the members.

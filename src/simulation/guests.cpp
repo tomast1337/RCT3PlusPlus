@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/guests.hpp"
 
+#include "core/types.hpp"
 #include "profiling/profiler.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/coaster.hpp"
@@ -60,7 +61,7 @@ namespace rct3::simulation
             const units::Money fee = r.ctx().contains<Draw>() ? r.ctx().get<Draw>().entrance_fee : units::Money { };
             if (fee.value <= 0)
                 return true;
-            if (std::ranges::fold_left(party, std::int64_t { 0 }, [&](std::int64_t sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) >= fee.value * static_cast<std::int64_t>(party.size()))
+            if (std::ranges::fold_left(party, i64 { 0 }, [&](i64 sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) >= fee.value * static_cast<i64>(party.size()))
             {
                 for (const entt::entity m : party)
                     pay(r, m, fee, &Wallet::spent_entry, park::LedgerLine::ParkEntranceTickets);
@@ -72,7 +73,7 @@ namespace rct3::simulation
             return false;
         }
 
-        void share(std::optional<Workers&> workers, std::size_t count, const std::function<void(std::size_t, std::size_t)>& body)
+        void share(std::optional<Workers&> workers, usize count, const std::function<void(usize, usize)>& body)
         {
             if (workers)
                 workers->for_ranges(count, body);
@@ -86,16 +87,16 @@ namespace rct3::simulation
             AttractionKind kind;
             Product product;
             NodeId entrance;
-            std::int64_t price;
-            float intensity;
-            float cover;
+            i64 price;
+            f32 intensity;
+            f32 cover;
             Serve serve;
             bool splash;
-            float excitement = 0;
-            float nausea = 0;
+            f32 excitement = 0;
+            f32 nausea = 0;
             units::Money worth { };
             bool untested = false;
-            std::size_t queued = 0; ///< Guests in the queue at this entrance
+            usize queued = 0; ///< Guests in the queue at this entrance
         };
 
         /// Whether the guest, or anyone in their party, carries a park map.
@@ -114,14 +115,14 @@ namespace rct3::simulation
             const auto* water = r.valid(pool) ? r.try_get<SwimPool>(pool) : nullptr;
             if (water == nullptr)
                 return false;
-            std::size_t n = 0;
+            usize n = 0;
             for (const auto [e, errand] : r.view<const Errand>().each())
             {
                 const auto* swimmer = r.try_get<Swimmer>(e);
                 const entt::entity room = errand.kind == ErrandKind::Swimming || (on_way && errand.kind == ErrandKind::Heading) ? errand.target : swimmer != nullptr ? swimmer->room : entt::null;
                 n += r.valid(room) && r.all_of<PoolDoor>(room) && r.get<PoolDoor>(room).pool == pool;
             }
-            return static_cast<float>(n) >= kTuning.pools.crowd * static_cast<float>(water->water.size());
+            return static_cast<f32>(n) >= kTuning.pools.crowd * static_cast<f32>(water->water.size());
         }
 
         std::vector<Offer> offers(const entt::registry& r)
@@ -162,7 +163,7 @@ namespace rct3::simulation
         {
             std::vector<entt::entity> wanted;
             std::vector<NodeId> entrances;
-            std::int64_t dearest = 0;
+            i64 dearest = 0;
             for (const Offer& o : offers)
             {
                 if (o.price > wallet.cash.value || !pick(o))
@@ -181,12 +182,12 @@ namespace rct3::simulation
         }
 
         /// How many guests a ride's queue `line` holds; no limit for a ride guests walk straight into.
-        std::size_t queue_room(const std::vector<NodeId>& line)
+        usize queue_room(const std::vector<NodeId>& line)
         {
             if (line.empty())
-                return std::numeric_limits<std::size_t>::max();
+                return std::numeric_limits<usize>::max();
             // Up to the middle of the line's far tile.
-            return static_cast<std::size_t>(static_cast<float>(line.size() - 1) / kTuning.queues.spacing.value) + 1;
+            return static_cast<usize>(static_cast<f32>(line.size() - 1) / kTuning.queues.spacing.value) + 1;
         }
 
         /// Where the guest goes next: a shop or facility for the most pressing need there is one for, else now
@@ -194,15 +195,15 @@ namespace rct3::simulation
         /// under cover. On a hot day food and drink is best cold, on a cold day hot; a guest too hot wants
         /// something cold to eat or drink, or a ride that splashes them. A party with a map goes for rides more
         /// often; one without now and then goes to buy one.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, float daring, const Taste& taste, float temperature, bool with_map, entt::entity last_ridden, entt::entity favourite)
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> choose(const PathNetwork& paths, NodeId at, const std::vector<Offer>& offers, const Needs& needs, const Mood& mood, const Wallet& wallet, Dice& dice, bool rained_on, f32 daring, const Taste& taste, f32 temperature, bool with_map, entt::entity last_ridden, entt::entity favourite)
         {
             struct Want
             {
-                float need;
+                f32 need;
                 Product product;
                 bool cold = false; ///< Only something cold will do
             };
-            const float hot = mood.heat.value;
+            const f32 hot = mood.heat.value;
             std::array<Want, 8> wants { {
                 { rained_on && mood.wet.value > 0 ? 1.0f : 0.0f, Product::Umbrella },
                 { needs.thirst.value, Product::Drink },
@@ -246,32 +247,32 @@ namespace rct3::simulation
             if (!with_map && maps_sold && random::chance(dice.state, kTuning.surroundings.map_wish.value))
                 if (auto found = shop(Product::Map, false))
                     return found;
-            const double ride_chance = std::min(1.0, kTuning.needs.ride_chance.value * (with_map ? kTuning.surroundings.map_rides : 1));
+            const f64 ride_chance = std::min(1.0, kTuning.needs.ride_chance.value * (with_map ? kTuning.surroundings.map_rides : 1));
             if (mood.nausea.value >= kTuning.needs.max_nausea.value || !random::chance(dice.state, ride_chance))
                 return std::nullopt;
-            const float wildest = std::min(mood.tolerance.value + kTuning.sickness.wildest.value, taste.most.value) + daring;
-            const float least_cover = rained_on ? kTuning.weather.covered.value : 0;
+            const f32 wildest = std::min(mood.tolerance.value + kTuning.sickness.wildest.value, taste.most.value) + daring;
+            const f32 least_cover = rained_on ? kTuning.weather.covered.value : 0;
             const glm::vec3 here = paths.centre(at);
-            const float reach = (with_map ? kTuning.choosing.map_reach : kTuning.choosing.reach) * paths.tile_size;
+            const f32 reach = (with_map ? kTuning.choosing.map_reach : kTuning.choosing.reach) * paths.tile_size;
             // Any ride in reach that suits them and that they want enough, the likelier the more they want it, the
             // nearer it is and the shorter its queue.
             const auto ride = [&](bool splash) -> std::optional<std::pair<entt::entity, std::vector<NodeId>>> {
-                std::vector<std::pair<const Offer*, float>> weighed;
-                float total = 0;
+                std::vector<std::pair<const Offer*, f32>> weighed;
+                f32 total = 0;
                 for (const Offer& o : offers)
                 {
                     // An untested ride's intensity is not known yet, so it puts no one off.
                     if (o.kind != AttractionKind::Ride || o.price > wallet.cash.value || (!o.untested && (o.intensity > wildest || o.intensity < taste.least.value)) || o.cover < least_cover || (splash && !o.splash))
                         continue;
                     const RideInMind in_mind { .excitement = { o.excitement }, .intensity = { o.intensity }, .nausea = { o.nausea }, .price = { o.price }, .worth = o.worth, .favourite = o.entity == favourite, .just_been = o.entity == last_ridden, .untested = o.untested };
-                    const float wants = ride_appeal(in_mind, taste, mood);
-                    const float near = 1 - glm::distance(here, paths.centre(o.entrance)) / reach;
+                    const f32 wants = ride_appeal(in_mind, taste, mood);
+                    const f32 near = 1 - glm::distance(here, paths.centre(o.entrance)) / reach;
                     if (wants < kTuning.choosing.bar || near <= 0)
                         continue;
                     weighed.emplace_back(&o, ride_pull(wants, near, o.queued));
                     total += weighed.back().second;
                 }
-                float roll = static_cast<float>(random::unit(dice.state)) * total;
+                f32 roll = static_cast<f32>(random::unit(dice.state)) * total;
                 for (const auto& [o, weight] : weighed)
                 {
                     roll -= weight;
@@ -300,28 +301,28 @@ namespace rct3::simulation
         /// sharply over the path.
         glm::vec2 lane_towards(glm::vec2 was, glm::vec2 want)
         {
-            const float most = kTuning.walking.lane_drift.value;
+            const f32 most = kTuning.walking.lane_drift.value;
             return glm::clamp(was + glm::clamp(want - was, -most, most), -kLaneReach, kLaneReach);
         }
 
         /// The lane of the `place`th of `of` standing together in a ring on a tile: the more of them, the wider
         /// the ring, so neighbours keep apart.
-        glm::vec2 ring_lane(std::size_t place, std::size_t of)
+        glm::vec2 ring_lane(usize place, usize of)
         {
-            const float n = static_cast<float>(std::max<std::size_t>(of, 1));
-            const float radius = std::clamp(kTuning.walking.ring_gap.value * n / (2 * glm::pi<float>()), kTuning.walking.huddle_radius.value, kLaneReach);
-            const float angle = 2 * glm::pi<float>() * static_cast<float>(place) / n;
+            const f32 n = static_cast<f32>(std::max<usize>(of, 1));
+            const f32 radius = std::clamp(kTuning.walking.ring_gap.value * n / (2 * glm::pi<f32>()), kTuning.walking.huddle_radius.value, kLaneReach);
+            const f32 angle = 2 * glm::pi<f32>() * static_cast<f32>(place) / n;
             return radius * glm::vec2(std::sin(angle), std::cos(angle));
         }
 
         /// The guest's place among their party's members, and how many there are.
-        std::pair<std::size_t, std::size_t> place_in_party(const entt::registry& r, entt::entity guest)
+        std::pair<usize, usize> place_in_party(const entt::registry& r, entt::entity guest)
         {
             const auto* member = r.try_get<Member>(guest);
             if (member == nullptr)
                 return { 0, 1 };
             const auto& members = r.get<Party>(member->party).members;
-            return { static_cast<std::size_t>(std::ranges::find(members, guest) - members.begin()), members.size() };
+            return { static_cast<usize>(std::ranges::find(members, guest) - members.begin()), members.size() };
         }
 
         /// Where a guest walks off their party's middle: their place in a ring, so no two members walk in one
@@ -336,8 +337,8 @@ namespace rct3::simulation
         /// stall, at one of a few places along it, by who they are.
         glm::vec2 counter_lane(const Shop& shop, entt::entity guest)
         {
-            constexpr float kReach = 1.2f;                                       ///< Chosen by eye: just short of kLaneReach
-            constexpr std::array<float, 4> kPlaces { -0.9f, -0.3f, 0.3f, 0.9f }; ///< Chosen by eye: along the counter
+            constexpr f32 kReach = 1.2f;                                       ///< Chosen by eye: just short of kLaneReach
+            constexpr std::array<f32, 4> kPlaces { -0.9f, -0.3f, 0.3f, 0.9f }; ///< Chosen by eye: along the counter
             const glm::vec2 across { -shop.counter.y, shop.counter.x };
             return shop.counter * kReach + across * kPlaces[entt::to_integral(guest) % kPlaces.size()];
         }
@@ -346,34 +347,34 @@ namespace rct3::simulation
         /// the park, by night a family, in a storm anyone. Where they go, and the way there: out of the gate and
         /// on to the nearest spawn point, or the gate itself when no spawn point can be reached from it. A party
         /// goes by how done its members are on average. `cash_machine` is whether the park has one open.
-        std::optional<std::pair<entt::entity, std::vector<NodeId>>> going_home(const entt::registry& r, const PathNetwork& paths, entt::entity guest, NodeId at, Dice& dice, bool night, bool storm, bool cash_machine, std::uint64_t tick)
+        std::optional<std::pair<entt::entity, std::vector<NodeId>>> going_home(const entt::registry& r, const PathNetwork& paths, entt::entity guest, NodeId at, Dice& dice, bool night, bool storm, bool cash_machine, u64 tick)
         {
             // A guest of honour stays for their whole visit, then heads straight out.
             const auto* vip = r.try_get<Vip>(guest);
             if (vip != nullptr && !vip->leaving)
                 return std::nullopt;
             const auto done = [&](entt::entity g) {
-                double chance = 0;
+                f64 chance = 0;
                 if (const auto* mood = r.try_get<Mood>(g))
                     chance = mood->happiness.value < kTuning.leaving.fed_up.value ? kTuning.leaving.fed_up_leave.value : mood->energy.value < kTuning.leaving.worn_out.value && mood->happiness.value < kTuning.leaving.enjoying.value ? kTuning.leaving.worn_out_leave.value : 0;
                 // shortcut: guests from a save count their stay from when the park was loaded; read their saved
                 // time in the park once its unit is settled.
-                const float hours = static_cast<float>(tick - r.get<Visitor>(g).arrived) * kTickSeconds / kSecondsPerHour;
+                const f32 hours = static_cast<f32>(tick - r.get<Visitor>(g).arrived) * kTickSeconds / kSecondsPerHour;
                 chance += hours > 2 * kTuning.leaving.long_stay_hours ? 2 * kTuning.leaving.long_stay.value : hours > kTuning.leaving.long_stay_hours ? kTuning.leaving.long_stay.value : 0;
                 if (const auto* wallet = r.try_get<Wallet>(g); wallet != nullptr && wallet->cash.value < kTuning.facilities.low_cash.value && (!cash_machine || wallet->bank.value <= 0))
                     chance += kTuning.leaving.broke.value;
                 return chance;
             };
-            double fed_up = done(guest);
+            f64 fed_up = done(guest);
             if (const auto* member = r.try_get<Member>(guest))
             {
                 const auto& members = r.get<Party>(member->party).members;
                 fed_up = 0;
                 for (const entt::entity m : members)
                     fed_up += done(m);
-                fed_up /= static_cast<double>(std::max<std::size_t>(members.size(), 1));
+                fed_up /= static_cast<f64>(std::max<usize>(members.size(), 1));
             }
-            const double chance = fed_up + (night && age_of(r, guest) != AgeGroup::Teen ? kTuning.leaving.night.value : 0) + (storm ? kTuning.leaving.storm.value : 0);
+            const f64 chance = fed_up + (night && age_of(r, guest) != AgeGroup::Teen ? kTuning.leaving.night.value : 0) + (storm ? kTuning.leaving.storm.value : 0);
             if (vip == nullptr && (chance == 0 || !random::chance(dice.state, chance * kTuning.needs.idle.value)))
                 return std::nullopt;
             if (const auto* member = r.try_get<Member>(guest); member != nullptr && (!r.get<Party>(member->party).away.empty() || std::ranges::any_of(r.get<Party>(member->party).members, [&](entt::entity m) { return m != guest && r.get<Errand>(m).kind != ErrandKind::Following; })))
@@ -396,28 +397,28 @@ namespace rct3::simulation
         {
             // Those turned away at the gate never came in.
             if (const auto* outside = r.try_get<Outside>(guest); outside == nullptr || outside->way != Outside::Way::TurnedAway)
-                ++r.ctx().emplace<Turnstile>().out[static_cast<std::size_t>(age_of(r, guest))];
+                ++r.ctx().emplace<Turnstile>().out[static_cast<usize>(age_of(r, guest))];
             r.remove<Needs, Mood, Wallet, Errand, Stride, Dice, Member, Linger, Gesture, Glance, Watching, Carried, RideWalk, Crossing, Swimmer, PoolRoute, Outside>(guest);
             r.emplace<Left>(guest);
         }
     } // namespace
 
-    float clamp01(float v)
+    f32 clamp01(f32 v)
     {
         return std::clamp(v, 0.0f, 1.0f);
     }
 
-    float swim_wish_needed(float temperature)
+    f32 swim_wish_needed(f32 temperature)
     {
         const auto& pools = kTuning.pools;
-        const float cold = pools.chill.value * std::max(0.0f, pools.cool.value - temperature);
-        const float hot = pools.heat.value * std::max(0.0f, temperature - pools.warm.value);
+        const f32 cold = pools.chill.value * std::max(0.0f, pools.cool.value - temperature);
+        const f32 hot = pools.heat.value * std::max(0.0f, temperature - pools.warm.value);
         return std::max(pools.least_wish.value, kTuning.needs.want.value + cold - hot);
     }
 
-    units::Money worth_of(const Ware& ware, units::Money flat, float temperature)
+    units::Money worth_of(const Ware& ware, units::Money flat, f32 temperature)
     {
-        const std::size_t band = temperature < kTuning.weather.cold.value ? 1 : temperature >= kTuning.weather.hot.value ? 2 : 0;
+        const usize band = temperature < kTuning.weather.cold.value ? 1 : temperature >= kTuning.weather.hot.value ? 2 : 0;
         return ware.worth[band].value > 0 ? ware.worth[band] : flat;
     }
 
@@ -429,13 +430,13 @@ namespace rct3::simulation
                 if (m != guest && r.all_of<Wallet>(m))
                     payers.push_back(m);
         std::ranges::stable_sort(payers.begin() + 1, payers.end(), std::greater { }, [&](entt::entity m) { return r.get<Wallet>(m).cash.value; });
-        if (std::ranges::fold_left(payers, std::int64_t { 0 }, [&](std::int64_t sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) < price.value)
+        if (std::ranges::fold_left(payers, i64 { 0 }, [&](i64 sum, entt::entity m) { return sum + r.get<Wallet>(m).cash.value; }) < price.value)
             return false;
-        std::int64_t owed = price.value;
+        i64 owed = price.value;
         for (const entt::entity m : payers)
         {
             Wallet& wallet = r.get<Wallet>(m);
-            const std::int64_t part = std::clamp(wallet.cash.value, std::int64_t { 0 }, owed);
+            const i64 part = std::clamp(wallet.cash.value, i64 { 0 }, owed);
             wallet.cash.value -= part;
             wallet.spent.value += part;
             if (on != nullptr)
@@ -449,7 +450,7 @@ namespace rct3::simulation
     NodeId wander(const PathNetwork& paths, NodeId at, std::optional<NodeId> came, Dice& dice, Walker who, const staff::Patrol* patrol)
     {
         std::array<NodeId, 4> ways { };
-        std::size_t count = 0;
+        usize count = 0;
         for (const std::optional<NodeId> n : paths.nodes()[at.value].next)
             if (n && n != came && !paths.nodes()[n->value].queue && paths.may_step(at, *n, who) && (patrol == nullptr || patrol->covers(paths.nodes()[n->value].tile)))
                 ways[count++] = *n;
@@ -460,31 +461,31 @@ namespace rct3::simulation
 
     glm::vec2 new_lane(Dice& dice, glm::vec2 was, glm::vec2 slot)
     {
-        const glm::vec2 drift { static_cast<float>(random::between(dice.state, -kTuning.walking.lane_drift.value, kTuning.walking.lane_drift.value)), static_cast<float>(random::between(dice.state, -kTuning.walking.lane_drift.value, kTuning.walking.lane_drift.value)) };
-        const float reach = kLaneReach - glm::length(slot);
+        const glm::vec2 drift { static_cast<f32>(random::between(dice.state, -kTuning.walking.lane_drift.value, kTuning.walking.lane_drift.value)), static_cast<f32>(random::between(dice.state, -kTuning.walking.lane_drift.value, kTuning.walking.lane_drift.value)) };
+        const f32 reach = kLaneReach - glm::length(slot);
         return lane_towards(was, glm::clamp(was - slot + drift, -reach, reach) + slot);
     }
 
-    float step_length(const PathNetwork& paths, const Stride& s)
+    f32 step_length(const PathNetwork& paths, const Stride& s)
     {
         return glm::distance(lane_point(paths, s.from, s.lane_from), lane_point(paths, s.to, s.lane_to));
     }
 
-    void walk_on(const PathNetwork& paths, Stride& s, float left)
+    void walk_on(const PathNetwork& paths, Stride& s, f32 left)
     {
         if (s.from == s.to || s.progress.value != 0 || left <= 0)
             return;
-        const float length = step_length(paths, s);
+        const f32 length = step_length(paths, s);
         s.progress.value = length > 0 ? std::min(left / length, 1.0f) : 1;
     }
 
-    void face_moved(Pose& pose, float dt)
+    void face_moved(Pose& pose, f32 dt)
     {
         const glm::vec2 moved { pose.position.x - pose.was.x, pose.position.z - pose.was.z };
         if (glm::dot(moved, moved) < 0.0001f)
             return;
-        const float turn = std::remainder(std::atan2(moved.x, moved.y) - pose.was_heading.value, 2 * glm::pi<float>()) / 2;
-        const float most = kTuning.walking.turn_rate.value * dt;
+        const f32 turn = std::remainder(std::atan2(moved.x, moved.y) - pose.was_heading.value, 2 * glm::pi<f32>()) / 2;
+        const f32 most = kTuning.walking.turn_rate.value * dt;
         pose.heading.value = pose.was_heading.value + std::clamp(turn, -most, most);
     }
 
@@ -557,7 +558,7 @@ namespace rct3::simulation
         return taste != nullptr ? *taste : Taste { };
     }
 
-    float time_of_day(const entt::registry& r)
+    f32 time_of_day(const entt::registry& r)
     {
         const auto* found = r.ctx().find<Daylight>();
         return found != nullptr ? found->time.value : Daylight { }.time.value;
@@ -569,9 +570,9 @@ namespace rct3::simulation
         return found != nullptr ? *found : Weather { };
     }
 
-    float side_after(random::RandomState& dice, float ahead)
+    f32 side_after(random::RandomState& dice, f32 ahead)
     {
-        const float side = kTuning.queues.reach.value * static_cast<float>(random::between(dice, kTuning.queues.nearest_side.value, 1.0));
+        const f32 side = kTuning.queues.reach.value * static_cast<f32>(random::between(dice, kTuning.queues.nearest_side.value, 1.0));
         return ahead > 0 || (ahead == 0 && random::chance(dice, 0.5)) ? -side : side;
     }
 
@@ -581,8 +582,8 @@ namespace rct3::simulation
         const PathNetwork& paths = world.paths;
         // shortcut: what counts in steps (rests, huddles, timers) runs at full speed in slow motion; upgrade if
         // slow motion is ever more than a look.
-        const float dt = kTickSeconds / world.guest_slowdown;
-        const float now = static_cast<float>(world.tick) * kTickSeconds;
+        const f32 dt = kTickSeconds / world.guest_slowdown;
+        const f32 now = static_cast<f32>(world.tick) * kTickSeconds;
 
         const auto shops = r.view<const Shop>();
         const bool cash_machine = std::ranges::any_of(shops, [&](entt::entity e) { return shops.get<const Shop>(e).product == Product::CashMachine; });
@@ -607,12 +608,12 @@ namespace rct3::simulation
         phase.emplace("Needs");
         // 1. Needs and moods.
         {
-            const float thirst = 1 + kTuning.weather.heat_per_degree.value * std::max(weather.temperature.value - kTuning.weather.hot.value, 0.0f);
-            const float hunger = 1 + kTuning.weather.heat_per_degree.value * std::max(kTuning.weather.cold.value - weather.temperature.value, 0.0f);
+            const f32 thirst = 1 + kTuning.weather.heat_per_degree.value * std::max(weather.temperature.value - kTuning.weather.hot.value, 0.0f);
+            const f32 hunger = 1 + kTuning.weather.heat_per_degree.value * std::max(kTuning.weather.cold.value - weather.temperature.value, 0.0f);
             const auto view = r.view<Needs, Mood>();
             const auto guests = sorted(view);
-            share(workers, guests.size(), [&](std::size_t begin, std::size_t end) {
-                for (std::size_t i = begin; i < end; ++i)
+            share(workers, guests.size(), [&](usize begin, usize end) {
+                for (usize i = begin; i < end; ++i)
                 {
                     auto [needs, mood] = view.get<Needs, Mood>(guests[i]);
                     mood.nausea.value = clamp01(mood.nausea.value - kTuning.sickness.settle.value * dt / (eating(r, guests[i]) ? kTuning.sickness.full_stomach.value : 1));
@@ -621,7 +622,7 @@ namespace rct3::simulation
                     // A bite now and then of what they bought, until it is gone.
                     if (auto* carried = r.try_get<Carried>(guests[i]); carried != nullptr && carried->bites > 0 && (carried->since.value += dt) >= kTuning.eating.bite.value)
                     {
-                        float& need = carried->food ? needs.hunger.value : needs.thirst.value;
+                        f32& need = carried->food ? needs.hunger.value : needs.thirst.value;
                         need = clamp01(need - carried->fill.value);
                         carried->since.value = 0;
                         --carried->bites;
@@ -634,7 +635,7 @@ namespace rct3::simulation
                     if (mood.wet.value >= kTuning.needs.want.value && weather.temperature.value < kTuning.weather.hot.value)
                         mood.happiness.value = clamp01(mood.happiness.value - kTuning.weather.wet_gloom.value * (weather.temperature.value < kTuning.weather.cold.value ? 2 : 1) * dt);
                     // The sun heats those out in it; shade, a cooler day and getting wet cool them.
-                    const float sweat = sun && !under(guests[i], true) ? kTuning.weather.sweat.value * (1 + kTuning.weather.heat_per_degree.value * (weather.temperature.value - kTuning.weather.hot.value)) : -kTuning.weather.cooling.value;
+                    const f32 sweat = sun && !under(guests[i], true) ? kTuning.weather.sweat.value * (1 + kTuning.weather.heat_per_degree.value * (weather.temperature.value - kTuning.weather.hot.value)) : -kTuning.weather.cooling.value;
                     mood.heat.value = clamp01(mood.heat.value + (sweat - (mood.wet.value > 0 ? kTuning.weather.cooling.value : 0)) * dt);
                     if (mood.heat.value >= kTuning.needs.want.value)
                         mood.happiness.value = clamp01(mood.happiness.value - kTuning.weather.heat_gloom.value * dt);
@@ -678,30 +679,30 @@ namespace rct3::simulation
                 if (ride.stops.empty() || fleet == nullptr || fleet->trains.empty() || !attraction.open || attraction.testing || (upkeep != nullptr && upkeep->broken))
                     continue;
                 const Coaster& track = fleet->trains.front();
-                const float length = track.length();
+                const f32 length = track.length();
                 // Timed by its last lap, or by one driven now without stops when it has none.
-                const float lap = ride.run.value > 0 ? ride.run.value : lap_seconds(track).value_or(0);
+                const f32 lap = ride.run.value > 0 ? ride.run.value : lap_seconds(track).value_or(0);
                 if (length <= 0 || lap <= 0 || track.stops.size() != ride.stops.size())
                     continue;
-                const float pace = kTuning.walking.speed[2].value / paths.tile_size;
-                for (std::size_t from = 0; from <= ride.stops.size(); ++from)
+                const f32 pace = kTuning.walking.speed[2].value / paths.tile_size;
+                for (usize from = 0; from <= ride.stops.size(); ++from)
                 {
                     const auto& queue = from == 0 ? ride.queue : ride.stops[from - 1].queue;
                     // The wait: the queue ahead at the rate the ride takes riders, or a load at a time by laps
                     // before it has a rate.
-                    const float wait = ride.per_hour > 0 ? static_cast<float>(queue.size()) * units::kHour.value / ride.per_hour : static_cast<float>(queue.size() / std::max<std::uint32_t>(ride.capacity, 1)) * lap;
+                    const f32 wait = ride.per_hour > 0 ? static_cast<f32>(queue.size()) * units::kHour.value / ride.per_hour : static_cast<f32>(queue.size() / std::max<u32>(ride.capacity, 1)) * lap;
                     // How far on round the track from this station each is.
-                    const auto ahead = [&](std::size_t k) { return std::fmod((k == 0 ? 0 : track.stops[k - 1]) - (from == 0 ? 0 : track.stops[from - 1]) + length, length); };
-                    for (std::size_t to = 0; to <= ride.stops.size(); ++to)
+                    const auto ahead = [&](usize k) { return std::fmod((k == 0 ? 0 : track.stops[k - 1]) - (from == 0 ? 0 : track.stops[from - 1]) + length, length); };
+                    for (usize to = 0; to <= ride.stops.size(); ++to)
                     {
                         if (to == from || (to > 0 && !ride.stops[to - 1].exit))
                             continue;
-                        const float along = ahead(to);
+                        const f32 along = ahead(to);
                         // Stations passed on the way, where the train stands too.
-                        std::size_t passed = 0;
-                        for (std::size_t k = 0; k <= ride.stops.size(); ++k)
+                        usize passed = 0;
+                        for (usize k = 0; k <= ride.stops.size(); ++k)
                             passed += k != from && ahead(k) < along;
-                        const float seconds = kTuning.transport.boarding.value + wait + lap * along / length + kTuning.transport.dwell.value * static_cast<float>(passed);
+                        const f32 seconds = kTuning.transport.boarding.value + wait + lap * along / length + kTuning.transport.dwell.value * static_cast<f32>(passed);
                         // A station with no way in or out takes no one across.
                         const std::optional<NodeId> in = entrance_of(r, e, from);
                         const std::optional<NodeId> out = exit_of(r, e, to);
@@ -716,7 +717,7 @@ namespace rct3::simulation
         // Footpath tiles under cover and in the shade, where guests go out of the rain or the sun.
         std::vector<NodeId> covers;
         std::vector<NodeId> shades;
-        for (std::uint32_t k = 0; k < paths.nodes().size(); ++k)
+        for (u32 k = 0; k < paths.nodes().size(); ++k)
         {
             const PathNode& node = paths.nodes()[k];
             if (node.queue || node.removed)
@@ -733,8 +734,8 @@ namespace rct3::simulation
         std::vector<std::vector<NodeId>> crossing(movers.size());
         if (!paths.nodes().empty())
         {
-            share(workers, movers.size(), [&](std::size_t begin, std::size_t end) {
-                for (std::size_t i = begin; i < end; ++i)
+            share(workers, movers.size(), [&](usize begin, usize end) {
+                for (usize i = begin; i < end; ++i)
                 {
                     auto [errand, stride, pose, dice, needs, mood, wallet] = movers_view.get(movers[i]);
                     stride.fresh = false;
@@ -760,10 +761,10 @@ namespace rct3::simulation
                         continue; // Standing with the others
                     }
 
-                    float left = 0;
+                    f32 left = 0;
                     if (stride.from != stride.to)
                     {
-                        const float length = step_length(paths, stride);
+                        const f32 length = step_length(paths, stride);
                         stride.progress.value += length > 0 ? gait_pace(stride.speed, mood.energy, stride.gait).value * dt / length : 1;
                         left = (stride.progress.value - 1) * length;
                     }
@@ -893,7 +894,7 @@ namespace rct3::simulation
                         }
                         else if (errand.kind == ErrandKind::Wandering && party != nullptr && errand.rest == ticks(kTuning.needs.idle.value) && (world.parties_huddle_often || random::chance(dice.state, kTuning.walking.huddle_chance.value)))
                         {
-                            party->huddle = ticks(static_cast<float>(random::between(dice.state, double { kTuning.walking.shortest_huddle.value }, double { kTuning.walking.longest_huddle.value })));
+                            party->huddle = ticks(static_cast<f32>(random::between(dice.state, f64 { kTuning.walking.shortest_huddle.value }, f64 { kTuning.walking.longest_huddle.value })));
                             stride.to = at;
                             stride.progress.value = 1;
                         }
@@ -926,8 +927,8 @@ namespace rct3::simulation
         {
             const auto view = r.view<Errand, Stride, Pose, const Member>();
             const auto followers = sorted(view);
-            share(workers, followers.size(), [&](std::size_t begin, std::size_t end) {
-                for (std::size_t i = begin; i < end; ++i)
+            share(workers, followers.size(), [&](usize begin, usize end) {
+                for (usize i = begin; i < end; ++i)
                 {
                     auto [errand, stride, pose, member] = view.get(followers[i]);
                     if (errand.kind != ErrandKind::Following)
@@ -945,15 +946,15 @@ namespace rct3::simulation
                         glm::vec3 centre = leader.position + kTuning.walking.huddle_radius.value * glm::vec3(std::sin(leader.heading.value), 0.0f, std::cos(leader.heading.value));
                         centre.x = std::clamp(centre.x, middle.x - kLaneReach, middle.x + kLaneReach);
                         centre.z = std::clamp(centre.z, middle.z - kLaneReach, middle.z + kLaneReach);
-                        const auto place_in_ring = static_cast<float>(std::ranges::find(party.members, followers[i]) - party.members.begin());
-                        const auto leader_place = static_cast<float>(std::ranges::find(party.members, party.leader) - party.members.begin());
-                        const float angle = std::atan2(leader.position.x - centre.x, leader.position.z - centre.z) + 2 * glm::pi<float>() * (place_in_ring - leader_place) / static_cast<float>(party.members.size());
+                        const auto place_in_ring = static_cast<f32>(std::ranges::find(party.members, followers[i]) - party.members.begin());
+                        const auto leader_place = static_cast<f32>(std::ranges::find(party.members, party.leader) - party.members.begin());
+                        const f32 angle = std::atan2(leader.position.x - centre.x, leader.position.z - centre.z) + 2 * glm::pi<f32>() * (place_in_ring - leader_place) / static_cast<f32>(party.members.size());
                         // Stepping across to their place in the ring rather than jumping there.
                         const glm::vec3 spot = centre + kTuning.walking.huddle_radius.value * glm::vec3(std::sin(angle), 0.0f, std::cos(angle));
                         const glm::vec3 off = spot - pose.position;
-                        const float reach = kTuning.walking.catch_up.value * stride.speed.value * dt;
+                        const f32 reach = kTuning.walking.catch_up.value * stride.speed.value * dt;
                         pose.position = glm::length(off) <= reach ? spot : pose.position + off * (reach / glm::length(off));
-                        pose.heading.value = angle + glm::pi<float>();
+                        pose.heading.value = angle + glm::pi<f32>();
                         stride.gait = Gait::Walk;
                         stride.from = lead.to;
                         stride.to = lead.to;
@@ -966,18 +967,18 @@ namespace rct3::simulation
                     const bool behind = stride.to != lead.to && stride.to != lead.from;
                     const units::Share energy = r.get<Mood>(followers[i]).energy;
                     stride.gait = behind || lead.gait == Gait::Run ? Gait::Run : Gait::Walk;
-                    float left = (behind ? gait_pace(stride.speed, energy, Gait::Run).value : kTuning.walking.catch_up.value * stride.speed.value) * dt;
-                    for (std::int32_t tiles = 0; tiles < 3 && left > 0; ++tiles)
+                    f32 left = (behind ? gait_pace(stride.speed, energy, Gait::Run).value : kTuning.walking.catch_up.value * stride.speed.value) * dt;
+                    for (i32 tiles = 0; tiles < 3 && left > 0; ++tiles)
                     {
                         const bool in_step = stride.from == lead.from && stride.to == lead.to;
                         if (in_step || (stride.from != stride.to && stride.progress.value < 1))
                         {
                             // In step, closing in on the leader; else finishing their own step first.
-                            const float until = in_step ? lead.progress.value : 1.0f;
+                            const f32 until = in_step ? lead.progress.value : 1.0f;
                             if (stride.progress.value >= until)
                                 break;
-                            const float length = step_length(paths, stride);
-                            const float gain = length > 0 ? std::min(left / length, until - stride.progress.value) : until - stride.progress.value;
+                            const f32 length = step_length(paths, stride);
+                            const f32 gain = length > 0 ? std::min(left / length, until - stride.progress.value) : until - stride.progress.value;
                             stride.progress.value += gain;
                             left -= gain * length;
                             if (in_step)
@@ -1022,11 +1023,11 @@ namespace rct3::simulation
         // anyone stepped and moves only themselves, so any split of the people can step at once.
         if (!paths.nodes().empty())
         {
-            const float space = kTuning.walking.personal_space.value;
+            const f32 space = kTuning.walking.personal_space.value;
             auto& bodies = world.buffers.bodies;
             auto& steps = world.buffers.steps;
             // Cells of one column in a row of keys, so a cell and those above and below it are one run.
-            const auto cell_key = [](std::int32_t col, std::int32_t row) { return std::int64_t { col } * (std::int64_t { 1 } << 32) + row; };
+            const auto cell_key = [](i32 col, i32 row) { return i64 { col } * (i64 { 1 } << 32) + row; };
             bodies.clear();
             for (const auto [e, errand, stride, pose] : r.view<const Errand, const Stride, const Pose>().each())
             {
@@ -1038,19 +1039,19 @@ namespace rct3::simulation
             }
             std::ranges::sort(bodies, [](const auto& a, const auto& b) { return std::tie(a.cell, a.who) < std::tie(b.cell, b.who); });
             steps.assign(bodies.size(), glm::vec2 { 0.0f });
-            const float most = 2 * kTuning.walking.step_aside.value * dt; // Every second tick
-            const std::int32_t colour = static_cast<std::int32_t>(world.tick % 2);
-            share(workers, bodies.size(), [&](std::size_t begin, std::size_t end) {
-                for (std::size_t i = begin; i < end; ++i)
+            const f32 most = 2 * kTuning.walking.step_aside.value * dt; // Every second tick
+            const i32 colour = static_cast<i32>(world.tick % 2);
+            share(workers, bodies.size(), [&](usize begin, usize end) {
+                for (usize i = begin; i < end; ++i)
                 {
                     const auto& me = bodies[i];
                     const glm::ivec2 cell { glm::floor(glm::vec2(me.at.x, me.at.z) / space) };
                     if (((cell.x + cell.y) & 1) != colour)
                         continue;
                     glm::vec2 away { 0.0f };
-                    for (std::int32_t dc = -1; dc <= 1; ++dc)
+                    for (i32 dc = -1; dc <= 1; ++dc)
                     {
-                        const std::int64_t last = cell_key(cell.x + dc, cell.y + 1);
+                        const i64 last = cell_key(cell.x + dc, cell.y + 1);
                         for (auto it = std::ranges::lower_bound(bodies, cell_key(cell.x + dc, cell.y - 1), { }, &StepBuffers::Body::cell); it != bodies.end() && it->cell <= last; ++it)
                         {
                             if (it->who == me.who || std::abs(it->at.y - me.at.y) > 1)
@@ -1058,13 +1059,13 @@ namespace rct3::simulation
                             const glm::vec2 off { me.at.x - it->at.x, me.at.z - it->at.z };
                             if (glm::dot(off, off) >= space * space)
                                 continue;
-                            const float apart = glm::length(off);
+                            const f32 apart = glm::length(off);
                             // Standing in one spot: apart by who they are, each one way.
                             const glm::vec2 way = apart > 0.001f ? off / apart : glm::vec2 { me.who < it->who ? 1.0f : -1.0f, 0.0f };
-                            away += (space - apart) / space * (way + static_cast<float>(kTuning.walking.keep_right.value) * glm::vec2 { -way.y, way.x });
+                            away += (space - apart) / space * (way + static_cast<f32>(kTuning.walking.keep_right.value) * glm::vec2 { -way.y, way.x });
                         }
                     }
-                    const float length = glm::length(away) * most;
+                    const f32 length = glm::length(away) * most;
                     if (length <= 0)
                         continue;
                     const auto* member = r.try_get<Member>(me.who);
@@ -1075,14 +1076,14 @@ namespace rct3::simulation
                     const Stride& stride = r.get<Stride>(me.who);
                     if (stride.from == stride.to)
                         continue;
-                    const float facing = r.get<Pose>(me.who).heading.value;
+                    const f32 facing = r.get<Pose>(me.who).heading.value;
                     const glm::vec2 side { std::cos(facing), -std::sin(facing) };
-                    const float room = std::min(most, kTuning.walking.swerve * (r.all_of<Mood>(me.who) ? gait_pace(stride.speed, r.get<Mood>(me.who).energy, stride.gait) : stride.speed).value * dt);
+                    const f32 room = std::min(most, kTuning.walking.swerve * (r.all_of<Mood>(me.who) ? gait_pace(stride.speed, r.get<Mood>(me.who).energy, stride.gait) : stride.speed).value * dt);
                     steps[i] = side * std::clamp(glm::dot(away / glm::length(away), side) * std::min(length, most), -room, room);
                 }
             });
-            share(workers, bodies.size(), [&](std::size_t begin, std::size_t end) {
-                for (std::size_t i = begin; i < end; ++i)
+            share(workers, bodies.size(), [&](usize begin, usize end) {
+                for (usize i = begin; i < end; ++i)
                 {
                     if (steps[i] == glm::vec2 { 0.0f })
                         continue;
@@ -1110,7 +1111,7 @@ namespace rct3::simulation
             auto& wallet = r.get<Wallet>(guest);
             auto& mood = r.get<Mood>(guest);
             auto& needs = r.get<Needs>(guest);
-            float* need = shop.product == Product::Drink ? &needs.thirst.value : shop.product == Product::Food ? &needs.hunger.value : shop.product == Product::Toilet ? &needs.bladder.value : shop.product == Product::FirstAid ? &mood.nausea.value : nullptr;
+            f32* need = shop.product == Product::Drink ? &needs.thirst.value : shop.product == Product::Food ? &needs.hunger.value : shop.product == Product::Toilet ? &needs.bladder.value : shop.product == Product::FirstAid ? &mood.nausea.value : nullptr;
             const bool umbrella = shop.product == Product::Umbrella;
             const bool meal = shop.product == Product::Food || shop.product == Product::Drink;
             // Where maps are sold, a party with none buys one, whatever else it came for.
@@ -1144,16 +1145,16 @@ namespace rct3::simulation
             // is not known, the same for every food or drink.
             const units::Money flat_worth = shop.product == Product::Food ? kTuning.eating.food_worth : kTuning.eating.drink_worth;
             const auto worth = [&](const Ware& w) { return worth_of(w, flat_worth, weather.temperature.value); };
-            std::size_t ware = shop.menu.size();
+            usize ware = shop.menu.size();
             units::Money price = attraction.price;
             if (meal && !shop.menu.empty())
             {
-                std::size_t fair = 0, affordable = 0;
+                usize fair = 0, affordable = 0;
                 for (const Ware& w : shop.menu)
                     if (w.product == shop.product && w.price.value <= wallet.cash.value)
                         ++affordable, fair += w.price.value <= worth(w).value ? 1 : 0;
                 if (fair > 0)
-                    for (std::size_t pick = random::below(r.get<Dice>(guest).state, static_cast<std::uint32_t>(fair)), k = 0; k < shop.menu.size(); ++k)
+                    for (usize pick = random::below(r.get<Dice>(guest).state, static_cast<u32>(fair)), k = 0; k < shop.menu.size(); ++k)
                     {
                         const Ware& w = shop.menu[k];
                         if (w.product == shop.product && w.price.value <= wallet.cash.value && w.price.value <= worth(w).value && pick-- == 0)
@@ -1178,7 +1179,7 @@ namespace rct3::simulation
                 think(r, guest, ThoughtKind::NotPaying, at, now);
                 return false;
             }
-            else if (shop.product == Product::Toilet && static_cast<float>(price.value) > static_cast<float>(kTuning.facilities.toilet_worth.value) * needs.bladder.value && attraction.open)
+            else if (shop.product == Product::Toilet && static_cast<f32>(price.value) > static_cast<f32>(kTuning.facilities.toilet_worth.value) * needs.bladder.value && attraction.open)
             {
                 // Worth more the more they need it.
                 mood.happiness.value = clamp01(mood.happiness.value - kTuning.needs.treat.value);
@@ -1196,7 +1197,7 @@ namespace rct3::simulation
                 }
                 return false;
             }
-            if (meal && price.value <= kTuning.eating.good_value.value * static_cast<float>((ware < shop.menu.size() ? worth(shop.menu[ware]) : flat_worth).value))
+            if (meal && price.value <= kTuning.eating.good_value.value * static_cast<f32>((ware < shop.menu.size() ? worth(shop.menu[ware]) : flat_worth).value))
                 think(r, guest, ThoughtKind::GoodValue, at, now);
             attraction.income.value += price.value;
             ++attraction.customers;
@@ -1207,14 +1208,14 @@ namespace rct3::simulation
             {
                 // Eaten or drunk a bite at a time from now on, in the hand: an empty still in it goes in a pocket,
                 // or on the path when both are full.
-                std::uint8_t pocketed = 0;
+                u8 pocketed = 0;
                 if (auto* old = r.try_get<Carried>(guest))
                 {
                     if (old->held)
                         free_hand(r, guest, *old, r.get<Stride>(guest).to);
                     pocketed = r.all_of<Carried>(guest) ? old->pocketed : 0;
                 }
-                r.emplace_or_replace<Carried>(guest, Carried { .stall = at, .ware = static_cast<std::uint8_t>(ware), .kind = std::uint8_t { shop.product == Product::Drink }, .food = shop.product == Product::Food, .bites = kTuning.eating.bites, .fill = { *need / kTuning.eating.bites }, .pocketed = pocketed });
+                r.emplace_or_replace<Carried>(guest, Carried { .stall = at, .ware = static_cast<u8>(ware), .kind = u8 { shop.product == Product::Drink }, .food = shop.product == Product::Food, .bites = kTuning.eating.bites, .fill = { *need / kTuning.eating.bites }, .pocketed = pocketed });
                 if (ware < shop.menu.size())
                 {
                     // Its extras feed, quench or upset them the more (or, as salt does, leave them thirstier), and
@@ -1238,7 +1239,7 @@ namespace rct3::simulation
             else
             {
                 // As much as they draw, or what their bank has left.
-                const std::int64_t drawn = std::clamp(wallet.bank.value, std::int64_t { 0 }, kTuning.facilities.withdraw.value);
+                const i64 drawn = std::clamp(wallet.bank.value, i64 { 0 }, kTuning.facilities.withdraw.value);
                 wallet.cash.value += drawn;
                 wallet.bank.value -= drawn;
                 wallet.withdrawn.value += drawn;
@@ -1252,7 +1253,7 @@ namespace rct3::simulation
                 mood.heat.value = 0;
             return true;
         };
-        for (std::size_t i = 0; i < movers.size(); ++i)
+        for (usize i = 0; i < movers.size(); ++i)
         {
             if (arrived[i] == entt::null || !r.valid(arrived[i]))
                 continue;
@@ -1298,7 +1299,7 @@ namespace rct3::simulation
                 // Those who bought stand at the counter a moment, facing the stall, and pay; at a toilet or first
                 // aid the longer the more they needed it. The rest of a party waits nearby (5.).
                 const auto need = [&](entt::entity m) { return r.all_of<Staff>(m) ? 0.0f : shop->product == Product::Toilet ? r.get<Needs>(m).bladder.value : shop->product == Product::FirstAid ? r.get<Mood>(m).nausea.value : 0.0f; };
-                const auto served = [&](entt::entity m, float needed) {
+                const auto served = [&](entt::entity m, f32 needed) {
                     const units::Seconds turn { std::max(kTuning.facilities.served.value, needed * kTuning.facilities.relief.value) };
                     r.get<Errand>(m) = { .kind = ErrandKind::Buying, .target = arrived[i], .rest = ticks(turn.value), .turn = turn };
                     auto& stride = r.get<Stride>(m);
@@ -1314,10 +1315,10 @@ namespace rct3::simulation
                     place(paths, stride, pose);
                 };
                 // An inspector only stands at the counter a while; they judged its prices on the way.
-                if (const float needed = need(guest); r.all_of<Staff>(guest) || buy(guest, arrived[i], *shop, !r.all_of<Member>(guest)))
+                if (const f32 needed = need(guest); r.all_of<Staff>(guest) || buy(guest, arrived[i], *shop, !r.all_of<Member>(guest)))
                     served(guest, needed);
                 for (const entt::entity m : followers)
-                    if (const float needed = need(m); buy(m, arrived[i], *shop, false))
+                    if (const f32 needed = need(m); buy(m, arrived[i], *shop, false))
                         served(m, needed);
             }
             else if (r.any_of<ParkGate, GuestSpawn>(arrived[i]))
@@ -1339,11 +1340,11 @@ namespace rct3::simulation
                 // Each pays at the door and goes in to change, at no more than the complex is worth to them, its
                 // slides too; those of the party who would rather not wait (5.).
                 const entt::entity pool = r.get<PoolDoor>(arrived[i]).pool;
-                const auto slides = static_cast<std::size_t>(std::ranges::count_if(r.view<const Trains>(), [&](entt::entity e) { return pool_ride_pool(world, e) == pool; }));
+                const auto slides = static_cast<usize>(std::ranges::count_if(r.view<const Trains>(), [&](entt::entity e) { return pool_ride_pool(world, e) == pool; }));
                 // And lazy rivers with a station joined to it.
-                const auto rivers = static_cast<std::size_t>(std::ranges::count_if(r.view<const River>(), [&](entt::entity e) { return std::ranges::any_of(r.get<River>(e).stations, [&](const River::Station& s) { return s.pool == pool; }); }));
+                const auto rivers = static_cast<usize>(std::ranges::count_if(r.view<const River>(), [&](entt::entity e) { return std::ranges::any_of(r.get<River>(e).stations, [&](const River::Station& s) { return s.pool == pool; }); }));
                 const auto* swim_pool = r.valid(pool) ? r.try_get<SwimPool>(pool) : nullptr;
-                const std::int64_t worth = swim_pool != nullptr ? rct3::park::pools::pool_worth(swim_pool->tally, slides, rivers, swim_pool->dirt.value) : 0;
+                const i64 worth = swim_pool != nullptr ? rct3::park::pools::pool_worth(swim_pool->tally, slides, rivers, swim_pool->dirt.value) : 0;
                 const auto swim = [&](entt::entity g) {
                     auto& attraction = r.get<Attraction>(arrived[i]);
                     const bool inspector = r.all_of<Staff>(g);
@@ -1389,23 +1390,23 @@ namespace rct3::simulation
                 // At whichever of its stations they came to; with more than one, off at one of the others, alike
                 // (a party all at the same).
                 const NodeId at = r.get<Stride>(guest).to;
-                std::size_t station = 0;
+                usize station = 0;
                 while (station < ride->stops.size() && ride->stops[station].entrance != at)
                     ++station;
                 station = station < ride->stops.size() ? station + 1 : 0;
                 auto& queue = station == 0 ? ride->queue : ride->stops[station - 1].queue;
                 const auto& line = station == 0 ? ride->line : ride->stops[station - 1].line;
-                std::vector<std::size_t> offs;
-                for (std::size_t k = 0; k <= ride->stops.size(); ++k)
+                std::vector<usize> offs;
+                for (usize k = 0; k <= ride->stops.size(); ++k)
                     if (k != station && (k == 0 ? exit_of(r, arrived[i], 0).has_value() : ride->stops[k - 1].exit.has_value()))
                         offs.push_back(k);
-                auto off = static_cast<std::uint8_t>(offs.empty() ? station : offs.size() == 1 ? offs[0] : offs[random::below(r.get<Dice>(guest).state, offs.size())]);
+                auto off = static_cast<u8>(offs.empty() ? station : offs.size() == 1 ? offs[0] : offs[random::below(r.get<Dice>(guest).state, offs.size())]);
                 // Riding across the park: off where their way goes on.
                 if (!crossing[i].empty())
                 {
-                    for (std::size_t k = 0; k <= ride->stops.size(); ++k)
+                    for (usize k = 0; k <= ride->stops.size(); ++k)
                         if (k != station && exit_of(r, arrived[i], k) == crossing[i].front())
-                            off = static_cast<std::uint8_t>(k);
+                            off = static_cast<u8>(k);
                     crossing[i].erase(crossing[i].begin());
                     r.emplace_or_replace<Crossing>(guest, Crossing { .ride = arrived[i], .errand = errand, .route = std::move(crossing[i]) });
                 }
@@ -1421,12 +1422,12 @@ namespace rct3::simulation
                 // In at the far end of the line, with those of the party who want to come; the rest wait (phase 5).
                 // Each stands to the other side of the line's middle from the guest ahead.
                 const auto join = [&](entt::entity g) {
-                    const float ahead = queue.empty() || !r.valid(queue.back()) ? 0 : r.get<Stride>(queue.back()).side.value;
-                    const float side = side_after(r.get<Dice>(g).state, ahead);
+                    const f32 ahead = queue.empty() || !r.valid(queue.back()) ? 0 : r.get<Stride>(queue.back()).side.value;
+                    const f32 side = side_after(r.get<Dice>(g).state, ahead);
                     queue.push_back(g);
-                    r.get<Errand>(g) = { .kind = ErrandKind::Queueing, .target = arrived[i], .station = static_cast<std::uint8_t>(station), .off = off };
+                    r.get<Errand>(g) = { .kind = ErrandKind::Queueing, .target = arrived[i], .station = static_cast<u8>(station), .off = off };
                     auto& stride = r.get<Stride>(g);
-                    stride.along.value = line.empty() ? 0 : static_cast<float>(line.size() - 1);
+                    stride.along.value = line.empty() ? 0 : static_cast<f32>(line.size() - 1);
                     stride.side.value = side;
                 };
                 join(guest);
@@ -1441,7 +1442,7 @@ namespace rct3::simulation
     {
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;
-        constexpr float dt = kTickSeconds;
+        constexpr f32 dt = kTickSeconds;
         // Guests outside the park with nowhere to go (just loaded, or put down there by the player) go on to the
         // gate to come in, or off to the nearest spawn point. With no way there they count as in the park.
         for (const entt::entity g : sorted(r.view<const Outside, Errand, Stride>()))
@@ -1475,14 +1476,14 @@ namespace rct3::simulation
 
         // Parties come families by day, mostly teens after dark, appearing at one of the park's spawn points
         // to walk to the gate; at the gate itself where no spawn point has a way there.
-        double arrivals = arrivals_per_second(weather);
+        f64 arrivals = arrivals_per_second(weather);
         if (const auto* draw = r.ctx().find<Draw>(); draw != nullptr && !r.view<const ParkGate>().empty())
         {
-            const auto guests = static_cast<std::uint32_t>(std::ranges::distance(r.view<const Visitor>(entt::exclude<Left>)));
-            const std::uint32_t ideal = ideal_guests(world);
+            const auto guests = static_cast<u32>(std::ranges::distance(r.view<const Visitor>(entt::exclude<Left>)));
+            const u32 ideal = ideal_guests(world);
             // A bigger park draws more till it is full: enough to fill its room in a day's opening, never fewer
             // than a small one's. Once full only the few of a small park still come.
-            const double fill = guests < ideal ? std::max(1.0, ideal / (kTuning.arrivals.fill.value * kTuning.arrivals.rate.value)) : 1.0;
+            const f64 fill = guests < ideal ? std::max(1.0, ideal / (kTuning.arrivals.fill.value * kTuning.arrivals.rate.value)) : 1.0;
             arrivals *= fill * drawn(*draw, guests, ideal, fair_entrance_fee(world));
         }
         // The park draws its parties as a whole, however many gates it has; each heads for the open gate
@@ -1507,7 +1508,7 @@ namespace rct3::simulation
             const auto spawns = sorted(r.view<const GuestSpawn>());
             std::optional<PathNetwork::NearestRoute> walk;
             NodeId from { };
-            for (std::size_t k = 0, first = spawns.empty() ? 0 : random::below(dice, spawns.size()); k < spawns.size() && !walk; ++k)
+            for (usize k = 0, first = spawns.empty() ? 0 : random::below(dice, spawns.size()); k < spawns.size() && !walk; ++k)
             {
                 from = r.get<GuestSpawn>(spawns[(first + k) % spawns.size()]).node;
                 walk = paths.route_nearest(from, entries);
@@ -1548,14 +1549,14 @@ namespace rct3::simulation
     units::Pace gait_pace(units::Pace walk, units::Share energy, Gait gait)
     {
         const auto& gaits = kTuning.gaits;
-        const double by_gait = gait == Gait::Run ? gaits.run_pace.value : gait == Gait::Weary ? gaits.weary_pace.value : gait == Gait::Queasy ? gaits.queasy_pace.value : gait == Gait::Bursting ? gaits.bursting_pace.value : 1.0;
-        const double by_energy = gaits.drained.value + (gaits.fresh.value - gaits.drained.value) * std::clamp(energy.value, 0.0f, 1.0f);
-        return { static_cast<float>(walk.value * by_energy * by_gait) };
+        const f64 by_gait = gait == Gait::Run ? gaits.run_pace.value : gait == Gait::Weary ? gaits.weary_pace.value : gait == Gait::Queasy ? gaits.queasy_pace.value : gait == Gait::Bursting ? gaits.bursting_pace.value : 1.0;
+        const f64 by_energy = gaits.drained.value + (gaits.fresh.value - gaits.drained.value) * std::clamp(energy.value, 0.0f, 1.0f);
+        return { static_cast<f32>(walk.value * by_energy * by_gait) };
     }
 
-    double arrivals_per_second(const Weather& weather)
+    f64 arrivals_per_second(const Weather& weather)
     {
-        double rate = kTuning.arrivals.rate.value * (weather.storm ? kTuning.arrivals.storm.value : weather.rain ? kTuning.arrivals.rain.value : 1);
+        f64 rate = kTuning.arrivals.rate.value * (weather.storm ? kTuning.arrivals.storm.value : weather.rain ? kTuning.arrivals.rain.value : 1);
         if (weather.temperature.value < kTuning.weather.cold.value)
             rate *= kTuning.arrivals.cold.value;
         else if (weather.sunny && !weather.rain)
@@ -1563,10 +1564,10 @@ namespace rct3::simulation
         return rate;
     }
 
-    std::uint32_t ideal_guests(const SimWorld& world)
+    u32 ideal_guests(const SimWorld& world)
     {
         const entt::registry& r = world.registry;
-        std::uint32_t room = 0;
+        u32 room = 0;
         for (const auto [e, ride, at] : r.view<const CycleRide, const Attraction>().each())
         {
             const auto* upkeep = r.try_get<Upkeep>(e);
@@ -1577,29 +1578,29 @@ namespace rct3::simulation
         room += draw != nullptr ? draw->pool_squares * kTuning.arrivals.guests_per_pool_square : 0;
         if (const auto* elsewhere = r.ctx().find<RoomElsewhere>())
             room += elsewhere->guests;
-        return static_cast<std::uint32_t>(std::lround(room * kTuning.arrivals.room_to_spare.value));
+        return static_cast<u32>(std::lround(room * kTuning.arrivals.room_to_spare.value));
     }
 
     units::Money fair_entrance_fee(const SimWorld& world)
     {
         const entt::registry& r = world.registry;
-        std::int64_t over = 0;
+        i64 over = 0;
         for (const auto [e, ride, at] : r.view<const CycleRide, const Attraction>().each())
         {
             if (!at.open)
                 continue;
-            over += std::max<std::int64_t>(0, ride_worth(ride).value - at.price.value);
+            over += std::max<i64>(0, ride_worth(ride).value - at.price.value);
         }
-        return { std::llround(static_cast<double>(over) * kTuning.arrivals.fair_fee.value) };
+        return { std::llround(static_cast<f64>(over) * kTuning.arrivals.fair_fee.value) };
     }
 
-    double drawn(const Draw& draw, std::uint32_t guests, std::uint32_t ideal, units::Money fair_fee)
+    f64 drawn(const Draw& draw, u32 guests, u32 ideal, units::Money fair_fee)
     {
         // Against the plain rate: an unknown park's share, rising in step with the rating to all of it at the plain
         // rating and on past it, up to the famous rating.
         const tuning::Arrivals& a = kTuning.arrivals;
-        const float known = std::clamp(draw.rating.value_or(a.plain_rating.value), a.unknown_rating.value, a.famous_rating.value) - a.unknown_rating.value;
-        double rate = a.unknown_draw.value + (1 - a.unknown_draw.value) * known / (a.plain_rating.value - a.unknown_rating.value);
+        const f32 known = std::clamp(draw.rating.value_or(a.plain_rating.value), a.unknown_rating.value, a.famous_rating.value) - a.unknown_rating.value;
+        f64 rate = a.unknown_draw.value + (1 - a.unknown_draw.value) * known / (a.plain_rating.value - a.unknown_rating.value);
         if (guests >= ideal)
             rate *= kTuning.arrivals.crowded.value;
         if (draw.entrance_fee > fair_fee)
@@ -1621,7 +1622,7 @@ namespace rct3::simulation
         }
         r.emplace_or_replace<Errand>(guest);
         const auto* visitor = r.try_get<Visitor>(guest);
-        const float speed = visitor != nullptr ? kTuning.walking.speed[std::to_underlying(visitor->age)].value : Stride { }.speed.value;
+        const f32 speed = visitor != nullptr ? kTuning.walking.speed[std::to_underlying(visitor->age)].value : Stride { }.speed.value;
         r.emplace_or_replace<Stride>(guest, Stride { .from = at, .to = at, .progress = 1, .speed = speed, .lane_from = lane, .lane_to = lane });
         r.emplace_or_replace<Dice>(guest, dice_for(world, guest));
         auto& pose = r.get_or_emplace<Pose>(guest);
@@ -1634,8 +1635,8 @@ namespace rct3::simulation
     {
         entt::registry& r = world.registry;
         const auto weights = party_weights(world, is_night(time_of_day(r)));
-        double roll = random::unit(dice) * std::reduce(weights.begin(), weights.end());
-        std::size_t pick = 0;
+        f64 roll = random::unit(dice) * std::reduce(weights.begin(), weights.end());
+        usize pick = 0;
         while (pick + 1 < kPartyKinds && roll >= weights[pick])
             roll -= weights[pick++];
         const auto kind = static_cast<PartyKind>(pick);
@@ -1644,7 +1645,7 @@ namespace rct3::simulation
         std::vector<Newcomer> who;
         const bool female = random::chance(dice, 0.5);
         const auto children = [&] {
-            for (auto n = random::between(dice, std::int64_t { 1 }, kTuning.parties.most_children); n > 0; --n)
+            for (auto n = random::between(dice, i64 { 1 }, kTuning.parties.most_children); n > 0; --n)
                 who.emplace_back(AgeGroup::Child, random::chance(dice, 0.5));
         };
         switch (kind)
@@ -1662,7 +1663,7 @@ namespace rct3::simulation
             }
             case PartyKind::TeenGang:
             case PartyKind::AdultParty:
-                for (auto n = random::between(dice, std::int64_t { 2 }, kTuning.parties.most_friends); n > 0; --n)
+                for (auto n = random::between(dice, i64 { 2 }, kTuning.parties.most_friends); n > 0; --n)
                     who.emplace_back(kind == PartyKind::TeenGang ? AgeGroup::Teen : AgeGroup::Adult, random::chance(dice, 0.5));
                 break;
             case PartyKind::Family:
@@ -1691,24 +1692,24 @@ namespace rct3::simulation
             r.emplace<Visitor>(guest, age, is_female, std::string { }, world.tick);
             r.emplace<Pose>(guest, paths.centre(at), 0.0f);
             // Some come wishing for a swim already, however much they like pools, and some needing the toilet.
-            const auto liking = std::clamp(static_cast<float>(random::unit(dice)), kTuning.pools.least_liking.value, kTuning.pools.most_liking.value);
-            const auto swim = static_cast<float>(random::unit(dice)) * kTuning.pools.arrival_wish.value;
-            r.emplace<Needs>(guest, Needs { .bladder = { static_cast<float>(random::unit(dice)) * kTuning.arrivals.bladder.value }, .swim = { swim } });
-            double stomach = random::unit(dice);
-            std::size_t level = 0;
+            const auto liking = std::clamp(static_cast<f32>(random::unit(dice)), kTuning.pools.least_liking.value, kTuning.pools.most_liking.value);
+            const auto swim = static_cast<f32>(random::unit(dice)) * kTuning.pools.arrival_wish.value;
+            r.emplace<Needs>(guest, Needs { .bladder = { static_cast<f32>(random::unit(dice)) * kTuning.arrivals.bladder.value }, .swim = { swim } });
+            f64 stomach = random::unit(dice);
+            usize level = 0;
             for (; level + 1 < kTuning.arrivals.stomachs.size() && stomach >= kTuning.arrivals.stomachs[level].value; ++level)
                 stomach -= kTuning.arrivals.stomachs[level].value;
-            r.emplace<Mood>(guest, Mood { .happiness = kTuning.arrivals.mood, .energy = { 1 }, .tolerance = { kTuning.sickness.tolerance_per_saved_level.value * static_cast<float>(level + 1) } });
-            const auto spread = [&] { return static_cast<float>(random::between(dice, -1.0, 1.0)) * kTuning.parties.taste_spread.value; };
-            const float least = std::clamp(band.least.value + spread(), 0.0f, 1.0f);
+            r.emplace<Mood>(guest, Mood { .happiness = kTuning.arrivals.mood, .energy = { 1 }, .tolerance = { kTuning.sickness.tolerance_per_saved_level.value * static_cast<f32>(level + 1) } });
+            const auto spread = [&] { return static_cast<f32>(random::between(dice, -1.0, 1.0)) * kTuning.parties.taste_spread.value; };
+            const f32 least = std::clamp(band.least.value + spread(), 0.0f, 1.0f);
             r.emplace<Taste>(guest, least, std::clamp(band.most.value + spread(), least, 1.0f), liking);
             // Around the park's averages, each on its own.
             const auto* draw = r.ctx().find<Draw>();
-            const auto around = [&](units::Money average, units::Money fallback) { return units::Money { std::llround(static_cast<double>(average.value > 0 ? average.value : fallback.value) * (1 + random::between(dice, -1.0, 1.0) * kTuning.arrivals.cash_spread.value)) }; };
+            const auto around = [&](units::Money average, units::Money fallback) { return units::Money { std::llround(static_cast<f64>(average.value > 0 ? average.value : fallback.value) * (1 + random::between(dice, -1.0, 1.0) * kTuning.arrivals.cash_spread.value)) }; };
             const units::Money cash = around(draw != nullptr ? draw->guest_cash : units::Money { }, kTuning.arrivals.cash);
             r.emplace<Wallet>(guest, cash, around(draw != nullptr ? draw->guest_bank : units::Money { }, kTuning.arrivals.bank));
             start_walking(world, guest, at);
-            ++r.ctx().emplace<Turnstile>().in[static_cast<std::size_t>(age)];
+            ++r.ctx().emplace<Turnstile>().in[static_cast<usize>(age)];
         }
         if (members.size() > 1)
         {

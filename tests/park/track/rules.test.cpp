@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/rules.hpp"
 
+#include "core/types.hpp"
 #include "ovl/tracked_ride.hpp"
 
 #include <doctest/doctest.h>
@@ -12,7 +13,7 @@ using namespace rct3::park::track;
 namespace
 {
     /// A tracked ride of `pieces` pieces in one part, with `stations` stations that have their doors.
-    save::model::Ride built_ride(std::size_t pieces, std::size_t stations = 1, bool circuit = true)
+    save::model::Ride built_ride(usize pieces, usize stations = 1, bool circuit = true)
     {
         save::model::Ride r;
         r.kind = save::model::RideKind::Tracked;
@@ -24,7 +25,7 @@ namespace
         return r;
     }
 
-    PieceShape piece(std::string name, std::string group = { }, std::uint32_t flags = 0)
+    PieceShape piece(std::string name, std::string group = { }, u32 flags = 0)
     {
         PieceShape s;
         s.record.name = std::move(name);
@@ -300,7 +301,7 @@ TEST_CASE("guests know a ride's ratings only after a lap, unless its kind is rat
     save::model::Ride race = fresh;
     race.mode = save::model::OperatingMode::Race;
     CHECK_FALSE(awaits_first_lap(track_rules(coaster), race));
-    for (const std::uint32_t never_tested : { 0x10u, 0x4000u })
+    for (const u32 never_tested : { 0x10u, 0x4000u })
     {
         coaster.rules.flags = never_tested;
         CHECK_FALSE(awaits_first_lap(track_rules(coaster), fresh));

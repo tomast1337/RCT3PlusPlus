@@ -7,20 +7,21 @@
 // Times of day are fractions of a day from midnight, as the day clock keeps them.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 
 namespace rct3::park
 {
 
     /// How far north of the equator the park lies, in radians.
-    inline const float kParkLatitude = glm::radians(40.0f);
+    inline const f32 kParkLatitude = glm::radians(40.0f);
     /// How far north of the equator the sun stands on the park's day, in radians: a summer day.
-    inline const float kSunDeclination = glm::radians(15.0f);
+    inline const f32 kSunDeclination = glm::radians(15.0f);
 
     /// Unit vector from the ground towards the sun at `time`; below the horizon (y < 0) at night.
-    [[nodiscard]] glm::vec3 sun_direction(float time);
+    [[nodiscard]] glm::vec3 sun_direction(f32 time);
 
     /// The sun's angle above the horizon at `time`, in radians; negative at night.
-    [[nodiscard]] float sun_elevation(float time);
+    [[nodiscard]] f32 sun_elevation(f32 time);
 
 } // namespace rct3::park

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management/staff_roster.hpp"
 
+#include "core/types.hpp"
 #include "simulation/staff/care.hpp"
 #include "strings/unicode.hpp"
 #include "ui/money_text.hpp"
@@ -19,7 +20,7 @@ namespace rct3::ui::screens::management
 
     namespace
     {
-        constexpr std::size_t kHires = 5;
+        constexpr usize kHires = 5;
         /// The hire buttons: the job each hires, its picture and help.
         struct Hire
         {
@@ -72,11 +73,11 @@ namespace rct3::ui::screens::management
         constexpr std::string_view kYes = "SMB_Label_Yes";
         constexpr std::string_view kNo = "SMB_Label_No";
         constexpr units::Seconds kSecondClick { 0.4f }; ///< Chosen by eye: a second click on a picture this soon counts
-        constexpr float kBox = 9;                       ///< The unfold box, as the picture of it is wide
-        constexpr float kPortraitWidth = 32;
-        constexpr float kPortraitHeight = 41;
-        constexpr float kIcon = 18;
-        constexpr float kTaskSize = 20;
+        constexpr f32 kBox = 9;                         ///< The unfold box, as the picture of it is wide
+        constexpr f32 kPortraitWidth = 32;
+        constexpr f32 kPortraitHeight = 41;
+        constexpr f32 kIcon = 18;
+        constexpr f32 kTaskSize = 20;
 
         std::u16string text(const StringTable& strings, std::string_view key)
         {
@@ -84,7 +85,7 @@ namespace rct3::ui::screens::management
         }
 
         /// How many clothes the uniform of `kind` has colours for; 0 for none.
-        std::size_t uniform_pots(save::model::StaffKind kind)
+        usize uniform_pots(save::model::StaffKind kind)
         {
             using enum save::model::StaffKind;
             switch (kind)
@@ -147,7 +148,7 @@ namespace rct3::ui::screens::management
         }
     }
 
-    StaffRoster::StaffRoster(std::string name, const StaffRosterStyle& style, const StringTable& strings, float width, float height)
+    StaffRoster::StaffRoster(std::string name, const StaffRosterStyle& style, const StringTable& strings, f32 width, f32 height)
         : widgets::Window(std::move(name), style.window, width, height)
         , style_(style)
         , strings_(&strings)
@@ -163,23 +164,23 @@ namespace rct3::ui::screens::management
 
         auto& back = body.add<widgets::Panel>("ListBack", style.list_back);
         back.colour = style.plain;
-        const float bottom = 2 * style.bottom_line + 6;
+        const f32 bottom = 2 * style.bottom_line + 6;
         back.placement = { { 0, 0, 1, 1 }, { 0, style.sort_height + 4, 0, -bottom } };
         list_ = &body.add<widgets::ScrollArea>("table", style.scroll);
         list_->placement = back.placement;
 
         // Hire: above Show:, as the game stacks them.
-        const float hire_y = bottom - 2;
+        const f32 hire_y = bottom - 2;
         add_label(body, "Staff_HireLabel", text(strings, "Staff_HireLabel"), bottom_left(0, hire_y - style.bottom_line, style.label_width, style.bottom_line), style.text_colour);
-        for (std::size_t i = 0; i < kHires; ++i)
+        for (usize i = 0; i < kHires; ++i)
         {
-            widgets::Button& b = add_icon(body, std::string(kHireButtons[i].icon), std::string(kHireFrame), std::string(kHireButtons[i].icon), bottom_left(style.label_width + static_cast<float>(i) * (style.hire_size + 2), hire_y - style.bottom_line, style.hire_size, style.bottom_line), text(strings, kHireButtons[i].help));
+            widgets::Button& b = add_icon(body, std::string(kHireButtons[i].icon), std::string(kHireFrame), std::string(kHireButtons[i].icon), bottom_left(style.label_width + static_cast<f32>(i) * (style.hire_size + 2), hire_y - style.bottom_line, style.hire_size, style.bottom_line), text(strings, kHireButtons[i].help));
             hires_[i] = &b;
         }
         add_label(body, "Staff_Filter", text(strings, "Staff_Filter"), bottom_left(0, 0, style.label_width, style.bottom_line), style.text_colour);
-        for (std::size_t i = 0; i < kRosterJobs.size(); ++i)
+        for (usize i = 0; i < kRosterJobs.size(); ++i)
         {
-            widgets::Button& b = add_icon(body, std::string(kRosterJobs[i].skin), std::string(kRosterJobs[i].skin), { }, bottom_left(style.label_width + static_cast<float>(i) * style.job_size, 0, style.job_size, style.bottom_line), text(strings, kRosterJobs[i].help));
+            widgets::Button& b = add_icon(body, std::string(kRosterJobs[i].skin), std::string(kRosterJobs[i].skin), { }, bottom_left(style.label_width + static_cast<f32>(i) * style.job_size, 0, style.job_size, style.bottom_line), text(strings, kRosterJobs[i].help));
             b.toggle = true;
             b.on = (jobs_ & (1u << i)) != 0;
             views_[i] = &b;
@@ -208,7 +209,7 @@ namespace rct3::ui::screens::management
         const bool same = lines.size() == rows_.size() && std::ranges::equal(lines, rows_, [](const RosterLine& l, const Row& r) { return l.index == r.line.index; });
         if (same)
         {
-            for (std::size_t i = 0; i < lines.size(); ++i)
+            for (usize i = 0; i < lines.size(); ++i)
             {
                 Row& r = rows_[i];
                 const bool typing = r.name != nullptr && r.name->has_keyboard_focus();
@@ -249,7 +250,7 @@ namespace rct3::ui::screens::management
         r.choices = { };
         r.patrol = r.costume = r.discipline = r.train = r.wage_up = r.wage_down = nullptr;
         const RosterLine& l = r.line;
-        const auto kind = static_cast<std::size_t>(l.kind);
+        const auto kind = static_cast<usize>(l.kind);
         const bool inspector = l.kind == save::model::StaffKind::ParkInspector;
         const bool vendor = l.kind == save::model::StaffKind::Vendor;
         auto& band = p.add<widgets::Panel>("band", std::string { });
@@ -258,7 +259,7 @@ namespace rct3::ui::screens::management
 
         r.expand = &add_icon(p, "Expand", r.expanded ? "Box_Minus" : "Box_Plus", { }, top_left(1, 1, kBox, kBox), text(strings, "Staff_Panel_Expand"));
         r.portrait = &add_icon(p, "Portrait", { }, std::string(kind < kPortraits.size() ? kPortraits[kind] : kPortraits[0]), top_left(kBox, 2, kPortraitWidth, kPortraitHeight), text(strings, "StaffWindow_CentreViewHelp"));
-        const float x = kBox + kPortraitWidth + 3;
+        const f32 x = kBox + kPortraitWidth + 3;
         r.name = &p.add<widgets::EditBox>("Name", l.name);
         r.name->skin = style_.name_box;
         r.name->focused_skin = style_.name_box_focused;
@@ -279,11 +280,11 @@ namespace rct3::ui::screens::management
             auto& face = p.add<widgets::Panel>("Mood", mood_icon(l.mood));
             face.placement = top_right(2, 2, kIcon, kIcon);
             face.tooltip = text(strings, mood_help);
-            const std::size_t pots = uniform_pots(l.kind);
-            const float right = 2 + style_.swatch * static_cast<float>(pots);
-            for (std::size_t pot = 0; pot < pots; ++pot)
+            const usize pots = uniform_pots(l.kind);
+            const f32 right = 2 + style_.swatch * static_cast<f32>(pots);
+            for (usize pot = 0; pot < pots; ++pot)
             {
-                widgets::Button& s = add_icon(p, std::format("Colour{}", pot), { }, std::format("{}{}", style_.palette.swatch_prefix, l.colours[pot] % style_.uniform_colours), top_right(right - style_.swatch * static_cast<float>(pot + 1) + 2, 23, style_.swatch, style_.swatch), text(strings, l.kind == save::model::StaffKind::Entertainer ? "Staff_Costume_Colours" : pots == 1 ? "Staff_Uniform_Colour" : "Staff_Uniform_Colours"));
+                widgets::Button& s = add_icon(p, std::format("Colour{}", pot), { }, std::format("{}{}", style_.palette.swatch_prefix, l.colours[pot] % style_.uniform_colours), top_right(right - style_.swatch * static_cast<f32>(pot + 1) + 2, 23, style_.swatch, style_.swatch), text(strings, l.kind == save::model::StaffKind::Entertainer ? "Staff_Costume_Colours" : pots == 1 ? "Staff_Uniform_Colour" : "Staff_Uniform_Colours"));
                 r.swatches.push_back(&s);
             }
             if (l.kind == save::model::StaffKind::Entertainer)
@@ -293,8 +294,8 @@ namespace rct3::ui::screens::management
             return;
 
         // Unfolded: their tasks, laziness, warnings and training on one line, their wage and start on the next.
-        float y = style_.row_height;
-        float tx = x;
+        f32 y = style_.row_height;
+        f32 tx = x;
         for (const RosterTask& t : roster_tasks(l.kind))
         {
             widgets::Button& b = add_icon(p, std::string(t.skin), std::string(t.skin), { }, top_left(tx, y, kTaskSize, kTaskSize), text(strings, t.help));
@@ -319,13 +320,13 @@ namespace rct3::ui::screens::management
 
     void StaffRoster::stack_rows()
     {
-        float y = 0;
-        for (std::size_t i = 0; i < rows_.size(); ++i)
+        f32 y = 0;
+        for (usize i = 0; i < rows_.size(); ++i)
         {
             Row& r = rows_[i];
             const bool inspector = r.line.kind == save::model::StaffKind::ParkInspector || r.line.kind == save::model::StaffKind::Vendor;
-            const float lines = !r.expanded ? 0 : inspector ? (roster_tasks(r.line.kind).empty() ? 0 : 1) : 2;
-            const float height = style_.row_height + lines * style_.line_height + (lines > 0 ? 2 : 0);
+            const f32 lines = !r.expanded ? 0 : inspector ? (roster_tasks(r.line.kind).empty() ? 0 : 1) : 2;
+            const f32 height = style_.row_height + lines * style_.line_height + (lines > 0 ? 2 : 0);
             r.panel->placement = { { 0, 0, 1, 0 }, { 0, y, 0, y + height } };
             y += height;
         }
@@ -354,7 +355,7 @@ namespace rct3::ui::screens::management
             sort_ = static_cast<RosterSort>(*sort_box_->selected());
             relist = true;
         }
-        for (std::size_t i = 0; i < views_.size(); ++i)
+        for (usize i = 0; i < views_.size(); ++i)
         {
             if (!views_[i]->take_click())
                 continue;
@@ -362,7 +363,7 @@ namespace rct3::ui::screens::management
             views_[i]->on = (jobs_ & (1u << i)) != 0;
             relist = true;
         }
-        for (std::size_t i = 0; i < kHires; ++i)
+        for (usize i = 0; i < kHires; ++i)
         {
             if (!hires_[i]->take_click())
                 continue;
@@ -388,8 +389,8 @@ namespace rct3::ui::screens::management
         }
         for (Row& r : rows_)
         {
-            const std::size_t who = r.line.index;
-            const auto change = [&](info::PersonControl control, std::int32_t value = 0, std::int32_t bit = 0) { asks_.change = { who, info::InfoChange { .id = info::person_control(control, bit), .value = value, .pot = 0, .text = { } } }; };
+            const usize who = r.line.index;
+            const auto change = [&](info::PersonControl control, i32 value = 0, i32 bit = 0) { asks_.change = { who, info::InfoChange { .id = info::person_control(control, bit), .value = value, .pot = 0, .text = { } } }; };
             if (r.expand->take_click())
             {
                 r.expanded = !r.expanded;
@@ -431,7 +432,7 @@ namespace rct3::ui::screens::management
                 {
                     std::u16string ask = text(strings, "StaffWindow_TrainingText1");
                     const std::u16string amount = money_text(units_.currency, r.line.training_cost);
-                    if (const std::size_t at = ask.find(u"%AMOUNT%"); at != std::u16string::npos)
+                    if (const usize at = ask.find(u"%AMOUNT%"); at != std::u16string::npos)
                         ask.replace(at, 8, amount);
                     say(ask + u" " + text(strings, "StaffWindow_TrainingText2"), true);
                     training_ = who;
@@ -447,7 +448,7 @@ namespace rct3::ui::screens::management
                 }
                 else
                 {
-                    const float y = r.discipline->rect().y0 - r.panel->rect().y0;
+                    const f32 y = r.discipline->rect().y0 - r.panel->rect().y0;
                     r.choices[0] = &add_icon(*r.panel, "Warn", { }, "Staff_GiveWarningIcon", top_right(3 * kIcon + 8, y, kIcon, kIcon), text(strings, "StaffWindow_DisciplineHelp"));
                     r.choices[1] = &add_icon(*r.panel, "Sack", { }, "Staff_GiveSackIcon", top_right(2 * kIcon + 6, y, kIcon, kIcon), text(strings, "StaffWindow_SackHelp"));
                     r.choices[0]->enabled = r.line.warnings < info::kMostWarnings;
@@ -457,7 +458,7 @@ namespace rct3::ui::screens::management
                 change(info::PersonControl::Warn);
             if (r.choices[1] != nullptr && r.choices[1]->take_click())
                 change(info::PersonControl::Sack);
-            for (std::size_t pot = 0; pot < r.swatches.size(); ++pot)
+            for (usize pot = 0; pot < r.swatches.size(); ++pot)
             {
                 if (!r.swatches[pot]->take_click())
                     continue;
@@ -477,7 +478,7 @@ namespace rct3::ui::screens::management
             if (r.costume != nullptr && r.costume->take_click())
             {
                 std::vector<widgets::MenuItem> items;
-                for (std::size_t c = 0; c < kCostumes.size(); ++c)
+                for (usize c = 0; c < kCostumes.size(); ++c)
                     items.push_back({ .text = text(strings, kCostumes[c]), .checked = c == r.line.costume });
                 costumes_ = &root_of(*this).add<widgets::Menu>("Costumes", style_.menu, std::move(items));
                 costumes_->place_at({ r.costume->rect().x0, r.costume->rect().y1 });
@@ -497,7 +498,7 @@ namespace rct3::ui::screens::management
         if (costumes_ != nullptr)
         {
             if (const auto picked = costumes_->take_choice(); picked && dressing_)
-                asks_.change = { *dressing_, info::InfoChange { .id = info::person_control(info::PersonControl::Costume), .value = static_cast<std::int32_t>(*picked), .pot = 0, .text = { } } };
+                asks_.change = { *dressing_, info::InfoChange { .id = info::person_control(info::PersonControl::Costume), .value = static_cast<i32>(*picked), .pot = 0, .text = { } } };
             if (costumes_->closing())
                 costumes_ = nullptr;
         }

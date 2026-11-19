@@ -5,6 +5,8 @@
 // into an error value at the API boundary.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <format>
 #include <stdexcept>
@@ -17,7 +19,7 @@ namespace rct3::render::vulkan
     inline void check(VkResult result, const char* what)
     {
         if (result != VK_SUCCESS)
-            throw std::runtime_error(std::format("{} failed (VkResult {})", what, static_cast<std::int32_t>(result)));
+            throw std::runtime_error(std::format("{} failed (VkResult {})", what, static_cast<i32>(result)));
     }
 
     struct Barrier

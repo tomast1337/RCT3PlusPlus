@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/animated_ride.hpp"
 
+#include "core/types.hpp"
+
 namespace rct3::ovl
 {
 
@@ -12,9 +14,9 @@ namespace rct3::ovl
         struct Variant
         {
             detail::AttractionLayout layout;
-            std::size_t size;                   // bytes of the item that are read
-            std::size_t minimum;                // bytes that must be there: the spline slots are missing from some items
-            std::optional<std::size_t> splines; // offset of the four spline slots
+            usize size;                   // bytes of the item that are read
+            usize minimum;                // bytes that must be there: the spline slots are missing from some items
+            std::optional<usize> splines; // offset of the four spline slots
         };
 
         Variant variant(OvlLayout layout)
@@ -55,7 +57,7 @@ namespace rct3::ovl
                 ride.info = detail::read_attraction(*record, v.layout, layout);
                 if (v.splines)
                 {
-                    for (std::size_t i = 0; i < ride.splines.size(); ++i)
+                    for (usize i = 0; i < ride.splines.size(); ++i)
                     {
                         ride.splines[i] = record->ref(*v.splines + i * 4, "spl");
                     }
@@ -69,7 +71,7 @@ namespace rct3::ovl
                 {
                     // Version 1 items hold the block 0x30 or 0x38 bytes in: the one whose words at 0x0C and 0x10
                     // read 1 and -1.
-                    for (const std::uint32_t at : { 0x30u, 0x38u })
+                    for (const u32 at : { 0x30u, 0x38u })
                     {
                         const auto block = ItemRecord::open(space, refs, symbol.data + at, 0x20);
                         if (block && block->read_u32(0x0C) == 1 && block->read_u32(0x10) == 0xFFFFFFFFu)

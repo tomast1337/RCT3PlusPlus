@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/paths.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -90,7 +91,7 @@ TEST_CASE("the panel sits in the bottom-left corner with its controls out")
     CHECK(f.panel->covers(Fixture::middle(disc)));
     CHECK(f.panel->covers({ strip.x1 - 20, strip.y1 - 20 }));
     CHECK_FALSE(f.panel->covers({ 900, 100 }));
-    for (std::size_t i = 0; i < kFootpathControls; ++i)
+    for (usize i = 0; i < kFootpathControls; ++i)
         CHECK(f.panel->control(i).visible);
     CHECK(f.panel->tab(FootpathPage::Controls).on);
 }
@@ -100,7 +101,7 @@ TEST_CASE("a control pressed is heard once, and one that cannot be used is not")
     Fixture f;
     f.open();
     f.click(Fixture::middle(f.panel->control(1).rect()));
-    CHECK(f.panel->take_control() == std::optional<std::size_t> { 1 });
+    CHECK(f.panel->take_control() == std::optional<usize> { 1 });
     CHECK_FALSE(f.panel->take_control());
 
     std::array<bool, kFootpathControls> usable { };

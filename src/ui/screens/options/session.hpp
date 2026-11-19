@@ -13,6 +13,7 @@
 
 #include "config/game/options.hpp"
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/screens/options/dialog.hpp"
 
@@ -51,7 +52,7 @@ namespace rct3::ui::screens::options
         /// True once after the window has closed: time to save the options.
         [[nodiscard]] bool take_closed();
         [[nodiscard]] std::optional<std::string> take_language();
-        [[nodiscard]] std::optional<std::size_t> take_screen_size();
+        [[nodiscard]] std::optional<usize> take_screen_size();
         [[nodiscard]] std::optional<KeyMap> take_keys();
         /// True while the window waits for keys, which should then do nothing else.
         [[nodiscard]] bool waiting_for_keys() const;
@@ -67,7 +68,7 @@ namespace rct3::ui::screens::options
         bool open_ = false;
         bool closed_ = false;
         std::optional<std::string> language_;
-        std::optional<std::size_t> screen_size_;
+        std::optional<usize> screen_size_;
         std::optional<KeyMap> keys_;
     };
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/enclosure_fence.hpp"
 
+#include "core/types.hpp"
 #include "ovl/item_record.hpp"
 
 namespace rct3::ovl
@@ -10,15 +11,15 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kTag = "enc";
-        constexpr std::size_t kSize = 0x54; // up to and including the strength
-        constexpr std::size_t kName = 0x04;
-        constexpr std::size_t kIcon = 0x08;
-        constexpr std::size_t kPieces = 0x0C;
-        constexpr std::size_t kFenceCost = 0x30;
-        constexpr std::size_t kFenceRefund = 0x34;
-        constexpr std::size_t kGateCost = 0x38;
-        constexpr std::size_t kGateRefund = 0x3C;
-        constexpr std::size_t kStrength = 0x50;
+        constexpr usize kSize = 0x54; // up to and including the strength
+        constexpr usize kName = 0x04;
+        constexpr usize kIcon = 0x08;
+        constexpr usize kPieces = 0x0C;
+        constexpr usize kFenceCost = 0x30;
+        constexpr usize kFenceRefund = 0x34;
+        constexpr usize kGateCost = 0x38;
+        constexpr usize kGateRefund = 0x3C;
+        constexpr usize kStrength = 0x50;
 
     } // namespace
 
@@ -40,7 +41,7 @@ namespace rct3::ovl
                 EnclosureFence f;
                 f.name_text = record->ref(kName, "txt");
                 f.icon = record->ref(kIcon, "gsi");
-                for (std::size_t i = 0; i < f.pieces.size(); ++i)
+                for (usize i = 0; i < f.pieces.size(); ++i)
                     f.pieces[i] = record->text(kPieces + 4 * i);
                 f.fence_cost = record->read_i32(kFenceCost);
                 f.fence_refund = record->read_i32(kFenceRefund);

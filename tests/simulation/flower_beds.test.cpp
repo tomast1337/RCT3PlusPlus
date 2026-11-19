@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/sandbox.hpp"
@@ -13,7 +14,7 @@ using namespace rct3::simulation;
 namespace
 {
     /// A bed on the tile at `col`, `row`, holding `water` of 300.
-    entt::entity bed(Sandbox& park, std::int32_t col, std::int32_t row, float water)
+    entt::entity bed(Sandbox& park, i32 col, i32 row, f32 water)
     {
         return add_flower_bed(park.world(), rct3::save::model::PlacedObject { .id = 7, .col = col, .row = row }, 300, water);
     }

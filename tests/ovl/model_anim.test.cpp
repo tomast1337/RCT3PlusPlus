@@ -2,6 +2,7 @@
 #include "ovl/model_anim.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -16,24 +17,24 @@ namespace
 {
 
     // Name block: "A:modelanim" at 0, padded to 16. The item block follows at address 16.
-    constexpr std::uint32_t kBase = 16;
-    constexpr std::uint32_t kPositions = 48; // frames * 1 bone * 12
-    constexpr std::uint32_t kFrames = 2;
+    constexpr u32 kBase = 16;
+    constexpr u32 kPositions = 48; // frames * 1 bone * 12
+    constexpr u32 kFrames = 2;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    void real(std::vector<std::byte>& out, float v)
+    void real(std::vector<std::byte>& out, f32 v)
     {
-        append_u32(out, std::bit_cast<std::uint32_t>(v));
+        append_u32(out, std::bit_cast<u32>(v));
     }
 
     void text(std::vector<std::byte>& out, const std::string& s)
     {
-        append_u16(out, static_cast<std::uint16_t>(s.size()));
+        append_u16(out, static_cast<u16>(s.size()));
         for (char c : s)
             out.push_back(static_cast<std::byte>(c));
     }
@@ -46,17 +47,17 @@ namespace
     }
 
     // Header (48 bytes), 2 positions (24 bytes), then 2 frames * 2 bones * 16 bytes of rotations.
-    std::vector<std::byte> item(std::uint32_t position_bones = 1, std::uint32_t plain = 0, std::uint32_t frames = kFrames)
+    std::vector<std::byte> item(u32 position_bones = 1, u32 plain = 0, u32 frames = kFrames)
     {
         std::vector<std::byte> out;
         real(out, 0.5f);
         words(out, { frames, 0, 0, 0, 0, position_bones, 2, plain, 0, kBase + kPositions, kBase + kPositions + 24 });
-        for (float v : { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f })
+        for (f32 v : { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f })
             real(out, v);
-        for (std::uint32_t i = 0; i < 4; ++i)
+        for (u32 i = 0; i < 4; ++i)
         {
-            for (float v : { 0.0f, 0.0f, 0.0f, 1.0f })
-                real(out, v + float(i) * 10);
+            for (f32 v : { 0.0f, 0.0f, 0.0f, 1.0f })
+                real(out, v + f32(i) * 10);
         }
         return out;
     }
@@ -64,7 +65,7 @@ namespace
     std::vector<std::byte> chunk_of(const std::string& names_text)
     {
         std::vector<std::byte> out;
-        append_u32(out, static_cast<std::uint32_t>(names_text.size()));
+        append_u32(out, static_cast<u32>(names_text.size()));
         for (char c : names_text)
             out.push_back(static_cast<std::byte>(c));
         return out;
@@ -87,7 +88,7 @@ namespace
     std::vector<std::byte> make_file(const std::vector<std::byte>& item_bytes, const std::vector<std::byte>& chunk)
     {
         auto file = build_file(1, { { names() }, { item_bytes }, { symbol_row(), loader_row() } }, { }, chunk);
-        constexpr std::size_t kLoaderCount = 20;
+        constexpr usize kLoaderCount = 20;
         file[kLoaderCount] = std::byte { 1 };
         std::vector<std::byte> declaration;
         text(declaration, "FGDK");

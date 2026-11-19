@@ -5,6 +5,7 @@
 // show on screen. Every style, and every frame drawn in code, takes its colours from a palette (palette.hpp).
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/font/set.hpp"
 #include "ui/game_frames.hpp"
 #include "ui/palette.hpp"
@@ -597,7 +598,7 @@ namespace rct3::ui::game_skins
         s.text_colour = p.text;
         s.button = kMenuCircle;
         s.start_icon = kStartTutorialIcon;
-        for (std::size_t i = 0; i < kQuarterCircles.size(); ++i)
+        for (usize i = 0; i < kQuarterCircles.size(); ++i)
             s.quarters.at(i) = kQuarterCircles[i];
         return s;
     }
@@ -772,7 +773,7 @@ namespace rct3::ui::game_skins
     }
 
     /// From the screen's bottom edge to the bottom-left panels: over the tool row and its open menu.
-    inline constexpr float kOverToolRow = screens::park_view::tool_row::kMargin + screens::park_view::tool_row::kButtonSize + screens::park_view::tool_row::kItemGap + screens::park_view::tool_row::kItemHeight + 4;
+    inline constexpr f32 kOverToolRow = screens::park_view::tool_row::kMargin + screens::park_view::tool_row::kButtonSize + screens::park_view::tool_row::kItemGap + screens::park_view::tool_row::kItemHeight + 4;
 
     /// The area delete tool's panel, over the tool row at the left.
     [[nodiscard]] inline screens::build::DeleteAreaPanelStyle delete_area_panel_style()
@@ -839,7 +840,7 @@ namespace rct3::ui::game_skins
         s.tab_help = { "PathEditor_EditMode", "PathEditor_CameraFollow", "Rct3pp_Paths_RouteHelp", "Rct3pp_Paths_RemoveHelp", "Obj_Paths_PathHelp", "Obj_Paths_QueueHelp", "Rct3pp_Paths_StraightHelp" };
         // Each turn and slope picture has a usable and an unusable look; the remove picture has only one.
         const std::array<std::string_view, 8> bases { "AttractionEditor_IconCurveL3", "AttractionEditor_IconCurve0", "AttractionEditor_IconCurveR3", "AttractionEditor_IconSlopeD2", "AttractionEditor_IconSlopeD1", "AttractionEditor_IconSlope0", "AttractionEditor_IconSlopeU1", "AttractionEditor_IconSlopeU2" };
-        for (std::size_t i = 0; i < bases.size(); ++i)
+        for (usize i = 0; i < bases.size(); ++i)
         {
             s.usable_icons.at(i) = std::format("{}On", bases[i]);
             s.unusable_icons.at(i) = std::format("{}Dis", bases[i]);

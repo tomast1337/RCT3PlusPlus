@@ -4,6 +4,7 @@
 // readers produce, they do not touch the overlay.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/bitmap_table.hpp"
 #include "ovl/flexi_texture.hpp"
 #include "ovl/flic.hpp"
@@ -18,15 +19,15 @@ namespace rct3::ovl::texture
 {
 
     /// Largest image side the decoders accept. Shipped bitmaps are at most 2048 wide.
-    inline constexpr std::uint32_t kMaxImageSide = 4096;
+    inline constexpr u32 kMaxImageSide = 4096;
 
     /// A decoded image: `width * height` pixels in row order, top row first, 4 bytes each: red, green, blue,
     /// alpha.
     struct RgbaImage
     {
-        std::uint32_t width = 0;
-        std::uint32_t height = 0;
-        std::vector<std::uint8_t> pixels;
+        u32 width = 0;
+        u32 height = 0;
+        std::vector<u8> pixels;
     };
 
     /// One frame of a flexi texture. Each palette entry is stored as blue, green, red and an unused byte. The
@@ -38,7 +39,7 @@ namespace rct3::ovl::texture
     /// must hold at least the level's bytes. Raw pixels are stored as blue, green, red, alpha. Format 18 is
     /// the 4x4 block format with a colour pair and 1-bit alpha, 19 the one with explicit 4-bit alpha. Nothing
     /// for an unknown format, a bad size or short data.
-    [[nodiscard]] std::optional<RgbaImage> decode_pixels(std::uint32_t format, std::uint32_t width, std::uint32_t height, std::span<const std::byte> data);
+    [[nodiscard]] std::optional<RgbaImage> decode_pixels(u32 format, u32 width, u32 height, std::span<const std::byte> data);
 
     /// All mip levels of a bitmap, largest first. Empty when any level cannot be decoded.
     [[nodiscard]] std::vector<RgbaImage> decode_bitmap(const Bitmap& bitmap);
@@ -55,11 +56,11 @@ namespace rct3::ovl::texture
     /// How many times to halve an image `width` by `height` for a texture detail `detail` (0 to 1): the image
     /// keeps that share of the doublings its longest side is made of, rounded up, so 1 keeps it whole and 0.5
     /// takes 256 down to 16. Never so often that a side would go below one pixel.
-    [[nodiscard]] std::int32_t texture_halvings(float detail, std::uint32_t width, std::uint32_t height);
+    [[nodiscard]] i32 texture_halvings(f32 detail, u32 width, u32 height);
 
     /// The image halved `times` times, each pixel the average of the two by two it covers (the last row or
     /// column taken again where a side is odd), its colour weighted by alpha so clear pixels do not darken
     /// edges. The image itself for 0.
-    [[nodiscard]] RgbaImage halved(RgbaImage image, std::int32_t times);
+    [[nodiscard]] RgbaImage halved(RgbaImage image, i32 times);
 
 } // namespace rct3::ovl::texture

@@ -6,6 +6,7 @@
 // would be stretched over, its drop shadow included.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/coded_frame.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/palette.hpp"
@@ -28,7 +29,7 @@ namespace rct3::ui::game_frames
     /// The front screen's big light blue disc behind a menu icon.
     [[nodiscard]] CodedFrame menu_circle(const Palette& p);
 
-    enum class Quarter : std::uint8_t
+    enum class Quarter : u8
     {
         TopLeft,
         TopRight,
@@ -74,7 +75,7 @@ namespace rct3::ui::game_frames
     [[nodiscard]] CodedFrame front_piece(const CodedFrame& whole, const Rect& piece);
 
     /// Which way an arrow on a button points.
-    enum class Arrow : std::uint8_t
+    enum class Arrow : u8
     {
         Up,
         Down,
@@ -113,7 +114,7 @@ namespace rct3::ui::game_frames
     /// A slider's thumb, 18 units by 13: two green arrows, left and right, outlined in black.
     [[nodiscard]] CodedFrame slider_thumb(const Palette& p);
     /// The disc behind a colour in the colour picker, `size` units across.
-    [[nodiscard]] CodedFrame colour_ring(Color colour, float size);
+    [[nodiscard]] CodedFrame colour_ring(Color colour, f32 size);
     /// What the colour picker sits on, 34 units by 37: light blue in a dark blue line, round, over a drop shadow.
     [[nodiscard]] CodedFrame colour_back(const Palette& p);
 
@@ -121,7 +122,7 @@ namespace rct3::ui::game_frames
     /// round. The middle piece, `width` by `height` units, has a half disc notch of radius `notch` up from its
     /// bottom edge.
     [[nodiscard]] CodedFrame park_bar_left(const Palette& p);
-    [[nodiscard]] CodedFrame park_bar_middle(const Palette& p, float width, float height, float notch);
+    [[nodiscard]] CodedFrame park_bar_middle(const Palette& p, f32 width, f32 height, f32 notch);
     [[nodiscard]] CodedFrame park_bar_right(const Palette& p);
 
     /// The white half disc behind a menu button, its flat side to the right where the label's band starts.

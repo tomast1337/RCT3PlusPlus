@@ -6,6 +6,7 @@
 #pragma once
 
 #include "config/game/install.hpp"
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "render/types.hpp"
 
@@ -38,10 +39,10 @@ namespace rct3::scene::park
     {
         glm::mat4 view_projection { 1.0f };
         glm::vec3 eye { 0.0f };
-        float amount = 0;  ///< 0 none to 1 a downpour
-        float wind = 0;    ///< 0 calm to 1 strong, leaning the streaks
-        float seconds = 0; ///< Real time, for the fall
-        float light = 1;   ///< How lit the air is, 0 dark to 1 full day
+        f32 amount = 0;  ///< 0 none to 1 a downpour
+        f32 wind = 0;    ///< 0 calm to 1 strong, leaning the streaks
+        f32 seconds = 0; ///< Real time, for the fall
+        f32 light = 1;   ///< How lit the air is, 0 dark to 1 full day
     };
 
     /// Loads the rain texture from the install. Without it, nothing is drawn.

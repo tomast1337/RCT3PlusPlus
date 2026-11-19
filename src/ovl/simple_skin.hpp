@@ -5,6 +5,7 @@
 // given in that bone's own space. A triangle may join corners of two parts, which stretches it as they move.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -18,20 +19,20 @@ namespace rct3::ovl
 
     struct SimpleSkinVertex
     {
-        std::array<float, 3> position { };
-        std::array<float, 3> normal { }; ///< Unit length in files seen
-        std::array<float, 2> uv { };
+        std::array<f32, 3> position { };
+        std::array<f32, 3> normal { }; ///< Unit length in files seen
+        std::array<f32, 2> uv { };
     };
 
     struct SimpleSkin
     {
         /// One number per part, the same in every skin of a head. They name the part's bone but are not
         /// needed to find it: parts follow the skeleton's bone order.
-        std::vector<std::uint32_t> part_ids;
+        std::vector<u32> part_ids;
         /// Vertices of each part. The sum is the vertex count in every item seen.
-        std::vector<std::uint32_t> part_vertex_counts;
+        std::vector<u32> part_vertex_counts;
         std::vector<SimpleSkinVertex> vertices;
-        std::vector<std::uint16_t> indices; ///< Three per triangle
+        std::vector<u16> indices; ///< Three per triangle
     };
 
     struct SimpleSkinItem

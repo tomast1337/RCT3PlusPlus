@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "audio/menu_music.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
@@ -16,32 +18,32 @@ namespace rct3::audio
             return std::ranges::equal(a, b, [](char x, char y) { return std::tolower(static_cast<unsigned char>(x)) == std::tolower(static_cast<unsigned char>(y)); });
         }
 
-        std::optional<std::size_t> find(std::string_view track, std::span<const std::string> files)
+        std::optional<usize> find(std::string_view track, std::span<const std::string> files)
         {
             const auto it = std::ranges::find_if(files, [&](const std::string& f) { return same_name(f, track); });
             if (it == files.end())
                 return std::nullopt;
-            return static_cast<std::size_t>(it - files.begin());
+            return static_cast<usize>(it - files.begin());
         }
 
-        std::string_view track_at(std::int32_t place, bool halloween)
+        std::string_view track_at(i32 place, bool halloween)
         {
             if (halloween)
-                return kHalloweenMenuTracks.at(static_cast<std::size_t>(place % 2));
-            if (place < static_cast<std::int32_t>(kMenuTracks.size()))
-                return kMenuTracks.at(static_cast<std::size_t>(place));
+                return kHalloweenMenuTracks.at(static_cast<usize>(place % 2));
+            if (place < static_cast<i32>(kMenuTracks.size()))
+                return kMenuTracks.at(static_cast<usize>(place));
             return kQuietMenuTrack;
         }
 
     } // namespace
 
-    MenuMusicPick pick_menu_music(std::optional<std::int32_t> place, bool halloween, std::span<const std::string> files)
+    MenuMusicPick pick_menu_music(std::optional<i32> place, bool halloween, std::span<const std::string> files)
     {
         if (!place || *place < 0)
             return { kQuietMenuTrack, find(kQuietMenuTrack, files), std::nullopt };
-        const std::int32_t count = static_cast<std::int32_t>(kMenuTracks.size());
-        std::int32_t at = *place;
-        for (std::int32_t tries = 0; tries < kMenuTrackTries; ++tries)
+        const i32 count = static_cast<i32>(kMenuTracks.size());
+        i32 at = *place;
+        for (i32 tries = 0; tries < kMenuTrackTries; ++tries)
         {
             const std::string_view track = track_at(at, halloween);
             at = (at + 1) % count;
@@ -71,7 +73,7 @@ namespace rct3::audio
         return menu;
     }
 
-    float park_music_level(float height, ParkView view)
+    f32 park_music_level(f32 height, ParkView view)
     {
         if (view == ParkView::Riding)
             return 0;

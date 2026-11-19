@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "parkfile/saved_park.hpp"
 
+#include "core/types.hpp"
 #include "parkfile/binary.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/parties.hpp"
@@ -55,7 +56,7 @@ TEST_CASE("a saved park reads back as written")
     REQUIRE_MESSAGE(read, (read ? "" : read.error()));
     CHECK(read->base.size() == 3);
     CHECK(read->summary.park_name == "Example Park");
-    CHECK(read->summary.preview == std::vector<std::uint8_t> { 9, 8, 7, 6 });
+    CHECK(read->summary.preview == std::vector<u8> { 9, 8, 7, 6 });
     CHECK(read->grid.width == 2);
     CHECK(read->grid.cells.size() == 2);
     CHECK(read->paths.at(0).col == 5);
@@ -63,7 +64,7 @@ TEST_CASE("a saved park reads back as written")
     CHECK(read->objects.at(0).symbol == "bench");
     CHECK(read->objects.at(0).base_height == 3);
     CHECK(read->objects.at(0).height_adjust == 0.5f);
-    CHECK(read->objects.at(0).colours == std::array<std::int32_t, 3> { 1, 2, 3 });
+    CHECK(read->objects.at(0).colours == std::array<i32, 3> { 1, 2, 3 });
     CHECK(read->rides.stalls.size() == 1);
     CHECK(read->progress.cash == units::Money { 123456 });
     CHECK(read->progress.date.year == 2);
@@ -92,7 +93,7 @@ TEST_CASE("a saved park reads back as written")
     REQUIRE(shown->shows->size() == 1);
     CHECK(shown->shows->front().tricks.at(1).name == "PonyShowHop");
     CHECK(shown->shows->front().tricks.at(1).invented);
-    CHECK(shown->shows->front().order == std::vector<std::uint32_t> { 1, 1 });
+    CHECK(shown->shows->front().order == std::vector<u32> { 1, 1 });
     CHECK_FALSE(shown->goals); // None kept: they start again from the original park
 
     hidden.goals.emplace();
@@ -115,10 +116,10 @@ TEST_CASE("a saved park reads back as written")
     CHECK(research->research->boost == units::Money { 50000 });
     CHECK(research->research->current == 12);
     CHECK(research->research->previous == 9);
-    CHECK(research->research->priorities == std::vector<float> { 0.5f, 1.0f });
+    CHECK(research->research->priorities == std::vector<f32> { 0.5f, 1.0f });
     CHECK(research->research->since_part == doctest::Approx(3.5f));
-    CHECK(research->research->invented == std::vector<std::uint64_t> { 9 });
-    CHECK(research->research->invented_at == std::vector<float> { 1234.5f });
+    CHECK(research->research->invented == std::vector<u64> { 9 });
+    CHECK(research->research->invented_at == std::vector<f32> { 1234.5f });
     CHECK(research->research->focus == 12);
     REQUIRE(research->research->set_aside.size() == 1);
     CHECK(research->research->set_aside[0].spent == units::Money { 400 });
@@ -126,7 +127,7 @@ TEST_CASE("a saved park reads back as written")
     hidden.broken_items = { 42, 43 };
     const auto broken = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
     REQUIRE(broken);
-    CHECK(broken->broken_items == std::vector<std::uint64_t> { 42, 43 });
+    CHECK(broken->broken_items == std::vector<u64> { 42, 43 });
     CHECK_FALSE(broken->waterfalls); // None kept: read again from the original park
 
     hidden.waterfalls.emplace(); // All the park's waterfalls deleted
@@ -207,18 +208,18 @@ TEST_CASE("a cut or changed saved park is refused")
 
 TEST_CASE("a unit is laid out as its bare number, so parks saved before it was wrapped still load")
 {
-    CHECK(parkfile::detail::layout_hash<units::Share>() == parkfile::detail::layout_hash<float>());
-    CHECK(parkfile::detail::layout_hash<units::Money>() == parkfile::detail::layout_hash<std::int64_t>());
-    CHECK(parkfile::detail::layout_hash<std::optional<units::Seconds>>() == parkfile::detail::layout_hash<std::optional<float>>());
+    CHECK(parkfile::detail::layout_hash<units::Share>() == parkfile::detail::layout_hash<f32>());
+    CHECK(parkfile::detail::layout_hash<units::Money>() == parkfile::detail::layout_hash<i64>());
+    CHECK(parkfile::detail::layout_hash<std::optional<units::Seconds>>() == parkfile::detail::layout_hash<std::optional<f32>>());
 }
 
 namespace
 {
     struct Kept
     {
-        std::optional<std::int32_t> place { };
+        std::optional<i32> place { };
         std::optional<units::Seconds> since { };
-        std::optional<std::int32_t> flagged { };
+        std::optional<i32> flagged { };
     };
 } // namespace
 
@@ -228,9 +229,9 @@ TEST_CASE("a member named to be kept as -1 for none is kept as the plain number,
 {
     struct Plain
     {
-        std::int32_t place = -1;
-        float since = -1;
-        std::optional<std::int32_t> flagged { };
+        i32 place = -1;
+        f32 since = -1;
+        std::optional<i32> flagged { };
     };
     CHECK(parkfile::detail::layout_hash<Kept>() == parkfile::detail::layout_hash<Plain>());
     const auto round_trip = [](const Kept& kept) {
@@ -238,8 +239,8 @@ TEST_CASE("a member named to be kept as -1 for none is kept as the plain number,
         parkfile::detail::put(w, kept);
         const auto bytes = w.take();
         parkfile::detail::Reader r(bytes);
-        const auto plain = std::pair { r.number<std::int32_t>(), r.number<float>() };
-        CHECK(r.number<std::uint8_t>() == (kept.flagged ? 1 : 0));
+        const auto plain = std::pair { r.number<i32>(), r.number<f32>() };
+        CHECK(r.number<u8>() == (kept.flagged ? 1 : 0));
         parkfile::detail::Reader again(bytes);
         Kept read { .place = 99, .since = units::Seconds { 99 }, .flagged = 99 };
         parkfile::detail::get(again, read);
@@ -262,9 +263,9 @@ TEST_CASE("a member named to be kept as -1 for none is kept as the plain number,
 
     // None of these can be below zero, so any such number in a file reads as none.
     parkfile::detail::Writer w;
-    w.number(std::int32_t { -5 });
+    w.number(i32 { -5 });
     w.number(-0.5f);
-    w.number(std::uint8_t { 0 });
+    w.number(u8 { 0 });
     const auto bytes = w.take();
     parkfile::detail::Reader r(bytes);
     Kept odd { .place = 1, .since = units::Seconds { 1 } };
@@ -276,7 +277,7 @@ TEST_CASE("a member named to be kept as -1 for none is kept as the plain number,
 TEST_CASE("a save keeps the park's objects and those the player built, platforms too, not those loading makes")
 {
     std::vector<save::model::PlacedObject> objects(11);
-    for (std::size_t i = 0; i < objects.size(); ++i)
+    for (usize i = 0; i < objects.size(); ++i)
         objects[i].id = 10 + i;
     // 10 and 11 are the park's; 12 a support made on loading; 13 a path's deck; 14 a track piece; 15 a flat
     // ride and 16 its entrance; 17 a tree the player planted; 18 a stall; 19 one grown beyond the edge; 20 the
@@ -382,7 +383,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     auto& l = loaded.registry;
     const auto guests = parkfile::place_guests(loaded, people);
     REQUIRE(guests.size() == 2);
-    const std::size_t first = people.guests[0].look == 1 ? 0 : 1; // Ann's place
+    const usize first = people.guests[0].look == 1 ? 0 : 1; // Ann's place
     const entt::entity ann2 = guests[first];
     const entt::entity bob2 = guests[1 - first];
     CHECK(l.get<Visitor>(ann2).name == "Ann");
@@ -427,7 +428,7 @@ TEST_CASE("a save keeps its swimmers in the pool of their changing room")
     using namespace simulation;
     SimWorld world;
     auto& r = world.registry;
-    const auto room_at = [](entt::registry& in, std::int32_t col) {
+    const auto room_at = [](entt::registry& in, i32 col) {
         const entt::entity room = in.create();
         in.emplace<PoolDoor>(room, PoolDoor { .col = col, .row = 3 });
         return room;
@@ -494,7 +495,7 @@ TEST_CASE("a loaded swimmer heads for no slide, the one they were saved heading 
     SimWorld loaded;
     auto& l = loaded.registry;
     // The saved slide's number now names something else.
-    for (std::int32_t i = 0; i < 3; ++i)
+    for (i32 i = 0; i < 3; ++i)
         static_cast<void>(l.create());
     const entt::entity room2 = l.create();
     l.emplace<PoolDoor>(room2, PoolDoor { .col = 2, .row = 3 });
@@ -531,7 +532,7 @@ TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animal
     const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
     REQUIRE_MESSAGE(read, (read ? "" : read.error()));
     REQUIRE(read->animals);
-    CHECK(std::ranges::equal(read->animals->enclosures.tiles, std::vector<std::optional<std::int32_t>> { 0, std::nullopt }));
+    CHECK(std::ranges::equal(read->animals->enclosures.tiles, std::vector<std::optional<i32>> { 0, std::nullopt }));
     CHECK(read->animals->enclosures.fences == std::vector<std::string> { "Wood" });
 
     SimWorld loaded;

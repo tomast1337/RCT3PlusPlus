@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park/messages.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <string_view>
 #include <utility>
@@ -48,7 +50,7 @@ namespace rct3::simulation::park
             messages.list.pop_front();
     }
 
-    void age(ParkMessages& messages, float game_seconds)
+    void age(ParkMessages& messages, f32 game_seconds)
     {
         for (ParkMessage& m : messages.list)
             m.age.value += game_seconds;

@@ -8,6 +8,7 @@
 // it covers every window and never takes the pointer itself.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widget.hpp"
 
 #include <string>
@@ -22,9 +23,9 @@ namespace rct3::ui
         font::FontRole font = font::FontRole::Small;
         Color colour = hex("#000000");
         units::Seconds delay { 0.5f }; ///< The pointer rests this long before the tooltip shows
-        float still_distance = 0.1f;   ///< Movement up to this many units still counts as resting
+        f32 still_distance = 0.1f;     ///< Movement up to this many units still counts as resting
         Rect padding { 4, 4, 4, 4 };   ///< Between the box edges and the text
-        float max_width = 240;         ///< Text wider than this wraps
+        f32 max_width = 240;           ///< Text wider than this wraps
         Point offset { 0, 20 };        ///< From the pointer to the box's top-left corner
     };
 

@@ -13,6 +13,7 @@
 // through take_clicked().
 #pragma once
 
+#include "core/types.hpp"
 #include "simulation/park/messages.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
@@ -48,7 +49,7 @@ namespace rct3::ui::screens::park_view
     /// One message as the drawer shows it.
     struct DrawerMessage
     {
-        std::uint64_t serial = 0; ///< Grows with each new message; see simulation::park::ParkMessage
+        u64 serial = 0; ///< Grows with each new message; see simulation::park::ParkMessage
         std::u16string text { };
         std::string icon { };   ///< Skin before the text
         std::string mood { };   ///< A thought's face between the icon and the text, for a message telling a thought
@@ -57,11 +58,11 @@ namespace rct3::ui::screens::park_view
 
     namespace message_drawer
     {
-        inline constexpr float kWidth = 480;
-        inline constexpr float kLeft = -258;                   ///< From the middle of the screen to the drawer's left edge
-        inline constexpr float kTop = 4;                       ///< From the top of the screen; the top never moves
-        inline constexpr float kClosed = 22;                   ///< Height when closed, all of it behind the bar
-        inline constexpr float kOpen = 360;                    ///< Height when fully open
+        inline constexpr f32 kWidth = 480;
+        inline constexpr f32 kLeft = -258;                     ///< From the middle of the screen to the drawer's left edge
+        inline constexpr f32 kTop = 4;                         ///< From the top of the screen; the top never moves
+        inline constexpr f32 kClosed = 22;                     ///< Height when closed, all of it behind the bar
+        inline constexpr f32 kOpen = 360;                      ///< Height when fully open
         inline constexpr units::PixelPace kSlideSpeed { 200 }; ///< It slides by itself
         inline constexpr units::Seconds kHold { 8 };           ///< It stays down this long to show new messages
     } // namespace message_drawer
@@ -87,7 +88,7 @@ namespace rct3::ui::screens::park_view
         /// first call takes all it is given as already seen.
         void show(std::span<const DrawerMessage> messages);
         /// The serial of the message whose icon was clicked, once.
-        [[nodiscard]] std::optional<std::uint64_t> take_clicked()
+        [[nodiscard]] std::optional<u64> take_clicked()
         {
             return std::exchange(clicked_, std::nullopt);
         }
@@ -101,12 +102,12 @@ namespace rct3::ui::screens::park_view
         {
             return style_;
         }
-        [[nodiscard]] float height() const
+        [[nodiscard]] f32 height() const
         {
             return height_;
         }
         /// How many of the newest messages are skipped, scrolled past by the arrows.
-        [[nodiscard]] std::size_t skipped() const
+        [[nodiscard]] usize skipped() const
         {
             return skipped_;
         }
@@ -136,7 +137,7 @@ namespace rct3::ui::screens::park_view
         void draw(DrawContext& context) const override;
 
     private:
-        enum class Slide : std::uint8_t
+        enum class Slide : u8
         {
             Resting,
             Opening, ///< Down to show the new messages
@@ -144,29 +145,29 @@ namespace rct3::ui::screens::park_view
             Closing, ///< Back up to where it rests
         };
 
-        void set_height(float height);
+        void set_height(f32 height);
         /// From the drawer's bottom, the top of the `count` newest rows after those skipped.
-        [[nodiscard]] float rows_top(std::size_t count) const;
+        [[nodiscard]] f32 rows_top(usize count) const;
         void step(std::ptrdiff_t older);
         /// The serial of the message whose clickable icon is at `p`, if any.
-        [[nodiscard]] std::optional<std::uint64_t> icon_at(Point p) const;
+        [[nodiscard]] std::optional<u64> icon_at(Point p) const;
         void draw_inside(DrawContext& context, const Rect& r) const;
 
         MessageDrawerStyle style_;
         std::vector<DrawerMessage> messages_; ///< Newest first
-        std::vector<float> row_heights_;      ///< Of each message, newest first, as of the last update
-        std::uint64_t seen_ = 0;
+        std::vector<f32> row_heights_;        ///< Of each message, newest first, as of the last update
+        u64 seen_ = 0;
         bool shown_ = false;
         bool alert_ = false;
-        std::optional<std::uint64_t> clicked_;
-        float height_ = message_drawer::kClosed;
-        float rest_ = message_drawer::kClosed; ///< Where it goes back to by itself
+        std::optional<u64> clicked_;
+        f32 height_ = message_drawer::kClosed;
+        f32 rest_ = message_drawer::kClosed; ///< Where it goes back to by itself
         Slide slide_ = Slide::Resting;
-        std::size_t unseen_ = 0; ///< New messages to slide down for
+        usize unseen_ = 0; ///< New messages to slide down for
         units::Seconds held_;
-        std::size_t skipped_ = 0;
+        usize skipped_ = 0;
         bool dragging_ = false;
-        float drag_from_ = 0;                       ///< Pointer height minus drawer height at the press
+        f32 drag_from_ = 0;                         ///< Pointer height minus drawer height at the press
         std::optional<units::Seconds> since_press_; ///< Since the first press of a pair
         widgets::Button* older_ = nullptr;
         widgets::Button* newer_ = nullptr;

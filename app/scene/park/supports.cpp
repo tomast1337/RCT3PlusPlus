@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/supports.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/support/columns.hpp"
 #include "profiling/profiler.hpp"
@@ -49,9 +50,9 @@ namespace rct3::scene::park
             return out;
         }
 
-        std::vector<std::array<float, 4>> ground(const save::model::TerrainGrid& grid)
+        std::vector<std::array<f32, 4>> ground(const save::model::TerrainGrid& grid)
         {
-            std::vector<std::array<float, 4>> out;
+            std::vector<std::array<f32, 4>> out;
             out.reserve(grid.cells.size());
             for (const save::model::TerrainCell& c : grid.cells)
                 out.push_back(c.corners);
@@ -88,7 +89,7 @@ namespace rct3::scene::park
 
         // The tiles where anything that holds up columns or is in their way changed.
         std::set<save::model::Tile> tiles;
-        std::unordered_map<std::uint64_t, SupportWatch::Seen> now;
+        std::unordered_map<u64, SupportWatch::Seen> now;
         for (const save::model::PlacedObject& o : scene.objects)
         {
             if (o.overlay == rct3::park::support::kSupportOverlay)
@@ -111,11 +112,11 @@ namespace rct3::scene::park
         std::vector<save::model::Tile> paths = ground_paths(scene);
         std::ranges::set_symmetric_difference(paths, w.ground_paths, std::inserter(tiles, tiles.end()));
         w.ground_paths = std::move(paths);
-        std::vector<std::array<float, 4>> corners = ground(scene.grid);
-        for (std::size_t i = 0; i < corners.size(); ++i)
+        std::vector<std::array<f32, 4>> corners = ground(scene.grid);
+        for (usize i = 0; i < corners.size(); ++i)
         {
             if (i >= w.ground.size() || corners[i] != w.ground[i])
-                tiles.emplace(static_cast<std::int32_t>(i % static_cast<std::size_t>(scene.grid.width)), static_cast<std::int32_t>(i / static_cast<std::size_t>(scene.grid.width)));
+                tiles.emplace(static_cast<i32>(i % static_cast<usize>(scene.grid.width)), static_cast<i32>(i / static_cast<usize>(scene.grid.width)));
         }
         w.ground = std::move(corners);
         const rct3::park::support::SupportSets* sets = support_sets(scene, assets);
@@ -128,8 +129,8 @@ namespace rct3::scene::park
         profiling::section("Wait", [&] { wait_for_build(scene); });
         started += std::chrono::steady_clock::now() - waited;
         // The old pieces go. Their places in the objects are kept for new ones, so no other object moves.
-        std::vector<std::size_t> spare;
-        for (std::size_t i = 0; i < scene.objects.size(); ++i)
+        std::vector<usize> spare;
+        for (usize i = 0; i < scene.objects.size(); ++i)
         {
             save::model::PlacedObject& o = scene.objects[i];
             if (o.overlay != rct3::park::support::kSupportOverlay)
@@ -143,12 +144,12 @@ namespace rct3::scene::park
             if (o.hidden && !scene.columns.contains(o.id))
                 spare.push_back(i);
         }
-        std::uint64_t last = 0;
+        u64 last = 0;
         for (const save::model::PlacedObject& o : scene.objects)
             last = std::max(last, o.id);
         place_objects(scene); // Their models, kept
         rct3::park::support::BuiltSupports built = profiling::section("Columns", [&] { return rct3::park::support::support_columns(scene.objects, scene.models, scene.footpaths.paths, scene.grid, *sets, last, supports_passed(scene), tiles, scene.places.models); });
-        for (std::size_t i = 0; i < built.pieces.size(); ++i)
+        for (usize i = 0; i < built.pieces.size(); ++i)
         {
             save::model::PlacedObject& piece = built.pieces[i];
             if (!load_object_model(scene, scene.footpaths.models, assets, piece))
@@ -188,11 +189,11 @@ namespace rct3::scene::park
     std::vector<save::model::PlacedObject> supports_under(const ParkScene& scene, std::span<const save::model::PlacedObject> ghosts, const rct3::park::support::SupportSets& sets)
     {
         std::vector<save::model::PlacedObject> objects = scene.objects;
-        std::uint64_t last = 0;
+        u64 last = 0;
         for (const save::model::PlacedObject& o : objects)
             last = std::max(last, o.id);
         std::set<save::model::Tile> tiles;
-        std::unordered_set<std::uint64_t> ids;
+        std::unordered_set<u64> ids;
         for (const save::model::PlacedObject& ghost : ghosts)
         {
             save::model::PlacedObject& o = objects.emplace_back(ghost);
@@ -203,7 +204,7 @@ namespace rct3::scene::park
         }
         rct3::park::support::BuiltSupports built = rct3::park::support::support_columns(objects, scene.models, scene.footpaths.paths, scene.grid, sets, last, supports_passed(scene), tiles);
         std::vector<save::model::PlacedObject> out;
-        for (std::size_t i = 0; i < built.pieces.size(); ++i)
+        for (usize i = 0; i < built.pieces.size(); ++i)
         {
             if (ids.contains(built.of[i].held))
                 out.push_back(std::move(built.pieces[i]));
@@ -211,9 +212,9 @@ namespace rct3::scene::park
         return out;
     }
 
-    std::unordered_set<std::uint64_t> supports_passed(const ParkScene& scene)
+    std::unordered_set<u64> supports_passed(const ParkScene& scene)
     {
-        std::unordered_set<std::uint64_t> platforms;
+        std::unordered_set<u64> platforms;
         for (const save::model::Ride& ride : scene.rides.rides)
         {
             for (const save::model::TrackPiece& piece : ride.track ? ride.track->pieces : std::vector<save::model::TrackPiece> { })
@@ -229,7 +230,7 @@ namespace rct3::scene::park
             if (p.queue)
                 railings.emplace(p.queue->fence_symbol, p.queue->fence_overlay);
         }
-        std::unordered_set<std::uint64_t> out(scene.footpaths.paving_decks.begin(), scene.footpaths.paving_decks.end());
+        std::unordered_set<u64> out(scene.footpaths.paving_decks.begin(), scene.footpaths.paving_decks.end());
         // A ride's fence stands on its floor's rim: it holds up nothing and is not in the way of the ride's columns.
         for (const auto& [_, pieces] : scene.ride_fence_pieces)
             out.insert(pieces.begin(), pieces.end());

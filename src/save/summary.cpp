@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/summary.hpp"
 
+#include "core/types.hpp"
 #include "save/value.hpp"
 
 #include <limits>
@@ -18,40 +19,40 @@ namespace rct3::save
         constexpr std::string_view kCurrentClass = "GUI2_CurrentDatDesc";
         constexpr std::string_view kCurrent = "CurrDatDesc";
 
-        std::optional<std::uint32_t> class_index(const SaveFile& file, std::string_view name)
+        std::optional<u32> class_index(const SaveFile& file, std::string_view name)
         {
-            for (std::size_t i = 0; i < file.classes.size(); ++i)
+            for (usize i = 0; i < file.classes.size(); ++i)
             {
                 if (file.classes[i].name == name)
-                    return static_cast<std::uint32_t>(i);
+                    return static_cast<u32>(i);
             }
             return std::nullopt;
         }
 
-        std::int32_t integer(const DecodedObject& o, std::string_view name)
+        i32 integer(const DecodedObject& o, std::string_view name)
         {
             std::optional<const Value&> v = o.find(name);
             if (!v || v->kind() != ValueKind::Integer)
                 return 0;
-            const std::int64_t n = v->as_integer();
-            if (n < std::numeric_limits<std::int32_t>::min() || n > std::numeric_limits<std::int32_t>::max())
+            const i64 n = v->as_integer();
+            if (n < std::numeric_limits<i32>::min() || n > std::numeric_limits<i32>::max())
                 return 0;
-            return static_cast<std::int32_t>(n);
+            return static_cast<i32>(n);
         }
 
-        std::uint8_t channel(const Value& pixel, std::string_view name)
+        u8 channel(const Value& pixel, std::string_view name)
         {
             std::optional<const Value&> v = pixel.field(name);
-            return v && v->kind() == ValueKind::Integer ? static_cast<std::uint8_t>(v->as_integer()) : 0;
+            return v && v->kind() == ValueKind::Integer ? static_cast<u8>(v->as_integer()) : 0;
         }
 
-        std::vector<std::uint8_t> preview(const DecodedObject& o)
+        std::vector<u8> preview(const DecodedObject& o)
         {
             std::optional<const Value&> v = o.find("DatPreview");
-            constexpr std::size_t kPixels = std::size_t { kPreviewWidth } * kPreviewHeight;
+            constexpr usize kPixels = usize { kPreviewWidth } * kPreviewHeight;
             if (!v || v->kind() != ValueKind::List || v->items().size() != kPixels)
                 return { };
-            std::vector<std::uint8_t> rgba;
+            std::vector<u8> rgba;
             rgba.reserve(kPixels * 4);
             for (const Value& pixel : v->items())
             {
@@ -95,7 +96,7 @@ namespace rct3::save
         }
 
         /// The summary the file names as its own.
-        std::optional<DecodedObject> named_summary(const SaveFile& file, std::uint32_t summary_class)
+        std::optional<DecodedObject> named_summary(const SaveFile& file, u32 summary_class)
         {
             const auto current_class = class_index(file, kCurrentClass);
             if (!current_class)

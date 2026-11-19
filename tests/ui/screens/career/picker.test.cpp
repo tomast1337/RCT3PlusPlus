@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/career/picker.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -31,7 +32,7 @@ namespace
             desktop.update({ });
         }
 
-        void tick(float seconds = 0)
+        void tick(f32 seconds = 0)
         {
             desktop.update({ }, { }, { units::Seconds { seconds }, nullptr });
         }
@@ -46,14 +47,14 @@ namespace
         }
     };
 
-    CareerRow row(std::u16string name, std::size_t a, std::size_t e, std::size_t t, std::size_t n)
+    CareerRow row(std::u16string name, usize a, usize e, usize t, usize n)
     {
         CareerRow r;
         r.name = std::move(name);
         r.score.completed = a + e + t;
         r.score.entrepreneur = e + t;
         r.score.tycoon = t;
-        r.score.percent = static_cast<float>(a + 2 * e + 3 * t) * 100 / static_cast<float>(3 * n);
+        r.score.percent = static_cast<f32>(a + 2 * e + 3 * t) * 100 / static_cast<f32>(3 * n);
         return r;
     }
 } // namespace

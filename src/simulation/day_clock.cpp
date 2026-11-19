@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/day_clock.hpp"
 
+#include "core/types.hpp"
 #include "save/model/park.hpp"
 
 #include <algorithm>
@@ -14,30 +15,30 @@ namespace rct3::simulation
     {
 
         /// The same time of day, brought into 0..1.
-        float wrapped(float t)
+        f32 wrapped(f32 t)
         {
             return t - std::floor(t);
         }
 
         /// How long the window lasts, as a fraction of a day; 0 for the whole day.
-        float length(DayWindow window)
+        f32 length(DayWindow window)
         {
             return wrapped(window.close - window.open);
         }
 
     } // namespace
 
-    DayWindow opening_hours(std::int32_t opening_minutes, std::int32_t closing_minutes)
+    DayWindow opening_hours(i32 opening_minutes, i32 closing_minutes)
     {
-        const auto fraction = [](std::int32_t minutes) { return wrapped(static_cast<float>(minutes) / static_cast<float>(save::model::kMinutesPerDay)); };
+        const auto fraction = [](i32 minutes) { return wrapped(static_cast<f32>(minutes) / static_cast<f32>(save::model::kMinutesPerDay)); };
         return { fraction(opening_minutes), fraction(closing_minutes) };
     }
 
-    DayMode day_mode(std::optional<std::int32_t> stored)
+    DayMode day_mode(std::optional<i32> stored)
     {
-        if (stored == static_cast<std::int32_t>(DayMode::AlwaysDay))
+        if (stored == static_cast<i32>(DayMode::AlwaysDay))
             return DayMode::AlwaysDay;
-        if (stored == static_cast<std::int32_t>(DayMode::AlwaysNight))
+        if (stored == static_cast<i32>(DayMode::AlwaysNight))
             return DayMode::AlwaysNight;
         return DayMode::ParkHours;
     }
@@ -56,18 +57,18 @@ namespace rct3::simulation
         return park_hours;
     }
 
-    DayTransition day_transition(std::int32_t option)
+    DayTransition day_transition(i32 option)
     {
-        return static_cast<DayTransition>(std::clamp(option, static_cast<std::int32_t>(DayTransition::Instant), static_cast<std::int32_t>(DayTransition::Cycle)));
+        return static_cast<DayTransition>(std::clamp(option, static_cast<i32>(DayTransition::Instant), static_cast<i32>(DayTransition::Cycle)));
     }
 
-    bool in_window(DayWindow window, float time)
+    bool in_window(DayWindow window, f32 time)
     {
-        const float span = length(window);
+        const f32 span = length(window);
         return span <= 0 || wrapped(time - window.open) < span;
     }
 
-    DayClock start_day(std::optional<float> time, DayWindow window, DayTransition transition)
+    DayClock start_day(std::optional<f32> time, DayWindow window, DayTransition transition)
     {
         DayClock clock;
         clock.window = window;
@@ -97,18 +98,18 @@ namespace rct3::simulation
         }
     }
 
-    void advance(DayClock& clock, float seconds)
+    void advance(DayClock& clock, f32 seconds)
     {
         if (!(seconds > 0))
             return;
-        const float step = seconds / kSecondsPerHour / kHoursPerDay;
-        const float span = length(clock.window);
+        const f32 step = seconds / kSecondsPerHour / kHoursPerDay;
+        const f32 span = length(clock.window);
         bool restarted = false;
         if (span <= 0)
             clock.time = wrapped(clock.time + step);
         else
         {
-            float into = wrapped(clock.time - clock.window.open) + step;
+            f32 into = wrapped(clock.time - clock.window.open) + step;
             if (into >= span)
             {
                 restarted = true;
@@ -134,8 +135,8 @@ namespace rct3::simulation
             case DayTransition::Cycle:
             {
                 // Always forwards, so the catch-up runs on through the night to the morning.
-                const float reach = step + seconds * kCatchUpHoursPerSecond / kHoursPerDay;
-                const float behind = wrapped(clock.time - clock.shown);
+                const f32 reach = step + seconds * kCatchUpHoursPerSecond / kHoursPerDay;
+                const f32 behind = wrapped(clock.time - clock.shown);
                 clock.shown = behind <= reach ? clock.time : wrapped(clock.shown + reach);
                 break;
             }

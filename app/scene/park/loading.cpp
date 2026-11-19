@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/loading.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "strings/unicode.hpp"
 #include "ui/image_set.hpp"
@@ -81,11 +82,11 @@ namespace rct3::scene::park
         ui::destroy_textures(device, *uploaded); // Left over only where the name was taken already
     }
 
-    void draw_park_loading(render::Device& device, ui::InterfaceAssets& assets, ui::DrawList& list, ParkLoadStage stage, std::uint64_t log_from)
+    void draw_park_loading(render::Device& device, ui::InterfaceAssets& assets, ui::DrawList& list, ParkLoadStage stage, u64 log_from)
     {
         namespace loading = ui::screens::loading_screen;
         const render::Extent extent = device.extent();
-        const ui::Rect screen { 0, 0, static_cast<float>(extent.width), static_cast<float>(extent.height) };
+        const ui::Rect screen { 0, 0, static_cast<f32>(extent.width), static_cast<f32>(extent.height) };
         list.clear();
         // In pixels: the column is sized from the window, and text keeps its font's size, as in the game's menus.
         list.set_scale(1);
@@ -99,15 +100,15 @@ namespace rct3::scene::park
             look.logo = loading::Picture { ui::texture_id(logo->second.handle), logo->second.width, logo->second.height };
 
         std::array<loading::Stage, kParkLoadStages> stages;
-        for (std::size_t i = 0; i < kStages.size(); ++i)
+        for (usize i = 0; i < kStages.size(); ++i)
         {
-            const auto at = static_cast<std::size_t>(stage);
+            const auto at = static_cast<usize>(stage);
             stages[i] = { assets.strings->get(park_load_text(kStages[i])), i < at ? loading::StageState::Done : i == at ? loading::StageState::Current : loading::StageState::Waiting };
         }
 
         // The park's last word, and how many warnings loading has given.
         std::u16string detail;
-        std::size_t warnings = 0;
+        usize warnings = 0;
         for (const logging::Entry& entry : logging::global().entries_since(log_from))
         {
             if (entry.level >= logging::Level::Warning)
@@ -118,7 +119,7 @@ namespace rct3::scene::park
         const std::array<ui::FormatArg, 1> count { { { u"count", strings::to_utf16(std::to_string(warnings)) } } };
         const std::u16string warning = warnings == 0 ? std::u16string { } : ui::format_string(assets.strings->get("Rct3pp_LoadingWarnings"), count);
 
-        const float progress = loading::stage_progress(static_cast<std::size_t>(stage), kParkLoadStages);
+        const f32 progress = loading::stage_progress(static_cast<usize>(stage), kParkLoadStages);
         loading::draw(list, screen, look, { assets.strings->get(loading::kHeadingText), stages, detail, warning, progress });
         ui::render_draw_list(device, assets.renderer, list);
     }

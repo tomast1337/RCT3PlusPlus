@@ -23,6 +23,7 @@
 // again as it was left. It keeps no park state; the owner hears through take_change() what the player chose.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/screens/build/paths.hpp"
 #include "ui/screens/info/panel.hpp"
 #include "ui/string_table.hpp"
@@ -42,7 +43,7 @@ namespace rct3::ui::screens::build
 {
 
     /// The paths page's controls: the path panel's, in their order, but its cut switch.
-    inline constexpr std::size_t kPoolPathControls = kFootpathControls - 1;
+    inline constexpr usize kPoolPathControls = kFootpathControls - 1;
 
     struct PoolPanelStyle
     {
@@ -55,13 +56,13 @@ namespace rct3::ui::screens::build
         std::string close_icon;       ///< On the close button
         widgets::SpinnerStyle height; ///< The surface height
         /// From the screen's bottom edge to the disc's: the tool row and its open menu stay clear below.
-        float bottom = info::info_panel::kDiscMargin;
+        f32 bottom = info::info_panel::kDiscMargin;
         Color text_colour = hex("#ffffff");
         Color chosen = hex("#00000040"); ///< Behind the chosen buttons
     };
 
     /// The panel's tabs, in their order round the ring.
-    enum class PoolPage : std::uint8_t
+    enum class PoolPage : u8
     {
         Editor,
         Paths,
@@ -74,12 +75,12 @@ namespace rct3::ui::screens::build
     struct PickedChoice
     {
         PoolPage page = PoolPage::Extras;
-        std::size_t choice = 0; ///< Its place in the page's choices
+        usize choice = 0; ///< Its place in the page's choices
         friend bool operator==(const PickedChoice&, const PickedChoice&) = default;
     };
 
     /// What the editor's tool does.
-    enum class PoolMode : std::uint8_t
+    enum class PoolMode : u8
     {
         Water,
         Tiles,
@@ -91,11 +92,11 @@ namespace rct3::ui::screens::build
     struct PoolEditor
     {
         PoolMode mode = PoolMode::Water;
-        std::int32_t depth = 2; ///< 1 shallow, 2 normal, 3 deep
-        std::int32_t edge = 0;  ///< 0 straight, 1 cut across, 2 tight curves, 3 loose curves
+        i32 depth = 2; ///< 1 shallow, 2 normal, 3 deep
+        i32 edge = 0;  ///< 0 straight, 1 cut across, 2 tight curves, 3 loose curves
         bool grid = false;
-        bool snap = true;        ///< The surface sits on the ground; else at `height`
-        std::int32_t height = 0; ///< Whole units
+        bool snap = true; ///< The surface sits on the ground; else at `height`
+        i32 height = 0;   ///< Whole units
         friend bool operator==(const PoolEditor&, const PoolEditor&) = default;
     };
 
@@ -108,32 +109,32 @@ namespace rct3::ui::screens::build
 
     namespace pool_panel
     {
-        inline constexpr float kButton = 32;    ///< An editor button, its 40 unit picture drawn smaller
-        inline constexpr float kEdgeWidth = 30; ///< An edge button, its 37 by 25 picture drawn smaller
-        inline constexpr float kEdgeHeight = 20;
-        inline constexpr float kRowGap = 3;       ///< Between the editor's rows
-        inline constexpr float kGroupGap = 8;     ///< Between the groups of a row
-        inline constexpr float kHeightWidth = 52; ///< Of the surface height's number
-        inline constexpr float kHeightHeight = 16;
-        inline constexpr std::int32_t kHeightLowest = -100;
-        inline constexpr std::int32_t kHeightHighest = 100;
-        inline constexpr float kEditorWidth = 3 * kButton + kGroupGap + kButton + 4 + kHeightWidth;
-        inline constexpr float kCell = 40;      ///< A picture on the extras and changing room pages, with the room round it
-        inline constexpr float kStairCell = 32; ///< Chosen by eye: a way between levels in the paths page's column, three to the strip's height
-        inline constexpr std::size_t kRows = 2;
-        inline constexpr float kChoicesNarrowest = 5 * kCell; ///< Chosen by eye: room on a page with few choices for a long name and price in its band
-        inline constexpr float kBodyLeft = 40;                ///< From the strip's left edge to the page, past the ring's tabs
-        inline constexpr float kBodyRight = 16;
-        inline constexpr float kBodyTop = 30;
-        inline constexpr float kStatusGap = 8;
-        inline constexpr float kDiscIcon = 56; ///< The picture of what the tool lays, on the disc
-        inline constexpr float kCloseLeft = 9;
-        inline constexpr float kCloseBottom = 9;
+        inline constexpr f32 kButton = 32;    ///< An editor button, its 40 unit picture drawn smaller
+        inline constexpr f32 kEdgeWidth = 30; ///< An edge button, its 37 by 25 picture drawn smaller
+        inline constexpr f32 kEdgeHeight = 20;
+        inline constexpr f32 kRowGap = 3;       ///< Between the editor's rows
+        inline constexpr f32 kGroupGap = 8;     ///< Between the groups of a row
+        inline constexpr f32 kHeightWidth = 52; ///< Of the surface height's number
+        inline constexpr f32 kHeightHeight = 16;
+        inline constexpr i32 kHeightLowest = -100;
+        inline constexpr i32 kHeightHighest = 100;
+        inline constexpr f32 kEditorWidth = 3 * kButton + kGroupGap + kButton + 4 + kHeightWidth;
+        inline constexpr f32 kCell = 40;      ///< A picture on the extras and changing room pages, with the room round it
+        inline constexpr f32 kStairCell = 32; ///< Chosen by eye: a way between levels in the paths page's column, three to the strip's height
+        inline constexpr usize kRows = 2;
+        inline constexpr f32 kChoicesNarrowest = 5 * kCell; ///< Chosen by eye: room on a page with few choices for a long name and price in its band
+        inline constexpr f32 kBodyLeft = 40;                ///< From the strip's left edge to the page, past the ring's tabs
+        inline constexpr f32 kBodyRight = 16;
+        inline constexpr f32 kBodyTop = 30;
+        inline constexpr f32 kStatusGap = 8;
+        inline constexpr f32 kDiscIcon = 56; ///< The picture of what the tool lays, on the disc
+        inline constexpr f32 kCloseLeft = 9;
+        inline constexpr f32 kCloseBottom = 9;
         /// Of the ring's slots (footpath_tab_offset), each tab's in the order of PoolPage, and the paths page's pin
         /// and camera follow switch.
-        inline constexpr std::array<std::int32_t, 5> kTabSlots { 4, 2, 3, 5, 6 };
-        inline constexpr std::int32_t kPinSlot = 0;
-        inline constexpr std::int32_t kFollowSlot = 1;
+        inline constexpr std::array<i32, 5> kTabSlots { 4, 2, 3, 5, 6 };
+        inline constexpr i32 kPinSlot = 0;
+        inline constexpr i32 kFollowSlot = 1;
     } // namespace pool_panel
 
     class PoolPanel : public Widget
@@ -175,13 +176,13 @@ namespace rct3::ui::screens::build
             return follow_->on;
         }
         /// Which of the paths page's controls can be used, and which of them picks the slope chosen.
-        void set_path_controls(const std::array<bool, kPoolPathControls>& usable, std::size_t slope_control)
+        void set_path_controls(const std::array<bool, kPoolPathControls>& usable, usize slope_control)
         {
             path_usable_ = usable;
             path_slope_ = slope_control;
         }
         /// The paths page's control pressed since the last call, by its index.
-        [[nodiscard]] std::optional<std::size_t> take_path_control()
+        [[nodiscard]] std::optional<usize> take_path_control()
         {
             return std::exchange(path_control_now_, std::nullopt);
         }
@@ -239,8 +240,8 @@ namespace rct3::ui::screens::build
         Widget* paths_page_ = nullptr;
         std::array<widgets::Button*, kPoolPathControls> path_controls_ { };
         std::array<bool, kPoolPathControls> path_usable_ { };
-        std::size_t path_slope_ = 5; ///< The control of the slope chosen
-        std::optional<std::size_t> path_control_now_;
+        usize path_slope_ = 5; ///< The control of the slope chosen
+        std::optional<usize> path_control_now_;
         widgets::Button* grid_ = nullptr;
         widgets::Button* snap_ = nullptr;
         widgets::Spinner* height_ = nullptr;

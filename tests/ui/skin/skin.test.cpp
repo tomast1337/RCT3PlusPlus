@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/skin/skin.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -9,9 +11,9 @@ using namespace rct3::ui::skin;
 
 namespace
 {
-    ovl::GuiSkin gui_skin(ovl::GuiSkinKind kind, std::vector<std::int32_t> coordinates)
+    ovl::GuiSkin gui_skin(ovl::GuiSkinKind kind, std::vector<i32> coordinates)
     {
-        return { static_cast<std::uint32_t>(kind), "atlas", std::move(coordinates) };
+        return { static_cast<u32>(kind), "atlas", std::move(coordinates) };
     }
 } // namespace
 

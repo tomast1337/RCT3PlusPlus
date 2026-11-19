@@ -10,6 +10,8 @@
 // Everything is little-endian. Names in the class table are byte strings, returned as views.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -39,20 +41,20 @@ namespace rct3::save
     [[nodiscard]] const char* to_string(Error e) noexcept;
 
     /// Hard limits that keep recursion and allocation bounded on hostile input.
-    inline constexpr std::uint32_t kMaxClasses = 0x3fff;
-    inline constexpr std::size_t kMaxAttributeDepth = 16;
+    inline constexpr u32 kMaxClasses = 0x3fff;
+    inline constexpr usize kMaxAttributeDepth = 16;
 
     /// Size of the optional header (prefix plus body) in bytes. Some effect files carry a shorter form of it, a
     /// prefix and twelve words (see read_save).
-    inline constexpr std::size_t kHeaderSize = 0x50;
+    inline constexpr usize kHeaderSize = 0x50;
 
     /// Header of the newer file generation. Older files have none: the class table starts at offset 0.
     struct Header
     {
         /// The 16 words after the 16-byte prefix, as stored (the short form's 12, then zeros). Index 0 is the
         /// format generation.
-        std::array<std::uint32_t, 16> words { };
-        [[nodiscard]] std::uint32_t version() const noexcept
+        std::array<u32, 16> words { };
+        [[nodiscard]] u32 version() const noexcept
         {
             return words[0];
         }
@@ -64,7 +66,7 @@ namespace rct3::save
     {
         std::string_view name;
         std::string_view type;
-        std::uint32_t size = 0;
+        u32 size = 0;
         std::vector<Attribute> children { }; ///< Element layout for compound types, empty otherwise
     };
 
@@ -77,9 +79,9 @@ namespace rct3::save
     /// One object record. `bytes` covers the whole record including the class index and id.
     struct Object
     {
-        std::uint32_t class_index = 0;
-        std::uint64_t id = 0;
-        std::size_t offset = 0;
+        u32 class_index = 0;
+        u64 id = 0;
+        usize offset = 0;
         std::span<const std::byte> bytes;
         /// The attribute data after the class index and id.
         [[nodiscard]] std::span<const std::byte> payload() const noexcept
@@ -99,8 +101,8 @@ namespace rct3::save
     struct Section
     {
         SectionKind kind;
-        std::size_t offset = 0;
-        std::size_t size = 0;
+        usize offset = 0;
+        usize size = 0;
     };
 
     [[nodiscard]] const char* to_string(SectionKind k) noexcept;
@@ -111,15 +113,15 @@ namespace rct3::save
         Header header;
         std::vector<Class> classes;
         std::vector<Object> objects;
-        std::vector<Section> sections;       ///< In file order, tiling the input exactly
-        bool has_checksum = false;           ///< True exactly when the file has a header
-        std::uint32_t stored_checksum = 0;   ///< Valid when has_checksum
-        std::uint32_t computed_checksum = 0; ///< Valid when has_checksum
+        std::vector<Section> sections; ///< In file order, tiling the input exactly
+        bool has_checksum = false;     ///< True exactly when the file has a header
+        u32 stored_checksum = 0;       ///< Valid when has_checksum
+        u32 computed_checksum = 0;     ///< Valid when has_checksum
     };
 
     /// The running sum stored in the trailer: a byte-wise stream-cipher recurrence over the whole file before
     /// the trailer, summing the produced cipher bytes into a wrapping u32.
-    [[nodiscard]] std::uint32_t compute_checksum(std::span<const std::byte> data) noexcept;
+    [[nodiscard]] u32 compute_checksum(std::span<const std::byte> data) noexcept;
 
     struct ReadOptions
     {
@@ -135,8 +137,8 @@ namespace rct3::save
     /// order, as encode_object makes them.
     struct ObjectRecord
     {
-        std::uint32_t class_index = 0;
-        std::uint64_t id = 0;
+        u32 class_index = 0;
+        u64 id = 0;
         std::span<const std::byte> payload;
     };
 

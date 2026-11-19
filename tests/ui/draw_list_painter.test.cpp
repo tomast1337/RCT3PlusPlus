@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/draw_list_painter.hpp"
 
+#include "core/types.hpp"
 #include "ui/shape.hpp"
 
 #include <doctest/doctest.h>
@@ -12,9 +13,9 @@ namespace
 {
     constexpr Color kBlack { 0, 0, 0, 255 };
 
-    Color at(const ovl::texture::RgbaImage& image, std::uint32_t x, std::uint32_t y)
+    Color at(const ovl::texture::RgbaImage& image, u32 x, u32 y)
     {
-        const std::uint8_t* p = &image.pixels[(std::size_t { y } * image.width + x) * 4];
+        const u8* p = &image.pixels[(usize { y } * image.width + x) * 4];
         return { p[0], p[1], p[2], p[3] };
     }
 } // namespace
@@ -38,7 +39,7 @@ TEST_CASE("half-clear quads blend once, also along the diagonal their triangles 
     list.fill({ 0, 0, 6, 6 }, { 255, 255, 255, 128 });
     auto picture = blank_picture(6, 6, kBlack);
     paint_draw_list(list, { }, picture);
-    for (std::uint32_t i = 0; i < 6; ++i)
+    for (u32 i = 0; i < 6; ++i)
         CHECK(at(picture, i, i) == Color { 128, 128, 128, 255 });
 }
 

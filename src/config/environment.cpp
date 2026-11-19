@@ -2,6 +2,7 @@
 #include "config/environment.hpp"
 
 #include "config/flag.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -28,17 +29,17 @@ namespace rct3::config
 
         // The table is indexed by EnvVar, so its order must follow the enum.
         static_assert([] {
-            for (std::size_t i = 0; i < kEnvVars.size(); ++i)
+            for (usize i = 0; i < kEnvVars.size(); ++i)
             {
-                if (static_cast<std::size_t>(kEnvVars[i].var) != i)
+                if (static_cast<usize>(kEnvVars[i].var) != i)
                     return false;
             }
             return true;
         }());
 
-        constexpr std::size_t index(EnvVar var)
+        constexpr usize index(EnvVar var)
         {
-            return static_cast<std::size_t>(var);
+            return static_cast<usize>(var);
         }
 
     } // namespace

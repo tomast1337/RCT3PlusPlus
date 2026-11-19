@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/flic.hpp"
 
+#include "core/types.hpp"
+
 #include <cstring>
 
 namespace rct3::ovl
@@ -10,15 +12,15 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kFlicTag = "flic";
-        constexpr std::size_t kItemSize = 12;        // u32, u32, f32
-        constexpr std::size_t kImageHeaderSize = 32; // eight 32-bit words
-        constexpr std::uint32_t kRawFormat = 2;
-        constexpr std::uint32_t kBlock8Format = 18;
-        constexpr std::uint32_t kBlock16Format = 19;
+        constexpr usize kItemSize = 12;        // u32, u32, f32
+        constexpr usize kImageHeaderSize = 32; // eight 32-bit words
+        constexpr u32 kRawFormat = 2;
+        constexpr u32 kBlock8Format = 18;
+        constexpr u32 kBlock16Format = 19;
 
-        std::uint32_t u32_at(std::span<const std::byte> b, std::size_t at)
+        u32 u32_at(std::span<const std::byte> b, usize at)
         {
-            std::uint32_t v = 0;
+            u32 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
@@ -40,7 +42,7 @@ namespace rct3::ovl
             if (u32_at(data, 16) != h.width || u32_at(data, 20) != h.height)
                 return std::nullopt;
 
-            std::uint64_t block_bytes = 0;
+            u64 block_bytes = 0;
             if (h.format == kBlock8Format)
                 block_bytes = 8;
             else if (h.format == kBlock16Format)
@@ -49,16 +51,16 @@ namespace rct3::ovl
                 return std::nullopt;
 
             // The row geometry must follow from the format, so a damaged header is not taken for an image.
-            const std::uint64_t blocks_wide = (std::uint64_t { h.width } + 3) / 4;
-            const std::uint64_t blocks_high = (std::uint64_t { h.height } + 3) / 4;
-            const std::uint64_t row_bytes = block_bytes != 0 ? blocks_wide * block_bytes : std::uint64_t { h.width } * 4;
-            const std::uint64_t row_count = block_bytes != 0 ? blocks_high : h.height;
+            const u64 blocks_wide = (u64 { h.width } + 3) / 4;
+            const u64 blocks_high = (u64 { h.height } + 3) / 4;
+            const u64 row_bytes = block_bytes != 0 ? blocks_wide * block_bytes : u64 { h.width } * 4;
+            const u64 row_count = block_bytes != 0 ? blocks_high : h.height;
             if (h.row_bytes != row_bytes || h.row_count != row_count)
                 return std::nullopt;
             return h;
         }
 
-        std::optional<Flic> read_one(const AddressSpace& space, const Part& part, std::size_t row, std::uint32_t revision)
+        std::optional<Flic> read_one(const AddressSpace& space, const Part& part, usize row, u32 revision)
         {
             if (row >= part.loaders.extra.size() || part.loaders.extra[row].size() != 1)
                 return std::nullopt;
@@ -84,8 +86,8 @@ namespace rct3::ovl
                 if (flic.data.size() / 4 == flic.frame_count && flic.data.size() % 4 == 0)
                 {
                     flic.frames.reserve(flic.frame_count);
-                    for (std::uint32_t i = 0; i < flic.frame_count; ++i)
-                        flic.frames.push_back(u32_at(flic.data, std::size_t { i } * 4));
+                    for (u32 i = 0; i < flic.frame_count; ++i)
+                        flic.frames.push_back(u32_at(flic.data, usize { i } * 4));
                 }
             }
             else if (revision == 2)
@@ -103,7 +105,7 @@ namespace rct3::ovl
         const AddressSpace space = overlay.space();
 
         std::vector<FlicItem> items;
-        for (std::size_t row = 0; row < part.loaders.entries.size(); ++row)
+        for (usize row = 0; row < part.loaders.entries.size(); ++row)
         {
             const LoaderEntry& entry = part.loaders.entries[row];
             if (entry.loader_type >= loaders.size() || loaders[entry.loader_type].tag != kFlicTag)

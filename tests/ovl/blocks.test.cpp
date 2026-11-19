@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "builder.hpp"
+#include "core/types.hpp"
 #include "ovl/ovl.hpp"
 
 #include <cstdint>
@@ -14,7 +15,7 @@ namespace
 {
 
     // Blocks filled with a marker byte, sized per type.
-    std::vector<std::byte> make(std::uint32_t version, const std::vector<std::vector<std::uint32_t>>& sizes, const std::vector<std::uint32_t>& relocations)
+    std::vector<std::byte> make(u32 version, const std::vector<std::vector<u32>>& sizes, const std::vector<u32>& relocations)
     {
         rct3::test::BlockBytes blocks;
         for (const auto& type : sizes)
@@ -30,10 +31,10 @@ namespace
 
 TEST_CASE("blocks get consecutive relative offsets across types")
 {
-    for (const std::uint32_t version : { 1u, 4u, 5u })
+    for (const u32 version : { 1u, 4u, 5u })
     {
         CAPTURE(version);
-        const std::vector<std::vector<std::uint32_t>> sizes = { { 8, 4 }, { }, { 16 } };
+        const std::vector<std::vector<u32>> sizes = { { 8, 4 }, { }, { 16 } };
         const auto file = make(version, sizes, { 0, 12 });
         auto f = parse(file);
         REQUIRE(f.has_value());
@@ -46,7 +47,7 @@ TEST_CASE("blocks get consecutive relative offsets across types")
         REQUIRE(f->block_types[2].blocks.size() == 1);
         CHECK(f->block_types[2].blocks[0].relative_offset == 12);
         CHECK(f->block_types[2].blocks[0].size == 16);
-        CHECK(f->relocations == std::vector<std::uint32_t> { 0, 12 });
+        CHECK(f->relocations == std::vector<u32> { 0, 12 });
         CHECK(f->end_offset == file.size());
     }
 }
@@ -60,7 +61,7 @@ TEST_CASE("post-block metadata is kept per version")
     const auto v5 = parse(make(5, { }, { }));
     REQUIRE(v5.has_value());
     CHECK(v5->unknown_bytes.size() == 3);
-    CHECK(v5->unknown_words == std::vector<std::uint32_t> { 7, 8 });
+    CHECK(v5->unknown_words == std::vector<u32> { 7, 8 });
 
     const auto v1 = parse(make(1, { }, { }));
     REQUIRE(v1.has_value());
@@ -101,7 +102,7 @@ TEST_CASE("truncated and oversized block data fail cleanly")
 
     SUBCASE("every prefix fails")
     {
-        for (std::size_t n = 0; n < file.size(); ++n)
+        for (usize n = 0; n < file.size(); ++n)
         {
             INFO("prefix length " << n);
             CHECK_FALSE(parse(std::span<const std::byte>(file.data(), n)).has_value());
@@ -112,7 +113,7 @@ TEST_CASE("truncated and oversized block data fail cleanly")
     {
         auto bad = make(5, { }, { });
         // Header is 0x14 bytes, then external refs, secondary refs and loader counts, then type 0's count.
-        for (std::size_t i = 0x14 + 12; i < 0x14 + 16; ++i)
+        for (usize i = 0x14 + 12; i < 0x14 + 16; ++i)
             bad[i] = std::byte { 0xFF };
         CHECK(parse(bad).error() == Error::ImplausibleCount);
     }
@@ -121,7 +122,7 @@ TEST_CASE("truncated and oversized block data fail cleanly")
     {
         auto bad = make(5, { }, { });
         // The relocation count is the last u32.
-        for (std::size_t i = bad.size() - 4; i < bad.size(); ++i)
+        for (usize i = bad.size() - 4; i < bad.size(); ++i)
             bad[i] = std::byte { 0xFF };
         CHECK(parse(bad).error() == Error::ImplausibleCount);
     }
@@ -168,7 +169,7 @@ TEST_CASE("per-stream relocation tables are read for v4 and streamed v5")
 
     SUBCASE("v5 without streams and v1 have no tables")
     {
-        for (std::uint32_t version : { 1u, 5u })
+        for (u32 version : { 1u, 5u })
         {
             const auto file = rct3::test::build_file(version, { one_block }, { });
             auto f = parse(file);
@@ -180,7 +181,7 @@ TEST_CASE("per-stream relocation tables are read for v4 and streamed v5")
     SUBCASE("a pair count larger than the file is refused")
     {
         auto file = rct3::test::build_file(4, { one_block }, { });
-        for (std::size_t i = file.size() - 4; i < file.size(); ++i)
+        for (usize i = file.size() - 4; i < file.size(); ++i)
             file[i] = std::byte { 0xFF };
         CHECK(parse(file).error() == Error::ImplausibleCount);
     }

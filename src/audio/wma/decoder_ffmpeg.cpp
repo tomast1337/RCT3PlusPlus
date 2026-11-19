@@ -3,6 +3,7 @@
 // The WMA decoder as FFmpeg's, built in (third_party/ffmpeg). It starts two frames late (its windows overlap):
 // delay() says how many samples that is, and WmaStream drops them.
 #include "audio/wma/decoder.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 #include <cstdint>
@@ -39,7 +40,7 @@ namespace rct3::audio::wma
             .channels = format.channels,
             .bit_rate = static_cast<int>(format.bit_rate), // c-api
             .block_align = format.block_align,
-            .extra = reinterpret_cast<const std::uint8_t*>(format.extra.data()),
+            .extra = reinterpret_cast<const u8*>(format.extra.data()),
             .extra_size = static_cast<int>(format.extra.size()), // c-api
         };
         auto s = std::make_unique<State>();
@@ -49,13 +50,13 @@ namespace rct3::audio::wma
         return Decoder(std::move(s));
     }
 
-    std::int32_t Decoder::decode(std::span<const std::byte> packet, const float* const*& planes)
+    i32 Decoder::decode(std::span<const std::byte> packet, const f32* const*& planes)
     {
         const int n = rct3_wma_decode(state_->decoder.get(), packet.empty() ? nullptr : reinterpret_cast<const std::uint8_t*>(packet.data()), static_cast<int>(packet.size()), &planes); // c-api
         return std::max(n, 0);
     }
 
-    std::int32_t Decoder::delay() const
+    i32 Decoder::delay() const
     {
         return rct3_wma_delay(state_->decoder.get());
     }

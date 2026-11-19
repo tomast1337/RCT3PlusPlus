@@ -14,6 +14,7 @@
 #pragma once
 
 #include "config/text_file.hpp"
+#include "core/types.hpp"
 
 #include <array>
 #include <cstddef>
@@ -30,7 +31,7 @@
 namespace rct3::config
 {
 
-    enum class Setting : std::uint8_t
+    enum class Setting : u8
     {
         GamePath,       ///< game_path: root folder of the installed original game
         SkipIntro,      ///< skip_intro: start without the logos
@@ -42,9 +43,9 @@ namespace rct3::config
         Count_, ///< Number of settings; not a setting
     };
 
-    inline constexpr std::size_t kSettingCount = static_cast<std::size_t>(Setting::Count_);
+    inline constexpr usize kSettingCount = static_cast<usize>(Setting::Count_);
 
-    enum class SettingKind : std::uint8_t
+    enum class SettingKind : u8
     {
         Text,
         Flag,  ///< true or false; text that flag_value() reads works too
@@ -103,6 +104,6 @@ namespace rct3::config
 
     /// The interface scale a value asks for: nothing for "auto" or empty (choose from the window size), else
     /// a whole number from 1 to 8. Anything else is an error.
-    [[nodiscard]] std::expected<std::optional<float>, std::string> parse_interface_scale(std::string_view value);
+    [[nodiscard]] std::expected<std::optional<f32>, std::string> parse_interface_scale(std::string_view value);
 
 } // namespace rct3::config

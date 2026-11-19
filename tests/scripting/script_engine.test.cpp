@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scripting/script_engine.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -10,7 +12,7 @@ TEST_CASE("a script calls natives with JSON and gets JSON back")
 {
     ScriptEngine engine;
     Json seen;
-    engine.define("park.add", [](const Json& a) { return Json(a[0].get<double>() + a[1].get<double>()); });
+    engine.define("park.add", [](const Json& a) { return Json(a[0].get<f64>() + a[1].get<f64>()); });
     engine.define("report", [&](const Json& a) {
         seen = a[0];
         return Json(nullptr);
@@ -37,9 +39,9 @@ TEST_CASE("helpers evaluated first are there for the script")
 TEST_CASE("a script waits the frames it asks for")
 {
     ScriptEngine engine;
-    std::int32_t reached = 0;
+    i32 reached = 0;
     engine.define("reach", [&](const Json& a) {
-        reached = a[0].get<std::int32_t>();
+        reached = a[0].get<i32>();
         return Json(nullptr);
     });
     engine.run("reach(1); await frames(2); reach(2);", "wait.js");

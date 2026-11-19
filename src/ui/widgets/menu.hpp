@@ -13,6 +13,7 @@
 // update in which it closed.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widget.hpp"
 
 #include <cstddef>
@@ -45,12 +46,12 @@ namespace rct3::ui::widgets
         Color separator_colour = hex("#0000003c");
         font::FontRole font = font::FontRole::Small;
         Rect padding { 6, 6, 6, 6 }; ///< Between the edges and the rows
-        float row_height = 18;
-        float separator_height = 7;
-        float tick_room = 16;    ///< Left of the text, for the tick
-        float shortcut_gap = 24; ///< Between the text and the shortcut
-        float text_end_room = 8; ///< Right of the widest text or shortcut
-        float min_width = 80;
+        f32 row_height = 18;
+        f32 separator_height = 7;
+        f32 tick_room = 16;    ///< Left of the text, for the tick
+        f32 shortcut_gap = 24; ///< Between the text and the shortcut
+        f32 text_end_room = 8; ///< Right of the widest text or shortcut
+        f32 min_width = 80;
     };
 
     class Menu : public Widget
@@ -63,32 +64,32 @@ namespace rct3::ui::widgets
 
         /// Opens the menu with its top-left corner at `at` in its parent (the desktop's root), at least
         /// `min_width` wide. Its height follows the items now; its width once it has fonts.
-        void place_at(Point at, float min_width = 0);
+        void place_at(Point at, f32 min_width = 0);
 
-        [[nodiscard]] std::optional<std::size_t> highlighted() const
+        [[nodiscard]] std::optional<usize> highlighted() const
         {
             return highlighted_;
         }
         /// Highlights `index` when it is an enabled command, or nothing.
-        void highlight(std::optional<std::size_t> index);
+        void highlight(std::optional<usize> index);
 
         /// The row chosen, once.
-        [[nodiscard]] std::optional<std::size_t> take_choice()
+        [[nodiscard]] std::optional<usize> take_choice()
         {
             return std::exchange(choice_, std::nullopt);
         }
         /// -1 for Left and +1 for Right since the last call, added up.
-        [[nodiscard]] std::int32_t take_sideways()
+        [[nodiscard]] i32 take_sideways()
         {
             return std::exchange(sideways_, 0);
         }
 
         /// The row at `p`, separators included.
-        [[nodiscard]] std::optional<std::size_t> row_at(Point p) const;
+        [[nodiscard]] std::optional<usize> row_at(Point p) const;
         /// Where row `index` is drawn, in desktop units.
-        [[nodiscard]] Rect row_rect(std::size_t index) const;
+        [[nodiscard]] Rect row_rect(usize index) const;
         /// The height the items take, padding included.
-        [[nodiscard]] float content_height() const;
+        [[nodiscard]] f32 content_height() const;
 
         [[nodiscard]] bool takes_pointer() const override
         {
@@ -106,15 +107,15 @@ namespace rct3::ui::widgets
         void draw(DrawContext& context) const override;
 
     private:
-        [[nodiscard]] bool choosable(std::size_t index) const;
-        void move_highlight(std::int32_t direction, std::size_t from);
-        void choose(std::size_t index);
+        [[nodiscard]] bool choosable(usize index) const;
+        void move_highlight(i32 direction, usize from);
+        void choose(usize index);
 
         Point at_;
-        float min_width_ = 0;
-        std::optional<std::size_t> highlighted_;
-        std::optional<std::size_t> choice_;
-        std::int32_t sideways_ = 0;
+        f32 min_width_ = 0;
+        std::optional<usize> highlighted_;
+        std::optional<usize> choice_;
+        i32 sideways_ = 0;
     };
 
 } // namespace rct3::ui::widgets

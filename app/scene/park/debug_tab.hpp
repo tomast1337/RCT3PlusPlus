@@ -5,6 +5,8 @@
 // and the people's motions stepped through one by one or played in turn, slowed down, or their parties standing together often. Scripts use the same tools by name.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -24,7 +26,7 @@ namespace rct3::scene::park
 
     struct ParkScene;
 
-    enum class DebugTool : std::uint8_t
+    enum class DebugTool : u8
     {
         AddMoney,
         BuyAllLand,
@@ -64,7 +66,7 @@ namespace rct3::scene::park
     /// off, or which of the park's firework displays to start. Returns how many things it changed: tiles, inventions,
     /// guests, rides, animals, birds, pieces, falls or jets, scenarios opened or stall items renamed, or 1 for money
     /// added, designs unlocked, a display started or stopped or a switch turned.
-    std::size_t use_debug_tool(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, DebugTool tool, std::int64_t amount);
+    usize use_debug_tool(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, DebugTool tool, i64 amount);
 
     /// The tab's contents, drawn into the developer window open now.
     void draw_debug_tab(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets);

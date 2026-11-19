@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "career/prf_import.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <string>
@@ -17,25 +19,25 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& put(const void* p, std::size_t n)
+        Bytes& put(const void* p, usize n)
         {
             const auto* b = static_cast<const std::byte*>(p);
             v.insert(v.end(), b, b + n);
             return *this;
         }
-        Bytes& put_u8(std::uint8_t x)
+        Bytes& put_u8(u8 x)
         {
             return put(&x, 1);
         }
-        Bytes& put_u16(std::uint16_t x)
+        Bytes& put_u16(u16 x)
         {
             return put(&x, 2);
         }
-        Bytes& put_u32(std::uint32_t x)
+        Bytes& put_u32(u32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put_u64(std::uint64_t x)
+        Bytes& put_u64(u64 x)
         {
             return put(&x, 8);
         }
@@ -46,14 +48,14 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            put_u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<u16>(s.size()));
             for (const char c : s)
-                put_u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<u8>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            put_u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<u32>(payload.v.size()));
             return cat(payload);
         }
         Bytes& text(const std::u16string& s)
@@ -69,13 +71,13 @@ namespace
     struct Attr
     {
         std::string name, type;
-        std::uint32_t size = 0;
+        u32 size = 0;
         std::vector<Attr> children { };
     };
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<u32>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -83,10 +85,10 @@ namespace
     struct Entry
     {
         std::u16string last_save;
-        std::uint32_t status = 0;
+        u32 status = 0;
     };
 
-    std::vector<std::byte> make_prf(const std::u16string& name, std::int32_t pack, std::int32_t current, const std::vector<Entry>& entries, std::string class_name = "ManagedPlayerProfile")
+    std::vector<std::byte> make_prf(const std::u16string& name, i32 pack, i32 current, const std::vector<Entry>& entries, std::string class_name = "ManagedPlayerProfile")
     {
         const std::vector<Attr> attrs = {
             { "AOPIndex", "int32", 4 },
@@ -96,15 +98,15 @@ namespace
         };
         Bytes b;
         b.put_u32(1);
-        b.name(class_name).put_u32(static_cast<std::uint32_t>(attrs.size()));
+        b.name(class_name).put_u32(static_cast<u32>(attrs.size()));
         for (const auto& a : attrs)
             write_attr(b, a);
         Bytes list;
-        list.put_u32(static_cast<std::uint32_t>(entries.size()));
+        list.put_u32(static_cast<u32>(entries.size()));
         for (const auto& e : entries)
             list.text(e.last_save).put_u32(e.status);
         b.put_u32(1).put_u32(0).put_u64(5);
-        b.put_u32(static_cast<std::uint32_t>(pack)).put_u32(static_cast<std::uint32_t>(current)).text(name).blob(list);
+        b.put_u32(static_cast<u32>(pack)).put_u32(static_cast<u32>(current)).text(name).blob(list);
         return b.v;
     }
 

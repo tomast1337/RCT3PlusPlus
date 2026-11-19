@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "config/option_effects.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 
 namespace rct3::config
@@ -85,7 +87,7 @@ namespace rct3::config
         std::bitset<game::kGameOptionCount> inert;
         inert.set();
         for (const game::GameOption o : kActedOn)
-            inert.reset(static_cast<std::size_t>(o));
+            inert.reset(static_cast<usize>(o));
         return inert;
     }
 

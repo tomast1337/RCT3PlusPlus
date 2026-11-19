@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/value.hpp"
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 
 #include <cstdint>
@@ -21,28 +22,28 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& put_u8(std::uint8_t x)
+        Bytes& put_u8(u8 x)
         {
             v.push_back(static_cast<std::byte>(x));
             return *this;
         }
-        Bytes& put_u16(std::uint16_t x)
+        Bytes& put_u16(u16 x)
         {
             return put(&x, 2);
         }
-        Bytes& put_u32(std::uint32_t x)
+        Bytes& put_u32(u32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put_u64(std::uint64_t x)
+        Bytes& put_u64(u64 x)
         {
             return put(&x, 8);
         }
-        Bytes& put_f32(float x)
+        Bytes& put_f32(f32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put(const void* p, std::size_t n)
+        Bytes& put(const void* p, usize n)
         {
             const auto* b = static_cast<const std::byte*>(p);
             v.insert(v.end(), b, b + n);
@@ -55,15 +56,15 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            put_u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<u16>(s.size()));
             for (const char c : s)
-                put_u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<u8>(c));
             return *this;
         }
         // A length-prefixed variable attribute payload.
         Bytes& blob(const Bytes& payload)
         {
-            put_u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<u32>(payload.v.size()));
             return cat(payload);
         }
         Bytes& marked_text(const std::u16string& s)
@@ -79,13 +80,13 @@ namespace
     struct Attr
     {
         std::string name, type;
-        std::uint32_t size = 0;
+        u32 size = 0;
         std::vector<Attr> children;
     };
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<u32>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -94,11 +95,11 @@ namespace
     std::vector<std::byte> make_file(const std::vector<Attr>& attrs, const std::vector<Bytes>& payloads)
     {
         Bytes b;
-        b.put_u32(1).name("Thing").put_u32(static_cast<std::uint32_t>(attrs.size()));
+        b.put_u32(1).name("Thing").put_u32(static_cast<u32>(attrs.size()));
         for (const auto& a : attrs)
             write_attr(b, a);
-        b.put_u32(static_cast<std::uint32_t>(payloads.size()));
-        std::uint64_t id = 100;
+        b.put_u32(static_cast<u32>(payloads.size()));
+        u64 id = 100;
         for (const auto& p : payloads)
         {
             b.put_u32(0).put_u64(id++).cat(p);
@@ -169,8 +170,8 @@ TEST_CASE("vectors, orientation, matrix and references")
     Bytes p;
     p.put_f32(1).put_f32(2).put_f32(3);
     p.put_f32(0.25f).put_f32(0.5f).put_f32(0.75f);
-    for (std::int32_t i = 0; i < 16; ++i)
-        p.put_f32(static_cast<float>(i));
+    for (i32 i = 0; i < 16; ++i)
+        p.put_f32(static_cast<f32>(i));
     p.put_u64(101).put_u64(0);
     const auto d = decode_one(attrs, p);
     const auto& o = d->object;
@@ -249,7 +250,7 @@ TEST_CASE("symbol text")
     {
         Bytes inner;
         for (const char c : std::string("alpha:beta"))
-            inner.put_u8(static_cast<std::uint8_t>(c));
+            inner.put_u8(static_cast<u8>(c));
         const auto d = decode_one(attrs, Bytes().blob(inner));
         CHECK(d->object.find("sym")->text() == "alpha:beta");
     }
@@ -437,10 +438,10 @@ TEST_CASE("hostile counts and leftovers degrade the container, not the object")
 TEST_CASE("nesting beyond the decoder depth limit degrades instead of recursing")
 {
     // Built by hand: the container reader would refuse a schema this deep, the decoder must still be safe.
-    constexpr std::size_t kLevels = 80;
+    constexpr usize kLevels = 80;
     SaveFile file;
     Attribute chain { "leaf", "int32", 4, { } };
-    for (std::size_t i = 0; i < kLevels; ++i)
+    for (usize i = 0; i < kLevels; ++i)
     {
         Attribute outer { "level", "struct", 0, { } };
         outer.children.push_back(std::move(chain));
@@ -453,7 +454,7 @@ TEST_CASE("nesting beyond the decoder depth limit degrades instead of recursing"
     payload.put_u32(0).put_u64(1);
     Bytes inner;
     inner.put_u32(42);
-    for (std::size_t i = 0; i < kLevels; ++i)
+    for (usize i = 0; i < kLevels; ++i)
     {
         Bytes outer;
         outer.blob(inner);
@@ -531,13 +532,13 @@ TEST_CASE("every truncation and every single byte flip decodes without crashing"
             CHECK(r->stats.values <= 2 * o.bytes.size() + file->classes[o.class_index].attributes.size());
         }
     };
-    for (std::size_t n = 0; n <= original.size(); ++n)
+    for (usize n = 0; n <= original.size(); ++n)
     {
         exercise(std::vector<std::byte>(original.begin(), original.begin() + static_cast<std::ptrdiff_t>(n)));
     }
-    for (std::size_t i = 0; i < original.size(); ++i)
+    for (usize i = 0; i < original.size(); ++i)
     {
-        for (const std::uint8_t mask : { 0x01, 0x80, 0xFF })
+        for (const u8 mask : { 0x01, 0x80, 0xFF })
         {
             auto copy = original;
             copy[i] ^= static_cast<std::byte>(mask);
@@ -572,8 +573,8 @@ TEST_CASE("every decoded attribute encodes back to its bytes")
     Bytes p;
     p.put_u8(1).put_u8(0xFE).put_u16(0xFFFE).put_u32(0xFFFFFFFEu).put_u32(0xFFFFFFFEu).put_f32(2.5f);
     p.put_f32(1).put_f32(2).put_f32(3).put_f32(0.25f).put_f32(0.5f).put_f32(0.75f);
-    for (std::int32_t i = 0; i < 16; ++i)
-        p.put_f32(static_cast<float>(i));
+    for (i32 i = 0; i < 16; ++i)
+        p.put_f32(static_cast<f32>(i));
     p.put_u64(101);
     p.marked_text(u"hé \U0001F600");
     p.blob(Bytes().put_u8('A').put_u8('b'));
@@ -655,11 +656,11 @@ TEST_CASE("encoding refuses values that do not fit their attributes")
         items.push_back(std::move(pt));
         return Value::make_struct({ name, "pt" }, std::move(items));
     };
-    const auto point = [](std::size_t count) {
+    const auto point = [](usize count) {
         std::vector<std::string_view> names { "x", "y" };
         names.resize(count);
         std::vector<Value> xy;
-        for (std::size_t i = 0; i < count; ++i)
+        for (usize i = 0; i < count; ++i)
             xy.push_back(Value::make_float(1.0f));
         return Value::make_struct(std::move(names), std::move(xy));
     };

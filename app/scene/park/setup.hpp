@@ -5,6 +5,7 @@
 #pragma once
 
 #include "config/game/install.hpp"
+#include "core/types.hpp"
 #include "park/asset_index.hpp"
 #include "park/ground/textures.hpp"
 #include "park/object/mesh.hpp"
@@ -30,7 +31,7 @@ namespace rct3::scene::park
     inline constexpr std::string_view kMessagesName = "messages";
     inline constexpr std::string_view kHeightsName = "heights";
     inline constexpr std::string_view kMoneyName = "money";
-    inline constexpr std::uint8_t kColourCells = 16; ///< Colours a person's clothes and skin pick from
+    inline constexpr u8 kColourCells = 16; ///< Colours a person's clothes and skin pick from
     inline constexpr std::string_view kInfoName = "info";
     inline constexpr std::string_view kRideCameraName = "ride_camera";       ///< The panel shown while riding along
     inline constexpr std::string_view kPlacingName = "placing";              ///< The round panel of the scenery being placed

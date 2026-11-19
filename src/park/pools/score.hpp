@@ -9,6 +9,7 @@
 // showers, lazy rivers), each kind counting only up to a few. Every weight is chosen by eye.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/pools/pools.hpp"
 
 #include <cstddef>
@@ -21,28 +22,28 @@ namespace rct3::park::pools
     /// What a pool complex has, counted from its squares and the extras on them.
     struct PoolTally
     {
-        std::int32_t squares = 0; ///< Of every kind
-        std::int32_t water_squares = 0;
-        std::int32_t depth_sum = 0;  ///< Of all squares' depths
-        std::int32_t depth_sum2 = 0; ///< Of their squares
-        std::int32_t shaped = 0;     ///< Water squares with a curved or cut corner, or at a corner jutting out
-        std::int32_t lamps = 0;
-        std::int32_t ladders = 0;
-        std::int32_t lifeguards = 0;
-        std::int32_t jacuzzis = 0;
-        std::int32_t high_dives = 0;
-        std::int32_t loungers = 0;
-        std::int32_t showers = 0;
+        i32 squares = 0; ///< Of every kind
+        i32 water_squares = 0;
+        i32 depth_sum = 0;  ///< Of all squares' depths
+        i32 depth_sum2 = 0; ///< Of their squares
+        i32 shaped = 0;     ///< Water squares with a curved or cut corner, or at a corner jutting out
+        i32 lamps = 0;
+        i32 ladders = 0;
+        i32 lifeguards = 0;
+        i32 jacuzzis = 0;
+        i32 high_dives = 0;
+        i32 loungers = 0;
+        i32 showers = 0;
     };
 
     /// The tally of the complex made of `squares`; extras not on one of them are left out.
     [[nodiscard]] PoolTally pool_tally(std::span<const PoolSquare> squares, std::span<const PoolExtra> extras);
 
     /// The complex's excitement, 0 to 1, with its water `dirt` from clean (0) to a health hazard (1).
-    [[nodiscard]] float pool_excitement(const PoolTally& tally, float dirt);
+    [[nodiscard]] f32 pool_excitement(const PoolTally& tally, f32 dirt);
 
     /// The most a guest pays to go in, hundredths, with `slides` ending in its water and `rivers` lazy rivers joined
     /// to it.
-    [[nodiscard]] std::int64_t pool_worth(const PoolTally& tally, std::size_t slides, std::size_t rivers, float dirt);
+    [[nodiscard]] i64 pool_worth(const PoolTally& tally, usize slides, usize rivers, f32 dirt);
 
 } // namespace rct3::park::pools

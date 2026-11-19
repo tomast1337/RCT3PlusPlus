@@ -19,6 +19,7 @@
 // the way it flies.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 
 #include <cstdint>
@@ -36,16 +37,16 @@ namespace rct3::park
     {
         std::string_view name;
         glm::mat4 place { 1.0f };
-        std::optional<std::int32_t> bone { }; ///< The bone it is, for a bone shape
+        std::optional<i32> bone { }; ///< The bone it is, for a bone shape
     };
 
     struct ModelLight
     {
-        glm::vec3 position { 0.0f };             ///< Model space
-        glm::vec3 colour { 1.0f };               ///< 0 to 1 a channel
-        std::optional<std::int32_t> colour_slot; ///< When set, the item's colour in this slot instead of `colour`
-        float radius = 0;                        ///< How far it reaches, world units
-        std::optional<std::int32_t> bone { };    ///< The bone that carries it, for a bone shape
+        glm::vec3 position { 0.0f };    ///< Model space
+        glm::vec3 colour { 1.0f };      ///< 0 to 1 a channel
+        std::optional<i32> colour_slot; ///< When set, the item's colour in this slot instead of `colour`
+        f32 radius = 0;                 ///< How far it reaches, world units
+        std::optional<i32> bone { };    ///< The bone that carries it, for a bone shape
     };
 
     /// The lights `places` mark, in light number order.
@@ -53,10 +54,10 @@ namespace rct3::park
 
     struct ModelEffect
     {
-        std::string effect { };               ///< The effect file's name, lower case, without its extension
-        glm::vec3 position { 0.0f };          ///< Model space
-        glm::vec3 up { 0.0f, 1.0f, 0.0f };    ///< The way it points, model space, length 1
-        std::optional<std::int32_t> bone { }; ///< The bone that carries it, for a bone shape
+        std::string effect { };            ///< The effect file's name, lower case, without its extension
+        glm::vec3 position { 0.0f };       ///< Model space
+        glm::vec3 up { 0.0f, 1.0f, 0.0f }; ///< The way it points, model space, length 1
+        std::optional<i32> bone { };       ///< The bone that carries it, for a bone shape
     };
 
     /// The firework tubes `places` mark, in number order; their effects are left empty.

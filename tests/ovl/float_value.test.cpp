@@ -2,6 +2,7 @@
 #include "ovl/float_value.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -18,7 +19,7 @@ namespace
     // Names: "A:flt" 0, "B:flt" 6, "C:flt" 12, "D:int" 18, "E:flt" 24. 30 bytes with the final NUL.
     const std::string kNames("A:flt\0B:flt\0C:flt\0D:int\0E:flt\0", 30);
 
-    std::vector<std::byte> row(std::uint32_t name, std::uint32_t data, bool pointer)
+    std::vector<std::byte> row(u32 name, u32 data, bool pointer)
     {
         std::vector<std::byte> out;
         append_u32(out, name);
@@ -29,9 +30,9 @@ namespace
         return out;
     }
 
-    std::uint32_t bits(float f)
+    u32 bits(f32 f)
     {
-        return std::bit_cast<std::uint32_t>(f);
+        return std::bit_cast<u32>(f);
     }
 
     Overlay make(const std::vector<std::vector<std::byte>>& rows)

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/coaster.hpp"
 #include "simulation/holding.hpp"
 #include "simulation/rides.hpp"
@@ -78,7 +79,7 @@ TEST_CASE("riders thrown from a crashed train fly on the way it went, land knock
     CHECK(r.get<Dropped>(g).drift.x > 0);     // On the way the train went
     CHECK(r.get<Dropped>(g).fall.value <= 0); // Never thrown downwards
     CHECK_FALSE(r.any_of<Errand, Stride>(g));
-    const float left = r.get<Pose>(g).position.x;
+    const f32 left = r.get<Pose>(g).position.x;
     park.run(5);
     CHECK(r.get<Pose>(g).position.x > left);
     CHECK(park.run_until([&] { return !r.get<Dropped>(g).thrown; }, 20));
@@ -106,7 +107,7 @@ TEST_CASE("a guest near a crash thinks it a disaster, and one beside a wreck blo
     CHECK_FALSE(r.get<Attraction>(ride).testing);
     // Right by a wreck till it blows up.
     Wreck& wreck = r.get<Wrecks>(ride).trains[0][0];
-    for (std::int32_t i = 0; i < 200 && wreck.state == WreckState::Flying; ++i)
+    for (i32 i = 0; i < 200 && wreck.state == WreckState::Flying; ++i)
     {
         wreck.at.x = r.get<Pose>(near).position.x;
         wreck.at.z = r.get<Pose>(near).position.z;
@@ -163,7 +164,7 @@ TEST_CASE("a ghost train's crash flies its wrecks but hurts no one, closes nothi
     CHECK_FALSE(thought(r, near, ThoughtKind::Disaster));
     // Right by a wreck as it blows up, and still standing.
     Wreck& wreck = r.get<Wrecks>(ride).trains[0][0];
-    for (std::int32_t i = 0; i < 200 && wreck.state == WreckState::Flying; ++i)
+    for (i32 i = 0; i < 200 && wreck.state == WreckState::Flying; ++i)
     {
         wreck.at.x = r.get<Pose>(near).position.x;
         wreck.at.z = r.get<Pose>(near).position.z;
@@ -198,7 +199,7 @@ TEST_CASE("a guest on ground grown too steep slides down it along the ground, fa
     auto& r = park.world().registry;
     const auto g = park.guest({ 1, 0 }, { .nausea = 0.7f }); // Too queasy to queue for a ride, so on foot
     // The ground falls away along +x from just behind them, then levels out four units on.
-    const float x0 = r.get<Pose>(g).position.x;
+    const f32 x0 = r.get<Pose>(g).position.x;
     r.ctx().insert_or_assign(WreckSurroundings { .ground = [x0](glm::vec2 p) { return -0.8f * std::clamp(p.x - x0 + 1, 0.0f, 5.0f); } });
     REQUIRE(slide(park.world(), g));
     REQUIRE(r.all_of<Dropped>(g));

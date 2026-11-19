@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/track/trains.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/ride_train.hpp"
@@ -49,13 +50,13 @@ namespace rct3::scene::track
             for (const auto part : car_file ? std::array { core::maybe(&car_file->common()), car_file->unique() } : std::array<std::optional<const ovl::Part&>, 2> { })
                 for (const ovl::RideTrainItem& t : part ? ovl::read_ride_trains(*car_file, *part) : std::vector<ovl::RideTrainItem> { })
                     if (t.train && strings::equals_ignoring_case(t.name, train_name) && t.train->fewest_cars > 0 && t.train->fewest_cars <= t.train->most_cars)
-                        limits = { .fewest_cars = static_cast<std::int32_t>(t.train->fewest_cars), .most_cars = static_cast<std::int32_t>(t.train->most_cars), .usual_cars = static_cast<std::int32_t>(std::clamp(t.train->usual_cars, t.train->fewest_cars, t.train->most_cars)) };
+                        limits = { .fewest_cars = static_cast<i32>(t.train->fewest_cars), .most_cars = static_cast<i32>(t.train->most_cars), .usual_cars = static_cast<i32>(std::clamp(t.train->usual_cars, t.train->fewest_cars, t.train->most_cars)) };
             return limits;
         }
 
     } // namespace
 
-    bool fit_trains(park::ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex index, std::int32_t trains, std::int32_t cars)
+    bool fit_trains(park::ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex index, i32 trains, i32 cars)
     {
         save::model::Ride& ride = scene.rides.rides[index.value];
         if (ride.trains.empty() || trains < 1 || cars < 1)
@@ -76,12 +77,12 @@ namespace rct3::scene::track
         // The train's designs by slot (rct3::park::ride::car_slots), each that it fills.
         std::array<std::optional<rct3::park::object::ObjectModel>, 6> designs;
         std::array<bool, 6> filled { };
-        for (std::size_t slot = 0; slot < designs.size(); ++slot)
+        for (usize slot = 0; slot < designs.size(); ++slot)
             filled[slot] = (designs[slot] = loader.load_car(name, path, slot)).has_value();
         // How each car of a train filling `slots` sits, by car; one without a model of its own takes no room.
-        const auto fits_of = [&](const std::vector<std::size_t>& slots) {
+        const auto fits_of = [&](const std::vector<usize>& slots) {
             std::vector<rct3::park::object::CarFit> fits;
-            for (const std::size_t slot : slots)
+            for (const usize slot : slots)
                 fits.push_back(designs[slot] && designs[slot]->car_fit ? *designs[slot]->car_fit : rct3::park::object::CarFit { });
             return fits;
         };
@@ -90,11 +91,11 @@ namespace rct3::scene::track
         if (course && ride.mode != save::model::OperatingMode::MiniGolf && std::ranges::contains(course->kinds, rct3::park::track::CourseKind::Station))
         {
             const auto limits = scene.train_limits.find(index);
-            const std::int32_t fewest = std::min(limits != scene.train_limits.end() ? limits->second.fewest_cars : 1, cars);
-            std::vector<float> lengths;
-            for (std::int32_t n = 1; n <= cars; ++n)
+            const i32 fewest = std::min(limits != scene.train_limits.end() ? limits->second.fewest_cars : 1, cars);
+            std::vector<f32> lengths;
+            for (i32 n = 1; n <= cars; ++n)
                 lengths.push_back(rct3::park::track::train_length(fits_of(rct3::park::ride::car_slots(n, filled))));
-            const std::int32_t fit = rct3::park::track::cars_fitting(*course, lengths, fewest);
+            const i32 fit = rct3::park::track::cars_fitting(*course, lengths, fewest);
             cars = fit > 0 ? fit : fewest;
         }
         // No longer than the track a lift's car carries.
@@ -107,32 +108,32 @@ namespace rct3::scene::track
                     --cars;
         }
         // A car more where those there have no seat, as a front car alone may have none.
-        while (cars < 2 && std::ranges::none_of(rct3::park::ride::car_slots(cars, filled), [&](std::size_t slot) { return designs[slot] && designs[slot]->seats > 0; }))
+        while (cars < 2 && std::ranges::none_of(rct3::park::ride::car_slots(cars, filled), [&](usize slot) { return designs[slot] && designs[slot]->seats > 0; }))
             ++cars;
-        const std::vector<std::size_t> slots = rct3::park::ride::car_slots(cars, filled);
+        const std::vector<usize> slots = rct3::park::ride::car_slots(cars, filled);
         std::vector<rct3::park::object::CarFit>& fits = scene.car_fits[index] = fits_of(slots);
-        if (std::ranges::none_of(slots, [&](std::size_t slot) { return designs[slot] && designs[slot]->car_fit; }))
+        if (std::ranges::none_of(slots, [&](usize slot) { return designs[slot] && designs[slot]->car_fit; }))
             fits.clear(); // Nothing to stand them by
         // As many trains as the course takes; a shuttle runs one.
         if (const auto coaster = course ? simulation::coaster_of(*course, ride) : std::nullopt; coaster && coaster->shuttle != simulation::Shuttle::None)
             trains = 1;
         else if (course)
             trains = std::min(trains, rct3::park::track::trains_fitting(*course, fits, ride.options.block_sectioned, index.value < scene.track_rules.size() ? scene.track_rules[index.value].most_trains : std::nullopt));
-        ride.trains.assign(static_cast<std::size_t>(trains), save::model::Train { });
+        ride.trains.assign(static_cast<usize>(trains), save::model::Train { });
         ride.seats.clear();
         bool arm = false;
-        for (std::int32_t t = 0; t < trains; ++t)
+        for (i32 t = 0; t < trains; ++t)
         {
-            save::model::Train& train = ride.trains[static_cast<std::size_t>(t)];
+            save::model::Train& train = ride.trains[static_cast<usize>(t)];
             train.symbol = symbol;
             train.overlay_path = path;
-            for (std::size_t car = 0; car < slots.size(); ++car)
+            for (usize car = 0; car < slots.size(); ++car)
             {
                 const auto& seated = designs[slots[car]];
                 arm = arm || (seated && !seated->arm_joints.empty());
-                train.cars.push_back({ .index = static_cast<std::int32_t>(car), .car_count = static_cast<std::int32_t>(slots.size()), .design_slot = static_cast<std::int32_t>(slots[car]) });
-                for (std::uint32_t seat = 0; seated && seat < seated->seats; ++seat)
-                    ride.seats.push_back({ .car = static_cast<std::int32_t>(car), .seat = static_cast<std::int32_t>(seat), .train = t });
+                train.cars.push_back({ .index = static_cast<i32>(car), .car_count = static_cast<i32>(slots.size()), .design_slot = static_cast<i32>(slots[car]) });
+                for (u32 seat = 0; seated && seat < seated->seats; ++seat)
+                    ride.seats.push_back({ .car = static_cast<i32>(car), .seat = static_cast<i32>(seat), .train = t });
             }
             train.length = { rct3::park::track::train_length(fits) };
         }
@@ -200,7 +201,7 @@ namespace rct3::scene::track
             return;
         if (!coaster)
         {
-            float front = course->length();
+            f32 front = course->length();
             for (save::model::Train& train : ride.trains)
             {
                 rct3::park::track::stand_train(*course, train, fits->second, std::max(front, 0.0f));
@@ -212,17 +213,17 @@ namespace rct3::scene::track
         // past that end, as if gone off it, and come back to the station one at a time.
         if (coaster->splash_out)
         {
-            for (std::size_t t = 0; t < ride.trains.size(); ++t)
+            for (usize t = 0; t < ride.trains.size(); ++t)
                 rct3::park::track::stand_train(*course, ride.trains[t], fits->second, t == 0 ? coaster->start : course->length());
             return;
         }
         // Spread over its stations; those with no room are left out, as the game does.
-        const std::vector<float> fronts = rct3::park::track::train_fronts(*course, coaster->start, ride.trains.front().length.value, static_cast<std::int32_t>(ride.trains.size()), ride.options.block_sectioned);
-        const auto kept = static_cast<std::int32_t>(fronts.size());
+        const std::vector<f32> fronts = rct3::park::track::train_fronts(*course, coaster->start, ride.trains.front().length.value, static_cast<i32>(ride.trains.size()), ride.options.block_sectioned);
+        const auto kept = static_cast<i32>(fronts.size());
         ride.trains.resize(fronts.size());
         std::erase_if(ride.seats, [&](const auto& seat) { return seat.train >= kept; });
         ride.train_count.emplace(kept);
-        for (std::size_t t = 0; t < fronts.size(); ++t)
+        for (usize t = 0; t < fronts.size(); ++t)
             rct3::park::track::stand_train(*course, ride.trains[t], fits->second, fronts[t]);
     }
 
@@ -242,12 +243,12 @@ namespace rct3::scene::track
         one.rides.push_back(scene.rides.rides[index.value]);
         simulation::import_boats(scene.sim, one, std::span(&e, 1), std::span(&scene.courses[index.value], 1), scene.grid, scene.footpaths.water.bodies, boat_obstacles(scene));
         auto* boats = scene.sim.registry.try_get<simulation::Boats>(e);
-        for (std::size_t k = 0; boats && k < scene.cars.size(); ++k)
+        for (usize k = 0; boats && k < scene.cars.size(); ++k)
             if (const auto model = scene.car_spots[k].ride == index ? scene.models.find(rct3::park::object::model_ref(scene.cars[k])) : scene.models.end(); model != scene.models.end() && model->second.boat_handling.turn_most > 0)
                 boats->handling = model->second.boat_handling;
     }
 
-    bool set_trains(render::Device& device, park::ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex index, std::int32_t trains, std::int32_t cars)
+    bool set_trains(render::Device& device, park::ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex index, i32 trains, i32 cars)
     {
         save::model::Ride& ride = scene.rides.rides[index.value];
         const entt::entity e = index.value < scene.ride_entities.size() ? scene.ride_entities[index.value] : entt::null;
@@ -278,13 +279,13 @@ namespace rct3::scene::track
             coaster->at = coaster->start;
             coaster->stops = fleet->trains.front().stops;
             r.replace<simulation::Trains>(e, simulation::trains_of(*coaster, ride));
-            r.get<simulation::CycleRide>(e).capacity = static_cast<std::uint32_t>(ride.seats.size() / std::max<std::size_t>(ride.trains.size(), 1));
+            r.get<simulation::CycleRide>(e).capacity = static_cast<u32>(ride.seats.size() / std::max<usize>(ride.trains.size(), 1));
         }
         park::replace_ride_cars(device, scene, install, index);
         // Boats all go back to the dock, as many as the ride now has.
         if (e != entt::null && r.all_of<simulation::Boats>(e))
         {
-            r.get<simulation::CycleRide>(e).capacity = static_cast<std::uint32_t>(ride.seats.size());
+            r.get<simulation::CycleRide>(e).capacity = static_cast<u32>(ride.seats.size());
             ready_boats(scene, index);
         }
         return true;

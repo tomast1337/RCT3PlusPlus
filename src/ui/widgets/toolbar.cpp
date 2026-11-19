@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/toolbar.hpp"
 
+#include "core/types.hpp"
+
 #include <cmath>
 #include <format>
 
@@ -46,10 +48,10 @@ namespace rct3::ui::widgets
         arrange();
     }
 
-    float Toolbar::length() const
+    f32 Toolbar::length() const
     {
         const bool across = orientation_ == Orientation::Horizontal;
-        float along = across ? style_.padding.x0 + style_.padding.x1 : style_.padding.y0 + style_.padding.y1;
+        f32 along = across ? style_.padding.x0 + style_.padding.x1 : style_.padding.y0 + style_.padding.y1;
         bool first = true;
         for (const auto& c : children())
         {
@@ -66,12 +68,12 @@ namespace rct3::ui::widgets
     void Toolbar::arrange()
     {
         const bool horizontal = orientation_ == Orientation::Horizontal;
-        float along = horizontal ? style_.padding.x0 : style_.padding.y0;
+        f32 along = horizontal ? style_.padding.x0 : style_.padding.y0;
         for (const auto& c : children())
         {
             if (!c->visible)
                 continue;
-            const float size = is_separator(*c) ? style_.separator_room : style_.button_size;
+            const f32 size = is_separator(*c) ? style_.separator_room : style_.button_size;
             c->placement = horizontal ? top_left(along, style_.padding.y0, size, style_.button_size) : top_left(style_.padding.x0, along, style_.button_size, size);
             along += size + style_.gap;
         }
@@ -94,12 +96,12 @@ namespace rct3::ui::widgets
             const Rect& r = c->rect();
             if (horizontal)
             {
-                const float x = std::round((r.x0 + r.x1) / 2);
+                const f32 x = std::round((r.x0 + r.x1) / 2);
                 context.list.fill({ x, r.y0 + 2, x + 1, r.y1 - 2 }, style_.separator_colour);
             }
             else
             {
-                const float y = std::round((r.y0 + r.y1) / 2);
+                const f32 y = std::round((r.y0 + r.y1) / 2);
                 context.list.fill({ r.x0 + 2, y, r.x1 - 2, y + 1 }, style_.separator_colour);
             }
         }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/rides.hpp"
 
+#include "core/types.hpp"
 #include "profiling/profiler.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/coaster.hpp"
@@ -47,49 +48,49 @@ namespace rct3::simulation
         }
 
         // Downtime windows: a game hour each, sampled 20 times, so each counts 0..20 as saved parks' do.
-        constexpr std::uint8_t kDowntimeSamples = 20;
-        constexpr float kDowntimeSampleSeconds = kSecondsPerHour / kDowntimeSamples;
+        constexpr u8 kDowntimeSamples = 20;
+        constexpr f32 kDowntimeSampleSeconds = kSecondsPerHour / kDowntimeSamples;
 
         /// A share, 0 to 1, fixed for each guest, so a queue looks the same every time it is shown.
-        float fixed_share(entt::entity e, std::uint64_t salt)
+        f32 fixed_share(entt::entity e, u64 salt)
         {
-            std::uint64_t mix = (std::uint64_t { entt::to_integral(e) } << 32) ^ salt;
-            return static_cast<float>(random::split_mix(mix) >> 40) / static_cast<float>(1u << 24);
+            u64 mix = (u64 { entt::to_integral(e) } << 32) ^ salt;
+            return static_cast<f32>(random::split_mix(mix) >> 40) / static_cast<f32>(1u << 24);
         }
     } // namespace
 
-    float Upkeep::downtime_share() const
+    f32 Upkeep::downtime_share() const
     {
-        std::int32_t sum = 0;
-        for (const std::uint8_t w : downtime)
+        i32 sum = 0;
+        for (const u8 w : downtime)
             sum += w;
-        return static_cast<float>(sum) / static_cast<float>(downtime.size() * kDowntimeSamples);
+        return static_cast<f32>(sum) / static_cast<f32>(downtime.size() * kDowntimeSamples);
     }
 
-    float room_ahead(std::span<const Coaster> trains, std::size_t t)
+    f32 room_ahead(std::span<const Coaster> trains, usize t)
     {
         const Coaster& train = trains[t];
-        const float length = train.length();
-        float room = std::numeric_limits<float>::infinity();
-        for (std::size_t k = 0; k < trains.size(); ++k)
+        const f32 length = train.length();
+        f32 room = std::numeric_limits<f32>::infinity();
+        for (usize k = 0; k < trains.size(); ++k)
         {
             // Gone off a pool slide's end, a train is in no one's way; on a track with two ends, nor is one behind.
             if (k == t || length <= 0 || trains[k].splashed || (!train.closed && trains[k].at < train.at))
                 continue;
             // How far ahead the back of train k is, round the track.
-            const float ahead = std::fmod(std::fmod(trains[k].at - train.at, length) + length, length);
+            const f32 ahead = std::fmod(std::fmod(trains[k].at - train.at, length) + length, length);
             room = std::min(room, std::max(ahead - trains[k].train_length - kBlockGap, 0.0f));
         }
         if (!train.blocks || length <= 0)
             return room;
         // Block ends: where a run of station, lift or block brake (not plain brakes) gives way to other track. A train stopped on one
         // (within kArrived) still counts it as ahead.
-        const auto ahead = [&](float d) { return std::fmod(std::fmod(d - train.at + kArrived, length) + length, length) - kArrived; };
+        const auto ahead = [&](f32 d) { return std::fmod(std::fmod(d - train.at + kArrived, length) + length, length) - kArrived; };
         // Only the nearest two ends ahead matter: the next, and the one closing the block beyond it.
-        std::array<float, 2> ends { };
-        std::array<float, 2> ends_ahead { std::numeric_limits<float>::infinity(), std::numeric_limits<float>::infinity() };
-        const auto end_at = [&](float d) {
-            const float a = ahead(d);
+        std::array<f32, 2> ends { };
+        std::array<f32, 2> ends_ahead { std::numeric_limits<f32>::infinity(), std::numeric_limits<f32>::infinity() };
+        const auto end_at = [&](f32 d) {
+            const f32 a = ahead(d);
             if (a < ends_ahead[0])
             {
                 ends = { d, ends[0] };
@@ -101,7 +102,7 @@ namespace rct3::simulation
                 ends_ahead[1] = a;
             }
         };
-        for (std::size_t i = 0; i + 2 < train.kinds.size(); ++i) // The last kind is past the track's end
+        for (usize i = 0; i + 2 < train.kinds.size(); ++i) // The last kind is past the track's end
             if (const Stretch k = train.kinds[i]; k != Stretch::Plain && k != Stretch::Launch && k != Stretch::Brake && k != Stretch::Booster && train.kinds[i + 1] != k)
                 end_at(train.distance[i + 1]);
         if (const Stretch last = train.kinds[train.kinds.size() - 2]; last != Stretch::Plain && last != Stretch::Launch && last != Stretch::Brake && last != Stretch::Booster && train.kinds.front() != last)
@@ -109,31 +110,31 @@ namespace rct3::simulation
         if (std::isinf(ends_ahead[1]))
             return room;
         // The block beyond the next end must hold no other train, not even a car of one.
-        const float end = ends[0];
-        const float block = std::fmod(std::fmod(ends[1] - end, length) + length, length);
-        for (std::size_t k = 0; k < trains.size(); ++k)
+        const f32 end = ends[0];
+        const f32 block = std::fmod(std::fmod(ends[1] - end, length) + length, length);
+        for (usize k = 0; k < trains.size(); ++k)
             if (k != t && std::fmod(std::fmod(trains[k].at - end, length) + length, length) - trains[k].train_length < block)
                 return std::min(room, std::max(ahead(end), 0.0f));
         return room;
     }
 
-    bool departs(const Departure& departure, std::size_t riders, std::size_t capacity, float waited)
+    bool departs(const Departure& departure, usize riders, usize capacity, f32 waited)
     {
         if (departure.min_wait && waited < departure.min_wait->value)
             return false;
         if (departure.max_wait && waited >= departure.max_wait->value)
             return true;
         // Quarters of the seats it waits for, the odd seat left over; any load is one rider.
-        const auto quarters = 4 - static_cast<std::size_t>(departure.wait_for);
-        return riders >= std::max<std::size_t>(capacity * quarters / 4, 1);
+        const auto quarters = 4 - static_cast<usize>(departure.wait_for);
+        return riders >= std::max<usize>(capacity * quarters / 4, 1);
     }
 
-    float cycle_seconds(const CycleRide& ride)
+    f32 cycle_seconds(const CycleRide& ride)
     {
-        return ride.start.value + static_cast<float>(ride.loops) * ride.run.value + ride.stop.value;
+        return ride.start.value + static_cast<f32>(ride.loops) * ride.run.value + ride.stop.value;
     }
 
-    std::optional<float> seconds_into_cycle(const CycleRide& ride)
+    std::optional<f32> seconds_into_cycle(const CycleRide& ride)
     {
         switch (ride.phase)
         {
@@ -142,14 +143,14 @@ namespace rct3::simulation
             case RidePhase::Starting:
                 return ride.in_phase.value;
             case RidePhase::Running:
-                return ride.start.value + static_cast<float>(ride.loop) * ride.run.value + ride.in_phase.value;
+                return ride.start.value + static_cast<f32>(ride.loop) * ride.run.value + ride.in_phase.value;
             case RidePhase::Stopping:
-                return ride.start.value + static_cast<float>(ride.loops) * ride.run.value + std::min(ride.in_phase.value, ride.stop.value);
+                return ride.start.value + static_cast<f32>(ride.loops) * ride.run.value + std::min(ride.in_phase.value, ride.stop.value);
         }
         return std::nullopt;
     }
 
-    bool advance_cycle(CycleRide& ride, float dt, bool held)
+    bool advance_cycle(CycleRide& ride, f32 dt, bool held)
     {
         if (ride.phase == RidePhase::Loading)
             return false;
@@ -163,10 +164,10 @@ namespace rct3::simulation
         }
         if (ride.phase == RidePhase::Running)
         {
-            const auto passed = ride.run.value > 0 ? static_cast<std::uint32_t>(ride.in_phase.value / ride.run.value) : ride.loops;
-            const std::uint32_t done = std::min(passed, ride.loops - std::min(ride.loop, ride.loops));
+            const auto passed = ride.run.value > 0 ? static_cast<u32>(ride.in_phase.value / ride.run.value) : ride.loops;
+            const u32 done = std::min(passed, ride.loops - std::min(ride.loop, ride.loops));
             ride.loop += done;
-            ride.in_phase.value -= static_cast<float>(done) * ride.run.value;
+            ride.in_phase.value -= static_cast<f32>(done) * ride.run.value;
             if (ride.loop >= ride.loops)
                 ride.phase = RidePhase::Stopping;
         }
@@ -185,13 +186,13 @@ namespace rct3::simulation
         const std::vector<glm::vec3>& track = walk.track;
         if (track.empty())
             return { };
-        const auto nearest = [&](glm::vec3 to) { return static_cast<std::size_t>(std::ranges::min_element(track, { }, [&](const glm::vec3& p) { return glm::distance(p, to); }) - track.begin()); };
-        const std::size_t last = nearest(out);
+        const auto nearest = [&](glm::vec3 to) { return static_cast<usize>(std::ranges::min_element(track, { }, [&](const glm::vec3& p) { return glm::distance(p, to); }) - track.begin()); };
+        const usize last = nearest(out);
         std::vector<glm::vec3> way;
         // A circuit's doors stand on its station, where the course starts: round past that start, so the whole
         // course is walked whichever door comes first along it.
         bool round = !walk.circuit;
-        for (std::size_t k = nearest(in);; k = (k + 1) % track.size())
+        for (usize k = nearest(in);; k = (k + 1) % track.size())
         {
             way.push_back(track[k]);
             if ((k == last && round) || (!walk.circuit && k + 1 == track.size()))
@@ -205,8 +206,8 @@ namespace rct3::simulation
     {
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;
-        constexpr float dt = kTickSeconds;
-        const float now = static_cast<float>(world.tick) * kTickSeconds;
+        constexpr f32 dt = kTickSeconds;
+        const f32 now = static_cast<f32>(world.tick) * kTickSeconds;
 
         phase.emplace("Rides");
         // 4. Rides, in entity order: queues shuffle forward, riders get off, the next ones board.
@@ -242,7 +243,7 @@ namespace rct3::simulation
                     stop_at(paths, *entrance, r.get<Stride>(guest), r.get<Pose>(guest));
             };
             // Each station's queue in turn.
-            for (std::size_t station = 0; station <= ride.stops.size(); ++station)
+            for (usize station = 0; station <= ride.stops.size(); ++station)
             {
                 auto& queue = station == 0 ? ride.queue : ride.stops[station - 1].queue;
                 const auto& line = station == 0 ? ride.line : ride.stops[station - 1].line;
@@ -260,12 +261,12 @@ namespace rct3::simulation
                 });
                 if (!line.empty())
                 {
-                    const float last = static_cast<float>(line.size() - 1);
-                    float side_ahead = 0;
-                    float along_ahead = -kTuning.queues.spacing.value; // Where the guest ahead stands now
-                    std::size_t beside_count = 0;                      // Those so far standing beside one ahead of them
-                    entt::entity party_ahead = entt::null;             // The guest ahead's party, while they stand alone
-                    for (std::size_t k = 0; k < queue.size(); ++k)
+                    const f32 last = static_cast<f32>(line.size() - 1);
+                    f32 side_ahead = 0;
+                    f32 along_ahead = -kTuning.queues.spacing.value; // Where the guest ahead stands now
+                    usize beside_count = 0;                          // Those so far standing beside one ahead of them
+                    entt::entity party_ahead = entt::null;           // The guest ahead's party, while they stand alone
+                    for (usize k = 0; k < queue.size(); ++k)
                     {
                         if (!r.valid(queue[k]))
                             continue;
@@ -276,27 +277,27 @@ namespace rct3::simulation
                         const bool beside = party != entt::null && party == party_ahead;
                         party_ahead = beside ? entt::null : party;
                         beside_count += beside ? 1 : 0;
-                        enum : std::uint64_t
+                        enum : u64
                         {
                             Side = 1,
                             Place = 2
                         };
                         // Guests brought in from a save have no side yet: across from the guest ahead too.
-                        const auto nearest = static_cast<float>(kTuning.queues.nearest_side.value);
+                        const auto nearest = static_cast<f32>(kTuning.queues.nearest_side.value);
                         if (stride.side.value == 0)
                             stride.side.value = (side_ahead > 0 ? -kTuning.queues.reach.value : kTuning.queues.reach.value) * (nearest + (1 - nearest) * fixed_share(queue[k], Side));
                         if (beside)
                         {
-                            const float reach = kTuning.queues.reach.value;
-                            const float apart = kTuning.queues.beside.value;
+                            const f32 reach = kTuning.queues.reach.value;
+                            const f32 apart = kTuning.queues.beside.value;
                             stride.side.value = std::clamp(side_ahead > 0 ? std::min(stride.side.value, side_ahead - apart) : std::max(stride.side.value, side_ahead + apart), -reach, reach);
                         }
                         side_ahead = stride.side.value;
                         // Off their even place by a little, so the line is not spaced like a ruler.
                         // Never nearer the guest ahead than the closest gap, wherever they stand: one still waiting for
                         // their own gap to open is not walked up past or into.
-                        const float even = (static_cast<float>(k - beside_count) + kTuning.queues.gap_spread.value * (fixed_share(queue[k], Place) - 0.5f)) * kTuning.queues.spacing.value;
-                        const float place_in_line = std::clamp(beside ? along_ahead : std::max(even, along_ahead + kTuning.queues.spacing.value * (1 - kTuning.queues.gap_spread.value)), 0.0f, last);
+                        const f32 even = (static_cast<f32>(k - beside_count) + kTuning.queues.gap_spread.value * (fixed_share(queue[k], Place) - 0.5f)) * kTuning.queues.spacing.value;
+                        const f32 place_in_line = std::clamp(beside ? along_ahead : std::max(even, along_ahead + kTuning.queues.spacing.value * (1 - kTuning.queues.gap_spread.value)), 0.0f, last);
                         // Up to the place behind the guest ahead, in shuffles: a guest standing waits for a gap.
                         const bool was_moving = stride.from != stride.to;
                         const bool moving = stride.along.value > place_in_line && (was_moving || stride.along.value - place_in_line > kTuning.queues.shuffle.value);
@@ -304,16 +305,16 @@ namespace rct3::simulation
                             stride.along.value = std::max(stride.along.value - stride.speed.value * dt / paths.tile_size, place_in_line);
                         along_ahead = stride.along.value;
                         // Between the tile behind and the one ahead, facing the front.
-                        const auto behind = static_cast<std::size_t>(std::ceil(stride.along.value));
-                        const auto ahead = static_cast<std::size_t>(std::floor(stride.along.value));
+                        const auto behind = static_cast<usize>(std::ceil(stride.along.value));
+                        const auto ahead = static_cast<usize>(std::floor(stride.along.value));
                         stride.from = line[behind];
                         stride.to = moving && stride.along.value > place_in_line ? line[ahead] : line[behind];
-                        stride.progress.value = static_cast<float>(behind) - stride.along.value;
+                        stride.progress.value = static_cast<f32>(behind) - stride.along.value;
                         auto& pose = r.get<Pose>(queue[k]);
                         pose.position = glm::mix(paths.centre(line[behind]), paths.centre(line[ahead]), stride.progress.value);
                         // To one side of the line, across the way it runs here (on a tile's middle, the way on to the front).
-                        const std::size_t from = ahead != behind ? behind : std::min(behind + 1, line.size() - 1);
-                        const std::size_t to = ahead != behind ? ahead : (behind > 0 ? behind - 1 : 0);
+                        const usize from = ahead != behind ? behind : std::min(behind + 1, line.size() - 1);
+                        const usize to = ahead != behind ? ahead : (behind > 0 ? behind - 1 : 0);
                         const glm::vec3 d = paths.centre(line[to]) - paths.centre(line[from]);
                         if (from != to && glm::length(glm::vec2(d.x, d.z)) > 0)
                         {
@@ -332,10 +333,10 @@ namespace rct3::simulation
             // `shift`: from where the train stands at the station's end to where it stands now.
             // Of the step a pool slide's train ran off its end in, the time left after it got there.
             const auto off_for = [&](const Coaster& c) { return std::clamp(dt - (c.at - c.was_at) / std::max(c.speed, 0.1f), 0.0f, dt); };
-            const auto unload = [&](std::vector<entt::entity>& riders, std::size_t station, glm::vec3 shift = glm::vec3(0.0f), const Coaster* splashed = nullptr) {
+            const auto unload = [&](std::vector<entt::entity>& riders, usize station, glm::vec3 shift = glm::vec3(0.0f), const Coaster* splashed = nullptr) {
                 std::vector<bool> off(riders.size());
-                float side_ahead = 0;
-                for (std::size_t seat = 0; seat < riders.size(); ++seat)
+                f32 side_ahead = 0;
+                for (usize seat = 0; seat < riders.size(); ++seat)
                 {
                     const entt::entity guest = riders[seat];
                     if (!r.valid(guest))
@@ -348,7 +349,7 @@ namespace rct3::simulation
                         continue;
                     off[seat] = true;
                     auto& mood = r.get<Mood>(guest);
-                    const float felt = felt_excitement(ride.excitement.value, r.all_of<Trains>(e), age_of(r, guest), night);
+                    const f32 felt = felt_excitement(ride.excitement.value, r.all_of<Trains>(e), age_of(r, guest), night);
                     Ridden& been = r.get_or_emplace<Ridden>(guest);
                     auto& ridden = been.rides;
                     been.last = e;
@@ -399,7 +400,7 @@ namespace rct3::simulation
                         // Each to a side of the way out as in a queue, so a load spills out abreast, not in one file:
                         // from past the seat, across the way on from each point, back to the middle on the path.
                         side_ahead = side_after(dice, side_ahead);
-                        for (std::size_t k = 1; k + 1 < walk.points.size(); ++k)
+                        for (usize k = 1; k + 1 < walk.points.size(); ++k)
                         {
                             const glm::vec3 d = walk.points[k + 1] - walk.points[k];
                             if (glm::length(glm::vec2(d.x, d.z)) > 0)
@@ -459,16 +460,16 @@ namespace rct3::simulation
                     else
                         let_out(r, paths, guest, e, gesture);
                 }
-                std::size_t seat = 0;
+                usize seat = 0;
                 std::erase_if(riders, [&](entt::entity) { return off[seat++]; });
             };
             // Riders an hour over the time since the last departure, smoothed over the last few.
             if (ride.since_departure)
                 ride.since_departure->value += dt;
-            const auto depart = [&](std::size_t riding, units::Seconds& timer) {
+            const auto depart = [&](usize riding, units::Seconds& timer) {
                 if (ride.since_departure && ride.since_departure->value > 0)
                 {
-                    const float rate = static_cast<float>(riding) * units::kHour.value / ride.since_departure->value;
+                    const f32 rate = static_cast<f32>(riding) * units::kHour.value / ride.since_departure->value;
                     ride.per_hour = ride.per_hour > 0 ? std::lerp(ride.per_hour, rate, kTuning.wear.flow_smoothing.value) : rate;
                 }
                 ride.since_departure = units::Seconds { };
@@ -484,7 +485,7 @@ namespace rct3::simulation
                     constexpr std::array kCoaster { EmergencyStop, RestraintsFailToOpen, RestraintsFailToClose, TrainStuckLeavingStation, StationBrakesFail, ControlFailure };
                     constexpr std::array kFlat { RestraintsFailToOpen, RestraintsFailToClose, DoorsFailToOpen, DoorsFailToClose, ControlFailure };
                     const bool coaster = r.all_of<Trains>(e);
-                    const std::size_t pick = random::below(r.get<Dice>(e).state, coaster ? kCoaster.size() : kFlat.size());
+                    const usize pick = random::below(r.get<Dice>(e).state, coaster ? kCoaster.size() : kFlat.size());
                     upkeep.kind = upkeep.last = coaster ? kCoaster[pick] : kFlat[pick];
                     upkeep.broken = true;
                     ++upkeep.breakdowns;
@@ -517,7 +518,7 @@ namespace rct3::simulation
                                 const glm::vec3 at = r.get<Pose>(g).position;
                                 glm::vec2 away(at.x - wreck.at.x, at.z - wreck.at.z);
                                 away = glm::length(away) > 0.01f ? glm::normalize(away) : glm::vec2(1, 0);
-                                const float push = static_cast<float>(random::between(dice, 0.5, 1.0));
+                                const f32 push = static_cast<f32>(random::between(dice, 0.5, 1.0));
                                 const glm::vec3 velocity(away.x * crashes.blown.value * push, crashes.lofted.value * push, away.y * crashes.blown.value * push);
                                 throw_person(r, g, at, velocity, r.get<Stride>(g).to);
                                 think(r, g, ThoughtKind::BeenInjured, e, now);
@@ -529,12 +530,12 @@ namespace rct3::simulation
             }
             // A cycle ends when the ride's time is up, or a train has come round.
             auto* fleet = r.try_get<Trains>(e);
-            std::vector<std::optional<std::size_t>> standing(1 + ride.stops.size()); // The train standing at each station, ready to load
+            std::vector<std::optional<usize>> standing(1 + ride.stops.size()); // The train standing at each station, ready to load
             if (fleet != nullptr)
             {
                 if (!fleet->trains.empty() && !(upkeep.broken && upkeep.kind == Breakdown::EmergencyStop))
                     lower_carriages(fleet->trains.front(), fleet->carriages, dt);
-                for (std::size_t t = 0; t < fleet->trains.size(); ++t)
+                for (usize t = 0; t < fleet->trains.size(); ++t)
                 {
                     Coaster& train = fleet->trains[t];
                     train.was_at = train.at;
@@ -589,12 +590,12 @@ namespace rct3::simulation
                     if (t == 0 && train.crashed)
                         fleet->lap = { };
                     // On a slide's way back to its lift, its riders are let off into the pool and the car goes on empty.
-                    if (!fleet->riders[t].empty() && std::ranges::any_of(train.drop_offs, [&](float d) { return train.was_at < d && train.at >= d; }))
+                    if (!fleet->riders[t].empty() && std::ranges::any_of(train.drop_offs, [&](f32 d) { return train.was_at < d && train.at >= d; }))
                         unload(fleet->riders[t], 0, glm::vec3(0.0f), &train);
                     // Its riders react to the ride, seated in its cars front to back.
                     if (const auto& riders = fleet->riders[t]; !riders.empty() && !train.crashed)
                     {
-                        enum : std::uint64_t
+                        enum : u64
                         {
                             Hands = 21,
                             Brace = 22,
@@ -603,15 +604,15 @@ namespace rct3::simulation
                         const Felt feel = felt(train);
                         const bool moving = train.running && std::abs(train.speed) >= kTuning.reactions.still.value;
                         const TrainRun run = !moving ? TrainRun::Standing : on_chain(train) ? TrainRun::Lifting : TrainRun::Free;
-                        const std::size_t per_car = std::max<std::size_t>(ride.capacity / static_cast<std::size_t>(std::max(train.cars, 1)), 1);
-                        for (std::size_t seat = 0; seat < riders.size(); ++seat)
+                        const usize per_car = std::max<usize>(ride.capacity / static_cast<usize>(std::max(train.cars, 1)), 1);
+                        for (usize seat = 0; seat < riders.size(); ++seat)
                         {
                             const entt::entity guest = riders[seat];
                             const auto* mood = r.valid(guest) ? r.try_get<Mood>(guest) : nullptr;
                             if (mood == nullptr)
                                 continue;
                             const auto* taste = r.try_get<Taste>(guest);
-                            const float over = ride.intensity.value - (taste != nullptr ? taste->most.value : 1.0f);
+                            const f32 over = ride.intensity.value - (taste != nullptr ? taste->most.value : 1.0f);
                             const Leanings leanings { .hands = fixed_share(guest, Hands), .brace = fixed_share(guest, Brace), .eyes = fixed_share(guest, Eyes) };
                             auto& thrill = r.get_or_emplace<Thrill>(guest);
                             thrill.reaction = react(thrill.reaction, feel, run, mood->happiness, over, leanings, seat < per_car ? CarPlace::Front : CarPlace::Behind, r.get<Dice>(guest).state, dt);
@@ -625,7 +626,7 @@ namespace rct3::simulation
                         const auto door = pool_door_at(world, at);
                         const auto* pool = door ? r.try_get<SwimPool>(r.get<PoolDoor>(*door).pool) : nullptr;
                         const auto* surroundings = r.ctx().find<WreckSurroundings>();
-                        float water = surroundings != nullptr && surroundings->ground ? surroundings->ground({ at.x, at.z }) : 0.0f;
+                        f32 water = surroundings != nullptr && surroundings->ground ? surroundings->ground({ at.x, at.z }) : 0.0f;
                         if (pool != nullptr && !pool->water.empty())
                             water = std::ranges::min(pool->water, { }, [&](const glm::vec3& w) { return glm::distance(glm::vec2(w.x, w.z), glm::vec2(at.x, at.z)); }).y;
                         const glm::vec3 way = track_way(train, train.at);
@@ -644,7 +645,7 @@ namespace rct3::simulation
                         fly(*train.flight, off_for(train));
                         unload(fleet->riders[t], 0, glm::vec3(0.0f), &train);
                     }
-                    const auto stop = round && !train.splashed ? std::optional<std::size_t> { 0 } : was_running ? standing_at(train) : std::nullopt;
+                    const auto stop = round && !train.splashed ? std::optional<usize> { 0 } : was_running ? standing_at(train) : std::nullopt;
                     // Held up in a station behind the train ahead, its riders get off where it stands, every car at
                     // once; it then moves up to load at the station's end.
                     const auto held = stop ? std::nullopt : held_in_station(train);
@@ -654,7 +655,7 @@ namespace rct3::simulation
                         for (const entt::entity guest : fleet->riders[t])
                             if (auto* thrill = r.valid(guest) ? r.try_get<Thrill>(guest) : nullptr)
                                 thrill->reaction = RideReaction::Waiting;
-                        const float end = !held || *held == 0 ? train.start : train.start + train.stops[*held - 1];
+                        const f32 end = !held || *held == 0 ? train.start : train.start + train.stops[*held - 1];
                         unload(fleet->riders[t], stop.value_or(held.value_or(0)), held ? track_point(train, train.at) - track_point(train, end) : glm::vec3(0.0f));
                     }
                     // Run off its track, the train's cars fly on as wrecks, throwing out their riders, and the ride
@@ -669,19 +670,19 @@ namespace rct3::simulation
                         thrown = thrown_cars(train, dice);
                         if (train.ghost)
                             continue;
-                        const auto spread = [&] { return static_cast<float>(random::between(dice, -1.0, 1.0)); };
-                        const std::size_t cars = thrown.size();
+                        const auto spread = [&] { return static_cast<f32>(random::between(dice, -1.0, 1.0)); };
+                        const usize cars = thrown.size();
                         // Riders fill the cars front to back.
                         std::vector<entt::entity>& riders = fleet->riders[t];
-                        const std::size_t seats = std::max<std::size_t>((ride.capacity + cars - 1) / cars, 1);
-                        wrecks->dangers += (attraction.open ? 1 : 0) + static_cast<std::uint32_t>(std::min(cars, (riders.size() + seats - 1) / seats));
+                        const usize seats = std::max<usize>((ride.capacity + cars - 1) / cars, 1);
+                        wrecks->dangers += (attraction.open ? 1 : 0) + static_cast<u32>(std::min(cars, (riders.size() + seats - 1) / seats));
                         ++wrecks->crashes;
                         wrecks->since = units::Seconds { };
                         // Riders fly out of their car as fast as it went, though never thrown downwards, land
                         // knocked over and, once up, walk back to the ride's exit.
                         // shortcut: they fly through what stands in the park and walk straight back over whatever
                         // lies between; upgrade when people walk off the paths.
-                        for (std::size_t seat = 0; seat < riders.size(); ++seat)
+                        for (usize seat = 0; seat < riders.size(); ++seat)
                         {
                             const entt::entity guest = riders[seat];
                             if (!r.valid(guest))
@@ -740,13 +741,13 @@ namespace rct3::simulation
                 for (const entt::entity guest : ride.riders)
                     if (const auto* mood = r.valid(guest) && !r.all_of<RideWalk>(guest) ? r.try_get<Mood>(guest) : nullptr)
                     {
-                        enum : std::uint64_t
+                        enum : u64
                         {
                             Hands = 21,
                             Eyes = 23
                         };
                         const auto* taste = r.try_get<Taste>(guest);
-                        const float over = ride.intensity.value - (taste != nullptr ? taste->most.value : 1.0f);
+                        const f32 over = ride.intensity.value - (taste != nullptr ? taste->most.value : 1.0f);
                         auto& thrill = r.get_or_emplace<Thrill>(guest);
                         thrill.reaction = react_flat(thrill.reaction, ride.phase == RidePhase::Running, mood->happiness, over, Leanings { .hands = fixed_share(guest, Hands), .eyes = fixed_share(guest, Eyes) }, r.get<Dice>(guest).state, dt);
                     }
@@ -774,7 +775,7 @@ namespace rct3::simulation
             // shortcut: the rest of a load boards from wherever they stand in the line, upgrade when guests are shown boarding.
             // On a ride whose trains stop at more than one station, each station's in turn, riders only walking on at
             // the first.
-            for (std::size_t station = 0; station <= ride.stops.size(); ++station)
+            for (usize station = 0; station <= ride.stops.size(); ++station)
             {
                 auto& queue = station == 0 ? ride.queue : ride.stops[station - 1].queue;
                 const auto& line = station == 0 ? ride.line : ride.stops[station - 1].line;
@@ -785,7 +786,7 @@ namespace rct3::simulation
                 auto* riders = !ready ? nullptr : fleet != nullptr ? &fleet->riders[*standing[station]] : &ride.riders;
                 if (riders != nullptr && at_front && riders->size() < ride.capacity && !(walk_on && std::ranges::any_of(*riders, at_ticket)))
                 {
-                    std::size_t boarding = std::min<std::size_t>(ride.capacity - riders->size(), queue.size());
+                    usize boarding = std::min<usize>(ride.capacity - riders->size(), queue.size());
                     // A party in line rides on one load: cut through by the seats left, it waits for the next when it
                     // fits one.
                     if (boarding < queue.size())
@@ -796,10 +797,10 @@ namespace rct3::simulation
                         };
                         if (const entt::entity cut = party_of(queue[boarding]); cut != entt::null && boarding > 0 && party_of(queue[boarding - 1]) == cut)
                         {
-                            std::size_t first = boarding;
+                            usize first = boarding;
                             while (first > 0 && party_of(queue[first - 1]) == cut)
                                 --first;
-                            std::size_t last = boarding;
+                            usize last = boarding;
                             while (last < queue.size() && party_of(queue[last]) == cut)
                                 ++last;
                             auto& count = r.ctx().emplace<PartyBoarding>();
@@ -813,8 +814,8 @@ namespace rct3::simulation
                         }
                     }
                     if (walk_on)
-                        boarding = std::min<std::size_t>(boarding, 1);
-                    for (std::size_t i = 0; i < boarding; ++i)
+                        boarding = std::min<usize>(boarding, 1);
+                    for (usize i = 0; i < boarding; ++i)
                     {
                         const entt::entity guest = queue[i];
                         if (!r.valid(guest))
@@ -848,7 +849,7 @@ namespace rct3::simulation
                             walk.points.push_back(paths.centre(*out));
                             r.emplace_or_replace<RideWalk>(guest, std::move(walk));
                         }
-                        else if (const std::size_t seat = riders->size(); walk_on && seat < walks->on.size())
+                        else if (const usize seat = riders->size(); walk_on && seat < walks->on.size())
                         {
                             RideWalk walk { .points = { walks->ticket }, .pause = kTuning.queues.ticket.value };
                             walk.points.insert(walk.points.end(), walks->on[seat].begin(), walks->on[seat].end());
@@ -889,7 +890,7 @@ namespace rct3::simulation
                     {
                         ride.synced = false;
                         ride.released = false;
-                        depart(static_cast<std::size_t>(std::ranges::count_if(*riders, [&](entt::entity g) { return r.valid(g) && r.get<Errand>(g).station == station; })), timer);
+                        depart(static_cast<usize>(std::ranges::count_if(*riders, [&](entt::entity g) { return r.valid(g) && r.get<Errand>(g).station == station; })), timer);
                         if (fleet != nullptr)
                             fleet->trains[*standing[station]].running = true;
                         else
@@ -905,7 +906,7 @@ namespace rct3::simulation
                         timer.value += dt;
                 }
             }
-            for (std::size_t station = 0; station <= ride.stops.size(); ++station)
+            for (usize station = 0; station <= ride.stops.size(); ++station)
             {
                 auto& queue = station == 0 ? ride.queue : ride.stops[station - 1].queue;
                 const std::optional<NodeId> entrance = entrance_of(r, e, station);
@@ -940,7 +941,7 @@ namespace rct3::simulation
             const auto* leaving = r.try_get<Departure>(e);
             if (fleet != nullptr && standing[0] && leaving != nullptr && leaving->leave_on_arrival && (!leaving->min_wait || ride.loading.value >= leaving->min_wait->value) && !fleet->trains[*standing[0]].running && !upkeep.broken && std::ranges::none_of(fleet->riders[*standing[0]], on_their_way))
             {
-                for (std::size_t t = 0; t < fleet->trains.size(); ++t)
+                for (usize t = 0; t < fleet->trains.size(); ++t)
                     if (t != *standing[0] && fleet->trains[t].running && room_ahead(fleet->trains, t) < 0.01f)
                     {
                         fleet->trains[*standing[0]].running = true;
@@ -950,13 +951,13 @@ namespace rct3::simulation
         }
     }
 
-    std::optional<NodeId> entrance_of(const entt::registry& r, entt::entity ride, std::size_t station)
+    std::optional<NodeId> entrance_of(const entt::registry& r, entt::entity ride, usize station)
     {
         const CycleRide& cycle = r.get<CycleRide>(ride);
         return station > 0 && station <= cycle.stops.size() ? cycle.stops[station - 1].entrance : r.get<Attraction>(ride).entrance;
     }
 
-    std::optional<NodeId> exit_of(const entt::registry& r, entt::entity ride, std::size_t station)
+    std::optional<NodeId> exit_of(const entt::registry& r, entt::entity ride, usize station)
     {
         const CycleRide& cycle = r.get<CycleRide>(ride);
         if (station > 0 && station <= cycle.stops.size())
@@ -984,7 +985,7 @@ namespace rct3::simulation
             be_sick(r, guest, out);
     }
 
-    RideReaction react(RideReaction now, const Felt& feel, TrainRun run, units::Share happiness, float over, const Leanings& leanings, CarPlace car, random::RandomState& dice, float dt)
+    RideReaction react(RideReaction now, const Felt& feel, TrainRun run, units::Share happiness, f32 over, const Leanings& leanings, CarPlace car, random::RandomState& dice, f32 dt)
     {
         const auto& k = kTuning.reactions;
         if (run != TrainRun::Free)
@@ -1004,7 +1005,7 @@ namespace rct3::simulation
         return hands ? RideReaction::HandsUp : RideReaction::Calm;
     }
 
-    RideReaction react_flat(RideReaction now, bool running, units::Share happiness, float over, const Leanings& leanings, random::RandomState& dice, float dt)
+    RideReaction react_flat(RideReaction now, bool running, units::Share happiness, f32 over, const Leanings& leanings, random::RandomState& dice, f32 dt)
     {
         const auto& k = kTuning.reactions;
         if (!running)
@@ -1017,7 +1018,7 @@ namespace rct3::simulation
         return thrilled && leanings.hands >= k.timid.value && random::chance(dice, k.hands_up.value * dt) ? RideReaction::HandsUp : RideReaction::Calm;
     }
 
-    float felt_excitement(float excitement, bool coaster, AgeGroup age, bool night)
+    f32 felt_excitement(f32 excitement, bool coaster, AgeGroup age, bool night)
     {
         if (!coaster || !night)
             return excitement;
@@ -1027,7 +1028,7 @@ namespace rct3::simulation
     units::Money ride_worth(const CycleRide& ride)
     {
         const auto& k = kTuning.arrivals;
-        const float worth = k.ride_worth.value * (ride.excitement.value + k.intensity_worth.value * ride.intensity.value);
+        const f32 worth = k.ride_worth.value * (ride.excitement.value + k.intensity_worth.value * ride.intensity.value);
         return { std::lround(ride.intensity.value > k.too_intense.value ? worth / 2 : worth) };
     }
 

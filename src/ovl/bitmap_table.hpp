@@ -4,6 +4,7 @@
 // mip chains. A table has no symbol name, it is attached to an anonymous loader row.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <cstddef>
@@ -25,18 +26,18 @@ namespace rct3::ovl
 
     /// Layout of a stored format value: 2 is 32 bits per pixel (B8G8R8A8), 18 is the 8-byte block format (DXT1) and 19 the 16-byte
     /// one (DXT3), the two blocks formats being 4x4 pixels. Nothing for any other value, which does not occur in shipped files.
-    [[nodiscard]] std::optional<BitmapLayout> bitmap_layout(std::uint32_t format) noexcept;
+    [[nodiscard]] std::optional<BitmapLayout> bitmap_layout(u32 format) noexcept;
 
     /// Bytes of all `levels` mip levels of a bitmap, stored from the largest level down with each level
     /// halving both sides down to 1. Nothing for an unknown format.
-    [[nodiscard]] std::optional<std::uint64_t> bitmap_data_size(std::uint32_t format, std::uint32_t width, std::uint32_t height, std::uint32_t levels) noexcept;
+    [[nodiscard]] std::optional<u64> bitmap_data_size(u32 format, u32 width, u32 height, u32 levels) noexcept;
 
     struct Bitmap
     {
-        std::uint32_t format = 0;
-        std::uint32_t width = 0;         ///< Power of two, at most 2048
-        std::uint32_t height = 0;        ///< Power of two, at most 2048
-        std::uint32_t levels = 0;        ///< Mip levels, 1 to 11
+        u32 format = 0;
+        u32 width = 0;                   ///< Power of two, at most 2048
+        u32 height = 0;                  ///< Power of two, at most 2048
+        u32 levels = 0;                  ///< Mip levels, 1 to 11
         std::span<const std::byte> data; ///< All levels in order, `bitmap_data_size` bytes
     };
 
@@ -47,7 +48,7 @@ namespace rct3::ovl
 
     struct BitmapTableItem
     {
-        std::size_t row = 0;              ///< Index of the loader row the table belongs to
+        usize row = 0;                    ///< Index of the loader row the table belongs to
         std::optional<BitmapTable> table; ///< Nothing when the row's data or chunks are unreadable
     };
 

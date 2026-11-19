@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/occlusion.hpp"
 
+#include "core/types.hpp"
+
 #include <span>
 #include <string_view>
 
@@ -11,12 +13,12 @@ namespace rct3::scene::park
     {
         // Chosen by eye: how far round a point is looked at, in world units (metres); how dark
         // the darkest corners get; and the last frames' share of each result.
-        constexpr float kRadius = 4.0f;
-        constexpr float kStrength = 0.8f;
+        constexpr f32 kRadius = 4.0f;
+        constexpr f32 kStrength = 0.8f;
         // shortcut: the results are kept in 8 bits a channel, as targets are, so a share near 1 would leave the
         // blend stuck a step short of the new value; 0.85 keeps that under 0.03. Upgrade to a float target if
         // it shows.
-        constexpr float kHistory = 0.85f;
+        constexpr f32 kHistory = 0.85f;
 
         constexpr std::array kAttributes { render::VertexAttribute { 0, render::VertexFormat::Float2, 0 } };
 
@@ -76,7 +78,7 @@ namespace rct3::scene::park
                 render::DrawCommand draw;
                 draw.pipeline = pipeline;
                 draw.vertices = *vertices;
-                draw.count = static_cast<std::uint32_t>(kCorners.size());
+                draw.count = static_cast<u32>(kCorners.size());
                 draw.transform = matrix;
                 draw.texture = texture;
                 draw.extra_textures = { extras[0], extras[1], extras[2] };
@@ -95,8 +97,8 @@ namespace rct3::scene::park
         if (!ready(device, o))
             return;
         device.end_pass();
-        const std::size_t now = o.frame & 1;
-        const std::size_t then = 1 - now;
+        const usize now = o.frame & 1;
+        const usize then = 1 - now;
         if (!device.copy_screen(o.screens[now]))
         {
             device.begin_pass(back);

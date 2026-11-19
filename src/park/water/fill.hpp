@@ -10,6 +10,7 @@
 // ground under or beside a lake leaves it the water the new ground still holds (settle_water).
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/world.hpp"
 
 #include <cstdint>
@@ -23,12 +24,12 @@ namespace rct3::park::water
 
     /// The water body filled from tile `col`, `row` to `level`. Its triangles are empty when the tile has no
     /// corner below the level. Nothing when the flood reaches a tile `allowed` refuses.
-    [[nodiscard]] std::optional<save::model::WaterBody> fill_water(const save::model::TerrainGrid& grid, save::model::Tile tile, float level, const std::function<bool(save::model::Tile)>& allowed);
+    [[nodiscard]] std::optional<save::model::WaterBody> fill_water(const save::model::TerrainGrid& grid, save::model::Tile tile, f32 level, const std::function<bool(save::model::Tile)>& allowed);
 
     /// The park's `water` after pouring on `tile` up to `level` rounded up to a whole unit: one new lake that
     /// takes in the lakes it reaches. `water` as it was when that holds no water; nothing when the flood reaches a
     /// tile `allowed` refuses or a lake standing higher.
-    [[nodiscard]] std::optional<save::model::WaterLayer> pour_water(const save::model::WaterLayer& water, const save::model::TerrainGrid& grid, save::model::Tile tile, float level, const std::function<bool(save::model::Tile)>& allowed);
+    [[nodiscard]] std::optional<save::model::WaterLayer> pour_water(const save::model::WaterLayer& water, const save::model::TerrainGrid& grid, save::model::Tile tile, f32 level, const std::function<bool(save::model::Tile)>& allowed);
 
     /// Takes the lake holding `tile` out of `water`, and the `falls` pouring from or into it, putting back in `grid`
     /// the ground their spillways were cut from; whether there was one.
@@ -36,7 +37,7 @@ namespace rct3::park::water
 
     /// Of `falls`, those pouring from or into a lake that `now` no longer holds as `was` did: one whose level
     /// changed, or that another lake took in.
-    [[nodiscard]] std::vector<std::size_t> flooded_falls(const save::model::WaterLayer& was, const save::model::WaterLayer& now, std::span<const save::model::Waterfall> falls, const save::model::TerrainGrid& grid);
+    [[nodiscard]] std::vector<usize> flooded_falls(const save::model::WaterLayer& was, const save::model::WaterLayer& now, std::span<const save::model::Waterfall> falls, const save::model::TerrainGrid& grid);
 
     /// After the ground moved from `was` to `grid`: settles every lake on a tile that moved, or beside one that now
     /// dips below its level. Such a lake keeps its level where the ground still holds it: tiles that rose out of it
@@ -53,6 +54,6 @@ namespace rct3::park::water
 
     /// The whole height an item floating on the water over `tile` stands at, its surface rounded up, or
     /// nothing on dry land.
-    [[nodiscard]] std::optional<std::int32_t> water_surface(std::span<const save::model::WaterBody> bodies, save::model::Tile tile);
+    [[nodiscard]] std::optional<i32> water_surface(std::span<const save::model::WaterBody> bodies, save::model::Tile tile);
 
 } // namespace rct3::park::water

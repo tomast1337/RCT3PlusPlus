@@ -4,6 +4,8 @@
 // only writes its own entity's components, so the result does not depend on how the work was shared.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
@@ -19,14 +21,14 @@ namespace rct3::simulation
     {
     public:
         /// `threads` helpers besides the calling thread; 0 runs everything on the caller.
-        explicit Workers(std::uint32_t threads = std::thread::hardware_concurrency() > 1 ? std::thread::hardware_concurrency() - 1 : 0);
+        explicit Workers(u32 threads = std::thread::hardware_concurrency() > 1 ? std::thread::hardware_concurrency() - 1 : 0);
         ~Workers();
         Workers(const Workers&) = delete;
         Workers& operator=(const Workers&) = delete;
 
         /// Calls `body(begin, end)` over ranges that together cover [0, count) once each, and returns when all
         /// are done. The calling thread takes a share.
-        void for_ranges(std::size_t count, const std::function<void(std::size_t, std::size_t)>& body);
+        void for_ranges(usize count, const std::function<void(usize, usize)>& body);
 
     private:
         void work();
@@ -36,12 +38,12 @@ namespace rct3::simulation
         std::mutex mutex_;
         std::condition_variable wake_;
         std::condition_variable done_;
-        const std::function<void(std::size_t, std::size_t)>* body_ = nullptr;
-        std::size_t count_ = 0;
-        std::size_t next_ = 0; ///< Start of the next range to hand out
-        std::size_t chunk_ = 1;
-        std::size_t busy_helpers_ = 0;
-        std::size_t job_ = 0; ///< Counts jobs, so helpers wake once per job
+        const std::function<void(usize, usize)>* body_ = nullptr;
+        usize count_ = 0;
+        usize next_ = 0; ///< Start of the next range to hand out
+        usize chunk_ = 1;
+        usize busy_helpers_ = 0;
+        usize job_ = 0; ///< Counts jobs, so helpers wake once per job
         bool stopping_ = false;
     };
 

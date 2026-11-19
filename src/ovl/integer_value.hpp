@@ -4,6 +4,7 @@
 // Used for small settings such as flags and indices.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <cstdint>
@@ -16,7 +17,7 @@ namespace rct3::ovl
     struct IntegerItem
     {
         std::string_view name; ///< Symbol name without the tag, a view into the part's bytes
-        std::int32_t value = 0;
+        i32 value = 0;
     };
 
     /// Integer values of one part of an overlay: the symbols tagged "int" that hold a value rather than a

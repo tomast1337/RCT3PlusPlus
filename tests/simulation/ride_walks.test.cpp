@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/ride_walks.hpp"
 
+#include "core/types.hpp"
 #include "simulation/enjoyment.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/rides.hpp"
@@ -42,7 +43,7 @@ TEST_CASE("riders walk past the ticket spot to their seats, and off past the exi
     CHECK(r.get<Errand>(g).kind == ErrandKind::Riding);
     CHECK(r.get<Wallet>(g).cash.value == 900);
     CHECK(near(r.get<Pose>(g).position, ticket));
-    const std::uint64_t at_ticket = park.world().tick;
+    const u64 at_ticket = park.world().tick;
     park.run(2);
     CHECK(r.get<CycleRide>(ride).phase == RidePhase::Loading);
     CHECK(r.get<Pose>(g).heading.value == doctest::Approx(1.0f));
@@ -99,21 +100,21 @@ TEST_CASE("a load walks off abreast, each to a side of the way out within the wa
     const glm::vec3 entrance = park.world().paths.centre(*r.get<Attraction>(ride).entrance);
     const glm::vec3 bend = entrance + glm::vec3(6, 0, 4);
     std::vector<std::vector<glm::vec3>> on, off;
-    for (std::int32_t seat = 0; seat < 3; ++seat)
+    for (i32 seat = 0; seat < 3; ++seat)
     {
-        on.push_back({ entrance + glm::vec3(6, 0, static_cast<float>(seat)) });
+        on.push_back({ entrance + glm::vec3(6, 0, static_cast<f32>(seat)) });
         off.push_back({ on.back().front(), bend, bend + glm::vec3(0, 0, 4) });
     }
     r.emplace<RideWalks>(ride, RideWalks { .ticket = entrance, .on = on, .off = off });
     std::vector<entt::entity> load;
-    for (std::int32_t i = 0; i < 3; ++i)
+    for (i32 i = 0; i < 3; ++i)
     {
         load.push_back(park.guest({ 4, 0 }, { .cash = 1000 }));
         r.get<Errand>(load.back()) = { ErrandKind::Heading, ride, 0 };
     }
     REQUIRE(park.run_until([&] { return std::ranges::all_of(load, [&](entt::entity g) { return r.all_of<RideWalk>(g) && r.get<RideWalk>(g).off; }); }, 120));
     const glm::vec3 exit = park.world().paths.centre(*r.get<CycleRide>(ride).exit);
-    std::vector<float> sides;
+    std::vector<f32> sides;
     for (const entt::entity g : load)
     {
         const auto& points = r.get<RideWalk>(g).points;

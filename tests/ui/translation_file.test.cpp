@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/translation_file.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <format>
@@ -35,9 +37,9 @@ TEST_CASE("anything but strings and groups fails, saying where")
     CHECK_FALSE(parse_translation("[\"a\"]"));
     CHECK_FALSE(parse_translation(R"({ "": "x" })"));
     std::string deep;
-    for (std::int32_t i = 0; i <= kMaxTranslationDepth + 1; ++i)
+    for (i32 i = 0; i <= kMaxTranslationDepth + 1; ++i)
         deep += "{\"g\":";
-    deep += std::format("\"x\"{}", std::string(static_cast<std::size_t>(kMaxTranslationDepth + 2), '}'));
+    deep += std::format("\"x\"{}", std::string(static_cast<usize>(kMaxTranslationDepth + 2), '}'));
     CHECK_FALSE(parse_translation(deep));
 }
 

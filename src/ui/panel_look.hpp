@@ -5,13 +5,15 @@
 // Icons and other pictures inside a frame stay pictures either way.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <string_view>
 
 namespace rct3::ui
 {
 
-    enum class PanelLook : std::uint8_t
+    enum class PanelLook : u8
     {
         Texture, ///< Stretched from the game's skins
         Coded,   ///< Drawn as shapes, sharp at any size

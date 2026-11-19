@@ -4,6 +4,7 @@
 // mix of them, and the step that keeps each party together. The components here, and that step.
 #pragma once
 
+#include "core/types.hpp"
 #include "profiling/profiler.hpp"
 #include "simulation/entt.hpp"
 #include "simulation/path_network.hpp"
@@ -23,7 +24,7 @@ namespace rct3::simulation
     /// The kinds of party that come in at the gate. Children only ever come with an adult.
     // shortcut: no party of the player's own made guests (custom peeps), as players cannot make guests yet;
     // add a kind here when they can.
-    enum class PartyKind : std::uint8_t
+    enum class PartyKind : u8
     {
         LoneTeen,
         LoneAdult,
@@ -34,14 +35,14 @@ namespace rct3::simulation
         Family,      ///< One or two parents with their children
         DayTrip,     ///< One adult taking children out
     };
-    inline constexpr std::size_t kPartyKinds = 8;
+    inline constexpr usize kPartyKinds = 8;
 
     /// The park's own mix of parties, in the registry's context, as a scenario sets it: how often each
     /// PartyKind comes against the others, and the share of families with one parent. The tuning's mix when
     /// none is there.
     struct PartyMix
     {
-        std::array<float, kPartyKinds> weights { };
+        std::array<f32, kPartyKinds> weights { };
         units::Chance single_parent { };
     };
 
@@ -49,8 +50,8 @@ namespace rct3::simulation
     /// on the next, and those too many for one load, split over two.
     struct PartyBoarding
     {
-        std::uint32_t held = 0;
-        std::uint32_t split = 0;
+        u32 held = 0;
+        u32 split = 0;
     };
 
     /// Guests going round the park together, such as a family. The leader chooses where to go for all of
@@ -60,7 +61,7 @@ namespace rct3::simulation
     {
         entt::entity leader = entt::null;
         std::vector<entt::entity> members { }; ///< The leader among them
-        std::uint32_t huddle = 0;              ///< Ticks left standing together in a ring, chatting (once all are back, too)
+        u32 huddle = 0;                        ///< Ticks left standing together in a ring, chatting (once all are back, too)
         std::optional<NodeId> gather { };      ///< The tile it waits on for those still busy, none of another party's
         std::vector<entt::entity> away { };    ///< Members out of it for now (held up, falling, thrown, sliding), back on landing
     };
@@ -74,13 +75,13 @@ namespace rct3::simulation
     /// with them.
     struct Lost
     {
-        std::uint32_t left = 0;
+        u32 left = 0;
     };
 
     /// How often each PartyKind comes in at the gate against the others: the park's mix (PartyMix, else the
     /// tuning's), tilted toward teens by wild rides and toward families by gentle ones, and after dark mostly
     /// teens.
-    [[nodiscard]] std::array<double, kPartyKinds> party_weights(const SimWorld& world, bool night);
+    [[nodiscard]] std::array<f64, kPartyKinds> party_weights(const SimWorld& world, bool night);
 
     /// One tick of the parties: while some members are busy the others wait near them, and once all are back
     /// they stand together a moment and go on behind the leader. Times the phase on `phase`.

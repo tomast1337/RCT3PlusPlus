@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/water/jet.hpp"
 
+#include "core/types.hpp"
 #include "units/units.hpp"
 
 #include <array>
@@ -15,7 +16,7 @@ using namespace rct3::park::water;
 namespace
 {
 
-    float flat(glm::vec2)
+    f32 flat(glm::vec2)
     {
         return 0;
     }
@@ -26,7 +27,7 @@ TEST_CASE("a level jet lands as far as a thrown stone would")
 {
     WaterJet jet(3, 0.1f, 0);
     jet.aim({ 0, 5, 0 }, { 6, 0, 0 });
-    for (std::int32_t i = 0; i < 120; ++i)
+    for (i32 i = 0; i < 120; ++i)
         jet.advance(1 / 60.0f);
     const auto land = jet.landing(flat);
     REQUIRE(land.has_value());
@@ -71,8 +72,8 @@ TEST_CASE("a jet's tube is rings round its drops, more see-through face on")
     CHECK(mesh.vertices.size() == jet.drops().size() * 9);
     CHECK(mesh.indices.size() == (jet.drops().size() - 1) * 8 * 6);
     // At the nozzle the ring's side facing the eye is clearer than its top, seen edge on.
-    float facing = 1, edge = 0;
-    for (std::size_t k = 0; k < 9; ++k)
+    f32 facing = 1, edge = 0;
+    for (usize k = 0; k < 9; ++k)
     {
         const GroundVertex& v = mesh.vertices[k];
         if (v.normal.x > 0.9f)
@@ -85,7 +86,7 @@ TEST_CASE("a jet's tube is rings round its drops, more see-through face on")
 
 TEST_CASE("a throw lands where it is aimed, up or down hill")
 {
-    for (const float rise : { 0.0f, 0.5f, -1.0f })
+    for (const f32 rise : { 0.0f, 0.5f, -1.0f })
     {
         const glm::vec3 from { 1, 2, 3 };
         const glm::vec3 to { 5, 2 + rise, 0 };
@@ -111,9 +112,9 @@ TEST_CASE("a jet that breaks up is wider, whiter and clearer toward its end, and
     jet_mesh(jets, { 10, 50, 0 }, 0, mesh);
     REQUIRE(mesh.batches.size() == 2);
     CHECK(mesh.batches[1].texture == kJetSpray);
-    const auto ring = [&](std::size_t i) {
-        float alpha = 0;
-        for (std::size_t k = 0; k < 9; ++k)
+    const auto ring = [&](usize i) {
+        f32 alpha = 0;
+        for (usize k = 0; k < 9; ++k)
             alpha += mesh.vertices[i * 9 + k].colour.a / 9;
         return std::pair { mesh.vertices[i * 9].colour.r, alpha };
     };
@@ -142,11 +143,11 @@ TEST_CASE("jet_layer_scroll: the first picture runs on past its second, and stay
 {
     const JetPicture& water = kJetPictures[0];
     CHECK(jet_layer_scroll(water, 0.0f).lengths == doctest::Approx(0.0f));
-    const float soon = jet_layer_scroll(water, 0.5f).lengths;
+    const f32 soon = jet_layer_scroll(water, 0.5f).lengths;
     CHECK(soon == doctest::Approx(1.0f - 0.5f * water.layer_lag));
-    for (const float seconds : { 1.0f, 7.3f, 1000.0f })
+    for (const f32 seconds : { 1.0f, 7.3f, 1000.0f })
     {
-        const float s = jet_layer_scroll(water, seconds).lengths;
+        const f32 s = jet_layer_scroll(water, seconds).lengths;
         CHECK(s >= 0.0f);
         CHECK(s < 1.0f);
     }

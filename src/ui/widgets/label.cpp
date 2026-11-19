@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/label.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <utility>
 
@@ -40,7 +42,7 @@ namespace rct3::ui::widgets
         const auto lines = break_lines(*f, text, style.wrap ? rect().width() : 0);
         for (const TextLine& line : lines)
             text_size_.x = std::max(text_size_.x, line.width);
-        text_size_.y = static_cast<float>(lines.size()) * f->line_height();
+        text_size_.y = static_cast<f32>(lines.size()) * f->line_height();
     }
 
     Rect Label::extent() const
@@ -62,9 +64,9 @@ namespace rct3::ui::widgets
         {
             // Where the text sits in the box, aligned as it is drawn.
             const Rect& r = rect();
-            const auto offset = [](Align a, float room) { return a == Align::Start ? 0 : a == Align::Centre ? room / 2 : room; };
-            const float x = r.x0 + offset(style.horizontal, r.width() - text_size_.x);
-            const float y = r.y0 + offset(style.vertical, r.height() - text_size_.y);
+            const auto offset = [](Align a, f32 room) { return a == Align::Start ? 0 : a == Align::Centre ? room / 2 : room; };
+            const f32 x = r.x0 + offset(style.horizontal, r.width() - text_size_.x);
+            const f32 y = r.y0 + offset(style.vertical, r.height() - text_size_.y);
             context.list.fill({ x, y, x + text_size_.x, y + text_size_.y }, selection_colour);
         }
         draw_text(context.list, *f, text, rect(), style);

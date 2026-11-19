@@ -6,6 +6,7 @@
 // round its shapes, so a pass sees the whole of it.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "park/object/mesh.hpp"
 
@@ -20,22 +21,22 @@ namespace rct3::park::object
     /// How a map `width` by `height` tiles is cut into chunks `tiles` square, row by row from the first tile.
     struct ChunkGrid
     {
-        std::int32_t across = 0;
-        std::int32_t down = 0;
-        std::int32_t tiles = 1;
+        i32 across = 0;
+        i32 down = 0;
+        i32 tiles = 1;
 
-        [[nodiscard]] static ChunkGrid of(std::int32_t width, std::int32_t height, std::int32_t tiles);
-        [[nodiscard]] std::size_t count() const;
+        [[nodiscard]] static ChunkGrid of(i32 width, i32 height, i32 tiles);
+        [[nodiscard]] usize count() const;
         /// The chunk holding the tile at `col`, `row`; tiles off the map go to the nearest chunk along its edge.
-        [[nodiscard]] std::size_t at(std::int32_t col, std::int32_t row) const;
+        [[nodiscard]] usize at(i32 col, i32 row) const;
     };
 
     /// By chunk, the indices of `objects` standing in it, rising.
-    [[nodiscard]] std::vector<std::vector<std::uint32_t>> chunk_members(std::span<const save::model::PlacedObject> objects, const ChunkGrid& grid);
+    [[nodiscard]] std::vector<std::vector<u32>> chunk_members(std::span<const save::model::PlacedObject> objects, const ChunkGrid& grid);
 
     /// By chunk of `members`, whether any object in it is planned differently in `now` than in `shown`. When the
     /// two plans are for different numbers of objects every chunk has changed.
-    [[nodiscard]] std::vector<bool> changed_chunks(const LevelPlan& now, const LevelPlan& shown, std::span<const std::vector<std::uint32_t>> members);
+    [[nodiscard]] std::vector<bool> changed_chunks(const LevelPlan& now, const LevelPlan& shown, std::span<const std::vector<u32>> members);
 
     /// The box round some shapes, empty until a point is taken in.
     struct ShapeBox

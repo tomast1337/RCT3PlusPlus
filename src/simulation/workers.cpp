@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/workers.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstdint>
 
@@ -9,12 +11,12 @@ namespace rct3::simulation
 
     namespace
     {
-        constexpr std::size_t kMinChunk = 64; ///< Items below which sharing out costs more than it saves
+        constexpr usize kMinChunk = 64; ///< Items below which sharing out costs more than it saves
     }
 
-    Workers::Workers(std::uint32_t threads)
+    Workers::Workers(u32 threads)
     {
-        for (std::uint32_t i = 0; i < threads; ++i)
+        for (u32 i = 0; i < threads; ++i)
             threads_.emplace_back([this] { work(); });
     }
 
@@ -32,8 +34,8 @@ namespace rct3::simulation
     {
         for (;;)
         {
-            std::size_t begin = 0;
-            std::size_t end = 0;
+            usize begin = 0;
+            usize end = 0;
             {
                 const std::scoped_lock lock(mutex_);
                 if (next_ >= count_)
@@ -48,7 +50,7 @@ namespace rct3::simulation
 
     void Workers::work()
     {
-        std::size_t seen = 0;
+        usize seen = 0;
         for (;;)
         {
             {
@@ -67,7 +69,7 @@ namespace rct3::simulation
         }
     }
 
-    void Workers::for_ranges(std::size_t count, const std::function<void(std::size_t, std::size_t)>& body)
+    void Workers::for_ranges(usize count, const std::function<void(usize, usize)>& body)
     {
         if (count == 0)
             return;

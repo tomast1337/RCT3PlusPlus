@@ -4,6 +4,7 @@
 #include "render/vulkan/device.hpp"
 
 #include "backends/imgui_impl_vulkan.h"
+#include "core/types.hpp"
 #include "imgui.h"
 #include "logging/log.hpp"
 #include "profiling/profiler.hpp"
@@ -34,7 +35,7 @@ namespace rct3::render::vulkan
         void check_imgui(VkResult result)
         {
             if (result != VK_SUCCESS)
-                throw std::runtime_error(std::format("ImGui Vulkan backend error {}", static_cast<std::int32_t>(result)));
+                throw std::runtime_error(std::format("ImGui Vulkan backend error {}", static_cast<i32>(result)));
         }
 
         VKAPI_ATTR VkBool32 VKAPI_CALL on_debug_message(VkDebugUtilsMessageSeverityFlagBitsEXT severity, VkDebugUtilsMessageTypeFlagsEXT, const VkDebugUtilsMessengerCallbackDataEXT* data, void*)
@@ -51,7 +52,7 @@ namespace rct3::render::vulkan
 
         bool has_layer(const char* name)
         {
-            std::uint32_t count = 0;
+            u32 count = 0;
             vkEnumerateInstanceLayerProperties(&count, nullptr);
             std::vector<VkLayerProperties> layers(count);
             vkEnumerateInstanceLayerProperties(&count, layers.data());
@@ -61,9 +62,9 @@ namespace rct3::render::vulkan
         // The flip makes clip space Y point up, as the shared conventions in render/types.hpp promise.
         void set_viewport(VkCommandBuffer cmd, VkRect2D area)
         {
-            const auto width = static_cast<float>(area.extent.width);
-            const auto height = static_cast<float>(area.extent.height);
-            const VkViewport viewport { static_cast<float>(area.offset.x), static_cast<float>(area.offset.y) + height, width, -height, 0, 1 };
+            const auto width = static_cast<f32>(area.extent.width);
+            const auto height = static_cast<f32>(area.extent.height);
+            const VkViewport viewport { static_cast<f32>(area.offset.x), static_cast<f32>(area.offset.y) + height, width, -height, 0, 1 };
             const VkRect2D scissor = area;
             vkCmdSetViewport(cmd, 0, 1, &viewport);
             vkCmdSetScissor(cmd, 0, 1, &scissor);
@@ -191,7 +192,7 @@ namespace rct3::render::vulkan
 
     void VulkanDevice::create_instance()
     {
-        std::uint32_t glfw_count = 0;
+        u32 glfw_count = 0;
         const char** glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_count);
         if (glfw_extensions == nullptr)
             throw std::runtime_error("GLFW found no Vulkan support");
@@ -211,9 +212,9 @@ namespace rct3::render::vulkan
 
         VkInstanceCreateInfo info { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
         info.pApplicationInfo = &app;
-        info.enabledLayerCount = static_cast<std::uint32_t>(layers.size());
+        info.enabledLayerCount = static_cast<u32>(layers.size());
         info.ppEnabledLayerNames = layers.data();
-        info.enabledExtensionCount = static_cast<std::uint32_t>(extensions.size());
+        info.enabledExtensionCount = static_cast<u32>(extensions.size());
         info.ppEnabledExtensionNames = extensions.data();
         check(vkCreateInstance(&info, nullptr, &instance_), "vkCreateInstance");
 
@@ -231,12 +232,12 @@ namespace rct3::render::vulkan
 
     void VulkanDevice::pick_device()
     {
-        std::uint32_t count = 0;
+        u32 count = 0;
         vkEnumeratePhysicalDevices(instance_, &count, nullptr);
         std::vector<VkPhysicalDevice> devices(count);
         vkEnumeratePhysicalDevices(instance_, &count, devices.data());
 
-        std::int32_t best_score = -1;
+        i32 best_score = -1;
         for (VkPhysicalDevice device : devices)
         {
             VkPhysicalDeviceProperties props;
@@ -245,30 +246,30 @@ namespace rct3::render::vulkan
                 continue;
 
             // A queue family that does both graphics and presenting.
-            std::uint32_t family_count = 0;
+            u32 family_count = 0;
             vkGetPhysicalDeviceQueueFamilyProperties(device, &family_count, nullptr);
             std::vector<VkQueueFamilyProperties> families(family_count);
             vkGetPhysicalDeviceQueueFamilyProperties(device, &family_count, families.data());
-            std::int32_t family = -1;
-            for (std::uint32_t i = 0; i < family_count; ++i)
+            i32 family = -1;
+            for (u32 i = 0; i < family_count; ++i)
             {
                 VkBool32 present = VK_FALSE;
                 vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface_, &present);
                 if ((families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) && present)
                 {
-                    family = static_cast<std::int32_t>(i);
+                    family = static_cast<i32>(i);
                     break;
                 }
             }
             if (family < 0)
                 continue;
 
-            const std::int32_t score = props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 2 : 1;
+            const i32 score = props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? 2 : 1;
             if (score > best_score)
             {
                 best_score = score;
                 gpu_ = device;
-                queue_family_ = static_cast<std::uint32_t>(family);
+                queue_family_ = static_cast<u32>(family);
                 std::memcpy(device_name_, props.deviceName, sizeof device_name_);
             }
         }
@@ -278,7 +279,7 @@ namespace rct3::render::vulkan
 
     void VulkanDevice::create_device()
     {
-        const float priority = 1.0f;
+        const f32 priority = 1.0f;
         VkDeviceQueueCreateInfo queue { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
         queue.queueFamilyIndex = queue_family_;
         queue.queueCount = 1;
@@ -312,7 +313,7 @@ namespace rct3::render::vulkan
         VkSurfaceCapabilitiesKHR caps;
         check(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu_, surface_, &caps), "surface capabilities");
 
-        std::uint32_t format_count = 0;
+        u32 format_count = 0;
         vkGetPhysicalDeviceSurfaceFormatsKHR(gpu_, surface_, &format_count, nullptr);
         std::vector<VkSurfaceFormatKHR> formats(format_count);
         vkGetPhysicalDeviceSurfaceFormatsKHR(gpu_, surface_, &format_count, formats.data());
@@ -333,11 +334,11 @@ namespace rct3::render::vulkan
         {
             int w = 0, h = 0; // c-api
             glfwGetFramebufferSize(config_.window, &w, &h);
-            extent_.width = std::clamp(static_cast<std::uint32_t>(w), caps.minImageExtent.width, caps.maxImageExtent.width);
-            extent_.height = std::clamp(static_cast<std::uint32_t>(h), caps.minImageExtent.height, caps.maxImageExtent.height);
+            extent_.width = std::clamp(static_cast<u32>(w), caps.minImageExtent.width, caps.maxImageExtent.width);
+            extent_.height = std::clamp(static_cast<u32>(h), caps.minImageExtent.height, caps.maxImageExtent.height);
         }
 
-        std::uint32_t image_count = caps.minImageCount + 1;
+        u32 image_count = caps.minImageCount + 1;
         if (caps.maxImageCount > 0)
             image_count = std::min(image_count, caps.maxImageCount);
 
@@ -349,7 +350,7 @@ namespace rct3::render::vulkan
         const bool wayland = glfwGetPlatform() == GLFW_PLATFORM_WAYLAND;
         if (!config_.vsync || wayland)
         {
-            std::uint32_t mode_count = 0;
+            u32 mode_count = 0;
             vkGetPhysicalDeviceSurfacePresentModesKHR(gpu_, surface_, &mode_count, nullptr);
             std::vector<VkPresentModeKHR> modes(mode_count);
             vkGetPhysicalDeviceSurfacePresentModesKHR(gpu_, surface_, &mode_count, modes.data());
@@ -369,8 +370,8 @@ namespace rct3::render::vulkan
         {
             int count = 0; // c-api
             GLFWmonitor** monitors = glfwGetMonitors(&count);
-            std::int32_t fastest = 60;
-            for (std::int32_t i = 0; i < count; ++i)
+            i32 fastest = 60;
+            for (i32 i = 0; i < count; ++i)
                 if (const GLFWvidmode* mode = glfwGetVideoMode(monitors[i]))
                     fastest = std::max(fastest, mode->refreshRate);
             frame_pace_ = 1.0 / fastest;
@@ -395,14 +396,14 @@ namespace rct3::render::vulkan
         if (old != VK_NULL_HANDLE)
             vkDestroySwapchainKHR(device_, old, nullptr);
 
-        std::uint32_t count = 0;
+        u32 count = 0;
         vkGetSwapchainImagesKHR(device_, swapchain_, &count, nullptr);
         images_.resize(count);
         vkGetSwapchainImagesKHR(device_, swapchain_, &count, images_.data());
 
         views_.resize(count);
         render_finished_.resize(count);
-        for (std::uint32_t i = 0; i < count; ++i)
+        for (u32 i = 0; i < count; ++i)
         {
             VkImageViewCreateInfo view { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
             view.image = images_[i];
@@ -421,7 +422,7 @@ namespace rct3::render::vulkan
     {
         VkPhysicalDeviceProperties props;
         vkGetPhysicalDeviceProperties(gpu_, &props);
-        const auto scaled = [&](std::uint32_t side) { return std::clamp(static_cast<std::uint32_t>(std::lround(static_cast<float>(side) * render_scale_)), 1u, props.limits.maxImageDimension2D); };
+        const auto scaled = [&](u32 side) { return std::clamp(static_cast<u32>(std::lround(static_cast<f32>(side) * render_scale_)), 1u, props.limits.maxImageDimension2D); };
         const auto made = create_texture({ .width = scaled(extent_.width), .height = scaled(extent_.height), .label = "screen", .target = true });
         if (!made)
             throw std::runtime_error(std::format("screen: {}", made.error()));
@@ -484,21 +485,21 @@ namespace rct3::render::vulkan
         multi_color_memory_ = multi_depth_memory_ = VK_NULL_HANDLE;
     }
 
-    std::vector<std::uint32_t> VulkanDevice::sample_levels() const
+    std::vector<u32> VulkanDevice::sample_levels() const
     {
         if (gpu_ == VK_NULL_HANDLE)
             return { };
         VkPhysicalDeviceProperties props;
         vkGetPhysicalDeviceProperties(gpu_, &props);
         const VkSampleCountFlags counts = props.limits.framebufferColorSampleCounts & props.limits.framebufferDepthSampleCounts;
-        std::vector<std::uint32_t> levels;
-        for (const std::uint32_t n : { 2u, 4u, 8u })
+        std::vector<u32> levels;
+        for (const u32 n : { 2u, 4u, 8u })
             if ((counts & n) != 0)
                 levels.push_back(n);
         return levels;
     }
 
-    void VulkanDevice::set_samples(std::uint32_t samples)
+    void VulkanDevice::set_samples(u32 samples)
     {
         assert(state_ == State::Idle);
         if (samples != 1 && !std::ranges::contains(sample_levels(), samples))
@@ -579,7 +580,7 @@ namespace rct3::render::vulkan
         {
             VkPhysicalDeviceProperties props;
             vkGetPhysicalDeviceProperties(gpu_, &props);
-            std::uint32_t family_count = 0;
+            u32 family_count = 0;
             vkGetPhysicalDeviceQueueFamilyProperties(gpu_, &family_count, nullptr);
             std::vector<VkQueueFamilyProperties> families(family_count);
             vkGetPhysicalDeviceQueueFamilyProperties(gpu_, &family_count, families.data());
@@ -623,7 +624,7 @@ namespace rct3::render::vulkan
         sampler_set_layout_ = make_set_layout(VK_DESCRIPTOR_TYPE_SAMPLER);
 
         // Texture count is a guess at what the UI and a park need at once; raise it when it runs out.
-        constexpr std::uint32_t kMaxTextures = 4096;
+        constexpr u32 kMaxTextures = 4096;
         const VkDescriptorPoolSize sizes[] = {
             { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, kMaxTextures },
             { VK_DESCRIPTOR_TYPE_SAMPLER, kSamplerCount },
@@ -658,7 +659,7 @@ namespace rct3::render::vulkan
     // One sampler per Filter x AddressMode pair, at index filter * 2 + address.
     void VulkanDevice::create_samplers()
     {
-        for (std::size_t i = 0; i < kSamplerCount; ++i)
+        for (usize i = 0; i < kSamplerCount; ++i)
         {
             const VkFilter filter = i / 2 == 0 ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
             const VkSamplerAddressMode address = i % 2 == 0 ? VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE : VK_SAMPLER_ADDRESS_MODE_REPEAT;
@@ -700,7 +701,7 @@ namespace rct3::render::vulkan
         info.Queue = queue_;
         info.DescriptorPoolSize = 16;
         info.MinImageCount = 2;
-        info.ImageCount = static_cast<std::uint32_t>(images_.size());
+        info.ImageCount = static_cast<u32>(images_.size());
         info.UseDynamicRendering = true;
         info.PipelineInfoMain = ui_pipeline_info();
         info.CheckVkResultFn = check_imgui;
@@ -763,7 +764,7 @@ namespace rct3::render::vulkan
     }
 
     // Copies staging into the whole image and leaves it ready for sampling. Waits for the GPU.
-    void VulkanDevice::upload(const Buffer& staging, const Texture& texture, std::uint32_t width, std::uint32_t height)
+    void VulkanDevice::upload(const Buffer& staging, const Texture& texture, u32 width, u32 height)
     {
         submit_once([&](VkCommandBuffer cmd) {
             image_barrier(cmd, texture.image, VK_IMAGE_ASPECT_COLOR_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_NONE, 0, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
@@ -776,7 +777,7 @@ namespace rct3::render::vulkan
     }
 
     // Clears a target's depth to the far plane, leaves it ready for sampling, and registers it as texture `id`.
-    void VulkanDevice::make_depth_readable(Texture& texture, std::uint32_t id)
+    void VulkanDevice::make_depth_readable(Texture& texture, u32 id)
     {
         submit_once([&](VkCommandBuffer cmd) {
             image_barrier(cmd, texture.depth_image, VK_IMAGE_ASPECT_DEPTH_BIT, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_2_NONE, 0, VK_PIPELINE_STAGE_2_CLEAR_BIT, VK_ACCESS_2_TRANSFER_WRITE_BIT });
@@ -815,7 +816,7 @@ namespace rct3::render::vulkan
     {
         assert(state_ == State::Idle);
         // A new render scale makes the screen anew; the window keeps its swapchain.
-        if (const auto side = [&](std::uint32_t w) { return std::max(1u, static_cast<std::uint32_t>(std::lround(static_cast<float>(w) * render_scale_))); }; side(extent_.width) != screen_.extent.width || side(extent_.height) != screen_.extent.height)
+        if (const auto side = [&](u32 w) { return std::max(1u, static_cast<u32>(std::lround(static_cast<f32>(w) * render_scale_))); }; side(extent_.width) != screen_.extent.width || side(extent_.height) != screen_.extent.height)
         {
             vkDeviceWaitIdle(device_);
             destroy_screen();
@@ -825,12 +826,12 @@ namespace rct3::render::vulkan
         check(vkWaitForFences(device_, 1, &frame.in_flight, VK_TRUE, UINT64_MAX), "vkWaitForFences");
         if (frame.timings != VK_NULL_HANDLE && frame.stamps > 0 && profiling::enabled())
         {
-            std::array<std::uint64_t, kMostStamps> stamps { };
-            if (vkGetQueryPoolResults(device_, frame.timings, 0, frame.stamps, sizeof stamps, stamps.data(), sizeof(std::uint64_t), VK_QUERY_RESULT_64_BIT) == VK_SUCCESS)
+            std::array<u64, kMostStamps> stamps { };
+            if (vkGetQueryPoolResults(device_, frame.timings, 0, frame.stamps, sizeof stamps, stamps.data(), sizeof(u64), VK_QUERY_RESULT_64_BIT) == VK_SUCCESS)
             {
-                for (std::uint32_t k = 0; k + 1 < frame.stamps; k += 2)
-                    profiling::record(std::format("GPU/Pass {}", k / 2), static_cast<double>(stamps[k + 1] - stamps[k]) * stamp_ms_);
-                profiling::record("GPU", static_cast<double>(stamps[frame.stamps - 1] - stamps[0]) * stamp_ms_);
+                for (u32 k = 0; k + 1 < frame.stamps; k += 2)
+                    profiling::record(std::format("GPU/Pass {}", k / 2), static_cast<f64>(stamps[k + 1] - stamps[k]) * stamp_ms_);
+                profiling::record("GPU", static_cast<f64>(stamps[frame.stamps - 1] - stamps[0]) * stamp_ms_);
             }
         }
         release(frame.garbage);
@@ -1016,16 +1017,16 @@ namespace rct3::render::vulkan
             assert(texture != textures_.end() && "draw with an unknown texture");
             if (texture == textures_.end())
                 return;
-            const std::size_t sampler = static_cast<std::size_t>(command.filter) * 2 + static_cast<std::size_t>(command.address);
+            const usize sampler = static_cast<usize>(command.filter) * 2 + static_cast<usize>(command.address);
             std::array<VkDescriptorSet, kSetCount> sets { };
             sets.fill(texture->second.set);
             sets[1] = sampler_sets_[sampler];
             // A missing extra texture reads as the first.
             const Shader shader = pipeline->second.shader;
             const bool water = shader == Shader::Water || shader == Shader::Waterfall;
-            const std::uint32_t count = water ? set_count_ : lit_shader(shader) ? 8 : shader == Shader::Occlusion || shader == Shader::Shafts ? 5 : 2;
+            const u32 count = water ? set_count_ : lit_shader(shader) ? 8 : shader == Shader::Occlusion || shader == Shader::Shafts ? 5 : 2;
             const std::array<TextureHandle, kExtraTextures> extras = bound_extra_textures(command, shader);
-            for (std::uint32_t i = 2; i < count; ++i)
+            for (u32 i = 2; i < count; ++i)
             {
                 const TextureHandle extra = extras[i - 2];
                 if (const auto found = textures_.find(extra.id); extra && found != textures_.end())
@@ -1075,9 +1076,9 @@ namespace rct3::render::vulkan
         if (!view())
             return { { 0, 0 }, screen };
         // Kept inside the screen, which may have shrunk since the view was set.
-        const std::uint32_t x = std::min(view()->x, screen.width);
-        const std::uint32_t y = std::min(view()->y, screen.height);
-        return { { static_cast<std::int32_t>(x), static_cast<std::int32_t>(y) }, { std::min(view()->size.width, screen.width - x), std::min(view()->size.height, screen.height - y) } };
+        const u32 x = std::min(view()->x, screen.width);
+        const u32 y = std::min(view()->y, screen.height);
+        return { { static_cast<i32>(x), static_cast<i32>(y) }, { std::min(view()->size.width, screen.width - x), std::min(view()->size.height, screen.height - y) } };
     }
 
     void VulkanDevice::draw_ui()
@@ -1124,7 +1125,7 @@ namespace rct3::render::vulkan
         VkImageCopy region { };
         region.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
         region.dstSubresource = region.srcSubresource;
-        region.srcOffset = { static_cast<std::int32_t>(screen_area().offset.x), static_cast<std::int32_t>(screen_area().offset.y), 0 };
+        region.srcOffset = { static_cast<i32>(screen_area().offset.x), static_cast<i32>(screen_area().offset.y), 0 };
         region.extent = { extent().width, extent().height, 1 };
         vkCmdCopyImage(cmd, screen, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, t.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
         region.srcSubresource.aspectMask = region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -1203,11 +1204,11 @@ namespace rct3::render::vulkan
         rendering.colorAttachmentCount = 1;
         rendering.pColorAttachments = &color;
         vkCmdBeginRendering(cmd, &rendering);
-        const VkViewport viewport { 0, 0, static_cast<float>(extent_.width), static_cast<float>(extent_.height), 0, 1 };
+        const VkViewport viewport { 0, 0, static_cast<f32>(extent_.width), static_cast<f32>(extent_.height), 0, 1 };
         vkCmdSetViewport(cmd, 0, 1, &viewport);
         vkCmdSetScissor(cmd, 0, 1, &rendering.renderArea);
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, present_pipeline_);
-        const std::size_t sampler = static_cast<std::size_t>(smooth_scaling_ ? Filter::Linear : Filter::Nearest) * 2 + static_cast<std::size_t>(AddressMode::Clamp);
+        const usize sampler = static_cast<usize>(smooth_scaling_ ? Filter::Linear : Filter::Nearest) * 2 + static_cast<usize>(AddressMode::Clamp);
         const std::array<VkDescriptorSet, 2> sets { screen_.set, sampler_sets_[sampler] };
         vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, 2, sets.data(), 0, nullptr);
         // Curve: each channel raised to a power, 1 at the middle setting, from 2 (darker) to 1/2 (lighter).
@@ -1249,7 +1250,7 @@ namespace rct3::render::vulkan
             // shortcut: waits for the frame on the spot, a hitch per screenshot; read a frame later when shots
             // come often (photos, video).
             check(vkWaitForFences(device_, 1, &frame.in_flight, VK_TRUE, UINT64_MAX), "vkWaitForFences");
-            ScreenPixels pixels { { reading_extent_.width, reading_extent_.height }, std::vector<std::uint8_t>(std::size_t { reading_extent_.width } * reading_extent_.height * 4) };
+            ScreenPixels pixels { { reading_extent_.width, reading_extent_.height }, std::vector<u8>(usize { reading_extent_.width } * reading_extent_.height * 4) };
             void* mapped = nullptr;
             check(vkMapMemory(device_, reading_.memory, 0, pixels.rgba.size(), 0, &mapped), "vkMapMemory");
             std::memcpy(pixels.rgba.data(), mapped, pixels.rgba.size());
@@ -1257,7 +1258,7 @@ namespace rct3::render::vulkan
             destroy(reading_);
             reading_ = { };
             const bool bgra = color_format_ == VK_FORMAT_B8G8R8A8_UNORM || color_format_ == VK_FORMAT_B8G8R8A8_SRGB;
-            for (std::size_t i = 0; i < pixels.rgba.size(); i += 4)
+            for (usize i = 0; i < pixels.rgba.size(); i += 4)
             {
                 if (bgra)
                     std::swap(pixels.rgba[i], pixels.rgba[i + 2]);
@@ -1275,16 +1276,16 @@ namespace rct3::render::vulkan
         if (frame_pace_ > 0)
         {
             // Wait out what is left of the frame; a late frame starts the pace again from now.
-            const double due = last_present_ + frame_pace_;
-            if (const double wait = due - glfwGetTime(); wait > 0)
-                std::this_thread::sleep_for(std::chrono::duration<double>(wait));
+            const f64 due = last_present_ + frame_pace_;
+            if (const f64 wait = due - glfwGetTime(); wait > 0)
+                std::this_thread::sleep_for(std::chrono::duration<f64>(wait));
             last_present_ = std::max(due, glfwGetTime());
         }
         const VkResult result = vkQueuePresentKHR(queue_, &present);
 
-        frame_stats_.buffers = static_cast<std::uint32_t>(buffers_.size());
-        frame_stats_.pipelines = static_cast<std::uint32_t>(pipelines_.size());
-        frame_stats_.textures = static_cast<std::uint32_t>(textures_.size());
+        frame_stats_.buffers = static_cast<u32>(buffers_.size());
+        frame_stats_.pipelines = static_cast<u32>(pipelines_.size());
+        frame_stats_.textures = static_cast<u32>(textures_.size());
         last_stats_ = frame_stats_;
         frame_index_ = (frame_index_ + 1) % kFramesInFlight;
         state_ = State::Idle;
@@ -1292,7 +1293,7 @@ namespace rct3::render::vulkan
         // Not every platform reports a resize through the present result, so compare sizes as well.
         int w = 0, h = 0; // c-api
         glfwGetFramebufferSize(config_.window, &w, &h);
-        const bool resized = static_cast<std::uint32_t>(w) != extent_.width || static_cast<std::uint32_t>(h) != extent_.height;
+        const bool resized = static_cast<u32>(w) != extent_.width || static_cast<u32>(h) != extent_.height;
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || resized)
             recreate_swapchain();
         else

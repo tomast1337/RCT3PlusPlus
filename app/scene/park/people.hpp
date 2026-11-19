@@ -5,6 +5,7 @@
 // built beside the frame, so a change drops that build first.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/people.hpp"
 #include "simulation/components.hpp"
 #include "ui/interface_assets.hpp"
@@ -25,20 +26,20 @@ namespace rct3::scene::park
     /// Hires a worker for job `kind` from the staff window and returns their place in shown_people, to be
     /// handed to the pointer as the game hands them; nothing where none can be hired. A keeper goes to an
     /// animal house picked at random instead, which dresses them with the other keepers.
-    [[nodiscard]] std::optional<std::size_t> hire(ParkScene& scene, save::model::StaffKind kind);
+    [[nodiscard]] std::optional<usize> hire(ParkScene& scene, save::model::StaffKind kind);
 
     /// After a person of `shown_people` is renamed `name`: the name the game keeps for its guest camera cheat
     /// puts the view with them, from their eyes.
-    void name_cheats(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t shown, std::u16string_view name);
+    void name_cheats(ParkScene& scene, const ui::InterfaceAssets& assets, usize shown, std::u16string_view name);
 
     /// Writes a change the player made on a person's page into the save. Returns whether the page is to be
     /// shown again for its new look.
-    [[nodiscard]] bool change_person(ParkScene& scene, std::size_t shown, const ui::screens::info::InfoChange& change);
+    [[nodiscard]] bool change_person(ParkScene& scene, usize shown, const ui::screens::info::InfoChange& change);
 
     /// Paints the clothes of pot `pot` of the person shown as `shown` in colour `colour`.
-    void paint_person(ParkScene& scene, std::size_t shown, std::size_t pot, std::size_t colour);
+    void paint_person(ParkScene& scene, usize shown, usize pot, usize colour);
 
     /// Fires the member of staff shown as `shown` of shown_people: they leave the park at once, as in the game.
-    void fire(ParkScene& scene, std::size_t shown);
+    void fire(ParkScene& scene, usize shown);
 
 } // namespace rct3::scene::park

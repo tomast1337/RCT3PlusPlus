@@ -5,6 +5,7 @@
 // Everything else on screen is put away while riding, and shows again after.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/models.hpp"
 #include "save/model/rides.hpp"
 #include "ui/interface_assets.hpp"
@@ -19,12 +20,12 @@ namespace rct3::scene::park
     struct ParkScene;
 
     /// Of the cars of ride `ride`, those with a camera of kind `eye`, in the order the park keeps them.
-    [[nodiscard]] std::vector<std::size_t> ride_seats(const ParkScene& scene, save::model::RideIndex ride, rct3::park::object::RideEye eye);
+    [[nodiscard]] std::vector<usize> ride_seats(const ParkScene& scene, save::model::RideIndex ride, rct3::park::object::RideEye eye);
 
     /// Goes with person `person` of `shown_people`, from their eyes or with `behind` from behind them, as
     /// ride_along does in a car; the train buttons go from person to person, the type button changes between
     /// the two views.
-    void ride_person(ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t person, bool behind);
+    void ride_person(ParkScene& scene, const ui::InterfaceAssets& assets, usize person, bool behind);
 
     /// Rides along on ride `ride`: a flat ride from its first rider seat; a tracked ride
     /// from the first front seat camera of a train under way, else of the first train, the rear or nose

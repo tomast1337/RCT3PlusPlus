@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/awards.hpp"
 
+#include "core/types.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -21,50 +22,50 @@ namespace rct3::simulation
             "Award_Theme_Spooky", "Award_Theme_WildWest", "Award_Theme_Adventure", "Award_Theme_Atlantis", "Award_Theme_Island", "Award_Most_Unsanitary", "Award_Most_Dangerous", "Award_Most_Dangerous_Pools", "Award_Extremely_Dangerous", "Award_Theme_Jungle", "Award_Theme_Prehistoric", "Award_Best_Animals", "Award_Cutest_Animals",       "Award_Most_Neglected_Animals",
         };
 
-        constexpr std::array<std::int32_t, 10> kFines = { 1, 2, 5, 7, 15, 22, 23, 24, 25, 30 };
+        constexpr std::array<i32, 10> kFines = { 1, 2, 5, 7, 15, 22, 23, 24, 25, 30 };
     } // namespace
 
-    std::string_view award_name(std::int32_t kind)
+    std::string_view award_name(i32 kind)
     {
-        return kind >= 0 && std::cmp_less(kind, kNames.size()) ? kNames[static_cast<std::size_t>(kind)] : std::string_view { };
+        return kind >= 0 && std::cmp_less(kind, kNames.size()) ? kNames[static_cast<usize>(kind)] : std::string_view { };
     }
 
-    bool award_is_fine(std::int32_t kind)
+    bool award_is_fine(i32 kind)
     {
         return std::ranges::contains(kFines, kind);
     }
 
-    std::string_view award_message(std::int32_t kind)
+    std::string_view award_message(i32 kind)
     {
         return award_is_fine(kind) ? "Award_Fine" : "Award_Award";
     }
 
-    bool award_earned(std::int32_t kind, const AwardFigures& f, std::uint32_t lately, random::RandomState& dice)
+    bool award_earned(i32 kind, const AwardFigures& f, u32 lately, random::RandomState& dice)
     {
-        const auto had = [&](std::initializer_list<std::int32_t> kinds) { return std::ranges::any_of(kinds, [&](std::int32_t k) { return (lately & (1u << k)) != 0; }); };
+        const auto had = [&](std::initializer_list<i32> kinds) { return std::ranges::any_of(kinds, [&](i32 k) { return (lately & (1u << k)) != 0; }); };
         using enum ThoughtKind;
         const auto count = [&](ThoughtKind thought) {
             const auto found = f.thoughts.find(thought);
             return found != f.thoughts.end() ? found->second : 0;
         };
-        const auto share = [&](ThoughtKind thought) { return f.guests > 0 ? static_cast<float>(count(thought)) / static_cast<float>(f.guests) : 0.0f; };
-        const auto rand = [&] { return static_cast<float>(random::unit(dice)); };
+        const auto share = [&](ThoughtKind thought) { return f.guests > 0 ? static_cast<f32>(count(thought)) / static_cast<f32>(f.guests) : 0.0f; };
+        const auto rand = [&] { return static_cast<f32>(random::unit(dice)); };
         // Litter, vandalism and sick lying about, as guests see it.
-        const std::int32_t litter = count(Litter) + count(Vandalism) + count(Vomit);
-        const float litter_share = share(Litter) + share(Vandalism) + share(Vomit);
-        const auto rides = static_cast<std::int32_t>(f.downtime.size());
-        constexpr std::int32_t kGuestsPerFacility = 128; ///< Guests one food stall or toilet serves, for the awards that count them
-        const auto down_over = [&](float percent) { return static_cast<std::int32_t>(std::ranges::count_if(f.downtime, [&](float d) { return d > percent; })); };
+        const i32 litter = count(Litter) + count(Vandalism) + count(Vomit);
+        const f32 litter_share = share(Litter) + share(Vandalism) + share(Vomit);
+        const auto rides = static_cast<i32>(f.downtime.size());
+        constexpr i32 kGuestsPerFacility = 128; ///< Guests one food stall or toilet serves, for the awards that count them
+        const auto down_over = [&](f32 percent) { return static_cast<i32>(std::ranges::count_if(f.downtime, [&](f32 d) { return d > percent; })); };
         switch (kind)
         {
             case 0: // Tidiest
-                return !had({ 1, 7 }) && f.guests >= 200 && static_cast<float>(f.guests) >= rand() * 500 && f.guests >= 10 * f.old_litter && share(ReallyTidy) > 1.0f / 64 && litter <= 5;
+                return !had({ 1, 7 }) && f.guests >= 200 && static_cast<f32>(f.guests) >= rand() * 500 && f.guests >= 10 * f.old_litter && share(ReallyTidy) > 1.0f / 64 && litter <= 5;
             case 1: // Most untidy
                 return !had({ 0, 8, 10 }) && litter_share >= 1.0f / 16;
             case 2: // Worst value
                 return !had({ 3 }) && f.fee_charged && f.entrance_fee > f.fair_fee;
             case 3: // Best value
-                return !had({ 2, 7 }) && f.fee_charged && f.fair_fee >= units::Money { 100 } && static_cast<float>(f.entrance_fee.value + 10) < static_cast<float>(f.fair_fee.value) * 0.5f;
+                return !had({ 2, 7 }) && f.fee_charged && f.fair_fee >= units::Money { 100 } && static_cast<f32>(f.entrance_fee.value + 10) < static_cast<f32>(f.fair_fee.value) * 0.5f;
             case 4: // Best food
                 return !had({ 5 }) && share(Hungry) <= 0.25f && f.food_stalls >= 7 && f.food_kinds >= 4 && f.stalls * kGuestsPerFacility >= f.guests;
             case 5: // Worst food
@@ -73,7 +74,7 @@ namespace rct3::simulation
                 return !had({ 7 }) && f.thrilling >= 6;
             case 7: // Most disappointing
             {
-                float let_down = 0;
+                f32 let_down = 0;
                 for (const ThoughtKind thought : { NoPools, MoreRides, NotPaying, AttackedBySeagull, NotPayingToilet, RideNotSafe, PoolBad, Vandalism })
                     let_down += share(thought);
                 return !had({ 3 }) && f.rating <= 500 && let_down > 0.25f;
@@ -82,13 +83,13 @@ namespace rct3::simulation
                 return !had({ 1, 7 }) && share(GreatScenery) > 1.0f / 128 && litter <= 15;
             case 9: // Safest
             {
-                constexpr float kGuests = 400;       ///< The crowd that makes a safe park news, at most
-                constexpr std::int32_t kRides = 7;   ///< At least that many rides
-                constexpr float kManyRides = 15;     ///< Past this a park is always big enough
-                constexpr std::int32_t kSick = 5;    ///< Guests feeling sick, at most
-                constexpr std::int32_t kDangers = 1; ///< Dangerous happenings, at most
-                constexpr float kReliability = 72;   ///< Average reliability, more than
-                return !had({ 22, 23, 24, 25 }) && static_cast<float>(f.guests) >= rand() * kGuests && rides >= kRides && static_cast<float>(rides) >= rand() * kManyRides && count(Vandalism) <= kSick && f.coaster_dangers + f.pool_dangers <= kDangers && f.crashed == 0 && f.reliability > kReliability;
+                constexpr f32 kGuests = 400;     ///< The crowd that makes a safe park news, at most
+                constexpr i32 kRides = 7;        ///< At least that many rides
+                constexpr f32 kManyRides = 15;   ///< Past this a park is always big enough
+                constexpr i32 kSick = 5;         ///< Guests feeling sick, at most
+                constexpr i32 kDangers = 1;      ///< Dangerous happenings, at most
+                constexpr f32 kReliability = 72; ///< Average reliability, more than
+                return !had({ 22, 23, 24, 25 }) && static_cast<f32>(f.guests) >= rand() * kGuests && rides >= kRides && static_cast<f32>(rides) >= rand() * kManyRides && count(Vandalism) <= kSick && f.coaster_dangers + f.pool_dangers <= kDangers && f.crashed == 0 && f.reliability > kReliability;
             }
             case 10: // Best staff
                 return !had({ 1 }) && litter <= 10 && f.every_staff_kind && f.staff * 32 > f.guests && down_over(25) == 0;
@@ -100,14 +101,14 @@ namespace rct3::simulation
                 return f.water_rides >= 6;
             case 14: // Best reliability
             {
-                constexpr std::int32_t kRunning = 7; ///< Rides running, at least
-                constexpr float kManyRunning = 25;   ///< Past this a park always has enough
-                constexpr float kDown = 10;          ///< No ride out of action more of the time
-                constexpr float kReliability = 78;   ///< Average reliability, more than
-                return !had({ 15 }) && f.running >= kRunning && static_cast<float>(f.running) >= rand() * kManyRunning && down_over(kDown) == 0 && f.reliability > kReliability;
+                constexpr i32 kRunning = 7;      ///< Rides running, at least
+                constexpr f32 kManyRunning = 25; ///< Past this a park always has enough
+                constexpr f32 kDown = 10;        ///< No ride out of action more of the time
+                constexpr f32 kReliability = 78; ///< Average reliability, more than
+                return !had({ 15 }) && f.running >= kRunning && static_cast<f32>(f.running) >= rand() * kManyRunning && down_over(kDown) == 0 && f.reliability > kReliability;
             }
             case 15: // Worst reliability
-                return !had({ 14 }) && rides >= 3 && static_cast<float>(rides) >= rand() * 10 && (down_over(75) > 2 || down_over(30) > 6 || f.reliability < 40);
+                return !had({ 14 }) && rides >= 3 && static_cast<f32>(rides) >= rand() * 10 && (down_over(75) > 2 || down_over(30) > 6 || f.reliability < 40);
             case 16: // Themes, each named after its theme
             case 17:
             case 18:
@@ -117,7 +118,7 @@ namespace rct3::simulation
             case 26:
             case 27:
             {
-                constexpr std::int32_t kThemed = 5; ///< Fitted: rides and stalls carrying the theme, at least
+                constexpr i32 kThemed = 5; ///< Fitted: rides and stalls carrying the theme, at least
                 constexpr std::string_view kTheme = "Award_Theme_";
                 const auto found = f.themed.find(award_name(kind).substr(kTheme.size()));
                 return found != f.themed.end() && found->second >= kThemed;
@@ -127,23 +128,23 @@ namespace rct3::simulation
             case 23: // Most dangerous
             case 25: // Extremely dangerous
             {
-                constexpr std::int32_t kCoasterWeight = 5; ///< A coaster happening counts as this many at pools
-                constexpr std::int32_t kDangerous = 25;    ///< Weighted happenings, at least
-                constexpr std::int32_t kExtremely = 60;
+                constexpr i32 kCoasterWeight = 5; ///< A coaster happening counts as this many at pools
+                constexpr i32 kDangerous = 25;    ///< Weighted happenings, at least
+                constexpr i32 kExtremely = 60;
                 return f.coaster_dangers * kCoasterWeight + f.pool_dangers >= (kind == 23 ? kDangerous : kExtremely);
             }
             case 24: // Most dangerous pools
             {
-                constexpr std::int32_t kPools = 12; ///< Happenings at pools, at least
+                constexpr i32 kPools = 12; ///< Happenings at pools, at least
                 return f.pool_dangers >= kPools;
             }
             case 28: // Best animals
             {
-                constexpr float kFit = 0.5f; ///< Health over which an animal adds to the park's name, under which it takes away
-                constexpr float kGain = 2;   ///< What each share of health over kFit adds, for an endangered animal
-                constexpr float kLoss = 20;  ///< And what each share under it takes away
-                constexpr float kBest = 12;  ///< The sum the park must pass
-                float sum = 0;
+                constexpr f32 kFit = 0.5f; ///< Health over which an animal adds to the park's name, under which it takes away
+                constexpr f32 kGain = 2;   ///< What each share of health over kFit adds, for an endangered animal
+                constexpr f32 kLoss = 20;  ///< And what each share under it takes away
+                constexpr f32 kBest = 12;  ///< The sum the park must pass
+                f32 sum = 0;
                 // Each animal's part is weighed by its rarity; the sum so far drops its fraction as each is added.
                 for (const AwardFigures::Animal& a : f.animals)
                     sum = std::trunc(sum) + (a.health - kFit) * (a.health > kFit ? kGain : kLoss) * a.rarity;
@@ -151,8 +152,8 @@ namespace rct3::simulation
             }
             case 29: // Cutest animals
             {
-                constexpr float kCutest = 10; ///< The sum the park must pass
-                float sum = 0;
+                constexpr f32 kCutest = 10; ///< The sum the park must pass
+                f32 sum = 0;
                 // Young animals only: the rarer and the healthier, the cuter.
                 for (const AwardFigures::Animal& a : f.animals)
                     sum += a.young ? std::sqrt(a.rarity) * std::sqrt(a.health) : 0;
@@ -160,8 +161,8 @@ namespace rct3::simulation
             }
             case 30: // Most neglected animals
             {
-                constexpr float kPoorly = 0.4f;   ///< Health under which an animal is neglected
-                constexpr std::int32_t kMany = 4; ///< Neglected animals the park gets away with
+                constexpr f32 kPoorly = 0.4f; ///< Health under which an animal is neglected
+                constexpr i32 kMany = 4;      ///< Neglected animals the park gets away with
                 return std::ranges::count_if(f.animals, [&](const AwardFigures::Animal& a) { return a.health < kPoorly; }) > kMany;
             }
             default:
@@ -171,20 +172,20 @@ namespace rct3::simulation
 
     namespace
     {
-        constexpr float kEnough = 96; ///< Fitted: tiles of the theme's scenery, its own counted in, that carry it
+        constexpr f32 kEnough = 96; ///< Fitted: tiles of the theme's scenery, its own counted in, that carry it
 
         /// A ride or stall, with its own theme (empty for none) and the tiles of each theme's scenery round it.
         struct Surroundings
         {
-            std::uint64_t id = 0;
+            u64 id = 0;
             std::string own { };
-            std::map<std::string, float, std::less<>> tiles { };
+            std::map<std::string, f32, std::less<>> tiles { };
         };
 
         std::vector<Surroundings> surroundings(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const rct3::park::BuildItem> catalogue)
         {
-            constexpr float kReach = 6; ///< Fitted: tiles round a ride or stall its scenery counts within
-            constexpr float kOwn = 8;   ///< Fitted: a ride or stall of the theme counts as this many tiles of its scenery
+            constexpr f32 kReach = 6; ///< Fitted: tiles round a ride or stall its scenery counts within
+            constexpr f32 kOwn = 8;   ///< Fitted: a ride or stall of the theme counts as this many tiles of its scenery
             // Overlays in one spelling: either slash, any case.
             const auto key = [](std::string_view s) {
                 std::string out(s);
@@ -193,19 +194,19 @@ namespace rct3::simulation
                 return out;
             };
             std::map<std::string, std::string, std::less<>> theme_of;
-            std::map<std::string, float, std::less<>> tiles_of; // Footprint of each item, by overlay and symbol
+            std::map<std::string, f32, std::less<>> tiles_of; // Footprint of each item, by overlay and symbol
             for (const rct3::park::BuildItem& item : catalogue)
             {
                 if (item.style_index.value_or(0) > 0 && !item.style.empty())
                     theme_of.try_emplace(key(item.overlay), item.style);
-                tiles_of.try_emplace(key(item.overlay) + '|' + key(item.symbol), static_cast<float>(std::max(1u, item.width * item.length)));
+                tiles_of.try_emplace(key(item.overlay) + '|' + key(item.symbol), static_cast<f32>(std::max(1u, item.width * item.length)));
             }
             struct Spot
             {
-                float col = 0, row = 0;
+                f32 col = 0, row = 0;
                 std::string_view theme;
                 save::model::ObjectId object = 0;
-                std::uint64_t id = 0;
+                u64 id = 0;
             };
             std::vector<Spot> attractions;
             const auto add = [&](const save::model::AttractionCommon& base, std::span<const save::model::Station> stations) {
@@ -217,7 +218,7 @@ namespace rct3::simulation
                 if (!spot || base.demolished)
                     return;
                 const auto theme = theme_of.find(key(base.overlay_path));
-                attractions.push_back({ static_cast<float>(spot->col), static_cast<float>(spot->row), theme != theme_of.end() ? std::string_view(theme->second) : std::string_view { }, spot->object, base.id });
+                attractions.push_back({ static_cast<f32>(spot->col), static_cast<f32>(spot->row), theme != theme_of.end() ? std::string_view(theme->second) : std::string_view { }, spot->object, base.id });
             };
             for (const save::model::Ride& ride : rides.rides)
                 add(ride.base, ride.stations);
@@ -225,7 +226,7 @@ namespace rct3::simulation
                 add(stall.base, { });
             // Each ride and stall's tiles of each theme's scenery round it, its own theme first.
             std::vector<Surroundings> tiles(attractions.size());
-            for (std::size_t i = 0; i < attractions.size(); ++i)
+            for (usize i = 0; i < attractions.size(); ++i)
             {
                 tiles[i] = { .id = attractions[i].id, .own = std::string(attractions[i].theme) };
                 if (!attractions[i].theme.empty())
@@ -237,17 +238,17 @@ namespace rct3::simulation
                 if (theme == theme_of.end() || std::ranges::contains(attractions, o.id, &Spot::object))
                     continue;
                 const auto size = tiles_of.find(key(o.overlay) + '|' + key(std::string_view(o.symbol).substr(0, o.symbol.find(':'))));
-                for (std::size_t i = 0; i < attractions.size(); ++i)
-                    if (std::hypot(static_cast<float>(o.col) - attractions[i].col, static_cast<float>(o.row) - attractions[i].row) <= kReach)
+                for (usize i = 0; i < attractions.size(); ++i)
+                    if (std::hypot(static_cast<f32>(o.col) - attractions[i].col, static_cast<f32>(o.row) - attractions[i].row) <= kReach)
                         tiles[i].tiles[theme->second] += size != tiles_of.end() ? size->second : 1;
             }
             return tiles;
         }
     } // namespace
 
-    std::map<std::string, std::int32_t, std::less<>> themed_attractions(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const rct3::park::BuildItem> catalogue)
+    std::map<std::string, i32, std::less<>> themed_attractions(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const rct3::park::BuildItem> catalogue)
     {
-        std::map<std::string, std::int32_t, std::less<>> themed;
+        std::map<std::string, i32, std::less<>> themed;
         for (const Surroundings& round : surroundings(rides, objects, catalogue))
             for (const auto& [theme, n] : round.tiles)
                 if (n >= kEnough)
@@ -255,16 +256,16 @@ namespace rct3::simulation
         return themed;
     }
 
-    std::vector<std::uint64_t> off_theme_attractions(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const rct3::park::BuildItem> catalogue)
+    std::vector<u64> off_theme_attractions(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects, std::span<const rct3::park::BuildItem> catalogue)
     {
-        std::vector<std::uint64_t> off;
+        std::vector<u64> off;
         for (const Surroundings& round : surroundings(rides, objects, catalogue))
             if (const auto most = std::ranges::max_element(round.tiles, { }, [](const auto& t) { return t.second; }); most != round.tiles.end() && most->second >= kEnough && most->first != round.own)
                 off.push_back(round.id);
         return off;
     }
 
-    std::vector<std::int32_t> award_month(save::model::Awards& awards, const AwardFigures& figures, random::RandomState& dice)
+    std::vector<i32> award_month(save::model::Awards& awards, const AwardFigures& figures, random::RandomState& dice)
     {
         if (awards.months_before_start > 0)
         {
@@ -272,16 +273,16 @@ namespace rct3::simulation
             return { };
         }
         // The last six months, this one first; what the five before it had keeps those away.
-        constexpr std::size_t kMonthsKept = 6;
-        awards.earned.insert(awards.earned.begin(), std::vector<std::int32_t> { });
+        constexpr usize kMonthsKept = 6;
+        awards.earned.insert(awards.earned.begin(), std::vector<i32> { });
         awards.earned.resize(kMonthsKept);
-        std::uint32_t lately = 0;
-        for (std::size_t m = 1; m < awards.earned.size(); ++m)
-            for (const std::int32_t k : awards.earned[m])
+        u32 lately = 0;
+        for (usize m = 1; m < awards.earned.size(); ++m)
+            for (const i32 k : awards.earned[m])
                 if (k >= 0 && k < kAwardKinds)
                     lately |= 1u << k;
-        std::vector<std::int32_t> given;
-        for (std::int32_t kind = 0; kind < kAwardKinds; ++kind)
+        std::vector<i32> given;
+        for (i32 kind = 0; kind < kAwardKinds; ++kind)
         {
             if ((lately & (1u << kind)) != 0 || (awards.available_mask & (1u << kind)) == 0 || !award_earned(kind, figures, lately, dice))
                 continue;
@@ -290,8 +291,8 @@ namespace rct3::simulation
             given.push_back(kind);
         }
         // Dangerous events are forgotten in time, those at pools sooner.
-        constexpr double kPoolForgotten = 0.5;     ///< A month's chance one dangerous event at a pool is forgotten
-        constexpr double kCoasterForgotten = 0.05; ///< And one on a coaster
+        constexpr f64 kPoolForgotten = 0.5;     ///< A month's chance one dangerous event at a pool is forgotten
+        constexpr f64 kCoasterForgotten = 0.05; ///< And one on a coaster
         if (awards.dangerous_pool_events && *awards.dangerous_pool_events > 0 && random::chance(dice, kPoolForgotten))
             --*awards.dangerous_pool_events;
         if (awards.dangerous_coaster_events && *awards.dangerous_coaster_events > 0 && random::chance(dice, kCoasterForgotten))

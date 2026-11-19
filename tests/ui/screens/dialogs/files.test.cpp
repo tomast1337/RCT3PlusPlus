@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/dialogs/files.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -42,7 +43,7 @@ namespace
             desktop.update({ });
         }
 
-        void tick(float seconds = 0)
+        void tick(f32 seconds = 0)
         {
             desktop.update({ }, { }, { units::Seconds { seconds }, nullptr });
         }

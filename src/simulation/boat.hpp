@@ -9,6 +9,7 @@
 // Positions are the park's world x and z. Kept free of the registry so it can be tested on a made-up lake.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "ovl/ride_train.hpp"
 #include "park/path/clearance.hpp"
@@ -27,14 +28,14 @@ namespace rct3::simulation
     /// Which tiles a boat can float on, and the surface's height there.
     struct WaterTiles
     {
-        std::int32_t cols = 0;
-        std::int32_t rows = 0;
-        float origin_x = 0;
-        float origin_z = 0;
-        float tile_size = 4;
-        std::vector<std::optional<float>> level { }; ///< Row-major; none where a boat cannot go
+        i32 cols = 0;
+        i32 rows = 0;
+        f32 origin_x = 0;
+        f32 origin_z = 0;
+        f32 tile_size = 4;
+        std::vector<std::optional<f32>> level { }; ///< Row-major; none where a boat cannot go
 
-        [[nodiscard]] std::optional<float> at(std::int32_t col, std::int32_t row) const;
+        [[nodiscard]] std::optional<f32> at(i32 col, i32 row) const;
         [[nodiscard]] glm::ivec2 tile_of(glm::vec2 at) const;
         [[nodiscard]] glm::vec2 middle(glm::ivec2 tile) const;
     };
@@ -47,7 +48,7 @@ namespace rct3::simulation
     /// too), `to` last and `from` left out. None when no way joins them.
     [[nodiscard]] std::optional<std::vector<glm::ivec2>> water_route(const WaterTiles& water, glm::ivec2 from, glm::ivec2 to);
 
-    enum class Sailing : std::uint8_t
+    enum class Sailing : u8
     {
         Out,    ///< Roaming the water
         Home,   ///< Making for the dock
@@ -82,10 +83,10 @@ namespace rct3::simulation
         glm::vec2 heading { 0, 1 };
         units::Radians lean { };
     };
-    [[nodiscard]] BoatPose between_sails(const Boat& boat, float along);
+    [[nodiscard]] BoatPose between_sails(const Boat& boat, f32 along);
 
     /// The oars a rowing boat pulls on: both while it keeps more or less straight, or those that turn it.
-    enum class Stroke : std::uint8_t
+    enum class Stroke : u8
     {
         Both,  ///< Straight on
         Left,  ///< Turning to its left
@@ -112,6 +113,6 @@ namespace rct3::simulation
     /// Sails `boat` for `seconds`, handling as `handling` says, at up to `top` m/s; after `roam` seconds out it
     /// heads home. It keeps clear of the others of `fleet` (which may hold `boat` itself), or, a boat that
     /// `bumps`, bounces off them. True once it docks.
-    bool sail(Boat& boat, const WaterTiles& water, const Dock& dock, const ovl::BoatHandling& handling, float top, float roam, float seconds, random::RandomState& dice, std::span<const Boat> fleet = { }, bool bumps = false);
+    bool sail(Boat& boat, const WaterTiles& water, const Dock& dock, const ovl::BoatHandling& handling, f32 top, f32 roam, f32 seconds, random::RandomState& dice, std::span<const Boat> fleet = { }, bool bumps = false);
 
 } // namespace rct3::simulation

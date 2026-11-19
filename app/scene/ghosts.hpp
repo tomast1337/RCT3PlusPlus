@@ -4,6 +4,7 @@
 // whether it can be built there, and drawn glowing at any hour.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "render/device.hpp"
 
@@ -26,7 +27,7 @@ namespace rct3::scene
 
     /// `light` as ghosts are drawn in: their own colour, unlit, with no haze, pulsing gently with `clock` (seconds),
     /// so they glow at any hour.
-    [[nodiscard]] render::SceneLight ghost_light(render::SceneLight light, float clock);
+    [[nodiscard]] render::SceneLight ghost_light(render::SceneLight light, f32 clock);
     /// Draws `mesh` see-through with `transform` and `light`; `solid`, as a built object is drawn instead, for a
     /// picture of it alone.
     void draw_ghost_mesh(render::Device& device, const park::ParkScene& scene, const rct3::park::object::ObjectMesh& mesh, const glm::mat4& transform, const render::SceneLight& light, bool solid = false);

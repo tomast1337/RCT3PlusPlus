@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object/models.hpp"
 
+#include "core/types.hpp"
 #include "park/terrain_mesh.hpp"
 
 #include <algorithm>
@@ -31,20 +32,20 @@ TEST_CASE("the water picture is see-through, tiles and is never recoloured")
     REQUIRE(water.indices.size() == water.width * water.height);
     REQUIRE(water.alpha.size() == water.indices.size());
     CHECK(water.slots == 0);
-    CHECK(std::ranges::all_of(water.alpha, [](std::uint8_t a) { return a > 0 && a < 255; }));
+    CHECK(std::ranges::all_of(water.alpha, [](u8 a) { return a > 0 && a < 255; }));
     // The edges meet: across the seam the shade steps no more than between neighbours inside the picture.
-    const auto at = [&](std::uint32_t x, std::uint32_t y) { return static_cast<std::int32_t>(water.indices[y * water.width + x]); };
-    std::int32_t inside = 0;
-    std::int32_t seam = 0;
-    for (std::uint32_t y = 0; y < water.height; ++y)
+    const auto at = [&](u32 x, u32 y) { return static_cast<i32>(water.indices[y * water.width + x]); };
+    i32 inside = 0;
+    i32 seam = 0;
+    for (u32 y = 0; y < water.height; ++y)
     {
-        for (std::uint32_t x = 1; x < water.width; ++x)
+        for (u32 x = 1; x < water.width; ++x)
             inside = std::max(inside, std::abs(at(x, y) - at(x - 1, y)));
         seam = std::max(seam, std::abs(at(0, y) - at(water.width - 1, y)));
     }
     CHECK(seam <= inside);
     // In the lakes' colour at its darkest.
-    CHECK(water.palette[0].b == static_cast<std::uint8_t>(kWaterColour.b * 255));
+    CHECK(water.palette[0].b == static_cast<u8>(kWaterColour.b * 255));
 }
 
 TEST_CASE("a mesh is blended as its transparency says")
@@ -57,7 +58,7 @@ TEST_CASE("a mesh is blended as its transparency says")
 
 TEST_CASE("a mesh of the depth filling style writes depth only, whatever its transparency")
 {
-    for (const std::uint32_t transparency : { 0u, 1u, 2u })
+    for (const u32 transparency : { 0u, 1u, 2u })
     {
         CHECK(part_blend(transparency, "SIFillZ") == PartBlend::DepthOnly);
         CHECK(part_blend(transparency, "sifillz") == PartBlend::DepthOnly);

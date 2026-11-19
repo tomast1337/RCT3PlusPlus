@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/thought_text.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -15,7 +17,7 @@ namespace rct3::ui
         constexpr std::string_view kKeyPrefix = "Thought_";
         constexpr std::u16string_view kNameMark = u"%NAME%";
         /// Texts tried for one thought at most; no thought has nearly as many.
-        constexpr std::int32_t kMostTexts = 32;
+        constexpr i32 kMostTexts = 32;
 
         struct Thought
         {
@@ -285,18 +287,18 @@ namespace rct3::ui
 
     } // namespace
 
-    std::string thought_key(std::int32_t id)
+    std::string thought_key(i32 id)
     {
-        if (id <= 0 || static_cast<std::size_t>(id) >= kThoughts.size())
+        if (id <= 0 || static_cast<usize>(id) >= kThoughts.size())
             return { };
-        return std::format("{}{}", kKeyPrefix, kThoughts[static_cast<std::size_t>(id)].name);
+        return std::format("{}{}", kKeyPrefix, kThoughts[static_cast<usize>(id)].name);
     }
 
-    Mood thought_mood(std::int32_t id)
+    Mood thought_mood(i32 id)
     {
-        if (id <= 0 || static_cast<std::size_t>(id) >= kThoughts.size())
+        if (id <= 0 || static_cast<usize>(id) >= kThoughts.size())
             return Mood::Neutral;
-        return kThoughts[static_cast<std::size_t>(id)].mood;
+        return kThoughts[static_cast<usize>(id)].mood;
     }
 
     std::optional<Mood> key_mood(std::string_view key)
@@ -312,7 +314,7 @@ namespace rct3::ui
         return it->mood;
     }
 
-    Mood happiness_mood(float happiness)
+    Mood happiness_mood(f32 happiness)
     {
         if (happiness > 2.0f / 3)
             return Mood::Happy;
@@ -325,12 +327,12 @@ namespace rct3::ui
         return std::string(kIcons[std::to_underlying(mood)]);
     }
 
-    std::string thought_text_key(const StringTable& strings, std::int32_t id, std::int64_t variant)
+    std::string thought_text_key(const StringTable& strings, i32 id, i64 variant)
     {
         const std::string key = thought_key(id);
         if (key.empty())
             return { };
-        std::int32_t count = 0;
+        i32 count = 0;
         while (count < kMostTexts && strings.contains(std::format("{}{}", key, count + 1)))
             ++count;
         if (count == 0)
@@ -338,7 +340,7 @@ namespace rct3::ui
         return std::format("{}{}", key, (variant % count + count) % count + 1);
     }
 
-    std::u16string thought_text(const StringTable& strings, std::int32_t id, std::int64_t variant, std::u16string_view name)
+    std::u16string thought_text(const StringTable& strings, i32 id, i64 variant, std::u16string_view name)
     {
         const std::string key = thought_text_key(strings, id, variant);
         if (key.empty())

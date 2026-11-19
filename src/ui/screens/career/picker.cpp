@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/career/picker.hpp"
 
+#include "core/types.hpp"
 #include "strings/unicode.hpp"
 #include "ui/skin/library.hpp"
 #include "ui/widgets/panel.hpp"
@@ -26,17 +27,17 @@ namespace rct3::ui::screens::career
         constexpr std::string_view kNo = "SMB_Label_No";
         constexpr std::string_view kQuestionName = "career_question";
 
-        std::u16string number(std::size_t n)
+        std::u16string number(usize n)
         {
             return strings::to_utf16(std::to_string(n));
         }
 
     } // namespace
 
-    std::u16string career_percent(float percent)
+    std::u16string career_percent(f32 percent)
     {
         std::array<char, 32> text { };
-        std::snprintf(text.data(), text.size(), "%.3g%%", static_cast<double>(percent));
+        std::snprintf(text.data(), text.size(), "%.3g%%", static_cast<f64>(percent));
         return strings::to_utf16(text.data());
     }
 
@@ -48,16 +49,16 @@ namespace rct3::ui::screens::career
             : Widget(std::move(name))
             , style_(style)
         {
-            const float c = style.cell;
-            for (std::size_t i = 0; i < counts.size(); ++i)
+            const f32 c = style.cell;
+            for (usize i = 0; i < counts.size(); ++i)
             {
                 widgets::Label& l = add<widgets::Label>(std::format("count{}", i), std::u16string { }, style.font);
                 l.style.colour = style.text_colour;
                 l.style.vertical = Align::Centre;
-                l.placement = top_left(c, c * static_cast<float>(i), c, c);
+                l.placement = top_left(c, c * static_cast<f32>(i), c, c);
                 counts[i] = &l;
             }
-            const float text_width = style.row_width - style.text_x;
+            const f32 text_width = style.row_width - style.text_x;
             box = &add<widgets::EditBox>("name");
             box->skin = { };
             box->focused_skin = style.name_box_focused;
@@ -77,7 +78,7 @@ namespace rct3::ui::screens::career
         widgets::Label* progress = nullptr;
         std::u16string known_name; // As the owner last gave it
         TextureId picture = 0;
-        std::size_t position = 0;
+        usize position = 0;
         bool selected = false;
 
         void set(CareerRow career)
@@ -109,10 +110,10 @@ namespace rct3::ui::screens::career
         {
             const Rect& r = rect();
             context.list.fill(r, style_.row_colours[position % 2]);
-            const float c = style_.cell;
-            for (std::size_t i = 0; i < style_.hats.size(); ++i)
+            const f32 c = style_.cell;
+            for (usize i = 0; i < style_.hats.size(); ++i)
             {
-                const float y = r.y0 + c * static_cast<float>(i);
+                const f32 y = r.y0 + c * static_cast<f32>(i);
                 skin::draw_skin(context.list, context.skins.find(style_.hats[i]), { r.x0, y, r.x0 + c, y + c });
             }
             const Rect& p = style_.picture;
@@ -126,7 +127,7 @@ namespace rct3::ui::screens::career
 
     private:
         const CareerDialogStyle& style_;
-        std::int32_t clicks_ = 0;
+        i32 clicks_ = 0;
     };
 
     CareerDialog::CareerDialog(std::string name, const CareerDialogStyle& style, const StringTable& strings)
@@ -145,16 +146,16 @@ namespace rct3::ui::screens::career
         list_ = &content().add<widgets::ScrollArea>("list", style.scroll);
         list_->placement = top_left(0, style.subtitle_height, style.width, style.list_height);
 
-        const float bar_y = style.subtitle_height + style.list_height;
-        const float buttons_x = style.width - 4 * style.button_size - 3 * style.button_gap;
+        const f32 bar_y = style.subtitle_height + style.list_height;
+        const f32 buttons_x = style.width - 4 * style.button_size - 3 * style.button_gap;
         hover_ = &content().add<widgets::Label>("hover", std::u16string { }, style.font);
         hover_->style.colour = style.hover_colour;
         hover_->style.vertical = Align::Centre;
         hover_->placement = top_left(0, bar_y, buttons_x, style.bar_height);
 
-        const auto button = [&](std::string id, const std::string& icon_skin, std::size_t slot) -> widgets::Button& {
+        const auto button = [&](std::string id, const std::string& icon_skin, usize slot) -> widgets::Button& {
             widgets::Button& b = content().add<widgets::Button>(std::move(id), style.button, icon_skin);
-            b.placement = top_left(buttons_x + static_cast<float>(slot) * (style.button_size + style.button_gap), bar_y + (style.bar_height - style.button_size) / 2, style.button_size, style.button_size);
+            b.placement = top_left(buttons_x + static_cast<f32>(slot) * (style.button_size + style.button_gap), bar_y + (style.bar_height - style.button_size) / 2, style.button_size, style.button_size);
             return b;
         };
         new_ = &button("new", style.new_icon, 0);
@@ -171,7 +172,7 @@ namespace rct3::ui::screens::career
         return std::u16string(strings_.get(key));
     }
 
-    CareerDialog::Row& CareerDialog::make_row(std::size_t index, CareerRow career)
+    CareerDialog::Row& CareerDialog::make_row(usize index, CareerRow career)
     {
         Row& row = list_->content().add<Row>(std::format("row{}", made_++), style_);
         row.position = index;
@@ -181,10 +182,10 @@ namespace rct3::ui::screens::career
 
     void CareerDialog::place_rows()
     {
-        for (std::size_t i = 0; i < rows_.size(); ++i)
+        for (usize i = 0; i < rows_.size(); ++i)
         {
             rows_[i]->position = i;
-            rows_[i]->placement = top_left(0, static_cast<float>(i) * style_.row_height, style_.row_width, style_.row_height);
+            rows_[i]->placement = top_left(0, static_cast<f32>(i) * style_.row_height, style_.row_width, style_.row_height);
         }
     }
 
@@ -193,14 +194,14 @@ namespace rct3::ui::screens::career
         for (Row* row : rows_)
             list_->content().remove(*row);
         rows_.clear();
-        for (std::size_t i = 0; i < careers.size(); ++i)
+        for (usize i = 0; i < careers.size(); ++i)
             rows_.push_back(&make_row(i, std::move(careers[i])));
         place_rows();
         last_clicked_.reset();
-        select(rows_.empty() ? std::nullopt : std::optional<std::size_t>(0));
+        select(rows_.empty() ? std::nullopt : std::optional<usize>(0));
     }
 
-    void CareerDialog::set_career(std::size_t index, CareerRow career)
+    void CareerDialog::set_career(usize index, CareerRow career)
     {
         if (index < rows_.size())
             rows_[index]->set(std::move(career));
@@ -213,33 +214,33 @@ namespace rct3::ui::screens::career
         select(rows_.size() - 1);
     }
 
-    void CareerDialog::select(std::optional<std::size_t> index)
+    void CareerDialog::select(std::optional<usize> index)
     {
         if (index && *index >= rows_.size())
             index.reset();
         selected_ = index;
-        for (std::size_t i = 0; i < rows_.size(); ++i)
+        for (usize i = 0; i < rows_.size(); ++i)
             rows_[i]->selected = index == i;
     }
 
-    widgets::EditBox& CareerDialog::name_box(std::size_t index) const
+    widgets::EditBox& CareerDialog::name_box(usize index) const
     {
         return *rows_.at(index)->box;
     }
 
-    std::array<std::u16string, 4> CareerDialog::row_text(std::size_t index) const
+    std::array<std::u16string, 4> CareerDialog::row_text(usize index) const
     {
         const Row& row = *rows_.at(index);
         return { row.counts[0]->text, row.counts[1]->text, row.counts[2]->text, row.progress->text };
     }
 
-    void CareerDialog::click_row(std::size_t index)
+    void CareerDialog::click_row(usize index)
     {
         if (index < rows_.size())
             rows_[index]->on_release({ }, true);
     }
 
-    std::optional<std::size_t> CareerDialog::take_load()
+    std::optional<usize> CareerDialog::take_load()
     {
         return std::exchange(load_out_, std::nullopt);
     }
@@ -249,7 +250,7 @@ namespace rct3::ui::screens::career
         return std::exchange(new_out_, false);
     }
 
-    std::optional<std::size_t> CareerDialog::take_delete()
+    std::optional<usize> CareerDialog::take_delete()
     {
         return std::exchange(delete_out_, std::nullopt);
     }
@@ -259,7 +260,7 @@ namespace rct3::ui::screens::career
         return std::exchange(rename_out_, std::nullopt);
     }
 
-    void CareerDialog::check_rename(std::size_t index)
+    void CareerDialog::check_rename(usize index)
     {
         Row& row = *rows_[index];
         if (row.box->text == row.known_name)
@@ -293,7 +294,7 @@ namespace rct3::ui::screens::career
                 question_ = nullptr; // It closes with the answer
                 if (*given == 0 && deleting_ && *deleting_ < rows_.size())
                 {
-                    const std::size_t index = *deleting_;
+                    const usize index = *deleting_;
                     list_->content().remove(*rows_[index]);
                     rows_.erase(rows_.begin() + static_cast<std::ptrdiff_t>(index));
                     place_rows();
@@ -306,7 +307,7 @@ namespace rct3::ui::screens::career
             return;
         }
 
-        for (std::size_t i = 0; i < rows_.size(); ++i)
+        for (usize i = 0; i < rows_.size(); ++i)
         {
             if (rows_[i]->box->take_commit())
                 check_rename(i);

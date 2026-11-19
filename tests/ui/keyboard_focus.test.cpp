@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/keyboard_focus.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 
 #include <doctest/doctest.h>
@@ -99,9 +100,9 @@ TEST_CASE("tab moves the focus within the top-most window and shows it")
         const FontSet fonts;
         DrawContext context { list, skins, fonts };
         desktop.draw(context);
-        const float o = desktop.focus_mark_style.outset;
-        float x0 = 1e9f;
-        float x1 = -1e9f;
+        const f32 o = desktop.focus_mark_style.outset;
+        f32 x0 = 1e9f;
+        f32 x1 = -1e9f;
         for (const Vertex& v : list.vertices())
         {
             x0 = std::min(x0, v.x);

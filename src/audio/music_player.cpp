@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "audio/music_player.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <utility>
@@ -11,7 +13,7 @@ namespace rct3::audio
     namespace
     {
 
-        constexpr std::size_t kChunkFrames = 4096;
+        constexpr usize kChunkFrames = 4096;
 
     } // namespace
 
@@ -23,7 +25,7 @@ namespace rct3::audio
     {
     }
 
-    std::expected<MusicPlayer, std::string> MusicPlayer::start(AudioEngine& engine, const std::filesystem::path& file, float volume, bool loop)
+    std::expected<MusicPlayer, std::string> MusicPlayer::start(AudioEngine& engine, const std::filesystem::path& file, f32 volume, bool loop)
     {
         auto stream = wma::WmaStream::open(file);
         if (!stream)
@@ -31,7 +33,7 @@ namespace rct3::audio
         const StreamFormat format {
             .channels = stream->channels(),
             .sample_rate = stream->sample_rate(),
-            .buffer_frames = static_cast<std::uint32_t>(std::lround(kMusicAheadSeconds * static_cast<float>(stream->sample_rate()))),
+            .buffer_frames = static_cast<u32>(std::lround(kMusicAheadSeconds * static_cast<f32>(stream->sample_rate()))),
         };
         auto voice = engine.play_stream(format, { .volume = volume });
         if (!voice)
@@ -49,11 +51,11 @@ namespace rct3::audio
     {
         if (ended_)
             return { };
-        const std::size_t channels = stream_.channels();
+        const usize channels = stream_.channels();
         bool rewound = false;
-        for (std::size_t space = engine.stream_space(voice_); space > 0; space = engine.stream_space(voice_))
+        for (usize space = engine.stream_space(voice_); space > 0; space = engine.stream_space(voice_))
         {
-            const std::size_t want = std::min(space, kChunkFrames);
+            const usize want = std::min(space, kChunkFrames);
             auto read = stream_.read(std::span(chunk_).first(want * channels));
             if (!read)
             {
@@ -85,7 +87,7 @@ namespace rct3::audio
         return { };
     }
 
-    bool MusicPlayer::set_volume(AudioEngine& engine, float volume)
+    bool MusicPlayer::set_volume(AudioEngine& engine, f32 volume)
     {
         return engine.set_voice_volume(voice_, volume);
     }

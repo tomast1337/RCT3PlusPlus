@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path/route.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -12,28 +14,28 @@ using rct3::units::Money;
 
 namespace
 {
-    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid owned_grid(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         for (save::model::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
+            c.flags = static_cast<u8>(save::model::TileFlag::Owned);
         return g;
     }
 
-    save::model::TerrainCell& cell(save::model::TerrainGrid& g, std::int32_t col, std::int32_t row)
+    save::model::TerrainCell& cell(save::model::TerrainGrid& g, i32 col, i32 row)
     {
-        return g.cells[static_cast<std::size_t>(row * g.width + col)];
+        return g.cells[static_cast<usize>(row * g.width + col)];
     }
 
     /// A ridge across every row at column `col`, `height` high on its flat top.
-    void ridge(save::model::TerrainGrid& g, std::int32_t col, float height)
+    void ridge(save::model::TerrainGrid& g, i32 col, f32 height)
     {
-        for (std::int32_t row = 0; row < g.height; ++row)
+        for (i32 row = 0; row < g.height; ++row)
             cell(g, col, row).corners = { height, height, height, height };
     }
 
@@ -47,7 +49,7 @@ namespace
 
     bool joined(const std::vector<RouteStep>& route)
     {
-        for (std::size_t i = 1; i < route.size(); ++i)
+        for (usize i = 1; i < route.size(); ++i)
         {
             const save::model::Tile a = route[i - 1].piece.spot;
             const save::model::Tile b = route[i].piece.spot;
@@ -60,9 +62,9 @@ namespace
     /// No two pieces of `route` on one tile come within kPathHeadroom of each other.
     bool keeps_room(const std::vector<RouteStep>& route)
     {
-        for (std::size_t i = 0; i < route.size(); ++i)
+        for (usize i = 0; i < route.size(); ++i)
         {
-            for (std::size_t j = i + 1; j < route.size(); ++j)
+            for (usize j = i + 1; j < route.size(); ++j)
             {
                 const NextPiece& a = route[i].piece;
                 const NextPiece& b = route[j].piece;
@@ -84,8 +86,8 @@ TEST_CASE("a route over flat ground lies on the ground, short and with one turn"
     CHECK(route->back().piece.spot == save::model::Tile { 6, 4 });
     CHECK(joined(*route));
     CHECK(std::ranges::all_of(*route, [](const RouteStep& s) { return s.piece.ground; }));
-    std::size_t turns = 0;
-    for (std::size_t i = 2; i < route->size(); ++i)
+    usize turns = 0;
+    for (usize i = 2; i < route->size(); ++i)
         turns += (*route)[i].heading != (*route)[i - 1].heading;
     CHECK(turns == 1);
     CHECK(route_price(*route, started_at({ 1, 1 }), g, { }, Money { 1000 }) == Money { 9000 });
@@ -94,7 +96,7 @@ TEST_CASE("a route over flat ground lies on the ground, short and with one turn"
 TEST_CASE("a route goes round land the park does not own")
 {
     save::model::TerrainGrid g = owned_grid(8, 6);
-    for (std::int32_t row = 0; row < 5; ++row)
+    for (i32 row = 0; row < 5; ++row)
         cell(g, 4, row).flags = 0;
     const auto route = find_route(started_at({ 1, 0 }), { 7, 0 }, g, { }, Money { 1000 });
     REQUIRE(route);
@@ -126,7 +128,7 @@ TEST_CASE("across a ridge a route climbs over it, or cuts through when cutting i
 TEST_CASE("under a mountain a route tunnels rather than climb over or cut a trench")
 {
     save::model::TerrainGrid g = owned_grid(14, 3);
-    for (std::int32_t col = 4; col <= 9; ++col)
+    for (i32 col = 4; col <= 9; ++col)
         ridge(g, col, 12);
     for (const bool cut : { false, true })
     {
@@ -179,7 +181,7 @@ TEST_CASE("a route goes on from the trail's end and walks over paths already the
 TEST_CASE("a route climbing round to a path over its own start keeps room over its own pieces")
 {
     const save::model::TerrainGrid g = owned_grid(5, 3);
-    for (const std::int32_t height : { 1, 2, 3, 4 })
+    for (const i32 height : { 1, 2, 3, 4 })
     {
         save::model::PathTile raised = ground_path({ 2, 1 }, "Old", 9);
         raised.kind = save::model::PathKind::Flying;
@@ -198,8 +200,8 @@ TEST_CASE("a queue route bridging a path leaves room to walk under it")
 {
     const save::model::TerrainGrid g = owned_grid(11, 3);
     std::vector<save::model::PathTile> paths;
-    for (std::int32_t row = 0; row < 3; ++row)
-        paths.push_back(ground_path({ 5, row }, "Old", static_cast<std::uint64_t>(row + 1)));
+    for (i32 row = 0; row < 3; ++row)
+        paths.push_back(ground_path({ 5, row }, "Old", static_cast<u64>(row + 1)));
     FootpathBuilder queue = started_at({ 1, 1 });
     queue.queue = true;
     const auto route = find_route(queue, { 9, 1 }, g, paths, Money { 1000 });
@@ -229,7 +231,7 @@ TEST_CASE("a straight route steps along the line to its goal, where the default 
 TEST_CASE("across a dip a route bridges it level rather than ramp down into it")
 {
     save::model::TerrainGrid g = owned_grid(12, 3);
-    for (std::int32_t col = 4; col <= 7; ++col)
+    for (i32 col = 4; col <= 7; ++col)
         ridge(g, col, -3);
     const auto route = find_route(started_at({ 1, 1 }), { 10, 1 }, g, { }, Money { 1000 });
     REQUIRE(route);

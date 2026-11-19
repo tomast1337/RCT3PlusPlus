@@ -5,6 +5,7 @@
 // design. Run with `./nob fuzz save_file`.
 #include "save/save_file.hpp"
 
+#include "core/types.hpp"
 #include "save/model/design.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
@@ -29,7 +30,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     {
         if (const auto g = rct3::save::model::decode_terrain(view))
         {
-            if (g->cells.size() != static_cast<std::size_t>(g->width) * static_cast<std::size_t>(g->height))
+            if (g->cells.size() != static_cast<usize>(g->width) * static_cast<usize>(g->height))
                 __builtin_trap();
             if (g->cells.size() > rct3::save::model::kMaxTerrainCells)
                 __builtin_trap();
@@ -54,7 +55,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         return 0;
 
     // Sections tile the input exactly, in order.
-    std::size_t at = 0;
+    usize at = 0;
     for (const auto& s : file->sections)
     {
         if (s.offset != at)
@@ -153,7 +154,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
     const auto world = rct3::save::model::load_world(*file, index);
     if (!world)
         __builtin_trap();
-    if (world->terrain.cells.size() != static_cast<std::size_t>(world->terrain.width) * static_cast<std::size_t>(world->terrain.height))
+    if (world->terrain.cells.size() != static_cast<usize>(world->terrain.width) * static_cast<usize>(world->terrain.height))
         __builtin_trap();
     if (world->objects.size() + world->paths.size() > file->objects.size())
         __builtin_trap();
@@ -167,7 +168,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         const auto model = rct3::save::model::load_rides(*file, index);
         if (!model)
             __builtin_trap();
-        std::size_t pieces = 0;
+        usize pieces = 0;
         for (const auto& r : model->rides)
         {
             if (r.track)

@@ -16,6 +16,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/screens/info/panel.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/column_table.hpp"
@@ -43,28 +44,28 @@ namespace rct3::ui::screens::management
         widgets::WindowStyle window;
         widgets::ColumnTableStyle table;
         widgets::ScrollBarStyle scroll;
-        float tab_size = 23;
-        float tab_step = 20; ///< The tabs overlap a little, as the options window's do
-        float tab_bar_height = 25;
-        float caption_x = 59; ///< Right of the window's icon, under the title
-        float caption_height = 20;
+        f32 tab_size = 23;
+        f32 tab_step = 20; ///< The tabs overlap a little, as the options window's do
+        f32 tab_bar_height = 25;
+        f32 caption_x = 59; ///< Right of the window's icon, under the title
+        f32 caption_height = 20;
         font::FontRole caption_font = font::FontRole::Small;
         Color caption_colour = hex("#2484be");
         Color text_colour = hex("#000000");
         Color heading_colour = hex("#2484be"); ///< Of a line that has no value: a heading over the lines below it
-        float line_height = 15;
-        float value_column = 0.55f; ///< Of the page's width, where values start
-        float pair_gap = 12;        ///< Between the two half lines of a row
-        float plot_height = 90;
-        float axis_width = 64; ///< Of the numbers left of a graph
-        std::string tick_box;  ///< Skins of a graph's series' tick boxes
+        f32 line_height = 15;
+        f32 value_column = 0.55f; ///< Of the page's width, where values start
+        f32 pair_gap = 12;        ///< Between the two half lines of a row
+        f32 plot_height = 90;
+        f32 axis_width = 64;  ///< Of the numbers left of a graph
+        std::string tick_box; ///< Skins of a graph's series' tick boxes
         std::string tick;
-        float tick_size = 13;
-        float gap = 6;               ///< Between the parts of a page
-        std::string button;          ///< Skin family of the buttons under a page
-        Rect button_inset;           ///< Of their text; see Button::text_inset
-        float button_height = 22;    ///< Of a button with text
-        float icon_button_size = 34; ///< Width and height of a button with an icon and no text
+        f32 tick_size = 13;
+        f32 gap = 6;               ///< Between the parts of a page
+        std::string button;        ///< Skin family of the buttons under a page
+        Rect button_inset;         ///< Of their text; see Button::text_inset
+        f32 button_height = 22;    ///< Of a button with text
+        f32 icon_button_size = 34; ///< Width and height of a button with an icon and no text
         /// The colours of a graph's series, in turn.
         std::vector<Color> series_colours { hex("#2484be"), hex("#e0402a"), hex("#3aa83a"), hex("#e0a020"), hex("#8a4fc0"), hex("#20a0a0"), hex("#c04080"), hex("#707070") };
         Color plot_background = hex("#ffffffa0");
@@ -72,7 +73,7 @@ namespace rct3::ui::screens::management
         widgets::SpinnerStyle spinner;      ///< Of a page's numbers, shown in words with only the arrows
         /// Of a page's bars set by pressing along them, as the info panel's; colours chosen by eye.
         widgets::SliderStyle bar { .rail = { }, .thumb = { }, .thumb_width = 0, .bar = true, .bar_back_colour = hex("#ece8f0") };
-        float bar_width = 130;             ///< Of a line's bar and a control's
+        f32 bar_width = 130;               ///< Of a line's bar and a control's
         Color bar_back = hex("#00000040"); ///< Of a line's bar, behind its filled part
     };
 
@@ -100,7 +101,7 @@ namespace rct3::ui::screens::management
     struct GraphRange
     {
         std::u16string name;
-        std::size_t slots = 0;
+        usize slots = 0;
     };
 
     struct ManagementPage
@@ -111,12 +112,12 @@ namespace rct3::ui::screens::management
         std::vector<info::InfoControl> controls;
         std::vector<info::InfoSeries> graph;
         std::vector<info::InfoTick> graph_ticks;
-        std::size_t graph_slots = 0;               ///< Samples across the graph; see LinePlot::slots
+        usize graph_slots = 0;                     ///< Samples across the graph; see LinePlot::slots
         std::vector<GraphRange> graph_ranges;      ///< Above the graph, which the wheel zooms too; none for neither
         std::vector<std::u16string> graph_when;    ///< Each sample's time, newest first, heading the readout
         std::vector<widgets::TableColumn> columns; ///< No table without any
         std::vector<widgets::TableRow> rows;
-        std::optional<std::size_t> sort; ///< The column the rows are sorted by until the player picks one
+        std::optional<usize> sort; ///< The column the rows are sorted by until the player picks one
         bool sort_descending = false;
         std::vector<ManagementButton> buttons;
         std::u16string note; ///< Under everything, across the page
@@ -126,37 +127,37 @@ namespace rct3::ui::screens::management
     {
     public:
         /// `width` x `height` with the frame, centred on the desktop, `tabs` along the top; `picked` open.
-        ManagementWindow(std::string name, const ManagementWindowStyle& style, float width, float height, std::vector<ManagementTab> tabs, std::size_t picked);
+        ManagementWindow(std::string name, const ManagementWindowStyle& style, f32 width, f32 height, std::vector<ManagementTab> tabs, usize picked);
 
-        [[nodiscard]] std::size_t tab() const
+        [[nodiscard]] usize tab() const
         {
             return tab_;
         }
-        [[nodiscard]] std::size_t tab_count() const
+        [[nodiscard]] usize tab_count() const
         {
             return tabs_.size();
         }
-        [[nodiscard]] widgets::Button& tab_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& tab_button(usize i) const
         {
             return *tabs_.at(i);
         }
         /// Opens tab `i`, as if the player picked it, but without reporting it.
-        void open_tab(std::size_t i);
+        void open_tab(usize i);
         /// The tab the player picked since the last call.
-        [[nodiscard]] std::optional<std::size_t> take_tab()
+        [[nodiscard]] std::optional<usize> take_tab()
         {
             return std::exchange(tab_now_, std::nullopt);
         }
         /// The button under the page the player pressed since the last call.
-        [[nodiscard]] std::optional<std::size_t> take_button()
+        [[nodiscard]] std::optional<usize> take_button()
         {
             return std::exchange(button_now_, std::nullopt);
         }
         /// A choice picked under one of the page's buttons.
         struct ButtonChoice
         {
-            std::size_t button { };
-            std::size_t choice { }; ///< Among the button's own
+            usize button { };
+            usize choice { }; ///< Among the button's own
             friend bool operator==(const ButtonChoice&, const ButtonChoice&) = default;
         };
         /// The choice the player picked since the last call.
@@ -165,14 +166,14 @@ namespace rct3::ui::screens::management
             return std::exchange(choice_now_, std::nullopt);
         }
         /// Where the page's control `id` stands now, a number's or a bar's, perhaps moved since the page came.
-        [[nodiscard]] std::optional<std::int32_t> control_value(std::int32_t id) const;
+        [[nodiscard]] std::optional<i32> control_value(i32 id) const;
         /// The control the player changed since the last call, the last one.
         [[nodiscard]] std::optional<info::InfoChange> take_change()
         {
             return std::exchange(change_now_, std::nullopt);
         }
         /// The id of the table row the player activated since the last call.
-        [[nodiscard]] std::optional<std::size_t> take_row()
+        [[nodiscard]] std::optional<usize> take_row()
         {
             return std::exchange(row_now_, std::nullopt);
         }
@@ -186,14 +187,14 @@ namespace rct3::ui::screens::management
         /// Makes the page as old as can be, so it is made again on the next update, once what it shows has moved.
         void age_page()
         {
-            page_age_ = units::Seconds { std::numeric_limits<float>::infinity() };
+            page_age_ = units::Seconds { std::numeric_limits<f32>::infinity() };
         }
         [[nodiscard]] std::optional<widgets::ColumnTable&> table() const
         {
             return core::maybe(table_);
         }
         /// The id of the table row picked, when the page has a table and one is picked.
-        [[nodiscard]] std::optional<std::size_t> picked_row() const;
+        [[nodiscard]] std::optional<usize> picked_row() const;
         /// Whether the row picked is another than when the page was last shown.
         [[nodiscard]] bool picked_row_changed() const
         {
@@ -210,7 +211,7 @@ namespace rct3::ui::screens::management
         }
         void sort_rows();
         /// Fans out the choices of button `i` beside it.
-        void open_choices(std::size_t i);
+        void open_choices(usize i);
         void close_choices();
         /// Gives the graph the series that are ticked and its numbers those of the one in focus.
         void fill_graph();
@@ -230,15 +231,15 @@ namespace rct3::ui::screens::management
         std::array<widgets::Label*, 5> axis_ { };     ///< Numbers up the graph's left, top first
         std::vector<std::string> hidden_;             ///< Keys of the series the player unticked
         std::string focus_;                           ///< Key of the series the player ticked last; the first when none
-        std::optional<std::size_t> graph_span_;       ///< Samples the player zoomed the graph to; all when none
-        std::size_t graph_slots_ = 0;                 ///< The page's graph's own, all of its samples
+        std::optional<usize> graph_span_;             ///< Samples the player zoomed the graph to; all when none
+        usize graph_slots_ = 0;                       ///< The page's graph's own, all of its samples
         std::vector<info::InfoTick> graph_ticks_;     ///< The page's graph's marks
         std::vector<std::u16string> graph_when_;      ///< See ManagementPage::graph_when
         std::vector<widgets::Label*> marks_;          ///< Words under the graph's marks that fit its span
         struct MarksTop
         {
-            float anchor = 0;
-            float offset = 0; ///< Down the page
+            f32 anchor = 0;
+            f32 offset = 0; ///< Down the page
         };
         MarksTop marks_top_ { };               ///< Of the marks' words
         std::vector<widgets::Button*> ranges_; ///< Picking the graph's span, by graph_ranges_
@@ -246,21 +247,21 @@ namespace rct3::ui::screens::management
         std::vector<widgets::Button*> buttons_;
         std::vector<std::vector<info::InfoChoice>> button_choices_; ///< Of each of buttons_
         std::vector<widgets::Button*> choices_;                     ///< Fanned out beside the button choosing_
-        std::optional<std::size_t> choosing_;
+        std::optional<usize> choosing_;
         struct ColumnSort
         {
-            std::size_t column { };
+            usize column { };
             bool highest_first { };
         };
         std::vector<std::optional<ColumnSort>> sorts_; ///< Of each tab, the player's; none until they pick one
         std::optional<ColumnSort> page_sort_;          ///< The page's own, for when the player has none
-        std::size_t tab_ = 0;
+        usize tab_ = 0;
         units::Seconds page_age_;
-        std::optional<std::size_t> tab_now_;
-        std::optional<std::size_t> button_now_;
+        std::optional<usize> tab_now_;
+        std::optional<usize> button_now_;
         std::optional<ButtonChoice> choice_now_;
-        std::optional<std::size_t> row_now_;
-        std::optional<std::size_t> shown_row_; ///< The row picked when the page was last shown
+        std::optional<usize> row_now_;
+        std::optional<usize> shown_row_; ///< The row picked when the page was last shown
         struct Control
         {
             info::InfoControl control;

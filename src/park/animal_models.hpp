@@ -11,6 +11,7 @@
 // out, so the files can be let go once the park's animals are loaded.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "ovl/animal/motions.hpp"
 #include "ovl/animal/species.hpp"
@@ -34,22 +35,22 @@ namespace rct3::park
     /// The frames of one motion, 30 a second. A bone neither list names keeps its resting place.
     struct AnimalClip
     {
-        float seconds = 0;
-        std::uint32_t frames = 0;
-        std::vector<std::int32_t> moving { };  ///< Bones whose offsets the frames hold
-        std::vector<std::int32_t> turning { }; ///< Bones whose turns the frames hold
-        std::vector<glm::vec3> positions { };  ///< frames * moving.size(), frame by frame, from the parent bone
-        std::vector<glm::quat> rotations { };  ///< frames * turning.size(), frame by frame, from the parent bone
+        f32 seconds = 0;
+        u32 frames = 0;
+        std::vector<i32> moving { };          ///< Bones whose offsets the frames hold
+        std::vector<i32> turning { };         ///< Bones whose turns the frames hold
+        std::vector<glm::vec3> positions { }; ///< frames * moving.size(), frame by frame, from the parent bone
+        std::vector<glm::quat> rotations { }; ///< frames * turning.size(), frame by frame, from the parent bone
     };
 
-    inline constexpr float kAnimalFramesPerSecond = 30.0f;
+    inline constexpr f32 kAnimalFramesPerSecond = 30.0f;
 
     struct AnimalVertex
     {
         glm::vec3 position { 0.0f }; ///< Model space, the body at rest
         glm::vec3 normal { 0.0f };
-        std::array<std::uint8_t, 4> bones { };
-        std::array<std::uint8_t, 4> weights { }; ///< Out of 255
+        std::array<u8, 4> bones { };
+        std::array<u8, 4> weights { }; ///< Out of 255
         glm::vec2 uv { 0.0f };
     };
 
@@ -60,7 +61,7 @@ namespace rct3::park
         object::PartBlend blend = object::PartBlend::Opaque;
         bool one_sided = true;
         std::vector<AnimalVertex> vertices { };
-        std::vector<std::uint16_t> indices { };
+        std::vector<u16> indices { };
     };
 
     /// One animal's look: its bones, its meshes at each level of detail and its motions.
@@ -75,11 +76,11 @@ namespace rct3::park
     };
 
     /// How long motion `motion` of `body` lasts, 0 when it has none.
-    [[nodiscard]] float motion_seconds(const AnimalBody& body, ovl::animal::AnimalMotion motion);
+    [[nodiscard]] f32 motion_seconds(const AnimalBody& body, ovl::animal::AnimalMotion motion);
 
     /// By bone: how `time` seconds into `motion` moves the bone and the vertices it carries, from where they
     /// rest to where they are (model space). The motion repeats; a motion the body lacks leaves it at rest.
-    [[nodiscard]] std::vector<glm::mat4> animal_pose(const AnimalBody& body, ovl::animal::AnimalMotion motion, float time);
+    [[nodiscard]] std::vector<glm::mat4> animal_pose(const AnimalBody& body, ovl::animal::AnimalMotion motion, f32 time);
 
     class AnimalLibrary
     {

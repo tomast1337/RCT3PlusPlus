@@ -16,6 +16,7 @@
 // same way, their gaps at the first station's doors; its other pieces are not fenced.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/models.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -28,10 +29,10 @@ namespace rct3::park::ride
 {
 
     /// The model of the placed object of that id, if it was found.
-    using ModelOf = std::function<const object::ObjectModel*(std::uint64_t object)>;
+    using ModelOf = std::function<const object::ObjectModel*(u64 object)>;
 
     /// Placed fence pieces round `ride`. `model_of` gives the models of the object a flat ride is built from and
     /// of its track pieces' objects; one not found is not fenced round. New objects take ids after `last_id`.
-    [[nodiscard]] std::vector<save::model::PlacedObject> ride_fences(const save::model::Ride& ride, const ModelOf& model_of, std::uint64_t last_id);
+    [[nodiscard]] std::vector<save::model::PlacedObject> ride_fences(const save::model::Ride& ride, const ModelOf& model_of, u64 last_id);
 
 } // namespace rct3::park::ride

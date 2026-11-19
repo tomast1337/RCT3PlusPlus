@@ -7,6 +7,7 @@
 // feels them. Its swing dies down, it is drawn back to rest, a bearing's friction slows it, and it may be held to a
 // furthest angle and a fastest turn.
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "units/units.hpp"
 
@@ -27,8 +28,8 @@ namespace rct3::simulation
         units::Share pull { };         ///< Of the car's acceleration, the share it feels
         /// Its spring's strength over its weight: held to rest on the car by this times the angle squared. With
         /// none it hangs level at rest, its up as near the world's as its line lets it.
-        float spring = 0;
-        float friction = 0;                         ///< Of the weight on its bearing, the share holding it back as it turns
+        f32 spring = 0;
+        f32 friction = 0;                           ///< Of the weight on its bearing, the share holding it back as it turns
         std::optional<units::TurnRate> fastest { }; ///< The fastest it turns, where it is held to one
         std::optional<units::Radians> furthest { }; ///< The furthest it swings from rest, where it is held to that
     };
@@ -44,6 +45,6 @@ namespace rct3::simulation
 
     /// Steps `swing` of `part` on by `seconds`, its car's axes in the world `car` (columns: the car's +X, up and
     /// ahead) and the car speeding up at `acceleration` (world, m/s²).
-    void swing_on(Swing& swing, const SwingingPart& part, const glm::mat3& car, glm::vec3 acceleration, float seconds);
+    void swing_on(Swing& swing, const SwingingPart& part, const glm::mat3& car, glm::vec3 acceleration, f32 seconds);
 
 } // namespace rct3::simulation

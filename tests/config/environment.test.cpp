@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "config/environment.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <set>
 #include <string>
@@ -12,9 +14,9 @@ TEST_CASE("every variable is registered once, in id order, ours with the project
     const auto vars = env_vars();
     REQUIRE(vars.size() == kEnvVarCount);
     std::set<std::string_view> names;
-    for (std::size_t i = 0; i < vars.size(); ++i)
+    for (usize i = 0; i < vars.size(); ++i)
     {
-        CHECK(static_cast<std::size_t>(vars[i].var) == i);
+        CHECK(static_cast<usize>(vars[i].var) == i);
         CHECK(vars[i].name.starts_with("RCT3PP_") != vars[i].standard);
         CHECK_FALSE(vars[i].description.empty());
         CHECK(names.insert(vars[i].name).second);

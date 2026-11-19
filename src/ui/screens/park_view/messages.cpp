@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/park_view/messages.hpp"
 
+#include "core/types.hpp"
 #include "simulation/awards.hpp"
 #include "strings/unicode.hpp"
 #include "ui/text_layout.hpp"
@@ -26,33 +27,33 @@ namespace rct3::ui::screens::park_view
         constexpr std::string_view kInspectorKeys = "Thought_PI_";
 
         // Where things sit, in units from the drawer's left and bottom edges.
-        constexpr float kLipHeight = 39;
-        constexpr float kLipSplit = kWidth / 2; ///< Where the lip's left half ends and its right half starts
-        constexpr float kBackHeight = 36;
-        constexpr float kBackReach = kOpen - kLipHeight; ///< How far up the back is repeated
-        constexpr float kFirstRow = 26;                  ///< Bottom of the newest row
-        constexpr float kStripeLeft = 10;
-        constexpr float kStripeRight = 470;
-        constexpr float kIconLeft = 18;
-        constexpr float kIconSize = 18;
-        constexpr float kTextLeft = 42;
-        constexpr float kMoodSize = 12;  ///< A thought's face, at kTextLeft
-        constexpr float kMoodShift = 16; ///< Of the text, past the face
-        constexpr float kTextRight = 468;
-        constexpr float kRowPadding = 4; ///< Added to the text's height; the text starts half of it down
-        constexpr float kEmptyRow = 18;
-        constexpr float kArrowSize = 17;
-        constexpr float kArrowBottom = 5;
-        constexpr float kNewerLeft = 330;
-        constexpr float kOlderLeft = 350;
+        constexpr f32 kLipHeight = 39;
+        constexpr f32 kLipSplit = kWidth / 2; ///< Where the lip's left half ends and its right half starts
+        constexpr f32 kBackHeight = 36;
+        constexpr f32 kBackReach = kOpen - kLipHeight; ///< How far up the back is repeated
+        constexpr f32 kFirstRow = 26;                  ///< Bottom of the newest row
+        constexpr f32 kStripeLeft = 10;
+        constexpr f32 kStripeRight = 470;
+        constexpr f32 kIconLeft = 18;
+        constexpr f32 kIconSize = 18;
+        constexpr f32 kTextLeft = 42;
+        constexpr f32 kMoodSize = 12;  ///< A thought's face, at kTextLeft
+        constexpr f32 kMoodShift = 16; ///< Of the text, past the face
+        constexpr f32 kTextRight = 468;
+        constexpr f32 kRowPadding = 4; ///< Added to the text's height; the text starts half of it down
+        constexpr f32 kEmptyRow = 18;
+        constexpr f32 kArrowSize = 17;
+        constexpr f32 kArrowBottom = 5;
+        constexpr f32 kNewerLeft = 330;
+        constexpr f32 kOlderLeft = 350;
         /// Rows filling more than this from the first skipped one leave room to step to older messages.
-        constexpr float kPage = 290;
+        constexpr f32 kPage = 290;
         /// Above the newest rows when sliding down for them, for the part of the drawer behind the bar.
-        constexpr float kUnderBar = 20;
+        constexpr f32 kUnderBar = 20;
 
         /// Removes `field` (with its percent signs) from `text` at `at`, with the space before it, and the
         /// separator before that when the field ended the text.
-        void drop_field(std::u16string& text, std::size_t at, std::size_t length)
+        void drop_field(std::u16string& text, usize at, usize length)
         {
             text.erase(at, length);
             if (at > 0 && text[at - 1] == u' ')
@@ -74,7 +75,7 @@ namespace rct3::ui::screens::park_view
         if (const auto at = text.find(u"%d"); message.number && at != std::u16string::npos)
             text.replace(at, 2, strings::to_utf16(std::to_string(*message.number)));
         // Fields are words between percent signs. The subject's name fills %NAME%, the field key any other.
-        std::size_t from = 0;
+        usize from = 0;
         while (from < text.size())
         {
             const auto open = text.find(u'%', from);
@@ -138,8 +139,8 @@ namespace rct3::ui::screens::park_view
     void MessageDrawer::show(std::span<const DrawerMessage> messages)
     {
         messages_.assign(messages.rbegin(), messages.rend());
-        std::uint64_t newest = 0;
-        std::size_t fresh = 0;
+        u64 newest = 0;
+        usize fresh = 0;
         for (const auto& m : messages_)
         {
             newest = std::max(newest, m.serial);
@@ -157,16 +158,16 @@ namespace rct3::ui::screens::park_view
             slide_ = Slide::Opening;
     }
 
-    void MessageDrawer::set_height(float height)
+    void MessageDrawer::set_height(f32 height)
     {
         height_ = std::clamp(height, kClosed, kOpen);
         placement = { { 0.5f, 0, 0.5f, 0 }, { kLeft, kTop, kLeft + kWidth, kTop + height_ } };
     }
 
-    float MessageDrawer::rows_top(std::size_t count) const
+    f32 MessageDrawer::rows_top(usize count) const
     {
-        float top = kFirstRow;
-        for (std::size_t i = skipped_; i < std::min(skipped_ + count, row_heights_.size()); ++i)
+        f32 top = kFirstRow;
+        for (usize i = skipped_; i < std::min(skipped_ + count, row_heights_.size()); ++i)
             top += row_heights_[i];
         return top;
     }
@@ -174,18 +175,18 @@ namespace rct3::ui::screens::park_view
     void MessageDrawer::step(std::ptrdiff_t older)
     {
         const auto last = static_cast<std::ptrdiff_t>(messages_.empty() ? 0 : messages_.size() - 1);
-        skipped_ = static_cast<std::size_t>(std::clamp(static_cast<std::ptrdiff_t>(skipped_) + older, std::ptrdiff_t { 0 }, last));
+        skipped_ = static_cast<usize>(std::clamp(static_cast<std::ptrdiff_t>(skipped_) + older, std::ptrdiff_t { 0 }, last));
     }
 
-    std::optional<std::uint64_t> MessageDrawer::icon_at(Point p) const
+    std::optional<u64> MessageDrawer::icon_at(Point p) const
     {
         const Rect r = rect();
         if (p.x < r.x0 + kIconLeft || p.x >= r.x0 + kIconLeft + kIconSize)
             return std::nullopt;
-        float bottom = r.y1 - kFirstRow;
-        for (std::size_t i = skipped_; i < messages_.size() && i < row_heights_.size() && bottom > r.y0; ++i)
+        f32 bottom = r.y1 - kFirstRow;
+        for (usize i = skipped_; i < messages_.size() && i < row_heights_.size() && bottom > r.y0; ++i)
         {
-            const float top = bottom - row_heights_[i];
+            const f32 top = bottom - row_heights_[i];
             if (messages_[i].clickable && p.y >= std::max(top, r.y0) && p.y < top + kIconSize)
                 return messages_[i].serial;
             bottom = top;
@@ -250,11 +251,11 @@ namespace rct3::ui::screens::park_view
         row_heights_.clear();
         for (const auto& m : messages_)
         {
-            float height = kEmptyRow;
+            f32 height = kEmptyRow;
             if (font)
             {
                 if (const auto lines = break_lines(*font, m.text, kTextRight - kTextLeft - (m.mood.empty() ? 0 : kMoodShift)).size(); lines > 0)
-                    height = static_cast<float>(lines) * font->line_height() + kRowPadding;
+                    height = static_cast<f32>(lines) * font->line_height() + kRowPadding;
             }
             row_heights_.push_back(height);
         }
@@ -267,18 +268,18 @@ namespace rct3::ui::screens::park_view
             step(-1);
         while (skipped_ > 0 && rows_top(messages_.size()) - kFirstRow <= kPage)
             --skipped_;
-        const float after_first = rows_top(messages_.size()) - rows_top(1);
+        const f32 after_first = rows_top(messages_.size()) - rows_top(1);
         older_->enabled = after_first >= kPage && skipped_ + 1 < messages_.size();
         newer_->enabled = skipped_ > 0 && !messages_.empty();
 
-        const float speed = kSlideSpeed.value * context.elapsed.value;
+        const f32 speed = kSlideSpeed.value * context.elapsed.value;
         switch (slide_)
         {
             case Slide::Resting:
                 break;
             case Slide::Opening:
             {
-                const float want = std::min(rows_top(unseen_) + kUnderBar, kOpen);
+                const f32 want = std::min(rows_top(unseen_) + kUnderBar, kOpen);
                 set_height(std::max(std::min(height_ + speed, want), height_));
                 if (height_ >= want)
                 {
@@ -306,11 +307,11 @@ namespace rct3::ui::screens::park_view
     void draw_drawer_frame(DrawContext& context, const MessageDrawerStyle& style, const Rect& r)
     {
         // The lip along the bottom in two halves, the back repeated above it.
-        const float lip = r.y1 - kLipHeight;
+        const f32 lip = r.y1 - kLipHeight;
         skin::draw_skin(context.list, context.skins.find(style.lip_left), { r.x0, lip, r.x0 + kLipSplit, r.y1 });
         skin::draw_skin(context.list, context.skins.find(style.lip_right), { r.x0 + kLipSplit, lip, r.x0 + kWidth, r.y1 });
         const auto back = context.skins.find(style.back);
-        for (float y = lip; y > lip - kBackReach && y > r.y0; y -= kBackHeight)
+        for (f32 y = lip; y > lip - kBackReach && y > r.y0; y -= kBackHeight)
             skin::draw_skin(context.list, back, { r.x0, y - kBackHeight, r.x0 + kWidth, y });
     }
 
@@ -328,18 +329,18 @@ namespace rct3::ui::screens::park_view
 
         // The newest message at the bottom, older ones above it.
         const auto font = context.fonts.get(font::FontRole::Small);
-        float bottom = r.y1 - kFirstRow;
-        for (std::size_t i = skipped_; i < messages_.size() && i < row_heights_.size() && bottom > r.y0; ++i)
+        f32 bottom = r.y1 - kFirstRow;
+        for (usize i = skipped_; i < messages_.size() && i < row_heights_.size() && bottom > r.y0; ++i)
         {
-            const float top = bottom - row_heights_[i];
+            const f32 top = bottom - row_heights_[i];
             const bool even = (i - skipped_) % 2 == 0;
             context.list.fill({ r.x0 + kStripeLeft, top, r.x0 + kStripeRight, bottom }, even ? style_.stripe : style_.stripe_alt);
             if (!messages_[i].icon.empty())
                 skin::draw_skin(context.list, context.skins.find(messages_[i].icon), { r.x0 + kIconLeft, top, r.x0 + kIconLeft + kIconSize, top + kIconSize });
-            float text_left = kTextLeft;
+            f32 text_left = kTextLeft;
             if (!messages_[i].mood.empty())
             {
-                const float y = top + kRowPadding / 2 + 1;
+                const f32 y = top + kRowPadding / 2 + 1;
                 skin::draw_skin(context.list, context.skins.find(messages_[i].mood), { r.x0 + kTextLeft, y, r.x0 + kTextLeft + kMoodSize, y + kMoodSize });
                 text_left += kMoodShift;
             }

@@ -41,7 +41,7 @@ namespace rct3::ui::widgets
         explicit EditBox(std::string name, std::u16string text = { });
 
         std::u16string text;
-        std::string skin;         ///< Stretched behind the text; none when empty
+        std::string skin;         ///< Stretched behind the text, over the palette's paper; neither when empty
         std::string focused_skin; ///< Instead of `skin` while the box has the keyboard focus
         font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");

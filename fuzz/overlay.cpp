@@ -231,7 +231,7 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         for (const auto& sq : it.squares)
             sink += sq.height_masks.size() + sq.flags;
         for (const auto& sound : it.sounds)
-            sink += sound.sounds.size() + sound.script_count;
+            sink += sound.sounds.size() + sound.scripts.size();
         sink += it.type + it.flags;
     }
     for (const auto& entry : rct3::ovl::read_carried_items(*overlay, part))

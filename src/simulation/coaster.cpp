@@ -40,7 +40,7 @@ namespace rct3::simulation
         constexpr units::Pace kWadeSpeed { 2.9f };         ///< A slide's car is carried through the pool at on its way back to its lift. Measured: a car of a tested slide in the original game
         constexpr units::Acceleration kWadeDrag { 40 };    ///< The water slows a faster car by, down to that. Measured likewise: 13 m/s down to 3 in 2 m
         constexpr units::Acceleration kJetPull { 15 };     ///< Booster jets push a car over them by. Chosen by eye
-        constexpr float kBlockBrakeEnd = 2;                ///< Chosen by eye: a block brake run's last piece grips a car this many times harder, so a fast train is down to the run's speed by its end
+        constexpr f32 kBlockBrakeEnd = 2;                  ///< Chosen by eye: a block brake run's last piece grips a car this many times harder, so a fast train is down to the run's speed by its end
         constexpr units::Seconds kLiftPause { 2 };         ///< A lift's car stands before it sets off, and before it lets its train go. Chosen by eye
         constexpr units::Distance kBoardShort { 0.5f };    ///< Short of the far end of a lift car's track, a train boarding it stops. Chosen by eye
         constexpr units::Acceleration kLiftEase { 2 };     ///< A lift's car speeds up by from either end of its climb, and slows by to it. Chosen by eye
@@ -472,19 +472,19 @@ namespace rct3::simulation
             const bool backing_in = !open && two_ends(c) && c.launched && c.speed < 0 && c.travelled < c.train_length && station_at(c.at - c.train_length);
             // Told once for each place, and only on plain track the train is free to move on: brakes, launches and a
             // train held up by the one ahead are no fault of the track's shape.
-            const auto stall_at = [&](float at) {
+            const auto stall_at = [&](f32 at) {
                 // Plain track a train's length either way, every stretch of it however short: a train waiting by a
                 // platform, brake or lift stands still too. A stall is a place past where trains set off.
                 bool plain = true;
-                for (float x = at - c.train_length; plain && x <= at + c.train_length;)
+                for (f32 x = at - c.train_length; plain && x <= at + c.train_length;)
                 {
-                    constexpr float kOnward = 0.01f; // Metres past a stretch's end the look goes on from, so it always moves
-                    const float d = wrap(c, x);
-                    const std::size_t i = point_at(c, d);
+                    constexpr f32 kOnward = 0.01f; // Metres past a stretch's end the look goes on from, so it always moves
+                    const f32 d = wrap(c, x);
+                    const usize i = point_at(c, d);
                     plain = c.kinds[i] == Stretch::Plain;
                     x += std::max(c.distance[i + 1] - d, kOnward);
                 }
-                if (plain && !c.stalls_by_design && !c.held_up && ahead_of(c.start, at) > kSetOff.value && room > kArrived && std::ranges::none_of(c.stalls_told, [&](float d) { return std::abs(d - at) < kStallSame.value; }))
+                if (plain && !c.stalls_by_design && !c.held_up && ahead_of(c.start, at) > kSetOff.value && room > kArrived && std::ranges::none_of(c.stalls_told, [&](f32 d) { return std::abs(d - at) < kStallSame.value; }))
                 {
                     c.stalled = at;
                     c.stalls_told.push_back(at);
@@ -627,21 +627,21 @@ namespace rct3::simulation
                 // the train is carried at that speed, whatever the slope, till its front is off the run, where it is
                 // let go at exactly that speed. Held for the block ahead, each car over them slows it likewise; let
                 // go, or over them after its front is off, each pushes it on while it is slower.
-                const std::int32_t cars = std::max(c.cars, 1);
-                const float car = c.train_length / static_cast<float>(cars);
+                const i32 cars = std::max(c.cars, 1);
+                const f32 car = c.train_length / static_cast<f32>(cars);
                 const bool held_back = std::isfinite(room);
-                float pull = 0;
-                float push = 0;
-                float least = 0;
-                float most = 0;
-                float jets = 0;
-                float jet_most = 0;
-                std::optional<float> carried_at;
+                f32 pull = 0;
+                f32 push = 0;
+                f32 least = 0;
+                f32 most = 0;
+                f32 jets = 0;
+                f32 jet_most = 0;
+                std::optional<f32> carried_at;
                 bool blocked = false;
                 for (i32 k = 0; k < cars; ++k)
                 {
-                    const float x = wrap(c, c.at - (static_cast<float>(k) + 0.5f) * car);
-                    const std::size_t i = point_at(c, x);
+                    const f32 x = wrap(c, c.at - (static_cast<f32>(k) + 0.5f) * car);
+                    const usize i = point_at(c, x);
                     const bool block = c.kinds[i] == Stretch::BlockBrake;
                     const bool jet = c.kinds[i] == Stretch::Booster;
                     if ((!block && !jet && c.kinds[i] != Stretch::Brake) || i >= c.brake_speeds.size() || c.brake_speeds[i] <= 0)
@@ -662,9 +662,9 @@ namespace rct3::simulation
                         // The car is on the run's last piece when the piece after its own is no block brake; with no
                         // pieces known, the run is one piece.
                         const auto piece = std::ranges::upper_bound(c.piece_starts, x) - c.piece_starts.begin();
-                        const float next = piece > 0 && static_cast<std::size_t>(piece) < c.piece_starts.size() ? c.piece_starts[static_cast<std::size_t>(piece)] : c.length();
+                        const f32 next = piece > 0 && static_cast<usize>(piece) < c.piece_starts.size() ? c.piece_starts[static_cast<usize>(piece)] : c.length();
                         const bool last = block && c.kinds[point_at(c, wrap(c, next))] != Stretch::BlockBrake;
-                        pull += (last ? kBlockBrakeEnd : 1.0f) * c.brake_pull / static_cast<float>(cars);
+                        pull += (last ? kBlockBrakeEnd : 1.0f) * c.brake_pull / static_cast<f32>(cars);
                         least = std::max(least, c.brake_speeds[i]);
                     }
                     else if (block && c.slowing && !held_back)
@@ -837,8 +837,8 @@ namespace rct3::simulation
             // Its front onto a block brake run with the block ahead clear past the run's end, it slows there; its
             // front off the run's end, it is let go at the run's speed.
             {
-                const std::size_t was = point_at(c, before);
-                std::size_t end = point_at(c, c.at);
+                const usize was = point_at(c, before);
+                usize end = point_at(c, c.at);
                 const bool on_run = c.kinds[end] == Stretch::BlockBrake && end < c.brake_speeds.size() && c.brake_speeds[end] > 0;
                 if (c.slowing && !on_run && moved > 0 && was < c.brake_speeds.size())
                     c.speed = c.brake_speeds[was];

@@ -427,12 +427,12 @@ namespace rct3::park::track
         // those there; then the other block ends the same way, so the next train waits in the block behind the
         // station rather than in the one it sets off into. Kept a block apart, a block takes one. A train with room
         // nowhere is left out; the gap is only between trains, so one as long as its station stands in it.
-        std::vector<float> fronts;
+        std::vector<f32> fronts;
         for (const bool stations : { true, false })
             for (bool placed = true; placed && std::cmp_less(fronts.size(), count);)
             {
                 placed = false;
-                for (std::size_t k = 0; k < spots.size(); ++k)
+                for (usize k = 0; k < spots.size(); ++k)
                 {
                     Spot& spot = spots[(spots.size() - k) % spots.size()];
                     if (spot.station != stations || std::cmp_greater_equal(fronts.size(), count) || (blocks && spot.used > 0) || spot.used + length > spot.room + kSame)

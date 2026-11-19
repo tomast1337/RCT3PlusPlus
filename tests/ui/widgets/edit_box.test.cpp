@@ -3,7 +3,9 @@
 
 #include "core/types.hpp"
 #include "ui/desktop.hpp"
+#include "ui/palette.hpp"
 
+#include <array>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -258,6 +260,31 @@ TEST_CASE("long text scrolls to keep the caret in view")
     home.presses.push_back({ Key::Home });
     desktop.update({ }, home, context);
     CHECK(caret_x() == doctest::Approx(3 + 1));
+}
+
+TEST_CASE("a framed box is filled with the palette's paper behind its frame")
+{
+    FontSet fonts;
+    Desktop desktop;
+    EditBox& box = desktop.root().add<EditBox>("box");
+    box.placement = top_left(10, 20, 100, 24);
+    desktop.layout({ 0, 0, 300, 100 });
+    DrawList list;
+    const SkinLibrary skins;
+    Palette palette;
+    palette.paper = hex("#123456");
+    DrawContext draw { list, skins, fonts, palette };
+
+    box.draw(draw);
+    CHECK(list.vertices().empty()); // No frame, nothing behind: it sits in a row as plain text
+
+    box.skin = "frame";
+    box.draw(draw);
+    const auto v = list.vertices();
+    REQUIRE(v.size() >= 4);
+    CHECK(v[0].x == doctest::Approx(10));
+    CHECK(v[0].y == doctest::Approx(20));
+    CHECK(v[0].color == std::array<u8, 4> { 0x12, 0x34, 0x56, 0xff });
 }
 
 TEST_CASE("copy and cut hand the selection to the clipboard")

@@ -368,7 +368,11 @@ namespace rct3::ui::widgets
     {
         const std::string& back = has_keyboard_focus() && !focused_skin.empty() ? focused_skin : skin;
         if (!back.empty())
+        {
+            // The frame's middle is see-through; the game fills it white, as it does a closed drop-down.
+            context.list.fill(rect(), context.palette.paper);
             skin::draw_skin(context.list, context.skins.find(back), rect());
+        }
         const auto f = context.fonts.get(font);
         if (!f)
             return;

@@ -1000,12 +1000,12 @@ namespace rct3::ui::screens::info
                 };
                 button(AttractionControl::Demolish, "Attraction_General_Delete", "TT_AttractionDialogIconDestroyButton");
                 // shortcut: keeping a design with its scenery, picking a fence and riding along are not built yet, so
-                // their buttons are greyed; enable each as it lands.
+                // their buttons are greyed; enable each as it lands. A design is kept of its track only.
                 if (f.ride && f.ride->kind == save::model::RideKind::Tracked)
                 {
                     button(AttractionControl::SceneryPick, "ParkInfoIcon_PlaceOwned", "SavedSelection_Coaster_Button_TT", false);
                     button(AttractionControl::SceneryClear, "SavedSelectionGrabber_ClearIcon", "SavedSelection_Coaster_Clear_TT", false);
-                    button(AttractionControl::SaveDesign, "File_SaveGame", "TT_AttractionDialogIconSaveButton", false);
+                    button(AttractionControl::SaveDesign, "File_SaveGame", "TT_AttractionDialogIconSaveButton");
                 }
                 // A pool ride has no fence, entrance or exit: its stations are joined to a pool complex's paving
                 // with the pool's path tool instead.

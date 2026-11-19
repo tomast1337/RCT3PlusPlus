@@ -43,6 +43,7 @@ namespace rct3::ui::screens::dialogs
         constexpr std::u16string_view kUnread = u"<Scanning...>"; ///< A row's first line until its file is read
         constexpr std::u16string_view kExtension = u".park";      ///< Ours, which saving writes
         constexpr std::u16string_view kOriginal = u".dat";        ///< The original game's, only ever read
+        constexpr std::u16string_view kDesign = u".trk";          ///< A ride's design, in the game's format
         /// What file names may hold besides letters and digits, as in the game.
         constexpr std::u16string_view kNameCharacters = u" _.,'!()[]-+=#;";
         constexpr std::string_view kQuestionName = "file_question";
@@ -72,7 +73,7 @@ namespace rct3::ui::screens::dialogs
         /// How long the save extension `name` ends with is, ours or the game's; 0 for none.
         std::size_t extension_size(std::u16string_view name)
         {
-            for (const std::u16string_view e : { kExtension, kOriginal })
+            for (const std::u16string_view e : { kExtension, kOriginal, kDesign })
             {
                 if (name.size() >= e.size() && same_name(name.substr(name.size() - e.size()), e))
                     return e.size();
@@ -107,9 +108,9 @@ namespace rct3::ui::screens::dialogs
         return std::u16string(file.substr(0, file.size() - extension_size(file)));
     }
 
-    std::u16string with_save_extension(std::u16string_view name)
+    std::u16string with_save_extension(std::u16string_view name, std::u16string_view extension)
     {
-        return shown_file_name(name) + std::u16string(kExtension);
+        return shown_file_name(name) + std::u16string(extension.empty() ? kExtension : extension);
     }
 
     /// One file: its picture, its name to rename it by, and three lines about it.
@@ -419,7 +420,7 @@ namespace rct3::ui::screens::dialogs
             return ask(Asking::Message, text(kNoDot), Answers::Ok);
         if (name.front() == u' ')
             return ask(Asking::Message, text(kNoSpace), Answers::Ok);
-        const std::u16string file = with_save_extension(name);
+        const std::u16string file = with_save_extension(name, save_extension_);
         // Kept files are elsewhere: saving writes beside the others and never over them.
         for (std::size_t i = 0; i < files_.size(); ++i)
         {

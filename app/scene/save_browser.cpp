@@ -12,6 +12,8 @@
 #include <fstream>
 #include <iterator>
 #include <span>
+#include <string>
+#include <string_view>
 #include <system_error>
 
 namespace rct3::scene
@@ -22,14 +24,22 @@ namespace rct3::scene
 
         namespace fs = std::filesystem;
 
+        constexpr std::string_view kDesignExtension = ".trk";
+
+        std::string lower_extension(const fs::path& path)
+        {
+            std::string extension = path.extension().string();
+            std::ranges::transform(extension, extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            return extension;
+        }
+
         bool is_save(const fs::directory_entry& entry)
         {
             std::error_code error;
             if (!entry.is_regular_file(error))
                 return false;
-            std::string extension = entry.path().extension().string();
-            std::ranges::transform(extension, extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-            return extension == ".dat" || extension == ".park";
+            const std::string extension = lower_extension(entry.path());
+            return extension == ".dat" || extension == ".park" || extension == kDesignExtension;
         }
 
         void free_pictures(render::Device& device, SaveBrowser& browser)
@@ -112,7 +122,9 @@ namespace rct3::scene
             const std::size_t index = browser.next_file++;
             const fs::path& path = browser.files[index];
             std::optional<save::SaveSummary> summary;
-            if (const auto bytes = read_bytes(path))
+            // shortcut: a design's row shows its file name only, as a structure's does; give it its picture and
+            // its ratings once the window has lines for them.
+            if (const auto bytes = lower_extension(path) == kDesignExtension ? std::nullopt : read_bytes(path))
             {
                 if (parkfile::is_park_file(*bytes))
                 {
@@ -146,6 +158,11 @@ namespace rct3::scene
         void write_save(const fs::path& path, const std::vector<std::byte>& bytes)
         {
             const auto log = logging::logger("ui");
+            if (bytes.empty())
+            {
+                log.warning("saves: nothing to write to {}", path.filename().string());
+                return;
+            }
             fs::path written = path;
             written += ".new";
             {

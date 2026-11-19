@@ -136,7 +136,7 @@ const guest = must(
     people.list().find((p) => !p.staff),
     "a guest",
 ).index;
-people.rename(guest, "Jonny Watts");
+people.rename(guest, must(ui.text("CheatPeepName_PeepCam"), "the guest camera's cheat name"));
 await until(() => camera.riding()?.eye !== undefined, 60, "the view from the guest");
 log("guest", JSON.stringify(camera.riding()));
 expect(camera.riding()!.kind === "guest" && camera.riding()!.car === guest, "the guest's eyes");

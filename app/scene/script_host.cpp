@@ -250,6 +250,13 @@ namespace rct3::scene
                 found["tooltip"] = strings::to_utf8(w->tooltip);
             return found;
         });
+        engine_.define("ui.text", [this](const Json& a) -> Json {
+            if (a.empty() || !a[0].is_string())
+                throw std::invalid_argument("ui.text takes a string key");
+            if (front_ == nullptr)
+                return nullptr;
+            return strings::to_utf8(front_->assets.strings->get(a[0].get<std::string>()));
+        });
         engine_.define("ui.children", [this](const Json& a) -> Json {
             if (a.empty() || !a[0].is_string())
                 throw std::invalid_argument("ui.children takes a widget path");

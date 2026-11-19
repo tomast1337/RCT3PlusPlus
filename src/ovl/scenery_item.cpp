@@ -38,6 +38,7 @@ namespace rct3::ovl
         constexpr std::uint32_t kMaxParameters = 1u << 8;
         constexpr std::uint32_t kMaxSounds = 1u << 8;
         constexpr std::uint32_t kMaxSoundNames = 1u << 12;
+        constexpr std::size_t kMaxSoundSteps = 1u << 10; // per script, far past any real one
         constexpr std::uint32_t kMaxVisuals = 1u << 10;
         constexpr std::uint32_t kMaxResearch = 1u << 8;
         constexpr std::size_t kMaxRun = 1u << 12; // items stored back to back
@@ -269,13 +270,43 @@ namespace rct3::ovl
                 total_names += names;
                 if (names != 0 && !space.bytes_at(slots, std::size_t { names } * 4))
                     return std::nullopt;
-                // The script slots are a plain pointer array. Its bounds are checked, its contents are not decoded.
                 if (scripts > kMaxSoundNames)
                     return std::nullopt;
-                if (scripts != 0 && !space.bytes_at(u32_at(*rows, at + 12), std::size_t { scripts } * 4))
+                const auto script_slots = space.bytes_at(u32_at(*rows, at + 12), std::size_t { scripts } * 4);
+                if (scripts != 0 && !script_slots)
                     return std::nullopt;
                 SceneryItemSound sound;
-                sound.script_count = scripts;
+                sound.scripts.resize(scripts);
+                // A script is steps back to back, each a time and a cue, Volume and Pitch then a value and a
+                // time, up to a cue 0. A null slot (zero and not relocated) is a silent animation.
+                for (std::uint32_t k = 0; k < scripts; ++k)
+                {
+                    std::uint32_t step = u32_at(*script_slots, std::size_t { k } * 4);
+                    if (step == 0 && !pointers_.contains(u32_at(*rows, at + 12) + k * 4))
+                        continue;
+                    for (std::size_t n = 0;; ++n)
+                    {
+                        const auto head = space.bytes_at(step, 8);
+                        if (!head || n == kMaxSoundSteps)
+                            return std::nullopt;
+                        const std::uint32_t cue = u32_at(*head, 4);
+                        // A cue past the known ones ends the script rather than lose the item over its sound.
+                        if (cue == 0 || cue > static_cast<std::uint32_t>(SoundCue::Pitch))
+                            break;
+                        SoundStep s { .at = f32_at(*head, 0), .cue = static_cast<SoundCue>(cue) };
+                        step += 8;
+                        if (s.cue == SoundCue::Volume || s.cue == SoundCue::Pitch)
+                        {
+                            const auto change = space.bytes_at(step, 8);
+                            if (!change)
+                                return std::nullopt;
+                            s.value = f32_at(*change, 0);
+                            s.until = f32_at(*change, 4);
+                            step += 8;
+                        }
+                        sound.scripts[k].push_back(s);
+                    }
+                }
                 sound.sounds.reserve(names);
                 for (std::uint32_t k = 0; k < names; ++k)
                     sound.sounds.push_back(refs.find(slots + k * 4, kSoundTag));

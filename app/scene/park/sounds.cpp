@@ -5,6 +5,7 @@
 #include "logging/log.hpp"
 #include "ovl/overlay.hpp"
 #include "park/camera.hpp"
+#include "park/object/mesh.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "scene/menu_audio.hpp"
 #include "scene/park/scene.hpp"
@@ -18,6 +19,7 @@
 #include <cstdint>
 #include <format>
 #include <glm/geometric.hpp>
+#include <limits>
 #include <span>
 #include <string_view>
 
@@ -47,10 +49,18 @@ namespace rct3::scene::park
         constexpr float kWaterfallFar = 90;                       ///< And no longer heard.
         constexpr float kRainLevel = 0.5f;                        ///< Of full loudness, a downpour. Chosen by eye, as the next
         constexpr float kThunderLevel = 0.9f;
-        constexpr float kThumpLevel = 0.6f;          ///< Chosen by eye: clear over the park without drowning it
-        constexpr units::Seconds kThumpGap { 0.4f }; ///< Chosen by eye: the wait before another thump, so a burst of pieces is one
-        constexpr float kEffectLevel = 0.9f;         ///< Chosen by ear: a firework's launch or bang, near it
-        constexpr float kShowMusicLevel = 0.8f;      ///< Chosen by ear: a firework display's music, over the park's sounds
+        constexpr float kThumpLevel = 0.6f;             ///< Chosen by eye: clear over the park without drowning it
+        constexpr units::Seconds kThumpGap { 0.4f };    ///< Chosen by eye: the wait before another thump, so a burst of pieces is one
+        constexpr float kEffectLevel = 0.9f;            ///< Chosen by ear: a firework's launch or bang, near it
+        constexpr float kShowMusicLevel = 0.8f;         ///< Chosen by ear: a firework display's music, over the park's sounds
+        constexpr std::size_t kHeardFlatRides = 4;      ///< Chosen by ear: the nearest flat rides heard, to spare voices
+        constexpr units::Distance kFlatRideNear { 10 }; ///< Chosen by ear: a flat ride's machinery is full loud this close
+        constexpr units::Distance kFlatRideFar { 120 }; ///< And gone this far
+        constexpr units::Distance kScreamNear { 5 };    ///< Chosen by ear: its riders' screams are full loud this close
+        constexpr units::Distance kScreamFar { 90 };    ///< And gone this far, before its machinery
+        constexpr float kScreamLowestPitch = 0.85f;     ///< Chosen by ear: a wide spread of pitches, so voices at once sound
+        constexpr float kScreamHighestPitch = 1.35f;    ///< like different riders
+        constexpr float kLowestScriptPitch = 0.05f;     ///< A script winding a motor down takes its pitch to 0, which cannot play
 
         void silence_trains(audio::AudioEngine& engine, ParkSounds& sounds)
         {
@@ -62,6 +72,36 @@ namespace rct3::scene::park
                 engine.stop(train.plume);
             }
             sounds.train_sounds.clear();
+        }
+
+        /// Stops the flat rides' voices, keeping how far their scripts have run.
+        void silence_flat_rides(audio::AudioEngine& engine, ParkSounds& sounds)
+        {
+            for (auto& [_, ride] : sounds.flat_rides)
+            {
+                for (FlatRideSounds::Entry& entry : ride.entries)
+                    engine.stop(std::exchange(entry.voice, { }));
+                for (audio::VoiceHandle& voice : ride.screams)
+                    engine.stop(std::exchange(voice, { }));
+            }
+        }
+
+        /// The sound of the packs named `name`, made the first time; nothing when no pack has it ("blank" is silence).
+        const PackSound* pack_sound(ParkSounds& sounds, const std::string& name)
+        {
+            auto [made, fresh] = sounds.pack_sounds_made.try_emplace(name);
+            for (const std::vector<ovl::SoundItem>& items : sounds.pack_sounds)
+            {
+                if (!fresh)
+                    break;
+                const auto item = std::ranges::find_if(items, [&](const ovl::SoundItem& i) { return i.info && strings::equals_ignoring_case(i.name, name); });
+                if (item == items.end())
+                    continue;
+                if (auto buffer = audio::from_ovl_sound(*item->info))
+                    made->second = PackSound { .buffer = std::move(*buffer), .loops = item->info->flag == ovl::kSoundLoops };
+                break;
+            }
+            return made->second ? &*made->second : nullptr;
         }
 
         std::vector<audio::SoundBuffer> load_named(const config::game::GameInstall& install, std::string_view file, std::span<const std::string_view> names)
@@ -118,17 +158,26 @@ namespace rct3::scene::park
         for (std::size_t i = 0; i < kRetches.size(); ++i)
             s.retches[i] = main(kRetches[i]);
         constexpr std::array<std::array<std::string_view, 3>, 4> kScreams { { { "ScreamBoy1", "ScreamBoy2" }, { "ScreamGirl1", "ScreamGirl2" }, { "ScreamBoys1", "ScreamBoys2", "ScreamBoys3" }, { "ScreamGirls1", "ScreamGirls2", "ScreamGirls3" } } };
-        if (const auto path = install.find("Sounds/Sounds.common.ovl"))
-            if (const auto overlay = ovl::Overlay::load(*path))
-            {
-                const auto items = ovl::read_sounds(*overlay, overlay->common());
-                for (std::size_t i = 0; i < kScreams.size(); ++i)
-                    s.screams[i] = sounds_named(items, kScreams[i]);
-                // Chosen by eye: a small splash off a small board, a bigger one off a high board.
-                constexpr std::array<std::array<std::string_view, 1>, 2> kDives { { { "Splash2Sml" }, { "SplashMedium1" } } };
-                for (std::size_t i = 0; i < kDives.size(); ++i)
-                    s.dives[i] = sounds_named(items, kDives[i]);
-            }
+        // The packs flat rides' items name their sounds from; the first holds the riders' screams and the divers' splashes.
+        constexpr std::array<std::string_view, 2> kPacks { "Sounds/Sounds.common.ovl", "Sounds/CTNewFX/CTNewFX.common.ovl" };
+        s.sound_packs.reserve(kPacks.size()); // The sounds read point into them
+        for (const std::string_view pack : kPacks)
+            if (const auto path = install.find(pack))
+                if (auto overlay = ovl::Overlay::load(*path))
+                {
+                    s.sound_packs.push_back(std::move(*overlay));
+                    s.pack_sounds.push_back(ovl::read_sounds(s.sound_packs.back(), s.sound_packs.back().common()));
+                }
+        if (!s.pack_sounds.empty())
+        {
+            const auto& items = s.pack_sounds.front();
+            for (std::size_t i = 0; i < kScreams.size(); ++i)
+                s.screams[i] = sounds_named(items, kScreams[i]);
+            // Chosen by eye: a small splash off a small board, a bigger one off a high board.
+            constexpr std::array<std::array<std::string_view, 1>, 2> kDives { { { "Splash2Sml" }, { "SplashMedium1" } } };
+            for (std::size_t i = 0; i < kDives.size(); ++i)
+                s.dives[i] = sounds_named(items, kDives[i]);
+        }
         constexpr std::array<std::string_view, 4> kExplosions { "CoasterExplosion01", "CoasterExplosion02", "CoasterExplosion03", "CoasterExplosion04" };
         s.explosions = main(kExplosions);
         constexpr std::array<std::string_view, 2> kBurning { "CoasterBurn01", "CoasterBurn02" };
@@ -301,6 +350,7 @@ namespace rct3::scene::park
         if (quiet)
         {
             silence_trains(engine, sounds);
+            silence_flat_rides(engine, sounds);
             return;
         }
 
@@ -506,6 +556,133 @@ namespace rct3::scene::park
         }
         silence_trains(engine, sounds); // Trains no longer there
         sounds.train_sounds = std::move(kept);
+
+        // Flat rides. Each entry of a ride's item's sound table runs the script of the motion playing, from its start
+        // each time the motion changes or comes round again; the nearest few rides are heard. While one runs wild
+        // enough, a few of its riders scream at a time, a new voice as soon as one ends.
+        struct HeardRide
+        {
+            const ParkScene::BonedRide* boned = nullptr;
+            const rct3::park::object::ObjectModel* model = nullptr;
+            float distance = 0;
+        };
+        std::vector<HeardRide> flat_rides;
+        for (const ParkScene::BonedRide& boned : scene.boned_rides)
+            if (boned.ride != entt::null && !boned.gate)
+                if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.objects[boned.object.value])); model != scene.models.end())
+                    flat_rides.push_back({ &boned, &model->second, glm::distance(glm::vec3(boned.placed[3]), eye) });
+        std::ranges::sort(flat_rides, { }, &HeardRide::distance);
+        std::map<entt::entity, FlatRideSounds> flat_kept;
+        constexpr units::Seconds kWhole { std::numeric_limits<float>::infinity() }; // Past every step of a script
+        for (std::size_t i = 0; i < flat_rides.size(); ++i)
+        {
+            const ParkScene::BonedRide& boned = *flat_rides[i].boned;
+            const auto& entries = flat_rides[i].model->sounds;
+            const glm::vec3 at(boned.placed[3]);
+            auto node = sounds.flat_rides.extract(boned.ride);
+            const bool fresh = !node;
+            FlatRideSounds ride = fresh ? FlatRideSounds { .entries = std::vector<FlatRideSounds::Entry>(entries.size()), .playing = boned.playing } : std::move(node.mapped());
+            const bool heard = i < kHeardFlatRides && flat_rides[i].distance < kFlatRideFar.value;
+            bool aloud = false; // Catching up runs scripts without playing their sounds
+
+            // Runs each entry's script for `motion` up to `until`.
+            const auto run = [&](std::size_t motion, units::Seconds until) {
+                for (std::size_t k = 0; k < entries.size() && k < ride.entries.size(); ++k)
+                {
+                    FlatRideSounds::Entry& entry = ride.entries[k];
+                    const std::span<const ovl::SoundStep> script = motion < entries[k].scripts.size() ? std::span(entries[k].scripts[motion]) : std::span<const ovl::SoundStep> { };
+                    while (const auto cue = audio::next_cue(script, entry.play, until))
+                    {
+                        if (*cue == ovl::SoundCue::Stop)
+                        {
+                            entry.loop.reset();
+                            engine.stop(std::exchange(entry.voice, { }));
+                            continue;
+                        }
+                        const auto& names = entries[k].names;
+                        if (names.empty())
+                            continue;
+                        const std::size_t pick = std::uniform_int_distribution<std::size_t>(0, names.size() - 1)(sounds.random);
+                        const PackSound* sound = pack_sound(sounds, names[pick]);
+                        if (sound == nullptr || (sound->loops && entry.loop))
+                            continue; // Silence, or a loop already going: one loop an entry
+                        if (sound->loops)
+                            entry.loop = pick;
+                        if (aloud)
+                        {
+                            const auto played = engine.play(sound->buffer, { .volume = 0, .at = at, .near = kFlatRideNear.value, .far = kFlatRideFar.value, .loop = sound->loops });
+                            entry.voice = played ? *played : audio::VoiceHandle { };
+                        }
+                    }
+                }
+            };
+            const auto restart = [&] {
+                for (FlatRideSounds::Entry& entry : ride.entries)
+                    audio::restart_script(entry.play, kWhole);
+            };
+            // First heard partway through a ride: what its start set going is still going.
+            if (fresh && boned.playing.motion > rct3::park::kRideStarting && boned.playing.motion <= rct3::park::kRideStopping)
+                for (std::size_t motion = rct3::park::kRideStarting; motion < boned.playing.motion; ++motion)
+                {
+                    run(motion, kWhole);
+                    restart();
+                }
+            aloud = heard;
+            if (boned.playing.motion != ride.playing.motion || boned.playing.seconds < ride.playing.seconds)
+            {
+                run(ride.playing.motion, kWhole);
+                restart();
+            }
+            ride.playing = boned.playing;
+            const units::Seconds now { ride.playing.seconds };
+            run(ride.playing.motion, now);
+            for (std::size_t k = 0; k < entries.size() && k < ride.entries.size(); ++k)
+            {
+                FlatRideSounds::Entry& entry = ride.entries[k];
+                if (!heard)
+                {
+                    engine.stop(std::exchange(entry.voice, { }));
+                    continue;
+                }
+                if (entry.loop && !engine.is_playing(entry.voice))
+                    if (const PackSound* sound = pack_sound(sounds, entries[k].names[*entry.loop]))
+                    {
+                        const auto played = engine.play(sound->buffer, { .volume = 0, .at = at, .near = kFlatRideNear.value, .far = kFlatRideFar.value, .loop = true });
+                        entry.voice = played ? *played : audio::VoiceHandle { };
+                    }
+                engine.set_voice_volume(entry.voice, kRideLevel * std::max(entry.play.volume.at(now), 0.0f));
+                engine.set_voice_pitch(entry.voice, std::clamp(entry.play.pitch.at(now), kLowestScriptPitch, audio::kMaxPitch));
+            }
+
+            // Its riders' screams, not a show's audience's.
+            const auto* cycle = r.try_get<simulation::CycleRide>(boned.ride);
+            const auto* attraction = r.try_get<simulation::Attraction>(boned.ride);
+            const bool show = attraction != nullptr && std::ranges::find(scene.shows, attraction->saved, &save::model::RideShow::ride) != scene.shows.end();
+            const bool screaming = cycle != nullptr && cycle->phase == simulation::RidePhase::Running && cycle->intensity.value >= audio::kScreamingIntensity.value && !cycle->riders.empty() && !show;
+            if (!heard)
+                for (audio::VoiceHandle& voice : ride.screams)
+                    engine.stop(std::exchange(voice, { }));
+            else if (screaming)
+            {
+                audio::ScreamingRiders riders;
+                for (const entt::entity rider : cycle->riders)
+                {
+                    const auto* visitor = r.try_get<simulation::Visitor>(rider);
+                    ++(visitor != nullptr && visitor->female ? riders.women : riders.men);
+                }
+                std::uniform_real_distribution<float> roll(0.0f, 1.0f);
+                std::uniform_real_distribution<float> pitch(kScreamLowestPitch, kScreamHighestPitch);
+                for (audio::VoiceHandle& voice : ride.screams)
+                    if (!engine.is_playing(voice))
+                    {
+                        const audio::Screamers who = audio::pick_screamers(riders, roll(sounds.random));
+                        voice = play_any(engine, sounds.screams[static_cast<std::size_t>(who)], sounds.random, { .volume = kScreamLevel, .pitch = pitch(sounds.random), .at = at, .near = kScreamNear.value, .far = kScreamFar.value });
+                    }
+            }
+            flat_kept.emplace(boned.ride, std::move(ride));
+        }
+        silence_flat_rides(engine, sounds); // Rides no longer there
+        sounds.flat_rides = std::move(flat_kept);
     }
 
     void stop_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds)
@@ -528,6 +705,8 @@ namespace rct3::scene::park
             engine.stop(voice);
         engine.stop(sounds.rumble);
         silence_trains(engine, sounds);
+        silence_flat_rides(engine, sounds);
+        sounds.flat_rides.clear();
     }
 
 } // namespace rct3::scene::park

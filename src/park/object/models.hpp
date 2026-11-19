@@ -14,6 +14,7 @@
 #include "math/glm.hpp"
 #include "ovl/ride_car.hpp"
 #include "ovl/ride_train.hpp"
+#include "ovl/scenery_item.hpp"
 #include "park/asset_index.hpp"
 #include "park/bone_poses.hpp"
 #include "park/flexi_colours.hpp"
@@ -273,6 +274,14 @@ namespace rct3::park::object
         /// turned over. Its nose's are the front seat's where it has no nose camera.
         std::array<std::optional<glm::mat4>, 3> ride_eyes;
         ovl::RideCameraTuning ride_look; ///< How they move, as the car's train sets it
+        /// What it is heard making as it moves (audio/sound_scripts.hpp): per entry of its item's sound table, the
+        /// sounds one of which plays, by name, and a script for each of its animations in the order listed.
+        struct Sound
+        {
+            std::vector<std::string> names { };
+            std::vector<std::vector<ovl::SoundStep>> scripts { };
+        };
+        std::vector<Sound> sounds;
         ovl::BoatHandling boat_handling; ///< How it handles out on open water, as the car's train sets it
         float mass = 0;                  ///< Of a car, kilograms, empty
         float rolling = 0;               ///< Of a car, how its train is held back, as the train's file has it (ovl::RideTrain)

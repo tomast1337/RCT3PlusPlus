@@ -3,7 +3,8 @@
 // The park's people heard from the camera, by the rules of audio/park_voices.hpp: the chatter of the crowd
 // about the point looked at, a guest's cheer, laugh or retching as they show how they feel, a diver's splash, and screams from
 // the riders of a train going fast or dropping, the trains themselves by the rules of audio/ride_sounds.hpp, and
-// the roar of each waterfall, and a firework display's music while it plays. Particle effects are heard by the
+// the roar of each waterfall, and a firework display's music while it plays. Flat rides are heard by the rules of
+// audio/sound_scripts.hpp, the nearest few. Particle effects are heard by the
 // sounds they name (fireworks launching and bursting), from where each began.
 // Building is heard too, not placed in the world: a thump each time something is put down (a ride, stall, piece of
 // track, scenery, structure or pool work), at most one in a short while; paths, fences and taking things away are
@@ -15,7 +16,11 @@
 #include "audio/audio.hpp"
 #include "audio/music_player.hpp"
 #include "audio/ride_sounds.hpp"
+#include "audio/sound_scripts.hpp"
 #include "config/game/install.hpp"
+#include "ovl/overlay.hpp"
+#include "ovl/sound.hpp"
+#include "park/bone_poses.hpp"
 #include "simulation/crash.hpp"
 #include "simulation/entt.hpp"
 #include "strings/ascii.hpp"
@@ -50,6 +55,28 @@ namespace rct3::scene::park
         audio::VoiceHandle plume;                  ///< The water plume loop after a splash
         units::Seconds plume_left;                 ///< What it has left
         std::optional<std::uint32_t> splashes { }; ///< Times its first car had splashed when last heard
+    };
+
+    /// What one flat ride is heard making.
+    struct FlatRideSounds
+    {
+        /// One entry of its item's sound table.
+        struct Entry
+        {
+            audio::ScriptPlay play { };
+            std::optional<std::size_t> loop { }; ///< Of the entry's sounds, a looping one its script started and has not stopped
+            audio::VoiceHandle voice { };        ///< The sound started last
+        };
+        std::vector<Entry> entries { };
+        rct3::park::MotionAt playing { }; ///< When last heard
+        std::array<audio::VoiceHandle, audio::kScreamVoices> screams { };
+    };
+
+    /// A sound of the game's sound packs, made when first played.
+    struct PackSound
+    {
+        audio::SoundBuffer buffer { };
+        bool loops = false;
     };
 
     struct ParkSounds
@@ -92,6 +119,11 @@ namespace rct3::scene::park
         std::optional<audio::MusicPlayer> show_music;                                       ///< A firework display's
         std::string show_track;                                                             ///< The file it was started from
         std::minstd_rand random;
+        /// The game's sound packs flat rides name their sounds from, and their sounds, kept to make one when it is first played.
+        std::vector<ovl::Overlay> sound_packs;
+        std::vector<std::vector<ovl::SoundItem>> pack_sounds;                                        ///< By pack
+        std::map<std::string, std::optional<PackSound>, strings::LessIgnoringCase> pack_sounds_made; ///< Nothing where no pack has it
+        std::map<entt::entity, FlatRideSounds> flat_rides;
     };
 
     [[nodiscard]] ParkSounds load_park_sounds(const config::game::GameInstall& install, std::uint32_t seed);

@@ -783,7 +783,11 @@ namespace rct3::scene::park
         profiling::section("Reflections", [&] {
             const WaterLook& look = scene.water.look;
             // Seen from the eye mirrored in the water's level, as the transform mirrors the world.
-            prepare_park_water(device, scene.water, view_projection, eye, scene.horizon, [&](const glm::mat4& transform, f32 level) { draw_world(device, scene, transform, scene.light, { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .water = false, .mirrored = true, .eye = { eye.x, 2 * level - eye.y, eye.z } }); });
+            prepare_park_water(device, scene.water, view_projection, eye, scene.horizon, [&](const glm::mat4& transform, f32 level) {
+                draw_world(device, scene, transform, scene.light, { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .water = false, .mirrored = true, .eye = { eye.x, 2 * level - eye.y, eye.z } });
+                // Bursts and fire shine in the water too.
+                draw_park_particles(device, scene.particles, transform, { eye.x, 2 * level - eye.y, eye.z }, { scene.camera.target.x, 2 * level - scene.camera.target.y, scene.camera.target.z }, scene.light);
+            });
         });
         profiling::section("World", [&] {
             device.set_wireframe(scene.wireframe);

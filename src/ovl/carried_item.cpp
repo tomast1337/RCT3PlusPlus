@@ -28,39 +28,39 @@ namespace rct3::ovl
             if (!raw)
                 return std::nullopt;
             const auto b = *raw;
-            using fields::f32;
-            using fields::i32;
-            using fields::u32;
+            using fields::read_f32;
+            using fields::read_i32;
+            using fields::read_u32;
 
             CarriedItem item;
-            item.unknown_00 = u32(b, 0x00);
-            item.unknown_04 = u32(b, 0x04);
-            item.unknown_08 = u32(b, 0x08);
+            item.unknown_00 = read_u32(b, 0x00);
+            item.unknown_04 = read_u32(b, 0x04);
+            item.unknown_08 = read_u32(b, 0x08);
             item.name_text = refs.find(address + 0x0c, kTextTag);
             item.plural_text = refs.find(address + 0x10, kTextTag);
             item.icon = refs.find(address + 0x14, kIconTag);
             item.shapes = { refs.find(address + 0x18, kShapeTag), refs.find(address + 0x1c, kShapeTag) };
-            item.unknown_20 = f32(b, 0x20);
+            item.unknown_20 = read_f32(b, 0x20);
             item.remains = refs.find(address + 0x24, kItemTag);
-            item.flags = u32(b, 0x28);
-            item.unknown_2c = i32(b, 0x2c);
-            item.unknown_30 = u32(b, 0x30);
+            item.flags = read_u32(b, 0x28);
+            item.unknown_2c = read_i32(b, 0x2c);
+            item.unknown_30 = read_u32(b, 0x30);
             for (std::size_t i = 0; i < 3; ++i)
-                item.effects[i] = f32(b, 0x34 + i * 4);
-            item.cost = u32(b, 0x40);
+                item.effects[i] = read_f32(b, 0x34 + i * 4);
+            item.cost = read_u32(b, 0x40);
             for (std::size_t i = 0; i < 3; ++i)
-                item.worth[i] = u32(b, 0x44 + i * 4);
-            item.unknown_50 = f32(b, 0x50);
-            item.unknown_54 = i32(b, 0x54);
-            item.unknown_58 = u32(b, 0x58);
+                item.worth[i] = read_u32(b, 0x44 + i * 4);
+            item.unknown_50 = read_f32(b, 0x50);
+            item.unknown_54 = read_i32(b, 0x54);
+            item.unknown_58 = read_u32(b, 0x58);
 
             // The extras are reference fields stored right after the structure.
-            const std::uint32_t extra_count = u32(b, 0x5c);
+            const std::uint32_t extra_count = read_u32(b, 0x5c);
             if (extra_count > kMaxExtras)
                 return std::nullopt;
             if (extra_count != 0)
             {
-                const std::uint32_t slots = u32(b, 0x60);
+                const std::uint32_t slots = read_u32(b, 0x60);
                 if (!space.bytes_at(slots, std::size_t { extra_count } * 4))
                     return std::nullopt;
                 item.extras.reserve(extra_count);
@@ -68,17 +68,17 @@ namespace rct3::ovl
                     item.extras.push_back(refs.find(slots + i * 4, kExtraTag));
             }
 
-            item.unknown_70 = u32(b, 0x70);
+            item.unknown_70 = read_u32(b, 0x70);
             item.texture = refs.find(address + 0x74, kTextureTag);
-            item.scale = { f32(b, 0x78), f32(b, 0x7c) };
-            item.unknown_80 = u32(b, 0x80);
+            item.scale = { read_f32(b, 0x78), read_f32(b, 0x7c) };
+            item.unknown_80 = read_u32(b, 0x80);
             for (std::size_t i = 0; i < 4; ++i)
             {
                 const std::size_t at = 0x84 + i * 4;
-                item.part_names[i] = fields::string_field(space, pointers, address + static_cast<std::uint32_t>(at), u32(b, at));
+                item.part_names[i] = fields::string_field(space, pointers, address + static_cast<std::uint32_t>(at), read_u32(b, at));
             }
-            item.unknown_94 = u32(b, 0x94);
-            item.style_name = fields::string_field(space, pointers, address + 0x98, u32(b, 0x98));
+            item.unknown_94 = read_u32(b, 0x94);
+            item.style_name = fields::string_field(space, pointers, address + 0x98, read_u32(b, 0x98));
             return item;
         }
 
@@ -89,12 +89,12 @@ namespace rct3::ovl
                 return std::nullopt;
             const auto b = *raw;
             CarriedItemExtra extra;
-            extra.unknown_00 = fields::u32(b, 0);
+            extra.unknown_00 = fields::read_u32(b, 0);
             extra.name_text = refs.find(address + 4, kTextTag);
             extra.icon = refs.find(address + 8, kIconTag);
-            extra.cost = fields::u32(b, 0x0c);
+            extra.cost = fields::read_u32(b, 0x0c);
             for (std::size_t i = 0; i < 3; ++i)
-                extra.effects[i] = fields::f32(b, 0x10 + i * 4);
+                extra.effects[i] = fields::read_f32(b, 0x10 + i * 4);
             return extra;
         }
 

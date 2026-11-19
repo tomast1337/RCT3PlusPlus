@@ -20,20 +20,20 @@ namespace
     {
         Builder b;
         b.raw("FGRK", 4);
-        b.u8(0x02);
-        b.u8(0), b.u8(0), b.u8(0);
-        b.u32(5);
-        b.u32(0x10);
-        b.u16(0); // subVersionFlag
-        b.u16(0); // extraFlag
-        b.u32(1);
+        b.put_u8(0x02);
+        b.put_u8(0), b.put_u8(0), b.put_u8(0);
+        b.put_u32(5);
+        b.put_u32(0x10);
+        b.put_u16(0); // subVersionFlag
+        b.put_u16(0); // extraFlag
+        b.put_u32(1);
         b.str("Sounds\\Sounds");
-        b.u32(0); // secondary refs
-        b.u32(2);
-        b.str("FGDK"), b.str("FlexiTexture"), b.u32(1), b.str("ftx");
-        b.str("RCT3"), b.str("StaticShape"), b.u32(1), b.str("shs");
-        b.u32(0), b.u32(4);
-        b.u32(1), b.u32(7);
+        b.put_u32(0); // secondary refs
+        b.put_u32(2);
+        b.str("FGDK"), b.str("FlexiTexture"), b.put_u32(1), b.str("ftx");
+        b.str("RCT3"), b.str("StaticShape"), b.put_u32(1), b.str("shs");
+        b.put_u32(0), b.put_u32(4);
+        b.put_u32(1), b.put_u32(7);
         return b.bytes;
     }
 
@@ -42,22 +42,22 @@ namespace
     {
         Builder b;
         b.raw("FGRK", 4);
-        b.u8(0x02);
-        b.u8(0), b.u8(0), b.u8(0);
-        b.u32(5);
-        b.u32(0x10);
-        b.u16(1); // subVersionFlag
-        b.u16(0);
-        b.u32(size);
-        b.u32(0), b.u32(0);
+        b.put_u8(0x02);
+        b.put_u8(0), b.put_u8(0), b.put_u8(0);
+        b.put_u32(5);
+        b.put_u32(0x10);
+        b.put_u16(1); // subVersionFlag
+        b.put_u16(0);
+        b.put_u32(size);
+        b.put_u32(0), b.put_u32(0);
         b.raw(tag.c_str(), tag.size() + 1);
         while (b.bytes.size() < 0x14 + size)
-            b.u8(0);
-        b.u32(0); // external refs
-        b.u32(0); // secondary refs
-        b.u32(1);
-        b.str("FGDK"), b.str("Model"), b.u32(1), b.str("mdl");
-        b.u32(0), b.u32(2);
+            b.put_u8(0);
+        b.put_u32(0); // external refs
+        b.put_u32(0); // secondary refs
+        b.put_u32(1);
+        b.str("FGDK"), b.str("Model"), b.put_u32(1), b.str("mdl");
+        b.put_u32(0), b.put_u32(2);
         return b.bytes;
     }
 

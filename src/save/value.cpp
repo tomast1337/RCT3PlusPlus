@@ -269,7 +269,7 @@ namespace rct3::save
                 pos_ += n;
                 return s;
             }
-            std::optional<std::uint32_t> u32()
+            std::optional<std::uint32_t> read_u32()
             {
                 auto s = take(4);
                 if (!s)
@@ -336,7 +336,7 @@ namespace rct3::save
                         return std::nullopt;
                     return fixed(a, *bytes, depth);
                 }
-                auto length = c.u32();
+                auto length = c.read_u32();
                 if (!length)
                     return std::nullopt;
                 auto bytes = c.take(*length);
@@ -513,7 +513,7 @@ namespace rct3::save
             {
                 const DecodeStats before = stats;
                 Cursor c(bytes);
-                const auto count = c.u32();
+                const auto count = c.read_u32();
                 if (!count)
                     return fallback(bytes, before);
 

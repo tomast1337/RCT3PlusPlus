@@ -18,16 +18,16 @@ namespace
     constexpr std::uint32_t kVersion1 = 1U << 16;         // 1.0 in the format's 16.16 fixed point
     constexpr std::uint32_t kMaxpVersionShort = 5U << 12; // Version 0.5 (stored as 0x5000): glyph count only
 
-    void u16(Bytes& b, std::int32_t v)
+    void put_u16(Bytes& b, std::int32_t v)
     {
         b.push_back(static_cast<std::uint8_t>((v >> 8) & 0xFF));
         b.push_back(static_cast<std::uint8_t>(v & 0xFF));
     }
 
-    void u32(Bytes& b, std::uint32_t v)
+    void put_u32(Bytes& b, std::uint32_t v)
     {
-        u16(b, static_cast<std::int32_t>(v >> 16));
-        u16(b, static_cast<std::int32_t>(v & 0xFFFF));
+        put_u16(b, static_cast<std::int32_t>(v >> 16));
+        put_u16(b, static_cast<std::int32_t>(v & 0xFFFF));
     }
 
     // A made-up font with an em of 1000 units, ascender 800, descender 200 and three glyphs: 0 (missing, empty),
@@ -39,66 +39,66 @@ namespace
         head[19] = 1000 & 0xFF; // Units per em; index-to-location format 0 (short)
 
         Bytes hhea;
-        u32(hhea, kVersion1);
-        u16(hhea, 800);  // Ascender
-        u16(hhea, -200); // Descender
+        put_u32(hhea, kVersion1);
+        put_u16(hhea, 800);  // Ascender
+        put_u16(hhea, -200); // Descender
         hhea.resize(34, 0);
-        u16(hhea, 3); // Advance widths given
+        put_u16(hhea, 3); // Advance widths given
 
         Bytes maxp;
-        u32(maxp, kMaxpVersionShort);
-        u16(maxp, 3);
+        put_u32(maxp, kMaxpVersionShort);
+        put_u16(maxp, 3);
 
         Bytes hmtx;
         for (const std::int32_t advance : { 500, 600, 300 })
         {
-            u16(hmtx, advance);
-            u16(hmtx, 0);
+            put_u16(hmtx, advance);
+            put_u16(hmtx, 0);
         }
 
         Bytes glyf;
-        u16(glyf, 1); // One contour
+        put_u16(glyf, 1); // One contour
         for (const std::int32_t v : { 0, 0, 500, 700 })
-            u16(glyf, v);
-        u16(glyf, 3); // Last point of the contour
-        u16(glyf, 0); // No instructions
+            put_u16(glyf, v);
+        put_u16(glyf, 3); // Last point of the contour
+        put_u16(glyf, 0); // No instructions
         for (std::int32_t i = 0; i < 4; ++i)
             glyf.push_back(1); // On the curve, coordinates as 16-bit deltas
         for (const std::int32_t dx : { 0, 0, 500, 0 })
-            u16(glyf, dx);
+            put_u16(glyf, dx);
         for (const std::int32_t dy : { 0, 700, 0, -700 })
-            u16(glyf, dy);
+            put_u16(glyf, dy);
 
         Bytes loca;
         for (const auto offset : { std::size_t { 0 }, std::size_t { 0 }, glyf.size(), glyf.size() })
-            u16(loca, static_cast<std::int32_t>(offset / 2));
+            put_u16(loca, static_cast<std::int32_t>(offset / 2));
 
         // Format 4: 'A'..'B' to glyphs 1..2, 'H' to glyph 1, and the closing segment.
         Bytes cmap;
-        u16(cmap, 0);
-        u16(cmap, 1);
-        u16(cmap, 3);
-        u16(cmap, 1);
-        u32(cmap, 12);
+        put_u16(cmap, 0);
+        put_u16(cmap, 1);
+        put_u16(cmap, 3);
+        put_u16(cmap, 1);
+        put_u32(cmap, 12);
         const std::array<std::int32_t, 3> starts = { 'A', 'H', 0xFFFF };
         const std::array<std::int32_t, 3> ends = { 'B', 'H', 0xFFFF };
         const std::array<std::int32_t, 3> deltas = { 1 - 'A', 1 - 'H', 1 };
-        u16(cmap, 4);
-        u16(cmap, 16 + 8 * 3); // Length
-        u16(cmap, 0);
-        u16(cmap, 6); // Segments times 2
-        u16(cmap, 4); // Search range
-        u16(cmap, 1); // Entry selector
-        u16(cmap, 2); // Range shift
+        put_u16(cmap, 4);
+        put_u16(cmap, 16 + 8 * 3); // Length
+        put_u16(cmap, 0);
+        put_u16(cmap, 6); // Segments times 2
+        put_u16(cmap, 4); // Search range
+        put_u16(cmap, 1); // Entry selector
+        put_u16(cmap, 2); // Range shift
         for (const std::int32_t e : ends)
-            u16(cmap, e);
-        u16(cmap, 0);
+            put_u16(cmap, e);
+        put_u16(cmap, 0);
         for (const std::int32_t s : starts)
-            u16(cmap, s);
+            put_u16(cmap, s);
         for (const std::int32_t d : deltas)
-            u16(cmap, d);
+            put_u16(cmap, d);
         for (std::int32_t i = 0; i < 3; ++i)
-            u16(cmap, 0);
+            put_u16(cmap, 0);
 
         const std::array<std::pair<std::string_view, const Bytes*>, 7> tables = { {
             { "cmap", &cmap },
@@ -110,18 +110,18 @@ namespace
             { "maxp", &maxp },
         } };
         Bytes file;
-        u32(file, kVersion1);
-        u16(file, static_cast<std::int32_t>(tables.size()));
-        u16(file, 64);
-        u16(file, 2);
-        u16(file, 48);
+        put_u32(file, kVersion1);
+        put_u16(file, static_cast<std::int32_t>(tables.size()));
+        put_u16(file, 64);
+        put_u16(file, 2);
+        put_u16(file, 48);
         std::size_t offset = 12 + 16 * tables.size();
         for (const auto& [tag, data] : tables)
         {
             file.insert(file.end(), tag.begin(), tag.end());
-            u32(file, 0);
-            u32(file, static_cast<std::uint32_t>(offset));
-            u32(file, static_cast<std::uint32_t>(data->size()));
+            put_u32(file, 0);
+            put_u32(file, static_cast<std::uint32_t>(offset));
+            put_u32(file, static_cast<std::uint32_t>(data->size()));
             offset += (data->size() + 3) & ~std::size_t { 3 };
         }
         for (const auto& [_, data] : tables)

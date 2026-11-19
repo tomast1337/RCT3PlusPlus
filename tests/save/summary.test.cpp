@@ -23,19 +23,19 @@ namespace
             v.insert(v.end(), b, b + n);
             return *this;
         }
-        Bytes& u8(std::uint8_t x)
+        Bytes& put_u8(std::uint8_t x)
         {
             return put(&x, 1);
         }
-        Bytes& u16(std::uint16_t x)
+        Bytes& put_u16(std::uint16_t x)
         {
             return put(&x, 2);
         }
-        Bytes& u32(std::uint32_t x)
+        Bytes& put_u32(std::uint32_t x)
         {
             return put(&x, 4);
         }
-        Bytes& u64(std::uint64_t x)
+        Bytes& put_u64(std::uint64_t x)
         {
             return put(&x, 8);
         }
@@ -46,22 +46,22 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<std::uint16_t>(s.size()));
             for (const char c : s)
-                u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<std::uint8_t>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<std::uint32_t>(payload.v.size()));
             return cat(payload);
         }
         Bytes& text(const std::u16string& s)
         {
             Bytes p;
-            p.u32(0xEFEFEFEFu); // Marks UTF-16 text
+            p.put_u32(0xEFEFEFEFu); // Marks UTF-16 text
             for (const char16_t c : s)
-                p.u16(c);
+                p.put_u16(c);
             return blob(p);
         }
     };
@@ -75,7 +75,7 @@ namespace
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).u32(a.size).u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -95,15 +95,15 @@ namespace
     Bytes summary_payload(const Summary& s)
     {
         Bytes preview;
-        preview.u32(s.pixels);
+        preview.put_u32(s.pixels);
         for (std::uint32_t i = 0; i < s.pixels; ++i)
-            preview.u8(static_cast<std::uint8_t>(i)).u8(20).u8(30); // B, G, R
+            preview.put_u8(static_cast<std::uint8_t>(i)).put_u8(20).put_u8(30); // B, G, R
         Bytes packs;
-        packs.u32(static_cast<std::uint32_t>(s.packs.size()));
+        packs.put_u32(static_cast<std::uint32_t>(s.packs.size()));
         for (const auto& p : s.packs)
-            packs.text(p).u32(1);
+            packs.text(p).put_u32(1);
         Bytes b;
-        b.text(s.name).u32(s.day).u32(s.month).u32(s.year).u32(s.minutes).u32(s.guests).u32(s.kind).blob(preview).blob(packs);
+        b.text(s.name).put_u32(s.day).put_u32(s.month).put_u32(s.year).put_u32(s.minutes).put_u32(s.guests).put_u32(s.kind).blob(preview).blob(packs);
         return b;
     }
 
@@ -112,22 +112,22 @@ namespace
     std::vector<std::byte> make_save(const std::vector<Summary>& summaries, std::optional<std::uint64_t> current)
     {
         Bytes b;
-        b.u32(3);
-        b.name("Other").u32(1);
+        b.put_u32(3);
+        b.name("Other").put_u32(1);
         write_attr(b, { "Number", "int32", 4 });
-        b.name("GUI2_DatDesc").u32(static_cast<std::uint32_t>(kSummaryAttrs.size()));
+        b.name("GUI2_DatDesc").put_u32(static_cast<std::uint32_t>(kSummaryAttrs.size()));
         for (const auto& a : kSummaryAttrs)
             write_attr(b, a);
-        b.name("GUI2_CurrentDatDesc").u32(1);
+        b.name("GUI2_CurrentDatDesc").put_u32(1);
         write_attr(b, { "CurrDatDesc", "reference", 8 });
 
-        b.u32(static_cast<std::uint32_t>(summaries.size() + 1 + (current ? 1 : 0)));
-        b.u32(0).u64(1).u32(7);
+        b.put_u32(static_cast<std::uint32_t>(summaries.size() + 1 + (current ? 1 : 0)));
+        b.put_u32(0).put_u64(1).put_u32(7);
         std::uint64_t id = 10;
         for (const auto& s : summaries)
-            b.u32(1).u64(id++).cat(summary_payload(s));
+            b.put_u32(1).put_u64(id++).cat(summary_payload(s));
         if (current)
-            b.u32(2).u64(99).u64(*current);
+            b.put_u32(2).put_u64(99).put_u64(*current);
         return b.v;
     }
 

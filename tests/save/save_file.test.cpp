@@ -18,27 +18,27 @@ namespace
     {
         std::vector<std::byte> bytes;
 
-        void u8(std::uint8_t v)
+        void put_u8(std::uint8_t v)
         {
             bytes.push_back(static_cast<std::byte>(v));
         }
-        void u16(std::uint16_t v)
+        void put_u16(std::uint16_t v)
         {
             put(&v, 2);
         }
-        void u32(std::uint32_t v)
+        void put_u32(std::uint32_t v)
         {
             put(&v, 4);
         }
-        void u64(std::uint64_t v)
+        void put_u64(std::uint64_t v)
         {
             put(&v, 8);
         }
         void str16(const std::string& s)
         {
-            u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<std::uint16_t>(s.size()));
             for (const char c : s)
-                u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<std::uint8_t>(c));
         }
         void put(const void* p, std::size_t n)
         {
@@ -50,47 +50,47 @@ namespace
         {
             str16(name);
             str16(type);
-            u32(size);
-            u32(children);
+            put_u32(size);
+            put_u32(children);
         }
         void header(std::uint32_t version)
         {
-            u32(0);
-            u32(0);
-            u32(0xF11EDA2Au);
-            u32(0x40);
-            u32(version);
+            put_u32(0);
+            put_u32(0);
+            put_u32(0xF11EDA2Au);
+            put_u32(0x40);
+            put_u32(version);
             for (std::int32_t i = 0; i < 15; ++i)
-                u32(0);
+                put_u32(0);
         }
         /// The short form some effect files carry: its own magic, a 1, then twelve words.
         void short_header(std::uint32_t version)
         {
-            u32(0);
-            u32(0);
-            u32(0xF11EDA1Au);
-            u32(1);
-            u32(version);
+            put_u32(0);
+            put_u32(0);
+            put_u32(0xF11EDA1Au);
+            put_u32(1);
+            put_u32(version);
             for (std::int32_t i = 0; i < 11; ++i)
-                u32(0);
+                put_u32(0);
         }
         void checksum()
         {
             const auto sum = compute_checksum(bytes);
-            u32(sum);
+            put_u32(sum);
         }
     };
 
     // Two classes: "Widget" with a fixed u32 and a variable blob, "Gadget" with a compound field.
     void class_table(Builder& b)
     {
-        b.u32(2);
+        b.put_u32(2);
         b.str16("Widget");
-        b.u32(2);
+        b.put_u32(2);
         b.attribute("count", "u32", 4);
         b.attribute("label", "text", 0);
         b.str16("Gadget");
-        b.u32(1);
+        b.put_u32(1);
         b.attribute("items", "seq", 0, 1);
         b.attribute("element", "u16", 2);
     }
@@ -98,23 +98,23 @@ namespace
     // Three objects: Widget, Gadget, Widget.
     void objects(Builder& b)
     {
-        b.u32(3);
-        b.u32(0);
-        b.u64(7);
-        b.u32(42);
-        b.u32(3);
-        b.u8('a');
-        b.u8('b');
-        b.u8('c');
-        b.u32(1);
-        b.u64(9);
-        b.u32(6); // payload length
-        b.u32(1); // element count
-        b.u16(0xBEEF);
-        b.u32(0);
-        b.u64(11);
-        b.u32(0);
-        b.u32(0);
+        b.put_u32(3);
+        b.put_u32(0);
+        b.put_u64(7);
+        b.put_u32(42);
+        b.put_u32(3);
+        b.put_u8('a');
+        b.put_u8('b');
+        b.put_u8('c');
+        b.put_u32(1);
+        b.put_u64(9);
+        b.put_u32(6); // payload length
+        b.put_u32(1); // element count
+        b.put_u16(0xBEEF);
+        b.put_u32(0);
+        b.put_u64(11);
+        b.put_u32(0);
+        b.put_u32(0);
     }
 
     std::vector<std::byte> headerless()
@@ -296,34 +296,34 @@ TEST_CASE("structural corruption")
     {
         Builder b;
         class_table(b);
-        b.u32(0xFFFFFFFFu);
+        b.put_u32(0xFFFFFFFFu);
         CHECK(read_save(b.bytes).error() == Error::ImplausibleCount);
     }
     SUBCASE("class count over the hard limit")
     {
         Builder b;
-        b.u32(kMaxClasses + 1);
+        b.put_u32(kMaxClasses + 1);
         b.bytes.resize(b.bytes.size() + 4 * (kMaxClasses + 1) * 2);
         CHECK(read_save(b.bytes).error() == Error::ImplausibleCount);
     }
     SUBCASE("attribute count larger than the data")
     {
         Builder b;
-        b.u32(1);
+        b.put_u32(1);
         b.str16("Widget");
-        b.u32(0x40000000u);
+        b.put_u32(0x40000000u);
         CHECK(read_save(b.bytes).error() == Error::ImplausibleCount);
     }
     SUBCASE("nesting beyond the limit")
     {
         Builder b;
-        b.u32(1);
+        b.put_u32(1);
         b.str16("Widget");
-        b.u32(1);
+        b.put_u32(1);
         for (std::size_t d = 0; d <= kMaxAttributeDepth + 1; ++d)
             b.attribute("n", "seq", 0, 1);
         b.attribute("leaf", "u8", 1);
-        b.u32(0);
+        b.put_u32(0);
         CHECK(read_save(b.bytes).error() == Error::BadClassTable);
     }
 }
@@ -334,8 +334,8 @@ TEST_CASE("empty and tiny inputs")
     const std::byte three[3] = { };
     CHECK_FALSE(read_save(three));
     Builder zero; // zero classes, zero objects: valid, empty
-    zero.u32(0);
-    zero.u32(0);
+    zero.put_u32(0);
+    zero.put_u32(0);
     const auto r = read_save(zero.bytes);
     REQUIRE(r);
     CHECK(r->classes.empty());

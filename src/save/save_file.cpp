@@ -47,15 +47,15 @@ namespace rct3::save
                 return data_.size() - pos_;
             }
 
-            bool u16(std::uint16_t& out)
+            bool read_u16(std::uint16_t& out)
             {
                 return fixed(out);
             }
-            bool u32(std::uint32_t& out)
+            bool read_u32(std::uint32_t& out)
             {
                 return fixed(out);
             }
-            bool u64(std::uint64_t& out)
+            bool read_u64(std::uint64_t& out)
             {
                 return fixed(out);
             }
@@ -99,11 +99,11 @@ namespace rct3::save
             std::uint16_t name_len = 0;
             std::uint16_t type_len = 0;
             std::uint32_t child_count = 0;
-            if (!r.u16(name_len) || !r.text(name_len, a.name))
+            if (!r.read_u16(name_len) || !r.text(name_len, a.name))
                 return std::unexpected(Error::Truncated);
-            if (!r.u16(type_len) || !r.text(type_len, a.type))
+            if (!r.read_u16(type_len) || !r.text(type_len, a.type))
                 return std::unexpected(Error::Truncated);
-            if (!r.u32(a.size) || !r.u32(child_count))
+            if (!r.read_u32(a.size) || !r.read_u32(child_count))
                 return std::unexpected(Error::Truncated);
             if (child_count > r.remaining() / kMinAttributeBytes)
                 return std::unexpected(Error::ImplausibleCount);
@@ -121,7 +121,7 @@ namespace rct3::save
         std::expected<std::vector<Class>, Error> read_class_table(Reader& r)
         {
             std::uint32_t count = 0;
-            if (!r.u32(count))
+            if (!r.read_u32(count))
                 return std::unexpected(Error::Truncated);
             if (count > kMaxClasses || count > r.remaining() / kMinClassBytes)
                 return std::unexpected(Error::ImplausibleCount);
@@ -132,9 +132,9 @@ namespace rct3::save
                 Class c;
                 std::uint16_t name_len = 0;
                 std::uint32_t attribute_count = 0;
-                if (!r.u16(name_len) || !r.text(name_len, c.name))
+                if (!r.read_u16(name_len) || !r.text(name_len, c.name))
                     return std::unexpected(Error::Truncated);
-                if (!r.u32(attribute_count))
+                if (!r.read_u32(attribute_count))
                     return std::unexpected(Error::Truncated);
                 if (attribute_count > r.remaining() / kMinAttributeBytes)
                     return std::unexpected(Error::ImplausibleCount);
@@ -166,7 +166,7 @@ namespace rct3::save
                 else
                 {
                     std::uint32_t length = 0;
-                    if (!r.u32(length) || !r.skip(length))
+                    if (!r.read_u32(length) || !r.skip(length))
                         return false;
                 }
             }
@@ -275,7 +275,7 @@ namespace rct3::save
 
         const std::size_t object_table_start = r.pos();
         std::uint32_t object_count = 0;
-        if (!r.u32(object_count))
+        if (!r.read_u32(object_count))
             return std::unexpected(Error::Truncated);
         if (object_count > r.remaining() / kObjectPrefixBytes)
             return std::unexpected(Error::ImplausibleCount);
@@ -284,7 +284,7 @@ namespace rct3::save
         {
             const std::size_t start = r.pos();
             Object o;
-            if (!r.u32(o.class_index) || !r.u64(o.id))
+            if (!r.read_u32(o.class_index) || !r.read_u64(o.id))
                 return std::unexpected(Error::BadObjectTable);
             if (o.class_index >= file.classes.size())
                 return std::unexpected(Error::BadClassIndex);

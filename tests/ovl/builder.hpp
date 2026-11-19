@@ -22,21 +22,21 @@ namespace rct3::test
             const auto* b = static_cast<const std::byte*>(p);
             bytes.insert(bytes.end(), b, b + n);
         }
-        void u8(std::uint8_t v)
+        void put_u8(std::uint8_t v)
         {
             raw(&v, 1);
         }
-        void u16(std::uint16_t v)
+        void put_u16(std::uint16_t v)
         {
             raw(&v, 2);
         }
-        void u32(std::uint32_t v)
+        void put_u32(std::uint32_t v)
         {
             raw(&v, 4);
         }
         void str(const std::string& s)
         {
-            u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<std::uint16_t>(s.size()));
             raw(s.data(), s.size());
         }
     };
@@ -84,43 +84,43 @@ namespace rct3::test
     {
         Builder b;
         b.raw("FGRK", 4);
-        b.u8(0x02);
-        b.u8(0), b.u8(0), b.u8(0);
-        b.u32(version);
+        b.put_u8(0x02);
+        b.put_u8(0), b.put_u8(0), b.put_u8(0);
+        b.put_u32(version);
         if (version != 1)
-            b.u32(0x10);
+            b.put_u32(0x10);
         const bool streamed = version == 5 && !streams.empty();
         if (version == 5)
         {
-            b.u16(static_cast<std::uint16_t>(streams.size())), b.u16(0);
+            b.put_u16(static_cast<std::uint16_t>(streams.size())), b.put_u16(0);
             if (streamed)
-                b.u32(16), b.u32(0), b.u32(0), b.u32(0); // stream block: size, 2 reserved, empty tag
+                b.put_u32(16), b.put_u32(0), b.put_u32(0), b.put_u32(0); // stream block: size, 2 reserved, empty tag
         }
-        b.u32(0); // external refs
-        b.u32(0); // secondary refs
-        b.u32(0); // loaders
+        b.put_u32(0); // external refs
+        b.put_u32(0); // secondary refs
+        b.put_u32(0); // loaders
 
         static const std::vector<std::vector<std::byte>> none;
         for (std::size_t t = 0; t < 9; ++t)
         {
             const auto& type = t < blocks.size() ? blocks[t] : none;
-            b.u32(static_cast<std::uint32_t>(type.size()));
+            b.put_u32(static_cast<std::uint32_t>(type.size()));
             if (version > 1)
             {
-                b.u32(0); // unknown
+                b.put_u32(0); // unknown
                 if (streamed)
-                    b.u32(0);
+                    b.put_u32(0);
                 for (const auto& block : type)
-                    b.u32(static_cast<std::uint32_t>(block.size()));
+                    b.put_u32(static_cast<std::uint32_t>(block.size()));
             }
         }
 
         if (version == 4)
-            b.u32(0), b.u32(0);
+            b.put_u32(0), b.put_u32(0);
         if (version == 5)
         {
-            b.u32(3), b.u8(1), b.u8(2), b.u8(3);
-            b.u32(2), b.u32(7), b.u32(8);
+            b.put_u32(3), b.put_u8(1), b.put_u8(2), b.put_u8(3);
+            b.put_u32(2), b.put_u32(7), b.put_u32(8);
         }
 
         for (const auto& type : blocks)
@@ -128,23 +128,23 @@ namespace rct3::test
             for (const auto& block : type)
             {
                 if (version == 1)
-                    b.u32(static_cast<std::uint32_t>(block.size()));
+                    b.put_u32(static_cast<std::uint32_t>(block.size()));
                 b.bytes.insert(b.bytes.end(), block.begin(), block.end());
             }
         }
 
-        b.u32(static_cast<std::uint32_t>(relocations.size()));
+        b.put_u32(static_cast<std::uint32_t>(relocations.size()));
         for (auto r : relocations)
-            b.u32(r);
+            b.put_u32(r);
         if (version == 4 || streamed)
         {
             for (std::size_t i = 0; i < (version == 4 ? 1 : streams.size()); ++i)
             {
                 const auto empty = StreamTables::value_type { };
                 const auto& table = i < streams.size() ? streams[i] : empty;
-                b.u32(static_cast<std::uint32_t>(table.size()));
+                b.put_u32(static_cast<std::uint32_t>(table.size()));
                 for (const auto& [location, value] : table)
-                    b.u32(location), b.u32(value);
+                    b.put_u32(location), b.put_u32(value);
             }
         }
         b.bytes.insert(b.bytes.end(), tail.begin(), tail.end());

@@ -25,35 +25,35 @@ namespace
             v.insert(v.end(), b, b + n);
             return *this;
         }
-        Bytes& u8(std::uint8_t x)
+        Bytes& put_u8(std::uint8_t x)
         {
             return put(&x, 1);
         }
-        Bytes& u16(std::uint16_t x)
+        Bytes& put_u16(std::uint16_t x)
         {
             return put(&x, 2);
         }
-        Bytes& u32(std::uint32_t x)
+        Bytes& put_u32(std::uint32_t x)
         {
             return put(&x, 4);
         }
-        Bytes& u64(std::uint64_t x)
+        Bytes& put_u64(std::uint64_t x)
         {
             return put(&x, 8);
         }
-        Bytes& f32(float x)
+        Bytes& put_f32(float x)
         {
             return put(&x, 4);
         }
         Bytes& name(const std::string& s)
         {
-            u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<std::uint16_t>(s.size()));
             return put(s.data(), s.size());
         }
         /// A variable-size field: its length, then its bytes.
         Bytes& field(const Bytes& b)
         {
-            u32(static_cast<std::uint32_t>(b.v.size()));
+            put_u32(static_cast<std::uint32_t>(b.v.size()));
             v.insert(v.end(), b.v.begin(), b.v.end());
             return *this;
         }
@@ -68,7 +68,7 @@ namespace
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).u32(a.size).u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
         for (const Attr& c : a.children)
             write_attr(b, c);
     }
@@ -81,18 +81,18 @@ namespace
     Bytes ref_list(const std::vector<std::uint64_t>& ids)
     {
         Bytes b;
-        b.u32(static_cast<std::uint32_t>(ids.size()));
+        b.put_u32(static_cast<std::uint32_t>(ids.size()));
         for (const std::uint64_t id : ids)
-            b.u64(id);
+            b.put_u64(id);
         return b;
     }
 
     Bytes float_list(const std::vector<float>& values)
     {
         Bytes b;
-        b.u32(static_cast<std::uint32_t>(values.size()));
+        b.put_u32(static_cast<std::uint32_t>(values.size()));
         for (const float f : values)
-            b.f32(f);
+            b.put_f32(f);
         return b;
     }
 
@@ -114,10 +114,10 @@ namespace
             { "ParticleDesc", { opacity, { "Lifetime", "float32", 4 }, refs("ParticleEmitterDescs"), { "TextureNameReduced", "string", 0 } } },
         };
         Bytes b;
-        b.u32(static_cast<std::uint32_t>(classes.size()));
+        b.put_u32(static_cast<std::uint32_t>(classes.size()));
         for (const auto& [name, attrs] : classes)
         {
-            b.name(name).u32(static_cast<std::uint32_t>(attrs.size()));
+            b.name(name).put_u32(static_cast<std::uint32_t>(attrs.size()));
             for (const Attr& a : attrs)
                 write_attr(b, a);
         }
@@ -126,13 +126,13 @@ namespace
         Bytes skin;
         skin.put("Glow", 4);
         Bytes curve;
-        curve.field(float_list({ 0.0f, 0.5f })).field(float_list({ 0.0f, 1.0f })).u8(0);
-        b.u32(5);
-        b.u32(kEffect).u64(1).f32(2.5f).field(ref_list({ 2, 3 })).field(sound);
-        b.u32(kEmitter).u64(2).u32(10).u64(4).f32(0.0f);
-        b.u32(kEmitter).u64(3).u32(20).u64(second_emits).f32(0.5f);
-        b.u32(kParticle).u64(4).field(curve).f32(0.75f).field(ref_list({ 5 })).field(skin);
-        b.u32(kEmitter).u64(5).u32(1).u64(4).f32(0.25f);
+        curve.field(float_list({ 0.0f, 0.5f })).field(float_list({ 0.0f, 1.0f })).put_u8(0);
+        b.put_u32(5);
+        b.put_u32(kEffect).put_u64(1).put_f32(2.5f).field(ref_list({ 2, 3 })).field(sound);
+        b.put_u32(kEmitter).put_u64(2).put_u32(10).put_u64(4).put_f32(0.0f);
+        b.put_u32(kEmitter).put_u64(3).put_u32(20).put_u64(second_emits).put_f32(0.5f);
+        b.put_u32(kParticle).put_u64(4).field(curve).put_f32(0.75f).field(ref_list({ 5 })).field(skin);
+        b.put_u32(kEmitter).put_u64(5).put_u32(1).put_u64(4).put_f32(0.25f);
         return b.v;
     }
 
@@ -153,31 +153,31 @@ namespace
             { "SIDDatabaseEntry", { { "SYMBOLNAME", "string", 0 } } },
         };
         Bytes b;
-        b.u32(static_cast<std::uint32_t>(classes.size()));
+        b.put_u32(static_cast<std::uint32_t>(classes.size()));
         for (const auto& [name, attrs] : classes)
         {
-            b.name(name).u32(static_cast<std::uint32_t>(attrs.size()));
+            b.name(name).put_u32(static_cast<std::uint32_t>(attrs.size()));
             for (const Attr& a : attrs)
                 write_attr(b, a);
         }
         Bytes launchers;
-        launchers.u32(2);
-        launchers.u32(3).u32(4).u32(0).u64(0);
-        launchers.u32(5).u32(4).u32(1).u64(2);
+        launchers.put_u32(2);
+        launchers.put_u32(3).put_u32(4).put_u32(0).put_u64(0);
+        launchers.put_u32(5).put_u32(4).put_u32(1).put_u64(2);
         // The lane is a whole number in a float-typed field.
         const auto put_shot = [](Bytes& shots, const std::string& effect, std::uint32_t from, std::uint32_t tube, float seconds, std::int32_t lane) {
             Bytes one;
-            one.field(text(effect)).u32(from).u32(tube).f32(seconds).f32(std::bit_cast<float>(lane));
+            one.field(text(effect)).put_u32(from).put_u32(tube).put_f32(seconds).put_f32(std::bit_cast<float>(lane));
             shots.field(one); // An element with a string in it is variable in size: it carries its length
         };
         Bytes shots;
-        shots.u32(3);
+        shots.put_u32(3);
         put_shot(shots, "Fireworks\\Peony.frw", 0, 2, 4.5f, 1);
         put_shot(shots, "Fireworks\\Comet.frw", 1, 0, 0.5f, 0);
         put_shot(shots, "Willow", last_launcher, 7, 2.0f, 3);
-        b.u32(2);
-        b.u32(0).u64(1).field(text("Night Sky")).u32(0x0f0).field(launchers).field(shots);
-        b.u32(1).u64(2).field(text("Mortar"));
+        b.put_u32(2);
+        b.put_u32(0).put_u64(1).field(text("Night Sky")).put_u32(0x0f0).field(launchers).field(shots);
+        b.put_u32(1).put_u64(2).field(text("Mortar"));
         return b.v;
     }
 
@@ -191,30 +191,30 @@ namespace
             { "ShowController", { { "Display", "reference", 8 } } },
         };
         Bytes b;
-        b.u32(static_cast<std::uint32_t>(classes.size()));
+        b.put_u32(static_cast<std::uint32_t>(classes.size()));
         for (const auto& [name, attrs] : classes)
         {
-            b.name(name).u32(static_cast<std::uint32_t>(attrs.size()));
+            b.name(name).put_u32(static_cast<std::uint32_t>(attrs.size()));
             for (const Attr& a : attrs)
                 write_attr(b, a);
         }
         const auto put_shot = [](Bytes& shots, const std::string& effect, std::uint64_t launcher, std::uint32_t tube, float seconds) {
             Bytes one;
-            one.field(text(effect)).u64(launcher).u32(tube).f32(seconds);
+            one.field(text(effect)).put_u64(launcher).put_u32(tube).put_f32(seconds);
             shots.field(one);
         };
         Bytes shots;
-        shots.u32(3);
+        shots.put_u32(3);
         put_shot(shots, "Fireworks\\Peony.frw", 41, 3, 2.0f);
         put_shot(shots, "Fireworks\\Comet.frw", 40, 0, 0.5f);
         put_shot(shots, "Fireworks\\Willow.frw", 40, 1, 1.0f);
         Bytes none;
-        none.u32(0);
-        b.u32(3);
+        none.put_u32(0);
+        b.put_u32(3);
         // The park's own names a show controller the park no longer has.
-        b.u32(0).u64(1).field(text("Evening Show")).field(text("Tune.wma")).u32(0b1100).u32(21 * 60).field(shots).u64(7);
-        b.u32(0).u64(2).field(text("Whale Show")).field(text("")).u32(0xffff).u32(22 * 60).field(none).u64(9);
-        b.u32(1).u64(9).u64(2);
+        b.put_u32(0).put_u64(1).field(text("Evening Show")).field(text("Tune.wma")).put_u32(0b1100).put_u32(21 * 60).field(shots).put_u64(7);
+        b.put_u32(0).put_u64(2).field(text("Whale Show")).field(text("")).put_u32(0xffff).put_u32(22 * 60).field(none).put_u64(9);
+        b.put_u32(1).put_u64(9).put_u64(2);
         return b.v;
     }
 
@@ -233,35 +233,35 @@ namespace
             { "FloatBlenderElement", { { "Float", "float32", 4 } } },
         };
         Bytes b;
-        b.u32(static_cast<std::uint32_t>(classes.size()));
+        b.put_u32(static_cast<std::uint32_t>(classes.size()));
         for (const auto& [name, attrs] : classes)
         {
-            b.name(name).u32(static_cast<std::uint32_t>(attrs.size()));
+            b.name(name).put_u32(static_cast<std::uint32_t>(attrs.size()));
             for (const Attr& a : attrs)
                 write_attr(b, a);
         }
         const auto put_shot = [](Bytes& shots, std::uint32_t kind, const std::string& effect, std::uint64_t source, std::uint64_t launcher, float seconds) {
             Bytes one;
-            one.u32(kind).field(text(effect)).u64(source).u64(launcher).f32(seconds);
+            one.put_u32(kind).field(text(effect)).put_u64(source).put_u64(launcher).put_f32(seconds);
             shots.field(one);
         };
         Bytes shots;
-        shots.u32(3);
+        shots.put_u32(3);
         put_shot(shots, 2, "Jets\\Spray.wjt", 2, 40, 2.0f);
         put_shot(shots, 0, "Fireworks\\Comet.frw", 0, 41, 0.5f);
         put_shot(shots, 2, "Jets\\Spray.wjt", 2, 40, 1.0f);
         Bytes points;
-        points.u32(3);
-        points.u64(5).f32(5.0f);
-        points.u64(6).f32(6.0f);
-        points.u64(5).f32(-1.0f); // Past the blender's count: not one of its points
-        b.u32(6);
-        b.u32(0).u64(1).field(text("Fountains")).u32(0xffff).u32(20 * 60).field(shots);
-        b.u32(1).u64(2).u64(3);
-        b.u32(2).u64(3).f32(10.0f).u64(4).u64(0);
-        b.u32(3).u64(4).f32(10.0f).u32(2).field(points);
-        b.u32(4).u64(5).f32(12.0f);
-        b.u32(4).u64(6).f32(16.0f);
+        points.put_u32(3);
+        points.put_u64(5).put_f32(5.0f);
+        points.put_u64(6).put_f32(6.0f);
+        points.put_u64(5).put_f32(-1.0f); // Past the blender's count: not one of its points
+        b.put_u32(6);
+        b.put_u32(0).put_u64(1).field(text("Fountains")).put_u32(0xffff).put_u32(20 * 60).field(shots);
+        b.put_u32(1).put_u64(2).put_u64(3);
+        b.put_u32(2).put_u64(3).put_f32(10.0f).put_u64(4).put_u64(0);
+        b.put_u32(3).put_u64(4).put_f32(10.0f).put_u32(2).field(points);
+        b.put_u32(4).put_u64(5).put_f32(12.0f);
+        b.put_u32(4).put_u64(6).put_f32(16.0f);
         return b.v;
     }
 

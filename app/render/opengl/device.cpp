@@ -488,9 +488,9 @@ namespace rct3::render::opengl
                 gl.VertexArrayElementBuffer(p.vertex_array, indices->second.buffer);
                 p.indices = indices->second.buffer;
             }
-            const bool u16 = command.index_type == IndexType::U16;
-            const std::uintptr_t offset = command.indices.offset + std::uintptr_t { command.first } * (u16 ? 2 : 4);
-            gl.DrawElementsBaseVertex(topology(p.desc.topology), static_cast<GLsizei>(command.count), u16 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, reinterpret_cast<const void*>(offset), command.vertex_offset);
+            const bool short_indices = command.index_type == IndexType::U16;
+            const std::uintptr_t offset = command.indices.offset + std::uintptr_t { command.first } * (short_indices ? 2 : 4);
+            gl.DrawElementsBaseVertex(topology(p.desc.topology), static_cast<GLsizei>(command.count), short_indices ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, reinterpret_cast<const void*>(offset), command.vertex_offset);
         }
         else
         {

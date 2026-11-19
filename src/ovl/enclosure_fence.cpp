@@ -42,10 +42,10 @@ namespace rct3::ovl
                 f.icon = record->ref(kIcon, "gsi");
                 for (std::size_t i = 0; i < f.pieces.size(); ++i)
                     f.pieces[i] = record->text(kPieces + 4 * i);
-                f.fence_cost = record->i32(kFenceCost);
-                f.fence_refund = record->i32(kFenceRefund);
-                f.gate_cost = record->i32(kGateCost);
-                f.gate_refund = record->i32(kGateRefund);
+                f.fence_cost = record->read_i32(kFenceCost);
+                f.fence_refund = record->read_i32(kFenceRefund);
+                f.gate_cost = record->read_i32(kGateCost);
+                f.gate_refund = record->read_i32(kGateRefund);
                 f.strength = record->real(kStrength);
                 item.fence = f;
             }

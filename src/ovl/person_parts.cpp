@@ -56,7 +56,7 @@ namespace rct3::ovl
             const std::uint32_t count = fixed + optional;
             if (count == 0)
                 return level;
-            const auto list = ItemRecord::open(space, refs, record.u32(offset + 4), std::size_t { count } * 4);
+            const auto list = ItemRecord::open(space, refs, record.read_u32(offset + 4), std::size_t { count } * 4);
             if (!list)
                 return std::nullopt;
             for (std::uint32_t i = 0; i < count; ++i)
@@ -75,7 +75,7 @@ namespace rct3::ovl
             section.kind = byte_at(*record, kKind);
             if (const std::uint32_t chances = byte_at(*record, kOptionalCount); chances != 0)
             {
-                const auto raw = space.bytes_at(record->u32(kChances), std::size_t { chances } * 4);
+                const auto raw = space.bytes_at(record->read_u32(kChances), std::size_t { chances } * 4);
                 if (!raw)
                     return std::nullopt;
                 for (std::uint32_t i = 0; i < chances; ++i)
@@ -105,7 +105,7 @@ namespace rct3::ovl
             const auto record = ItemRecord::open(space, refs, address, kPieceSize);
             if (!record)
                 return std::nullopt;
-            return BodyPiece { .texture = record->ref(8, kTextureTag), .mesh = record->ref(12, kMeshTag), .channel = record->u32(16) };
+            return BodyPiece { .texture = record->ref(8, kTextureTag), .mesh = record->ref(12, kMeshTag), .channel = record->read_u32(16) };
         }
 
         std::optional<HeadRig> read_head(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address)

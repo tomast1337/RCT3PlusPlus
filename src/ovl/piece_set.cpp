@@ -57,7 +57,7 @@ namespace rct3::ovl
             for (std::size_t i = 0; i < count; ++i)
             {
                 const std::size_t at = offset + i * 4;
-                out.push_back(ctx.string_at(address + static_cast<std::uint32_t>(at), fields::u32(raw, at)));
+                out.push_back(ctx.string_at(address + static_cast<std::uint32_t>(at), fields::read_u32(raw, at)));
             }
         }
 
@@ -65,8 +65,8 @@ namespace rct3::ovl
         /// returned value is how many bytes of rows to skip.
         std::optional<std::size_t> read_research(const Context& ctx, std::span<const std::byte> raw, std::uint32_t address, std::size_t offset, std::size_t header_size, std::vector<SceneryItemResearch>& out)
         {
-            const std::uint32_t count = fields::u32(raw, offset);
-            const std::uint32_t rows = fields::u32(raw, offset + 4);
+            const std::uint32_t count = fields::read_u32(raw, offset);
+            const std::uint32_t rows = fields::read_u32(raw, offset + 4);
             if (!ctx.reader.read_research(rows, count, out))
                 return std::nullopt;
             const bool inline_rows = count != 0 && rows == address + header_size;
@@ -91,7 +91,7 @@ namespace rct3::ovl
             if (!head)
                 return std::nullopt;
             PathType p;
-            p.header_word = fields::u32(*head, 0);
+            p.header_word = fields::read_u32(*head, 0);
             const std::uint32_t expansion = p.header_word >> 24;
             if (expansion > 1)
                 return std::nullopt;
@@ -100,7 +100,7 @@ namespace rct3::ovl
             const auto raw = ctx.reader.space().bytes_at(address, header);
             if (!raw)
                 return std::nullopt;
-            p.name = ctx.string_at(address + 4, fields::u32(*raw, 4));
+            p.name = ctx.string_at(address + 4, fields::read_u32(*raw, 4));
             p.name_text = ctx.reference(address + 8, kTextTag);
             p.icon = ctx.reference(address + 0xc, kIconTag);
 
@@ -130,14 +130,14 @@ namespace rct3::ovl
             if (!raw)
                 return std::nullopt;
             QueueType q;
-            q.name = ctx.string_at(address, fields::u32(*raw, 0));
+            q.name = ctx.string_at(address, fields::read_u32(*raw, 0));
             q.name_text = ctx.reference(address + 4, kTextTag);
             q.icon = ctx.reference(address + 8, kIconTag);
             q.ground = ctx.reference(address + 0xc, kGroundTag);
             for (std::size_t i = 0; i < q.piece_names.size(); ++i)
             {
                 const std::size_t at = 0x10 + i * 4;
-                q.piece_names[i] = ctx.string_at(address + static_cast<std::uint32_t>(at), fields::u32(*raw, at));
+                q.piece_names[i] = ctx.string_at(address + static_cast<std::uint32_t>(at), fields::read_u32(*raw, at));
             }
             const auto skip = read_research(ctx, *raw, address, 0x2c, kQueueHeader, q.research);
             if (!skip)
@@ -155,15 +155,15 @@ namespace rct3::ovl
             if (!raw)
                 return std::nullopt;
             PoolType p;
-            p.name = ctx.string_at(address, fields::u32(*raw, 0));
+            p.name = ctx.string_at(address, fields::read_u32(*raw, 0));
             p.name_text = ctx.reference(address + 4, kTextTag);
             p.icon = ctx.reference(address + 8, kIconTag);
             read_names(ctx, *raw, address, 0xc, kPoolNames, p.piece_names);
             std::size_t at = 0xc + kPoolNames * 4;
             for (auto& v : p.prices)
-                v = fields::i32(*raw, at), at += 4;
+                v = fields::read_i32(*raw, at), at += 4;
             for (auto& v : p.unknown_floats)
-                v = fields::f32(*raw, at), at += 4;
+                v = fields::read_f32(*raw, at), at += 4;
             const std::size_t spline_count = (kPoolHeader - at) / 4;
             p.splines.reserve(spline_count);
             for (std::size_t i = 0; i < spline_count; ++i)
@@ -183,22 +183,22 @@ namespace rct3::ovl
             if (!raw)
                 return std::nullopt;
             EnclosureType e;
-            e.name = ctx.string_at(address, fields::u32(*raw, 0));
+            e.name = ctx.string_at(address, fields::read_u32(*raw, 0));
             e.name_text = ctx.reference(address + 4, kTextTag);
             e.icon = ctx.reference(address + 8, kIconTag);
             for (std::size_t i = 0; i < e.piece_names.size(); ++i)
             {
                 const std::size_t at = 0xc + i * 4;
-                e.piece_names[i] = ctx.string_at(address + static_cast<std::uint32_t>(at), fields::u32(*raw, at));
+                e.piece_names[i] = ctx.string_at(address + static_cast<std::uint32_t>(at), fields::read_u32(*raw, at));
             }
             for (std::size_t i = 0; i < e.unknown_values.size(); ++i)
-                e.unknown_values[i] = fields::i32(*raw, 0x30 + i * 4);
+                e.unknown_values[i] = fields::read_i32(*raw, 0x30 + i * 4);
             for (std::size_t i = 0; i < e.splines.size(); ++i)
             {
                 e.splines[i] = ctx.reference(address + 0x40 + static_cast<std::uint32_t>(i * 4), kSplineTag);
             }
             for (std::size_t i = 0; i < e.unknown_floats.size(); ++i)
-                e.unknown_floats[i] = fields::f32(*raw, 0x50 + i * 4);
+                e.unknown_floats[i] = fields::read_f32(*raw, 0x50 + i * 4);
             auto items = read_items(ctx, address, kEnclosureHeader);
             if (!items)
                 return std::nullopt;

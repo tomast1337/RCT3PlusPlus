@@ -64,8 +64,8 @@ namespace rct3::ovl
             const auto block = ItemRecord::open(space, refs, address, 0x20);
             if (!block)
                 return std::nullopt;
-            const std::uint32_t first = block->u32(0);
-            return first != 0xFFFFFFFFu ? first : block->u32(0x1C);
+            const std::uint32_t first = block->read_u32(0);
+            return first != 0xFFFFFFFFu ? first : block->read_u32(0x1C);
         }
 
         /// How riders sit on a ride, from the same block as its guests: its second word, numbered as ride cars
@@ -74,14 +74,14 @@ namespace rct3::ovl
         [[nodiscard]] inline std::optional<std::uint8_t> read_ride_seating(const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t address)
         {
             const auto block = ItemRecord::open(space, refs, address, 0x20);
-            if (!block || block->u32(4) > 0xFF)
+            if (!block || block->read_u32(4) > 0xFF)
                 return std::nullopt;
-            return static_cast<std::uint8_t>(block->u32(4));
+            return static_cast<std::uint8_t>(block->read_u32(4));
         }
 
         [[nodiscard]] inline AttractionInfo read_attraction(const ItemRecord& record, const AttractionLayout& at, OvlLayout layout)
         {
-            const auto word = [&](std::optional<std::size_t> offset) -> std::uint32_t { return offset ? record.u32(*offset) : 0; };
+            const auto word = [&](std::optional<std::size_t> offset) -> std::uint32_t { return offset ? record.read_u32(*offset) : 0; };
             const auto ref = [&](std::optional<std::size_t> offset, std::string_view tag) -> std::string_view { return offset ? record.ref(*offset, tag) : std::string_view { }; };
 
             AttractionInfo info;

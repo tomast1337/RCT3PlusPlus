@@ -63,11 +63,11 @@ namespace rct3::ovl::animal
                 at_ += size;
                 return out;
             }
-            std::uint32_t u32() noexcept
+            std::uint32_t read_u32() noexcept
             {
                 return word<std::uint32_t>();
             }
-            std::uint16_t u16() noexcept
+            std::uint16_t read_u16() noexcept
             {
                 return word<std::uint16_t>();
             }
@@ -134,10 +134,10 @@ namespace rct3::ovl::animal
             const auto data = chunk_bytes(part, part.loaders.extra[row][0]);
             const auto names = chunk_bytes(part, part.loaders.extra[row][1]);
             Cursor c(data);
-            const std::uint32_t bone_count = c.u32();
-            c.u32(); // Lengths of two lookup tables the game builds itself.
-            const std::uint32_t extra_links = c.u32();
-            c.u32();
+            const std::uint32_t bone_count = c.read_u32();
+            c.read_u32(); // Lengths of two lookup tables the game builds itself.
+            const std::uint32_t extra_links = c.read_u32();
+            c.read_u32();
             if (!c.ok() || bone_count > kMaxBones || extra_links != 0)
                 return std::nullopt;
             c.take(std::size_t { prefix_words } * 4);
@@ -176,7 +176,7 @@ namespace rct3::ovl::animal
             // Material names: their lengths, then the names.
             std::vector<std::uint32_t> lengths(material_count);
             for (std::uint32_t& length : lengths)
-                length = c.u32();
+                length = c.read_u32();
             std::vector<std::string_view> materials;
             for (const std::uint32_t length : lengths)
             {
@@ -192,7 +192,7 @@ namespace rct3::ovl::animal
             const auto levels = c.take(std::size_t { level_count } * kLevelSize);
             for (std::uint32_t i = 0; i < level_count; ++i)
             {
-                if (c.u32() != 0)
+                if (c.read_u32() != 0)
                     return std::nullopt;
             }
             c.align();
@@ -266,7 +266,7 @@ namespace rct3::ovl::animal
                         return std::nullopt;
                     for (std::uint16_t k = 0; k < listed; ++k)
                     {
-                        const std::uint16_t mesh = static_cast<std::uint16_t>(c.u32() & 0xFFFF);
+                        const std::uint16_t mesh = static_cast<std::uint16_t>(c.read_u32() & 0xFFFF);
                         if (!c.ok() || mesh >= level.size())
                             return std::nullopt;
                         level[mesh].texture = materials[material];

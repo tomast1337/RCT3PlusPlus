@@ -30,23 +30,23 @@ namespace
             v.insert(v.end(), b, b + n);
             return *this;
         }
-        Bytes& u8(std::uint8_t x)
+        Bytes& put_u8(std::uint8_t x)
         {
             return put(&x, 1);
         }
-        Bytes& u16(std::uint16_t x)
+        Bytes& put_u16(std::uint16_t x)
         {
             return put(&x, 2);
         }
-        Bytes& u32(std::uint32_t x)
+        Bytes& put_u32(std::uint32_t x)
         {
             return put(&x, 4);
         }
-        Bytes& u64(std::uint64_t x)
+        Bytes& put_u64(std::uint64_t x)
         {
             return put(&x, 8);
         }
-        Bytes& f32(float x)
+        Bytes& put_f32(float x)
         {
             return put(&x, 4);
         }
@@ -57,14 +57,14 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<std::uint16_t>(s.size()));
             for (const char c : s)
-                u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<std::uint8_t>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<std::uint32_t>(payload.v.size()));
             return cat(payload);
         }
     };
@@ -76,15 +76,15 @@ namespace
         std::vector<Attr> children;
     };
 
-    Attr i32(const char* n)
+    Attr attr_i32(const char* n)
     {
         return { n, "int32", 4, { } };
     }
-    Attr u32(const char* n)
+    Attr attr_u32(const char* n)
     {
         return { n, "uint32", 4, { } };
     }
-    Attr f32(const char* n)
+    Attr attr_f32(const char* n)
     {
         return { n, "float32", 4, { } };
     }
@@ -128,12 +128,12 @@ namespace
     }
     Attr colours(const char* n)
     {
-        return structure(n, { i32("COL0"), i32("COL1"), i32("COL2") });
+        return structure(n, { attr_i32("COL0"), attr_i32("COL1"), attr_i32("COL2") });
     }
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).u32(a.size).u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -144,23 +144,23 @@ namespace
         if (a.size > 0)
         {
             for (std::uint32_t i = 0; i < a.size; ++i)
-                b.u8(0);
+                b.put_u8(0);
         }
         else if (a.type == "string")
         {
             Bytes p;
-            p.u32(0xEFEFEFEFu);
+            p.put_u32(0xEFEFEFEFu);
             b.blob(p);
         }
         else if (a.type == "list" || a.type == "array")
         {
             Bytes p;
-            p.u32(0);
+            p.put_u32(0);
             b.blob(p);
         }
         else
         {
-            b.u32(0);
+            b.put_u32(0);
         }
     }
 
@@ -172,53 +172,53 @@ namespace
         std::map<std::string, Bytes> set;
         Obj& i(const std::string& n, std::int32_t x)
         {
-            set[n] = Bytes().u32(static_cast<std::uint32_t>(x));
+            set[n] = Bytes().put_u32(static_cast<std::uint32_t>(x));
             return *this;
         }
         Obj& u(const std::string& n, std::uint32_t x)
         {
-            set[n] = Bytes().u32(x);
+            set[n] = Bytes().put_u32(x);
             return *this;
         }
         Obj& f(const std::string& n, float x)
         {
-            set[n] = Bytes().f32(x);
+            set[n] = Bytes().put_f32(x);
             return *this;
         }
         Obj& b(const std::string& n, bool x)
         {
-            set[n] = Bytes().u8(x ? 1 : 0);
+            set[n] = Bytes().put_u8(x ? 1 : 0);
             return *this;
         }
         Obj& r(const std::string& n, std::uint64_t x)
         {
-            set[n] = Bytes().u64(x);
+            set[n] = Bytes().put_u64(x);
             return *this;
         }
         Obj& s(const std::string& n, const std::u16string& x)
         {
             Bytes p;
-            p.u32(0xEFEFEFEFu);
+            p.put_u32(0xEFEFEFEFu);
             for (const auto c : x)
-                p.u16(c);
+                p.put_u16(c);
             set[n] = Bytes().blob(p);
             return *this;
         }
         Obj& refs(const std::string& n, const std::vector<std::uint64_t>& ids)
         {
             Bytes p;
-            p.u32(static_cast<std::uint32_t>(ids.size()));
+            p.put_u32(static_cast<std::uint32_t>(ids.size()));
             for (const auto x : ids)
-                p.u64(x);
+                p.put_u64(x);
             set[n] = Bytes().blob(p);
             return *this;
         }
         Obj& ints(const std::string& n, const std::vector<std::int32_t>& xs)
         {
             Bytes p;
-            p.u32(static_cast<std::uint32_t>(xs.size()));
+            p.put_u32(static_cast<std::uint32_t>(xs.size()));
             for (const auto x : xs)
-                p.u32(static_cast<std::uint32_t>(x));
+                p.put_u32(static_cast<std::uint32_t>(x));
             set[n] = Bytes().blob(p);
             return *this;
         }
@@ -247,15 +247,15 @@ namespace
         auto w = std::make_unique<World>();
         Bytes b;
         std::vector<std::string> order;
-        b.u32(static_cast<std::uint32_t>(schema.classes.size()));
+        b.put_u32(static_cast<std::uint32_t>(schema.classes.size()));
         for (const auto& [name, attrs] : schema.classes)
         {
             order.push_back(name);
-            b.name(name).u32(static_cast<std::uint32_t>(attrs.size()));
+            b.name(name).put_u32(static_cast<std::uint32_t>(attrs.size()));
             for (const auto& a : attrs)
                 write_attr(b, a);
         }
-        b.u32(static_cast<std::uint32_t>(objects.size()));
+        b.put_u32(static_cast<std::uint32_t>(objects.size()));
         for (const auto& o : objects)
         {
             std::uint32_t ci = 0;
@@ -264,7 +264,7 @@ namespace
                 if (order[k] == o.cls)
                     ci = k;
             }
-            b.u32(ci).u64(o.id);
+            b.put_u32(ci).put_u64(o.id);
             for (const auto& a : schema.classes.at(o.cls))
             {
                 const auto it = o.set.find(a.name);
@@ -288,56 +288,56 @@ namespace
     Schema ride_schema()
     {
         Schema s;
-        const Attr stations = { "RideStations", "list", 0, { ref("Entrance"), f32("EntranceTimeRemaining"), ref("Exit"), f32("ExitTimeRemaining"), ref("QueueLine"), f32("m_queueTimeSecs") } };
-        const auto results = [](const char* n) { return structure(n, { f32("MaxSpeed"), f32("RideLength"), i32("NDrops"), structure("CornerCounts", { i32("n90"), i32("n180"), i32("n270"), i32("n360") }), u32("Valid") }); };
+        const Attr stations = { "RideStations", "list", 0, { ref("Entrance"), attr_f32("EntranceTimeRemaining"), ref("Exit"), attr_f32("ExitTimeRemaining"), ref("QueueLine"), attr_f32("m_queueTimeSecs") } };
+        const auto results = [](const char* n) { return structure(n, { attr_f32("MaxSpeed"), attr_f32("RideLength"), attr_i32("NDrops"), structure("CornerCounts", { attr_i32("n90"), attr_i32("n180"), attr_i32("n270"), attr_i32("n360") }), attr_u32("Valid") }); };
         s.classes["TrackedRideInstance"] = {
             ref("AIDDatabaseEntry"),
             str("Name"),
-            i32("State"),
-            u32("Flags"),
-            i32("OpMode"),
-            i32("TicketPrice"),
-            i32("Direction"),
+            attr_i32("State"),
+            attr_u32("Flags"),
+            attr_i32("OpMode"),
+            attr_i32("TicketPrice"),
+            attr_i32("Direction"),
             ref("Track"),
             ref_list("Trains"),
-            i32("NTrains"),
-            i32("NCarsPerTrain"),
+            attr_i32("NTrains"),
+            attr_i32("NCarsPerTrain"),
             str("TrackedRideSymbolName"),
             str("TrackedRideOverlayName"),
             stations,
             ref("RideStationsObj"),
-            structure("RideAssessmentResults", { flag("AssessmentIsValid"), vec3("AssessmentRatings"), f32("AssessmentReliability"), f32("AssessmentUnderCover"), f32("AssessmentValue") }),
+            structure("RideAssessmentResults", { flag("AssessmentIsValid"), vec3("AssessmentRatings"), attr_f32("AssessmentReliability"), attr_f32("AssessmentUnderCover"), attr_f32("AssessmentValue") }),
             structure("TrackedRideStats", { structure("TrackedRideTesting", { results("Results"), results("SavedTrackedRideTestResults") }) }),
             int_list("m_downTimeCounters"),
-            f32("m_reliability"),
-            f32("FixedSpeed"),
-            i32("MinWaitTime"),
-            i32("m_breakdownType"),
+            attr_f32("m_reliability"),
+            attr_f32("FixedSpeed"),
+            attr_i32("MinWaitTime"),
+            attr_i32("m_breakdownType"),
             { "GraphSpeed", "graphedValue", 0, { } },
             colours("CarFlexiColours"),
             ref_list("BlockSections"),
             int_list("SortedTrains"),
-            { "RideSeats", "list", 0, { i32("TrainCarNo"), i32("TrainCarSeatNo"), i32("TrainNo") } },
-            { "IntervalData", "list", 0, { i32("GuestsPerInterval"), i32("IncomePerInterval"), i32("LossesPerInterval") } },
+            { "RideSeats", "list", 0, { attr_i32("TrainCarNo"), attr_i32("TrainCarSeatNo"), attr_i32("TrainNo") } },
+            { "IntervalData", "list", 0, { attr_i32("GuestsPerInterval"), attr_i32("IncomePerInterval"), attr_i32("LossesPerInterval") } },
         };
         s.classes["RideStations"] = { stations };
-        s.classes["QueueLine"] = { ref("HeadTile"), i32("QueueSize"), ref("RideInstance"), i32("StationIndex") };
+        s.classes["QueueLine"] = { ref("HeadTile"), attr_i32("QueueSize"), ref("RideInstance"), attr_i32("StationIndex") };
         s.classes["PathQueue"] = { ref("QueueLine") };
-        s.classes["Track"] = { i32("Direction"), ref("FirstSegment"), flag("IsCircuit"), ref("LastSegment"), flag("Prototype"), colours("TrackFlexiColours"), ref("TrackedRideInstance") };
+        s.classes["Track"] = { attr_i32("Direction"), ref("FirstSegment"), flag("IsCircuit"), ref("LastSegment"), flag("Prototype"), colours("TrackFlexiColours"), ref("TrackedRideInstance") };
         s.classes["TrackSegment"] = { ref("Track"), ref("FirstPiece"), ref("LastPiece"), ref("NextSegment"), ref("PrevSegment") };
         s.classes["TrackPiece"] = {
-            str("SYMBOLNAME"), ref("SIDDatabaseEntry"), ref("SceneryItem"), structure("SceneryItemDataField", { i32("POSX"), i32("POSZ"), i32("HEIGHT"), i32("DIRECTION"), i32("CORNER") }), flag("Reversed"), f32("StartDistance"), f32("StartDistanceBackwardsSpline"), colours("FlexiColourField"), i32("BrakeSpeed"), i32("HoldingTime"), ref("Next"), ref("Prev"), ref("Segment"), ref("PlatformPiece"),
+            str("SYMBOLNAME"), ref("SIDDatabaseEntry"), ref("SceneryItem"), structure("SceneryItemDataField", { attr_i32("POSX"), attr_i32("POSZ"), attr_i32("HEIGHT"), attr_i32("DIRECTION"), attr_i32("CORNER") }), flag("Reversed"), attr_f32("StartDistance"), attr_f32("StartDistanceBackwardsSpline"), colours("FlexiColourField"), attr_i32("BrakeSpeed"), attr_i32("HoldingTime"), ref("Next"), ref("Prev"), ref("Segment"), ref("PlatformPiece"),
         };
-        s.classes["TrackPlatformPiece"] = { ref("TrackPiece"), u32("Flags"), structure("SceneryItemDataField", { i32("POSX"), i32("POSZ"), i32("HEIGHT"), i32("DIRECTION"), i32("CORNER") }) };
+        s.classes["TrackPlatformPiece"] = { ref("TrackPiece"), attr_u32("Flags"), structure("SceneryItemDataField", { attr_i32("POSX"), attr_i32("POSZ"), attr_i32("HEIGHT"), attr_i32("DIRECTION"), attr_i32("CORNER") }) };
         s.classes["RideTrainInstance"] = {
-            ref("TrackedRideInstance"), ref_list("Cars"), i32("WhichTrain"), i32("State"), f32("StateTime"), f32("Distance"), f32("Speed"), i32("Station"), str("RideTrainSymbolName"), ref("FrontTrackPiece"), f32("Mass"),
+            ref("TrackedRideInstance"), ref_list("Cars"), attr_i32("WhichTrain"), attr_i32("State"), attr_f32("StateTime"), attr_f32("Distance"), attr_f32("Speed"), attr_i32("Station"), str("RideTrainSymbolName"), ref("FrontTrackPiece"), attr_f32("Mass"),
         };
         s.classes["RideCarInstance"] = {
-            ref("RideTrainInstance"), i32("WhichCar"), i32("NCars"), i32("WhichRideTrainCar"), i32("State"), i32("NumPeepsInCar"), structure("Stats", { f32("Distance"), f32("Speed"), vec3("Pos"), flag("PosValid"), ref("TrackPiece") }),
+            ref("RideTrainInstance"), attr_i32("WhichCar"), attr_i32("NCars"), attr_i32("WhichRideTrainCar"), attr_i32("State"), attr_i32("NumPeepsInCar"), structure("Stats", { attr_f32("Distance"), attr_f32("Speed"), vec3("Pos"), flag("PosValid"), ref("TrackPiece") }),
         };
-        s.classes["StallInstance"] = { ref("AIDDatabaseEntry"), str("Name"), i32("State"), i32("TotalProfit"), str("StallSymbolName"), ref("Scenery"), i32("Direction"), ref_list("ShopItems"), ref_list("ShopExtras") };
-        s.classes["ShopItemInstance"] = { ref("CIDEntry"), i32("Price"), i32("TotalSold"), str("Name"), ref("Stall"), ref("SaleItem"), i32("FlexiColour0"), i32("Extras") };
-        s.classes["ShopExtraInstance"] = { ref("CIDEntry"), i32("Setting") };
+        s.classes["StallInstance"] = { ref("AIDDatabaseEntry"), str("Name"), attr_i32("State"), attr_i32("TotalProfit"), str("StallSymbolName"), ref("Scenery"), attr_i32("Direction"), ref_list("ShopItems"), ref_list("ShopExtras") };
+        s.classes["ShopItemInstance"] = { ref("CIDEntry"), attr_i32("Price"), attr_i32("TotalSold"), str("Name"), ref("Stall"), ref("SaleItem"), attr_i32("FlexiColour0"), attr_i32("Extras") };
+        s.classes["ShopExtraInstance"] = { ref("CIDEntry"), attr_i32("Setting") };
         return s;
     }
 
@@ -349,7 +349,7 @@ namespace
         Obj p { "TrackPiece", id, { } };
         p.s("SYMBOLNAME", sym).r("Next", next).r("Prev", prev).r("Segment", kSeg).f("StartDistance", dist);
         Bytes at;
-        at.u32(static_cast<std::uint32_t>(x)).u32(7).u32(static_cast<std::uint32_t>(-3)).u32(2).u32(1);
+        at.put_u32(static_cast<std::uint32_t>(x)).put_u32(7).put_u32(static_cast<std::uint32_t>(-3)).put_u32(2).put_u32(1);
         p.raw("SceneryItemDataField", at);
         return p;
     }
@@ -489,12 +489,12 @@ TEST_CASE("uninitialised fill is masked or defaulted")
 {
     Obj r { "TrackedRideInstance", 5, { } };
     Bytes assess;
-    assess.u8(0).f32(std::bit_cast<float>(0xCCCCCCCCu)).f32(std::bit_cast<float>(0xCCCCCCCCu)).f32(std::bit_cast<float>(0xCCCCCCCCu)).f32(std::bit_cast<float>(0xCCCCCCCCu)).f32(std::bit_cast<float>(0xCCCCCCCCu)).f32(std::bit_cast<float>(0xCCCCCCCCu));
+    assess.put_u8(0).put_f32(std::bit_cast<float>(0xCCCCCCCCu)).put_f32(std::bit_cast<float>(0xCCCCCCCCu)).put_f32(std::bit_cast<float>(0xCCCCCCCCu)).put_f32(std::bit_cast<float>(0xCCCCCCCCu)).put_f32(std::bit_cast<float>(0xCCCCCCCCu)).put_f32(std::bit_cast<float>(0xCCCCCCCCu));
     r.raw("RideAssessmentResults", assess);
     // Last lap: valid word has junk in the upper bytes and bit 0 set. Current lap: junk but bit 0 clear.
     const auto results = [](float speed, std::uint32_t valid) {
         Bytes b;
-        b.f32(speed).f32(0).u32(0).u32(0).u32(0).u32(0).u32(0).u32(valid);
+        b.put_f32(speed).put_f32(0).put_u32(0).put_u32(0).put_u32(0).put_u32(0).put_u32(0).put_u32(valid);
         return b;
     };
     Bytes testing;
@@ -613,7 +613,7 @@ TEST_CASE("hostile list counts leave the lists empty")
 {
     Obj r { "TrackedRideInstance", 5, { } };
     Bytes huge;
-    huge.u32(0x7FFFFFFFu).u64(1); // claims two billion entries in eight bytes of data
+    huge.put_u32(0x7FFFFFFFu).put_u64(1); // claims two billion entries in eight bytes of data
     r.raw("Trains", Bytes().blob(huge));
     r.raw("RideSeats", Bytes().blob(huge));
     r.raw("m_downTimeCounters", Bytes().blob(huge));
@@ -629,11 +629,11 @@ TEST_CASE("stations resolve through the holder object and count queue tiles")
     objs[0].r("RideStationsObj", 70);
     const auto station = [](std::uint64_t entrance, std::uint64_t line) {
         Bytes b;
-        b.u64(entrance).f32(1.5f).u64(kStale).f32(0).u64(line).f32(30.0f);
+        b.put_u64(entrance).put_f32(1.5f).put_u64(kStale).put_f32(0).put_u64(line).put_f32(30.0f);
         return b;
     };
     Bytes list;
-    list.u32(2).cat(station(80, 71)).cat(station(kStale, 72));
+    list.put_u32(2).cat(station(80, 71)).cat(station(kStale, 72));
     Obj holder { "RideStations", 70, { } };
     holder.raw("RideStations", Bytes().blob(list));
     Obj entrance { "TrackedRideInstance", 80, { } }; // any live object works as the placement target
@@ -681,7 +681,7 @@ TEST_CASE("station platforms attach to their pieces")
     Obj pl { "TrackPlatformPiece", 90, { } };
     pl.r("TrackPiece", kB).u("Flags", 5);
     Bytes at;
-    at.u32(11).u32(7).u32(0).u32(1).u32(0);
+    at.put_u32(11).put_u32(7).put_u32(0).put_u32(1).put_u32(0);
     pl.raw("SceneryItemDataField", at);
     objs.push_back(pl);
     const auto w = build(ride_schema(), objs);
@@ -743,7 +743,7 @@ TEST_CASE("stalls load items and extras with prices in hundredths")
 TEST_CASE("a save without any rides loads an empty model")
 {
     Schema s;
-    s.classes["Other"] = { i32("x") };
+    s.classes["Other"] = { attr_i32("x") };
     const auto w = build(s, { Obj { "Other", 1, { } } });
     CHECK(w->model.rides.empty());
     CHECK(w->model.stalls.empty());
@@ -754,19 +754,19 @@ TEST_CASE("placement records give where an attraction's parts stand, and fence e
     Schema s;
     const Attr stations = { "RideStations", "list", 0, { ref("Entrance"), ref("Exit") } };
     s.classes["AnimatedRideInstance"] = { ref("Scenery"), ref("Fence"), ref("OverrideFence"), stations };
-    s.classes["Placement"] = { ref("SceneryItem"), structure("SceneryItemDataField", { i32("POSX"), i32("POSZ"), i32("HEIGHT"), i32("DIRECTION"), i32("CORNER") }) };
-    s.classes["SceneryItem"] = { i32("Unused") };
+    s.classes["Placement"] = { ref("SceneryItem"), structure("SceneryItemDataField", { attr_i32("POSX"), attr_i32("POSZ"), attr_i32("HEIGHT"), attr_i32("DIRECTION"), attr_i32("CORNER") }) };
+    s.classes["SceneryItem"] = { attr_i32("Unused") };
     s.classes["SIDDatabaseEntry"] = { str("SYMBOLNAME"), str("OVERLAYFILENAME") };
 
     const auto placement = [](std::uint64_t id, std::uint64_t item, std::int32_t col, std::int32_t row, std::int32_t height, std::int32_t direction) {
         Obj p { "Placement", id, { } };
-        p.r("SceneryItem", item).raw("SceneryItemDataField", Bytes().u32(static_cast<std::uint32_t>(col)).u32(static_cast<std::uint32_t>(row)).u32(static_cast<std::uint32_t>(height)).u32(static_cast<std::uint32_t>(direction)).u32(0));
+        p.r("SceneryItem", item).raw("SceneryItemDataField", Bytes().put_u32(static_cast<std::uint32_t>(col)).put_u32(static_cast<std::uint32_t>(row)).put_u32(static_cast<std::uint32_t>(height)).put_u32(static_cast<std::uint32_t>(direction)).put_u32(0));
         return p;
     };
     Obj ride { "AnimatedRideInstance", 5, { } };
     ride.r("Scenery", 30).r("Fence", 40).r("OverrideFence", kStale);
     Bytes list;
-    list.u32(1).u64(31).u64(kStale);
+    list.put_u32(1).put_u64(31).put_u64(kStale);
     ride.raw("RideStations", Bytes().blob(list));
     Obj fence { "SIDDatabaseEntry", 40, { } };
     fence.s("SYMBOLNAME", u"Picket:sid").s("OVERLAYFILENAME", u"Fences\\Picket");
@@ -796,7 +796,7 @@ TEST_CASE("a show ride's show loads its known tricks and the order they are put 
 {
     Schema s;
     s.classes["ShowController"] = { ref("Ride"), ref_list("AvailableAnimations"), ref_list("AnimationSequence") };
-    s.classes["InventibleAnimation"] = { str("Name"), f32("Duration"), flag("IsHidden"), flag("IsAvailable"), flag("IsInvented") };
+    s.classes["InventibleAnimation"] = { str("Name"), attr_f32("Duration"), flag("IsHidden"), flag("IsAvailable"), flag("IsInvented") };
     Obj show { "ShowController", 10, { } };
     show.r("Ride", 3).refs("AvailableAnimations", { 20, 21, 22, kStale }).refs("AnimationSequence", { 22, 21, 22, kStale });
     Obj idle { "InventibleAnimation", 20, { } };

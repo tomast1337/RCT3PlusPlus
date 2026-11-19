@@ -81,8 +81,8 @@ namespace rct3::parkfile
 
     save::model::Cash kept_cash(const simulation::Wallet& wallet)
     {
-        const auto i32 = [](units::Money m) { return static_cast<std::int32_t>(std::clamp<std::int64_t>(m.value, std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max())); };
-        return { .bank = i32(wallet.bank), .current = i32(wallet.cash), .withdrawn = i32(wallet.withdrawn), .spent_drink = i32(wallet.spent_drink), .spent_food = i32(wallet.spent_food), .spent_park_entry = i32(wallet.spent_entry), .spent_rides = i32(wallet.spent_rides), .spent_souvenirs = i32(wallet.spent_souvenirs), .total_spent = i32(wallet.spent) };
+        const auto clamp_i32 = [](units::Money m) { return static_cast<std::int32_t>(std::clamp<std::int64_t>(m.value, std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max())); };
+        return { .bank = clamp_i32(wallet.bank), .current = clamp_i32(wallet.cash), .withdrawn = clamp_i32(wallet.withdrawn), .spent_drink = clamp_i32(wallet.spent_drink), .spent_food = clamp_i32(wallet.spent_food), .spent_park_entry = clamp_i32(wallet.spent_entry), .spent_rides = clamp_i32(wallet.spent_rides), .spent_souvenirs = clamp_i32(wallet.spent_souvenirs), .total_spent = clamp_i32(wallet.spent) };
     }
 
     SavedPeople keep_people(const simulation::SimWorld& world, save::model::PeopleModel model, const std::unordered_map<entt::entity, std::int32_t>& looks)

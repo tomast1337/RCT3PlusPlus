@@ -77,19 +77,19 @@ namespace rct3::audio
                     v = (v << 8) | std::to_integer<std::uint64_t>(b[i]);
                 return v;
             }
-            std::uint8_t u8()
+            std::uint8_t read_u8()
             {
                 return static_cast<std::uint8_t>(value(1));
             }
-            std::uint16_t u16()
+            std::uint16_t read_u16()
             {
                 return static_cast<std::uint16_t>(value(2));
             }
-            std::uint32_t u32()
+            std::uint32_t read_u32()
             {
                 return static_cast<std::uint32_t>(value(4));
             }
-            std::uint64_t u64()
+            std::uint64_t read_u64()
             {
                 return value(8);
             }
@@ -124,14 +124,14 @@ namespace rct3::audio
         std::expected<AsfVideoFormat, std::string> read_video(Reader w)
         {
             AsfVideoFormat f;
-            f.width = w.u32();
-            f.height = w.u32();
+            f.width = w.read_u32();
+            f.height = w.read_u32();
             w.skip(1); // Reserved
-            const std::uint16_t format_size = w.u16();
+            const std::uint16_t format_size = w.read_u16();
             Reader b(w.bytes(format_size));
-            const std::uint32_t header_size = b.u32();
+            const std::uint32_t header_size = b.read_u32();
             b.skip(4 + 4 + 2 + 2); // Width, height, planes, bits per pixel
-            f.codec = b.u32();
+            f.codec = b.read_u32();
             b.skip(4 + 4 + 4 + 4 + 4); // Image size, pixels per metre twice, colours used and important
             if (!w.ok() || !b.ok() || header_size < kBitmapHeader || header_size > format_size)
                 return std::unexpected("cut short video format");
@@ -147,9 +147,9 @@ namespace rct3::audio
             const Guid type = r.guid();
             const Guid correction = r.guid();
             r.skip(8); // Time offset
-            const std::uint32_t specific_size = r.u32();
-            const std::uint32_t correction_size = r.u32();
-            const std::uint16_t flags = r.u16();
+            const std::uint32_t specific_size = r.read_u32();
+            const std::uint32_t correction_size = r.read_u32();
+            const std::uint16_t flags = r.read_u16();
             r.skip(4);
             if (!r.ok())
                 return std::unexpected("cut short stream properties");
@@ -174,17 +174,17 @@ namespace rct3::audio
             StreamInfo s;
             s.number = static_cast<std::uint8_t>(flags & 0x7F);
             AsfAudioFormat& f = s.format;
-            f.codec = w.u16();
-            f.channels = w.u16();
-            f.sample_rate = w.u32();
-            f.bytes_per_second = w.u32();
-            f.block_align = w.u16();
-            f.bits_per_sample = w.u16();
+            f.codec = w.read_u16();
+            f.channels = w.read_u16();
+            f.sample_rate = w.read_u32();
+            f.bytes_per_second = w.read_u32();
+            f.block_align = w.read_u16();
+            f.bits_per_sample = w.read_u16();
             if (!w.ok())
                 return std::unexpected("cut short audio format");
             if (w.left() >= 2)
             {
-                const std::uint16_t extra = w.u16();
+                const std::uint16_t extra = w.read_u16();
                 const auto bytes = w.bytes(extra);
                 if (!w.ok())
                     return std::unexpected("cut short codec bytes");
@@ -202,7 +202,7 @@ namespace rct3::audio
         Reader r(start);
         if (r.guid() != kHeaderObject || !r.ok())
             return std::unexpected("not an ASF file");
-        const std::uint64_t size = r.u64();
+        const std::uint64_t size = r.read_u64();
         if (size < 30 || size > kMaxHeader)
             return std::unexpected("bad ASF header size");
         return static_cast<std::size_t>(size) + kDataObjectHeader;
@@ -217,8 +217,8 @@ namespace rct3::audio
             return std::unexpected("cut short ASF header");
         Reader r(head);
         r.skip(16);
-        const std::uint64_t header_end = r.u64();
-        const std::uint32_t objects = r.u32();
+        const std::uint64_t header_end = r.read_u64();
+        const std::uint32_t objects = r.read_u32();
         r.skip(2);
 
         AsfHeader h;
@@ -228,20 +228,20 @@ namespace rct3::audio
         {
             const std::size_t start = r.position();
             const Guid id = r.guid();
-            const std::uint64_t object_size = r.u64();
+            const std::uint64_t object_size = r.read_u64();
             if (!r.ok() || object_size < kObjectHeader || object_size > header_end - start)
                 return std::unexpected("bad object in the ASF header");
             Reader body(r.bytes(static_cast<std::size_t>(object_size - kObjectHeader)));
             if (id == kFileProperties)
             {
                 body.skip(16 + 8 + 8); // File id, file size, creation date
-                h.packet_count = body.u64();
-                const std::uint64_t play = body.u64();    // In 100 ns
-                body.skip(8);                             // Send duration
-                const std::uint64_t preroll = body.u64(); // In ms
-                body.skip(4);                             // Flags
-                const std::uint32_t min_packet = body.u32();
-                const std::uint32_t max_packet = body.u32();
+                h.packet_count = body.read_u64();
+                const std::uint64_t play = body.read_u64();    // In 100 ns
+                body.skip(8);                                  // Send duration
+                const std::uint64_t preroll = body.read_u64(); // In ms
+                body.skip(4);                                  // Flags
+                const std::uint32_t min_packet = body.read_u32();
+                const std::uint32_t max_packet = body.read_u32();
                 if (!body.ok())
                     return std::unexpected("cut short file properties");
                 if (min_packet != max_packet || min_packet == 0)
@@ -289,15 +289,15 @@ namespace rct3::audio
     std::expected<std::vector<AsfPayload>, std::string> read_asf_packet(std::span<const std::byte> packet)
     {
         Reader r(packet);
-        std::uint8_t flags = r.u8();
+        std::uint8_t flags = r.read_u8();
         if (flags & 0x80) // Error correction data first
         {
             if (flags & 0x10)
                 return std::unexpected("unknown ASF error correction");
             r.skip(flags & 0x0F);
-            flags = r.u8();
+            flags = r.read_u8();
         }
-        const std::uint8_t properties = r.u8();
+        const std::uint8_t properties = r.read_u8();
         const bool multiple = flags & 0x01;
         std::uint32_t length = r.sized(flags >> 5);
         r.sized(flags >> 1); // Sequence
@@ -315,7 +315,7 @@ namespace rct3::audio
         std::uint32_t length_type = 0;
         if (multiple)
         {
-            const std::uint8_t payload_flags = r.u8();
+            const std::uint8_t payload_flags = r.read_u8();
             count = payload_flags & 0x3F;
             length_type = payload_flags >> 6;
         }
@@ -323,7 +323,7 @@ namespace rct3::audio
         for (std::uint32_t i = 0; i < count; ++i)
         {
             AsfPayload p;
-            const std::uint8_t stream = r.u8();
+            const std::uint8_t stream = r.read_u8();
             p.stream = stream & 0x7F;
             p.key_frame = (stream & 0x80) != 0;
             p.object = r.sized(properties >> 4);
@@ -335,8 +335,8 @@ namespace rct3::audio
             if (replicated >= 8)
             {
                 Reader e(extra);
-                p.object_size = e.u32();
-                p.time = e.u32();
+                p.object_size = e.read_u32();
+                p.time = e.read_u32();
             }
             const std::uint32_t size = multiple ? r.sized(length_type) : static_cast<std::uint32_t>(r.position() <= end ? end - r.position() : 0);
             if (!r.ok() || r.position() > end || size > end - r.position())

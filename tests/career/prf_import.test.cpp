@@ -23,19 +23,19 @@ namespace
             v.insert(v.end(), b, b + n);
             return *this;
         }
-        Bytes& u8(std::uint8_t x)
+        Bytes& put_u8(std::uint8_t x)
         {
             return put(&x, 1);
         }
-        Bytes& u16(std::uint16_t x)
+        Bytes& put_u16(std::uint16_t x)
         {
             return put(&x, 2);
         }
-        Bytes& u32(std::uint32_t x)
+        Bytes& put_u32(std::uint32_t x)
         {
             return put(&x, 4);
         }
-        Bytes& u64(std::uint64_t x)
+        Bytes& put_u64(std::uint64_t x)
         {
             return put(&x, 8);
         }
@@ -46,22 +46,22 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<std::uint16_t>(s.size()));
             for (const char c : s)
-                u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<std::uint8_t>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<std::uint32_t>(payload.v.size()));
             return cat(payload);
         }
         Bytes& text(const std::u16string& s)
         {
             Bytes p;
-            p.u32(0xEFEFEFEFu); // Marks UTF-16 text
+            p.put_u32(0xEFEFEFEFu); // Marks UTF-16 text
             for (const char16_t c : s)
-                p.u16(c);
+                p.put_u16(c);
             return blob(p);
         }
     };
@@ -75,7 +75,7 @@ namespace
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).u32(a.size).u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -95,16 +95,16 @@ namespace
             { "ScenarioData", "array", 0, { { "LastSaveName", "string" }, { "Status", "int32", 4 } } },
         };
         Bytes b;
-        b.u32(1);
-        b.name(class_name).u32(static_cast<std::uint32_t>(attrs.size()));
+        b.put_u32(1);
+        b.name(class_name).put_u32(static_cast<std::uint32_t>(attrs.size()));
         for (const auto& a : attrs)
             write_attr(b, a);
         Bytes list;
-        list.u32(static_cast<std::uint32_t>(entries.size()));
+        list.put_u32(static_cast<std::uint32_t>(entries.size()));
         for (const auto& e : entries)
-            list.text(e.last_save).u32(e.status);
-        b.u32(1).u32(0).u64(5);
-        b.u32(static_cast<std::uint32_t>(pack)).u32(static_cast<std::uint32_t>(current)).text(name).blob(list);
+            list.text(e.last_save).put_u32(e.status);
+        b.put_u32(1).put_u32(0).put_u64(5);
+        b.put_u32(static_cast<std::uint32_t>(pack)).put_u32(static_cast<std::uint32_t>(current)).text(name).blob(list);
         return b.v;
     }
 

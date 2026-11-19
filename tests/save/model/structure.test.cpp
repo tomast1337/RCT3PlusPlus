@@ -17,7 +17,7 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& u8(std::uint8_t x)
+        Bytes& put_u8(std::uint8_t x)
         {
             v.push_back(static_cast<std::byte>(x));
             return *this;
@@ -28,19 +28,19 @@ namespace
             v.insert(v.end(), b, b + n);
             return *this;
         }
-        Bytes& u16(std::uint16_t x)
+        Bytes& put_u16(std::uint16_t x)
         {
             return put(&x, 2);
         }
-        Bytes& u32(std::uint32_t x)
+        Bytes& put_u32(std::uint32_t x)
         {
             return put(&x, 4);
         }
-        Bytes& i32(std::int32_t x)
+        Bytes& put_i32(std::int32_t x)
         {
             return put(&x, 4);
         }
-        Bytes& u64(std::uint64_t x)
+        Bytes& put_u64(std::uint64_t x)
         {
             return put(&x, 8);
         }
@@ -51,22 +51,22 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<std::uint16_t>(s.size()));
             for (const char c : s)
-                u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<std::uint8_t>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<std::uint32_t>(payload.v.size()));
             return cat(payload);
         }
         Bytes& text(const std::u16string& s)
         {
             Bytes p;
-            p.u32(0xEFEFEFEFu);
+            p.put_u32(0xEFEFEFEFu);
             for (const auto c : s)
-                p.u16(c);
+                p.put_u16(c);
             return blob(p);
         }
     };
@@ -80,7 +80,7 @@ namespace
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).u32(a.size).u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -101,33 +101,33 @@ namespace
     {
         const std::vector<Attr> piece_fields = { i32a("Col"), i32a("Corner"), i32a("Dir"), i32a("FlexiPick0"), i32a("FlexiPick1"), i32a("FlexiPick2"), i32a("Height"), i32a("Row"), { "SID", "reference", 8, { } } };
         Bytes b;
-        b.u32(2);
-        b.name("SavedSelection").u32(5);
+        b.put_u32(2);
+        b.name("SavedSelection").put_u32(5);
         write_attr(b, i32a("Cols"));
         write_attr(b, { "Name", "string", 0, { } });
         write_attr(b, i32a("Rows"));
         write_attr(b, { "Scenery", "array", 0, piece_fields });
         write_attr(b, { "Selected", "array", 0, { { "Selected", "bool", 1, { } } } });
-        b.name("SIDDatabaseEntry").u32(2);
+        b.name("SIDDatabaseEntry").put_u32(2);
         write_attr(b, { "OVERLAYFILENAME", "string", 0, { } });
         write_attr(b, { "SYMBOLNAME", "string", 0, { } });
 
-        b.u32(3);
+        b.put_u32(3);
         Bytes s;
-        s.i32(cols).text(u"Gate house").i32(rows);
+        s.put_i32(cols).text(u"Gate house").put_i32(rows);
         Bytes list;
-        list.u32(static_cast<std::uint32_t>(pieces.size()));
+        list.put_u32(static_cast<std::uint32_t>(pieces.size()));
         for (const Piece& p : pieces)
-            list.i32(p.col).i32(p.corner).i32(p.dir).i32(4).i32(5).i32(6).i32(p.height).i32(p.row).u64(p.sid);
+            list.put_i32(p.col).put_i32(p.corner).put_i32(p.dir).put_i32(4).put_i32(5).put_i32(6).put_i32(p.height).put_i32(p.row).put_u64(p.sid);
         s.blob(list);
         Bytes marks;
-        marks.u32(static_cast<std::uint32_t>(selected.size()));
+        marks.put_u32(static_cast<std::uint32_t>(selected.size()));
         for (const bool m : selected)
-            marks.u8(m ? 1 : 0);
+            marks.put_u8(m ? 1 : 0);
         s.blob(marks);
-        b.u32(0).u64(10).cat(s);
-        b.u32(1).u64(20).text(u"Style/Themed/Castle/style").text(u"wall_a");
-        b.u32(1).u64(21).text(u"Style/Themed/Castle/style").text(u"");
+        b.put_u32(0).put_u64(10).cat(s);
+        b.put_u32(1).put_u64(20).text(u"Style/Themed/Castle/style").text(u"wall_a");
+        b.put_u32(1).put_u64(21).text(u"Style/Themed/Castle/style").text(u"");
         return b.v;
     }
 

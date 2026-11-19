@@ -379,13 +379,13 @@ TEST_CASE("a track set's pieces are also looked for in the files beside it whose
     const auto write = [&](const std::string& name, const std::string& tag) {
         test::Builder b;
         b.raw("FGRK", 4);
-        b.u8(0x02), b.u8(0), b.u8(0), b.u8(0);
-        b.u32(5), b.u32(0x10);
-        b.u16(0), b.u16(0); // No stream block
-        b.u32(0), b.u32(0); // No references
-        b.u32(1);
-        b.str("FGDK"), b.str("Loader"), b.u32(1), b.str(tag);
-        b.u32(0), b.u32(1);
+        b.put_u8(0x02), b.put_u8(0), b.put_u8(0), b.put_u8(0);
+        b.put_u32(5), b.put_u32(0x10);
+        b.put_u16(0), b.put_u16(0); // No stream block
+        b.put_u32(0), b.put_u32(0); // No references
+        b.put_u32(1);
+        b.str("FGDK"), b.str("Loader"), b.put_u32(1), b.str(tag);
+        b.put_u32(0), b.put_u32(1);
         std::ofstream(dir / name, std::ios::binary).write(reinterpret_cast<const char*>(b.bytes.data()), static_cast<std::streamsize>(b.bytes.size()));
     };
     write("Set.common.ovl", "tks");

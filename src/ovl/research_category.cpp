@@ -25,19 +25,19 @@ namespace rct3::ovl
             const auto b = *raw;
 
             ResearchCategory c;
-            c.kind = fields::u32(b, 0x00);
-            c.name = fields::string_field(space, pointers, address + 4, fields::u32(b, 0x04));
+            c.kind = fields::read_u32(b, 0x00);
+            c.name = fields::string_field(space, pointers, address + 4, fields::read_u32(b, 0x04));
             c.name_text = refs.find(address + 8, kTextTag);
-            c.start_level = fields::f32(b, 0x0c);
-            c.develop_cost = fields::f32(b, 0x10);
+            c.start_level = fields::read_f32(b, 0x0c);
+            c.develop_cost = fields::read_f32(b, 0x10);
 
-            const std::uint32_t count = fields::u32(b, 0x14);
+            const std::uint32_t count = fields::read_u32(b, 0x14);
             if (count > kMaxPrerequisites)
                 return std::nullopt;
             if (count != 0)
             {
                 // Each row: the category, a word that is -1 in files seen, and the level as a float.
-                const std::uint32_t rows = fields::u32(b, 0x18);
+                const std::uint32_t rows = fields::read_u32(b, 0x18);
                 const auto all = space.bytes_at(rows, std::size_t { count } * kRowSize);
                 if (!all)
                     return std::nullopt;
@@ -49,8 +49,8 @@ namespace rct3::ovl
                     c.prerequisites.push_back(
                         {
                             .category = refs.find(at, kCategoryTag),
-                            .unknown = fields::i32(*all, off + 4),
-                            .level = fields::f32(*all, off + 8),
+                            .unknown = fields::read_i32(*all, off + 4),
+                            .level = fields::read_f32(*all, off + 8),
                         });
                 }
             }

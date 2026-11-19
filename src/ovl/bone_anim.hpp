@@ -18,10 +18,11 @@ namespace rct3::ovl
     struct BoneKeyframe
     {
         float time = 0;
-        /// Translation for a position track. For a rotation track three angles in radians. A single-axis
-        /// angle about x matches the bone's stored rotation under the row-vector convention
-        /// [[1,0,0],[0,cos,sin],[0,-sin,cos]]. The order in which the three axes combine and the way
-        /// keyframes are interpolated are not confirmed.
+        /// Translation for a position track. For a rotation track a rotation vector: its direction is the axis
+        /// and its length the angle in radians, so the three values are not separate per-axis angles and have no
+        /// axis order. For a single axis it matches the bone's stored rotation under the row-vector convention
+        /// [[1,0,0],[0,cos,sin],[0,-sin,cos]]. Checked on thousands of bones whose first keyframe equals the
+        /// rest pose. How keyframes are blended between two times is not confirmed.
         std::array<float, 3> value { };
     };
 

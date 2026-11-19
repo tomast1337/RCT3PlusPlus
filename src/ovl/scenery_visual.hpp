@@ -36,7 +36,8 @@ namespace rct3::ovl
         float height = 0;
         /// Texture rectangle as {u0, u1, v0, v1}, {0, 1, 0, 1} for the other types.
         std::array<float, 4> texcoords { };
-        /// Farthest view distance at which this level is still drawn, in world units. Levels are listed from
+        /// Farthest view distance at which this level is still drawn, in world units. How the
+        /// value combines with the object's size and the view setting is not confirmed. Levels are listed from
         /// the most to the least detailed and the values grow along the list in all but a few items; the last
         /// level of a multi-level item is usually a large value (hundreds to thousands) so it covers the rest.
         float distance = 0;
@@ -47,7 +48,8 @@ namespace rct3::ovl
     {
         /// Bit mask. 0x01000000 is set on exactly the items of version-4 files and 0x02000000 on exactly the
         /// items of version-5 files (the first and second expansion). The low bits mark plants (0x1, with
-        /// swaying, mostly), 0x2, 0x4 and 0x70 groups; their exact meaning is not confirmed.
+        /// swaying, mostly), 0x2, 0x4 and 0x70 groups; their exact meaning is not confirmed. 0x1000 is set on
+        /// one item only (a ferris wheel); objects with this bit are handled separately when the level of detail is chosen.
         std::uint32_t flags = 0;
         float sway = 0;            ///< 0 for static items, 0.1 to 0.2 for plants
         float brightness = 0;      ///< 1, or 0.6 to 0.8 for plants

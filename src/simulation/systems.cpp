@@ -232,7 +232,8 @@ namespace rct3::simulation
                     linger->left.value -= dt;
                     if (linger->at != PathItemKind::Bench)
                     {
-                        mood.happiness.value = clamp01(mood.happiness.value + kTuning.facilities.sight_cheer.value * dt);
+                        if (linger->at != PathItemKind::PassportPost)
+                            mood.happiness.value = clamp01(mood.happiness.value + kTuning.facilities.sight_cheer.value * dt);
                         // Firing a water cannon: now and then they swing it on to another guest in reach, who
                         // gets soaked while it is on them.
                         if (linger->at == PathItemKind::WaterCannon && r.all_of<Pose>(g))
@@ -332,9 +333,9 @@ namespace rct3::simulation
                     if (heard != speakers.end() && !lately && random::chance(dice.state, kTuning.surroundings.music_thought.value))
                         think(r, g, ThoughtKind::NiceMusic, *heard, now);
                 }
-                // Every guest walking by a passport post they have no stamp from has their passport stamped there,
-                // but VIPs and those already given the park's gift. With enough stamps the park gives them its
-                // gift, if it can pay for it.
+                // Every guest walking by a passport post they have no stamp from stops at it to have their passport
+                // stamped, their party waiting, but VIPs and those already given the park's gift. With enough stamps
+                // the park gives them its gift, if it can pay for it.
                 const bool on_foot = errand.kind == ErrandKind::Wandering || errand.kind == ErrandKind::Heading || errand.kind == ErrandKind::Following;
                 const std::span<const entt::entity> passed = stride.fresh && on_foot && !r.all_of<Vip>(g) ? items(stride.from) : std::span<const entt::entity> { };
                 if (const auto post = std::ranges::find_if(passed, [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::PassportPost && !r.get<PathItem>(i).broken; }); post != passed.end())
@@ -347,6 +348,7 @@ namespace rct3::simulation
                         const auto inked = static_cast<i32>(0xFFU << 24U | u32 { ink[0] } << 16U | u32 { ink[1] } << 8U | ink[2]);
                         passport.stamps.push_back({ .post = r.get<PathItem>(*post).object, .colour = colour != nullptr ? colour->value : inked, .at = { static_cast<f32>(random::unit(dice.state)), static_cast<f32>(random::unit(dice.state)) } });
                         r.emplace_or_replace<Gesture>(g, Gesture { .kind = GestureKind::HandOver, .left = kTuning.gestures.shown, .at = *post });
+                        r.emplace_or_replace<Linger>(g, Linger { .at = PathItemKind::PassportPost, .left = kTuning.surroundings.stamping, .bench = *post });
                         mood.happiness.value = clamp01(mood.happiness.value + kTuning.surroundings.stamp_cheer.value);
                         if (auto* rules = r.ctx().find<PassportRules>(); rules != nullptr && rules->stamps_for_gift > 0 && passport.stamps.size() >= rules->stamps_for_gift)
                         {

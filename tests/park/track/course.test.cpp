@@ -210,6 +210,25 @@ TEST_CASE("several trains stand at the stations first, then queued behind them o
     CHECK(park::track::train_fronts(c, 60, 8, 2, false) == std::vector<f32> { 60, 10 });
 }
 
+TEST_CASE("a train as long as its station stands in it, and the next waits at the block end behind it")
+{
+    // A closed 100 m course: a 10 m station ending at 10, a block brake running into it, a lift ending at 40.
+    park::track::TrackCourse c;
+    for (std::int32_t i = 0; i <= 10; ++i)
+    {
+        c.points.push_back({ static_cast<float>(i) * 10, 0, 0 });
+        c.distance.push_back(static_cast<float>(i) * 10);
+        c.kinds.push_back(park::track::CourseKind::Plain);
+    }
+    c.closed = true;
+    c.kinds[0] = park::track::CourseKind::Station;
+    c.kinds[3] = park::track::CourseKind::Chain;
+    c.kinds[9] = park::track::CourseKind::BlockBrake;
+    CHECK(park::track::train_fronts(c, 10, 10, 2, true) == std::vector<float> { 10, 0 });
+    // A third goes on back round, to the lift top.
+    CHECK(park::track::train_fronts(c, 10, 10, 3, true) == std::vector<float> { 10, 0, 40 });
+}
+
 TEST_CASE("a train has as many cars as fit along its shortest station, within what its kind allows")
 {
     park::track::TrackCourse c = corner();

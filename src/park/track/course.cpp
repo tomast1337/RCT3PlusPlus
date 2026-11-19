@@ -423,16 +423,19 @@ namespace rct3::park::track
         std::ranges::sort(spots, { }, &Spot::ahead);
         for (usize i = 0; i < spots.size(); ++i)
             spots[i].room = i == 0 ? whole - spots.back().ahead : spots[i].ahead - spots[i - 1].ahead;
-        // Stations first, a train at each in turn going on round the track, then queued behind those there; then the
-        // other block ends the same way. Kept a block apart, a block takes one. A train with room nowhere is left out.
-        std::vector<f32> fronts;
+        // Stations first, a train at each in turn going back round the track from the start, then queued behind
+        // those there; then the other block ends the same way, so the next train waits in the block behind the
+        // station rather than in the one it sets off into. Kept a block apart, a block takes one. A train with room
+        // nowhere is left out; the gap is only between trains, so one as long as its station stands in it.
+        std::vector<float> fronts;
         for (const bool stations : { true, false })
             for (bool placed = true; placed && std::cmp_less(fronts.size(), count);)
             {
                 placed = false;
-                for (Spot& spot : spots)
+                for (std::size_t k = 0; k < spots.size(); ++k)
                 {
-                    if (spot.station != stations || std::cmp_greater_equal(fronts.size(), count) || (blocks && spot.used > 0) || spot.used + length + kTrainGap > spot.room)
+                    Spot& spot = spots[(spots.size() - k) % spots.size()];
+                    if (spot.station != stations || std::cmp_greater_equal(fronts.size(), count) || (blocks && spot.used > 0) || spot.used + length > spot.room + kSame)
                         continue;
                     fronts.push_back(std::fmod(start + spot.ahead - spot.used + whole, whole));
                     spot.used += length + kTrainGap;

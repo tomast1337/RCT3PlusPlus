@@ -1269,6 +1269,29 @@ TEST_CASE("on a ride with two stations, riders get on at either and off at the o
     CHECK(r.get<Attraction>(ride).customers == 2);
 }
 
+TEST_CASE("a test of a ride with two stations ends at the second, its lap only the run there")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Railway", { 4, 0 }, 100, { .capacity = 4, .cycle_seconds = 1000 });
+    auto& r = park.world().registry;
+    r.get<Attraction>(ride).open = false;
+    r.get<Attraction>(ride).testing = true;
+    r.get<CycleRide>(ride).untested = true;
+    r.get<CycleRide>(ride).stops.emplace_back();
+    Coaster track;
+    track.distance = { 0, 100 };
+    track.height = { 0, 0 };
+    track.kinds = { Stretch::Plain, Stretch::Plain };
+    track.fixed_speed = 10;
+    track.stops = { 40 };
+    r.emplace<Trains>(ride, Trains { { track }, { { } } });
+    CHECK(park.run_until([&] { return r.get<Trains>(ride).lap_done.has_value(); }, 10));
+    CHECK_FALSE(r.get<CycleRide>(ride).untested);
+    // Done the moment it came to the second station, not when it came round.
+    CHECK(r.get<Trains>(ride).trains[0].travelled == doctest::Approx(40).epsilon(0.02));
+}
+
 TEST_CASE("on a ride whose first station has no way to the paths, riders get off where they got on")
 {
     Sandbox park;

@@ -344,9 +344,13 @@ namespace rct3::simulation::tuning
     {
         usize dirty_path = 3;                                          ///< Pieces of litter on a tile that make guests on it glum
         units::PerSecond dirt_gloom = units::PerSecond::over({ 900 }); ///< Happiness lost on a dirty path
-        /// An empty is held this long before it goes in a pocket, or on the path when they are full. Fitted to the
-        /// saves: after five minutes, parks have about as much litter lying about as their saves had.
-        units::Seconds carry { 60 };
+        units::Seconds carry { 60 };                                   ///< An empty is held this long before it goes in a pocket, if one is free
+        /// A strolling guest with empties drops one on the path now and then, with no guard in the park. Chosen by
+        /// eye: a few pieces a minute in a busy park with no guards, so litter builds up where there are no bins.
+        units::Frequency dropping = units::Frequency::every({ 6000 });
+        /// Guests for each guard at which guests drop their empties half as often; more guards, less still.
+        /// Chosen by eye: a guard or two in a park of a few hundred tells.
+        f32 guard_calm = 100;
         units::Seconds old { 400 }; ///< Litter lying this long counts against the park's rating
     };
 

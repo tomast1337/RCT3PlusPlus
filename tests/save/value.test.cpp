@@ -21,24 +21,24 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& u8(std::uint8_t x)
+        Bytes& put_u8(std::uint8_t x)
         {
             v.push_back(static_cast<std::byte>(x));
             return *this;
         }
-        Bytes& u16(std::uint16_t x)
+        Bytes& put_u16(std::uint16_t x)
         {
             return put(&x, 2);
         }
-        Bytes& u32(std::uint32_t x)
+        Bytes& put_u32(std::uint32_t x)
         {
             return put(&x, 4);
         }
-        Bytes& u64(std::uint64_t x)
+        Bytes& put_u64(std::uint64_t x)
         {
             return put(&x, 8);
         }
-        Bytes& f32(float x)
+        Bytes& put_f32(float x)
         {
             return put(&x, 4);
         }
@@ -55,23 +55,23 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<std::uint16_t>(s.size()));
             for (const char c : s)
-                u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<std::uint8_t>(c));
             return *this;
         }
         // A length-prefixed variable attribute payload.
         Bytes& blob(const Bytes& payload)
         {
-            u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<std::uint32_t>(payload.v.size()));
             return cat(payload);
         }
         Bytes& marked_text(const std::u16string& s)
         {
             Bytes p;
-            p.u32(0xEFEFEFEFu);
+            p.put_u32(0xEFEFEFEFu);
             for (const auto c : s)
-                p.u16(c);
+                p.put_u16(c);
             return blob(p);
         }
     };
@@ -85,7 +85,7 @@ namespace
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).u32(a.size).u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -94,14 +94,14 @@ namespace
     std::vector<std::byte> make_file(const std::vector<Attr>& attrs, const std::vector<Bytes>& payloads)
     {
         Bytes b;
-        b.u32(1).name("Thing").u32(static_cast<std::uint32_t>(attrs.size()));
+        b.put_u32(1).name("Thing").put_u32(static_cast<std::uint32_t>(attrs.size()));
         for (const auto& a : attrs)
             write_attr(b, a);
-        b.u32(static_cast<std::uint32_t>(payloads.size()));
+        b.put_u32(static_cast<std::uint32_t>(payloads.size()));
         std::uint64_t id = 100;
         for (const auto& p : payloads)
         {
-            b.u32(0).u64(id++).cat(p);
+            b.put_u32(0).put_u64(id++).cat(p);
         }
         return b.v;
     }
@@ -135,7 +135,7 @@ TEST_CASE("fixed scalars decode with the right sign and width")
         { "flag", "bool", 1, { } }, { "s8", "int8", 1, { } }, { "u8", "uint8", 1, { } }, { "u16", "uint16", 2, { } }, { "s32", "int32", 4, { } }, { "u32", "uint32", 4, { } }, { "real", "float32", 4, { } },
     };
     Bytes p;
-    p.u8(7).u8(0xFE).u8(0xFE).u16(0xFFFE).u32(0xFFFFFFFEu).u32(0xFFFFFFFEu).f32(2.5f);
+    p.put_u8(7).put_u8(0xFE).put_u8(0xFE).put_u16(0xFFFE).put_u32(0xFFFFFFFEu).put_u32(0xFFFFFFFEu).put_f32(2.5f);
     const auto d = decode_one(attrs, p);
     const auto& o = d->object;
     CHECK(o.class_name == "Thing");
@@ -156,7 +156,7 @@ TEST_CASE("fixed scalars decode with the right sign and width")
 
 TEST_CASE("type names match case-insensitively")
 {
-    const auto d = decode_one({ { "x", "INT32", 4, { } } }, Bytes().u32(9));
+    const auto d = decode_one({ { "x", "INT32", 4, { } } }, Bytes().put_u32(9));
     CHECK(d->object.find("x")->kind() == ValueKind::Integer);
     CHECK(d->object.find("x")->as_integer() == 9);
 }
@@ -167,11 +167,11 @@ TEST_CASE("vectors, orientation, matrix and references")
         { "pos", "vector3", 12, { } }, { "rot", "orientation", 12, { } }, { "m", "matrix44", 64, { } }, { "link", "reference", 8, { } }, { "owner", "managedobjectptr", 8, { } },
     };
     Bytes p;
-    p.f32(1).f32(2).f32(3);
-    p.f32(0.25f).f32(0.5f).f32(0.75f);
+    p.put_f32(1).put_f32(2).put_f32(3);
+    p.put_f32(0.25f).put_f32(0.5f).put_f32(0.75f);
     for (std::int32_t i = 0; i < 16; ++i)
-        p.f32(static_cast<float>(i));
-    p.u64(101).u64(0);
+        p.put_f32(static_cast<float>(i));
+    p.put_u64(101).put_u64(0);
     const auto d = decode_one(attrs, p);
     const auto& o = d->object;
     REQUIRE(o.find("pos")->floats().size() == 3);
@@ -189,7 +189,7 @@ TEST_CASE("vectors, orientation, matrix and references")
 
 TEST_CASE("a scalar with the wrong declared size stays raw and counts as opaque")
 {
-    const auto d = decode_one({ { "v", "vector3", 8, { } } }, Bytes().u32(1).u32(2));
+    const auto d = decode_one({ { "v", "vector3", 8, { } } }, Bytes().put_u32(1).put_u32(2));
     CHECK(d->object.find("v")->kind() == ValueKind::Raw);
     CHECK(d->object.find("v")->raw().size() == 8);
     CHECK(d->object.stats.opaque == 1);
@@ -221,21 +221,21 @@ TEST_CASE("strings")
     }
     SUBCASE("zero length is the empty string")
     {
-        const auto d = decode_one(attrs, Bytes().u32(0));
+        const auto d = decode_one(attrs, Bytes().put_u32(0));
         CHECK(d->object.find("s")->kind() == ValueKind::String);
         CHECK(d->object.find("s")->text().empty());
     }
     SUBCASE("unmarked payload is one byte per character")
     {
         Bytes inner;
-        inner.u8('o').u8('l').u8('d').u8(0xE9);
+        inner.put_u8('o').put_u8('l').put_u8('d').put_u8(0xE9);
         const auto d = decode_one(attrs, Bytes().blob(inner));
         CHECK(d->object.find("s")->text() == "old\xC3\xA9");
     }
     SUBCASE("odd number of text bytes after the marker degrades to raw")
     {
         Bytes inner;
-        inner.u32(0xEFEFEFEFu).u8('a').u8(0).u8('b');
+        inner.put_u32(0xEFEFEFEFu).put_u8('a').put_u8(0).put_u8('b');
         const auto d = decode_one(attrs, Bytes().blob(inner));
         CHECK(d->object.find("s")->kind() == ValueKind::Raw);
         CHECK(d->object.stats.fallbacks == 1);
@@ -249,14 +249,14 @@ TEST_CASE("symbol text")
     {
         Bytes inner;
         for (const char c : std::string("alpha:beta"))
-            inner.u8(static_cast<std::uint8_t>(c));
+            inner.put_u8(static_cast<std::uint8_t>(c));
         const auto d = decode_one(attrs, Bytes().blob(inner));
         CHECK(d->object.find("sym")->text() == "alpha:beta");
     }
     SUBCASE("control bytes degrade to raw")
     {
         Bytes inner;
-        inner.u8('a').u8(1);
+        inner.put_u8('a').put_u8(1);
         const auto d = decode_one(attrs, Bytes().blob(inner));
         CHECK(d->object.find("sym")->kind() == ValueKind::Raw);
         CHECK(d->object.stats.fallbacks == 1);
@@ -271,11 +271,11 @@ TEST_CASE("list of scalars and list of structs")
         { "empty", "list", 0, { { "n", "int32", 4, { } } } },
     };
     Bytes nums;
-    nums.u32(3).u32(10).u32(20).u32(0xFFFFFFFFu);
+    nums.put_u32(3).put_u32(10).put_u32(20).put_u32(0xFFFFFFFFu);
     Bytes pairs;
-    pairs.u32(2).u8(1).f32(0.5f).u8(2).f32(1.5f);
+    pairs.put_u32(2).put_u8(1).put_f32(0.5f).put_u8(2).put_f32(1.5f);
     Bytes empty;
-    empty.u32(0);
+    empty.put_u32(0);
     const auto d = decode_one(attrs, Bytes().blob(nums).blob(pairs).blob(empty));
     const auto& o = d->object;
     REQUIRE(o.find("nums")->items().size() == 3);
@@ -299,12 +299,12 @@ TEST_CASE("nested variable fields carry their own length prefix")
         { "rec", "struct", 0, { { "label", "string", 0, { } }, { "level", "uint8", 1, { } } } },
     };
     Bytes row0, row1;
-    row0.u32(2).u32(1).u32(2);
-    row1.u32(0);
+    row0.put_u32(2).put_u32(1).put_u32(2);
+    row1.put_u32(0);
     Bytes grid;
-    grid.u32(2).blob(row0).blob(row1);
+    grid.put_u32(2).blob(row0).blob(row1);
     Bytes rec;
-    rec.marked_text(u"hi").u8(9);
+    rec.marked_text(u"hi").put_u8(9);
     const auto d = decode_one(attrs, Bytes().blob(grid).blob(rec));
     const auto& o = d->object;
     REQUIRE(o.find("grid")->items().size() == 2);
@@ -320,7 +320,7 @@ TEST_CASE("nested variable fields carry their own length prefix")
 TEST_CASE("fixed-size struct is decoded from its children")
 {
     const std::vector<Attr> attrs = { { "pt", "struct", 5, { { "x", "float32", 4, { } }, { "on", "bool", 1, { } } } } };
-    const auto d = decode_one(attrs, Bytes().f32(1.0f).u8(1));
+    const auto d = decode_one(attrs, Bytes().put_f32(1.0f).put_u8(1));
     CHECK(d->object.find("pt")->field("x")->as_float() == 1.0f);
     CHECK(d->object.find("pt")->field("on")->as_bool());
     CHECK(d->object.stats.fallbacks == 0);
@@ -329,7 +329,7 @@ TEST_CASE("fixed-size struct is decoded from its children")
 TEST_CASE("fixed-size struct whose children do not add up stays raw")
 {
     const std::vector<Attr> attrs = { { "pt", "struct", 6, { { "x", "float32", 4, { } } } } };
-    const auto d = decode_one(attrs, Bytes().f32(1.0f).u8(1).u8(2));
+    const auto d = decode_one(attrs, Bytes().put_f32(1.0f).put_u8(1).put_u8(2));
     CHECK(d->object.find("pt")->kind() == ValueKind::Raw);
     CHECK(d->object.stats.fallbacks == 1);
 }
@@ -338,10 +338,10 @@ TEST_CASE("curve and path blobs")
 {
     const std::vector<Attr> attrs = { { "curve", "graphedValue", 0, { } }, { "route", "waypointlist", 0, { } } };
     Bytes curve;
-    curve.u32(0xFFFFFFFFu).u32(8).u32(2).f32(1.0f).f32(2.0f);
+    curve.put_u32(0xFFFFFFFFu).put_u32(8).put_u32(2).put_f32(1.0f).put_f32(2.0f);
     Bytes route;
-    route.u16(2).u16(5).u16(6).u16(0xFFFF);
-    route.f32(1).f32(2).f32(3).f32(4).f32(5).f32(6);
+    route.put_u16(2).put_u16(5).put_u16(6).put_u16(0xFFFF);
+    route.put_f32(1).put_f32(2).put_f32(3).put_f32(4).put_f32(5).put_f32(6);
     const auto d = decode_one(attrs, Bytes().blob(curve).blob(route));
     const auto& o = d->object;
     CHECK(o.find("curve")->field("first")->as_integer() == -1);
@@ -359,9 +359,9 @@ TEST_CASE("curve and path with inconsistent lengths degrade to raw")
 {
     const std::vector<Attr> attrs = { { "curve", "graphedValue", 0, { } }, { "route", "waypointlist", 0, { } } };
     Bytes curve;
-    curve.u32(0).u32(8).u32(5).f32(1.0f); // claims five values, holds one
+    curve.put_u32(0).put_u32(8).put_u32(5).put_f32(1.0f); // claims five values, holds one
     Bytes route;
-    route.u16(9).u16(0).u16(0).u16(0xFFFF); // claims nine points, holds none
+    route.put_u16(9).put_u16(0).put_u16(0).put_u16(0xFFFF); // claims nine points, holds none
     const auto d = decode_one(attrs, Bytes().blob(curve).blob(route));
     CHECK(d->object.find("curve")->kind() == ValueKind::Raw);
     CHECK(d->object.find("route")->kind() == ValueKind::Raw);
@@ -371,8 +371,8 @@ TEST_CASE("curve and path with inconsistent lengths degrade to raw")
 TEST_CASE("unknown variable types are kept as raw bytes")
 {
     Bytes inner;
-    inner.u8(1).u8(2).u8(3);
-    const auto d = decode_one({ { "blob", "mystery", 0, { } }, { "after", "int32", 4, { } } }, Bytes().blob(inner).u32(77));
+    inner.put_u8(1).put_u8(2).put_u8(3);
+    const auto d = decode_one({ { "blob", "mystery", 0, { } }, { "after", "int32", 4, { } } }, Bytes().blob(inner).put_u32(77));
     REQUIRE(d->object.find("blob")->kind() == ValueKind::Raw);
     CHECK(d->object.find("blob")->raw().size() == 3);
     CHECK(d->object.find("after")->as_integer() == 77);
@@ -386,8 +386,8 @@ TEST_CASE("hostile counts and leftovers degrade the container, not the object")
     SUBCASE("count far larger than the payload")
     {
         Bytes inner;
-        inner.u32(0xFFFFFFFFu).u32(1);
-        const auto d = decode_one(attrs, Bytes().blob(inner).u8(5));
+        inner.put_u32(0xFFFFFFFFu).put_u32(1);
+        const auto d = decode_one(attrs, Bytes().blob(inner).put_u8(5));
         CHECK(d->object.find("items")->kind() == ValueKind::Raw);
         CHECK(d->object.find("tail")->as_integer() == 5);
         CHECK(d->object.stats.fallbacks == 1);
@@ -395,23 +395,23 @@ TEST_CASE("hostile counts and leftovers degrade the container, not the object")
     SUBCASE("bytes left after the last element")
     {
         Bytes inner;
-        inner.u32(1).u32(1).u8(0);
-        const auto d = decode_one(attrs, Bytes().blob(inner).u8(5));
+        inner.put_u32(1).put_u32(1).put_u8(0);
+        const auto d = decode_one(attrs, Bytes().blob(inner).put_u8(5));
         CHECK(d->object.find("items")->kind() == ValueKind::Raw);
         CHECK(d->object.stats.fallbacks == 1);
     }
     SUBCASE("payload too short for the count")
     {
         Bytes inner;
-        inner.u8(1).u8(0);
-        const auto d = decode_one(attrs, Bytes().blob(inner).u8(5));
+        inner.put_u8(1).put_u8(0);
+        const auto d = decode_one(attrs, Bytes().blob(inner).put_u8(5));
         CHECK(d->object.find("items")->kind() == ValueKind::Raw);
     }
     SUBCASE("elements with no layout cannot carry a count")
     {
         const std::vector<Attr> none = { { "items", "list", 0, { } } };
         Bytes inner;
-        inner.u32(0x7FFFFFFFu);
+        inner.put_u32(0x7FFFFFFFu);
         const auto d = decode_one(none, Bytes().blob(inner));
         CHECK(d->object.find("items")->kind() == ValueKind::Raw);
         CHECK(d->object.stats.fallbacks == 1);
@@ -419,7 +419,7 @@ TEST_CASE("hostile counts and leftovers degrade the container, not the object")
     SUBCASE("elements with no layout and a zero count are an empty list")
     {
         const std::vector<Attr> none = { { "items", "list", 0, { } } };
-        const auto d = decode_one(none, Bytes().blob(Bytes().u32(0)));
+        const auto d = decode_one(none, Bytes().blob(Bytes().put_u32(0)));
         CHECK(d->object.find("items")->kind() == ValueKind::List);
         CHECK(d->object.stats.fallbacks == 0);
     }
@@ -427,7 +427,7 @@ TEST_CASE("hostile counts and leftovers degrade the container, not the object")
     {
         const std::vector<Attr> var = { { "names", "list", 0, { { "s", "string", 0, { } } } } };
         Bytes inner;
-        inner.u32(1).u32(0x1000);
+        inner.put_u32(1).put_u32(0x1000);
         const auto d = decode_one(var, Bytes().blob(inner));
         CHECK(d->object.find("names")->kind() == ValueKind::Raw);
         CHECK(d->object.stats.fallbacks == 1);
@@ -450,9 +450,9 @@ TEST_CASE("nesting beyond the decoder depth limit degrades instead of recursing"
     file.classes[0].attributes.push_back(std::move(chain));
 
     Bytes payload;
-    payload.u32(0).u64(1);
+    payload.put_u32(0).put_u64(1);
     Bytes inner;
-    inner.u32(42);
+    inner.put_u32(42);
     for (std::size_t i = 0; i < kLevels; ++i)
     {
         Bytes outer;
@@ -486,8 +486,8 @@ TEST_CASE("decode_object validates its input")
 TEST_CASE("object index resolves ids, first one wins on duplicates")
 {
     Bytes a, b;
-    a.u32(1);
-    b.u32(2);
+    a.put_u32(1);
+    b.put_u32(2);
     const auto bytes = make_file({ { "n", "int32", 4, { } } }, { a, b });
     const auto file = read_save(bytes);
     REQUIRE(file);
@@ -511,13 +511,13 @@ TEST_CASE("every truncation and every single byte flip decodes without crashing"
     Bytes label;
     label.marked_text(u"ab");
     Bytes items;
-    items.u32(2);
-    items.u16(1).marked_text(u"x");
-    items.u16(2).marked_text(u"yz");
+    items.put_u32(2);
+    items.put_u16(1).marked_text(u"x");
+    items.put_u16(2).marked_text(u"yz");
     Bytes curve;
-    curve.u32(0).u32(1).u32(1).f32(1.0f);
+    curve.put_u32(0).put_u32(1).put_u32(1).put_f32(1.0f);
     Bytes p;
-    p.cat(label).blob(items).blob(curve).f32(1).f32(2).f32(3);
+    p.cat(label).blob(items).blob(curve).put_f32(1).put_f32(2).put_f32(3);
     const auto original = make_file(attrs, { p });
 
     const auto exercise = [](const std::vector<std::byte>& data) {
@@ -570,20 +570,20 @@ TEST_CASE("every decoded attribute encodes back to its bytes")
         { "short", "vector3", 8, { } },
     };
     Bytes p;
-    p.u8(1).u8(0xFE).u16(0xFFFE).u32(0xFFFFFFFEu).u32(0xFFFFFFFEu).f32(2.5f);
-    p.f32(1).f32(2).f32(3).f32(0.25f).f32(0.5f).f32(0.75f);
+    p.put_u8(1).put_u8(0xFE).put_u16(0xFFFE).put_u32(0xFFFFFFFEu).put_u32(0xFFFFFFFEu).put_f32(2.5f);
+    p.put_f32(1).put_f32(2).put_f32(3).put_f32(0.25f).put_f32(0.5f).put_f32(0.75f);
     for (std::int32_t i = 0; i < 16; ++i)
-        p.f32(static_cast<float>(i));
-    p.u64(101);
+        p.put_f32(static_cast<float>(i));
+    p.put_u64(101);
     p.marked_text(u"hé \U0001F600");
-    p.blob(Bytes().u8('A').u8('b'));
-    p.blob(Bytes().u32(2).u8(1).f32(0.5f).u8(2).f32(1.5f));
-    p.blob(Bytes().marked_text(u"hi").u8(9));
-    p.f32(1.0f).u8(1);
-    p.blob(Bytes().u32(0xFFFFFFFFu).u32(8).u32(2).f32(1.0f).f32(2.0f));
-    p.blob(Bytes().u16(1).u16(5).u16(6).u16(0xFFFF).f32(1).f32(2).f32(3));
-    p.blob(Bytes().u32(77));
-    p.u32(1).u32(2);
+    p.blob(Bytes().put_u8('A').put_u8('b'));
+    p.blob(Bytes().put_u32(2).put_u8(1).put_f32(0.5f).put_u8(2).put_f32(1.5f));
+    p.blob(Bytes().marked_text(u"hi").put_u8(9));
+    p.put_f32(1.0f).put_u8(1);
+    p.blob(Bytes().put_u32(0xFFFFFFFFu).put_u32(8).put_u32(2).put_f32(1.0f).put_f32(2.0f));
+    p.blob(Bytes().put_u16(1).put_u16(5).put_u16(6).put_u16(0xFFFF).put_f32(1).put_f32(2).put_f32(3));
+    p.blob(Bytes().put_u32(77));
+    p.put_u32(1).put_u32(2);
     const auto d = decode_one(attrs, p);
     REQUIRE(d->object.stats.fallbacks == 0);
     const auto encoded = encode_object(d->file.classes[0], d->object.fields);
@@ -637,7 +637,7 @@ TEST_CASE("values built in code read back as the same tree")
 TEST_CASE("an 8-bit string is written back marked, as UTF-16")
 {
     Bytes p;
-    p.blob(Bytes().u8('o').u8('k'));
+    p.blob(Bytes().put_u8('o').put_u8('k'));
     const auto d = decode_one({ { "s", "string", 0, { } } }, p);
     const auto encoded = encode_object(d->file.classes[0], d->object.fields);
     REQUIRE(encoded);

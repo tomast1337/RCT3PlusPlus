@@ -17,14 +17,14 @@ namespace rct3::ovl::texture
         constexpr std::size_t kFlicHeaderSize = 32;      // eight header words, the first level's pixels follow
         constexpr std::size_t kFlicLevelHeaderSize = 16; // width, height, row bytes and row count of a later level
 
-        std::uint8_t u8(std::span<const std::byte> b, std::size_t at)
+        std::uint8_t read_u8(std::span<const std::byte> b, std::size_t at)
         {
             return static_cast<std::uint8_t>(b[at]);
         }
 
         std::uint16_t u16_at(std::span<const std::byte> b, std::size_t at)
         {
-            return static_cast<std::uint16_t>(u8(b, at) | (u8(b, at + 1) << 8));
+            return static_cast<std::uint16_t>(read_u8(b, at) | (read_u8(b, at + 1) << 8));
         }
 
         bool side_ok(std::uint32_t side)
@@ -80,7 +80,7 @@ namespace rct3::ovl::texture
             }
             for (std::int32_t row = 0; row < 4; ++row)
             {
-                const std::uint32_t bits = u8(block, 4 + row);
+                const std::uint32_t bits = read_u8(block, 4 + row);
                 for (std::int32_t col = 0; col < 4; ++col)
                     std::memcpy(out[row * 4 + col], palette[(bits >> (2 * col)) & 3], 4);
             }
@@ -92,10 +92,10 @@ namespace rct3::ovl::texture
             const std::size_t count = std::size_t { width } * height;
             for (std::size_t i = 0; i < count; ++i)
             {
-                image.pixels[i * 4 + 0] = u8(data, i * 4 + 2);
-                image.pixels[i * 4 + 1] = u8(data, i * 4 + 1);
-                image.pixels[i * 4 + 2] = u8(data, i * 4 + 0);
-                image.pixels[i * 4 + 3] = u8(data, i * 4 + 3);
+                image.pixels[i * 4 + 0] = read_u8(data, i * 4 + 2);
+                image.pixels[i * 4 + 1] = read_u8(data, i * 4 + 1);
+                image.pixels[i * 4 + 2] = read_u8(data, i * 4 + 0);
+                image.pixels[i * 4 + 3] = read_u8(data, i * 4 + 3);
             }
             return image;
         }
@@ -122,7 +122,7 @@ namespace rct3::ovl::texture
                         std::memcpy(dst, px[i], 4);
                         if (explicit_alpha)
                         {
-                            const std::uint32_t nibble = (u8(block, i / 2) >> ((i % 2) * 4)) & 15;
+                            const std::uint32_t nibble = (read_u8(block, i / 2) >> ((i % 2) * 4)) & 15;
                             dst[3] = static_cast<std::uint8_t>(nibble * 17);
                         }
                     }
@@ -146,11 +146,11 @@ namespace rct3::ovl::texture
         RgbaImage image = blank(frame.width, frame.height);
         for (std::size_t i = 0; i < count; ++i)
         {
-            const std::size_t entry = std::size_t { u8(frame.pixels, i) } * 4;
-            image.pixels[i * 4 + 0] = u8(frame.palette, entry + 2);
-            image.pixels[i * 4 + 1] = u8(frame.palette, entry + 1);
-            image.pixels[i * 4 + 2] = u8(frame.palette, entry + 0);
-            image.pixels[i * 4 + 3] = frame.alpha ? u8(*frame.alpha, i) : 255;
+            const std::size_t entry = std::size_t { read_u8(frame.pixels, i) } * 4;
+            image.pixels[i * 4 + 0] = read_u8(frame.palette, entry + 2);
+            image.pixels[i * 4 + 1] = read_u8(frame.palette, entry + 1);
+            image.pixels[i * 4 + 2] = read_u8(frame.palette, entry + 0);
+            image.pixels[i * 4 + 3] = frame.alpha ? read_u8(*frame.alpha, i) : 255;
         }
         return image;
     }

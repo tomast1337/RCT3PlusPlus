@@ -61,7 +61,7 @@ namespace
         Builder b;
         b.str("FGDK");
         b.str("BmpTbl");
-        b.u32(1);
+        b.put_u32(1);
         b.str("btbl");
         const std::uint32_t one = 1;
         std::memcpy(file.data() + 20, &one, 4);

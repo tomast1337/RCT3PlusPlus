@@ -64,10 +64,10 @@ namespace rct3::ovl
                 TrackSection s;
                 s.name = record->text(0x00);
                 s.scenery_item = record->ref(0x04, "sid");
-                s.join_a = record->u32(0x08);
-                s.join_b = record->u32(0x0C);
-                s.role = record->u32(0x10);
-                s.flags = { record->u32(0x18), record->u32(0x1C) };
+                s.join_a = record->read_u32(0x08);
+                s.join_b = record->read_u32(0x0C);
+                s.role = record->read_u32(0x10);
+                s.flags = { record->read_u32(0x18), record->read_u32(0x1C) };
                 for (std::size_t i = 0; i < s.splines.size(); ++i)
                     s.splines[i] = record->ref(0x20 + i * 4, "spl");
                 for (std::size_t i = 0; i < s.extra_splines.size(); ++i)
@@ -83,13 +83,13 @@ namespace rct3::ovl
                 {
                     s.start_join = record->text(0x50);
                     s.end_join = record->text(0x6C);
-                    s.widths = { record->u32(0x114), record->u32(0x118) };
+                    s.widths = { record->read_u32(0x114), record->read_u32(0x118) };
                 }
                 // Entries of the least and most speed and the force, and with the layout below a span of the piece too.
-                const bool spans = (s.flags[0] & 0x400000) != 0 && (layout != OvlLayout::NoStream ? record->u32(0xE4) : 0) >= 2;
+                const bool spans = (s.flags[0] & 0x400000) != 0 && (layout != OvlLayout::NoStream ? record->read_u32(0xE4) : 0) >= 2;
                 const std::size_t entry = spans ? 20 : 12;
-                const std::uint32_t pushes = record->u32(0x70);
-                if (const auto list = pushes == 0 ? std::nullopt : ItemRecord::open(space, refs, record->u32(0x74), std::size_t { pushes } * entry))
+                const std::uint32_t pushes = record->read_u32(0x70);
+                if (const auto list = pushes == 0 ? std::nullopt : ItemRecord::open(space, refs, record->read_u32(0x74), std::size_t { pushes } * entry))
                     for (std::uint32_t i = 0; i < pushes; ++i)
                     {
                         const std::size_t at = i * entry;
@@ -97,26 +97,26 @@ namespace rct3::ovl
                     }
                 // Later records number their own layout, 2 in one-stream files and 3 in many-stream files: the group and
                 // tags come with 2, the side and the other half with 3.
-                const std::uint32_t record_layout = layout != OvlLayout::NoStream ? record->u32(0xE4) : 0;
+                const std::uint32_t record_layout = layout != OvlLayout::NoStream ? record->read_u32(0xE4) : 0;
                 if (record_layout >= 2)
                 {
                     s.group = record->text(0x104);
-                    s.ground = record->u32(0x128);
+                    s.ground = record->read_u32(0x128);
                     if (const float drop_off = record->real(0x124); drop_off >= 0)
                         s.drop_off = drop_off;
-                    const std::uint32_t count = record->u32(0xF4);
-                    if (const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, record->u32(0xF8), std::size_t { count } * 16))
+                    const std::uint32_t count = record->read_u32(0xF4);
+                    if (const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, record->read_u32(0xF8), std::size_t { count } * 16))
                         for (std::uint32_t i = 0; i < count; ++i)
-                            s.squares.push_back({ list->i32(i * 16), list->i32(i * 16 + 4), list->i32(i * 16 + 8), list->u32(i * 16 + 12) });
+                            s.squares.push_back({ list->read_i32(i * 16), list->read_i32(i * 16 + 4), list->read_i32(i * 16 + 8), list->read_u32(i * 16 + 12) });
                     for (std::size_t end = 0; end < 2; ++end)
                     {
-                        const auto list = [&](std::size_t at) { return strings(space, refs, record->u32(at + end * 8), record->u32(at + end * 8 + 4)); };
+                        const auto list = [&](std::size_t at) { return strings(space, refs, record->read_u32(at + end * 8), record->read_u32(at + end * 8 + 4)); };
                         s.tags[end] = { list(0x13C), list(0x14C), list(0x15C) };
                     }
                 }
                 if (record_layout >= 3)
                 {
-                    s.side = record->u32(0x16C);
+                    s.side = record->read_u32(0x16C);
                     s.partner = record->ref(0x170, kTag);
                 }
                 s.references = record->references(static_cast<std::uint32_t>(size));

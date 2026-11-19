@@ -30,7 +30,7 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& u8(std::uint8_t x)
+        Bytes& put_u8(std::uint8_t x)
         {
             v.push_back(static_cast<std::byte>(x));
             return *this;
@@ -41,19 +41,19 @@ namespace
             v.insert(v.end(), b, b + n);
             return *this;
         }
-        Bytes& u16(std::uint16_t x)
+        Bytes& put_u16(std::uint16_t x)
         {
             return put(&x, 2);
         }
-        Bytes& u32(std::uint32_t x)
+        Bytes& put_u32(std::uint32_t x)
         {
             return put(&x, 4);
         }
-        Bytes& u64(std::uint64_t x)
+        Bytes& put_u64(std::uint64_t x)
         {
             return put(&x, 8);
         }
-        Bytes& f32(float x)
+        Bytes& put_f32(float x)
         {
             return put(&x, 4);
         }
@@ -64,14 +64,14 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<std::uint16_t>(s.size()));
             for (const char c : s)
-                u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<std::uint8_t>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<std::uint32_t>(payload.v.size()));
             return cat(payload);
         }
     };
@@ -85,7 +85,7 @@ namespace
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).u32(a.size).u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -98,42 +98,42 @@ namespace
 
     Field fint(const std::string& n, std::int32_t v)
     {
-        return { { n, "int32", 4, { } }, Bytes().u32(static_cast<std::uint32_t>(v)) };
+        return { { n, "int32", 4, { } }, Bytes().put_u32(static_cast<std::uint32_t>(v)) };
     }
     Field ffloat(const std::string& n, float v)
     {
-        return { { n, "float32", 4, { } }, Bytes().f32(v) };
+        return { { n, "float32", 4, { } }, Bytes().put_f32(v) };
     }
     Field fbool(const std::string& n, bool v)
     {
-        return { { n, "bool", 1, { } }, Bytes().u8(v ? 1 : 0) };
+        return { { n, "bool", 1, { } }, Bytes().put_u8(v ? 1 : 0) };
     }
     Field fref(const std::string& n, std::uint64_t id)
     {
-        return { { n, "reference", 8, { } }, Bytes().u64(id) };
+        return { { n, "reference", 8, { } }, Bytes().put_u64(id) };
     }
     Field fstr(const std::string& n, const std::string& text)
     {
         Bytes p;
-        p.u32(0xEFEFEFEFu);
+        p.put_u32(0xEFEFEFEFu);
         for (const char c : text)
-            p.u16(static_cast<std::uint16_t>(static_cast<std::uint8_t>(c)));
+            p.put_u16(static_cast<std::uint16_t>(static_cast<std::uint8_t>(c)));
         return { { n, "string", 0, { } }, Bytes().blob(p) };
     }
     Field fgraph(const std::string& n, const std::vector<float>& values, std::uint32_t capacity = 64)
     {
         Bytes p;
-        p.u32(0xFFFFFFFFu).u32(capacity).u32(static_cast<std::uint32_t>(values.size()));
+        p.put_u32(0xFFFFFFFFu).put_u32(capacity).put_u32(static_cast<std::uint32_t>(values.size()));
         for (const float f : values)
-            p.f32(f);
+            p.put_f32(f);
         return { { n, "graphedValue", 0, { } }, Bytes().blob(p) };
     }
     Field fintlist(const std::string& n, const std::vector<std::int32_t>& values)
     {
         Bytes p;
-        p.u32(static_cast<std::uint32_t>(values.size()));
+        p.put_u32(static_cast<std::uint32_t>(values.size()));
         for (const auto x : values)
-            p.u32(static_cast<std::uint32_t>(x));
+            p.put_u32(static_cast<std::uint32_t>(x));
         return { { n, "list", 0, { { "n", "int32", 4, { } } } }, Bytes().blob(p) };
     }
     /// A list of struct elements, each with the given int32 members.
@@ -143,20 +143,20 @@ namespace
         for (const auto& m : members)
             a.children.push_back({ m, "int32", 4, { } });
         Bytes p;
-        p.u32(static_cast<std::uint32_t>(rows.size()));
+        p.put_u32(static_cast<std::uint32_t>(rows.size()));
         for (const auto& r : rows)
         {
             for (const auto x : r)
-                p.u32(static_cast<std::uint32_t>(x));
+                p.put_u32(static_cast<std::uint32_t>(x));
         }
         return { a, Bytes().blob(p) };
     }
     Field frefs(const std::string& n, const std::vector<std::uint64_t>& ids)
     {
         Bytes p;
-        p.u32(static_cast<std::uint32_t>(ids.size()));
+        p.put_u32(static_cast<std::uint32_t>(ids.size()));
         for (const auto id : ids)
-            p.u64(id);
+            p.put_u64(id);
         return { { n, "list", 0, { { "r", "reference", 8, { } } } }, Bytes().blob(p) };
     }
 
@@ -170,18 +170,18 @@ namespace
     std::vector<std::byte> build(const std::vector<Obj>& objects)
     {
         Bytes b;
-        b.u32(static_cast<std::uint32_t>(objects.size())); // one class per object, in order
+        b.put_u32(static_cast<std::uint32_t>(objects.size())); // one class per object, in order
         for (const auto& o : objects)
         {
-            b.name(o.cls).u32(static_cast<std::uint32_t>(o.fields.size()));
+            b.name(o.cls).put_u32(static_cast<std::uint32_t>(o.fields.size()));
             for (const auto& f : o.fields)
                 write_attr(b, f.attr);
         }
-        b.u32(static_cast<std::uint32_t>(objects.size()));
+        b.put_u32(static_cast<std::uint32_t>(objects.size()));
         std::uint32_t idx = 0;
         for (const auto& o : objects)
         {
-            b.u32(idx++).u64(o.id);
+            b.put_u32(idx++).put_u64(o.id);
             for (const auto& f : o.fields)
                 b.cat(f.data);
         }
@@ -393,7 +393,7 @@ TEST_CASE("park: hostile counts and sizes")
     SUBCASE("a list claiming far more elements than there are bytes stays raw and loads as defaults")
     {
         Bytes p;
-        p.u32(0xFFFFFFFFu).u32(1).u32(2);
+        p.put_u32(0xFFFFFFFFu).put_u32(1).put_u32(2);
         Field f { { "MonthlyExpendature", "list", 0, { { "ShopSales", "int32", 4, { } } } }, Bytes().blob(p) };
         const auto l = load({ { "Money", 1, { f, fint("Cash", 7) } } });
         CHECK(l->model.finance.cash == 7);
@@ -417,7 +417,7 @@ TEST_CASE("park: hostile counts and sizes")
     SUBCASE("a legacy graph without the marker word is read from its two-word header")
     {
         Bytes p;
-        p.u32(16).u32(2).f32(5.0f).f32(6.0f);
+        p.put_u32(16).put_u32(2).put_f32(5.0f).put_f32(6.0f);
         Field f { { "ParkRating", "graphedValue", 0, { } }, Bytes().blob(p) };
         const auto l = load({ { "Park", 1, { f } } });
         CHECK(l->model.park.park_rating.capacity == 16);
@@ -427,7 +427,7 @@ TEST_CASE("park: hostile counts and sizes")
     SUBCASE("a legacy graph with a lying count is empty")
     {
         Bytes p;
-        p.u32(16).u32(1000).f32(5.0f);
+        p.put_u32(16).put_u32(1000).put_f32(5.0f);
         Field f { { "ParkRating", "graphedValue", 0, { } }, Bytes().blob(p) };
         const auto l = load({ { "Park", 1, { f } } });
         CHECK(l->model.park.park_rating.empty());
@@ -494,14 +494,14 @@ TEST_CASE("park: calendar day of the month")
 TEST_CASE("park: awards, objectives, research")
 {
     Bytes award_cats; // AwardsArray: list of elements, each an array of ids (a single variable child)
-    award_cats.u32(3);
+    award_cats.put_u32(3);
     const std::vector<std::vector<std::int32_t>> cats = { { }, { 4, 9 }, { } };
     for (const auto& c : cats)
     {
         Bytes inner;
-        inner.u32(static_cast<std::uint32_t>(c.size()));
+        inner.put_u32(static_cast<std::uint32_t>(c.size()));
         for (const auto x : c)
-            inner.u32(static_cast<std::uint32_t>(x));
+            inner.put_u32(static_cast<std::uint32_t>(x));
         award_cats.blob(inner);
     }
     Field awards_array { { "AwardsArray", "list", 0, { { "AwardTypes", "array", 0, { { "AwardType", "int32", 4, { } } } } } }, Bytes().blob(award_cats) };

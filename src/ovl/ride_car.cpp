@@ -56,7 +56,7 @@ namespace rct3::ovl
                 RideCar car;
                 car.name = record->text(0x00);
                 car.display_name = record->text(0x04);
-                car.kind = record->u32(0x08);
+                car.kind = record->read_u32(0x08);
                 // The body's weight, and each moving part's where the car has one (-1 where not).
                 car.mass = record->real(0x10) + std::max(record->real(0x1C), 0.0f) + std::max(record->real(0xE0), 0.0f);
                 car.visual = record->ref(0x0C, "svd");
@@ -65,22 +65,22 @@ namespace rct3::ovl
                 for (std::size_t i = 0; i < car.wheels.size(); ++i)
                 {
                     car.wheels[i] = record->ref(0xA4 + 8 * i, "svd");
-                    car.wheels_turned[i] = record->u32(0xA8 + 8 * i) != 0;
+                    car.wheels_turned[i] = record->read_u32(0xA8 + 8 * i) != 0;
                 }
                 car.axles = { record->ref(0xC4, "svd"), record->ref(0xC8, "svd") };
                 for (std::size_t i = 0; i < car.rowing.size(); ++i)
-                    car.rowing[i] = core::none_if_negative(record->i32(0x7C + 4 * i));
+                    car.rowing[i] = core::none_if_negative(record->read_i32(0x7C + 4 * i));
                 // Byte 9, which later cars set to 2 or more, says which of the fields below they have.
                 const std::uint32_t later = (car.kind >> 8) & 0xFF;
-                car.spin_stops = later >= 2 ? std::max(record->u32(0x104), 1u) : 1;
-                car.spin_settles = record->u32(0x3C) != 0;
-                car.spin_held_on_chains = later >= 2 ? (record->u32(0x110) & 0x10) != 0 : car.spin_settles;
+                car.spin_stops = later >= 2 ? std::max(record->read_u32(0x104), 1u) : 1;
+                car.spin_settles = record->read_u32(0x3C) != 0;
+                car.spin_held_on_chains = later >= 2 ? (record->read_u32(0x110) & 0x10) != 0 : car.spin_settles;
                 // Each moving part's block: the second's fields lie at the first's plus this.
                 constexpr std::array<std::size_t, 2> kPartBlocks { 0, 0xC4 };
                 for (std::size_t i = 0; i < car.moves.size(); ++i)
                 {
                     const std::size_t at = kPartBlocks[i];
-                    const std::uint32_t motion = record->u32(at + 0x18);
+                    const std::uint32_t motion = record->read_u32(at + 0x18);
                     if (motion < std::to_underlying(PartMotion::Swings) || motion > std::to_underlying(PartMotion::Spins))
                         continue;
                     car.moves[i] = PartMoves {
@@ -99,7 +99,7 @@ namespace rct3::ovl
                 }
                 car.references = record->references(static_cast<std::uint32_t>(size));
                 car.record = record->bytes();
-                if ((record->u32(0x110) & 0x200) != 0)
+                if ((record->read_u32(0x110) & 0x200) != 0)
                     car.trough = TroughRide { .damping = record->real(0x20), .centring = record->real(0x24), .friction = record->real(0x34), .pull = record->real(0x2C) };
                 item.car = std::move(car);
             }

@@ -337,7 +337,7 @@ namespace rct3::save::model
                         return def;
                 }
             }
-            [[nodiscard]] std::int32_t i32(std::int32_t def = 0) const
+            [[nodiscard]] std::int32_t read_i32(std::int32_t def = 0) const
             {
                 return static_cast<std::int32_t>(integer(def));
             }
@@ -558,9 +558,9 @@ namespace rct3::save::model
                                 .symbol = f[id::kPieceSymbol].text(),
                                 .asset = live(f[id::kPieceAsset]),
                                 .scenery = live(f[id::kPieceScenery]),
-                                .tile_x = at[id::kPosX].i32(),
-                                .tile_z = at[id::kPosZ].i32(),
-                                .height = at[id::kHeight].i32(),
+                                .tile_x = at[id::kPosX].read_i32(),
+                                .tile_z = at[id::kPosZ].read_i32(),
+                                .height = at[id::kHeight].read_i32(),
                                 .height_adjust = at[id::kHeightAdjust].number(),
                                 .direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer()),
                                 .corner = static_cast<std::uint8_t>(at[id::kPieceCorner].integer()),
@@ -568,9 +568,9 @@ namespace rct3::save::model
                                 .start_distance = units::Distance { f[id::kStartDistance].number() },
                                 .reverse_start_distance = units::Distance { f[id::kStartDistanceBack].number() },
                                 .colours = colours_of(f[id::kPieceColours]),
-                                .brake_speed = core::none_if_negative(f[id::kPieceBrake].i32(-1)),
-                                .holding_time = f[id::kPieceHolding].i32(0),
-                                .speed_class = core::none_if_negative(f[id::kPieceSpeed].i32(-1)),
+                                .brake_speed = core::none_if_negative(f[id::kPieceBrake].read_i32(-1)),
+                                .holding_time = f[id::kPieceHolding].read_i32(0),
+                                .speed_class = core::none_if_negative(f[id::kPieceSpeed].read_i32(-1)),
                             },
                             .next = f[id::kNext].ref(),
                             .prev = f[id::kPrev].ref(),
@@ -595,9 +595,9 @@ namespace rct3::save::model
                         platforms_.emplace(d->id, PlatformRecord {
                             .platform = {
                                 .id = d->id,
-                                .tile_x = at[id::kPosX].i32(),
-                                .tile_z = at[id::kPosZ].i32(),
-                                .height = at[id::kHeight].i32(),
+                                .tile_x = at[id::kPosX].read_i32(),
+                                .tile_z = at[id::kPosZ].read_i32(),
+                                .height = at[id::kHeight].read_i32(),
                                 .direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer()),
                                 .corner = static_cast<std::uint8_t>(at[id::kPieceCorner].integer()),
                                 .flags = static_cast<std::uint32_t>(f[id::kFlags].integer()),
@@ -630,9 +630,9 @@ namespace rct3::save::model
                     return std::nullopt;
                 return PlacementSpot {
                     .object = live(f[id::kPlacedItem]),
-                    .col = at[id::kPosX].i32(),
-                    .row = at[id::kPosZ].i32(),
-                    .height = at[id::kHeight].i32(),
+                    .col = at[id::kPosX].read_i32(),
+                    .row = at[id::kPosZ].read_i32(),
+                    .height = at[id::kHeight].read_i32(),
                     .direction = static_cast<std::uint8_t>(at[id::kPieceDirection].integer() & 3),
                 };
             }
@@ -660,7 +660,7 @@ namespace rct3::save::model
                     .symbol = f[symbol_key].text(),
                     .overlay_path = f[overlay_key].text(),
                     .name = f[id::kName].text(),
-                    .state = static_cast<AttractionState>(f[id::kState].i32()),
+                    .state = static_cast<AttractionState>(f[id::kState].read_i32()),
                     .flags = static_cast<std::uint32_t>(f[id::kFlags].integer()),
                     .build_time = units::Seconds { f[id::kBuildTime].number() },
                     .total_guests = f[id::kTotalGuests].integer(),
@@ -668,7 +668,7 @@ namespace rct3::save::model
                     .running_cost = { f[id::kRunningCost].integer() },
                     .popularity = f[id::kPopularity].number(),
                     .satisfaction = f[id::kSatisfaction].number(),
-                    .repair_status = static_cast<RepairStatus>(f[id::kRepair].i32()),
+                    .repair_status = static_cast<RepairStatus>(f[id::kRepair].read_i32()),
                     .time_since_inspection = core::none_if_negative(units::Seconds { f[id::kSinceInspection].number(-1) }),
                     .time_since_breakdown = core::none_if_negative(units::Seconds { f[id::kSinceBreakdown].number(-1) }),
                     .time_since_crash = core::none_if_negative(units::Seconds { f[id::kSinceCrash].number(-1) }),
@@ -698,14 +698,14 @@ namespace rct3::save::model
                     const ObjectId guest = live(v[id::kThoughtGuest]);
                     if (guest == 0)
                         continue; // empty or stale slot
-                    out.push_back({ guest, v[id::kThoughtId].i32(), v[id::kThoughtTime].number(), v[id::kThoughtVariant].integer() });
+                    out.push_back({ guest, v[id::kThoughtId].read_i32(), v[id::kThoughtTime].number(), v[id::kThoughtVariant].integer() });
                 }
                 return out;
             }
 
             static TestResults read_results(View r)
             {
-                const auto corners = [](View c) { return std::array<std::int32_t, 4> { c[id::kCorner90].i32(), c[id::kCorner180].i32(), c[id::kCorner270].i32(), c[id::kCorner360].i32() }; };
+                const auto corners = [](View c) { return std::array<std::int32_t, 4> { c[id::kCorner90].read_i32(), c[id::kCorner180].read_i32(), c[id::kCorner270].read_i32(), c[id::kCorner360].read_i32() }; };
                 TestResults t {
                     .max_speed = r[id::kMaxSpeed].number(),
                     .average_speed = r[id::kAverageSpeed].number(),
@@ -715,16 +715,16 @@ namespace rct3::save::model
                     .max_negative_vertical = r[id::kMaxNegativeG].number(),
                     .max_lateral = r[id::kMaxLateralG].number(),
                     .air_time = { r[id::kAirTime].number() },
-                    .drop_count = r[id::kDrops].i32(),
+                    .drop_count = r[id::kDrops].read_i32(),
                     .highest_drop = { r[id::kHighestDrop].number() },
-                    .inversion_count = r[id::kInversions].i32(),
-                    .lift_hill_count = r[id::kLiftHills].i32(),
+                    .inversion_count = r[id::kInversions].read_i32(),
+                    .lift_hill_count = r[id::kLiftHills].read_i32(),
                     .corners_flat = corners(r[id::kCorners]),
                     .corners_banked = corners(r[id::kBankedCorners]),
                     .corners_sloped = corners(r[id::kSlopedCorners]),
                 };
                 for (std::size_t i = 0; i < 7; ++i)
-                    t.special_sections[i] = r[id::kSections][id::kSectionNames[i]].i32();
+                    t.special_sections[i] = r[id::kSections][id::kSectionNames[i]].read_i32();
                 t.valid = (r[id::kValid].integer() & 1) != 0; // upper bytes are uninitialised memory
                 return t;
             }
@@ -776,7 +776,7 @@ namespace rct3::save::model
                     if (auto q = fetch(v[id::kQueueLineRef].ref(), Role::QueueLine))
                     {
                         s.queue_line = q->id;
-                        s.queue_size = View(q->fields)[id::kQueueSize].i32();
+                        s.queue_size = View(q->fields)[id::kQueueSize].read_i32();
                         if (const auto it = queue_tiles_.find(q->id); it != queue_tiles_.end())
                             s.queue_tiles = it->second;
                         if (s.queue_size != s.queue_tiles)
@@ -789,7 +789,7 @@ namespace rct3::save::model
             void read_ride_common(Ride& ride, const DecodedObject& d)
             {
                 const View f(d.fields);
-                ride.mode = static_cast<OperatingMode>(f[id::kOpMode].i32());
+                ride.mode = static_cast<OperatingMode>(f[id::kOpMode].read_i32());
                 ride.ticket_price = units::Money { f[id::kTicket].integer() };
                 ride.music = f[id::kMusic].text();
                 ride.intervals = read_intervals(f);
@@ -830,13 +830,13 @@ namespace rct3::save::model
                 };
 
                 ride.breakdown = Breakdown {
-                    .current = static_cast<BreakdownKind>(f[id::kBreakdownType].i32()),
-                    .last = static_cast<BreakdownKind>(f[id::kLastBreakdownType].i32()),
-                    .station = core::none_if_negative(f[id::kBreakdownStation].i32(-1)),
-                    .train = core::none_if_negative(f[id::kBreakdownTrain].i32(-1)),
-                    .car = core::none_if_negative(f[id::kBreakdownCar].i32(-1)),
-                    .seat = core::none_if_negative(f[id::kBreakdownSeat].i32(-1)),
-                    .inspection_interval = f[id::kInspectionInterval].i32(),
+                    .current = static_cast<BreakdownKind>(f[id::kBreakdownType].read_i32()),
+                    .last = static_cast<BreakdownKind>(f[id::kLastBreakdownType].read_i32()),
+                    .station = core::none_if_negative(f[id::kBreakdownStation].read_i32(-1)),
+                    .train = core::none_if_negative(f[id::kBreakdownTrain].read_i32(-1)),
+                    .car = core::none_if_negative(f[id::kBreakdownCar].read_i32(-1)),
+                    .seat = core::none_if_negative(f[id::kBreakdownSeat].read_i32(-1)),
+                    .inspection_interval = f[id::kInspectionInterval].read_i32(),
                     .reliability = f[id::kReliability].number(100),
                 };
                 Breakdown& b = ride.breakdown;
@@ -855,21 +855,21 @@ namespace rct3::save::model
                     .block_sectioned = f[id::kBlockSectioned].boolean(),
                     .sync_trains = f[id::kSyncTrains].boolean(),
                     .leave_if_other_train_enters_station = f[id::kLeaveIfEnters].boolean(),
-                    .min_wait = core::none_if_negative(f[id::kMinWait].i32(-1)),
-                    .max_wait = core::none_if_negative(f[id::kMaxWait].i32(-1)),
-                    .wait_for_load = f[id::kWaitForLoad].i32(4),
+                    .min_wait = core::none_if_negative(f[id::kMinWait].read_i32(-1)),
+                    .max_wait = core::none_if_negative(f[id::kMaxWait].read_i32(-1)),
+                    .wait_for_load = f[id::kWaitForLoad].read_i32(4),
                     .launch_speed = { f[id::kLaunchSpeed].number() },
                     .lift_speed = { f[id::kLiftSpeed].number() },
                     .brake_speed = { f[id::kBrakeSpeed].number() },
                     .block_brake_off_speed = { f[id::kBlockBrakeOff].number() },
                     .fixed_speed = core::none_if_negative(units::Pace { f[id::kFixedSpeed].number(-1) }),
-                    .circuits = f[id::kCircuitsRun].i32(1),
+                    .circuits = f[id::kCircuitsRun].read_i32(1),
                 };
 
                 ride.race = RaceState {
                     .in_progress = f[id::kRaceInProgress].boolean(),
                     .over = f[id::kRaceOver].boolean(),
-                    .winner = core::none_if_negative(f[id::kRaceWinner].i32(-1)),
+                    .winner = core::none_if_negative(f[id::kRaceWinner].read_i32(-1)),
                     .seconds_since_end = f[id::kRaceSince].number(),
                 };
 
@@ -911,17 +911,17 @@ namespace rct3::save::model
 
                 if (role == Role::TrackedRide)
                 {
-                    ride.train_count = core::none_if_negative(f[id::kTrainCount].i32(-1));
-                    ride.cars_per_train = core::none_if_negative(f[id::kCarsPerTrain].i32(-1));
-                    ride.train_selection = f[id::kTrainSelection].i32();
+                    ride.train_count = core::none_if_negative(f[id::kTrainCount].read_i32(-1));
+                    ride.cars_per_train = core::none_if_negative(f[id::kCarsPerTrain].read_i32(-1));
+                    ride.train_selection = f[id::kTrainSelection].read_i32();
                     for (const auto& item : f[id::kSeats].items())
                     {
                         const View v(item);
-                        ride.seats.push_back({ v[id::kSeatCar].i32(), v[id::kSeatSeat].i32(), v[id::kSeatTrain].i32() });
+                        ride.seats.push_back({ v[id::kSeatCar].read_i32(), v[id::kSeatSeat].read_i32(), v[id::kSeatTrain].read_i32() });
                     }
                     ride.block_sections = live_list(f[id::kBlockSections]);
                     for (const auto& item : f[id::kSortedTrains].items())
-                        ride.sorted_trains.push_back(View(item).i32());
+                        ride.sorted_trains.push_back(View(item).read_i32());
                     ride.cable_lift_trains = live_list(f[id::kCableLift]);
                     ride.thrill_lift_trains = live_list(f[id::kThrillLift]);
                     ride.reverse_cable_lift_trains = live_list(f[id::kReverseCableLift]);
@@ -941,9 +941,9 @@ namespace rct3::save::model
                 }
                 else if (role == Role::FlatRide)
                 {
-                    ride.ride_state = f[id::kRideState].i32();
-                    ride.people_on_ride = f[id::kPeopleOnRide].i32();
-                    ride.loop_count = f[id::kLoops].i32();
+                    ride.ride_state = f[id::kRideState].read_i32();
+                    ride.people_on_ride = f[id::kPeopleOnRide].read_i32();
+                    ride.loop_count = f[id::kLoops].read_i32();
                 }
                 else
                 {
@@ -1087,19 +1087,19 @@ namespace rct3::save::model
                     Train t {
                         .id = d->id,
                         .ride = tf[id::kTrainRide].ref(),
-                        .index = tf[id::kWhichTrain].i32(),
-                        .state = static_cast<TrainState>(tf[id::kState].i32()),
+                        .index = tf[id::kWhichTrain].read_i32(),
+                        .state = static_cast<TrainState>(tf[id::kState].read_i32()),
                         .state_time = units::Seconds { tf[id::kStateTime].number() },
                         .front_piece = live(tf[id::kFrontPiece]),
                         .rear_piece = live(tf[id::kRearPiece]),
                         .distance = { tf[id::kDistance].number() },
                         .speed = { tf[id::kSpeed].number() },
                         .acceleration = tf[id::kAccel].number(),
-                        .station = core::none_if_negative(tf[id::kStation].i32(-1)),
-                        .start_station = core::none_if_negative(tf[id::kStartStation].i32(-1)),
-                        .current_station = core::none_if_negative(tf[id::kOnStation].i32(-1)),
-                        .lap_count = tf[id::kCircuits].i32(),
-                        .shuttle_direction = tf[id::kShuttle].i32(),
+                        .station = core::none_if_negative(tf[id::kStation].read_i32(-1)),
+                        .start_station = core::none_if_negative(tf[id::kStartStation].read_i32(-1)),
+                        .current_station = core::none_if_negative(tf[id::kOnStation].read_i32(-1)),
+                        .lap_count = tf[id::kCircuits].read_i32(),
+                        .shuttle_direction = tf[id::kShuttle].read_i32(),
                         .static_friction = tf[id::kStaticFriction].number(),
                         .dynamic_friction = tf[id::kDynamicFriction].number(),
                         .mass = tf[id::kMass].number(),
@@ -1136,11 +1136,11 @@ namespace rct3::save::model
                         const auto pos = st[id::kStatPos].floats();
                         Car car {
                             .id = c->id,
-                            .index = cf[id::kWhichCar].i32(),
-                            .car_count = cf[id::kCarCount].i32(),
-                            .design_slot = cf[id::kCarSlot].i32(),
-                            .state = static_cast<CarState>(cf[id::kState].i32()),
-                            .passengers = cf[id::kPeeps].i32(),
+                            .index = cf[id::kWhichCar].read_i32(),
+                            .car_count = cf[id::kCarCount].read_i32(),
+                            .design_slot = cf[id::kCarSlot].read_i32(),
+                            .state = static_cast<CarState>(cf[id::kState].read_i32()),
+                            .passengers = cf[id::kPeeps].read_i32(),
                             .distance = { st[id::kDistance].number() },
                             .speed = { st[id::kSpeed].number() },
                             .length = { st[id::kLength].number() },
@@ -1242,7 +1242,7 @@ namespace rct3::save::model
                         continue;
                     }
                     const View v(ex->fields);
-                    StallExtra se { .id = ex->id, .extra_asset = live(v[id::kItemAsset]), .level = v[id::kExtraSetting].i32() };
+                    StallExtra se { .id = ex->id, .extra_asset = live(v[id::kItemAsset]), .level = v[id::kExtraSetting].read_i32() };
                     if (std::optional<const Object&> kind = se.extra_asset != 0 ? index_.find(se.extra_asset) : std::nullopt)
                         if (auto k = decode(*kind))
                             se.kind_symbol = View(k->fields)[id::kItemKindSymbol].text();

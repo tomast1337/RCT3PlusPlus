@@ -34,9 +34,9 @@ namespace rct3::ovl
                 train.display_name = record->text(0x04);
                 for (std::size_t i = 0; i < train.cars.size(); ++i)
                     train.cars[i] = record->ref(0x08 + i * 4, "ric");
-                train.fewest_cars = record->u32(0x20);
-                train.most_cars = record->u32(0x24);
-                train.usual_cars = record->u32(0x28);
+                train.fewest_cars = record->read_u32(0x20);
+                train.most_cars = record->read_u32(0x24);
+                train.usual_cars = record->read_u32(0x28);
                 train.rolling = record->real(0x2C);
                 train.resting = record->real(0x30);
                 train.air = record->real(0x34);

@@ -366,7 +366,7 @@ namespace rct3::save::model
                 return std::nullopt;
             return f;
         }
-        float f32(std::optional<const Value&> v, float def = 0) noexcept
+        float read_f32(std::optional<const Value&> v, float def = 0) noexcept
         {
             return opt_f32(v).value_or(def);
         }
@@ -378,12 +378,12 @@ namespace rct3::save::model
                 return std::nullopt;
             return static_cast<std::int32_t>(*b);
         }
-        std::int32_t i32(std::optional<const Value&> v, std::int32_t def = 0) noexcept
+        std::int32_t read_i32(std::optional<const Value&> v, std::int32_t def = 0) noexcept
         {
             return opt_i32(v).value_or(def);
         }
 
-        std::uint8_t u8(std::optional<const Value&> v, std::uint8_t def = 0) noexcept
+        std::uint8_t read_u8(std::optional<const Value&> v, std::uint8_t def = 0) noexcept
         {
             const auto b = bits32(v);
             if (!b || *b == kFillBits)
@@ -471,9 +471,9 @@ namespace rct3::save::model
                 std::optional<const Value&> t = items[i];
                 out[i].about = ref(sub(t, at::thought_about), index);
                 out[i].other = ref(sub(t, at::thought_person), index);
-                out[i].id = i32(sub(t, at::thought_id));
-                out[i].time = core::none_if_negative(f32(sub(t, at::thought_time), -1));
-                out[i].variant = i32(sub(t, at::thought_variant));
+                out[i].id = read_i32(sub(t, at::thought_id));
+                out[i].time = core::none_if_negative(read_f32(sub(t, at::thought_time), -1));
+                out[i].variant = read_i32(sub(t, at::thought_variant));
             }
             return out;
         }
@@ -484,16 +484,16 @@ namespace rct3::save::model
             if (!v || v->kind() != ValueKind::List)
                 return out;
             for (std::optional<const Value&> s : v->items())
-                out.push_back({ .colour = i32(sub(s, at::stamp_colour)), .post = ref(sub(s, at::stamp_post), index), .x = f32(sub(s, at::stamp_x)), .y = f32(sub(s, at::stamp_y)) });
+                out.push_back({ .colour = read_i32(sub(s, at::stamp_colour)), .post = ref(sub(s, at::stamp_post), index), .x = read_f32(sub(s, at::stamp_x)), .y = read_f32(sub(s, at::stamp_y)) });
             return out;
         }
 
         Mood mood(std::optional<const Value&> v) noexcept
         {
             return Mood {
-                .energy = f32(sub(v, at::energy_f), 0.5f),
-                .happiness = f32(sub(v, at::happiness_f), 0.5f),
-                .nausea = f32(sub(v, at::nausea_f), 0),
+                .energy = read_f32(sub(v, at::energy_f), 0.5f),
+                .happiness = read_f32(sub(v, at::happiness_f), 0.5f),
+                .nausea = read_f32(sub(v, at::nausea_f), 0),
                 .sunburn = opt_f32(sub(v, at::sunburn_f)),
             };
         }
@@ -504,25 +504,25 @@ namespace rct3::save::model
             const auto mask = [&](std::string_view n) { return bits32(get(n)).value_or(0); };
             Person p {
                 .id = o.id,
-                .type = static_cast<PersonType>(u8(get(at::person_type), static_cast<std::uint8_t>(default_type))),
-                .sub_type = u8(get(at::sub_type)),
+                .type = static_cast<PersonType>(read_u8(get(at::person_type), static_cast<std::uint8_t>(default_type))),
+                .sub_type = read_u8(get(at::sub_type)),
                 .name = str(get(at::name)),
                 .position = matrix_position(get(at::world_matrix)),
-                .heading = { f32(get(at::facing_angle)) },
+                .heading = { read_f32(get(at::facing_angle)) },
                 .lane_offset = vec3(get(at::path_offset)),
-                .state = static_cast<PersonState>(i32(get(at::state))),
-                .sub_state = i32(get(at::sub_state)),
+                .state = static_cast<PersonState>(read_i32(get(at::state))),
+                .sub_state = read_i32(get(at::sub_state)),
                 .state_target = ref(get(at::state_target), index),
-                .decide_time = f32(get(at::decide_time)),
-                .start_time = f32(get(at::start_date)),
+                .decide_time = read_f32(get(at::decide_time)),
+                .start_time = read_f32(get(at::start_date)),
                 .animation = {
-                    .anim_type = core::none_if_negative(i32(get(at::anim_type), -1)),
-                    .walk = core::none_if_negative(i32(get(at::current_walk_anim), -1)),
-                    .idle = core::none_if_negative(i32(get(at::idle_anim), -1)),
-                    .alternate_walk = core::none_if_negative(i32(get(at::alternate_walk_anim), -1)),
-                    .playback_time = f32(get(at::anim_time)),
-                    .playback_rate = f32(get(at::anim_speed)),
-                    .walk_speed = f32(get(at::move_speed)),
+                    .anim_type = core::none_if_negative(read_i32(get(at::anim_type), -1)),
+                    .walk = core::none_if_negative(read_i32(get(at::current_walk_anim), -1)),
+                    .idle = core::none_if_negative(read_i32(get(at::idle_anim), -1)),
+                    .alternate_walk = core::none_if_negative(read_i32(get(at::alternate_walk_anim), -1)),
+                    .playback_time = read_f32(get(at::anim_time)),
+                    .playback_rate = read_f32(get(at::anim_speed)),
+                    .walk_speed = read_f32(get(at::move_speed)),
                 },
                 .appearance = {
                     .head = ref(get(at::head_group), index),
@@ -530,18 +530,18 @@ namespace rct3::save::model
                     .legs = ref(get(at::legs_group), index),
                     .swim_body = ref(get(at::swim_body_group), index),
                     .swim_legs = ref(get(at::swim_legs_group), index),
-                    .palettes = { u8(get(at::skin_palette), 255), u8(get(at::upper_palette), 255), u8(get(at::lower_palette), 255), u8(get(at::upper_swim_palette), 255), u8(get(at::lower_swim_palette), 255) },
+                    .palettes = { read_u8(get(at::skin_palette), 255), read_u8(get(at::upper_palette), 255), read_u8(get(at::lower_palette), 255), read_u8(get(at::upper_swim_palette), 255), read_u8(get(at::lower_swim_palette), 255) },
                     .optionals = { mask(at::head_optionals), mask(at::body_optionals), mask(at::legs_optionals) },
                     .wearing_swimsuit = flag(get(at::use_swim_suit)),
-                    .level_of_detail = u8(get(at::level_of_detail)),
+                    .level_of_detail = read_u8(get(at::level_of_detail)),
                     .visible = flag(get(at::rendering), true),
                 },
                 .look_at = {
-                    .type = i32(get(at::look_type)),
+                    .type = read_i32(get(at::look_type)),
                     .target = ref(get(at::look_target), index),
-                    .horizontal = { f32(get(at::look_h)) },
-                    .vertical = { f32(get(at::look_v)) },
-                    .distance = { f32(get(at::look_dist), 1.5f) },
+                    .horizontal = { read_f32(get(at::look_h)) },
+                    .vertical = { read_f32(get(at::look_v)) },
+                    .distance = { read_f32(get(at::look_dist), 1.5f) },
                     .extra_bits = bits32(get(at::look_extra)).value_or(0),
                 },
                 .thoughts = thoughts(get(at::recent_thoughts), index),
@@ -549,8 +549,8 @@ namespace rct3::save::model
                 .attraction_info = ref(get(at::attraction_info), index),
                 .route_controller = ref(get(at::route_controller), index),
                 .holder = ref(get(at::holders), index),
-                .time_to_next_think = units::Seconds { f32(get(at::time_to_next_think)) },
-                .thinks_to_big_think = i32(get(at::thinks_to_big)),
+                .time_to_next_think = units::Seconds { read_f32(get(at::time_to_next_think)) },
+                .thinks_to_big_think = read_i32(get(at::thinks_to_big)),
             };
             if (std::optional<const Value&> world = get(at::world_matrix))
             {
@@ -752,43 +752,43 @@ namespace rct3::save::model
         return Guest {
             .person = build_person(o, index, PersonType::Adult),
             .cash = {
-                .bank = i32(sub(cash, at::atm_cash)),
-                .current = i32(sub(cash, at::current_cash)),
-                .withdrawn = i32(sub(cash, at::withdrawn)),
-                .spent_drink = i32(sub(cash, at::spent_drink)),
-                .spent_food = i32(sub(cash, at::spent_food)),
-                .spent_park_entry = i32(sub(cash, at::spent_entry)),
-                .spent_rides = i32(sub(cash, at::spent_rides)),
-                .spent_souvenirs = i32(sub(cash, at::spent_souvenirs)),
-                .total_spent = i32(sub(cash, at::total_spent)),
+                .bank = read_i32(sub(cash, at::atm_cash)),
+                .current = read_i32(sub(cash, at::current_cash)),
+                .withdrawn = read_i32(sub(cash, at::withdrawn)),
+                .spent_drink = read_i32(sub(cash, at::spent_drink)),
+                .spent_food = read_i32(sub(cash, at::spent_food)),
+                .spent_park_entry = read_i32(sub(cash, at::spent_entry)),
+                .spent_rides = read_i32(sub(cash, at::spent_rides)),
+                .spent_souvenirs = read_i32(sub(cash, at::spent_souvenirs)),
+                .total_spent = read_i32(sub(cash, at::total_spent)),
             },
             .needs = {
-                .food = f32(sub(need, at::food_f), 1),
-                .drink = f32(sub(need, at::drink_f), 1),
-                .toilet = f32(sub(need, at::toilet_f), 0),
+                .food = read_f32(sub(need, at::food_f), 1),
+                .drink = read_f32(sub(need, at::drink_f), 1),
+                .toilet = read_f32(sub(need, at::toilet_f), 0),
             },
             .mood_now = now,
             .mood_target = get(at::target_health) ? mood(get(at::target_health)) : now,
             .ride_preference = {
-                .intensity = static_cast<RideIntensity>(u8(get(at::intensity), 1)),
-                .min = f32(get(at::intensity_min)),
-                .max = f32(get(at::intensity_max)),
+                .intensity = static_cast<RideIntensity>(read_u8(get(at::intensity), 1)),
+                .min = read_f32(get(at::intensity_min)),
+                .max = read_f32(get(at::intensity_max)),
             },
-            .nausea_tolerance = static_cast<NauseaTolerance>(u8(get(at::nausea_tolerance), 1)),
+            .nausea_tolerance = static_cast<NauseaTolerance>(read_u8(get(at::nausea_tolerance), 1)),
             .favourite_ride = ref(get(at::favourite_ride), index),
-            .favourite_ride_rating = f32(get(at::favourite_rating)),
+            .favourite_ride_rating = read_f32(get(at::favourite_rating)),
             .group = ref(get(at::guest_group), index),
             .counters = {
-                .rides = i32(get(at::rides_done)),
-                .drinks = i32(get(at::drinks_bought)),
-                .food_items = i32(get(at::food_bought)),
-                .souvenirs = i32(get(at::souvenirs_bought)),
-                .photos = i32(get(at::photos_taken)),
-                .times_lost = i32(get(at::man_lost)),
-                .minutes_in_park = i32(get(at::time_in_park_int)),
+                .rides = read_i32(get(at::rides_done)),
+                .drinks = read_i32(get(at::drinks_bought)),
+                .food_items = read_i32(get(at::food_bought)),
+                .souvenirs = read_i32(get(at::souvenirs_bought)),
+                .photos = read_i32(get(at::photos_taken)),
+                .times_lost = read_i32(get(at::man_lost)),
+                .minutes_in_park = read_i32(get(at::time_in_park_int)),
             },
-            .scenery_assess_timer = i32(get(at::assess_scenery)),
-            .consuming_amount = f32(get(at::consuming_amount)),
+            .scenery_assess_timer = read_i32(get(at::assess_scenery)),
+            .consuming_amount = read_f32(get(at::consuming_amount)),
             .in_park = flag(get(at::is_in_park), true),
             .is_avatar = flag(get(at::is_avatar)),
             .facing_photo = flag(get(at::is_facing_photo)),
@@ -816,20 +816,20 @@ namespace rct3::save::model
         Staff s {
             .person = build_person(o, index, c->type),
             .kind = c->kind,
-            .type_id = i32(get(at::staff_type_id)),
-            .wage_level = i32(get(at::wage_level), 1),
-            .warnings = i32(get(at::warnings)),
-            .training = i32(get(at::training)),
-            .laziness = f32(get(at::laziness)),
-            .happiness = f32(get(at::happiness), 0.5f),
-            .think_timer = units::Seconds { f32(get(at::think_timer)) },
-            .last_task_type = i32(get(at::last_task_type)),
-            .thinks_since_last_task = core::none_if_negative(i32(get(at::thinks_last_task), -1)),
-            .thinks_since_different_task = core::none_if_negative(i32(get(at::thinks_different_task), -1)),
-            .thinks_since_no_task = core::none_if_negative(i32(get(at::thinks_no_task), -1)),
-            .thinks_since_happy = core::none_if_negative(i32(get(at::thinks_happy), -1)),
-            .patrol = { u8(get(at::start_col)), u8(get(at::start_row)), u8(get(at::grid_x)), u8(get(at::grid_y)), flag(get(at::start_state)) },
-            .task_flags = i32(get(at::task_flags)),
+            .type_id = read_i32(get(at::staff_type_id)),
+            .wage_level = read_i32(get(at::wage_level), 1),
+            .warnings = read_i32(get(at::warnings)),
+            .training = read_i32(get(at::training)),
+            .laziness = read_f32(get(at::laziness)),
+            .happiness = read_f32(get(at::happiness), 0.5f),
+            .think_timer = units::Seconds { read_f32(get(at::think_timer)) },
+            .last_task_type = read_i32(get(at::last_task_type)),
+            .thinks_since_last_task = core::none_if_negative(read_i32(get(at::thinks_last_task), -1)),
+            .thinks_since_different_task = core::none_if_negative(read_i32(get(at::thinks_different_task), -1)),
+            .thinks_since_no_task = core::none_if_negative(read_i32(get(at::thinks_no_task), -1)),
+            .thinks_since_happy = core::none_if_negative(read_i32(get(at::thinks_happy), -1)),
+            .patrol = { read_u8(get(at::start_col)), read_u8(get(at::start_row)), read_u8(get(at::grid_x)), read_u8(get(at::grid_y)), flag(get(at::start_state)) },
+            .task_flags = read_i32(get(at::task_flags)),
             .time_in_pool = opt_f32(get(at::time_in_pool)).transform([](float s) { return units::Seconds { s }; }),
         };
         switch (c->kind)
@@ -837,10 +837,10 @@ namespace rct3::save::model
             case StaffKind::Handyman:
             {
                 s.work = HandymanWork {
-                    .bins_emptied = i32(get(at::bins_emptied)),
-                    .gardens_watered = i32(get(at::gardens_watered)),
-                    .grass_mown = i32(get(at::grass_mown)),
-                    .paths_swept = i32(get(at::paths_swept)),
+                    .bins_emptied = read_i32(get(at::bins_emptied)),
+                    .gardens_watered = read_i32(get(at::gardens_watered)),
+                    .grass_mown = read_i32(get(at::grass_mown)),
+                    .paths_swept = read_i32(get(at::paths_swept)),
                     .duty_waypoint = vec3(get(at::duty_waypoint)),
                 };
                 break;
@@ -849,22 +849,22 @@ namespace rct3::save::model
             {
                 s.work = MechanicWork {
                     .info = ref(get(at::mechanic_info), index),
-                    .objects_fixed = i32(get(at::objects_fixed)),
-                    .objects_inspected = i32(get(at::objects_inspected)),
-                    .state_timer = f32(get(at::state_timer)),
+                    .objects_fixed = read_i32(get(at::objects_fixed)),
+                    .objects_inspected = read_i32(get(at::objects_inspected)),
+                    .state_timer = read_f32(get(at::state_timer)),
                 };
                 break;
             }
             case StaffKind::Entertainer:
             {
                 s.work = EntertainerWork {
-                    .anim_count = i32(get(at::anim_count)),
+                    .anim_count = read_i32(get(at::anim_count)),
                     .bad = flag(get(at::bad)),
                     .facing = flag(get(at::facing)),
                     .guests_ok = flag(get(at::guests_ok)),
-                    .show_piece_index = i32(get(at::show_piece)),
-                    .time_till_entertain = f32(get(at::time_till_entertain)),
-                    .too_few_many_guests_time = f32(get(at::too_few_many)),
+                    .show_piece_index = read_i32(get(at::show_piece)),
+                    .time_till_entertain = read_f32(get(at::time_till_entertain)),
+                    .too_few_many_guests_time = read_f32(get(at::too_few_many)),
                 };
                 break;
             }
@@ -882,9 +882,9 @@ namespace rct3::save::model
             {
                 s.work = KeeperWork {
                     .shelters_to_fill = ref_list(get(at::shelters_to_fill), index, kMaxVisited),
-                    .enclosure_id = i32(get(at::enclosure_id)),
-                    .dung_cleared = i32(get(at::dung_cleared)),
-                    .troughs_filled = i32(get(at::troughs_filled)),
+                    .enclosure_id = read_i32(get(at::enclosure_id)),
+                    .dung_cleared = read_i32(get(at::dung_cleared)),
+                    .troughs_filled = read_i32(get(at::troughs_filled)),
                 };
                 break;
             }
@@ -916,14 +916,14 @@ namespace rct3::save::model
             .id = o.id,
             .kind = *kind,
             .position = matrix_position(get(at::world_matrix)),
-            .anim_type = i32(get(at::anim_type)),
-            .anim_time = f32(get(at::anim_time)),
-            .anim_speed = f32(get(at::anim_speed)),
-            .state = i32(get(at::state)),
-            .sub_state = i32(get(at::sub_state)),
-            .state_timer = f32(get(at::state_timer_a)),
-            .palette = u8(get(at::palette)),
-            .time_in_park = f32(get(at::time_in_park_f)),
+            .anim_type = read_i32(get(at::anim_type)),
+            .anim_time = read_f32(get(at::anim_time)),
+            .anim_speed = read_f32(get(at::anim_speed)),
+            .state = read_i32(get(at::state)),
+            .sub_state = read_i32(get(at::sub_state)),
+            .state_timer = read_f32(get(at::state_timer_a)),
+            .palette = read_u8(get(at::palette)),
+            .time_in_park = read_f32(get(at::time_in_park_f)),
             .target = vec3(get(at::target_pos)),
             .leader = flag(get(at::leader)),
         };
@@ -931,11 +931,11 @@ namespace rct3::save::model
         {
             a.left = ref(get(at::left_fish), index);
             a.right = ref(get(at::right_fish), index);
-            a.fish_type = i32(get(at::fish_type));
-            a.swim_radius = f32(get(at::swim_radius));
-            a.swim_speed_per_step = f32(get(at::swim_speed_step));
-            a.swim_turn_speed_per_step = f32(get(at::swim_turn_step));
-            a.normal_swim_speed = f32(get(at::normal_swim_speed));
+            a.fish_type = read_i32(get(at::fish_type));
+            a.swim_radius = read_f32(get(at::swim_radius));
+            a.swim_speed_per_step = read_f32(get(at::swim_speed_step));
+            a.swim_turn_speed_per_step = read_f32(get(at::swim_turn_step));
+            a.normal_swim_speed = read_f32(get(at::normal_swim_speed));
         }
         else
         {
@@ -946,8 +946,8 @@ namespace rct3::save::model
         if (*kind == AnimalKind::Seagull)
         {
             a.victim = ref(get(at::victim), index);
-            a.litter_pecked = i32(get(at::litter_pecked));
-            a.guests_attacked = i32(get(at::guests_attacked));
+            a.litter_pecked = read_i32(get(at::litter_pecked));
+            a.guests_attacked = read_i32(get(at::guests_attacked));
         }
         return a;
     }
@@ -961,34 +961,34 @@ namespace rct3::save::model
             .id = o.id,
             .name_template = str(get(at::wa_name)),
             .first_names = str(get(at::wa_first_names)),
-            .generation_suffix = i32(get(at::wa_suffix)),
+            .generation_suffix = read_i32(get(at::wa_suffix)),
             .is_male = flag(get(at::wa_is_male)),
             .is_adult = flag(get(at::wa_is_adult)),
-            .date_of_birth = f32(get(at::wa_birth)),
-            .health = f32(get(at::wa_health)),
-            .food = f32(get(at::wa_food)),
-            .drink = f32(get(at::wa_drink)),
-            .tiredness = f32(get(at::wa_tiredness)),
-            .social = f32(get(at::wa_social)),
-            .dung = f32(get(at::wa_dung)),
+            .date_of_birth = read_f32(get(at::wa_birth)),
+            .health = read_f32(get(at::wa_health)),
+            .food = read_f32(get(at::wa_food)),
+            .drink = read_f32(get(at::wa_drink)),
+            .tiredness = read_f32(get(at::wa_tiredness)),
+            .social = read_f32(get(at::wa_social)),
+            .dung = read_f32(get(at::wa_dung)),
             .sleeping = flag(get(at::wa_sleeping)),
             .tranquilised = flag(get(at::wa_tranquilised)),
             .can_be_picked_up = flag(get(at::wa_pickup)),
             .in_crate = flag(get(at::wa_crate)),
             .been_paid_for = flag(get(at::wa_paid)),
-            .adoption_fee = i32(get(at::wa_fee)),
-            .species_hunger = i32(get(at::wa_hunger)),
-            .species_life_expectancy = i32(get(at::wa_life)),
-            .species_peep_enjoyment = i32(get(at::wa_enjoyment)),
-            .species_social = i32(get(at::wa_species_social)),
-            .species_water_req = i32(get(at::wa_water)),
-            .type = i32(get(at::wa_type)),
+            .adoption_fee = read_i32(get(at::wa_fee)),
+            .species_hunger = read_i32(get(at::wa_hunger)),
+            .species_life_expectancy = read_i32(get(at::wa_life)),
+            .species_peep_enjoyment = read_i32(get(at::wa_enjoyment)),
+            .species_social = read_i32(get(at::wa_species_social)),
+            .species_water_req = read_i32(get(at::wa_water)),
+            .type = read_i32(get(at::wa_type)),
             .entry = ref(get(at::wa_entry), index),
             .family_membership = ref(get(at::wa_family), index),
             .visual = ref(get(at::wa_visual), index),
-            .pregnancy_timer = core::none_if_negative(f32(get(at::wa_pregnancy), -1)),
-            .babies_in_womb = i32(get(at::wa_babies)),
-            .enclosure_health_score = f32(get(at::wa_enclosure_score)),
+            .pregnancy_timer = core::none_if_negative(read_f32(get(at::wa_pregnancy), -1)),
+            .babies_in_womb = read_i32(get(at::wa_babies)),
+            .enclosure_health_score = read_f32(get(at::wa_enclosure_score)),
             .thoughts = thoughts(get(at::wa_thoughts), index),
         };
     }
@@ -1000,31 +1000,31 @@ namespace rct3::save::model
         const auto get = [&](std::string_view n) { return o.find(n); };
         GuestGroup g {
             .id = o.id,
-            .group_type = i32(get(at::g_type)),
-            .num_members = i32(get(at::g_num_members)),
+            .group_type = read_i32(get(at::g_type)),
+            .num_members = read_i32(get(at::g_num_members)),
             .leader = ref(get(at::g_leader), index),
             .avatar = ref(get(at::g_avatar), index),
             .members = ref_list(get(at::g_members), index, kMaxGroupMembers),
-            .flock_state = i32(get(at::g_flock_state)),
-            .flock_sub_state = i32(get(at::g_flock_sub)),
+            .flock_state = read_i32(get(at::g_flock_state)),
+            .flock_sub_state = read_i32(get(at::g_flock_sub)),
             .flock_focus = ref(get(at::g_flock_focus), index),
             .flock_target = ref(get(at::g_flock_target), index),
-            .flock_index = i32(get(at::g_flock_index)),
-            .flock_progress = f32(get(at::g_flock_progress)),
-            .flock_decay = f32(get(at::g_flock_decay)),
+            .flock_index = read_i32(get(at::g_flock_index)),
+            .flock_progress = read_f32(get(at::g_flock_progress)),
+            .flock_decay = read_f32(get(at::g_flock_decay)),
             .average_mood = {
-                .energy = f32(get(at::g_avg_energy)),
-                .happiness = f32(get(at::g_avg_happiness)),
-                .nausea = f32(get(at::g_avg_nausea)),
+                .energy = read_f32(get(at::g_avg_energy)),
+                .happiness = read_f32(get(at::g_avg_happiness)),
+                .nausea = read_f32(get(at::g_avg_nausea)),
                 .sunburn = opt_f32(get(at::g_avg_sunburn)),
             },
-            .min_food = f32(get(at::g_min_food)),
-            .min_drink = f32(get(at::g_min_drink)),
-            .max_toilet = f32(get(at::g_max_toilet)),
-            .min_intensity = f32(get(at::g_min_intensity)),
-            .max_intensity = f32(get(at::g_max_intensity)),
-            .set_piece_type = i32(get(at::g_sp_type)),
-            .set_piece_state = i32(get(at::g_sp_state)),
+            .min_food = read_f32(get(at::g_min_food)),
+            .min_drink = read_f32(get(at::g_min_drink)),
+            .max_toilet = read_f32(get(at::g_max_toilet)),
+            .min_intensity = read_f32(get(at::g_min_intensity)),
+            .max_intensity = read_f32(get(at::g_max_intensity)),
+            .set_piece_type = read_i32(get(at::g_sp_type)),
+            .set_piece_state = read_i32(get(at::g_sp_state)),
             .set_piece_focus = vec3(get(at::g_sp_focus)),
             .set_piece_path = ref(get(at::g_sp_path), index),
             .set_piece_actor0 = ref(get(at::g_sp_actor0), index),
@@ -1049,7 +1049,7 @@ namespace rct3::save::model
         ItemHolder h {
             .id = o.id,
             .owner = ref(get(at::h_owner), index),
-            .consuming_slot = core::none_if_negative(i32(get(at::h_consuming), -1)),
+            .consuming_slot = core::none_if_negative(read_i32(get(at::h_consuming), -1)),
             .head = ref(get(at::h_head), index),
             .left_hand = ref(get(at::h_lhand), index),
             .right_hand = ref(get(at::h_rhand), index),
@@ -1074,14 +1074,14 @@ namespace rct3::save::model
             .id = o.id,
             .definition = ref(get(at::i_definition), index),
             .name = str(get(at::i_name)),
-            .food = f32(get(at::i_food)),
-            .drink = f32(get(at::i_drink)),
-            .nausea = f32(get(at::i_nausea)),
+            .food = read_f32(get(at::i_food)),
+            .drink = read_f32(get(at::i_drink)),
+            .nausea = read_f32(get(at::i_nausea)),
             .bad = flag(get(at::i_bad)),
             .becomes = ref(get(at::i_becomes), index),
             .voucher_target = ref(get(at::i_voucher), index),
-            .colours = { u8(get(at::i_colour0)), u8(get(at::i_colour1)), u8(get(at::i_colour2)) },
-            .inventory_choice = core::none_if_negative(i32(get(at::i_inventory), -1)),
+            .colours = { read_u8(get(at::i_colour0)), read_u8(get(at::i_colour1)), read_u8(get(at::i_colour2)) },
+            .inventory_choice = core::none_if_negative(read_i32(get(at::i_inventory), -1)),
         };
     }
 
@@ -1094,10 +1094,10 @@ namespace rct3::save::model
             .id = o.id,
             .definition = ref(get(at::i_definition), index),
             .name = str(get(at::i_name)),
-            .price = i32(get(at::i_price)),
-            .total_sold = i32(get(at::i_total_sold)),
-            .extras = i32(get(at::i_extras)),
-            .colours = { u8(get(at::i_colour0)), u8(get(at::i_colour1)), u8(get(at::i_colour2)) },
+            .price = read_i32(get(at::i_price)),
+            .total_sold = read_i32(get(at::i_total_sold)),
+            .extras = read_i32(get(at::i_extras)),
+            .colours = { read_u8(get(at::i_colour0)), read_u8(get(at::i_colour1)), read_u8(get(at::i_colour2)) },
             .sale_item = ref(get(at::i_sale_item), index),
             .stall = ref(get(at::i_stall), index),
         };
@@ -1110,7 +1110,7 @@ namespace rct3::save::model
         return ShopExtra {
             .id = o.id,
             .definition = ref(o.find(at::i_definition), index),
-            .setting = i32(o.find(at::i_setting)),
+            .setting = read_i32(o.find(at::i_setting)),
         };
     }
 
@@ -1122,9 +1122,9 @@ namespace rct3::save::model
             .id = o.id,
             .position = vec3(o.find(at::l_position)),
             .orientation = vec3(o.find(at::l_orientation)),
-            .type = u8(o.find(at::l_type)),
-            .state = static_cast<LitterState>(u8(o.find(at::l_state))),
-            .create_time = f32(o.find(at::l_create)),
+            .type = read_u8(o.find(at::l_type)),
+            .state = static_cast<LitterState>(read_u8(o.find(at::l_state))),
+            .create_time = read_f32(o.find(at::l_create)),
             .path_tile = ref(o.find(at::l_tile), index),
             .flags = bits32(o.find(at::l_flags)),
         };
@@ -1137,9 +1137,9 @@ namespace rct3::save::model
         return PartGroup {
             .id = o.id,
             .symbol = str(o.find(at::pg_symbol)),
-            .section = u8(o.find(at::pg_section)),
-            .sex = u8(o.find(at::pg_sex)),
-            .type = u8(o.find(at::pg_type)),
+            .section = read_u8(o.find(at::pg_section)),
+            .sex = read_u8(o.find(at::pg_sex)),
+            .type = read_u8(o.find(at::pg_type)),
         };
     }
 
@@ -1264,7 +1264,7 @@ namespace rct3::save::model
                         m.part_groups.push_back(std::move(*g));
                     break;
                 case Slot::Passport:
-                    m.passport = PassportRules { .gift = ref(d.find(at::gift), index), .stamps_for_gift = i32(d.find(at::stamps_for_gift)) };
+                    m.passport = PassportRules { .gift = ref(d.find(at::gift), index), .stamps_for_gift = read_i32(d.find(at::stamps_for_gift)) };
                     break;
                 case Slot::None:
                     break;

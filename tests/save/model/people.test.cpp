@@ -25,24 +25,24 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& u8(std::uint8_t x)
+        Bytes& put_u8(std::uint8_t x)
         {
             v.push_back(static_cast<std::byte>(x));
             return *this;
         }
-        Bytes& u16(std::uint16_t x)
+        Bytes& put_u16(std::uint16_t x)
         {
             return put(&x, 2);
         }
-        Bytes& u32(std::uint32_t x)
+        Bytes& put_u32(std::uint32_t x)
         {
             return put(&x, 4);
         }
-        Bytes& u64(std::uint64_t x)
+        Bytes& put_u64(std::uint64_t x)
         {
             return put(&x, 8);
         }
-        Bytes& f32(float x)
+        Bytes& put_f32(float x)
         {
             return put(&x, 4);
         }
@@ -59,14 +59,14 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<std::uint16_t>(s.size()));
             for (const char c : s)
-                u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<std::uint8_t>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<std::uint32_t>(payload.v.size()));
             return cat(payload);
         }
     };
@@ -82,7 +82,7 @@ namespace
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).u32(a.size).u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -101,57 +101,57 @@ namespace
         {
         }
 
-        Obj& i32(const std::string& n, std::int32_t x)
+        Obj& put_i32(const std::string& n, std::int32_t x)
         {
             attrs.push_back({ n, "int32", 4, { } });
-            payload.u32(static_cast<std::uint32_t>(x));
+            payload.put_u32(static_cast<std::uint32_t>(x));
             return *this;
         }
-        Obj& u8(const std::string& n, std::uint8_t x)
+        Obj& put_u8(const std::string& n, std::uint8_t x)
         {
             attrs.push_back({ n, "uint8", 1, { } });
-            payload.u8(x);
+            payload.put_u8(x);
             return *this;
         }
-        Obj& f32(const std::string& n, float x)
+        Obj& put_f32(const std::string& n, float x)
         {
             attrs.push_back({ n, "float32", 4, { } });
-            payload.f32(x);
+            payload.put_f32(x);
             return *this;
         }
         Obj& boolean(const std::string& n, bool x)
         {
             attrs.push_back({ n, "bool", 1, { } });
-            payload.u8(x ? 1 : 0);
+            payload.put_u8(x ? 1 : 0);
             return *this;
         }
         Obj& ref(const std::string& n, std::uint64_t x)
         {
             attrs.push_back({ n, "reference", 8, { } });
-            payload.u64(x);
+            payload.put_u64(x);
             return *this;
         }
         Obj& vec3(const std::string& n, float x, float y, float z)
         {
             attrs.push_back({ n, "vector3", 12, { } });
-            payload.f32(x).f32(y).f32(z);
+            payload.put_f32(x).put_f32(y).put_f32(z);
             return *this;
         }
         Obj& matrix(const std::string& n, float x, float y, float z)
         {
             attrs.push_back({ n, "matrix44", 64, { } });
             for (std::int32_t i = 0; i < 12; ++i)
-                payload.f32(i % 5 == 0 ? 1.0f : 0.0f);
-            payload.f32(x).f32(y).f32(z).f32(1);
+                payload.put_f32(i % 5 == 0 ? 1.0f : 0.0f);
+            payload.put_f32(x).put_f32(y).put_f32(z).put_f32(1);
             return *this;
         }
         Obj& str(const std::string& n, const std::u16string& s)
         {
             attrs.push_back({ n, "string", 0, { } });
             Bytes p;
-            p.u32(0xEFEFEFEFu);
+            p.put_u32(0xEFEFEFEFu);
             for (const auto c : s)
-                p.u16(c);
+                p.put_u16(c);
             payload.blob(p);
             return *this;
         }
@@ -159,9 +159,9 @@ namespace
         {
             attrs.push_back({ n, "list", 0, { { "r", "reference", 8, { } } } });
             Bytes p;
-            p.u32(static_cast<std::uint32_t>(ids.size()));
+            p.put_u32(static_cast<std::uint32_t>(ids.size()));
             for (const auto id_ : ids)
-                p.u64(id_);
+                p.put_u64(id_);
             payload.blob(p);
             return *this;
         }
@@ -170,7 +170,7 @@ namespace
         {
             attrs.push_back({ n, "list", 0, { { "r", "reference", 8, { } } } });
             Bytes p;
-            p.u32(count);
+            p.put_u32(count);
             payload.blob(p);
             return *this;
         }
@@ -178,9 +178,9 @@ namespace
         {
             attrs.push_back({ n, "list", 0, { { "p", "vector3", 12, { } } } });
             Bytes p;
-            p.u32(static_cast<std::uint32_t>(pts.size()));
+            p.put_u32(static_cast<std::uint32_t>(pts.size()));
             for (const auto& q : pts)
-                p.f32(q.x).f32(q.y).f32(q.z);
+                p.put_f32(q.x).put_f32(q.y).put_f32(q.z);
             payload.blob(p);
             return *this;
         }
@@ -195,9 +195,9 @@ namespace
         {
             attrs.push_back({ n, "list", 0, { { "About", "reference", 8, { } }, { "GuestReference", "reference", 8, { } }, { "Thought", "int32", 4, { } }, { "Time", "float32", 4, { } }, { "Variant", "int32", 4, { } } } });
             Bytes p;
-            p.u32(static_cast<std::uint32_t>(ts.size()));
+            p.put_u32(static_cast<std::uint32_t>(ts.size()));
             for (const auto& t : ts)
-                p.u64(t.about).u64(t.other).u32(static_cast<std::uint32_t>(t.id)).f32(t.time).u32(static_cast<std::uint32_t>(t.variant));
+                p.put_u64(t.about).put_u64(t.other).put_u32(static_cast<std::uint32_t>(t.id)).put_f32(t.time).put_u32(static_cast<std::uint32_t>(t.variant));
             payload.blob(p);
             return *this;
         }
@@ -226,7 +226,7 @@ namespace
             for (const auto& f : fs)
             {
                 a.children.push_back({ f.name, f.is_float ? "float32" : "int32", 4, { } });
-                payload.u32(f.bits);
+                payload.put_u32(f.bits);
             }
             attrs.push_back(std::move(a));
             return *this;
@@ -248,19 +248,19 @@ namespace
             if (!std::ranges::contains(names, o.cls))
                 names.push_back(o.cls);
         Bytes b;
-        b.u32(static_cast<std::uint32_t>(names.size()));
+        b.put_u32(static_cast<std::uint32_t>(names.size()));
         for (const auto& n : names)
         {
             const auto first = std::find_if(objs.begin(), objs.end(), [&](const Obj& o) { return o.cls == n; });
-            b.name(n).u32(static_cast<std::uint32_t>(first->attrs.size()));
+            b.name(n).put_u32(static_cast<std::uint32_t>(first->attrs.size()));
             for (const auto& a : first->attrs)
                 write_attr(b, a);
         }
-        b.u32(static_cast<std::uint32_t>(objs.size()));
+        b.put_u32(static_cast<std::uint32_t>(objs.size()));
         for (const auto& o : objs)
         {
             const auto idx = std::find(names.begin(), names.end(), o.cls) - names.begin();
-            b.u32(static_cast<std::uint32_t>(idx)).u64(o.id).cat(o.payload);
+            b.put_u32(static_cast<std::uint32_t>(idx)).put_u64(o.id).cat(o.payload);
         }
         auto w = std::make_unique<World>();
         w->bytes = std::move(b.v);
@@ -291,18 +291,18 @@ namespace
 TEST_CASE("a minimal guest decodes into typed fields")
 {
     Obj g("Guest", 10);
-    g.i32("PersonType", 1).u8("SubType", 1).i32("State", 16).i32("SubState", 2).f32("FacingAngle", 1.5f);
+    g.put_i32("PersonType", 1).put_u8("SubType", 1).put_i32("State", 16).put_i32("SubState", 2).put_f32("FacingAngle", 1.5f);
     g.matrix("WorldMatrix", 3, 4, 5).vec3("PathOffset", 0.25f, 0, -0.5f).str("NameS", u"Ann B");
     g.ref("StateTarget", 11).ref("GuestGroup", 12).ref("MyHolders", 13).ref("FavouriteRide", 11);
     g.group("CashInfo", { Obj::fi("ATMCash", 9000), Obj::fi("CurrentCash", 800), Obj::fi("SpentOnDrink", 10), Obj::fi("SpentOnFood", 20), Obj::fi("SpentOnParkEntry", 30), Obj::fi("SpentOnRides", 40), Obj::fi("SpentOnSouvenirs", 50), Obj::fi("TotalSpent", 150), Obj::fi("WithdrawnCash", 5) });
     g.group("Consumption", { Obj::ff("FoodF", 0.75f), Obj::ff("DrinkF", 0.5f), Obj::ff("ToiletF", 0.125f) });
     g.group("CurrentHealth", { Obj::ff("EnergyF", 0.25f), Obj::ff("HappinessF", 0.5f), Obj::ff("NauseaF", 0.0f), Obj::ff("SunBurnF", 0.0625f) });
     g.group("TargetHealth", { Obj::ff("EnergyF", 0.75f), Obj::ff("HappinessF", 1.0f), Obj::ff("NauseaF", 0.5f) });
-    g.u8("PreferedRideIntensity", 2).f32("PreferedIntensityMin", -1).f32("PreferedIntensityMax", 7.5f);
-    g.u8("NauseaTolerance", 3).i32("NumRidesDone", 4).i32("TimeInPark", 90).boolean("IsInPark", true);
+    g.put_u8("PreferedRideIntensity", 2).put_f32("PreferedIntensityMin", -1).put_f32("PreferedIntensityMax", 7.5f);
+    g.put_u8("NauseaTolerance", 3).put_i32("NumRidesDone", 4).put_i32("TimeInPark", 90).boolean("IsInPark", true);
     g.thoughts("RecentThoughts", { { 11, 0, 5, 12.5f, 777 }, { } });
     g.refs("AttractionsVisited", { 11, 99999 });
-    g.u8("SkinPalette", 3).u8("UpperClothingPalette", 255).i32("HeadOptionals", 6).ref("HeadPartGroup", 11);
+    g.put_u8("SkinPalette", 3).put_u8("UpperClothingPalette", 255).put_i32("HeadOptionals", 6).ref("HeadPartGroup", 11);
     const auto w = make_world({ g, blank("GuestGroup", 12), blank("GuestHolders", 13), blank("Ride", 11) });
 
     const auto guest = build(*w, 10, make_guest);
@@ -359,7 +359,7 @@ TEST_CASE("a minimal guest decodes into typed fields")
 TEST_CASE("missing attributes take defaults")
 {
     Obj g("Guest", 1);
-    g.i32("State", 4);
+    g.put_i32("State", 4);
     const auto w = make_world({ g });
     const auto guest = build(*w, 1, make_guest);
     REQUIRE(guest);
@@ -382,11 +382,11 @@ TEST_CASE("missing attributes take defaults")
 TEST_CASE("uninitialised fill becomes the default or none")
 {
     Obj g("Guest", 1);
-    g.f32("FacingAngle", std::bit_cast<float>(kFill)).i32("NumRidesDone", static_cast<std::int32_t>(kFill));
+    g.put_f32("FacingAngle", std::bit_cast<float>(kFill)).put_i32("NumRidesDone", static_cast<std::int32_t>(kFill));
     g.group("Consumption", { Obj::ffill("FoodF"), Obj::ff("DrinkF", 0.25f), Obj::ffill("ToiletF") });
-    g.f32("PoolNeed", std::bit_cast<float>(kFill)).f32("PriceModifier", 1.5f);
+    g.put_f32("PoolNeed", std::bit_cast<float>(kFill)).put_f32("PriceModifier", 1.5f);
     g.matrix("WorldMatrix", std::bit_cast<float>(kFill), 2, 3);
-    g.f32("MoveSpeed", std::numeric_limits<float>::quiet_NaN());
+    g.put_f32("MoveSpeed", std::numeric_limits<float>::quiet_NaN());
     const auto w = make_world({ g });
     const auto guest = build(*w, 1, make_guest);
     REQUIRE(guest);
@@ -405,7 +405,7 @@ TEST_CASE("dangling references are none, live ones kept")
 {
     Obj g("Guest", 1);
     g.ref("GuestGroup", 424242).ref("StateTarget", 2).ref("RouteController", 0).ref("LookAtTarget", 3);
-    g.i32("FavouriteRide", 2); // a reference stored under an integer type still resolves
+    g.put_i32("FavouriteRide", 2); // a reference stored under an integer type still resolves
     const auto w = make_world({ g, blank("Bench", 2) });
     const auto guest = build(*w, 1, make_guest);
     REQUIRE(guest);
@@ -421,10 +421,10 @@ TEST_CASE("dangling references are none, live ones kept")
 TEST_CASE("values stored under the wrong declared type are reinterpreted")
 {
     Obj g("Guest", 1);
-    g.i32("TimeToNextThink", std::bit_cast<std::int32_t>(2.5f));             // float seconds in an int slot
-    g.f32("ThinksToNextBigThink", std::bit_cast<float>(std::int32_t { 7 })); // small count in a float slot
-    g.i32("IsInPark", 0).i32("PersonType", 2).i32("LookAtExtra", std::bit_cast<std::int32_t>(0.5f));
-    g.i32("NameS", 5).f32("StateTarget", 1.0f).str("PhotosTaken", u"x");
+    g.put_i32("TimeToNextThink", std::bit_cast<std::int32_t>(2.5f));             // float seconds in an int slot
+    g.put_f32("ThinksToNextBigThink", std::bit_cast<float>(std::int32_t { 7 })); // small count in a float slot
+    g.put_i32("IsInPark", 0).put_i32("PersonType", 2).put_i32("LookAtExtra", std::bit_cast<std::int32_t>(0.5f));
+    g.put_i32("NameS", 5).put_f32("StateTarget", 1.0f).str("PhotosTaken", u"x");
     const auto w = make_world({ g });
     const auto guest = build(*w, 1, make_guest);
     REQUIRE(guest);
@@ -441,7 +441,7 @@ TEST_CASE("values stored under the wrong declared type are reinterpreted")
 TEST_CASE("unknown enumeration values are kept")
 {
     Obj g("Guest", 1);
-    g.i32("State", 9999).i32("SubState", -3).i32("PersonType", 77).u8("PreferedRideIntensity", 9).u8("NauseaTolerance", 200);
+    g.put_i32("State", 9999).put_i32("SubState", -3).put_i32("PersonType", 77).put_u8("PreferedRideIntensity", 9).put_u8("NauseaTolerance", 200);
     const auto w = make_world({ g });
     const auto guest = build(*w, 1, make_guest);
     REQUIRE(guest);
@@ -468,22 +468,22 @@ TEST_CASE("builders reject objects of another class")
 TEST_CASE("staff roles carry their own data")
 {
     Obj h("Handyman", 1);
-    h.i32("PersonType", 4).i32("State", 14).i32("StaffTypeId", 2).i32("WageLevel", 2).i32("Training", 3);
-    h.f32("Laziness", 0.5f).f32("Happiness", 0.75f).f32("ThinkTimer", 3.5f).i32("ThinksSinceHappy", -1);
-    h.u8("StartCol", 10).u8("StartRow", 20).u8("GridSizeX", 5).u8("GridSizeY", 6).boolean("StartState", true);
-    h.i32("BinsEmptied", 3).i32("PathsSwept", 8).vec3("DutyWayPoint", 1, 2, 3);
+    h.put_i32("PersonType", 4).put_i32("State", 14).put_i32("StaffTypeId", 2).put_i32("WageLevel", 2).put_i32("Training", 3);
+    h.put_f32("Laziness", 0.5f).put_f32("Happiness", 0.75f).put_f32("ThinkTimer", 3.5f).put_i32("ThinksSinceHappy", -1);
+    h.put_u8("StartCol", 10).put_u8("StartRow", 20).put_u8("GridSizeX", 5).put_u8("GridSizeY", 6).boolean("StartState", true);
+    h.put_i32("BinsEmptied", 3).put_i32("PathsSwept", 8).vec3("DutyWayPoint", 1, 2, 3);
     Obj v("Vendor", 2);
-    v.i32("PersonType", 8).ref("SceneryItem", 1).ref("AttractionInstance", 555).ref("Customer", 0);
+    v.put_i32("PersonType", 8).ref("SceneryItem", 1).ref("AttractionInstance", 555).ref("Customer", 0);
     Obj m("Mechanic", 3);
-    m.i32("ObjectsFixed", 4).f32("StateTimer", 1.5f).ref("ObjectMechanicInfo", 1);
+    m.put_i32("ObjectsFixed", 4).put_f32("StateTimer", 1.5f).ref("ObjectMechanicInfo", 1);
     Obj k("AnimalKeeper", 4);
-    k.i32("PersonType", 9).refs("SheltersToFill", { 1, 1, 777 }).i32("EnclosureID", 3);
+    k.put_i32("PersonType", 9).refs("SheltersToFill", { 1, 1, 777 }).put_i32("EnclosureID", 3);
     Obj l("LifeGuard", 5);
     l.ref("LifeGuardChair", 1).boolean("ChairBeenSet", true);
     Obj i("ParkInspector", 6);
-    i.i32("PersonType", 3).i32("StaffTypeId", -1);
+    i.put_i32("PersonType", 3).put_i32("StaffTypeId", -1);
     Obj e("Entertainer", 7);
-    e.u8("SubType", 5).i32("ShowPieceIndex", 2).boolean("Bad", true);
+    e.put_u8("SubType", 5).put_i32("ShowPieceIndex", 2).boolean("Bad", true);
     Obj s("SecurityGuard", 8);
     const auto w = make_world({ h, v, m, k, l, i, e, s });
 
@@ -557,14 +557,14 @@ TEST_CASE("staff roles carry their own data")
 TEST_CASE("animals of each kind")
 {
     Obj d("Duck", 1);
-    d.matrix("WorldMatrix", 7, 8, 9).i32("AnimType", 2).i32("State", 512).i32("SubState", 1).u8("Palette", 3);
-    d.boolean("Leader", true).ref("LeftDuck", 2).ref("RightDuck", 888).f32("StateTimer", 4.5f).f32("TimeInPark", 100);
+    d.matrix("WorldMatrix", 7, 8, 9).put_i32("AnimType", 2).put_i32("State", 512).put_i32("SubState", 1).put_u8("Palette", 3);
+    d.boolean("Leader", true).ref("LeftDuck", 2).ref("RightDuck", 888).put_f32("StateTimer", 4.5f).put_f32("TimeInPark", 100);
     d.vec3("TargetPos", 1, 2, 3);
     Obj f("Fish", 2);
-    f.i32("FishType", 2).f32("SwimRadius", 0.5f).ref("LeftFish", 1).f32("SwimSpeedPerStep", 0.25f).f32("NormalSwimSpeed", 3);
-    f.f32("SwimSlowAtTarget", std::bit_cast<float>(kFill));
+    f.put_i32("FishType", 2).put_f32("SwimRadius", 0.5f).ref("LeftFish", 1).put_f32("SwimSpeedPerStep", 0.25f).put_f32("NormalSwimSpeed", 3);
+    f.put_f32("SwimSlowAtTarget", std::bit_cast<float>(kFill));
     Obj g("Seagull", 3);
-    g.ref("Victim", 1).i32("LitterPecked", 4).i32("GuestsAttacked", 1);
+    g.ref("Victim", 1).put_i32("LitterPecked", 4).put_i32("GuestsAttacked", 1);
     const auto w = make_world({ d, f, g });
 
     const auto da = build(*w, 1, make_animal);
@@ -597,8 +597,8 @@ TEST_CASE("animals of each kind")
 TEST_CASE("zoo animal")
 {
     Obj z("WildAnimal", 1);
-    z.str("FirstAndMiddleName", u"Rex the").boolean("IsMale", true).boolean("IsAdult", false).f32("DateOfBirth", -50);
-    z.f32("Health", 0.5f).i32("AdoptionFee", 100).i32("SSHunger", 12).f32("PregnancyTimer", -1);
+    z.str("FirstAndMiddleName", u"Rex the").boolean("IsMale", true).boolean("IsAdult", false).put_f32("DateOfBirth", -50);
+    z.put_f32("Health", 0.5f).put_i32("AdoptionFee", 100).put_i32("SSHunger", 12).put_f32("PregnancyTimer", -1);
     z.ref("Entry", 2).ref("FamilyMembership", 31337).thoughts("ThoughtsAbout", { { 0, 0, 250, 3, 9 } });
     const auto w = make_world({ z, blank("Entry", 2) });
     const auto a = build(*w, 1, make_zoo_animal);
@@ -638,19 +638,19 @@ TEST_CASE("a zoo animal takes its species from its entry and its place from its 
 TEST_CASE("guest groups, holders, items and litter")
 {
     Obj g("GuestGroup", 1);
-    g.i32("GuestGroupType", 4).i32("NumMembers", 3).ref("Leader", 10).refs("Members", { 10, 11, 9999, 0 });
-    g.i32("FlockState", 16).f32("MinFood", 0.5f).f32("AvgSunBurn", 0.25f).i32("SetPieceType", 2);
+    g.put_i32("GuestGroupType", 4).put_i32("NumMembers", 3).ref("Leader", 10).refs("Members", { 10, 11, 9999, 0 });
+    g.put_i32("FlockState", 16).put_f32("MinFood", 0.5f).put_f32("AvgSunBurn", 0.25f).put_i32("SetPieceType", 2);
     g.vec3s("SetPiecePos", { { 1, 2, 3 }, { 4, 5, 6 } }).boolean("SetPieceTakePhoto", true);
     Obj h("GuestHolders", 2);
-    h.ref("Person", 10).i32("ConsumingItem", -1).ref("LHandHolder", 3).ref("RHandHolder", 4040).i32("HiddenBits", 88);
+    h.ref("Person", 10).put_i32("ConsumingItem", -1).ref("LHandHolder", 3).ref("RHandHolder", 4040).put_i32("HiddenBits", 88);
     Obj c("CarriedItemInstance", 3);
-    c.ref("CIDEntry", 10).str("Name", u"Thing").f32("Drink", -0.5f).boolean("Bad", true).u8("FlexiColour1", 4);
+    c.ref("CIDEntry", 10).str("Name", u"Thing").put_f32("Drink", -0.5f).boolean("Bad", true).put_u8("FlexiColour1", 4);
     Obj s("ShopItemInstance", 4);
-    s.str("Name", u"Item").i32("Price", 150).i32("TotalSold", 12).ref("Stall", 10);
+    s.str("Name", u"Item").put_i32("Price", 150).put_i32("TotalSold", 12).ref("Stall", 10);
     Obj x("ShopExtraInstance", 5);
-    x.i32("Setting", 3);
+    x.put_i32("Setting", 3);
     Obj t("Litter", 6);
-    t.vec3("Position", 1, 0, 2).vec3("Orientation", 0, 1.5f, 0).u8("LitterType", 3).u8("LitterState", 1).f32("CreateTime", 9).ref("PathTile", 10);
+    t.vec3("Position", 1, 0, 2).vec3("Orientation", 0, 1.5f, 0).put_u8("LitterType", 3).put_u8("LitterState", 1).put_f32("CreateTime", 9).ref("PathTile", 10);
     const auto w = make_world({ g, h, c, s, x, t, blank("Guest", 10), blank("Guest", 11) });
 
     const auto grp = build(*w, 1, make_guest_group);
@@ -707,7 +707,7 @@ TEST_CASE("guest groups, holders, items and litter")
 TEST_CASE("hostile list counts do not allocate or fail")
 {
     Obj g("GuestGroup", 1);
-    g.hostile_refs("Members", 0xFFFFFFFFu).i32("NumMembers", -5);
+    g.hostile_refs("Members", 0xFFFFFFFFu).put_i32("NumMembers", -5);
     Obj p("Guest", 2);
     p.hostile_refs("AttractionsVisited", 0x7FFFFFFFu).hostile_refs("RecentThoughts", 0xFFFFFFF0u);
     Obj k("AnimalKeeper", 3);
@@ -743,7 +743,7 @@ namespace
     Obj consistent_guest(std::uint64_t id, std::uint64_t group, std::uint64_t holder, float food = 0.5f, std::int32_t drink_spent = 10, std::int32_t total = 10)
     {
         Obj g("Guest", id);
-        g.i32("PersonType", 2).ref("GuestGroup", group).ref("MyHolders", holder);
+        g.put_i32("PersonType", 2).ref("GuestGroup", group).ref("MyHolders", holder);
         g.group("CashInfo", { Obj::fi("ATMCash", 100), Obj::fi("CurrentCash", 50), Obj::fi("SpentOnDrink", drink_spent), Obj::fi("SpentOnFood", 0), Obj::fi("SpentOnParkEntry", 0), Obj::fi("SpentOnRides", 0), Obj::fi("SpentOnSouvenirs", 0), Obj::fi("TotalSpent", total), Obj::fi("WithdrawnCash", 0) });
         g.group("Consumption", { Obj::ff("FoodF", food), Obj::ff("DrinkF", 0.5f), Obj::ff("ToiletF", 0.5f) });
         return g;
@@ -753,13 +753,13 @@ namespace
 TEST_CASE("a consistent population validates cleanly")
 {
     Obj grp("GuestGroup", 20);
-    grp.i32("NumMembers", 2).refs("Members", { 1, 2, 0 });
+    grp.put_i32("NumMembers", 2).refs("Members", { 1, 2, 0 });
     Obj h1("GuestHolders", 30), h2("GuestHolders", 31), hs("GuestHolders", 32);
     h1.ref("Person", 1);
     h2.ref("Person", 2);
     hs.ref("Person", 40);
     Obj st("Handyman", 40);
-    st.i32("PersonType", 4).ref("MyHolders", 32);
+    st.put_i32("PersonType", 4).ref("MyHolders", 32);
     const auto w = make_world({ consistent_guest(1, 20, 30), consistent_guest(2, 20, 31), grp, h1, h2, hs, st });
     const auto model = load_people(w->file, *w->index);
     REQUIRE(model);
@@ -775,7 +775,7 @@ TEST_CASE("validation reports broken invariants")
     auto bad = consistent_guest(1, 777, 30); // group does not exist
     const auto out_of_range = consistent_guest(2, 20, 99, 1.5f, 50, 10);
     Obj grp("GuestGroup", 20);
-    grp.i32("NumMembers", 1).refs("Members", { 1, 40 }); // member 40 is not a guest, count wrong
+    grp.put_i32("NumMembers", 1).refs("Members", { 1, 40 }); // member 40 is not a guest, count wrong
     Obj h("GuestHolders", 30);
     h.ref("Person", 1);
     Obj orphan("GuestHolders", 31);
@@ -799,7 +799,7 @@ TEST_CASE("validation reports broken invariants")
 TEST_CASE("part groups name the sets people are dressed from")
 {
     Obj g("PPGDatabaseEntry", 7);
-    g.str("SymbolName", u"XY01_BODY").u8("PartGroup", 1).u8("PeopleSex", 1).u8("PeopleType", 2);
+    g.str("SymbolName", u"XY01_BODY").put_u8("PartGroup", 1).put_u8("PeopleSex", 1).put_u8("PeopleType", 2);
     const auto w = make_world({ g, blank("Ride", 1) });
     CHECK_FALSE(build(*w, 1, [](const auto& d, const auto&) { return make_part_group(d); }).has_value());
     const auto group = build(*w, 7, [](const auto& d, const auto&) { return make_part_group(d); });

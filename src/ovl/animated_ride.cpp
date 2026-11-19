@@ -72,7 +72,7 @@ namespace rct3::ovl
                     for (const std::uint32_t at : { 0x30u, 0x38u })
                     {
                         const auto block = ItemRecord::open(space, refs, symbol.data + at, 0x20);
-                        if (block && block->u32(0x0C) == 1 && block->u32(0x10) == 0xFFFFFFFFu)
+                        if (block && block->read_u32(0x0C) == 1 && block->read_u32(0x10) == 0xFFFFFFFFu)
                         {
                             ride.guests = detail::read_ride_guests(space, refs, symbol.data + at);
                             ride.seating = detail::read_ride_seating(space, refs, symbol.data + at);

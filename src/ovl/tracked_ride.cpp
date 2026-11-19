@@ -33,8 +33,8 @@ namespace rct3::ovl
             if (!r)
                 return std::nullopt;
             RideOperatingDefaults d;
-            d.mode = r->u32(0x48);
-            d.allowed_modes = r->u32(0x4C);
+            d.mode = r->read_u32(0x48);
+            d.allowed_modes = r->read_u32(0x4C);
             d.station_speed = r->real(0x54);
             d.launch_speed = r->real(0x5C);
             d.lift_speed = r->real(0x64);
@@ -46,8 +46,8 @@ namespace rct3::ovl
                 d.fixed_speed = fixed;
             d.lift_min = r->real(0xF0);
             d.lift_max = r->real(0xF4);
-            d.cost = r->i32(0xFC);
-            d.height_cost = r->i32(0xCC);
+            d.cost = r->read_i32(0xFC);
+            d.height_cost = r->read_i32(0xCC);
             d.launch_min = r->real(0x108);
             d.launch_max = r->real(0x10C);
             d.platform = r->text(0x38);
@@ -58,14 +58,14 @@ namespace rct3::ovl
             {
                 d.water_pace = water->real(0x160);
                 d.water_hold = water->real(0x164);
-                d.flow_alone = water->u32(0x184) != 0;
+                d.flow_alone = water->read_u32(0x184) != 0;
                 d.flow_speed = water->real(0x188);
                 d.flow_force = water->real(0x18C);
                 d.flow_hold = water->real(0x190);
             }
             constexpr std::uint32_t kMostTrains = 64; // Our own bound against a stray count
-            const std::uint32_t list = r->u32(0x0C);
-            for (std::uint32_t i = 0; i < std::min(r->u32(0x08), kMostTrains) && list != 0; ++i)
+            const std::uint32_t list = r->read_u32(0x0C);
+            for (std::uint32_t i = 0; i < std::min(r->read_u32(0x08), kMostTrains) && list != 0; ++i)
             {
                 const auto entry = space.bytes_at(list + i * 4, 4);
                 if (!entry)
@@ -87,8 +87,8 @@ namespace rct3::ovl
             if (!r)
                 return out;
             constexpr std::uint32_t kMostPieces = 4096; // A bound against a stray count
-            const std::uint32_t count = std::min(r->u32(0x00) == 0xFFFFFFFF ? r->u32(0x130) : r->u32(0x00), kMostPieces);
-            const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, r->u32(0x04), std::size_t { count } * 4);
+            const std::uint32_t count = std::min(r->read_u32(0x00) == 0xFFFFFFFF ? r->read_u32(0x130) : r->read_u32(0x00), kMostPieces);
+            const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, r->read_u32(0x04), std::size_t { count } * 4);
             for (std::uint32_t i = 0; list && i < count; ++i)
             {
                 if (const std::string_view name = list->ref(i * 4, "tks"); !name.empty())
@@ -101,7 +101,7 @@ namespace rct3::ovl
         /// negate, 0x2 forward, 0x4 backward, 0x8 first, 0x10 last), then the group's name or the piece.
         PieceTest piece_test(const ItemRecord& entry, std::size_t at)
         {
-            const std::uint32_t word = entry.u32(at);
+            const std::uint32_t word = entry.read_u32(at);
             PieceTest t;
             t.kind = static_cast<std::uint8_t>(word & 0xFF);
             t.name = t.kind == 0 ? entry.text(at + 4) : t.kind == 1 ? entry.ref(at + 4, "tks") : std::string_view { };
@@ -120,30 +120,30 @@ namespace rct3::ovl
             TrackRules rules;
             if (const auto doors = fields == 0 ? std::nullopt : ItemRecord::open(space, refs, fields, 0x30))
             {
-                rules.entrances = doors->u32(0x28);
-                rules.exits = doors->u32(0x2C);
+                rules.entrances = doors->read_u32(0x28);
+                rules.exits = doors->read_u32(0x2C);
             }
             if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open(space, refs, fields + attraction_offset(layout), 0x34))
-                rules.flags = block->u32(0x30);
+                rules.flags = block->read_u32(0x30);
             const auto r = ItemRecord::open(space, refs, address, 0x184);
             if (!r)
                 return rules;
-            if (const std::int32_t least = r->i32(0x17C); least >= 0)
+            if (const std::int32_t least = r->read_i32(0x17C); least >= 0)
                 rules.min_pieces = static_cast<std::uint32_t>(least);
-            rules.circuit_only = r->u32(0x180) != 0;
-            if (const std::int32_t most = r->i32(0xEC); most >= 0)
+            rules.circuit_only = r->read_u32(0x180) != 0;
+            if (const std::int32_t most = r->read_i32(0xEC); most >= 0)
                 rules.most_trains = static_cast<std::uint32_t>(most);
-            rules.car_rotation = r->u32(0xB0) != 0;
+            rules.car_rotation = r->read_u32(0xB0) != 0;
             if (const auto longer = ItemRecord::open(space, refs, address, 0x1A8))
-                rules.car_facing = longer->u32(0x1A4);
+                rules.car_facing = longer->read_u32(0x1A4);
             // A list of (count, pointer) pairs, each pointing at that many 16-byte entries: the piece test,
             // then what the piece becomes.
-            const std::uint32_t count = r->u32(0x148);
-            const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, r->u32(0x14C), std::size_t { count } * 8);
+            const std::uint32_t count = r->read_u32(0x148);
+            const auto list = count == 0 ? std::nullopt : ItemRecord::open(space, refs, r->read_u32(0x14C), std::size_t { count } * 8);
             for (std::uint32_t i = 0; list && i < count; ++i)
             {
-                const std::uint32_t n = list->u32(i * 8);
-                const auto entries = n == 0 ? std::nullopt : ItemRecord::open(space, refs, list->u32(i * 8 + 4), std::size_t { n } * 16);
+                const std::uint32_t n = list->read_u32(i * 8);
+                const auto entries = n == 0 ? std::nullopt : ItemRecord::open(space, refs, list->read_u32(i * 8 + 4), std::size_t { n } * 16);
                 if (!entries)
                     continue;
                 auto& pattern = rules.patterns.emplace_back();
@@ -191,7 +191,7 @@ namespace rct3::ovl
                     ride.track_sections[i] = record->ref(0xD4 + i * 4, "tks");
                     ride.splines[i] = record->ref(0x114 + i * 4, "spl");
                 }
-                const std::uint32_t fields = record->u32(0x12C);
+                const std::uint32_t fields = record->read_u32(0x12C);
                 if (const auto block = fields == 0 ? std::nullopt : ItemRecord::open_up_to(space, refs, fields + attraction_offset(layout), kLaterFieldsSize, kHeaderSize))
                     ride.info = detail::read_attraction(*block, kFields, layout);
                 // The guests lead the block the attraction fields are in.

@@ -52,11 +52,11 @@ namespace rct3::ovl::animal
                 s.fence_strength = record->real(kFenceStrength);
                 for (std::size_t i = 0; i < s.variants.size(); ++i)
                 {
-                    const std::uint32_t at = record->u32(kVariants + 4 * i);
+                    const std::uint32_t at = record->read_u32(kVariants + 4 * i);
                     if (at == 0)
                         continue;
                     if (const auto v = ItemRecord::open(space, refs, at, kVariantSize))
-                        s.variants[i] = AnimalVariant { v->ref(kVariantModel, "mdl"), v->ref(kVariantMotions, "wad"), v->ref(kVariantDescription, "txt"), v->ref(kVariantIcon, "gsi"), v->i32(kVariantPrice), v->real(kVariantRarity) };
+                        s.variants[i] = AnimalVariant { v->ref(kVariantModel, "mdl"), v->ref(kVariantMotions, "wad"), v->ref(kVariantDescription, "txt"), v->ref(kVariantIcon, "gsi"), v->read_i32(kVariantPrice), v->real(kVariantRarity) };
                 }
                 item.species = s;
             }

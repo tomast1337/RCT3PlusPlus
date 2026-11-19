@@ -32,9 +32,9 @@ namespace rct3::ovl::animal
                 continue;
             AnimalMotionsItem item { parts.name, std::nullopt };
             const auto record = ItemRecord::open(space, refs, symbol.data, kSize);
-            const std::uint32_t count = record ? record->u32(kCount) : 0;
-            const auto animations = record && count <= kMaxSlots ? ItemRecord::open(space, refs, record->u32(kAnimations), std::size_t { count } * 4) : std::nullopt;
-            const auto seconds = record && count <= kMaxSlots ? ItemRecord::open(space, refs, record->u32(kSeconds), std::size_t { count } * 4) : std::nullopt;
+            const std::uint32_t count = record ? record->read_u32(kCount) : 0;
+            const auto animations = record && count <= kMaxSlots ? ItemRecord::open(space, refs, record->read_u32(kAnimations), std::size_t { count } * 4) : std::nullopt;
+            const auto seconds = record && count <= kMaxSlots ? ItemRecord::open(space, refs, record->read_u32(kSeconds), std::size_t { count } * 4) : std::nullopt;
             if (animations && seconds)
             {
                 AnimalMotions m;

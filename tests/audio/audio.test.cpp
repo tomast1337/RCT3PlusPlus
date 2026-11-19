@@ -132,10 +132,10 @@ TEST_CASE("sound items convert to playable buffers")
 
     SUBCASE("8-bit PCM is unsigned and widened")
     {
-        const std::array<std::byte, 3> u8 { std::byte { 128 }, std::byte { 255 }, std::byte { 0 } };
+        const std::array<std::byte, 3> pcm_u8 { std::byte { 128 }, std::byte { 255 }, std::byte { 0 } };
         info.bits_per_sample = 8;
         info.channels = 1;
-        info.samples = std::span<const std::byte>(u8);
+        info.samples = std::span<const std::byte>(pcm_u8);
         const auto b = from_ovl_sound(info);
         REQUIRE(b.has_value());
         REQUIRE(b->frame_count() == 3);

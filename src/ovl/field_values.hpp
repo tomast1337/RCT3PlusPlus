@@ -15,19 +15,19 @@
 namespace rct3::ovl::fields
 {
 
-    [[nodiscard]] inline std::uint32_t u32(std::span<const std::byte> bytes, std::size_t at) noexcept
+    [[nodiscard]] inline std::uint32_t read_u32(std::span<const std::byte> bytes, std::size_t at) noexcept
     {
         std::uint32_t v = 0;
         std::memcpy(&v, bytes.data() + at, sizeof v);
         return v;
     }
 
-    [[nodiscard]] inline std::int32_t i32(std::span<const std::byte> bytes, std::size_t at) noexcept
+    [[nodiscard]] inline std::int32_t read_i32(std::span<const std::byte> bytes, std::size_t at) noexcept
     {
-        return static_cast<std::int32_t>(u32(bytes, at));
+        return static_cast<std::int32_t>(read_u32(bytes, at));
     }
 
-    [[nodiscard]] inline float f32(std::span<const std::byte> bytes, std::size_t at) noexcept
+    [[nodiscard]] inline float read_f32(std::span<const std::byte> bytes, std::size_t at) noexcept
     {
         float v = 0;
         std::memcpy(&v, bytes.data() + at, sizeof v);

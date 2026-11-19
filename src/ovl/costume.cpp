@@ -20,16 +20,16 @@ namespace rct3::ovl
             if (!raw)
                 return std::nullopt;
             const auto b = *raw;
-            const std::uint32_t count = fields::u32(b, 0x0c);
-            const std::uint32_t slots = fields::u32(b, 0x10);
+            const std::uint32_t count = fields::read_u32(b, 0x0c);
+            const std::uint32_t slots = fields::read_u32(b, 0x10);
             if (count > kMaxSections || (count != 0 && !space.bytes_at(slots, std::size_t { count } * 4)))
                 return std::nullopt;
             Costume c;
-            c.name = fields::string_field(space, pointers, address + 0x14, fields::u32(b, 0x14));
+            c.name = fields::string_field(space, pointers, address + 0x14, fields::read_u32(b, 0x14));
             for (std::uint32_t i = 0; i < count; ++i)
             {
                 const std::uint32_t at = slots + i * 4;
-                c.sections.push_back(fields::string_field(space, pointers, at, fields::u32(*space.bytes_at(at, 4), 0)));
+                c.sections.push_back(fields::string_field(space, pointers, at, fields::read_u32(*space.bytes_at(at, 4), 0)));
             }
             return c;
         }

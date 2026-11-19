@@ -114,26 +114,26 @@ namespace rct3::ovl
             return bytes_;
         }
 
-        [[nodiscard]] std::uint32_t u32(std::size_t offset) const noexcept
+        [[nodiscard]] std::uint32_t read_u32(std::size_t offset) const noexcept
         {
             std::uint32_t v = 0;
             if (offset + 4 <= bytes_.size())
                 std::memcpy(&v, bytes_.data() + offset, sizeof v);
             return v;
         }
-        [[nodiscard]] std::int32_t i32(std::size_t offset) const noexcept
+        [[nodiscard]] std::int32_t read_i32(std::size_t offset) const noexcept
         {
-            return static_cast<std::int32_t>(u32(offset));
+            return static_cast<std::int32_t>(read_u32(offset));
         }
         [[nodiscard]] float real(std::size_t offset) const noexcept
         {
-            return std::bit_cast<float>(u32(offset));
+            return std::bit_cast<float>(read_u32(offset));
         }
 
         /// The string the pointer field at `offset` points at. Empty for a null or bad pointer.
         [[nodiscard]] std::string_view text(std::size_t offset) const noexcept
         {
-            const std::uint32_t pointer = u32(offset);
+            const std::uint32_t pointer = read_u32(offset);
             if (pointer == 0)
                 return { };
             return space_->cstring_at(pointer).value_or(std::string_view { });

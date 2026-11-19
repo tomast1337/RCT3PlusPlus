@@ -53,7 +53,7 @@ namespace rct3::ovl::animal
         each_item(overlay, part, kToyTag, [&](std::string_view name, const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t at) {
             AnimalToyItem item { name, std::nullopt };
             if (const auto record = ItemRecord::open(space, refs, at, kToySize))
-                item.toy = AnimalToy { record->ref(kToyName, "txt"), record->ref(kToyDescription, "txt"), record->ref(kToyIcon, "gsi"), record->ref(kToyShape, "shs"), record->i32(kToyPrice) };
+                item.toy = AnimalToy { record->ref(kToyName, "txt"), record->ref(kToyDescription, "txt"), record->ref(kToyIcon, "gsi"), record->ref(kToyShape, "shs"), record->read_i32(kToyPrice) };
             items.push_back(item);
         });
         return items;

@@ -231,6 +231,31 @@ TEST_CASE("a train that cannot crest a hill raises one stall at that place, and 
     CHECK(rolled.front() < 100);
 }
 
+TEST_CASE("a train standing on a block brake shorter than itself is waiting there, not stalled")
+{
+    // A level circuit; the block brake ends a little behind the train's front, between the points a coarse look
+    // along the train would see.
+    Coaster c;
+    c.distance = { 0, 10, 52, 53, 100 };
+    c.height = { 0, 0, 0, 0, 0 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::BlockBrake, Stretch::Plain, Stretch::Plain };
+    c.brake_speeds = { 0, 0, 2, 0, 0 };
+    c.train_length = 8;
+    c.station_speed = 2;
+    c.start = 10;
+    c.at = 55;
+    c.travelled = 45;
+    c.launched = true;
+    c.running = true;
+    bool told = false;
+    for (std::int32_t t = 0; t < 40; ++t)
+    {
+        drive(c, 0.25f, 30); // The block ahead is not yet clear
+        told = told || std::exchange(c.stalled, std::nullopt).has_value();
+    }
+    CHECK_FALSE(told);
+}
+
 TEST_CASE("a test run finds the coaster's speed, time and drops")
 {
     const auto test = test_lap(hill());

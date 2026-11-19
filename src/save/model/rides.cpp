@@ -213,7 +213,6 @@ namespace rct3::save::model
             constexpr std::string_view kNextSegment = "NextSegment";
             constexpr std::string_view kFirstPiece = "FirstPiece";
             constexpr std::string_view kLastPiece = "LastPiece";
-            constexpr std::string_view kSegmentTrack = "Track";
             constexpr std::string_view kPieceSymbol = "SYMBOLNAME";
             constexpr std::string_view kPieceAsset = "SIDDatabaseEntry";
             constexpr std::string_view kPieceScenery = "SceneryItem";

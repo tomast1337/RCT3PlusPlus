@@ -210,7 +210,7 @@ TEST_CASE("of two rides alike, guests mostly take the tested one")
     auto& r = park.world().registry;
     r.get<CycleRide>(untested).untested = true;
     for (i32 i = 0; i < 12; ++i)
-        park.guest({ 0, 0 }, { .cash = 1000 });
+        park.guest({ 0, 0 }, { .cash = { 1000 } });
     park.run_seconds(900);
     CHECK(r.get<Attraction>(untested).customers > 0);
     CHECK(r.get<Attraction>(untested).customers * 2 < r.get<Attraction>(tested).customers);

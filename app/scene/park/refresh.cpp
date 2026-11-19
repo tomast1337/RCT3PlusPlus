@@ -41,7 +41,6 @@
 #include <cstdint>
 #include <format>
 #include <future>
-#include <inplace_vector>
 #include <map>
 #include <numbers>
 #include <ranges>
@@ -254,23 +253,24 @@ namespace rct3::scene::park
                     if (turn.now != now)
                         turn = { turn.now, now, scene.park_clock };
                     // Bringing down their hands or their arms from their eyes, then raising them, then the loop.
-                    std::inplace_vector<rct3::park::person::Clip, 3> clips;
+                    std::array<rct3::park::person::Clip, 3> clips;
+                    usize count = 0;
                     const auto add = [&](RideReaction reaction, const std::optional<i32>& hands, const std::optional<i32>& eyes) {
                         if (const auto& once = reaction == RideReaction::HandsUp ? hands : reaction == RideReaction::CoverEyes ? eyes : std::nullopt; once && turn.was != turn.now)
                         {
                             pose.motion = *once;
-                            clips.push_back({ *once, rct3::park::person::motion_seconds(*scene.person_models, pose) });
+                            clips[count++] = { *once, rct3::park::person::motion_seconds(*scene.person_models, pose) };
                         }
                     };
                     add(turn.was, motions->hands_up_out, motions->cover_eyes_out);
                     add(turn.now, motions->hands_up_in, motions->cover_eyes_in);
                     // In RideReaction's order.
                     const std::array by_reaction { motions->wait, motions->ride, motions->hands_up, motions->cover_eyes, motions->strained };
-                    clips.push_back({ by_reaction[std::to_underlying(now)], 0 });
-                    pose.motion = clips.back().motion;
-                    if (clips.size() > 1)
+                    clips[count++] = { by_reaction[std::to_underlying(now)], 0 };
+                    pose.motion = clips[count - 1].motion;
+                    if (count > 1)
                     {
-                        const rct3::park::person::Clip at = rct3::park::person::clip_at(clips, scene.park_clock - turn.since);
+                        const rct3::park::person::Clip at = rct3::park::person::clip_at(std::span(clips).first(count), scene.park_clock - turn.since);
                         pose.motion = at.motion;
                         pose.time = at.seconds;
                     }

@@ -1623,7 +1623,7 @@ namespace rct3::simulation
         r.emplace_or_replace<Errand>(guest);
         const auto* visitor = r.try_get<Visitor>(guest);
         const f32 speed = visitor != nullptr ? kTuning.walking.speed[std::to_underlying(visitor->age)].value : Stride { }.speed.value;
-        r.emplace_or_replace<Stride>(guest, Stride { .from = at, .to = at, .progress = 1, .speed = speed, .lane_from = lane, .lane_to = lane });
+        r.emplace_or_replace<Stride>(guest, Stride { .from = at, .to = at, .progress = { 1 }, .speed = { speed }, .lane_from = lane, .lane_to = lane });
         r.emplace_or_replace<Dice>(guest, dice_for(world, guest));
         auto& pose = r.get_or_emplace<Pose>(guest);
         place(world.paths, r.get<Stride>(guest), pose);

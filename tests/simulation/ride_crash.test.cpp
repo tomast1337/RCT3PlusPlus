@@ -49,7 +49,7 @@ TEST_CASE("a train off the end of its track crashes: the ride closes and its rid
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = unfinished(park);
     auto& r = park.world().registry;
-    const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+    const auto g = park.guest({ 4, 0 }, { .cash = { 1000 } });
     r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
     CHECK(park.run_until([&] { return r.all_of<Wrecks>(ride); }, 30));
     const auto& wrecks = r.get<Wrecks>(ride);
@@ -71,7 +71,7 @@ TEST_CASE("riders thrown from a crashed train fly on the way it went, land knock
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = unfinished(park);
     auto& r = park.world().registry;
-    const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+    const auto g = park.guest({ 4, 0 }, { .cash = { 1000 } });
     r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
     CHECK(park.run_until([&] { return r.all_of<Wrecks>(ride); }, 30));
     REQUIRE(r.all_of<Dropped>(g));

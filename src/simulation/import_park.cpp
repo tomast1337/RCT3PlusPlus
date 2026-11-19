@@ -1325,7 +1325,7 @@ namespace rct3::simulation
     void import_party_mix(SimWorld& world, const save::model::GroupMix& mix)
     {
         // The save lists the kinds in PartyKind's order.
-        world.registry.ctx().insert_or_assign(PartyMix { .weights = mix.weights, .single_parent = mix.single_parent });
+        world.registry.ctx().insert_or_assign(PartyMix { .weights = mix.weights, .single_parent = { mix.single_parent } });
     }
 
     Upkeep upkeep_of(const save::model::Ride& ride)
@@ -1790,7 +1790,7 @@ namespace rct3::simulation
                 continue;
             const entt::entity e = r.create();
             const save::model::Staff& saved = people.staff[i];
-            Staff staff { .role = role, .tasks = saved.task_flags, .training = std::clamp(saved.training, 0, staff::kMostTraining), .warnings = saved.warnings, .happiness = std::clamp(saved.happiness, 0.0f, 1.0f), .laziness = std::clamp(saved.laziness, 0.0f, 1.0f) };
+            Staff staff { .role = role, .tasks = saved.task_flags, .training = std::clamp(saved.training, 0, staff::kMostTraining), .warnings = saved.warnings, .happiness = { std::clamp(saved.happiness, 0.0f, 1.0f) }, .laziness = { std::clamp(saved.laziness, 0.0f, 1.0f) } };
             staff::set_wage_level(staff, saved.wage_level);
             staff::take_saved_work(staff, saved);
             r.emplace<Staff>(e, staff);
@@ -1845,7 +1845,7 @@ namespace rct3::simulation
     {
         const entt::entity e = world.registry.create();
         // An inspector's mood never changes; saved ones are all half content.
-        Staff staff { .role = role, .happiness = role == StaffRole::Inspector ? 0.5f : 1.0f };
+        Staff staff { .role = role, .happiness = { role == StaffRole::Inspector ? 0.5f : 1.0f } };
         staff::set_wage_level(staff, staff.wage_level);
         world.registry.emplace<Staff>(e, staff);
         start_walking(world, e, at);

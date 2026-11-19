@@ -587,7 +587,7 @@ namespace rct3::scene::park
             ways.ticket_heading = std::atan2(in[0].x, in[0].z);
             if (model_of(*entrance) != nullptr && !model_of(*entrance)->seat_places.empty())
                 rct3::park::ride::set_ticket_spot(ways, in, model_of(*entrance)->seat_places.front());
-            scene.sim.registry.emplace_or_replace<simulation::RideWalks>(entity, simulation::RideWalks { .ticket = ways.ticket, .ticket_heading = ways.ticket_heading, .on = std::move(ways.on), .off = std::move(ways.off) });
+            scene.sim.registry.emplace_or_replace<simulation::RideWalks>(entity, simulation::RideWalks { .ticket = ways.ticket, .ticket_heading = { ways.ticket_heading }, .on = std::move(ways.on), .off = std::move(ways.off) });
             // The entrance's and exit's gates, by the motions the buildings name ...Close, ...Open, and those ending
             // Idle that hold them there.
             for (const auto& [door, is_exit] : { std::pair { entrance, false }, std::pair { exit, true } })

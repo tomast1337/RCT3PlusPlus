@@ -76,8 +76,8 @@ TEST_CASE("overwork and idleness both make staff unhappy, and unhappy staff grow
 
     SUBCASE("training slows how fast laziness grows")
     {
-        Staff raw { .training = 0, .happiness = 0.2f };
-        Staff schooled { .training = kMostTraining, .happiness = 0.2f };
+        Staff raw { .training = 0, .happiness = { 0.2f } };
+        Staff schooled { .training = kMostTraining, .happiness = { 0.2f } };
         care_for(raw, false, 60);
         care_for(schooled, false, 60);
         CHECK(raw.laziness.value > schooled.laziness.value);
@@ -87,7 +87,7 @@ TEST_CASE("overwork and idleness both make staff unhappy, and unhappy staff grow
 TEST_CASE("laziness slows the work and brings rests")
 {
     Staff keen;
-    Staff lazy { .laziness = 0.5f };
+    Staff lazy { .laziness = { 0.5f } };
     CHECK(work_slowdown(keen) == 1);
     CHECK(work_slowdown(lazy) == doctest::Approx(1.5));
     CHECK(rest_chance(keen) == 0);
@@ -127,11 +127,11 @@ TEST_CASE("each level of training costs what the tuning says for it")
 
 TEST_CASE("a warning shakes off laziness, but upsets a worker who was not lazy")
 {
-    Staff lazy { .happiness = 0.4f, .laziness = 0.6f };
+    Staff lazy { .happiness = { 0.4f }, .laziness = { 0.6f } };
     warn(lazy);
     CHECK(lazy.laziness.value == 0);
     CHECK(lazy.happiness.value == doctest::Approx(0.4f));
-    Staff good { .happiness = 0.9f };
+    Staff good { .happiness = { 0.9f } };
     warn(good);
     CHECK(good.happiness.value < 0.9f);
     CHECK(good.warnings == 1);
@@ -147,7 +147,7 @@ TEST_CASE("staff think about their work and how they feel")
 
     SUBCASE("one miserable for long thinks of quitting, and stops once content again")
     {
-        Staff sad { .happiness = 0.1f, .load = 0.5f };
+        Staff sad { .happiness = { 0.1f }, .load = { 0.5f } };
         CHECK(staff_thoughts(sad) == std::vector { StaffMiserable });
         for (i32 i = 0; i < 100 && staff_thoughts(sad) != std::vector { StaffWantToQuit }; ++i)
             ;
@@ -161,7 +161,7 @@ TEST_CASE("staff think about their work and how they feel")
 TEST_CASE("a miserable worker thinks of quitting once a stretch, then quits once")
 {
     using enum ThoughtKind;
-    Staff sad { .happiness = 0.1f, .load = 0.5f };
+    Staff sad { .happiness = { 0.1f }, .load = { 0.5f } };
     i32 wanted = 0;
     i32 quit = 0;
     for (i32 i = 0; i < 200; ++i)
@@ -186,7 +186,7 @@ TEST_CASE("a miserable worker thinks of quitting once a stretch, then quits once
 
 TEST_CASE("a park inspector keeps their mood, thinks nothing of it and never quits")
 {
-    Staff inspector { .role = StaffRole::Inspector, .happiness = 0.5f, .load = 0 };
+    Staff inspector { .role = StaffRole::Inspector, .happiness = { 0.5f }, .load = { 0 } };
     for (i32 i = 0; i < 200; ++i)
     {
         care_for(inspector, false, 10);

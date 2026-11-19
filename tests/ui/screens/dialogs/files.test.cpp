@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/dialogs/files.hpp"
 
+#include "core/maybe.hpp"
 #include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
@@ -191,7 +192,7 @@ TEST_CASE("saving checks the name, adds the extension and asks before replacing"
 {
     Fixture f(FileDialogMode::Save);
     f.dialog->set_files({ u"Old.park" });
-    EditBox& name = *f.dialog->name_box();
+    EditBox& name = *rct3::core::as_pointer(f.dialog->name_box());
 
     f.dialog->open_button().click();
     f.tick();

@@ -19,7 +19,7 @@ namespace
 
     struct Lab
     {
-        Research research { .budget = 20000 };
+        Research research { .budget = { 20000 } };
         std::vector<ResearchItem> items { { .id = 1, .area = ResearchArea::ThrillRides, .cost = units::Money { 16000 } }, { .id = 2, .area = ResearchArea::Shops, .cost = units::Money { 10000 } } };
         simulation::park::ParkState park;
         save::model::Finance money;
@@ -263,7 +263,7 @@ TEST_CASE("the next item is drawn from the areas the player cares for")
 TEST_CASE("the progress of the current item and the months the budget takes to finish it")
 {
     const std::vector<ResearchItem> items { { .id = 1, .cost = units::Money { 24000 } }, { .id = 2, .cost = units::Money { 10000 } } };
-    Research r { .budget = 20000, .spent = 6000, .current = 1 };
+    Research r { .budget = { 20000 }, .spent = { 6000 }, .current = 1 };
     auto p = research_progress(r, items);
     REQUIRE(p);
     CHECK(p->id == 1);

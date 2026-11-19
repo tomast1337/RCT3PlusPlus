@@ -22,7 +22,7 @@ TEST_CASE("a thirsty guest walks to the drink stand and buys a drink")
     Sandbox park;
     park.path({ 0, 0 }, { 9, 0 });
     const auto stand = park.shop("Drinks", Product::Drink, { 9, 0 }, 150);
-    const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = 1000 });
+    const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = { 1000 } });
     auto& r = park.world().registry;
 
     CHECK(park.run_until([&] { return r.get<Attraction>(stand).customers == 1; }, 120));
@@ -84,7 +84,7 @@ TEST_CASE("a drink worth more in the cold sells on a cold day and not a mild one
         park.path({ 0, 0 }, { 4, 0 });
         const auto stall = park.shop("Drinks", Product::Drink, { 4, 0 }, 150);
         auto& r = park.world().registry;
-        r.ctx().emplace<Weather>(Weather { .temperature = cold ? kTuning.weather.cold.value - 1 : kTuning.weather.cold.value + 1 });
+        r.ctx().emplace<Weather>(Weather { .temperature = { cold ? kTuning.weather.cold.value - 1 : kTuning.weather.cold.value + 1 } });
         r.get<Shop>(stall).menu = { { .product = Product::Drink, .price = { 150 }, .symbol = "Cocoa", .cost = { 40 }, .worth = { units::Money { 120 }, units::Money { 160 }, units::Money { 100 } } } };
         const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f });
         park.run_seconds(30);
@@ -137,7 +137,7 @@ TEST_CASE("a guest who cannot pay does not go, and stays on the paths")
     Sandbox park;
     park.path({ 0, 0 }, { 5, 0 }).path({ 2, 1 }, { 2, 4 });
     const auto stand = park.shop("Drinks", Product::Drink, { 5, 0 }, 500);
-    const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = 100 });
+    const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = { 100 } });
     auto& r = park.world().registry;
     for (i32 i = 0; i < 600; ++i)
     {
@@ -152,7 +152,7 @@ TEST_CASE("needs grow and a pressing need spoils the mood")
 {
     Sandbox park;
     park.path({ 0, 0 }, { 1, 0 });
-    const auto guest = park.guest({ 0, 0 }, { .thirst = 0.69f, .happiness = 0.5f, .cash = 0 });
+    const auto guest = park.guest({ 0, 0 }, { .thirst = 0.69f, .happiness = 0.5f, .cash = { 0 } });
     park.run_seconds(120);
     auto& r = park.world().registry;
     CHECK(r.get<Needs>(guest).thirst.value > 0.9f);
@@ -169,7 +169,7 @@ TEST_CASE("a flat ride takes its queue a load at a time and cheers its riders")
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 3; ++i)
     {
-        const auto g = park.guest({ 4, 0 }, { .happiness = 0.4f, .cash = 1000 });
+        const auto g = park.guest({ 4, 0 }, { .happiness = 0.4f, .cash = { 1000 } });
         // Sent straight to the ride, as if they had chosen it.
         r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
         guests.push_back(g);
@@ -245,7 +245,7 @@ TEST_CASE("guests walk up a ride's queue line in turn, and the ride waits for th
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 3; ++i)
     {
-        const auto g = park.guest({ 0, 0 }, { .cash = 1000 });
+        const auto g = park.guest({ 0, 0 }, { .cash = { 1000 } });
         r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
         guests.push_back(g);
     }
@@ -273,7 +273,7 @@ TEST_CASE("a queue fills two or three abreast, round its turn, and a full one pu
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 60; ++i)
     {
-        const auto g = park.guest({ i % 5, 3 }, { .cash = 1000 });
+        const auto g = park.guest({ i % 5, 3 }, { .cash = { 1000 } });
         r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
         guests.push_back(g);
     }
@@ -308,7 +308,7 @@ TEST_CASE("in a moving queue nobody walks up past the guest ahead, nor into them
     const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 1, .cycle_seconds = 3, .line = { { 5, 0 }, { 5, 1 }, { 5, 2 } } });
     auto& r = park.world().registry;
     for (i32 i = 0; i < 30; ++i)
-        r.get<Errand>(park.guest({ i % 5, 3 }, { .cash = 1000 })) = { ErrandKind::Heading, ride, 0 };
+        r.get<Errand>(park.guest({ i % 5, 3 }, { .cash = { 1000 } })) = { ErrandKind::Heading, ride, 0 };
     const auto& queue = r.get<CycleRide>(ride).queue;
     f32 closest = 100;
     f32 least_gap = 100;
@@ -336,7 +336,7 @@ TEST_CASE("guests a save put in a queue stand off its middle, to each side in tu
     auto& cycle = r.get<CycleRide>(ride);
     for (i32 i = 0; i < 2; ++i)
     {
-        const auto g = park.guest({ 3, 1 }, { .cash = 1000 });
+        const auto g = park.guest({ 3, 1 }, { .cash = { 1000 } });
         r.get<Errand>(g) = { ErrandKind::Queueing, ride, 0 };
         r.get<Stride>(g).along.value = 2;
         cycle.queue.push_back(g);
@@ -355,7 +355,7 @@ TEST_CASE("an unhappy guest who has queued very long gives up and walks off")
     // Takes nobody, so the line never moves.
     const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 0, .cycle_seconds = 10, .line = { { 5, 0 }, { 4, 0 }, { 3, 0 } } });
     auto& r = park.world().registry;
-    const auto g = park.guest({ 0, 0 }, { .cash = 1000 });
+    const auto g = park.guest({ 0, 0 }, { .cash = { 1000 } });
     r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
     REQUIRE(park.run_until([&] { return r.get<CycleRide>(ride).queue.size() == 1; }, 30));
     r.get<Errand>(g).queued.value = 1000;
@@ -433,7 +433,7 @@ TEST_CASE("a coaster's riders get off when its train comes round, not after the 
     train.kinds = { Stretch::Plain, Stretch::Plain };
     train.fixed_speed = 5; // Round in 10 s
     r.emplace<Trains>(ride, Trains { { train }, { { } } });
-    const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+    const auto g = park.guest({ 4, 0 }, { .cash = { 1000 } });
     r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
     park.run(2);
     CHECK(r.get<Errand>(g).kind == ErrandKind::Riding);
@@ -481,7 +481,7 @@ TEST_CASE("a coaster's trains run on their own, each waiting behind the one in f
         CHECK(gap() >= kBlockGap - 1e-3f); // Never closer than the gap, round and round
     }
     // A rider boards whichever train stands at the start, and gets off when it comes round.
-    const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+    const auto g = park.guest({ 4, 0 }, { .cash = { 1000 } });
     r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
     CHECK(park.run_until([&] { return r.get<Errand>(g).kind == ErrandKind::Riding; }, 30));
     CHECK(park.run_until([&] { return r.get<Errand>(g).kind != ErrandKind::Riding; }, 30));
@@ -559,8 +559,8 @@ TEST_CASE("two strangers walking into each other step aside and pass")
     // On one line, straight at each other.
     const NodeId west = r.get<Stride>(a).from;
     const NodeId east = r.get<Stride>(b).from;
-    r.get<Stride>(a) = Stride { .from = west, .to = east, .progress = 0, .speed = 1.2f };
-    r.get<Stride>(b) = Stride { .from = east, .to = west, .progress = 0, .speed = 1.2f };
+    r.get<Stride>(a) = Stride { .from = west, .to = east, .progress = { 0 }, .speed = { 1.2f } };
+    r.get<Stride>(b) = Stride { .from = east, .to = west, .progress = { 0 }, .speed = { 1.2f } };
     f32 closest = 100;
     for (i32 t = 0; t < 12; ++t)
     {
@@ -585,7 +585,7 @@ TEST_CASE("two people kept close in one cell are pushed apart every second tick"
     const glm::vec3 centre = park.world().paths.centre(west);
     const glm::vec2 middle = (glm::floor(glm::vec2 { centre.x, centre.z } / space) + 0.5f) * space - glm::vec2 { centre.x, centre.z };
     // Both setting off east, side by side across the path, so the push is aside.
-    const auto stand = [&](glm::vec2 lane) { return Stride { .from = west, .to = east, .progress = 0, .speed = 0.01f, .lane_from = lane, .lane_to = lane }; };
+    const auto stand = [&](glm::vec2 lane) { return Stride { .from = west, .to = east, .progress = { 0 }, .speed = { 0.01f }, .lane_from = lane, .lane_to = lane }; };
     std::vector<bool> pushed;
     for (i32 t = 0; t < 6; ++t)
     {
@@ -607,7 +607,7 @@ TEST_CASE("staff on their rounds turn to face the way they walk")
     const auto e = park.staff(StaffRole::Other, { 0, 0 });
     auto& r = park.world().registry;
     const auto at = [&](i32 c) { return *park.world().paths.find({ c, 0, 0 }); };
-    r.get<Stride>(e) = Stride { .from = at(0), .to = at(1), .progress = 0, .route = { at(2), at(3), at(4), at(5) } };
+    r.get<Stride>(e) = Stride { .from = at(0), .to = at(1), .progress = { 0 }, .route = { at(2), at(3), at(4), at(5) } };
     r.get<Pose>(e).heading.value = -glm::half_pi<f32>(); // Facing -x, back against the way they set off
     const f32 start = r.get<Pose>(e).position.x;
     park.run(4);
@@ -623,7 +623,7 @@ TEST_CASE("a walker turns a corner across its inside, turning no faster than tur
     auto& r = park.world().registry;
     const auto at = [&](i32 c, i32 row) { return *park.world().paths.find({ c, row, 0 }); };
     r.get<Errand>(g) = Errand { .kind = ErrandKind::Wandering, .rest = 1000 };
-    r.get<Stride>(g) = Stride { .from = at(1, 0), .to = at(2, 0), .progress = 0, .route = { at(3, 0), at(3, 1), at(3, 2), at(3, 3) } };
+    r.get<Stride>(g) = Stride { .from = at(1, 0), .to = at(2, 0), .progress = { 0 }, .route = { at(3, 0), at(3, 1), at(3, 2), at(3, 3) } };
     r.get<Pose>(g).heading.value = glm::half_pi<f32>(); // Facing +x, the way they set off
     const glm::vec2 inside = glm::normalize(glm::vec2 { -1.0f, 1.0f });
     bool turned = false;
@@ -655,8 +655,8 @@ TEST_CASE("one walking close behind another is pushed aside, never back against 
         r.get<Errand>(g) = Errand { .kind = ErrandKind::Wandering, .rest = 1000 };
         r.get<Pose>(g).heading.value = glm::half_pi<f32>();
     }
-    r.get<Stride>(a) = Stride { .from = at(0), .to = at(1), .progress = 0, .speed = 1.3f, .route = { at(2), at(3), at(4), at(5) } };
-    r.get<Stride>(b) = Stride { .from = at(0), .to = at(1), .progress = 0.05f, .speed = 0.6f, .route = { at(2), at(3), at(4), at(5) } };
+    r.get<Stride>(a) = Stride { .from = at(0), .to = at(1), .progress = { 0 }, .speed = { 1.3f }, .route = { at(2), at(3), at(4), at(5) } };
+    r.get<Stride>(b) = Stride { .from = at(0), .to = at(1), .progress = { 0.05f }, .speed = { 0.6f }, .route = { at(2), at(3), at(4), at(5) } };
     for (i32 t = 0; t < 20; ++t)
     {
         const f32 was = r.get<Pose>(a).position.x;
@@ -668,7 +668,7 @@ TEST_CASE("one walking close behind another is pushed aside, never back against 
 
 TEST_CASE("between steps a pose is drawn part way, turning the short way round")
 {
-    const Pose pose { .position = { 4, 0, 0 }, .heading = 3.0f, .was = { 0, 0, 0 }, .was_heading = -3.0f };
+    const Pose pose { .position = { 4, 0, 0 }, .heading = { 3.0f }, .was = { 0, 0, 0 }, .was_heading = { -3.0f } };
     const Pose half = between_steps(pose, 0.5f);
     CHECK(half.position.x == doctest::Approx(2));
     CHECK(std::cos(half.heading.value) == doctest::Approx(-1).epsilon(0.01)); // Through pi, not through 0
@@ -679,8 +679,8 @@ TEST_CASE("a party walks together, goes where its neediest wants, and each buys 
     Sandbox park;
     park.path({ 0, 0 }, { 8, 0 });
     const auto stand = park.shop("Drinks", Product::Drink, { 8, 0 }, 100);
-    const auto parent = park.guest({ 0, 0 }, { .cash = 1000 });
-    const auto child = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = 1000 });
+    const auto parent = park.guest({ 0, 0 }, { .cash = { 1000 } });
+    const auto child = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = { 1000 } });
     park.party({ parent, child });
     auto& r = park.world().registry;
     for (i32 i = 0; i < 20; ++i)
@@ -1095,7 +1095,7 @@ TEST_CASE("a ride waiting for a full load sends a full train when the queue is l
         r.emplace<Trains>(ride, Trains { { train }, { { } } });
         r.emplace<Departure>(ride, Departure { .wait_for = LoadWait::Full, .max_wait = units::Seconds { 30 } });
         for (i32 i = 0; i < guests; ++i)
-            r.get<Errand>(park.guest({ 4, 0 }, { .cash = 1000 })) = { ErrandKind::Heading, ride, 0 };
+            r.get<Errand>(park.guest({ 4, 0 }, { .cash = { 1000 } })) = { ErrandKind::Heading, ride, 0 };
         return ride;
     };
     {
@@ -1124,7 +1124,7 @@ TEST_CASE("a ride reckons its riders an hour from its departures")
     const auto ride = park.flat_ride("Spinner", { 4, 0 }, 100, { .capacity = 2, .cycle_seconds = 10 });
     auto& r = park.world().registry;
     for (i32 i = 0; i < 12; ++i)
-        r.get<Errand>(park.guest({ 4, 0 }, { .cash = 1000 })) = { ErrandKind::Heading, ride, 0 };
+        r.get<Errand>(park.guest({ 4, 0 }, { .cash = { 1000 } })) = { ErrandKind::Heading, ride, 0 };
     const auto& f = r.get<CycleRide>(ride);
     CHECK(f.per_hour == 0);
     park.run_seconds(45);
@@ -1197,7 +1197,7 @@ TEST_CASE("of two rides as near, guests do not always take the same one")
     const auto one = park.flat_ride("One", { 4, 0 }, 0, { .capacity = 4, .cycle_seconds = 20 });
     const auto other = park.flat_ride("Other", { 4, 0 }, 0, { .capacity = 4, .cycle_seconds = 20 });
     for (i32 i = 0; i < 12; ++i)
-        park.guest({ 0, 0 }, { .cash = 1000 });
+        park.guest({ 0, 0 }, { .cash = { 1000 } });
     park.run_seconds(900);
     const auto& r = park.world().registry;
     CHECK(r.get<Attraction>(one).customers > 0);
@@ -1213,7 +1213,7 @@ TEST_CASE("pulling a ride down sends its riders and its queue off on the paths")
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 3; ++i)
     {
-        const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+        const auto g = park.guest({ 4, 0 }, { .cash = { 1000 } });
         r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
         guests.push_back(g);
     }
@@ -1250,8 +1250,8 @@ TEST_CASE("on a ride with two stations, riders get on at either and off at the o
     track.fixed_speed = 10;
     track.stops = { 40 };
     r.emplace<Trains>(ride, Trains { { track }, { { } } });
-    const auto near = park.guest({ 1, 0 }, { .cash = 1000 });
-    const auto far = park.guest({ 8, 0 }, { .cash = 1000 });
+    const auto near = park.guest({ 1, 0 }, { .cash = { 1000 } });
+    const auto far = park.guest({ 8, 0 }, { .cash = { 1000 } });
     r.get<Errand>(near) = { ErrandKind::Heading, ride, 0 };
     r.get<Errand>(far) = { ErrandKind::Heading, ride, 0 };
     park.run(2);
@@ -1287,12 +1287,12 @@ TEST_CASE("on a ride whose first station has no way to the paths, riders get off
     track.stops = { 40 };
     r.emplace<Trains>(ride, Trains { { track }, { { } } });
     // One gets on at the first station; then it loses its way to the paths.
-    const auto first = park.guest({ 1, 0 }, { .cash = 1000 });
+    const auto first = park.guest({ 1, 0 }, { .cash = { 1000 } });
     r.get<Errand>(first) = { ErrandKind::Heading, ride, 0 };
     REQUIRE(park.run_until([&] { return r.get<Errand>(first).kind == ErrandKind::Riding; }, 10));
     r.get<CycleRide>(ride).exit = std::nullopt;
     r.get<Attraction>(ride).entrance = std::nullopt;
-    const auto guest = park.guest({ 8, 0 }, { .cash = 1000 });
+    const auto guest = park.guest({ 8, 0 }, { .cash = { 1000 } });
     r.get<Errand>(guest) = { ErrandKind::Heading, ride, 0 };
     REQUIRE(park.run_until([&] { return r.get<Errand>(guest).kind == ErrandKind::Queueing; }, 10));
     CHECK(r.get<Errand>(guest).off == 1);
@@ -1317,7 +1317,7 @@ TEST_CASE("a guest going far rides from one station of a ride to another when th
     track.fixed_speed = 10;
     track.stops = { 50 };
     r.emplace<Trains>(ride, Trains { { track }, { { } } });
-    const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = 1000 });
+    const auto guest = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = { 1000 } });
     bool crossed = false;
     CHECK(park.run_until(
         [&] {

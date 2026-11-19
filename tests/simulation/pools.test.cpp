@@ -68,7 +68,7 @@ TEST_CASE("a guest wishing to swim pays at the changing room, swims for their st
     pool_by_path(park);
     auto& r = park.world().registry;
     const entt::entity room = room_of(r);
-    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } });
     REQUIRE(park.run_until([&] { return r.get<Attraction>(room).customers == 1; }, 60));
     CHECK(r.get<Wallet>(guest).cash.value == 800);
     CHECK(r.get<Attraction>(room).income.value == 200);
@@ -97,7 +97,7 @@ TEST_CASE("a pool takes so many swimmers for its water and no more")
     const auto room_for = static_cast<usize>(kTuning.pools.crowd * static_cast<f32>(r.get<SwimPool>(r.get<PoolDoor>(room).pool).water.size()));
     std::vector<entt::entity> keen;
     for (usize i = 0; i < room_for + 4; ++i)
-        keen.push_back(park.guest({ static_cast<i32>(i % 4), 0 }, { .swim = 0.9f, .cash = 1000 }));
+        keen.push_back(park.guest({ static_cast<i32>(i % 4), 0 }, { .swim = 0.9f, .cash = { 1000 } }));
     park.run_seconds(60);
     CHECK(r.get<Attraction>(room).customers == room_for);
     CHECK(std::ranges::count_if(keen, [&](entt::entity g) { return r.get<Errand>(g).kind == ErrandKind::Swimming; }) == static_cast<std::ptrdiff_t>(room_for));
@@ -121,7 +121,7 @@ TEST_CASE("on a cool day only those wishing hard for a swim go, the others think
     Sandbox park;
     pool_by_path(park);
     auto& r = park.world().registry;
-    r.ctx().emplace<Weather>(Weather { .temperature = kTuning.pools.cool.value - 3 });
+    r.ctx().emplace<Weather>(Weather { .temperature = { kTuning.pools.cool.value - 3 } });
     const auto keen = park.guest({ 0, 0 }, { .swim = 0.9f });
     const auto mild = park.guest({ 1, 0 }, { .swim = kTuning.needs.want.value + 0.02f });
     REQUIRE(park.run_until([&] { return r.get<Errand>(keen).kind == ErrandKind::Swimming; }, 60));
@@ -138,13 +138,13 @@ TEST_CASE("on a hot day guests go for a swim wishing less for one")
     const f32 mild_wish = kTuning.needs.want.value - 0.1f;
     SUBCASE("hot: they go")
     {
-        r.ctx().emplace<Weather>(Weather { .temperature = kTuning.pools.warm.value + 8 });
+        r.ctx().emplace<Weather>(Weather { .temperature = { kTuning.pools.warm.value + 8 } });
         const auto mild = park.guest({ 0, 0 }, { .swim = mild_wish });
         CHECK(park.run_until([&] { return r.get<Errand>(mild).kind == ErrandKind::Swimming; }, 60));
     }
     SUBCASE("mild: they do not")
     {
-        r.ctx().emplace<Weather>(Weather { .temperature = kTuning.pools.cool.value + 2 });
+        r.ctx().emplace<Weather>(Weather { .temperature = { kTuning.pools.cool.value + 2 } });
         const auto mild = park.guest({ 0, 0 }, { .swim = mild_wish });
         park.run_seconds(60);
         CHECK(r.get<Errand>(mild).kind != ErrandKind::Swimming);
@@ -171,7 +171,7 @@ TEST_CASE("a guest will not pay more for a pool than it is worth to them")
     import_pools(park.world(), pools);
     auto& r = park.world().registry;
     const entt::entity room = room_of(r);
-    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 10000 });
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 10000 } });
     park.run_seconds(30);
     CHECK(r.get<Attraction>(room).customers == 0);
     CHECK(r.get<Wallet>(guest).cash.value == 10000);
@@ -184,8 +184,8 @@ TEST_CASE("the wish to swim grows the faster the more a guest likes pools")
     Sandbox park;
     park.path({ 0, 0 }, { 3, 0 });
     auto& r = park.world().registry;
-    const auto keen = park.guest({ 0, 0 }, { .cash = 0 });
-    const auto cool = park.guest({ 3, 0 }, { .cash = 0 });
+    const auto keen = park.guest({ 0, 0 }, { .cash = { 0 } });
+    const auto cool = park.guest({ 3, 0 }, { .cash = { 0 } });
     r.emplace<Taste>(keen, Taste { .pools = { 0.9f } });
     r.emplace<Taste>(cool, Taste { .pools = { 0.1f } });
     park.run_seconds(300);
@@ -263,7 +263,7 @@ TEST_CASE("swimmers sit in the spa pools and stand at the extras now and then")
     REQUIRE(pool.extras.size() == 1);
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 8; ++i)
-        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } }));
     bool in_spa = false, at_extra = false;
     park.run_until(
         [&] {
@@ -306,7 +306,7 @@ TEST_CASE("swimmers lie on loungers and stand under showers, as many as they tak
         CHECK(spot.places == places);
         std::vector<entt::entity> guests;
         for (i32 i = 0; i < 48; ++i)
-            guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+            guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } }));
         usize most = 0, waiting = 0;
         for (i32 t = 0; t < 4 * static_cast<i32>(kTuning.pools.stay.value); ++t)
         {
@@ -355,7 +355,7 @@ TEST_CASE("swimmers dirty the water, and the room's fluid cleans it while the ro
     auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room).pool);
     r.get<PoolTank>(room).left = { 0 }; // Nothing to clean with yet
     for (i32 k = 0; k < 6; ++k)
-        park.guest({ k % 3, 0 }, { .swim = 0.9f, .cash = 1000 });
+        park.guest({ k % 3, 0 }, { .swim = 0.9f, .cash = { 1000 } });
     REQUIRE(park.run_until([&] { return r.view<const Swimmer>().size() == 6; }, 60));
     park.run_seconds(200);
     CHECK(pool.dirt.value > 0.05f);
@@ -377,7 +377,7 @@ TEST_CASE("swimmers coming out think of the water as it is")
         const entt::entity room = room_of(r);
         r.get<PoolTank>(room) = { .fluid = fluid, .left = { 1 } };
         auto& pool = r.get<SwimPool>(r.get<PoolDoor>(room).pool);
-        const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+        const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } });
         park.run_until(
             [&] {
                 pool.dirt = { dirt }; // Held where it is
@@ -468,7 +468,7 @@ TEST_CASE("a guest wears their swimwear from changing into it at the room till c
     pool_by_path(park);
     auto& r = park.world().registry;
     const entt::entity room = room_of(r);
-    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } });
     bool dressed_outside = false;
     REQUIRE(park.run_until(
         [&] {
@@ -541,7 +541,7 @@ TEST_CASE("swimmers changing cannot be picked up, and staff let go over a pool w
     pool_by_path(park);
     auto& r = park.world().registry;
     const entt::entity room = room_of(r);
-    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } });
     REQUIRE(park.run_until([&] { return r.all_of<Swimmer>(guest); }, 60));
     CHECK_FALSE(pick_up(park.world(), guest));
 
@@ -577,7 +577,7 @@ TEST_CASE("swimmers climb a high diving board, walk out, dive off its end into t
     CHECK(board.levels.size() == 2);
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 12; ++i)
-        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } }));
     std::vector<std::vector<DiveStep>> steps(guests.size());
     usize most = 0;
     bool done = false;
@@ -640,7 +640,7 @@ TEST_CASE("swimmers spend a good part of their time out on the paving round the 
     auto& r = park.world().registry;
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 30; ++i)
-        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } }));
     // Looks at swimmers free to go where they like: in the water, out on the paving, and of those walking.
     i32 in = 0;
     i32 out = 0;
@@ -679,7 +679,7 @@ TEST_CASE("a high diving board whose end is past the water is a danger, and the 
     REQUIRE(r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).boards.size() == 1);
     park.staff(StaffRole::Inspector, { 0, 0 });
     for (i32 i = 0; i < 12; ++i)
-        park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+        park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } });
     REQUIRE(park.run_until([&] { return r.ctx().find<PoolDangers>() != nullptr; }, 4 * kTuning.pools.stay.value));
     CHECK(r.ctx().get<PoolDangers>().landings >= 1);
     const auto* findings = r.ctx().find<Findings>();
@@ -706,7 +706,7 @@ TEST_CASE("swimmers waiting for a high diving board stand in a line behind its l
     auto& r = park.world().registry;
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 60; ++i)
-        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } }));
     // The most waiting at once, standing at their places a while, and the closest two of them ever came.
     usize most = 0;
     f32 closest = std::numeric_limits<f32>::max();
@@ -754,7 +754,7 @@ TEST_CASE("a small diving board on the pool's wall is walked out on and dived of
     CHECK(pool.boards.front().foot.z < park.world().paths.origin.y + 3 * park.world().paths.tile_size);
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 8; ++i)
-        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } }));
     bool walked = false, dived = false, ladder_out = false, ladder_in = false;
     park.run_until(
         [&] {
@@ -797,7 +797,7 @@ TEST_CASE("swimmers walk up a ramp to a raised square and down it again, the ram
     const f32 raised_col = park.world().paths.origin.x + 6 * tile;
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 8; ++i)
-        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } }));
     std::set<entt::entity> up;
     bool slope = false, down = false;
     park.run_until(
@@ -829,7 +829,7 @@ TEST_CASE("swimmers cross the water's edge only diving in or climbing out, in th
     auto& r = park.world().registry;
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 8; ++i)
-        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } }));
     struct Seen
     {
         bool in_water = false;
@@ -950,7 +950,7 @@ TEST_CASE("swimmers never go where no way over the pool leads, and keep to the p
     const auto& paths = park.world().paths;
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 8; ++i)
-        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } }));
     const auto tile = [&](f32 along, f32 origin) { return static_cast<i32>(std::floor((along - origin) / paths.tile_size)); };
     bool up = false;
     for (i32 t = 0; t < static_cast<i32>(2 * kTuning.pools.stay.value); ++t)
@@ -992,7 +992,7 @@ TEST_CASE("swimmers spread over the three lanes each way across a square, not on
     const auto& paths = park.world().paths;
     std::vector<entt::entity> guests;
     for (i32 i = 0; i < 12; ++i)
-        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 }));
+        guests.push_back(park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } }));
     // How often a swimmer is on each lane, either way: left of the middle, on it, right of it.
     std::array<i32, 3> on { };
     for (i32 t = 0; t < static_cast<i32>(kTuning.pools.stay.value); ++t)

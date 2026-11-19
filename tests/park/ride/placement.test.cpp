@@ -389,9 +389,9 @@ TEST_CASE("a synchronised stall gives its menu to the other stalls of its kind")
         s.extras = { save::model::StallExtra { .kind_symbol = "Ketchup:ced", .level = 0 } };
     }
     stalls[2].base.symbol = "DrinksStall:sta";
-    stalls[0].items = { save::model::StallItem { .kind_symbol = "Burger:cid", .price = 175 }, save::model::StallItem { .kind_symbol = "MedBurger:cid", .price = 260 } };
+    stalls[0].items = { save::model::StallItem { .kind_symbol = "Burger:cid", .price = { 175 } }, save::model::StallItem { .kind_symbol = "MedBurger:cid", .price = { 260 } } };
     stalls[0].extras[0].level = 3;
-    stalls[1].items = { save::model::StallItem { .kind_symbol = "MedBurger:cid", .price = 250, .total_sold = 12 }, save::model::StallItem { .kind_symbol = "XLBurger:cid", .price = 450 } };
+    stalls[1].items = { save::model::StallItem { .kind_symbol = "MedBurger:cid", .price = { 250 }, .total_sold = 12 }, save::model::StallItem { .kind_symbol = "XLBurger:cid", .price = { 450 } } };
     park::ride::copy_menu(stalls, 0);
     REQUIRE(stalls[1].items.size() == 2);
     CHECK(stalls[1].items[0].kind_symbol == "Burger:cid");

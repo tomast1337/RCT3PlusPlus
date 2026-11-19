@@ -845,13 +845,13 @@ namespace rct3::simulation
                         if (through != nullptr)
                         {
                             const std::optional<NodeId> out = exit_of(r, e);
-                            RideWalk walk { .points = way_through(*through, paths.centre(*entrance_of(r, e, 0)), paths.centre(*out)), .pause = kTuning.queues.ticket.value };
+                            RideWalk walk { .points = way_through(*through, paths.centre(*entrance_of(r, e, 0)), paths.centre(*out)), .pause = { kTuning.queues.ticket.value } };
                             walk.points.push_back(paths.centre(*out));
                             r.emplace_or_replace<RideWalk>(guest, std::move(walk));
                         }
                         else if (const usize seat = riders->size(); walk_on && seat < walks->on.size())
                         {
-                            RideWalk walk { .points = { walks->ticket }, .pause = kTuning.queues.ticket.value };
+                            RideWalk walk { .points = { walks->ticket }, .pause = { kTuning.queues.ticket.value } };
                             walk.points.insert(walk.points.end(), walks->on[seat].begin(), walks->on[seat].end());
                             r.emplace_or_replace<RideWalk>(guest, std::move(walk));
                         }

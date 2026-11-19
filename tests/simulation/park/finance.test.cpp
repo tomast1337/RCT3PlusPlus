@@ -162,7 +162,7 @@ TEST_CASE("repaying the loan needs the cash in hand")
 
 TEST_CASE("a park whose money never runs out has no loan to change")
 {
-    ParkState park { .loan = 0 };
+    ParkState park { .loan = { 0 } };
     CHECK(loan_step(park, units::Money { 500'000 }, LoanMove::Borrow) == units::Money { 0 });
     CHECK_FALSE(change_loan(park, units::Money { 500'000 }, LoanMove::Borrow));
     CHECK(park.loan == units::Money { 0 });
@@ -205,7 +205,7 @@ TEST_CASE("a loan is charged a week's interest as each week ends, and no loan no
     CHECK(weekly_interest(units::Money { 1'000'000 }, 6) == units::Money { std::llround(1'000'000 * 0.06 / kTuning.charges.interest_weeks) });
     CHECK(weekly_interest(units::Money { 0 }, 6) == units::Money { 0 });
     Sandbox park;
-    auto& charges = park.world().registry.ctx().emplace<Charges>(Charges { .loan = 1'000'000, .rate = 6 });
+    auto& charges = park.world().registry.ctx().emplace<Charges>(Charges { .loan = { 1'000'000 }, .rate = 6 });
     park.run_seconds(kWeek * 0.9f);
     CHECK(charges.interest.value == 0);
     park.run_seconds(kWeek * 0.2f);

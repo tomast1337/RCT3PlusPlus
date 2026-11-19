@@ -72,7 +72,7 @@ TEST_CASE("a guest who cannot pay thinks so, and keeps no more than six thoughts
     Sandbox park;
     park.path({ 0, 0 }, { 3, 0 });
     const auto shop = park.shop("Drinks", Product::Drink, { 3, 0 }, 500);
-    const auto g = park.guest({ 0, 0 }, { .thirst = 0.9f, .hunger = 0.9f, .bladder = 0.9f, .energy = 0.1f, .nausea = 0.7f, .cash = 600 });
+    const auto g = park.guest({ 0, 0 }, { .thirst = 0.9f, .hunger = 0.9f, .bladder = 0.9f, .energy = 0.1f, .nausea = 0.7f, .cash = { 600 } });
     auto& r = park.world().registry;
     CHECK(park.run_until([&] { return r.get<Errand>(g).kind == ErrandKind::Heading; }, 10));
     r.get<Attraction>(shop).price.value = 800; // Dearer by the time they get there

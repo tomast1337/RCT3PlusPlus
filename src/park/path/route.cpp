@@ -151,7 +151,7 @@ namespace rct3::park::path
             for (const Side heading : kSides)
             {
                 const bool turn = heading != node.heading;
-                if (node.started && (turn && node.on_slope || heading == node.heading.opposite()))
+                if (node.started && ((turn && node.on_slope) || heading == node.heading.opposite()))
                     continue;
                 for (usize s = 0; s < kPathSlopeCount; ++s)
                 {

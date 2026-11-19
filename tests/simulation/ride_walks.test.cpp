@@ -34,8 +34,8 @@ TEST_CASE("riders walk past the ticket spot to their seats, and off past the exi
     const glm::vec3 ticket = entrance + glm::vec3(1, 0, 0);
     const glm::vec3 seat = entrance + glm::vec3(6, 1, 0);
     const glm::vec3 way_out = entrance + glm::vec3(6, 0, 8);
-    r.emplace<RideWalks>(ride, RideWalks { .ticket = ticket, .ticket_heading = 1, .on = { { entrance + glm::vec3(4, 0, 0), seat } }, .off = { { seat, way_out } } });
-    const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+    r.emplace<RideWalks>(ride, RideWalks { .ticket = ticket, .ticket_heading = { 1 }, .on = { { entrance + glm::vec3(4, 0, 0), seat } }, .off = { { seat, way_out } } });
+    const auto g = park.guest({ 4, 0 }, { .cash = { 1000 } });
     r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
 
     // Pays, walks to the ticket spot and stands there facing the way given, the ride waiting.
@@ -74,8 +74,8 @@ TEST_CASE("the next rider steps up to the ticket spot once the one ahead has han
     auto& r = park.world().registry;
     const glm::vec3 entrance = park.world().paths.centre(*r.get<Attraction>(ride).entrance);
     r.emplace<RideWalks>(ride, RideWalks { .ticket = entrance, .on = { { entrance + glm::vec3(20, 0, 0) }, { entrance + glm::vec3(20, 0, 1) } } });
-    const auto a = park.guest({ 4, 0 }, { .cash = 1000 });
-    const auto b = park.guest({ 4, 0 }, { .cash = 1000 });
+    const auto a = park.guest({ 4, 0 }, { .cash = { 1000 } });
+    const auto b = park.guest({ 4, 0 }, { .cash = { 1000 } });
     r.get<Errand>(a) = { ErrandKind::Heading, ride, 0 };
     r.get<Errand>(b) = { ErrandKind::Heading, ride, 0 };
     REQUIRE(park.run_until([&] { return r.all_of<RideWalk>(a) || r.all_of<RideWalk>(b); }, 30));
@@ -109,7 +109,7 @@ TEST_CASE("a load walks off abreast, each to a side of the way out within the wa
     std::vector<entt::entity> load;
     for (i32 i = 0; i < 3; ++i)
     {
-        load.push_back(park.guest({ 4, 0 }, { .cash = 1000 }));
+        load.push_back(park.guest({ 4, 0 }, { .cash = { 1000 } }));
         r.get<Errand>(load.back()) = { ErrandKind::Heading, ride, 0 };
     }
     REQUIRE(park.run_until([&] { return std::ranges::all_of(load, [&](entt::entity g) { return r.all_of<RideWalk>(g) && r.get<RideWalk>(g).off; }); }, 120));
@@ -155,8 +155,8 @@ TEST_CASE("a walk-through takes guests in one by one while there is room, walks 
     const glm::vec3 exit = paths.centre(*r.get<CycleRide>(ride).exit);
     const std::vector<glm::vec3> track { entrance + glm::vec3(2, 0, 0), entrance + glm::vec3(8, 0, 0), exit + glm::vec3(8, 0, 0), exit + glm::vec3(2, 0, 0) };
     r.emplace<WalkThrough>(ride, WalkThrough { .track = track });
-    const auto a = park.guest({ 4, 0 }, { .cash = 1000 });
-    const auto b = park.guest({ 4, 0 }, { .cash = 1000 });
+    const auto a = park.guest({ 4, 0 }, { .cash = { 1000 } });
+    const auto b = park.guest({ 4, 0 }, { .cash = { 1000 } });
     r.get<Errand>(a) = { ErrandKind::Heading, ride, 0 };
     r.get<Errand>(b) = { ErrandKind::Heading, ride, 0 };
 
@@ -197,14 +197,14 @@ TEST_CASE("a flat ride out of its longest wait shuts its gates on a rider still 
     const glm::vec3 entrance = park.world().paths.centre(*r.get<Attraction>(ride).entrance);
     r.emplace<RideWalks>(ride, RideWalks { .ticket = entrance, .on = { { entrance + glm::vec3(12, 0, 0) }, { entrance + glm::vec3(12, 0, 1) } } });
     r.emplace<Departure>(ride, Departure { .max_wait = rct3::units::Seconds { 2 } });
-    const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+    const auto g = park.guest({ 4, 0 }, { .cash = { 1000 } });
     r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
     const auto walking = [&] { return r.all_of<RideWalk>(g) && !r.get<RideWalk>(g).off; };
     REQUIRE(park.run_until(walking, 30));
     // Its gates shut while they walk, and no one else gets on.
     REQUIRE(park.run_until([&] { return r.get<CycleRide>(ride).phase == RidePhase::Starting; }, 5));
     CHECK(walking());
-    const auto late = park.guest({ 4, 0 }, { .cash = 1000 });
+    const auto late = park.guest({ 4, 0 }, { .cash = { 1000 } });
     r.get<Errand>(late) = { ErrandKind::Heading, ride, 0 };
     park.run(1);
     CHECK(r.get<CycleRide>(ride).in_phase.value == 0);

@@ -129,6 +129,8 @@ declare namespace ui {
     function toggle(path: string, on: boolean): Promise<void>;
     /** The names of the shown widgets in the one at `path` ("" for the top), in order; undefined when it is not shown. */
     function children(path: string): string[] | undefined;
+    /** The interface's string under `key` in the language shown, as its windows show it; undefined with no front end. */
+    function text(key: string): string | undefined;
 }
 
 declare namespace career {

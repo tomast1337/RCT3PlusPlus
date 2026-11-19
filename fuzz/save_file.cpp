@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // libFuzzer target: read_save must return a value or an error for any input, never crash, read out of
-// bounds or trip a sanitizer. Run with `./nob fuzz save_file`.
+// bounds or trip a sanitizer; what it read must write back to a file it reads again, and a ride it holds to a
+// design. Run with `./nob fuzz save_file`.
 #include "save/save_file.hpp"
 
+#include "save/model/design.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -13,7 +15,10 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <expected>
+#include <optional>
 #include <span>
+#include <vector>
 
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size) // c-api
 {
@@ -95,6 +100,24 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         if (!index.find(o.id))
             __builtin_trap();
     }
+    // Every decoded object encodes again, and the objects written read back as many and as framed.
+    {
+        std::vector<std::vector<std::byte>> payloads;
+        std::vector<rct3::save::ObjectRecord> records;
+        payloads.reserve(file->objects.size());
+        for (const auto& o : file->objects)
+        {
+            auto encoded = rct3::save::encode_object(file->classes[o.class_index], rct3::save::decode_object(*file, o)->fields);
+            if (!encoded)
+                __builtin_trap();
+            payloads.push_back(std::move(*encoded));
+            records.push_back({ .class_index = o.class_index, .id = o.id, .payload = payloads.back() });
+        }
+        const auto written = rct3::save::write_save(file->has_header ? std::optional(file->header) : std::nullopt, file->classes, records);
+        const auto back = written ? rct3::save::read_save(*written) : std::unexpected(rct3::save::Error::Truncated);
+        if (!back || back->objects.size() != file->objects.size())
+            __builtin_trap();
+    }
     // BEGIN park: the park loader accepts everything that decodes and yields a self-consistent model.
     {
         const auto model = rct3::save::model::load_park(*file, index);
@@ -149,6 +172,9 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         {
             if (r.track)
                 pieces += r.track->pieces.size();
+            // A ride written as a design reads back as one.
+            if (const auto design = rct3::save::model::write_design(r, world->objects, { }); design && !rct3::save::model::read_design_summary(*design))
+                __builtin_trap();
         }
         if (pieces > file->objects.size())
             __builtin_trap();

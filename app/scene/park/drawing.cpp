@@ -726,7 +726,8 @@ namespace rct3::scene::park
             constexpr usize kMostBursts = 8;               // Most lit at once, the brightest: each lights many cells
             constexpr f32 kBurstLight = 0.002f;            // Chosen by eye: a big burst's thousand sparks light the ground under it like a lamp
             constexpr units::Distance kBurstReach { 120 }; // Chosen by eye: from the highest shells, down to the ground and paths round the launchers
-            std::vector<rct3::park::Lamp> bursts;
+            std::vector<rct3::park::Lamp>& bursts = scene.bursts;
+            bursts.clear();
             if (scene.darkness >= 0.01f)
                 for (const ParkParticles::Shown& shown : scene.particles.fired)
                     if (shown.awake)

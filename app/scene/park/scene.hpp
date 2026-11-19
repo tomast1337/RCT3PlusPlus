@@ -507,11 +507,12 @@ namespace rct3::scene::park
         std::vector<glm::vec3> anchors;
         std::vector<rct3::park::Lamp> lamps; ///< The objects' lamps at full strength; packed again when `lamps_due`
         bool lamps_due = true;
-        bool car_lamps = false;             ///< Some ride car carries lamps, so they are packed again each frame
-        f32 darkness = 0;                   ///< How dark the sky is, 0 by day to 1 at night (rct3::park::sky::sky_darkness)
-        render::TextureHandle lamp_texture; ///< render::SceneLight::lamps
-        u32 lamp_rows = 0;                  ///< Of that texture
-        std::optional<f32> lamp_strength;   ///< The strength it was packed with; none before the first packing
+        bool car_lamps = false;               ///< Some ride car carries lamps, so they are packed again each frame
+        std::vector<rct3::park::Lamp> bursts; ///< The fired effects glowing this frame, kept to reuse its memory
+        f32 darkness = 0;                     ///< How dark the sky is, 0 by day to 1 at night (rct3::park::sky::sky_darkness)
+        render::TextureHandle lamp_texture;   ///< render::SceneLight::lamps
+        u32 lamp_rows = 0;                    ///< Of that texture
+        std::optional<f32> lamp_strength;     ///< The strength it was packed with; none before the first packing
         /// Where the objects stand, and the boxes they are clicked in, brought up to date (place_objects) after a
         /// change or when objects are added.
         mutable rct3::park::object::ObjectPlaces places;

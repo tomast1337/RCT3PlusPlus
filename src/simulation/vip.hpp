@@ -2,7 +2,11 @@
 #pragma once
 
 // Guests of honour (VIPs). Some scenario goals send a celebrity on a visit: the player is told a month and a
-// week ahead, the VIP comes in at the gate on the day, stays the months the goal says and then heads home.
+// week ahead, the VIP comes in at the gate on the day with their bodyguards, stays the months the goal says and
+// then heads home. They come with stops in mind, what they want to see: the coasters exciting enough, most
+// exciting first, then a pool. They walk to each in turn, the bodyguards beside them; when one is closed, broken
+// down or crashed, or there is no way to it, they complain, complain again a while later, and in the end give
+// it up for the next. Between stops and after the last they go round as other guests do.
 // While in the park they look round now and then: litter on their path and time on a broken or crashed ride
 // wear their patience down, a happy mood builds it back, and they tick off what they came to see (different
 // exciting coasters, fireworks, a themed area). The visit went well when they leave with patience left and
@@ -15,6 +19,7 @@
 #include "simulation/sim_world.hpp"
 #include "units/units.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <string>
@@ -23,6 +28,16 @@
 
 namespace rct3::simulation
 {
+    /// What holds a VIP up on the way to their next stop.
+    enum class VipSnag : std::uint8_t
+    {
+        None,
+        Closed,
+        Broken,
+        Crashed,
+        NoWay, ///< No walk over the paths reaches it
+    };
+
     /// A guest of honour a scenario's goal sent. They go home only once their visit is over or
     /// their patience has run out.
     struct Vip
@@ -38,9 +53,21 @@ namespace rct3::simulation
         float happiness_sum = 0; ///< Over their looks, for their average
         std::uint32_t looks = 0;
         bool leaving = false;
-        units::Seconds poll { };      ///< Until they next look for fans about them
-        std::uint32_t fans = 0;       ///< Gathered round them for an autograph now
-        std::uint32_t signatures = 0; ///< Autographs given since their last look round
+        units::Seconds poll { };             ///< Until they next look for fans about them
+        std::uint32_t fans = 0;              ///< Gathered round them for an autograph now
+        std::uint32_t signatures = 0;        ///< Autographs given since their last look round
+        bool pool = false;                   ///< Swam in a pool
+        std::vector<entt::entity> stops { }; ///< What they came to see, in turn: coasters, a pool's changing room
+        std::size_t next_stop = 0;           ///< Of stops, where they go next
+        VipSnag snag = VipSnag::None;        ///< What holds them up at it
+        units::Seconds snagged { };          ///< How long it has since they last said so
+        bool nagged = false;                 ///< Said so again already
+    };
+
+    /// One of a VIP's bodyguards, who walk with them in their party.
+    struct Bodyguard
+    {
+        entt::entity vip = entt::null;
     };
 
     /// Text key of celebrity `who`'s name; empty for a number with none.
@@ -58,8 +85,8 @@ namespace rct3::simulation
     };
 
     /// Moves the VIP goals of `set` on to calendar `time`, `game_seconds` after the last call: tells the player
-    /// of a visit coming, lets the VIP in on the day, has them look round, and judges the visit as they leave,
-    /// posting each to `messages`.
+    /// of a visit coming, lets the VIP in on the day with their bodyguards, sends them on to their stops, has them
+    /// look round, and judges the visit as they leave, posting each to `messages`.
     void advance_vips(SimWorld& world, save::model::ObjectiveSet& set, float time, float game_seconds, park::ParkMessages& messages, const VipSurroundings& around);
 
 } // namespace rct3::simulation

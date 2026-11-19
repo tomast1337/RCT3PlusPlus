@@ -364,6 +364,7 @@ namespace rct3::save::model
         float next_visit = 0;
         std::int32_t retry_months = 0; ///< After a visit that went badly, months until they come again
         std::int32_t months_to_stay = 0;
+        std::int32_t guards = 0;                        ///< Bodyguards who come with them
         std::int32_t coasters_needed = 0;               ///< kCoasters: how many different coasters they want to ride
         float min_excitement = 0;                       ///< kCoasters: how exciting each must be, as rides are rated
         std::int32_t theme = 0;                         ///< kThemedArea: the theme they want to see

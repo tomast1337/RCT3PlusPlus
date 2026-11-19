@@ -263,11 +263,19 @@ namespace rct3::simulation
                     const float last = static_cast<float>(line.size() - 1);
                     float side_ahead = 0;
                     float along_ahead = -kTuning.queues.spacing.value; // Where the guest ahead stands now
+                    std::size_t beside_count = 0;                      // Those so far standing beside one ahead of them
+                    entt::entity party_ahead = entt::null;             // The guest ahead's party, while they stand alone
                     for (std::size_t k = 0; k < queue.size(); ++k)
                     {
                         if (!r.valid(queue[k]))
                             continue;
                         auto& stride = r.get<Stride>(queue[k]);
+                        // Two of a party stand side by side across the line, level with each other.
+                        const auto* member = r.try_get<Member>(queue[k]);
+                        const entt::entity party = member != nullptr ? member->party : entt::null;
+                        const bool beside = party != entt::null && party == party_ahead;
+                        party_ahead = beside ? entt::null : party;
+                        beside_count += beside ? 1 : 0;
                         enum : std::uint64_t
                         {
                             Side = 1,
@@ -277,12 +285,18 @@ namespace rct3::simulation
                         const auto nearest = static_cast<float>(kTuning.queues.nearest_side.value);
                         if (stride.side.value == 0)
                             stride.side.value = (side_ahead > 0 ? -kTuning.queues.reach.value : kTuning.queues.reach.value) * (nearest + (1 - nearest) * fixed_share(queue[k], Side));
+                        if (beside)
+                        {
+                            const float reach = kTuning.queues.reach.value;
+                            const float apart = kTuning.queues.beside.value;
+                            stride.side.value = std::clamp(side_ahead > 0 ? std::min(stride.side.value, side_ahead - apart) : std::max(stride.side.value, side_ahead + apart), -reach, reach);
+                        }
                         side_ahead = stride.side.value;
                         // Off their even place by a little, so the line is not spaced like a ruler.
                         // Never nearer the guest ahead than the closest gap, wherever they stand: one still waiting for
                         // their own gap to open is not walked up past or into.
-                        const float even = (static_cast<float>(k) + kTuning.queues.gap_spread.value * (fixed_share(queue[k], Place) - 0.5f)) * kTuning.queues.spacing.value;
-                        const float place_in_line = std::clamp(std::max(even, along_ahead + kTuning.queues.spacing.value * (1 - kTuning.queues.gap_spread.value)), 0.0f, last);
+                        const float even = (static_cast<float>(k - beside_count) + kTuning.queues.gap_spread.value * (fixed_share(queue[k], Place) - 0.5f)) * kTuning.queues.spacing.value;
+                        const float place_in_line = std::clamp(beside ? along_ahead : std::max(even, along_ahead + kTuning.queues.spacing.value * (1 - kTuning.queues.gap_spread.value)), 0.0f, last);
                         // Up to the place behind the guest ahead, in shuffles: a guest standing waits for a gap.
                         const bool was_moving = stride.from != stride.to;
                         const bool moving = stride.along.value > place_in_line && (was_moving || stride.along.value - place_in_line > kTuning.queues.shuffle.value);

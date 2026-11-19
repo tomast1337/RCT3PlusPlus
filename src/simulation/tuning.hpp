@@ -161,6 +161,7 @@ namespace rct3::simulation::tuning
         units::Share give_up_mood { 0.3f };                         ///< Happiness below which they may
         units::Frequency give_up = units::Frequency::every({ 30 }); ///< How often they do then
         units::Seconds ticket { 2.5f };                             ///< A guest stands handing over their ticket at a ride's entrance
+        units::Distance beside { 0.8f };                            ///< Chosen by eye: least across the line between two of a party side by side
     };
 
     /// Cash machines, benches and sights.

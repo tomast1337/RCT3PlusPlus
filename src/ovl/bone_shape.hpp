@@ -29,7 +29,7 @@ namespace rct3::ovl
         std::array<std::uint8_t, 4> bones { };
         /// Weight of each bone out of 255. They add up to 255 in every file seen.
         std::array<std::uint8_t, 4> weights { };
-        std::array<std::uint8_t, 4> colour { }; ///< Four bytes, 255 in the last one in almost all vertices
+        std::array<std::uint8_t, 4> colour { }; ///< Blue, green, red, alpha as in static shapes: opaque white in almost all vertices
         std::array<float, 2> texcoord { };
     };
 

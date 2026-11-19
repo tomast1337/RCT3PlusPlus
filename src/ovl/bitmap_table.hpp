@@ -23,8 +23,8 @@ namespace rct3::ovl
         Blocks16, ///< 4x4 pixel blocks of 16 bytes: DXT3 compression, explicit 4-bit alpha
     };
 
-    /// Layout of a stored format value: 2 is 32 bits per pixel, 18 and 19 are 4x4 block formats of 8 and 16
-    /// bytes. Nothing for any other value, which does not occur in shipped files.
+    /// Layout of a stored format value: 2 is 32 bits per pixel (B8G8R8A8), 18 is the 8-byte block format (DXT1) and 19 the 16-byte
+    /// one (DXT3), the two blocks formats being 4x4 pixels. Nothing for any other value, which does not occur in shipped files.
     [[nodiscard]] std::optional<BitmapLayout> bitmap_layout(std::uint32_t format) noexcept;
 
     /// Bytes of all `levels` mip levels of a bitmap, stored from the largest level down with each level

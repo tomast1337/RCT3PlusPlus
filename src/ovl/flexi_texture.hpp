@@ -43,7 +43,9 @@ namespace rct3::ovl
         std::uint32_t height = 0;
         /// 0 for single-frame textures, non-zero for all multi-frame ones. It is the playback speed in frames of
         /// the sequence per second: textures that differ only by a "slow" variant carry half the value. Seen
-        /// values are 3 to 25.
+        /// values are 3 to 25. The sequence position shown at clock time t (seconds) is
+        /// (floor(animation * t) + offset) mod sequence.size(), where the offset is a per-use start phase that
+        /// is 0 unless a piece wants to desynchronise copies of the same texture.
         std::uint32_t animation = 0;
         /// Bit mask, 0..7: which of three recolourable colour slots the texture uses. The art marks each slot
         /// with a solid colour region: bit 0 blue, bit 1 magenta, bit 2 yellow.

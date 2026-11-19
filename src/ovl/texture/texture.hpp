@@ -28,12 +28,15 @@ namespace rct3::ovl::texture
 
     struct Texture
     {
-        /// Sixteen 16-bit values at the start of the record, 7 in every file seen. Purpose unknown.
+        /// Sixteen 16-bit values at the start of the record, 7 in every file seen. Purpose not confirmed.
         std::array<std::uint16_t, 16> table { };
-        /// Three words after the table: {0 or 1 or 2, 4 or 8 or 12, 0 or 13 or 16}. Purpose unknown.
+        /// Three words after the table: {0 or 1 or 2, 4 or 8 or 12, 0 or 13 or 16}. The first equals `first`
+        /// and the second is 4 + 4 * `first` in every file seen (so they hold no extra information). The
+        /// third is 0 for plain textures, 13 for water and cube-map textures and 16 for most others; its use
+        /// is not confirmed.
         std::array<std::uint32_t, 3> parameters { };
         std::string_view style;          ///< Texture style name without the tag. Empty when not referenced.
-        std::uint16_t first = 0;         ///< 0, 1 or 2
+        std::uint16_t first = 0;         ///< 0, 1 or 2. Nonzero exactly when the texture has a `node`
         std::uint16_t count = 0;         ///< 0, 1 or 2 in shipped files
         std::optional<TextureNode> node; ///< Absent in the few textures whose `parameters[1]` is 4
     };

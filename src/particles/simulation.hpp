@@ -11,11 +11,13 @@
 #include "core/types.hpp"
 #include "math/glm.hpp"
 #include "particles/effect.hpp"
+#include "particles/library.hpp"
 #include "random/generator.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <vector>
 
 namespace rct3::particles
@@ -51,6 +53,21 @@ namespace rct3::particles
 
     /// How particle `i` of `particles` looks now.
     [[nodiscard]] Look look(const Effect& effect, const ParticleArrays& particles, usize i);
+
+    /// The light glowing particles throw on what is round them: the sum of their colours, from their middle as
+    /// weighted by how bright each is.
+    struct Glow
+    {
+        glm::vec3 position { 0.0f };
+        glm::vec3 colour { 0.0f };
+    };
+
+    /// Most particles `glow` looks at in one run; it scales the rest up from them.
+    inline constexpr usize kGlowSamples = 256;
+
+    /// The glow of `particles`, each kind drawn with `sprites` (by Effect::particles): the added ones glow (fire,
+    /// sparks), the mixed ones do not (smoke, spray). Nothing once they have faded or died.
+    [[nodiscard]] Glow glow(const Effect& effect, const ParticleArrays& particles, std::span<const Sprite* const> sprites);
 
     /// A sound that began: the effect's own, or particle kind `particle`'s.
     struct Heard

@@ -60,6 +60,29 @@ namespace rct3::particles
         return { colour, std::lerp(kind.start_size, kind.end_size, t) * particles.scale[i], kind.stretch > 0 ? particles.velocity[i] * kind.stretch : glm::vec3(0.0f) };
     }
 
+    Glow glow(const Effect& effect, const ParticleArrays& particles, std::span<const Sprite* const> sprites)
+    {
+        // A busy burst has thousands of sparks: an even spread of some of them stands for the rest.
+        const usize stride = std::max<usize>(1, (particles.count() + kGlowSamples - 1) / kGlowSamples);
+        glm::vec3 sum { 0.0f };
+        glm::vec3 weighted { 0.0f };
+        f32 weights = 0;
+        for (usize i = 0; i < particles.count(); i += stride)
+        {
+            const usize kind = particles.kind[i];
+            if (particles.age[i] < 0 || kind >= sprites.size() || sprites[kind] == nullptr || sprites[kind]->blended)
+                continue;
+            const glm::vec3 c = glm::max(glm::vec3(look(effect, particles, i).colour), glm::vec3(0.0f));
+            const f32 w = c.r + c.g + c.b;
+            sum += c;
+            weighted += particles.position[i] * w;
+            weights += w;
+        }
+        if (weights <= 0)
+            return { };
+        return { .position = weighted / weights, .colour = sum * static_cast<f32>(stride) };
+    }
+
     EffectRun::EffectRun(const Effect& effect, random::RandomState random, bool loops, usize capacity, f32 strength, f32 scale)
         : effect_(&effect)
         , random_(random)

@@ -3,6 +3,7 @@
 
 #include "core/types.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -71,4 +72,17 @@ TEST_CASE("lamps spread far apart widen the cells instead of growing the grid")
     CHECK(texel(t, 0).w <= kLampCellsAcross);
     CHECK(texel(t, 0).z >= 10000.0f / kLampCellsAcross);
     CHECK(listed(t, 10000, 0) == std::vector { 1 });
+}
+
+TEST_CASE("only the brightest lamps are kept")
+{
+    std::vector<Lamp> lamps;
+    for (const f32 c : { 0.2f, 3.0f, 0.5f, 1.0f, 0.1f })
+        lamps.push_back(Lamp { .colour = { 0, c, 0 } });
+    keep_brightest(lamps, 2);
+    REQUIRE(lamps.size() == 2);
+    CHECK(std::ranges::find(lamps, 3.0f, [](const Lamp& l) { return l.colour.g; }) != lamps.end());
+    CHECK(std::ranges::find(lamps, 1.0f, [](const Lamp& l) { return l.colour.g; }) != lamps.end());
+    keep_brightest(lamps, 8);
+    CHECK(lamps.size() == 2);
 }

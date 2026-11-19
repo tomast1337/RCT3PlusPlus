@@ -5,6 +5,7 @@
 #include "park/daylight.hpp"
 #include "park/flexi_colours.hpp"
 #include "park/ground/textures.hpp"
+#include "park/lamp_grid.hpp"
 #include "park/object/models.hpp"
 #include "park/person/mesh.hpp"
 #include "park/person/motions.hpp"
@@ -16,6 +17,7 @@
 #include "scene/park/footpaths.hpp"
 #include "scene/park/glow.hpp"
 #include "scene/park/occlusion.hpp"
+#include "scene/park/particles.hpp"
 #include "scene/park/patrol.hpp"
 #include "scene/park/poses.hpp"
 #include "scene/park/refresh.hpp"
@@ -719,24 +721,42 @@ namespace rct3::scene::park
             scene.light.lamps = { };
             constexpr f32 kLampStrength = 0.75f; // Path lamps light their pools without washing them white
             const f32 strength = scene.darkness * kLampStrength;
-            if (strength < 0.01f || (scene.lamps.empty() && !scene.car_lamps))
+            // Glowing effects set off once (firework bursts, explosions) light what is round them as their sparks
+            // do: bright as they burst, fading as the sparks fade and die.
+            constexpr usize kMostBursts = 8;               // Most lit at once, the brightest: each lights many cells
+            constexpr f32 kBurstLight = 0.002f;            // Chosen by eye: a big burst's thousand sparks light the ground under it like a lamp
+            constexpr units::Distance kBurstReach { 120 }; // Chosen by eye: from the highest shells, down to the ground and paths round the launchers
+            std::vector<rct3::park::Lamp> bursts;
+            if (scene.darkness >= 0.01f)
+                for (const ParkParticles::Shown& shown : scene.particles.fired)
+                    if (shown.awake)
+                        if (const particles::Glow glow = particles::glow(shown.run.effect(), shown.run.particles(), shown.sprites); glm::length(glow.colour) > 0)
+                            bursts.push_back({ .position = glow.position, .radius = kBurstReach.value, .colour = glow.colour * kBurstLight * scene.darkness });
+            rct3::park::keep_brightest(bursts, kMostBursts);
+            if (strength < 0.01f || (scene.lamps.empty() && !scene.car_lamps && bursts.empty()))
                 return;
-            if (scene.lamps_due || scene.car_lamps || !scene.lamp_strength || std::abs(strength - *scene.lamp_strength) > 0.01f)
+            if (scene.lamps_due || scene.car_lamps || !bursts.empty() || !scene.lamp_strength || std::abs(strength - *scene.lamp_strength) > 0.01f)
             {
                 std::vector<rct3::park::Lamp> lamps = scene.lamps;
                 if (scene.car_lamps)
                     std::ranges::copy(rct3::park::object::object_lamps(scene.cars, scene.models, scene.grid, { }, scene.car_places), std::back_inserter(lamps));
-                if (lamps.empty())
-                    return;
                 for (rct3::park::Lamp& l : lamps)
                     l.colour *= strength;
+                // After the lamps, so a cell crowded with lamps keeps them all and leaves the bursts out there.
+                std::ranges::copy(bursts, std::back_inserter(lamps));
+                if (lamps.empty())
+                    return;
                 constexpr f32 kCell = 8; // Two tiles, a lamp's usual reach
-                const rct3::park::LampTexels texels = rct3::park::lamp_texels(lamps, kCell);
-                if (scene.lamp_texture && scene.lamp_rows != texels.rows)
+                rct3::park::LampTexels texels = rct3::park::lamp_texels(lamps, kCell);
+                // A texture with rows to spare is kept and the rest padded, so bursts moving the grid each frame
+                // do not make a new one each frame.
+                if (scene.lamp_texture && scene.lamp_rows < texels.rows)
                 {
                     device.destroy_texture(scene.lamp_texture);
                     scene.lamp_texture = { };
                 }
+                if (scene.lamp_texture)
+                    texels.values.resize(usize { scene.lamp_rows } * rct3::park::kLampTexelsAcross * 4, -1.0f);
                 const auto bytes = std::as_bytes(std::span(texels.values));
                 if (!scene.lamp_texture)
                 {
@@ -754,7 +774,8 @@ namespace rct3::scene::park
                     back.clear = false;
                     device.begin_pass(back);
                 }
-                scene.lamps_due = false;
+                // Packed again next frame while bursts glow, and once more as the last fades.
+                scene.lamps_due = !bursts.empty();
                 scene.lamp_strength = strength;
             }
             scene.light.lamps = scene.lamp_texture;

@@ -347,7 +347,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     r.emplace<Member>(ann, party);
     r.emplace<Member>(bob, party);
     const entt::entity sweeper = r.create();
-    r.emplace<Staff>(sweeper, Staff { .role = StaffRole::Handyman, .wage = 900, .training = 1, .laziness = 0.25f, .mended = 5, .think = { 12.5f }, .miserable = 3 });
+    r.emplace<Staff>(sweeper, Staff { .role = StaffRole::Handyman, .busy = { 3 }, .wage = 900, .training = 1, .laziness = 0.25f, .load = { 0.5f }, .job = StaffJob::Sweep, .job_length = { 5 }, .mended = 5, .think = { 12.5f }, .miserable = 3 });
     r.emplace<Pose>(sweeper, Pose { .position = { 3, 0, 4 } });
     r.emplace<staff::Patrol>(sweeper, staff::Patrol { { { 1, 2 }, { 3, 4 } }, 7 });
 
@@ -380,6 +380,11 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     CHECK(people.staff[0].mended == 5);
     CHECK(people.staff[0].think.value == 12.5f);
     CHECK(people.staff[0].miserable == 3);
+    CHECK(people.staff[0].job == StaffJob::Sweep);
+    CHECK(people.staff[0].busy.value == 3);
+    CHECK(people.staff[0].job_length.value == 5);
+    CHECK(people.staff[0].load.value == 0.5f);
+    CHECK(people.staff[0].ride == 0);
 
     SimWorld loaded;
     auto& l = loaded.registry;
@@ -712,4 +717,135 @@ TEST_CASE("a save keeps who waits in a ride's queue, in order, and how long they
     CHECK(loaded.registry.get<Errand>(line[0]).queued == units::Seconds { 90 });
     CHECK(loaded.registry.get<Visitor>(line[1]).name == r.get<Visitor>(back).name);
     CHECK(loaded.registry.get<Errand>(line[1]).queued == units::Seconds { 30 });
+}
+
+TEST_CASE("a save keeps a mechanic at work on a ride, and one on the way is sent again")
+{
+    using namespace simulation;
+    const auto make_world = [](SimWorld& world) {
+        world.paths.add({ 0, 0, 0 });
+        const entt::entity ride = world.registry.create();
+        world.registry.emplace<Attraction>(ride, Attraction { .kind = AttractionKind::Ride, .name = "Teacups", .saved = 77 });
+        world.registry.emplace<Upkeep>(ride, Upkeep { .broken = true });
+        return ride;
+    };
+    SimWorld world;
+    auto& r = world.registry;
+    const entt::entity ride = make_world(world);
+    const entt::entity fixing = r.create();
+    r.emplace<Staff>(fixing, Staff { .role = StaffRole::Mechanic, .busy = { 6 }, .ride = ride, .job = StaffJob::Fix, .job_length = { 8 } });
+    r.emplace<Pose>(fixing);
+    r.get<Upkeep>(ride).mechanic = fixing;
+    const entt::entity walking = r.create();
+    r.emplace<Staff>(walking, Staff { .role = StaffRole::Mechanic, .ride = ride });
+    r.emplace<Pose>(walking);
+
+    parkfile::SavedPark park = small_park();
+    park.people = parkfile::keep_people(world, { }, { });
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+
+    SimWorld loaded;
+    const entt::entity ride2 = make_world(loaded);
+    const auto staff = parkfile::place_staff(loaded, *read->people);
+    REQUIRE(staff.size() == 2);
+    auto& l = loaded.registry;
+    const bool first_fixing = l.get<Staff>(staff[0]).busy.value > 0;
+    const Staff& fixer = l.get<Staff>(staff[first_fixing ? 0 : 1]);
+    const Staff& sent = l.get<Staff>(staff[first_fixing ? 1 : 0]);
+    CHECK(fixer.ride == ride2);
+    CHECK(fixer.job == StaffJob::Fix);
+    CHECK(fixer.busy.value == 6);
+    CHECK(fixer.job_length.value == 8);
+    CHECK(l.get<Upkeep>(ride2).mechanic == staff[first_fixing ? 0 : 1]);
+    CHECK(sent.ride == entt::null);
+
+    // With the ride gone, the job is dropped.
+    SimWorld bare;
+    bare.paths.add({ 0, 0, 0 });
+    for (const entt::entity e : parkfile::place_staff(bare, *read->people))
+    {
+        CHECK(bare.registry.get<Staff>(e).busy.value == 0);
+        CHECK(bare.registry.get<Staff>(e).job == StaffJob::None);
+    }
+}
+
+TEST_CASE("a save keeps where a ride is in its cycle, its trains on the track and their riders")
+{
+    using namespace simulation;
+    const auto make_world = [](SimWorld& world, usize trains) {
+        const auto exit = world.paths.add({ 0, 0, 0 });
+        const entt::entity ride = world.registry.create();
+        world.registry.emplace<CycleRide>(ride, CycleRide { .exit = exit });
+        world.registry.emplace<Attraction>(ride, Attraction { .kind = AttractionKind::Ride, .name = "Coaster", .saved = 77 });
+        Coaster track; // Set field by field, as some of its fields have no default to leave out
+        track.distance = { 0, 100 };
+        track.height = { 0, 0 };
+        Trains fleet { .trains = std::vector<Coaster>(trains, track), .riders = std::vector<std::vector<entt::entity>>(trains) };
+        world.registry.emplace<Trains>(ride, std::move(fleet));
+        return ride;
+    };
+    SimWorld world;
+    auto& r = world.registry;
+    const entt::entity ride = make_world(world, 2);
+    const entt::entity rider = r.create();
+    r.emplace<Visitor>(rider, Visitor { .name = "Ann" });
+    r.emplace<Pose>(rider);
+    r.emplace<Needs>(rider);
+    r.emplace<Mood>(rider);
+    r.emplace<Wallet>(rider);
+    r.emplace<Errand>(rider, Errand { .kind = ErrandKind::Riding, .target = ride });
+    auto& cycle = r.get<CycleRide>(ride);
+    cycle.phase = RidePhase::Running;
+    cycle.in_phase = { 12 };
+    cycle.since_departure = units::Seconds { 20 };
+    cycle.per_hour = 600;
+    auto& fleet = r.get<Trains>(ride);
+    fleet.trains[1].running = true;
+    fleet.trains[1].at = 40;
+    fleet.trains[1].speed = 15;
+    fleet.trains[1].travelled = 140;
+    fleet.riders[1] = { rider };
+
+    parkfile::SavedPark park = small_park();
+    park.people = parkfile::keep_people(world, { }, { });
+    park.runs = parkfile::keep_runs(world);
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    REQUIRE(read->runs.size() == 1);
+
+    SimWorld loaded;
+    const entt::entity again = make_world(loaded, 2);
+    const auto guests = parkfile::place_guests(loaded, *read->people);
+    start_guests(loaded);
+    CHECK(parkfile::place_runs(loaded, read->runs, guests) == 1);
+    auto& l = loaded.registry;
+    const auto& cycle2 = l.get<CycleRide>(again);
+    CHECK(cycle2.phase == RidePhase::Running);
+    CHECK(cycle2.in_phase.value == 12);
+    CHECK(cycle2.since_departure == units::Seconds { 20 });
+    CHECK(cycle2.per_hour == 600);
+    const auto& fleet2 = l.get<Trains>(again);
+    CHECK_FALSE(fleet2.trains[0].running);
+    CHECK(fleet2.trains[1].running);
+    CHECK(fleet2.trains[1].at == 40);
+    CHECK(fleet2.trains[1].was_at == 40);
+    CHECK(fleet2.trains[1].speed == 15);
+    CHECK(fleet2.trains[1].travelled == 140);
+    REQUIRE(fleet2.riders[1].size() == 1);
+    CHECK(l.get<Visitor>(fleet2.riders[1][0]).name == "Ann");
+    CHECK(l.get<Errand>(fleet2.riders[1][0]).kind == ErrandKind::Riding);
+    CHECK(l.get<Errand>(fleet2.riders[1][0]).target == again);
+
+    // Rebuilt with one train, the ride starts afresh.
+    SimWorld rebuilt;
+    const entt::entity other = make_world(rebuilt, 1);
+    const auto guests3 = parkfile::place_guests(rebuilt, *read->people);
+    start_guests(rebuilt);
+    CHECK(parkfile::place_runs(rebuilt, read->runs, guests3) == 0);
+    CHECK(rebuilt.registry.get<CycleRide>(other).phase == RidePhase::Loading);
+
+    // A crashed train keeps nothing of its ride.
+    fleet.trains[0].crashed = true;
+    CHECK(parkfile::keep_runs(world).empty());
 }

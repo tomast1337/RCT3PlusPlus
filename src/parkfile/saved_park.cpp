@@ -145,7 +145,12 @@ namespace rct3::parkfile
             model.guests[i].in_park = in_park[i];
         for (const auto [e, staff, pose] : r.view<const Staff, const Pose>().each())
         {
-            SavedWorker& w = out.staff.emplace_back(SavedWorker { .look = look(e, model.staff.size()), .role = staff.role, .wage = staff.wage.value, .wage_level = staff.wage_level, .training = staff.training, .warnings = staff.warnings, .happiness = staff.happiness.value, .laziness = staff.laziness.value, .position = pose.position, .heading = pose.heading.value, .mended = staff.mended, .think = staff.think.value, .miserable = staff.miserable });
+            SavedWorker& w = out.staff.emplace_back(
+                SavedWorker { .look = look(e, model.staff.size()), .role = staff.role, .wage = staff.wage.value, .wage_level = staff.wage_level, .training = staff.training, .warnings = staff.warnings, .happiness = staff.happiness.value, .laziness = staff.laziness.value, .position = pose.position, .heading = pose.heading.value, .mended = staff.mended, .think = staff.think.value, .miserable = staff.miserable, .job = staff.job, .busy = staff.busy, .job_length = staff.job_length, .load = staff.load });
+            // Only a mechanic at work on a ride keeps it; one on the way is sent again.
+            if (staff.ride != entt::null && staff.busy.value > 0)
+                if (const auto* ride = r.try_get<Attraction>(staff.ride))
+                    w.ride = ride->saved;
             if (const auto* patrol = r.try_get<staff::Patrol>(e))
                 w.patrol = *patrol;
         }
@@ -271,6 +276,23 @@ namespace rct3::parkfile
             staff.mended = w.mended;
             staff.think = w.think;
             staff.miserable = w.miserable;
+            staff.job = w.job;
+            staff.busy = w.busy;
+            staff.job_length = w.job_length;
+            staff.load = w.load;
+            if (w.ride != 0)
+                for (const auto [ride, attraction, upkeep] : r.view<const Attraction, Upkeep>().each())
+                    if (attraction.saved == w.ride && upkeep.mechanic == entt::null)
+                    {
+                        staff.ride = ride;
+                        upkeep.mechanic = e;
+                        break;
+                    }
+            // A mechanic whose ride is gone has nothing left to work on.
+            if (w.ride != 0 && staff.ride == entt::null)
+                staff.busy = staff.job_length = { };
+            if (staff.busy.value == 0)
+                staff.job = StaffJob::None;
             r.emplace<Staff>(e, staff);
             r.emplace<Pose>(e, w.position, w.heading, w.position, w.heading);
             if (w.patrol)
@@ -445,14 +467,124 @@ namespace rct3::parkfile
         return placed;
     }
 
+    std::vector<SavedRun> keep_runs(const simulation::SimWorld& world)
+    {
+        using namespace simulation;
+        const entt::registry& r = world.registry;
+        std::unordered_map<entt::entity, i32> numbers;
+        for (const entt::entity e : r.view<const Visitor, const Pose, const Needs, const Mood, const Wallet>(entt::exclude<Left>)) // As keep_people goes
+            numbers.emplace(e, static_cast<i32>(numbers.size()));
+        const auto riders_of = [&](const std::vector<entt::entity>& on) {
+            std::vector<SavedRider> out;
+            for (const entt::entity g : on)
+                if (const auto number = numbers.find(g); number != numbers.end())
+                    if (const auto* errand = r.try_get<Errand>(g))
+                        out.push_back({ .guest = number->second, .station = errand->station, .off = errand->off });
+            return out;
+        };
+        std::vector<SavedRun> out;
+        for (const auto [e, cycle, attraction] : r.view<const CycleRide, const Attraction>().each())
+        {
+            const auto* fleet = r.try_get<Trains>(e);
+            // shortcut: a pool's rides keep nothing, as their riders swim on from them; keep them once swimmers'
+            // rides are kept.
+            const bool pool_ride = r.all_of<River>(e) || (fleet != nullptr && !fleet->trains.empty() && (fleet->trains.front().splash_out || !fleet->trains.front().drop_offs.empty()));
+            const bool off_track = fleet != nullptr && std::ranges::any_of(fleet->trains, [](const Coaster& t) { return t.crashed || t.splashed || t.flight || t.lifted; });
+            if (attraction.saved == 0 || pool_ride || off_track)
+                continue;
+            SavedRun run { .ride = attraction.saved, .phase = cycle.phase, .in_phase = cycle.in_phase, .loop = cycle.loop, .loading = cycle.loading, .since_departure = cycle.since_departure, .per_hour = cycle.per_hour, .riders = riders_of(cycle.riders) };
+            for (const Stop& stop : cycle.stops)
+                run.stops_loading.push_back(stop.loading);
+            if (fleet != nullptr)
+                for (usize t = 0; t < fleet->trains.size(); ++t)
+                {
+                    const Coaster& c = fleet->trains[t];
+                    run.trains.push_back({ .running = c.running, .at = c.at, .travelled = c.travelled, .next_stop = static_cast<u32>(c.next_stop), .speed = c.speed, .launched = c.launched, .lean = c.lean, .lean_rate = c.lean_rate, .passed = c.passed, .push = c.push, .pushed = c.pushed, .held = c.held, .riders = t < fleet->riders.size() ? riders_of(fleet->riders[t]) : std::vector<SavedRider> { } });
+                }
+            out.push_back(std::move(run));
+        }
+        return out;
+    }
+
+    usize place_runs(simulation::SimWorld& world, std::span<const SavedRun> runs, std::span<const entt::entity> guests)
+    {
+        using namespace simulation;
+        entt::registry& r = world.registry;
+        std::unordered_map<u64, entt::entity> rides;
+        for (const auto [e, cycle, attraction] : r.view<const CycleRide, const Attraction>().each())
+            if (attraction.saved != 0)
+                rides.emplace(attraction.saved, e);
+        usize seated = 0;
+        for (const SavedRun& run : runs)
+        {
+            const auto found = rides.find(run.ride);
+            if (found == rides.end())
+                continue;
+            const entt::entity ride = found->second;
+            auto& cycle = r.get<CycleRide>(ride);
+            auto* fleet = r.try_get<Trains>(ride);
+            // A ride rebuilt since, with another number of trains or stations, starts its cycle afresh.
+            if ((fleet != nullptr && fleet->trains.size() != run.trains.size()) || cycle.stops.size() != run.stops_loading.size())
+                continue;
+            cycle.phase = run.phase;
+            cycle.in_phase = run.in_phase;
+            cycle.loop = run.loop;
+            cycle.loading = run.loading;
+            cycle.since_departure = run.since_departure;
+            cycle.per_hour = run.per_hour;
+            for (usize s = 0; s < cycle.stops.size(); ++s)
+                cycle.stops[s].loading = run.stops_loading[s];
+            const std::optional<NodeId> off = cycle.exit.or_else([&] { return r.get<Attraction>(ride).entrance; });
+            // Each rider as board_saved_riders seats them: walking from where riders get off, riding.
+            const auto seat = [&](const std::vector<SavedRider>& saved, std::vector<entt::entity>& on) {
+                for (const SavedRider& s : saved)
+                {
+                    const entt::entity g = s.guest >= 0 && static_cast<usize>(s.guest) < guests.size() ? guests[static_cast<usize>(s.guest)] : entt::null;
+                    const auto* errand = g == entt::null ? nullptr : r.try_get<Errand>(g);
+                    // One start_guests set queueing is in a queue's list; one riding, already on.
+                    if (errand == nullptr || errand->kind == ErrandKind::Riding || errand->kind == ErrandKind::Queueing || (!r.all_of<Stride>(g) && !off))
+                        continue;
+                    if (!r.all_of<Stride>(g))
+                        start_walking(world, g, *off);
+                    on.push_back(g);
+                    r.get<Errand>(g) = { .kind = ErrandKind::Riding, .target = ride, .station = s.station, .off = s.off };
+                    ++seated;
+                }
+            };
+            seat(run.riders, cycle.riders);
+            if (fleet == nullptr)
+                continue;
+            for (usize t = 0; t < fleet->trains.size(); ++t)
+            {
+                Coaster& c = fleet->trains[t];
+                const SavedTrain& saved = run.trains[t];
+                c.running = saved.running;
+                c.at = c.was_at = std::clamp(saved.at, 0.0f, c.length());
+                c.travelled = saved.travelled;
+                c.next_stop = std::min<usize>(saved.next_stop, c.stops.size());
+                c.speed = saved.speed;
+                c.launched = saved.launched;
+                c.lean = saved.lean;
+                c.lean_rate = saved.lean_rate;
+                c.passed = saved.passed;
+                c.push = saved.push;
+                c.pushed = saved.pushed;
+                c.held = saved.held;
+                fleet->riders.resize(fleet->trains.size());
+                seat(saved.riders, fleet->riders[t]);
+            }
+        }
+        return seated;
+    }
+
     std::vector<std::byte> write_saved_park(const SavedPark& park)
     {
         Writer w;
         const bool shows = park.shows && !park.shows->empty();
-        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1) + (park.litter ? 1 : 0) + (park.queues.empty() ? 0 : 1));
+        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1) + (park.litter ? 1 : 0) + (park.queues.empty() ? 0 : 1) + (park.runs.empty() ? 0 : 1));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
-            put_chunk(w, "PEOP", 6, *park.people);
+            put_chunk(w, "PEOP", 7, *park.people);
         if (!park.no_queue_signs.empty())
             put_chunk(w, "QSGN", 1, park.no_queue_signs);
         if (shows)
@@ -477,6 +609,8 @@ namespace rct3::parkfile
             put_chunk(w, "LITR", 1, *park.litter);
         if (!park.queues.empty())
             put_chunk(w, "QUEU", 1, park.queues);
+        if (!park.runs.empty())
+            put_chunk(w, "RUNS", 1, park.runs);
         return w.take();
     }
 
@@ -488,7 +622,7 @@ namespace rct3::parkfile
             std::expected<void, std::string> result;
             if (tag == "PEOP")
             {
-                if (park.people || version != 6) // 2 adds the swimmers, 3 those outside the park, 4 passports, 5 the gift, 6 maps and umbrellas
+                if (park.people || version != 7) // 2 adds the swimmers, 3 those outside the park, 4 passports, 5 the gift, 6 maps and umbrellas, 7 jobs
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.people.emplace());
             }
@@ -573,6 +707,12 @@ namespace rct3::parkfile
                 if (!park.queues.empty() || version != 1)
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.queues);
+            }
+            if (tag == "RUNS")
+            {
+                if (!park.runs.empty() || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                return get_chunk(tag, body, park.runs);
             }
             each_chunk(park, [&](std::string_view name, auto& value) {
                 if (name != tag)

@@ -848,7 +848,7 @@ namespace
                     continue;
                 }
                 const auto& s = *item.info;
-                out.info("  {:<32} fmt {:d} ch {:d} rate {:d} bits {:d} size {:d} addr {:08x} flag {:d}", name.c_str(), s.format_tag, s.channels, s.sample_rate, s.bits_per_sample, s.data_size, s.data_address, s.flag);
+                out.info("  {:<32} fmt {:d} ch {:d} rate {:d} bits {:d} size {:d} addr {:08x} loops {:d} fade {:g}/{:g}s near {:g} far {:g}", name.c_str(), s.format_tag, s.channels, s.sample_rate, s.bits_per_sample, s.data_size, s.data_address, s.loops, s.fade_in_seconds, s.fade_out_seconds, s.near_distance, s.far_distance);
             }
         }
         if (opt.text)

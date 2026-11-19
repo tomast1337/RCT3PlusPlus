@@ -106,7 +106,7 @@ namespace rct3::scene::park
                 if (item == items.end())
                     continue;
                 if (auto buffer = audio::from_ovl_sound(*item->info))
-                    made->second = PackSound { .buffer = std::move(*buffer), .loops = item->info->flag == ovl::kSoundLoops };
+                    made->second = PackSound { .buffer = std::move(*buffer), .loops = item->info->loops };
                 break;
             }
             return made->second ? &*made->second : nullptr;

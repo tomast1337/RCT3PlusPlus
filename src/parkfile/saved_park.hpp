@@ -39,8 +39,12 @@
 //              pieces are built again on loading. Only when there are any.
 //   "BEDS" v1  std::vector<save::model::FlowerBedState>: how much water each flower bed holds. Only when there are any;
 //              without it, the beds' water is read again from the original park.
+//   "LITR" v1  std::vector<SavedLitter>: the litter and sick lying on the paths. Saves made before it lack it; their
+//              litter is read again from the original park.
+//   "QUEU" v1  std::vector<SavedQueue>: who waits in each ride's queues, in order, and how long they have. Only when
+//              anyone does; without it, the guests standing in a queue join it in the order they stand.
 //
-// The rest of the simulation (queues, rides' runs, litter, staff jobs) starts again from the original park.
+// The rest of the simulation (rides' runs, staff jobs) starts again from the original park.
 #pragma once
 
 #include "core/types.hpp"
@@ -202,6 +206,30 @@ namespace rct3::parkfile
         std::vector<SavedDung> dung { };
     };
 
+    /// A piece of litter, or sick, lying on the paths.
+    struct SavedLitter
+    {
+        glm::vec3 position { 0.0f }; ///< The middle of the path tile it lies on
+        u8 kind = 0;                 ///< As simulation::Litter numbers it
+        units::Seconds age { };
+        bool vomit = false;
+    };
+
+    /// A guest waiting in a queue: their place in SavedPeople::guests, and how long they have waited.
+    struct SavedQueuer
+    {
+        i32 guest = 0;
+        units::Seconds queued { };
+    };
+
+    /// The queue of one station of a ride, first in line first.
+    struct SavedQueue
+    {
+        u64 ride = 0;   ///< The ride's saved id (simulation::Attraction::saved)
+        u8 station = 0; ///< 0 the first, k its k-th stop after it
+        std::vector<SavedQueuer> guests { };
+    };
+
     struct SavedPark
     {
         std::vector<std::byte> base;
@@ -225,6 +253,8 @@ namespace rct3::parkfile
         std::optional<SavedAnimals> animals;                           ///< None in saves made before animals were kept
         std::optional<park::pools::PoolMap> pools;                     ///< The pools the player laid; none when they laid none
         std::vector<save::model::FlowerBedState> flower_beds;          ///< Their water, as the simulation has it
+        std::optional<std::vector<SavedLitter>> litter;                ///< None in saves made before litter was kept
+        std::vector<SavedQueue> queues;                                ///< The queues anyone waits in
     };
 
     /// A guest's wallet as their saved page keeps it, each sum held to the page's range.
@@ -257,6 +287,21 @@ namespace rct3::parkfile
     /// Adds the saved animal houses, animals and dung to `world`, the houses' keepers being among `staff`,
     /// place_staff's answer.
     void place_animals(simulation::SimWorld& world, const SavedAnimals& animals, std::span<const entt::entity> staff);
+
+    /// The litter lying on the paths of `world`.
+    [[nodiscard]] std::vector<SavedLitter> keep_litter(const simulation::SimWorld& world);
+
+    /// Lays the saved litter on the path tiles under it, in place of import_litter; returns how many pieces. Call
+    /// after import_paths.
+    usize place_litter(simulation::SimWorld& world, std::span<const SavedLitter> litter);
+
+    /// The queues of the rides of `world` that anyone waits in, the guests numbered as keep_people orders them.
+    [[nodiscard]] std::vector<SavedQueue> keep_queues(const simulation::SimWorld& world);
+
+    /// Puts the guests that start_guests set queueing back in the order they waited, with the time they had
+    /// waited, `guests` being place_guests's answer. A guest no longer on their ride's queue stays where
+    /// start_guests put them; one not saved goes behind those who were. Returns how many were put back.
+    usize place_queues(simulation::SimWorld& world, std::span<const SavedQueue> queues, std::span<const entt::entity> guests);
 
     /// The objects a save keeps: the first `own` (the park's own), the scenery the player `placed`, and those a
     /// path, a track piece or a ride placed whole stands on, with its entrance and exit (the player's); not

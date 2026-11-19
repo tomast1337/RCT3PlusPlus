@@ -878,8 +878,9 @@ namespace rct3::simulation
                             fleet->trains[*standing[station]].running = true;
                         else
                         {
-                            // shortcut: every flat ride loads all at once and runs its loops; wheels that turn a step per
-                            // pair seated, shows and rides in sections are left out, upgrade with the ride menu's setups.
+                            // A flat ride loads all at once: no shipped ride model has the animations to turn a step
+                            // per load. shortcut: a ride in sections runs as one, upgrade if more than the trampoline
+                            // splits its seats.
                             ride.phase = RidePhase::Starting;
                             ride.in_phase.value = 0;
                         }

@@ -232,6 +232,8 @@ declare namespace park {
     function showObject(object: PlacedObjectId): void;
     /** The litter and sick lying on the paths, each by the middle of the path tile it lies on, in tiles. */
     function litter(): { col: Tiles; row: Tiles; sick: boolean }[];
+    /** The wild ducks and gulls, each by where it is in tiles, and whether it is down on the water or ground. */
+    function wildBirds(): { kind: "duck" | "gull"; col: Tiles; row: Tiles; resting: boolean }[];
     /** Breaks every bench, bin and sign at once, as vandals would; how many it broke. */
     function breakPathItems(): number;
     /** Sets the energy of every guest to `share` (0 to 1), as a long day would; how many guests. */
@@ -368,6 +370,9 @@ declare namespace debug {
             | "reset_rides"
             | "remove_animals"
             | "refresh_animals"
+            | "add_ducks"
+            | "add_gulls"
+            | "remove_wild_birds"
             | "drop_litter"
             | "clear_litter"
             | "rebuild_waterfalls"

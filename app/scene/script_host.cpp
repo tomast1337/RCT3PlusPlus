@@ -33,6 +33,7 @@
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 #include "simulation/vip.hpp"
+#include "simulation/wild_birds.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
 #include "ui/key_combo.hpp"
@@ -521,6 +522,15 @@ namespace rct3::scene
                     pieces.push_back({ { "col", (at.x - g.origin_x) / g.tile_size_x }, { "row", (at.z - g.origin_z) / g.tile_size_z }, { "sick", piece.vomit } });
                 }
             return pieces;
+        });
+        engine_.define("park.wildBirds", [this](const Json&) -> Json {
+            if (park_ == nullptr)
+                throw std::runtime_error("no park is open");
+            Json birds = Json::array();
+            const auto& g = park_->grid;
+            for (const auto [e, bird, pose] : park_->sim.registry.view<const simulation::WildBird, const simulation::Pose>().each())
+                birds.push_back({ { "kind", bird.kind == simulation::BirdKind::Duck ? "duck" : "gull" }, { "col", (pose.position.x - g.origin_x) / g.tile_size_x }, { "row", (pose.position.z - g.origin_z) / g.tile_size_z }, { "resting", bird.job == simulation::BirdJob::Resting } });
+            return birds;
         });
         engine_.define("park.breakPathItems", [this](const Json&) -> Json {
             if (park_ == nullptr)

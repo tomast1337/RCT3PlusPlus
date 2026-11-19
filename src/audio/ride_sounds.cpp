@@ -82,6 +82,12 @@ namespace rct3::audio
         return coaster ? TrackSoundSet::Steel : TrackSoundSet::None;
     }
 
+    float ride_music_level(units::Distance away)
+    {
+        const float left = std::clamp((kMusicFar.value - away.value) / (kMusicFar.value - kMusicNear.value), 0.0f, 1.0f);
+        return left * left;
+    }
+
     RunningMix running_mix(float speed, RunningLoops loops)
     {
         speed = std::abs(speed);

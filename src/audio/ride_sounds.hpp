@@ -79,4 +79,12 @@ namespace rct3::audio
     };
     [[nodiscard]] RunningMix running_mix(float speed, RunningLoops loops);
 
+    inline constexpr units::Distance kMusicNear { 15 }; ///< Chosen by ear: a ride's music is full loud this close to its entrance
+    inline constexpr units::Distance kMusicFar { 90 };  ///< And gone this far, so a path between rides hears the nearer
+    inline constexpr std::size_t kHeardTracks = 3;      ///< Chosen by ear: the loudest tracks played at once, more is noise
+
+    /// How loud a ride's music is heard `away` from it, 0..1: full near, then falling off steeply at first and ever
+    /// more gently to nothing far, as the square of the share of the way still to go.
+    [[nodiscard]] float ride_music_level(units::Distance away);
+
 } // namespace rct3::audio

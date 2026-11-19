@@ -53,3 +53,13 @@ TEST_CASE("a train's running loops cross from slow to fast with its speed, silen
         CHECK(slow_only.slow == doctest::Approx(1));
     }
 }
+
+TEST_CASE("a ride's music is full near its entrance and falls off by the square of the way left")
+{
+    CHECK(ride_music_level(rct3::units::Distance { 0 }) == 1);
+    CHECK(ride_music_level(kMusicNear) == 1);
+    const rct3::units::Distance halfway { (kMusicNear.value + kMusicFar.value) / 2 };
+    CHECK(ride_music_level(halfway) == doctest::Approx(0.25f));
+    CHECK(ride_music_level(kMusicFar) == 0);
+    CHECK(ride_music_level(rct3::units::Distance { kMusicFar.value * 2 }) == 0);
+}

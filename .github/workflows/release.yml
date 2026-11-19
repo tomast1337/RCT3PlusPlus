@@ -9,7 +9,8 @@
 # commit. Both releases open with .github/release_notes.md.
 #
 # Windows does not build yet: its job may fail without failing the run, and the release then says Windows is not
-# available. No tests run here: ci.yml covers them on every push and pull request. macOS is not built yet.
+# available. It builds in MSYS2's CLANG64, whose standard library is libc++: libc++ 23 has std::optional<T&> but not
+# yet std::inplace_vector or std::stacktrace, which the code uses (nob links libstdc++'s -lstdc++exp for the latter). No tests run here: ci.yml covers them on every push and pull request. macOS is not built yet.
 name: release
 
 on:
@@ -83,11 +84,12 @@ jobs:
 
       - uses: msys2/setup-msys2@v2
         with:
-          msystem: UCRT64
+          msystem: CLANG64
           install: >-
             git
-            mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-vulkan-devel
+            mingw-w64-clang-x86_64-clang
+            mingw-w64-clang-x86_64-lld
+            mingw-w64-clang-x86_64-vulkan-devel
             unzip
             zip
 
@@ -99,11 +101,11 @@ jobs:
 
       - name: Package
         run: |
-          g++ -std=c++26 -o nob nob.cpp
+          clang++ -std=c++26 -o nob nob.cpp
           ./nob package
           ldd build/release/rct3pp.exe
           # One .exe: no MSYS2 DLL (GLFW and the compiler's runtime are linked in).
-          if ldd build/release/rct3pp.exe | grep -i ucrt64; then exit 1; fi
+          if ldd build/release/rct3pp.exe | grep -i clang64; then exit 1; fi
 
       - uses: actions/upload-artifact@v4
         with:

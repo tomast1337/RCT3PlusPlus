@@ -231,7 +231,7 @@ namespace nob
 
         const char* cxx = std::getenv("CXX");
         Cmd cmd;
-        cmd << (cxx ? cxx : "g++") << "-std=c++26" << "-o" << self.string() << source.string();
+        cmd << (cxx ? cxx : "clang++") << "-std=c++26" << "-o" << self.string() << source.string();
         if (!run(cmd))
         {
             fs::rename(old, self, ec);

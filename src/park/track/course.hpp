@@ -140,8 +140,8 @@ namespace rct3::park::track
     [[nodiscard]] i32 trains_fitting(const TrackCourse& course, std::span<const object::CarFit> fits, bool blocks, std::optional<u32> cap);
 
     /// Where the fronts of `count` trains `length` long stand on closed `course`, the first at `start` (a station's
-    /// end): one at each station's end in turn on round the track, then more queued kTrainGap behind those, a station
-    /// at a time; then likewise at the ends of its other blocks (lift tops, block brakes). Kept a block apart
+    /// end): one at each station's end in turn going back round the track, then more queued kTrainGap behind those, a
+    /// station at a time; then likewise at the ends of its other blocks (block brakes, lift tops). Kept a block apart
     /// (`blocks`), each block takes one. Trains with no room behind a block's end before the next block back are left
     /// out, so there may be fewer than `count`; never none.
     [[nodiscard]] std::vector<f32> train_fronts(const TrackCourse& course, f32 start, f32 length, i32 count, bool blocks);

@@ -40,6 +40,7 @@
 #include "park/water/jet.hpp"
 #include "parkfile/saved_park.hpp"
 #include "profiling/profiler.hpp"
+#include "save/left_out.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -1282,6 +1283,10 @@ namespace rct3::scene::park
             saved = std::move(*read);
             *bytes = std::move(saved->base);
         }
+        // What an original park holds that loading never looks at is told once the park is in.
+        std::optional<save::FieldReads> reads;
+        if (!saved)
+            reads.emplace(*bytes);
         const auto file = profiling::section("ParseSave", [&] { return save::read_save(*bytes, { .verify_checksum = false }); });
         if (!file)
             return std::unexpected(std::string(save::to_string(file.error())));
@@ -1814,6 +1819,18 @@ namespace rct3::scene::park
             const auto shown = std::ranges::count_if(scene.objects, [](const save::model::PlacedObject& o) { return !o.hidden; });
             log.info("{} objects in view, {} without a model, {} models, {} pictures", drawn, shown - modelled, scene.models.size(), scene.object_textures.size());
             watch_supports(scene);
+        }
+        if (reads)
+        {
+            const std::vector<save::LeftOutClass> left = save::left_out(*file, *reads);
+            for (const save::LeftOutClass& c : left)
+            {
+                std::string fields;
+                for (const std::string& f : c.fields)
+                    fields += std::format("{}{}", fields.empty() ? "" : ", ", f);
+                log.info("not carried over from {} ({} objects{}): {}", c.name, c.objects, c.untouched ? ", none of it read" : "", fields);
+            }
+            scene.left_out = save::left_out_groups(left);
         }
         return scene;
     }

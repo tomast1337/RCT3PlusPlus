@@ -155,6 +155,34 @@ namespace rct3::save
     /// field count does not fit its attribute.
     [[nodiscard]] std::expected<std::vector<std::byte>, Error> encode_object(const Class& cls, const Value& fields);
 
+    /// Marks which attributes of a save loaders look up (Value::field) while it lives, so that what a load left
+    /// behind can be told afterwards (see save/left_out.hpp). Attribute names are views into the save's bytes,
+    /// so an attribute is told apart by where its name lies in them, whichever read of the bytes decoded it.
+    ///
+    /// Global: the lookups happen deep inside every loader, and threading a log through all of them would put
+    /// it in every loader's signature for one report. One per thread, owned by whoever made it; they nest, the
+    /// newest recording until it goes.
+    class FieldReads
+    {
+    public:
+        explicit FieldReads(std::span<const std::byte> data);
+        ~FieldReads();
+        FieldReads(const FieldReads&) = delete;
+        FieldReads& operator=(const FieldReads&) = delete;
+
+        /// Whether `name`, a view into the bytes given, was looked up. A name from elsewhere never was.
+        [[nodiscard]] bool was_read(std::string_view name) const noexcept;
+        /// Marks `name` looked up; called by Value::field on the recording log, if any.
+        void mark(std::string_view name) noexcept;
+
+    private:
+        [[nodiscard]] std::optional<usize> offset(std::string_view name) const noexcept;
+
+        std::span<const std::byte> data_;
+        std::vector<bool> read_;
+        FieldReads* outer_ = nullptr;
+    };
+
     /// Object lookup by id. Ids are unique in well-formed files; on duplicates the first object wins.
     class ObjectIndex
     {

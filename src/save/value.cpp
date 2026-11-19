@@ -26,6 +26,12 @@ namespace rct3::save
         };
     } // namespace detail
 
+    namespace
+    {
+        /// The log recording on this thread, if any (see FieldReads).
+        thread_local FieldReads* recording = nullptr;
+    } // namespace
+
     const char* to_string(ValueKind k) noexcept
     {
         switch (k)
@@ -100,9 +106,49 @@ namespace rct3::save
         for (usize i = 0; i < extra_->names.size(); ++i)
         {
             if (extra_->names[i] == name)
+            {
+                if (recording != nullptr)
+                    recording->mark(extra_->names[i]);
                 return extra_->items[i];
+            }
         }
         return std::nullopt;
+    }
+
+    // ---- FieldReads -------------------------------------------------------------------------------------------
+
+    FieldReads::FieldReads(std::span<const std::byte> data)
+        : data_(data)
+        , read_(data.size())
+        , outer_(std::exchange(recording, this))
+    {
+    }
+
+    FieldReads::~FieldReads()
+    {
+        recording = outer_;
+    }
+
+    std::optional<usize> FieldReads::offset(std::string_view name) const noexcept
+    {
+        // Compared as addresses: the name may point anywhere.
+        const auto at = reinterpret_cast<std::uintptr_t>(name.data());
+        const auto begin = reinterpret_cast<std::uintptr_t>(data_.data());
+        if (name.empty() || at < begin || at - begin >= data_.size())
+            return std::nullopt;
+        return static_cast<usize>(at - begin);
+    }
+
+    bool FieldReads::was_read(std::string_view name) const noexcept
+    {
+        const auto at = offset(name);
+        return at && read_[*at];
+    }
+
+    void FieldReads::mark(std::string_view name) noexcept
+    {
+        if (const auto at = offset(name))
+            read_[*at] = true;
     }
 
     Value Value::make_bool(bool v)

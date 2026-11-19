@@ -78,6 +78,7 @@
 #include "ui/screens/park_view/tool_menus.hpp"
 #include "ui/screens/park_view/tool_row.hpp"
 #include "ui/screens/tutorial/guide.hpp"
+#include "ui/string_format.hpp"
 #include "ui/thought_text.hpp"
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
@@ -2440,6 +2441,15 @@ namespace rct3::scene::park
         // Prizes won are told in a box each, as the player closes the one before.
         if (auto box = desktop.root().find_as<ui::widgets::QuestionBox>(kPrizeName))
             (void)box->take_answer();
+        else if (!scene.left_out.empty())
+        {
+            std::u16string groups;
+            for (const std::string_view key : std::exchange(scene.left_out, { }))
+                groups += u"\n- " + std::u16string(assets.strings->get(key));
+            const std::array<ui::FormatArg, 1> args { { { u"groups", groups } } };
+            const ui::widgets::QuestionBoxStyle style = skins::question_box_style(assets.palette);
+            desktop.root().add<ui::widgets::QuestionBox>(std::string(kPrizeName), style, ui::format_string(assets.strings->get("Rct3pp_LeftOut"), args), std::vector<ui::widgets::QuestionAnswer> { { std::u16string(assets.strings->get(kOk)), style.confirm_icon } });
+        }
         else if (!scene.prizes.empty())
         {
             const ui::widgets::QuestionBoxStyle style = skins::question_box_style(assets.palette);

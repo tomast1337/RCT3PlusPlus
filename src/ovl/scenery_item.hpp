@@ -53,12 +53,31 @@ namespace rct3::ovl
         std::string_view value;
     };
 
+    /// What one step of a sound script does.
+    enum class SoundCue : std::uint32_t
+    {
+        Start = 1,  ///< Start one of the entry's sounds, chosen at random
+        Stop = 2,   ///< Stop the sound started last
+        Volume = 3, ///< Bring the volume to `value` by `until`, in a straight line
+        Pitch = 4,  ///< Bring the pitch to `value` by `until`, in a straight line
+    };
+
+    /// One step of a sound script: at `at` seconds into its animation, do `cue`.
+    struct SoundStep
+    {
+        float at = 0;
+        SoundCue cue = SoundCue::Start;
+        float value = 0; ///< Volume and Pitch only
+        float until = 0; ///< Volume and Pitch only: seconds into the animation the change is done by; at once when not later than `at`
+        friend bool operator==(const SoundStep&, const SoundStep&) = default;
+    };
+
     /// One entry of the sound table.
     struct SceneryItemSound
     {
         std::vector<std::string_view> sounds; ///< "snd" items, one is chosen when the entry plays
-        /// Number of script slots that follow. The scripts themselves are not decoded.
-        std::uint32_t script_count = 0;
+        /// One script per animation of the item, in the item's animation order; empty where that animation is silent.
+        std::vector<std::vector<SoundStep>> scripts;
     };
 
     /// A row of 12 bytes naming a research category and the level it must reach. Scenery items (three items of the

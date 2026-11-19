@@ -31,13 +31,16 @@ namespace rct3::ovl
 
         /// Nine floating point values whose meaning is not known yet.
         std::array<float, 9> parameters { };
-        std::uint32_t flag = 0; ///< 0 or 1, meaning unknown
+        std::uint32_t flag = 0; ///< kSoundLoops for a sound made to play round and round, else 0
 
         std::uint32_t data_address = 0; ///< Address of the samples in the shared address space
         std::uint32_t data_size = 0;    ///< Size of the samples in bytes
         /// The samples, or nothing when the data pointer does not resolve to `data_size` bytes of one block.
         std::optional<std::span<const std::byte>> samples;
     };
+
+    /// SoundInfo::flag of a loop: the coasters' chain and running sounds have it, their one-off sounds not.
+    inline constexpr std::uint32_t kSoundLoops = 1;
 
     struct SoundItem
     {

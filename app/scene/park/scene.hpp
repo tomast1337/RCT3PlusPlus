@@ -716,6 +716,7 @@ namespace rct3::scene::park
             std::size_t step = rct3::park::kGateShut; ///< Which of the gate's motions plays
             float since = 0;                          ///< scene.park_clock when that motion began
             float open_until = 0;                     ///< scene.park_clock till which the gate is to stay open
+            rct3::park::MotionAt playing { };         ///< Its motion when last drawn, and how far in, for its sounds
         };
         std::vector<BonedRide> boned_rides;
         /// Where each boned ride's seat bones carry their seats now, all rides' seats in turn.

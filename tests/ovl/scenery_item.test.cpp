@@ -11,6 +11,8 @@
 using namespace rct3::test;
 using rct3::ovl::Overlay;
 using rct3::ovl::read_scenery_items;
+using rct3::ovl::SoundCue;
+using rct3::ovl::SoundStep;
 
 namespace
 {
@@ -38,7 +40,8 @@ namespace
     constexpr std::uint32_t kScripts = 412;     // 1 word
     constexpr std::uint32_t kVisualSlots = 416; // 2 words
     constexpr std::uint32_t kResearch = 424;    // 12 bytes
-    constexpr std::uint32_t kEnd = 436;
+    constexpr std::uint32_t kScript = 436;      // 8 words
+    constexpr std::uint32_t kEnd = 468;
 
     struct Words
     {
@@ -163,7 +166,16 @@ namespace
         w.set(kSounds + 4, kBase + kSoundSlots);
         w.set(kSounds + 8, 1);
         w.set(kSounds + 12, kBase + kScripts);
-        w.set(kScripts, 0);
+        w.set(kScripts, kBase + kScript);
+        // Start at 0.5 s, bring the volume to 0.25 by 2 s, end at 3 s.
+        w.real(kScript, 0.5f);
+        w.set(kScript + 4, 1);
+        w.real(kScript + 8, 0.5f);
+        w.set(kScript + 12, 3);
+        w.real(kScript + 16, 0.25f);
+        w.real(kScript + 20, 2.0f);
+        w.real(kScript + 24, 3.0f);
+        w.set(kScript + 28, 0);
         w.set(kResearch + 4, static_cast<std::uint32_t>(-1));
         w.real(kResearch + 8, 10.0f);
 
@@ -245,7 +257,10 @@ TEST_CASE("scenery items expose every decoded field")
     REQUIRE(it.sounds[0].sounds.size() == 2);
     CHECK(it.sounds[0].sounds[0] == "S0");
     CHECK(it.sounds[0].sounds[1] == "S1");
-    CHECK(it.sounds[0].script_count == 1);
+    REQUIRE(it.sounds[0].scripts.size() == 1);
+    REQUIRE(it.sounds[0].scripts[0].size() == 2);
+    CHECK(it.sounds[0].scripts[0][0] == SoundStep { .at = 0.5f, .cue = SoundCue::Start });
+    CHECK(it.sounds[0].scripts[0][1] == SoundStep { .at = 0.5f, .cue = SoundCue::Volume, .value = 0.25f, .until = 2.0f });
 
     REQUIRE(it.research.size() == 1);
     CHECK(it.research[0].category == "Cat");

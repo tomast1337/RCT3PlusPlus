@@ -615,6 +615,8 @@ namespace rct3::park::object
         model.water_only = (item->flags & ovl::kItemWaterOnly) != 0;
         for (std::size_t i = 0; i < model.default_colours.size(); ++i)
             model.default_colours[i] = static_cast<std::int32_t>(item->default_colours[i]);
+        for (const ovl::SceneryItemSound& sound : item->sounds)
+            model.sounds.push_back({ .names = { sound.sounds.begin(), sound.sounds.end() }, .scripts = sound.scripts });
         // A path feature's setting names what it is for.
         constexpr std::array<std::pair<std::string_view, PathFeature>, 5> kFeatures { { { "VistaPoint", PathFeature::Vista }, { "LoudSpeaker", PathFeature::Speaker }, { "PassportPost", PathFeature::PassportPost }, { "PathFountain", PathFeature::Fountain }, { "WaterCannon", PathFeature::WaterCannon } } };
         for (const auto& [name, feature] : kFeatures)

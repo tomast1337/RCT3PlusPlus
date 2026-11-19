@@ -338,6 +338,7 @@ namespace rct3::scene::park
                             if (const auto act = rct3::park::ride::show_motion(*show, model->second.animation_names, seconds, now, idle))
                                 playing = *act;
                 }
+                boned.playing = playing;
                 const auto [motion, time] = playing;
                 std::vector<glm::mat4> moves = rct3::park::bone_moves(*model->second.rig, motion, time);
                 // A water cannon a guest fires turns its gun to the guest they spray, or sweeps it about with no

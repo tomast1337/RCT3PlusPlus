@@ -704,7 +704,9 @@ namespace rct3::simulation
                         sailing = sailing || boat.state != Sailing::Docked;
                     }
                 const RidePhase was = ride.phase;
-                if (advance_cycle(ride, dt, held || sailing))
+                // Gone at its longest wait with some still walking to their seats, it starts once they sit.
+                const bool seating = ride.phase == RidePhase::Starting && std::ranges::any_of(ride.riders, [&](entt::entity g) { return r.valid(g) && r.all_of<RideWalk>(g) && !r.get<RideWalk>(g).off; });
+                if (!seating && advance_cycle(ride, dt, held || sailing))
                     unload(ride.riders, 0);
                 // Walked through to its end, out at the exit.
                 if (through != nullptr)
@@ -844,8 +846,12 @@ namespace rct3::simulation
                 if (riders != nullptr && !upkeep.broken && through == nullptr)
                 {
                     const auto* departure = r.try_get<Departure>(e);
-                    // It waits for those still walking to their seats.
-                    bool go = std::ranges::none_of(*riders, on_their_way) && (attraction.testing || departs(departure != nullptr ? *departure : Departure { }, riders->size(), ride.capacity, timer.value));
+                    // It waits for those still walking to their seats, but for a ride without trains whose longest
+                    // wait is up: that shuts its gates on them and starts once they sit.
+                    const Departure& rules = departure != nullptr ? *departure : Departure { };
+                    const bool walking = std::ranges::any_of(*riders, on_their_way);
+                    const bool out_of_wait = fleet == nullptr && rules.max_wait && timer.value >= rules.max_wait->value;
+                    bool go = attraction.testing ? !walking : departs(rules, riders->size(), ride.capacity, timer.value) && (!walking || out_of_wait);
                     // Told to, a ready train waits for one ready at each station beside it told the same; then all go.
                     // shortcut: only the stations right beside count, not those beside them in turn; upgrade if a row of
                     // three or more synced stations turns up in a park.

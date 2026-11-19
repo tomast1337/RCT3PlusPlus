@@ -177,6 +177,7 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
     station.entrance_spot = save::model::PlacementSpot { .col = 6, .row = 0, .direction = 2 }; // Its back to (5, 0)
     station.exit_spot = save::model::PlacementSpot { .col = 4, .row = 1, .direction = 3 };     // Its back to (4, 2)
     station.queue_line = 7;
+    ride.options.min_wait = 10;
     const std::array<std::optional<simulation::RideTiming>, 1> timings { simulation::RideTiming { .seats = 12, .run = 40 } };
 
     const auto added = simulation::import_rides(world, rides, timings);
@@ -191,8 +192,10 @@ TEST_CASE("a ride comes over with its queue line, from the entrance back to the 
     CHECK(cycle.exit == at(4, 2));
     CHECK(cycle.capacity == 12);
     CHECK(cycle.excitement.value == doctest::Approx(0.5f));
-    CHECK(cycle.nausea.value == 1);                               // Ratings past 10 count as 10
-    CHECK_FALSE(world.registry.all_of<simulation::Departure>(e)); // A flat ride's saved settings are not its own
+    CHECK(cycle.nausea.value == 1); // Ratings past 10 count as 10
+    // A flat ride goes by the waits it holds, though the game offers no setting for them.
+    REQUIRE(world.registry.all_of<simulation::Departure>(e));
+    CHECK(world.registry.get<simulation::Departure>(e).min_wait == units::Seconds { 10 });
 }
 
 TEST_CASE("a ride's door joins only the path on the tile behind it, near its height")

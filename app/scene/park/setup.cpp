@@ -1114,6 +1114,7 @@ namespace rct3::scene::park
                         parkfile::place_parties(scene.sim, *kept, placed);
                         parkfile::place_swimmers(scene.sim, *kept, placed);
                         parkfile::place_queues(scene.sim, saved->queues, placed);
+                        parkfile::place_runs(scene.sim, saved->runs, placed);
                     }
                     else
                     {

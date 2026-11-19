@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // A park from the game, opened: a box tells what its save holds that is not brought over, and the log lists it.
-// Saved and loaded again, the park keeps its litter and the guests in its queues, and no box
+// Saved and loaded again, the park keeps its litter, the guests in its queues and those on its rides, and no box
 // is told for a park of ours. Give it a park the game saved with litter and guests queueing:
 //
 //   ./nob script scripts/tests/save_state.ts -- --no-intro --no-audio --seed 1 --park PARK
@@ -26,16 +26,26 @@ const litter = () =>
             .map((l) => `${l.col},${l.row},${l.sick}`)
             .sort(),
     );
-const queued = () =>
+const in_state = (state: string) => () =>
     people
         .list()
-        .filter((p) => p.state === "queueing")
+        .filter((p) => p.state === state)
         .map((p) => p.name)
         .sort()
         .join("|");
+const queued = in_state("queueing");
+const riding = in_state("riding");
 const saved_litter = litter();
 const saved_queued = queued();
-log("litter", park.litter().length, "queueing", saved_queued.split("|").filter((n) => n).length);
+const saved_riding = riding();
+log(
+    "litter",
+    park.litter().length,
+    "queueing",
+    saved_queued.split("|").filter((n) => n).length,
+    "riding",
+    saved_riding.split("|").filter((n) => n).length,
+);
 
 await click_tool("Files");
 await ui.click("tools/Files/File_SaveGame");
@@ -71,4 +81,9 @@ expect(
     [...before].every((n) => after.has(n)),
     "everyone queueing as saved still queueing",
 );
+const riding_after = new Set(riding().split("|"));
+const kept_riding = saved_riding.split("|").filter((n) => riding_after.has(n)).length;
+log("riding after loading", riding_after.size, "of them riding as saved", kept_riding);
+// Riders of a pool's rides, not kept, get off.
+expect(kept_riding > 0 || saved_riding === "", "riders kept on their rides");
 quit(0);

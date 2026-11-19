@@ -17,8 +17,8 @@
 //   "RIDE" v1  save::model::RideModel
 //   "PARK" v1  SavedProgress: the money, the calendar and the weather, with the ledger and the weekly graphs
 //   "VIEW" v1  park::ParkCamera
-//   "PEOP" v5  SavedPeople: the people's looks and pages, where the guests and staff stand and how they are,
-//              their passports, and the park's passport gift. Saves made before it lack it; their people start
+//   "PEOP" v7  SavedPeople: the people's looks and pages, where the guests and staff stand and how they are,
+//              the staff's jobs in hand, their passports, and the park's passport gift. Saves made before it lack it; their people start
 //              again from the original park.
 //   "QSGN" v1  std::vector<save::model::ObjectId>: the rides whose queues have no signs, by id. Only when there are any.
 //   "SHOW" v1  std::vector<save::model::RideShow>: the show rides' shows. Only when there are any; without it, the
@@ -41,10 +41,11 @@
 //              without it, the beds' water is read again from the original park.
 //   "LITR" v1  std::vector<SavedLitter>: the litter and sick lying on the paths. Saves made before it lack it; their
 //              litter is read again from the original park.
+//   "RUNS" v1  std::vector<SavedRun>: where the rides are in their cycles, their trains and riders. Only when there are any.
 //   "QUEU" v1  std::vector<SavedQueue>: who waits in each ride's queues, in order, and how long they have. Only when
 //              anyone does; without it, the guests standing in a queue join it in the order they stand.
 //
-// The rest of the simulation (rides' runs, staff jobs) starts again from the original park.
+// The rest of the simulation (a mechanic on the way to a ride, a pool's rides) starts again from the original park.
 #pragma once
 
 #include "core/types.hpp"
@@ -61,6 +62,7 @@
 #include "simulation/guests.hpp"
 #include "simulation/park/rating.hpp"
 #include "simulation/research.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/staff/patrol.hpp"
 #include "simulation/swimming.hpp"
@@ -156,6 +158,12 @@ namespace rct3::parkfile
         u32 mended = 0;           ///< Broken path items mended
         units::Seconds think { }; ///< To their next thought
         u32 miserable = 0;        ///< Thoughts in a row had while miserable, towards quitting
+        // The job in hand.
+        simulation::StaffJob job = simulation::StaffJob::None;
+        units::Seconds busy { };       ///< Left at it
+        units::Seconds job_length { }; ///< As it began
+        units::Share load { };         ///< Of the recent past, spent at work
+        u64 ride = 0;                  ///< The saved id of the ride a mechanic works on; 0 for none
     };
 
     struct SavedPeople
@@ -230,6 +238,47 @@ namespace rct3::parkfile
         std::vector<SavedQueuer> guests { };
     };
 
+    /// A guest on a ride: their place in SavedPeople::guests, and the stations they boarded at and get off at.
+    struct SavedRider
+    {
+        i32 guest = 0;
+        u8 station = 0;
+        u8 off = 0;
+    };
+
+    /// A train on its track: how far along it is, how fast, and who rides it.
+    struct SavedTrain
+    {
+        bool running = false;
+        f32 at = 0;
+        f32 travelled = 0;
+        u32 next_stop = 0;
+        f32 speed = 0;
+        bool launched = false;
+        units::Radians lean { };
+        units::TurnRate lean_rate { };
+        i32 passed = 0;
+        f32 push = 0;
+        units::Distance pushed { };
+        units::Seconds held { };
+        std::vector<SavedRider> riders { };
+    };
+
+    /// Where a ride is in its cycle, with its trains and riders.
+    struct SavedRun
+    {
+        u64 ride = 0; ///< The ride's saved id (simulation::Attraction::saved)
+        simulation::RidePhase phase = simulation::RidePhase::Loading;
+        units::Seconds in_phase { };
+        u32 loop = 0;
+        units::Seconds loading { };
+        std::optional<units::Seconds> since_departure { };
+        f32 per_hour = 0;
+        std::vector<units::Seconds> stops_loading { }; ///< By stop after the first station
+        std::vector<SavedRider> riders { };            ///< Of a ride with no trains
+        std::vector<SavedTrain> trains { };
+    };
+
     struct SavedPark
     {
         std::vector<std::byte> base;
@@ -255,6 +304,7 @@ namespace rct3::parkfile
         std::vector<save::model::FlowerBedState> flower_beds;          ///< Their water, as the simulation has it
         std::optional<std::vector<SavedLitter>> litter;                ///< None in saves made before litter was kept
         std::vector<SavedQueue> queues;                                ///< The queues anyone waits in
+        std::vector<SavedRun> runs;                                    ///< Of the rides kept mid-cycle
     };
 
     /// A guest's wallet as their saved page keeps it, each sum held to the page's range.
@@ -302,6 +352,15 @@ namespace rct3::parkfile
     /// waited, `guests` being place_guests's answer. A guest no longer on their ride's queue stays where
     /// start_guests put them; one not saved goes behind those who were. Returns how many were put back.
     usize place_queues(simulation::SimWorld& world, std::span<const SavedQueue> queues, std::span<const entt::entity> guests);
+
+    /// Where the rides of `world` are in their cycles, the guests numbered as keep_people orders them. A ride
+    /// whose trains have crashed, are off the track or up a lift tower, or a pool's ride, is left out.
+    [[nodiscard]] std::vector<SavedRun> keep_runs(const simulation::SimWorld& world);
+
+    /// Puts the rides back where they were in their cycles, their trains where they were on the track and their
+    /// riders on them, `guests` being place_guests's answer. A ride whose trains are not as saved starts its cycle
+    /// afresh. Call after start_guests. Returns how many riders were put back.
+    usize place_runs(simulation::SimWorld& world, std::span<const SavedRun> runs, std::span<const entt::entity> guests);
 
     /// The objects a save keeps: the first `own` (the park's own), the scenery the player `placed`, and those a
     /// path, a track piece or a ride placed whole stands on, with its entrance and exit (the player's); not

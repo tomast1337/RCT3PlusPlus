@@ -465,7 +465,11 @@ namespace rct3::simulation
                     continue;
             }
             const Stretch under = c.kinds[point_at(c, c.at)];
+            // A chain carries a train at no less than its speed while either end is on it. It holds the train at
+            // that speed only while the front is on it (a shuttle's, either end); once the front is over the top,
+            // the cars still on it are pushed as its pieces give, which can leave the train faster than the chain.
             const bool chained = on_chain(c);
+            const bool chain_holds = open ? chained : chain_at(c, c.at);
             // Its last time in, a shuttle's train is taken by the station's tyres as soon as either end is on it.
             const bool home = open && c.passed >= c.passes && (station_at(c.at) || station_at(c.at - c.train_length));
             // Rolling back to where it set off with its tail on the platform: the station takes it from there.
@@ -515,15 +519,16 @@ namespace rct3::simulation
                 for (i32 k = 0; k < pressing; ++k)
                     press += std::abs(track_up(c, c.at - (static_cast<f32>(k) + 0.5f) * c.train_length / static_cast<f32>(pressing)).y);
                 const f32 grip = kGravity.value * (c.ups.empty() ? std::sqrt(1 - slope * slope) : press / static_cast<f32>(pressing));
-                // Each car on plain track is pushed as its piece gives while the train's speed is in the push's range;
-                // over level water, faster than the flow, held back by it. A ride's own flow pushes and holds alike on
-                // all its water.
+                // Each car on plain track, or on a chain not holding the train, is pushed as its piece gives while the
+                // train's speed is in the push's range; over level water, faster than the flow, held back by it. A
+                // ride's own flow pushes and holds alike on all its water.
                 f32 pushed = 0;
                 for (i32 k = 0; k < pressing && c.mass.value > 0; ++k)
                 {
                     const f32 x = wrap(c, c.at - (static_cast<f32>(k) + 0.5f) * c.train_length / static_cast<f32>(pressing));
                     const auto piece = std::ranges::upper_bound(c.piece_starts, x) - c.piece_starts.begin() - 1;
-                    if (piece < 0 || static_cast<usize>(piece) >= c.pushes.size() || c.kinds[point_at(c, x)] != Stretch::Plain)
+                    const Stretch kind = c.kinds[point_at(c, x)];
+                    if (piece < 0 || static_cast<usize>(piece) >= c.pushes.size() || (kind != Stretch::Plain && (kind != Stretch::Chain || chain_holds)))
                         continue;
                     const auto at = static_cast<usize>(piece);
                     const bool flowing = c.flow && at < c.water.size() && c.water[at];

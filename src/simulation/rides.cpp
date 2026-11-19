@@ -10,6 +10,7 @@
 #include "simulation/enjoyment.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
+#include "simulation/name_cheats.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/ride_walks.hpp"
 #include "simulation/swimming.hpp"
@@ -477,6 +478,11 @@ namespace rct3::simulation
                 // Each run with riders wears the ride, and may end in a breakdown that closes it.
                 if (riding == 0)
                     return;
+                if (world.cheats.unbreakable)
+                {
+                    upkeep.reliability.value = 1;
+                    return;
+                }
                 upkeep.reliability.value = std::max(upkeep.reliability.value - kTuning.wear.per_run.value, 0.0f);
                 if (random::chance(r.get<Dice>(e).state, kTuning.wear.breakdown.value * (1 - upkeep.reliability.value)))
                 {
@@ -510,7 +516,7 @@ namespace rct3::simulation
                             // Thrown outwards and up, they land knocked over and walk back to the path they were on.
                             std::vector<entt::entity> blown;
                             for (const auto [g, pose, errand, visitor] : r.view<const Pose, const Errand, const Visitor>().each())
-                                if (errand.kind != ErrandKind::Riding && errand.kind != ErrandKind::Queueing && glm::distance(pose.position, wreck.at) < crashes.blast.value)
+                                if (errand.kind != ErrandKind::Riding && errand.kind != ErrandKind::Queueing && glm::distance(pose.position, wreck.at) < crashes.blast.value * (world.cheats.big_blasts ? kBlastReach : 1.0f))
                                     blown.push_back(g);
                             auto& dice = r.get<Dice>(e).state;
                             for (const entt::entity g : blown)
@@ -518,7 +524,7 @@ namespace rct3::simulation
                                 const glm::vec3 at = r.get<Pose>(g).position;
                                 glm::vec2 away(at.x - wreck.at.x, at.z - wreck.at.z);
                                 away = glm::length(away) > 0.01f ? glm::normalize(away) : glm::vec2(1, 0);
-                                const f32 push = static_cast<f32>(random::between(dice, 0.5, 1.0));
+                                const f32 push = static_cast<f32>(random::between(dice, 0.5, 1.0)) * (world.cheats.big_blasts ? kBlastPush : 1.0f);
                                 const glm::vec3 velocity(away.x * crashes.blown.value * push, crashes.lofted.value * push, away.y * crashes.blown.value * push);
                                 throw_person(r, g, at, velocity, r.get<Stride>(g).to);
                                 think(r, g, ThoughtKind::BeenInjured, e, now);

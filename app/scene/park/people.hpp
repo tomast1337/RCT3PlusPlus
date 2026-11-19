@@ -28,8 +28,8 @@ namespace rct3::scene::park
     /// animal house picked at random instead, which dresses them with the other keepers.
     [[nodiscard]] std::optional<usize> hire(ParkScene& scene, save::model::StaffKind kind);
 
-    /// After a person of `shown_people` is renamed `name`: the name the game keeps for its guest camera cheat
-    /// puts the view with them, from their eyes.
+    /// After a person of `shown_people` is renamed `name`: a cheat's name sets it off (simulation/name_cheats.hpp),
+    /// the guest camera's putting the view with them, from their eyes.
     void name_cheats(ParkScene& scene, const ui::InterfaceAssets& assets, usize shown, std::u16string_view name);
 
     /// Writes a change the player made on a person's page into the save. Returns whether the page is to be

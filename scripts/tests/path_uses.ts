@@ -4,7 +4,7 @@
 // a drink stall, a cash machine, and a small fire on the grass next to the road. Guests dropped on the paths
 // then:
 //
-//   - buy drinks and, with no bin anywhere, drop the empties they carry too long, so litter lies on the paths;
+//   - buy drinks and, with no bin anywhere, now and then drop the empties they carry, so litter lies on the paths;
 //   - put their empties in a bin once one stands on the road;
 //   - short of cash, draw more at the cash machine;
 //   - stop now and then to watch the fire, though it stands beside the road, not on it;
@@ -121,7 +121,7 @@ async function dryUntil(check: () => boolean, seconds: number, what: string): Pr
     }
 }
 
-// With no bin, litter on the paths: each guest's pockets hold two empties, and the third is dropped.
+// With no bin, litter on the paths: guests keep their empties a while, but drop one now and then.
 await dryUntil(() => park.litter().length > 0, 3600, "litter dropped");
 const piece = park.litter()[0];
 log("litter", park.litter().length, "first at", piece.col.toFixed(1), piece.row.toFixed(1));

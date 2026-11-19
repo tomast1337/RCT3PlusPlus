@@ -161,10 +161,12 @@ namespace rct3::simulation
             // The tiles guards keep vandals off: theirs and those a few steps along the paths from it.
             auto& guarded = buffers.guarded;
             guarded.assign(paths.nodes().size(), false);
+            f32 guards = 0;
             for (const auto [e, staff, stride] : r.view<const Staff, const Stride>().each())
             {
                 if (staff.role != StaffRole::Guard || stride.to.value >= paths.nodes().size())
                     continue;
+                ++guards;
                 auto& ring = buffers.ring;
                 auto& next = buffers.next;
                 ring.assign(1, stride.to);
@@ -193,7 +195,10 @@ namespace rct3::simulation
                         return linger;
                 return std::nullopt;
             };
-            for (const entt::entity g : sorted(guests_view))
+            // How often a guest with empties drops one, for the guards about.
+            const std::vector<entt::entity> guests = sorted(guests_view);
+            const f64 littering = kTuning.litter.dropping.value / (1 + guards * kTuning.litter.guard_calm / std::max(static_cast<f32>(guests.size()), 1.0f));
+            for (const entt::entity g : guests)
             {
                 auto [errand, stride, mood, dice, needs] = guests_view.get(g);
                 if (!walking(errand.kind) || stride.from.value >= paths.nodes().size() || stride.to.value >= paths.nodes().size())
@@ -463,8 +468,9 @@ namespace rct3::simulation
                 }
                 if (std::ranges::any_of(items(at), [&](entt::entity i) { return r.get<PathItem>(i).broken; }))
                     mood.happiness.value = clamp01(mood.happiness.value - kTuning.vandals.gloom.value * dt);
-                // Empties go in a bin with room on their tile, all they have, as many as fit; one held too long goes
-                // in a pocket, or on the path once both are full.
+                // Empties go in a bin with room on their tile, all they have, as many as fit; one held a while goes
+                // in a pocket if one is free. Now and then one is dropped on the path instead, less often the more
+                // guards the park has.
                 if (auto* rubbish = r.try_get<Carried>(g); rubbish != nullptr && (rubbish->bites == 0 || !rubbish->held))
                 {
                     const bool in_hand = rubbish->held && rubbish->bites == 0;
@@ -473,8 +479,18 @@ namespace rct3::simulation
                     const auto bin = std::ranges::find_if(items(at), [&](entt::entity i) { return r.all_of<Bin>(i) && !r.get<PathItem>(i).broken && r.get<Bin>(i).contents + 1 <= r.get<Bin>(i).capacity; });
                     if (bin != items(at).end())
                         bin_empties(r, g, *rubbish, *bin);
-                    else if (in_hand && rubbish->since.value >= kTuning.litter.carry.value)
+                    else if (in_hand && rubbish->since.value >= kTuning.litter.carry.value && rubbish->pocketed < Carried::kPockets)
                         free_hand(r, g, *rubbish, at);
+                    else if (random::chance(dice.state, littering * dt))
+                    {
+                        r.emplace<Litter>(r.create(), Litter { at, rubbish->kind, 0 });
+                        if (in_hand)
+                            rubbish->held = false;
+                        else
+                            --rubbish->pocketed;
+                        if (!rubbish->held && rubbish->pocketed == 0)
+                            r.remove<Carried>(g);
+                    }
                 }
                 if (mood.happiness.value < kTuning.vandals.mood.value && !guarded[at.value] && random::chance(dice.state, kTuning.vandals.breaking.value * dt))
                 {

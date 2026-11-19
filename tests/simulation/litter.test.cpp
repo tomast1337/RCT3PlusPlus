@@ -61,6 +61,24 @@ TEST_CASE("an empty in hand goes in a pocket when buying more, and on the path o
     }
 }
 
+TEST_CASE("guests with empties and no bin drop them now and then, far less often with guards about")
+{
+    const auto dropped = [](i32 guards) {
+        Sandbox park;
+        park.path({ 0, 0 }, { 4, 0 });
+        auto& r = park.world().registry;
+        for (i32 i = 0; i < 40; ++i)
+            r.emplace<Carried>(park.guest({ i % 5, 0 }, { .happiness = 1 }), Carried { .pocketed = Carried::kPockets });
+        for (i32 i = 0; i < guards; ++i)
+            park.staff(StaffRole::Guard, { i % 5, 0 });
+        park.run_seconds(kTuning.litter.dropping.value > 0 ? static_cast<f32>(1 / kTuning.litter.dropping.value) : 0);
+        return litter(park);
+    };
+    const usize unguarded = dropped(0);
+    CHECK(unguarded > 10);
+    CHECK(unguarded > 4 * dropped(20));
+}
+
 TEST_CASE("a guest puts every empty they have in a bin on their tile, while it has room")
 {
     for (const f32 room : { 40.0f, 2.0f, 0.0f })

@@ -158,6 +158,14 @@ namespace rct3::scene
                 if (!scene.park_to_play)
                     logging::logger("ui").warning("front screen: the blank landscape is missing from the game's folder");
             }
+            // The coaster designer is the game's park made for it, played as a sandbox of coasters.
+            else if (request->action == ui::screens::front::FrontAction::CoasterDesigner)
+            {
+                scene.park_to_play = scene.assets.install->find("Campaigns/Base/CoasterDesigner.dat");
+                scene.game_to_play = { .designer = true };
+                if (!scene.park_to_play)
+                    logging::logger("ui").warning("front screen: the coaster designer's park is missing from the game's folder");
+            }
             else
                 logging::logger("ui").info("front screen: choice {} (pack {}) does nothing yet", static_cast<std::int32_t>(request->action), request->pack);
         }

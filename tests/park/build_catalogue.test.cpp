@@ -269,3 +269,20 @@ TEST_CASE("items of an overlay that gives only its theme's number take the theme
     CHECK(named[2].style.empty());
     CHECK(named[3].style.empty());
 }
+
+TEST_CASE("a park offering one list of rides hides the other rides and shops, not its scenery")
+{
+    BuildOffer offer;
+    offer.offer_rides_of(BuildList::Coasters);
+    const auto item = [](BuildList list) {
+        BuildItem i;
+        i.overlay = "Invented/Item";
+        i.symbol = "Item";
+        i.list = list;
+        return i;
+    };
+    CHECK(offer.state(item(BuildList::Coasters)) == BuildOffer::State::Offered);
+    CHECK(offer.state(item(BuildList::ThrillRides)) == BuildOffer::State::Hidden);
+    CHECK(offer.state(item(BuildList::FoodShops)) == BuildOffer::State::Hidden);
+    CHECK(offer.state(item(BuildList::Trees)) == BuildOffer::State::Offered);
+}

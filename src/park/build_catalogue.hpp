@@ -240,6 +240,11 @@ namespace rct3::park
         /// only made available when the style `names_category` (the plain path and queue, which research
         /// never invents). Styles the park does not list may be laid.
         [[nodiscard]] bool offers_path(std::string_view name, bool names_category) const;
+        /// Hides every ride, shop and animal but those of `list`, as the coaster designer offers coasters only.
+        void offer_rides_of(BuildList list)
+        {
+            rides_of_ = list;
+        }
 
     private:
         struct Flags
@@ -249,6 +254,7 @@ namespace rct3::park
         };
         bool known_ = false;
         bool species_known_ = false;
+        std::optional<BuildList> rides_of_ { };
         std::map<std::string, State> listed_; // By "overlay|symbol", in lower case
         /// Of scenery and of path and queue styles (by "|name"), the park's flags: other entries can share a scenery
         /// item's name, such as a stall's.

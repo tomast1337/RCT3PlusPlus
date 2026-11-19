@@ -155,8 +155,9 @@ type Weather = "sunny" | "sunny-cloudy" | "cloudy" | "light rain" | "heavy rain"
 
 declare namespace park {
     /** Opens the park at `path` in the game's folder, such as "Campaigns/Base/BlankLandscape.dat", and waits until it shows.
-     *  It is played as a sandbox, which offers everything, unless `sandbox` is false. */
-    function open(path: string, settings?: { sandbox?: boolean }): Promise<void>;
+     *  It is played as a sandbox, which offers everything, unless `sandbox` is false; as the coaster designer, a
+     *  sandbox offering coasters only, when `designer` is true. */
+    function open(path: string, settings?: { sandbox?: boolean; designer?: boolean }): Promise<void>;
     function loaded(): boolean;
     /** Runs the park on `seconds` of its own time, whatever its speed, without drawing them: a step of its
      *  simulation at a time, as frames would run them; nothing while paused. Resolves a frame later, drawn as it is then. */

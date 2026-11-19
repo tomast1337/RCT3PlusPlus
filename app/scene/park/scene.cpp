@@ -1060,6 +1060,7 @@ namespace rct3::scene::park
         });
         profiling::section("People", [&] { refresh_people(scene, viewer, rct3::park::view_projection(scene.camera, aspect(device), scene.seat, scene.seat_across), elapsed); });
         profiling::section("ZooAnimals", [&] { place_animals(scene); });
+        profiling::section("WildBirds", [&] { place_wild_birds(scene); });
         auto bar = desktop.root().find_as<ui::screens::park_view::ParkBar>(kBarName);
         if (bar)
         {
@@ -1429,11 +1430,13 @@ namespace rct3::scene::park
                         return std::nullopt;
                     },
                 };
+                const simulation::BirdGround birds = bird_ground(scene);
                 profiling::section("Guests", [&] {
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                     {
                         simulation::step(scene.sim);
                         simulation::step_animals(scene.sim, animal_ground, { simulation::kTickSeconds }, scene.park.messages);
+                        simulation::step_wild_birds(scene.sim, birds, { simulation::kTickSeconds });
                     }
                 });
                 // A coaster's lap just run becomes its graphs.

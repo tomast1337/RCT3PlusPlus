@@ -990,6 +990,7 @@ namespace rct3::scene::park
                 scene.people = std::move(*people);
                 load_people_models(device, scene, install, seed);
                 load_zoo_animals(scene, install);
+                load_wild_birds(device, scene, install);
                 profiling::section("Simulation", [&] {
                     scene.sim.seed = seed;
                     scene.sim.ratings = ratings;
@@ -1836,6 +1837,7 @@ namespace rct3::scene::park
         ui::destroy_textures(device, scene.object_textures);
         ui::destroy_textures(device, scene.people_textures);
         ui::destroy_textures(device, scene.drawn_animals.textures);
+        ui::destroy_textures(device, scene.drawn_birds.textures);
         ui::destroy_textures(device, scene.sky_textures);
         for (const render::TextureHandle t : { scene.blank, scene.variation })
         {

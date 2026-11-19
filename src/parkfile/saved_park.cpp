@@ -6,6 +6,7 @@
 #include "simulation/enjoyment.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/staff/care.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
@@ -367,11 +368,88 @@ namespace rct3::parkfile
         }
     }
 
+    std::vector<SavedLitter> keep_litter(const simulation::SimWorld& world)
+    {
+        std::vector<SavedLitter> out;
+        for (const auto [e, litter] : world.registry.view<const simulation::Litter>().each())
+            if (litter.node.value < world.paths.nodes().size())
+                out.push_back({ .position = world.paths.centre(litter.node), .kind = litter.kind, .age = litter.age, .vomit = litter.vomit });
+        return out;
+    }
+
+    usize place_litter(simulation::SimWorld& world, std::span<const SavedLitter> litter)
+    {
+        usize placed = 0;
+        for (const SavedLitter& l : litter)
+            if (const auto at = world.paths.nearest(l.position))
+            {
+                world.registry.emplace<simulation::Litter>(world.registry.create(), simulation::Litter { .node = *at, .kind = l.kind, .age = l.age, .vomit = l.vomit });
+                ++placed;
+            }
+        return placed;
+    }
+
+    std::vector<SavedQueue> keep_queues(const simulation::SimWorld& world)
+    {
+        using namespace simulation;
+        const entt::registry& r = world.registry;
+        std::unordered_map<entt::entity, i32> numbers;
+        for (const entt::entity e : r.view<const Visitor, const Pose, const Needs, const Mood, const Wallet>(entt::exclude<Left>)) // As keep_people goes
+            numbers.emplace(e, static_cast<i32>(numbers.size()));
+        std::vector<SavedQueue> out;
+        for (const auto [e, cycle, attraction] : r.view<const CycleRide, const Attraction>().each())
+        {
+            if (attraction.saved == 0)
+                continue;
+            for (usize station = 0; station <= cycle.stops.size(); ++station)
+            {
+                SavedQueue queue { .ride = attraction.saved, .station = static_cast<u8>(std::min<usize>(station, 255)) };
+                for (const entt::entity g : station == 0 ? cycle.queue : cycle.stops[station - 1].queue)
+                    if (const auto number = numbers.find(g); number != numbers.end())
+                        if (const auto* errand = r.try_get<Errand>(g))
+                            queue.guests.push_back({ .guest = number->second, .queued = errand->queued });
+                if (!queue.guests.empty())
+                    out.push_back(std::move(queue));
+            }
+        }
+        return out;
+    }
+
+    usize place_queues(simulation::SimWorld& world, std::span<const SavedQueue> queues, std::span<const entt::entity> guests)
+    {
+        using namespace simulation;
+        entt::registry& r = world.registry;
+        usize placed = 0;
+        for (const SavedQueue& saved : queues)
+            for (const auto [e, cycle, attraction] : r.view<CycleRide, const Attraction>().each())
+            {
+                if (attraction.saved != saved.ride || saved.station > cycle.stops.size())
+                    continue;
+                std::vector<entt::entity>& queue = saved.station == 0 ? cycle.queue : cycle.stops[saved.station - 1].queue;
+                std::vector<entt::entity> ordered;
+                for (const SavedQueuer& q : saved.guests)
+                {
+                    const entt::entity g = q.guest >= 0 && static_cast<usize>(q.guest) < guests.size() ? guests[static_cast<usize>(q.guest)] : entt::null;
+                    if (g == entt::null || !std::ranges::contains(queue, g) || std::ranges::contains(ordered, g))
+                        continue;
+                    ordered.push_back(g);
+                    r.get<Errand>(g).queued = q.queued;
+                    ++placed;
+                }
+                for (const entt::entity g : queue)
+                    if (!std::ranges::contains(ordered, g))
+                        ordered.push_back(g);
+                queue = std::move(ordered);
+                break;
+            }
+        return placed;
+    }
+
     std::vector<std::byte> write_saved_park(const SavedPark& park)
     {
         Writer w;
         const bool shows = park.shows && !park.shows->empty();
-        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1));
+        write_header(w, kChunks + (park.people ? 1 : 0) + (park.no_queue_signs.empty() ? 0 : 1) + (shows ? 1 : 0) + (park.goals ? 1 : 0) + (park.research ? 1 : 0) + (park.broken_items.empty() ? 0 : 1) + (park.waterfalls ? 1 : 0) + (park.animals ? 1 : 0) + (park.day_mode ? 1 : 0) + (park.pools ? 1 : 0) + (park.flower_beds.empty() ? 0 : 1) + (park.litter ? 1 : 0) + (park.queues.empty() ? 0 : 1));
         each_chunk(park, [&](std::string_view tag, const auto& value) { put_chunk(w, tag, 1, value); });
         if (park.people)
             put_chunk(w, "PEOP", 6, *park.people);
@@ -395,6 +473,10 @@ namespace rct3::parkfile
             put_chunk(w, "ANML", 1, *park.animals);
         if (park.pools)
             put_chunk(w, "POOL", 9, *park.pools);
+        if (park.litter)
+            put_chunk(w, "LITR", 1, *park.litter);
+        if (!park.queues.empty())
+            put_chunk(w, "QUEU", 1, park.queues);
         return w.take();
     }
 
@@ -479,6 +561,18 @@ namespace rct3::parkfile
                 if (park.pools || version != 9) // 9 adds the ground each square dug
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.pools.emplace());
+            }
+            if (tag == "LITR")
+            {
+                if (park.litter || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                return get_chunk(tag, body, park.litter.emplace());
+            }
+            if (tag == "QUEU")
+            {
+                if (!park.queues.empty() || version != 1)
+                    return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                return get_chunk(tag, body, park.queues);
             }
             each_chunk(park, [&](std::string_view name, auto& value) {
                 if (name != tag)

@@ -5,10 +5,12 @@
 #include "parkfile/binary.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/parties.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/staff/patrol.hpp"
 #include "simulation/swimming.hpp"
 #include "units/units.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <tuple>
@@ -620,4 +622,94 @@ TEST_CASE("a save keeps a person's switches and a ride's call for a mechanic")
     CHECK(read->people->model.staff[0].person.highlight);
     REQUIRE(read->rides.rides.size() == 1);
     CHECK(simulation::upkeep_of(read->rides.rides[0]).called);
+}
+
+TEST_CASE("a save keeps the litter on the paths, and loading lays it again")
+{
+    using namespace simulation;
+    SimWorld world;
+    const auto tile = world.paths.add({ 2, 1, 0 });
+    world.registry.emplace<Litter>(world.registry.create(), Litter { .node = tile, .kind = 1, .age = { 40 } });
+    world.registry.emplace<Litter>(world.registry.create(), Litter { .node = tile, .age = { 5 }, .vomit = true });
+
+    parkfile::SavedPark park = small_park();
+    CHECK_FALSE(parkfile::read_saved_park(parkfile::write_saved_park(park))->litter); // As in saves made before litter was kept
+    park.litter = parkfile::keep_litter(world);
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    REQUIRE(read->litter);
+    REQUIRE(read->litter->size() == 2);
+
+    SimWorld loaded;
+    const auto again = loaded.paths.add({ 2, 1, 0 });
+    CHECK(parkfile::place_litter(loaded, *read->litter) == 2);
+    std::vector<std::tuple<u8, f32, bool>> lying;
+    for (const auto [e, litter] : loaded.registry.view<const Litter>().each())
+    {
+        CHECK(litter.node == again);
+        lying.emplace_back(litter.kind, litter.age.value, litter.vomit);
+    }
+    std::ranges::sort(lying);
+    CHECK(lying == std::vector<std::tuple<u8, f32, bool>> { { 0, 5.0f, true }, { 1, 40.0f, false } });
+
+    // Swept clean, it stays clean: an empty list is kept, not the original park's litter.
+    park.litter.emplace();
+    const auto swept = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE(swept);
+    CHECK(swept->litter);
+    CHECK(swept->litter->empty());
+}
+
+TEST_CASE("a save keeps who waits in a ride's queue, in order, and how long they have")
+{
+    using namespace simulation;
+    const auto make_world = [](SimWorld& world) {
+        world.paths.add({ 0, 0, 0 });
+        const auto queue = world.paths.add({ 1, 0, 0 }, true);
+        const entt::entity ride = world.registry.create();
+        world.registry.emplace<CycleRide>(ride, CycleRide { .line = { queue } });
+        world.registry.emplace<Attraction>(ride, Attraction { .kind = AttractionKind::Ride, .name = "Teacups", .saved = 77 });
+        return std::pair { ride, queue };
+    };
+    SimWorld world;
+    auto& r = world.registry;
+    const auto [ride, queue] = make_world(world);
+    std::vector<entt::entity> waiting;
+    for (const char* name : { "Ann", "Bob" })
+    {
+        const entt::entity g = waiting.emplace_back(r.create());
+        r.emplace<Visitor>(g, Visitor { .name = name });
+        r.emplace<Pose>(g, Pose { .position = world.paths.centre(queue) });
+        r.emplace<Needs>(g);
+        r.emplace<Mood>(g);
+        r.emplace<Wallet>(g);
+    }
+    parkfile::SavedPark park = small_park();
+    park.people = parkfile::keep_people(world, { }, { });
+    // The one the save numbers second got there first, though both stand on the one tile: loading, which lines
+    // up those on a tile as it numbers them, would have it the other way round.
+    const bool ann_first = park.people->guests.at(0).visitor.name == "Ann";
+    const entt::entity front = waiting[ann_first ? 1 : 0];
+    const entt::entity back = waiting[ann_first ? 0 : 1];
+    r.emplace<Errand>(front, Errand { .kind = ErrandKind::Queueing, .target = ride, .queued = { 90 } });
+    r.emplace<Errand>(back, Errand { .kind = ErrandKind::Queueing, .target = ride, .queued = { 30 } });
+    r.get<CycleRide>(ride).queue = { front, back };
+    park.queues = parkfile::keep_queues(world);
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    REQUIRE(read->queues.size() == 1);
+    CHECK(read->queues[0].ride == 77);
+
+    SimWorld loaded;
+    const auto [again, _] = make_world(loaded);
+    const auto guests = parkfile::place_guests(loaded, *read->people);
+    start_guests(loaded);
+    CHECK(parkfile::place_queues(loaded, read->queues, guests) == 2);
+    // Guests are numbered as the save goes through them, so they are told by name.
+    const auto& line = loaded.registry.get<CycleRide>(again).queue;
+    REQUIRE(line.size() == 2);
+    CHECK(loaded.registry.get<Visitor>(line[0]).name == r.get<Visitor>(front).name);
+    CHECK(loaded.registry.get<Errand>(line[0]).queued == units::Seconds { 90 });
+    CHECK(loaded.registry.get<Visitor>(line[1]).name == r.get<Visitor>(back).name);
+    CHECK(loaded.registry.get<Errand>(line[1]).queued == units::Seconds { 30 });
 }

@@ -1113,6 +1113,7 @@ namespace rct3::scene::park
                     {
                         parkfile::place_parties(scene.sim, *kept, placed);
                         parkfile::place_swimmers(scene.sim, *kept, placed);
+                        parkfile::place_queues(scene.sim, saved->queues, placed);
                     }
                     else
                     {
@@ -1120,7 +1121,10 @@ namespace rct3::scene::park
                         simulation::resume_saved_swimmers(scene.sim, scene.people, guests);
                         simulation::import_parties(scene.sim, scene.people, guests);
                     }
-                    simulation::import_litter(scene.sim, scene.people, scene.park.time);
+                    if (saved && saved->litter)
+                        parkfile::place_litter(scene.sim, *saved->litter);
+                    else
+                        simulation::import_litter(scene.sim, scene.people, scene.park.time);
                     // The benches the game's park lists, and those placed in ours, which it does not.
                     // Each seats as many as its model has seats for.
                     std::vector<u64> benches = world.benches;

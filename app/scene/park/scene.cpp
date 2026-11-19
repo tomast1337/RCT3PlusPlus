@@ -2585,6 +2585,8 @@ namespace rct3::scene::park
                 looks.emplace(p.guest, static_cast<i32>(p.saved));
         }
         saved.people = parkfile::keep_people(scene.sim, scene.people, looks);
+        saved.queues = parkfile::keep_queues(scene.sim);
+        saved.litter = parkfile::keep_litter(scene.sim);
         saved.no_queue_signs.assign(scene.led_signs.hidden.begin(), scene.led_signs.hidden.end());
         saved.shows = scene.shows;
         if (saved.shows)

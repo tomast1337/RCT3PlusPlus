@@ -702,8 +702,10 @@ namespace rct3::simulation
             }
             // Launched: pushed just hard enough to reach the speed as its tail clears the platform it stood on,
             // and on a launch stretch past it as hard as the push from a standing start. A shuttle's push is sized
-            // the same way, over a train's length from where it began.
+            // the same way, over a train's length from where it began. The platform pushes only cars whose middle is
+            // on it, so the push ends half a car early and a short train leaves short of the speed.
             const bool platform = !c.launched && c.travelled < c.train_length;
+            const bool on_platform = platform && c.travelled < c.train_length - c.train_length / static_cast<f32>(2 * std::max(c.cars, 1));
             const bool assisted = under == Stretch::Launch || c.kinds[point_at(c, wrap(c, c.at - c.train_length))] == Stretch::Launch;
             f32 target = 0;
             f32 left = c.train_length;
@@ -712,7 +714,7 @@ namespace rct3::simulation
                 target = c.push;
                 left -= c.pushed.value;
             }
-            else if (c.launch_speed && (platform || (assisted && c.speed >= 0)))
+            else if (c.launch_speed && (on_platform || (assisted && c.speed >= 0)))
             {
                 target = *c.launch_speed;
                 left -= platform ? c.travelled : 0;

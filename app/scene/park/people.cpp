@@ -162,13 +162,15 @@ namespace rct3::scene::park
             case GuestCamera:
                 ride_person(scene, assets, shown, false);
                 return;
+            case NotYet:
+                logging::logger("park").info("name cheat {} is not in rct3++ yet", found->key);
+                break;
             default:
                 break;
         }
         (void)simulation::set_off(scene.sim, found->cheat);
-        // Those with nothing to see at once say they are on.
-        const std::string_view said = found->cheat == Unbreakable ? "Rct3pp_Cheat_Unbreakable" : found->cheat == RideAllFlat ? "Rct3pp_Cheat_RideAllFlat" : found->cheat == RideAllTracked ? "Rct3pp_Cheat_RideAllTracked" : found->cheat == BigBlasts ? "Rct3pp_Cheat_BigBlasts" : "";
-        if (!said.empty())
+        // Those with nothing to see at once say they are on, and those not here yet say so.
+        if (const std::string_view said = simulation::set_off_message(found->cheat); !said.empty())
             simulation::park::post(scene.park.messages, { .text_key = std::string(said) });
     }
 

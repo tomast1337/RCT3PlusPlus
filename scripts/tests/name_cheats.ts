@@ -66,6 +66,16 @@ people.rename(guest(), name("CheatPeepName_AllGroupsIndividuals"));
 await frames(3);
 expect(grouped() === before_groups, "the groups kept");
 
+// A cheat rct3++ has no system for yet says so, and the guest keeps the name.
+const lean = guest();
+people.rename(lean, name("CheatPeepName_Lean"));
+await frames(3);
+expect(
+    park.messages().some((m) => m.key === "Rct3pp_Cheat_NotYet"),
+    "the not-yet message",
+);
+expect(people.list().find((p) => p.index === lean)?.name === name("CheatPeepName_Lean"), "the name kept");
+
 // A name that is no cheat's does nothing.
 const cash = park.cash();
 people.rename(guest(), "Someone");

@@ -317,7 +317,9 @@ async function run(d: (typeof all)[number], row: Row): Promise<void> {
 const rows: Row[] = [];
 // Coasters whose test train stalls in our simulation, though they run in the original game: see #333.
 // With --strict, any other design that raises the stall message fails the run.
-const kKnownStalls: string[] = [];
+// Soap Box Speeders: its car comes off the first hill too slow for the rise after it; it got over only while the
+// push that sent it off the platform was left on past its lift.
+const kKnownStalls: string[] = ["Soap Box Speeders"];
 const ok = (r: Row) =>
     r.laid === "laid" &&
     r.closed === "yes" &&

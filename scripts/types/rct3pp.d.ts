@@ -1045,8 +1045,10 @@ type Person = {
                 /** A worker the simulation runs: their job, and what their time at work goes on now. */
                 role: "handyman" | "mechanic" | "guard" | "other" | "vendor" | "keeper" | "inspector" | "entertainer";
                 job: "none" | "sweep" | "emptybin" | "mend" | "water" | "fix" | "inspect" | "watch" | "rest";
+                /** The tiles of their patrol area; 0 when they have the whole park. */
+                patrol: number;
             }
-          | { role?: undefined; job?: undefined }
+          | { role?: undefined; job?: undefined; patrol?: undefined }
       ))
 ) &
     ({ state?: undefined } | PersonOnPaths);

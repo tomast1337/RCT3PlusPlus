@@ -61,6 +61,7 @@ namespace rct3::ovl
                 car.mass = record->real(0x10) + std::max(record->real(0x1C), 0.0f) + std::max(record->real(0xE0), 0.0f);
                 car.visual = record->ref(0x0C, "svd");
                 car.part = record->ref(0x14, "svd");
+                car.second_part = record->ref(0xD8, "svd");
                 for (std::size_t i = 0; i < car.wheels.size(); ++i)
                 {
                     car.wheels[i] = record->ref(0xA4 + 8 * i, "svd");
@@ -69,6 +70,11 @@ namespace rct3::ovl
                 car.axles = { record->ref(0xC4, "svd"), record->ref(0xC8, "svd") };
                 for (std::size_t i = 0; i < car.rowing.size(); ++i)
                     car.rowing[i] = core::none_if_negative(record->i32(0x7C + 4 * i));
+                // Byte 9, which later cars set to 2 or more, says which of the fields below they have.
+                const std::uint32_t later = (car.kind >> 8) & 0xFF;
+                car.spin_stops = later >= 2 ? std::max(record->u32(0x104), 1u) : 1;
+                car.spin_settles = record->u32(0x3C) != 0;
+                car.spin_held_on_chains = later >= 2 ? (record->u32(0x110) & 0x10) != 0 : car.spin_settles;
                 // Each moving part's block: the second's fields lie at the first's plus this.
                 constexpr std::array<std::size_t, 2> kPartBlocks { 0, 0xC4 };
                 for (std::size_t i = 0; i < car.moves.size(); ++i)
@@ -86,6 +92,9 @@ namespace rct3::ovl
                         .spring = record->real(at + 0x30),
                         .friction = record->real(at + 0x34),
                         .furthest = core::none_if_negative(record->real(at + 0x38)).transform([](float v) { return units::Radians { v }; }),
+                        .weight = { std::max(record->real(at + 0x1C), 0.0f) },
+                        // Of gravity, the share each part feels: in the latest cars, by part, from byte 308.
+                        .gravity = { later > 2 && size >= kManyStreamsSize ? record->real(0x134 + 4 * i) : 1.0f },
                     };
                 }
                 car.references = record->references(static_cast<std::uint32_t>(size));

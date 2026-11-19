@@ -540,6 +540,8 @@ namespace rct3::simulation
                     train.was_at = train.at;
                     for (Swing& swing : train.swings)
                         swing.was = swing.angle;
+                    for (Spin& spin : train.spins)
+                        spin.was = spin.angle;
                     if (upkeep.broken && upkeep.kind == Breakdown::EmergencyStop)
                         continue; // Halted on the track till fixed
                     // A crashed train is off the track till its wrecks are gone, and back in the station once the

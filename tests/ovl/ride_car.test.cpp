@@ -103,3 +103,51 @@ TEST_CASE("ride cars expose how their moving parts move, none where the motion i
     CHECK_FALSE(plain[0].car->moves[0].has_value());
     CHECK_FALSE(plain[0].car->moves[1].has_value());
 }
+
+TEST_CASE("ride cars expose how their spinning part comes to rest, and the weight and gravity of each moving part")
+{
+    // A later car (byte 9 is 3): its part stops at four ways round, is held on chains, and its first part feels half
+    // of gravity.
+    Pool pool;
+    pool.add("Test:ric");
+    std::vector<std::byte> bytes;
+    put(bytes, { 0, 0, 0x30B, 0, 0, 0, 4, bits(250) });
+    bytes.resize(0x104);
+    put(bytes, { 4 });
+    bytes.resize(0x110);
+    put(bytes, { 0x11 });
+    bytes.resize(0x134);
+    put(bytes, { bits(0.5f), bits(1) });
+    bytes.resize(336);
+    const auto overlay = make_record_overlay(5, pool, "Test:ric", bytes);
+    const auto items = read_ride_cars(overlay, overlay.common());
+    REQUIRE(items.size() == 1);
+    REQUIRE(items[0].car.has_value());
+    const auto& car = *items[0].car;
+    CHECK(car.spin_stops == 4);
+    CHECK_FALSE(car.spin_settles);
+    CHECK(car.spin_held_on_chains);
+    REQUIRE(car.moves[0].has_value());
+    CHECK(car.moves[0]->weight.value == doctest::Approx(250));
+    CHECK(car.moves[0]->gravity.value == doctest::Approx(0.5f));
+
+    // An earlier car (byte 9 is 0) that spins whole: one stop, settles where it is, held on chains, all of gravity.
+    Pool early;
+    early.add("Test:ric");
+    std::vector<std::byte> old;
+    put(old, { 0, 0, 11, 0, 0, 0, 4, bits(140) });
+    old.resize(0x3C);
+    put(old, { 1 });
+    old.resize(0x104);
+    put(old, { 4 });
+    old.resize(240);
+    const auto first = make_record_overlay(1, early, "Test:ric", old);
+    const auto cars = read_ride_cars(first, first.common());
+    REQUIRE(cars.size() == 1);
+    REQUIRE(cars[0].car.has_value());
+    CHECK(cars[0].car->spin_stops == 1);
+    CHECK(cars[0].car->spin_settles);
+    CHECK(cars[0].car->spin_held_on_chains);
+    REQUIRE(cars[0].car->moves[0].has_value());
+    CHECK(cars[0].car->moves[0]->gravity.value == 1);
+}

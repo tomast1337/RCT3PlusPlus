@@ -22,6 +22,7 @@
 #include "random/generator.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/crash.hpp"
+#include "simulation/spinning_part.hpp"
 #include "simulation/swinging_part.hpp"
 #include "units/units.hpp"
 
@@ -217,6 +218,7 @@ namespace rct3::simulation
         std::optional<SwingingPart> swinging;
         float swung_speed = 0;                       ///< Its speed when its cars' parts last swung, for how fast it has sped up since
         std::vector<Swing> swings { };               ///< By car, front first: where its swinging part is
+        std::vector<Spin> spins { };                 ///< By car, front first: where its spinning part is
         std::vector<bool> covered { };               ///< By point: the stretch from it is a tube, which no car goes out of
         std::vector<bool> steady { };                ///< By point: on the stretch from it a slide's car swings by its weight alone
         std::vector<float> drop_offs { };            ///< As rct3::park::track::TrackCourse::drop_offs
@@ -235,6 +237,9 @@ namespace rct3::simulation
             bool alone = false; ///< In place of its pieces' own pushes
         };
         std::optional<Flow> flow { };
+        /// Of a train whose cars have a part spinning on them, or spin whole, how it spins, alike on every car; nothing
+        /// for every other train.
+        std::optional<SpinningPart> spinning;
         /// What holds it back, as its train's file gives it (these, most coaster trains'): rolling, as this much of
         /// the weight pressing it onto the rails, all of it upright or upside down and none on its side; standing
         /// still, up to `resting` of it; and the air, `drag` newtons for each (m/s)² of its speed, on its `mass`.

@@ -83,9 +83,9 @@ TEST_CASE("sound items expose format, parameters and samples")
     CHECK(s.bytes_per_second == 44100);
     CHECK(s.block_align == 2);
     CHECK(s.bits_per_sample == 16);
-    CHECK(s.parameters[0] == 0.5f);
-    CHECK(s.parameters[8] == 4.5f);
-    CHECK(s.flag == 1);
+    CHECK(s.fade_in_seconds == 0.5f);
+    CHECK(s.far_distance == 4.5f);
+    CHECK(s.loops);
     CHECK(s.data_address == 9);
     CHECK(s.data_size == 8);
     REQUIRE(s.samples.has_value());

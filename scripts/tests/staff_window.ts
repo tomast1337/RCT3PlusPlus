@@ -12,11 +12,6 @@ export {};
 await park.open("Campaigns/Base/Gunslinger.dat");
 await park.ready();
 await frames(30);
-// The box telling what the save holds that is not brought over would hide the window.
-if (ui.find("prize_won") !== undefined) {
-    await ui.click(`prize_won/${must(ui.children("prize_won"), "prize_won shown").at(-1)!}`);
-    await until(() => ui.find("prize_won") === undefined, 120, "the box to close");
-}
 const paths = map.paths().filter((p) => !p.queue && !p.raised);
 const spot = paths[Math.floor(paths.length / 2)];
 camera.look({ col: spot.col + 0.5, row: spot.row + 0.5 }, { col: spot.col + 6, row: spot.row + 6, up: 20 });

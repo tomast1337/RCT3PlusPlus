@@ -87,6 +87,7 @@ TEST_CASE("a launched train reaches its launch speed as its tail leaves the plat
     c.running = true;
     Coaster one = c;
     one.cars = 1;
+    one.height = { 0, 0, 0, 0, 0 }; // Level, so the climb does not slow it as it leaves
     for (i32 i = 0; i < 10000 && c.travelled < c.train_length; ++i)
         drive(c, 0.01f);
     // The push ends as the last car's middle leaves the platform: some 5 % short with five cars.
@@ -100,6 +101,26 @@ TEST_CASE("a launched train reaches its launch speed as its tail leaves the plat
     slow.running = true;
     drive(slow, 1);
     CHECK(slow.speed < 5);
+}
+
+TEST_CASE("a launched car leaves as fast whatever steps it is driven in")
+{
+    // One car, a few metres long, launched hard: over in a fraction of a second.
+    for (const f32 length : { 3.0f, 4.0f, 5.0f, 6.0f })
+    {
+        Coaster fine = hill();
+        fine.kinds[1] = Stretch::Plain;
+        fine.launch_speed = 25;
+        fine.cars = 1;
+        fine.train_length = length;
+        fine.running = true;
+        Coaster coarse = fine;
+        for (i32 i = 0; i < 100; ++i)
+            drive(fine, 0.0025f);
+        drive(coarse, 0.25f);
+        CAPTURE(length);
+        CHECK(coarse.speed == doctest::Approx(fine.speed).epsilon(0.01));
+    }
 }
 
 TEST_CASE("a launch stretch past the platform goes on pushing the train up its slope")

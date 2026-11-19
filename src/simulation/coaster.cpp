@@ -19,6 +19,7 @@ namespace rct3::simulation
     {
         using units::kGravity;
         constexpr units::Seconds kStep { 0.05f };          ///< A part step, short enough for the steepest drops
+        constexpr units::Seconds kLaunchStep { 0.002f };   ///< A part step while launched off the platform, short enough that a car a few metres long is pushed over its length in many steps, not one or two
         constexpr units::Pace kCrawl { 0.1f };             ///< Under this a train is all but stopped
         constexpr units::Pace kAtRest { 0.01f };           ///< Chosen by eye: under this a train held by its grip on the rails stays stopped
         constexpr units::Pace kCoast { 1 };                ///< Chosen by eye: rolling and the air alone never slow a moving train below this, so one over level track creeps on, as in the original game
@@ -382,10 +383,13 @@ namespace rct3::simulation
             c.pushed = { };
             c.held = { };
         }
-        const i32 steps = static_cast<i32>(std::ceil(seconds / kStep.value));
-        for (i32 step = 0; step < steps; ++step)
+        for (f32 done = 0; seconds - done > 1e-6f;)
         {
-            const f32 dt = std::min(seconds - static_cast<f32>(step) * kStep.value, kStep.value);
+            // A launch off the platform is over in a fraction of a second: stepped finely, so how fast the train
+            // leaves does not hang on where the steps fall.
+            const bool launching = c.launch_speed && !open && !c.launched && c.travelled < c.train_length;
+            const f32 dt = std::min(seconds - done, launching ? kLaunchStep.value : kStep.value);
+            done += dt;
             if (c.swinging || c.spinning)
                 swing_cars(c, dt, Going::Moving);
             // On a lift: rolled to a stop on its car's track, carried up, held at the top for the block ahead, then
@@ -544,7 +548,8 @@ namespace rct3::simulation
                     }
                 }
                 const f32 downhill = -kGravity.value * slope + pushed;
-                const bool held = std::abs(downhill) <= c.resting * grip;
+                // Launched off the platform, the launch outpulls its grip however small the step.
+                const bool held = std::abs(downhill) <= c.resting * grip && !launching;
                 const f32 losses = c.rolling * grip + (c.mass.value > 0 ? c.drag / c.mass.value : 0) * c.speed * c.speed;
                 const f32 rolled = c.speed + downhill * dt;
                 f32 sped = rolled - std::copysign(losses, c.speed != 0 ? c.speed : downhill) * dt;

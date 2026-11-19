@@ -4,7 +4,7 @@
 // Saved and loaded again, the park keeps its litter, the guests in its queues and those on its rides, and no box
 // is told for a park of ours. Give it a park the game saved with litter and guests queueing:
 //
-//   ./nob script scripts/tests/save_state.ts -- --no-intro --no-audio --seed 1 --park PARK
+//   ./nob script scripts/tests/save_state.ts -- --no-intro --no-audio --seed 1 --left-out-box --park PARK
 
 export {};
 

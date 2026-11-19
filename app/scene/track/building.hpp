@@ -16,7 +16,8 @@
 // picked there, a custom track is built piece by piece, and cancelling closes the building as closing its
 // panel does. A design in hand has a round panel of its own, as a flat ride being placed does: turning it with
 // its price, its name and tune with why it may not stand where it is, its colours, and whether the ground it
-// passes into is cut smoothly, sharply or not at all. Once laid its window opens and its doors are placed.
+// passes into is cut smoothly, sharply or not at all. Once laid its window opens and its doors are placed; in
+// the coaster designer its track opens for building on instead.
 //
 // The scene holds one TrackBuilding; it is idle until a ride is opened in it.
 #pragma once

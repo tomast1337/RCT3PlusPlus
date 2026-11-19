@@ -167,20 +167,10 @@ TEST_CASE("a VIP's opinion counts each coaster wanted once, and is their happine
     CHECK(vip_opinion(vip, { .wishes = T::kLitter }, 0.8f) == doctest::Approx(0.8f));
 }
 
-TEST_CASE("a VIP comes in with their bodyguards, who walk with them as their party")
+TEST_CASE("a VIP comes in with the bodyguards their goal names, who walk with them as their party")
 {
     Sandbox park = gated();
-    std::int32_t named = 0;
-    std::int32_t expected = kTuning.vips.guards;
-    SUBCASE("as many as the goal names")
-    {
-        named = 3;
-        expected = 3;
-    }
-    SUBCASE("the tuning's number when it names none")
-    {
-    }
-    auto set = one_goal({ .next_visit = 0, .months_to_stay = 1, .guards = named });
+    auto set = one_goal({ .next_visit = 0, .months_to_stay = 1, .guards = 3 });
     ParkMessages messages;
     advance_vips(park.world(), set, 0, 1, messages, { });
     auto& r = park.world().registry;
@@ -189,13 +179,24 @@ TEST_CASE("a VIP comes in with their bodyguards, who walk with them as their par
     REQUIRE(r.all_of<Member>(*vip));
     const Party& party = r.get<Party>(r.get<Member>(*vip).party);
     CHECK(party.leader == *vip);
-    CHECK(std::cmp_equal(party.members.size(), expected + 1));
+    CHECK(party.members.size() == 4);
     for (const entt::entity m : party.members)
         if (m != *vip)
         {
             CHECK(r.get<Bodyguard>(m).vip == *vip);
             CHECK(r.get<Errand>(m).kind == ErrandKind::Following);
         }
+}
+
+TEST_CASE("a VIP whose goal names no bodyguards comes in alone")
+{
+    Sandbox park = gated();
+    auto set = one_goal({ .next_visit = 0, .months_to_stay = 1, .guards = 0 });
+    ParkMessages messages;
+    advance_vips(park.world(), set, 0, 1, messages, { });
+    auto& r = park.world().registry;
+    REQUIRE(the_vip(r));
+    CHECK(r.view<Bodyguard>().empty());
 }
 
 TEST_CASE("a VIP walks to the coasters they want, most exciting first, and goes on once they have ridden enough")

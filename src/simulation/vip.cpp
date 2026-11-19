@@ -138,7 +138,7 @@ namespace rct3::simulation
                 const entt::entity gate = *gates.begin();
                 // Celebrities 2 and 3 are women, as their models are. Their bodyguards walk with them as their party.
                 constexpr std::int32_t kMostGuards = 7; ///< Chosen by eye: a party of eight at most keeps the walk together
-                const std::int32_t guards = std::clamp(goal.guards > 0 ? goal.guards : tune.guards, 0, kMostGuards);
+                const std::int32_t guards = std::clamp(goal.guards, 0, kMostGuards);
                 std::vector<Newcomer> who(static_cast<std::size_t>(guards) + 1, Newcomer { AgeGroup::Adult, false });
                 who.front().is_female = goal.who == 2 || goal.who == 3;
                 const NodeId at = gates.get<const ParkGate>(gate).node;

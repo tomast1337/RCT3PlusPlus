@@ -6,9 +6,19 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 
 namespace rct3::park
 {
+
+    void keep_brightest(std::vector<Lamp>& lamps, usize most)
+    {
+        if (lamps.size() <= most)
+            return;
+        const auto brightness = [](const Lamp& l) { return std::max({ l.colour.r, l.colour.g, l.colour.b }); };
+        std::ranges::nth_element(lamps, lamps.begin() + static_cast<std::ptrdiff_t>(most), std::greater { }, brightness);
+        lamps.resize(most);
+    }
 
     LampTexels lamp_texels(std::span<const Lamp> lamps, f32 cell)
     {

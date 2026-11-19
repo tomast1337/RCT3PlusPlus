@@ -5,6 +5,7 @@
 #include "particles/library.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -229,4 +230,32 @@ TEST_CASE("a shell rises from its tube and is heard launching there and bursting
     CHECK(run.sounds()[0].particle == 1u);
     CHECK(run.sounds()[0].position.y == doctest::Approx(2 + 30).epsilon(0.05));
     CHECK(run.sounds()[0].position.x == doctest::Approx(5));
+}
+
+TEST_CASE("a burst's sparks glow brightest as it bursts, fading with them to nothing")
+{
+    // 600 red sparks at once, fading out over their two-second life, beside 100 smoke puffs that never glow.
+    Effect e;
+    e.roots = { 0, 1 };
+    e.emitters = { Emitter { .end = 0, .count = 600, .speed_random = 5, .particle = 0 }, Emitter { .end = 0, .count = 100, .particle = 1 } };
+    Particle spark { .lifetime = 2 };
+    spark.colour = { Curve { .times = { 0, 1 }, .values = { 1, 0 } }, Curve { .times = { 0 }, .values = { 0 } }, Curve { .times = { 0 }, .values = { 0 } }, Curve { } };
+    e.particles = { spark, Particle { .lifetime = 2 } };
+    const Sprite added { .frames = { { 0, 0, 1, 1 } } };
+    const Sprite mixed { .frames = { { 0, 0, 1, 1 } }, .blended = true };
+    const std::array<const Sprite*, 2> sprites { &added, &mixed };
+    EffectRun run(e, seeded(), false, 1024);
+    run.place({ 0, 40, 0 });
+
+    run_for(run, 0.1f);
+    const Glow burst = glow(e, run.particles(), sprites);
+    CHECK(burst.colour.r == doctest::Approx(600 * 0.95f).epsilon(0.1));
+    CHECK(burst.colour.g == 0);
+    CHECK(burst.position.y == doctest::Approx(40).epsilon(0.1));
+    run_for(run, 1);
+    const Glow later = glow(e, run.particles(), sprites);
+    CHECK(later.colour.r < burst.colour.r * 0.6f);
+    CHECK(later.colour.r > 0);
+    run_for(run, 1.5f);
+    CHECK(glow(e, run.particles(), sprites).colour == glm::vec3(0));
 }

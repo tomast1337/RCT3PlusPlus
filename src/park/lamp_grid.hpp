@@ -36,6 +36,9 @@ namespace rct3::park
         std::vector<f32> values { };
     };
 
+    /// Keeps the `most` brightest of `lamps`, by their strongest colour channel, in no set order.
+    void keep_brightest(std::vector<Lamp>& lamps, usize most);
+
     /// `lamps` packed with a grid of cells `cell` world units across or wider. Nothing when there are none.
     [[nodiscard]] LampTexels lamp_texels(std::span<const Lamp> lamps, f32 cell);
 

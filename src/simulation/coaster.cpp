@@ -579,6 +579,10 @@ namespace rct3::simulation
                 }
                 else
                 {
+                    // Setting off with its back still in the station, the station's tyres carry it off, up to the
+                    // station's speed, whatever the track past the platform is.
+                    if (!open && c.speed >= 0 && c.speed < c.station_speed && station_at(c.at - c.train_length))
+                        c.speed = std::min(c.speed + kStationTyres.value * dt, c.station_speed);
                     // shortcut: a train stalled in a dip, or on brakes, is pushed on as if by tyres until it outruns
                     // them, upgrade if valleys should roll it back for good. On a circuit one rolling back counts as
                     // stalled; on a track with two ends rolling back is its way home to the station.
@@ -840,8 +844,9 @@ namespace rct3::simulation
                 c.running = false;
                 return false;
             }
-            // Not yet off the platform, the station holds it from rolling back.
-            if (c.travelled < 0 && !c.launched)
+            // Not yet off the platform, the station holds it from rolling back; so it does one on a circuit that
+            // rolls back from a rise it could not top, whose tyres then set it off again.
+            if (c.travelled < 0 && (!c.launched || (c.closed && !c.launch_speed)))
             {
                 c.at = c.start;
                 c.travelled = 0;

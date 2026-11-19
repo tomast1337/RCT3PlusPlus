@@ -135,6 +135,25 @@ TEST_CASE("a train is pulled up the chain, runs down the drop faster and comes r
     CHECK(running.at == 10);
 }
 
+TEST_CASE("a train setting off onto level track past the platform is carried off by the station, not left standing")
+{
+    // A 100 m circuit: a 10 m station, 20 m level, a 30 m chain up 15 m, a 30 m drop and 10 m level back home.
+    Coaster c;
+    c.distance = { 0, 10, 30, 60, 90, 100 };
+    c.height = { 0, 0, 0, 15, 0, 0 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Chain, Stretch::Plain, Stretch::Plain, Stretch::Plain };
+    c.lift_speed = 3;
+    c.station_speed = 2;
+    c.train_length = 5;
+    c.start = 10;
+    c.at = 10;
+    c.running = true;
+    for (std::int32_t t = 0; t < 8; ++t)
+        CHECK_FALSE(drive(c, 0.25f));
+    CHECK(c.travelled > 1); // Under way within 2 s
+    CHECK(c.speed <= c.station_speed);
+}
+
 TEST_CASE("a slide's car down in the pool on its way back is slowed in the water and carried on to the lift")
 {
     // The drop's foot to the lift's foot is the pool, the level 30 m back from 70 m.

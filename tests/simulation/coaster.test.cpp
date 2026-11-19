@@ -318,6 +318,72 @@ TEST_CASE("a block brake pushes a slow train on up to its speed, and no faster")
     CHECK(c.speed == doctest::Approx(4).epsilon(0.05));
 }
 
+TEST_CASE("a block brake lets a passing train go at exactly its speed, however fast it came on")
+{
+    // Down the drop at about 17 m/s onto 4 m of block brake set to 4, far too short to brake it down.
+    Coaster c = hill();
+    c.distance = { 0, 10, 40, 70, 74, 100 };
+    c.height = { 0, 0, 15, 0, 0, 0 };
+    c.kinds = { Stretch::Station, Stretch::Chain, Stretch::Plain, Stretch::BlockBrake, Stretch::Plain, Stretch::Plain };
+    c.brake_speeds = { -1, -1, -1, 4, -1, -1 };
+    c.rolling = 0;
+    c.running = true;
+    while (c.at < 70)
+        drive(c, 0.02f);
+    CHECK(c.speed > 15);
+    while (c.at < 74)
+        drive(c, 0.02f);
+    CHECK(c.speed == doctest::Approx(4).epsilon(0.001));
+}
+
+TEST_CASE("a slow train coming onto a block brake with the block ahead clear is carried at its speed at once")
+{
+    Coaster c = hill();
+    c.height = { 0, 0, 0, 0, 0 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::BlockBrake, Stretch::Plain };
+    c.brake_speeds = { -1, -1, -1, 4, -1 };
+    c.running = true;
+    c.launched = true;
+    c.travelled = 20;
+    c.train_length = 2;
+    c.cars = 1;
+    c.at = 69.5f;
+    c.speed = 2;
+    drive(c, 1.5f); // Till its car's middle is on the block brake
+    CHECK(c.at > 72);
+    CHECK(c.speed == doctest::Approx(4));
+    drive(c, 1);
+    CHECK(c.speed == doctest::Approx(4)); // However the track runs under it
+}
+
+TEST_CASE("the last piece of a block brake run brakes a car over it harder than those before it")
+{
+    // Two 10 m block brake pieces on level track, one car.
+    Coaster c = hill();
+    c.distance = { 0, 10, 40, 70, 80, 100 };
+    c.height = { 0, 0, 0, 0, 0, 0 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::BlockBrake, Stretch::BlockBrake, Stretch::Plain };
+    c.brake_speeds = { -1, -1, -1, 4, 4, -1 };
+    c.piece_starts = { 0, 10, 40, 70, 80 };
+    c.train_length = 2;
+    c.cars = 1;
+    c.rolling = 0;
+    c.running = true;
+    c.launched = true;
+    c.travelled = 20;
+    c.slowing = true;
+    c.at = 74;
+    c.speed = 12;
+    drive(c, 0.1f);
+    const float first = 12 - c.speed;
+    c.at = 84;
+    c.speed = 12;
+    drive(c, 0.1f);
+    const float last = 12 - c.speed;
+    CHECK(first > 0);
+    CHECK(last == doctest::Approx(2 * first).epsilon(0.05));
+}
+
 TEST_CASE("booster jets shove a car up a climb, hard, to their speed and no faster")
 {
     // A 20 m climb up 8 m from 10 m on, boosters along it set to 9 m/s.

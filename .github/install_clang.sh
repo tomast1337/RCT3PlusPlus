@@ -1,8 +1,8 @@
 #!/bin/sh
 # Installs Clang in the CI and release jobs, which run in the gcc:16 image (Debian trixie). Clang 23 comes from
 # apt.llvm.org (it keeps only the latest point release of each major, so the major is what is pinned). GCC 16 stays
-# for its libstdc++ only: std::optional<T&> and std::inplace_vector need libstdc++ 16, and Debian's own GCC 14 in
-# the same image would be picked otherwise. Puts Clang (and ld.lld) first on the job's PATH.
+# for its libstdc++ only: std::optional<T&> needs libstdc++ 16, and Debian's own GCC 14 in the same image would be
+# picked otherwise. Puts Clang (and ld.lld) first on the job's PATH.
 set -eu
 version=23
 apt-get update -qq

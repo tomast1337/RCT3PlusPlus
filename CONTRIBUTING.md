@@ -14,14 +14,14 @@ is turned down however good it is.
 The build script is `nob.cpp`, plain C++ that builds itself. Bootstrap once, then use `./nob`:
 
 ```
-g++ -std=c++26 -o nob nob.cpp
+clang++ -std=c++26 -o nob nob.cpp
 ./nob                          # build library, tools and tests into build/<mode>/
 ./nob test                     # build and run tests
 ./nob test --filter header     # only test cases whose name contains "header"
 ./nob test --sanitize          # AddressSanitizer + UBSan
 ./nob test --sanitize --no-tools   # the same without building the tools
 ./nob test -- -ltc             # extra args go to the test binary (list test cases)
-./nob fuzz ovl_header --seconds 60   # libFuzzer, needs Clang
+./nob fuzz ovl_header --seconds 60   # libFuzzer
 ./nob run                      # graphical viewer: front screen + Dear ImGui (needs a Vulkan 1.3 driver, slangc)
 ./nob run -- --frames 120      # exit after 120 frames (smoke test); RCT3PP_VALIDATION=1 enables validation layers
 ./nob --release | ./nob clean
@@ -33,8 +33,8 @@ build/debug/sound-play "/path/to/Main.common.ovl" SOUND_NAME   # play one sound 
 build/debug/sound-play --null --tone 440                       # same path without an audio device
 ```
 
-`./nob` rebuilds itself when `nob.cpp` or `nob.hpp` change. `CXX` selects the compiler (default `g++`). Fuzzing uses `CLANGXX` (default `clang++`).
-`build/compile_commands.json` is written for clangd. Needs a C++26 compiler (GCC 16+, or Clang 20+ with libstdc++ 16+). POSIX
+`./nob` rebuilds itself when `nob.cpp` or `nob.hpp` change. `CXX` selects the compiler (default `clang++`; nob passes Clang flags), `CC` the C compiler for vendored C code.
+`build/compile_commands.json` is written for clangd. Needs Clang 23+ with GCC 16+'s libstdc++ (`std::optional<T&>`); GCC itself is not used as a compiler. POSIX
 only for now.
 
 Audio (`src/audio/`) uses the vendored [miniaudio](third_party/miniaudio/) and is linked into the tests and
@@ -147,7 +147,7 @@ Security problems (for example a file that crashes the parser or reads out of bo
 2. Build and test (see [Building and running](#building-and-running)):
 
    ```
-   g++ -std=c++26 -o nob nob.cpp
+   clang++ -std=c++26 -o nob nob.cpp
    ./nob test
    ./nob format --check
    ```

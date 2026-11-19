@@ -224,6 +224,8 @@ TEST_CASE("file names show without their extension, and get it when saved")
     CHECK(with_save_extension(u"Park") == u"Park.park");
     CHECK(with_save_extension(u"Park.DAT") == u"Park.park");
     CHECK(with_save_extension(u"Park.park") == u"Park.park");
+    CHECK(shown_file_name(u"[Kind]Ride.trk") == u"[Kind]Ride");
+    CHECK(with_save_extension(u"[Kind]Ride", u".trk") == u"[Kind]Ride.trk");
 }
 
 TEST_CASE("kept files open but are not deleted, renamed or saved over")

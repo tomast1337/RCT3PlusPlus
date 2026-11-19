@@ -418,6 +418,15 @@ namespace rct3::scene::park
         std::vector<rct3::park::WaterVertex> water { }; ///< Its lakes' surfaces, with the rest drawn as one
     };
 
+    /// The window that saves a tracked ride's design, in the player's folder of coaster designs.
+    struct DesignFiles
+    {
+        std::optional<save::model::RideIndex> asked; ///< A ride whose design is to be saved, until its window opens
+        std::optional<save::model::RideIndex> ride;  ///< The one the open window saves
+        SaveBrowser browser;
+        std::size_t windows_opened = 0;
+    };
+
     struct ParkScene
     {
         save::model::TerrainGrid grid;
@@ -921,6 +930,7 @@ namespace rct3::scene::park
         LandTools land;                                                ///< The land menu's shape and paint tools
         RidePlacing placing;                                           ///< The ride picked in a build list, while it is placed
         StructureTools structures;                                     ///< The scenery menu's tools that pick out and place structures
+        DesignFiles designs;                                           ///< The window that saves a ride's design
         LedSigns led_signs;                                            ///< The scrolling boards over queues and on park entrances
     };
 

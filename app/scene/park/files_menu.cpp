@@ -4,6 +4,7 @@
 #include "career/career_file.hpp"
 #include "logging/log.hpp"
 #include "parkfile/structure_file.hpp"
+#include "scene/track/design_file.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
 #include "ui/screens/dialogs/about.hpp"
@@ -29,6 +30,7 @@ namespace rct3::scene::park
         constexpr std::string_view kAboutName = "about";
         constexpr std::string_view kFilesName = "park_files";
         constexpr std::string_view kStructureFilesName = "structure_files";
+        constexpr std::string_view kDesignFilesName = "design_files";
         constexpr std::string_view kLoadQuestionName = "load_question"; ///< Asks whether to save before another game is loaded
         constexpr std::string_view kLoadQuestionTitle = "FSM_SaveBeforeLoad_Title";
         constexpr std::string_view kLoadQuestionText = "FSM_SaveBeforeLoad_Message";
@@ -114,6 +116,27 @@ namespace rct3::scene::park
             dialog.set_file_name(kStructureName);
         }
 
+        std::optional<ui::screens::dialogs::FileDialog&> design_dialog(const ParkScene& park)
+        {
+            return park.desktop->root().find_as<ui::screens::dialogs::FileDialog>(kDesignFilesName);
+        }
+
+        /// The window that saves a ride's design, in place of another such window, its name offered as the game
+        /// names a design.
+        void open_design_files(ParkScene& park, const FrontEndScene& front, save::model::RideIndex ride)
+        {
+            ui::Widget& root = park.desktop->root();
+            if (auto shown = design_dialog(park))
+                root.remove(*shown);
+            park.designs.browser.data = front.saves.data;
+            park.designs.browser.game_saves = front.saves.game_saves;
+            park.designs.ride = ride;
+            ++park.designs.windows_opened;
+            auto& dialog = root.add<ui::screens::dialogs::FileDialog>(std::string(kDesignFilesName), skins::file_dialog_style(front.assets.palette), *front.assets.strings, ui::screens::dialogs::FileDialogMode::Save, front.assets.fonts.language == ui::kDefaultLanguage);
+            dialog.set_save_extension(u".trk");
+            dialog.set_file_name(track::design_file_name(park.rides.rides.at(ride.value), *front.assets.strings));
+        }
+
     } // namespace
 
     void update_park_windows(render::Device& device, ParkScene& park, FrontEndScene& front)
@@ -127,6 +150,17 @@ namespace rct3::scene::park
                 return parkfile::write_structure_file(s);
             }))
             (void)start_structure_placing(park, *picked, front.assets);
+        if (const auto ride = std::exchange(park.designs.asked, std::nullopt); ride && ride->value < park.rides.rides.size())
+            open_design_files(park, front, *ride);
+        const ParkGame designs { .folder = config::UserFolder::Coasters };
+        (void)update_save_browser(device, park.designs.browser, design_dialog(park), park.designs.windows_opened, designs, [&](const std::filesystem::path&) {
+            const auto ride = park.designs.ride;
+            std::vector<std::byte> bytes = ride && ride->value < park.rides.rides.size() ? track::ride_design_file(park, *ride, front.assets) : std::vector<std::byte> { };
+            // The build lists read the designs again, the new one among them.
+            if (!bytes.empty())
+                park.build.designs = { };
+            return bytes;
+        });
         for (const ui::screens::park_view::ToolItem item : std::exchange(park.window_requests, { }))
         {
             if (item == ui::screens::park_view::ToolItem::About)
@@ -214,6 +248,7 @@ namespace rct3::scene::park
     {
         destroy_save_browser(device, park.saves);
         destroy_save_browser(device, park.structures.browser);
+        destroy_save_browser(device, park.designs.browser);
         if (!park.options)
             return;
         park.options->close();

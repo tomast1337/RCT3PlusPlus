@@ -16,7 +16,8 @@
 // Clicking a row picks it, and puts its name in the save box; clicking it again soon after opens it. Saving
 // checks the name first, as the game does: it may not be empty or start with a dot or a space, and replacing
 // a file in the list asks first. Saving writes our own format, so the name gets ".park"; the game's ".dat"
-// files show and load but are never written. Deleting and renaming ask too.
+// files show and load but are never written. A window that saves another kind of file, such as a ride's
+// design (".trk"), is given its extension. Deleting and renaming ask too.
 //
 // Files the owner marks as kept (another program's, say) show and open but cannot be deleted, renamed or
 // saved over. Saving can be switched off as a whole, when the owner has no way to write the file: the
@@ -106,6 +107,11 @@ namespace rct3::ui::screens::dialogs
         void set_files(std::vector<std::u16string> files, std::vector<bool> kept = { });
         /// Puts `name` in the save box, without its extension. Nothing when loading.
         void set_file_name(std::u16string_view name);
+        /// The extension saving gives the name, in place of ".park".
+        void set_save_extension(std::u16string extension)
+        {
+            save_extension_ = std::move(extension);
+        }
         /// Whether saving can happen; when not, the save button is greyed and nothing is saved.
         void set_can_save(bool can);
         [[nodiscard]] bool can_save() const
@@ -215,6 +221,7 @@ namespace rct3::ui::screens::dialogs
         std::vector<bool> read_;
         std::vector<bool> kept_;
         bool can_save_ = true;
+        std::u16string save_extension_;
         std::optional<std::size_t> selected_;
         widgets::ScrollArea* list_ = nullptr;
         widgets::Label* status_ = nullptr;
@@ -236,9 +243,9 @@ namespace rct3::ui::screens::dialogs
         std::optional<std::size_t> last_clicked_;
     };
 
-    /// The file name without ".park" or ".dat", as a row shows it.
+    /// The file name without ".park", ".dat" or ".trk", as a row shows it.
     [[nodiscard]] std::u16string shown_file_name(std::u16string_view file);
-    /// `name` as saving writes it: without ".dat", with ".park".
-    [[nodiscard]] std::u16string with_save_extension(std::u16string_view name);
+    /// `name` as saving writes it: without ".dat", with ".park", or with `extension` when given.
+    [[nodiscard]] std::u16string with_save_extension(std::u16string_view name, std::u16string_view extension = { });
 
 } // namespace rct3::ui::screens::dialogs

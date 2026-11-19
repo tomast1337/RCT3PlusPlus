@@ -773,6 +773,8 @@ namespace rct3::scene::park
             }
             else if (change && scene.shown && change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Demolish))
                 ask_demolish(scene, *assets.strings, assets.palette, { *scene.shown });
+            else if (change && scene.shown && scene.shown->kind == rct3::park::AttractionRef::Kind::Ride && change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::SaveDesign))
+                scene.designs.asked = scene.shown->ride();
             // A pool ride's join button opens the pool panel on its paths page, the window staying, as in the game.
             else if (change && scene.shown && change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::JoinPool))
                 toggle_pool_panel(device, scene, assets, info_units(assets, options).currency, ui::screens::build::PoolPage::Paths);

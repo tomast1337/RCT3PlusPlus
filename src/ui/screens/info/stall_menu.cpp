@@ -213,7 +213,7 @@ namespace rct3::ui::screens::info
     {
         // Above the bin, as many as the height takes, at least one.
         const f32 cell = style_.strip_cell;
-        return std::max<usize>(1, static_cast<usize>(std::floor((rect().height() - cell) / cell)));
+        return static_cast<usize>(std::max(1.0f, std::floor((rect().height() - cell) / cell))); // Clamped before the cast: a negative one is undefined
     }
 
     f32 StallMenu::strip_width() const

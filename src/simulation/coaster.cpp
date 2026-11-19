@@ -40,6 +40,7 @@ namespace rct3::simulation
         constexpr units::Pace kWadeSpeed { 2.9f };         ///< A slide's car is carried through the pool at on its way back to its lift. Measured: a car of a tested slide in the original game
         constexpr units::Acceleration kWadeDrag { 40 };    ///< The water slows a faster car by, down to that. Measured likewise: 13 m/s down to 3 in 2 m
         constexpr units::Acceleration kJetPull { 15 };     ///< Booster jets push a car over them by. Chosen by eye
+        constexpr float kBlockBrakeEnd = 2;                ///< Chosen by eye: a block brake run's last piece grips a car this many times harder, so a fast train is down to the run's speed by its end
         constexpr units::Seconds kLiftPause { 2 };         ///< A lift's car stands before it sets off, and before it lets its train go. Chosen by eye
         constexpr units::Distance kBoardShort { 0.5f };    ///< Short of the far end of a lift car's track, a train boarding it stops. Chosen by eye
         constexpr units::Acceleration kLiftEase { 2 };     ///< A lift's car speeds up by from either end of its climb, and slows by to it. Chosen by eye
@@ -604,22 +605,29 @@ namespace rct3::simulation
                         c.held_up = false;
                     }
                 }
-                // Each car over a brake or block brake slows the train while it is faster than that brake's speed,
-                // down to it and no further, whichever way it goes; each over a block brake pushes it on while it is
-                // slower. A brake set to nothing lets it through. Each car over a booster is shoved on by its jets,
-                // much harder, while slower than the booster's speed.
-                const i32 cars = std::max(c.cars, 1);
-                const f32 car = c.train_length / static_cast<f32>(cars);
-                f32 pull = 0;
-                f32 push = 0;
-                f32 least = 0;
-                f32 most = 0;
-                f32 jets = 0;
-                f32 jet_most = 0;
+                // Each car over a brake slows the train while it is faster than that brake's speed, down to it and
+                // no further, whichever way it goes. A brake set to nothing lets it through. Each car over a booster
+                // is shoved on by its jets, much harder, while slower than the booster's speed.
+                // Block brakes go by what the train is doing there. Come onto them with the block ahead clear, each
+                // car over them slows it to their speed, those over the run's last piece harder, and once down to it
+                // the train is carried at that speed, whatever the slope, till its front is off the run, where it is
+                // let go at exactly that speed. Held for the block ahead, each car over them slows it likewise; let
+                // go, or over them after its front is off, each pushes it on while it is slower.
+                const std::int32_t cars = std::max(c.cars, 1);
+                const float car = c.train_length / static_cast<float>(cars);
+                const bool held_back = std::isfinite(room);
+                float pull = 0;
+                float push = 0;
+                float least = 0;
+                float most = 0;
+                float jets = 0;
+                float jet_most = 0;
+                std::optional<float> carried_at;
                 bool blocked = false;
                 for (i32 k = 0; k < cars; ++k)
                 {
-                    const usize i = point_at(c, wrap(c, c.at - (static_cast<f32>(k) + 0.5f) * car));
+                    const float x = wrap(c, c.at - (static_cast<float>(k) + 0.5f) * car);
+                    const std::size_t i = point_at(c, x);
                     const bool block = c.kinds[i] == Stretch::BlockBrake;
                     const bool jet = c.kinds[i] == Stretch::Booster;
                     if ((!block && !jet && c.kinds[i] != Stretch::Brake) || i >= c.brake_speeds.size() || c.brake_speeds[i] <= 0)
@@ -634,18 +642,28 @@ namespace rct3::simulation
                         continue;
                     }
                     blocked = blocked || block;
-                    if (std::abs(c.speed) > c.brake_speeds[i])
+                    const bool braking = !block || c.slowing || held_back || open;
+                    if (braking && std::abs(c.speed) > c.brake_speeds[i])
                     {
-                        pull += c.brake_pull / static_cast<f32>(cars);
+                        // The car is on the run's last piece when the piece after its own is no block brake; with no
+                        // pieces known, the run is one piece.
+                        const auto piece = std::ranges::upper_bound(c.piece_starts, x) - c.piece_starts.begin();
+                        const float next = piece > 0 && static_cast<std::size_t>(piece) < c.piece_starts.size() ? c.piece_starts[static_cast<std::size_t>(piece)] : c.length();
+                        const bool last = block && c.kinds[point_at(c, wrap(c, next))] != Stretch::BlockBrake;
+                        pull += (last ? kBlockBrakeEnd : 1.0f) * c.brake_pull / static_cast<float>(cars);
                         least = std::max(least, c.brake_speeds[i]);
                     }
-                    else if (block && !open)
+                    else if (block && c.slowing && !held_back)
+                        carried_at = c.brake_speeds[i];
+                    else if (block && !open && !braking)
                     {
                         push += c.boost_pull / static_cast<f32>(cars);
                         most = std::max(most, c.brake_speeds[i]);
                     }
                 }
-                if (pull > 0)
+                if (carried_at)
+                    c.speed = *carried_at;
+                else if (pull > 0)
                     c.speed = std::copysign(std::max(std::abs(c.speed) - pull * dt, least), c.speed);
                 else if (push > 0)
                     c.speed = std::min(c.speed + push * dt, most);
@@ -799,6 +817,19 @@ namespace rct3::simulation
             c.at = wrap(c, c.at + moved);
             c.travelled += moved;
             c.launched = c.launched || c.travelled >= c.train_length;
+            // Its front onto a block brake run with the block ahead clear past the run's end, it slows there; its
+            // front off the run's end, it is let go at the run's speed.
+            {
+                const std::size_t was = point_at(c, before);
+                std::size_t end = point_at(c, c.at);
+                const bool on_run = c.kinds[end] == Stretch::BlockBrake && end < c.brake_speeds.size() && c.brake_speeds[end] > 0;
+                if (c.slowing && !on_run && moved > 0 && was < c.brake_speeds.size())
+                    c.speed = c.brake_speeds[was];
+                while (end + 2 < c.distance.size() && c.kinds[end + 1] == Stretch::BlockBrake)
+                    ++end;
+                const bool clear = room > (end + 1 < c.distance.size() ? c.distance[end + 1] : c.length()) - c.at;
+                c.slowing = on_run && moved > 0 && (c.slowing || (c.kinds[was] != Stretch::BlockBrake && clear));
+            }
             // At another station, it stops there to let riders off and on.
             if (c.next_stop < c.stops.size() && c.travelled >= c.stops[c.next_stop] - kArrived)
             {

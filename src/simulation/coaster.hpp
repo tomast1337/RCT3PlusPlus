@@ -7,10 +7,11 @@
 // chain carries it up at no less than the ride's lift speed, and the station's tyres push it at the ride's
 // station speed, slowing it there too when it comes back. Brakes slow it down to their speed and no further,
 // each car over one braking it, so a short run of brakes may not bring a fast train all the way down. Block brakes
-// do the same and push a slower train up to their speed; one held for the block ahead brakes it to a stop. A ride
-// with a fixed speed moves at that speed everywhere. Boosters' jets shove a car on hard while it is slower than their
-// speed, as a water coaster's climbs have them. A pool slide's car is not carried off its platform but eased off at a
-// walk, the slope taking it from there. In its turns an open slide's car swings up the trough's wall, as far as the
+// met with the block ahead clear slow it the same, the run's last piece harder, carry it at their speed once down to
+// it and let it go at exactly that speed off their end; one held for the block ahead brakes it to a stop, and once let
+// go they push it on up to their speed. A ride with a fixed speed moves at that speed everywhere. Boosters' jets
+// shove a car on hard while it is slower than their speed, as a water coaster's climbs have them. A pool slide's
+// car is not carried off its platform but eased off at a walk, the slope taking it from there. In its turns an open slide's car swings up the trough's wall, as far as the
 // turn's pull outweighs gravity and the wall's friction; swung up past the rims it flies out and crashes. On a shuttle the train runs back and forth between the
 // track's ends, counting its passes through the station. A train that runs off either end of a track with two
 // ends, a shuttle's or an unfinished circuit's, crashes. The speeds are the ride's own, as its park keeps them.
@@ -260,13 +261,14 @@ namespace rct3::simulation
         f32 crawl_at = 0;
         std::optional<f32> rolled_from; ///< Where it began to roll back, while it does
         /// Where along the track it stalled since its owner last took it (see `stalls_told`), a place at a time.
-        std::optional<f32> stalled;
-        bool stalls_by_design = false;    ///< Its kind's trains crawl or roll back as a matter of course: never told as a stall
-        bool held_up = false;             ///< Slowed behind the train in front since it last went faster than its station's speed: its stalls are not told
-        std::vector<f32> stalls_told { }; ///< The places it has stalled at, no two close, so a lap is not told again
-        bool launched = false;            ///< Its tail has left the platform since it set off, so it is pushed no more there
-        units::Radians lean { };          ///< Of a slide's car, it has swung up the trough's wall from the bottom, to its right
-        units::TurnRate lean_rate { };    ///< How fast that swing is changing
+        std::optional<float> stalled;
+        bool stalls_by_design = false;      ///< Its kind's trains crawl or roll back as a matter of course: never told as a stall
+        bool held_up = false;               ///< Slowed behind the train in front since it last went faster than its station's speed: its stalls are not told
+        bool slowing = false;               ///< Its front came onto the block brake run it is on with the block ahead clear: carried at the run's speed, and let go at it
+        std::vector<float> stalls_told { }; ///< The places it has stalled at, no two close, so a lap is not told again
+        bool launched = false;              ///< Its tail has left the platform since it set off, so it is pushed no more there
+        units::Radians lean { };            ///< Of a slide's car, it has swung up the trough's wall from the bottom, to its right
+        units::TurnRate lean_rate { };      ///< How fast that swing is changing
         // A shuttle's train
         i32 passed = 0;             ///< Times it has come into the station since it set off
         f32 push = 0;               ///< The speed it is being pushed to, negative backwards; 0 when it is not

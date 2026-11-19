@@ -2,6 +2,7 @@
 #include "simulation/import_park.hpp"
 
 #include "core/types.hpp"
+#include "logging/log.hpp"
 #include "ovl/animated_ride.hpp"
 #include "ovl/tracked_ride.hpp"
 #include "park/ground/paths.hpp"
@@ -23,6 +24,7 @@
 #include "simulation/ride_walks.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/staff/care.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/staff/work.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/swimming.hpp"
@@ -1794,6 +1796,10 @@ namespace rct3::simulation
             staff::set_wage_level(staff, saved.wage_level);
             staff::take_saved_work(staff, saved);
             r.emplace<Staff>(e, staff);
+            if (const auto tiles = save::model::patrol_tiles(saved.patrol); !tiles)
+                logging::logger("simulation").warning("{} {}: patrol area left out, {}", save::model::to_string(saved.kind), p.name, save::model::to_string(tiles.error()));
+            else if (!tiles->empty())
+                r.emplace<staff::Patrol>(e, staff::Patrol { .tiles = *tiles | std::views::transform([](save::model::PatrolTile t) { return glm::ivec2(t.col, t.row); }) | std::ranges::to<std::vector>() });
             r.emplace<Pose>(e, position, units::Radians { -p.heading.value }, position, units::Radians { -p.heading.value }); // The original turns the other way
             if (walks)
                 start_walking(world, e, *at);

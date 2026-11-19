@@ -10,6 +10,9 @@
 #include "scene/park/setup.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/import_park.hpp"
+#include "simulation/name_cheats.hpp"
+#include "simulation/park/finance.hpp"
+#include "simulation/park/messages.hpp"
 #include "simulation/staff/care.hpp"
 #include "simulation/staff/patrol.hpp"
 #include "simulation/systems.hpp"
@@ -146,8 +149,27 @@ namespace rct3::scene::park
 
     void name_cheats(ParkScene& scene, const ui::InterfaceAssets& assets, usize shown, std::u16string_view name)
     {
-        if (strings::equals_ignoring_case(strings::to_utf8(name), strings::to_utf8(assets.strings->get("CheatPeepName_PeepCam"))))
-            ride_person(scene, assets, shown, false);
+        const std::string typed = strings::to_utf8(name);
+        const auto found = std::ranges::find_if(simulation::kNameCheatKeys, [&](const simulation::NameCheatKey& k) { return strings::equals_ignoring_case(typed, strings::to_utf8(assets.strings->get(k.key))); });
+        if (found == simulation::kNameCheatKeys.end())
+            return;
+        using enum simulation::NameCheat;
+        switch (found->cheat)
+        {
+            case Money:
+                simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, units::Money { -simulation::kCheatMoney.value }, simulation::park::LedgerLine::Other, simulation::park::Charge::Always);
+                return;
+            case GuestCamera:
+                ride_person(scene, assets, shown, false);
+                return;
+            default:
+                break;
+        }
+        (void)simulation::set_off(scene.sim, found->cheat);
+        // Those with nothing to see at once say they are on.
+        const std::string_view said = found->cheat == Unbreakable ? "Rct3pp_Cheat_Unbreakable" : found->cheat == RideAllFlat ? "Rct3pp_Cheat_RideAllFlat" : found->cheat == RideAllTracked ? "Rct3pp_Cheat_RideAllTracked" : found->cheat == BigBlasts ? "Rct3pp_Cheat_BigBlasts" : found->cheat == Alone ? "Rct3pp_Cheat_Alone" : "";
+        if (!said.empty())
+            simulation::park::post(scene.park.messages, { .text_key = std::string(said) });
     }
 
     bool change_person(ParkScene& scene, usize shown, const ui::screens::info::InfoChange& change)

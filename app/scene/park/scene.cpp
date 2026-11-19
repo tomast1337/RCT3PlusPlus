@@ -1012,7 +1012,7 @@ namespace rct3::scene::park
         scene.clock += elapsed.value;
         const units::Seconds park_time { elapsed.value * simulation::time_factor(scene.park.speed) };
         scene.park_clock += park_time.value;
-        scene.people_clock += park_time.value / scene.sim.guest_slowdown;
+        scene.people_clock += park_time.value / simulation::current_guest_slowdown(scene.sim);
         scene.chain_shifts.resize(scene.rides.rides.size());
         for (usize i = 0; i < scene.chain_shifts.size(); ++i)
             scene.chain_shifts[i] = rct3::park::chain_shift(scene.chain_shifts[i], scene.rides.rides[i].options.lift_speed.value, park_time.value);

@@ -9,6 +9,7 @@
 #include "core/types.hpp"
 #include "random/generator.hpp"
 #include "simulation/entt.hpp"
+#include "simulation/name_cheats.hpp"
 #include "simulation/path_network.hpp"
 #include "simulation/ratings.hpp"
 
@@ -49,6 +50,14 @@ namespace rct3::simulation
         StepBuffers buffers { };
         f32 guest_slowdown = 1;            ///< Developer switch: guests live this many times slower than the park
         bool parties_huddle_often = false; ///< Developer switch: a wandering party stands together at every rest
+        NameCheats cheats { };             ///< Set off by renaming guests
     };
+
+    /// How many times slower than the park guests live now: the developer's slow motion, quickened while guests
+    /// are in a hurry.
+    [[nodiscard]] inline f32 current_guest_slowdown(const SimWorld& world)
+    {
+        return world.guest_slowdown / (world.cheats.hurry.value > 0 ? kHurryPace : 1.0f);
+    }
 
 } // namespace rct3::simulation

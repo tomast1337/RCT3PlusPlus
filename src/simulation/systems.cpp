@@ -240,18 +240,42 @@ namespace rct3::simulation
                         {
                             const glm::vec3 from = r.get<Pose>(g).position;
                             const f32 reach = kTuning.surroundings.cannon_reach.value;
-                            // Only those in front of it: it turns so far, and never back on its firer. Not riders in
-                            // cars: their Pose stays where they boarded while the car is away. Swimmers riding a slide
-                            // or a river move with it, so they may be hit.
-                            // shortcut: riders and boats passing are never hit; upgrade when the simulation knows
-                            // where ride cars are.
+                            // Only those in front of it: it turns so far, and never back on its firer. Riders are
+                            // where the middle of their train is, or their boat once it is out; those on other rides
+                            // are out of its reach. Swimmers riding a slide or a river move with it, so they are where
+                            // they stand.
                             const auto* cannon = r.valid(linger->bench) ? r.try_get<PathItem>(linger->bench) : nullptr;
+                            const auto where = [&](entt::entity t) -> std::optional<glm::vec3> {
+                                const auto* errand = r.try_get<Errand>(t);
+                                if (errand == nullptr || errand->kind != ErrandKind::Riding || r.all_of<Swimmer>(t))
+                                    return r.get<Pose>(t).position;
+                                if (!r.valid(errand->target))
+                                    return std::nullopt;
+                                if (const auto* fleet = r.try_get<Trains>(errand->target))
+                                    for (usize k = 0; k < fleet->trains.size() && k < fleet->riders.size(); ++k)
+                                        if (const Coaster& train = fleet->trains[k]; train.points.size() >= 2 && train.points.size() == train.distance.size() && std::ranges::contains(fleet->riders[k], t))
+                                            return track_point(train, train.at - train.train_length / 2);
+                                // shortcut: a boat's riders are taken to fill its boats in turn, as many to each as
+                                // its seats share out; upgrade when each boat keeps its own riders. Boats are on the
+                                // firer's level.
+                                const auto* boats = r.try_get<Boats>(errand->target);
+                                const auto* ride = r.try_get<CycleRide>(errand->target);
+                                if (boats == nullptr || ride == nullptr || boats->boats.empty())
+                                    return std::nullopt;
+                                const auto seat = std::ranges::find(ride->riders, t);
+                                const usize each = std::max<usize>(ride->capacity / boats->boats.size(), 1);
+                                const usize k = static_cast<usize>(seat - ride->riders.begin()) / each;
+                                if (seat == ride->riders.end() || k >= boats->boats.size() || boats->boats[k].state == Sailing::Docked)
+                                    return std::nullopt;
+                                return glm::vec3 { boats->boats[k].at.x, from.y, boats->boats[k].at.y };
+                            };
                             const auto in_reach = [&](entt::entity t) {
                                 if (t == g || cannon == nullptr || !r.valid(t) || !r.all_of<Pose, Mood, Visitor>(t) || r.any_of<Staff>(t))
                                     return false;
-                                if (const auto* errand = r.try_get<Errand>(t); errand != nullptr && errand->kind == ErrandKind::Riding && !r.all_of<Swimmer>(t))
+                                const std::optional<glm::vec3> spot = where(t);
+                                if (!spot)
                                     return false;
-                                const glm::vec3 to = r.get<Pose>(t).position - from;
+                                const glm::vec3 to = *spot - from;
                                 return glm::length(to) <= reach && cannon_turn(cannon->heading, { to.x, to.z }, kTuning.surroundings.cannon_swing.value).has_value();
                             };
                             if (!in_reach(linger->target) || random::chance(dice.state, kTuning.surroundings.retarget.value * dt))

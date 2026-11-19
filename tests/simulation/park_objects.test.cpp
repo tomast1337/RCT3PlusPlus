@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/types.hpp"
+#include "simulation/boat.hpp"
+#include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/import_park.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/systems.hpp"
@@ -346,22 +349,44 @@ TEST_CASE("a water cannon's firer sprays another guest in reach, who gets wet")
     CHECK(r.get<Mood>(firer).wet.value == 0);
 }
 
-TEST_CASE("a water cannon's firer sprays no rider in a car, whose place is where they boarded")
+TEST_CASE("a water cannon's firer sprays riders where their train or boat passes, not where they boarded")
 {
-    Sandbox park;
-    park.path({ 0, 0 }, { 1, 0 });
-    const auto cannon = park.item(PathItemKind::WaterCannon, { 0, 0 });
-    const auto firer = park.guest({ 0, 0 });
-    const auto rider = park.guest({ 1, 0 });
-    auto& r = park.world().registry;
-    const glm::vec3 way = r.get<Pose>(rider).position - r.get<Pose>(firer).position;
-    r.get<PathItem>(cannon).heading = std::atan2(way.x, way.z);
-    r.get<Errand>(rider) = { .kind = ErrandKind::Riding };
-    r.emplace_or_replace<Linger>(firer, Linger { .at = PathItemKind::WaterCannon, .left = units::Seconds { 20 }, .bench = cannon });
-    park.run_seconds(3);
-    REQUIRE(r.all_of<Linger>(firer));
-    CHECK(r.get<Linger>(firer).target == entt::entity { entt::null });
-    CHECK(r.get<Mood>(rider).wet.value == 0);
+    for (const bool boat : { false, true })
+        for (const bool passing : { false, true })
+        {
+            Sandbox park;
+            park.path({ 0, 0 }, { 1, 0 });
+            const auto cannon = park.item(PathItemKind::WaterCannon, { 0, 0 });
+            const auto firer = park.guest({ 0, 0 });
+            const auto rider = park.guest({ 1, 0 });
+            auto& r = park.world().registry;
+            const glm::vec3 boarded = r.get<Pose>(rider).position;
+            const glm::vec3 way = boarded - r.get<Pose>(firer).position;
+            r.get<PathItem>(cannon).heading = std::atan2(way.x, way.z);
+            // The car is in front of the cannon, or far off along the same line.
+            const glm::vec3 car = r.get<Pose>(firer).position + way * (passing ? 1.0f : 50.0f);
+            const entt::entity ride = r.create();
+            if (boat)
+            {
+                r.emplace<Attraction>(ride);
+                r.emplace<CycleRide>(ride, CycleRide { .capacity = 2, .run = units::Seconds { 60 }, .phase = RidePhase::Running, .riders = { rider } });
+                r.emplace<Boats>(ride, Boats { .boats = { Boat { .at = { car.x, car.z }, .state = Sailing::Out } } });
+            }
+            else
+            {
+                Coaster train { .distance = { 0, 20 }, .height = { car.y, car.y }, .points = { car, car } };
+                train.at = 5;
+                r.emplace<Trains>(ride, Trains { .trains = { train }, .riders = { { rider } } });
+            }
+            r.get<Errand>(rider) = { .kind = ErrandKind::Riding, .target = ride };
+            r.emplace_or_replace<Linger>(firer, Linger { .at = PathItemKind::WaterCannon, .left = units::Seconds { 20 }, .bench = cannon });
+            park.run_seconds(3);
+            CAPTURE(boat);
+            CAPTURE(passing);
+            REQUIRE(r.all_of<Linger>(firer));
+            CHECK((r.get<Linger>(firer).target == rider) == passing);
+            CHECK((r.get<Mood>(rider).wet.value > 0) == passing);
+        }
 }
 
 TEST_CASE("a water cannon's firer sprays no one behind it, but aims about in front")

@@ -166,6 +166,16 @@ namespace
             payload.blob(p);
             return *this;
         }
+        Obj& ints(const std::string& n, const std::vector<i32>& xs)
+        {
+            attrs.push_back({ n, "list", 0, { { "i", "int32", 4, { } } } });
+            Bytes p;
+            p.put_u32(static_cast<u32>(xs.size()));
+            for (const i32 x : xs)
+                p.put_u32(static_cast<u32>(x));
+            payload.blob(p);
+            return *this;
+        }
         /// A list that claims `count` elements but carries no data.
         Obj& hostile_refs(const std::string& n, u32 count)
         {
@@ -826,4 +836,50 @@ TEST_CASE("an empty save gives an empty model")
     CHECK(model->staff.empty());
     CHECK(model->animals.empty());
     CHECK(validate(*model).empty());
+}
+
+TEST_CASE("patrol area: runs of tiles in and out along the walk")
+{
+    // The walk's grid, 3 wide and 2 tall, goes (0,0) (1,0) (0,1) (1,1) (2,0) (2,1), places 0 1 3 4 2 5 counted
+    // row by row; the box is 2 columns by 3 rows, its rows counted from the last: places 0 and 1 are its third row.
+    PatrolArea area { .start_col = 10, .start_row = 20, .size_x = 3, .size_y = 2, .start_state = false, .runs = { 1, 2, 3 } };
+    CHECK(patrol_tiles(area) == std::vector<PatrolTile> { { 11, 22 }, { 11, 21 } });
+    area.start_state = true;
+    CHECK(patrol_tiles(area) == std::vector<PatrolTile> { { 10, 22 }, { 10, 20 }, { 10, 21 }, { 11, 20 } });
+    area.runs = { 6 };
+    CHECK(patrol_tiles(area)->size() == 6);
+    // 2 wide and 3 tall: (0,0) (1,0) (0,1) (0,2) (1,1) (1,2), places 0 1 2 4 3 5; a box of 3 columns by 2 rows.
+    area = { .start_col = 0, .start_row = 0, .size_x = 2, .size_y = 3, .start_state = false, .runs = { 3, 1, 2 } };
+    CHECK(patrol_tiles(area) == std::vector<PatrolTile> { { 1, 0 } });
+    area.runs = { };
+    CHECK(patrol_tiles(area)->empty());
+}
+
+TEST_CASE("patrol area: runs that do not fit the box are an error")
+{
+    PatrolArea area { .start_col = 1, .start_row = 1, .size_x = 3, .size_y = 2, .start_state = true };
+    area.runs = { 2, 1 };
+    CHECK(patrol_tiles(area).error() == PatrolError::RunsShort);
+    area.runs = { 6, 1 };
+    CHECK(patrol_tiles(area).error() == PatrolError::RunsTooLong);
+    area.runs = { 4, 3 };
+    CHECK(patrol_tiles(area).error() == PatrolError::RunsTooLong);
+    area.runs = { 0, 6 };
+    CHECK(patrol_tiles(area).error() == PatrolError::BadRun);
+    area.runs = { 6, -1 };
+    CHECK(patrol_tiles(area).error() == PatrolError::BadRun);
+    area.size_x = 0;
+    area.runs = { 1 };
+    CHECK(patrol_tiles(area).error() == PatrolError::EmptyBox);
+}
+
+TEST_CASE("make_staff reads the patrol area's runs")
+{
+    Obj h("Handyman", 1);
+    h.put_u8("StartCol", 4).put_u8("StartRow", 5).put_u8("GridSizeX", 2).put_u8("GridSizeY", 2).boolean("StartState", true).ints("PatrolZoneEncoded", { 1, 2, 1 });
+    const auto w = make_world({ h });
+    const auto s = build(*w, 1, make_staff);
+    REQUIRE(s);
+    CHECK(s->patrol.runs == std::vector<i32> { 1, 2, 1 });
+    CHECK(patrol_tiles(s->patrol) == std::vector<PatrolTile> { { 4, 6 }, { 5, 5 } });
 }

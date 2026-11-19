@@ -146,6 +146,15 @@ extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t* data, std::size_t size
         if (!people)
             __builtin_trap();
         (void)rct3::save::model::validate(*people);
+        // A patrol area decodes to tiles inside its box, or to an error.
+        for (const auto& s : people->staff)
+        {
+            const auto& area = s.patrol;
+            if (const auto tiles = rct3::save::model::patrol_tiles(area))
+                for (const auto t : *tiles)
+                    if (t.col < area.start_col || t.row < area.start_row || t.col >= area.start_col + area.size_y || t.row >= area.start_row + area.size_x)
+                        __builtin_trap();
+        }
     }
     // --- people model loader (end) ---
 

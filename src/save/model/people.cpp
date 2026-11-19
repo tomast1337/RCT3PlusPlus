@@ -172,6 +172,7 @@ namespace rct3::save::model
             constexpr std::string_view start_col = "StartCol";
             constexpr std::string_view start_row = "StartRow";
             constexpr std::string_view start_state = "StartState";
+            constexpr std::string_view patrol_runs = "PatrolZoneEncoded";
             constexpr std::string_view task_flags = "TaskFlags";
             constexpr std::string_view bins_emptied = "BinsEmptied";
             constexpr std::string_view gardens_watered = "GardensWatered";
@@ -691,6 +692,63 @@ namespace rct3::save::model
         return "other";
     }
 
+    const char* to_string(PatrolError e) noexcept
+    {
+        switch (e)
+        {
+            case PatrolError::EmptyBox:
+                return "runs for an empty box";
+            case PatrolError::BadRun:
+                return "a run of no tiles";
+            case PatrolError::RunsShort:
+                return "runs end before the box does";
+            case PatrolError::RunsTooLong:
+                return "runs go past the box";
+        }
+        return "bad patrol area";
+    }
+
+    std::expected<std::vector<PatrolTile>, PatrolError> patrol_tiles(const PatrolArea& area)
+    {
+        std::vector<PatrolTile> out;
+        if (area.runs.empty())
+            return out;
+        // Cell (a, b) of the walk's grid, size_x wide; the diagonals (a + b constant) taken in turn, the even ones
+        // with a rising, the odd ones falling.
+        const i32 across = area.size_x;
+        const i32 down = area.size_y;
+        if (across == 0 || down == 0)
+            return std::unexpected(PatrolError::EmptyBox);
+        if (std::ranges::any_of(area.runs, [](i32 n) { return n <= 0; }))
+            return std::unexpected(PatrolError::BadRun);
+        usize run = 0;
+        i32 left = area.runs[0];
+        bool in = area.start_state;
+        for (i32 d = 0; d <= across + down - 2; ++d)
+        {
+            const i32 low = std::max(0, d - (down - 1));
+            const i32 high = std::min(d, across - 1);
+            for (i32 i = 0; i <= high - low; ++i)
+            {
+                if (left == 0)
+                {
+                    if (++run == area.runs.size())
+                        return std::unexpected(PatrolError::RunsShort);
+                    left = area.runs[run];
+                    in = !in;
+                }
+                const i32 a = d % 2 == 0 ? low + i : high - i;
+                const i32 place = (d - a) * across + a;
+                if (in)
+                    out.push_back({ area.start_col + place % down, area.start_row + across - 1 - place / down });
+                --left;
+            }
+        }
+        if (left != 0 || run + 1 != area.runs.size())
+            return std::unexpected(PatrolError::RunsTooLong);
+        return out;
+    }
+
     const char* to_string(AnimalKind v) noexcept
     {
         switch (v)
@@ -814,6 +872,11 @@ namespace rct3::save::model
         if (!c)
             return std::nullopt;
         const auto get = [&](std::string_view n) { return o.find(n); };
+        std::vector<i32> runs;
+        if (const auto v = get(at::patrol_runs); v && v->kind() == ValueKind::List)
+            // At most one more than a box of 255 x 255 tiles can need, so a longer list still reads as too long.
+            for (usize i = 0; i < v->items().size() && i <= 255 * 255; ++i)
+                runs.push_back(read_i32(v->items()[i]));
         Staff s {
             .person = build_person(o, index, c->type),
             .kind = c->kind,
@@ -829,7 +892,7 @@ namespace rct3::save::model
             .thinks_since_different_task = core::none_if_negative(read_i32(get(at::thinks_different_task), -1)),
             .thinks_since_no_task = core::none_if_negative(read_i32(get(at::thinks_no_task), -1)),
             .thinks_since_happy = core::none_if_negative(read_i32(get(at::thinks_happy), -1)),
-            .patrol = { read_u8(get(at::start_col)), read_u8(get(at::start_row)), read_u8(get(at::grid_x)), read_u8(get(at::grid_y)), flag(get(at::start_state)) },
+            .patrol = { read_u8(get(at::start_col)), read_u8(get(at::start_row)), read_u8(get(at::grid_x)), read_u8(get(at::grid_y)), flag(get(at::start_state)), std::move(runs) },
             .task_flags = read_i32(get(at::task_flags)),
             .time_in_pool = opt_f32(get(at::time_in_pool)).transform([](f32 s) { return units::Seconds { s }; }),
         };

@@ -357,13 +357,15 @@ namespace rct3::simulation
                         }
                     }
                 }
-                // A wandering guest just come to a tile may sit on a bench there when tired or eating, or stop at a sight.
-                if (errand.kind == ErrandKind::Wandering && stride.fresh)
+                // A wandering guest just come to a tile may sit on a bench there when tired or eating, or stop at a sight;
+                // one following their party may sit too, the others waiting for them (5.).
+                if ((errand.kind == ErrandKind::Wandering || errand.kind == ErrandKind::Following) && stride.fresh)
                 {
                     const NodeId here = stride.from;
                     const auto sight = std::ranges::find_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Sight || r.get<PathItem>(i).kind == PathItemKind::PhotoSpot; });
                     // Jumping fountains catch a passer's eye for a moment, and often please them.
-                    if (const auto fountain = std::ranges::find_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Fountain; }); fountain != items(here).end() && random::chance(dice.state, kTuning.surroundings.glance.value))
+                    const bool following = errand.kind == ErrandKind::Following;
+                    if (const auto fountain = std::ranges::find_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::Fountain; }); !following && fountain != items(here).end() && random::chance(dice.state, kTuning.surroundings.glance.value))
                     {
                         r.emplace_or_replace<Glance>(g, Glance { .at = *fountain, .left = kTuning.surroundings.glancing });
                         if (random::chance(dice.state, kTuning.surroundings.fountain_thought.value))
@@ -375,7 +377,7 @@ namespace rct3::simulation
                     }
                     // A free water cannon tempts some passers to fire it a while, one at a time.
                     const auto cannon = std::ranges::find_if(items(here), [&](entt::entity i) { return r.get<PathItem>(i).kind == PathItemKind::WaterCannon && !r.get<PathItem>(i).broken; });
-                    if (cannon != items(here).end() && std::ranges::none_of(r.view<const Linger>().each(), [&](const auto& other) { return std::get<1>(other).bench == *cannon; }) && random::chance(dice.state, kTuning.surroundings.fire_cannon.value))
+                    if (!following && cannon != items(here).end() && std::ranges::none_of(r.view<const Linger>().each(), [&](const auto& other) { return std::get<1>(other).bench == *cannon; }) && random::chance(dice.state, kTuning.surroundings.fire_cannon.value))
                     {
                         r.emplace<Linger>(g, Linger { .at = PathItemKind::WaterCannon, .left = kTuning.surroundings.firing, .bench = *cannon });
                         continue;
@@ -397,7 +399,7 @@ namespace rct3::simulation
                             continue;
                         }
                     // Most walk past an effect or animatronic, taking it in as scenery; a view is worth a stop.
-                    if (sight != items(here).end() && random::chance(dice.state, r.get<PathItem>(*sight).kind == PathItemKind::Sight ? kTuning.surroundings.stop.value : kTuning.facilities.watch_chance.value))
+                    if (!following && sight != items(here).end() && random::chance(dice.state, r.get<PathItem>(*sight).kind == PathItemKind::Sight ? kTuning.surroundings.stop.value : kTuning.facilities.watch_chance.value))
                     {
                         const PathItemKind kind = r.get<PathItem>(*sight).kind;
                         r.emplace<Linger>(g, Linger { .at = kind, .left = kTuning.facilities.watch, .bench = *sight });

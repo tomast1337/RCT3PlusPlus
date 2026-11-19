@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Guests on benches, on the game's blank landscape: benches put on both sides of the road in from the entrance,
-// parties dropped on the paths and worn out. Their leaders sit down on the benches' seats, never more than a bench
-// has, and two side by side are pictured talking; then, rested, they get up and walk on.
+// parties dropped on the paths and worn out. They sit down on the benches' seats, leaders and those following alike,
+// never more than a bench has, and two side by side are pictured talking; then, rested, they get up and walk on.
 //
 //   ./nob script scripts/tests/benches.ts -- --no-audio
 
@@ -43,7 +43,7 @@ await frames(2);
 const benches = park.pathItems().filter((i) => i.kind === "bench");
 expect(benches.length === 6, `6 benches, not ${benches.length}`);
 
-// Parties on the paths, worn out: their leaders sit, two by two on each bench at most.
+// Parties on the paths, worn out: they sit, two by two on each bench at most.
 expect(park.dropParties(12, 5).length > 0, "parties dropped in the park");
 log("guests", park.tireGuests(0.1));
 const sitters = () => people.list().filter((p): p is Person & { state: "sitting" } => p.state === "sitting");

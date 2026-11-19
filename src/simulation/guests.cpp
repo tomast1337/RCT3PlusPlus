@@ -933,8 +933,8 @@ namespace rct3::simulation
                     if (errand.kind != ErrandKind::Following)
                         continue;
                     stride.fresh = false;
-                    if (r.any_of<Gesture, Watching>(followers[i]))
-                        continue; // Showing how they feel or watching; they catch up after
+                    if (r.any_of<Gesture, Watching, Linger>(followers[i]))
+                        continue; // Showing how they feel, watching or sitting; they catch up after
                     const Party& party = r.get<Party>(member.party);
                     const Stride& lead = r.get<Stride>(party.leader);
                     if (party.huddle > 0 && lead.from == lead.to && stride.to == lead.to && stride.progress.value >= 1)

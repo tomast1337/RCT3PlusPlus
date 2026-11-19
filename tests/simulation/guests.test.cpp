@@ -909,6 +909,21 @@ TEST_CASE("waiting long for the rest of their party at a ride, guests grow glum,
     }
 }
 
+TEST_CASE("one of a party following the rest sits on a bench when tired, the others waiting for them")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    park.item(PathItemKind::Bench, { 4, 0 });
+    const auto leader = park.guest({ 0, 0 });
+    const auto tired = park.guest({ 0, 0 }, { .energy = 0.1f });
+    park.party({ leader, tired });
+    auto& r = park.world().registry;
+    REQUIRE(park.run_until([&] { return r.all_of<Linger>(tired); }, 120));
+    CHECK(r.get<Linger>(tired).at == PathItemKind::Bench);
+    park.run_seconds(3);
+    CHECK(r.get<Errand>(leader).kind == ErrandKind::Waiting);
+}
+
 TEST_CASE("a party waits on a tile away from the queue, the bigger party in a wider ring, all facing in")
 {
     Sandbox park;

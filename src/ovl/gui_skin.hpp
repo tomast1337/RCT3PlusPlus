@@ -18,7 +18,7 @@ namespace rct3::ovl
     enum class GuiSkinKind : std::uint32_t
     {
         Rect = 0,            ///< One rectangle: x0, y0, x1, y1
-        Solid = 1,           ///< No texture area: a single item in the install, with no coordinates
+        WholeTexture = 1,    ///< The whole texture, stored with no coordinates. A single item in the install, a solid colour fill
         NinePatch = 2,       ///< Four x lines then four y lines: a 3 x 3 grid
         Frame = 3,           ///< Same lines as NinePatch, the centre cell is not drawn
         HorizontalThree = 4, ///< Four x lines then two y lines: three cells side by side
@@ -29,7 +29,9 @@ namespace rct3::ovl
     {
         std::uint32_t kind = 0;   ///< A `GuiSkinKind` value
         std::string_view texture; ///< "tex" item the coordinates refer to. Empty when not referenced.
-        /// Texture coordinates in pixels, in the order the kind lists them: 4, 0, 8, 8, 6 or 6 values.
+        /// Texture coordinates in pixels, in the order the kind lists them: 4, 0, 8, 8, 6 or 6 values. Pixels
+        /// count from the top left of the image, which is stored bottom row first: texture coordinates are
+        /// u = x / width and v = 1 - y / height.
         std::vector<std::int32_t> coordinates;
     };
 

@@ -29,7 +29,7 @@ namespace rct3::ovl
             {
                 case GuiSkinKind::Rect:
                     return 4;
-                case GuiSkinKind::Solid:
+                case GuiSkinKind::WholeTexture:
                     return 0;
                 case GuiSkinKind::NinePatch:
                 case GuiSkinKind::Frame:

@@ -10,11 +10,6 @@ export {};
 
 await until(() => park.loaded(), 1200, "the park");
 await frames(10);
-// The box telling what the save holds that is not brought over would hide the ground.
-if (ui.find("prize_won") !== undefined) {
-    await ui.click(`prize_won/${must(ui.children("prize_won"), "prize_won shown").at(-1)!}`);
-    await until(() => ui.find("prize_won") === undefined, 120, "the box to close");
-}
 must(park.displays()[0], "a firework display in the park");
 park.setTime(23 / 24);
 await frames(5);

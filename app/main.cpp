@@ -4,7 +4,7 @@
 // the game installed it first plays the startup logos and the loading screen, then shows the front screen
 // built from real skins, with the menu music and the buttons' clicks.
 //
-//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--version] [--help]
+//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--left-out-box] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--version] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default), opengl, software (on the CPU) or null; kept by
 //                     --write-settings
@@ -22,6 +22,8 @@
 //   --script FILE     run the JavaScript FILE, which plays the game through its pointer (scene/script_host.hpp);
 //                     the game exits when it ends, with 1 when it failed
 //   --script-report DIR  put the script's screenshots and log in DIR for review
+//   --left-out-box    with --script, still tell in a box what an original park's save holds that is not brought
+//                     over; scripts otherwise go without it, as it would stand over the park they play
 //   -- ARGS...        the rest are the script's own arguments, as its args() gives them
 //   --seed N          the seed of every park's random numbers, decimal or 0x hex, so a run repeats; by
 //                     default each park gets a fresh one (random/entropy.hpp), shown in the log
@@ -105,7 +107,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|opengl|software|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--version] [--help] [-- SCRIPT ARGS...]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|opengl|software|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--left-out-box] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--version] [--help] [-- SCRIPT ARGS...]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)
@@ -561,6 +563,7 @@ int main(int argc, char** argv)
     std::optional<std::filesystem::path> script_file;
     std::optional<std::filesystem::path> script_report;
     std::vector<std::string> script_args;
+    bool left_out_box = false; ///< A script still gets the box telling what loading an original park left out
     std::optional<rct3::random::Seed> seed;
     bool simulate = true;                         ///< The park starts with the simulation running
     std::optional<std::filesystem::path> profile; ///< Where to write the profiler's table on the way out
@@ -593,6 +596,10 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--script-report") == 0 && i + 1 < argc)
         {
             script_report = argv[++i];
+        }
+        else if (std::strcmp(argv[i], "--left-out-box") == 0)
+        {
+            left_out_box = true;
         }
         else if (std::strcmp(argv[i], "--") == 0)
         {
@@ -1023,6 +1030,8 @@ int main(int argc, char** argv)
                 park_sounds = rct3::scene::park::load_park_sounds(*install, std::random_device { }());
             park->simulate = simulate;
             park->scale = scale;
+            if (script_file && !left_out_box)
+                park->left_out.clear();
             if (front)
             {
                 park->saves.data = front->saves.data;

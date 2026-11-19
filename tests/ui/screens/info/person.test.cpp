@@ -130,7 +130,44 @@ TEST_CASE("what a person is doing names where they are heading")
     p.people.guests[0].person.state = save::model::PersonState::Wandering;
     CHECK(person_doing(guest(p), s) == u"Strolling");
     p.people.staff[0].person.state = save::model::PersonState::Wandering;
-    CHECK(person_doing(staff(p), s) == u"On rounds");
+    CHECK(person_doing(staff(p), s) == u"Strolling"); // Workers rove as guests do
+}
+
+TEST_CASE("what a worker the simulation walks is doing comes from the job in hand, not the save")
+{
+    StringTable s = table();
+    s.add("PersonState_SweepingLitter", u"Brushing");
+    s.add("PersonState_FixingBrokenRide", u"Mending a ride");
+    s.add("PersonState_HeadForBrokenRide", u"Off to a broken ride");
+    s.add("PersonState_HeadForInspectRide", u"Off to check a ride");
+    s.add("PersonState_Entertaining", u"Performing");
+    Park p = sample_park();
+    p.people.staff[0].person.state = save::model::PersonState::Queueing;
+    PersonFacts f = staff(p);
+    const auto doing = [&](StaffActivity a) {
+        f.activity = a;
+        return person_doing(f, s);
+    };
+    CHECK(doing({ }) == u"Strolling");
+    CHECK(doing({ .job = simulation::StaffJob::Sweep }) == u"Brushing");
+    CHECK(doing({ .job = simulation::StaffJob::Fix, .ride_broken = true }) == u"Mending a ride");
+    CHECK(doing({ .ride_broken = true }) == u"Off to a broken ride");
+    CHECK(doing({ .ride_broken = false }) == u"Off to check a ride");
+    CHECK(doing({ .showing = true }) == u"Performing");
+}
+
+TEST_CASE("a person's name box is short, not the page's width")
+{
+    const StringTable s = table();
+    const InfoUnits units { };
+    const Park p = sample_park();
+    for (const PersonFacts& f : { guest(p), staff(p) })
+    {
+        const InfoPage page = person_page(PersonTab::General, f, s, units);
+        const auto name = std::ranges::find(page.controls, InfoControlKind::Text, &InfoControl::kind);
+        REQUIRE(name != page.controls.end());
+        CHECK(name->width > 0);
+    }
 }
 
 TEST_CASE("a guest's pages tell their rides, what they carry, how they feel and their money")
@@ -270,9 +307,19 @@ TEST_CASE("each job has its own tabs, and its controls are written from the save
     CHECK(costume.controls[0].items.size() == 7);
     CHECK(costume.controls[0].items[3] == u"Martian");
     CHECK(costume.controls[0].value == 3);
+    // The costume tab's face is the head of the costume they wear.
+    CHECK(std::ranges::find(shows, PersonTab::Costume, &PersonTabInfo::tab)->icon == "EntertainerCostume_Alien");
 
     mechanic.kind = save::model::StaffKind::LifeGuard;
     CHECK(person_tabs(staff(p)).size() == 3);
+
+    // The park's inspector has only the buttons every person has.
+    mechanic.kind = save::model::StaffKind::ParkInspector;
+    PersonFacts walked = staff(p);
+    walked.patrol_tiles = 0;
+    const InfoPage inspector = person_page(PersonTab::General, walked, s, units);
+    REQUIRE(inspector.controls.size() == 5);
+    CHECK(inspector.controls.back().id == person_control(PersonControl::Highlight));
 }
 
 TEST_CASE("a worker's tasks page holds only their tasks, and no name over it")

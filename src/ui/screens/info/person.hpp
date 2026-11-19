@@ -14,6 +14,7 @@
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
+#include "simulation/components.hpp"
 #include "ui/screens/info/attraction.hpp"
 #include "ui/screens/info/panel.hpp"
 #include "ui/string_table.hpp"
@@ -55,6 +56,15 @@ namespace rct3::ui::screens::info
         usize pots = 0;        ///< Of a paint tab: the clothes it colours, upper first
     };
 
+    /// What a member of staff the simulation walks is about now, which their status line says rather than the state
+    /// the park was saved in.
+    struct StaffActivity
+    {
+        simulation::StaffJob job = simulation::StaffJob::None;
+        std::optional<bool> ride_broken { }; ///< Of a mechanic bound for a ride or at it: whether it has broken down
+        bool showing = false;                ///< An entertainer in the middle of a show
+    };
+
     /// The person a page is written about, the guest or the member of staff they are, and the park's people and
     /// attractions their references lead to.
     struct PersonFacts
@@ -73,6 +83,7 @@ namespace rct3::ui::screens::info
         usize uncovered_paths = 0; ///< Path tiles no one in their job has in a patrol, when any has one
         /// Of a handyman the simulation walks, the broken path items they have mended since the park was opened.
         std::optional<u32> items_mended { };
+        std::optional<StaffActivity> activity { };
         f32 zero_time = 0; ///< Where the park's calendar starts, for the day staff were hired
         /// Of staff: an hour of their pay, and what their next level of training costs (nothing once fully trained).
         std::optional<units::Money> wage { };

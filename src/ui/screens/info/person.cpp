@@ -45,6 +45,7 @@ namespace rct3::ui::screens::info
 
         constexpr f32 kPatrolChoiceWidth = 56;  ///< Chosen by eye: a brush or zone list on the patrol row
         constexpr f32 kPatrolButtonWidth = 150; ///< Chosen by eye: fill and copy, side by side under them
+        constexpr f32 kNameWidth = 150;         ///< Chosen by eye: a short box, room for a long name
 
         /// A job's task: its flag bit and words.
         struct Task
@@ -81,10 +82,21 @@ namespace rct3::ui::screens::info
             { 1, "AnimalKeeper_FillTroughs", "AnimalKeeper_FillTroughsTT", "Staff_TaskButtonRefilTroughs" },
         } };
 
-        /// The costumes in the order of an entertainer's saved costume number.
-        constexpr std::array<std::string_view, 7> kCostumes = {
-            "Entertainer_SubType_Panda", "Entertainer_SubType_Elephant", "Entertainer_SubType_PumpkinHead", "Entertainer_SubType_Alien", "Entertainer_SubType_Cowgirl", "Entertainer_SubType_Shark", "Entertainer_SubType_Tiger",
+        struct Costume
+        {
+            std::string_view name; ///< String key
+            std::string_view icon; ///< Skin of its head, the face of the costume tab
         };
+        /// The costumes in the order of an entertainer's saved costume number.
+        constexpr std::array<Costume, 7> kCostumes { {
+            { "Entertainer_SubType_Panda", "EntertainerCostume_Panda" },
+            { "Entertainer_SubType_Elephant", "EntertainerCostume_Elephant" },
+            { "Entertainer_SubType_PumpkinHead", "EntertainerCostume_Pumpkin" },
+            { "Entertainer_SubType_Alien", "EntertainerCostume_Alien" },
+            { "Entertainer_SubType_Cowgirl", "EntertainerCostume_Cowgirl" },
+            { "Entertainer_SubType_Shark", "EntertainerCostume_Shark" },
+            { "Entertainer_SubType_Tiger", "EntertainerCostume_Tiger" },
+        } };
 
         std::span<const Task> tasks(save::model::StaffKind kind)
         {
@@ -222,7 +234,7 @@ namespace rct3::ui::screens::info
                 case Drowning:
                     return "PersonState_Drowning";
                 case Wandering:
-                    return guest ? "PersonState_Wandering" : "PersonState_Patrol";
+                    return "PersonState_Wandering";
                 case SelectingPosition:
                     return "PersonState_PosSelect";
                 case Queueing:
@@ -278,6 +290,35 @@ namespace rct3::ui::screens::info
                     return "PersonState_WatchingEntertainer";
             }
             return { };
+        }
+
+        std::string_view activity_key(const StaffActivity& a)
+        {
+            using enum simulation::StaffJob;
+            switch (a.job)
+            {
+                case Sweep:
+                    return "PersonState_SweepingLitter";
+                case EmptyBin:
+                    return "PersonState_EmptyingBin";
+                case Mend:
+                    return "Rct3pp_PersonState_Mending";
+                case Water:
+                    return "PersonState_WateringGarden";
+                case Fix:
+                    return "PersonState_FixingBrokenRide";
+                case Inspect:
+                    return "PersonState_InspectingRide";
+                case Watch:
+                    return "PersonState_Patrol";
+                case Rest:
+                    return "PersonState_Decision";
+                case None:
+                    break;
+            }
+            if (a.ride_broken)
+                return *a.ride_broken ? "PersonState_HeadForBrokenRide" : "PersonState_HeadForInspectRide";
+            return a.showing ? "PersonState_Entertaining" : "PersonState_Wandering";
         }
 
         std::u16string time_in_park(i32 minutes)
@@ -438,6 +479,7 @@ namespace rct3::ui::screens::info
             name.kind = InfoControlKind::Text;
             name.text = person_name(f, strings);
             name.maximum = kLongestName;
+            name.width = kNameWidth;
             return name;
         }
 
@@ -447,6 +489,7 @@ namespace rct3::ui::screens::info
         {
             const save::model::Person& p = *core::as_pointer(f.person());
             InfoControl& doing = page.controls.emplace_back();
+            doing.name = "PersonDoing";
             doing.kind = InfoControlKind::Words;
             doing.label = person_doing(f, strings);
             const auto button = [&](PersonControl id, std::string name, std::string icon, std::string_view help) {
@@ -510,16 +553,16 @@ namespace rct3::ui::screens::info
             // One row of round buttons under the name and what they are doing.
             person_buttons(page, f, strings, "Employee_Name_Pincer", "Employee_Name_ThoughtsToConsole");
             const auto button = [&](PersonControl id, std::string_view icon, std::string_view help, bool enabled = true) -> InfoControl& { return page.controls.emplace_back(InfoControl { .id = person_control(id), .name = std::string(icon), .kind = InfoControlKind::Button, .icon = std::string(icon), .enabled = enabled, .beside = true, .help = text(strings, help) }); };
+            // The park's inspector is not the player's to manage: no patrol, warning, sacking or training.
+            if (s.kind == save::model::StaffKind::ParkInspector)
+                return;
             // Held down while their area is being painted, with the button that clears it beside it.
             if (f.patrol_tiles)
                 button(PersonControl::PatrolEdit, "Staff_PatrolAreaLarge", f.painting_patrol ? "StaffWindow_FinishEditingPatrolAreaHelp" : "StaffWindow_EditPatrolAreaHelp").value = f.painting_patrol ? 1 : 0;
             if (f.patrol_tiles && f.painting_patrol)
                 button(PersonControl::PatrolClear, "PathEditor_Freeform", "StaffWindow_ClearPatrolAreaHelp");
-            if (s.kind != save::model::StaffKind::ParkInspector)
-            {
-                button(PersonControl::Warn, "Staff_WarnIconLarge", "StaffWindow_DisciplineHelp", s.warnings < kMostWarnings);
-                button(PersonControl::Sack, "Staff_SackIconLarge", "StaffWindow_SackHelp");
-            }
+            button(PersonControl::Warn, "Staff_WarnIconLarge", "StaffWindow_DisciplineHelp", s.warnings < kMostWarnings);
+            button(PersonControl::Sack, "Staff_SackIconLarge", "StaffWindow_SackHelp");
             // Its squares fill a level at a time, as the training is bought.
             const i32 level = std::clamp(s.training, 0, kMostTraining);
             InfoControl& train = button(PersonControl::Train, kTrainingIcons[static_cast<usize>(level)], "StaffWindow_TrainHelp", level < kMostTraining);
@@ -558,8 +601,8 @@ namespace rct3::ui::screens::info
             c.name = "Entertainer_Costume_Text";
             c.kind = InfoControlKind::Choice;
             c.label = text(strings, "Entertainer_Costume_Text");
-            for (const std::string_view key : kCostumes)
-                c.items.push_back(text(strings, key));
+            for (const Costume& costume : kCostumes)
+                c.items.push_back(text(strings, costume.name));
             c.value = s.person.sub_type < kCostumes.size() ? s.person.sub_type : -1;
             page.controls.push_back(std::move(c));
         }
@@ -597,7 +640,10 @@ namespace rct3::ui::screens::info
         if (!tasks(kind).empty())
             tabs.push_back({ PersonTab::Tasks, slot++, "Staff_Tools", "Staff_Tasks" });
         if (kind == save::model::StaffKind::Entertainer)
-            tabs.push_back({ PersonTab::Costume, slot++, "Staff_InfoIcon", "Entertainer_Costume_Menu" });
+        {
+            const usize worn = facts.staff->person.sub_type;
+            tabs.push_back({ PersonTab::Costume, slot++, worn < kCostumes.size() ? kCostumes[worn].icon : kCostumes[0].icon, "Entertainer_Costume_Menu" });
+        }
         if (const usize pots = uniform_pots(kind); pots > 0)
             tabs.push_back({ PersonTab::Uniform, slot++, kPaintIcon, uniform_help(kind), pots });
         return tabs;
@@ -622,7 +668,7 @@ namespace rct3::ui::screens::info
         const auto p = facts.person();
         if (!p)
             return { };
-        const std::string_view key = state_key(*p, facts.guest != nullptr);
+        const std::string_view key = facts.activity ? activity_key(*facts.activity) : state_key(*p, facts.guest != nullptr);
         if (key.empty())
             return { };
         std::u16string doing = text(strings, key);

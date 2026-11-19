@@ -716,6 +716,8 @@ namespace rct3::park
 
     BuildOffer::State BuildOffer::state(const BuildItem& item) const
     {
+        if (rides_of_ && item.list <= BuildList::Facilities && item.list != *rides_of_)
+            return State::Hidden;
         const std::string k = key(item.overlay, item.symbol);
         const auto listed = listed_.find(k);
         switch (item.kind)

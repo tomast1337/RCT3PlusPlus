@@ -44,6 +44,8 @@ namespace rct3::scene
         /// Started as a sandbox, where the player chooses how the day goes. The park file does not say; the menu
         /// it was opened from does, whatever the park's money.
         bool sandbox = true;
+        /// The coaster designer: a sandbox whose rides are coasters only, where a coaster's design is saved.
+        bool designer = false;
     };
 
     /// The bytes of the save to write to the path given, made when the player saves.

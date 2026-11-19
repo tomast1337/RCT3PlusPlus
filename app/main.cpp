@@ -1036,6 +1036,8 @@ int main(int argc, char** argv)
                 park->build.offer = rct3::park::BuildOffer(park->park_model.content);
                 park->research_items.reset();
             }
+            if (park_game.designer)
+                park->build.offer.offer_rides_of(rct3::park::BuildList::Coasters);
             // A career scenario's weather follows its setting.
             if (!park_game.career.empty())
                 park->park.climate = rct3::simulation::career_climate(park_game.scenario).value_or(park->park.climate);
@@ -1134,7 +1136,7 @@ int main(int argc, char** argv)
                         if (const auto wanted = script->take_park())
                         {
                             park_to_load = install ? install->find(wanted->path) : std::nullopt;
-                            park_game = { .sandbox = wanted->sandbox };
+                            park_game = { .sandbox = wanted->sandbox || wanted->designer, .designer = wanted->designer };
                             if (!park_to_load)
                                 script->fail(std::format("park.open: no {} in the game's folder", wanted->path));
                         }

@@ -27,8 +27,8 @@
 //   args()              the script's own arguments, those after `--` on the command line
 //   report(file, text)  writes `text` to `file` in the report folder; false when there is none
 //   quit(code)          leaves the game with `code` (also when the script ends: 0, or 1 when it failed)
-//   park.open(path, { sandbox })  opens the park at `path` in the game's folder and waits until it shows;
-//                       played as a sandbox unless `sandbox` is false
+//   park.open(path, { sandbox, designer })  opens the park at `path` in the game's folder and waits until it
+//                       shows; played as a sandbox unless `sandbox` is false, as the coaster designer when `designer`
 //   park.advance(seconds)  runs the park on `seconds` of its time without drawing them, a step of its
 //                       simulation at a time; park.advanceUntil(check, seconds, what) a park second at a time
 //                       until check() holds
@@ -154,8 +154,9 @@ namespace rct3::scene
         [[nodiscard]] std::optional<CareerRequest> take_career();
         struct ParkRequest
         {
-            std::string path { }; ///< In the game's folder
-            bool sandbox = false; ///< Played as a sandbox
+            std::string path { };  ///< In the game's folder
+            bool sandbox = false;  ///< Played as a sandbox
+            bool designer = false; ///< ... as the coaster designer
         };
         /// The park the script asked for, once.
         [[nodiscard]] std::optional<ParkRequest> take_park();

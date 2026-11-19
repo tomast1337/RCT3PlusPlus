@@ -310,7 +310,7 @@ namespace rct3::scene
         engine_.define("park.open", [this](const Json& a) {
             if (a.empty() || !a[0].is_string() || (a.size() > 1 && !a[1].is_object()))
                 throw std::invalid_argument("park.open takes a path in the game's folder and optional settings");
-            open_ = ParkRequest { .path = a[0].get<std::string>(), .sandbox = a.size() < 2 || a[1].value("sandbox", true) };
+            open_ = ParkRequest { .path = a[0].get<std::string>(), .sandbox = a.size() < 2 || a[1].value("sandbox", true), .designer = a.size() > 1 && a[1].value("designer", false) };
             return Json(nullptr);
         });
         engine_.define("render.live", [this](const Json&) -> Json {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // A VIP's visit, walked: the first-level VIP of the game's Raiders of the Lost Coaster wants two exciting coasters, and
-// the park has two. On the day they come in at the gate with their bodyguards, the arrival is told, and they walk off
+// the park has two. On the day they come in at the gate, alone as the goal names no bodyguards, the arrival is told, and they walk off
 // to the coaster they want most. Closing that coaster under them stops them, and they say so.
 //
 //   ./nob script scripts/tests/vip_route.ts -- --no-audio
@@ -26,18 +26,18 @@ await frames(20);
 await screenshot("arrived");
 const came = park.vips()[0];
 log("vip", JSON.stringify(came));
-expect(came.guards > 0, "bodyguards with the VIP");
+expect(came.guards === 0, "no bodyguards, as the goal names none");
 expect(came.stops > 0, "a coaster the VIP wants to see");
 
 await until(() => park.vips()[0].heading !== "", 600, "the VIP to set off for the coaster");
 const heading = park.vips()[0].heading;
 log("heading for", heading);
 await until(() => park.vips()[0].shown !== null, 600, "the VIP to be dressed and shown");
-await frames(900); // Down the path a way, the bodyguards beside them
+await frames(900); // Down the path a way
 const at = park.vips()[0];
 camera.look({ col: at.col, row: at.row, up: 1 }, { col: at.col - 2, row: at.row + 2, up: 6 });
 await frames(30);
-await screenshot("vip_guards");
+await screenshot("vip_walking");
 
 const ride = rides.list().findIndex((r) => r.name === heading);
 expect(ride >= 0, `${heading} among the rides`);

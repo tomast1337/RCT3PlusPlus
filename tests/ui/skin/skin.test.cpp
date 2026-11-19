@@ -102,11 +102,11 @@ TEST_CASE("caps shrink in proportion when the target is too small")
     CHECK(p[2].target == Rect { 3, 0, 4, 8 });
 }
 
-TEST_CASE("solid skins and empty textures draw nothing")
+TEST_CASE("whole-texture skins and empty textures draw nothing yet")
 {
-    const auto solid = skin_layout(gui_skin(ovl::GuiSkinKind::Solid, { }));
-    REQUIRE(solid);
-    CHECK(skin_pieces(*solid, { 0, 0, 10, 10 }, 16, 16).count == 0);
+    const auto whole = skin_layout(gui_skin(ovl::GuiSkinKind::WholeTexture, { }));
+    REQUIRE(whole);
+    CHECK(skin_pieces(*whole, { 0, 0, 10, 10 }, 16, 16).count == 0);
     const auto rect = skin_layout(gui_skin(ovl::GuiSkinKind::Rect, { 0, 0, 4, 4 }));
     REQUIRE(rect);
     CHECK(skin_pieces(*rect, { 0, 0, 10, 10 }, 0, 16).count == 0);

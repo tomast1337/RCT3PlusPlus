@@ -348,8 +348,9 @@ declare namespace debug {
     /** Brings the developer windows' Debug tab to the front, once they are shown (keys.press("F12")). */
     function open(): void;
     /** Uses the Debug tab's tool `tool` with `amount`: money to add in hundredths, how many guests or pieces of
-     *  litter, how many times slower the guests live (1 for their own pace), or 1 on and 0 off for the other
-     *  switches. Returns how many things it changed, or 1 for a switch turned. */
+     *  litter, how many times slower the guests live (1 for their own pace), which firework display to start, or 1
+     *  on and 0 off for the other switches. Returns how many things it changed, or 1 for a switch turned or a
+     *  display started or stopped. */
     function use(
         tool:
             | "add_money"
@@ -372,7 +373,9 @@ declare namespace debug {
             | "slow_guests"
             | "parties_huddle_often"
             | "cycle_motions"
-            | "cycle_person_motions",
+            | "cycle_person_motions"
+            | "start_display"
+            | "stop_display",
         amount?: number,
     ): number;
 }

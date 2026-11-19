@@ -965,8 +965,10 @@ namespace rct3::scene::park
         if (const auto asked = std::exchange(scene.prop_requested, std::nullopt); asked && info)
             if (const auto found = std::ranges::find(scene.objects, *asked, &save::model::PlacedObject::id); found != scene.objects.end())
                 open_prop(scene, *info, save::model::PlacedObjectIndex { static_cast<std::size_t>(found - scene.objects.begin()) }, assets, options);
-        // The Construction tab has no page: it opens the panel that builds the ride's track.
-        if (const auto asked = std::exchange(scene.construct_requested, std::nullopt); asked && asked->kind == rct3::park::AttractionRef::Kind::Ride)
+        // The Construction tab has no page: it opens the panel that builds the ride's track. One asked for as the
+        // last was closed waits until that has gone.
+        const auto old_panel = scene.desktop->root().find("placing/body/construction");
+        if (const auto asked = old_panel && old_panel->closing() ? std::nullopt : std::exchange(scene.construct_requested, std::nullopt); asked && asked->kind == rct3::park::AttractionRef::Kind::Ride)
         {
             // An open ride's track stays as it is; testing or closed, it may be changed.
             if (asked->index < scene.rides.rides.size() && scene.rides.rides[asked->index].base.state == save::model::AttractionState::Open)

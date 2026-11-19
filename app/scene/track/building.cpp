@@ -746,7 +746,10 @@ namespace rct3::scene::track
                 ride.base.name = strings::to_utf8(b.design_title);
             scene.ride_tunes[ride.base.id] = b.design_tune;
             scene.info_requested = rct3::park::AttractionRef::of(*b.ride);
-            if (!(b.ride->value < scene.track_rules.size() && scene.track_rules[b.ride->value].pool_ride))
+            // In the coaster designer a design is picked to be changed: its track opens for building on.
+            if (scene.game.designer)
+                scene.construct_requested = rct3::park::AttractionRef::of(*b.ride);
+            else if (!(b.ride->value < scene.track_rules.size() && scene.track_rules[b.ride->value].pool_ride))
                 scene.doors_requested = *b.ride;
             close_track_building(scene);
             return true;

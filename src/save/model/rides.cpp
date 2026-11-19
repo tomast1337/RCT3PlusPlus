@@ -87,6 +87,7 @@ namespace rct3::save::model
             // Ride
             constexpr std::string_view kOpMode = "OpMode";
             constexpr std::string_view kTicket = "TicketPrice";
+            constexpr std::string_view kMusic = "RideMusicSelection";
             constexpr std::string_view kAssessment = "RideAssessmentResults";
             constexpr std::string_view kAssessValid = "AssessmentIsValid";
             constexpr std::string_view kAssessRatings = "AssessmentRatings";
@@ -790,6 +791,7 @@ namespace rct3::save::model
                 const View f(d.fields);
                 ride.mode = static_cast<OperatingMode>(f[id::kOpMode].i32());
                 ride.ticket_price = units::Money { f[id::kTicket].integer() };
+                ride.music = f[id::kMusic].text();
                 ride.intervals = read_intervals(f);
                 ride.thoughts = read_thoughts(f);
 

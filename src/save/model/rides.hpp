@@ -438,6 +438,7 @@ namespace rct3::save::model
         AttractionCommon base { };
         OperatingMode mode = OperatingMode::ContinuousCircuit;
         units::Money ticket_price { };
+        std::string music { }; ///< The file of the game's music folder it plays while open; empty for none
         std::vector<Station> stations { };
         std::vector<IntervalStats> intervals { };
         std::vector<ThoughtEntry> thoughts { };

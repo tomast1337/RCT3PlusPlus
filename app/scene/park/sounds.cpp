@@ -60,6 +60,7 @@ namespace rct3::scene::park
         constexpr units::Distance kScreamFar { 90 };    ///< And gone this far, before its machinery
         constexpr float kScreamLowestPitch = 0.85f;     ///< Chosen by ear: a wide spread of pitches, so voices at once sound
         constexpr float kScreamHighestPitch = 1.35f;    ///< like different riders
+        constexpr float kRideMusicLevel = 0.6f;         ///< Chosen by ear: a ride's music near it, under its machinery and screams
         constexpr float kLowestScriptPitch = 0.05f;     ///< A script winding a motor down takes its pitch to 0, which cannot play
 
         void silence_trains(audio::AudioEngine& engine, ParkSounds& sounds)
@@ -84,6 +85,13 @@ namespace rct3::scene::park
                 for (audio::VoiceHandle& voice : ride.screams)
                     engine.stop(std::exchange(voice, { }));
             }
+        }
+
+        void stop_ride_music(audio::AudioEngine& engine, ParkSounds& sounds)
+        {
+            for (auto& [_, music] : sounds.ride_music)
+                music.stop(engine);
+            sounds.ride_music.clear();
         }
 
         /// The sound of the packs named `name`, made the first time; nothing when no pack has it ("blank" is silence).
@@ -351,7 +359,68 @@ namespace rct3::scene::park
         {
             silence_trains(engine, sounds);
             silence_flat_rides(engine, sounds);
+            stop_ride_music(engine, sounds);
             return;
+        }
+
+        // Rides' music: each open ride's track from its entrance, one stream a track however many rides play it, as
+        // loud as the nearest of them, and only the loudest few tracks.
+        {
+            struct Track
+            {
+                std::string_view file { };
+                float level = 0;
+                float pan = 0;
+            };
+            std::vector<Track> tracks;
+            const glm::vec3 right = glm::normalize(glm::cross(scene.camera.target - eye, glm::vec3(0.0f, 1.0f, 0.0f)));
+            for (std::size_t i = 0; i < scene.rides.rides.size() && i < scene.ride_entities.size() && !sounds.music_folder.empty(); ++i)
+            {
+                const std::string& file = scene.rides.rides[i].music;
+                const auto* attraction = file.empty() || sounds.broken_tracks.contains(file) ? nullptr : r.try_get<simulation::Attraction>(scene.ride_entities[i]);
+                if (attraction == nullptr || !attraction->open || attraction->testing || !attraction->entrance)
+                    continue;
+                const glm::vec3 away = scene.sim.paths.centre(*attraction->entrance) - eye;
+                const float level = audio::ride_music_level(units::Distance { glm::length(away) });
+                if (level <= 0)
+                    continue;
+                const float pan = glm::length(away) > 0 ? glm::dot(glm::normalize(away), right) : 0.0f;
+                const auto same = std::ranges::find_if(tracks, [&](const Track& t) { return strings::equals_ignoring_case(t.file, file); });
+                if (same == tracks.end())
+                    tracks.push_back({ file, level, pan });
+                else if (level > same->level)
+                    *same = { file, level, pan };
+            }
+            std::ranges::sort(tracks, std::ranges::greater { }, &Track::level);
+            tracks.resize(std::min(tracks.size(), audio::kHeardTracks));
+            std::erase_if(sounds.ride_music, [&](auto& playing) {
+                if (std::ranges::any_of(tracks, [&](const Track& t) { return strings::equals_ignoring_case(t.file, playing.first); }))
+                    return false;
+                playing.second.stop(engine);
+                return true;
+            });
+            for (const Track& track : tracks)
+            {
+                auto music = sounds.ride_music.find(track.file);
+                if (music == sounds.ride_music.end())
+                {
+                    auto started = audio::MusicPlayer::start(engine, sounds.music_folder / track.file, 0);
+                    if (!started)
+                    {
+                        logging::logger("audio").warning("no ride music {}: {}", track.file, started.error());
+                        sounds.broken_tracks.emplace(track.file);
+                        continue;
+                    }
+                    music = sounds.ride_music.emplace(std::string(track.file), std::move(*started)).first;
+                }
+                music->second.set_volume(engine, kRideMusicLevel * track.level);
+                music->second.set_pan(engine, track.pan);
+                if (const auto read = music->second.update(engine); !read)
+                {
+                    logging::logger("audio").warning("ride music {} stopped: {}", track.file, read.error());
+                    sounds.broken_tracks.emplace(track.file);
+                }
+            }
         }
 
         // Guests showing how they feel, heard as they start.
@@ -707,6 +776,7 @@ namespace rct3::scene::park
         silence_trains(engine, sounds);
         silence_flat_rides(engine, sounds);
         sounds.flat_rides.clear();
+        stop_ride_music(engine, sounds);
     }
 
 } // namespace rct3::scene::park

@@ -4,7 +4,7 @@
 // about the point looked at, a guest's cheer, laugh or retching as they show how they feel, a diver's splash, and screams from
 // the riders of a train going fast or dropping, the trains themselves by the rules of audio/ride_sounds.hpp, and
 // the roar of each waterfall, and a firework display's music while it plays. Flat rides are heard by the rules of
-// audio/sound_scripts.hpp, the nearest few. Particle effects are heard by the
+// audio/sound_scripts.hpp, the nearest few, and each open ride's music from its entrance (audio/ride_sounds.hpp). Particle effects are heard by the
 // sounds they name (fireworks launching and bursting), from where each began.
 // Building is heard too, not placed in the world: a thump each time something is put down (a ride, stall, piece of
 // track, scenery, structure or pool work), at most one in a short while; paths, fences and taking things away are
@@ -124,6 +124,8 @@ namespace rct3::scene::park
         std::vector<std::vector<ovl::SoundItem>> pack_sounds;                                        ///< By pack
         std::map<std::string, std::optional<PackSound>, strings::LessIgnoringCase> pack_sounds_made; ///< Nothing where no pack has it
         std::map<entt::entity, FlatRideSounds> flat_rides;
+        std::map<std::string, audio::MusicPlayer, strings::LessIgnoringCase> ride_music; ///< By track, one for all rides playing it
+        std::set<std::string, strings::LessIgnoringCase> broken_tracks;                  ///< That would not play, not tried again
     };
 
     [[nodiscard]] ParkSounds load_park_sounds(const config::game::GameInstall& install, std::uint32_t seed);

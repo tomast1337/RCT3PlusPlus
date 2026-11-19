@@ -803,7 +803,7 @@ int main(int argc, char** argv)
                 ++spots[{ static_cast<std::int32_t>(pose.position.x * 10), static_cast<std::int32_t>(pose.position.z * 10) }];
             }
             const auto* boarding = r.ctx().find<simulation::PartyBoarding>();
-            out.info("parties: held back to ride together {:d}, split over two loads {:d}; waiting by rides {:d}, on exit tiles {:d}, most on one spot {:d}", boarding ? boarding->held : 0, boarding ? boarding->split : 0, waiting, on_exits, spots.empty() ? 0 : std::ranges::max(spots | std::views::values));
+            out.info("parties: held back to ride together {:d}, split over two loads {:d}, split up by waiting too long {:d}; waiting by rides {:d}, on exit tiles {:d}, most on one spot {:d}", boarding ? boarding->held : 0, boarding ? boarding->split : 0, boarding ? boarding->gave_up : 0, waiting, on_exits, spots.empty() ? 0 : std::ranges::max(spots | std::views::values));
         }
         out.info("paths: {:d} diagonals across squares; {:.1f}% of guests' walking on them", squares / 2, stepping > 0 ? 100.0 * static_cast<double>(across) / static_cast<double>(stepping) : 0.0);
         std::string line = std::format("thoughts held by {} guests:", thinkers);

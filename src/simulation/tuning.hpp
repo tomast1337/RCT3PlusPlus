@@ -310,6 +310,12 @@ namespace rct3::simulation::tuning
         TasteBand middle { { 0.1f }, { 0.7f } };  ///< Couples, adults on their own and in parties
         TasteBand gentle { { 0.0f }, { 0.45f } }; ///< Families and day trips
         units::Share taste_spread { 0.1f };
+        units::Seconds bored_after { 180 };                            ///< Chosen by eye: waiting by a ride for the rest, after which those waiting grow glum
+        units::PerSecond wait_gloom = units::PerSecond::over({ 900 }); ///< Chosen by eye: happiness those waiting lose meanwhile
+        /// Chosen by eye: waiting by a ride after which the party splits up, those at the ride going on as a party of
+        /// their own; after `bored_after` already when the ride has broken down.
+        units::Seconds patience { 600 };
+        units::Share split_gloom { 0.05f }; ///< Chosen by eye: happiness those waiting lose on giving up
     };
 
     /// Guests going home. Tuned so busy saved parks keep their guest counts.

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Guests renamed with the game's cheat names, each name read from the language files by its key: the park gets
-// its money, the guests on the paths jump for joy, laugh or retch, the rules' cheats say they are on, and the
-// groups split up.
+// its money, the guests on the paths jump for joy, laugh or retch, and the rules' cheats say they are on;
+// a name the game knows that changes nothing leaves the groups be.
 //
 //   ./nob script scripts/tests/name_cheats.ts -- --no-audio
 
@@ -58,23 +58,13 @@ for (const [key, said] of [
     );
 }
 
-// Groups split up.
-expect(
-    people.list().some((p) => p.state !== undefined && p.party !== undefined),
-    "guests in groups",
-);
+// A cheat's name the game knows but that changes nothing leaves the groups as they were.
+const grouped = (): number => people.list().filter((p) => p.state !== undefined && p.party !== undefined).length;
+const before_groups = grouped();
+expect(before_groups > 0, "guests in groups");
 people.rename(guest(), name("CheatPeepName_AllGroupsIndividuals"));
 await frames(3);
-expect(
-    people.list().every((p) => p.state === undefined || p.party === undefined),
-    "no one in a group",
-);
-expect(
-    park.messages().some((m) => m.key === "Rct3pp_Cheat_Alone"),
-    "the message saying so",
-);
-await park.advance(30);
-expect(park.guests() > 0, "the park runs on");
+expect(grouped() === before_groups, "the groups kept");
 
 // A name that is no cheat's does nothing.
 const cash = park.cash();

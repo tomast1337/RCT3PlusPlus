@@ -30,7 +30,6 @@ namespace rct3::simulation
         RideAllFlat,    ///< Guests try any ride off track, however wild or tame for them
         RideAllTracked, ///< And any ride on track
         BigBlasts,      ///< Crashed trains blow up far wider and harder
-        Alone,          ///< Every party splits up, each guest going round alone
         Hurry,          ///< Guests go about at a run for a while
     };
 
@@ -50,7 +49,6 @@ namespace rct3::simulation
         NameCheatKey { "CheatPeepName_RideAllRides", NameCheat::RideAllFlat },
         NameCheatKey { "CheatPeepName_RideAllCoasters", NameCheat::RideAllTracked },
         NameCheatKey { "CheatPeepName_BigExplosion", NameCheat::BigBlasts },
-        NameCheatKey { "CheatPeepName_AllGroupsIndividuals", NameCheat::Alone },
         NameCheatKey { "CheatPeepName_Ati", NameCheat::Hurry },
     };
 

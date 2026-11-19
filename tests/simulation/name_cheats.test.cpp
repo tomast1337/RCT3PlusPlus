@@ -6,7 +6,6 @@
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
-#include "simulation/parties.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/sim_world.hpp"
@@ -105,27 +104,6 @@ TEST_CASE("name cheats: a big blast knocks over a guest out of an ordinary one's
         CHECK(wreck.state == WreckState::Burning);
         CHECK(r.all_of<Dropped>(near) == big);
     }
-}
-
-TEST_CASE("name cheats: every party splits up, its guests going round alone")
-{
-    Sandbox park;
-    park.path({ 0, 0 }, { 6, 0 });
-    const auto a = park.guest({ 0, 0 });
-    const auto b = park.guest({ 1, 0 });
-    const auto c = park.guest({ 2, 0 });
-    park.party({ a, b, c });
-    park.run_seconds(5);
-    auto& r = park.world().registry;
-    CHECK(set_off(park.world(), NameCheat::Alone) == 3);
-    CHECK(r.view<const Party>().empty());
-    for (const auto g : { a, b, c })
-    {
-        CHECK_FALSE(r.all_of<Member>(g));
-        CHECK(r.get<Errand>(g).kind != ErrandKind::Following);
-        CHECK(r.get<Errand>(g).kind != ErrandKind::Waiting);
-    }
-    park.run_seconds(60); // And the park runs on without them
 }
 
 TEST_CASE("name cheats: guests in a hurry walk faster for a while, then at their own pace again")

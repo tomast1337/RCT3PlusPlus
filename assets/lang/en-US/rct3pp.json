@@ -185,8 +185,7 @@
             "Unbreakable": "Cheat on: rides no longer break down",
             "RideAllFlat": "Cheat on: guests try any ride, however wild or tame",
             "RideAllTracked": "Cheat on: guests try any coaster, however wild or tame",
-            "BigBlasts": "Cheat on: crashed trains blow up far bigger",
-            "Alone": "Cheat on: every group has split up, each guest going round alone"
+            "BigBlasts": "Cheat on: crashed trains blow up far bigger"
         },
         "Debug": {
             "UnlockDesigns": "Unlock saved designs",

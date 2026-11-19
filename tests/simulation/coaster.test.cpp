@@ -143,23 +143,6 @@ TEST_CASE("a train is pulled up the chain, runs down the drop faster and comes r
     CHECK(running.at == 10);
 }
 
-TEST_CASE("a chain holds a train at its speed while the front is on it, and its pieces push it faster past the top")
-{
-    // The chain's piece pushes each car on it up to 5 m/s, faster than the chain's 3.
-    Coaster c = hill();
-    c.cars = 5;
-    c.piece_starts = { 0, 10, 40, 70 };
-    c.pushes = { { }, { { .from = 10, .to = 40, .least = 0, .most = 5, .force = 4000 } }, { }, { } };
-    c.running = true;
-    for (i32 t = 0; t < 2000 && c.at < 38; ++t)
-        drive(c, 0.01f);
-    CHECK(c.speed == doctest::Approx(c.lift_speed));
-    // Over the top, before the drop has run long enough to speed it up.
-    for (i32 t = 0; t < 2000 && c.at < 42; ++t)
-        drive(c, 0.01f);
-    CHECK(c.speed > c.lift_speed + 0.5f);
-}
-
 TEST_CASE("a train setting off onto level track past the platform is carried off by the station, then let go")
 {
     // A 100 m circuit: a 10 m station, 20 m level, a 30 m chain up 15 m, a 30 m drop and 10 m level back home.

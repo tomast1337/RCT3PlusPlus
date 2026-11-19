@@ -44,7 +44,7 @@ A file is these sections, in this order:
 7. Relocation table
 8. Stream relocation tables (versions 4 and 5)
 9. Extra data chunks
-10. Trailing bytes we do not understand yet
+10. Trailing bytes (authoring metadata)
 
 ### 1. Header
 
@@ -149,7 +149,13 @@ item, in loader table order.
 
 ### 10. Trailing bytes
 
-Many files have more bytes after the chunks. We do not know what they hold, and nothing we load needs them.
+Every file has more bytes after the chunks, from a few hundred bytes to several megabytes. They are
+authoring metadata that the game does not read when it loads the file: records that name the
+source files an item was built from (as text paths on the artists' machines, repeated in a
+small table format that starts with the word "FilesAndLines"), and in some files the name of a texture
+tool. The bytes can be
+ignored or dropped safely; a reader must only not be confused by them, so stop at the end of the chunk
+stream and do not insist that the file ends there.
 
 ## The tables in block type 2
 

@@ -46,16 +46,17 @@ namespace rct3::simulation
     };
 
     /// Parties at the rides so far, in the registry's context: those held back from a load to ride together
-    /// on the next, and those too many for one load, split over two.
+    /// on the next, those too many for one load, split over two, and those split up by waiting too long.
     struct PartyBoarding
     {
         std::uint32_t held = 0;
         std::uint32_t split = 0;
+        std::uint32_t gave_up = 0;
     };
 
     /// Guests going round the park together, such as a family. The leader chooses where to go for all of
     /// them, by the most pressing needs among them; the others walk beside. At a ride some may stay out and
-    /// wait by its exit for the rest. Now and then they stop and stand in a ring for a while.
+    /// wait by its exit for the rest, for so long. Now and then they stop and stand in a ring for a while.
     struct Party
     {
         entt::entity leader = entt::null;
@@ -63,6 +64,7 @@ namespace rct3::simulation
         std::uint32_t huddle = 0;              ///< Ticks left standing together in a ring, chatting (once all are back, too)
         std::optional<NodeId> gather { };      ///< The tile it waits on for those still busy, none of another party's
         std::vector<entt::entity> away { };    ///< Members out of it for now (held up, falling, thrown, sliding), back on landing
+        units::Seconds waited { };             ///< So far by a ride for those on it or in its queue
     };
 
     struct Member

@@ -667,6 +667,7 @@ namespace rct3::scene::track
         // A design of two tracks side by side holds both halves of each joined piece, laid as they come rather
         // than each laying its other half.
         const rct3::park::track::SplitState split = design.empty() ? b.split : std::exchange(b.split, rct3::park::track::SplitState::None);
+        const std::size_t floating_before = scene.money.size();
         for (std::size_t i = 0; i < std::max<std::size_t>(design.size(), 1); ++i)
         {
             if (i > 0)
@@ -694,6 +695,14 @@ namespace rct3::scene::track
                 piece.holding_time = design[i].holding_time;
                 piece.speed_class = design[i].speed_class; // A booster's speed among them
             }
+        }
+        // A design shows what it cost as one amount where it starts, not one over every piece.
+        if (scene.money.size() > floating_before + 1)
+        {
+            const auto laid_floats = scene.money.begin() + static_cast<std::ptrdiff_t>(floating_before);
+            for (auto m = laid_floats + 1; m != scene.money.end(); ++m)
+                laid_floats->amount += m->amount;
+            scene.money.erase(laid_floats + 1, scene.money.end());
         }
         // The height Shift gave the first piece goes with it; a track begun again starts on the ground.
         if (!ride.track->pieces.empty())

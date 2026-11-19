@@ -8,6 +8,7 @@
 #include "simulation/guests.hpp"
 #include "simulation/import_people.hpp"
 #include "simulation/rides.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/stalls.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
@@ -515,8 +516,14 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     people.staff[2].person.position = { 50, 0, 50 };
     people.staff[3].kind = save::model::StaffKind::Vendor;
     people.staff[3].person.position = { 51, 0, 52 };
+    people.staff[0].patrol = { .start_col = 2, .start_row = 1, .size_x = 1, .size_y = 2, .start_state = true, .runs = { 1, 1 } };
+    people.staff[1].patrol = { .start_col = 2, .start_row = 1, .size_x = 1, .size_y = 2, .start_state = true, .runs = { 1, 5 } }; // Does not fit its box
     const auto staff = simulation::import_staff(world, people);
     REQUIRE(staff.size() == 4);
+    // The saved patrol area comes over; one that does not decode is left out, the whole park theirs.
+    CHECK(world.registry.get<simulation::staff::Patrol>(staff[0]).tiles == std::vector<glm::ivec2> { { 2, 1 } });
+    CHECK_FALSE(world.registry.all_of<simulation::staff::Patrol>(staff[1]));
+    CHECK_FALSE(world.registry.all_of<simulation::staff::Patrol>(staff[2]));
     // A vendor stays in their booth, off the paths.
     CHECK(world.registry.get<simulation::Staff>(staff[3]).role == simulation::StaffRole::Vendor);
     CHECK_FALSE(world.registry.all_of<simulation::Stride>(staff[3]));

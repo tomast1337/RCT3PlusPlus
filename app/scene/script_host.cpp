@@ -1579,8 +1579,11 @@ namespace rct3::scene
                             Json swings = Json::array();
                             for (const simulation::Swing& swing : c.swings)
                                 swings.push_back(swing.angle.value);
+                            Json spins = Json::array();
+                            for (const simulation::Spin& spin : c.spins)
+                                spins.push_back(spin.angle.value);
                             const Json lift = c.lifted ? Json { { "phase", kPhases[std::to_underlying(c.lifted->phase)] }, { "aboard", c.lifted->aboard.value } } : Json(nullptr);
-                            at.push_back({ { "front", c.at }, { "speed", c.speed }, { "lean", c.trough ? Json(c.lean.value) : Json(nullptr) }, { "swings", swings }, { "length", c.train_length }, { "station", standing ? Json(*standing) : Json(nullptr) }, { "held", held ? Json(*held) : Json(nullptr) }, { "riders", t < fleet->riders.size() ? fleet->riders[t].size() : 0 }, { "lift", lift } });
+                            at.push_back({ { "front", c.at }, { "speed", c.speed }, { "lean", c.trough ? Json(c.lean.value) : Json(nullptr) }, { "swings", swings }, { "spins", spins }, { "length", c.train_length }, { "station", standing ? Json(*standing) : Json(nullptr) }, { "held", held ? Json(*held) : Json(nullptr) }, { "riders", t < fleet->riders.size() ? fleet->riders[t].size() : 0 }, { "lift", lift } });
                         }
                         one["trainsAt"] = std::move(at);
                         one["trackLength"] = fleet->trains.empty() ? 0.0f : fleet->trains.front().length();

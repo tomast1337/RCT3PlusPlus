@@ -65,7 +65,7 @@ namespace rct3::park
         // from the one to the other. Seen end on, either is nothing, and any turn is as level as none. A part sprung
         // to its car rests as it sits on it.
         float turn = swung.value;
-        if (part.moves.spring <= 0)
+        if (part.moves.spring <= 0 && part.moves.motion != ovl::PartMotion::Spins)
         {
             const glm::vec3 world_up = glm::inverse(turned) * glm::vec3(0, 1, 0);
             const glm::vec3 to = world_up - part.axis * glm::dot(world_up, part.axis);

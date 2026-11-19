@@ -852,6 +852,26 @@ namespace rct3::scene::park
                 .furthest = m.furthest,
             };
         }
+        // A part that spins, or a car spinning whole, spins as its car file has it, its spring over its own weight.
+        train.spinning.reset();
+        train.spins.clear();
+        if (const auto& spin = model.car_spin)
+        {
+            const ovl::PartMoves& m = spin->moves;
+            train.spinning = simulation::SpinningPart {
+                .lever = spin->lever,
+                .damping = m.damping,
+                .pull = m.pull,
+                .gravity = m.gravity,
+                .spring = m.weight.value > 0 ? m.spring / m.weight.value : 0.0f,
+                .friction = m.friction,
+                .fastest = m.fastest,
+                .furthest = m.furthest,
+                .stops = spin->stops,
+                .rest = spin->settles ? simulation::SpinRest::Settles : simulation::SpinRest::Squares,
+                .held_on_chains = spin->held_on_chains,
+            };
+        }
         // shortcut: the train weighs as many empty cars as its front one, upgrade with riders' weight and each car's own.
         train.stalls_by_design = rules != nullptr && rules->trains_stall_by_design();
         if (model.mass > 0)

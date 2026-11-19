@@ -271,6 +271,8 @@ namespace rct3::scene::park
                 });
             if (parts.people && moving)
                 profiling::section("ZooAnimals", [&] { draw_transient(device, scene, scene.frame_uploads, scene.drawn_animals.mesh, scene.drawn_animals.textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
+            if (parts.people && moving)
+                profiling::section("WildBirds", [&] { draw_transient(device, scene, scene.frame_uploads, scene.drawn_birds.mesh, scene.drawn_birds.textures, transform, light, object_pipeline, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; }); });
             if (scene.show_scenery && parts.scenery && still)
                 profiling::section("LedSigns", [&] { draw_led_signs(device, scene, transform, light); });
             if (scene.show_scenery && parts.scenery && moving)

@@ -4,6 +4,7 @@
 #include "simulation/guests.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -48,7 +49,7 @@ TEST_CASE("a flock of ducks comes down on the pond and stays on it")
     run(world, ground, 60);
     CHECK(world.registry.view<WildBird>().size() == 12);
     CHECK(all_in(world, BirdJob::Resting));
-    for (int i = 0; i < 40; ++i)
+    for (std::int32_t i = 0; i < 40; ++i)
     {
         run(world, ground, 1);
         // Whenever it is down, a duck is over the pond; in the air on the way off it need not be.

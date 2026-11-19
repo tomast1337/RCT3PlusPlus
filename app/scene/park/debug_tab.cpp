@@ -12,6 +12,7 @@
 #include "scene/park/waterfalls.hpp"
 #include "simulation/debug_tools.hpp"
 #include "simulation/guests.hpp"
+#include "simulation/wild_birds.hpp"
 #include "strings/unicode.hpp"
 #include "ui/interface_assets.hpp"
 
@@ -25,6 +26,11 @@ namespace rct3::scene::park
 
     namespace
     {
+        /// Ducks in a flock, and gulls, that the buttons add. Chosen by eye: a flock the size of a natural one, and
+        /// a few gulls to see them cross.
+        constexpr std::size_t kDebugFlock = 12;
+        constexpr std::size_t kDebugGulls = 3;
+
         /// The park's own walkable tiles, not its queues nor the road out to the gate: where guests and litter are
         /// dropped.
         std::vector<simulation::NodeId> park_paths(const ParkScene& scene)
@@ -100,6 +106,12 @@ namespace rct3::scene::park
                 return simulation::remove_animals(scene.sim);
             case DebugTool::RefreshAnimals:
                 return simulation::refresh_animals(scene.sim);
+            case DebugTool::AddDucks:
+                return simulation::add_ducks(scene.sim, bird_ground(scene), kDebugFlock);
+            case DebugTool::AddGulls:
+                return simulation::add_gulls(scene.sim, bird_ground(scene), kDebugGulls);
+            case DebugTool::RemoveWildBirds:
+                return simulation::remove_wild_birds(scene.sim);
             case DebugTool::DropLitter:
                 return simulation::scatter_litter(scene.sim, scene.gameplay, park_paths(scene), count);
             case DebugTool::ClearLitter:
@@ -294,6 +306,15 @@ namespace rct3::scene::park
             tool_button(device, scene, assets, "Remove all animals", DebugTool::RemoveAnimals);
             ImGui::SameLine();
             tool_button(device, scene, assets, "Reset animals' needs", DebugTool::RefreshAnimals);
+        }
+
+        if (ImGui::CollapsingHeader("Wild birds", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            tool_button(device, scene, assets, "Add a flock of ducks", DebugTool::AddDucks);
+            ImGui::SameLine();
+            tool_button(device, scene, assets, "Add gulls", DebugTool::AddGulls);
+            ImGui::SameLine();
+            tool_button(device, scene, assets, "Remove all wild birds", DebugTool::RemoveWildBirds);
         }
 
         if (ImGui::CollapsingHeader("Litter", ImGuiTreeNodeFlags_DefaultOpen))

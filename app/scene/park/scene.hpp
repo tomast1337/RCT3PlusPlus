@@ -67,6 +67,7 @@
 #include "scene/save_browser.hpp"
 #include "scene/structure_tools.hpp"
 #include "scene/track/building.hpp"
+#include "scene/wild_birds.hpp"
 #include "scene/zoo_animals.hpp"
 #include "simulation/boat.hpp"
 #include "simulation/components.hpp"
@@ -759,6 +760,7 @@ namespace rct3::scene::park
         std::vector<glm::mat4> rider_places; ///< By piece of `riders`: its car's place, put each frame
         units::Seconds since_riders;
         ui::UiTextures people_textures;
+        DrawnBirds drawn_birds;                                                             ///< The wild ducks and gulls
         DrawnAnimals drawn_animals;                                                         ///< The saved zoo animals, drawn with their models
         rct3::park::AttractionObjects attractions;                                          ///< Which attraction each object belongs to, for clicks
         std::optional<rct3::park::AttractionRef> shown;                                     ///< The attraction the info panel tells about

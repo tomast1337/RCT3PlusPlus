@@ -350,14 +350,41 @@ namespace rct3::save::model
 
     // ----- staff -----
 
+    /// A staff member's patrol area, kept as a box of tiles and, inside it, which tiles belong: `runs` holds how
+    /// many cells in a row are in or out along a walk over the box (see patrol_tiles), the first run being in
+    /// when `start_state` is set, each next run the other way. No runs: no area, the whole park.
     struct PatrolArea
     {
-        u8 start_col = 0;
-        u8 start_row = 0;
-        u8 size_x = 0;
-        u8 size_y = 0;
+        u8 start_col = 0; ///< The box's first column
+        u8 start_row = 0; ///< ... and row
+        u8 size_x = 0;    ///< Rows of the box
+        u8 size_y = 0;    ///< Columns of the box
         bool start_state = false;
+        std::vector<i32> runs { };
     };
+
+    struct PatrolTile
+    {
+        i32 col = 0;
+        i32 row = 0;
+        bool operator==(const PatrolTile&) const = default;
+    };
+
+    enum class PatrolError
+    {
+        EmptyBox,    ///< Runs given for a box with no tiles
+        BadRun,      ///< A run of no tiles or fewer
+        RunsShort,   ///< The runs end before the walk does
+        RunsTooLong, ///< The runs go on past the box's far corner
+    };
+
+    [[nodiscard]] const char* to_string(PatrolError e) noexcept;
+
+    /// The tiles `area` takes in, in walk order; none when it has no runs. The walk goes over a grid size_x
+    /// wide and size_y tall from one corner to the other, diagonal by diagonal, turning at the edges. Each
+    /// cell's place in that grid, counted row by row, is a tile of the box counted row by row too, but from
+    /// the box's last row back to its first.
+    [[nodiscard]] std::expected<std::vector<PatrolTile>, PatrolError> patrol_tiles(const PatrolArea& area);
 
     struct HandymanWork
     {

@@ -2,7 +2,6 @@
 #include "simulation/parties.hpp"
 
 #include "simulation/components.hpp"
-#include "simulation/guests.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/systems.hpp"
@@ -10,7 +9,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iterator>
 #include <ranges>
 #include <span>
 #include <utility>
@@ -140,70 +138,6 @@ namespace rct3::simulation
                 busy_at = party.away.front();
                 const auto& lead = r.get<Stride>(party.leader);
                 near = lead.progress.value < 0.5f ? lead.from : lead.to;
-            }
-            // Waiting by a ride has its limits: after a while those waiting grow glum, and in the end they give up and the
-            // party splits, those at the ride going on as a party of their own; sooner if the ride has broken down. Not
-            // where either side would be children alone.
-            if (waiting && busy_at != entt::null && r.all_of<CycleRide>(busy_at))
-                party.waited.value += kTickSeconds;
-            else
-                party.waited = { };
-            const bool bored = party.waited.value >= kTuning.parties.bored_after.value;
-            if (bored)
-                for (const entt::entity m : party.members)
-                    if (r.get<Errand>(m).kind == ErrandKind::Waiting)
-                    {
-                        auto& happiness = r.get<Mood>(m).happiness.value;
-                        happiness = clamp01(happiness - kTuning.parties.wait_gloom.value * kTickSeconds);
-                    }
-            const auto* upkeep = r.try_get<Upkeep>(busy_at);
-            if (bored && (party.waited.value >= kTuning.parties.patience.value || (upkeep != nullptr && upkeep->broken)))
-            {
-                const auto at_ride = [&](entt::entity m) {
-                    const Errand& errand = r.get<Errand>(m);
-                    return (errand.kind == ErrandKind::Queueing || errand.kind == ErrandKind::Riding) && errand.target == busy_at;
-                };
-                const auto grown = [&](entt::entity m) { return r.get<Visitor>(m).age != AgeGroup::Child; };
-                std::vector<entt::entity> off;
-                std::ranges::copy_if(party.members, std::back_inserter(off), at_ride);
-                std::vector<entt::entity> stay;
-                std::ranges::remove_copy_if(party.members, std::back_inserter(stay), at_ride);
-                if (std::ranges::any_of(off, grown) && std::ranges::any_of(stay, grown))
-                {
-                    const entt::entity off_leader = std::ranges::contains(off, party.leader) ? party.leader : off.front();
-                    party.members = stay;
-                    party.leader = std::ranges::contains(stay, party.leader) ? party.leader : stay.front();
-                    party.waited = { };
-                    ++r.ctx().emplace<PartyBoarding>().gave_up;
-                    for (const entt::entity m : stay)
-                        if (Errand& errand = r.get<Errand>(m); errand.kind == ErrandKind::Waiting)
-                        {
-                            auto& happiness = r.get<Mood>(m).happiness.value;
-                            happiness = clamp01(happiness - kTuning.parties.split_gloom.value);
-                        }
-                    // One left on their own walks on alone, out of any party.
-                    const auto alone = [&](entt::entity m) {
-                        r.remove<Member>(m);
-                        if (Errand& errand = r.get<Errand>(m); errand.kind == ErrandKind::Waiting)
-                            errand = { ErrandKind::Wandering, entt::null, ticks(kTuning.needs.idle.value) };
-                    };
-                    if (stay.size() == 1)
-                    {
-                        alone(stay.front());
-                        r.destroy(e);
-                    }
-                    // Made last: a new party moves the others in memory.
-                    if (off.size() == 1)
-                        alone(off.front());
-                    else
-                    {
-                        const entt::entity split = r.create();
-                        for (const entt::entity m : off)
-                            r.get<Member>(m).party = split;
-                        r.emplace<Party>(split, Party { .leader = off_leader, .members = std::move(off) });
-                    }
-                    continue;
-                }
             }
             if (near && (!party.gather || party.gather->value >= taken.size()))
             {

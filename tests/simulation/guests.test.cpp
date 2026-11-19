@@ -852,63 +852,6 @@ TEST_CASE("two of a party in a queue stand side by side across the line, level w
     CHECK(along(c) > along(b));
 }
 
-TEST_CASE("waiting long for the rest of their party at a ride, guests grow glum, then the party splits up")
-{
-    struct Waiting
-    {
-        entt::entity rider = entt::null;
-        std::array<entt::entity, 2> waiters { };
-        entt::entity party = entt::null;
-    };
-    const auto waiting_party = [](Sandbox& park, AgeGroup waiter_age) {
-        park.path({ 0, 0 }, { 6, 0 });
-        const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 4, .cycle_seconds = 2000, .exit = glm::ivec2 { 3, 0 } });
-        const auto rider = park.guest({ 6, 0 }, { .happiness = 0.8f });
-        const std::array waiters { park.guest({ 6, 0 }, { .happiness = 0.8f, .nausea = 0.9f }), park.guest({ 6, 0 }, { .happiness = 0.8f, .nausea = 0.9f }) };
-        auto& r = park.world().registry;
-        for (const auto w : waiters)
-            r.get<Visitor>(w).age = waiter_age;
-        const auto party = park.party({ rider, waiters[0], waiters[1] });
-        r.get<Errand>(rider) = { ErrandKind::Heading, ride, 0 };
-        park.run(2);
-        REQUIRE(r.get<Errand>(rider).kind == ErrandKind::Riding);
-        return Waiting { .rider = rider, .waiters = waiters, .party = party };
-    };
-    SUBCASE("those waiting give up and go on as a party of their own")
-    {
-        Sandbox park;
-        auto [rider, waiters, party] = waiting_party(park, AgeGroup::Adult);
-        auto& r = park.world().registry;
-        park.run_seconds(kTuning.parties.bored_after.value + 60);
-        CHECK(r.get<Mood>(waiters[0]).happiness.value < 0.8f);
-        CHECK(r.get<Member>(waiters[0]).party == party);
-        park.run_seconds(kTuning.parties.patience.value - kTuning.parties.bored_after.value);
-        CHECK_FALSE(r.all_of<Member>(rider)); // Alone on the ride now
-        CHECK(r.get<Party>(party).members.size() == 2);
-        CHECK(r.get<Party>(party).leader == waiters[0]);
-        CHECK(park.run_until([&] { return r.get<Errand>(waiters[1]).kind == ErrandKind::Following; }, 30));
-        CHECK(r.get<Errand>(waiters[0]).kind == ErrandKind::Wandering);
-    }
-    SUBCASE("sooner when the ride breaks down")
-    {
-        Sandbox park;
-        auto [rider, waiters, party] = waiting_party(park, AgeGroup::Adult);
-        auto& r = park.world().registry;
-        r.emplace_or_replace<Upkeep>(r.get<Errand>(rider).target, Upkeep { .broken = true, .inspect_every = std::nullopt });
-        park.run_seconds(kTuning.parties.bored_after.value + 5);
-        CHECK_FALSE(r.all_of<Member>(rider));
-    }
-    SUBCASE("children are never left on their own")
-    {
-        Sandbox park;
-        auto [rider, waiters, party] = waiting_party(park, AgeGroup::Child);
-        auto& r = park.world().registry;
-        park.run_seconds(kTuning.parties.patience.value + 10);
-        CHECK(r.get<Member>(rider).party == party);
-        CHECK(r.get<Errand>(waiters[0]).kind == ErrandKind::Waiting);
-    }
-}
-
 TEST_CASE("one of a party following the rest sits on a bench when tired, the others waiting for them")
 {
     Sandbox park;

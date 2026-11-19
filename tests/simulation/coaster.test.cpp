@@ -1160,3 +1160,21 @@ TEST_CASE("a standing train's swinging parts only hang, whatever speed it was le
     for (const Swing& swing : c.swings)
         CHECK(swing.angle.value == doctest::Approx(0));
 }
+
+TEST_CASE("a train's spinning parts turn in a curve without changing how it runs, and a train without them is unchanged")
+{
+    Coaster plain = circling(10, 9);
+    plain.trough.reset();
+    Coaster spinning = plain;
+    spinning.spinning = SpinningPart { .damping = { 0.3f }, .pull = { 0.3f } };
+    for (std::int32_t i = 0; i < 80; ++i)
+    {
+        drive(plain, 0.05f);
+        drive(spinning, 0.05f);
+    }
+    CHECK(plain.spins.empty());
+    REQUIRE(!spinning.spins.empty());
+    CHECK(std::abs(spinning.spins[0].angle.value) > 0.1f);
+    CHECK(spinning.at == plain.at);
+    CHECK(spinning.speed == plain.speed);
+}

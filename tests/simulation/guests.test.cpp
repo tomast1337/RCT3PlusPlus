@@ -9,6 +9,7 @@
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 
+#include <array>
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -820,6 +821,35 @@ TEST_CASE("two parties waiting by one exit each stand on a tile of their own")
             CHECK(r.get<Stride>(g).to == r.get<Stride>(those.front()).to);
         }
     CHECK(r.get<Stride>(waiting[0].front()).to != r.get<Stride>(waiting[1].front()).to);
+}
+
+TEST_CASE("two of a party in a queue stand side by side across the line, level with each other")
+{
+    Sandbox park;
+    park.path({ 0, 3 }, { 5, 3 }).queue({ 5, 0 }, { 5, 2 });
+    const auto ride = park.flat_ride("Spinner", { 6, 0 }, 100, { .capacity = 1, .cycle_seconds = 600, .line = { { 5, 0 }, { 5, 1 }, { 5, 2 } } });
+    auto& r = park.world().registry;
+    const auto stranger = park.guest({ 5, 2 });
+    const auto a = park.guest({ 5, 2 });
+    const auto b = park.guest({ 5, 2 });
+    const auto c = park.guest({ 5, 2 });
+    park.party({ a, b, c });
+    auto& cycle = r.get<CycleRide>(ride);
+    for (const auto g : { stranger, a, b, c })
+    {
+        r.get<Errand>(g) = { ErrandKind::Queueing, ride, 0 };
+        r.get<Stride>(g).along.value = 2;
+        cycle.queue.push_back(g);
+    }
+    park.run_seconds(30);
+    REQUIRE(cycle.queue.size() == 3); // The stranger rides
+    const auto along = [&](entt::entity g) { return r.get<Stride>(g).along.value; };
+    const auto side = [&](entt::entity g) { return r.get<Stride>(g).side.value; };
+    CHECK(along(a) == doctest::Approx(along(b)));
+    CHECK(std::abs(side(a) - side(b)) >= kTuning.queues.beside.value - 0.001f);
+    CHECK(side(a) * side(b) < 0);
+    // The third stands behind the pair, not beside them.
+    CHECK(along(c) > along(b));
 }
 
 TEST_CASE("a party waits on a tile away from the queue, the bigger party in a wider ring, all facing in")

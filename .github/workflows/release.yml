@@ -10,7 +10,7 @@
 #
 # Windows does not build yet: its job may fail without failing the run, and the release then says Windows is not
 # available. It builds in MSYS2's CLANG64, whose standard library is libc++: libc++ 23 has std::optional<T&> but not
-# yet std::inplace_vector or std::stacktrace, which the code uses (nob links libstdc++'s -lstdc++exp for the latter). No tests run here: ci.yml covers them on every push and pull request. macOS is not built yet.
+# yet std::stacktrace, which the crash report uses (nob also links libstdc++'s -lstdc++exp for it). No tests run here: ci.yml covers them on every push and pull request. macOS is not built yet.
 name: release
 
 on:

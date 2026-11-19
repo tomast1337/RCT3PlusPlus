@@ -1,6 +1,6 @@
 # Minimal CI: compile and run the unit tests (synthetic data only, no game files needed).
 #
-# The project builds with Clang 23 on GCC 16's libstdc++ (for std::optional<T&> and std::inplace_vector). The jobs
+# The project builds with Clang 23 on GCC 16's libstdc++ (for std::optional<T&>). The jobs
 # run inside the official gcc:16 Docker image for that library, and .github/install_clang.sh adds Clang from
 # apt.llvm.org. The nob build script is bootstrapped from source in each job.
 #

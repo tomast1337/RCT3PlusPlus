@@ -19,13 +19,13 @@ Suggested messages:
 
 - C++26, built with `nob` (`nob.cpp`, no external build system), GPL-3.0-or-later. Put `// SPDX-License-Identifier: GPL-3.0-or-later` at the top of
   every source file.
-- Write to a C++23 baseline and use C++26 features only where GCC 16+ and Clang 20+ (on libstdc++ 16+) both support them. Nullable references are `std::optional<T&>`, not `T*`; raw pointers stay only at third-party edges (EnTT, C libraries).
-- Bootstrap once with `g++ -std=c++26 -o nob nob.cpp`, then `./nob test` builds and runs the tests.
+- Write to a C++23 baseline and use C++26 features only where Clang 23+ on libstdc++ 16+ supports them (GCC is the standard library only, not a compiler here). Nullable references are `std::optional<T&>`, not `T*`; raw pointers stay only at third-party edges (EnTT, C libraries).
+- Bootstrap once with `clang++ -std=c++26 -o nob nob.cpp`, then `./nob test` builds and runs the tests.
   New `.cpp` files under `src/`, `tools/<name>/main.cpp` and `tests/` are picked up automatically.
 - Tests use [doctest](third_party/doctest/). Put them in `tests/<mirror of the src path>/<topic>.test.cpp`,
   one `TEST_CASE` per behaviour, `SUBCASE` for variants. Run `./nob test --sanitize` before handing over
   parser changes. Test inputs are built in code, never read from the game install.
-- Fuzz targets live in `fuzz/<name>.cpp` (libFuzzer, Clang). Every new parser entry point that takes
+- Fuzz targets live in `fuzz/<name>.cpp` (libFuzzer). Every new parser entry point that takes
   untrusted bytes gets one. Run `./nob fuzz <name> --seconds 60`. Corpora and crashes go to `local/`.
   Seeds under `fuzz/seeds/` and `fuzz/*.dict` must be synthetic.
 - Format specifications, when published, live in this repository's `docs/`, written in our own words. Fix
@@ -102,8 +102,9 @@ On a per-frame or per-tick path, in this order:
    return a fresh `std::vector` each frame. A per-node flag or count is a vector indexed by node, not a hash
    set or map.
 2. Keep only what is used. If the code reads the nearest two, track two; do not collect and sort them all.
-3. `std::array` for a count with a fixed maximum (wheels per car, corners of a tile), and
-   `std::inplace_vector<T, N>` for a short list with a hard maximum.
+3. `std::array` for a count with a fixed maximum (wheels per car, corners of a tile), and a `std::array` with
+   a count beside it for a short list with a hard maximum. Not `std::inplace_vector` yet: libstdc++ 16's warns
+   under Clang, and libc++ (Windows) has none.
 4. `std::string_view` for a string that is only compared or looked up. Strings up to 15 characters do not
    allocate anyway.
 5. A template parameter or `std::function_ref` for a callback that does not outlive the call. A

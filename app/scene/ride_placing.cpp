@@ -944,6 +944,9 @@ namespace rct3::scene
             ride.base.spot = save::model::PlacementSpot { object, p.site->col, p.site->row, p.site->height, static_cast<std::uint8_t>(p.site->turn.value) };
             ride.base.facing = static_cast<std::uint8_t>(p.site->turn.value);
             ride.base.running_cost = simulation::park::running_cost(p.item->price, false);
+            // It waits for a load as every flat ride in the saved parks checked does, with no setting to change it.
+            ride.options.min_wait = 10;
+            ride.options.max_wait = 120;
             park::float_money(scene, site_point(scene, *p.site), -price);
             logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
             take_fence(scene, assets, ride, *p.item);

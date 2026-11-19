@@ -1584,8 +1584,8 @@ namespace rct3::simulation
             r.emplace<Upkeep>(e, upkeep_of(ride));
             if (r.get<Upkeep>(e).broken)
                 r.get<Attraction>(e).open = false;
-            // The game offers the settings to tracked rides only; others hold leftovers.
-            if (ride.kind == save::model::RideKind::Tracked)
+            // The game offers the settings to tracked rides only, but a flat ride goes by the ones it holds too.
+            if (ride.kind == save::model::RideKind::Tracked || ride.kind == save::model::RideKind::Flat)
                 r.emplace<Departure>(e, departure_of(ride.options));
             added[i] = e;
         }

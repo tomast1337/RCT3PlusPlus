@@ -186,3 +186,41 @@ TEST_CASE("a walk-through takes guests in one by one while there is room, walks 
     CHECK(glm::distance(glm::vec2(r.get<Pose>(first).position.x, r.get<Pose>(first).position.z), glm::vec2(exit.x, exit.z)) < 1.0f);
     CHECK(park.run_until([&] { return r.all_of<RideWalk>(second); }, 30));
 }
+
+TEST_CASE("a flat ride out of its longest wait shuts its gates on a rider still walking on, and starts once they sit")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Twirl", { 4, 0 }, 100, { .capacity = 2, .cycle_seconds = 10 });
+    auto& r = park.world().registry;
+    const glm::vec3 entrance = park.world().paths.centre(*r.get<Attraction>(ride).entrance);
+    r.emplace<RideWalks>(ride, RideWalks { .ticket = entrance, .on = { { entrance + glm::vec3(12, 0, 0) }, { entrance + glm::vec3(12, 0, 1) } } });
+    r.emplace<Departure>(ride, Departure { .max_wait = rct3::units::Seconds { 2 } });
+    const auto g = park.guest({ 4, 0 }, { .cash = 1000 });
+    r.get<Errand>(g) = { ErrandKind::Heading, ride, 0 };
+    const auto walking = [&] { return r.all_of<RideWalk>(g) && !r.get<RideWalk>(g).off; };
+    REQUIRE(park.run_until(walking, 30));
+    // Its gates shut while they walk, and no one else gets on.
+    REQUIRE(park.run_until([&] { return r.get<CycleRide>(ride).phase == RidePhase::Starting; }, 5));
+    CHECK(walking());
+    const auto late = park.guest({ 4, 0 }, { .cash = 1000 });
+    r.get<Errand>(late) = { ErrandKind::Heading, ride, 0 };
+    park.run(1);
+    CHECK(r.get<CycleRide>(ride).in_phase.value == 0);
+    CHECK(r.get<CycleRide>(ride).riders.size() == 1);
+    // Seated, it starts.
+    REQUIRE(park.run_until([&] { return !walking(); }, 60));
+    CHECK(park.run_until([&] { return r.get<CycleRide>(ride).in_phase.value > 0; }, 1));
+}
+
+TEST_CASE("a flat ride being tested goes once those walking on sit, without waiting for a load")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 4, 0 });
+    const auto ride = park.flat_ride("Twirl", { 4, 0 }, 100, { .capacity = 2, .cycle_seconds = 10 });
+    auto& r = park.world().registry;
+    r.emplace<Departure>(ride, Departure { .wait_for = LoadWait::Full, .min_wait = rct3::units::Seconds { 30 } });
+    r.get<Attraction>(ride).testing = true;
+    park.run(1);
+    CHECK(r.get<CycleRide>(ride).phase != RidePhase::Loading);
+}

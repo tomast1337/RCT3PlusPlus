@@ -6,7 +6,9 @@
 #include <cstdint>
 #include <cstring>
 #include <doctest/doctest.h>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using namespace rct3::save;
@@ -542,4 +544,128 @@ TEST_CASE("every truncation and every single byte flip decodes without crashing"
             exercise(copy);
         }
     }
+}
+
+TEST_CASE("every decoded attribute encodes back to its bytes")
+{
+    const std::vector<Attr> attrs = {
+        { "flag", "bool", 1, { } },
+        { "s8", "int8", 1, { } },
+        { "u16", "uint16", 2, { } },
+        { "s32", "int32", 4, { } },
+        { "u32", "uint32", 4, { } },
+        { "real", "float32", 4, { } },
+        { "pos", "vector3", 12, { } },
+        { "rot", "orientation", 12, { } },
+        { "m", "matrix44", 64, { } },
+        { "link", "managedobjectptr", 8, { } },
+        { "s", "string", 0, { } },
+        { "sym", "resourcesymbol", 0, { } },
+        { "pairs", "array", 0, { { "a", "uint8", 1, { } }, { "b", "float32", 4, { } } } },
+        { "rec", "struct", 0, { { "label", "string", 0, { } }, { "level", "uint8", 1, { } } } },
+        { "pt", "struct", 5, { { "x", "float32", 4, { } }, { "on", "bool", 1, { } } } },
+        { "curve", "graphedValue", 0, { } },
+        { "route", "waypointlist", 0, { } },
+        { "odd", "mystery", 0, { } },
+        { "short", "vector3", 8, { } },
+    };
+    Bytes p;
+    p.u8(1).u8(0xFE).u16(0xFFFE).u32(0xFFFFFFFEu).u32(0xFFFFFFFEu).f32(2.5f);
+    p.f32(1).f32(2).f32(3).f32(0.25f).f32(0.5f).f32(0.75f);
+    for (std::int32_t i = 0; i < 16; ++i)
+        p.f32(static_cast<float>(i));
+    p.u64(101);
+    p.marked_text(u"hé \U0001F600");
+    p.blob(Bytes().u8('A').u8('b'));
+    p.blob(Bytes().u32(2).u8(1).f32(0.5f).u8(2).f32(1.5f));
+    p.blob(Bytes().marked_text(u"hi").u8(9));
+    p.f32(1.0f).u8(1);
+    p.blob(Bytes().u32(0xFFFFFFFFu).u32(8).u32(2).f32(1.0f).f32(2.0f));
+    p.blob(Bytes().u16(1).u16(5).u16(6).u16(0xFFFF).f32(1).f32(2).f32(3));
+    p.blob(Bytes().u32(77));
+    p.u32(1).u32(2);
+    const auto d = decode_one(attrs, p);
+    REQUIRE(d->object.stats.fallbacks == 0);
+    const auto encoded = encode_object(d->file.classes[0], d->object.fields);
+    REQUIRE(encoded);
+    CHECK(*encoded == p.v);
+}
+
+TEST_CASE("values built in code read back as the same tree")
+{
+    const std::vector<Attr> attrs = {
+        { "count", "int32", 4, { } }, { "name", "string", 0, { } }, { "next", "managedobjectptr", 8, { } }, { "tags", "list", 0, { { "n", "int32", 4, { } } } }, { "colours", "struct", 8, { { "A", "int32", 4, { } }, { "B", "int32", 4, { } } } },
+    };
+    // The schema as a file declares it, read from one holding no objects.
+    const auto schema_bytes = make_file(attrs, { });
+    const auto schema = read_save(schema_bytes);
+    REQUIRE(schema);
+
+    std::vector<Value> tags;
+    tags.push_back(Value::make_integer(4));
+    tags.push_back(Value::make_integer(-5));
+    std::vector<Value> colours;
+    colours.push_back(Value::make_integer(1));
+    colours.push_back(Value::make_integer(2));
+    std::vector<Value> items;
+    items.push_back(Value::make_integer(-3));
+    items.push_back(Value::make_string("Ride é"));
+    items.push_back(Value::make_reference(102));
+    items.push_back(Value::make_list(std::move(tags)));
+    items.push_back(Value::make_struct({ "A", "B" }, std::move(colours)));
+    const Value fields = Value::make_struct({ "count", "name", "next", "tags", "colours" }, std::move(items));
+
+    const auto payload = encode_object(schema->classes[0], fields);
+    REQUIRE(payload);
+    const auto bytes = write_save(Header { .words = { 2 } }, schema->classes, std::vector { ObjectRecord { .class_index = 0, .id = 5, .payload = *payload } });
+    REQUIRE(bytes);
+    const auto file = read_save(*bytes);
+    REQUIRE(file);
+    CHECK(file->header.version() == 2);
+    REQUIRE(file->objects.size() == 1);
+    const auto o = decode_object(*file, file->objects[0]);
+    REQUIRE(o);
+    CHECK(o->id == 5);
+    CHECK(o->find("count")->as_integer() == -3);
+    CHECK(o->find("name")->text() == "Ride é");
+    CHECK(o->find("next")->as_reference() == 102);
+    REQUIRE(o->find("tags")->items().size() == 2);
+    CHECK(o->find("tags")->items()[1].as_integer() == -5);
+    CHECK(o->find("colours")->field("B")->as_integer() == 2);
+}
+
+TEST_CASE("an 8-bit string is written back marked, as UTF-16")
+{
+    Bytes p;
+    p.blob(Bytes().u8('o').u8('k'));
+    const auto d = decode_one({ { "s", "string", 0, { } } }, p);
+    const auto encoded = encode_object(d->file.classes[0], d->object.fields);
+    REQUIRE(encoded);
+    CHECK(*encoded == Bytes().marked_text(u"ok").v);
+}
+
+TEST_CASE("encoding refuses values that do not fit their attributes")
+{
+    const auto schema_bytes = make_file({ { "n", "int32", 4, { } }, { "pt", "struct", 8, { { "x", "float32", 4, { } }, { "y", "float32", 4, { } } } } }, { });
+    const auto schema = read_save(schema_bytes);
+    REQUIRE(schema);
+    const auto fields = [](Value n, std::string_view name, Value pt) {
+        std::vector<Value> items;
+        items.push_back(std::move(n));
+        items.push_back(std::move(pt));
+        return Value::make_struct({ name, "pt" }, std::move(items));
+    };
+    const auto point = [](std::size_t count) {
+        std::vector<std::string_view> names { "x", "y" };
+        names.resize(count);
+        std::vector<Value> xy;
+        for (std::size_t i = 0; i < count; ++i)
+            xy.push_back(Value::make_float(1.0f));
+        return Value::make_struct(std::move(names), std::move(xy));
+    };
+    CHECK(encode_object(schema->classes[0], fields(Value::make_integer(1), "n", point(2))));
+    CHECK(encode_object(schema->classes[0], fields(Value::make_float(1), "n", point(2))).error() == Error::ValueMismatch);
+    CHECK(encode_object(schema->classes[0], fields(Value::make_integer(1), "m", point(2))).error() == Error::ValueMismatch);
+    CHECK(encode_object(schema->classes[0], fields(Value::make_integer(1), "n", point(1))).error() == Error::ValueMismatch);
+    CHECK(encode_object(schema->classes[0], Value::make_integer(1)).error() == Error::ValueMismatch);
 }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/save_file.hpp"
 
+#include <algorithm>
+#include <cstdint>
 #include <cstring>
 #include <utility>
 
@@ -195,6 +197,8 @@ namespace rct3::save
                 return "trailing data";
             case Error::ChecksumMismatch:
                 return "checksum mismatch";
+            case Error::ValueMismatch:
+                return "value does not fit its attribute";
         }
         return "unknown";
     }
@@ -305,6 +309,68 @@ namespace rct3::save
                 return std::unexpected(Error::ChecksumMismatch);
         }
         return file;
+    }
+
+    std::expected<std::vector<std::byte>, Error> write_save(const std::optional<Header>& header, std::span<const Class> classes, std::span<const ObjectRecord> objects)
+    {
+        std::vector<std::byte> out;
+        const auto put = [&out]<class T>(T v) {
+            const auto at = out.size();
+            out.resize(at + sizeof v);
+            std::memcpy(out.data() + at, &v, sizeof v);
+        };
+        const auto text = [&](std::string_view s) {
+            if (s.size() > UINT16_MAX)
+                return false;
+            put(static_cast<std::uint16_t>(s.size()));
+            const auto at = out.size();
+            out.resize(at + s.size());
+            std::memcpy(out.data() + at, s.data(), s.size());
+            return true;
+        };
+        const auto attribute = [&](this const auto& self, const Attribute& a) -> bool {
+            if (!text(a.name) || !text(a.type))
+                return false;
+            put(a.size);
+            put(static_cast<std::uint32_t>(a.children.size()));
+            return std::ranges::all_of(a.children, [&](const Attribute& child) { return self(child); });
+        };
+
+        if (header)
+        {
+            for (const std::uint32_t w : { 0u, 0u, kMagic, kHeaderBodySize })
+                put(w);
+            for (const std::uint32_t w : header->words)
+                put(w);
+        }
+        if (classes.size() > kMaxClasses)
+            return std::unexpected(Error::ImplausibleCount);
+        put(static_cast<std::uint32_t>(classes.size()));
+        for (const Class& c : classes)
+        {
+            if (!text(c.name))
+                return std::unexpected(Error::ValueMismatch);
+            put(static_cast<std::uint32_t>(c.attributes.size()));
+            if (!std::ranges::all_of(c.attributes, attribute))
+                return std::unexpected(Error::ValueMismatch);
+        }
+        put(static_cast<std::uint32_t>(objects.size()));
+        for (const ObjectRecord& o : objects)
+        {
+            if (o.class_index >= classes.size())
+                return std::unexpected(Error::BadClassIndex);
+            // Checked the way the reader frames it, so a payload that would read back as another object's bytes
+            // is refused here rather than written.
+            Reader r(o.payload);
+            if (!skip_attributes(r, classes[o.class_index]) || r.remaining() != 0)
+                return std::unexpected(Error::BadObjectTable);
+            put(o.class_index);
+            put(o.id);
+            out.insert(out.end(), o.payload.begin(), o.payload.end());
+        }
+        if (header)
+            put(compute_checksum(out));
+        return out;
     }
 
 } // namespace rct3::save

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include <doctest/doctest.h>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -339,4 +340,32 @@ TEST_CASE("empty and tiny inputs")
     REQUIRE(r);
     CHECK(r->classes.empty());
     CHECK(r->objects.empty());
+}
+
+TEST_CASE("a file written from what was read is the same bytes")
+{
+    for (const auto& bytes : { headerless(), headered(2) })
+    {
+        const auto file = read_save(bytes);
+        REQUIRE(file);
+        std::vector<ObjectRecord> records;
+        for (const Object& o : file->objects)
+            records.push_back({ .class_index = o.class_index, .id = o.id, .payload = o.payload() });
+        const auto written = write_save(file->has_header ? std::optional(file->header) : std::nullopt, file->classes, records);
+        REQUIRE(written);
+        CHECK(*written == bytes);
+    }
+}
+
+TEST_CASE("writing refuses an object of no class or with bytes its class does not frame")
+{
+    const auto bytes = headerless();
+    const auto file = read_save(bytes);
+    REQUIRE(file);
+    const std::byte four[4] = { };
+    const std::byte five[5] = { };
+    CHECK(write_save(std::nullopt, file->classes, std::vector { ObjectRecord { .class_index = 2, .id = 1, .payload = { } } }).error() == Error::BadClassIndex);
+    // A Widget is a u32 and a blob: four bytes end inside it, five leave a byte over.
+    CHECK(write_save(std::nullopt, file->classes, std::vector { ObjectRecord { .class_index = 0, .id = 1, .payload = four } }).error() == Error::BadObjectTable);
+    CHECK(write_save(std::nullopt, file->classes, std::vector { ObjectRecord { .class_index = 1, .id = 1, .payload = five } }).error() == Error::BadObjectTable);
 }

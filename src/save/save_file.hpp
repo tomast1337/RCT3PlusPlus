@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Container reader for the original game's park and scenario save files.
+// Container reader and writer for the original game's park and scenario save files.
 //
 // A save is a plain, self-describing stream: an optional fixed header, a class table that describes the
 // layout of every kind of object in the file, a flat list of object records and, when the header is
@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <optional>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -32,6 +33,7 @@ namespace rct3::save
         BadObjectTable,     ///< An object's attributes run past the end of the data
         TrailingData,       ///< Bytes remain after the object table that are not the checksum
         ChecksumMismatch,   ///< Stored checksum differs from the computed one
+        ValueMismatch,      ///< Writing: a value does not fit its attribute's layout, or a name or count its field
     };
 
     [[nodiscard]] const char* to_string(Error e) noexcept;
@@ -63,7 +65,7 @@ namespace rct3::save
         std::string_view name;
         std::string_view type;
         std::uint32_t size = 0;
-        std::vector<Attribute> children; ///< Element layout for compound types, empty otherwise
+        std::vector<Attribute> children { }; ///< Element layout for compound types, empty otherwise
     };
 
     struct Class
@@ -128,5 +130,20 @@ namespace rct3::save
     /// Parses and validates the container. The returned views point into `data`, which must outlive them.
     /// The reader allocates at most a small multiple of the input size.
     [[nodiscard]] std::expected<SaveFile, Error> read_save(std::span<const std::byte> data, const ReadOptions& options = { });
+
+    /// One object to write: its class (by place in the class table), its id and its attribute bytes in schema
+    /// order, as encode_object makes them.
+    struct ObjectRecord
+    {
+        std::uint32_t class_index = 0;
+        std::uint64_t id = 0;
+        std::span<const std::byte> payload;
+    };
+
+    /// The inverse of read_save: a header (in its full form) when given, the class table, the objects in the
+    /// order given and, with a header, the checksum after them. The game reads object 0 as the file's root.
+    /// Fails when an object names a class not in the table, its payload does not frame as its class says, or a
+    /// name is too long for its length field.
+    [[nodiscard]] std::expected<std::vector<std::byte>, Error> write_save(const std::optional<Header>& header, std::span<const Class> classes, std::span<const ObjectRecord> objects);
 
 } // namespace rct3::save

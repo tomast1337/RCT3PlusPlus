@@ -441,6 +441,30 @@ TEST_CASE("every guest at a passport post they have no stamp from has it stamped
     CHECK_FALSE(r.all_of<Passport>(vip));
 }
 
+TEST_CASE("a guest stops at a passport post while it stamps their passport, their party waiting for them")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 3, 0 });
+    const auto post = park.item(PathItemKind::PassportPost, { 1, 0 });
+    auto& r = park.world().registry;
+    r.get<PathItem>(post).object = 7;
+    const auto g = park.guest({ 2, 0 });
+    const auto mate = park.guest({ 2, 0 });
+    r.emplace<Passport>(mate, Passport { .stamps = { { .post = 7 } } }); // Stamped there before
+    park.party({ g, mate });
+    CHECK(park.run_until([&] { return r.all_of<Passport>(g); }, 600));
+    REQUIRE(r.all_of<Linger>(g));
+    CHECK(r.get<Linger>(g).at == PathItemKind::PassportPost);
+    CHECK(r.get<Linger>(g).bench == post);
+    const glm::vec3 stood = r.get<Pose>(g).position;
+    const f32 happy = r.get<Mood>(g).happiness.value;
+    park.run_seconds(kTuning.surroundings.stamping.value / 2);
+    CHECK(glm::distance(r.get<Pose>(g).position, stood) < 0.01f); // Standing there
+    CHECK(r.get<Mood>(g).happiness.value <= happy + 0.001f);      // Not a sight to enjoy
+    CHECK(r.get<Errand>(mate).kind == ErrandKind::Waiting);
+    CHECK(park.run_until([&] { return !r.all_of<Linger>(g); }, kTuning.surroundings.stamping.value));
+}
+
 TEST_CASE("with enough stamps a guest is given the park's passport gift, paid for by the park, unless it cannot pay")
 {
     for (const i64 cash : { 1000, 100 })

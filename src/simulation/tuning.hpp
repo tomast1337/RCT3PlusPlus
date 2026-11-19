@@ -788,6 +788,7 @@ namespace rct3::simulation::tuning
         i32 earshot = 2;                        ///< Chosen by eye: tiles from a loudspeaker within which guests hear it
         units::Chance music_thought { 0.15 };   ///< Chosen by eye: of liking its music, on each tile walked in earshot
         units::Share stamp_cheer { 0.1f };      ///< Chosen by eye: happiness from a new stamp in a guest's passport
+        units::Seconds stamping { 3 };          ///< Chosen by eye: a guest stands at a passport post, their party waiting, while it stamps their passport
         units::Share gift_cheer { 0.2f };       ///< Chosen by eye: happiness from being given the park's passport gift
         units::Share no_gift_gloom { 0.1f };    ///< Chosen by eye: happiness lost when the park cannot pay for the gift they are due
         u32 stamps_for_gift = 5;                ///< Chosen by eye: stamps a new park asks for before giving its passport gift

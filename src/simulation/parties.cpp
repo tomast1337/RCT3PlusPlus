@@ -93,9 +93,9 @@ namespace rct3::simulation
         const f32 now = static_cast<f32>(world.tick) * kTickSeconds;
 
         phase.emplace("Parties");
-        // 5. Parties: while some are busy (in a ride's queue or on it, at a stall's counter, sitting on a bench), the
-        // others walk to a tile near there and wait; once all are back they stand together a moment, then go on
-        // behind the leader.
+        // 5. Parties: while some are busy (in a ride's queue or on it, at a stall's counter, sitting on a bench, at a
+        // passport post), the others walk to a tile near there and wait; once all are back they stand together a
+        // moment, then go on behind the leader.
         std::vector<bool> taken(paths.nodes().size(), false); // Tiles parties wait on
         for (const auto [e, party] : r.view<const Party>().each())
             if (party.gather && party.gather->value < taken.size())
@@ -126,7 +126,7 @@ namespace rct3::simulation
                     busy_at = errand.target;
                     near = r.get<Attraction>(errand.target).entrance;
                 }
-                else if (errand.kind == ErrandKind::Buying || (r.all_of<Linger>(m) && r.get<Linger>(m).at == PathItemKind::Bench))
+                else if (errand.kind == ErrandKind::Buying || (r.all_of<Linger>(m) && (r.get<Linger>(m).at == PathItemKind::Bench || r.get<Linger>(m).at == PathItemKind::PassportPost)))
                 {
                     busy_at = errand.kind == ErrandKind::Buying ? errand.target : m;
                     near = r.get<Stride>(m).from;

@@ -696,7 +696,8 @@ interface RideRun {
     moving?: number;
     /** On a track: each train's front along the track (metres), its speed along it (m/s), a slide car's
      *  swing up its trough's wall (radians, to its right; null for other trains), each car's swinging part's
-     *  angle from rest (radians, front car first; empty where none swings), its length, and the
+     *  angle from rest (radians, front car first; empty where none swings), each car's spinning part's angle
+     *  from facing ahead (radians, front car first; empty where none spins), its length, and the
      *  station it stands at (0 the first, k the k-th stop after it), null while under way; the station it
      *  is held up in behind the train ahead, short of its end, numbered alike, or null; and the riders
      *  still in its seats. On a lift's car, how far it has come up the lift and how far its front is along
@@ -706,6 +707,7 @@ interface RideRun {
         speed: number;
         lean: number | null;
         swings: number[];
+        spins: number[];
         length: number;
         station: number | null;
         held: number | null;

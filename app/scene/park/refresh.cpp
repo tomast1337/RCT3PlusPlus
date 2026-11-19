@@ -644,6 +644,20 @@ namespace rct3::scene::park
     void place_cars(ParkScene& scene, const glm::vec3& eye, const glm::mat4& view, units::Seconds elapsed)
     {
         const float seconds = elapsed.value;
+        // How far the moving part of car `i` of `train` has turned, as `turns` (its train's swings or spins) has it,
+        // between its last step's ends: the car the same way behind its train's front as where the park kept it.
+        const auto part_turn = [&](std::size_t i, const simulation::Coaster& train, const auto& turns) {
+            const rct3::park::ride::CarSpot spot = scene.car_spots[i];
+            if (turns.empty())
+                return units::Radians { };
+            float behind = scene.rides.rides[spot.ride.value].trains[spot.train].distance.value - (spot.front_wheels + spot.rear_wheels) / 2;
+            if (behind < 0)
+                behind += train.length();
+            const std::size_t k = std::min(static_cast<std::size_t>(std::max(behind, 0.0f) / train.train_length * static_cast<float>(turns.size())), turns.size() - 1);
+            const float along = std::clamp(scene.sim_time / simulation::kTickSeconds, 0.0f, 1.0f);
+            // The short way round, as a spin crosses from a half turn one way to a half turn the other.
+            return units::Radians { turns[k].was.value + std::remainder(turns[k].angle.value - turns[k].was.value, 2 * std::numbers::pi_v<float>) * along };
+        };
         // Chosen by eye: the effects a car's splash points spray, by strength, and its wake.
         constexpr std::array<std::string_view, 3> kSplashEffects { "splash2", "splash4", "watersplashbig" };
         constexpr std::string_view kWakeEffect = "waterwakemedium";
@@ -753,6 +767,9 @@ namespace rct3::scene::park
                 }
                 else
                     place = rct3::park::track::moved_along(*scene.courses[spot.ride.value], place, { spot.front_wheels, spot.rear_wheels }, moved[i]);
+                // A car that spins whole turns about its up, before a slide's car swings in its trough.
+                if (train.spinning && !std::ranges::contains(scene.arm_cars, i, &ParkScene::ArmCar::car))
+                    place = place * glm::rotate(glm::mat4(1.0f), part_turn(i, train, train.spins).value, glm::vec3(0, 1, 0));
                 // A slide's car swung up its trough's wall, turned about its shape's pivot.
                 if (train.trough && train.lean.value != 0)
                 {
@@ -947,15 +964,10 @@ namespace rct3::scene::park
                 const entt::entity ride = scene.simulate && spot.ride.value < scene.ride_entities.size() ? scene.ride_entities[spot.ride.value] : entt::null;
                 const auto* fleet = ride != entt::null ? scene.sim.registry.try_get<simulation::Trains>(ride) : nullptr;
                 units::Radians swung { };
-                if (fleet && !spot.lift && spot.train < fleet->trains.size() && !fleet->trains[spot.train].swings.empty())
+                if (fleet && !spot.lift && spot.train < fleet->trains.size())
                 {
                     const simulation::Coaster& train = fleet->trains[spot.train];
-                    float behind = scene.rides.rides[spot.ride.value].trains[spot.train].distance.value - (spot.front_wheels + spot.rear_wheels) / 2;
-                    if (behind < 0)
-                        behind += train.length();
-                    const std::size_t k = std::min(static_cast<std::size_t>(std::max(behind, 0.0f) / train.train_length * static_cast<float>(train.swings.size())), train.swings.size() - 1);
-                    const simulation::Swing& swing = train.swings[k];
-                    swung = { std::lerp(swing.was.value, swing.angle.value, std::clamp(scene.sim_time / simulation::kTickSeconds, 0.0f, 1.0f)) };
+                    swung = arm.part->moves.motion == ovl::PartMotion::Spins ? part_turn(arm.car, train, train.spins) : part_turn(arm.car, train, train.swings);
                 }
                 arm.seats = rct3::park::part_move(*arm.part, scene.car_places[arm.car], swung);
                 *joint_place++ = scene.car_places[arm.car] * arm.seats;

@@ -62,7 +62,8 @@ namespace rct3::park
     /// How a car's moving part moves what it carries, model space, with the car placed at `place` (model to world):
     /// turned about its pivot's line as far as brings its up nearest the world's (+Y), then on by `swung`, as
     /// glm::rotate turns about that line. A part sprung to its car (CarPart::moves' spring) turns from where it sits
-    /// on it by `swung` alone. Its heading follows the car's.
+    /// on it by `swung` alone, and one that spins turns about its car's up by `swung` alone. Its heading follows the
+    /// car's.
     [[nodiscard]] glm::mat4 part_move(const object::CarPart& part, const glm::mat4& place, units::Radians swung = { });
 
     /// Puts each object where `places` (model to world, by object) has it, leaving those already there.

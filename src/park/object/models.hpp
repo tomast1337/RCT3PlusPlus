@@ -98,6 +98,18 @@ namespace rct3::park::object
         glm::vec3 up { 0, 1, 0 };   ///< Pivot space: the part's own up
     };
 
+    /// How a car's part spins on it, or the whole car spins (ovl::RideCar::moves and the spin fields beside them).
+    struct CarSpin
+    {
+        ovl::PartMoves moves { };
+        /// Car model space, from the spinning part's pivot to the middle of its weight across its up: its shape's
+        /// bone named "cog", or half a metre behind its origin where it has none.
+        glm::vec3 lever { 0, 0, -0.5f };
+        std::uint32_t stops = 1;
+        bool settles = false;
+        bool held_on_chains = false;
+    };
+
     /// A flat picture standing upright on the item's anchor, turned to face the viewer round the vertical.
     struct Billboard
     {
@@ -255,9 +267,12 @@ namespace rct3::park::object
         /// Of a car whose riders sit on an arm: the arm's joints at rest, model space, from the base out. The
         /// first turns about its own up, the others about their own sideways.
         std::vector<glm::mat4> arm_joints;
-        /// Of a car whose moving part swings about one line, or is held level about it (its furthest turn 0): that
-        /// part, drawn apart.
+        /// Of a car whose moving part swings about one line, or is held level about it (its furthest turn 0), or spins
+        /// about its up: that part, drawn apart.
         std::optional<CarPart> car_part;
+        /// Of a car with a part spinning on it (then drawn apart as `car_part`), or that spins whole (no `car_part`):
+        /// how it spins.
+        std::optional<CarSpin> car_spin;
         /// Of a car with bones named "carfront" and "carrear" at its ends: how it sits on its track. Its wheels
         /// are its wheel bones, or both midway between its ends, on its own centre line, where it has none.
         std::optional<CarFit> car_fit;

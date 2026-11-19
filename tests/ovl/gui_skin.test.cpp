@@ -113,9 +113,9 @@ TEST_CASE("gui skins expose kind, texture and coordinates")
         }
     }
 
-    SUBCASE("a solid item has none and needs no pointer")
+    SUBCASE("a whole-texture item has none and needs no pointer")
     {
-        const auto overlay = make(structure(static_cast<std::uint32_t>(GuiSkinKind::Solid), 0));
+        const auto overlay = make(structure(static_cast<std::uint32_t>(GuiSkinKind::WholeTexture), 0));
         const auto items = read_gui_skins(overlay, overlay.common());
         REQUIRE(items[0].skin.has_value());
         CHECK(items[0].skin->coordinates.empty());

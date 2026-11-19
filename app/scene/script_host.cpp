@@ -726,7 +726,20 @@ namespace rct3::scene
                 const auto shown = std::ranges::find(park.shown_people, e, &park::ShownPerson::guest);
                 const glm::vec3 at = r.all_of<simulation::Pose>(e) ? r.get<simulation::Pose>(e).position : glm::vec3 { };
                 const save::model::TerrainGrid& g = park.grid;
-                out.push_back({ { "name", visitor.name }, { "col", g.tile_size_x > 0 ? (at.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (at.z - g.origin_z) / g.tile_size_z : 0 }, { "patience", vip.patience.value }, { "leaving", vip.leaving }, { "gone", r.all_of<simulation::Left>(e) }, { "shown", shown != park.shown_people.end() ? Json(shown - park.shown_people.begin()) : Json(nullptr) } });
+                const auto* errand = r.try_get<simulation::Errand>(e);
+                const std::string heading = errand != nullptr && errand->kind == simulation::ErrandKind::Heading && r.valid(errand->target) && r.all_of<simulation::Attraction>(errand->target) ? r.get<simulation::Attraction>(errand->target).name : std::string { };
+                out.push_back(
+                    { { "name", visitor.name },
+                      { "col", g.tile_size_x > 0 ? (at.x - g.origin_x) / g.tile_size_x : 0 },
+                      { "row", g.tile_size_z > 0 ? (at.z - g.origin_z) / g.tile_size_z : 0 },
+                      { "patience", vip.patience.value },
+                      { "leaving", vip.leaving },
+                      { "gone", r.all_of<simulation::Left>(e) },
+                      { "guards", std::ranges::count_if(r.view<const simulation::Bodyguard>().each(), [&](const auto& g) { return std::get<1>(g).vip == e && !r.all_of<simulation::Left>(std::get<0>(g)); }) },
+                      { "stops", vip.stops.size() },
+                      { "nextStop", vip.next_stop },
+                      { "heading", heading },
+                      { "shown", shown != park.shown_people.end() ? Json(shown - park.shown_people.begin()) : Json(nullptr) } });
             }
             return out;
         });

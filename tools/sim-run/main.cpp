@@ -2,7 +2,7 @@
 //
 // sim-run: run the simulation headless on an original save and report what happened.
 //
-//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--awards] [--car-places]
+//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--awards] [--car-places] [--left-out]
 //
 // Brings over the save's paths, stalls, rides and guests, runs N seconds of park time (default 600) and prints
 // what each shop and ride took and how the guests are doing, with how long the run took. --profile adds the
@@ -10,7 +10,9 @@
 // carry each theme, as the theme awards count them. --car-places (with --game) stands each car the save keeps at
 // its saved wheel distances on our track, prints how far that is from where the save has it, by track piece, with
 // each piece's length against the park's, and stops without running. Flat rides take their timing from their
-// models, so they come over only with --game, the game's folder.
+// models, so they come over only with --game, the game's folder. --left-out reads the park as the app does, prints
+// what that left behind, one tab-separated line per class (class, objects, whether none of it was read, the fields
+// never looked up joined by commas), and stops without running.
 #include "config/game/install.hpp"
 #include "core/types.hpp"
 #include "logging/crash.hpp"
@@ -26,12 +28,16 @@
 #include "park/track/course.hpp"
 #include "park/track/pieces.hpp"
 #include "park/track/rules.hpp"
+#include "particles/display.hpp"
 #include "profiling/profiler.hpp"
+#include "save/left_out.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
+#include "save/model/tutorial.hpp"
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
+#include "save/value.hpp"
 #include "simulation/awards.hpp"
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
@@ -124,6 +130,7 @@ int main(int argc, char** argv)
     bool profile = false;                            // Print the time each phase of a step took
     bool awards = false;                             // Print what the theme awards count
     std::optional<std::vector<CarPlace>> car_places; // With --car-places: each saved car stood by our track, then stop
+    bool left_out = false;                           // Print what loading the park left behind, then stop
     for (i32 i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--seconds") == 0 && i + 1 < argc)
@@ -144,6 +151,8 @@ int main(int argc, char** argv)
             awards = true;
         else if (std::strcmp(argv[i], "--car-places") == 0)
             car_places.emplace();
+        else if (std::strcmp(argv[i], "--left-out") == 0)
+            left_out = true;
         else if (std::strcmp(argv[i], "--weather") == 0 && i + 1 < argc)
             weather = argv[++i];
         else
@@ -151,7 +160,7 @@ int main(int argc, char** argv)
     }
     if (!path || (car_places && !game))
     {
-        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--awards] [--car-places]");
+        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--awards] [--car-places] [--left-out]");
         return 2;
     }
     std::ifstream in(path, std::ios::binary);
@@ -161,6 +170,9 @@ int main(int argc, char** argv)
         out.error("{}: cannot read", path);
         return 1;
     }
+    std::optional<save::FieldReads> reads;
+    if (left_out)
+        reads.emplace(std::as_bytes(std::span(raw)));
     const auto file = save::read_save(std::as_bytes(std::span(raw)), { .verify_checksum = false });
     if (!file)
     {
@@ -175,6 +187,22 @@ int main(int argc, char** argv)
     {
         out.error("{}: cannot load people, world or rides", path);
         return 1;
+    }
+    if (reads)
+    {
+        // The rest of what the app reads of an original park, so the fields left are those it leaves too.
+        (void)save::model::load_park(*file, index);
+        (void)save::model::load_shows(*file, index);
+        (void)save::model::load_tutorial(*file);
+        (void)particles::read_park_displays(*file);
+        for (const save::LeftOutClass& c : save::left_out(*file, *reads))
+        {
+            std::string fields;
+            for (const std::string& f : c.fields)
+                fields += std::format("{}{}", fields.empty() ? "" : ",", f);
+            out.info("{}\t{:d}\t{:d}\t{}", c.name, c.objects, c.untouched, fields);
+        }
+        return 0;
     }
 
     simulation::SimWorld world;

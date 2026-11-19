@@ -283,8 +283,8 @@ namespace rct3::simulation
             Moving,
         };
 
-        /// Swings each car's part on by `dt`, from how its car turns where it is in the train and how the train has
-        /// sped up since they last swung.
+        /// Swings or spins each car's part on by `dt`, from how its car turns where it is in the train and how the
+        /// train has sped up since they last moved.
         void swing_cars(Coaster& c, float dt, Going going)
         {
             const bool moving = going == Going::Moving;
@@ -292,9 +292,11 @@ namespace rct3::simulation
             const float speed = moving ? c.speed : 0.0f;
             const float along = moving && dt > 0 ? (speed - c.swung_speed) / dt : 0.0f;
             c.swung_speed = speed;
-            c.swings.resize(static_cast<std::size_t>(std::max(c.cars, 1)));
-            const float spacing = c.train_length / static_cast<float>(c.swings.size());
-            for (std::size_t k = 0; k < c.swings.size(); ++k)
+            const auto cars = static_cast<std::size_t>(std::max(c.cars, 1));
+            c.swings.resize(c.swinging ? cars : 0);
+            c.spins.resize(c.spinning ? cars : 0);
+            const float spacing = c.train_length / static_cast<float>(cars);
+            for (std::size_t k = 0; k < cars; ++k)
             {
                 const float d = c.at - (static_cast<float>(k) + 0.5f) * spacing;
                 const glm::vec3 here = track_point(c, d);
@@ -304,7 +306,18 @@ namespace rct3::simulation
                 const glm::vec3 bend = (ahead - 2.0f * here + behind) / (kReach * kReach);
                 const glm::vec3 side = glm::cross(track_up(c, d), way);
                 const glm::vec3 x = glm::length(side) > 1e-6f ? glm::normalize(side) : glm::vec3(1, 0, 0);
-                swing_on(c.swings[k], *c.swinging, glm::mat3(x, glm::cross(way, x), way), bend * speed * speed + way * along, dt);
+                const glm::mat3 axes(x, glm::cross(way, x), way);
+                const glm::vec3 acceleration = bend * speed * speed + way * along;
+                if (c.swinging)
+                    swing_on(c.swings[k], *c.swinging, axes, acceleration, dt);
+                if (c.spinning)
+                {
+                    const bool station = c.kinds[point_at(c, wrap(c, d))] == Stretch::Station;
+                    const SpinGround ground = station ? SpinGround::Station : chain_at(c, d) ? SpinGround::Chain : SpinGround::Track;
+                    // The car's heading turns about its up as fast as its way bends at its speed.
+                    const units::TurnRate turning { speed * glm::dot(glm::cross(way, bend), axes[1]) };
+                    spin_on(c.spins[k], *c.spinning, { .axes = axes, .acceleration = acceleration, .turning = turning, .ground = ground }, dt);
+                }
             }
         }
     } // namespace
@@ -315,7 +328,7 @@ namespace rct3::simulation
         {
             c.rolled_from.reset(); // Set down at its start again by its owner, it has not rolled back from where it was
             // Standing, its cars' parts swing down to rest.
-            for (float left = seconds; c.swinging && c.distance.size() >= 2 && left > 0; left -= kStep.value)
+            for (float left = seconds; (c.swinging || c.spinning) && c.distance.size() >= 2 && left > 0; left -= kStep.value)
                 swing_cars(c, std::min(left, kStep.value), Going::Standing);
             return false;
         }
@@ -371,7 +384,7 @@ namespace rct3::simulation
         for (std::int32_t step = 0; step < steps; ++step)
         {
             const float dt = std::min(seconds - static_cast<float>(step) * kStep.value, kStep.value);
-            if (c.swinging)
+            if (c.swinging || c.spinning)
                 swing_cars(c, dt, Going::Moving);
             // On a lift: rolled to a stop on its car's track, carried up, held at the top for the block ahead, then
             // let go to roll off under gravity, till its front is off the car's track and the track takes it.

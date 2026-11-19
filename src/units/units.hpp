@@ -177,6 +177,13 @@ namespace rct3::units
         float value = 0;
     };
 
+    /// How fast a turning speeds up or slows: radians a second, each second.
+    struct TurnAcceleration
+    {
+        static constexpr bool kUnit = true;
+        float value = 0;
+    };
+
     /// A length on screen or across a picture, in pixels; in the interface, in its units (pixels at a scale of one).
     struct Pixels
     {

@@ -49,6 +49,8 @@ namespace rct3::ovl
         float friction = 0;                         ///< Of the weight on its bearing, the share holding it back as it turns
         /// The furthest it turns from rest, where it is held to that; 0 keeps it at rest
         std::optional<units::Radians> furthest { };
+        units::Mass weight { };     ///< Its own
+        units::Share gravity { 1 }; ///< Of gravity, the share that turns it: all of it but in some later cars
     };
 
     struct RideCar
@@ -65,6 +67,8 @@ namespace rct3::ovl
         /// "svd" item of the part of the car that spins or swings on it, such as a spinning tub or a hanging
         /// seat; empty when the car is one piece. The two line up where each has a bone named "pivot".
         std::string_view part;
+        /// "svd" item of the second moving part, at byte 216 of version 4 and 5 records; empty where it has none.
+        std::string_view second_part;
         /// How its moving parts move, nothing where it has none: the first from the block at byte 20 (`part` the
         /// item that draws it), the second from the same fields in the block at byte 216 of version 4 and 5 records.
         /// Each block holds the part's "svd" reference, its motion, its weight (`mass` for the first), damping and
@@ -72,6 +76,15 @@ namespace rct3::ovl
         /// furthest turn in radians (-1 none). A car with no moving part holds 0 for its motion. Some cars name a
         /// motion and no item: the whole car moves.
         std::array<std::optional<PartMoves>, 2> moves { };
+        /// Of a car whose part spins, the ways round it may stop at a station, evenly spaced round from facing ahead:
+        /// the word at byte 260 in later cars (byte 9 of the record 2 or more), one in earlier ones.
+        std::uint32_t spin_stops = 1;
+        /// Its spinning part slows to a stop at a station wherever it faces, rather than turning to one of its stops,
+        /// as a rapids ride's raft that spins whole does: the word at byte 60 is not 0.
+        bool spin_settles = false;
+        /// Its spinning part is held from spinning on a lift chain: the word at byte 60 is not 0 in earlier cars, bit
+        /// 0x10 of the word at byte 272 is set in later ones.
+        bool spin_held_on_chains = false;
         /// "svd" items of the wheels: front right, front left, rear right, rear left; empty where it has none.
         std::array<std::string_view, 4> wheels;
         /// By wheel, whether its piece is drawn turned half round about the car's up, as where one side's wheel

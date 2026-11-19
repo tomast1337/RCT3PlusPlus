@@ -806,15 +806,20 @@ namespace
             cmd << f.string();
         bool ok = run(cmd);
 
-        // Bare int, unsigned, short and long, whose width depends on the compiler (AGENTS.md, "Number types").
-        // Comments, literals and preprocessor lines are skipped. Allowed: a line marked `// c-api`, `int main(int
-        // argc`, and `unsigned char` handed to a <cctype> function on the same line.
+        // Bare int, unsigned, short and long, whose width depends on the compiler, and the long names the short ones
+        // in src/core/types.hpp stand for: std::int32_t and the rest, std::size_t, float and double (AGENTS.md,
+        // "Number types"; nob itself does not use that header, so only the first rule holds here). Comments,
+        // literals and preprocessor lines are skipped. Allowed: a line marked `// c-api`, `int main(int argc`, and
+        // `unsigned char` handed to a <cctype> function on the same line.
         if (check)
         {
             const auto word_char = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_'; };
             constexpr std::array<std::string_view, 11> kCctype { "std::isalnum(", "std::isalpha(", "std::isdigit(", "std::isspace(", "std::isupper(", "std::islower(", "std::isxdigit(", "std::ispunct(", "std::isprint(", "std::tolower(", "std::toupper(" };
+            constexpr std::array<std::string_view, 11> kLong { "int8_t", "int16_t", "int32_t", "int64_t", "uint8_t", "uint16_t", "uint32_t", "uint64_t", "size_t", "float", "double" };
+            constexpr std::array<std::string_view, 11> kShort { "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "usize", "f32", "f64" };
             for (const auto& f : files)
             {
+                const bool short_names = f != "nob.cpp" && f != "nob.hpp" && f != fs::path("src/core/types.hpp");
                 std::ifstream in(f, std::ios::binary);
                 const std::string text { std::istreambuf_iterator<char>(in), { } };
 
@@ -887,11 +892,21 @@ namespace
                     for (std::size_t w = 0; w < words.size(); ++w)
                     {
                         const bool bare = words[w] == "int" || words[w] == "unsigned" || words[w] == "short" || words[w] == "long";
-                        if (!bare || (cctype && words[w] == "unsigned" && w + 1 < words.size() && words[w + 1] == "char"))
-                            continue;
-                        log(Level::Error, "{}:{}: bare `{}`: use a fixed-width type from <cstdint>, or mark a C API line `// c-api` (AGENTS.md, \"Number types\")", f.string(), number + 1, words[w]);
-                        ok = false;
-                        break;
+                        if (bare && !(cctype && words[w] == "unsigned" && w + 1 < words.size() && words[w + 1] == "char"))
+                        {
+                            log(Level::Error, "{}:{}: bare `{}`: use a short number type from core/types.hpp, or mark a C API line `// c-api` (AGENTS.md, \"Number types\")", f.string(), number + 1, words[w]);
+                            ok = false;
+                            break;
+                        }
+                        const auto at = std::ranges::find(kLong, words[w]);
+                        const std::size_t from = static_cast<std::size_t>(words[w].data() - line.data());
+                        const bool std_name = at < kLong.end() - 2 ? from >= 5 && line.substr(from - 5, 5) == "std::" : at != kLong.end();
+                        if (short_names && std_name)
+                        {
+                            log(Level::Error, "{}:{}: `{}`: use `{}` from core/types.hpp, or mark a C API line `// c-api` (AGENTS.md, \"Number types\")", f.string(), number + 1, words[w], kShort[static_cast<std::size_t>(at - kLong.begin())]);
+                            ok = false;
+                            break;
+                        }
                     }
                 }
             }

@@ -132,11 +132,11 @@ behaviour identical: `sim-run` output must not change.
   Give every struct member a default (`{ }` when nothing else fits) so leaving a field out does not warn.
 - A value with a unit has a unit type from `units/units.hpp` (`units::Money`, `units::Seconds`,
   `units::Radians`, ...), so the declaration says what it measures: `units::Seconds idle { 5 };`, not
-  `float idle = 5; ///< Seconds`. Add a kind there when none fits, with one doc comment. Plain numbers stay at
+  `f32 idle = 5; ///< Seconds`. Add a kind there when none fits, with one doc comment. Plain numbers stay at
   the edges a type cannot cross (file layouts, the GPU, third-party code) and in short locals.
 - A place in one list that is passed around or kept has an id type from `core/id.hpp`
   (`using RideIndex = core::Id<struct RideIndexTag>;`, declared beside the list), so a ride's place cannot be
-  passed where a stall's is meant: `void drop_ride_cars(Scene&, RideIndex ride)`, not `std::size_t ride`.
+  passed where a stall's is meant: `void drop_ride_cars(Scene&, RideIndex ride)`, not `usize ride`.
   Index the list with `.value`. Loop counters, file layouts, the GPU, EnTT and the script API's JSON numbers
   stay plain and are wrapped where they come in.
 - No magic "none" values: a value that may be missing is `std::optional<T>` (or an enum when there are more
@@ -149,11 +149,11 @@ behaviour identical: `sim-run` output must not change.
   that is plainly the value being set (`set_open(bool open)`) or passed straight from a variable of that name
   stays.
 - Named results: a function that returns two or more things, or a member that keeps them, uses a small struct
-  with named fields (`struct NearestRoute { std::size_t target { }; std::vector<NodeId> walk { }; };`), not
+  with named fields (`struct NearestRoute { usize target { }; std::vector<NodeId> walk { }; };`), not
   `std::pair` or `std::tuple`, so callers read `route->walk`, not `route->second`. A pair stays inside one
   function, and where a library wants one (`std::map` entries, keys built from several values).
 - No comments that only say what: when a comment restates the name or the next line, rename the code so it says
-  it (`std::size_t next_file = 0;`, not `std::size_t next = 0; ///< The next file to read`), or split a condition
+  it (`usize next_file = 0;`, not `usize next = 0; ///< The next file to read`), or split a condition
   into a named local, then delete the comment. A comment stays when it says why: a reason, a source, a surprise,
   a rule of the game, a range or edge case, or a unit no type carries yet.
 
@@ -161,15 +161,21 @@ behaviour identical: `sim-run` output must not change.
 
 The width of every number is written in its type, the same on every compiler and platform.
 
-- Whole numbers use the fixed-width types from `<cstdint>`: `std::int32_t`, `std::uint8_t`, `std::int64_t` and
-  so on, at the width the value needs. Not bare `int`, `unsigned`, `short` or `long`: their width depends on
-  the compiler (`long` is 64-bit on Linux and macOS, 32-bit on Windows).
-- Counts, sizes and indexes into containers are `std::size_t`.
-- `float` is 32-bit and `double` 64-bit IEEE 754; `units/units.hpp` checks this at compile time. Do not use
-  `std::float32_t` / `std::float64_t` until Clang and MSVC have them.
-- A measured quantity (distance, speed, angle, time, money) uses its unit type from `units/units.hpp`.
-- A field read from or written to a file uses the width the format has (`std::uint16_t` for a 2-byte field).
+- Numbers use the short names from `core/types.hpp`, as in Rust: `i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`,
+  `u64`, `f32` and `f64`, at the width the value needs. Not bare `int`, `unsigned`, `short` or `long`: their
+  width depends on the compiler (`long` is 64-bit on Linux and macOS, 32-bit on Windows). Not the long names
+  they stand for either (`std::int32_t`, `float`, ...).
+- Counts, sizes and indexes into containers are `usize`.
+- `f32` is a 32-bit and `f64` a 64-bit IEEE 754 number; `core/types.hpp` checks this at compile time. `f32`
+  becomes `std::float32_t` there once Clang and MSVC have it.
+- A measured quantity (distance, speed, angle, time, money) uses its unit type from `units/units.hpp`; the
+  short names are for plain numbers.
+- A field read from or written to a file uses the width the format has (`u16` for a 2-byte field).
 - Exceptions: `int main(int argc, char** argv)`; `char` for text; `unsigned char` to pass a `char` to the
   `<cctype>` functions (`std::tolower`, `std::isdigit`, ...); and a type a C or library API fixes (a callback
   signature, an `int*` out-parameter, a printf-style argument). Mark such a line with a `// c-api` comment.
-- `./nob format --check` fails on a bare `int`, `unsigned`, `short` or `long` outside these exceptions.
+- `./nob format --check` fails on a bare `int`, `unsigned`, `short` or `long`, and on `std::int32_t` and the
+  other `<cstdint>` names, `std::size_t`, `float` and `double`, outside these exceptions.
+- A branch started before the short names: rebase it, then run `tools/short-types/short_types.py` from the
+  repository root. It rewrites the long names (not in comments, literals or `// c-api` lines), adds the
+  include and runs clang-format; running it again changes nothing.

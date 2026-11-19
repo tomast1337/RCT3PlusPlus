@@ -47,9 +47,37 @@ namespace rct3::simulation
                 return 0;
             case NameCheat::Money:
             case NameCheat::GuestCamera:
+            case NameCheat::Nothing:
+            case NameCheat::NotYet:
                 return 0;
         }
         return 0;
+    }
+
+    std::string_view set_off_message(NameCheat cheat) noexcept
+    {
+        switch (cheat)
+        {
+            case NameCheat::Unbreakable:
+                return "Rct3pp_Cheat_Unbreakable";
+            case NameCheat::RideAllFlat:
+                return "Rct3pp_Cheat_RideAllFlat";
+            case NameCheat::RideAllTracked:
+                return "Rct3pp_Cheat_RideAllTracked";
+            case NameCheat::BigBlasts:
+                return "Rct3pp_Cheat_BigBlasts";
+            case NameCheat::NotYet:
+                return "Rct3pp_Cheat_NotYet";
+            case NameCheat::Money:
+            case NameCheat::Cheer:
+            case NameCheat::Laugh:
+            case NameCheat::Retch:
+            case NameCheat::GuestCamera:
+            case NameCheat::Hurry:
+            case NameCheat::Nothing:
+                return { };
+        }
+        return { };
     }
 
 } // namespace rct3::simulation

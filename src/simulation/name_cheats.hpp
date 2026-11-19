@@ -31,6 +31,8 @@ namespace rct3::simulation
         RideAllTracked, ///< And any ride on track
         BigBlasts,      ///< Crashed trains blow up far wider and harder
         Hurry,          ///< Guests go about at a run for a while
+        Nothing,        ///< A name the game knows that changes nothing there either
+        NotYet,         ///< A cheat whose system rct3++ does not have yet: the player is told so
     };
 
     /// The language key holding the name that sets each cheat off.
@@ -50,6 +52,15 @@ namespace rct3::simulation
         NameCheatKey { "CheatPeepName_RideAllCoasters", NameCheat::RideAllTracked },
         NameCheatKey { "CheatPeepName_BigExplosion", NameCheat::BigBlasts },
         NameCheatKey { "CheatPeepName_Ati", NameCheat::Hurry },
+        NameCheatKey { "CheatPeepName_AllGroupsIndividuals", NameCheat::Nothing },
+        NameCheatKey { "CheatPeepName_CoasterHeights", NameCheat::NotYet }, ///< Lifts the track height limit; rct3++ has none yet
+        NameCheatKey { "CheatPeepName_Fawkes", NameCheat::NotYet },         ///< Unlocks the firework display designer
+        NameCheatKey { "CheatPeepName_Moss", NameCheat::NotYet },           ///< A buggy the player drives
+        NameCheatKey { "CheatPeepName_Lean", NameCheat::NotYet },           ///< Opens the flying camera editor
+        NameCheatKey { "CheatPeepName_Mouse", NameCheat::NotYet },          ///< Guests stare at the ground a while
+        NameCheatKey { "CheatPeepName_Hitchcock", NameCheat::NotYet },      ///< Guests look round nervously a while
+        NameCheatKey { "CheatPeepName_FunnyDarts", NameCheat::NotYet },     ///< Safari darts drawn as a dinosaur
+        NameCheatKey { "CheatPeepName_Photostory", NameCheat::NotYet },     ///< What it does is not known yet
     };
 
     /// The money the cheat gives: 10,000.00, as the game gives it.
@@ -68,6 +79,9 @@ namespace rct3::simulation
         bool big_blasts = false;
         units::Seconds hurry { }; ///< Left of guests' hurry
     };
+
+    /// The message telling the player `cheat` is on, for those with nothing to see at once; empty for the rest.
+    [[nodiscard]] std::string_view set_off_message(NameCheat cheat) noexcept;
 
     /// Sets `cheat` off in `world`; Money and GuestCamera are the scene's and do nothing here. Returns how many
     /// guests it acted on for those that act on guests at once.

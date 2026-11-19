@@ -131,3 +131,34 @@ TEST_CASE("name cheats: guests in a hurry walk faster for a while, then at their
     CHECK(left == doctest::Approx(kHurry.value - 40 * kTickSeconds));
     CHECK(current_guest_slowdown(SimWorld { }) == 1);
 }
+
+TEST_CASE("name cheats: the table has each of the game's cheat names once, and every kind of cheat is in it")
+{
+    CHECK(kNameCheatKeys.size() == 19);
+    for (const auto& a : kNameCheatKeys)
+    {
+        CHECK(a.key.starts_with("CheatPeepName_"));
+        CHECK(std::ranges::count(kNameCheatKeys, a.key, &NameCheatKey::key) == 1);
+    }
+    for (u8 c = 0; c <= static_cast<u8>(NameCheat::NotYet); ++c)
+        CHECK(std::ranges::contains(kNameCheatKeys, static_cast<NameCheat>(c), &NameCheatKey::cheat));
+}
+
+TEST_CASE("name cheats: a name the game knows but rct3++ has no system for says so and changes nothing")
+{
+    CHECK(set_off_message(NameCheat::NotYet) == "Rct3pp_Cheat_NotYet");
+    CHECK(set_off_message(NameCheat::Nothing).empty());
+    CHECK(set_off_message(NameCheat::Cheer).empty());
+    CHECK(set_off_message(NameCheat::Unbreakable) == "Rct3pp_Cheat_Unbreakable");
+    for (const auto cheat : { NameCheat::NotYet, NameCheat::Nothing })
+    {
+        Sandbox park;
+        park.path({ 0, 0 }, { 4, 0 });
+        const auto g = park.guest({ 0, 0 });
+        CHECK(set_off(park.world(), cheat) == 0);
+        const NameCheats& on = park.world().cheats;
+        CHECK_FALSE((on.unbreakable || on.ride_all_flat || on.ride_all_tracked || on.big_blasts));
+        CHECK(on.hurry.value == 0);
+        CHECK_FALSE(park.world().registry.all_of<Gesture>(g));
+    }
+}

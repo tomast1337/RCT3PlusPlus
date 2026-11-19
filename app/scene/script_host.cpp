@@ -30,6 +30,7 @@
 #include "simulation/parties.hpp"
 #include "simulation/ride_walks.hpp"
 #include "simulation/rides.hpp"
+#include "simulation/staff/patrol.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
@@ -1280,6 +1281,8 @@ namespace rct3::scene
                 {
                     person["role"] = kRoles[std::to_underlying(staff->role)];
                     person["job"] = kJobs[std::to_underlying(staff->job)];
+                    const auto* patrol = r.try_get<simulation::staff::Patrol>(p.guest);
+                    person["patrol"] = patrol != nullptr ? patrol->tiles.size() : 0;
                 }
                 if (const auto* passport = !p.staff && r.valid(p.guest) ? r.try_get<simulation::Passport>(p.guest) : nullptr)
                 {

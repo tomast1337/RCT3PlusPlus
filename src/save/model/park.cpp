@@ -165,6 +165,7 @@ namespace rct3::save::model
             constexpr std::string_view kVipNext = "NextInsertVIPTime";
             constexpr std::string_view kVipRetry = "InsertionInterval";
             constexpr std::string_view kVipStay = "MonthsToStayInPark";
+            constexpr std::string_view kVipGuards = "NumBodyGuards";
             constexpr std::string_view kVipCoasters = "CoastersNeeded";
             constexpr std::string_view kVipExcitement = "MinExcitment";
             constexpr std::string_view kVipTheme = "PreferedStyle";
@@ -608,6 +609,7 @@ namespace rct3::save::model
                     .next_visit = float_of(o.find(kVipNext), 0.0f),
                     .retry_months = i32_of(o.find(kVipRetry), 0),
                     .months_to_stay = i32_of(o.find(kVipStay), 0),
+                    .guards = i32_of(o.find(kVipGuards), 0),
                     .coasters_needed = i32_of(o.find(kVipCoasters), 0),
                     .min_excitement = float_of(o.find(kVipExcitement), 0.0f),
                     .theme = i32_of(o.find(kVipTheme), 0),

@@ -566,6 +566,9 @@ namespace rct3::simulation::tuning
         std::int32_t heap = 3;         ///< Pieces of litter by them from which on it counts in full
         units::Share few { 0.4f };     ///< What less litter than a heap counts for
         std::int32_t reach = 3;        ///< Tiles round them they see a themed area in
+        std::int32_t guards = 2;       ///< Chosen by eye: bodyguards with a VIP whose goal names none, so none walks alone
+        units::Seconds nag { 40 };     ///< Chosen by eye: held up this long at a stop, they say so again
+        units::Seconds give_up { 80 }; ///< Chosen by eye: held up this long after saying so again, they go on to the next
     };
 
     /// Entertainers' shows and the crowds round them.

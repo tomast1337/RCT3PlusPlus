@@ -6,12 +6,17 @@
 #include "simulation/guests.hpp"
 #include "simulation/objectives.hpp"
 #include "simulation/rides.hpp"
+#include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
 #include <array>
+#include <functional>
+#include <optional>
 #include <ranges>
+#include <utility>
+#include <vector>
 
 namespace rct3::simulation
 {
@@ -20,13 +25,17 @@ namespace rct3::simulation
         constexpr float kMonth = save::model::GameClock::kUnitsPerMonth;
         constexpr float kWeek = save::model::GameClock::kUnitsPerWeek;
 
-        /// Whether `ride` is broken down, or has a train lying wrecked.
-        bool out_of_order(const entt::registry& r, entt::entity ride)
+        /// Whether `ride` has a train lying wrecked.
+        bool crashed(const entt::registry& r, entt::entity ride)
         {
-            if (const auto* upkeep = r.try_get<Upkeep>(ride); upkeep != nullptr && upkeep->broken)
-                return true;
             const auto* wrecks = r.try_get<Wrecks>(ride);
             return wrecks != nullptr && std::ranges::any_of(wrecks->trains, [](const auto& t) { return !t.empty(); });
+        }
+
+        bool broken(const entt::registry& r, entt::entity ride)
+        {
+            const auto* upkeep = r.try_get<Upkeep>(ride);
+            return upkeep != nullptr && upkeep->broken;
         }
     } // namespace
 
@@ -51,9 +60,9 @@ namespace rct3::simulation
         tick(T::kCoasters, std::max(target.coasters_needed, 0), static_cast<std::int32_t>(vip.coasters.size()));
         tick(T::kFireworks, 1, vip.fireworks ? 1 : 0);
         tick(T::kThemedArea, 1, vip.themed ? 1 : 0);
-        // shortcut: pools and viewing galleries are not simulated, so a VIP wanting one counts it seen; judge them
-        // once rct3++ has swimming pools and animal galleries.
-        tick(T::kPool, 1, 1);
+        tick(T::kPool, 1, vip.pool ? 1 : 0);
+        // shortcut: viewing galleries are not simulated, so a VIP wanting them counts them seen; judge them once
+        // rct3++ has animal galleries.
         tick(T::kGalleries, 1, 1);
         return wanted > 0 ? static_cast<float>(seen) / static_cast<float>(wanted) : happiness;
     }
@@ -66,6 +75,14 @@ namespace rct3::simulation
         const std::int32_t level = level_playing(set);
         const auto name_of = [&](std::uint8_t who) { return around.name ? around.name(who) : std::string { }; };
         const auto tell = [&](std::string_view key, std::uint8_t who) { park::post(messages, { .text_key = std::string(key), .subject_name = name_of(who) }); };
+        // shortcut: any ride with trains counts as a coaster, as the simulation does not tell coasters from other
+        // tracked rides, but a pool's slides do not; tell them apart once it keeps a ride's kind.
+        const auto coaster = [&](entt::entity ride, const T& goal) -> std::optional<float> {
+            const auto* cycle = r.try_get<CycleRide>(ride);
+            if (cycle == nullptr || !r.all_of<Trains, Attraction>(ride) || pool_ride_pool(world, ride) || cycle->excitement.value * 10.0f < goal.min_excitement)
+                return std::nullopt;
+            return cycle->excitement.value;
+        };
         // shortcut: VIP messages name the VIP but have no camera on them, as guests who came in since the park
         // was loaded have no id a message can keep; point them at the VIP once such guests are given one.
         for (save::model::Condition& c : set.conditions)
@@ -119,11 +136,41 @@ namespace rct3::simulation
                 if (gates.begin() == gates.end())
                     continue; // The park has no gate yet; they come once it does
                 const entt::entity gate = *gates.begin();
-                // Celebrities 2 and 3 are women, as their models are.
-                const std::array<Newcomer, 1> who { Newcomer { AgeGroup::Adult, goal.who == 2 || goal.who == 3 } };
-                const entt::entity guest = admit_guests(world, gates.get<Dice>(gate).state, gates.get<const ParkGate>(gate).node, who, kTuning.parties.middle).front();
+                // Celebrities 2 and 3 are women, as their models are. Their bodyguards walk with them as their party.
+                constexpr std::int32_t kMostGuards = 7; ///< Chosen by eye: a party of eight at most keeps the walk together
+                const std::int32_t guards = std::clamp(goal.guards > 0 ? goal.guards : tune.guards, 0, kMostGuards);
+                std::vector<Newcomer> who(static_cast<std::size_t>(guards) + 1, Newcomer { AgeGroup::Adult, false });
+                who.front().is_female = goal.who == 2 || goal.who == 3;
+                const NodeId at = gates.get<const ParkGate>(gate).node;
+                const std::vector<entt::entity> party = admit_guests(world, gates.get<Dice>(gate).state, at, who, kTuning.parties.middle);
+                const entt::entity guest = party.front();
                 r.get<Visitor>(guest).name = name_of(goal.who);
-                r.emplace<Vip>(guest, Vip { .goal = c.id, .who = goal.who, .came = time, .look = tune.look });
+                for (const entt::entity guard : party | std::views::drop(1))
+                    r.emplace<Bodyguard>(guard, guest);
+                // Their stops: the coasters they want, most exciting first, then the pool nearest the gate.
+                std::vector<std::pair<float, entt::entity>> coasters;
+                if ((goal.wishes & T::kCoasters) != 0)
+                    for (const entt::entity ride : sorted(r.view<const CycleRide>()))
+                        if (const auto excitement = coaster(ride, goal))
+                            coasters.emplace_back(*excitement, ride);
+                std::ranges::stable_sort(coasters, std::greater { }, &std::pair<float, entt::entity>::first);
+                std::vector<entt::entity> stops { std::from_range, coasters | std::views::values };
+                if ((goal.wishes & T::kPool) != 0)
+                {
+                    std::vector<entt::entity> doors;
+                    std::vector<NodeId> entrances;
+                    for (const entt::entity door : sorted(r.view<const PoolDoor, const Attraction>()))
+                        if (const auto& entrance = r.get<const Attraction>(door).entrance)
+                        {
+                            doors.push_back(door);
+                            entrances.push_back(*entrance);
+                        }
+                    if (auto nearest = world.paths.route_nearest(at, entrances))
+                        stops.push_back(doors[nearest->target]);
+                    else if (!doors.empty())
+                        stops.push_back(doors.front()); // They say there is no way to it
+                }
+                r.emplace<Vip>(guest, Vip { .goal = c.id, .who = goal.who, .came = time, .look = tune.look, .stops = std::move(stops) });
                 goal.warned_week = goal.warned_month = false;
                 tell("VIP_ArrivedInPark", goal.who);
                 continue;
@@ -151,15 +198,82 @@ namespace rct3::simulation
                     if (near > 0)
                         lose(goal.litter_tolerance, near >= tune.heap ? 1.0f : tune.few.value);
                 }
-            if (const auto* errand = r.try_get<Errand>(guest); errand != nullptr && errand->kind == ErrandKind::Riding && r.valid(errand->target))
+            Errand& errand = r.get<Errand>(guest);
+            if (errand.kind == ErrandKind::Riding && r.valid(errand.target))
             {
-                const entt::entity ride = errand->target;
-                if ((goal.wishes & T::kBreakdowns) != 0 && out_of_order(r, ride))
+                const entt::entity ride = errand.target;
+                if ((goal.wishes & T::kBreakdowns) != 0 && (broken(r, ride) || crashed(r, ride)))
                     lose(goal.breakdown_tolerance, 1.0f);
-                // shortcut: any ride with trains counts as a coaster, as the simulation does not tell coasters from
-                // other tracked rides; tell them apart once it keeps a ride's kind.
-                if (const auto* cycle = r.try_get<CycleRide>(ride); cycle != nullptr && r.all_of<Trains>(ride) && cycle->excitement.value * 10.0f >= goal.min_excitement && !std::ranges::contains(vip.coasters, ride))
+                if (coaster(ride, goal) && !std::ranges::contains(vip.coasters, ride))
                     vip.coasters.push_back(ride);
+            }
+            if (errand.kind == ErrandKind::Swimming)
+                vip.pool = true;
+            // On to their next stop once free, past those they are done with: a coaster ridden (or as many as they
+            // want), a pool swum in, one pulled down. Held up there, they say why, again later, then give it up.
+            const auto done_with = [&](entt::entity stop) {
+                if (!r.valid(stop) || !r.all_of<Attraction>(stop))
+                    return true;
+                if (r.all_of<PoolDoor>(stop))
+                    return vip.pool;
+                return std::ranges::contains(vip.coasters, stop) || std::cmp_greater_equal(vip.coasters.size(), goal.coasters_needed);
+            };
+            while (vip.next_stop < vip.stops.size() && done_with(vip.stops[vip.next_stop]))
+            {
+                ++vip.next_stop;
+                vip.snag = VipSnag::None;
+            }
+            // On the way there too: a stop that closes, breaks down or crashes meanwhile stops them.
+            const bool on_way = vip.next_stop < vip.stops.size() && errand.kind == ErrandKind::Heading && errand.target == vip.stops[vip.next_stop];
+            if (vip.next_stop < vip.stops.size() && (errand.kind == ErrandKind::Wandering || on_way))
+            {
+                const entt::entity stop = vip.stops[vip.next_stop];
+                const Attraction& attraction = r.get<Attraction>(stop);
+                Stride& stride = r.get<Stride>(guest);
+                auto walk = !on_way && attraction.entrance ? world.paths.route(stride.to, *attraction.entrance, Walker::Guest, r.get<Wallet>(guest).cash.value) : std::nullopt;
+                const VipSnag snag = crashed(r, stop) ? VipSnag::Crashed : broken(r, stop) ? VipSnag::Broken : !attraction.open ? VipSnag::Closed : !on_way && !walk ? VipSnag::NoWay : VipSnag::None;
+                // What they say, first and again, by VipSnag.
+                constexpr std::array<std::array<std::string_view, 2>, 5> kSay { {
+                    { },
+                    { "VIP_AttractionClosed", "VIP_AttractionClosed2" },
+                    { "VIP_AttractionBroken", "VIP_AttractionBroken2" },
+                    { "VIP_AttractionCrashed", "VIP_AttractionCrashed2" },
+                    { "VIP_CantGetToWaypoint", "VIP_CantGetToWaypoint2" },
+                } };
+                const auto& say = kSay[std::to_underlying(snag)];
+                if (on_way && snag != VipSnag::None)
+                {
+                    errand = { ErrandKind::Wandering, entt::null, 0 };
+                    stride.route.clear();
+                }
+                if (snag == VipSnag::None)
+                {
+                    if (walk)
+                    {
+                        errand = { ErrandKind::Heading, stop, 0 };
+                        stride.route = std::move(*walk);
+                    }
+                    vip.snag = VipSnag::None;
+                }
+                else if (snag != vip.snag)
+                {
+                    tell(say[0], vip.who);
+                    vip.snag = snag;
+                    vip.snagged = { };
+                    vip.nagged = false;
+                }
+                else if (vip.snagged.value += tune.look.value; !vip.nagged && vip.snagged.value >= tune.nag.value)
+                {
+                    tell(say[1], vip.who);
+                    vip.snagged = { };
+                    vip.nagged = true;
+                }
+                else if (vip.nagged && vip.snagged.value >= tune.give_up.value)
+                {
+                    tell("VIP_GivenUpTryingToGetToWaypoint", vip.who);
+                    ++vip.next_stop;
+                    vip.snag = VipSnag::None;
+                }
             }
             // A display that goes up while they are in the park counts, wherever they are.
             if (r.ctx().contains<FireworkShow>())

@@ -2,9 +2,12 @@
 #include "simulation/vip.hpp"
 
 #include "simulation/components.hpp"
+#include "simulation/crash.hpp"
 #include "simulation/fireworks.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/objectives.hpp"
+#include "simulation/parties.hpp"
+#include "simulation/rides.hpp"
 #include "simulation/sandbox.hpp"
 #include "simulation/systems.hpp"
 
@@ -12,6 +15,8 @@
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <ranges>
+#include <string>
+#include <utility>
 
 using namespace rct3;
 using namespace rct3::simulation;
@@ -160,4 +165,132 @@ TEST_CASE("a VIP's opinion counts each coaster wanted once, and is their happine
     vip.fireworks = true;
     CHECK(vip_opinion(vip, wants, 0.8f) == 1);
     CHECK(vip_opinion(vip, { .wishes = T::kLitter }, 0.8f) == doctest::Approx(0.8f));
+}
+
+TEST_CASE("a VIP comes in with their bodyguards, who walk with them as their party")
+{
+    Sandbox park = gated();
+    std::int32_t named = 0;
+    std::int32_t expected = kTuning.vips.guards;
+    SUBCASE("as many as the goal names")
+    {
+        named = 3;
+        expected = 3;
+    }
+    SUBCASE("the tuning's number when it names none")
+    {
+    }
+    auto set = one_goal({ .next_visit = 0, .months_to_stay = 1, .guards = named });
+    ParkMessages messages;
+    advance_vips(park.world(), set, 0, 1, messages, { });
+    auto& r = park.world().registry;
+    const auto vip = the_vip(r);
+    REQUIRE(vip);
+    REQUIRE(r.all_of<Member>(*vip));
+    const Party& party = r.get<Party>(r.get<Member>(*vip).party);
+    CHECK(party.leader == *vip);
+    CHECK(std::cmp_equal(party.members.size(), expected + 1));
+    for (const entt::entity m : party.members)
+        if (m != *vip)
+        {
+            CHECK(r.get<Bodyguard>(m).vip == *vip);
+            CHECK(r.get<Errand>(m).kind == ErrandKind::Following);
+        }
+}
+
+TEST_CASE("a VIP walks to the coasters they want, most exciting first, and goes on once they have ridden enough")
+{
+    Sandbox park = gated();
+    auto& r = park.world().registry;
+    const entt::entity tame = park.flat_ride("Tame", { 2, 0 }, 100, { .excitement = 0.55f });
+    const entt::entity wild = park.flat_ride("Wild", { 4, 0 }, 100, { .excitement = 0.7f });
+    const entt::entity dull = park.flat_ride("Dull", { 3, 0 }, 100, { .excitement = 0.3f });
+    for (const entt::entity ride : { tame, wild, dull })
+        r.emplace<Trains>(ride);
+    auto set = one_goal({ .wishes = T::kCoasters, .next_visit = 0, .months_to_stay = 1, .coasters_needed = 1, .min_excitement = 5 });
+    ParkMessages messages;
+    advance_vips(park.world(), set, 0, 1, messages, { });
+    const auto vip = the_vip(r);
+    REQUIRE(vip);
+    CHECK(r.get<Vip>(*vip).stops == std::vector { wild, tame }); // Not the one too dull for them
+    advance_vips(park.world(), set, 1, kTuning.vips.look.value, messages, { });
+    CHECK(r.get<Errand>(*vip).kind == ErrandKind::Heading);
+    CHECK(r.get<Errand>(*vip).target == wild);
+    r.get<Errand>(*vip) = { ErrandKind::Riding, wild, 0 };
+    advance_vips(park.world(), set, 2, kTuning.vips.look.value, messages, { });
+    CHECK(r.get<Vip>(*vip).coasters == std::vector { wild });
+    CHECK(r.get<Vip>(*vip).next_stop == 2); // One was all they wanted
+    CHECK(vip_opinion(r.get<Vip>(*vip), *set.conditions[0].vip, 0) == 1);
+}
+
+TEST_CASE("a VIP held up on the way to a stop says why, says so again later, then gives it up")
+{
+    Sandbox park = gated();
+    park.path({ 8, 0 }, { 9, 0 }); // Not joined to the rest
+    auto& r = park.world().registry;
+    const entt::entity joined = park.flat_ride("Joined", { 4, 0 }, 100, { .excitement = 0.7f });
+    const entt::entity apart = park.flat_ride("Apart", { 9, 0 }, 100, { .excitement = 0.8f });
+    r.emplace<Trains>(joined);
+    r.emplace<Trains>(apart);
+    std::string first = "VIP_CantGetToWaypoint";
+    std::string again = "VIP_CantGetToWaypoint2";
+    entt::entity held = apart;
+    SUBCASE("no way there")
+    {
+    }
+    SUBCASE("closed")
+    {
+        r.get<Attraction>(joined).open = false;
+        r.get<CycleRide>(joined).excitement.value = 0.9f;
+        held = joined;
+        first = "VIP_AttractionClosed";
+        again = "VIP_AttractionClosed2";
+    }
+    SUBCASE("broken down")
+    {
+        r.emplace<Upkeep>(joined, Upkeep { .broken = true });
+        r.get<CycleRide>(joined).excitement.value = 0.9f;
+        held = joined;
+        first = "VIP_AttractionBroken";
+        again = "VIP_AttractionBroken2";
+    }
+    SUBCASE("crashed")
+    {
+        r.emplace<Wrecks>(joined, Wrecks { .trains = { { Wreck { } } } });
+        r.get<CycleRide>(joined).excitement.value = 0.9f;
+        held = joined;
+        first = "VIP_AttractionCrashed";
+        again = "VIP_AttractionCrashed2";
+    }
+    auto set = one_goal({ .wishes = T::kCoasters, .next_visit = 0, .months_to_stay = 1, .coasters_needed = 2, .min_excitement = 5 });
+    ParkMessages messages;
+    advance_vips(park.world(), set, 0, 1, messages, { });
+    const auto vip = the_vip(r);
+    REQUIRE(vip);
+    REQUIRE(r.get<Vip>(*vip).stops.front() == held);
+    const auto look = [&] { advance_vips(park.world(), set, 1, kTuning.vips.look.value, messages, { }); };
+    look();
+    CHECK(messages.list.back().text_key == first);
+    CHECK(r.get<Errand>(*vip).kind == ErrandKind::Wandering);
+    const auto said = [&](const std::string& key) { return std::ranges::count(keys(messages), key); };
+    for (std::int32_t i = 0; i < 100 && said(again) == 0; ++i)
+        look();
+    CHECK(said(first) == 1); // Once, not at every look
+    CHECK(said(again) == 1);
+    for (std::int32_t i = 0; i < 100 && said("VIP_GivenUpTryingToGetToWaypoint") == 0; ++i)
+        look();
+    CHECK(said(again) == 1);
+    CHECK(r.get<Vip>(*vip).next_stop == 1);
+    look(); // Off to the other one
+    CHECK(r.get<Errand>(*vip).kind == (held == apart ? ErrandKind::Heading : ErrandKind::Wandering));
+    CHECK(vip_opinion(r.get<Vip>(*vip), *set.conditions[0].vip, 0) < 1); // Short of what they came for so far
+}
+
+TEST_CASE("a VIP who wants a swim has seen the pool once they swim in one")
+{
+    Vip vip;
+    const T wants { .wishes = T::kPool };
+    CHECK(vip_opinion(vip, wants, 1) == 0);
+    vip.pool = true;
+    CHECK(vip_opinion(vip, wants, 1) == 1);
 }

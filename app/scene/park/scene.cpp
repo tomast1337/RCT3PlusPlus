@@ -1200,7 +1200,7 @@ namespace rct3::scene::park
                         .rating = static_cast<i32>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
                         .money = scene.park.cash.has_value(),
                         .fee_charged = scene.park.cash.has_value() && !money.unlimited() && !money.entrance_fee_fixed(),
-                        .entrance_fee = money.entrance_fee,
+                        .entrance_fee = { money.entrance_fee },
                         .fair_fee = simulation::fair_entrance_fee(scene.sim),
                         .old_litter = simulation::old_litter(scene.sim),
                     };
@@ -1309,7 +1309,7 @@ namespace rct3::scene::park
                 (void)simulation::park::ledger_month(money, scene.ledger_month, scene.park.date);
                 const save::model::LedgerPeriod last_month = money.ledger.size() > 1 ? money.ledger[1] : save::model::LedgerPeriod { };
                 const simulation::ParkFigures figures {
-                    .park_value = simulation::park::park_value(scene.park.guests, scene.rides).value,
+                    .park_value = { simulation::park::park_value(scene.park.guests, scene.rides).value },
                     .guests = scene.park.guests,
                     .rating = static_cast<i32>(std::lround(scene.park.rating.value_or(0) * simulation::park::kMaxRating)),
                     .loan = scene.park.loan,

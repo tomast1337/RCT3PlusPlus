@@ -40,7 +40,7 @@ TEST_CASE("a guest getting wet goes and buys an umbrella")
     const auto stall = park.shop("Umbrellas", Product::Umbrella, { 4, 0 }, 300);
     auto& r = park.world().registry;
     r.ctx().emplace<Weather>(Weather { .rain = true });
-    const auto g = park.guest({ 0, 0 }, { .cash = 1000 });
+    const auto g = park.guest({ 0, 0 }, { .cash = { 1000 } });
     CHECK(park.run_until([&] { return r.all_of<Umbrella>(g); }, 60));
     CHECK(r.get<Attraction>(stall).customers == 1);
     CHECK(r.get<Wallet>(g).cash.value == 700);
@@ -71,7 +71,7 @@ TEST_CASE("guests get thirsty faster on a hot day")
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
         auto& r = park.world().registry;
-        r.ctx().emplace<Weather>(Weather { .temperature = hot ? 35.0f : 20.0f });
+        r.ctx().emplace<Weather>(Weather { .temperature = { hot ? 35.0f : 20.0f } });
         const auto g = park.guest({ 0, 0 });
         park.run_seconds(60);
         thirst[hot] = r.get<Needs>(g).thirst.value;

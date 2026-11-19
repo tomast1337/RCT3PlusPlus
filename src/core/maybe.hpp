@@ -16,10 +16,12 @@ namespace rct3::core
         return p != nullptr ? std::optional<T&>(*p) : std::nullopt;
     }
 
-    /// Back to a pointer, for storing a link: null when `r` holds nothing.
+    /// Back to a pointer, for storing a link: null when `r` holds nothing. Also for binding a reference to what a
+    /// call returns, `T& t = *as_pointer(call())`: Clang's lifetime checks take `*call()` for a reference into a
+    /// destroyed temporary, as if the optional owned its value.
     template<typename T> [[nodiscard]] constexpr T* as_pointer(std::optional<T&> r) noexcept
     {
-        return r ? &*r : nullptr;
+        return r.transform([](T& value) { return &value; }).value_or(nullptr); // `&*r` trips the same check
     }
 
 } // namespace rct3::core

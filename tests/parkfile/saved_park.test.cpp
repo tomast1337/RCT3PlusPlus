@@ -109,7 +109,7 @@ TEST_CASE("a saved park reads back as written")
     CHECK(goals->broken_items.empty());
     CHECK_FALSE(goals->research); // None kept: research starts again from the original park
 
-    hidden.research = simulation::Research { .budget = 20000, .spent = 667, .boost = 50000, .current = 12, .previous = 9, .priorities = { 0.5f, 1.0f }, .since_part = 3.5f, .invented = { 9 }, .invented_at = { 1234.5f }, .focus = 12, .set_aside = { { .id = 7, .spent = units::Money { 400 } } } };
+    hidden.research = simulation::Research { .budget = { 20000 }, .spent = { 667 }, .boost = { 50000 }, .current = 12, .previous = 9, .priorities = { 0.5f, 1.0f }, .since_part = 3.5f, .invented = { 9 }, .invented_at = { 1234.5f }, .focus = 12, .set_aside = { { .id = 7, .spent = units::Money { 400 } } } };
     const auto research = parkfile::read_saved_park(parkfile::write_saved_park(hidden));
     REQUIRE(research);
     REQUIRE(research->research);
@@ -320,8 +320,8 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     // Ann is drawn as the second saved guest; Bob arrived since and is walking in; Cy has left.
     const entt::entity ann = r.create();
     r.emplace<Visitor>(ann, Visitor { .name = "Ann" });
-    r.emplace<Pose>(ann, Pose { .position = { 1, 0, 2 }, .heading = 0.5f });
-    r.emplace<Needs>(ann, Needs { .hunger = 0.25f });
+    r.emplace<Pose>(ann, Pose { .position = { 1, 0, 2 }, .heading = { 0.5f } });
+    r.emplace<Needs>(ann, Needs { .hunger = { 0.25f } });
     r.emplace<Mood>(ann);
     r.emplace<Wallet>(ann, Wallet { .cash = { 500 }, .bank = { 4000 }, .spent = { 300 }, .spent_rides = { 300 } });
     r.emplace<Taste>(ann, 0.1f, 0.7f);
@@ -347,7 +347,7 @@ TEST_CASE("a save keeps the guests and staff, and loading puts them back")
     r.emplace<Member>(ann, party);
     r.emplace<Member>(bob, party);
     const entt::entity sweeper = r.create();
-    r.emplace<Staff>(sweeper, Staff { .role = StaffRole::Handyman, .busy = { 3 }, .wage = 900, .training = 1, .laziness = 0.25f, .load = { 0.5f }, .job = StaffJob::Sweep, .job_length = { 5 }, .mended = 5, .think = { 12.5f }, .miserable = 3 });
+    r.emplace<Staff>(sweeper, Staff { .role = StaffRole::Handyman, .busy = { 3 }, .wage = { 900 }, .training = 1, .laziness = { 0.25f }, .load = { 0.5f }, .job = StaffJob::Sweep, .job_length = { 5 }, .mended = 5, .think = { 12.5f }, .miserable = 3 });
     r.emplace<Pose>(sweeper, Pose { .position = { 3, 0, 4 } });
     r.emplace<staff::Patrol>(sweeper, staff::Patrol { { { 1, 2 }, { 3, 4 } }, 7 });
 

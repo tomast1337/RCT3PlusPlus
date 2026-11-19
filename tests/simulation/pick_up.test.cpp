@@ -70,7 +70,7 @@ TEST_CASE("a party member picked up or sliding away stays in the party, which wa
         const auto party = park.party({ a, b, c });
         auto& r = park.world().registry;
         park.run(2);
-        REQUIRE(held ? pick_up(park.world(), c) : slide(park.world(), c));
+        REQUIRE((held ? pick_up(park.world(), c) : slide(park.world(), c)));
         CHECK(r.get<Party>(party).members == std::vector<entt::entity> { a, b });
         CHECK(r.get<Party>(party).away == std::vector<entt::entity> { c });
         CHECK_FALSE(r.any_of<Member>(c));

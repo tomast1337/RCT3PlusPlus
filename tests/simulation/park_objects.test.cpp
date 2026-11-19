@@ -37,7 +37,7 @@ TEST_CASE("guests use toilets, cash machines and first aid when they need them")
         Sandbox park;
         park.path({ 0, 0 }, { 6, 0 });
         park.shop("Cash", Product::CashMachine, { 6, 0 }, 0);
-        const auto g = park.guest({ 0, 0 }, { .cash = 100 });
+        const auto g = park.guest({ 0, 0 }, { .cash = { 100 } });
         CHECK(park.run_until([&] { return park.world().registry.get<Wallet>(g).cash.value > 100; }, 60));
     }
     {
@@ -103,7 +103,7 @@ TEST_CASE("a guest who cannot afford what they want draws cash, though they have
         park.path({ 0, 0 }, { 6, 0 });
         park.shop("Food", Product::Food, { 6, 0 }, 3000);
         park.shop("Cash", Product::CashMachine, { 0, 0 }, 0);
-        const auto g = park.guest({ 3, 0 }, { .hunger = 0.9f, .cash = 2000 });
+        const auto g = park.guest({ 3, 0 }, { .hunger = 0.9f, .cash = { 2000 } });
         CHECK(park.run_until([&] { return park.world().registry.get<Wallet>(g).withdrawn.value > 0; }, 60));
     }
     {
@@ -111,7 +111,7 @@ TEST_CASE("a guest who cannot afford what they want draws cash, though they have
         Sandbox park;
         park.path({ 0, 0 }, { 6, 0 });
         park.shop("Cash", Product::CashMachine, { 6, 0 }, 0);
-        const auto g = park.guest({ 0, 0 }, { .cash = 2000 });
+        const auto g = park.guest({ 0, 0 }, { .cash = { 2000 } });
         auto& r = park.world().registry;
         r.get<Wallet>(g).needs_cash = true;
         CHECK(park.run_until([&] { return r.get<Wallet>(g).withdrawn.value > 0; }, 60));

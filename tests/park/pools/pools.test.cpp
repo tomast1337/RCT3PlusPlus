@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/pools/pools.hpp"
 
+#include "core/maybe.hpp"
 #include "core/types.hpp"
 
 #include <algorithm>
@@ -485,7 +486,7 @@ TEST_CASE("pools: a pool path trail starts at any side of the complex that no sq
 {
     PoolMap map = ringed(2, 1);
     // A paved corner starts from its two outer sides; the sides it shares with the ring and the water do not.
-    const PoolSquare& corner = *map.at(0, 0);
+    const PoolSquare& corner = *rct3::core::as_pointer(map.at(0, 0));
     CHECK(pool_path_start(map, corner, Side { 2 }) == 4);
     CHECK(pool_path_start(map, corner, Side { 3 }) == 4);
     CHECK_FALSE(pool_path_start(map, corner, Side { 0 }));

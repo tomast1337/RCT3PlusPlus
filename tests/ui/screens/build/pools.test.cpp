@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/pools.hpp"
 
+#include "core/maybe.hpp"
 #include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
@@ -31,7 +32,7 @@ namespace
 
         Button& button(std::string_view path) const
         {
-            return *desktop.root().find_as<Button>(path);
+            return *rct3::core::as_pointer(desktop.root().find_as<Button>(path));
         }
 
         void click(std::string_view path)

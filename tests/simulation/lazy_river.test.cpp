@@ -66,7 +66,7 @@ TEST_CASE("a swimmer floats round a lazy river joined to their pool, free, and g
     auto& r = park.world().registry;
     CHECK(r.get<Attraction>(river).price.value == 0);
     CHECK(r.get<CycleRide>(river).excitement.value > 0);
-    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } });
     REQUIRE(park.run_until([&] { return r.get<Errand>(guest).kind == ErrandKind::Swimming && in_swimwear(r, guest); }, 120));
     const i64 cash = r.get<Wallet>(guest).cash.value;
     REQUIRE(park.run_until([&] { return r.all_of<Floating>(guest); }, 900));
@@ -131,7 +131,7 @@ TEST_CASE("a lazy river's station joins the pool paving or pool path along its s
         CHECK(station.square.x == doctest::Approx(paths.origin.x + 7.5f * paths.tile_size));
         CHECK(station.square.z == doctest::Approx(paths.origin.y + 3.5f * paths.tile_size));
         // A swimmer gets on from that square and, far enough round, off onto it.
-        const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+        const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } });
         REQUIRE(park.run_until([&] { return r.all_of<Floating>(guest); }, 900));
         const f32 lap = r.get<River>(river).course.length();
         REQUIRE(park.run_until([&] { return !r.all_of<Floating>(guest); }, (kTuning.rivers.most_stay * lap + lap) / (kTuning.rivers.flow.value - kTuning.rivers.most_paddle.value / 2) + 60));

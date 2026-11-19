@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/panel.hpp"
 
+#include "core/maybe.hpp"
 #include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
@@ -406,7 +407,7 @@ TEST_CASE("a paint tab opens colours above itself for the pot pressed, and tells
     f.click(Fixture::middle(f.panel->tab(1).rect()));
     REQUIRE(f.panel->painting() == 1);
     REQUIRE(f.panel->palette());
-    ColourPalette& palette = *f.panel->palette();
+    ColourPalette& palette = *rct3::core::as_pointer(f.panel->palette());
     CHECK(palette.count() == game_skins::info_panel_style(kGamePalette).palette_count);
     CHECK(palette.rect().y1 < f.panel->tab(1).rect().y0);
     CHECK(palette.rect().x1 <= 1000);

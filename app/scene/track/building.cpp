@@ -2,6 +2,7 @@
 #include "scene/track/building.hpp"
 
 #include "career/career_file.hpp"
+#include "core/maybe.hpp"
 #include "core/types.hpp"
 #include "logging/log.hpp"
 #include "ovl/tracked_ride.hpp"
@@ -901,7 +902,7 @@ namespace rct3::scene::track
             const usize index = pieces.size() - 1 - b.arm_back;
             save::model::TrackPiece& piece = pieces[index];
             strip->find_as<ui::widgets::Label>("piece_label")->text = strings::to_utf16(std::format("{}/{}", index + 1, pieces.size()));
-            auto& enable = *strip->find_as<ui::widgets::Tickbox>("enable");
+            auto& enable = *core::as_pointer(strip->find_as<ui::widgets::Tickbox>("enable"));
             // The nearest piece before or after this one (round a circuit) with angles of its own.
             const auto nearest = [&](bool before) -> std::optional<rct3::park::track::ArmAngles> {
                 for (usize k = 1; k < pieces.size(); ++k)
@@ -929,7 +930,7 @@ namespace rct3::scene::track
             }
             for (usize j = 0; j < kArmJoints.size(); ++j)
             {
-                auto& spinner = *strip->find_as<ui::widgets::Spinner>(kArmJoints[j]);
+                auto& spinner = *core::as_pointer(strip->find_as<ui::widgets::Spinner>(kArmJoints[j]));
                 if (spinner.take_change() && piece.arm_angles)
                     (*piece.arm_angles)[j] = static_cast<f32>(spinner.value());
                 spinner.enabled = piece.arm_angles.has_value();

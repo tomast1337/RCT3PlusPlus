@@ -40,7 +40,7 @@ TEST_CASE("awards wait for the scenario to let them begin, then come once in fiv
 TEST_CASE("an award had lately keeps its opposite away")
 {
     random::RandomState dice = random::seeded({ });
-    simulation::AwardFigures dear { .guests = 100, .money = true, .fee_charged = true, .entrance_fee = 5000, .fair_fee = 2000 };
+    simulation::AwardFigures dear { .guests = 100, .money = true, .fee_charged = true, .entrance_fee = { 5000 }, .fair_fee = { 2000 } };
     CHECK(simulation::award_earned(2, dear, 0, dice)); // Worst value
     CHECK_FALSE(simulation::award_earned(2, dear, 1u << 3, dice));
     CHECK_FALSE(simulation::award_earned(3, dear, 0, dice));

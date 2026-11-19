@@ -140,7 +140,7 @@ TEST_CASE("the research prize is free progress at the next part of the budget pa
     save::model::Finance finance;
     save::model::TerrainGrid land;
     std::optional<i64> kept;
-    simulation::Research research { .budget = 30000, .current = 1 };
+    simulation::Research research { .budget = { 30000 }, .current = 1 };
     std::vector<simulation::ResearchItem> items { { .id = 1, .cost = units::Money { 100000 } } };
     random::RandomState dice = random::seeded(random::Seed { 1 });
     simulation::give_prize(park, finance, kept, land, research, 9);
@@ -221,7 +221,7 @@ TEST_CASE("a goal on last month's takings holds for one month less, as that mont
 
 TEST_CASE("a goal reads where the park stands on it and whether that meets it")
 {
-    const simulation::ParkFigures f { .guests = 250, .loan = 500, .animal_health = 49, .dung = 12 };
+    const simulation::ParkFigures f { .guests = 250, .loan = { 500 }, .animal_health = 49, .dung = 12 };
     const simulation::GoalReading guests = simulation::read_goal(goal(0, save::model::ConditionKind::ParkGuests, 200), f);
     CHECK(guests.now == 250);
     CHECK(guests.met);

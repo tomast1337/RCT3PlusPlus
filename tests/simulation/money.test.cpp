@@ -73,7 +73,7 @@ TEST_CASE("a cash machine gives a guest no more than their bank has left, and no
     Sandbox park;
     park.path({ 0, 0 }, { 6, 0 });
     const auto machine = park.shop("Cash", Product::CashMachine, { 6, 0 }, 0);
-    const auto g = park.guest({ 0, 0 }, { .cash = 100, .bank = 2000 });
+    const auto g = park.guest({ 0, 0 }, { .cash = { 100 }, .bank = { 2000 } });
     auto& r = park.world().registry;
     CHECK(park.run_until([&] { return r.get<Wallet>(g).cash.value > 100; }, 60));
     const Wallet& w = r.get<Wallet>(g);
@@ -127,8 +127,8 @@ TEST_CASE("a guest short of a ride's price is helped out by their party")
     Sandbox park;
     park.path({ 0, 0 }, { 8, 0 });
     const auto ride = park.flat_ride("Spinner", { 8, 0 }, 300, { .capacity = 8, .cycle_seconds = 5, .excitement = 0.6f });
-    const auto child = park.guest({ 0, 0 }, { .cash = 100 });
-    const auto parent = park.guest({ 0, 0 }, { .cash = 1000 });
+    const auto child = park.guest({ 0, 0 }, { .cash = { 100 } });
+    const auto parent = park.guest({ 0, 0 }, { .cash = { 1000 } });
     park.party({ child, parent });
     auto& r = park.world().registry;
     r.get<Errand>(child) = { ErrandKind::Heading, ride, 0 };
@@ -143,9 +143,9 @@ TEST_CASE("at a stall each member of a party pays for their own, and one short o
     Sandbox park;
     park.path({ 0, 0 }, { 8, 0 });
     const auto stand = park.shop("Drinks", Product::Drink, { 8, 0 }, 300);
-    const auto parent = park.guest({ 0, 0 }, { .cash = 1000 });
-    const auto child = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = 100 });
-    const auto teen = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = 350 });
+    const auto parent = park.guest({ 0, 0 }, { .cash = { 1000 } });
+    const auto child = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = { 100 } });
+    const auto teen = park.guest({ 0, 0 }, { .thirst = 0.9f, .cash = { 350 } });
     park.party({ parent, child, teen });
     auto& r = park.world().registry;
     CHECK(park.run_until([&] { return r.get<Attraction>(stand).customers >= 1; }, 60));

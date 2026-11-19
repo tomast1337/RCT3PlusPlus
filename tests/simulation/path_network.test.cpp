@@ -289,7 +289,8 @@ TEST_CASE("a wall between two tiles parts them, a queue keeps its own sides, and
     PathNetwork high;
     const NodeId low = high.add({ 0, 0, 6 });
     high.add_wall(0, 0, rct3::park::Side::kNextCol, -0.5f, 2);
-    CHECK(high.nodes()[low.value].next[0] == high.add({ 1, 0, 6 }));
+    const NodeId beside = high.add({ 1, 0, 6 }); // Before the check: the sides of == may be evaluated in either order
+    CHECK(high.nodes()[low.value].next[0] == beside);
 }
 
 TEST_CASE("a no-entry side keeps guests from coming in across it, but not from leaving or staff from passing")

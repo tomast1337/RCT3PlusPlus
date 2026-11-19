@@ -220,7 +220,7 @@ namespace rct3::scene::park
         // Pay, training and warnings change the walking worker, and the saved one shows it; without the
         // simulation, the saved one alone.
         const entt::entity worker = shown_staff(scene);
-        simulation::Staff loose { .wage_level = staff->wage_level, .training = staff->training, .warnings = staff->warnings, .happiness = staff->happiness, .laziness = staff->laziness };
+        simulation::Staff loose { .wage_level = staff->wage_level, .training = staff->training, .warnings = staff->warnings, .happiness = { staff->happiness }, .laziness = { staff->laziness } };
         simulation::Staff& care = worker != entt::null ? scene.sim.registry.get<simulation::Staff>(worker) : loose;
         const auto show = [&] {
             copy_mood(care, *staff);

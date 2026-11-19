@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management/staff_roster.hpp"
 
+#include "core/maybe.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/info/person.hpp"
@@ -46,7 +47,7 @@ namespace
         {
             auto b = window->content().find_as<Button>(path);
             REQUIRE(b);
-            return *b;
+            return *rct3::core::as_pointer(b);
         }
     };
 } // namespace

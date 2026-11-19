@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/scroll_area.hpp"
 
+#include "core/maybe.hpp"
 #include "ui/desktop.hpp"
 #include "ui/widgets/label.hpp"
 
@@ -209,8 +210,8 @@ TEST_CASE("a focused scroll area moves with the keys")
     desktop.update({ { 20, 20 }, true, true });
     desktop.update({ { 20, 20 }, false, true });
     REQUIRE(rct3::core::as_pointer(desktop.keyboard_focus()) == &area);
-    ScrollBar& v = *area.vertical();
-    ScrollBar& h = *area.horizontal();
+    ScrollBar& v = *rct3::core::as_pointer(area.vertical());
+    ScrollBar& h = *rct3::core::as_pointer(area.horizontal());
     REQUIRE(v.visible == 100);
 
     const auto press = [&](Key key) {

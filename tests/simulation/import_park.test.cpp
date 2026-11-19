@@ -65,7 +65,7 @@ TEST_CASE("a stall sells what its items are named, or their kinds are, or its ow
         save::model::Stall& s = rides.stalls.emplace_back();
         s.base.symbol = std::move(symbol);
         s.base.spot = save::model::PlacementSpot { .col = col, .row = 1 };
-        s.items.push_back({ .kind_symbol = std::move(kind), .price = 120, .name = std::move(item) });
+        s.items.push_back({ .kind_symbol = std::move(kind), .price = { 120 }, .name = std::move(item) });
     };
     stall("GenericStall:sta", "Cola", 0);
     stall("HotDogStall:sta", "%ME%", 1);
@@ -94,7 +94,7 @@ TEST_CASE("a stall's item is food or drink by what its kind feeds or quenches, w
         save::model::Stall& s = rides.stalls.emplace_back();
         s.base.symbol = "Odd:sta";
         s.base.spot = save::model::PlacementSpot { .col = col, .row = 1 };
-        s.items.push_back({ .kind_symbol = kind, .price = 100, .name = "%ME%" });
+        s.items.push_back({ .kind_symbol = kind, .price = { 100 }, .name = "%ME%" });
     }
     REQUIRE(simulation::import_stalls(world, rides, kinds) == 2);
     std::vector<simulation::Product> sold;
@@ -114,7 +114,7 @@ TEST_CASE("a stall's food and drink is cold or hot by its name, and plain otherw
     {
         save::model::Stall& s = rides.stalls.emplace_back();
         s.base.spot = save::model::PlacementSpot { .col = col, .row = 1 };
-        s.items.push_back({ .price = 100, .name = item });
+        s.items.push_back({ .price = { 100 }, .name = item });
     }
     REQUIRE(simulation::import_stalls(world, rides) == 4);
     std::vector<simulation::Serve> served;
@@ -135,7 +135,7 @@ TEST_CASE("a stall's ware takes the extras ticked on it or left to the guest, as
     save::model::RideModel rides;
     save::model::Stall& s = rides.stalls.emplace_back();
     s.base.spot = save::model::PlacementSpot { .col = 0, .row = 1 };
-    s.items.push_back({ .kind_symbol = "Burger:cid", .price = 200, .name = "%ME%", .extras = 0b011 }); // Ketchup and cheese ticked
+    s.items.push_back({ .kind_symbol = "Burger:cid", .price = { 200 }, .name = "%ME%", .extras = 0b011 }); // Ketchup and cheese ticked
     s.extras = { { .kind_symbol = "ketchup:ced", .level = save::model::StallExtra::kNone }, { .kind_symbol = "Cheese:ced", .level = 4 }, { .kind_symbol = "Onion:ced", .level = save::model::StallExtra::kGuestChoice } };
     REQUIRE(simulation::import_stalls(world, rides, kinds) == 1);
     const auto& menu = world.registry.get<simulation::Shop>(world.registry.view<simulation::Shop>().front()).menu;
@@ -807,7 +807,7 @@ TEST_CASE("paths laid and taken away come and go from the network; walkers and r
     auto& r = world.registry;
     const entt::entity walker = r.create();
     r.emplace<simulation::Pose>(walker, simulation::Pose { .position = world.paths.centre(at(1)) });
-    r.emplace<simulation::Stride>(walker, simulation::Stride { .from = at(1), .to = at(2), .progress = 0.5f, .route = { at(3) } });
+    r.emplace<simulation::Stride>(walker, simulation::Stride { .from = at(1), .to = at(2), .progress = { 0.5f }, .route = { at(3) } });
     r.emplace<simulation::Errand>(walker, simulation::Errand { .kind = simulation::ErrandKind::Heading, .target = e });
     const simulation::NodeId middle = at(2);
     const entt::entity litter = r.create();

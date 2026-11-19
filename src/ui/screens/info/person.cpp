@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/person.hpp"
 
+#include "core/maybe.hpp"
 #include "core/types.hpp"
 #include "save/model/park.hpp"
 #include "strings/unicode.hpp"
@@ -444,7 +445,7 @@ namespace rct3::ui::screens::info
         /// to the messages and the highlight over them, the last two showing on or off.
         void person_buttons(InfoPage& page, const PersonFacts& f, const StringTable& strings, std::string_view pincer_help, std::string_view console_help)
         {
-            const save::model::Person& p = *f.person();
+            const save::model::Person& p = *core::as_pointer(f.person());
             InfoControl& doing = page.controls.emplace_back();
             doing.kind = InfoControlKind::Words;
             doing.label = person_doing(f, strings);

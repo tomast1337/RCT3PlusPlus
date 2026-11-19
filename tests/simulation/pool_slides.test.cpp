@@ -68,7 +68,7 @@ TEST_CASE("a swimmer goes up a slide ending in their pool, rides it free in thei
     Sandbox park;
     const auto slide = slide_by_pool(park);
     auto& r = park.world().registry;
-    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } });
     REQUIRE(park.run_until([&] { return r.get<Errand>(guest).kind == ErrandKind::Swimming && in_swimwear(r, guest); }, 120));
     const i64 cash = r.get<Wallet>(guest).cash.value;
     // At the station they queue, and board the waiting car at once.
@@ -115,7 +115,7 @@ TEST_CASE("a fast slide's car and rider thrown at a small pool's far wall stop a
     r.get<Trains>(slide).trains.front().fixed_speed = 20; // Far past the far wall, two squares on
     const SwimPool& pool = r.get<SwimPool>(r.get<PoolDoor>(r.view<const PoolDoor>().front()).pool);
     const f32 wall = std::ranges::max(pool.water, { }, &glm::vec3::z).z + park.world().paths.tile_size / 2;
-    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } });
     REQUIRE(park.run_until([&] { return r.all_of<Dropped>(guest); }, 900));
     f32 furthest = 0;
     REQUIRE(park.run_until(
@@ -136,7 +136,7 @@ TEST_CASE("a swimmer in a slide's queue swims on when the slide breaks down")
     Sandbox park;
     const auto slide = slide_by_pool(park);
     auto& r = park.world().registry;
-    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    const auto guest = park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } });
     REQUIRE(park.run_until([&] { return r.get<Errand>(guest).kind == ErrandKind::Swimming && in_swimwear(r, guest); }, 120));
     Errand& errand = r.get<Errand>(guest);
     r.get<Swimmer>(guest).room = errand.target;
@@ -212,7 +212,7 @@ TEST_CASE("swimmers queueing for a pool slide stand apart in a line, never two o
     auto& r = park.world().registry;
     r.get<Attraction>(slide).entrance = r.get<CycleRide>(slide).exit = std::nullopt; // Only swimmers queue, from the pool
     for (i32 i = 0; i < 20; ++i)
-        park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+        park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } });
     // The longest line, and the closest two in it came once both had been in it a few seconds: two joining on one
     // spot, or lines from two ways meeting, step apart.
     usize most = 0;
@@ -242,7 +242,7 @@ TEST_CASE("a slide that throws its rider onto the path is a danger: it is shut, 
     const auto slide = slide_by_pool(park, true);
     auto& r = park.world().registry;
     park.staff(StaffRole::Inspector, { 0, 0 });
-    park.guest({ 0, 0 }, { .swim = 0.9f, .cash = 1000 });
+    park.guest({ 0, 0 }, { .swim = 0.9f, .cash = { 1000 } });
     REQUIRE(park.run_until([&] { return r.ctx().find<PoolDangers>() != nullptr; }, 900));
     CHECK(r.ctx().get<PoolDangers>().landings == 1);
     CHECK_FALSE(r.get<Attraction>(slide).open);

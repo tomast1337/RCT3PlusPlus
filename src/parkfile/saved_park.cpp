@@ -146,7 +146,7 @@ namespace rct3::parkfile
         for (const auto [e, staff, pose] : r.view<const Staff, const Pose>().each())
         {
             SavedWorker& w = out.staff.emplace_back(
-                SavedWorker { .look = look(e, model.staff.size()), .role = staff.role, .wage = staff.wage.value, .wage_level = staff.wage_level, .training = staff.training, .warnings = staff.warnings, .happiness = staff.happiness.value, .laziness = staff.laziness.value, .position = pose.position, .heading = pose.heading.value, .mended = staff.mended, .think = staff.think.value, .miserable = staff.miserable, .job = staff.job, .busy = staff.busy, .job_length = staff.job_length, .load = staff.load });
+                SavedWorker { .look = look(e, model.staff.size()), .role = staff.role, .wage = staff.wage.value, .wage_level = staff.wage_level, .training = staff.training, .warnings = staff.warnings, .happiness = staff.happiness.value, .laziness = staff.laziness.value, .position = pose.position, .heading = pose.heading.value, .mended = staff.mended, .think = { staff.think.value }, .miserable = staff.miserable, .job = staff.job, .busy = staff.busy, .job_length = staff.job_length, .load = staff.load });
             // Only a mechanic at work on a ride keeps it; one on the way is sent again.
             if (staff.ride != entt::null && staff.busy.value > 0)
                 if (const auto* ride = r.try_get<Attraction>(staff.ride))
@@ -270,7 +270,7 @@ namespace rct3::parkfile
             const entt::entity e = r.create();
             // The tasks the player set are on the worker's page.
             const bool paged = w.look && static_cast<usize>(*w.look) < people.model.staff.size();
-            Staff staff { .role = w.role, .tasks = paged ? people.model.staff[static_cast<usize>(*w.look)].task_flags : kEveryTask, .wage = w.wage, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = w.happiness, .laziness = w.laziness };
+            Staff staff { .role = w.role, .tasks = paged ? people.model.staff[static_cast<usize>(*w.look)].task_flags : kEveryTask, .wage = { w.wage }, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = { w.happiness }, .laziness = { w.laziness } };
             if (paged)
                 staff::take_saved_work(staff, people.model.staff[static_cast<usize>(*w.look)]);
             staff.mended = w.mended;

@@ -39,10 +39,13 @@ jobs:
           persist-credentials: false
           fetch-depth: 0 # The tags, for the version
 
+      # Clang 23 on the image's GCC 16 libstdc++, as in ci.yml.
+      - name: Install Clang
+        run: .github/install_clang.sh
+
       # GLFW is vendored; its X11 and Wayland back ends need only these headers to build.
       - name: Install the Vulkan and windowing headers and slangc
         run: |
-          apt-get update -qq
           apt-get install -y -qq --no-install-recommends libvulkan-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libwayland-dev libxkbcommon-dev
           curl -fsSL -o slang.tar.gz https://github.com/shader-slang/slang/releases/download/v2026.18.2/slang-2026.18.2-linux-x86_64.tar.gz
           mkdir -p /opt/slang && tar -xzf slang.tar.gz -C /opt/slang
@@ -52,7 +55,7 @@ jobs:
 
       - name: Package
         run: |
-          g++ -std=c++26 -o nob nob.cpp
+          clang++ -std=c++26 -o nob nob.cpp
           ./nob package
           ldd build/release/rct3pp
           # One binary: GLFW is built in and opens the windowing libraries at run time.

@@ -411,17 +411,22 @@ TEST_CASE("a display is due on its months only, from its start time for a short 
     }
 }
 
-TEST_CASE("a display's shots go off once each, as its time reaches theirs")
+TEST_CASE("a display's shots go off once each, as its time reaches theirs, from their launcher's tube")
 {
-    const Display d { .shots = { { .effect = "a", .seconds = 0 }, { .effect = "b", .seconds = 1 }, { .effect = "c", .seconds = 1 }, { .effect = "d", .seconds = 3 } } };
+    const Display d { .launchers = { { }, { } }, .shots = { { .effect = "a", .launcher = 1, .tube = 4, .seconds = 0 }, { .effect = "b", .launcher = 0, .tube = 2, .seconds = 1 }, { .effect = "c", .launcher = 1, .tube = 0, .seconds = 1 }, { .effect = "d", .seconds = 3 } } };
     DisplayRun run;
     const auto first = advance_display(run, d, 0.5f);
     REQUIRE(first.size() == 1);
     CHECK(first[0].effect == "a");
+    CHECK(first[0].launcher == 1);
+    CHECK(first[0].tube == 4);
     CHECK(advance_display(run, d, 0.25f).empty());
     const auto both = advance_display(run, d, 0.25f);
     REQUIRE(both.size() == 2);
+    CHECK(both[0].launcher == 0);
+    CHECK(both[0].tube == 2);
     CHECK(both[1].effect == "c");
+    CHECK(both[1].launcher == 1);
     // A long step fires all it passes.
     CHECK(advance_display(run, d, 10).size() == 1);
     CHECK(advance_display(run, d, 1).empty());

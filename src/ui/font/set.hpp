@@ -8,6 +8,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/font/font.hpp"
 
 #include <array>
@@ -18,7 +19,7 @@
 namespace rct3::ui::font
 {
 
-    enum class FontRole : std::uint8_t
+    enum class FontRole : u8
     {
         Tiny,
         Small,
@@ -30,19 +31,19 @@ namespace rct3::ui::font
         ScaledMedium,
     };
 
-    inline constexpr std::size_t kFontRoleCount = 8;
+    inline constexpr usize kFontRoleCount = 8;
 
     class FontSet
     {
     public:
         void set(FontRole role, Font font)
         {
-            fonts_[static_cast<std::size_t>(role)] = std::move(font);
+            fonts_[static_cast<usize>(role)] = std::move(font);
         }
         /// Nothing when the role has no font; text in it is then not drawn.
         [[nodiscard]] std::optional<const Font&> get(FontRole role) const
         {
-            const auto& f = fonts_[static_cast<std::size_t>(role)];
+            const auto& f = fonts_[static_cast<usize>(role)];
             return f ? std::optional<const Font&>(*f) : std::nullopt;
         }
 

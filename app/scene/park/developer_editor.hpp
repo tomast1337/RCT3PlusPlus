@@ -5,6 +5,7 @@
 // everyone treated at once. Every change goes to the simulation, so a park saved afterwards keeps it.
 #pragma once
 
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "simulation/entt.hpp"
 #include "ui/string_table.hpp"
@@ -27,15 +28,15 @@ namespace rct3::scene::park
         bool focus = false;              ///< Brought in front of the windows docked with it when next drawn, as a guest was picked
         std::array<char, 64> search { };
         std::array<char, 64> name { };     ///< The rename box, filled from the guest when they are picked
-        std::int32_t thought = 0;          ///< Picked to give: by ThoughtKind's number
+        i32 thought = 0;                   ///< Picked to give: by ThoughtKind's number
         entt::entity send_to = entt::null; ///< Picked to send the guest to
-        std::int32_t groups = 5;           ///< To let in at the gate
-        double cash_for_all = 10;          ///< In currency units
+        i32 groups = 5;                    ///< To let in at the gate
+        f64 cash_for_all = 10;             ///< In currency units
         std::vector<entt::entity> rows;    ///< The guest list as shown, kept so its memory is reused
         /// The thoughts the language has words for: ThoughtKind's number and the words; read once.
         struct ThoughtText
         {
-            std::int32_t id = 0;
+            i32 id = 0;
             std::string text { };
         };
         std::vector<ThoughtText> thoughts;

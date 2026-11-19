@@ -2,6 +2,7 @@
 #include "park/animal_models.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ovl/animal/model.hpp"
 #include "ovl/animal/species.hpp"
 #include "ovl/model_anim.hpp"
@@ -43,7 +44,7 @@ namespace rct3::park
             return { blend, !s.ends_with("ds") };
         }
 
-        glm::quat quat_of(const std::array<float, 4>& xyzw)
+        glm::quat quat_of(const std::array<f32, 4>& xyzw)
         {
             return glm::quat(xyzw[3], xyzw[0], xyzw[1], xyzw[2]);
         }
@@ -56,7 +57,7 @@ namespace rct3::park
         /// Every bone's place in model space, given each one's place from its parent.
         void chain(std::span<const std::optional<ovl::BoneIndex>> parents, std::span<glm::mat4> world)
         {
-            for (std::size_t b = 0; b < parents.size(); ++b)
+            for (usize b = 0; b < parents.size(); ++b)
             {
                 if (parents[b])
                     world[b] = world[parents[b]->value] * world[b];
@@ -65,53 +66,53 @@ namespace rct3::park
 
     } // namespace
 
-    float motion_seconds(const AnimalBody& body, ovl::animal::AnimalMotion motion)
+    f32 motion_seconds(const AnimalBody& body, ovl::animal::AnimalMotion motion)
     {
-        const auto slot = static_cast<std::size_t>(motion);
+        const auto slot = static_cast<usize>(motion);
         return slot < body.motions.size() && body.motions[slot] ? body.motions[slot]->seconds : 0.0f;
     }
 
-    std::vector<glm::mat4> animal_pose(const AnimalBody& body, ovl::animal::AnimalMotion motion, float time)
+    std::vector<glm::mat4> animal_pose(const AnimalBody& body, ovl::animal::AnimalMotion motion, f32 time)
     {
-        const std::size_t n = body.parents.size();
+        const usize n = body.parents.size();
         std::vector<glm::vec3> positions = body.rest_positions;
         std::vector<glm::quat> rotations = body.rest_rotations;
         positions.resize(n);
         rotations.resize(n, glm::quat(1, 0, 0, 0));
         std::vector<glm::mat4> rest(n);
-        for (std::size_t b = 0; b < n; ++b)
+        for (usize b = 0; b < n; ++b)
             rest[b] = bone_local(positions[b], rotations[b]);
         chain(body.parents, rest);
 
-        const auto slot = static_cast<std::size_t>(motion);
+        const auto slot = static_cast<usize>(motion);
         if (slot < body.motions.size() && body.motions[slot] && body.motions[slot]->frames > 0)
         {
             const AnimalClip& clip = *body.motions[slot];
-            const float last = static_cast<float>(clip.frames - 1);
-            float frame = clip.seconds > 0 && std::isfinite(time) ? std::fmod(std::max(time, 0.0f), clip.seconds) * kAnimalFramesPerSecond : 0.0f;
+            const f32 last = static_cast<f32>(clip.frames - 1);
+            f32 frame = clip.seconds > 0 && std::isfinite(time) ? std::fmod(std::max(time, 0.0f), clip.seconds) * kAnimalFramesPerSecond : 0.0f;
             frame = std::clamp(frame, 0.0f, last);
-            const auto from = static_cast<std::size_t>(frame);
-            const std::size_t to = std::min<std::size_t>(from + 1, clip.frames - 1);
-            const float along = frame - static_cast<float>(from);
-            for (std::size_t k = 0; k < clip.moving.size(); ++k)
+            const auto from = static_cast<usize>(frame);
+            const usize to = std::min<usize>(from + 1, clip.frames - 1);
+            const f32 along = frame - static_cast<f32>(from);
+            for (usize k = 0; k < clip.moving.size(); ++k)
             {
-                const auto b = static_cast<std::size_t>(clip.moving[k]);
+                const auto b = static_cast<usize>(clip.moving[k]);
                 if (b < n && (to + 1) * clip.moving.size() <= clip.positions.size())
                     positions[b] = glm::mix(clip.positions[from * clip.moving.size() + k], clip.positions[to * clip.moving.size() + k], along);
             }
-            for (std::size_t k = 0; k < clip.turning.size(); ++k)
+            for (usize k = 0; k < clip.turning.size(); ++k)
             {
-                const auto b = static_cast<std::size_t>(clip.turning[k]);
+                const auto b = static_cast<usize>(clip.turning[k]);
                 if (b < n && (to + 1) * clip.turning.size() <= clip.rotations.size())
                     rotations[b] = glm::slerp(clip.rotations[from * clip.turning.size() + k], clip.rotations[to * clip.turning.size() + k], along);
             }
         }
 
         std::vector<glm::mat4> posed(n);
-        for (std::size_t b = 0; b < n; ++b)
+        for (usize b = 0; b < n; ++b)
             posed[b] = bone_local(positions[b], rotations[b]);
         chain(body.parents, posed);
-        for (std::size_t b = 0; b < n; ++b)
+        for (usize b = 0; b < n; ++b)
             posed[b] = posed[b] * glm::inverse(rest[b]);
         return posed;
     }
@@ -198,10 +199,10 @@ namespace rct3::park
         const auto [unused, found] = f.find<ovl::animal::AnimalSpecies>(species, "was", "", &ovl::animal::read_animal_species, &ovl::animal::AnimalSpeciesItem::species, &species_file);
         if (!found)
             return std::nullopt;
-        const auto wanted = static_cast<std::size_t>(age);
+        const auto wanted = static_cast<usize>(age);
         // The one asked for, the other sex of the same age, then any.
         const std::optional<ovl::animal::AnimalVariant>* variant = nullptr;
-        for (const std::size_t i : { wanted, wanted ^ 1, std::size_t { 0 }, std::size_t { 1 }, std::size_t { 2 }, std::size_t { 3 } })
+        for (const usize i : { wanted, wanted ^ 1, usize { 0 }, usize { 1 }, usize { 2 }, usize { 3 } })
         {
             if (found->variants[i] && !found->variants[i]->model.empty())
             {
@@ -226,9 +227,9 @@ namespace rct3::park
             body.rest_rotations.push_back(quat_of(bone.rotation));
             bone_names.push_back(lower(bone.name));
         }
-        const auto bone_of = [&](std::string_view name) -> std::int32_t {
+        const auto bone_of = [&](std::string_view name) -> i32 {
             const auto at = std::ranges::find(bone_names, lower(name));
-            return at == bone_names.end() ? -1 : static_cast<std::int32_t>(at - bone_names.begin());
+            return at == bone_names.end() ? -1 : static_cast<i32>(at - bone_names.begin());
         };
 
         for (const auto& level : model->levels)
@@ -257,21 +258,21 @@ namespace rct3::park
                             piece.picture = std::move(key);
                     }
                 }
-                for (std::uint32_t v = 0; v < mesh.vertex_count; ++v)
+                for (u32 v = 0; v < mesh.vertex_count; ++v)
                 {
                     const ovl::BoneVertex b = mesh.vertex(v);
                     piece.vertices.push_back({ { b.position[0], b.position[1], b.position[2] }, { b.normal[0], b.normal[1], b.normal[2] }, b.bones, b.weights, { b.texcoord[0], b.texcoord[1] } });
                 }
-                for (std::uint32_t i = 0; i < mesh.index_count; ++i)
+                for (u32 i = 0; i < mesh.index_count; ++i)
                     piece.indices.push_back(mesh.index(i));
                 pieces.push_back(std::move(piece));
             }
         }
 
-        body.motions.resize(static_cast<std::size_t>(ovl::animal::AnimalMotion::TurnRight90) + 1);
+        body.motions.resize(static_cast<usize>(ovl::animal::AnimalMotion::TurnRight90) + 1);
         std::string motions_file;
         const auto [motions_open, motions] = (*variant)->motions.empty() ? std::pair<Files::Open*, std::optional<ovl::animal::AnimalMotions>> { } : f.find<ovl::animal::AnimalMotions>((*variant)->motions, "wad", model_file, &ovl::animal::read_animal_motions, &ovl::animal::AnimalMotionsItem::motions, &motions_file);
-        for (std::size_t slot = 0; motions && slot < motions->animations.size() && slot < body.motions.size(); ++slot)
+        for (usize slot = 0; motions && slot < motions->animations.size() && slot < body.motions.size(); ++slot)
         {
             const std::string_view name = motions->animations[slot];
             if (name.empty())

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/course.hpp"
 
+#include "core/types.hpp"
 #include "ovl/spline.hpp"
 
 #include <algorithm>
@@ -132,14 +133,14 @@ TEST_CASE("station runs are measured from one end of the station to the other, j
     c.points.resize(6);
     c.distance = { 0, 4, 10, 12, 15, 20 };
     c.kinds = { K::Station, K::Plain, K::Station, K::Station, K::Plain, K::Plain };
-    CHECK(park::track::station_runs(c) == std::vector<float> { 4, 5 });
+    CHECK(park::track::station_runs(c) == std::vector<f32> { 4, 5 });
     c.closed = true;
-    CHECK(park::track::station_runs(c) == std::vector<float> { 4, 5 });
+    CHECK(park::track::station_runs(c) == std::vector<f32> { 4, 5 });
     // The last stretch is a station too: on a closed course it runs on into the first.
     c.kinds = { K::Station, K::Plain, K::Plain, K::Plain, K::Station, K::Plain };
-    CHECK(park::track::station_runs(c) == std::vector<float> { 9 });
+    CHECK(park::track::station_runs(c) == std::vector<f32> { 9 });
     c.closed = false;
-    CHECK(park::track::station_runs(c) == std::vector<float> { 4, 5 });
+    CHECK(park::track::station_runs(c) == std::vector<f32> { 4, 5 });
     CHECK(park::track::station_runs(corner()).empty());
 }
 
@@ -186,10 +187,10 @@ TEST_CASE("several trains stand at the stations first, then queued behind them o
 {
     // A closed 100 m course: a station ending at 10, a lift ending at 40, a second station ending at 60.
     park::track::TrackCourse c;
-    for (std::int32_t i = 0; i <= 10; ++i)
+    for (i32 i = 0; i <= 10; ++i)
     {
-        c.points.push_back({ static_cast<float>(i) * 10, 0, 0 });
-        c.distance.push_back(static_cast<float>(i) * 10);
+        c.points.push_back({ static_cast<f32>(i) * 10, 0, 0 });
+        c.distance.push_back(static_cast<f32>(i) * 10);
         c.kinds.push_back(park::track::CourseKind::Plain);
     }
     c.closed = true;
@@ -197,16 +198,16 @@ TEST_CASE("several trains stand at the stations first, then queued behind them o
     c.kinds[3] = park::track::CourseKind::Chain;
     c.kinds[5] = park::track::CourseKind::Station;
     // One at each station from the first; then queued 8 + 2 behind each in turn.
-    CHECK(park::track::train_fronts(c, 10, 8, 2, false) == std::vector<float> { 10, 60 });
-    CHECK(park::track::train_fronts(c, 10, 8, 4, false) == std::vector<float> { 10, 60, 0, 50 });
+    CHECK(park::track::train_fronts(c, 10, 8, 2, false) == std::vector<f32> { 10, 60 });
+    CHECK(park::track::train_fronts(c, 10, 8, 4, false) == std::vector<f32> { 10, 60, 0, 50 });
     // Behind the second station only 20 m to the lift top: room for two. Behind the first, 50 to the second: five.
     // The lift top then takes what is left, back to the first station's end.
     CHECK(park::track::train_fronts(c, 10, 8, 9, false).size() == 9);
     CHECK(park::track::train_fronts(c, 10, 8, 20, false).size() == 2 + 5 + 3);
     // A block apart, one at each block end: the stations, then the lift top.
-    CHECK(park::track::train_fronts(c, 10, 8, 5, true) == std::vector<float> { 10, 60, 40 });
+    CHECK(park::track::train_fronts(c, 10, 8, 5, true) == std::vector<f32> { 10, 60, 40 });
     // Starting from the second station puts the first train there.
-    CHECK(park::track::train_fronts(c, 60, 8, 2, false) == std::vector<float> { 60, 10 });
+    CHECK(park::track::train_fronts(c, 60, 8, 2, false) == std::vector<f32> { 60, 10 });
 }
 
 TEST_CASE("a train has as many cars as fit along its shortest station, within what its kind allows")
@@ -238,11 +239,11 @@ TEST_CASE("a track in several stretches runs along the first one with a station"
     auto& track = ride.track.emplace();
     std::vector<save::model::PlacedObject> objects;
     // Two plain pieces, then a stretch of a station and a plain piece that closes on itself.
-    for (std::uint64_t i = 0; i < 4; ++i)
+    for (u64 i = 0; i < 4; ++i)
     {
         save::model::PlacedObject& o = objects.emplace_back();
         o.id = 100 + i;
-        o.col = static_cast<std::int32_t>(i);
+        o.col = static_cast<i32>(i);
         o.force_absolute_height = true;
         save::model::TrackPiece& piece = track.pieces.emplace_back();
         piece.symbol = i == 2 ? "Station" : "Plain";
@@ -274,7 +275,7 @@ TEST_CASE("a piece is as long along the course as the mean of its rails, and car
     grid.cells.resize(64);
     // Straight rails 4 long along -X, a metre apart, whose stored lengths say 4.5 and 5.5, as rails rolling round the
     // middle line would be.
-    const auto rail = [](float z, float length) {
+    const auto rail = [](f32 z, f32 length) {
         ovl::Spline s;
         s.length = length;
         s.segment_lengths = { length };
@@ -289,11 +290,11 @@ TEST_CASE("a piece is as long along the course as the mean of its rails, and car
     save::model::Ride ride;
     auto& track = ride.track.emplace();
     std::vector<save::model::PlacedObject> objects;
-    for (std::uint64_t i = 0; i < 2; ++i)
+    for (u64 i = 0; i < 2; ++i)
     {
         save::model::PlacedObject& o = objects.emplace_back();
         o.id = 100 + i;
-        o.col = static_cast<std::int32_t>(i);
+        o.col = static_cast<i32>(i);
         o.force_absolute_height = true;
         save::model::TrackPiece& p = track.pieces.emplace_back();
         p.symbol = "Rolled";
@@ -340,11 +341,11 @@ TEST_CASE("holding pieces end blocks, lift tops are lift, a tower's chain-marked
     auto& track = ride.track.emplace();
     std::vector<save::model::PlacedObject> objects;
     const std::array<std::string, 4> symbols { "Holds", "Top", "Tower", "Spiral" };
-    for (std::uint64_t i = 0; i < symbols.size(); ++i)
+    for (u64 i = 0; i < symbols.size(); ++i)
     {
         save::model::PlacedObject& o = objects.emplace_back();
         o.id = 100 + i;
-        o.col = static_cast<std::int32_t>(i);
+        o.col = static_cast<i32>(i);
         o.force_absolute_height = true;
         save::model::TrackPiece& piece = track.pieces.emplace_back();
         piece.symbol = symbols[i];
@@ -355,9 +356,9 @@ TEST_CASE("holding pieces end blocks, lift tops are lift, a tower's chain-marked
     const auto course = park::track::track_course(ride, objects, { }, grid, { }, shape_of);
     REQUIRE(course);
     REQUIRE(course->piece_starts.size() == 4);
-    const auto kind_of = [&](std::size_t piece) {
+    const auto kind_of = [&](usize piece) {
         const auto after = std::ranges::upper_bound(course->distance, course->piece_starts[piece] + 0.01f);
-        return course->kinds[static_cast<std::size_t>(after - course->distance.begin() - 1)];
+        return course->kinds[static_cast<usize>(after - course->distance.begin() - 1)];
     };
     CHECK(kind_of(0) == park::track::CourseKind::BlockBrake);
     CHECK(kind_of(1) == park::track::CourseKind::Lift);
@@ -389,7 +390,7 @@ TEST_CASE("a lift tower's foot, middle and top make one lift run, its foot keepi
     auto& track = ride.track.emplace();
     std::vector<save::model::PlacedObject> objects;
     const std::array<std::string, 5> symbols { "Plain", "Foot", "Middle", "Top", "Plain" };
-    for (std::uint64_t i = 0; i < symbols.size(); ++i)
+    for (u64 i = 0; i < symbols.size(); ++i)
     {
         save::model::PlacedObject& o = objects.emplace_back();
         o.id = 100 + i;
@@ -431,12 +432,12 @@ TEST_CASE("brakes and block brakes keep their own speed, else the piece's speed,
     auto& track = ride.track.emplace();
     std::vector<save::model::PlacedObject> objects;
     const std::array<std::string, 4> symbols { "Brakes", "Block", "Holds", "Plain" };
-    const std::array<std::optional<std::int32_t>, 4> speeds { 6, std::nullopt, std::nullopt, 9 };
-    for (std::uint64_t i = 0; i < symbols.size(); ++i)
+    const std::array<std::optional<i32>, 4> speeds { 6, std::nullopt, std::nullopt, 9 };
+    for (u64 i = 0; i < symbols.size(); ++i)
     {
         save::model::PlacedObject& o = objects.emplace_back();
         o.id = 100 + i;
-        o.col = static_cast<std::int32_t>(i);
+        o.col = static_cast<i32>(i);
         o.force_absolute_height = true;
         save::model::TrackPiece& piece = track.pieces.emplace_back();
         piece.symbol = symbols[i];
@@ -449,9 +450,9 @@ TEST_CASE("brakes and block brakes keep their own speed, else the piece's speed,
     const auto course = park::track::track_course(ride, objects, { }, grid, { }, shape_of);
     REQUIRE(course);
     REQUIRE(course->piece_starts.size() == 4);
-    const auto speed_of = [&](std::size_t piece) {
+    const auto speed_of = [&](usize piece) {
         const auto after = std::ranges::upper_bound(course->distance, course->piece_starts[piece] + 0.01f);
-        return course->brake_speeds[static_cast<std::size_t>(after - course->distance.begin() - 1)];
+        return course->brake_speeds[static_cast<usize>(after - course->distance.begin() - 1)];
     };
     CHECK(speed_of(0) == 6);
     CHECK(speed_of(1) == 5);
@@ -469,17 +470,17 @@ TEST_CASE("a pool slide's track ends open at a bowl, a funnel or an end piece, a
     grid.cells.resize(64);
     park::track::PieceShape plain;
     plain.line.path = { { 2, 0, 0 }, { -2, 0, 0 } };
-    const auto ends_open = [&](std::uint32_t role) {
+    const auto ends_open = [&](u32 role) {
         park::track::PieceShape last = plain;
         last.record.role = role;
         save::model::Ride ride;
         auto& track = ride.track.emplace();
         std::vector<save::model::PlacedObject> objects;
-        for (std::uint64_t i = 0; i < 2; ++i)
+        for (u64 i = 0; i < 2; ++i)
         {
             save::model::PlacedObject& o = objects.emplace_back();
             o.id = 100 + i;
-            o.col = static_cast<std::int32_t>(i);
+            o.col = static_cast<i32>(i);
             o.force_absolute_height = true;
             save::model::TrackPiece& piece = track.pieces.emplace_back();
             piece.symbol = i == 0 ? "Plain" : "Last";

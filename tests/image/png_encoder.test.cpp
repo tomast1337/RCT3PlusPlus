@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "image/png_encoder.hpp"
 
+#include "core/types.hpp"
 #include "image/picture_file.hpp"
 
 #include <cstdint>
@@ -24,9 +25,9 @@ TEST_CASE("an encoded image decodes to the same pixels")
     SUBCASE("one larger than a stored block")
     {
         ovl::texture::RgbaImage image { 200, 100, { } };
-        image.pixels.resize(std::size_t { image.width } * image.height * 4);
-        for (std::size_t i = 0; i < image.pixels.size(); ++i)
-            image.pixels[i] = static_cast<std::uint8_t>(i * 7);
+        image.pixels.resize(usize { image.width } * image.height * 4);
+        for (usize i = 0; i < image.pixels.size(); ++i)
+            image.pixels[i] = static_cast<u8>(i * 7);
         const auto decoded = image::decode_picture(image::encode_png(image));
         REQUIRE(decoded);
         CHECK(decoded->pixels == image.pixels);

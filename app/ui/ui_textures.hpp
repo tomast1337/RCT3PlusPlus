@@ -4,6 +4,7 @@
 // coordinates.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/texture/image.hpp"
 #include "render/device.hpp"
 #include "ui/skin/library.hpp"
@@ -19,8 +20,8 @@ namespace rct3::ui
     struct UiTexture
     {
         render::TextureHandle handle;
-        float width = 0;
-        float height = 0;
+        f32 width = 0;
+        f32 height = 0;
     };
 
     using UiTextures = std::map<std::string, UiTexture, std::less<>>;

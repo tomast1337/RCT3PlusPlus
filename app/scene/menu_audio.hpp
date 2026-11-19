@@ -13,6 +13,7 @@
 #include "audio/music_player.hpp"
 #include "config/game/install.hpp"
 #include "config/game/options.hpp"
+#include "core/types.hpp"
 #include "ovl/sound.hpp"
 #include "ui/interface_sound.hpp"
 
@@ -30,11 +31,11 @@ namespace rct3::scene
     struct MenuAudio
     {
         std::optional<audio::MusicPlayer> music;
-        std::optional<float> music_volume;        // As last set; none before the first update
-        std::optional<float> music_level;         // The fade last asked for; none for music just started
+        std::optional<f32> music_volume;          // As last set; none before the first update
+        std::optional<f32> music_level;           // The fade last asked for; none for music just started
         std::filesystem::path folder;             ///< The game's music folder; empty without one
         std::vector<std::string> files;           ///< Its tracks
-        std::optional<std::size_t> cycle_file;    ///< The cycle's track for this run, when there is one
+        std::optional<usize> cycle_file;          ///< The cycle's track for this run, when there is one
         std::optional<audio::MenuMusicWish> wish; ///< What the music playing was started for
         std::vector<audio::SoundBuffer> presses;
         std::vector<audio::SoundBuffer> releases;
@@ -49,11 +50,11 @@ namespace rct3::scene
     [[nodiscard]] std::vector<std::string> music_files(const config::game::GameInstall& install);
 
     /// Picks the run's track, which moves the menu music's cycle on in `options`, and starts it.
-    [[nodiscard]] MenuAudio start_menu_audio(audio::AudioEngine& engine, const config::game::GameInstall& install, config::game::GameOptions& options, std::uint32_t seed);
+    [[nodiscard]] MenuAudio start_menu_audio(audio::AudioEngine& engine, const config::game::GameInstall& install, config::game::GameOptions& options, u32 seed);
 
     /// Keeps the music going at the volume of `options`, fading to `level` of it (0..1), and plays the interface's
     /// sounds. Sets the engine's master volume to the game volume. `in_park` while a park is open, which quiets the menus' own music.
-    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::game::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park = false, float level = 1);
+    void update_menu_audio(audio::AudioEngine& engine, MenuAudio& menu, const config::game::GameOptions& options, std::span<const ui::InterfaceSound> sounds, bool in_park = false, f32 level = 1);
 
     void stop_menu_audio(audio::AudioEngine& engine, MenuAudio& menu);
 

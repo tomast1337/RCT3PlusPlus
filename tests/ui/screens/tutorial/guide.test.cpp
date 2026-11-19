@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/tutorial/guide.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/font/set.hpp"
 #include "ui/game_style.hpp"
@@ -43,7 +44,7 @@ namespace
         return Font::from(f, pages);
     }
 
-    PointerState at(float x, float y, bool down = false)
+    PointerState at(f32 x, f32 y, bool down = false)
     {
         return { { x, y }, down, true };
     }
@@ -115,7 +116,7 @@ TEST_CASE("the page is at least the floor wide and tall, and grows with the text
 
     SUBCASE("no stored width, or a nonsense one, gives the floor")
     {
-        for (const float stored : { 0.0f, -1000.0f, 100.0f })
+        for (const f32 stored : { 0.0f, -1000.0f, 100.0f })
         {
             const TutorialGuideSize s = tutorial_guide_size(style, stored, 20);
             CHECK(s.page.x == doctest::Approx(281));
@@ -224,7 +225,7 @@ TEST_CASE("a long text makes the window taller, keeping it in its place")
 {
     save::model::TutorialScript s = lessons();
     s.name = "Long"; // Not the name the fixture's strings replace step one's text under
-    for (std::int32_t i = 0; i < 40; ++i)
+    for (i32 i = 0; i < 40; ++i)
         s.steps[0].text += "word word word word ";
     Fixture f(std::move(s));
     const Rect r = f.window->rect();

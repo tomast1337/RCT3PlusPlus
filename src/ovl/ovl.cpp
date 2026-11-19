@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/ovl.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <bit>
@@ -24,11 +26,11 @@ namespace rct3::ovl
             {
             }
 
-            [[nodiscard]] std::size_t position() const noexcept
+            [[nodiscard]] usize position() const noexcept
             {
                 return pos_;
             }
-            [[nodiscard]] std::size_t remaining() const noexcept
+            [[nodiscard]] usize remaining() const noexcept
             {
                 return data_.size() - pos_;
             }
@@ -46,7 +48,7 @@ namespace rct3::ovl
             // u16 length + bytes, no terminator.
             [[nodiscard]] std::expected<std::string, Error> read_string()
             {
-                auto len = read<std::uint16_t>();
+                auto len = read<u16>();
                 if (!len)
                     return std::unexpected(len.error());
                 if (data_.size() - pos_ < *len)
@@ -56,7 +58,7 @@ namespace rct3::ovl
                 return s;
             }
 
-            [[nodiscard]] std::expected<std::vector<std::byte>, Error> read_bytes(std::size_t n)
+            [[nodiscard]] std::expected<std::vector<std::byte>, Error> read_bytes(usize n)
             {
                 if (remaining() < n)
                     return std::unexpected(Error::Truncated);
@@ -65,7 +67,7 @@ namespace rct3::ovl
                 return out;
             }
 
-            [[nodiscard]] std::expected<void, Error> seek(std::size_t pos)
+            [[nodiscard]] std::expected<void, Error> seek(usize pos)
             {
                 if (pos > data_.size())
                     return std::unexpected(Error::Truncated);
@@ -74,7 +76,7 @@ namespace rct3::ovl
             }
 
             // Bytes up to a NUL terminator inside [pos_, limit). Leaves the cursor after the terminator.
-            [[nodiscard]] std::expected<std::string, Error> read_cstring(std::size_t limit)
+            [[nodiscard]] std::expected<std::string, Error> read_cstring(usize limit)
             {
                 if (limit > data_.size())
                     return std::unexpected(Error::Truncated);
@@ -90,14 +92,14 @@ namespace rct3::ovl
             }
 
             // Every counted entry costs at least `min_entry_size` bytes, so the count cannot exceed what is left.
-            [[nodiscard]] bool plausible_count(std::uint32_t count, std::size_t min_entry_size) const noexcept
+            [[nodiscard]] bool plausible_count(u32 count, usize min_entry_size) const noexcept
             {
                 return count <= (data_.size() - pos_) / min_entry_size;
             }
 
         private:
             std::span<const std::byte> data_;
-            std::size_t pos_ = 0;
+            usize pos_ = 0;
         };
 
 #define RCT3_TRY(var, expr)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    \
@@ -107,12 +109,12 @@ namespace rct3::ovl
 
         std::expected<std::vector<std::string>, Error> read_string_list(Cursor& c)
         {
-            RCT3_TRY(count, c.read<std::uint32_t>());
-            if (!c.plausible_count(*count, sizeof(std::uint16_t)))
+            RCT3_TRY(count, c.read<u32>());
+            if (!c.plausible_count(*count, sizeof(u16)))
                 return std::unexpected(Error::ImplausibleCount);
             std::vector<std::string> out;
             out.reserve(*count);
-            for (std::uint32_t i = 0; i < *count; ++i)
+            for (u32 i = 0; i < *count; ++i)
             {
                 RCT3_TRY(s, c.read_string());
                 out.push_back(std::move(*s));
@@ -161,32 +163,32 @@ namespace rct3::ovl
         {
             Header h;
 
-            RCT3_TRY(magic, c.read<std::uint32_t>());
-            if (*magic != std::bit_cast<std::uint32_t>(std::array<char, 4> { 'F', 'G', 'R', 'K' }))
+            RCT3_TRY(magic, c.read<u32>());
+            if (*magic != std::bit_cast<u32>(std::array<char, 4> { 'F', 'G', 'R', 'K' }))
             {
                 return std::unexpected(Error::BadMagic);
             }
 
-            RCT3_TRY(flags, c.read<std::uint8_t>());
+            RCT3_TRY(flags, c.read<u8>());
             h.flags = *flags;
-            for (std::int32_t i = 0; i < 3; ++i)
+            for (i32 i = 0; i < 3; ++i)
             {
-                RCT3_TRY(pad, c.read<std::uint8_t>());
+                RCT3_TRY(pad, c.read<u8>());
             }
 
-            RCT3_TRY(version, c.read<std::uint32_t>());
+            RCT3_TRY(version, c.read<u32>());
             if (*version != 1 && *version != 4 && *version != 5)
                 return std::unexpected(Error::UnsupportedVersion);
             h.layout = static_cast<OvlLayout>(*version);
 
             if (h.layout != OvlLayout::NoStream)
             {
-                RCT3_TRY(discarded, c.read<std::uint32_t>()); // always 0x10 in observed files
+                RCT3_TRY(discarded, c.read<u32>()); // always 0x10 in observed files
             }
             if (h.layout == OvlLayout::ManyStreams)
             {
-                RCT3_TRY(sub, c.read<std::int16_t>());
-                RCT3_TRY(extra, c.read<std::int16_t>());
+                RCT3_TRY(sub, c.read<i16>());
+                RCT3_TRY(extra, c.read<i16>());
                 if (*sub < 0)
                     return std::unexpected(Error::ImplausibleCount);
                 h.stream_count = *sub;
@@ -195,12 +197,12 @@ namespace rct3::ovl
                 {
                     // Self-sized block: u32 size (counted from its own start), two reserved u32, a NUL-terminated
                     // tag, then padding up to the size. Seen with size 20 + tag and size 16 + empty tag.
-                    const std::size_t start = c.position();
-                    RCT3_TRY(size, c.read<std::uint32_t>());
+                    const usize start = c.position();
+                    RCT3_TRY(size, c.read<u32>());
                     if (*size < 16)
                         return std::unexpected(Error::BadStreamBlock);
-                    RCT3_TRY(reserved_a, c.read<std::uint32_t>());
-                    RCT3_TRY(reserved_b, c.read<std::uint32_t>());
+                    RCT3_TRY(reserved_a, c.read<u32>());
+                    RCT3_TRY(reserved_b, c.read<u32>());
                     RCT3_TRY(tag, c.read_cstring(start + *size));
                     h.stream_tag = std::move(*tag);
                     RCT3_TRY(sought, c.seek(start + *size));
@@ -212,17 +214,17 @@ namespace rct3::ovl
             RCT3_TRY(sec, read_string_list(c));
             h.secondary_refs = std::move(*sec);
 
-            RCT3_TRY(loader_count, c.read<std::uint32_t>());
+            RCT3_TRY(loader_count, c.read<u32>());
             // Smallest entry: 3 empty strings (2 bytes each) + u32.
             if (!c.plausible_count(*loader_count, 10))
                 return std::unexpected(Error::ImplausibleCount);
             h.loaders.reserve(*loader_count);
-            for (std::uint32_t i = 0; i < *loader_count; ++i)
+            for (u32 i = 0; i < *loader_count; ++i)
             {
                 Loader l;
                 RCT3_TRY(loader, c.read_string());
                 RCT3_TRY(name, c.read_string());
-                RCT3_TRY(type, c.read<std::uint32_t>());
+                RCT3_TRY(type, c.read<u32>());
                 RCT3_TRY(tag, c.read_string());
                 l.loader = std::move(*loader);
                 l.name = std::move(*name);
@@ -234,10 +236,10 @@ namespace rct3::ovl
             if (h.layout == OvlLayout::ManyStreams)
             {
                 // fileTypeCount x { loaderIdx, symbolCount }, index-mapped.
-                for (std::uint32_t i = 0; i < *loader_count; ++i)
+                for (u32 i = 0; i < *loader_count; ++i)
                 {
-                    RCT3_TRY(idx, c.read<std::uint32_t>());
-                    RCT3_TRY(count, c.read<std::uint32_t>());
+                    RCT3_TRY(idx, c.read<u32>());
+                    RCT3_TRY(count, c.read<u32>());
                     if (*idx >= h.loaders.size())
                         return std::unexpected(Error::BadLoaderIndex);
                     h.loaders[*idx].symbol_count = *count;
@@ -256,15 +258,15 @@ namespace rct3::ovl
         return read_header(c);
     }
 
-    std::optional<BlockLocation> File::locate(std::uint32_t address, std::uint32_t base) const noexcept
+    std::optional<BlockLocation> File::locate(u32 address, u32 base) const noexcept
     {
         if (address < base)
             return std::nullopt;
-        const std::uint32_t relative_address = address - base;
-        for (std::size_t t = 0; t < block_types.size(); ++t)
+        const u32 relative_address = address - base;
+        for (usize t = 0; t < block_types.size(); ++t)
         {
             const auto& blocks = block_types[t].blocks;
-            for (std::size_t i = 0; i < blocks.size(); ++i)
+            for (usize i = 0; i < blocks.size(); ++i)
             {
                 const Block& b = blocks[i];
                 if (relative_address >= b.relative_offset && relative_address - b.relative_offset < b.size)
@@ -289,26 +291,26 @@ namespace rct3::ovl
         // Block definitions. v1 keeps sizes inline with the data instead of here.
         for (auto& type : f.block_types)
         {
-            RCT3_TRY(count, c.read<std::uint32_t>());
+            RCT3_TRY(count, c.read<u32>());
             if (layout != OvlLayout::NoStream)
             {
-                RCT3_TRY(unknown, c.read<std::uint32_t>());
+                RCT3_TRY(unknown, c.read<u32>());
                 type.unknown = *unknown;
                 if (has_extra)
                 {
-                    RCT3_TRY(extra, c.read<std::uint32_t>());
+                    RCT3_TRY(extra, c.read<u32>());
                     type.extra = *extra;
                 }
             }
             // Each block costs at least a u32, either its size here or inline in the data section.
-            if (!c.plausible_count(*count, sizeof(std::uint32_t)))
+            if (!c.plausible_count(*count, sizeof(u32)))
                 return std::unexpected(Error::ImplausibleCount);
             type.blocks.resize(*count);
             if (layout != OvlLayout::NoStream)
             {
                 for (auto& block : type.blocks)
                 {
-                    RCT3_TRY(size, c.read<std::uint32_t>());
+                    RCT3_TRY(size, c.read<u32>());
                     block.size = *size;
                 }
             }
@@ -317,45 +319,45 @@ namespace rct3::ovl
         // Post-block metadata.
         if (layout == OvlLayout::OneStream)
         {
-            for (std::int32_t i = 0; i < 2; ++i)
+            for (i32 i = 0; i < 2; ++i)
             {
-                RCT3_TRY(word, c.read<std::uint32_t>());
+                RCT3_TRY(word, c.read<u32>());
                 f.unknown_words.push_back(*word);
             }
         }
         else if (layout == OvlLayout::ManyStreams)
         {
-            RCT3_TRY(byte_count, c.read<std::uint32_t>());
+            RCT3_TRY(byte_count, c.read<u32>());
             if (!c.plausible_count(*byte_count, 1))
                 return std::unexpected(Error::ImplausibleCount);
             RCT3_TRY(bytes, c.read_bytes(*byte_count));
             f.unknown_bytes = std::move(*bytes);
 
-            RCT3_TRY(word_count, c.read<std::uint32_t>());
-            if (!c.plausible_count(*word_count, sizeof(std::uint32_t)))
+            RCT3_TRY(word_count, c.read<u32>());
+            if (!c.plausible_count(*word_count, sizeof(u32)))
                 return std::unexpected(Error::ImplausibleCount);
             f.unknown_words.reserve(*word_count);
-            for (std::uint32_t i = 0; i < *word_count; ++i)
+            for (u32 i = 0; i < *word_count; ++i)
             {
-                RCT3_TRY(word, c.read<std::uint32_t>());
+                RCT3_TRY(word, c.read<u32>());
                 f.unknown_words.push_back(*word);
             }
         }
 
         // Block data, in type then block order. Assigns each block its place in the relative address space.
-        std::uint64_t relative = 0;
+        u64 relative = 0;
         for (auto& type : f.block_types)
         {
             for (auto& block : type.blocks)
             {
                 if (layout == OvlLayout::NoStream)
                 {
-                    RCT3_TRY(size, c.read<std::uint32_t>());
+                    RCT3_TRY(size, c.read<u32>());
                     block.size = *size;
                 }
                 if (c.remaining() < block.size)
                     return std::unexpected(Error::Truncated);
-                block.relative_offset = static_cast<std::uint32_t>(relative);
+                block.relative_offset = static_cast<u32>(relative);
                 block.file_offset = c.position();
                 relative += block.size;
                 if (relative > UINT32_MAX)
@@ -363,34 +365,34 @@ namespace rct3::ovl
                 RCT3_TRY(sought, c.seek(c.position() + block.size));
             }
         }
-        f.data_size = static_cast<std::uint32_t>(relative);
+        f.data_size = static_cast<u32>(relative);
 
         // Relocation table.
-        RCT3_TRY(relocation_count, c.read<std::uint32_t>());
-        if (!c.plausible_count(*relocation_count, sizeof(std::uint32_t)))
+        RCT3_TRY(relocation_count, c.read<u32>());
+        if (!c.plausible_count(*relocation_count, sizeof(u32)))
         {
             return std::unexpected(Error::ImplausibleCount);
         }
         f.relocations.reserve(*relocation_count);
-        for (std::uint32_t i = 0; i < *relocation_count; ++i)
+        for (u32 i = 0; i < *relocation_count; ++i)
         {
-            RCT3_TRY(address, c.read<std::uint32_t>());
+            RCT3_TRY(address, c.read<u32>());
             f.relocations.push_back(*address);
         }
 
         // One table per data stream: u32 count, then count pairs of u32 (location, value).
-        const std::size_t streams = layout == OvlLayout::OneStream ? 1 : layout == OvlLayout::ManyStreams ? static_cast<std::size_t>(f.header.stream_count) : 0;
+        const usize streams = layout == OvlLayout::OneStream ? 1 : layout == OvlLayout::ManyStreams ? static_cast<usize>(f.header.stream_count) : 0;
         f.stream_relocations.resize(streams);
         for (auto& table : f.stream_relocations)
         {
-            RCT3_TRY(count, c.read<std::uint32_t>());
-            if (!c.plausible_count(*count, 2 * sizeof(std::uint32_t)))
+            RCT3_TRY(count, c.read<u32>());
+            if (!c.plausible_count(*count, 2 * sizeof(u32)))
                 return std::unexpected(Error::ImplausibleCount);
             table.reserve(*count);
-            for (std::uint32_t i = 0; i < *count; ++i)
+            for (u32 i = 0; i < *count; ++i)
             {
-                RCT3_TRY(location, c.read<std::uint32_t>());
-                RCT3_TRY(value, c.read<std::uint32_t>());
+                RCT3_TRY(location, c.read<u32>());
+                RCT3_TRY(value, c.read<u32>());
                 table.push_back({ *location, *value });
             }
         }
@@ -399,12 +401,12 @@ namespace rct3::ovl
         return f;
     }
 
-    void AddressSpace::add(const File& file, std::span<const std::byte> bytes, std::uint32_t base)
+    void AddressSpace::add(const File& file, std::span<const std::byte> bytes, u32 base)
     {
         entries_.push_back({ &file, bytes, base });
     }
 
-    std::optional<std::span<const std::byte>> AddressSpace::bytes_at(std::uint32_t address, std::size_t length) const noexcept
+    std::optional<std::span<const std::byte>> AddressSpace::bytes_at(u32 address, usize length) const noexcept
     {
         for (const auto& e : entries_)
         {
@@ -419,7 +421,7 @@ namespace rct3::ovl
         return std::nullopt;
     }
 
-    std::optional<std::string_view> AddressSpace::cstring_at(std::uint32_t address) const noexcept
+    std::optional<std::string_view> AddressSpace::cstring_at(u32 address) const noexcept
     {
         for (const auto& e : entries_)
         {
@@ -431,12 +433,12 @@ namespace rct3::ovl
             const auto nul = std::find(rest.begin(), rest.end(), std::byte { 0 });
             if (nul == rest.end())
                 return std::nullopt;
-            return std::string_view(reinterpret_cast<const char*>(rest.data()), static_cast<std::size_t>(nul - rest.begin()));
+            return std::string_view(reinterpret_cast<const char*>(rest.data()), static_cast<usize>(nul - rest.begin()));
         }
         return std::nullopt;
     }
 
-    std::optional<std::u16string> AddressSpace::utf16_at(std::uint32_t address) const
+    std::optional<std::u16string> AddressSpace::utf16_at(u32 address) const
     {
         for (const auto& e : entries_)
         {
@@ -447,9 +449,9 @@ namespace rct3::ovl
             const auto rest = e.bytes.subspan(block.file_offset + at->offset, block.size - at->offset);
 
             std::u16string out;
-            for (std::size_t i = 0; i + 1 < rest.size(); i += 2)
+            for (usize i = 0; i + 1 < rest.size(); i += 2)
             {
-                const auto unit = static_cast<char16_t>(std::to_integer<std::uint32_t>(rest[i]) | (std::to_integer<std::uint32_t>(rest[i + 1]) << 8));
+                const auto unit = static_cast<char16_t>(std::to_integer<u32>(rest[i]) | (std::to_integer<u32>(rest[i + 1]) << 8));
                 if (unit == 0)
                     return out;
                 out.push_back(unit);
@@ -469,14 +471,14 @@ namespace rct3::ovl
 
     std::expected<std::vector<Symbol>, Error> read_symbols(const File& file, std::span<const std::byte> bytes, const AddressSpace& space)
     {
-        constexpr std::size_t kSymbolTableType = 2;
+        constexpr usize kSymbolTableType = 2;
         const auto& blocks = file.block_types[kSymbolTableType].blocks;
         if (blocks.empty())
             return std::vector<Symbol> { };
 
         // v1 rows are {name, data, isPointer:u32}. v4 and v5 rows are {name, data, isPointer:u16, unknown:u16, hash}.
         const bool wide = file.header.layout != OvlLayout::NoStream;
-        const std::size_t stride = wide ? 16 : 12;
+        const usize stride = wide ? 16 : 12;
 
         const Block& table = blocks[0];
         if (table.size % stride != 0)
@@ -488,7 +490,7 @@ namespace rct3::ovl
 
         std::vector<Symbol> out;
         out.reserve(table.size / stride);
-        for (std::size_t off = 0; off < table.size; off += stride)
+        for (usize off = 0; off < table.size; off += stride)
         {
             const std::byte* row = bytes.data() + table.file_offset + off;
             Symbol sym;
@@ -496,7 +498,7 @@ namespace rct3::ovl
             std::memcpy(&sym.data, row + 4, 4);
             if (wide)
             {
-                std::uint16_t is_pointer = 0;
+                u16 is_pointer = 0;
                 std::memcpy(&is_pointer, row + 8, 2);
                 sym.is_pointer = is_pointer != 0;
                 std::memcpy(&sym.unknown, row + 10, 2);
@@ -504,7 +506,7 @@ namespace rct3::ovl
             }
             else
             {
-                std::uint32_t is_pointer = 0;
+                u32 is_pointer = 0;
                 std::memcpy(&is_pointer, row + 8, 4);
                 sym.is_pointer = is_pointer != 0;
             }
@@ -517,15 +519,15 @@ namespace rct3::ovl
 
     std::expected<std::vector<Reference>, Error> read_references(const File& file, std::span<const std::byte> bytes, const AddressSpace& space)
     {
-        constexpr std::size_t kTableType = 2;
-        constexpr std::size_t kTableBlock = 2;
+        constexpr usize kTableType = 2;
+        constexpr usize kTableBlock = 2;
 
         const auto& blocks = file.block_types[kTableType].blocks;
         if (blocks.size() <= kTableBlock)
             return std::vector<Reference> { };
 
         const bool wide = file.header.layout != OvlLayout::NoStream;
-        const std::size_t stride = wide ? 16 : 12;
+        const usize stride = wide ? 16 : 12;
 
         const Block& table = blocks[kTableBlock];
         if (table.size % stride != 0)
@@ -537,7 +539,7 @@ namespace rct3::ovl
 
         std::vector<Reference> out;
         out.reserve(table.size / stride);
-        for (std::size_t off = 0; off < table.size; off += stride)
+        for (usize off = 0; off < table.size; off += stride)
         {
             const std::byte* row = bytes.data() + table.file_offset + off;
             Reference ref;
@@ -555,9 +557,9 @@ namespace rct3::ovl
 
     std::expected<LoaderTable, Error> read_loaders(const File& file, std::span<const std::byte> bytes)
     {
-        constexpr std::size_t kLoaderTableType = 2;
-        constexpr std::size_t kLoaderTableBlock = 1;
-        constexpr std::size_t kRowSize = 20;
+        constexpr usize kLoaderTableType = 2;
+        constexpr usize kLoaderTableBlock = 1;
+        constexpr usize kRowSize = 20;
 
         LoaderTable out;
         out.end_offset = file.end_offset;
@@ -576,10 +578,10 @@ namespace rct3::ovl
 
         const bool v5 = file.header.layout == OvlLayout::ManyStreams;
         out.entries.reserve(table.size / kRowSize);
-        for (std::size_t off = 0; off < table.size; off += kRowSize)
+        for (usize off = 0; off < table.size; off += kRowSize)
         {
             const std::byte* row = bytes.data() + table.file_offset + off;
-            std::uint32_t extra_field = 0;
+            u32 extra_field = 0;
             LoaderEntry e;
             std::memcpy(&e.loader_type, row, 4);
             std::memcpy(&e.data, row + 4, 4);
@@ -588,7 +590,7 @@ namespace rct3::ovl
             std::memcpy(&e.symbols_to_resolve, row + 16, 4);
             // v5 packs a 16-bit chunk count with a 16-bit unknown. Older versions use the whole field.
             e.extra_count = v5 ? (extra_field & 0xFFFF) : extra_field;
-            e.unknown = v5 ? static_cast<std::uint16_t>(extra_field >> 16) : 0;
+            e.unknown = v5 ? static_cast<u16>(extra_field >> 16) : 0;
             out.entries.push_back(e);
         }
 
@@ -597,16 +599,16 @@ namespace rct3::ovl
         RCT3_TRY(sought, c.seek(file.end_offset));
 
         out.extra.resize(out.entries.size());
-        for (std::size_t i = 0; i < out.entries.size(); ++i)
+        for (usize i = 0; i < out.entries.size(); ++i)
         {
             // Each chunk costs at least its size field.
-            if (!c.plausible_count(out.entries[i].extra_count, sizeof(std::uint32_t)))
+            if (!c.plausible_count(out.entries[i].extra_count, sizeof(u32)))
             {
                 return std::unexpected(Error::ImplausibleCount);
             }
-            for (std::uint32_t k = 0; k < out.entries[i].extra_count; ++k)
+            for (u32 k = 0; k < out.entries[i].extra_count; ++k)
             {
-                RCT3_TRY(size, c.read<std::uint32_t>());
+                RCT3_TRY(size, c.read<u32>());
                 if (c.remaining() < *size)
                     return std::unexpected(Error::Truncated);
                 out.extra[i].push_back({ c.position(), *size });

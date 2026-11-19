@@ -4,6 +4,7 @@
 // shape, a bone shape or a billboard.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -16,7 +17,7 @@ namespace rct3::ovl
 {
 
     /// Values of `SceneryVisualLod::mesh_type` seen in files.
-    enum class LodMeshType : std::uint32_t
+    enum class LodMeshType : u32
     {
         StaticShape = 0,
         BoneShape = 3,
@@ -25,22 +26,22 @@ namespace rct3::ovl
 
     struct SceneryVisualLod
     {
-        std::uint32_t mesh_type = 0;   ///< A `LodMeshType` value, other values are kept as read
+        u32 mesh_type = 0;             ///< A `LodMeshType` value, other values are kept as read
         std::string_view name;         ///< Name of this level, a string in the file
         std::string_view static_shape; ///< "shs" item, for static shapes
         std::string_view bone_shape;   ///< "bsh" item, for bone shapes
         std::string_view texture;      ///< "ftx" item, for billboards
         std::string_view style;        ///< "txs" item, for billboards (always the standard billboard style)
         /// Billboard size. 1 x 1 for the other types.
-        float width = 0;
-        float height = 0;
+        f32 width = 0;
+        f32 height = 0;
         /// Texture rectangle as {u0, u1, v0, v1}, {0, 1, 0, 1} for the other types.
-        std::array<float, 4> texcoords { };
+        std::array<f32, 4> texcoords { };
         /// Farthest view distance at which this level is still drawn, in world units. How the
         /// value combines with the object's size and the view setting is not confirmed. Levels are listed from
         /// the most to the least detailed and the values grow along the list in all but a few items; the last
         /// level of a multi-level item is usually a large value (hundreds to thousands) so it covers the rest.
-        float distance = 0;
+        f32 distance = 0;
         std::vector<std::string_view> animations; ///< "ban" items, for bone shapes
     };
 
@@ -50,10 +51,10 @@ namespace rct3::ovl
         /// items of version-5 files (the first and second expansion). The low bits mark plants (0x1, with
         /// swaying, mostly), 0x2, 0x4 and 0x70 groups; their exact meaning is not confirmed. 0x1000 is set on
         /// one item only (a ferris wheel); objects with this bit are handled separately when the level of detail is chosen.
-        std::uint32_t flags = 0;
-        float sway = 0;            ///< 0 for static items, 0.1 to 0.2 for plants
-        float brightness = 0;      ///< 1, or 0.6 to 0.8 for plants
-        float scale_variation = 0; ///< 0, or 0.35 to 0.4 for plants
+        u32 flags = 0;
+        f32 sway = 0;            ///< 0 for static items, 0.1 to 0.2 for plants
+        f32 brightness = 0;      ///< 1, or 0.6 to 0.8 for plants
+        f32 scale_variation = 0; ///< 0, or 0.35 to 0.4 for plants
         std::vector<SceneryVisualLod> lods;
     };
 

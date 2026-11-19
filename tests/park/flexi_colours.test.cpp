@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/flexi_colours.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
@@ -10,7 +12,7 @@ using namespace rct3::park;
 
 namespace
 {
-    std::int32_t brightness(Rgb c)
+    i32 brightness(Rgb c)
     {
         return c.r + c.g + c.b;
     }
@@ -24,7 +26,7 @@ namespace
 
         Frame()
         {
-            for (std::size_t i = 0; i < 256; ++i)
+            for (usize i = 0; i < 256; ++i)
             {
                 palette[i * 4 + 0] = std::byte(i); // Blue
                 palette[i * 4 + 1] = std::byte(0);
@@ -48,11 +50,11 @@ namespace
 
 TEST_CASE("a colour's shades run from pale through the colour to dark")
 {
-    for (std::size_t c = 0; c < kFlexiColourCount; ++c)
+    for (usize c = 0; c < kFlexiColourCount; ++c)
     {
         const Rgb colour = flexi_colour(c);
         CHECK(flexi_shade(colour, kFlexiFullShade) == colour);
-        for (std::size_t s = 1; s < kFlexiShades; ++s)
+        for (usize s = 1; s < kFlexiShades; ++s)
             CHECK(brightness(flexi_shade(colour, s)) <= brightness(flexi_shade(colour, s - 1)));
         CHECK(brightness(flexi_shade(colour, 0)) > brightness(colour));
     }
@@ -75,19 +77,19 @@ TEST_CASE("frames keep their indices and are painted per slot")
     REQUIRE(image);
     CHECK(image->slots == 0b111);
     CHECK(image->palette[200] == Rgb { 55, 0, 200 });
-    CHECK(image->indices == std::vector<std::uint8_t> { 0, 200 });
-    CHECK(image->alpha == std::vector<std::uint8_t> { 255, 7 });
+    CHECK(image->indices == std::vector<u8> { 0, 200 });
+    CHECK(image->alpha == std::vector<u8> { 255, 7 });
 
     // Index 200 lies in the third slot's run, at shade 200 - 171.
     const Rgb orange { 250, 120, 10 };
     const ovl::texture::RgbaImage painted = paint(*image, { Rgb { }, Rgb { }, orange });
     const Rgb shade = flexi_shade(orange, 200 - 1 - 2 * kFlexiShades);
-    CHECK(painted.pixels == std::vector<std::uint8_t> { 255, 0, 0, 255, shade.r, shade.g, shade.b, 7 });
+    CHECK(painted.pixels == std::vector<u8> { 255, 0, 0, 255, shade.r, shade.g, shade.b, 7 });
 
     // Without that slot the texture's own colour stays.
     const auto plain = palette_image(frame.view(false), 0b011);
     REQUIRE(plain);
-    CHECK(paint(*plain, { orange, orange, orange }).pixels == std::vector<std::uint8_t> { 255, 0, 0, 255, 55, 0, 200, 255 });
+    CHECK(paint(*plain, { orange, orange, orange }).pixels == std::vector<u8> { 255, 0, 0, 255, 55, 0, 200, 255 });
 }
 
 TEST_CASE("malformed frames are refused")
@@ -117,6 +119,6 @@ TEST_CASE("a new ride's colours are a scheme chosen by its model's name, in any 
     const auto twist = name_colours("Twist");
     CHECK(twist == name_colours("TWIST"));
     CHECK((twist[0] != twist[1] && twist[1] != twist[2]));
-    for (const std::int32_t c : twist)
-        CHECK((c >= 0 && c < static_cast<std::int32_t>(kFlexiColourCount)));
+    for (const i32 c : twist)
+        CHECK((c >= 0 && c < static_cast<i32>(kFlexiColourCount)));
 }

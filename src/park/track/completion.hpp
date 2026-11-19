@@ -7,6 +7,7 @@
 // pieces are laid (no stations, chains or pieces picked by name), and only where each meets the last.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/track/pieces.hpp"
 #include "save/model/world.hpp"
 #include "units/units.hpp"
@@ -32,7 +33,7 @@ namespace rct3::park::track
         save::model::PlacedObject object; ///< As place_after sets it
     };
 
-    enum class CompletionFailure : std::uint8_t
+    enum class CompletionFailure : u8
     {
         NoWay,      ///< Every way was tried
         OutOfTries, ///< Gave up after `tries` ends
@@ -53,26 +54,26 @@ namespace rct3::park::track
         {
             TrackTip tip;
             LaidPlacement laid;
-            std::size_t before = 0; ///< The step it carries on from; the first carries on from itself
-            units::Tiles come { };  ///< Of track laid so far
+            usize before = 0;      ///< The step it carries on from; the first carries on from itself
+            units::Tiles come { }; ///< Of track laid so far
         };
         std::vector<Step> steps;
-        std::vector<std::pair<float, std::size_t>> open; ///< A heap of steps to carry on from, nearest the goal first
-        std::set<std::tuple<std::int64_t, std::int64_t, std::int64_t, std::int32_t, std::int32_t, std::int32_t, std::size_t, bool>> reached_ends;
-        std::size_t tried = 0;
-        std::size_t nearest = 0; ///< The step tried that came nearest the goal
+        std::vector<std::pair<f32, usize>> open; ///< A heap of steps to carry on from, nearest the goal first
+        std::set<std::tuple<i64, i64, i64, i32, i32, i32, usize, bool>> reached_ends;
+        usize tried = 0;
+        usize nearest = 0; ///< The step tried that came nearest the goal
     };
 
     [[nodiscard]] CompletionSearch start_completion(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::model::TerrainGrid& grid, std::function<bool(const save::model::PlacedObject&)> allowed);
 
     /// Carries `search` on for up to `tries` more ends: the way once it is found, NoWay once every way was
     /// tried, nothing while it goes on.
-    [[nodiscard]] std::optional<std::expected<std::vector<LaidPlacement>, CompletionFailure>> search_on(CompletionSearch& search, std::size_t tries);
+    [[nodiscard]] std::optional<std::expected<std::vector<LaidPlacement>, CompletionFailure>> search_on(CompletionSearch& search, usize tries);
 
     /// The pieces laid so far toward the end that came nearest the goal.
     [[nodiscard]] std::vector<LaidPlacement> nearest_way(const CompletionSearch& search);
 
     /// The whole search at once, giving up with OutOfTries after `tries` ends.
-    [[nodiscard]] std::expected<std::vector<LaidPlacement>, CompletionFailure> complete_track(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::model::TerrainGrid& grid, const std::function<bool(const save::model::PlacedObject&)>& allowed, std::size_t tries);
+    [[nodiscard]] std::expected<std::vector<LaidPlacement>, CompletionFailure> complete_track(std::span<const PieceShape> pieces, const TrackTip& tip, LaidPiece last, const TrackTip& goal, LaidPiece first, const save::model::TerrainGrid& grid, const std::function<bool(const save::model::PlacedObject&)>& allowed, usize tries);
 
 } // namespace rct3::park::track

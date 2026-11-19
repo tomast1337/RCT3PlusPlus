@@ -2,6 +2,7 @@
 #include "ovl/flexi_texture.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <doctest/doctest.h>
 #include <string>
@@ -15,15 +16,15 @@ namespace
 {
 
     // Symbol name block: "T:ftx" and NUL, 6 bytes. The structure block follows it at address 6.
-    constexpr std::uint32_t kBase = 6;
+    constexpr u32 kBase = 6;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    std::vector<std::byte> row(std::uint32_t name, std::uint32_t data)
+    std::vector<std::byte> row(u32 name, u32 data)
     {
         std::vector<std::byte> out;
         words(out, { name, data });
@@ -36,22 +37,22 @@ namespace
     // Layout inside the structure block (offsets, then +kBase for addresses):
     //   0 header(36) | 36 sequence(2*4) | 44 frames(2*28) | 100 palette0(1024) | 1124 pixels0(16) |
     //   1140 alpha0(16) | 1156 palette1(1024) | 2180 pixels1(16) | 2196 end
-    std::vector<std::byte> structure(std::uint32_t second_frame_pixels = kBase + 2180)
+    std::vector<std::byte> structure(u32 second_frame_pixels = kBase + 2180)
     {
         std::vector<std::byte> out;
         words(out, { 2, 4, 4, 9, 3, 2, kBase + 36, 2, kBase + 44 });
         words(out, { 1, 0 });
         words(out, { 2, 4, 4, 3, kBase + 100, kBase + 1124, kBase + 1140 });
         words(out, { 2, 4, 4, 3, kBase + 1156, second_frame_pixels, 0 });
-        for (std::size_t i = 0; i < 1024; ++i)
+        for (usize i = 0; i < 1024; ++i)
             out.push_back(static_cast<std::byte>(i & 0xFF));
-        for (std::size_t i = 0; i < 16; ++i)
+        for (usize i = 0; i < 16; ++i)
             out.push_back(static_cast<std::byte>(0x10 + i));
-        for (std::size_t i = 0; i < 16; ++i)
+        for (usize i = 0; i < 16; ++i)
             out.push_back(static_cast<std::byte>(0x80 + i));
-        for (std::size_t i = 0; i < 1024; ++i)
+        for (usize i = 0; i < 1024; ++i)
             out.push_back(static_cast<std::byte>(0xFF - (i & 0xFF)));
-        for (std::size_t i = 0; i < 16; ++i)
+        for (usize i = 0; i < 16; ++i)
             out.push_back(static_cast<std::byte>(0x40 + i));
         return out;
     }

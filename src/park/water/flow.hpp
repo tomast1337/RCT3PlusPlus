@@ -12,6 +12,7 @@
 // That sheet is given the same flowing water (flowing_sheet).
 #pragma once
 
+#include "core/types.hpp"
 #include "math/texture_shift.hpp"
 #include "ovl/spline.hpp"
 #include "ovl/texture/image.hpp"
@@ -40,9 +41,9 @@ namespace rct3::park::water
     inline constexpr std::string_view kFlowPicture = "rct3pp:flow";
 
     /// About how far the picture runs along the water before it repeats, in park units.
-    inline constexpr float kFlowRepeat = 4.0f;
+    inline constexpr f32 kFlowRepeat = 4.0f;
     /// How far the water moves each second, in park units.
-    inline constexpr float kFlowSpeed = 3.0f;
+    inline constexpr f32 kFlowSpeed = 3.0f;
 
     /// The water between `left` and `right`, textured `texture` and see-through, its picture running from the
     /// end of the water nearer the start of `track` (the piece's rails). Nothing when the edges do not pair up
@@ -59,11 +60,11 @@ namespace rct3::park::water
 
     /// How much of the water shows (0 to 1) at `along` its strip (ModelPart::flow) faded by `fade`, `last` being
     /// the strip's ModelPart::flow_last.
-    [[nodiscard]] float flow_alpha(const object::FlowFade& fade, float along, float last);
+    [[nodiscard]] f32 flow_alpha(const object::FlowFade& fade, f32 along, f32 last);
 
     /// How far along its picture the water of a piece of run `run` (see Chains) is moved after flowing for
     /// `seconds`, added to the picture's v: against the strip's v when the run is negative.
-    [[nodiscard]] math::TextureShift flow_scroll(float seconds, std::int32_t run);
+    [[nodiscard]] math::TextureShift flow_scroll(f32 seconds, i32 run);
 
     /// The picture of the texture `name` (the flowing water's by default) from the overlay whose common file is
     /// `file`.

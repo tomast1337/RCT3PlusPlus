@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/fireworks.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/ride_walks.hpp"
@@ -22,7 +23,7 @@ namespace rct3::simulation
     void watch_fireworks(SimWorld& world)
     {
         entt::registry& r = world.registry;
-        const float now = static_cast<float>(world.tick) * kTickSeconds;
+        const f32 now = static_cast<f32>(world.tick) * kTickSeconds;
         if (const auto* show = r.ctx().find<FireworkShow>())
         {
             const auto view = r.view<const Visitor, const Errand, Pose>(entt::exclude<Staff, Linger, Watching, Gesture, Left, Held, Dropped, RideWalk, Crossing, Swimmer, Outside, FireworkWatcher>);

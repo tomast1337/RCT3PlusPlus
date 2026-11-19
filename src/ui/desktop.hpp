@@ -27,6 +27,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/interface_sound.hpp"
 #include "ui/keyboard.hpp"
 #include "ui/keyboard_focus.hpp"
@@ -129,7 +130,7 @@ namespace rct3::ui
     private:
         void follow_popups();
         /// The index of the top-most modal top-level widget shown; input reaches it and those above.
-        [[nodiscard]] std::optional<std::size_t> top_modal() const;
+        [[nodiscard]] std::optional<usize> top_modal() const;
         /// Takes the keyboard focus from a widget a modal one shuts out.
         void drop_shut_out_focus();
         [[nodiscard]] std::optional<CursorKind> pointer_cursor(const PointerState& pointer, const Widget* under) const;

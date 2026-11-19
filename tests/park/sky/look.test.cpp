@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/sky/look.hpp"
 
+#include "core/types.hpp"
 #include "park/sky/mesh.hpp"
 #include "simulation/day_clock.hpp"
 
@@ -13,7 +14,7 @@ using namespace rct3::park::sky;
 
 namespace
 {
-    constexpr float hours(float h)
+    constexpr f32 hours(f32 h)
     {
         return h / simulation::kHoursPerDay;
     }
@@ -29,15 +30,15 @@ TEST_CASE("the sky shows the middle of the day while the sun is high")
 
 TEST_CASE("mornings walk from night to midday, evenings from midday to night")
 {
-    float last = sky_column(hours(2));
+    f32 last = sky_column(hours(2));
     CHECK(last == doctest::Approx(kNightColumn));
-    for (float h = 2.25f; h < 12; h += 0.25f)
+    for (f32 h = 2.25f; h < 12; h += 0.25f)
     {
         CHECK(sky_column(hours(h)) >= last);
         last = sky_column(hours(h));
     }
     last = sky_column(hours(12));
-    for (float h = 12.25f; h < 24; h += 0.25f)
+    for (f32 h = 12.25f; h < 24; h += 0.25f)
     {
         CHECK(sky_column(hours(h)) >= last);
         last = sky_column(hours(h));
@@ -54,7 +55,7 @@ TEST_CASE("the stars come out as the sun goes down")
 {
     CHECK(sky_darkness(hours(0)) == 1);
     CHECK(sky_darkness(hours(23)) == 1);
-    const float dusk = sky_darkness(hours(19.2f));
+    const f32 dusk = sky_darkness(hours(19.2f));
     CHECK(dusk > 0);
     CHECK(dusk < 1);
     CHECK(sky_darkness(hours(19.6f)) > dusk);

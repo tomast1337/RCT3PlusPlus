@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/weather_look.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
@@ -13,26 +15,26 @@ namespace rct3::park
         // Chosen by eye.
         constexpr units::PerSecond kEase { 0.15f };             ///< Of the whole way, rain and gloom move a second: a change takes several seconds
         constexpr units::PerSecond kFlashFade { 6 };            ///< Of a flash's brightness lost a second
-        constexpr float kFewestStrokeSeconds = 5;               ///< Between strokes, at least
-        constexpr float kMostStrokeSeconds = 16;                ///< And at most
-        constexpr float kFlickerBrightness = 0.6f;              ///< Of a stroke's second, fainter flash
+        constexpr f32 kFewestStrokeSeconds = 5;                 ///< Between strokes, at least
+        constexpr f32 kMostStrokeSeconds = 16;                  ///< And at most
+        constexpr f32 kFlickerBrightness = 0.6f;                ///< Of a stroke's second, fainter flash
         constexpr units::Seconds kFlickerSoonest { 0.08f };     ///< After a stroke its second flash comes, at least
         constexpr units::Seconds kFlickerLatest { 0.2f };       ///< And at most
         constexpr units::Seconds kThunderSoonest { 0.4f };      ///< After a stroke its thunder is heard, at least
         constexpr units::Seconds kThunderLatest { 3.0f };       ///< And at most
-        constexpr float kDarkEnough = 0.9f;                     ///< Of the storm's gloom the sky reaches before strokes come
-        constexpr float kGreyed = 0.6f;                         ///< Of the colour turned grey at full gloom
-        constexpr float kDimmed = 0.7f;                         ///< Of the light taken at full gloom, for full strength
+        constexpr f32 kDarkEnough = 0.9f;                       ///< Of the storm's gloom the sky reaches before strokes come
+        constexpr f32 kGreyed = 0.6f;                           ///< Of the colour turned grey at full gloom
+        constexpr f32 kDimmed = 0.7f;                           ///< Of the light taken at full gloom, for full strength
         constexpr glm::vec3 kFlashColour { 0.4f, 0.42f, 0.5f }; ///< Added at a stroke's height, at full strength
 
-        float toward(float now, float goal, float step)
+        f32 toward(f32 now, f32 goal, f32 step)
         {
             return std::abs(goal - now) <= step ? goal : now + (goal > now ? step : -step);
         }
 
-        float between(random::RandomState& dice, float low, float high)
+        f32 between(random::RandomState& dice, f32 low, f32 high)
         {
-            return static_cast<float>(random::between(dice, double { low }, double { high }));
+            return static_cast<f32>(random::between(dice, f64 { low }, f64 { high }));
         }
     } // namespace
 
@@ -58,7 +60,7 @@ namespace rct3::park
         }
     }
 
-    bool advance_weather_look(WeatherLook& look, save::model::WeatherType type, float seconds, random::RandomState& dice)
+    bool advance_weather_look(WeatherLook& look, save::model::WeatherType type, f32 seconds, random::RandomState& dice)
     {
         if (!(seconds > 0))
             return false;
@@ -90,9 +92,9 @@ namespace rct3::park
         return false;
     }
 
-    glm::vec3 weathered(glm::vec3 colour, const WeatherLook& look, float strength)
+    glm::vec3 weathered(glm::vec3 colour, const WeatherLook& look, f32 strength)
     {
-        const float grey = glm::dot(colour, glm::vec3(0.3f, 0.59f, 0.11f));
+        const f32 grey = glm::dot(colour, glm::vec3(0.3f, 0.59f, 0.11f));
         const glm::vec3 overcast = glm::mix(colour, glm::vec3(grey), kGreyed * look.gloom) * (1 - kDimmed * strength * look.gloom);
         return overcast + kFlashColour * (look.flash * strength);
     }

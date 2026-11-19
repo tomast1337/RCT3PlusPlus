@@ -8,6 +8,8 @@
 // saved park, so a park and a seed replay the same way.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstdint>
 #include <expected>
@@ -21,20 +23,20 @@ namespace rct3::random
     /// a park passes round.
     struct Seed
     {
-        std::uint64_t value = 0;
+        u64 value = 0;
 
         auto operator<=>(const Seed&) const = default;
     };
 
     struct RandomState
     {
-        std::array<std::uint64_t, 4> words { };
+        std::array<u64, 4> words { };
 
         bool operator==(const RandomState&) const = default;
     };
 
     /// What each stream is for. A stream's number is part of the format of saved states: never reorder.
-    enum class RandomStream : std::uint64_t
+    enum class RandomStream : u64
     {
         Gameplay = 1,  ///< Anything that changes how the park plays: guests, rides, weather, research
         Scenery = 2,   ///< Placing generated scenery, such as the trees beyond the map
@@ -44,7 +46,7 @@ namespace rct3::random
 
     /// One step of SplitMix64: advances `state` and returns a well-mixed value. Also good for mixing
     /// several numbers into one seed.
-    [[nodiscard]] std::uint64_t split_mix(std::uint64_t& state);
+    [[nodiscard]] u64 split_mix(u64& state);
 
     /// A state seeded from `seed`. Any seed, zero too, gives a usable state.
     [[nodiscard]] RandomState seeded(Seed seed);
@@ -52,17 +54,17 @@ namespace rct3::random
     [[nodiscard]] RandomState stream(Seed seed, RandomStream stream);
 
     /// The next 64 random bits.
-    [[nodiscard]] std::uint64_t next(RandomState& state);
+    [[nodiscard]] u64 next(RandomState& state);
     /// A value in [0, 1).
-    [[nodiscard]] double unit(RandomState& state);
+    [[nodiscard]] f64 unit(RandomState& state);
     /// A whole number in [0, count), every one equally likely; 0 when `count` is 0.
-    [[nodiscard]] std::uint64_t below(RandomState& state, std::uint64_t count);
+    [[nodiscard]] u64 below(RandomState& state, u64 count);
     /// A whole number in [low, high], both included; `low` when `high` is below it.
-    [[nodiscard]] std::int64_t between(RandomState& state, std::int64_t low, std::int64_t high);
+    [[nodiscard]] i64 between(RandomState& state, i64 low, i64 high);
     /// A value in [low, high).
-    [[nodiscard]] double between(RandomState& state, double low, double high);
+    [[nodiscard]] f64 between(RandomState& state, f64 low, f64 high);
     /// True with probability `p` (0 never, 1 always).
-    [[nodiscard]] bool chance(RandomState& state, double p);
+    [[nodiscard]] bool chance(RandomState& state, f64 p);
 
     /// A seed as written for people: "0x" and 16 hex digits, which parse_seed reads back.
     [[nodiscard]] std::string seed_text(Seed seed);

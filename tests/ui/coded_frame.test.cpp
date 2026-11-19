@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/coded_frame.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -86,7 +88,7 @@ TEST_CASE("a tint multiplies a coded frame's colours as it would a picture's")
     DrawList list;
     draw_frame(list, frame, { 0, 0, 10, 10 }, { 128, 128, 128, 255 });
     REQUIRE_FALSE(list.shape_vertices().empty());
-    CHECK(list.shape_vertices()[0].top == std::array<std::uint8_t, 4> { 128, 0, 0, 255 });
+    CHECK(list.shape_vertices()[0].top == std::array<u8, 4> { 128, 0, 0, 255 });
 }
 
 TEST_CASE("a frame measured at a size scales its radii with the smaller of its two scales")

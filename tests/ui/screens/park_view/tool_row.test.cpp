@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/park_view/tool_row.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/park_view/tool_menus.hpp"
@@ -22,7 +23,7 @@ namespace
         Desktop desktop;
         ToolRow* row = nullptr;
 
-        Fixture(float width, float height)
+        Fixture(f32 width, f32 height)
         {
             strings.add("MapHelp", u"Karten");
             strings.add("File_QuitHelp", u"Ende");
@@ -161,7 +162,7 @@ TEST_CASE("picking an item reports it and leaves the menu open; switches turn ov
 TEST_CASE("every tool but paths, the map and leaving has a menu, and no item is in two")
 {
     std::vector<ToolItem> all;
-    for (std::size_t t = 0; t < kParkToolCount; ++t)
+    for (usize t = 0; t < kParkToolCount; ++t)
     {
         const auto tool = static_cast<ParkTool>(t);
         const bool acts_at_once = tool == ParkTool::Paths || tool == ParkTool::Map || tool == ParkTool::Leave;

@@ -5,6 +5,8 @@
 // platform: a file ending in _ffmpeg.cpp everywhere but Windows, one ending in _windows.cpp on Windows.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -18,8 +20,8 @@ namespace rct3::video::wmv
     /// The stream's format, as the ASF header gives it.
     struct Format
     {
-        std::uint32_t width = 0;
-        std::uint32_t height = 0;
+        u32 width = 0;
+        u32 height = 0;
         std::span<const std::byte> extra; ///< The codec bytes after the bitmap header
     };
 
@@ -27,10 +29,10 @@ namespace rct3::video::wmv
     /// each `strides[i]` bytes a row, holding every row of the picture.
     struct Picture
     {
-        std::uint32_t width = 0;
-        std::uint32_t height = 0;
-        std::array<std::span<const std::uint8_t>, 3> planes { };
-        std::array<std::size_t, 3> strides { };
+        u32 width = 0;
+        u32 height = 0;
+        std::array<std::span<const u8>, 3> planes { };
+        std::array<usize, 3> strides { };
     };
 
     class Decoder

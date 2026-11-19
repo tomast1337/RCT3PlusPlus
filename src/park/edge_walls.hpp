@@ -12,6 +12,7 @@
 // (lamps, benches), are not fences and never cut.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "park/turns.hpp"
 #include "save/model/world.hpp"
@@ -29,12 +30,12 @@ namespace rct3::park
     {
         save::model::Tile tile;
         Side side;
-        float low = 0;
-        float high = 0;
+        f32 low = 0;
+        f32 high = 0;
     };
 
     /// The walls by tile and side, each listed on both tiles it stands between: key (row << 16 | col) << 2 | side.
-    using EdgeWalls = std::unordered_multimap<std::uint64_t, EdgeWall>;
+    using EdgeWalls = std::unordered_multimap<u64, EdgeWall>;
 
     /// The wall `object` is, if it is a fence or wall that stands on an edge and is shown.
     [[nodiscard]] std::optional<EdgeWall> edge_wall(const save::model::PlacedObject& object, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
@@ -42,6 +43,6 @@ namespace rct3::park
     [[nodiscard]] EdgeWalls edge_walls(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
 
     /// Whether a wall stands along `side` of `tile` where a path's edge meets it at `height`.
-    [[nodiscard]] bool walled(const EdgeWalls& walls, save::model::Tile tile, Side side, float height);
+    [[nodiscard]] bool walled(const EdgeWalls& walls, save::model::Tile tile, Side side, f32 height);
 
 } // namespace rct3::park

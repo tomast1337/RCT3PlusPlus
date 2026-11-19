@@ -8,6 +8,7 @@
 // water on the lens nothing is copied or drawn.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/lens_drops.hpp"
 #include "render/device.hpp"
 #include "units/units.hpp"
@@ -43,8 +44,8 @@ namespace rct3::scene::park
         std::optional<glm::vec3> last_eye;   ///< A frame ago
         std::optional<glm::vec3> last_ahead; ///< The way the view looked a frame ago
         /// The car ridden a frame ago and the times it had splashed (rct3::park::CarWater::splashes)
-        std::optional<std::pair<std::size_t, std::uint32_t>> car_splashes;
-        float rain_due = 0;              ///< Drops the rain owes the lens, landed once whole
+        std::optional<std::pair<usize, u32>> car_splashes;
+        f32 rain_due = 0;                ///< Drops the rain owes the lens, landed once whole
         units::Seconds clock;            ///< For the wind's slow turning
         std::vector<LensCorner> corners; ///< The drops' quads, kept from frame to frame
     };
@@ -54,13 +55,13 @@ namespace rct3::scene::park
     {
         glm::mat4 view_projection { 1.0f };
         glm::vec3 eye { };
-        float aspect = 1;
+        f32 aspect = 1;
         bool under_water = false;
-        std::int32_t rain = 0; ///< 0 none, 1 light, 2 heavy, 3 a storm
-        float wind = 0;        ///< The park's wind, 0 calm to 1 strong
+        i32 rain = 0; ///< 0 none, 1 light, 2 heavy, 3 a storm
+        f32 wind = 0; ///< The park's wind, 0 calm to 1 strong
         /// The car ridden and the times it has splashed through water (rct3::park::CarWater::splashes); none while
         /// no car is ridden.
-        std::optional<std::pair<std::size_t, std::uint32_t>> car_splashes;
+        std::optional<std::pair<usize, u32>> car_splashes;
     };
 
     /// Wets the lens as `around` says and moves its water on by `elapsed`; all water goes when `on` is false.

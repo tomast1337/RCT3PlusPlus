@@ -4,6 +4,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ovl/ovl.hpp"
 
 #include <cstddef>
@@ -23,7 +24,7 @@ namespace rct3::ovl
         File file;
         std::vector<Symbol> symbols; ///< Names are views into `bytes` (or the common file's bytes)
         LoaderTable loaders;
-        std::uint32_t base = 0; ///< Where this part's address space starts: 0 for common, common's size for unique
+        u32 base = 0; ///< Where this part's address space starts: 0 for common, common's size for unique
     };
 
     /// A loaded `<name>.common.ovl` with its `<name>.unique.ovl`. Owns all bytes. Movable, not copyable,

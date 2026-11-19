@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/fallback_font.hpp"
 
+#include "core/types.hpp"
 #include "ui/text_layout.hpp"
 
 #include <array>
@@ -12,7 +13,7 @@ using namespace rct3::ui::font;
 
 namespace
 {
-    Glyph square(float size, float advance, TextureId page)
+    Glyph square(f32 size, f32 advance, TextureId page)
     {
         return { { 0, -size, size, 0 }, { 0, 0, 1, 1 }, page, advance };
     }

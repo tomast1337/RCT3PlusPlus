@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/interface_assets.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
@@ -87,7 +88,7 @@ namespace rct3::ui
         return assets;
     }
 
-    const font::FontSet& fonts_for(render::Device& device, InterfaceAssets& assets, float view_width)
+    const font::FontSet& fonts_for(render::Device& device, InterfaceAssets& assets, f32 view_width)
     {
         return fonts_for(device, *assets.install, assets.fonts, view_width);
     }

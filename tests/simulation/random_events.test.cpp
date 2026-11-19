@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/random_events.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -22,10 +24,10 @@ TEST_CASE("an event happens about as often as its rate says")
     EventRates rates;
     rates[RandomEvent::RideBreakdown] = 2; // Twice an hour
     random::RandomState s = random::seeded(random::Seed { 5 });
-    std::int32_t happened = 0;
-    for (std::int32_t i = 0; i < 10000; ++i)
+    i32 happened = 0;
+    for (i32 i = 0; i < 10000; ++i)
         happened += roll_events(s, rates, 0.1).empty() ? 0 : 1;
-    const double expected = 10000 * chance_in(2, 0.1);
+    const f64 expected = 10000 * chance_in(2, 0.1);
     CHECK(std::abs(happened - expected) < 0.05 * expected);
     CHECK(chance_in(2, 0.1) == doctest::Approx(1 - std::exp(-0.2)));
     CHECK(chance_in(0, 1) == 0);
@@ -45,9 +47,9 @@ TEST_CASE("events come in their order, each at most once")
 TEST_CASE("a weighted pick follows the weights and skips the empty ones")
 {
     random::RandomState s = random::seeded(random::Seed { 11 });
-    const std::array<double, 4> weights { 0, 1, -5, 3 };
-    std::array<std::int32_t, 4> picked { };
-    for (std::int32_t i = 0; i < 4000; ++i)
+    const std::array<f64, 4> weights { 0, 1, -5, 3 };
+    std::array<i32, 4> picked { };
+    for (i32 i = 0; i < 4000; ++i)
     {
         const auto p = pick_weighted(s, weights);
         REQUIRE(p);
@@ -56,6 +58,6 @@ TEST_CASE("a weighted pick follows the weights and skips the empty ones")
     CHECK(picked[0] == 0);
     CHECK(picked[2] == 0);
     CHECK(picked[3] > 2 * picked[1]);
-    CHECK_FALSE(pick_weighted(s, std::array<double, 2> { 0, -1 }));
+    CHECK_FALSE(pick_weighted(s, std::array<f64, 2> { 0, -1 }));
     CHECK_FALSE(pick_weighted(s, { }));
 }

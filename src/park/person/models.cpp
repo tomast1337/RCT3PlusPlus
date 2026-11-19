@@ -2,6 +2,7 @@
 #include "park/person/models.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/person_parts.hpp"
 #include "ovl/skeleton.hpp"
@@ -42,47 +43,47 @@ namespace rct3::park::person
 
     } // namespace
 
-    KeyBlend blend_keys(std::span<const float> times, float time, bool repeats)
+    KeyBlend blend_keys(std::span<const f32> times, f32 time, bool repeats)
     {
-        const std::size_t n = times.size();
+        const usize n = times.size();
         if (n <= 1 || !(time > 0))
             return { };
-        const float length = times[n - 1];
+        const f32 length = times[n - 1];
         if (time >= length)
         {
             if (!repeats || !(length > 0))
                 return { n - 1, n - 1, 0 };
             time = std::fmod(time, length);
         }
-        const auto i = static_cast<std::size_t>(std::ranges::upper_bound(times, time) - times.begin());
+        const auto i = static_cast<usize>(std::ranges::upper_bound(times, time) - times.begin());
         if (i >= n)
             return { n - 1, n - 1, 0 };
-        const float before = i > 0 ? times[i - 1] : 0.0f;
-        const float span = times[i] - before;
+        const f32 before = i > 0 ? times[i - 1] : 0.0f;
+        const f32 span = times[i] - before;
         return { i, i + 1 == n ? 0 : i + 1, span > 0 ? (time - before) / span : 0.0f };
     }
 
     MotionIndex::MotionIndex(std::span<const std::string_view> names)
     {
-        for (std::size_t i = 0; i < names.size(); ++i)
+        for (usize i = 0; i < names.size(); ++i)
         {
             const auto number = motion_number(names[i]);
             if (!number || *number < 0)
                 continue;
-            const auto at = static_cast<std::size_t>(*number);
+            const auto at = static_cast<usize>(*number);
             if (by_number_.size() <= at)
                 by_number_.resize(at + 1, 0);
             // The first motion of a name wins, as several spellings can share a number.
             if (by_number_[at] == 0)
-                by_number_[at] = static_cast<std::uint16_t>(i);
+                by_number_[at] = static_cast<u16>(i);
         }
     }
 
-    std::size_t MotionIndex::operator[](std::int32_t number) const noexcept
+    usize MotionIndex::operator[](i32 number) const noexcept
     {
-        if (number < 0 || static_cast<std::size_t>(number) >= by_number_.size())
+        if (number < 0 || static_cast<usize>(number) >= by_number_.size())
             return 0;
-        return by_number_[static_cast<std::size_t>(number)];
+        return by_number_[static_cast<usize>(number)];
     }
 
     struct PersonLibrary::Files
@@ -196,7 +197,7 @@ namespace rct3::park::person
         const ovl::BodySection section = found->second;
 
         PartSet set;
-        for (std::size_t i = 0; i < kPersonLevels; ++i)
+        for (usize i = 0; i < kPersonLevels; ++i)
         {
             auto level = read_level(section.levels[i].fixed, section.levels[i].optional, *path);
             auto swim = read_level(section.swim_levels[i].fixed, section.swim_levels[i].optional, *path);
@@ -225,7 +226,7 @@ namespace rct3::park::person
         return level;
     }
 
-    std::optional<std::size_t> PersonLibrary::read_piece(std::string_view name, std::string_view near)
+    std::optional<usize> PersonLibrary::read_piece(std::string_view name, std::string_view near)
     {
         Files& f = *files_;
         const auto piece_file = f.parts.find(tagged(name, "prt"), near);
@@ -235,7 +236,7 @@ namespace rct3::park::person
         const std::string key = std::format("{}|{}", *piece_file, lower(name));
         if (const auto it = loaded_pieces_.find(key); it != loaded_pieces_.end())
             return it->second;
-        std::optional<std::size_t> result;
+        std::optional<usize> result;
         const auto* piece = f.find_item<ovl::BodyPiece>(name, "prt", near, [&](Files::Open& o) -> const auto& { return f.items(o, o.pieces, &ovl::read_body_pieces, &ovl::BodyPieceItem::piece); });
         if (piece)
         {
@@ -265,7 +266,7 @@ namespace rct3::park::person
         return result;
     }
 
-    std::optional<std::size_t> PersonLibrary::read_head(std::string_view name, std::string_view near)
+    std::optional<usize> PersonLibrary::read_head(std::string_view name, std::string_view near)
     {
         Files& f = *files_;
         const auto found_file = f.parts.find(tagged(name, "phd"), near);
@@ -275,7 +276,7 @@ namespace rct3::park::person
         const std::string key = std::format("{}|{}", rig_file, lower(name));
         if (const auto it = loaded_heads_.find(key); it != loaded_heads_.end())
             return it->second;
-        std::optional<std::size_t> result;
+        std::optional<usize> result;
         const auto* rig = f.find_item<ovl::HeadRig>(name, "phd", near, [&](Files::Open& o) -> const auto& { return f.items(o, o.heads, &ovl::read_head_rigs, &ovl::HeadRigItem::head); });
         const auto* skeleton = rig ? f.find_item<ovl::Skeleton>(rig->bones, "sal", rig_file, [&](Files::Open& o) -> const auto& { return f.items(o, o.skeletons, &ovl::read_skeletons, &ovl::SkeletonItem::skeleton); }) : nullptr;
         if (rig && skeleton)
@@ -284,14 +285,14 @@ namespace rct3::park::person
             HeadModel head;
             head.parents = skeleton->parents;
             if (const auto named = std::ranges::find_if(skeleton->bones, [](std::string_view bone) { return lower(bone).ends_with(" head"); }); named != skeleton->bones.end())
-                head.turns = static_cast<std::size_t>(named - skeleton->bones.begin());
+                head.turns = static_cast<usize>(named - skeleton->bones.begin());
             head.motion_index = MotionIndex(skeleton->animation_names);
             for (const std::string_view motion : skeleton->animations)
             {
                 const auto* anim = motion.empty() ? nullptr : f.find_item<ovl::SimpleAnim>(motion, "san", skeleton_file, [&](Files::Open& o) -> const auto& { return f.items(o, o.motions, &ovl::read_simple_anims, &ovl::SimpleAnimItem::anim); });
                 head.motions.push_back(anim ? std::optional(*anim) : std::nullopt);
             }
-            for (std::size_t level = 0; level < head.skins.size(); ++level)
+            for (usize level = 0; level < head.skins.size(); ++level)
             {
                 const std::string_view skin = rig->skins[level * ovl::kHeadFaces];
                 if (const auto* found = skin.empty() ? nullptr : f.find_item<ovl::SimpleSkin>(skin, "ssk", rig_file, [&](Files::Open& o) -> const auto& { return f.items(o, o.skins, &ovl::read_simple_skins, &ovl::SimpleSkinItem::skin); }))

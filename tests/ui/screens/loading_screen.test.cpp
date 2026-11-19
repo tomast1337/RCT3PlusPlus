@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/loading_screen.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <doctest/doctest.h>
 
@@ -10,7 +12,7 @@ using namespace rct3::ui::screens::loading_screen;
 
 namespace
 {
-    Glyph square(float size, float advance)
+    Glyph square(f32 size, f32 advance)
     {
         return { { 0, -size, size, 0 }, { 0, 0, 1, 1 }, 9, advance };
     }
@@ -20,9 +22,9 @@ namespace
         return inner.x0 >= outer.x0 && inner.y0 >= outer.y0 && inner.x1 <= outer.x1 && inner.y1 <= outer.y1;
     }
 
-    std::size_t quads_with(const DrawList& list, TextureId texture)
+    usize quads_with(const DrawList& list, TextureId texture)
     {
-        std::size_t n = 0;
+        usize n = 0;
         for (const Batch& b : list.batches())
         {
             if (b.kind == BatchKind::Quads && b.texture == texture)
@@ -31,9 +33,9 @@ namespace
         return n;
     }
 
-    std::size_t shapes(const DrawList& list)
+    usize shapes(const DrawList& list)
     {
-        std::size_t n = 0;
+        usize n = 0;
         for (const Batch& b : list.batches())
         {
             if (b.kind == BatchKind::Shapes)
@@ -73,7 +75,7 @@ TEST_CASE("the backdrop splits through the logo's middle, a band behind it, the 
 {
     const Rect screen { 0, 0, 1280, 720 };
     const Layout l = layout_for(screen, kAll);
-    const float middle = (l.logo.y0 + l.logo.y1) / 2;
+    const f32 middle = (l.logo.y0 + l.logo.y1) / 2;
     CHECK(l.dark.y1 == doctest::Approx(middle).epsilon(0.01));
     CHECK(l.light.y0 == l.dark.y1);
     CHECK(l.dark.y0 == 0);

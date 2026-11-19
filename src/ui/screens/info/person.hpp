@@ -10,6 +10,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -30,7 +31,7 @@
 namespace rct3::ui::screens::info
 {
 
-    enum class PersonTab : std::uint8_t
+    enum class PersonTab : u8
     {
         General, ///< Who they are and what they are doing
         Thoughts,
@@ -48,10 +49,10 @@ namespace rct3::ui::screens::info
     struct PersonTabInfo
     {
         PersonTab tab = PersonTab::General;
-        std::int32_t slot = 0; ///< Its place on the ring
+        i32 slot = 0;          ///< Its place on the ring
         std::string_view icon; ///< Skin
         std::string_view help; ///< String key
-        std::size_t pots = 0;  ///< Of a paint tab: the clothes it colours, upper first
+        usize pots = 0;        ///< Of a paint tab: the clothes it colours, upper first
     };
 
     /// The person a page is written about, the guest or the member of staff they are, and the park's people and
@@ -65,19 +66,19 @@ namespace rct3::ui::screens::info
         std::span<const save::model::PlacedObject> objects { }; ///< The park's placed objects, for thoughts about path items
         /// Staff the simulation walks: the tiles of their patrol area (0 for none, the whole park), and whether
         /// clicks on the ground paint it. Empty for others.
-        std::optional<std::size_t> patrol_tiles { };
+        std::optional<usize> patrol_tiles { };
         bool painting_patrol = false;
-        std::int32_t patrol_brush = 0;   ///< Of kPatrolBrushes
-        std::uint32_t patrol_zone = 0;   ///< The shared zone they are on, 0 none
-        std::size_t uncovered_paths = 0; ///< Path tiles no one in their job has in a patrol, when any has one
+        i32 patrol_brush = 0;      ///< Of kPatrolBrushes
+        u32 patrol_zone = 0;       ///< The shared zone they are on, 0 none
+        usize uncovered_paths = 0; ///< Path tiles no one in their job has in a patrol, when any has one
         /// Of a handyman the simulation walks, the broken path items they have mended since the park was opened.
-        std::optional<std::uint32_t> items_mended { };
-        float zero_time = 0; ///< Where the park's calendar starts, for the day staff were hired
+        std::optional<u32> items_mended { };
+        f32 zero_time = 0; ///< Where the park's calendar starts, for the day staff were hired
         /// Of staff: an hour of their pay, and what their next level of training costs (nothing once fully trained).
         std::optional<units::Money> wage { };
         units::Money training_cost;
         /// Of a VIP on their visit: their patience and their opinion of the park, each 0..1.
-        std::optional<std::pair<float, float>> vip { };
+        std::optional<std::pair<f32, f32>> vip { };
         /// Of a guest: the stamps in their passport and whether they have the park's gift for them, with the gift's
         /// name key and the stamps it takes, and whether the park has any passport post.
         struct Passport
@@ -85,7 +86,7 @@ namespace rct3::ui::screens::info
             std::vector<InfoStamp> stamps { };
             bool gift = false;
             std::string_view gift_name { };
-            std::size_t stamps_for_gift = 0;
+            usize stamps_for_gift = 0;
             bool posts = false;
         };
         Passport passport { };
@@ -100,7 +101,7 @@ namespace rct3::ui::screens::info
     [[nodiscard]] std::vector<PersonTabInfo> person_tabs(const PersonFacts& facts);
 
     /// Ids of the controls on a person's pages (InfoControl::id).
-    enum class PersonControl : std::uint8_t
+    enum class PersonControl : u8
     {
         Name,
         Sack, ///< Fires them at once, as the game does
@@ -121,25 +122,25 @@ namespace rct3::ui::screens::info
         Task,        ///< The first task's tick; the task of flag bit b is this plus b
     };
 
-    [[nodiscard]] constexpr std::int32_t person_control(PersonControl control, std::int32_t bit = 0)
+    [[nodiscard]] constexpr i32 person_control(PersonControl control, i32 bit = 0)
     {
-        return static_cast<std::int32_t>(control) + bit;
+        return static_cast<i32>(control) + bit;
     }
 
     /// Tiles across the patrol brush paints, by its choice.
-    inline constexpr std::array<std::int32_t, 3> kPatrolBrushes { 1, 3, 5 };
+    inline constexpr std::array<i32, 3> kPatrolBrushes { 1, 3, 5 };
     /// Shared patrol zones a member of staff can be put on, besides none.
-    inline constexpr std::uint32_t kPatrolZones = 8;
+    inline constexpr u32 kPatrolZones = 8;
 
     /// Longest name the player may type, as in the game.
-    inline constexpr std::int32_t kLongestName = 34;
+    inline constexpr i32 kLongestName = 34;
     /// Warnings after which a member of staff cannot be warned again.
-    inline constexpr std::int32_t kMostWarnings = 4;
-    inline constexpr std::int32_t kMostTraining = 3; ///< Training levels, as the simulation has them
+    inline constexpr i32 kMostWarnings = 4;
+    inline constexpr i32 kMostTraining = 3; ///< Training levels, as the simulation has them
     /// Colours a uniform can be in.
-    inline constexpr std::size_t kUniformColours = 16;
+    inline constexpr usize kUniformColours = 16;
     /// Where the clothes' colours are among a person's palettes: the upper's, then the lower's.
-    inline constexpr std::size_t kUpperPalette = 1;
+    inline constexpr usize kUpperPalette = 1;
 
     /// The person's name as the player sees it. Staff are saved with a stand-in for the name of their job, put
     /// in here.

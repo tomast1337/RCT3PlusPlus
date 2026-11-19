@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/view_lines.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -14,20 +16,20 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height, float at)
+    save::model::TerrainGrid flat_grid(i32 width, i32 height, f32 at)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         for (save::model::TerrainCell& c : g.cells)
             c.corners = { at, at, at, at };
         return g;
     }
 
-    constexpr std::size_t kStripVertices = 4;
+    constexpr usize kStripVertices = 4;
 } // namespace
 
 TEST_CASE("the grid draws each tile edge once, the map's far edges too")
@@ -50,7 +52,7 @@ TEST_CASE("contours cross a slope at each step and leave flat ground bare")
     CHECK(mesh.vertices.size() == 4 * kStripVertices);
     for (const GroundVertex& v : mesh.vertices)
     {
-        const float level = v.position.y - 0.03f;
+        const f32 level = v.position.y - 0.03f;
         CHECK(level == doctest::Approx(std::round(level)).epsilon(0.001));
     }
 }

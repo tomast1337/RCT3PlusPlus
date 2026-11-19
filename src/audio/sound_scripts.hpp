@@ -13,6 +13,7 @@
 // group's, men's or women's as many of each ride.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/scenery_item.hpp"
 #include "units/units.hpp"
 
@@ -27,17 +28,17 @@ namespace rct3::audio
     /// A level that runs in a straight line from `from` at `start` to `to` at `until`, and stays there.
     struct Glide
     {
-        float from = 1;
-        float to = 1;
+        f32 from = 1;
+        f32 to = 1;
         units::Seconds start { };
         units::Seconds until { };
-        [[nodiscard]] float at(units::Seconds now) const;
+        [[nodiscard]] f32 at(units::Seconds now) const;
     };
 
     /// How far one sound entry's script has run, and the entry's volume and pitch.
     struct ScriptPlay
     {
-        std::size_t next_step = 0;
+        usize next_step = 0;
         Glide volume { };
         Glide pitch { };
     };
@@ -50,10 +51,10 @@ namespace rct3::audio
     void restart_script(ScriptPlay& play, units::Seconds was);
 
     inline constexpr units::Share kScreamingIntensity { 0.06f }; ///< Chosen by ear: gentler rides, a carousel, are ridden quietly
-    inline constexpr std::size_t kScreamVoices = 3;              ///< Chosen by ear: a few at a time sound like a crowd, more like a wall
+    inline constexpr usize kScreamVoices = 3;                    ///< Chosen by ear: a few at a time sound like a crowd, more like a wall
 
     /// Which of the screams a voice plays, in the order of ParkSounds::screams.
-    enum class Screamers : std::uint8_t
+    enum class Screamers : u8
     {
         Man,
         Woman,
@@ -64,12 +65,12 @@ namespace rct3::audio
     /// The riders of a ride who are screaming, by sex.
     struct ScreamingRiders
     {
-        std::size_t men = 0;
-        std::size_t women = 0;
+        usize men = 0;
+        usize women = 0;
     };
 
     /// Who a new voice is: the men or the women, picked by `roll` (0..1) as many of each scream; a group of them
     /// when more than one, after which one of them is left to scream on. Some must be screaming.
-    [[nodiscard]] Screamers pick_screamers(ScreamingRiders& riders, float roll);
+    [[nodiscard]] Screamers pick_screamers(ScreamingRiders& riders, f32 roll);
 
 } // namespace rct3::audio

@@ -13,6 +13,7 @@
 // lines as the reason and switches the button off with show_design().
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/screens/info/panel.hpp"
 #include "ui/widgets/button.hpp"
@@ -42,16 +43,16 @@ namespace rct3::ui::screens::build
         std::string border; ///< Around the picture
         Color text_colour = hex("#000000");
         // Our own layout, in units.
-        float width = 780;
-        float height = 560;
-        float list_share = 0.6f; ///< Of the content's width
-        float gap = 8;
-        float picture = 140; ///< Width and height
-        float line_height = 14;
-        float value_column = 0.66f; ///< Of the details' width
-        float button_width = 100;
-        float button_height = 22;
-        float arrow = 20;
+        f32 width = 780;
+        f32 height = 560;
+        f32 list_share = 0.6f; ///< Of the content's width
+        f32 gap = 8;
+        f32 picture = 140; ///< Width and height
+        f32 line_height = 14;
+        f32 value_column = 0.66f; ///< Of the details' width
+        f32 button_width = 100;
+        f32 button_height = 22;
+        f32 arrow = 20;
     };
 
     class DesignBrowser : public widgets::Window
@@ -61,17 +62,17 @@ namespace rct3::ui::screens::build
         DesignBrowser(std::string name, const DesignBrowserStyle& style, std::u16string title, std::string icon, std::vector<widgets::TableColumn> columns, std::vector<widgets::TableRow> rows, std::u16string build_text, std::u16string cancel_text);
 
         /// The id of the row picked since the last call.
-        [[nodiscard]] std::optional<std::size_t> take_picked()
+        [[nodiscard]] std::optional<usize> take_picked()
         {
             return std::exchange(picked_, std::nullopt);
         }
         /// -1 or 1 for each press of the train's arrows since the last call, the last one.
-        [[nodiscard]] std::optional<std::int32_t> take_train_step()
+        [[nodiscard]] std::optional<i32> take_train_step()
         {
             return std::exchange(train_step_, std::nullopt);
         }
         /// The id of the row to build, once asked.
-        [[nodiscard]] std::optional<std::size_t> take_build()
+        [[nodiscard]] std::optional<usize> take_build()
         {
             return std::exchange(build_, std::nullopt);
         }
@@ -105,10 +106,10 @@ namespace rct3::ui::screens::build
         widgets::Button* build_button_ = nullptr;
         widgets::Button* cancel_button_ = nullptr;
         TextureId picture_ = 0;
-        std::optional<std::size_t> shown_; ///< Id of the row the details are of
-        std::optional<std::size_t> picked_;
-        std::optional<std::int32_t> train_step_;
-        std::optional<std::size_t> build_;
+        std::optional<usize> shown_; ///< Id of the row the details are of
+        std::optional<usize> picked_;
+        std::optional<i32> train_step_;
+        std::optional<usize> build_;
         bool cancel_ = false;
     };
 

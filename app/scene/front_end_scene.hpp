@@ -8,6 +8,7 @@
 
 #include "config/game/install.hpp"
 #include "config/game/options.hpp"
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "scene/career_browser.hpp"
 #include "scene/save_browser.hpp"
@@ -37,11 +38,11 @@ namespace rct3::scene
         std::optional<config::UserData> data;              ///< Where the saves and careers are; without it there are none
         std::optional<std::filesystem::path> game_saves;   ///< The original game's folder of the player's games, if found
         std::vector<ui::screens::options::ScreenSize> screen_sizes;
-        std::optional<std::size_t> screen_size;
-        std::vector<std::int32_t> anti_aliasing_levels;     ///< Samples per pixel the device offers above 1
+        std::optional<usize> screen_size;
+        std::vector<i32> anti_aliasing_levels;              ///< Samples per pixel the device offers above 1
         ui::KeyMap keys;                                    ///< In use, for the options window to change
         std::vector<std::filesystem::path> picture_folders; ///< Of the slideshow behind the front screen, in order
-        std::uint32_t picture_seed = 0;                     ///< Shuffles the slideshow
+        u32 picture_seed = 0;                               ///< Shuffles the slideshow
         bool reload = false;                                ///< Built again after a language change: no opening animation, options window open
     };
 
@@ -50,7 +51,7 @@ namespace rct3::scene
         ui::InterfaceAssets assets;
         SlideshowView slideshow;
         std::vector<std::filesystem::path> picture_folders; ///< The slideshow's usual pictures
-        std::uint32_t picture_seed = 0;
+        u32 picture_seed = 0;
         std::optional<std::string> slideshow_shown; ///< The career map's folder of pictures shown instead
         SaveBrowser saves;
         CareerBrowser careers;
@@ -65,9 +66,9 @@ namespace rct3::scene
         std::unique_ptr<Live> live = std::make_unique<Live>();
         const ui::font::FontSet* current_fonts = nullptr; ///< The set for the width of the last update
         ui::DrawList list;
-        std::optional<float> scale;                        ///< Chosen interface scale; nothing picks one from the window height
+        std::optional<f32> scale;                          ///< Chosen interface scale; nothing picks one from the window height
         bool fullscreen = false;                           ///< As last applied
-        std::size_t tutorials_seen = 0;                    ///< The front end's count of tutorial menus when last checked
+        usize tutorials_seen = 0;                          ///< The front end's count of tutorial menus when last checked
         std::optional<std::filesystem::path> park_to_play; ///< A tutorial's park or a save picked to load, until taken
         ParkGame game_to_play;                             ///< What that park is played as
     };
@@ -77,7 +78,7 @@ namespace rct3::scene
     {
         bool quit = false;
         std::optional<bool> fullscreen;
-        std::optional<std::size_t> screen_size; ///< Into FrontEndSceneSetup::screen_sizes
+        std::optional<usize> screen_size; ///< Into FrontEndSceneSetup::screen_sizes
         std::optional<std::string> language;
         std::optional<ui::KeyMap> keys;
         std::optional<std::filesystem::path> park; ///< A park to play: a tutorial's, a scenario's, or a save the user loaded
@@ -91,7 +92,7 @@ namespace rct3::scene
     bool update_front_end_scene(render::Device& device, FrontEndScene& scene, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, units::Seconds elapsed);
 
     /// The interface's scale on the device.
-    [[nodiscard]] float front_end_scale(const render::Device& device, const FrontEndScene& scene);
+    [[nodiscard]] f32 front_end_scale(const render::Device& device, const FrontEndScene& scene);
 
     /// What the user asked for since the last call.
     [[nodiscard]] FrontEndRequests take_front_end_requests(FrontEndScene& scene);

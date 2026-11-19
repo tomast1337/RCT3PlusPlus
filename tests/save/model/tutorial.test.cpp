@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/tutorial.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -10,7 +12,7 @@ using namespace rct3::save::model;
 namespace
 {
     // Field names follow the format; every value is invented.
-    Value step(std::string title, std::string text, std::vector<std::string> triggers, std::int64_t position, std::int64_t width)
+    Value step(std::string title, std::string text, std::vector<std::string> triggers, i64 position, i64 width)
     {
         std::vector<Value> trigger_values;
         for (auto& t : triggers)

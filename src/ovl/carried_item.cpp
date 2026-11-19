@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/carried_item.hpp"
 
+#include "core/types.hpp"
 #include "ovl/field_values.hpp"
 #include "ovl/reference_names.hpp"
 
@@ -17,12 +18,12 @@ namespace rct3::ovl
         constexpr std::string_view kShapeTag = "shs";
         constexpr std::string_view kTextureTag = "ftx";
 
-        constexpr std::size_t kItemSize = 0x9c;
-        constexpr std::size_t kExtraSize = 28;
+        constexpr usize kItemSize = 0x9c;
+        constexpr usize kExtraSize = 28;
         // Real items have at most three extras.
-        constexpr std::uint32_t kMaxExtras = 1u << 10;
+        constexpr u32 kMaxExtras = 1u << 10;
 
-        std::optional<CarriedItem> read_item(const AddressSpace& space, const ReferenceNames& refs, const PointerFields& pointers, std::uint32_t address)
+        std::optional<CarriedItem> read_item(const AddressSpace& space, const ReferenceNames& refs, const PointerFields& pointers, u32 address)
         {
             const auto raw = space.bytes_at(address, kItemSize);
             if (!raw)
@@ -45,26 +46,26 @@ namespace rct3::ovl
             item.flags = read_u32(b, 0x28);
             item.unknown_2c = read_i32(b, 0x2c);
             item.unknown_30 = read_u32(b, 0x30);
-            for (std::size_t i = 0; i < 3; ++i)
+            for (usize i = 0; i < 3; ++i)
                 item.effects[i] = read_f32(b, 0x34 + i * 4);
             item.cost = read_u32(b, 0x40);
-            for (std::size_t i = 0; i < 3; ++i)
+            for (usize i = 0; i < 3; ++i)
                 item.worth[i] = read_u32(b, 0x44 + i * 4);
             item.unknown_50 = read_f32(b, 0x50);
             item.unknown_54 = read_i32(b, 0x54);
             item.unknown_58 = read_u32(b, 0x58);
 
             // The extras are reference fields stored right after the structure.
-            const std::uint32_t extra_count = read_u32(b, 0x5c);
+            const u32 extra_count = read_u32(b, 0x5c);
             if (extra_count > kMaxExtras)
                 return std::nullopt;
             if (extra_count != 0)
             {
-                const std::uint32_t slots = read_u32(b, 0x60);
-                if (!space.bytes_at(slots, std::size_t { extra_count } * 4))
+                const u32 slots = read_u32(b, 0x60);
+                if (!space.bytes_at(slots, usize { extra_count } * 4))
                     return std::nullopt;
                 item.extras.reserve(extra_count);
-                for (std::uint32_t i = 0; i < extra_count; ++i)
+                for (u32 i = 0; i < extra_count; ++i)
                     item.extras.push_back(refs.find(slots + i * 4, kExtraTag));
             }
 
@@ -72,17 +73,17 @@ namespace rct3::ovl
             item.texture = refs.find(address + 0x74, kTextureTag);
             item.scale = { read_f32(b, 0x78), read_f32(b, 0x7c) };
             item.unknown_80 = read_u32(b, 0x80);
-            for (std::size_t i = 0; i < 4; ++i)
+            for (usize i = 0; i < 4; ++i)
             {
-                const std::size_t at = 0x84 + i * 4;
-                item.part_names[i] = fields::string_field(space, pointers, address + static_cast<std::uint32_t>(at), read_u32(b, at));
+                const usize at = 0x84 + i * 4;
+                item.part_names[i] = fields::string_field(space, pointers, address + static_cast<u32>(at), read_u32(b, at));
             }
             item.unknown_94 = read_u32(b, 0x94);
             item.style_name = fields::string_field(space, pointers, address + 0x98, read_u32(b, 0x98));
             return item;
         }
 
-        std::optional<CarriedItemExtra> read_extra(const AddressSpace& space, const ReferenceNames& refs, std::uint32_t address)
+        std::optional<CarriedItemExtra> read_extra(const AddressSpace& space, const ReferenceNames& refs, u32 address)
         {
             const auto raw = space.bytes_at(address, kExtraSize);
             if (!raw)
@@ -93,7 +94,7 @@ namespace rct3::ovl
             extra.name_text = refs.find(address + 4, kTextTag);
             extra.icon = refs.find(address + 8, kIconTag);
             extra.cost = fields::read_u32(b, 0x0c);
-            for (std::size_t i = 0; i < 3; ++i)
+            for (usize i = 0; i < 3; ++i)
                 extra.effects[i] = fields::read_f32(b, 0x10 + i * 4);
             return extra;
         }

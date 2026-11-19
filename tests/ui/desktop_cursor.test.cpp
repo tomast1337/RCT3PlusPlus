@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/edit_box.hpp"
@@ -13,7 +14,7 @@ using namespace rct3::ui::widgets;
 
 namespace
 {
-    PointerState at(float x, float y, bool down = false)
+    PointerState at(f32 x, f32 y, bool down = false)
     {
         return { { x, y }, down, true };
     }
@@ -145,7 +146,7 @@ TEST_CASE("a resizable window shows resize arrows at its edges and corners")
     Window& w = desktop.root().add<Window>("w", window_style(), 200, 100); // At 100,100 to 300,200
     w.resizable = true;
     desktop.layout(kView);
-    const auto over = [&](float x, float y) {
+    const auto over = [&](f32 x, f32 y) {
         desktop.update(at(x, y));
         return desktop.cursor();
     };
@@ -194,7 +195,7 @@ TEST_CASE("a scroll bar's rider is taken hold of, its arrows and rail clicked")
     bar.content = 400;
     bar.visible = 100;
     desktop.layout(kView);
-    const auto over = [&](float y) {
+    const auto over = [&](f32 y) {
         desktop.update(at(5, y));
         return desktop.cursor();
     };

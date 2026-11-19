@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground/holds.hpp"
 
+#include "core/types.hpp"
 #include "park/item_category.hpp"
 
 #include <array>
@@ -14,23 +15,23 @@ using namespace rct3::park::ground;
 
 namespace
 {
-    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid flat_grid(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         return g;
     }
 
     /// One item of `category` on tile (1, 1) at height `base`, its one square solid from level 0 to 2.
-    std::pair<std::vector<save::model::PlacedObject>, object::ObjectModels> one_item(ItemCategory category, std::int32_t base)
+    std::pair<std::vector<save::model::PlacedObject>, object::ObjectModels> one_item(ItemCategory category, i32 base)
     {
         object::ObjectModel model;
         model.category = std::to_underlying(category);
-        model.solid = { std::array<std::int32_t, 2> { 0, 2 } };
+        model.solid = { std::array<i32, 2> { 0, 2 } };
         model.levels = { { 100, { }, { } } };
         save::model::PlacedObject o;
         o.id = 1;
@@ -44,9 +45,9 @@ namespace
         return { { o }, models };
     }
 
-    constexpr std::array<float, 4> kLevel { 0, 0, 0, 0 };
-    constexpr std::array<float, 4> kUp { 3, 3, 3, 3 };
-    constexpr std::array<float, 4> kDown { -3, -3, -3, -3 };
+    constexpr std::array<f32, 4> kLevel { 0, 0, 0, 0 };
+    constexpr std::array<f32, 4> kUp { 3, 3, 3, 3 };
+    constexpr std::array<f32, 4> kDown { -3, -3, -3, -3 };
 } // namespace
 
 TEST_CASE("a tree lets the ground move and is seated on it after")
@@ -119,10 +120,10 @@ TEST_CASE("limit_ground: corners stop at the lowest and highest ground, and grou
     grid.at(0, 0).corners = { 200, -100, 20, -20 };
     grid.at(1, 0).corners = { 170, -90, 155, -78 };
     CHECK(limit_ground(grid, was) == doctest::Approx(50 + 25 + 10 + 10 + 5 + 3));
-    CHECK(grid.at(0, 0).corners == std::array<float, 4> { kHighestGround, kLowestGround, 20, -20 });
-    CHECK(grid.at(1, 0).corners == std::array<float, 4> { 160, -80, kHighestGround, kLowestGround });
+    CHECK(grid.at(0, 0).corners == std::array<f32, 4> { kHighestGround, kLowestGround, 20, -20 });
+    CHECK(grid.at(1, 0).corners == std::array<f32, 4> { 160, -80, kHighestGround, kLowestGround });
 
     grid.at(1, 0).corners = { 152, -76, 0, 0 }; // Past the limits still, but nearer than it was
     CHECK(limit_ground(grid, was) == 0);
-    CHECK(grid.at(1, 0).corners == std::array<float, 4> { 152, -76, 0, 0 });
+    CHECK(grid.at(1, 0).corners == std::array<f32, 4> { 152, -76, 0, 0 });
 }

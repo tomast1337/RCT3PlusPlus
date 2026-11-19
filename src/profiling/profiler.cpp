@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "profiling/profiler.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -19,15 +21,15 @@ namespace rct3::profiling
 
         struct ScopeData
         {
-            std::array<double, kHistoryLength> history { };
-            std::size_t head = 0;
-            std::size_t count = 0;
-            double last = 0;
-            double average = 0;
-            double current_max = 0;
-            double previous_max = 0;
+            std::array<f64, kHistoryLength> history { };
+            usize head = 0;
+            usize count = 0;
+            f64 last = 0;
+            f64 average = 0;
+            f64 current_max = 0;
+            f64 previous_max = 0;
 
-            void add(double ms)
+            void add(f64 ms)
             {
                 last = ms;
                 average = average == 0 ? ms : average * 0.95 + ms * 0.05;
@@ -48,14 +50,14 @@ namespace rct3::profiling
             std::string path;
             std::mutex gate;
             std::unordered_map<std::string, ScopeData> scopes;
-            double period_timer = 0;
+            f64 period_timer = 0;
 
             std::string current_path(std::string_view leaf) const
             {
                 return path.empty() ? std::string(leaf) : std::format("{}/{}", path, leaf);
             }
 
-            void add(const std::string& path, double ms)
+            void add(const std::string& path, f64 ms)
             {
                 std::lock_guard lock(gate);
                 scopes[path].add(ms);
@@ -91,16 +93,16 @@ namespace rct3::profiling
                 fn(*c);
         }
 
-        double percentile(const std::vector<double>& sorted, double p)
+        f64 percentile(const std::vector<f64>& sorted, f64 p)
         {
             if (sorted.empty())
                 return 0;
-            const auto rank = static_cast<std::ptrdiff_t>(std::ceil(static_cast<double>(sorted.size()) * p)) - 1;
+            const auto rank = static_cast<std::ptrdiff_t>(std::ceil(static_cast<f64>(sorted.size()) * p)) - 1;
             const auto index = std::clamp<std::ptrdiff_t>(rank, 0, static_cast<std::ptrdiff_t>(sorted.size()) - 1);
-            return sorted[static_cast<std::size_t>(index)];
+            return sorted[static_cast<usize>(index)];
         }
 
-        void append_fixed(std::string& out, double value)
+        void append_fixed(std::string& out, f64 value)
         {
             std::array<char, 64> buffer { };
             const auto result = std::to_chars(buffer.data(), buffer.data() + buffer.size(), value, std::chars_format::fixed, 6);
@@ -148,14 +150,14 @@ namespace rct3::profiling
         });
     }
 
-    void record(std::string_view name, double milliseconds)
+    void record(std::string_view name, f64 milliseconds)
     {
         if (t_context == nullptr || !enabled())
             return;
         t_context->add(t_context->current_path(name), milliseconds);
     }
 
-    void update(double delta_seconds)
+    void update(f64 delta_seconds)
     {
         for_each_context([delta_seconds](detail::Context& c) {
             std::lock_guard lock(c.gate);
@@ -201,7 +203,7 @@ namespace rct3::profiling
         if (context_ == nullptr)
             return;
         const auto elapsed = std::chrono::steady_clock::now() - start_;
-        const double ms = std::chrono::duration<double, std::milli>(elapsed).count();
+        const f64 ms = std::chrono::duration<f64, std::milli>(elapsed).count();
         context_->add(context_->path, ms);
         context_->path.resize(mark_);
     }
@@ -219,11 +221,11 @@ namespace rct3::profiling
                 s.last = data.last;
                 s.average = data.average;
                 s.period_max = std::max(data.current_max, data.previous_max);
-                const std::size_t start = (data.head + kHistoryLength - data.count) % kHistoryLength;
+                const usize start = (data.head + kHistoryLength - data.count) % kHistoryLength;
                 s.history.reserve(data.count);
-                for (std::size_t i = 0; i < data.count; ++i)
+                for (usize i = 0; i < data.count; ++i)
                     s.history.push_back(data.history[(start + i) % kHistoryLength]);
-                std::vector<double> sorted = s.history;
+                std::vector<f64> sorted = s.history;
                 std::ranges::sort(sorted);
                 s.p50 = percentile(sorted, 0.50);
                 s.p95 = percentile(sorted, 0.95);
@@ -242,7 +244,7 @@ namespace rct3::profiling
             out += s.name;
             out += '\t';
             out += std::to_string(s.samples);
-            for (const double v : { s.last, s.average, s.p50, s.p95, s.period_max })
+            for (const f64 v : { s.last, s.average, s.p50, s.p95, s.period_max })
             {
                 out += '\t';
                 append_fixed(out, v);

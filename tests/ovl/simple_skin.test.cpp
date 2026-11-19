@@ -2,6 +2,7 @@
 #include "ovl/simple_skin.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -16,21 +17,21 @@ namespace
 {
 
     // Name block: "A:ssk" at 0, padded to 16. The structure block follows at address 16.
-    constexpr std::uint32_t kBase = 16;
-    constexpr std::uint32_t kIds = 28;      // 2 parts * 4
-    constexpr std::uint32_t kCounts = 36;   // 2 parts * 4
-    constexpr std::uint32_t kIndices = 44;  // 1 triangle * 6 bytes, padded to 8
-    constexpr std::uint32_t kVertices = 52; // 3 vertices * 32
+    constexpr u32 kBase = 16;
+    constexpr u32 kIds = 28;      // 2 parts * 4
+    constexpr u32 kCounts = 36;   // 2 parts * 4
+    constexpr u32 kIndices = 44;  // 1 triangle * 6 bytes, padded to 8
+    constexpr u32 kVertices = 52; // 3 vertices * 32
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    void real(std::vector<std::byte>& out, float v)
+    void real(std::vector<std::byte>& out, f32 v)
     {
-        append_u32(out, std::bit_cast<std::uint32_t>(v));
+        append_u32(out, std::bit_cast<u32>(v));
     }
 
     std::vector<std::byte> names()
@@ -50,17 +51,17 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> structure(std::uint32_t parts = 2, std::uint32_t triangles = 1, std::uint32_t vertices = 3)
+    std::vector<std::byte> structure(u32 parts = 2, u32 triangles = 1, u32 vertices = 3)
     {
         std::vector<std::byte> out;
         words(out, { parts, kBase + kIds, kBase + kCounts, triangles, kBase + kIndices, vertices, kBase + kVertices });
         words(out, { 100, 110 }); // ids
         words(out, { 1, 2 });     // counts
-        for (std::uint16_t i : { 0, 1, 2, 0 })
+        for (u16 i : { 0, 1, 2, 0 })
             append_u16(out, i);
-        for (std::uint32_t i = 0; i < 3; ++i)
+        for (u32 i = 0; i < 3; ++i)
         {
-            for (float v : { float(i), 1.0f, 2.0f, 0.0f, 1.0f, 0.0f, 0.25f * float(i), 0.5f })
+            for (f32 v : { f32(i), 1.0f, 2.0f, 0.0f, 1.0f, 0.0f, 0.25f * f32(i), 0.5f })
                 real(out, v);
         }
         return out;

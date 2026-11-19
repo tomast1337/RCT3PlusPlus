@@ -7,6 +7,8 @@
 // file.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <expected>
@@ -21,7 +23,7 @@ namespace rct3::video::wmv
 
     /// 4:2:0 Y, U and V (U and V at half the width and height, rounded up), limited range with the
     /// standard-definition colours, to RGBA: `width` by `height` pixels, four bytes each, row by row.
-    void yuv_to_rgba(std::uint32_t width, std::uint32_t height, std::span<const std::uint8_t> y, std::size_t y_stride, std::span<const std::uint8_t> u, std::size_t u_stride, std::span<const std::uint8_t> v, std::size_t v_stride, std::span<std::uint8_t> rgba);
+    void yuv_to_rgba(u32 width, u32 height, std::span<const u8> y, usize y_stride, std::span<const u8> u, usize u_stride, std::span<const u8> v, usize v_stride, std::span<u8> rgba);
 
     class WmvMovie
     {
@@ -33,15 +35,15 @@ namespace rct3::video::wmv
         WmvMovie& operator=(WmvMovie&&) noexcept;
         ~WmvMovie();
 
-        [[nodiscard]] std::uint32_t width() const;
-        [[nodiscard]] std::uint32_t height() const;
+        [[nodiscard]] u32 width() const;
+        [[nodiscard]] u32 height() const;
         /// How long the file says it plays.
-        [[nodiscard]] double seconds() const;
+        [[nodiscard]] f64 seconds() const;
 
         /// Decodes the frames due by `seconds` into the movie. True when the picture changed.
-        bool advance(double seconds);
+        bool advance(f64 seconds);
         /// The picture last decoded, width() by height() RGBA; empty before the first.
-        [[nodiscard]] std::span<const std::uint8_t> picture() const;
+        [[nodiscard]] std::span<const u8> picture() const;
         /// No frames are left.
         [[nodiscard]] bool finished() const;
 

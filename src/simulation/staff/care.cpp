@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/staff/care.hpp"
 
+#include "core/types.hpp"
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
@@ -24,12 +25,12 @@ namespace rct3::simulation::staff
         return role != StaffRole::Vendor && role != StaffRole::Keeper && role != StaffRole::Other;
     }
 
-    std::int64_t wage_at(StaffRole role, std::int32_t level)
+    i64 wage_at(StaffRole role, i32 level)
     {
-        return kTuning.staff.wages.at(std::to_underlying(role))[static_cast<std::size_t>(std::clamp(level, 0, kMostWageLevel))];
+        return kTuning.staff.wages.at(std::to_underlying(role))[static_cast<usize>(std::clamp(level, 0, kMostWageLevel))];
     }
 
-    void set_wage_level(Staff& staff, std::int32_t level)
+    void set_wage_level(Staff& staff, i32 level)
     {
         staff.wage_level = std::clamp(level, 0, kMostWageLevel);
         staff.wage.value = wage_at(staff.role, staff.wage_level);
@@ -37,10 +38,10 @@ namespace rct3::simulation::staff
 
     units::Money training_cost(const Staff& staff)
     {
-        return staff.training >= 0 && staff.training < kMostTraining ? kTuning.staff.training_cost[static_cast<std::size_t>(staff.training)] : units::Money { };
+        return staff.training >= 0 && staff.training < kMostTraining ? kTuning.staff.training_cost[static_cast<usize>(staff.training)] : units::Money { };
     }
 
-    std::int32_t hired_training(bool park_has_money)
+    i32 hired_training(bool park_has_money)
     {
         return park_has_money ? 0 : kMostTraining;
     }
@@ -62,23 +63,23 @@ namespace rct3::simulation::staff
             staff.happiness.value = std::max(staff.happiness.value - kTuning.staff.warning_gloom.value, 0.0f);
     }
 
-    void care_for(Staff& staff, bool working, float seconds)
+    void care_for(Staff& staff, bool working, f32 seconds)
     {
         if (staff.role == StaffRole::Inspector) // An inspector's mood and laziness never change
             return;
         staff.load.value += ((working ? 1.0f : 0.0f) - staff.load.value) * std::min(seconds / kTuning.staff.load_window.value, 1.0f);
         // An entertainer's work comes in short shows, so their share of time at work is no measure of them.
         const bool entertainer = staff.role == StaffRole::Entertainer;
-        const float overwork = entertainer ? 0.0f : std::max(staff.load.value - kTuning.staff.overworked.value, 0.0f) * kTuning.staff.overwork_gloom;
-        const float boredom = entertainer ? 0.0f : std::max(kTuning.staff.bored.value - staff.load.value, 0.0f) * kTuning.staff.bored_gloom;
-        const float content = std::clamp(kTuning.staff.content_base.value + kTuning.staff.content_per_training.value * static_cast<float>(staff.training) + kTuning.staff.content_per_wage.value * static_cast<float>(staff.wage_level) - overwork - boredom, 0.0f, 1.0f);
-        const float step = kTuning.staff.mood.value * seconds;
+        const f32 overwork = entertainer ? 0.0f : std::max(staff.load.value - kTuning.staff.overworked.value, 0.0f) * kTuning.staff.overwork_gloom;
+        const f32 boredom = entertainer ? 0.0f : std::max(kTuning.staff.bored.value - staff.load.value, 0.0f) * kTuning.staff.bored_gloom;
+        const f32 content = std::clamp(kTuning.staff.content_base.value + kTuning.staff.content_per_training.value * static_cast<f32>(staff.training) + kTuning.staff.content_per_wage.value * static_cast<f32>(staff.wage_level) - overwork - boredom, 0.0f, 1.0f);
+        const f32 step = kTuning.staff.mood.value * seconds;
         if (entertainer && !working)
-            staff.happiness.value = std::max(staff.happiness.value - kTuning.staff.lonely_gloom.value * seconds / static_cast<float>(1 + std::max(staff.training, 0)), 0.0f);
+            staff.happiness.value = std::max(staff.happiness.value - kTuning.staff.lonely_gloom.value * seconds / static_cast<f32>(1 + std::max(staff.training, 0)), 0.0f);
         else
             staff.happiness.value = staff.happiness.value < content ? std::min(staff.happiness.value + step, content) : std::max(staff.happiness.value - step, content);
         if (staff.happiness.value < kTuning.staff.lazy_below.value)
-            staff.laziness.value += (kTuning.staff.lazy_below.value - staff.happiness.value) * kTuning.staff.lazy.value / static_cast<float>(1 + std::max(staff.training, 0)) * seconds;
+            staff.laziness.value += (kTuning.staff.lazy_below.value - staff.happiness.value) * kTuning.staff.lazy.value / static_cast<f32>(1 + std::max(staff.training, 0)) * seconds;
         else
             staff.laziness.value -= kTuning.staff.lazy_fade.value * seconds;
         staff.laziness.value = std::clamp(staff.laziness.value, 0.0f, 1.0f);
@@ -133,12 +134,12 @@ namespace rct3::simulation::staff
         return staff.miserable == kTuning.staff.quit_after + kTuning.staff.leave_after + 1;
     }
 
-    float work_slowdown(const Staff& staff)
+    f32 work_slowdown(const Staff& staff)
     {
         return 1 + staff.laziness.value;
     }
 
-    float rest_chance(const Staff& staff)
+    f32 rest_chance(const Staff& staff)
     {
         return staff.laziness.value * kTuning.staff.rest.value;
     }

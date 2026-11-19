@@ -3,6 +3,7 @@
 // Ride trains: which cars a train of a tracked ride is made of and how they are spaced.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/item_record.hpp"
 #include "ovl/overlay.hpp"
 
@@ -21,19 +22,19 @@ namespace rct3::ovl
     /// 0.4 m), spinning cars look nowhere ahead, and a few cars such as karts look less far.
     struct RideCameraTuning
     {
-        float look_ahead = 0;   ///< How far along the track the rider looks; none when 0
-        float sway_per_g = 0;   ///< The head's sway against the car's pull, per g of it
-        float sway_most = 0;    ///< And the most it sways
-        float sway_settle = 0;  ///< The time the sway takes to follow the pull
-        float shake_from = 0;   ///< The speed in metres a second the view starts shaking at
-        float shake = 0;        ///< Its shake per (speed over that)², in radians
-        float shake_across = 0; ///< The most it shakes side to side
-        float shake_up = 0;     ///< And up and down
-        float chain_shake = 0;  ///< The same three on a lift chain
-        float chain_shake_across = 0;
-        float chain_shake_up = 0;
-        float turn_settle = 0; ///< The time the view takes to follow the car's turns
-        float look_tilt = 0;   ///< How far looking ahead into a turn leans the view into it, 0 to 1
+        f32 look_ahead = 0;   ///< How far along the track the rider looks; none when 0
+        f32 sway_per_g = 0;   ///< The head's sway against the car's pull, per g of it
+        f32 sway_most = 0;    ///< And the most it sways
+        f32 sway_settle = 0;  ///< The time the sway takes to follow the pull
+        f32 shake_from = 0;   ///< The speed in metres a second the view starts shaking at
+        f32 shake = 0;        ///< Its shake per (speed over that)², in radians
+        f32 shake_across = 0; ///< The most it shakes side to side
+        f32 shake_up = 0;     ///< And up and down
+        f32 chain_shake = 0;  ///< The same three on a lift chain
+        f32 chain_shake_across = 0;
+        f32 chain_shake_up = 0;
+        f32 turn_settle = 0; ///< The time the view takes to follow the car's turns
+        f32 look_tilt = 0;   ///< How far looking ahead into a turn leans the view into it, 0 to 1
     };
 
     /// How a boat of this train handles off its track, out on open water. Turns in radians, speeds in metres a
@@ -41,14 +42,14 @@ namespace rct3::ovl
     /// turn and lean harder, bumper boats turn quicker and never lean.
     struct BoatHandling
     {
-        float turn_most = 0;  ///< Radians a second it turns at most
-        float turn_gain = 0;  ///< Radians a second it turns per radian its mark lies off its bow
-        float speed_up = 0;   ///< m/s² it speeds up by at most; it slows by up to twice that
-        float speed_gain = 0; ///< m/s² it speeds up by per m/s short of the speed it wants
-        float turn_slow = 0;  ///< m/s² it slows by per radian its mark lies off its bow
-        float brake = 0;      ///< m/s² it slows by near the end of its way and per stretch of water ahead it cannot go on
-        float lean_gain = 0;  ///< Radians it leans per radian a second it turns
-        float lean_most = 0;  ///< And the most it leans
+        f32 turn_most = 0;  ///< Radians a second it turns at most
+        f32 turn_gain = 0;  ///< Radians a second it turns per radian its mark lies off its bow
+        f32 speed_up = 0;   ///< m/s² it speeds up by at most; it slows by up to twice that
+        f32 speed_gain = 0; ///< m/s² it speeds up by per m/s short of the speed it wants
+        f32 turn_slow = 0;  ///< m/s² it slows by per radian its mark lies off its bow
+        f32 brake = 0;      ///< m/s² it slows by near the end of its way and per stretch of water ahead it cannot go on
+        f32 lean_gain = 0;  ///< Radians it leans per radian a second it turns
+        f32 lean_most = 0;  ///< And the most it leans
     };
 
     struct RideTrain
@@ -62,15 +63,15 @@ namespace rct3::ovl
         std::vector<ItemReference> references;
         /// Passenger cars a train of this kind may have, fewest and most, and how many it has unless set
         /// otherwise. Every train the game ships has fewest <= usual <= most.
-        std::uint32_t fewest_cars = 0;
-        std::uint32_t most_cars = 0;
-        std::uint32_t usual_cars = 0;
+        u32 fewest_cars = 0;
+        u32 most_cars = 0;
+        u32 usual_cars = 0;
         /// What holds it back: rolling, as this much of its weight on the track; standing still, up to this much
         /// of it; and the air, as this much of its speed squared, in newtons. Bytes 44, 48 and 52 of the record;
         /// most coaster trains have 0.04, 0.06 and 0.02, every pool slide's 0.06, 0.04 and 0.005.
-        float rolling = 0;
-        float resting = 0;
-        float air = 0;
+        f32 rolling = 0;
+        f32 resting = 0;
+        f32 air = 0;
         /// The fixed part of the record, 184 bytes. Bytes 32 to 43 are the car counts above; from byte 44 it is
         /// single-precision numbers, the ride camera's among them, whose meanings are unconfirmed. More data follows it in the file: pointers to arrays of per-car data and
         /// texture references, which are not interpreted.

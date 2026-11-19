@@ -2,6 +2,7 @@
 #include "simulation/sandbox.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/rides.hpp"
@@ -14,13 +15,13 @@
 namespace rct3::simulation
 {
 
-    Sandbox::Sandbox(random::Seed seed, std::uint32_t threads)
+    Sandbox::Sandbox(random::Seed seed, u32 threads)
         : workers_(threads > 0 ? std::make_unique<Workers>(threads) : nullptr)
     {
         world_.seed = seed;
     }
 
-    NodeId Sandbox::node(glm::ivec2 tile, std::int32_t level) const
+    NodeId Sandbox::node(glm::ivec2 tile, i32 level) const
     {
         const auto found = world_.paths.find({ tile.x, tile.y, level });
         if (!found)
@@ -28,17 +29,17 @@ namespace rct3::simulation
         return *found;
     }
 
-    Sandbox& Sandbox::path(glm::ivec2 from, glm::ivec2 to, std::int32_t level)
+    Sandbox& Sandbox::path(glm::ivec2 from, glm::ivec2 to, i32 level)
     {
         return lay(from, to, level, 0);
     }
 
-    Sandbox& Sandbox::queue(glm::ivec2 from, glm::ivec2 to, std::int32_t level)
+    Sandbox& Sandbox::queue(glm::ivec2 from, glm::ivec2 to, i32 level)
     {
         return lay(from, to, level, ++lines_);
     }
 
-    Sandbox& Sandbox::lay(glm::ivec2 from, glm::ivec2 to, std::int32_t level, std::uint64_t line)
+    Sandbox& Sandbox::lay(glm::ivec2 from, glm::ivec2 to, i32 level, u64 line)
     {
         if (from.x != to.x && from.y != to.y)
             throw std::invalid_argument("a sandbox path runs along a column or a row");
@@ -52,7 +53,7 @@ namespace rct3::simulation
         return *this;
     }
 
-    entt::entity Sandbox::shop(std::string name, Product product, glm::ivec2 entrance, std::int64_t price, std::int32_t level)
+    entt::entity Sandbox::shop(std::string name, Product product, glm::ivec2 entrance, i64 price, i32 level)
     {
         auto& r = world_.registry;
         const entt::entity e = r.create();
@@ -61,7 +62,7 @@ namespace rct3::simulation
         return e;
     }
 
-    entt::entity Sandbox::flat_ride(std::string name, glm::ivec2 entrance, std::int64_t price, const RideSetup& setup, std::int32_t level)
+    entt::entity Sandbox::flat_ride(std::string name, glm::ivec2 entrance, i64 price, const RideSetup& setup, i32 level)
     {
         auto& r = world_.registry;
         const entt::entity e = r.create();
@@ -73,7 +74,7 @@ namespace rct3::simulation
         return e;
     }
 
-    entt::entity Sandbox::item(PathItemKind kind, glm::ivec2 at, float capacity, std::int32_t level)
+    entt::entity Sandbox::item(PathItemKind kind, glm::ivec2 at, f32 capacity, i32 level)
     {
         auto& r = world_.registry;
         const entt::entity e = r.create();
@@ -83,7 +84,7 @@ namespace rct3::simulation
         return e;
     }
 
-    entt::entity Sandbox::staff(StaffRole role, glm::ivec2 at, std::int32_t level)
+    entt::entity Sandbox::staff(StaffRole role, glm::ivec2 at, i32 level)
     {
         const entt::entity e = world_.registry.create();
         world_.registry.emplace<Staff>(e, role);
@@ -91,14 +92,14 @@ namespace rct3::simulation
         return e;
     }
 
-    Sandbox& Sandbox::litter(glm::ivec2 at, std::int32_t count, std::int32_t level)
+    Sandbox& Sandbox::litter(glm::ivec2 at, i32 count, i32 level)
     {
-        for (std::int32_t i = 0; i < count; ++i)
+        for (i32 i = 0; i < count; ++i)
             world_.registry.emplace<Litter>(world_.registry.create(), Litter { node(at, level) });
         return *this;
     }
 
-    entt::entity Sandbox::guest(glm::ivec2 at, const GuestSetup& setup, std::int32_t level)
+    entt::entity Sandbox::guest(glm::ivec2 at, const GuestSetup& setup, i32 level)
     {
         auto& r = world_.registry;
         const NodeId n = node(at, level);
@@ -126,20 +127,20 @@ namespace rct3::simulation
         return e;
     }
 
-    void Sandbox::run(std::uint32_t count)
+    void Sandbox::run(u32 count)
     {
-        for (std::uint32_t i = 0; i < count; ++i)
+        for (u32 i = 0; i < count; ++i)
             step(world_, core::maybe(workers_.get()));
     }
 
-    void Sandbox::run_seconds(float seconds)
+    void Sandbox::run_seconds(f32 seconds)
     {
         run(ticks(seconds));
     }
 
-    bool Sandbox::run_until(const std::function<bool()>& done, float seconds)
+    bool Sandbox::run_until(const std::function<bool()>& done, f32 seconds)
     {
-        for (std::uint32_t i = 0, n = ticks(seconds); i < n; ++i)
+        for (u32 i = 0, n = ticks(seconds); i < n; ++i)
         {
             if (done())
                 return true;

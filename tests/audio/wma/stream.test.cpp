@@ -2,6 +2,7 @@
 #include "audio/wma/stream.hpp"
 
 #include "../sine_wma.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -15,17 +16,17 @@ namespace fs = std::filesystem;
 
 namespace
 {
-    fs::path write_sine(const char* name, std::size_t size = rct3::test::kSineWma.size())
+    fs::path write_sine(const char* name, usize size = rct3::test::kSineWma.size())
     {
         const fs::path path = fs::temp_directory_path() / name;
         std::ofstream(path, std::ios::binary).write(reinterpret_cast<const char*>(rct3::test::kSineWma.data()), static_cast<std::streamsize>(size));
         return path;
     }
 
-    std::vector<float> read_all(WmaStream& s)
+    std::vector<f32> read_all(WmaStream& s)
     {
-        std::vector<float> all;
-        std::vector<float> chunk(1000 * s.channels());
+        std::vector<f32> all;
+        std::vector<f32> chunk(1000 * s.channels());
         for (;;)
         {
             const auto n = s.read(chunk);
@@ -45,23 +46,23 @@ TEST_CASE("a WMA file decodes to its sound")
     CHECK(s->sample_rate() == 22050);
     CHECK(s->channels() == 2);
     const auto all = read_all(*s);
-    const std::size_t frames = all.size() / 2;
+    const usize frames = all.size() / 2;
     CHECK(frames >= 22050 / 5); // The encoder leaves out the last part frame
     CHECK(frames <= 22050 * 3 / 10);
 
     // A 1000 Hz sine: two zero crossings a period, in both channels alike, at the encoder's level.
-    std::size_t crossings = 0;
-    float peak = 0;
-    const std::size_t from = 1000;
-    const std::size_t to = 5000;
-    for (std::size_t i = from; i < to; ++i)
+    usize crossings = 0;
+    f32 peak = 0;
+    const usize from = 1000;
+    const usize to = 5000;
+    for (usize i = from; i < to; ++i)
     {
         crossings += (all[2 * i] < 0) != (all[2 * i + 2] < 0) ? 1 : 0;
         peak = std::max(peak, std::abs(all[2 * i]));
         CHECK(all[2 * i] == doctest::Approx(all[2 * i + 1]).epsilon(0.05));
     }
-    const double expected = 2.0 * 1000 * static_cast<double>(to - from) / 22050;
-    CHECK(static_cast<double>(crossings) == doctest::Approx(expected).epsilon(0.02));
+    const f64 expected = 2.0 * 1000 * static_cast<f64>(to - from) / 22050;
+    CHECK(static_cast<f64>(crossings) == doctest::Approx(expected).epsilon(0.02));
     CHECK(peak > 0.05f);
     CHECK(peak < 0.2f);
 

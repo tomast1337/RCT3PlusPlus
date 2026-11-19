@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "logging/crash.hpp"
 
+#include "core/types.hpp"
 #include "core/version.hpp"
 #include "logging/log.hpp"
 
@@ -45,7 +46,7 @@ namespace rct3::logging
     void install_crash_report(const std::filesystem::path& file)
     {
         g_file = file.string();
-        for (const std::int32_t signal : { SIGABRT, SIGSEGV, SIGBUS, SIGFPE, SIGILL })
+        for (const i32 signal : { SIGABRT, SIGSEGV, SIGBUS, SIGFPE, SIGILL })
             std::signal(signal, report);
     }
 

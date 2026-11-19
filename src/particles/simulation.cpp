@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "particles/simulation.hpp"
 
+#include "core/types.hpp"
 #include "units/units.hpp"
 
 #include <algorithm>
@@ -14,19 +15,19 @@ namespace rct3::particles
     {
 
         using units::kGravity;
-        constexpr float kTau = 2 * std::numbers::pi_v<float>;
+        constexpr f32 kTau = 2 * std::numbers::pi_v<f32>;
 
-        float fraction(random::RandomState& r)
+        f32 fraction(random::RandomState& r)
         {
-            return static_cast<float>(random::unit(r));
+            return static_cast<f32>(random::unit(r));
         }
 
         /// A point evenly spread in the ball of radius 1.
         glm::vec3 in_ball(random::RandomState& r)
         {
-            const float z = 2 * fraction(r) - 1;
-            const float a = kTau * fraction(r);
-            const float across = std::sqrt(std::max(0.0f, 1 - z * z));
+            const f32 z = 2 * fraction(r) - 1;
+            const f32 a = kTau * fraction(r);
+            const f32 across = std::sqrt(std::max(0.0f, 1 - z * z));
             return glm::vec3(across * std::cos(a), across * std::sin(a), z) * std::cbrt(fraction(r));
         }
 
@@ -35,12 +36,12 @@ namespace rct3::particles
         {
             const glm::vec3 side = glm::normalize(glm::cross(up, std::abs(up.y) < 0.9f ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0)));
             const glm::vec3 other = glm::cross(up, side);
-            const float a = kTau * fraction(r);
+            const f32 a = kTau * fraction(r);
             return (side * std::cos(a) + other * std::sin(a)) * std::sqrt(fraction(r));
         }
 
         /// The share of `emitter`'s particles due by `t` of its owner's life.
-        float due(const Emitter& emitter, float t)
+        f32 due(const Emitter& emitter, f32 t)
         {
             if (emitter.end <= emitter.start)
                 return t >= emitter.start ? 1.0f : 0.0f;
@@ -49,17 +50,17 @@ namespace rct3::particles
 
     } // namespace
 
-    Look look(const Effect& effect, const ParticleArrays& particles, std::size_t i)
+    Look look(const Effect& effect, const ParticleArrays& particles, usize i)
     {
         const Particle& kind = effect.particles[particles.kind[i]];
-        const float t = std::clamp(particles.age[i] / particles.life[i], 0.0f, 1.0f);
+        const f32 t = std::clamp(particles.age[i] / particles.life[i], 0.0f, 1.0f);
         glm::vec4 colour { kind.colour[0].at(t), kind.colour[1].at(t), kind.colour[2].at(t), kind.colour[3].at(t) };
         if (kind.tinted)
             colour *= effect.tint;
         return { colour, std::lerp(kind.start_size, kind.end_size, t) * particles.scale[i], kind.stretch > 0 ? particles.velocity[i] * kind.stretch : glm::vec3(0.0f) };
     }
 
-    EffectRun::EffectRun(const Effect& effect, random::RandomState random, bool loops, std::size_t capacity, float strength, float scale)
+    EffectRun::EffectRun(const Effect& effect, random::RandomState random, bool loops, usize capacity, f32 strength, f32 scale)
         : effect_(&effect)
         , random_(random)
         , loops_(loops)
@@ -77,7 +78,7 @@ namespace rct3::particles
     {
         // shortcut: carried particles follow the run's move but not its turn, upgrade if turning rides show it
         const glm::vec3 moved = position - position_;
-        for (std::size_t i = 0; i < live_.count(); ++i)
+        for (usize i = 0; i < live_.count(); ++i)
             if (live_.relative[i] != 0)
                 live_.position[i] += moved;
         position_ = position;
@@ -85,9 +86,9 @@ namespace rct3::particles
         velocity_ = velocity;
     }
 
-    void EffectRun::advance(float seconds)
+    void EffectRun::advance(f32 seconds)
     {
-        constexpr float dt = 1 / kParticleSteps;
+        constexpr f32 dt = 1 / kParticleSteps;
         pending_ += seconds;
         // A long pause (a dragged window, a slow frame) does not replay everything it missed.
         pending_ = std::min(pending_, 0.25f);
@@ -95,12 +96,12 @@ namespace rct3::particles
             step(dt);
     }
 
-    float EffectRun::emit(const Emitter& emitter, float emitted, float age, float life, glm::vec3 position, glm::vec3 velocity)
+    f32 EffectRun::emit(const Emitter& emitter, f32 emitted, f32 age, f32 life, glm::vec3 position, glm::vec3 velocity)
     {
         if (!emitter.particle || life <= 0)
             return emitted;
-        const float count = static_cast<float>(emitter.count) * (emitter.count_scaled ? effect_->strength * strength_ : 1.0f);
-        const float target = std::floor(count * due(emitter, age / life));
+        const f32 count = static_cast<f32>(emitter.count) * (emitter.count_scaled ? effect_->strength * strength_ : 1.0f);
+        const f32 target = std::floor(count * due(emitter, age / life));
         const Particle& kind = effect_->particles[*emitter.particle];
         for (; emitted < target; ++emitted)
         {
@@ -122,7 +123,7 @@ namespace rct3::particles
             live_.life.push_back(std::max(kind.lifetime * (1 - fraction(random_) * kind.lifetime_random), 1 / kParticleSteps));
             live_.scale.push_back(1 - fraction(random_) * kind.size_random);
             live_.roll.push_back(kTau * fraction(random_));
-            live_.kind.push_back(static_cast<std::uint32_t>(*emitter.particle));
+            live_.kind.push_back(static_cast<u32>(*emitter.particle));
             live_.relative.push_back(emitter.relative ? 1 : 0);
             emitted_.resize(live_.count() * widest_, 0.0f);
             std::fill(emitted_.end() - static_cast<std::ptrdiff_t>(widest_), emitted_.end(), 0.0f);
@@ -130,15 +131,15 @@ namespace rct3::particles
         return emitted;
     }
 
-    void EffectRun::step(float dt)
+    void EffectRun::step(f32 dt)
     {
         // The run's own emitters, and its own sound as it starts.
         if (age_ == 0 && !effect_->sound.empty())
             heard_.push_back({ .position = position_ });
         if (age_ < life_)
         {
-            const float after = std::min(age_ + dt, life_);
-            for (std::size_t i = 0; i < effect_->roots.size(); ++i)
+            const f32 after = std::min(age_ + dt, life_);
+            for (usize i = 0; i < effect_->roots.size(); ++i)
                 root_emitted_[i] = emit(effect_->emitters[effect_->roots[i]], root_emitted_[i], after, life_, position_, velocity_);
             age_ += dt;
             if (age_ >= life_ && loops_)
@@ -150,10 +151,10 @@ namespace rct3::particles
         }
 
         // Particles: age, move, emit, die. Ones born this step are moved from the next.
-        const std::size_t count = live_.count();
+        const usize count = live_.count();
         const glm::vec3 down(0, -kGravity.value, 0);
-        const std::size_t sounds_before = heard_.size();
-        for (std::size_t i = 0; i < count; ++i)
+        const usize sounds_before = heard_.size();
+        for (usize i = 0; i < count; ++i)
         {
             const bool unborn = live_.age[i] <= 0;
             live_.age[i] += dt;
@@ -166,15 +167,15 @@ namespace rct3::particles
             live_.velocity[i] *= std::max(0.0f, 1 - kind.drag * dt);
             live_.position[i] += live_.velocity[i] * dt;
             live_.roll[i] += kind.roll * dt;
-            for (std::size_t e = 0; e < kind.emitters.size(); ++e)
+            for (usize e = 0; e < kind.emitters.size(); ++e)
                 emitted_[i * widest_ + e] = emit(effect_->emitters[kind.emitters[e]], emitted_[i * widest_ + e], std::min(live_.age[i], live_.life[i]), live_.life[i], live_.position[i], live_.velocity[i]);
         }
         // Dead ones are replaced by the last, in every array, counters too.
-        const auto replace = [&](auto& field, std::size_t i) {
+        const auto replace = [&](auto& field, usize i) {
             field[i] = field.back();
             field.pop_back();
         };
-        for (std::size_t i = 0; i < live_.count();)
+        for (usize i = 0; i < live_.count();)
         {
             if (live_.age[i] < live_.life[i])
             {

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/animal_mesh.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3::park;
@@ -9,7 +11,7 @@ using rct3::ovl::animal::AnimalMotion;
 namespace
 {
 
-    constexpr float kTurn = 1.5707963f; // a quarter turn
+    constexpr f32 kTurn = 1.5707963f; // a quarter turn
 
     /// A root at the origin and a child one unit up, a stand that turns the root a quarter about z over two
     /// frames, and a walk that lifts the child.
@@ -19,13 +21,13 @@ namespace
         body.parents = { std::nullopt, rct3::ovl::BoneIndex { 0 } };
         body.rest_positions = { glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f) };
         body.rest_rotations = { glm::quat(1, 0, 0, 0), glm::quat(1, 0, 0, 0) };
-        body.motions.resize(static_cast<std::size_t>(AnimalMotion::TurnRight90) + 1);
+        body.motions.resize(static_cast<usize>(AnimalMotion::TurnRight90) + 1);
         AnimalClip stand { .seconds = 2.0f / kAnimalFramesPerSecond, .frames = 3, .turning = { 0 } };
         stand.rotations = { glm::quat(1, 0, 0, 0), glm::angleAxis(kTurn / 2, glm::vec3(0, 0, 1)), glm::angleAxis(kTurn, glm::vec3(0, 0, 1)) };
-        body.motions[static_cast<std::size_t>(AnimalMotion::Stand)] = stand;
+        body.motions[static_cast<usize>(AnimalMotion::Stand)] = stand;
         AnimalClip walk { .seconds = 1.0f / kAnimalFramesPerSecond, .frames = 2, .moving = { 1 } };
         walk.positions = { glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 3.0f, 0.0f) };
-        body.motions[static_cast<std::size_t>(AnimalMotion::Walk)] = walk;
+        body.motions[static_cast<usize>(AnimalMotion::Walk)] = walk;
         AnimalPiece piece { .picture = "skin" };
         piece.vertices = { { .position = { 0, 2, 0 }, .normal = { 1, 0, 0 }, .bones = { 1, 0, 0, 0 }, .weights = { 255, 0, 0, 0 } }, { .position = { 1, 0, 0 }, .bones = { 0, 0, 0, 0 }, .weights = { 255, 0, 0, 0 } }, { .position = { 0, 0, 1 } } };
         piece.indices = { 0, 1, 2 };
@@ -61,7 +63,7 @@ TEST_CASE("a turned bone carries its children and their vertices")
 TEST_CASE("frames between keys blend and the motion repeats")
 {
     const AnimalBody body = two_bones();
-    const float frame = 1.0f / kAnimalFramesPerSecond;
+    const f32 frame = 1.0f / kAnimalFramesPerSecond;
     check_near(animal_pose(body, AnimalMotion::Walk, frame / 2)[1] * glm::vec4(0, 1, 0, 1), { 0, 2, 0 });
     check_near(animal_pose(body, AnimalMotion::Walk, frame + frame / 2)[1] * glm::vec4(0, 1, 0, 1), { 0, 2, 0 });
     check_near(animal_pose(body, AnimalMotion::Stand, frame)[1] * glm::vec4(0, 1, 0, 1), glm::vec3(glm::angleAxis(kTurn / 2, glm::vec3(0, 0, 1)) * glm::vec3(0, 1, 0)));

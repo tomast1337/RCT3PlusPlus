@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "parkfile/structure_file.hpp"
 
+#include "core/types.hpp"
 #include "parkfile/binary.hpp"
 
 #include <format>
@@ -21,7 +22,7 @@ namespace rct3::parkfile
     std::expected<save::model::Structure, std::string> read_structure_file(std::span<const std::byte> bytes)
     {
         std::optional<save::model::Structure> out;
-        auto read = read_chunks(bytes, [&](std::string_view tag, std::uint32_t version, Reader& body) -> std::expected<void, std::string> {
+        auto read = read_chunks(bytes, [&](std::string_view tag, u32 version, Reader& body) -> std::expected<void, std::string> {
             if (tag != "STRC")
             {
                 body.slice(body.left()); // A chunk of a newer build is skipped
@@ -35,7 +36,7 @@ namespace rct3::parkfile
             return std::unexpected(read.error());
         if (!out)
             return std::unexpected("no structure in the file");
-        if (out->cols <= 0 || out->rows <= 0 || out->tiles.size() != static_cast<std::size_t>(out->cols) * static_cast<std::size_t>(out->rows))
+        if (out->cols <= 0 || out->rows <= 0 || out->tiles.size() != static_cast<usize>(out->cols) * static_cast<usize>(out->rows))
             return std::unexpected("the structure's tiles do not match its box");
         return std::move(*out);
     }

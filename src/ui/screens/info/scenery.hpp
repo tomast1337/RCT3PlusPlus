@@ -6,6 +6,7 @@
 // an attraction's instead, about the pool complex it lets guests into.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/pools/pools.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -25,7 +26,7 @@
 namespace rct3::ui::screens::info
 {
 
-    enum class SceneryTab : std::uint8_t
+    enum class SceneryTab : u8
     {
         Destroy,  ///< Pulls the prop down; has no page
         Colour,   ///< Picks the colours of the parts that take them
@@ -44,69 +45,69 @@ namespace rct3::ui::screens::info
     };
 
     /// The ids of a changing room's controls.
-    inline constexpr std::int32_t kPoolTicketControl = 2; ///< The ticket price, hundredths
-    inline constexpr std::int32_t kPoolNameControl = 3;   ///< The complex's name, typed
-    inline constexpr std::int32_t kPoolDeleteRoomControl = 4;
-    inline constexpr std::int32_t kPoolDeleteComplexControl = 5;
-    inline constexpr std::int32_t kPoolLocateControl = 6;
-    inline constexpr std::int32_t kPoolMechanicControl = 7;
-    inline constexpr std::int32_t kPoolFluidControl = 8;       ///< A choice: the cleaning fluid, mildest 0 to harshest 2
-    inline constexpr std::int32_t kPoolWaveHeightControl = 9;  ///< The wave machines' wave height setting
-    inline constexpr std::int32_t kPoolWaveLengthControl = 10; ///< Their wave length: kLeastWaveFrequency + kMostWaveFrequency less the frequency
-    inline constexpr std::int32_t kPoolWaveOnControl = 11;     ///< Seconds they run for
-    inline constexpr std::int32_t kPoolWaveEveryControl = 12;  ///< Minutes from one start of theirs to the next
-    inline constexpr std::int32_t kPoolInspectionControl = 13; ///< A choice: the inspection interval, in the maintenance page's order
-    inline constexpr std::int32_t kPoolSaveControl = 14;
+    inline constexpr i32 kPoolTicketControl = 2; ///< The ticket price, hundredths
+    inline constexpr i32 kPoolNameControl = 3;   ///< The complex's name, typed
+    inline constexpr i32 kPoolDeleteRoomControl = 4;
+    inline constexpr i32 kPoolDeleteComplexControl = 5;
+    inline constexpr i32 kPoolLocateControl = 6;
+    inline constexpr i32 kPoolMechanicControl = 7;
+    inline constexpr i32 kPoolFluidControl = 8;       ///< A choice: the cleaning fluid, mildest 0 to harshest 2
+    inline constexpr i32 kPoolWaveHeightControl = 9;  ///< The wave machines' wave height setting
+    inline constexpr i32 kPoolWaveLengthControl = 10; ///< Their wave length: kLeastWaveFrequency + kMostWaveFrequency less the frequency
+    inline constexpr i32 kPoolWaveOnControl = 11;     ///< Seconds they run for
+    inline constexpr i32 kPoolWaveEveryControl = 12;  ///< Minutes from one start of theirs to the next
+    inline constexpr i32 kPoolInspectionControl = 13; ///< A choice: the inspection interval, in the maintenance page's order
+    inline constexpr i32 kPoolSaveControl = 14;
     /// Stamps a passport needs for the gift.
-    inline constexpr std::int32_t kPassportStampsControl = 15;
+    inline constexpr i32 kPassportStampsControl = 15;
     /// A choice: the gift, by its place in PassportFacts::gifts.
-    inline constexpr std::int32_t kPassportGiftControl = 16;
-    inline constexpr std::int32_t kMostWaveOn = 600;   ///< Chosen by eye
-    inline constexpr std::int32_t kWaveOnStep = 10;    ///< Chosen by eye
-    inline constexpr std::int32_t kMostWaveEvery = 30; ///< Chosen by eye: minutes
-    inline constexpr std::int32_t kMostPoolTicket = 2000;
+    inline constexpr i32 kPassportGiftControl = 16;
+    inline constexpr i32 kMostWaveOn = 600;   ///< Chosen by eye
+    inline constexpr i32 kWaveOnStep = 10;    ///< Chosen by eye
+    inline constexpr i32 kMostWaveEvery = 30; ///< Chosen by eye: minutes
+    inline constexpr i32 kMostPoolTicket = 2000;
     /// The inspection interval a room shows before one is picked for it: every 30 minutes.
-    inline constexpr std::int32_t kPoolInspection = 2;
+    inline constexpr i32 kPoolInspection = 2;
 
     /// The pool complex a changing room lets guests into, and the room itself.
     struct PoolComplexFacts
     {
         std::u16string name { }; ///< Empty for the default
-        std::size_t number = 1;  ///< Of the room among the park's rooms of its kind, from 1, for its name
+        usize number = 1;        ///< Of the room among the park's rooms of its kind, from 1, for its name
         units::Money ticket { };
         bool open = false;
-        std::int64_t people = 0; ///< In the complex
-        std::size_t dirt = 0;    ///< How dirty its water is, in six steps, cleanest 0
-        std::uint8_t fluid = 0;  ///< As kPoolFluidControl's value
+        i64 people = 0; ///< In the complex
+        usize dirt = 0; ///< How dirty its water is, in six steps, cleanest 0
+        u8 fluid = 0;   ///< As kPoolFluidControl's value
         park::pools::PoolWaves waves { };
         bool machines = false; ///< It has wave machines; without, their times cannot be set
         Currency currency { };
-        std::int64_t customers = 0; ///< The room's, so far
-        units::Money income { };    ///< Its takings so far
-        units::Money refill { };    ///< A full tank of its fluid, which a mechanic's inspection tops up
-        float reliability = 1;      ///< 0 to 1
+        i64 customers = 0;       ///< The room's, so far
+        units::Money income { }; ///< Its takings so far
+        units::Money refill { }; ///< A full tank of its fluid, which a mechanic's inspection tops up
+        f32 reliability = 1;     ///< 0 to 1
         units::Seconds since_inspection { };
-        std::int32_t inspection = kPoolInspection;           ///< As kPoolInspectionControl's value
+        i32 inspection = kPoolInspection;                    ///< As kPoolInspectionControl's value
         std::vector<save::model::ThoughtEntry> thoughts { }; ///< Guests' thoughts about the room
     };
 
     /// The park's passport rules, which every passport post's window sets.
     struct PassportFacts
     {
-        std::int32_t stamps_for_gift = 0;
-        std::int32_t most_stamps = 0;
+        i32 stamps_for_gift = 0;
+        i32 most_stamps = 0;
         std::vector<std::string_view> gifts { }; ///< What it may give, by the string keys of their names
-        std::int32_t gift = 0;                   ///< Of `gifts`
+        i32 gift = 0;                            ///< Of `gifts`
     };
 
     struct SceneryTabInfo
     {
         SceneryTab tab = SceneryTab::Destroy;
-        std::int32_t slot = 0;           ///< Its place on the ring
-        std::string_view icon;           ///< Skin
-        std::string_view help;           ///< String key
-        bool action = false;             ///< Acts at once instead of opening a page
-        std::vector<std::size_t> paints; ///< The colour tab's: the colour in each slot it paints, in turn
+        i32 slot = 0;              ///< Its place on the ring
+        std::string_view icon;     ///< Skin
+        std::string_view help;     ///< String key
+        bool action = false;       ///< Acts at once instead of opening a page
+        std::vector<usize> paints; ///< The colour tab's: the colour in each slot it paints, in turn
     };
 
     /// The prop a page is written about: the asset it is made from and what it does, when it is a bin or a sign.
@@ -117,13 +118,13 @@ namespace rct3::ui::screens::info
         const save::model::SignState* sign = nullptr;
         std::optional<PoolComplexFacts> pool { };  ///< When it is a changing room
         std::optional<PassportFacts> passport { }; ///< When it is a passport post
-        std::uint32_t colour_slots = 0;            ///< The colour slots its pictures take (bit k: slot k)
-        std::array<std::int32_t, 3> colours { };   ///< The colour picked for each slot, of the 32
-        float zero_time = 0;                       ///< Where the park's calendar starts, for the dates shown
+        u32 colour_slots = 0;                      ///< The colour slots its pictures take (bit k: slot k)
+        std::array<i32, 3> colours { };            ///< The colour picked for each slot, of the 32
+        f32 zero_time = 0;                         ///< Where the park's calendar starts, for the dates shown
     };
 
     /// The colour slots the colour tab paints, in the order of its pots.
-    [[nodiscard]] std::vector<std::size_t> scenery_paint_slots(const SceneryFacts& facts);
+    [[nodiscard]] std::vector<usize> scenery_paint_slots(const SceneryFacts& facts);
 
     /// The tabs of the prop, in the order of their slots.
     [[nodiscard]] std::vector<SceneryTabInfo> scenery_tabs(const SceneryFacts& facts);

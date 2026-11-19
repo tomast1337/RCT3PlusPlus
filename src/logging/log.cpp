@@ -2,6 +2,7 @@
 #include "logging/log.hpp"
 
 #include "core/hash.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 #include <array>
@@ -50,9 +51,9 @@ namespace rct3::logging
             static constexpr std::array<std::string_view, 6> kPalette = {
                 "\x1b[36m", "\x1b[35m", "\x1b[34m", "\x1b[96m", "\x1b[95m", "\x1b[94m",
             };
-            std::uint32_t h = core::kFnv32Offset;
+            u32 h = core::kFnv32Offset;
             for (const char c : category)
-                h = (h ^ static_cast<std::uint8_t>(c)) * core::kFnv32Prime;
+                h = (h ^ static_cast<u8>(c)) * core::kFnv32Prime;
             return kPalette[h % kPalette.size()];
         }
 
@@ -73,7 +74,7 @@ namespace rct3::logging
             const std::tm tm = local_time(std::chrono::system_clock::to_time_t(tp));
             char buf[32];
             std::strftime(buf, sizeof buf, "%Y-%m-%d %H:%M:%S", &tm);
-            return std::format("{}.{:03}", buf, static_cast<std::int32_t>(((ms.count() % 1000) + 1000) % 1000));
+            return std::format("{}.{:03}", buf, static_cast<i32>(((ms.count() % 1000) + 1000) % 1000));
         }
 
         bool use_color(ColorMode mode, std::FILE* stream)
@@ -207,12 +208,12 @@ namespace rct3::logging
         return entries_since(0);
     }
 
-    std::vector<Entry> Log::entries_since(std::uint64_t sequence) const
+    std::vector<Entry> Log::entries_since(u64 sequence) const
     {
         const std::scoped_lock lock(mutex_);
         std::vector<Entry> out;
         out.reserve(ring_count_);
-        for (std::size_t i = 0; i < ring_count_; ++i)
+        for (usize i = 0; i < ring_count_; ++i)
         {
             const Entry& e = ring_[(ring_head_ + i) % ring_.size()];
             if (e.sequence > sequence)
@@ -221,7 +222,7 @@ namespace rct3::logging
         return out;
     }
 
-    std::uint64_t Log::latest_sequence() const
+    u64 Log::latest_sequence() const
     {
         const std::scoped_lock lock(mutex_);
         return next_sequence_ - 1;

@@ -2,6 +2,7 @@
 #include "ui/key_map.hpp"
 
 #include "config/json_text.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 #include <format>
@@ -83,14 +84,14 @@ namespace rct3::ui
             { P::TurnItemRight, G::DuringPlay, "turn_item_right", "Rct3pp_TurnItemRight", letter(U'.') },
         } };
 
-        std::size_t index(Command c)
+        usize index(Command c)
         {
-            return static_cast<std::size_t>(c);
+            return static_cast<usize>(c);
         }
 
-        std::size_t index(PlayCommand c)
+        usize index(PlayCommand c)
         {
-            return static_cast<std::size_t>(c);
+            return static_cast<usize>(c);
         }
 
         bool same(const CommandPress& c, const KeyPress& p)
@@ -199,7 +200,7 @@ namespace rct3::ui
 
     std::optional<Command> KeyMap::command_of(const KeyCombo& combo) const
     {
-        for (std::size_t i = 0; i < keys_.size(); ++i)
+        for (usize i = 0; i < keys_.size(); ++i)
         {
             if (std::ranges::find(keys_[i], combo) != keys_[i].end())
                 return static_cast<Command>(i);
@@ -215,7 +216,7 @@ namespace rct3::ui
         {
             if (const auto played = play_key_combo(press))
             {
-                for (std::size_t i = 0; i < play_.size(); ++i)
+                for (usize i = 0; i < play_.size(); ++i)
                 {
                     if (play_[i] == played)
                         out.play.push_back(static_cast<PlayCommand>(i));

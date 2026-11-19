@@ -9,6 +9,7 @@
 #pragma once
 
 #include "audio/audio.hpp"
+#include "core/types.hpp"
 #include "units/units.hpp"
 
 #include <cstddef>
@@ -19,15 +20,15 @@ namespace rct3::audio
 
     inline constexpr units::Distance kNearVoice { 12 };
     inline constexpr units::Distance kFarVoice { 400 }; ///< As far as the camera goes
-    inline constexpr std::size_t kCrowd = 30;           ///< People about the camera's point for the chatter at full
+    inline constexpr usize kCrowd = 30;                 ///< People about the camera's point for the chatter at full
 
     /// A sound at `at`, at `volume` when near.
-    [[nodiscard]] PlayParams heard(glm::vec3 at, float volume);
+    [[nodiscard]] PlayParams heard(glm::vec3 at, f32 volume);
 
     /// The chatter's loudness, 0..1, with `people` about the camera's point.
-    [[nodiscard]] float chatter_level(std::size_t people);
+    [[nodiscard]] f32 chatter_level(usize people);
 
     /// Screams a second from one car's riders, going at `speed` and dropping at `drop` (both a second, world units).
-    [[nodiscard]] float screams_per_second(float speed, float drop);
+    [[nodiscard]] f32 screams_per_second(f32 speed, f32 drop);
 
 } // namespace rct3::audio

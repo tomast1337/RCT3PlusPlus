@@ -4,6 +4,7 @@
 // from key to key of a motion; its picture holds four colourings in a two by two grid, and a bird wears one.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/frame_mesh.hpp"
 #include "ovl/texture/pixels.hpp"
 #include "park/object/mesh.hpp"
@@ -23,7 +24,7 @@
 namespace rct3::park
 {
 
-    enum class BirdMotion : std::uint8_t
+    enum class BirdMotion : u8
     {
         Swim,
         Fly,
@@ -46,10 +47,10 @@ namespace rct3::park
 
     struct BirdModel
     {
-        static constexpr std::size_t kNone = ~std::size_t { 0 };
+        static constexpr usize kNone = ~usize { 0 };
 
         ovl::FrameMesh mesh;
-        std::array<std::size_t, static_cast<std::size_t>(BirdMotion::Count)> motions { }; ///< Index into `mesh.animations`, `kNone` for none
+        std::array<usize, static_cast<usize>(BirdMotion::Count)> motions { }; ///< Index into `mesh.animations`, `kNone` for none
         ovl::texture::RgbaImage picture;
         std::string picture_key;
     };
@@ -59,14 +60,14 @@ namespace rct3::park
     [[nodiscard]] std::optional<BirdModel> read_bird_model(const std::filesystem::path& overlay, std::string_view mesh, std::string_view picture);
 
     /// How long `motion` takes, 0 when the model has none.
-    [[nodiscard]] float motion_seconds(const BirdModel& model, BirdMotion motion);
+    [[nodiscard]] f32 motion_seconds(const BirdModel& model, BirdMotion motion);
 
     struct PlacedBird
     {
         const BirdModel* model = nullptr;
         BirdMotion motion = BirdMotion::Swim;
         units::Seconds time { }; ///< Into the motion
-        std::uint8_t palette = 0;
+        u8 palette = 0;
         glm::mat4 world { 1.0f }; ///< Model to park
     };
 

@@ -10,6 +10,7 @@
 // The scatter draws from the scenery stream: the same seed and park give the same trees.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "park/surrounding_land.hpp"
 #include "random/generator.hpp"
@@ -24,21 +25,21 @@ namespace rct3::park
 
     /// How far from its park tree a tree beyond the edge may stand, as a share of the map's width plus its
     /// height. Fitted to the shipped parks' lists: none stands farther than a quarter.
-    inline constexpr float kOffMapReachShare = 0.25f;
+    inline constexpr f32 kOffMapReachShare = 0.25f;
     /// How many places each park tree tries beyond the edge. Chosen by eye: as many trees as the
     /// shipped parks list, within a tenth or so.
-    inline constexpr std::int32_t kOffMapTries = 8;
+    inline constexpr i32 kOffMapTries = 8;
     /// The least upward share of the land's slope a tree stands on. Chosen by eye: hillsides yes, cliffs no.
-    inline constexpr float kOffMapFlatness = 0.9f;
+    inline constexpr f32 kOffMapFlatness = 0.9f;
     /// How far each tree's foot sits below the land, so it never floats where the land curves.
-    inline constexpr float kTreeSink = 0.3f;
+    inline constexpr f32 kTreeSink = 0.3f;
 
     /// True for a placed item drawn as a tree or plant: one that sways in the wind.
     [[nodiscard]] bool is_plant(const save::model::PlacedObject& object, const object::ObjectModels& models);
 
     /// Trees for the land round `grid`, grown round the plants on it among `objects` from index `from` on,
     /// numbered after the highest id among all `objects`. None when those include no plants.
-    [[nodiscard]] std::vector<save::model::PlacedObject> off_map_trees(std::span<const save::model::PlacedObject> objects, std::size_t from, const object::ObjectModels& models, const save::model::TerrainGrid& grid, const LandRings& land, random::RandomState& scenery);
+    [[nodiscard]] std::vector<save::model::PlacedObject> off_map_trees(std::span<const save::model::PlacedObject> objects, usize from, const object::ObjectModels& models, const save::model::TerrainGrid& grid, const LandRings& land, random::RandomState& scenery);
 
     /// The trees a park file lists beyond the edge, each a copy of the park plant it names, numbered after
     /// the highest id among `objects`. Those naming no plant on the map, or standing where the land round it

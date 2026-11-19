@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/moving_meshes.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <glm/gtc/matrix_transform.hpp>
@@ -23,13 +25,13 @@ namespace rct3::park
         for (const save::model::PlacedObject& o : objects)
         {
             const auto model = models.find(object::model_ref(o));
-            const std::size_t apart = model == models.end() ? 0 : object::pieces_apart(model->second);
+            const usize apart = model == models.end() ? 0 : object::pieces_apart(model->second);
             if (apart == 0)
             {
                 alone.push_back(object::object_mesh(std::span(&o, 1), models, grid, { }, { }, { }, { { o.id, glm::mat4(1.0f) } }));
                 continue;
             }
-            for (std::int32_t joint = -1; joint < static_cast<std::int32_t>(apart); ++joint)
+            for (i32 joint = -1; joint < static_cast<i32>(apart); ++joint)
             {
                 object::ObjectModels one;
                 object::ObjectModel& piece = one[model->first] = model->second;
@@ -42,13 +44,13 @@ namespace rct3::park
         return gathered_meshes(alone);
     }
 
-    std::vector<glm::mat4> arm_moves(std::span<const glm::mat4> joints, std::span<const float> degrees)
+    std::vector<glm::mat4> arm_moves(std::span<const glm::mat4> joints, std::span<const f32> degrees)
     {
         std::vector<glm::mat4> moves;
         glm::mat4 carried(1.0f);
-        for (std::size_t j = 0; j < joints.size(); ++j)
+        for (usize j = 0; j < joints.size(); ++j)
         {
-            const float turn = j < degrees.size() ? glm::radians(degrees[j]) : 0.0f;
+            const f32 turn = j < degrees.size() ? glm::radians(degrees[j]) : 0.0f;
             // Turned in the joint's own space: taken there from the model's, turned, and put back.
             carried = carried * joints[j] * glm::rotate(glm::mat4(1.0f), turn, j == 0 ? glm::vec3(0, 1, 0) : glm::vec3(1, 0, 0)) * glm::inverse(joints[j]);
             moves.push_back(carried);
@@ -64,7 +66,7 @@ namespace rct3::park
         // The world's up and the part's in the pivot's space, each seen along the line it turns about; turned
         // from the one to the other. Seen end on, either is nothing, and any turn is as level as none. A part sprung
         // to its car rests as it sits on it.
-        float turn = swung.value;
+        f32 turn = swung.value;
         if (part.moves.spring <= 0 && part.moves.motion != ovl::PartMotion::Spins)
         {
             const glm::vec3 world_up = glm::inverse(turned) * glm::vec3(0, 1, 0);
@@ -88,14 +90,14 @@ namespace rct3::park
                 piece.levels = { object::ModelLevel { .distance = 0, .parts = { part }, .billboard = std::nullopt } };
                 alone.push_back(object::object_mesh(std::span(&object, 1), one, grid, { }, { }, { }, { { object.id, glm::mat4(1.0f) } }));
                 // One part makes one run, so the piece keeps the part's vertex order, unless it was left out.
-                const std::size_t before = skins.size();
+                const usize before = skins.size();
                 for (const object::ModelVertex& v : part.vertices)
                     skins.push_back({ v.bones, v.weights });
                 skins.resize(before + alone.back().vertices.size());
             }
         MovingMeshes out = gathered_meshes(alone);
         out.skins = std::move(skins);
-        std::vector<std::int32_t> bones(model.rig ? model.rig->parents.size() : 0);
+        std::vector<i32> bones(model.rig ? model.rig->parents.size() : 0);
         std::iota(bones.begin(), bones.end(), 0);
         out.places.assign(bones.size(), glm::mat4(1.0f));
         return BonedMeshes { std::move(out), std::move(bones) };
@@ -107,15 +109,15 @@ namespace rct3::park
         for (const object::ObjectMesh& one : alone)
         {
             out.own.insert(out.own.end(), one.vertices.begin(), one.vertices.end());
-            out.ends.push_back(static_cast<std::uint32_t>(out.own.size()));
+            out.ends.push_back(static_cast<u32>(out.own.size()));
             out.mesh.drawn += one.drawn;
             out.mesh.missing += one.missing;
         }
-        std::map<std::tuple<std::string, object::PartBlend, bool>, std::size_t> batch_of;
-        std::vector<std::vector<std::uint32_t>> indices;
-        for (std::size_t i = 0; i < alone.size(); ++i)
+        std::map<std::tuple<std::string, object::PartBlend, bool>, usize> batch_of;
+        std::vector<std::vector<u32>> indices;
+        for (usize i = 0; i < alone.size(); ++i)
         {
-            const std::uint32_t base = i == 0 ? 0 : out.ends[i - 1];
+            const u32 base = i == 0 ? 0 : out.ends[i - 1];
             for (const object::ObjectBatch& batch : alone[i].batches)
             {
                 const auto [at, added] = batch_of.try_emplace({ batch.texture, batch.blend, batch.one_sided }, out.mesh.batches.size());
@@ -124,14 +126,14 @@ namespace rct3::park
                     out.mesh.batches.push_back(batch);
                     indices.emplace_back();
                 }
-                for (std::uint32_t k = batch.first; k < batch.first + batch.count; ++k)
+                for (u32 k = batch.first; k < batch.first + batch.count; ++k)
                     indices[at->second].push_back(base + alone[i].indices[k]);
             }
         }
-        for (std::size_t b = 0; b < out.mesh.batches.size(); ++b)
+        for (usize b = 0; b < out.mesh.batches.size(); ++b)
         {
-            out.mesh.batches[b].first = static_cast<std::uint32_t>(out.mesh.indices.size());
-            out.mesh.batches[b].count = static_cast<std::uint32_t>(indices[b].size());
+            out.mesh.batches[b].first = static_cast<u32>(out.mesh.indices.size());
+            out.mesh.batches[b].count = static_cast<u32>(indices[b].size());
             out.mesh.indices.insert(out.mesh.indices.end(), indices[b].begin(), indices[b].end());
         }
         out.mesh.vertices = out.own;
@@ -149,20 +151,20 @@ namespace rct3::park
             if (places.empty())
                 return;
             // Plain arithmetic, as below. Most vertices follow one bone whole and need no blend.
-            for (std::size_t v = 0; v < meshes.own.size() && v < meshes.skins.size(); ++v)
+            for (usize v = 0; v < meshes.own.size() && v < meshes.skins.size(); ++v)
             {
                 const VertexSkin& skin = meshes.skins[v];
                 glm::vec4 blend[4]; // Columns of the blended place, when there is a blend
                 const glm::vec4* c = &places[skin.bones[0] < places.size() ? skin.bones[0] : 0][0];
                 if (skin.weights[0] != 255)
                 {
-                    float m[16] { };
-                    float total = 0;
-                    for (std::size_t k = 0; k < 4; ++k)
+                    f32 m[16] { };
+                    f32 total = 0;
+                    for (usize k = 0; k < 4; ++k)
                     {
                         if (skin.weights[k] == 0 || skin.bones[k] >= places.size())
                             continue;
-                        const float w = static_cast<float>(skin.weights[k]) / 255.0f;
+                        const f32 w = static_cast<f32>(skin.weights[k]) / 255.0f;
                         const glm::mat4& from = places[skin.bones[k]];
                         for (glm::length_t col = 0; col < 4; ++col)
                             for (glm::length_t row = 0; row < 4; ++row)
@@ -171,7 +173,7 @@ namespace rct3::park
                     }
                     if (total > 0)
                     {
-                        for (std::size_t col = 0; col < 4; ++col)
+                        for (usize col = 0; col < 4; ++col)
                             blend[col] = { m[col * 4], m[col * 4 + 1], m[col * 4 + 2], m[col * 4 + 3] };
                         c = blend;
                     }
@@ -187,14 +189,14 @@ namespace rct3::park
                 to_n.y = c[0].y * n.x + c[1].y * n.y + c[2].y * n.z;
                 to_n.z = c[0].z * n.x + c[1].z * n.y + c[2].z * n.z;
                 // Blended turns shorten a normal.
-                const float length = c == blend ? std::sqrt(to_n.x * to_n.x + to_n.y * to_n.y + to_n.z * to_n.z) : 0.0f;
+                const f32 length = c == blend ? std::sqrt(to_n.x * to_n.x + to_n.y * to_n.y + to_n.z * to_n.z) : 0.0f;
                 if (length > 0)
                     to_n /= length;
             }
             return;
         }
-        std::uint32_t first = 0;
-        for (std::size_t i = 0; i < meshes.ends.size() && i < places.size(); ++i)
+        u32 first = 0;
+        for (usize i = 0; i < meshes.ends.size() && i < places.size(); ++i)
         {
             const glm::mat4& m = places[i];
             if (meshes.places[i] == m)
@@ -205,7 +207,7 @@ namespace rct3::park
             meshes.places[i] = m;
             // Plain arithmetic: thousands of vertices a frame, and vector types cost calls in unoptimised builds.
             const glm::vec4* c = &m[0]; // The four columns
-            for (std::uint32_t v = first; v < meshes.ends[i]; ++v)
+            for (u32 v = first; v < meshes.ends[i]; ++v)
             {
                 const glm::vec3& p = meshes.own[v].position;
                 const glm::vec3& n = meshes.own[v].normal;

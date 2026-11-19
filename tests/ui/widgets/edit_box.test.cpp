@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/edit_box.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 
 #include <doctest/doctest.h>
@@ -170,7 +171,7 @@ TEST_CASE("the pointer places the caret and drags a selection")
     box.placement = top_left(0, 0, 200, 24);
     desktop.layout({ 0, 0, 300, 100 });
     const UpdateContext context { units::Seconds { }, &fonts };
-    const float x0 = box.padding.x0;
+    const f32 x0 = box.padding.x0;
 
     desktop.update({ { x0 + 21, 10 }, true, true }, context); // Nearer the end of b than the middle of c
     CHECK(rct3::core::as_pointer(desktop.keyboard_focus()) == &box);
@@ -197,9 +198,9 @@ TEST_CASE("a double press selects a word, a triple one everything")
     EditBox& box = desktop.root().add<EditBox>("box", u"big  wheel ride");
     box.placement = top_left(0, 0, 200, 24);
     desktop.layout({ 0, 0, 300, 100 });
-    const float x0 = box.padding.x0;
+    const f32 x0 = box.padding.x0;
     // Waits `wait` seconds, then presses at `x` and lets go.
-    const auto press = [&](float x, float wait = 0.1f) {
+    const auto press = [&](f32 x, f32 wait = 0.1f) {
         desktop.update({ { x0 + x, 10 }, false, true }, { wait, &fonts });
         desktop.update({ { x0 + x, 10 }, true, true }, { units::Seconds { }, &fonts });
         desktop.update({ { x0 + x, 10 }, false, true }, { units::Seconds { }, &fonts });
@@ -363,10 +364,10 @@ TEST_CASE("text being composed shows at the caret without being typed")
     // First the tinted patch over the three composed characters, after "ab".
     REQUIRE(v.size() >= 8);
     CHECK(v[0].color[3] == box.composition_colour.a);
-    const float patch_x0 = v[0].x;
+    const f32 patch_x0 = v[0].x;
     CHECK(v[1].x - patch_x0 == doctest::Approx(30));
     // The caret sits at the input method's cursor, after "x".
-    const float caret_x = (v[v.size() - 4].x + v[v.size() - 2].x) / 2;
+    const f32 caret_x = (v[v.size() - 4].x + v[v.size() - 2].x) / 2;
     CHECK(caret_x - patch_x0 == doctest::Approx(10));
 
     SUBCASE("confirmed text arrives typed")

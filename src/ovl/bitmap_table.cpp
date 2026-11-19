@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/bitmap_table.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstring>
 #include <string_view>
@@ -12,15 +14,15 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kTableTag = "btbl";
-        constexpr std::size_t kRowDataSize = 8; // {reserved, bitmap count}
-        constexpr std::size_t kPrefixSize = 8;  // two words before the bitmap descriptions
-        constexpr std::size_t kBitmapSize = 16; // {format, width, height, levels}
-        constexpr std::uint32_t kMaxSide = 2048;
-        constexpr std::uint32_t kMaxLevels = 11;
+        constexpr usize kRowDataSize = 8; // {reserved, bitmap count}
+        constexpr usize kPrefixSize = 8;  // two words before the bitmap descriptions
+        constexpr usize kBitmapSize = 16; // {format, width, height, levels}
+        constexpr u32 kMaxSide = 2048;
+        constexpr u32 kMaxLevels = 11;
 
-        std::uint32_t u32_at(std::span<const std::byte> b, std::size_t at)
+        u32 u32_at(std::span<const std::byte> b, usize at)
         {
-            std::uint32_t v = 0;
+            u32 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
@@ -34,7 +36,7 @@ namespace rct3::ovl
             return std::span<const std::byte>(part.bytes).subspan(chunk.file_offset, chunk.size);
         }
 
-        std::optional<BitmapTable> read_table(const Overlay& overlay, const Part& part, std::size_t row)
+        std::optional<BitmapTable> read_table(const Overlay& overlay, const Part& part, usize row)
         {
             const LoaderEntry& entry = part.loaders.entries[row];
             const auto& chunks = part.loaders.extra[row];
@@ -44,21 +46,21 @@ namespace rct3::ovl
             const auto header = overlay.space().bytes_at(entry.data, kRowDataSize);
             if (!header)
                 return std::nullopt;
-            const std::uint32_t count = u32_at(*header, 4);
+            const u32 count = u32_at(*header, 4);
 
             const auto descriptions = chunk_bytes(part, chunks[0]);
             const auto pixels = chunk_bytes(part, chunks[1]);
             if (!descriptions || !pixels)
                 return std::nullopt;
-            if (descriptions->size() != kPrefixSize + std::uint64_t { count } * kBitmapSize)
+            if (descriptions->size() != kPrefixSize + u64 { count } * kBitmapSize)
                 return std::nullopt;
 
             BitmapTable table;
             table.bitmaps.reserve(count);
-            std::size_t used = 0;
-            for (std::uint32_t i = 0; i < count; ++i)
+            usize used = 0;
+            for (u32 i = 0; i < count; ++i)
             {
-                const std::size_t at = kPrefixSize + std::size_t { i } * kBitmapSize;
+                const usize at = kPrefixSize + usize { i } * kBitmapSize;
                 Bitmap bitmap;
                 bitmap.format = u32_at(*descriptions, at);
                 bitmap.width = u32_at(*descriptions, at + 4);
@@ -72,8 +74,8 @@ namespace rct3::ovl
                 const auto size = bitmap_data_size(bitmap.format, bitmap.width, bitmap.height, bitmap.levels);
                 if (!size || *size > pixels->size() - used)
                     return std::nullopt;
-                bitmap.data = pixels->subspan(used, static_cast<std::size_t>(*size));
-                used += static_cast<std::size_t>(*size);
+                bitmap.data = pixels->subspan(used, static_cast<usize>(*size));
+                used += static_cast<usize>(*size);
                 table.bitmaps.push_back(bitmap);
             }
             if (used != pixels->size())
@@ -83,7 +85,7 @@ namespace rct3::ovl
 
     } // namespace
 
-    std::optional<BitmapLayout> bitmap_layout(std::uint32_t format) noexcept
+    std::optional<BitmapLayout> bitmap_layout(u32 format) noexcept
     {
         switch (format)
         {
@@ -98,17 +100,17 @@ namespace rct3::ovl
         }
     }
 
-    std::optional<std::uint64_t> bitmap_data_size(std::uint32_t format, std::uint32_t width, std::uint32_t height, std::uint32_t levels) noexcept
+    std::optional<u64> bitmap_data_size(u32 format, u32 width, u32 height, u32 levels) noexcept
     {
         const auto layout = bitmap_layout(format);
         if (!layout || levels > 32)
             return std::nullopt;
 
-        std::uint64_t total = 0;
-        for (std::uint32_t level = 0; level < levels; ++level)
+        u64 total = 0;
+        for (u32 level = 0; level < levels; ++level)
         {
-            const std::uint64_t w = std::max<std::uint32_t>(1, width >> level);
-            const std::uint64_t h = std::max<std::uint32_t>(1, height >> level);
+            const u64 w = std::max<u32>(1, width >> level);
+            const u64 h = std::max<u32>(1, height >> level);
             switch (*layout)
             {
                 case BitmapLayout::Pixels32:
@@ -129,9 +131,9 @@ namespace rct3::ovl
     {
         std::vector<BitmapTableItem> items;
         const auto& loaders = part.file.header.loaders;
-        for (std::size_t row = 0; row < part.loaders.entries.size(); ++row)
+        for (usize row = 0; row < part.loaders.entries.size(); ++row)
         {
-            const std::uint32_t type = part.loaders.entries[row].loader_type;
+            const u32 type = part.loaders.entries[row].loader_type;
             if (type >= loaders.size() || loaders[type].tag != kTableTag)
                 continue;
             items.push_back({ row, read_table(overlay, part, row) });

@@ -15,6 +15,7 @@
 // is heard only with the camera well up, fading in as it rises and out as it comes down.
 #pragma once
 
+#include "core/types.hpp"
 #include "units/units.hpp"
 
 #include <array>
@@ -38,16 +39,16 @@ namespace rct3::audio
     /// For 31 October, at even and odd places.
     inline constexpr std::array<std::string_view, 2> kHalloweenMenuTracks = { "Haunted House.wma", "Gothic Moon.wma" };
     /// Tracks tried before giving up for the quiet one.
-    inline constexpr std::int32_t kMenuTrackTries = 10;
+    inline constexpr i32 kMenuTrackTries = 10;
 
-    inline constexpr float kMenuMusicLevel = 0.5f; ///< Of the music volume
+    inline constexpr f32 kMenuMusicLevel = 0.5f; ///< Of the music volume
 
     inline constexpr units::Distance kParkMusicQuiet { 80 }; ///< Of the eye above the point looked at, and below: silent
     inline constexpr units::Distance kParkMusicFull { 240 }; ///< And above: at full
-    inline constexpr float kMusicFadeSeconds = 2;            ///< To fade out, or in, all the way
+    inline constexpr f32 kMusicFadeSeconds = 2;              ///< To fade out, or in, all the way
 
     /// Where the park view looks from.
-    enum class ParkView : std::uint8_t
+    enum class ParkView : u8
     {
         Overhead, ///< The camera over the park
         Riding,   ///< Out of a ride's car, seat or a person's eyes
@@ -55,16 +56,16 @@ namespace rct3::audio
 
     /// How much of the park's music is heard, 0..1, with the eye `height` above the point looked at;
     /// none in the `Riding` view.
-    [[nodiscard]] float park_music_level(float height, ParkView view);
+    [[nodiscard]] f32 park_music_level(f32 height, ParkView view);
 
     struct MenuMusicPick
     {
         std::string_view track;
-        std::optional<std::size_t> file;        ///< Of the files given, the track's; nothing when it is missing too
-        std::optional<std::int32_t> next_place; ///< Where the cycle carries on next run; nothing without cycling
+        std::optional<usize> file;     ///< Of the files given, the track's; nothing when it is missing too
+        std::optional<i32> next_place; ///< Where the cycle carries on next run; nothing without cycling
     };
 
-    enum class MenuMusicSource : std::uint8_t
+    enum class MenuMusicSource : u8
     {
         Cycle,   ///< The run's track of the cycle
         Track,   ///< The track the player picked
@@ -75,7 +76,7 @@ namespace rct3::audio
     struct MenuMusicWish
     {
         MenuMusicSource source = MenuMusicSource::Cycle;
-        std::size_t file = 0; ///< Of the files given, for a picked track
+        usize file = 0; ///< Of the files given, for a picked track
         friend bool operator==(const MenuMusicWish&, const MenuMusicWish&) = default;
     };
 
@@ -89,7 +90,7 @@ namespace rct3::audio
 
     /// Picks this run's track. `place` is where the cycle stands, nothing when it is off; `files` are the
     /// names in the music folder, matched in any case.
-    [[nodiscard]] MenuMusicPick pick_menu_music(std::optional<std::int32_t> place, bool halloween, std::span<const std::string> files);
+    [[nodiscard]] MenuMusicPick pick_menu_music(std::optional<i32> place, bool halloween, std::span<const std::string> files);
 
     /// Whether `when` falls on 31 October, by the UTC calendar.
     [[nodiscard]] bool is_halloween(std::chrono::system_clock::time_point when);

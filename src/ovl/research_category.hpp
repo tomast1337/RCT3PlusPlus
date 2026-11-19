@@ -4,6 +4,7 @@
 // require other categories to be complete first.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/scenery_item.hpp"
 
@@ -20,14 +21,14 @@ namespace rct3::ovl
     {
         /// 0, 1 or 2. Unconfirmed: 2 appears on categories whose names end in a marker for items unlocked
         /// by playing a scenario, 1 on themed groups, 0 on the rest.
-        std::uint32_t kind = 0;
+        u32 kind = 0;
         std::string_view name;      ///< The category's own name as stored in the structure
         std::string_view name_text; ///< "txt" item
         /// Level the category starts at: 0, 10, 20, 25 or 50 seen. Park files of the base game hold the same
         /// value as the category's current level.
-        float start_level = 0;
+        f32 start_level = 0;
         /// Cost of developing the category: 10, or 1 for the unlockable kind. Park files hold the same value.
-        float develop_cost = 0;
+        f32 develop_cost = 0;
         /// Categories that must reach a level first, as 12-byte rows. A row whose reference is missing gives an
         /// empty name.
         std::vector<SceneryItemResearch> prerequisites;

@@ -5,6 +5,7 @@
 // the mesh again. Every object is drawn at its finest level.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "units/units.hpp"
 
@@ -21,16 +22,16 @@ namespace rct3::park
     /// each does, out of 255.
     struct VertexSkin
     {
-        std::array<std::uint8_t, 4> bones { };
-        std::array<std::uint8_t, 4> weights { };
+        std::array<u8, 4> bones { };
+        std::array<u8, 4> weights { };
     };
 
     struct MovingMeshes
     {
-        object::ObjectMesh mesh;         ///< All the objects where they were last put
-        std::vector<GroundVertex> own;   ///< The vertices of `mesh` in their objects' own spaces
-        std::vector<std::uint32_t> ends; ///< By object: one past its last vertex in `mesh`
-        std::vector<glm::mat4> places;   ///< By object, or by bone when skinned: where it was last put
+        object::ObjectMesh mesh;       ///< All the objects where they were last put
+        std::vector<GroundVertex> own; ///< The vertices of `mesh` in their objects' own spaces
+        std::vector<u32> ends;         ///< By object: one past its last vertex in `mesh`
+        std::vector<glm::mat4> places; ///< By object, or by bone when skinned: where it was last put
         /// Of a model moved by bones: by vertex of `own`, the bones that move it. Empty when each object moves
         /// whole.
         std::vector<VertexSkin> skins;
@@ -47,8 +48,8 @@ namespace rct3::park
     /// The parts of a rigged object, skinned to the bones that move them.
     struct BonedMeshes
     {
-        MovingMeshes meshes { };             ///< In the model's own space, each vertex skinned to the bones that move it
-        std::vector<std::int32_t> bones { }; ///< The rig's bones, one per place to be given
+        MovingMeshes meshes { };    ///< In the model's own space, each vertex skinned to the bones that move it
+        std::vector<i32> bones { }; ///< The rig's bones, one per place to be given
     };
 
     /// The parts of `object` (whose model `model` has a rig) at its rig's level.
@@ -57,7 +58,7 @@ namespace rct3::park
     /// How each of an arm's joints, at rest at `joints` (model space, from the base out), moves what it carries
     /// once turned by `degrees`: model space, each joint carried by those before it. The first turns about its
     /// own up, the others about their own sideways.
-    [[nodiscard]] std::vector<glm::mat4> arm_moves(std::span<const glm::mat4> joints, std::span<const float> degrees);
+    [[nodiscard]] std::vector<glm::mat4> arm_moves(std::span<const glm::mat4> joints, std::span<const f32> degrees);
 
     /// How a car's moving part moves what it carries, model space, with the car placed at `place` (model to world):
     /// turned about its pivot's line as far as brings its up nearest the world's (+Y), then on by `swung`, as

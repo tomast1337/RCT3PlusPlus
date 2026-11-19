@@ -17,6 +17,7 @@
 // Dice, so a world steps the same way however many workers it has.
 #pragma once
 
+#include "core/types.hpp"
 #include "simulation/coaster.hpp"
 #include "simulation/components.hpp"
 #include "simulation/sim_world.hpp"
@@ -36,33 +37,33 @@ namespace rct3::simulation
 
     class Workers;
 
-    inline constexpr float kTickSeconds = 0.25f; ///< Simulated time a step covers
+    inline constexpr f32 kTickSeconds = 0.25f; ///< Simulated time a step covers
     /// Farthest a guest walks off a path tile's middle, along x and z.
     /// shortcut: one width for every path, from how evenly saved guests spread to about this either side of
     /// the middle; upgrade when paths of other widths are modelled.
-    inline constexpr float kLaneReach = 1.3f;
+    inline constexpr f32 kLaneReach = 1.3f;
     inline constexpr units::Seconds kLongQueue { 240 }; ///< Of queueing, that feel like ages
 
     struct Pose;
     /// Where `pose` is drawn `along` (0..1) of the way through the step after the last.
-    [[nodiscard]] Pose between_steps(const Pose& pose, float along);
+    [[nodiscard]] Pose between_steps(const Pose& pose, f32 along);
 
     /// How far a water cannon pointing along `heading` at rest turns, round the vertical, to point along `way`
     /// (x, z): radians, the way Pose's heading grows; none when that is more than `most` to either side, as
     /// behind it.
-    [[nodiscard]] std::optional<float> cannon_turn(float heading, glm::vec2 way, float most);
+    [[nodiscard]] std::optional<f32> cannon_turn(f32 heading, glm::vec2 way, f32 most);
 
     /// Pieces of litter lying long enough to count against the park's rating (tuning::Litter::old).
-    [[nodiscard]] std::int32_t old_litter(const SimWorld& world);
+    [[nodiscard]] i32 old_litter(const SimWorld& world);
 
     /// The broken path items, and what putting each back new comes to at `price` (by its object id, the placed
     /// object it stands as). Our own design, as replace_broken.
     struct Replacement
     {
-        std::uint32_t items = 0;
+        u32 items = 0;
         units::Money cost { };
     };
-    [[nodiscard]] Replacement replacement(const SimWorld& world, const std::function<units::Money(std::uint64_t object)>& price);
+    [[nodiscard]] Replacement replacement(const SimWorld& world, const std::function<units::Money(u64 object)>& price);
 
     /// Puts every broken path item back new at once. The player pays the whole price of each (replacement), the
     /// quick and dear way; a handyman mends one for nothing, given time.
@@ -73,16 +74,16 @@ namespace rct3::simulation
     void pull_down(SimWorld& world, entt::entity attraction);
 
     /// Whether a time of day (a fraction from midnight) is dark: from 20:00 to 6:00, our own hours.
-    [[nodiscard]] bool is_night(float time);
+    [[nodiscard]] bool is_night(f32 time);
 
     /// Ticks in `seconds` of simulated time, rounded up.
-    [[nodiscard]] std::uint32_t ticks(float seconds);
+    [[nodiscard]] u32 ticks(f32 seconds);
 
     /// The inspector tells the player `finding` about `about` at `now`, unless they told it lately.
-    void tell(entt::registry& r, entt::entity inspector, Finding finding, entt::entity about, float now);
+    void tell(entt::registry& r, entt::entity inspector, Finding finding, entt::entity about, f32 now);
 
     /// The guest thinks `kind` about `about` at `now` (seconds into the run), unless they thought it lately.
-    void think(entt::registry& r, entt::entity guest, ThoughtKind kind, entt::entity about, float now);
+    void think(entt::registry& r, entt::entity guest, ThoughtKind kind, entt::entity about, f32 now);
 
     /// Stands `pose` where `s` has got to between its two tiles, in its lanes, on the path's surface.
     void place(const PathNetwork& paths, const Stride& s, Pose& pose);

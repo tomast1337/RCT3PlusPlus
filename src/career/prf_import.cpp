@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "career/prf_import.hpp"
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -18,16 +19,16 @@ namespace rct3::career
 
         // Class and attribute names, as the format names them.
         constexpr std::string_view kClass = "ManagedPlayerProfile";
-        constexpr std::int32_t kExpansions = 2;
+        constexpr i32 kExpansions = 2;
 
-        std::int32_t integer(std::optional<const save::Value&> v, std::int32_t fallback)
+        i32 integer(std::optional<const save::Value&> v, i32 fallback)
         {
             if (!v || v->kind() != save::ValueKind::Integer)
                 return fallback;
-            const std::int64_t n = v->as_integer();
-            if (n < std::numeric_limits<std::int32_t>::min() || n > std::numeric_limits<std::int32_t>::max())
+            const i64 n = v->as_integer();
+            if (n < std::numeric_limits<i32>::min() || n > std::numeric_limits<i32>::max())
                 return fallback;
-            return static_cast<std::int32_t>(n);
+            return static_cast<i32>(n);
         }
 
         std::string text(std::optional<const save::Value&> v)
@@ -35,7 +36,7 @@ namespace rct3::career
             return v && v->kind() == save::ValueKind::String ? std::string(v->text()) : std::string { };
         }
 
-        ScenarioStatus status_of(std::int32_t status)
+        ScenarioStatus status_of(i32 status)
         {
             switch (status)
             {
@@ -83,7 +84,7 @@ namespace rct3::career
                 continue;
             PrfCareer prf;
             prf.name = text(decoded->find("PlayerName"));
-            const std::int32_t pack = integer(decoded->find("AOPIndex"), -1);
+            const i32 pack = integer(decoded->find("AOPIndex"), -1);
             if (pack < -1 || pack >= kExpansions)
                 return std::unexpected(PrfError::UnknownPack);
             prf.pack = pack + 1;
@@ -98,7 +99,7 @@ namespace rct3::career
         return std::unexpected(PrfError::NoCareer);
     }
 
-    std::string prf_scenario_folder(std::size_t index)
+    std::string prf_scenario_folder(usize index)
     {
         std::array<char, 16> name { };
         std::snprintf(name.data(), name.size(), "Scenario%02zu", index + 1);
@@ -110,7 +111,7 @@ namespace rct3::career
         Career career;
         career.name = prf.name;
         career.pack = prf.pack;
-        for (std::size_t i = 0; i < ids.size(); ++i)
+        for (usize i = 0; i < ids.size(); ++i)
         {
             ScenarioProgress p { .id = ids[i] };
             if (i < prf.scenarios.size())
@@ -121,8 +122,8 @@ namespace rct3::career
             }
             career.scenarios.push_back(std::move(p));
         }
-        if (prf.current >= 0 && static_cast<std::size_t>(prf.current) < ids.size())
-            career.current = static_cast<std::size_t>(prf.current);
+        if (prf.current >= 0 && static_cast<usize>(prf.current) < ids.size())
+            career.current = static_cast<usize>(prf.current);
         open_earned(career);
         return career;
     }

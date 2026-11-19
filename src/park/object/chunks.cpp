@@ -1,46 +1,48 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object/chunks.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstdint>
 
 namespace rct3::park::object
 {
 
-    ChunkGrid ChunkGrid::of(std::int32_t width, std::int32_t height, std::int32_t tiles)
+    ChunkGrid ChunkGrid::of(i32 width, i32 height, i32 tiles)
     {
         return { .across = std::max(1, (width + tiles - 1) / tiles), .down = std::max(1, (height + tiles - 1) / tiles), .tiles = tiles };
     }
 
-    std::size_t ChunkGrid::count() const
+    usize ChunkGrid::count() const
     {
-        return static_cast<std::size_t>(across) * static_cast<std::size_t>(down);
+        return static_cast<usize>(across) * static_cast<usize>(down);
     }
 
-    std::size_t ChunkGrid::at(std::int32_t col, std::int32_t row) const
+    usize ChunkGrid::at(i32 col, i32 row) const
     {
-        const std::int32_t c = std::clamp(col / tiles, 0, across - 1);
-        const std::int32_t r = std::clamp(row / tiles, 0, down - 1);
-        return static_cast<std::size_t>(r) * static_cast<std::size_t>(across) + static_cast<std::size_t>(c);
+        const i32 c = std::clamp(col / tiles, 0, across - 1);
+        const i32 r = std::clamp(row / tiles, 0, down - 1);
+        return static_cast<usize>(r) * static_cast<usize>(across) + static_cast<usize>(c);
     }
 
-    std::vector<std::vector<std::uint32_t>> chunk_members(std::span<const save::model::PlacedObject> objects, const ChunkGrid& grid)
+    std::vector<std::vector<u32>> chunk_members(std::span<const save::model::PlacedObject> objects, const ChunkGrid& grid)
     {
-        std::vector<std::vector<std::uint32_t>> members(grid.count());
-        for (std::size_t i = 0; i < objects.size(); ++i)
-            members[grid.at(objects[i].col, objects[i].row)].push_back(static_cast<std::uint32_t>(i));
+        std::vector<std::vector<u32>> members(grid.count());
+        for (usize i = 0; i < objects.size(); ++i)
+            members[grid.at(objects[i].col, objects[i].row)].push_back(static_cast<u32>(i));
         return members;
     }
 
-    std::vector<bool> changed_chunks(const LevelPlan& now, const LevelPlan& shown, std::span<const std::vector<std::uint32_t>> members)
+    std::vector<bool> changed_chunks(const LevelPlan& now, const LevelPlan& shown, std::span<const std::vector<u32>> members)
     {
-        const std::size_t n = now.steady.size();
+        const usize n = now.steady.size();
         const bool same_objects = shown.steady.size() == n && shown.finer.size() == n && shown.coarser.size() == n && shown.bands.size() == now.bands.size() && now.finer.size() == n && now.coarser.size() == n;
         std::vector<bool> changed(members.size(), !same_objects);
         if (!same_objects)
             return changed;
-        for (std::size_t c = 0; c < members.size(); ++c)
-            changed[c] = std::ranges::any_of(members[c], [&](std::uint32_t i) { return now.steady[i] != shown.steady[i] || now.finer[i] != shown.finer[i] || now.coarser[i] != shown.coarser[i] || (i < now.bands.size() && now.bands[i] != shown.bands[i]); });
+        for (usize c = 0; c < members.size(); ++c)
+            changed[c] = std::ranges::any_of(members[c], [&](u32 i) { return now.steady[i] != shown.steady[i] || now.finer[i] != shown.finer[i] || now.coarser[i] != shown.coarser[i] || (i < now.bands.size() && now.bands[i] != shown.bands[i]); });
         return changed;
     }
 

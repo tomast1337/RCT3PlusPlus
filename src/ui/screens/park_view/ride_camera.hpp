@@ -11,6 +11,7 @@
 // pointer moved each frame, and takes what the player asked for with take_action().
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/label.hpp"
@@ -41,10 +42,10 @@ namespace rct3::ui::screens::park_view
         Color text_colour = hex("#ffffff");
     };
 
-    inline constexpr std::size_t kFlatSeatType = 3;  ///< Of RideCameraPanelStyle::types, a flat ride's seats
-    inline constexpr std::size_t kFlatFixedType = 4; ///< And its fixed cameras
+    inline constexpr usize kFlatSeatType = 3;  ///< Of RideCameraPanelStyle::types, a flat ride's seats
+    inline constexpr usize kFlatFixedType = 4; ///< And its fixed cameras
 
-    enum class RideCameraAction : std::uint8_t
+    enum class RideCameraAction : u8
     {
         Leave,
         PreviousCamera,
@@ -77,16 +78,16 @@ namespace rct3::ui::screens::park_view
         /// `noun` (a train, or on a flat ride a ride). `next_type` is the
         /// kind of camera the type button changes to, by park::object::RideEye, named `next_name`; nothing when the train
         /// has one kind.
-        void show(std::u16string info, RideCameraSteps steps, std::u16string_view noun, std::optional<std::size_t> next_type = std::nullopt, std::u16string_view next_name = { });
+        void show(std::u16string info, RideCameraSteps steps, std::u16string_view noun, std::optional<usize> next_type = std::nullopt, std::u16string_view next_name = { });
         /// The pointer moved `distance` units since the last update.
-        void pointer_moved(float distance);
+        void pointer_moved(f32 distance);
         /// What a button asked for since the last call.
         [[nodiscard]] std::optional<RideCameraAction> take_action()
         {
             return std::exchange(asked_, std::nullopt);
         }
         /// 1 fully in sight, 0 out of it.
-        [[nodiscard]] float shown() const
+        [[nodiscard]] f32 shown() const
         {
             return shown_;
         }
@@ -100,7 +101,7 @@ namespace rct3::ui::screens::park_view
         }
         [[nodiscard]] widgets::Button& button(RideCameraAction action) const
         {
-            return *buttons_.at(static_cast<std::size_t>(action));
+            return *buttons_.at(static_cast<usize>(action));
         }
         [[nodiscard]] widgets::Button& pin() const
         {
@@ -120,7 +121,7 @@ namespace rct3::ui::screens::park_view
         widgets::Button* pin_ = nullptr;
         std::array<widgets::Button*, 6> buttons_ { }; ///< By RideCameraAction
         std::optional<RideCameraAction> asked_;
-        float shown_ = 1;
+        f32 shown_ = 1;
         units::Seconds still_; ///< How long the pointer has been still
     };
 

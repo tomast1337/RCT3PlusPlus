@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/park_view/ride_camera.hpp"
 
+#include "core/types.hpp"
 #include "ui/placement.hpp"
 
 #include <algorithm>
@@ -11,18 +12,18 @@ namespace rct3::ui::screens::park_view
     namespace
     {
         // In units of the desktop.
-        constexpr float kMargin = 10;
-        constexpr float kLineHeight = 18;
-        constexpr float kButtonsTop = 32;
-        constexpr float kButton = 32;
-        constexpr float kPin = 16;
-        constexpr float kGap = 6;
-        constexpr float kHeight = kButtonsTop + kButton + kMargin;
-        constexpr float kWidth = kMargin * 2 + kPin + kGap + 6 * (kButton + kGap) - kGap;
+        constexpr f32 kMargin = 10;
+        constexpr f32 kLineHeight = 18;
+        constexpr f32 kButtonsTop = 32;
+        constexpr f32 kButton = 32;
+        constexpr f32 kPin = 16;
+        constexpr f32 kGap = 6;
+        constexpr f32 kHeight = kButtonsTop + kButton + kMargin;
+        constexpr f32 kWidth = kMargin * 2 + kPin + kGap + 6 * (kButton + kGap) - kGap;
 
         constexpr std::array<std::string_view, 6> kHelp { "RidecamGUI_Exit", "RidecamGUI_PrevCam", "RidecamGUI_NextCam", "RidecamGUI_PrevTrain", "RidecamGUI_NextTrain", "RidecamGUI_Type" };
         /// Left to right, after the pin: leave, change the kind, then the steps.
-        constexpr std::array<std::size_t, 6> kSlot { 0, 2, 3, 4, 5, 1 };
+        constexpr std::array<usize, 6> kSlot { 0, 2, 3, 4, 5, 1 };
     } // namespace
 
     RideCameraPanel::RideCameraPanel(std::string name, RideCameraPanelStyle style, const StringTable& strings)
@@ -39,17 +40,17 @@ namespace rct3::ui::screens::park_view
         pin_->toggle = true;
         pin_->tooltip = strings_.get("RidecamGUI_Stick");
         pin_->placement = top_left(kMargin, kButtonsTop + (kButton - kPin) / 2, kPin, kPin);
-        const float x = kMargin + kPin + kGap;
-        for (std::size_t i = 0; i < buttons_.size(); ++i)
+        const f32 x = kMargin + kPin + kGap;
+        for (usize i = 0; i < buttons_.size(); ++i)
         {
             buttons_[i] = &add<widgets::Button>(std::string(kHelp[i]), style_.button, i == 0 ? style_.leave : i <= 4 ? style_.steps[i - 1] : style_.types[1]);
             buttons_[i]->tooltip = strings_.get(kHelp[i]);
-            buttons_[i]->placement = top_left(x + static_cast<float>(kSlot[i]) * (kButton + kGap), kButtonsTop, kButton, kButton);
+            buttons_[i]->placement = top_left(x + static_cast<f32>(kSlot[i]) * (kButton + kGap), kButtonsTop, kButton, kButton);
         }
         buttons_[5]->enabled = false;
     }
 
-    void RideCameraPanel::show(std::u16string info, RideCameraSteps steps, std::u16string_view noun, std::optional<std::size_t> next_type, std::u16string_view next_name)
+    void RideCameraPanel::show(std::u16string info, RideCameraSteps steps, std::u16string_view noun, std::optional<usize> next_type, std::u16string_view next_name)
     {
         // The text of `key` with `with` in place of its mark, as in "Change to # camera".
         const auto marked = [&](std::string_view key, std::u16string_view with) {
@@ -66,7 +67,7 @@ namespace rct3::ui::screens::park_view
             type.icon = style_.types[*next_type];
             type.tooltip = marked(kHelp[5], next_name);
         }
-        for (std::size_t step = 0; step < style_.steps.size(); ++step)
+        for (usize step = 0; step < style_.steps.size(); ++step)
         {
             widgets::Button& b = *buttons_[step + 1];
             b.enabled = step < 2 ? steps.cameras : steps.trains;
@@ -78,7 +79,7 @@ namespace rct3::ui::screens::park_view
         }
     }
 
-    void RideCameraPanel::pointer_moved(float distance)
+    void RideCameraPanel::pointer_moved(f32 distance)
     {
         if (distance > ride_camera_panel::kWakeDistance.value)
             still_ = { };
@@ -86,7 +87,7 @@ namespace rct3::ui::screens::park_view
 
     void RideCameraPanel::update(const UpdateContext& context)
     {
-        for (std::size_t i = 0; i < buttons_.size(); ++i)
+        for (usize i = 0; i < buttons_.size(); ++i)
             if (buttons_[i]->take_click())
                 asked_ = static_cast<RideCameraAction>(i);
         if (pin_->take_click())
@@ -95,10 +96,10 @@ namespace rct3::ui::screens::park_view
 
         still_ += context.elapsed;
         const bool wanted = pin_->on || hovered() || still_ < ride_camera_panel::kStill;
-        const float step = context.elapsed.value / ride_camera_panel::kSlide.value;
+        const f32 step = context.elapsed.value / ride_camera_panel::kSlide.value;
         shown_ = std::clamp(shown_ + (wanted ? step : -step), 0.0f, 1.0f);
         // Eased, so it slows as it comes to rest at either end.
-        const float eased = shown_ * (2 - shown_);
+        const f32 eased = shown_ * (2 - shown_);
         placement = bottom_right(0, -(1 - eased) * kHeight, kWidth, kHeight);
     }
 

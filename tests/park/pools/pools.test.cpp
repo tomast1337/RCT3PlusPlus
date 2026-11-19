@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/pools/pools.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -13,14 +15,14 @@ namespace
 {
 
     /// An invented price list, shaped like a pool type's.
-    constexpr std::array<std::int32_t, 18> kPrices { 0, 0, 100, 300, 50, -200, 70, 10, -60, -5, 11, -9, 900, -800, 25, -15, 40, -30 };
+    constexpr std::array<i32, 18> kPrices { 0, 0, 100, 300, 50, -200, 70, 10, -60, -5, 11, -9, 900, -800, 25, -15, 40, -30 };
 
     /// A pool of `cols` by `rows` water squares, ringed by paved squares, its corner at (0, 0).
-    PoolMap ringed(std::int32_t cols, std::int32_t rows)
+    PoolMap ringed(i32 cols, i32 rows)
     {
         PoolMap map;
-        for (std::int32_t row = 0; row < rows + 2; ++row)
-            for (std::int32_t col = 0; col < cols + 2; ++col)
+        for (i32 row = 0; row < rows + 2; ++row)
+            for (i32 col = 0; col < cols + 2; ++col)
             {
                 const bool edge = col == 0 || row == 0 || col == cols + 1 || row == rows + 1;
                 map.squares.push_back({ .col = col, .row = row, .kind = edge ? PoolKind::Tile : PoolKind::Water, .surface = 4, .depth = 2 });
@@ -28,12 +30,12 @@ namespace
         return map;
     }
 
-    std::vector<PoolWallPiece> walls_at(const PoolMap& map, std::int32_t col, std::int32_t row)
+    std::vector<PoolWallPiece> walls_at(const PoolMap& map, i32 col, i32 row)
     {
         return pool_walls(water_around(map, *map.at(col, row)));
     }
 
-    bool has(const std::vector<PoolWallPiece>& walls, PoolWall shape, std::int32_t turn)
+    bool has(const std::vector<PoolWallPiece>& walls, PoolWall shape, i32 turn)
     {
         return std::ranges::any_of(walls, [&](const PoolWallPiece& w) { return w.shape == shape && w.side.value == turn; });
     }
@@ -84,52 +86,52 @@ TEST_CASE("pools: a lone square, an end and a channel")
 
 TEST_CASE("pools: every way water lies round a square walls each dry side once and each dry corner between water")
 {
-    for (std::uint32_t mask = 0; mask < 256; ++mask)
+    for (u32 mask = 0; mask < 256; ++mask)
     {
         CAPTURE(mask);
-        const auto water = static_cast<std::uint8_t>(mask);
-        const auto wet = [&](std::int32_t turn) { return (water & (1u << (turn & 3))) != 0; };
-        std::array<std::int32_t, 4> sides { };
-        std::array<std::int32_t, 4> corners { };
+        const auto water = static_cast<u8>(mask);
+        const auto wet = [&](i32 turn) { return (water & (1u << (turn & 3))) != 0; };
+        std::array<i32, 4> sides { };
+        std::array<i32, 4> corners { };
         for (const PoolWallPiece& w : pool_walls(water))
             switch (w.shape)
             {
                 case PoolWall::Edge:
-                    ++sides[static_cast<std::size_t>(w.side.value)];
+                    ++sides[static_cast<usize>(w.side.value)];
                     break;
                 case PoolWall::OuterCorner:
-                    ++sides[static_cast<std::size_t>(w.side.value)];
-                    ++sides[static_cast<std::size_t>((w.side.value + 1) & 3)];
+                    ++sides[static_cast<usize>(w.side.value)];
+                    ++sides[static_cast<usize>((w.side.value + 1) & 3)];
                     break;
                 case PoolWall::InnerCorner:
-                    ++corners[static_cast<std::size_t>(w.side.value)];
+                    ++corners[static_cast<usize>(w.side.value)];
                     break;
                 case PoolWall::End: // Open a turn before its own
-                    for (std::int32_t turn = 0; turn < 4; ++turn)
-                        sides[static_cast<std::size_t>(turn)] += turn != ((w.side.value + 3) & 3) ? 1 : 0;
+                    for (i32 turn = 0; turn < 4; ++turn)
+                        sides[static_cast<usize>(turn)] += turn != ((w.side.value + 3) & 3) ? 1 : 0;
                     break;
                 case PoolWall::Full:
-                    for (std::int32_t& side : sides)
+                    for (i32& side : sides)
                         ++side;
                     break;
             }
-        for (std::int32_t turn = 0; turn < 4; ++turn)
+        for (i32 turn = 0; turn < 4; ++turn)
         {
-            CHECK(sides[static_cast<std::size_t>(turn)] == (wet(turn) ? 0 : 1));
-            CHECK(corners[static_cast<std::size_t>(turn)] == (wet(turn) && wet(turn + 1) && (water & (kNextBoth << turn)) == 0 ? 1 : 0));
+            CHECK(sides[static_cast<usize>(turn)] == (wet(turn) ? 0 : 1));
+            CHECK(corners[static_cast<usize>(turn)] == (wet(turn) && wet(turn + 1) && (water & (kNextBoth << turn)) == 0 ? 1 : 0));
         }
         // Laid straight, each wall is a stack of its own pieces turned as the wall.
         PoolMap map { { { .col = 1, .row = 1, .surface = 4, .depth = 2 } } };
-        constexpr std::array<std::array<std::int32_t, 2>, 8> kAround { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 }, { 1, 1 }, { 1, -1 }, { -1, -1 }, { -1, 1 } } };
-        for (std::size_t bit = 0; bit < kAround.size(); ++bit)
+        constexpr std::array<std::array<i32, 2>, 8> kAround { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 }, { 1, 1 }, { 1, -1 }, { -1, -1 }, { -1, 1 } } };
+        for (usize bit = 0; bit < kAround.size(); ++bit)
             if (water & (1u << bit))
                 map.squares.push_back({ .col = 1 + kAround[bit][0], .row = 1 + kAround[bit][1], .surface = 4, .depth = 2 });
         CHECK(water_around(map, *map.at(1, 1)) == water);
-        std::vector<std::pair<std::string_view, std::int32_t>> want;
+        std::vector<std::pair<std::string_view, i32>> want;
         constexpr std::array<std::string_view, 5> kTop { "EdgeTop", "Corner1Top", "CurveCorner1Top", "EndTop", "FullTop" }; // By PoolWall
         for (const PoolWallPiece& w : pool_walls(water))
-            want.emplace_back(kTop[static_cast<std::size_t>(w.shape)], w.side.value);
-        std::vector<std::pair<std::string_view, std::int32_t>> got;
+            want.emplace_back(kTop[static_cast<usize>(w.shape)], w.side.value);
+        std::vector<std::pair<std::string_view, i32>> got;
         for (const PoolPiece& p : pool_pieces(map, *map.at(1, 1)))
             if (p.symbol.ends_with("Top"))
                 got.emplace_back(p.symbol, p.turn.value);
@@ -149,16 +151,16 @@ namespace
     }
 
     /// The top pieces of the walls of the square at (`col`, `row`), as name and turn.
-    std::vector<std::pair<std::string_view, std::int32_t>> tops(const PoolMap& map, std::int32_t col, std::int32_t row)
+    std::vector<std::pair<std::string_view, i32>> tops(const PoolMap& map, i32 col, i32 row)
     {
-        std::vector<std::pair<std::string_view, std::int32_t>> out;
+        std::vector<std::pair<std::string_view, i32>> out;
         for (const PoolPiece& p : pool_pieces(map, *map.at(col, row)))
             if (p.symbol.ends_with("Top") && !p.symbol.starts_with("Solid"))
                 out.emplace_back(p.symbol, p.turn.value);
         return out;
     }
 
-    using Tops = std::vector<std::pair<std::string_view, std::int32_t>>;
+    using Tops = std::vector<std::pair<std::string_view, i32>>;
 
 } // namespace
 
@@ -202,8 +204,8 @@ TEST_CASE("pools: an inside corner has its own wall, a plain one where a corner 
 {
     // An L of water: rows 1 and 2 four long, then two more rows two wide; the inside corner at (2, 2).
     PoolMap map;
-    for (std::int32_t row = 1; row <= 4; ++row)
-        for (std::int32_t col = 1; col <= (row <= 2 ? 4 : 2); ++col)
+    for (i32 row = 1; row <= 4; ++row)
+        for (i32 col = 1; col <= (row <= 2 ? 4 : 2); ++col)
             map.squares.push_back({ .col = col, .row = row, .kind = PoolKind::Water, .surface = 4, .depth = 2 });
     // Turned to the first of the two sides round it: the next row.
     CHECK(tops(map, 2, 2) == Tops { { "CurveCorner1Top", 0 } });
@@ -229,10 +231,10 @@ TEST_CASE("pools: an inside corner meeting a sweep at its second side, or at bot
 {
     // Loose water three by two, then two more squares under its first two: the inside corner at (2, 2), between the
     // next row and the next column, both of whose squares sweep round their own corners.
-    const auto loose = [](std::int32_t rows) {
+    const auto loose = [](i32 rows) {
         PoolMap map;
-        for (std::int32_t row = 1; row <= rows; ++row)
-            for (std::int32_t col = 1; col <= (row <= 2 ? 3 : 2); ++col)
+        for (i32 row = 1; row <= rows; ++row)
+            for (i32 col = 1; col <= (row <= 2 ? 3 : 2); ++col)
                 map.squares.push_back({ .col = col, .row = row, .kind = PoolKind::Water, .surface = 4, .depth = 2, .edge = PoolEdge::Loose });
         return map;
     };
@@ -285,14 +287,14 @@ TEST_CASE("pools: a spa pool tops its paved stack")
 TEST_CASE("pools: a high diving board climbs from its paved stack in levels, a board at each")
 {
     const PoolMap map;
-    std::vector<std::pair<std::string_view, std::int32_t>> above;
+    std::vector<std::pair<std::string_view, i32>> above;
     for (const PoolPiece& p : pool_pieces(map, { .kind = PoolKind::HighDive, .surface = 4, .depth = 2, .board = 10, .side = Side { 1 } }))
         if (p.height > 4 || p.symbol.starts_with("DB"))
         {
             above.emplace_back(p.symbol, p.height);
             CHECK(p.turn.value == 3);
         }
-    using Piece = std::pair<std::string_view, std::int32_t>;
+    using Piece = std::pair<std::string_view, i32>;
     CHECK(above == std::vector<Piece> { { "DBBase", 4 }, { "DBMidBoard", 6 }, { "DBMid", 7 }, { "DBMidBoard", 9 }, { "DBMid", 10 }, { "DBTopBoard", 12 } });
     // Its climb is paid by the unit, in whole levels.
     CHECK(pool_build_cost(kPrices, { .kind = PoolKind::HighDive, .depth = 2, .board = 10 }).value == 70 + 2 * 10 + 9 * 40);
@@ -348,10 +350,10 @@ TEST_CASE("pools: saved pool path steps climbing on from steps below have their 
     save::model::WorldModel world;
     // A pool path at row 2, then three flights of steps climbing on along the column, two levels each.
     world.pool_segments = { { .id = 1, .col = 5, .row = 2, .type = 5, .surface = 0 } };
-    for (std::int32_t k = 0; k < 3; ++k)
-        world.pool_segments.push_back({ .id = static_cast<std::uint64_t>(2 + k), .col = 5, .row = 3 + k, .type = 7, .surface = 2 * k });
+    for (i32 k = 0; k < 3; ++k)
+        world.pool_segments.push_back({ .id = static_cast<u64>(2 + k), .col = 5, .row = 3 + k, .type = 7, .surface = 2 * k });
     const auto map = saved_pools(world, { });
-    for (std::int32_t row = 3; row < 6; ++row)
+    for (i32 row = 3; row < 6; ++row)
         CHECK(map.at(5, row)->side == Side::kRowBefore);
 }
 
@@ -359,9 +361,9 @@ TEST_CASE("pools: a spiral staircase winds up from its paved stack, railed at it
 {
     // Its foot at the next column, a paved square at the top level at the row before.
     PoolMap map { { { .col = 0, .row = 0, .kind = PoolKind::Stairs, .surface = 4, .depth = 2, .board = 5, .side = Side { 0 } }, { .col = 0, .row = -1, .kind = PoolKind::Tile, .surface = 9, .depth = 2 } } };
-    std::vector<std::pair<std::string_view, std::int32_t>> steps;
-    std::vector<std::int32_t> turns;
-    std::vector<std::int32_t> top_rails;
+    std::vector<std::pair<std::string_view, i32>> steps;
+    std::vector<i32> turns;
+    std::vector<i32> top_rails;
     for (const PoolPiece& p : pool_pieces(map, map.squares[0]))
     {
         if (p.symbol.starts_with("Stairs") || p.symbol == "SolidTop")
@@ -372,10 +374,10 @@ TEST_CASE("pools: a spiral staircase winds up from its paved stack, railed at it
         if (p.symbol == "Railing" && p.height == 9)
             top_rails.push_back(p.turn.value);
     }
-    using Piece = std::pair<std::string_view, std::int32_t>;
+    using Piece = std::pair<std::string_view, i32>;
     CHECK(steps == std::vector<Piece> { { "StairsBase", 4 }, { "StairsMid", 5 }, { "StairsMid", 6 }, { "StairsMid", 7 }, { "StairsTop", 8 } });
-    CHECK(turns == std::vector<std::int32_t> { 0, 3, 2, 1, 0 });
-    CHECK(top_rails == std::vector<std::int32_t> { 0, 1, 3 });
+    CHECK(turns == std::vector<i32> { 0, 3, 2, 1, 0 });
+    CHECK(top_rails == std::vector<i32> { 0, 1, 3 });
     // Its climb is paid by the unit.
     CHECK(pool_build_cost(kPrices, { .kind = PoolKind::Stairs, .depth = 2, .board = 5 }).value == 70 + 2 * 10 + 5 * 25);
     CHECK(pool_refund(kPrices, { .kind = PoolKind::Stairs, .depth = 2, .board = 5 }).value == -60 - 2 * 5 - 5 * 15);
@@ -383,12 +385,12 @@ TEST_CASE("pools: a spiral staircase winds up from its paved stack, railed at it
 
 TEST_CASE("pools: a pool path's piece follows the paths joining it, slopes by their foot and top")
 {
-    const auto piece = [](const PoolMap& map, std::int32_t col, std::int32_t row) {
+    const auto piece = [](const PoolMap& map, i32 col, i32 row) {
         const auto pieces = pool_pieces(map, *map.at(col, row));
         REQUIRE(pieces.size() == 1);
         return std::pair { pieces[0].symbol, pieces[0].turn.value };
     };
-    using Piece = std::pair<std::string_view, std::int32_t>;
+    using Piece = std::pair<std::string_view, i32>;
     // A path along the columns, turning down the rows to a slope rising a unit away from it, then the path on.
     const PoolMap map { {
         { .col = 0, .row = 0, .kind = PoolKind::Path, .surface = 4, .depth = 0 },
@@ -401,7 +403,7 @@ TEST_CASE("pools: a pool path's piece follows the paths joining it, slopes by th
     CHECK(piece(map, 1, 1) == Piece { "PathSlope", 2 });
     CHECK(piece(map, 1, 2) == Piece { "PathStraight", 2 });
     // A piece alone, as a trail's first, runs the way it was laid.
-    for (const std::int32_t turn : { 0, 1, 2, 3 })
+    for (const i32 turn : { 0, 1, 2, 3 })
     {
         const PoolMap lone { { { .col = 0, .row = 0, .kind = PoolKind::Path, .surface = 4, .depth = 0, .side = Side { turn } } } };
         CHECK(piece(lone, 0, 0) == Piece { "PathStraight", turn % 2 != 0 ? 3 : 2 });
@@ -420,12 +422,12 @@ TEST_CASE("pools: a pool path's piece follows the paths joining it, slopes by th
 
 TEST_CASE("pools: a pool path joins a slide's station, the paving, the water and a spiral staircase's top beside it")
 {
-    const auto piece = [](const PoolMap& map, std::int32_t col, std::int32_t row, std::span<const PoolOpening> openings = { }) {
+    const auto piece = [](const PoolMap& map, i32 col, i32 row, std::span<const PoolOpening> openings = { }) {
         const auto pieces = pool_pieces(map, *map.at(col, row), openings);
         REQUIRE(pieces.size() == 1);
         return std::pair { pieces[0].symbol, pieces[0].turn.value };
     };
-    using Piece = std::pair<std::string_view, std::int32_t>;
+    using Piece = std::pair<std::string_view, i32>;
     // A path down the rows past a station along the column before it: an L at its end, a T beside its middle.
     const PoolMap map { {
         { .col = 1, .row = 0, .kind = PoolKind::Path, .surface = 6, .depth = 0 },
@@ -489,7 +491,7 @@ TEST_CASE("pools: a pool path trail starts at any side of the complex that no sq
     CHECK_FALSE(pool_path_start(map, corner, Side { 0 }));
     CHECK_FALSE(pool_path_start(map, corner, Side { 1 }));
     // Water inside the ring meets squares all round.
-    for (std::int32_t turn = 0; turn < 4; ++turn)
+    for (i32 turn = 0; turn < 4; ++turn)
         CHECK_FALSE(pool_path_start(map, *map.at(1, 1), Side { turn }));
     // A slope off the ring's top side, its foot on the paving: its top starts a trail a unit up, its sides none,
     // and the paving under its foot no longer starts one there.
@@ -539,7 +541,7 @@ TEST_CASE("pools: a pool ride's station counts once as joined where any square o
     PoolMap map;
     // A station of three squares along column 5 at deck 16, a track piece off it, then a station of two squares
     // along column 9 at the ground; its sides off the track face the columns.
-    const auto at = [](std::int32_t col, std::int32_t row, std::int32_t height) { return std::optional(SlidePlatform { .col = col, .row = row, .height = height, .turn = ModelTurn { 3 } }); };
+    const auto at = [](i32 col, i32 row, i32 height) { return std::optional(SlidePlatform { .col = col, .row = row, .height = height, .turn = ModelTurn { 3 } }); };
     const std::vector platforms { at(5, 4, 16), at(5, 5, 16), at(5, 6, 16), std::optional<SlidePlatform> { }, at(9, 6, 0), at(9, 5, 0) };
     CHECK(joined_stations(map, platforms) == 0);
     // A path along the first station's track, or level with it but a square off, joins neither.
@@ -739,21 +741,21 @@ TEST_CASE("pools: a ramp opens the railings across it, on its own square and on 
 {
     // A paved square with a higher one at each side, two up at the next row, one up at the next column.
     const auto railed = [](const PoolMap& map, const PoolSquare& s) {
-        std::vector<std::int32_t> turns;
+        std::vector<i32> turns;
         for (const PoolPiece& p : pool_pieces(map, s))
             if (p.symbol == "Railing")
                 turns.push_back(p.turn.value);
         return turns;
     };
-    for (std::int32_t turn = 0; turn < 4; ++turn)
+    for (i32 turn = 0; turn < 4; ++turn)
     {
         CAPTURE(turn);
-        constexpr std::array<std::array<std::int32_t, 2>, 4> kStep { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } };
-        const auto [dc, dr] = kStep[static_cast<std::size_t>(turn)];
+        constexpr std::array<std::array<i32, 2>, 4> kStep { { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } } };
+        const auto [dc, dr] = kStep[static_cast<usize>(turn)];
         PoolMap map { { { .col = 0, .row = 0, .kind = PoolKind::Tile, .surface = 4 }, { .col = dc, .row = dr, .kind = PoolKind::Tile, .surface = 6 } } };
-        const auto all_but = [](std::int32_t open) {
-            std::vector<std::int32_t> turns;
-            for (std::int32_t t = 0; t < 4; ++t)
+        const auto all_but = [](i32 open) {
+            std::vector<i32> turns;
+            for (i32 t = 0; t < 4; ++t)
                 if (t != open)
                     turns.push_back(t);
             return turns;
@@ -786,7 +788,7 @@ TEST_CASE("pools: a ramp opens the railings across it, on its own square and on 
 TEST_CASE("pools: a square at a spiral staircase's top is open towards it, one at its foot level too")
 {
     PoolMap map { { { .col = 0, .row = 0, .kind = PoolKind::Stairs, .surface = 4, .depth = 2, .board = 5, .side = Side { 1 } }, { .col = 0, .row = -1, .kind = PoolKind::Tile, .surface = 9, .depth = 2 }, { .col = 1, .row = 0, .kind = PoolKind::Tile, .surface = 4, .depth = 2 }, { .col = -1, .row = 0, .kind = PoolKind::Tile, .surface = 7, .depth = 2 } } };
-    const auto railed = [&](std::size_t square, std::int32_t turn) { return std::ranges::any_of(pool_pieces(map, map.squares[square]), [&](const PoolPiece& p) { return p.symbol == "Railing" && p.turn.value == turn; }); };
+    const auto railed = [&](usize square, i32 turn) { return std::ranges::any_of(pool_pieces(map, map.squares[square]), [&](const PoolPiece& p) { return p.symbol == "Railing" && p.turn.value == turn; }); };
     CHECK_FALSE(railed(1, 0)); // At its top
     CHECK_FALSE(railed(2, 3)); // At its foot
     CHECK(railed(3, 1));       // Neither: between its foot and its top
@@ -797,7 +799,7 @@ TEST_CASE("pools: a changing room fits on every side of a pool, turned towards i
     const PoolMap map = ringed(2, 2);
     // West, south, east and north of the paved ring, each opening on the square beside it alone.
     for (const auto [col, row, turn] : { std::array { -1, 1, 1 }, std::array { 1, -1, 0 }, std::array { 4, 2, 3 }, std::array { 2, 4, 2 } })
-        for (std::int32_t other = 0; other < 4; ++other)
+        for (i32 other = 0; other < 4; ++other)
             CHECK(pool_room_fits(map, col, row, Side { other }) == (other == turn));
 }
 
@@ -809,8 +811,8 @@ TEST_CASE("pools: a complex is the squares that meet side to side, and the chang
     map.rooms.push_back({ .col = -1, .row = 1, .side = Side { 1 } });
     map.rooms.push_back({ .col = 9, .row = 0, .side = Side { 1 } });
     map.rooms.push_back({ .col = 1, .row = 4, .side = Side { 2 } });
-    CHECK(pool_complex_rooms(map, 0) == std::vector<std::size_t> { 0, 2 });
-    CHECK(pool_complex_rooms(map, 1) == std::vector<std::size_t> { 1 });
+    CHECK(pool_complex_rooms(map, 0) == std::vector<usize> { 0, 2 });
+    CHECK(pool_complex_rooms(map, 1) == std::vector<usize> { 1 });
     CHECK(pool_complex(map, 1).size() == 1);
     // A room goes with the square it opens on.
     (void)take_up_pool(map, kPrices, { 10, 0 }, { 10, 0 });
@@ -860,17 +862,17 @@ TEST_CASE("pools: a park from the game's own pieces for its squares go, so the s
         { .id = 1, .symbol = "Base", .overlay = std::string(kSaved), .col = 1, .row = 1 }, { .id = 2, .symbol = "SolidTop", .overlay = std::string(kSaved), .col = 0, .row = 0 }, { .id = 3, .symbol = "Railing", .overlay = std::string(kSaved), .col = 2, .row = 2 }, { .id = 4, .symbol = "Lamp", .overlay = std::string(kSaved), .col = 0, .row = 1 }, { .id = 5, .symbol = "Base", .overlay = "Other/Stub", .col = 1, .row = 1 },
     };
     drop_saved_pool_pieces(map, "Pool/Type/Stub", objects);
-    std::vector<std::uint64_t> kept;
+    std::vector<u64> kept;
     for (const save::model::PlacedObject& o : objects)
         kept.push_back(o.id);
-    CHECK(kept == std::vector<std::uint64_t> { 4, 5 });
+    CHECK(kept == std::vector<u64> { 4, 5 });
 }
 
 namespace
 {
 
     /// Whether the point (`x`, `z`) of the square at (`col`, `row`) of `map`, in tiles from its middle, is open water.
-    bool open_at(const PoolMap& map, std::int32_t col, std::int32_t row, float x, float z)
+    bool open_at(const PoolMap& map, i32 col, i32 row, f32 x, f32 z)
     {
         return pool_water_at(map, *map.at(col, row), x, z);
     }
@@ -944,17 +946,17 @@ TEST_CASE("pools: a square joined by a slide's end leaves its railing open on th
     // A strip of two squares along a column; the slide's end stands at (2, 0), joining (1, 0) across its column before.
     const PoolMap map { { { .col = 0, .row = 0, .surface = 4, .depth = 2 }, { .col = 1, .row = 0, .surface = 4, .depth = 2 } } };
     const auto railings = [&](std::span<const PoolOpening> openings) {
-        std::vector<std::int32_t> out;
+        std::vector<i32> out;
         for (const PoolPiece& p : pool_pieces(map, *map.at(1, 0), openings))
             if (p.symbol == "Railing")
                 out.push_back(p.turn.value);
         return out;
     };
-    CHECK(railings({ }) == std::vector<std::int32_t> { 0, 1, 2 });
+    CHECK(railings({ }) == std::vector<i32> { 0, 1, 2 });
     const std::array joined { PoolOpening { .col = 2, .row = 0, .height = 4, .side = Side::kColBefore } };
-    CHECK(railings(joined) == std::vector<std::int32_t> { 0, 2 });
+    CHECK(railings(joined) == std::vector<i32> { 0, 2 });
     const std::array higher { PoolOpening { .col = 2, .row = 0, .height = 6, .side = Side::kColBefore } };
-    CHECK(railings(higher) == std::vector<std::int32_t> { 0, 1, 2 });
+    CHECK(railings(higher) == std::vector<i32> { 0, 1, 2 });
     const std::array away { PoolOpening { .col = 2, .row = 0, .height = 4, .side = Side::kNextRow } };
-    CHECK(railings(away) == std::vector<std::int32_t> { 0, 1, 2 });
+    CHECK(railings(away) == std::vector<i32> { 0, 1, 2 });
 }

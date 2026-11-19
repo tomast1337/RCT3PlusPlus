@@ -4,6 +4,7 @@
 // pictures they cut from, in the particle overlay) and the effect files, read when first asked for by name.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/texture/image.hpp"
 #include "particles/effect.hpp"
 #include "strings/ascii.hpp"
@@ -24,14 +25,14 @@ namespace rct3::particles
     struct Sprite
     {
         std::string atlas { };
-        std::vector<std::array<float, 4>> frames { };
+        std::vector<std::array<f32, 4>> frames { };
         bool blended = false; ///< Mixed by opacity; otherwise added
         bool animated = false;
-        float loop_time = 1;
+        f32 loop_time = 1;
 
         /// The frame to show `age` seconds into a particle's life; `pick` (0 to 1) chooses one of a still
         /// sprite's frames, so particles differ.
-        [[nodiscard]] std::size_t frame(float age, float pick) const noexcept;
+        [[nodiscard]] usize frame(f32 age, f32 pick) const noexcept;
     };
 
     class Library

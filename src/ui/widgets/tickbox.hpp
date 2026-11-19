@@ -4,6 +4,7 @@
 // over the widget.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widget.hpp"
 
 #include <cstdint>
@@ -44,7 +45,7 @@ namespace rct3::ui::widgets
     private:
         void flip();
 
-        std::int32_t changes_ = 0;
+        i32 changes_ = 0;
     };
 
 } // namespace rct3::ui::widgets

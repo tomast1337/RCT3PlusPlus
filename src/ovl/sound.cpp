@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/sound.hpp"
 
+#include "core/types.hpp"
+
 #include <cstring>
 
 namespace rct3::ovl
@@ -11,23 +13,23 @@ namespace rct3::ovl
 
         constexpr std::string_view kSoundTag = "snd";
 
-        std::uint16_t u16_at(std::span<const std::byte> b, std::size_t at)
+        u16 u16_at(std::span<const std::byte> b, usize at)
         {
-            std::uint16_t v = 0;
+            u16 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
 
-        std::uint32_t u32_at(std::span<const std::byte> b, std::size_t at)
+        u32 u32_at(std::span<const std::byte> b, usize at)
         {
-            std::uint32_t v = 0;
+            u32 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
 
-        float f32_at(std::span<const std::byte> b, std::size_t at)
+        f32 f32_at(std::span<const std::byte> b, usize at)
         {
-            float v = 0;
+            f32 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground/holds.hpp"
 
+#include "core/types.hpp"
 #include "park/boundary_fence.hpp"
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
@@ -20,11 +21,11 @@ namespace rct3::park::ground
 
     namespace
     {
-        constexpr float kSame = 0.001f; ///< Heights closer than this have not moved
+        constexpr f32 kSame = 0.001f; ///< Heights closer than this have not moved
 
-        std::uint32_t key_of(std::int32_t col, std::int32_t row)
+        u32 key_of(i32 col, i32 row)
         {
-            return static_cast<std::uint32_t>(row) << 16 | static_cast<std::uint16_t>(col);
+            return static_cast<u32>(row) << 16 | static_cast<u16>(col);
         }
 
         std::vector<save::model::Tile> under(const save::model::PlacedObject& o, const object::ObjectModel& m)
@@ -40,7 +41,7 @@ namespace rct3::park::ground
     {
         GroundHolds out;
         std::vector<save::model::PlacedObject> raised;
-        for (std::size_t i = 0; i < objects.size(); ++i)
+        for (usize i = 0; i < objects.size(); ++i)
         {
             const save::model::PlacedObject& o = objects[i];
             if (o.hidden || o.fixture)
@@ -64,14 +65,14 @@ namespace rct3::park::ground
         {
             if (p.elevation && p.elevation->underground)
                 continue;
-            const std::uint32_t key = key_of(p.col, p.row);
+            const u32 key = key_of(p.col, p.row);
             if (!p.elevation || is_ground_queue(p))
             {
                 out.paved.insert(key);
                 continue;
             }
             const save::model::PathElevation& e = *p.elevation;
-            const float low = static_cast<float>(e.quantised_height) - (slope_falls(e.slope) ? path_rise(e.slope) : 0);
+            const f32 low = static_cast<f32>(e.quantised_height) - (slope_falls(e.slope) ? path_rise(e.slope) : 0);
             const auto [at, fresh] = out.decks.try_emplace(key, low);
             if (!fresh)
                 at->second = std::min(at->second, low);
@@ -79,16 +80,16 @@ namespace rct3::park::ground
         return out;
     }
 
-    float limit_ground(save::model::TerrainGrid& grid, const save::model::TerrainGrid& was)
+    f32 limit_ground(save::model::TerrainGrid& grid, const save::model::TerrainGrid& was)
     {
-        float trimmed = 0;
-        for (std::size_t i = 0; i < grid.cells.size() && i < was.cells.size(); ++i)
+        f32 trimmed = 0;
+        for (usize i = 0; i < grid.cells.size() && i < was.cells.size(); ++i)
         {
-            for (std::size_t k = 0; k < 4; ++k)
+            for (usize k = 0; k < 4; ++k)
             {
-                float& now = grid.cells[i].corners[k];
-                const float before = was.cells[i].corners[k];
-                const float kept = std::clamp(now, std::min(kLowestGround, before), std::max(kHighestGround, before));
+                f32& now = grid.cells[i].corners[k];
+                const f32 before = was.cells[i].corners[k];
+                const f32 kept = std::clamp(now, std::min(kLowestGround, before), std::max(kHighestGround, before));
                 trimmed += std::abs(now - kept);
                 now = kept;
             }
@@ -96,18 +97,18 @@ namespace rct3::park::ground
         return trimmed;
     }
 
-    bool refuses(const GroundHolds& holds, save::model::Tile tile, const std::array<float, 4>& was, const std::array<float, 4>& now)
+    bool refuses(const GroundHolds& holds, save::model::Tile tile, const std::array<f32, 4>& was, const std::array<f32, 4>& now)
     {
-        const std::uint32_t key = key_of(tile.col, tile.row);
+        const u32 key = key_of(tile.col, tile.row);
         if (holds.held.contains(key))
             return true;
-        const auto tilt = [](const std::array<float, 4>& c) { return std::ranges::max(c) - std::ranges::min(c); };
+        const auto tilt = [](const std::array<f32, 4>& c) { return std::ranges::max(c) - std::ranges::min(c); };
         // A paved tile already steeper may still be made flatter.
         if (holds.paved.contains(key) && tilt(now) > kPavedTilt && tilt(now) > tilt(was) + kSame)
             return true;
         const auto deck = holds.decks.find(key);
         const auto spans = holds.raised.tiles.find(key);
-        for (std::size_t k = 0; k < 4; ++k)
+        for (usize k = 0; k < 4; ++k)
         {
             if (now[k] <= was[k] + kSame)
                 continue;
@@ -123,7 +124,7 @@ namespace rct3::park::ground
     {
         return std::ranges::any_of(cuts, [&](const GroundCut& cut) {
             const auto [col, row] = cut.tile;
-            const auto wet = [&](std::int32_t c, std::int32_t r) { return water::holds_water(bodies, { c, r }); };
+            const auto wet = [&](i32 c, i32 r) { return water::holds_water(bodies, { c, r }); };
             return !owned_outright(grid.at(col, row)) || wet(col, row) || wet(col - 1, row) || wet(col + 1, row) || wet(col, row - 1) || wet(col, row + 1) || refuses(holds, cut.tile, grid.at(col, row).corners, cut.corners);
         });
     }
@@ -142,10 +143,10 @@ namespace rct3::park::ground
 
     units::Money cuts_cost(const GroundCuts& cuts, const save::model::TerrainGrid& grid)
     {
-        float moved = 0;
+        f32 moved = 0;
         for (const std::vector<GroundCut>* part : { &cuts.footprint, &cuts.rim })
             for (const GroundCut& cut : *part)
-                for (std::size_t k = 0; k < 4; ++k)
+                for (usize k = 0; k < 4; ++k)
                     moved += std::abs(cut.corners[k] - grid.at(cut.tile.col, cut.tile.row).corners[k]);
         return units::Money { std::lround(moved * kShapeCost) };
     }
@@ -160,7 +161,7 @@ namespace rct3::park::ground
     bool seat_followers(std::span<save::model::PlacedObject> objects, const GroundHolds& holds, const object::ObjectModels& models, const save::model::TerrainGrid& grid, save::model::Tile first, save::model::Tile last)
     {
         bool moved = false;
-        for (const std::size_t i : holds.followers)
+        for (const usize i : holds.followers)
         {
             save::model::PlacedObject& o = objects[i];
             const auto model = models.find(object::model_ref(o));
@@ -171,8 +172,8 @@ namespace rct3::park::ground
             if (std::ranges::none_of(tiles, [&](const auto& t) { return t.col >= first.col && t.col <= last.col && t.row >= first.row && t.row <= last.row; }))
                 continue;
             // Whole units, rounded up so it stands on the ground, not in it.
-            const float ground = object::object_transform(o, static_cast<object::Positioning>(m.positioning), grid, m.squares, true)[3].y - o.height_adjust.value_or(0);
-            o.base_height = static_cast<std::int32_t>(std::ceil(ground - kSame));
+            const f32 ground = object::object_transform(o, static_cast<object::Positioning>(m.positioning), grid, m.squares, true)[3].y - o.height_adjust.value_or(0);
+            o.base_height = static_cast<i32>(std::ceil(ground - kSame));
             moved = true;
         }
         return moved;

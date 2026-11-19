@@ -16,6 +16,7 @@
 // every object and reports how many values were produced, left raw or failed to fit their layout, and how
 // many references resolve to an object in the file.
 // Exit status is 0 when the file parses and its checksum (if any) matches.
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "particles/display.hpp"
 #include "particles/effect.hpp"
@@ -56,18 +57,18 @@ namespace
     using rct3::save::Value;
     using rct3::save::ValueKind;
 
-    void print_value(const Value& v, std::int32_t indent, const char* name)
+    void print_value(const Value& v, i32 indent, const char* name)
     {
         // Each value takes one line, after its indent and name.
-        const std::string head = std::string(static_cast<std::size_t>(indent), ' ') + (name ? std::format("{} = ", name) : "");
+        const std::string head = std::string(static_cast<usize>(indent), ' ') + (name ? std::format("{} = ", name) : "");
         switch (v.kind())
         {
             case ValueKind::Raw:
             {
                 const auto raw = v.raw();
                 std::string line = std::format("{}raw[{}]", head, raw.size());
-                for (std::size_t i = 0; i < raw.size() && i < 16; ++i)
-                    line += std::format(" {:02x}", static_cast<std::uint32_t>(raw[i]));
+                for (usize i = 0; i < raw.size() && i < 16; ++i)
+                    line += std::format(" {:02x}", static_cast<u32>(raw[i]));
                 if (raw.size() > 16)
                     line += " ...";
                 out.info("{}", line);
@@ -80,7 +81,7 @@ namespace
                 out.info("{}{}", head, v.as_integer());
                 return;
             case ValueKind::Float:
-                out.info("{}{:g}", head, static_cast<double>(v.as_float()));
+                out.info("{}{:g}", head, static_cast<f64>(v.as_float()));
                 return;
             case ValueKind::String:
                 out.info("{}\"{}\"", head, v.text());
@@ -98,8 +99,8 @@ namespace
             {
                 std::string line = std::format("{}{}[", head, rct3::save::to_string(v.kind()));
                 const auto f = v.floats();
-                for (std::size_t i = 0; i < f.size() && i < 24; ++i)
-                    line += std::format("{}{:g}", i ? " " : "", static_cast<double>(f[i]));
+                for (usize i = 0; i < f.size() && i < 24; ++i)
+                    line += std::format("{}{:g}", i ? " " : "", static_cast<f64>(f[i]));
                 if (f.size() > 24)
                     line += std::format(" ... ({})", f.size());
                 out.info("{}]", line);
@@ -108,12 +109,12 @@ namespace
             case ValueKind::List:
             {
                 out.info("{}list[{}]", head, v.items().size());
-                std::size_t shown = 0;
+                usize shown = 0;
                 for (const auto& item : v.items())
                 {
                     if (++shown > 8)
                     {
-                        out.info("{}...", std::string(static_cast<std::size_t>(indent + 2), ' '));
+                        out.info("{}...", std::string(static_cast<usize>(indent + 2), ' '));
                         break;
                     }
                     print_value(item, indent + 2, nullptr);
@@ -123,12 +124,12 @@ namespace
             case ValueKind::Struct:
             {
                 out.info("{}{{", head);
-                for (std::size_t i = 0; i < v.items().size(); ++i)
+                for (usize i = 0; i < v.items().size(); ++i)
                 {
                     const auto n = std::string(v.names()[i]);
                     print_value(v.items()[i], indent + 2, n.c_str());
                 }
-                out.info("{}}}", std::string(static_cast<std::size_t>(indent), ' '));
+                out.info("{}}}", std::string(static_cast<usize>(indent), ' '));
                 return;
             }
         }
@@ -136,9 +137,9 @@ namespace
 
     struct RefCount
     {
-        std::size_t total = 0;
-        std::size_t null = 0;
-        std::size_t resolved = 0;
+        usize total = 0;
+        usize null = 0;
+        usize resolved = 0;
     };
 
     void count_refs(const Value& v, const rct3::save::ObjectIndex& index, RefCount& rc)
@@ -171,70 +172,70 @@ namespace
 {
 
     // Minimal PNG writer: 8-bit grayscale, stored (uncompressed) deflate blocks.
-    std::uint32_t png_crc(const std::uint8_t* d, std::size_t n, std::uint32_t crc = 0xffffffffu)
+    u32 png_crc(const u8* d, usize n, u32 crc = 0xffffffffu)
     {
-        for (std::size_t i = 0; i < n; ++i)
+        for (usize i = 0; i < n; ++i)
         {
             crc ^= d[i];
-            for (std::int32_t k = 0; k < 8; ++k)
+            for (i32 k = 0; k < 8; ++k)
                 crc = (crc >> 1) ^ (0xedb88320u & (0u - (crc & 1u)));
         }
         return crc;
     }
 
-    void png_chunk(std::vector<std::uint8_t>& out, const char* type, const std::vector<std::uint8_t>& data)
+    void png_chunk(std::vector<u8>& out, const char* type, const std::vector<u8>& data)
     {
-        const auto put32 = [&](std::uint32_t v) {
-            for (std::int32_t s = 24; s >= 0; s -= 8)
-                out.push_back(static_cast<std::uint8_t>(v >> s));
+        const auto put32 = [&](u32 v) {
+            for (i32 s = 24; s >= 0; s -= 8)
+                out.push_back(static_cast<u8>(v >> s));
         };
-        put32(static_cast<std::uint32_t>(data.size()));
-        std::vector<std::uint8_t> body(type, type + 4);
+        put32(static_cast<u32>(data.size()));
+        std::vector<u8> body(type, type + 4);
         body.insert(body.end(), data.begin(), data.end());
         out.insert(out.end(), body.begin(), body.end());
         put32(png_crc(body.data(), body.size()) ^ 0xffffffffu);
     }
 
-    bool write_gray_png(const char* path, std::int32_t w, std::int32_t h, const std::vector<std::uint8_t>& pixels)
+    bool write_gray_png(const char* path, i32 w, i32 h, const std::vector<u8>& pixels)
     {
-        std::vector<std::uint8_t> raw;
-        raw.reserve(static_cast<std::size_t>(h) * (static_cast<std::size_t>(w) + 1));
-        for (std::int32_t y = 0; y < h; ++y)
+        std::vector<u8> raw;
+        raw.reserve(static_cast<usize>(h) * (static_cast<usize>(w) + 1));
+        for (i32 y = 0; y < h; ++y)
         {
             raw.push_back(0); // filter: none
             raw.insert(raw.end(), pixels.begin() + static_cast<std::ptrdiff_t>(y) * w, pixels.begin() + static_cast<std::ptrdiff_t>(y + 1) * w);
         }
-        std::vector<std::uint8_t> z { 0x78, 0x01 };
-        for (std::size_t pos = 0; pos < raw.size() || pos == 0;)
+        std::vector<u8> z { 0x78, 0x01 };
+        for (usize pos = 0; pos < raw.size() || pos == 0;)
         {
-            const std::size_t n = std::min<std::size_t>(65535, raw.size() - pos);
+            const usize n = std::min<usize>(65535, raw.size() - pos);
             const bool last = pos + n >= raw.size();
             z.push_back(last ? 1 : 0);
-            z.push_back(static_cast<std::uint8_t>(n & 0xff));
-            z.push_back(static_cast<std::uint8_t>(n >> 8));
-            z.push_back(static_cast<std::uint8_t>(~n & 0xff));
-            z.push_back(static_cast<std::uint8_t>((~n >> 8) & 0xff));
+            z.push_back(static_cast<u8>(n & 0xff));
+            z.push_back(static_cast<u8>(n >> 8));
+            z.push_back(static_cast<u8>(~n & 0xff));
+            z.push_back(static_cast<u8>((~n >> 8) & 0xff));
             z.insert(z.end(), raw.begin() + static_cast<std::ptrdiff_t>(pos), raw.begin() + static_cast<std::ptrdiff_t>(pos + n));
             pos += n;
             if (last)
                 break;
         }
-        std::uint32_t a = 1, b = 0;
-        for (const std::uint8_t c : raw)
+        u32 a = 1, b = 0;
+        for (const u8 c : raw)
         {
             a = (a + c) % 65521u;
             b = (b + a) % 65521u;
         }
-        const std::uint32_t adler = (b << 16) | a;
-        for (std::int32_t s = 24; s >= 0; s -= 8)
-            z.push_back(static_cast<std::uint8_t>(adler >> s));
+        const u32 adler = (b << 16) | a;
+        for (i32 s = 24; s >= 0; s -= 8)
+            z.push_back(static_cast<u8>(adler >> s));
 
-        std::vector<std::uint8_t> out { 0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a };
-        std::vector<std::uint8_t> ihdr;
-        for (const std::int32_t v : { w, h })
+        std::vector<u8> out { 0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a };
+        std::vector<u8> ihdr;
+        for (const i32 v : { w, h })
         {
-            for (std::int32_t s = 24; s >= 0; s -= 8)
-                ihdr.push_back(static_cast<std::uint8_t>(v >> s));
+            for (i32 s = 24; s >= 0; s -= 8)
+                ihdr.push_back(static_cast<u8>(v >> s));
         }
         ihdr.insert(ihdr.end(), { 8, 0, 0, 0, 0 });
         png_chunk(out, "IHDR", ihdr);
@@ -266,46 +267,46 @@ namespace
         }
         else
         {
-            float lo = g.cells[0].corners[0], hi = lo;
-            std::array<std::size_t, 6> own { };
-            std::set<std::int32_t> surfaces, cliffs;
-            std::size_t flat = 0;
-            std::map<std::int32_t, std::size_t> flag_values;
+            f32 lo = g.cells[0].corners[0], hi = lo;
+            std::array<usize, 6> own { };
+            std::set<i32> surfaces, cliffs;
+            usize flat = 0;
+            std::map<i32, usize> flag_values;
             for (const auto& c : g.cells)
             {
                 lo = std::min(lo, c.min_height());
                 hi = std::max(hi, c.max_height());
-                ++own[static_cast<std::size_t>(c.ownership())];
+                ++own[static_cast<usize>(c.ownership())];
                 surfaces.insert(c.surface);
                 cliffs.insert(c.cliff_style);
                 if (c.min_height() == c.max_height())
                     ++flat;
                 ++flag_values[c.flags];
             }
-            out.info("  terrain      {:d}x{:d} cells, {} layout, trailing {:d}, tile {:g} x {:g}, origin ({:g}, {:g})", g.width, g.height, g.layout == TerrainCellLayout::Cell24 ? "24-byte" : "20-byte", g.trailing_bytes, static_cast<double>(g.tile_size_x), static_cast<double>(g.tile_size_z), static_cast<double>(g.origin_x), static_cast<double>(g.origin_z));
-            out.info("  heights      {:g} .. {:g}, flat tiles {:d}, surfaces {:d} distinct, cliff styles {:d} distinct", static_cast<double>(lo), static_cast<double>(hi), flat, surfaces.size(), cliffs.size());
+            out.info("  terrain      {:d}x{:d} cells, {} layout, trailing {:d}, tile {:g} x {:g}, origin ({:g}, {:g})", g.width, g.height, g.layout == TerrainCellLayout::Cell24 ? "24-byte" : "20-byte", g.trailing_bytes, static_cast<f64>(g.tile_size_x), static_cast<f64>(g.tile_size_z), static_cast<f64>(g.origin_x), static_cast<f64>(g.origin_z));
+            out.info("  heights      {:g} .. {:g}, flat tiles {:d}, surfaces {:d} distinct, cliff styles {:d} distinct", static_cast<f64>(lo), static_cast<f64>(hi), flat, surfaces.size(), cliffs.size());
             std::string owned = "  ownership   ";
-            for (std::size_t i = 0; i < own.size(); ++i)
+            for (usize i = 0; i < own.size(); ++i)
             {
                 owned += std::format(" {}={}", to_string(static_cast<Ownership>(i)), own[i]);
             }
             out.info("{}", owned);
             std::string flags = "  flag bytes  ";
             for (const auto& [v, n] : flag_values)
-                flags += std::format(" {:02x}:{}", static_cast<std::uint32_t>(v), n);
+                flags += std::format(" {:02x}:{}", static_cast<u32>(v), n);
             out.info("{}", flags);
         }
         std::string water = std::format("  water        {} bodies, {} triangles, map {}x{}", w.water.bodies.size(), w.water.triangle_count(), w.water.width, w.water.height);
-        for (std::size_t i = 0; i < w.water.bodies.size() && i < 4; ++i)
-            water += std::format(" [level {:g}, {} tris]", static_cast<double>(w.water.bodies[i].level), w.water.bodies[i].tris.size());
+        for (usize i = 0; i < w.water.bodies.size() && i < 4; ++i)
+            water += std::format(" [level {:g}, {} tris]", static_cast<f64>(w.water.bodies[i].level), w.water.bodies[i].tris.size());
         out.info("{}", water);
         if (!w.pool_water.empty())
         {
             // How the pools' surfaces stand against the ground under them, highest corner.
-            std::map<std::int32_t, std::size_t> above;
+            std::map<i32, usize> above;
             for (const PoolWater& p : w.pool_water)
                 if (w.terrain.contains(p.col, p.row))
-                    ++above[p.surface - static_cast<std::int32_t>(std::ceil(w.terrain.at(p.col, p.row).max_height()))];
+                    ++above[p.surface - static_cast<i32>(std::ceil(w.terrain.at(p.col, p.row).max_height()))];
             std::string pools = std::format("  pools        {} squares of water; surface minus ground:", w.pool_water.size());
             for (const auto& [d, n] : above)
                 pools += std::format(" {} x{}", d, n);
@@ -314,24 +315,24 @@ namespace
                 out.info("  waterfall    lip ({:g}, {:g}, {:g}) to ({:g}, {:g}, {:g}), lakes {:g} over {:g}", f.lip_left.x, f.lip_left.y, f.lip_left.z, f.lip_right.x, f.lip_right.y, f.lip_right.z, f.top.y, f.bottom.y);
         }
 
-        std::array<std::size_t, 4> kinds { };
-        std::size_t with_underground = 0;
-        std::map<std::pair<std::int32_t, std::int32_t>, std::size_t> per_tile;
+        std::array<usize, 4> kinds { };
+        usize with_underground = 0;
+        std::map<std::pair<i32, i32>, usize> per_tile;
         for (const auto& p : w.paths)
         {
-            ++kinds[static_cast<std::size_t>(p.kind)];
+            ++kinds[static_cast<usize>(p.kind)];
             ++per_tile[{ p.col, p.row }];
             if (p.elevation && p.elevation->underground)
                 ++with_underground;
         }
-        std::size_t stacked = 0;
+        usize stacked = 0;
         for (const auto& [_, n] : per_tile)
             stacked += n > 1;
         out.info(
             "  paths        {:d} tiles (ground {:d}, flying {:d}, queue {:d}, unknown {:d}), {:d} distinct positions, "
             "{:d} positions with several, {:d} queue lines, {:d} underground",
             w.paths.size(), kinds[0], kinds[1], kinds[2], kinds[3], per_tile.size(), stacked, w.queue_lines.size(), with_underground);
-        std::size_t free_standing = 0, hidden = 0, unset = 0, adjust = 0, named = 0;
+        usize free_standing = 0, hidden = 0, unset = 0, adjust = 0, named = 0;
         std::set<std::string> symbols;
         for (const auto& o : w.objects)
         {
@@ -350,16 +351,16 @@ namespace
         {
             // Orientation check: paths and scenery sit on bought land, so the (col,row) reading should hit owned
             // tiles far more often than the transposed (row,col) reading.
-            std::size_t direct = 0, swapped = 0, total = 0;
-            std::int32_t max_col = -1, max_row = -1;
-            const auto owned = [&](std::int32_t c, std::int32_t r) { return g.contains(c, r) && g.at(c, r).ownership() == Ownership::Owned; };
+            usize direct = 0, swapped = 0, total = 0;
+            i32 max_col = -1, max_row = -1;
+            const auto owned = [&](i32 c, i32 r) { return g.contains(c, r) && g.at(c, r).ownership() == Ownership::Owned; };
             for (const auto& p : w.paths)
             {
                 ++total;
                 direct += owned(p.col, p.row);
                 swapped += owned(p.row, p.col);
-                max_col = std::max<std::int32_t>(max_col, p.col);
-                max_row = std::max<std::int32_t>(max_row, p.row);
+                max_col = std::max<i32>(max_col, p.col);
+                max_row = std::max<i32>(max_row, p.row);
             }
             for (const auto& o : w.objects)
             {
@@ -374,38 +375,38 @@ namespace
         if (w.weather)
         {
             const Weather& k = *w.weather;
-            out.info("  weather      {} (raw {:d}), forecast {}, climate {:d}, {:g} degC, wind {:g}", to_string(k.type), k.raw_type, to_string(k.forecast), k.climate, static_cast<double>(k.temperature.value), static_cast<double>(k.wind_speed));
+            out.info("  weather      {} (raw {:d}), forecast {}, climate {:d}, {:g} degC, wind {:g}", to_string(k.type), k.raw_type, to_string(k.forecast), k.climate, static_cast<f64>(k.temperature.value), static_cast<f64>(k.wind_speed));
         }
         if (w.sky_background)
             out.info("  sky          background {:d}", *w.sky_background);
         if (w.time)
-            out.info("  time         day fraction {:g}, time {:g}", static_cast<double>(w.time->day_fraction), static_cast<double>(w.time->time.value));
+            out.info("  time         day fraction {:g}, time {:g}", static_cast<f64>(w.time->day_fraction), static_cast<f64>(w.time->time.value));
         if (w.camera)
-            out.info("  camera       pos ({:g}, {:g}, {:g}) orientation ({:g}, {:g}, {:g})", static_cast<double>(w.camera->position.x), static_cast<double>(w.camera->position.y), static_cast<double>(w.camera->position.z), static_cast<double>(w.camera->orientation.x), static_cast<double>(w.camera->orientation.y), static_cast<double>(w.camera->orientation.z));
+            out.info("  camera       pos ({:g}, {:g}, {:g}) orientation ({:g}, {:g}, {:g})", static_cast<f64>(w.camera->position.x), static_cast<f64>(w.camera->position.y), static_cast<f64>(w.camera->position.z), static_cast<f64>(w.camera->orientation.x), static_cast<f64>(w.camera->orientation.y), static_cast<f64>(w.camera->orientation.z));
         bool ok = true;
         for (const auto& i : w.issues)
         {
-            out.info("  ISSUE        {} x{:d} (first object {:d})", to_string(i.kind), i.count, static_cast<std::uint64_t>(i.first_object));
+            out.info("  ISSUE        {} x{:d} (first object {:d})", to_string(i.kind), i.count, static_cast<u64>(i.first_object));
             ok = false;
         }
         if (png_path && !g.empty())
         {
-            float lo = g.cells[0].corners[0], hi = lo;
+            f32 lo = g.cells[0].corners[0], hi = lo;
             for (const auto& c : g.cells)
             {
                 lo = std::min(lo, c.min_height());
                 hi = std::max(hi, c.max_height());
             }
-            const float span = hi > lo ? hi - lo : 1.0f;
-            constexpr std::int32_t kScale = 3;
-            const std::int32_t pw = g.width * kScale, ph = g.height * kScale;
-            std::vector<std::uint8_t> px(static_cast<std::size_t>(pw) * static_cast<std::size_t>(ph));
-            for (std::int32_t y = 0; y < ph; ++y)
+            const f32 span = hi > lo ? hi - lo : 1.0f;
+            constexpr i32 kScale = 3;
+            const i32 pw = g.width * kScale, ph = g.height * kScale;
+            std::vector<u8> px(static_cast<usize>(pw) * static_cast<usize>(ph));
+            for (i32 y = 0; y < ph; ++y)
             {
-                for (std::int32_t x = 0; x < pw; ++x)
+                for (i32 x = 0; x < pw; ++x)
                 {
-                    const float v = (g.at(x / kScale, y / kScale).corners[0] - lo) / span;
-                    px[static_cast<std::size_t>(y) * static_cast<std::size_t>(pw) + static_cast<std::size_t>(x)] = static_cast<std::uint8_t>(std::clamp(v, 0.0f, 1.0f) * 255.0f);
+                    const f32 v = (g.at(x / kScale, y / kScale).corners[0] - lo) / span;
+                    px[static_cast<usize>(y) * static_cast<usize>(pw) + static_cast<usize>(x)] = static_cast<u8>(std::clamp(v, 0.0f, 1.0f) * 255.0f);
                 }
             }
             if (write_gray_png(png_path, pw, ph, px))
@@ -425,8 +426,8 @@ int main(int argc, char** argv)
     // `save-dump --effect FILE...`: each particle effect read as the game shows it, or why it could not be.
     if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--effect") == 0; }))
     {
-        std::int32_t bad = 0;
-        for (std::int32_t i = 1; i < argc; ++i)
+        i32 bad = 0;
+        for (i32 i = 1; i < argc; ++i)
         {
             if (std::strncmp(argv[i], "--", 2) == 0)
                 continue;
@@ -444,13 +445,13 @@ int main(int argc, char** argv)
                 skins += std::format(" {}", p.skin.empty() ? "-" : p.skin);
             // Ten seconds of it running round, for the most particles it keeps alive at once.
             rct3::particles::EffectRun run(*effect, rct3::random::stream(rct3::random::Seed { 1 }, rct3::random::RandomStream::Particles), true, 1u << 20);
-            std::size_t peak = 0;
-            for (std::int32_t frame = 0; frame < 600; ++frame)
+            usize peak = 0;
+            for (i32 frame = 0; frame < 600; ++frame)
             {
                 run.advance(1 / 60.0f);
                 peak = std::max(peak, run.particles().count());
             }
-            out.info("{}: life {:.2f}, {:d} roots, {:d} emitters, {:d} particles, peak {:d} live:{}", argv[i], static_cast<double>(effect->lifetime), effect->roots.size(), effect->emitters.size(), effect->particles.size(), peak, skins.c_str());
+            out.info("{}: life {:.2f}, {:d} roots, {:d} emitters, {:d} particles, peak {:d} live:{}", argv[i], static_cast<f64>(effect->lifetime), effect->roots.size(), effect->emitters.size(), effect->particles.size(), peak, skins.c_str());
         }
         return bad == 0 ? 0 : 1;
     }
@@ -458,8 +459,8 @@ int main(int argc, char** argv)
     // `save-dump --display FILE...`: each firework display, its launchers and when its shots go off.
     if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--display") == 0; }))
     {
-        std::int32_t bad = 0;
-        for (std::int32_t i = 1; i < argc; ++i)
+        i32 bad = 0;
+        for (i32 i = 1; i < argc; ++i)
         {
             if (std::strncmp(argv[i], "--", 2) == 0)
                 continue;
@@ -472,15 +473,15 @@ int main(int argc, char** argv)
                 ++bad;
                 continue;
             }
-            std::map<std::string, std::int32_t> effects;
-            std::int32_t lanes = 0, tubes = 0;
+            std::map<std::string, i32> effects;
+            i32 lanes = 0, tubes = 0;
             for (const auto& shot : display->shots)
             {
                 ++effects[shot.effect];
                 lanes = std::max(lanes, shot.lane + 1);
                 tubes = std::max(tubes, shot.tube + 1);
             }
-            out.info("{}: \"{}\" to {}, months {:04x}, at {:02d}:{:02d}, {:d} launchers, {:d} shots over {:.1f} s, {:d} lanes, {:d} tubes", argv[i], display->name.c_str(), display->music_file.c_str(), display->months, display->start_minutes / 60, display->start_minutes % 60, display->launchers.size(), display->shots.size(), display->shots.empty() ? 0.0 : static_cast<double>(display->shots.back().seconds), lanes, tubes);
+            out.info("{}: \"{}\" to {}, months {:04x}, at {:02d}:{:02d}, {:d} launchers, {:d} shots over {:.1f} s, {:d} lanes, {:d} tubes", argv[i], display->name.c_str(), display->music_file.c_str(), display->months, display->start_minutes / 60, display->start_minutes % 60, display->launchers.size(), display->shots.size(), display->shots.empty() ? 0.0 : static_cast<f64>(display->shots.back().seconds), lanes, tubes);
             for (const auto& l : display->launchers)
                 out.info("  launcher {} at {:d},{:d} corner {:d} turned {:d}", l.item.c_str(), l.col, l.row, l.corner, l.direction);
             for (const auto& [name, count] : effects)
@@ -493,13 +494,13 @@ int main(int argc, char** argv)
     if (std::any_of(argv + 1, argv + argc, [](const char* a) { return std::strcmp(a, "--park") == 0; }))
     {
         const char* root = nullptr;
-        std::int32_t bad = 0;
-        for (std::int32_t i = 1; i < argc; ++i)
+        i32 bad = 0;
+        for (i32 i = 1; i < argc; ++i)
         {
             if (std::strcmp(argv[i], "--root") == 0 && i + 1 < argc)
                 root = argv[i + 1];
         }
-        for (std::int32_t i = 1; i < argc; ++i)
+        for (i32 i = 1; i < argc; ++i)
         {
             if (std::strcmp(argv[i], "--park") == 0)
                 continue;
@@ -529,11 +530,11 @@ int main(int argc, char** argv)
             const auto& m = *model;
             const auto date = m.clock.date();
             out.info("{}", argv[i]);
-            out.info("  park       rating {:g} guests {:g} flags {:x} open {:d}..{:d}", static_cast<double>(m.park.rating().value_or(-1.0f)), static_cast<double>(m.park.guests_in_park.latest().value_or(-1.0f)), m.park.flags.raw, m.park.opening_minutes, m.park.closing_minutes);
-            out.info("  clock      time {:g} year {:d} month {:d} week {:d}", static_cast<double>(m.clock.time), static_cast<std::int64_t>(date.year), date.month, date.week);
-            out.info("  finance    cash {:d} loan {:d}/{:d} ledger periods {:d} sum0 {:d}", m.finance.cash, m.finance.loan, m.finance.max_loan, m.finance.ledger.size(), static_cast<std::int64_t>(m.finance.ledger.empty() ? 0 : m.finance.ledger.front().raw_sum()));
+            out.info("  park       rating {:g} guests {:g} flags {:x} open {:d}..{:d}", static_cast<f64>(m.park.rating().value_or(-1.0f)), static_cast<f64>(m.park.guests_in_park.latest().value_or(-1.0f)), m.park.flags.raw, m.park.opening_minutes, m.park.closing_minutes);
+            out.info("  clock      time {:g} year {:d} month {:d} week {:d}", static_cast<f64>(m.clock.time), static_cast<i64>(date.year), date.month, date.week);
+            out.info("  finance    cash {:d} loan {:d}/{:d} ledger periods {:d} sum0 {:d}", m.finance.cash, m.finance.loan, m.finance.max_loan, m.finance.ledger.size(), static_cast<i64>(m.finance.ledger.empty() ? 0 : m.finance.ledger.front().raw_sum()));
             if (const auto rides = rct3::save::model::load_rides(*file, index))
-                out.info("  value      saved {:.0f} ours {:d}", static_cast<double>(m.finance.park_value.latest().value_or(-1.0f)), rct3::simulation::park::park_value(static_cast<std::int32_t>(m.park.guests_in_park.latest().value_or(0.0f)), *rides).value);
+                out.info("  value      saved {:.0f} ours {:d}", static_cast<f64>(m.finance.park_value.latest().value_or(-1.0f)), rct3::simulation::park::park_value(static_cast<i32>(m.park.guests_in_park.latest().value_or(0.0f)), *rides).value);
             out.info(
                 "  scenario   objectives {:d} conditions {:d} challenges {:d} categories {:d} messages {:d}/{:d}"
                 " particles {:d}",
@@ -561,9 +562,9 @@ int main(int argc, char** argv)
     {
         using namespace rct3::save;
         using namespace rct3::save::model;
-        double error_sum = 0;
-        std::size_t compared = 0;
-        for (std::int32_t i = 1; i < argc; ++i)
+        f64 error_sum = 0;
+        usize compared = 0;
+        for (i32 i = 1; i < argc; ++i)
         {
             if (std::strncmp(argv[i], "--", 2) == 0)
                 continue;
@@ -579,16 +580,16 @@ int main(int argc, char** argv)
             if (!park || !people || !ride_model || !park->park.rating())
                 continue;
             auto input = rct3::simulation::park::rating_input(*people, *ride_model, park->awards, park->clock.time);
-            input.guests = static_cast<std::int32_t>(park->park.guests_in_park.latest().value_or(0.0f));
+            input.guests = static_cast<i32>(park->park.guests_in_park.latest().value_or(0.0f));
             input.harder = park->park.flags.has(ParkFlag::HarderRating);
             const auto p = rct3::simulation::park::rate_park(input);
-            const float saved = *park->park.rating();
-            error_sum += std::abs(static_cast<double>(p.total) - static_cast<double>(saved));
+            const f32 saved = *park->park.rating();
+            error_sum += std::abs(static_cast<f64>(p.total) - static_cast<f64>(saved));
             ++compared;
-            out.info("{:<44} saved {:4.0f} ours {:4d}  happy {:3d} rides {:3d} up {:3d} guests {:3d} litter {:4d} lost {:4d} crash {:4d} awards {:4d} harder {:4d}  ({:d} guests, {:d} rides)", std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), static_cast<double>(saved), p.total, p.happiness, p.rides, p.reliability, p.guests, p.litter, p.lost_guests, p.crash, p.awards, p.harder, input.guests, input.rides.size());
+            out.info("{:<44} saved {:4.0f} ours {:4d}  happy {:3d} rides {:3d} up {:3d} guests {:3d} litter {:4d} lost {:4d} crash {:4d} awards {:4d} harder {:4d}  ({:d} guests, {:d} rides)", std::string(argv[i]).substr(std::string(argv[i]).find_last_of('/') + 1).c_str(), static_cast<f64>(saved), p.total, p.happiness, p.rides, p.reliability, p.guests, p.litter, p.lost_guests, p.crash, p.awards, p.harder, input.guests, input.rides.size());
         }
         if (compared > 0)
-            out.info("mean difference {:.0f} over {:d} saves", error_sum / static_cast<double>(compared), compared);
+            out.info("mean difference {:.0f} over {:d} saves", error_sum / static_cast<f64>(compared), compared);
         return 0;
     }
     // `save-dump --trains FILE...`: every saved train and car, grouped by the state number it holds, with what
@@ -597,7 +598,7 @@ int main(int argc, char** argv)
     {
         using namespace rct3::save;
         using namespace rct3::save::model;
-        for (std::int32_t i = 1; i < argc; ++i)
+        for (i32 i = 1; i < argc; ++i)
         {
             if (std::strncmp(argv[i], "--", 2) == 0)
                 continue;
@@ -621,13 +622,13 @@ int main(int argc, char** argv)
         using namespace rct3::save::model;
         struct Seen
         {
-            std::size_t count = 0, still = 0, platform = 0, riders = 0, files = 0;
-            double speed = 0, time = 0, accel = 0;
-            std::map<std::string, std::size_t> pieces;
-            std::map<std::int32_t, std::size_t> others; ///< Car states for trains, train states for cars
+            usize count = 0, still = 0, platform = 0, riders = 0, files = 0;
+            f64 speed = 0, time = 0, accel = 0;
+            std::map<std::string, usize> pieces;
+            std::map<i32, usize> others; ///< Car states for trains, train states for cars
             std::string last_file;
         };
-        std::map<std::int32_t, Seen> trains, cars;
+        std::map<i32, Seen> trains, cars;
         // The piece's shape without the ride's prefix, e.g. "Station" from "WoodenCoaster_Station".
         const auto shape = [](const std::string& symbol) {
             const auto at = symbol.find('_');
@@ -636,7 +637,7 @@ int main(int argc, char** argv)
                 s.resize(colon);
             return s;
         };
-        const auto note = [](Seen& seen, const std::string& file, float speed, float time, float accel, bool platform, std::int32_t riders, const std::string& piece, std::int32_t other) {
+        const auto note = [](Seen& seen, const std::string& file, f32 speed, f32 time, f32 accel, bool platform, i32 riders, const std::string& piece, i32 other) {
             ++seen.count;
             seen.still += std::abs(speed) < 0.01f;
             seen.platform += platform;
@@ -652,7 +653,7 @@ int main(int argc, char** argv)
                 seen.last_file = file;
             }
         };
-        for (std::int32_t i = 1; i < argc; ++i)
+        for (i32 i = 1; i < argc; ++i)
         {
             if (std::strncmp(argv[i], "--", 2) == 0)
                 continue;
@@ -677,32 +678,32 @@ int main(int argc, char** argv)
                 };
                 for (const Train& t : ride.trains)
                 {
-                    std::int32_t riders = 0;
+                    i32 riders = 0;
                     for (const Car& c : t.cars)
                         riders += c.passengers;
                     const TrackPiece* front = piece(t.front_piece);
-                    note(trains[static_cast<std::int32_t>(t.state)], argv[i], t.speed.value, t.state_time.value, t.acceleration, front != nullptr && front->platform.has_value(), riders, front ? shape(front->symbol) : "-", t.cars.empty() ? -1 : static_cast<std::int32_t>(t.cars.front().state));
+                    note(trains[static_cast<i32>(t.state)], argv[i], t.speed.value, t.state_time.value, t.acceleration, front != nullptr && front->platform.has_value(), riders, front ? shape(front->symbol) : "-", t.cars.empty() ? -1 : static_cast<i32>(t.cars.front().state));
                     for (const Car& c : t.cars)
                     {
                         const TrackPiece* at = piece(c.front_piece);
-                        note(cars[static_cast<std::int32_t>(c.state)], argv[i], c.speed.value, t.state_time.value, t.acceleration, at != nullptr && at->platform.has_value(), c.passengers, at ? shape(at->symbol) : "-", static_cast<std::int32_t>(t.state));
+                        note(cars[static_cast<i32>(c.state)], argv[i], c.speed.value, t.state_time.value, t.acceleration, at != nullptr && at->platform.has_value(), c.passengers, at ? shape(at->symbol) : "-", static_cast<i32>(t.state));
                     }
                 }
             }
         }
-        const auto print = [](const char* what, const char* other, const std::map<std::int32_t, Seen>& seen) {
+        const auto print = [](const char* what, const char* other, const std::map<i32, Seen>& seen) {
             out.info("{} states", what);
             for (const auto& [state, s] : seen)
             {
-                const auto n = static_cast<double>(s.count);
-                out.info("  {:3d}  {:5d} in {:3d} files  still {:3.0f}%  platform {:3.0f}%  riders {:3.0f}%  speed {:5.1f}  accel {:6.2f}  time {:6.1f}", state, s.count, s.files, 100 * static_cast<double>(s.still) / n, 100 * static_cast<double>(s.platform) / n, 100 * static_cast<double>(s.riders) / n, s.speed / n, s.accel / n, s.time / n);
-                std::vector<std::pair<std::size_t, std::string>> top;
+                const auto n = static_cast<f64>(s.count);
+                out.info("  {:3d}  {:5d} in {:3d} files  still {:3.0f}%  platform {:3.0f}%  riders {:3.0f}%  speed {:5.1f}  accel {:6.2f}  time {:6.1f}", state, s.count, s.files, 100 * static_cast<f64>(s.still) / n, 100 * static_cast<f64>(s.platform) / n, 100 * static_cast<f64>(s.riders) / n, s.speed / n, s.accel / n, s.time / n);
+                std::vector<std::pair<usize, std::string>> top;
                 for (const auto& [name, k] : s.pieces)
                     top.emplace_back(k, name);
                 std::ranges::sort(top, std::greater { });
                 std::string pieces = "       pieces";
-                for (std::size_t k = 0; k < top.size() && k < 4; ++k)
-                    pieces += std::format(" {} {:.0f}%", top[k].second, 100 * static_cast<double>(top[k].first) / n);
+                for (usize k = 0; k < top.size() && k < 4; ++k)
+                    pieces += std::format(" {} {:.0f}%", top[k].second, 100 * static_cast<f64>(top[k].first) / n);
                 out.info("{}", pieces);
                 std::string others = std::format("       {}", other);
                 for (const auto& [o, k] : s.others)
@@ -722,12 +723,12 @@ int main(int argc, char** argv)
         using namespace rct3::save::model;
         struct Seen
         {
-            std::size_t count = 0, underground = 0, no_base = 0;
-            std::map<std::string, std::size_t> pieces;
-            std::map<std::int32_t, std::size_t> quantised_minus_4base, base_minus_ground, piece_minus_base, direction;
+            usize count = 0, underground = 0, no_base = 0;
+            std::map<std::string, usize> pieces;
+            std::map<i32, usize> quantised_minus_4base, base_minus_ground, piece_minus_base, direction;
         };
-        std::map<std::pair<std::string, std::int32_t>, Seen> seen;
-        for (std::int32_t i = 1; i < argc; ++i)
+        std::map<std::pair<std::string, i32>, Seen> seen;
+        for (i32 i = 1; i < argc; ++i)
         {
             if (std::strncmp(argv[i], "--", 2) == 0)
                 continue;
@@ -740,13 +741,13 @@ int main(int argc, char** argv)
             const auto world = load_world(*file, index);
             if (!world)
                 continue;
-            std::map<std::uint64_t, const PlacedObject*> objects;
+            std::map<u64, const PlacedObject*> objects;
             for (const PlacedObject& o : world->objects)
                 objects[o.id] = &o;
             if (std::getenv("PATHS_ALL") != nullptr)
             {
                 for (const QueueLine& q : world->queue_lines)
-                    out.info("line {} {:d} {:d} {:d} {:d} {:d}", argv[i], static_cast<std::uint64_t>(q.id), static_cast<std::uint64_t>(q.head_ref), q.length, static_cast<std::uint64_t>(q.ride_ref), q.station_index);
+                    out.info("line {} {:d} {:d} {:d} {:d} {:d}", argv[i], static_cast<u64>(q.id), static_cast<u64>(q.head_ref), q.length, static_cast<u64>(q.ride_ref), q.station_index);
                 if (const auto rides = load_rides(*file, index))
                 {
                     for (const Ride& ride : rides->rides)
@@ -754,7 +755,7 @@ int main(int argc, char** argv)
                         for (const Station& st : ride.stations)
                         {
                             if (st.entrance_spot)
-                                out.info("entrance {} {:d} {:d} {:d} {:d} {:d}", argv[i], st.entrance_spot->col, st.entrance_spot->row, st.entrance_spot->height, st.entrance_spot->direction, static_cast<std::uint64_t>(st.queue_line));
+                                out.info("entrance {} {:d} {:d} {:d} {:d} {:d}", argv[i], st.entrance_spot->col, st.entrance_spot->row, st.entrance_spot->height, st.entrance_spot->direction, static_cast<u64>(st.queue_line));
                         }
                     }
                 }
@@ -775,7 +776,7 @@ int main(int argc, char** argv)
                 }
                 if (std::getenv("PATHS_ALL") != nullptr && p.queue)
                     out.info(
-                        "queue {} {:d} {:d} {:d} {:d} {:d} {:d} {:d} {:d} {} {} {} {:d},{:d},{:d} {:d},{:d},{:d}", argv[i], static_cast<std::uint64_t>(p.id), p.col, p.row, p.elevation ? p.elevation->quantised_height : 0, p.elevation ? p.elevation->slope : -1, p.queue->start_direction, p.queue->end_direction, static_cast<std::uint64_t>(p.queue->queue_line_ref), p.surface_name.c_str(), p.queue->fence_symbol.c_str(), p.queue->fence_overlay.c_str(), p.surface_colours ? (*p.surface_colours)[0] : -1,
+                        "queue {} {:d} {:d} {:d} {:d} {:d} {:d} {:d} {:d} {} {} {} {:d},{:d},{:d} {:d},{:d},{:d}", argv[i], static_cast<u64>(p.id), p.col, p.row, p.elevation ? p.elevation->quantised_height : 0, p.elevation ? p.elevation->slope : -1, p.queue->start_direction, p.queue->end_direction, static_cast<u64>(p.queue->queue_line_ref), p.surface_name.c_str(), p.queue->fence_symbol.c_str(), p.queue->fence_overlay.c_str(), p.surface_colours ? (*p.surface_colours)[0] : -1,
                         p.surface_colours ? (*p.surface_colours)[1] : -1, p.surface_colours ? (*p.surface_colours)[2] : -1, p.queue->fence_colours[0], p.queue->fence_colours[1], p.queue->fence_colours[2]);
                 if (!p.elevation)
                     continue;
@@ -784,10 +785,10 @@ int main(int argc, char** argv)
                 s.underground += p.elevation->underground;
                 ++s.direction[p.direction];
                 s.no_base += !p.elevation->base_height;
-                const std::int32_t quantised = p.elevation->quantised_height;
-                const float ground = world->terrain.contains(p.col, p.row) ? world->terrain.at(p.col, p.row).min_height() : 0;
+                const i32 quantised = p.elevation->quantised_height;
+                const f32 ground = world->terrain.contains(p.col, p.row) ? world->terrain.at(p.col, p.row).min_height() : 0;
                 ++s.quantised_minus_4base[quantised % 4];
-                ++s.base_minus_ground[quantised - static_cast<std::int32_t>(std::floor(ground * 4))];
+                ++s.base_minus_ground[quantised - static_cast<i32>(std::floor(ground * 4))];
                 if (const auto o = objects.find(p.elevation->scenery_ref); o != objects.end())
                 {
                     std::string symbol = o->second->symbol;
@@ -804,8 +805,8 @@ int main(int argc, char** argv)
                 }
             }
         }
-        const auto top = [](const auto& counts, std::size_t n) {
-            std::vector<std::pair<std::size_t, std::string>> sorted;
+        const auto top = [](const auto& counts, usize n) {
+            std::vector<std::pair<usize, std::string>> sorted;
             for (const auto& [k, c] : counts)
             {
                 std::ostringstream key;
@@ -814,7 +815,7 @@ int main(int argc, char** argv)
             }
             std::ranges::sort(sorted, std::greater { });
             std::string out;
-            for (std::size_t i = 0; i < sorted.size() && i < n; ++i)
+            for (usize i = 0; i < sorted.size() && i < n; ++i)
                 out += std::format(" {} x{}", sorted[i].second, sorted[i].first);
             return out;
         };
@@ -835,10 +836,10 @@ int main(int argc, char** argv)
         using namespace rct3::save;
         using namespace rct3::save::model;
         PeopleModel total;
-        std::map<std::string, std::size_t> issue_counts;
-        std::map<std::string, std::size_t> kinds;
-        std::size_t files = 0, failed = 0, shown = 0;
-        for (std::int32_t i = 1; i < argc; ++i)
+        std::map<std::string, usize> issue_counts;
+        std::map<std::string, usize> kinds;
+        usize files = 0, failed = 0, shown = 0;
+        for (i32 i = 1; i < argc; ++i)
         {
             if (std::strncmp(argv[i], "--", 2) == 0)
                 continue;
@@ -874,9 +875,7 @@ int main(int argc, char** argv)
             if (shown < 2 && !model->guests.empty())
             {
                 const auto& g = model->guests.front();
-                out.info(
-                    "  e.g. guest {:d} {} at ({:.1f} {:.1f} {:.1f}) state {:d}/{:d} cash {:d} food {:.2f} happy {:.2f} group {:d}", static_cast<std::uint64_t>(g.person.id), to_string(g.person.type), static_cast<double>(g.person.position.x), static_cast<double>(g.person.position.y), static_cast<double>(g.person.position.z), static_cast<std::int32_t>(g.person.state), g.person.sub_state, g.cash.current, static_cast<double>(g.needs.food), static_cast<double>(g.mood_now.happiness),
-                    static_cast<std::uint64_t>(g.group.id));
+                out.info("  e.g. guest {:d} {} at ({:.1f} {:.1f} {:.1f}) state {:d}/{:d} cash {:d} food {:.2f} happy {:.2f} group {:d}", static_cast<u64>(g.person.id), to_string(g.person.type), static_cast<f64>(g.person.position.x), static_cast<f64>(g.person.position.y), static_cast<f64>(g.person.position.z), static_cast<i32>(g.person.state), g.person.sub_state, g.cash.current, static_cast<f64>(g.needs.food), static_cast<f64>(g.mood_now.happiness), static_cast<u64>(g.group.id));
                 ++shown;
             }
             const auto add = [](auto& dst, auto& src) { std::move(src.begin(), src.end(), std::back_inserter(dst)); };
@@ -910,7 +909,7 @@ int main(int argc, char** argv)
     const char* object_id = nullptr;
     const char* path = nullptr;
     bool rides = false; // --rides
-    for (std::int32_t i = 1; i < argc; ++i)
+    for (i32 i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--classes") == 0)
             classes = true;
@@ -980,8 +979,8 @@ int main(int argc, char** argv)
         out.info("checksum       stored {:08x} computed {:08x} {}", file->stored_checksum, file->computed_checksum, ok ? "ok" : "MISMATCH");
     }
 
-    std::vector<std::size_t> count(file->classes.size());
-    std::vector<std::size_t> size(file->classes.size());
+    std::vector<usize> count(file->classes.size());
+    std::vector<usize> size(file->classes.size());
     for (const auto& o : file->objects)
     {
         ++count[o.class_index];
@@ -991,7 +990,7 @@ int main(int argc, char** argv)
     {
         out.info("class table");
         out.info("  {:<4} {:<34} {:<6} {:<8} {}", "idx", "name", "attrs", "objects", "bytes");
-        for (std::size_t i = 0; i < file->classes.size(); ++i)
+        for (usize i = 0; i < file->classes.size(); ++i)
         {
             const auto& c = file->classes[i];
             out.info("  {:<4} {:<34} {:<6} {:<8} {}", i, c.name, c.attributes.size(), count[i], size[i]);
@@ -1011,7 +1010,7 @@ int main(int argc, char** argv)
         const auto decoded = rct3::save::decode_object(*file, o);
         if (!decoded)
         {
-            out.info("object {:d}: {}", static_cast<std::uint64_t>(o.id), rct3::save::to_string(decoded.error()));
+            out.info("object {:d}: {}", static_cast<u64>(o.id), rct3::save::to_string(decoded.error()));
             return;
         }
         out.info("object {} class {} ({} values, {} opaque, {} fallbacks)", decoded->id, decoded->class_name, decoded->stats.values, decoded->stats.opaque, decoded->stats.fallbacks);
@@ -1038,7 +1037,7 @@ int main(int argc, char** argv)
         const rct3::save::ObjectIndex index(*file);
         rct3::save::DecodeStats total;
         RefCount refs;
-        std::size_t failed = 0;
+        usize failed = 0;
         for (const auto& o : file->objects)
         {
             const auto decoded = rct3::save::decode_object(*file, o);
@@ -1070,8 +1069,8 @@ int main(int argc, char** argv)
             out.info("rides          error: {}", rct3::save::to_string(model.error()));
             return 1;
         }
-        std::size_t tracked = 0, flat = 0, special = 0, tracks = 0, circuits = 0, pieces = 0, stations = 0;
-        std::size_t trains = 0, cars = 0, items = 0, extras = 0, segments = 0;
+        usize tracked = 0, flat = 0, special = 0, tracks = 0, circuits = 0, pieces = 0, stations = 0;
+        usize trains = 0, cars = 0, items = 0, extras = 0, segments = 0;
         for (const auto& r : model->rides)
         {
             tracked += r.kind == rct3::save::model::RideKind::Tracked;
@@ -1106,7 +1105,7 @@ int main(int argc, char** argv)
             g.track_back_link_mismatch, g.unresolved_tracks, g.truncated_tracks, g.segment_piece_mismatch, g.piece_segment_mismatch, g.platform_back_link_mismatch, g.open_ends_with_live_link, g.train_back_link_mismatch, g.train_index_mismatch, g.car_back_link_mismatch, g.car_index_mismatch, g.car_count_mismatch, g.unresolved_trains, g.unresolved_cars, g.duplicate_refs, g.queue_size_mismatch, g.item_back_link_mismatch, g.unresolved_items);
         for (const auto& r : model->rides)
         {
-            out.info("  ride {:<10d} kind {:d} state {:d} mode {:d} ticket {:d} stations {:d} trains {:d} pieces {:d}{}", static_cast<std::uint64_t>(r.base.id), static_cast<std::uint32_t>(r.kind), static_cast<std::int32_t>(r.base.state), static_cast<std::int32_t>(r.mode), static_cast<std::int64_t>(r.ticket_price.value), r.stations.size(), r.trains.size(), r.track ? r.track->pieces.size() : 0, r.track ? (r.track->circuit ? " circuit" : " open") : "");
+            out.info("  ride {:<10d} kind {:d} state {:d} mode {:d} ticket {:d} stations {:d} trains {:d} pieces {:d}{}", static_cast<u64>(r.base.id), static_cast<u32>(r.kind), static_cast<i32>(r.base.state), static_cast<i32>(r.mode), static_cast<i64>(r.ticket_price.value), r.stations.size(), r.trains.size(), r.track ? r.track->pieces.size() : 0, r.track ? (r.track->circuit ? " circuit" : " open") : "");
         }
     }
     // --- rides: end -----------------------------------------------------------------------------------

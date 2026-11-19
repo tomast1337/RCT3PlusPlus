@@ -2,6 +2,7 @@
 #include "scene/park/footpaths.hpp"
 
 #include "config/game/options.hpp"
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/camera.hpp"
 #include "park/ground/queues.hpp"
@@ -45,9 +46,9 @@ namespace rct3::scene::park
 
         constexpr std::array<std::string_view, 2> kIconFiles { rct3::park::path::kPathIconFile, rct3::park::path::kQueueIconFile };
         /// Of the next piece over the paths already laid, so the two never fight for the same depth.
-        constexpr float kGhostLift = 0.02f;
+        constexpr f32 kGhostLift = 0.02f;
         /// Of the arrow over the next piece, so it shows over the piece's own picture.
-        constexpr float kArrowLift = 0.04f;
+        constexpr f32 kArrowLift = 0.04f;
         constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
         constexpr std::string_view kPickStart = "Rct3pp_Paths_PickStart";
         constexpr std::string_view kNotOwned = "Rct3pp_Paths_NotOwned";
@@ -56,8 +57,8 @@ namespace rct3::scene::park
         constexpr std::string_view kOccupied = "Rct3pp_Paths_Occupied";
         constexpr std::string_view kBlocked = "Rct3pp_Paths_Blocked";
         /// How fast the following camera closes on the next piece, per second, and how near counts as there.
-        constexpr float kFollowRate = 6;
-        constexpr float kFollowNear = 0.05f;
+        constexpr f32 kFollowRate = 6;
+        constexpr f32 kFollowNear = 0.05f;
         constexpr std::string_view kNoRoute = "Rct3pp_Paths_NoRoute";
         /// The railing new queues get: the one most queues in the parks seen use.
         constexpr std::string_view kQueueRailing = "Van_Scaffold2";
@@ -120,13 +121,13 @@ namespace rct3::scene::park
                 return std::nullopt;
             const bool queue = f.styles[*f.style].queue;
             const auto before = std::ranges::count_if(std::span(f.styles).first(*f.style), [&](const rct3::park::path::PathStyle& s) { return s.queue == queue && offered(offer, s); });
-            return ui::screens::build::FootpathPick { queue, static_cast<std::size_t>(before) };
+            return ui::screens::build::FootpathPick { queue, static_cast<usize>(before) };
         }
 
-        std::optional<std::size_t> style_of(const ParkFootpaths& f, const rct3::park::BuildOffer& offer, ui::screens::build::FootpathPick pick)
+        std::optional<usize> style_of(const ParkFootpaths& f, const rct3::park::BuildOffer& offer, ui::screens::build::FootpathPick pick)
         {
-            std::size_t seen = 0;
-            for (std::size_t i = 0; i < f.styles.size(); ++i)
+            usize seen = 0;
+            for (usize i = 0; i < f.styles.size(); ++i)
             {
                 if (f.styles[i].queue != pick.queue || !offered(offer, f.styles[i]))
                     continue;
@@ -138,7 +139,7 @@ namespace rct3::scene::park
 
     } // namespace
 
-    save::model::PlacedObject deck_object(const rct3::park::path::PathStyle& style, const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::uint64_t id)
+    save::model::PlacedObject deck_object(const rct3::park::path::PathStyle& style, const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, u64 id)
     {
         const auto [symbol, turn] = rct3::park::path::deck_for(style, path, paths, grid);
         const save::model::PathElevation& e = *path.elevation;
@@ -150,7 +151,7 @@ namespace rct3::scene::park
         o.col = path.col;
         o.row = path.row;
         // Stands on its low end: a piece going down is entered at its top.
-        o.base_height = e.quantised_height - (rct3::park::slope_falls(e.slope) ? static_cast<std::int32_t>(rct3::park::ground::path_rise(e.slope)) : 0);
+        o.base_height = e.quantised_height - (rct3::park::slope_falls(e.slope) ? static_cast<i32>(rct3::park::ground::path_rise(e.slope)) : 0);
         o.rotation = turn.value;
         // Held at its own height: an object with no offset from the ground would be put on the ground.
         o.force_absolute_height = true;
@@ -187,7 +188,7 @@ namespace rct3::scene::park
 
         units::Money stroke_cost(const ParkFootpaths& f, const rct3::park::path::DragPlan& plan)
         {
-            return units::Money { static_cast<std::int64_t>(plan.lay.size()) * next_cost(f.styles[*f.style]).value };
+            return units::Money { static_cast<i64>(plan.lay.size()) * next_cost(f.styles[*f.style]).value };
         }
 
         /// The route to the tile pointed at, with routing on, and whether it only goes through what is in the
@@ -213,9 +214,9 @@ namespace rct3::scene::park
             return rct3::park::path::route_price(route, f.builder, scene.grid, f.paths, next_cost(f.styles[*f.style]));
         }
 
-        std::uint64_t unused_id(const ParkScene& scene)
+        u64 unused_id(const ParkScene& scene)
         {
-            std::uint64_t last = 0;
+            u64 last = 0;
             for (const save::model::PathTile& p : scene.footpaths.paths)
                 last = std::max(last, p.id);
             for (const save::model::PlacedObject& o : scene.objects)
@@ -226,13 +227,13 @@ namespace rct3::scene::park
         /// The tiles of `spots` and those beside them, as a mask over the grid.
         std::vector<bool> around(const save::model::TerrainGrid& grid, std::span<const save::model::Tile> spots)
         {
-            std::vector<bool> keep(static_cast<std::size_t>(grid.width) * static_cast<std::size_t>(grid.height), false);
+            std::vector<bool> keep(static_cast<usize>(grid.width) * static_cast<usize>(grid.height), false);
             for (const save::model::Tile spot : spots)
             {
                 for (const save::model::Tile near : { spot, rct3::park::step(spot, rct3::park::Side::kNextRow), rct3::park::step(spot, rct3::park::Side::kNextCol), rct3::park::step(spot, rct3::park::Side::kRowBefore), rct3::park::step(spot, rct3::park::Side::kColBefore) })
                 {
                     if (grid.contains(near.col, near.row))
-                        keep[static_cast<std::size_t>(near.row) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(near.col)] = true;
+                        keep[static_cast<usize>(near.row) * static_cast<usize>(grid.width) + static_cast<usize>(near.col)] = true;
                 }
             }
             return keep;
@@ -289,7 +290,7 @@ namespace rct3::scene::park
             simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable);
             glm::vec3 at = tile_point(scene.grid, { path.col, path.row });
             if (path.elevation && !rct3::park::ground::is_ground_queue(path))
-                at.y = static_cast<float>(path.elevation->quantised_height);
+                at.y = static_cast<f32>(path.elevation->quantised_height);
             float_money(scene, at, back + also);
         }
 
@@ -330,9 +331,9 @@ namespace rct3::scene::park
             const glm::vec4 tint = affordable && !f.route_blocked ? kGhostTint : kRefusedTint;
             std::vector<save::model::PathTile> with = f.paths;
             rct3::park::FootpathBuilder trial = f.builder;
-            std::uint64_t id = unused_id(scene);
+            u64 id = unused_id(scene);
             std::vector<save::model::Tile> ground;
-            std::vector<std::size_t> raised;
+            std::vector<usize> raised;
             for (const rct3::park::path::RouteStep& step : *f.route)
             {
                 trial.heading = step.heading;
@@ -340,7 +341,7 @@ namespace rct3::scene::park
                 if (!rct3::park::lay_path(trial, with, step.piece, style.name, id, step.piece.ground ? 0 : id + 1))
                     continue;
                 if (style.queue)
-                    with.back().surface_colours = std::array<std::int32_t, 3> { };
+                    with.back().surface_colours = std::array<i32, 3> { };
                 if (step.piece.ground)
                     ground.push_back(step.piece.spot);
                 else
@@ -351,7 +352,7 @@ namespace rct3::scene::park
             // shortcut: ground cut away for the route and raised paths beside it that would take new pieces are
             // not shown; show them once routes are laid often enough to need it.
             std::vector<save::model::PlacedObject> shown;
-            for (const std::size_t i : raised)
+            for (const usize i : raised)
                 shown.push_back(deck_object(style, with[i], with, scene.grid, with[i].elevation->scenery_ref));
             std::erase_if(shown, [&](const save::model::PlacedObject& o) { return !load_object_model(scene, f.models, assets, o); });
             if (const rct3::park::support::SupportSets* sets = support_sets(scene, assets); sets != nullptr && !shown.empty())
@@ -373,14 +374,14 @@ namespace rct3::scene::park
         struct Joined
         {
             std::optional<rct3::park::EntranceBeside> entrance { };
-            std::optional<std::uint64_t> line { };
-            std::vector<std::size_t> turned { }; ///< Of the paths
+            std::optional<u64> line { };
+            std::vector<usize> turned { }; ///< Of the paths
         };
 
         /// Joins `paths.back()`, the piece `piece` just laid: a queue to the entrance it is behind, at its height,
         /// giving the station line `new_line` when it has none, or to the line whose head it meets. Then a queue's
         /// open end bends to a path beside it: the queue just laid, or those beside the path just laid.
-        Joined join_laid(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, const rct3::park::NextPiece& piece, std::uint64_t new_line)
+        Joined join_laid(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, const rct3::park::NextPiece& piece, u64 new_line)
         {
             Joined out;
             const save::model::PathTile laid = paths.back();
@@ -390,7 +391,7 @@ namespace rct3::scene::park
                 out.entrance = rct3::park::entrance_beside(rides, piece.spot, laid.elevation ? laid.elevation->quantised_height : piece.start);
                 out.line = out.entrance ? rct3::park::join_entrance(rides, paths, grid, paths.size() - 1, *out.entrance, new_line) : rct3::park::join_line(rides, paths, grid, paths.size() - 1);
             }
-            for (std::size_t i = 0; i < paths.size(); ++i)
+            for (usize i = 0; i < paths.size(); ++i)
             {
                 const bool candidate = queue ? i + 1 == paths.size() : paths[i].queue && std::abs(paths[i].col - laid.col) + std::abs(paths[i].row - laid.row) == 1;
                 if (candidate && rct3::park::turn_to_path(paths, grid, i))
@@ -449,12 +450,12 @@ namespace rct3::scene::park
             const rct3::park::path::PathStyle& style = f.styles[*f.style];
             std::vector<save::model::PathTile> with = f.paths;
             rct3::park::FootpathBuilder trial = b;
-            const std::uint64_t id = unused_id(scene);
+            const u64 id = unused_id(scene);
             (void)rct3::park::lay_path(trial, with, *piece, style.name, id, piece->ground ? 0 : id + 1);
             if (with.size() == f.paths.size())
                 return; // The same piece is already there
             if (style.queue)
-                with.back().surface_colours = std::array<std::int32_t, 3> { };
+                with.back().surface_colours = std::array<i32, 3> { };
             // Joined as laying it would, so its ends and the queues beside turn as they will; a path joins no ride, so
             // only a queue needs the rides, which are a copy here.
             save::model::RideModel rides = style.queue ? scene.rides : save::model::RideModel { };
@@ -516,7 +517,7 @@ namespace rct3::scene::park
         }
 
         /// Hides `objects` of the scene's objects.
-        void hide(ParkScene& scene, std::span<const std::uint64_t> objects)
+        void hide(ParkScene& scene, std::span<const u64> objects)
         {
             for (save::model::PlacedObject& o : scene.objects)
             {
@@ -526,15 +527,15 @@ namespace rct3::scene::park
         }
 
         /// Builds the railings along the queue tiles `tiles` (by id) again.
-        void rail(ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> tiles)
+        void rail(ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const u64> tiles)
         {
             ParkFootpaths& f = scene.footpaths;
-            for (const std::uint64_t id : tiles)
+            for (const u64 id : tiles)
             {
                 const auto tile = std::ranges::find(f.paths, id, &save::model::PathTile::id);
                 if (tile == f.paths.end() || !tile->queue)
                     continue;
-                std::vector<std::uint64_t>& railings = f.railings[id];
+                std::vector<u64>& railings = f.railings[id];
                 hide(scene, railings);
                 railings.clear();
                 rct3::park::QueueFences fences = rct3::park::queue_fences(std::span(&*tile, 1), scene.grid, unused_id(scene));
@@ -584,7 +585,7 @@ namespace rct3::scene::park
                 return;
             }
             wait_for_build(scene);
-            std::uint64_t id = unused_id(scene);
+            u64 id = unused_id(scene);
             f.stroke.clear();
             for (const save::model::Tile spot : plan->lay)
             {
@@ -620,7 +621,7 @@ namespace rct3::scene::park
         {
             ParkFootpaths& f = scene.footpaths;
             wait_for_build(scene);
-            const std::vector<std::uint64_t> gone = std::exchange(f.stroke, { });
+            const std::vector<u64> gone = std::exchange(f.stroke, { });
             save::model::Tile low { scene.grid.width, scene.grid.height };
             save::model::Tile high { -1, -1 };
             std::vector<save::model::PathTile> taken;
@@ -628,8 +629,8 @@ namespace rct3::scene::park
                 if (!std::ranges::contains(gone, p.id))
                     return false;
                 taken.push_back(p);
-                low = { std::min<std::int32_t>(low.col, p.col), std::min<std::int32_t>(low.row, p.row) };
-                high = { std::max<std::int32_t>(high.col, p.col), std::max<std::int32_t>(high.row, p.row) };
+                low = { std::min<i32>(low.col, p.col), std::min<i32>(low.row, p.row) };
+                high = { std::max<i32>(high.col, p.col), std::max<i32>(high.row, p.row) };
                 return true;
             });
             if (high.col < 0)
@@ -658,7 +659,7 @@ namespace rct3::scene::park
                 f.notice = std::u16string(assets.strings->get(kNoMoney));
                 return;
             }
-            const std::uint64_t id = unused_id(scene);
+            const u64 id = unused_id(scene);
             wait_for_build(scene);
             if (!there && piece.cut)
                 rct3::park::cut_down(scene.grid, piece, f.builder.heading);
@@ -668,9 +669,9 @@ namespace rct3::scene::park
             f.route_laid = 0;
             f.last_height = piece.end;
             const glm::vec3 ground = tile_point(scene.grid, piece.spot);
-            float_money(scene, { ground.x, static_cast<float>(std::max(piece.start, piece.end)), ground.z }, -cost);
+            float_money(scene, { ground.x, static_cast<f32>(std::max(piece.start, piece.end)), ground.z }, -cost);
             // The queue tile laid before may now open towards this one.
-            std::vector<std::uint64_t> railed { f.paths.back().id };
+            std::vector<u64> railed { f.paths.back().id };
             if (f.builder.trail.size() > 1 && f.builder.trail[f.builder.trail.size() - 2].laid != 0)
                 railed.push_back(f.builder.trail[f.builder.trail.size() - 2].laid);
             if (!piece.ground)
@@ -687,7 +688,7 @@ namespace rct3::scene::park
             if (f.builder.queue)
             {
                 save::model::PathTile& laid = f.paths.back();
-                laid.surface_colours = std::array<std::int32_t, 3> { };
+                laid.surface_colours = std::array<i32, 3> { };
                 // A line's railing is its ride's fence; a queue of no ride yet has the plain one.
                 if (laid.queue->fence_symbol.empty())
                 {
@@ -703,7 +704,7 @@ namespace rct3::scene::park
                 if (joined.line && p.queue && p.queue->queue_line_ref == *joined.line && !std::ranges::contains(railed, p.id))
                     railed.push_back(p.id);
             }
-            for (const std::size_t i : joined.turned)
+            for (const usize i : joined.turned)
             {
                 if (!std::ranges::contains(railed, f.paths[i].id))
                     railed.push_back(f.paths[i].id);
@@ -711,7 +712,7 @@ namespace rct3::scene::park
             if (f.builder.queue || !joined.turned.empty())
                 rail(scene, assets, railed);
             // Raised queue tiles whose line changed take new pieces too.
-            for (const std::uint64_t changed : railed)
+            for (const u64 changed : railed)
             {
                 if (const auto at = std::ranges::find(f.paths, changed, &save::model::PathTile::id); at != f.paths.end())
                     refresh_around(scene, assets, { at->col, at->row });
@@ -733,7 +734,7 @@ namespace rct3::scene::park
             ParkFootpaths& f = scene.footpaths;
             refund(scene, removed, also);
             wait_for_build(scene);
-            std::vector<std::uint64_t> gone = std::move(f.railings[removed.id]);
+            std::vector<u64> gone = std::move(f.railings[removed.id]);
             f.railings.erase(removed.id);
             if (removed.elevation)
                 gone.push_back(removed.elevation->scenery_ref);
@@ -765,7 +766,7 @@ namespace rct3::scene::park
         }
 
         /// Takes paths `ids` away, the trail backing up over its own (rct3::park::remove_paths).
-        void take_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids, units::Money also = { })
+        void take_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const u64> ids, units::Money also = { })
         {
             ParkFootpaths& f = scene.footpaths;
             // Indices into the paths may point at what is gone, and the last stroke or route may be part of it.
@@ -819,12 +820,12 @@ namespace rct3::scene::park
                 return;
             }
             const rct3::park::PathSlope slope = f.builder.slope;
-            const std::size_t before = f.builder.trail.size();
+            const usize before = f.builder.trail.size();
             for (const rct3::park::path::RouteStep& step : *route)
             {
                 f.builder.heading = step.heading;
                 f.builder.slope = step.slope;
-                const std::size_t had = f.builder.trail.size();
+                const usize had = f.builder.trail.size();
                 lay(device, scene, assets, false);
                 if (f.builder.trail.size() == had)
                     break; // Refused part way; what was laid stays
@@ -874,12 +875,12 @@ namespace rct3::scene::park
         if (!f.loaded)
         {
             f.loaded = true;
-            const std::size_t skins = ui::add_extra_skins(device, assets, kIconFiles);
+            const usize skins = ui::add_extra_skins(device, assets, kIconFiles);
             read_path_styles(f, assets);
             logging::logger("park").info("{} path and queue styles, {} pictures", f.styles.size(), skins);
             const auto first = std::ranges::find_if(f.styles, [&](const rct3::park::path::PathStyle& s) { return !s.queue && offered(scene.build.offer, s); });
             if (first != f.styles.end())
-                f.style = static_cast<std::size_t>(first - f.styles.begin());
+                f.style = static_cast<usize>(first - f.styles.begin());
         }
         // It starts clean: no trail goes on from where the last one was left.
         (void)drop_footpath_trail(scene);
@@ -1010,7 +1011,7 @@ namespace rct3::scene::park
                 lay(device, scene, assets);
             else if (step == rct3::park::PathStep::Remove && f.route_laid > 0)
             {
-                for (std::size_t n = std::exchange(f.route_laid, 0); n > 0; --n)
+                for (usize n = std::exchange(f.route_laid, 0); n > 0; --n)
                     remove(device, scene, assets);
             }
             else if (step == rct3::park::PathStep::Remove && !f.stroke.empty())
@@ -1031,7 +1032,7 @@ namespace rct3::scene::park
         if (const auto next = rct3::park::next_piece(f.builder, scene.grid); panel->following() && next && next->spot != f.followed)
         {
             f.followed = next->spot;
-            f.camera_goal = glm::vec3 { scene.grid.world_x(next->spot.col) + scene.grid.tile_size_x / 2, static_cast<float>(next->start), scene.grid.world_z(next->spot.row) + scene.grid.tile_size_z / 2 };
+            f.camera_goal = glm::vec3 { scene.grid.world_x(next->spot.col) + scene.grid.tile_size_x / 2, static_cast<f32>(next->start), scene.grid.world_z(next->spot.row) + scene.grid.tile_size_z / 2 };
         }
         else if (!panel->following())
             f.camera_goal.reset();
@@ -1043,12 +1044,12 @@ namespace rct3::scene::park
         else
         {
             usable.fill(true);
-            usable.at(static_cast<std::size_t>(rct3::park::PathControl::TurnLeft)) = rct3::park::can_turn(f.builder);
-            usable.at(static_cast<std::size_t>(rct3::park::PathControl::TurnRight)) = rct3::park::can_turn(f.builder);
-            usable.at(static_cast<std::size_t>(rct3::park::PathControl::Straight)) = problem == rct3::park::LayProblem::None;
+            usable.at(static_cast<usize>(rct3::park::PathControl::TurnLeft)) = rct3::park::can_turn(f.builder);
+            usable.at(static_cast<usize>(rct3::park::PathControl::TurnRight)) = rct3::park::can_turn(f.builder);
+            usable.at(static_cast<usize>(rct3::park::PathControl::Straight)) = problem == rct3::park::LayProblem::None;
         }
-        usable.at(static_cast<std::size_t>(rct3::park::PathControl::Remove)) = !f.builder.trail.empty() || !f.stroke.empty() || f.route_laid > 0;
-        panel->set_controls(usable, static_cast<std::size_t>(rct3::park::slope_control(f.builder.slope)), f.builder.cut_into_ground);
+        usable.at(static_cast<usize>(rct3::park::PathControl::Remove)) = !f.builder.trail.empty() || !f.stroke.empty() || f.route_laid > 0;
+        panel->set_controls(usable, static_cast<usize>(rct3::park::slope_control(f.builder.slope)), f.builder.cut_into_ground);
 
         std::u16string status = f.notice;
         if (status.empty())
@@ -1104,8 +1105,8 @@ namespace rct3::scene::park
             if (!distance)
                 return std::nullopt;
             const glm::vec3 hit = ray.origin + ray.direction * *distance;
-            const auto col = static_cast<std::int32_t>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x));
-            const auto row = static_cast<std::int32_t>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z));
+            const auto col = static_cast<i32>(std::floor((hit.x - scene.grid.origin_x) / scene.grid.tile_size_x));
+            const auto row = static_cast<i32>(std::floor((hit.z - scene.grid.origin_z) / scene.grid.tile_size_z));
             if (!scene.grid.contains(col, row))
                 return std::nullopt;
             return save::model::Tile { col, row };
@@ -1159,7 +1160,7 @@ namespace rct3::scene::park
                 f.lay_next = f.took_click = true;
             else
             {
-                const auto steps = static_cast<std::int32_t>(std::lround((*f.slope_press - at.y) / rct3::park::kSlopeDragStep));
+                const auto steps = static_cast<i32>(std::lround((*f.slope_press - at.y) / rct3::park::kSlopeDragStep));
                 if (const rct3::park::PathSlope slope = rct3::park::stepped_slope(f.slope_before, steps); slope != f.builder.slope)
                 {
                     f.builder.slope = slope;
@@ -1233,11 +1234,11 @@ namespace rct3::scene::park
             {
                 // Up and down an upright plane through where Shift went down, facing the camera.
                 const glm::vec3 across = glm::normalize(glm::vec3 { ray->direction.x, 0.0f, ray->direction.z });
-                const float along = glm::dot(ray->direction, across);
+                const f32 along = glm::dot(ray->direction, across);
                 if (along > 1e-4f)
                 {
-                    const float y = ray->origin.y + ray->direction.y * glm::dot(f.lift->at - ray->origin, across) / along;
-                    const std::int32_t height = f.lift->height + static_cast<std::int32_t>(std::lround(y - f.lift->at.y));
+                    const f32 y = ray->origin.y + ray->direction.y * glm::dot(f.lift->at - ray->origin, across) / along;
+                    const i32 height = f.lift->height + static_cast<i32>(std::lround(y - f.lift->at.y));
                     if (height != f.builder.start_height)
                     {
                         f.builder.start_height = height;
@@ -1260,7 +1261,7 @@ namespace rct3::scene::park
         {
             auto tile = input.over_interface ? std::nullopt : controls_tile(scene, at, size);
             // A path off the ground pointed at is the goal itself, at its height.
-            std::optional<std::int32_t> height;
+            std::optional<i32> height;
             if (const auto ray = input.over_interface ? std::nullopt : controls_ray(scene, at, size))
             {
                 if (const auto under = rct3::park::path::path_under(*ray, f.paths, scene.grid, ground_faded(scene)))
@@ -1317,8 +1318,8 @@ namespace rct3::scene::park
             }
             // The path edge pointed at, if any.
             // Or a ride's door, before what is behind it.
-            std::optional<std::pair<std::size_t, rct3::park::Side>> edge;
-            std::optional<std::array<std::int32_t, 4>> door;
+            std::optional<std::pair<usize, rct3::park::Side>> edge;
+            std::optional<std::array<i32, 4>> door;
             // While a trail goes on its arrow holds still: nothing else pointed at shows.
             const bool held = f.builder.start.has_value();
             if (const auto ray = input.over_interface || held ? std::nullopt : controls_ray(scene, at, size))
@@ -1327,7 +1328,7 @@ namespace rct3::scene::park
                 if (const auto d = rct3::park::path::door_under(*ray, doors, scene.grid, ground_faded(scene)))
                 {
                     const save::model::PlacementSpot& spot = doors[*d];
-                    door = std::array<std::int32_t, 4> { spot.col, spot.row, spot.height, spot.direction };
+                    door = std::array<i32, 4> { spot.col, spot.row, spot.height, spot.direction };
                 }
                 else if (const auto under = rct3::park::path::path_under(*ray, f.paths, scene.grid, ground_faded(scene)); under && under->side)
                     edge = std::pair { under->path_index, *under->side };
@@ -1342,7 +1343,7 @@ namespace rct3::scene::park
                     f.hover = std::move(b);
                 else if (door)
                 {
-                    rct3::park::path::start_from_door(b, save::model::PlacementSpot { .col = (*door)[0], .row = (*door)[1], .height = (*door)[2], .direction = static_cast<std::uint8_t>((*door)[3]) });
+                    rct3::park::path::start_from_door(b, save::model::PlacementSpot { .col = (*door)[0], .row = (*door)[1], .height = (*door)[2], .direction = static_cast<u8>((*door)[3]) });
                     f.hover = std::move(b);
                 }
                 f.dirty = true;
@@ -1431,7 +1432,7 @@ namespace rct3::scene::park
         return true;
     }
 
-    std::optional<std::uint64_t> footpath_at(const ParkScene& scene, ui::Point at, ui::Point size)
+    std::optional<u64> footpath_at(const ParkScene& scene, ui::Point at, ui::Point size)
     {
         if (size.x <= 0 || size.y <= 0)
             return std::nullopt;
@@ -1440,7 +1441,7 @@ namespace rct3::scene::park
         return under ? std::optional(scene.footpaths.paths[under->path_index].id) : std::nullopt;
     }
 
-    void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids, units::Money also)
+    void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const u64> ids, units::Money also)
     {
         if (ids.empty())
             return;
@@ -1453,8 +1454,8 @@ namespace rct3::scene::park
     {
         ParkFootpaths& f = scene.footpaths;
         save::model::Ride& r = scene.rides.rides.at(ride.value);
-        std::vector<std::uint64_t> railed;
-        for (std::size_t s = 0; s < r.stations.size(); ++s)
+        std::vector<u64> railed;
+        for (usize s = 0; s < r.stations.size(); ++s)
         {
             save::model::Station& station = r.stations[s];
             if (r.base.demolished)
@@ -1487,7 +1488,7 @@ namespace rct3::scene::park
             return;
         rail(scene, assets, railed);
         std::vector<save::model::PathTile> changed;
-        for (const std::uint64_t id : railed)
+        for (const u64 id : railed)
         {
             const auto at = std::ranges::find(f.paths, id, &save::model::PathTile::id);
             refresh_around(scene, assets, { at->col, at->row });

@@ -16,6 +16,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/screens/front/layout.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
@@ -41,7 +42,7 @@ namespace rct3::ui::screens::front
         inline constexpr std::string_view kBandEndSkin = "FrontScreen_Triangle";
     } // namespace front_screen
 
-    enum class FrontMenu : std::uint8_t
+    enum class FrontMenu : u8
     {
         Main,
         Play,
@@ -52,10 +53,10 @@ namespace rct3::ui::screens::front
         Tutorials, ///< Likewise for the tutorials
         Count_,
     };
-    inline constexpr std::size_t kFrontMenuCount = static_cast<std::size_t>(FrontMenu::Count_);
+    inline constexpr usize kFrontMenuCount = static_cast<usize>(FrontMenu::Count_);
 
     /// What a button does.
-    enum class FrontAction : std::uint8_t
+    enum class FrontAction : u8
     {
         OpenMenu,
         Options,
@@ -79,7 +80,7 @@ namespace rct3::ui::screens::front
         std::string_view icon;      ///< Skin
         FrontAction action = FrontAction::OpenMenu;
         FrontMenu menu = FrontMenu::Main; ///< For OpenMenu
-        std::int32_t pack = 0;            ///< For Campaign and Tutorial: 0 the original game, then each expansion
+        i32 pack = 0;                     ///< For Campaign and Tutorial: 0 the original game, then each expansion
     };
 
     struct FrontMenuInfo
@@ -92,13 +93,13 @@ namespace rct3::ui::screens::front
     /// Every menu, by FrontMenu.
     [[nodiscard]] const FrontMenuInfo& front_menu(FrontMenu menu);
 
-    inline constexpr std::int32_t kExpansionCount = 2;
+    inline constexpr i32 kExpansionCount = 2;
 
     /// What the owner is asked to do.
     struct FrontRequest
     {
         FrontAction action = FrontAction::Options;
-        std::int32_t pack = 0;
+        i32 pack = 0;
 
         friend bool operator==(const FrontRequest&, const FrontRequest&) = default;
     };
@@ -156,7 +157,7 @@ namespace rct3::ui::screens::front
         [[nodiscard]] std::optional<FrontRequest> take_request();
 
         /// The button of entry `index` of `menu`; null when there is none.
-        [[nodiscard]] std::optional<FrontButton&> button(FrontMenu menu, std::size_t index) const;
+        [[nodiscard]] std::optional<FrontButton&> button(FrontMenu menu, usize index) const;
         [[nodiscard]] FrontButton& back_button() const
         {
             return *back_;
@@ -166,8 +167,8 @@ namespace rct3::ui::screens::front
             return *quit_;
         }
         /// The name shown in the box beside button `index`, and how far it has faded in (0 to 1).
-        [[nodiscard]] std::u16string_view label(std::size_t index) const;
-        [[nodiscard]] float label_alpha(std::size_t index) const;
+        [[nodiscard]] std::u16string_view label(usize index) const;
+        [[nodiscard]] f32 label_alpha(usize index) const;
         /// Puts other lines of help along the bottom until the next update, for what is shown over the screen.
         void show_help(std::u16string title, std::u16string text);
         /// The two lines of help along the bottom.
@@ -201,7 +202,7 @@ namespace rct3::ui::screens::front
             std::string skin;
         };
 
-        [[nodiscard]] front_screen::Polar goal(FrontMenu menu, std::size_t index) const;
+        [[nodiscard]] front_screen::Polar goal(FrontMenu menu, usize index) const;
         void clear_labels();
 
         const StringTable& strings_;
@@ -213,7 +214,7 @@ namespace rct3::ui::screens::front
         FrontMenu current_ = FrontMenu::Main;
         std::optional<FrontMenu> parent_; // Moved out, while a child of it is open
         std::array<std::u16string, front_screen::kMaxMenuEntries> labels_;
-        std::array<float, front_screen::kMaxMenuEntries> label_alpha_ { };
+        std::array<f32, front_screen::kMaxMenuEntries> label_alpha_ { };
         std::u16string help_title_;
         std::u16string help_text_;
         std::vector<FrontRequest> requests_;

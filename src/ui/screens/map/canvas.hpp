@@ -11,6 +11,7 @@
 // Map points run from 0 to 1 across and down the whole map, as park::to_map gives them.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widget.hpp"
 
 #include <optional>
@@ -21,45 +22,45 @@ namespace rct3::ui::screens::map
 
     namespace map_view
     {
-        inline constexpr float kMaxZoom = 8;
-        inline constexpr float kZoomPerNotch = 1.25f;
+        inline constexpr f32 kMaxZoom = 8;
+        inline constexpr f32 kZoomPerNotch = 1.25f;
         /// Zoomed in, the camera's marker is kept this far from the edges, as a share of the view.
-        inline constexpr float kFollowMargin = 0.2f;
+        inline constexpr f32 kFollowMargin = 0.2f;
 
         /// What part of the map shows: its middle, as a map point, and how many times larger than when the
         /// whole map fits.
         struct View
         {
             Point centre { 0.5f, 0.5f };
-            float zoom = 1;
+            f32 zoom = 1;
         };
 
         /// Where the whole map lies on the screen for `view`, in `area`, for a map `aspect` times as wide as
         /// it is tall: at zoom 1 as large as fits, centred.
-        [[nodiscard]] Rect map_rect(const Rect& area, float aspect, const View& view);
+        [[nodiscard]] Rect map_rect(const Rect& area, f32 aspect, const View& view);
         /// The map point at a screen point, and back.
         [[nodiscard]] Point to_map(const Rect& map, Point screen);
         [[nodiscard]] Point to_screen(const Rect& map, Point at);
         /// `view` kept from showing beyond the map where the map fills the area, and centred where it does not.
-        [[nodiscard]] View clamped(const Rect& area, float aspect, View view);
+        [[nodiscard]] View clamped(const Rect& area, f32 aspect, View view);
         /// `view` zoomed `factor` times about the screen point `pointer`, which stays over the same map point.
-        [[nodiscard]] View zoomed(const Rect& area, float aspect, View view, float factor, Point pointer);
+        [[nodiscard]] View zoomed(const Rect& area, f32 aspect, View view, f32 factor, Point pointer);
         /// `view` moved the least that brings the map point `at` at least kFollowMargin inside the area.
-        [[nodiscard]] View following(const Rect& area, float aspect, View view, Point at);
+        [[nodiscard]] View following(const Rect& area, f32 aspect, View view, Point at);
     } // namespace map_view
 
     struct MapCanvasStyle
     {
         Color back = hex("#24323d");
-        float corner = 6;
+        f32 corner = 6;
         Color view_fill = hex("#ffffff30");
         Color view_line = hex("#ffffffd0");
-        float view_line_width = 1.5f;
+        f32 view_line_width = 1.5f;
         Color marker = hex("#ffffff");
         Color marker_line = hex("#1d5fbf");
-        float marker_size = 12;
-        float marker_outline = 2.5f;
-        float pointer_length = 14; ///< From the marker's middle along the way the camera faces
+        f32 marker_size = 12;
+        f32 marker_outline = 2.5f;
+        f32 pointer_length = 14; ///< From the marker's middle along the way the camera faces
     };
 
     /// The camera as the map shows it, in map points.
@@ -77,7 +78,7 @@ namespace rct3::ui::screens::map
 
         TextureId picture = 0;
         TextureId people = 0;
-        float aspect = 1; ///< Of the map: its width over its height
+        f32 aspect = 1; ///< Of the map: its width over its height
         MapCamera camera;
 
         [[nodiscard]] const map_view::View& view() const

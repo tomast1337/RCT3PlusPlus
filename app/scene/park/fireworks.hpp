@@ -6,6 +6,7 @@
 // itself carries the shell up and bursts it. A launcher taken away leaves its shots out.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "park/camera.hpp"
 #include "particles/display.hpp"
@@ -34,24 +35,24 @@ namespace rct3::scene::park
     {
         struct Playing
         {
-            std::size_t display = 0; ///< In `displays`
+            usize display = 0; ///< In `displays`
             particles::DisplayRun run { };
             glm::vec3 centre { 0.0f }; ///< Among its launchers, on the ground
         };
 
         std::vector<particles::Display> displays;
-        std::vector<std::uint8_t> was_due; ///< By display: due at the last look, so a day starts it once
+        std::vector<u8> was_due; ///< By display: due at the last look, so a day starts it once
         std::optional<Playing> playing;
     };
 
     /// The displays the park `file` schedules; none when it holds none or they cannot be read.
     void load_park_fireworks(ParkFireworks& fireworks, const save::SaveFile& file);
     /// Starts display `display` at once, in place of any playing; false when there is no such display.
-    bool start_park_display(ParkScene& scene, std::size_t display);
+    bool start_park_display(ParkScene& scene, usize display);
     void stop_park_display(ParkScene& scene);
     /// The view of the display playing from `yaw`: its launchers and the sky its shells burst in; none when no
     /// display plays or none of its launchers stands.
-    std::optional<rct3::park::ParkCamera> park_display_view(const ParkScene& scene, float yaw);
+    std::optional<rct3::park::ParkCamera> park_display_view(const ParkScene& scene, f32 yaw);
     /// Starts the displays that fall due and moves the one playing on by `park_time`, firing its shots.
     void update_park_fireworks(ParkScene& scene, units::Seconds park_time);
 

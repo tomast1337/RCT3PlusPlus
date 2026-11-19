@@ -5,6 +5,7 @@
 // components, so a park saved afterwards keeps it.
 #pragma once
 
+#include "core/types.hpp"
 #include "simulation/entt.hpp"
 #include "units/units.hpp"
 
@@ -20,7 +21,7 @@ namespace rct3::simulation
     struct SimWorld;
 
     /// A level of a guest's Mood or Needs, 0 to 1.
-    enum class GuestLevel : std::uint8_t
+    enum class GuestLevel : u8
     {
         Happiness,
         Energy,
@@ -33,7 +34,7 @@ namespace rct3::simulation
         Swim,
         Tolerance,
     };
-    inline constexpr std::size_t kGuestLevels = 10;
+    inline constexpr usize kGuestLevels = 10;
 
     /// The level's name as the developer windows and scripts call it: "happiness", "nausea"...
     [[nodiscard]] std::string_view level_name(GuestLevel level);

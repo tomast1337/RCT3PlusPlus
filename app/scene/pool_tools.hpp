@@ -17,6 +17,7 @@
 // delete menu's tool does; the tool stays out. Picking another tool puts it away.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/build_catalogue.hpp"
 #include "park/pools/pools.hpp"
 #include "park/terrain_mesh.hpp"
@@ -59,7 +60,7 @@ namespace rct3::scene
 
     /// Takes up the pool complex the changing room `room` (of the pools' rooms) opens on, its squares, extras
     /// and rooms, refunded as the delete tool refunds them.
-    void delete_pool_complex(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, std::size_t room);
+    void delete_pool_complex(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, usize room);
 
     /// A right click at `at`, in a view of `size`, with a pool tool out: takes up the top pool square pointed at,
     /// with what stands on it, refunded as the delete tool refunds it. False when no square is there.

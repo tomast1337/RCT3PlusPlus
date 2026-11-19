@@ -5,6 +5,8 @@
 // everywhere else.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <glm/vec3.hpp>
 #include <span>
@@ -14,10 +16,10 @@ namespace rct3::park::track
 {
 
     /// The side of the square every design the game ships keeps.
-    inline constexpr std::uint32_t kTopViewSize = 512;
+    inline constexpr u32 kTopViewSize = 512;
 
     /// RGBA, `size` by `size`, top row first, x to the right and z down: the line through `points` (a
     /// course's, in metres), grey levels by height, clear where it does not pass. Empty for no points.
-    [[nodiscard]] std::vector<std::uint8_t> top_view(std::span<const glm::vec3> points, std::uint32_t size = kTopViewSize);
+    [[nodiscard]] std::vector<u8> top_view(std::span<const glm::vec3> points, u32 size = kTopViewSize);
 
 } // namespace rct3::park::track

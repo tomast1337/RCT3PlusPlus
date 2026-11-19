@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/turns.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -63,6 +65,6 @@ TEST_CASE("a heading wraps round in eighths, and is a quarter turn or a side onl
     CHECK(Heading8 { 6 }.side() == Side::kNextRow);
     CHECK_FALSE(Heading8 { 5 }.side().has_value());
     // A quarter turn is two eighths, so turning heading 0 by a turn gives that turn back.
-    for (std::int32_t t = 0; t < 4; ++t)
+    for (i32 t = 0; t < 4; ++t)
         CHECK(Heading8 { }.turned(ModelTurn { t }).quarter_turns() == ModelTurn { t });
 }

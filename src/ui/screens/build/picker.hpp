@@ -28,6 +28,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widget.hpp"
 #include "ui/widgets/button.hpp"
@@ -51,19 +52,19 @@ namespace rct3::ui::screens::build
     namespace build_picker
     {
         /// The window's size when first opened, and the parts above the grid.
-        inline constexpr float kWidth = 380;
-        inline constexpr float kHeight = 400;
-        inline constexpr float kCaptionX = 59;  ///< Right of the window's icon, under the title
-        inline constexpr float kBarHeight = 20; ///< Of the search box and of the filters' row
-        inline constexpr float kGap = 4;
-        inline constexpr float kFilter = 30;  ///< Width and height of a filter: the kinds' icons are this big
-        inline constexpr float kGroupGap = 8; ///< Between the object, theme and pack filters
-        inline constexpr float kNote = 16;    ///< Under the grid, while there is a note
+        inline constexpr f32 kWidth = 380;
+        inline constexpr f32 kHeight = 400;
+        inline constexpr f32 kCaptionX = 59;  ///< Right of the window's icon, under the title
+        inline constexpr f32 kBarHeight = 20; ///< Of the search box and of the filters' row
+        inline constexpr f32 kGap = 4;
+        inline constexpr f32 kFilter = 30;  ///< Width and height of a filter: the kinds' icons are this big
+        inline constexpr f32 kGroupGap = 8; ///< Between the object, theme and pack filters
+        inline constexpr f32 kNote = 16;    ///< Under the grid, while there is a note
 
         /// The grid.
-        inline constexpr float kTile = 72;
-        inline constexpr float kTileIcon = 64;
-        inline constexpr float kBadge = 16; ///< In a tile's top corners
+        inline constexpr f32 kTile = 72;
+        inline constexpr f32 kTileIcon = 64;
+        inline constexpr f32 kBadge = 16; ///< In a tile's top corners
     } // namespace build_picker
 
     /// One item, or a heading over a set of them, as the window shows it.
@@ -77,12 +78,12 @@ namespace rct3::ui::screens::build
         units::Money cost { };           ///< The price
         std::string badge;               ///< Skin in the right-hand corner, if any
         std::string style;               ///< The theme's name; empty for items of no theme
-        std::uint32_t addon = 0;         ///< 0 for the base game, else its add-on pack
+        u32 addon = 0;                   ///< 0 for the base game, else its add-on pack
         std::string kind;                ///< Its object filter's name ("Coaster_Steel"); empty for none
-        std::size_t item = 0;            ///< The owner's number for the item
+        usize item = 0;                  ///< The owner's number for the item
         bool locked = false;             ///< Shown, but not to be picked until it is invented
-        std::optional<float> progress;   ///< How far research has got with it, 0 to 1, while it is under way
-        std::int32_t rank = 0;           ///< Rows sort by this first, then by name
+        std::optional<f32> progress;     ///< How far research has got with it, 0 to 1, while it is under way
+        i32 rank = 0;                    ///< Rows sort by this first, then by name
         std::vector<PickerRow> children; ///< A heading's rows; a row with any is a heading
     };
 
@@ -106,7 +107,7 @@ namespace rct3::ui::screens::build
         std::string style_filter;      ///< + the theme's name: the skin of its filter while on
         std::string style_filter_off;  ///< ... and while off
         std::string pack_filter;       ///< + the pack's number from 0: the picture of its filter
-        float pack_icon_scale = 0.5f;  ///< The pictures are badges drawn larger elsewhere
+        f32 pack_icon_scale = 0.5f;    ///< The pictures are badges drawn larger elsewhere
         std::string pack_name;         ///< + the pack's number from 0: the string key of its name
         std::string style_help;        ///< String key of the theme filters' help, under the theme's name
         widgets::ScrollBarStyle scroll_bar;
@@ -130,14 +131,14 @@ namespace rct3::ui::screens::build
         BuildPicker(std::string name, BuildPickerStyle style, const StringTable& strings, std::u16string title, std::string icon, std::vector<PickerRow> rows, std::vector<PickerTheme> themes = { });
 
         /// The item of each row picked since the last call, the last one.
-        [[nodiscard]] std::optional<std::size_t> take_picked();
-        [[nodiscard]] std::optional<std::size_t> picked() const
+        [[nodiscard]] std::optional<usize> take_picked();
+        [[nodiscard]] std::optional<usize> picked() const
         {
             return picked_;
         }
         /// Marks the row of `item` (the owner's number for it), opening its heading, without picking it.
         // shortcut: the list is not scrolled to the row; scroll it once lists grow long enough to hide it.
-        void show_item(std::size_t item);
+        void show_item(usize item);
         /// What the park can pay; items dearer are shaded. None: money never runs out.
         std::optional<units::Money> cash;
         /// A line under the grid, e.g. to say what the window leaves out.
@@ -146,7 +147,7 @@ namespace rct3::ui::screens::build
         /// may set them before the first update to restore them.
         std::set<std::string, std::less<>> kinds_off;
         std::set<std::string, std::less<>> styles_off;
-        std::set<std::uint32_t> packs_only;
+        std::set<u32> packs_only;
 
         // For tests and owners that drive the window.
         [[nodiscard]] std::span<BuildPickerRow* const> rows() const
@@ -172,7 +173,7 @@ namespace rct3::ui::screens::build
         void add_rows(const std::vector<PickerRow>& rows, BuildPickerRow* heading);
         void add_filters(const std::vector<PickerTheme>& themes);
         /// Lays the filters out in rows `width` units wide, a little apart between groups, and the grid below.
-        void wrap_filters(float width);
+        void wrap_filters(f32 width);
         /// Whether the filters and the search let `row` show; a heading while any of its rows do.
         [[nodiscard]] bool shows(const PickerRow& row) const;
         void lay_out();
@@ -183,7 +184,7 @@ namespace rct3::ui::screens::build
         std::vector<BuildPickerRow*> rows_;
         struct FilterKey
         {
-            enum class Group : std::uint8_t
+            enum class Group : u8
             {
                 Object,
                 Theme,
@@ -191,7 +192,7 @@ namespace rct3::ui::screens::build
             };
             Group group = Group::Object;
             std::string name; ///< Of the kind or the theme
-            std::uint32_t pack = 0;
+            u32 pack = 0;
         };
         std::vector<widgets::Button*> filters_;
         std::vector<FilterKey> keys_; ///< Of each filter
@@ -199,11 +200,11 @@ namespace rct3::ui::screens::build
         widgets::ScrollArea* list_ = nullptr;
         std::u16string query_; ///< Folded, as the layout last filtered by
         bool dirty_ = true;
-        float laid_width_ = 0;        ///< Of the grid when it was laid out
-        float laid_filter_width_ = 0; ///< Of the window's content when the filters were wrapped
+        f32 laid_width_ = 0;        ///< Of the grid when it was laid out
+        f32 laid_filter_width_ = 0; ///< Of the window's content when the filters were wrapped
         bool laid_note_ = false;
-        std::optional<std::size_t> picked_;
-        std::optional<std::size_t> picked_out_;
+        std::optional<usize> picked_;
+        std::optional<usize> picked_out_;
     };
 
     /// An item of the grid, or a heading.

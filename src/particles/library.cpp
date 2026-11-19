@@ -2,6 +2,7 @@
 #include "particles/library.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/particle_skin.hpp"
 #include "ovl/texture/pixels.hpp"
@@ -23,13 +24,13 @@ namespace rct3::particles
         constexpr std::array<std::string_view, 2> kEffectFolders { "ParticleEffects", "Fireworks" };
     } // namespace
 
-    std::size_t Sprite::frame(float age, float pick) const noexcept
+    usize Sprite::frame(f32 age, f32 pick) const noexcept
     {
         if (frames.size() < 2)
             return 0;
-        const float run = animated && loop_time > 0 ? age / loop_time : pick;
-        const float share = run - std::floor(run);
-        return std::min(static_cast<std::size_t>(share * static_cast<float>(frames.size())), frames.size() - 1);
+        const f32 run = animated && loop_time > 0 ? age / loop_time : pick;
+        const f32 share = run - std::floor(run);
+        return std::min(static_cast<usize>(share * static_cast<f32>(frames.size())), frames.size() - 1);
     }
 
     std::expected<Library, std::string> Library::load(const std::filesystem::path& root)

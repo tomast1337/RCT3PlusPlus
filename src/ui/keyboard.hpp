@@ -15,6 +15,8 @@
 // text. The platform fills the composition when its window system reports one.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -23,7 +25,7 @@
 namespace rct3::ui
 {
 
-    enum class Key : std::uint8_t
+    enum class Key : u8
     {
         Left,
         Right,
@@ -75,7 +77,7 @@ namespace rct3::ui
     struct Composition
     {
         std::u16string text { }; ///< Empty when nothing is being composed
-        std::size_t caret = 0;   ///< Where in `text` the input method's cursor is, in UTF-16 units
+        usize caret = 0;         ///< Where in `text` the input method's cursor is, in UTF-16 units
 
         friend bool operator==(const Composition&, const Composition&) = default;
     };

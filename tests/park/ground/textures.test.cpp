@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground/textures.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <string_view>
 #include <vector>
@@ -58,7 +60,7 @@ TEST_CASE("a queue's mask leaves its dark parts to the ground below")
 
 TEST_CASE("each cliff face gets the tunnel pictures nearest it in colour")
 {
-    const auto plain = [](std::uint8_t r, std::uint8_t g, std::uint8_t b) { return rct3::ovl::texture::RgbaImage { 1, 1, { r, g, b, 255 } }; };
+    const auto plain = [](u8 r, u8 g, u8 b) { return rct3::ovl::texture::RgbaImage { 1, 1, { r, g, b, 255 } }; };
     GroundImages images;
     images.emplace(ground_key(GroundPaint::Cliff, 0), plain(200, 40, 30));
     images.emplace(ground_key(GroundPaint::Cliff, 4), plain(20, 30, 220));

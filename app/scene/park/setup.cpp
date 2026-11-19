@@ -2,6 +2,7 @@
 #include "scene/park/setup.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "ovl/carried_item.hpp"
 #include "ovl/costume.hpp"
@@ -154,7 +155,7 @@ namespace rct3::scene::park
             add_referenced(index, install);
             rct3::park::object::ModelLoader loader(index);
             std::map<std::string, bool, std::less<>> tried;
-            for (std::size_t i = 0; i < objects.size(); ++i)
+            for (usize i = 0; i < objects.size(); ++i)
             {
                 const save::model::PlacedObject& o = objects[i];
                 std::string key = rct3::park::object::model_key(o);
@@ -178,11 +179,11 @@ namespace rct3::scene::park
         }
 
         /// The ground's grass and dirt get half the relief of walls and rock.
-        constexpr float kGroundRelief = 0.35f;
+        constexpr f32 kGroundRelief = 0.35f;
         /// How strongly the ground shows while building under it.
-        constexpr float kFadedGround = 0.35f;
+        constexpr f32 kFadedGround = 0.35f;
 
-        constexpr std::uint8_t kPickColour = 255;
+        constexpr u8 kPickColour = 255;
         constexpr std::string_view kCharacterFolder = "Characters";
         /// Where the staff's uniform pictures are.
         /// shortcut: always the one set the game ships, though a save names its set; upgrade when a save
@@ -215,7 +216,7 @@ namespace rct3::scene::park
                     for (const rct3::park::object::ModelPart& part : model->levels.front().parts)
                         batches.push_back({ rct3::park::painted_name(part.texture, part.slots, { }), part.texture, { }, part.blend, 0, 0 });
             };
-            for (std::size_t i = 0; i < kUmbrellaShapes.size(); ++i)
+            for (usize i = 0; i < kUmbrellaShapes.size(); ++i)
             {
                 scene.umbrellas[i] = loader.load_shape(kUmbrellaShapes[i], kCarriedOverlay);
                 add_pictures(scene.umbrellas[i]);
@@ -227,7 +228,7 @@ namespace rct3::scene::park
                     scene.staff_tools.emplace(tool, std::move(*model));
                 }
             constexpr std::array<std::string_view, 2> kLitterShapes { "Litter", "Puke" };
-            for (std::size_t i = 0; i < kLitterShapes.size(); ++i)
+            for (usize i = 0; i < kLitterShapes.size(); ++i)
             {
                 scene.litter_looks[i] = loader.load_shape(kLitterShapes[i], std::format("{}/Litter", litter));
                 add_pictures(scene.litter_looks[i]);
@@ -241,8 +242,8 @@ namespace rct3::scene::park
             if (scene.swim_ring && !scene.swim_ring->levels.empty())
             {
                 std::vector<rct3::park::object::ModelPart>& parts = scene.swim_ring->levels.front().parts;
-                const auto corners = [](const rct3::park::object::ModelPart& part, std::size_t t) { return std::array { part.vertices[part.indices[t]].position, part.vertices[part.indices[t + 1]].position, part.vertices[part.indices[t + 2]].position }; };
-                const auto ring_way = [&](const rct3::park::object::ModelPart& part, std::size_t t) {
+                const auto corners = [](const rct3::park::object::ModelPart& part, usize t) { return std::array { part.vertices[part.indices[t]].position, part.vertices[part.indices[t + 1]].position, part.vertices[part.indices[t + 2]].position }; };
+                const auto ring_way = [&](const rct3::park::object::ModelPart& part, usize t) {
                     if (std::max({ part.indices[t], part.indices[t + 1], part.indices[t + 2] }) >= part.vertices.size())
                         return false;
                     const auto c = corners(part, t);
@@ -250,9 +251,9 @@ namespace rct3::scene::park
                     return centre.x > std::abs(centre.z);
                 };
                 glm::vec3 middle { 0.0f };
-                float count = 0;
+                f32 count = 0;
                 for (const rct3::park::object::ModelPart& part : parts)
-                    for (std::size_t t = 0; t + 2 < part.indices.size(); t += 3)
+                    for (usize t = 0; t + 2 < part.indices.size(); t += 3)
                         if (ring_way(part, t))
                         {
                             const auto c = corners(part, t);
@@ -261,19 +262,19 @@ namespace rct3::scene::park
                         }
                 middle = count > 0 ? middle / count : glm::vec3(0.0f);
                 const auto across = [&](const glm::vec3& p) { return glm::length(glm::vec2(p.x - middle.x, p.z - middle.z)); };
-                float reach = 0;
+                f32 reach = 0;
                 for (const rct3::park::object::ModelPart& part : parts)
-                    for (std::size_t t = 0; t + 2 < part.indices.size(); t += 3)
+                    for (usize t = 0; t + 2 < part.indices.size(); t += 3)
                         if (ring_way(part, t))
                             for (const glm::vec3& p : corners(part, t))
                                 reach += across(p) / (3.0f * count);
                 // Chosen by eye: the farthest a kept corner and the nearest a kept middle is, over the average, leaving out the frame
                 // and the seat across the hole, which the rider in it would be under.
-                constexpr float kRingReach = 1.5f, kHoleReach = 0.6f;
+                constexpr f32 kRingReach = 1.5f, kHoleReach = 0.6f;
                 for (rct3::park::object::ModelPart& part : parts)
                 {
-                    std::vector<std::uint32_t> kept;
-                    for (std::size_t t = 0; t + 2 < part.indices.size(); t += 3)
+                    std::vector<u32> kept;
+                    for (usize t = 0; t + 2 < part.indices.size(); t += 3)
                         if (ring_way(part, t) && std::ranges::all_of(corners(part, t), [&](const glm::vec3& p) { return across(p) <= kRingReach * reach; }) && across((corners(part, t)[0] + corners(part, t)[1] + corners(part, t)[2]) / 3.0f) >= kHoleReach * reach)
                             kept.insert(kept.end(), { part.indices[t], part.indices[t + 1], part.indices[t + 2] });
                     for (rct3::park::object::ModelVertex& v : part.vertices)
@@ -344,7 +345,7 @@ namespace rct3::scene::park
             // Colours left for the game to pick are picked here, the same each time for the same park and seed.
             scene.looks = random::stream(seed, random::RandomStream::Effects);
             random::RandomState& colours = scene.looks;
-            const auto add = [&](const save::model::Person& person, bool staff, std::size_t saved) {
+            const auto add = [&](const save::model::Person& person, bool staff, usize saved) {
                 const save::model::Appearance& a = person.appearance;
                 if (!a.visible)
                     return;
@@ -358,19 +359,19 @@ namespace rct3::scene::park
                 shown.swimwear = a.wearing_swimsuit;
                 if (look.head == nullptr && look.body == nullptr && look.legs == nullptr)
                     return;
-                for (std::size_t i = 0; i < look.colours.size(); ++i)
+                for (usize i = 0; i < look.colours.size(); ++i)
                 {
-                    const std::uint8_t saved = a.palettes[i];
-                    look.colours[i] = saved == kPickColour ? static_cast<std::uint8_t>(random::below(colours, kColourCells)) : static_cast<std::uint8_t>(saved % kColourCells);
+                    const u8 saved = a.palettes[i];
+                    look.colours[i] = saved == kPickColour ? static_cast<u8>(random::below(colours, kColourCells)) : static_cast<u8>(saved % kColourCells);
                 }
                 // All bits set means none were picked yet.
-                if (a.optionals[0] != ~std::uint32_t { 0 })
+                if (a.optionals[0] != ~u32 { 0 })
                     look.optionals = a.optionals;
                 // Stored a row per axis, which is a column each here.
                 for (glm::length_t c = 0; c < 4; ++c)
                 {
                     for (glm::length_t r = 0; r < 4; ++r)
-                        shown.pose.world[c][r] = person.world[static_cast<std::size_t>(c * 4 + r)];
+                        shown.pose.world[c][r] = person.world[static_cast<usize>(c * 4 + r)];
                 }
                 shown.pose.motion = person.animation.anim_type.value_or(rct3::park::person::motion::kIdle);
                 shown.saved_time = person.animation.playback_time;
@@ -380,12 +381,12 @@ namespace rct3::scene::park
                 shown.saved = saved;
                 scene.shown_people.push_back(shown);
             };
-            for (std::size_t i = 0; i < scene.people.guests.size(); ++i)
+            for (usize i = 0; i < scene.people.guests.size(); ++i)
             {
                 if (scene.people.guests[i].in_park)
                     add(scene.people.guests[i].person, false, i);
             }
-            for (std::size_t i = 0; i < scene.people.staff.size(); ++i)
+            for (usize i = 0; i < scene.people.staff.size(); ++i)
                 add(scene.people.staff[i].person, true, i);
             // What guests coming in at the gate wear: every head, body and legs in the guests' folders, one
             // folder for each age and sex (such as "AF" for adult women), files such as "AF01_Head_Stub". Each
@@ -396,12 +397,12 @@ namespace rct3::scene::park
                 next_id = std::max(next_id, g.id + 1);
             // The id of the park's part group of `symbol`: a group the park already has keeps its id; symbols are
             // matched in any case.
-            const auto group = [&](std::string_view symbol, std::size_t section, std::size_t sex, std::size_t type) {
+            const auto group = [&](std::string_view symbol, usize section, usize sex, usize type) {
                 const auto same = [&](const save::model::PartGroup& g) { return std::ranges::equal(g.symbol, symbol, [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b)); }); };
                 const auto known = std::ranges::find_if(scene.people.part_groups, same);
                 if (known != scene.people.part_groups.end())
                     return known->id;
-                scene.people.part_groups.push_back({ .id = next_id, .symbol = std::string(symbol), .section = static_cast<std::uint8_t>(section), .sex = static_cast<std::uint8_t>(sex), .type = static_cast<std::uint8_t>(type) });
+                scene.people.part_groups.push_back({ .id = next_id, .symbol = std::string(symbol), .section = static_cast<u8>(section), .sex = static_cast<u8>(sex), .type = static_cast<u8>(type) });
                 return next_id++;
             };
             std::error_code error;
@@ -411,7 +412,7 @@ namespace rct3::scene::park
                 // The celebrities VIP goals send each have a folder of their own, by the goals' numbers from 1.
                 constexpr std::array<std::string_view, 6> kCelebrities { "Politician", "PopStar", "MovieStar", "JoeSlugger", "BobWaterman", "Smythe" };
                 const auto celebrity = std::ranges::find(kCelebrities, name);
-                const auto vip = celebrity != kCelebrities.end() ? static_cast<std::uint8_t>(celebrity - kCelebrities.begin() + 1) : std::uint8_t { 0 };
+                const auto vip = celebrity != kCelebrities.end() ? static_cast<u8>(celebrity - kCelebrities.begin() + 1) : u8 { 0 };
                 auto type = name.size() == 2 ? std::string_view("CTA").find(name[0]) : std::string_view::npos;
                 auto sex = name.size() == 2 ? std::string_view("MF").find(name[1]) : std::string_view::npos;
                 if (vip != 0)
@@ -461,7 +462,7 @@ namespace rct3::scene::park
                         return at != std::string_view::npos && std::ranges::all_of(symbol.substr(at + s.size()), [](char c) { return c >= '0' && c <= '9'; });
                     });
                     const bool swim = swim_section != kSwimSections.end();
-                    const auto number = static_cast<std::uint8_t>(swim ? swim_section - kSwimSections.begin() + 1 : section - kSections.begin());
+                    const auto number = static_cast<u8>(swim ? swim_section - kSwimSections.begin() + 1 : section - kSections.begin());
                     const rct3::park::person::PartSet* part = section != kSections.end() || swim ? core::as_pointer(library.part_set(symbol)) : nullptr;
                     if (part == nullptr)
                         continue;
@@ -483,12 +484,12 @@ namespace rct3::scene::park
                     {
                         // shortcut: a costume's number is read from the digits ending its name, as the install numbers them; read it from elsewhere if a costume ever lacks them.
                         const auto digits = std::ranges::find_if(c.name, [](char ch) { return ch >= '0' && ch <= '9'; });
-                        std::uint32_t number = 0;
+                        u32 number = 0;
                         if (!c.costume || c.costume->sections.size() < 3 || std::from_chars(std::to_address(digits), c.name.data() + c.name.size(), number).ec != std::errc { } || number > 255)
                             continue;
-                        for (std::uint8_t k = 0; k < 3; ++k)
+                        for (u8 k = 0; k < 3; ++k)
                             if (const rct3::park::person::PartSet* set = core::as_pointer(library.part_set(c.costume->sections[k])))
-                                scene.wardrobe.push_back({ .id = group(c.costume->sections[k], k, 0, std::to_underlying(save::model::PersonType::Entertainer)), .set = set, .type = save::model::PersonType::Entertainer, .section = k, .costume = static_cast<std::uint8_t>(number) });
+                                scene.wardrobe.push_back({ .id = group(c.costume->sections[k], k, 0, std::to_underlying(save::model::PersonType::Entertainer)), .set = set, .type = save::model::PersonType::Entertainer, .section = k, .costume = static_cast<u8>(number) });
                     }
             }
             library.close_files();
@@ -552,8 +553,8 @@ namespace rct3::scene::park
             simulation::DayWindow hours;
             if (const auto park = save::model::load_park(file, index); park && park->has_park)
                 hours = simulation::opening_hours(park->park.opening_minutes, park->park.closing_minutes);
-            const std::optional<std::int32_t> mode = world.time ? world.time->day_night_mode : std::nullopt;
-            const std::optional<float> time = world.time ? std::optional(world.time->day_fraction) : std::nullopt;
+            const std::optional<i32> mode = world.time ? world.time->day_night_mode : std::nullopt;
+            const std::optional<f32> time = world.time ? std::optional(world.time->day_fraction) : std::nullopt;
             const simulation::DayMode day_mode = simulation::day_mode(mode);
             simulation::DayClock clock = simulation::start_day(time, simulation::day_window(day_mode, hours), simulation::day_transition(options.choice(config::game::GameOption::DayNight)));
             clock.mode = day_mode;
@@ -561,7 +562,7 @@ namespace rct3::scene::park
             return clock;
         }
 
-        constexpr float kTicketSpot = 1; ///< Along an entrance without a spot of its own, towards the ride
+        constexpr f32 kTicketSpot = 1; ///< Along an entrance without a spot of its own, towards the ride
 
         /// Gives simulated ride `entity` its riders' ways on and off, as `ways_of` lays them from where `ride`'s
         /// first station has its entrance and exit, with the ticket spot the entrance's model has (its first
@@ -591,12 +592,12 @@ namespace rct3::scene::park
             for (const auto& [door, is_exit] : { std::pair { entrance, false }, std::pair { exit, true } })
             {
                 const rct3::park::object::ObjectModel* model = model_of(*door);
-                const auto k = save::model::PlacedObjectIndex { static_cast<std::size_t>(door - scene.objects.begin()) };
+                const auto k = save::model::PlacedObjectIndex { static_cast<usize>(door - scene.objects.begin()) };
                 if (model == nullptr || !model->rig || std::ranges::contains(scene.boned_rides, k, &ParkScene::BonedRide::object))
                     continue;
-                const auto motion = [&](std::string_view end) -> std::optional<std::size_t> {
+                const auto motion = [&](std::string_view end) -> std::optional<usize> {
                     const auto found = std::ranges::find_if(model->animation_names, [&](const std::string& name) { return name.ends_with(end); });
-                    return found != model->animation_names.end() ? std::optional(static_cast<std::size_t>(found - model->animation_names.begin())) : std::nullopt;
+                    return found != model->animation_names.end() ? std::optional(static_cast<usize>(found - model->animation_names.begin())) : std::nullopt;
                 };
                 const auto shut = motion("CloseIdle"), opening = motion("Open"), open = motion("OpenIdle"), shutting = motion("Close");
                 if (!shut || !opening || !open || !shutting)
@@ -633,7 +634,7 @@ namespace rct3::scene::park
         for (auto& [name, image] : images)
         {
             // Worked out first: the size cannot be read in the same call that moves the image away.
-            const std::int32_t halvings = ovl::texture::texture_halvings(scene.texture_detail, image.width, image.height);
+            const i32 halvings = ovl::texture::texture_halvings(scene.texture_detail, image.width, image.height);
             image = ovl::texture::halved(std::move(image), halvings);
         }
     }
@@ -671,7 +672,7 @@ namespace rct3::scene::park
         const entt::entity entity = scene.ride_entities[ride_index.value];
         if (ride.kind != save::model::RideKind::Flat || ride.base.placement == 0 || entity == entt::null)
             return;
-        for (std::size_t k = 0; k < scene.objects.size(); ++k)
+        for (usize k = 0; k < scene.objects.size(); ++k)
         {
             const auto model = scene.objects[k].owner_ref == ride.base.placement ? scene.models.find(rct3::park::object::model_ref(scene.objects[k])) : scene.models.end();
             if (model != scene.models.end() && !model->second.seat_places.empty())
@@ -722,9 +723,9 @@ namespace rct3::scene::park
         }
     }
 
-    void add_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex from, std::size_t count, RideCarsAdded added)
+    void add_ride_cars(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, save::model::RideIndex from, usize count, RideCarsAdded added)
     {
-        std::uint64_t last = 0;
+        u64 last = 0;
         for (const auto& list : { std::span<const save::model::PlacedObject>(scene.objects), std::span<const save::model::PlacedObject>(scene.cars) })
             for (const save::model::PlacedObject& o : list)
                 last = std::max(last, o.id);
@@ -734,7 +735,7 @@ namespace rct3::scene::park
         // A ride whose kind has a lift car has one on each of its lift towers, numbered past its trains.
         for (const save::model::PlacedObject& o : cars.pieces)
             last = std::max(last, o.id);
-        for (std::size_t r = from.value; r < from.value + count; ++r)
+        for (usize r = from.value; r < from.value + count; ++r)
         {
             const auto& lift = r < scene.track_rules.size() ? scene.track_rules[r].lift_car : std::nullopt;
             const auto& course = r < scene.courses.size() ? scene.courses[r] : std::nullopt;
@@ -744,7 +745,7 @@ namespace rct3::scene::park
             std::string path = std::filesystem::relative(*file, install.root()).generic_string();
             path.resize(path.size() - std::string_view(".common.ovl").size());
             const save::model::Ride& ride = scene.rides.rides[r];
-            for (std::size_t l = 0; l < course->lifts.size(); ++l)
+            for (usize l = 0; l < course->lifts.size(); ++l)
             {
                 save::model::PlacedObject& o = cars.pieces.emplace_back();
                 o.id = ++last;
@@ -758,7 +759,7 @@ namespace rct3::scene::park
             }
         }
         load_models(install, cars.pieces, false, scene.models, scene.pictures, cars.designs);
-        const std::size_t first = scene.cars.size();
+        const usize first = scene.cars.size();
         scene.cars.insert(scene.cars.end(), cars.pieces.begin(), cars.pieces.end());
         scene.car_spots.insert(scene.car_spots.end(), cars.spots.begin(), cars.spots.end());
         scene.saved_cars.merge(cars.fitted);
@@ -770,7 +771,7 @@ namespace rct3::scene::park
             const auto model = scene.models.find(rct3::park::object::model_ref(car));
             return model != scene.models.end() && !model->second.lights.empty();
         });
-        for (std::size_t i = first; i < scene.cars.size(); ++i)
+        for (usize i = first; i < scene.cars.size(); ++i)
             if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[i])); model != scene.models.end() && model->second.car_part)
                 scene.arm_cars.push_back({ .car = i, .joints = { model->second.car_part->pivot }, .part = model->second.car_part });
             else if (model != scene.models.end() && !model->second.arm_joints.empty())
@@ -793,14 +794,14 @@ namespace rct3::scene::park
     void drop_ride_cars(ParkScene& scene, save::model::RideIndex ride_index)
     {
         // Each car's place once the ride's own are gone, by its place now.
-        std::vector<std::optional<std::size_t>> kept(scene.cars.size());
-        std::size_t next = 0;
-        for (std::size_t i = 0; i < scene.cars.size(); ++i)
+        std::vector<std::optional<usize>> kept(scene.cars.size());
+        usize next = 0;
+        for (usize i = 0; i < scene.cars.size(); ++i)
             if (scene.car_spots[i].ride != ride_index)
                 kept[i] = next++;
             else
                 scene.saved_cars.erase(scene.cars[i].id);
-        for (std::size_t i = scene.cars.size(); i-- > 0;)
+        for (usize i = scene.cars.size(); i-- > 0;)
             if (!kept[i])
             {
                 scene.cars.erase(scene.cars.begin() + static_cast<std::ptrdiff_t>(i));
@@ -814,8 +815,8 @@ namespace rct3::scene::park
             boned.car = *kept[boned.car];
         for (auto& [_, cars] : scene.ride_cars)
         {
-            std::erase_if(cars, [&](std::size_t car) { return !kept[car]; });
-            for (std::size_t& car : cars)
+            std::erase_if(cars, [&](usize car) { return !kept[car]; });
+            for (usize& car : cars)
                 car = *kept[car];
         }
         if (scene.riding)
@@ -879,7 +880,7 @@ namespace rct3::scene::park
             train.rolling = model.rolling;
             train.resting = model.resting;
             train.drag = model.air;
-            const units::Mass mass { model.mass * static_cast<float>(std::max(train.cars, 1)) };
+            const units::Mass mass { model.mass * static_cast<f32>(std::max(train.cars, 1)) };
             // Brakes and block brakes push each car as hard whatever it weighs: the heavier train, the less it is slowed.
             train.brake_pull *= train.mass.value / mass.value;
             train.boost_pull *= train.mass.value / mass.value;
@@ -906,9 +907,9 @@ namespace rct3::scene::park
         const entt::entity entity = ride_index.value < scene.ride_entities.size() ? scene.ride_entities[ride_index.value] : entt::null;
         if (entity == entt::null)
             return;
-        std::vector<std::size_t>& cars = scene.ride_cars[entity];
+        std::vector<usize>& cars = scene.ride_cars[entity];
         cars.clear();
-        for (std::size_t i = 0; i < scene.car_spots.size(); ++i)
+        for (usize i = 0; i < scene.car_spots.size(); ++i)
             if (scene.car_spots[i].ride == ride_index)
                 cars.push_back(i);
         auto* fleet = scene.sim.registry.try_get<simulation::Trains>(entity);
@@ -923,7 +924,7 @@ namespace rct3::scene::park
         // Each lift's car carries a train as long as its track, at its kind's speeds, letting it go as steeply as
         // that track points down at the top.
         const auto& lift_car = ride_index.value < scene.track_rules.size() ? scene.track_rules[ride_index.value].lift_car : std::nullopt;
-        for (const std::size_t car : lift_car&& fleet != nullptr && scene.courses[ride_index.value] ? cars : std::vector<std::size_t> { })
+        for (const usize car : lift_car&& fleet != nullptr && scene.courses[ride_index.value] ? cars : std::vector<usize> { })
         {
             const rct3::park::ride::CarSpot& spot = scene.car_spots[car];
             const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[car]));
@@ -932,7 +933,7 @@ namespace rct3::scene::park
             const std::vector<glm::vec3>& track = model->second.carried;
             const rct3::park::track::LiftRun& run = scene.courses[ride_index.value]->lifts[*spot.lift];
             const glm::vec3 off = glm::mat3(rct3::park::track::lift_car_place(*scene.courses[ride_index.value], run, model->second, run.to)) * (track[track.size() - 1] - track[track.size() - 2]);
-            const float drop = glm::length(off) > 0 ? std::clamp(-glm::normalize(off).y, 0.0f, 1.0f) : 0.0f;
+            const f32 drop = glm::length(off) > 0 ? std::clamp(-glm::normalize(off).y, 0.0f, 1.0f) : 0.0f;
             for (simulation::Coaster& train : fleet->trains)
                 if (*spot.lift < train.lifts.size())
                 {
@@ -953,9 +954,9 @@ namespace rct3::scene::park
         walk_ride(device, scene, entity, ride, [&](const glm::mat4& entrance, const glm::mat4& exit) {
             std::vector<glm::vec3> seats;
             // A car without its model (from a file the game lacks) seats its share of the train at its middle.
-            const auto first_train = std::ranges::count(cars, std::size_t { 0 }, [&](std::size_t car) { return scene.car_spots[car].train; });
-            const std::size_t share = (scene.sim.registry.get<simulation::CycleRide>(entity).capacity + first_train - 1) / std::max<std::size_t>(first_train, 1);
-            for (const std::size_t car : cars)
+            const auto first_train = std::ranges::count(cars, usize { 0 }, [&](usize car) { return scene.car_spots[car].train; });
+            const usize share = (scene.sim.registry.get<simulation::CycleRide>(entity).capacity + first_train - 1) / std::max<usize>(first_train, 1);
+            for (const usize car : cars)
             {
                 const rct3::park::ride::CarSpot& spot = scene.car_spots[car];
                 if (spot.train != 0)
@@ -974,7 +975,7 @@ namespace rct3::scene::park
 
     void animate_scenery(render::Device& device, ParkScene& scene, save::model::PlacedObjectIndex object)
     {
-        const std::size_t k = object.value;
+        const usize k = object.value;
         const auto model = k < scene.objects.size() ? scene.models.find(rct3::park::object::model_ref(scene.objects[k])) : scene.models.end();
         // Rides' parts move with their rides (doors as guests pass, chains while the ride runs), so only what the
         // scenery lists hold moves on its own, and stalls, whose one motion loops open or closed.
@@ -990,7 +991,7 @@ namespace rct3::scene::park
         boned.bones = std::move(bones);
         boned.first_seat = scene.seat_carriers.size();
         // Half its footprint's diagonal and a tile over, for what stands taller than wide.
-        boned.reach = scene.grid.tile_size_x * (std::hypot(static_cast<float>(model->second.squares[0]), static_cast<float>(model->second.squares[1])) / 2 + 1);
+        boned.reach = scene.grid.tile_size_x * (std::hypot(static_cast<f32>(model->second.squares[0]), static_cast<f32>(model->second.squares[1])) / 2 + 1);
         add_textures(device, scene, boned.mesh.mesh.batches);
     }
 
@@ -1016,12 +1017,12 @@ namespace rct3::scene::park
                     scene.sim.ratings = ratings;
                     simulation::import_paths(scene.sim, world.paths, scene.grid);
                     // The saved ones by their place in scene.people, null for those not drawn.
-                    const auto by_look = [](std::size_t count, std::span<const entt::entity> placed, const auto& records) {
+                    const auto by_look = [](usize count, std::span<const entt::entity> placed, const auto& records) {
                         std::vector<entt::entity> out(count, entt::null);
-                        for (std::size_t i = 0; i < placed.size() && i < records.size(); ++i)
+                        for (usize i = 0; i < placed.size() && i < records.size(); ++i)
                         {
                             if (const auto look = records[i].look; look && std::cmp_less(*look, count))
-                                out[static_cast<std::size_t>(*look)] = placed[i];
+                                out[static_cast<usize>(*look)] = placed[i];
                         }
                         return out;
                     };
@@ -1049,7 +1050,7 @@ namespace rct3::scene::park
                     };
                     std::vector<std::optional<simulation::Coaster>> coasters(scene.rides.rides.size());
                     scene.courses.assign(scene.rides.rides.size(), std::nullopt);
-                    for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
+                    for (usize i = 0; i < scene.rides.rides.size(); ++i)
                     {
                         if (auto course = rct3::park::track::track_course(scene.rides.rides[i], scene.objects, scene.models, scene.grid, scene.fitted, shape_of))
                         {
@@ -1059,22 +1060,22 @@ namespace rct3::scene::park
                     }
                     const auto guests_room = simulation::ride_guests(scene.rides, [&](std::string_view path) { return install.find(path); });
                     scene.ride_entities = simulation::import_rides(scene.sim, scene.rides, timings, coasters, guests_room);
-                    for (std::size_t i = 0; i < scene.ride_entities.size(); ++i)
+                    for (usize i = 0; i < scene.ride_entities.size(); ++i)
                         if (scene.ride_entities[i] == entt::null && scene.courses[i])
                         {
                             scene.ride_entities[i] = simulation::import_climb_slide(scene.sim, scene.rides.rides[i], *scene.courses[i]);
                             if (scene.ride_entities[i] == entt::null)
                                 scene.ride_entities[i] = simulation::import_walk_through(scene.sim, scene.rides.rides[i], *scene.courses[i], guests_room[i]);
                         }
-                    for (std::size_t i = 0; const auto seating : simulation::ride_seatings(scene.rides, [&](std::string_view path) { return install.find(path); }))
+                    for (usize i = 0; const auto seating : simulation::ride_seatings(scene.rides, [&](std::string_view path) { return install.find(path); }))
                         if (const entt::entity e = scene.ride_entities[i++]; seating && e != entt::null)
-                            scene.ride_seatings[e] = static_cast<std::uint8_t>(*seating);
+                            scene.ride_seatings[e] = static_cast<u8>(*seating);
                     for (const auto kind : simulation::ride_kinds(scene.rides, [&](std::string_view path) { return install.find(path); }))
                         scene.ride_groups.push_back(kind ? simulation::ride_group(*kind) : simulation::RideGroup::Other);
                     simulation::import_boats(scene.sim, scene.rides, scene.ride_entities, scene.courses, scene.grid, world.water.bodies, track::boat_obstacles(scene));
                     // Each kind of boat handles as its train sets it.
-                    for (std::size_t k = 0; k < scene.cars.size(); ++k)
-                        if (const std::size_t ride = scene.car_spots[k].ride.value; ride < scene.ride_entities.size() && scene.ride_entities[ride] != entt::null)
+                    for (usize k = 0; k < scene.cars.size(); ++k)
+                        if (const usize ride = scene.car_spots[k].ride.value; ride < scene.ride_entities.size() && scene.ride_entities[ride] != entt::null)
                             if (auto* boats = scene.sim.registry.try_get<simulation::Boats>(scene.ride_entities[ride]))
                                 if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.cars[k])); model != scene.models.end() && model->second.boat_handling.turn_most > 0)
                                     boats->handling = model->second.boat_handling;
@@ -1093,10 +1094,10 @@ namespace rct3::scene::park
                         }
                         scene.track_rules.push_back(kinds.contains(key) ? kinds[key] : rct3::park::track::TrackRules { });
                     }
-                    for (std::size_t i = 0; i < scene.ride_entities.size(); ++i)
+                    for (usize i = 0; i < scene.ride_entities.size(); ++i)
                         if (auto* cycle = scene.ride_entities[i] == entt::null ? nullptr : scene.sim.registry.try_get<simulation::CycleRide>(scene.ride_entities[i]))
                             cycle->untested = rct3::park::track::awaits_first_lap(scene.track_rules[i], scene.rides.rides[i]);
-                    for (std::size_t i = 0; i < scene.rides.rides.size(); ++i)
+                    for (usize i = 0; i < scene.rides.rides.size(); ++i)
                     {
                         const save::model::RideIndex ride { i };
                         seat_flat_ride(device, scene, ride);
@@ -1121,8 +1122,8 @@ namespace rct3::scene::park
                     simulation::import_litter(scene.sim, scene.people, scene.park.time);
                     // The benches the game's park lists, and those placed in ours, which it does not.
                     // Each seats as many as its model has seats for.
-                    std::vector<std::uint64_t> benches = world.benches;
-                    std::unordered_map<std::uint64_t, std::size_t> seats;
+                    std::vector<u64> benches = world.benches;
+                    std::unordered_map<u64, usize> seats;
                     for (const save::model::PlacedObject& o : scene.objects)
                     {
                         const auto model = scene.models.find(rct3::park::object::model_ref(o));
@@ -1142,13 +1143,13 @@ namespace rct3::scene::park
                     {
                         item.broken = scene.broken_objects.contains(item.object);
                         if (const auto bench = seats.find(item.object); bench != seats.end() && bench->second > 0)
-                            item.seats = static_cast<std::uint8_t>(std::min<std::size_t>(bench->second, 255));
+                            item.seats = static_cast<u8>(std::min<usize>(bench->second, 255));
                     }
                     for (const save::model::PlacedObject& o : scene.objects)
                         if (const auto wall = rct3::park::edge_wall(o, scene.models, scene.grid))
                             simulation::set_wall(scene.sim, *wall, true);
                     simulation::import_cover(scene.sim, [&](std::span<const glm::vec3> points) { return rct3::park::overheads(points, scene.objects, scene.models, scene.grid, scene.fitted); });
-                    simulation::import_facilities(scene.sim, scene.rides, [&](const save::model::Ride& ride) -> std::optional<std::uint32_t> {
+                    simulation::import_facilities(scene.sim, scene.rides, [&](const save::model::Ride& ride) -> std::optional<u32> {
                         const auto file = install.find(std::format("{}.common.ovl", ride.base.overlay_path));
                         return file ? rct3::park::special_attraction_kind(*file, std::string_view(ride.base.symbol).substr(0, ride.base.symbol.find(':'))) : std::nullopt;
                     });
@@ -1160,7 +1161,7 @@ namespace rct3::scene::park
                         const auto model = scene.models.find(rct3::park::object::model_ref(o));
                         return model == scene.models.end() ? 0.0f : simulation::scenery_weight(model->second.category, model->second.feature);
                     });
-                    simulation::import_gate(scene.sim, scene.objects, [&](const save::model::PlacedObject& o) -> std::optional<std::array<std::int32_t, 2>> {
+                    simulation::import_gate(scene.sim, scene.objects, [&](const save::model::PlacedObject& o) -> std::optional<std::array<i32, 2>> {
                         const auto model = scene.models.find(rct3::park::object::model_ref(o));
                         if (model == scene.models.end() || model->second.category != std::to_underlying(rct3::park::ItemCategory::ParkEntrance))
                             return std::nullopt;
@@ -1185,8 +1186,8 @@ namespace rct3::scene::park
                     {
                         const save::model::TerrainGrid& g = scene.grid;
                         const auto enclosure_at = [&](glm::vec2 p) {
-                            const auto col = g.tile_size_x > 0 ? static_cast<std::int32_t>(std::floor((p.x - g.origin_x) / g.tile_size_x)) : -1;
-                            const auto row = g.tile_size_z > 0 ? static_cast<std::int32_t>(std::floor((p.y - g.origin_z) / g.tile_size_z)) : -1;
+                            const auto col = g.tile_size_x > 0 ? static_cast<i32>(std::floor((p.x - g.origin_x) / g.tile_size_x)) : -1;
+                            const auto row = g.tile_size_z > 0 ? static_cast<i32>(std::floor((p.y - g.origin_z) / g.tile_size_z)) : -1;
                             return scene.enclosures.at(col, row);
                         };
                         // The park's own animal houses, beside the keepers' huts the park placed with them.
@@ -1201,20 +1202,20 @@ namespace rct3::scene::park
                             if (o.overlay != kShelters || o.symbol == kHut || std::ranges::any_of(houses, [&](const simulation::AnimalHouse& h) { return h.troughs == tile_point(g, { o.col, o.row }); }))
                                 continue;
                             const auto model = scene.models.find(rct3::park::object::model_key(o));
-                            std::array<std::int32_t, 2> span = model != scene.models.end() ? model->second.squares : std::array<std::int32_t, 2> { 1, 1 };
+                            std::array<i32, 2> span = model != scene.models.end() ? model->second.squares : std::array<i32, 2> { 1, 1 };
                             if (o.rotation % 2 != 0)
                                 std::swap(span[0], span[1]);
                             const glm::vec3 middle = tile_point(g, { o.col, o.row });
-                            const glm::vec2 half { static_cast<float>(span[0]) * g.tile_size_x / 2, static_cast<float>(span[1]) * g.tile_size_z / 2 };
+                            const glm::vec2 half { static_cast<f32>(span[0]) * g.tile_size_x / 2, static_cast<f32>(span[1]) * g.tile_size_z / 2 };
                             simulation::AnimalHouse house { .object = o.id, .enclosure = enclosure_at({ middle.x, middle.z }), .troughs = middle, .low = glm::vec2 { middle.x, middle.z } - half, .high = glm::vec2 { middle.x, middle.z } + half };
-                            const auto hut = std::ranges::min_element(scene.objects, { }, [&](const save::model::PlacedObject& h) { return h.symbol == kHut ? std::abs(h.col - o.col) + std::abs(h.row - o.row) : std::numeric_limits<std::int32_t>::max(); });
+                            const auto hut = std::ranges::min_element(scene.objects, { }, [&](const save::model::PlacedObject& h) { return h.symbol == kHut ? std::abs(h.col - o.col) + std::abs(h.row - o.row) : std::numeric_limits<i32>::max(); });
                             if (hut != scene.objects.end() && hut->symbol == kHut && std::abs(hut->col - o.col) + std::abs(hut->row - o.row) <= span[0] + span[1])
                                 house.hut = hut->id;
                             houses.push_back(house);
                         }
                         // Each keeper keeps the enclosure the park gave them.
                         std::vector<simulation::KeeperPost> keepers;
-                        for (std::size_t i = 0; kept == nullptr && i < scene.people.staff.size() && i < staff.size(); ++i)
+                        for (usize i = 0; kept == nullptr && i < scene.people.staff.size() && i < staff.size(); ++i)
                             if (const auto* work = std::get_if<save::model::KeeperWork>(&scene.people.staff[i].work); work != nullptr && staff[i] != entt::null)
                                 keepers.emplace_back(staff[i], work->enclosure_id);
                         simulation::import_animal_houses(scene.sim, houses, keepers);
@@ -1409,21 +1410,21 @@ namespace rct3::scene::park
                     log.warning("{}: {}", name, loaded ? "no picture" : loaded.error());
             }
             rct3::park::ground::add_tunnel_images(images, tunnels);
-            for (std::size_t i = 0; i < paths.styles.size(); ++i)
+            for (usize i = 0; i < paths.styles.size(); ++i)
             {
                 const std::string name = rct3::park::ground::path_texture_file(paths.styles[i]);
                 const auto found = install.find(name);
-                const auto missing = found ? rct3::park::ground::add_path_images(images, *found, paths.styles[i], static_cast<std::uint8_t>(i)) : std::expected<std::size_t, std::string>(std::unexpected("not found"));
+                const auto missing = found ? rct3::park::ground::add_path_images(images, *found, paths.styles[i], static_cast<u8>(i)) : std::expected<usize, std::string>(std::unexpected("not found"));
                 if (!missing)
                     log.warning("{}: {}", name, missing.error());
                 else if (*missing > 0)
                     log.warning("{}: {} ground pictures missing", name, *missing);
             }
-            for (std::size_t i = 0; i < queues.paintings.size(); ++i)
+            for (usize i = 0; i < queues.paintings.size(); ++i)
             {
                 const std::string name = rct3::park::ground::queue_texture_file(queues.paintings[i].style);
                 const auto found = install.find(name);
-                const auto added = found ? rct3::park::ground::add_queue_image(images, *found, queues.paintings[i], static_cast<std::uint8_t>(i)) : std::expected<bool, std::string>(std::unexpected("not found"));
+                const auto added = found ? rct3::park::ground::add_queue_image(images, *found, queues.paintings[i], static_cast<u8>(i)) : std::expected<bool, std::string>(std::unexpected("not found"));
                 if (!added)
                     log.warning("{}: {}", name, added.error());
                 else if (!*added)
@@ -1512,7 +1513,7 @@ namespace rct3::scene::park
             // along queues and fences round rides.
             std::vector<save::model::PlacedObject> built;
             const auto largest_id = [&] {
-                std::uint64_t last = 0;
+                u64 last = 0;
                 for (const auto& list : { std::span<const save::model::PlacedObject>(scene.objects), std::span<const save::model::PlacedObject>(built) })
                 {
                     for (const save::model::PlacedObject& o : list)
@@ -1547,7 +1548,7 @@ namespace rct3::scene::park
                     const auto started = std::chrono::steady_clock::now();
                     rct3::park::support::BuiltSupports columns = rct3::park::support::support_columns(scene.objects, scene.models, world->paths, scene.grid, *sets, largest_id(), supports_passed(scene));
                     log.info("supports built in {} us", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - started).count());
-                    for (std::size_t i = 0; i < columns.pieces.size(); ++i)
+                    for (usize i = 0; i < columns.pieces.size(); ++i)
                         scene.columns.emplace(columns.pieces[i].id, columns.of[i].tile);
                     built = std::move(columns.pieces);
                     scene.fitted = std::move(columns.fitted);
@@ -1556,19 +1557,19 @@ namespace rct3::scene::park
                 else
                     log.warning("supports: {}", sets.error());
             }
-            const std::size_t supports = built.size();
+            const usize supports = built.size();
             rct3::park::QueueFences fences = rct3::park::queue_fences(world->paths, scene.grid, largest_id());
             log.info("{} supports, {} queue railings", supports, fences.pieces.size());
             built.insert(built.end(), std::make_move_iterator(fences.pieces.begin()), std::make_move_iterator(fences.pieces.end()));
             scene.leans = std::move(fences.leans);
-            std::unordered_map<std::uint64_t, const rct3::park::object::ObjectModel*> object_models;
+            std::unordered_map<u64, const rct3::park::object::ObjectModel*> object_models;
             for (const save::model::PlacedObject& o : scene.objects)
             {
                 if (const auto found = scene.models.find(rct3::park::object::model_ref(o)); found != scene.models.end())
                     object_models.emplace(o.id, &found->second);
             }
-            std::size_t ride_fences = 0;
-            const auto model_of = [&](std::uint64_t object) {
+            usize ride_fences = 0;
+            const auto model_of = [&](u64 object) {
                 const auto found = object_models.find(object);
                 return found != object_models.end() ? found->second : nullptr;
             };
@@ -1588,7 +1589,7 @@ namespace rct3::scene::park
             log.info("{} park fence panels", boundary.pieces.size());
             for (const save::model::PlacedObject& panel : boundary.pieces)
                 scene.fence_panels.push_back(panel.id);
-            const std::size_t first_panel = built.size();
+            const usize first_panel = built.size();
             built.insert(built.end(), std::make_move_iterator(boundary.pieces.begin()), std::make_move_iterator(boundary.pieces.end()));
             scene.leans.merge(boundary.leans);
             // The animal enclosures' fences: the park keeps only which tiles are in which.
@@ -1606,7 +1607,7 @@ namespace rct3::scene::park
             }
             load_models(install, built, false, scene.models, scene.pictures);
             // The park names only the fences, so their panels take the fences' own colours.
-            for (std::size_t i = first_panel; i < built.size(); ++i)
+            for (usize i = first_panel; i < built.size(); ++i)
             {
                 if (const auto found = scene.models.find(rct3::park::object::model_ref(built[i])); found != scene.models.end())
                     built[i].colours = found->second.default_colours;
@@ -1771,7 +1772,7 @@ namespace rct3::scene::park
             scene.desktop->root().add<ui::screens::park_view::MessageDrawer>(std::string(kMessagesName), skins::message_drawer_style(palette), strings).stays_behind = true;
             auto& tools = scene.desktop->root().add<ui::screens::park_view::ToolRow>(std::string(kToolsName), skins::tool_row_style(palette), strings);
             // Only these menu items do anything yet; the rest show faded until their tools exist.
-            for (std::size_t t = 0; t < ui::screens::park_view::kParkToolCount; ++t)
+            for (usize t = 0; t < ui::screens::park_view::kParkToolCount; ++t)
             {
                 for (const ui::screens::park_view::ToolMenuItem& entry : ui::screens::park_view::tool_menu(static_cast<ui::screens::park_view::ParkTool>(t)))
                     tools.set_available(
@@ -1794,7 +1795,7 @@ namespace rct3::scene::park
 
         // ── 9. People and simulation ──
         scene.attractions = rct3::park::attraction_objects(scene.rides, scene.objects);
-        for (std::size_t k = 0; k < scene.objects.size(); ++k)
+        for (usize k = 0; k < scene.objects.size(); ++k)
             animate_scenery(device, scene, save::model::PlacedObjectIndex { k });
         start_simulation(device, scene, install, *file, index, saved, *world, park_model, seed, ratings);
 
@@ -1808,7 +1809,7 @@ namespace rct3::scene::park
             scene.desktop->tooltip_style = skins::tooltip_style(palette);
             scene.map = park_map(scene.grid, world->paths, world->water, scene.objects, scene.models, scene.fitted, scene.attractions, scene.rides, images, install);
             log.info("{}: {} by {} tiles", path.filename().string(), scene.grid.width, scene.grid.height);
-            const auto drawn = std::ranges::count_if(scene.levels.steady, [](std::int8_t l) { return l != rct3::park::object::kNotDrawn; }) + std::ranges::count_if(scene.levels.finer, [](std::int8_t l) { return l != rct3::park::object::kNotDrawn; });
+            const auto drawn = std::ranges::count_if(scene.levels.steady, [](i8 l) { return l != rct3::park::object::kNotDrawn; }) + std::ranges::count_if(scene.levels.finer, [](i8 l) { return l != rct3::park::object::kNotDrawn; });
             const auto modelled = std::ranges::count_if(scene.objects, [&](const save::model::PlacedObject& o) { return !o.hidden && scene.models.contains(rct3::park::object::model_key(o)); });
             const auto shown = std::ranges::count_if(scene.objects, [](const save::model::PlacedObject& o) { return !o.hidden; });
             log.info("{} objects in view, {} without a model, {} models, {} pictures", drawn, shown - modelled, scene.models.size(), scene.object_textures.size());

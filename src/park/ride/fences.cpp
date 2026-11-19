@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ride/fences.hpp"
 
+#include "core/types.hpp"
 #include "park/object/placement.hpp"
 
 #include <array>
@@ -21,7 +22,7 @@ namespace rct3::park::ride
         {
             const std::string* symbol = nullptr;
             const std::string* overlay = nullptr;
-            std::array<std::int32_t, 3> colours { };
+            std::array<i32, 3> colours { };
         };
 
         Tile tile_of(const save::model::PlacementSpot& spot)
@@ -32,14 +33,14 @@ namespace rct3::park::ride
         class Builder
         {
         public:
-            Builder(const FenceLook& look, std::uint64_t last_id)
+            Builder(const FenceLook& look, u64 last_id)
                 : look_(look)
                 , last_id_(last_id)
             {
             }
 
             /// A panel on the edge of `tile` that `turn` points its outward side at.
-            void add(Tile tile, ModelTurn turn, std::int32_t height)
+            void add(Tile tile, ModelTurn turn, i32 height)
             {
                 save::model::PlacedObject& o = pieces_.emplace_back();
                 o.id = ++last_id_;
@@ -62,7 +63,7 @@ namespace rct3::park::ride
 
         private:
             const FenceLook& look_;
-            std::uint64_t last_id_;
+            u64 last_id_;
             std::vector<save::model::PlacedObject> pieces_;
         };
 
@@ -72,19 +73,19 @@ namespace rct3::park::ride
         {
             const auto [xs, zs] = item.squares;
             const bool outline = !item.fence_outline.empty();
-            const auto inside = [&](std::int32_t x, std::int32_t z) {
+            const auto inside = [&](i32 x, i32 z) {
                 if (x < 0 || z < 0 || x >= xs || z >= zs)
                     return false;
-                return !outline || item.fence_outline[static_cast<std::size_t>(z) * static_cast<std::size_t>(xs) + static_cast<std::size_t>(x)];
+                return !outline || item.fence_outline[static_cast<usize>(z) * static_cast<usize>(xs) + static_cast<usize>(x)];
             };
 
             save::model::PlacedObject placed;
             placed.col = spot.col;
             placed.row = spot.row;
             placed.rotation = spot.direction;
-            for (std::int32_t z = 0; z < zs; ++z)
+            for (i32 z = 0; z < zs; ++z)
             {
-                for (std::int32_t x = 0; x < xs; ++x)
+                for (i32 x = 0; x < xs; ++x)
                 {
                     if (!inside(x, z))
                         continue;
@@ -95,8 +96,8 @@ namespace rct3::park::ride
                     // single square across); an outline wherever the neighbour is outside it.
                     struct SquareSide
                     {
-                        std::int32_t dx, dz;
-                        std::int32_t turns;
+                        i32 dx, dz;
+                        i32 turns;
                     };
                     static constexpr std::array<SquareSide, 4> kSquareSides { SquareSide { -1, 0, 0 }, SquareSide { 0, 1, 1 }, SquareSide { 1, 0, 2 }, SquareSide { 0, -1, 3 } };
                     for (const SquareSide& side : kSquareSides)
@@ -115,7 +116,7 @@ namespace rct3::park::ride
 
     } // namespace
 
-    std::vector<save::model::PlacedObject> ride_fences(const save::model::Ride& ride, const ModelOf& model_of, std::uint64_t last_id)
+    std::vector<save::model::PlacedObject> ride_fences(const save::model::Ride& ride, const ModelOf& model_of, u64 last_id)
     {
         if (ride.kind == save::model::RideKind::Special)
             return { };

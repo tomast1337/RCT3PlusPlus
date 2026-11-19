@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "image/picture_file.hpp"
 
+#include "core/types.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -31,25 +32,25 @@ namespace rct3::image
 
     std::expected<ovl::texture::RgbaImage, std::string> decode_picture(std::span<const std::byte> data)
     {
-        if (data.empty() || data.size() > static_cast<std::size_t>(INT_MAX))
+        if (data.empty() || data.size() > static_cast<usize>(INT_MAX))
             return std::unexpected("not a picture");
         const auto* bytes = reinterpret_cast<const stbi_uc*>(data.data());
-        const std::int32_t length = static_cast<std::int32_t>(data.size());
+        const i32 length = static_cast<i32>(data.size());
         int width = 0;    // c-api
         int height = 0;   // c-api
         int channels = 0; // c-api
         // Checked before decoding, so a huge size in a header costs nothing.
         if (stbi_info_from_memory(bytes, length, &width, &height, &channels) == 0)
             return std::unexpected(std::string("not a picture: ") + stbi_failure_reason());
-        if (width <= 0 || height <= 0 || static_cast<std::uint32_t>(width) > ovl::texture::kMaxImageSide || static_cast<std::uint32_t>(height) > ovl::texture::kMaxImageSide)
+        if (width <= 0 || height <= 0 || static_cast<u32>(width) > ovl::texture::kMaxImageSide || static_cast<u32>(height) > ovl::texture::kMaxImageSide)
             return std::unexpected(std::format("picture of {}x{} is too large", width, height));
         const std::unique_ptr<stbi_uc, FreeImage> pixels(stbi_load_from_memory(bytes, length, &width, &height, &channels, 4));
         if (!pixels)
             return std::unexpected(std::string("cannot decode the picture: ") + stbi_failure_reason());
         ovl::texture::RgbaImage image;
-        image.width = static_cast<std::uint32_t>(width);
-        image.height = static_cast<std::uint32_t>(height);
-        image.pixels.resize(static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4);
+        image.width = static_cast<u32>(width);
+        image.height = static_cast<u32>(height);
+        image.pixels.resize(static_cast<usize>(width) * static_cast<usize>(height) * 4);
         std::memcpy(image.pixels.data(), pixels.get(), image.pixels.size());
         return image;
     }

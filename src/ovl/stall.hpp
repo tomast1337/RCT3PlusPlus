@@ -3,6 +3,7 @@
 // Stalls: shops, food stands, toilets and the like.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/attraction.hpp"
 #include "ovl/overlay.hpp"
 
@@ -17,8 +18,8 @@ namespace rct3::ovl
     /// One thing a stall sells and the price it starts at.
     struct StallGoods
     {
-        std::string_view item;  ///< "cid" item
-        std::int32_t price = 0; ///< In hundredths of the currency unit
+        std::string_view item; ///< "cid" item
+        i32 price = 0;         ///< In hundredths of the currency unit
     };
 
     struct Stall

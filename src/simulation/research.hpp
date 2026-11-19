@@ -17,6 +17,7 @@
 // shortcut: ride improvements stay as the park file has them; upgrade when improvements are invented over time.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/build_catalogue.hpp"
 #include "park/path/styles.hpp"
 #include "random/generator.hpp"
@@ -35,7 +36,7 @@ namespace rct3::simulation
 {
 
     /// The research areas, in the order a park file keeps their priorities.
-    enum class ResearchArea : std::uint8_t
+    enum class ResearchArea : u8
     {
         Coasters,
         JuniorRides,
@@ -50,7 +51,7 @@ namespace rct3::simulation
         ShowElements,
         PoolRides,
     };
-    inline constexpr std::size_t kResearchAreas = 12;
+    inline constexpr usize kResearchAreas = 12;
 
     /// The messages telling the player something was invented: the game's own texts, naming what it was.
     inline constexpr std::string_view kInventedKey = "Invented_Attraction";
@@ -61,7 +62,7 @@ namespace rct3::simulation
     /// Something the park may invent.
     struct ResearchItem
     {
-        std::uint64_t id = 0; ///< Of its entry in the park's content (save::model::AssetRequirement::id)
+        u64 id = 0; ///< Of its entry in the park's content (save::model::AssetRequirement::id)
         ResearchArea area = ResearchArea::OtherRides;
         units::Money cost { };
     };
@@ -69,26 +70,26 @@ namespace rct3::simulation
     /// An item research was taken off for a focus, with what had been spent on it.
     struct SetAside
     {
-        std::uint64_t id = 0; ///< ResearchItem::id
+        u64 id = 0; ///< ResearchItem::id
         units::Money spent { };
     };
 
     /// How far the park's research has got.
     struct Research
     {
-        units::Money budget { };                   ///< A month; nought when the park does no research
-        units::Money spent { };                    ///< Counted towards the current item
-        units::Money boost { };                    ///< What a prize gave, counted with the next part paid
-        std::optional<std::uint64_t> current { };  ///< The item being worked on (ResearchItem::id)
-        std::optional<std::uint64_t> previous { }; ///< The item invented last
-        std::vector<float> priorities { };         ///< A weight for each ResearchArea, in order; areas past its end weigh 1
-        float since_part = 0;                      ///< Calendar units since the last part of the budget was paid
-        std::vector<std::uint64_t> invented { };   ///< Items invented since the park file was made, oldest first
-        std::vector<float> invented_at { };        ///< The calendar's time each of `invented` was invented (park::ParkState::time)
+        units::Money budget { };          ///< A month; nought when the park does no research
+        units::Money spent { };           ///< Counted towards the current item
+        units::Money boost { };           ///< What a prize gave, counted with the next part paid
+        std::optional<u64> current { };   ///< The item being worked on (ResearchItem::id)
+        std::optional<u64> previous { };  ///< The item invented last
+        std::vector<f32> priorities { };  ///< A weight for each ResearchArea, in order; areas past its end weigh 1
+        f32 since_part = 0;               ///< Calendar units since the last part of the budget was paid
+        std::vector<u64> invented { };    ///< Items invented since the park file was made, oldest first
+        std::vector<f32> invented_at { }; ///< The calendar's time each of `invented` was invented (park::ParkState::time)
         /// The item the player asked to research next, at its cost times tuning::Research::focus_cost; the current
         /// item while set.
-        std::optional<std::uint64_t> focus { };
-        std::optional<std::uint64_t> unfocused { }; ///< The item worked on when the focus began, taken up again once it ends
+        std::optional<u64> focus { };
+        std::optional<u64> unfocused { }; ///< The item worked on when the focus began, taken up again once it ends
         /// Items research was taken off for a focus, oldest first; each starts from what was spent on it when it is
         /// worked on again.
         std::vector<SetAside> set_aside { };
@@ -108,7 +109,7 @@ namespace rct3::simulation
     /// boost waiting; a park that cannot pay it skips it, and one whose money never runs out researches for
     /// free. An item whose cost is covered leaves `items` and joins Research::invented, and the next is drawn
     /// from the areas that still have any, by their priorities. With nothing left to invent, nothing is paid.
-    void step_research(Research& research, float units, std::vector<ResearchItem>& items, park::ParkState& park, save::model::Finance& finance, std::optional<std::int64_t>& kept, random::RandomState& dice);
+    void step_research(Research& research, f32 units, std::vector<ResearchItem>& items, park::ParkState& park, save::model::Finance& finance, std::optional<i64>& kept, random::RandomState& dice);
 
     /// What `item` costs to invent: its cost, more when research is `focused` on it.
     [[nodiscard]] units::Money research_cost(const ResearchItem& item, bool focused);
@@ -116,18 +117,18 @@ namespace rct3::simulation
     /// Focuses research on the item `id` of `items`, at once and at a higher cost, setting aside the item worked
     /// on with what was spent on it; with no `id`, ends the focus and takes up again the item worked on when it
     /// began. False, changing nothing, when `id` is not among `items`.
-    bool focus_research(Research& research, std::optional<std::uint64_t> id, std::span<const ResearchItem> items);
+    bool focus_research(Research& research, std::optional<u64> id, std::span<const ResearchItem> items);
 
     /// What may come next in each area, in the areas' order: the `per_area` cheapest of `items` there, cheapest
     /// first, leaving out the item being worked on.
-    [[nodiscard]] std::vector<ResearchItem> research_preview(const Research& research, std::span<const ResearchItem> items, std::size_t per_area);
+    [[nodiscard]] std::vector<ResearchItem> research_preview(const Research& research, std::span<const ResearchItem> items, usize per_area);
 
     /// How far the item being worked on has got.
     struct ResearchProgress
     {
-        std::uint64_t id = 0;                   ///< ResearchItem::id
-        float done = 0;                         ///< Of its cost, 0 to 1, with any boost waiting
-        std::optional<std::int64_t> months { }; ///< Whole months the budget takes to cover the rest, at least one; none without a budget
+        u64 id = 0;                    ///< ResearchItem::id
+        f32 done = 0;                  ///< Of its cost, 0 to 1, with any boost waiting
+        std::optional<i64> months { }; ///< Whole months the budget takes to cover the rest, at least one; none without a budget
     };
 
     /// The progress of the current item, if it is among `items`.

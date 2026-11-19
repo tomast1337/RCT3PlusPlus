@@ -18,6 +18,7 @@
 #include "audio/ride_sounds.hpp"
 #include "audio/sound_scripts.hpp"
 #include "config/game/install.hpp"
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/sound.hpp"
 #include "park/bone_poses.hpp"
@@ -50,11 +51,11 @@ namespace rct3::scene::park
         audio::TrackSoundSet set = audio::TrackSoundSet::None;
         std::array<audio::VoiceHandle, 3> running; ///< Slow, medium, fast
         audio::VoiceHandle chain;
-        units::Seconds chain_off;                  ///< Since the train left the chain, while its loop fades
-        bool was_running = false;                  ///< Last update, to hear it set off and come in
-        audio::VoiceHandle plume;                  ///< The water plume loop after a splash
-        units::Seconds plume_left;                 ///< What it has left
-        std::optional<std::uint32_t> splashes { }; ///< Times its first car had splashed when last heard
+        units::Seconds chain_off;        ///< Since the train left the chain, while its loop fades
+        bool was_running = false;        ///< Last update, to hear it set off and come in
+        audio::VoiceHandle plume;        ///< The water plume loop after a splash
+        units::Seconds plume_left;       ///< What it has left
+        std::optional<u32> splashes { }; ///< Times its first car had splashed when last heard
     };
 
     /// What one flat ride is heard making.
@@ -64,8 +65,8 @@ namespace rct3::scene::park
         struct Entry
         {
             audio::ScriptPlay play { };
-            std::optional<std::size_t> loop { }; ///< Of the entry's sounds, a looping one its script started and has not stopped
-            audio::VoiceHandle voice { };        ///< The sound started last
+            std::optional<usize> loop { }; ///< Of the entry's sounds, a looping one its script started and has not stopped
+            audio::VoiceHandle voice { };  ///< The sound started last
         };
         std::vector<Entry> entries { };
         rct3::park::MotionAt playing { }; ///< When last heard
@@ -85,31 +86,31 @@ namespace rct3::scene::park
         std::vector<audio::SoundBuffer> whoops; ///< Men's cheers
         std::vector<audio::SoundBuffer> cheers; ///< Women's and children's
         std::vector<audio::SoundBuffer> laughs;
-        std::array<std::vector<audio::SoundBuffer>, 3> retches;                          ///< A child's, a woman's, a man's
-        std::array<std::vector<audio::SoundBuffer>, 4> screams;                          ///< A man alone, a woman alone, men, women
-        std::array<audio::VoiceHandle, 2> chatter_voices;                                ///< Overlapping, so the chatter never stops
-        std::set<entt::entity> heard;                                                    ///< Guests whose gesture was heard
-        std::array<std::vector<audio::SoundBuffer>, 2> dives;                            ///< Going under off a small board, and off a high one
-        std::set<entt::entity> under;                                                    ///< Divers coming back up, their splash heard
-        std::map<std::pair<entt::entity, std::size_t>, audio::VoiceHandle> train_voices; ///< By ride and train
+        std::array<std::vector<audio::SoundBuffer>, 3> retches;                    ///< A child's, a woman's, a man's
+        std::array<std::vector<audio::SoundBuffer>, 4> screams;                    ///< A man alone, a woman alone, men, women
+        std::array<audio::VoiceHandle, 2> chatter_voices;                          ///< Overlapping, so the chatter never stops
+        std::set<entt::entity> heard;                                              ///< Guests whose gesture was heard
+        std::array<std::vector<audio::SoundBuffer>, 2> dives;                      ///< Going under off a small board, and off a high one
+        std::set<entt::entity> under;                                              ///< Divers coming back up, their splash heard
+        std::map<std::pair<entt::entity, usize>, audio::VoiceHandle> train_voices; ///< By ride and train
         /// Each set's sounds, by audio::TrackSound; nothing where the set lacks one.
         std::array<std::array<std::optional<audio::SoundBuffer>, audio::kTrackSounds>, audio::kTrackSoundSets> track_sounds;
-        std::map<std::pair<entt::entity, std::size_t>, TrainSounds> train_sounds; ///< By ride and train
-        std::vector<glm::vec3> car_were;                                          ///< By car, where last heard
+        std::map<std::pair<entt::entity, usize>, TrainSounds> train_sounds; ///< By ride and train
+        std::vector<glm::vec3> car_were;                                    ///< By car, where last heard
         std::vector<audio::SoundBuffer> waterfall_loops;
         std::vector<audio::VoiceHandle> waterfall_voices; ///< By waterfall of the park
         std::vector<audio::SoundBuffer> explosions;       ///< Of crashed trains' wrecks
         std::vector<audio::SoundBuffer> burning;          ///< Loops of their fires
         /// Of each wreck, by ride, train and car: its landings and state when last heard.
-        std::map<std::tuple<entt::entity, std::size_t, std::size_t>, std::pair<std::int32_t, simulation::WreckState>> wrecks_heard;
+        std::map<std::tuple<entt::entity, usize, usize>, std::pair<i32, simulation::WreckState>> wrecks_heard;
         std::map<entt::entity, audio::VoiceHandle> fires;      ///< By ride: the loop of its burning wrecks
         std::array<std::optional<audio::SoundBuffer>, 3> rain; ///< Loops of light rain, heavy rain and a storm
         std::array<audio::VoiceHandle, 3> rain_voices;
         std::vector<audio::SoundBuffer> thunder;
         std::vector<audio::SoundBuffer> thumps;    ///< Of something put down
-        std::uint32_t built_heard = 0;             ///< ParkScene::built when last looked at
+        u32 built_heard = 0;                       ///< ParkScene::built when last looked at
         std::optional<audio::SoundBuffer> fanfare; ///< Of a level won
-        std::uint32_t levels_heard = 0;            ///< ParkScene::levels_won when last looked at
+        u32 levels_heard = 0;                      ///< ParkScene::levels_won when last looked at
         std::vector<audio::SoundBuffer> rumbles;   ///< Of the ground being shaped
         audio::VoiceHandle rumble;
         bool rumbling = false; ///< A stroke's rumble was started; one a stroke, though it ends first
@@ -128,7 +129,7 @@ namespace rct3::scene::park
         std::set<std::string, strings::LessIgnoringCase> broken_tracks;                  ///< That would not play, not tried again
     };
 
-    [[nodiscard]] ParkSounds load_park_sounds(const config::game::GameInstall& install, std::uint32_t seed);
+    [[nodiscard]] ParkSounds load_park_sounds(const config::game::GameInstall& install, u32 seed);
     /// Plays what is heard in `scene` now, `elapsed` after the last update.
     void update_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds, const ParkScene& scene, units::Seconds elapsed);
     void stop_park_sounds(audio::AudioEngine& engine, ParkSounds& sounds);

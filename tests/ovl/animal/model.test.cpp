@@ -2,6 +2,7 @@
 #include "ovl/animal/model.hpp"
 
 #include "../builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <cstdint>
@@ -17,33 +18,33 @@ namespace
 {
 
     // Name block: "A:mdl" at 0, padded to 16. The item block follows at address 16.
-    constexpr std::uint32_t kBase = 16;
+    constexpr u32 kBase = 16;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    void reals(std::vector<std::byte>& out, std::initializer_list<float> values)
+    void reals(std::vector<std::byte>& out, std::initializer_list<f32> values)
     {
         for (auto v : values)
-            append_u32(out, std::bit_cast<std::uint32_t>(v));
+            append_u32(out, std::bit_cast<u32>(v));
     }
 
     void align(std::vector<std::byte>& out)
     {
-        out.resize((out.size() + 15) & ~std::size_t { 15 });
+        out.resize((out.size() + 15) & ~usize { 15 });
     }
 
     void text(std::vector<std::byte>& out, const std::string& s)
     {
-        append_u16(out, static_cast<std::uint16_t>(s.size()));
+        append_u16(out, static_cast<u16>(s.size()));
         for (char c : s)
             out.push_back(static_cast<std::byte>(c));
     }
 
-    std::vector<std::byte> header(std::uint8_t levels = 2, std::uint32_t flags = 0x10000)
+    std::vector<std::byte> header(u8 levels = 2, u32 flags = 0x10000)
     {
         std::vector<std::byte> out;
         append_u32(out, flags);
@@ -58,10 +59,10 @@ namespace
 
     struct Options
     {
-        std::int16_t second_parent = 0;
-        std::uint8_t vertex_bone = 1;
-        std::uint16_t index = 2;
-        std::uint32_t format = 0x1305;
+        i16 second_parent = 0;
+        u8 vertex_bone = 1;
+        u16 index = 2;
+        u32 format = 0x1305;
     };
 
     // Two bones, one material "Skin", a level with one triangle and an empty second level.
@@ -70,14 +71,14 @@ namespace
         std::vector<std::byte> out;
         words(out, { 2, 0, 0, 0 });
         align(out);
-        for (std::int32_t bone = 0; bone < 2; ++bone)
+        for (i32 bone = 0; bone < 2; ++bone)
         {
-            reals(out, { 0, static_cast<float>(bone), 0, 1, 0, 0, 0, 1 });
-            for (std::int32_t k = 0; k < 16; ++k)
+            reals(out, { 0, static_cast<f32>(bone), 0, 1, 0, 0, 0, 1 });
+            for (i32 k = 0; k < 16; ++k)
                 reals(out, { k % 5 == 0 ? 1.0f : 0.0f });
         }
         append_u16(out, 0xFFFF), append_u16(out, 1);
-        append_u16(out, static_cast<std::uint16_t>(o.second_parent)), append_u16(out, 0xFFFF);
+        append_u16(out, static_cast<u16>(o.second_parent)), append_u16(out, 0xFFFF);
         align(out);
         words(out, { 5 });
         for (char c : std::string("Skin", 5))
@@ -92,16 +93,16 @@ namespace
         append_u16(out, 1), append_u16(out, 3);
         out.resize(out.size() + 20);
         align(out);
-        for (std::int32_t v = 0; v < 3; ++v)
+        for (i32 v = 0; v < 3; ++v)
         {
-            reals(out, { static_cast<float>(v), 1, 2, 0, 1, 0 });
+            reals(out, { static_cast<f32>(v), 1, 2, 0, 1, 0 });
             out.push_back(std::byte { 0 }), out.push_back(std::byte { o.vertex_bone }), out.push_back(std::byte { 0 }), out.push_back(std::byte { 0 });
             out.push_back(std::byte { 55 }), out.push_back(std::byte { 200 }), out.push_back(std::byte { 0 }), out.push_back(std::byte { 0 });
             words(out, { 0xFFFFFFFF });
             reals(out, { 0.25f, 0.75f });
         }
         append_u16(out, 0), append_u16(out, 1), append_u16(out, o.index);
-        out.resize((out.size() + 3) & ~std::size_t { 3 });
+        out.resize((out.size() + 3) & ~usize { 3 });
         append_u16(out, 0), append_u16(out, 1), append_u16(out, 0), append_u16(out, 0), words(out, { 0, 0 });
         words(out, { 0x10000 });
         // The empty level's group.
@@ -112,9 +113,9 @@ namespace
     std::vector<std::byte> chunks(const std::vector<std::byte>& data, const std::string& names = std::string("root\0leg\0", 9))
     {
         std::vector<std::byte> out;
-        append_u32(out, static_cast<std::uint32_t>(data.size()));
+        append_u32(out, static_cast<u32>(data.size()));
         out.insert(out.end(), data.begin(), data.end());
-        append_u32(out, static_cast<std::uint32_t>(names.size()));
+        append_u32(out, static_cast<u32>(names.size()));
         for (char c : names)
             out.push_back(static_cast<std::byte>(c));
         return out;
@@ -129,7 +130,7 @@ namespace
         std::vector<std::byte> loader;
         words(loader, { 0, kBase, 2, 0, 0 });
         auto file = build_file(1, { { bytes_of_string(n) }, { item_bytes }, { symbol, loader } }, { }, tail);
-        constexpr std::size_t kLoaderCount = 20;
+        constexpr usize kLoaderCount = 20;
         file[kLoaderCount] = std::byte { 1 };
         std::vector<std::byte> declaration;
         text(declaration, "FGDK");

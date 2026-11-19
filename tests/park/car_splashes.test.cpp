@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/car_splashes.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -23,7 +25,7 @@ namespace
         return c;
     }
 
-    constexpr float kStep = 0.1f;
+    constexpr f32 kStep = 0.1f;
 
 } // namespace
 
@@ -61,9 +63,9 @@ TEST_CASE("a car running on through water leaves a wake now and then")
 {
     const track::TrackCourse c = course();
     CarWater water { .wet = true };
-    std::int32_t wakes = 0;
-    for (std::int32_t i = 0; i < 20; ++i)
-        wakes += car_splash(water, c, 10.2f + 0.4f * static_cast<float>(i), false, { 4, 0, 0 }, kStep).wake ? 1 : 0;
+    i32 wakes = 0;
+    for (i32 i = 0; i < 20; ++i)
+        wakes += car_splash(water, c, 10.2f + 0.4f * static_cast<f32>(i), false, { 4, 0, 0 }, kStep).wake ? 1 : 0;
     CHECK(wakes >= 3);
     CHECK(wakes <= 5);
 }

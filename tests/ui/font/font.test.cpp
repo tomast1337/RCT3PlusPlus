@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/font/font.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -19,7 +21,7 @@ namespace
         return f;
     }
 
-    ovl::FontGlyph glyph(std::uint32_t code, float advance, std::array<float, 4> uv = { }, std::array<float, 2> shift = { }, std::uint16_t page = 0)
+    ovl::FontGlyph glyph(u32 code, f32 advance, std::array<f32, 4> uv = { }, std::array<f32, 2> shift = { }, u16 page = 0)
     {
         ovl::FontGlyph g;
         g.code = code;

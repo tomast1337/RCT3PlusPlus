@@ -8,6 +8,7 @@
 // step. With nothing to scroll the rider is hidden and the bar ignores input.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widget.hpp"
 
 #include <cstdint>
@@ -16,7 +17,7 @@
 namespace rct3::ui::widgets
 {
 
-    enum class Orientation : std::uint8_t
+    enum class Orientation : u8
     {
         Vertical,
         Horizontal,
@@ -28,12 +29,12 @@ namespace rct3::ui::widgets
         std::string forward_arrow;            ///< Down or right
         std::string rail;                     ///< Stretched along the track
         std::string rider;                    ///< Family base name (see SkinLibrary)
-        float thickness = 15;                 ///< Across the bar; the arrows are squares of this size
-        float step = 20;                      ///< Per arrow press
-        float wheel_step = 60;                ///< Per wheel notch
+        f32 thickness = 15;                   ///< Across the bar; the arrows are squares of this size
+        f32 step = 20;                        ///< Per arrow press
+        f32 wheel_step = 60;                  ///< Per wheel notch
         units::Seconds repeat_delay { 0.4f }; ///< An arrow is held this long before it repeats
         units::Seconds repeat_interval { 0.05f };
-        float min_rider = 10; ///< So a long list keeps a rider that can be grabbed
+        f32 min_rider = 10; ///< So a long list keeps a rider that can be grabbed
     };
 
     /// Where the parts of a bar are, in desktop units.
@@ -50,9 +51,9 @@ namespace rct3::ui::widgets
     public:
         ScrollBar(std::string name, ScrollBarStyle style, Orientation orientation);
 
-        float content = 0;  ///< Length of what is scrolled
-        float visible = 0;  ///< Length of the part in view
-        float position = 0; ///< Of the view's start in the content, 0 to range()
+        f32 content = 0;  ///< Length of what is scrolled
+        f32 visible = 0;  ///< Length of the part in view
+        f32 position = 0; ///< Of the view's start in the content, 0 to range()
 
         [[nodiscard]] Orientation orientation() const
         {
@@ -63,9 +64,9 @@ namespace rct3::ui::widgets
             return style_;
         }
         /// How far the view can move: content - visible, at least 0.
-        [[nodiscard]] float range() const;
+        [[nodiscard]] f32 range() const;
         /// Moves the view by `delta`, kept within the range.
-        void scroll_by(float delta);
+        void scroll_by(f32 delta);
         /// Puts `position` back in the range, e.g. after the content shrank.
         void clamp();
 
@@ -88,7 +89,7 @@ namespace rct3::ui::widgets
         void draw(DrawContext& context) const override;
 
     private:
-        enum class Part : std::uint8_t
+        enum class Part : u8
         {
             None,
             Back,
@@ -96,13 +97,13 @@ namespace rct3::ui::widgets
             Rider,
         };
 
-        [[nodiscard]] float along(Point p) const;
-        void drag_to(float pointer);
+        [[nodiscard]] f32 along(Point p) const;
+        void drag_to(f32 pointer);
 
         ScrollBarStyle style_;
         Orientation orientation_;
         Part held_ = Part::None;
-        float grab_ = 0; ///< Pointer offset from the rider's start while it is dragged
+        f32 grab_ = 0; ///< Pointer offset from the rider's start while it is dragged
         units::Seconds held_time_;
         units::Seconds next_repeat_;
     };

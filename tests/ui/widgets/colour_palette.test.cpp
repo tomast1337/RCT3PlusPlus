@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/colour_palette.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 
 #include <doctest/doctest.h>
@@ -22,7 +23,7 @@ namespace
         return s;
     }
 
-    PointerState at(float x, float y, bool down = false)
+    PointerState at(f32 x, f32 y, bool down = false)
     {
         return { { x, y }, down, true };
     }

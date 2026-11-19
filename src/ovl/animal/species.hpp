@@ -4,6 +4,7 @@
 // four animals of the species a park can buy (adult male and female, young male and female).
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -22,12 +23,12 @@ namespace rct3::ovl::animal
         std::string_view motions;          ///< "wad" item (animal/motions.hpp)
         std::string_view description_text; ///< "txt" item
         std::string_view icon;             ///< "gsi" item; adults of both sexes often share one
-        std::int32_t price = 0;            ///< Hundredths of the currency unit
-        float rarity = 0;                  ///< From 0, common, to 1, endangered
+        i32 price = 0;                     ///< Hundredths of the currency unit
+        f32 rarity = 0;                    ///< From 0, common, to 1, endangered
     };
 
     /// The order of `AnimalSpecies::variants`.
-    enum class AnimalAge : std::uint8_t
+    enum class AnimalAge : u8
     {
         AdultMale,
         AdultFemale,
@@ -41,7 +42,7 @@ namespace rct3::ovl::animal
         std::string_view description_text; ///< "txt" item
         std::string_view icon;             ///< "gsi" item
         std::string_view shelter;          ///< Name of the shelter the species needs, as stored (any case)
-        float fence_strength = 0;          ///< The least strength of fence that holds the species
+        f32 fence_strength = 0;            ///< The least strength of fence that holds the species
         /// Nothing where the pointer is null or the record does not fit its block.
         std::array<std::optional<AnimalVariant>, 4> variants;
     };

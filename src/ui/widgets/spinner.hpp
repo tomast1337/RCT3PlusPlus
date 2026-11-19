@@ -10,6 +10,7 @@
 // The owner asks with take_change() whether the user changed the value.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widgets/edit_box.hpp"
 
 #include <cstdint>
@@ -24,7 +25,7 @@ namespace rct3::ui::widgets
         std::string field_focused; ///< Behind it while typing
         std::string up;            ///< Family base name of the upper arrow (see SkinLibrary)
         std::string down;
-        float arrow_width = 20;
+        f32 arrow_width = 20;
         units::Seconds repeat_delay { 0.4f }; ///< An arrow is held this long before it repeats
         units::Seconds repeat_interval { 0.08f };
     };
@@ -34,20 +35,20 @@ namespace rct3::ui::widgets
     public:
         Spinner(std::string name, SpinnerStyle style);
 
-        std::int32_t minimum = 0;
-        std::int32_t maximum = 100;
-        std::int32_t step = 1;
+        i32 minimum = 0;
+        i32 maximum = 100;
+        i32 step = 1;
         /// Places after the point the value is shown with: 2 shows 150 as 1.50, and reads 1.5 back as 150.
-        std::int32_t decimals = 0;
+        i32 decimals = 0;
         /// Shown after the number, as " mph"; typed text may keep it or leave it out.
         std::u16string unit;
 
-        [[nodiscard]] std::int32_t value() const
+        [[nodiscard]] i32 value() const
         {
             return value_;
         }
         /// Sets the value, kept in range. Not reported by take_change().
-        void set_value(std::int32_t v);
+        void set_value(i32 v);
 
         /// True once for each change by the user since the last call.
         [[nodiscard]] bool take_change();
@@ -76,18 +77,18 @@ namespace rct3::ui::widgets
         void draw(DrawContext& context) const override;
 
     private:
-        void step_by(std::int64_t steps); // By the user
+        void step_by(i64 steps); // By the user
         void read_field();
         void show_value();
 
         SpinnerStyle style_;
         EditBox* field_ = nullptr;
-        std::int32_t value_ = 0;
-        std::int32_t held_ = 0; // +1 while the up arrow is held, -1 for the down arrow
+        i32 value_ = 0;
+        i32 held_ = 0; // +1 while the up arrow is held, -1 for the down arrow
         units::Seconds held_time_;
         units::Seconds next_repeat_;
         bool typing_ = false; // The field has text not yet read back
-        std::int32_t changes_ = 0;
+        i32 changes_ = 0;
     };
 
 } // namespace rct3::ui::widgets

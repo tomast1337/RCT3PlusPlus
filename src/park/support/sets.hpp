@@ -8,6 +8,7 @@
 // way and others for columns that face along an axis or a diagonal.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/support/footprint.hpp"
 
 #include <cstdint>
@@ -23,12 +24,12 @@ namespace rct3::park::support
 {
 
     /// Item types of support pieces, as scenery items store them.
-    inline constexpr std::uint32_t kSupportMiddleType = 12;
-    inline constexpr std::uint32_t kSupportTopType = 13;
-    inline constexpr std::uint32_t kSupportFootType = 14;
-    inline constexpr std::uint32_t kSupportDeepFootType = 15;
-    inline constexpr std::uint32_t kSupportBeamType = 16;
-    inline constexpr std::uint32_t kSupportCapType = 17;
+    inline constexpr u32 kSupportMiddleType = 12;
+    inline constexpr u32 kSupportTopType = 13;
+    inline constexpr u32 kSupportFootType = 14;
+    inline constexpr u32 kSupportDeepFootType = 15;
+    inline constexpr u32 kSupportBeamType = 16;
+    inline constexpr u32 kSupportCapType = 17;
 
     /// Where the support pieces are, relative to the game's folder and as PlacedObject::overlay names it.
     inline constexpr std::string_view kSupportOverlay = "Supports/Supports";
@@ -36,7 +37,7 @@ namespace rct3::park::support
     struct SupportPiece
     {
         std::string symbol;
-        std::int32_t levels = 0; ///< How tall it is
+        i32 levels = 0; ///< How tall it is
     };
 
     /// The pieces of one group that face one way.
@@ -57,12 +58,12 @@ namespace rct3::park::support
     using SupportSets = std::map<std::string, std::vector<SupportSet>, std::less<>>;
 
     /// Item flags of support pieces that the set takes on.
-    inline constexpr std::uint32_t kStandsOnAnything = 0x4000;
-    inline constexpr std::uint32_t kStandsClose = 0x8000;
+    inline constexpr u32 kStandsOnAnything = 0x4000;
+    inline constexpr u32 kStandsClose = 0x8000;
 
     /// Adds a piece to the set of `group` facing `kind`, by its item type; other types are ignored, and so
     /// is a second piece of a role and height the set already has. `flags` are the piece's item flags.
-    void add_support_piece(SupportSets& sets, std::string_view group, std::uint32_t type, std::string_view symbol, std::int32_t levels, SupportKind kind = kRoundSupport, std::uint32_t flags = 0);
+    void add_support_piece(SupportSets& sets, std::string_view group, u32 type, std::string_view symbol, i32 levels, SupportKind kind = kRoundSupport, u32 flags = 0);
 
     /// The support sets of the overlay at `path`.
     [[nodiscard]] std::expected<SupportSets, std::string> load_support_sets(const std::filesystem::path& path);

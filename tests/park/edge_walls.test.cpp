@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/edge_walls.hpp"
 
+#include "core/types.hpp"
 #include "park/ground/paths.hpp"
 #include "park/item_category.hpp"
 #include "park/object/placement.hpp"
@@ -16,29 +17,29 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid flat_grid(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         return g;
     }
 
-    save::model::PathTile ground_tile(std::int32_t col, std::int32_t row)
+    save::model::PathTile ground_tile(i32 col, i32 row)
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Ground;
         p.surface_name = "Gravel";
-        p.col = static_cast<std::uint8_t>(col);
-        p.row = static_cast<std::uint8_t>(row);
+        p.col = static_cast<u8>(col);
+        p.row = static_cast<u8>(row);
         return p;
     }
 
     /// A fence on tile (2, 1) whose +X faces after `turns` quarter turns, and its model, of `category`.
-    std::pair<save::model::PlacedObject, object::ObjectModels> fence(std::int32_t turns, ItemCategory category = ItemCategory::Fence, object::Positioning positioning = object::Positioning::Edge)
+    std::pair<save::model::PlacedObject, object::ObjectModels> fence(i32 turns, ItemCategory category = ItemCategory::Fence, object::Positioning positioning = object::Positioning::Edge)
     {
         object::ObjectModel model;
         model.category = std::to_underlying(category);
@@ -92,7 +93,7 @@ TEST_CASE("paths on the ground and on decks do not join across a wall")
     CHECK(ground::path_continues(map, grid, { 2, 1 }, -1, 0));
 
     std::vector<save::model::PathTile> decks;
-    for (std::int32_t col = 1; col <= 3; ++col)
+    for (i32 col = 1; col <= 3; ++col)
     {
         save::model::PathTile p = ground_tile(col, 1);
         p.kind = save::model::PathKind::Flying;

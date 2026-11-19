@@ -5,6 +5,7 @@
 // three-cell buttons in different tints. Rebuilt from scratch every frame, as the game's interface is.
 #pragma once
 
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/ui_renderer.hpp"
@@ -25,7 +26,7 @@ namespace rct3::scene
     [[nodiscard]] std::expected<UiDemo, std::string> create_ui_demo(render::Device& device);
 
     /// Rebuilds the demo's draw list and records it into the current pass. `seconds` drives the animation.
-    void draw_ui_demo(render::Device& device, UiDemo& demo, double seconds);
+    void draw_ui_demo(render::Device& device, UiDemo& demo, f64 seconds);
 
     void destroy_ui_demo(render::Device& device, UiDemo& demo);
 

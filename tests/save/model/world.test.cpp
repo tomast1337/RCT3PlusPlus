@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/world.hpp"
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -23,32 +24,32 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& put_u8(std::uint8_t x)
+        Bytes& put_u8(u8 x)
         {
             v.push_back(static_cast<std::byte>(x));
             return *this;
         }
-        Bytes& put_u16(std::uint16_t x)
+        Bytes& put_u16(u16 x)
         {
             return put(&x, 2);
         }
-        Bytes& put_u32(std::uint32_t x)
+        Bytes& put_u32(u32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put_i32(std::int32_t x)
+        Bytes& put_i32(i32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put_u64(std::uint64_t x)
+        Bytes& put_u64(u64 x)
         {
             return put(&x, 8);
         }
-        Bytes& put_f32(float x)
+        Bytes& put_f32(f32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put(const void* p, std::size_t n)
+        Bytes& put(const void* p, usize n)
         {
             const auto* b = static_cast<const std::byte*>(p);
             v.insert(v.end(), b, b + n);
@@ -61,14 +62,14 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            put_u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<u16>(s.size()));
             for (const char c : s)
-                put_u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<u8>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            put_u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<u32>(payload.v.size()));
             return cat(payload);
         }
         Bytes& text(const std::u16string& s)
@@ -86,22 +87,22 @@ namespace
     };
 
     // A terrain cell in the 24-byte layout. Invented values.
-    Bytes& cell24(Bytes& b, float h0, float h1, float h2, float h3, std::uint8_t surface, std::uint8_t cliff, std::uint8_t flags)
+    Bytes& cell24(Bytes& b, f32 h0, f32 h1, f32 h2, f32 h3, u8 surface, u8 cliff, u8 flags)
     {
         b.put_f32(h0).put_f32(h1).put_f32(h2).put_f32(h3).put_u8(surface).put_u8(cliff).put_u8(0).put_u8(0).put_u8(flags).put_u8(0xFF).put_u8(0).put_u8(0);
         return b;
     }
 
-    Bytes& cell20(Bytes& b, float h0, float h1, float h2, float h3, std::uint8_t surface, std::uint8_t cliff, std::uint8_t flag_nibble)
+    Bytes& cell20(Bytes& b, f32 h0, f32 h1, f32 h2, f32 h3, u8 surface, u8 cliff, u8 flag_nibble)
     {
         b.put_f32(h0).put_f32(h1).put_f32(h2).put_f32(h3).put_u8(surface).put_u8(cliff).put_u8(0).put_u8(flag_nibble);
         return b;
     }
 
-    Bytes terrain_header(std::int32_t w, std::int32_t h, float ox = -8, float oz = -12, float tx = 4, float tz = 4)
+    Bytes terrain_header(i32 w, i32 h, f32 ox = -8, f32 oz = -12, f32 tx = 4, f32 tz = 4)
     {
         Bytes b;
-        b.put_u8(static_cast<std::uint8_t>(w)).put_u8(static_cast<std::uint8_t>(h)).put_f32(ox).put_f32(oz).put_f32(tx).put_f32(tz);
+        b.put_u8(static_cast<u8>(w)).put_u8(static_cast<u8>(h)).put_f32(ox).put_f32(oz).put_f32(tx).put_f32(tz);
         return b;
     }
 
@@ -109,28 +110,28 @@ namespace
     Bytes make_terrain_3x2(bool legacy = false)
     {
         Bytes b = terrain_header(3, 2);
-        for (std::int32_t row = 0; row < 2; ++row)
+        for (i32 row = 0; row < 2; ++row)
         {
-            for (std::int32_t col = 0; col < 3; ++col)
+            for (i32 col = 0; col < 3; ++col)
             {
-                const auto v = [&](std::int32_t dx, std::int32_t dz) { return static_cast<float>(col + dx + 10 * (row + dz)); };
-                const std::uint8_t flags = static_cast<std::uint8_t>(col == 0 ? 0x02 : col == 1 ? 0x05 : 0x40);
+                const auto v = [&](i32 dx, i32 dz) { return static_cast<f32>(col + dx + 10 * (row + dz)); };
+                const u8 flags = static_cast<u8>(col == 0 ? 0x02 : col == 1 ? 0x05 : 0x40);
                 if (legacy)
-                    cell20(b, v(0, 0), v(1, 0), v(0, 1), v(1, 1), static_cast<std::uint8_t>(col), 1, flags & 0x0f);
+                    cell20(b, v(0, 0), v(1, 0), v(0, 1), v(1, 1), static_cast<u8>(col), 1, flags & 0x0f);
                 else
-                    cell24(b, v(0, 0), v(1, 0), v(0, 1), v(1, 1), static_cast<std::uint8_t>(col), 1, flags);
+                    cell24(b, v(0, 0), v(1, 0), v(0, 1), v(1, 1), static_cast<u8>(col), 1, flags);
             }
         }
         return b;
     }
 
-    Bytes make_water(std::int32_t w, std::int32_t h, const std::vector<std::pair<float, std::vector<WaterTri>>>& bodies)
+    Bytes make_water(i32 w, i32 h, const std::vector<std::pair<f32, std::vector<WaterTri>>>& bodies)
     {
         Bytes b;
-        b.put_u8(static_cast<std::uint8_t>(w)).put_u8(static_cast<std::uint8_t>(h)).put_u32(static_cast<std::uint32_t>(bodies.size()));
+        b.put_u8(static_cast<u8>(w)).put_u8(static_cast<u8>(h)).put_u32(static_cast<u32>(bodies.size()));
         for (const auto& [level, tris] : bodies)
         {
-            b.put_f32(level).put_u32(static_cast<std::uint32_t>(tris.size()));
+            b.put_f32(level).put_u32(static_cast<u32>(tris.size()));
             for (const auto& t : tris)
                 b.put_u8(t.col).put_u8(t.row).put_u8(t.triangle).put_u8(t.mask);
         }
@@ -142,7 +143,7 @@ namespace
     struct Attr
     {
         std::string name, type;
-        std::uint32_t size = 0;
+        u32 size = 0;
         std::vector<Attr> children;
     };
 
@@ -154,14 +155,14 @@ namespace
 
     struct Obj
     {
-        std::uint32_t cls;
-        std::uint64_t id;
+        u32 cls;
+        u64 id;
         Bytes payload;
     };
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<u32>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -169,21 +170,21 @@ namespace
     std::vector<std::byte> make_save(const std::vector<Cls>& classes, const std::vector<Obj>& objects)
     {
         Bytes b;
-        b.put_u32(static_cast<std::uint32_t>(classes.size()));
+        b.put_u32(static_cast<u32>(classes.size()));
         for (const auto& c : classes)
         {
-            b.name(c.name).put_u32(static_cast<std::uint32_t>(c.attrs.size()));
+            b.name(c.name).put_u32(static_cast<u32>(c.attrs.size()));
             for (const auto& a : c.attrs)
                 write_attr(b, a);
         }
-        b.put_u32(static_cast<std::uint32_t>(objects.size()));
+        b.put_u32(static_cast<u32>(objects.size()));
         for (const auto& o : objects)
             b.put_u32(o.cls).put_u64(o.id).cat(o.payload);
         return b.v;
     }
 
     // Class indices of the synthetic schema.
-    enum : std::uint32_t
+    enum : u32
     {
         kTerrain,
         kWater,
@@ -242,7 +243,7 @@ namespace
             data.push_back(f32a("HEIGHTADJUST"));
         data.push_back(i32a("POSX"));
         data.push_back(i32a("POSZ"));
-        const std::uint32_t data_size = with_adjust ? 24 : 20;
+        const u32 data_size = with_adjust ? 24 : 20;
         const std::vector<Attr> path_base = { u8a("ColIndex"), u8a("Direction"), u8a("PathType"), u8a("RowIndex"), refa("Surface"), u8a("SurfaceType") };
         auto flying = path_base;
         for (const auto& a : { u8a("SlopeType"), i32a("BaseHeight"), i32a("QuantisedHeight"), refa("SceneryItem") })
@@ -276,21 +277,21 @@ namespace
         };
     }
 
-    Obj terrain_obj(std::uint64_t id, const Bytes& blob, const Bytes& skirt = Bytes().put_u32(0), const Bytes& blocking = Bytes().put_i32(-1))
+    Obj terrain_obj(u64 id, const Bytes& blob, const Bytes& skirt = Bytes().put_u32(0), const Bytes& blocking = Bytes().put_i32(-1))
     {
         Bytes p;
         p.blob(blob).blob(skirt).blob(blocking);
         return { kTerrain, id, p };
     }
 
-    Obj water_obj(std::uint64_t id, const Bytes& blob)
+    Obj water_obj(u64 id, const Bytes& blob)
     {
         Bytes p;
         p.blob(blob);
         return { kWater, id, p };
     }
 
-    Obj path_obj(std::uint32_t cls, std::uint64_t id, std::uint8_t col, std::uint8_t row, std::uint8_t kind, std::uint64_t scenery = 0, std::int32_t base = -1, std::int32_t quant = 0, std::uint8_t slope = 0, std::uint64_t fence = 0)
+    Obj path_obj(u32 cls, u64 id, u8 col, u8 row, u8 kind, u64 scenery = 0, i32 base = -1, i32 quant = 0, u8 slope = 0, u64 fence = 0)
     {
         Bytes p;
         p.put_u8(col).put_u8(255).put_u8(kind).put_u8(row).put_u64(0).put_u8(255);
@@ -303,7 +304,7 @@ namespace
         return { cls, id, p };
     }
 
-    Obj scenery_obj(std::uint64_t id, std::int32_t col, std::int32_t row, std::int32_t height, std::uint64_t def, std::uint64_t owner, bool with_adjust = true, std::uint32_t behaviours = 0, std::optional<float> motion = std::nullopt)
+    Obj scenery_obj(u64 id, i32 col, i32 row, i32 height, u64 def, u64 owner, bool with_adjust = true, u32 behaviours = 0, std::optional<f32> motion = std::nullopt)
     {
         Bytes p;
         p.put_i32(2).put_i32(1).put_i32(height);
@@ -313,7 +314,7 @@ namespace
         p.put_u64(def).put_u64(owner).put_i32(3).put_i32(1).put_i32(2).put_i32(35).put_u8(0);
         Bytes list;
         list.put_u32(behaviours);
-        for (std::uint32_t i = 0; i < behaviours; ++i)
+        for (u32 i = 0; i < behaviours; ++i)
             list.put_u64(900 + i);
         p.blob(list);
         Bytes motions;
@@ -324,7 +325,7 @@ namespace
         return { kScenery, id, p };
     }
 
-    Obj entry_obj(std::uint64_t id, const std::u16string& symbol, const std::u16string& overlay = u"Scenery/Trees")
+    Obj entry_obj(u64 id, const std::u16string& symbol, const std::u16string& overlay = u"Scenery/Trees")
     {
         Bytes p;
         p.text(symbol);
@@ -430,7 +431,7 @@ TEST_CASE("terrain: 20-byte legacy cells")
 TEST_CASE("terrain: a few unused trailing bytes are tolerated and counted")
 {
     auto blob = make_terrain_3x2();
-    for (std::int32_t i = 0; i < 8; ++i)
+    for (i32 i = 0; i < 8; ++i)
         blob.put_u8(0xAA);
     const auto g = decode_terrain(blob.span());
     REQUIRE(g);
@@ -465,7 +466,7 @@ TEST_CASE("terrain: wrong sizes and hostile headers are errors")
     SUBCASE("a size that fits neither layout")
     {
         Bytes b = terrain_header(2, 2);
-        for (std::int32_t i = 0; i < 4 * 24 + 9; ++i)
+        for (i32 i = 0; i < 4 * 24 + 9; ++i)
             b.put_u8(0); // more than one layout plus slack
         CHECK(decode_terrain(b.span()).error() == Error::ImplausibleCount);
     }
@@ -476,7 +477,7 @@ TEST_CASE("terrain: wrong sizes and hostile headers are errors")
     }
     SUBCASE("tile size must be positive and finite")
     {
-        const float nan = std::numeric_limits<float>::quiet_NaN();
+        const f32 nan = std::numeric_limits<f32>::quiet_NaN();
         Bytes a = terrain_header(1, 1, 0, 0, 0.0f, 4.0f);
         cell24(a, 0, 0, 0, 0, 0, 0, 0);
         CHECK(decode_terrain(a.span()).error() == Error::BadHeader);
@@ -511,7 +512,7 @@ TEST_CASE("terrain: height queries follow the triangle split")
     CHECK(g->height_at(4, -4).has_value());
     CHECK_FALSE(g->height_at(4.1f, 0).has_value());
     CHECK_FALSE(g->height_at(-8.1f, 0).has_value());
-    CHECK_FALSE(g->height_at(0, std::numeric_limits<float>::quiet_NaN()).has_value());
+    CHECK_FALSE(g->height_at(0, std::numeric_limits<f32>::quiet_NaN()).has_value());
     CHECK_FALSE(TerrainGrid { }.height_at(0, 0).has_value());
 }
 
@@ -793,7 +794,7 @@ TEST_CASE("load_world: a queue's ground surface names its style through the queu
     REQUIRE(l->world->paths.size() == 1);
     CHECK(l->world->paths[0].surface_name == "Queue_A");
     REQUIRE(l->world->paths[0].surface_colours.has_value());
-    CHECK(*l->world->paths[0].surface_colours == std::array<std::int32_t, 3> { 20, 1, 5 });
+    CHECK(*l->world->paths[0].surface_colours == std::array<i32, 3> { 20, 1, 5 });
 }
 
 TEST_CASE("load_world: older scenery layout without a height adjust")
@@ -829,7 +830,7 @@ TEST_CASE("load_world: litter bins and signs keep the object they belong to")
     REQUIRE(l->world->signs.size() == 1);
     CHECK(l->world->signs[0].object_ref == 301);
     CHECK(l->world->signs[0].text == "Welcome");
-    CHECK(l->world->benches == std::vector<std::uint64_t> { 300 });
+    CHECK(l->world->benches == std::vector<u64> { 300 });
 }
 
 TEST_CASE("load_world: flower beds keep their object and the water they hold")
@@ -939,7 +940,7 @@ TEST_CASE("load_world: consistency findings")
 TEST_CASE("load_world: non-finite heights are reported")
 {
     Bytes b = terrain_header(1, 1, 0, 0, 1, 1);
-    cell24(b, std::numeric_limits<float>::quiet_NaN(), 0, 0, 0, 0, 0, 0);
+    cell24(b, std::numeric_limits<f32>::quiet_NaN(), 0, 0, 0, 0, 0, 0);
     const auto l = load(schema(), { terrain_obj(1, b) });
     REQUIRE(l->world);
     CHECK(l->world->issue_count(WorldIssueKind::NonFiniteHeight) == 1);
@@ -970,7 +971,7 @@ TEST_CASE("enum names")
 
 TEST_CASE("load_world: the pool squares that hold water, at their surface and depth")
 {
-    const auto pool = [](std::uint64_t id, std::int32_t col, std::int32_t row, std::int32_t type, bool prototype) { return Obj { kPool, id, Bytes().put_i32(col).put_i32(2).put_u8(prototype ? 1 : 0).put_i32(row).put_i32(type).put_i32(-5) }; };
+    const auto pool = [](u64 id, i32 col, i32 row, i32 type, bool prototype) { return Obj { kPool, id, Bytes().put_i32(col).put_i32(2).put_u8(prototype ? 1 : 0).put_i32(row).put_i32(type).put_i32(-5) }; };
     const auto l = load(schema(), { terrain_obj(1, make_terrain_3x2()), pool(500, 1, 0, 0, false), pool(501, 2, 1, 0, false), pool(502, 0, 0, 1, false), pool(503, 0, 1, 0, true) });
     REQUIRE(l->world);
     REQUIRE(l->world->pool_water.size() == 2);
@@ -1004,7 +1005,7 @@ TEST_CASE("load_world: enclosures, each tile naming its own and each its fence")
     regions.put_u32(3).put_u64(60).put_u8(1).put_u64(60).put_u8(0).put_u64(61).put_u8(1);
     Bytes tiles;
     tiles.put_u32(6);
-    for (const std::int32_t region : { 0, 0, -1, 2, 1, 2 })
+    for (const i32 region : { 0, 0, -1, 2, 1, 2 })
         tiles.put_i32(0).put_i32(region);
     Bytes p;
     p.put_i32(3).blob(regions).put_i32(2).blob(tiles);
@@ -1017,7 +1018,7 @@ TEST_CASE("load_world: enclosures, each tile naming its own and each its fence")
     CHECK(e.cols == 3);
     CHECK(e.rows == 2);
     CHECK(e.fences == std::vector<std::string> { "Wood", "", "Electric" });
-    CHECK(std::ranges::equal(e.tiles, std::vector<std::optional<std::int32_t>> { 0, 0, std::nullopt, 2, std::nullopt, 2 }));
+    CHECK(std::ranges::equal(e.tiles, std::vector<std::optional<i32>> { 0, 0, std::nullopt, 2, std::nullopt, 2 }));
     CHECK(e.at(2, 1) == 2);
     CHECK_FALSE(e.at(3, 0));
 }

@@ -6,6 +6,7 @@
 // these.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/path/clearance.hpp"
 #include "park/ride/placement.hpp"
 #include "park/track/pieces.hpp"
@@ -27,7 +28,7 @@ namespace rct3::scene::track
 {
 
     /// The role track files give holding brakes (ovl::TrackSection::role).
-    inline constexpr std::uint32_t kHoldingRole = 24;
+    inline constexpr u32 kHoldingRole = 24;
 
     const rct3::park::track::PieceCatalogue* catalogue(const TrackBuilding& b);
 
@@ -35,7 +36,7 @@ namespace rct3::scene::track
     std::optional<const rct3::park::track::PieceCatalogue&> load_catalogue(TrackBuilding& b, const std::string& overlay, const ui::InterfaceAssets& assets);
 
     /// Of the scene's objects by id.
-    std::unordered_map<std::uint64_t, save::model::PlacedObjectIndex> object_indices(const park::ParkScene& scene);
+    std::unordered_map<u64, save::model::PlacedObjectIndex> object_indices(const park::ParkScene& scene);
 
     /// Whether the ride's track waits for the first piece of a stretch: it has none yet, or a new one was begun.
     bool opening(const save::model::Ride& ride);
@@ -87,7 +88,7 @@ namespace rct3::scene::track
     /// Where piece `i` of `design` goes when the design is moved and turned as its first piece is to stand as
     /// `to`, as it was saved rather than on after the piece before: some pieces' ends do not quite meet their
     /// neighbours' as their shapes are read. Nothing when the catalogue has no such piece.
-    std::optional<rct3::park::track::PiecePlacement> design_piece(const rct3::park::track::PieceCatalogue& c, std::span<const save::model::TrackPiece> design, std::size_t i, const save::model::PlacedObject& to, const save::model::TerrainGrid& grid);
+    std::optional<rct3::park::track::PiecePlacement> design_piece(const rct3::park::track::PieceCatalogue& c, std::span<const save::model::TrackPiece> design, usize i, const save::model::PlacedObject& to, const save::model::TerrainGrid& grid);
 
     /// Whether `o`, its model loaded, may not stand: it would take room `taken` or a path takes, stand off
     /// land the park owns, or cut ground that may not be cut.

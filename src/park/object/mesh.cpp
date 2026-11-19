@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object/mesh.hpp"
 
+#include "core/types.hpp"
 #include "park/ground/textures.hpp"
 #include "park/object/placement.hpp"
 #include "park/water/flow.hpp"
@@ -24,12 +25,12 @@ namespace rct3::park::object
             std::string picture;
             FlexiColours colours { };
             std::vector<GroundVertex> vertices;
-            std::vector<std::uint32_t> indices;
+            std::vector<u32> indices;
             std::vector<BillboardStand> stands; ///< Billboard runs only
-            std::vector<std::uint32_t> owners;  ///< By vertex
+            std::vector<u32> owners;            ///< By vertex
         };
 
-        using Key = std::tuple<PartBlend, std::string, bool, std::int32_t>; // Blend, painted picture, one-sided, chain run
+        using Key = std::tuple<PartBlend, std::string, bool, i32>; // Blend, painted picture, one-sided, chain run
 
         FlexiColours colours_of(const save::model::PlacedObject& object, const ColourOverrides& overrides)
         {
@@ -49,8 +50,8 @@ namespace rct3::park::object
 
         std::string ground_texture(GroundPaint paint, const save::model::TerrainGrid& grid, glm::vec2 anchor)
         {
-            const std::int32_t col = grid.tile_size_x != 0 ? static_cast<std::int32_t>(std::floor((anchor.x - grid.origin_x) / grid.tile_size_x)) : -1;
-            const std::int32_t row = grid.tile_size_z != 0 ? static_cast<std::int32_t>(std::floor((anchor.y - grid.origin_z) / grid.tile_size_z)) : -1;
+            const i32 col = grid.tile_size_x != 0 ? static_cast<i32>(std::floor((anchor.x - grid.origin_x) / grid.tile_size_x)) : -1;
+            const i32 row = grid.tile_size_z != 0 ? static_cast<i32>(std::floor((anchor.y - grid.origin_z) / grid.tile_size_z)) : -1;
             if (!grid.contains(col, row))
                 return ground::ground_key(paint, 0);
             const save::model::TerrainCell& cell = grid.at(col, row);
@@ -71,11 +72,11 @@ namespace rct3::park::object
             for (auto& [key, run] : runs)
             {
                 const auto& [blend, texture, one_sided, chain] = key;
-                const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
-                mesh.batches.push_back({ texture, run.picture, run.colours, blend, static_cast<std::uint32_t>(mesh.indices.size()), static_cast<std::uint32_t>(run.indices.size()), one_sided, chain });
+                const auto base = static_cast<u32>(mesh.vertices.size());
+                mesh.batches.push_back({ texture, run.picture, run.colours, blend, static_cast<u32>(mesh.indices.size()), static_cast<u32>(run.indices.size()), one_sided, chain });
                 mesh.vertices.insert(mesh.vertices.end(), run.vertices.begin(), run.vertices.end());
                 mesh.owners.insert(mesh.owners.end(), run.owners.begin(), run.owners.end());
-                for (const std::uint32_t i : run.indices)
+                for (const u32 i : run.indices)
                     mesh.indices.push_back(base + i);
             }
         }
@@ -99,7 +100,7 @@ namespace rct3::park::object
         {
             for (const std::string_view part : { ref.overlay, std::string_view("|"), ref.symbol })
             {
-                if (const std::int32_t c = part.compare(key.substr(0, part.size())); c != 0)
+                if (const i32 c = part.compare(key.substr(0, part.size())); c != 0)
                     return c <=> 0;
                 key.remove_prefix(part.size());
             }
@@ -127,16 +128,16 @@ namespace rct3::park::object
         return object_transform(object, static_cast<Positioning>(model->positioning), grid, model->squares, model->ground_height);
     }
 
-    std::vector<std::size_t> update_places(ObjectPlaces& places, std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted)
+    std::vector<usize> update_places(ObjectPlaces& places, std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted)
     {
-        const std::size_t had = places.models.size();
+        const usize had = places.models.size();
         const bool more_models = models.size() != places.model_count;
         places.keys.resize(objects.size());
         places.models.resize(objects.size(), nullptr);
         places.transforms.resize(objects.size());
         places.model_count = models.size();
-        std::vector<std::size_t> changed;
-        for (std::size_t i = 0; i < objects.size(); ++i)
+        std::vector<usize> changed;
+        for (usize i = 0; i < objects.size(); ++i)
         {
             const save::model::PlacedObject& o = objects[i];
             std::string& key = places.keys[i];
@@ -175,7 +176,7 @@ namespace rct3::park::object
     std::vector<Lamp> object_lamps(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted, std::span<const glm::mat4> places, std::span<const ObjectModel* const> found)
     {
         std::vector<Lamp> lamps;
-        for (std::size_t i = 0; i < objects.size(); ++i)
+        for (usize i = 0; i < objects.size(); ++i)
         {
             const save::model::PlacedObject& object = objects[i];
             if (object.hidden)
@@ -194,7 +195,7 @@ namespace rct3::park::object
                 glm::vec3 colour = light.colour;
                 if (light.colour_slot)
                 {
-                    const Rgb c = flexi_colour(static_cast<std::size_t>(std::max(object.colours[static_cast<std::size_t>(*light.colour_slot)], 0)));
+                    const Rgb c = flexi_colour(static_cast<usize>(std::max(object.colours[static_cast<usize>(*light.colour_slot)], 0)));
                     colour = glm::vec3(c.r, c.g, c.b) / 255.0f;
                 }
                 lamps.push_back({ .position = glm::vec3(placed * glm::vec4(light.position, 1.0f)), .radius = light.radius, .colour = colour });
@@ -206,7 +207,7 @@ namespace rct3::park::object
     std::vector<PlacedEffect> object_effects(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, const Fitted& fitted, std::span<const glm::mat4> places, std::span<const ObjectModel* const> found)
     {
         std::vector<PlacedEffect> effects;
-        for (std::size_t i = 0; i < objects.size(); ++i)
+        for (usize i = 0; i < objects.size(); ++i)
         {
             if (objects[i].hidden)
                 continue;
@@ -229,7 +230,7 @@ namespace rct3::park::object
         return effects;
     }
 
-    PlacedEffect launch_point(const glm::mat4& placed, const ObjectModel& model, std::size_t tube)
+    PlacedEffect launch_point(const glm::mat4& placed, const ObjectModel& model, usize tube)
     {
         const ModelEffect straight_up { };
         const ModelEffect& t = model.tubes.empty() ? straight_up : model.tubes[tube % model.tubes.size()];
@@ -238,10 +239,10 @@ namespace rct3::park::object
         return { .position = glm::vec3(placed * glm::vec4(t.position, 1.0f)), .axes = glm::mat3(side, up, glm::cross(side, up)) };
     }
 
-    LevelPlan plan_levels(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, float band, const LevelScales& scales)
+    LevelPlan plan_levels(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, f32 band, const LevelScales& scales)
     {
         LevelPlan plan { .steady = ObjectLevels(objects.size(), kNotDrawn), .finer = ObjectLevels(objects.size(), kNotDrawn), .coarser = ObjectLevels(objects.size(), kNotDrawn), .bands = std::vector<glm::vec2>(objects.size()) };
-        for (std::size_t i = 0; i < objects.size() && i < anchors.size(); ++i)
+        for (usize i = 0; i < objects.size() && i < anchors.size(); ++i)
         {
             if (objects[i].hidden)
                 continue;
@@ -249,29 +250,29 @@ namespace rct3::park::object
             if (model == models.end() || model->second.levels.empty())
                 continue;
             const auto& levels = model->second.levels;
-            const float distance = glm::distance(eye, anchors[i]);
-            const LevelScale scale = scales[static_cast<std::size_t>(detail_kind(model->second.category))];
+            const f32 distance = glm::distance(eye, anchors[i]);
+            const LevelScale scale = scales[static_cast<usize>(detail_kind(model->second.category))];
             const auto level = level_at(model->second, distance, scale);
             // The edges the object may be crossing: past the end of its own level, or just past the one before.
-            const std::size_t last = levels.size() - 1;
-            const std::size_t at = level.value_or(last + 1);
-            for (const std::size_t edge : { at, at - 1 })
+            const usize last = levels.size() - 1;
+            const usize at = level.value_or(last + 1);
+            for (const usize edge : { at, at - 1 })
             {
                 if (band <= 0)
                     break;
                 if (edge > last)
                     continue;
-                const float far = level_reach(model->second, edge, scale);
-                const float near = far * (1 - band);
+                const f32 far = level_reach(model->second, edge, scale);
+                const f32 near = far * (1 - band);
                 if (!std::isfinite(far) || far <= 0 || distance < near - far * kCrossMargin || distance > far + far * kCrossMargin)
                     continue;
-                plan.finer[i] = static_cast<std::int8_t>(edge);
-                plan.coarser[i] = edge < last ? static_cast<std::int8_t>(edge + 1) : kNotDrawn;
+                plan.finer[i] = static_cast<i8>(edge);
+                plan.coarser[i] = edge < last ? static_cast<i8>(edge + 1) : kNotDrawn;
                 plan.bands[i] = { near, far };
                 break;
             }
             if (plan.finer[i] == kNotDrawn && level)
-                plan.steady[i] = static_cast<std::int8_t>(*level);
+                plan.steady[i] = static_cast<i8>(*level);
         }
         return plan;
     }
@@ -279,25 +280,25 @@ namespace rct3::park::object
     ObjectLevels object_levels(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, const LevelScales& scales)
     {
         ObjectLevels levels(objects.size(), kNotDrawn);
-        for (std::size_t i = 0; i < objects.size() && i < anchors.size(); ++i)
+        for (usize i = 0; i < objects.size() && i < anchors.size(); ++i)
         {
             if (objects[i].hidden)
                 continue;
             const auto model = models.find(model_ref(objects[i]));
             if (model == models.end())
                 continue;
-            if (const auto level = level_at(model->second, glm::distance(eye, anchors[i]), scales[static_cast<std::size_t>(detail_kind(model->second.category))]))
-                levels[i] = static_cast<std::int8_t>(*level);
+            if (const auto level = level_at(model->second, glm::distance(eye, anchors[i]), scales[static_cast<usize>(detail_kind(model->second.category))]))
+                levels[i] = static_cast<i8>(*level);
         }
         return levels;
     }
 
-    ObjectMesh object_mesh(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, std::span<const std::int8_t> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted, const Broken& broken, const Chains& chains, const FlowFades& fades)
+    ObjectMesh object_mesh(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, std::span<const i8> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted, const Broken& broken, const Chains& chains, const FlowFades& fades)
     {
         const bool finest = levels.size() != objects.size();
         ObjectMesh mesh;
         std::map<Key, Run> runs;
-        for (std::size_t index = 0; index < objects.size(); ++index)
+        for (usize index = 0; index < objects.size(); ++index)
         {
             const save::model::PlacedObject& object = objects[index];
             // Before the model is looked up: a chunk's build passes every object, most of them not drawn.
@@ -309,11 +310,11 @@ namespace rct3::park::object
                 ++mesh.missing;
                 continue;
             }
-            const std::int8_t level = finest ? 0 : levels[index];
-            if (level < 0 || static_cast<std::size_t>(level) >= model->second.levels.size())
+            const i8 level = finest ? 0 : levels[index];
+            if (level < 0 || static_cast<usize>(level) >= model->second.levels.size())
                 continue;
             const bool worn = !model->second.broken_levels.empty() && broken.contains(object.id);
-            const ModelLevel& shown = (worn ? model->second.broken_levels : model->second.levels)[static_cast<std::size_t>(level)];
+            const ModelLevel& shown = (worn ? model->second.broken_levels : model->second.levels)[static_cast<usize>(level)];
             if (shown.parts.empty())
                 continue;
             ++mesh.drawn;
@@ -335,9 +336,9 @@ namespace rct3::park::object
                 Run& run = runs[{ part.blend, paint ? ground_texture(*paint, grid, anchor) : painted_name(part.texture, part.slots, colours), part.one_sided, part.chain && chain != chains.end() ? chain->second : 0 }];
                 run.picture = part.texture;
                 run.colours = used_colours(part.slots, colours);
-                const auto base = static_cast<std::uint32_t>(run.vertices.size());
+                const auto base = static_cast<u32>(run.vertices.size());
                 const bool faded = fade != fades.end() && part.flow.size() == part.vertices.size();
-                for (std::size_t k = 0; k < part.vertices.size(); ++k)
+                for (usize k = 0; k < part.vertices.size(); ++k)
                 {
                     const ModelVertex& v = part.vertices[k];
                     glm::vec3 at { transform * glm::vec4(v.position, 1.0f) };
@@ -350,8 +351,8 @@ namespace rct3::park::object
                     const glm::vec3 normal = stretched ? glm::normalize(turn * v.normal) : turn * v.normal;
                     run.vertices.push_back({ at, glm::vec4(1.0f, 1.0f, 1.0f, faded ? water::flow_alpha(fade->second, part.flow[k], part.flow_last) : 1.0f), paint ? ground_uv(at, normal) : v.uv, normal });
                 }
-                run.owners.resize(run.vertices.size(), static_cast<std::uint32_t>(index));
-                for (const std::uint32_t i : part.indices)
+                run.owners.resize(run.vertices.size(), static_cast<u32>(index));
+                for (const u32 i : part.indices)
                     run.indices.push_back(base + i);
             }
         }
@@ -360,18 +361,18 @@ namespace rct3::park::object
         return mesh;
     }
 
-    Billboards gather_billboards(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const ColourOverrides& overrides)
+    Billboards gather_billboards(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const i8> levels, const ColourOverrides& overrides)
     {
         Billboards boards;
         std::map<Key, Run> runs;
-        for (std::size_t index = 0; index < objects.size() && index < levels.size() && index < anchors.size(); ++index)
+        for (usize index = 0; index < objects.size() && index < levels.size() && index < anchors.size(); ++index)
         {
             if (levels[index] < 0)
                 continue;
             const auto model = models.find(model_ref(objects[index]));
-            if (model == models.end() || static_cast<std::size_t>(levels[index]) >= model->second.levels.size())
+            if (model == models.end() || static_cast<usize>(levels[index]) >= model->second.levels.size())
                 continue;
-            const auto& board = model->second.levels[static_cast<std::size_t>(levels[index])].billboard;
+            const auto& board = model->second.levels[static_cast<usize>(levels[index])].billboard;
             if (!board)
                 continue;
             ++boards.mesh.drawn;
@@ -379,7 +380,7 @@ namespace rct3::park::object
             Run& run = runs[{ PartBlend::Cutout, painted_name(board->texture, board->slots, colours), false, 0 }];
             run.picture = board->texture;
             run.colours = used_colours(board->slots, colours);
-            const auto first = static_cast<std::uint32_t>(run.vertices.size());
+            const auto first = static_cast<u32>(run.vertices.size());
             // Without a normal, so it is lit as a surface facing up and turning round a tree does not change its
             // shade.
             const glm::vec4 shade { 1.0f };
@@ -387,9 +388,9 @@ namespace rct3::park::object
             run.vertices.push_back({ glm::vec3(0.0f), shade, { board->uv_max.x, board->uv_min.y } });
             run.vertices.push_back({ glm::vec3(0.0f), shade, board->uv_max });
             run.vertices.push_back({ glm::vec3(0.0f), shade, { board->uv_min.x, board->uv_max.y } });
-            for (const std::uint32_t i : { 0u, 1u, 2u, 0u, 2u, 3u })
+            for (const u32 i : { 0u, 1u, 2u, 0u, 2u, 3u })
                 run.indices.push_back(first + i);
-            run.owners.resize(run.vertices.size(), static_cast<std::uint32_t>(index));
+            run.owners.resize(run.vertices.size(), static_cast<u32>(index));
             run.stands.push_back({ anchors[index], board->width / 2, board->height });
         }
         for (const auto& [_, run] : runs)
@@ -400,11 +401,11 @@ namespace rct3::park::object
 
     void face_billboards(Billboards& boards, const glm::vec3& eye)
     {
-        for (std::size_t k = 0; k < boards.stands.size() && k * 4 + 3 < boards.mesh.vertices.size(); ++k)
+        for (usize k = 0; k < boards.stands.size() && k * 4 + 3 < boards.mesh.vertices.size(); ++k)
         {
             const BillboardStand& stand = boards.stands[k];
             glm::vec2 facing { eye.x - stand.base.x, eye.z - stand.base.z };
-            const float length = glm::length(facing);
+            const f32 length = glm::length(facing);
             facing = length < 1e-4f ? glm::vec2 { 0, 1 } : facing / length;
             const glm::vec3 right = glm::vec3(facing.y, 0, -facing.x) * stand.half_width;
             const glm::vec3 up { 0, stand.height, 0 };
@@ -416,7 +417,7 @@ namespace rct3::park::object
         }
     }
 
-    ObjectMesh billboard_mesh(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const std::int8_t> levels, const glm::vec3& eye, const ColourOverrides& overrides)
+    ObjectMesh billboard_mesh(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, std::span<const i8> levels, const glm::vec3& eye, const ColourOverrides& overrides)
     {
         Billboards boards = gather_billboards(objects, models, anchors, levels, overrides);
         face_billboards(boards, eye);

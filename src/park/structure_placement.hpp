@@ -12,6 +12,7 @@
 // the park's own land and no item takes room a solid item or a path fills, as one item placed alone.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "park/path/clearance.hpp"
 #include "park/turns.hpp"
@@ -26,20 +27,20 @@ namespace rct3::park
 {
 
     /// Whether an item of `category` goes into a structure picked from the park.
-    [[nodiscard]] bool goes_in_structure(std::uint32_t category) noexcept;
+    [[nodiscard]] bool goes_in_structure(u32 category) noexcept;
 
     /// The structure of the scenery in `objects` on the `marked` tiles, its heights above its lowest item. Empty
     /// (no tiles) when nothing is marked.
     [[nodiscard]] save::model::Structure pick_structure(std::span<const save::model::Tile> marked, std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, const save::model::TerrainGrid& grid);
 
     /// Where `structure`'s tile (col, row) lands when it is centred on `at` and turned `turn`.
-    [[nodiscard]] save::model::Tile structure_tile(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::int32_t col, std::int32_t row);
+    [[nodiscard]] save::model::Tile structure_tile(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, i32 col, i32 row);
 
     /// `structure`'s items as objects to add, centred on `at`, turned `turn`, its lowest item at
     /// `height`. They have no ids yet.
-    [[nodiscard]] std::vector<save::model::PlacedObject> structure_objects(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::int32_t height, const object::ObjectModels& models);
+    [[nodiscard]] std::vector<save::model::PlacedObject> structure_objects(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, i32 height, const object::ObjectModels& models);
 
-    enum class StructureProblem : std::uint8_t
+    enum class StructureProblem : u8
     {
         None,
         NotOwned, ///< A tile of it is off the map or not the park's

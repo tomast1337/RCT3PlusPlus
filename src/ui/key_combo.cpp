@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/key_combo.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cctype>
 #include <vector>
@@ -112,17 +114,17 @@ namespace rct3::ui
         {
             std::vector<std::string> parts;
             const std::string all = folded(text);
-            std::size_t start = 0;
+            usize start = 0;
             while (start <= all.size())
             {
-                const std::size_t plus = all.find('+', start);
-                const std::size_t end = plus == std::string::npos ? all.size() : plus;
+                const usize plus = all.find('+', start);
+                const usize end = plus == std::string::npos ? all.size() : plus;
                 parts.push_back(all.substr(start, end - start));
                 start = end + 1;
             }
 
             KeyPress press;
-            for (std::size_t i = 0; i + 1 < parts.size(); ++i)
+            for (usize i = 0; i + 1 < parts.size(); ++i)
             {
                 if (parts[i] == "ctrl" || parts[i] == "control")
                     press.control = true;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "render/backend.hpp"
 
+#include "core/types.hpp"
 #include "render/null/null_device.hpp"
 #include "render/opengl/device.hpp"
 #include "render/software/device.hpp"
@@ -29,7 +30,7 @@ namespace rct3::render
 
         constexpr auto kBackendIds = [] {
             std::array<Backend, kBackends.size()> ids { };
-            for (std::size_t i = 0; i < kBackends.size(); ++i)
+            for (usize i = 0; i < kBackends.size(); ++i)
                 ids[i] = kBackends[i].backend;
             return ids;
         }();

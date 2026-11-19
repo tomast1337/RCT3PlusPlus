@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "config/user_data.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <filesystem>
 #include <set>
@@ -13,16 +15,16 @@ TEST_CASE("every folder and file of the user's data is registered once, in id or
     std::set<std::string_view> names;
     const auto folders = user_folders_table();
     REQUIRE(folders.size() == kUserFolderCount);
-    for (std::size_t i = 0; i < folders.size(); ++i)
+    for (usize i = 0; i < folders.size(); ++i)
     {
-        CHECK(static_cast<std::size_t>(folders[i].folder) == i);
+        CHECK(static_cast<usize>(folders[i].folder) == i);
         CHECK(names.insert(folders[i].name).second);
     }
     const auto files = user_files_table();
     REQUIRE(files.size() == kUserFileCount);
-    for (std::size_t i = 0; i < files.size(); ++i)
+    for (usize i = 0; i < files.size(); ++i)
     {
-        CHECK(static_cast<std::size_t>(files[i].file) == i);
+        CHECK(static_cast<usize>(files[i].file) == i);
         CHECK(names.insert(files[i].name).second);
     }
 }

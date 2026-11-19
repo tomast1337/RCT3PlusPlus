@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "audio/ride_sounds.hpp"
 
+#include "core/types.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -16,11 +17,11 @@ namespace rct3::audio
 
         // Speed bands, world units a second: the slow loop alone up to kSlowOnly, gone by kSlowGone; the
         // fast loop from kFastFrom, alone by kFastOnly; the medium one fills between. Full loud from kLoud.
-        constexpr float kSlowOnly = 6;
-        constexpr float kSlowGone = 16;
-        constexpr float kFastFrom = 12;
-        constexpr float kFastOnly = 24;
-        constexpr float kLoud = 14;
+        constexpr f32 kSlowOnly = 6;
+        constexpr f32 kSlowGone = 16;
+        constexpr f32 kFastFrom = 12;
+        constexpr f32 kFastOnly = 24;
+        constexpr f32 kLoud = 14;
 
         bool contains_ignoring_case(std::string_view text, std::string_view part)
         {
@@ -50,7 +51,7 @@ namespace rct3::audio
             { "Rafts", TrackSoundSet::Water },
         } };
 
-        float ramp(float x, float from, float to)
+        f32 ramp(f32 x, f32 from, f32 to)
         {
             return std::clamp((x - from) / (to - from), 0.0f, 1.0f);
         }
@@ -60,13 +61,13 @@ namespace rct3::audio
     std::string_view file_of(TrackSoundSet set)
     {
         constexpr std::array<std::string_view, kTrackSoundSets> kFiles { "", "Steel", "Wood", "Inverted", "Water", "GoKart", "HopOnTram", "AirBoat", "PaddleSteamer", "SafariTransport", "ElephantTransport" };
-        return kFiles[static_cast<std::size_t>(set)];
+        return kFiles[static_cast<usize>(set)];
     }
 
     std::string_view name_of(TrackSound sound)
     {
         constexpr std::array<std::string_view, kTrackSounds> kNames { "Slow", "Med", "Fast", "Chain", "Start", "Stop", "WaterSplash", "WaterPlume" };
-        return kNames[static_cast<std::size_t>(sound)];
+        return kNames[static_cast<usize>(sound)];
     }
 
     TrackSoundSet track_sound_set(std::string_view overlay)
@@ -82,16 +83,16 @@ namespace rct3::audio
         return coaster ? TrackSoundSet::Steel : TrackSoundSet::None;
     }
 
-    float ride_music_level(units::Distance away)
+    f32 ride_music_level(units::Distance away)
     {
-        const float left = std::clamp((kMusicFar.value - away.value) / (kMusicFar.value - kMusicNear.value), 0.0f, 1.0f);
+        const f32 left = std::clamp((kMusicFar.value - away.value) / (kMusicFar.value - kMusicNear.value), 0.0f, 1.0f);
         return left * left;
     }
 
-    RunningMix running_mix(float speed, RunningLoops loops)
+    RunningMix running_mix(f32 speed, RunningLoops loops)
     {
         speed = std::abs(speed);
-        const float loud = ramp(speed, 0, kLoud);
+        const f32 loud = ramp(speed, 0, kLoud);
         RunningMix mix;
         mix.slow = 1 - ramp(speed, kSlowOnly, kSlowGone);
         mix.fast = ramp(speed, kFastFrom, kFastOnly);

@@ -5,6 +5,7 @@
 // many the park has. The layout is render::SceneLight::lamps.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 
 #include <cstdint>
@@ -15,27 +16,27 @@ namespace rct3::park
 {
 
     /// Width of the lamps' texture, in texels. Also in app/shaders/lit.slang.
-    inline constexpr std::uint32_t kLampTexelsAcross = 256;
+    inline constexpr u32 kLampTexelsAcross = 256;
     /// Most lamps one cell lists. Also in app/shaders/lit.slang.
-    inline constexpr std::uint32_t kLampsPerCell = 16;
+    inline constexpr u32 kLampsPerCell = 16;
     /// Most cells along each side of the grid: the cells grow when the lamps spread wider.
-    inline constexpr std::uint32_t kLampCellsAcross = 128;
+    inline constexpr u32 kLampCellsAcross = 128;
 
     struct Lamp
     {
         glm::vec3 position { 0.0f }; ///< World space
-        float radius = 0;
+        f32 radius = 0;
         glm::vec3 colour { 0.0f }; ///< Times its strength
     };
 
     /// The texture's texels, four floats each, `kLampTexelsAcross` to a row, padded to a whole row.
     struct LampTexels
     {
-        std::uint32_t rows = 0;
-        std::vector<float> values { };
+        u32 rows = 0;
+        std::vector<f32> values { };
     };
 
     /// `lamps` packed with a grid of cells `cell` world units across or wider. Nothing when there are none.
-    [[nodiscard]] LampTexels lamp_texels(std::span<const Lamp> lamps, float cell);
+    [[nodiscard]] LampTexels lamp_texels(std::span<const Lamp> lamps, f32 cell);
 
 } // namespace rct3::park

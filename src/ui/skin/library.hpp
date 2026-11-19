@@ -13,6 +13,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "strings/ascii.hpp"
 #include "ui/coded_frame.hpp"
 #include "ui/draw_list.hpp"
@@ -32,16 +33,16 @@ namespace rct3::ui::skin
     {
         SkinLayout layout;
         TextureId texture = 0;
-        float texture_width = 0;
-        float texture_height = 0;
+        f32 texture_width = 0;
+        f32 texture_height = 0;
         std::shared_ptr<const CodedFrame> coded; ///< When set, drawn in place of the picture
 
         /// The size the skin has in its texture: the size it is drawn at when it is not stretched. A coded
         /// skin with no picture gives the size its frame was measured at.
-        [[nodiscard]] std::array<float, 2> size() const;
+        [[nodiscard]] std::array<f32, 2> size() const;
     };
 
-    enum class SkinState : std::uint8_t
+    enum class SkinState : u8
     {
         Up,
         UpOver,
@@ -68,7 +69,7 @@ namespace rct3::ui::skin
         /// The family member for `state`, or the nearest one that exists, or the skin named `base`.
         [[nodiscard]] std::optional<const SkinRef&> find(std::string_view base, SkinState state) const;
 
-        [[nodiscard]] std::size_t size() const
+        [[nodiscard]] usize size() const
         {
             return skins_.size();
         }

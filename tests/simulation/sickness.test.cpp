@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/rides.hpp"
@@ -13,10 +14,10 @@ using namespace rct3::simulation;
 
 namespace
 {
-    std::size_t vomit(Sandbox& park)
+    usize vomit(Sandbox& park)
     {
         auto& r = park.world().registry;
-        return static_cast<std::size_t>(std::ranges::count_if(r.view<Litter>(), [&](entt::entity e) { return r.get<Litter>(e).vomit; }));
+        return static_cast<usize>(std::ranges::count_if(r.view<Litter>(), [&](entt::entity e) { return r.get<Litter>(e).vomit; }));
     }
 } // namespace
 
@@ -35,7 +36,7 @@ TEST_CASE("nausea fades, slower while the guest is still eating")
 
 TEST_CASE("guests keep off rides wilder than their stomachs take")
 {
-    for (const float tolerance : { 0.1f, 0.9f })
+    for (const f32 tolerance : { 0.1f, 0.9f })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
@@ -55,7 +56,7 @@ TEST_CASE("guests sick from a ride are sick by its exit, the mess upsets others 
     auto& r = park.world().registry;
     r.emplace<Upkeep>(ride, Upkeep { .inspect_every = std::nullopt });
     std::vector<entt::entity> riders;
-    for (std::int32_t i = 0; i < 20; ++i)
+    for (i32 i = 0; i < 20; ++i)
     {
         riders.push_back(park.guest({ 4, 0 }, { .nausea = 0.7f }));
         r.get<Mood>(riders.back()).tolerance.value = 0;
@@ -70,7 +71,7 @@ TEST_CASE("guests sick from a ride are sick by its exit, the mess upsets others 
     const auto passer = park.guest({ 3, 0 });
     r.get<Errand>(passer).rest = 1000;
     r.get<Stride>(passer).progress.value = 1;
-    const float before = r.get<Mood>(passer).nausea.value;
+    const f32 before = r.get<Mood>(passer).nausea.value;
     park.run(1);
     CHECK(r.get<Mood>(passer).nausea.value > before);
     park.staff(StaffRole::Handyman, { 0, 0 });
@@ -86,7 +87,7 @@ TEST_CASE("a sick guest sits down on a bench and settles before riding again")
     auto& r = park.world().registry;
     CHECK(park.run_until([&] { return r.all_of<Linger>(g); }, 60));
     CHECK(r.get<Linger>(g).at == PathItemKind::Bench);
-    const float before = r.get<Mood>(g).nausea.value;
+    const f32 before = r.get<Mood>(g).nausea.value;
     park.run_seconds(20);
     CHECK(r.get<Mood>(g).nausea.value < before - 0.1f);
 }

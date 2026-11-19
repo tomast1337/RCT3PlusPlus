@@ -2,6 +2,7 @@
 #include "ovl/sound.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <cstdint>
 #include <cstring>
@@ -16,16 +17,16 @@ using rct3::ovl::read_sounds;
 namespace
 {
 
-    void append_f32(std::vector<std::byte>& out, float v)
+    void append_f32(std::vector<std::byte>& out, f32 v)
     {
-        std::uint32_t bits = 0;
+        u32 bits = 0;
         std::memcpy(&bits, &v, sizeof bits);
         append_u32(out, bits);
     }
 
     // An 80-byte descriptor. Words: format/channels, rate, bytes per second, align/bits, 2 zero, 9 floats,
     // flag, data address, data size, 2 zero.
-    std::vector<std::byte> descriptor(std::uint32_t rate, std::uint32_t data_address, std::uint32_t data_size, std::uint32_t flag = 0)
+    std::vector<std::byte> descriptor(u32 rate, u32 data_address, u32 data_size, u32 flag = 0)
     {
         std::vector<std::byte> out;
         append_u16(out, 1);
@@ -36,8 +37,8 @@ namespace
         append_u16(out, 16);
         append_u32(out, 0);
         append_u32(out, 0);
-        for (std::int32_t i = 0; i < 9; ++i)
-            append_f32(out, 0.5f * static_cast<float>(i + 1));
+        for (i32 i = 0; i < 9; ++i)
+            append_f32(out, 0.5f * static_cast<f32>(i + 1));
         append_u32(out, flag);
         append_u32(out, data_address);
         append_u32(out, data_size);
@@ -46,7 +47,7 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> row(std::uint32_t name, std::uint32_t data)
+    std::vector<std::byte> row(u32 name, u32 data)
     {
         std::vector<std::byte> out;
         append_u32(out, name);

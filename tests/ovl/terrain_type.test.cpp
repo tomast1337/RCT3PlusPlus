@@ -2,6 +2,7 @@
 #include "ovl/terrain_type.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -17,13 +18,13 @@ namespace
 
     constexpr char kNameData[] = "Ground:ter\0Rock:ter\0Ground:tex\0Rock:tex\0GroundHelp\0GroundLabel\0RockHelp\0RockLabel";
     const std::string kNames(kNameData, sizeof kNameData);
-    const std::uint32_t kBase = (static_cast<std::uint32_t>(sizeof kNameData) + 3) & ~3u;
+    const u32 kBase = (static_cast<u32>(sizeof kNameData) + 3) & ~3u;
 
-    std::uint32_t name_at(const std::string& needle)
+    u32 name_at(const std::string& needle)
     {
         const auto at = kNames.find(needle);
         REQUIRE(at != std::string::npos);
-        return static_cast<std::uint32_t>(at);
+        return static_cast<u32>(at);
     }
 
     std::vector<std::byte> names()
@@ -36,7 +37,7 @@ namespace
     std::vector<std::byte> symbols()
     {
         std::vector<std::byte> out;
-        for (const auto& [name, data] : { std::pair<std::string, std::uint32_t> { "Ground:ter", 0 }, { "Rock:ter", 60 } })
+        for (const auto& [name, data] : { std::pair<std::string, u32> { "Ground:ter", 0 }, { "Rock:ter", 60 } })
         {
             append_u32(out, name_at(name));
             append_u32(out, kBase + data);
@@ -62,7 +63,7 @@ namespace
 
     std::vector<std::byte> block()
     {
-        std::vector<std::uint32_t> w(30, 0);
+        std::vector<u32> w(30, 0);
         w[0] = 1;
         w[3] = 4;
         w[4] = 2;
@@ -70,9 +71,9 @@ namespace
         w[7] = name_at("GroundLabel");
         w[8] = 0xFF112233u;
         w[9] = 0xFF112244u;
-        w[10] = std::bit_cast<std::uint32_t>(0.1f);
-        w[12] = std::bit_cast<std::uint32_t>(0.3f);
-        w[14] = std::bit_cast<std::uint32_t>(-0.5f);
+        w[10] = std::bit_cast<u32>(0.1f);
+        w[12] = std::bit_cast<u32>(0.3f);
+        w[14] = std::bit_cast<u32>(-0.5f);
         w[15 + 0] = 1;
         w[15 + 2] = 1;
         w[15 + 3] = 5;

@@ -28,6 +28,7 @@
 #pragma once
 
 #include "core/id.hpp"
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "park/turns.hpp"
 #include "units/units.hpp"
@@ -44,27 +45,27 @@ namespace rct3::simulation
 {
 
     /// A path tile's place in the network's nodes.
-    using NodeId = core::Id<struct NodeIdTag, std::uint32_t>;
+    using NodeId = core::Id<struct NodeIdTag, u32>;
 
     /// The network's number for park side `side`: the park's count with each pair swapped.
-    [[nodiscard]] constexpr std::size_t network_side(rct3::park::Side side) noexcept
+    [[nodiscard]] constexpr usize network_side(rct3::park::Side side) noexcept
     {
-        return static_cast<std::size_t>(side.value ^ 1);
+        return static_cast<usize>(side.value ^ 1);
     }
     /// Most a path's surface may stand above or below its neighbour's at the ends of their shared edge and
     /// still join it. Chosen by eye: a quarter of a level absorbs rounding in saved heights, while a ramp's side
     /// or a raised path beside the ground is off by at least a whole level at one end.
-    inline constexpr float kEdgeGap = 0.25f;
+    inline constexpr f32 kEdgeGap = 0.25f;
 
     /// Who walks: guests keep to the no-entry signs, staff to the tiles not kept from them.
-    enum class Walker : std::uint8_t
+    enum class Walker : u8
     {
         Guest,
         Staff,
     };
 
     /// What is over a path tile.
-    enum class Cover : std::uint8_t
+    enum class Cover : u8
     {
         Open,
         Shade, ///< Trees, which keep the sun off but not the rain
@@ -73,9 +74,9 @@ namespace rct3::simulation
 
     struct PathTileSpot
     {
-        std::int32_t col = 0;
-        std::int32_t row = 0;
-        std::int32_t level = 0;
+        i32 col = 0;
+        i32 row = 0;
+        i32 level = 0;
         bool operator==(const PathTileSpot&) const = default;
     };
 
@@ -83,18 +84,18 @@ namespace rct3::simulation
     {
         PathTileSpot tile;
         bool queue = false;
-        float height = 0;          ///< World height of the middle of the tile
-        std::uint64_t line = 0;    ///< Of a queue tile, the queue line it belongs to as the save names it; 0 if none
-        bool covered = false;      ///< Under a roof that keeps the rain off
-        bool shaded = false;       ///< Out of the sun: under a roof or trees
-        bool removed = false;      ///< Its tile was taken away
-        std::uint8_t no_entry = 0; ///< Sides guests may not come in across, bit k for side k as `next` numbers them
+        f32 height = 0;       ///< World height of the middle of the tile
+        u64 line = 0;         ///< Of a queue tile, the queue line it belongs to as the save names it; 0 if none
+        bool covered = false; ///< Under a roof that keeps the rain off
+        bool shaded = false;  ///< Out of the sun: under a roof or trees
+        bool removed = false; ///< Its tile was taken away
+        u8 no_entry = 0;      ///< Sides guests may not come in across, bit k for side k as `next` numbers them
         bool staff_kept_off = false;
-        std::uint8_t open = 0b1111; ///< Sides it may join across, bit k for side k as `next` numbers them; a queue only its two ends
+        u8 open = 0b1111; ///< Sides it may join across, bit k for side k as `next` numbers them; a queue only its two ends
         /// World heights of the path's surface at the tile's corners: low col low row, high col low row, low col
         /// high row, high col high row. Between them it is two flat triangles, split from the second corner to
         /// the third, as the ground is.
-        std::array<float, 4> corners { };
+        std::array<f32, 4> corners { };
         /// The node beside this one on each side (+col, +row, -col, -row), if any.
         std::array<std::optional<NodeId>, 4> next { };
         /// The node a step across a square of paths reaches at each corner (+col +row, -col +row, -col -row,
@@ -108,22 +109,22 @@ namespace rct3::simulation
     {
         NodeId from { };
         NodeId to { };
-        float length = 0; ///< In steps between tiles side by side
+        f32 length = 0; ///< In steps between tiles side by side
         units::Money toll { };
-        std::uint32_t owner = 0; ///< What it stands for, as whoever made it numbers it
+        u32 owner = 0; ///< What it stands for, as whoever made it numbers it
     };
 
     class PathNetwork
     {
     public:
-        float tile_size = 4;       ///< World units across a tile
-        float level_height = 1;    ///< World units per level
+        f32 tile_size = 4;         ///< World units across a tile
+        f32 level_height = 1;      ///< World units per level
         glm::vec2 origin { 0.0f }; ///< World x and z of the corner of tile (0, 0)
-        std::int32_t max_step = 1; ///< Most levels between tiles that join; set before adding tiles
+        i32 max_step = 1;          ///< Most levels between tiles that join; set before adding tiles
 
         /// Adds a path tile and joins it to its neighbours; an existing tile at the same spot is returned instead.
         /// The middle of the tile is at `height`, or at its level when not given; a queue tile belongs to `line`.
-        NodeId add(PathTileSpot tile, bool queue = false, std::optional<float> height = std::nullopt, std::uint64_t line = 0);
+        NodeId add(PathTileSpot tile, bool queue = false, std::optional<f32> height = std::nullopt, u64 line = 0);
 
         /// Takes a tile away: its node is joined to nothing any more, and the squares it made lose their
         /// crossings.
@@ -131,9 +132,9 @@ namespace rct3::simulation
 
         /// Stands a wall along `side` of tile (`col`, `row`), from world height `low` to `high`, and parts the
         /// tiles it stands between.
-        void add_wall(std::int32_t col, std::int32_t row, rct3::park::Side side, float low, float high);
+        void add_wall(i32 col, i32 row, rct3::park::Side side, f32 low, f32 high);
         /// Takes such a wall away again, and joins what it kept apart.
-        void remove_wall(std::int32_t col, std::int32_t row, rct3::park::Side side, float low, float high);
+        void remove_wall(i32 col, i32 row, rct3::park::Side side, f32 low, f32 high);
 
         [[nodiscard]] const std::vector<PathNode>& nodes() const
         {
@@ -141,24 +142,24 @@ namespace rct3::simulation
         }
         [[nodiscard]] std::optional<NodeId> find(PathTileSpot tile) const;
         /// Puts a queue tile's node in queue line `line`.
-        void set_line(NodeId node, std::uint64_t line)
+        void set_line(NodeId node, u64 line)
         {
             nodes_[node.value].line = line;
         }
         /// Moves a node to `level` with its middle at `height`, as when the ground under it rose or sank; set its
         /// corners after, which joins it again.
-        void set_height(NodeId node, std::int32_t level, float height)
+        void set_height(NodeId node, i32 level, f32 height)
         {
             nodes_[node.value].tile.level = level;
             nodes_[node.value].height = height;
         }
         /// Gives a node's tile a surface that is not flat at its height (a ramp, or ground that is not level) and
         /// the sides it may join across (`open`, as PathNode::open); joins its tile again to suit.
-        void set_corners(NodeId node, std::array<float, 4> corners, std::uint8_t open = 0b1111);
+        void set_corners(NodeId node, std::array<f32, 4> corners, u8 open = 0b1111);
         /// Bars side `side` of a node's tile to guests coming in, or lifts the bar.
         void set_no_entry(NodeId node, rct3::park::Side side, bool barred)
         {
-            const auto bit = static_cast<std::uint8_t>(1U << network_side(side));
+            const auto bit = static_cast<u8>(1U << network_side(side));
             nodes_[node.value].no_entry = barred ? nodes_[node.value].no_entry | bit : nodes_[node.value].no_entry & ~bit;
         }
         /// Keeps staff off a node's tile, or lets them on again.
@@ -179,7 +180,7 @@ namespace rct3::simulation
         [[nodiscard]] glm::vec3 centre(NodeId node) const;
         /// The height of the path's surface under world point `at` (x and z) on a walk from `from` to `to`: on
         /// whichever of their tiles holds it, else on the path tile there nearest them in height.
-        [[nodiscard]] float surface(NodeId from, NodeId to, glm::vec2 at) const;
+        [[nodiscard]] f32 surface(NodeId from, NodeId to, glm::vec2 at) const;
 
         /// Adds a link; a queue tile it starts from is entered on the way only to take it.
         void link(const PathLink& link);
@@ -194,37 +195,37 @@ namespace rct3::simulation
         /// may walk out along its line. Only steps `who` may take.
         /// Given a `purse`, the way may also take links, as many as their tolls together fit it; a link shows in
         /// the walk as a step from its start to its end.
-        [[nodiscard]] std::optional<std::vector<NodeId>> route(NodeId from, NodeId to, Walker who = Walker::Guest, std::optional<std::int64_t> purse = std::nullopt) const;
+        [[nodiscard]] std::optional<std::vector<NodeId>> route(NodeId from, NodeId to, Walker who = Walker::Guest, std::optional<i64> purse = std::nullopt) const;
         /// The nearest of several targets, and the walk there.
         struct NearestRoute
         {
-            std::size_t target { };       ///< Its place among the targets: the first, where several share a node
+            usize target { };             ///< Its place among the targets: the first, where several share a node
             std::vector<NodeId> walk { }; ///< As route gives it
         };
         /// Like route, to whichever of `targets` is nearest. One search, however many targets.
-        [[nodiscard]] std::optional<NearestRoute> route_nearest(NodeId from, std::span<const NodeId> targets, Walker who = Walker::Guest, std::optional<std::int64_t> purse = std::nullopt) const;
+        [[nodiscard]] std::optional<NearestRoute> route_nearest(NodeId from, std::span<const NodeId> targets, Walker who = Walker::Guest, std::optional<i64> purse = std::nullopt) const;
         /// From a queue tile, the walk along its line to the nearest tile off the queue a guest may step onto, as
         /// route gives it; empty when `from` is no queue, none when the line leads nowhere.
         [[nodiscard]] std::optional<std::vector<NodeId>> way_out(NodeId from) const;
 
     private:
-        static std::uint64_t key(std::int32_t col, std::int32_t row);
+        static u64 key(i32 col, i32 row);
         /// Joins a node to the tiles beside it that nothing keeps apart.
         void join_sides(NodeId id);
         void join_corners(NodeId id);
         /// Unjoins the nodes on a tile and joins them again, and the squares round it.
-        void rejoin(std::int32_t col, std::int32_t row);
+        void rejoin(i32 col, i32 row);
         struct Wall
         {
-            std::size_t side = 0; ///< As `next` numbers them
-            float low = 0;
-            float high = 0;
+            usize side = 0; ///< As `next` numbers them
+            f32 low = 0;
+            f32 high = 0;
             bool operator==(const Wall&) const = default;
         };
-        std::unordered_multimap<std::uint64_t, Wall> walls_; ///< By tile, listed on both tiles of each
-        bool corners_ = false;                               ///< Whether any square of paths has been found
+        std::unordered_multimap<u64, Wall> walls_; ///< By tile, listed on both tiles of each
+        bool corners_ = false;                     ///< Whether any square of paths has been found
         std::vector<PathNode> nodes_;
-        std::unordered_multimap<std::uint64_t, NodeId> by_tile_;
+        std::unordered_multimap<u64, NodeId> by_tile_;
         std::unordered_multimap<NodeId, PathLink> links_; ///< By the node each starts from
     };
 

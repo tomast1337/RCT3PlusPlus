@@ -13,6 +13,7 @@
 #include "audio/audio.hpp"
 #include "audio/music_player.hpp"
 #include "config/game/install.hpp"
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/skin/set.hpp"
@@ -46,7 +47,7 @@ namespace rct3::scene
         ui::UiTextures logos;
         ui::StartupSequence sequence { { } };
         ui::DrawList list;
-        std::optional<float> scale; ///< Chosen interface scale; nothing picks one from the window height
+        std::optional<f32> scale; ///< Chosen interface scale; nothing picks one from the window height
     };
 
     /// Loads the banner logos (the game's logo among them, for the loading screen) and the logo movies.

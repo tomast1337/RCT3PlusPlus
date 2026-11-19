@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/staff/care.hpp"
 
+#include "core/types.hpp"
 #include "simulation/tuning.hpp"
 
 #include <algorithm>
@@ -13,10 +14,10 @@ using namespace rct3::simulation::staff;
 namespace
 {
     /// `hours` of work at `load`, a minute at a time.
-    void live(Staff& s, float load, float hours)
+    void live(Staff& s, f32 load, f32 hours)
     {
-        for (std::int32_t minute = 0; minute < static_cast<std::int32_t>(hours * 60); ++minute)
-            care_for(s, (minute % 10) < static_cast<std::int32_t>(load * 10), 60);
+        for (i32 minute = 0; minute < static_cast<i32>(hours * 60); ++minute)
+            care_for(s, (minute % 10) < static_cast<i32>(load * 10), 60);
     }
 } // namespace
 
@@ -97,7 +98,7 @@ TEST_CASE("training goes up a level at a time, dearer each time, up to fully tra
 {
     Staff s { .training = 0 };
     rct3::units::Money last;
-    for (std::int32_t level = 0; level < kMostTraining; ++level)
+    for (i32 level = 0; level < kMostTraining; ++level)
     {
         CHECK(training_cost(s) > last);
         last = training_cost(s);
@@ -117,7 +118,7 @@ TEST_CASE("a park without money hires staff fully trained; where money counts th
 TEST_CASE("each level of training costs what the tuning says for it")
 {
     Staff s { .training = 0 };
-    for (std::size_t level = 0; level < kTuning.staff.training_cost.size(); ++level)
+    for (usize level = 0; level < kTuning.staff.training_cost.size(); ++level)
     {
         CHECK(training_cost(s) == kTuning.staff.training_cost[level]);
         CHECK(train(s));
@@ -148,7 +149,7 @@ TEST_CASE("staff think about their work and how they feel")
     {
         Staff sad { .happiness = 0.1f, .load = 0.5f };
         CHECK(staff_thoughts(sad) == std::vector { StaffMiserable });
-        for (std::int32_t i = 0; i < 100 && staff_thoughts(sad) != std::vector { StaffWantToQuit }; ++i)
+        for (i32 i = 0; i < 100 && staff_thoughts(sad) != std::vector { StaffWantToQuit }; ++i)
             ;
         CHECK(sad.miserable > 1);
         sad.happiness.value = 0.6f;
@@ -161,11 +162,11 @@ TEST_CASE("a miserable worker thinks of quitting once a stretch, then quits once
 {
     using enum ThoughtKind;
     Staff sad { .happiness = 0.1f, .load = 0.5f };
-    std::int32_t wanted = 0;
-    std::int32_t quit = 0;
-    for (std::int32_t i = 0; i < 200; ++i)
+    i32 wanted = 0;
+    i32 quit = 0;
+    for (i32 i = 0; i < 200; ++i)
     {
-        wanted += static_cast<std::int32_t>(std::ranges::count(staff_thoughts(sad), StaffWantToQuit));
+        wanted += static_cast<i32>(std::ranges::count(staff_thoughts(sad), StaffWantToQuit));
         quit += quits(sad) ? 1 : 0;
         CHECK(!(quit == 1 && wanted == 0)); // Thought of it before quitting
     }
@@ -177,8 +178,8 @@ TEST_CASE("a miserable worker thinks of quitting once a stretch, then quits once
         sad.happiness.value = 0.6f;
         (void)staff_thoughts(sad);
         sad.happiness.value = 0.1f;
-        for (std::int32_t i = 0; i < 200; ++i)
-            wanted += static_cast<std::int32_t>(std::ranges::count(staff_thoughts(sad), StaffWantToQuit));
+        for (i32 i = 0; i < 200; ++i)
+            wanted += static_cast<i32>(std::ranges::count(staff_thoughts(sad), StaffWantToQuit));
         CHECK(wanted == 2);
     }
 }
@@ -186,7 +187,7 @@ TEST_CASE("a miserable worker thinks of quitting once a stretch, then quits once
 TEST_CASE("a park inspector keeps their mood, thinks nothing of it and never quits")
 {
     Staff inspector { .role = StaffRole::Inspector, .happiness = 0.5f, .load = 0 };
-    for (std::int32_t i = 0; i < 200; ++i)
+    for (i32 i = 0; i < 200; ++i)
     {
         care_for(inspector, false, 10);
         CHECK(staff_thoughts(inspector).empty());

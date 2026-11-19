@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "parkfile/park_file.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/rides.hpp"
@@ -21,7 +22,7 @@ namespace
         world.seed = random::Seed { 0xC0FF };
         auto& r = world.registry;
         const auto a = r.create();
-        r.emplace<simulation::Visitor>(a, simulation::AgeGroup::Teen, true, "Ada Example", std::uint64_t { 7 }, true);
+        r.emplace<simulation::Visitor>(a, simulation::AgeGroup::Teen, true, "Ada Example", u64 { 7 }, true);
         r.emplace<simulation::Pose>(a, glm::vec3 { 1.5f, 2.0f, -3.25f }, 0.5f);
         r.emplace<simulation::Needs>(a, 0.1f, 0.9f, 0.3f);
         r.emplace<simulation::Mood>(a, 0.8f, 0.6f, 0.0f);
@@ -29,12 +30,12 @@ namespace
         const auto gone = r.create();
         const auto b = r.create();
         r.destroy(gone); // A gap in the ids
-        r.emplace<simulation::Visitor>(b, simulation::AgeGroup::Child, false, "", std::uint64_t { 0 });
+        r.emplace<simulation::Visitor>(b, simulation::AgeGroup::Child, false, "", u64 { 0 });
         r.emplace<simulation::Needs>(b);
         return world;
     }
 
-    std::vector<std::byte> header(std::uint32_t version, std::uint32_t chunks)
+    std::vector<std::byte> header(u32 version, u32 chunks)
     {
         std::vector<std::byte> out(16);
         std::memcpy(out.data(), "R3PPPARK", 8);
@@ -43,10 +44,10 @@ namespace
         return out;
     }
 
-    void chunk(std::vector<std::byte>& out, const char* tag, std::uint32_t version, std::vector<std::byte> payload)
+    void chunk(std::vector<std::byte>& out, const char* tag, u32 version, std::vector<std::byte> payload)
     {
-        const std::uint64_t length = payload.size();
-        const std::size_t at = out.size();
+        const u64 length = payload.size();
+        const usize at = out.size();
         out.resize(at + 16);
         std::memcpy(out.data() + at, tag, 4);
         std::memcpy(out.data() + at + 4, &version, 4);
@@ -147,7 +148,7 @@ TEST_CASE("broken files are refused, not trusted")
 
     SUBCASE("every cut is refused")
     {
-        for (std::size_t n = 0; n < good.size(); ++n)
+        for (usize n = 0; n < good.size(); ++n)
             CHECK_FALSE(parkfile::read_park_file(std::span(good).first(n)));
     }
     SUBCASE("trailing bytes")

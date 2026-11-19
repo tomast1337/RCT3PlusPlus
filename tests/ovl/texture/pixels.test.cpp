@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/texture/pixels.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3::ovl;
@@ -9,11 +11,11 @@ using namespace rct3::ovl::texture;
 TEST_CASE("flipping reverses the row order and keeps each row intact")
 {
     RgbaImage image { 2, 3, { } };
-    for (std::uint8_t row = 0; row < 3; ++row)
+    for (u8 row = 0; row < 3; ++row)
         image.pixels.insert(image.pixels.end(), { row, 1, 2, 3, row, 5, 6, 7 });
     const RgbaImage flipped = flipped_vertically(image);
     REQUIRE(flipped.pixels.size() == image.pixels.size());
-    for (std::uint8_t row = 0; row < 3; ++row)
+    for (u8 row = 0; row < 3; ++row)
     {
         CHECK(flipped.pixels[row * 8] == 2 - row);
         CHECK(flipped.pixels[row * 8 + 5] == 5);

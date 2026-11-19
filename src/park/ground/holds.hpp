@@ -16,6 +16,7 @@
 // the rest of the stroke still moves.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/object/mesh.hpp"
 #include "park/path/clearance.hpp"
 #include "save/model/world.hpp"
@@ -31,36 +32,36 @@
 namespace rct3::park::ground
 {
 
-    inline constexpr float kDeckRoom = 0.25f;    ///< Chosen by eye: kept between the ground and a raised path's underside
-    inline constexpr float kPavedTilt = 1.5f;    ///< Chosen by eye: how far from flat a tile with a path on the ground may go
-    inline constexpr float kShapeCost = 25;      ///< Price, in hundredths, of a height unit one corner of one tile moves
-    inline constexpr float kLowestGround = -75;  ///< No tool digs a corner below this height
-    inline constexpr float kHighestGround = 150; ///< No tool raises a corner above this height
+    inline constexpr f32 kDeckRoom = 0.25f;    ///< Chosen by eye: kept between the ground and a raised path's underside
+    inline constexpr f32 kPavedTilt = 1.5f;    ///< Chosen by eye: how far from flat a tile with a path on the ground may go
+    inline constexpr f32 kShapeCost = 25;      ///< Price, in hundredths, of a height unit one corner of one tile moves
+    inline constexpr f32 kLowestGround = -75;  ///< No tool digs a corner below this height
+    inline constexpr f32 kHighestGround = 150; ///< No tool raises a corner above this height
 
     /// What the land tools must leave be on each tile, by tile (row << 16 | column), gathered as a stroke starts.
     struct GroundHolds
     {
-        std::unordered_set<std::uint32_t> held;         ///< Tiles under items that hold the ground
-        path::SolidTiles raised;                        ///< Solid squares of items that keep a height of their own
-        std::unordered_map<std::uint32_t, float> decks; ///< The lowest underside of the raised paths over a tile
-        std::unordered_set<std::uint32_t> paved;        ///< Tiles with a path on the ground
-        std::vector<std::size_t> followers;             ///< Items that stand on the ground and follow it, of the objects
+        std::unordered_set<u32> held;       ///< Tiles under items that hold the ground
+        path::SolidTiles raised;            ///< Solid squares of items that keep a height of their own
+        std::unordered_map<u32, f32> decks; ///< The lowest underside of the raised paths over a tile
+        std::unordered_set<u32> paved;      ///< Tiles with a path on the ground
+        std::vector<usize> followers;       ///< Items that stand on the ground and follow it, of the objects
     };
 
     [[nodiscard]] GroundHolds ground_holds(std::span<const save::model::PlacedObject> objects, const object::ObjectModels& models, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);
 
     /// Whether the ground of `tile` may not go from corners `was` to `now`.
-    [[nodiscard]] bool refuses(const GroundHolds& holds, save::model::Tile tile, const std::array<float, 4>& was, const std::array<float, 4>& now);
+    [[nodiscard]] bool refuses(const GroundHolds& holds, save::model::Tile tile, const std::array<f32, 4>& was, const std::array<f32, 4>& now);
 
     /// Stops the corners of `grid` at the lowest and highest ground: a corner `was` has past a limit may come back
     /// but not go further. Returns the sum of how far it moved corners back.
-    float limit_ground(save::model::TerrainGrid& grid, const save::model::TerrainGrid& was);
+    f32 limit_ground(save::model::TerrainGrid& grid, const save::model::TerrainGrid& was);
 
     /// A tile's ground after a cut or levelling.
     struct GroundCut
     {
         save::model::Tile tile { };
-        std::array<float, 4> corners { };
+        std::array<f32, 4> corners { };
     };
 
     /// The tiles a cut or levelling changes: those under what it is for, and those round them it blends in.

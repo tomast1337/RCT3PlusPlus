@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/ui_textures.hpp"
 
+#include "core/types.hpp"
 #include "ui/ui_renderer.hpp"
 
 #include <format>
@@ -21,7 +22,7 @@ namespace rct3::ui
                 destroy_textures(device, textures);
                 return std::unexpected(std::format("{}: {}", name, texture.error()));
             }
-            textures.emplace(name, UiTexture { *texture, static_cast<float>(image.width), static_cast<float>(image.height) });
+            textures.emplace(name, UiTexture { *texture, static_cast<f32>(image.width), static_cast<f32>(image.height) });
         }
         return textures;
     }

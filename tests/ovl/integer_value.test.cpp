@@ -2,6 +2,7 @@
 #include "ovl/integer_value.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <doctest/doctest.h>
 #include <string>
@@ -17,7 +18,7 @@ namespace
     // Names: "A:int" 0, "B:int" 6, "C:int" 12, "D:flt" 18, "E:int" 24. 30 bytes with the final NUL.
     const std::string kNames("A:int\0B:int\0C:int\0D:flt\0E:int\0", 30);
 
-    std::vector<std::byte> row(std::uint32_t name, std::uint32_t data, bool pointer)
+    std::vector<std::byte> row(u32 name, u32 data, bool pointer)
     {
         std::vector<std::byte> out;
         append_u32(out, name);

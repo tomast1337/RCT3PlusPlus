@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/animated_ride.hpp"
 
+#include "core/types.hpp"
 #include "record_file.hpp"
 
 #include <doctest/doctest.h>
@@ -17,10 +18,10 @@ TEST_CASE("version 5 animated rides, with the type id offset removed")
     pool.add("CarouselIcon:gsi");
     pool.add("Carousel:sid");
     pool.add("Path:spl");
-    std::vector<std::uint32_t> w(0xC4 / 4 + 2, 0);
+    std::vector<u32> w(0xC4 / 4 + 2, 0);
     w[0x70 / 4] = 768 + 4;
     w[0x80 / 4] = 626;
-    w[0x84 / 4] = static_cast<std::uint32_t>(-566);
+    w[0x84 / 4] = static_cast<u32>(-566);
     w[0x90 / 4] = 4960;
     w[0x2C / 4] = 0xFFFFFFFF; // The guests: the default, which follows
     w[0x48 / 4] = 55;
@@ -50,12 +51,12 @@ TEST_CASE("version 5 animated rides, with the type id offset removed")
 
 TEST_CASE("version 1 animated rides keep their guests in whichever of two places is marked")
 {
-    for (const std::uint32_t at : { 0x30u, 0x38u })
+    for (const u32 at : { 0x30u, 0x38u })
     {
         CAPTURE(at);
         Pool pool;
         pool.add("Carousel:anr");
-        std::vector<std::uint32_t> w(0x60 / 4, 0);
+        std::vector<u32> w(0x60 / 4, 0);
         w[at / 4] = 30;
         w[(at + 0x0C) / 4] = 1;
         w[(at + 0x10) / 4] = 0xFFFFFFFF;
@@ -98,7 +99,7 @@ TEST_CASE("an animated ride whose seating word is out of range has no seating")
 {
     Pool pool;
     pool.add("Carousel:anr");
-    std::vector<std::uint32_t> w(0xC4 / 4 + 2, 0);
+    std::vector<u32> w(0xC4 / 4 + 2, 0);
     w[0x2C / 4] = 40;
     w[0x30 / 4] = 300;
     std::vector<std::byte> bytes;

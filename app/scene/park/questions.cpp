@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/questions.hpp"
 
+#include "core/types.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
 #include "strings/unicode.hpp"
@@ -65,7 +66,7 @@ namespace rct3::scene::park
         scene.demolish_asked = std::move(refs);
     }
 
-    void ask_sell_pool_complex(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, std::size_t room)
+    void ask_sell_pool_complex(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, usize room)
     {
         if (scene.desktop->root().find(kSellPoolName))
             return;

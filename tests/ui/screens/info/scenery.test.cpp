@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/scenery.hpp"
 
+#include "core/types.hpp"
 #include "park/item_category.hpp"
 #include "save/model/park.hpp"
 
@@ -53,13 +54,13 @@ TEST_CASE("a prop that takes colours gets a tab with a pot for each slot it take
     SceneryFacts facts;
     facts.colour_slots = 0b101;
     facts.colours = { 3, 8, 40 };
-    CHECK(scenery_paint_slots(facts) == std::vector<std::size_t> { 0, 2 });
+    CHECK(scenery_paint_slots(facts) == std::vector<usize> { 0, 2 });
     const auto tabs = scenery_tabs(facts);
     REQUIRE(tabs.size() == 2);
     CHECK(tabs[1].tab == SceneryTab::Colour);
     CHECK(tabs[1].slot == 1);
     // The third slot's colour is out of the range, so shown as the first.
-    CHECK(tabs[1].paints == std::vector<std::size_t> { 3, 0 });
+    CHECK(tabs[1].paints == std::vector<usize> { 3, 0 });
     CHECK(tabs[0].paints.empty());
 }
 
@@ -117,7 +118,7 @@ TEST_CASE("a changing room's window is an attraction's, its tabs round the ring 
     s.add("PoolComplexDefaultName", u"Pool complex");
     const auto tabs = scenery_tabs({ .pool = PoolComplexFacts { } });
     std::vector<SceneryTab> kinds;
-    std::vector<std::int32_t> slots;
+    std::vector<i32> slots;
     for (const SceneryTabInfo& t : tabs)
     {
         kinds.push_back(t.tab);
@@ -142,9 +143,9 @@ TEST_CASE("a changing room's details name the room and the complex, tell its sta
     s.add("AttractionStatusClosed", u"Closed");
     s.add("PeopleInPoolComplex1", u"# person inside");
     s.add("PeopleInPoolComplexX", u"# people inside");
-    const auto details = [&](bool open, std::int64_t people) { return scenery_page(SceneryTab::RoomDetails, { .symbol = "Hut", .pool = PoolComplexFacts { .name = u"Lagoon", .number = 3, .open = open, .people = people } }, s); };
+    const auto details = [&](bool open, i64 people) { return scenery_page(SceneryTab::RoomDetails, { .symbol = "Hut", .pool = PoolComplexFacts { .name = u"Lagoon", .number = 3, .open = open, .people = people } }, s); };
     const InfoPage page = details(false, 0);
-    std::vector<std::int32_t> ids;
+    std::vector<i32> ids;
     for (const InfoControl& c : page.controls)
         ids.push_back(c.id);
     CHECK(ids == std::vector { 0, kPoolNameControl, 0, kPoolDeleteRoomControl, kPoolDeleteComplexControl, kPoolSaveControl, kPoolLocateControl });
@@ -187,7 +188,7 @@ TEST_CASE("a changing room sets its complex's waves on bars, the machines' times
     s.add("ManySeconds", u"# secs");
     s.add("OneMinute", u"# min");
     s.add("ManyMinutes", u"# mins");
-    const auto mode = [&](bool machines, float every) { return scenery_page(SceneryTab::RoomMode, { .pool = PoolComplexFacts { .waves = { .height = 5, .frequency = { 4 }, .on = { 40 }, .every = { every } }, .machines = machines } }, s); };
+    const auto mode = [&](bool machines, f32 every) { return scenery_page(SceneryTab::RoomMode, { .pool = PoolComplexFacts { .waves = { .height = 5, .frequency = { 4 }, .on = { 40 }, .every = { every } }, .machines = machines } }, s); };
     const InfoPage page = mode(true, 180);
     REQUIRE(page.controls.size() == 4);
     CHECK(page.controls[0].id == kPoolWaveHeightControl);
@@ -196,7 +197,7 @@ TEST_CASE("a changing room sets its complex's waves on bars, the machines' times
     CHECK(page.controls[0].value == 5);
     CHECK(page.controls[1].id == kPoolWaveLengthControl);
     CHECK(page.controls[1].kind == InfoControlKind::Bar);
-    CHECK(page.controls[1].value == static_cast<std::int32_t>(park::pools::kLeastWaveFrequency + park::pools::kMostWaveFrequency) - 4); // Longer for a lower frequency
+    CHECK(page.controls[1].value == static_cast<i32>(park::pools::kLeastWaveFrequency + park::pools::kMostWaveFrequency) - 4); // Longer for a lower frequency
     CHECK(page.controls[2].value == 40);
     CHECK(page.controls[2].shown == u"40 secs");
     CHECK(page.controls[3].value == 3);
@@ -249,9 +250,9 @@ TEST_CASE("paths, rides, supports and what lies about are not props")
 {
     using enum park::ItemCategory;
     for (const auto c : { Tree, SmallScenery, Bench, LitterBin, Sign, PathFeature, ParkEntrance, Fireworks, RideEvent })
-        CHECK(park::is_prop(static_cast<std::uint32_t>(c)));
+        CHECK(park::is_prop(static_cast<u32>(c)));
     for (const auto c : { SupportColumn, SupportCap, TrackPiece, PathPiece, Leftover, GuestSpawn, Ride, RideEntrance, RideExit, KeepClear, Stall, Effect })
-        CHECK_FALSE(park::is_prop(static_cast<std::uint32_t>(c)));
+        CHECK_FALSE(park::is_prop(static_cast<u32>(c)));
 }
 
 TEST_CASE("a passport post's tab sets the stamps the park's gift takes, and the gift")

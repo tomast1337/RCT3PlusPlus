@@ -35,6 +35,7 @@
 // The styles and their pictures are read from the install the first time the panel opens.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/footpath_builder.hpp"
 #include "park/ground/paths.hpp"
 #include "park/ground/queues.hpp"
@@ -82,7 +83,7 @@ namespace rct3::scene::park
     {
         std::vector<rct3::park::path::PathStyle> styles; ///< Path styles, then queue styles; read when the panel first opens
         bool loaded = false;
-        std::optional<std::size_t> style; ///< Of styles, the one chosen
+        std::optional<usize> style; ///< Of styles, the one chosen
         rct3::park::FootpathBuilder builder;
         std::vector<save::model::PathTile> paths;        ///< The park's paths as they are now
         save::model::WaterLayer water;                   ///< To build the ground again with
@@ -91,7 +92,7 @@ namespace rct3::scene::park
         std::vector<rct3::park::ground::Paving> pavings; ///< What the rides and stalls pave: doors, stalls, flat rides' floors
         bool pavings_stale = false;                      ///< The ground was built without the pavings as they are now
         rct3::park::EdgeWalls walls;                     ///< The fences and walls paths do not join across
-        std::vector<std::uint64_t> paving_decks;         ///< Objects drawing the paving off the ground
+        std::vector<u64> paving_decks;                   ///< Objects drawing the paving off the ground
         /// The path styles whose ground pictures the scene has, by the index the ground's batches use.
         std::vector<std::string> pictured;
         std::vector<rct3::park::ground::QueuePainting> queues_pictured; ///< The same for the ground queues' pictures
@@ -100,9 +101,9 @@ namespace rct3::scene::park
         std::map<std::string, TrackModels, std::less<>> models;         ///< Of the raised pieces and supports laid
         std::optional<rct3::park::support::SupportSets> support_sets;   ///< Read when the first raised piece is laid
         /// Of the queue tiles laid here, the railings along them.
-        std::unordered_map<std::uint64_t, std::vector<std::uint64_t>> railings;
+        std::unordered_map<u64, std::vector<u64>> railings;
         rct3::park::TerrainMesh arrow;                                    ///< Over the next piece, pointing the way it goes
-        std::optional<float> slope_press;                                 ///< While dragging on the arrow: the pointer's height when pressed
+        std::optional<f32> slope_press;                                   ///< While dragging on the arrow: the pointer's height when pressed
         rct3::park::PathSlope slope_before = rct3::park::PathSlope::Flat; ///< And the slope then, to step from
         bool lay_next = false;                                            ///< Letting go on the arrow lays the next piece
         bool under_ground = false;                                        ///< The ghost goes into a tunnel, so the ground is drawn faded
@@ -110,36 +111,36 @@ namespace rct3::scene::park
         std::vector<save::model::Tile> brush;                             ///< While a stroke goes on: the tiles it passed over, in order
         /// The path edge the pointer is at, as the builder going on from it, and which path and side that is.
         std::optional<rct3::park::FootpathBuilder> hover;
-        std::optional<std::pair<std::size_t, rct3::park::Side>> hover_edge;
-        std::optional<save::model::Tile> hover_tile;           ///< Bare ground pointed at, shown as the path a click would lay
-        std::optional<std::array<std::int32_t, 4>> hover_door; ///< The door pointed at: column, row, height, quarter turns
+        std::optional<std::pair<usize, rct3::park::Side>> hover_edge;
+        std::optional<save::model::Tile> hover_tile;  ///< Bare ground pointed at, shown as the path a click would lay
+        std::optional<std::array<i32, 4>> hover_door; ///< The door pointed at: column, row, height, quarter turns
         /// While Shift is held: where the pointer met the ground when it went down, and the first piece's height then.
         struct Lift
         {
             glm::vec3 at { 0.0f };
-            std::int32_t height = 0;
+            i32 height = 0;
         };
         std::optional<Lift> lift;
-        std::optional<std::int32_t> last_height;                       ///< Where the last piece laid here ended, for Control
+        std::optional<i32> last_height;                                ///< Where the last piece laid here ended, for Control
         bool drop = false;                                             ///< The stroke ended, so its paths are laid
         std::optional<rct3::park::path::DragPlan> plan;                ///< What the stroke would lay, worked out when it changes
-        std::vector<std::uint64_t> stroke;                             ///< The paths the last stroke laid, until another piece is laid
+        std::vector<u64> stroke;                                       ///< The paths the last stroke laid, until another piece is laid
         bool routing = false;                                          ///< The panel's route tab was on last frame
         bool straight = false;                                         ///< The panel's straight tab was on last frame
-        std::int32_t brush_size = 1;                                   ///< The panel's brush size last frame
+        i32 brush_size = 1;                                            ///< The panel's brush size last frame
         std::optional<save::model::Tile> route_goal;                   ///< With routing on: the tile pointed at
-        std::optional<std::int32_t> route_goal_height;                 ///< And the height of the raised path pointed at there
+        std::optional<i32> route_goal_height;                          ///< And the height of the raised path pointed at there
         std::optional<std::vector<rct3::park::path::RouteStep>> route; ///< The route there, worked out when it changes
         bool route_blocked = false;                                    ///< Only through what is in the way, so it is shown refused
         rct3::park::path::SolidTiles solids;                           ///< What stands in the paths' way
-        std::optional<std::size_t> solids_of;                          ///< The scene's object count when worked out
+        std::optional<usize> solids_of;                                ///< The scene's object count when worked out
         bool route_press = false;                                      ///< The button went down to lay the route
         bool lay_route = false;                                        ///< And came up, so the route is laid
-        std::size_t route_laid = 0;                                    ///< Pieces the last route laid, until another piece is laid
-        std::optional<std::uint64_t> sell;                             ///< A right click picked this path to sell
+        usize route_laid = 0;                                          ///< Pieces the last route laid, until another piece is laid
+        std::optional<u64> sell;                                       ///< A right click picked this path to sell
         bool removing = false;                                         ///< The panel's remove tab was on last frame
-        std::optional<std::uint64_t> remove_hover;                     ///< With removing on: the path pointed at
-        std::vector<std::uint64_t> remove_marked;                      ///< And the paths a press went over, until let go
+        std::optional<u64> remove_hover;                               ///< With removing on: the path pointed at
+        std::vector<u64> remove_marked;                                ///< And the paths a press went over, until let go
         bool remove_now = false;                                       ///< Let go, so the marked paths are taken away
         std::optional<bool> follow_changed;                            ///< The follow tab was switched, for the options to keep
         std::optional<save::model::Tile> followed;                     ///< With camera follow on: the next piece's tile the camera went to
@@ -160,10 +161,10 @@ namespace rct3::scene::park
     [[nodiscard]] bool footpath_panel_open(const ParkScene& scene);
 
     /// The object drawing raised path `path` of `style`, with the piece the paths around it call for.
-    save::model::PlacedObject deck_object(const rct3::park::path::PathStyle& style, const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::uint64_t id);
+    save::model::PlacedObject deck_object(const rct3::park::path::PathStyle& style, const save::model::PathTile& path, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, u64 id);
 
     /// What happened to a fence or wall on a tile's edge.
-    enum class WallChange : std::uint8_t
+    enum class WallChange : u8
     {
         PutUp,
         TakenDown,
@@ -190,11 +191,11 @@ namespace rct3::scene::park
     bool footpath_sell(ParkScene& scene, ui::Point at, ui::Point size);
 
     /// The path under the pointer at `at`, in interface units on a screen of `size`, by its id.
-    [[nodiscard]] std::optional<std::uint64_t> footpath_at(const ParkScene& scene, ui::Point at, ui::Point size);
+    [[nodiscard]] std::optional<u64> footpath_at(const ParkScene& scene, ui::Point at, ui::Point size);
 
     /// Takes paths `ids` away, paying back what laying them cost, as selling them from the path panel does. The
     /// first one's floating sum takes in `also` (above 0 for money in), paid for what stood on them.
-    void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids, units::Money also = { });
+    void remove_footpaths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const u64> ids, units::Money also = { });
 
     /// Joins the queues laid behind ride `ride`'s entrances to their stations' lines, as a queue laid there after
     /// the entrance joins; when the ride is demolished, its lines go back to plain queues instead.

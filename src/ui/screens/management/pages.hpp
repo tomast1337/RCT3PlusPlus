@@ -7,6 +7,7 @@
 // dash; a page whose content needs what is not built yet says so in its note.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -33,7 +34,7 @@ namespace rct3::ui::screens::management
 {
 
     /// The management windows, in the order the menu offers them from its button outwards, most used first.
-    enum class ManagementTopic : std::uint8_t
+    enum class ManagementTopic : u8
     {
         ParkOperations,
         Finances,
@@ -45,7 +46,7 @@ namespace rct3::ui::screens::management
         Challenges,
         Count_,
     };
-    inline constexpr std::size_t kManagementTopicCount = static_cast<std::size_t>(ManagementTopic::Count_);
+    inline constexpr usize kManagementTopicCount = static_cast<usize>(ManagementTopic::Count_);
 
     /// The window the management menu's `item` opens; none for other items.
     [[nodiscard]] std::optional<ManagementTopic> management_topic(park_view::ToolItem item);
@@ -54,8 +55,8 @@ namespace rct3::ui::screens::management
     {
         std::string_view icon;  ///< Skin in the frame's corner: the menu item's
         std::string_view title; ///< String key
-        float width = 0;        ///< With the frame
-        float height = 0;
+        f32 width = 0;          ///< With the frame
+        f32 height = 0;
     };
 
     [[nodiscard]] ManagementLayout management_layout(ManagementTopic topic);
@@ -68,8 +69,8 @@ namespace rct3::ui::screens::management
     /// player is painting it.
     struct StaffLook
     {
-        std::array<std::uint8_t, 2> colours { };
-        std::size_t patrol_tiles = 0;
+        std::array<u8, 2> colours { };
+        usize patrol_tiles = 0;
         bool painting_patrol = false;
     };
 
@@ -77,7 +78,7 @@ namespace rct3::ui::screens::management
     struct AttractionTakings
     {
         units::Money income { };
-        std::int64_t customers = 0;
+        i64 customers = 0;
     };
 
     /// What the pages are written from. Any of it may be missing; its values then show as dashes.
@@ -87,46 +88,46 @@ namespace rct3::ui::screens::management
         const simulation::park::ParkState* state = nullptr;
         const save::model::PeopleModel* people = nullptr;
         const save::model::RideModel* rides = nullptr;
-        std::uint32_t broken_items = 0;                     ///< Path items vandals have broken
+        u32 broken_items = 0;                               ///< Path items vandals have broken
         units::Money replace_cost { };                      ///< To replace them all at once
         std::span<const simulation::GoalReading> goals { }; ///< By place in the park's goals, as last checked
         bool animal_houses = false;                         ///< Whether the park has any, which keepers are hired to
         std::span<const StaffLook> staff_looks { };         ///< By place in the park's staff; may be short
-        float zero_time = 0;                                ///< Where the park's calendar starts, for hire dates
+        f32 zero_time = 0;                                  ///< Where the park's calendar starts, for hire dates
         const simulation::Research* research = nullptr;     ///< As it runs
         /// What is left to invent, once the build lists say what each item is.
         std::optional<std::span<const simulation::ResearchItem>> research_left { };
         /// The string key of the name of a research item (simulation::ResearchItem::id); empty when unknown.
-        std::function<std::string_view(std::uint64_t)> research_name { };
+        std::function<std::string_view(u64)> research_name { };
         /// The item picked on the research window's list of what may come next.
-        std::optional<std::uint64_t> research_pick { };
+        std::optional<u64> research_pick { };
         /// The line the finances ledger shows in its last column (kLedgerLineControl).
-        std::size_t ledger_line = 0;
+        usize ledger_line = 0;
         /// What the attraction with saved id `id` (save::model::AttractionCommon::id) has taken since the park was
         /// opened; nothing when not given.
-        std::function<AttractionTakings(std::uint64_t)> takings { };
+        std::function<AttractionTakings(u64)> takings { };
     };
 
     /// The park operations window's tab of the awards won and fines received.
-    inline constexpr std::size_t kAwardsTab = 3;
+    inline constexpr usize kAwardsTab = 3;
     /// And its tab of how the park rating is made up.
-    inline constexpr std::size_t kRatingTab = 4;
+    inline constexpr usize kRatingTab = 4;
 
     /// The park operations window's first page's buttons, by their place among its buttons: opening or closing
     /// the park by the place of its choice (open first), taking the view to the next of its entrances, and
     /// buying land or building rights.
-    inline constexpr std::size_t kOpenCloseParkButton = 0;
-    inline constexpr std::size_t kCentreEntranceButton = 1;
-    inline constexpr std::size_t kBuyLandButton = 2;
-    inline constexpr std::size_t kBuyRightsButton = 3;
+    inline constexpr usize kOpenCloseParkButton = 0;
+    inline constexpr usize kCentreEntranceButton = 1;
+    inline constexpr usize kBuyLandButton = 2;
+    inline constexpr usize kBuyRightsButton = 3;
 
     /// The button on the park operations window's first page that replaces every broken path item at its full
     /// price, by its place among the page's buttons. Our own: the game has no way to mend them.
-    inline constexpr std::size_t kReplaceBrokenButton = 4;
+    inline constexpr usize kReplaceBrokenButton = 4;
 
     /// The finances window's pages. Ours are on tabs in this order; the original's, which the player may ask for
     /// (InfoUnits::original_finances), are the summary and the graphs.
-    enum class FinancePage : std::uint8_t
+    enum class FinancePage : u8
     {
         Summary, ///< The money, and the ledger's last months a column each
         Ledger,  ///< Every month the park keeps, a row each
@@ -136,46 +137,46 @@ namespace rct3::ui::screens::management
     };
 
     /// The page on tab `tab` of the finances window, ours or the `original` layout's.
-    [[nodiscard]] FinancePage finance_page(std::size_t tab, bool original);
+    [[nodiscard]] FinancePage finance_page(usize tab, bool original);
 
     /// The finances ledger's control picking the line its last column shows, by index of the summary's lines.
-    inline constexpr std::int32_t kLedgerLineControl = 0;
+    inline constexpr i32 kLedgerLineControl = 0;
     /// The finances loan page's bar setting the loan, in hundredths, a simulation::park::kLoanStep at a time.
-    inline constexpr std::int32_t kLoanControl = 0;
+    inline constexpr i32 kLoanControl = 0;
 
     /// The finances ledger's button writing it out (ledger_csv), by its place among the page's buttons.
-    inline constexpr std::size_t kExportLedgerButton = 0;
+    inline constexpr usize kExportLedgerButton = 0;
 
     /// The finances window's summary's buttons, by their place among its buttons: borrowing a step more and
     /// repaying a step of the loan (see simulation::park::change_loan).
-    inline constexpr std::size_t kBorrowButton = 0;
-    inline constexpr std::size_t kRepayButton = 1;
+    inline constexpr usize kBorrowButton = 0;
+    inline constexpr usize kRepayButton = 1;
 
     /// The research window's controls (InfoControl::id): the monthly budget, then the priority of each research
     /// area (simulation::ResearchArea) in order, from 0 to 100.
-    inline constexpr std::int32_t kResearchBudgetControl = 0;
-    inline constexpr std::int32_t kFirstPriorityControl = 1;
+    inline constexpr i32 kResearchBudgetControl = 0;
+    inline constexpr i32 kFirstPriorityControl = 1;
     /// The research budget's step and most, in hundredths. Chosen by eye: steps of 50.00, up to five times the
     /// 200.00 a month scenarios usually set aside.
-    inline constexpr std::int32_t kResearchBudgetStep = 5000;
-    inline constexpr std::int32_t kMostResearchBudget = 100000;
+    inline constexpr i32 kResearchBudgetStep = 5000;
+    inline constexpr i32 kMostResearchBudget = 100000;
     /// The research window's tabs after the priorities: what has been invented and when, and what may come next.
-    inline constexpr std::size_t kInventedTab = 1;
-    inline constexpr std::size_t kComingTab = 2;
+    inline constexpr usize kInventedTab = 1;
+    inline constexpr usize kComingTab = 2;
     /// The buttons under the list of what may come next: focusing research on the item picked, and ending the
     /// focus.
-    inline constexpr std::size_t kFocusButton = 0;
-    inline constexpr std::size_t kUnfocusButton = 1;
+    inline constexpr usize kFocusButton = 0;
+    inline constexpr usize kUnfocusButton = 1;
     /// Items listed of each area as what may come next. Chosen by eye: a few to pick from without a long list.
-    inline constexpr std::size_t kComingPerArea = 3;
+    inline constexpr usize kComingPerArea = 3;
 
     /// The button on each page of the attractions window that puts every listed attraction in the state of the
     /// choice picked, by its place among the page's buttons, and those states by the place of their choice.
-    inline constexpr std::size_t kOpenCloseAllButton = 0;
+    inline constexpr usize kOpenCloseAllButton = 0;
     inline constexpr std::array<save::model::AttractionState, 2> kOpenCloseAllStates = { save::model::AttractionState::Open, save::model::AttractionState::Closed };
 
     /// The page of tab `tab` of `topic`'s window.
-    [[nodiscard]] ManagementPage management_page(ManagementTopic topic, std::size_t tab, const ManagementFacts& facts, const StringTable& strings, const info::InfoUnits& units);
+    [[nodiscard]] ManagementPage management_page(ManagementTopic topic, usize tab, const ManagementFacts& facts, const StringTable& strings, const info::InfoUnits& units);
 
     /// The whole ledger as comma-separated values for a spreadsheet: a heading row, then a row a month, the oldest
     /// first, with the month's name and each line in whole units of the currency, money in above nought. Empty
@@ -186,7 +187,7 @@ namespace rct3::ui::screens::management
     /// people or attractions. Rows carry it packed in their id.
     struct ManagementRow
     {
-        enum class Kind : std::uint8_t
+        enum class Kind : u8
         {
             Guest,
             Staff,
@@ -195,7 +196,7 @@ namespace rct3::ui::screens::management
             None, ///< A row about nothing that has an info panel
         };
         Kind kind = Kind::None;
-        std::size_t index = 0;
+        usize index = 0;
 
         friend bool operator==(const ManagementRow&, const ManagementRow&) = default;
     };
@@ -204,7 +205,7 @@ namespace rct3::ui::screens::management
     /// for the scenario's name; the scenario's name when the park has none.
     [[nodiscard]] std::u16string park_name(const save::model::Park& park, const StringTable& strings);
 
-    [[nodiscard]] std::size_t management_row_id(ManagementRow row);
-    [[nodiscard]] ManagementRow management_row(std::size_t id);
+    [[nodiscard]] usize management_row_id(ManagementRow row);
+    [[nodiscard]] ManagementRow management_row(usize id);
 
 } // namespace rct3::ui::screens::management

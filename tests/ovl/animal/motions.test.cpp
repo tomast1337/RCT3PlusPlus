@@ -2,6 +2,7 @@
 #include "ovl/animal/motions.hpp"
 
 #include "../record_file.hpp"
+#include "core/types.hpp"
 
 #include <doctest/doctest.h>
 
@@ -14,7 +15,7 @@ TEST_CASE("an animal motion set names an animation and a length for each slot")
     pool.add("wombat:wad");
     pool.add("WombatWalk:modelanim");
     pool.add("WombatStand:modelanim");
-    const std::uint32_t at = pool.base();
+    const u32 at = pool.base();
     // The set, then three animation references (the middle one unused), then three lengths.
     std::vector<std::byte> bytes;
     put(bytes, { 3, 1, 3, at + 0x20, at + 0x2C });

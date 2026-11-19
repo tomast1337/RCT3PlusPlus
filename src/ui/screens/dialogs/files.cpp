@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/dialogs/files.hpp"
 
+#include "core/types.hpp"
 #include "ui/save_text.hpp"
 #include "ui/skin/library.hpp"
 #include "ui/widgets/panel.hpp"
@@ -71,7 +72,7 @@ namespace rct3::ui::screens::dialogs
         }
 
         /// How long the save extension `name` ends with is, ours or the game's; 0 for none.
-        std::size_t extension_size(std::u16string_view name)
+        usize extension_size(std::u16string_view name)
         {
             for (const std::u16string_view e : { kExtension, kOriginal, kDesign })
             {
@@ -83,21 +84,21 @@ namespace rct3::ui::screens::dialogs
 
         std::u16string replaced(std::u16string text, std::u16string_view key, std::u16string_view value)
         {
-            const std::size_t at = text.find(key);
+            const usize at = text.find(key);
             if (at != std::u16string::npos)
                 text.replace(at, key.size(), value);
             return text;
         }
 
-        std::u16string number(std::size_t n)
+        std::u16string number(usize n)
         {
             const std::string s = std::to_string(n);
             return std::u16string(s.begin(), s.end());
         }
 
-        Color mix(Color a, Color b, float t)
+        Color mix(Color a, Color b, f32 t)
         {
-            const auto m = [t](std::uint8_t x, std::uint8_t y) { return static_cast<std::uint8_t>(std::lround(static_cast<float>(x) + (static_cast<float>(y) - static_cast<float>(x)) * t)); };
+            const auto m = [t](u8 x, u8 y) { return static_cast<u8>(std::lround(static_cast<f32>(x) + (static_cast<f32>(y) - static_cast<f32>(x)) * t)); };
             return { m(a.r, b.r), m(a.g, b.g), m(a.b, b.b), m(a.a, b.a) };
         }
 
@@ -130,12 +131,12 @@ namespace rct3::ui::screens::dialogs
             box->padding.y1 = 0;
             box->allowed = name_characters();
             box->placement = top_left(style.name_box_rect.x0, style.name_box_rect.y0, style.name_box_rect.width(), style.name_box_rect.height());
-            for (std::size_t i = 0; i < lines.size(); ++i)
+            for (usize i = 0; i < lines.size(); ++i)
             {
                 widgets::Label& l = add<widgets::Label>(std::format("line{}", i), std::u16string { }, style.font);
                 l.style.colour = style.line_colour;
                 l.style.vertical = Align::Centre;
-                l.placement = top_left(style.lines_x, style.lines_top + static_cast<float>(i) * (style.line_height - 4), style.lines_width, style.line_height - 4);
+                l.placement = top_left(style.lines_x, style.lines_top + static_cast<f32>(i) * (style.line_height - 4), style.lines_width, style.line_height - 4);
                 labels[i] = &l;
             }
             set_lines({ std::u16string(kUnread), { }, { } });
@@ -150,7 +151,7 @@ namespace rct3::ui::screens::dialogs
         void set_lines(std::array<std::u16string, 3> text)
         {
             lines = std::move(text);
-            for (std::size_t i = 0; i < lines.size(); ++i)
+            for (usize i = 0; i < lines.size(); ++i)
                 labels[i]->text = lines[i];
         }
 
@@ -184,14 +185,14 @@ namespace rct3::ui::screens::dialogs
             skin::draw_skin(context.list, context.skins.find(style_.border), frame);
             if (picture != 0)
             {
-                const float i = style_.picture_inset;
+                const f32 i = style_.picture_inset;
                 context.list.image({ frame.x0 + i, frame.y0 + i, frame.x1 - i, frame.y1 - i }, picture, { 0, 0, 1, 1 });
             }
         }
 
     private:
         const FileDialogStyle& style_;
-        std::int32_t clicks_ = 0;
+        i32 clicks_ = 0;
     };
 
     FileDialog::FileDialog(std::string name, const FileDialogStyle& style, const StringTable& strings, FileDialogMode mode, bool twelve_hour)
@@ -207,8 +208,8 @@ namespace rct3::ui::screens::dialogs
         title = text(saving ? kSaveTitle : kLoadTitle);
         icon = saving ? style.save_icon : style.load_icon;
 
-        const float buttons_y = style.height - style.bottom - style.button_size;
-        const auto button = [&](std::string id, const std::string& icon_skin, std::size_t slot, std::string_view tip) -> widgets::Button& {
+        const f32 buttons_y = style.height - style.bottom - style.button_size;
+        const auto button = [&](std::string id, const std::string& icon_skin, usize slot, std::string_view tip) -> widgets::Button& {
             widgets::Button& b = content().add<widgets::Button>(std::move(id), style.button, icon_skin);
             b.placement = top_left(style.button_x.at(slot), buttons_y, style.button_size, style.button_size);
             b.tooltip = text(tip);
@@ -225,16 +226,16 @@ namespace rct3::ui::screens::dialogs
         hover_->style.vertical = Align::Centre;
         hover_->placement = top_left(style.line_x, buttons_y + (style.button_size - style.line_height) / 2, style.button_x[0] - style.line_x, style.line_height);
 
-        const float status_y = buttons_y - style.gap - style.line_height;
+        const f32 status_y = buttons_y - style.gap - style.line_height;
         status_ = &content().add<widgets::Label>("status", std::u16string { }, style.font);
         status_->style.colour = style.text_colour;
         status_->style.vertical = Align::Centre;
         status_->placement = top_left(style.line_x, status_y, style.list_right - style.line_x, style.line_height);
 
-        float list_bottom = status_y - style.gap;
+        f32 list_bottom = status_y - style.gap;
         if (saving)
         {
-            const float box_y = status_y - style.gap - style.line_height;
+            const f32 box_y = status_y - style.gap - style.line_height;
             name_box_ = &content().add<widgets::EditBox>("file_name");
             name_box_->skin = style.name_box;
             name_box_->focused_skin = style.name_box_focused;
@@ -269,10 +270,10 @@ namespace rct3::ui::screens::dialogs
         selected_.reset();
         last_clicked_.reset();
         renaming_.reset();
-        for (std::size_t i = 0; i < files_.size(); ++i)
+        for (usize i = 0; i < files_.size(); ++i)
         {
             Row& row = list_->content().add<Row>(std::format("row{}", i), style_, shown_file_name(files_[i]));
-            row.placement = top_left(0, static_cast<float>(i) * style_.row_height, style_.row_width, style_.row_height);
+            row.placement = top_left(0, static_cast<f32>(i) * style_.row_height, style_.row_width, style_.row_height);
             row.tooltip = text(kListTip);
             row.box->tooltip = text(kNameTip);
             row.box->enabled = !kept_[i];
@@ -295,7 +296,7 @@ namespace rct3::ui::screens::dialogs
             open_->enabled = can;
     }
 
-    void FileDialog::set_summary(std::size_t index, const std::optional<save::SaveSummary>& summary, TextureId picture)
+    void FileDialog::set_summary(usize index, const std::optional<save::SaveSummary>& summary, TextureId picture)
     {
         if (index >= rows_.size())
             return;
@@ -318,7 +319,7 @@ namespace rct3::ui::screens::dialogs
         }
         if (!since_complete_)
         {
-            const auto done = static_cast<std::size_t>(std::ranges::count(read_, true));
+            const auto done = static_cast<usize>(std::ranges::count(read_, true));
             std::u16string s = text(kScanning);
             s = replaced(std::move(s), u"%d", number(std::min(done + 1, files_.size())));
             status_->text = replaced(std::move(s), u"%d", number(files_.size()));
@@ -331,32 +332,32 @@ namespace rct3::ui::screens::dialogs
             return;
         }
         status_->text = text(kScanComplete);
-        const float fade = std::clamp((*since_complete_ - (style_.complete_time - units::Seconds { 1 })).value, 0.0f, 1.0f);
+        const f32 fade = std::clamp((*since_complete_ - (style_.complete_time - units::Seconds { 1 })).value, 0.0f, 1.0f);
         status_->style.colour = mix(style_.text_colour, style_.faded_colour, fade);
     }
 
-    void FileDialog::select(std::size_t index)
+    void FileDialog::select(usize index)
     {
         if (index >= rows_.size())
             return;
-        for (std::size_t i = 0; i < rows_.size(); ++i)
+        for (usize i = 0; i < rows_.size(); ++i)
             rows_[i]->selected = i == index;
         selected_ = index;
         if (name_box_ != nullptr)
             name_box_->text = shown_file_name(files_[index]);
     }
 
-    widgets::EditBox& FileDialog::row_name_box(std::size_t index) const
+    widgets::EditBox& FileDialog::row_name_box(usize index) const
     {
         return *rows_.at(index)->box;
     }
 
-    const std::array<std::u16string, 3>& FileDialog::row_lines(std::size_t index) const
+    const std::array<std::u16string, 3>& FileDialog::row_lines(usize index) const
     {
         return rows_.at(index)->lines;
     }
 
-    void FileDialog::click_row(std::size_t index)
+    void FileDialog::click_row(usize index)
     {
         if (index < rows_.size())
             rows_[index]->on_release({ }, true);
@@ -422,7 +423,7 @@ namespace rct3::ui::screens::dialogs
             return ask(Asking::Message, text(kNoSpace), Answers::Ok);
         const std::u16string file = with_save_extension(name, save_extension_);
         // Kept files are elsewhere: saving writes beside the others and never over them.
-        for (std::size_t i = 0; i < files_.size(); ++i)
+        for (usize i = 0; i < files_.size(); ++i)
         {
             if (!kept(i) && same_name(files_[i], file))
             {
@@ -433,7 +434,7 @@ namespace rct3::ui::screens::dialogs
         open_out_ = file;
     }
 
-    void FileDialog::answer(std::size_t given)
+    void FileDialog::answer(usize given)
     {
         const bool yes = given == 0;
         switch (asking_)
@@ -479,7 +480,7 @@ namespace rct3::ui::screens::dialogs
             return;
         }
 
-        for (std::size_t i = 0; i < rows_.size(); ++i)
+        for (usize i = 0; i < rows_.size(); ++i)
         {
             if (!rows_[i]->take_click())
                 continue;
@@ -490,7 +491,7 @@ namespace rct3::ui::screens::dialogs
             if (twice)
                 open_chosen();
         }
-        for (std::size_t i = 0; i < rows_.size(); ++i)
+        for (usize i = 0; i < rows_.size(); ++i)
         {
             widgets::EditBox& box = *rows_[i]->box;
             if (!box.take_commit() || kept(i))

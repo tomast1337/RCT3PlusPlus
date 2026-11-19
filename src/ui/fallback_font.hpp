@@ -7,6 +7,7 @@
 // ascents can still put letters of very different sizes side by side.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/truetype_font.hpp"
 
 #include <algorithm>
@@ -34,7 +35,7 @@ namespace rct3::ui
     };
 
     /// How far a capital H reaches above the baseline in `font`; its ascent when it has no H.
-    [[nodiscard]] inline float cap_height(const font::Font& font)
+    [[nodiscard]] inline f32 cap_height(const font::Font& font)
     {
         auto h = font.find(u'H');
         return h && h->box.y0 < 0 ? -h->box.y0 : font.ascent();
@@ -45,8 +46,8 @@ namespace rct3::ui
     /// the multiple. A grid of 0 means an outline font: any whole pixel size.
     struct PixelGrid
     {
-        float grid = 0;
-        float tolerance = 0;
+        f32 grid = 0;
+        f32 tolerance = 0;
     };
 
     /// GNU Unifont, the fallback the viewer uses, draws every glyph on a 16-pixel em.
@@ -54,14 +55,14 @@ namespace rct3::ui
 
     /// The em size, in whole pixels, at which a fallback with capitals `cap_per_em` of its em tall has
     /// capitals `primary_cap` tall, moved onto the pixel grid when close to it. At least one pixel.
-    [[nodiscard]] inline float fallback_em_pixels(float primary_cap, float cap_per_em, PixelGrid pixels = { })
+    [[nodiscard]] inline f32 fallback_em_pixels(f32 primary_cap, f32 cap_per_em, PixelGrid pixels = { })
     {
         if (!(cap_per_em > 0) || !(primary_cap > 0))
             return 1;
-        const float em = primary_cap / cap_per_em;
+        const f32 em = primary_cap / cap_per_em;
         if (pixels.grid > 0)
         {
-            const float snapped = std::max(1.0f, std::round(em / pixels.grid)) * pixels.grid;
+            const f32 snapped = std::max(1.0f, std::round(em / pixels.grid)) * pixels.grid;
             if (std::abs(snapped - em) <= pixels.tolerance * em)
                 return snapped;
         }

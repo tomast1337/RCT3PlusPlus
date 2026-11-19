@@ -10,6 +10,7 @@
 // A piece flagged as a tunnel whose ground was lowered since no longer has ground over it; it hollows nothing.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
 
@@ -21,10 +22,10 @@ namespace rct3::park::path
 
     /// Room over a tunnel piece's highest point, in world units: below kTunnelCover, so a lip of ground stays
     /// over the opening.
-    inline constexpr float kTunnelHeight = 2.75f;
+    inline constexpr f32 kTunnelHeight = 2.75f;
     /// How far under a tunnel piece's lowest point its hollow starts, so the deck hides the floor's edge. Our
     /// own value.
-    inline constexpr float kTunnelFloor = 0.1f;
+    inline constexpr f32 kTunnelFloor = 0.1f;
 
     /// The hollows of the tunnel pieces among `paths`.
     [[nodiscard]] std::vector<GroundOpening> tunnel_hollows(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid);

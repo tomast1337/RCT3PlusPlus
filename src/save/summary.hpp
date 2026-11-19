@@ -8,6 +8,7 @@
 // no day, no kind and no packs) keep their defaults.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 
 #include <cstdint>
@@ -20,20 +21,20 @@ namespace rct3::save
 {
 
     /// The size of the picture in a save's summary.
-    inline constexpr std::uint32_t kPreviewWidth = 74;
-    inline constexpr std::uint32_t kPreviewHeight = 58;
+    inline constexpr u32 kPreviewWidth = 74;
+    inline constexpr u32 kPreviewHeight = 58;
 
     struct SaveSummary
     {
         std::string park_name;
-        std::int32_t day = 0;     ///< Of the month, from 1; 0 when the file does not say
-        std::int32_t month = 0;   ///< From 0, the first month of the park's season
-        std::int32_t year = 0;    ///< From 1
-        std::int32_t minutes = 0; ///< Since midnight
-        std::int32_t guests = 0;
-        std::int32_t kind = 0;             ///< 0 for a park; other values describe other things the game saves
-        std::vector<std::uint8_t> preview; ///< RGBA, kPreviewWidth by kPreviewHeight, top row first; empty when absent
-        std::vector<std::string> packs;    ///< Names of the add-on packs the save needs
+        i32 day = 0;     ///< Of the month, from 1; 0 when the file does not say
+        i32 month = 0;   ///< From 0, the first month of the park's season
+        i32 year = 0;    ///< From 1
+        i32 minutes = 0; ///< Since midnight
+        i32 guests = 0;
+        i32 kind = 0;                   ///< 0 for a park; other values describe other things the game saves
+        std::vector<u8> preview;        ///< RGBA, kPreviewWidth by kPreviewHeight, top row first; empty when absent
+        std::vector<std::string> packs; ///< Names of the add-on packs the save needs
     };
 
     enum class SummaryError

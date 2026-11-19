@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/sun_view.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 
 namespace rct3::park
 {
 
-    SunView sun_view(glm::vec3 to_sun, glm::vec3 centre, float radius, std::uint32_t texels)
+    SunView sun_view(glm::vec3 to_sun, glm::vec3 centre, f32 radius, u32 texels)
     {
         const glm::vec3 towards = glm::normalize(to_sun);
         // Any up will do that is not along the sunlight.
@@ -15,10 +17,10 @@ namespace rct3::park
         const glm::mat4 view = glm::lookAt(glm::vec3(0.0f), -towards, up);
         // The square reaches half a step further each way, so it holds the one round `centre` wherever that
         // falls in its step: a fifteenth more across, the texels as much larger.
-        const auto across = static_cast<float>(std::max(texels, 1u));
-        const float texel = 2 * radius / (across - across / kSunViewSteps);
-        const float step = texel * std::max(1.0f, std::floor(across / kSunViewSteps));
-        const float half = texel * across / 2;
+        const auto across = static_cast<f32>(std::max(texels, 1u));
+        const f32 texel = 2 * radius / (across - across / kSunViewSteps);
+        const f32 step = texel * std::max(1.0f, std::floor(across / kSunViewSteps));
+        const f32 half = texel * across / 2;
         glm::vec3 middle = glm::vec3(view * glm::vec4(centre, 1.0f));
         middle.x = std::round(middle.x / step) * step;
         middle.y = std::round(middle.y / step) * step;
@@ -27,21 +29,21 @@ namespace rct3::park
         return { projection * view, { texel } };
     }
 
-    float shadow_radius(float distance)
+    f32 shadow_radius(f32 distance)
     {
-        constexpr float kLeast = 40;
-        constexpr float kMost = 300;
-        const float wanted = std::clamp(distance * 1.5f, kLeast, kMost);
-        const float steps = std::ceil(4 * std::log2(wanted / kLeast));
+        constexpr f32 kLeast = 40;
+        constexpr f32 kMost = 300;
+        const f32 wanted = std::clamp(distance * 1.5f, kLeast, kMost);
+        const f32 steps = std::ceil(4 * std::log2(wanted / kLeast));
         return std::min(kLeast * std::exp2(steps / 4), kMost);
     }
 
-    glm::vec3 steady_sun(glm::vec3 kept, glm::vec3 now, float step)
+    glm::vec3 steady_sun(glm::vec3 kept, glm::vec3 now, f32 step)
     {
         return glm::dot(kept, now) >= std::cos(step) ? kept : now;
     }
 
-    float sun_step_share(glm::vec3 kept, glm::vec3 now, float step)
+    f32 sun_step_share(glm::vec3 kept, glm::vec3 now, f32 step)
     {
         if (step <= 0)
             return 1;

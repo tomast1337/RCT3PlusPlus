@@ -10,6 +10,7 @@
 // open start side turns to a path beside it, so the line bends to meet the path as it is laid.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/turns.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -27,39 +28,39 @@ namespace rct3::park
     struct EntranceBeside
     {
         save::model::RideIndex ride { };
-        std::size_t station = 0; ///< Of the ride's stations
-        Side side;               ///< Heading from the tile to the entrance
+        usize station = 0; ///< Of the ride's stations
+        Side side;         ///< Heading from the tile to the entrance
         friend bool operator==(const EntranceBeside&, const EntranceBeside&) = default;
     };
 
     /// How far apart in height a queue tile and an entrance may be and still join, in world units.
-    inline constexpr std::int32_t kEntranceReach = 1;
+    inline constexpr i32 kEntranceReach = 1;
 
     /// The entrance whose back faces `tile` (the tile beyond it, away from its ride) and whose height is within
     /// kEntranceReach of `height`, if any; any height when `height` is empty.
-    [[nodiscard]] std::optional<EntranceBeside> entrance_beside(const save::model::RideModel& rides, save::model::Tile tile, std::optional<std::int32_t> height);
+    [[nodiscard]] std::optional<EntranceBeside> entrance_beside(const save::model::RideModel& rides, save::model::Tile tile, std::optional<i32> height);
 
     /// The queue tiles linked behind `paths[tile]` (following end sides), nearest first, not counting itself.
-    [[nodiscard]] std::vector<std::size_t> tiles_behind(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::size_t tile);
+    [[nodiscard]] std::vector<usize> tiles_behind(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, usize tile);
 
     /// Turns the start side of queue tile `paths[tile]` towards a path (not a queue) beside it, when nothing meets
     /// that side yet and the path's edge meets the tile's there; the side guests come in by then opens onto the
     /// path. Returns whether it turned.
-    bool turn_to_path(std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t tile);
+    bool turn_to_path(std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, usize tile);
 
     /// Joins queue tile `paths[tile]` to `entrance`, giving the station a line with id `new_line` when it has
     /// none, and rails the line with the ride's fence. Returns the line's id.
-    std::uint64_t join_entrance(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t tile, const EntranceBeside& entrance, std::uint64_t new_line);
+    u64 join_entrance(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, usize tile, const EntranceBeside& entrance, u64 new_line);
 
     /// Joins queue tile `paths[tile]` to the line whose open start side faces it from a tile beside, as it joins an
     /// entrance: it leads into that line's head, and the tiles behind it follow. Returns the line's id, nothing
     /// when no line's head is beside it.
-    std::optional<std::uint64_t> join_line(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t tile);
+    std::optional<u64> join_line(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, usize tile);
 
     /// Joins a queue already laid behind the entrance of station `station` of ride `ride`, as one laid there after
     /// would join: the queue tile behind it, meeting it within kEntranceReach and on no line yet, joins the
     /// station's line (made with id `new_line` when it has none), and the tiles laid on from it follow. Returns the
     /// line's id, nothing when no such queue is there.
-    std::optional<std::uint64_t> join_queue_behind(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, save::model::RideIndex ride, std::size_t station, std::uint64_t new_line);
+    std::optional<u64> join_queue_behind(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, save::model::RideIndex ride, usize station, u64 new_line);
 
 } // namespace rct3::park

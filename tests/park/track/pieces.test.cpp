@@ -3,6 +3,7 @@
 
 #include "../../ovl/builder.hpp"
 #include "../../ovl/record_file.hpp"
+#include "core/types.hpp"
 #include "ovl/spline.hpp"
 #include "park/object/placement.hpp"
 
@@ -21,7 +22,7 @@ using namespace rct3::park::track;
 
 namespace
 {
-    constexpr float kTile = 4;
+    constexpr f32 kTile = 4;
 
     /// Ten by ten flat tiles from (0, 0).
     save::model::TerrainGrid flat()
@@ -44,7 +45,7 @@ namespace
         return l;
     }
 
-    PieceRecord record(std::string name, std::uint32_t flags = 0)
+    PieceRecord record(std::string name, u32 flags = 0)
     {
         PieceRecord r;
         r.name = name;
@@ -54,7 +55,7 @@ namespace
     }
 
     /// A piece with the given ends and curve, as its line would measure.
-    PieceShape shape(PieceEnd entry, PieceEnd exit, std::int32_t curve = 0, PieceUse use = PieceUse::Plain)
+    PieceShape shape(PieceEnd entry, PieceEnd exit, i32 curve = 0, PieceUse use = PieceUse::Plain)
     {
         PieceShape s;
         s.entry = entry;
@@ -64,7 +65,7 @@ namespace
         return s;
     }
 
-    save::model::PlacedObject placed(std::int32_t col, std::int32_t row, std::int32_t turns, std::int32_t height)
+    save::model::PlacedObject placed(i32 col, i32 row, i32 turns, i32 height)
     {
         save::model::PlacedObject o;
         o.col = col;
@@ -75,7 +76,7 @@ namespace
         return o;
     }
 
-    bool has(const std::vector<LaidPiece>& fit, std::size_t index, bool reversed)
+    bool has(const std::vector<LaidPiece>& fit, usize index, bool reversed)
     {
         return std::ranges::contains(fit, LaidPiece { index, reversed });
     }
@@ -171,7 +172,7 @@ TEST_CASE("a ride's banks count from the station it lists, and its plain pieces 
     const std::vector<PieceRecord> records { record("InvStation", kPieceStation), record("InvStraight"), record("Station", kPieceStation), record("StraightTwin"), record("Straight", kPieceStarts), record("StraightToTilt") };
     const std::vector<PieceLine> lines { hanging, hanging, straight_line(), straight_line(), straight_line(), tilting };
     const auto banks = [](const std::vector<PieceShape>& pieces) {
-        std::vector<std::pair<std::int32_t, std::int32_t>> out;
+        std::vector<std::pair<i32, i32>> out;
         for (const PieceShape& p : pieces)
             out.emplace_back(p.entry.bank, p.exit.bank);
         return out;
@@ -179,11 +180,11 @@ TEST_CASE("a ride's banks count from the station it lists, and its plain pieces 
     const auto listing = [](std::vector<std::string_view> names) { return [names](const PieceRecord& r) { return std::ranges::contains(names, std::string_view(r.name)); }; };
 
     const std::vector<PieceShape> upright = shape_pieces(records, lines, listing({ "Station", "Straight", "StraightToTilt" }));
-    CHECK(banks(upright) == std::vector<std::pair<std::int32_t, std::int32_t>> { { 4, 4 }, { 4, 4 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 2 } });
+    CHECK(banks(upright) == std::vector<std::pair<i32, i32>> { { 4, 4 }, { 4, 4 }, { 0, 0 }, { 0, 0 }, { 0, 0 }, { 0, 2 } });
     CHECK(upright[4].use == PieceUse::Plain);
 
     const std::vector<PieceShape> under = shape_pieces(records, lines, listing({ "InvStation", "InvStraight" }));
-    CHECK(banks(under) == std::vector<std::pair<std::int32_t, std::int32_t>> { { 0, 0 }, { 0, 0 }, { 4, 4 }, { 4, 4 }, { 4, 4 }, { 4, -2 } });
+    CHECK(banks(under) == std::vector<std::pair<i32, i32>> { { 0, 0 }, { 0, 0 }, { 4, 4 }, { 4, 4 }, { 4, 4 }, { 4, -2 } });
     CHECK(under[1].use == PieceUse::Plain);
 
     // Listing everything, the plainer twin keeps the shape.
@@ -276,7 +277,7 @@ TEST_CASE("a saved layout moved and turned keeps each piece where the one before
     REQUIRE(second);
     const auto third = place_after(second->next, s, false, g);
     REQUIRE(third);
-    for (std::int32_t turns = 0; turns < 4; ++turns)
+    for (i32 turns = 0; turns < 4; ++turns)
     {
         CAPTURE(turns);
         const save::model::PlacedObject to = placed(5, 4, turns, 7);
@@ -314,7 +315,7 @@ TEST_CASE("a piece whose start cannot meet the tip at a whole tile and height is
 
 TEST_CASE("ends meet by name, width and the tags each side needs and forbids")
 {
-    const auto end = [](std::string name, std::vector<std::string> offers = { }, std::vector<std::string> needs = { }, std::vector<std::string> forbids = { }, std::uint32_t width = 0) { return PieceJoin { std::move(name), std::move(offers), std::move(needs), std::move(forbids), width }; };
+    const auto end = [](std::string name, std::vector<std::string> offers = { }, std::vector<std::string> needs = { }, std::vector<std::string> forbids = { }, u32 width = 0) { return PieceJoin { std::move(name), std::move(offers), std::move(needs), std::move(forbids), width }; };
     CHECK(ends_meet(end(""), end("")));
     CHECK(ends_meet(end("Rope"), end("rope")));
     CHECK_FALSE(ends_meet(end("Rope"), end("")));
@@ -414,9 +415,9 @@ TEST_CASE("slide_climbs: each slide is reached up the loop and along the path en
 TEST_CASE("a piece's middle line follows its rails even when they are split into a different number of parts")
 {
     // Straight rails 8 long along -X, a metre apart: the left in two parts, the right in one.
-    const auto rail = [](float z, std::vector<float> xs) {
+    const auto rail = [](f32 z, std::vector<f32> xs) {
         ovl::Spline s;
-        for (std::size_t i = 0; i < xs.size(); ++i)
+        for (usize i = 0; i < xs.size(); ++i)
         {
             ovl::SplineNode n;
             n.position = { xs[i], 0, z };
@@ -431,8 +432,8 @@ TEST_CASE("a piece's middle line follows its rails even when they are split into
     const auto line = middle_line(rail(-0.5f, { 4, 0, -4 }), rail(0.5f, { 4, -4 }));
     REQUIRE(line);
     REQUIRE(line->path.size() > 2);
-    float length = 0;
-    for (std::size_t k = 0; k < line->path.size(); ++k)
+    f32 length = 0;
+    for (usize k = 0; k < line->path.size(); ++k)
     {
         CHECK(line->path[k].z == doctest::Approx(0));
         CHECK(line->ups[k].y == doctest::Approx(1));
@@ -447,7 +448,7 @@ TEST_CASE("a piece's middle line pairs its rails by length, not by how fast each
 {
     // Straight rails 4 long along -X, a metre apart. The right one moves evenly along its curve; the left one
     // starts slowly and finishes fast, so at the same share of their curves the two are far from abreast.
-    const auto rail = [](float z, float out, float in) {
+    const auto rail = [](f32 z, f32 out, f32 in) {
         ovl::Spline s;
         s.length = 4;
         s.segment_lengths = { 4 };
@@ -455,7 +456,7 @@ TEST_CASE("a piece's middle line pairs its rails by length, not by how fast each
         return s;
     };
     ovl::Spline left = rail(-0.5f, 0.3f, 3);
-    float within = 0.001f;
+    f32 within = 0.001f;
     SUBCASE("measured along the rails")
     {
     }
@@ -464,23 +465,23 @@ TEST_CASE("a piece's middle line pairs its rails by length, not by how fast each
         // Rounded to 1/255 of the parameter as stored, which moves a point up to a couple of centimetres.
         within = 0.02f;
         auto& marks = left.segment_parameters.emplace_back();
-        for (std::size_t m = 0; m < marks.size(); ++m)
+        for (usize m = 0; m < marks.size(); ++m)
         {
-            const float x = 2 - 4 * static_cast<float>(m + 1) / static_cast<float>(marks.size() + 1);
-            float low = 0;
-            float high = 1;
-            for (std::int32_t i = 0; i < 30; ++i)
+            const f32 x = 2 - 4 * static_cast<f32>(m + 1) / static_cast<f32>(marks.size() + 1);
+            f32 low = 0;
+            f32 high = 1;
+            for (i32 i = 0; i < 30; ++i)
                 (ovl::spline_point(left, 0, (low + high) / 2)[0] > x ? low : high) = (low + high) / 2;
-            marks[m] = static_cast<std::uint8_t>(std::lround(low * 255));
+            marks[m] = static_cast<u8>(std::lround(low * 255));
         }
     }
     const auto line = middle_line(left, rail(0.5f, 4.0f / 3, 4.0f / 3));
     REQUIRE(line);
     CHECK(line->length == doctest::Approx(4));
     REQUIRE(line->path.size() > 2);
-    for (std::size_t k = 0; k < line->path.size(); ++k)
+    for (usize k = 0; k < line->path.size(); ++k)
     {
-        const float share = static_cast<float>(k) / static_cast<float>(line->path.size() - 1);
+        const f32 share = static_cast<f32>(k) / static_cast<f32>(line->path.size() - 1);
         CHECK(glm::distance(line->path[k], glm::vec3 { 2 - 4 * share, 0, 0 }) < within);
     }
 }
@@ -501,7 +502,7 @@ namespace
     {
         const auto vertical = [](glm::vec3 start, glm::vec3 end, glm::vec3 start_direction, glm::vec3 end_direction) { return PieceLine { .start = start, .end = end, .start_direction = start_direction, .end_direction = end_direction }; };
         const glm::vec3 up { 0, 1, 0 };
-        const auto piece = [&](std::string name, std::uint32_t flag, std::string starts, std::string ends, PieceLine joins_at, float rise) {
+        const auto piece = [&](std::string name, u32 flag, std::string starts, std::string ends, PieceLine joins_at, f32 rise) {
             PieceRecord r = record(std::move(name), flag);
             r.joins[0].name = std::move(starts);
             r.joins[1].name = std::move(ends);
@@ -553,12 +554,12 @@ TEST_CASE("a lift tower's pieces follow in order: its foot, any middles, its top
     PieceLine upright = straight_line();
     upright.start_direction = upright.end_direction = { 0, 1, 0 };
     const std::vector<PieceShape> pieces { shape_piece(record("Straight"), straight_line()), shape_piece(record("Vertical"), upright), tower.foot, tower.middle, tower.top };
-    const auto after = [&](std::size_t last) { return pieces_after(pieces, laid_exit(pieces[last], false), LaidPiece { last, false }); };
+    const auto after = [&](usize last) { return pieces_after(pieces, laid_exit(pieces[last], false), LaidPiece { last, false }); };
     const std::vector<LaidPiece> level = after(0);
     CHECK(has(level, 2, false));
     CHECK_FALSE(has(level, 3, false));
     CHECK_FALSE(has(level, 4, false));
-    for (const std::size_t open : { 2, 3 })
+    for (const usize open : { 2, 3 })
     {
         CAPTURE(open);
         const std::vector<LaidPiece> tower_open = after(open);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/support/footprint.hpp"
 
+#include "core/types.hpp"
 #include "ovl/scenery_item.hpp"
 
 #include <bit>
@@ -13,14 +14,14 @@ using namespace rct3::park::support;
 namespace
 {
 
-    ovl::SceneryItem item(std::uint32_t flags, std::uint32_t type = 18)
+    ovl::SceneryItem item(u32 flags, u32 type = 18)
     {
         ovl::SceneryItem i;
         i.flags = flags;
         i.type = type;
         i.x_squares = 2;
         i.z_squares = 1;
-        const auto square = [&](std::uint32_t flags, std::int32_t low, std::int32_t high, SupportKind kind) {
+        const auto square = [&](u32 flags, i32 low, i32 high, SupportKind kind) {
             ovl::SceneryItemSquare& s = i.squares.emplace_back();
             s.flags = flags;
             s.min_height = low;
@@ -56,7 +57,7 @@ TEST_CASE("support points are read from the item's point records")
 {
     ovl::SceneryItem i = item(0x80 | 0x400 | 0x800 | 0x100);
     ovl::SceneryItemNode n;
-    n.words = { 1, 0, 2, 1, std::bit_cast<std::uint32_t>(0.25f), std::bit_cast<std::uint32_t>(0.75f), std::bit_cast<std::uint32_t>(4.5f), static_cast<std::uint32_t>(-1), 0, 0, 2, std::bit_cast<std::uint32_t>(3.0f) };
+    n.words = { 1, 0, 2, 1, std::bit_cast<u32>(0.25f), std::bit_cast<u32>(0.75f), std::bit_cast<u32>(4.5f), static_cast<u32>(-1), 0, 0, 2, std::bit_cast<u32>(3.0f) };
     n.words[20] = 0x3;
     n.words[21] = 4;
     i.nodes.push_back(n);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/particles.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 
 #include <algorithm>
@@ -15,9 +16,9 @@ namespace rct3::scene::park
     namespace
     {
         /// Effects farther from the eye than this wait and are not drawn.
-        constexpr float kShowDistance = 250;
+        constexpr f32 kShowDistance = 250;
         /// At most this many particles alive in one effect; the busiest firework keeps about 4300.
-        constexpr std::size_t kRunCapacity = 8192;
+        constexpr usize kRunCapacity = 8192;
 
         struct Corner
         {
@@ -32,7 +33,7 @@ namespace rct3::scene::park
             render::VertexAttribute { 2, render::VertexFormat::Float2, offsetof(Corner, uv) },
         };
         /// A run of `effect` at `position`, each on numbers of its own; nothing when the install lacks it.
-        std::optional<ParkParticles::Shown> start(ParkParticles& particles, std::string_view name, glm::vec3 position, const glm::mat3& axes, bool loops, float scale = 1)
+        std::optional<ParkParticles::Shown> start(ParkParticles& particles, std::string_view name, glm::vec3 position, const glm::mat3& axes, bool loops, f32 scale = 1)
         {
             const particles::Effect* effect = particles.library->effect(name);
             if (effect == nullptr)
@@ -74,7 +75,7 @@ namespace rct3::scene::park
         particles.shown.clear();
         if (!particles.library)
             return;
-        std::size_t missing = 0;
+        usize missing = 0;
         for (const rct3::park::object::PlacedEffect& placed : effects)
         {
             if (auto shown = start(particles, placed.effect, placed.position, placed.axes, true))
@@ -89,7 +90,7 @@ namespace rct3::scene::park
             logging::logger("particles").warning("{} named particle effects not found", missing);
     }
 
-    bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up, float scale)
+    bool fire_park_particles(ParkParticles& particles, std::string_view effect, glm::vec3 position, glm::vec3 up, f32 scale)
     {
         if (!particles.library)
             return false;
@@ -101,20 +102,20 @@ namespace rct3::scene::park
         return shown.has_value();
     }
 
-    void advance_park_particles(ParkParticles& particles, units::Seconds elapsed, glm::vec3 eye, std::size_t budget)
+    void advance_park_particles(ParkParticles& particles, units::Seconds elapsed, glm::vec3 eye, usize budget)
     {
         particles.heard.clear();
         std::erase_if(particles.fired, [](const ParkParticles::Shown& s) { return s.run.finished(); });
-        std::vector<std::pair<float, ParkParticles::Shown*>> near;
+        std::vector<std::pair<f32, ParkParticles::Shown*>> near;
         for (auto* list : { &particles.shown, &particles.fired })
             for (ParkParticles::Shown& shown : *list)
             {
                 shown.awake = false;
-                if (const float d = glm::distance(shown.position, eye); d < kShowDistance)
+                if (const f32 d = glm::distance(shown.position, eye); d < kShowDistance)
                     near.emplace_back(d, &shown);
             }
-        std::ranges::sort(near, { }, &std::pair<float, ParkParticles::Shown*>::first);
-        std::size_t alive = 0;
+        std::ranges::sort(near, { }, &std::pair<f32, ParkParticles::Shown*>::first);
+        usize alive = 0;
         for (const auto& [distance, shown] : near)
         {
             if (alive >= budget)
@@ -148,12 +149,12 @@ namespace rct3::scene::park
         const glm::vec3 up = glm::cross(forward, right);
         // shortcut: mixed particles (smoke, spray) take the light from above only, no sun or lamps; upgrade
         // with lit particles if smoke looks flat by day.
-        const float dim = std::clamp(std::max({ light.sky.r, light.sky.g, light.sky.b }) + std::max(light.sun_direction.y, 0.0f) * std::max({ light.sun.r, light.sun.g, light.sun.b }), 0.05f, 1.0f);
+        const f32 dim = std::clamp(std::max({ light.sky.r, light.sky.g, light.sky.b }) + std::max(light.sun_direction.y, 0.0f) * std::max({ light.sun.r, light.sun.g, light.sun.b }), 0.05f, 1.0f);
 
         // One batch per atlas and blending; mixed ones farthest first.
         struct Quad
         {
-            float distance;
+            f32 distance;
             std::array<Corner, 6> corners;
         };
         std::map<std::pair<std::string, bool>, std::vector<Quad>> batches;
@@ -163,7 +164,7 @@ namespace rct3::scene::park
                 if (!shown.awake)
                     continue;
                 const particles::ParticleArrays& live = shown.run.particles();
-                for (std::size_t i = 0; i < live.count(); ++i)
+                for (usize i = 0; i < live.count(); ++i)
                 {
                     const particles::Sprite* sprite = shown.sprites[live.kind[i]];
                     if (live.age[i] < 0 || sprite == nullptr || sprite->frames.empty())
@@ -175,7 +176,7 @@ namespace rct3::scene::park
                     if (look.size <= 0 || (sprite->blended ? look.colour.a <= 0 : glm::vec3(look.colour) == glm::vec3(0.0f)))
                         continue;
                     const auto& f = sprite->frames[sprite->frame(live.age[i], live.roll[i] / 6.2832f)];
-                    const float half = look.size * shown.size / 2;
+                    const f32 half = look.size * shown.size / 2;
                     glm::vec3 across = (right * std::cos(live.roll[i]) + up * std::sin(live.roll[i])) * half;
                     glm::vec3 along = (up * std::cos(live.roll[i]) - right * std::sin(live.roll[i])) * half;
                     // Stretched ones (drops of a fountain's stream) lie along their motion as the eye sees it.
@@ -211,7 +212,7 @@ namespace rct3::scene::park
             render::DrawCommand draw;
             draw.pipeline = key.second ? particles.mixed : particles.added;
             draw.vertices = *vertices;
-            draw.count = static_cast<std::uint32_t>(corners.size());
+            draw.count = static_cast<u32>(corners.size());
             draw.transform = view_projection;
             draw.texture = atlas->second;
             draw.filter = render::Filter::Linear;

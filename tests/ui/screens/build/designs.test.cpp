@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/designs.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -34,9 +35,9 @@ namespace
             desktop.update({ at, false, true });
         }
 
-        [[nodiscard]] std::vector<std::size_t> ids() const
+        [[nodiscard]] std::vector<usize> ids() const
         {
-            std::vector<std::size_t> out;
+            std::vector<usize> out;
             for (const TableRow& r : window->table().rows)
                 out.push_back(r.id);
             return out;
@@ -47,24 +48,24 @@ namespace
 TEST_CASE("the custom track stays the first row however the designs are sorted")
 {
     Fixture f;
-    CHECK(f.ids() == std::vector<std::size_t> { 0, 2, 1 });
+    CHECK(f.ids() == std::vector<usize> { 0, 2, 1 });
     // Press the excitement heading twice: highest first.
     const Rect& r = f.window->table().rect();
     f.click({ r.x1 - 30, r.y0 + 5 });
     f.click({ r.x1 - 30, r.y0 + 5 });
-    CHECK(f.ids() == std::vector<std::size_t> { 0, 2, 1 });
+    CHECK(f.ids() == std::vector<usize> { 0, 2, 1 });
     f.click({ r.x1 - 30, r.y0 + 5 });
-    CHECK(f.ids() == std::vector<std::size_t> { 0, 1, 2 });
+    CHECK(f.ids() == std::vector<usize> { 0, 1, 2 });
 }
 
 TEST_CASE("the window reports the custom track picked as it opens, then each row picked once")
 {
     Fixture f;
-    CHECK(f.window->take_picked() == std::optional<std::size_t>(0));
+    CHECK(f.window->take_picked() == std::optional<usize>(0));
     CHECK_FALSE(f.window->take_picked());
     f.window->table().select(2);
     f.desktop.update({ });
-    CHECK(f.window->take_picked() == std::optional<std::size_t>(1));
+    CHECK(f.window->take_picked() == std::optional<usize>(1));
 }
 
 TEST_CASE("a locked design cannot be built")
@@ -81,5 +82,5 @@ TEST_CASE("a locked design cannot be built")
     f.window->show_design(0, { }, true);
     build->click();
     f.desktop.update({ });
-    CHECK(f.window->take_build() == std::optional<std::size_t>(2));
+    CHECK(f.window->take_build() == std::optional<usize>(2));
 }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/enclosure_fence.hpp"
 
+#include "core/types.hpp"
 #include "record_file.hpp"
 
 #include <doctest/doctest.h>
@@ -11,15 +12,15 @@ using rct3::ovl::read_enclosure_fences;
 TEST_CASE("an enclosure fence names its pieces and costs")
 {
     Pool pool;
-    const std::array<std::uint32_t, 9> pieces = { pool.add("RopeFull"), pool.add("RopeEnd"), pool.add("RopeCorner"), pool.add("RopeEdge"), pool.add("RopeInner"), pool.add("RopeGate"), pool.add("RopeLookLeft"), pool.add("RopeLook"), pool.add("RopeLookRight") };
+    const std::array<u32, 9> pieces = { pool.add("RopeFull"), pool.add("RopeEnd"), pool.add("RopeCorner"), pool.add("RopeEdge"), pool.add("RopeInner"), pool.add("RopeGate"), pool.add("RopeLookLeft"), pool.add("RopeLook"), pool.add("RopeLookRight") };
     pool.add("Rope:enc");
     pool.add("RopeName:txt");
     pool.add("RopeIcon:gsi");
     std::vector<std::byte> bytes;
     put(bytes, { 0, 0, 0 });
-    for (const std::uint32_t p : pieces)
+    for (const u32 p : pieces)
         put(bytes, { p });
-    put(bytes, { 700, static_cast<std::uint32_t>(-600), 3000, static_cast<std::uint32_t>(-2500) });
+    put(bytes, { 700, static_cast<u32>(-600), 3000, static_cast<u32>(-2500) });
     put(bytes, { 0, 0, 0, 0, bits(2.5f) });
     bytes.resize(0x5C, std::byte { 0 });
     const auto overlay = make_record_overlay(5, pool, "Rope:enc", bytes, { { 4, "RopeName:txt" }, { 8, "RopeIcon:gsi" } });

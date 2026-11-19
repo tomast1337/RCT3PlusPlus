@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/import_park.hpp"
@@ -68,7 +69,7 @@ TEST_CASE("a guest will not pay more for a toilet than their need makes it worth
 TEST_CASE("a guest stays at a toilet or first aid the longer the more they needed it")
 {
     // How long the guest stands at the facility, from paying to walking on.
-    const auto stay = [](Product product, float need) {
+    const auto stay = [](Product product, f32 need) {
         Sandbox park;
         park.path({ 0, 0 }, { 6, 0 });
         park.shop("Facility", product, { 6, 0 }, 0);
@@ -76,7 +77,7 @@ TEST_CASE("a guest stays at a toilet or first aid the longer the more they neede
         auto& r = park.world().registry;
         const auto buying = [&] { return r.get<Errand>(g).kind == ErrandKind::Buying; };
         REQUIRE(park.run_until(buying, 60));
-        float seconds = 0;
+        f32 seconds = 0;
         while (buying() && seconds < 60)
         {
             park.run_seconds(0.5f);
@@ -87,7 +88,7 @@ TEST_CASE("a guest stays at a toilet or first aid the longer the more they neede
     // Not quite sick enough to throw up on the way.
     for (const auto [product, most] : { std::pair { Product::Toilet, 1.0f }, std::pair { Product::FirstAid, 0.75f } })
     {
-        const float longest = stay(product, most);
+        const f32 longest = stay(product, most);
         CHECK(longest >= kTuning.facilities.relief.value * most - 1);
         CHECK(stay(product, 0.6f) < longest - 1);
         CHECK(stay(product, 0.6f) >= kTuning.facilities.served.value);
@@ -124,14 +125,14 @@ TEST_CASE("tired guests sit on the benches they pass, as many as there are seats
     park.path({ 0, 0 }, { 1, 0 });
     park.item(PathItemKind::Bench, { 0, 0 });
     std::vector<entt::entity> guests;
-    for (std::int32_t i = 0; i < 6; ++i)
+    for (i32 i = 0; i < 6; ++i)
         guests.push_back(park.guest({ 1, 0 }, { .energy = 0.1f }));
     auto& r = park.world().registry;
-    std::size_t most = 0;
-    for (std::int32_t t = 0; t < 400; ++t)
+    usize most = 0;
+    for (i32 t = 0; t < 400; ++t)
     {
         park.run(1);
-        most = std::max<std::size_t>(most, r.view<Linger>().size());
+        most = std::max<usize>(most, r.view<Linger>().size());
     }
     CHECK(most > 0);
     CHECK(most <= 3);
@@ -147,7 +148,7 @@ TEST_CASE("guests stop at a view, cheered by it, and vandals leave it be")
     auto& r = park.world().registry;
     CHECK(park.run_until([&] { return r.all_of<Linger>(g); }, 120));
     CHECK(r.get<Linger>(g).at == PathItemKind::PhotoSpot);
-    const float before = r.get<Mood>(g).happiness.value;
+    const f32 before = r.get<Mood>(g).happiness.value;
     park.run_seconds(10);
     CHECK(r.get<Mood>(g).happiness.value > before);
     r.get<Mood>(g).happiness.value = 0;
@@ -157,16 +158,16 @@ TEST_CASE("guests stop at a view, cheered by it, and vandals leave it be")
 
 TEST_CASE("guests seldom stop at an effect or animatronic, far less than at a view")
 {
-    std::array<std::size_t, 2> stopped { };
+    std::array<usize, 2> stopped { };
     for (const PathItemKind kind : { PathItemKind::Sight, PathItemKind::PhotoSpot })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 1, 0 });
         park.item(kind, { 0, 0 });
-        for (std::int32_t i = 0; i < 10; ++i)
+        for (i32 i = 0; i < 10; ++i)
             park.guest({ 1, 0 });
         auto& r = park.world().registry;
-        for (std::int32_t t = 0; t < 2000; ++t)
+        for (i32 t = 0; t < 2000; ++t)
         {
             park.run(1);
             stopped[kind == PathItemKind::PhotoSpot] += r.view<Linger>().size();
@@ -183,8 +184,8 @@ TEST_CASE("guests think the scenery round them great, or else the paths tidy")
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
         std::vector<rct3::save::model::PlacedObject> trees;
-        for (std::int32_t i = 0; i < 30; ++i)
-            trees.push_back({ .id = static_cast<std::uint64_t>(i + 1), .col = i % 4, .row = 1 });
+        for (i32 i = 0; i < 30; ++i)
+            trees.push_back({ .id = static_cast<u64>(i + 1), .col = i % 4, .row = 1 });
         import_scenery(park.world(), trees, [&](const rct3::save::model::PlacedObject&) { return planted ? 1.0f : 0.0f; });
         const auto g = park.guest({ 0, 0 });
         auto& r = park.world().registry;
@@ -204,11 +205,11 @@ TEST_CASE("scenery taken away stops counting round the paths at once, never belo
     const rct3::save::model::PlacedObject tree { .id = 1, .col = 0, .row = 1 };
     import_scenery(park.world(), std::span(&tree, 1), [](const rct3::save::model::PlacedObject&) { return 2.0f; });
     const auto& near = park.world().registry.ctx().get<SceneryNear>().by_node;
-    REQUIRE(std::ranges::any_of(near, [](float w) { return w > 0; }));
+    REQUIRE(std::ranges::any_of(near, [](f32 w) { return w > 0; }));
     add_scenery(park.world(), tree, -2.0f);
-    CHECK(std::ranges::all_of(near, [](float w) { return w == 0; }));
+    CHECK(std::ranges::all_of(near, [](f32 w) { return w == 0; }));
     add_scenery(park.world(), tree, -2.0f);
-    CHECK(std::ranges::all_of(near, [](float w) { return w == 0; }));
+    CHECK(std::ranges::all_of(near, [](f32 w) { return w == 0; }));
 }
 
 TEST_CASE("a party with the player's guest in it has its photo taken at a photo spot, others do not")
@@ -273,18 +274,18 @@ TEST_CASE("guests passing jumping fountains turn to look, and some like them, wi
     park.path({ 0, 0 }, { 1, 0 });
     park.item(PathItemKind::Fountain, { 0, 0 });
     std::vector<entt::entity> guests;
-    for (std::int32_t i = 0; i < 6; ++i)
+    for (i32 i = 0; i < 6; ++i)
         guests.push_back(park.guest({ 1, 0 }));
     auto& r = park.world().registry;
     bool glanced = false;
     bool walked_on = false; // A glancer still going, from one tick to the next
-    for (std::int32_t t = 0; t < 600; ++t)
+    for (i32 t = 0; t < 600; ++t)
     {
         std::vector<glm::vec3> was;
         for (const entt::entity g : guests)
             was.push_back(r.get<Pose>(g).position);
         park.run(1);
-        for (std::size_t i = 0; i < guests.size(); ++i)
+        for (usize i = 0; i < guests.size(); ++i)
             if (const auto* glance = r.try_get<Glance>(guests[i]))
             {
                 glanced = glanced || r.all_of<PathItem>(glance->at);
@@ -305,15 +306,15 @@ TEST_CASE("a guest passing a free water cannon may fire it a while, one at a tim
     Sandbox park;
     park.path({ 0, 0 }, { 1, 0 });
     park.item(PathItemKind::WaterCannon, { 0, 0 });
-    for (std::int32_t i = 0; i < 8; ++i)
+    for (i32 i = 0; i < 8; ++i)
         park.guest({ 1, 0 });
     auto& r = park.world().registry;
-    std::size_t most = 0;
+    usize most = 0;
     entt::entity firing = entt::null;
-    for (std::int32_t t = 0; t < 3000; ++t)
+    for (i32 t = 0; t < 3000; ++t)
     {
         park.run(1);
-        std::size_t now = 0;
+        usize now = 0;
         for (const auto [g, linger] : r.view<const Linger>().each())
             if (linger.at == PathItemKind::WaterCannon)
             {
@@ -383,12 +384,12 @@ TEST_CASE("a water cannon's firer sprays no one behind it, but aims about in fro
 TEST_CASE("a water cannon turns only so far to either side of where it points at rest")
 {
     CHECK(cannon_turn(0, { 0, 1 }, 1).value() == doctest::Approx(0));
-    CHECK(cannon_turn(0, { 1, 1 }, 1).value() == doctest::Approx(glm::pi<float>() / 4));
-    CHECK(cannon_turn(0, { -1, 1 }, 1).value() == doctest::Approx(-glm::pi<float>() / 4));
+    CHECK(cannon_turn(0, { 1, 1 }, 1).value() == doctest::Approx(glm::pi<f32>() / 4));
+    CHECK(cannon_turn(0, { -1, 1 }, 1).value() == doctest::Approx(-glm::pi<f32>() / 4));
     CHECK_FALSE(cannon_turn(0, { 1, 0 }, 1).has_value());
     CHECK_FALSE(cannon_turn(0, { 0, -1 }, 1).has_value());
     // Across the half turn: pointing nearly backwards round the circle, a little turn reaches it.
-    CHECK(cannon_turn(3, { std::sin(-3.0f), std::cos(-3.0f) }, 1).value() == doctest::Approx(2 * glm::pi<float>() - 6));
+    CHECK(cannon_turn(3, { std::sin(-3.0f), std::cos(-3.0f) }, 1).value() == doctest::Approx(2 * glm::pi<f32>() - 6));
 }
 
 TEST_CASE("a party stops together at a view and likes it with scenery round it, or folds its arms at a bare one")
@@ -399,8 +400,8 @@ TEST_CASE("a party stops together at a view and likes it with scenery round it, 
         park.path({ 0, 0 }, { 1, 0 });
         park.item(PathItemKind::PhotoSpot, { 0, 0 });
         std::vector<rct3::save::model::PlacedObject> trees;
-        for (std::int32_t i = 0; i < 30; ++i)
-            trees.push_back({ .id = static_cast<std::uint64_t>(i + 1), .col = i % 2, .row = 1 });
+        for (i32 i = 0; i < 30; ++i)
+            trees.push_back({ .id = static_cast<u64>(i + 1), .col = i % 2, .row = 1 });
         import_scenery(park.world(), trees, [&](const rct3::save::model::PlacedObject&) { return planted ? 1.0f : 0.0f; });
         const auto leader = park.guest({ 1, 0 });
         const auto friend_ = park.guest({ 1, 0 });
@@ -442,21 +443,21 @@ TEST_CASE("every guest at a passport post they have no stamp from has it stamped
 
 TEST_CASE("with enough stamps a guest is given the park's passport gift, paid for by the park, unless it cannot pay")
 {
-    for (const std::int64_t cash : { 1000, 100 })
+    for (const i64 cash : { 1000, 100 })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 1, 0 });
         auto& r = park.world().registry;
-        for (const std::int32_t col : { 0, 1 })
-            r.get<PathItem>(park.item(PathItemKind::PassportPost, { col, 0 })).object = static_cast<std::uint64_t>(col + 1);
+        for (const i32 col : { 0, 1 })
+            r.get<PathItem>(park.item(PathItemKind::PassportPost, { col, 0 })).object = static_cast<u64>(col + 1);
         r.ctx().emplace<PassportRules>(PassportRules { .stamps_for_gift = 2, .gift_cost = { 150 }, .park_cash = units::Money { cash } });
         const auto g = park.guest({ 1, 0 }, { .happiness = 0.5f });
         CHECK(park.run_until([&] { return r.all_of<Passport>(g) && r.get<Passport>(g).stamps.size() == 2; }, 600));
         const auto* supplies = r.ctx().find<Supplies>();
-        const std::int64_t paid = supplies != nullptr ? supplies->paid[std::to_underlying(park::LedgerLine::ShopStock)].value : 0;
+        const i64 paid = supplies != nullptr ? supplies->paid[std::to_underlying(park::LedgerLine::ShopStock)].value : 0;
         CHECK(r.get<Passport>(g).gift == (cash == 1000));
         // Posts with no colour of their own ink in one, opaque.
-        CHECK((static_cast<std::uint32_t>(r.get<Passport>(g).stamps[0].colour) >> 24U) == 255);
+        CHECK((static_cast<u32>(r.get<Passport>(g).stamps[0].colour) >> 24U) == 255);
         CHECK(paid == (cash == 1000 ? 150 : 0));
     }
 }

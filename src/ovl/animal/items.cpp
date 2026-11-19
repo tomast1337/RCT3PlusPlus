@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/animal/items.hpp"
 
+#include "core/types.hpp"
 #include "ovl/item_record.hpp"
 
 namespace rct3::ovl::animal
@@ -10,16 +11,16 @@ namespace rct3::ovl::animal
     {
 
         constexpr std::string_view kShelterTag = "asd";
-        constexpr std::size_t kShelterSize = 0x14; // up to and including the hut
-        constexpr std::size_t kShelterHut = 0x10;
+        constexpr usize kShelterSize = 0x14; // up to and including the hut
+        constexpr usize kShelterHut = 0x10;
 
         constexpr std::string_view kToyTag = "wai";
-        constexpr std::size_t kToySize = 0x58; // up to and including the description
-        constexpr std::size_t kToyShape = 0x14;
-        constexpr std::size_t kToyPrice = 0x1C;
-        constexpr std::size_t kToyIcon = 0x38;
-        constexpr std::size_t kToyName = 0x3C;
-        constexpr std::size_t kToyDescription = 0x54;
+        constexpr usize kToySize = 0x58; // up to and including the description
+        constexpr usize kToyShape = 0x14;
+        constexpr usize kToyPrice = 0x1C;
+        constexpr usize kToyIcon = 0x38;
+        constexpr usize kToyName = 0x3C;
+        constexpr usize kToyDescription = 0x54;
 
         template<typename Read> void each_item(const Overlay& overlay, const Part& part, std::string_view tag, Read read)
         {
@@ -40,7 +41,7 @@ namespace rct3::ovl::animal
     std::vector<ShelterItem> read_shelters(const Overlay& overlay, const Part& part)
     {
         std::vector<ShelterItem> items;
-        each_item(overlay, part, kShelterTag, [&](std::string_view name, const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t at) {
+        each_item(overlay, part, kShelterTag, [&](std::string_view name, const AddressSpace& space, const ReferenceIndex& refs, u32 at) {
             if (const auto record = ItemRecord::open(space, refs, at, kShelterSize))
                 items.push_back({ name, record->ref(0, "sid"), record->ref(kShelterHut, "sid") });
         });
@@ -50,7 +51,7 @@ namespace rct3::ovl::animal
     std::vector<AnimalToyItem> read_animal_toys(const Overlay& overlay, const Part& part)
     {
         std::vector<AnimalToyItem> items;
-        each_item(overlay, part, kToyTag, [&](std::string_view name, const AddressSpace& space, const ReferenceIndex& refs, std::uint32_t at) {
+        each_item(overlay, part, kToyTag, [&](std::string_view name, const AddressSpace& space, const ReferenceIndex& refs, u32 at) {
             AnimalToyItem item { name, std::nullopt };
             if (const auto record = ItemRecord::open(space, refs, at, kToySize))
                 item.toy = AnimalToy { record->ref(kToyName, "txt"), record->ref(kToyDescription, "txt"), record->ref(kToyIcon, "gsi"), record->ref(kToyShape, "shs"), record->read_i32(kToyPrice) };

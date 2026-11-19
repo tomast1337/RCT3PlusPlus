@@ -8,6 +8,7 @@
 // The window knows nothing of the park: the owner names the rows, reads which are on and fills the map.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/screens/map/canvas.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/window.hpp"
@@ -25,12 +26,12 @@ namespace rct3::ui::screens::map
         MapCanvasStyle canvas;
         Point size { 640, 500 };     ///< At first: about square for the map
         Point min_size { 460, 420 }; ///< Room for the whole legend
-        float legend_width = 170;
-        float gap = 8; ///< Between the map and the legend
-        float row_height = 20;
-        float group_gap = 8; ///< Above a row that starts a group
-        float swatch = 12;
-        float swatch_gap = 8;
+        f32 legend_width = 170;
+        f32 gap = 8; ///< Between the map and the legend
+        f32 row_height = 20;
+        f32 group_gap = 8; ///< Above a row that starts a group
+        f32 swatch = 12;
+        f32 swatch_gap = 8;
         font::FontRole font = font::FontRole::Small;
         Color text = hex("#1b1b1b");
         Color text_off = hex("#1b1b1b70");
@@ -49,7 +50,7 @@ namespace rct3::ui::screens::map
     };
 
     /// Where the legend's rows go, from the top of the legend: each row's top.
-    [[nodiscard]] std::vector<float> legend_tops(const MapPanelStyle& style, const std::vector<MapLegendEntry>& entries);
+    [[nodiscard]] std::vector<f32> legend_tops(const MapPanelStyle& style, const std::vector<MapLegendEntry>& entries);
 
     class MapLegendRow;
 
@@ -63,8 +64,8 @@ namespace rct3::ui::screens::map
             return *canvas_;
         }
         /// Whether the layer of row `index` is shown.
-        [[nodiscard]] bool shown(std::size_t index) const;
-        [[nodiscard]] std::size_t size() const
+        [[nodiscard]] bool shown(usize index) const;
+        [[nodiscard]] usize size() const
         {
             return rows_.size();
         }

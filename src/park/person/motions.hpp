@@ -9,6 +9,8 @@
 // the start and end of a cheer.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -21,17 +23,17 @@ namespace rct3::park::person
     /// Numbers of a few motions the game picks on its own.
     namespace motion
     {
-        inline constexpr std::int32_t kWalk = 0;
-        inline constexpr std::int32_t kIdle = 35;
+        inline constexpr i32 kWalk = 0;
+        inline constexpr i32 kIdle = 35;
     } // namespace motion
 
     /// The number of the motion named `name`, whatever its case. Nothing for a name not in the table.
-    [[nodiscard]] std::optional<std::int32_t> motion_number(std::string_view name);
+    [[nodiscard]] std::optional<i32> motion_number(std::string_view name);
 
     /// A motion's number and one of its names.
     struct NamedMotion
     {
-        std::int32_t number = 0;
+        i32 number = 0;
         std::string_view name { };
     };
 
@@ -43,38 +45,38 @@ namespace rct3::park::person
     /// motion for are its riding one.
     struct RiderMotions
     {
-        std::int32_t ride = 0;
-        std::int32_t wait = 0;
-        std::int32_t hands_up = 0;
-        std::int32_t cover_eyes = 0;
-        std::int32_t strained = 0;
+        i32 ride = 0;
+        i32 wait = 0;
+        i32 hands_up = 0;
+        i32 cover_eyes = 0;
+        i32 strained = 0;
         /// Played once on raising their hands or covering their eyes and on bringing them down; nothing where
         /// the seating has none.
-        std::optional<std::int32_t> hands_up_in { };
-        std::optional<std::int32_t> hands_up_out { };
-        std::optional<std::int32_t> cover_eyes_in { };
-        std::optional<std::int32_t> cover_eyes_out { };
+        std::optional<i32> hands_up_in { };
+        std::optional<i32> hands_up_out { };
+        std::optional<i32> cover_eyes_in { };
+        std::optional<i32> cover_eyes_out { };
     };
 
     /// A motion and a length of time: how long it plays, or how far into it.
     struct Clip
     {
-        std::int32_t motion = 0;
-        float seconds = 0;
+        i32 motion = 0;
+        f32 seconds = 0;
     };
 
     /// Of `clips` played in turn, each for its time and the last for good, the one playing `since` seconds after
     /// the first began and how far into it. `clips` must not be empty.
-    [[nodiscard]] Clip clip_at(std::span<const Clip> clips, float since);
+    [[nodiscard]] Clip clip_at(std::span<const Clip> clips, f32 since);
 
     /// The motions of riders seated as `seating` says (a ride car's or a flat ride's seating number); nothing for a seating
     /// not known.
-    [[nodiscard]] std::optional<RiderMotions> rider_motions(std::uint8_t seating);
+    [[nodiscard]] std::optional<RiderMotions> rider_motions(u8 seating);
 
-    inline constexpr std::uint8_t kSlideBodySeating = 30; ///< A body slide's rider, lying on their back
-    inline constexpr std::uint8_t kSlideRingSeating = 31; ///< A ring slide's rider, sitting in the ring
+    inline constexpr u8 kSlideBodySeating = 30; ///< A body slide's rider, lying on their back
+    inline constexpr u8 kSlideRingSeating = 31; ///< A ring slide's rider, sitting in the ring
 
     /// Whether motion `number` starts again from the beginning once it ends.
-    [[nodiscard]] bool motion_repeats(std::int32_t number);
+    [[nodiscard]] bool motion_repeats(i32 number);
 
 } // namespace rct3::park::person

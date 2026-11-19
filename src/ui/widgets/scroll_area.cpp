@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/scroll_area.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 
 namespace rct3::ui::widgets
@@ -24,7 +26,7 @@ namespace rct3::ui::widgets
             return reach;
         }
 
-        float thickness(const ScrollBar* bar)
+        f32 thickness(const ScrollBar* bar)
         {
             return bar != nullptr ? bar->style().thickness : 0;
         }
@@ -44,8 +46,8 @@ namespace rct3::ui::widgets
             horizontal_ = &add<ScrollBar>("horizontal", std::move(*horizontal), Orientation::Horizontal);
 
         // The bars leave the bottom-right corner to each other.
-        const float across_v = thickness(vertical_);
-        const float across_h = thickness(horizontal_);
+        const f32 across_v = thickness(vertical_);
+        const f32 across_h = thickness(horizontal_);
         if (vertical_ != nullptr)
             vertical_->placement = { { 1, 0, 1, 1 }, { -across_v, 0, 0, -across_h } };
         if (horizontal_ != nullptr)
@@ -72,8 +74,8 @@ namespace rct3::ui::widgets
             along = horizontal_;
         if (along == nullptr || along->range() <= 0)
             return false;
-        const float step = along->style().step;
-        const float page = std::max(step, along->visible - step);
+        const f32 step = along->style().step;
+        const f32 page = std::max(step, along->visible - step);
         switch (key.key)
         {
             case Key::Up:
@@ -126,7 +128,7 @@ namespace rct3::ui::widgets
         Placement& p = content_->placement;
         if (horizontal_ != nullptr)
         {
-            const float x = -horizontal_->position;
+            const f32 x = -horizontal_->position;
             p.anchors.x0 = 0;
             p.anchors.x1 = 0;
             p.offsets.x0 = x;
@@ -140,7 +142,7 @@ namespace rct3::ui::widgets
             p.offsets.x1 = 0;
         }
         // Vertically the content keeps the view's height; children below it are what scrolls.
-        const float y = vertical_ != nullptr ? -vertical_->position : 0;
+        const f32 y = vertical_ != nullptr ? -vertical_->position : 0;
         p.anchors.y0 = 0;
         p.anchors.y1 = 1;
         p.offsets.y0 = y;

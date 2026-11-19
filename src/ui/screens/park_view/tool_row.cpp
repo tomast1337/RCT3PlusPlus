@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/park_view/tool_row.hpp"
 
+#include "core/types.hpp"
 #include "ui/screens/park_view/tool_menus.hpp"
 
 #include <algorithm>
@@ -17,8 +18,8 @@ namespace rct3::ui::screens::park_view
         constexpr std::string_view kQuitHelp = "File_QuitHelp";
         constexpr std::string_view kCareerHelp = "File_CareerMapHelp";
 
-        constexpr float kSmallestStep = 16;
-        constexpr std::size_t kGapAfter = static_cast<std::size_t>(ParkTool::Management); ///< Half a step after it
+        constexpr f32 kSmallestStep = 16;
+        constexpr usize kGapAfter = static_cast<usize>(ParkTool::Management); ///< Half a step after it
 
         std::u16string help(const StringTable& strings, std::string_view icon)
         {
@@ -37,10 +38,10 @@ namespace rct3::ui::screens::park_view
         }
     } // namespace
 
-    float tool_row_step(float width)
+    f32 tool_row_step(f32 width)
     {
         // The buttons and the half step's gap, inside the margins.
-        const float steps = static_cast<float>(kParkToolCount) + 0.5f;
+        const f32 steps = static_cast<f32>(kParkToolCount) + 0.5f;
         return std::clamp((width - 2 * tool_row::kMargin) / steps, kSmallestStep, tool_row::kButtonSize);
     }
 
@@ -54,7 +55,7 @@ namespace rct3::ui::screens::park_view
         // Each tool holds its button and its menu's items, named by their icons, so a widget path such as
         // "tools/View/Land_People" leads to the tool and to the item's line in its menu table.
         static constexpr std::array<std::string_view, kParkToolCount> kToolNames = { "Delete", "Land", "Paths", "Scenery", "Shops", "Rides", "Management", "Leave", "Files", "View", "Map" };
-        for (std::size_t i = 0; i < buttons_.size(); ++i)
+        for (usize i = 0; i < buttons_.size(); ++i)
         {
             // Covers the row and lets the pointer through, as the row does.
             Widget& group = add<Widget>(std::string(kToolNames[i]));
@@ -141,25 +142,25 @@ namespace rct3::ui::screens::park_view
     void ToolRow::place_menu(ParkTool tool)
     {
         const widgets::Button& under = button(tool);
-        const float step = under.placement.offsets.x1 - under.placement.offsets.x0;
-        const float middle = (under.placement.offsets.x0 + under.placement.offsets.x1) / 2;
-        const float first = tool_row::kMargin + step + tool_row::kItemGap;
-        const float width = rect().width();
-        const auto count = static_cast<std::size_t>(std::ranges::count_if(items_, [&](const MenuItem& m) { return m.tool == tool && !m.under; }));
+        const f32 step = under.placement.offsets.x1 - under.placement.offsets.x0;
+        const f32 middle = (under.placement.offsets.x0 + under.placement.offsets.x1) / 2;
+        const f32 first = tool_row::kMargin + step + tool_row::kItemGap;
+        const f32 width = rect().width();
+        const auto count = static_cast<usize>(std::ranges::count_if(items_, [&](const MenuItem& m) { return m.tool == tool && !m.under; }));
         // A row centred over the button and kept on the screen; one too wide for it goes on in another row above.
-        const float room = width - 2 * tool_row::kMargin - (tool_row::kItemStep - tool_row::kItemWidth);
-        const std::size_t fit = std::max<std::size_t>(1, static_cast<std::size_t>(std::floor(room / tool_row::kItemStep)));
-        std::size_t i = 0;
+        const f32 room = width - 2 * tool_row::kMargin - (tool_row::kItemStep - tool_row::kItemWidth);
+        const usize fit = std::max<usize>(1, static_cast<usize>(std::floor(room / tool_row::kItemStep)));
+        usize i = 0;
         for (MenuItem& m : items_)
         {
             if (m.tool != tool || m.under)
                 continue;
-            const std::size_t line = i / fit;
-            const std::size_t in_line = std::min(fit, count - line * fit);
-            const float span = tool_row::kItemStep * static_cast<float>(in_line - 1) + tool_row::kItemWidth;
-            const float left = std::clamp(middle - span / 2, tool_row::kMargin, std::max(tool_row::kMargin, width - tool_row::kMargin - span));
-            const float x = left + tool_row::kItemStep * static_cast<float>(i % fit);
-            const float y = first + tool_row::kItemStep * static_cast<float>(line);
+            const usize line = i / fit;
+            const usize in_line = std::min(fit, count - line * fit);
+            const f32 span = tool_row::kItemStep * static_cast<f32>(in_line - 1) + tool_row::kItemWidth;
+            const f32 left = std::clamp(middle - span / 2, tool_row::kMargin, std::max(tool_row::kMargin, width - tool_row::kMargin - span));
+            const f32 x = left + tool_row::kItemStep * static_cast<f32>(i % fit);
+            const f32 y = first + tool_row::kItemStep * static_cast<f32>(line);
             m.x = std::floor(x);
             m.bottom = y;
             m.button->placement = bottom_left(m.x, y, tool_row::kItemWidth, tool_row::kItemHeight);
@@ -172,16 +173,16 @@ namespace rct3::ui::screens::park_view
     {
         // A row centred over the item, a step above it, kept on the screen.
         const MenuItem& over = find(item);
-        const float middle = over.x + tool_row::kItemWidth / 2;
-        const auto count = static_cast<std::size_t>(std::ranges::count(items_, std::optional(item), &MenuItem::under));
-        const float span = tool_row::kItemStep * static_cast<float>(count - 1) + tool_row::kItemWidth;
-        const float left = std::clamp(middle - span / 2, tool_row::kMargin, std::max(tool_row::kMargin, rect().width() - tool_row::kMargin - span));
-        std::size_t i = 0;
+        const f32 middle = over.x + tool_row::kItemWidth / 2;
+        const auto count = static_cast<usize>(std::ranges::count(items_, std::optional(item), &MenuItem::under));
+        const f32 span = tool_row::kItemStep * static_cast<f32>(count - 1) + tool_row::kItemWidth;
+        const f32 left = std::clamp(middle - span / 2, tool_row::kMargin, std::max(tool_row::kMargin, rect().width() - tool_row::kMargin - span));
+        usize i = 0;
         for (MenuItem& m : items_)
         {
             if (m.under != item)
                 continue;
-            m.button->placement = bottom_left(std::floor(left + tool_row::kItemStep * static_cast<float>(i++)), over.bottom + tool_row::kItemStep, tool_row::kItemWidth, tool_row::kItemHeight);
+            m.button->placement = bottom_left(std::floor(left + tool_row::kItemStep * static_cast<f32>(i++)), over.bottom + tool_row::kItemStep, tool_row::kItemWidth, tool_row::kItemHeight);
             m.button->visible = true;
         }
     }
@@ -189,16 +190,16 @@ namespace rct3::ui::screens::park_view
     void ToolRow::set_career(bool career)
     {
         widgets::Button& leave = button(ParkTool::Leave);
-        leave.icon = career ? style_.career_leave_icon : style_.icons[static_cast<std::size_t>(ParkTool::Leave)];
+        leave.icon = career ? style_.career_leave_icon : style_.icons[static_cast<usize>(ParkTool::Leave)];
         leave.tooltip = strings_.get(career ? kCareerHelp : kQuitHelp);
     }
 
-    void ToolRow::place(float width)
+    void ToolRow::place(f32 width)
     {
-        const float step = tool_row_step(width);
-        const float span = step * (static_cast<float>(kParkToolCount) + 0.5f);
-        float x = std::floor((width - span) / 2);
-        for (std::size_t i = 0; i < buttons_.size(); ++i)
+        const f32 step = tool_row_step(width);
+        const f32 span = step * (static_cast<f32>(kParkToolCount) + 0.5f);
+        f32 x = std::floor((width - span) / 2);
+        for (usize i = 0; i < buttons_.size(); ++i)
         {
             buttons_[i]->placement = bottom_left(x, tool_row::kMargin, step, step);
             buttons_[i]->icon_scale = step / tool_row::kButtonSize;
@@ -211,7 +212,7 @@ namespace rct3::ui::screens::park_view
 
     void ToolRow::update(const UpdateContext&)
     {
-        if (const float width = rect().width(); width != placed_for_)
+        if (const f32 width = rect().width(); width != placed_for_)
         {
             place(width);
             if (open_)
@@ -219,7 +220,7 @@ namespace rct3::ui::screens::park_view
             if (sub_open_)
                 place_submenu(*sub_open_);
         }
-        for (std::size_t i = 0; i < buttons_.size(); ++i)
+        for (usize i = 0; i < buttons_.size(); ++i)
         {
             if (!buttons_[i]->take_click())
                 continue;

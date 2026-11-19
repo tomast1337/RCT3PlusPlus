@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/picker.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -47,7 +48,7 @@ namespace
         }
     };
 
-    PickerRow row(std::u16string name, std::size_t item, std::vector<PickerRow> children = { })
+    PickerRow row(std::u16string name, usize item, std::vector<PickerRow> children = { })
     {
         PickerRow r;
         r.name = std::move(name);
@@ -136,12 +137,12 @@ TEST_CASE("a locked row is not picked")
 TEST_CASE("the items fill as many columns as the panel is wide")
 {
     std::vector<PickerRow> rows;
-    for (std::size_t i = 0; i < 9; ++i)
+    for (usize i = 0; i < 9; ++i)
         rows.push_back(row(u"Item", i));
     Fixture f(std::move(rows));
     f.step();
     const auto& tiles = f.picker->rows();
-    const auto columns = static_cast<std::size_t>(tiles[0]->parent()->rect().width() / build_picker::kTile);
+    const auto columns = static_cast<usize>(tiles[0]->parent()->rect().width() / build_picker::kTile);
     REQUIRE(columns >= 2);
     CHECK(tiles[columns - 1]->rect().y0 == tiles[0]->rect().y0);
     CHECK(tiles[columns]->rect().x0 == tiles[0]->rect().x0);
@@ -271,7 +272,7 @@ TEST_CASE("theme filters too many for the window's width wrap onto more rows, th
 {
     std::vector<PickerRow> rows;
     std::vector<PickerTheme> themes;
-    for (std::size_t i = 0; i < 20; ++i)
+    for (usize i = 0; i < 20; ++i)
     {
         PickerTheme t { std::format("Theme{}", i), u"Theme" };
         PickerRow r = row(u"Thing", i);
@@ -281,7 +282,7 @@ TEST_CASE("theme filters too many for the window's width wrap onto more rows, th
     }
     Fixture f(std::move(rows), std::move(themes));
     const Rect body = f.picker->content().rect();
-    float bottom = 0;
+    f32 bottom = 0;
     for (const Button* b : f.picker->filters())
     {
         CHECK(b->rect().x1 <= body.x1);
@@ -293,7 +294,7 @@ TEST_CASE("theme filters too many for the window's width wrap onto more rows, th
     f.picker->placement = top_left(10, 10, 2 * build_picker::kWidth, build_picker::kHeight);
     f.step();
     f.step();
-    float wide_bottom = 0;
+    f32 wide_bottom = 0;
     for (const Button* b : f.picker->filters())
         wide_bottom = std::max(wide_bottom, b->rect().y1);
     CHECK(wide_bottom < bottom);

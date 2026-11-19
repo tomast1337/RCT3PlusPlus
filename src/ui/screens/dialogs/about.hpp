@@ -17,6 +17,7 @@
 // The layout is ours, after the game's.
 #pragma once
 
+#include "core/types.hpp"
 #include "random/generator.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
@@ -37,7 +38,7 @@ namespace rct3::ui::screens::dialogs
     /// One line of the rolling credits.
     struct CreditLine
     {
-        enum class Kind : std::uint8_t
+        enum class Kind : u8
         {
             Heading, ///< A pack's name, or the game's, over its credits
             Role,
@@ -46,13 +47,13 @@ namespace rct3::ui::screens::dialogs
         std::u16string text;
         Kind kind = Kind::Name;
         Align align = Align::Start; ///< Which edge the line is moved in from; Centre for headings
-        float inset = 0;            ///< From that edge, as a fraction of the roll's width
-        std::int32_t gaps = 0;      ///< Credit gaps above the line
-        std::int32_t row = 0;       ///< Lines above the line
+        f32 inset = 0;              ///< From that edge, as a fraction of the roll's width
+        i32 gaps = 0;               ///< Credit gaps above the line
+        i32 row = 0;                ///< Lines above the line
     };
 
     /// Which add-on packs are installed, by the game's numbering (0 and 1).
-    using AddOnPacks = std::vector<std::int32_t>;
+    using AddOnPacks = std::vector<i32>;
 
     /// The game's name and the copyright lines, as the info page shows them.
     [[nodiscard]] std::vector<std::u16string> about_info_lines(const StringTable& strings);
@@ -62,39 +63,39 @@ namespace rct3::ui::screens::dialogs
 
     /// Every credit line in order: the packs in `packs` that have credits, newest first, then the base game.
     /// The insets come from `random`.
-    [[nodiscard]] std::vector<CreditLine> credit_lines(const StringTable& strings, std::span<const std::int32_t> packs, random::RandomState& random);
+    [[nodiscard]] std::vector<CreditLine> credit_lines(const StringTable& strings, std::span<const i32> packs, random::RandomState& random);
 
     struct AboutWindowStyle
     {
         widgets::WindowStyle window;
         std::string icon;         ///< In the window's corner and on the info tab
         std::string credits_icon; ///< On the credits tab
-        float page_width = 530;
-        float page_height = 250;
-        float tab_size = 20; ///< The tab pictures are drawn this big, half their own size
-        float tab_bar_height = 22;
-        float caption_x = 59; ///< Right of the window's icon, under the title
-        float caption_width = 280;
+        f32 page_width = 530;
+        f32 page_height = 250;
+        f32 tab_size = 20; ///< The tab pictures are drawn this big, half their own size
+        f32 tab_bar_height = 22;
+        f32 caption_x = 59; ///< Right of the window's icon, under the title
+        f32 caption_width = 280;
         font::FontRole caption_font = font::FontRole::Small;
         Color caption_colour = hex("#2484be");
         font::FontRole title_font = font::FontRole::Medium; ///< Of the game's name on the info page
         font::FontRole font = font::FontRole::Small;
         Color text_colour = hex("#000000");
         Color role_colour = hex("#2484be");
-        float line_gap = 5;    ///< Between the info page's lines
-        float credit_gap = 25; ///< Above each credit
+        f32 line_gap = 5;    ///< Between the info page's lines
+        f32 credit_gap = 25; ///< Above each credit
         units::PixelPace roll_speed { 40 };
-        float fast_factor = 3;    ///< While the pointer holds the roll down
-        float most_inset = 0.35f; ///< Of the width: the furthest a credit is moved in from its edge
+        f32 fast_factor = 3;    ///< While the pointer holds the roll down
+        f32 most_inset = 0.35f; ///< Of the width: the furthest a credit is moved in from its edge
     };
 
-    enum class AboutPage : std::uint8_t
+    enum class AboutPage : u8
     {
         Info,
         Credits,
         Count_,
     };
-    inline constexpr std::size_t kAboutPageCount = static_cast<std::size_t>(AboutPage::Count_);
+    inline constexpr usize kAboutPageCount = static_cast<usize>(AboutPage::Count_);
 
     /// The credits, rolling within their rectangle.
     class CreditsScroller : public Widget
@@ -103,7 +104,7 @@ namespace rct3::ui::screens::dialogs
         CreditsScroller(std::string name, std::vector<CreditLine> lines, const AboutWindowStyle& style);
 
         /// How far the roll has moved up, in units.
-        [[nodiscard]] float offset() const
+        [[nodiscard]] f32 offset() const
         {
             return offset_;
         }
@@ -113,7 +114,7 @@ namespace rct3::ui::screens::dialogs
             offset_ = 0;
         }
         /// From the top of the first line to the bottom of the last, in units; 0 before the first update.
-        [[nodiscard]] float length() const
+        [[nodiscard]] f32 length() const
         {
             return length_;
         }
@@ -131,12 +132,12 @@ namespace rct3::ui::screens::dialogs
         void draw(DrawContext& context) const override;
 
     private:
-        [[nodiscard]] float line_y(const CreditLine& line, float line_height) const;
+        [[nodiscard]] f32 line_y(const CreditLine& line, f32 line_height) const;
 
         std::vector<CreditLine> lines_;
         AboutWindowStyle style_;
-        float offset_ = 0;
-        float length_ = 0;
+        f32 offset_ = 0;
+        f32 length_ = 0;
     };
 
     class GameInfoBox : public widgets::Window
@@ -152,7 +153,7 @@ namespace rct3::ui::screens::dialogs
 
         [[nodiscard]] widgets::Button& tab(AboutPage page) const
         {
-            return *tabs_.at(static_cast<std::size_t>(page));
+            return *tabs_.at(static_cast<usize>(page));
         }
         [[nodiscard]] const widgets::Label& caption() const
         {
@@ -181,7 +182,7 @@ namespace rct3::ui::screens::dialogs
         widgets::Label* caption_ = nullptr;
         std::vector<widgets::Label*> info_;
         CreditsScroller* credits_ = nullptr;
-        float info_height_ = 0; // Of the info page's lines, as of the last update
+        f32 info_height_ = 0; // Of the info page's lines, as of the last update
         AboutPage page_ = AboutPage::Info;
     };
 

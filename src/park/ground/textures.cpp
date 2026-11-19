@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ground/textures.hpp"
 
+#include "core/types.hpp"
 #include "ovl/flexi_texture.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/terrain_type.hpp"
@@ -31,7 +32,7 @@ namespace rct3::park::ground
         return terrain_type.starts_with(kCliffPrefix) ? GroundPaint::Cliff : GroundPaint::Surface;
     }
 
-    std::string ground_key(GroundPaint paint, std::uint8_t index)
+    std::string ground_key(GroundPaint paint, u8 index)
     {
         switch (paint)
         {
@@ -58,13 +59,13 @@ namespace rct3::park::ground
         return std::format("Path/{0}/{0}_Texture.common.ovl", style);
     }
 
-    std::expected<std::size_t, std::string> add_path_images(GroundImages& images, const std::filesystem::path& path, std::string_view style, std::uint8_t index)
+    std::expected<usize, std::string> add_path_images(GroundImages& images, const std::filesystem::path& path, std::string_view style, u8 index)
     {
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
             return std::unexpected(std::string(ovl::to_string(overlay.error())));
         const ovl::texture::TexturePixels pixels = ovl::texture::TexturePixels::index(*overlay);
-        std::size_t missing = 2;
+        usize missing = 2;
         for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
@@ -115,11 +116,11 @@ namespace rct3::park::ground
         return std::format("Queue/{0}/{0}_Texture.common.ovl", style);
     }
 
-    std::optional<std::size_t> queue_picture(std::span<const std::string_view> names, std::string_view style)
+    std::optional<usize> queue_picture(std::span<const std::string_view> names, std::string_view style)
     {
         const std::string named = std::format("Ground{}", style);
-        std::optional<std::size_t> chosen;
-        for (std::size_t i = 0; i < names.size(); ++i)
+        std::optional<usize> chosen;
+        for (usize i = 0; i < names.size(); ++i)
         {
             const std::string_view n = names[i];
             if (n.size() >= kMaskEnding.size() && strings::equals_ignoring_case(n.substr(n.size() - kMaskEnding.size()), kMaskEnding))
@@ -136,11 +137,11 @@ namespace rct3::park::ground
     {
         if (mask.width != picture.width || mask.height != picture.height || mask.indices.size() * 4 != picture.pixels.size())
             return;
-        for (std::size_t i = 0; i < mask.indices.size(); ++i)
-            picture.pixels[i * 4 + 3] = static_cast<std::uint8_t>(picture.pixels[i * 4 + 3] * mask.palette[mask.indices[i]].r / 255);
+        for (usize i = 0; i < mask.indices.size(); ++i)
+            picture.pixels[i * 4 + 3] = static_cast<u8>(picture.pixels[i * 4 + 3] * mask.palette[mask.indices[i]].r / 255);
     }
 
-    std::expected<bool, std::string> add_queue_image(GroundImages& images, const std::filesystem::path& path, const QueuePainting& painting, std::uint8_t index)
+    std::expected<bool, std::string> add_queue_image(GroundImages& images, const std::filesystem::path& path, const QueuePainting& painting, u8 index)
     {
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
@@ -171,7 +172,7 @@ namespace rct3::park::ground
         const auto mask = std::ranges::find_if(names, [&](std::string_view n) { return strings::equals_ignoring_case(n, mask_name); });
         if (mask != names.end())
         {
-            const ovl::FlexiTexture& texture = *items[static_cast<std::size_t>(mask - names.begin())].texture;
+            const ovl::FlexiTexture& texture = *items[static_cast<usize>(mask - names.begin())].texture;
             if (const auto grey = palette_image(texture.frames.front(), 0))
                 apply_queue_mask(painted, *grey);
         }
@@ -188,29 +189,29 @@ namespace rct3::park::ground
     {
         ovl::texture::RgbaImage cut_out(const ovl::texture::RgbaImage& from, const PictureRegion& region)
         {
-            const auto at = [&](float share, std::uint32_t side) { return std::min(side, static_cast<std::uint32_t>(share * static_cast<float>(side))); };
-            const std::uint32_t left = at(region.left, from.width);
-            const std::uint32_t top = at(region.top, from.height);
+            const auto at = [&](f32 share, u32 side) { return std::min(side, static_cast<u32>(share * static_cast<f32>(side))); };
+            const u32 left = at(region.left, from.width);
+            const u32 top = at(region.top, from.height);
             ovl::texture::RgbaImage out;
             out.width = std::max(at(region.right, from.width), left + 1) - left;
             out.height = std::max(at(region.bottom, from.height), top + 1) - top;
-            out.pixels.reserve(std::size_t { out.width } * out.height * 4);
-            for (std::uint32_t y = 0; y < out.height; ++y)
+            out.pixels.reserve(usize { out.width } * out.height * 4);
+            for (u32 y = 0; y < out.height; ++y)
             {
-                const std::size_t row = (std::size_t { std::min(top + y, from.height - 1) } * from.width + left) * 4;
-                out.pixels.insert(out.pixels.end(), from.pixels.begin() + static_cast<std::ptrdiff_t>(row), from.pixels.begin() + static_cast<std::ptrdiff_t>(row + std::size_t { out.width } * 4));
+                const usize row = (usize { std::min(top + y, from.height - 1) } * from.width + left) * 4;
+                out.pixels.insert(out.pixels.end(), from.pixels.begin() + static_cast<std::ptrdiff_t>(row), from.pixels.begin() + static_cast<std::ptrdiff_t>(row + usize { out.width } * 4));
             }
             return out;
         }
 
-        std::array<float, 3> mean_colour(const ovl::texture::RgbaImage& image)
+        std::array<f32, 3> mean_colour(const ovl::texture::RgbaImage& image)
         {
-            std::array<double, 3> sum { };
-            for (std::size_t i = 0; i + 3 < image.pixels.size(); i += 4)
-                for (std::size_t c = 0; c < 3; ++c)
+            std::array<f64, 3> sum { };
+            for (usize i = 0; i + 3 < image.pixels.size(); i += 4)
+                for (usize c = 0; c < 3; ++c)
                     sum[c] += image.pixels[i + c];
-            const double count = std::max<double>(1, static_cast<double>(image.pixels.size() / 4));
-            return { static_cast<float>(sum[0] / count), static_cast<float>(sum[1] / count), static_cast<float>(sum[2] / count) };
+            const f64 count = std::max<f64>(1, static_cast<f64>(image.pixels.size() / 4));
+            return { static_cast<f32>(sum[0] / count), static_cast<f32>(sum[1] / count), static_cast<f32>(sum[2] / count) };
         }
     } // namespace
 
@@ -240,28 +241,28 @@ namespace rct3::park::ground
     {
         if (styles.empty())
             return;
-        std::vector<std::array<float, 3>> colours;
+        std::vector<std::array<f32, 3>> colours;
         for (const TunnelPictures& s : styles)
             colours.push_back(mean_colour(s.wall));
-        for (std::int32_t cliff = 0; cliff <= std::numeric_limits<std::uint8_t>::max(); ++cliff)
+        for (i32 cliff = 0; cliff <= std::numeric_limits<u8>::max(); ++cliff)
         {
-            const auto face = images.find(ground_key(GroundPaint::Cliff, static_cast<std::uint8_t>(cliff)));
+            const auto face = images.find(ground_key(GroundPaint::Cliff, static_cast<u8>(cliff)));
             if (face == images.end())
                 continue;
             const auto colour = mean_colour(face->second);
-            const auto distance = [&](std::size_t s) {
-                float d = 0;
-                for (std::size_t c = 0; c < 3; ++c)
+            const auto distance = [&](usize s) {
+                f32 d = 0;
+                for (usize c = 0; c < 3; ++c)
                     d += (colours[s][c] - colour[c]) * (colours[s][c] - colour[c]);
                 return d;
             };
-            const std::size_t nearest = std::ranges::min(std::views::iota(std::size_t { 0 }, styles.size()), { }, distance);
-            images.insert_or_assign(ground_key(GroundPaint::TunnelWall, static_cast<std::uint8_t>(cliff)), styles[nearest].wall);
-            images.insert_or_assign(ground_key(GroundPaint::TunnelCeiling, static_cast<std::uint8_t>(cliff)), styles[nearest].ceiling);
+            const usize nearest = std::ranges::min(std::views::iota(usize { 0 }, styles.size()), { }, distance);
+            images.insert_or_assign(ground_key(GroundPaint::TunnelWall, static_cast<u8>(cliff)), styles[nearest].wall);
+            images.insert_or_assign(ground_key(GroundPaint::TunnelCeiling, static_cast<u8>(cliff)), styles[nearest].ceiling);
         }
     }
 
-    std::expected<std::size_t, std::string> add_ground_images(GroundImages& images, const std::filesystem::path& path)
+    std::expected<usize, std::string> add_ground_images(GroundImages& images, const std::filesystem::path& path)
     {
         auto overlay = ovl::Overlay::load(path);
         if (!overlay)
@@ -280,7 +281,7 @@ namespace rct3::park::ground
             }
         }
 
-        std::size_t missing = 0;
+        usize missing = 0;
         for (const auto part : { core::maybe(&overlay->common()), overlay->unique() })
         {
             if (!part)
@@ -289,12 +290,12 @@ namespace rct3::park::ground
             {
                 const auto source = entry.terrain ? textures.find(entry.terrain->texture) : textures.end();
                 auto image = source == textures.end() ? std::nullopt : pixels.first_frame(source->second);
-                if (!image || entry.terrain->index > std::numeric_limits<std::uint8_t>::max())
+                if (!image || entry.terrain->index > std::numeric_limits<u8>::max())
                 {
                     ++missing;
                     continue;
                 }
-                images.insert_or_assign(ground_key(ground_paint(entry.name), static_cast<std::uint8_t>(entry.terrain->index)), std::move(*image));
+                images.insert_or_assign(ground_key(ground_paint(entry.name), static_cast<u8>(entry.terrain->index)), std::move(*image));
             }
         }
         return missing;
@@ -312,8 +313,8 @@ namespace rct3::park::ground
                 continue;
             for (const ovl::TerrainTypeEntry& entry : ovl::read_terrain_types(*overlay, *part))
             {
-                if (entry.terrain && ground_paint(entry.name) == paint && entry.terrain->index <= std::numeric_limits<std::uint8_t>::max())
-                    out.push_back({ static_cast<std::uint8_t>(entry.terrain->index), std::string(entry.terrain->label_name), std::string(entry.terrain->help_name) });
+                if (entry.terrain && ground_paint(entry.name) == paint && entry.terrain->index <= std::numeric_limits<u8>::max())
+                    out.push_back({ static_cast<u8>(entry.terrain->index), std::string(entry.terrain->label_name), std::string(entry.terrain->help_name) });
             }
         }
         return out;

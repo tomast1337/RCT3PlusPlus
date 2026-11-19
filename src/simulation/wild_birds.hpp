@@ -16,6 +16,7 @@
 // as time goes by.
 #pragma once
 
+#include "core/types.hpp"
 #include "random/generator.hpp"
 #include "simulation/components.hpp"
 #include "simulation/entt.hpp"
@@ -30,13 +31,13 @@
 namespace rct3::simulation
 {
 
-    enum class BirdKind : std::uint8_t
+    enum class BirdKind : u8
     {
         Duck,
         Gull,
     };
 
-    enum class BirdJob : std::uint8_t
+    enum class BirdJob : u8
     {
         Flying,    ///< In the air, on the way to `goal`
         Landing,   ///< Coming down from `from` onto `goal`
@@ -48,7 +49,7 @@ namespace rct3::simulation
     struct WildBird
     {
         BirdKind kind = BirdKind::Duck;
-        std::uint8_t palette = 0; ///< Which of its picture's colourings it wears, 0..3
+        u8 palette = 0; ///< Which of its picture's colourings it wears, 0..3
         BirdJob job = BirdJob::Flying;
         glm::vec3 goal { 0.0f }; ///< Where it is headed now: its flock's goal in the air, the spot it paddles or stands at
         glm::vec3 from { 0.0f }; ///< Where a landing or take-off began
@@ -57,14 +58,14 @@ namespace rct3::simulation
         glm::vec2 slot { 0.0f }; ///< Where it flies in its flock, sideways and behind its leader
         units::Seconds busy { }; ///< In a landing or take-off, how long it has been at it; resting, how long is left
         bool leaving = false;    ///< Flying out of the park, not to land
-        std::uint8_t visits = 0; ///< Gull: pieces of litter it has come down at
+        u8 visits = 0;           ///< Gull: pieces of litter it has come down at
     };
 
     /// What the birds fly and swim over, and where the park ends.
     struct BirdGround
     {
-        std::function<float(glm::vec2)> height;                                   ///< Of the ground, at a point across the park
-        std::function<std::optional<float>(glm::vec2)> water;                     ///< The height of the water's surface at a point, none on land
+        std::function<f32(glm::vec2)> height;                                     ///< Of the ground, at a point across the park
+        std::function<std::optional<f32>(glm::vec2)> water;                       ///< The height of the water's surface at a point, none on land
         std::function<std::optional<glm::vec2>(random::RandomState&)> water_spot; ///< A point picked at random over water; none without water
         glm::vec2 low { 0.0f };                                                   ///< The park's least corner across the park
         glm::vec2 high { 0.0f };                                                  ///< And its greatest
@@ -83,14 +84,14 @@ namespace rct3::simulation
     /// Values for how birds live.
     struct BirdRates
     {
-        std::int32_t flock_least = 9;             ///< Ducks in a flock that comes in by itself, at least
-        std::int32_t flock_most = 17;             ///< And at most
+        i32 flock_least = 9;                      ///< Ducks in a flock that comes in by itself, at least
+        i32 flock_most = 17;                      ///< And at most
         units::Seconds flocks_every_least { 90 }; ///< Between one flock of ducks coming in and the next, at least
         units::Seconds flocks_every_most { 180 }; ///< And at most
-        std::int32_t flocks_at_once = 2;          ///< Flocks of ducks at one time, past which no more come by themselves
+        i32 flocks_at_once = 2;                   ///< Flocks of ducks at one time, past which no more come by themselves
         units::Seconds gull_spacing { 45 };       ///< Between gulls with a park all litter; a clean park waits longer
-        std::int32_t gulls_at_once = 8;           ///< Gulls at one time, past which no more come by themselves
-        std::int32_t gull_visits = 4;             ///< Pieces of litter a gull comes down at before it flies off for good
+        i32 gulls_at_once = 8;                    ///< Gulls at one time, past which no more come by themselves
+        i32 gull_visits = 4;                      ///< Pieces of litter a gull comes down at before it flies off for good
         units::Share gull_again { 0.6f };         ///< Of the time a gull that stood at litter makes for another piece
         units::Pace flight { 9 };                 ///< Flying
         units::Pace catching_up { 12 };           ///< A duck fallen behind its place in the V flies at
@@ -114,20 +115,20 @@ namespace rct3::simulation
         units::Seconds gull_stands_least { 6 };   ///< A gull at litter, at least
         units::Seconds gull_stands_most { 15 };   ///< And at most
         units::Distance beyond { 40 };            ///< Birds come in from, and leave to, this far outside the park's corners
-        std::int32_t tries = 8;                   ///< Spots picked before a bird settles for staying where it is
+        i32 tries = 8;                            ///< Spots picked before a bird settles for staying where it is
     };
 
     inline constexpr BirdRates kBirdRates { };
 
     /// A flock of `count` ducks coming in from beyond the park for some water, the first the leader. None when the
     /// park has no water. Returns how many.
-    std::size_t add_ducks(SimWorld& world, const BirdGround& ground, std::size_t count);
+    usize add_ducks(SimWorld& world, const BirdGround& ground, usize count);
 
     /// `count` gulls coming in from beyond the park, together. Returns how many.
-    std::size_t add_gulls(SimWorld& world, const BirdGround& ground, std::size_t count);
+    usize add_gulls(SimWorld& world, const BirdGround& ground, usize count);
 
     /// Takes every wild bird out of the park. Returns how many.
-    std::size_t remove_wild_birds(SimWorld& world);
+    usize remove_wild_birds(SimWorld& world);
 
     /// Moves the birds on by `dt`, and lets new ones come when it is time.
     void step_wild_birds(SimWorld& world, const BirdGround& ground, units::Seconds dt);

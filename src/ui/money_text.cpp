@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/money_text.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <format>
 
@@ -13,20 +15,20 @@ namespace rct3::ui
         constexpr char kBefore = 'a';
         constexpr char kAfter = 'b';
         constexpr char kDecimal = 'd';
-        constexpr std::int64_t kHundredths = 100;
-        constexpr std::size_t kGroup = 3;
+        constexpr i64 kHundredths = 100;
+        constexpr usize kGroup = 3;
 
-        std::u16string part(const StringTable& strings, std::int32_t index, char letter)
+        std::u16string part(const StringTable& strings, i32 index, char letter)
         {
             return std::u16string(strings.get(std::format("{}{}{}", kCurrencyPrefix, index, letter)));
         }
 
         /// `n` in decimal digits, by threes with `separator` between them when it is not empty.
-        std::u16string grouped(std::uint64_t n, std::u16string_view separator)
+        std::u16string grouped(u64 n, std::u16string_view separator)
         {
             const std::string digits = std::to_string(n);
             std::u16string out;
-            for (std::size_t i = 0; i < digits.size(); ++i)
+            for (usize i = 0; i < digits.size(); ++i)
             {
                 if (i > 0 && (digits.size() - i) % kGroup == 0)
                     out += separator;
@@ -36,17 +38,17 @@ namespace rct3::ui
         }
     } // namespace
 
-    Currency currency(const StringTable& strings, std::int32_t index)
+    Currency currency(const StringTable& strings, i32 index)
     {
         return { part(strings, index, kBefore), part(strings, index, kAfter), part(strings, index, kDecimal) };
     }
 
     std::u16string money_text(const Currency& currency, units::Money money)
     {
-        const std::int64_t amount = money.value;
+        const i64 amount = money.value;
         const bool negative = amount < 0;
         // The magnitude without overflow, even for the smallest value.
-        const std::uint64_t magnitude = negative ? 0 - static_cast<std::uint64_t>(amount) : static_cast<std::uint64_t>(amount);
+        const u64 magnitude = negative ? 0 - static_cast<u64>(amount) : static_cast<u64>(amount);
         const bool cents = !currency.decimal.empty();
         const std::u16string_view separator = currency.decimal == u"," ? u"" : u",";
 

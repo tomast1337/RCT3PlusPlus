@@ -22,6 +22,7 @@
 #include "assets/embedded_files.hpp"
 #include "config/environment.hpp"
 #include "config/game/install.hpp"
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/text.hpp"
 #include "strings/ascii.hpp"
@@ -57,7 +58,7 @@ namespace
     {
         std::set<std::string, std::less<>> listed;            ///< The game's English text items, lower case
         std::map<std::string, std::string, std::less<>> data; ///< Text names other overlays hold, lower case, to the first overlay
-        std::int32_t unread = 0;
+        i32 unread = 0;
     };
 
     GameKeys read_game(const config::game::GameInstall& install)
@@ -119,7 +120,7 @@ int main(int argc, char** argv)
 {
     std::optional<std::filesystem::path> game_dir;
     std::optional<std::filesystem::path> report_path;
-    for (std::int32_t i = 1; i < argc; ++i)
+    for (i32 i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--game") == 0 && i + 1 < argc)
             game_dir = argv[++i];
@@ -174,7 +175,7 @@ int main(int argc, char** argv)
         std::println("no game install (--game DIR or RCT3PP_GAME_PATH): data and game-only stay empty");
 
     constexpr std::array<std::string_view, 6> kGroups = { "literal", "prefix", "data", "own-unused", "game-only", "unreached" };
-    std::map<std::string_view, std::map<std::string, std::int32_t>> by_group; ///< Group, then the key up to its first '_'
+    std::map<std::string_view, std::map<std::string, i32>> by_group; ///< Group, then the key up to its first '_'
     std::ofstream report;
     if (report_path)
         report.open(*report_path);
@@ -215,8 +216,8 @@ int main(int argc, char** argv)
     for (const std::string_view group : kGroups)
     {
         const auto& heads = by_group[group];
-        std::int32_t total = 0;
-        std::vector<std::pair<std::int32_t, std::string>> top;
+        i32 total = 0;
+        std::vector<std::pair<i32, std::string>> top;
         for (const auto& [head, count] : heads)
         {
             total += count;
@@ -224,7 +225,7 @@ int main(int argc, char** argv)
         }
         std::ranges::sort(top);
         std::string line;
-        for (std::size_t i = 0; i < std::min<std::size_t>(top.size(), 12); ++i)
+        for (usize i = 0; i < std::min<usize>(top.size(), 12); ++i)
             line += std::format(" {} {},", top[i].second, -top[i].first);
         std::println("{:>11} {:>6} {}", group, total, line.empty() ? line : line.substr(0, line.size() - 1));
     }

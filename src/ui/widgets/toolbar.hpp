@@ -5,6 +5,7 @@
 // clicks, and may make any of them a toggle.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/scroll_bar.hpp"
 #include "units/units.hpp"
@@ -21,9 +22,9 @@ namespace rct3::ui::widgets
         std::string button;     ///< Family base name for the buttons (see SkinLibrary)
         Color separator_colour = hex("#0000003c");
         Rect padding { 4, 4, 4, 4 }; ///< Between the edges and the buttons
-        float button_size = 30;      ///< Buttons are squares
-        float gap = 4;               ///< Between buttons
-        float separator_room = 12;   ///< Taken by a separator, its line in the middle
+        f32 button_size = 30;        ///< Buttons are squares
+        f32 gap = 4;                 ///< Between buttons
+        f32 separator_room = 12;     ///< Taken by a separator, its line in the middle
         units::Pixels swell { };     ///< Of the buttons; see Button
     };
 
@@ -37,7 +38,7 @@ namespace rct3::ui::widgets
         void add_separator();
 
         /// The length along the bar that its buttons and separators take, padding included.
-        [[nodiscard]] float length() const;
+        [[nodiscard]] f32 length() const;
 
         void update(const UpdateContext& context) override;
         void draw(DrawContext& context) const override;
@@ -47,7 +48,7 @@ namespace rct3::ui::widgets
 
         ToolbarStyle style_;
         Orientation orientation_;
-        std::int32_t separators_ = 0;
+        i32 separators_ = 0;
     };
 
 } // namespace rct3::ui::widgets

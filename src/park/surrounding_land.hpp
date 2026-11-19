@@ -20,6 +20,7 @@
 // down to it over kShorePoints edge points, under the same water, so the shore is a slope and not a wall.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
 
@@ -31,45 +32,45 @@ namespace rct3::park
 {
 
     /// How far the first ring is from the edge, in world units; each next step is kSurroundGrowth times it.
-    inline constexpr float kSurroundFirstStep = 6;
-    inline constexpr float kSurroundGrowth = 1.4f;
+    inline constexpr f32 kSurroundFirstStep = 6;
+    inline constexpr f32 kSurroundGrowth = 1.4f;
     /// How far from the edge the land goes. It is fully see-through there.
-    inline constexpr float kSurroundReach = 1800;
+    inline constexpr f32 kSurroundReach = 1800;
     /// From the edge, where the land starts fading.
-    inline constexpr float kSurroundFadeStart = 500;
+    inline constexpr f32 kSurroundFadeStart = 500;
     /// How much of its height above the average a ring keeps from the one inside it.
-    inline constexpr float kSurroundKeep = 0.75f;
+    inline constexpr f32 kSurroundKeep = 0.75f;
     /// How many times each ring's heights and surfaces are smoothed along it.
-    inline constexpr std::int32_t kSurroundSmoothing = 3;
+    inline constexpr i32 kSurroundSmoothing = 3;
     /// How far under the sea the land beyond the edge stays.
-    inline constexpr float kSeaDepth = 3;
+    inline constexpr f32 kSeaDepth = 3;
     /// How far from the edge the sea goes: past the far plane wherever the eye is over the map.
-    inline constexpr float kSeaReach = 6000;
+    inline constexpr f32 kSeaReach = 6000;
     /// Over how many edge points beside the sea the land comes down to it.
-    inline constexpr std::size_t kShorePoints = 6;
+    inline constexpr usize kShorePoints = 6;
 
     /// The land's shape without its paint: how far out each ring is, and the height of each of its points.
     /// Every ring has `points` points, walking round the map as its edge does.
     struct LandRings
     {
-        std::size_t points = 0;
-        std::vector<float> distances; ///< Ring by ring, from 0 at the edge out to kSurroundReach
-        std::vector<float> heights;   ///< Ring after ring, `points` each
+        usize points = 0;
+        std::vector<f32> distances; ///< Ring by ring, from 0 at the edge out to kSurroundReach
+        std::vector<f32> heights;   ///< Ring after ring, `points` each
         /// Round the edge, the level of the sea going out from each point; NaN where there is none.
-        std::vector<float> sea;
+        std::vector<f32> sea;
         /// Round the edge, the level of the water lying off each point: the sea's, or the nearest sea's within
         /// kShorePoints; NaN beyond.
-        std::vector<float> shore;
+        std::vector<f32> shore;
     };
 
     [[nodiscard]] LandRings land_rings(const save::model::TerrainGrid& grid, const save::model::WaterLayer& water = { });
 
     /// The land's height at world (x, z) beyond the map's edge, between its points. Nothing on the map, past
     /// the land's reach, or under the sea or the water by its shore.
-    [[nodiscard]] std::optional<float> land_height(const LandRings& rings, const save::model::TerrainGrid& grid, float x, float z);
+    [[nodiscard]] std::optional<f32> land_height(const LandRings& rings, const save::model::TerrainGrid& grid, f32 x, f32 z);
 
     /// The height the land settles at far out: the mean height round the map's edge.
-    [[nodiscard]] float edge_level(const save::model::TerrainGrid& grid);
+    [[nodiscard]] f32 edge_level(const save::model::TerrainGrid& grid);
 
     /// The land round `grid`, batched by surface as terrain_mesh's ground is, and the sea where `water` goes
     /// on past the edge. Empty for an empty grid.

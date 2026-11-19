@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "random/generator.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -13,7 +15,7 @@ using namespace rct3::random;
 TEST_CASE("the generators give their published sequences")
 {
     // SplitMix64 from 0, and xoshiro256** from the words 1, 2, 3, 4.
-    std::uint64_t counter = 0;
+    u64 counter = 0;
     CHECK(split_mix(counter) == 0xe220a8397b1dcdafULL);
     CHECK(split_mix(counter) == 0x6e789e6aa1b965f4ULL);
     RandomState s { { 1, 2, 3, 4 } };
@@ -27,7 +29,7 @@ TEST_CASE("a seed always gives the same numbers, and each stream its own")
 {
     RandomState a = seeded(Seed { 42 });
     RandomState b = seeded(Seed { 42 });
-    for (std::int32_t i = 0; i < 10; ++i)
+    for (i32 i = 0; i < 10; ++i)
         CHECK(next(a) == next(b));
     CHECK(seeded(Seed { 0 }) != RandomState { });
     CHECK(stream(Seed { 42 }, RandomStream::Gameplay) == stream(Seed { 42 }, RandomStream::Gameplay));
@@ -38,26 +40,26 @@ TEST_CASE("a seed always gives the same numbers, and each stream its own")
 TEST_CASE("draws stay in their ranges")
 {
     RandomState s = seeded(Seed { 7 });
-    std::array<std::int32_t, 6> seen { };
-    for (std::int32_t i = 0; i < 6000; ++i)
+    std::array<i32, 6> seen { };
+    for (i32 i = 0; i < 6000; ++i)
     {
-        const double u = unit(s);
+        const f64 u = unit(s);
         CHECK(u >= 0);
         CHECK(u < 1);
-        const auto face = between(s, std::int64_t { 1 }, std::int64_t { 6 });
+        const auto face = between(s, i64 { 1 }, i64 { 6 });
         REQUIRE(face >= 1);
         REQUIRE(face <= 6);
-        ++seen[static_cast<std::size_t>(face - 1)];
+        ++seen[static_cast<usize>(face - 1)];
     }
     // Each face about a sixth of the time.
-    CHECK(std::ranges::all_of(seen, [](std::int32_t n) { return n > 850 && n < 1150; }));
+    CHECK(std::ranges::all_of(seen, [](i32 n) { return n > 850 && n < 1150; }));
     CHECK(below(s, 0) == 0);
     CHECK(below(s, 1) == 0);
-    CHECK(between(s, std::int64_t { 5 }, std::int64_t { 2 }) == 5);
-    CHECK(between(s, std::numeric_limits<std::int64_t>::min(), std::numeric_limits<std::int64_t>::max()) != 0); // Whole range, any value
+    CHECK(between(s, i64 { 5 }, i64 { 2 }) == 5);
+    CHECK(between(s, std::numeric_limits<i64>::min(), std::numeric_limits<i64>::max()) != 0); // Whole range, any value
     CHECK_FALSE(chance(s, 0));
     CHECK(chance(s, 1));
-    const double r = between(s, 2.0, 3.0);
+    const f64 r = between(s, 2.0, 3.0);
     CHECK(r >= 2);
     CHECK(r < 3);
 }

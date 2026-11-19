@@ -5,6 +5,7 @@
 // keeps a gutter at its right for the bar.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/draw_list.hpp"
 
 #include <cstddef>
@@ -14,15 +15,15 @@ namespace rct3::ui::widgets
 
     struct RowBands
     {
-        float height = 16;
+        f32 height = 16;
         Color stripe { };     ///< Behind the first row, and every other one after it
         Color plain = kWhite; ///< Behind the others
         Color band { };       ///< Behind a row that stands out
-        float gutter = 18;    ///< Kept clear at the right for the scroll bar
+        f32 gutter = 18;      ///< Kept clear at the right for the scroll bar
     };
 
     /// Fills `row`, the `index`th of its list, with its stripe.
-    inline void fill_row(DrawList& list, const RowBands& bands, const Rect& row, std::size_t index)
+    inline void fill_row(DrawList& list, const RowBands& bands, const Rect& row, usize index)
     {
         list.fill(row, index % 2 == 0 ? bands.stripe : bands.plain);
     }

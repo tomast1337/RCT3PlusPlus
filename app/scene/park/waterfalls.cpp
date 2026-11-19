@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/waterfalls.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/camera.hpp"
 
@@ -63,13 +64,13 @@ namespace rct3::scene::park
         }
     }
 
-    void draw_park_waterfalls(render::Device& device, const ParkWaterfalls& falls, const ParkWater& water, const glm::mat4& transform, const render::SceneLight& light, glm::vec3 eye, float time, FallsSeen seen)
+    void draw_park_waterfalls(render::Device& device, const ParkWaterfalls& falls, const ParkWater& water, const glm::mat4& transform, const render::SceneLight& light, glm::vec3 eye, f32 time, FallsSeen seen)
     {
         using rct3::park::FallPart;
         if (!falls.vertices || !falls.indices || !water.waves || (seen == FallsSeen::Mirrored && falls.detail < rct3::park::WaterfallDetail::High))
             return;
         const bool behind = seen == FallsSeen::WithScene && water.have_behind;
-        for (std::size_t part = 0; part < falls.mesh.parts.size(); ++part)
+        for (usize part = 0; part < falls.mesh.parts.size(); ++part)
         {
             const rct3::park::FallBatch batch = falls.mesh.parts[part];
             const bool sheet_only = seen == FallsSeen::Mirrored || seen == FallsSeen::FromUnderWater;
@@ -82,7 +83,7 @@ namespace rct3::scene::park
             draw.light = light;
             if (behind)
                 draw.extra_textures = { render::TextureHandle { }, water.behind, device.depth_texture(water.behind), render::TextureHandle { } };
-            draw.water = { .eye = eye, .time = time, .near = rct3::park::kNear, .far = rct3::park::kFar, .refraction = behind, .fall_part = static_cast<std::int32_t>(part), .fall_detail = static_cast<std::int32_t>(falls.detail) };
+            draw.water = { .eye = eye, .time = time, .near = rct3::park::kNear, .far = rct3::park::kFar, .refraction = behind, .fall_part = static_cast<i32>(part), .fall_detail = static_cast<i32>(falls.detail) };
             device.draw(draw);
         }
     }

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "ovl/texture/image.hpp"
 #include "park/chain_lifts.hpp"
 #include "park/daylight.hpp"
@@ -44,8 +45,8 @@ namespace rct3::scene::park
     {
 
         // Size of photos at photo spots.
-        constexpr std::uint32_t kPhotoWidth = 640;
-        constexpr std::uint32_t kPhotoHeight = 480;
+        constexpr u32 kPhotoWidth = 640;
+        constexpr u32 kPhotoHeight = 480;
 
         /// `mesh` in the frame's memory, with its vertices as `vertex_bytes` when given, for pipelines of another
         /// layout. Copied there the first time the frame asks and kept in `uploads` for the passes after; copied each
@@ -96,7 +97,7 @@ namespace rct3::scene::park
 
         /// Which of the things casting shadows a draw takes: the shadow keeps those standing still in a drawing of
         /// their own, and draws only the others each frame.
-        enum class Casters : std::uint8_t
+        enum class Casters : u8
         {
             All,
             Still,  ///< The ground, objects, billboards, signs and crates
@@ -153,7 +154,7 @@ namespace rct3::scene::park
             // Opaque and cut-out parts in the solid pass, the others in their own.
             const bool still = parts.casters != Casters::Moving;
             const bool moving = parts.casters != Casters::Still;
-            const auto draw_shown = [&](std::size_t set, std::optional<rct3::park::object::PartBlend> pass) {
+            const auto draw_shown = [&](usize set, std::optional<rct3::park::object::PartBlend> pass) {
                 const bool crossing = set != 0;
                 for (const ChunkBatch& at : scene.object_order[set])
                 {
@@ -227,13 +228,13 @@ namespace rct3::scene::park
             // Only the chunks the view reaches: for a shadow map, those in the sun's box round the camera, so ones
             // out of the camera's view still cast into it.
             scene.chunks_seen.resize(scene.object_chunks.size());
-            for (std::size_t c = 0; c < scene.object_chunks.size(); ++c)
+            for (usize c = 0; c < scene.object_chunks.size(); ++c)
             {
                 const rct3::park::object::ShapeBox& box = scene.object_chunks[c].box;
                 scene.chunks_seen[c] = !box.empty && rct3::park::box_in_view(transform, box.low, box.high) ? 1 : 0;
             }
             const auto draw_objects = [&](std::optional<rct3::park::object::PartBlend> pass) {
-                for (std::size_t set = 0; set < kChunkSets.size(); ++set)
+                for (usize set = 0; set < kChunkSets.size(); ++set)
                     draw_shown(set, pass);
             };
             if (scene.show_scenery && parts.scenery && still)
@@ -243,7 +244,7 @@ namespace rct3::scene::park
                 });
             if (scene.show_scenery && parts.scenery && still)
                 profiling::section("Billboards", [&] {
-                    for (std::size_t c = 0; c < scene.object_chunks.size(); ++c)
+                    for (usize c = 0; c < scene.object_chunks.size(); ++c)
                     {
                         const ObjectChunk& chunk = scene.object_chunks[c];
                         if (scene.chunks_seen[c] == 0)
@@ -378,11 +379,11 @@ namespace rct3::scene::park
         }
 
         /// The shadow maps' size: half on the software backend, where filling them costs most of a frame.
-        std::uint32_t shadow_texels(const render::Device& device)
+        u32 shadow_texels(const render::Device& device)
         {
             return device.backend() == render::Backend::Software ? 1024 : 2048;
         }
-        constexpr float kShadowSunHeight = 0.02f; ///< Of the sun's way, how far up it is before things cast shadows
+        constexpr f32 kShadowSunHeight = 0.02f; ///< Of the sun's way, how far up it is before things cast shadows
 
         /// Makes `target` for a shadow map when it is not made yet; false when the device cannot.
         bool make_shadow_target(render::Device& device, render::TextureHandle& target)
@@ -446,7 +447,7 @@ namespace rct3::scene::park
                 }
                 scene.shadow_views = *made;
             }
-            const float step = glm::radians(0.5f);
+            const f32 step = glm::radians(0.5f);
             const glm::vec3 to_sun = glm::normalize(scene.light.sun_direction);
             ShadowDrawing* now = &scene.shadow_drawings[scene.shadow_now];
             const bool stepped = rct3::park::steady_sun(now->sun, to_sun, step) != now->sun;
@@ -459,8 +460,8 @@ namespace rct3::scene::park
             ShadowDrawing& before = scene.shadow_drawings[1 - scene.shadow_now];
             const bool blend = scene.blend_shadows && before.drawn != glm::mat4(0.0f);
             // Riding along, round the rider, as far as an overhead view from a middling height shadows.
-            constexpr float kRideShadowDistance = 60;
-            const float centre_radius = rct3::park::shadow_radius(scene.seat ? kRideShadowDistance : scene.camera.distance);
+            constexpr f32 kRideShadowDistance = 60;
+            const f32 centre_radius = rct3::park::shadow_radius(scene.seat ? kRideShadowDistance : scene.camera.distance);
             const glm::vec3 centre = scene.seat ? glm::vec3((*scene.seat)[3]) : scene.camera.target;
             const rct3::park::SunView sun = rct3::park::sun_view(now->sun, centre, centre_radius, shadow_texels(device));
             const rct3::park::SunView sun_before = rct3::park::sun_view(before.sun, centre, centre_radius, shadow_texels(device));
@@ -500,7 +501,7 @@ namespace rct3::scene::park
             if (moving_now)
                 profiling::section("Moving", [&] { draw_shadow(device, scene, { .target = scene.shadow_map, .depth_from = now->still }, sun.view_projection, Casters::Moving); });
             // A step swaps which drawing is the latest, and it is always drawn then, so the rows follow here.
-            std::array<float, 40> views { };
+            std::array<f32, 40> views { };
             std::ranges::copy(now->view, views.begin());
             std::ranges::copy(before.view, views.begin() + 20);
             device.update_texture(scene.shadow_views, std::as_bytes(std::span(views)));
@@ -511,10 +512,10 @@ namespace rct3::scene::park
 
         /// Draws into the round view of `panel`, by `draw` given the view's transform: into `target`, made again
         /// when the view's size in pixels (`pixels`) changes, cleared to `back`.
-        template<typename Panel, typename Draw> void draw_view(render::Device& device, ParkScene& scene, Panel& panel, render::TextureHandle& target, std::uint32_t& pixels, std::string_view label, render::Color back, Draw&& draw)
+        template<typename Panel, typename Draw> void draw_view(render::Device& device, ParkScene& scene, Panel& panel, render::TextureHandle& target, u32& pixels, std::string_view label, render::Color back, Draw&& draw)
         {
-            const float scale = scale_for(device, scene);
-            const auto wanted = static_cast<std::uint32_t>(std::lround(ui::screens::info::info_panel::kView * scale));
+            const f32 scale = scale_for(device, scene);
+            const auto wanted = static_cast<u32>(std::lround(ui::screens::info::info_panel::kView * scale));
             if (target && pixels != wanted)
             {
                 device.destroy_texture(target);
@@ -552,22 +553,22 @@ namespace rct3::scene::park
 
         /// Draws the people `shown` (of the shown people) as they are now, alone in a row at the middle of the
         /// world, seen from a view turning round them as the build list's previews turn.
-        void draw_people_alone(render::Device& device, const ParkScene& scene, std::span<const std::size_t> shown)
+        void draw_people_alone(render::Device& device, const ParkScene& scene, std::span<const usize> shown)
         {
             if (!scene.person_models)
                 return;
-            constexpr float kGap = 0.7f;    ///< Between neighbours in the row
-            constexpr float kHeight = 2.0f; ///< Of the box the view fits, a tall adult's and a little over
-            const float first = -0.5f * kGap * static_cast<float>(shown.size() - 1);
+            constexpr f32 kGap = 0.7f;    ///< Between neighbours in the row
+            constexpr f32 kHeight = 2.0f; ///< Of the box the view fits, a tall adult's and a little over
+            const f32 first = -0.5f * kGap * static_cast<f32>(shown.size() - 1);
             std::vector<rct3::park::person::PlacedPerson> placed;
-            for (std::size_t k = 0; k < shown.size(); ++k)
+            for (usize k = 0; k < shown.size(); ++k)
             {
                 if (shown[k] >= scene.shown_people.size())
                     continue;
                 // Seated on a ride they stand idle instead.
                 rct3::park::person::PlacedPerson pose = pose_person(scene, shown[k], scene.people_clock, scene.simulate).value_or(rct3::park::person::PlacedPerson { .look = scene.shown_people[shown[k]].pose.look, .motion = rct3::park::person::motion::kIdle, .time = scene.clock });
                 pose.level = 0;
-                pose.world = glm::translate(glm::mat4(1.0f), glm::vec3(first + kGap * static_cast<float>(k), 0, 0));
+                pose.world = glm::translate(glm::mat4(1.0f), glm::vec3(first + kGap * static_cast<f32>(k), 0, 0));
                 placed.push_back(pose);
             }
             const std::array<glm::vec3, 2> box { glm::vec3(first - kGap / 2, 0, -kGap / 2), glm::vec3(kGap / 2 - first, kHeight, kGap / 2) };
@@ -577,7 +578,7 @@ namespace rct3::scene::park
             rct3::park::person::PersonRuns runs;
             const rct3::park::object::ObjectMesh mesh = rct3::park::person::person_mesh(*scene.person_models, placed, runs);
             // Lit by the noon sun whatever the park's hour, so they look the same by night; no shadows, lamps or haze.
-            constexpr float kNoon = 0.5f; ///< Of a day from midnight
+            constexpr f32 kNoon = 0.5f; ///< Of a day from midnight
             const rct3::park::Daylight noon = rct3::park::daylight(kNoon);
             const render::SceneLight light { .sun_direction = noon.sun_direction, .sun = noon.sun, .sky = noon.sky, .ground = noon.ground };
             draw_transient(device, scene, std::nullopt, mesh, scene.people_textures, rct3::park::view_projection(camera, 1), light, [&](const rct3::park::object::ObjectBatch&) { return scene.object_pipeline; }, [](const rct3::park::object::ObjectBatch&) { return render::AddressMode::Clamp; });
@@ -605,7 +606,7 @@ namespace rct3::scene::park
             into.target = scene.photo_target;
             into.clear_color = scene.horizon;
             device.begin_pass(into);
-            draw_world(device, scene, rct3::park::view_projection(shot.camera, static_cast<float>(kPhotoWidth) / kPhotoHeight), scene.light, { .eye = rct3::park::eye(shot.camera) });
+            draw_world(device, scene, rct3::park::view_projection(shot.camera, static_cast<f32>(kPhotoWidth) / kPhotoHeight), scene.light, { .eye = rct3::park::eye(shot.camera) });
             device.end_pass();
             if (device.read_screen(scene.photo_target))
                 scene.photo_reading = shot.name;
@@ -616,7 +617,7 @@ namespace rct3::scene::park
 
     } // namespace
 
-    float park_interface_scale(const render::Device& device, const ParkScene& scene)
+    f32 park_interface_scale(const render::Device& device, const ParkScene& scene)
     {
         return scale_for(device, scene);
     }
@@ -627,11 +628,11 @@ namespace rct3::scene::park
         // The ripples on the still water of objects (fountain basins, rct3::park::kWaterPicture) move on to now.
         if (const auto texture = scene.object_textures.find(rct3::park::object::kWaterPicture); texture != scene.object_textures.end())
         {
-            constexpr float kRate = 12; ///< Chosen by eye: pictures a second, smooth enough for slow ripples
-            if (const auto frame = static_cast<std::uint32_t>(scene.park_clock * kRate); frame != scene.ripple_frame)
+            constexpr f32 kRate = 12; ///< Chosen by eye: pictures a second, smooth enough for slow ripples
+            if (const auto frame = static_cast<u32>(scene.park_clock * kRate); frame != scene.ripple_frame)
             {
                 scene.ripple_frame = frame;
-                const rct3::park::PaletteImage picture = rct3::park::object::water_picture(static_cast<float>(frame) / kRate);
+                const rct3::park::PaletteImage picture = rct3::park::object::water_picture(static_cast<f32>(frame) / kRate);
                 // Halved as it was when first uploaded, to fit the texture.
                 const ovl::texture::RgbaImage rippled = ovl::texture::halved(rct3::park::paint(picture, { }), ovl::texture::texture_halvings(scene.texture_detail, picture.width, picture.height));
                 device.end_pass();
@@ -667,8 +668,8 @@ namespace rct3::scene::park
                 const glm::vec2 flow = glm::normalize(level);
                 const glm::vec3 lip = (left + right) / 2.0f;
                 // Down onto the water under the lip, or the ground with none there.
-                float below = scene.grid.height_at(lip.x, lip.z).value_or(lip.y);
-                for (float y = lip.y; y > below - 1; y -= 0.25f)
+                f32 below = scene.grid.height_at(lip.x, lip.z).value_or(lip.y);
+                for (f32 y = lip.y; y > below - 1; y -= 0.25f)
                     if (const auto water = rct3::park::water::water_above(scene.water.surface, { lip.x, y, lip.z }))
                     {
                         below = water->level;
@@ -676,7 +677,7 @@ namespace rct3::scene::park
                     }
                 if (below >= lip.y)
                     continue;
-                const float throw_out = kPourSpeed.value * std::sqrt(2 * (lip.y - below) / units::kGravity.value);
+                const f32 throw_out = kPourSpeed.value * std::sqrt(2 * (lip.y - below) / units::kGravity.value);
                 scene.slide_pours.push_back({ .left = left, .right = right, .landing = { lip.x + flow.x * throw_out, below, lip.z + flow.y * throw_out }, .water = below > scene.grid.height_at(lip.x, lip.z).value_or(below) });
             }
         }
@@ -698,7 +699,7 @@ namespace rct3::scene::park
         {
             // A person, or a party, stands alone; anything else is seen where it is in the park.
             const std::array person { scene.shown_person.value_or(0) };
-            const std::span<const std::size_t> alone = scene.shown_person ? std::span<const std::size_t>(person) : std::span<const std::size_t>(scene.shown_party);
+            const std::span<const usize> alone = scene.shown_person ? std::span<const usize>(person) : std::span<const usize>(scene.shown_party);
             profiling::section("InfoView", [&] { draw_view(device, scene, *info, scene.view_target, scene.view_pixels, "attraction view", !alone.empty() ? kPeopleViewBack : scene.horizon, [&] { !alone.empty() ? draw_people_alone(device, scene, alone) : draw_world(device, scene, rct3::park::view_projection(scene.view_camera, 1), scene.light, { .eye = rct3::park::eye(scene.view_camera) }); }); });
         }
         // The item being placed, alone on the disc's grey, lit as the park is.
@@ -716,8 +717,8 @@ namespace rct3::scene::park
         profiling::section("Lamps", [&] {
             // Lamps come on as the sky darkens, packed again when the strength has moved enough to see.
             scene.light.lamps = { };
-            constexpr float kLampStrength = 0.75f; // Path lamps light their pools without washing them white
-            const float strength = scene.darkness * kLampStrength;
+            constexpr f32 kLampStrength = 0.75f; // Path lamps light their pools without washing them white
+            const f32 strength = scene.darkness * kLampStrength;
             if (strength < 0.01f || (scene.lamps.empty() && !scene.car_lamps))
                 return;
             if (scene.lamps_due || scene.car_lamps || !scene.lamp_strength || std::abs(strength - *scene.lamp_strength) > 0.01f)
@@ -729,7 +730,7 @@ namespace rct3::scene::park
                     return;
                 for (rct3::park::Lamp& l : lamps)
                     l.colour *= strength;
-                constexpr float kCell = 8; // Two tiles, a lamp's usual reach
+                constexpr f32 kCell = 8; // Two tiles, a lamp's usual reach
                 const rct3::park::LampTexels texels = rct3::park::lamp_texels(lamps, kCell);
                 if (scene.lamp_texture && scene.lamp_rows != texels.rows)
                 {
@@ -761,7 +762,7 @@ namespace rct3::scene::park
         profiling::section("Reflections", [&] {
             const WaterLook& look = scene.water.look;
             // Seen from the eye mirrored in the water's level, as the transform mirrors the world.
-            prepare_park_water(device, scene.water, view_projection, eye, scene.horizon, [&](const glm::mat4& transform, float level) { draw_world(device, scene, transform, scene.light, { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .water = false, .mirrored = true, .eye = { eye.x, 2 * level - eye.y, eye.z } }); });
+            prepare_park_water(device, scene.water, view_projection, eye, scene.horizon, [&](const glm::mat4& transform, f32 level) { draw_world(device, scene, transform, scene.light, { .background = look.reflect_background, .terrain = look.reflect_terrain, .scenery = look.reflect_scenery, .people = look.reflect_people, .water = false, .mirrored = true, .eye = { eye.x, 2 * level - eye.y, eye.z } }); });
         });
         profiling::section("World", [&] {
             device.set_wireframe(scene.wireframe);
@@ -776,7 +777,7 @@ namespace rct3::scene::park
             profiling::section("Particles", [&] { draw_park_particles(device, scene.particles, view_projection, eye, scene.camera.target, scene.light); });
         if (scene.weather_look.rain > 0 && !scene.water.eye_in)
         {
-            const float lit = std::max({ scene.light.sky.r, scene.light.sky.g, scene.light.sky.b });
+            const f32 lit = std::max({ scene.light.sky.r, scene.light.sky.g, scene.light.sky.b });
             profiling::section("Rain", [&] { draw_park_rain(device, scene.rain, { .view_projection = view_projection, .eye = eye, .amount = scene.weather_look.rain, .wind = scene.park.wind, .seconds = scene.clock, .light = lit }); });
         }
         LightShafts shafts;
@@ -784,8 +785,8 @@ namespace rct3::scene::park
         {
             // How strong the shafts are at most. They fade in as the sun rises, and read as far into
             // the air as the shadow map reaches, beyond which nothing shadows it.
-            constexpr float kShaftStrength = 0.22f;
-            const float risen = glm::smoothstep(0.0f, 0.1f, glm::normalize(scene.light.sun_direction).y);
+            constexpr f32 kShaftStrength = 0.22f;
+            const f32 risen = glm::smoothstep(0.0f, 0.1f, glm::normalize(scene.light.sun_direction).y);
             shafts = { .from_clip = glm::inverse(view_projection), .light = scene.light, .reach = rct3::park::shadow_radius(scene.camera.distance), .strength = kShaftStrength * risen };
         }
         if (scene.bloom || shafts.strength > 0.0f)

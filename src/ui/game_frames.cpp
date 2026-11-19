@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/game_frames.hpp"
 
+#include "core/types.hpp"
 #include "ui/screens/front/layout.hpp"
 
 #include <algorithm>
@@ -29,7 +30,7 @@ namespace rct3::ui::game_frames
             return s;
         }
 
-        Shape outlined(Color fill, Color outline, float width, Corners corners)
+        Shape outlined(Color fill, Color outline, f32 width, Corners corners)
         {
             Shape s = solid(fill, corners);
             s.outline = outline;
@@ -37,19 +38,19 @@ namespace rct3::ui::game_frames
             return s;
         }
 
-        Corners top_corners(float r)
+        Corners top_corners(f32 r)
         {
             return { r, r, 0, 0 };
         }
 
-        Corners bottom_corners(float r)
+        Corners bottom_corners(f32 r)
         {
             return { 0, 0, r, r };
         }
 
         // A drop shadow `dx`, `dy` below and right of a body inset by as much from the far sides, shown only
         // where the body does not cover it: frames are hollow, so the shadow must not darken their middle.
-        void add_side_shadow(CodedFrame& frame, float dx, float dy, Color colour, Corners corners)
+        void add_side_shadow(CodedFrame& frame, f32 dx, f32 dy, Color colour, Corners corners)
         {
             const FrameBox shadow = inset_box(dx, dy, 0, 0);
             frame.layers.push_back({ shadow, solid(colour, corners), FrameBox { { 1, -dx }, { 0, 0 }, { 1, 0 }, { 1, 0 } } });
@@ -89,12 +90,12 @@ namespace rct3::ui::game_frames
 
         // A button `width` by `height` units: `rims` one unit each from the outside in, then `fill`, and an
         // arrow toward `way` in `mark` filling `mark_box`.
-        CodedFrame arrow_button(float width, float height, std::initializer_list<Color> rims, Color fill, Arrow way, const FrameBox& mark_box, Color mark)
+        CodedFrame arrow_button(f32 width, f32 height, std::initializer_list<Color> rims, Color fill, Arrow way, const FrameBox& mark_box, Color mark)
         {
             CodedFrame f;
             f.width = width;
             f.height = height;
-            float in = 0;
+            f32 in = 0;
             for (const Color rim : rims)
             {
                 f.layers.push_back({ inset_box(in, in, in, in), solid(rim), { } });
@@ -107,7 +108,7 @@ namespace rct3::ui::game_frames
 
         // Where the arrow sits on a scroll arrow, 15 units square, moved in by `in` for a button with more rims:
         // 12 units across its base and 6 to its point, its base just off the middle.
-        FrameBox arrow_mark(Arrow way, float in)
+        FrameBox arrow_mark(Arrow way, f32 in)
         {
             switch (way)
             {
@@ -227,7 +228,7 @@ namespace rct3::ui::game_frames
         return f;
     }
 
-    CodedFrame colour_ring(Color colour, float size)
+    CodedFrame colour_ring(Color colour, f32 size)
     {
         CodedFrame f;
         f.width = size;
@@ -238,7 +239,7 @@ namespace rct3::ui::game_frames
 
     CodedFrame colour_back(const Palette& p)
     {
-        constexpr float kRound = 13;
+        constexpr f32 kRound = 13;
         CodedFrame f;
         f.width = 34;
         f.height = 37;
@@ -250,9 +251,9 @@ namespace rct3::ui::game_frames
     namespace
     {
         constexpr Color kBarShadow = hex("#00000098");
-        constexpr float kBarCorner = 13;
-        constexpr float kBarShadowDrop = 3; // Below the band, and so the band stops this far above the bottom
-        constexpr float kBarShadowShift = 2;
+        constexpr f32 kBarCorner = 13;
+        constexpr f32 kBarShadowDrop = 3; // Below the band, and so the band stops this far above the bottom
+        constexpr f32 kBarShadowShift = 2;
     } // namespace
 
     CodedFrame park_bar_left(const Palette& p)
@@ -263,7 +264,7 @@ namespace rct3::ui::game_frames
         return f;
     }
 
-    CodedFrame park_bar_middle(const Palette& p, float width, float height, float notch)
+    CodedFrame park_bar_middle(const Palette& p, f32 width, f32 height, f32 notch)
     {
         // The notch cuts the band and, shifted with it, the shadow, which then shows as a crescent inside the
         // notch's upper left.
@@ -290,7 +291,7 @@ namespace rct3::ui::game_frames
     CodedFrame lozenge(const Palette& p, bool enabled)
     {
         // The body leaves two units on the right and three below to its shadow.
-        constexpr float kRadius = 10;
+        constexpr f32 kRadius = 10;
         CodedFrame f;
         f.layers.push_back({ inset_box(2, 3, 0, 0), solid(hex("#0000005d"), round_corners(kRadius)), { } });
         f.layers.push_back({ inset_box(0, 0, 2, 3), outlined(p.paper, enabled ? p.border : p.disabled_fill, 2, round_corners(kRadius)), { } });
@@ -299,7 +300,7 @@ namespace rct3::ui::game_frames
 
     CodedFrame selected_row(const Palette& p)
     {
-        constexpr float kRadius = 7;
+        constexpr f32 kRadius = 7;
         CodedFrame f;
         Shape shadow = solid(hex("#0000007f"), round_corners(kRadius));
         shadow.softness = 1;
@@ -315,7 +316,7 @@ namespace rct3::ui::game_frames
         CodedFrame f;
         f.width = 32;
         f.height = 33;
-        constexpr float kSize = 31.5f;
+        constexpr f32 kSize = 31.5f;
         // A dark edge all round, deepest below.
         Shape shadow = solid(hex("#000000a0"), round_corners(kSize / 2));
         shadow.softness = 1;
@@ -346,15 +347,15 @@ namespace rct3::ui::game_frames
     {
         // Measured on a quarter 324 by 322 units. The disc's middle sits just past the quarter's inner corner;
         // the blue line runs round it 50 units in from its edge.
-        constexpr float kWidth = 324;
-        constexpr float kHeight = 322;
-        constexpr float kRadius = 322;
-        constexpr float kLine = 272;
-        constexpr float kLineWidth = 2;
+        constexpr f32 kWidth = 324;
+        constexpr f32 kHeight = 322;
+        constexpr f32 kRadius = 322;
+        constexpr f32 kLine = 272;
+        constexpr f32 kLineWidth = 2;
         const bool left = quarter == Quarter::TopLeft || quarter == Quarter::BottomLeft;
         const bool top = quarter == Quarter::TopLeft || quarter == Quarter::TopRight;
-        const float cx = left ? kWidth : 0;
-        const float cy = top ? kHeight + 2 : -2;
+        const f32 cx = left ? kWidth : 0;
+        const f32 cy = top ? kHeight + 2 : -2;
         CodedFrame f;
         f.width = kWidth;
         f.height = kHeight;
@@ -376,18 +377,18 @@ namespace rct3::ui::game_frames
     {
 
         constexpr Color kDrawerShadow = hex("#0000004b");
-        constexpr float kDrawerShade = 2;
-        constexpr float kPanelLeft = 9;
-        constexpr float kPanelRight = 12;
-        constexpr float kPanelBottom = 13; // From the lip's top
-        constexpr float kPanelCorner = 4;
-        constexpr float kLipCorner = 3;
-        constexpr float kGripHalf = 5;
-        constexpr float kPast = 24; // How far a half reaches past its far side, to be cut there
+        constexpr f32 kDrawerShade = 2;
+        constexpr f32 kPanelLeft = 9;
+        constexpr f32 kPanelRight = 12;
+        constexpr f32 kPanelBottom = 13; // From the lip's top
+        constexpr f32 kPanelCorner = 4;
+        constexpr f32 kLipCorner = 3;
+        constexpr f32 kGripHalf = 5;
+        constexpr f32 kPast = 24; // How far a half reaches past its far side, to be cut there
 
         void add_grip(const Palette& p, CodedFrame& f, FrameEdge x0, FrameEdge x1)
         {
-            for (const float y : { 30.0f, 32.0f, 34.0f })
+            for (const f32 y : { 30.0f, 32.0f, 34.0f })
                 f.layers.push_back({ { x0, { 0, y }, x1, { 0, y + 1 } }, solid(p.rule), { } });
         }
 
@@ -435,11 +436,11 @@ namespace rct3::ui::game_frames
 
         // What the small and large windows share: a hollow body with a blue band along its top and thin grey
         // sides, its shadow three units right and down.
-        constexpr float kWindowShade = 3;
-        constexpr float kBand = 18;
-        constexpr float kBandCorner = 11.7f;
+        constexpr f32 kWindowShade = 3;
+        constexpr f32 kBand = 18;
+        constexpr f32 kBandCorner = 11.7f;
 
-        CodedFrame window_body(const Palette& p, Color shadow, float bottom_corner)
+        CodedFrame window_body(const Palette& p, Color shadow, f32 bottom_corner)
         {
             CodedFrame f;
             add_side_shadow(f, kWindowShade, kWindowShade, shadow, { kBandCorner, kBandCorner, bottom_corner, bottom_corner });
@@ -459,15 +460,15 @@ namespace rct3::ui::game_frames
 
     CodedFrame window_background(const Palette& p)
     {
-        constexpr float kTile = 16;
-        constexpr float kPeriod = 4; // Rows from one pair of lines to the next
+        constexpr f32 kTile = 16;
+        constexpr f32 kPeriod = 4; // Rows from one pair of lines to the next
         CodedFrame f;
         f.width = kTile;
         f.height = kTile;
         f.layers.push_back({ inset_box(0, 0, 0, 0), solid(p.paper), { } });
-        for (std::int32_t pair = 0; pair < static_cast<std::int32_t>(kTile / kPeriod); ++pair)
+        for (i32 pair = 0; pair < static_cast<i32>(kTile / kPeriod); ++pair)
         {
-            const float y = static_cast<float>(pair) * kPeriod;
+            const f32 y = static_cast<f32>(pair) * kPeriod;
             f.layers.push_back({ corner_box(0, y + 1, kTile, 1), solid(p.paper_line), { } });
             f.layers.push_back({ corner_box(0, y + 2, kTile, 1), solid(p.paper_line_deep), { } });
         }
@@ -485,10 +486,10 @@ namespace rct3::ui::game_frames
     {
         // The icon's disc sits in the top-left corner, overlapping the band, with a gap round it where the
         // band is cut away.
-        constexpr float kDiscX = 29;
-        constexpr float kDiscY = 40;
-        constexpr float kDisc = 23;
-        constexpr float kGap = 30;
+        constexpr f32 kDiscX = 29;
+        constexpr f32 kDiscY = 40;
+        constexpr f32 kDisc = 23;
+        constexpr f32 kGap = 30;
         CodedFrame f = window_body(p, hex("#0000007f"), 3);
         Shape band = solid(p.accent, top_corners(kBandCorner));
         band.cut_x = kDiscX;
@@ -507,19 +508,19 @@ namespace rct3::ui::game_frames
         // The front screen's backdrop, in design units. Everything is round one centre: the veil runs from
         // a white band under the ring out to the screen's edges, but for a circle that leaves the left edge
         // blue; the ring lies over the band, and the strip along the bottom closes it all.
-        constexpr float kCentreX = 735.5f;
-        constexpr float kCentreY = 241.5f;
-        constexpr float kVeilOuter = 660;
-        constexpr float kRingOuter = 441;
+        constexpr f32 kCentreX = 735.5f;
+        constexpr f32 kCentreY = 241.5f;
+        constexpr f32 kVeilOuter = 660;
+        constexpr f32 kRingOuter = 441;
         /// Approximation: matched by eye to the running game on a wide screen; the arc's pictures alone give 22.
-        constexpr float kRingWidth = 30;
-        constexpr float kVeilInner = 442; ///< Inside it, a thinner white band under the ring
-        constexpr float kUnderRingWidth = 19.5f;
-        constexpr float kStripTop = 694; ///< A dark line, then the light band
-        constexpr float kStripLight = 696;
-        constexpr float kStripMiddle = 732; ///< A dark line with a thin light one under it
-        constexpr float kStripThin = 737;
-        constexpr float kStripThinEnd = 739;
+        constexpr f32 kRingWidth = 30;
+        constexpr f32 kVeilInner = 442; ///< Inside it, a thinner white band under the ring
+        constexpr f32 kUnderRingWidth = 19.5f;
+        constexpr f32 kStripTop = 694; ///< A dark line, then the light band
+        constexpr f32 kStripLight = 696;
+        constexpr f32 kStripMiddle = 732; ///< A dark line with a thin light one under it
+        constexpr f32 kStripThin = 737;
+        constexpr f32 kStripThinEnd = 739;
         constexpr Rect kTitle { 260.5f, 707, 790, 759 }; ///< The lozenge; its right edge kept from the screen's
         constexpr Rect kTitleLine { 290, 736, 759, 738 };
 
@@ -530,12 +531,12 @@ namespace rct3::ui::game_frames
 
         // A box running along the strip: its left edge `left` units in, its right `right` units in from the
         // design's right edge, moved out to the screen's right edge at `screen_right`.
-        FrameBox along_strip(float left, float top, float right, float bottom, float screen_right)
+        FrameBox along_strip(f32 left, f32 top, f32 right, f32 bottom, f32 screen_right)
         {
             return units({ left, top, screen_right - (kDesignWidth - right), bottom });
         }
 
-        Rect shifted(const Rect& r, float dx, float dy)
+        Rect shifted(const Rect& r, f32 dx, f32 dy)
         {
             return { r.x0 + dx, r.y0 + dy, r.x1 + dx, r.y1 + dy };
         }
@@ -636,8 +637,8 @@ namespace rct3::ui::game_frames
 
     CodedFrame curved_strip(const Palette& p)
     {
-        constexpr float kRadius = 20;
-        constexpr float kShadow = 3;
+        constexpr f32 kRadius = 20;
+        constexpr f32 kShadow = 3;
         const Corners right { 0, kRadius, kRadius, 0 };
         CodedFrame f;
         f.layers.push_back({ inset_box(kShadow, kShadow, 0, 0), solid(hex("#0000005d"), right), { } });

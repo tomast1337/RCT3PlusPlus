@@ -13,6 +13,7 @@
 // place of the shared one.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/font/set.hpp"
 
 #include <array>
@@ -26,23 +27,23 @@ namespace rct3::ui::font
 {
 
     /// The widths there are sets for, smallest first.
-    inline constexpr std::array<std::int32_t, 3> kFontSetWidths = { 800, 1024, 1280 };
+    inline constexpr std::array<i32, 3> kFontSetWidths = { 800, 1024, 1280 };
     /// The set whose sizes windows use on every screen.
-    inline constexpr std::int32_t kFixedFontSetWidth = 1024;
+    inline constexpr i32 kFixedFontSetWidth = 1024;
 
     /// The width of the set for an interface `view_width` units wide.
-    [[nodiscard]] constexpr std::int32_t font_set_width(float view_width)
+    [[nodiscard]] constexpr i32 font_set_width(f32 view_width)
     {
-        for (const std::int32_t w : kFontSetWidths)
+        for (const i32 w : kFontSetWidths)
         {
-            if (view_width <= static_cast<float>(w))
+            if (view_width <= static_cast<f32>(w))
                 return w;
         }
         return kFontSetWidths.back();
     }
 
     /// The overlay with the fonts for `language` at set `width`, relative to the install root.
-    [[nodiscard]] std::string font_overlay(std::string_view language, std::int32_t width);
+    [[nodiscard]] std::string font_overlay(std::string_view language, i32 width);
 
     /// The fonts of a set by role, as they are named in its overlays. The scaled roles take theirs from
     /// these by scaled_role().

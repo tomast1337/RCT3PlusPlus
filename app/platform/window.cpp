@@ -2,6 +2,7 @@
 #include "platform/window.hpp"
 
 #include "backends/imgui_impl_glfw.h"
+#include "core/types.hpp"
 #include "imgui.h"
 #include "render/backend.hpp"
 #include "strings/unicode.hpp"
@@ -18,7 +19,7 @@ namespace rct3::platform
     namespace
     {
 
-        std::optional<ui::Key> interface_key(std::int32_t key)
+        std::optional<ui::Key> interface_key(i32 key)
         {
             switch (key)
             {
@@ -55,7 +56,7 @@ namespace rct3::platform
                     return ui::Key::Insert;
                 default:
                     if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12)
-                        return static_cast<ui::Key>(static_cast<std::int32_t>(ui::Key::F1) + (key - GLFW_KEY_F1));
+                        return static_cast<ui::Key>(static_cast<i32>(ui::Key::F1) + (key - GLFW_KEY_F1));
                     return std::nullopt;
             }
         }
@@ -83,7 +84,7 @@ namespace rct3::platform
         // Installed before ImGui's own callbacks, which call it in turn.
         auto collected = std::make_unique<Collected>();
         glfwSetWindowUserPointer(window, collected.get());
-        glfwSetScrollCallback(window, [](GLFWwindow* w, double x, double y) {
+        glfwSetScrollCallback(window, [](GLFWwindow* w, f64 x, f64 y) {
             Collected* collected = &collected_of(w);
             // Shift turns the wheel sideways, as in most programs.
             const bool shift = glfwGetKey(w, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(w, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
@@ -178,7 +179,7 @@ namespace rct3::platform
         GLFWmonitor* monitor = glfwGetPrimaryMonitor();
         int count = 0; // c-api
         const GLFWvidmode* modes = monitor != nullptr ? glfwGetVideoModes(monitor, &count) : nullptr;
-        for (std::int32_t i = 0; i < count; ++i)
+        for (i32 i = 0; i < count; ++i)
         {
             const Size s { modes[i].width, modes[i].height };
             if (!std::ranges::contains(sizes, s))
@@ -216,12 +217,12 @@ namespace rct3::platform
         }
         else
         {
-            constexpr std::int32_t kWindowedPosition = 64; // Clear of the screen's corner and its title bar
+            constexpr i32 kWindowedPosition = 64; // Clear of the screen's corner and its title bar
             glfwSetWindowMonitor(window_, nullptr, kWindowedPosition, kWindowedPosition, s.width, s.height, GLFW_DONT_CARE);
         }
     }
 
-    double Window::time() const
+    f64 Window::time() const
     {
         return glfwGetTime();
     }
@@ -230,8 +231,8 @@ namespace rct3::platform
     {
         // GLFW reports the cursor in screen coordinates, which differ from framebuffer pixels on scaled
         // displays.
-        double cx = 0;
-        double cy = 0;
+        f64 cx = 0;
+        f64 cy = 0;
         glfwGetCursorPos(window_, &cx, &cy);
         int ww = 0; // c-api
         int wh = 0; // c-api
@@ -242,23 +243,23 @@ namespace rct3::platform
         Pointer p;
         if (ww > 0 && wh > 0)
         {
-            p.x = static_cast<float>(cx * fw / ww);
-            p.y = static_cast<float>(cy * fh / wh);
+            p.x = static_cast<f32>(cx * fw / ww);
+            p.y = static_cast<f32>(cy * fh / wh);
         }
         p.left = glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
         p.right = glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
         p.shift = glfwGetKey(window_, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(window_, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
         p.control = glfwGetKey(window_, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(window_, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
         p.middle = glfwGetMouseButton(window_, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS;
-        p.wheel_x = static_cast<float>(collected_->wheel_x);
-        p.wheel_y = static_cast<float>(collected_->wheel_y);
+        p.wheel_x = static_cast<f32>(collected_->wheel_x);
+        p.wheel_y = static_cast<f32>(collected_->wheel_y);
         p.inside = glfwGetWindowAttrib(window_, GLFW_HOVERED) != 0 && glfwGetWindowAttrib(window_, GLFW_FOCUSED) != 0;
         return p;
     }
 
     bool Window::held(ui::Key key) const
     {
-        for (const std::int32_t k : { GLFW_KEY_LEFT, GLFW_KEY_RIGHT, GLFW_KEY_UP, GLFW_KEY_DOWN, GLFW_KEY_PAGE_UP, GLFW_KEY_PAGE_DOWN })
+        for (const i32 k : { GLFW_KEY_LEFT, GLFW_KEY_RIGHT, GLFW_KEY_UP, GLFW_KEY_DOWN, GLFW_KEY_PAGE_UP, GLFW_KEY_PAGE_DOWN })
         {
             if (interface_key(k) == key)
                 return glfwGetKey(window_, k) == GLFW_PRESS;
@@ -268,7 +269,7 @@ namespace rct3::platform
 
     bool Window::held(const ui::KeyCombo& combo) const
     {
-        const auto down = [&](std::int32_t k) { return glfwGetKey(window_, k) == GLFW_PRESS; };
+        const auto down = [&](i32 k) { return glfwGetKey(window_, k) == GLFW_PRESS; };
         const bool control = down(GLFW_KEY_LEFT_CONTROL) || down(GLFW_KEY_RIGHT_CONTROL);
         const bool shift = down(GLFW_KEY_LEFT_SHIFT) || down(GLFW_KEY_RIGHT_SHIFT);
         const bool alt = down(GLFW_KEY_LEFT_ALT) || down(GLFW_KEY_RIGHT_ALT);
@@ -279,12 +280,12 @@ namespace rct3::platform
             // By the US layout, as presses are named (see the key callback).
             const char32_t c = combo.character;
             if (c >= U'a' && c <= U'z')
-                return down(GLFW_KEY_A + static_cast<std::int32_t>(c - U'a'));
+                return down(GLFW_KEY_A + static_cast<i32>(c - U'a'));
             if (c >= U'0' && c <= U'9')
-                return down(GLFW_KEY_0 + static_cast<std::int32_t>(c - U'0'));
+                return down(GLFW_KEY_0 + static_cast<i32>(c - U'0'));
             return false;
         }
-        for (std::int32_t k = GLFW_KEY_SPACE; k <= GLFW_KEY_LAST; ++k)
+        for (i32 k = GLFW_KEY_SPACE; k <= GLFW_KEY_LAST; ++k)
         {
             if (interface_key(k) == combo.key && down(k))
                 return true;

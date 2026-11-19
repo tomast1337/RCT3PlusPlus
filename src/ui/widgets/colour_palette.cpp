@@ -1,25 +1,27 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/colour_palette.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <format>
 
 namespace rct3::ui::widgets
 {
 
-    ColourPalette::ColourPalette(std::string name, ColourPaletteStyle style, std::size_t count, std::size_t columns, std::size_t current)
+    ColourPalette::ColourPalette(std::string name, ColourPaletteStyle style, usize count, usize columns, usize current)
         : Widget(std::move(name))
         , style_(std::move(style))
         , current_(current)
     {
-        columns = std::max<std::size_t>(columns, 1);
-        for (std::size_t i = 0; i < count; ++i)
+        columns = std::max<usize>(columns, 1);
+        for (usize i = 0; i < count; ++i)
         {
             const std::string& ring = i == current ? style_.current_ring : style_.ring;
             const std::string swatch = std::format("{}{}", style_.swatch_prefix, i);
             Button& b = add<Button>(swatch, ring, swatch);
-            const float x = style_.margin + style_.pitch * static_cast<float>(i % columns);
-            const float y = style_.margin + style_.pitch * static_cast<float>(i / columns);
+            const f32 x = style_.margin + style_.pitch * static_cast<f32>(i % columns);
+            const f32 y = style_.margin + style_.pitch * static_cast<f32>(i / columns);
             b.placement = top_left(x, y, style_.swatch, style_.swatch);
             b.swell = style_.swell;
             b.icon_scale = style_.picture_scale;
@@ -27,19 +29,19 @@ namespace rct3::ui::widgets
         }
     }
 
-    Point ColourPalette::size(const ColourPaletteStyle& style, std::size_t count, std::size_t columns)
+    Point ColourPalette::size(const ColourPaletteStyle& style, usize count, usize columns)
     {
-        columns = std::max<std::size_t>(columns, 1);
-        const std::size_t rows = (count + columns - 1) / columns;
-        const auto span = [&](std::size_t n) { return n == 0 ? 0.0f : style.pitch * static_cast<float>(n - 1) + style.swatch; };
+        columns = std::max<usize>(columns, 1);
+        const usize rows = (count + columns - 1) / columns;
+        const auto span = [&](usize n) { return n == 0 ? 0.0f : style.pitch * static_cast<f32>(n - 1) + style.swatch; };
         return { 2 * style.margin + span(std::min(count, columns)), 2 * style.margin + span(rows) };
     }
 
-    std::optional<std::size_t> ColourPalette::take_pick()
+    std::optional<usize> ColourPalette::take_pick()
     {
         // Read from the swatches when asked, so a pick made this update is not left for the next.
-        std::optional<std::size_t> picked;
-        for (std::size_t i = 0; i < swatches_.size(); ++i)
+        std::optional<usize> picked;
+        for (usize i = 0; i < swatches_.size(); ++i)
         {
             if (swatches_[i]->take_click())
                 picked = i;

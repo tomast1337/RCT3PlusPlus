@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/support/columns.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -30,14 +32,14 @@ namespace
         return sets;
     }
 
-    save::model::TerrainGrid flat_grid(std::int32_t size, float level)
+    save::model::TerrainGrid flat_grid(i32 size, f32 level)
     {
         save::model::TerrainGrid g;
         g.width = size;
         g.height = size;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(size * size));
+        g.cells.resize(static_cast<usize>(size * size));
         for (save::model::TerrainCell& c : g.cells)
             c.corners = { level, level, level, level };
         return g;
@@ -68,7 +70,7 @@ namespace
             piece("LongBeam", { -1.5f, -0.1f, -0.2f }, { 1.5f, 0.1f, 0.2f });
         }
 
-        save::model::PlacedObject& add(std::string symbol, SupportFootprint footprint, std::int32_t col, std::int32_t row, std::int32_t base, std::int32_t rotation = 0)
+        save::model::PlacedObject& add(std::string symbol, SupportFootprint footprint, i32 col, i32 row, i32 base, i32 rotation = 0)
         {
             object::ObjectModel m;
             m.support_group = std::string(kGroup);
@@ -87,7 +89,7 @@ namespace
     };
 
     /// One square of track that wants a round column under it and takes levels `low` to `high`.
-    SupportFootprint track_square(std::int32_t low = 0, std::int32_t high = 1)
+    SupportFootprint track_square(i32 low = 0, i32 high = 1)
     {
         SupportFootprint f;
         f.x_squares = 1;
@@ -98,15 +100,15 @@ namespace
         return f;
     }
 
-    std::vector<std::pair<std::string, std::int32_t>> stack(const std::vector<save::model::PlacedObject>& pieces, std::int32_t col, std::int32_t row)
+    std::vector<std::pair<std::string, i32>> stack(const std::vector<save::model::PlacedObject>& pieces, i32 col, i32 row)
     {
-        std::vector<std::pair<std::string, std::int32_t>> out;
+        std::vector<std::pair<std::string, i32>> out;
         for (const save::model::PlacedObject& o : pieces)
         {
             if (o.col == col && o.row == row)
                 out.emplace_back(o.symbol, *o.base_height);
         }
-        std::ranges::sort(out, { }, &std::pair<std::string, std::int32_t>::second);
+        std::ranges::sort(out, { }, &std::pair<std::string, i32>::second);
         return out;
     }
 
@@ -136,7 +138,7 @@ TEST_CASE("a column under track on the ground: deep foot, middles lined up on th
     Park park;
     park.add("Straight", track_square(), 3, 3, 10);
     const BuiltSupports built = support_columns(park.objects, park.models, { }, flat_grid(8, 2), girders(), 100);
-    using Stack = std::vector<std::pair<std::string, std::int32_t>>;
+    using Stack = std::vector<std::pair<std::string, i32>>;
     CHECK(stack(built.pieces, 3, 3) == Stack { { "DeepFoot", 2 }, { "Mid1", 3 }, { "Mid4", 4 }, { "Mid1", 8 }, { "Head", 9 } });
     CHECK(built.fitted.empty());
     CHECK(built.pieces.front().id == 101);
@@ -180,7 +182,7 @@ TEST_CASE("a column stands on track below only when that track or the set allows
     park.add("Upper", track_square(), 3, 3, 20);
     park.add("Lower", track_square(), 3, 3, 10);
     const auto upper_foot = [&](const SupportSets& sets) {
-        std::vector<std::int32_t> feet;
+        std::vector<i32> feet;
         for (const save::model::PlacedObject& o : support_columns(park.objects, park.models, { }, flat_grid(8, 0), sets, 0).pieces)
         {
             if (o.symbol == "Foot")
@@ -191,7 +193,7 @@ TEST_CASE("a column stands on track below only when that track or the set allows
     CHECK(upper_foot(girders()).empty()); // Only the lower track's column, which stands on the ground
     SupportSets anything = girders();
     anything.at(std::string(kGroup)).front().stands_on_anything = true;
-    CHECK(upper_foot(anything) == std::vector<std::int32_t> { 12 });
+    CHECK(upper_foot(anything) == std::vector<i32> { 12 });
 }
 
 TEST_CASE("items that ask for every other tile get columns where column and row differ in evenness")
@@ -277,7 +279,7 @@ TEST_CASE("a column over a raised path, a ride or scenery is left out, unless it
     ride.track = false;
     park.add("Ride", ride, 6, 6, 1);
     park.add("OverRide", track_square(), 6, 6, 12);
-    using Stack = std::vector<std::pair<std::string, std::int32_t>>;
+    using Stack = std::vector<std::pair<std::string, i32>>;
     const BuiltSupports built = support_columns(park.objects, park.models, { }, flat_grid(8, 0), girders(), 0);
     // Only the deck's own column to the ground.
     CHECK(stack(built.pieces, 3, 3) == Stack { { "DeepFoot", 0 }, { "Mid1", 1 }, { "Mid2", 2 }, { "Mid4", 4 }, { "Head", 8 } });
@@ -287,8 +289,8 @@ TEST_CASE("a column over a raised path, a ride or scenery is left out, unless it
     anything.at(std::string(kGroup)).front().stands_on_anything = true;
     const BuiltSupports on = support_columns(park.objects, park.models, { }, flat_grid(8, 0), anything, 0);
     // On the deck's top, with no level kept clear: it is no track.
-    CHECK(std::ranges::count(stack(on.pieces, 3, 3), std::pair<std::string, std::int32_t> { "Foot", 10 }) == 1);
-    CHECK(std::ranges::count(stack(on.pieces, 6, 6), std::pair<std::string, std::int32_t> { "Foot", 4 }) == 1);
+    CHECK(std::ranges::count(stack(on.pieces, 3, 3), std::pair<std::string, i32> { "Foot", 10 }) == 1);
+    CHECK(std::ranges::count(stack(on.pieces, 6, 6), std::pair<std::string, i32> { "Foot", 4 }) == 1);
 }
 
 TEST_CASE("a column passes by items it is told to, and stands on the ground over buried ones")
@@ -304,11 +306,11 @@ TEST_CASE("a column passes by items it is told to, and stands on the ground over
     CHECK(stack(support_columns(park.objects, park.models, { }, grid, girders(), 0).pieces, 3, 3).empty());
     const BuiltSupports passed = support_columns(park.objects, park.models, { }, grid, girders(), 0, { 2 });
     REQUIRE_FALSE(stack(passed.pieces, 3, 3).empty());
-    CHECK(stack(passed.pieces, 3, 3).front() == std::pair<std::string, std::int32_t> { "DeepFoot", 0 });
+    CHECK(stack(passed.pieces, 3, 3).front() == std::pair<std::string, i32> { "DeepFoot", 0 });
     // Over track in a tunnel: on the ground, as on an item.
     const auto over_tunnel = stack(passed.pieces, 5, 5);
     REQUIRE_FALSE(over_tunnel.empty());
-    CHECK(over_tunnel.front() == std::pair<std::string, std::int32_t> { "Foot", 0 });
+    CHECK(over_tunnel.front() == std::pair<std::string, i32> { "Foot", 0 });
 }
 
 TEST_CASE("columns are built on the tiles asked for only, each telling what it holds up and where")
@@ -320,7 +322,7 @@ TEST_CASE("columns are built on the tiles asked for only, each telling what it h
     const BuiltSupports built = support_columns(park.objects, park.models, { }, flat_grid(8, 0), girders(), 0, { }, tiles);
     REQUIRE_FALSE(built.pieces.empty());
     REQUIRE(built.of.size() == built.pieces.size());
-    for (std::size_t i = 0; i < built.pieces.size(); ++i)
+    for (usize i = 0; i < built.pieces.size(); ++i)
     {
         CHECK(built.pieces[i].col == 4);
         CHECK(built.of[i].held == 2);
@@ -347,7 +349,7 @@ TEST_CASE("a placed object that names a support set gets its columns from that s
     for (const auto& [symbol, levels] : { std::pair { "Post1", 1 }, std::pair { "Post4", 4 } })
         add_support_piece(sets, "posts", kSupportMiddleType, symbol, levels);
     park.add("Straight", track_square(), 3, 3, 6).support_set = "posts";
-    using Stack = std::vector<std::pair<std::string, std::int32_t>>;
+    using Stack = std::vector<std::pair<std::string, i32>>;
     CHECK(stack(support_columns(park.objects, park.models, { }, flat_grid(8, 0), sets, 100).pieces, 3, 3) == Stack { { "Post4", 0 }, { "Post1", 4 }, { "Post1", 5 } });
     park.objects.front().support_set.clear();
     CHECK(stack(support_columns(park.objects, park.models, { }, flat_grid(8, 0), sets, 100).pieces, 3, 3).front().first == "DeepFoot");

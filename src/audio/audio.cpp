@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "audio/audio.hpp"
 
+#include "core/types.hpp"
 #include "miniaudio/miniaudio_config.h"
 
 #include <algorithm>
@@ -18,37 +19,37 @@ namespace rct3::audio
     namespace
     {
 
-        std::size_t frame_bytes(const SoundBuffer& b) noexcept
+        usize frame_bytes(const SoundBuffer& b) noexcept
         {
             return b.channels * bytes_per_sample(b.format);
         }
 
-        bool finite_in(float v, float lo, float hi) noexcept
+        bool finite_in(f32 v, f32 lo, f32 hi) noexcept
         {
             return std::isfinite(v) && v >= lo && v <= hi;
         }
 
         // Under water: little above a low hum gets through, and that a little quieter.
-        constexpr double kMuffledCutoff = 500; // Hz
-        constexpr float kMuffledVolume = 0.7f;
+        constexpr f64 kMuffledCutoff = 500; // Hz
+        constexpr f32 kMuffledVolume = 0.7f;
         constexpr ma_uint32 kMuffleOrder = 2;
         // Open, the filter passes all but the very top of the band.
-        double clear_cutoff(std::uint32_t sample_rate) noexcept
+        f64 clear_cutoff(u32 sample_rate) noexcept
         {
             return 0.45 * sample_rate;
         }
 
     } // namespace
 
-    std::size_t SoundBuffer::frame_count() const noexcept
+    usize SoundBuffer::frame_count() const noexcept
     {
-        const std::size_t fb = frame_bytes(*this);
+        const usize fb = frame_bytes(*this);
         return fb == 0 ? 0 : data.size() / fb;
     }
 
-    double SoundBuffer::duration_seconds() const noexcept
+    f64 SoundBuffer::duration_seconds() const noexcept
     {
-        return sample_rate == 0 ? 0.0 : static_cast<double>(frame_count()) / sample_rate;
+        return sample_rate == 0 ? 0.0 : static_cast<f64>(frame_count()) / sample_rate;
     }
 
     bool SoundBuffer::valid() const noexcept
@@ -57,11 +58,11 @@ namespace rct3::audio
             return false;
         if (sample_rate == 0 || sample_rate > kMaxSampleRate)
             return false;
-        const std::size_t fb = frame_bytes(*this);
+        const usize fb = frame_bytes(*this);
         return !data.empty() && data.size() % fb == 0;
     }
 
-    SoundBuffer make_pcm16(std::span<const std::int16_t> samples, std::uint16_t channels, std::uint32_t sample_rate)
+    SoundBuffer make_pcm16(std::span<const i16> samples, u16 channels, u32 sample_rate)
     {
         SoundBuffer b { SampleFormat::Pcm16, channels, sample_rate, { } };
         b.data.resize(samples.size_bytes());
@@ -70,7 +71,7 @@ namespace rct3::audio
         return b;
     }
 
-    SoundBuffer make_float(std::span<const float> samples, std::uint16_t channels, std::uint32_t sample_rate)
+    SoundBuffer make_float(std::span<const f32> samples, u16 channels, u32 sample_rate)
     {
         SoundBuffer b { SampleFormat::Float32, channels, sample_rate, { } };
         b.data.resize(samples.size_bytes());
@@ -112,11 +113,11 @@ namespace rct3::audio
         if (!info.samples)
             return std::unexpected(ConvertError::MissingSamples);
 
-        const std::size_t in_sample = info.bits_per_sample / 8;
-        const std::size_t frames = info.samples->size() / (in_sample * info.channels);
+        const usize in_sample = info.bits_per_sample / 8;
+        const usize frames = info.samples->size() / (in_sample * info.channels);
         if (frames == 0)
             return std::unexpected(ConvertError::Empty);
-        const std::size_t count = frames * info.channels;
+        const usize count = frames * info.channels;
 
         SoundBuffer out { SampleFormat::Pcm16, info.channels, info.sample_rate, { } };
         out.data.resize(count * 2);
@@ -127,9 +128,9 @@ namespace rct3::audio
         }
         else
         {
-            for (std::size_t i = 0; i < count; ++i)
+            for (usize i = 0; i < count; ++i)
             {
-                const auto v = static_cast<std::int16_t>((static_cast<std::int32_t>(std::to_integer<std::uint32_t>(src[i])) - 128) * 256);
+                const auto v = static_cast<i16>((static_cast<i32>(std::to_integer<u32>(src[i])) - 128) * 256);
                 std::memcpy(out.data.data() + i * 2, &v, 2);
             }
         }
@@ -202,20 +203,20 @@ namespace rct3::audio
             const ma_uint64 n = std::min(count, src->frames - src->cursor);
             if (out != nullptr && n > 0)
             {
-                const std::size_t samples = static_cast<std::size_t>(n) * src->channels;
-                const std::size_t first = static_cast<std::size_t>(src->cursor) * src->channels;
-                auto* dst = static_cast<float*>(out);
+                const usize samples = static_cast<usize>(n) * src->channels;
+                const usize first = static_cast<usize>(src->cursor) * src->channels;
+                auto* dst = static_cast<f32*>(out);
                 if (src->is_float)
                 {
-                    std::memcpy(dst, src->data.data() + first * sizeof(float), samples * sizeof(float));
+                    std::memcpy(dst, src->data.data() + first * sizeof(f32), samples * sizeof(f32));
                 }
                 else
                 {
-                    for (std::size_t i = 0; i < samples; ++i)
+                    for (usize i = 0; i < samples; ++i)
                     {
-                        std::int16_t v = 0;
+                        i16 v = 0;
                         std::memcpy(&v, src->data.data() + (first + i) * sizeof v, sizeof v);
-                        dst[i] = static_cast<float>(v) * (1.0f / 32768.0f);
+                        dst[i] = static_cast<f32>(v) * (1.0f / 32768.0f);
                     }
                 }
             }
@@ -276,7 +277,7 @@ namespace rct3::audio
         ma_result stream_read(ma_data_source* ds, void* out, ma_uint64 count, ma_uint64* read)
         {
             auto* src = static_cast<StreamSource*>(ds);
-            auto* dst = static_cast<float*>(out);
+            auto* dst = static_cast<f32*>(out);
             const bool ended = src->ended.load(std::memory_order_acquire);
             ma_uint64 got = 0;
             while (got < count)
@@ -286,7 +287,7 @@ namespace rct3::audio
                 if (ma_pcm_rb_acquire_read(&src->ring, &n, &buffer) != MA_SUCCESS || n == 0)
                     break;
                 if (dst != nullptr)
-                    std::memcpy(dst + got * src->channels, buffer, static_cast<std::size_t>(n) * src->channels * sizeof(float));
+                    std::memcpy(dst + got * src->channels, buffer, static_cast<usize>(n) * src->channels * sizeof(f32));
                 ma_pcm_rb_commit_read(&src->ring, n);
                 got += n;
             }
@@ -338,7 +339,7 @@ namespace rct3::audio
             StreamSource stream;
             bool streamed = false; // plays `stream`, not `source`
             ma_sound sound;
-            std::uint32_t generation = 0; // bumped on every start, so stale handles never match
+            u32 generation = 0; // bumped on every start, so stale handles never match
             bool in_use = false;
         };
 
@@ -348,7 +349,7 @@ namespace rct3::audio
     {
         EngineConfig config;
         Backend active = Backend::Offline;
-        float master = 1.0f;
+        f32 master = 1.0f;
         bool context_ready = false;
         bool engine_ready = false;
         ma_context context { };
@@ -357,11 +358,11 @@ namespace rct3::audio
         bool muffle_ready = false;
         bool muffled = false;
         std::unique_ptr<Voice[]> voices; // never moves: miniaudio keeps pointers into a started voice
-        std::size_t voice_count = 0;
+        usize voice_count = 0;
 
         ~Impl()
         {
-            for (std::size_t i = 0; i < voice_count; ++i)
+            for (usize i = 0; i < voice_count; ++i)
                 release(voices[i]);
             if (muffle_ready)
                 ma_lpf_node_uninit(&muffle, nullptr);
@@ -418,7 +419,7 @@ namespace rct3::audio
         Voice* free_slot()
         {
             collect();
-            for (std::size_t i = 0; i < voice_count; ++i)
+            for (usize i = 0; i < voice_count; ++i)
             {
                 if (!voices[i].in_use)
                     return &voices[i];
@@ -455,12 +456,12 @@ namespace rct3::audio
                 release(v);
                 return std::unexpected(PlayError::Failed);
             }
-            return VoiceHandle { static_cast<std::uint32_t>(&v - voices.get()), v.generation };
+            return VoiceHandle { static_cast<u32>(&v - voices.get()), v.generation };
         }
 
         void collect()
         {
-            for (std::size_t i = 0; i < voice_count; ++i)
+            for (usize i = 0; i < voice_count; ++i)
             {
                 if (voices[i].in_use && finished(voices[i]))
                     release(voices[i]);
@@ -508,10 +509,10 @@ namespace rct3::audio
         {
             // Real backends, in miniaudio's preferred order for this platform, without the null backend.
             std::array<ma_backend, ma_backend_null + 1> all { };
-            std::size_t n = 0;
+            usize n = 0;
             ma_get_enabled_backends(all.data(), all.size(), &n);
             std::vector<ma_backend> real;
-            for (std::size_t i = 0; i < n; ++i)
+            for (usize i = 0; i < n; ++i)
             {
                 if (all[i] != ma_backend_null)
                     real.push_back(all[i]);
@@ -629,7 +630,7 @@ namespace rct3::audio
         return m.start_voice(v, &src, params);
     }
 
-    std::size_t AudioEngine::stream_space(VoiceHandle voice) const
+    usize AudioEngine::stream_space(VoiceHandle voice) const
     {
         const Voice* v = impl_->find(voice);
         if (v == nullptr || !v->streamed || v->stream.ended.load(std::memory_order_relaxed))
@@ -637,21 +638,21 @@ namespace rct3::audio
         return ma_pcm_rb_available_write(const_cast<ma_pcm_rb*>(&v->stream.ring));
     }
 
-    std::size_t AudioEngine::feed(VoiceHandle voice, std::span<const float> samples)
+    usize AudioEngine::feed(VoiceHandle voice, std::span<const f32> samples)
     {
         Voice* v = impl_->find(voice);
         if (v == nullptr || !v->streamed || v->stream.ended.load(std::memory_order_relaxed))
             return 0;
         StreamSource& src = v->stream;
-        const std::size_t frames = samples.size() / src.channels;
-        std::size_t done = 0;
+        const usize frames = samples.size() / src.channels;
+        usize done = 0;
         while (done < frames)
         {
-            ma_uint32 n = static_cast<ma_uint32>(std::min<std::size_t>(frames - done, 0xFFFFFFFFu));
+            ma_uint32 n = static_cast<ma_uint32>(std::min<usize>(frames - done, 0xFFFFFFFFu));
             void* buffer = nullptr;
             if (ma_pcm_rb_acquire_write(&src.ring, &n, &buffer) != MA_SUCCESS || n == 0)
                 break;
-            std::memcpy(buffer, samples.data() + done * src.channels, static_cast<std::size_t>(n) * src.channels * sizeof(float));
+            std::memcpy(buffer, samples.data() + done * src.channels, static_cast<usize>(n) * src.channels * sizeof(f32));
             ma_pcm_rb_commit_write(&src.ring, n);
             done += n;
         }
@@ -679,7 +680,7 @@ namespace rct3::audio
 
     void AudioEngine::stop_all()
     {
-        for (std::size_t i = 0; i < impl_->voice_count; ++i)
+        for (usize i = 0; i < impl_->voice_count; ++i)
         {
             Voice& v = impl_->voices[i];
             if (v.in_use)
@@ -688,7 +689,7 @@ namespace rct3::audio
         }
     }
 
-    bool AudioEngine::set_voice_volume(VoiceHandle voice, float volume)
+    bool AudioEngine::set_voice_volume(VoiceHandle voice, f32 volume)
     {
         Voice* v = impl_->find(voice);
         if (v == nullptr || !finite_in(volume, 0.0f, kMaxVolume))
@@ -697,7 +698,7 @@ namespace rct3::audio
         return true;
     }
 
-    bool AudioEngine::set_voice_pan(VoiceHandle voice, float pan)
+    bool AudioEngine::set_voice_pan(VoiceHandle voice, f32 pan)
     {
         Voice* v = impl_->find(voice);
         if (v == nullptr || !finite_in(pan, -1.0f, 1.0f))
@@ -706,7 +707,7 @@ namespace rct3::audio
         return true;
     }
 
-    bool AudioEngine::set_voice_pitch(VoiceHandle voice, float pitch)
+    bool AudioEngine::set_voice_pitch(VoiceHandle voice, f32 pitch)
     {
         Voice* v = impl_->find(voice);
         if (v == nullptr || !finite_in(pitch, 0.0f, kMaxPitch) || pitch <= 0.0f)
@@ -715,7 +716,7 @@ namespace rct3::audio
         return true;
     }
 
-    bool AudioEngine::fade_voice(VoiceHandle voice, float level, float seconds)
+    bool AudioEngine::fade_voice(VoiceHandle voice, f32 level, f32 seconds)
     {
         Voice* v = impl_->find(voice);
         if (v == nullptr || !finite_in(level, 0.0f, 1.0f) || !finite_in(seconds, 0.0f, 3600.0f))
@@ -759,10 +760,10 @@ namespace rct3::audio
         return v != nullptr && !Impl::finished(*v);
     }
 
-    std::uint32_t AudioEngine::active_voices() const
+    u32 AudioEngine::active_voices() const
     {
-        std::uint32_t n = 0;
-        for (std::size_t i = 0; i < impl_->voice_count; ++i)
+        u32 n = 0;
+        for (usize i = 0; i < impl_->voice_count; ++i)
         {
             if (impl_->voices[i].in_use && !Impl::finished(impl_->voices[i]))
                 ++n;
@@ -770,12 +771,12 @@ namespace rct3::audio
         return n;
     }
 
-    std::uint32_t AudioEngine::max_voices() const noexcept
+    u32 AudioEngine::max_voices() const noexcept
     {
-        return static_cast<std::uint32_t>(impl_->voice_count);
+        return static_cast<u32>(impl_->voice_count);
     }
 
-    bool AudioEngine::set_master_volume(float volume)
+    bool AudioEngine::set_master_volume(f32 volume)
     {
         if (!finite_in(volume, 0.0f, kMaxVolume))
             return false;
@@ -784,7 +785,7 @@ namespace rct3::audio
         return true;
     }
 
-    float AudioEngine::master_volume() const noexcept
+    f32 AudioEngine::master_volume() const noexcept
     {
         return impl_->master;
     }
@@ -792,20 +793,20 @@ namespace rct3::audio
     {
         return impl_->active;
     }
-    std::uint32_t AudioEngine::sample_rate() const noexcept
+    u32 AudioEngine::sample_rate() const noexcept
     {
         return impl_->config.sample_rate;
     }
-    std::uint16_t AudioEngine::channels() const noexcept
+    u16 AudioEngine::channels() const noexcept
     {
         return impl_->config.channels;
     }
 
-    std::size_t AudioEngine::render(std::span<float> out)
+    usize AudioEngine::render(std::span<f32> out)
     {
         if (impl_->active != Backend::Offline)
             return 0;
-        const std::size_t frames = out.size() / impl_->config.channels;
+        const usize frames = out.size() / impl_->config.channels;
         // The mixer reports fewer frames than asked for when nothing is playing (or the last voice ends
         // inside the block); what it did not write is silence.
         std::ranges::fill(out, 0.0f);

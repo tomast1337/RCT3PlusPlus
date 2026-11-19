@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/dialogs/about.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -26,13 +28,13 @@ namespace rct3::ui::screens::dialogs
         constexpr std::array<std::string_view, 2> kPackNames = { "ContentPackName_SoakedAddOn", "ContentPackName_WildAddOn" };
 
         /// The credits under one key prefix, numbered from 0 until one is missing.
-        void add_credits(std::vector<CreditLine>& out, const StringTable& strings, std::u16string heading, const std::string& prefix, random::RandomState& random, std::int32_t& gaps, std::int32_t& row)
+        void add_credits(std::vector<CreditLine>& out, const StringTable& strings, std::u16string heading, const std::string& prefix, random::RandomState& random, i32& gaps, i32& row)
         {
             if (!strings.contains(std::format("{}0", prefix)))
                 return;
             ++gaps;
             out.push_back({ std::move(heading), CreditLine::Kind::Heading, Align::Centre, 0, gaps, row++ });
-            for (std::int32_t k = 0;; ++k)
+            for (i32 k = 0;; ++k)
             {
                 const std::string key = prefix + std::to_string(k);
                 if (!strings.contains(key))
@@ -40,7 +42,7 @@ namespace rct3::ui::screens::dialogs
                 ++gaps;
                 // Alternately from the right and the left edge, moved in by a random amount.
                 const Align align = k % 2 == 0 ? Align::End : Align::Start;
-                const auto inset = static_cast<float>(random::unit(random));
+                const auto inset = static_cast<f32>(random::unit(random));
                 bool first = true;
                 for (const auto part : std::views::split(strings.get(key), u'|'))
                 {
@@ -52,9 +54,9 @@ namespace rct3::ui::screens::dialogs
         }
 
         /// Copies `prefix` + first, + first + 1, ... from `from` until one is missing.
-        void copy_numbered(StringTable& to, const StringTable& from, const std::string& prefix, std::int32_t first)
+        void copy_numbered(StringTable& to, const StringTable& from, const std::string& prefix, i32 first)
         {
-            for (std::int32_t k = first; from.contains(prefix + std::to_string(k)); ++k)
+            for (i32 k = first; from.contains(prefix + std::to_string(k)); ++k)
                 to.add(prefix + std::to_string(k), std::u16string(from.get(prefix + std::to_string(k))));
         }
 
@@ -64,14 +66,14 @@ namespace rct3::ui::screens::dialogs
     {
         copy_numbered(to, game, std::string(kCopyright), 1);
         copy_numbered(to, game, std::string(kBaseCredits), 0);
-        for (std::size_t pack = 0; pack < kPackNames.size(); ++pack)
+        for (usize pack = 0; pack < kPackNames.size(); ++pack)
             copy_numbered(to, game, std::format("{}{}_", kPackCredits, pack), 0);
     }
 
     std::vector<std::u16string> about_info_lines(const StringTable& strings)
     {
         std::vector<std::u16string> lines { std::u16string(strings.get(kGameName)) };
-        for (std::int32_t n = 1;; ++n)
+        for (i32 n = 1;; ++n)
         {
             const std::string key = std::string(kCopyright) + std::to_string(n);
             if (!strings.contains(key))
@@ -81,19 +83,19 @@ namespace rct3::ui::screens::dialogs
         return lines;
     }
 
-    std::vector<CreditLine> credit_lines(const StringTable& strings, std::span<const std::int32_t> packs, random::RandomState& random)
+    std::vector<CreditLine> credit_lines(const StringTable& strings, std::span<const i32> packs, random::RandomState& random)
     {
-        auto newest_first = packs | std::ranges::to<std::vector<std::int32_t>>();
+        auto newest_first = packs | std::ranges::to<std::vector<i32>>();
         std::ranges::sort(newest_first, std::greater { });
         std::vector<CreditLine> out;
-        std::int32_t gaps = 0;
-        std::int32_t row = 0;
-        for (const std::int32_t pack : newest_first)
+        i32 gaps = 0;
+        i32 row = 0;
+        for (const i32 pack : newest_first)
         {
-            if (pack < 0 || static_cast<std::size_t>(pack) >= kPackNames.size())
+            if (pack < 0 || static_cast<usize>(pack) >= kPackNames.size())
                 continue;
             const std::string prefix = std::format("{}{}_", kPackCredits, pack);
-            add_credits(out, strings, std::u16string(strings.get(kPackNames.at(static_cast<std::size_t>(pack)))), prefix, random, gaps, row);
+            add_credits(out, strings, std::u16string(strings.get(kPackNames.at(static_cast<usize>(pack)))), prefix, random, gaps, row);
         }
         add_credits(out, strings, std::u16string(strings.get(kBaseName)), std::string(kBaseCredits), random, gaps, row);
         return out;
@@ -107,10 +109,10 @@ namespace rct3::ui::screens::dialogs
         clip_children = true;
     }
 
-    float CreditsScroller::line_y(const CreditLine& line, float line_height) const
+    f32 CreditsScroller::line_y(const CreditLine& line, f32 line_height) const
     {
         // No gap above the first credit: the roll starts with it at the top.
-        return static_cast<float>(std::max(0, line.gaps - 1)) * style_.credit_gap + static_cast<float>(line.row) * line_height;
+        return static_cast<f32>(std::max(0, line.gaps - 1)) * style_.credit_gap + static_cast<f32>(line.row) * line_height;
     }
 
     void CreditsScroller::update(const UpdateContext& context)
@@ -120,7 +122,7 @@ namespace rct3::ui::screens::dialogs
             length_ = line_y(lines_.back(), f->line_height()) + f->line_height();
 
         // Up until the last line is in sight at the bottom, then from the top again.
-        const float end = length_ - rect().height();
+        const f32 end = length_ - rect().height();
         if (end <= 0)
         {
             offset_ = 0;
@@ -142,17 +144,17 @@ namespace rct3::ui::screens::dialogs
             return;
         }
         const Rect& r = rect();
-        const float w = r.width();
-        const float top = std::round(r.y0 - offset_);
+        const f32 w = r.width();
+        const f32 top = std::round(r.y0 - offset_);
         for (const CreditLine& line : lines_)
         {
-            const float y = top + line_y(line, f->line_height());
+            const f32 y = top + line_y(line, f->line_height());
             if (y + f->line_height() < r.y0)
                 continue;
             if (y > r.y1)
                 break;
             Rect box { r.x0, y, r.x1, y + f->line_height() };
-            const float in = std::round(line.inset * style_.most_inset * w);
+            const f32 in = std::round(line.inset * style_.most_inset * w);
             if (line.align == Align::Start)
                 box.x0 += in;
             else if (line.align == Align::End)
@@ -177,13 +179,13 @@ namespace rct3::ui::screens::dialogs
         caption_->placement = top_left(style.caption_x, 0, style.caption_width, style.tab_size);
 
         const std::array<std::pair<std::string, std::string_view>, kAboutPageCount> tabs = { { { style.icon, kInfoTab }, { style.credits_icon, kCreditsTab } } };
-        for (std::size_t i = 0; i < kAboutPageCount; ++i)
+        for (usize i = 0; i < kAboutPageCount; ++i)
         {
             // The picture is the button, drawn at the tab's size.
             auto& tab = body.add<widgets::Button>(tabs.at(i).first, tabs.at(i).first);
             tab.toggle = true;
             tab.tooltip = strings.get(tabs.at(i).second);
-            const float right = style.tab_size * static_cast<float>(kAboutPageCount - i);
+            const f32 right = style.tab_size * static_cast<f32>(kAboutPageCount - i);
             tab.placement = top_left(style.page_width - right, 0, style.tab_size, style.tab_size);
             tabs_.at(i) = &tab;
             captions_.at(i) = tab.tooltip;
@@ -193,9 +195,9 @@ namespace rct3::ui::screens::dialogs
             pages_.at(i) = &page;
         }
 
-        Widget& info = *pages_.at(static_cast<std::size_t>(AboutPage::Info));
+        Widget& info = *pages_.at(static_cast<usize>(AboutPage::Info));
         const std::vector<std::u16string> lines = about_info_lines(strings);
-        for (std::size_t i = 0; i < lines.size(); ++i)
+        for (usize i = 0; i < lines.size(); ++i)
         {
             auto& label = info.add<widgets::Label>(std::format("line{}", i), lines[i], i == 0 ? style.title_font : style.font);
             label.style.colour = style.text_colour;
@@ -205,7 +207,7 @@ namespace rct3::ui::screens::dialogs
         place_info();
 
         random::RandomState random = random::seeded(seed);
-        credits_ = &pages_.at(static_cast<std::size_t>(AboutPage::Credits))->add<CreditsScroller>("roll", credit_lines(strings, packs, random), style);
+        credits_ = &pages_.at(static_cast<usize>(AboutPage::Credits))->add<CreditsScroller>("roll", credit_lines(strings, packs, random), style);
         credits_->placement = fill();
         show_page(AboutPage::Info);
     }
@@ -213,10 +215,10 @@ namespace rct3::ui::screens::dialogs
     void GameInfoBox::place_info()
     {
         // Each line under the one before, as tall as it wraps to.
-        float y = 0;
+        f32 y = 0;
         for (widgets::Label* label : info_)
         {
-            const float height = std::max(1.0f, label->extent().height());
+            const f32 height = std::max(1.0f, label->extent().height());
             label->placement = top_left(0, y, style_.page_width, height);
             y += height + style_.line_gap;
         }
@@ -226,10 +228,10 @@ namespace rct3::ui::screens::dialogs
     void GameInfoBox::fit_page()
     {
         // The info page as tall as its lines, as the game sizes it to them; the credits at their own height.
-        const float page = page_ == AboutPage::Info && info_height_ > 0 ? info_height_ : style_.page_height;
+        const f32 page = page_ == AboutPage::Info && info_height_ > 0 ? info_height_ : style_.page_height;
         const Rect& in = style_.window.content_inset;
         set_height(in.y0 + style_.tab_bar_height + page + in.y1);
-        pages_.at(static_cast<std::size_t>(page_))->placement = top_left(0, style_.tab_bar_height, style_.page_width, page);
+        pages_.at(static_cast<usize>(page_))->placement = top_left(0, style_.tab_bar_height, style_.page_width, page);
     }
 
     void GameInfoBox::show_page(AboutPage page)
@@ -237,19 +239,19 @@ namespace rct3::ui::screens::dialogs
         if (page == AboutPage::Credits && page_ != AboutPage::Credits)
             credits_->restart();
         page_ = page;
-        for (std::size_t i = 0; i < kAboutPageCount; ++i)
+        for (usize i = 0; i < kAboutPageCount; ++i)
         {
-            const bool current = i == static_cast<std::size_t>(page);
+            const bool current = i == static_cast<usize>(page);
             pages_.at(i)->visible = current;
             tabs_.at(i)->on = current;
         }
-        caption_->text = captions_.at(static_cast<std::size_t>(page));
+        caption_->text = captions_.at(static_cast<usize>(page));
     }
 
     void GameInfoBox::update(const UpdateContext& context)
     {
         widgets::Window::update(context);
-        for (std::size_t i = 0; i < kAboutPageCount; ++i)
+        for (usize i = 0; i < kAboutPageCount; ++i)
         {
             if (tabs_.at(i)->take_click())
                 show_page(static_cast<AboutPage>(i));

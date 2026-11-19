@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/import_people.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/enjoyment.hpp"
 #include "simulation/guests.hpp"
@@ -29,7 +30,7 @@ namespace rct3::simulation
         }
 
         // The original keeps how full a guest is; we keep how much they need.
-        float need(float fullness)
+        f32 need(f32 fullness)
         {
             return std::clamp(1.0f - fullness, 0.0f, 1.0f);
         }
@@ -39,7 +40,7 @@ namespace rct3::simulation
     {
         entt::registry& r = world.registry;
         std::vector<entt::entity> out(people.guests.size(), entt::null);
-        for (std::size_t i = 0; i < people.guests.size(); ++i)
+        for (usize i = 0; i < people.guests.size(); ++i)
         {
             const save::model::Guest& g = people.guests[i];
             if (!g.in_park)
@@ -47,11 +48,11 @@ namespace rct3::simulation
             const save::model::Person& p = g.person;
             const entt::entity e = r.create();
             out[i] = e;
-            r.emplace<Visitor>(e, age_group(p.type), p.sub_type == std::to_underlying(save::model::Sex::Female), p.name, std::uint64_t { 0 }, g.is_avatar);
+            r.emplace<Visitor>(e, age_group(p.type), p.sub_type == std::to_underlying(save::model::Sex::Female), p.name, u64 { 0 }, g.is_avatar);
             const glm::vec3 at { p.position.x, p.position.y, p.position.z };
             r.emplace<Pose>(e, at, units::Radians { -p.heading.value }, at, units::Radians { -p.heading.value }); // The original turns the other way
             r.emplace<Needs>(e, need(g.needs.food), need(g.needs.drink), std::clamp(g.needs.toilet, 0.0f, 1.0f));
-            r.emplace<Mood>(e, g.mood_now.happiness, g.mood_now.energy, g.mood_now.nausea, kTuning.sickness.tolerance_per_saved_level.value * static_cast<float>(std::to_underlying(g.nausea_tolerance) + 1));
+            r.emplace<Mood>(e, g.mood_now.happiness, g.mood_now.energy, g.mood_now.nausea, kTuning.sickness.tolerance_per_saved_level.value * static_cast<f32>(std::to_underlying(g.nausea_tolerance) + 1));
             const save::model::Cash& c = g.cash;
             if (g.favourite_ride)
                 r.emplace<Favourite>(e, Favourite { .ride = entt::null, .saved = g.favourite_ride.id, .score = g.favourite_ride_rating });
@@ -69,14 +70,14 @@ namespace rct3::simulation
         return out;
     }
 
-    std::size_t import_parties(SimWorld& world, const save::model::PeopleModel& people, std::span<const entt::entity> guests)
+    usize import_parties(SimWorld& world, const save::model::PeopleModel& people, std::span<const entt::entity> guests)
     {
         entt::registry& r = world.registry;
         std::unordered_map<save::model::PeopleObjectId, entt::entity> by_id;
-        for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
+        for (usize i = 0; i < people.guests.size() && i < guests.size(); ++i)
             if (guests[i] != entt::null)
                 by_id.emplace(people.guests[i].person.id, guests[i]);
-        std::size_t made = 0;
+        usize made = 0;
         for (const save::model::GuestGroup& group : people.groups)
         {
             Party party;

@@ -6,6 +6,7 @@
 // for that one's info panel.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/screens/management/pages.hpp"
 #include "ui/screens/management/staff_roster.hpp"
@@ -25,7 +26,7 @@ namespace rct3::scene::park
     void toggle_management_window(ui::Desktop& desktop, ui::screens::management::ManagementTopic topic, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::info::InfoUnits& units);
 
     /// Opens the window of `topic` at tab `tab`, or turns the open one to it.
-    void open_management_window(ui::Desktop& desktop, ui::screens::management::ManagementTopic topic, std::size_t tab, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::info::InfoUnits& units);
+    void open_management_window(ui::Desktop& desktop, ui::screens::management::ManagementTopic topic, usize tab, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::info::InfoUnits& units);
 
     [[nodiscard]] bool management_window_open(const ui::Desktop& desktop);
 
@@ -47,9 +48,9 @@ namespace rct3::scene::park
         ui::screens::management::RosterAsks staff;   ///< Of the staff window
         std::optional<units::Money> research_budget; ///< A month (ui::screens::management::kResearchBudgetControl)
         /// A research area's priority, from 0 to 1 (ui::screens::management::kFirstPriorityControl)
-        std::optional<std::pair<std::size_t, float>> research_priority;
+        std::optional<std::pair<usize, f32>> research_priority;
         /// Focus research on this item, or end the focus when it holds none (ui::screens::management::kFocusButton, kUnfocusButton)
-        std::optional<std::optional<std::uint64_t>> research_focus;
+        std::optional<std::optional<u64>> research_focus;
     };
 
     /// Writes the open windows' pages again where the player picked a tab or where it is time to, and returns

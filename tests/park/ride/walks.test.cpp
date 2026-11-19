@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ride/walks.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3::park;
@@ -28,7 +30,7 @@ TEST_CASE("flat ride riders go round the loop the shorter way to their seat's pa
     ways.paths = { { { 4, 0, 4 }, { 2, 0.5f, 2 } }, { { -4, 0, -4 }, { -2, 0.5f, -2 } } };
     const std::vector<glm::vec3> seats { { 1.5f, 1, 1.5f }, { -1.5f, 1, -1.5f } };
     // In from the east, out to the west.
-    const glm::mat4 entrance = glm::rotate(building({ 7, 0, -3 }), glm::pi<float>(), glm::vec3(0, 1, 0));
+    const glm::mat4 entrance = glm::rotate(building({ 7, 0, -3 }), glm::pi<f32>(), glm::vec3(0, 1, 0));
     const glm::mat4 exit = building({ -7, 0, 3 });
     const RideWays w = flat_ride_ways(ways, seats, entrance, exit);
     REQUIRE(w.on.size() == 2);
@@ -76,8 +78,8 @@ TEST_CASE("tracked ride riders climb to the platform edge and walk along it to b
 TEST_CASE("the ticket spot faces along the entrance spot's own z axis")
 {
     RideWays w;
-    const glm::mat4 entrance = glm::rotate(building({ 10, 0, 20 }), glm::half_pi<float>(), glm::vec3(0, 1, 0));
+    const glm::mat4 entrance = glm::rotate(building({ 10, 0, 20 }), glm::half_pi<f32>(), glm::vec3(0, 1, 0));
     set_ticket_spot(w, entrance, glm::translate(glm::mat4(1.0f), glm::vec3(-1, 0, -0.5f)));
     CHECK(near(w.ticket, { 9.5f, 0, 21 }));
-    CHECK(w.ticket_heading == doctest::Approx(glm::half_pi<float>()));
+    CHECK(w.ticket_heading == doctest::Approx(glm::half_pi<f32>()));
 }

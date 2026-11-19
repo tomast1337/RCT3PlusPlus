@@ -5,6 +5,7 @@
 // is logged once and leaves its layer empty.
 #pragma once
 
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/slideshow.hpp"
@@ -23,11 +24,11 @@ namespace rct3::scene
 
         struct Loaded
         {
-            std::size_t index = 0;
+            usize index = 0;
             render::TextureHandle texture;
         };
         std::vector<Loaded> loaded;
-        std::set<std::size_t> failed;
+        std::set<usize> failed;
     };
 
     /// Moves the show on and loads what it now shows.

@@ -8,6 +8,7 @@
 // chance does not depend on how the time is cut into steps. Rolls draw from the gameplay stream only.
 #pragma once
 
+#include "core/types.hpp"
 #include "random/generator.hpp"
 
 #include <array>
@@ -20,7 +21,7 @@
 namespace rct3::simulation
 {
 
-    enum class RandomEvent : std::uint8_t
+    enum class RandomEvent : u8
     {
         RideBreakdown,   ///< A ride stops working until a mechanic fixes it
         WeatherChange,   ///< The weather moves to another kind
@@ -31,7 +32,7 @@ namespace rct3::simulation
         Count_,
     };
 
-    inline constexpr std::size_t kRandomEventCount = static_cast<std::size_t>(RandomEvent::Count_);
+    inline constexpr usize kRandomEventCount = static_cast<usize>(RandomEvent::Count_);
 
     /// The event's name, for logs and saved files.
     [[nodiscard]] std::string_view event_name(RandomEvent event);
@@ -39,26 +40,26 @@ namespace rct3::simulation
     /// How many times each event happens per game hour, on average.
     struct EventRates
     {
-        std::array<double, kRandomEventCount> per_hour { };
+        std::array<f64, kRandomEventCount> per_hour { };
 
-        [[nodiscard]] double& operator[](RandomEvent e)
+        [[nodiscard]] f64& operator[](RandomEvent e)
         {
-            return per_hour[static_cast<std::size_t>(e)];
+            return per_hour[static_cast<usize>(e)];
         }
-        [[nodiscard]] double operator[](RandomEvent e) const
+        [[nodiscard]] f64 operator[](RandomEvent e) const
         {
-            return per_hour[static_cast<std::size_t>(e)];
+            return per_hour[static_cast<usize>(e)];
         }
     };
 
     /// The chance that an event of `rate` per hour happens in `hours`.
-    [[nodiscard]] double chance_in(double rate, double hours);
+    [[nodiscard]] f64 chance_in(f64 rate, f64 hours);
 
     /// The events that happen in the next `hours`, in the order of RandomEvent, each at most once.
-    [[nodiscard]] std::vector<RandomEvent> roll_events(random::RandomState& gameplay, const EventRates& rates, double hours);
+    [[nodiscard]] std::vector<RandomEvent> roll_events(random::RandomState& gameplay, const EventRates& rates, f64 hours);
 
     /// An index into `weights` picked in proportion to its weight. Nothing when no weight is above zero;
     /// negative weights count as zero. For picking what kind of breakdown, which weather, and so on.
-    [[nodiscard]] std::optional<std::size_t> pick_weighted(random::RandomState& state, std::span<const double> weights);
+    [[nodiscard]] std::optional<usize> pick_weighted(random::RandomState& state, std::span<const f64> weights);
 
 } // namespace rct3::simulation

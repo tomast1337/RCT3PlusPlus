@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/glow.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstddef>
 #include <span>
@@ -14,12 +16,12 @@ namespace rct3::scene::park
     {
         // Brightness above which a pixel glows, and how strongly the chain's average level is added back. Chosen by
         // eye.
-        constexpr float kThreshold = 0.72f;
-        constexpr float kStrength = 0.8f;
+        constexpr f32 kThreshold = 0.72f;
+        constexpr f32 kStrength = 0.8f;
         // How far apart the growing tent reads, in texels of the smaller picture.
-        constexpr float kReach = 1.0f;
+        constexpr f32 kReach = 1.0f;
         // The chain stops before a picture would be narrower than this.
-        constexpr std::uint32_t kSmallest = 8;
+        constexpr u32 kSmallest = 8;
 
         struct Corner
         {
@@ -72,12 +74,12 @@ namespace rct3::scene::park
             if (!vertices)
                 return;
             draw.vertices = *vertices;
-            draw.count = static_cast<std::uint32_t>(corners.size());
+            draw.count = static_cast<u32>(corners.size());
             device.draw(draw);
         }
 
         /// Draws `from` over the whole of the open pass through the Glow shader, shrinking or growing it.
-        void cover(render::Device& device, render::PipelineHandle pipeline, render::TextureHandle from, bool shrinking, float reach, float threshold, float gain)
+        void cover(render::Device& device, render::PipelineHandle pipeline, render::TextureHandle from, bool shrinking, f32 reach, f32 threshold, f32 gain)
         {
             render::DrawCommand draw;
             draw.pipeline = pipeline;
@@ -124,7 +126,7 @@ namespace rct3::scene::park
         if (copied && bloom)
         {
             render::PassDesc into;
-            for (std::size_t i = 0; i < glow.used; ++i)
+            for (usize i = 0; i < glow.used; ++i)
             {
                 into.target = glow.levels[i];
                 device.begin_pass(into);
@@ -133,7 +135,7 @@ namespace rct3::scene::park
             }
             // Each level grown onto the next larger keeps what that one holds, so the first ends with them all.
             into.clear = false;
-            for (std::size_t i = glow.used - 1; i > 0; --i)
+            for (usize i = glow.used - 1; i > 0; --i)
             {
                 into.target = glow.levels[i - 1];
                 device.begin_pass(into);
@@ -159,7 +161,7 @@ namespace rct3::scene::park
         back.clear = false;
         device.begin_pass(back);
         if (copied && bloom)
-            cover(device, glow.add, glow.levels[0], false, kReach, 0.0f, kStrength / static_cast<float>(glow.used));
+            cover(device, glow.add, glow.levels[0], false, kReach, 0.0f, kStrength / static_cast<f32>(glow.used));
         if (copied && marched)
             cover(device, glow.add, glow.shafts, false, kReach, 0.0f, 1.0f);
     }

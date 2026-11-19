@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/rides.hpp"
@@ -15,14 +16,14 @@ namespace dice_rolls = rct3::random;
 namespace
 {
     /// Of `tries` picks for a guest of `age` with `energy`, the share running.
-    double running_share(AgeGroup age, float energy, std::int32_t tries = 4000)
+    f64 running_share(AgeGroup age, f32 energy, i32 tries = 4000)
     {
         auto dice = dice_rolls::seeded(dice_rolls::Seed { 7 });
         const Mood mood { .happiness = { 0.5f }, .energy = { energy } };
-        std::int32_t runs = 0;
-        for (std::int32_t i = 0; i < tries; ++i)
+        i32 runs = 0;
+        for (i32 i = 0; i < tries; ++i)
             runs += pick_gait(age, mood, Needs { }, dice) == Gait::Run;
-        return static_cast<double>(runs) / tries;
+        return static_cast<f64>(runs) / tries;
     }
 
     const Leanings kKeen { .hands = 1, .brace = 1, .eyes = 0 };
@@ -32,9 +33,9 @@ namespace
 
 TEST_CASE("children run most, adults seldom, and the tired less than the fresh")
 {
-    const double child = running_share(AgeGroup::Child, 1);
-    const double teen = running_share(AgeGroup::Teen, 1);
-    const double adult = running_share(AgeGroup::Adult, 1);
+    const f64 child = running_share(AgeGroup::Child, 1);
+    const f64 teen = running_share(AgeGroup::Teen, 1);
+    const f64 adult = running_share(AgeGroup::Adult, 1);
     CHECK(child > teen);
     CHECK(teen > adult);
     CHECK(adult > 0);
@@ -64,15 +65,15 @@ TEST_CASE("the guests walking a park do not all go at one pace")
     Sandbox park;
     park.path({ 0, 0 }, { 12, 0 });
     std::vector<entt::entity> guests;
-    for (std::int32_t i = 0; i < 30; ++i)
-        guests.push_back(park.guest({ 0, 0 }, { .energy = 0.3f + 0.02f * static_cast<float>(i) }));
+    for (i32 i = 0; i < 30; ++i)
+        guests.push_back(park.guest({ 0, 0 }, { .energy = 0.3f + 0.02f * static_cast<f32>(i) }));
     park.run_seconds(30);
     auto& r = park.world().registry;
-    float slowest = 100, fastest = 0;
+    f32 slowest = 100, fastest = 0;
     for (const entt::entity g : guests)
     {
         const auto& stride = r.get<Stride>(g);
-        const float pace = gait_pace(stride.speed, r.get<Mood>(g).energy, stride.gait).value;
+        const f32 pace = gait_pace(stride.speed, r.get<Mood>(g).energy, stride.gait).value;
         slowest = std::min(slowest, pace);
         fastest = std::max(fastest, pace);
     }
@@ -90,7 +91,7 @@ TEST_CASE("thrilled riders throw their hands up and keep them up till the forces
 {
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 3 });
     RideReaction now = RideReaction::Calm;
-    for (std::int32_t i = 0; i < 40 && now != RideReaction::HandsUp; ++i)
+    for (i32 i = 0; i < 40 && now != RideReaction::HandsUp; ++i)
         now = react(now, kCruising, TrainRun::Free, { 1 }, 0, kKeen, CarPlace::Behind, dice, 0.25f);
     CHECK(now == RideReaction::HandsUp);
     CHECK(react(now, kCruising, TrainRun::Free, { 0.5f }, 0, kKeen, CarPlace::Behind, dice, 0.25f) == RideReaction::HandsUp);
@@ -100,8 +101,8 @@ TEST_CASE("thrilled riders throw their hands up and keep them up till the forces
 TEST_CASE("riders who are not thrilled raise their hands only floating over a hill")
 {
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 4 });
-    std::int32_t cruising = 0, floating = 0;
-    for (std::int32_t i = 0; i < 400; ++i)
+    i32 cruising = 0, floating = 0;
+    for (i32 i = 0; i < 400; ++i)
     {
         cruising += react(RideReaction::Calm, kCruising, TrainRun::Free, { 0.5f }, 0, kKeen, CarPlace::Behind, dice, 0.25f) == RideReaction::HandsUp;
         floating += react(RideReaction::Calm, Felt { .vertical = 0 }, TrainRun::Free, { 0.5f }, 0, kKeen, CarPlace::Behind, dice, 0.25f) == RideReaction::HandsUp;
@@ -113,11 +114,11 @@ TEST_CASE("riders who are not thrilled raise their hands only floating over a hi
 TEST_CASE("timid riders never raise their hands, and the front car has fewer of them")
 {
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 5 });
-    for (std::int32_t i = 0; i < 200; ++i)
+    for (i32 i = 0; i < 200; ++i)
         CHECK(react(RideReaction::Calm, kCruising, TrainRun::Free, { 1 }, 0, kTimid, CarPlace::Front, dice, 1) != RideReaction::HandsUp);
     const Leanings middling { .hands = 0.2f };
-    std::int32_t front = 0, back = 0;
-    for (std::int32_t i = 0; i < 200; ++i)
+    i32 front = 0, back = 0;
+    for (i32 i = 0; i < 200; ++i)
     {
         front += react(RideReaction::Calm, kCruising, TrainRun::Free, { 1 }, 0, middling, CarPlace::Front, dice, 1) == RideReaction::HandsUp;
         back += react(RideReaction::Calm, kCruising, TrainRun::Free, { 1 }, 0, middling, CarPlace::Behind, dice, 1) == RideReaction::HandsUp;
@@ -148,10 +149,10 @@ TEST_CASE("flat ride riders the ride suits throw their hands up and keep them up
 {
     auto dice = dice_rolls::seeded(dice_rolls::Seed { 9 });
     RideReaction now = RideReaction::Calm;
-    for (std::int32_t i = 0; i < 40 && now != RideReaction::HandsUp; ++i)
+    for (i32 i = 0; i < 40 && now != RideReaction::HandsUp; ++i)
         now = react_flat(now, true, { 0.5f }, 0, kKeen, dice, 0.25f);
     CHECK(now == RideReaction::HandsUp);
     CHECK(react_flat(now, true, { 0.1f }, -1, kKeen, dice, 0.25f) == RideReaction::HandsUp);
-    for (std::int32_t i = 0; i < 400; ++i)
+    for (i32 i = 0; i < 400; ++i)
         CHECK(react_flat(RideReaction::Calm, true, { 0.5f }, -0.8f, kKeen, dice, 0.25f) == RideReaction::Calm);
 }

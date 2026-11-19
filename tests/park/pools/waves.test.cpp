@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/pools/waves.hpp"
 
+#include "core/types.hpp"
 #include "park/terrain_mesh.hpp"
 
 #include <algorithm>
@@ -21,8 +22,8 @@ namespace
     PoolMap ringed()
     {
         PoolMap map;
-        for (std::int32_t row = 0; row < 6; ++row)
-            for (std::int32_t col = 0; col < 8; ++col)
+        for (i32 row = 0; row < 6; ++row)
+            for (i32 col = 0; col < 8; ++col)
             {
                 const bool edge = col == 0 || row == 0 || col == 7 || row == 5;
                 map.squares.push_back({ .col = col, .row = row, .kind = edge ? PoolKind::Tile : PoolKind::Water, .surface = 4, .depth = 2 });
@@ -41,7 +42,7 @@ namespace
     {
         std::vector<glm::vec3> points;
         for (const glm::vec2 p : at)
-            points.push_back({ p.x, p.y, static_cast<float>(points.size()) });
+            points.push_back({ p.x, p.y, static_cast<f32>(points.size()) });
         return points;
     }
 
@@ -69,10 +70,10 @@ TEST_CASE("pool waves: the machines run for their time out of every period, and 
     PoolMap map = ringed();
     map.extras.push_back({ .col = 1, .row = 2, .side = rct3::park::Side { 3 }, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
     const std::vector<PoolWave> waves = machine_waves(map, { }, grid());
-    const auto largest = [&](glm::vec2 at, float from) {
-        float most = 0;
-        for (std::int32_t i = 0; i < 100; ++i)
-            most = std::max(most, std::abs(pool_wave_height(waves, at, from + static_cast<float>(i) * 0.05f)));
+    const auto largest = [&](glm::vec2 at, f32 from) {
+        f32 most = 0;
+        for (i32 i = 0; i < 100; ++i)
+            most = std::max(most, std::abs(pool_wave_height(waves, at, from + static_cast<f32>(i) * 0.05f)));
         return most;
     };
     const glm::vec2 near { 5, 10 };
@@ -89,9 +90,9 @@ TEST_CASE("pool waves: a wave machine's front is its own square wide, widens a l
     map.extras.push_back({ .col = 1, .row = 2, .side = rct3::park::Side { 3 }, .fit = pool_extra_fit("WaveMachine UnderWaterWall") });
     std::vector<PoolWave> waves = machine_waves(map, { }, grid());
     const auto largest = [&](glm::vec2 at) {
-        float most = 0;
-        for (std::int32_t i = 0; i < 200; ++i)
-            most = std::max(most, std::abs(pool_wave_height(waves, at, 6 + static_cast<float>(i) * 0.05f)));
+        f32 most = 0;
+        for (i32 i = 0; i < 200; ++i)
+            most = std::max(most, std::abs(pool_wave_height(waves, at, 6 + static_cast<f32>(i) * 0.05f)));
         return most;
     };
     CHECK(largest({ 6, 10 }) > largest({ 14, 10 })); // Lower further out
@@ -136,9 +137,9 @@ TEST_CASE("pool waves: a circle drawn round makes a whirlpool turning the way it
 {
     const PoolMap map = ringed();
     std::vector<glm::vec2> way;
-    for (std::int32_t i = 0; i <= 24; ++i)
+    for (i32 i = 0; i <= 24; ++i)
     {
-        const float a = static_cast<float>(i) * std::numbers::pi_v<float> / 8; // One and a half turns
+        const f32 a = static_cast<f32>(i) * std::numbers::pi_v<f32> / 8; // One and a half turns
         way.push_back(glm::vec2 { 14, 12 } + 2.0f * glm::vec2 { std::cos(a), std::sin(a) });
     }
     const auto wave = drawn_wave(map, grid(), drawn(way), 10);
@@ -171,10 +172,10 @@ TEST_CASE("pool waves: the surface they lift dies down at a wall and stays under
 {
     const save::model::TerrainGrid g = grid();
     // Water on the right and below only: walls on the left and above, and the corner square up and to the left.
-    const auto water = [](std::int32_t dc, std::int32_t dr) { return dc >= 0 && dr >= 0; };
+    const auto water = [](i32 dc, i32 dr) { return dc >= 0 && dr >= 0; };
     CHECK(pool_wall_room(g, { 0, 2 }, water) == 0);
     CHECK(pool_wall_room(g, { 1, 3 }, water) == doctest::Approx(1));
-    CHECK(pool_wall_room(g, { 2, 2 }, [](std::int32_t, std::int32_t) { return true; }) == 4); // Water all round: a square at most
+    CHECK(pool_wall_room(g, { 2, 2 }, [](i32, i32) { return true; }) == 4); // Water all round: a square at most
     CHECK(pool_wave_lift(1, 0) == 0);
     CHECK(pool_wave_lift(1, 0.1f) <= kPoolWaveLook.rim_room + kPoolWaveLook.rim_rise * 0.1f);
     CHECK(pool_wave_lift(0.1f, 4) == doctest::Approx(0.1f));

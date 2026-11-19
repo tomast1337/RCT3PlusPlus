@@ -9,6 +9,7 @@
 // made-up land. Positions are the park's world x, y (up) and z; units are metres and seconds.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "units/units.hpp"
 
@@ -18,7 +19,7 @@
 namespace rct3::simulation
 {
 
-    enum class WreckState : std::uint8_t
+    enum class WreckState : u8
     {
         Flying,
         Burning, ///< Blown up, lying where it came down
@@ -26,7 +27,7 @@ namespace rct3::simulation
     };
 
     /// What became of a wreck over a step, the last thing that did when several did.
-    enum class WreckEvent : std::uint8_t
+    enum class WreckEvent : u8
     {
         None,
         Bounced,
@@ -41,7 +42,7 @@ namespace rct3::simulation
         glm::vec3 velocity { };
         glm::vec3 spin { };              ///< Its tumble: the axis, as long as the radians a second
         glm::quat turned { 1, 0, 0, 0 }; ///< From how it sat on the track
-        std::int32_t landings = 0;       ///< Times it has come down on the ground
+        i32 landings = 0;                ///< Times it has come down on the ground
         units::Seconds flying { };       ///< Since it was thrown
         units::Seconds burnt { };        ///< Since it blew up
         WreckState state = WreckState::Flying;
@@ -51,15 +52,15 @@ namespace rct3::simulation
     /// What a wreck flies through.
     struct WreckSurroundings
     {
-        std::function<float(glm::vec2)> ground { }; ///< The ground's height under a point x, z; flat at 0 when not given
-        std::function<bool(glm::vec3)> struck { };  ///< Whether something standing in the park is at a point
+        std::function<f32(glm::vec2)> ground { };  ///< The ground's height under a point x, z; flat at 0 when not given
+        std::function<bool(glm::vec3)> struck { }; ///< Whether something standing in the park is at a point
     };
 
     /// Moves `wreck` on by `seconds` through `around`.
-    WreckEvent fly(Wreck& wreck, float seconds, const WreckSurroundings& around);
+    WreckEvent fly(Wreck& wreck, f32 seconds, const WreckSurroundings& around);
 
     /// How the ground given by `ground` (see WreckSurroundings) rises at `at`: its rise over run along x and z,
     /// pointing uphill; a cliff on one side of it is left out. Flat when no ground is given.
-    [[nodiscard]] glm::vec2 slope(const std::function<float(glm::vec2)>& ground, glm::vec2 at);
+    [[nodiscard]] glm::vec2 slope(const std::function<f32(glm::vec2)>& ground, glm::vec2 at);
 
 } // namespace rct3::simulation

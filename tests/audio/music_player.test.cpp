@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "audio/music_player.hpp"
 
+#include "core/types.hpp"
 #include "sine_wma.hpp"
 
 #include <cmath>
@@ -24,15 +25,15 @@ TEST_CASE("music plays round and round from its file")
     REQUIRE(music);
 
     // Four times the file's length, a frame at a time.
-    std::vector<float> frame(2 * 800);
-    float late_peak = 0;
-    for (std::int32_t i = 0; i < 60; ++i)
+    std::vector<f32> frame(2 * 800);
+    f32 late_peak = 0;
+    for (i32 i = 0; i < 60; ++i)
     {
         REQUIRE(music->update(*engine));
         CHECK(engine->render(frame) == 800);
         if (i >= 50)
         {
-            for (const float v : frame)
+            for (const f32 v : frame)
                 late_peak = std::max(late_peak, std::abs(v));
         }
     }
@@ -47,7 +48,7 @@ TEST_CASE("music plays round and round from its file")
     // Once, as a movie's sound: over by four times the file's length.
     auto once = MusicPlayer::start(*engine, path, 1.0f, false);
     REQUIRE(once);
-    for (std::int32_t i = 0; i < 60; ++i)
+    for (i32 i = 0; i < 60; ++i)
     {
         REQUIRE(once->update(*engine));
         (void)engine->render(frame);

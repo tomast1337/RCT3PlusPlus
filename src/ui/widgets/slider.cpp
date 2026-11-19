@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/slider.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 
@@ -10,8 +12,8 @@ namespace rct3::ui::widgets
     namespace
     {
 
-        constexpr float kKeyShare = 1.0f / 20; ///< Of the range, per key without a step
-        constexpr float kPageShare = 1.0f / 10;
+        constexpr f32 kKeyShare = 1.0f / 20; ///< Of the range, per key without a step
+        constexpr f32 kPageShare = 1.0f / 10;
 
     } // namespace
 
@@ -21,23 +23,23 @@ namespace rct3::ui::widgets
     {
     }
 
-    float Slider::snapped(float v) const
+    f32 Slider::snapped(f32 v) const
     {
-        const float low = std::min(minimum, maximum);
-        const float high = std::max(minimum, maximum);
+        const f32 low = std::min(minimum, maximum);
+        const f32 high = std::max(minimum, maximum);
         if (step > 0)
             v = minimum + std::round((v - minimum) / step) * step;
         return std::clamp(v, low, high);
     }
 
-    void Slider::set_value(float v)
+    void Slider::set_value(f32 v)
     {
         value_ = snapped(v);
     }
 
-    void Slider::move_to(float v)
+    void Slider::move_to(f32 v)
     {
-        const float before = value_;
+        const f32 before = value_;
         set_value(v);
         if (value_ != before)
             ++changes_;
@@ -51,7 +53,7 @@ namespace rct3::ui::widgets
         return true;
     }
 
-    float Slider::key_step() const
+    f32 Slider::key_step() const
     {
         return step > 0 ? step : (maximum - minimum) * kKeyShare;
     }
@@ -59,10 +61,10 @@ namespace rct3::ui::widgets
     Rect Slider::thumb() const
     {
         const Rect& r = rect();
-        const float travel = std::max(0.0f, r.width() - style.thumb_width);
-        const float share = maximum != minimum ? (value_ - minimum) / (maximum - minimum) : 0;
-        const float x = std::round(r.x0 + share * travel);
-        const float y = std::round(r.y0 + (r.height() - style.thumb_height) / 2);
+        const f32 travel = std::max(0.0f, r.width() - style.thumb_width);
+        const f32 share = maximum != minimum ? (value_ - minimum) / (maximum - minimum) : 0;
+        const f32 x = std::round(r.x0 + share * travel);
+        const f32 y = std::round(r.y0 + (r.height() - style.thumb_height) / 2);
         return { x, y, x + style.thumb_width, y + style.thumb_height };
     }
 
@@ -74,7 +76,7 @@ namespace rct3::ui::widgets
     void Slider::on_press(Point p)
     {
         const Rect t = thumb();
-        const float centre = (t.x0 + t.x1) / 2;
+        const f32 centre = (t.x0 + t.x1) / 2;
         grab_ = contains(t, p) ? p.x - centre : 0;
         on_drag(p);
     }
@@ -82,10 +84,10 @@ namespace rct3::ui::widgets
     void Slider::on_drag(Point p)
     {
         const Rect& r = rect();
-        const float travel = r.width() - style.thumb_width;
+        const f32 travel = r.width() - style.thumb_width;
         if (travel <= 0)
             return;
-        const float share = (p.x - grab_ - r.x0 - style.thumb_width / 2) / travel;
+        const f32 share = (p.x - grab_ - r.x0 - style.thumb_width / 2) / travel;
         move_to(minimum + std::clamp(share, 0.0f, 1.0f) * (maximum - minimum));
     }
 
@@ -99,7 +101,7 @@ namespace rct3::ui::widgets
 
     bool Slider::on_key(const KeyPress& key)
     {
-        const float page = std::max(key_step(), (maximum - minimum) * kPageShare);
+        const f32 page = std::max(key_step(), (maximum - minimum) * kPageShare);
         switch (key.key)
         {
             case Key::Left:
@@ -132,15 +134,15 @@ namespace rct3::ui::widgets
         const Rect& r = rect();
         if (style.bar)
         {
-            const float share = maximum > minimum ? std::clamp((value_ - minimum) / (maximum - minimum), 0.0f, 1.0f) : 0.0f;
+            const f32 share = maximum > minimum ? std::clamp((value_ - minimum) / (maximum - minimum), 0.0f, 1.0f) : 0.0f;
             const Color fade = enabled ? kWhite : skin::kDisabledTint;
-            const auto tinted = [&](Color c) { return Color { static_cast<std::uint8_t>(c.r * fade.r / 255), static_cast<std::uint8_t>(c.g * fade.g / 255), static_cast<std::uint8_t>(c.b * fade.b / 255), static_cast<std::uint8_t>(c.a * fade.a / 255) }; };
+            const auto tinted = [&](Color c) { return Color { static_cast<u8>(c.r * fade.r / 255), static_cast<u8>(c.g * fade.g / 255), static_cast<u8>(c.b * fade.b / 255), static_cast<u8>(c.a * fade.a / 255) }; };
             context.list.fill(r, tinted(style.bar_back_colour));
             context.list.fill({ r.x0, r.y0, r.x0 + r.width() * share, r.y1 }, tinted(style.bar_colour));
             return;
         }
-        const float half = style.thumb_width / 2;
-        const float y = std::round(r.y0 + (r.height() - style.rail_thickness) / 2);
+        const f32 half = style.thumb_width / 2;
+        const f32 y = std::round(r.y0 + (r.height() - style.rail_thickness) / 2);
         const Rect rail { r.x0 + half, y, r.x1 - half, y + style.rail_thickness };
         if (const auto skin = style.rail.empty() ? std::nullopt : context.skins.find(style.rail))
             skin::draw_skin(context.list, skin, rail, enabled ? kWhite : skin::kDisabledTint);

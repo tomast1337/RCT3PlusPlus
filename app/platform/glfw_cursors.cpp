@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "platform/glfw_cursors.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 
 #include <GLFW/glfw3.h>
@@ -23,7 +24,7 @@ namespace rct3::platform
     {
 
         // GLFW's shape for each standard cursor; none where this GLFW has no such shape or it is not a shape.
-        std::optional<std::int32_t> glfw_shape(ui::StandardCursor shape)
+        std::optional<i32> glfw_shape(ui::StandardCursor shape)
         {
             switch (shape)
             {
@@ -67,10 +68,10 @@ namespace rct3::platform
         , available_(ui::required_cursors())
     {
         std::string missing;
-        for (std::size_t i = 0; i < ui::kStandardCursors; ++i)
+        for (usize i = 0; i < ui::kStandardCursors; ++i)
         {
             const auto shape = static_cast<ui::StandardCursor>(i);
-            const std::optional<std::int32_t> glfw = glfw_shape(shape);
+            const std::optional<i32> glfw = glfw_shape(shape);
             if (!glfw)
                 continue;
             // Null when the platform or its cursor theme lacks the shape, or the GLFW library at run time is
@@ -114,7 +115,7 @@ namespace rct3::platform
             return;
         }
         glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        glfwSetCursor(window_, cursors_.at(static_cast<std::size_t>(shape)));
+        glfwSetCursor(window_, cursors_.at(static_cast<usize>(shape)));
     }
 
 } // namespace rct3::platform

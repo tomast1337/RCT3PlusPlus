@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/land_buying.hpp"
 
+#include "core/types.hpp"
+
 #include <utility>
 
 namespace rct3::park
@@ -22,7 +24,7 @@ namespace rct3::park
                 out.short_of_cash = true;
                 continue;
             }
-            cell.flags = static_cast<std::uint8_t>((cell.flags & ~std::to_underlying(save::model::TileFlag::ForSale)) | std::to_underlying(save::model::TileFlag::Owned));
+            cell.flags = static_cast<u8>((cell.flags & ~std::to_underlying(save::model::TileFlag::ForSale)) | std::to_underlying(save::model::TileFlag::Owned));
             out.spent += price;
             ++out.tiles;
         }

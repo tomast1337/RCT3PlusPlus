@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/off_map_trees.hpp"
 
+#include "core/types.hpp"
 #include "park/object/placement.hpp"
 
 #include <cstdint>
@@ -11,14 +12,14 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid flat(std::int32_t size, float y)
+    save::model::TerrainGrid flat(i32 size, f32 y)
     {
         save::model::TerrainGrid g;
         g.width = size;
         g.height = size;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(size * size));
+        g.cells.resize(static_cast<usize>(size * size));
         for (auto& c : g.cells)
             c.corners = { y, y, y, y };
         return g;
@@ -37,7 +38,7 @@ namespace
         return m;
     }
 
-    save::model::PlacedObject placed(std::uint64_t id, std::string symbol)
+    save::model::PlacedObject placed(u64 id, std::string symbol)
     {
         save::model::PlacedObject o;
         o.id = id;
@@ -57,11 +58,11 @@ TEST_CASE("trees beyond the edge copy the park's plants near it, on the land rou
     bench.sway = 0; // Still in the wind: not a plant
     models.emplace("Things/Things|Bench", bench);
     std::vector<save::model::PlacedObject> objects;
-    for (std::int32_t row = 0; row < 20; ++row)
+    for (i32 row = 0; row < 20; ++row)
     {
-        objects.push_back(placed(static_cast<std::uint64_t>(row + 1), "Pine"));
+        objects.push_back(placed(static_cast<u64>(row + 1), "Pine"));
         objects.back().row = row; // Along the west edge
-        objects.push_back(placed(static_cast<std::uint64_t>(row + 30), "Bench"));
+        objects.push_back(placed(static_cast<u64>(row + 30), "Bench"));
         objects.back().col = 19; // Along the east edge
         objects.back().row = row;
     }
@@ -74,7 +75,7 @@ TEST_CASE("trees beyond the edge copy the park's plants near it, on the land rou
     const std::vector<save::model::PlacedObject> trees = off_map_trees(objects, 0, models, g, land, s);
     REQUIRE(trees.size() > 20);
     CHECK(trees.size() <= 20 * kOffMapTries);
-    std::uint64_t id = 100;
+    u64 id = 100;
     for (const save::model::PlacedObject& t : trees)
     {
         CHECK(t.symbol == "Pine");
@@ -124,7 +125,7 @@ TEST_CASE("planting a tree seeds trees beyond the edge round it alone")
     models.emplace("Things/Things|Pine", plant());
     models.emplace("Things/Things|Palm", plant());
     std::vector<save::model::PlacedObject> objects;
-    for (std::uint64_t i = 1; i <= 20; ++i)
+    for (u64 i = 1; i <= 20; ++i)
         objects.push_back(placed(i, "Pine"));
     const LandRings land = land_rings(g);
     random::RandomState s = random::stream(random::Seed { 1 }, random::RandomStream::Scenery);
@@ -133,7 +134,7 @@ TEST_CASE("planting a tree seeds trees beyond the edge round it alone")
     objects.insert(objects.end(), first.begin(), first.end());
     objects.push_back(placed(5, "Palm")); // In the corner, by two edges
     std::vector<save::model::PlacedObject> more;
-    for (std::int32_t tries = 0; tries < 20 && more.empty(); ++tries)
+    for (i32 tries = 0; tries < 20 && more.empty(); ++tries)
         more = off_map_trees(objects, objects.size() - 1, models, g, land, s);
     REQUIRE_FALSE(more.empty());
     for (const save::model::PlacedObject& t : more)

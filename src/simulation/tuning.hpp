@@ -5,6 +5,7 @@
 // (see units.hpp).
 #pragma once
 
+#include "core/types.hpp"
 #include "units/units.hpp"
 
 #include <array>
@@ -36,44 +37,44 @@ namespace rct3::simulation::tuning
         /// Fitted to saves: a saved guest's favourite-ride score less 25 for each point of that ride's excitement
         /// rating leaves a whole number of points in steps of five, between about -130 and 140, for over 8,000
         /// guests of eight parks. So a favourite scores this for each share of excitement, plus its points.
-        float favourite_per_excitement = 250;
-        units::Share slack { 0.1f };            ///< How far past their range a ride still nearly suits a guest
-        units::Factor tame_reach { 1.5 };       ///< Chosen by eye: so much further under their range, a tame ride being easier to bear than a wild one
-        units::Share happy_slack { 0.2f };      ///< And more, at full happiness: a happy guest takes more in their stride
-        std::int32_t suited = 60;               ///< For a ride whose intensity and nausea both suit them
-        std::int32_t per_miss = 12;             ///< Less for each step either is from suiting them
-        std::int32_t way_off = 40;              ///< Less again when either is way off
-        std::int32_t fair_price = 35;           ///< For a ride that cost no more than it is worth
-        std::int32_t dear_price = -40;          ///< For one that cost twice that or more; in between in step
-        std::int32_t quick = 15;                ///< For a ride with no wait
-        units::Seconds per_point { 10 };        ///< Of waiting, that takes a point off that
-        std::int32_t longest_wait = -30;        ///< The least any wait gives
-        std::int32_t new_ride = 15;             ///< For a ride they have not been on before
-        float happiness_per_point = 1.0f / 300; ///< Happiness for each point
-        units::Share content { 0.45f };         ///< Happiness getting on below which a guest takes no ride for their favourite
-        units::Share least_queasy { 0.2f };     ///< A ride sickens a guest it left happy only this much of their unhappiness
-        units::Share most_queasy { 0.8f };      ///< And a miserable one this much
-        units::Share stomach_reach { 0.6f };    ///< Nausea a stomach takes in comfort, under its tolerance...
-        units::Share stomach_margin { 0.1f };   ///< ...and over it
-        units::Share delighted { 0.8f };        ///< Happiness a ride leaves a guest at that makes them braver
-        units::Share braver { 0.02f };          ///< How much wilder the rides they like then get
-        units::Share boldest { 1.4f };          ///< Fitted to saves: no saved guest likes rides wilder than about 14 on the rating scale; none grow braver past it
+        f32 favourite_per_excitement = 250;
+        units::Share slack { 0.1f };          ///< How far past their range a ride still nearly suits a guest
+        units::Factor tame_reach { 1.5 };     ///< Chosen by eye: so much further under their range, a tame ride being easier to bear than a wild one
+        units::Share happy_slack { 0.2f };    ///< And more, at full happiness: a happy guest takes more in their stride
+        i32 suited = 60;                      ///< For a ride whose intensity and nausea both suit them
+        i32 per_miss = 12;                    ///< Less for each step either is from suiting them
+        i32 way_off = 40;                     ///< Less again when either is way off
+        i32 fair_price = 35;                  ///< For a ride that cost no more than it is worth
+        i32 dear_price = -40;                 ///< For one that cost twice that or more; in between in step
+        i32 quick = 15;                       ///< For a ride with no wait
+        units::Seconds per_point { 10 };      ///< Of waiting, that takes a point off that
+        i32 longest_wait = -30;               ///< The least any wait gives
+        i32 new_ride = 15;                    ///< For a ride they have not been on before
+        f32 happiness_per_point = 1.0f / 300; ///< Happiness for each point
+        units::Share content { 0.45f };       ///< Happiness getting on below which a guest takes no ride for their favourite
+        units::Share least_queasy { 0.2f };   ///< A ride sickens a guest it left happy only this much of their unhappiness
+        units::Share most_queasy { 0.8f };    ///< And a miserable one this much
+        units::Share stomach_reach { 0.6f };  ///< Nausea a stomach takes in comfort, under its tolerance...
+        units::Share stomach_margin { 0.1f }; ///< ...and over it
+        units::Share delighted { 0.8f };      ///< Happiness a ride leaves a guest at that makes them braver
+        units::Share braver { 0.02f };        ///< How much wilder the rides they like then get
+        units::Share boldest { 1.4f };        ///< Fitted to saves: no saved guest likes rides wilder than about 14 on the rating scale; none grow braver past it
     };
 
     /// How much a guest wants to go on a ride they think of.
     struct Choosing
     {
-        float excitement = 0.3f; ///< For each share of a ride's excitement
-        float suits = 0.3f;      ///< For an intensity right in their range; less the further off it is
-        float bargain = 0.2f;    ///< For a free ride; none for one at its worth, as much off at twice that
-        float sickening = 0.6f;  ///< Off for each share of nausea past what their stomach takes in comfort
-        float favourite = 0.3f;
-        float again = 0.25f;     ///< Off for the ride they just got off: they would rather try another
-        float untested = 0.16f;  ///< For a ride not yet round a lap, in place of its ratings and price. Chosen by eye: over the bar, so a daring few try it
-        float bar = 0.15f;       ///< Below this a guest does not go on a ride at all
-        float reach = 25;        ///< Tiles away, as the crow flies, past which a guest does not think of a ride
-        float map_reach = 60;    ///< And with a park map in hand
-        float queue_halves = 15; ///< Chosen by eye: guests in a ride's queue that halve how likely one who wants it picks it
+        f32 excitement = 0.3f; ///< For each share of a ride's excitement
+        f32 suits = 0.3f;      ///< For an intensity right in their range; less the further off it is
+        f32 bargain = 0.2f;    ///< For a free ride; none for one at its worth, as much off at twice that
+        f32 sickening = 0.6f;  ///< Off for each share of nausea past what their stomach takes in comfort
+        f32 favourite = 0.3f;
+        f32 again = 0.25f;     ///< Off for the ride they just got off: they would rather try another
+        f32 untested = 0.16f;  ///< For a ride not yet round a lap, in place of its ratings and price. Chosen by eye: over the bar, so a daring few try it
+        f32 bar = 0.15f;       ///< Below this a guest does not go on a ride at all
+        f32 reach = 25;        ///< Tiles away, as the crow flies, past which a guest does not think of a ride
+        f32 map_reach = 60;    ///< And with a park map in hand
+        f32 queue_halves = 15; ///< Chosen by eye: guests in a ride's queue that halve how likely one who wants it picks it
     };
 
     /// Guests showing how a ride left them as they step off.
@@ -100,10 +101,10 @@ namespace rct3::simulation::tuning
         units::Seconds regroup { 3 };            ///< A party stands together once all are back, before going on
         units::Distance corner_cut { 0.8f };     ///< Chosen by eye: how far towards the inside of a turn a walker going somewhere takes the tile they turn on
         units::TurnRate turn_rate { 6.0f };      ///< Chosen by eye: fastest a walker turns to face where they go
-        float swerve = 0.5f;                     ///< Chosen by eye: most a walker steps aside from others for each unit walked on
+        f32 swerve = 0.5f;                       ///< Chosen by eye: most a walker steps aside from others for each unit walked on
         units::Seconds retry_way { 5 };          ///< Chosen by eye: how long one who found no way back to their party waits before looking again
         units::Seconds lost_wait { 20 };         ///< Chosen by eye: how long one cut off from their party stands lost before being put with them
-        std::size_t gather_reach = 24;           ///< Tiles looked at for one a party can wait on of its own
+        usize gather_reach = 24;                 ///< Tiles looked at for one a party can wait on of its own
         units::Distance personal_space { 0.6f }; ///< People walking nearer one another than this step apart
         units::Pace step_aside { 1.5f };         ///< Fastest anyone steps apart from others
         units::Factor keep_right { 1.0 };        ///< How much of stepping apart goes to the right, so two meeting head on pass
@@ -132,10 +133,10 @@ namespace rct3::simulation::tuning
         units::Share thrilled { 0.7f };                             ///< Chosen by eye: happiness over which a rider throws their hands up
         units::Frequency hands_up = units::Frequency::every({ 1 }); ///< A thrilled rider's chance of raising them, a second
         units::Frequency floating = units::Frequency::every({ 2 }); ///< Any rider's, floating over a hill
-        float airtime = 0.3f;                                       ///< Up through their seat, in g, under which riders float
-        float strain = 3.5f;                                        ///< g up through their seat a rider braces against
-        float strain_across = 1.2f;                                 ///< And sideways
-        float hands_down = 4.5f;                                    ///< g, up or sideways, that brings raised hands down
+        f32 airtime = 0.3f;                                         ///< Up through their seat, in g, under which riders float
+        f32 strain = 3.5f;                                          ///< g up through their seat a rider braces against
+        f32 strain_across = 1.2f;                                   ///< And sideways
+        f32 hands_down = 4.5f;                                      ///< g, up or sideways, that brings raised hands down
         /// Chosen by eye, for about a coaster rider in four under way with their hands up: of riders, the share
         /// never raising their hands, in the front car and behind it.
         units::Share timid_front { 0.15f };
@@ -144,7 +145,7 @@ namespace rct3::simulation::tuning
         units::Share too_wild { 0.15f }; ///< Ride intensity past what a rider likes that has them cover their eyes
         units::Share hide_eyes { 0.5f }; ///< Of riders it is too wild for, the share who cover them
         units::Share suits { 0.5f };     ///< Chosen by eye: intensity short of what a flat ride's rider likes most that still thrills them
-        float diving = -0.5f;            ///< Of the track's way, the drop under which a car heads down
+        f32 diving = -0.5f;              ///< Of the track's way, the drop under which a car heads down
         units::Pace still { 0.5f };      ///< Under which a train counts as standing, held at a brake or block
     };
 
@@ -176,7 +177,7 @@ namespace rct3::simulation::tuning
         units::PerSecond rest = units::PerSecond::over({ 60 }); ///< Energy back while sitting
         /// Chosen by eye: once rested, a guest of full energy gets up in about this long; the more worn out, the longer.
         units::PerSecond stand = units::PerSecond::over({ 20 });
-        float chatting = 3;                 ///< Chosen by eye: how many times longer one sits on with someone beside them
+        f32 chatting = 3;                   ///< Chosen by eye: how many times longer one sits on with someone beside them
         units::Seconds rise { 2.5f };       ///< Chosen by eye: getting up off a bench and stepping back to the path
         units::Chance watch_chance { 0.3 }; ///< Of stopping at a sight passed
         units::Seconds watch { 15 };
@@ -188,7 +189,7 @@ namespace rct3::simulation::tuning
     /// Guests eating and drinking what they bought.
     struct Eating
     {
-        std::uint8_t bites = 6;       ///< Chosen by eye: in which a guest eats or drinks something up
+        u8 bites = 6;                 ///< Chosen by eye: in which a guest eats or drinks something up
         units::Seconds bite { 2.5f }; ///< Chosen by eye: between bites
         // Chosen by eye: over the stalls' usual prices in the saves, so only prices raised past them put guests off.
         units::Money food_worth { 500 };   ///< Most a guest pays for something to eat
@@ -196,8 +197,8 @@ namespace rct3::simulation::tuning
         units::Share good_value { 0.35f }; ///< Chosen by eye: of its worth, at or under which a guest thinks a price good value
         /// Chosen by eye: by an extra's level (none, a little, some, more, loads, as the guest likes), how much of
         /// its usual amount goes on.
-        std::array<float, 6> extra_amounts { 0.0f, 0.5f, 1.0f, 1.5f, 2.0f, 1.0f };
-        std::uint8_t toppings_noticed = 2;      ///< Chosen by eye: extras an item must take for a guest to remark on them
+        std::array<f32, 6> extra_amounts { 0.0f, 0.5f, 1.0f, 1.5f, 2.0f, 1.0f };
+        u8 toppings_noticed = 2;                ///< Chosen by eye: extras an item must take for a guest to remark on them
         units::Chance topping_thought { 0.15 }; ///< Chosen by eye: of remarking on its extras, none or all, on buying it
     };
 
@@ -208,8 +209,8 @@ namespace rct3::simulation::tuning
         units::PerSecond rest_settle = units::PerSecond::over({ 120 }); ///< And while sitting on a bench
         units::Share wildest { 0.3f };                                  ///< Intensity past a guest's tolerance they still go on
         units::Factor full_stomach { 1.5 };                             ///< Nausea a ride gives a guest still eating; settling as much slower
-        float ride_nausea = 0.2f;                                       ///< Nausea a ride gives for each point of its nausea rating, before tolerance
-        float tolerance_ceiling = 1.5f;                                 ///< A rider's tolerance is taken off this to scale that nausea: the less tolerant feel more
+        f32 ride_nausea = 0.2f;                                         ///< Nausea a ride gives for each point of its nausea rating, before tolerance
+        f32 tolerance_ceiling = 1.5f;                                   ///< A rider's tolerance is taken off this to scale that nausea: the less tolerant feel more
         units::Share sick { 0.8f };                                     ///< Nausea past which a guest may be sick
         units::Chance sick_after_ride { 0.3 };                          ///< Of it, getting off a ride
         units::Frequency sick_walking = units::Frequency::every({ 120 });
@@ -257,8 +258,8 @@ namespace rct3::simulation::tuning
         // Pools: a series of parks saved a step apart (an empty pool, then filled, deeper, wider, with a jacuzzi,
         // extras, a slide, a lazy river, a second pool) shows the ideal guest count growing by three for each square
         // holding water, whatever its depth, and by nothing for jacuzzis or extras.
-        std::uint32_t guests_per_pool_square = 3;
-        std::uint32_t guests_per_seat = 3; ///< For a ride whose data does not say how many it makes room for
+        u32 guests_per_pool_square = 3;
+        u32 guests_per_seat = 3; ///< For a ride whose data does not say how many it makes room for
         // Rides and pools alone reproduce the saved parks' ideal guest counts, exactly in small parks, a little
         // under in big ones, where some rides are not simulated yet; we give some room over on purpose: better too many
         // guests than too few.
@@ -298,14 +299,14 @@ namespace rct3::simulation::tuning
     struct Parties
     {
         /// How often each PartyKind comes against the others, where the park sets no mix of its own.
-        std::array<float, 8> weights { 2, 2, 3, 3, 2, 2, 4, 1 };
+        std::array<f32, 8> weights { 2, 2, 3, 3, 2, 2, 4, 1 };
         units::Chance single_parent { 0.2 }; ///< Of a family having one parent
-        std::int64_t most_children = 4;      ///< In a family or on a day trip; at least one
-        std::int64_t most_friends = 5;       ///< In a gang or a party; at least two
+        i64 most_children = 4;               ///< In a family or on a day trip; at least one
+        i64 most_friends = 5;                ///< In a gang or a party; at least two
         units::Factor night_others { 0.15 }; ///< On parties other than teens' after dark
         /// How far the park's rides tilt the mix: a park of only the wildest rides draws teens' parties
         /// (1 + pull) times as often and families and day trips that much less; of only the gentlest, the reverse.
-        double pull = 1.0;
+        f64 pull = 1.0;
         TasteBand thrill { { 0.2f }, { 0.85f } }; ///< Teens on their own and in gangs
         TasteBand middle { { 0.1f }, { 0.7f } };  ///< Couples, adults on their own and in parties
         TasteBand gentle { { 0.0f }, { 0.45f } }; ///< Families and day trips
@@ -323,14 +324,14 @@ namespace rct3::simulation::tuning
         units::Share worn_out { 0.2f }; ///< Energy under which a guest not enjoying themselves tires of it
         units::Share enjoying { 0.5f }; ///< Happiness from which a worn out guest stays on
         units::Frequency worn_out_leave = units::Frequency::every({ 90 });
-        float long_stay_hours = 4;                                     ///< Game hours in the park after which guests start to drift home
+        f32 long_stay_hours = 4;                                       ///< Game hours in the park after which guests start to drift home
         units::Frequency long_stay = units::Frequency::every({ 400 }); ///< After that; twice as often after twice as long
         units::Frequency broke = units::Frequency::every({ 1 });       ///< A guest who cannot pay for anything and has no cash machine: at once
     };
 
     struct Thoughts
     {
-        std::size_t kept = 6;           ///< As many as saved parks keep
+        usize kept = 6;                 ///< As many as saved parks keep
         units::Seconds rethink { 300 }; ///< Before the same thought about the same thing comes back
         // A ride that leaves a guest delighted (Enjoyment::delighted) may leave them thinking they enjoyed it.
         units::Share settled { 0.4f };     ///< Chosen by eye: nausea past which they are too queasy to think so
@@ -341,7 +342,7 @@ namespace rct3::simulation::tuning
     /// Litter and bins.
     struct Litter
     {
-        std::size_t dirty_path = 3;                                    ///< Pieces of litter on a tile that make guests on it glum
+        usize dirty_path = 3;                                          ///< Pieces of litter on a tile that make guests on it glum
         units::PerSecond dirt_gloom = units::PerSecond::over({ 900 }); ///< Happiness lost on a dirty path
         /// An empty is held this long before it goes in a pocket, or on the path when they are full. Fitted to the
         /// saves: after five minutes, parks have about as much litter lying about as their saves had.
@@ -355,9 +356,9 @@ namespace rct3::simulation::tuning
         units::PerSecond gloom = units::PerSecond::over({ 1200 });    ///< Happiness lost standing by something broken
         units::Share mood { 0.15f };                                  ///< Guests less happy than this may break things
         units::Frequency breaking = units::Frequency::every({ 120 }); ///< Such a guest breaking what is by them
-        std::int32_t guard_reach = 3;                                 ///< Path tiles a guard keeps vandals off, walking out from theirs
+        i32 guard_reach = 3;                                          ///< Path tiles a guard keeps vandals off, walking out from theirs
         units::Seconds fade { 3600 };                                 ///< Over which a break stops counting as recent
-        float bad = 2.5f;                                             ///< Recent breaks that make the player be told: about three within the hour
+        f32 bad = 2.5f;                                               ///< Recent breaks that make the player be told: about three within the hour
         units::Seconds warning_every { 1200 };                        ///< At least, between telling them
     };
 
@@ -389,7 +390,7 @@ namespace rct3::simulation::tuning
         units::Seconds stall_longest { 5400 };
         /// Chosen by eye: guests one fully trained guard looks after, halving how fast stalls wear; with
         /// fewer guests, each guard counts as looking after this many. Untrained guards count a quarter.
-        float guard_guests = 200;
+        f32 guard_guests = 200;
     };
 
     /// How content and lazy staff are, and their pay and training.
@@ -399,7 +400,7 @@ namespace rct3::simulation::tuning
         /// raise); paid a quarter each week. Levels 1 and 2 of handymen, mechanics, guards and entertainers are the wages
         /// the game's staff window shows. Chosen by eye: level 0, and vendors' and keepers' wages (keepers below guards).
         /// Lifeguards (Other) and park inspectors are not paid.
-        std::array<std::array<std::int64_t, 3>, 8> wages { {
+        std::array<std::array<i64, 3>, 8> wages { {
             { 3000, 3500, 4200 }, // Handyman
             { 5000, 5500, 6500 }, // Mechanic
             { 1200, 1500, 2000 }, // Guard
@@ -415,8 +416,8 @@ namespace rct3::simulation::tuning
         units::Share content_per_wage { 0.1f };                           ///< More for each wage level
         units::Share overworked { 0.85f };                                ///< Of time at work, past which they feel overworked
         units::Share bored { 0.15f };                                     ///< Below which they feel idle
-        float overwork_gloom = 2;                                         ///< Happiness lost for each share past overworked
-        float bored_gloom = 3;                                            ///< And for each share below idle
+        f32 overwork_gloom = 2;                                           ///< Happiness lost for each share past overworked
+        f32 bored_gloom = 3;                                              ///< And for each share below idle
         units::PerSecond mood = units::PerSecond::over({ 900 });          ///< How fast happiness goes to where it is heading
         units::PerSecond lonely_gloom = units::PerSecond::over({ 1800 }); ///< Chosen by eye: happiness an untrained entertainer loses with no guests near
         units::Share lazy_below { 0.5f };                                 ///< Happiness below which laziness grows
@@ -431,8 +432,8 @@ namespace rct3::simulation::tuning
         units::Share keen { 0.05f };                                                                                         ///< Chosen by eye: laziness up to which they think they are keen
         units::Share glad { 0.85f };                                                                                         ///< Chosen by eye: happiness from which they think they are happy
         units::Share miserable { 0.25f };                                                                                    ///< Chosen by eye: happiness below which they think they are miserable
-        std::uint32_t quit_after = 20;                                                                                       ///< Chosen by eye: thoughts in a row miserable before they think of quitting
-        std::uint32_t leave_after = 10;                                                                                      ///< Chosen by eye: more such thoughts, after that, before they quit
+        u32 quit_after = 20;                                                                                                 ///< Chosen by eye: thoughts in a row miserable before they think of quitting
+        u32 leave_after = 10;                                                                                                ///< Chosen by eye: more such thoughts, after that, before they quit
     };
 
     /// The park rating: each part's share of the 1000, and the shapes inside them.
@@ -446,15 +447,15 @@ namespace rct3::simulation::tuning
         units::RideScore good_excitement { 7 }; ///< A ride this exciting scores in full
         units::RideScore harsh_intensity { 7 }; ///< Above this, a ride starts to put guests off
         units::RideScore intensity_range { 4 }; ///< How far above harsh a ride stops scoring at all
-        float rides_for_variety = 3;            ///< About two thirds of the variety at this many rides
-        float guests_for_busy = 300;            ///< About two thirds of the guests part at this many guests
+        f32 rides_for_variety = 3;              ///< About two thirds of the variety at this many rides
+        f32 guests_for_busy = 300;              ///< About two thirds of the guests part at this many guests
         // Fitted to saved parks' ratings (save-dump --rating): litter counting once it is as old as Litter::old,
         // awards and fines over the months the park keeps. Saves hold few lost guests, so their weight is only the
         // most the fit leaves room for, and none hold a recent crash, so its weight is chosen by eye.
-        std::int32_t per_litter = 5;
-        std::int32_t most_litter = 600;
-        std::int32_t per_lost_guest = 2;
-        std::int32_t most_lost_guests = 100;
+        i32 per_litter = 5;
+        i32 most_litter = 600;
+        i32 per_lost_guest = 2;
+        i32 most_lost_guests = 100;
         units::RatingPoints crash { 100 }; ///< Chosen by eye: taken off just after a crash, less as the park forgets it
         units::RatingPoints per_award { 20 };
         units::RatingPoints per_fine { 40 };
@@ -493,7 +494,7 @@ namespace rct3::simulation::tuning
     {
         /// A month's budget leaves in this many equal parts. Fitted against the ledgers of saved scenarios, whose
         /// research line moves by a thirtieth of their budget at a time.
-        double parts_per_month = 30;
+        f64 parts_per_month = 30;
         /// What inventing an item costs, by its kind. Chosen by eye: at the 200.00 a month saved scenarios set
         /// aside, a tracked ride takes a little over a month, a flat ride most of one and a stall half of one.
         units::Money tracked_ride_cost { 24000 };
@@ -503,11 +504,11 @@ namespace rct3::simulation::tuning
         /// A scenery item costs its price times this, up to the cap. Chosen by eye: at the usual 200.00 a month an
         /// item of the usual price, about 15.00, takes under a third of a month, and the dearest (ride events, at
         /// hundreds) are held to under half a month, less than a stall.
-        double scenery_cost_per_price = 4;
+        f64 scenery_cost_per_price = 4;
         units::Money scenery_cost_cap { 8000 };
         /// An item the player focuses research on costs this many times its cost. Chosen by eye: half as much
         /// again, enough that picking every item by hand is a choice with a price.
-        double focus_cost = 1.5;
+        f64 focus_cost = 1.5;
     };
 
     /// What the park is charged each week.
@@ -515,12 +516,12 @@ namespace rct3::simulation::tuning
     {
         /// A loan's yearly rate of interest is spread over this many weeks. Tuned against the ledgers of saved
         /// scenarios, so that a week's interest on their loans at their rates comes to what their ledgers show.
-        double interest_weeks = 48;
+        f64 interest_weeks = 48;
         /// A ride built here costs this share of its build cost to run each week: a tracked ride its track's, a
         /// flat ride its own. Tuned against the open rides of saved scenarios, from what each costs to run against
         /// what building it costs; a flat ride's share is far smaller.
-        double tracked_running_share = 0.02;
-        double flat_running_share = 0.0017;
+        f64 tracked_running_share = 0.02;
+        f64 flat_running_share = 0.0017;
         /// A facility built here (a toilet, a cash machine, first aid) costs this to run each week, whatever its kind.
         /// Tuned against the facilities of the base campaign's saved scenarios.
         units::Money facility_running_cost { 80 };
@@ -552,8 +553,8 @@ namespace rct3::simulation::tuning
     /// People on foot whose ground the land tools tip too steep: they slide down it, fall over, and get up.
     struct Slides
     {
-        float steep = 0.3f;           ///< Chosen by eye: rise over run of the ground past which those on it slide; a ground path tile tipped as far as it may go is past it
-        float grip = 0.25f;           ///< Chosen by eye: the ground's rub on a slider, as a share of their weight
+        f32 steep = 0.3f;             ///< Chosen by eye: rise over run of the ground past which those on it slide; a ground path tile tipped as far as it may go is past it
+        f32 grip = 0.25f;             ///< Chosen by eye: the ground's rub on a slider, as a share of their weight
         units::Pace settled { 0.3f }; ///< Chosen by eye: a slider slower than this, on ground no steeper than `steep`, stops
         units::Seconds longest { 8 }; ///< Chosen by eye: the longest a slide lasts, however steep the ground goes on
     };
@@ -564,9 +565,9 @@ namespace rct3::simulation::tuning
     {
         units::Seconds look { 4 };     ///< Between their looks round the park
         units::Share cheer { 0.025f }; ///< Their patience grows by this share of their happiness at each look
-        std::int32_t heap = 3;         ///< Pieces of litter by them from which on it counts in full
+        i32 heap = 3;                  ///< Pieces of litter by them from which on it counts in full
         units::Share few { 0.4f };     ///< What less litter than a heap counts for
-        std::int32_t reach = 3;        ///< Tiles round them they see a themed area in
+        i32 reach = 3;                 ///< Tiles round them they see a themed area in
         units::Seconds nag { 40 };     ///< Chosen by eye: held up this long at a stop, they say so again
         units::Seconds give_up { 80 }; ///< Chosen by eye: held up this long after saying so again, they go on to the next
     };
@@ -584,7 +585,7 @@ namespace rct3::simulation::tuning
         units::Share least_keen { 0.05f };                         ///< The chance of starting a show never falls below this, however lazy or glum
         units::Radians crowd_spread { 0.4f };                      ///< Round the entertainer, between members of a party watching side by side
         units::Share poor_lazy { 0.7f };                           ///< Chosen by eye: laziness from which a show is a poor one, as when miserable
-        std::int32_t moves = 5;                                    ///< Chosen by eye: moves in a show of an untrained entertainer, long enough to draw a crowd; each level adds one
+        i32 moves = 5;                                             ///< Chosen by eye: moves in a show of an untrained entertainer, long enough to draw a crowd; each level adds one
         units::Seconds gap { 20 };                                 ///< Chosen by eye: rest after a show before the next
         units::Share cheer { 0.08f };                              ///< Chosen by eye: happiness a good show gives each in the crowd
         units::Share poor_gloom { 0.03f };                         ///< Chosen by eye: happiness an entertainer loses over a poor show
@@ -640,7 +641,7 @@ namespace rct3::simulation::tuning
         units::PerSecond longing = units::PerSecond::over({ 300 }); ///< Wish to swim grown in a guest who likes pools fully; slower as they like them less
         // Fitted to saves: big parks with many guests wishing for a swim hold 1.4 to 1.6 swimmers a square of water
         // in their pools, the fullest saved pool 2.4.
-        float crowd = 2.0f; ///< Swimmers a pool takes for each square of its water, counting those on their way, changing and on its rides; no more set out for it
+        f32 crowd = 2.0f; ///< Swimmers a pool takes for each square of its water, counting those on their way, changing and on its rides; no more set out for it
         // Fitted to saves: of 14,000 saved guests a tenth like pools exactly the least, a tenth exactly the most, and
         // the rest evenly between.
         units::Share least_liking { 0.1f };
@@ -664,30 +665,30 @@ namespace rct3::simulation::tuning
         units::Seconds deck_rest { 3 };                           ///< Most standing between walks on the paved squares; saved swimmers out on them seldom stand
         units::Chance extra { 0.3 };                              ///< Of going to a spa pool or an extra next, of those that go on from the water
         units::Chance slide { 0.25 };                             ///< Chosen by eye: of going up one of the pool's slides next, when it has any
-        std::uint8_t lounger_places = 2;                          ///< Swimmers a set of sun loungers takes at once, as the saved parks' do
-        std::uint8_t shower_places = 3;                           ///< And a shower
+        u8 lounger_places = 2;                                    ///< Swimmers a set of sun loungers takes at once, as the saved parks' do
+        u8 shower_places = 3;                                     ///< And a shower
         units::Seconds lounging { 45 };                           ///< Chosen by eye: on a lounger
         units::Distance deck { 0.2f };                            ///< The paving's top over the pool's surface, where saved guests walk it
         units::Distance lanes { 1.5f };                           ///< Chosen by eye: from a square's middle to the lanes beside it; swimmers keep to one of the three lanes each way across a square, so a crowd spreads
         units::Distance queue_gap { 0.85f };                      ///< From one swimmer in a slide's line to the one ahead, as a saved park's stand
-        float slide_deck = 2;                                     ///< Chosen by eye: most levels a slide's station track stands over the paving or steps beside its platform
+        f32 slide_deck = 2;                                       ///< Chosen by eye: most levels a slide's station track stands over the paving or steps beside its platform
         units::Distance lounger_reach { 1.44f };                  ///< From a set of loungers' middle to where one lying on the last is placed, the way they face, as a saved park's are
-        float lounger_side = 0.55f;                               ///< And sideways from there, as a saved park's are
+        f32 lounger_side = 0.55f;                                 ///< And sideways from there, as a saved park's are
         units::Distance lounger_gap { 1.75f };                    ///< Between the loungers of a set, the way those on them face, measured by eye on the model
         units::Distance shower_reach { 0.75f };                   ///< From a shower's pole to those under it, as a saved park's are
         units::Seconds dive_in { 2.0f };                          ///< Diving in off the water's edge, as long as the swimwear's dive motion lasts
         units::Seconds climb_out { 3.4f };                        ///< Climbing out over the wall, as its motion lasts
         units::Seconds ladder { 3.0f };                           ///< Up or down a ladder, as its motion lasts
         units::Distance dive_reach { 0.94f };                     ///< Out over the water a dive off the edge takes them, as its motion carries the body
-        float out_reach = 0.43f;                                  ///< On over the wall climbing out takes them, as its motion carries the body
-        float ladder_reach = 0.39f;                               ///< And up a ladder
+        f32 out_reach = 0.43f;                                    ///< On over the wall climbing out takes them, as its motion carries the body
+        f32 ladder_reach = 0.39f;                                 ///< And up a ladder
         units::Seconds showering { 6 };                           ///< Chosen by eye: under a shower
         units::Seconds patience { 20 };                           ///< Chosen by eye: waiting for a place at an extra before going elsewhere
-        float spa_water = 0.0f;                                   ///< A spa pool's water over the paving round it, in height units
+        f32 spa_water = 0.0f;                                     ///< A spa pool's water over the paving round it, in height units
         units::Tiles long_ramp { 0.75f };                         ///< A ramp climbing two or more: from its side to its foot, as its model runs
         units::Tiles short_ramp { 0.25f };                        ///< One climbing one
         units::Distance dip { 16.0f };                            ///< Chosen by eye: a way into or out of the water counts as this much longer (four squares), so walkers keep to the paving
-        float platform = 3.5f;                                    ///< Chosen by eye: how many squares off the paving a slide's station may stand and be walked to, a platform three long beside it
+        f32 platform = 3.5f;                                      ///< Chosen by eye: how many squares off the paving a slide's station may stand and be walked to, a platform three long beside it
         units::PerSecond cheer = units::PerSecond::over({ 600 }); ///< Happiness gained while swimming in clean water; lost in dirty
         /// Dirt a swimmer brings to a pool of one square of water in a second; less in bigger pools.
         units::PerSecond dirtying = units::PerSecond::over({ 1200 });
@@ -706,15 +707,15 @@ namespace rct3::simulation::tuning
         units::Pace flow { 1.7f };         ///< The current, as far as the saved parks' riders went over their time on the river
         units::Pace least_paddle { 0.5f }; ///< Riders paddle from this fast to `most_paddle`, ahead or back, as saved riders do
         units::Pace most_paddle { 2.0f };
-        float least_stay = 0.5f; ///< Laps a rider floats before getting off, from this many to `most_stay`, as saved riders mean to
-        float most_stay = 2.0f;
+        f32 least_stay = 0.5f; ///< Laps a rider floats before getting off, from this many to `most_stay`, as saved riders mean to
+        f32 most_stay = 2.0f;
         units::TurnRate spin { 1.5f };                          ///< Most a resting rider's ring turns, about as fast as saved riders' rings turn
         units::Chance paddle { 0.15 };                          ///< Chosen by eye: of paddling off, each time a resting rider's ring comes round to face along the river or back
         units::Frequency rest = units::Frequency::every({ 8 }); ///< Chosen by eye: how often a paddling rider stops to rest
         units::Distance lane { 1.0f };                          ///< Chosen by eye: most to either side of the channel's middle a rider floats
         units::Tiles join { 1.75f };                            ///< Chosen by eye: most across from a pool ride's station track to the middle of a square beside it that joins it to its complex, a wide station's track lying a tile and a half from its sides' squares
         /// Excitement, intensity and nausea of a river not rated yet, as a saved park rates its river (with no test run)
-        std::array<float, 3> rated { 3.6f, 0.9f, 0.0f };
+        std::array<f32, 3> rated { 3.6f, 0.9f, 0.0f };
     };
 
     /// Slides with no cars that swimmers climb on foot, as on an inflatable ship.
@@ -722,17 +723,17 @@ namespace rct3::simulation::tuning
     {
         units::Pace climb { 0.9f };   ///< Chosen by eye: up the steps, about a slow walk
         units::Distance gap { 1.5f }; ///< Chosen by eye: up the steps the one ahead must be before the next sets off
-        float drag = 0.25f;           ///< Chosen by eye: share of their speed a slider loses each second, against gravity's pull
+        f32 drag = 0.25f;             ///< Chosen by eye: share of their speed a slider loses each second, against gravity's pull
         units::Pace slowest { 1.0f }; ///< Chosen by eye: down the slide, never slower, so nobody stops on a flat stretch
         units::Pace fastest { 8.0f }; ///< Chosen by eye
         /// Chosen by eye: excitement, intensity and nausea of one not rated yet, a little under a body slide
-        std::array<float, 3> rated { 3.0f, 1.5f, 0.5f };
+        std::array<f32, 3> rated { 3.0f, 1.5f, 0.5f };
     };
 
     /// Rides walked through on foot, as an aquarium.
     struct WalkThroughs
     {
-        std::uint32_t crowd = 30; ///< Chosen by eye: inside at once when its ride file says nothing, as the smallest house takes
+        u32 crowd = 30; ///< Chosen by eye: inside at once when its ride file says nothing, as the smallest house takes
     };
 
     /// Dives off a pool's boards.
@@ -748,12 +749,12 @@ namespace rct3::simulation::tuning
         units::Share high_cheer { 0.04f };   ///< Chosen by eye: happiness from a dive off a high board
         units::Share small_cheer { 0.015f }; ///< Chosen by eye: and off a small one
         units::Distance behind { 0.3f };     ///< Chosen by eye: from the pool's wall back to where swimmers step on a small board
-        float small_reach = 3.5f;            ///< From the wall to where a diver stands at a small board's end, as far as its model reaches
-        float small_board = 0.3f;            ///< A small board's top over the paving, as its model stands
-        float ladder_foot = -0.15f;          ///< From a high board's square middle towards the water to a climber on its ladder: the rungs' back is 0.05 ahead of the middle, as the tower's model has them, and the climber's middle a fifth of a unit behind that, chosen by eye
-        float ladder_side = 0.535f;          ///< And to the side, the middle of the rungs as the tower's model has them
-        float ladder_queue = 0.8f;           ///< Chosen by eye: back from a high board's ladder foot to where the next swimmer waits their turn, clear of the tower
-        float high_reach = 5.1f;             ///< From the ladder's climber out to where a diver stands at its boards' end, a little short of their tip as the model reaches
+        f32 small_reach = 3.5f;              ///< From the wall to where a diver stands at a small board's end, as far as its model reaches
+        f32 small_board = 0.3f;              ///< A small board's top over the paving, as its model stands
+        f32 ladder_foot = -0.15f;            ///< From a high board's square middle towards the water to a climber on its ladder: the rungs' back is 0.05 ahead of the middle, as the tower's model has them, and the climber's middle a fifth of a unit behind that, chosen by eye
+        f32 ladder_side = 0.535f;            ///< And to the side, the middle of the rungs as the tower's model has them
+        f32 ladder_queue = 0.8f;             ///< Chosen by eye: back from a high board's ladder foot to where the next swimmer waits their turn, clear of the tower
+        f32 high_reach = 5.1f;               ///< From the ladder's climber out to where a diver stands at its boards' end, a little short of their tip as the model reaches
         units::Distance board_top { 1.2f };  ///< A high board's top over the height it is placed at, as its model stands
     };
 
@@ -761,11 +762,11 @@ namespace rct3::simulation::tuning
     struct Surroundings
     {
         units::Seconds look { 90 };             ///< Chosen by eye: between a guest's looks at what is round them
-        std::int32_t reach = 2;                 ///< Chosen by eye: tiles round a path tile whose scenery counts for it
-        float plant = 1;                        ///< Chosen by eye: what a tree, shrub or flower bed adds
-        float ornament = 1.5f;                  ///< Chosen by eye: what other scenery adds
-        float feature = 4;                      ///< Chosen by eye: what a fountain, effect or animatronic adds
-        float great = 20;                       ///< Chosen by eye: scenery round a tile from which guests think it great
+        i32 reach = 2;                          ///< Chosen by eye: tiles round a path tile whose scenery counts for it
+        f32 plant = 1;                          ///< Chosen by eye: what a tree, shrub or flower bed adds
+        f32 ornament = 1.5f;                    ///< Chosen by eye: what other scenery adds
+        f32 feature = 4;                        ///< Chosen by eye: what a fountain, effect or animatronic adds
+        f32 great = 20;                         ///< Chosen by eye: scenery round a tile from which guests think it great
         units::Share great_cheer { 0.04f };     ///< Chosen by eye: happiness from thinking the scenery great
         units::Share tidy_cheer { 0.02f };      ///< Chosen by eye: happiness from thinking the park tidy
         units::Chance stop { 0.02 };            ///< Chosen by eye: of stopping to watch an effect or animatronic passed; most walk on
@@ -780,18 +781,18 @@ namespace rct3::simulation::tuning
         units::Chance retarget { 0.25 };        ///< Chosen by eye: a second, of the firer swinging on to someone else
         units::Share soaking { 0.3f };          ///< Chosen by eye: wetness a second for someone the cannon sprays
         units::Share view_cheer { 0.05f };      ///< Chosen by eye: happiness from a fine view
-        std::int32_t earshot = 2;               ///< Chosen by eye: tiles from a loudspeaker within which guests hear it
+        i32 earshot = 2;                        ///< Chosen by eye: tiles from a loudspeaker within which guests hear it
         units::Chance music_thought { 0.15 };   ///< Chosen by eye: of liking its music, on each tile walked in earshot
         units::Share stamp_cheer { 0.1f };      ///< Chosen by eye: happiness from a new stamp in a guest's passport
         units::Share gift_cheer { 0.2f };       ///< Chosen by eye: happiness from being given the park's passport gift
         units::Share no_gift_gloom { 0.1f };    ///< Chosen by eye: happiness lost when the park cannot pay for the gift they are due
-        std::uint32_t stamps_for_gift = 5;      ///< Chosen by eye: stamps a new park asks for before giving its passport gift
-        std::uint32_t most_stamps = 12;         ///< Chosen by eye: about as many stamps as a passport's page shows without hiding each other
+        u32 stamps_for_gift = 5;                ///< Chosen by eye: stamps a new park asks for before giving its passport gift
+        u32 most_stamps = 12;                   ///< Chosen by eye: about as many stamps as a passport's page shows without hiding each other
         /// Chosen by eye: the inks of passport posts with no colour of their own, red, blue, green, orange, purple
         /// and teal, as red, green and blue.
-        std::array<std::array<std::uint8_t, 3>, 6> stamp_inks { { { 200, 40, 40 }, { 40, 80, 200 }, { 40, 150, 60 }, { 230, 130, 20 }, { 140, 60, 170 }, { 20, 150, 150 } } };
+        std::array<std::array<u8, 3>, 6> stamp_inks { { { 200, 40, 40 }, { 40, 80, 200 }, { 40, 150, 60 }, { 230, 130, 20 }, { 140, 60, 170 }, { 20, 150, 150 } } };
         units::Chance map_wish { 0.02 }; ///< Chosen by eye: of a party with no map going to buy one, each time it picks where to go
-        float map_rides = 4;             ///< Chosen by eye: how many times as often a party holding a map goes for a ride
+        f32 map_rides = 4;               ///< Chosen by eye: how many times as often a party holding a map goes for a ride
     };
 
     struct Tuning

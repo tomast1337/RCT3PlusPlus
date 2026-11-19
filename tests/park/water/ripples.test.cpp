@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/water/ripples.hpp"
 
+#include "core/types.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -18,7 +20,7 @@ TEST_CASE("a ripple's ring widens at its speed and its crests fall as it ages")
     CHECK(ripple_amplitude(first) == doctest::Approx(kRippleLook.height));
     advance_ripples(r, 0.5f);
     CHECK(ripple_radius(first) == doctest::Approx(0.5f * kRippleLook.speed));
-    const float earlier = ripple_amplitude(first);
+    const f32 earlier = ripple_amplitude(first);
     advance_ripples(r, 0.5f);
     CHECK(ripple_amplitude(first) < earlier);
 }
@@ -28,7 +30,7 @@ TEST_CASE("the water stands highest on the ring and is still far from it")
     Ripples r;
     start_ripple(r, { 0, 0 });
     advance_ripples(r, 1);
-    const float radius = ripple_radius(r.ripples[0]);
+    const f32 radius = ripple_radius(r.ripples[0]);
     CHECK(ripple_height(r, { radius, 0 }) == doctest::Approx(ripple_amplitude(r.ripples[0])));
     CHECK(ripple_height(r, { 0, radius }) == doctest::Approx(ripple_height(r, { radius, 0 })));
     CHECK(std::abs(ripple_height(r, { radius + 10 * kRippleLook.width, 0 })) < 1e-6f);
@@ -47,7 +49,7 @@ TEST_CASE("a ripple ends once it has died down, freeing its place")
 {
     Ripples r;
     start_ripple(r, { 0, 0 });
-    for (std::int32_t i = 0; i < 200 && live_ripples(r) > 0; ++i)
+    for (i32 i = 0; i < 200 && live_ripples(r) > 0; ++i)
         advance_ripples(r, 0.1f);
     CHECK(live_ripples(r) == 0);
     CHECK(ripple_height(r, { 0, 0 }) == 0);
@@ -56,9 +58,9 @@ TEST_CASE("a ripple ends once it has died down, freeing its place")
 TEST_CASE("with every place taken, a new ripple replaces the oldest")
 {
     Ripples r;
-    for (std::size_t i = 0; i < kMaxRipples; ++i)
+    for (usize i = 0; i < kMaxRipples; ++i)
     {
-        start_ripple(r, { static_cast<float>(i), 0 });
+        start_ripple(r, { static_cast<f32>(i), 0 });
         advance_ripples(r, 0.01f);
     }
     REQUIRE(live_ripples(r) == kMaxRipples);

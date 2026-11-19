@@ -2,6 +2,7 @@
 #include "ovl/person_parts.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <cstdint>
@@ -16,24 +17,24 @@ namespace
 {
 
     const std::string kNames("S:ppg\0P:prt\0H:phd\0T:tex\0M:mms\0B:sal\0K:ssk\0", 42);
-    constexpr std::uint32_t kBase = 48; // names padded
+    constexpr u32 kBase = 48; // names padded
 
-    std::uint32_t name_at(const std::string& needle)
+    u32 name_at(const std::string& needle)
     {
         const auto at = kNames.find(needle);
         REQUIRE(at != std::string::npos);
-        return static_cast<std::uint32_t>(at);
+        return static_cast<u32>(at);
     }
 
     // Offsets inside the structure block.
-    constexpr std::uint32_t kSet = 0;      // 84 bytes
-    constexpr std::uint32_t kChances = 84; // one float
-    constexpr std::uint32_t kList = 88;    // two reference fields
-    constexpr std::uint32_t kPiece = 96;   // 20 bytes
-    constexpr std::uint32_t kHead = 116;   // 192 bytes
-    constexpr std::uint32_t kEnd = 308;
+    constexpr u32 kSet = 0;      // 84 bytes
+    constexpr u32 kChances = 84; // one float
+    constexpr u32 kList = 88;    // two reference fields
+    constexpr u32 kPiece = 96;   // 20 bytes
+    constexpr u32 kHead = 116;   // 192 bytes
+    constexpr u32 kEnd = 308;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
@@ -54,7 +55,7 @@ namespace
         return bytes_of_string(text);
     }
 
-    std::vector<std::byte> symbol_row(const std::string& name, std::uint32_t at)
+    std::vector<std::byte> symbol_row(const std::string& name, u32 at)
     {
         std::vector<std::byte> out;
         words(out, { name_at(name), kBase + at });
@@ -64,27 +65,27 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> reference_row(std::uint32_t at, const std::string& name)
+    std::vector<std::byte> reference_row(u32 at, const std::string& name)
     {
         std::vector<std::byte> out;
         words(out, { kBase + at, name_at(name), 0, 0 });
         return out;
     }
 
-    std::vector<std::byte> structure(std::uint8_t level_two_fixed = 1)
+    std::vector<std::byte> structure(u8 level_two_fixed = 1)
     {
         std::vector<std::byte> out;
         words(out, { 1, 0, 0 });
         out.insert(out.end(), { std::byte { 2 }, std::byte { 1 }, std::byte { 1 }, std::byte { 1 } });
-        words(out, { 0, kBase + kChances, std::bit_cast<std::uint32_t>(100.0f) });
+        words(out, { 0, kBase + kChances, std::bit_cast<u32>(100.0f) });
         // Levels: one fixed and one optional piece; nothing, with a pointer that must not be followed; one fixed.
         words(out, { 0x0101, kBase + kList, 0, 12345, level_two_fixed, kBase + kList });
         words(out, { 0 }); // head reference
-        for (std::int32_t i = 0; i < 6; ++i)
+        for (i32 i = 0; i < 6; ++i)
             words(out, { 0 });
         words(out, { 0 }); // swimwear head
         REQUIRE(out.size() == kChances);
-        words(out, { std::bit_cast<std::uint32_t>(0.25f), 0, 0 });
+        words(out, { std::bit_cast<u32>(0.25f), 0, 0 });
         words(out, { 1, 0, 0, 0, 2 });
         REQUIRE(out.size() == kHead);
         out.resize(kEnd, std::byte { 0 });
@@ -116,8 +117,8 @@ TEST_CASE("a section lists its pieces at each level, fixed first, then optional"
     const auto& s = *items[0].section;
     CHECK(s.age_group == 2);
     CHECK(s.sex == 1);
-    CHECK(s.kind == static_cast<std::uint8_t>(rct3::ovl::SectionKind::Body));
-    CHECK(s.optional_chances == std::vector<float> { 0.25f });
+    CHECK(s.kind == static_cast<u8>(rct3::ovl::SectionKind::Body));
+    CHECK(s.optional_chances == std::vector<f32> { 0.25f });
     CHECK(s.levels[0].fixed == std::vector<std::string_view> { "P" });
     CHECK(s.levels[0].optional == std::vector<std::string_view> { "P" });
     CHECK(s.levels[1].fixed.empty()); // Its pointer is never followed
@@ -141,7 +142,7 @@ TEST_CASE("a piece names its mesh, its picture and the colour that picks its cel
     REQUIRE(items[0].piece.has_value());
     CHECK(items[0].piece->texture == "T");
     CHECK(items[0].piece->mesh == "M");
-    CHECK(items[0].piece->channel == static_cast<std::uint32_t>(rct3::ovl::ColourChannel::Bottom));
+    CHECK(items[0].piece->channel == static_cast<u32>(rct3::ovl::ColourChannel::Bottom));
 }
 
 TEST_CASE("a head names its picture, its bones and a skin for each face at each level")

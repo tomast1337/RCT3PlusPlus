@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/stall_menu.hpp"
 
+#include "core/types.hpp"
 #include "ui/skin/library.hpp"
 #include "ui/text_layout.hpp"
 #include "ui/widgets/edit_box.hpp"
@@ -47,7 +48,7 @@ namespace rct3::ui::screens::info
             }
             void on_press(Point p) override
             {
-                for (std::size_t i = 0; i < menu_.view().lines.size(); ++i)
+                for (usize i = 0; i < menu_.view().lines.size(); ++i)
                 {
                     if (contains(menu_.handle_rect(i), p))
                     {
@@ -92,9 +93,9 @@ namespace rct3::ui::screens::info
         };
 
         /// The extras on offer of `line`, by place in the view's.
-        std::vector<std::size_t> offered(const MenuLine& line)
+        std::vector<usize> offered(const MenuLine& line)
         {
-            std::vector<std::size_t> out;
+            std::vector<usize> out;
             for (const auto& e : line.extras)
             {
                 if (e)
@@ -107,10 +108,10 @@ namespace rct3::ui::screens::info
     std::vector<MenuRow> menu_rows(const StallMenuView& view)
     {
         std::vector<MenuRow> rows;
-        std::optional<std::vector<std::size_t>> band;
-        for (std::size_t i = 0; i < view.lines.size(); ++i)
+        std::optional<std::vector<usize>> band;
+        for (usize i = 0; i < view.lines.size(); ++i)
         {
-            std::vector<std::size_t> extras = offered(view.lines[i]);
+            std::vector<usize> extras = offered(view.lines[i]);
             if (band != extras)
             {
                 // Lines that take no extras have no ticks to head.
@@ -123,7 +124,7 @@ namespace rct3::ui::screens::info
         return rows;
     }
 
-    std::size_t drop_place(std::optional<std::size_t> from, std::size_t before)
+    usize drop_place(std::optional<usize> from, usize before)
     {
         return from && *from < before ? before - 1 : before;
     }
@@ -139,21 +140,21 @@ namespace rct3::ui::screens::info
         sync_->tooltip = view_.sync_help;
         pane_ = &add<widgets::ScrollArea>("menu", style_.bar);
         back_ = &pane_->content().add<MenuRowsBack>(*this);
-        const float bar = style_.bar.thickness;
+        const f32 bar = style_.bar.thickness;
         // Laid from the right of the rows, which stop short of the bar by the rest of the gutter.
-        const float right = std::max(0.0f, style_.rows.gutter - bar);
-        const float h = style_.rows.height;
-        std::size_t row = 0;
+        const f32 right = std::max(0.0f, style_.rows.gutter - bar);
+        const f32 h = style_.rows.height;
+        usize row = 0;
         for (const MenuRow& r : rows_)
         {
-            const float y = static_cast<float>(row++) * h;
+            const f32 y = static_cast<f32>(row++) * h;
             if (!r.line)
                 continue;
-            const std::size_t i = *r.line;
+            const usize i = *r.line;
             const MenuLine& line = view_.lines[i];
             LineWidgets w;
-            const float extras_right = right + style_.price_width;
-            const float extras_left = extras_right + style_.extras_width;
+            const f32 extras_right = right + style_.price_width;
+            const f32 extras_left = extras_right + style_.extras_width;
             widgets::EditBox& name_box = pane_->content().add<widgets::EditBox>(std::format("ItemName{}", i), line.name);
             name_box.skin = style_.price.field;
             name_box.focused_skin = style_.price.field_focused;
@@ -166,35 +167,35 @@ namespace rct3::ui::screens::info
             price.maximum = view_.most_price;
             price.step = view_.price_step;
             price.decimals = 2;
-            price.set_value(static_cast<std::int32_t>(line.price.value));
+            price.set_value(static_cast<i32>(line.price.value));
             price.placement = { { 1, 0, 1, 0 }, { -extras_right, y, -right, y + h } };
             price.tooltip = line.help;
             w.price = &price;
             if (!line.paints.empty())
             {
                 widgets::PaintButton& pot = pane_->content().add<widgets::PaintButton>(std::format("ItemColour{}", i), style_.paint, line.paints);
-                const float x = -extras_left + (style_.pot_width - h) / 2;
+                const f32 x = -extras_left + (style_.pot_width - h) / 2;
                 pot.placement = { { 1, 0, 1, 0 }, { x, y, x + h, y + h } };
                 w.pot = &pot;
             }
             // Each tick under its extra's picture in the band over the run.
-            const std::vector<std::size_t> columns = offered(line);
+            const std::vector<usize> columns = offered(line);
             w.ticks.assign(line.extras.size(), nullptr);
-            for (std::size_t k = 0; k < line.extras.size(); ++k)
+            for (usize k = 0; k < line.extras.size(); ++k)
             {
                 if (!line.extras[k])
                     continue;
-                const auto column = static_cast<float>(std::ranges::find(columns, *line.extras[k]) - columns.begin());
+                const auto column = static_cast<f32>(std::ranges::find(columns, *line.extras[k]) - columns.begin());
                 widgets::Tickbox& tick = pane_->content().add<widgets::Tickbox>(std::format("ItemExtra{}_{}", i, k), style_.tick_box, style_.tick);
                 tick.ticked = (line.ticked >> k & 1U) != 0;
                 tick.tooltip = k < line.tick_help.size() ? line.tick_help[k] : std::u16string { };
-                const float x = -extras_left + column * h;
+                const f32 x = -extras_left + column * h;
                 tick.placement = { { 1, 0, 1, 0 }, { x, y, x + h, y + h } };
                 w.ticks[k] = &tick;
             }
             lines_.push_back(std::move(w));
         }
-        back_->placement = { { 0, 0, 1, 0 }, { 0, 0, -right, static_cast<float>(rows_.size()) * h } };
+        back_->placement = { { 0, 0, 1, 0 }, { 0, 0, -right, static_cast<f32>(rows_.size()) * h } };
         over_ = &add<MenuDragOver>(*this);
         over_->placement = fill();
         lay_out_rows();
@@ -202,24 +203,24 @@ namespace rct3::ui::screens::info
 
     void StallMenu::lay_out_rows()
     {
-        const float cell = style_.strip_cell;
-        const float strip = strip_width();
+        const f32 cell = style_.strip_cell;
+        const f32 strip = strip_width();
         sync_->placement = bottom_left(strip, 0, cell, cell);
         pane_->placement = { { 0, 0, 1, 1 }, { strip, 0, 0, -cell - style_.tick_gap } };
     }
 
-    std::size_t StallMenu::strip_rows() const
+    usize StallMenu::strip_rows() const
     {
         // Above the bin, as many as the height takes, at least one.
-        const float cell = style_.strip_cell;
-        return std::max<std::size_t>(1, static_cast<std::size_t>(std::floor((rect().height() - cell) / cell)));
+        const f32 cell = style_.strip_cell;
+        return std::max<usize>(1, static_cast<usize>(std::floor((rect().height() - cell) / cell)));
     }
 
-    float StallMenu::strip_width() const
+    f32 StallMenu::strip_width() const
     {
-        const std::size_t rows = strip_rows();
-        const std::size_t columns = std::max<std::size_t>(1, (view_.goods.size() + rows - 1) / rows);
-        return static_cast<float>(columns) * style_.strip_cell;
+        const usize rows = strip_rows();
+        const usize columns = std::max<usize>(1, (view_.goods.size() + rows - 1) / rows);
+        return static_cast<f32>(columns) * style_.strip_cell;
     }
 
     Rect StallMenu::bin_rect() const
@@ -228,13 +229,13 @@ namespace rct3::ui::screens::info
         return { r.x0, r.y1 - style_.strip_cell, r.x0 + style_.strip_cell, r.y1 };
     }
 
-    Rect StallMenu::good_rect(std::size_t i) const
+    Rect StallMenu::good_rect(usize i) const
     {
-        const std::size_t rows = strip_rows();
-        const float cell = style_.strip_cell;
+        const usize rows = strip_rows();
+        const f32 cell = style_.strip_cell;
         const Rect bin = bin_rect();
-        const float x = bin.x0 + static_cast<float>(i / rows) * cell;
-        const float y = bin.y0 - static_cast<float>(i % rows + 1) * cell;
+        const f32 x = bin.x0 + static_cast<f32>(i / rows) * cell;
+        const f32 y = bin.y0 - static_cast<f32>(i % rows + 1) * cell;
         return { x, y, x + cell, y + cell };
     }
 
@@ -243,17 +244,17 @@ namespace rct3::ui::screens::info
         return pane_->rect();
     }
 
-    Rect StallMenu::handle_rect(std::size_t i) const
+    Rect StallMenu::handle_rect(usize i) const
     {
         const Rect c = back_->rect();
         const auto row = std::ranges::find(rows_, std::optional(i), &MenuRow::line);
-        const float y = c.y0 + static_cast<float>(row - rows_.begin()) * style_.rows.height;
+        const f32 y = c.y0 + static_cast<f32>(row - rows_.begin()) * style_.rows.height;
         return { c.x0, y, c.x0 + style_.strip_cell, y + style_.rows.height };
     }
 
-    std::optional<std::size_t> StallMenu::good_at(Point p) const
+    std::optional<usize> StallMenu::good_at(Point p) const
     {
-        for (std::size_t i = 0; i < view_.goods.size(); ++i)
+        for (usize i = 0; i < view_.goods.size(); ++i)
         {
             if (contains(good_rect(i), p))
                 return i;
@@ -261,12 +262,12 @@ namespace rct3::ui::screens::info
         return std::nullopt;
     }
 
-    std::optional<std::size_t> StallMenu::drop_before(Point p) const
+    std::optional<usize> StallMenu::drop_before(Point p) const
     {
         if (!contains(pane_rect(), p))
             return std::nullopt;
         // Before the first line whose middle is below the pointer; after them all when none is.
-        for (std::size_t i = 0; i < view_.lines.size(); ++i)
+        for (usize i = 0; i < view_.lines.size(); ++i)
         {
             const Rect h = handle_rect(i);
             if (p.y < (h.y0 + h.y1) / 2)
@@ -283,7 +284,7 @@ namespace rct3::ui::screens::info
     std::vector<StallMenu::LinePot> StallMenu::pots() const
     {
         std::vector<LinePot> out;
-        for (std::size_t i = 0; i < lines_.size(); ++i)
+        for (usize i = 0; i < lines_.size(); ++i)
         {
             if (lines_[i].pot != nullptr)
                 out.push_back({ .line = i, .pot = lines_[i].pot });
@@ -291,12 +292,12 @@ namespace rct3::ui::screens::info
         return out;
     }
 
-    float StallMenu::scrolled() const
+    f32 StallMenu::scrolled() const
     {
         return pane_->vertical() ? pane_->vertical()->position : 0;
     }
 
-    void StallMenu::scroll_to(float position)
+    void StallMenu::scroll_to(f32 position)
     {
         if (auto bar = pane_->vertical())
             bar->position = position;
@@ -308,7 +309,7 @@ namespace rct3::ui::screens::info
             return CursorKind::Grabbing;
         if (good_at(p) || contains(bin_rect(), p))
             return CursorKind::Grab;
-        for (std::size_t i = 0; i < view_.lines.size(); ++i)
+        for (usize i = 0; i < view_.lines.size(); ++i)
         {
             if (contains(handle_rect(i), p) && contains(pane_rect(), p))
                 return CursorKind::Grab;
@@ -330,7 +331,7 @@ namespace rct3::ui::screens::info
         else
         {
             tooltip.clear();
-            for (std::size_t i = 0; i < view_.lines.size(); ++i)
+            for (usize i = 0; i < view_.lines.size(); ++i)
             {
                 const Rect h = handle_rect(i);
                 if (p.y >= h.y0 && p.y < h.y1)
@@ -338,13 +339,13 @@ namespace rct3::ui::screens::info
             }
             // The extras' pictures in the bands say how much of each goes on.
             const Rect c = back_->rect();
-            for (std::size_t r = 0; r < rows_.size(); ++r)
+            for (usize r = 0; r < rows_.size(); ++r)
             {
-                const float y = c.y0 + static_cast<float>(r) * style_.rows.height;
+                const f32 y = c.y0 + static_cast<f32>(r) * style_.rows.height;
                 if (rows_[r].line || p.y < y || p.y >= y + style_.rows.height)
                     continue;
-                const float left = c.x1 - style_.price_width - style_.extras_width;
-                const auto column = static_cast<std::size_t>(std::max(0.0f, std::floor((p.x - left) / style_.rows.height)));
+                const f32 left = c.x1 - style_.price_width - style_.extras_width;
+                const auto column = static_cast<usize>(std::max(0.0f, std::floor((p.x - left) / style_.rows.height)));
                 if (p.x >= left && column < rows_[r].extras.size())
                     tooltip = view_.extras[rows_[r].extras[column]].help;
             }
@@ -359,7 +360,7 @@ namespace rct3::ui::screens::info
             bin_pressed_ = true;
     }
 
-    void StallMenu::press_handle(std::size_t line, Point p)
+    void StallMenu::press_handle(usize line, Point p)
     {
         drag_ = Drag { .good = std::nullopt, .line = line, .from = p, .at = p };
     }
@@ -387,7 +388,7 @@ namespace rct3::ui::screens::info
         if (drag_->moving)
             drop(p);
         else if (drag_->good)
-            event_ = MenuEvent { MenuAction::Add, *drag_->good, static_cast<std::int32_t>(view_.lines.size()), { } };
+            event_ = MenuEvent { MenuAction::Add, *drag_->good, static_cast<i32>(view_.lines.size()), { } };
         else if (drag_->line)
             picked_ = picked_ == drag_->line ? std::nullopt : drag_->line;
         drag_.reset();
@@ -404,9 +405,9 @@ namespace rct3::ui::screens::info
         if (!before)
             return;
         if (drag_->good)
-            event_ = MenuEvent { MenuAction::Add, *drag_->good, static_cast<std::int32_t>(*before), { } };
-        else if (const std::size_t to = drop_place(drag_->line, *before); to != *drag_->line)
-            event_ = MenuEvent { MenuAction::Move, *drag_->line, static_cast<std::int32_t>(to), { } };
+            event_ = MenuEvent { MenuAction::Add, *drag_->good, static_cast<i32>(*before), { } };
+        else if (const usize to = drop_place(drag_->line, *before); to != *drag_->line)
+            event_ = MenuEvent { MenuAction::Move, *drag_->line, static_cast<i32>(to), { } };
     }
 
     void StallMenu::update(const UpdateContext&)
@@ -414,20 +415,20 @@ namespace rct3::ui::screens::info
         lay_out_rows();
         if (sync_->take_change())
             event_ = MenuEvent { MenuAction::Sync, 0, sync_->ticked ? 1 : 0, { } };
-        for (std::size_t i = 0; i < lines_.size(); ++i)
+        for (usize i = 0; i < lines_.size(); ++i)
         {
             LineWidgets& w = lines_[i];
             if (w.price->take_change())
                 event_ = MenuEvent { MenuAction::Price, i, w.price->value(), { } };
             if (w.name->take_commit())
                 event_ = MenuEvent { MenuAction::Name, i, 0, w.name->text };
-            for (std::size_t k = 0; k < w.ticks.size(); ++k)
+            for (usize k = 0; k < w.ticks.size(); ++k)
             {
                 if (w.ticks[k] == nullptr || !w.ticks[k]->take_change())
                     continue;
-                std::uint32_t& ticked = view_.lines[i].ticked;
+                u32& ticked = view_.lines[i].ticked;
                 ticked = w.ticks[k]->ticked ? ticked | 1U << k : ticked & ~(1U << k);
-                event_ = MenuEvent { MenuAction::Extras, i, static_cast<std::int32_t>(ticked), { } };
+                event_ = MenuEvent { MenuAction::Extras, i, static_cast<i32>(ticked), { } };
             }
         }
     }
@@ -435,7 +436,7 @@ namespace rct3::ui::screens::info
     void StallMenu::draw(DrawContext& context) const
     {
         skin::draw_skin(context.list, context.skins.find(style_.bin), bin_rect(), bin_pressed_ ? style_.picked : kWhite);
-        for (std::size_t i = 0; i < view_.goods.size(); ++i)
+        for (usize i = 0; i < view_.goods.size(); ++i)
             skin::draw_skin(context.list, context.skins.find(view_.goods[i].icon), good_rect(i));
         // The tick's words, beside it.
         if (const auto f = context.fonts.get(font::FontRole::Small))
@@ -447,22 +448,22 @@ namespace rct3::ui::screens::info
 
     void StallMenu::draw_rows(DrawContext& context, const Rect& content) const
     {
-        const float h = style_.rows.height;
-        const float left = content.x1 - style_.price_width - style_.extras_width;
-        for (std::size_t r = 0; r < rows_.size(); ++r)
+        const f32 h = style_.rows.height;
+        const f32 left = content.x1 - style_.price_width - style_.extras_width;
+        for (usize r = 0; r < rows_.size(); ++r)
         {
-            const Rect row { content.x0, content.y0 + static_cast<float>(r) * h, content.x1, content.y0 + static_cast<float>(r + 1) * h };
+            const Rect row { content.x0, content.y0 + static_cast<f32>(r) * h, content.x1, content.y0 + static_cast<f32>(r + 1) * h };
             if (!rows_[r].line)
             {
                 context.list.fill(row, style_.rows.band);
-                for (std::size_t k = 0; k < rows_[r].extras.size(); ++k)
+                for (usize k = 0; k < rows_[r].extras.size(); ++k)
                 {
-                    const float x = left + static_cast<float>(k) * h;
+                    const f32 x = left + static_cast<f32>(k) * h;
                     skin::draw_skin(context.list, context.skins.find(view_.extras[rows_[r].extras[k]].icon), { x, row.y0, x + h, row.y1 });
                 }
                 continue;
             }
-            const std::size_t i = *rows_[r].line;
+            const usize i = *rows_[r].line;
             if (picked_ == i)
                 context.list.fill(row, style_.picked);
             else
@@ -476,12 +477,12 @@ namespace rct3::ui::screens::info
         if (!drag_ || !drag_->moving)
             return;
         const std::string& icon = drag_->good ? view_.goods[*drag_->good].icon : view_.lines[*drag_->line].icon;
-        const float h = style_.rows.height;
+        const f32 h = style_.rows.height;
         if (const auto before = drop_before(drag_->at))
         {
             // A line across the pane where it would go.
             const Rect pane = pane_rect();
-            const float y = *before < view_.lines.size() ? handle_rect(*before).y0 : (view_.lines.empty() ? back_->rect().y0 + h : handle_rect(view_.lines.size() - 1).y1);
+            const f32 y = *before < view_.lines.size() ? handle_rect(*before).y0 : (view_.lines.empty() ? back_->rect().y0 + h : handle_rect(view_.lines.size() - 1).y1);
             if (context.list.push_clip(pane))
                 context.list.fill({ pane.x0, y - 1, back_->rect().x1, y + 1 }, style_.drop);
             context.list.pop_clip();

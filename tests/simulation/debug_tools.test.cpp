@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/debug_tools.hpp"
 
+#include "core/types.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
@@ -18,9 +19,9 @@ using namespace rct3::simulation;
 
 namespace
 {
-    std::size_t guests_in(const entt::registry& r)
+    usize guests_in(const entt::registry& r)
     {
-        return static_cast<std::size_t>(std::ranges::distance(r.view<const Visitor>(entt::exclude<Left>)));
+        return static_cast<usize>(std::ranges::distance(r.view<const Visitor>(entt::exclude<Left>)));
     }
 } // namespace
 
@@ -30,8 +31,8 @@ TEST_CASE("debug tools: finishing research invents everything left at once")
     std::vector<ResearchItem> items { { .id = 1, .cost = units::Money { 100 } }, { .id = 2, .cost = units::Money { 200 } } };
     invent_everything(research, items, 42);
     CHECK(items.empty());
-    CHECK(research.invented == std::vector<std::uint64_t> { 1, 2 });
-    CHECK(research.invented_at == std::vector<float> { 42, 42 });
+    CHECK(research.invented == std::vector<u64> { 1, 2 });
+    CHECK(research.invented_at == std::vector<f32> { 42, 42 });
     CHECK(research.previous == 2);
     CHECK_FALSE(research.current);
     CHECK_FALSE(research.focus);
@@ -47,7 +48,7 @@ TEST_CASE("debug tools: guests come in on the spots given until there are enough
     random::RandomState dice = random::seeded({ 3 });
     CHECK(add_guests(park.world(), dice, { }, 10) == 0);
     const std::array spots { NodeId { 1 }, NodeId { 4 } };
-    const std::size_t came = add_guests(park.world(), dice, spots, 10);
+    const usize came = add_guests(park.world(), dice, spots, 10);
     CHECK(came >= 10);
     CHECK(guests_in(r) == came);
     for (const auto [e, stride] : r.view<const Stride>().each())
@@ -61,7 +62,7 @@ TEST_CASE("debug tools: everyone goes home from the queues, the rides and their 
     Sandbox park;
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 2, .cycle_seconds = 30, .excitement = 1, .intensity = 0.3f });
-    for (std::int32_t i = 0; i < 6; ++i)
+    for (i32 i = 0; i < 6; ++i)
         park.guest({ i % 4, 0 }, { .happiness = 1 });
     (void)park.party({ park.guest({ 0, 0 }), park.guest({ 0, 0 }) });
     auto& r = park.world().registry;
@@ -96,7 +97,7 @@ TEST_CASE("debug tools: rides break down all at once, and a reset repairs, empti
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 2, .cycle_seconds = 30, .excitement = 1, .intensity = 0.3f });
     const auto other = park.flat_ride("Teacups", { 0, 0 }, 0);
-    for (std::int32_t i = 0; i < 6; ++i)
+    for (i32 i = 0; i < 6; ++i)
         park.guest({ 1 + i % 3, 0 }, { .happiness = 1 });
     auto& r = park.world().registry;
     REQUIRE(park.run_until([&] { return r.get<Attraction>(ride).customers > 0 && !r.get<CycleRide>(ride).queue.empty(); }, 120));

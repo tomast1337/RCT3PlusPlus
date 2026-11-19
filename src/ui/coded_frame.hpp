@@ -8,6 +8,7 @@
 // measured at; it then grows and shrinks with its rectangle, corners and all.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/shape.hpp"
 
@@ -21,8 +22,8 @@ namespace rct3::ui
     /// One edge of a layer's box: a share of the frame's width (or height) from its left (or top), plus units.
     struct FrameEdge
     {
-        float share = 0;
-        float offset = 0;
+        f32 share = 0;
+        f32 offset = 0;
     };
 
     struct FrameBox
@@ -34,13 +35,13 @@ namespace rct3::ui
     };
 
     /// The box `left`, `top`, `right` and `bottom` units in from the frame's sides.
-    [[nodiscard]] constexpr FrameBox inset_box(float left, float top, float right, float bottom)
+    [[nodiscard]] constexpr FrameBox inset_box(f32 left, f32 top, f32 right, f32 bottom)
     {
         return { { 0, left }, { 0, top }, { 1, -right }, { 1, -bottom } };
     }
 
     /// A box `width` by `height` units with its top-left corner `x`, `y` units from the frame's top-left.
-    [[nodiscard]] constexpr FrameBox corner_box(float x, float y, float width, float height)
+    [[nodiscard]] constexpr FrameBox corner_box(f32 x, f32 y, f32 width, f32 height)
     {
         return { { 0, x }, { 0, y }, { 0, x + width }, { 0, y + height } };
     }
@@ -49,8 +50,8 @@ namespace rct3::ui
     /// from its top-left, so it stays on the same points however the box is stretched.
     struct CutLine
     {
-        std::array<float, 2> from;
-        std::array<float, 2> to;
+        std::array<f32, 2> from;
+        std::array<f32, 2> to;
     };
 
     /// The line from a box's top-left corner to its bottom-right: a layer cut along it keeps the half below.
@@ -70,12 +71,12 @@ namespace rct3::ui
     struct CodedFrame
     {
         std::vector<FrameLayer> layers; ///< In painter's order
-        float width = 0;                ///< When above 0 with `height`, the size the frame was measured at
-        float height = 0;
+        f32 width = 0;                  ///< When above 0 with `height`, the size the frame was measured at
+        f32 height = 0;
     };
 
     /// Where `box` falls in `target`, for a frame measured at `width` by `height` (0 for one that does not scale).
-    [[nodiscard]] Rect frame_rect(const FrameBox& box, const Rect& target, float width, float height);
+    [[nodiscard]] Rect frame_rect(const FrameBox& box, const Rect& target, f32 width, f32 height);
 
     /// Draws `frame` over `target`, its colours multiplied by `tint` as a picture's would be.
     void draw_frame(DrawList& list, const CodedFrame& frame, const Rect& target, Color tint = kWhite);

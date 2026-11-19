@@ -8,6 +8,7 @@
 // The menu knows nothing of files: the owner says which tutorials are there and starts the one taken.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/screens/front/layout.hpp"
 #include "ui/screens/front/screen.hpp"
 #include "ui/tutorials.hpp"
@@ -29,14 +30,14 @@ namespace rct3::ui::screens::tutorial
         /// The disc's radius, and the box it must fit in: right of the arc, clear of the top edge and above
         /// the badges and the bottom strip. The box stretches with the screen; the disc is as large as fits
         /// in it, as near the buttons' centre as it can be while staying inside.
-        inline constexpr float kDiscRadius = 320;
+        inline constexpr f32 kDiscRadius = 320;
         inline constexpr Rect kDiscArea { 380, 8, 1016, 590 };
 
         /// Where the disc lands on a screen: its middle, and screen units per design unit.
         struct DiscPlace
         {
             Point centre;
-            float scale = 1;
+            f32 scale = 1;
 
             /// A design point, measured from the buttons' centre, on the screen.
             [[nodiscard]] Point at(Point design) const
@@ -54,19 +55,19 @@ namespace rct3::ui::screens::tutorial
         [[nodiscard]] DiscPlace disc_place(const front::front_screen::Frame& frame);
 
         /// The tutorials on a circle round the buttons' centre, the first at the top.
-        inline constexpr float kRadius = 270;
-        inline constexpr float kFirstAngle = 2.35f;
-        inline constexpr float kAngleStep = 0.26f;
-        inline constexpr float kButtonSize = 64;
-        inline constexpr float kStartAngle = 5.6f; ///< The start button, on the same circle
+        inline constexpr f32 kRadius = 270;
+        inline constexpr f32 kFirstAngle = 2.35f;
+        inline constexpr f32 kAngleStep = 0.26f;
+        inline constexpr f32 kButtonSize = 64;
+        inline constexpr f32 kStartAngle = 5.6f; ///< The start button, on the same circle
 
         /// A name runs from kLabelStart buttons right of its button's left edge to kLabelReach right of
         /// its right edge, as tall as the button.
-        inline constexpr float kLabelStart = 1.45f;
-        inline constexpr float kLabelReach = 280;
+        inline constexpr f32 kLabelStart = 1.45f;
+        inline constexpr f32 kLabelReach = 280;
         inline constexpr Rect kDescription { 780, 96, 980, 396 };
 
-        [[nodiscard]] float angle(std::size_t index);
+        [[nodiscard]] f32 angle(usize index);
     } // namespace tutorial_picker
 
     struct TutorialPickerStyle
@@ -84,32 +85,32 @@ namespace rct3::ui::screens::tutorial
     public:
         TutorialPicker(std::string name, TutorialPickerStyle style, const StringTable& strings, std::vector<TutorialInfo> tutorials);
 
-        [[nodiscard]] std::size_t size() const
+        [[nodiscard]] usize size() const
         {
             return tutorials_.size();
         }
-        [[nodiscard]] const TutorialInfo& tutorial(std::size_t index) const
+        [[nodiscard]] const TutorialInfo& tutorial(usize index) const
         {
             return tutorials_.at(index);
         }
-        [[nodiscard]] std::size_t picked() const
+        [[nodiscard]] usize picked() const
         {
             return picked_;
         }
         /// Picks tutorial `index`, if it is there.
-        void pick(std::size_t index);
+        void pick(usize index);
         /// Whether tutorial `index`'s park is there; all are at first.
-        void set_available(std::size_t index, bool available);
+        void set_available(usize index, bool available);
 
         /// The tutorial to start, once each time start is pressed.
-        [[nodiscard]] std::optional<std::size_t> take_start();
+        [[nodiscard]] std::optional<usize> take_start();
 
         /// The two lines for the bottom strip while the pointer is over the menu: a tutorial's name, or what
         /// the start button does.
         [[nodiscard]] std::optional<std::array<std::u16string, 2>> help() const;
 
         // For tests and owners that drive the menu.
-        [[nodiscard]] front::FrontButton& button(std::size_t index) const
+        [[nodiscard]] front::FrontButton& button(usize index) const
         {
             return *buttons_.at(index);
         }
@@ -128,8 +129,8 @@ namespace rct3::ui::screens::tutorial
         std::vector<front::FrontButton*> buttons_;
         std::vector<Rect> labels_;
         front::FrontButton* start_ = nullptr;
-        std::size_t picked_ = 0;
-        std::optional<std::size_t> start_out_;
+        usize picked_ = 0;
+        std::optional<usize> start_out_;
     };
 
 } // namespace rct3::ui::screens::tutorial

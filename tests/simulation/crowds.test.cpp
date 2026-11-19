@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/crowds.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
@@ -30,14 +31,14 @@ namespace
         entt::entity star = entt::null;
         std::vector<entt::entity> guests;
 
-        explicit Stage(float happiness, float laziness)
+        explicit Stage(f32 happiness, f32 laziness)
         {
             park.path({ 0, 0 }, { 8, 0 });
             star = park.staff(StaffRole::Entertainer, { 4, 0 });
             auto& staff = park.world().registry.get<Staff>(star);
             staff.happiness.value = happiness;
             staff.laziness.value = laziness;
-            for (const std::int32_t col : { 3, 3, 5, 5, 4, 4 })
+            for (const i32 col : { 3, 3, 5, 5, 4, 4 })
                 guests.push_back(park.guest({ col, 0 }));
         }
 
@@ -63,7 +64,7 @@ namespace
 
 TEST_CASE("an untrained entertainer keeps their spirits while guests are about, and grows miserable with none near")
 {
-    const float content = kTuning.staff.content_base.value; // Untrained, on the lowest wage
+    const f32 content = kTuning.staff.content_base.value; // Untrained, on the lowest wage
     SUBCASE("guests about")
     {
         Stage stage(content, 0);
@@ -96,11 +97,11 @@ TEST_CASE("an untrained entertainer's short shows draw parties to watch")
     r.get<Staff>(stage.star).training = 0;
     stage.park.party({ stage.guests[0], stage.guests[1], stage.guests[2] });
     stage.park.party({ stage.guests[3], stage.guests[4], stage.guests[5] });
-    for (std::int32_t show = 0; show < 5; ++show)
+    for (i32 show = 0; show < 5; ++show)
     {
         CAPTURE(show);
         REQUIRE(stage.park.run_until([&] { return stage.performing(); }, 120));
-        REQUIRE(r.get<Show>(stage.star).moves.size() == static_cast<std::size_t>(kTuning.shows.moves));
+        REQUIRE(r.get<Show>(stage.star).moves.size() == static_cast<usize>(kTuning.shows.moves));
         CHECK(stage.park.run_until([&] { return !stage.watching().empty() || !stage.performing(); }, 60));
         CHECK_FALSE(stage.watching().empty());
         REQUIRE(stage.park.run_until([&] { return !stage.performing(); }, 60));
@@ -110,10 +111,10 @@ TEST_CASE("an untrained entertainer's short shows draw parties to watch")
 TEST_CASE("a better trained entertainer's show has more moves and fancier dances; a miserable or lazy one's is worse")
 {
     random::RandomState dice = random::seeded(random::Seed { 3 });
-    for (std::int32_t i = 0; i < 20; ++i)
+    for (i32 i = 0; i < 20; ++i)
     {
         const auto plain = show_moves(0, false, dice);
-        CHECK(plain.size() == static_cast<std::size_t>(kTuning.shows.moves));
+        CHECK(plain.size() == static_cast<usize>(kTuning.shows.moves));
         CHECK(std::ranges::contains(plain, ShowMove::Wave)); // Their height, untrained
         CHECK(std::ranges::none_of(plain, [](ShowMove m) { return m == ShowMove::DanceTwo || m == ShowMove::DanceThree; }));
         const auto best = show_moves(3, false, dice);
@@ -126,7 +127,7 @@ TEST_CASE("a better trained entertainer's show has more moves and fancier dances
     staff.laziness.value = 0;
     CHECK(show_quality(staff) == 3);
     CHECK_FALSE(poor_show(staff));
-    const float keen = show_chance(staff);
+    const f32 keen = show_chance(staff);
     staff.training = 0;
     CHECK(show_chance(staff) < keen);
     staff.training = 3;
@@ -140,7 +141,7 @@ TEST_CASE("a better trained entertainer's show has more moves and fancier dances
 TEST_CASE("a poor show has a fall in it, getting up after, and ends dejected")
 {
     random::RandomState dice = random::seeded(random::Seed { 5 });
-    for (std::int32_t i = 0; i < 20; ++i)
+    for (i32 i = 0; i < 20; ++i)
     {
         const auto moves = show_moves(1, true, dice);
         const auto fall = std::ranges::find(moves, ShowMove::FallOver);
@@ -162,13 +163,13 @@ TEST_CASE("guests near an entertainer's show gather round, facing them, and clap
     stage.park.run_seconds(3); // Time to step to their places
     const auto crowd = stage.watching();
     const glm::vec3 star = r.get<Pose>(stage.star).position;
-    std::vector<float> happy;
+    std::vector<f32> happy;
     for (const entt::entity g : crowd)
     {
         const Pose& pose = r.get<Pose>(g);
         const glm::vec2 off { star.x - pose.position.x, star.z - pose.position.z };
         CHECK(glm::length(off) <= kTuning.shows.ring.value + 0.5f);
-        CHECK(std::abs(std::remainder(pose.heading.value - std::atan2(off.x, off.y), 2 * glm::pi<float>())) < 0.1f); // Facing the star
+        CHECK(std::abs(std::remainder(pose.heading.value - std::atan2(off.x, off.y), 2 * glm::pi<f32>())) < 0.1f); // Facing the star
         happy.push_back(r.get<Mood>(g).happiness.value);
     }
     // They stand still, the star too, while the show goes on.
@@ -180,7 +181,7 @@ TEST_CASE("guests near an entertainer's show gather round, facing them, and clap
         CHECK(r.get<Pose>(stage.star).position == star);
     }
     REQUIRE(stage.park.run_until([&] { return !stage.performing(); }, 60));
-    for (std::size_t i = 0; i < crowd.size(); ++i)
+    for (usize i = 0; i < crowd.size(); ++i)
     {
         const entt::entity g = crowd[i];
         CHECK_FALSE(r.all_of<Watching>(g));
@@ -200,7 +201,7 @@ TEST_CASE("after a poor show children cry or take fright, the rest look bored, n
 {
     Stage stage(1, 0.9f);
     auto& r = stage.park.world().registry;
-    for (std::size_t i = 0; i < stage.guests.size(); i += 2)
+    for (usize i = 0; i < stage.guests.size(); i += 2)
         r.get<Visitor>(stage.guests[i]).age = AgeGroup::Child;
     REQUIRE(stage.park.run_until([&] { return stage.performing(); }, 60));
     CHECK(r.get<Show>(stage.star).poor);
@@ -208,12 +209,12 @@ TEST_CASE("after a poor show children cry or take fright, the rest look bored, n
     const auto children = [&] { return std::ranges::count_if(stage.watching(), [&](entt::entity g) { return r.get<Visitor>(g).age == AgeGroup::Child; }); };
     REQUIRE(stage.park.run_until([&] { return children() > 0 && children() < std::ssize(stage.watching()); }, 10));
     const auto crowd = stage.watching();
-    std::vector<float> happy;
+    std::vector<f32> happy;
     for (const entt::entity g : crowd)
         happy.push_back(r.get<Mood>(g).happiness.value);
-    const float glum = r.get<Staff>(stage.star).happiness.value;
+    const f32 glum = r.get<Staff>(stage.star).happiness.value;
     REQUIRE(stage.park.run_until([&] { return !stage.performing(); }, 60));
-    for (std::size_t i = 0; i < crowd.size(); ++i)
+    for (usize i = 0; i < crowd.size(); ++i)
     {
         REQUIRE(r.all_of<Gesture>(crowd[i]));
         const GestureKind kind = r.get<Gesture>(crowd[i]).kind;
@@ -255,18 +256,18 @@ TEST_CASE("fans gather round a VIP, who signs for them one at a time; each autog
     REQUIRE(vips.begin() != vips.end());
     const entt::entity vip = *vips.begin();
     std::vector<entt::entity> fans;
-    for (const std::int32_t col : { 1, 1, 2, 2 })
+    for (const i32 col : { 1, 1, 2, 2 })
         fans.push_back(park.guest({ col, 0 }));
     const auto signed_for = [&](entt::entity g) {
         const auto* got = r.try_get<Autographs>(g);
         return got != nullptr && std::ranges::contains(got->from, vip);
     };
-    std::vector<float> happy;
+    std::vector<f32> happy;
     for (const entt::entity g : fans)
         happy.push_back(r.get<Mood>(g).happiness.value);
     REQUIRE(park.run_until([&] { return std::ranges::any_of(fans, [&](entt::entity g) { return r.all_of<Watching>(g) && r.get<Watching>(g).autograph; }); }, 30));
     REQUIRE(park.run_until([&] { return std::ranges::count_if(fans, signed_for) >= 2; }, 60));
-    for (std::size_t i = 0; i < fans.size(); ++i)
+    for (usize i = 0; i < fans.size(); ++i)
         if (signed_for(fans[i]))
             CHECK(r.get<Mood>(fans[i]).happiness.value > happy[i]);
     // Signed for, they do not ask that VIP again.
@@ -279,7 +280,7 @@ TEST_CASE("fans gather round a VIP, who signs for them one at a time; each autog
     const auto given = r.get<Vip>(vip).signatures;
     CHECK(given >= 1);
     advance_vips(park.world(), set, 1, kTuning.vips.look.value, messages, { });
-    CHECK(r.get<Vip>(vip).patience.value == doctest::Approx(std::max(0.0f, 1.0f - static_cast<float>(given) / 4)));
+    CHECK(r.get<Vip>(vip).patience.value == doctest::Approx(std::max(0.0f, 1.0f - static_cast<f32>(given) / 4)));
     CHECK(r.get<Vip>(vip).signatures == 0);
 }
 
@@ -309,7 +310,7 @@ namespace
             stride.route = park.world().paths.route(stride.to, park.world().paths.find({ 14, 0, 0 }).value()).value();
         }
 
-        float tile_of(entt::entity e)
+        f32 tile_of(entt::entity e)
         {
             return park.world().registry.get<Pose>(e).position.x / park.world().paths.tile_size;
         }

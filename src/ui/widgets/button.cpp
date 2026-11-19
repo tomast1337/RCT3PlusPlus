@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/button.hpp"
 
+#include "core/types.hpp"
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
@@ -59,17 +60,17 @@ namespace rct3::ui::widgets
     Rect Button::face() const
     {
         // Eased in and out, and whole units so the skin's edges stay sharp.
-        const float t = grown_ * grown_ * (3 - 2 * grown_);
-        const float by = std::round(swell.value * t);
+        const f32 t = grown_ * grown_ * (3 - 2 * grown_);
+        const f32 by = std::round(swell.value * t);
         const Rect& r = rect();
         return { r.x0 - by, r.y0 - by, r.x1 + by, r.y1 + by };
     }
 
     void Button::update(const UpdateContext& context)
     {
-        const float target = hovered() && enabled && swell.value > 0 ? 1.0f : 0.0f;
-        const float swell_seconds = swell_time.value;
-        const float step = swell_seconds > 0 ? context.elapsed.value / swell_seconds : 1.0f;
+        const f32 target = hovered() && enabled && swell.value > 0 ? 1.0f : 0.0f;
+        const f32 swell_seconds = swell_time.value;
+        const f32 step = swell_seconds > 0 ? context.elapsed.value / swell_seconds : 1.0f;
         grown_ = grown_ < target ? std::min(target, grown_ + step) : std::max(target, grown_ - step);
     }
 
@@ -85,16 +86,16 @@ namespace rct3::ui::widgets
         skin::draw_skin_state(context.list, context.skins, skin, look, r);
 
         // The face looks pushed in while held: what is on it moves by one unit.
-        const float nudge = s == skin::SkinState::Pressed ? 1.0f : 0.0f;
+        const f32 nudge = s == skin::SkinState::Pressed ? 1.0f : 0.0f;
         if (const auto glyph = icon.empty() ? std::nullopt : context.skins.find(icon))
         {
             // The icon grows with the face.
-            const float own = icon_fit > 0 ? icon_fit / std::max({ glyph->size()[0], glyph->size()[1], 1.0f }) : icon_scale;
-            const float grow = (rect().width() > 0 ? r.width() / rect().width() : 1.0f) * own;
-            const float w = std::round(glyph->size()[0] * grow);
-            const float h = std::round(glyph->size()[1] * grow);
-            const float x = std::round(r.x0 + (r.width() - w) / 2) + nudge;
-            const float y = std::round(r.y0 + (r.height() - h) / 2) + nudge;
+            const f32 own = icon_fit > 0 ? icon_fit / std::max({ glyph->size()[0], glyph->size()[1], 1.0f }) : icon_scale;
+            const f32 grow = (rect().width() > 0 ? r.width() / rect().width() : 1.0f) * own;
+            const f32 w = std::round(glyph->size()[0] * grow);
+            const f32 h = std::round(glyph->size()[1] * grow);
+            const f32 x = std::round(r.x0 + (r.width() - w) / 2) + nudge;
+            const f32 y = std::round(r.y0 + (r.height() - h) / 2) + nudge;
             skin::draw_skin(context.list, glyph, { x, y, x + w, y + h }, s == skin::SkinState::Disabled ? hex("#ffffff80") : icon_colour);
         }
 

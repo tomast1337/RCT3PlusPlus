@@ -19,6 +19,7 @@
 #pragma once
 
 #include "core/minus_one.hpp"
+#include "core/types.hpp"
 #include "parkfile/kept_as_minus_one.hpp"
 
 #include <algorithm>
@@ -46,14 +47,14 @@ namespace rct3::parkfile::detail
 {
 
     inline constexpr std::array<char, 8> kMagic { 'R', '3', 'P', 'P', 'P', 'A', 'R', 'K' };
-    inline constexpr std::size_t kChunkHeader = 16;
+    inline constexpr usize kChunkHeader = 16;
 
     // ----- writing -----
 
     class Writer
     {
     public:
-        void bytes(const void* data, std::size_t size)
+        void bytes(const void* data, usize size)
         {
             const auto* p = static_cast<const std::byte*>(data);
             out_.insert(out_.end(), p, p + size);
@@ -61,7 +62,7 @@ namespace rct3::parkfile::detail
         template<typename T> void number(T value)
         {
             if constexpr (std::is_floating_point_v<T>)
-                number(std::bit_cast<std::conditional_t<sizeof(T) == 4, std::uint32_t, std::uint64_t>>(value));
+                number(std::bit_cast<std::conditional_t<sizeof(T) == 4, u32, u64>>(value));
             else
             {
                 if constexpr (std::endian::native == std::endian::big)
@@ -71,7 +72,7 @@ namespace rct3::parkfile::detail
         }
         void text(std::string_view s)
         {
-            number(static_cast<std::uint32_t>(s.size()));
+            number(static_cast<u32>(s.size()));
             bytes(s.data(), s.size());
         }
         void vec3(glm::vec3 v)
@@ -80,12 +81,12 @@ namespace rct3::parkfile::detail
             number(v.y);
             number(v.z);
         }
-        std::size_t size() const
+        usize size() const
         {
             return out_.size();
         }
         /// Overwrites the eight bytes at `at` with `value`.
-        void patch(std::size_t at, std::uint64_t value)
+        void patch(usize at, u64 value)
         {
             if constexpr (std::endian::native == std::endian::big)
                 value = std::byteswap(value);
@@ -111,7 +112,7 @@ namespace rct3::parkfile::detail
         {
         }
 
-        bool take(void* to, std::size_t size)
+        bool take(void* to, usize size)
         {
             if (size > in_.size() - at_)
             {
@@ -127,7 +128,7 @@ namespace rct3::parkfile::detail
         template<typename T> T number()
         {
             if constexpr (std::is_floating_point_v<T>)
-                return std::bit_cast<T>(number<std::conditional_t<sizeof(T) == 4, std::uint32_t, std::uint64_t>>());
+                return std::bit_cast<T>(number<std::conditional_t<sizeof(T) == 4, u32, u64>>());
             else
             {
                 T value { };
@@ -139,7 +140,7 @@ namespace rct3::parkfile::detail
         }
         std::string text()
         {
-            const auto size = number<std::uint32_t>();
+            const auto size = number<u32>();
             if (size > left())
             {
                 ok_ = false;
@@ -152,12 +153,12 @@ namespace rct3::parkfile::detail
         }
         glm::vec3 vec3()
         {
-            const float x = number<float>();
-            const float y = number<float>();
-            const float z = number<float>();
+            const f32 x = number<f32>();
+            const f32 y = number<f32>();
+            const f32 z = number<f32>();
             return { x, y, z };
         }
-        std::span<const std::byte> slice(std::size_t size)
+        std::span<const std::byte> slice(usize size)
         {
             if (size > left())
             {
@@ -169,7 +170,7 @@ namespace rct3::parkfile::detail
             at_ += size;
             return s;
         }
-        std::size_t left() const
+        usize left() const
         {
             return in_.size() - at_;
         }
@@ -186,31 +187,31 @@ namespace rct3::parkfile::detail
 
     private:
         std::span<const std::byte> in_;
-        std::size_t at_ = 0;
+        usize at_ = 0;
         bool ok_ = true;
     };
 
     /// Starts a chunk; returns where its length goes, filled in by end_chunk.
-    inline std::size_t begin_chunk(Writer& w, std::string_view tag, std::uint32_t version)
+    inline usize begin_chunk(Writer& w, std::string_view tag, u32 version)
     {
         w.bytes(tag.data(), 4);
         w.number(version);
-        const std::size_t at = w.size();
-        w.number(std::uint64_t { 0 });
+        const usize at = w.size();
+        w.number(u64 { 0 });
         return at;
     }
 
-    inline void end_chunk(Writer& w, std::size_t length_at)
+    inline void end_chunk(Writer& w, usize length_at)
     {
         w.patch(length_at, w.size() - length_at - 8);
     }
 
     /// The magic, the format version and the number of chunks to come.
-    void write_header(Writer& w, std::uint32_t chunks);
+    void write_header(Writer& w, u32 chunks);
 
     /// Checks the header and calls `chunk` with each chunk's tag, version and payload, in file order; stops at
     /// the first error, its own or the callback's. A chunk the callback leaves unread in part is an error.
-    std::expected<void, std::string> read_chunks(std::span<const std::byte> bytes, const std::function<std::expected<void, std::string>(std::string_view tag, std::uint32_t version, Reader& body)>& chunk);
+    std::expected<void, std::string> read_chunks(std::span<const std::byte> bytes, const std::function<std::expected<void, std::string>(std::string_view tag, u32 version, Reader& body)>& chunk);
 
     // ----- values field by field -----
 
@@ -229,7 +230,7 @@ namespace rct3::parkfile::detail
     template<typename T> struct IsArray : std::false_type
     {
     };
-    template<typename T, std::size_t N> struct IsArray<std::array<T, N>> : std::true_type
+    template<typename T, usize N> struct IsArray<std::array<T, N>> : std::true_type
     {
     };
     template<typename T> struct IsGlm : std::false_type
@@ -318,7 +319,7 @@ namespace rct3::parkfile::detail
         else if constexpr (IsVariant<T>::value)
         {
             out += "x(";
-            [&]<std::size_t... I>(std::index_sequence<I...>) { ((out += I > 0 ? "|" : "", layout<std::variant_alternative_t<I, T>>(out)), ...); }(std::make_index_sequence<std::variant_size_v<T>> { });
+            [&]<usize... I>(std::index_sequence<I...>) { ((out += I > 0 ? "|" : "", layout<std::variant_alternative_t<I, T>>(out)), ...); }(std::make_index_sequence<std::variant_size_v<T>> { });
             out += ')';
         }
         else
@@ -334,14 +335,14 @@ namespace rct3::parkfile::detail
     }
 
     /// FNV-1a over the layout of `T`.
-    template<typename T> std::uint64_t layout_hash()
+    template<typename T> u64 layout_hash()
     {
         std::string text;
         layout<T>(text);
-        std::uint64_t hash = 0xcbf29ce484222325;
+        u64 hash = 0xcbf29ce484222325;
         for (const char c : text)
         {
-            hash ^= static_cast<std::uint8_t>(c);
+            hash ^= static_cast<u8>(c);
             hash *= 0x100000001b3;
         }
         return hash;
@@ -350,7 +351,7 @@ namespace rct3::parkfile::detail
     template<typename T> void put(Writer& w, const T& value)
     {
         if constexpr (std::same_as<T, bool>)
-            w.number(std::uint8_t { value });
+            w.number(u8 { value });
         else if constexpr (std::is_enum_v<T>)
             w.number(std::to_underlying(value));
         else if constexpr (Scalar<T>)
@@ -359,13 +360,13 @@ namespace rct3::parkfile::detail
             w.text(value);
         else if constexpr (IsVector<T>::value)
         {
-            w.number(static_cast<std::uint32_t>(value.size()));
+            w.number(static_cast<u32>(value.size()));
             for (const auto& item : value)
                 put(w, item);
         }
         else if constexpr (IsOptional<T>::value)
         {
-            w.number(std::uint8_t { value.has_value() });
+            w.number(u8 { value.has_value() });
             if (value)
                 put(w, *value);
         }
@@ -384,7 +385,7 @@ namespace rct3::parkfile::detail
         else if constexpr (IsVariant<T>::value)
         {
             static_assert(std::variant_size_v<T> <= 255);
-            w.number(static_cast<std::uint8_t>(value.index()));
+            w.number(static_cast<u8>(value.index()));
             std::visit([&](const auto& held) { put(w, held); }, value);
         }
         else
@@ -399,7 +400,7 @@ namespace rct3::parkfile::detail
     template<typename T> void get(Reader& r, T& value)
     {
         if constexpr (std::same_as<T, bool>)
-            value = r.number<std::uint8_t>() != 0;
+            value = r.number<u8>() != 0;
         else if constexpr (std::is_enum_v<T>)
             value = static_cast<T>(r.number<std::underlying_type_t<T>>());
         else if constexpr (Scalar<T>)
@@ -409,7 +410,7 @@ namespace rct3::parkfile::detail
         else if constexpr (IsVector<T>::value)
         {
             // Every element takes at least a byte, so a count past the bytes left is not believed.
-            const auto count = r.number<std::uint32_t>();
+            const auto count = r.number<u32>();
             if (count > r.left())
             {
                 r.fail();
@@ -426,7 +427,7 @@ namespace rct3::parkfile::detail
         else if constexpr (IsOptional<T>::value)
         {
             value.reset();
-            if (r.number<std::uint8_t>() != 0)
+            if (r.number<u8>() != 0)
                 get(r, value.emplace());
         }
         else if constexpr (IsArray<T>::value)
@@ -443,13 +444,13 @@ namespace rct3::parkfile::detail
             return;
         else if constexpr (IsVariant<T>::value)
         {
-            const auto index = r.number<std::uint8_t>();
+            const auto index = r.number<u8>();
             if (index >= std::variant_size_v<T>)
             {
                 r.fail();
                 return;
             }
-            [&]<std::size_t... I>(std::index_sequence<I...>) { ((I == index ? get(r, value.template emplace<I>()) : void()), ...); }(std::make_index_sequence<std::variant_size_v<T>> { });
+            [&]<usize... I>(std::index_sequence<I...>) { ((I == index ? get(r, value.template emplace<I>()) : void()), ...); }(std::make_index_sequence<std::variant_size_v<T>> { });
         }
         else
         {
@@ -477,7 +478,7 @@ namespace rct3::parkfile::detail
     {
         if constexpr (IsVector<T>::value)
         {
-            w.number(static_cast<std::uint32_t>(value.size()));
+            w.number(static_cast<u32>(value.size()));
             for (const auto& item : value)
                 put_minus_one(w, item);
         }
@@ -490,7 +491,7 @@ namespace rct3::parkfile::detail
         if constexpr (IsVector<T>::value)
         {
             // Every element takes at least a byte, so a count past the bytes left is not believed.
-            const auto count = r.number<std::uint32_t>();
+            const auto count = r.number<u32>();
             if (count > r.left())
             {
                 r.fail();
@@ -537,9 +538,9 @@ namespace rct3::parkfile::detail
     }
 
     /// Writes `value` as the payload of chunk `tag`, after its layout hash.
-    template<typename T> void put_chunk(Writer& w, std::string_view tag, std::uint32_t version, const T& value)
+    template<typename T> void put_chunk(Writer& w, std::string_view tag, u32 version, const T& value)
     {
-        const std::size_t at = begin_chunk(w, tag, version);
+        const usize at = begin_chunk(w, tag, version);
         w.number(layout_hash<T>());
         put(w, value);
         end_chunk(w, at);
@@ -548,7 +549,7 @@ namespace rct3::parkfile::detail
     /// Reads a chunk put_chunk wrote.
     template<typename T> std::expected<void, std::string> get_chunk(std::string_view tag, Reader& r, T& value)
     {
-        if (r.number<std::uint64_t>() != layout_hash<T>())
+        if (r.number<u64>() != layout_hash<T>())
             return std::unexpected(std::format("{}: written by a build whose park model differs from this one's", tag));
         get(r, value);
         if (!r.ok())

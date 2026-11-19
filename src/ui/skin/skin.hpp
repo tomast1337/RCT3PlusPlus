@@ -6,6 +6,7 @@
 // Nothing is tiled.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/gui_skin.hpp"
 #include "ui/draw_list.hpp"
 
@@ -21,10 +22,10 @@ namespace rct3::ui::skin
     struct SkinLayout
     {
         ovl::GuiSkinKind kind = ovl::GuiSkinKind::Rect;
-        std::array<float, 4> xs { };
-        std::array<float, 4> ys { };
-        std::size_t x_count = 0; ///< 0, 2 or 4
-        std::size_t y_count = 0;
+        std::array<f32, 4> xs { };
+        std::array<f32, 4> ys { };
+        usize x_count = 0; ///< 0, 2 or 4
+        usize y_count = 0;
         bool mirror_x = false; ///< Drawn left to right reversed
         bool mirror_y = false; ///< Drawn upside down
     };
@@ -36,7 +37,7 @@ namespace rct3::ui::skin
 
     /// The skin as a picture stored with its rows the other way up: y lines are mirrored about the texture
     /// height and put back in increasing order.
-    [[nodiscard]] SkinLayout flipped_vertically(const SkinLayout& layout, float texture_height);
+    [[nodiscard]] SkinLayout flipped_vertically(const SkinLayout& layout, f32 texture_height);
 
     struct SkinPiece
     {
@@ -47,7 +48,7 @@ namespace rct3::ui::skin
     struct SkinPieces
     {
         std::array<SkinPiece, 9> items { };
-        std::size_t count = 0;
+        usize count = 0;
         [[nodiscard]] std::span<const SkinPiece> pieces() const&
         {
             return { items.data(), count };
@@ -57,8 +58,8 @@ namespace rct3::ui::skin
 
     /// Cuts `target` and the texture area the same way. Caps shrink in proportion when `target` is smaller
     /// than they are. Pieces left empty are still listed; DrawList drops them.
-    [[nodiscard]] SkinPieces skin_pieces(const SkinLayout& layout, const Rect& target, float texture_width, float texture_height);
+    [[nodiscard]] SkinPieces skin_pieces(const SkinLayout& layout, const Rect& target, f32 texture_width, f32 texture_height);
 
-    void draw_skin(DrawList& list, const SkinLayout& layout, const Rect& target, TextureId texture, float texture_width, float texture_height, Color tint = kWhite);
+    void draw_skin(DrawList& list, const SkinLayout& layout, const Rect& target, TextureId texture, f32 texture_width, f32 texture_height, Color tint = kWhite);
 
 } // namespace rct3::ui::skin

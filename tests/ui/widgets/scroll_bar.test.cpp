@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/scroll_bar.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 
 #include <doctest/doctest.h>
@@ -23,7 +24,7 @@ namespace
         return s;
     }
 
-    PointerState at(float x, float y, bool down = false)
+    PointerState at(f32 x, f32 y, bool down = false)
     {
         return { { x, y }, down, true };
     }
@@ -40,7 +41,7 @@ namespace
             bar.visible = 100;
             desktop.layout({ 0, 0, 200, 200 });
         }
-        void click(float y)
+        void click(f32 y)
         {
             desktop.update(at(5, y, true));
             desktop.update(at(5, y));

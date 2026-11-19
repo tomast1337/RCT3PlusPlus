@@ -10,6 +10,7 @@
 #pragma once
 
 #include "config/environment.hpp"
+#include "core/types.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -23,7 +24,7 @@
 namespace rct3::config
 {
 
-    enum class UserFolder : std::uint8_t
+    enum class UserFolder : u8
     {
         Config,          ///< config/: settings, game options, keys
         Screenshots,     ///< screenshots/
@@ -47,9 +48,9 @@ namespace rct3::config
 
         Count_, ///< Number of folders; not a folder
     };
-    inline constexpr std::size_t kUserFolderCount = static_cast<std::size_t>(UserFolder::Count_);
+    inline constexpr usize kUserFolderCount = static_cast<usize>(UserFolder::Count_);
 
-    enum class UserFile : std::uint8_t
+    enum class UserFile : u8
     {
         Settings,    ///< The program's settings (settings.hpp)
         GameOptions, ///< What the options window sets (config/game/options.hpp)
@@ -58,7 +59,7 @@ namespace rct3::config
 
         Count_, ///< Number of files; not a file
     };
-    inline constexpr std::size_t kUserFileCount = static_cast<std::size_t>(UserFile::Count_);
+    inline constexpr usize kUserFileCount = static_cast<usize>(UserFile::Count_);
 
     struct UserFolderInfo
     {

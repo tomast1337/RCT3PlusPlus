@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/slideshow_view.hpp"
 
+#include "core/types.hpp"
 #include "image/picture_file.hpp"
 #include "logging/log.hpp"
 #include "ui/ui_renderer.hpp"
@@ -14,13 +15,13 @@ namespace rct3::scene
     namespace
     {
 
-        const SlideshowView::Loaded* find_loaded(const SlideshowView& view, std::size_t index)
+        const SlideshowView::Loaded* find_loaded(const SlideshowView& view, usize index)
         {
             const auto it = std::ranges::find(view.loaded, index, &SlideshowView::Loaded::index);
             return it == view.loaded.end() ? nullptr : &*it;
         }
 
-        void load(render::Device& device, SlideshowView& view, std::size_t index)
+        void load(render::Device& device, SlideshowView& view, usize index)
         {
             if (find_loaded(view, index) != nullptr || view.failed.contains(index))
                 return;
@@ -49,7 +50,7 @@ namespace rct3::scene
     {
         view.show.update(elapsed);
         const auto shown = view.show.shown();
-        const auto wanted = [&](std::size_t index) { return index == shown.under || index == shown.over; };
+        const auto wanted = [&](usize index) { return index == shown.under || index == shown.over; };
         std::erase_if(view.loaded, [&](const SlideshowView::Loaded& l) {
             if (wanted(l.index))
                 return false;
@@ -66,11 +67,11 @@ namespace rct3::scene
     void draw_slideshow_view(const SlideshowView& view, ui::DrawList& list, const ui::Rect& area)
     {
         const auto shown = view.show.shown();
-        const auto draw = [&](std::optional<std::size_t> index, float alpha) {
+        const auto draw = [&](std::optional<usize> index, f32 alpha) {
             const SlideshowView::Loaded* loaded = index ? find_loaded(view, *index) : nullptr;
             if (loaded == nullptr || alpha <= 0)
                 return;
-            const auto a = static_cast<std::uint8_t>(std::lround(alpha * 255));
+            const auto a = static_cast<u8>(std::lround(alpha * 255));
             list.image(area, ui::texture_id(loaded->texture), { 0, 0, 1, 1 }, { 255, 255, 255, a });
         };
         draw(shown.under, 1);

@@ -2,6 +2,7 @@
 #include "scene/save_browser.hpp"
 
 #include "config/game/saves.hpp"
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "parkfile/saved_park.hpp"
 #include "save/summary.hpp"
@@ -96,7 +97,7 @@ namespace rct3::scene
         /// Our file of that name; never one of the game's.
         std::optional<fs::path> ours(const SaveBrowser& browser, std::u16string_view name)
         {
-            for (std::size_t i = 0; i < browser.files.size(); ++i)
+            for (usize i = 0; i < browser.files.size(); ++i)
             {
                 if (!browser.kept[i] && browser.files[i].filename().u16string() == name)
                     return browser.files[i];
@@ -119,7 +120,7 @@ namespace rct3::scene
         {
             if (browser.next_file >= browser.files.size())
                 return;
-            const std::size_t index = browser.next_file++;
+            const usize index = browser.next_file++;
             const fs::path& path = browser.files[index];
             std::optional<save::SaveSummary> summary;
             // shortcut: a design's row shows its file name only, as a structure's does; give it its picture and
@@ -213,7 +214,7 @@ namespace rct3::scene
 
     } // namespace
 
-    std::optional<fs::path> update_save_browser(render::Device& device, SaveBrowser& browser, std::optional<ui::screens::dialogs::FileDialog&> dialog, std::size_t opened, const ParkGame& game, const SaveWriter& write)
+    std::optional<fs::path> update_save_browser(render::Device& device, SaveBrowser& browser, std::optional<ui::screens::dialogs::FileDialog&> dialog, usize opened, const ParkGame& game, const SaveWriter& write)
     {
         if (!dialog)
         {

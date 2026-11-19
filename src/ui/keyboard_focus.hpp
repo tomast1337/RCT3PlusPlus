@@ -7,6 +7,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/widget.hpp"
 
 namespace rct3::ui
@@ -15,8 +16,8 @@ namespace rct3::ui
     struct FocusMarkStyle
     {
         Color colour = hex("#000000a0");
-        float thickness = 1;
-        float outset = 2; ///< From the widget's edges outwards
+        f32 thickness = 1;
+        f32 outset = 2; ///< From the widget's edges outwards
     };
 
     /// Whether `w` and everything above it are shown and enabled.

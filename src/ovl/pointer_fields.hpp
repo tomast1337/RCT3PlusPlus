@@ -5,6 +5,7 @@
 // space only when it is in this set, otherwise it is a null pointer.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <cstdint>
@@ -26,7 +27,7 @@ namespace rct3::ovl
         }
 
         /// True when the field at `address` is a relocated pointer.
-        [[nodiscard]] bool contains(std::uint32_t address) const noexcept
+        [[nodiscard]] bool contains(u32 address) const noexcept
         {
             return fields_.contains(address);
         }
@@ -35,7 +36,7 @@ namespace rct3::ovl
         void add(const Part& part)
         {
             fields_.reserve(fields_.size() + part.file.relocations.size());
-            for (const std::uint32_t location : part.file.relocations)
+            for (const u32 location : part.file.relocations)
                 fields_.insert(part.base + location);
             // Stream relocations name locations in the shared address space already.
             for (const auto& table : part.file.stream_relocations)
@@ -45,7 +46,7 @@ namespace rct3::ovl
             }
         }
 
-        std::unordered_set<std::uint32_t> fields_;
+        std::unordered_set<u32> fields_;
     };
 
 } // namespace rct3::ovl

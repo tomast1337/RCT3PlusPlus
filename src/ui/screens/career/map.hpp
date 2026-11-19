@@ -17,6 +17,7 @@
 
 #include "career/career.hpp"
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/career_scenarios.hpp"
 #include "ui/screens/front/screen.hpp"
 #include "ui/string_table.hpp"
@@ -36,51 +37,51 @@ namespace rct3::ui::screens::career
         // In the front screen's 1024 by 768 design frame, y down (front/layout.hpp).
 
         /// The scenarios on a circle round the buttons' centre, the first at the top left.
-        inline constexpr float kScenarioRadius = 430; ///< The middle of the white ring, measured on its pictures
-        inline constexpr float kScenarioFirstAngle = 2.75f;
-        inline constexpr float kScenarioAngleStep = 0.16f;
-        inline constexpr float kScenarioSize = 64;
-        inline constexpr float kPickedFactor = 1.4f; ///< The picked scenario's size, times kScenarioSize
+        inline constexpr f32 kScenarioRadius = 430; ///< The middle of the white ring, measured on its pictures
+        inline constexpr f32 kScenarioFirstAngle = 2.75f;
+        inline constexpr f32 kScenarioAngleStep = 0.16f;
+        inline constexpr f32 kScenarioSize = 64;
+        inline constexpr f32 kPickedFactor = 1.4f; ///< The picked scenario's size, times kScenarioSize
         /// The round pictures' size, times their own: the others', the picked one's.
-        inline constexpr float kIconScale = 0.5f;
-        inline constexpr float kPickedIconScale = 0.75f;
+        inline constexpr f32 kIconScale = 0.5f;
+        inline constexpr f32 kPickedIconScale = 0.75f;
         /// Where a scenario's mark goes, in fractions of its button: from the left, from the top, and its size.
         inline constexpr Point kMarkAt { 0.35f, 0.45f };
-        inline constexpr float kMarkSize = 0.5f;
+        inline constexpr f32 kMarkSize = 0.5f;
         /// How much the picked scenario grows under the pointer, times its size; the rest grow as the front
         /// screen's buttons do.
-        inline constexpr float kPickedSwell = 1.06f;
+        inline constexpr f32 kPickedSwell = 1.06f;
 
         /// The panel: its sides, its top, and the least it reaches down; a long description takes it lower.
-        inline constexpr float kPanelLeft = 16;
-        inline constexpr float kPanelRight = 264;
-        inline constexpr float kPanelTop = 40;
-        inline constexpr float kPanelBottom = 304;
-        inline constexpr float kTextLeft = 26; ///< The name and description, inside the panel
-        inline constexpr float kTextRight = 254;
-        inline constexpr float kTitleGap = 10; ///< Under the name
+        inline constexpr f32 kPanelLeft = 16;
+        inline constexpr f32 kPanelRight = 264;
+        inline constexpr f32 kPanelTop = 40;
+        inline constexpr f32 kPanelBottom = 304;
+        inline constexpr f32 kTextLeft = 26; ///< The name and description, inside the panel
+        inline constexpr f32 kTextRight = 254;
+        inline constexpr f32 kTitleGap = 10; ///< Under the name
 
         /// The buttons under the description: squares of kButtonSize, kButtonUp of a button above the
         /// panel's bottom, counted back from its right edge in steps of kButtonStep buttons.
-        inline constexpr float kButtonSize = 32;
-        inline constexpr float kButtonUp = 0.4f;
-        inline constexpr float kButtonStep = 1.25f;
-        inline constexpr std::array<float, 3> kButtonSteps = { 4.0f, 3.0f, 2.0f }; ///< New, resume, load
+        inline constexpr f32 kButtonSize = 32;
+        inline constexpr f32 kButtonUp = 0.4f;
+        inline constexpr f32 kButtonStep = 1.25f;
+        inline constexpr std::array<f32, 3> kButtonSteps = { 4.0f, 3.0f, 2.0f }; ///< New, resume, load
 
         /// Main menu and quit, on the front screen's small circle.
-        inline constexpr std::array<float, 2> kSmallAngles = front::front_screen::kSmallAngles;
+        inline constexpr std::array<f32, 2> kSmallAngles = front::front_screen::kSmallAngles;
 
         /// The large picture: its bottom-left corner kPictureBottom above the screen's bottom, at
         /// kPictureScale of its own size when a front piece goes over it. The front piece settles from
         /// kPopFactor bigger over kPopTime.
-        inline constexpr float kPictureBottom = 76;
-        inline constexpr float kPictureScale = 0.8f;
-        inline constexpr float kPopFactor = 1.12f;
+        inline constexpr f32 kPictureBottom = 76;
+        inline constexpr f32 kPictureScale = 0.8f;
+        inline constexpr f32 kPopFactor = 1.12f;
         inline constexpr units::Seconds kPopTime { 0.25f };
 
-        [[nodiscard]] float scenario_angle(std::size_t index);
+        [[nodiscard]] f32 scenario_angle(usize index);
         /// How big the front piece is, times its settled size, `since` the pick.
-        [[nodiscard]] float pop(units::Seconds since);
+        [[nodiscard]] f32 pop(units::Seconds since);
     } // namespace career_board
 
     struct CareerBoardStyle
@@ -115,25 +116,25 @@ namespace rct3::ui::screens::career
     {
     public:
         /// `picked` is shown first.
-        CareerBoard(std::string name, CareerBoardStyle style, const StringTable& strings, std::vector<CareerBoardScenario> scenarios, std::size_t picked);
+        CareerBoard(std::string name, CareerBoardStyle style, const StringTable& strings, std::vector<CareerBoardScenario> scenarios, usize picked);
 
-        [[nodiscard]] std::size_t size() const
+        [[nodiscard]] usize size() const
         {
             return scenarios_.size();
         }
-        [[nodiscard]] std::size_t picked() const
+        [[nodiscard]] usize picked() const
         {
             return picked_;
         }
         /// Shows scenario `index`, if it is not locked.
-        void pick(std::size_t index);
-        void set_can_resume(std::size_t index, bool can);
+        void pick(usize index);
+        void set_can_resume(usize index, bool can);
 
         /// The scenario the user picked, once each time.
-        [[nodiscard]] std::optional<std::size_t> take_picked();
+        [[nodiscard]] std::optional<usize> take_picked();
         /// The scenario to start anew, or whose last game to resume, once the user has said yes.
-        [[nodiscard]] std::optional<std::size_t> take_new();
-        [[nodiscard]] std::optional<std::size_t> take_resume();
+        [[nodiscard]] std::optional<usize> take_new();
+        [[nodiscard]] std::optional<usize> take_resume();
         /// True once when the load button was pressed.
         [[nodiscard]] bool take_load();
         /// True once the user has said yes to going back to the main menu.
@@ -142,7 +143,7 @@ namespace rct3::ui::screens::career
         [[nodiscard]] bool take_quit();
 
         // For tests and owners that drive the screen.
-        [[nodiscard]] front::FrontButton& scenario_button(std::size_t index) const
+        [[nodiscard]] front::FrontButton& scenario_button(usize index) const
         {
             return *buttons_.at(index);
         }
@@ -189,7 +190,7 @@ namespace rct3::ui::screens::career
         void draw(DrawContext& context) const override;
 
     private:
-        enum class Asking : std::uint8_t
+        enum class Asking : u8
         {
             New,
             Resume,
@@ -197,7 +198,7 @@ namespace rct3::ui::screens::career
         };
 
         [[nodiscard]] std::u16string text(std::string_view key) const;
-        [[nodiscard]] std::u16string numbered(std::string_view key, std::size_t number) const;
+        [[nodiscard]] std::u16string numbered(std::string_view key, usize number) const;
         void ask(Asking what);
         void hover_text();
         void layout(const UpdateContext& context);
@@ -213,16 +214,16 @@ namespace rct3::ui::screens::career
         front::FrontButton* quit_ = nullptr;
         widgets::QuestionBox* question_ = nullptr;
         Asking asking_ = Asking::New;
-        std::size_t picked_ = 0;
+        usize picked_ = 0;
         units::Seconds since_pick_;
         Rect panel_;
         Rect title_box_;
         Rect description_box_;
         std::u16string help_title_;
         std::u16string help_text_;
-        std::optional<std::size_t> picked_out_;
-        std::optional<std::size_t> new_out_;
-        std::optional<std::size_t> resume_out_;
+        std::optional<usize> picked_out_;
+        std::optional<usize> new_out_;
+        std::optional<usize> resume_out_;
         bool load_out_ = false;
         bool menu_out_ = false;
         bool quit_out_ = false;

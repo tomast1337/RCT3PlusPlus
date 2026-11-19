@@ -7,6 +7,7 @@
 // versions of app/shaders (render/software/shaders.hpp), some with less detail.
 #pragma once
 
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "render/software/raster.hpp"
 
@@ -58,11 +59,11 @@ namespace rct3::render::software
         {
         }
         void end_frame() override;
-        [[nodiscard]] std::vector<std::uint32_t> sample_levels() const override
+        [[nodiscard]] std::vector<u32> sample_levels() const override
         {
             return { };
         }
-        void set_samples(std::uint32_t /*samples*/) override
+        void set_samples(u32 /*samples*/) override
         {
         }
         [[nodiscard]] FrameStats stats() const override
@@ -83,7 +84,7 @@ namespace rct3::render::software
             std::vector<VertexAttribute> attributes;
         };
 
-        enum class State : std::uint8_t
+        enum class State : u8
         {
             Off,
             Idle,
@@ -123,11 +124,11 @@ namespace rct3::render::software
         std::optional<Texture&> pass_target_;
         ScreenView pass_area_;
 
-        std::uint32_t transient_id_ = 0; ///< Buffer id of the per-frame memory, which grows to fit a frame
-        std::uint32_t next_id_ = 1;
-        std::unordered_map<std::uint32_t, std::vector<std::byte>> buffers_;
-        std::unordered_map<std::uint32_t, Pipeline> pipelines_;
-        std::unordered_map<std::uint32_t, Texture> textures_;
+        u32 transient_id_ = 0; ///< Buffer id of the per-frame memory, which grows to fit a frame
+        u32 next_id_ = 1;
+        std::unordered_map<u32, std::vector<std::byte>> buffers_;
+        std::unordered_map<u32, Pipeline> pipelines_;
+        std::unordered_map<u32, Texture> textures_;
 
         bool ui_ready_ = false;
         bool ui_drawn_ = false;

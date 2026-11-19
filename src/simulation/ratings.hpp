@@ -11,6 +11,7 @@
 // tools/ratings-fit/fit.py, and a file of the same shape in the user's config folder replaces it.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/coaster.hpp"
 
@@ -27,14 +28,14 @@ namespace rct3::simulation
 
     struct Ratings
     {
-        float excitement = 0;
-        float intensity = 0;
-        float nausea = 0;
+        f32 excitement = 0;
+        f32 intensity = 0;
+        f32 nausea = 0;
     };
 
     /// What the model reads off a test run, in the order of `kRatingFeatures`.
     inline constexpr std::array<std::string_view, 13> kRatingFeatures { "one", "max_speed", "average_speed", "ride_time", "ride_length", "up_force", "down_force", "side_force", "air_time", "drops", "highest_drop", "inversions", "lift_hills" };
-    using RatingFeatures = std::array<float, kRatingFeatures.size()>;
+    using RatingFeatures = std::array<f32, kRatingFeatures.size()>;
 
     struct RatingModel
     {
@@ -45,9 +46,9 @@ namespace rct3::simulation
             std::array<RatingFeatures, 3> weights { }; ///< Excitement, intensity, nausea
         };
         RatingFeatures caps { };
-        std::vector<float> penalty_bounds; ///< Intensities at each of which excitement is cut
-        float penalty_keep = 1;            ///< Share of excitement kept at each bound passed
-        std::vector<Family> families;      ///< The one named "default" rates types in no family
+        std::vector<f32> penalty_bounds; ///< Intensities at each of which excitement is cut
+        f32 penalty_keep = 1;            ///< Share of excitement kept at each bound passed
+        std::vector<Family> families;    ///< The one named "default" rates types in no family
     };
 
     /// The model in `json` text. An error names what is wrong: not JSON, a missing part, an unknown feature.
@@ -64,6 +65,6 @@ namespace rct3::simulation
     /// A test run of `coaster` from a standing start, as far as the model knows: speeds, time, length and the
     /// drops it goes down. Forces, air time and turns are left at nothing. Nothing if the train does not come
     /// round within `most` seconds.
-    [[nodiscard]] std::optional<save::model::TestResults> test_lap(Coaster coaster, float most = 1200);
+    [[nodiscard]] std::optional<save::model::TestResults> test_lap(Coaster coaster, f32 most = 1200);
 
 } // namespace rct3::simulation

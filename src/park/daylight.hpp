@@ -11,6 +11,7 @@
 // None of the shades here come from the game; they are ours to tune.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 
 namespace rct3::park
@@ -29,12 +30,12 @@ namespace rct3::park
     inline constexpr glm::vec3 kDaySky { 0.42f, 0.46f, 0.55f };
     inline constexpr glm::vec3 kNightSky { 0.13f, 0.17f, 0.3f };
     /// How much of the light falling on the ground it throws back up.
-    inline constexpr float kGroundBounce = 0.3f;
+    inline constexpr f32 kGroundBounce = 0.3f;
 
     /// The light at `time`, a fraction of a day from midnight.
-    [[nodiscard]] Daylight daylight(float time);
+    [[nodiscard]] Daylight daylight(f32 time);
 
     /// `a` turned towards `b` by `t`, 0 to 1: the colours mixed, the sun's direction turned between.
-    [[nodiscard]] Daylight mixed(const Daylight& a, const Daylight& b, float t);
+    [[nodiscard]] Daylight mixed(const Daylight& a, const Daylight& b, f32 t);
 
 } // namespace rct3::park

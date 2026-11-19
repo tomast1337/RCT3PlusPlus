@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "builder.hpp"
+#include "core/types.hpp"
 #include "ovl/ovl.hpp"
 
 #include <cstdint>
@@ -23,7 +24,7 @@ namespace
         return bytes_of_string(std::string("alpha:ftx\0beta:txt\0", 20));
     }
 
-    std::vector<std::byte> wide_row(std::uint32_t name, std::uint32_t data, std::uint16_t is_pointer, std::uint32_t hash)
+    std::vector<std::byte> wide_row(u32 name, u32 data, u16 is_pointer, u32 hash)
     {
         std::vector<std::byte> row;
         append_u32(row, name);
@@ -34,7 +35,7 @@ namespace
         return row;
     }
 
-    std::vector<std::byte> narrow_row(std::uint32_t name, std::uint32_t data, std::uint32_t is_pointer)
+    std::vector<std::byte> narrow_row(u32 name, u32 data, u32 is_pointer)
     {
         std::vector<std::byte> row;
         append_u32(row, name);

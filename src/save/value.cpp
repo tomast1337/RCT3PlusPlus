@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/value.hpp"
 
+#include "core/types.hpp"
 #include "strings/unicode.hpp"
 
 #include <algorithm>
@@ -19,7 +20,7 @@ namespace rct3::save
         struct ValueExtra
         {
             std::string text;
-            std::vector<float> floats;
+            std::vector<f32> floats;
             std::vector<Value> items;
             std::vector<std::string_view> names;
         };
@@ -64,10 +65,10 @@ namespace rct3::save
     Value::Value(Value&&) noexcept = default;
     Value& Value::operator=(Value&&) noexcept = default;
 
-    float Value::as_float() const noexcept
+    f32 Value::as_float() const noexcept
     {
-        const auto bits = static_cast<std::uint32_t>(bits_);
-        float f;
+        const auto bits = static_cast<u32>(bits_);
+        f32 f;
         std::memcpy(&f, &bits, sizeof f);
         return f;
     }
@@ -77,9 +78,9 @@ namespace rct3::save
         return extra_ ? std::string_view(extra_->text) : std::string_view();
     }
 
-    std::span<const float> Value::floats() const noexcept
+    std::span<const f32> Value::floats() const noexcept
     {
-        return extra_ ? std::span<const float>(extra_->floats) : std::span<const float>();
+        return extra_ ? std::span<const f32>(extra_->floats) : std::span<const f32>();
     }
 
     std::span<const Value> Value::items() const noexcept
@@ -96,7 +97,7 @@ namespace rct3::save
     {
         if (kind_ != ValueKind::Struct || !extra_)
             return std::nullopt;
-        for (std::size_t i = 0; i < extra_->names.size(); ++i)
+        for (usize i = 0; i < extra_->names.size(); ++i)
         {
             if (extra_->names[i] == name)
                 return extra_->items[i];
@@ -112,25 +113,25 @@ namespace rct3::save
         return r;
     }
 
-    Value Value::make_integer(std::int64_t v)
+    Value Value::make_integer(i64 v)
     {
         Value r;
         r.kind_ = ValueKind::Integer;
-        r.bits_ = static_cast<std::uint64_t>(v);
+        r.bits_ = static_cast<u64>(v);
         return r;
     }
 
-    Value Value::make_float(float v)
+    Value Value::make_float(f32 v)
     {
         Value r;
         r.kind_ = ValueKind::Float;
-        std::uint32_t bits;
+        u32 bits;
         std::memcpy(&bits, &v, sizeof bits);
         r.bits_ = bits;
         return r;
     }
 
-    Value Value::make_reference(std::uint64_t id)
+    Value Value::make_reference(u64 id)
     {
         Value r;
         r.kind_ = ValueKind::Reference;
@@ -155,7 +156,7 @@ namespace rct3::save
         return r;
     }
 
-    Value Value::make_floats(ValueKind kind, std::vector<float> values)
+    Value Value::make_floats(ValueKind kind, std::vector<f32> values)
     {
         Value r;
         r.kind_ = kind;
@@ -190,14 +191,14 @@ namespace rct3::save
 
         // Nesting the decoder is willing to follow. The class table reader already caps schema depth; this guards
         // callers that build a SaveFile by hand.
-        constexpr std::size_t kMaxDepth = 32;
+        constexpr usize kMaxDepth = 32;
         // Smallest encoding of a variable child inside an element: its u32 length.
-        constexpr std::size_t kVariableChildBytes = 4;
+        constexpr usize kVariableChildBytes = 4;
 
         // The fixed-size types the decoder understands. A fixed attribute is only decoded as one of these when its
         // declared size also matches, mirroring a reader that skips by size when the layout is not what it expects.
         // Matching is case-insensitive.
-        enum class Scalar : std::uint8_t
+        enum class Scalar : u8
         {
             Bool,
             I8,
@@ -215,7 +216,7 @@ namespace rct3::save
         struct ScalarType
         {
             std::string_view name;
-            std::uint32_t size;
+            u32 size;
             Scalar scalar;
         };
 
@@ -237,7 +238,7 @@ namespace rct3::save
         {
             if (a.size() != b.size())
                 return false;
-            for (std::size_t i = 0; i < a.size(); ++i)
+            for (usize i = 0; i < a.size(); ++i)
             {
                 if (std::tolower(static_cast<unsigned char>(a[i])) != std::tolower(static_cast<unsigned char>(b[i])))
                     return false;
@@ -252,7 +253,7 @@ namespace rct3::save
                 : data_(data)
             {
             }
-            [[nodiscard]] std::size_t remaining() const noexcept
+            [[nodiscard]] usize remaining() const noexcept
             {
                 return data_.size() - pos_;
             }
@@ -261,7 +262,7 @@ namespace rct3::save
                 return pos_ == data_.size();
             }
 
-            std::optional<std::span<const std::byte>> take(std::size_t n)
+            std::optional<std::span<const std::byte>> take(usize n)
             {
                 if (n > remaining())
                     return std::nullopt;
@@ -269,15 +270,15 @@ namespace rct3::save
                 pos_ += n;
                 return s;
             }
-            std::optional<std::uint32_t> read_u32()
+            std::optional<u32> read_u32()
             {
                 auto s = take(4);
                 if (!s)
                     return std::nullopt;
-                return load<std::uint32_t>(*s, 0);
+                return load<u32>(*s, 0);
             }
 
-            template<class T> static T load(std::span<const std::byte> s, std::size_t at) noexcept
+            template<class T> static T load(std::span<const std::byte> s, usize at) noexcept
             {
                 T v;
                 std::memcpy(&v, s.data() + at, sizeof v);
@@ -286,7 +287,7 @@ namespace rct3::save
 
         private:
             std::span<const std::byte> data_;
-            std::size_t pos_ = 0;
+            usize pos_ = 0;
         };
 
         // UTF-16LE to UTF-8; unpaired surrogates become U+FFFD.
@@ -294,13 +295,13 @@ namespace rct3::save
         {
             std::string out;
             out.reserve(bytes.size() / 2);
-            const std::size_t n = bytes.size() / 2;
-            for (std::size_t i = 0; i < n; ++i)
+            const usize n = bytes.size() / 2;
+            for (usize i = 0; i < n; ++i)
             {
-                char32_t u = Cursor::load<std::uint16_t>(bytes, i * 2);
+                char32_t u = Cursor::load<u16>(bytes, i * 2);
                 if (strings::is_high_surrogate(u) && i + 1 < n)
                 {
-                    const char32_t lo = Cursor::load<std::uint16_t>(bytes, (i + 1) * 2);
+                    const char32_t lo = Cursor::load<u16>(bytes, (i + 1) * 2);
                     if (strings::is_low_surrogate(lo))
                     {
                         u = strings::from_surrogates(u, lo);
@@ -327,7 +328,7 @@ namespace rct3::save
 
             // Reads one attribute, fixed or length-prefixed, from the cursor. Fails only when the framing runs past the
             // end of the cursor's data.
-            std::optional<Value> attribute(const Attribute& a, Cursor& c, std::size_t depth)
+            std::optional<Value> attribute(const Attribute& a, Cursor& c, usize depth)
             {
                 if (a.size > 0)
                 {
@@ -366,7 +367,7 @@ namespace rct3::save
             }
 
             // Children of a compound type, decoded one after another from `c`. nullopt when the data is too short.
-            std::optional<std::vector<Value>> sequence(const std::vector<Attribute>& children, Cursor& c, std::size_t depth)
+            std::optional<std::vector<Value>> sequence(const std::vector<Attribute>& children, Cursor& c, usize depth)
             {
                 std::vector<Value> out;
                 out.reserve(children.size());
@@ -381,7 +382,7 @@ namespace rct3::save
             }
 
             // One element of a list or array: the lone child, or a struct of several children.
-            std::optional<Value> element(const std::vector<Attribute>& children, Cursor& c, std::size_t depth)
+            std::optional<Value> element(const std::vector<Attribute>& children, Cursor& c, usize depth)
             {
                 if (children.size() == 1)
                     return attribute(children[0], c, depth + 1);
@@ -396,7 +397,7 @@ namespace rct3::save
                 return Value::make_struct(std::move(names), std::move(*fields));
             }
 
-            Value structure(const Attribute& a, std::span<const std::byte> bytes, std::size_t depth)
+            Value structure(const Attribute& a, std::span<const std::byte> bytes, usize depth)
             {
                 const DecodeStats before = stats;
                 Cursor c(bytes);
@@ -410,7 +411,7 @@ namespace rct3::save
                 return produce(Value::make_struct(std::move(names), std::move(*fields)));
             }
 
-            Value fixed(const Attribute& a, std::span<const std::byte> bytes, std::size_t depth)
+            Value fixed(const Attribute& a, std::span<const std::byte> bytes, usize depth)
             {
                 if (depth > kMaxDepth)
                     return fallback(bytes, stats);
@@ -432,24 +433,24 @@ namespace rct3::save
                     case Scalar::Bool:
                         return Value::make_bool(b[0] != std::byte { 0 });
                     case Scalar::I8:
-                        return Value::make_integer(static_cast<std::int8_t>(b[0]));
+                        return Value::make_integer(static_cast<i8>(b[0]));
                     case Scalar::U8:
-                        return Value::make_integer(static_cast<std::uint8_t>(b[0]));
+                        return Value::make_integer(static_cast<u8>(b[0]));
                     case Scalar::U16:
-                        return Value::make_integer(Cursor::load<std::uint16_t>(b, 0));
+                        return Value::make_integer(Cursor::load<u16>(b, 0));
                     case Scalar::I32:
-                        return Value::make_integer(Cursor::load<std::int32_t>(b, 0));
+                        return Value::make_integer(Cursor::load<i32>(b, 0));
                     case Scalar::U32:
-                        return Value::make_integer(Cursor::load<std::uint32_t>(b, 0));
+                        return Value::make_integer(Cursor::load<u32>(b, 0));
                     case Scalar::F32:
-                        return Value::make_float(Cursor::load<float>(b, 0));
+                        return Value::make_float(Cursor::load<f32>(b, 0));
                     case Scalar::Ref:
-                        return Value::make_reference(Cursor::load<std::uint64_t>(b, 0));
+                        return Value::make_reference(Cursor::load<u64>(b, 0));
                     case Scalar::Vec3:
                     case Scalar::Orient:
                     case Scalar::Mat44:
                     {
-                        std::vector<float> f(b.size() / 4);
+                        std::vector<f32> f(b.size() / 4);
                         std::memcpy(f.data(), b.data(), f.size() * 4);
                         const auto kind = s == Scalar::Vec3 ? ValueKind::Vector3 : s == Scalar::Orient ? ValueKind::Orientation : ValueKind::Matrix44;
                         return Value::make_floats(kind, std::move(f));
@@ -458,7 +459,7 @@ namespace rct3::save
                 return Value::make_raw(b);
             }
 
-            Value variable(const Attribute& a, std::span<const std::byte> bytes, std::size_t depth)
+            Value variable(const Attribute& a, std::span<const std::byte> bytes, usize depth)
             {
                 if (depth > kMaxDepth)
                     return fallback(bytes, stats);
@@ -481,8 +482,8 @@ namespace rct3::save
             {
                 // Marked payloads hold UTF-16LE after a four byte marker. Without the marker the bytes are one 8-bit
                 // character each.
-                constexpr std::uint32_t kMarker = 0xEFEFEFEFu;
-                if (bytes.size() >= 4 && Cursor::load<std::uint32_t>(bytes, 0) == kMarker)
+                constexpr u32 kMarker = 0xEFEFEFEFu;
+                if (bytes.size() >= 4 && Cursor::load<u32>(bytes, 0) == kMarker)
                 {
                     const auto body = bytes.subspan(4);
                     if (body.size() % 2 != 0)
@@ -491,7 +492,7 @@ namespace rct3::save
                 }
                 std::string s;
                 for (const std::byte b : bytes)
-                    strings::append_utf8(s, static_cast<std::uint8_t>(b));
+                    strings::append_utf8(s, static_cast<u8>(b));
                 return produce(Value::make_string(std::move(s)));
             }
 
@@ -501,7 +502,7 @@ namespace rct3::save
                 s.reserve(bytes.size());
                 for (const std::byte b : bytes)
                 {
-                    const auto ch = static_cast<std::uint8_t>(b);
+                    const auto ch = static_cast<u8>(b);
                     if (ch < 0x20 || ch > 0x7E)
                         return fallback(bytes, stats);
                     s += static_cast<char>(ch);
@@ -509,7 +510,7 @@ namespace rct3::save
                 return produce(Value::make_string(std::move(s)));
             }
 
-            Value container(const Attribute& a, std::span<const std::byte> bytes, std::size_t depth)
+            Value container(const Attribute& a, std::span<const std::byte> bytes, usize depth)
             {
                 const DecodeStats before = stats;
                 Cursor c(bytes);
@@ -517,7 +518,7 @@ namespace rct3::save
                 if (!count)
                     return fallback(bytes, before);
 
-                std::size_t min_element = 0;
+                usize min_element = 0;
                 for (const auto& child : a.children)
                     min_element += child.size > 0 ? child.size : kVariableChildBytes;
                 // Every element consumes at least min_element bytes, so the count is bounded by the data. Elements that
@@ -527,7 +528,7 @@ namespace rct3::save
 
                 std::vector<Value> items;
                 items.reserve(*count);
-                for (std::uint32_t i = 0; i < *count; ++i)
+                for (u32 i = 0; i < *count; ++i)
                 {
                     auto v = element(a.children, c, depth);
                     if (!v)
@@ -544,14 +545,14 @@ namespace rct3::save
             {
                 if (bytes.size() >= 12)
                 {
-                    const auto count = Cursor::load<std::uint32_t>(bytes, 8);
-                    if (count <= (bytes.size() - 12) / 4 && 12 + std::size_t { count } * 4 == bytes.size())
+                    const auto count = Cursor::load<u32>(bytes, 8);
+                    if (count <= (bytes.size() - 12) / 4 && 12 + usize { count } * 4 == bytes.size())
                     {
-                        std::vector<float> f(count);
-                        std::memcpy(f.data(), bytes.data() + 12, std::size_t { count } * 4);
+                        std::vector<f32> f(count);
+                        std::memcpy(f.data(), bytes.data() + 12, usize { count } * 4);
                         std::vector<Value> v;
-                        v.push_back(Value::make_integer(Cursor::load<std::int32_t>(bytes, 0)));
-                        v.push_back(Value::make_integer(Cursor::load<std::uint32_t>(bytes, 4)));
+                        v.push_back(Value::make_integer(Cursor::load<i32>(bytes, 0)));
+                        v.push_back(Value::make_integer(Cursor::load<u32>(bytes, 4)));
                         v.push_back(Value::make_floats(ValueKind::FloatArray, std::move(f)));
                         stats.values += 3;
                         return produce(Value::make_struct({ "first", "capacity", "values" }, std::move(v)));
@@ -565,17 +566,17 @@ namespace rct3::save
             {
                 if (bytes.size() >= 8)
                 {
-                    const auto count = Cursor::load<std::uint16_t>(bytes, 0);
-                    if (8 + std::size_t { count } * 12 == bytes.size())
+                    const auto count = Cursor::load<u16>(bytes, 0);
+                    if (8 + usize { count } * 12 == bytes.size())
                     {
                         std::vector<Value> head;
-                        for (std::size_t i = 0; i < 4; ++i)
-                            head.push_back(Value::make_integer(Cursor::load<std::uint16_t>(bytes, i * 2)));
+                        for (usize i = 0; i < 4; ++i)
+                            head.push_back(Value::make_integer(Cursor::load<u16>(bytes, i * 2)));
                         std::vector<Value> points;
                         points.reserve(count);
-                        for (std::size_t i = 0; i < count; ++i)
+                        for (usize i = 0; i < count; ++i)
                         {
-                            std::vector<float> f(3);
+                            std::vector<f32> f(3);
                             std::memcpy(f.data(), bytes.data() + 8 + i * 12, 12);
                             points.push_back(Value::make_floats(ValueKind::Vector3, std::move(f)));
                         }
@@ -594,31 +595,31 @@ namespace rct3::save
         public:
             std::vector<std::byte> out;
 
-            bool attribute(const Attribute& a, const Value& v, std::size_t depth)
+            bool attribute(const Attribute& a, const Value& v, usize depth)
             {
                 if (depth > kMaxDepth)
                     return false;
                 if (a.size > 0)
                 {
-                    const std::size_t start = out.size();
+                    const usize start = out.size();
                     return fixed(a, v, depth) && out.size() - start == a.size;
                 }
                 // Its length goes in front once its bytes are known.
-                const std::size_t at = out.size();
-                put(std::uint32_t { 0 });
+                const usize at = out.size();
+                put(u32 { 0 });
                 if (!variable(a, v, depth))
                     return false;
-                const auto length = static_cast<std::uint32_t>(out.size() - at - 4);
+                const auto length = static_cast<u32>(out.size() - at - 4);
                 std::memcpy(out.data() + at, &length, sizeof length);
                 return true;
             }
 
             // A Struct's items as `children`, one each in order, under the same names.
-            bool sequence(const std::vector<Attribute>& children, const Value& v, std::size_t depth)
+            bool sequence(const std::vector<Attribute>& children, const Value& v, usize depth)
             {
                 if (v.kind() != ValueKind::Struct || v.items().size() != children.size())
                     return false;
-                for (std::size_t i = 0; i < children.size(); ++i)
+                for (usize i = 0; i < children.size(); ++i)
                     if (v.names()[i] != children[i].name || !attribute(children[i], v.items()[i], depth + 1))
                         return false;
                 return true;
@@ -627,17 +628,17 @@ namespace rct3::save
         private:
             template<class T> void put(T v)
             {
-                const std::size_t at = out.size();
+                const usize at = out.size();
                 out.resize(at + sizeof v);
                 std::memcpy(out.data() + at, &v, sizeof v);
             }
-            void put_floats(std::span<const float> f)
+            void put_floats(std::span<const f32> f)
             {
-                for (const float x : f)
+                for (const f32 x : f)
                     put(x);
             }
 
-            bool fixed(const Attribute& a, const Value& v, std::size_t depth)
+            bool fixed(const Attribute& a, const Value& v, usize depth)
             {
                 if (v.kind() == ValueKind::Raw)
                 {
@@ -651,18 +652,18 @@ namespace rct3::save
                     switch (t.scalar)
                     {
                         case Scalar::Bool:
-                            put(static_cast<std::uint8_t>(v.as_bool()));
+                            put(static_cast<u8>(v.as_bool()));
                             return v.kind() == ValueKind::Bool;
                         case Scalar::I8:
                         case Scalar::U8:
-                            put(static_cast<std::uint8_t>(v.as_integer()));
+                            put(static_cast<u8>(v.as_integer()));
                             return v.kind() == ValueKind::Integer;
                         case Scalar::U16:
-                            put(static_cast<std::uint16_t>(v.as_integer()));
+                            put(static_cast<u16>(v.as_integer()));
                             return v.kind() == ValueKind::Integer;
                         case Scalar::I32:
                         case Scalar::U32:
-                            put(static_cast<std::uint32_t>(v.as_integer()));
+                            put(static_cast<u32>(v.as_integer()));
                             return v.kind() == ValueKind::Integer;
                         case Scalar::F32:
                             put(v.as_float());
@@ -680,7 +681,7 @@ namespace rct3::save
                 return iequals(a.type, kStructType) && !a.children.empty() && sequence(a.children, v, depth);
             }
 
-            bool variable(const Attribute& a, const Value& v, std::size_t depth)
+            bool variable(const Attribute& a, const Value& v, usize depth)
             {
                 if (v.kind() == ValueKind::Raw)
                 {
@@ -691,7 +692,7 @@ namespace rct3::save
                 {
                     put(0xEFEFEFEFu);
                     for (const char16_t u : strings::to_utf16(v.text()))
-                        put(static_cast<std::uint16_t>(u));
+                        put(static_cast<u16>(u));
                     return true;
                 }
                 if (iequals(a.type, kSymbolType) && v.kind() == ValueKind::String)
@@ -701,7 +702,7 @@ namespace rct3::save
                 }
                 if ((iequals(a.type, kListType) || iequals(a.type, kArrayType)) && v.kind() == ValueKind::List && !a.children.empty())
                 {
-                    put(static_cast<std::uint32_t>(v.items().size()));
+                    put(static_cast<u32>(v.items().size()));
                     for (const Value& item : v.items())
                         if (a.children.size() == 1 ? !attribute(a.children[0], item, depth + 1) : !sequence(a.children, item, depth))
                             return false;
@@ -712,19 +713,19 @@ namespace rct3::save
                 // The two small layouts, as the Decoder names their parts.
                 if (iequals(a.type, kCurveType) && v.kind() == ValueKind::Struct && v.items().size() == 3)
                 {
-                    const std::span<const float> values = v.items()[2].floats();
-                    put(static_cast<std::int32_t>(v.items()[0].as_integer()));
-                    put(static_cast<std::uint32_t>(v.items()[1].as_integer()));
-                    put(static_cast<std::uint32_t>(values.size()));
+                    const std::span<const f32> values = v.items()[2].floats();
+                    put(static_cast<i32>(v.items()[0].as_integer()));
+                    put(static_cast<u32>(v.items()[1].as_integer()));
+                    put(static_cast<u32>(values.size()));
                     put_floats(values);
                     return true;
                 }
                 if (iequals(a.type, kPathType) && v.kind() == ValueKind::Struct && v.items().size() == 5)
                 {
-                    for (std::size_t i = 0; i < 4; ++i)
-                        put(static_cast<std::uint16_t>(v.items()[i].as_integer()));
+                    for (usize i = 0; i < 4; ++i)
+                        put(static_cast<u16>(v.items()[i].as_integer()));
                     const std::span<const Value> points = v.items()[4].items();
-                    if (points.size() != static_cast<std::size_t>(v.items()[0].as_integer()) || !std::ranges::all_of(points, [](const Value& p) { return p.floats().size() == 3; }))
+                    if (points.size() != static_cast<usize>(v.items()[0].as_integer()) || !std::ranges::all_of(points, [](const Value& p) { return p.floats().size() == 3; }))
                         return false;
                     for (const Value& point : points)
                         put_floats(point.floats());
@@ -741,7 +742,7 @@ namespace rct3::save
         Encoder e;
         if (fields.kind() != ValueKind::Struct || fields.items().size() != cls.attributes.size())
             return std::unexpected(Error::ValueMismatch);
-        for (std::size_t i = 0; i < cls.attributes.size(); ++i)
+        for (usize i = 0; i < cls.attributes.size(); ++i)
             if (fields.names()[i] != cls.attributes[i].name || !e.attribute(cls.attributes[i], fields.items()[i], 0))
                 return std::unexpected(Error::ValueMismatch);
         return std::move(e.out);
@@ -785,13 +786,13 @@ namespace rct3::save
         : file_(&file)
     {
         by_id_.reserve(file.objects.size());
-        for (std::size_t i = 0; i < file.objects.size(); ++i)
+        for (usize i = 0; i < file.objects.size(); ++i)
         {
-            by_id_.try_emplace(file.objects[i].id, static_cast<std::uint32_t>(i));
+            by_id_.try_emplace(file.objects[i].id, static_cast<u32>(i));
         }
     }
 
-    std::optional<const Object&> ObjectIndex::find(std::uint64_t id) const noexcept
+    std::optional<const Object&> ObjectIndex::find(u64 id) const noexcept
     {
         const auto it = by_id_.find(id);
         if (it == by_id_.end())

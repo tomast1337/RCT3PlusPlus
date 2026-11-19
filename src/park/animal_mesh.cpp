@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/animal_mesh.hpp"
 
+#include "core/types.hpp"
+
 namespace rct3::park
 {
 
@@ -17,7 +19,7 @@ namespace rct3::park
             if (animal.body == nullptr || animal.body->levels.empty())
                 continue;
             // The level asked for, or the coarsest one with something to draw.
-            std::size_t level = std::min(animal.level, animal.body->levels.size() - 1);
+            usize level = std::min(animal.level, animal.body->levels.size() - 1);
             while (level > 0 && animal.body->levels[level].empty())
                 --level;
             const std::vector<glm::mat4> pose = animal_pose(*animal.body, animal.motion, animal.time.value);
@@ -27,16 +29,16 @@ namespace rct3::park
                 AnimalRun& run = runs[piece.picture];
                 run.blend = piece.blend;
                 run.one_sided = piece.one_sided;
-                const auto base = static_cast<std::uint32_t>(run.vertices.size());
+                const auto base = static_cast<u32>(run.vertices.size());
                 for (const AnimalVertex& v : piece.vertices)
                 {
                     glm::mat4 skin(0.0f);
-                    float total = 0;
-                    for (std::size_t k = 0; k < 4; ++k)
+                    f32 total = 0;
+                    for (usize k = 0; k < 4; ++k)
                     {
                         if (v.weights[k] == 0 || v.bones[k] >= pose.size())
                             continue;
-                        const float w = static_cast<float>(v.weights[k]) / 255.0f;
+                        const f32 w = static_cast<f32>(v.weights[k]) / 255.0f;
                         skin += w * pose[v.bones[k]];
                         total += w;
                     }
@@ -44,10 +46,10 @@ namespace rct3::park
                         skin = glm::mat4(1.0f);
                     const glm::vec3 at = animal.world * skin * glm::vec4(v.position, 1.0f);
                     const glm::vec3 normal = turn * glm::mat3(skin) * v.normal;
-                    const float length = glm::length(normal);
+                    const f32 length = glm::length(normal);
                     run.vertices.push_back({ at, glm::vec4(1.0f), v.uv, length > 0 ? normal / length : normal });
                 }
-                for (const std::uint16_t i : piece.indices)
+                for (const u16 i : piece.indices)
                     run.indices.push_back(base + i);
             }
             ++mesh.drawn;
@@ -58,10 +60,10 @@ namespace rct3::park
             {
                 if (run.blend != blend || run.indices.empty())
                     continue;
-                const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
-                mesh.batches.push_back({ .texture = picture, .picture = picture, .blend = blend, .first = static_cast<std::uint32_t>(mesh.indices.size()), .count = static_cast<std::uint32_t>(run.indices.size()), .one_sided = run.one_sided });
+                const auto base = static_cast<u32>(mesh.vertices.size());
+                mesh.batches.push_back({ .texture = picture, .picture = picture, .blend = blend, .first = static_cast<u32>(mesh.indices.size()), .count = static_cast<u32>(run.indices.size()), .one_sided = run.one_sided });
                 mesh.vertices.insert(mesh.vertices.end(), run.vertices.begin(), run.vertices.end());
-                for (const std::uint32_t i : run.indices)
+                for (const u32 i : run.indices)
                     mesh.indices.push_back(base + i);
             }
         }

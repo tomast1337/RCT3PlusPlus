@@ -7,6 +7,7 @@
 // right and down than to the left and up.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/world.hpp"
 
 #include <cstdint>
@@ -16,17 +17,17 @@
 namespace rct3::park::ground
 {
 
-    inline constexpr std::int32_t kLargestBrush = 64; ///< Radius, in world units
-    inline constexpr std::int32_t kDefaultBrush = 10;
+    inline constexpr i32 kLargestBrush = 64; ///< Radius, in world units
+    inline constexpr i32 kDefaultBrush = 10;
 
     /// How many tiles across a brush of `radius` is, on tiles `tile_size` wide: one at least.
-    [[nodiscard]] std::int32_t brush_across(std::int32_t radius, float tile_size);
+    [[nodiscard]] i32 brush_across(i32 radius, f32 tile_size);
 
     /// The square `size` tiles across round `middle`, those inside a grid `columns` by `rows` only.
-    [[nodiscard]] std::vector<save::model::Tile> brush_tiles(save::model::Tile middle, std::int32_t size, std::int32_t columns, std::int32_t rows);
+    [[nodiscard]] std::vector<save::model::Tile> brush_tiles(save::model::Tile middle, i32 size, i32 columns, i32 rows);
 
     /// The tiles a round brush covers: the one holding `point` and those with a corner within `reach` of it,
     /// both in tile units, inside a grid `columns` by `rows` only.
-    [[nodiscard]] std::vector<save::model::Tile> round_brush_tiles(glm::vec2 point, float reach, std::int32_t columns, std::int32_t rows);
+    [[nodiscard]] std::vector<save::model::Tile> round_brush_tiles(glm::vec2 point, f32 reach, i32 columns, i32 rows);
 
 } // namespace rct3::park::ground

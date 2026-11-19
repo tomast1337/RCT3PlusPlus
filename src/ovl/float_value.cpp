@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/float_value.hpp"
 
+#include "core/types.hpp"
+
 #include <bit>
 #include <cstdint>
 
@@ -22,7 +24,7 @@ namespace rct3::ovl
             const SymbolName parts = split_symbol_name(symbol.name);
             if (parts.tag != kFloatTag)
                 continue;
-            items.push_back({ parts.name, std::bit_cast<float>(static_cast<std::uint32_t>(symbol.data)) });
+            items.push_back({ parts.name, std::bit_cast<f32>(static_cast<u32>(symbol.data)) });
         }
         return items;
     }

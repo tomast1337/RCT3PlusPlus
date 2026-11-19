@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/sandbox.hpp"
@@ -14,10 +15,10 @@ using namespace rct3::simulation;
 
 namespace
 {
-    std::size_t times(Sandbox& park, entt::entity guest, ThoughtKind kind)
+    usize times(Sandbox& park, entt::entity guest, ThoughtKind kind)
     {
         const auto* thoughts = park.world().registry.try_get<Thoughts>(guest);
-        return thoughts == nullptr ? 0 : static_cast<std::size_t>(std::ranges::count(thoughts->recent, kind, &Thought::kind));
+        return thoughts == nullptr ? 0 : static_cast<usize>(std::ranges::count(thoughts->recent, kind, &Thought::kind));
     }
 } // namespace
 
@@ -58,7 +59,7 @@ TEST_CASE("riders think of the ride: enjoyed it, and the queue was long")
     park.path({ 0, 0 }, { 3, 0 });
     const auto ride = park.flat_ride("Twister", { 3, 0 }, 0, { .capacity = 1, .cycle_seconds = 200, .excitement = 0.9f });
     std::vector<entt::entity> guests;
-    for (std::int32_t i = 0; i < 4; ++i)
+    for (i32 i = 0; i < 4; ++i)
         guests.push_back(park.guest({ 0, 0 }, { .happiness = 0.95f })); // Only a delighted rider thinks they enjoyed it
     auto& r = park.world().registry;
     park.run_seconds(900);

@@ -2,6 +2,7 @@
 #include "ovl/particle_skin.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -16,26 +17,26 @@ namespace
 {
 
     // Name block, 16 bytes: "P:psi" 0, "Img:tex" 6. Structure block at address 16.
-    constexpr std::uint32_t kBase = 16;
-    constexpr std::uint32_t kNameTexture = 6;
+    constexpr u32 kBase = 16;
+    constexpr u32 kNameTexture = 6;
 
     // Offsets inside the structure block: item (28 bytes), frame list (2 pointers), two frames of 16 bytes.
-    constexpr std::uint32_t kList = 28;
-    constexpr std::uint32_t kFrames = 36;
-    constexpr std::uint32_t kEnd = 68;
+    constexpr u32 kList = 28;
+    constexpr u32 kFrames = 36;
+    constexpr u32 kEnd = 68;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    std::uint32_t bits(float f)
+    u32 bits(f32 f)
     {
-        return std::bit_cast<std::uint32_t>(f);
+        return std::bit_cast<u32>(f);
     }
 
-    std::vector<std::byte> structure(std::uint32_t count, std::uint32_t blended, std::uint32_t single)
+    std::vector<std::byte> structure(u32 count, u32 blended, u32 single)
     {
         std::vector<std::byte> out;
         words(out, { count, kBase + kList, 0, blended, single, bits(0.5f), 0 });

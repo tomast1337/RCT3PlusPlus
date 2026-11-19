@@ -2,6 +2,7 @@
 #include "save/model/world.hpp"
 
 #include "core/minus_one.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 #include <array>
@@ -132,7 +133,7 @@ namespace rct3::save::model
             constexpr std::string_view kRoomScenery = "Scenery";
             constexpr std::string_view kRoomSegment = "PoolSegment";
             constexpr std::string_view kRoomState = "State";
-            constexpr std::int64_t kRoomOpen = 2;
+            constexpr i64 kRoomOpen = 2;
             constexpr std::string_view kRoomFluid = "CleaningFluidSelected";
             // Waterfalls between two lakes.
             constexpr std::string_view kWaterfallClass = "WaterfallBody";
@@ -156,30 +157,30 @@ namespace rct3::save::model
 
         // ---- Byte reading ----------------------------------------------------------------------------------------
 
-        std::uint32_t rd_u32(std::span<const std::byte> b, std::size_t at) noexcept
+        u32 rd_u32(std::span<const std::byte> b, usize at) noexcept
         {
-            std::uint32_t v;
+            u32 v;
             std::memcpy(&v, b.data() + at, 4);
             return std::endian::native == std::endian::little ? v : std::byteswap(v);
         }
 
-        float rd_f32(std::span<const std::byte> b, std::size_t at) noexcept
+        f32 rd_f32(std::span<const std::byte> b, usize at) noexcept
         {
-            return std::bit_cast<float>(rd_u32(b, at));
+            return std::bit_cast<f32>(rd_u32(b, at));
         }
 
-        std::uint64_t rd_u64(std::span<const std::byte> b, std::size_t at) noexcept
+        u64 rd_u64(std::span<const std::byte> b, usize at) noexcept
         {
-            return static_cast<std::uint64_t>(rd_u32(b, at)) | (static_cast<std::uint64_t>(rd_u32(b, at + 4)) << 32);
+            return static_cast<u64>(rd_u32(b, at)) | (static_cast<u64>(rd_u32(b, at + 4)) << 32);
         }
 
-        std::uint8_t rd_u8(std::span<const std::byte> b, std::size_t at) noexcept
+        u8 rd_u8(std::span<const std::byte> b, usize at) noexcept
         {
-            return static_cast<std::uint8_t>(b[at]);
+            return static_cast<u8>(b[at]);
         }
 
-        constexpr std::size_t kTerrainHeader = 18;
-        constexpr std::size_t kTerrainTailSlack = 8;
+        constexpr usize kTerrainHeader = 18;
+        constexpr usize kTerrainTailSlack = 8;
 
     } // namespace
 
@@ -221,7 +222,7 @@ namespace rct3::save::model
         return "?";
     }
 
-    WeatherType weather_type_from(std::int32_t raw) noexcept
+    WeatherType weather_type_from(i32 raw) noexcept
     {
         if (raw >= 0 && raw <= 6)
             return static_cast<WeatherType>(raw);
@@ -292,7 +293,7 @@ namespace rct3::save::model
         return "?";
     }
 
-    std::size_t WorldModel::issue_count(WorldIssueKind k) const noexcept
+    usize WorldModel::issue_count(WorldIssueKind k) const noexcept
     {
         for (const auto& i : issues)
         {
@@ -313,18 +314,18 @@ namespace rct3::save::model
         return has(TileFlag::HeldBack) ? Ownership::Locked : Ownership::Unowned;
     }
 
-    float TerrainCell::min_height() const noexcept
+    f32 TerrainCell::min_height() const noexcept
     {
         return *std::ranges::min_element(corners);
     }
-    float TerrainCell::max_height() const noexcept
+    f32 TerrainCell::max_height() const noexcept
     {
         return *std::ranges::max_element(corners);
     }
 
-    std::size_t WaterLayer::triangle_count() const noexcept
+    usize WaterLayer::triangle_count() const noexcept
     {
-        std::size_t n = 0;
+        usize n = 0;
         for (const auto& b : bodies)
             n += b.tris.size();
         return n;
@@ -338,28 +339,28 @@ namespace rct3::save::model
         // Tile and in-tile fraction for a world coordinate; false when outside the grid.
         struct TilePos
         {
-            std::int32_t col = 0;
-            std::int32_t row = 0;
-            float fx = 0;
-            float fz = 0;
+            i32 col = 0;
+            i32 row = 0;
+            f32 fx = 0;
+            f32 fz = 0;
         };
 
-        std::optional<TilePos> locate(const TerrainGrid& g, float x, float z) noexcept
+        std::optional<TilePos> locate(const TerrainGrid& g, f32 x, f32 z) noexcept
         {
             if (g.empty() || !(g.tile_size_x > 0) || !(g.tile_size_z > 0))
                 return std::nullopt;
-            const float tx = (x - g.origin_x) / g.tile_size_x;
-            const float tz = (z - g.origin_z) / g.tile_size_z;
-            if (!(tx >= 0) || !(tz >= 0) || !(tx <= static_cast<float>(g.width)) || !(tz <= static_cast<float>(g.height)))
+            const f32 tx = (x - g.origin_x) / g.tile_size_x;
+            const f32 tz = (z - g.origin_z) / g.tile_size_z;
+            if (!(tx >= 0) || !(tz >= 0) || !(tx <= static_cast<f32>(g.width)) || !(tz <= static_cast<f32>(g.height)))
                 return std::nullopt;
-            const std::int32_t col = std::min(static_cast<std::int32_t>(tx), g.width - 1);
-            const std::int32_t row = std::min(static_cast<std::int32_t>(tz), g.height - 1);
-            return TilePos { .col = col, .row = row, .fx = tx - static_cast<float>(col), .fz = tz - static_cast<float>(row) };
+            const i32 col = std::min(static_cast<i32>(tx), g.width - 1);
+            const i32 row = std::min(static_cast<i32>(tz), g.height - 1);
+            return TilePos { .col = col, .row = row, .fx = tx - static_cast<f32>(col), .fz = tz - static_cast<f32>(row) };
         }
 
     } // namespace
 
-    std::optional<float> TerrainGrid::height_at(float x, float z) const noexcept
+    std::optional<f32> TerrainGrid::height_at(f32 x, f32 z) const noexcept
     {
         const auto p = locate(*this, x, z);
         if (!p)
@@ -370,14 +371,14 @@ namespace rct3::save::model
         return c[3] + (1.0f - p->fx) * (c[2] - c[3]) + (1.0f - p->fz) * (c[1] - c[3]);
     }
 
-    std::optional<float> TerrainGrid::height_bilinear_at(float x, float z) const noexcept
+    std::optional<f32> TerrainGrid::height_bilinear_at(f32 x, f32 z) const noexcept
     {
         const auto p = locate(*this, x, z);
         if (!p)
             return std::nullopt;
         const auto& c = at(p->col, p->row).corners;
-        const float near_edge = c[0] + p->fx * (c[1] - c[0]);
-        const float far_edge = c[2] + p->fx * (c[3] - c[2]);
+        const f32 near_edge = c[0] + p->fx * (c[1] - c[0]);
+        const f32 far_edge = c[2] + p->fx * (c[3] - c[2]);
         return near_edge + p->fz * (far_edge - near_edge);
     }
 
@@ -385,27 +386,27 @@ namespace rct3::save::model
     {
         if (blob.size() < kTerrainHeader)
             return std::unexpected(Error::Truncated);
-        const std::size_t w = rd_u8(blob, 0);
-        const std::size_t h = rd_u8(blob, 1);
+        const usize w = rd_u8(blob, 0);
+        const usize h = rd_u8(blob, 1);
         if (w == 0 || h == 0)
             return std::unexpected(Error::ImplausibleCount);
-        const float origin_x = rd_f32(blob, 2);
-        const float origin_z = rd_f32(blob, 6);
-        const float tile_size_x = rd_f32(blob, 10);
-        const float tile_size_z = rd_f32(blob, 14);
+        const f32 origin_x = rd_f32(blob, 2);
+        const f32 origin_z = rd_f32(blob, 6);
+        const f32 tile_size_x = rd_f32(blob, 10);
+        const f32 tile_size_z = rd_f32(blob, 14);
         if (!std::isfinite(origin_x) || !std::isfinite(origin_z) || !std::isfinite(tile_size_x) || !std::isfinite(tile_size_z) || !(tile_size_x > 0) || !(tile_size_z > 0))
             return std::unexpected(Error::BadHeader);
 
-        const std::size_t n = w * h; // at most kMaxTerrainCells
-        const std::size_t avail = blob.size() - kTerrainHeader;
-        const auto fits = [&](std::size_t stride) { return avail >= n * stride && avail - n * stride <= kTerrainTailSlack; };
+        const usize n = w * h; // at most kMaxTerrainCells
+        const usize avail = blob.size() - kTerrainHeader;
+        const auto fits = [&](usize stride) { return avail >= n * stride && avail - n * stride <= kTerrainTailSlack; };
         if (!fits(24) && !fits(20))
             return std::unexpected(avail < n * 24 ? Error::Truncated : Error::ImplausibleCount);
-        const std::size_t stride = fits(24) ? 24 : 20;
+        const usize stride = fits(24) ? 24 : 20;
 
         TerrainGrid g {
-            .width = static_cast<std::int32_t>(w),
-            .height = static_cast<std::int32_t>(h),
+            .width = static_cast<i32>(w),
+            .height = static_cast<i32>(h),
             .origin_x = origin_x,
             .origin_z = origin_z,
             .tile_size_x = tile_size_x,
@@ -414,15 +415,15 @@ namespace rct3::save::model
             .trailing_bytes = avail - n * stride,
         };
         g.cells.reserve(n);
-        for (std::size_t i = 0; i < n; ++i)
+        for (usize i = 0; i < n; ++i)
         {
-            const std::size_t at = kTerrainHeader + i * stride;
+            const usize at = kTerrainHeader + i * stride;
             g.cells.push_back(
                 {
                     .corners = { rd_f32(blob, at), rd_f32(blob, at + 4), rd_f32(blob, at + 8), rd_f32(blob, at + 12) },
                     .surface = rd_u8(blob, at + 16),
                     .cliff_style = rd_u8(blob, at + 17),
-                    .flags = stride == 24 ? rd_u8(blob, at + 20) : static_cast<std::uint8_t>(rd_u8(blob, at + 19) & 0x0f),
+                    .flags = stride == 24 ? rd_u8(blob, at + 20) : static_cast<u8>(rd_u8(blob, at + 19) & 0x0f),
                 });
         }
         return g;
@@ -435,22 +436,22 @@ namespace rct3::save::model
         if (blob.size() < 6)
             return std::unexpected(Error::Truncated);
         WaterLayer layer { .width = rd_u8(blob, 0), .height = rd_u8(blob, 1) };
-        const std::uint32_t count = rd_u32(blob, 2);
-        std::size_t pos = 6;
+        const u32 count = rd_u32(blob, 2);
+        usize pos = 6;
         if (count > (blob.size() - pos) / 8)
             return std::unexpected(Error::ImplausibleCount);
         layer.bodies.reserve(count);
-        for (std::uint32_t b = 0; b < count; ++b)
+        for (u32 b = 0; b < count; ++b)
         {
             if (blob.size() - pos < 8)
                 return std::unexpected(Error::Truncated);
-            const float level = rd_f32(blob, pos);
-            const std::uint32_t n = rd_u32(blob, pos + 4);
+            const f32 level = rd_f32(blob, pos);
+            const u32 n = rd_u32(blob, pos + 4);
             pos += 8;
             if (n > (blob.size() - pos) / 4)
                 return std::unexpected(Error::ImplausibleCount);
             WaterBody body { .level = level, .tris = std::vector<WaterTri>(n) };
-            for (std::uint32_t i = 0; i < n; ++i, pos += 4)
+            for (u32 i = 0; i < n; ++i, pos += 4)
             {
                 body.tris[i] = { rd_u8(blob, pos), rd_u8(blob, pos + 1), rd_u8(blob, pos + 2), rd_u8(blob, pos + 3) };
             }
@@ -461,18 +462,18 @@ namespace rct3::save::model
         return layer;
     }
 
-    std::optional<std::uint8_t> expected_water_mask(const TerrainGrid& grid, float level, Tile tile, std::int32_t triangle) noexcept
+    std::optional<u8> expected_water_mask(const TerrainGrid& grid, f32 level, Tile tile, i32 triangle) noexcept
     {
         const auto [col, row] = tile;
         if (!grid.contains(col, row) || (triangle != 0 && triangle != 1))
             return std::nullopt;
         const auto& c = grid.at(col, row).corners;
-        const std::array<float, 3> corner = triangle == 0 ? std::array { c[0], c[1], c[2] } : std::array { c[3], c[2], c[1] };
-        std::uint8_t mask = 0;
-        for (std::size_t i = 0; i < 3; ++i)
+        const std::array<f32, 3> corner = triangle == 0 ? std::array { c[0], c[1], c[2] } : std::array { c[3], c[2], c[1] };
+        u8 mask = 0;
+        for (usize i = 0; i < 3; ++i)
         {
             if (corner[i] < level)
-                mask = static_cast<std::uint8_t>(mask | (1u << i));
+                mask = static_cast<u8>(mask | (1u << i));
         }
         return mask;
     }
@@ -483,15 +484,15 @@ namespace rct3::save::model
     {
         if (blob.size() < 4)
             return std::unexpected(Error::Truncated);
-        const std::uint32_t count = rd_u32(blob, 0);
+        const u32 count = rd_u32(blob, 0);
         if (count > (blob.size() - 4) / 20)
             return std::unexpected(Error::ImplausibleCount);
-        if (blob.size() != 4 + static_cast<std::size_t>(count) * 20)
+        if (blob.size() != 4 + static_cast<usize>(count) * 20)
             return std::unexpected(Error::TrailingData);
         std::vector<RawSkirtTree> out(count);
-        for (std::uint32_t i = 0; i < count; ++i)
+        for (u32 i = 0; i < count; ++i)
         {
-            const std::size_t at = 4 + static_cast<std::size_t>(i) * 20;
+            const usize at = 4 + static_cast<usize>(i) * 20;
             out[i].scenery_ref = rd_u64(blob, at);
             out[i].position = { rd_f32(blob, at + 8), rd_f32(blob, at + 12), rd_f32(blob, at + 16) };
         }
@@ -503,7 +504,7 @@ namespace rct3::save::model
     namespace
     {
 
-        enum class Kind : std::uint8_t
+        enum class Kind : u8
         {
             None,
             Terrain,
@@ -528,13 +529,13 @@ namespace rct3::save::model
         };
 
         // Typed reads over a decoded value. Missing attributes and attributes kept raw give empty results.
-        std::optional<std::int64_t> get_int(std::optional<const Value&> v) noexcept
+        std::optional<i64> get_int(std::optional<const Value&> v) noexcept
         {
             if (v && v->kind() == ValueKind::Integer)
                 return v->as_integer();
             return std::nullopt;
         }
-        std::optional<float> get_float(std::optional<const Value&> v) noexcept
+        std::optional<f32> get_float(std::optional<const Value&> v) noexcept
         {
             if (v && v->kind() == ValueKind::Float)
                 return v->as_float();
@@ -546,7 +547,7 @@ namespace rct3::save::model
                 return v->as_bool();
             return std::nullopt;
         }
-        std::optional<std::uint64_t> get_ref(std::optional<const Value&> v) noexcept
+        std::optional<u64> get_ref(std::optional<const Value&> v) noexcept
         {
             if (v && v->kind() == ValueKind::Reference)
                 return v->as_reference();
@@ -559,12 +560,12 @@ namespace rct3::save::model
             return std::nullopt;
         }
 
-        std::int32_t int_or(std::optional<const Value&> v, std::int32_t d = 0) noexcept
+        i32 int_or(std::optional<const Value&> v, i32 d = 0) noexcept
         {
             const auto x = get_int(v);
-            return x ? static_cast<std::int32_t>(*x) : d;
+            return x ? static_cast<i32>(*x) : d;
         }
-        float float_or(std::optional<const Value&> v, float d = 0) noexcept
+        f32 float_or(std::optional<const Value&> v, f32 d = 0) noexcept
         {
             return get_float(v).value_or(d);
         }
@@ -576,14 +577,14 @@ namespace rct3::save::model
             return { };
         }
 
-        std::uint8_t byte_or(std::optional<const Value&> v, std::uint8_t d = 0) noexcept
+        u8 byte_or(std::optional<const Value&> v, u8 d = 0) noexcept
         {
             const auto x = get_int(v);
-            return x ? static_cast<std::uint8_t>(*x) : d;
+            return x ? static_cast<u8>(*x) : d;
         }
 
         /// The three picked colours of a colour struct, or nothing when `v` is not one.
-        std::optional<std::array<std::int32_t, 3>> get_colours(std::optional<const Value&> v) noexcept
+        std::optional<std::array<i32, 3>> get_colours(std::optional<const Value&> v) noexcept
         {
             if (!v || v->kind() != ValueKind::Struct)
                 return std::nullopt;
@@ -600,9 +601,9 @@ namespace rct3::save::model
         class Issues
         {
         public:
-            void add(WorldIssueKind k, std::uint64_t object = 0) noexcept
+            void add(WorldIssueKind k, u64 object = 0) noexcept
             {
-                auto& i = items_[static_cast<std::size_t>(k)];
+                auto& i = items_[static_cast<usize>(k)];
                 if (i.count++ == 0)
                     i.first_object = object;
                 i.kind = k;
@@ -619,7 +620,7 @@ namespace rct3::save::model
             }
 
         private:
-            std::array<WorldIssue, static_cast<std::size_t>(WorldIssueKind::Count_)> items_ { };
+            std::array<WorldIssue, static_cast<usize>(WorldIssueKind::Count_)> items_ { };
         };
 
         // Resolves strings out of other objects, with a cache so repeated definitions are decoded once.
@@ -632,18 +633,18 @@ namespace rct3::save::model
             {
             }
 
-            const std::string& symbol(std::uint64_t ref)
+            const std::string& symbol(u64 ref)
             {
                 return lookup(symbols_, ref, [&](const DecodedObject& o) { return text_of(o, names::kEntrySymbol); });
             }
 
-            const std::string& overlay(std::uint64_t ref)
+            const std::string& overlay(u64 ref)
             {
                 return lookup(overlays_, ref, [&](const DecodedObject& o) { return text_of(o, names::kEntryOverlay); });
             }
 
             // System name of a path surface. A queue ground surface names its queue style through one more hop.
-            const std::string& surface(std::uint64_t ref)
+            const std::string& surface(u64 ref)
             {
                 return lookup(surfaces_, ref, [&](const DecodedObject& o) {
                     auto s = text_of(o, names::kEntrySystemName);
@@ -662,13 +663,13 @@ namespace rct3::save::model
             }
 
             // The colours a queue ground surface picks, when the surface is one.
-            std::optional<std::array<std::int32_t, 3>> surface_colours(std::uint64_t ref)
+            std::optional<std::array<i32, 3>> surface_colours(u64 ref)
             {
                 if (ref == 0)
                     return std::nullopt;
                 if (const auto it = colours_.find(ref); it != colours_.end())
                     return it->second;
-                std::optional<std::array<std::int32_t, 3>> out;
+                std::optional<std::array<i32, 3>> out;
                 if (const auto obj = index_.find(ref))
                 {
                     if (const auto d = decode_object(file_, *obj))
@@ -686,7 +687,7 @@ namespace rct3::save::model
                 return { };
             }
 
-            template<typename F> const std::string& lookup(std::unordered_map<std::uint64_t, std::string>& cache, std::uint64_t ref, F&& make)
+            template<typename F> const std::string& lookup(std::unordered_map<u64, std::string>& cache, u64 ref, F&& make)
             {
                 static const std::string empty;
                 if (ref == 0)
@@ -704,13 +705,13 @@ namespace rct3::save::model
 
             const SaveFile& file_;
             const ObjectIndex& index_;
-            std::unordered_map<std::uint64_t, std::string> symbols_;
-            std::unordered_map<std::uint64_t, std::string> overlays_;
-            std::unordered_map<std::uint64_t, std::string> surfaces_;
-            std::unordered_map<std::uint64_t, std::optional<std::array<std::int32_t, 3>>> colours_;
+            std::unordered_map<u64, std::string> symbols_;
+            std::unordered_map<u64, std::string> overlays_;
+            std::unordered_map<u64, std::string> surfaces_;
+            std::unordered_map<u64, std::optional<std::array<i32, 3>>> colours_;
         };
 
-        PathKind path_kind_of(std::uint8_t raw) noexcept
+        PathKind path_kind_of(u8 raw) noexcept
         {
             switch (raw)
             {
@@ -739,8 +740,8 @@ namespace rct3::save::model
 
         PathTile read_path(const DecodedObject& o, Resolver& res)
         {
-            const std::uint8_t raw_kind = byte_or(o.find(names::kPathType), 0);
-            const std::uint64_t surface_ref = get_ref(o.find(names::kPathSurface)).value_or(0);
+            const u8 raw_kind = byte_or(o.find(names::kPathType), 0);
+            const u64 surface_ref = get_ref(o.find(names::kPathSurface)).value_or(0);
             PathTile t {
                 .id = o.id,
                 .kind = path_kind_of(raw_kind),
@@ -762,7 +763,7 @@ namespace rct3::save::model
                 const auto b = get_int(base);
                 t.elevation = PathElevation {
                     .slope = byte_or(slope),
-                    .base_height = b && *b != -1 ? std::optional(static_cast<std::int32_t>(*b)) : std::nullopt,
+                    .base_height = b && *b != -1 ? std::optional(static_cast<i32>(*b)) : std::nullopt,
                     .quantised_height = int_or(quant),
                     .scenery_ref = get_ref(o.find(names::kPathScenery)).value_or(0),
                     .underground = get_bool(o.find(names::kPathUnderground)).value_or(false),
@@ -772,14 +773,14 @@ namespace rct3::save::model
             std::optional<const Value&> line = o.find(names::kPathQueueLine);
             if (fence || line || o.find(names::kPathStartDir))
             {
-                const std::uint64_t fence_ref = get_ref(fence).value_or(0);
+                const u64 fence_ref = get_ref(fence).value_or(0);
                 t.queue = PathQueueInfo {
                     .start_direction = byte_or(o.find(names::kPathStartDir)),
                     .end_direction = byte_or(o.find(names::kPathEndDir)),
                     .fence_ref = fence_ref,
                     .fence_symbol = res.symbol(fence_ref),
                     .fence_overlay = res.overlay(fence_ref),
-                    .fence_colours = get_colours(o.find(names::kPathFenceColours)).value_or(std::array<std::int32_t, 3> { }),
+                    .fence_colours = get_colours(o.find(names::kPathFenceColours)).value_or(std::array<i32, 3> { }),
                     .queue_line_ref = get_ref(line).value_or(0),
                 };
             }
@@ -792,7 +793,7 @@ namespace rct3::save::model
                 .id = o.id,
                 .definition_ref = get_ref(o.find(names::kSceneryDefinition)).value_or(get_ref(o.find(names::kDesignSceneryDefinition)).value_or(0)),
                 .owner_ref = get_ref(o.find(names::kSceneryOwner)).value_or(0),
-                .colours = get_colours(o.find(names::kSceneryColours)).value_or(std::array<std::int32_t, 3> { }),
+                .colours = get_colours(o.find(names::kSceneryColours)).value_or(std::array<i32, 3> { }),
                 .height_offset = int_or(o.find(names::kSceneryHeightOffset)),
                 .frame_offset = int_or(o.find(names::kSceneryFrameOffset)),
                 .force_absolute_height = get_bool(o.find(names::kSceneryAbsolute)).value_or(false),
@@ -805,13 +806,13 @@ namespace rct3::save::model
                 p.col = int_or(d->field(names::kDataCol));
                 p.row = int_or(d->field(names::kDataRow));
                 if (const auto h = get_int(d->field(names::kDataHeight)); h && *h != kUnsetBaseHeight)
-                    p.base_height = static_cast<std::int32_t>(*h);
+                    p.base_height = static_cast<i32>(*h);
                 p.rotation = int_or(d->field(names::kDataDirection));
                 p.quadrant = int_or(d->field(names::kDataCorner));
                 p.height_adjust = get_float(d->field(names::kDataAdjust));
             }
             if (std::optional<const Value&> b = o.find(names::kSceneryBehaviours); b && b->kind() == ValueKind::List)
-                p.behaviour_count = static_cast<std::uint32_t>(b->items().size());
+                p.behaviour_count = static_cast<u32>(b->items().size());
             if (std::optional<const Value&> m = o.find(names::kSceneryMotions); m && m->kind() == ValueKind::List && !m->items().empty() && m->items().front().kind() == ValueKind::Struct)
                 p.motion_time = units::Seconds { float_or(m->items().front().field(names::kSceneryMotionTime)) };
             return p;
@@ -819,8 +820,8 @@ namespace rct3::save::model
 
         Weather read_weather(const DecodedObject& o)
         {
-            const std::int32_t raw_type = int_or(o.find("Type"));
-            const std::int32_t raw_forecast = int_or(o.find("ForecastType"));
+            const i32 raw_type = int_or(o.find("Type"));
+            const i32 raw_forecast = int_or(o.find("ForecastType"));
             Weather w {
                 .type = weather_type_from(raw_type),
                 .raw_type = raw_type,
@@ -868,7 +869,7 @@ namespace rct3::save::model
                 .day_fraction = float_or(o.find("DayNightTime")),
                 .time = { float_or(o.find("Time")) },
                 .time_origin = { float_or(o.find("ZeroTime")) },
-                .day_night_mode = mode ? std::optional(static_cast<std::int32_t>(*mode)) : std::nullopt,
+                .day_night_mode = mode ? std::optional(static_cast<i32>(*mode)) : std::nullopt,
                 .day_fraction_as_rendered = get_float(o.find("DayNightTimeAsRendered")),
             };
         }
@@ -893,7 +894,7 @@ namespace rct3::save::model
 
         std::vector<Kind> kinds(file.classes.size(), Kind::None);
         std::vector<std::optional<PathKind>> path_class_kind(file.classes.size());
-        for (std::size_t i = 0; i < file.classes.size(); ++i)
+        for (usize i = 0; i < file.classes.size(); ++i)
         {
             const auto name = file.classes[i].name;
             if (name == names::kTerrainClass)
@@ -940,7 +941,7 @@ namespace rct3::save::model
         }
 
         bool have_terrain = false, have_water = false, have_weather = false, have_sky = false, have_time = false, have_camera = false;
-        std::vector<std::uint64_t> path_scenery; // parallel to m.paths: link id or 0
+        std::vector<u64> path_scenery; // parallel to m.paths: link id or 0
 
         const auto singleton = [&](bool& seen, const DecodedObject& o) {
             if (seen)
@@ -1080,7 +1081,7 @@ namespace rct3::save::model
                     break;
                 case Kind::UsePoint:
                     if (const auto owner = get_ref(o.find(names::kBehaviourOwner)))
-                        m.use_points.push_back({ .id = o.id, .object_ref = *owner, .stamp_colour = get_int(o.find(names::kStampColour)).transform([](std::int64_t c) { return static_cast<std::int32_t>(c); }) });
+                        m.use_points.push_back({ .id = o.id, .object_ref = *owner, .stamp_colour = get_int(o.find(names::kStampColour)).transform([](i64 c) { return static_cast<i32>(c); }) });
                     break;
                 case Kind::Weather:
                     if (singleton(have_weather, o))
@@ -1090,7 +1091,7 @@ namespace rct3::save::model
                     if (singleton(have_sky, o))
                     {
                         if (const auto v = get_int(o.find(names::kSkyIndex)))
-                            m.sky_background = static_cast<std::int32_t>(*v);
+                            m.sky_background = static_cast<i32>(*v);
                     }
                     break;
                 case Kind::Time:
@@ -1110,8 +1111,8 @@ namespace rct3::save::model
                     if (get_bool(o.find(names::kPoolGroundKept)).value_or(false))
                     {
                         auto& ground = m.pool_segments.back().ground.emplace();
-                        for (std::size_t i = 0; i < ground.size(); ++i)
-                            ground[i] = static_cast<float>(int_or(o.find(names::kPoolGround[i])));
+                        for (usize i = 0; i < ground.size(); ++i)
+                            ground[i] = static_cast<f32>(int_or(o.find(names::kPoolGround[i])));
                     }
                     if (m.pool_segments.back().type == 0)
                         m.pool_water.push_back({ m.pool_segments.back().col, m.pool_segments.back().row, m.pool_segments.back().surface, m.pool_segments.back().depth });
@@ -1143,7 +1144,7 @@ namespace rct3::save::model
                             e.fences.push_back(get_bool(r.field(names::kEnclosureValid)).value_or(false) ? resolver.surface(get_ref(r.field(names::kEnclosureEntry)).value_or(0)) : std::string());
                     const auto tiles = o.find(names::kEnclosureTiles);
                     // A grid that does not fit its size is left empty.
-                    if (!tiles || tiles->kind() != ValueKind::List || tiles->items().size() != static_cast<std::size_t>(e.cols) * static_cast<std::size_t>(e.rows))
+                    if (!tiles || tiles->kind() != ValueKind::List || tiles->items().size() != static_cast<usize>(e.cols) * static_cast<usize>(e.rows))
                     {
                         e = { };
                         break;
@@ -1153,7 +1154,7 @@ namespace rct3::save::model
                     {
                         const auto region = core::none_if_negative(int_or(t.field(names::kEnclosureTileRegion), -1));
                         // A tile of a place unused, or of none, is outside.
-                        e.tiles.push_back(region && static_cast<std::size_t>(*region) < e.fences.size() && !e.fences[static_cast<std::size_t>(*region)].empty() ? region : std::nullopt);
+                        e.tiles.push_back(region && static_cast<usize>(*region) < e.fences.size() && !e.fences[static_cast<usize>(*region)].empty() ? region : std::nullopt);
                     }
                     break;
                 }
@@ -1185,7 +1186,7 @@ namespace rct3::save::model
         const TerrainGrid& g = m.terrain;
         for (const auto& c : g.cells)
         {
-            for (const float h : c.corners)
+            for (const f32 h : c.corners)
             {
                 if (!std::isfinite(h))
                 {
@@ -1218,7 +1219,7 @@ namespace rct3::save::model
             }
         }
 
-        std::unordered_map<std::uint64_t, std::pair<std::int32_t, std::int32_t>> placed;
+        std::unordered_map<u64, std::pair<i32, i32>> placed;
         placed.reserve(m.objects.size());
         for (const auto& p : m.objects)
             placed.emplace(p.id, std::pair { p.col, p.row });
@@ -1227,7 +1228,7 @@ namespace rct3::save::model
             if (!g.empty() && !g.contains(p.col, p.row))
                 issues.add(WorldIssueKind::ObjectOutOfRange, p.id);
         }
-        for (std::size_t i = 0; i < m.paths.size(); ++i)
+        for (usize i = 0; i < m.paths.size(); ++i)
         {
             const auto& t = m.paths[i];
             if (!g.empty() && !g.contains(t.col, t.row))

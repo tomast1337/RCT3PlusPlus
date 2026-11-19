@@ -15,6 +15,7 @@
 // Floats that are meant to be levels are not clamped; use validate() to find out-of-range values.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 #include "units/units.hpp"
@@ -32,7 +33,7 @@
 namespace rct3::save::model
 {
 
-    using PeopleObjectId = std::uint64_t;
+    using PeopleObjectId = u64;
 
     /// Reference to another object of the same save. id 0 means none (also used for dangling references).
     struct PeopleRef
@@ -54,16 +55,16 @@ namespace rct3::save::model
 
     struct PeopleVec3
     {
-        float x = 0;
-        float y = 0;
-        float z = 0;
+        f32 x = 0;
+        f32 y = 0;
+        f32 z = 0;
         friend bool operator==(const PeopleVec3&, const PeopleVec3&) = default;
     };
 
     // ----- enumerations (explicit underlying types; values outside the list are representable) -----
 
     /// What a person is. Guests are 0..2, everything else is a staff role.
-    enum class PersonType : std::uint8_t
+    enum class PersonType : u8
     {
         Child = 0,
         Teen = 1,
@@ -78,7 +79,7 @@ namespace rct3::save::model
         LifeGuard = 12,
     };
 
-    enum class Sex : std::uint8_t
+    enum class Sex : u8
     {
         Male = 0,
         Female = 1
@@ -87,7 +88,7 @@ namespace rct3::save::model
     /// States shared by all persons. Guests and staff reuse numbers from 12 upward for role-specific states
     /// (see GuestState); the number alone is not enough to name those. Names are the game's own text keys.
     /// Numbers are matched to states by what the person is doing in game and what their state target is.
-    enum class PersonState : std::int32_t
+    enum class PersonState : i32
     {
         Decision = 0,
         Dangling = 1,
@@ -110,7 +111,7 @@ namespace rct3::save::model
     };
 
     /// Guest-only states, meaningful for a Guest when its state is in 12..20.
-    enum class GuestState : std::int32_t
+    enum class GuestState : i32
     {
         HeadingForBench = 12,
         WalkingToPark = 13,
@@ -123,14 +124,14 @@ namespace rct3::save::model
         WatchingEntertainer = 20,
     };
 
-    enum class RideIntensity : std::uint8_t
+    enum class RideIntensity : u8
     {
         Low = 0,
         Medium = 1,
         High = 2,
         Extreme = 3
     };
-    enum class NauseaTolerance : std::uint8_t
+    enum class NauseaTolerance : u8
     {
         Low = 0,
         Medium = 1,
@@ -138,7 +139,7 @@ namespace rct3::save::model
         VeryHigh = 3
     };
 
-    enum class StaffKind : std::uint8_t
+    enum class StaffKind : u8
     {
         Handyman,
         Mechanic,
@@ -150,14 +151,14 @@ namespace rct3::save::model
         ParkInspector,
     };
 
-    enum class AnimalKind : std::uint8_t
+    enum class AnimalKind : u8
     {
         Duck,
         Seagull,
         Fish
     };
 
-    enum class LitterState : std::uint8_t
+    enum class LitterState : u8
     {
         OnGround = 0,
         Carried = 1
@@ -170,7 +171,7 @@ namespace rct3::save::model
 
     [[nodiscard]] constexpr bool is_guest_type(PersonType t) noexcept
     {
-        return static_cast<std::uint8_t>(t) <= 2;
+        return static_cast<u8>(t) <= 2;
     }
 
     // ----- shared person data -----
@@ -178,49 +179,49 @@ namespace rct3::save::model
     struct Thought
     {
         PeopleRef about { };
-        PeopleRef other { };           ///< A second person involved (a guest, for staff thoughts)
-        std::int32_t id = 0;           ///< Thought identifier, 0 = empty slot. Label list not modelled.
-        std::optional<float> time { }; ///< Game clock when it was had; none for an empty slot
-        std::int32_t variant = 0;      ///< Seed choosing a text variant
+        PeopleRef other { };         ///< A second person involved (a guest, for staff thoughts)
+        i32 id = 0;                  ///< Thought identifier, 0 = empty slot. Label list not modelled.
+        std::optional<f32> time { }; ///< Game clock when it was had; none for an empty slot
+        i32 variant = 0;             ///< Seed choosing a text variant
         [[nodiscard]] bool empty() const noexcept
         {
             return id == 0;
         }
     };
 
-    inline constexpr std::size_t kThoughtSlots = 6;
+    inline constexpr usize kThoughtSlots = 6;
 
     struct Appearance
     {
         PeopleRef head { }, body { }, legs { }, swim_body { }, swim_legs { }; ///< Part group database entries
         /// skin, upper clothes, lower clothes, upper swimsuit, lower swimsuit. 255 means "pick at random".
-        std::array<std::uint8_t, 5> palettes { 255, 255, 255, 255, 255 };
-        std::array<std::uint32_t, 3> optionals { }; ///< Optional mesh part masks: head, body, legs
+        std::array<u8, 5> palettes { 255, 255, 255, 255, 255 };
+        std::array<u32, 3> optionals { }; ///< Optional mesh part masks: head, body, legs
         bool wearing_swimsuit = false;
-        std::uint8_t level_of_detail = 0; ///< 0..3
+        u8 level_of_detail = 0; ///< 0..3
         bool visible = true;
     };
 
     struct Animation
     {
-        std::optional<std::int32_t> anim_type { }; ///< Index into the person's animation set
-        std::optional<std::int32_t> walk { };
-        std::optional<std::int32_t> idle { };
-        std::optional<std::int32_t> alternate_walk { };
-        float playback_time = 0;
-        float playback_rate = 0;
-        float walk_speed = 0;
+        std::optional<i32> anim_type { }; ///< Index into the person's animation set
+        std::optional<i32> walk { };
+        std::optional<i32> idle { };
+        std::optional<i32> alternate_walk { };
+        f32 playback_time = 0;
+        f32 playback_rate = 0;
+        f32 walk_speed = 0;
     };
 
     struct LookAt
     {
-        std::int32_t type = 0; ///< 0 none; 1, 2, 6 seen
+        i32 type = 0; ///< 0 none; 1, 2, 6 seen
         PeopleRef target { };
         units::Radians horizontal { };
         units::Radians vertical { };
         units::Distance distance { 1.5f };
         /// Union keyed by `type` (float bits or an id); kept as the stored bit pattern.
-        std::uint32_t extra_bits = 0;
+        u32 extra_bits = 0;
     };
 
     /// Everything every person has, whatever its role.
@@ -228,18 +229,18 @@ namespace rct3::save::model
     {
         PeopleObjectId id = 0;
         PersonType type = PersonType::Adult;
-        std::uint8_t sub_type = 0; ///< Sex for guests (see Sex), costume variant for entertainers
-        std::string name { };      ///< Guests: a real name. Staff: a placeholder to be localised.
-        PeopleVec3 position { };   ///< World position
+        u8 sub_type = 0;         ///< Sex for guests (see Sex), costume variant for entertainers
+        std::string name { };    ///< Guests: a real name. Staff: a placeholder to be localised.
+        PeopleVec3 position { }; ///< World position
         /// Model to world as stored: four rows, the model's x, y and z axes then its position.
-        std::array<float, 16> world { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+        std::array<f32, 16> world { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
         units::Radians heading { }; ///< 0..2pi
         PeopleVec3 lane_offset { }; ///< Offset from the path centre line
         PersonState state = PersonState::Decision;
-        std::int32_t sub_state = 0;
+        i32 sub_state = 0;
         PeopleRef state_target { };
-        float decide_time = 0; ///< Countdown to the next decision
-        float start_time = 0;  ///< Game clock when the person entered the park
+        f32 decide_time = 0; ///< Countdown to the next decision
+        f32 start_time = 0;  ///< Game clock when the person entered the park
         Animation animation { };
         Appearance appearance { };
         LookAt look_at { };
@@ -249,7 +250,7 @@ namespace rct3::save::model
         PeopleRef route_controller { };
         PeopleRef holder { }; ///< The person's item holder object (MyHolders)
         units::Seconds time_to_next_think { };
-        std::int32_t thinks_to_big_think = 0;
+        i32 thinks_to_big_think = 0;
         // The player's switches on their window, kept in rct3++'s own saves.
         bool thoughts_to_console = false; ///< Their new thoughts are posted as messages
         bool highlight = false;           ///< Their name and what they are doing float above them, while the park shows highlights
@@ -260,58 +261,58 @@ namespace rct3::save::model
 
     struct Cash
     {
-        std::int32_t bank = 0; ///< What cash machines can still give them, minor units
-        std::int32_t current = 0;
-        std::int32_t withdrawn = 0;
-        std::int32_t spent_drink = 0;
-        std::int32_t spent_food = 0;
-        std::int32_t spent_park_entry = 0;
-        std::int32_t spent_rides = 0;
-        std::int32_t spent_souvenirs = 0;
-        std::int32_t total_spent = 0;
+        i32 bank = 0; ///< What cash machines can still give them, minor units
+        i32 current = 0;
+        i32 withdrawn = 0;
+        i32 spent_drink = 0;
+        i32 spent_food = 0;
+        i32 spent_park_entry = 0;
+        i32 spent_rides = 0;
+        i32 spent_souvenirs = 0;
+        i32 total_spent = 0;
     };
 
     /// Needs, each 0..1. High food and drink mean satisfied, a high toilet value means urgent.
     struct Needs
     {
-        float food = 1;
-        float drink = 1;
-        float toilet = 0;
+        f32 food = 1;
+        f32 drink = 1;
+        f32 toilet = 0;
     };
 
     struct Mood
     {
-        float energy = 0.5f;
-        float happiness = 0.5f;
-        float nausea = 0;
-        std::optional<float> sunburn { }; ///< Only newer saves store it
+        f32 energy = 0.5f;
+        f32 happiness = 0.5f;
+        f32 nausea = 0;
+        std::optional<f32> sunburn { }; ///< Only newer saves store it
     };
 
     struct RidePreference
     {
         RideIntensity intensity = RideIntensity::Medium;
-        float min = 0; ///< Bounds in intensity units
-        float max = 0;
+        f32 min = 0; ///< Bounds in intensity units
+        f32 max = 0;
     };
 
     struct GuestCounters
     {
-        std::int32_t rides = 0;
-        std::int32_t drinks = 0;
-        std::int32_t food_items = 0;
-        std::int32_t souvenirs = 0;
-        std::int32_t photos = 0;
-        std::int32_t times_lost = 0;
-        std::int32_t minutes_in_park = 0;
+        i32 rides = 0;
+        i32 drinks = 0;
+        i32 food_items = 0;
+        i32 souvenirs = 0;
+        i32 photos = 0;
+        i32 times_lost = 0;
+        i32 minutes_in_park = 0;
     };
 
     /// A stamp in a guest's passport, from a passport post.
     struct PassportStamp
     {
-        std::int32_t colour = 0; ///< The post's stamp colour, as the post keeps it
-        PeopleRef post { };      ///< The post, as a use point (WorldModel::use_points)
-        float x = 0;             ///< Where on the page it sits, 0..1 across
-        float y = 0;             ///< And 0..1 down
+        i32 colour = 0;     ///< The post's stamp colour, as the post keeps it
+        PeopleRef post { }; ///< The post, as a use point (WorldModel::use_points)
+        f32 x = 0;          ///< Where on the page it sits, 0..1 across
+        f32 y = 0;          ///< And 0..1 down
     };
 
     struct Guest
@@ -324,11 +325,11 @@ namespace rct3::save::model
         RidePreference ride_preference { };
         NauseaTolerance nausea_tolerance = NauseaTolerance::Medium;
         PeopleRef favourite_ride { };
-        float favourite_ride_rating = 0; ///< Unit not confirmed
+        f32 favourite_ride_rating = 0; ///< Unit not confirmed
         PeopleRef group { };
         GuestCounters counters { };
-        std::int32_t scenery_assess_timer = 0;
-        float consuming_amount = 0; ///< 0..1 progress of the item being eaten or drunk
+        i32 scenery_assess_timer = 0;
+        f32 consuming_amount = 0; ///< 0..1 progress of the item being eaten or drunk
         bool in_park = true;
         bool is_avatar = false; ///< Player-named guest
         bool facing_photo = false;
@@ -341,49 +342,49 @@ namespace rct3::save::model
         bool needs_cash = false;
         bool wants_leave_park = false;
         bool leaving_due_to_closed_park = false;
-        std::optional<float> pool_need { };
-        std::optional<float> pool_preference { };
+        std::optional<f32> pool_need { };
+        std::optional<f32> pool_preference { };
         std::optional<units::Seconds> time_in_pool { }; ///< Still to swim, while in a pool
-        std::optional<float> price_modifier { };        ///< Willingness-to-pay multiplier
+        std::optional<f32> price_modifier { };          ///< Willingness-to-pay multiplier
     };
 
     // ----- staff -----
 
     struct PatrolArea
     {
-        std::uint8_t start_col = 0;
-        std::uint8_t start_row = 0;
-        std::uint8_t size_x = 0;
-        std::uint8_t size_y = 0;
+        u8 start_col = 0;
+        u8 start_row = 0;
+        u8 size_x = 0;
+        u8 size_y = 0;
         bool start_state = false;
     };
 
     struct HandymanWork
     {
-        std::int32_t bins_emptied = 0;
-        std::int32_t gardens_watered = 0;
-        std::int32_t grass_mown = 0;
-        std::int32_t paths_swept = 0;
+        i32 bins_emptied = 0;
+        i32 gardens_watered = 0;
+        i32 grass_mown = 0;
+        i32 paths_swept = 0;
         PeopleVec3 duty_waypoint { };
     };
 
     struct MechanicWork
     {
         PeopleRef info { }; ///< Per-object mechanic bookkeeping
-        std::int32_t objects_fixed = 0;
-        std::int32_t objects_inspected = 0;
-        float state_timer = 0;
+        i32 objects_fixed = 0;
+        i32 objects_inspected = 0;
+        f32 state_timer = 0;
     };
 
     struct EntertainerWork
     {
-        std::int32_t anim_count = 0;
+        i32 anim_count = 0;
         bool bad = false;
         bool facing = false;
         bool guests_ok = false;
-        std::int32_t show_piece_index = 0;
-        float time_till_entertain = 0;
-        float too_few_many_guests_time = 0;
+        i32 show_piece_index = 0;
+        f32 time_till_entertain = 0;
+        f32 too_few_many_guests_time = 0;
     };
 
     struct VendorWork
@@ -397,9 +398,9 @@ namespace rct3::save::model
     struct KeeperWork
     {
         std::vector<PeopleRef> shelters_to_fill { };
-        std::int32_t enclosure_id = 0;
-        std::int32_t dung_cleared = 0;
-        std::int32_t troughs_filled = 0;
+        i32 enclosure_id = 0;
+        i32 dung_cleared = 0;
+        i32 troughs_filled = 0;
     };
 
     struct LifeGuardWork
@@ -412,21 +413,21 @@ namespace rct3::save::model
     {
         Person person { };
         StaffKind kind = StaffKind::Handyman;
-        std::int32_t type_id = 0; ///< Per-class variant; for vendors a per-park vendor id
-        std::int32_t wage_level = 1;
-        std::int32_t warnings = 0;
-        std::int32_t training = 0; ///< 0 untrained .. 3 fully trained
-        float laziness = 0;        ///< 0..1
-        float happiness = 0.5f;    ///< 0..1
+        i32 type_id = 0; ///< Per-class variant; for vendors a per-park vendor id
+        i32 wage_level = 1;
+        i32 warnings = 0;
+        i32 training = 0;     ///< 0 untrained .. 3 fully trained
+        f32 laziness = 0;     ///< 0..1
+        f32 happiness = 0.5f; ///< 0..1
         units::Seconds think_timer { };
-        std::int32_t last_task_type = 0;
+        i32 last_task_type = 0;
         // Counters of thinks since an event; none when it never happened.
-        std::optional<std::int32_t> thinks_since_last_task { };
-        std::optional<std::int32_t> thinks_since_different_task { };
-        std::optional<std::int32_t> thinks_since_no_task { };
-        std::optional<std::int32_t> thinks_since_happy { };
+        std::optional<i32> thinks_since_last_task { };
+        std::optional<i32> thinks_since_different_task { };
+        std::optional<i32> thinks_since_no_task { };
+        std::optional<i32> thinks_since_happy { };
         PatrolArea patrol { };
-        std::int32_t task_flags = 0;
+        i32 task_flags = 0;
         std::optional<units::Seconds> time_in_pool { }; ///< Still to swim, while in a pool (an inspector looking one over)
         std::variant<std::monostate, HandymanWork, MechanicWork, EntertainerWork, VendorWork, KeeperWork, LifeGuardWork> work { };
     };
@@ -438,14 +439,14 @@ namespace rct3::save::model
         PeopleObjectId id = 0;
         AnimalKind kind = AnimalKind::Duck;
         PeopleVec3 position { };
-        std::int32_t anim_type = 0;
-        float anim_time = 0;
-        float anim_speed = 0;
-        std::int32_t state = 0;
-        std::int32_t sub_state = 0;
-        float state_timer = 0;
-        std::uint8_t palette = 0; ///< Colour variant, 0..3
-        float time_in_park = 0;
+        i32 anim_type = 0;
+        f32 anim_time = 0;
+        f32 anim_speed = 0;
+        i32 state = 0;
+        i32 sub_state = 0;
+        f32 state_timer = 0;
+        u8 palette = 0; ///< Colour variant, 0..3
+        f32 time_in_park = 0;
         PeopleVec3 target { };
         bool leader = false; ///< Flock or school leader (ducks, fish)
         PeopleRef left { };  ///< Neighbour in the formation (ducks, fish)
@@ -453,14 +454,14 @@ namespace rct3::save::model
         PeopleRef flight_route { }; ///< Ducks and gulls
         // Gulls
         PeopleRef victim { };
-        std::int32_t litter_pecked = 0;
-        std::int32_t guests_attacked = 0;
+        i32 litter_pecked = 0;
+        i32 guests_attacked = 0;
         // Fish
-        std::int32_t fish_type = 0;
-        float swim_radius = 0;
-        float swim_speed_per_step = 0;
-        float swim_turn_speed_per_step = 0;
-        float normal_swim_speed = 0;
+        i32 fish_type = 0;
+        f32 swim_radius = 0;
+        f32 swim_speed_per_step = 0;
+        f32 swim_turn_speed_per_step = 0;
+        f32 normal_swim_speed = 0;
     };
 
     /// A zoo animal. Its species is not stored as a field; it follows from the referenced entry and visual.
@@ -469,67 +470,67 @@ namespace rct3::save::model
         PeopleObjectId id = 0;
         std::string name_template { }; ///< Name pattern with placeholders to localise
         std::string first_names { };
-        std::int32_t generation_suffix = 0;
+        i32 generation_suffix = 0;
         bool is_male = false;
         bool is_adult = false;
-        float date_of_birth = 0;                                                    ///< Game clock, negative for born before the start
-        float health = 0, food = 0, drink = 0, tiredness = 0, social = 0, dung = 0; ///< 0..1
+        f32 date_of_birth = 0;                                                    ///< Game clock, negative for born before the start
+        f32 health = 0, food = 0, drink = 0, tiredness = 0, social = 0, dung = 0; ///< 0..1
         bool sleeping = false;
         bool tranquilised = false;
         bool can_be_picked_up = false;
         bool in_crate = false;
         bool been_paid_for = false;
-        std::int32_t adoption_fee = 0;
-        std::int32_t species_hunger = 0;
-        std::int32_t species_life_expectancy = 0;
-        std::int32_t species_peep_enjoyment = 0;
-        std::int32_t species_social = 0;
-        std::int32_t species_water_req = 0;
-        std::int32_t type = 0;
+        i32 adoption_fee = 0;
+        i32 species_hunger = 0;
+        i32 species_life_expectancy = 0;
+        i32 species_peep_enjoyment = 0;
+        i32 species_social = 0;
+        i32 species_water_req = 0;
+        i32 type = 0;
         PeopleRef entry { };
         PeopleRef family_membership { };
         PeopleRef visual { };
         std::string species { }; ///< Symbol of its species ("was" item), from the database entry `entry` names
         /// Model to world from the visual `visual` names, stored as Person::world is; identity without one.
-        std::array<float, 16> world { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
-        std::optional<float> pregnancy_timer { }; ///< None when not pregnant
-        std::int32_t babies_in_womb = 0;
-        float enclosure_health_score = 0;
+        std::array<f32, 16> world { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+        std::optional<f32> pregnancy_timer { }; ///< None when not pregnant
+        i32 babies_in_womb = 0;
+        f32 enclosure_health_score = 0;
         std::array<Thought, kThoughtSlots> thoughts { };
     };
 
     // ----- groups, holders, items, litter -----
 
-    inline constexpr std::size_t kMaxGroupMembers = 64; ///< Members beyond this are dropped
+    inline constexpr usize kMaxGroupMembers = 64; ///< Members beyond this are dropped
 
     struct GuestGroup
     {
         PeopleObjectId id = 0;
-        std::int32_t group_type = 0;  ///< 0..10, names not modelled
-        std::int32_t num_members = 0; ///< As stored; see live_members()
+        i32 group_type = 0;  ///< 0..10, names not modelled
+        i32 num_members = 0; ///< As stored; see live_members()
         PeopleRef leader { };
         PeopleRef avatar { };
         /// Member slots in file order; unused or dangling slots are none.
         std::vector<PeopleRef> members { };
-        std::int32_t flock_state = 0;
-        std::int32_t flock_sub_state = 0;
+        i32 flock_state = 0;
+        i32 flock_sub_state = 0;
         PeopleRef flock_focus { };
         PeopleRef flock_target { };
-        std::int32_t flock_index = 0;
-        float flock_progress = 0;
-        float flock_decay = 0;
+        i32 flock_index = 0;
+        f32 flock_progress = 0;
+        f32 flock_decay = 0;
         Mood average_mood { };
-        float min_food = 0, min_drink = 0, max_toilet = 0;
-        float min_intensity = 0, max_intensity = 0;
-        std::int32_t set_piece_type = 0;
-        std::int32_t set_piece_state = 0;
+        f32 min_food = 0, min_drink = 0, max_toilet = 0;
+        f32 min_intensity = 0, max_intensity = 0;
+        i32 set_piece_type = 0;
+        i32 set_piece_state = 0;
         PeopleVec3 set_piece_focus { };
         PeopleRef set_piece_path { };
         PeopleRef set_piece_actor0 { }, set_piece_actor1 { };
         std::vector<PeopleVec3> set_piece_positions { };
         bool set_piece_take_photo = false;
         PeopleRef hold_hands_route { };
-        [[nodiscard]] std::size_t live_members() const noexcept;
+        [[nodiscard]] usize live_members() const noexcept;
     };
 
     /// The items one person carries.
@@ -537,11 +538,11 @@ namespace rct3::save::model
     {
         PeopleObjectId id = 0;
         PeopleRef owner { };
-        std::optional<std::int32_t> consuming_slot { };
+        std::optional<i32> consuming_slot { };
         PeopleRef head { }, left_hand { }, right_hand { }, left_pocket { }, right_pocket { };
         PeopleRef umbrella { }, sunglasses { }, swimsuit { };
         std::vector<PeopleRef> slotless { };
-        std::optional<std::uint32_t> hidden_parts { }; ///< Mask of hidden body parts, when stored
+        std::optional<u32> hidden_parts { }; ///< Mask of hidden body parts, when stored
     };
 
     struct CarriedItem
@@ -550,14 +551,14 @@ namespace rct3::save::model
         PeopleRef definition { };    ///< The item's database entry
         std::string kind_symbol { }; ///< What kind of item it is, by the database entry's symbol, as `Burger:cid`
         std::string name { };
-        float food = 0;
-        float drink = 0; ///< May be negative
-        float nausea = 0;
+        f32 food = 0;
+        f32 drink = 0; ///< May be negative
+        f32 nausea = 0;
         bool bad = false;
         PeopleRef becomes { }; ///< Item this turns into when used up
         PeopleRef voucher_target { };
-        std::array<std::uint8_t, 3> colours { };
-        std::optional<std::int32_t> inventory_choice { };
+        std::array<u8, 3> colours { };
+        std::optional<i32> inventory_choice { };
     };
 
     struct ShopItem
@@ -565,10 +566,10 @@ namespace rct3::save::model
         PeopleObjectId id = 0;
         PeopleRef definition { };
         std::string name { };
-        std::int32_t price = 0; ///< Minor units
-        std::int32_t total_sold = 0;
-        std::int32_t extras = 0;
-        std::array<std::uint8_t, 3> colours { };
+        i32 price = 0; ///< Minor units
+        i32 total_sold = 0;
+        i32 extras = 0;
+        std::array<u8, 3> colours { };
         PeopleRef sale_item { };
         PeopleRef stall { };
     };
@@ -577,7 +578,7 @@ namespace rct3::save::model
     {
         PeopleObjectId id = 0;
         PeopleRef definition { };
-        std::int32_t setting = 0;
+        i32 setting = 0;
     };
 
     struct Litter
@@ -585,12 +586,12 @@ namespace rct3::save::model
         PeopleObjectId id = 0;
         PeopleVec3 position { };
         PeopleVec3 orientation { }; ///< Euler angles in radians; y is the heading
-        std::uint8_t type = 0;      ///< 0..5, names not modelled
+        u8 type = 0;                ///< 0..5, names not modelled
         LitterState state = LitterState::OnGround;
-        float create_time = 0;
+        f32 create_time = 0;
         PeopleRef path_tile { };
         /// Newer saves only. Bit 5 keeps the piece out of the park's rating; the other bits are not known.
-        std::optional<std::uint32_t> flags { };
+        std::optional<u32> flags { };
     };
 
     /// One of the sets of meshes people's heads, bodies and legs are picked from, named by the symbol the
@@ -599,16 +600,16 @@ namespace rct3::save::model
     {
         PeopleObjectId id = 0;
         std::string symbol { };
-        std::uint8_t section = 0; ///< 0 head, 1 body, 2 legs
-        std::uint8_t sex = 0;
-        std::uint8_t type = 0; ///< Same numbers as PersonType
+        u8 section = 0; ///< 0 head, 1 body, 2 legs
+        u8 sex = 0;
+        u8 type = 0; ///< Same numbers as PersonType
     };
 
     /// What the park gives a guest whose passport has enough stamps.
     struct PassportRules
     {
         PeopleRef gift { }; ///< The carried item given, among PeopleModel::carried_items
-        std::int32_t stamps_for_gift = 0;
+        i32 stamps_for_gift = 0;
     };
 
     struct PeopleModel
@@ -646,7 +647,7 @@ namespace rct3::save::model
 
     // ----- validation -----
 
-    enum class IssueKind : std::uint8_t
+    enum class IssueKind : u8
     {
         PersonWithoutHolder,      ///< No holder names the person as its owner
         HolderOwnerNotPerson,     ///< A holder's owner is none or not a guest or staff member

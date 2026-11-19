@@ -14,6 +14,7 @@
 // show(), again every so often, and hears what the player asked with take_asks().
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/info/attraction.hpp"
 #include "ui/screens/info/panel.hpp"
@@ -54,18 +55,18 @@ namespace rct3::ui::screens::management
         Color accent_colour = hex("#2484be"); ///< Of the sort's name
         Color stripe = hex("#efe8ef");        ///< Behind every other row
         Color plain = hex("#ffffff");
-        float sort_x = 59;                ///< Right of the window's icon
-        float sort_height = 18;           ///< Of the band with the drop-down
-        float row_height = 46;            ///< Of a folded row
-        float line_height = 20;           ///< Of each line an unfolded row adds
-        float bottom_line = 20;           ///< Of each line along the bottom
-        float label_width = 40;           ///< Of "Hire:" and "Show:"
-        float hire_size = 23;             ///< Of a hire button; the picture is about this wide
-        float job_size = 24;              ///< Of a switch showing a job
-        float name_width = 150;           ///< Of the name and what they do
-        float swatch = 16;                ///< Of a colour of the uniform
-        std::size_t uniform_colours = 32; ///< On the board, as the info panel's
-        std::size_t palette_columns = 8;
+        f32 sort_x = 59;            ///< Right of the window's icon
+        f32 sort_height = 18;       ///< Of the band with the drop-down
+        f32 row_height = 46;        ///< Of a folded row
+        f32 line_height = 20;       ///< Of each line an unfolded row adds
+        f32 bottom_line = 20;       ///< Of each line along the bottom
+        f32 label_width = 40;       ///< Of "Hire:" and "Show:"
+        f32 hire_size = 23;         ///< Of a hire button; the picture is about this wide
+        f32 job_size = 24;          ///< Of a switch showing a job
+        f32 name_width = 150;       ///< Of the name and what they do
+        f32 swatch = 16;            ///< Of a colour of the uniform
+        usize uniform_colours = 32; ///< On the board, as the info panel's
+        usize palette_columns = 8;
     };
 
     /// What the player asked of the staff window. A change is one the info panel's controls make too, by
@@ -73,21 +74,21 @@ namespace rct3::ui::screens::management
     struct RosterAsks
     {
         std::optional<save::model::StaffKind> hire;
-        std::optional<std::size_t> open;   ///< Their panel
-        std::optional<std::size_t> centre; ///< The view to them
+        std::optional<usize> open;   ///< Their panel
+        std::optional<usize> centre; ///< The view to them
         /// A change to worker `staff`.
         struct Change
         {
-            std::size_t staff = 0;
+            usize staff = 0;
             info::InfoChange what { };
         };
         std::optional<Change> change;
         /// Paint the clothes of pot `pot` of worker `staff` in colour `colour`.
         struct Paint
         {
-            std::size_t staff = 0;
-            std::size_t pot = 0;
-            std::size_t colour = 0;
+            usize staff = 0;
+            usize pot = 0;
+            usize colour = 0;
         };
         std::optional<Paint> paint;
     };
@@ -95,7 +96,7 @@ namespace rct3::ui::screens::management
     /// A task's switch in a row: its flag bit, skin family and help.
     struct RosterTask
     {
-        std::int32_t bit = 0;
+        i32 bit = 0;
         std::string_view skin;
         std::string_view help;
         bool inverted = false; ///< The bit set means the task is off
@@ -107,7 +108,7 @@ namespace rct3::ui::screens::management
     class StaffRoster : public widgets::Window
     {
     public:
-        StaffRoster(std::string name, const StaffRosterStyle& style, const StringTable& strings, float width, float height);
+        StaffRoster(std::string name, const StaffRosterStyle& style, const StringTable& strings, f32 width, f32 height);
 
         /// Writes the rows again from `facts`, keeping those that did not change.
         void show(const ManagementFacts& facts, const StringTable& strings, const info::InfoUnits& units);
@@ -126,7 +127,7 @@ namespace rct3::ui::screens::management
         }
         struct ShownRow
         {
-            std::size_t staff = 0; ///< By place in the park's staff
+            usize staff = 0; ///< By place in the park's staff
             bool unfolded = false;
             friend bool operator==(const ShownRow&, const ShownRow&) = default;
         };
@@ -154,9 +155,9 @@ namespace rct3::ui::screens::management
             widgets::Button* train = nullptr;
             widgets::Button* wage_up = nullptr;
             widgets::Button* wage_down = nullptr;
-            std::vector<std::pair<std::int32_t, widgets::Button*>> tasks; ///< With their bit
-            std::vector<widgets::Button*> swatches;                       ///< By pot
-            std::array<widgets::Button*, 2> choices { };                  ///< Warn and sack, beside the discipline button while open
+            std::vector<std::pair<i32, widgets::Button*>> tasks; ///< With their bit
+            std::vector<widgets::Button*> swatches;              ///< By pot
+            std::array<widgets::Button*, 2> choices { };         ///< Warn and sack, beside the discipline button while open
         };
 
         /// Makes row `r`'s widgets again from its line.
@@ -176,19 +177,19 @@ namespace rct3::ui::screens::management
         widgets::Button* expand_all_ = nullptr;
         widgets::Button* contract_all_ = nullptr;
         std::vector<Row> rows_;
-        std::vector<std::size_t> unfolded_; ///< By place in the park's staff
+        std::vector<usize> unfolded_; ///< By place in the park's staff
         RosterSort sort_ = RosterSort::Job;
         RosterJobs jobs_ = kStartRosterJobs;
         bool animal_houses_ = false;
         units::Seconds page_age_;
-        units::Seconds since_portrait_;                               ///< Since the last click on a picture
-        std::optional<std::size_t> last_portrait_;                    ///< Whose picture it was
-        widgets::ColourPalette* palette_ = nullptr;                   ///< Open for the swatch `painting_`
-        std::optional<std::pair<std::size_t, std::size_t>> painting_; ///< Worker and pot
-        widgets::Menu* costumes_ = nullptr;                           ///< Open for the worker `dressing_`
-        std::optional<std::size_t> dressing_;
+        units::Seconds since_portrait_;                   ///< Since the last click on a picture
+        std::optional<usize> last_portrait_;              ///< Whose picture it was
+        widgets::ColourPalette* palette_ = nullptr;       ///< Open for the swatch `painting_`
+        std::optional<std::pair<usize, usize>> painting_; ///< Worker and pot
+        widgets::Menu* costumes_ = nullptr;               ///< Open for the worker `dressing_`
+        std::optional<usize> dressing_;
         widgets::QuestionBox* question_ = nullptr;
-        std::optional<std::size_t> training_; ///< The worker the open question is about
+        std::optional<usize> training_; ///< The worker the open question is about
         RosterAsks asks_;
     };
 

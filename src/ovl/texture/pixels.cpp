@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/texture/pixels.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstring>
 
@@ -29,7 +31,7 @@ namespace rct3::ovl::texture
         return out;
     }
 
-    std::size_t TexturePixels::frame_count(const Texture& texture) const
+    usize TexturePixels::frame_count(const Texture& texture) const
     {
         if (!texture.node)
             return 0;
@@ -39,7 +41,7 @@ namespace rct3::ovl::texture
         return flic->second.image ? 1 : flic->second.frames.size();
     }
 
-    std::optional<RgbaImage> TexturePixels::frame(const Texture& texture, std::size_t index) const
+    std::optional<RgbaImage> TexturePixels::frame(const Texture& texture, usize index) const
     {
         if (!texture.node)
             return std::nullopt;
@@ -64,7 +66,7 @@ namespace rct3::ovl::texture
         if (after == tables_.begin())
             return std::nullopt;
         const BitmapTable& table = std::prev(after)->table;
-        const std::uint32_t bitmap = flic->second.frames[index];
+        const u32 bitmap = flic->second.frames[index];
         if (bitmap >= table.bitmaps.size())
             return std::nullopt;
         auto levels = decode_bitmap(table.bitmaps[bitmap]);
@@ -75,10 +77,10 @@ namespace rct3::ovl::texture
 
     RgbaImage flipped_vertically(RgbaImage image)
     {
-        const std::size_t row = std::size_t { image.width } * 4;
+        const usize row = usize { image.width } * 4;
         if (image.pixels.size() != row * image.height)
             return image;
-        for (std::uint32_t top = 0, bottom = image.height; top + 1 < bottom; ++top)
+        for (u32 top = 0, bottom = image.height; top + 1 < bottom; ++top)
         {
             --bottom;
             std::swap_ranges(image.pixels.begin() + static_cast<std::ptrdiff_t>(top * row), image.pixels.begin() + static_cast<std::ptrdiff_t>((top + 1) * row), image.pixels.begin() + static_cast<std::ptrdiff_t>(bottom * row));

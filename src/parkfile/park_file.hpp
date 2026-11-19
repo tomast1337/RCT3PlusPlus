@@ -41,6 +41,7 @@
 // to be at least u16 per axis, never the original's single byte.
 #pragma once
 
+#include "core/types.hpp"
 #include "simulation/sim_world.hpp"
 
 #include <cstddef>
@@ -53,7 +54,7 @@
 namespace rct3::parkfile
 {
 
-    inline constexpr std::uint32_t kParkFileVersion = 1;
+    inline constexpr u32 kParkFileVersion = 1;
 
     [[nodiscard]] std::vector<std::byte> write_park_file(const simulation::SimWorld& world);
 

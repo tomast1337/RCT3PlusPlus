@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/design.hpp"
 
+#include "core/types.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "save/save_file.hpp"
@@ -18,11 +19,11 @@ using namespace rct3::save::model;
 namespace
 {
     /// The alpha of pixel `i`, and its grey level.
-    std::uint8_t alpha(const std::vector<std::uint8_t>& rgba, std::size_t i)
+    u8 alpha(const std::vector<u8>& rgba, usize i)
     {
         return rgba.at(i * 4 + 3);
     }
-    std::uint8_t level(const std::vector<std::uint8_t>& rgba, std::size_t i)
+    u8 level(const std::vector<u8>& rgba, usize i)
     {
         return rgba.at(i * 4);
     }
@@ -40,9 +41,9 @@ namespace
     {
         Fixture f;
         Track track { .facing = 1, .prototype = false, .colours = { 1, 2, 3 }, .segments = { { .first_piece = 0, .piece_count = 3, .closed = true } }, .circuit = true };
-        for (std::int32_t i = 0; i < 3; ++i)
+        for (i32 i = 0; i < 3; ++i)
         {
-            const std::uint64_t object = 100 + static_cast<std::uint64_t>(i);
+            const u64 object = 100 + static_cast<u64>(i);
             f.objects.push_back({ .id = object, .symbol = i == 0 ? "Platform" : "Bend", .overlay = "Tracks/Invented/Track1", .col = 10 + i, .row = 20, .base_height = 3, .owner_ref = object });
             track.pieces.push_back(
                 {
@@ -52,10 +53,10 @@ namespace
                     .tile_x = 10 + i,
                     .tile_z = 20,
                     .height = 3,
-                    .direction = static_cast<std::uint8_t>(i),
+                    .direction = static_cast<u8>(i),
                     .corner = 2,
                     .reversed = i == 2,
-                    .start_distance = { 4.0f * static_cast<float>(i) },
+                    .start_distance = { 4.0f * static_cast<f32>(i) },
                     .colours = { 4, 5, 6 },
                     .brake_speed = i == 1 ? std::optional(7) : std::nullopt,
                     .holding_time = 2,
@@ -101,7 +102,7 @@ namespace
 TEST_CASE("a packed design picture lays opaque pixels and skips clear runs, row after row")
 {
     // Invented 3 x 2 picture: clear, full, clear | a third, clear, clear; then the end.
-    const std::vector<std::uint8_t> packed { 64, 63, 64, 21, 0, 9, 65, 0, 0, 63 };
+    const std::vector<u8> packed { 64, 63, 64, 21, 0, 9, 65, 0, 0, 63 };
     const auto rgba = design_picture(3, 2, packed, { });
     REQUIRE(rgba.size() == 3 * 2 * 4);
     CHECK(alpha(rgba, 0) == 0);
@@ -116,7 +117,7 @@ TEST_CASE("a packed design picture lays opaque pixels and skips clear runs, row 
 
 TEST_CASE("an unpacked design picture is clear where its byte is zero")
 {
-    const std::vector<std::uint8_t> unpacked { 0, 200, 7, 0 };
+    const std::vector<u8> unpacked { 0, 200, 7, 0 };
     const auto rgba = design_picture(2, 2, { }, unpacked);
     REQUIRE(rgba.size() == 16);
     CHECK(alpha(rgba, 0) == 0);
@@ -129,10 +130,10 @@ TEST_CASE("an unpacked design picture is clear where its byte is zero")
 TEST_CASE("a picture packed and unpacked again is the same picture")
 {
     // One row of 400: a long clear run, more than one skip byte holds, then three levels and clear to the end.
-    std::vector<std::uint8_t> rgba(400 * 4, 0);
-    for (const std::size_t at : { 300u, 301u, 302u })
+    std::vector<u8> rgba(400 * 4, 0);
+    for (const usize at : { 300u, 301u, 302u })
     {
-        rgba[at * 4] = rgba[at * 4 + 1] = rgba[at * 4 + 2] = static_cast<std::uint8_t>(at == 300 ? 255 : at == 301 ? 85 : 1);
+        rgba[at * 4] = rgba[at * 4 + 1] = rgba[at * 4 + 2] = static_cast<u8>(at == 300 ? 255 : at == 301 ? 85 : 1);
         rgba[at * 4 + 3] = 255;
     }
     const auto packed = pack_design_picture(rgba);
@@ -205,7 +206,7 @@ TEST_CASE("a written design reads back as the same ride and track")
     CHECK(r.track->circuit);
     CHECK(r.track->colours == RideColours { 1, 2, 3 });
     REQUIRE(r.track->pieces.size() == 3);
-    for (std::size_t i = 0; i < 3; ++i)
+    for (usize i = 0; i < 3; ++i)
     {
         const TrackPiece& want = f.ride.track->pieces[i];
         const TrackPiece& got = r.track->pieces[i];
@@ -231,7 +232,7 @@ TEST_CASE("a written design reads back as the same ride and track")
     REQUIRE(door != world->objects.end());
     CHECK(door->symbol == "Way In");
     CHECK(door->rotation == 2);
-    CHECK(door->colours == std::array<std::int32_t, 3> { 7, 8, 9 });
+    CHECK(door->colours == std::array<i32, 3> { 7, 8, 9 });
     const auto asset = index.find(r.track->pieces[1].asset);
     REQUIRE(asset);
     const auto entry = decode_object(*file, *asset);

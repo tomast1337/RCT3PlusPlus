@@ -3,6 +3,7 @@
 
 #include "assets/embedded_files.hpp"
 #include "config/json_text.hpp"
+#include "core/types.hpp"
 #include "strings/unicode.hpp"
 #include "ui/language.hpp"
 
@@ -15,7 +16,7 @@ namespace rct3::ui
     namespace
     {
 
-        std::expected<void, std::string> add_group(StringTable& table, const config::Json& group, const std::string& prefix, std::int32_t depth)
+        std::expected<void, std::string> add_group(StringTable& table, const config::Json& group, const std::string& prefix, i32 depth)
         {
             if (depth > kMaxTranslationDepth)
                 return std::unexpected(std::format("{}: groups nested too deep", prefix));

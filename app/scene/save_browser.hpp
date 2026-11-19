@@ -9,6 +9,7 @@
 #pragma once
 
 #include "config/user_data.hpp"
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "ui/screens/dialogs/files.hpp"
 
@@ -26,11 +27,11 @@ namespace rct3::scene
     {
         std::optional<config::UserData> data;            ///< Where our folders are; without it only the game's show
         std::optional<std::filesystem::path> game_saves; ///< The game's folder of the player's games, if found
-        std::size_t opened = 0;                          ///< The owner's count of windows when this one was listed
+        usize opened = 0;                                ///< The owner's count of windows when this one was listed
         std::filesystem::path folder;                    ///< Ours, where deleting, renaming and saving happen
         std::vector<std::filesystem::path> files;        ///< As the window lists them
         std::vector<bool> kept;                          ///< The game's files, which are only read
-        std::size_t next_file = 0;
+        usize next_file = 0;
         std::vector<render::TextureHandle> pictures;
     };
 
@@ -54,7 +55,7 @@ namespace rct3::scene
     /// Follows `dialog` (none when no window is open): lists the folder of `game`, ours and the game's (none in a
     /// career), whenever `opened` changes, reads the next file and carries out the window's requests, saving with
     /// `write`. Returns the file picked to load.
-    [[nodiscard]] std::optional<std::filesystem::path> update_save_browser(render::Device& device, SaveBrowser& browser, std::optional<ui::screens::dialogs::FileDialog&> dialog, std::size_t opened, const ParkGame& game, const SaveWriter& write = nullptr);
+    [[nodiscard]] std::optional<std::filesystem::path> update_save_browser(render::Device& device, SaveBrowser& browser, std::optional<ui::screens::dialogs::FileDialog&> dialog, usize opened, const ParkGame& game, const SaveWriter& write = nullptr);
 
     void destroy_save_browser(render::Device& device, SaveBrowser& browser);
 

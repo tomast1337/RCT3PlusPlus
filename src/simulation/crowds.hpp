@@ -9,6 +9,7 @@
 // round them till signed for, one at a time, and a VIP who minds hunters loses some patience for each.
 #pragma once
 
+#include "core/types.hpp"
 #include "random/generator.hpp"
 #include "simulation/components.hpp"
 
@@ -23,7 +24,7 @@ namespace rct3::simulation
     struct SimWorld;
 
     /// What an entertainer does in a show, in turn: the motions their costume has for it.
-    enum class ShowMove : std::uint8_t
+    enum class ShowMove : u8
     {
         Wave,
         Idle,
@@ -52,22 +53,22 @@ namespace rct3::simulation
     };
 
     /// The chance an entertainer starts a show when they find guests near: higher trained, happy and keen.
-    [[nodiscard]] float show_chance(const Staff& staff);
+    [[nodiscard]] f32 show_chance(const Staff& staff);
 
     /// Whether a show they put on now is a poor one: they are miserable or lazy.
     [[nodiscard]] bool poor_show(const Staff& staff);
 
     /// How good a show they put on now is, 0 to 3: their training, a level less when miserable and another when
     /// lazy.
-    [[nodiscard]] std::int32_t show_quality(const Staff& staff);
+    [[nodiscard]] i32 show_quality(const Staff& staff);
 
     /// The moves of a show of `quality` (0 to 3), poor or not, drawn with `dice`. A good show has one move at its
     /// height, the best dance its quality allows (a wave untrained), and the others from those it allows, more
     /// on offer the better it is. A poor one falls over somewhere and ends dejected.
-    [[nodiscard]] std::vector<ShowMove> show_moves(std::int32_t quality, bool poor, random::RandomState& dice);
+    [[nodiscard]] std::vector<ShowMove> show_moves(i32 quality, bool poor, random::RandomState& dice);
 
     /// How long `moves` take in turn.
-    [[nodiscard]] float show_seconds(std::span<const ShowMove> moves);
+    [[nodiscard]] f32 show_seconds(std::span<const ShowMove> moves);
 
     /// Where a show is at.
     struct ShowMoment

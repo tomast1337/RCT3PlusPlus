@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/column_table.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 
 #include <doctest/doctest.h>
@@ -11,14 +12,14 @@ using namespace rct3::ui::widgets;
 
 namespace
 {
-    TableRow row(std::u16string name, std::optional<double> number, std::size_t id)
+    TableRow row(std::u16string name, std::optional<f64> number, usize id)
     {
         return { { std::move(name), u"" }, { std::nullopt, number }, id };
     }
 
-    std::vector<std::size_t> ids(const std::vector<TableRow>& rows)
+    std::vector<usize> ids(const std::vector<TableRow>& rows)
     {
-        std::vector<std::size_t> out;
+        std::vector<usize> out;
         for (const TableRow& r : rows)
             out.push_back(r.id);
         return out;
@@ -50,13 +51,13 @@ namespace
         {
             table.placement = top_left(0, 0, 110, 100);
             table.columns = { { u"Name", 0, Align::Start, true }, { u"Cost", 40, Align::End, true }, { u"Note", 20, Align::Start, false } };
-            for (std::size_t i = 0; i < 6; ++i)
-                table.rows.push_back(row(u"Ride", static_cast<double>(i), i));
+            for (usize i = 0; i < 6; ++i)
+                table.rows.push_back(row(u"Ride", static_cast<f64>(i), i));
             desktop.layout({ 0, 0, 300, 300 });
             desktop.update({ { 200, 200 }, false, true });
         }
 
-        void click(float x, float y)
+        void click(f32 x, f32 y)
         {
             desktop.update({ { x, y }, true, true });
             desktop.update({ { x, y }, false, true });
@@ -70,17 +71,17 @@ TEST_CASE("rows sort by their numbers, then by their text")
     SUBCASE("lowest first")
     {
         sort_table_rows(rows, 1, false);
-        CHECK(ids(rows) == std::vector<std::size_t> { 2, 0, 1, 3 });
+        CHECK(ids(rows) == std::vector<usize> { 2, 0, 1, 3 });
     }
     SUBCASE("highest first keeps rows without a number last, in their order")
     {
         sort_table_rows(rows, 1, true);
-        CHECK(ids(rows) == std::vector<std::size_t> { 0, 2, 1, 3 });
+        CHECK(ids(rows) == std::vector<usize> { 0, 2, 1, 3 });
     }
     SUBCASE("by text")
     {
         sort_table_rows(rows, 0, false);
-        CHECK(ids(rows) == std::vector<std::size_t> { 2, 1, 0, 3 });
+        CHECK(ids(rows) == std::vector<usize> { 2, 1, 0, 3 });
     }
 }
 
@@ -88,7 +89,7 @@ TEST_CASE("ties keep their order")
 {
     std::vector<TableRow> rows { row(u"B", 1, 0), row(u"A", 1, 1), row(u"C", 1, 2) };
     sort_table_rows(rows, 1, true);
-    CHECK(ids(rows) == std::vector<std::size_t> { 0, 1, 2 });
+    CHECK(ids(rows) == std::vector<usize> { 0, 1, 2 });
 }
 
 TEST_CASE("the shared column takes what the fixed ones leave")
@@ -106,7 +107,7 @@ TEST_CASE("pressing a heading asks to sort by it, unless it cannot sort")
 {
     Fixture f;
     f.click(60, 5);
-    CHECK(f.table.take_sort() == std::optional<std::size_t>(1));
+    CHECK(f.table.take_sort() == std::optional<usize>(1));
     CHECK_FALSE(f.table.take_sort());
     f.click(90, 5);
     CHECK_FALSE(f.table.take_sort());
@@ -116,7 +117,7 @@ TEST_CASE("pressing a row selects it and pressing it again activates it")
 {
     Fixture f;
     f.click(20, 45); // Second row
-    CHECK(f.table.selected() == std::optional<std::size_t>(1));
+    CHECK(f.table.selected() == std::optional<usize>(1));
     CHECK_FALSE(f.table.take_activate());
     f.click(20, 45);
     CHECK(f.table.take_activate());

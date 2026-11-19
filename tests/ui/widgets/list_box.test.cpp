@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/list_box.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 
 #include <doctest/doctest.h>
@@ -41,7 +42,7 @@ namespace
             desktop.update({ { 200, 200 }, false, true });
         }
 
-        void click(float y, bool release = true)
+        void click(f32 y, bool release = true)
         {
             desktop.update({ { 20, y }, true, true });
             if (release)

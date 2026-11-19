@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/party.hpp"
 
+#include "core/types.hpp"
 #include "units/units.hpp"
 
 #include <algorithm>
@@ -22,7 +23,7 @@ namespace rct3::ui::screens::info
         };
         /// Words for a guest's liking of intense rides, gentlest first.
         constexpr std::array<std::string_view, 4> kIntensityWords = { "PersonEditor_Gentle", "PersonEditor_Normal", "PersonEditor_Wild", "PersonEditor_Crazy" };
-        constexpr std::size_t kListLines = 6; ///< As many as the page has room for
+        constexpr usize kListLines = 6; ///< As many as the page has room for
         using units::kPercent;
         constexpr Color kLeaderColour = hex("#ffd75e"); ///< Of the leader's row
 
@@ -36,7 +37,7 @@ namespace rct3::ui::screens::info
             page.lines.push_back({ text(strings, label), std::move(value), half, std::string(label) });
         }
 
-        std::u16string percent(float fraction)
+        std::u16string percent(f32 fraction)
         {
             const std::string s = std::format("{} %", std::lround(std::clamp(fraction, 0.0f, 1.0f) * kPercent));
             return { s.begin(), s.end() };
@@ -86,13 +87,13 @@ namespace rct3::ui::screens::info
         void stats(InfoPage& page, const PartyFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             const auto mean = [&](auto&& of) {
-                float sum = 0;
+                f32 sum = 0;
                 for (const PersonFacts& m : f.members)
                     sum += of(*m.guest);
-                return sum / static_cast<float>(f.members.size());
+                return sum / static_cast<f32>(f.members.size());
             };
             const auto most = [&](auto&& of) {
-                float top = 0;
+                f32 top = 0;
                 for (const PersonFacts& m : f.members)
                     top = std::max(top, of(*m.guest));
                 return top;
@@ -106,7 +107,7 @@ namespace rct3::ui::screens::info
             if (std::ranges::all_of(f.members, [](const PersonFacts& m) { return m.guest->mood_now.sunburn.has_value(); }))
                 add(page, strings, "Guest_SunBurn", percent(mean([](const save::model::Guest& g) { return *g.mood_now.sunburn; })), true);
             // From the gentlest liking among them to the wildest.
-            const auto [low, high] = std::ranges::minmax(f.members | std::views::transform([](const PersonFacts& m) { return static_cast<std::size_t>(m.guest->ride_preference.intensity); }));
+            const auto [low, high] = std::ranges::minmax(f.members | std::views::transform([](const PersonFacts& m) { return static_cast<usize>(m.guest->ride_preference.intensity); }));
             if (high < kIntensityWords.size())
                 add(page, strings, "Guest_PreferredRideIntensity", low == high ? text(strings, kIntensityWords[low]) : text(strings, kIntensityWords[low]) + u" - " + text(strings, kIntensityWords[high]));
             if (auto line = leader_line(f, PersonTab::General, "Guest_TimeInPark", strings, units))
@@ -116,10 +117,10 @@ namespace rct3::ui::screens::info
         // A row for each, what they are doing beside their name; the leader's in its own colour.
         void members(InfoPage& page, const PartyFacts& f, const StringTable& strings)
         {
-            for (std::size_t i = 0; i < f.members.size(); ++i)
+            for (usize i = 0; i < f.members.size(); ++i)
             {
                 InfoControl& row = page.controls.emplace_back();
-                row.id = static_cast<std::int32_t>(i);
+                row.id = static_cast<i32>(i);
                 row.name = std::format("member{}", i);
                 row.kind = InfoControlKind::Button;
                 row.label = person_doing(f.members[i], strings);
@@ -139,7 +140,7 @@ namespace rct3::ui::screens::info
         InfoPage page;
         if (facts.members.empty() || !std::ranges::all_of(facts.members, [](const PersonFacts& m) { return m.guest != nullptr; }))
             return page;
-        const auto kind = static_cast<std::size_t>(facts.kind.value_or(-1));
+        const auto kind = static_cast<usize>(facts.kind.value_or(-1));
         page.title = kind < kKinds.size() ? text(strings, kKinds[kind]) : text(strings, "GuestDetails_GroupHelp");
         // Not over the cash rows, which fill the page as in the guest window.
         if (tab != PartyTab::Cash)

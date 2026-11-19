@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/staff/work.hpp"
 
+#include "core/types.hpp"
 #include "save/model/park.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
@@ -36,8 +37,8 @@ namespace rct3::simulation::staff
     {
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;
-        constexpr float dt = kTickSeconds;
-        const float now = static_cast<float>(world.tick) * kTickSeconds;
+        constexpr f32 dt = kTickSeconds;
+        const f32 now = static_cast<f32>(world.tick) * kTickSeconds;
         const Weather weather = weather_in(r);
         auto& litter_at = world.buffers.litter_at;
         const auto& items_at = world.buffers.items_at;
@@ -54,7 +55,7 @@ namespace rct3::simulation::staff
         // shortcut: the payroll's week runs from when the park was opened, not from the calendar's week; count from
         // the calendar if the day wages go out ever shows.
         {
-            constexpr float kSecondsPerWeek = kSecondsPerHour * save::model::GameClock::kUnitsPerWeek / park::kCalendarUnitsPerHour;
+            constexpr f32 kSecondsPerWeek = kSecondsPerHour * save::model::GameClock::kUnitsPerWeek / park::kCalendarUnitsPerHour;
             auto& payroll = r.ctx().emplace<Payroll>();
             for (payroll.week.value += dt; payroll.week.value >= kSecondsPerWeek; payroll.week.value -= kSecondsPerWeek)
                 for (const auto [e, staff] : r.view<const Staff>().each())
@@ -125,7 +126,7 @@ namespace rct3::simulation::staff
         // What a mechanic could not be sent to is told by the park's inspector, if it has one.
         const auto inspectors = r.view<const Staff, const Rounds>();
         const auto inspector = std::ranges::find_if(inspectors, [&](entt::entity i) { return inspectors.get<const Staff>(i).role == StaffRole::Inspector; });
-        const auto send = [&](entt::entity ride, Upkeep& upkeep, std::int32_t task) {
+        const auto send = [&](entt::entity ride, Upkeep& upkeep, i32 task) {
             // Those whose patrol takes the ride in, the nearest first, then the nearest without one; one with
             // a patrol keeps to it.
             const auto patrolled = [&](entt::entity m) {
@@ -260,17 +261,17 @@ namespace rct3::simulation::staff
                     if (auto* tank = r.try_get<PoolTank>(staff.ride))
                     {
                         const auto price = kTuning.pools.refill[std::to_underlying(tank->fluid)].value;
-                        r.ctx().emplace<Supplies>().paid[std::to_underlying(park::LedgerLine::Other)].value += std::llround(static_cast<double>(price) * (1 - tank->left.value));
+                        r.ctx().emplace<Supplies>().paid[std::to_underlying(park::LedgerLine::Other)].value += std::llround(static_cast<f64>(price) * (1 - tank->left.value));
                         tank->left.value = 1;
                     }
                     staff.ride = entt::null;
                 }
                 continue;
             }
-            float left = 0;
+            f32 left = 0;
             if (stride.from != stride.to)
             {
-                const float length = step_length(paths, stride);
+                const f32 length = step_length(paths, stride);
                 stride.progress.value += length > 0 ? stride.speed.value * dt / length : 1;
                 if (stride.progress.value < 1)
                 {
@@ -290,10 +291,10 @@ namespace rct3::simulation::staff
                 if (!stride.route.empty())
                     return true;
                 std::optional<NodeId> home;
-                float best = std::numeric_limits<float>::infinity();
-                for (std::uint32_t k = 0; k < paths.nodes().size(); ++k)
+                f32 best = std::numeric_limits<f32>::infinity();
+                for (u32 k = 0; k < paths.nodes().size(); ++k)
                     if (!paths.nodes()[k].queue && !paths.nodes()[k].removed && area.covers(paths.nodes()[k].tile))
-                        if (const float d = glm::distance(paths.centre(NodeId { k }), paths.centre(from)); d < best)
+                        if (const f32 d = glm::distance(paths.centre(NodeId { k }), paths.centre(from)); d < best)
                         {
                             best = d;
                             home = NodeId { k };
@@ -358,19 +359,19 @@ namespace rct3::simulation::staff
             {
                 rounds->gap = kTuning.inspector.gap;
                 std::erase_if(rounds->seen, [&](const auto& seen) { return !r.valid(seen.what) || now - seen.when.value >= kTuning.inspector.again.value; });
-                constexpr std::int32_t kTasks = 8;
-                std::int32_t task = 0;
-                for (std::int32_t k = 0; k < kTasks && task == 0; ++k)
-                    if (const std::int32_t bit = 1 << ((rounds->task + k) % kTasks); (staff.tasks & bit) != 0)
+                constexpr i32 kTasks = 8;
+                i32 task = 0;
+                for (i32 k = 0; k < kTasks && task == 0; ++k)
+                    if (const i32 bit = 1 << ((rounds->task + k) % kTasks); (staff.tasks & bit) != 0)
                         task = bit;
                 if (task != 0)
-                    rounds->task = static_cast<std::uint8_t>((std::countr_zero(static_cast<std::uint32_t>(task)) + 1) % kTasks);
+                    rounds->task = static_cast<u8>((std::countr_zero(static_cast<u32>(task)) + 1) % kTasks);
                 const auto been = [&](entt::entity x) { return std::ranges::contains(rounds->seen, x, &Rounds::Seen::what); };
                 // With the food and drink, whatever many of the guests want most.
                 if (task == kRefreshmentsTask)
                 {
-                    std::array<std::size_t, 4> wanting { }; // Hungry, thirsty, tired, bursting
-                    std::size_t guests = 0;
+                    std::array<usize, 4> wanting { }; // Hungry, thirsty, tired, bursting
+                    usize guests = 0;
                     for (const auto [g, needs, mood, visitor] : r.view<const Needs, const Mood, const Visitor>(entt::exclude<Left>).each())
                     {
                         ++guests;
@@ -380,21 +381,21 @@ namespace rct3::simulation::staff
                         wanting[3] += needs.bladder.value >= kTuning.needs.want.value ? 1 : 0;
                     }
                     const auto most = std::ranges::max_element(wanting);
-                    if (static_cast<float>(*most) > kTuning.inspector.crowd.value * static_cast<float>(guests) && std::ranges::count(wanting, *most) == 1)
+                    if (static_cast<f32>(*most) > kTuning.inspector.crowd.value * static_cast<f32>(guests) && std::ranges::count(wanting, *most) == 1)
                         tell(r, e, static_cast<Finding>(std::to_underlying(Finding::Hungry) + (most - wanting.begin())), entt::null, now);
                 }
                 // With the rides, whether many of the attractions that can break are broken down.
                 if (task == kTrackedRidesTask || task == kFlatRidesTask)
                 {
-                    std::size_t breakable = 0;
-                    std::size_t broken = 0;
+                    usize breakable = 0;
+                    usize broken = 0;
                     for (const auto [a, upkeep] : r.view<const Upkeep>().each())
                         if (r.all_of<CycleRide>(a) || upkeep.break_in)
                         {
                             ++breakable;
                             broken += upkeep.broken ? 1 : 0;
                         }
-                    if (broken > 1 && static_cast<float>(broken) >= kTuning.inspector.breakdowns.value * static_cast<float>(breakable))
+                    if (broken > 1 && static_cast<f32>(broken) >= kTuning.inspector.breakdowns.value * static_cast<f32>(breakable))
                         tell(r, e, Finding::Breakdowns, entt::null, now);
                 }
                 bool visiting = false;
@@ -466,7 +467,7 @@ namespace rct3::simulation::staff
                             if (worth.value <= 0)
                                 return;                               // Nothing to judge it by
                             dear = dear || price.value > worth.value; // Guests would not pay it
-                            cheap = cheap || static_cast<float>(price.value) <= kTuning.eating.good_value.value * static_cast<float>(worth.value);
+                            cheap = cheap || static_cast<f32>(price.value) <= kTuning.eating.good_value.value * static_cast<f32>(worth.value);
                         };
                         const auto flat = [](Product p) { return p == Product::Food ? kTuning.eating.food_worth : p == Product::Drink ? kTuning.eating.drink_worth : units::Money { }; };
                         if (shop->menu.empty())
@@ -549,7 +550,7 @@ namespace rct3::simulation::staff
                     stride.progress.value = 1;
                 }
             }
-            else if (const float busy = job(); busy > 0)
+            else if (const f32 busy = job(); busy > 0)
             {
                 staff.busy.value = staff.job_length.value = busy * staff::work_slowdown(staff);
                 stride.to = at;
@@ -573,10 +574,10 @@ namespace rct3::simulation::staff
                                  mine = b;
                          if (mine == entt::null)
                          {
-                             float best = kTuning.handymen.garden_reach.value;
+                             f32 best = kTuning.handymen.garden_reach.value;
                              for (const auto [b, bed] : beds.each())
                                  if (bed.water <= 0 && bed.handyman == entt::null && bed.node.value < paths.nodes().size() && !paths.nodes()[bed.node.value].removed && (patrol == nullptr || patrol->covers(paths.nodes()[bed.node.value].tile)))
-                                     if (const float d = glm::distance(paths.centre(bed.node), paths.centre(at)); d <= best)
+                                     if (const f32 d = glm::distance(paths.centre(bed.node), paths.centre(at)); d <= best)
                                      {
                                          best = d;
                                          mine = b;
@@ -617,7 +618,7 @@ namespace rct3::simulation::staff
                 // they had none.
                 const Patrol* keep_to = inside ? patrol : nullptr;
                 NodeId next = wander(paths, at, came != at ? std::optional(came) : std::nullopt, dice, Walker::Staff, keep_to);
-                const auto work_on = [&](NodeId n) { return (sweeps ? litter_on(n) : 0) + (mends ? static_cast<std::size_t>(std::ranges::count_if(items(n), [&](entt::entity i) { return r.get<PathItem>(i).broken; })) : 0); };
+                const auto work_on = [&](NodeId n) { return (sweeps ? litter_on(n) : 0) + (mends ? static_cast<usize>(std::ranges::count_if(items(n), [&](entt::entity i) { return r.get<PathItem>(i).broken; })) : 0); };
                 if (sweeps || mends)
                     for (const std::optional<NodeId> n : paths.nodes()[at.value].next)
                         if (n && !paths.nodes()[n->value].queue && paths.may_step(at, *n, Walker::Staff) && (keep_to == nullptr || keep_to->covers(paths.nodes()[n->value].tile)) && work_on(*n) > work_on(next))

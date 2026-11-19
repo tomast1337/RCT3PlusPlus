@@ -11,6 +11,7 @@
 // is added over the screen.
 #pragma once
 
+#include "core/types.hpp"
 #include "render/device.hpp"
 
 #include <array>
@@ -22,7 +23,7 @@ namespace rct3::scene::park
 
     struct ParkGlow
     {
-        static constexpr std::size_t kLevels = 6; ///< The most halvings; fewer on a small screen
+        static constexpr usize kLevels = 6; ///< The most halvings; fewer on a small screen
 
         render::PipelineHandle shrink; ///< Down the chain, replacing
         render::PipelineHandle add;    ///< Up the chain and onto the screen, adding
@@ -31,7 +32,7 @@ namespace rct3::scene::park
         render::Extent screen_size;
         std::array<render::TextureHandle, kLevels> levels { }; ///< Half size, then each half the one before
         std::array<render::Extent, kLevels> level_sizes { };
-        std::size_t used = 0;         ///< How many levels the screen's size allows
+        usize used = 0;               ///< How many levels the screen's size allows
         render::TextureHandle shafts; ///< Half size
         render::Extent shafts_size;
     };
@@ -40,8 +41,8 @@ namespace rct3::scene::park
     {
         glm::mat4 from_clip { 1.0f }; ///< The screen's clip space to the world
         render::SceneLight light;     ///< The sun, and its shadow, without which none are drawn
-        float reach = 0.0f;           ///< How far into the air each pixel reads, in world units
-        float strength = 0.0f;        ///< 0 draws none
+        f32 reach = 0.0f;             ///< How far into the air each pixel reads, in world units
+        f32 strength = 0.0f;          ///< 0 draws none
     };
 
     /// Glows the screen as drawn so far, with the bloom, the light shafts or both. Call between passes of the

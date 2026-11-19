@@ -3,6 +3,7 @@
 // Tracked rides: the kinds of ride built from track sections, such as a coaster or a log flume.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/attraction.hpp"
 #include "ovl/overlay.hpp"
 
@@ -18,32 +19,32 @@ namespace rct3::ovl
     /// How a kind of tracked ride runs unless the player changes it. Speeds are metres a second.
     struct RideOperatingDefaults
     {
-        std::uint32_t mode = 0;          ///< Operating mode, numbered as the save's ride operating mode
-        std::uint32_t allowed_modes = 0; ///< Bit (1 << mode) for each mode the player may pick
-        float station_speed = 0;         ///< Trains are sent off a platform at, and brought in to stop at
+        u32 mode = 0;          ///< Operating mode, numbered as the save's ride operating mode
+        u32 allowed_modes = 0; ///< Bit (1 << mode) for each mode the player may pick
+        f32 station_speed = 0; ///< Trains are sent off a platform at, and brought in to stop at
         /// Over water pieces that push the cars on: the share of the speed a piece pushes up to that a car may go
         /// before the water holds it back, and the share of the push it is held back with. 1 and 1 in files without them.
-        float water_pace = 1;
-        float water_hold = 1;
+        f32 water_pace = 1;
+        f32 water_hold = 1;
         /// Of a ride whose water flows all along it, the same on every water piece: the speed it pushes each car on up
         /// to, 0 or less for none, the push in Newtons, and what it holds back a car going faster with on level water.
-        float flow_speed = 0;
-        float flow_force = 0;
-        float flow_hold = 0;
+        f32 flow_speed = 0;
+        f32 flow_force = 0;
+        f32 flow_hold = 0;
         bool flow_alone = false; ///< The ride's flow stands in for its pieces' own pushes
-        float launch_speed = 0;
-        float lift_speed = 0;                 ///< Lift chain speed
-        float brake_speed = 0;                ///< Speed brakes slow trains to
-        float block_brake_speed = 0;          ///< Speed a train leaves a block brake at
-        float brake_force = 0;                ///< Newtons each car over a brake is held back with
-        float block_brake_force = 0;          ///< Newtons each car over a block brake is pushed with while slower than its speed
-        std::optional<float> fixed_speed;     ///< The one speed of rides that never vary it, such as transport rides
-        float lift_min = 0, lift_max = 0;     ///< Range the player may set the lift speed in
-        float launch_min = 0, launch_max = 0; ///< Range the player may set the launch speed in
-        std::int32_t cost = 0;                ///< Base build cost, hundredths
+        f32 launch_speed = 0;
+        f32 lift_speed = 0;                 ///< Lift chain speed
+        f32 brake_speed = 0;                ///< Speed brakes slow trains to
+        f32 block_brake_speed = 0;          ///< Speed a train leaves a block brake at
+        f32 brake_force = 0;                ///< Newtons each car over a brake is held back with
+        f32 block_brake_force = 0;          ///< Newtons each car over a block brake is pushed with while slower than its speed
+        std::optional<f32> fixed_speed;     ///< The one speed of rides that never vary it, such as transport rides
+        f32 lift_min = 0, lift_max = 0;     ///< Range the player may set the lift speed in
+        f32 launch_min = 0, launch_max = 0; ///< Range the player may set the launch speed in
+        i32 cost = 0;                       ///< Base build cost, hundredths
         /// At 0xCC: hundredths added to a track piece's price for its height over the ground; 0 on rides whose
         /// track costs the same at any height. The files hold 0 to 700, most coasters 500.
-        std::int32_t height_cost = 0;
+        i32 height_cost = 0;
         /// Names of the "rit" trains the ride may run, the one it starts with first: a count at 0x08 and a
         /// pointer at 0x0C to as many string pointers.
         std::vector<std::string_view> trains;
@@ -52,15 +53,15 @@ namespace rct3::ovl
         /// The "rit" train of the ride's lift car, which carries a train up a lift tower, string at 0x24; empty for
         /// a ride without one.
         std::string_view lift_car;
-        float lift_car_up = 0;   ///< At 0x28: how fast the lift car climbs its tower
-        float lift_car_down = 0; ///< At 0x2C: how fast it comes back down, below 0 as it goes down
+        f32 lift_car_up = 0;   ///< At 0x28: how fast the lift car climbs its tower
+        f32 lift_car_down = 0; ///< At 0x2C: how fast it comes back down, below 0 as it goes down
     };
 
     /// Which piece a piece pattern entry takes, and where. Kinds: 0 any piece of the group `name`
     /// (an empty name meaning pieces of no group), 1 the piece `name`, 2 any piece.
     struct PieceTest
     {
-        std::uint8_t kind = 2;
+        u8 kind = 2;
         std::string_view name; ///< A group, or a "tks" item
         bool negate = false;   ///< Takes the pieces the kind and name do not
         bool forward = false;  ///< Only a piece laid as drawn
@@ -82,19 +83,19 @@ namespace rct3::ovl
     struct TrackRules
     {
         /// Bits: 0x10 and 0x4000 the ride is never tested (0x10 also rated without a measured lap), 0x200 its track may be in several pieces.
-        std::uint32_t flags = 0;
-        std::optional<std::uint32_t> min_pieces;  ///< Fewest pieces it opens with
-        bool circuit_only = false;                ///< Opens only as a closed circuit
-        std::optional<std::uint32_t> most_trains; ///< Most trains it may run at once; none when the file sets no limit
+        u32 flags = 0;
+        std::optional<u32> min_pieces;  ///< Fewest pieces it opens with
+        bool circuit_only = false;      ///< Opens only as a closed circuit
+        std::optional<u32> most_trains; ///< Most trains it may run at once; none when the file sets no limit
         /// How many entrances and exits it needs: 0 one per station, 1 any number, 2 exactly one, 3 at
         /// least one, 4 none.
-        std::uint32_t entrances = 3;
-        std::uint32_t exits = 3;
+        u32 entrances = 3;
+        u32 exits = 3;
         /// The player sets how far the cars turn on each piece, as on the 4D coasters. Version 4 and 5 files only.
         bool car_rotation = false;
         /// The player sets which way the cars face on each piece, or lets them spin, as on the spinning coaster.
         /// Version 5 files only.
-        std::uint32_t car_facing = 0;
+        u32 car_facing = 0;
         /// Runs of pieces swapped for others after every change to the track, so a station's ends or a
         /// waterfall's parts are the right pieces: each pattern takes consecutive pieces, one per entry.
         std::vector<std::vector<PatternEntry>> patterns;
@@ -116,7 +117,7 @@ namespace rct3::ovl
         /// Nothing when the item is too short to hold them.
         std::optional<RideOperatingDefaults> operating;
         /// Guests the ride makes room for in the park while it is open and working.
-        std::optional<std::uint32_t> guests;
+        std::optional<u32> guests;
         TrackRules rules;
     };
 

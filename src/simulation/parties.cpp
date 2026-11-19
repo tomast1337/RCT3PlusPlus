@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/parties.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sim_world.hpp"
@@ -32,7 +33,7 @@ namespace rct3::simulation
             for (const NodeId origin : starts)
             {
                 std::vector<NodeId> seen { origin };
-                for (std::size_t k = 0; k < seen.size() && seen.size() <= kTuning.walking.gather_reach; ++k)
+                for (usize k = 0; k < seen.size() && seen.size() <= kTuning.walking.gather_reach; ++k)
                 {
                     const NodeId n = seen[k];
                     if (n != from && !nodes[n.value].queue)
@@ -51,16 +52,16 @@ namespace rct3::simulation
         }
     } // namespace
 
-    std::array<double, kPartyKinds> party_weights(const SimWorld& world, bool night)
+    std::array<f64, kPartyKinds> party_weights(const SimWorld& world, bool night)
     {
         const entt::registry& r = world.registry;
         const auto* mix = r.ctx().find<PartyMix>();
-        std::array<double, kPartyKinds> weights { };
-        for (std::size_t k = 0; k < kPartyKinds; ++k)
+        std::array<f64, kPartyKinds> weights { };
+        for (usize k = 0; k < kPartyKinds; ++k)
             weights[k] = mix != nullptr ? mix->weights[k] : kTuning.parties.weights[k];
         // How wild the open rides are, from -1 (all the gentlest) to 1 (all the wildest); none tilt nothing.
-        float wild = 0;
-        std::size_t rides = 0;
+        f32 wild = 0;
+        usize rides = 0;
         for (const auto [e, ride, at] : r.view<const CycleRide, const Attraction>().each())
         {
             if (!at.open)
@@ -68,10 +69,10 @@ namespace rct3::simulation
             wild += ride.intensity.value * 2 - 1;
             ++rides;
         }
-        const double tilt = std::pow(1 + kTuning.parties.pull, rides > 0 ? wild / static_cast<float>(rides) : 0.0f);
+        const f64 tilt = std::pow(1 + kTuning.parties.pull, rides > 0 ? wild / static_cast<f32>(rides) : 0.0f);
         // shortcut: no campaign aims at a kind of party, as advertising campaigns are not simulated yet (the
         // finances work, #98); when they are, one aimed at families or at teens multiplies those weights here.
-        for (std::size_t k = 0; k < kPartyKinds; ++k)
+        for (usize k = 0; k < kPartyKinds; ++k)
         {
             const auto kind = static_cast<PartyKind>(k);
             const bool teens = kind == PartyKind::LoneTeen || kind == PartyKind::TeenCouple || kind == PartyKind::TeenGang;
@@ -89,7 +90,7 @@ namespace rct3::simulation
     {
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;
-        const float now = static_cast<float>(world.tick) * kTickSeconds;
+        const f32 now = static_cast<f32>(world.tick) * kTickSeconds;
 
         phase.emplace("Parties");
         // 5. Parties: while some are busy (in a ride's queue or on it, at a stall's counter, sitting on a bench), the
@@ -107,7 +108,7 @@ namespace rct3::simulation
                 continue;
             entt::entity busy_at = entt::null; // The ride, stall or bench sitter keeping them
             std::optional<NodeId> near;        // And the tile the rest wait by
-            std::uint8_t off_at = 0;           // The station those on a ride get off at
+            u8 off_at = 0;                     // The station those on a ride get off at
             bool waiting = false;
             for (const entt::entity m : party.members)
             {

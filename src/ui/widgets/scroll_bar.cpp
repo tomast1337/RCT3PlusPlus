@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/scroll_bar.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 
 namespace rct3::ui::widgets
@@ -10,7 +12,7 @@ namespace rct3::ui::widgets
     {
 
         // Parts are worked out along the bar: `start` and `end` on the long axis, `across` the short one.
-        Rect span(Orientation o, float start, float end, float across0, float across1)
+        Rect span(Orientation o, f32 start, f32 end, f32 across0, f32 across1)
         {
             return o == Orientation::Vertical ? Rect { across0, start, across1, end } : Rect { start, across0, end, across1 };
         }
@@ -27,12 +29,12 @@ namespace rct3::ui::widgets
     {
     }
 
-    float ScrollBar::range() const
+    f32 ScrollBar::range() const
     {
         return std::max(0.0f, content - visible);
     }
 
-    void ScrollBar::scroll_by(float delta)
+    void ScrollBar::scroll_by(f32 delta)
     {
         position += delta;
         clamp();
@@ -43,7 +45,7 @@ namespace rct3::ui::widgets
         position = std::clamp(position, 0.0f, range());
     }
 
-    float ScrollBar::along(Point p) const
+    f32 ScrollBar::along(Point p) const
     {
         return orientation_ == Orientation::Vertical ? p.y : p.x;
     }
@@ -52,38 +54,38 @@ namespace rct3::ui::widgets
     {
         const Rect& r = rect();
         const bool vertical = orientation_ == Orientation::Vertical;
-        const float start = vertical ? r.y0 : r.x0;
-        const float end = vertical ? r.y1 : r.x1;
-        const float a0 = vertical ? r.x0 : r.y0;
-        const float a1 = vertical ? r.x1 : r.y1;
+        const f32 start = vertical ? r.y0 : r.x0;
+        const f32 end = vertical ? r.y1 : r.x1;
+        const f32 a0 = vertical ? r.x0 : r.y0;
+        const f32 a1 = vertical ? r.x1 : r.y1;
         // The arrows share what there is when the bar is shorter than both.
-        const float arrow = std::min(style_.thickness, (end - start) / 2);
+        const f32 arrow = std::min(style_.thickness, (end - start) / 2);
 
         ScrollBarParts p;
         p.back = span(orientation_, start, start + arrow, a0, a1);
         p.forward = span(orientation_, end - arrow, end, a0, a1);
-        const float t0 = start + arrow;
-        const float t1 = end - arrow;
+        const f32 t0 = start + arrow;
+        const f32 t1 = end - arrow;
         p.track = span(orientation_, t0, t1, a0, a1);
-        const float track = t1 - t0;
+        const f32 track = t1 - t0;
         if (range() <= 0 || content <= 0 || track <= 0)
             return p;
-        const float length = std::clamp(track * visible / content, std::min(style_.min_rider, track), track);
-        const float offset = (track - length) * position / range();
+        const f32 length = std::clamp(track * visible / content, std::min(style_.min_rider, track), track);
+        const f32 offset = (track - length) * position / range();
         p.rider = span(orientation_, t0 + offset, t0 + offset + length, a0, a1);
         return p;
     }
 
-    void ScrollBar::drag_to(float pointer)
+    void ScrollBar::drag_to(f32 pointer)
     {
         const ScrollBarParts p = parts();
         const bool vertical = orientation_ == Orientation::Vertical;
-        const float t0 = vertical ? p.track.y0 : p.track.x0;
-        const float track = vertical ? p.track.height() : p.track.width();
-        const float length = vertical ? p.rider.height() : p.rider.width();
+        const f32 t0 = vertical ? p.track.y0 : p.track.x0;
+        const f32 track = vertical ? p.track.height() : p.track.width();
+        const f32 length = vertical ? p.rider.height() : p.rider.width();
         if (track <= length)
             return;
-        const float t = std::clamp((pointer - grab_ - t0) / (track - length), 0.0f, 1.0f);
+        const f32 t = std::clamp((pointer - grab_ - t0) / (track - length), 0.0f, 1.0f);
         position = t * range();
     }
 
@@ -122,8 +124,8 @@ namespace rct3::ui::widgets
         {
             held_ = Part::Rider;
             const bool vertical = orientation_ == Orientation::Vertical;
-            const float rider_start = vertical ? parts_now.rider.y0 : parts_now.rider.x0;
-            const float length = vertical ? parts_now.rider.height() : parts_now.rider.width();
+            const f32 rider_start = vertical ? parts_now.rider.y0 : parts_now.rider.x0;
+            const f32 length = vertical ? parts_now.rider.height() : parts_now.rider.width();
             if (contains(parts_now.rider, p))
             {
                 grab_ = along(p) - rider_start;
@@ -149,7 +151,7 @@ namespace rct3::ui::widgets
 
     bool ScrollBar::on_wheel(Point notches)
     {
-        const float along = orientation_ == Orientation::Vertical ? notches.y : notches.x;
+        const f32 along = orientation_ == Orientation::Vertical ? notches.y : notches.x;
         if (range() <= 0 || along == 0)
             return false;
         scroll_by(-along * style_.wheel_step);

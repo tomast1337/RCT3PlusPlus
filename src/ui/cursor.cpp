@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/cursor.hpp"
 
+#include "core/types.hpp"
+
 #include <cassert>
 
 namespace rct3::ui
@@ -53,14 +55,14 @@ namespace rct3::ui
             { "zoom-out", { Crosshair, Arrow, Arrow } },
             { "hidden", { Hidden, Hidden, Hidden } },
         } };
-        static_assert(static_cast<std::size_t>(CursorKind::Hidden) + 1 == kCursorKinds);
-        static_assert(static_cast<std::size_t>(StandardCursor::Hidden) + 1 == kStandardCursors);
+        static_assert(static_cast<usize>(CursorKind::Hidden) + 1 == kCursorKinds);
+        static_assert(static_cast<usize>(StandardCursor::Hidden) + 1 == kStandardCursors);
 
         constexpr std::array<std::string_view, kStandardCursors> kShapeNames { "arrow", "pointing-hand", "i-beam", "crosshair", "not-allowed", "resize-all", "resize-ew", "resize-ns", "resize-nwse", "resize-nesw", "hidden" };
 
         const KindShapes& entry(CursorKind kind)
         {
-            return kKinds.at(static_cast<std::size_t>(kind));
+            return kKinds.at(static_cast<usize>(kind));
         }
 
     } // namespace
@@ -72,14 +74,14 @@ namespace rct3::ui
 
     std::string_view standard_cursor_name(StandardCursor shape)
     {
-        return kShapeNames.at(static_cast<std::size_t>(shape));
+        return kShapeNames.at(static_cast<usize>(shape));
     }
 
     StandardCursorSet required_cursors()
     {
         StandardCursorSet set;
-        set.set(static_cast<std::size_t>(Arrow));
-        set.set(static_cast<std::size_t>(Hidden));
+        set.set(static_cast<usize>(Arrow));
+        set.set(static_cast<usize>(Hidden));
         return set;
     }
 
@@ -92,7 +94,7 @@ namespace rct3::ui
     {
         for (const StandardCursor shape : cursor_shapes(kind))
         {
-            if (available.test(static_cast<std::size_t>(shape)))
+            if (available.test(static_cast<usize>(shape)))
                 return shape;
         }
         // Only reached with a backend missing a required shape.

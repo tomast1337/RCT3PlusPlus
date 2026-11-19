@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/tile_shaping.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -10,14 +12,14 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height, float at)
+    save::model::TerrainGrid flat_grid(i32 width, i32 height, f32 at)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         for (save::model::TerrainCell& c : g.cells)
             c.corners = { at, at, at, at };
         return g;
@@ -28,8 +30,8 @@ namespace
         return true;
     }
 
-    constexpr std::array<float, 4> kLevelTwo { 2, 2, 2, 2 };
-    constexpr std::size_t kStripVertices = 4;
+    constexpr std::array<f32, 4> kLevelTwo { 2, 2, 2, 2 };
+    constexpr usize kStripVertices = 4;
 } // namespace
 
 TEST_CASE("the pointer's place in a tile picks the whole tile, an edge or a corner")
@@ -47,8 +49,8 @@ TEST_CASE("a tile moves alone, its neighbours keep their corners")
 {
     save::model::TerrainGrid g = flat_grid(3, 3, 2);
     const TileStroke s = begin_tile_stroke(g, 1, 1, 1, 1, TilePart::Whole);
-    const float moved = shape_tiles(g, s, TileShaping::Free, 1.5f, anywhere);
-    CHECK(g.at(1, 1).corners == std::array<float, 4> { 3.5f, 3.5f, 3.5f, 3.5f });
+    const f32 moved = shape_tiles(g, s, TileShaping::Free, 1.5f, anywhere);
+    CHECK(g.at(1, 1).corners == std::array<f32, 4> { 3.5f, 3.5f, 3.5f, 3.5f });
     CHECK(g.at(0, 1).corners == kLevelTwo);
     CHECK(g.at(2, 2).corners == kLevelTwo);
     CHECK(moved == doctest::Approx(6));
@@ -61,26 +63,26 @@ TEST_CASE("an edge or a corner moves only its own corners, and a slope lifts fro
 {
     save::model::TerrainGrid g = flat_grid(2, 1, 2);
     shape_tiles(g, begin_tile_stroke(g, 0, 0, 0, 0, TilePart::Right), TileShaping::Free, 1, anywhere);
-    CHECK(g.at(0, 0).corners == std::array<float, 4> { 2, 3, 2, 3 });
+    CHECK(g.at(0, 0).corners == std::array<f32, 4> { 2, 3, 2, 3 });
     shape_tiles(g, begin_tile_stroke(g, 1, 0, 1, 0, TilePart::FarLeft), TileShaping::Free, -1, anywhere);
-    CHECK(g.at(1, 0).corners == std::array<float, 4> { 2, 2, 1, 2 });
+    CHECK(g.at(1, 0).corners == std::array<f32, 4> { 2, 2, 1, 2 });
     // The sloped tile, lifted by half: its low corners rise to 2.5, its high ones stay.
     shape_tiles(g, begin_tile_stroke(g, 0, 0, 0, 0, TilePart::Whole), TileShaping::Free, 0.5f, anywhere);
-    CHECK(g.at(0, 0).corners == std::array<float, 4> { 2.5f, 3, 2.5f, 3 });
+    CHECK(g.at(0, 0).corners == std::array<f32, 4> { 2.5f, 3, 2.5f, 3 });
 }
 
 TEST_CASE("whole units round, and snapping catches on the heights round the corner")
 {
     save::model::TerrainGrid g = flat_grid(2, 1, 2);
     shape_tiles(g, begin_tile_stroke(g, 0, 0, 0, 0, TilePart::Whole), TileShaping::Whole, 1.25f, anywhere);
-    CHECK(g.at(0, 0).corners == std::array<float, 4> { 3, 3, 3, 3 });
+    CHECK(g.at(0, 0).corners == std::array<f32, 4> { 3, 3, 3, 3 });
 
     g = flat_grid(2, 1, 2);
     g.at(1, 0).corners = { 5, 5, 5, 5 };
     const TileStroke s = begin_tile_stroke(g, 0, 0, 0, 0, TilePart::Whole);
     shape_tiles(g, s, TileShaping::Snap, 2.75f, anywhere);
     // The right edge meets the neighbour's left edge; the left edge has nothing near and moves freely.
-    CHECK(g.at(0, 0).corners == std::array<float, 4> { 4.75f, 5, 4.75f, 5 });
+    CHECK(g.at(0, 0).corners == std::array<f32, 4> { 4.75f, 5, 4.75f, 5 });
 }
 
 TEST_CASE("refused tiles keep their corners")

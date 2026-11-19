@@ -14,6 +14,7 @@
 // paths and in quarter tiles sit within the tile is a guess from the models' shapes.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "park/turns.hpp"
 #include "save/model/world.hpp"
@@ -27,7 +28,7 @@ namespace rct3::park::object
 {
 
     /// How an item sits on its tile, as its scenery item stores it.
-    enum class Positioning : std::uint16_t
+    enum class Positioning : u16
     {
         Tile = 0,          ///< Centred on the tile
         PathSide = 1,      ///< On a path, against one side
@@ -41,10 +42,10 @@ namespace rct3::park::object
     };
 
     /// How far from the tile's centre an edge or corner item's model origin goes, along its own +X.
-    inline constexpr float kEdgeOffset = 2.0f;
+    inline constexpr f32 kEdgeOffset = 2.0f;
     /// Likewise for items against a path's side, and centres of quarter and half tiles from the tile centre.
-    inline constexpr float kPathSideOffset = 1.6f;
-    inline constexpr float kQuarterOffset = 1.0f;
+    inline constexpr f32 kPathSideOffset = 1.6f;
+    inline constexpr f32 kQuarterOffset = 1.0f;
 
     /// The direction a model's +X points after `turn`, in the park's X and Z.
     [[nodiscard]] glm::vec2 turned_x(ModelTurn turn);
@@ -74,10 +75,10 @@ namespace rct3::park::object
     /// and Z); the lowest of equals. None when no side suits.
     template<std::predicate<Side> Suits> [[nodiscard]] std::optional<Side> nearest_side(glm::vec2 at, Suits&& suits)
     {
-        const std::array<float, 4> away { 1 - at.y, 1 - at.x, at.y, at.x }; // By side
+        const std::array<f32, 4> away { 1 - at.y, 1 - at.x, at.y, at.x }; // By side
         std::optional<Side> best;
         for (const Side side : kSides)
-            if (suits(side) && (!best || away[static_cast<std::size_t>(side.value)] < away[static_cast<std::size_t>(best->value)]))
+            if (suits(side) && (!best || away[static_cast<usize>(side.value)] < away[static_cast<usize>(best->value)]))
                 best = side;
         return best;
     }
@@ -86,15 +87,15 @@ namespace rct3::park::object
     /// `squares` tiles along its own X and Z. The object names the footprint's tile of lowest column and row
     /// whichever way it turns, and its model is built round the footprint's middle: the middle of a tile
     /// when both sides are odd, a tile's corner when both are even.
-    [[nodiscard]] glm::vec2 footprint_middle(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares);
+    [[nodiscard]] glm::vec2 footprint_middle(const save::model::PlacedObject& object, std::array<i32, 2> squares);
 
     /// `object`, covering `squares`, moved and turned with a layout it was saved in, so that the layout's object
     /// `from`, covering `from_squares`, stands as `to`: round the middle of `from`'s footprint, its height kept
     /// as far above `from`'s.
-    [[nodiscard]] save::model::PlacedObject moved_with(save::model::PlacedObject object, std::array<std::int32_t, 2> squares, const save::model::PlacedObject& from, std::array<std::int32_t, 2> from_squares, const save::model::PlacedObject& to);
+    [[nodiscard]] save::model::PlacedObject moved_with(save::model::PlacedObject object, std::array<i32, 2> squares, const save::model::PlacedObject& from, std::array<i32, 2> from_squares, const save::model::PlacedObject& to);
 
     /// The tile under square (x, z) of a footprint of `squares`, counted along the object's own X and Z.
-    [[nodiscard]] save::model::Tile square_tile(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, std::int32_t x, std::int32_t z);
+    [[nodiscard]] save::model::Tile square_tile(const save::model::PlacedObject& object, std::array<i32, 2> squares, i32 x, i32 z);
 
     /// Whether `object` stands on the ground rather than at a height of its own.
     [[nodiscard]] bool on_ground(const save::model::PlacedObject& object);
@@ -102,10 +103,10 @@ namespace rct3::park::object
     /// The model-to-park transform of `object`, whose item positions itself as `positioning` and covers
     /// `squares` tiles along its own X and Z. On the ground it stands at the ground's height under its
     /// anchor when `ground_height`, otherwise at its stored height.
-    [[nodiscard]] glm::mat4 object_transform(const save::model::PlacedObject& object, Positioning positioning, const save::model::TerrainGrid& grid, std::array<std::int32_t, 2> squares = { 1, 1 }, bool ground_height = true);
+    [[nodiscard]] glm::mat4 object_transform(const save::model::PlacedObject& object, Positioning positioning, const save::model::TerrainGrid& grid, std::array<i32, 2> squares = { 1, 1 }, bool ground_height = true);
 
     /// Whether the park owns every tile `object` covers, for an item covering `squares` tiles along its own X
     /// and Z. Land bought only to build over counts for things raised off the ground, not for those on it.
-    [[nodiscard]] bool on_owned_land(const save::model::PlacedObject& object, std::array<std::int32_t, 2> squares, const save::model::TerrainGrid& grid);
+    [[nodiscard]] bool on_owned_land(const save::model::PlacedObject& object, std::array<i32, 2> squares, const save::model::TerrainGrid& grid);
 
 } // namespace rct3::park::object

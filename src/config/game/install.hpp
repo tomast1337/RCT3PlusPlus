@@ -12,6 +12,7 @@
 
 #include "config/environment.hpp"
 #include "config/settings.hpp"
+#include "core/types.hpp"
 
 #include <array>
 #include <expected>
@@ -24,7 +25,7 @@
 namespace rct3::config::game
 {
 
-    enum class InstallError : std::uint8_t
+    enum class InstallError : u8
     {
         NotConfigured,  ///< Neither RCT3PP_GAME_PATH nor game_path is set, and no usual place holds an install
         NotFound,       ///< The path does not exist

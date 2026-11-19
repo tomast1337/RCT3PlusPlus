@@ -12,6 +12,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/widgets/menu.hpp"
 
 #include <cstddef>
@@ -33,8 +34,8 @@ namespace rct3::ui::widgets
         Color text_colour = hex("#000000");
         Color disabled_text_colour = hex("#7f7f7f");
         font::FontRole font = font::FontRole::Small;
-        float opener_width = 16; ///< The arrow is a square this wide at the right edge, centred vertically
-        float text_indent = 5;
+        f32 opener_width = 16; ///< The arrow is a square this wide at the right edge, centred vertically
+        f32 text_indent = 5;
         MenuStyle menu;
     };
 
@@ -51,12 +52,12 @@ namespace rct3::ui::widgets
         DropdownStyle style;
         std::vector<std::u16string> items;
 
-        [[nodiscard]] std::optional<std::size_t> selected() const
+        [[nodiscard]] std::optional<usize> selected() const
         {
             return selected_;
         }
         /// Selects `index`, or nothing when out of range. Not reported by take_change().
-        void select(std::optional<std::size_t> index);
+        void select(std::optional<usize> index);
 
         /// True once for each change by the user since the last call.
         [[nodiscard]] bool take_change();
@@ -88,12 +89,12 @@ namespace rct3::ui::widgets
 
     private:
         void open();
-        void pick(std::size_t index);
+        void pick(usize index);
 
-        std::optional<std::size_t> selected_;
+        std::optional<usize> selected_;
         Menu* menu_ = nullptr; // Valid until this widget's update sees it closing; the sweep comes after
         bool dragged_into_menu_ = false;
-        std::int32_t changes_ = 0;
+        i32 changes_ = 0;
     };
 
 } // namespace rct3::ui::widgets

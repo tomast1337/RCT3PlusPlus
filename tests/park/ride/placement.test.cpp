@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/ride/placement.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <doctest/doctest.h>
 #include <string>
@@ -39,11 +41,11 @@ TEST_CASE("a ride's footprint is centred on the tile under the pointer, turned, 
     const RideSite flat = ride_site({ 4, 4 }, { 3, 2 }, { }, grid);
     CHECK(flat.col == 3);
     CHECK(flat.row == 4);
-    CHECK(flat.span == std::array<std::int32_t, 2> { 3, 2 });
+    CHECK(flat.span == std::array<i32, 2> { 3, 2 });
     CHECK(flat.height == 2);
     const RideSite turned = ride_site({ 4, 4 }, { 3, 2 }, ModelTurn { 5 }, grid);
     CHECK(turned.turn == ModelTurn { 1 });
-    CHECK(turned.span == std::array<std::int32_t, 2> { 2, 3 });
+    CHECK(turned.span == std::array<i32, 2> { 2, 3 });
     CHECK(turned.col == 4);
     CHECK(turned.row == 3);
     CHECK(ride_site({ 6, 6 }, { 1, 1 }, { }, grid).height == 6);
@@ -95,12 +97,12 @@ TEST_CASE("placing a ride levels its footprint, and the tiles round it slope to 
     RideSite site = ride_site({ 6, 6 }, { 1, 1 }, { }, grid);
     site.height = 4;
     level_ground(grid, site);
-    CHECK(grid.at(6, 6).corners == std::array<float, 4> { 4, 4, 4, 4 });
+    CHECK(grid.at(6, 6).corners == std::array<f32, 4> { 4, 4, 4, 4 });
     // The tile to its left shares its two left corners; its own far ones stay.
-    CHECK(grid.at(5, 6).corners == std::array<float, 4> { 2, 4, 2, 4 });
+    CHECK(grid.at(5, 6).corners == std::array<f32, 4> { 2, 4, 2, 4 });
     // The tile diagonally up and left shares one corner.
-    CHECK(grid.at(5, 5).corners == std::array<float, 4> { 2, 2, 2, 4 });
-    CHECK(grid.at(4, 6).corners == std::array<float, 4> { 2, 2, 2, 2 });
+    CHECK(grid.at(5, 5).corners == std::array<f32, 4> { 2, 2, 2, 4 });
+    CHECK(grid.at(4, 6).corners == std::array<f32, 4> { 2, 2, 2, 2 });
 }
 
 TEST_CASE("shaping flattens a sloped tile to its top or bottom, then moves a flat one a unit")
@@ -152,7 +154,7 @@ TEST_CASE("a tracked ride's entrance stands beside its station, across the track
 TEST_CASE("a door goes to the station it stands beside, each station taking its own entrance and exit")
 {
     // A circuit along x: a station of three pieces over the track's end and start, and one of two further on.
-    const auto piece = [](std::int32_t x) {
+    const auto piece = [](i32 x) {
         save::model::TrackPiece p;
         p.tile_x = x;
         p.tile_z = 4;
@@ -160,8 +162,8 @@ TEST_CASE("a door goes to the station it stands beside, each station taking its 
         return p;
     };
     const std::vector stations { piece(1), piece(2), piece(6), piece(7), piece(0) };
-    const auto beside = [](std::int32_t x) { return DoorSpot { x, 5, ModelTurn { 3 }, 2 }; };
-    const auto spot = [](const DoorSpot& d) { return save::model::PlacementSpot { 1, d.col, d.row, d.height, static_cast<std::uint8_t>(d.turn.value) }; };
+    const auto beside = [](i32 x) { return DoorSpot { x, 5, ModelTurn { 3 }, 2 }; };
+    const auto spot = [](const DoorSpot& d) { return save::model::PlacementSpot { 1, d.col, d.row, d.height, static_cast<u8>(d.turn.value) }; };
     // Nothing kept yet: the first station, whichever run it stands beside.
     CHECK(door_station(stations, { }, beside(7)) == 0);
     // A station whose door stands beside the same run takes the other door, wherever along the run it was kept,
@@ -280,10 +282,10 @@ TEST_CASE("a ride that stands only on water needs water under every tile, and ot
     // A lake at height 5 whose triangles fill the tiles 2..4 along 2..3.
     save::model::WaterBody lake;
     lake.level = 5;
-    for (std::int32_t r = 2; r <= 3; ++r)
-        for (std::int32_t c = 2; c <= 4; ++c)
-            for (std::uint8_t t = 0; t < 2; ++t)
-                lake.tris.push_back({ .col = static_cast<std::uint8_t>(c), .row = static_cast<std::uint8_t>(r), .triangle = t, .mask = 7 });
+    for (i32 r = 2; r <= 3; ++r)
+        for (i32 c = 2; c <= 4; ++c)
+            for (u8 t = 0; t < 2; ++t)
+                lake.tris.push_back({ .col = static_cast<u8>(c), .row = static_cast<u8>(r), .triangle = t, .mask = 7 });
     const std::vector bodies { lake };
     CHECK(water_problem(RideSite { 2, 2, 0, 2, { 3, 2 } }, true, bodies) == SiteProblem::None);
     CHECK(water_problem(RideSite { 2, 2, 0, 2, { 3, 3 } }, true, bodies) == SiteProblem::OffWater);
@@ -326,7 +328,7 @@ TEST_CASE("a show ride knows the tricks named for its kind, its idle first, each
     const std::vector<std::string> names { "SealShowAnimTrick2", "SealShowAnimIdle", "SealShowAnimTrick1", "BearShowJuggle", "BearShowIdleLoop", "BigSealShowAnimTrick1" };
     // A kind whose animations are named apart from its tricks, and the loop for its idle.
     const std::vector<std::string> seal { "Trick1", "loop", "PlainSealShowTrick02" };
-    const std::vector<float> seal_seconds { 10, 4, 20 };
+    const std::vector<f32> seal_seconds { 10, 4, 20 };
     const auto tricks = show_tricks("PlainSealShow", names, seal, seal_seconds);
     REQUIRE(tricks.size() == 3);
     CHECK(tricks[0].name == "SealShowAnimIdle");
@@ -338,7 +340,7 @@ TEST_CASE("a show ride knows the tricks named for its kind, its idle first, each
     CHECK((tricks[2].available && tricks[2].invented && !tricks[2].hidden));
     // Another kind's tricks are left out, and one without an animation lasts nothing.
     const std::vector<std::string> bear { "BearShowIdleLoop" };
-    const std::vector<float> bear_seconds { 3 };
+    const std::vector<f32> bear_seconds { 3 };
     const auto bears = show_tricks("BearShow", names, bear, bear_seconds);
     REQUIRE(bears.size() == 2);
     CHECK(bears[0].name == "BearShowIdleLoop");
@@ -351,7 +353,7 @@ TEST_CASE("a show ride's performers do the show's tricks in order, and their idl
 {
     // The model's animations, by place: two tricks and a loop, as a show ride's model names them.
     const std::vector<std::string> animations { "SealShowTrick01", "SealShowTrick02", "SealShowLoop" };
-    const std::vector<float> seconds { 10, 20, 4 };
+    const std::vector<f32> seconds { 10, 20, 4 };
     const save::model::RideShow show {
         .ride = 7,
         .tricks = { { .name = "SealShowAnimIdle", .seconds = 4 }, { .name = "SealShowAnimTrick1", .seconds = 10 }, { .name = "SealShowAnimTrick2", .seconds = 20 } },

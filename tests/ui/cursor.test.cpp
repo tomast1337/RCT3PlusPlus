@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/cursor.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <initializer_list>
 #include <set>
@@ -15,7 +17,7 @@ namespace
     {
         StandardCursorSet set = required_cursors();
         for (const StandardCursor s : shapes)
-            set.set(static_cast<std::size_t>(s));
+            set.set(static_cast<usize>(s));
         return set;
     }
 
@@ -85,10 +87,10 @@ TEST_CASE("a backend with only the older shapes falls back further")
 TEST_CASE("every kind ends on a shape every backend has, and has a name")
 {
     std::set<std::string_view> names;
-    for (std::size_t i = 0; i < kCursorKinds; ++i)
+    for (usize i = 0; i < kCursorKinds; ++i)
     {
         const auto kind = static_cast<CursorKind>(i);
-        CHECK(required_cursors().test(static_cast<std::size_t>(cursor_shapes(kind).back())));
+        CHECK(required_cursors().test(static_cast<usize>(cursor_shapes(kind).back())));
         CHECK(resolve_cursor(kind, required_cursors()) == cursor_shapes(kind).back());
         names.insert(cursor_name(kind));
     }

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/waterfall_mesh.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -56,17 +58,17 @@ TEST_CASE("waterfall_point: a fall whose direction is missing runs toward where 
 namespace
 {
 
-    std::size_t part(const WaterfallMesh& mesh, FallPart p)
+    usize part(const WaterfallMesh& mesh, FallPart p)
     {
-        return mesh.parts[static_cast<std::size_t>(p)].count;
+        return mesh.parts[static_cast<usize>(p)].count;
     }
 
     /// The mist batch's puffs and droplets, by the sign of their normal's last value.
-    std::pair<std::int32_t, std::int32_t> puffs_and_droplets(const WaterfallMesh& mesh)
+    std::pair<i32, i32> puffs_and_droplets(const WaterfallMesh& mesh)
     {
-        const FallBatch mist = mesh.parts[static_cast<std::size_t>(FallPart::Mist)];
-        std::pair<std::int32_t, std::int32_t> counted { };
-        for (std::uint32_t i = mist.first; i < mist.first + mist.count; i += 6)
+        const FallBatch mist = mesh.parts[static_cast<usize>(FallPart::Mist)];
+        std::pair<i32, i32> counted { };
+        for (u32 i = mist.first; i < mist.first + mist.count; i += 6)
             ++(mesh.vertices[mesh.indices[i]].normal.z > 0 ? counted.first : counted.second);
         return counted;
     }
@@ -89,14 +91,14 @@ TEST_CASE("waterfall_mesh: foam and sheet at every level, mist from Medium, more
     const std::vector<save::model::Waterfall> falls { fall(), tall };
     const std::vector<FallLakes> lakes(2);
     WaterfallMesh mesh;
-    std::array<std::pair<std::int32_t, std::int32_t>, 4> mist { };
+    std::array<std::pair<i32, i32>, 4> mist { };
     for (const WaterfallDetail detail : { WaterfallDetail::Low, WaterfallDetail::Medium, WaterfallDetail::High, WaterfallDetail::Ultra })
     {
-        CAPTURE(static_cast<std::int32_t>(detail));
+        CAPTURE(static_cast<i32>(detail));
         waterfall_mesh(falls, lakes, detail, mesh);
         CHECK(part(mesh, FallPart::Foam) == 2 * 6);
         CHECK(part(mesh, FallPart::Sheet) == 2 * 13 * 6); // Twelve rows down and one behind the edge each
-        mist[static_cast<std::size_t>(detail)] = puffs_and_droplets(mesh);
+        mist[static_cast<usize>(detail)] = puffs_and_droplets(mesh);
     }
     CHECK(mist[0] == std::pair { 0, 0 });
     CHECK(mist[1].first > 0);
@@ -112,7 +114,7 @@ TEST_CASE("waterfall_mesh: the sheet's last row carries the time the whole fall 
     const std::vector<save::model::Waterfall> falls { fall() };
     WaterfallMesh mesh;
     waterfall_mesh(falls, std::vector<FallLakes>(1), WaterfallDetail::High, mesh);
-    const FallBatch sheet = mesh.parts[static_cast<std::size_t>(FallPart::Sheet)];
+    const FallBatch sheet = mesh.parts[static_cast<usize>(FallPart::Sheet)];
     const GroundVertex& last = mesh.vertices[mesh.indices[sheet.first + sheet.count - 1]];
     CHECK(last.uv.y == doctest::Approx(fall_seconds({ 15.0f }).value));
     CHECK(last.position.y == doctest::Approx(5.0f));
@@ -137,10 +139,10 @@ TEST_CASE("waterfall_mesh: a second fall over the same edge keeps only what the 
     wider.lip_right.z = 10.0f; // From -4 to 10: 6 units past the first
     WaterfallMesh mesh;
     const auto sheet_ends = [&] {
-        const FallBatch sheet = mesh.parts[static_cast<std::size_t>(FallPart::Sheet)];
-        float low = 1e9f;
-        float high = -1e9f;
-        for (std::uint32_t i = sheet.first; i < sheet.first + sheet.count; ++i)
+        const FallBatch sheet = mesh.parts[static_cast<usize>(FallPart::Sheet)];
+        f32 low = 1e9f;
+        f32 high = -1e9f;
+        for (u32 i = sheet.first; i < sheet.first + sheet.count; ++i)
         {
             low = std::min(low, mesh.vertices[mesh.indices[i]].position.z);
             high = std::max(high, mesh.vertices[mesh.indices[i]].position.z);
@@ -156,8 +158,8 @@ TEST_CASE("waterfall_mesh: a second fall over the same edge keeps only what the 
     CHECK(sheet_ends().first == doctest::Approx(-4.0f));
     CHECK(sheet_ends().second == doctest::Approx(10.0f));
     // The second's piece starts where the first ends: no stretch of edge is poured over twice.
-    const FallBatch sheet = mesh.parts[static_cast<std::size_t>(FallPart::Sheet)];
-    const float second_start = mesh.vertices[mesh.indices[sheet.first + 13 * 6]].position.z;
+    const FallBatch sheet = mesh.parts[static_cast<usize>(FallPart::Sheet)];
+    const f32 second_start = mesh.vertices[mesh.indices[sheet.first + 13 * 6]].position.z;
     CHECK(second_start == doctest::Approx(4.0f));
     // A fall over another edge, or to another lake, is left whole.
     save::model::Waterfall elsewhere = wider;
@@ -165,7 +167,7 @@ TEST_CASE("waterfall_mesh: a second fall over the same edge keeps only what the 
     const std::vector<save::model::Waterfall> apart { first, elsewhere };
     waterfall_mesh(apart, { }, WaterfallDetail::Low, mesh);
     CHECK(sheet_ends().second == doctest::Approx(10.0f));
-    CHECK(mesh.vertices[mesh.indices[mesh.parts[static_cast<std::size_t>(FallPart::Sheet)].first + 13 * 6]].position.z == doctest::Approx(-4.0f));
+    CHECK(mesh.vertices[mesh.indices[mesh.parts[static_cast<usize>(FallPart::Sheet)].first + 13 * 6]].position.z == doctest::Approx(-4.0f));
 }
 
 TEST_CASE("waterfall_mesh: nothing for no falls, and the mesh is emptied")

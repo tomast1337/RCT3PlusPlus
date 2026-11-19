@@ -18,6 +18,7 @@
 // Tiles the owner refuses stay as they are.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
 
@@ -33,7 +34,7 @@ namespace rct3::park
 
     /// What a one-tile tool moves. Left and right are the tile's low and high x edges, near and far its low and
     /// high z edges.
-    enum class TilePart : std::uint8_t
+    enum class TilePart : u8
     {
         Whole,
         Left,
@@ -54,12 +55,12 @@ namespace rct3::park
     [[nodiscard]] TilePart part_at(glm::vec2 within);
 
     /// How far into a tile, as a share of it, the pointer picks an edge.
-    inline constexpr float kPartEdge = 0.25f;
+    inline constexpr f32 kPartEdge = 0.25f;
 
     /// How near a height a snapping corner must come to catch on it, in height units.
-    inline constexpr float kSnapReach = 0.4f;
+    inline constexpr f32 kSnapReach = 0.4f;
 
-    enum class TileShaping : std::uint8_t
+    enum class TileShaping : u8
     {
         Free,
         Snap,
@@ -69,25 +70,25 @@ namespace rct3::park
     /// The tiles from (`col0`, `row0`) to (`col1`, `row1`), both in, and their corners as a stroke found them.
     struct TileStroke
     {
-        std::int32_t col0 = 0;
-        std::int32_t row0 = 0;
-        std::int32_t col1 = -1;
-        std::int32_t row1 = -1;
+        i32 col0 = 0;
+        i32 row0 = 0;
+        i32 col1 = -1;
+        i32 row1 = -1;
         TilePart part = TilePart::Whole;
-        std::vector<std::array<float, 4>> before; ///< Row by row
-        float low = 0;                            ///< Of the picked corners
-        float high = 0;
+        std::vector<std::array<f32, 4>> before; ///< Row by row
+        f32 low = 0;                            ///< Of the picked corners
+        f32 high = 0;
     };
 
     /// Starts a stroke over the tiles from (`col0`, `row0`) to (`col1`, `row1`), clipped to the grid.
-    [[nodiscard]] TileStroke begin_tile_stroke(const save::model::TerrainGrid& grid, std::int32_t col0, std::int32_t row0, std::int32_t col1, std::int32_t row1, TilePart part);
+    [[nodiscard]] TileStroke begin_tile_stroke(const save::model::TerrainGrid& grid, i32 col0, i32 row0, i32 col1, i32 row1, TilePart part);
 
     /// Sets the stroke's tiles for a drag of `amount` height units (up positive) from where it began, on the
     /// tiles `free` allows. Returns the sum of how far every corner moved from where the stroke found it.
-    float shape_tiles(save::model::TerrainGrid& grid, const TileStroke& stroke, TileShaping shaping, float amount, const std::function<bool(save::model::Tile)>& free);
+    f32 shape_tiles(save::model::TerrainGrid& grid, const TileStroke& stroke, TileShaping shaping, f32 amount, const std::function<bool(save::model::Tile)>& free);
 
     /// Adds strips on the ground that show what a stroke would move: the tiles' edges, the one edge, or a cross
     /// on the one corner.
-    void tile_marks(TerrainMesh& mesh, const save::model::TerrainGrid& grid, std::int32_t col0, std::int32_t row0, std::int32_t col1, std::int32_t row1, TilePart part, glm::vec4 colour);
+    void tile_marks(TerrainMesh& mesh, const save::model::TerrainGrid& grid, i32 col0, i32 row0, i32 col1, i32 row1, TilePart part, glm::vec4 colour);
 
 } // namespace rct3::park

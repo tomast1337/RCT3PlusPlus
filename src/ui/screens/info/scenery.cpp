@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/scenery.hpp"
 
+#include "core/types.hpp"
 #include "save/model/park.hpp"
 #include "strings/unicode.hpp"
 #include "ui/screens/info/attraction.hpp"
@@ -45,14 +46,14 @@ namespace rct3::ui::screens::info
         constexpr std::array<std::string_view, 7> kInspections { "RideInspectionIntervalEvery10Mins", "RideInspectionIntervalEvery20Mins", "RideInspectionIntervalEvery30Mins", "RideInspectionIntervalEvery45Mins", "RideInspectionIntervalEveryHour", "RideInspectionIntervalEvery2Hours", "RideInspectionIntervalNever" };
         // The wave machines' settings: label and help, by control from kPoolWaveHeightControl on.
         constexpr std::array<std::array<std::string_view, 2>, 4> kWaveSettings { { { "WaveHeightText", "WaveHeightToolTip" }, { "WaveLengthText", "WaveLengthToolTip" }, { "WaveOnPeriodText", "WaveOnPeriodToolTip" }, { "WaveTotalPeriodText", "WaveTotalPeriodToolTip" } } };
-        constexpr std::int32_t kTicketStep = 10;
+        constexpr i32 kTicketStep = 10;
         using units::kPercent;
-        constexpr std::int32_t kSecondsPerMinute = 60;
-        constexpr float kMaintenanceWidth = 440; ///< As wide as a ride's maintenance page
+        constexpr i32 kSecondsPerMinute = 60;
+        constexpr f32 kMaintenanceWidth = 440; ///< As wide as a ride's maintenance page
         /// Slot 1 is the colours tab's, kept even when a prop takes no colours; what a prop does goes on from the next.
-        constexpr std::int32_t kColourSlot = 1;
-        constexpr std::int32_t kColourCount = 32;
-        constexpr std::int32_t kFirstBehaviourSlot = 2;
+        constexpr i32 kColourSlot = 1;
+        constexpr i32 kColourCount = 32;
+        constexpr i32 kFirstBehaviourSlot = 2;
 
         std::u16string ascii(std::string_view s)
         {
@@ -60,7 +61,7 @@ namespace rct3::ui::screens::info
         }
 
         /// `words` with its number mark standing for `n`.
-        std::u16string numbered(std::u16string_view words, std::int64_t n)
+        std::u16string numbered(std::u16string_view words, i64 n)
         {
             std::u16string out(words);
             if (const auto mark = out.find(u'#'); mark != std::u16string::npos)
@@ -70,10 +71,10 @@ namespace rct3::ui::screens::info
 
     } // namespace
 
-    std::vector<std::size_t> scenery_paint_slots(const SceneryFacts& facts)
+    std::vector<usize> scenery_paint_slots(const SceneryFacts& facts)
     {
-        std::vector<std::size_t> slots;
-        for (std::size_t s = 0; s < facts.colours.size(); ++s)
+        std::vector<usize> slots;
+        for (usize s = 0; s < facts.colours.size(); ++s)
         {
             if ((facts.colour_slots & (1U << s)) != 0)
                 slots.push_back(s);
@@ -97,18 +98,18 @@ namespace rct3::ui::screens::info
                 { SceneryTab::RoomMaintenance, 10, "Attraction_Maintenance", "AttractionDetails_RideMaintenanceHelp", false, { } },
             };
         std::vector<SceneryTabInfo> tabs { { SceneryTab::Destroy, 0, "Attraction_General_Delete", "ATE_TT_Demolish", true, { } } };
-        if (const std::vector<std::size_t> slots = scenery_paint_slots(facts); !slots.empty())
+        if (const std::vector<usize> slots = scenery_paint_slots(facts); !slots.empty())
         {
             tabs.push_back({ SceneryTab::Colour, kColourSlot, "Attraction_Colour", "Scenery_SetFlexiColours", false, { } });
             SceneryTabInfo& colour = tabs.back();
-            for (const std::size_t s : slots)
+            for (const usize s : slots)
             {
                 // A colour out of the range is shown as the first.
-                const std::int32_t c = facts.colours.at(s);
-                colour.paints.push_back(c >= 0 && c < kColourCount ? static_cast<std::size_t>(c) : 0);
+                const i32 c = facts.colours.at(s);
+                colour.paints.push_back(c >= 0 && c < kColourCount ? static_cast<usize>(c) : 0);
             }
         }
-        std::int32_t slot = kFirstBehaviourSlot;
+        i32 slot = kFirstBehaviourSlot;
         if (facts.bin != nullptr)
             tabs.push_back({ SceneryTab::Bin, slot++, "Guest_Stats", "Bin_Statistics", false, { } });
         if (facts.sign != nullptr)
@@ -132,7 +133,7 @@ namespace rct3::ui::screens::info
         if (tab == SceneryTab::Bin && facts.bin != nullptr)
         {
             const save::model::BinState& bin = *facts.bin;
-            const float full = bin.capacity > 0 ? std::clamp(bin.contents / bin.capacity, 0.0f, 1.0f) : 0.0f;
+            const f32 full = bin.capacity > 0 ? std::clamp(bin.contents / bin.capacity, 0.0f, 1.0f) : 0.0f;
             page.lines.push_back({ std::u16string(strings.get(kAmountFull)), ascii(std::format("{}%", std::lround(full * kPercent))), false, std::string(kAmountFull) });
             std::u16string emptied(strings.get(kNeverEmptied));
             if (bin.last_emptied)
@@ -167,10 +168,10 @@ namespace rct3::ui::screens::info
             const std::u16string complex = pool.name.empty() ? std::u16string(strings.get(kPoolDefaultName)) : pool.name;
             page.title = complex;
             const auto text = [&](std::string_view key) { return std::u16string(strings.get(key)); };
-            const auto money = [&](std::int64_t amount) { return money_text(pool.currency, units::Money { amount }); };
+            const auto money = [&](i64 amount) { return money_text(pool.currency, units::Money { amount }); };
             const auto line = [&](std::string_view key, std::u16string value) { page.lines.push_back({ text(key), std::move(value), false, std::string(key) }); };
-            const auto button = [&](std::int32_t id, std::string_view icon, std::string_view help, bool beside, bool enabled = true) { page.controls.push_back({ .id = id, .name = std::string(icon), .kind = InfoControlKind::Button, .icon = std::string(icon), .enabled = enabled, .beside = beside, .help = text(help) }); };
-            const auto choice = [&](std::int32_t id, std::string_view key, std::span<const std::string_view> items, std::int32_t value, bool beside = false) {
+            const auto button = [&](i32 id, std::string_view icon, std::string_view help, bool beside, bool enabled = true) { page.controls.push_back({ .id = id, .name = std::string(icon), .kind = InfoControlKind::Button, .icon = std::string(icon), .enabled = enabled, .beside = beside, .help = text(help) }); };
+            const auto choice = [&](i32 id, std::string_view key, std::span<const std::string_view> items, i32 value, bool beside = false) {
                 InfoControl& c = page.controls.emplace_back();
                 c.id = id;
                 c.name = key;
@@ -205,12 +206,12 @@ namespace rct3::ui::screens::info
                 // The price over the sums, as the player sets it first, shown in money with only its arrows.
                 // shortcut: the room is not measured an hour at a time and has no running cost, so the projections
                 // are nothing an hour; reckon them once pools keep a rate of customers and a running cost.
-                const auto per_hour = [&](std::int64_t amount) {
+                const auto per_hour = [&](i64 amount) {
                     std::u16string words = text(kPerHour);
                     const auto mark = words.find(u'#');
                     return mark == std::u16string::npos ? money(amount) : words.replace(mark, 1, money(amount));
                 };
-                const auto ticket = static_cast<std::int32_t>(std::clamp<std::int64_t>(pool.ticket.value, 0, kMostPoolTicket));
+                const auto ticket = static_cast<i32>(std::clamp<i64>(pool.ticket.value, 0, kMostPoolTicket));
                 page.controls.push_back({ .id = kPoolTicketControl, .name = std::string(kTicket), .kind = InfoControlKind::Number, .label = text(kTicket), .value = ticket, .maximum = kMostPoolTicket, .step = kTicketStep, .decimals = 2, .shown = money(ticket) });
                 page.controls_after = 0;
                 line("AttractionFinancesDialogLabel_Income", per_hour(0));
@@ -230,22 +231,22 @@ namespace rct3::ui::screens::info
             {
                 // The wave's height and length on bars, and the machines' times, which only count with a machine in
                 // the pool, in words with their arrows.
-                const auto setting = [&](std::int32_t id) { return kWaveSettings[static_cast<std::size_t>(id - kPoolWaveHeightControl)]; };
-                const auto bar = [&](std::int32_t id, std::int32_t value, std::int32_t least, std::int32_t most) {
+                const auto setting = [&](i32 id) { return kWaveSettings[static_cast<usize>(id - kPoolWaveHeightControl)]; };
+                const auto bar = [&](i32 id, i32 value, i32 least, i32 most) {
                     const auto [label, help] = setting(id);
                     page.controls.push_back({ .id = id, .name = std::string(label), .kind = InfoControlKind::Bar, .label = text(label), .value = std::clamp(value, least, most), .minimum = least, .maximum = most, .help = text(help) });
                 };
-                const auto timed = [&](std::int32_t id, std::int32_t value, std::int32_t least, std::int32_t most, std::int32_t step, std::string_view one, std::string_view many) {
+                const auto timed = [&](i32 id, i32 value, i32 least, i32 most, i32 step, std::string_view one, std::string_view many) {
                     const auto [label, help] = setting(id);
                     value = std::clamp(value, least, most);
                     page.controls.push_back({ .id = id, .name = std::string(label), .kind = InfoControlKind::Number, .label = text(label), .value = value, .minimum = least, .maximum = most, .step = step, .shown = numbered(strings.get(value == 1 ? one : many), value), .enabled = pool.machines, .help = text(help) });
                 };
-                const auto least_frequency = static_cast<std::int32_t>(park::pools::kLeastWaveFrequency);
-                const auto most_frequency = static_cast<std::int32_t>(park::pools::kMostWaveFrequency);
-                bar(kPoolWaveHeightControl, static_cast<std::int32_t>(std::lround(pool.waves.height)), static_cast<std::int32_t>(park::pools::kLeastWaveHeight), static_cast<std::int32_t>(park::pools::kMostWaveHeight));
-                bar(kPoolWaveLengthControl, least_frequency + most_frequency - static_cast<std::int32_t>(std::lround(pool.waves.frequency.value)), least_frequency, most_frequency);
-                timed(kPoolWaveOnControl, static_cast<std::int32_t>(std::lround(pool.waves.on.value)), 0, kMostWaveOn, kWaveOnStep, "OneSecond", "ManySeconds");
-                timed(kPoolWaveEveryControl, static_cast<std::int32_t>(std::lround(pool.waves.every.value / kSecondsPerMinute)), 1, kMostWaveEvery, 1, "OneMinute", "ManyMinutes");
+                const auto least_frequency = static_cast<i32>(park::pools::kLeastWaveFrequency);
+                const auto most_frequency = static_cast<i32>(park::pools::kMostWaveFrequency);
+                bar(kPoolWaveHeightControl, static_cast<i32>(std::lround(pool.waves.height)), static_cast<i32>(park::pools::kLeastWaveHeight), static_cast<i32>(park::pools::kMostWaveHeight));
+                bar(kPoolWaveLengthControl, least_frequency + most_frequency - static_cast<i32>(std::lround(pool.waves.frequency.value)), least_frequency, most_frequency);
+                timed(kPoolWaveOnControl, static_cast<i32>(std::lround(pool.waves.on.value)), 0, kMostWaveOn, kWaveOnStep, "OneSecond", "ManySeconds");
+                timed(kPoolWaveEveryControl, static_cast<i32>(std::lround(pool.waves.every.value / kSecondsPerMinute)), 1, kMostWaveEvery, 1, "OneMinute", "ManyMinutes");
             }
             else if (tab == SceneryTab::RoomCustomers)
             {

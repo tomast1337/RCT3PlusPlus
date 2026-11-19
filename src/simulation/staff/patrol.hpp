@@ -3,6 +3,7 @@
 // Staff patrols: the tiles a worker keeps to, painted by the player, and zones that several workers share.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "simulation/components.hpp"
 #include "simulation/entt.hpp"
@@ -25,7 +26,7 @@ namespace rct3::simulation::staff
     struct Patrol
     {
         std::vector<glm::ivec2> tiles; ///< (col, row), any level
-        std::uint32_t zone = 0;        ///< A shared zone: painting one on it paints all on it; 0 none
+        u32 zone = 0;                  ///< A shared zone: painting one on it paints all on it; 0 none
 
         [[nodiscard]] bool covers(const PathTileSpot& at) const
         {
@@ -35,11 +36,11 @@ namespace rct3::simulation::staff
 
     /// Path tiles (not queues) that no member of staff in `role` has in their patrol. None when any of them has
     /// no patrol, as they walk the whole park, or when there is no one in the role.
-    [[nodiscard]] std::size_t uncovered_paths(const SimWorld& world, StaffRole role);
+    [[nodiscard]] usize uncovered_paths(const SimWorld& world, StaffRole role);
 
     /// Adds the square of tiles `across` wide round `at` to `staff`'s patrol area, or takes them away, and does
     /// the same to everyone sharing their zone. An area left with no tiles goes: the whole park again.
-    void paint_patrol(entt::registry& r, entt::entity staff, glm::ivec2 at, std::int32_t across, bool add);
+    void paint_patrol(entt::registry& r, entt::entity staff, glm::ivec2 at, i32 across, bool add);
 
     /// Empties `staff`'s patrol area and their zone's: the whole park again. They stay on their zone.
     void clear_patrol(entt::registry& r, entt::entity staff);
@@ -48,6 +49,6 @@ namespace rct3::simulation::staff
     void fill_patrol(entt::registry& r, entt::entity staff);
 
     /// Puts `staff` on shared zone `zone` (0 none). Joining a zone others are on takes its tiles.
-    void join_zone(entt::registry& r, entt::entity staff, std::uint32_t zone);
+    void join_zone(entt::registry& r, entt::entity staff, u32 zone);
 
 } // namespace rct3::simulation::staff

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/ui_renderer.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstddef>
 
@@ -94,7 +96,7 @@ namespace rct3::ui
 
         const render::Extent extent = device.extent();
         // Top-left origin, y down: the top edge (y = 0) maps to the top of clip space.
-        const glm::mat4 screen = glm::ortho(0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, -1.0f, 1.0f);
+        const glm::mat4 screen = glm::ortho(0.0f, static_cast<f32>(extent.width), static_cast<f32>(extent.height), 0.0f, -1.0f, 1.0f);
 
         render::DrawCommand command;
         command.pipeline = renderer.pipeline;

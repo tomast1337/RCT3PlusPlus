@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/track_section.hpp"
 
+#include "core/types.hpp"
 #include "record_file.hpp"
 
 #include <doctest/doctest.h>
@@ -11,12 +12,12 @@ using rct3::ovl::read_track_sections;
 namespace
 {
 
-    constexpr std::uint32_t kSize[] = { 0, 228, 0, 0, 364, 392 };
+    constexpr u32 kSize[] = { 0, 228, 0, 0, 364, 392 };
 
     // A record of `words` 32-bit fields with the given pointer and number fields filled in.
-    std::vector<std::byte> record(std::uint32_t version, Pool& pool)
+    std::vector<std::byte> record(u32 version, Pool& pool)
     {
-        std::vector<std::uint32_t> w(kSize[version] / 4, 0);
+        std::vector<u32> w(kSize[version] / 4, 0);
         w[0] = pool.add("Curve");
         w[2] = 3;
         w[3] = 6;
@@ -37,7 +38,7 @@ namespace
 
 TEST_CASE("track sections are read in every file version")
 {
-    for (std::uint32_t version : { 1u, 4u, 5u })
+    for (u32 version : { 1u, 4u, 5u })
     {
         CAPTURE(version);
         Pool pool;
@@ -105,7 +106,7 @@ TEST_CASE("references of the wrong type are not used")
 
 TEST_CASE("later track sections give their join names, widths, group, tags and side")
 {
-    for (const std::uint32_t version : { 4u, 5u })
+    for (const u32 version : { 4u, 5u })
     {
         CAPTURE(version);
         Pool pool;
@@ -115,9 +116,9 @@ TEST_CASE("later track sections give their join names, widths, group, tags and s
         const auto offer = pool.add("Shelf");
         const auto forbid = pool.add("Ledge");
         pool.add("Base:tks");
-        const std::uint32_t base = pool.base();
-        std::vector<std::uint32_t> w(kSize[version] / 4 + 3, 0);
-        const auto list = static_cast<std::uint32_t>(base + kSize[version]); // three string pointers past the record
+        const u32 base = pool.base();
+        std::vector<u32> w(kSize[version] / 4 + 3, 0);
+        const auto list = static_cast<u32>(base + kSize[version]); // three string pointers past the record
         w[kSize[version] / 4] = offer;
         w[kSize[version] / 4 + 1] = forbid;
         w[kSize[version] / 4 + 2] = offer;
@@ -143,7 +144,7 @@ TEST_CASE("later track sections give their join names, widths, group, tags and s
         const auto& s = *items[0].section;
         CHECK(s.start_join == "bottom");
         CHECK(s.end_join == "top");
-        CHECK(s.widths == std::array<std::uint32_t, 2> { 1, 0 });
+        CHECK(s.widths == std::array<u32, 2> { 1, 0 });
         CHECK(s.group == "station");
         CHECK(s.tags[0].offers == std::vector<std::string_view> { "Shelf" });
         CHECK(s.tags[0].needs.empty());
@@ -158,7 +159,7 @@ TEST_CASE("a joined piece of side by side tracks names the section of its other 
     Pool pool;
     pool.add("Joined:tks");
     pool.add("Joined_R:tks");
-    std::vector<std::uint32_t> w(kSize[5] / 4, 0);
+    std::vector<u32> w(kSize[5] / 4, 0);
     w[0xE4 / 4] = 3;
     w[0x16C / 4] = 1;
     std::vector<std::byte> bytes;

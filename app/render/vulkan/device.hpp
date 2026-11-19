@@ -7,6 +7,7 @@
 // buffer and the call waits for the copy, which suits loading but not streaming.
 #pragma once
 
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "render/shader_inputs.hpp"
 
@@ -65,8 +66,8 @@ namespace rct3::render::vulkan
             wireframe_ = on;
         }
         void end_frame() override;
-        [[nodiscard]] std::vector<std::uint32_t> sample_levels() const override;
-        void set_samples(std::uint32_t samples) override;
+        [[nodiscard]] std::vector<u32> sample_levels() const override;
+        void set_samples(u32 samples) override;
         [[nodiscard]] FrameStats stats() const override
         {
             return last_stats_;
@@ -78,7 +79,7 @@ namespace rct3::render::vulkan
     private:
         /// The part of the screen passes into it draw to: the view, kept inside the screen, or all of it.
         [[nodiscard]] VkRect2D screen_area() const;
-        static constexpr std::uint32_t kFramesInFlight = 2;
+        static constexpr u32 kFramesInFlight = 2;
 
         struct Buffer
         {
@@ -101,13 +102,13 @@ namespace rct3::render::vulkan
             VkImageView depth_view = VK_NULL_HANDLE;
             // Readable depth only: the id under which the depth is drawn with, an entry that owns nothing but
             // its own view and set.
-            std::uint32_t depth_id = 0;
+            u32 depth_id = 0;
         };
 
         // One block of per-frame memory, mapped for its whole life and registered in buffers_ so draws find it.
         struct TransientBlock
         {
-            std::uint32_t id = 0;
+            u32 id = 0;
             std::byte* mapped = nullptr;
             VkDeviceSize size = 0;
         };
@@ -124,7 +125,7 @@ namespace rct3::render::vulkan
             std::vector<VertexAttribute> attributes;
             VkPipeline multi = VK_NULL_HANDLE; ///< For the screen drawn with `multi_samples`; made when first drawn
             VkPipeline multi_wire = VK_NULL_HANDLE;
-            std::uint32_t multi_samples = 0;
+            u32 multi_samples = 0;
         };
 
         // A buffer's copy from its staging, sent without waiting for the GPU; the staging and the commands go
@@ -158,12 +159,12 @@ namespace rct3::render::vulkan
             /// When each pass began and ended on the GPU, read once the frame is done; none where the queue
             /// keeps no time.
             VkQueryPool timings = VK_NULL_HANDLE;
-            std::uint32_t stamps = 0; ///< Written this frame, two a pass
+            u32 stamps = 0; ///< Written this frame, two a pass
         };
-        static constexpr std::uint32_t kMostStamps = 64;
-        float stamp_ms_ = 0; ///< Milliseconds a timestamp tick lasts
+        static constexpr u32 kMostStamps = 64;
+        f32 stamp_ms_ = 0; ///< Milliseconds a timestamp tick lasts
 
-        enum class State : std::uint8_t
+        enum class State : u8
         {
             Off,
             Idle,
@@ -191,7 +192,7 @@ namespace rct3::render::vulkan
         void reset_transient(Frame& frame);
 
         // Resources (resources.cpp)
-        [[nodiscard]] std::uint32_t find_memory_type(std::uint32_t type_bits, VkMemoryPropertyFlags properties) const;
+        [[nodiscard]] u32 find_memory_type(u32 type_bits, VkMemoryPropertyFlags properties) const;
         [[nodiscard]] Buffer make_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags memory = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         void destroy(const Buffer& buffer);
         void destroy(const Texture& texture);
@@ -199,8 +200,8 @@ namespace rct3::render::vulkan
         void submit_once(const std::function<void(VkCommandBuffer)>& record);
         /// Lets go of the uploads the GPU is done with; all of them, waiting, when `wait`.
         void release_uploads(bool wait);
-        void upload(const Buffer& staging, const Texture& texture, std::uint32_t width, std::uint32_t height);
-        void make_depth_readable(Texture& texture, std::uint32_t id);
+        void upload(const Buffer& staging, const Texture& texture, u32 width, u32 height);
+        void make_depth_readable(Texture& texture, u32 id);
         /// `desc` as a pipeline drawing with `samples` per pixel, and the same outlining triangles where it can.
         [[nodiscard]] std::pair<VkPipeline, VkPipeline> build_pipeline(const PipelineDesc& desc, VkSampleCountFlagBits samples);
         void create_multisample();
@@ -216,7 +217,7 @@ namespace rct3::render::vulkan
         {
             VkPipeline pipeline = VK_NULL_HANDLE;
             std::array<VkDescriptorSet, 2 + kExtraTextures> sets { };
-            std::uint32_t set_count = 0;
+            u32 set_count = 0;
             ShaderConstants constants { };
             bool has_constants = false;
             VkBuffer vertices = VK_NULL_HANDLE;
@@ -232,15 +233,15 @@ namespace rct3::render::vulkan
         VkSurfaceKHR surface_ = VK_NULL_HANDLE;
         VkPhysicalDevice gpu_ = VK_NULL_HANDLE;
         char device_name_[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE] = { };
-        std::uint32_t queue_family_ = 0;
+        u32 queue_family_ = 0;
         VkDevice device_ = VK_NULL_HANDLE;
         VkQueue queue_ = VK_NULL_HANDLE;
 
         VkSwapchainKHR swapchain_ = VK_NULL_HANDLE;
         VkFormat color_format_ = VK_FORMAT_UNDEFINED;
         VkExtent2D extent_ { };
-        double frame_pace_ = 0;   ///< Seconds between presents when the device paces frames itself, else 0
-        double last_present_ = 0; ///< When the last paced frame was presented, in GLFW's time
+        f64 frame_pace_ = 0;   ///< Seconds between presents when the device paces frames itself, else 0
+        f64 last_present_ = 0; ///< When the last paced frame was presented, in GLFW's time
         std::vector<VkImage> images_;
         std::vector<VkImageView> views_;
         std::vector<VkSemaphore> render_finished_; // One per swapchain image
@@ -262,8 +263,8 @@ namespace rct3::render::vulkan
 
         // With more than one sample, the screen's passes draw into these and resolve into screen_ as each ends,
         // so later passes and copy_screen find the screen as without.
-        std::uint32_t samples_ = 1;
-        std::uint32_t pass_samples_ = 1; ///< Of the open pass
+        u32 samples_ = 1;
+        u32 pass_samples_ = 1; ///< Of the open pass
         VkImage multi_color_image_ = VK_NULL_HANDLE;
         VkDeviceMemory multi_color_memory_ = VK_NULL_HANDLE;
         VkImageView multi_color_view_ = VK_NULL_HANDLE;
@@ -273,29 +274,29 @@ namespace rct3::render::vulkan
 
         // Set 0 is the texture, set 1 the sampler (see app/shaders/textured.slang), sets 2 on the extra textures
         // when the device can bind that many sets.
-        static constexpr std::uint32_t kSetCount = 2 + kExtraTextures;
-        std::uint32_t set_count_ = 4;
+        static constexpr u32 kSetCount = 2 + kExtraTextures;
+        u32 set_count_ = 4;
         VkDescriptorSetLayout texture_set_layout_ = VK_NULL_HANDLE;
         VkDescriptorSetLayout sampler_set_layout_ = VK_NULL_HANDLE;
         VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
         VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
         VkCommandPool upload_pool_ = VK_NULL_HANDLE;
         std::vector<BufferUpload> uploads_;
-        static constexpr std::size_t kSamplerCount = 4; // Filter x AddressMode
+        static constexpr usize kSamplerCount = 4; // Filter x AddressMode
         std::array<VkSampler, kSamplerCount> samplers_ { };
         std::array<VkDescriptorSet, kSamplerCount> sampler_sets_ { };
 
         std::array<Frame, kFramesInFlight> frames_ { };
-        std::uint32_t frame_index_ = 0;
-        std::uint32_t image_index_ = 0;
+        u32 frame_index_ = 0;
+        u32 image_index_ = 0;
         bool ui_ready_ = false;
         bool line_fill_ = false; ///< The GPU can outline triangles
         bool wireframe_ = false;
 
-        std::uint32_t next_id_ = 1;
-        std::unordered_map<std::uint32_t, Buffer> buffers_;
-        std::unordered_map<std::uint32_t, Pipeline> pipelines_;
-        std::unordered_map<std::uint32_t, Texture> textures_;
+        u32 next_id_ = 1;
+        std::unordered_map<u32, Buffer> buffers_;
+        std::unordered_map<u32, Pipeline> pipelines_;
+        std::unordered_map<u32, Texture> textures_;
 
         FrameStats frame_stats_;
         FrameStats last_stats_;

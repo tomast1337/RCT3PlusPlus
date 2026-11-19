@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object/pick.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <optional>
@@ -12,12 +14,12 @@ using namespace rct3::park::object;
 
 namespace
 {
-    std::optional<std::size_t> index_of(std::optional<PickHit> hit)
+    std::optional<usize> index_of(std::optional<PickHit> hit)
     {
         return hit.transform([](const PickHit& h) { return h.index; });
     }
 
-    save::model::TerrainGrid flat(float height)
+    save::model::TerrainGrid flat(f32 height)
     {
         save::model::TerrainGrid g;
         g.width = 4;
@@ -40,7 +42,7 @@ namespace
         return m;
     }
 
-    save::model::PlacedObject placed_object(std::uint64_t id, std::int32_t col)
+    save::model::PlacedObject placed_object(u64 id, i32 col)
     {
         save::model::PlacedObject o;
         o.id = id;
@@ -51,7 +53,7 @@ namespace
         return o;
     }
 
-    Ray down_at(float x, float z)
+    Ray down_at(f32 x, f32 z)
     {
         return { { x, 50, z }, { 0, -1, 0 } };
     }
@@ -139,33 +141,33 @@ TEST_CASE("kept places and boxes are worked out again only for the objects that 
     ObjectPlaces places;
     std::vector<PickBox> boxes;
     const auto update = [&] {
-        const std::vector<std::size_t> changed = update_places(places, objects, models, g, { });
+        const std::vector<usize> changed = update_places(places, objects, models, g, { });
         update_pick_boxes(boxes, places, changed);
         return changed;
     };
-    CHECK(update() == std::vector<std::size_t> { 0, 1, 2 });
+    CHECK(update() == std::vector<usize> { 0, 1, 2 });
     CHECK(boxes.size() == 2); // The rock has no model
     CHECK(update().empty());
 
     objects[1].col = 3;
-    CHECK(update() == std::vector<std::size_t> { 1 });
-    const auto wanted = [](std::size_t) { return true; };
+    CHECK(update() == std::vector<usize> { 1 });
+    const auto wanted = [](usize) { return true; };
     CHECK(index_of(pick_object(down_at(14, 2), boxes, g, wanted)) == 1u);
     CHECK_FALSE(pick_object(down_at(6, 2), boxes, g, wanted));
 
     // A model loaded later is found for the object that had none.
     models.emplace("Things/Things|Rock", cube());
-    CHECK(update() == std::vector<std::size_t> { 2 });
+    CHECK(update() == std::vector<usize> { 2 });
     CHECK(boxes.size() == 3);
 
     // The ground under an object moves it.
     g.cells[0].corners = { 1, 1, 1, 1 };
-    CHECK(update() == std::vector<std::size_t> { 0 });
+    CHECK(update() == std::vector<usize> { 0 });
     CHECK(places.transforms[0][3].y == doctest::Approx(1));
 
     // Taking one out moves the rest down a place: what now stands there is worked out again.
     objects.erase(objects.begin());
-    CHECK(update() == std::vector<std::size_t> { 0, 1 });
+    CHECK(update() == std::vector<usize> { 0, 1 });
     REQUIRE(boxes.size() == 2);
     CHECK(boxes[1].object_index == 1);
     CHECK(index_of(pick_object(down_at(14, 2), boxes, g, wanted)) == 0u);

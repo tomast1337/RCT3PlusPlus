@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/lens.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -17,14 +19,14 @@ namespace rct3::scene::park
     namespace
     {
         // Chosen by eye.
-        constexpr float kRainPerSecond[] = { 0.0f, 2.5f, 8.0f, 18.0f }; ///< Drops landing, by how hard it rains
-        constexpr float kWindPush = 0.9f;                               ///< Screen heights a second the strongest wind pushes drops across
-        constexpr units::Radians kWindSwing { 0.6f };                   ///< The wind's way swings this far either side of its middle
-        constexpr units::Seconds kWindPeriod { 240.0f };                ///< The wind takes this long to swing round and back
-        constexpr std::size_t kSplashDrops = 40;
-        constexpr std::size_t kSplashSheets = 2;
+        constexpr f32 kRainPerSecond[] = { 0.0f, 2.5f, 8.0f, 18.0f }; ///< Drops landing, by how hard it rains
+        constexpr f32 kWindPush = 0.9f;                               ///< Screen heights a second the strongest wind pushes drops across
+        constexpr units::Radians kWindSwing { 0.6f };                 ///< The wind's way swings this far either side of its middle
+        constexpr units::Seconds kWindPeriod { 240.0f };              ///< The wind takes this long to swing round and back
+        constexpr usize kSplashDrops = 40;
+        constexpr usize kSplashSheets = 2;
 
-        constexpr float kStretch = 2.5f;            ///< A drop's length along its slide grows by this per screen height a second
+        constexpr f32 kStretch = 2.5f;              ///< A drop's length along its slide grows by this per screen height a second
         constexpr units::Seconds kFadeIn { 0.15f }; ///< A drop takes this long to show in full
         constexpr units::Seconds kFadeOut { 1.0f }; ///< And to dry away at the end of its life
 
@@ -35,7 +37,7 @@ namespace rct3::scene::park
         };
 
         /// The point `clip` (x right, y up, both -1..1, at depth `depth`) stands for in the world.
-        glm::vec3 unprojected(const glm::mat4& back, glm::vec2 clip, float depth)
+        glm::vec3 unprojected(const glm::mat4& back, glm::vec2 clip, f32 depth)
         {
             const glm::vec4 p = back * glm::vec4(clip, depth, 1.0f);
             return glm::vec3(p) / p.w;
@@ -44,7 +46,7 @@ namespace rct3::scene::park
 
     void advance_park_lens(ParkLens& lens, const LensSurroundings& around, bool on, units::Seconds elapsed)
     {
-        const float seconds = elapsed.value;
+        const f32 seconds = elapsed.value;
         rct3::park::LensWater& water = lens.water;
         if (!on)
         {
@@ -72,13 +74,13 @@ namespace rct3::scene::park
         lens.was_under = around.under_water;
 
         // Rain lands on a lens looking out level or up into it, less the more it looks down, none straight down.
-        const std::int32_t rain = std::clamp(around.rain, 0, 3);
+        const i32 rain = std::clamp(around.rain, 0, 3);
         if (!around.under_water && rain > 0)
         {
             lens.rain_due += kRainPerSecond[rain] * std::clamp(1.0f + ahead.y * 1.5f, 0.0f, 1.0f) * seconds;
-            const auto whole = static_cast<std::size_t>(lens.rain_due);
+            const auto whole = static_cast<usize>(lens.rain_due);
             rct3::park::wet_lens(water, whole, 0, around.aspect);
-            lens.rain_due -= static_cast<float>(whole);
+            lens.rain_due -= static_cast<f32>(whole);
         }
 
         // A splash of the car ridden (park/car_splashes.hpp).
@@ -87,7 +89,7 @@ namespace rct3::scene::park
         lens.car_splashes = around.car_splashes;
 
         // The wind keeps to one way, swinging slowly either side of it.
-        const float way = kWindSwing.value * std::sin(lens.clock.value * 2 * std::numbers::pi_v<float> / kWindPeriod.value);
+        const f32 way = kWindSwing.value * std::sin(lens.clock.value * 2 * std::numbers::pi_v<f32> / kWindPeriod.value);
         const glm::vec3 wind = glm::vec3 { std::cos(way), 0.0f, std::sin(way) } * (std::clamp(around.wind, 0.0f, 1.0f) * kWindPush);
         rct3::park::LensPush push { .aspect = around.aspect, .down = across({ 0, -1, 0 }), .wind = across(wind) };
         if (lens.last_ahead && lens.last_eye && seconds > 0)
@@ -128,16 +130,16 @@ namespace rct3::scene::park
             lens.screen = *created;
             lens.screen_size = size;
         }
-        const float aspect = static_cast<float>(size.width) / static_cast<float>(std::max(size.height, 1u));
+        const f32 aspect = static_cast<f32>(size.width) / static_cast<f32>(std::max(size.height, 1u));
         std::vector<LensCorner>& corners = lens.corners;
         corners.clear();
         for (const rct3::park::LensDrop& drop : lens.water.drops)
         {
-            const float shown = std::min({ 1.0f, drop.age.value / kFadeIn.value, (drop.life - drop.age).value / kFadeOut.value });
+            const f32 shown = std::min({ 1.0f, drop.age.value / kFadeIn.value, (drop.life - drop.age).value / kFadeOut.value });
             if (shown <= 0)
                 continue;
             // Long along its slide, a little narrower across it; to screen shares, then clip space with y up.
-            const float speed = glm::length(drop.velocity);
+            const f32 speed = glm::length(drop.velocity);
             const glm::vec2 along = speed > 1e-4f ? drop.velocity / speed : glm::vec2 { 0, 1 };
             const glm::vec2 side { -along.y, along.x };
             const glm::vec2 a = along * drop.radius * (1 + speed * kStretch);
@@ -165,7 +167,7 @@ namespace rct3::scene::park
         render::DrawCommand draw;
         draw.pipeline = lens.pipeline;
         draw.vertices = *vertices;
-        draw.count = static_cast<std::uint32_t>(corners.size());
+        draw.count = static_cast<u32>(corners.size());
         draw.texture = lens.screen;
         draw.filter = render::Filter::Linear;
         device.draw(draw);

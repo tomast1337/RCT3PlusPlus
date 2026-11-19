@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/choice.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <bit>
 #include <cstdint>
@@ -16,10 +18,10 @@ namespace rct3::park::track
         /// A plain candidate as the picks see it.
         struct Offer
         {
-            std::int32_t curve = 0;
-            std::int32_t slope = 0;
-            std::int32_t bank = 0;
-            std::uint8_t toggles = 0;
+            i32 curve = 0;
+            i32 slope = 0;
+            i32 bank = 0;
+            u8 toggles = 0;
             LaidPiece laid;
         };
 
@@ -35,8 +37,8 @@ namespace rct3::park::track
                     continue;
                 const PieceEnd exit = laid_exit(p, c.reversed);
                 // Wide is of the end the piece is laid to, its start when laid backwards.
-                const std::uint8_t wide = toggle_bit(PieceToggle::Wide);
-                const std::uint8_t toggles = c.reversed ? static_cast<std::uint8_t>((p.toggles & ~wide) | (p.record.joins[0].width != 0 ? wide : 0)) : p.toggles;
+                const u8 wide = toggle_bit(PieceToggle::Wide);
+                const u8 toggles = c.reversed ? static_cast<u8>((p.toggles & ~wide) | (p.record.joins[0].width != 0 ? wide : 0)) : p.toggles;
                 out.push_back({ laid_curve(p, c.reversed), exit.slope, exit.bank, toggles, c });
             }
             return out;
@@ -53,16 +55,16 @@ namespace rct3::park::track
         }
 
         /// How many toggles an offer has other than asked.
-        std::int32_t toggles_apart(const Offer& o, const TrackChoice& c)
+        i32 toggles_apart(const Offer& o, const TrackChoice& c)
         {
-            return std::popcount(static_cast<std::uint32_t>(o.toggles ^ c.toggles));
+            return std::popcount(static_cast<u32>(o.toggles ^ c.toggles));
         }
 
         /// How far an offer is from the picks: steps on each pick, changed toggles counting less than any step,
         /// then picks nearer level and straight first.
         auto distance(const Offer& o, const TrackChoice& c)
         {
-            const std::int32_t steps = std::abs(o.curve - c.curve) + std::abs(o.slope - c.slope) + std::abs(o.bank - c.bank);
+            const i32 steps = std::abs(o.curve - c.curve) + std::abs(o.slope - c.slope) + std::abs(o.bank - c.bank);
             return std::make_tuple(steps, toggles_apart(o, c), std::abs(o.curve) + std::abs(o.slope) + std::abs(o.bank));
         }
 
@@ -103,7 +105,7 @@ namespace rct3::park::track
         // nearest the picked toggles come first, so of a piece and its enclosed twin the one asked for leads.
         for (const PieceUse use : { PieceUse::Station, PieceUse::Special })
         {
-            const std::size_t from = o.named.size();
+            const usize from = o.named.size();
             for (const LaidPiece& c : candidates)
             {
                 if (c.index >= pieces.size() || pieces[c.index].use != use)
@@ -112,7 +114,7 @@ namespace rct3::park::track
                     continue;
                 o.named.push_back(c);
             }
-            const auto apart = [&](const LaidPiece& c) { return std::popcount(static_cast<std::uint32_t>(pieces[c.index].toggles ^ choice.toggles)); };
+            const auto apart = [&](const LaidPiece& c) { return std::popcount(static_cast<u32>(pieces[c.index].toggles ^ choice.toggles)); };
             std::ranges::stable_sort(o.named.begin() + static_cast<std::ptrdiff_t>(from), o.named.end(), { }, apart);
         }
         return o;
@@ -132,10 +134,10 @@ namespace rct3::park::track
         return best != nullptr ? std::optional { best->laid } : std::nullopt;
     }
 
-    TrackChoice pick_value(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, ChoiceAxis axis, std::int32_t value)
+    TrackChoice pick_value(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, ChoiceAxis axis, i32 value)
     {
         choice.named.reset();
-        const auto on_axis = [axis](const auto& picks) -> std::int32_t {
+        const auto on_axis = [axis](const auto& picks) -> i32 {
             switch (axis)
             {
                 case ChoiceAxis::Slope:
@@ -164,13 +166,13 @@ namespace rct3::park::track
 
     TrackChoice pick_toggle(std::span<const PieceShape> pieces, std::span<const LaidPiece> candidates, TrackChoice choice, PieceToggle toggle)
     {
-        const std::uint8_t bit = toggle_bit(toggle);
-        const std::uint8_t wanted = choice.toggles ^ bit;
+        const u8 bit = toggle_bit(toggle);
+        const u8 wanted = choice.toggles ^ bit;
         // A piece picked by name turns into its twin the other way, as a funnel into its enclosed form, when one fits.
         if (choice.named && choice.named->index < pieces.size())
         {
             const PieceShape& now = pieces[choice.named->index];
-            constexpr float kSameEnd = 0.01f; ///< Twins share their splines
+            constexpr f32 kSameEnd = 0.01f; ///< Twins share their splines
             const auto twin = std::ranges::find_if(candidates, [&](const LaidPiece& c) {
                 if (c.index >= pieces.size() || c.reversed != choice.named->reversed)
                     return false;
@@ -180,7 +182,7 @@ namespace rct3::park::track
             if (twin != candidates.end())
             {
                 choice.named = *twin;
-                choice.toggles = static_cast<std::uint8_t>((choice.toggles & ~bit) | (pieces[twin->index].toggles & bit));
+                choice.toggles = static_cast<u8>((choice.toggles & ~bit) | (pieces[twin->index].toggles & bit));
                 return choice;
             }
         }

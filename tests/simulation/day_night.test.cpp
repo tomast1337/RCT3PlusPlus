@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
@@ -24,7 +25,7 @@ TEST_CASE("after dark a coaster thrills teens more and families less; other ride
 
 TEST_CASE("guests come in at the gate: families by day, mostly teens at night")
 {
-    for (const float time : { 0.5f, 23.0f / 24 })
+    for (const f32 time : { 0.5f, 23.0f / 24 })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
@@ -33,8 +34,8 @@ TEST_CASE("guests come in at the gate: families by day, mostly teens at night")
         r.ctx().emplace<Daylight>(Daylight { time });
         park.run_seconds(1800);
         const auto& turnstile = r.ctx().get<Turnstile>();
-        const std::uint32_t teens = turnstile.in[std::to_underlying(AgeGroup::Teen)];
-        const std::uint32_t all = turnstile.in[0] + turnstile.in[1] + turnstile.in[2];
+        const u32 teens = turnstile.in[std::to_underlying(AgeGroup::Teen)];
+        const u32 all = turnstile.in[0] + turnstile.in[1] + turnstile.in[2];
         CHECK(all > 20);
         if (is_night(time))
             CHECK(teens * 2 > all);

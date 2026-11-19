@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/relief_maps.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -9,27 +11,27 @@ using rct3::ovl::texture::RgbaImage;
 
 namespace
 {
-    constexpr std::uint32_t kSide = 16;
+    constexpr u32 kSide = 16;
 
     /// Grey `base` with a column at x = 8 brighter by `lift`.
-    RgbaImage ridge(std::uint8_t base, std::uint8_t lift)
+    RgbaImage ridge(u8 base, u8 lift)
     {
-        RgbaImage picture { kSide, kSide, std::vector<std::uint8_t>(kSide * kSide * 4, 255) };
-        for (std::uint32_t y = 0; y < kSide; ++y)
+        RgbaImage picture { kSide, kSide, std::vector<u8>(kSide * kSide * 4, 255) };
+        for (u32 y = 0; y < kSide; ++y)
         {
-            for (std::uint32_t x = 0; x < kSide; ++x)
+            for (u32 x = 0; x < kSide; ++x)
             {
-                const auto v = static_cast<std::uint8_t>(x == 8 ? base + lift : base);
-                std::uint8_t* p = &picture.pixels[(y * kSide + x) * 4];
+                const auto v = static_cast<u8>(x == 8 ? base + lift : base);
+                u8* p = &picture.pixels[(y * kSide + x) * 4];
                 p[0] = p[1] = p[2] = v;
             }
         }
         return picture;
     }
 
-    std::int32_t texel(const RgbaImage& map, std::uint32_t x, std::uint32_t y, std::int32_t channel)
+    i32 texel(const RgbaImage& map, u32 x, u32 y, i32 channel)
     {
-        return map.pixels[(y * map.width + x) * 4 + static_cast<std::uint32_t>(channel)];
+        return map.pixels[(y * map.width + x) * 4 + static_cast<u32>(channel)];
     }
 } // namespace
 
@@ -37,7 +39,7 @@ TEST_CASE("a picture without detail gives a flat relief map")
 {
     const RgbaImage map = relief_map(ridge(90, 0));
     REQUIRE(map.pixels.size() == kSide * kSide * 4);
-    for (std::uint32_t i = 0; i < kSide * kSide; ++i)
+    for (u32 i = 0; i < kSide * kSide; ++i)
     {
         CHECK(map.pixels[i * 4] == 128);
         CHECK(map.pixels[i * 4 + 1] == 128);
@@ -49,7 +51,7 @@ TEST_CASE("a picture without detail gives a flat relief map")
 TEST_CASE("a dark line is a hollow, closed to the sky; half strength makes it shallower")
 {
     RgbaImage groove = ridge(150, 0);
-    for (std::uint32_t y = 0; y < kSide; ++y)
+    for (u32 y = 0; y < kSide; ++y)
         groove.pixels[(y * kSide + 8) * 4] = groove.pixels[(y * kSide + 8) * 4 + 1] = groove.pixels[(y * kSide + 8) * 4 + 2] = 40;
     const RgbaImage deep = relief_map(groove);
     const RgbaImage shallow = relief_map(groove, 0.5f);
@@ -73,7 +75,7 @@ TEST_CASE("faint detail is stretched to the same relief as strong detail")
 {
     const RgbaImage faint = relief_map(ridge(100, 8));
     const RgbaImage strong = relief_map(ridge(60, 120));
-    for (std::uint32_t x = 0; x < kSide; ++x)
+    for (u32 x = 0; x < kSide; ++x)
         CHECK(std::abs(texel(faint, x, 0, 0) - texel(strong, x, 0, 0)) <= 2);
 }
 

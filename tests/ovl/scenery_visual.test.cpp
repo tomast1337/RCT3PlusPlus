@@ -2,6 +2,7 @@
 #include "ovl/scenery_visual.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -16,33 +17,33 @@ namespace
 {
 
     const std::string kNames("V:svd\0Lod0\0Lod1\0Sh:shs\0Bo:bsh\0An:ban\0Bb:ftx\0", 44);
-    const std::uint32_t kBase = 48; // names padded to a multiple of 4
+    const u32 kBase = 48; // names padded to a multiple of 4
 
-    std::uint32_t name_at(const std::string& needle)
+    u32 name_at(const std::string& needle)
     {
         const auto at = kNames.find(needle);
         REQUIRE(at != std::string::npos);
-        return static_cast<std::uint32_t>(at);
+        return static_cast<u32>(at);
     }
 
     // Offsets inside the structure block.
-    constexpr std::uint32_t kHeader = 0;      // 28 bytes
-    constexpr std::uint32_t kLodArray = 28;   // 2 pointers
-    constexpr std::uint32_t kLod0 = 36;       // 72 bytes
-    constexpr std::uint32_t kLod1 = 108;      // 72 bytes
-    constexpr std::uint32_t kAnimArray = 180; // 2 pointers
-    constexpr std::uint32_t kAnimSlots = 188; // 2 reference fields
-    constexpr std::uint32_t kEnd = 196;
+    constexpr u32 kHeader = 0;      // 28 bytes
+    constexpr u32 kLodArray = 28;   // 2 pointers
+    constexpr u32 kLod0 = 36;       // 72 bytes
+    constexpr u32 kLod1 = 108;      // 72 bytes
+    constexpr u32 kAnimArray = 180; // 2 pointers
+    constexpr u32 kAnimSlots = 188; // 2 reference fields
+    constexpr u32 kEnd = 196;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    void real(std::vector<std::byte>& out, float v)
+    void real(std::vector<std::byte>& out, f32 v)
     {
-        append_u32(out, std::bit_cast<std::uint32_t>(v));
+        append_u32(out, std::bit_cast<u32>(v));
     }
 
     std::vector<std::byte> names()
@@ -62,7 +63,7 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> reference_row(std::uint32_t location, const std::string& name)
+    std::vector<std::byte> reference_row(u32 location, const std::string& name)
     {
         std::vector<std::byte> out;
         words(out, { location, name_at(name), 0, 0 });
@@ -82,19 +83,19 @@ namespace
         return concat({ reference_row(kBase + kLod0 + 8, "Sh:shs"), reference_row(kBase + kLod1 + 16, "Bo:bsh"), reference_row(kBase + kAnimSlots, "An:ban"), reference_row(kBase + kAnimSlots + 4, "An:ban") });
     }
 
-    void lod(std::vector<std::byte>& out, std::uint32_t type, std::uint32_t name, float distance, std::uint32_t animations, std::uint32_t animation_array)
+    void lod(std::vector<std::byte>& out, u32 type, u32 name, f32 distance, u32 animations, u32 animation_array)
     {
         words(out, { type, name, 0, 0, 0, 0, 0, 0 });
-        for (float f : { 2.0f, 3.0f, 0.1f, 0.9f, 0.2f, 0.8f, distance })
+        for (f32 f : { 2.0f, 3.0f, 0.1f, 0.9f, 0.2f, 0.8f, distance })
             real(out, f);
         words(out, { animations, 0, animation_array });
     }
 
-    std::vector<std::byte> structure(std::uint32_t lod_count = 2, std::uint32_t animation_array = kBase + kAnimArray)
+    std::vector<std::byte> structure(u32 lod_count = 2, u32 animation_array = kBase + kAnimArray)
     {
         std::vector<std::byte> out;
         words(out, { 5 });
-        for (float f : { 0.5f, 0.75f, 1.0f, 0.25f })
+        for (f32 f : { 0.5f, 0.75f, 1.0f, 0.25f })
             real(out, f);
         words(out, { lod_count, kBase + kLodArray, kBase + kLod0, kBase + kLod1 });
         lod(out, 0, name_at("Lod0"), 50.0f, 0, 0);
@@ -129,7 +130,7 @@ TEST_CASE("scenery visuals expose levels of detail and references")
     REQUIRE(v.lods.size() == 2);
 
     const auto& a = v.lods[0];
-    CHECK(a.mesh_type == static_cast<std::uint32_t>(rct3::ovl::LodMeshType::StaticShape));
+    CHECK(a.mesh_type == static_cast<u32>(rct3::ovl::LodMeshType::StaticShape));
     CHECK(a.name == "Lod0");
     CHECK(a.static_shape == "Sh");
     CHECK(a.bone_shape.empty());
@@ -141,7 +142,7 @@ TEST_CASE("scenery visuals expose levels of detail and references")
     CHECK(a.animations.empty());
 
     const auto& b = v.lods[1];
-    CHECK(b.mesh_type == static_cast<std::uint32_t>(rct3::ovl::LodMeshType::BoneShape));
+    CHECK(b.mesh_type == static_cast<u32>(rct3::ovl::LodMeshType::BoneShape));
     CHECK(b.name == "Lod1");
     CHECK(b.bone_shape == "Bo");
     CHECK(b.static_shape.empty());

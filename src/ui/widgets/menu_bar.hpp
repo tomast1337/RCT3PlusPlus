@@ -11,6 +11,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/widgets/menu.hpp"
 
 #include <cstddef>
@@ -29,8 +30,8 @@ namespace rct3::ui::widgets
         Color highlight_colour = hex("#5aa8e6");
         Color text_colour = hex("#000000");
         font::FontRole font = font::FontRole::Small;
-        float title_padding = 10; ///< Each side of a title's text
-        float first_indent = 4;
+        f32 title_padding = 10; ///< Each side of a title's text
+        f32 first_indent = 4;
         MenuStyle menu;
     };
 
@@ -42,8 +43,8 @@ namespace rct3::ui::widgets
 
     struct MenuChoice
     {
-        std::size_t menu = 0;
-        std::size_t item = 0;
+        usize menu = 0;
+        usize item = 0;
 
         friend bool operator==(const MenuChoice&, const MenuChoice&) = default;
     };
@@ -68,7 +69,7 @@ namespace rct3::ui::widgets
         }
 
         /// Which menu is open, if any.
-        [[nodiscard]] std::optional<std::size_t> open_menu() const
+        [[nodiscard]] std::optional<usize> open_menu() const
         {
             return menu_ != nullptr ? std::optional(open_) : std::nullopt;
         }
@@ -77,8 +78,8 @@ namespace rct3::ui::widgets
             return core::maybe(menu_);
         }
         /// Where title `index` is, in desktop units, as of the last update.
-        [[nodiscard]] Rect title_rect(std::size_t index) const;
-        [[nodiscard]] std::optional<std::size_t> title_at(Point p) const;
+        [[nodiscard]] Rect title_rect(usize index) const;
+        [[nodiscard]] std::optional<usize> title_at(Point p) const;
 
         [[nodiscard]] bool takes_pointer() const override
         {
@@ -95,13 +96,13 @@ namespace rct3::ui::widgets
         void draw(DrawContext& context) const override;
 
     private:
-        void open(std::size_t index);
+        void open(usize index);
         void close_menu();
 
-        std::vector<float> widths_; // Of each title, from the last update with fonts
-        Menu* menu_ = nullptr;      // Valid until this widget's update sees it closing
-        std::size_t open_ = 0;
-        std::size_t marked_ = 0; // The title the keys move between
+        std::vector<f32> widths_; // Of each title, from the last update with fonts
+        Menu* menu_ = nullptr;    // Valid until this widget's update sees it closing
+        usize open_ = 0;
+        usize marked_ = 0; // The title the keys move between
         std::optional<MenuChoice> choice_;
     };
 

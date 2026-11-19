@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/skin/skin.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <utility>
 
@@ -12,8 +14,8 @@ namespace rct3::ui::skin
 
         struct Lines
         {
-            std::size_t x;
-            std::size_t y;
+            usize x;
+            usize y;
         };
 
         std::optional<Lines> line_counts(ovl::GuiSkinKind kind)
@@ -38,18 +40,18 @@ namespace rct3::ui::skin
         // One axis cut into cells: where each cell goes on screen and which texture span it shows.
         struct Span
         {
-            float from;
-            float to;
+            f32 from;
+            f32 to;
         };
 
         struct Axis
         {
             std::array<Span, 3> target { };
             std::array<Span, 3> source { };
-            std::size_t count = 0;
+            usize count = 0;
         };
 
-        Axis cut(std::span<const float> lines, float from, float to)
+        Axis cut(std::span<const f32> lines, f32 from, f32 to)
         {
             Axis axis;
             if (lines.size() == 2)
@@ -59,12 +61,12 @@ namespace rct3::ui::skin
                 axis.count = 1;
                 return axis;
             }
-            float start = lines[1] - lines[0];
-            float end = lines[3] - lines[2];
-            const float length = to - from;
+            f32 start = lines[1] - lines[0];
+            f32 end = lines[3] - lines[2];
+            const f32 length = to - from;
             if (start + end > length && start + end > 0)
             {
-                const float scale = std::max(length, 0.0f) / (start + end);
+                const f32 scale = std::max(length, 0.0f) / (start + end);
                 start *= scale;
                 end *= scale;
             }
@@ -87,8 +89,8 @@ namespace rct3::ui::skin
         // A Rect lists x0, y0, x1, y1; the other kinds list all x lines, then all y lines.
         if (kind == ovl::GuiSkinKind::Rect)
         {
-            layout.xs = { static_cast<float>(skin.coordinates[0]), static_cast<float>(skin.coordinates[2]) };
-            layout.ys = { static_cast<float>(skin.coordinates[1]), static_cast<float>(skin.coordinates[3]) };
+            layout.xs = { static_cast<f32>(skin.coordinates[0]), static_cast<f32>(skin.coordinates[2]) };
+            layout.ys = { static_cast<f32>(skin.coordinates[1]), static_cast<f32>(skin.coordinates[3]) };
             layout.mirror_x = layout.xs[0] > layout.xs[1];
             layout.mirror_y = layout.ys[0] > layout.ys[1];
             if (layout.mirror_x)
@@ -98,34 +100,34 @@ namespace rct3::ui::skin
         }
         else
         {
-            for (std::size_t i = 0; i < counts->x; ++i)
-                layout.xs[i] = static_cast<float>(skin.coordinates[i]);
-            for (std::size_t i = 0; i < counts->y; ++i)
-                layout.ys[i] = static_cast<float>(skin.coordinates[counts->x + i]);
+            for (usize i = 0; i < counts->x; ++i)
+                layout.xs[i] = static_cast<f32>(skin.coordinates[i]);
+            for (usize i = 0; i < counts->y; ++i)
+                layout.ys[i] = static_cast<f32>(skin.coordinates[counts->x + i]);
         }
         if (!std::ranges::is_sorted(std::span(layout.xs).first(layout.x_count)) || !std::ranges::is_sorted(std::span(layout.ys).first(layout.y_count)))
             return std::nullopt;
         return layout;
     }
 
-    SkinLayout flipped_vertically(const SkinLayout& layout, float texture_height)
+    SkinLayout flipped_vertically(const SkinLayout& layout, f32 texture_height)
     {
         SkinLayout flipped = layout;
-        for (std::size_t i = 0; i < layout.y_count; ++i)
+        for (usize i = 0; i < layout.y_count; ++i)
             flipped.ys[i] = texture_height - layout.ys[layout.y_count - 1 - i];
         return flipped;
     }
 
-    SkinPieces skin_pieces(const SkinLayout& layout, const Rect& target, float texture_width, float texture_height)
+    SkinPieces skin_pieces(const SkinLayout& layout, const Rect& target, f32 texture_width, f32 texture_height)
     {
         SkinPieces out;
         if (layout.x_count == 0 || layout.y_count == 0 || texture_width <= 0 || texture_height <= 0)
             return out;
         const Axis xs = cut(std::span(layout.xs).first(layout.x_count), target.x0, target.x1);
         const Axis ys = cut(std::span(layout.ys).first(layout.y_count), target.y0, target.y1);
-        for (std::size_t row = 0; row < ys.count; ++row)
+        for (usize row = 0; row < ys.count; ++row)
         {
-            for (std::size_t column = 0; column < xs.count; ++column)
+            for (usize column = 0; column < xs.count; ++column)
             {
                 if (layout.kind == ovl::GuiSkinKind::Frame && row == 1 && column == 1)
                     continue;
@@ -140,7 +142,7 @@ namespace rct3::ui::skin
         return out;
     }
 
-    void draw_skin(DrawList& list, const SkinLayout& layout, const Rect& target, TextureId texture, float texture_width, float texture_height, Color tint)
+    void draw_skin(DrawList& list, const SkinLayout& layout, const Rect& target, TextureId texture, f32 texture_width, f32 texture_height, Color tint)
     {
         const SkinPieces pieces = skin_pieces(layout, target, texture_width, texture_height);
         for (const SkinPiece& piece : pieces.pieces())

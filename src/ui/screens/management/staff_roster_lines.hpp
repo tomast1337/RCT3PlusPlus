@@ -4,6 +4,7 @@
 // chose to sort them by. Each line holds what its row shows, so the window can tell which rows changed.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/people.hpp"
 #include "ui/screens/management/pages.hpp"
 #include "ui/string_table.hpp"
@@ -21,7 +22,7 @@ namespace rct3::ui::screens::management
 {
 
     /// What the staff window sorts its rows by, in the order its drop-down offers them.
-    enum class RosterSort : std::uint8_t
+    enum class RosterSort : u8
     {
         Job,
         Name,
@@ -37,7 +38,7 @@ namespace rct3::ui::screens::management
         Laziness,
         Count_,
     };
-    inline constexpr std::size_t kRosterSorts = static_cast<std::size_t>(RosterSort::Count_);
+    inline constexpr usize kRosterSorts = static_cast<usize>(RosterSort::Count_);
 
     /// The drop-down's words for each of RosterSort, as string keys.
     inline constexpr std::array<std::string_view, kRosterSorts> kRosterSortNames = {
@@ -63,7 +64,7 @@ namespace rct3::ui::screens::management
     } };
 
     /// The jobs shown, one bit per kRosterJobs entry: everyone but the vendors, who stand at their stalls.
-    using RosterJobs = std::uint8_t;
+    using RosterJobs = u8;
     inline constexpr RosterJobs kAllRosterJobs = (1u << kRosterJobs.size()) - 1;
     inline constexpr RosterJobs kStartRosterJobs = kAllRosterJobs & ~(1u << 4);
 
@@ -73,24 +74,24 @@ namespace rct3::ui::screens::management
     /// A worker's row: who they are, what they do and what the player can change.
     struct RosterLine
     {
-        std::size_t index = 0; ///< In the park's staff
+        usize index = 0; ///< In the park's staff
         save::model::StaffKind kind = save::model::StaffKind::Handyman;
         std::u16string name;
         std::u16string doing;
         Mood mood = Mood::Neutral;
-        float happiness = 0;
-        float laziness = 0;
-        std::int32_t warnings = 0;
-        std::int32_t training = 0;
-        std::int32_t wage_level = 0;
-        units::Money wage;            ///< An hour's pay
-        units::Money training_cost;   ///< Of their next level; nothing once fully trained
-        std::int32_t tasks = 0;       ///< Task flags
-        std::size_t patrol_tiles = 0; ///< 0 for none: the whole park
+        f32 happiness = 0;
+        f32 laziness = 0;
+        i32 warnings = 0;
+        i32 training = 0;
+        i32 wage_level = 0;
+        units::Money wage;          ///< An hour's pay
+        units::Money training_cost; ///< Of their next level; nothing once fully trained
+        i32 tasks = 0;              ///< Task flags
+        usize patrol_tiles = 0;     ///< 0 for none: the whole park
         bool painting_patrol = false;
-        std::array<std::uint8_t, 2> colours { };
-        std::uint8_t costume = 0; ///< An entertainer's
-        float hired = 0;          ///< When, in the park's seconds
+        std::array<u8, 2> colours { };
+        u8 costume = 0; ///< An entertainer's
+        f32 hired = 0;  ///< When, in the park's seconds
         std::u16string hired_text;
 
         friend bool operator==(const RosterLine&, const RosterLine&) = default;

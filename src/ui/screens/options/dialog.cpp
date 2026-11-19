@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/options/dialog.hpp"
 
+#include "core/types.hpp"
 #include "ui/money_text.hpp"
 
 #include <algorithm>
@@ -67,7 +68,7 @@ namespace rct3::ui::screens::options
 
         // The camera page's help: what each mouse button and the wheel does in each control mode, as the game
         // tells it. The lines start with the button's name; a button with nothing to do shows only that.
-        enum class CameraAction : std::uint8_t
+        enum class CameraAction : u8
         {
             None,
             Move,
@@ -95,13 +96,13 @@ namespace rct3::ui::screens::options
             { A::None, A::Move, A::Rotate, A::None, A::Zoom },
             { A::None, A::Move, A::Move, A::Rotate, A::Zoom },
         } };
-        constexpr float kFreelookMode = 1;
+        constexpr f32 kFreelookMode = 1;
 
-        CameraLines camera_lines(std::int32_t mode, std::int32_t controls)
+        CameraLines camera_lines(i32 mode, i32 controls)
         {
             if (mode <= 0)
-                return kAdvancedCamera.at(static_cast<std::size_t>(std::clamp(controls, 0, 2)));
-            return kOtherCamera.at(static_cast<std::size_t>(std::min(mode, 3) - 1));
+                return kAdvancedCamera.at(static_cast<usize>(std::clamp(controls, 0, 2)));
+            return kOtherCamera.at(static_cast<usize>(std::min(mode, 3) - 1));
         }
 
         std::u16string str(const StringTable& strings, std::string_view key)
@@ -148,12 +149,12 @@ namespace rct3::ui::screens::options
         caption_->style.vertical = Align::Centre;
         caption_->style.colour = style.caption_colour;
         caption_->placement = top_left(style.caption_x, 0, style.caption_width, style.caption_height);
-        for (std::size_t i = 0; i < kOptionsPageCount; ++i)
+        for (usize i = 0; i < kOptionsPageCount; ++i)
         {
             auto& tab = body.add<widgets::Button>(std::string(kTabs[i].icon), std::string(kTabs[i].icon));
             tab.toggle = true;
             tab.tooltip = str(strings, kTabs[i].caption_key);
-            tab.placement = top_left(style.tabs_x + style.tab_step * static_cast<float>(i), 0, style.tab_size, style.tab_size);
+            tab.placement = top_left(style.tabs_x + style.tab_step * static_cast<f32>(i), 0, style.tab_size, style.tab_size);
             tabs_[i] = &tab;
             captions_[i] = tab.tooltip;
 
@@ -175,8 +176,8 @@ namespace rct3::ui::screens::options
     void OptionsDialog::fit_page()
     {
         // The window wraps the open page, as the game's do.
-        float bottom = 0;
-        for (const auto& child : pages_.at(static_cast<std::size_t>(page_))->children())
+        f32 bottom = 0;
+        for (const auto& child : pages_.at(static_cast<usize>(page_))->children())
         {
             if (child->visible)
                 bottom = std::max(bottom, child->placement.offsets.y1);
@@ -202,13 +203,13 @@ namespace rct3::ui::screens::options
             language_ = &rows.list(str(strings, "GameOptionsDialog_Language"), std::move(names), { }, "GameOptionsDialog_Language");
             const auto at = std::ranges::find(choices_.languages, choices_.language);
             if (at != choices_.languages.end())
-                language_->select(static_cast<std::size_t>(at - choices_.languages.begin()));
+                language_->select(static_cast<usize>(at - choices_.languages.begin()));
             if (choices_.language_locked)
                 rows.disable();
         }
         std::vector<std::u16string> currencies;
-        const std::int32_t last_currency = static_cast<std::int32_t>(config::game::game_option_info(O::Currency).maximum);
-        for (std::int32_t n = 0; n <= last_currency; ++n)
+        const i32 last_currency = static_cast<i32>(config::game::game_option_info(O::Currency).maximum);
+        for (i32 n = 0; n <= last_currency; ++n)
         {
             const Currency c = currency(strings, n);
             std::u16string sign = trimmed(c.before + c.after);
@@ -243,15 +244,15 @@ namespace rct3::ui::screens::options
     void OptionsDialog::show_background_music()
     {
         const std::vector<std::string>& files = choices_.background_music;
-        const std::size_t shuffle = files.size();
-        const std::size_t none = shuffle + 1;
-        std::size_t shown = choices_.background_track.value_or(none);
+        const usize shuffle = files.size();
+        const usize none = shuffle + 1;
+        usize shown = choices_.background_track.value_or(none);
         if (options_.flag(O::ShuffleBackgroundMusic))
             shown = shuffle;
         else if (const auto& track = options_.background_music())
         {
             const auto it = std::ranges::find(files, *track);
-            shown = track->empty() ? none : it != files.end() ? static_cast<std::size_t>(it - files.begin()) : shown;
+            shown = track->empty() ? none : it != files.end() ? static_cast<usize>(it - files.begin()) : shown;
         }
         music_->select(std::min(shown, none));
     }
@@ -261,7 +262,7 @@ namespace rct3::ui::screens::options
         if (music_ == nullptr || !music_->take_change() || !music_->selected())
             return;
         const std::vector<std::string>& files = choices_.background_music;
-        const std::size_t picked = *music_->selected();
+        const usize picked = *music_->selected();
         options_.set(O::ShuffleBackgroundMusic, picked == files.size() ? 1.0f : 0.0f);
         if (picked < files.size())
             options_.set_background_music(files[picked]);
@@ -273,7 +274,7 @@ namespace rct3::ui::screens::options
     void OptionsDialog::build_keys(Widget& page, const StringTable& strings)
     {
         const KeyListStyle& k = style_.keys;
-        const float width = style_.page_width;
+        const f32 width = style_.page_width;
         auto& back = page.add<widgets::Panel>("key_back", std::string { });
         back.colour = k.background;
         back.placement = top_left(0, 0, width, k.height);
@@ -282,7 +283,7 @@ namespace rct3::ui::screens::options
         Widget& list = area.content();
 
         // Each row named by its string key: the box or the fixed keys by the key, its name with "_label".
-        float y = k.top;
+        f32 y = k.top;
         const auto bar = [&](std::string_view key) {
             y += k.group_gap;
             auto& fill = list.add<widgets::Panel>(std::format("{}_bar", key), std::string { });
@@ -342,7 +343,7 @@ namespace rct3::ui::screens::options
                 widgets::KeyBox& b = box(info.label_key, combo ? std::vector { *combo } : std::vector<KeyCombo> { });
                 b.game_key = true;
                 b.tooltip = str(strings, kKeyChange);
-                play_boxes_.at(static_cast<std::size_t>(info.command)) = &b;
+                play_boxes_.at(static_cast<usize>(info.command)) = &b;
                 row(std::move(name), b);
             }
         }
@@ -355,7 +356,7 @@ namespace rct3::ui::screens::options
             b.prompt = str(strings, kPressKeys);
             b.none = str(strings, kNoKeys);
             b.tooltip = str(strings, kKeysTip);
-            key_boxes_.at(static_cast<std::size_t>(info.command)) = &b;
+            key_boxes_.at(static_cast<usize>(info.command)) = &b;
             row(str(strings, info.label_key), b);
         }
         row(str(strings, kMoveByWord), fixed(kMoveByWordKeys, str(strings, kMoveByWordKeys)));
@@ -388,7 +389,7 @@ namespace rct3::ui::screens::options
         graphics_top_ = &top;
 
         // The game picks a quality level for the computer here; we cannot tell yet, so it shows unusable.
-        const float icon_x = style_.page_width - style_.auto_detect_right - style_.auto_detect_size;
+        const f32 icon_x = style_.page_width - style_.auto_detect_right - style_.auto_detect_size;
         auto_detect_ = &page.add<widgets::Button>("auto_detect", std::string { }, style_.auto_detect_icon);
         auto_detect_->tooltip = str(strings, kAutoDetectTip);
         auto_detect_->placement = top_left(icon_x, 0, style_.auto_detect_size, style_.auto_detect_size);
@@ -403,7 +404,7 @@ namespace rct3::ui::screens::options
         auto& rows = *rows_.emplace_back(std::make_unique<OptionRows>(custom_->content(), style_.page_width - style_.scroll.thickness, style_.rows, options_, choices_.inert));
         custom_rows_ = &rows;
         std::vector<std::u16string> samples = { str(strings, "GameOptionsDialog_AntiAliasNone") };
-        for (const std::int32_t level : choices_.anti_aliasing_levels)
+        for (const i32 level : choices_.anti_aliasing_levels)
             samples.push_back(str(strings, "GameOptionsDialog_AntiAliasLevel") + u" " + ascii(std::to_string(level)));
         rows.choice(O::AntiAliasing, str(strings, "GameOptionsDialog_AntiAlias"), std::move(samples));
         rows.choice(O::Shadows, str(strings, "GameOptionsDialog_Shadows"), items(strings, { "GameOptionsDialog_ShadowsTypeNone", "GameOptionsDialog_ShadowsTypeStatic", "GameOptionsDialog_ShadowsTypeDynamic" }));
@@ -415,7 +416,7 @@ namespace rct3::ui::screens::options
         rows.headings(str(strings, "GameOptionsDialog_LODTitle"), str(strings, "GameOptionsDialog_DrawDistanceTitle"));
         rows.shown_when(details);
         const std::array<std::string_view, config::game::kDetailPairs.size()> kinds = { "GameOptionsDialog_PeopleLOD", "GameOptionsDialog_AnimalLOD", "GameOptionsDialog_VegetationLOD", "GameOptionsDialog_FenceLOD", "GameOptionsDialog_BuildingLOD", "GameOptionsDialog_PathsLOD", "GameOptionsDialog_SceneryLOD", "GameOptionsDialog_SupportLOD", "GameOptionsDialog_TrackLOD", "GameOptionsDialog_RideLOD" };
-        for (std::size_t i = 0; i < kinds.size(); ++i)
+        for (usize i = 0; i < kinds.size(); ++i)
         {
             rows.pair(config::game::kDetailPairs[i], str(strings, kinds[i]));
             rows.shown_when(details);
@@ -503,7 +504,7 @@ namespace rct3::ui::screens::options
 
         // What the mouse does in the chosen mode; update_camera_help() fills the lines in.
         rows.section();
-        for (std::size_t i = 0; i < camera_help_.size(); ++i)
+        for (usize i = 0; i < camera_help_.size(); ++i)
         {
             camera_buttons_.at(i) = str(strings, kCameraButtonKeys.at(i));
             camera_help_.at(i) = &rows.note(camera_buttons_.at(i));
@@ -517,10 +518,10 @@ namespace rct3::ui::screens::options
 
     void OptionsDialog::update_camera_help()
     {
-        const CameraLines lines = camera_lines(static_cast<std::int32_t>(options_.choice(O::CameraMode)), static_cast<std::int32_t>(std::lround(options_.get(O::CameraControls))));
-        for (std::size_t i = 0; i < camera_help_.size(); ++i)
+        const CameraLines lines = camera_lines(static_cast<i32>(options_.choice(O::CameraMode)), static_cast<i32>(std::lround(options_.get(O::CameraControls))));
+        for (usize i = 0; i < camera_help_.size(); ++i)
         {
-            const std::u16string& action = camera_actions_.at(static_cast<std::size_t>(lines.at(i)));
+            const std::u16string& action = camera_actions_.at(static_cast<usize>(lines.at(i)));
             camera_help_.at(i)->text = action.empty() ? camera_buttons_.at(i) : camera_buttons_.at(i) + u" " + action;
         }
     }
@@ -528,13 +529,13 @@ namespace rct3::ui::screens::options
     void OptionsDialog::show_page(OptionsPage page)
     {
         page_ = page;
-        for (std::size_t i = 0; i < kOptionsPageCount; ++i)
+        for (usize i = 0; i < kOptionsPageCount; ++i)
         {
-            const bool current = i == static_cast<std::size_t>(page);
+            const bool current = i == static_cast<usize>(page);
             pages_[i]->visible = current;
             tabs_[i]->on = current;
         }
-        caption_->text = captions_.at(static_cast<std::size_t>(page));
+        caption_->text = captions_.at(static_cast<usize>(page));
     }
 
     bool OptionsDialog::take_change()
@@ -547,7 +548,7 @@ namespace rct3::ui::screens::options
         return std::exchange(picked_language_, std::nullopt);
     }
 
-    std::optional<std::size_t> OptionsDialog::take_screen_size()
+    std::optional<usize> OptionsDialog::take_screen_size()
     {
         return std::exchange(picked_screen_size_, std::nullopt);
     }
@@ -566,7 +567,7 @@ namespace rct3::ui::screens::options
     void OptionsDialog::update_keys()
     {
         bool changed = false;
-        for (std::size_t i = 0; i < kCommandCount; ++i)
+        for (usize i = 0; i < kCommandCount; ++i)
         {
             if (key_boxes_[i]->take_change())
             {
@@ -575,7 +576,7 @@ namespace rct3::ui::screens::options
                 changed = true;
             }
         }
-        for (std::size_t i = 0; i < kPlayCommandCount; ++i)
+        for (usize i = 0; i < kPlayCommandCount; ++i)
         {
             widgets::KeyBox* box = play_boxes_[i];
             if (box != nullptr && box->take_change())
@@ -592,9 +593,9 @@ namespace rct3::ui::screens::options
         }
         if (!changed)
             return;
-        for (std::size_t i = 0; i < kCommandCount; ++i)
+        for (usize i = 0; i < kCommandCount; ++i)
             key_boxes_[i]->combos = keys_.keys(static_cast<Command>(i));
-        for (std::size_t i = 0; i < kPlayCommandCount; ++i)
+        for (usize i = 0; i < kPlayCommandCount; ++i)
         {
             if (widgets::KeyBox* box = play_boxes_[i])
             {
@@ -608,7 +609,7 @@ namespace rct3::ui::screens::options
     void OptionsDialog::update(const UpdateContext& context)
     {
         widgets::Window::update(context);
-        for (std::size_t i = 0; i < kOptionsPageCount; ++i)
+        for (usize i = 0; i < kOptionsPageCount; ++i)
         {
             if (tabs_[i]->take_click())
                 show_page(static_cast<OptionsPage>(i));
@@ -630,7 +631,7 @@ namespace rct3::ui::screens::options
             picked_screen_size_ = *resolution_->selected();
         update_camera_help();
 
-        const float top = graphics_top_->height() + style_.rows.section_gap;
+        const f32 top = graphics_top_->height() + style_.rows.section_gap;
         custom_->placement = top_left(0, top, style_.page_width, std::min(style_.scroll_height, style_.page_height - top));
         fit_page();
     }

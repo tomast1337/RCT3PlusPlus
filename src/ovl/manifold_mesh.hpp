@@ -3,6 +3,7 @@
 // Manifold meshes: simple triangle meshes with positions only, used as collision proxies.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -17,10 +18,10 @@ namespace rct3::ovl
     struct ManifoldMesh
     {
         /// Bounding box. Equals the extent of the vertices in every item seen.
-        std::array<float, 3> min { };
-        std::array<float, 3> max { };
-        std::vector<std::array<float, 3>> vertices;
-        std::vector<std::uint16_t> indices; ///< Three per triangle
+        std::array<f32, 3> min { };
+        std::array<f32, 3> max { };
+        std::vector<std::array<f32, 3>> vertices;
+        std::vector<u16> indices; ///< Three per triangle
     };
 
     struct ManifoldMeshItem

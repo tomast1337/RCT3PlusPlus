@@ -6,12 +6,14 @@
 // windows make no sound. A new message in the park has a sound of its own.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstdint>
 
 namespace rct3::ui
 {
 
-    enum class InterfaceSound : std::uint8_t
+    enum class InterfaceSound : u8
     {
         Press,
         Release,

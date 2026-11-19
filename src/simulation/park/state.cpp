@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park/state.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/tuning.hpp"
 
@@ -30,7 +31,7 @@ namespace rct3::simulation::park
             if (park->has_park)
             {
                 if (const auto guests = park->park.guests_in_park.latest())
-                    s.guests = static_cast<std::int32_t>(std::lround(*guests));
+                    s.guests = static_cast<i32>(std::lround(*guests));
                 if (const auto rating = park->park.rating())
                     s.rating = *rating / save::model::kMaxParkRating;
                 s.harder_rating = park->park.flags.has(save::model::ParkFlag::HarderRating);
@@ -53,20 +54,20 @@ namespace rct3::simulation::park
 
     namespace
     {
-        std::int64_t week_of(float time, float zero_time) noexcept
+        i64 week_of(f32 time, f32 zero_time) noexcept
         {
-            return static_cast<std::int64_t>(std::floor((time - zero_time) / save::model::GameClock::kUnitsPerWeek));
+            return static_cast<i64>(std::floor((time - zero_time) / save::model::GameClock::kUnitsPerWeek));
         }
     } // namespace
 
-    std::int32_t pass_time(ParkState& state, float seconds)
+    i32 pass_time(ParkState& state, f32 seconds)
     {
         if (seconds <= 0)
             return 0;
-        const std::int64_t before = week_of(state.time, state.zero_time);
+        const i64 before = week_of(state.time, state.zero_time);
         state.time += seconds / kSecondsPerHour * kCalendarUnitsPerHour;
         state.date = save::model::GameClock::date_at(state.time, state.zero_time);
-        return static_cast<std::int32_t>(std::max<std::int64_t>(0, week_of(state.time, state.zero_time) - before));
+        return static_cast<i32>(std::max<i64>(0, week_of(state.time, state.zero_time) - before));
     }
 
     void rate_week(ParkState& state, RatingInput input)

@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "audio/sound_scripts.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 
 namespace rct3::audio
 {
 
-    float Glide::at(units::Seconds now) const
+    f32 Glide::at(units::Seconds now) const
     {
         if (now >= until || until <= start)
             return to;
@@ -39,16 +41,16 @@ namespace rct3::audio
 
     void restart_script(ScriptPlay& play, units::Seconds was)
     {
-        const float volume = play.volume.at(was);
-        const float pitch = play.pitch.at(was);
+        const f32 volume = play.volume.at(was);
+        const f32 pitch = play.pitch.at(was);
         play = { .next_step = 0, .volume = { .from = volume, .to = volume }, .pitch = { .from = pitch, .to = pitch } };
     }
 
-    Screamers pick_screamers(ScreamingRiders& riders, float roll)
+    Screamers pick_screamers(ScreamingRiders& riders, f32 roll)
     {
-        const std::size_t all = riders.men + riders.women;
-        const bool men = static_cast<float>(riders.men) > std::clamp(roll, 0.0f, 1.0f) * static_cast<float>(all) || riders.women == 0;
-        std::size_t& of = men ? riders.men : riders.women;
+        const usize all = riders.men + riders.women;
+        const bool men = static_cast<f32>(riders.men) > std::clamp(roll, 0.0f, 1.0f) * static_cast<f32>(all) || riders.women == 0;
+        usize& of = men ? riders.men : riders.women;
         if (of <= 1)
             return men ? Screamers::Man : Screamers::Woman;
         of = 1;

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/water/surface.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -11,7 +13,7 @@ using namespace rct3::park::water;
 namespace
 {
     /// A square of water at `level` from (x, z) to (x + size, z + size), `depth` deep.
-    void square(std::vector<WaterVertex>& out, float level, float x, float z, float size, float depth = 1)
+    void square(std::vector<WaterVertex>& out, f32 level, f32 x, f32 z, f32 size, f32 depth = 1)
     {
         const glm::vec4 colour { 0.2f, 0.4f, 0.5f, 0.6f };
         const glm::vec3 a { x, level, z }, b { x + size, level, z }, c { x, level, z + size }, d { x + size, level, z + size };
@@ -51,10 +53,10 @@ TEST_CASE("the reflected heights are those covering most of the view, below the 
     square(water, 50, -50, -50, 100); // Above the eye
     const WaterSurface s = water_surface(water);
     const glm::vec3 eye { 0, 20, 0 };
-    const std::vector<float> one = reflection_levels(s, looking_down(eye), eye, 1);
+    const std::vector<f32> one = reflection_levels(s, looking_down(eye), eye, 1);
     REQUIRE(one.size() == 1);
     CHECK(one[0] == doctest::Approx(0));
-    const std::vector<float> two = reflection_levels(s, looking_down(eye), eye, 2);
+    const std::vector<f32> two = reflection_levels(s, looking_down(eye), eye, 2);
     CHECK(two.size() == 2);
     CHECK(reflection_levels(s, looking_down(eye), eye, 0).empty());
 }
@@ -66,11 +68,11 @@ TEST_CASE("water close in height to a reflected one shares it")
     square(water, 0.25f, -2, -2, 4);
     const WaterSurface s = water_surface(water);
     const glm::vec3 eye { 0, 20, 0 };
-    const std::vector<float> levels = reflection_levels(s, looking_down(eye), eye, 2);
+    const std::vector<f32> levels = reflection_levels(s, looking_down(eye), eye, 2);
     REQUIRE(levels.size() == 1); // The pool borrows the lake's
     CHECK(reflection_for(0.25f, levels) == 0);
     CHECK_FALSE(reflection_for(3, levels));
-    const std::vector<float> both { 0, 1 };
+    const std::vector<f32> both { 0, 1 };
     CHECK(reflection_for(0.7f, both) == 1);
 }
 

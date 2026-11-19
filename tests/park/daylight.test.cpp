@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/daylight.hpp"
 
+#include "core/types.hpp"
 #include "park/sun.hpp"
 #include "simulation/day_clock.hpp"
 
@@ -11,12 +12,12 @@ using namespace rct3::park;
 
 namespace
 {
-    constexpr float hours(float h)
+    constexpr f32 hours(f32 h)
     {
         return h / simulation::kHoursPerDay;
     }
 
-    float brightness(glm::vec3 c)
+    f32 brightness(glm::vec3 c)
     {
         return (c.r + c.g + c.b) / 3;
     }
@@ -31,7 +32,7 @@ TEST_CASE("by day the sun and the open sky light the park")
     CHECK(brightness(noon.ground) > 0);
     CHECK(brightness(noon.ground) < brightness(noon.sky));
     // Flat ground at noon ends up about as bright as its picture.
-    const float flat = brightness(noon.sky) + brightness(noon.sun) * noon.sun_direction.y;
+    const f32 flat = brightness(noon.sky) + brightness(noon.sun) * noon.sun_direction.y;
     CHECK(flat > 0.85f);
     CHECK(flat < 1.15f);
 }

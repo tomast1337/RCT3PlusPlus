@@ -7,6 +7,7 @@
 //
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widget.hpp"
 #include "units/units.hpp"
 
@@ -29,14 +30,14 @@ namespace rct3::ui::widgets
     };
 
     /// How far a float has risen at `age`, in interface units.
-    [[nodiscard]] float money_float_rise(units::Seconds age) noexcept;
+    [[nodiscard]] f32 money_float_rise(units::Seconds age) noexcept;
 
     /// How opaque a float is at `age`, from 1 down to 0 as it ends.
-    [[nodiscard]] float money_float_alpha(units::Seconds age) noexcept;
+    [[nodiscard]] f32 money_float_alpha(units::Seconds age) noexcept;
 
     /// How far letter `letter` of a float stands above the rest of its line at `age`, for text
     /// `line_height` high: a wave running along the letters.
-    [[nodiscard]] float money_float_bob(std::size_t letter, units::Seconds age, float line_height) noexcept;
+    [[nodiscard]] f32 money_float_bob(usize letter, units::Seconds age, f32 line_height) noexcept;
 
     class MoneyFloaters : public Widget
     {

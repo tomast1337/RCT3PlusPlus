@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "parkfile/saved_park.hpp"
 
+#include "core/types.hpp"
 #include "parkfile/binary.hpp"
 #include "simulation/enjoyment.hpp"
 #include "simulation/guests.hpp"
@@ -36,14 +37,14 @@ namespace rct3::parkfile
             f("PARK", park.progress);
             f("VIEW", park.camera);
         }
-        constexpr std::uint32_t kChunks = 10;
+        constexpr u32 kChunks = 10;
     } // namespace
 
-    std::vector<save::model::PlacedObject> kept_objects(std::span<const save::model::PlacedObject> objects, std::size_t own, const std::unordered_set<std::uint64_t>& placed, std::span<const save::model::PathTile> paths, const save::model::RideModel& rides)
+    std::vector<save::model::PlacedObject> kept_objects(std::span<const save::model::PlacedObject> objects, usize own, const std::unordered_set<u64>& placed, std::span<const save::model::PathTile> paths, const save::model::RideModel& rides)
     {
-        std::unordered_set<std::uint64_t> built = placed;
+        std::unordered_set<u64> built = placed;
         // A station piece's platform model is owned by its platform record, which the ride keeps.
-        std::unordered_set<std::uint64_t> platforms;
+        std::unordered_set<u64> platforms;
         for (const save::model::PathTile& p : paths)
         {
             if (p.elevation)
@@ -71,7 +72,7 @@ namespace rct3::parkfile
                 built.insert(stall.base.spot->object);
         }
         std::vector<save::model::PlacedObject> kept;
-        for (std::size_t i = 0; i < objects.size(); ++i)
+        for (usize i = 0; i < objects.size(); ++i)
         {
             if (i < own || built.contains(objects[i].id) || platforms.contains(objects[i].owner_ref))
                 kept.push_back(objects[i]);
@@ -81,20 +82,20 @@ namespace rct3::parkfile
 
     save::model::Cash kept_cash(const simulation::Wallet& wallet)
     {
-        const auto clamp_i32 = [](units::Money m) { return static_cast<std::int32_t>(std::clamp<std::int64_t>(m.value, std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max())); };
+        const auto clamp_i32 = [](units::Money m) { return static_cast<i32>(std::clamp<i64>(m.value, std::numeric_limits<i32>::min(), std::numeric_limits<i32>::max())); };
         return { .bank = clamp_i32(wallet.bank), .current = clamp_i32(wallet.cash), .withdrawn = clamp_i32(wallet.withdrawn), .spent_drink = clamp_i32(wallet.spent_drink), .spent_food = clamp_i32(wallet.spent_food), .spent_park_entry = clamp_i32(wallet.spent_entry), .spent_rides = clamp_i32(wallet.spent_rides), .spent_souvenirs = clamp_i32(wallet.spent_souvenirs), .total_spent = clamp_i32(wallet.spent) };
     }
 
-    SavedPeople keep_people(const simulation::SimWorld& world, save::model::PeopleModel model, const std::unordered_map<entt::entity, std::int32_t>& looks)
+    SavedPeople keep_people(const simulation::SimWorld& world, save::model::PeopleModel model, const std::unordered_map<entt::entity, i32>& looks)
     {
         using namespace simulation;
         const entt::registry& r = world.registry;
         SavedPeople out;
-        const auto look = [&](entt::entity e, std::size_t count) {
+        const auto look = [&](entt::entity e, usize count) {
             const auto found = looks.find(e);
-            return found != looks.end() && found->second >= 0 && static_cast<std::size_t>(found->second) < count ? std::optional(found->second) : std::nullopt;
+            return found != looks.end() && found->second >= 0 && static_cast<usize>(found->second) < count ? std::optional(found->second) : std::nullopt;
         };
-        std::unordered_map<entt::entity, std::int32_t> parties;
+        std::unordered_map<entt::entity, i32> parties;
         std::vector<bool> in_park(model.guests.size());
         // shortcut: queueing, riding and errands other than swimming are not kept, guests walk on from where they
         // stand; keep them once the save can name rides and path nodes that last across loading.
@@ -123,14 +124,14 @@ namespace rct3::parkfile
                 g.swim = SavedSwim { .room_col = door->col, .room_row = door->row, .swimmer = *swimmer };
             if (const auto* member = r.try_get<Member>(e); member != nullptr && r.valid(member->party))
             {
-                g.party.emplace(parties.try_emplace(member->party, static_cast<std::int32_t>(parties.size())).first->second);
+                g.party.emplace(parties.try_emplace(member->party, static_cast<i32>(parties.size())).first->second);
                 g.leader = r.get<Party>(member->party).leader == e;
             }
             if (g.look)
             {
-                in_park[static_cast<std::size_t>(*g.look)] = true;
+                in_park[static_cast<usize>(*g.look)] = true;
                 // The rest of their money goes with their page, where the original keeps it; so does their favourite.
-                save::model::Guest& page = model.guests[static_cast<std::size_t>(*g.look)];
+                save::model::Guest& page = model.guests[static_cast<usize>(*g.look)];
                 page.cash = kept_cash(wallet);
                 if (const auto* favourite = r.try_get<Favourite>(e); favourite != nullptr && favourite->saved != 0)
                 {
@@ -139,7 +140,7 @@ namespace rct3::parkfile
                 }
             }
         }
-        for (std::size_t i = 0; i < model.guests.size(); ++i)
+        for (usize i = 0; i < model.guests.size(); ++i)
             model.guests[i].in_park = in_park[i];
         for (const auto [e, staff, pose] : r.view<const Staff, const Pose>().each())
         {
@@ -166,9 +167,9 @@ namespace rct3::parkfile
             r.emplace<Needs>(e, g.needs);
             r.emplace<Mood>(e, g.mood);
             Wallet& wallet = r.emplace<Wallet>(e, g.cash);
-            if (g.look && static_cast<std::size_t>(*g.look) < people.model.guests.size())
+            if (g.look && static_cast<usize>(*g.look) < people.model.guests.size())
             {
-                const save::model::Guest& page = people.model.guests[static_cast<std::size_t>(*g.look)];
+                const save::model::Guest& page = people.model.guests[static_cast<usize>(*g.look)];
                 const save::model::Cash& c = page.cash;
                 wallet = { .cash = { g.cash }, .bank = { c.bank }, .withdrawn = { c.withdrawn }, .spent = { c.total_spent }, .spent_entry = { c.spent_park_entry }, .spent_rides = { c.spent_rides }, .spent_food = { c.spent_food }, .spent_drink = { c.spent_drink }, .spent_souvenirs = { c.spent_souvenirs } };
                 if (page.favourite_ride)
@@ -192,8 +193,8 @@ namespace rct3::parkfile
     {
         using namespace simulation;
         entt::registry& r = world.registry;
-        std::map<std::int32_t, Party> parties; // In order, so the entities come out the same each load
-        for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
+        std::map<i32, Party> parties; // In order, so the entities come out the same each load
+        for (usize i = 0; i < people.guests.size() && i < guests.size(); ++i)
         {
             const SavedGuest& g = people.guests[i];
             if (!g.party || !r.all_of<Errand>(guests[i]) || r.all_of<Member>(guests[i]))
@@ -220,12 +221,12 @@ namespace rct3::parkfile
         }
     }
 
-    std::size_t place_swimmers(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests)
+    usize place_swimmers(simulation::SimWorld& world, const SavedPeople& people, std::span<const entt::entity> guests)
     {
         using namespace simulation;
         entt::registry& r = world.registry;
-        std::size_t placed = 0;
-        for (std::size_t i = 0; i < people.guests.size() && i < guests.size(); ++i)
+        usize placed = 0;
+        for (usize i = 0; i < people.guests.size() && i < guests.size(); ++i)
         {
             const SavedGuest& g = people.guests[i];
             if (!g.swim || !r.all_of<Errand, Pose>(guests[i]))
@@ -252,7 +253,7 @@ namespace rct3::parkfile
         using namespace simulation;
         entt::registry& r = world.registry;
         std::vector<entt::entity> out(people.staff.size(), entt::null);
-        for (std::size_t i = 0; i < people.staff.size(); ++i)
+        for (usize i = 0; i < people.staff.size(); ++i)
         {
             const SavedWorker& w = people.staff[i];
             const auto at = world.paths.nearest(w.position);
@@ -262,10 +263,10 @@ namespace rct3::parkfile
                 continue;
             const entt::entity e = r.create();
             // The tasks the player set are on the worker's page.
-            const bool paged = w.look && static_cast<std::size_t>(*w.look) < people.model.staff.size();
-            Staff staff { .role = w.role, .tasks = paged ? people.model.staff[static_cast<std::size_t>(*w.look)].task_flags : kEveryTask, .wage = w.wage, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = w.happiness, .laziness = w.laziness };
+            const bool paged = w.look && static_cast<usize>(*w.look) < people.model.staff.size();
+            Staff staff { .role = w.role, .tasks = paged ? people.model.staff[static_cast<usize>(*w.look)].task_flags : kEveryTask, .wage = w.wage, .wage_level = w.wage_level, .training = w.training, .warnings = w.warnings, .happiness = w.happiness, .laziness = w.laziness };
             if (paged)
-                staff::take_saved_work(staff, people.model.staff[static_cast<std::size_t>(*w.look)]);
+                staff::take_saved_work(staff, people.model.staff[static_cast<usize>(*w.look)]);
             staff.mended = w.mended;
             staff.think = w.think;
             staff.miserable = w.miserable;
@@ -286,28 +287,28 @@ namespace rct3::parkfile
         const entt::registry& r = world.registry;
         SavedAnimals out { .enclosures = std::move(enclosures) };
         // The staff in keep_people's order.
-        std::map<entt::entity, std::int32_t> kept;
+        std::map<entt::entity, i32> kept;
         for (const entt::entity e : r.view<const Staff, const Pose>())
-            kept.emplace(e, static_cast<std::int32_t>(kept.size()));
-        std::map<entt::entity, std::pair<std::int32_t, const KeeperDuty*>> keepers; // Of each house
+            kept.emplace(e, static_cast<i32>(kept.size()));
+        std::map<entt::entity, std::pair<i32, const KeeperDuty*>> keepers; // Of each house
         for (const auto [e, duty] : r.view<const KeeperDuty>().each())
             if (const auto found = kept.find(e); found != kept.end())
                 keepers.emplace(duty.house, std::pair { found->second, &duty });
         // What a keeper is after, by its place in what is saved.
-        std::map<entt::entity, std::int32_t> places;
+        std::map<entt::entity, i32> places;
         for (const auto [e, animal, pose] : r.view<const Animal, const Pose>().each())
         {
-            places.emplace(e, static_cast<std::int32_t>(out.animals.size()));
+            places.emplace(e, static_cast<i32>(out.animals.size()));
             out.animals.push_back({ .animal = animal, .position = pose.position, .heading = pose.heading.value });
         }
         for (const auto [e, dung, pose] : r.view<const Dung, const Pose>().each())
         {
-            places.emplace(e, static_cast<std::int32_t>(out.dung.size()));
+            places.emplace(e, static_cast<i32>(out.dung.size()));
             out.dung.push_back({ .enclosure = dung.enclosure, .position = pose.position });
         }
-        std::map<entt::entity, std::int32_t> house_at; // Of what a keeper fills
+        std::map<entt::entity, i32> house_at; // Of what a keeper fills
         for (const entt::entity e : r.view<const AnimalHouse>())
-            house_at.emplace(e, static_cast<std::int32_t>(house_at.size()));
+            house_at.emplace(e, static_cast<i32>(house_at.size()));
         for (const auto [e, house] : r.view<const AnimalHouse>().each())
         {
             SavedAnimalHouse& saved = out.houses.emplace_back(SavedAnimalHouse { .house = house });
@@ -351,15 +352,15 @@ namespace rct3::parkfile
             r.emplace<Dung>(e, Dung { saved.enclosure });
             r.emplace<Pose>(e, saved.position, 0.0f, saved.position, 0.0f);
         }
-        for (std::size_t i = 0; i < animals.houses.size(); ++i)
+        for (usize i = 0; i < animals.houses.size(); ++i)
         {
             const SavedAnimalHouse& saved = animals.houses[i];
-            const entt::entity keeper = saved.keeper && static_cast<std::size_t>(*saved.keeper) < staff.size() ? staff[static_cast<std::size_t>(*saved.keeper)] : entt::null;
+            const entt::entity keeper = saved.keeper && static_cast<usize>(*saved.keeper) < staff.size() ? staff[static_cast<usize>(*saved.keeper)] : entt::null;
             if (keeper == entt::null || !r.valid(keeper))
                 continue;
             // A job after something no longer there starts over.
             const std::span<const entt::entity> targets = saved.job == KeeperJob::Clearing ? std::span(dropped) : saved.job == KeeperJob::Catching ? std::span(placed) : saved.job == KeeperJob::Filling ? std::span(homes) : std::span<const entt::entity> { };
-            const entt::entity target = saved.target && static_cast<std::size_t>(*saved.target) < targets.size() ? targets[static_cast<std::size_t>(*saved.target)] : entt::null;
+            const entt::entity target = saved.target && static_cast<usize>(*saved.target) < targets.size() ? targets[static_cast<usize>(*saved.target)] : entt::null;
             const bool lost = target == entt::null && saved.job != KeeperJob::Idle && saved.job != KeeperJob::Strolling;
             r.emplace_or_replace<KeeperDuty>(keeper, lost ? KeeperDuty { .house = homes[i] } : KeeperDuty { .house = homes[i], .job = saved.job, .goal = saved.goal, .target = target, .busy = units::Seconds { saved.busy } });
             r.emplace_or_replace<Dice>(keeper, dice_for(world, keeper));
@@ -400,8 +401,8 @@ namespace rct3::parkfile
     std::expected<SavedPark, std::string> read_saved_park(std::span<const std::byte> bytes)
     {
         SavedPark park;
-        std::uint32_t found = 0;
-        auto read = read_chunks(bytes, [&](std::string_view tag, std::uint32_t version, Reader& body) -> std::expected<void, std::string> {
+        u32 found = 0;
+        auto read = read_chunks(bytes, [&](std::string_view tag, u32 version, Reader& body) -> std::expected<void, std::string> {
             std::expected<void, std::string> result;
             if (tag == "PEOP")
             {
@@ -422,7 +423,7 @@ namespace rct3::parkfile
                 auto read = get_chunk(tag, body, park.shows.emplace());
                 // A place naming no trick is dropped, so the show's places can be looked up unchecked.
                 for (save::model::RideShow& show : *park.shows)
-                    std::erase_if(show.order, [&](std::uint32_t t) { return t >= show.tricks.size(); });
+                    std::erase_if(show.order, [&](u32 t) { return t >= show.tricks.size(); });
                 return read;
             }
             if (tag == "GOAL")
@@ -464,7 +465,7 @@ namespace rct3::parkfile
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 auto read = get_chunk(tag, body, park.day_mode.emplace());
                 // A number with no mode keeps the park's hours.
-                park.day_mode = simulation::day_mode(static_cast<std::int32_t>(*park.day_mode));
+                park.day_mode = simulation::day_mode(static_cast<i32>(*park.day_mode));
                 return read;
             }
             if (tag == "ANML")

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/model_anim.hpp"
 
+#include "core/types.hpp"
+
 #include <cstring>
 #include <span>
 #include <unordered_map>
@@ -12,24 +14,24 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kAnimTag = "modelanim";
-        constexpr std::size_t kHeaderSize = 48; // see read_one
-        constexpr std::uint32_t kMaxFrames = 1u << 20;
-        constexpr std::uint32_t kMaxBones = 4096;
+        constexpr usize kHeaderSize = 48; // see read_one
+        constexpr u32 kMaxFrames = 1u << 20;
+        constexpr u32 kMaxBones = 4096;
 
-        std::uint32_t u32_at(std::span<const std::byte> b, std::size_t at)
+        u32 u32_at(std::span<const std::byte> b, usize at)
         {
-            std::uint32_t v = 0;
+            u32 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
 
         // Splits `count` NUL-terminated strings off the front of `text`. False when the text runs out.
-        bool take_names(std::string_view& text, std::uint32_t count, std::vector<std::string_view>& out)
+        bool take_names(std::string_view& text, u32 count, std::vector<std::string_view>& out)
         {
             out.reserve(count);
-            for (std::uint32_t i = 0; i < count; ++i)
+            for (u32 i = 0; i < count; ++i)
             {
-                const std::size_t end = text.find('\0');
+                const usize end = text.find('\0');
                 if (end == std::string_view::npos)
                     return false;
                 out.push_back(text.substr(0, end));
@@ -38,7 +40,7 @@ namespace rct3::ovl
             return true;
         }
 
-        std::optional<ModelAnim> read_one(const AddressSpace& space, const Part& part, std::size_t row)
+        std::optional<ModelAnim> read_one(const AddressSpace& space, const Part& part, usize row)
         {
             if (row >= part.loaders.extra.size() || part.loaders.extra[row].size() != 1)
                 return std::nullopt;
@@ -57,10 +59,10 @@ namespace rct3::ovl
             ModelAnim anim;
             std::memcpy(&anim.duration, header->data(), sizeof anim.duration);
             anim.frame_count = u32_at(*header, 4);
-            const std::uint32_t position_count = u32_at(*header, 0x18);
-            const std::uint32_t rotation_count = u32_at(*header, 0x1c);
-            const std::uint32_t plain_count = u32_at(*header, 0x20);
-            const std::uint32_t pair_count = u32_at(*header, 0x24);
+            const u32 position_count = u32_at(*header, 0x18);
+            const u32 rotation_count = u32_at(*header, 0x1c);
+            const u32 plain_count = u32_at(*header, 0x20);
+            const u32 pair_count = u32_at(*header, 0x24);
             if (anim.frame_count > kMaxFrames || position_count > kMaxBones || rotation_count > kMaxBones)
             {
                 return std::nullopt;
@@ -74,8 +76,8 @@ namespace rct3::ovl
             if (!take_names(text, rotation_count, anim.rotation_bones))
                 return std::nullopt;
 
-            const std::size_t position_total = std::size_t { anim.frame_count } * position_count;
-            const std::size_t rotation_total = std::size_t { anim.frame_count } * rotation_count;
+            const usize position_total = usize { anim.frame_count } * position_count;
+            const usize rotation_total = usize { anim.frame_count } * rotation_count;
             if (position_total != 0)
             {
                 const auto raw = space.bytes_at(u32_at(*header, 0x28), position_total * 12);
@@ -102,7 +104,7 @@ namespace rct3::ovl
         const auto& loaders = part.file.header.loaders;
         const AddressSpace space = overlay.space();
 
-        std::unordered_map<std::uint32_t, std::string_view> names;
+        std::unordered_map<u32, std::string_view> names;
         for (const auto& symbol : part.symbols)
         {
             if (!symbol.is_pointer)
@@ -113,7 +115,7 @@ namespace rct3::ovl
         }
 
         std::vector<ModelAnimItem> items;
-        for (std::size_t row = 0; row < part.loaders.entries.size(); ++row)
+        for (usize row = 0; row < part.loaders.entries.size(); ++row)
         {
             const LoaderEntry& entry = part.loaders.entries[row];
             if (entry.loader_type >= loaders.size() || loaders[entry.loader_type].tag != kAnimTag)

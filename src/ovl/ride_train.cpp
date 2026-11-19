@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/ride_train.hpp"
 
+#include "core/types.hpp"
+
 namespace rct3::ovl
 {
 
@@ -8,7 +10,7 @@ namespace rct3::ovl
     {
 
         constexpr std::string_view kTag = "rit";
-        constexpr std::size_t kFixedSize = 184;
+        constexpr usize kFixedSize = 184;
 
     } // namespace
 
@@ -32,7 +34,7 @@ namespace rct3::ovl
                 RideTrain train;
                 train.name = record->text(0x00);
                 train.display_name = record->text(0x04);
-                for (std::size_t i = 0; i < train.cars.size(); ++i)
+                for (usize i = 0; i < train.cars.size(); ++i)
                     train.cars[i] = record->ref(0x08 + i * 4, "ric");
                 train.fewest_cars = record->read_u32(0x20);
                 train.most_cars = record->read_u32(0x24);
@@ -40,11 +42,11 @@ namespace rct3::ovl
                 train.rolling = record->real(0x2C);
                 train.resting = record->real(0x30);
                 train.air = record->real(0x34);
-                train.references = record->references(static_cast<std::uint32_t>(kFixedSize));
+                train.references = record->references(static_cast<u32>(kFixedSize));
                 train.record = record->bytes();
-                const auto real = [&](std::size_t i) { return record->real(0x38 + i * 4); };
+                const auto real = [&](usize i) { return record->real(0x38 + i * 4); };
                 train.camera = { .look_ahead = real(0), .sway_per_g = real(1), .sway_most = real(2), .sway_settle = real(3), .shake_from = real(4), .shake = real(5), .shake_across = real(6), .shake_up = real(7), .chain_shake = real(8), .chain_shake_across = real(9), .chain_shake_up = real(10), .turn_settle = real(11), .look_tilt = real(12) };
-                const auto boat = [&](std::size_t i) { return record->real(0x6c + i * 4); };
+                const auto boat = [&](usize i) { return record->real(0x6c + i * 4); };
                 train.boat = { .turn_most = boat(0), .turn_gain = boat(1), .speed_up = boat(2), .speed_gain = boat(3), .turn_slow = boat(4), .brake = boat(5), .lean_gain = boat(6), .lean_most = boat(7) };
                 // Most trains go on with the name of the station platform type they stop at.
                 if (const auto longer = ItemRecord::open(space, refs, symbol.data, kFixedSize + 4))

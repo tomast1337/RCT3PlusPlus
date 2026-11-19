@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/menu_bar.hpp"
 
+#include "core/types.hpp"
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
@@ -14,7 +15,7 @@ namespace rct3::ui::widgets
     namespace
     {
 
-        constexpr float kUnmeasuredWidth = 60; ///< A title's width before there are fonts
+        constexpr f32 kUnmeasuredWidth = 60; ///< A title's width before there are fonts
 
         Widget& root_of(Widget& w)
         {
@@ -37,18 +38,18 @@ namespace rct3::ui::widgets
         close_menu();
     }
 
-    Rect MenuBar::title_rect(std::size_t index) const
+    Rect MenuBar::title_rect(usize index) const
     {
-        float x = rect().x0 + style.first_indent;
-        for (std::size_t i = 0; i < index && i < menus.size(); ++i)
+        f32 x = rect().x0 + style.first_indent;
+        for (usize i = 0; i < index && i < menus.size(); ++i)
             x += i < widths_.size() ? widths_[i] : kUnmeasuredWidth;
-        const float w = index < widths_.size() ? widths_[index] : kUnmeasuredWidth;
+        const f32 w = index < widths_.size() ? widths_[index] : kUnmeasuredWidth;
         return { x, rect().y0, x + w, rect().y1 };
     }
 
-    std::optional<std::size_t> MenuBar::title_at(Point p) const
+    std::optional<usize> MenuBar::title_at(Point p) const
     {
-        for (std::size_t i = 0; i < menus.size(); ++i)
+        for (usize i = 0; i < menus.size(); ++i)
         {
             if (contains(title_rect(i), p))
                 return i;
@@ -62,7 +63,7 @@ namespace rct3::ui::widgets
             menu_->close();
     }
 
-    void MenuBar::open(std::size_t index)
+    void MenuBar::open(usize index)
     {
         Widget& root = root_of(*this);
         if (&root == this || index >= menus.size())
@@ -126,11 +127,11 @@ namespace rct3::ui::widgets
         {
             if (const auto item = menu_->take_choice())
                 choice_ = MenuChoice { open_, *item };
-            if (const std::int32_t by = menu_->take_sideways(); by != 0 && !menus.empty())
+            if (const i32 by = menu_->take_sideways(); by != 0 && !menus.empty())
             {
                 const auto n = static_cast<std::ptrdiff_t>(menus.size());
                 const auto next = ((static_cast<std::ptrdiff_t>(open_) + by) % n + n) % n;
-                open(static_cast<std::size_t>(next));
+                open(static_cast<usize>(next));
                 menu_->highlight(std::nullopt);
             }
             else if (menu_->closing())
@@ -152,7 +153,7 @@ namespace rct3::ui::widgets
         if (!style.background.empty())
             skin::draw_skin(context.list, context.skins.find(style.background), rect());
         const auto f = context.fonts.get(style.font);
-        for (std::size_t i = 0; i < menus.size(); ++i)
+        for (usize i = 0; i < menus.size(); ++i)
         {
             const Rect title = title_rect(i);
             const bool lit = (menu_ != nullptr && open_ == i) || (has_keyboard_focus() && menu_ == nullptr && marked_ == i);

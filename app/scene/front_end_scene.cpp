@@ -2,6 +2,7 @@
 #include "scene/front_end_scene.hpp"
 
 #include "config/option_effects.hpp"
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "scene/menu_audio.hpp"
 #include "scene/park/loading.hpp"
@@ -32,9 +33,9 @@ namespace rct3::scene
         /// What the options show for the zoomed-out park's music, as the game does at first.
         constexpr std::string_view kFirstBackgroundMusic = "Summer Air.wma";
 
-        float scale_for(const render::Device& device, const FrontEndScene& scene)
+        f32 scale_for(const render::Device& device, const FrontEndScene& scene)
         {
-            return ui::interface_scale(static_cast<float>(device.extent().height), scene.scale, device.render_scale());
+            return ui::interface_scale(static_cast<f32>(device.extent().height), scene.scale, device.render_scale());
         }
 
     } // namespace
@@ -81,7 +82,7 @@ namespace rct3::scene
         front.choices.background_music = music_files(install);
         const auto shown = std::ranges::find(front.choices.background_music, kFirstBackgroundMusic);
         if (shown != front.choices.background_music.end())
-            front.choices.background_track = static_cast<std::size_t>(shown - front.choices.background_music.begin());
+            front.choices.background_track = static_cast<usize>(shown - front.choices.background_music.begin());
         // The game writes times with am and pm only in English.
         front.twelve_hour = front.choices.language == ui::kDefaultLanguage;
         front.open_options = setup.reload;
@@ -92,10 +93,10 @@ namespace rct3::scene
 
     bool update_front_end_scene(render::Device& device, FrontEndScene& scene, const ui::PointerState& pointer_pixels, const ui::KeyboardState& keyboard, units::Seconds elapsed)
     {
-        const float scale = scale_for(device, scene);
+        const f32 scale = scale_for(device, scene);
         const render::Extent extent = device.extent();
         ui::Desktop& desktop = scene.live->desktop;
-        desktop.layout({ 0, 0, static_cast<float>(extent.width) / scale, static_cast<float>(extent.height) / scale });
+        desktop.layout({ 0, 0, static_cast<f32>(extent.width) / scale, static_cast<f32>(extent.height) / scale });
 
         ui::PointerState pointer = pointer_pixels;
         pointer.position = { pointer.position.x / scale, pointer.position.y / scale };
@@ -137,7 +138,7 @@ namespace rct3::scene
             if (scene.live->front->tutorial_pickers_opened() != scene.tutorials_seen)
             {
                 scene.tutorials_seen = scene.live->front->tutorial_pickers_opened();
-                for (std::size_t i = 0; i < picker->size(); ++i)
+                for (usize i = 0; i < picker->size(); ++i)
                     picker->set_available(i, scene.assets.install->find(picker->tutorial(i).park).has_value());
             }
             if (const auto start = picker->take_start())
@@ -167,12 +168,12 @@ namespace rct3::scene
                     logging::logger("ui").warning("front screen: the coaster designer's park is missing from the game's folder");
             }
             else
-                logging::logger("ui").info("front screen: choice {} (pack {}) does nothing yet", static_cast<std::int32_t>(request->action), request->pack);
+                logging::logger("ui").info("front screen: choice {} (pack {}) does nothing yet", static_cast<i32>(request->action), request->pack);
         }
         return over;
     }
 
-    float front_end_scale(const render::Device& device, const FrontEndScene& scene)
+    f32 front_end_scale(const render::Device& device, const FrontEndScene& scene)
     {
         return scale_for(device, scene);
     }

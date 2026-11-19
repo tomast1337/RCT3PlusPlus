@@ -15,6 +15,7 @@
 // A corner point is held where the owner says so (land the park does not own, paths, things standing on it).
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/world.hpp"
 #include "units/units.hpp"
 
@@ -27,7 +28,7 @@
 namespace rct3::park::ground
 {
 
-    enum class GroundShape : std::uint8_t
+    enum class GroundShape : u8
     {
         Ridge,
         Mountain,
@@ -39,31 +40,31 @@ namespace rct3::park::ground
     };
 
     inline constexpr units::Pixels kDragDeadZone { 25 }; ///< The pointer moves from where it pressed before the ground starts to move
-    inline constexpr float kDragRate = 0.25f;            ///< Height units the middle of a brush moves for each pixel past that
+    inline constexpr f32 kDragRate = 0.25f;              ///< Height units the middle of a brush moves for each pixel past that
 
-    inline constexpr float kSprayRate = 0.2f;        ///< Height units a second the middle of a sprayed brush moves, for each step of the spray speed
-    inline constexpr std::int32_t kFastestSpray = 9; ///< The spray speed runs from 1 to this
-    inline constexpr std::int32_t kDefaultSpray = 5;
+    inline constexpr f32 kSprayRate = 0.2f; ///< Height units a second the middle of a sprayed brush moves, for each step of the spray speed
+    inline constexpr i32 kFastestSpray = 9; ///< The spray speed runs from 1 to this
+    inline constexpr i32 kDefaultSpray = 5;
 
     /// How far the middle of a dragged brush has gone with the pointer `pixels` up from where it pressed (down
     /// when negative): nothing inside the dead zone, then evenly, with no steps.
-    [[nodiscard]] float drag_amount(float pixels);
+    [[nodiscard]] f32 drag_amount(f32 pixels);
 
     /// The share of the amount the shape takes at `across`, the distance from the middle (or for a ridge or a
     /// canyon from its line) over the reach, and `along`, the distance along that line over the reach. Raising shapes
     /// give 0 to 1, lowering ones -1 to 0 (a crater's rim rises a little); 0 from the reach out.
-    [[nodiscard]] float shape_share(GroundShape shape, float across, float along = 0);
+    [[nodiscard]] f32 shape_share(GroundShape shape, f32 across, f32 along = 0);
 
     /// How rough the shape is: the most a corner point at the brush's middle is off the shape either way, twice
     /// over, as a share of the amount; it falls off evenly to nothing at the reach.
-    [[nodiscard]] float shape_roughness(GroundShape shape);
+    [[nodiscard]] f32 shape_roughness(GroundShape shape);
 
     /// The ground as a stroke found it.
     struct GroundBefore
     {
-        std::int32_t width = 0;                        ///< Of the grid, in tiles
-        std::vector<std::array<float, 4>> corners { }; ///< Every tile's own, row by row
-        std::vector<bool> held { };                    ///< By corner point, (width + 1) by (height + 1), row by row
+        i32 width = 0;                               ///< Of the grid, in tiles
+        std::vector<std::array<f32, 4>> corners { }; ///< Every tile's own, row by row
+        std::vector<bool> held { };                  ///< By corner point, (width + 1) by (height + 1), row by row
     };
 
     /// The grid's ground as it is, its corner points held where `free` refuses a tile touching them.
@@ -72,6 +73,6 @@ namespace rct3::park::ground
     /// A stroke `amount` units high (down when negative) of `shape`, centred on `middle` with `reach` tiles,
     /// over the heights `before`, rough by the draws `seed` picks. Returns the sum of how far every corner of
     /// every tile moved from where it stood.
-    float shape_ground(save::model::TerrainGrid& grid, const GroundBefore& before, GroundShape shape, glm::vec2 middle, float reach, glm::vec2 along, float amount, std::uint64_t seed);
+    f32 shape_ground(save::model::TerrainGrid& grid, const GroundBefore& before, GroundShape shape, glm::vec2 middle, f32 reach, glm::vec2 along, f32 amount, u64 seed);
 
 } // namespace rct3::park::ground

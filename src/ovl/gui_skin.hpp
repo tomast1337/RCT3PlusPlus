@@ -4,6 +4,7 @@
 // stretchable grid of rectangles.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <cstdint>
@@ -15,7 +16,7 @@ namespace rct3::ovl
 {
 
     /// How a skin item cuts up its texture. Values of `GuiSkin::kind` seen in files.
-    enum class GuiSkinKind : std::uint32_t
+    enum class GuiSkinKind : u32
     {
         Rect = 0,            ///< One rectangle: x0, y0, x1, y1
         WholeTexture = 1,    ///< The whole texture, stored with no coordinates. A single item in the install, a solid colour fill
@@ -27,12 +28,12 @@ namespace rct3::ovl
 
     struct GuiSkin
     {
-        std::uint32_t kind = 0;   ///< A `GuiSkinKind` value
+        u32 kind = 0;             ///< A `GuiSkinKind` value
         std::string_view texture; ///< "tex" item the coordinates refer to. Empty when not referenced.
         /// Texture coordinates in pixels, in the order the kind lists them: 4, 0, 8, 8, 6 or 6 values. Pixels
         /// count from the top left of the image, which is stored bottom row first: texture coordinates are
         /// u = x / width and v = 1 - y / height.
-        std::vector<std::int32_t> coordinates;
+        std::vector<i32> coordinates;
     };
 
     struct GuiSkinItem

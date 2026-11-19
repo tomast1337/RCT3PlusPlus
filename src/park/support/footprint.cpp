@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/support/footprint.hpp"
 
+#include "core/types.hpp"
 #include "ovl/scenery_item.hpp"
 
 #include <bit>
@@ -12,42 +13,42 @@ namespace rct3::park::support
     {
 
         // Item flags.
-        constexpr std::uint32_t kCarriesColumns = 0x100;
-        constexpr std::uint32_t kWantsSupports = 0x80;
-        constexpr std::uint32_t kAlternateTiles = 0x200;
-        constexpr std::uint32_t kByPoints = 0x400;
-        constexpr std::uint32_t kCapped = 0x800;
-        constexpr std::uint32_t kNoColumnsMeet = 1u << 26; ///< Joined coaster pieces: columns neither hold them up nor stop at them
-        constexpr std::uint32_t kTrackType = 18;
+        constexpr u32 kCarriesColumns = 0x100;
+        constexpr u32 kWantsSupports = 0x80;
+        constexpr u32 kAlternateTiles = 0x200;
+        constexpr u32 kByPoints = 0x400;
+        constexpr u32 kCapped = 0x800;
+        constexpr u32 kNoColumnsMeet = 1u << 26; ///< Joined coaster pieces: columns neither hold them up nor stop at them
+        constexpr u32 kTrackType = 18;
 
         // Square flags.
-        constexpr std::uint32_t kSquareWantsColumn = 0x2;
-        constexpr std::uint32_t kFirstCellBit = 3;
-        constexpr std::uint32_t kCellMask = 0x1ff;
+        constexpr u32 kSquareWantsColumn = 0x2;
+        constexpr u32 kFirstCellBit = 3;
+        constexpr u32 kCellMask = 0x1ff;
 
         // A support point's words.
-        constexpr std::size_t kTopSquare = 0;
-        constexpr std::size_t kTopCell = 2;
-        constexpr std::size_t kTopWithin = 4;
-        constexpr std::size_t kTopHeight = 6;
-        constexpr std::size_t kColumnSquare = 7;
-        constexpr std::size_t kColumnCell = 9;
-        constexpr std::size_t kColumnHeight = 11;
-        constexpr std::size_t kPointFlags = 20;
-        constexpr std::size_t kPointGroup = 21;
-        constexpr std::uint32_t kHanging = 0x1;
-        constexpr std::uint32_t kStraightOnly = 0x2;
+        constexpr usize kTopSquare = 0;
+        constexpr usize kTopCell = 2;
+        constexpr usize kTopWithin = 4;
+        constexpr usize kTopHeight = 6;
+        constexpr usize kColumnSquare = 7;
+        constexpr usize kColumnCell = 9;
+        constexpr usize kColumnHeight = 11;
+        constexpr usize kPointFlags = 20;
+        constexpr usize kPointGroup = 21;
+        constexpr u32 kHanging = 0x1;
+        constexpr u32 kStraightOnly = 0x2;
 
         constexpr SupportKind kLastDiagonal = kFirstDiagonal + 3;
 
-        std::int32_t int_at(const ovl::SceneryItemNode& n, std::size_t i)
+        i32 int_at(const ovl::SceneryItemNode& n, usize i)
         {
-            return static_cast<std::int32_t>(n.words[i]);
+            return static_cast<i32>(n.words[i]);
         }
 
-        float float_at(const ovl::SceneryItemNode& n, std::size_t i)
+        f32 float_at(const ovl::SceneryItemNode& n, usize i)
         {
-            return std::bit_cast<float>(n.words[i]);
+            return std::bit_cast<f32>(n.words[i]);
         }
 
     } // namespace
@@ -72,8 +73,8 @@ namespace rct3::park::support
         f.by_points = (item.flags & kByPoints) != 0;
         f.alternate_tiles = (item.flags & kAlternateTiles) != 0;
         f.capped = (item.flags & kCapped) != 0;
-        f.x_squares = static_cast<std::int32_t>(item.x_squares);
-        f.z_squares = static_cast<std::int32_t>(item.z_squares);
+        f.x_squares = static_cast<i32>(item.x_squares);
+        f.z_squares = static_cast<i32>(item.z_squares);
         for (const ovl::SceneryItemSquare& s : item.squares)
             f.squares.push_back({ s.min_height, s.max_height, s.support_kind, (s.flags & kSquareWantsColumn) != 0, (s.flags >> kFirstCellBit) & kCellMask });
         if (f.by_points)

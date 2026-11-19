@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/vip.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/fireworks.hpp"
 #include "simulation/guests.hpp"
@@ -22,8 +23,8 @@ namespace rct3::simulation
 {
     namespace
     {
-        constexpr float kMonth = save::model::GameClock::kUnitsPerMonth;
-        constexpr float kWeek = save::model::GameClock::kUnitsPerWeek;
+        constexpr f32 kMonth = save::model::GameClock::kUnitsPerMonth;
+        constexpr f32 kWeek = save::model::GameClock::kUnitsPerWeek;
 
         /// Whether `ride` has a train lying wrecked.
         bool crashed(const entt::registry& r, entt::entity ride)
@@ -39,45 +40,45 @@ namespace rct3::simulation
         }
     } // namespace
 
-    std::string_view vip_name_key(std::uint8_t who) noexcept
+    std::string_view vip_name_key(u8 who) noexcept
     {
         // The name each celebrity's own data file gives them, by the number the goals use.
         constexpr std::array<std::string_view, 7> kNames { "", "PoliticianName", "PopStarName", "MovieStarName", "SportsStar1Name", "BobWatermanName", "SmytheName" };
         return who < kNames.size() ? kNames[who] : std::string_view { };
     }
 
-    float vip_opinion(const Vip& vip, const save::model::VipTarget& target, float happiness)
+    f32 vip_opinion(const Vip& vip, const save::model::VipTarget& target, f32 happiness)
     {
         using T = save::model::VipTarget;
-        std::int32_t wanted = 0;
-        std::int32_t seen = 0;
-        const auto tick = [&](std::uint32_t wish, std::int32_t needed, std::int32_t done) {
+        i32 wanted = 0;
+        i32 seen = 0;
+        const auto tick = [&](u32 wish, i32 needed, i32 done) {
             if ((target.wishes & wish) == 0)
                 return;
             wanted += needed;
             seen += std::min(done, needed);
         };
-        tick(T::kCoasters, std::max(target.coasters_needed, 0), static_cast<std::int32_t>(vip.coasters.size()));
+        tick(T::kCoasters, std::max(target.coasters_needed, 0), static_cast<i32>(vip.coasters.size()));
         tick(T::kFireworks, 1, vip.fireworks ? 1 : 0);
         tick(T::kThemedArea, 1, vip.themed ? 1 : 0);
         tick(T::kPool, 1, vip.pool ? 1 : 0);
         // shortcut: viewing galleries are not simulated, so a VIP wanting them counts them seen; judge them once
         // rct3++ has animal galleries.
         tick(T::kGalleries, 1, 1);
-        return wanted > 0 ? static_cast<float>(seen) / static_cast<float>(wanted) : happiness;
+        return wanted > 0 ? static_cast<f32>(seen) / static_cast<f32>(wanted) : happiness;
     }
 
-    void advance_vips(SimWorld& world, save::model::ObjectiveSet& set, float time, float game_seconds, park::ParkMessages& messages, const VipSurroundings& around)
+    void advance_vips(SimWorld& world, save::model::ObjectiveSet& set, f32 time, f32 game_seconds, park::ParkMessages& messages, const VipSurroundings& around)
     {
         using T = save::model::VipTarget;
         entt::registry& r = world.registry;
         const tuning::Vips& tune = kTuning.vips;
-        const std::int32_t level = level_playing(set);
-        const auto name_of = [&](std::uint8_t who) { return around.name ? around.name(who) : std::string { }; };
-        const auto tell = [&](std::string_view key, std::uint8_t who) { park::post(messages, { .text_key = std::string(key), .subject_name = name_of(who) }); };
+        const i32 level = level_playing(set);
+        const auto name_of = [&](u8 who) { return around.name ? around.name(who) : std::string { }; };
+        const auto tell = [&](std::string_view key, u8 who) { park::post(messages, { .text_key = std::string(key), .subject_name = name_of(who) }); };
         // shortcut: any ride with trains counts as a coaster, as the simulation does not tell coasters from other
         // tracked rides, but a pool's slides do not; tell them apart once it keeps a ride's kind.
-        const auto coaster = [&](entt::entity ride, const T& goal) -> std::optional<float> {
+        const auto coaster = [&](entt::entity ride, const T& goal) -> std::optional<f32> {
             const auto* cycle = r.try_get<CycleRide>(ride);
             if (cycle == nullptr || !r.all_of<Trains, Attraction>(ride) || pool_ride_pool(world, ride) || cycle->excitement.value * 10.0f < goal.min_excitement)
                 return std::nullopt;
@@ -96,7 +97,7 @@ namespace rct3::simulation
             if (mine != here.end() && r.all_of<Left>(*mine))
             {
                 const Vip& vip = r.get<Vip>(*mine);
-                const float average = vip.looks > 0 ? vip.happiness_sum / static_cast<float>(vip.looks) : 0.0f;
+                const f32 average = vip.looks > 0 ? vip.happiness_sum / static_cast<f32>(vip.looks) : 0.0f;
                 const bool pleased = vip.patience.value > 0 && ((goal.wishes & T::kHappiness) == 0 || average >= goal.target_happiness);
                 const bool wishes = (goal.wishes & (T::kCoasters | T::kFireworks | T::kThemedArea | T::kPool | T::kGalleries)) != 0;
                 const bool well = pleased && (!wishes || vip_opinion(vip, goal, average) >= 1.0f);
@@ -105,7 +106,7 @@ namespace rct3::simulation
                 if (well)
                     goal.met = true;
                 else
-                    goal.next_visit = time + static_cast<float>(goal.retry_months) * kMonth;
+                    goal.next_visit = time + static_cast<f32>(goal.retry_months) * kMonth;
                 r.remove<Vip>(*mine);
                 continue;
             }
@@ -137,9 +138,9 @@ namespace rct3::simulation
                     continue; // The park has no gate yet; they come once it does
                 const entt::entity gate = *gates.begin();
                 // Celebrities 2 and 3 are women, as their models are. Their bodyguards walk with them as their party.
-                constexpr std::int32_t kMostGuards = 7; ///< Chosen by eye: a party of eight at most keeps the walk together
-                const std::int32_t guards = std::clamp(goal.guards, 0, kMostGuards);
-                std::vector<Newcomer> who(static_cast<std::size_t>(guards) + 1, Newcomer { AgeGroup::Adult, false });
+                constexpr i32 kMostGuards = 7; ///< Chosen by eye: a party of eight at most keeps the walk together
+                const i32 guards = std::clamp(goal.guards, 0, kMostGuards);
+                std::vector<Newcomer> who(static_cast<usize>(guards) + 1, Newcomer { AgeGroup::Adult, false });
                 who.front().is_female = goal.who == 2 || goal.who == 3;
                 const NodeId at = gates.get<const ParkGate>(gate).node;
                 const std::vector<entt::entity> party = admit_guests(world, gates.get<Dice>(gate).state, at, who, kTuning.parties.middle);
@@ -148,12 +149,12 @@ namespace rct3::simulation
                 for (const entt::entity guard : party | std::views::drop(1))
                     r.emplace<Bodyguard>(guard, guest);
                 // Their stops: the coasters they want, most exciting first, then the pool nearest the gate.
-                std::vector<std::pair<float, entt::entity>> coasters;
+                std::vector<std::pair<f32, entt::entity>> coasters;
                 if ((goal.wishes & T::kCoasters) != 0)
                     for (const entt::entity ride : sorted(r.view<const CycleRide>()))
                         if (const auto excitement = coaster(ride, goal))
                             coasters.emplace_back(*excitement, ride);
-                std::ranges::stable_sort(coasters, std::greater { }, &std::pair<float, entt::entity>::first);
+                std::ranges::stable_sort(coasters, std::greater { }, &std::pair<f32, entt::entity>::first);
                 std::vector<entt::entity> stops { std::from_range, coasters | std::views::values };
                 if ((goal.wishes & T::kPool) != 0)
                 {
@@ -182,12 +183,12 @@ namespace rct3::simulation
             if (vip.look.value > 0 || vip.leaving)
                 continue;
             vip.look = tune.look;
-            const float happiness = r.all_of<Mood>(guest) ? r.get<Mood>(guest).happiness.value : 0.0f;
+            const f32 happiness = r.all_of<Mood>(guest) ? r.get<Mood>(guest).happiness.value : 0.0f;
             vip.happiness_sum += happiness;
             ++vip.looks;
             if (vip.patience.value > 0)
                 vip.patience.value = std::min(vip.patience.value + happiness * tune.cheer.value, 1.0f);
-            const auto lose = [&](float tolerance, float share) {
+            const auto lose = [&](f32 tolerance, f32 share) {
                 if (tolerance > 0)
                     vip.patience.value = std::max(vip.patience.value - share / tolerance, 0.0f);
             };
@@ -282,11 +283,11 @@ namespace rct3::simulation
                 vip.themed = true;
             // Each autograph signed since the last look wears a VIP who minds hunters down a little.
             if ((goal.wishes & T::kAutographs) != 0)
-                lose(goal.autograph_tolerance, static_cast<float>(vip.signatures));
+                lose(goal.autograph_tolerance, static_cast<f32>(vip.signatures));
             vip.signatures = 0;
             // shortcut: dung and animals are not simulated, so those tolerances never wear a VIP down; add them
             // with animals.
-            if (vip.patience.value <= 0 || time - vip.came >= static_cast<float>(goal.months_to_stay) * kMonth)
+            if (vip.patience.value <= 0 || time - vip.came >= static_cast<f32>(goal.months_to_stay) * kMonth)
             {
                 vip.leaving = true;
                 tell("VIP_IsLeavingPark", vip.who);

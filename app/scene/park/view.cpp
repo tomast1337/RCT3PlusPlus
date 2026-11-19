@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/view.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/camera.hpp"
 #include "park/view_lines.hpp"
@@ -23,15 +24,15 @@ namespace rct3::scene::park
         constexpr glm::vec4 kContourColour { 1.0f, 1.0f, 1.0f, 0.45f };
         /// How far from the middle of the view heights are labelled, in world units: farther, they crowd. Our
         /// own value.
-        constexpr float kLabelReach = 48.0f;
+        constexpr f32 kLabelReach = 48.0f;
         constexpr glm::vec4 kTickColour { 1.0f, 1.0f, 1.0f, 0.8f };
-        constexpr float kTickWidth = 0.08f; ///< World units
-        constexpr float kLabelLift = 0.6f;  ///< Over the path or track, so the label stands above it.
+        constexpr f32 kTickWidth = 0.08f; ///< World units
+        constexpr f32 kLabelLift = 0.6f;  ///< Over the path or track, so the label stands above it.
         /// A float younger than this, and this near, in world units, takes another amount rather than
         /// a new float beginning. A held brush shows a sum a few times a second, while pieces
         /// laid one after another on neighbouring tiles each show their own.
         constexpr units::Seconds kMoneyMerge { 0.3f };
-        constexpr float kMoneyReach = 1.0f;
+        constexpr f32 kMoneyReach = 1.0f;
 
         void drop(render::Device& device, ViewLines& lines)
         {
@@ -55,7 +56,7 @@ namespace rct3::scene::park
             set_view_lines(device, lines, make());
         }
 
-        std::u16string whole(float height)
+        std::u16string whole(f32 height)
         {
             const std::string text = std::format("{}", std::lround(height));
             return { text.begin(), text.end() };
@@ -81,7 +82,7 @@ namespace rct3::scene::park
         }
         lines.vertices = *vertices;
         lines.indices = *indices;
-        lines.count = static_cast<std::uint32_t>(mesh.indices.size());
+        lines.count = static_cast<u32>(mesh.indices.size());
     }
 
     void update_view_lines(render::Device& device, ParkScene& scene)
@@ -132,8 +133,8 @@ namespace rct3::scene::park
 
     glm::vec3 tile_point(const save::model::TerrainGrid& grid, save::model::Tile tile)
     {
-        const float x = grid.world_x(tile.col) + grid.tile_size_x / 2;
-        const float z = grid.world_z(tile.row) + grid.tile_size_z / 2;
+        const f32 x = grid.world_x(tile.col) + grid.tile_size_x / 2;
+        const f32 z = grid.world_z(tile.row) + grid.tile_size_z / 2;
         return { x, grid.height_at(x, z).value_or(0), z };
     }
 
@@ -153,8 +154,8 @@ namespace rct3::scene::park
         // Every attraction's takings are followed, shown or not, so switching them on shows only what comes after.
         for (const auto [e, attraction] : scene.sim.registry.view<const simulation::Attraction>().each())
         {
-            std::int64_t& seen = scene.income_seen[e];
-            const std::int64_t paid = std::exchange(seen, attraction.income.value);
+            i64& seen = scene.income_seen[e];
+            const i64 paid = std::exchange(seen, attraction.income.value);
             const auto& nodes = scene.sim.paths.nodes();
             if (!scene.show_guest_payments || attraction.income.value <= paid || !attraction.entrance || attraction.entrance->value >= nodes.size())
                 continue;
@@ -198,7 +199,7 @@ namespace rct3::scene::park
             return { };
         const glm::mat4 view = rct3::park::view_projection(scene.camera, size.x / size.y);
         const glm::vec3 middle = scene.camera.target;
-        std::vector<std::pair<float, ui::widgets::WorldLabel>> found;
+        std::vector<std::pair<f32, ui::widgets::WorldLabel>> found;
         const auto add = [&](glm::vec3 at, std::u16string text) {
             if (glm::distance(glm::vec2(at.x, at.z), glm::vec2(middle.x, middle.z)) > kLabelReach)
                 return;
@@ -221,14 +222,14 @@ namespace rct3::scene::park
         }
         if (scene.show_ride_heights)
         {
-            for (std::size_t r = 0; r < scene.rides.rides.size(); ++r)
+            for (usize r = 0; r < scene.rides.rides.size(); ++r)
             {
                 const save::model::Ride& ride = scene.rides.rides[r];
                 if (!ride.track || ride.base.demolished || save::model::RideIndex { r } == built)
                     continue;
                 for (const save::model::TrackPiece& p : ride.track->pieces)
                 {
-                    const auto height = static_cast<float>(p.height);
+                    const auto height = static_cast<f32>(p.height);
                     add({ g.world_x(p.tile_x) + g.tile_size_x / 2, height, g.world_z(p.tile_z) + g.tile_size_z / 2 }, whole(height));
                 }
             }
@@ -239,7 +240,7 @@ namespace rct3::scene::park
             for (const rct3::park::HeightMark& m : rct3::park::height_marks(track::track_end_points(scene, scene.building), g))
                 add(m.at, ui::screens::info::distance_text(m.above, units));
         }
-        std::ranges::sort(found, std::greater { }, &std::pair<float, ui::widgets::WorldLabel>::first);
+        std::ranges::sort(found, std::greater { }, &std::pair<f32, ui::widgets::WorldLabel>::first);
         std::vector<ui::widgets::WorldLabel> labels;
         labels.reserve(found.size());
         for (auto& [_, label] : found)

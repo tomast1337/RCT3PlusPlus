@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/stall_menu.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -64,11 +65,11 @@ TEST_CASE("a band goes over each run of lines that take the same extras")
     const std::vector<MenuRow> rows = menu_rows(three_lines());
     REQUIRE(rows.size() == 5);
     CHECK_FALSE(rows[0].line);
-    CHECK(rows[0].extras == std::vector<std::size_t> { 0 });
+    CHECK(rows[0].extras == std::vector<usize> { 0 });
     CHECK(rows[1].line == 0);
     CHECK(rows[2].line == 1);
     CHECK_FALSE(rows[3].line);
-    CHECK(rows[3].extras == std::vector<std::size_t> { 1 });
+    CHECK(rows[3].extras == std::vector<usize> { 1 });
     CHECK(rows[4].line == 2);
     // Lines that take no extras go without a band.
     StallMenuView plain;

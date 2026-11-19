@@ -11,6 +11,7 @@
 // crests.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "units/units.hpp"
 
@@ -20,26 +21,26 @@
 namespace rct3::park::water
 {
 
-    inline constexpr std::size_t kMaxRipples = 16;
+    inline constexpr usize kMaxRipples = 16;
 
     /// How ripples look and behave. Lengths in world units (about a metre), times in seconds.
     struct RippleLook
     {
-        float speed = 3.0f;           ///< Of the ring, outwards
-        float wavelength = 1.2f;      ///< From one crest to the next
-        float width = 1.6f;           ///< Of the train of waves round the ring
-        float height = 0.07f;         ///< Of the crests when the ripple starts
+        f32 speed = 3.0f;             ///< Of the ring, outwards
+        f32 wavelength = 1.2f;        ///< From one crest to the next
+        f32 width = 1.6f;             ///< Of the train of waves round the ring
+        f32 height = 0.07f;           ///< Of the crests when the ripple starts
         units::Seconds fade { 2.2f }; ///< For the height to fall to a third (1/e)
-        float spread = 2.0f;          ///< The height also falls as the ring grows past this radius
-        float gone = 0.02f;           ///< A ripple whose height has fallen below this share of `height` ends
+        f32 spread = 2.0f;            ///< The height also falls as the ring grows past this radius
+        f32 gone = 0.02f;             ///< A ripple whose height has fallen below this share of `height` ends
     };
     inline constexpr RippleLook kRippleLook { };
 
     struct Ripple
     {
         glm::vec2 middle { 0.0f }; ///< World x and z
-        float age = 0;
-        float strength = 0; ///< 0 for a free place, up to 1
+        f32 age = 0;
+        f32 strength = 0; ///< 0 for a free place, up to 1
     };
 
     struct Ripples
@@ -48,16 +49,16 @@ namespace rct3::park::water
     };
 
     /// Starts a ripple at `middle`, in a free place or else in place of the oldest.
-    void start_ripple(Ripples& ripples, glm::vec2 middle, float strength = 1, const RippleLook& look = kRippleLook);
+    void start_ripple(Ripples& ripples, glm::vec2 middle, f32 strength = 1, const RippleLook& look = kRippleLook);
     /// Ages the ripples by `seconds`, ending those that have died down.
-    void advance_ripples(Ripples& ripples, float seconds, const RippleLook& look = kRippleLook);
-    [[nodiscard]] std::size_t live_ripples(const Ripples& ripples);
+    void advance_ripples(Ripples& ripples, f32 seconds, const RippleLook& look = kRippleLook);
+    [[nodiscard]] usize live_ripples(const Ripples& ripples);
 
-    [[nodiscard]] float ripple_radius(const Ripple& ripple, const RippleLook& look = kRippleLook);
+    [[nodiscard]] f32 ripple_radius(const Ripple& ripple, const RippleLook& look = kRippleLook);
     /// The height of its crests now; 0 for a free place.
-    [[nodiscard]] float ripple_amplitude(const Ripple& ripple, const RippleLook& look = kRippleLook);
+    [[nodiscard]] f32 ripple_amplitude(const Ripple& ripple, const RippleLook& look = kRippleLook);
     /// How far the water stands above its level at world x and z `at`, from all the ripples together.
-    [[nodiscard]] float ripple_height(const Ripples& ripples, glm::vec2 at, const RippleLook& look = kRippleLook);
+    [[nodiscard]] f32 ripple_height(const Ripples& ripples, glm::vec2 at, const RippleLook& look = kRippleLook);
 
     /// What the renderer reads, two rows of kMaxRipples: the first holds each ripple's middle x and z, radius and
     /// amplitude (0 for none), the second its wave number (radians per world unit) and width.

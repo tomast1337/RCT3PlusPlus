@@ -13,6 +13,8 @@
 // record nothing.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <chrono>
 #include <cstddef>
 #include <string>
@@ -25,7 +27,7 @@ namespace rct3::profiling
 {
 
     /// Samples kept per scope for percentile and graph use.
-    inline constexpr std::size_t kHistoryLength = 300;
+    inline constexpr usize kHistoryLength = 300;
 
     namespace detail
     {
@@ -47,10 +49,10 @@ namespace rct3::profiling
     void reset();
 
     /// Records a value measured elsewhere, in milliseconds, under `name` at the current nesting level.
-    void record(std::string_view name, double milliseconds);
+    void record(std::string_view name, f64 milliseconds);
 
     /// Advances the one-second timer that rolls the period maximum. Call once per frame.
-    void update(double delta_seconds);
+    void update(f64 delta_seconds);
 
     /// Stores each scope's latest value in its history. Call once per frame.
     void capture_frame();
@@ -67,7 +69,7 @@ namespace rct3::profiling
 
     private:
         detail::Context* context_ = nullptr;
-        std::size_t mark_ = 0; ///< How long the context's path was before this scope opened
+        usize mark_ = 0; ///< How long the context's path was before this scope opened
         std::chrono::steady_clock::time_point start_ { };
     };
 
@@ -82,13 +84,13 @@ namespace rct3::profiling
     struct ScopeStats
     {
         std::string name; ///< "[Thread] Parent/Child"
-        std::size_t samples = 0;
-        double last = 0;
-        double average = 0; ///< Exponential moving average
-        double p50 = 0;
-        double p95 = 0;
-        double period_max = 0;       ///< Maximum over the current and previous one-second periods
-        std::vector<double> history; ///< Oldest first, at most kHistoryLength values
+        usize samples = 0;
+        f64 last = 0;
+        f64 average = 0; ///< Exponential moving average
+        f64 p50 = 0;
+        f64 p95 = 0;
+        f64 period_max = 0;       ///< Maximum over the current and previous one-second periods
+        std::vector<f64> history; ///< Oldest first, at most kHistoryLength values
     };
 
     /// Statistics of every scope of every context, sorted by name.

@@ -15,6 +15,7 @@
 
 #include "career/career.hpp"
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/draw_list.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
@@ -46,7 +47,7 @@ namespace rct3::ui::screens::career
         std::string load_icon;
         std::string cancel_icon;
         std::string delete_icon;
-        float big_icon_scale = 0.6f;     ///< Of the new and load icons, drawn smaller than their own size
+        f32 big_icon_scale = 0.6f;       ///< Of the new and load icons, drawn smaller than their own size
         std::array<std::string, 3> hats; ///< Tycoon, entrepreneur, apprentice, top to bottom
         std::string row_frame;           ///< Around a row
         std::string row_frame_selected;
@@ -57,19 +58,19 @@ namespace rct3::ui::screens::career
         Color hover_colour = hex("#2484be");
         std::array<Color, 2> row_colours { hex("#efe8ef"), hex("#ffffff") };
 
-        float width = 380;
-        float subtitle_height = 21; ///< Band above the list for the line saying what to do
-        float subtitle_x = 59;
-        float list_height = 270;
-        float bar_height = 30; ///< Under the list: the hovered button's name and the buttons
-        float button_size = 30;
-        float button_gap = 8;
-        float row_width = 362;
-        float row_height = 60;
-        float cell = 20;                      ///< Hats and counts are cells this size, three down the row's left
+        f32 width = 380;
+        f32 subtitle_height = 21; ///< Band above the list for the line saying what to do
+        f32 subtitle_x = 59;
+        f32 list_height = 270;
+        f32 bar_height = 30; ///< Under the list: the hovered button's name and the buttons
+        f32 button_size = 30;
+        f32 button_gap = 8;
+        f32 row_width = 362;
+        f32 row_height = 60;
+        f32 cell = 20;                        ///< Hats and counts are cells this size, three down the row's left
         Rect picture { 43, 1, 117, 59 };      ///< In a row
-        float text_x = 120;                   ///< Name and progress, from here to the row's right
-        std::size_t name_length = 40;         ///< Ours; the game sets none
+        f32 text_x = 120;                     ///< Name and progress, from here to the row's right
+        usize name_length = 40;               ///< Ours; the game sets none
         units::Seconds double_click { 0.4f }; ///< Between the clicks of a double click (ours)
     };
 
@@ -88,26 +89,26 @@ namespace rct3::ui::screens::career
 
         /// Shows these careers, the first picked.
         void set_careers(std::vector<CareerRow> careers);
-        void set_career(std::size_t index, CareerRow career);
+        void set_career(usize index, CareerRow career);
         /// Adds a career at the bottom and picks it.
         void add_career(CareerRow career);
 
-        [[nodiscard]] std::size_t size() const
+        [[nodiscard]] usize size() const
         {
             return rows_.size();
         }
-        [[nodiscard]] std::optional<std::size_t> selected() const
+        [[nodiscard]] std::optional<usize> selected() const
         {
             return selected_;
         }
-        void select(std::optional<std::size_t> index);
+        void select(std::optional<usize> index);
 
-        [[nodiscard]] std::optional<std::size_t> take_load();
+        [[nodiscard]] std::optional<usize> take_load();
         [[nodiscard]] bool take_new();
-        [[nodiscard]] std::optional<std::size_t> take_delete();
+        [[nodiscard]] std::optional<usize> take_delete();
         struct Rename
         {
-            std::size_t career { }; ///< By its row
+            usize career { }; ///< By its row
             std::u16string name { };
             friend bool operator==(const Rename&, const Rename&) = default;
         };
@@ -126,9 +127,9 @@ namespace rct3::ui::screens::career
         {
             return *delete_;
         }
-        [[nodiscard]] widgets::EditBox& name_box(std::size_t index) const;
+        [[nodiscard]] widgets::EditBox& name_box(usize index) const;
         /// The counts beside the tycoon, entrepreneur and apprentice hats, and the progress.
-        [[nodiscard]] std::array<std::u16string, 4> row_text(std::size_t index) const;
+        [[nodiscard]] std::array<std::u16string, 4> row_text(usize index) const;
         [[nodiscard]] const widgets::Label& hover() const
         {
             return *hover_;
@@ -137,7 +138,7 @@ namespace rct3::ui::screens::career
         {
             return core::maybe(question_);
         }
-        void click_row(std::size_t index);
+        void click_row(usize index);
 
         void update(const UpdateContext& context) override;
 
@@ -145,15 +146,15 @@ namespace rct3::ui::screens::career
         class Row;
 
         [[nodiscard]] std::u16string text(std::string_view key) const;
-        Row& make_row(std::size_t index, CareerRow career);
+        Row& make_row(usize index, CareerRow career);
         void place_rows();
         void load();
-        void check_rename(std::size_t index);
+        void check_rename(usize index);
 
         CareerDialogStyle style_;
         const StringTable& strings_;
         std::vector<Row*> rows_;
-        std::optional<std::size_t> selected_;
+        std::optional<usize> selected_;
         widgets::ScrollArea* list_ = nullptr;
         widgets::Label* hover_ = nullptr;
         widgets::Button* new_ = nullptr;
@@ -161,17 +162,17 @@ namespace rct3::ui::screens::career
         widgets::Button* cancel_ = nullptr;
         widgets::Button* delete_ = nullptr;
         widgets::QuestionBox* question_ = nullptr;
-        std::optional<std::size_t> deleting_;
-        std::optional<std::size_t> load_out_;
+        std::optional<usize> deleting_;
+        std::optional<usize> load_out_;
         bool new_out_ = false;
-        std::optional<std::size_t> delete_out_;
+        std::optional<usize> delete_out_;
         std::optional<Rename> rename_out_;
-        std::size_t made_ = 0; // Rows made, so each has its own name
+        usize made_ = 0; // Rows made, so each has its own name
         units::Seconds since_click_;
-        std::optional<std::size_t> last_clicked_;
+        std::optional<usize> last_clicked_;
     };
 
     /// The progress as the game writes it: three significant digits and a percent sign, e.g. "33.3%".
-    [[nodiscard]] std::u16string career_percent(float percent);
+    [[nodiscard]] std::u16string career_percent(f32 percent);
 
 } // namespace rct3::ui::screens::career

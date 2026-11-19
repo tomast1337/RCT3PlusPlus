@@ -28,6 +28,7 @@
 // that uses them is in flight: the backend defers the release until the GPU is done with them.
 #pragma once
 
+#include "core/types.hpp"
 #include "render/types.hpp"
 
 #include <expected>
@@ -41,7 +42,7 @@ struct GLFWwindow;
 namespace rct3::render
 {
 
-    enum class Backend : std::uint8_t
+    enum class Backend : u8
     {
         Vulkan,
         OpenGl,   ///< OpenGL 4.5 core, for machines without good Vulkan drivers
@@ -64,8 +65,8 @@ namespace rct3::render
     /// A part of the screen, in pixels from its top-left corner.
     struct ScreenView
     {
-        std::uint32_t x = 0;
-        std::uint32_t y = 0;
+        u32 x = 0;
+        u32 y = 0;
         Extent size;
     };
 
@@ -105,12 +106,12 @@ namespace rct3::render
 
         /// The screen is drawn at the window's size times `scale`, then stretched over the window as the frame
         /// ends, so the game can draw at fewer or more pixels than the window has. From the next frame.
-        void set_render_scale(float scale)
+        void set_render_scale(f32 scale)
         {
             render_scale_ = scale;
         }
 
-        [[nodiscard]] float render_scale() const
+        [[nodiscard]] f32 render_scale() const
         {
             return render_scale_;
         }
@@ -123,7 +124,7 @@ namespace rct3::render
 
         /// How bright the stretched screen shows: 0.5 as drawn, lower darker, higher brighter. Screenshots are
         /// taken before it, as drawn.
-        void set_brightness(float brightness)
+        void set_brightness(f32 brightness)
         {
             brightness_ = brightness;
         }
@@ -184,10 +185,10 @@ namespace rct3::render
 
         /// The samples per pixel above 1 the screen can be drawn with to smooth edges, fewest first; none when
         /// the device cannot.
-        [[nodiscard]] virtual std::vector<std::uint32_t> sample_levels() const = 0;
+        [[nodiscard]] virtual std::vector<u32> sample_levels() const = 0;
         /// Draws the screen's passes with `samples` per pixel from the next frame: 1 for none, else one of
         /// sample_levels. Passes into targets keep one. Only between frames.
-        virtual void set_samples(std::uint32_t samples) = 0;
+        virtual void set_samples(u32 samples) = 0;
 
         /// Counters of the last finished frame.
         [[nodiscard]] virtual FrameStats stats() const = 0;
@@ -203,9 +204,9 @@ namespace rct3::render
         virtual void draw_ui() = 0;
 
     protected:
-        float render_scale_ = 1;
+        f32 render_scale_ = 1;
         bool smooth_scaling_ = true;
-        float brightness_ = 0.5f;
+        f32 brightness_ = 0.5f;
 
     private:
         std::optional<ScreenView> view_;

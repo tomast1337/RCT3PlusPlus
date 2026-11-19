@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/spinning_part.hpp"
 
+#include "core/types.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -23,13 +25,13 @@ namespace
         return { .acceleration = { 5, 0, 0 }, .turning = { 8 * 5 / 64.0f } };
     }
 
-    void run(Spin& spin, const SpinningPart& part, const SpinCar& car, float seconds)
+    void run(Spin& spin, const SpinningPart& part, const SpinCar& car, f32 seconds)
     {
-        for (float t = 0; t < seconds; t += 0.05f)
+        for (f32 t = 0; t < seconds; t += 0.05f)
             spin_on(spin, part, car, 0.05f);
     }
 
-    constexpr float kQuarter = std::numbers::pi_v<float> / 2;
+    constexpr f32 kQuarter = std::numbers::pi_v<f32> / 2;
 } // namespace
 
 TEST_CASE("a spinning part on a car going straight on level track stays as it is")
@@ -50,7 +52,7 @@ TEST_CASE("in a steady turn a spinning part turns its weight out of the turn and
     CHECK(spin.angle.value == doctest::Approx(kQuarter).epsilon(0.1));
     CHECK(spin.rate.value == doctest::Approx(turning().turning.value).epsilon(1e-2));
     // Settled: a further second moves it no more on its car.
-    const float settled = spin.angle.value;
+    const f32 settled = spin.angle.value;
     run(spin, tub(), turning(), 1);
     CHECK(spin.angle.value == doctest::Approx(settled).epsilon(1e-3));
 }
@@ -68,7 +70,7 @@ TEST_CASE("a free spinning part keeps its heading while its car turns under it")
 TEST_CASE("on a slope a spinning part turns its weight downhill")
 {
     // The car heads +Z, banked with its +X side up: gravity seen in the car pulls towards -X.
-    const float bank = 0.3f;
+    const f32 bank = 0.3f;
     const glm::mat3 banked(glm::rotate(glm::mat4(1.0f), bank, glm::vec3(0, 0, 1)));
     Spin spin { .angle = { 0.1f } };
     run(spin, tub(), SpinCar { .axes = banked }, 60);
@@ -113,9 +115,9 @@ TEST_CASE("a spinning part held on a chain stops spinning there")
 
 TEST_CASE("at a station a spinning part squares up to the nearest of its stops, and stays there")
 {
-    for (const std::uint32_t stops : { 1u, 4u })
-        for (const float from : { 0.5f, -2.5f, 3.0f })
-            for (const float rate : { 0.0f, 3.0f, -1.5f })
+    for (const u32 stops : { 1u, 4u })
+        for (const f32 from : { 0.5f, -2.5f, 3.0f })
+            for (const f32 rate : { 0.0f, 3.0f, -1.5f })
             {
                 CAPTURE(stops);
                 CAPTURE(from);
@@ -126,10 +128,10 @@ TEST_CASE("at a station a spinning part squares up to the nearest of its stops, 
                 run(spin, part, SpinCar { .ground = SpinGround::Station }, 20);
                 CHECK(spin.squaring == Squaring::Squared);
                 CHECK(spin.rate.value == 0);
-                const float step = 2 * std::numbers::pi_v<float> / static_cast<float>(stops);
-                const float off = std::remainder(spin.angle.value, step);
+                const f32 step = 2 * std::numbers::pi_v<f32> / static_cast<f32>(stops);
+                const f32 off = std::remainder(spin.angle.value, step);
                 CHECK(std::abs(off) < 1e-4f);
-                const float squared = spin.angle.value;
+                const f32 squared = spin.angle.value;
                 run(spin, part, SpinCar { .acceleration = { 3, 0, 0 }, .ground = SpinGround::Station }, 2);
                 CHECK(spin.angle.value == squared);
             }
@@ -158,7 +160,7 @@ TEST_CASE("a sprung spinning part is drawn back to face ahead, and held within i
     part.furthest = units::Radians { 0.5f };
     part.fastest = units::TurnRate { 1 };
     Spin spin;
-    for (std::int32_t k = 0; k < 400; ++k)
+    for (i32 k = 0; k < 400; ++k)
     {
         spin_on(spin, part, turning(), 0.05f);
         CHECK(std::abs(spin.angle.value) <= 0.5f + 1e-6f);

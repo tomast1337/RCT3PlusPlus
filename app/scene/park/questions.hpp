@@ -4,6 +4,7 @@
 // complex, to remove a lake that has waterfalls, or the waterfalls a rising lake would flood. Each box is asked once at a time, by its name; the answer comes back in the park's update.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/attraction_objects.hpp"
 #include "save/model/world.hpp"
 #include "ui/palette.hpp"
@@ -31,7 +32,7 @@ namespace rct3::scene::park
     void ask_demolish(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, std::vector<rct3::park::AttractionRef> refs);
 
     /// Asks whether to sell the pool complex the changing room `room` opens on.
-    void ask_sell_pool_complex(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, std::size_t room);
+    void ask_sell_pool_complex(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, usize room);
 
     /// Asks whether to remove the lake holding `tile`, which has waterfalls that go with it.
     void ask_remove_lake(ParkScene& scene, const ui::StringTable& strings, const ui::Palette& palette, save::model::Tile tile);

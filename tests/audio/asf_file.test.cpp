@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "audio/asf_file.hpp"
 
+#include "core/types.hpp"
 #include "sine_wma.hpp"
 #include "tiny_wmv.hpp"
 
@@ -19,10 +20,10 @@ namespace
         return std::as_bytes(std::span(rct3::test::kSineWma));
     }
 
-    std::vector<std::byte> bytes(std::initializer_list<std::int32_t> list)
+    std::vector<std::byte> bytes(std::initializer_list<i32> list)
     {
         std::vector<std::byte> out;
-        for (const std::int32_t b : list)
+        for (const i32 b : list)
             out.push_back(static_cast<std::byte>(b));
         return out;
     }
@@ -130,7 +131,7 @@ TEST_CASE("a video stream gives its picture's size and codec, and its frames who
     CHECK(h->video_stream != h->audio_stream);
 
     AsfObjects frames(h->video_stream);
-    for (std::size_t at = h->first_packet; at + h->packet_size <= file.size(); at += h->packet_size)
+    for (usize at = h->first_packet; at + h->packet_size <= file.size(); at += h->packet_size)
     {
         const auto payloads = read_asf_packet(file.subspan(at, h->packet_size));
         REQUIRE(payloads);

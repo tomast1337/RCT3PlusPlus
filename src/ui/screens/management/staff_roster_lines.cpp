@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management/staff_roster_lines.hpp"
 
+#include "core/types.hpp"
 #include "simulation/staff/care.hpp"
 #include "ui/save_text.hpp"
 #include "ui/screens/info/person.hpp"
@@ -15,9 +16,9 @@ namespace rct3::ui::screens::management
     namespace
     {
         /// The place of `kind` among the switches; the jobs without one after them.
-        std::size_t job_rank(save::model::StaffKind kind)
+        usize job_rank(save::model::StaffKind kind)
         {
-            return static_cast<std::size_t>(std::ranges::find(kRosterJobs, kind, &RosterJob::kind) - kRosterJobs.begin());
+            return static_cast<usize>(std::ranges::find(kRosterJobs, kind, &RosterJob::kind) - kRosterJobs.begin());
         }
     } // namespace
 
@@ -26,7 +27,7 @@ namespace rct3::ui::screens::management
         // Lifeguards belong to their chairs, not to the list.
         if (kind == save::model::StaffKind::LifeGuard)
             return false;
-        const std::size_t rank = job_rank(kind);
+        const usize rank = job_rank(kind);
         return rank >= kRosterJobs.size() || (jobs & (1u << rank)) != 0;
     }
 
@@ -35,7 +36,7 @@ namespace rct3::ui::screens::management
         std::vector<RosterLine> lines;
         if (facts.people == nullptr)
             return lines;
-        for (std::size_t i = 0; i < facts.people->staff.size(); ++i)
+        for (usize i = 0; i < facts.people->staff.size(); ++i)
         {
             const save::model::Staff& s = facts.people->staff[i];
             if (!shows_job(jobs, s.kind))
@@ -66,11 +67,11 @@ namespace rct3::ui::screens::management
                     .colours = look.colours,
                     .costume = s.person.sub_type,
                     .hired = s.person.start_time,
-                    .hired_text = date_text(strings, hired.day, hired.month, static_cast<std::int32_t>(hired.year + 1)),
+                    .hired_text = date_text(strings, hired.day, hired.month, static_cast<i32>(hired.year + 1)),
                 });
         }
         // Each sort's key, lowest first; keys where the highest come first are turned round.
-        const auto key = [&](const RosterLine& l) -> std::tuple<double, std::u16string_view> {
+        const auto key = [&](const RosterLine& l) -> std::tuple<f64, std::u16string_view> {
             switch (sort)
             {
                 case RosterSort::Job:
@@ -79,21 +80,21 @@ namespace rct3::ui::screens::management
                 case RosterSort::Name:
                     return { 0, l.name };
                 case RosterSort::PatrolArea:
-                    return { -static_cast<double>(l.patrol_tiles), { } };
+                    return { -static_cast<f64>(l.patrol_tiles), { } };
                 case RosterSort::Tasks:
-                    return { -static_cast<double>(std::popcount(static_cast<std::uint32_t>(l.tasks))), { } };
+                    return { -static_cast<f64>(std::popcount(static_cast<u32>(l.tasks))), { } };
                 case RosterSort::Uniform:
                     return { l.colours[0] * 256.0 + l.colours[1], { } };
                 case RosterSort::Wage:
-                    return { -static_cast<double>(l.wage.value), { } };
+                    return { -static_cast<f64>(l.wage.value), { } };
                 case RosterSort::Activity:
                     return { 0, l.doing };
                 case RosterSort::Happiness:
                     return { -l.happiness, { } };
                 case RosterSort::Warnings:
-                    return { -static_cast<double>(l.warnings), { } };
+                    return { -static_cast<f64>(l.warnings), { } };
                 case RosterSort::Training:
-                    return { -static_cast<double>(l.training), { } };
+                    return { -static_cast<f64>(l.training), { } };
                 case RosterSort::StartDate:
                     return { l.hired, { } };
                 case RosterSort::Laziness:

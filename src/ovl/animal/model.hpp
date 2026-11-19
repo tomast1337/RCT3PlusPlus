@@ -11,6 +11,7 @@
 // (see bone_shape.hpp). Bones are stored relative to their parent, as an offset and a turn.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/bone_index.hpp"
 #include "ovl/bone_shape.hpp"
 #include "ovl/overlay.hpp"
@@ -27,15 +28,15 @@ namespace rct3::ovl::animal
     struct AnimalBone
     {
         std::string_view name;
-        std::optional<BoneIndex> parent { };          ///< An earlier bone; none for a root
-        std::array<float, 3> position { };            ///< At rest, from the parent bone
-        std::array<float, 4> rotation { 0, 0, 0, 1 }; ///< At rest, from the parent bone: a unit quaternion x, y, z, w
+        std::optional<BoneIndex> parent { };        ///< An earlier bone; none for a root
+        std::array<f32, 3> position { };            ///< At rest, from the parent bone
+        std::array<f32, 4> rotation { 0, 0, 0, 1 }; ///< At rest, from the parent bone: a unit quaternion x, y, z, w
     };
 
     struct AnimalModel
     {
-        std::array<float, 3> bounds_min { };
-        std::array<float, 3> bounds_max { };
+        std::array<f32, 3> bounds_min { };
+        std::array<f32, 3> bounds_max { };
         std::vector<AnimalBone> bones;
         /// Each level of detail, finest first, as meshes. A mesh's `texture` is the name of its material,
         /// which names a texture ("tex" item) without the tag. Coarse levels may have no meshes.

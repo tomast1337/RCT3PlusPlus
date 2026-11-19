@@ -5,6 +5,8 @@ extern "C" {
 #include <ffmpeg/libavutil/tx.h>
 }
 
+#include "core/types.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <numbers>
@@ -12,25 +14,25 @@ extern "C" {
 
 TEST_CASE("the inverse MDCT matches its definition")
 {
-    for (const std::int32_t n : { 16, 64, 256 })
+    for (const i32 n : { 16, 64, 256 })
     {
-        std::vector<float> in(static_cast<std::size_t>(n));
-        for (std::int32_t k = 0; k < n; ++k)
-            in[static_cast<std::size_t>(k)] = std::sin(0.7f * static_cast<float>(k)) + 0.25f * static_cast<float>(k % 3);
+        std::vector<f32> in(static_cast<usize>(n));
+        for (i32 k = 0; k < n; ++k)
+            in[static_cast<usize>(k)] = std::sin(0.7f * static_cast<f32>(k)) + 0.25f * static_cast<f32>(k % 3);
         AVTXContext* tx = nullptr;
         av_tx_fn fn = nullptr;
-        const float scale = 0.5f;
+        const f32 scale = 0.5f;
         REQUIRE(av_tx_init(&tx, &fn, AV_TX_FLOAT_MDCT, 1, n, &scale, AV_TX_FULL_IMDCT) == 0);
-        std::vector<float> out(static_cast<std::size_t>(2 * n));
-        fn(tx, out.data(), in.data(), sizeof(float));
+        std::vector<f32> out(static_cast<usize>(2 * n));
+        fn(tx, out.data(), in.data(), sizeof(f32));
         av_tx_uninit(&tx);
         CHECK(tx == nullptr);
-        for (std::int32_t i = 0; i < 2 * n; ++i)
+        for (i32 i = 0; i < 2 * n; ++i)
         {
-            double sum = 0;
-            for (std::int32_t k = 0; k < n; ++k)
-                sum += in[static_cast<std::size_t>(k)] * std::cos(std::numbers::pi / n * (i + 0.5 + n / 2.0) * (k + 0.5));
-            CHECK(out[static_cast<std::size_t>(i)] == doctest::Approx(-scale * sum).epsilon(1e-4).scale(1e-3 * n));
+            f64 sum = 0;
+            for (i32 k = 0; k < n; ++k)
+                sum += in[static_cast<usize>(k)] * std::cos(std::numbers::pi / n * (i + 0.5 + n / 2.0) * (k + 0.5));
+            CHECK(out[static_cast<usize>(i)] == doctest::Approx(-scale * sum).epsilon(1e-4).scale(1e-3 * n));
         }
     }
 }

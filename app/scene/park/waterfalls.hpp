@@ -5,6 +5,7 @@
 // (app/shaders/waterfall.slang), which runs the water from the park's clock.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/water/surface.hpp"
 #include "park/waterfall_mesh.hpp"
 #include "render/device.hpp"
@@ -30,7 +31,7 @@ namespace rct3::scene::park
     };
 
     /// How the falls are seen in a draw.
-    enum class FallsSeen : std::uint8_t
+    enum class FallsSeen : u8
     {
         Direct,         ///< In a view of the park, without the scene behind them
         WithScene,      ///< In the park's own view, which copied the scene behind the water (ParkWater::behind)
@@ -46,7 +47,7 @@ namespace rct3::scene::park
     /// Draws them into the open pass through `transform`, seen from `eye` (mirrored with the transform, in a
     /// reflection), lit by `light`, at `time` of the park's clock; the wave picture and the scene behind are
     /// `water`'s.
-    void draw_park_waterfalls(render::Device& device, const ParkWaterfalls& falls, const ParkWater& water, const glm::mat4& transform, const render::SceneLight& light, glm::vec3 eye, float time, FallsSeen seen);
+    void draw_park_waterfalls(render::Device& device, const ParkWaterfalls& falls, const ParkWater& water, const glm::mat4& transform, const render::SceneLight& light, glm::vec3 eye, f32 time, FallsSeen seen);
     void destroy_park_waterfalls(render::Device& device, ParkWaterfalls& falls);
 
 } // namespace rct3::scene::park

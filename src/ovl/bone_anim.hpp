@@ -3,6 +3,7 @@
 // Bone animations: per-bone keyframe tracks for position and rotation over a fixed duration.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -17,13 +18,13 @@ namespace rct3::ovl
     /// One keyframe of a track: a time in seconds and three values.
     struct BoneKeyframe
     {
-        float time = 0;
+        f32 time = 0;
         /// Translation for a position track. For a rotation track a rotation vector: its direction is the axis
         /// and its length the angle in radians, so the three values are not separate per-axis angles and have no
         /// axis order. For a single axis it matches the bone's stored rotation under the row-vector convention
         /// [[1,0,0],[0,cos,sin],[0,-sin,cos]]. Checked on thousands of bones whose first keyframe equals the
         /// rest pose. How keyframes are blended between two times is not confirmed.
-        std::array<float, 3> value { };
+        std::array<f32, 3> value { };
     };
 
     struct BoneTrack
@@ -36,7 +37,7 @@ namespace rct3::ovl
     struct BoneAnim
     {
         /// Length of the animation in seconds. Equals the last keyframe time of every item seen.
-        float duration = 0;
+        f32 duration = 0;
         std::vector<BoneTrack> bones;
     };
 

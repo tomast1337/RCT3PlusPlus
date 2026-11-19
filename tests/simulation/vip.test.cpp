@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/vip.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/crash.hpp"
 #include "simulation/fireworks.hpp"
@@ -24,7 +25,7 @@ using namespace rct3::simulation::park;
 
 namespace
 {
-    constexpr float kMonth = save::model::GameClock::kUnitsPerMonth;
+    constexpr f32 kMonth = save::model::GameClock::kUnitsPerMonth;
     using T = save::model::VipTarget;
 
     save::model::ObjectiveSet one_goal(T target)
@@ -66,7 +67,7 @@ TEST_CASE("the player is told a month and a week ahead, then the VIP comes in at
     Sandbox park = gated();
     auto set = one_goal({ .who = 2, .next_visit = 10 * kMonth, .months_to_stay = 1 });
     ParkMessages messages;
-    const VipSurroundings around { .name = [](std::uint8_t who) { return who == 2 ? std::string("Kara") : std::string(); } };
+    const VipSurroundings around { .name = [](u8 who) { return who == 2 ? std::string("Kara") : std::string(); } };
     advance_vips(park.world(), set, 8 * kMonth, 1, messages, around);
     CHECK(messages.list.empty());
     advance_vips(park.world(), set, 9.1f * kMonth, 1, messages, around);
@@ -114,7 +115,7 @@ TEST_CASE("litter on their path wears a VIP's patience down till they leave, and
     park.litter({ 0, 0 }, 5);
     for (const auto [e, l] : r.view<Litter>().each())
         l.node = stride.from;
-    for (std::int32_t i = 0; i < 10 && !r.get<Vip>(*vip).leaving; ++i)
+    for (i32 i = 0; i < 10 && !r.get<Vip>(*vip).leaving; ++i)
         advance_vips(park.world(), set, 1, kTuning.vips.look.value, messages, { });
     CHECK(r.get<Vip>(*vip).leaving);
     CHECK(r.get<Vip>(*vip).patience.value == 0);
@@ -137,8 +138,8 @@ TEST_CASE("a VIP who saw what they came for and kept their patience meets the go
     const auto vip = the_vip(r);
     REQUIRE(vip);
     r.ctx().emplace<FireworkShow>(); // A display going up
-    std::int32_t asked_theme = -1;
-    const VipSurroundings around { .themed = [&](glm::vec3, std::int32_t theme, std::int32_t) {
+    i32 asked_theme = -1;
+    const VipSurroundings around { .themed = [&](glm::vec3, i32 theme, i32) {
         asked_theme = theme;
         return 40;
     } };
@@ -274,11 +275,11 @@ TEST_CASE("a VIP held up on the way to a stop says why, says so again later, the
     CHECK(messages.list.back().text_key == first);
     CHECK(r.get<Errand>(*vip).kind == ErrandKind::Wandering);
     const auto said = [&](const std::string& key) { return std::ranges::count(keys(messages), key); };
-    for (std::int32_t i = 0; i < 100 && said(again) == 0; ++i)
+    for (i32 i = 0; i < 100 && said(again) == 0; ++i)
         look();
     CHECK(said(first) == 1); // Once, not at every look
     CHECK(said(again) == 1);
-    for (std::int32_t i = 0; i < 100 && said("VIP_GivenUpTryingToGetToWaypoint") == 0; ++i)
+    for (i32 i = 0; i < 100 && said("VIP_GivenUpTryingToGetToWaypoint") == 0; ++i)
         look();
     CHECK(said(again) == 1);
     CHECK(r.get<Vip>(*vip).next_stop == 1);

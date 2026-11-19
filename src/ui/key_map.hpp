@@ -27,6 +27,7 @@
 #pragma once
 
 #include "config/text_file.hpp"
+#include "core/types.hpp"
 #include "ui/key_combo.hpp"
 #include "ui/keyboard.hpp"
 
@@ -44,7 +45,7 @@
 namespace rct3::ui
 {
 
-    enum class Command : std::uint8_t
+    enum class Command : u8
     {
         Cancel, ///< Close a window or menu, cancel, go back
         DefaultButton,
@@ -60,7 +61,7 @@ namespace rct3::ui
 
         Count_, ///< Number of commands; not a command
     };
-    inline constexpr std::size_t kCommandCount = static_cast<std::size_t>(Command::Count_);
+    inline constexpr usize kCommandCount = static_cast<usize>(Command::Count_);
 
     /// The press a command arrives as.
     struct CommandPress
@@ -84,7 +85,7 @@ namespace rct3::ui
     [[nodiscard]] const CommandInfo& command_info(Command command);
 
     /// The game's commands, in the order the game lists them.
-    enum class PlayCommand : std::uint8_t
+    enum class PlayCommand : u8
     {
         ExitGame,
         ScreenSnapshot,
@@ -122,9 +123,9 @@ namespace rct3::ui
 
         Count_, ///< Number of commands; not a command
     };
-    inline constexpr std::size_t kPlayCommandCount = static_cast<std::size_t>(PlayCommand::Count_);
+    inline constexpr usize kPlayCommandCount = static_cast<usize>(PlayCommand::Count_);
 
-    enum class PlayKeyGroup : std::uint8_t
+    enum class PlayKeyGroup : u8
     {
         Universal,  ///< Anywhere in the game
         DuringPlay, ///< In a park

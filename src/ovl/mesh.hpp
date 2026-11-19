@@ -6,6 +6,7 @@
 // verifying models outside the project, and as a common input for later renderers.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/bone_shape.hpp"
 #include "ovl/static_shape.hpp"
 
@@ -24,23 +25,23 @@ namespace rct3::ovl
         std::string texture; ///< Flexi texture name, empty when the source part references none
         std::string style;   ///< Texture style name, empty when the source part references none
         /// First entry of `Mesh::indices` used by this part, and how many entries (a multiple of three).
-        std::uint32_t first_index = 0;
-        std::uint32_t index_count = 0;
+        u32 first_index = 0;
+        u32 index_count = 0;
         /// The source part's rendering values, copied as read (see the reader headers for what they mean).
-        std::uint32_t transparency = 0;
-        std::uint32_t flags = 0;
-        std::uint32_t sides = 0;
+        u32 transparency = 0;
+        u32 flags = 0;
+        u32 sides = 0;
     };
 
     /// Triangle list with per-vertex attributes in the model's own coordinate system, unmodified. Texture
     /// coordinates are as stored. All parts of a shape share the vertex arrays; indices are global.
     struct Mesh
     {
-        std::vector<std::array<float, 3>> positions;
-        std::vector<std::array<float, 3>> normals; ///< Same length as `positions`
-        std::vector<std::array<float, 2>> uvs;     ///< Same length as `positions`
-        std::vector<std::uint32_t> indices;        ///< Three per triangle, each below `positions.size()`
-        std::vector<MeshPart> parts;               ///< Cover `indices` in order without gaps
+        std::vector<std::array<f32, 3>> positions;
+        std::vector<std::array<f32, 3>> normals; ///< Same length as `positions`
+        std::vector<std::array<f32, 2>> uvs;     ///< Same length as `positions`
+        std::vector<u32> indices;                ///< Three per triangle, each below `positions.size()`
+        std::vector<MeshPart> parts;             ///< Cover `indices` in order without gaps
     };
 
     /// Build a mesh from a static shape. Triangles with an index outside their part's vertices are dropped,

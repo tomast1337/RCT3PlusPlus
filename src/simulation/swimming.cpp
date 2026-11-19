@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/swimming.hpp"
 
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
@@ -36,7 +37,7 @@ namespace rct3::simulation
 
         /// A swimmer `dt` further with their dive off `board` of `pool`: up its ladder, out along it, off its end,
         /// down through the air and under, and back up, swimming on after.
-        void dive_off(const SwimPool& pool, const PoolBoard& board, Swimmer& swimmer, Pose& pose, Mood& mood, float walk, float tile, float dt)
+        void dive_off(const SwimPool& pool, const PoolBoard& board, Swimmer& swimmer, Pose& pose, Mood& mood, f32 walk, f32 tile, f32 dt)
         {
             const auto& k = kTuning.dives;
             const glm::vec3 ahead { std::sin(board.heading.value), 0, std::cos(board.heading.value) };
@@ -67,7 +68,7 @@ namespace rct3::simulation
                 {
                     const glm::vec3 end = board.foot + ahead * board.reach.value;
                     const glm::vec2 to { end.x - pose.position.x, end.z - pose.position.z };
-                    const float way = glm::length(to);
+                    const f32 way = glm::length(to);
                     const glm::vec2 at = way <= walk * dt ? glm::vec2 { end.x, end.z } : glm::vec2 { pose.position.x, pose.position.z } + to * (walk * dt / way);
                     pose.position = { at.x, swimmer.height, at.y };
                     if (way <= walk * dt)
@@ -86,7 +87,7 @@ namespace rct3::simulation
                     swimmer.fall.value += kTuning.holding.gravity.value * dt;
                     pose.position += ahead * (k.leap.value * dt) + glm::vec3 { 0, -swimmer.fall.value * dt, 0 };
                     const auto water = std::ranges::find_if(pool.water, [&](const glm::vec3& w) { return std::abs(pose.position.x - w.x) <= tile / 2 && std::abs(pose.position.z - w.z) <= tile / 2; });
-                    const float surface = water != pool.water.end() ? water->y : board.foot.y;
+                    const f32 surface = water != pool.water.end() ? water->y : board.foot.y;
                     if (pose.position.y > surface)
                         break;
                     pose.position.y = surface;
@@ -108,11 +109,11 @@ namespace rct3::simulation
 
         /// Joins each lazy river's stations to the complexes whose paving or pool paths lie beside them, and floats
         /// their riders round in their rings till they get off at a joined station and swim on in its complex.
-        void float_on_rivers(SimWorld& world, float dt)
+        void float_on_rivers(SimWorld& world, f32 dt)
         {
             auto& r = world.registry;
             const auto& tuning = kTuning.rivers;
-            constexpr float kPi = std::numbers::pi_v<float>;
+            constexpr f32 kPi = std::numbers::pi_v<f32>;
             // Looked for again while a station joins none, or its complex has gone.
             for (const entt::entity e : sorted(r.view<River>()))
                 for (River::Station& station : r.get<River>(e).stations)
@@ -137,13 +138,13 @@ namespace rct3::simulation
                 }
                 auto& dice = r.get<Dice>(g).state;
                 auto& pose = r.get<Pose>(g);
-                const float length = river->course.length();
+                const f32 length = river->course.length();
                 // Resting, their ring turns; come round to face along the river or back, they may paddle off that way.
                 if (!f.paddling)
                 {
-                    const float was = f.facing.value;
+                    const f32 was = f.facing.value;
                     f.facing.value += f.spin.value * dt;
-                    for (const float way : { 0.0f, kPi, -kPi })
+                    for (const f32 way : { 0.0f, kPi, -kPi })
                         if ((was - way) * (f.facing.value - way) < 0 && random::chance(dice, tuning.paddle.value))
                         {
                             f.paddling = true;
@@ -155,11 +156,11 @@ namespace rct3::simulation
                 else if (random::chance(dice, tuning.rest.value * dt))
                 {
                     f.paddling = false;
-                    f.spin = { static_cast<float>(random::between(dice, -tuning.spin.value, tuning.spin.value)) };
+                    f.spin = { static_cast<f32>(random::between(dice, -tuning.spin.value, tuning.spin.value)) };
                 }
                 // Carried by the current, faster paddling along it and slower paddling against it.
-                const float moved = (tuning.flow.value + (f.paddling ? f.paddle.value * std::cos(f.facing.value) : 0.0f)) * dt;
-                const float from = f.along;
+                const f32 moved = (tuning.flow.value + (f.paddling ? f.paddle.value * std::cos(f.facing.value) : 0.0f)) * dt;
+                const f32 from = f.along;
                 f.along = std::fmod(std::fmod(f.along + moved, length) + length, length);
                 f.travelled += moved;
                 swimmer->left.value -= dt;
@@ -199,7 +200,7 @@ namespace rct3::simulation
 
         /// Swimmers on slides climbed on foot: up the steps, then down the slide, faster down its steeper stretches,
         /// and off its end into the pool, splashing down as off a pool slide.
-        void climb_slides(SimWorld& world, float dt)
+        void climb_slides(SimWorld& world, f32 dt)
         {
             auto& r = world.registry;
             const auto& tuning = kTuning.climbs;
@@ -213,7 +214,7 @@ namespace rct3::simulation
                 if (!r.all_of<Swimmer>(g) || errand == nullptr || errand->kind != ErrandKind::Riding || errand->target != c.slide || slide == nullptr || c.way >= slide->ways.size())
                 {
                     if (slide == nullptr && errand != nullptr && errand->kind == ErrandKind::Riding && errand->target == c.slide && r.all_of<Swimmer>(g))
-                        c.along = std::numeric_limits<float>::max();
+                        c.along = std::numeric_limits<f32>::max();
                     else
                     {
                         r.remove<Climbing>(g);
@@ -260,7 +261,7 @@ namespace rct3::simulation
                 if (r.valid(from) && r.all_of<CycleRide>(from))
                     std::erase(r.get<CycleRide>(from).riders, g);
                 r.remove<Climbing>(g);
-                const float ground = pool != nullptr && !pool->water.empty() ? std::ranges::min_element(pool->water, { }, [&](const glm::vec3& w) { return glm::distance(glm::vec2(w.x, w.z), glm::vec2(at.x, at.z)); })->y : at.y;
+                const f32 ground = pool != nullptr && !pool->water.empty() ? std::ranges::min_element(pool->water, { }, [&](const glm::vec3& w) { return glm::distance(glm::vec2(w.x, w.z), glm::vec2(at.x, at.z)); })->y : at.y;
                 // With no water under the end they come down on hard ground: a dangerous happening, and the park's
                 // inspector, if it has one, says so of an open slide.
                 if (pool == nullptr || pool->water.empty())
@@ -270,7 +271,7 @@ namespace rct3::simulation
                         for (const auto [i, staff] : r.view<const Staff>().each())
                             if (staff.role == StaffRole::Inspector)
                             {
-                                tell(r, i, Finding::DangerousFlume, from, static_cast<float>(world.tick) * kTickSeconds);
+                                tell(r, i, Finding::DangerousFlume, from, static_cast<f32>(world.tick) * kTickSeconds);
                                 break;
                             }
                 }
@@ -283,35 +284,35 @@ namespace rct3::simulation
         }
     } // namespace
 
-    std::size_t dirt_step(const SwimPool& pool)
+    usize dirt_step(const SwimPool& pool)
     {
-        return std::min(static_cast<std::size_t>(pool.dirt.value * 6), std::size_t { 5 });
+        return std::min(static_cast<usize>(pool.dirt.value * 6), usize { 5 });
     }
 
-    bool open_water(const SwimPool& pool, std::size_t square, glm::vec3 at, float tile)
+    bool open_water(const SwimPool& pool, usize square, glm::vec3 at, f32 tile)
     {
         if (square >= pool.open.size())
             return true;
-        const float steps = static_cast<float>(kOpenSteps);
-        const auto step = [&](float along) { return static_cast<std::size_t>(std::clamp((along / tile + 0.5f) * steps, 0.0f, steps - 1)); };
+        const f32 steps = static_cast<f32>(kOpenSteps);
+        const auto step = [&](f32 along) { return static_cast<usize>(std::clamp((along / tile + 0.5f) * steps, 0.0f, steps - 1)); };
         return pool.open[square][step(at.z - pool.water[square].z) * kOpenSteps + step(at.x - pool.water[square].x)];
     }
 
-    glm::vec2 pool_stop(const SwimPool& pool, glm::vec2 from, glm::vec2 to, float tile)
+    glm::vec2 pool_stop(const SwimPool& pool, glm::vec2 from, glm::vec2 to, f32 tile)
     {
         const auto over = [&](glm::vec2 at) {
             const auto square = std::ranges::find_if(pool.water, [&](const glm::vec3& w) { return std::abs(at.x - w.x) <= tile / 2 && std::abs(at.y - w.z) <= tile / 2; });
-            return square != pool.water.end() && open_water(pool, static_cast<std::size_t>(square - pool.water.begin()), { at.x, 0, at.y }, tile);
+            return square != pool.water.end() && open_water(pool, static_cast<usize>(square - pool.water.begin()), { at.x, 0, at.y }, tile);
         };
         // In steps of the open water's marks, at most a few hundred squares' worth.
-        constexpr float kMostSteps = 4096;
-        const float mark = tile / static_cast<float>(kOpenSteps);
-        const std::int32_t steps = static_cast<std::int32_t>(std::min(std::ceil(glm::distance(from, to) / mark), kMostSteps));
+        constexpr f32 kMostSteps = 4096;
+        const f32 mark = tile / static_cast<f32>(kOpenSteps);
+        const i32 steps = static_cast<i32>(std::min(std::ceil(glm::distance(from, to) / mark), kMostSteps));
         bool inside = over(from);
         glm::vec2 last = from;
-        for (std::int32_t i = 1; i <= steps; ++i)
+        for (i32 i = 1; i <= steps; ++i)
         {
-            const glm::vec2 at = glm::mix(from, to, static_cast<float>(i) / static_cast<float>(steps));
+            const glm::vec2 at = glm::mix(from, to, static_cast<f32>(i) / static_cast<f32>(steps));
             const bool wet = over(at);
             if (inside && !wet)
                 return last;
@@ -321,11 +322,11 @@ namespace rct3::simulation
         return to;
     }
 
-    std::optional<std::size_t> pool_walk_at(const SwimPool& pool, glm::vec3 at, float tile, float level)
+    std::optional<usize> pool_walk_at(const SwimPool& pool, glm::vec3 at, f32 tile, f32 level)
     {
-        std::optional<std::size_t> best;
-        float nearest = std::numeric_limits<float>::max();
-        for (std::size_t i = 0; i < pool.walks.size(); ++i)
+        std::optional<usize> best;
+        f32 nearest = std::numeric_limits<f32>::max();
+        for (usize i = 0; i < pool.walks.size(); ++i)
             if (const glm::vec3& w = pool.walks[i].at; std::abs(at.x - w.x) <= tile / 2 && std::abs(at.z - w.z) <= tile / 2 && std::abs(at.y - w.y) < nearest)
             {
                 best = i;
@@ -333,7 +334,7 @@ namespace rct3::simulation
             }
         if (best)
             return best;
-        for (std::size_t i = 0; i < pool.walks.size(); ++i)
+        for (usize i = 0; i < pool.walks.size(); ++i)
             if (const glm::vec3& w = pool.walks[i].at; std::max(std::abs(at.x - w.x), std::abs(at.z - w.z)) <= kTuning.pools.platform * tile && std::abs(at.y - w.y) <= 2 * level && glm::distance(at, w) < nearest)
             {
                 best = i;
@@ -342,11 +343,11 @@ namespace rct3::simulation
         return best;
     }
 
-    std::vector<std::optional<std::size_t>> pool_ways(const SwimPool& pool, std::size_t from)
+    std::vector<std::optional<usize>> pool_ways(const SwimPool& pool, usize from)
     {
-        std::vector<std::optional<std::size_t>> before(pool.walks.size());
-        std::vector<float> far(pool.walks.size(), std::numeric_limits<float>::max());
-        std::priority_queue<std::pair<float, std::size_t>, std::vector<std::pair<float, std::size_t>>, std::greater<>> open;
+        std::vector<std::optional<usize>> before(pool.walks.size());
+        std::vector<f32> far(pool.walks.size(), std::numeric_limits<f32>::max());
+        std::priority_queue<std::pair<f32, usize>, std::vector<std::pair<f32, usize>>, std::greater<>> open;
         before[from] = from;
         far[from] = 0;
         open.emplace(0.0f, from);
@@ -360,7 +361,7 @@ namespace rct3::simulation
             for (const PoolWalk::Join& join : walk.joins)
             {
                 const PoolWalk& next = pool.walks[join.to];
-                float length = walk.water != next.water ? kTuning.pools.dip.value : 0.0f;
+                f32 length = walk.water != next.water ? kTuning.pools.dip.value : 0.0f;
                 glm::vec3 last = walk.at;
                 for (const glm::vec3& p : join.via)
                     length += glm::distance(std::exchange(last, p), p);
@@ -379,7 +380,7 @@ namespace rct3::simulation
     std::optional<entt::entity> pool_door_at(const SimWorld& world, glm::vec3 point)
     {
         const auto& r = world.registry;
-        const float half = world.paths.tile_size / 2;
+        const f32 half = world.paths.tile_size / 2;
         const auto within = [&](const glm::vec3& w) { return std::abs(point.x - w.x) <= half && std::abs(point.z - w.z) <= half; };
         for (const entt::entity door : sorted(r.view<const PoolDoor>()))
         {
@@ -391,27 +392,27 @@ namespace rct3::simulation
         return std::nullopt;
     }
 
-    std::optional<PoolJoin> pool_beside(const SimWorld& world, std::span<const glm::vec3> station, float raised)
+    std::optional<PoolJoin> pool_beside(const SimWorld& world, std::span<const glm::vec3> station, f32 raised)
     {
         const auto& r = world.registry;
-        const float tile = world.paths.tile_size;
+        const f32 tile = world.paths.tile_size;
         std::optional<PoolJoin> found;
-        float closest = kTuning.rivers.join.value * tile;
+        f32 closest = kTuning.rivers.join.value * tile;
         for (const entt::entity pool : sorted(r.view<const SwimPool>()))
         {
             const SwimPool& complex = r.get<SwimPool>(pool);
             for (const auto* squares : { &complex.paved, &complex.steps })
                 for (const glm::vec3& square : *squares)
-                    for (std::size_t k = 0; k < station.size(); ++k)
+                    for (usize k = 0; k < station.size(); ++k)
                     {
                         // Across the track from a stretch of the station, not past its ends, and at its level.
                         const glm::vec3 a = station[k];
                         const glm::vec3 b = station[std::min(k + 1, station.size() - 1)];
                         const glm::vec2 run { b.x - a.x, b.z - a.z };
                         const glm::vec2 to { square.x - a.x, square.z - a.z };
-                        const float length = glm::length(run);
-                        const float along = length > 0 ? glm::dot(to, run) / length : 0.0f;
-                        const float across = length > 0 ? std::abs(run.x * to.y - run.y * to.x) / length : glm::length(to);
+                        const f32 length = glm::length(run);
+                        const f32 along = length > 0 ? glm::dot(to, run) / length : 0.0f;
+                        const f32 across = length > 0 ? std::abs(run.x * to.y - run.y * to.x) / length : glm::length(to);
                         if (a.y - square.y <= -world.paths.level_height || a.y - square.y >= world.paths.level_height + raised || along < -tile / 2 || along > length + tile / 2 || across >= closest)
                             continue;
                         closest = across;
@@ -441,7 +442,7 @@ namespace rct3::simulation
         if (const auto* attraction = r.try_get<Attraction>(ride); attraction == nullptr || attraction->entrance)
             return std::nullopt;
         std::vector<glm::vec3> station;
-        for (std::size_t i = 0; i + 1 < train.points.size() && i < train.kinds.size(); ++i)
+        for (usize i = 0; i + 1 < train.points.size() && i < train.kinds.size(); ++i)
             if (train.kinds[i] == Stretch::Station)
                 station.insert(station.end(), { train.points[i], train.points[i + 1] });
         const auto join = station.empty() ? std::nullopt : pool_beside(world, station, kTuning.pools.slide_deck * world.paths.level_height);
@@ -463,8 +464,8 @@ namespace rct3::simulation
     {
         entt::registry& r = world.registry;
         const PathNetwork& paths = world.paths;
-        constexpr float dt = kTickSeconds;
-        const float now = static_cast<float>(world.tick) * kTickSeconds;
+        constexpr f32 dt = kTickSeconds;
+        const f32 now = static_cast<f32>(world.tick) * kTickSeconds;
 
         phase.emplace("Pools");
         // Changing rooms use up their cleaning fluid while open, cleaning their pool, and call for a mechanic to
@@ -489,26 +490,26 @@ namespace rct3::simulation
         // the paved squares round it, resting between; their time up, they go back and change again, and come out
         // at the door. At an extra with every place taken they wait beside it a while.
         // The places taken on each pool's extras, a bit for each.
-        std::unordered_map<entt::entity, std::vector<std::uint32_t>> places_taken;
+        std::unordered_map<entt::entity, std::vector<u32>> places_taken;
         for (const auto [g, swimmer, errand] : r.view<const Swimmer, const Errand>().each())
             if (const auto* door = swimmer.place && swimmer.spot && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
             {
                 auto& places = places_taken[door->pool];
-                places.resize(std::max(places.size(), static_cast<std::size_t>(*swimmer.spot) + 1));
-                places[static_cast<std::size_t>(*swimmer.spot)] |= 1u << *swimmer.place;
+                places.resize(std::max(places.size(), static_cast<usize>(*swimmer.spot) + 1));
+                places[static_cast<usize>(*swimmer.spot)] |= 1u << *swimmer.place;
             }
         // The diving boards in use, by pool, one swimmer on each at a time.
-        std::set<std::pair<entt::entity, std::int32_t>> boards_taken;
+        std::set<std::pair<entt::entity, i32>> boards_taken;
         for (const auto [g, swimmer, errand] : r.view<const Swimmer, const Errand>().each())
             if (const auto* door = swimmer.dive != DiveStep::None && swimmer.board && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
                 boards_taken.insert({ door->pool, *swimmer.board });
         // And the ladders, one swimmer on the way to each or on it at a time.
-        std::set<std::pair<entt::entity, std::int32_t>> ladders_taken;
+        std::set<std::pair<entt::entity, i32>> ladders_taken;
         for (const auto [g, swimmer, errand] : r.view<const Swimmer, const Errand>().each())
             if (const auto* door = swimmer.ladder && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
                 ladders_taken.insert({ door->pool, *swimmer.ladder });
         // And those waiting their turn at each high board, in a line behind its ladder.
-        std::map<std::pair<entt::entity, std::int32_t>, std::vector<entt::entity>> board_lines;
+        std::map<std::pair<entt::entity, i32>, std::vector<entt::entity>> board_lines;
         for (const auto [g, swimmer, errand] : r.view<const Swimmer, const Errand>().each())
             if (const auto* door = swimmer.board && swimmer.dive == DiveStep::None && swimmer.waited.value > 0 && r.valid(errand.target) ? r.try_get<PoolDoor>(errand.target) : nullptr)
                 board_lines[{ door->pool, *swimmer.board }].push_back(g);
@@ -518,7 +519,7 @@ namespace rct3::simulation
             auto& pose = r.get<Pose>(g);
             // How far they have still to go along their way over the complex to their goal.
             const auto way_left = [&](const PoolRoute& route) {
-                float left = 0;
+                f32 left = 0;
                 glm::vec3 from = pose.position;
                 for (const PoolRoute::Point& p : route.via | std::views::reverse)
                     left += glm::distance(from, std::exchange(from, p.at));
@@ -536,7 +537,7 @@ namespace rct3::simulation
                     continue;
                 const auto& line = r.get<CycleRide>(swimming->target).queue;
                 const auto at = std::ranges::find(line, g);
-                const float pace = r.get<Stride>(g).speed.value * dt;
+                const f32 pace = r.get<Stride>(g).speed.value * dt;
                 const auto crowding = [&](const glm::vec3& p) { return std::find_if(line.begin(), at, [&](entt::entity o) { return glm::distance(p, r.get<Pose>(o).position) < kTuning.pools.queue_gap.value; }); };
                 if (crowding(pose.position) != at)
                 {
@@ -551,11 +552,11 @@ namespace rct3::simulation
                     pose.position += glm::vec3 { away.x, 0, away.y } * pace;
                     continue;
                 }
-                const float step = std::min(pace, way_left(*route) - static_cast<float>(at - line.begin()) * kTuning.pools.queue_gap.value);
+                const f32 step = std::min(pace, way_left(*route) - static_cast<f32>(at - line.begin()) * kTuning.pools.queue_gap.value);
                 if (step <= 0)
                     continue;
                 const glm::vec3 to = (route->via.empty() ? swimmer.goal : route->via.back().at) - pose.position;
-                const float left = glm::length(to);
+                const f32 left = glm::length(to);
                 // Nor up close on anyone behind them in it who stands in the way, who steps away.
                 if (const glm::vec3 next = pose.position + (left <= step ? to : to * (step / left)); crowding(next) != at || std::any_of(std::next(at), line.end(), [&](entt::entity o) { return glm::distance(next, r.get<Pose>(o).position) < kTuning.pools.queue_gap.value / 2; }))
                     continue;
@@ -611,10 +612,10 @@ namespace rct3::simulation
             // On or off a diving board, the dive takes them till they are back in the water.
             if (swimmer.dive != DiveStep::None)
             {
-                if (swimmer.board && static_cast<std::size_t>(*swimmer.board) < pool->boards.size())
+                if (swimmer.board && static_cast<usize>(*swimmer.board) < pool->boards.size())
                 {
                     const bool falling = swimmer.dive == DiveStep::Fall;
-                    dive_off(*pool, pool->boards[static_cast<std::size_t>(*swimmer.board)], swimmer, pose, r.get<Mood>(g), r.get<Stride>(g).speed.value, paths.tile_size, dt);
+                    dive_off(*pool, pool->boards[static_cast<usize>(*swimmer.board)], swimmer, pose, r.get<Mood>(g), r.get<Stride>(g).speed.value, paths.tile_size, dt);
                     // Down on hard ground, not in the water: a dangerous happening, and the park's inspector, if it
                     // has one, says so of the complex.
                     if (falling && swimmer.dive == DiveStep::Surface && !swimmer.in_water)
@@ -637,7 +638,7 @@ namespace rct3::simulation
             if (swimmer.edge != PoolEdge::None)
             {
                 const auto& k = kTuning.pools;
-                const float length = (swimmer.edge == PoolEdge::DiveIn ? k.dive_in : swimmer.edge == PoolEdge::ClimbOut ? k.climb_out : k.ladder).value;
+                const f32 length = (swimmer.edge == PoolEdge::DiveIn ? k.dive_in : swimmer.edge == PoolEdge::ClimbOut ? k.climb_out : k.ladder).value;
                 swimmer.edging.value += dt;
                 pose.position = glm::mix(swimmer.edge_from, swimmer.edge_to, std::min(swimmer.edging.value / length, 1.0f));
                 swimmer.left.value -= dt;
@@ -664,17 +665,17 @@ namespace rct3::simulation
                 route = &r.emplace_or_replace<PoolRoute>(g, PoolRoute { .goal = swimmer.goal });
                 const auto from = pool_walk_at(*pool, pose.position, paths.tile_size, paths.level_height);
                 const auto to = pool_walk_at(*pool, swimmer.goal, paths.tile_size, paths.level_height);
-                const auto before = from ? pool_ways(*pool, *from) : std::vector<std::optional<std::size_t>> { };
+                const auto before = from ? pool_ways(*pool, *from) : std::vector<std::optional<usize>> { };
                 // They keep to the lane they are on of the three each way across a square, crossing from square to
                 // square on it, so a crowd spreads over the pool; on their way to a slide, to the middle one, so its
                 // line is one file. A lane taking them over the water's edge, they take the middle one.
                 const auto way = [&](glm::vec3 lane) {
                     std::vector<PoolRoute::Point> via;
-                    for (std::size_t at = to.value_or(0); from && to && before[at] && at != *from; at = *before[at])
+                    for (usize at = to.value_or(0); from && to && before[at] && at != *from; at = *before[at])
                     {
                         const PoolWalk& last = pool->walks[*before[at]];
                         const auto join = std::ranges::find(last.joins, at, &PoolWalk::Join::to);
-                        for (std::size_t i = join->via.size(); i-- > 0;)
+                        for (usize i = join->via.size(); i-- > 0;)
                         {
                             glm::vec3 p = join->via[i];
                             if (join->via.size() == 1) // Where the two squares meet: along their side
@@ -689,14 +690,14 @@ namespace rct3::simulation
                 };
                 const auto wet = [&](glm::vec3 at) {
                     const auto w = std::ranges::find_if(pool->water, [&](const glm::vec3& s) { return std::abs(at.x - s.x) <= paths.tile_size / 2 && std::abs(at.z - s.z) <= paths.tile_size / 2; });
-                    return w != pool->water.end() && open_water(*pool, static_cast<std::size_t>(w - pool->water.begin()), at, paths.tile_size);
+                    return w != pool->water.end() && open_water(*pool, static_cast<usize>(w - pool->water.begin()), at, paths.tile_size);
                 };
                 const auto clear = [&](const std::vector<PoolRoute::Point>& via) {
                     std::vector<glm::vec3> points { pose.position };
                     for (const PoolRoute::Point& p : via | std::views::reverse)
                         points.push_back(p.at);
                     points.push_back(swimmer.goal);
-                    for (std::size_t i = 1; i < points.size(); ++i)
+                    for (usize i = 1; i < points.size(); ++i)
                         if (const glm::vec3 a = points[i - 1], b = points[i]; wet(a) && wet(b) && pool_stop(*pool, { a.x, a.z }, { b.x, b.z }, paths.tile_size) != glm::vec2 { b.x, b.z })
                             return false;
                     return true;
@@ -704,7 +705,7 @@ namespace rct3::simulation
                 glm::vec3 lane { 0.0f };
                 if (from && !r.valid(swimmer.slide))
                 {
-                    const auto snap = [](float off) { return std::clamp(std::round(off / kTuning.pools.lanes.value), -1.0f, 1.0f) * kTuning.pools.lanes.value; };
+                    const auto snap = [](f32 off) { return std::clamp(std::round(off / kTuning.pools.lanes.value), -1.0f, 1.0f) * kTuning.pools.lanes.value; };
                     lane = { snap(pose.position.x - pool->walks[*from].at.x), 0, snap(pose.position.z - pool->walks[*from].at.z) };
                 }
                 route->via = way(lane);
@@ -712,7 +713,7 @@ namespace rct3::simulation
                     route->via = way(glm::vec3 { 0.0f });
             }
             // Out of the water on their way to a slide whose line reaches back to them: at its end, there.
-            if (const auto* line = r.valid(swimmer.slide) && !swimmer.in_water && r.all_of<Trains>(swimmer.slide) ? r.try_get<CycleRide>(swimmer.slide) : nullptr; line != nullptr && !line->queue.empty() && way_left(*route) <= static_cast<float>(line->queue.size()) * kTuning.pools.queue_gap.value)
+            if (const auto* line = r.valid(swimmer.slide) && !swimmer.in_water && r.all_of<Trains>(swimmer.slide) ? r.try_get<CycleRide>(swimmer.slide) : nullptr; line != nullptr && !line->queue.empty() && way_left(*route) <= static_cast<f32>(line->queue.size()) * kTuning.pools.queue_gap.value)
             {
                 const auto* upkeep = r.try_get<Upkeep>(swimmer.slide);
                 if (r.get<Attraction>(swimmer.slide).open && (upkeep == nullptr || !upkeep->broken))
@@ -727,8 +728,8 @@ namespace rct3::simulation
             if (!route->via.empty() && !route->via.back().water && !swimmer.in_water)
             {
                 const glm::vec3 to = route->via.back().at - pose.position;
-                const float left = glm::length(to);
-                const float pace = r.get<Stride>(g).speed.value * dt;
+                const f32 left = glm::length(to);
+                const f32 pace = r.get<Stride>(g).speed.value * dt;
                 if (glm::length(glm::vec2 { to.x, to.z }) > 0)
                     pose.heading.value = std::atan2(to.x, to.z);
                 pose.position += left <= pace ? to : to * (pace / left);
@@ -742,26 +743,26 @@ namespace rct3::simulation
             // the water too: of the squares under them, the one nearest their height; off them, at the height they are
             // going to.
             const glm::vec2 to { target.x - pose.position.x, target.z - pose.position.z };
-            const float way = glm::length(to);
-            const float pace = (swimmer.in_water ? kTuning.pools.swim.value : r.get<Stride>(g).speed.value) * dt;
+            const f32 way = glm::length(to);
+            const f32 pace = (swimmer.in_water ? kTuning.pools.swim.value : r.get<Stride>(g).speed.value) * dt;
             const bool there = way <= pace;
             swimmer.stayed.value = there && route->via.empty() ? swimmer.stayed.value + dt : 0;
             if (!there)
                 pose.heading.value = std::atan2(to.x, to.y);
             const glm::vec2 at = there ? glm::vec2 { target.x, target.z } : glm::vec2 { pose.position.x, pose.position.z } + to * (pace / way);
-            const float half = paths.tile_size / 2;
+            const f32 half = paths.tile_size / 2;
             const auto within = [&](const glm::vec3& w) { return std::abs(at.x - w.x) <= half && std::abs(at.y - w.z) <= half; };
             const auto under = [&](const std::vector<glm::vec3>& spots) {
-                const auto best = std::ranges::min_element(spots, { }, [&](const glm::vec3& w) { return within(w) ? std::abs(w.y - pose.position.y) : std::numeric_limits<float>::max(); });
+                const auto best = std::ranges::min_element(spots, { }, [&](const glm::vec3& w) { return within(w) ? std::abs(w.y - pose.position.y) : std::numeric_limits<f32>::max(); });
                 return best != spots.end() && within(*best) ? best : spots.end();
             };
             const auto square = under(pool->water);
             const auto pave = under(pool->paved);
-            std::optional<float> water;
-            std::optional<float> paved;
+            std::optional<f32> water;
+            std::optional<f32> paved;
             if (pave != pool->paved.end())
                 paved = pave->y;
-            if (square != pool->water.end() && open_water(*pool, static_cast<std::size_t>(square - pool->water.begin()), { at.x, 0, at.y }, paths.tile_size))
+            if (square != pool->water.end() && open_water(*pool, static_cast<usize>(square - pool->water.begin()), { at.x, 0, at.y }, paths.tile_size))
                 water = square->y;
             else if (square != pool->water.end() && !paved)
                 paved = square->y - rct3::park::kPoolBrim * paths.level_height + kTuning.pools.deck.value;
@@ -769,7 +770,7 @@ namespace rct3::simulation
             const bool wet = water && (!paved || std::abs(*water - pose.position.y) <= std::abs(*paved - pose.position.y));
             // At the open water's edge, not on the way to a ladder: in off it, diving where they stand on the paving,
             // or out over the wall from the water. Out of a spa pool they step.
-            const auto edge = [&](PoolEdge how, float reach, float height) {
+            const auto edge = [&](PoolEdge how, f32 reach, f32 height) {
                 const glm::vec3 ahead { std::sin(pose.heading.value), 0, std::cos(pose.heading.value) };
                 swimmer.edge = how;
                 swimmer.edge_from = pose.position;
@@ -800,8 +801,8 @@ namespace rct3::simulation
             // In the water they dirty it, the less the more water there is, and enjoy it the cleaner it is.
             if (swimmer.in_water)
             {
-                pool->dirt.value = std::min(pool->dirt.value + kTuning.pools.dirtying.value * dt / static_cast<float>(pool->water.size()), 1.0f);
-                const float liking = harsh(pool, r.try_get<PoolTank>(errand.target)) ? -0.5f : 1 - 2 * pool->dirt.value / kTuning.pools.bad.value;
+                pool->dirt.value = std::min(pool->dirt.value + kTuning.pools.dirtying.value * dt / static_cast<f32>(pool->water.size()), 1.0f);
+                const f32 liking = harsh(pool, r.try_get<PoolTank>(errand.target)) ? -0.5f : 1 - 2 * pool->dirt.value / kTuning.pools.bad.value;
                 auto& happiness = r.get<Mood>(g).happiness.value;
                 happiness = std::clamp(happiness + kTuning.pools.cheer.value * liking * dt, 0.0f, 1.0f);
             }
@@ -816,7 +817,7 @@ namespace rct3::simulation
             // At a ladder: up it out of the water, or down it in.
             if (swimmer.ladder)
             {
-                const auto which = static_cast<std::size_t>(*swimmer.ladder);
+                const auto which = static_cast<usize>(*swimmer.ladder);
                 if (which >= pool->ladders.size())
                     swimmer.ladder.reset();
                 else
@@ -839,7 +840,7 @@ namespace rct3::simulation
                 // Into a lazy river at its station there, in a ring, free on the complex's ticket.
                 if (const auto* river = r.try_get<River>(slide); river != nullptr && r.get<Attraction>(slide).open && (upkeep == nullptr || !upkeep->broken))
                 {
-                    const auto station = std::ranges::min_element(river->stations, { }, [&](const River::Station& st) { return st.pool == door->pool ? glm::distance(st.square, pose.position) : std::numeric_limits<float>::max(); });
+                    const auto station = std::ranges::min_element(river->stations, { }, [&](const River::Station& st) { return st.pool == door->pool ? glm::distance(st.square, pose.position) : std::numeric_limits<f32>::max(); });
                     if (station->pool != door->pool)
                         continue;
                     const auto& tuning = kTuning.rivers;
@@ -847,11 +848,11 @@ namespace rct3::simulation
                         g,
                         Floating { .river = slide,
                                    .along = station->at,
-                                   .stay = static_cast<float>(random::between(dice, tuning.least_stay, tuning.most_stay)) * river->course.length(),
-                                   .lane = static_cast<float>(random::between(dice, -1.0, 1.0)),
-                                   .facing = { static_cast<float>(random::between(dice, -std::numbers::pi, std::numbers::pi)) },
-                                   .spin = { static_cast<float>(random::between(dice, -tuning.spin.value, tuning.spin.value)) },
-                                   .paddle = { static_cast<float>(random::between(dice, tuning.least_paddle.value, tuning.most_paddle.value)) } });
+                                   .stay = static_cast<f32>(random::between(dice, tuning.least_stay, tuning.most_stay)) * river->course.length(),
+                                   .lane = static_cast<f32>(random::between(dice, -1.0, 1.0)),
+                                   .facing = { static_cast<f32>(random::between(dice, -std::numbers::pi, std::numbers::pi)) },
+                                   .spin = { static_cast<f32>(random::between(dice, -tuning.spin.value, tuning.spin.value)) },
+                                   .paddle = { static_cast<f32>(random::between(dice, tuning.least_paddle.value, tuning.most_paddle.value)) } });
                     swimmer.room = errand.target;
                     swimmer.in_water = true;
                     errand = { .kind = ErrandKind::Riding, .target = slide };
@@ -872,7 +873,7 @@ namespace rct3::simulation
                         swimmer.slide = slide;
                         continue;
                     }
-                    r.emplace_or_replace<Climbing>(g, Climbing { .slide = slide, .way = static_cast<std::uint8_t>(random::below(dice, climb->ways.size())), .speed = kTuning.climbs.climb });
+                    r.emplace_or_replace<Climbing>(g, Climbing { .slide = slide, .way = static_cast<u8>(random::below(dice, climb->ways.size())), .speed = kTuning.climbs.climb });
                     swimmer.room = errand.target;
                     swimmer.in_water = false;
                     errand = { .kind = ErrandKind::Riding, .target = slide };
@@ -892,19 +893,19 @@ namespace rct3::simulation
             }
             // At a diving board's foot: on it, once nobody else is; a high one up to one of its boards, the top one
             // unless they walk out on a lower one on the way.
-            if (swimmer.board && static_cast<std::size_t>(*swimmer.board) < pool->boards.size())
+            if (swimmer.board && static_cast<usize>(*swimmer.board) < pool->boards.size())
             {
-                const PoolBoard& board = pool->boards[static_cast<std::size_t>(*swimmer.board)];
+                const PoolBoard& board = pool->boards[static_cast<usize>(*swimmer.board)];
                 // Those waiting their turn stand in a line behind it, a high board's behind its ladder, not in the
                 // tower, a gap apart, in the order they came to their places; each steps up as the line moves.
                 auto& line = board_lines[{ door->pool, *swimmer.board }];
-                const auto ahead = swimmer.waited.value == 0 ? line.size() : static_cast<std::size_t>(std::ranges::count_if(line, [&](entt::entity o) {
-                    const float waited = r.get<Swimmer>(o).waited.value;
+                const auto ahead = swimmer.waited.value == 0 ? line.size() : static_cast<usize>(std::ranges::count_if(line, [&](entt::entity o) {
+                    const f32 waited = r.get<Swimmer>(o).waited.value;
                     return o != g && (waited > swimmer.waited.value || (waited == swimmer.waited.value && o < g));
                 }));
                 if (ahead > 0 || !boards_taken.insert({ door->pool, *swimmer.board }).second)
                 {
-                    const float back = (board.high ? kTuning.dives.ladder_queue : kTuning.pools.queue_gap.value) + static_cast<float>(ahead) * kTuning.pools.queue_gap.value;
+                    const f32 back = (board.high ? kTuning.dives.ladder_queue : kTuning.pools.queue_gap.value) + static_cast<f32>(ahead) * kTuning.pools.queue_gap.value;
                     glm::vec3 place = board.foot - glm::vec3 { std::sin(board.heading.value), 0, std::cos(board.heading.value) } * back;
                     // A line as long as the paving behind it takes no more: the rest go off to do something else.
                     const bool room = std::ranges::any_of(pool->walks, [&](const PoolWalk& w) { return !w.water && std::abs(place.x - w.at.x) <= paths.tile_size / 2 && std::abs(place.z - w.at.z) <= paths.tile_size / 2 && std::abs(place.y - w.at.y) < paths.level_height; });
@@ -926,7 +927,7 @@ namespace rct3::simulation
                 {
                     swimmer.waited = { };
                     swimmer.height = board.levels.back();
-                    for (std::size_t level = 0; level + 1 < board.levels.size(); ++level)
+                    for (usize level = 0; level + 1 < board.levels.size(); ++level)
                         if (random::chance(dice, kTuning.dives.step_off.value))
                         {
                             swimmer.height = board.levels[level];
@@ -953,15 +954,15 @@ namespace rct3::simulation
                 }
                 continue;
             }
-            if (swimmer.spot && static_cast<std::size_t>(*swimmer.spot) < pool->extras.size() && !swimmer.place && pool->extras[static_cast<std::size_t>(*swimmer.spot)].use != PoolUse::Stand)
+            if (swimmer.spot && static_cast<usize>(*swimmer.spot) < pool->extras.size() && !swimmer.place && pool->extras[static_cast<usize>(*swimmer.spot)].use != PoolUse::Stand)
             {
                 // At a lounger or shower: on it in a free place, one lounger of a set each, round a shower's pole
                 // facing it; else wait their turn.
-                const PoolSpot& spot = pool->extras[static_cast<std::size_t>(*swimmer.spot)];
+                const PoolSpot& spot = pool->extras[static_cast<usize>(*swimmer.spot)];
                 auto& places = places_taken[door->pool];
                 places.resize(std::max(places.size(), pool->extras.size()));
-                std::uint32_t& used = places[static_cast<std::size_t>(*swimmer.spot)];
-                std::int32_t free = 0;
+                u32& used = places[static_cast<usize>(*swimmer.spot)];
+                i32 free = 0;
                 while (free < spot.places && (used & (1u << free)) != 0)
                     ++free;
                 if (free < spot.places)
@@ -976,8 +977,8 @@ namespace rct3::simulation
                     const auto& tuning = kTuning.pools;
                     // The shower's places a third of a turn apart, the last where a saved park's showering guest stood.
                     constexpr units::Radians kLastPlace { glm::radians(30.5f) }; ///< Round from the shower's front
-                    const float turn = kLastPlace.value + 2 * std::numbers::pi_v<float> * static_cast<float>(free + 1 - spot.places) / static_cast<float>(spot.places);
-                    const glm::vec3 off = spot.use == PoolUse::Lounge ? ahead * (tuning.lounger_reach.value - static_cast<float>(spot.places - 1 - free) * tuning.lounger_gap.value) + side * tuning.lounger_side : (side * std::cos(turn) + ahead * std::sin(turn)) * tuning.shower_reach.value;
+                    const f32 turn = kLastPlace.value + 2 * std::numbers::pi_v<f32> * static_cast<f32>(free + 1 - spot.places) / static_cast<f32>(spot.places);
+                    const glm::vec3 off = spot.use == PoolUse::Lounge ? ahead * (tuning.lounger_reach.value - static_cast<f32>(spot.places - 1 - free) * tuning.lounger_gap.value) + side * tuning.lounger_side : (side * std::cos(turn) + ahead * std::sin(turn)) * tuning.shower_reach.value;
                     swimmer.goal = spot.at + off;
                     pose.position = swimmer.goal;
                     pose.heading = spot.use == PoolUse::Lounge ? spot.heading : units::Radians { std::atan2(-off.x, -off.z) };
@@ -994,10 +995,10 @@ namespace rct3::simulation
             swimmer.place.reset();
             swimmer.use = PoolUse::Stand;
             swimmer.waited = { };
-            swimmer.idle.value = static_cast<float>(random::between(dice, double { kTuning.pools.shortest_rest.value }, double { kTuning.pools.longest_rest.value }));
+            swimmer.idle.value = static_cast<f32>(random::between(dice, f64 { kTuning.pools.shortest_rest.value }, f64 { kTuning.pools.longest_rest.value }));
             // Only to what a way leads to from where they are.
             const auto here = pool_walk_at(*pool, pose.position, paths.tile_size, paths.level_height);
-            const auto before = here ? pool_ways(*pool, *here) : std::vector<std::optional<std::size_t>> { };
+            const auto before = here ? pool_ways(*pool, *here) : std::vector<std::optional<usize>> { };
             const auto reach = [&](const glm::vec3& p) {
                 const auto w = here ? pool_walk_at(*pool, p, paths.tile_size, paths.level_height) : std::nullopt;
                 return w && before[*w].has_value();
@@ -1020,9 +1021,9 @@ namespace rct3::simulation
                     // Off the paving's own square: a station's last point may lie on its edge.
                     const auto off = [&](const glm::vec3& p) {
                         const glm::vec2 d { p.x - pool->walks[*beside].at.x, p.z - pool->walks[*beside].at.z };
-                        return std::max(std::abs(d.x), std::abs(d.y)) <= paths.tile_size / 2 ? std::numeric_limits<float>::max() : glm::length(d);
+                        return std::max(std::abs(d.x), std::abs(d.y)) <= paths.tile_size / 2 ? std::numeric_limits<f32>::max() : glm::length(d);
                     };
-                    for (std::size_t i = 0; i + 1 < train.points.size(); ++i)
+                    for (usize i = 0; i + 1 < train.points.size(); ++i)
                         if (i < train.kinds.size() && train.kinds[i] == Stretch::Station)
                             for (const glm::vec3& p : { train.points[i], train.points[i + 1] })
                                 if (off(p) < off(on))
@@ -1033,7 +1034,7 @@ namespace rct3::simulation
                 {
                     // A platform standing off the complex, beside the paving or steps that join it: on from there.
                     std::vector<glm::vec3> station;
-                    for (std::size_t i = 0; i + 1 < train.points.size() && i < train.kinds.size(); ++i)
+                    for (usize i = 0; i + 1 < train.points.size() && i < train.kinds.size(); ++i)
                         if (train.kinds[i] == Stretch::Station)
                             station.insert(station.end(), { train.points[i], train.points[i + 1] });
                     if (const auto join = pool_beside(world, station, kTuning.pools.slide_deck * paths.level_height))
@@ -1069,54 +1070,54 @@ namespace rct3::simulation
                 continue;
             }
             // Now and then off one of its diving boards.
-            std::vector<std::int32_t> boards;
-            for (std::size_t i = 0; i < pool->boards.size(); ++i)
+            std::vector<i32> boards;
+            for (usize i = 0; i < pool->boards.size(); ++i)
                 if (reach(pool->boards[i].foot))
-                    boards.push_back(static_cast<std::int32_t>(i));
+                    boards.push_back(static_cast<i32>(i));
             if (!boards.empty() && random::chance(dice, kTuning.dives.chance.value))
             {
-                const std::int32_t board = boards[random::below(dice, boards.size())];
+                const i32 board = boards[random::below(dice, boards.size())];
                 swimmer.board.emplace(board);
-                swimmer.goal = pool->boards[static_cast<std::size_t>(board)].foot;
+                swimmer.goal = pool->boards[static_cast<usize>(board)].foot;
                 swimmer.to_spa = false;
                 continue;
             }
             // Out on the paving they mostly walk on along it, standing little, before going back in.
             const bool out = !pool->paved.empty() && random::chance(dice, (swimmer.in_water ? kTuning.pools.poolside : kTuning.pools.stay_out).value);
             if (out)
-                swimmer.idle.value = static_cast<float>(random::between(dice, 0.0, double { kTuning.pools.deck_rest.value }));
+                swimmer.idle.value = static_cast<f32>(random::between(dice, 0.0, f64 { kTuning.pools.deck_rest.value }));
             if (out == swimmer.in_water && !pool->ladders.empty() && random::chance(dice, kTuning.dives.ladder.value))
-                if (const auto which = static_cast<std::int32_t>(random::below(dice, pool->ladders.size())); reach(pool->ladders[static_cast<std::size_t>(which)].water) && ladders_taken.insert({ door->pool, which }).second)
+                if (const auto which = static_cast<i32>(random::below(dice, pool->ladders.size())); reach(pool->ladders[static_cast<usize>(which)].water) && ladders_taken.insert({ door->pool, which }).second)
                 {
                     swimmer.ladder.emplace(which);
-                    const PoolLadder& ladder = pool->ladders[static_cast<std::size_t>(which)];
+                    const PoolLadder& ladder = pool->ladders[static_cast<usize>(which)];
                     swimmer.goal = swimmer.in_water ? ladder.water : ladder.deck;
                     swimmer.to_spa = false;
                     continue;
                 }
             const bool extra = out && pool->spa.size() + pool->extras.size() > 0 && random::chance(dice, kTuning.pools.extra.value);
-            const auto spot_at = [&](std::size_t i) { return extra ? (i < pool->spa.size() ? pool->spa[i] : pool->extras[i - pool->spa.size()].at) : out ? pool->paved[i] : pool->water[i]; };
-            std::vector<std::size_t> spots;
-            for (std::size_t i = 0; i < (extra ? pool->spa.size() + pool->extras.size() : out ? pool->paved.size() : pool->water.size()); ++i)
+            const auto spot_at = [&](usize i) { return extra ? (i < pool->spa.size() ? pool->spa[i] : pool->extras[i - pool->spa.size()].at) : out ? pool->paved[i] : pool->water[i]; };
+            std::vector<usize> spots;
+            for (usize i = 0; i < (extra ? pool->spa.size() + pool->extras.size() : out ? pool->paved.size() : pool->water.size()); ++i)
                 if (reach(spot_at(i)))
                     spots.push_back(i);
             if (spots.empty())
                 continue;
-            std::size_t pick = spots[random::below(dice, spots.size())];
+            usize pick = spots[random::below(dice, spots.size())];
             swimmer.to_spa = extra && pick < pool->spa.size();
             if (extra)
             {
                 swimmer.goal = spot_at(pick);
-                swimmer.spot = swimmer.to_spa ? std::nullopt : std::optional(static_cast<std::int32_t>(pick - pool->spa.size()));
+                swimmer.spot = swimmer.to_spa ? std::nullopt : std::optional(static_cast<i32>(pick - pool->spa.size()));
             }
             else
             {
                 // Where two of a square's lanes cross; in the water, a few tries for one clear of the paving round it,
                 // as a curved corner's square has only its open corner.
-                const auto lane = [&] { return (static_cast<float>(random::below(dice, 3)) - 1.0f) * kTuning.pools.lanes.value; };
+                const auto lane = [&] { return (static_cast<f32>(random::below(dice, 3)) - 1.0f) * kTuning.pools.lanes.value; };
                 const auto near = [&](const glm::vec3& middle) { return middle + glm::vec3 { lane(), 0, lane() }; };
                 swimmer.goal = near(spot_at(pick));
-                for (std::size_t tries = 0; !out && tries < 8 && !open_water(*pool, pick, swimmer.goal, paths.tile_size); ++tries)
+                for (usize tries = 0; !out && tries < 8 && !open_water(*pool, pick, swimmer.goal, paths.tile_size); ++tries)
                 {
                     pick = spots[random::below(dice, spots.size())];
                     swimmer.goal = near(spot_at(pick));

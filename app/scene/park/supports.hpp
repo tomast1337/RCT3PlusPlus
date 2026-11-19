@@ -8,6 +8,7 @@
 // its old pieces first. The support pieces are read here too, and the columns a ghost would stand on worked out.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/support/sets.hpp"
 #include "save/model/world.hpp"
 
@@ -38,18 +39,18 @@ namespace rct3::scene::park
         {
             std::string symbol;
             std::string overlay;
-            std::int32_t col = 0;
-            std::int32_t row = 0;
-            std::int32_t rotation = 0;
-            std::optional<std::int32_t> base_height;
+            i32 col = 0;
+            i32 row = 0;
+            i32 rotation = 0;
+            std::optional<i32> base_height;
             bool hidden = false;
             std::string support_set;
             std::vector<save::model::Tile> tiles; ///< Whose columns it may change
         };
-        std::unordered_map<std::uint64_t, Seen> objects; ///< By id; support pieces left out
-        std::vector<save::model::Tile> ground_paths;     ///< Tiles with a path on the ground, in order
-        std::vector<std::array<float, 4>> ground;        ///< Each tile's corner heights, row by row
-        bool stale = false;                              ///< Something changed since
+        std::unordered_map<u64, Seen> objects;       ///< By id; support pieces left out
+        std::vector<save::model::Tile> ground_paths; ///< Tiles with a path on the ground, in order
+        std::vector<std::array<f32, 4>> ground;      ///< Each tile's corner heights, row by row
+        bool stale = false;                          ///< Something changed since
     };
 
     /// Remembers how the park stands now, its supports just built.
@@ -62,7 +63,7 @@ namespace rct3::scene::park
     const rct3::park::support::SupportSets* support_sets(ParkScene& scene, const ui::InterfaceAssets& assets);
 
     /// What columns pass by as if it were not there: the rides' station platforms and the paving off the ground.
-    [[nodiscard]] std::unordered_set<std::uint64_t> supports_passed(const ParkScene& scene);
+    [[nodiscard]] std::unordered_set<u64> supports_passed(const ParkScene& scene);
 
     /// The support pieces that would hold up `ghosts`, were they added to the scene's objects.
     /// shortcut: the columns of what is there already stay as they are under a ghost; show them changed too if

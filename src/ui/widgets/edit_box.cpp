@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/edit_box.hpp"
 
+#include "core/types.hpp"
 #include "strings/unicode.hpp"
 #include "ui/text_layout.hpp"
 
@@ -18,12 +19,12 @@ namespace rct3::ui::widgets
         using strings::is_low_surrogate;
 
         constexpr units::Seconds kBlinkPeriod { 1.0f }; ///< The caret shows for the first half
-        constexpr float kCaretHalfWidth = 1.0f;
+        constexpr f32 kCaretHalfWidth = 1.0f;
         constexpr units::Seconds kMultiPress { 0.4f };     ///< A press this soon after the last adds to it
         constexpr units::Pixels kMultiPressReach { 4.0f }; ///< The pointer may move between them
 
         // The position `at` moved back to the start of the character it falls in.
-        std::size_t boundary(const std::u16string& s, std::size_t at)
+        usize boundary(const std::u16string& s, usize at)
         {
             at = std::min(at, s.size());
             if (at > 0 && at < s.size() && is_low_surrogate(s[at]) && is_high_surrogate(s[at - 1]))
@@ -31,14 +32,14 @@ namespace rct3::ui::widgets
             return at;
         }
 
-        std::size_t next_char(const std::u16string& s, std::size_t at)
+        usize next_char(const std::u16string& s, usize at)
         {
             if (at >= s.size())
                 return s.size();
             return boundary(s, at + (is_high_surrogate(s[at]) ? 2 : 1));
         }
 
-        std::size_t previous_char(const std::u16string& s, std::size_t at)
+        usize previous_char(const std::u16string& s, usize at)
         {
             return at == 0 ? 0 : boundary(s, at - 1);
         }
@@ -49,7 +50,7 @@ namespace rct3::ui::widgets
         }
 
         // Past the spaces, then past the word: where Control+Right stops.
-        std::size_t next_word(const std::u16string& s, std::size_t at)
+        usize next_word(const std::u16string& s, usize at)
         {
             while (at < s.size() && is_space(s[at]))
                 ++at;
@@ -58,7 +59,7 @@ namespace rct3::ui::widgets
             return at;
         }
 
-        std::size_t previous_word(const std::u16string& s, std::size_t at)
+        usize previous_word(const std::u16string& s, usize at)
         {
             while (at > 0 && is_space(s[at - 1]))
                 --at;
@@ -67,22 +68,22 @@ namespace rct3::ui::widgets
             return at;
         }
 
-        std::size_t count_chars(const std::u16string& s)
+        usize count_chars(const std::u16string& s)
         {
-            std::size_t n = 0;
-            for (std::size_t i = 0; i < s.size(); i = next_char(s, i))
+            usize n = 0;
+            for (usize i = 0; i < s.size(); i = next_char(s, i))
                 ++n;
             return n;
         }
 
         // The character position nearest to `x` units from the start of the text.
-        std::size_t position_at(const font::Font& font, const std::u16string& s, float x)
+        usize position_at(const font::Font& font, const std::u16string& s, f32 x)
         {
-            float left = 0;
-            for (std::size_t i = 0; i < s.size();)
+            f32 left = 0;
+            for (usize i = 0; i < s.size();)
             {
-                const std::size_t next = next_char(s, i);
-                const float right = text_width(font, std::u16string_view(s).substr(0, next));
+                const usize next = next_char(s, i);
+                const f32 right = text_width(font, std::u16string_view(s).substr(0, next));
                 if (x < (left + right) / 2)
                     return i;
                 left = right;
@@ -100,7 +101,7 @@ namespace rct3::ui::widgets
         caret_ = anchor_ = this->text.size();
     }
 
-    void EditBox::set_caret(std::size_t position, bool extend)
+    void EditBox::set_caret(usize position, bool extend)
     {
         caret_ = boundary(text, position);
         if (!extend)
@@ -152,8 +153,8 @@ namespace rct3::ui::widgets
 
     void EditBox::erase_selection()
     {
-        const std::size_t from = std::min(caret_, anchor_);
-        const std::size_t to = std::max(caret_, anchor_);
+        const usize from = std::min(caret_, anchor_);
+        const usize to = std::max(caret_, anchor_);
         text.erase(from, to - from);
         caret_ = anchor_ = from;
     }
@@ -167,7 +168,7 @@ namespace rct3::ui::widgets
     std::u16string EditBox::accepted(std::u16string_view typed) const
     {
         std::u16string out;
-        for (std::size_t i = 0; i < typed.size(); ++i)
+        for (usize i = 0; i < typed.size(); ++i)
         {
             char32_t c = typed[i];
             if (is_high_surrogate(c) && i + 1 < typed.size() && is_low_surrogate(typed[i + 1]))
@@ -195,8 +196,8 @@ namespace rct3::ui::widgets
         if (max_length != 0)
         {
             // Keep as many whole characters as there is room for.
-            std::size_t room = max_length - std::min(max_length, count_chars(text));
-            std::size_t end = 0;
+            usize room = max_length - std::min(max_length, count_chars(text));
+            usize end = 0;
             while (end < piece.size() && room > 0)
             {
                 end = next_char(piece, end);
@@ -212,7 +213,7 @@ namespace rct3::ui::widgets
 
     std::u16string EditBox::selected_text() const
     {
-        const std::size_t from = std::min(caret_, anchor_);
+        const usize from = std::min(caret_, anchor_);
         return text.substr(from, std::max(caret_, anchor_) - from);
     }
 
@@ -341,10 +342,10 @@ namespace rct3::ui::widgets
             {
                 // The word or the run of spaces the press is in, as Control+arrows step over them.
                 const bool space = caret_ < text.size() && is_space(text[caret_]);
-                std::size_t from = caret_;
+                usize from = caret_;
                 while (from > 0 && is_space(text[from - 1]) == space)
                     from = previous_char(text, from);
-                std::size_t to = caret_;
+                usize to = caret_;
                 while (to < text.size() && is_space(text[to]) == space)
                     to = next_char(text, to);
                 anchor_ = from;
@@ -357,8 +358,8 @@ namespace rct3::ui::widgets
         }
 
         // Keep the caret in view, and no empty room on the right while the text is wider than the box.
-        const float caret_x = text_width(*f, std::u16string_view(text).substr(0, caret_)) + text_width(*f, std::u16string_view(composition_.text).substr(0, composition_.caret));
-        const float room = std::max(0.0f, box.width() - 2 * kCaretHalfWidth);
+        const f32 caret_x = text_width(*f, std::u16string_view(text).substr(0, caret_)) + text_width(*f, std::u16string_view(composition_.text).substr(0, composition_.caret));
+        const f32 room = std::max(0.0f, box.width() - 2 * kCaretHalfWidth);
         scroll_ = std::clamp(scroll_, caret_x - room, caret_x);
         scroll_ = std::clamp(scroll_, 0.0f, std::max(0.0f, text_width(*f, text) - room));
     }
@@ -377,14 +378,14 @@ namespace rct3::ui::widgets
             // Text being composed is shown in place at the caret, as if typed.
             const bool composing = !composition_.text.empty();
             const std::u16string shown = composing ? text.substr(0, caret_) + composition_.text + text.substr(caret_) : text;
-            const float top = std::round(box.y0 + (box.height() - f->line_height()) / 2);
-            const float bottom = top + f->line_height();
-            const float origin = box.x0 + kCaretHalfWidth - scroll_;
-            const auto x_of = [&](std::size_t at) { return std::round(origin + text_width(*f, std::u16string_view(shown).substr(0, at))); };
+            const f32 top = std::round(box.y0 + (box.height() - f->line_height()) / 2);
+            const f32 bottom = top + f->line_height();
+            const f32 origin = box.x0 + kCaretHalfWidth - scroll_;
+            const auto x_of = [&](usize at) { return std::round(origin + text_width(*f, std::u16string_view(shown).substr(0, at))); };
             if (composing)
             {
-                const float x0 = x_of(caret_);
-                const float x1 = x_of(caret_ + composition_.text.size());
+                const f32 x0 = x_of(caret_);
+                const f32 x1 = x_of(caret_ + composition_.text.size());
                 context.list.fill({ x0, top, x1, bottom }, composition_colour);
                 context.list.fill({ x0, bottom - 1, x1, bottom }, text_colour);
             }
@@ -396,7 +397,7 @@ namespace rct3::ui::widgets
             draw_text(context.list, *f, shown, line, { enabled ? text_colour : disabled_text_colour, Align::Start, Align::Start, false });
             if (has_keyboard_focus() && blink_time_.value < kBlinkPeriod.value / 2)
             {
-                const float x = x_of(caret_ + composition_.caret);
+                const f32 x = x_of(caret_ + composition_.caret);
                 context.list.fill({ x - kCaretHalfWidth, top, x + kCaretHalfWidth, bottom }, caret_colour);
             }
         }

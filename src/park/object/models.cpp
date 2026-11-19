@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/object/models.hpp"
 
+#include "core/types.hpp"
 #include "ovl/bone_anim.hpp"
 #include "ovl/bone_shape.hpp"
 #include "ovl/flexi_texture.hpp"
@@ -39,7 +40,7 @@ namespace rct3::park::object
 
         constexpr std::string_view kItemTag = ":sid";
         /// A footprint square's flag for a square things collide with.
-        constexpr std::uint32_t kSquareSolid = 0x1;
+        constexpr u32 kSquareSolid = 0x1;
         constexpr std::string_view kVisualTag = ":svd";
         constexpr std::string_view kStaticTag = ":shs";
         constexpr std::string_view kBoneTag = ":bsh";
@@ -96,7 +97,7 @@ namespace rct3::park::object
 
         /// A mesh's sides value for drawing only the front of its triangles; 1 draws both. Of the shapes in the
         /// install, those marked so face the way their normals point all but 0.2% of the time, the rest 0.4.
-        constexpr std::uint32_t kFrontOnly = 3;
+        constexpr u32 kFrontOnly = 3;
 
         template<typename Mesh, typename Index> ModelPart part_of(const Mesh& mesh, Index&& index)
         {
@@ -104,7 +105,7 @@ namespace rct3::park::object
             part.blend = part_blend(mesh.transparency, mesh.style);
             part.one_sided = mesh.sides == kFrontOnly;
             part.vertices.reserve(mesh.vertex_count);
-            for (std::size_t i = 0; i < mesh.vertex_count; ++i)
+            for (usize i = 0; i < mesh.vertex_count; ++i)
             {
                 const auto v = mesh.vertex(i);
                 part.vertices.push_back({ { v.position[0], v.position[1], v.position[2] }, { v.normal[0], v.normal[1], v.normal[2] }, { v.texcoord[0], v.texcoord[1] } });
@@ -115,11 +116,11 @@ namespace rct3::park::object
                 }
             }
             part.indices.reserve(mesh.index_count);
-            for (std::size_t i = 0; i + 2 < mesh.index_count; i += 3)
+            for (usize i = 0; i + 2 < mesh.index_count; i += 3)
             {
-                const std::uint32_t a = index(mesh, i);
-                const std::uint32_t b = index(mesh, i + 1);
-                const std::uint32_t c = index(mesh, i + 2);
+                const u32 a = index(mesh, i);
+                const u32 b = index(mesh, i + 1);
+                const u32 c = index(mesh, i + 2);
                 if (a >= mesh.vertex_count || b >= mesh.vertex_count || c >= mesh.vertex_count)
                     continue;
                 part.indices.insert(part.indices.end(), { a, b, c });
@@ -211,14 +212,14 @@ namespace rct3::park::object
         }
 
         /// The bones named `kind` and a number, by their place in the shape, in number order.
-        std::vector<std::int32_t> numbered_bones(const ovl::BoneShape& shape, std::string_view kind)
+        std::vector<i32> numbered_bones(const ovl::BoneShape& shape, std::string_view kind)
         {
-            std::vector<std::pair<std::int32_t, std::int32_t>> found;
-            for (std::size_t b = 0; b < shape.bones.size(); ++b)
+            std::vector<std::pair<i32, i32>> found;
+            for (usize b = 0; b < shape.bones.size(); ++b)
                 if (is_numbered(shape.bones[b].name, kind))
-                    found.emplace_back(std::stoi(std::string(shape.bones[b].name.substr(kind.size()))), static_cast<std::int32_t>(b));
+                    found.emplace_back(std::stoi(std::string(shape.bones[b].name.substr(kind.size()))), static_cast<i32>(b));
             std::ranges::sort(found);
-            std::vector<std::int32_t> out;
+            std::vector<i32> out;
             for (const auto& f : found)
                 out.push_back(f.second);
             return out;
@@ -228,25 +229,25 @@ namespace rct3::park::object
         std::vector<glm::mat4> numbered_places(const ovl::BoneShape& shape, std::string_view kind)
         {
             std::vector<glm::mat4> out;
-            for (const std::int32_t b : numbered_bones(shape, kind))
+            for (const i32 b : numbered_bones(shape, kind))
             {
                 // Row vectors in rows read as glm's columns: the same transform, for column vectors.
                 glm::mat4 place { 1.0f };
                 for (glm::length_t c = 0; c < 4; ++c)
                     for (glm::length_t r = 0; r < 4; ++r)
-                        place[c][r] = shape.bones[static_cast<std::size_t>(b)].world[static_cast<std::size_t>(c * 4 + r)];
+                        place[c][r] = shape.bones[static_cast<usize>(b)].world[static_cast<usize>(c * 4 + r)];
                 out.push_back(place);
             }
             return out;
         }
 
-        glm::mat4 column_matrix(const std::array<float, 16>& rows)
+        glm::mat4 column_matrix(const std::array<f32, 16>& rows)
         {
             // Row vectors in rows read as glm's columns: the same transform, for column vectors.
             glm::mat4 m { 1.0f };
             for (glm::length_t c = 0; c < 4; ++c)
                 for (glm::length_t r = 0; r < 4; ++r)
-                    m[c][r] = rows[static_cast<std::size_t>(c * 4 + r)];
+                    m[c][r] = rows[static_cast<usize>(c * 4 + r)];
             return m;
         }
 
@@ -284,7 +285,7 @@ namespace rct3::park::object
                 const auto bone = std::ranges::find(shape.bones, track.name, &ovl::Bone::name);
                 if (bone == shape.bones.end())
                     continue;
-                const auto b = static_cast<std::size_t>(bone - shape.bones.begin());
+                const auto b = static_cast<usize>(bone - shape.bones.begin());
                 m.positions[b] = keys(track.positions);
                 m.rotations[b] = keys(track.rotations);
             }
@@ -296,16 +297,16 @@ namespace rct3::park::object
         /// seams.
         std::vector<ModelPart> parts_by_bone(ModelPart whole)
         {
-            std::vector<std::int32_t> carrier(whole.vertices.size(), 0);
-            for (std::size_t i = 0; i < carrier.size(); ++i)
+            std::vector<i32> carrier(whole.vertices.size(), 0);
+            for (usize i = 0; i < carrier.size(); ++i)
             {
                 const ModelVertex& v = whole.vertices[i];
-                carrier[i] = v.bones[static_cast<std::size_t>(std::ranges::max_element(v.weights) - v.weights.begin())];
+                carrier[i] = v.bones[static_cast<usize>(std::ranges::max_element(v.weights) - v.weights.begin())];
             }
-            std::map<std::int32_t, std::pair<ModelPart, std::vector<std::uint32_t>>> by_bone;
-            for (std::size_t t = 0; t + 2 < whole.indices.size(); t += 3)
+            std::map<i32, std::pair<ModelPart, std::vector<u32>>> by_bone;
+            for (usize t = 0; t + 2 < whole.indices.size(); t += 3)
             {
-                const std::int32_t bone = carrier[whole.indices[t]];
+                const i32 bone = carrier[whole.indices[t]];
                 auto [at, added] = by_bone.try_emplace(bone);
                 auto& [part, remap] = at->second;
                 if (added)
@@ -317,12 +318,12 @@ namespace rct3::park::object
                     part.bone = bone;
                     remap.assign(whole.vertices.size(), UINT32_MAX);
                 }
-                for (std::size_t k = t; k < t + 3; ++k)
+                for (usize k = t; k < t + 3; ++k)
                 {
-                    std::uint32_t& to = remap[whole.indices[k]];
+                    u32& to = remap[whole.indices[k]];
                     if (to == UINT32_MAX)
                     {
-                        to = static_cast<std::uint32_t>(part.vertices.size());
+                        to = static_cast<u32>(part.vertices.size());
                         part.vertices.push_back(whole.vertices[whole.indices[k]]);
                     }
                     part.indices.push_back(to);
@@ -365,12 +366,12 @@ namespace rct3::park::object
         ride::Walkways walkways_in(OpenFile& f)
         {
             const auto points = [](const ovl::Spline& spline) {
-                constexpr std::int32_t kSteps = 4; // Points a curve
+                constexpr i32 kSteps = 4; // Points a curve
                 std::vector<glm::vec3> out;
-                for (std::size_t s = 0; s + 1 < spline.nodes.size(); ++s)
-                    for (std::int32_t k = 0; k < kSteps; ++k)
+                for (usize s = 0; s + 1 < spline.nodes.size(); ++s)
+                    for (i32 k = 0; k < kSteps; ++k)
                     {
-                        const auto p = ovl::spline_point(spline, s, static_cast<float>(k) / kSteps);
+                        const auto p = ovl::spline_point(spline, s, static_cast<f32>(k) / kSteps);
                         out.emplace_back(p[0], p[1], p[2]);
                     }
                 if (!spline.nodes.empty())
@@ -379,17 +380,17 @@ namespace rct3::park::object
             };
             const auto ends_with = [](std::string_view name, std::string_view end) { return name.size() >= end.size() && strings::equals_ignoring_case(name.substr(name.size() - end.size()), end); };
             ride::Walkways ways;
-            std::vector<std::pair<std::int32_t, std::vector<glm::vec3>>> paths;
+            std::vector<std::pair<i32, std::vector<glm::vec3>>> paths;
             for (const auto& [name, spline] : entries(f.splines, f.overlay, [](const ovl::Overlay& o, const ovl::Part& p) { return pairs<ovl::Spline>(ovl::read_splines(o, p), &ovl::SplineItem::spline); }))
             {
-                const std::size_t digits = name.size() - std::min(name.size(), name.find_last_not_of("0123456789") + 1);
+                const usize digits = name.size() - std::min(name.size(), name.find_last_not_of("0123456789") + 1);
                 const std::string_view stem = name.substr(0, name.size() - digits);
                 if (ends_with(name, "loop"))
                     ways.loop = points(spline);
                 else if (digits > 0 && ends_with(stem, "path") && !ends_with(stem, "mechpath"))
                     paths.emplace_back(std::stoi(std::string(name.substr(stem.size()))), points(spline));
             }
-            std::ranges::sort(paths, { }, &std::pair<std::int32_t, std::vector<glm::vec3>>::first);
+            std::ranges::sort(paths, { }, &std::pair<i32, std::vector<glm::vec3>>::first);
             for (auto& path : paths)
                 ways.paths.push_back(std::move(path.second));
             return ways;
@@ -419,7 +420,7 @@ namespace rct3::park::object
         const ovl::FlexiTexture* texture = texture_in(*found->second, name);
         if (texture == nullptr || texture->frames.empty())
             return { };
-        const std::size_t frame = texture->sequence.empty() ? 0 : texture->sequence.front();
+        const usize frame = texture->sequence.empty() ? 0 : texture->sequence.front();
         if (frame >= texture->frames.size())
             return { };
         auto picture = palette_image(texture->frames[frame], texture->flags);
@@ -429,41 +430,41 @@ namespace rct3::park::object
         return key;
     }
 
-    PaletteImage water_picture(float seconds)
+    PaletteImage water_picture(f32 seconds)
     {
         // The lakes' colour, its ripple crests a little lighter, in a soft criss-cross whose two sets of waves
         // run different ways.
-        constexpr std::uint32_t kSize = 64;
+        constexpr u32 kSize = 64;
         constexpr units::TurnRate kRun { 1.3f }; ///< Chosen by eye: the waves move on
-        constexpr std::int32_t kShades = 16;
+        constexpr i32 kShades = 16;
         PaletteImage picture;
         picture.width = kSize;
         picture.height = kSize;
-        constexpr float kCrest = 0.25f; ///< How much lighter the crests are
-        for (std::int32_t i = 0; i < kShades; ++i)
+        constexpr f32 kCrest = 0.25f; ///< How much lighter the crests are
+        for (i32 i = 0; i < kShades; ++i)
         {
-            const glm::vec3 shade = glm::mix(glm::vec3(kWaterColour), glm::vec3(1.0f), kCrest * static_cast<float>(i) / (kShades - 1));
-            picture.palette[i] = { static_cast<std::uint8_t>(shade.r * 255), static_cast<std::uint8_t>(shade.g * 255), static_cast<std::uint8_t>(shade.b * 255) };
+            const glm::vec3 shade = glm::mix(glm::vec3(kWaterColour), glm::vec3(1.0f), kCrest * static_cast<f32>(i) / (kShades - 1));
+            picture.palette[i] = { static_cast<u8>(shade.r * 255), static_cast<u8>(shade.g * 255), static_cast<u8>(shade.b * 255) };
         }
-        const float alpha = kWaterColour.a * 255;
+        const f32 alpha = kWaterColour.a * 255;
         picture.indices.resize(kSize * kSize);
         picture.alpha.resize(kSize * kSize);
-        constexpr float kTurn = 6.2831853f / kSize;
-        for (std::uint32_t y = 0; y < kSize; ++y)
+        constexpr f32 kTurn = 6.2831853f / kSize;
+        for (u32 y = 0; y < kSize; ++y)
         {
-            for (std::uint32_t x = 0; x < kSize; ++x)
+            for (u32 x = 0; x < kSize; ++x)
             {
                 // Whole periods across the picture, so it tiles.
-                const float wave = (std::sin(kTurn * 2 * x + std::sin(kTurn * 3 * y) + kRun.value * seconds) + std::sin(kTurn * 3 * y + std::sin(kTurn * 2 * x) - 0.7f * kRun.value * seconds)) * 0.25f + 0.5f;
-                const std::size_t at = y * kSize + x;
-                picture.indices[at] = static_cast<std::uint8_t>(std::clamp(wave * kShades, 0.0f, kShades - 1.0f));
-                picture.alpha[at] = static_cast<std::uint8_t>(std::clamp(alpha - 20 + wave * 40, 1.0f, 254.0f));
+                const f32 wave = (std::sin(kTurn * 2 * x + std::sin(kTurn * 3 * y) + kRun.value * seconds) + std::sin(kTurn * 3 * y + std::sin(kTurn * 2 * x) - 0.7f * kRun.value * seconds)) * 0.25f + 0.5f;
+                const usize at = y * kSize + x;
+                picture.indices[at] = static_cast<u8>(std::clamp(wave * kShades, 0.0f, kShades - 1.0f));
+                picture.alpha[at] = static_cast<u8>(std::clamp(alpha - 20 + wave * 40, 1.0f, 254.0f));
             }
         }
         return picture;
     }
 
-    PartBlend part_blend(std::uint32_t transparency, std::string_view style)
+    PartBlend part_blend(u32 transparency, std::string_view style)
     {
         if (strings::equals_ignoring_case(style, "SIFillZ"))
             return PartBlend::DepthOnly;
@@ -522,9 +523,9 @@ namespace rct3::park::object
         part.slots = picture != pictures_.end() ? picture->second.slots : 0;
     }
 
-    std::uint32_t colour_slots(const ObjectModel& model)
+    u32 colour_slots(const ObjectModel& model)
     {
-        std::uint32_t slots = 0;
+        u32 slots = 0;
         for (const ModelLevel& level : model.levels)
         {
             for (const ModelPart& part : level.parts)
@@ -535,15 +536,15 @@ namespace rct3::park::object
         return slots;
     }
 
-    float level_reach(const ObjectModel& model, std::size_t level, LevelScale scale)
+    f32 level_reach(const ObjectModel& model, usize level, LevelScale scale)
     {
-        const float last = model.levels.back().distance * scale.distance;
+        const f32 last = model.levels.back().distance * scale.distance;
         return level + 1 < model.levels.size() ? std::min(model.levels[level].distance * scale.detail, last) : last;
     }
 
-    std::optional<std::size_t> level_at(const ObjectModel& model, float distance, LevelScale scale)
+    std::optional<usize> level_at(const ObjectModel& model, f32 distance, LevelScale scale)
     {
-        for (std::size_t i = 0; i < model.levels.size(); ++i)
+        for (usize i = 0; i < model.levels.size(); ++i)
         {
             if (distance <= level_reach(model, i, scale))
                 return i;
@@ -572,7 +573,7 @@ namespace rct3::park::object
         const std::string near = item_file->first;
         // Support sets kept in one file name their pieces' looks alike (two sets' one-level pieces both call theirs
         // Support1m); each set's own looks are in the folder named after the set, beside that file.
-        const std::size_t slash = near.rfind('/');
+        const usize slash = near.rfind('/');
         const std::string own_folder = item->group.empty() || slash == std::string::npos ? std::string { } : std::format("{}/{}/", std::string_view(near).substr(0, slash), item->group);
 
         // The visuals that can be read, with the file each is in; a broken look apart.
@@ -601,20 +602,20 @@ namespace rct3::park::object
         ObjectModel model;
         model.positioning = item->positioning;
         model.category = item->type;
-        model.squares = { static_cast<std::int32_t>(std::max(item->x_squares, 1u)), static_cast<std::int32_t>(std::max(item->z_squares, 1u)) };
+        model.squares = { static_cast<i32>(std::max(item->x_squares, 1u)), static_cast<i32>(std::max(item->z_squares, 1u)) };
         model.sway = visual->sway;
         model.support_group = item->group;
         if (!item->squares.empty())
             model.lowest_level = std::ranges::min(item->squares, { }, &ovl::SceneryItemSquare::min_height).min_height;
         model.supports = support::support_footprint(*item);
-        if (item->squares.size() == static_cast<std::size_t>(model.squares[0]) * static_cast<std::size_t>(model.squares[1]))
+        if (item->squares.size() == static_cast<usize>(model.squares[0]) * static_cast<usize>(model.squares[1]))
         {
             for (const ovl::SceneryItemSquare& s : item->squares)
                 model.solid.push_back((s.flags & kSquareSolid) != 0 ? std::optional(std::array { s.min_height, s.max_height }) : std::nullopt);
         }
         model.water_only = (item->flags & ovl::kItemWaterOnly) != 0;
-        for (std::size_t i = 0; i < model.default_colours.size(); ++i)
-            model.default_colours[i] = static_cast<std::int32_t>(item->default_colours[i]);
+        for (usize i = 0; i < model.default_colours.size(); ++i)
+            model.default_colours[i] = static_cast<i32>(item->default_colours[i]);
         for (const ovl::SceneryItemSound& sound : item->sounds)
             model.sounds.push_back({ .names = { sound.sounds.begin(), sound.sounds.end() }, .scripts = sound.scripts });
         // A path feature's setting names what it is for.
@@ -632,7 +633,7 @@ namespace rct3::park::object
                 if (strings::equals_ignoring_case(*w, "Capacity") && std::next(w) != words.end())
                 {
                     const std::string_view number = *std::next(w);
-                    float capacity = 0;
+                    f32 capacity = 0;
                     if (const auto [_, error] = std::from_chars(number.data(), number.data() + number.size(), capacity); error == std::errc { } && capacity > 0)
                         model.water_capacity = capacity;
                 }
@@ -642,7 +643,7 @@ namespace rct3::park::object
         model.holds_ground = (item->flags & ovl::kItemHoldsGround) != 0;
         // Buildings, rides and path pieces carry the bit too but stay rigid; only plants bend.
         model.fits_ground = (item->flags & ovl::kItemFitsGround) != 0 && item->type <= std::to_underlying(ItemCategory::Flowers);
-        if ((item->flags & ovl::kItemFenceOutline) != 0 && item->squares.size() == static_cast<std::size_t>(model.squares[0]) * static_cast<std::size_t>(model.squares[1]))
+        if ((item->flags & ovl::kItemFenceOutline) != 0 && item->squares.size() == static_cast<usize>(model.squares[0]) * static_cast<usize>(model.squares[1]))
         {
             // Inside are the solid squares that reach down to the ground.
             for (const ovl::SceneryItemSquare& square : item->squares)
@@ -670,7 +671,7 @@ namespace rct3::park::object
         {
             ModelLevel level;
             level.distance = lod.distance;
-            if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::StaticShape))
+            if (lod.mesh_type == static_cast<u32>(ovl::LodMeshType::StaticShape))
             {
                 const ovl::StaticShape* shape = add_static(level, lod.static_shape, visual_path);
                 if (shape == nullptr)
@@ -680,11 +681,11 @@ namespace rct3::park::object
                 // A bench's seats, as points named and numbered as a ride's seat bones are, in number order.
                 if (model.seat_places.empty())
                 {
-                    std::vector<std::pair<std::int32_t, glm::mat4>> seats;
+                    std::vector<std::pair<i32, glm::mat4>> seats;
                     for (const ovl::ShapeEffect& e : shape->effects)
-                        if (std::int32_t number = 0; is_numbered(e.name, kSeat) && std::from_chars(e.name.data() + kSeat.size(), e.name.data() + e.name.size(), number).ec == std::errc { })
+                        if (i32 number = 0; is_numbered(e.name, kSeat) && std::from_chars(e.name.data() + kSeat.size(), e.name.data() + e.name.size(), number).ec == std::errc { })
                             seats.emplace_back(number, column_matrix(e.transform));
-                    std::ranges::sort(seats, { }, &std::pair<std::int32_t, glm::mat4>::first);
+                    std::ranges::sort(seats, { }, &std::pair<i32, glm::mat4>::first);
                     for (const auto& seat : seats)
                         model.seat_places.push_back(seat.second);
                 }
@@ -706,13 +707,13 @@ namespace rct3::park::object
                         model.tubes = model_tubes(places);
                 }
             }
-            else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape))
+            else if (lod.mesh_type == static_cast<u32>(ovl::LodMeshType::BoneShape))
             {
                 const auto file = files_->holding(tagged(lod.bone_shape, kBoneTag), visual_path);
                 const ovl::BoneShape* shape = file ? bone_in(*file->second, lod.bone_shape) : nullptr;
                 if (shape == nullptr)
                     continue;
-                model.seats = std::max(model.seats, static_cast<std::uint32_t>(numbered_bones(*shape, kSeat).size()));
+                model.seats = std::max(model.seats, static_cast<u32>(numbered_bones(*shape, kSeat).size()));
                 if (model.walkways.loop.empty() && model.seats > 0)
                     model.walkways = walkways_in(*file->second);
                 if (model.seat_places.empty())
@@ -723,42 +724,42 @@ namespace rct3::park::object
                     model.vendor_place = column_matrix(vendor->world);
                 // A car on an arm: each bone is carried by the nearest of the arm's joints it hangs from.
                 constexpr std::array<std::string_view, 4> kArmJoints { "ik_robotjoint01", "ik_robotjoint02", "ik_robotjoint03", "ik_robotjoint04" };
-                std::array<std::int32_t, 4> joint_bones;
+                std::array<i32, 4> joint_bones;
                 joint_bones.fill(-1);
-                for (std::size_t b = 0; b < shape->bones.size(); ++b)
-                    for (std::size_t j = 0; j < kArmJoints.size(); ++j)
+                for (usize b = 0; b < shape->bones.size(); ++b)
+                    for (usize j = 0; j < kArmJoints.size(); ++j)
                         if (strings::equals_ignoring_case(shape->bones[b].name, kArmJoints[j]))
-                            joint_bones[j] = static_cast<std::int32_t>(b);
-                std::vector<std::int32_t> joint_of;
+                            joint_bones[j] = static_cast<i32>(b);
+                std::vector<i32> joint_of;
                 if (!std::ranges::contains(joint_bones, -1))
                 {
                     joint_of.assign(shape->bones.size(), -1);
-                    for (std::size_t b = 0; b < shape->bones.size(); ++b)
+                    for (usize b = 0; b < shape->bones.size(); ++b)
                     {
                         std::optional up = ovl::BoneIndex { b };
-                        for (std::size_t hops = 0; up && up->value < shape->bones.size() && hops < shape->bones.size() && joint_of[b] < 0; ++hops, up = shape->bones[up->value].parent)
-                            if (const auto j = std::ranges::find(joint_bones, static_cast<std::int32_t>(up->value)); j != joint_bones.end())
-                                joint_of[b] = static_cast<std::int32_t>(j - joint_bones.begin());
+                        for (usize hops = 0; up && up->value < shape->bones.size() && hops < shape->bones.size() && joint_of[b] < 0; ++hops, up = shape->bones[up->value].parent)
+                            if (const auto j = std::ranges::find(joint_bones, static_cast<i32>(up->value)); j != joint_bones.end())
+                                joint_of[b] = static_cast<i32>(j - joint_bones.begin());
                     }
                     if (model.arm_joints.empty())
-                        for (const std::int32_t b : joint_bones)
-                            model.arm_joints.push_back(column_matrix(shape->bones[static_cast<std::size_t>(b)].world));
+                        for (const i32 b : joint_bones)
+                            model.arm_joints.push_back(column_matrix(shape->bones[static_cast<usize>(b)].world));
                 }
                 // A water cannon has no motions of its own, but turns its gun to aim: rigged all the same.
                 const auto bone_named = [&](std::string_view name) {
                     const auto b = std::ranges::find_if(shape->bones, [&](const ovl::Bone& bone) { return strings::equals_ignoring_case(bone.name, name); });
-                    return b != shape->bones.end() ? static_cast<std::int32_t>(b - shape->bones.begin()) : -1;
+                    return b != shape->bones.end() ? static_cast<i32>(b - shape->bones.begin()) : -1;
                 };
-                const std::int32_t turret = bone_named(kCannonTurret);
-                const std::int32_t nozzle = bone_named(kCannonNozzle);
+                const i32 turret = bone_named(kCannonTurret);
+                const i32 nozzle = bone_named(kCannonNozzle);
                 const bool aims = turret >= 0 && nozzle >= 0;
                 const bool rigged = joint_of.empty() && !model.rig && (!lod.animations.empty() || aims);
                 if (model.lights.empty() || model.effects.empty())
                 {
                     std::vector<NamedPlace> places;
-                    for (std::size_t b = 0; b < shape->bones.size(); ++b)
+                    for (usize b = 0; b < shape->bones.size(); ++b)
                     {
-                        const auto bone = static_cast<std::int32_t>(b);
+                        const auto bone = static_cast<i32>(b);
                         places.push_back({ .name = shape->bones[b].name, .place = column_matrix(shape->bones[b].world), .bone = rigged ? std::optional { bone } : !joint_of.empty() && joint_of[b] >= 0 ? std::optional { joint_of[b] } : std::nullopt });
                     }
                     if (model.lights.empty())
@@ -792,20 +793,20 @@ namespace rct3::park::object
                 }
                 for (const ovl::BoneMesh& mesh : shape->meshes)
                 {
-                    ModelPart part = part_of(mesh, [](const ovl::BoneMesh& m, std::size_t i) { return static_cast<std::uint32_t>(m.index(i)); });
+                    ModelPart part = part_of(mesh, [](const ovl::BoneMesh& m, usize i) { return static_cast<u32>(m.index(i)); });
                     set_texture(part, mesh.texture, mesh.style, file->first);
                     part.board = (mesh.texture_flags & ovl::kMeshFlagBoard) != 0;
                     if (!joint_of.empty())
                         for (ModelPart& one : parts_by_bone(std::move(part)))
                         {
-                            one.bone = one.bone >= 0 && one.bone < std::ssize(joint_of) ? joint_of[static_cast<std::size_t>(one.bone)] : -1;
+                            one.bone = one.bone >= 0 && one.bone < std::ssize(joint_of) ? joint_of[static_cast<usize>(one.bone)] : -1;
                             level.parts.push_back(std::move(one));
                         }
                     else
                         level.parts.push_back(std::move(part));
                 }
             }
-            else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::Billboard))
+            else if (lod.mesh_type == static_cast<u32>(ovl::LodMeshType::Billboard))
             {
                 if (lod.width <= 0 || lod.height <= 0)
                     continue;
@@ -892,7 +893,7 @@ namespace rct3::park::object
             return nullptr;
         for (const ovl::ShapeMesh& mesh : shape->meshes)
         {
-            level.parts.push_back(part_of(mesh, [](const ovl::ShapeMesh& m, std::size_t i) { return m.index(i); }));
+            level.parts.push_back(part_of(mesh, [](const ovl::ShapeMesh& m, usize i) { return m.index(i); }));
             set_texture(level.parts.back(), mesh.texture, mesh.style, file->first);
             level.parts.back().board = (mesh.texture_flags & ovl::kMeshFlagBoard) != 0;
             level.parts.back().chain = (mesh.texture_flags & ovl::kMeshFlagChain) != 0;
@@ -910,7 +911,7 @@ namespace rct3::park::object
         return model;
     }
 
-    std::size_t pieces_apart(const ObjectModel& model)
+    usize pieces_apart(const ObjectModel& model)
     {
         return model.car_part ? 1 : model.arm_joints.size();
     }
@@ -929,14 +930,14 @@ namespace rct3::park::object
         fit.on_track = (front_wheels + rear_wheels) / 2.0f;
         fit.link_front = points.link_front ? behind(*points.link_front) : 0;
         fit.link_rear = points.link_rear ? behind(*points.link_rear) : fit.length;
-        const std::int32_t links = (points.link_front ? 1 : 0) + (points.link_rear ? 1 : 0);
+        const i32 links = (points.link_front ? 1 : 0) + (points.link_rear ? 1 : 0);
         if (links > 0)
-            fit.link_height = ((points.link_front ? points.link_front->y : 0) + (points.link_rear ? points.link_rear->y : 0)) / static_cast<float>(links) - fit.on_track.y;
+            fit.link_height = ((points.link_front ? points.link_front->y : 0) + (points.link_rear ? points.link_rear->y : 0)) / static_cast<f32>(links) - fit.on_track.y;
         fit.link = points.link;
         return fit;
     }
 
-    std::optional<ObjectModel> ModelLoader::load_car(std::string_view train, std::string_view overlay, std::size_t slot)
+    std::optional<ObjectModel> ModelLoader::load_car(std::string_view train, std::string_view overlay, usize slot)
     {
         const std::string hint = index_.overlay(overlay).value_or(std::string(overlay));
         const auto train_file = files_->holding(tagged(train, kTrainTag), hint);
@@ -972,7 +973,7 @@ namespace rct3::park::object
                 for (const ModelLevel& level : pieces.levels)
                     model.levels.push_back({ .distance = level.distance, .parts = { }, .billboard = std::nullopt });
             const glm::mat3 turn { place };
-            for (std::size_t i = 0; i < model.levels.size() && !pieces.levels.empty(); ++i)
+            for (usize i = 0; i < model.levels.size() && !pieces.levels.empty(); ++i)
                 for (ModelPart one : pieces.levels[std::min(i, pieces.levels.size() - 1)].parts)
                 {
                     for (ModelVertex& vertex : one.vertices)
@@ -993,7 +994,7 @@ namespace rct3::park::object
             if (piece == nullptr)
                 return std::nullopt;
             for (const ovl::SceneryVisualLod& lod : piece->lods)
-                if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::BoneShape))
+                if (lod.mesh_type == static_cast<u32>(ovl::LodMeshType::BoneShape))
                 {
                     const auto shape_file = files_->holding(tagged(lod.bone_shape, kBoneTag), file->first);
                     if (const ovl::BoneShape* shape = shape_file ? bone_in(*shape_file->second, lod.bone_shape) : nullptr)
@@ -1001,7 +1002,7 @@ namespace rct3::park::object
                             if (strings::equals_ignoring_case(b.name, bone))
                                 return column_matrix(b.world);
                 }
-                else if (lod.mesh_type == static_cast<std::uint32_t>(ovl::LodMeshType::StaticShape))
+                else if (lod.mesh_type == static_cast<u32>(ovl::LodMeshType::StaticShape))
                 {
                     const auto shape_file = files_->holding(tagged(lod.static_shape, kStaticTag), file->first);
                     if (const ovl::StaticShape* shape = shape_file ? static_in(*shape_file->second, lod.static_shape) : nullptr)
@@ -1046,7 +1047,7 @@ namespace rct3::park::object
             };
         }
         const glm::mat4 part_place = swings ? glm::translate(car_pivot, -part_pivot) : glm::translate(rest, pivot - part_pivot);
-        std::vector<std::size_t> parts_before;
+        std::vector<usize> parts_before;
         for (const ModelLevel& level : model.levels)
             parts_before.push_back(level.parts.size());
         if (const auto part = add(car->part, part_place))
@@ -1065,8 +1066,8 @@ namespace rct3::park::object
                                                                           : glm::vec3(0, 0, 1),
                 };
                 parts_before.resize(model.levels.size());
-                for (std::size_t i = 0; i < model.levels.size(); ++i)
-                    for (std::size_t k = parts_before[i]; k < model.levels[i].parts.size(); ++k)
+                for (usize i = 0; i < model.levels.size(); ++i)
+                    for (usize k = parts_before[i]; k < model.levels[i].parts.size(); ++k)
                         model.levels[i].parts[k].bone = 0;
             }
         }
@@ -1103,18 +1104,18 @@ namespace rct3::park::object
         constexpr std::array<std::string_view, 4> kWheelBones { "wheelfr", "wheelfl", "wheelrr", "wheelrl" };
         constexpr std::array<std::string_view, 2> kAxleEnds { "wheelr", "wheell" };
         std::array<std::optional<glm::mat4>, 2> axles;
-        for (std::size_t i = 0; i < axles.size(); ++i)
+        for (usize i = 0; i < axles.size(); ++i)
             if (!car->axles[i].empty())
                 if (const auto bone = bone_of(car->visual, kAxleBones[i]))
                     add(car->axles[i], *(axles[i] = at(*bone)));
-        for (std::size_t i = 0; i < car->wheels.size(); ++i)
+        for (usize i = 0; i < car->wheels.size(); ++i)
         {
             std::optional<glm::mat4> place = car->wheels[i].empty() ? std::nullopt : bone_of(car->visual, kWheelBones[i]);
             if (!place && axles[i / 2])
                 if (const auto end = bone_of(car->axles[i / 2], kAxleEnds[i % 2]))
                     place = *axles[i / 2] * *end;
             if (place)
-                add(car->wheels[i], car->wheels_turned[i] ? glm::rotate(at(*place), glm::pi<float>(), { 0, 1, 0 }) : at(*place));
+                add(car->wheels[i], car->wheels_turned[i] ? glm::rotate(at(*place), glm::pi<f32>(), { 0, 1, 0 }) : at(*place));
         }
         const auto car_front = bone_of(car->visual, "carfront"), car_rear = bone_of(car->visual, "carrear");
         if (car_front && car_rear)
@@ -1122,10 +1123,10 @@ namespace rct3::park::object
             // By axle: on an axle piece, the middle of the wheel bones that piece has, else the axle's own place;
             // without one, the middle of the car's wheel bones for that axle.
             CarPoints points { .front = glm::vec3((*car_front)[3]), .rear = glm::vec3((*car_rear)[3]), .link = slot == kLinkSlot };
-            for (std::size_t i = 0; i < points.wheels.size(); ++i)
+            for (usize i = 0; i < points.wheels.size(); ++i)
             {
                 glm::vec3 sum { 0.0f };
-                std::int32_t found = 0;
+                i32 found = 0;
                 const auto count = [&](std::string_view piece, std::string_view bone, const glm::mat4& place) {
                     if (const auto wheel = bone_of(piece, bone))
                     {
@@ -1146,10 +1147,10 @@ namespace rct3::park::object
                     }
                 }
                 else
-                    for (std::size_t k = 2 * i; k < 2 * i + 2; ++k)
+                    for (usize k = 2 * i; k < 2 * i + 2; ++k)
                         count(car->visual, kWheelBones[k], glm::mat4(1.0f));
                 if (found > 0)
-                    points.wheels[i] = sum / static_cast<float>(found);
+                    points.wheels[i] = sum / static_cast<f32>(found);
             }
             if (const auto link = bone_of(car->visual, "linkfront"))
                 points.link_front = glm::vec3((*link)[3]);
@@ -1160,7 +1161,7 @@ namespace rct3::park::object
         else if (slot == kLinkSlot && !model.levels.empty())
         {
             // A link without bones at its ends reaches as far as its finest shape does, front to back.
-            float low = std::numeric_limits<float>::max(), high = std::numeric_limits<float>::lowest();
+            f32 low = std::numeric_limits<f32>::max(), high = std::numeric_limits<f32>::lowest();
             for (const ModelPart& part : model.levels.front().parts)
                 for (const ModelVertex& vertex : part.vertices)
                 {
@@ -1189,19 +1190,19 @@ namespace rct3::park::object
         model.swing_arm = car->part.empty() ? pivot.y : part_pivot.y;
         model.stand_in = bone_of(car->visual, "dummy") || bone_of(car->part, "dummy");
         constexpr std::array<std::string_view, 3> kStrengths { "low", "med", "high" };
-        for (std::uint8_t strength = 0; strength < kStrengths.size(); ++strength)
+        for (u8 strength = 0; strength < kStrengths.size(); ++strength)
         {
             if (const auto wake = bone_of(car->visual, std::format("wake{}01", kStrengths[strength])))
                 model.splash_points.push_back({ .position = glm::vec3((*wake)[3]), .strength = strength, .wake = true });
-            constexpr std::int32_t kMostSplashes = 6; // Numbered from 01; seen up to 06
-            for (std::int32_t n = 1; n <= kMostSplashes; ++n)
+            constexpr i32 kMostSplashes = 6; // Numbered from 01; seen up to 06
+            for (i32 n = 1; n <= kMostSplashes; ++n)
                 if (const auto splash = bone_of(car->visual, std::format("watersplash{}{:02}", kStrengths[strength], n)))
                     model.splash_points.push_back({ .position = glm::vec3((*splash)[3]), .strength = strength });
         }
-        if (model.rig && std::ranges::all_of(car->rowing, [&](std::optional<std::int32_t> m) { return m && std::cmp_less(*m, model.rig->motions.size()); }))
-            model.rowing = { static_cast<std::size_t>(*car->rowing[0]), static_cast<std::size_t>(*car->rowing[1]), static_cast<std::size_t>(*car->rowing[2]) };
-        constexpr std::uint8_t kRideSeating = 35; ///< The seating number that leaves it to the ride
-        if (const auto seating = static_cast<std::uint8_t>(car->kind & 0xff); seating != kRideSeating)
+        if (model.rig && std::ranges::all_of(car->rowing, [&](std::optional<i32> m) { return m && std::cmp_less(*m, model.rig->motions.size()); }))
+            model.rowing = { static_cast<usize>(*car->rowing[0]), static_cast<usize>(*car->rowing[1]), static_cast<usize>(*car->rowing[2]) };
+        constexpr u8 kRideSeating = 35; ///< The seating number that leaves it to the ride
+        if (const auto seating = static_cast<u8>(car->kind & 0xff); seating != kRideSeating)
             model.seating = seating;
         if (model.levels.empty())
             return std::nullopt;

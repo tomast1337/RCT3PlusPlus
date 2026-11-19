@@ -4,6 +4,7 @@
 // needs them: the pictures of path styles, for one, live in overlays of their own.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/interface_assets.hpp"
 
 #include <span>
@@ -15,6 +16,6 @@ namespace rct3::ui
     /// Adds the skins of each overlay in `files` (paths in the install) to `assets`, with their pictures.
     /// Skins and pictures it already has keep theirs. Files that are missing or unreadable are skipped and
     /// logged. Returns how many skins were added.
-    std::size_t add_extra_skins(render::Device& device, InterfaceAssets& assets, std::span<const std::string_view> files);
+    usize add_extra_skins(render::Device& device, InterfaceAssets& assets, std::span<const std::string_view> files);
 
 } // namespace rct3::ui

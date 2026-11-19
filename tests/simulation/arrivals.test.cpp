@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
@@ -19,7 +20,7 @@ TEST_CASE("the park has room for guests on its working rides and in its pools")
     const auto spinner = park.flat_ride("Spinner", { 1, 0 }, 100, { .capacity = 10 });
     const auto swing = park.flat_ride("Swing", { 3, 0 }, 100, { .capacity = 10 });
     auto& r = park.world().registry;
-    const std::uint32_t both = ideal_guests(park.world());
+    const u32 both = ideal_guests(park.world());
     CHECK(both > 0);
     r.emplace_or_replace<Upkeep>(swing, Upkeep { .broken = true });
     CHECK(ideal_guests(park.world()) == both / 2);
@@ -27,7 +28,7 @@ TEST_CASE("the park has room for guests on its working rides and in its pools")
     CHECK(ideal_guests(park.world()) == 0);
     r.ctx().emplace<Draw>(Draw { .pool_squares = 25 });
     CHECK(ideal_guests(park.world()) > 25);
-    const std::uint32_t pools = ideal_guests(park.world());
+    const u32 pools = ideal_guests(park.world());
     r.ctx().emplace<RoomElsewhere>(RoomElsewhere { 40 }); // Rides not simulated
     CHECK(ideal_guests(park.world()) > pools + 40);
 }
@@ -50,14 +51,14 @@ TEST_CASE("a well rated park with room draws more guests; a full or overpriced o
     CHECK(drawn({ .rating = 0.2f }, 0, 100, units::Money { 0 }) < drawn({ .rating = 0.4f }, 0, 100, units::Money { 0 }));
     CHECK(drawn({ .rating = 0.2f }, 0, 100, units::Money { 0 }) > 0); // A few still come to a park nobody rates
     CHECK(drawn(plain, 100, 100, units::Money { 0 }) < 1);
-    const double fair = drawn({ .entrance_fee = units::Money { 1000 } }, 0, 100, units::Money { 1000 });
+    const f64 fair = drawn({ .entrance_fee = units::Money { 1000 } }, 0, 100, units::Money { 1000 });
     CHECK(drawn({ .entrance_fee = units::Money { 1500 } }, 0, 100, units::Money { 1000 }) < fair);
     CHECK(drawn({ .entrance_fee = units::Money { 2500 } }, 0, 100, units::Money { 1000 }) < drawn({ .entrance_fee = units::Money { 1500 } }, 0, 100, units::Money { 1000 }));
 }
 
 TEST_CASE("a park with room for many guests draws them in faster")
 {
-    const auto came = [](std::uint32_t pool_squares) {
+    const auto came = [](u32 pool_squares) {
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
         auto& r = park.world().registry;
@@ -77,7 +78,7 @@ TEST_CASE("guests come in parties: children only ever with an adult, each party 
     auto& r = park.world().registry;
     r.emplace<ParkGate>(r.create(), ParkGate { park.world().paths.find({ 0, 0, 0 }).value() });
     park.run_seconds(1800);
-    std::size_t children = 0;
+    usize children = 0;
     for (const auto [e, visitor] : r.view<const Visitor>(entt::exclude<Left>).each())
     {
         if (visitor.age != AgeGroup::Child)
@@ -95,7 +96,7 @@ TEST_CASE("guests come in parties: children only ever with an adult, each party 
 
 TEST_CASE("wild rides draw teens' parties, gentle ones families; a park's own mix is followed")
 {
-    const auto weights = [](float intensity) {
+    const auto weights = [](f32 intensity) {
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
         park.flat_ride("Ride", { 1, 0 }, 100, { .intensity = intensity });

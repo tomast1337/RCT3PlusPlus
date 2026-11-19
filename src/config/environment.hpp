@@ -9,6 +9,8 @@
 // Adding a variable: add an EnvVar id, add its row to the table, then read it through an Environment.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -23,7 +25,7 @@
 namespace rct3::config
 {
 
-    enum class EnvVar : std::uint8_t
+    enum class EnvVar : u8
     {
         GamePath,     ///< RCT3PP_GAME_PATH: root folder of the installed original game
         Validation,   ///< RCT3PP_VALIDATION: enable the graphics API's validation layer
@@ -40,7 +42,7 @@ namespace rct3::config
         Count_, ///< Number of variables; not a variable
     };
 
-    inline constexpr std::size_t kEnvVarCount = static_cast<std::size_t>(EnvVar::Count_);
+    inline constexpr usize kEnvVarCount = static_cast<usize>(EnvVar::Count_);
 
     struct EnvVarInfo
     {

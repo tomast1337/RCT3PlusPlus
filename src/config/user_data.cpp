@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "config/user_data.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <format>
 #include <system_error>
@@ -47,14 +49,14 @@ namespace rct3::config
 
         // The tables are indexed by their ids, so their order must follow the enums.
         static_assert([] {
-            for (std::size_t i = 0; i < kFolders.size(); ++i)
+            for (usize i = 0; i < kFolders.size(); ++i)
             {
-                if (static_cast<std::size_t>(kFolders[i].folder) != i)
+                if (static_cast<usize>(kFolders[i].folder) != i)
                     return false;
             }
-            for (std::size_t i = 0; i < kFiles.size(); ++i)
+            for (usize i = 0; i < kFiles.size(); ++i)
             {
-                if (static_cast<std::size_t>(kFiles[i].file) != i)
+                if (static_cast<usize>(kFiles[i].file) != i)
                     return false;
             }
             return true;
@@ -95,12 +97,12 @@ namespace rct3::config
 
     fs::path UserData::folder(UserFolder folder) const
     {
-        return root_ / kFolders.at(static_cast<std::size_t>(folder)).name;
+        return root_ / kFolders.at(static_cast<usize>(folder)).name;
     }
 
     fs::path UserData::file(UserFile file) const
     {
-        const UserFileInfo& info = kFiles.at(static_cast<std::size_t>(file));
+        const UserFileInfo& info = kFiles.at(static_cast<usize>(file));
         return folder(info.folder) / info.name;
     }
 

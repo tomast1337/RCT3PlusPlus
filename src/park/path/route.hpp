@@ -24,6 +24,7 @@
 // down to a tunnel or through.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/footpath_builder.hpp"
 #include "save/model/world.hpp"
 #include "units/units.hpp"
@@ -38,15 +39,15 @@ namespace rct3::park::path
 {
 
     /// In hundredths of the currency unit.
-    inline constexpr std::int64_t kRouteStepCost = 100;
-    inline constexpr std::int64_t kRouteTurnCost = 50;
-    inline constexpr std::int64_t kRouteSlopeCost = 100;
-    inline constexpr std::int64_t kRouteCutCost = 200;
-    inline constexpr std::int64_t kRouteLineCost = 200;
-    inline constexpr std::int64_t kRouteDipCost = 1000;
+    inline constexpr i64 kRouteStepCost = 100;
+    inline constexpr i64 kRouteTurnCost = 50;
+    inline constexpr i64 kRouteSlopeCost = 100;
+    inline constexpr i64 kRouteCutCost = 200;
+    inline constexpr i64 kRouteLineCost = 200;
+    inline constexpr i64 kRouteDipCost = 1000;
     static_assert(kRouteDipCost > kRaisedPieceCost.value, "a level bridge has to cost less than a dip");
     /// Pieces looked at before a search gives up.
-    inline constexpr std::size_t kRouteSearchLimit = 60000;
+    inline constexpr usize kRouteSearchLimit = 60000;
 
     /// A piece of a route: how the builder is set to lay it, and the piece it lays.
     struct RouteStep
@@ -61,7 +62,7 @@ namespace rct3::park::path
     /// the search limit. An empty route when the trail already ends on the goal. With `goal_height`, the route
     /// ends on the path on the goal tile standing at that height. With `solids`, it goes round what fills them.
     /// With `straight`, it keeps to the line from its start to the goal.
-    [[nodiscard]] std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::model::Tile goal, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, units::Money ground_cost, std::optional<std::int32_t> goal_height = std::nullopt, std::optional<const SolidTiles&> solids = std::nullopt, bool straight = false);
+    [[nodiscard]] std::optional<std::vector<RouteStep>> find_route(const FootpathBuilder& from, save::model::Tile goal, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, units::Money ground_cost, std::optional<i32> goal_height = std::nullopt, std::optional<const SolidTiles&> solids = std::nullopt, bool straight = false);
 
     /// What laying `route` costs, as the pieces' prices add up (walking over a path already there is free).
     [[nodiscard]] units::Money route_price(std::span<const RouteStep> route, const FootpathBuilder& from, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, units::Money ground_cost);

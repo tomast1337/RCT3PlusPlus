@@ -6,6 +6,7 @@
 // save them), and placing one (a lone turn button, as the second is left out when its picture is empty).
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/string_table.hpp"
 #include "ui/widgets/button.hpp"
 #include "ui/widgets/panel.hpp"
@@ -26,10 +27,10 @@ namespace rct3::ui::screens::build
         std::string remove;                                        ///< Empty for no second button
         std::string clear_help = "GUI2_DeleteSelection_ClearHelp"; ///< String keys
         std::string remove_help = "GUI2_DeleteSelection_DeleteHelp";
-        float bottom = 0; ///< Its bottom edge, up from the screen's
+        f32 bottom = 0; ///< Its bottom edge, up from the screen's
     };
 
-    enum class DeleteAreaAction : std::uint8_t
+    enum class DeleteAreaAction : u8
     {
         Clear,
         Delete,

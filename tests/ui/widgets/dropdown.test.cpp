@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/dropdown.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 
 #include <doctest/doctest.h>
@@ -34,7 +35,7 @@ namespace
             desktop.update({ { 390, 390 }, false, true });
         }
 
-        void at(float x, float y, bool down)
+        void at(f32 x, f32 y, bool down)
         {
             desktop.update({ { x, y }, down, true });
         }

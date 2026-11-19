@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/attraction.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <doctest/doctest.h>
 #include <optional>
@@ -273,7 +275,7 @@ TEST_CASE("vehicles, operating mode and graphs are written from the ride")
     CHECK(speed->value == 2237);
     CHECK(speed->text == u" mph");
     CHECK(speed->decimals == 2);
-    CHECK(static_cast<float>(speed->value) / 100 / speed_scale(DistanceUnits::Imperial) == doctest::Approx(10).epsilon(0.001));
+    CHECK(static_cast<f32>(speed->value) / 100 / speed_scale(DistanceUnits::Imperial) == doctest::Approx(10).epsilon(0.001));
 
     CHECK(attraction_page(AttractionTab::Graphs, f, s, { }).graph.empty());
     ride.graphs.speed = { 1, 2, 3 };
@@ -333,7 +335,7 @@ TEST_CASE("a show ride's operating mode page sets its show trick by trick")
     save::model::Ride ride;
     ride.kind = save::model::RideKind::Flat;
     const save::model::RideShow show { .ride = 1, .tricks = { { .name = "PonyIdle", .seconds = 5, .available = true, .invented = true }, { .name = "PonyHop", .seconds = 30, .available = true, .invented = true }, { .name = "PonySecret", .seconds = 9, .hidden = true, .available = true, .invented = true }, { .name = "PonySpin", .seconds = 45, .available = true, .invented = true }, { .name = "PonyNew", .seconds = 9, .available = true } }, .order = { 3, 1 } };
-    CHECK(show_offers(show) == std::vector<std::uint32_t> { 1, 3 }); // Not the idle one, a hidden one or one not researched
+    CHECK(show_offers(show) == std::vector<u32> { 1, 3 }); // Not the idle one, a hidden one or one not researched
     AttractionFacts f { &ride.base, &ride, nullptr };
     f.show = &show;
     const InfoPage second = attraction_page(AttractionTab::Mode, f, s, { }, 1);
@@ -400,7 +402,7 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     const InfoPage cars = attraction_page(AttractionTab::Vehicles, f, s, { });
     REQUIRE(cars.controls.size() == 1);
     CHECK(cars.controls[0].kind == InfoControlKind::Paint);
-    CHECK(cars.controls[0].paints == std::vector<std::size_t> { 3, 4, 5 });
+    CHECK(cars.controls[0].paints == std::vector<usize> { 3, 4, 5 });
     // The name, the tune, the state, then the buttons: pulling down, finding it and riding along.
     const InfoPage details = attraction_page(AttractionTab::View, f, s, { });
     REQUIRE(details.controls.size() == 6);
@@ -465,7 +467,7 @@ TEST_CASE("a stall's items page offers what its kind sells and is not yet on its
     CHECK(menu.lines[0].ticked == 1);
     // The item's first extra is the stall's first; its second the stall does not offer.
     REQUIRE(menu.lines[0].extras.size() == 2);
-    CHECK(menu.lines[0].extras[0] == std::optional<std::size_t>(0));
+    CHECK(menu.lines[0].extras[0] == std::optional<usize>(0));
     CHECK_FALSE(menu.lines[0].extras[1].has_value());
 }
 

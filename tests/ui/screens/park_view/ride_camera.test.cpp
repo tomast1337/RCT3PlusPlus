@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/park_view/ride_camera.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -30,7 +31,7 @@ namespace
             frame();
         }
 
-        void frame(float seconds = 0, Point at = { 10, 10 }, bool down = false)
+        void frame(f32 seconds = 0, Point at = { 10, 10 }, bool down = false)
         {
             desktop.layout({ 0, 0, 1000, 700 });
             desktop.update({ at, down }, { }, { .elapsed = units::Seconds { seconds } });
@@ -49,20 +50,20 @@ TEST_CASE("the ride camera panel hides once the pointer is still, and comes back
 {
     Fixture f;
     CHECK(f.panel->rect().y1 == doctest::Approx(700));
-    for (std::int32_t i = 0; i < 10; ++i)
+    for (i32 i = 0; i < 10; ++i)
         f.frame(0.5f);
     CHECK(f.panel->shown() == 0);
     f.frame(0);
     CHECK(f.panel->rect().y0 >= 700); // Out of sight below the screen
     f.panel->pointer_moved(50);
-    for (std::int32_t i = 0; i < 10; ++i)
+    for (i32 i = 0; i < 10; ++i)
         f.frame(0.1f);
     CHECK(f.panel->shown() == 1);
 
     // Pinned, it stays.
     f.click(f.panel->pin());
     CHECK(f.panel->pinned());
-    for (std::int32_t i = 0; i < 10; ++i)
+    for (i32 i = 0; i < 10; ++i)
         f.frame(1);
     CHECK(f.panel->shown() == 1);
 }

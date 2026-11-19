@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/guest_edits.hpp"
 
+#include "core/types.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/parties.hpp"
 #include "simulation/sim_world.hpp"
@@ -99,7 +100,7 @@ namespace rct3::simulation
     void keep_held_levels(entt::registry& r)
     {
         for (const auto [e, held, mood, needs] : r.view<const HeldLevels, Mood, Needs>().each())
-            for (std::size_t k = 0; k < kGuestLevels; ++k)
+            for (usize k = 0; k < kGuestLevels; ++k)
                 if (held.at[k])
                     level_in(mood, needs, static_cast<GuestLevel>(k)) = *held.at[k];
     }

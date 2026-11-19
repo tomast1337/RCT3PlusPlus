@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/options/rows.hpp"
 
+#include "core/types.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <format>
@@ -12,11 +14,11 @@ namespace rct3::ui::screens::options
     namespace
     {
 
-        constexpr float kNameGap = 5; ///< Between a name and the control column
+        constexpr f32 kNameGap = 5; ///< Between a name and the control column
 
     } // namespace
 
-    OptionRows::OptionRows(Widget& page, float width, OptionRowsStyle style, config::game::GameOptions& options, std::bitset<config::game::kGameOptionCount> inert)
+    OptionRows::OptionRows(Widget& page, f32 width, OptionRowsStyle style, config::game::GameOptions& options, std::bitset<config::game::kGameOptionCount> inert)
         : page_(page)
         , width_(width)
         , style_(std::move(style))
@@ -38,7 +40,7 @@ namespace rct3::ui::screens::options
         return widget.empty() ? std::string(kind) + std::to_string(count_++) : std::string(widget);
     }
 
-    widgets::Label& OptionRows::name_label(Row& row, std::u16string name, float x, float width, std::u16string tip, std::string_view widget)
+    widgets::Label& OptionRows::name_label(Row& row, std::u16string name, f32 x, f32 width, std::u16string tip, std::string_view widget)
     {
         auto& label = page_.add<widgets::Label>(widget.empty() ? control_name({ }, "name") : std::format("{}_label", widget), std::move(name), style_.font);
         label.style.colour = style_.text_colour;
@@ -55,7 +57,7 @@ namespace rct3::ui::screens::options
         auto& box = page_.add<widgets::Tickbox>(control_name(widget, "tick"), style_.tick_box, style_.tick);
         box.tooltip = tip;
         row.parts.push_back({ &box, style_.left, style_.tick_size, style_.tick_size });
-        const float text_x = style_.left + style_.tick_size + style_.tick_gap;
+        const f32 text_x = style_.left + style_.tick_size + style_.tick_gap;
         name_label(row, std::move(name), text_x, width_ - text_x, std::move(tip), widget);
         bind(row, { option, Kind::Tick, &box });
         return box;
@@ -83,11 +85,11 @@ namespace rct3::ui::screens::options
     void OptionRows::bind(Row& row, const Binding& binding)
     {
         row.bindings.push_back(binding);
-        row.inert = row.inert || inert_.test(static_cast<std::size_t>(binding.option));
+        row.inert = row.inert || inert_.test(static_cast<usize>(binding.option));
         set_control(binding);
     }
 
-    float OptionRows::slider_height() const
+    f32 OptionRows::slider_height() const
     {
         return style_.slider_inset > 0 ? style_.row_height - 2 * style_.slider_inset : 0;
     }
@@ -113,9 +115,9 @@ namespace rct3::ui::screens::options
         const config::game::GameOptionInfo& info = config::game::game_option_info(option);
         name_label(row, std::move(name), style_.left, style_.control_x - style_.left - kNameGap, tip, info.name);
         auto& s = page_.add<widgets::Spinner>(control_name(info.name, "number"), style_.spinner);
-        s.minimum = static_cast<std::int32_t>(info.minimum);
-        s.maximum = static_cast<std::int32_t>(info.maximum);
-        s.step = std::max(1, static_cast<std::int32_t>(info.step));
+        s.minimum = static_cast<i32>(info.minimum);
+        s.maximum = static_cast<i32>(info.maximum);
+        s.step = std::max(1, static_cast<i32>(info.step));
         s.tooltip = std::move(tip);
         row.parts.push_back({ &s, style_.control_x, style_.number_width, 0 });
         bind(row, { option, Kind::Number, &s });
@@ -152,10 +154,10 @@ namespace rct3::ui::screens::options
         return name_label(row, std::move(value), style_.control_x, width_ - style_.control_x, std::move(tip));
     }
 
-    widgets::Label& OptionRows::note(std::u16string text, std::int32_t lines)
+    widgets::Label& OptionRows::note(std::u16string text, i32 lines)
     {
         Row& row = add_row();
-        row.height = static_cast<float>(std::max(1, lines)) * style_.row_height;
+        row.height = static_cast<f32>(std::max(1, lines)) * style_.row_height;
         widgets::Label& label = name_label(row, std::move(text), style_.left, width_ - style_.left, { });
         label.style.wrap = true;
         label.style.vertical = Align::Start;
@@ -223,20 +225,20 @@ namespace rct3::ui::screens::options
 
     void OptionRows::set_control(const Binding& b)
     {
-        const float value = options_.get(b.option);
+        const f32 value = options_.get(b.option);
         switch (b.kind)
         {
             case Kind::Tick:
                 static_cast<widgets::Tickbox*>(b.control)->ticked = value != 0;
                 break;
             case Kind::Choice:
-                static_cast<widgets::Dropdown*>(b.control)->select(static_cast<std::size_t>(std::max(0.0f, value)));
+                static_cast<widgets::Dropdown*>(b.control)->select(static_cast<usize>(std::max(0.0f, value)));
                 break;
             case Kind::Level:
                 static_cast<widgets::Slider*>(b.control)->set_value(value);
                 break;
             case Kind::Number:
-                static_cast<widgets::Spinner*>(b.control)->set_value(static_cast<std::int32_t>(std::lround(value)));
+                static_cast<widgets::Spinner*>(b.control)->set_value(static_cast<i32>(std::lround(value)));
                 break;
         }
     }
@@ -269,7 +271,7 @@ namespace rct3::ui::screens::options
                     case Kind::Choice:
                         if (auto* d = static_cast<widgets::Dropdown*>(b.control); d->take_change() && d->selected())
                         {
-                            options_.set(b.option, static_cast<float>(*d->selected()));
+                            options_.set(b.option, static_cast<f32>(*d->selected()));
                             changed = true;
                         }
                         break;
@@ -283,7 +285,7 @@ namespace rct3::ui::screens::options
                     case Kind::Number:
                         if (auto* s = static_cast<widgets::Spinner*>(b.control); s->take_change())
                         {
-                            options_.set(b.option, static_cast<float>(s->value()));
+                            options_.set(b.option, static_cast<f32>(s->value()));
                             changed = true;
                         }
                         break;
@@ -292,7 +294,7 @@ namespace rct3::ui::screens::options
         }
 
         // Then place what shows, closing up behind hidden rows.
-        float y = 0;
+        f32 y = 0;
         bool first = true;
         for (const Row& row : rows_)
         {
@@ -310,10 +312,10 @@ namespace rct3::ui::screens::options
             if (!first)
                 y += row.gap_before;
             first = false;
-            const float row_height = row.height > 0 ? row.height : style_.row_height;
+            const f32 row_height = row.height > 0 ? row.height : style_.row_height;
             for (const Part& p : row.parts)
             {
-                const float h = p.height > 0 ? p.height : row_height;
+                const f32 h = p.height > 0 ? p.height : row_height;
                 p.widget->placement = top_left(p.x, y + std::round((row_height - h) / 2), p.width, h);
             }
             y += row_height;

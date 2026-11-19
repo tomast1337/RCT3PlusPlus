@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/pools/score.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -10,16 +12,16 @@ using namespace rct3::park::pools;
 namespace
 {
     /// `cols` by `rows` squares of water at depth `depth`, corner at (0, 0).
-    std::vector<PoolSquare> water(std::int32_t cols, std::int32_t rows, std::int32_t depth = 2)
+    std::vector<PoolSquare> water(i32 cols, i32 rows, i32 depth = 2)
     {
         std::vector<PoolSquare> out;
-        for (std::int32_t row = 0; row < rows; ++row)
-            for (std::int32_t col = 0; col < cols; ++col)
+        for (i32 row = 0; row < rows; ++row)
+            for (i32 col = 0; col < cols; ++col)
                 out.push_back({ .col = col, .row = row, .depth = depth });
         return out;
     }
 
-    PoolExtra extra(std::int32_t col, std::int32_t row, PoolExtraFit fit)
+    PoolExtra extra(i32 col, i32 row, PoolExtraFit fit)
     {
         return { .col = col, .row = row, .fit = fit };
     }
@@ -44,11 +46,11 @@ TEST_CASE("a pool's tally counts its water, shaped corners, features and the ext
 TEST_CASE("more water, mixed depths, lamps, ladders and lifeguards each make a pool more exciting, up to 1")
 {
     const PoolTally plain = pool_tally(water(4, 4), { });
-    const float base = pool_excitement(plain, 0);
+    const f32 base = pool_excitement(plain, 0);
     CHECK(base > 0);
     CHECK(pool_excitement(pool_tally(water(8, 8), { }), 0) > base);
     auto deep = water(4, 4);
-    for (std::size_t i = 0; i < 8; ++i)
+    for (usize i = 0; i < 8; ++i)
         deep[i].depth = 3;
     CHECK(pool_excitement(pool_tally(deep, { }), 0) > base);
     for (const PoolExtraFit fit : { PoolExtraFit { .ladder = true }, PoolExtraFit { .light = true }, PoolExtraFit { .lifeguard = true } })

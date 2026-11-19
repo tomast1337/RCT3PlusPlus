@@ -13,6 +13,8 @@
 // All functions are safe to call from any thread.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -29,7 +31,7 @@
 namespace rct3::logging
 {
 
-    enum class Level : std::uint8_t
+    enum class Level : u8
     {
         Debug,
         Info,
@@ -38,7 +40,7 @@ namespace rct3::logging
         Critical
     };
 
-    enum class ColorMode : std::uint8_t
+    enum class ColorMode : u8
     {
         Auto, // colour only when the stream is a terminal and NO_COLOR is not set
         Always,
@@ -48,7 +50,7 @@ namespace rct3::logging
     struct Entry
     {
         /// Starts at 1 and increases by one per accepted message, so a reader can ask for "everything after N".
-        std::uint64_t sequence = 0;
+        u64 sequence = 0;
         std::chrono::system_clock::time_point timestamp;
         Level level = Level::Info;
         std::string category;
@@ -59,7 +61,7 @@ namespace rct3::logging
     {
         Level minimum_level = Level::Debug;
         /// Entries kept in memory. 0 disables the ring.
-        std::size_t memory_capacity = 1000;
+        usize memory_capacity = 1000;
         bool console_enabled = true;
         ColorMode color = ColorMode::Auto;
         /// Console lines carry the message alone, as a command-line tool's report wants; the file keeps all.
@@ -139,9 +141,9 @@ namespace rct3::logging
         /// The ring contents, oldest first.
         [[nodiscard]] std::vector<Entry> recent_entries() const;
         /// Ring entries whose sequence is greater than `sequence`, oldest first. Pass 0 for everything held.
-        [[nodiscard]] std::vector<Entry> entries_since(std::uint64_t sequence) const;
+        [[nodiscard]] std::vector<Entry> entries_since(u64 sequence) const;
         /// Sequence of the newest entry accepted so far, 0 when none. Not reset by clear().
-        [[nodiscard]] std::uint64_t latest_sequence() const;
+        [[nodiscard]] u64 latest_sequence() const;
         /// Empties the ring. The file and console are unaffected.
         void clear();
         /// Writes the ring, oldest first, as plain text.
@@ -155,10 +157,10 @@ namespace rct3::logging
         Config config_;
         bool color_stdout_ = false;
         bool color_stderr_ = false;
-        std::vector<Entry> ring_;   // storage of `memory_capacity` slots once the first entry arrives
-        std::size_t ring_head_ = 0; // index of the oldest entry
-        std::size_t ring_count_ = 0;
-        std::uint64_t next_sequence_ = 1;
+        std::vector<Entry> ring_; // storage of `memory_capacity` slots once the first entry arrives
+        usize ring_head_ = 0;     // index of the oldest entry
+        usize ring_count_ = 0;
+        u64 next_sequence_ = 1;
         std::ofstream file_;
     };
 

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/park/graphs.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3;
@@ -18,14 +20,14 @@ TEST_CASE("a week's end puts its figures in the week's slot and starts the next"
     close_week(park, { .guests = 100, .intake = 30, .income = units::Money { 700 }, .profit = units::Money { 500 } });
     // A level starts the new week where it is. A park file's series keeps its oldest, growing to the weeks a graph
     // keeps.
-    CHECK(park.park.guests_in_park.samples == std::vector<float> { 100, 100, 80, 70 });
+    CHECK(park.park.guests_in_park.samples == std::vector<f32> { 100, 100, 80, 70 });
     CHECK(park.park.guests_in_park.capacity == kGraphWeeks);
     // A total over the week starts at nought.
-    CHECK(park.park.guest_intake.samples == std::vector<float> { 0, 30, 40 });
+    CHECK(park.park.guest_intake.samples == std::vector<f32> { 0, 30, 40 });
     // What the simulation does not work out carries on.
-    CHECK(park.finance.share_price.samples == std::vector<float> { 5000, 5000 });
+    CHECK(park.finance.share_price.samples == std::vector<f32> { 5000, 5000 });
     // Spent: what came in less what was made.
-    CHECK(park.finance.expenditure.samples == std::vector<float> { 0, 200 });
+    CHECK(park.finance.expenditure.samples == std::vector<f32> { 0, 200 });
     // A series the park file did not keep keeps our number of weeks.
     CHECK(park.finance.expenditure.capacity == kGraphWeeks);
 }
@@ -34,9 +36,9 @@ TEST_CASE("a park without its records starts its graphs as a week ends")
 {
     save::model::ParkModel park;
     close_week(park, { .guests = 100, .income = units::Money { 50 } });
-    CHECK(park.park.guests_in_park.samples == std::vector<float> { 100, 100 });
+    CHECK(park.park.guests_in_park.samples == std::vector<f32> { 100, 100 });
     CHECK(park.park.guests_in_park.capacity == kGraphWeeks);
-    CHECK(park.finance.income.samples == std::vector<float> { 0, 50 });
+    CHECK(park.finance.income.samples == std::vector<f32> { 0, 50 });
     // Nothing to carry on from.
     CHECK(park.finance.share_price.empty());
 }
@@ -45,6 +47,6 @@ TEST_CASE("the company is worth its cash less its loan and the park's value")
 {
     save::model::ParkModel park;
     close_week(park, { .cash_less_loan = units::Money { -2000 }, .park_value = units::Money { 9000 } });
-    CHECK(park.finance.park_value.samples == std::vector<float> { 9000, 9000 });
-    CHECK(park.finance.company_value.samples == std::vector<float> { 7000, 7000 });
+    CHECK(park.finance.park_value.samples == std::vector<f32> { 9000, 9000 });
+    CHECK(park.finance.company_value.samples == std::vector<f32> { 7000, 7000 });
 }

@@ -16,6 +16,7 @@
 #include "career/career_file.hpp"
 #include "config/game/install.hpp"
 #include "config/user_data.hpp"
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "scene/save_browser.hpp"
 #include "ui/screens/front/desktop.hpp"
@@ -33,14 +34,14 @@ namespace rct3::scene
     struct CareerBrowser
     {
         std::optional<config::UserData> data; ///< Where the careers are; without it none are kept
-        std::size_t opened = 0;               ///< The front end's count of windows when this one was listed
+        usize opened = 0;                     ///< The front end's count of windows when this one was listed
         std::filesystem::path folder;
         std::vector<std::string> scenario_ids;
         std::vector<career::CareerEntry> careers;
-        std::size_t next_picture = 0; ///< The next career whose picture to read
+        usize next_picture = 0; ///< The next career whose picture to read
         std::vector<render::TextureHandle> pictures;
         std::optional<career::CareerEntry> playing; ///< The career whose map is shown
-        std::size_t map_opened = 0;                 ///< The front end's count of maps when it was shown
+        usize map_opened = 0;                       ///< The front end's count of maps when it was shown
         /// The folder of pictures the slideshow should show, relative to the game; nothing for its usual ones.
         std::optional<std::string> slideshow;
         std::optional<std::filesystem::path> park; ///< A scenario's park or a career's game to play, until taken
@@ -52,7 +53,7 @@ namespace rct3::scene
 
     /// Starts scenario `index` of the first career of game `pack`, made when there is none, as its map's New
     /// does, the map shown under the park. False when the scenario is not there or not open.
-    bool start_career_scenario(CareerBrowser& browser, ui::screens::front::FrontEnd& front, std::int32_t pack, std::size_t index, const ui::StringTable& strings, const config::game::GameInstall& install);
+    bool start_career_scenario(CareerBrowser& browser, ui::screens::front::FrontEnd& front, i32 pack, usize index, const ui::StringTable& strings, const config::game::GameInstall& install);
 
     void destroy_career_browser(render::Device& device, CareerBrowser& browser);
 

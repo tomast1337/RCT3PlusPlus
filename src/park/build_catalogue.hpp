@@ -21,6 +21,7 @@
 // animal a park can buy: adult male and female, young male and female.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "save/model/park.hpp"
 #include "units/units.hpp"
@@ -39,7 +40,7 @@ namespace rct3::park
 {
 
     /// The lists the build menus open.
-    enum class BuildList : std::uint8_t
+    enum class BuildList : u8
     {
         // Rides
         Coasters,
@@ -72,19 +73,19 @@ namespace rct3::park
     };
 
     /// The list of a ride by its attraction kind; nothing for kinds the rides menu leaves out.
-    [[nodiscard]] std::optional<BuildList> ride_list(std::uint32_t kind) noexcept;
+    [[nodiscard]] std::optional<BuildList> ride_list(u32 kind) noexcept;
     /// The list of a shop or facility by its attraction kind; nothing for kinds the shops menu leaves out.
-    [[nodiscard]] std::optional<BuildList> shop_list(std::uint32_t kind) noexcept;
+    [[nodiscard]] std::optional<BuildList> shop_list(u32 kind) noexcept;
     /// The attraction kind of the special attraction (a toilet, a cash machine and the like) named `name` in the
     /// overlay `file`; nothing when the file has no such attraction.
-    [[nodiscard]] std::optional<std::uint32_t> special_attraction_kind(const std::filesystem::path& file, std::string_view name);
+    [[nodiscard]] std::optional<u32> special_attraction_kind(const std::filesystem::path& file, std::string_view name);
     /// The list of a piece of scenery by its item category; nothing for categories no list shows.
-    [[nodiscard]] std::optional<BuildList> scenery_list(std::uint32_t category) noexcept;
+    [[nodiscard]] std::optional<BuildList> scenery_list(u32 category) noexcept;
 
     /// Item flag of scenery that also goes in the billboard list.
-    inline constexpr std::uint32_t kBillboardFlag = 1u << 25;
+    inline constexpr u32 kBillboardFlag = 1u << 25;
 
-    enum class BuildKind : std::uint8_t
+    enum class BuildKind : u8
     {
         TrackedRide, ///< Built piece by piece
         FlatRide,    ///< Placed whole: rides without a track and the attractions that stand alone
@@ -123,7 +124,7 @@ namespace rct3::park
     inline constexpr std::string_view kEnclosureDelete = "EnclosureDelete";
 
     /// The parts of the enclosure list, in the order it shows them.
-    enum class EnclosurePart : std::uint8_t
+    enum class EnclosurePart : u8
     {
         None, ///< Items of other lists
         Fences,
@@ -153,26 +154,26 @@ namespace rct3::park
         std::string group_icon;
         std::string group_text;
         /// How the item sits on the grid, and its footprint in tiles; zero for rides with a track.
-        std::uint16_t placement = 0;
-        std::uint32_t width = 0;
-        std::uint32_t length = 0;
+        u16 placement = 0;
+        u32 width = 0;
+        u32 length = 0;
         bool water_only = false; ///< Stands only on water
-        std::uint32_t addon = 0; ///< 0 for the base game, else the expansion it came with
+        u32 addon = 0;           ///< 0 for the base game, else the expansion it came with
         /// The kind of attraction (ride_list's `kind`) or the scenery category (scenery_list's) that put the
         /// item in its list; 0 for others.
-        std::uint32_t type = 0;
+        u32 type = 0;
         /// The theme the item belongs to, as the theme's overlay numbers and names it: its name for skins
         /// ("Space") and its title shown to the player ("Sci-fi"). None and empty for items of no theme. Overlays
         /// that add to a theme give only its number.
-        std::optional<std::int32_t> style_index { };
+        std::optional<i32> style_index { };
         std::string style;
         std::string style_title;
         EnclosurePart part = EnclosurePart::None;
         /// Animals: the symbol of the shelter their species needs, in any case; empty for other items.
         std::string needs;
         /// Enclosure fences: how strong they are. Animals: the least strength of fence that holds them.
-        float strength = 0;
-        float rarity = 0; ///< Animals: from 0, common, to 1, endangered
+        f32 strength = 0;
+        f32 rarity = 0; ///< Animals: from 0, common, to 1, endangered
         /// Shops: whether placed as a stall, as against a special attraction such as a toilet.
         bool stall = false;
         bool names_category = false; ///< Scenery: names a research category, which keeps it out of research
@@ -181,11 +182,11 @@ namespace rct3::park
         struct Goods
         {
             std::string item;
-            std::int32_t price = 0;
+            i32 price = 0;
         };
         std::vector<Goods> goods;
         /// Pool tools: the pool type's price list (ovl::PoolType::prices), what their squares cost.
-        std::vector<std::int32_t> pool_prices { };
+        std::vector<i32> pool_prices { };
         std::string pool_extra { }; ///< Pool extras: the words of their setting, read by park::pools::pool_extra_fit
     };
 
@@ -216,7 +217,7 @@ namespace rct3::park
     {
     public:
         /// What the park lets the player do with an item, from least to most.
-        enum class State : std::uint8_t
+        enum class State : u8
         {
             Hidden, ///< Not part of this park
             Locked, ///< To be invented first

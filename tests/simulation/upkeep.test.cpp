@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
@@ -23,7 +24,7 @@ TEST_CASE("a ride worn right down breaks now and then, and its queue gives up")
     Sandbox park;
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 4, .cycle_seconds = 10 });
-    for (std::int32_t i = 0; i < 12; ++i)
+    for (i32 i = 0; i < 12; ++i)
         park.guest({ i % 4, 0 });
     auto& r = park.world().registry;
     r.emplace<Upkeep>(ride, Upkeep { .reliability = 0, .inspect_every = std::nullopt });
@@ -33,7 +34,7 @@ TEST_CASE("a ride worn right down breaks now and then, and its queue gives up")
     park.run(1);
     CHECK(r.get<CycleRide>(ride).queue.empty());
     // Closed, it takes no one on and wears no further while it waits for a mechanic.
-    const std::uint32_t customers = r.get<Attraction>(ride).customers;
+    const u32 customers = r.get<Attraction>(ride).customers;
     park.run_seconds(300);
     CHECK(r.get<Upkeep>(ride).breakdowns == 1);
     CHECK(r.get<Attraction>(ride).customers == customers);
@@ -99,7 +100,7 @@ TEST_CASE("staff are paid a quarter of their monthly wage as each week ends, ven
         const entt::entity e = r.create();
         r.emplace<Staff>(e, s);
     }
-    const float week = kSecondsPerHour * rct3::save::model::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
+    const f32 week = kSecondsPerHour * rct3::save::model::GameClock::kUnitsPerWeek / kCalendarUnitsPerHour;
     park.run_seconds(week * 0.9f);
     CHECK(r.ctx().get<Payroll>().paid.value == 0);
     park.run_seconds(week * 0.2f);
@@ -192,7 +193,7 @@ TEST_CASE("an emergency stop halts a coaster's train on the track till a mechani
     auto& upkeep = r.get<Upkeep>(ride);
     upkeep.broken = true;
     upkeep.kind = upkeep.last = Breakdown::EmergencyStop;
-    const float at = r.get<Trains>(ride).trains[0].travelled;
+    const f32 at = r.get<Trains>(ride).trains[0].travelled;
     park.run_seconds(30);
     CHECK(r.get<Trains>(ride).trains[0].travelled == at);
     CHECK(r.get<Errand>(g).kind == ErrandKind::Riding);
@@ -226,7 +227,7 @@ TEST_CASE("a ride breaking down breaks in one of the ways its sort can, and a sa
     Sandbox park;
     park.path({ 0, 0 }, { 4, 0 });
     const auto ride = park.flat_ride("Twister", { 4, 0 }, 0, { .capacity = 4, .cycle_seconds = 10 });
-    for (std::int32_t i = 0; i < 8; ++i)
+    for (i32 i = 0; i < 8; ++i)
         park.guest({ i % 4, 0 });
     auto& r = park.world().registry;
     r.emplace<Upkeep>(ride, Upkeep { .reliability = 0, .inspect_every = std::nullopt });

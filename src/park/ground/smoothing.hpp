@@ -22,6 +22,7 @@
 //     so the edges between tiles show.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/world.hpp"
 
 #include <cstdint>
@@ -31,7 +32,7 @@
 namespace rct3::park::ground
 {
 
-    enum class GroundSmoothing : std::uint8_t
+    enum class GroundSmoothing : u8
     {
         Average,
         Random,
@@ -41,17 +42,17 @@ namespace rct3::park::ground
     };
 
     /// The whole unit a pad levelled from `height` lies at.
-    [[nodiscard]] float whole_level(float height);
+    [[nodiscard]] f32 whole_level(f32 height);
 
     /// The mean height of the corner points within `reach` tiles of `middle`; 0 when there are none.
-    [[nodiscard]] float mean_height(const save::model::TerrainGrid& grid, glm::vec2 middle, float reach);
+    [[nodiscard]] f32 mean_height(const save::model::TerrainGrid& grid, glm::vec2 middle, f32 reach);
 
-    inline constexpr float kSmoothSprayShare = 0.5f; ///< Of a raising spray's speed, what a smoothing spray moves the ground at
-    inline constexpr float kSmoothDragRate = 0.01f;  ///< Of the way to the smoothed ground, for each pixel dragged past the dead zone
+    inline constexpr f32 kSmoothSprayShare = 0.5f; ///< Of a raising spray's speed, what a smoothing spray moves the ground at
+    inline constexpr f32 kSmoothDragRate = 0.01f;  ///< Of the way to the smoothed ground, for each pixel dragged past the dead zone
 
     /// One pass of `tool` over the ground within `reach` tiles of `middle`, on tiles `free` lets change: at the
     /// middle `share` of the way (all of it from 1), no corner further than `most` there. `seed` picks Random's
     /// ups and downs. Returns the sum of how far the corners moved.
-    float smooth_ground(save::model::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, float reach, float share, float most, float target, std::uint64_t seed, const std::function<bool(save::model::Tile)>& free);
+    f32 smooth_ground(save::model::TerrainGrid& grid, GroundSmoothing tool, glm::vec2 middle, f32 reach, f32 share, f32 most, f32 target, u64 seed, const std::function<bool(save::model::Tile)>& free);
 
 } // namespace rct3::park::ground

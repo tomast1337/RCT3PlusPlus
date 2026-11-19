@@ -4,6 +4,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/widget.hpp"
 
 #include <string>
@@ -22,7 +23,7 @@ namespace rct3::ui
     /// The part of the widget's rectangle that stops the pointer, to within `step` units: all of it, unless the
     /// widget has gaps (Widget::covers), as panels spanning the screen to sit by its corner do. Empty when it
     /// stops the pointer nowhere.
-    [[nodiscard]] Rect covered_bounds(const Widget& w, float step = 4);
+    [[nodiscard]] Rect covered_bounds(const Widget& w, f32 step = 4);
 
     /// The widget's class without its namespaces, e.g. "Button".
     [[nodiscard]] std::string type_name(const Widget& w);

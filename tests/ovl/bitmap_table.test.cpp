@@ -2,6 +2,7 @@
 #include "ovl/bitmap_table.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <array>
 #include <cstring>
@@ -19,7 +20,7 @@ using rct3::ovl::read_bitmap_tables;
 namespace
 {
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
@@ -28,13 +29,13 @@ namespace
     std::vector<std::byte> chunk(const std::vector<std::byte>& body)
     {
         std::vector<std::byte> out;
-        append_u32(out, static_cast<std::uint32_t>(body.size()));
+        append_u32(out, static_cast<u32>(body.size()));
         out.insert(out.end(), body.begin(), body.end());
         return out;
     }
 
     // Chunk 0: two reserved words then {format, width, height, levels} per bitmap.
-    std::vector<std::byte> descriptions(std::initializer_list<std::array<std::uint32_t, 4>> bitmaps, std::uint32_t reserved = 0)
+    std::vector<std::byte> descriptions(std::initializer_list<std::array<u32, 4>> bitmaps, u32 reserved = 0)
     {
         std::vector<std::byte> out;
         words(out, { reserved, 0 });
@@ -45,7 +46,7 @@ namespace
 
     // A version 1 file with one loader of tag "btbl" and one loader row of that type. The header from
     // build_file has no loaders, so the loader list is spliced in after its zero count.
-    std::vector<std::byte> make_file(std::uint32_t count, const std::vector<std::byte>& chunk0, const std::vector<std::byte>& chunk1, std::uint32_t extra_count = 2)
+    std::vector<std::byte> make_file(u32 count, const std::vector<std::byte>& chunk0, const std::vector<std::byte>& chunk1, u32 extra_count = 2)
     {
         std::vector<std::byte> row;
         words(row, { 0, 20, extra_count, 0, 0 }); // type, data address, chunk count, symbol, resolve
@@ -63,16 +64,16 @@ namespace
         b.str("BmpTbl");
         b.put_u32(1);
         b.str("btbl");
-        const std::uint32_t one = 1;
+        const u32 one = 1;
         std::memcpy(file.data() + 20, &one, 4);
         file.insert(file.begin() + 24, b.bytes.begin(), b.bytes.end());
         return file;
     }
 
-    std::vector<std::byte> filled(std::size_t size, std::uint8_t first)
+    std::vector<std::byte> filled(usize size, u8 first)
     {
         std::vector<std::byte> out(size);
-        for (std::size_t i = 0; i < size; ++i)
+        for (usize i = 0; i < size; ++i)
             out[i] = static_cast<std::byte>(first + i);
         return out;
     }
@@ -151,7 +152,7 @@ TEST_CASE("bitmap table edge cases")
 
     SUBCASE("unknown format, oversized side and bad level count are unreadable")
     {
-        for (const auto& bad : { std::array<std::uint32_t, 4> { 5, 4, 4, 1 }, { 2, 4096, 4, 1 }, { 2, 4, 4, 0 }, { 2, 4, 4, 12 } })
+        for (const auto& bad : { std::array<u32, 4> { 5, 4, 4, 1 }, { 2, 4096, 4, 1 }, { 2, 4, 4, 0 }, { 2, 4, 4, 12 } })
         {
             const auto overlay = load(make_file(1, descriptions({ bad }), filled(64, 0)));
             CHECK_FALSE(read_bitmap_tables(overlay, overlay.common())[0].table.has_value());

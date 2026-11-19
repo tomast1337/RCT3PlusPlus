@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/queue_fences.hpp"
 
+#include "core/types.hpp"
 #include "park/ground/paths.hpp"
 #include "park/object/placement.hpp"
 #include "park/path/decks.hpp"
@@ -15,7 +16,7 @@ namespace rct3::park
         return object::turn_facing(side);
     }
 
-    bool slope_falls(std::uint8_t slope) noexcept
+    bool slope_falls(u8 slope) noexcept
     {
         return slope == 2 || slope == 5;
     }
@@ -35,7 +36,7 @@ namespace rct3::park
         return { 0, (h[3] - h[1]) / grid.tile_size_z };
     }
 
-    QueueFences queue_fences(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::uint64_t last_id)
+    QueueFences queue_fences(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, u64 last_id)
     {
         QueueFences out;
         for (const save::model::PathTile& p : paths)
@@ -43,7 +44,7 @@ namespace rct3::park
             if (p.kind != save::model::PathKind::Queue || !p.queue || !p.elevation || p.queue->fence_symbol.empty())
                 continue;
             const bool on_ground = ground::is_ground_queue(p);
-            const float rise = on_ground ? 0.0f : ground::path_rise(p.elevation->slope);
+            const f32 rise = on_ground ? 0.0f : ground::path_rise(p.elevation->slope);
             const auto in = path::stored_heading(p.queue->start_direction);
             const auto out_side = path::stored_heading(p.queue->end_direction);
             // A slope is fenced along the way its deck faces, leaning as the deck rises, whichever way the
@@ -55,12 +56,12 @@ namespace rct3::park
                 continue;
 
             glm::vec2 slope_lean { };
-            float low = static_cast<float>(p.elevation->quantised_height);
+            f32 low = static_cast<f32>(p.elevation->quantised_height);
             if (rise > 0)
             {
                 const auto [dc, dr] = facing->step();
-                const float up = *ahead - *behind;
-                slope_lean = { up * static_cast<float>(dc) / grid.tile_size_x, up * static_cast<float>(dr) / grid.tile_size_z };
+                const f32 up = *ahead - *behind;
+                slope_lean = { up * static_cast<f32>(dc) / grid.tile_size_x, up * static_cast<f32>(dr) / grid.tile_size_z };
                 low = std::min(*ahead, *behind);
             }
 
@@ -85,7 +86,7 @@ namespace rct3::park
                 }
                 else
                 {
-                    o.base_height = static_cast<std::int32_t>(low);
+                    o.base_height = static_cast<i32>(low);
                     o.height_adjust = rise / 2;
                     o.force_absolute_height = true;
                 }

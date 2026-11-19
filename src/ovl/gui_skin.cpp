@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/gui_skin.hpp"
 
+#include "core/types.hpp"
 #include "ovl/reference_names.hpp"
 
 #include <cstring>
@@ -13,17 +14,17 @@ namespace rct3::ovl
 
         constexpr std::string_view kSkinTag = "gsi";
         constexpr std::string_view kTextureTag = "tex";
-        constexpr std::size_t kItemSize = 16; // type, texture reference, coordinate pointer, one unused word
+        constexpr usize kItemSize = 16; // type, texture reference, coordinate pointer, one unused word
 
-        std::uint32_t u32_at(std::span<const std::byte> b, std::size_t at)
+        u32 u32_at(std::span<const std::byte> b, usize at)
         {
-            std::uint32_t v = 0;
+            u32 v = 0;
             std::memcpy(&v, b.data() + at, sizeof v);
             return v;
         }
 
         // Number of 32-bit coordinates a kind stores, or nothing for kinds not seen in files.
-        std::optional<std::size_t> coordinate_count(std::uint32_t kind)
+        std::optional<usize> coordinate_count(u32 kind)
         {
             switch (static_cast<GuiSkinKind>(kind))
             {
@@ -41,7 +42,7 @@ namespace rct3::ovl
             return std::nullopt;
         }
 
-        std::optional<GuiSkin> read_skin(const AddressSpace& space, const ReferenceNames& refs, std::uint32_t address)
+        std::optional<GuiSkin> read_skin(const AddressSpace& space, const ReferenceNames& refs, u32 address)
         {
             const auto raw = space.bytes_at(address, kItemSize);
             if (!raw)
@@ -60,9 +61,9 @@ namespace rct3::ovl
                 if (!values)
                     return std::nullopt;
                 skin.coordinates.reserve(*count);
-                for (std::size_t i = 0; i < *count; ++i)
+                for (usize i = 0; i < *count; ++i)
                 {
-                    skin.coordinates.push_back(static_cast<std::int32_t>(u32_at(*values, i * 4)));
+                    skin.coordinates.push_back(static_cast<i32>(u32_at(*values, i * 4)));
                 }
             }
             return skin;

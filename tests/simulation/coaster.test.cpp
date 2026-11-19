@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/coaster.hpp"
 
+#include "core/types.hpp"
 #include "simulation/ratings.hpp"
 
 #include <algorithm>
@@ -32,7 +33,7 @@ namespace
     }
 
     /// A 100 m track with two ends: a 30 m spike up 25 m at each, and a 20 m station from 40 to 60 between.
-    Coaster spikes(Shuttle shuttle, std::int32_t passes)
+    Coaster spikes(Shuttle shuttle, i32 passes)
     {
         Coaster c;
         c.distance = { 0, 30, 40, 60, 70, 100 };
@@ -50,7 +51,7 @@ namespace
     }
 
     /// A 60 m tower straight up from a 5 m base.
-    Coaster tower(Shuttle shuttle, std::int32_t passes)
+    Coaster tower(Shuttle shuttle, i32 passes)
     {
         Coaster c;
         c.distance = { 0, 5, 65 };
@@ -83,7 +84,7 @@ TEST_CASE("a launched train reaches its launch speed as its tail leaves the plat
     c.kinds[1] = Stretch::Plain; // No chain: the launch alone takes it on
     c.launch_speed = 20;
     c.running = true;
-    for (std::int32_t i = 0; i < 10000 && c.travelled < c.train_length; ++i)
+    for (i32 i = 0; i < 10000 && c.travelled < c.train_length; ++i)
         drive(c, 0.01f);
     CHECK(c.speed == doctest::Approx(20).epsilon(0.05));
     // Unlaunched, it only creeps off.
@@ -103,7 +104,7 @@ TEST_CASE("a launch stretch past the platform goes on pushing the train up its s
     for (Coaster* c : { &plain, &pushed })
     {
         c->running = true;
-        for (std::int32_t i = 0; i < 10000 && c->at < 35; ++i)
+        for (i32 i = 0; i < 10000 && c->at < 35; ++i)
             drive(*c, 0.01f);
     }
     CHECK(pushed.speed > plain.speed + 2);
@@ -121,9 +122,9 @@ TEST_CASE("a train is pulled up the chain, runs down the drop faster and comes r
 
     Coaster running = hill();
     running.running = true;
-    float fastest = 0;
+    f32 fastest = 0;
     bool back = false;
-    for (std::int32_t t = 0; t < 400 && !back; ++t)
+    for (i32 t = 0; t < 400 && !back; ++t)
     {
         back = drive(running, 0.25f);
         fastest = std::max(fastest, running.speed);
@@ -140,9 +141,9 @@ TEST_CASE("a slide's car down in the pool on its way back is slowed in the water
     Coaster c = hill();
     c.wades = { { { 70, 100 } } };
     c.running = true;
-    float in_pool = 0;
-    float slowest = 100;
-    for (std::int32_t t = 0; t < 4000 && c.running; ++t)
+    f32 in_pool = 0;
+    f32 slowest = 100;
+    for (i32 t = 0; t < 4000 && c.running; ++t)
     {
         drive(c, 0.01f);
         if (c.at > 75 && c.at < 100)
@@ -178,10 +179,10 @@ TEST_CASE("a train that cannot crest a hill raises one stall at that place, and 
 {
     // Where its stalls were found over a few laps, taking each as the owner of the train would.
     const auto stalls = [](Coaster c) {
-        std::vector<float> found;
+        std::vector<f32> found;
         c.running = true;
         c.speed = c.station_speed; // Sent off by the station
-        for (std::int32_t t = 0; t < 4000; ++t)
+        for (i32 t = 0; t < 4000; ++t)
         {
             if (drive(c, 0.25f))
                 c.running = true; // Round again, as a ride in testing sets it off again
@@ -197,7 +198,7 @@ TEST_CASE("a train that cannot crest a hill raises one stall at that place, and 
     dry.distance = { 0, 10, 50, 100, 130 }; // A flat run from the station, so the climb starts well clear of its platform
     dry.height = { 0, 0, 0, 15, 0 };
     dry.station_speed = 8; // Fast enough to roll the flat to the climb
-    const std::vector<float> found = stalls(dry);
+    const std::vector<f32> found = stalls(dry);
     REQUIRE(found.size() == 1); // Laps after the first stall at the same place and are not told again
     CHECK(found.front() > 40);
     CHECK(found.front() < 100); // On the way up to the crest
@@ -205,7 +206,7 @@ TEST_CASE("a train that cannot crest a hill raises one stall at that place, and 
     // On a track with two ends, as one being built, rolling back down the climb is a stall too.
     Coaster open = dry;
     open.closed = false;
-    const std::vector<float> rolled = stalls(open);
+    const std::vector<f32> rolled = stalls(open);
     REQUIRE(rolled.size() == 1);
     CHECK(rolled.front() > 40);
     CHECK(rolled.front() < 100);
@@ -233,7 +234,7 @@ TEST_CASE("brakes slow a train down along them to their speed and no further")
     while (c.at < 71)
         drive(c, 0.05f);
     CHECK(c.speed > 10); // Not cut at once
-    float slowest = c.speed;
+    f32 slowest = c.speed;
     while (c.at < 99)
     {
         drive(c, 0.05f);
@@ -257,11 +258,11 @@ TEST_CASE("brakes slow a train less the fewer of its cars are over them")
     c.at = 71; // One car on the brakes
     c.speed = 15;
     drive(c, 0.1f);
-    const float one = 15 - c.speed;
+    const f32 one = 15 - c.speed;
     c.at = 79; // Every car on them
     c.speed = 15;
     drive(c, 0.1f);
-    const float all = 15 - c.speed;
+    const f32 all = 15 - c.speed;
     CHECK(one > 0);
     CHECK(all == doctest::Approx(4 * one).epsilon(0.1));
 }
@@ -312,7 +313,7 @@ TEST_CASE("a block brake pushes a slow train on up to its speed, and no faster")
     drive(c, 0.1f);
     CHECK(c.speed > 0);
     CHECK(c.speed < 4);
-    for (std::int32_t i = 0; i < 20; ++i)
+    for (i32 i = 0; i < 20; ++i)
         drive(c, 0.1f);
     CHECK(c.speed == doctest::Approx(4).epsilon(0.05));
 }
@@ -334,7 +335,7 @@ TEST_CASE("booster jets shove a car up a climb, hard, to their speed and no fast
     c.speed = 1;
     drive(c, 0.5f);
     CHECK(c.speed > 5); // Much harder than any station or block brake pushes
-    for (std::int32_t i = 0; i < 10; ++i)
+    for (i32 i = 0; i < 10; ++i)
         drive(c, 0.1f);
     CHECK(c.speed <= 9);
     CHECK(c.speed > 8);
@@ -357,14 +358,14 @@ TEST_CASE("a pool slide's car is eased off its platform, then taken by the slope
     drive(c, 0.1f);
     CHECK(c.speed > 0);
     CHECK(c.speed < 1); // Eased up, not put straight to the station's speed
-    float most = 0;
+    f32 most = 0;
     while (c.travelled < 0.5f && c.running)
     {
         drive(c, 0.05f);
         most = std::max(most, c.speed);
     }
     CHECK(most < 1.5f); // Nothing like the station speed it would be carried at, though the slope has begun to tell
-    for (std::int32_t i = 0; i < 20 && c.running; ++i)
+    for (i32 i = 0; i < 20 && c.running; ++i)
         drive(c, 0.05f);
     CHECK(c.speed > 2); // Gravity's, down the slope
 }
@@ -380,10 +381,10 @@ TEST_CASE("a train held at a block brake is braked to a stop where its room ends
     c.travelled = 20;
     c.at = 75;
     c.speed = 4;
-    const float end = 85; // The room ends 10 m on
-    float last = c.speed;
+    const f32 end = 85; // The room ends 10 m on
+    f32 last = c.speed;
     bool smooth = true;
-    for (std::int32_t i = 0; i < 400 && c.speed > 0; ++i)
+    for (i32 i = 0; i < 400 && c.speed > 0; ++i)
     {
         drive(c, 0.05f, end - c.at);
         smooth = smooth && last - c.speed < 1.5f; // No sudden stop: no harder than 30 m/s² a step
@@ -398,16 +399,16 @@ TEST_CASE("a train coming into the station slows the nearer it gets to where it 
 {
     Coaster c = hill();
     c.running = true;
-    for (std::int32_t i = 0; i < 2000 && c.travelled < 90; ++i)
+    for (i32 i = 0; i < 2000 && c.travelled < 90; ++i)
         drive(c, 0.05f);
     drive(c, 0.05f);
     REQUIRE(c.running);
-    const float in = c.speed; // As the front comes into the station, under 10 m from its stop
+    const f32 in = c.speed; // As the front comes into the station, under 10 m from its stop
     CHECK(in > c.station_speed);
     CHECK(in < 8);
-    float last = in;
+    f32 last = in;
     bool slowing = true;
-    for (std::int32_t i = 0; i < 400 && c.running && c.travelled < 99.5f; ++i)
+    for (i32 i = 0; i < 400 && c.running && c.travelled < 99.5f; ++i)
     {
         drive(c, 0.05f);
         slowing = slowing && c.speed <= last + 0.01f;
@@ -424,9 +425,9 @@ TEST_CASE("a launched train that rolls back into the station stops there and is 
     c.kinds[1] = Stretch::Plain;
     c.launch_speed = 8;
     c.running = true;
-    float top = 0;
+    f32 top = 0;
     bool back = false;
-    for (std::int32_t i = 0; i < 4000 && !back; ++i)
+    for (i32 i = 0; i < 4000 && !back; ++i)
     {
         back = drive(c, 0.05f);
         top = std::max(top, c.speed);
@@ -451,7 +452,7 @@ TEST_CASE("a train launched up a spike at the end of its track rolls all the way
     c.launch_speed = 20;
     c.running = true;
     bool back = false;
-    for (std::int32_t i = 0; i < 4000 && c.running; ++i)
+    for (i32 i = 0; i < 4000 && c.running; ++i)
         back = drive(c, 0.05f);
     CHECK(back);
     CHECK_FALSE(c.crashed);
@@ -461,7 +462,7 @@ TEST_CASE("a train launched up a spike at the end of its track rolls all the way
 namespace
 {
     /// An 8 m station, a 40 m launch stretch, 12 m level and a 40 m spike up 40 m at the end of the track.
-    Coaster spike_after_launch(float launch)
+    Coaster spike_after_launch(f32 launch)
     {
         Coaster c;
         c.distance = { 0, 8, 48, 60, 100 };
@@ -483,12 +484,12 @@ TEST_CASE("a train rolling back over its launch stretch is slowed harder the nea
     Coaster c = spike_after_launch(25);
     bool back = false;
     bool rolled_back = false;
-    float jolt = 0;      // Most speed lost or gained in one step on the way back
-    float first = 0;     // Slow-down in the first step back over the launch stretch
-    float hardest = 0;   // And the hardest there
-    float coming_in = 0; // Fastest with its tail on the platform
-    float last = 0;
-    for (std::int32_t i = 0; i < 4000 && c.running; ++i)
+    f32 jolt = 0;      // Most speed lost or gained in one step on the way back
+    f32 first = 0;     // Slow-down in the first step back over the launch stretch
+    f32 hardest = 0;   // And the hardest there
+    f32 coming_in = 0; // Fastest with its tail on the platform
+    f32 last = 0;
+    for (i32 i = 0; i < 4000 && c.running; ++i)
     {
         last = c.speed;
         back = drive(c, 0.05f);
@@ -498,7 +499,7 @@ TEST_CASE("a train rolling back over its launch stretch is slowed harder the nea
         jolt = std::max(jolt, std::abs(c.speed - last));
         if (c.at < 48 && c.at - c.train_length > 8 && last < 0)
         {
-            const float slowed = (c.speed - last) / 0.05f;
+            const f32 slowed = (c.speed - last) / 0.05f;
             if (first == 0)
                 first = slowed;
             hardest = std::max(hardest, slowed);
@@ -520,12 +521,12 @@ TEST_CASE("a train rolling back over its launch stretch is slowed harder the nea
 TEST_CASE("a train rolling back over its launch stretch slower than the station's speed rolls on unslowed")
 {
     Coaster c = spike_after_launch(7);
-    c.rolling = 0;  // Unslowed by its wheels either, to see the launch stretch leaves it be
-    float onto = 0; // Speed as its front came onto the launch stretch going back
-    float off = 0;  // And as its tail reached the platform
-    for (std::int32_t i = 0; i < 4000 && c.running; ++i)
+    c.rolling = 0; // Unslowed by its wheels either, to see the launch stretch leaves it be
+    f32 onto = 0;  // Speed as its front came onto the launch stretch going back
+    f32 off = 0;   // And as its tail reached the platform
+    for (i32 i = 0; i < 4000 && c.running; ++i)
     {
-        const float was = c.at;
+        const f32 was = c.at;
         drive(c, 0.05f);
         if (c.speed < 0 && was >= 48 && c.at < 48)
             onto = -c.speed;
@@ -548,7 +549,7 @@ TEST_CASE("a train standing on brakes is pushed on, as anywhere else it stalls")
     c.launched = true;
     c.travelled = 45;
     c.at = 55;
-    for (std::int32_t i = 0; i < 20; ++i)
+    for (i32 i = 0; i < 20; ++i)
         drive(c, 0.5f, 50); // Room ahead, as behind another train
     CHECK(c.at > 60);
 }
@@ -556,11 +557,11 @@ TEST_CASE("a train standing on brakes is pushed on, as anywhere else it stalls")
 TEST_CASE("a reverse launched shuttle goes back up one spike, through the station up the other, and stops in it")
 {
     Coaster c = spikes(Shuttle::Back, 2);
-    float lowest = c.at;
-    float highest = c.at;
-    float first = 0; // Its speed a moment after setting off
+    f32 lowest = c.at;
+    f32 highest = c.at;
+    f32 first = 0; // Its speed a moment after setting off
     bool back = false;
-    for (std::int32_t i = 0; i < 4000 && !back; ++i)
+    for (i32 i = 0; i < 4000 && !back; ++i)
     {
         back = drive(c, 0.05f);
         first = i == 10 ? c.speed : first;
@@ -586,9 +587,9 @@ TEST_CASE("a shuttle's chain carries the train up it going backwards too")
     c.start = c.at = 70;
     c.lift_speed = 3;
     c.launch_speed = 6; // Too slow to climb far up the spike on its own
-    float lowest = c.at;
+    f32 lowest = c.at;
     bool back = false;
-    for (std::int32_t i = 0; i < 4000 && !back; ++i)
+    for (i32 i = 0; i < 4000 && !back; ++i)
     {
         back = drive(c, 0.05f);
         lowest = std::min(lowest, c.at);
@@ -601,14 +602,14 @@ TEST_CASE("a shuttle's chain carries the train up it going backwards too")
 TEST_CASE("a swinging shuttle is pushed each pass, building up and dying down, and stops after its passes")
 {
     Coaster c = spikes(Shuttle::Swing, 8);
-    c.launch_speed = 20;              // Its first, gentlest push still carries it clear of the station
-    std::vector<float> fastest(9, 0); // On each pass
+    c.launch_speed = 20;            // Its first, gentlest push still carries it clear of the station
+    std::vector<f32> fastest(9, 0); // On each pass
     bool back = false;
-    for (std::int32_t i = 0; i < 20000 && !back; ++i)
+    for (i32 i = 0; i < 20000 && !back; ++i)
     {
-        const std::int32_t pass = c.passed;
+        const i32 pass = c.passed;
         back = drive(c, 0.05f);
-        fastest[static_cast<std::size_t>(pass)] = std::max(fastest[static_cast<std::size_t>(pass)], std::abs(c.speed));
+        fastest[static_cast<usize>(pass)] = std::max(fastest[static_cast<usize>(pass)], std::abs(c.speed));
     }
     CHECK(back);
     CHECK(c.at == 60);
@@ -619,12 +620,12 @@ TEST_CASE("a swinging shuttle is pushed each pass, building up and dying down, a
 TEST_CASE("a launched tower's train is braked as it falls back, then pushed up again but less high")
 {
     Coaster c = tower(Shuttle::Tower, 2);
-    std::vector<float> top(3, 0); // Highest on each pass
+    std::vector<f32> top(3, 0); // Highest on each pass
     bool back = false;
-    for (std::int32_t i = 0; i < 4000 && !back; ++i)
+    for (i32 i = 0; i < 4000 && !back; ++i)
     {
         back = drive(c, 0.05f);
-        top[static_cast<std::size_t>(std::min(c.passed, 2))] = std::max(top[static_cast<std::size_t>(std::min(c.passed, 2))], c.at);
+        top[static_cast<usize>(std::min(c.passed, 2))] = std::max(top[static_cast<usize>(std::min(c.passed, 2))], c.at);
     }
     CHECK(back);
     CHECK(c.at == 5);
@@ -636,9 +637,9 @@ TEST_CASE("a launched tower's train is braked as it falls back, then pushed up a
 TEST_CASE("a drop tower's train is held at the top of its climb before it falls")
 {
     Coaster c = tower(Shuttle::Drop, 1);
-    float still = 0; // Seconds stopped up the tower
+    f32 still = 0; // Seconds stopped up the tower
     bool back = false;
-    for (std::int32_t i = 0; i < 4000 && !back; ++i)
+    for (i32 i = 0; i < 4000 && !back; ++i)
     {
         back = drive(c, 0.05f);
         still += c.speed == 0 && c.at > 10 ? 0.05f : 0;
@@ -646,8 +647,8 @@ TEST_CASE("a drop tower's train is held at the top of its climb before it falls"
     CHECK(back);
     CHECK(still == doctest::Approx(3).epsilon(0.1));
     Coaster plain = tower(Shuttle::Tower, 1);
-    float plain_still = 0;
-    for (std::int32_t i = 0; i < 4000 && plain.running; ++i)
+    f32 plain_still = 0;
+    for (i32 i = 0; i < 4000 && plain.running; ++i)
     {
         drive(plain, 0.05f);
         plain_still += plain.speed == 0 && plain.at > 10 ? 0.05f : 0;
@@ -673,7 +674,7 @@ TEST_CASE("a train going round an unfinished track runs off its end and crashes 
 {
     Coaster c = unfinished();
     bool back = false;
-    for (std::int32_t i = 0; i < 4000 && c.running; ++i)
+    for (i32 i = 0; i < 4000 && c.running; ++i)
         back = back || drive(c, 0.05f);
     CHECK_FALSE(back);
     CHECK(c.crashed);
@@ -686,7 +687,7 @@ TEST_CASE("a train off the end of a pool slide splashes out, not crashed, still 
     Coaster c = unfinished();
     c.splash_out = true;
     bool back = false;
-    for (std::int32_t i = 0; i < 4000 && c.running; ++i)
+    for (i32 i = 0; i < 4000 && c.running; ++i)
         back = drive(c, 0.05f);
     CHECK(back);
     CHECK(c.splashed);
@@ -705,7 +706,7 @@ TEST_CASE("a shuttle's train pushed too hard runs off an end and crashes")
 {
     Coaster c = spikes(Shuttle::Back, 2);
     c.launch_speed = 40; // Far more than the spike behind the station takes
-    for (std::int32_t i = 0; i < 4000 && c.running; ++i)
+    for (i32 i = 0; i < 4000 && c.running; ++i)
         drive(c, 0.05f);
     CHECK(c.crashed);
     CHECK(c.at == 5); // Its back off the start of the track
@@ -717,7 +718,7 @@ TEST_CASE("a train on a finished circuit never crashes")
     Coaster c = hill();
     c.running = true;
     bool back = false;
-    for (std::int32_t i = 0; i < 4000 && !back; ++i)
+    for (i32 i = 0; i < 4000 && !back; ++i)
         back = drive(c, 0.05f);
     CHECK(back);
     CHECK_FALSE(c.crashed);
@@ -728,7 +729,7 @@ TEST_CASE("a ghost train crashes off the end of an unfinished track as any train
 {
     Coaster c = unfinished();
     c.ghost = true;
-    for (std::int32_t i = 0; i < 2000 && !c.crashed; ++i)
+    for (i32 i = 0; i < 2000 && !c.crashed; ++i)
         drive(c, 0.05f);
     CHECK(c.crashed);
     CHECK_FALSE(c.running);
@@ -742,7 +743,7 @@ TEST_CASE("a train on a circuit with another station stops there, and goes on ro
     c.fixed_speed = 4;
     c.stops = { 50 };
     c.running = true;
-    for (std::int32_t i = 0; i < 100 && c.running; ++i)
+    for (i32 i = 0; i < 100 && c.running; ++i)
         CHECK_FALSE(drive(c, 0.25f));
     CHECK_FALSE(c.running);
     CHECK(standing_at(c) == 1);
@@ -750,7 +751,7 @@ TEST_CASE("a train on a circuit with another station stops there, and goes on ro
     CHECK(track_point(c, c.at).x == track_point(c, 60).x);
     c.running = true;
     bool back = false;
-    for (std::int32_t i = 0; i < 100 && !back; ++i)
+    for (i32 i = 0; i < 100 && !back; ++i)
         back = drive(c, 0.25f);
     CHECK(back);
     CHECK(standing_at(c) == 0);
@@ -775,7 +776,7 @@ TEST_CASE("a train held up by the block ahead a hair short of the station's end 
 
 TEST_CASE("a train held up in the station by the one ahead is where its riders get off, short of the station's end")
 {
-    const auto held_at = [](float travelled) {
+    const auto held_at = [](f32 travelled) {
         Coaster c = hill();
         c.fixed_speed = 4;
         c.running = true;
@@ -802,9 +803,9 @@ TEST_CASE("a lap's graphs take a sample each tenth of a second, newest first whe
     c.kinds = { Stretch::Plain, Stretch::Plain };
     c.speed = 10;
     LapRecorder lap;
-    for (std::int32_t i = 0; i < 3; ++i)
+    for (i32 i = 0; i < 3; ++i)
     {
-        c.at = static_cast<float>(i);
+        c.at = static_cast<f32>(i);
         record(lap, c, 0.06f);
         record(lap, c, 0.06f);
         c.speed += 1;
@@ -816,7 +817,7 @@ TEST_CASE("a lap's graphs take a sample each tenth of a second, newest first whe
     CHECK(lap.vertical[0] == doctest::Approx(9.81f));
     CHECK(lap.lateral[0] == doctest::Approx(0));
     const rct3::save::model::RideGraphs graphs = end_lap(lap);
-    CHECK(graphs.speed == std::vector<float> { 12, 11, 10 });
+    CHECK(graphs.speed == std::vector<f32> { 12, 11, 10 });
     CHECK(lap.speed.empty());
 }
 
@@ -833,12 +834,12 @@ TEST_CASE("a long lap's graphs keep its last samples")
 TEST_CASE("a turn banked to suit the train's speed presses riders into their seats, not sideways")
 {
     // A circle 20 m round its middle, banked 45 degrees in, taken at the speed whose pull into the turn is one g.
-    constexpr float kRadius = 20;
-    constexpr std::int32_t kPoints = 361;
+    constexpr f32 kRadius = 20;
+    constexpr i32 kPoints = 361;
     Coaster c;
-    for (std::int32_t i = 0; i < kPoints; ++i)
+    for (i32 i = 0; i < kPoints; ++i)
     {
-        const float angle = 2 * std::numbers::pi_v<float> * static_cast<float>(i) / (kPoints - 1);
+        const f32 angle = 2 * std::numbers::pi_v<f32> * static_cast<f32>(i) / (kPoints - 1);
         const glm::vec3 out { std::cos(angle), 0, std::sin(angle) };
         c.points.push_back(out * kRadius);
         c.ups.push_back(glm::normalize(glm::vec3(0, 1, 0) - out));
@@ -848,20 +849,20 @@ TEST_CASE("a turn banked to suit the train's speed presses riders into their sea
     }
     c.speed = std::sqrt(9.81f * kRadius);
     LapRecorder lap;
-    for (std::int32_t i = 0; i < 20; ++i)
+    for (i32 i = 0; i < 20; ++i)
     {
-        c.at = static_cast<float>(i) * c.speed * 0.025f;
+        c.at = static_cast<f32>(i) * c.speed * 0.025f;
         record(lap, c, 0.025f);
     }
     REQUIRE_FALSE(lap.vertical.empty());
-    CHECK(lap.vertical.back() == doctest::Approx(9.81f * std::numbers::sqrt2_v<float>).epsilon(0.02));
+    CHECK(lap.vertical.back() == doctest::Approx(9.81f * std::numbers::sqrt2_v<f32>).epsilon(0.02));
     CHECK(std::abs(lap.lateral.back()) < 0.2f);
     // Unbanked, the same turn pulls them sideways by a g.
     c.ups.clear();
     LapRecorder flat;
-    for (std::int32_t i = 0; i < 20; ++i)
+    for (i32 i = 0; i < 20; ++i)
     {
-        c.at = static_cast<float>(i) * c.speed * 0.025f;
+        c.at = static_cast<f32>(i) * c.speed * 0.025f;
         record(flat, c, 0.025f);
     }
     CHECK(std::abs(flat.lateral.back()) == doctest::Approx(9.81f).epsilon(0.02));
@@ -884,13 +885,13 @@ namespace
 {
     /// A pool slide's car going round a flat circle of radius `r` to its left at `speed`, swinging in its trough as a
     /// body slide's car does.
-    Coaster circling(float r, float speed)
+    Coaster circling(f32 r, f32 speed)
     {
         Coaster c;
-        constexpr std::int32_t kPoints = 64;
-        for (std::int32_t k = 0; k <= kPoints; ++k)
+        constexpr i32 kPoints = 64;
+        for (i32 k = 0; k <= kPoints; ++k)
         {
-            const float a = 2 * std::numbers::pi_v<float> * static_cast<float>(k) / kPoints;
+            const f32 a = 2 * std::numbers::pi_v<f32> * static_cast<f32>(k) / kPoints;
             c.points.emplace_back(r * std::cos(a), 0, r * std::sin(a));
             c.distance.push_back(r * a);
             c.height.push_back(0);
@@ -912,14 +913,14 @@ TEST_CASE("a slide's car swings up its trough's wall in a turn, the further the 
 {
     Coaster slow = circling(10, 9);
     Coaster fast = circling(10, 13);
-    for (std::int32_t i = 0; i < 80; ++i)
+    for (i32 i = 0; i < 80; ++i)
     {
         drive(slow, 0.05f);
         drive(fast, 0.05f);
     }
     // A gentle turn's pull is not enough to slide it up the wall against the wall's friction.
     Coaster gentle = circling(10, 5);
-    for (std::int32_t i = 0; i < 80; ++i)
+    for (i32 i = 0; i < 80; ++i)
         drive(gentle, 0.05f);
     CHECK(gentle.lean.value == 0);
     REQUIRE(slow.running);
@@ -932,13 +933,13 @@ TEST_CASE("a slide's car swings up its trough's wall in a turn, the further the 
 TEST_CASE("a slide's car taken round a tight turn too fast flies out of its trough and crashes, but not in a tube")
 {
     Coaster c = circling(3, 22);
-    for (std::int32_t i = 0; i < 12 && c.running; ++i)
+    for (i32 i = 0; i < 12 && c.running; ++i)
         drive(c, 0.05f);
     CHECK(c.crashed);
     CHECK_FALSE(c.running);
     Coaster tube = circling(3, 22);
     tube.covered.assign(tube.distance.size(), true);
-    for (std::int32_t i = 0; i < 12; ++i) // Short of coming round to its start
+    for (i32 i = 0; i < 12; ++i) // Short of coming round to its start
         drive(tube, 0.05f);
     CHECK_FALSE(tube.crashed);
     CHECK(tube.running);
@@ -951,9 +952,9 @@ TEST_CASE("a slide's car that feels only a share of a turn's pull rides a turn t
     full.trough = Trough { .damping = { 2 }, .friction = 0.1f, .length = { 1.6f } };
     Coaster share = full;
     share.trough->pull = 0.2f;
-    for (std::int32_t i = 0; i < 40 && full.running; ++i)
+    for (i32 i = 0; i < 40 && full.running; ++i)
         drive(full, 0.05f);
-    for (std::int32_t i = 0; i < 40; ++i)
+    for (i32 i = 0; i < 40; ++i)
         drive(share, 0.05f);
     CHECK(full.crashed);
     CHECK_FALSE(share.crashed);
@@ -964,7 +965,7 @@ TEST_CASE("a slide's car taken round onto its lift is not swung up the wall by t
 {
     Coaster c = circling(3, 22);
     c.steady.assign(c.distance.size(), true);
-    for (std::int32_t i = 0; i < 12; ++i)
+    for (i32 i = 0; i < 12; ++i)
         drive(c, 0.05f);
     CHECK_FALSE(c.crashed);
     CHECK(c.lean.value == 0);
@@ -976,7 +977,7 @@ TEST_CASE("a slide's car on the straight stays in the middle of its trough")
     c.trough = Trough { .damping = { 2 }, .centring = { 1 }, .friction = 0.5f };
     c.points = { { 0, 0, 0 }, { 0, 0, 10 }, { 0, 15, 40 }, { 0, 0, 70 }, { 0, 0, 100 } };
     c.running = true;
-    for (std::int32_t i = 0; i < 200 && c.running; ++i)
+    for (i32 i = 0; i < 200 && c.running; ++i)
     {
         drive(c, 0.05f);
         CHECK(c.lean.value == doctest::Approx(0).epsilon(1e-4));
@@ -986,7 +987,7 @@ TEST_CASE("a slide's car on the straight stays in the middle of its trough")
 namespace
 {
     /// `hill()` laid level throughout, its train running at `speed` 40 m along, with no air holding it back.
-    Coaster level(float speed)
+    Coaster level(f32 speed)
     {
         Coaster c = hill();
         c.kinds[1] = Stretch::Plain;
@@ -1107,13 +1108,13 @@ TEST_CASE("a car off a slide's end flies on, comes down on its water ahead and f
 {
     Flight f { .from = { 0, 3, 0 }, .way = { 0, 0, 1 }, .at = { 0, 3, 0 }, .velocity = { 0, 0, 8 }, .water = 1 };
     // From 2 m over the water it falls for sqrt(2 * 2 / g) seconds, going on at its speed.
-    const float fall = std::sqrt(4 / 9.81f);
+    const f32 fall = std::sqrt(4 / 9.81f);
     CHECK(fly(f, fall / 2));
     CHECK_FALSE(f.afloat.has_value());
     CHECK(f.at.y == doctest::Approx(3 - 9.81f / 2 * fall * fall / 4));
     CHECK(f.at.z == doctest::Approx(4 * fall));
     // Nose down as it falls, levelling off once afloat.
-    const float dived = flown(f, glm::mat4(1.0f))[2].y;
+    const f32 dived = flown(f, glm::mat4(1.0f))[2].y;
     CHECK(dived < 0);
     CHECK(fly(f, fall));
     CHECK(f.afloat.has_value());
@@ -1122,12 +1123,12 @@ TEST_CASE("a car off a slide's end flies on, comes down on its water ahead and f
     CHECK(flown(f, glm::mat4(1.0f))[2].y > dived);
     CHECK(flown(f, glm::mat4(1.0f))[2].y < 0);
     // It drifts on slowing, then sinks and is gone.
-    const float drifted = f.at.z;
+    const f32 drifted = f.at.z;
     CHECK(fly(f, 1));
     CHECK(flown(f, glm::mat4(1.0f))[2].y == doctest::Approx(0).epsilon(1e-5));
     CHECK(f.at.z > drifted);
     CHECK(glm::length(f.velocity) < 8);
-    float t = 0;
+    f32 t = 0;
     while (fly(f, 0.1f) && t < 20)
         t += 0.1f;
     CHECK(t == doctest::Approx(kGone.value - 1 - fall * 1.5f - 0.1f).epsilon(0.05));
@@ -1138,7 +1139,7 @@ TEST_CASE("a car off a slide's end is stopped by its pool's far wall, and flies 
 {
     const Flight start { .from = { 0, 3, 0 }, .way = { 0, 0, 1 }, .at = { 0, 3, 0 }, .velocity = { 0, 0, 8 }, .water = 1, .speed = { 8 }, .reach = { 5 } };
     Flight stepped = start;
-    for (std::int32_t i = 0; i < 20; ++i)
+    for (i32 i = 0; i < 20; ++i)
         fly(stepped, 0.25f);
     Flight whole = start;
     fly(whole, 5);
@@ -1167,7 +1168,7 @@ TEST_CASE("a train's spinning parts turn in a curve without changing how it runs
     plain.trough.reset();
     Coaster spinning = plain;
     spinning.spinning = SpinningPart { .damping = { 0.3f }, .pull = { 0.3f } };
-    for (std::int32_t i = 0; i < 80; ++i)
+    for (i32 i = 0; i < 80; ++i)
     {
         drive(plain, 0.05f);
         drive(spinning, 0.05f);

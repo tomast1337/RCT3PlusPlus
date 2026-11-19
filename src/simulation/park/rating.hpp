@@ -22,6 +22,7 @@
 // saves hold.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/park.hpp"
 #include "save/model/people.hpp"
 #include "save/model/rides.hpp"
@@ -34,46 +35,46 @@
 namespace rct3::simulation::park
 {
 
-    inline constexpr std::int32_t kMaxRating = 1000;
+    inline constexpr i32 kMaxRating = 1000;
 
     /// What the rating needs from one ride.
     struct RideRatingInput
     {
-        float downtime_percent = 0;      ///< 0..100 of the time the ride is out of action
-        std::optional<float> excitement; ///< None while the ride has no valid test result
-        std::optional<float> intensity;
+        f32 downtime_percent = 0;      ///< 0..100 of the time the ride is out of action
+        std::optional<f32> excitement; ///< None while the ride has no valid test result
+        std::optional<f32> intensity;
     };
 
     /// Everything the weekly score is worked out from.
     struct RatingInput
     {
         bool harder = false; ///< The scenario asks for a harder rating
-        std::int32_t guests = 0;
-        std::int32_t guests_inside = 0; ///< Guests walked through, counted one by one
-        float happiness = 0;            ///< Their happiness, each 0..1, added up
+        i32 guests = 0;
+        i32 guests_inside = 0; ///< Guests walked through, counted one by one
+        f32 happiness = 0;     ///< Their happiness, each 0..1, added up
         std::vector<RideRatingInput> rides;
-        std::int32_t old_litter = 0; ///< Pieces lying long enough to count, vomit too
-        std::int32_t lost_guests = 0;
+        i32 old_litter = 0; ///< Pieces lying long enough to count, vomit too
+        i32 lost_guests = 0;
         std::optional<units::Seconds> since_crash; ///< Since the park's latest crash; none once it is forgotten
-        std::int32_t awards = 0;                   ///< Given in the months the park keeps
-        std::int32_t fines = 0;
-        float prize = 0; ///< Points a prize adds (ParkState::rating_bonus)
+        i32 awards = 0;                            ///< Given in the months the park keeps
+        i32 fines = 0;
+        f32 prize = 0; ///< Points a prize adds (ParkState::rating_bonus)
     };
 
     /// The parts of a score, each already signed as it adds to the total.
     struct RatingParts
     {
-        std::int32_t happiness = 0;
-        std::int32_t rides = 0;
-        std::int32_t reliability = 0;
-        std::int32_t guests = 0;
-        std::int32_t litter = 0;      ///< Zero or negative
-        std::int32_t lost_guests = 0; ///< Zero or negative
-        std::int32_t crash = 0;       ///< Zero or negative
-        std::int32_t awards = 0;      ///< Awards less fines
-        std::int32_t prize = 0;
-        std::int32_t harder = 0; ///< Zero or negative: what the harder rating took off
-        std::int32_t total = 0;  ///< The parts added up, kept to 0..kMaxRating
+        i32 happiness = 0;
+        i32 rides = 0;
+        i32 reliability = 0;
+        i32 guests = 0;
+        i32 litter = 0;      ///< Zero or negative
+        i32 lost_guests = 0; ///< Zero or negative
+        i32 crash = 0;       ///< Zero or negative
+        i32 awards = 0;      ///< Awards less fines
+        i32 prize = 0;
+        i32 harder = 0; ///< Zero or negative: what the harder rating took off
+        i32 total = 0;  ///< The parts added up, kept to 0..kMaxRating
 
         bool operator==(const RatingParts&) const = default;
     };
@@ -82,10 +83,10 @@ namespace rct3::simulation::park
 
     /// The score's inputs gathered from the park's people, rides and awards at calendar time `now`. The guest
     /// count, the harder flag and the prize are left for the caller.
-    [[nodiscard]] RatingInput rating_input(const save::model::PeopleModel& people, const save::model::RideModel& rides, const save::model::Awards& awards, float now);
+    [[nodiscard]] RatingInput rating_input(const save::model::PeopleModel& people, const save::model::RideModel& rides, const save::model::Awards& awards, f32 now);
 
     /// The rating after a week: `before` (0..1, none for a park not rated yet) moved part of the way towards
     /// `score` (0..kMaxRating).
-    [[nodiscard]] float next_rating(std::optional<float> before, std::int32_t score) noexcept;
+    [[nodiscard]] f32 next_rating(std::optional<f32> before, i32 score) noexcept;
 
 } // namespace rct3::simulation::park

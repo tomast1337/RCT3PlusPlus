@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/design.hpp"
 
+#include "core/types.hpp"
 #include "save/value.hpp"
 
 #include <algorithm>
@@ -20,39 +21,39 @@ namespace rct3::save::model
         // Class and attribute names of a design's header and picture, as the format names them.
         constexpr std::string_view kHeaderClass = "TrackedRideInstanceSaveHeader";
         constexpr std::string_view kPicture = "TrackedRidePreview";
-        constexpr std::uint32_t kLargestPicture = 1024; ///< A bound on what a file may claim
-        constexpr std::uint8_t kLevels = 63;            ///< Levels of a packed pixel
-        constexpr std::uint8_t kFirstSkip = 64;         ///< Packed bytes from here skip clear pixels
-        constexpr std::size_t kLongestSkip = 255 - (kFirstSkip - 1);
+        constexpr u32 kLargestPicture = 1024; ///< A bound on what a file may claim
+        constexpr u8 kLevels = 63;            ///< Levels of a packed pixel
+        constexpr u8 kFirstSkip = 64;         ///< Packed bytes from here skip clear pixels
+        constexpr usize kLongestSkip = 255 - (kFirstSkip - 1);
         /// The header words every design of the newer generation carries.
         constexpr Header kDesignHeader { .words = { 2, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0xFFFFFFFFu, 0xFFFFFFFFu, 0, 0 } };
 
-        std::int32_t integer(const Value& v, std::string_view name, std::int32_t fallback = 0)
+        i32 integer(const Value& v, std::string_view name, i32 fallback = 0)
         {
             const auto f = v.field(name);
             if (!f || f->kind() != ValueKind::Integer)
                 return fallback;
-            return static_cast<std::int32_t>(std::clamp<std::int64_t>(f->as_integer(), std::numeric_limits<std::int32_t>::min(), std::numeric_limits<std::int32_t>::max()));
+            return static_cast<i32>(std::clamp<i64>(f->as_integer(), std::numeric_limits<i32>::min(), std::numeric_limits<i32>::max()));
         }
 
-        float number(const Value& v, std::string_view name)
+        f32 number(const Value& v, std::string_view name)
         {
             const auto f = v.field(name);
             if (!f)
                 return 0;
-            const float x = f->kind() == ValueKind::Float ? f->as_float() : f->kind() == ValueKind::Integer ? static_cast<float>(f->as_integer()) : 0.0f;
+            const f32 x = f->kind() == ValueKind::Float ? f->as_float() : f->kind() == ValueKind::Integer ? static_cast<f32>(f->as_integer()) : 0.0f;
             return std::isfinite(x) ? x : 0.0f;
         }
 
-        std::vector<std::uint8_t> bytes(const Value& v, std::string_view name)
+        std::vector<u8> bytes(const Value& v, std::string_view name)
         {
-            std::vector<std::uint8_t> out;
+            std::vector<u8> out;
             const auto f = v.field(name);
             if (!f || f->kind() != ValueKind::List)
                 return out;
             out.reserve(f->items().size());
             for (const Value& item : f->items())
-                out.push_back(item.kind() == ValueKind::Integer ? static_cast<std::uint8_t>(item.as_integer()) : 0);
+                out.push_back(item.kind() == ValueKind::Integer ? static_cast<u8>(item.as_integer()) : 0);
             return out;
         }
 
@@ -74,13 +75,13 @@ namespace rct3::save::model
         return "unknown";
     }
 
-    std::vector<std::uint8_t> design_picture(std::uint32_t width, std::uint32_t height, std::span<const std::uint8_t> packed, std::span<const std::uint8_t> unpacked)
+    std::vector<u8> design_picture(u32 width, u32 height, std::span<const u8> packed, std::span<const u8> unpacked)
     {
-        const std::size_t pixels = std::size_t { width } * height;
+        const usize pixels = usize { width } * height;
         if (width == 0 || height == 0 || width > kLargestPicture || height > kLargestPicture)
             return { };
-        std::vector<std::uint8_t> rgba(pixels * 4, 0);
-        const auto put = [&](std::size_t at, std::uint8_t level) {
+        std::vector<u8> rgba(pixels * 4, 0);
+        const auto put = [&](usize at, u8 level) {
             rgba[at * 4] = rgba[at * 4 + 1] = rgba[at * 4 + 2] = level;
             rgba[at * 4 + 3] = 255;
         };
@@ -88,15 +89,15 @@ namespace rct3::save::model
         {
             if (unpacked.size() != pixels)
                 return { };
-            for (std::size_t i = 0; i < pixels; ++i)
+            for (usize i = 0; i < pixels; ++i)
                 if (unpacked[i] != 0)
                     put(i, unpacked[i]);
             return rgba;
         }
-        std::size_t at = 0;
-        for (std::size_t i = 0; i < packed.size(); ++i)
+        usize at = 0;
+        for (usize i = 0; i < packed.size(); ++i)
         {
-            const std::uint8_t b = packed[i];
+            const u8 b = packed[i];
             if (b == 0)
             {
                 if (i + 1 < packed.size() && packed[i + 1] == 0)
@@ -106,7 +107,7 @@ namespace rct3::save::model
             else if (b < kFirstSkip)
             {
                 if (at < pixels)
-                    put(at, static_cast<std::uint8_t>(std::lround(static_cast<float>(b) * 255.0f / kLevels)));
+                    put(at, static_cast<u8>(std::lround(static_cast<f32>(b) * 255.0f / kLevels)));
                 ++at;
             }
             else
@@ -120,10 +121,10 @@ namespace rct3::save::model
         const auto file = read_save(data, { .verify_checksum = false });
         if (!file)
             return std::unexpected(DesignError::NotASave);
-        std::optional<std::uint32_t> header_class;
-        for (std::size_t i = 0; i < file->classes.size() && !header_class; ++i)
+        std::optional<u32> header_class;
+        for (usize i = 0; i < file->classes.size() && !header_class; ++i)
             if (file->classes[i].name == kHeaderClass)
-                header_class = static_cast<std::uint32_t>(i);
+                header_class = static_cast<u32>(i);
         const auto object = header_class ? std::ranges::find(file->objects, *header_class, &Object::class_index) : file->objects.end();
         if (object == file->objects.end())
             return std::unexpected(DesignError::NoHeader);
@@ -139,7 +140,7 @@ namespace rct3::save::model
         if (const auto cost = h.field("Cost"); cost && cost->kind() == ValueKind::Integer)
             s.cost = { cost->as_integer() };
         // The file keeps -1 for none.
-        if (const std::int32_t scenario = integer(h, "NeedScenarioComplete", -1); scenario >= 0)
+        if (const i32 scenario = integer(h, "NeedScenarioComplete", -1); scenario >= 0)
             s.scenario = scenario;
         s.level = integer(h, "CompletionLevel");
         s.train = integer(h, "TrainSelection");
@@ -171,8 +172,8 @@ namespace rct3::save::model
                 if (const auto picture = decode_object(*file, *target))
                 {
                     const Value& p = picture->fields;
-                    const auto width = static_cast<std::uint32_t>(std::max(integer(p, "Width"), 0));
-                    const auto height = static_cast<std::uint32_t>(std::max(integer(p, "Height"), 0));
+                    const auto width = static_cast<u32>(std::max(integer(p, "Width"), 0));
+                    const auto height = static_cast<u32>(std::max(integer(p, "Height"), 0));
                     s.picture = design_picture(width, height, bytes(p, "Compact"), bytes(p, "Red"));
                     if (!s.picture.empty())
                     {
@@ -183,11 +184,11 @@ namespace rct3::save::model
         return s;
     }
 
-    std::vector<std::uint8_t> pack_design_picture(std::span<const std::uint8_t> rgba)
+    std::vector<u8> pack_design_picture(std::span<const u8> rgba)
     {
-        std::vector<std::uint8_t> out;
-        std::size_t clear = 0;
-        for (std::size_t at = 0; at + 3 < rgba.size(); at += 4)
+        std::vector<u8> out;
+        usize clear = 0;
+        for (usize at = 0; at + 3 < rgba.size(); at += 4)
         {
             if (rgba[at + 3] == 0)
             {
@@ -195,8 +196,8 @@ namespace rct3::save::model
                 continue;
             }
             for (; clear > 0; clear -= std::min(clear, kLongestSkip))
-                out.push_back(static_cast<std::uint8_t>(std::min(clear, kLongestSkip) + (kFirstSkip - 1)));
-            out.push_back(static_cast<std::uint8_t>(std::clamp<std::int32_t>(static_cast<std::int32_t>(std::lround(rgba[at] * float { kLevels } / 255.0f)), 1, kLevels)));
+                out.push_back(static_cast<u8>(std::min(clear, kLongestSkip) + (kFirstSkip - 1)));
+            out.push_back(static_cast<u8>(std::clamp<i32>(static_cast<i32>(std::lround(rgba[at] * f32 { kLevels } / 255.0f)), 1, kLevels)));
         }
         out.insert(out.end(), { 0, 0 });
         return out;
@@ -210,7 +211,7 @@ namespace rct3::save::model
         struct ObjectBuilder
         {
             std::string_view class_name;
-            std::uint64_t id = 0;
+            u64 id = 0;
             std::vector<Attribute> attributes { };
             std::vector<std::string_view> names { };
             std::vector<Value> values { };
@@ -221,11 +222,11 @@ namespace rct3::save::model
                 attributes.push_back(std::move(a));
                 values.push_back(std::move(v));
             }
-            void integer(std::string_view name, std::int64_t v)
+            void integer(std::string_view name, i64 v)
             {
                 add({ .name = name, .type = "int32", .size = 4 }, Value::make_integer(v));
             }
-            void number(std::string_view name, float v)
+            void number(std::string_view name, f32 v)
             {
                 add({ .name = name, .type = "float32", .size = 4 }, Value::make_float(v));
             }
@@ -233,7 +234,7 @@ namespace rct3::save::model
             {
                 add({ .name = name, .type = "bool", .size = 1 }, Value::make_bool(v));
             }
-            void reference(std::string_view name, std::uint64_t v)
+            void reference(std::string_view name, u64 v)
             {
                 add({ .name = name, .type = "managedobjectptr", .size = 8 }, Value::make_reference(v));
             }
@@ -244,15 +245,15 @@ namespace rct3::save::model
             void colours(std::string_view name, const RideColours& c)
             {
                 std::vector<Value> v;
-                for (const std::uint8_t x : c)
+                for (const u8 x : c)
                     v.push_back(Value::make_integer(x));
                 add({ .name = name, .type = "struct", .size = 12, .children = { int32("COL0"), int32("COL1"), int32("COL2") } }, Value::make_struct({ "COL0", "COL1", "COL2" }, std::move(v)));
             }
             /// Where a piece, platform or door stands.
-            void placement(std::int32_t col, std::int32_t row, std::int32_t height, std::int32_t direction, std::int32_t corner)
+            void placement(i32 col, i32 row, i32 height, i32 direction, i32 corner)
             {
                 std::vector<Value> v;
-                for (const std::int32_t x : { corner, direction, height, col, row })
+                for (const i32 x : { corner, direction, height, col, row })
                     v.push_back(Value::make_integer(x));
                 add({ .name = "SceneryItemDataField", .type = "struct", .size = 20, .children = { int32("CORNER"), int32("DIRECTION"), int32("HEIGHT"), int32("POSX"), int32("POSZ") } }, Value::make_struct({ "CORNER", "DIRECTION", "HEIGHT", "POSX", "POSZ" }, std::move(v)));
             }
@@ -294,8 +295,8 @@ namespace rct3::save::model
             return std::unexpected(DesignError::NoTrack);
         const Track& track = *ride.track;
         const std::vector<TrackPiece>& pieces = track.pieces;
-        std::unordered_map<std::uint64_t, const PlacedObject*> by_id;
-        std::unordered_map<std::uint64_t, const PlacedObject*> by_owner; // a platform's object names the platform as its owner
+        std::unordered_map<u64, const PlacedObject*> by_id;
+        std::unordered_map<u64, const PlacedObject*> by_owner; // a platform's object names the platform as its owner
         for (const PlacedObject& o : objects)
         {
             by_id.try_emplace(o.id, &o);
@@ -304,19 +305,19 @@ namespace rct3::save::model
         }
 
         // ---- 1. Ids: the header first, as the root; the rest in any order, as a reader remaps them ----
-        std::uint64_t next_id = 1;
-        const std::uint64_t header_id = next_id++, ride_id = next_id++, picture_id = next_id++, stations_id = next_id++, track_id = next_id++;
-        std::vector<std::uint64_t> segment_ids(std::max<std::size_t>(track.segments.size(), 1));
-        for (std::uint64_t& s : segment_ids)
+        u64 next_id = 1;
+        const u64 header_id = next_id++, ride_id = next_id++, picture_id = next_id++, stations_id = next_id++, track_id = next_id++;
+        std::vector<u64> segment_ids(std::max<usize>(track.segments.size(), 1));
+        for (u64& s : segment_ids)
             s = next_id++;
-        std::vector<std::uint64_t> piece_ids(pieces.size());
-        for (std::uint64_t& p : piece_ids)
+        std::vector<u64> piece_ids(pieces.size());
+        for (u64& p : piece_ids)
             p = next_id++;
         std::vector<ObjectBuilder> built;
 
         // An asset entry per symbol and overlay, shared by all that name it.
-        std::map<std::pair<std::string, std::string>, std::uint64_t> entries;
-        const auto entry = [&](const PlacedObject& o) -> std::optional<std::uint64_t> {
+        std::map<std::pair<std::string, std::string>, u64> entries;
+        const auto entry = [&](const PlacedObject& o) -> std::optional<u64> {
             if (o.symbol.empty() || o.overlay.empty())
                 return std::nullopt;
             const auto [at, added] = entries.try_emplace({ o.symbol, overlay_path(o.overlay) }, next_id);
@@ -341,9 +342,9 @@ namespace rct3::save::model
             h.integer("Rows", summary.length);
             const TestResults results = summary.results.value_or(TestResults { });
             std::vector<Value> r;
-            for (const float x : { results.air_time.value, results.average_speed, results.highest_drop.value, results.max_lateral, results.max_negative_vertical, results.max_positive_vertical, results.max_speed })
+            for (const f32 x : { results.air_time.value, results.average_speed, results.highest_drop.value, results.max_lateral, results.max_negative_vertical, results.max_positive_vertical, results.max_speed })
                 r.push_back(Value::make_float(x));
-            for (const std::int32_t x : { results.drop_count, results.inversion_count, results.lift_hill_count })
+            for (const i32 x : { results.drop_count, results.inversion_count, results.lift_hill_count })
                 r.push_back(Value::make_integer(x));
             r.push_back(Value::make_float(results.ride_length.value));
             r.push_back(Value::make_float(results.ride_time.value));
@@ -400,7 +401,7 @@ namespace rct3::save::model
         {
             ObjectBuilder p { .class_name = kPicture, .id = picture_id };
             std::vector<Value> packed;
-            for (const std::uint8_t b : pack_design_picture(summary.picture))
+            for (const u8 b : pack_design_picture(summary.picture))
                 packed.push_back(Value::make_integer(b));
             p.add({ .name = "Compact", .type = "array", .children = { { .name = "Compact", .type = "uint8", .size = 1 } } }, Value::make_list(std::move(packed)));
             p.integer("Height", summary.picture_height);
@@ -414,10 +415,10 @@ namespace rct3::save::model
             std::vector<Value> list;
             for (const Station& station : ride.stations)
             {
-                std::array<std::uint64_t, 2> doors { };
-                for (std::size_t k = 0; k < doors.size(); ++k)
+                std::array<u64, 2> doors { };
+                for (usize k = 0; k < doors.size(); ++k)
                 {
-                    const std::uint64_t placed = k == 0 ? station.entrance : station.exit;
+                    const u64 placed = k == 0 ? station.entrance : station.exit;
                     if (placed == 0)
                         continue;
                     const auto door = by_id.find(placed);
@@ -426,7 +427,7 @@ namespace rct3::save::model
                         return std::unexpected(DesignError::NoAsset);
                     const PlacedObject& d = *door->second;
                     ObjectBuilder placement { .class_name = "SceneryItemPlacementSingle", .id = next_id++ };
-                    placement.colours("FlexiColourField", { static_cast<std::uint8_t>(d.colours[0]), static_cast<std::uint8_t>(d.colours[1]), static_cast<std::uint8_t>(d.colours[2]) });
+                    placement.colours("FlexiColourField", { static_cast<u8>(d.colours[0]), static_cast<u8>(d.colours[1]), static_cast<u8>(d.colours[2]) });
                     placement.reference("Owner", ride_id);
                     placement.reference("SIDDatabaseEntry", *asset);
                     placement.placement(d.col, d.row, d.base_height.value_or(0), d.rotation, d.quadrant);
@@ -463,7 +464,7 @@ namespace rct3::save::model
             t.reference("TrackedRideInstance", ride_id);
             built.push_back(std::move(t));
         }
-        for (std::size_t k = 0; k < segments.size(); ++k)
+        for (usize k = 0; k < segments.size(); ++k)
         {
             const TrackSegment& stretch = segments[k];
             if (stretch.piece_count == 0 || stretch.first_piece + stretch.piece_count > pieces.size())
@@ -478,7 +479,7 @@ namespace rct3::save::model
             s.reference("Track", track_id);
             built.push_back(std::move(s));
 
-            for (std::size_t i = stretch.first_piece; i < stretch.first_piece + stretch.piece_count; ++i)
+            for (usize i = stretch.first_piece; i < stretch.first_piece + stretch.piece_count; ++i)
             {
                 const TrackPiece& piece = pieces[i];
                 const auto object = by_id.find(piece.scenery);
@@ -487,9 +488,9 @@ namespace rct3::save::model
                     return std::unexpected(DesignError::NoAsset);
                 // Round its own stretch when that closes on itself, else on into the next and, on a circuit,
                 // from the last back to the first.
-                const std::size_t first = stretch.first_piece, last = stretch.first_piece + stretch.piece_count - 1;
+                const usize first = stretch.first_piece, last = stretch.first_piece + stretch.piece_count - 1;
                 const bool round = stretch.closed || (track.circuit && segments.size() == 1);
-                std::uint64_t next = 0, prev = 0;
+                u64 next = 0, prev = 0;
                 if (i < last)
                     next = piece_ids[i + 1];
                 else if (round)
@@ -523,7 +524,7 @@ namespace rct3::save::model
                 p.integer("Speed", piece.speed_class.value_or(-1));
                 {
                     std::vector<Value> angles;
-                    for (const float a : piece.arm_angles.value_or(std::array<float, 4> { }))
+                    for (const f32 a : piece.arm_angles.value_or(std::array<f32, 4> { }))
                         angles.push_back(Value::make_float(a));
                     std::vector<Value> arm;
                     arm.push_back(Value::make_list(std::move(angles)));
@@ -555,18 +556,18 @@ namespace rct3::save::model
         // ---- 7. The container: one class per kind of object, its layout that of its first, which every other
         // of its kind shares as they are built alike ----
         std::vector<Class> classes;
-        std::vector<std::uint32_t> class_of(built.size());
-        for (std::size_t i = 0; i < built.size(); ++i)
+        std::vector<u32> class_of(built.size());
+        for (usize i = 0; i < built.size(); ++i)
         {
             const auto found = std::ranges::find(classes, built[i].class_name, &Class::name);
             if (found == classes.end())
                 classes.push_back({ .name = built[i].class_name, .attributes = built[i].attributes });
-            class_of[i] = static_cast<std::uint32_t>(std::ranges::find(classes, built[i].class_name, &Class::name) - classes.begin());
+            class_of[i] = static_cast<u32>(std::ranges::find(classes, built[i].class_name, &Class::name) - classes.begin());
         }
         std::vector<std::vector<std::byte>> payloads;
         std::vector<ObjectRecord> records;
         payloads.reserve(built.size());
-        for (std::size_t i = 0; i < built.size(); ++i)
+        for (usize i = 0; i < built.size(); ++i)
         {
             ObjectBuilder& b = built[i];
             auto payload = encode_object(classes[class_of[i]], Value::make_struct(std::move(b.names), std::move(b.values)));

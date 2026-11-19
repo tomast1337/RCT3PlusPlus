@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/map/window.hpp"
 
+#include "core/types.hpp"
 #include "ui/shape.hpp"
 
 #include <cstdint>
@@ -24,7 +25,7 @@ namespace rct3::ui::screens::map
         }
 
         bool shown;
-        std::int32_t changes = 0;
+        i32 changes = 0;
 
         [[nodiscard]] bool takes_pointer() const override
         {
@@ -55,8 +56,8 @@ namespace rct3::ui::screens::map
                 context.list.shape(back);
             }
             // The swatch: filled when the layer shows, only its outline when it does not.
-            const float s = style_.swatch;
-            const float top = r.y0 + (r.height() - s) / 2;
+            const f32 s = style_.swatch;
+            const f32 top = r.y0 + (r.height() - s) / 2;
             Shape swatch;
             swatch.rect = { r.x0 + style_.swatch_gap / 2, top, r.x0 + style_.swatch_gap / 2 + s, top + s };
             swatch.corners = round_corners(round_ ? s / 2 : s / 4);
@@ -74,11 +75,11 @@ namespace rct3::ui::screens::map
         bool round_;
     };
 
-    std::vector<float> legend_tops(const MapPanelStyle& style, const std::vector<MapLegendEntry>& entries)
+    std::vector<f32> legend_tops(const MapPanelStyle& style, const std::vector<MapLegendEntry>& entries)
     {
-        std::vector<float> tops;
-        float y = 0;
-        for (std::size_t i = 0; i < entries.size(); ++i)
+        std::vector<f32> tops;
+        f32 y = 0;
+        for (usize i = 0; i < entries.size(); ++i)
         {
             if (i > 0 && entries[i].starts_group)
                 y += style.group_gap;
@@ -99,8 +100,8 @@ namespace rct3::ui::screens::map
         canvas_ = &content().add<MapCanvas>("map", style.canvas);
         canvas_->placement = { { 0, 0, 1, 1 }, { 0, 0, -(style.legend_width + style.gap), 0 } };
 
-        const std::vector<float> tops = legend_tops(style_, entries);
-        for (std::size_t i = 0; i < entries.size(); ++i)
+        const std::vector<f32> tops = legend_tops(style_, entries);
+        for (usize i = 0; i < entries.size(); ++i)
         {
             MapLegendRow& row = content().add<MapLegendRow>(entries[i].name.empty() ? std::format("layer{}", i) : entries[i].name, style_, entries[i].colour, entries[i].shown, entries[i].round);
             row.placement = { { 1, 0, 1, 0 }, { -style.legend_width, tops[i], 0, tops[i] + style.row_height } };
@@ -112,7 +113,7 @@ namespace rct3::ui::screens::map
         }
     }
 
-    bool MapPanel::shown(std::size_t index) const
+    bool MapPanel::shown(usize index) const
     {
         return index < rows_.size() && rows_[index]->shown;
     }
@@ -131,7 +132,7 @@ namespace rct3::ui::screens::map
     void MapPanel::update(const UpdateContext& context)
     {
         widgets::Window::update(context);
-        for (std::size_t i = 0; i < rows_.size(); ++i)
+        for (usize i = 0; i < rows_.size(); ++i)
             labels_[i]->style.colour = rows_[i]->shown ? style_.text : style_.text_off;
     }
 

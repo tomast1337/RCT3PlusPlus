@@ -92,6 +92,7 @@
 // types/rct3pp.d.ts describes them for TypeScript.
 #pragma once
 
+#include "core/types.hpp"
 #include "render/device.hpp"
 #include "scripting/script_engine.hpp"
 #include "ui/keyboard.hpp"
@@ -135,20 +136,20 @@ namespace rct3::scene
         /// until the script first moves it.
         struct Pointer
         {
-            float x = 0;
-            float y = 0;
+            f32 x = 0;
+            f32 y = 0;
             bool down = false;
             bool right = false;
             bool middle = false;
             bool shift = false;
             bool control = false;
-            float wheel = 0; ///< Notches turned this frame, positive away from the user
+            f32 wheel = 0; ///< Notches turned this frame, positive away from the user
         };
         [[nodiscard]] std::optional<Pointer> pointer(const render::Device& device) const;
         struct CareerRequest
         {
-            std::int32_t game = 0;
-            std::size_t scenario = 0; ///< Its place in the game's list
+            i32 game = 0;
+            usize scenario = 0; ///< Its place in the game's list
         };
         /// The career scenario the script asked to start, once.
         [[nodiscard]] std::optional<CareerRequest> take_career();
@@ -166,7 +167,7 @@ namespace rct3::scene
             return std::exchange(keys_, { });
         }
         /// The park seconds the script asked to run on without drawing since the last call.
-        [[nodiscard]] float take_advance()
+        [[nodiscard]] f32 take_advance()
         {
             return std::exchange(advance_, 0.0f);
         }
@@ -176,7 +177,7 @@ namespace rct3::scene
         /// screenshots folder.
         [[nodiscard]] std::optional<std::filesystem::path> take_screenshot();
         /// The exit code once the script asked to quit, finished or failed.
-        [[nodiscard]] std::optional<std::int32_t> quit() const
+        [[nodiscard]] std::optional<i32> quit() const
         {
             return quit_;
         }
@@ -185,7 +186,7 @@ namespace rct3::scene
         ScriptHost() = default;
         void define();
         /// The interface shown, the park's or else the front end's, and its scale.
-        [[nodiscard]] std::optional<std::pair<ui::Widget&, float>> shown_root() const;
+        [[nodiscard]] std::optional<std::pair<ui::Widget&, f32>> shown_root() const;
         /// To the log, and to the report's when there is one.
         void write(const std::string& line, bool error);
 
@@ -195,7 +196,7 @@ namespace rct3::scene
         bool right_ = false;
         bool middle_ = false;
         bool shift_ = false;
-        float wheel_ = 0;
+        f32 wheel_ = 0;
         bool control_ = false;
         std::vector<ui::KeyPress> keys_;
         platform::Window* window_ = nullptr; ///< Whose clipboard clipboard.get() and clipboard.set() use
@@ -203,11 +204,11 @@ namespace rct3::scene
         std::optional<std::filesystem::path> report_;
         std::ofstream report_log_;
         std::vector<std::string> args_; ///< The script's own, from the command line
-        std::int32_t shots_ = 0;
+        i32 shots_ = 0;
         std::optional<ParkRequest> open_;
         std::optional<CareerRequest> career_;
-        std::optional<std::int32_t> quit_;
-        float advance_ = 0;
+        std::optional<i32> quit_;
+        f32 advance_ = 0;
         render::Device* device_ = nullptr; ///< While a tick runs
         park::ParkScene* park_ = nullptr;
         FrontEndScene* front_ = nullptr;

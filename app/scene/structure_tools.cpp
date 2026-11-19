@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/structure_tools.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/camera.hpp"
 #include "park/edge_walls.hpp"
@@ -40,7 +41,7 @@ namespace rct3::scene
         {
             if (t.corner && t.other && tile.col >= std::min(t.corner->col, t.other->col) && tile.col <= std::max(t.corner->col, t.other->col) && tile.row >= std::min(t.corner->row, t.other->row) && tile.row <= std::max(t.corner->row, t.other->row))
                 return !t.unmarking;
-            return t.marks[static_cast<std::size_t>(tile.row) * static_cast<std::size_t>(grid.width) + static_cast<std::size_t>(tile.col)] != 0;
+            return t.marks[static_cast<usize>(tile.row) * static_cast<usize>(grid.width) + static_cast<usize>(tile.col)] != 0;
         }
 
         std::vector<save::model::Tile> marked_tiles(const StructureTools& t, const save::model::TerrainGrid& grid)
@@ -48,8 +49,8 @@ namespace rct3::scene
             std::vector<save::model::Tile> out;
             if (t.marks.empty())
                 return out;
-            for (std::int32_t row = 0; row < grid.height; ++row)
-                for (std::int32_t col = 0; col < grid.width; ++col)
+            for (i32 row = 0; row < grid.height; ++row)
+                for (i32 col = 0; col < grid.width; ++col)
                     if (marked(t, grid, { col, row }))
                         out.push_back({ col, row });
             return out;
@@ -113,7 +114,7 @@ namespace rct3::scene
         if (tool == StructureTools::Tool::Grab)
         {
             t.tool = tool;
-            t.marks.assign(static_cast<std::size_t>(scene.grid.width) * static_cast<std::size_t>(scene.grid.height), 0);
+            t.marks.assign(static_cast<usize>(scene.grid.width) * static_cast<usize>(scene.grid.height), 0);
             t.marks_changed = true;
             scene.desktop->root().add<ui::screens::build::DeleteAreaPanel>(std::string(kGrabName), skins::structure_grab_panel_style(), *assets.strings);
         }
@@ -174,15 +175,15 @@ namespace rct3::scene
             else if (t.corner && t.other)
             {
                 for (const save::model::Tile m : marked_tiles(t, scene.grid))
-                    t.marks[static_cast<std::size_t>(m.row) * static_cast<std::size_t>(scene.grid.width) + static_cast<std::size_t>(m.col)] = 2; // Kept through the reset below
-                for (std::uint8_t& m : t.marks)
+                    t.marks[static_cast<usize>(m.row) * static_cast<usize>(scene.grid.width) + static_cast<usize>(m.col)] = 2; // Kept through the reset below
+                for (u8& m : t.marks)
                     m = m == 2 ? 1 : 0;
                 t.corner.reset();
                 t.other.reset();
             }
             if (auto panel = scene.desktop->root().find_as<ui::screens::build::DeleteAreaPanel>(kGrabName))
             {
-                const bool any = std::ranges::contains(t.marks, std::uint8_t { 1 });
+                const bool any = std::ranges::contains(t.marks, u8 { 1 });
                 panel->set_marked(any);
                 if (const auto asked = panel->take_action(); asked == ui::screens::build::DeleteAreaAction::Clear)
                 {
@@ -293,8 +294,8 @@ namespace rct3::scene
         wait_for_build(scene);
         ++scene.built;
         // The tool stays out for another, as in the game.
-        const std::size_t first = scene.objects.size();
-        std::uint64_t id = last_id(scene);
+        const usize first = scene.objects.size();
+        u64 id = last_id(scene);
         for (save::model::PlacedObject o : t.ghost_items)
         {
             o.id = ++id;
@@ -303,14 +304,14 @@ namespace rct3::scene
             scene.objects.push_back(std::move(o));
         }
         objects_changed(scene);
-        for (std::size_t i = first; i < scene.objects.size(); ++i)
+        for (usize i = first; i < scene.objects.size(); ++i)
         {
             if (const auto wall = rct3::park::edge_wall(scene.objects[i], scene.models, scene.grid))
                 park::wall_changed(device, scene, assets, *wall, park::WallChange::PutUp);
             park::animate_scenery(device, scene, save::model::PlacedObjectIndex { i });
         }
         const save::model::TerrainGrid& g = scene.grid;
-        park::float_money(scene, { g.world_x(t.pointed_tile->col) + g.tile_size_x / 2, static_cast<float>(t.height), g.world_z(t.pointed_tile->row) + g.tile_size_z / 2 }, -t.cost);
+        park::float_money(scene, { g.world_x(t.pointed_tile->col) + g.tile_size_x / 2, static_cast<f32>(t.height), g.world_z(t.pointed_tile->row) + g.tile_size_z / 2 }, -t.cost);
         logging::logger("park").info("structures: built {} ({} items) at {},{} height {} turned {}", t.structure->name, t.ghost_items.size(), t.pointed_tile->col, t.pointed_tile->row, t.height, t.turn.value);
         t.ghost_mesh = { };
         return true;

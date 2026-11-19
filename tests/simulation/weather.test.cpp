@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/park/state.hpp"
@@ -47,12 +48,12 @@ TEST_CASE("a guest getting wet goes and buys an umbrella")
 
 TEST_CASE("in the rain an open-air ride's queue empties while a covered ride's does not")
 {
-    for (const float cover : { 0.0f, 1.0f })
+    for (const f32 cover : { 0.0f, 1.0f })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
         const auto ride = park.flat_ride("Twister", { 3, 0 }, 0, { .capacity = 1, .cycle_seconds = 600, .cover = cover });
-        for (std::int32_t i = 0; i < 6; ++i)
+        for (i32 i = 0; i < 6; ++i)
             park.guest({ 3, 0 });
         auto& r = park.world().registry;
         CHECK(park.run_until([&] { return r.get<CycleRide>(ride).queue.size() >= 3; }, 120));
@@ -64,8 +65,8 @@ TEST_CASE("in the rain an open-air ride's queue empties while a covered ride's d
 
 TEST_CASE("guests get thirsty faster on a hot day")
 {
-    float thirst[2] { };
-    for (const std::int32_t hot : { 0, 1 })
+    f32 thirst[2] { };
+    for (const i32 hot : { 0, 1 })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
@@ -118,10 +119,10 @@ TEST_CASE("guests queueing under cover stay in an open-air ride's queue in the r
     park.path({ 0, 0 }, { 2, 0 }).queue({ 3, 0 }, { 6, 0 });
     const auto ride = park.flat_ride("Spinner", { 6, 0 }, 0, { .capacity = 1, .cycle_seconds = 600, .line = { { 6, 0 }, { 5, 0 }, { 4, 0 }, { 3, 0 } } });
     auto& paths = park.world().paths;
-    for (std::int32_t col = 3; col <= 6; ++col)
+    for (i32 col = 3; col <= 6; ++col)
         paths.cover(*paths.find({ col, 0, 0 }), Cover::Roof);
     auto& r = park.world().registry;
-    for (std::int32_t i = 0; i < 4; ++i)
+    for (i32 i = 0; i < 4; ++i)
         r.get<Errand>(park.guest({ 0, 0 })) = { ErrandKind::Heading, ride, 0 };
     REQUIRE(park.run_until([&] { return r.get<CycleRide>(ride).queue.size() == 3; }, 60));
     r.ctx().emplace<Weather>(Weather { .rain = true, .storm = true });
@@ -145,7 +146,7 @@ TEST_CASE("in a storm guests of any age head home, by day too")
 
 TEST_CASE("fewer guests come in the rain and the cold, more on a sunny day")
 {
-    const double mild = arrivals_per_second({ });
+    const f64 mild = arrivals_per_second({ });
     CHECK(arrivals_per_second({ .rain = true }) < mild);
     CHECK(arrivals_per_second({ .rain = true, .storm = true }) < arrivals_per_second({ .rain = true }));
     CHECK(arrivals_per_second({ .temperature = rct3::units::Degrees { 2 } }) < mild);

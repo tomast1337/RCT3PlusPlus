@@ -7,6 +7,7 @@
 // grinning one for a glad thought, a red frowning one for a complaint, a plain one for the rest.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/string_table.hpp"
 
 #include <cstdint>
@@ -17,7 +18,7 @@
 namespace rct3::ui
 {
 
-    enum class Mood : std::uint8_t
+    enum class Mood : u8
     {
         Neutral,
         Happy,
@@ -25,23 +26,23 @@ namespace rct3::ui
     };
 
     /// The start of the language keys of the thought `id`'s texts; empty for no thought or an unknown one.
-    [[nodiscard]] std::string thought_key(std::int32_t id);
+    [[nodiscard]] std::string thought_key(i32 id);
 
     /// The language key of the text of the thought `id` said in the way `variant` picks, such as "Thought_ImLost2";
     /// empty when the language has no text for it.
-    [[nodiscard]] std::string thought_text_key(const StringTable& strings, std::int32_t id, std::int64_t variant);
+    [[nodiscard]] std::string thought_text_key(const StringTable& strings, i32 id, i64 variant);
 
     /// The text of the thought `id` said in the way `variant` picks, about `name`. Empty when the language has
     /// no text for it.
-    [[nodiscard]] std::u16string thought_text(const StringTable& strings, std::int32_t id, std::int64_t variant, std::u16string_view name);
+    [[nodiscard]] std::u16string thought_text(const StringTable& strings, i32 id, i64 variant, std::u16string_view name);
 
     /// How the thought `id` feels; neutral for no thought or an unknown one.
-    [[nodiscard]] Mood thought_mood(std::int32_t id);
+    [[nodiscard]] Mood thought_mood(i32 id);
     /// The mood of the thought whose text `key` is, such as "Thought_ImLost2"; none for a key of no thought.
     [[nodiscard]] std::optional<Mood> key_mood(std::string_view key);
     /// How someone as happy as `happiness` (0 to 1) feels: the scale cut in thirds, sad in the lowest and happy in the
     /// highest.
-    [[nodiscard]] Mood happiness_mood(float happiness);
+    [[nodiscard]] Mood happiness_mood(f32 happiness);
     /// The skin of the face standing for `mood`.
     [[nodiscard]] std::string mood_icon(Mood mood);
 

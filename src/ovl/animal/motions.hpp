@@ -5,6 +5,7 @@
 // species; a slot a species does not use names no animation.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <cstdint>
@@ -16,7 +17,7 @@ namespace rct3::ovl::animal
 {
 
     /// The slots of a motion set, by number.
-    enum class AnimalMotion : std::uint8_t
+    enum class AnimalMotion : u8
     {
         Walk,
         WalkSick,
@@ -52,7 +53,7 @@ namespace rct3::ovl::animal
     {
         /// By slot: the model animation's name without the tag, empty where the slot is unused.
         std::vector<std::string_view> animations;
-        std::vector<float> seconds; ///< By slot: how long its animation lasts
+        std::vector<f32> seconds; ///< By slot: how long its animation lasts
     };
 
     struct AnimalMotionsItem

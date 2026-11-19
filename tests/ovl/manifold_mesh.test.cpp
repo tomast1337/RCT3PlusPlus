@@ -2,6 +2,7 @@
 #include "ovl/manifold_mesh.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <bit>
 #include <doctest/doctest.h>
@@ -16,19 +17,19 @@ namespace
 {
 
     // Name block: "A:mam" at 0, padded to 16. The structure block follows at address 16.
-    constexpr std::uint32_t kBase = 16;
-    constexpr std::uint32_t kVertices = 48; // 3 vertices * 16
-    constexpr std::uint32_t kIndices = 96;  // 1 triangle * 6 bytes
+    constexpr u32 kBase = 16;
+    constexpr u32 kVertices = 48; // 3 vertices * 16
+    constexpr u32 kIndices = 96;  // 1 triangle * 6 bytes
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
     }
 
-    void real(std::vector<std::byte>& out, float v)
+    void real(std::vector<std::byte>& out, f32 v)
     {
-        append_u32(out, std::bit_cast<std::uint32_t>(v));
+        append_u32(out, std::bit_cast<u32>(v));
     }
 
     std::vector<std::byte> names()
@@ -48,18 +49,18 @@ namespace
         return out;
     }
 
-    std::vector<std::byte> structure(std::uint32_t vertices = 3, std::uint32_t triangles = 1)
+    std::vector<std::byte> structure(u32 vertices = 3, u32 triangles = 1)
     {
         std::vector<std::byte> out;
-        for (float v : { -1.0f, -2.0f, -3.0f, 0.0f, 4.0f, 5.0f, 6.0f, 0.0f })
+        for (f32 v : { -1.0f, -2.0f, -3.0f, 0.0f, 4.0f, 5.0f, 6.0f, 0.0f })
             real(out, v);
         words(out, { vertices, triangles, kBase + kVertices, kBase + kIndices });
-        for (std::uint32_t i = 0; i < 3; ++i)
+        for (u32 i = 0; i < 3; ++i)
         {
-            for (float v : { float(i), float(i) + 0.5f, -float(i), 0.0f })
+            for (f32 v : { f32(i), f32(i) + 0.5f, -f32(i), 0.0f })
                 real(out, v);
         }
-        for (std::uint16_t i : { 0, 1, 2 })
+        for (u16 i : { 0, 1, 2 })
             append_u16(out, i);
         return out;
     }

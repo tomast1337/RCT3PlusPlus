@@ -5,6 +5,7 @@
 // example of what a backend has to implement.
 #pragma once
 
+#include "core/types.hpp"
 #include "render/device.hpp"
 
 #include <unordered_map>
@@ -49,11 +50,11 @@ namespace rct3::render::null
         void set_wireframe(bool /*on*/) override
         {
         }
-        [[nodiscard]] std::vector<std::uint32_t> sample_levels() const override
+        [[nodiscard]] std::vector<u32> sample_levels() const override
         {
             return { };
         }
-        void set_samples(std::uint32_t /*samples*/) override
+        void set_samples(u32 /*samples*/) override
         {
         }
         void end_frame() override;
@@ -69,10 +70,10 @@ namespace rct3::render::null
         struct Buffer
         {
             BufferUsage usage;
-            std::size_t size;
+            usize size;
         };
 
-        enum class State : std::uint8_t
+        enum class State : u8
         {
             Off,
             Idle,
@@ -83,14 +84,14 @@ namespace rct3::render::null
         DeviceConfig config_;
         State state_ = State::Off;
         bool ui_ready_ = false;
-        std::uint32_t next_id_ = 1;
-        std::unordered_map<std::uint32_t, Buffer> buffers_;
-        std::unordered_map<std::uint32_t, Topology> pipelines_;
-        std::unordered_map<std::uint32_t, Extent> textures_;
-        std::unordered_map<std::uint32_t, std::uint32_t> depths_; ///< Target id to the id of its readable depth
+        u32 next_id_ = 1;
+        std::unordered_map<u32, Buffer> buffers_;
+        std::unordered_map<u32, Topology> pipelines_;
+        std::unordered_map<u32, Extent> textures_;
+        std::unordered_map<u32, u32> depths_; ///< Target id to the id of its readable depth
         // One id stands for all transient memory; its size is the high-water mark of offsets handed out.
-        std::uint32_t transient_id_ = 0;
-        std::uint64_t transient_used_ = 0;
+        u32 transient_id_ = 0;
+        u64 transient_used_ = 0;
         FrameStats frame_stats_;
         FrameStats last_stats_;
         std::optional<Extent> reading_;    ///< The screen read_screen asked for, until its frame ends

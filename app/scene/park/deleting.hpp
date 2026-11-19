@@ -5,6 +5,7 @@
 // panel and a ride's demolish button pull down the same way.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/attraction_objects.hpp"
 #include "render/device.hpp"
 #include "save/model/world.hpp"
@@ -29,7 +30,7 @@ namespace rct3::scene::park
     /// The delete menu's tools: one deletes what a click lands on, the other what stands on the tiles dragged over.
     struct DeleteTools
     {
-        enum class Tool : std::uint8_t
+        enum class Tool : u8
         {
             None,
             One,
@@ -39,13 +40,13 @@ namespace rct3::scene::park
         std::optional<save::model::Tile> corner; ///< Of the area marked, where the drag began
         std::optional<save::model::Tile> other;  ///< And the opposite corner, where it is now or ended
         bool dragging = false;
-        std::optional<std::array<std::int32_t, 4>> drawn; ///< Columns and rows the marks show now
-        std::vector<bool> kept { };                       ///< Tiles the drag may not take in or out, row by row; filled as it begins
+        std::optional<std::array<i32, 4>> drawn; ///< Columns and rows the marks show now
+        std::vector<bool> kept { };              ///< Tiles the drag may not take in or out, row by row; filled as it begins
         /// What letting go would do: the enclosures it would leave, and what that costs (below 0 when the fence
         /// taken down pays back more than any put up), for the columns and rows marked.
         struct Marked
         {
-            std::array<std::int32_t, 4> area { };
+            std::array<i32, 4> area { };
             save::model::EnclosureMap enclosures { };
             units::Money cost;
         };
@@ -63,7 +64,7 @@ namespace rct3::scene::park
 
     /// Takes paths `ids` away with the delete tools, and the bins, benches, signs and the like on their tiles, the
     /// money for both floating up as one sum.
-    void delete_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const std::uint64_t> ids);
+    void delete_paths(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, std::span<const u64> ids);
 
     /// Pulls attraction `ref` down: it goes from the park with its doors, track and fence, its guests walk off
     /// (out of its queue at the entrance, riders off at the exit), and what it is worth comes back. It keeps its

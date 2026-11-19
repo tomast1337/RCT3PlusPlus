@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/integer_value.hpp"
 
+#include "core/types.hpp"
+
 namespace rct3::ovl
 {
 
@@ -19,7 +21,7 @@ namespace rct3::ovl
             const SymbolName parts = split_symbol_name(symbol.name);
             if (parts.tag != kIntegerTag)
                 continue;
-            items.push_back({ parts.name, static_cast<std::int32_t>(symbol.data) });
+            items.push_back({ parts.name, static_cast<i32>(symbol.data) });
         }
         return items;
     }

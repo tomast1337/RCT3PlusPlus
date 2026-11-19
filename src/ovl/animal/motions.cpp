@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/animal/motions.hpp"
 
+#include "core/types.hpp"
 #include "ovl/item_record.hpp"
 
 namespace rct3::ovl::animal
@@ -10,11 +11,11 @@ namespace rct3::ovl::animal
     {
 
         constexpr std::string_view kTag = "wad";
-        constexpr std::size_t kSize = 0x14; // up to and including the lengths' pointer
-        constexpr std::size_t kCount = 0x08;
-        constexpr std::size_t kAnimations = 0x0C;
-        constexpr std::size_t kSeconds = 0x10;
-        constexpr std::uint32_t kMaxSlots = 256;
+        constexpr usize kSize = 0x14; // up to and including the lengths' pointer
+        constexpr usize kCount = 0x08;
+        constexpr usize kAnimations = 0x0C;
+        constexpr usize kSeconds = 0x10;
+        constexpr u32 kMaxSlots = 256;
 
     } // namespace
 
@@ -32,16 +33,16 @@ namespace rct3::ovl::animal
                 continue;
             AnimalMotionsItem item { parts.name, std::nullopt };
             const auto record = ItemRecord::open(space, refs, symbol.data, kSize);
-            const std::uint32_t count = record ? record->read_u32(kCount) : 0;
-            const auto animations = record && count <= kMaxSlots ? ItemRecord::open(space, refs, record->read_u32(kAnimations), std::size_t { count } * 4) : std::nullopt;
-            const auto seconds = record && count <= kMaxSlots ? ItemRecord::open(space, refs, record->read_u32(kSeconds), std::size_t { count } * 4) : std::nullopt;
+            const u32 count = record ? record->read_u32(kCount) : 0;
+            const auto animations = record && count <= kMaxSlots ? ItemRecord::open(space, refs, record->read_u32(kAnimations), usize { count } * 4) : std::nullopt;
+            const auto seconds = record && count <= kMaxSlots ? ItemRecord::open(space, refs, record->read_u32(kSeconds), usize { count } * 4) : std::nullopt;
             if (animations && seconds)
             {
                 AnimalMotions m;
-                for (std::uint32_t i = 0; i < count; ++i)
+                for (u32 i = 0; i < count; ++i)
                 {
-                    m.animations.push_back(animations->ref(std::size_t { i } * 4, "modelanim"));
-                    m.seconds.push_back(seconds->real(std::size_t { i } * 4));
+                    m.animations.push_back(animations->ref(usize { i } * 4, "modelanim"));
+                    m.seconds.push_back(seconds->real(usize { i } * 4));
                 }
                 item.motions = std::move(m);
             }

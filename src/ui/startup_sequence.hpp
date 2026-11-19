@@ -6,6 +6,7 @@
 // whole sequence at once, without a fade.
 #pragma once
 
+#include "core/types.hpp"
 #include "units/units.hpp"
 
 #include <cstddef>
@@ -42,7 +43,7 @@ namespace rct3::ui
     struct StartupFrame
     {
         std::string_view image;
-        float opacity = 0;   ///< 0 transparent .. 1 opaque
+        f32 opacity = 0;     ///< 0 transparent .. 1 opaque
         units::Seconds time; ///< Since the step started fading in
     };
 
@@ -63,7 +64,7 @@ namespace rct3::ui
 
     private:
         std::vector<StartupStep> steps_;
-        std::size_t step_ = 0;
+        usize step_ = 0;
         units::Seconds elapsed_; ///< Since the current step started fading in; past `shown` it is fading out
     };
 

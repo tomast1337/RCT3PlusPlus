@@ -7,6 +7,8 @@
 // first of the sound. A block the decoder cannot read is skipped.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <expected>
@@ -27,14 +29,14 @@ namespace rct3::audio::wma
         WmaStream& operator=(WmaStream&&) noexcept;
         ~WmaStream();
 
-        [[nodiscard]] std::uint32_t sample_rate() const;
-        [[nodiscard]] std::uint16_t channels() const;
+        [[nodiscard]] u32 sample_rate() const;
+        [[nodiscard]] u16 channels() const;
         /// How long the file says it plays.
-        [[nodiscard]] double seconds() const;
+        [[nodiscard]] f64 seconds() const;
 
         /// Fills `out` with whole frames, channels interleaved, and returns how many; fewer than fit only at
         /// the end of the sound. An error is a file that cannot be read any more.
-        [[nodiscard]] std::expected<std::size_t, std::string> read(std::span<float> out);
+        [[nodiscard]] std::expected<usize, std::string> read(std::span<f32> out);
 
         /// Back to the start of the sound.
         [[nodiscard]] std::expected<void, std::string> rewind();

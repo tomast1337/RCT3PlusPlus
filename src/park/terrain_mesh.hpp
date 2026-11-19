@@ -17,6 +17,7 @@
 // World units throughout: X along the columns, Z along the rows, Y up.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "math/hex_colour.hpp"
 #include "save/model/world.hpp"
@@ -46,11 +47,11 @@ namespace rct3::park
     {
         glm::vec3 position { 0.0f };
         glm::vec4 colour { 1.0f };
-        float depth = 0; ///< World units, 0 where the ground reaches the surface or rises above it
-        float room = 0;  ///< Pool water: world units to its nearest wall, at most a square; 0 elsewhere
+        f32 depth = 0; ///< World units, 0 where the ground reaches the surface or rises above it
+        f32 room = 0;  ///< Pool water: world units to its nearest wall, at most a square; 0 elsewhere
     };
 
-    enum class GroundPaint : std::uint8_t
+    enum class GroundPaint : u8
     {
         Surface,       ///< A land surface, by its index in the terrain types
         Cliff,         ///< A cliff face, likewise
@@ -64,17 +65,17 @@ namespace rct3::park
     /// The tiles from column `col` and row `row` up to, not including, `end_col` and `end_row`.
     struct TileRect
     {
-        std::int32_t col = 0;
-        std::int32_t row = 0;
-        std::int32_t end_col = 0;
-        std::int32_t end_row = 0;
+        i32 col = 0;
+        i32 row = 0;
+        i32 end_col = 0;
+        i32 end_row = 0;
 
-        [[nodiscard]] bool contains(std::int32_t c, std::int32_t r) const
+        [[nodiscard]] bool contains(i32 c, i32 r) const
         {
             return c >= col && c < end_col && r >= row && r < end_row;
         }
         /// This one with `n` more tiles round each side.
-        [[nodiscard]] TileRect grown(std::int32_t n) const
+        [[nodiscard]] TileRect grown(i32 n) const
         {
             return { col - n, row - n, end_col + n, end_row + n };
         }
@@ -84,15 +85,15 @@ namespace rct3::park
     struct GroundBatch
     {
         GroundPaint paint = GroundPaint::Surface;
-        std::uint8_t index = 0;
-        std::uint32_t first = 0;
-        std::uint32_t count = 0;
+        u8 index = 0;
+        u32 first = 0;
+        u32 count = 0;
     };
 
     struct TerrainMesh
     {
         std::vector<GroundVertex> vertices;
-        std::vector<std::uint32_t> indices;
+        std::vector<u32> indices;
         std::vector<GroundBatch> batches;
         std::vector<WaterVertex> water; ///< Triangles, three vertices each
         glm::vec3 low { 0.0f };         ///< Corners of the box round the ground
@@ -100,18 +101,18 @@ namespace rct3::park
     };
 
     /// World units one repeat of a ground texture covers.
-    inline constexpr float kTextureSpan = 16;
+    inline constexpr f32 kTextureSpan = 16;
     /// Height differences smaller than this make no wall.
-    inline constexpr float kFlat = 0.001f;
+    inline constexpr f32 kFlat = 0.001f;
     inline constexpr glm::vec4 kWaterColour = math::unit(math::hex("#2c64a0a6"));
 
     /// A band of height on a tile that the walls along its edges leave open.
     struct GroundOpening
     {
-        std::int32_t col = 0;
-        std::int32_t row = 0;
-        float low = 0;
-        float high = 0;
+        i32 col = 0;
+        i32 row = 0;
+        f32 low = 0;
+        f32 high = 0;
     };
 
     /// The ground of the tiles of `area`, or of all of them, with the walls on their right and far edges.
@@ -119,8 +120,8 @@ namespace rct3::park
 
     /// How far above the pool's surface height its water stands: just under the top of the rim piece there,
     /// which rises a fifth of a unit.
-    inline constexpr float kPoolBrim = 0.1f;
-    inline constexpr std::int32_t kPoolWaterSteps = 6; ///< Chosen by eye: a pool square's water is cut this many times each way, for the waves
+    inline constexpr f32 kPoolBrim = 0.1f;
+    inline constexpr i32 kPoolWaterSteps = 6; ///< Chosen by eye: a pool square's water is cut this many times each way, for the waves
     /// Pool water is clearer and lighter than the lakes': its low alpha also has it mirror the sky less looking
     /// down, so swimmers show whole under the surface.
     inline constexpr glm::vec4 kPoolColour = math::unit(math::hex("#3c9ccc4c"));
@@ -133,16 +134,16 @@ namespace rct3::park
 
     /// World units from `within` (from a pool water square's least corner, in world units) to the nearest square
     /// round it that `water` (by column and row step to it) says holds no water, at most a square across.
-    [[nodiscard]] float pool_wall_room(const save::model::TerrainGrid& grid, glm::vec2 within, std::function_ref<bool(std::int32_t dc, std::int32_t dr)> water);
+    [[nodiscard]] f32 pool_wall_room(const save::model::TerrainGrid& grid, glm::vec2 within, std::function_ref<bool(i32 dc, i32 dr)> water);
 
     /// How much of the ground round grid point (x, z) has `surface`: the share of the tiles touching it,
     /// which is how much of that surface shows there.
-    [[nodiscard]] float surface_share(const save::model::TerrainGrid& grid, std::int32_t x, std::int32_t z, std::uint8_t surface);
+    [[nodiscard]] f32 surface_share(const save::model::TerrainGrid& grid, i32 x, i32 z, u8 surface);
 
     /// The normal (any length, pointing up) a tile's ground is lit by at its corner `corner`: the area-weighted sum of the
     /// faces of every tile meeting at that grid point at the same height, so the ground shades smoothly
     /// across tiles and stays sharp where a cliff splits it.
-    [[nodiscard]] glm::vec3 ground_normal(const save::model::TerrainGrid& grid, save::model::Tile tile, std::int32_t corner);
+    [[nodiscard]] glm::vec3 ground_normal(const save::model::TerrainGrid& grid, save::model::Tile tile, i32 corner);
 
     /// Adds `more`'s ground (not its water) after `mesh`'s, its batches after `mesh`'s, and grows the box.
     void add_ground(TerrainMesh& mesh, const TerrainMesh& more);

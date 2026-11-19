@@ -14,6 +14,7 @@
 // window fits the picture without stretching it.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "save/model/world.hpp"
 
@@ -28,7 +29,7 @@
 namespace rct3::park
 {
 
-    enum class MapLayer : std::uint8_t
+    enum class MapLayer : u8
     {
         Relief,   ///< The ground shaded by height and slope; without it the ground is one flat colour
         Contours, ///< Lines of equal height
@@ -48,24 +49,24 @@ namespace rct3::park
         Staff,
         Patrols, ///< The tiles of the staff's patrol areas
     };
-    inline constexpr std::size_t kMapLayerCount = 17;
+    inline constexpr usize kMapLayerCount = 17;
 
     /// The layers shown, by MapLayer.
     using MapLayers = std::bitset<kMapLayerCount>;
 
     [[nodiscard]] inline bool shows(const MapLayers& layers, MapLayer layer)
     {
-        return layers.test(static_cast<std::size_t>(layer));
+        return layers.test(static_cast<usize>(layer));
     }
     [[nodiscard]] MapLayers all_map_layers();
 
     /// A colour with straight (not premultiplied) alpha.
     struct MapRgba
     {
-        std::uint8_t r = 0;
-        std::uint8_t g = 0;
-        std::uint8_t b = 0;
-        std::uint8_t a = 255;
+        u8 r = 0;
+        u8 g = 0;
+        u8 b = 0;
+        u8 a = 255;
         friend bool operator==(const MapRgba&, const MapRgba&) = default;
     };
 
@@ -75,16 +76,16 @@ namespace rct3::park
 
     /// The layer of an attraction that sells or serves something, by the type its stall or facility item
     /// gives; any other type, or none, is a ride.
-    [[nodiscard]] MapLayer attraction_layer(std::optional<std::uint32_t> type_id);
+    [[nodiscard]] MapLayer attraction_layer(std::optional<u32> type_id);
 
     /// The ground the map covers and the way between the park and the map, where the map runs from 0 to 1
     /// across and down.
     struct MapFrame
     {
-        float west_edge = 0;
-        float south_edge = 0;
-        float width = 1; ///< West to east
-        float depth = 1; ///< South to north
+        f32 west_edge = 0;
+        f32 south_edge = 0;
+        f32 width = 1; ///< West to east
+        f32 depth = 1; ///< South to north
     };
     [[nodiscard]] MapFrame map_frame(const save::model::TerrainGrid& grid);
     /// The map point of the park point (x, z).
@@ -94,8 +95,8 @@ namespace rct3::park
 
     struct MapPathTile
     {
-        std::int32_t col = 0;
-        std::int32_t row = 0;
+        i32 col = 0;
+        i32 row = 0;
         bool queue = false;
     };
 
@@ -111,7 +112,7 @@ namespace rct3::park
     {
         std::vector<MapPathTile> paths;
         /// The surface height of the water on each tile, row by row as the grid's cells; none where dry.
-        std::vector<std::optional<float>> water;
+        std::vector<std::optional<f32>> water;
         std::vector<MapShape> shapes;
         /// The colour of each ground surface, by its index in the terrain types; the land's middle tint for
         /// those without one. Set by the owner, from the surfaces' pictures.
@@ -130,30 +131,30 @@ namespace rct3::park
     /// A picture: rows from the top, four bytes a pixel (red, green, blue, straight alpha).
     struct MapPicture
     {
-        std::int32_t width = 0;
-        std::int32_t height = 0;
-        std::vector<std::uint8_t> rgba;
+        i32 width = 0;
+        i32 height = 0;
+        std::vector<u8> rgba;
 
-        [[nodiscard]] MapRgba at(std::int32_t x, std::int32_t y) const;
+        [[nodiscard]] MapRgba at(i32 x, i32 y) const;
     };
 
     /// Pixels per tile for the map of `grid`: enough that the picture is about a thousand pixels across,
     /// within limits that keep small parks crisp and large ones affordable.
-    [[nodiscard]] std::int32_t map_scale(const save::model::TerrainGrid& grid);
-    inline constexpr std::int32_t kMinMapScale = 2;
-    inline constexpr std::int32_t kMaxMapScale = 8;
-    inline constexpr std::int32_t kMapPixelsAcross = 1024;
+    [[nodiscard]] i32 map_scale(const save::model::TerrainGrid& grid);
+    inline constexpr i32 kMinMapScale = 2;
+    inline constexpr i32 kMaxMapScale = 8;
+    inline constexpr i32 kMapPixelsAcross = 1024;
 
     /// The ground layers of a map, `scale` pixels per tile.
     struct MapGround
     {
-        std::int32_t scale = 1;
+        i32 scale = 1;
         MapPicture relief;   ///< Opaque
         MapPicture flat;     ///< Opaque: the ground without relief
         MapPicture contours; ///< Clear but for the lines
         MapPicture water;    ///< Clear but for the water
     };
-    [[nodiscard]] MapGround map_ground(const save::model::TerrainGrid& grid, const MapFeatures& features, std::int32_t scale);
+    [[nodiscard]] MapGround map_ground(const save::model::TerrainGrid& grid, const MapFeatures& features, i32 scale);
 
     /// The map with the layers in `layers`, people aside.
     [[nodiscard]] MapPicture compose_map(const MapGround& ground, const save::model::TerrainGrid& grid, const MapFeatures& features, const MapLayers& layers);
@@ -172,6 +173,6 @@ namespace rct3::park
 
     /// A clear picture the size of the map's with a dot for each person whose layer `layers` shows, over the
     /// patrol tiles tinted, deeper where areas overlap.
-    [[nodiscard]] MapPicture people_picture(const save::model::TerrainGrid& grid, std::int32_t scale, std::span<const MapPerson> people, const MapLayers& layers, std::span<const glm::ivec2> patrol_tiles = { });
+    [[nodiscard]] MapPicture people_picture(const save::model::TerrainGrid& grid, i32 scale, std::span<const MapPerson> people, const MapLayers& layers, std::span<const glm::ivec2> patrol_tiles = { });
 
 } // namespace rct3::park

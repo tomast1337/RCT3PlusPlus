@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/pools/score.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <set>
@@ -11,8 +13,8 @@ namespace rct3::park::pools
 
     PoolTally pool_tally(std::span<const PoolSquare> squares, std::span<const PoolExtra> extras)
     {
-        std::set<std::pair<std::int32_t, std::int32_t>> water;
-        std::set<std::pair<std::int32_t, std::int32_t>> all;
+        std::set<std::pair<i32, i32>> water;
+        std::set<std::pair<i32, i32>> all;
         for (const PoolSquare& s : squares)
         {
             all.emplace(s.col, s.row);
@@ -31,7 +33,7 @@ namespace rct3::park::pools
                 continue;
             ++t.water_squares;
             // Dry on two sides that meet: a corner jutting out.
-            const auto dry = [&](std::int32_t dc, std::int32_t dr) { return !water.contains({ s.col + dc, s.row + dr }); };
+            const auto dry = [&](i32 dc, i32 dr) { return !water.contains({ s.col + dc, s.row + dr }); };
             const bool corner = (dry(0, 1) || dry(0, -1)) && (dry(1, 0) || dry(-1, 0));
             t.shaped += s.edge != PoolEdge::Straight || corner ? 1 : 0;
         }
@@ -48,36 +50,36 @@ namespace rct3::park::pools
         return t;
     }
 
-    float pool_excitement(const PoolTally& t, float dirt)
+    f32 pool_excitement(const PoolTally& t, f32 dirt)
     {
         if (t.squares == 0)
             return 0;
-        const auto share = [](float x) { return std::clamp(x, 0.0f, 1.0f); };
-        const float n = static_cast<float>(t.squares);
-        const float mean = static_cast<float>(t.depth_sum) / n;
-        const float spread = std::sqrt(std::max(0.0f, static_cast<float>(t.depth_sum2) / n - mean * mean));
+        const auto share = [](f32 x) { return std::clamp(x, 0.0f, 1.0f); };
+        const f32 n = static_cast<f32>(t.squares);
+        const f32 mean = static_cast<f32>(t.depth_sum) / n;
+        const f32 spread = std::sqrt(std::max(0.0f, static_cast<f32>(t.depth_sum2) / n - mean * mean));
         // Chosen by eye: each term full at about what a well kept pool of fair size has, the weights adding to 1.
-        float e = 0.30f * share(static_cast<float>(t.water_squares) / 40) // 40 squares of water
-            + 0.15f * share(spread / 0.8f)                                // shallow, normal and deep ends
-            + 0.10f * share(static_cast<float>(t.lamps) * 6 / n);         // a lamp to six squares
+        f32 e = 0.30f * share(static_cast<f32>(t.water_squares) / 40) // 40 squares of water
+            + 0.15f * share(spread / 0.8f)                            // shallow, normal and deep ends
+            + 0.10f * share(static_cast<f32>(t.lamps) * 6 / n);       // a lamp to six squares
         if (t.water_squares > 0)
         {
-            const float w = static_cast<float>(t.water_squares);
-            e += 0.15f * share(static_cast<float>(t.shaped) * 3 / w)        // a third of the water shaped
-                + 0.15f * share(static_cast<float>(t.ladders) * 12 / w)     // a ladder to twelve squares of water
-                + 0.15f * share(static_cast<float>(t.lifeguards) * 30 / w); // a lifeguard to thirty
+            const f32 w = static_cast<f32>(t.water_squares);
+            e += 0.15f * share(static_cast<f32>(t.shaped) * 3 / w)        // a third of the water shaped
+                + 0.15f * share(static_cast<f32>(t.ladders) * 12 / w)     // a ladder to twelve squares of water
+                + 0.15f * share(static_cast<f32>(t.lifeguards) * 30 / w); // a lifeguard to thirty
         }
         // Chosen by eye: a pool that is a health hazard is half as good.
         return share(e * (1 - share(dirt) / 2));
     }
 
-    std::int64_t pool_worth(const PoolTally& t, std::size_t slides, std::size_t rivers, float dirt)
+    i64 pool_worth(const PoolTally& t, usize slides, usize rivers, f32 dirt)
     {
         // Chosen by eye, hundredths: over the ticket new complexes start at, so a plain pool still sells at it.
-        constexpr std::int64_t kPlainWorth = 300;      ///< A pool with nothing in it
-        constexpr std::int64_t kExcitementWorth = 500; ///< Added at full excitement
-        const auto up_to = [](std::int64_t count, std::int64_t most, std::int64_t each) { return std::min(count, most) * each; };
-        return kPlainWorth + std::llround(kExcitementWorth * pool_excitement(t, dirt)) + up_to(t.jacuzzis, 4, 60) + up_to(t.high_dives, 3, 100) + up_to(static_cast<std::int64_t>(slides), 4, 150) + up_to(static_cast<std::int64_t>(rivers), 2, 200) + up_to(t.loungers, 8, 15) + up_to(t.showers, 4, 20);
+        constexpr i64 kPlainWorth = 300;      ///< A pool with nothing in it
+        constexpr i64 kExcitementWorth = 500; ///< Added at full excitement
+        const auto up_to = [](i64 count, i64 most, i64 each) { return std::min(count, most) * each; };
+        return kPlainWorth + std::llround(kExcitementWorth * pool_excitement(t, dirt)) + up_to(t.jacuzzis, 4, 60) + up_to(t.high_dives, 3, 100) + up_to(static_cast<i64>(slides), 4, 150) + up_to(static_cast<i64>(rivers), 2, 200) + up_to(t.loungers, 8, 15) + up_to(t.showers, 4, 20);
     }
 
 } // namespace rct3::park::pools

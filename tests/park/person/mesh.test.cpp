@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/person/mesh.hpp"
 
+#include "core/types.hpp"
 #include "park/person/motions.hpp"
 
 #include <array>
@@ -51,17 +52,17 @@ TEST_CASE("a hand's socket is at the middle of its triangle as the motion poses 
     socket.mesh.points = 3;
     socket.mesh.normals = 1;
     socket.mesh.tracks = 1;
-    for (std::uint16_t p = 0; p < 3; ++p)
+    for (u16 p = 0; p < 3; ++p)
         socket.mesh.corners.push_back({ p, 0, { } });
     socket.mesh.indices = { 0, 1, 2 };
     ovl::FrameAnimation motion;
     motion.scale = { 0.01f, 0.01f, 0.01f };
     motion.times = { 1.0f };
-    const std::array<std::array<std::uint32_t, 3>, 3> steps { { { 10, 100, 20 }, { 13, 100, 20 }, { 10, 103, 23 } } };
+    const std::array<std::array<u32, 3>, 3> steps { { { 10, 100, 20 }, { 13, 100, 20 }, { 10, 103, 23 } } };
     for (const auto& [x, y, z] : steps)
     {
-        const std::uint32_t word = x << 21 | y << 11 | z;
-        for (std::int32_t b = 0; b < 4; ++b)
+        const u32 word = x << 21 | y << 11 | z;
+        for (i32 b = 0; b < 4; ++b)
             motion.keys.push_back(static_cast<std::byte>(word >> (8 * b)));
     }
     motion.keys.resize(socket.mesh.key_size(), std::byte { 127 });
@@ -83,13 +84,13 @@ TEST_CASE("a walk's pace is how fast the foot on the ground slides back beneath 
     ovl::FrameAnimation walk;
     walk.scale = { 0.01f, 0.01f, 0.01f };
     walk.times = { 0.25f, 0.5f, 0.75f, 1.0f };
-    for (std::uint32_t k = 0; k < 4; ++k)
+    for (u32 k = 0; k < 4; ++k)
     {
-        const std::array<std::array<std::uint32_t, 3>, 2> steps { { { 10, 0, 60 - 10 * k }, { 10, 50, 60 + 10 * k } } };
+        const std::array<std::array<u32, 3>, 2> steps { { { 10, 0, 60 - 10 * k }, { 10, 50, 60 + 10 * k } } };
         for (const auto& [x, y, z] : steps)
         {
-            const std::uint32_t word = x << 21 | y << 11 | z;
-            for (std::int32_t b = 0; b < 4; ++b)
+            const u32 word = x << 21 | y << 11 | z;
+            for (i32 b = 0; b < 4; ++b)
                 walk.keys.push_back(static_cast<std::byte>(word >> (8 * b)));
         }
         walk.keys.resize((k + 1) * legs.mesh.key_size(), std::byte { 127 });

@@ -22,6 +22,7 @@
 // What is refused is named by the game's text keys, so the player reads the game's own words.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/world.hpp"
 
 #include <expected>
@@ -40,13 +41,13 @@ namespace rct3::park
     inline constexpr std::string_view kWaterfallDeleteNotOwned = "Waterfall_DeletionFailure_LandNotOwned";
     inline constexpr std::string_view kWaterfallLandUnsuitable = "Waterfall_CreationFailure_LandUnsuitable";
 
-    inline constexpr float kSpillwayDepth = 0.25f; ///< Chosen by eye: how far under the lake's level the spillway's floor lies
-    inline constexpr float kSpillwayRim = 0.01f;   ///< Chosen by eye: over the level at its far side, so the lake stops there
+    inline constexpr f32 kSpillwayDepth = 0.25f; ///< Chosen by eye: how far under the lake's level the spillway's floor lies
+    inline constexpr f32 kSpillwayRim = 0.01f;   ///< Chosen by eye: over the level at its far side, so the lake stops there
 
     /// The waterfall joining lakes `first` and `second` of `bodies` (in either order), picked by the player on
     /// tiles `at_first` and `at_second`, with the ground of its spillway as it is; or the text key of why there can
     /// be none. The ground is left as it is: cut_spillway cuts it.
-    [[nodiscard]] std::expected<save::model::Waterfall, std::string_view> make_waterfall(const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> bodies, std::size_t first, std::size_t second, save::model::Tile at_first, save::model::Tile at_second);
+    [[nodiscard]] std::expected<save::model::Waterfall, std::string_view> make_waterfall(const save::model::TerrainGrid& grid, std::span<const save::model::WaterBody> bodies, usize first, usize second, save::model::Tile at_first, save::model::Tile at_second);
 
     /// The ground of `grid` with the spillway of `fall` (as make_waterfall gave it) cut into it.
     void cut_spillway(save::model::TerrainGrid& grid, const save::model::Waterfall& fall);
@@ -55,6 +56,6 @@ namespace rct3::park
     void restore_spillway(save::model::TerrainGrid& grid, const save::model::Waterfall& fall);
 
     /// Of `falls`, the one whose water passes over the ground at `x`, `z` (world units), seen from above.
-    [[nodiscard]] std::optional<std::size_t> waterfall_at(std::span<const save::model::Waterfall> falls, float x, float z);
+    [[nodiscard]] std::optional<usize> waterfall_at(std::span<const save::model::Waterfall> falls, f32 x, f32 z);
 
 } // namespace rct3::park

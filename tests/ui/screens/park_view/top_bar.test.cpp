@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/park_view/top_bar.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -55,7 +56,7 @@ TEST_CASE("the bar sits centred along the top, its items inside it and in order"
     CHECK(r.x0 == doctest::Approx((1000 - park_bar::kWidth) / 2));
     CHECK(r.y0 == 0);
     CHECK(r.height() == park_bar::kHeight);
-    float last = r.x0;
+    f32 last = r.x0;
     for (const auto& child : f.bar->children())
     {
         // Hidden ones may share a place with another, as the money's two arrows do.
@@ -186,7 +187,7 @@ TEST_CASE("the day mode button shows only with a mode, and makes room for itself
 {
     Fixture f;
     CHECK_FALSE(f.bar->day_mode_button().visible);
-    const float money = f.bar->money().rect().width();
+    const f32 money = f.bar->money().rect().width();
 
     ParkBarValues v;
     v.day_mode = simulation::DayMode::AlwaysNight;

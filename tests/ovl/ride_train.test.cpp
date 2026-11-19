@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/ride_train.hpp"
 
+#include "core/types.hpp"
 #include "record_file.hpp"
 
 #include <bit>
@@ -22,11 +23,11 @@ TEST_CASE("ride trains list their cars")
     bytes.resize(0x20, std::byte { 0 });
     put(bytes, { 2, 7, 3 });
     bytes.resize(0x38, std::byte { 0 });
-    put(bytes, { std::bit_cast<std::uint32_t>(6.0f), std::bit_cast<std::uint32_t>(0.25f) });
+    put(bytes, { std::bit_cast<u32>(6.0f), std::bit_cast<u32>(0.25f) });
     bytes.resize(0x68, std::byte { 0 });
-    put(bytes, { std::bit_cast<std::uint32_t>(0.75f), std::bit_cast<std::uint32_t>(2.0f) });
+    put(bytes, { std::bit_cast<u32>(0.75f), std::bit_cast<u32>(2.0f) });
     bytes.resize(0x88, std::byte { 0 });
-    put(bytes, { std::bit_cast<std::uint32_t>(0.3f) });
+    put(bytes, { std::bit_cast<u32>(0.3f) });
     bytes.resize(200, std::byte { 0 });
     const auto overlay = make_record_overlay(1, pool, "Test:rit", bytes, { { 0x08, "Front:ric" }, { 0x10, "Back:ric" } });
     const auto items = read_ride_trains(overlay, overlay.common());

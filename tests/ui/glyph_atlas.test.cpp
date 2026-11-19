@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/glyph_atlas.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <doctest/doctest.h>
 
@@ -32,7 +34,7 @@ TEST_CASE("empty and oversized glyphs take no space")
     const std::array<AtlasSize, 3> sizes = { { { 0, 5 }, { 15, 2 }, { 3, 3 } } };
     const auto slots = pack_atlas(sizes, 16);
     CHECK(slots[0].page == 0);
-    CHECK(slots[1].page == static_cast<std::uint32_t>(-1));
+    CHECK(slots[1].page == static_cast<u32>(-1));
     CHECK(slots[2].x == 1);
     CHECK(slots[2].y == 1);
     CHECK(atlas_page_count(slots) == 1);
@@ -45,7 +47,7 @@ TEST_CASE("pages are white with coverage in alpha")
     const auto pages = atlas_pages(bitmaps, slots, 4);
     REQUIRE(pages.size() == 1);
     REQUIRE(pages[0].pixels.size() == 4 * 4 * 4);
-    const auto at = [&](std::uint32_t x, std::uint32_t y, std::uint32_t c) { return pages[0].pixels[((y * 4) + x) * 4 + c]; };
+    const auto at = [&](u32 x, u32 y, u32 c) { return pages[0].pixels[((y * 4) + x) * 4 + c]; };
     CHECK(at(1, 2, 3) == 200);
     CHECK(at(2, 2, 3) == 50);
     CHECK(at(0, 0, 3) == 0);

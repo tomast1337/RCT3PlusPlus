@@ -5,6 +5,8 @@
 // _ffmpeg.cpp everywhere but Windows, one ending in _windows.cpp on Windows.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -17,11 +19,11 @@ namespace rct3::audio::wma
     /// The stream's format, as the ASF header gives it.
     struct Format
     {
-        std::int32_t version = 0; ///< 1 or 2
-        std::uint32_t sample_rate = 0;
-        std::uint16_t channels = 0;
-        std::uint32_t bit_rate = 0;       ///< Bits per second
-        std::uint16_t block_align = 0;    ///< Bytes in each packet
+        i32 version = 0; ///< 1 or 2
+        u32 sample_rate = 0;
+        u16 channels = 0;
+        u32 bit_rate = 0;                 ///< Bits per second
+        u16 block_align = 0;              ///< Bytes in each packet
         std::span<const std::byte> extra; ///< The codec bytes after the wave format
     };
 
@@ -38,10 +40,10 @@ namespace rct3::audio::wma
         /// Decodes one packet of block_align bytes and returns the samples it gives for each channel, one
         /// plane a channel in `planes` (valid until the next call). 0 when the packet gives none yet, or cannot
         /// be read. An empty packet gives the last samples still held back.
-        std::int32_t decode(std::span<const std::byte> packet, const float* const*& planes);
+        i32 decode(std::span<const std::byte> packet, const f32* const*& planes);
 
         /// Samples for each channel at the start of what decode() gives that come before the sound.
-        [[nodiscard]] std::int32_t delay() const;
+        [[nodiscard]] i32 delay() const;
 
         /// Forgets the data carried between packets, to start the stream again.
         void reset();

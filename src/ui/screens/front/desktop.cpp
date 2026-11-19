@@ -2,6 +2,7 @@
 #include "ui/screens/front/desktop.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 
 #include <cstdint>
 #include <utility>
@@ -16,7 +17,7 @@ namespace rct3::ui::screens::front
         constexpr std::string_view kQuitText = "FrontScreen_Message_ConfirmExit";
         constexpr std::string_view kYes = "SMB_Label_Yes";
         constexpr std::string_view kNo = "SMB_Label_No";
-        constexpr std::size_t kYesAnswer = 0;
+        constexpr usize kYesAnswer = 0;
 
     } // namespace
 
@@ -75,7 +76,7 @@ namespace rct3::ui::screens::front
         return desktop_.root().find_as<career::CareerDialog>(kCareersName);
     }
 
-    void FrontEnd::open_careers(std::int32_t pack)
+    void FrontEnd::open_careers(i32 pack)
     {
         if (auto open = career_dialog())
         {
@@ -91,7 +92,7 @@ namespace rct3::ui::screens::front
         desktop_.root().add<career::CareerDialog>(std::string(kCareersName), style_.careers, strings_);
     }
 
-    career::CareerBoard& FrontEnd::open_career_board(std::vector<career::CareerBoardScenario> scenarios, std::size_t picked)
+    career::CareerBoard& FrontEnd::open_career_board(std::vector<career::CareerBoardScenario> scenarios, usize picked)
     {
         if (auto dialog = career_dialog())
             desktop_.root().remove(*dialog);
@@ -115,7 +116,7 @@ namespace rct3::ui::screens::front
         return desktop_.root().find_as<tutorial::TutorialPicker>(kTutorialsName);
     }
 
-    void FrontEnd::open_tutorials(std::int32_t pack)
+    void FrontEnd::open_tutorials(i32 pack)
     {
         if (auto open = tutorial_picker())
         {
@@ -215,7 +216,7 @@ namespace rct3::ui::screens::front
         return options_.take_language();
     }
 
-    std::optional<std::size_t> FrontEnd::take_screen_size()
+    std::optional<usize> FrontEnd::take_screen_size()
     {
         return options_.take_screen_size();
     }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/person/motions.hpp"
 
+#include "core/types.hpp"
 #include "strings/ascii.hpp"
 
 #include <algorithm>
@@ -18,7 +19,7 @@ namespace rct3::park::person
         struct Named
         {
             std::string_view name; ///< Lower case
-            std::int32_t number = 0;
+            i32 number = 0;
         };
 
         /// Sorted by name.
@@ -420,14 +421,14 @@ namespace rct3::park::person
         });
 
         /// The motions that play once, sorted.
-        constexpr std::array kOnce = std::to_array<std::int32_t>({
+        constexpr std::array kOnce = std::to_array<i32>({
             25,  27,  32,  34,  39,  41,  46,  48,  49,  51,  63,  65,  66,  68,  69,  71,  75,  76,  91,  93,  96,  98,  101, 103, 105, 107, 109, 111, 115, 117, 118, 120, 121, 123, 124, 126, 127, 129, 130, 132, 133, 135, 136, 138, 139, 141, 142, 144, 145, 147, 148, 150, 151, 153, 154,
             156, 175, 177, 210, 212, 213, 215, 216, 218, 219, 221, 222, 224, 249, 251, 252, 254, 257, 259, 260, 262, 267, 269, 270, 272, 273, 275, 276, 278, 280, 282, 286, 288, 290, 292, 293, 303, 305, 306, 308, 311, 313, 316, 318, 321, 322, 329, 331, 336, 339, 341, 349, 350, 351,
         });
 
     } // namespace
 
-    std::optional<std::int32_t> motion_number(std::string_view name)
+    std::optional<i32> motion_number(std::string_view name)
     {
         std::string lower(name);
         std::ranges::transform(lower, lower.begin(), [](char c) { return strings::ascii_lower(c); });
@@ -449,12 +450,12 @@ namespace rct3::park::person
         return out;
     }
 
-    std::optional<RiderMotions> rider_motions(std::uint8_t seating)
+    std::optional<RiderMotions> rider_motions(u8 seating)
     {
         // By the names of each seating's motions; empty where it has none of that kind.
         struct Names
         {
-            std::uint8_t seating = 0;
+            u8 seating = 0;
             std::string_view ride, wait, hands_up, cover_eyes, strained;
         };
         constexpr std::array kSeatings = std::to_array<Names>({
@@ -485,10 +486,10 @@ namespace rct3::park::person
         const auto* names = std::ranges::find(kSeatings, seating, &Names::seating);
         if (names == kSeatings.end())
             return std::nullopt;
-        const std::int32_t ride = motion_number(names->ride).value_or(motion::kIdle);
+        const i32 ride = motion_number(names->ride).value_or(motion::kIdle);
         const auto or_ride = [&](std::string_view name) { return name.empty() ? ride : motion_number(name).value_or(ride); };
         // A loop's motions in and out are named as it is, ending in "in" and "out" for "loop".
-        const auto beside = [](std::string_view loop, std::string_view end) -> std::optional<std::int32_t> {
+        const auto beside = [](std::string_view loop, std::string_view end) -> std::optional<i32> {
             if (!loop.ends_with("loop"))
                 return std::nullopt;
             loop.remove_suffix(4);
@@ -507,7 +508,7 @@ namespace rct3::park::person
         };
     }
 
-    Clip clip_at(std::span<const Clip> clips, float since)
+    Clip clip_at(std::span<const Clip> clips, f32 since)
     {
         for (const Clip& clip : clips.first(clips.size() - 1))
         {
@@ -518,7 +519,7 @@ namespace rct3::park::person
         return { clips.back().motion, since };
     }
 
-    bool motion_repeats(std::int32_t number)
+    bool motion_repeats(i32 number)
     {
         return !std::ranges::binary_search(kOnce, number);
     }

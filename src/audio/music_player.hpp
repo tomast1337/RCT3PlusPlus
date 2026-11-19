@@ -7,6 +7,7 @@
 
 #include "audio/audio.hpp"
 #include "audio/wma/stream.hpp"
+#include "core/types.hpp"
 
 #include <expected>
 #include <filesystem>
@@ -16,22 +17,22 @@
 namespace rct3::audio
 {
 
-    inline constexpr float kMusicAheadSeconds = 1.0f;
+    inline constexpr f32 kMusicAheadSeconds = 1.0f;
 
     class MusicPlayer
     {
     public:
-        [[nodiscard]] static std::expected<MusicPlayer, std::string> start(AudioEngine& engine, const std::filesystem::path& file, float volume, bool loop = true);
+        [[nodiscard]] static std::expected<MusicPlayer, std::string> start(AudioEngine& engine, const std::filesystem::path& file, f32 volume, bool loop = true);
 
         /// Reads on into the engine, back to the start at the end when looping. An error means the file cannot be read
         /// any more: the music stops when what was read has played, and later calls do nothing.
         [[nodiscard]] std::expected<void, std::string> update(AudioEngine& engine);
-        bool set_volume(AudioEngine& engine, float volume);
-        bool set_pan(AudioEngine& engine, float pan)
+        bool set_volume(AudioEngine& engine, f32 volume);
+        bool set_pan(AudioEngine& engine, f32 pan)
         {
             return engine.set_voice_pan(voice_, pan);
         }
-        bool fade(AudioEngine& engine, float level, float seconds)
+        bool fade(AudioEngine& engine, f32 level, f32 seconds)
         {
             return engine.fade_voice(voice_, level, seconds);
         }
@@ -47,7 +48,7 @@ namespace rct3::audio
 
         wma::WmaStream stream_;
         VoiceHandle voice_;
-        std::vector<float> chunk_;
+        std::vector<f32> chunk_;
         bool loop_ = true;
         bool ended_ = false;
     };

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "particles/effect.hpp"
 
+#include "core/types.hpp"
 #include "particles/display.hpp"
 #include "save/save_file.hpp"
 
@@ -19,41 +20,41 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& put(const void* p, std::size_t n)
+        Bytes& put(const void* p, usize n)
         {
             const auto* b = static_cast<const std::byte*>(p);
             v.insert(v.end(), b, b + n);
             return *this;
         }
-        Bytes& put_u8(std::uint8_t x)
+        Bytes& put_u8(u8 x)
         {
             return put(&x, 1);
         }
-        Bytes& put_u16(std::uint16_t x)
+        Bytes& put_u16(u16 x)
         {
             return put(&x, 2);
         }
-        Bytes& put_u32(std::uint32_t x)
+        Bytes& put_u32(u32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put_u64(std::uint64_t x)
+        Bytes& put_u64(u64 x)
         {
             return put(&x, 8);
         }
-        Bytes& put_f32(float x)
+        Bytes& put_f32(f32 x)
         {
             return put(&x, 4);
         }
         Bytes& name(const std::string& s)
         {
-            put_u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<u16>(s.size()));
             return put(s.data(), s.size());
         }
         /// A variable-size field: its length, then its bytes.
         Bytes& field(const Bytes& b)
         {
-            put_u32(static_cast<std::uint32_t>(b.v.size()));
+            put_u32(static_cast<u32>(b.v.size()));
             v.insert(v.end(), b.v.begin(), b.v.end());
             return *this;
         }
@@ -62,13 +63,13 @@ namespace
     struct Attr
     {
         std::string name, type;
-        std::uint32_t size = 0;
+        u32 size = 0;
         std::vector<Attr> children { };
     };
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<u32>(a.children.size()));
         for (const Attr& c : a.children)
             write_attr(b, c);
     }
@@ -78,25 +79,25 @@ namespace
         return { n, "array", 0, { { n + "Element", "reference", 8 } } };
     }
 
-    Bytes ref_list(const std::vector<std::uint64_t>& ids)
+    Bytes ref_list(const std::vector<u64>& ids)
     {
         Bytes b;
-        b.put_u32(static_cast<std::uint32_t>(ids.size()));
-        for (const std::uint64_t id : ids)
+        b.put_u32(static_cast<u32>(ids.size()));
+        for (const u64 id : ids)
             b.put_u64(id);
         return b;
     }
 
-    Bytes float_list(const std::vector<float>& values)
+    Bytes float_list(const std::vector<f32>& values)
     {
         Bytes b;
-        b.put_u32(static_cast<std::uint32_t>(values.size()));
-        for (const float f : values)
+        b.put_u32(static_cast<u32>(values.size()));
+        for (const f32 f : values)
             b.put_f32(f);
         return b;
     }
 
-    enum : std::uint32_t
+    enum : u32
     {
         kEffect,
         kEmitter,
@@ -105,7 +106,7 @@ namespace
 
     /// An effect (id 1) with two emitters (2, 3) sharing one particle (4), which has an emitter of its own (5)
     /// emitting the same particle again. The second emitter emits `second_emits`.
-    std::vector<std::byte> invented_effect(std::uint64_t second_emits = 4)
+    std::vector<std::byte> invented_effect(u64 second_emits = 4)
     {
         const Attr opacity { "ColourA", "struct", 0, { { "ColourATimes", "array", 0, { { "ColourATimesElement", "float32", 4 } } }, { "ColourAValues", "array", 0, { { "ColourAValuesElement", "float32", 4 } } }, { "wrap", "bool", 1 } } };
         const std::vector<std::pair<std::string, std::vector<Attr>>> classes {
@@ -114,10 +115,10 @@ namespace
             { "ParticleDesc", { opacity, { "Lifetime", "float32", 4 }, refs("ParticleEmitterDescs"), { "TextureNameReduced", "string", 0 } } },
         };
         Bytes b;
-        b.put_u32(static_cast<std::uint32_t>(classes.size()));
+        b.put_u32(static_cast<u32>(classes.size()));
         for (const auto& [name, attrs] : classes)
         {
-            b.name(name).put_u32(static_cast<std::uint32_t>(attrs.size()));
+            b.name(name).put_u32(static_cast<u32>(attrs.size()));
             for (const Attr& a : attrs)
                 write_attr(b, a);
         }
@@ -144,7 +145,7 @@ namespace
 
     /// A display (id 1) with two launchers, the second named by an item object (id 2), and three shots out of
     /// time order. The last shot fires from launcher `last_launcher`.
-    std::vector<std::byte> invented_display(std::uint32_t last_launcher = 1)
+    std::vector<std::byte> invented_display(u32 last_launcher = 1)
     {
         const Attr launcher { "SceneryEntriesElement", "struct", 20, { { "Col", "int32", 4 }, { "Row", "int32", 4 }, { "Dir", "int32", 4 }, { "SID", "reference", 8 } } };
         const Attr shot { "EntriesElement", "struct", 0, { { "Name", "string", 0 }, { "SceneryEntry", "int32", 4 }, { "SlotIndex", "int32", 4 }, { "Time", "float32", 4 }, { "Track", "float32", 4 } } };
@@ -153,10 +154,10 @@ namespace
             { "SIDDatabaseEntry", { { "SYMBOLNAME", "string", 0 } } },
         };
         Bytes b;
-        b.put_u32(static_cast<std::uint32_t>(classes.size()));
+        b.put_u32(static_cast<u32>(classes.size()));
         for (const auto& [name, attrs] : classes)
         {
-            b.name(name).put_u32(static_cast<std::uint32_t>(attrs.size()));
+            b.name(name).put_u32(static_cast<u32>(attrs.size()));
             for (const Attr& a : attrs)
                 write_attr(b, a);
         }
@@ -165,9 +166,9 @@ namespace
         launchers.put_u32(3).put_u32(4).put_u32(0).put_u64(0);
         launchers.put_u32(5).put_u32(4).put_u32(1).put_u64(2);
         // The lane is a whole number in a float-typed field.
-        const auto put_shot = [](Bytes& shots, const std::string& effect, std::uint32_t from, std::uint32_t tube, float seconds, std::int32_t lane) {
+        const auto put_shot = [](Bytes& shots, const std::string& effect, u32 from, u32 tube, f32 seconds, i32 lane) {
             Bytes one;
-            one.field(text(effect)).put_u32(from).put_u32(tube).put_f32(seconds).put_f32(std::bit_cast<float>(lane));
+            one.field(text(effect)).put_u32(from).put_u32(tube).put_f32(seconds).put_f32(std::bit_cast<f32>(lane));
             shots.field(one); // An element with a string in it is variable in size: it carries its length
         };
         Bytes shots;
@@ -191,14 +192,14 @@ namespace
             { "ShowController", { { "Display", "reference", 8 } } },
         };
         Bytes b;
-        b.put_u32(static_cast<std::uint32_t>(classes.size()));
+        b.put_u32(static_cast<u32>(classes.size()));
         for (const auto& [name, attrs] : classes)
         {
-            b.name(name).put_u32(static_cast<std::uint32_t>(attrs.size()));
+            b.name(name).put_u32(static_cast<u32>(attrs.size()));
             for (const Attr& a : attrs)
                 write_attr(b, a);
         }
-        const auto put_shot = [](Bytes& shots, const std::string& effect, std::uint64_t launcher, std::uint32_t tube, float seconds) {
+        const auto put_shot = [](Bytes& shots, const std::string& effect, u64 launcher, u32 tube, f32 seconds) {
             Bytes one;
             one.field(text(effect)).put_u64(launcher).put_u32(tube).put_f32(seconds);
             shots.field(one);
@@ -233,14 +234,14 @@ namespace
             { "FloatBlenderElement", { { "Float", "float32", 4 } } },
         };
         Bytes b;
-        b.put_u32(static_cast<std::uint32_t>(classes.size()));
+        b.put_u32(static_cast<u32>(classes.size()));
         for (const auto& [name, attrs] : classes)
         {
-            b.name(name).put_u32(static_cast<std::uint32_t>(attrs.size()));
+            b.name(name).put_u32(static_cast<u32>(attrs.size()));
             for (const Attr& a : attrs)
                 write_attr(b, a);
         }
-        const auto put_shot = [](Bytes& shots, std::uint32_t kind, const std::string& effect, std::uint64_t source, std::uint64_t launcher, float seconds) {
+        const auto put_shot = [](Bytes& shots, u32 kind, const std::string& effect, u64 source, u64 launcher, f32 seconds) {
             Bytes one;
             one.put_u32(kind).field(text(effect)).put_u64(source).put_u64(launcher).put_f32(seconds);
             shots.field(one);

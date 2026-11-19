@@ -11,6 +11,7 @@
 // The models' coordinates are the game's: Y up, the ground at 0, a full-tile item centred on its tile.
 #pragma once
 
+#include "core/types.hpp"
 #include "math/glm.hpp"
 #include "ovl/ride_car.hpp"
 #include "ovl/ride_train.hpp"
@@ -44,7 +45,7 @@ namespace rct3::park::object
 {
 
     /// How a part is blended with what is behind it.
-    enum class PartBlend : std::uint8_t
+    enum class PartBlend : u8
     {
         Opaque,
         Cutout,  ///< Pixels are either drawn or not, by their alpha
@@ -56,7 +57,7 @@ namespace rct3::park::object
 
     /// How a mesh with `transparency` (0 opaque, 1 cut out, 2 blended) and texture style `style` is blended. A
     /// style that fills depth (SIFillZ) draws depth only, whatever its transparency says.
-    [[nodiscard]] PartBlend part_blend(std::uint32_t transparency, std::string_view style);
+    [[nodiscard]] PartBlend part_blend(u32 transparency, std::string_view style);
 
     struct ModelVertex
     {
@@ -65,29 +66,29 @@ namespace rct3::park::object
         glm::vec2 uv { 0.0f };
         /// Of a model moved by bones, at its rig's level: up to four bones of the rig that move the vertex, and
         /// how much each does, out of 255. Zero weights mean nothing.
-        std::array<std::uint8_t, 4> bones { };
-        std::array<std::uint8_t, 4> weights { };
+        std::array<u8, 4> bones { };
+        std::array<u8, 4> weights { };
     };
 
     struct ModelPart
     {
-        std::string texture;     ///< Key of the part's picture, empty for none
-        std::uint32_t slots = 0; ///< Colour slots the picture recolours (bit k: slot k)
+        std::string texture; ///< Key of the part's picture, empty for none
+        u32 slots = 0;       ///< Colour slots the picture recolours (bit k: slot k)
         PartBlend blend = PartBlend::Opaque;
         bool one_sided = false; ///< Only the side its triangles face is drawn; the file marks the rest as both
         std::vector<ModelVertex> vertices;
-        std::vector<std::uint32_t> indices; ///< Three per triangle
+        std::vector<u32> indices; ///< Three per triangle
         /// Of a car on an arm, at every level: the arm's joint that carries it; of a car whose moving part is drawn
         /// apart (ObjectModel::car_part), 0 for that part; -1 for the car itself.
-        std::int32_t bone = -1;
+        i32 bone = -1;
         bool board = false; ///< A board for words (ovl::kMeshFlagBoard)
         /// Its picture slides along it: a lift piece's chain as the lift runs (chain_lifts.hpp), or a slide's
         /// flowing water (water/flow.hpp, whose parts the scene tells by their picture)
         bool chain = false;
         /// Of a slide's flowing water strip (water/flow.hpp), by vertex: how far along the strip it is the way the
         /// water runs, 0 to 1, by the water's spline nodes; empty for other parts.
-        std::vector<float> flow { };
-        float flow_last = 0; ///< Of such a strip, the share of it from its last node but one to its end
+        std::vector<f32> flow { };
+        f32 flow_last = 0; ///< Of such a strip, the share of it from its last node but one to its end
     };
 
     /// A car's part that moves on it about a pivot, such as a tub or a hanging seat (ovl::RideCar::moves).
@@ -106,7 +107,7 @@ namespace rct3::park::object
         /// Car model space, from the spinning part's pivot to the middle of its weight across its up: its shape's
         /// bone named "cog", or half a metre behind its origin where it has none.
         glm::vec3 lever { 0, 0, -0.5f };
-        std::uint32_t stops = 1;
+        u32 stops = 1;
         bool settles = false;
         bool held_on_chains = false;
     };
@@ -114,10 +115,10 @@ namespace rct3::park::object
     /// A flat picture standing upright on the item's anchor, turned to face the viewer round the vertical.
     struct Billboard
     {
-        std::string texture;     ///< Key of the picture, empty for none
-        std::uint32_t slots = 0; ///< Colour slots the picture recolours
-        float width = 0;
-        float height = 0;
+        std::string texture; ///< Key of the picture, empty for none
+        u32 slots = 0;       ///< Colour slots the picture recolours
+        f32 width = 0;
+        f32 height = 0;
         glm::vec2 uv_min { 0.0f }; ///< Texture coordinates of the top left corner
         glm::vec2 uv_max { 1.0f }; ///< And of the bottom right
     };
@@ -125,27 +126,27 @@ namespace rct3::park::object
     /// One level of detail: shape parts, or a billboard.
     struct ModelLevel
     {
-        float distance = 0; ///< Farthest distance from the viewer this level is drawn at
+        f32 distance = 0; ///< Farthest distance from the viewer this level is drawn at
         std::vector<ModelPart> parts;
         std::optional<Billboard> billboard;
     };
 
     /// The slot of a train's car designs that holds the link coupling its cars, where it has one.
-    inline constexpr std::size_t kLinkSlot = 5;
+    inline constexpr usize kLinkSlot = 5;
 
     /// How a car sits on its track, in its own space, where it faces +z.
     struct CarFit
     {
-        float length = 0;       ///< From its front to its rear, which is how far apart cars of a train stand
-        float front_wheels = 0; ///< How far behind its front its front wheels are
-        float rear_wheels = 0;  ///< How far behind its front its rear wheels are
+        f32 length = 0;       ///< From its front to its rear, which is how far apart cars of a train stand
+        f32 front_wheels = 0; ///< How far behind its front its front wheels are
+        f32 rear_wheels = 0;  ///< How far behind its front its rear wheels are
         /// The point midway between its front and rear wheels, which stands on the track.
         glm::vec3 on_track { 0.0f };
         /// How far behind its front a link ahead of it couples on, and one behind it: its bones named
         /// "linkfront" and "linkrear", or else its front and its rear.
-        float link_front = 0;
-        float link_rear = 0;
-        float link_height = 0; ///< How high over its on_track point those bones are, on average
+        f32 link_front = 0;
+        f32 link_rear = 0;
+        f32 link_height = 0; ///< How high over its on_track point those bones are, on average
         /// A link (kLinkSlot) between the cars either side: `length` is how far along the track it reaches from
         /// where the car ahead couples on to where the car behind does, and its on_track point stands midway.
         bool link = false;
@@ -168,7 +169,7 @@ namespace rct3::park::object
 
     /// The cameras a car may have: on its nose, which only the train's first car shows, at its front seat
     /// and at its rear seat. The rear one never looks ahead.
-    enum class RideEye : std::uint8_t
+    enum class RideEye : u8
     {
         Nose,
         Front,
@@ -187,7 +188,7 @@ namespace rct3::park::object
     struct SplashPoint
     {
         glm::vec3 position { 0.0f }; ///< Model space
-        std::uint8_t strength = 0;   ///< How big a spray: 0 low, 1 medium, 2 high
+        u8 strength = 0;             ///< How big a spray: 0 low, 1 medium, 2 high
         bool wake = false;           ///< A wake's, not a splash's
     };
 
@@ -202,61 +203,61 @@ namespace rct3::park::object
 
     struct ObjectModel
     {
-        std::uint16_t positioning = 0; ///< How the item sits on its tile (see object/placement.hpp)
+        u16 positioning = 0; ///< How the item sits on its tile (see object/placement.hpp)
         /// Of a ride car, how its riders sit (ovl::RideCar::kind's low byte); nothing when the ride says.
-        std::optional<std::uint8_t> seating;
-        std::uint32_t category = 0;                   ///< What kind of item it is (see item_category.hpp)
-        std::array<std::int32_t, 2> squares { 1, 1 }; ///< Tiles it covers along its own X and Z
-        float sway = 0;                               ///< How much it sways in the wind; above 0 for trees and plants only
+        std::optional<u8> seating;
+        u32 category = 0;                    ///< What kind of item it is (see item_category.hpp)
+        std::array<i32, 2> squares { 1, 1 }; ///< Tiles it covers along its own X and Z
+        f32 sway = 0;                        ///< How much it sways in the wind; above 0 for trees and plants only
         /// Places for riders: the most bones named "peep" and a number that any level has.
-        std::uint32_t seats = 0;
+        u32 seats = 0;
         std::string support_group; ///< The set of supports it stands on, or the set a support belongs to
         /// Track sections that lay this piece from its far end, as a right-hand curve lays the left-hand one's:
         /// its chain and water run the other way on them (chain_lifts.hpp).
         std::vector<std::string> runs_back;
-        std::int32_t lowest_level = 0;                   ///< Lowest level its footprint takes, from its base height
-        bool water_only = false;                         ///< A ride that stands only on water
-        bool fenced_round = false;                       ///< A track piece fenced round its footprint, a tower's base
-        bool paved_under = false;                        ///< A track piece whose footprint is paved, a tower's base
-        bool flows = false;                              ///< A track piece water flows along (water/flow.hpp)
-        PathFeature feature = PathFeature::None;         ///< What a path feature is for
-        std::optional<float> water_capacity { };         ///< A flower bed's water when full; none for what is not watered
-        bool no_entry = false;                           ///< A sign that can be set to forbid entry
-        bool ground_height = true;                       ///< On the ground, it stands at the ground's height there
-        bool fits_ground = false;                        ///< A plant on the ground, its shape bends to follow it
-        PathRules path_rules { };                        ///< Which paths a path item may stand on
-        bool holds_ground = false;                       ///< A ride, stall or the like the ground under is not reshaped
-        std::array<std::int32_t, 3> default_colours { }; ///< Colours it takes when nothing names its own
+        i32 lowest_level = 0;                    ///< Lowest level its footprint takes, from its base height
+        bool water_only = false;                 ///< A ride that stands only on water
+        bool fenced_round = false;               ///< A track piece fenced round its footprint, a tower's base
+        bool paved_under = false;                ///< A track piece whose footprint is paved, a tower's base
+        bool flows = false;                      ///< A track piece water flows along (water/flow.hpp)
+        PathFeature feature = PathFeature::None; ///< What a path feature is for
+        std::optional<f32> water_capacity { };   ///< A flower bed's water when full; none for what is not watered
+        bool no_entry = false;                   ///< A sign that can be set to forbid entry
+        bool ground_height = true;               ///< On the ground, it stands at the ground's height there
+        bool fits_ground = false;                ///< A plant on the ground, its shape bends to follow it
+        PathRules path_rules { };                ///< Which paths a path item may stand on
+        bool holds_ground = false;               ///< A ride, stall or the like the ground under is not reshaped
+        std::array<i32, 3> default_colours { };  ///< Colours it takes when nothing names its own
         /// For rides fenced round an outline, not their whole footprint: per square, row by row (X fastest),
         /// whether it is inside the outline. Empty for every other item.
         std::vector<bool> fence_outline;
         std::optional<support::SupportFootprint> supports; ///< What it asks of the columns under it
         /// Per square, row by row (X fastest): the lowest level over its base it fills solid and the one over the highest, or
         /// nothing where nothing collides.
-        std::vector<std::optional<std::array<std::int32_t, 2>>> solid;
+        std::vector<std::optional<std::array<i32, 2>>> solid;
         std::vector<ModelLevel> levels; ///< Finest first, never empty
         /// How it looks once vandals have broken it, level for level as `levels`: the visual the item lists
         /// named after it with "_Broken" (a bench has one, a bin or a lamp not). Empty when it has none.
         std::vector<ModelLevel> broken_levels;
-        std::int32_t price = 0;        ///< To build one, hundredths of the currency unit
-        std::int32_t removal_cost = 0; ///< To pull one down, hundredths; below zero it pays back
+        i32 price = 0;        ///< To build one, hundredths of the currency unit
+        i32 removal_cost = 0; ///< To pull one down, hundredths; below zero it pays back
         /// Of an animated model, the length in seconds of each animation its finest level lists, in the order
         /// listed; 0 for one that cannot be read. Flat rides list theirs as standing, starting, running and
         /// stopping.
-        std::vector<float> animation_seconds;
+        std::vector<f32> animation_seconds;
         std::vector<std::string> animation_names; ///< Of those animations, in the same order
         /// Where each rider sits, model space, by seat number, from the first level with seats.
         std::vector<glm::mat4> seat_places;
         /// Of a model its bones move: the bones and their motions, from the first level listing motions,
         /// whose vertices each name the bones that move them.
         std::optional<BoneRig> rig;
-        std::size_t rig_level = 0;
-        std::vector<std::int32_t> seat_bones; ///< By seat number, the rig's bone the seat is, when it has one
+        usize rig_level = 0;
+        std::vector<i32> seat_bones; ///< By seat number, the rig's bone the seat is, when it has one
         /// Of a water cannon: the rig's bones that aim it.
         struct AimBones
         {
-            std::int32_t turret { }; ///< Its gun, which turns to aim
-            std::int32_t nozzle { }; ///< At its muzzle
+            i32 turret { }; ///< Its gun, which turns to aim
+            i32 nozzle { }; ///< At its muzzle
         };
         std::optional<AimBones> aim_bones;
         /// Of a jumping fountain: its nozzles, points named kNozzle and more, model space.
@@ -264,7 +265,7 @@ namespace rct3::park::object
         /// Of a flat ride, its own fixed cameras, bones named "camera" and a number: model space, by number,
         /// looking along +Z with +Y up, and the rig's bone each is, when it has one.
         std::vector<glm::mat4> view_places;
-        std::vector<std::int32_t> view_bones;
+        std::vector<i32> view_bones;
         /// Of a car whose riders sit on an arm: the arm's joints at rest, model space, from the base out. The
         /// first turns about its own up, the others about their own sideways.
         std::vector<glm::mat4> arm_joints;
@@ -298,16 +299,16 @@ namespace rct3::park::object
         };
         std::vector<Sound> sounds;
         ovl::BoatHandling boat_handling; ///< How it handles out on open water, as the car's train sets it
-        float mass = 0;                  ///< Of a car, kilograms, empty
-        float rolling = 0;               ///< Of a car, how its train is held back, as the train's file has it (ovl::RideTrain)
-        float resting = 0;
-        float air = 0;
+        f32 mass = 0;                    ///< Of a car, kilograms, empty
+        f32 rolling = 0;                 ///< Of a car, how its train is held back, as the train's file has it (ovl::RideTrain)
+        f32 resting = 0;
+        f32 air = 0;
         /// Of a pool slide's car, how it swings in the trough, how far up from the car's origin its shape's
         /// pivot stands, the point it is drawn swung about, and how far the swinging shape hangs under it: the
         /// height of that shape's own pivot (a car of one shape, its car's).
         std::optional<ovl::TroughRide> trough;
-        float swing_pivot = 0;
-        float swing_arm = 0;
+        f32 swing_pivot = 0;
+        f32 swing_arm = 0;
         /// Of a car that is itself a stand-in rider, a dummy with a bone of that name, shown riding while the ride is
         /// tested: a real rider takes its place, so it is not drawn under one.
         bool stand_in = false;
@@ -315,7 +316,7 @@ namespace rct3::park::object
         std::optional<SlidePour> pour;
         /// Of a rowing boat whose rig moves its oars: its motions rowing straight on, turning to its left and to
         /// its right (ovl::RideCar::rowing).
-        std::optional<std::array<std::size_t, 3>> rowing;
+        std::optional<std::array<usize, 3>> rowing;
         /// Of a flat ride, the walkways its riders take to and from their seats, model space; empty for most.
         ride::Walkways walkways;
         /// The lamps it carries, from the finest level that marks any (see model_lights.hpp). A lamp on a bone
@@ -332,27 +333,27 @@ namespace rct3::park::object
 
     /// How many pieces of `model` are drawn apart from it, each moved on its own: its arm's joints, or its car's
     /// moving part.
-    [[nodiscard]] std::size_t pieces_apart(const ObjectModel& model);
+    [[nodiscard]] usize pieces_apart(const ObjectModel& model);
 
     /// The colour slots any picture of `model` recolours, at any level (bit k: slot k).
-    [[nodiscard]] std::uint32_t colour_slots(const ObjectModel& model);
+    [[nodiscard]] u32 colour_slots(const ObjectModel& model);
 
     /// How far an item's levels reach, as shares of the distances its model gives them: `detail` for every level
     /// but the last, so how long the finer levels hold, and `distance` for the last, beyond which it is not drawn.
     struct LevelScale
     {
-        float detail = 1;
-        float distance = 1;
+        f32 detail = 1;
+        f32 distance = 1;
     };
     /// By DetailKind.
     using LevelScales = std::array<LevelScale, kDetailKinds>;
 
     /// How far level `level` of `model` reaches with `scale`; never past where the last level ends.
-    [[nodiscard]] float level_reach(const ObjectModel& model, std::size_t level, LevelScale scale);
+    [[nodiscard]] f32 level_reach(const ObjectModel& model, usize level, LevelScale scale);
 
     /// The level of `model` to draw at `distance` with `scale`: the first that reaches that far. Nothing when the
     /// item is too far away for all of them.
-    [[nodiscard]] std::optional<std::size_t> level_at(const ObjectModel& model, float distance, LevelScale scale = { });
+    [[nodiscard]] std::optional<usize> level_at(const ObjectModel& model, f32 distance, LevelScale scale = { });
 
     using ModelPictures = std::map<std::string, PaletteImage, std::less<>>;
 
@@ -385,11 +386,11 @@ namespace rct3::park::object
 
     /// How far those parts are lifted: they lie on the basin they fill, and would fight it for depth. Our own
     /// value, small enough not to show.
-    inline constexpr float kWaterLift = 0.03f;
+    inline constexpr f32 kWaterLift = 0.03f;
 
     /// A see-through, faintly rippled picture for those parts, in the colour of the park's lakes, its ripples
     /// as they are `seconds` on. It tiles at any time.
-    [[nodiscard]] PaletteImage water_picture(float seconds = 0);
+    [[nodiscard]] PaletteImage water_picture(f32 seconds = 0);
 
     /// Loads models through an asset index, reading each overlay once. Keep it while loading a park's models,
     /// then drop it to free the files.
@@ -409,7 +410,7 @@ namespace rct3::park::object
 
         /// The model of car `slot` (0 to 5) of the ride train `train` (its name without the tag), looked for in
         /// `overlay` first. Nothing when the train, the car or every level of its visual is missing.
-        [[nodiscard]] std::optional<ObjectModel> load_car(std::string_view train, std::string_view overlay, std::size_t slot);
+        [[nodiscard]] std::optional<ObjectModel> load_car(std::string_view train, std::string_view overlay, usize slot);
 
         /// A model of the one static shape `shape` (its name without the tag), as carried items are drawn,
         /// looked for in `overlay` first. Nothing when it is missing.

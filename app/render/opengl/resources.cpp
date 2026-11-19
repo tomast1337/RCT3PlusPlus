@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // OpenGL backend: buffers, textures, per-frame memory, pipelines and the shader programs behind render::Shader.
+#include "core/types.hpp"
 #include "render/opengl/device.hpp"
 
 #include <algorithm>
@@ -86,7 +87,7 @@ namespace rct3::render::opengl
         {
             const char* vertex = nullptr;
             const char* fragment = nullptr;
-            std::int32_t mode = 0; ///< The fragment stage's specialisation constant 0 (lit.slang)
+            i32 mode = 0; ///< The fragment stage's specialisation constant 0 (lit.slang)
         };
 
         // As the Vulkan backend's table (render/vulkan/resources.cpp).
@@ -146,7 +147,7 @@ namespace rct3::render::opengl
 
     // A program from the GLSL the build made, `mode` defined for its specialisation constant. Empty with the
     // compiler's or linker's complaint.
-    std::expected<GLuint, std::string> OpenGlDevice::compile_program(const char* vertex, const char* fragment, std::int32_t mode)
+    std::expected<GLuint, std::string> OpenGlDevice::compile_program(const char* vertex, const char* fragment, i32 mode)
     {
         const std::string head = std::format("#version 450\n#define SPECIALISATION_0 {}\n", mode);
         GLuint program = gl.CreateProgram();
@@ -189,7 +190,7 @@ namespace rct3::render::opengl
     // Each program is compiled once, the first time a pipeline asks for it, and shared by every pipeline after.
     std::expected<GLuint, std::string> OpenGlDevice::program(Shader shader)
     {
-        GLuint& made = programs_.at(static_cast<std::size_t>(shader));
+        GLuint& made = programs_.at(static_cast<usize>(shader));
         if (made != 0)
             return made;
         const ShaderCode code = shader_code(shader);
@@ -208,7 +209,7 @@ namespace rct3::render::opengl
         Buffer b { .size = desc.data.size() };
         gl.CreateBuffers(1, &b.buffer);
         gl.NamedBufferStorage(b.buffer, static_cast<GLsizeiptr>(desc.data.size()), desc.data.data(), 0);
-        const std::uint32_t id = next_id_++;
+        const u32 id = next_id_++;
         buffers_.emplace(id, b);
         return BufferHandle { id };
     }
@@ -238,11 +239,11 @@ namespace rct3::render::opengl
             gl.TextureSubImage2D(t.texture, 0, 0, 0, width, height, GL_RGBA, gl_type(desc.format), desc.pixels.data());
             return t;
         }
-        const std::array<float, 4> clear { };
+        const std::array<f32, 4> clear { };
         gl.ClearTexImage(t.texture, 0, GL_RGBA, GL_FLOAT, clear.data());
         gl.CreateTextures(GL_TEXTURE_2D, 1, &t.depth);
         gl.TextureStorage2D(t.depth, 1, GL_DEPTH_COMPONENT32F, width, height);
-        const float far = 1.0f;
+        const f32 far = 1.0f;
         gl.ClearTexImage(t.depth, 0, GL_DEPTH_COMPONENT, GL_FLOAT, &far);
         gl.CreateFramebuffers(1, &t.framebuffer);
         gl.NamedFramebufferTexture(t.framebuffer, GL_COLOR_ATTACHMENT0, t.texture, 0);
@@ -280,7 +281,7 @@ namespace rct3::render::opengl
             made->depth_id = next_id_++;
             textures_.emplace(made->depth_id, Texture { .texture = made->depth, .extent = made->extent, .owned = false });
         }
-        const std::uint32_t id = next_id_++;
+        const u32 id = next_id_++;
         textures_.emplace(id, *made);
         return TextureHandle { id };
     }
@@ -317,14 +318,14 @@ namespace rct3::render::opengl
         gl.TextureSubImage2D(t.texture, 0, 0, 0, static_cast<GLsizei>(t.extent.width), static_cast<GLsizei>(t.extent.height), GL_RGBA, gl_type(t.format), pixels.data());
     }
 
-    std::uint32_t OpenGlDevice::make_transient_block(std::size_t size)
+    u32 OpenGlDevice::make_transient_block(usize size)
     {
         Buffer b { .size = size };
         constexpr GLbitfield kFlags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
         gl.CreateBuffers(1, &b.buffer);
         gl.NamedBufferStorage(b.buffer, static_cast<GLsizeiptr>(size), nullptr, kFlags);
         b.mapped = static_cast<std::byte*>(gl.MapNamedBufferRange(b.buffer, 0, static_cast<GLsizeiptr>(size), kFlags));
-        const std::uint32_t id = next_id_++;
+        const u32 id = next_id_++;
         buffers_.emplace(id, b);
         return id;
     }
@@ -336,8 +337,8 @@ namespace rct3::render::opengl
         frame.transient_used = 0;
         if (frame.transient.size() <= 1)
             return;
-        std::size_t total = 0;
-        for (const std::uint32_t block : frame.transient)
+        usize total = 0;
+        for (const u32 block : frame.transient)
         {
             total += buffers_.at(block).size;
             destroy_buffer(BufferHandle { block });
@@ -349,17 +350,17 @@ namespace rct3::render::opengl
     std::expected<BufferSlice, std::string> OpenGlDevice::allocate_transient(std::span<const std::byte> data)
     {
         assert(state_ == State::InFrame || state_ == State::InPass);
-        constexpr std::size_t kAlign = 16;
-        constexpr std::size_t kFirstBlock = std::size_t { 1 } << 20;
+        constexpr usize kAlign = 16;
+        constexpr usize kFirstBlock = usize { 1 } << 20;
         Frame& frame = frames_[frame_index_];
-        std::size_t offset = (frame.transient_used + kAlign - 1) & ~(kAlign - 1);
+        usize offset = (frame.transient_used + kAlign - 1) & ~(kAlign - 1);
         if (frame.transient.empty() || offset + data.size() > buffers_.at(frame.transient.back()).size)
         {
-            const std::size_t last = frame.transient.empty() ? kFirstBlock / 2 : buffers_.at(frame.transient.back()).size;
+            const usize last = frame.transient.empty() ? kFirstBlock / 2 : buffers_.at(frame.transient.back()).size;
             frame.transient.push_back(make_transient_block(std::max(last * 2, data.size())));
             offset = 0;
         }
-        const std::uint32_t block = frame.transient.back();
+        const u32 block = frame.transient.back();
         std::byte* mapped = buffers_.at(block).mapped;
         if (mapped == nullptr)
             return std::unexpected("cannot map per-frame memory");
@@ -367,7 +368,7 @@ namespace rct3::render::opengl
             std::memcpy(mapped + offset, data.data(), data.size());
         frame.transient_used = offset + data.size();
         frame_stats_.transient_bytes += data.size();
-        return BufferSlice { BufferHandle { block }, static_cast<std::uint32_t>(offset) };
+        return BufferSlice { BufferHandle { block }, static_cast<u32>(offset) };
     }
 
     std::expected<PipelineHandle, std::string> OpenGlDevice::create_pipeline(const PipelineDesc& desc)
@@ -400,7 +401,7 @@ namespace rct3::render::opengl
             gl.VertexArrayAttribFormat(p.vertex_array, a.location, size, type, static_cast<GLboolean>(normalised), a.offset);
             gl.VertexArrayAttribBinding(p.vertex_array, a.location, 0);
         }
-        const std::uint32_t id = next_id_++;
+        const u32 id = next_id_++;
         pipelines_.emplace(id, p);
         return PipelineHandle { id };
     }

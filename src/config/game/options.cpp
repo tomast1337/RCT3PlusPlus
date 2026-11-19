@@ -2,6 +2,7 @@
 #include "config/game/options.hpp"
 
 #include "config/json_text.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -17,7 +18,7 @@ namespace rct3::config::game
         namespace fs = std::filesystem;
         using O = GameOption;
 
-        constexpr float kAny = 0; // Step of an option that takes any value in its range
+        constexpr f32 kAny = 0; // Step of an option that takes any value in its range
 
         // Defaults are ours: the middle of the road, everything on that costs little.
         constexpr std::array<GameOptionInfo, kGameOptionCount> kOptions = { {
@@ -110,9 +111,9 @@ namespace rct3::config::game
 
         // The table is indexed by GameOption, so its order must follow the enum.
         static_assert([] {
-            for (std::size_t i = 0; i < kOptions.size(); ++i)
+            for (usize i = 0; i < kOptions.size(); ++i)
             {
-                if (static_cast<std::size_t>(kOptions[i].option) != i)
+                if (static_cast<usize>(kOptions[i].option) != i)
                     return false;
             }
             return true;
@@ -122,9 +123,9 @@ namespace rct3::config::game
         // Options files of earlier versions may hold these; they are skipped without a word.
         constexpr std::array<std::string_view, 2> kRetired = { "live_content", "blend_detail_levels" };
 
-        constexpr std::size_t index(GameOption option)
+        constexpr usize index(GameOption option)
         {
-            return static_cast<std::size_t>(option);
+            return static_cast<usize>(option);
         }
 
         const GameOptionInfo* find_option(std::string_view name)
@@ -133,7 +134,7 @@ namespace rct3::config::game
             return found == kOptions.end() ? nullptr : &*found;
         }
 
-        float kept(const GameOptionInfo& info, float value)
+        f32 kept(const GameOptionInfo& info, f32 value)
         {
             if (info.step > 0)
                 value = info.minimum + std::round((value - info.minimum) / info.step) * info.step;
@@ -180,8 +181,8 @@ namespace rct3::config::game
                 report(problems, std::format("unknown option {}", name));
             else if (value.is_boolean())
                 options.set(info->option, value.get<bool>() ? 1.0f : 0.0f);
-            else if (value.is_number() && std::isfinite(value.get<double>()))
-                options.set(info->option, value.get<float>());
+            else if (value.is_number() && std::isfinite(value.get<f64>()))
+                options.set(info->option, value.get<f32>());
             else
                 report(problems, std::format("{}: not a number", name));
         }
@@ -196,12 +197,12 @@ namespace rct3::config::game
         return *text ? parse(**text, problems) : GameOptions { };
     }
 
-    float GameOptions::get(GameOption option) const
+    f32 GameOptions::get(GameOption option) const
     {
         return index(option) < kGameOptionCount ? values_[index(option)] : 0;
     }
 
-    void GameOptions::set(GameOption option, float value)
+    void GameOptions::set(GameOption option, f32 value)
     {
         if (index(option) < kGameOptionCount)
             values_[index(option)] = kept(kOptions[index(option)], value);
@@ -212,11 +213,11 @@ namespace rct3::config::game
         Json json = Json::object();
         for (const GameOptionInfo& info : kOptions)
         {
-            const float value = values_[index(info.option)];
+            const f32 value = values_[index(info.option)];
             if (value == info.default_value)
                 continue;
             if (value == std::trunc(value))
-                json[info.name] = static_cast<std::int64_t>(value);
+                json[info.name] = static_cast<i64>(value);
             else
                 json[info.name] = value;
         }

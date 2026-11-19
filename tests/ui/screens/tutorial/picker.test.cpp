@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/tutorial/picker.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -57,7 +58,7 @@ TEST_CASE("the tutorials sit on an arc from the top, the start button low on the
     const Rect first = f.menu->button(0).rect();
     const Rect second = f.menu->button(1).rect();
     const Rect start = f.menu->start_button().rect();
-    const float scale = tutorial_picker::disc_place(front_screen::frame_for(f.menu->rect())).scale;
+    const f32 scale = tutorial_picker::disc_place(front_screen::frame_for(f.menu->rect())).scale;
     CHECK(first.width() == doctest::Approx(tutorial_picker::kButtonSize * scale));
     CHECK(first.height() == doctest::Approx(first.width()));
     CHECK(second.y0 > first.y0);
@@ -113,7 +114,7 @@ TEST_CASE("the disc stays round and on the screen, whatever its shape")
         const front_screen::Frame frame = front_screen::frame_for(screen);
         const tm::DiscPlace disc = tm::disc_place(frame);
         const Rect area = frame.stretched(tm::kDiscArea);
-        const float radius = tm::kDiscRadius * disc.scale;
+        const f32 radius = tm::kDiscRadius * disc.scale;
         CHECK(disc.scale > 0);
         CHECK(disc.centre.x - radius >= area.x0 - 0.01f);
         CHECK(disc.centre.x + radius <= area.x1 + 0.01f);
@@ -123,7 +124,7 @@ TEST_CASE("the disc stays round and on the screen, whatever its shape")
         CHECK(2 * radius == doctest::Approx(std::min(area.width(), area.height())));
 
         // A circle round the buttons' centre lands as a circle.
-        const float r = 100;
+        const f32 r = 100;
         const Point right = disc.at({ front_screen::kRingCentre.x + r, front_screen::kRingCentre.y });
         const Point down = disc.at({ front_screen::kRingCentre.x, front_screen::kRingCentre.y + r });
         CHECK(right.x - disc.centre.x == doctest::Approx(down.y - disc.centre.y));
@@ -137,7 +138,7 @@ TEST_CASE("on a wide screen the buttons sit on a circle, not an oval")
     f.tick();
     const tutorial_picker::DiscPlace disc = tutorial_picker::disc_place(front_screen::frame_for(f.menu->rect()));
     const auto distance = [&](const Rect& r) { return std::hypot((r.x0 + r.x1) / 2 - disc.centre.x, (r.y0 + r.y1) / 2 - disc.centre.y); };
-    const float expected = tutorial_picker::kRadius * disc.scale;
+    const f32 expected = tutorial_picker::kRadius * disc.scale;
     CHECK(distance(f.menu->button(0).rect()) == doctest::Approx(expected));
     CHECK(distance(f.menu->button(2).rect()) == doctest::Approx(expected));
     CHECK(distance(f.menu->start_button().rect()) == doctest::Approx(expected));

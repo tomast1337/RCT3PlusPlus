@@ -9,6 +9,7 @@
 // The climates' warmth and odds, how long weather holds and how fast things change are chosen by eye.
 #pragma once
 
+#include "core/types.hpp"
 #include "random/generator.hpp"
 #include "save/model/world.hpp"
 #include "units/units.hpp"
@@ -28,7 +29,7 @@ namespace rct3::simulation
     } // namespace park
 
     /// The climates a park file can name, in the order of the scenario editor's list.
-    enum class Climate : std::int32_t
+    enum class Climate : i32
     {
         Temperate,
         Spooky,
@@ -44,28 +45,28 @@ namespace rct3::simulation
     };
 
     /// The kinds the weather moves between by itself: sunny to thunderstorm, by their save numbers.
-    inline constexpr std::size_t kRolledWeathers = 6;
+    inline constexpr usize kRolledWeathers = 6;
 
     /// What a climate is like in one month.
     struct ClimateMonth
     {
-        units::Degrees warmth { };                    ///< On a cloudy day
-        std::array<double, kRolledWeathers> odds { }; ///< Of each kind, sunny first; they add up to 1
+        units::Degrees warmth { };                 ///< On a cloudy day
+        std::array<f64, kRolledWeathers> odds { }; ///< Of each kind, sunny first; they add up to 1
     };
 
     /// Climate `climate` (a park file's number; an unknown one is temperate) in month `month`, 0 March to 7
     /// October (other numbers wrap).
-    [[nodiscard]] ClimateMonth climate_month(std::int32_t climate, std::int32_t month);
+    [[nodiscard]] ClimateMonth climate_month(i32 climate, i32 month);
 
     /// The temperature weather `type` brings in month `month` of `climate`.
-    [[nodiscard]] units::Degrees weather_temperature(std::int32_t climate, std::int32_t month, save::model::WeatherType type);
+    [[nodiscard]] units::Degrees weather_temperature(i32 climate, i32 month, save::model::WeatherType type);
 
     /// The climate the original game's career scenario `scenario` (by its id) is played in; none for any other
     /// park, which keeps its file's.
-    [[nodiscard]] std::optional<std::int32_t> career_climate(std::string_view scenario);
+    [[nodiscard]] std::optional<i32> career_climate(std::string_view scenario);
 
     /// Moves the weather on by `units` of calendar time, rolling forecasts with `dice`. Nothing changes while
     /// `frozen` (the Disable weather option).
-    void advance_weather(park::ParkState& state, float units, random::RandomState& dice, bool frozen);
+    void advance_weather(park::ParkState& state, f32 units, random::RandomState& dice, bool frozen);
 
 } // namespace rct3::simulation

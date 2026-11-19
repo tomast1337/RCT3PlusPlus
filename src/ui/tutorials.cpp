@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/tutorials.hpp"
 
+#include "core/types.hpp"
 #include "strings/unicode.hpp"
 
 #include <cstdint>
@@ -19,28 +20,28 @@ namespace rct3::ui
         constexpr std::string_view kFolder = "Tutorials/";
         constexpr std::string_view kAlternate = "_Alternate";
         constexpr std::string_view kExtension = ".dat";
-        constexpr std::int32_t kMostTutorials = 99;
-        constexpr std::size_t kExtras = 8;          ///< The original game's tutorial the expansions change
-        constexpr std::size_t kAlternateExtras = 0; ///< The expansion that gives it another park
-        constexpr std::size_t kWithoutExtras = 1;   ///< The one that leaves it out
+        constexpr i32 kMostTutorials = 99;
+        constexpr usize kExtras = 8;          ///< The original game's tutorial the expansions change
+        constexpr usize kAlternateExtras = 0; ///< The expansion that gives it another park
+        constexpr usize kWithoutExtras = 1;   ///< The one that leaves it out
 
-        bool installed(std::span<const bool> expansions, std::size_t n)
+        bool installed(std::span<const bool> expansions, usize n)
         {
             return n < expansions.size() && expansions[n];
         }
     } // namespace
 
-    std::vector<TutorialInfo> tutorials(const StringTable& strings, std::int32_t pack, std::span<const bool> expansions)
+    std::vector<TutorialInfo> tutorials(const StringTable& strings, i32 pack, std::span<const bool> expansions)
     {
         const std::string start = pack <= 0 ? std::string(kStart) : std::format("{}{}_", kExpansionStart, pack - 1);
         std::vector<TutorialInfo> out;
-        for (std::int32_t n = 1; n <= kMostTutorials; ++n)
+        for (i32 n = 1; n <= kMostTutorials; ++n)
         {
             const std::string number = std::to_string(n);
             const std::u16string_view name = strings.get(start + std::string(kName) + number);
             if (name.empty())
                 break;
-            const auto count = static_cast<std::size_t>(n);
+            const auto count = static_cast<usize>(n);
             const bool extras = pack <= 0 && count == kExtras;
             if (extras && installed(expansions, kWithoutExtras))
                 break;

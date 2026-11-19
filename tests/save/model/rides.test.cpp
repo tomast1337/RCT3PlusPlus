@@ -3,6 +3,7 @@
 // Ride model tests. Every save here is built in code with invented values and invented asset names.
 #include "save/model/rides.hpp"
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -24,29 +25,29 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& put(const void* p, std::size_t n)
+        Bytes& put(const void* p, usize n)
         {
             const auto* b = static_cast<const std::byte*>(p);
             v.insert(v.end(), b, b + n);
             return *this;
         }
-        Bytes& put_u8(std::uint8_t x)
+        Bytes& put_u8(u8 x)
         {
             return put(&x, 1);
         }
-        Bytes& put_u16(std::uint16_t x)
+        Bytes& put_u16(u16 x)
         {
             return put(&x, 2);
         }
-        Bytes& put_u32(std::uint32_t x)
+        Bytes& put_u32(u32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put_u64(std::uint64_t x)
+        Bytes& put_u64(u64 x)
         {
             return put(&x, 8);
         }
-        Bytes& put_f32(float x)
+        Bytes& put_f32(f32 x)
         {
             return put(&x, 4);
         }
@@ -57,14 +58,14 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            put_u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<u16>(s.size()));
             for (const char c : s)
-                put_u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<u8>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            put_u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<u32>(payload.v.size()));
             return cat(payload);
         }
     };
@@ -72,7 +73,7 @@ namespace
     struct Attr
     {
         std::string name, type;
-        std::uint32_t size = 0;
+        u32 size = 0;
         std::vector<Attr> children;
     };
 
@@ -114,7 +115,7 @@ namespace
     }
     Attr structure(const char* n, std::vector<Attr> kids)
     {
-        std::uint32_t size = 0;
+        u32 size = 0;
         for (const auto& k : kids)
         {
             if (k.size == 0)
@@ -133,7 +134,7 @@ namespace
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<u32>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -143,7 +144,7 @@ namespace
     {
         if (a.size > 0)
         {
-            for (std::uint32_t i = 0; i < a.size; ++i)
+            for (u32 i = 0; i < a.size; ++i)
                 b.put_u8(0);
         }
         else if (a.type == "string")
@@ -168,19 +169,19 @@ namespace
     struct Obj
     {
         std::string cls;
-        std::uint64_t id;
+        u64 id;
         std::map<std::string, Bytes> set;
-        Obj& i(const std::string& n, std::int32_t x)
+        Obj& i(const std::string& n, i32 x)
         {
-            set[n] = Bytes().put_u32(static_cast<std::uint32_t>(x));
+            set[n] = Bytes().put_u32(static_cast<u32>(x));
             return *this;
         }
-        Obj& u(const std::string& n, std::uint32_t x)
+        Obj& u(const std::string& n, u32 x)
         {
             set[n] = Bytes().put_u32(x);
             return *this;
         }
-        Obj& f(const std::string& n, float x)
+        Obj& f(const std::string& n, f32 x)
         {
             set[n] = Bytes().put_f32(x);
             return *this;
@@ -190,7 +191,7 @@ namespace
             set[n] = Bytes().put_u8(x ? 1 : 0);
             return *this;
         }
-        Obj& r(const std::string& n, std::uint64_t x)
+        Obj& r(const std::string& n, u64 x)
         {
             set[n] = Bytes().put_u64(x);
             return *this;
@@ -204,21 +205,21 @@ namespace
             set[n] = Bytes().blob(p);
             return *this;
         }
-        Obj& refs(const std::string& n, const std::vector<std::uint64_t>& ids)
+        Obj& refs(const std::string& n, const std::vector<u64>& ids)
         {
             Bytes p;
-            p.put_u32(static_cast<std::uint32_t>(ids.size()));
+            p.put_u32(static_cast<u32>(ids.size()));
             for (const auto x : ids)
                 p.put_u64(x);
             set[n] = Bytes().blob(p);
             return *this;
         }
-        Obj& ints(const std::string& n, const std::vector<std::int32_t>& xs)
+        Obj& ints(const std::string& n, const std::vector<i32>& xs)
         {
             Bytes p;
-            p.put_u32(static_cast<std::uint32_t>(xs.size()));
+            p.put_u32(static_cast<u32>(xs.size()));
             for (const auto x : xs)
-                p.put_u32(static_cast<std::uint32_t>(x));
+                p.put_u32(static_cast<u32>(x));
             set[n] = Bytes().blob(p);
             return *this;
         }
@@ -247,19 +248,19 @@ namespace
         auto w = std::make_unique<World>();
         Bytes b;
         std::vector<std::string> order;
-        b.put_u32(static_cast<std::uint32_t>(schema.classes.size()));
+        b.put_u32(static_cast<u32>(schema.classes.size()));
         for (const auto& [name, attrs] : schema.classes)
         {
             order.push_back(name);
-            b.name(name).put_u32(static_cast<std::uint32_t>(attrs.size()));
+            b.name(name).put_u32(static_cast<u32>(attrs.size()));
             for (const auto& a : attrs)
                 write_attr(b, a);
         }
-        b.put_u32(static_cast<std::uint32_t>(objects.size()));
+        b.put_u32(static_cast<u32>(objects.size()));
         for (const auto& o : objects)
         {
-            std::uint32_t ci = 0;
-            for (std::uint32_t k = 0; k < order.size(); ++k)
+            u32 ci = 0;
+            for (u32 k = 0; k < order.size(); ++k)
             {
                 if (order[k] == o.cls)
                     ci = k;
@@ -342,19 +343,19 @@ namespace
     }
 
     // Ids used by the fixtures.
-    constexpr std::uint64_t kRide = 10, kTrack = 11, kSeg = 12, kA = 20, kB = 21, kC = 22, kStale = 9999;
+    constexpr u64 kRide = 10, kTrack = 11, kSeg = 12, kA = 20, kB = 21, kC = 22, kStale = 9999;
 
-    Obj piece(std::uint64_t id, const char16_t* sym, std::uint64_t next, std::uint64_t prev, std::int32_t x, float dist)
+    Obj piece(u64 id, const char16_t* sym, u64 next, u64 prev, i32 x, f32 dist)
     {
         Obj p { "TrackPiece", id, { } };
         p.s("SYMBOLNAME", sym).r("Next", next).r("Prev", prev).r("Segment", kSeg).f("StartDistance", dist);
         Bytes at;
-        at.put_u32(static_cast<std::uint32_t>(x)).put_u32(7).put_u32(static_cast<std::uint32_t>(-3)).put_u32(2).put_u32(1);
+        at.put_u32(static_cast<u32>(x)).put_u32(7).put_u32(static_cast<u32>(-3)).put_u32(2).put_u32(1);
         p.raw("SceneryItemDataField", at);
         return p;
     }
 
-    std::vector<Obj> basic_track(std::uint64_t a_prev, std::uint64_t c_next)
+    std::vector<Obj> basic_track(u64 a_prev, u64 c_next)
     {
         Obj ride { "TrackedRideInstance", kRide, { } };
         ride.r("Track", kTrack).s("Name", u"Test Ride").i("State", 2).i("TicketPrice", 250).i("OpMode", 5);
@@ -489,16 +490,16 @@ TEST_CASE("uninitialised fill is masked or defaulted")
 {
     Obj r { "TrackedRideInstance", 5, { } };
     Bytes assess;
-    assess.put_u8(0).put_f32(std::bit_cast<float>(0xCCCCCCCCu)).put_f32(std::bit_cast<float>(0xCCCCCCCCu)).put_f32(std::bit_cast<float>(0xCCCCCCCCu)).put_f32(std::bit_cast<float>(0xCCCCCCCCu)).put_f32(std::bit_cast<float>(0xCCCCCCCCu)).put_f32(std::bit_cast<float>(0xCCCCCCCCu));
+    assess.put_u8(0).put_f32(std::bit_cast<f32>(0xCCCCCCCCu)).put_f32(std::bit_cast<f32>(0xCCCCCCCCu)).put_f32(std::bit_cast<f32>(0xCCCCCCCCu)).put_f32(std::bit_cast<f32>(0xCCCCCCCCu)).put_f32(std::bit_cast<f32>(0xCCCCCCCCu)).put_f32(std::bit_cast<f32>(0xCCCCCCCCu));
     r.raw("RideAssessmentResults", assess);
     // Last lap: valid word has junk in the upper bytes and bit 0 set. Current lap: junk but bit 0 clear.
-    const auto results = [](float speed, std::uint32_t valid) {
+    const auto results = [](f32 speed, u32 valid) {
         Bytes b;
         b.put_f32(speed).put_f32(0).put_u32(0).put_u32(0).put_u32(0).put_u32(0).put_u32(0).put_u32(valid);
         return b;
     };
     Bytes testing;
-    testing.cat(results(std::bit_cast<float>(0xCCCCCCCCu), 0x6EF300u)).cat(results(12.5f, 0x6EF301u));
+    testing.cat(results(std::bit_cast<f32>(0xCCCCCCCCu), 0x6EF300u)).cat(results(12.5f, 0x6EF301u));
     r.raw("TrackedRideStats", testing);
     const auto w = build(ride_schema(), { r });
     const auto& ride = w->model.rides[0];
@@ -540,7 +541,7 @@ TEST_CASE("trains and cars keep their stored indices and unknown states")
     t0.s("RideTrainSymbolName", u"Invented:rit").r("FrontTrackPiece", kB);
     Obj t1 { "RideTrainInstance", 51, { } };
     t1.r("TrackedRideInstance", kRide).refs("Cars", { 63 }).i("WhichTrain", 1).i("State", 22);
-    const auto car = [](std::uint64_t id, std::uint64_t train, std::int32_t which, std::int32_t count, std::int32_t slot) {
+    const auto car = [](u64 id, u64 train, i32 which, i32 count, i32 slot) {
         Obj c { "RideCarInstance", id, { } };
         c.r("RideTrainInstance", train).i("WhichCar", which).i("NCars", count).i("WhichRideTrainCar", slot).i("State", 1);
         return c;
@@ -554,7 +555,7 @@ TEST_CASE("trains and cars keep their stored indices and unknown states")
     const auto w = build(ride_schema(), objs);
     const auto& r = w->model.rides[0];
     REQUIRE(r.trains.size() == 2);
-    CHECK(static_cast<std::int32_t>(r.trains[0].state) == 69); // An unnamed number survives
+    CHECK(static_cast<i32>(r.trains[0].state) == 69); // An unnamed number survives
     CHECK(r.trains[1].state == TrainState::Arriving);
     CHECK(r.trains[0].symbol == "Invented:rit");
     CHECK(r.trains[0].front_piece == kB);
@@ -596,9 +597,9 @@ TEST_CASE("index and count mismatches are reported, not fatal")
 TEST_CASE("an object listed many times is attached once")
 {
     auto objs = basic_track(kStale, kStale);
-    objs[0].refs("Trains", std::vector<std::uint64_t>(200, 50));
+    objs[0].refs("Trains", std::vector<u64>(200, 50));
     Obj t0 { "RideTrainInstance", 50, { } };
-    t0.r("TrackedRideInstance", kRide).refs("Cars", std::vector<std::uint64_t>(100, 60));
+    t0.r("TrackedRideInstance", kRide).refs("Cars", std::vector<u64>(100, 60));
     Obj c0 { "RideCarInstance", 60, { } };
     c0.r("RideTrainInstance", 50);
     objs.push_back(t0);
@@ -627,7 +628,7 @@ TEST_CASE("stations resolve through the holder object and count queue tiles")
 {
     auto objs = basic_track(kStale, kStale);
     objs[0].r("RideStationsObj", 70);
-    const auto station = [](std::uint64_t entrance, std::uint64_t line) {
+    const auto station = [](u64 entrance, u64 line) {
         Bytes b;
         b.put_u64(entrance).put_f32(1.5f).put_u64(kStale).put_f32(0).put_u64(line).put_f32(30.0f);
         return b;
@@ -641,7 +642,7 @@ TEST_CASE("stations resolve through the holder object and count queue tiles")
     q1.i("QueueSize", 2).r("RideInstance", kRide).i("StationIndex", 0);
     Obj q2 { "QueueLine", 72, { } };
     q2.i("QueueSize", 3).i("StationIndex", 1);
-    for (const std::uint64_t tid : { 200u, 201u })
+    for (const u64 tid : { 200u, 201u })
     {
         Obj t { "PathQueue", tid, { } };
         t.r("QueueLine", 71);
@@ -758,9 +759,9 @@ TEST_CASE("placement records give where an attraction's parts stand, and fence e
     s.classes["SceneryItem"] = { attr_i32("Unused") };
     s.classes["SIDDatabaseEntry"] = { str("SYMBOLNAME"), str("OVERLAYFILENAME") };
 
-    const auto placement = [](std::uint64_t id, std::uint64_t item, std::int32_t col, std::int32_t row, std::int32_t height, std::int32_t direction) {
+    const auto placement = [](u64 id, u64 item, i32 col, i32 row, i32 height, i32 direction) {
         Obj p { "Placement", id, { } };
-        p.r("SceneryItem", item).raw("SceneryItemDataField", Bytes().put_u32(static_cast<std::uint32_t>(col)).put_u32(static_cast<std::uint32_t>(row)).put_u32(static_cast<std::uint32_t>(height)).put_u32(static_cast<std::uint32_t>(direction)).put_u32(0));
+        p.r("SceneryItem", item).raw("SceneryItemDataField", Bytes().put_u32(static_cast<u32>(col)).put_u32(static_cast<u32>(row)).put_u32(static_cast<u32>(height)).put_u32(static_cast<u32>(direction)).put_u32(0));
         return p;
     };
     Obj ride { "AnimatedRideInstance", 5, { } };
@@ -821,5 +822,5 @@ TEST_CASE("a show ride's show loads its known tricks and the order they are put 
     CHECK_FALSE(got.tricks[1].invented);
     CHECK(got.tricks[2].hidden);
     CHECK(got.tricks[2].seconds == 0); // Never negative
-    CHECK(got.order == std::vector<std::uint32_t> { 2, 1, 2 });
+    CHECK(got.order == std::vector<u32> { 2, 1, 2 });
 }

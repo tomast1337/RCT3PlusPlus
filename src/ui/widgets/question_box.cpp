@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/question_box.hpp"
 
+#include "core/types.hpp"
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
@@ -24,7 +25,7 @@ namespace rct3::ui::widgets
         hover_->style.colour = style.hover_colour;
         hover_->style.vertical = Align::Centre;
 
-        for (std::size_t i = 0; i < answers.size(); ++i)
+        for (usize i = 0; i < answers.size(); ++i)
         {
             const QuestionAnswer& a = answers[i];
             Button& b = content().add<Button>(a.icon.empty() ? std::format("answer{}", i) : a.icon, style.button, a.icon);
@@ -47,39 +48,39 @@ namespace rct3::ui::widgets
         fit(0);
     }
 
-    void QuestionBox::fit(float text_height)
+    void QuestionBox::fit(f32 text_height)
     {
-        const float m = style_.margin;
+        const f32 m = style_.margin;
         const Rect& in = style_.window.content_inset;
-        float row = 0;
+        f32 row = 0;
         for (const Button* b : buttons_)
             row += (b->icon.empty() ? style_.text_button_width : style_.button_size) + (row > 0 ? style_.button_gap : 0);
         row_width_ = row;
-        const float content_width = std::max(style_.min_width - in.x0 - in.x1, m + std::max(style_.text_width, style_.hover_width + style_.button_gap + row) + m);
-        const float buttons_top = m + text_height + (text_height > 0 ? m : 0);
-        const float content_height = buttons_top + (buttons_.empty() ? 0 : style_.button_size + m);
+        const f32 content_width = std::max(style_.min_width - in.x0 - in.x1, m + std::max(style_.text_width, style_.hover_width + style_.button_gap + row) + m);
+        const f32 buttons_top = m + text_height + (text_height > 0 ? m : 0);
+        const f32 content_height = buttons_top + (buttons_.empty() ? 0 : style_.button_size + m);
 
         text_->placement = top_left(m, m, content_width - 2 * m, text_height);
         hover_->placement = top_left(m, buttons_top, style_.hover_width, style_.button_size);
-        float x = content_width - m - row;
+        f32 x = content_width - m - row;
         for (Button* b : buttons_)
         {
-            const float w = b->icon.empty() ? style_.text_button_width : style_.button_size;
+            const f32 w = b->icon.empty() ? style_.text_button_width : style_.button_size;
             b->placement = top_left(x, buttons_top, w, style_.button_size);
             x += w + style_.button_gap;
         }
-        const float width = content_width + in.x0 + in.x1;
-        const float height = content_height + in.y0 + in.y1;
+        const f32 width = content_width + in.x0 + in.x1;
+        const f32 height = content_height + in.y0 + in.y1;
         if (placement.offsets.x1 - placement.offsets.x0 != width || placement.offsets.y1 - placement.offsets.y0 != height)
             placement = centred(width, height);
     }
 
-    std::optional<std::size_t> QuestionBox::take_answer()
+    std::optional<usize> QuestionBox::take_answer()
     {
         if (answered_)
             return std::nullopt;
-        std::optional<std::size_t> answer;
-        for (std::size_t i = 0; i < buttons_.size() && !answer; ++i)
+        std::optional<usize> answer;
+        for (usize i = 0; i < buttons_.size() && !answer; ++i)
         {
             if (buttons_[i]->take_click())
                 answer = i;
@@ -103,10 +104,10 @@ namespace rct3::ui::widgets
         if (const auto f = context.fonts ? context.fonts->get(style_.font) : std::nullopt)
         {
             const auto lines = break_lines(*f, text_->text, style_.text_width);
-            fit(static_cast<float>(lines.size()) * f->line_height());
+            fit(static_cast<f32>(lines.size()) * f->line_height());
         }
         hover_->text.clear();
-        for (std::size_t i = 0; i < buttons_.size(); ++i)
+        for (usize i = 0; i < buttons_.size(); ++i)
         {
             if (buttons_[i]->hovered() && buttons_[i]->text.empty())
                 hover_->text = names_[i];

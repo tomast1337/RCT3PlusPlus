@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/management.hpp"
 
+#include "core/types.hpp"
 #include "ui/game_style.hpp"
 
 #include <array>
@@ -33,12 +34,12 @@ namespace rct3::scene::park
         }
 
         /// The research item of the row picked on the research window's list of what may come next.
-        std::optional<std::uint64_t> research_pick(const ui::screens::management::ManagementWindow& window, const ui::screens::management::ManagementFacts& facts)
+        std::optional<u64> research_pick(const ui::screens::management::ManagementWindow& window, const ui::screens::management::ManagementFacts& facts)
         {
             const auto row = window.picked_row();
             if (!row || facts.park == nullptr || window.tab() != ui::screens::management::kComingTab)
                 return std::nullopt;
-            const std::size_t at = ui::screens::management::management_row(*row).index;
+            const usize at = ui::screens::management::management_row(*row).index;
             return at < facts.park->content.entries.size() ? std::optional(facts.park->content.entries[at].id) : std::nullopt;
         }
 
@@ -48,7 +49,7 @@ namespace rct3::scene::park
             if (topic == ui::screens::management::ManagementTopic::Research)
                 shown.research_pick = research_pick(window, facts);
             if (topic == ui::screens::management::ManagementTopic::Finances)
-                shown.ledger_line = static_cast<std::size_t>(std::max(0, window.control_value(ui::screens::management::kLedgerLineControl).value_or(0)));
+                shown.ledger_line = static_cast<usize>(std::max(0, window.control_value(ui::screens::management::kLedgerLineControl).value_or(0)));
             window.show_page(ui::screens::management::management_page(topic, window.tab(), shown, strings, units));
         }
     } // namespace
@@ -68,7 +69,7 @@ namespace rct3::scene::park
         open_management_window(desktop, topic, 0, facts, strings, palette, units);
     }
 
-    void open_management_window(ui::Desktop& desktop, ui::screens::management::ManagementTopic topic, std::size_t tab, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::info::InfoUnits& units)
+    void open_management_window(ui::Desktop& desktop, ui::screens::management::ManagementTopic topic, usize tab, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::Palette& palette, const ui::screens::info::InfoUnits& units)
     {
         if (auto open = find_window(desktop, topic))
         {
@@ -95,7 +96,7 @@ namespace rct3::scene::park
 
     bool management_window_open(const ui::Desktop& desktop)
     {
-        for (std::size_t t = 0; t < ui::screens::management::kManagementTopicCount; ++t)
+        for (usize t = 0; t < ui::screens::management::kManagementTopicCount; ++t)
         {
             if (find_window(desktop, static_cast<ui::screens::management::ManagementTopic>(t)))
                 return true;
@@ -106,7 +107,7 @@ namespace rct3::scene::park
     ManagementAsks update_management_windows(ui::Desktop& desktop, const ui::screens::management::ManagementFacts& facts, const ui::StringTable& strings, const ui::screens::info::InfoUnits& units)
     {
         ManagementAsks asks;
-        for (std::size_t t = 0; t < ui::screens::management::kManagementTopicCount; ++t)
+        for (usize t = 0; t < ui::screens::management::kManagementTopicCount; ++t)
         {
             const auto topic = static_cast<ui::screens::management::ManagementTopic>(t);
             auto window = find_window(desktop, topic);
@@ -163,7 +164,7 @@ namespace rct3::scene::park
                 if (change->id == ui::screens::management::kResearchBudgetControl)
                     asks.research_budget = units::Money { change->value };
                 else if (change->id >= ui::screens::management::kFirstPriorityControl)
-                    asks.research_priority = std::pair(static_cast<std::size_t>(change->id - ui::screens::management::kFirstPriorityControl), static_cast<float>(change->value) / 100);
+                    asks.research_priority = std::pair(static_cast<usize>(change->id - ui::screens::management::kFirstPriorityControl), static_cast<f32>(change->value) / 100);
             }
             if (const auto row = window->take_row())
                 asks.activated_row = ui::screens::management::management_row(*row);

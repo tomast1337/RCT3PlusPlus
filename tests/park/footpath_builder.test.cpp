@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/footpath_builder.hpp"
 
+#include "core/types.hpp"
 #include "park/path/decks.hpp"
 
 #include <algorithm>
@@ -15,16 +16,16 @@ using rct3::units::Money;
 namespace
 {
     /// A small flat park, every tile owned unless told otherwise.
-    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid owned_grid(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         for (save::model::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
+            c.flags = static_cast<u8>(save::model::TileFlag::Owned);
         return g;
     }
 } // namespace
@@ -71,7 +72,7 @@ TEST_CASE("no turning while the last piece slopes")
 
 TEST_CASE("slope controls map to slopes and back")
 {
-    for (std::uint8_t i = 0; i < kPathSlopeCount; ++i)
+    for (u8 i = 0; i < kPathSlopeCount; ++i)
     {
         const auto slope = static_cast<PathSlope>(i);
         CHECK(picks_slope(slope_control(slope)));
@@ -102,7 +103,7 @@ TEST_CASE("what stops the next piece")
     b.slope = PathSlope::Flat;
     g.cells[3 * 4 + 1].flags = 0;
     CHECK(lay_problem(b, g, { }) == LayProblem::NotOwned);
-    g.cells[3 * 4 + 1].flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
+    g.cells[3 * 4 + 1].flags = static_cast<u8>(save::model::TileFlag::Owned);
     std::vector<save::model::PathTile> paths;
     CHECK(lay_path(b, paths, *next_piece(b, g), "Gravel", 1, 0));
     // Heading 0 leaves the four-row park from row 3.
@@ -146,7 +147,7 @@ TEST_CASE("removing paths backs the trail up from its end, newest first, and let
         paths = { ground_path({ 0, 5 }, "Old", 99) };
         b = { };
         start_at(b, { 0, 0 });
-        for (std::uint64_t id = 1; id <= 4; ++id)
+        for (u64 id = 1; id <= 4; ++id)
             REQUIRE(lay_path(b, paths, *next_piece(b, g), "Gravel", id, 0));
     };
     FootpathBuilder b;
@@ -154,19 +155,19 @@ TEST_CASE("removing paths backs the trail up from its end, newest first, and let
 
     // A drag from the trail's third piece to its end: the end goes first, and the arrow backs up over both.
     lay_trail(b, paths);
-    const std::vector<std::uint64_t> back { 3, 4 };
-    CHECK(ids(remove_paths(b, paths, back)) == std::vector<std::uint64_t> { 4, 3 });
+    const std::vector<u64> back { 3, 4 };
+    CHECK(ids(remove_paths(b, paths, back)) == std::vector<u64> { 4, 3 });
     CHECK(b.start.has_value());
     CHECK(b.trail.size() == 2);
     CHECK(next_spot(b) == save::model::Tile { 0, 2 });
 
     // The trail's second piece and a path the trail never laid: the trail is let go, both are taken.
     lay_trail(b, paths);
-    const std::vector<std::uint64_t> middle { 2, 99, 50 };
-    CHECK(ids(remove_paths(b, paths, middle)) == std::vector<std::uint64_t> { 2, 99 });
+    const std::vector<u64> middle { 2, 99, 50 };
+    CHECK(ids(remove_paths(b, paths, middle)) == std::vector<u64> { 2, 99 });
     CHECK_FALSE(b.start.has_value());
     CHECK(b.trail.empty());
-    CHECK(ids(paths) == std::vector<std::uint64_t> { 1, 3, 4 });
+    CHECK(ids(paths) == std::vector<u64> { 1, 3, 4 });
 }
 
 TEST_CASE("slopes climb off the ground and later pieces start where the last ended")
@@ -208,7 +209,7 @@ TEST_CASE("slopes climb off the ground and later pieces start where the last end
 TEST_CASE("a hill stops a piece, or is cut down to it")
 {
     save::model::TerrainGrid g = owned_grid(4, 4);
-    for (float& c : g.cells[1 * 4 + 2].corners)
+    for (f32& c : g.cells[1 * 4 + 2].corners)
         c = 2; // Too low over the piece for a tunnel
     FootpathBuilder b;
     start_at(b, { 1, 1 });
@@ -236,7 +237,7 @@ TEST_CASE("a hill stops a piece, or is cut down to it")
 TEST_CASE("deep under a hill a piece is a tunnel, laid without cutting")
 {
     save::model::TerrainGrid g = owned_grid(4, 4);
-    for (float& c : g.cells[1 * 4 + 2].corners)
+    for (f32& c : g.cells[1 * 4 + 2].corners)
         c = 3;
     FootpathBuilder b;
     start_at(b, { 1, 1 });
@@ -257,7 +258,7 @@ TEST_CASE("deep under a hill a piece is a tunnel, laid without cutting")
 
     // Rising inside the hill needs room over the piece's high end.
     b.slope = PathSlope::Up;
-    for (float& c : g.cells[1 * 4 + 3].corners)
+    for (f32& c : g.cells[1 * 4 + 3].corners)
         c = 3.5f;
     CHECK_FALSE(next_piece(b, g)->tunnel);
 }
@@ -277,7 +278,7 @@ TEST_CASE("taking a piece away pays back what laying it cost")
     FootpathBuilder b;
     start_at(b, { 1, 0 });
     std::vector<save::model::PathTile> paths;
-    std::uint64_t id = 1;
+    u64 id = 1;
     std::vector<Money> paid;
     for (const PathSlope slope : { PathSlope::Flat, PathSlope::Up, PathSlope::SteepUp, PathSlope::Flat, PathSlope::Down })
     {
@@ -289,7 +290,7 @@ TEST_CASE("taking a piece away pays back what laying it cost")
     }
     REQUIRE(paths.size() == paid.size());
     CHECK(paid.back() > Money { 1200 }); // Raised by then
-    for (std::size_t i = 0; i < paths.size(); ++i)
+    for (usize i = 0; i < paths.size(); ++i)
         CHECK(laid_price(paths[i], g, Money { 1200 }) == paid[i]);
 }
 
@@ -401,7 +402,7 @@ TEST_CASE("a trail's first piece set off the ground is raised, and set deep unde
 
 TEST_CASE("only the controls that lead to a piece that fits can be used")
 {
-    const auto usable = [](const std::array<bool, kPathControlCount>& u, PathControl c) { return u.at(static_cast<std::size_t>(c)); };
+    const auto usable = [](const std::array<bool, kPathControlCount>& u, PathControl c) { return u.at(static_cast<usize>(c)); };
     const save::model::TerrainGrid g = owned_grid(4, 4);
     FootpathBuilder b;
     start_at(b, { 0, 3 });

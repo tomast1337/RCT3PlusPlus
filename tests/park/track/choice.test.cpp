@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/choice.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
@@ -10,10 +12,10 @@ using namespace rct3::park::track;
 
 namespace
 {
-    constexpr std::uint8_t kChain = toggle_bit(PieceToggle::Chain);
-    constexpr std::uint8_t kEnclosed = toggle_bit(PieceToggle::Enclosed);
+    constexpr u8 kChain = toggle_bit(PieceToggle::Chain);
+    constexpr u8 kEnclosed = toggle_bit(PieceToggle::Enclosed);
 
-    PieceShape piece(PieceEnd exit, std::int32_t curve = 0, PieceUse use = PieceUse::Plain, std::uint8_t toggles = 0)
+    PieceShape piece(PieceEnd exit, i32 curve = 0, PieceUse use = PieceUse::Plain, u8 toggles = 0)
     {
         PieceShape s;
         s.exit = exit;
@@ -39,7 +41,7 @@ namespace
         };
     }
 
-    TrackChoice picks(std::int32_t curve, std::int32_t slope = 0, std::int32_t bank = 0, std::uint8_t toggles = 0)
+    TrackChoice picks(i32 curve, i32 slope = 0, i32 bank = 0, u8 toggles = 0)
     {
         TrackChoice c;
         c.curve = curve;

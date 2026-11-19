@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/panel.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -184,7 +185,7 @@ TEST_CASE("the title sits in the band above the lines, and the values clear the 
     f.panel->show_page(page);
     f.desktop.update({ }, { .fonts = &fonts });
     f.desktop.update({ }, { .fonts = &fonts });
-    const float column = 200 + 2 * info_panel::kPairGap;
+    const f32 column = 200 + 2 * info_panel::kPairGap;
     CHECK(f.panel->body().find("one_value")->rect().x0 == body.x0 + column);
     CHECK(f.panel->body().find("two_label")->rect().width() == column);
 
@@ -215,7 +216,7 @@ TEST_CASE("controls share a row when beside, and a page of halves stacks its rig
     fonts.set(FontRole::Small, test_font());
     InfoPage page;
     page.width = 400;
-    const auto control = [](std::string name, InfoControlKind kind, std::u16string label, std::int32_t column, bool beside) {
+    const auto control = [](std::string name, InfoControlKind kind, std::u16string label, i32 column, bool beside) {
         InfoControl c;
         c.name = std::move(name);
         c.kind = kind;
@@ -238,8 +239,8 @@ TEST_CASE("controls share a row when beside, and a page of halves stacks its rig
     };
     CHECK(body.rect().width() == 400);
     CHECK(at("mode").x0 == 0);
-    const float end = 400 - info_panel::kRingReach;
-    const float half = end / 2 - info_panel::kPairGap;
+    const f32 end = 400 - info_panel::kRingReach;
+    const f32 half = end / 2 - info_panel::kPairGap;
     CHECK(at("mode").x1 == doctest::Approx(std::min(info_panel::kChoiceWidth, half)));
     // The tick's row: the box, its label (50 wide and a gap either side) and the number after them.
     CHECK(at("wait").x0 == 0);
@@ -247,7 +248,7 @@ TEST_CASE("controls share a row when beside, and a page of halves stacks its rig
     CHECK(at("seconds").x0 == info_panel::kTickSize + info_panel::kPairGap + 50 + 2 * info_panel::kPairGap);
     CHECK(at("seconds").y0 < at("wait").y1);
     // The right half starts back at the top.
-    const float right = end / 2 + info_panel::kPairGap;
+    const f32 right = end / 2 + info_panel::kPairGap;
     CHECK(at("note_label").x0 == right);
     CHECK(at("note_label").y0 == at("mode").y0);
     CHECK(at("speed").x0 == right + 80 + 2 * info_panel::kPairGap);
@@ -409,7 +410,7 @@ TEST_CASE("a paint tab opens colours above itself for the pot pressed, and tells
     CHECK(palette.count() == game_skins::info_panel_style(kGamePalette).palette_count);
     CHECK(palette.rect().y1 < f.panel->tab(1).rect().y0);
     CHECK(palette.rect().x1 <= 1000);
-    const std::size_t pot = palette.current() == 4 ? 0 : 1;
+    const usize pot = palette.current() == 4 ? 0 : 1;
     CHECK(palette.current() == (pot == 0 ? 4U : 9U));
 
     f.click(Fixture::middle(palette.swatch(21).rect()));
@@ -470,7 +471,7 @@ TEST_CASE("the frame is drawn either from the skins or as shapes in code")
         const Rect s = coded.strip();
         const Rect d = coded.disc();
         // One pixel of smoothing past the shadows.
-        const float reach = info_panel::kShadowOffset + 1;
+        const f32 reach = info_panel::kShadowOffset + 1;
         for (const ShapeVertex& v : list.shape_vertices())
         {
             CHECK(v.x >= s.x0 - 1);
@@ -561,7 +562,7 @@ TEST_CASE("a page taller than the strip scrolls with the wheel, and its bar show
     Fixture f;
     f.panel->show(three(), 0);
     InfoPage page;
-    for (std::int32_t i = 0; i < 20; ++i)
+    for (i32 i = 0; i < 20; ++i)
         page.lines.push_back({ .label = u"line", .value = u"1", .name = std::format("row{}", i) });
     f.panel->show_page(page);
     f.desktop.update({ });
@@ -570,7 +571,7 @@ TEST_CASE("a page taller than the strip scrolls with the wheel, and its bar show
     CHECK(static_cast<const Widget&>(*bar).visible);
     const auto first = f.desktop.root().find("info/body/row0_label");
     REQUIRE(first);
-    const float top = first->rect().y0;
+    const f32 top = first->rect().y0;
     PointerState s;
     s.position = Fixture::middle(f.desktop.root().find("info/body")->rect());
     f.desktop.update(s);

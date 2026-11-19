@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "strings/unicode.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 
 namespace rct3::strings
@@ -11,13 +13,13 @@ namespace rct3::strings
 
         // The character starting at `text[i]` and its length in bytes. Overlong forms, surrogates and values
         // past U+10FFFF are refused; a bad sequence is one replacement character for its first byte.
-        std::pair<char32_t, std::size_t> decode_utf8(std::string_view text, std::size_t i)
+        std::pair<char32_t, usize> decode_utf8(std::string_view text, usize i)
         {
-            const auto byte = [&](std::size_t k) { return static_cast<std::uint8_t>(text[k]); };
-            const std::uint8_t lead = byte(i);
+            const auto byte = [&](usize k) { return static_cast<u8>(text[k]); };
+            const u8 lead = byte(i);
             if (lead < 0x80)
                 return { lead, 1 };
-            std::size_t length = 0;
+            usize length = 0;
             char32_t cp = 0;
             char32_t smallest = 0;
             if ((lead & 0xE0) == 0xC0)
@@ -44,7 +46,7 @@ namespace rct3::strings
             }
             if (i + length > text.size())
                 return { kReplacement, 1 };
-            for (std::size_t k = 1; k < length; ++k)
+            for (usize k = 1; k < length; ++k)
             {
                 if ((byte(i + k) & 0xC0) != 0x80)
                     return { kReplacement, 1 };
@@ -114,7 +116,7 @@ namespace rct3::strings
     {
         std::string out;
         out.reserve(text.size());
-        for (std::size_t i = 0; i < text.size(); ++i)
+        for (usize i = 0; i < text.size(); ++i)
         {
             const char16_t unit = text[i];
             if (is_high_surrogate(unit) && i + 1 < text.size() && is_low_surrogate(text[i + 1]))
@@ -138,7 +140,7 @@ namespace rct3::strings
     {
         std::u16string out;
         out.reserve(utf8.size());
-        for (std::size_t i = 0; i < utf8.size();)
+        for (usize i = 0; i < utf8.size();)
         {
             const auto [cp, length] = decode_utf8(utf8, i);
             append_utf16(out, cp);

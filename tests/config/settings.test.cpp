@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "config/settings.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <filesystem>
 #include <format>
@@ -16,9 +18,9 @@ TEST_CASE("every setting is registered once, in id order, with a description")
     const auto table = settings_table();
     REQUIRE(table.size() == kSettingCount);
     std::set<std::string_view> names;
-    for (std::size_t i = 0; i < table.size(); ++i)
+    for (usize i = 0; i < table.size(); ++i)
     {
-        CHECK(static_cast<std::size_t>(table[i].setting) == i);
+        CHECK(static_cast<usize>(table[i].setting) == i);
         CHECK_FALSE(table[i].description.empty());
         CHECK(names.insert(table[i].name).second);
     }

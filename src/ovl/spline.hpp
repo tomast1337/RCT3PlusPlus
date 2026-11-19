@@ -3,6 +3,7 @@
 // Splines: smooth curves through a list of 3D points, used for ride tracks, paths and lift cars.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -17,34 +18,34 @@ namespace rct3::ovl
     /// One control point of a spline.
     struct SplineNode
     {
-        std::array<float, 3> position { };
+        std::array<f32, 3> position { };
         /// Two offsets per node, the first zero at the start of an open spline and the second zero at its
         /// end. Each segment is a cubic Bezier curve: from a node, through the node plus its `tangent_out`
         /// and the next node plus its `tangent_in`, to the next node. The stored segment lengths are those
         /// curves' lengths.
-        std::array<float, 3> tangent_in { };
-        std::array<float, 3> tangent_out { };
+        std::array<f32, 3> tangent_in { };
+        std::array<f32, 3> tangent_out { };
     };
 
-    constexpr std::size_t kLengthMarks = 14; ///< Evenly spaced lengths inside a segment whose parameter is stored
+    constexpr usize kLengthMarks = 14; ///< Evenly spaced lengths inside a segment whose parameter is stored
 
     struct Spline
     {
         /// Set in a few hundred splines. One more segment length is stored when it is set, so it most likely
         /// marks a loop whose last node joins the first. Not confirmed.
         bool closed = false;
-        float length = 0;     ///< Total length, equal to the sum of the segment lengths
-        float max_height = 0; ///< Largest Y of the nodes in nearly every item
+        f32 length = 0;     ///< Total length, equal to the sum of the segment lengths
+        f32 max_height = 0; ///< Largest Y of the nodes in nearly every item
         std::vector<SplineNode> nodes;
-        std::vector<float> segment_lengths; ///< Length of each segment between consecutive nodes
+        std::vector<f32> segment_lengths; ///< Length of each segment between consecutive nodes
         /// For each segment, its curve parameter at 1/15, 2/15 ... 14/15 of the way along its length, as 0 to 255
         /// for 0 to 1: a point a given length along is found between these. Empty when not stored.
-        std::vector<std::array<std::uint8_t, kLengthMarks>> segment_parameters;
+        std::vector<std::array<u8, kLengthMarks>> segment_parameters;
     };
 
     /// The point a fraction `t` (0 to 1) of the way along segment `segment` of `spline`, by the curve's
     /// parameter rather than its length. Segment must be below `nodes.size() - 1`.
-    [[nodiscard]] std::array<float, 3> spline_point(const Spline& spline, std::size_t segment, float t);
+    [[nodiscard]] std::array<f32, 3> spline_point(const Spline& spline, usize segment, f32 t);
 
     struct SplineItem
     {

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "core/types.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/sandbox.hpp"
@@ -32,11 +33,11 @@ TEST_CASE("a ride ticket, a food or drink sale and the stock it took each land o
     const auto on = [](const auto& lines, LedgerLine line) { return lines.paid[std::to_underlying(line)].value; };
     CHECK(on(*receipts, LedgerLine::FoodDrinkSales) == r.get<Attraction>(stand).income.value);
     CHECK(on(*receipts, LedgerLine::RideTickets) == r.get<Attraction>(ride).income.value);
-    CHECK(std::ranges::fold_left(receipts->paid, std::int64_t { 0 }, [](std::int64_t sum, units::Money m) { return sum + m.value; }) == r.get<Attraction>(stand).income.value + r.get<Attraction>(ride).income.value);
+    CHECK(std::ranges::fold_left(receipts->paid, i64 { 0 }, [](i64 sum, units::Money m) { return sum + m.value; }) == r.get<Attraction>(stand).income.value + r.get<Attraction>(ride).income.value);
     const auto* supplies = r.ctx().find<Supplies>();
     REQUIRE(supplies != nullptr);
     CHECK(on(*supplies, LedgerLine::FoodDrinkStock) == 40 * r.get<Attraction>(stand).customers);
-    CHECK(std::ranges::fold_left(supplies->paid, std::int64_t { 0 }, [](std::int64_t sum, units::Money m) { return sum + m.value; }) == on(*supplies, LedgerLine::FoodDrinkStock));
+    CHECK(std::ranges::fold_left(supplies->paid, i64 { 0 }, [](i64 sum, units::Money m) { return sum + m.value; }) == on(*supplies, LedgerLine::FoodDrinkStock));
 }
 
 TEST_CASE("guests bring cash and bank around the park's averages, or the tuning's where it sets none")
@@ -51,19 +52,19 @@ TEST_CASE("guests bring cash and bank around the park's averages, or the tuning'
         const units::Money cash = averages ? units::Money { 10000 } : kTuning.arrivals.cash;
         const units::Money bank = averages ? units::Money { 30000 } : kTuning.arrivals.bank;
         rct3::random::RandomState dice = rct3::random::seeded({ 7 });
-        double sum = 0;
-        std::size_t count = 0;
-        for (std::int32_t i = 0; i < 100; ++i)
+        f64 sum = 0;
+        usize count = 0;
+        for (i32 i = 0; i < 100; ++i)
             for (const entt::entity g : admit_party(park.world(), dice, NodeId { 0 }))
             {
                 const Wallet& w = r.get<Wallet>(g);
-                const double spread = kTuning.arrivals.cash_spread.value;
-                CHECK(std::abs(static_cast<double>(w.cash.value - cash.value)) <= static_cast<double>(cash.value) * spread + 1);
-                CHECK(std::abs(static_cast<double>(w.bank.value - bank.value)) <= static_cast<double>(bank.value) * spread + 1);
-                sum += static_cast<double>(w.cash.value);
+                const f64 spread = kTuning.arrivals.cash_spread.value;
+                CHECK(std::abs(static_cast<f64>(w.cash.value - cash.value)) <= static_cast<f64>(cash.value) * spread + 1);
+                CHECK(std::abs(static_cast<f64>(w.bank.value - bank.value)) <= static_cast<f64>(bank.value) * spread + 1);
+                sum += static_cast<f64>(w.cash.value);
                 ++count;
             }
-        CHECK(sum / static_cast<double>(count) == doctest::Approx(static_cast<double>(cash.value)).epsilon(0.05));
+        CHECK(sum / static_cast<f64>(count) == doctest::Approx(static_cast<f64>(cash.value)).epsilon(0.05));
     }
 }
 
@@ -88,7 +89,7 @@ TEST_CASE("a cash machine gives a guest no more than their bank has left, and no
 
 TEST_CASE("guests pay the entrance fee at the gate, and a party that cannot is turned away")
 {
-    for (const std::int64_t fee : { 1000, 100000 })
+    for (const i64 fee : { 1000, 100000 })
     {
         Sandbox park;
         park.path({ 0, 0 }, { 3, 0 });
@@ -101,15 +102,15 @@ TEST_CASE("guests pay the entrance fee at the gate, and a party that cannot is t
         if (fee == 1000)
         {
             REQUIRE_FALSE(r.view<Visitor>().empty());
-            std::int64_t entry = 0;
+            i64 entry = 0;
             for (const auto [g, wallet] : r.view<const Wallet>().each())
             {
                 CHECK(wallet.spent.value == wallet.spent_entry.value);
                 entry += wallet.spent_entry.value;
             }
             REQUIRE(receipts != nullptr);
-            const std::int64_t gate = receipts->paid[std::to_underlying(LedgerLine::ParkEntranceTickets)].value;
-            CHECK(gate == fee * static_cast<std::int64_t>(r.view<Visitor>().size()));
+            const i64 gate = receipts->paid[std::to_underlying(LedgerLine::ParkEntranceTickets)].value;
+            CHECK(gate == fee * static_cast<i64>(r.view<Visitor>().size()));
             CHECK(entry == gate);
         }
         else

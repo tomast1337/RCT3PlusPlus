@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/startup_sequence.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 
@@ -41,7 +43,7 @@ TEST_CASE("a step fades in, holds, fades out, then the next one starts")
     REQUIRE(s.frame());
     CHECK(s.frame()->image == "b");
     CHECK(s.frame()->opacity == 0);
-    for (std::int32_t i = 0; i < 60; ++i)
+    for (i32 i = 0; i < 60; ++i)
         s.update(Seconds { 0.1f }, false);
     CHECK(s.finished());
     CHECK_FALSE(s.frame());

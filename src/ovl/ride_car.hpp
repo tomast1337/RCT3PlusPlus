@@ -4,6 +4,7 @@
 // together.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/item_record.hpp"
 #include "ovl/overlay.hpp"
 #include "units/units.hpp"
@@ -22,14 +23,14 @@ namespace rct3::ovl
     /// How a pool slide's car rides its open trough: swung up the trough's wall in a turn, it may go over the rim.
     struct TroughRide
     {
-        float damping = 0;  ///< Per second, how fast its swing dies down
-        float centring = 0; ///< Per second, how fast it is drawn back to the trough's middle
-        float friction = 0; ///< Of the car on the wall, held back as it swings by this much of the weight pressing it there
-        float pull = 0;     ///< Of a turn's pull, the share that swings it up the wall
+        f32 damping = 0;  ///< Per second, how fast its swing dies down
+        f32 centring = 0; ///< Per second, how fast it is drawn back to the trough's middle
+        f32 friction = 0; ///< Of the car on the wall, held back as it swings by this much of the weight pressing it there
+        f32 pull = 0;     ///< Of a turn's pull, the share that swings it up the wall
     };
 
     /// How a part of a car moves on the car: the word at byte 24 of its block (see RideCar::moves).
-    enum class PartMotion : std::uint32_t
+    enum class PartMotion : u32
     {
         Swings = 1,         ///< Swings both forward and back and side to side
         SwingsForward = 2,  ///< Forward and back only, about the car's right
@@ -45,8 +46,8 @@ namespace rct3::ovl
         units::PerSecond centring { };              ///< How fast it is drawn back to rest
         std::optional<units::TurnRate> fastest { }; ///< The fastest it turns, where it is held to one
         units::Share pull { };                      ///< Of the car's speeding up and slowing, the share it feels
-        float spring = 0;                           ///< How hard it is pulled back to rest, the further the harder
-        float friction = 0;                         ///< Of the weight on its bearing, the share holding it back as it turns
+        f32 spring = 0;                             ///< How hard it is pulled back to rest, the further the harder
+        f32 friction = 0;                           ///< Of the weight on its bearing, the share holding it back as it turns
         /// The furthest it turns from rest, where it is held to that; 0 keeps it at rest
         std::optional<units::Radians> furthest { };
         units::Mass weight { };     ///< Its own
@@ -61,9 +62,9 @@ namespace rct3::ovl
         /// shapes show, 0 in stand-up coaster cars, 3 in lie-down ones, 4 on bikes, 11 behind a lap bar, 13
         /// with feet dangling under inverted cars (see park::person::rider_motions). 35 leaves it to the ride. Higher
         /// bits are set in some later cars; their meaning is unconfirmed.
-        std::uint32_t kind = 0;
+        u32 kind = 0;
         std::string_view visual; ///< "svd" item that draws the car
-        float mass = 0;          ///< Kilograms, empty, its body's (byte 16) and its moving parts' together: 40 a body slide's mat, 300 a raft blasted up by jets
+        f32 mass = 0;            ///< Kilograms, empty, its body's (byte 16) and its moving parts' together: 40 a body slide's mat, 300 a raft blasted up by jets
         /// "svd" item of the part of the car that spins or swings on it, such as a spinning tub or a hanging
         /// seat; empty when the car is one piece. The two line up where each has a bone named "pivot".
         std::string_view part;
@@ -78,7 +79,7 @@ namespace rct3::ovl
         std::array<std::optional<PartMoves>, 2> moves { };
         /// Of a car whose part spins, the ways round it may stop at a station, evenly spaced round from facing ahead:
         /// the word at byte 260 in later cars (byte 9 of the record 2 or more), one in earlier ones.
-        std::uint32_t spin_stops = 1;
+        u32 spin_stops = 1;
         /// Its spinning part slows to a stop at a station wherever it faces, rather than turning to one of its stops,
         /// as a rapids ride's raft that spins whole does: the word at byte 60 is not 0.
         bool spin_settles = false;
@@ -95,7 +96,7 @@ namespace rct3::ovl
         /// Of the visual's animations, by number, the ones a rowing boat rows by: straight on with both oars,
         /// turning to its left and turning to its right (as the car's model has its +X to its right). None where
         /// it has none, as in every car but rowing boats.
-        std::array<std::optional<std::int32_t>, 3> rowing { };
+        std::array<std::optional<i32>, 3> rowing { };
         /// Every reference in the record, in file order. Besides the visual it holds further "svd" items for
         /// parts of the car, such as seats and wheels.
         std::vector<ItemReference> references;

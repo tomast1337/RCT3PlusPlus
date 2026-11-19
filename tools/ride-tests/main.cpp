@@ -6,6 +6,7 @@
 //
 // One row per tracked ride with a valid test lap and valid ratings. tools/ratings-fit/fit.py fits the ride
 // rating model's weights to these rows.
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "save/model/rides.hpp"
 #include "save/save_file.hpp"
@@ -35,8 +36,8 @@ int main(int argc, char** argv)
         return 2;
     }
     out.info("save,type,excitement,intensity,nausea,max_speed,average_speed,ride_time,ride_length,max_positive_vertical,max_negative_vertical,max_lateral,air_time,drop_count,highest_drop,inversion_count,lift_hill_count");
-    std::int32_t failed = 0;
-    for (std::int32_t i = 1; i < argc; ++i)
+    i32 failed = 0;
+    for (i32 i = 1; i < argc; ++i)
     {
         std::ifstream in(argv[i], std::ios::binary);
         const std::vector<char> raw((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
@@ -63,8 +64,8 @@ int main(int argc, char** argv)
             if (ride.kind != save::model::RideKind::Tracked || !ride.assessment.valid || !t || t->max_speed <= 0)
                 continue;
             out.info(
-                "\"{}\",\"{}\",{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:d},{:g},{:d},{:d}", name.c_str(), ride.base.symbol.c_str(), static_cast<double>(ride.assessment.excitement), static_cast<double>(ride.assessment.intensity), static_cast<double>(ride.assessment.nausea), static_cast<double>(t->max_speed), static_cast<double>(t->average_speed), static_cast<double>(t->ride_time.value), static_cast<double>(t->ride_length.value), static_cast<double>(t->max_positive_vertical),
-                static_cast<double>(t->max_negative_vertical), static_cast<double>(t->max_lateral), static_cast<double>(t->air_time.value), t->drop_count, static_cast<double>(t->highest_drop.value), t->inversion_count, t->lift_hill_count);
+                "\"{}\",\"{}\",{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:g},{:d},{:g},{:d},{:d}", name.c_str(), ride.base.symbol.c_str(), static_cast<f64>(ride.assessment.excitement), static_cast<f64>(ride.assessment.intensity), static_cast<f64>(ride.assessment.nausea), static_cast<f64>(t->max_speed), static_cast<f64>(t->average_speed), static_cast<f64>(t->ride_time.value), static_cast<f64>(t->ride_length.value), static_cast<f64>(t->max_positive_vertical),
+                static_cast<f64>(t->max_negative_vertical), static_cast<f64>(t->max_lateral), static_cast<f64>(t->air_time.value), t->drop_count, static_cast<f64>(t->highest_drop.value), t->inversion_count, t->lift_hill_count);
         }
     }
     return failed == argc - 1 ? 1 : 0;

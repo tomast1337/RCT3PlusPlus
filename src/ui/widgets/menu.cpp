@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/menu.hpp"
 
+#include "core/types.hpp"
 #include "ui/text_layout.hpp"
 
 #include <algorithm>
@@ -20,33 +21,33 @@ namespace rct3::ui::widgets
         place_at({ 0, 0 });
     }
 
-    void Menu::place_at(Point at, float min_width)
+    void Menu::place_at(Point at, f32 min_width)
     {
         at_ = at;
         min_width_ = std::max(min_width, style.min_width);
         placement = top_left(at.x, at.y, min_width_, content_height());
     }
 
-    float Menu::content_height() const
+    f32 Menu::content_height() const
     {
-        float h = style.padding.y0 + style.padding.y1;
+        f32 h = style.padding.y0 + style.padding.y1;
         for (const MenuItem& item : items)
             h += item.separator ? style.separator_height : style.row_height;
         return h;
     }
 
-    Rect Menu::row_rect(std::size_t index) const
+    Rect Menu::row_rect(usize index) const
     {
-        float y = rect().y0 + style.padding.y0;
-        for (std::size_t i = 0; i < index && i < items.size(); ++i)
+        f32 y = rect().y0 + style.padding.y0;
+        for (usize i = 0; i < index && i < items.size(); ++i)
             y += items[i].separator ? style.separator_height : style.row_height;
-        const float h = index < items.size() && items[index].separator ? style.separator_height : style.row_height;
+        const f32 h = index < items.size() && items[index].separator ? style.separator_height : style.row_height;
         return { rect().x0 + style.padding.x0, y, rect().x1 - style.padding.x1, y + h };
     }
 
-    std::optional<std::size_t> Menu::row_at(Point p) const
+    std::optional<usize> Menu::row_at(Point p) const
     {
-        for (std::size_t i = 0; i < items.size(); ++i)
+        for (usize i = 0; i < items.size(); ++i)
         {
             if (contains(row_rect(i), p))
                 return i;
@@ -54,30 +55,30 @@ namespace rct3::ui::widgets
         return std::nullopt;
     }
 
-    bool Menu::choosable(std::size_t index) const
+    bool Menu::choosable(usize index) const
     {
         return index < items.size() && items[index].enabled && !items[index].separator;
     }
 
-    void Menu::highlight(std::optional<std::size_t> index)
+    void Menu::highlight(std::optional<usize> index)
     {
         highlighted_ = index && choosable(*index) ? index : std::nullopt;
     }
 
-    void Menu::move_highlight(std::int32_t direction, std::size_t from)
+    void Menu::move_highlight(i32 direction, usize from)
     {
         const auto n = static_cast<std::ptrdiff_t>(items.size());
         for (std::ptrdiff_t i = static_cast<std::ptrdiff_t>(from); i >= 0 && i < n; i += direction)
         {
-            if (choosable(static_cast<std::size_t>(i)))
+            if (choosable(static_cast<usize>(i)))
             {
-                highlighted_ = static_cast<std::size_t>(i);
+                highlighted_ = static_cast<usize>(i);
                 return;
             }
         }
     }
 
-    void Menu::choose(std::size_t index)
+    void Menu::choose(usize index)
     {
         if (!choosable(index))
             return;
@@ -105,7 +106,7 @@ namespace rct3::ui::widgets
 
     bool Menu::on_key(const KeyPress& key)
     {
-        const std::size_t last = items.empty() ? 0 : items.size() - 1;
+        const usize last = items.empty() ? 0 : items.size() - 1;
         switch (key.key)
         {
             case Key::Up:
@@ -145,17 +146,17 @@ namespace rct3::ui::widgets
     void Menu::update(const UpdateContext& context)
     {
         const auto f = context.fonts ? context.fonts->get(style.font) : std::nullopt;
-        float width = min_width_;
+        f32 width = min_width_;
         if (f)
         {
-            float text = 0;
-            float shortcut = 0;
+            f32 text = 0;
+            f32 shortcut = 0;
             for (const MenuItem& item : items)
             {
                 text = std::max(text, text_width(*f, item.text));
                 shortcut = std::max(shortcut, text_width(*f, item.shortcut));
             }
-            const float inner = style.tick_room + text + (shortcut > 0 ? style.shortcut_gap + shortcut : 0) + style.text_end_room;
+            const f32 inner = style.tick_room + text + (shortcut > 0 ? style.shortcut_gap + shortcut : 0) + style.text_end_room;
             width = std::max(width, std::ceil(inner + style.padding.x0 + style.padding.x1));
         }
         // Keep the top-left corner where it was put; layout keeps the menu on the desktop.
@@ -168,13 +169,13 @@ namespace rct3::ui::widgets
         if (!style.background.empty())
             skin::draw_skin(context.list, context.skins.find(style.background), rect());
         const auto f = context.fonts.get(style.font);
-        for (std::size_t i = 0; i < items.size(); ++i)
+        for (usize i = 0; i < items.size(); ++i)
         {
             const MenuItem& item = items[i];
             const Rect row = row_rect(i);
             if (item.separator)
             {
-                const float y = std::round((row.y0 + row.y1) / 2);
+                const f32 y = std::round((row.y0 + row.y1) / 2);
                 context.list.fill({ row.x0 + 2, y, row.x1 - 2, y + 1 }, style.separator_colour);
                 continue;
             }
@@ -187,9 +188,9 @@ namespace rct3::ui::widgets
             }
             if (item.checked)
             {
-                const float size = std::min(style.tick_room - 4, row.height() - 4);
-                const float x = row.x0 + std::round((style.tick_room - size) / 2);
-                const float y = row.y0 + std::round((row.height() - size) / 2);
+                const f32 size = std::min(style.tick_room - 4, row.height() - 4);
+                const f32 x = row.x0 + std::round((style.tick_room - size) / 2);
+                const f32 y = row.y0 + std::round((row.height() - size) / 2);
                 const Rect box { x, y, x + size, y + size };
                 if (const auto tick = style.tick.empty() ? std::nullopt : context.skins.find(style.tick))
                     skin::draw_skin(context.list, tick, box);

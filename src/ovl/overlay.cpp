@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/overlay.hpp"
 
+#include "core/types.hpp"
+
 #include <fstream>
 #include <string>
 #include <system_error>
@@ -56,7 +58,7 @@ namespace rct3::ovl
         }
 
         // Parses one file. `common` is the already loaded common part when this is the unique file.
-        std::expected<Part, Error> make_part(std::vector<std::byte> bytes, std::uint32_t base, const Part* common)
+        std::expected<Part, Error> make_part(std::vector<std::byte> bytes, u32 base, const Part* common)
         {
             Part part;
             part.bytes = std::move(bytes);

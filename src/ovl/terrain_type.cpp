@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/terrain_type.hpp"
 
+#include "core/types.hpp"
 #include "ovl/field_values.hpp"
 #include "ovl/reference_names.hpp"
 
@@ -12,9 +13,9 @@ namespace rct3::ovl
 
         constexpr std::string_view kTerrainTag = "ter";
         constexpr std::string_view kTextureTag = "tex";
-        constexpr std::size_t kSize = 60;
+        constexpr usize kSize = 60;
 
-        std::optional<TerrainType> read_terrain(const AddressSpace& space, const ReferenceNames& refs, const PointerFields& pointers, std::uint32_t address)
+        std::optional<TerrainType> read_terrain(const AddressSpace& space, const ReferenceNames& refs, const PointerFields& pointers, u32 address)
         {
             const auto raw = space.bytes_at(address, kSize);
             if (!raw)
@@ -31,7 +32,7 @@ namespace rct3::ovl
             t.help_name = fields::string_field(space, pointers, address + 0x18, fields::read_u32(b, 0x18));
             t.label_name = fields::string_field(space, pointers, address + 0x1c, fields::read_u32(b, 0x1c));
             t.colours = { fields::read_u32(b, 0x20), fields::read_u32(b, 0x24) };
-            for (std::size_t i = 0; i < t.parameters.size(); ++i)
+            for (usize i = 0; i < t.parameters.size(); ++i)
                 t.parameters[i] = fields::read_f32(b, 0x28 + i * 4);
             return t;
         }

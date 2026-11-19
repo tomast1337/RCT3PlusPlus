@@ -6,6 +6,8 @@
 // ground's brightness reads the red one.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -14,9 +16,9 @@ namespace rct3::park::ground
 {
 
     /// The picture's width and height in texels.
-    inline constexpr std::uint32_t kVariationSize = 128;
+    inline constexpr u32 kVariationSize = 128;
     /// Across the picture, how many noise features there are; it tiles without a seam.
-    inline constexpr std::uint32_t kVariationCells = 8;
+    inline constexpr u32 kVariationCells = 8;
 
     /// The picture as Rgba8 texels, row by row. Each channel's noise wanders smoothly round mid grey, from 0
     /// to 255, the same every time.

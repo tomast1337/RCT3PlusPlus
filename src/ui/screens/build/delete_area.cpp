@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/delete_area.hpp"
 
+#include "core/types.hpp"
 #include "ui/placement.hpp"
 
 namespace rct3::ui::screens::build
@@ -9,16 +10,16 @@ namespace rct3::ui::screens::build
     namespace
     {
         // In units of the desktop.
-        constexpr float kMargin = 10;
-        constexpr float kButton = 32;
-        constexpr float kGap = 8;
-        constexpr float kHeight = kMargin * 2 + kButton;
+        constexpr f32 kMargin = 10;
+        constexpr f32 kButton = 32;
+        constexpr f32 kGap = 8;
+        constexpr f32 kHeight = kMargin * 2 + kButton;
     } // namespace
 
     DeleteAreaPanel::DeleteAreaPanel(std::string name, const DeleteAreaPanelStyle& style, const StringTable& strings)
         : Widget(std::move(name))
     {
-        const float buttons = style.remove.empty() ? 1 : 2;
+        const f32 buttons = style.remove.empty() ? 1 : 2;
         placement = bottom_left(0, style.bottom, kMargin * 2 + kButton * buttons + kGap * (buttons - 1), kHeight);
         add<widgets::Panel>("back", style.back);
         clear_ = &add<widgets::Button>(style.clear, style.button, style.clear);

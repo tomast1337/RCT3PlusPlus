@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/structure_placement.hpp"
 
+#include "core/types.hpp"
 #include "park/item_category.hpp"
 #include "park/object/placement.hpp"
 
@@ -23,17 +24,17 @@ namespace rct3::park
         }
 
         /// The tiles an item covers along the park's columns and rows, as it is turned.
-        std::array<std::int32_t, 2> span_of(std::int32_t rotation, const object::ObjectModel* model)
+        std::array<i32, 2> span_of(i32 rotation, const object::ObjectModel* model)
         {
-            const std::array<std::int32_t, 2> squares = model ? model->squares : std::array<std::int32_t, 2> { 1, 1 };
+            const std::array<i32, 2> squares = model ? model->squares : std::array<i32, 2> { 1, 1 };
             return (rotation & 1) != 0 ? std::array { squares[1], squares[0] } : squares;
         }
 
         /// A point of the box, in tiles from its first corner, turned with it: where it lies in the turned box.
         glm::vec2 turned(glm::vec2 p, ModelTurn turn, const save::model::Structure& s)
         {
-            const auto cols = static_cast<float>(s.cols);
-            const auto rows = static_cast<float>(s.rows);
+            const auto cols = static_cast<f32>(s.cols);
+            const auto rows = static_cast<f32>(s.rows);
             switch (turn.value)
             {
                 case 1:
@@ -51,24 +52,24 @@ namespace rct3::park
         /// turns, stays on `at`.
         glm::vec2 corner(const save::model::Structure& s, save::model::Tile at, ModelTurn turn)
         {
-            const std::int32_t c = s.cols / 2;
-            const std::int32_t r = s.rows / 2;
+            const i32 c = s.cols / 2;
+            const i32 r = s.rows / 2;
             switch (turn.value)
             {
                 case 1:
-                    return { static_cast<float>(at.col - r), static_cast<float>(at.row + c + 1 - s.cols) };
+                    return { static_cast<f32>(at.col - r), static_cast<f32>(at.row + c + 1 - s.cols) };
                 case 2:
-                    return { static_cast<float>(at.col + c + 1 - s.cols), static_cast<float>(at.row + r + 1 - s.rows) };
+                    return { static_cast<f32>(at.col + c + 1 - s.cols), static_cast<f32>(at.row + r + 1 - s.rows) };
                 case 3:
-                    return { static_cast<float>(at.col + r + 1 - s.rows), static_cast<float>(at.row - c) };
+                    return { static_cast<f32>(at.col + r + 1 - s.rows), static_cast<f32>(at.row - c) };
                 default:
-                    return { static_cast<float>(at.col - c), static_cast<float>(at.row - r) };
+                    return { static_cast<f32>(at.col - c), static_cast<f32>(at.row - r) };
             }
         }
 
     } // namespace
 
-    bool goes_in_structure(std::uint32_t category) noexcept
+    bool goes_in_structure(u32 category) noexcept
     {
         constexpr std::array kLeft { 6u, 12u, 13u, 14u, 15u, 16u, 17u, 18u, 19u, 21u, 23u, 24u, 25u, 26u, 27u, 30u, 31u, 32u, 33u, 37u, 38u, 39u, 40u };
         return !std::ranges::contains(kLeft, category);
@@ -83,9 +84,9 @@ namespace rct3::park
         const auto [low_row, high_row] = std::ranges::minmax(marked, { }, &save::model::Tile::row);
         s.cols = high_col.col - low_col.col + 1;
         s.rows = high_row.row - low_row.row + 1;
-        s.tiles.assign(static_cast<std::size_t>(s.cols) * static_cast<std::size_t>(s.rows), 0);
+        s.tiles.assign(static_cast<usize>(s.cols) * static_cast<usize>(s.rows), 0);
         for (const save::model::Tile t : marked)
-            s.tiles[static_cast<std::size_t>(t.row - low_row.row) * static_cast<std::size_t>(s.cols) + static_cast<std::size_t>(t.col - low_col.col)] = 1;
+            s.tiles[static_cast<usize>(t.row - low_row.row) * static_cast<usize>(s.cols) + static_cast<usize>(t.col - low_col.col)] = 1;
         for (const save::model::PlacedObject& o : objects)
         {
             if (o.fixture || o.hidden || !o.free_standing() || o.symbol.empty())
@@ -95,20 +96,20 @@ namespace rct3::park
                 continue;
             const auto span = span_of(o.rotation, model);
             bool on_mark = false;
-            for (std::int32_t c = 0; c < span[0] && !on_mark; ++c)
-                for (std::int32_t r = 0; r < span[1] && !on_mark; ++r)
+            for (i32 c = 0; c < span[0] && !on_mark; ++c)
+                for (i32 r = 0; r < span[1] && !on_mark; ++r)
                     on_mark = s.has_tile(o.col + c - low_col.col, o.row + r - low_row.row);
             if (!on_mark)
                 continue;
             // The height it stands at, less the nudge its own model adds.
-            const float y = object::object_transform(o, static_cast<object::Positioning>(model->positioning), grid, model->squares)[3].y - o.height_adjust.value_or(0);
+            const f32 y = object::object_transform(o, static_cast<object::Positioning>(model->positioning), grid, model->squares)[3].y - o.height_adjust.value_or(0);
             s.pieces.push_back(
                 {
                     .symbol = o.symbol,
                     .overlay = o.overlay,
                     .col = o.col - low_col.col,
                     .row = o.row - low_row.row,
-                    .height = static_cast<std::int32_t>(std::lround(y)),
+                    .height = static_cast<i32>(std::lround(y)),
                     .rotation = o.rotation & 3,
                     .quadrant = o.quadrant & 3,
                     .colours = o.colours,
@@ -118,13 +119,13 @@ namespace rct3::park
         return s;
     }
 
-    save::model::Tile structure_tile(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::int32_t col, std::int32_t row)
+    save::model::Tile structure_tile(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, i32 col, i32 row)
     {
-        const glm::vec2 p = corner(structure, at, turn) + turned({ static_cast<float>(col) + 0.5f, static_cast<float>(row) + 0.5f }, turn, structure);
-        return { static_cast<std::int32_t>(std::floor(p.x)), static_cast<std::int32_t>(std::floor(p.y)) };
+        const glm::vec2 p = corner(structure, at, turn) + turned({ static_cast<f32>(col) + 0.5f, static_cast<f32>(row) + 0.5f }, turn, structure);
+        return { static_cast<i32>(std::floor(p.x)), static_cast<i32>(std::floor(p.y)) };
     }
 
-    std::vector<save::model::PlacedObject> structure_objects(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::int32_t height, const object::ObjectModels& models)
+    std::vector<save::model::PlacedObject> structure_objects(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, i32 height, const object::ObjectModels& models)
     {
         std::vector<save::model::PlacedObject> out;
         out.reserve(structure.pieces.size());
@@ -141,12 +142,12 @@ namespace rct3::park
             o.force_absolute_height = true;
             // Its tiles turn with the box; it stands from the first of them.
             const auto span = span_of(p.rotation, model_of(o, models));
-            const glm::vec2 a = turned({ static_cast<float>(p.col), static_cast<float>(p.row) }, turn, structure);
-            const glm::vec2 b = turned({ static_cast<float>(p.col + span[0]), static_cast<float>(p.row + span[1]) }, turn, structure);
-            o.col = static_cast<std::int32_t>(origin.x + std::min(a.x, b.x));
-            o.row = static_cast<std::int32_t>(origin.y + std::min(a.y, b.y));
+            const glm::vec2 a = turned({ static_cast<f32>(p.col), static_cast<f32>(p.row) }, turn, structure);
+            const glm::vec2 b = turned({ static_cast<f32>(p.col + span[0]), static_cast<f32>(p.row + span[1]) }, turn, structure);
+            o.col = static_cast<i32>(origin.x + std::min(a.x, b.x));
+            o.row = static_cast<i32>(origin.y + std::min(a.y, b.y));
             // A quarter of a tile turns with it too.
-            const glm::vec2 q = turned({ static_cast<float>(p.col) + ((p.quadrant & 1) != 0 ? 0.75f : 0.25f), static_cast<float>(p.row) + ((p.quadrant & 2) != 0 ? 0.75f : 0.25f) }, turn, structure);
+            const glm::vec2 q = turned({ static_cast<f32>(p.col) + ((p.quadrant & 1) != 0 ? 0.75f : 0.25f), static_cast<f32>(p.row) + ((p.quadrant & 2) != 0 ? 0.75f : 0.25f) }, turn, structure);
             o.quadrant = (q.x - std::floor(q.x) >= 0.5f ? 1 : 0) + (q.y - std::floor(q.y) >= 0.5f ? 2 : 0);
             out.push_back(std::move(o));
         }
@@ -155,8 +156,8 @@ namespace rct3::park
 
     StructureProblem structure_problem(const save::model::Structure& structure, save::model::Tile at, ModelTurn turn, std::span<const save::model::PlacedObject> placed, const object::ObjectModels& models, const path::SolidTiles& solids, std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid)
     {
-        for (std::int32_t row = 0; row < structure.rows; ++row)
-            for (std::int32_t col = 0; col < structure.cols; ++col)
+        for (i32 row = 0; row < structure.rows; ++row)
+            for (i32 col = 0; col < structure.cols; ++col)
             {
                 if (!structure.has_tile(col, row))
                     continue;

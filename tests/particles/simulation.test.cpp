@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "particles/simulation.hpp"
 
+#include "core/types.hpp"
 #include "particles/library.hpp"
 
 #include <algorithm>
@@ -16,7 +17,7 @@ namespace
 {
 
     /// One emitter sending `count` particles of `life` seconds evenly over a one-second effect.
-    Effect steady(std::int32_t count, float life)
+    Effect steady(i32 count, f32 life)
     {
         Effect e;
         e.roots = { 0 };
@@ -31,9 +32,9 @@ namespace
     }
 
     /// `seconds` of time in frames of a tenth, as the park would call it.
-    void run_for(EffectRun& run, float seconds)
+    void run_for(EffectRun& run, f32 seconds)
     {
-        for (std::int32_t i = 0; i < static_cast<std::int32_t>(seconds * 10 + 0.5f); ++i)
+        for (i32 i = 0; i < static_cast<i32>(seconds * 10 + 0.5f); ++i)
             run.advance(0.1f);
     }
 
@@ -47,11 +48,11 @@ TEST_CASE("an emitter spreads its particles over its share of the owner's life")
     run.advance(0.2f);
     run.advance(0.1f);
     CHECK(run.particles().count() == 5);
-    for (std::int32_t i = 0; i < 10; ++i)
+    for (i32 i = 0; i < 10; ++i)
         run.advance(0.1f);
     CHECK(run.particles().count() == 10);
     CHECK_FALSE(run.finished());
-    for (std::int32_t i = 0; i < 40; ++i)
+    for (i32 i = 0; i < 40; ++i)
         run.advance(0.2f);
     CHECK(run.finished());
 }
@@ -60,8 +61,8 @@ TEST_CASE("a looping run starts its effect again")
 {
     const Effect e = steady(4, 0.5f);
     EffectRun run(e, seeded(), true, 64);
-    std::size_t most = 0;
-    for (std::int32_t i = 0; i < 100; ++i)
+    usize most = 0;
+    for (i32 i = 0; i < 100; ++i)
     {
         run.advance(0.05f);
         most = std::max(most, run.particles().count());
@@ -83,7 +84,7 @@ TEST_CASE("the same seed gives the same particles")
     b.advance(0.25f);
     b.advance(0.25f);
     REQUIRE(a.particles().count() == b.particles().count());
-    for (std::size_t i = 0; i < a.particles().count(); ++i)
+    for (usize i = 0; i < a.particles().count(); ++i)
         CHECK(a.particles().position[i] == b.particles().position[i]);
 }
 
@@ -125,7 +126,7 @@ TEST_CASE("a scaled run is the same effect smaller, in the same time")
     run_for(small, 1);
     REQUIRE(whole.particles().count() == 10);
     REQUIRE(small.particles().count() == 10);
-    for (std::size_t i = 0; i < 10; ++i)
+    for (usize i = 0; i < 10; ++i)
     {
         const glm::vec3 far = whole.particles().position[i] - glm::vec3(3, 1, 0);
         const glm::vec3 near = small.particles().position[i] - glm::vec3(3, 1, 0);

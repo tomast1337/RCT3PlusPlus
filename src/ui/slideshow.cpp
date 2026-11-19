@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/slideshow.hpp"
 
+#include "core/types.hpp"
 #include "image/picture_file.hpp"
 #include "ui/screens/front/layout.hpp"
 
@@ -17,11 +18,11 @@ namespace rct3::ui
         using screens::front::front_screen::kDesignHeight;
         using screens::front::front_screen::kDesignWidth;
 
-        constexpr float kEdge = 80; ///< Of the front screen's artwork, at the design size
+        constexpr f32 kEdge = 80; ///< Of the front screen's artwork, at the design size
 
     } // namespace
 
-    std::vector<std::filesystem::path> slideshow_pictures(std::span<const std::filesystem::path> folders, std::uint32_t seed)
+    std::vector<std::filesystem::path> slideshow_pictures(std::span<const std::filesystem::path> folders, u32 seed)
     {
         std::vector<std::filesystem::path> out;
         std::mt19937 random(seed);
@@ -33,12 +34,12 @@ namespace rct3::ui
         return out;
     }
 
-    Rect slideshow_rect(float width, float height)
+    Rect slideshow_rect(f32 width, f32 height)
     {
         if (width <= 0 || height <= 0)
             return { };
-        const float left = kEdge * width / kDesignWidth;
-        const float bottom = kEdge * height / kDesignHeight * height / width;
+        const f32 left = kEdge * width / kDesignWidth;
+        const f32 bottom = kEdge * height / kDesignHeight * height / width;
         return { left, 0, width, height - bottom };
     }
 
@@ -75,8 +76,8 @@ namespace rct3::ui
     {
         if (pictures_.empty())
             return { };
-        const float fade = timing_.fade.value;
-        const float alpha = fade > 0 ? std::min(time_.value / fade, 1.0f) : 1.0f;
+        const f32 fade = timing_.fade.value;
+        const f32 alpha = fade > 0 ? std::min(time_.value / fade, 1.0f) : 1.0f;
         return { under_, over_, alpha };
     }
 

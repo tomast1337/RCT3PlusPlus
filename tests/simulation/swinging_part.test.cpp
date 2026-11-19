@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/swinging_part.hpp"
 
+#include "core/types.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -20,14 +22,14 @@ namespace
     const glm::mat3 kLevel { 1.0f };
 
     /// Where the part hangs, from its pivot, swung by `angle` about +Z from straight down.
-    glm::vec3 hang(float angle)
+    glm::vec3 hang(f32 angle)
     {
         return glm::mat3(glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 0, 1))) * glm::vec3(0, -1, 0);
     }
 
-    void run(Swing& swing, const SwingingPart& part, glm::vec3 acceleration, float seconds)
+    void run(Swing& swing, const SwingingPart& part, glm::vec3 acceleration, f32 seconds)
     {
-        for (float t = 0; t < seconds; t += 0.05f)
+        for (f32 t = 0; t < seconds; t += 0.05f)
             swing_on(swing, part, kLevel, acceleration, 0.05f);
     }
 } // namespace
@@ -43,14 +45,14 @@ TEST_CASE("a swinging part at rest on a standing car hangs straight down")
 TEST_CASE("in a steady turn a swinging part swings out of it, as far as the turn's pull against gravity")
 {
     // Turning left at 5 m/s² towards the turn's middle, at +X: it settles hanging along gravity less that pull.
-    for (const float pull : { 1.0f, 0.5f })
+    for (const f32 pull : { 1.0f, 0.5f })
     {
         CAPTURE(pull);
         SwingingPart part = sideways();
         part.pull = { pull };
         Swing swing;
         run(swing, part, { 5, 0, 0 }, 20);
-        const float expected = std::atan(pull * 5 / units::kGravity.value);
+        const f32 expected = std::atan(pull * 5 / units::kGravity.value);
         CHECK(std::abs(swing.angle.value) == doctest::Approx(expected).epsilon(1e-3));
         CHECK(hang(swing.angle.value).x < 0); // Out, away from the turn's middle
         CHECK(std::abs(swing.rate.value) < 1e-3f);
@@ -59,13 +61,13 @@ TEST_CASE("in a steady turn a swinging part swings out of it, as far as the turn
 
 TEST_CASE("a swinging part's damping makes it settle, and faster the more it has")
 {
-    const auto left_after = [](float damping) {
+    const auto left_after = [](f32 damping) {
         SwingingPart part = sideways();
         part.damping = { damping };
         Swing swing { .angle = { 0.6f } };
         run(swing, part, glm::vec3(0.0f), 3);
         // How far it would swing out from here: its angle, and its turning as an angle at its swing's pace.
-        const float pace = std::sqrt(part.arm.value * units::kGravity.value);
+        const f32 pace = std::sqrt(part.arm.value * units::kGravity.value);
         return std::hypot(swing.angle.value, swing.rate.value / pace);
     };
     CHECK(left_after(2) < 0.05f);
@@ -88,7 +90,7 @@ TEST_CASE("a swinging part swings no further than its furthest angle, and turns 
     part.furthest = units::Radians { 0.3f };
     part.fastest = units::TurnRate { 0.5f };
     Swing swing;
-    for (std::int32_t k = 0; k < 400; ++k)
+    for (i32 k = 0; k < 400; ++k)
     {
         swing_on(swing, part, kLevel, { 20, 0, 0 }, 0.05f);
         CHECK(std::abs(swing.angle.value) <= 0.3f + 1e-6f);
@@ -119,7 +121,7 @@ TEST_CASE("a part swinging forward and back swings back as its car speeds up, an
     // Standing on a slope, its rest is level: it does not swing.
     Swing still;
     const glm::mat3 climbing(glm::rotate(glm::mat4(1.0f), -0.4f, glm::vec3(1, 0, 0)));
-    for (std::int32_t k = 0; k < 100; ++k)
+    for (i32 k = 0; k < 100; ++k)
         swing_on(still, part, climbing, glm::vec3(0.0f), 0.05f);
     CHECK(still.angle.value == doctest::Approx(0));
 }
@@ -130,7 +132,7 @@ TEST_CASE("a part sprung to its car rests on the car, banked with it")
     part.spring = 50;
     Swing swing;
     const glm::mat3 banked(glm::rotate(glm::mat4(1.0f), 0.5f, glm::vec3(0, 0, 1)));
-    for (std::int32_t k = 0; k < 400; ++k)
+    for (i32 k = 0; k < 400; ++k)
         swing_on(swing, part, banked, glm::vec3(0.0f), 0.05f);
     // Gravity pulls it towards straight down, half a radian off the car's own down; the spring holds it near the car.
     CHECK(std::abs(swing.angle.value) < 0.5f);

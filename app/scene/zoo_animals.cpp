@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/zoo_animals.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
@@ -17,7 +18,7 @@ namespace rct3::scene
     namespace
     {
         /// Seconds one animal's motion runs ahead of the one before, so they do not move as one.
-        constexpr float kMotionSpread = 0.37f;
+        constexpr f32 kMotionSpread = 0.37f;
 
         /// Uploads the pictures of the bodies read since the last upload.
         void upload_new_pictures(render::Device& device, park::ParkScene& scene)
@@ -118,14 +119,14 @@ namespace rct3::scene
                 crate_places.push_back(world);
                 continue;
             }
-            const float offset = static_cast<float>(entt::to_entity(e)) * kMotionSpread;
+            const f32 offset = static_cast<f32>(entt::to_entity(e)) * kMotionSpread;
             drawn.placed.push_back({ .body = &*body, .motion = motion_of(*body, animal, pose), .time = { scene.park_clock + offset }, .world = world });
         }
         if (crated != drawn.crated)
         {
             const save::model::PlacedObject crate = animal_crate();
             std::vector<save::model::PlacedObject> shapes(crated.size(), crate);
-            for (std::size_t i = 0; i < shapes.size(); ++i)
+            for (usize i = 0; i < shapes.size(); ++i)
                 shapes[i].id = i + 1;
             drawn.crates = scene.models.contains(rct3::park::object::model_key(crate)) ? rct3::park::moving_meshes(shapes, scene.models, scene.grid) : rct3::park::MovingMeshes { };
             drawn.crated = std::move(crated);

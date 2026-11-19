@@ -2,6 +2,7 @@
 #include "ovl/skeleton.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <doctest/doctest.h>
 #include <string>
@@ -15,23 +16,23 @@ namespace
 {
 
     const std::string kNames("B:sal\0W:san\0Root\0Arm\0Hand\0Wave\0", 31);
-    constexpr std::uint32_t kBase = 32; // names padded
+    constexpr u32 kBase = 32; // names padded
 
-    std::uint32_t name_at(const std::string& needle)
+    u32 name_at(const std::string& needle)
     {
         const auto at = kNames.find(needle);
         REQUIRE(at != std::string::npos);
-        return static_cast<std::uint32_t>(at);
+        return static_cast<u32>(at);
     }
 
     // Offsets inside the structure block: the skeleton, then its lists.
-    constexpr std::uint32_t kBones = 40;
-    constexpr std::uint32_t kParents = 52;
-    constexpr std::uint32_t kMotionNames = 64;
-    constexpr std::uint32_t kMotions = 68;
-    constexpr std::uint32_t kEnd = 72;
+    constexpr u32 kBones = 40;
+    constexpr u32 kParents = 52;
+    constexpr u32 kMotionNames = 64;
+    constexpr u32 kMotions = 68;
+    constexpr u32 kEnd = 72;
 
-    void words(std::vector<std::byte>& out, std::initializer_list<std::uint32_t> values)
+    void words(std::vector<std::byte>& out, std::initializer_list<u32> values)
     {
         for (auto v : values)
             append_u32(out, v);
@@ -62,12 +63,12 @@ namespace
     }
 
     /// Three bones: the second hangs from the first, the third names itself, which counts as none.
-    std::vector<std::byte> structure(std::uint32_t bones = 3)
+    std::vector<std::byte> structure(u32 bones = 3)
     {
         std::vector<std::byte> out;
         words(out, { bones, kBase + kBones, kBase + kParents, 0, 0, 0, 0, 1, kBase + kMotionNames, kBase + kMotions });
         words(out, { name_at("Root"), name_at("Arm"), name_at("Hand") });
-        words(out, { static_cast<std::uint32_t>(-1), 0, 2 });
+        words(out, { static_cast<u32>(-1), 0, 2 });
         words(out, { name_at("Wave"), 0 });
         REQUIRE(out.size() == kEnd);
         return out;

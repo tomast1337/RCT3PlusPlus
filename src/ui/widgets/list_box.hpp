@@ -14,6 +14,7 @@
 // they activated a row. Changing `items` or calling select() is never reported.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widgets/scroll_bar.hpp"
 
 #include <cstddef>
@@ -35,12 +36,12 @@ namespace rct3::ui::widgets
         Color disabled_text_colour = hex("#7f7f7f");
         Color stripe = hex("#00000000");      ///< Behind every other row, the first included
         Color greyed_tint = hex("#ffffff66"); ///< Over a greyed row's pictures
-        float icon_size = 16;                 ///< Of the pictures before a row's text, each square
-        float icon_gap = 1;                   ///< Between the pictures, and after the last
+        f32 icon_size = 16;                   ///< Of the pictures before a row's text, each square
+        f32 icon_gap = 1;                     ///< Between the pictures, and after the last
         font::FontRole font = font::FontRole::Small;
-        float row_height = 18;
+        f32 row_height = 18;
         Rect padding { 3, 3, 3, 3 };          ///< Between the edges and the rows and bar; fixed when the list is made
-        float text_indent = 4;                ///< From a row's left edge to its text
+        f32 text_indent = 4;                  ///< From a row's left edge to its text
         units::Seconds double_click { 0.4f }; ///< A second press this soon activates
     };
 
@@ -54,19 +55,19 @@ namespace rct3::ui::widgets
         std::vector<std::vector<std::string>> icons; ///< Skins of the pictures before each row's text, by row
         std::vector<bool> greyed;                    ///< By row; rows past its end are not
 
-        [[nodiscard]] std::optional<std::size_t> selected() const
+        [[nodiscard]] std::optional<usize> selected() const
         {
             return selected_;
         }
         /// Selects `index` (nothing when out of range or nullopt) and scrolls it into view.
-        void select(std::optional<std::size_t> index);
+        void select(std::optional<usize> index);
 
         [[nodiscard]] ScrollBar& bar()
         {
             return *bar_;
         }
         /// The row at `p`, if `p` is over one.
-        [[nodiscard]] std::optional<std::size_t> row_at(Point p) const;
+        [[nodiscard]] std::optional<usize> row_at(Point p) const;
 
         /// True once for each change of the selection by the user since the last call.
         [[nodiscard]] bool take_change();
@@ -94,21 +95,21 @@ namespace rct3::ui::widgets
         void draw(DrawContext& context) const override;
 
     private:
-        [[nodiscard]] bool is_greyed(std::size_t row) const
+        [[nodiscard]] bool is_greyed(usize row) const
         {
             return row < greyed.size() && greyed[row];
         }
         [[nodiscard]] Rect rows_box() const;
-        [[nodiscard]] std::size_t rows_in_view() const;
-        void pick(std::size_t index);
+        [[nodiscard]] usize rows_in_view() const;
+        void pick(usize index);
 
         ScrollBar* bar_ = nullptr;
-        std::optional<std::size_t> selected_;
+        std::optional<usize> selected_;
         bool reveal_ = false;        // Scroll the selection into view at the next update
         units::Seconds since_press_; // Since the last press on a row
-        std::optional<std::size_t> last_pressed_;
-        std::int32_t changes_ = 0;
-        std::int32_t activations_ = 0;
+        std::optional<usize> last_pressed_;
+        i32 changes_ = 0;
+        i32 activations_ = 0;
     };
 
 } // namespace rct3::ui::widgets

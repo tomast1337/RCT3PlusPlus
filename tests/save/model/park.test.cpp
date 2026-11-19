@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/park.hpp"
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -30,30 +31,30 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& put_u8(std::uint8_t x)
+        Bytes& put_u8(u8 x)
         {
             v.push_back(static_cast<std::byte>(x));
             return *this;
         }
-        Bytes& put(const void* p, std::size_t n)
+        Bytes& put(const void* p, usize n)
         {
             const auto* b = static_cast<const std::byte*>(p);
             v.insert(v.end(), b, b + n);
             return *this;
         }
-        Bytes& put_u16(std::uint16_t x)
+        Bytes& put_u16(u16 x)
         {
             return put(&x, 2);
         }
-        Bytes& put_u32(std::uint32_t x)
+        Bytes& put_u32(u32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put_u64(std::uint64_t x)
+        Bytes& put_u64(u64 x)
         {
             return put(&x, 8);
         }
-        Bytes& put_f32(float x)
+        Bytes& put_f32(f32 x)
         {
             return put(&x, 4);
         }
@@ -64,14 +65,14 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            put_u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<u16>(s.size()));
             for (const char c : s)
-                put_u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<u8>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            put_u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<u32>(payload.v.size()));
             return cat(payload);
         }
     };
@@ -79,13 +80,13 @@ namespace
     struct Attr
     {
         std::string name, type;
-        std::uint32_t size = 0;
+        u32 size = 0;
         std::vector<Attr> children;
     };
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<u32>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -96,11 +97,11 @@ namespace
         Bytes data; ///< Exactly the bytes the object stores for this attribute (with length prefix if variable)
     };
 
-    Field fint(const std::string& n, std::int32_t v)
+    Field fint(const std::string& n, i32 v)
     {
-        return { { n, "int32", 4, { } }, Bytes().put_u32(static_cast<std::uint32_t>(v)) };
+        return { { n, "int32", 4, { } }, Bytes().put_u32(static_cast<u32>(v)) };
     }
-    Field ffloat(const std::string& n, float v)
+    Field ffloat(const std::string& n, f32 v)
     {
         return { { n, "float32", 4, { } }, Bytes().put_f32(v) };
     }
@@ -108,7 +109,7 @@ namespace
     {
         return { { n, "bool", 1, { } }, Bytes().put_u8(v ? 1 : 0) };
     }
-    Field fref(const std::string& n, std::uint64_t id)
+    Field fref(const std::string& n, u64 id)
     {
         return { { n, "reference", 8, { } }, Bytes().put_u64(id) };
     }
@@ -117,44 +118,44 @@ namespace
         Bytes p;
         p.put_u32(0xEFEFEFEFu);
         for (const char c : text)
-            p.put_u16(static_cast<std::uint16_t>(static_cast<std::uint8_t>(c)));
+            p.put_u16(static_cast<u16>(static_cast<u8>(c)));
         return { { n, "string", 0, { } }, Bytes().blob(p) };
     }
-    Field fgraph(const std::string& n, const std::vector<float>& values, std::uint32_t capacity = 64)
+    Field fgraph(const std::string& n, const std::vector<f32>& values, u32 capacity = 64)
     {
         Bytes p;
-        p.put_u32(0xFFFFFFFFu).put_u32(capacity).put_u32(static_cast<std::uint32_t>(values.size()));
-        for (const float f : values)
+        p.put_u32(0xFFFFFFFFu).put_u32(capacity).put_u32(static_cast<u32>(values.size()));
+        for (const f32 f : values)
             p.put_f32(f);
         return { { n, "graphedValue", 0, { } }, Bytes().blob(p) };
     }
-    Field fintlist(const std::string& n, const std::vector<std::int32_t>& values)
+    Field fintlist(const std::string& n, const std::vector<i32>& values)
     {
         Bytes p;
-        p.put_u32(static_cast<std::uint32_t>(values.size()));
+        p.put_u32(static_cast<u32>(values.size()));
         for (const auto x : values)
-            p.put_u32(static_cast<std::uint32_t>(x));
+            p.put_u32(static_cast<u32>(x));
         return { { n, "list", 0, { { "n", "int32", 4, { } } } }, Bytes().blob(p) };
     }
     /// A list of struct elements, each with the given int32 members.
-    Field fledger(const std::string& n, const std::vector<std::string>& members, const std::vector<std::vector<std::int32_t>>& rows)
+    Field fledger(const std::string& n, const std::vector<std::string>& members, const std::vector<std::vector<i32>>& rows)
     {
         Attr a { n, "list", 0, { } };
         for (const auto& m : members)
             a.children.push_back({ m, "int32", 4, { } });
         Bytes p;
-        p.put_u32(static_cast<std::uint32_t>(rows.size()));
+        p.put_u32(static_cast<u32>(rows.size()));
         for (const auto& r : rows)
         {
             for (const auto x : r)
-                p.put_u32(static_cast<std::uint32_t>(x));
+                p.put_u32(static_cast<u32>(x));
         }
         return { a, Bytes().blob(p) };
     }
-    Field frefs(const std::string& n, const std::vector<std::uint64_t>& ids)
+    Field frefs(const std::string& n, const std::vector<u64>& ids)
     {
         Bytes p;
-        p.put_u32(static_cast<std::uint32_t>(ids.size()));
+        p.put_u32(static_cast<u32>(ids.size()));
         for (const auto id : ids)
             p.put_u64(id);
         return { { n, "list", 0, { { "r", "reference", 8, { } } } }, Bytes().blob(p) };
@@ -163,22 +164,22 @@ namespace
     struct Obj
     {
         std::string cls;
-        std::uint64_t id;
+        u64 id;
         std::vector<Field> fields;
     };
 
     std::vector<std::byte> build(const std::vector<Obj>& objects)
     {
         Bytes b;
-        b.put_u32(static_cast<std::uint32_t>(objects.size())); // one class per object, in order
+        b.put_u32(static_cast<u32>(objects.size())); // one class per object, in order
         for (const auto& o : objects)
         {
-            b.name(o.cls).put_u32(static_cast<std::uint32_t>(o.fields.size()));
+            b.name(o.cls).put_u32(static_cast<u32>(o.fields.size()));
             for (const auto& f : o.fields)
                 write_attr(b, f.attr);
         }
-        b.put_u32(static_cast<std::uint32_t>(objects.size()));
-        std::uint32_t idx = 0;
+        b.put_u32(static_cast<u32>(objects.size()));
+        u32 idx = 0;
         for (const auto& o : objects)
         {
             b.put_u32(idx++).put_u64(o.id);
@@ -353,17 +354,17 @@ TEST_CASE("park: dangling references mean none, live ones are kept")
 TEST_CASE("park: ring order")
 {
     CHECK(ring_order(0, 0).empty());
-    CHECK(ring_order(4, 0) == std::vector<std::size_t> { 0, 1, 2, 3 });
-    CHECK(ring_order(4, 2) == std::vector<std::size_t> { 2, 3, 0, 1 });
-    CHECK(ring_order(4, 3) == std::vector<std::size_t> { 3, 0, 1, 2 });
-    CHECK(ring_order(4, 4) == std::vector<std::size_t> { 0, 1, 2, 3 }); // out of range counts as zero
-    CHECK(ring_order(4, -3) == std::vector<std::size_t> { 0, 1, 2, 3 });
-    CHECK(ring_order(3, std::numeric_limits<std::int64_t>::max()).size() == 3);
+    CHECK(ring_order(4, 0) == std::vector<usize> { 0, 1, 2, 3 });
+    CHECK(ring_order(4, 2) == std::vector<usize> { 2, 3, 0, 1 });
+    CHECK(ring_order(4, 3) == std::vector<usize> { 3, 0, 1, 2 });
+    CHECK(ring_order(4, 4) == std::vector<usize> { 0, 1, 2, 3 }); // out of range counts as zero
+    CHECK(ring_order(4, -3) == std::vector<usize> { 0, 1, 2, 3 });
+    CHECK(ring_order(3, std::numeric_limits<i64>::max()).size() == 3);
 }
 
 TEST_CASE("park: message log is ordered oldest first and skips dangling slots")
 {
-    const auto entry = [](std::uint64_t id, const char* text, float time) { return Obj { "MessageConsoleEntry", id, { fstr("Text", text), ffloat("Time", time) } }; };
+    const auto entry = [](u64 id, const char* text, f32 time) { return Obj { "MessageConsoleEntry", id, { fstr("Text", text), ffloat("Time", time) } }; };
     const auto l = load(
         {
             entry(21, "msg:a", 1.0f),
@@ -401,7 +402,7 @@ TEST_CASE("park: hostile counts and sizes")
     }
     SUBCASE("more ledger periods than five are truncated")
     {
-        std::vector<std::vector<std::int32_t>> rows(9, { 1 });
+        std::vector<std::vector<i32>> rows(9, { 1 });
         const auto l = load({ { "Money", 1, { fledger("MonthlyExpendature", { "ShopSales" }, rows) } } });
         CHECK(l->model.finance.ledger.size() == kLedgerPeriods);
     }
@@ -443,14 +444,14 @@ TEST_CASE("park: series push drops the oldest beyond capacity")
 {
     Series s;
     s.capacity = 3;
-    for (std::int32_t i = 1; i <= 5; ++i)
-        s.push(static_cast<float>(i));
+    for (i32 i = 1; i <= 5; ++i)
+        s.push(static_cast<f32>(i));
     REQUIRE(s.samples.size() == 3);
     CHECK(s.samples.front() == 5.0f); // Newest first
     CHECK(s.samples.back() == 3.0f);
     CHECK(s.latest().value() == 5.0f);
     Series unbounded;
-    for (std::int32_t i = 0; i < 100; ++i)
+    for (i32 i = 0; i < 100; ++i)
         unbounded.push(1.0f);
     CHECK(unbounded.samples.size() == 100);
 }
@@ -468,7 +469,7 @@ TEST_CASE("park: calendar split")
     CHECK(GameClock::split(360.0f).month == 1);
     CHECK(GameClock::split(2879.0f).month == 7);
     CHECK(GameClock::split(2880.0f).year == 1);
-    for (const float bad : { -5.0f, std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity() })
+    for (const f32 bad : { -5.0f, std::numeric_limits<f32>::quiet_NaN(), std::numeric_limits<f32>::infinity() })
     {
         const auto d = GameClock::split(bad);
         CHECK(d.year == 0);
@@ -495,13 +496,13 @@ TEST_CASE("park: awards, objectives, research")
 {
     Bytes award_cats; // AwardsArray: list of elements, each an array of ids (a single variable child)
     award_cats.put_u32(3);
-    const std::vector<std::vector<std::int32_t>> cats = { { }, { 4, 9 }, { } };
+    const std::vector<std::vector<i32>> cats = { { }, { 4, 9 }, { } };
     for (const auto& c : cats)
     {
         Bytes inner;
-        inner.put_u32(static_cast<std::uint32_t>(c.size()));
+        inner.put_u32(static_cast<u32>(c.size()));
         for (const auto x : c)
-            inner.put_u32(static_cast<std::uint32_t>(x));
+            inner.put_u32(static_cast<u32>(x));
         award_cats.blob(inner);
     }
     Field awards_array { { "AwardsArray", "list", 0, { { "AwardTypes", "array", 0, { { "AwardType", "int32", 4, { } } } } } }, Bytes().blob(award_cats) };
@@ -521,8 +522,8 @@ TEST_CASE("park: awards, objectives, research")
     CHECK(m.awards.available_mask == 0xFFFFFFFFu);
     CHECK(m.awards.months_before_start == 2);
     REQUIRE(m.awards.earned.size() == 3);
-    CHECK(m.awards.earned[1] == std::vector<std::int32_t> { 4, 9 });
-    CHECK(m.awards.prize_money == std::vector<std::int32_t> { 100, -100, 0 });
+    CHECK(m.awards.earned[1] == std::vector<i32> { 4, 9 });
+    CHECK(m.awards.prize_money == std::vector<i32> { 100, -100, 0 });
     CHECK(m.awards.dangerous_pool_events == 4);
     CHECK_FALSE(m.awards.dangerous_coaster_events.has_value());
 
@@ -600,7 +601,7 @@ TEST_CASE("park: validation reports broken invariants")
         {
             { "Park", 1, { fgraph("ParkRating", { 1200 }), fint("OpeningTimeMinutes", 5000), fint("ClosingTimeMinutes", 1000) } },
             { "Money", 2, { fint("Loan", 90), fint("MaxLoan", 50) } },
-            { "GameTime", 3, { ffloat("Time", std::numeric_limits<float>::quiet_NaN()) } },
+            { "GameTime", 3, { ffloat("Time", std::numeric_limits<f32>::quiet_NaN()) } },
         });
     const auto issues = validate(l->model);
     CHECK(issues.size() == 4);

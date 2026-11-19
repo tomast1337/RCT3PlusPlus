@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/waterfall_making.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -24,16 +26,16 @@ namespace
         g.tile_size_z = 4;
         g.cells.resize(32);
         for (save::model::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
+            c.flags = static_cast<u8>(save::model::TileFlag::Owned);
         return g;
     }
 
-    save::model::WaterBody lake(float level, std::int32_t col0, std::int32_t col1, std::int32_t row0, std::int32_t row1)
+    save::model::WaterBody lake(f32 level, i32 col0, i32 col1, i32 row0, i32 row1)
     {
         save::model::WaterBody b { .level = level };
-        for (std::int32_t r = row0; r <= row1; ++r)
-            for (std::int32_t c = col0; c <= col1; ++c)
-                b.tris.push_back({ .col = static_cast<std::uint8_t>(c), .row = static_cast<std::uint8_t>(r) });
+        for (i32 r = row0; r <= row1; ++r)
+            for (i32 c = col0; c <= col1; ++c)
+                b.tris.push_back({ .col = static_cast<u8>(c), .row = static_cast<u8>(r) });
         return b;
     }
 
@@ -87,16 +89,16 @@ TEST_CASE("make_waterfall: keeps the ground of the spillway, cut_spillway cuts i
 {
     // A bank at 12 from column 2 on, the higher lake's floor at 8.
     save::model::TerrainGrid grid = owned_grid();
-    for (std::int32_t r = 0; r < grid.height; ++r)
-        for (std::int32_t c = 0; c < grid.width; ++c)
+    for (i32 r = 0; r < grid.height; ++r)
+        for (i32 c = 0; c < grid.width; ++c)
             grid.at(c, r).corners.fill(c < 2 ? 8.0f : c < 4 ? 12.0f : 0.0f);
     const auto fall = make_waterfall(grid, kLakes, 0, 1, { 1, 1 }, { 4, 1 });
     REQUIRE(fall);
     CHECK(fall->carved.size() == 9); // Columns 1 to 3 of rows 0 to 2
     save::model::TerrainGrid cut = grid;
     cut_spillway(cut, *fall);
-    constexpr float kFloor = 10 - kSpillwayDepth;
-    constexpr float kRim = 10 + kSpillwayRim;
+    constexpr f32 kFloor = 10 - kSpillwayDepth;
+    constexpr f32 kRim = 10 + kSpillwayRim;
     CHECK(cut.at(1, 1).corners == std::array { 8.0f, kFloor, 8.0f, kFloor });     // The old edge sinks
     CHECK(cut.at(2, 1).corners == std::array { kFloor, kRim, kFloor, kRim });     // The spillway
     CHECK(cut.at(3, 1).corners == std::array { kFloor, kFloor, kFloor, kFloor }); // On the way down
@@ -106,7 +108,7 @@ TEST_CASE("make_waterfall: keeps the ground of the spillway, cut_spillway cuts i
     CHECK(cut.at(2, 3).corners == grid.at(2, 3).corners); // Beside the edge
     CHECK(cut.at(0, 1).corners == grid.at(0, 1).corners);
     restore_spillway(cut, *fall);
-    for (std::size_t i = 0; i < grid.cells.size(); ++i)
+    for (usize i = 0; i < grid.cells.size(); ++i)
         CHECK(cut.cells[i].corners == grid.cells[i].corners);
 }
 
@@ -122,8 +124,8 @@ TEST_CASE("make_waterfall: cuts nothing when the lower lake lies against the edg
 TEST_CASE("make_waterfall: an edge of two tiles pours over its middle, between two sloped banks")
 {
     save::model::TerrainGrid grid = owned_grid();
-    for (std::int32_t r = 0; r < grid.height; ++r)
-        for (std::int32_t c = 0; c < grid.width; ++c)
+    for (i32 r = 0; r < grid.height; ++r)
+        for (i32 c = 0; c < grid.width; ++c)
             grid.at(c, r).corners.fill(c < 2 ? 8.0f : c < 4 ? 12.0f : 0.0f);
     const std::vector<save::model::WaterBody> lakes { lake(10, 0, 1, 0, 1), kLakes[1] };
     const auto fall = make_waterfall(grid, lakes, 0, 1, { 1, 0 }, { 4, 1 });
@@ -132,8 +134,8 @@ TEST_CASE("make_waterfall: an edge of two tiles pours over its middle, between t
     CHECK(fall->lip_left.z + fall->lip_right.z == 8.0f);           // Over the line between rows 0 and 1
     CHECK(fall->flow.x == 1.0f);
     cut_spillway(grid, *fall);
-    constexpr float kFloor = 10 - kSpillwayDepth;
-    constexpr float kRim = 10 + kSpillwayRim;
+    constexpr f32 kFloor = 10 - kSpillwayDepth;
+    constexpr f32 kRim = 10 + kSpillwayRim;
     CHECK(grid.at(2, 0).corners == std::array { 12.0f, 12.0f, kFloor, kRim });
     CHECK(grid.at(2, 1).corners == std::array { kFloor, kRim, 12.0f, 12.0f });
     CHECK(grid.at(3, 0).corners == std::array { 12.0f, 12.0f, kFloor, kFloor }); // On the way down
@@ -143,8 +145,8 @@ TEST_CASE("make_waterfall: the edge is the one the lower lake was picked in fron
 {
     // The higher lake over columns and rows 0 to 2; the lower one round its east and south.
     save::model::WaterBody round = lake(2, 4, 5, 0, 3);
-    for (std::int32_t c = 0; c < 4; ++c)
-        round.tris.push_back({ .col = static_cast<std::uint8_t>(c), .row = 3 });
+    for (i32 c = 0; c < 4; ++c)
+        round.tris.push_back({ .col = static_cast<u8>(c), .row = 3 });
     const std::vector<save::model::WaterBody> lakes { lake(10, 0, 2, 0, 2), round };
     const save::model::TerrainGrid grid = owned_grid();
     const auto east = make_waterfall(grid, lakes, 0, 1, { 1, 1 }, { 5, 1 });

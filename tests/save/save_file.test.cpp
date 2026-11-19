@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/save_file.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <cstring>
 #include <doctest/doctest.h>
@@ -18,60 +20,60 @@ namespace
     {
         std::vector<std::byte> bytes;
 
-        void put_u8(std::uint8_t v)
+        void put_u8(u8 v)
         {
             bytes.push_back(static_cast<std::byte>(v));
         }
-        void put_u16(std::uint16_t v)
+        void put_u16(u16 v)
         {
             put(&v, 2);
         }
-        void put_u32(std::uint32_t v)
+        void put_u32(u32 v)
         {
             put(&v, 4);
         }
-        void put_u64(std::uint64_t v)
+        void put_u64(u64 v)
         {
             put(&v, 8);
         }
         void str16(const std::string& s)
         {
-            put_u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<u16>(s.size()));
             for (const char c : s)
-                put_u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<u8>(c));
         }
-        void put(const void* p, std::size_t n)
+        void put(const void* p, usize n)
         {
             const auto* b = static_cast<const std::byte*>(p);
             bytes.insert(bytes.end(), b, b + n);
         }
         // name, type, size, child count (children appended by the caller)
-        void attribute(const std::string& name, const std::string& type, std::uint32_t size, std::uint32_t children = 0)
+        void attribute(const std::string& name, const std::string& type, u32 size, u32 children = 0)
         {
             str16(name);
             str16(type);
             put_u32(size);
             put_u32(children);
         }
-        void header(std::uint32_t version)
+        void header(u32 version)
         {
             put_u32(0);
             put_u32(0);
             put_u32(0xF11EDA2Au);
             put_u32(0x40);
             put_u32(version);
-            for (std::int32_t i = 0; i < 15; ++i)
+            for (i32 i = 0; i < 15; ++i)
                 put_u32(0);
         }
         /// The short form some effect files carry: its own magic, a 1, then twelve words.
-        void short_header(std::uint32_t version)
+        void short_header(u32 version)
         {
             put_u32(0);
             put_u32(0);
             put_u32(0xF11EDA1Au);
             put_u32(1);
             put_u32(version);
-            for (std::int32_t i = 0; i < 11; ++i)
+            for (i32 i = 0; i < 11; ++i)
                 put_u32(0);
         }
         void checksum()
@@ -125,7 +127,7 @@ namespace
         return b.bytes;
     }
 
-    std::vector<std::byte> headered(std::uint32_t version = 1)
+    std::vector<std::byte> headered(u32 version = 1)
     {
         Builder b;
         b.header(version);
@@ -169,7 +171,7 @@ TEST_CASE("headerless file parses into classes and objects")
     CHECK(file->objects[2].id == 11);
 
     // Sections tile the input exactly and objects lie inside the object table.
-    std::size_t at = 0;
+    usize at = 0;
     for (const auto& s : file->sections)
     {
         CHECK(s.offset == at);
@@ -254,7 +256,7 @@ TEST_CASE("every truncation of a valid file fails cleanly")
 {
     for (const auto& bytes : { headerless(), headered() })
     {
-        for (std::size_t n = 0; n < bytes.size(); ++n)
+        for (usize n = 0; n < bytes.size(); ++n)
         {
             // Eight zero bytes are, by themselves, a valid headerless file with no classes and no objects.
             if (n == 8)
@@ -320,7 +322,7 @@ TEST_CASE("structural corruption")
         b.put_u32(1);
         b.str16("Widget");
         b.put_u32(1);
-        for (std::size_t d = 0; d <= kMaxAttributeDepth + 1; ++d)
+        for (usize d = 0; d <= kMaxAttributeDepth + 1; ++d)
             b.attribute("n", "seq", 0, 1);
         b.attribute("leaf", "u8", 1);
         b.put_u32(0);

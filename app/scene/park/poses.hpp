@@ -5,6 +5,7 @@
 // and what they wear.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/person/mesh.hpp"
 #include "scene/park/scene.hpp"
 
@@ -20,12 +21,12 @@ namespace rct3::scene::park
     /// Shown person `i` posed as they are at `clock`, as the park draws them, at the finest level; with
     /// `simulate`, a simulated guest where and as the simulation has them. Nothing for those not drawn
     /// standing: gone home, or seated on a ride.
-    [[nodiscard]] std::optional<rct3::park::person::PlacedPerson> pose_person(const ParkScene& scene, std::size_t i, float clock, bool simulate);
+    [[nodiscard]] std::optional<rct3::park::person::PlacedPerson> pose_person(const ParkScene& scene, usize i, f32 clock, bool simulate);
 
     /// The motion a person sliding down a slope plays, by name: on their front facing down it (`heading`, as
     /// simulation::Pose has it, against their `drift`), on their back facing up it, else sitting; staff, who
     /// have no sliding motions, flail.
-    [[nodiscard]] std::string_view slide_motion(float heading, glm::vec2 drift, bool staff);
+    [[nodiscard]] std::string_view slide_motion(f32 heading, glm::vec2 drift, bool staff);
 
     /// `shown` as they look now: in their swimwear inside a pool complex, riding its slides or held or
     /// falling out of it, their clothes elsewhere (simulation::in_swimwear).
@@ -40,6 +41,6 @@ namespace rct3::scene::park
     bool own_float(const rct3::park::person::PersonLibrary& library, const rct3::park::person::PlacedPerson& person);
 
     /// How guests go on foot in each gait (simulation::Gait), as the game's motions name them.
-    extern const std::array<std::int32_t, kGaits> kGaitMotions;
+    extern const std::array<i32, kGaits> kGaitMotions;
 
 } // namespace rct3::scene::park

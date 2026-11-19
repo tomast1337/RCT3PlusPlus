@@ -27,6 +27,7 @@
 
 #include "config/game/options.hpp"
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ui/key_map.hpp"
 #include "ui/screens/options/rows.hpp"
 #include "ui/string_table.hpp"
@@ -49,8 +50,8 @@ namespace rct3::ui::screens::options
 
     struct ScreenSize
     {
-        std::int32_t width = 0;
-        std::int32_t height = 0;
+        i32 width = 0;
+        i32 height = 0;
 
         friend bool operator==(const ScreenSize&, const ScreenSize&) = default;
     };
@@ -61,13 +62,13 @@ namespace rct3::ui::screens::options
         std::vector<std::string> languages; ///< Installed, by the game's names; the row shows with two or more
         std::string language;               ///< The one in use
         std::vector<ScreenSize> screen_sizes;
-        std::optional<std::size_t> screen_size;             ///< The one in use, if it is in the list
-        std::vector<std::int32_t> anti_aliasing_levels { }; ///< Offered after "none", e.g. 2, 4 and 8 samples
-        KeyMap keys { };                                    ///< In use; the keys page changes a copy
+        std::optional<usize> screen_size;          ///< The one in use, if it is in the list
+        std::vector<i32> anti_aliasing_levels { }; ///< Offered after "none", e.g. 2, 4 and 8 samples
+        KeyMap keys { };                           ///< In use; the keys page changes a copy
         /// The music files the park can play when zoomed out; the row shows with any. The choice goes into the
         /// options.
         std::vector<std::string> background_music { };
-        std::optional<std::size_t> background_track { };       ///< Shown while the player has not chosen; nothing for no music
+        std::optional<usize> background_track { };             ///< Shown while the player has not chosen; nothing for no music
         std::bitset<config::game::kGameOptionCount> inert { }; ///< Options nothing acts on yet: shown, not usable
         bool language_locked = false;                          ///< The language shows but cannot change, e.g. in a park
     };
@@ -75,22 +76,22 @@ namespace rct3::ui::screens::options
     /// The keys page: one scrolling list, the commands in groups under blue bars.
     struct KeyListStyle
     {
-        float height = 270;
+        f32 height = 270;
         Color background = hex("#ffffff");
-        float top = 10;       ///< Before the first group
-        float group_gap = 10; ///< Above each group's bar
-        float bar_height = 24;
-        float bar_text_inset = 5;
+        f32 top = 10;       ///< Before the first group
+        f32 group_gap = 10; ///< Above each group's bar
+        f32 bar_height = 24;
+        f32 bar_text_inset = 5;
         Color bar_colour = hex("#2384bf");
         Color bar_text_colour = hex("#ffffff");
-        float row_gap = 2; ///< Above each row
-        float row_height = 18;
-        float name_x = 5;
-        float name_width = 280;
-        float keys_x = 295;
-        float keys_right = 18; ///< Where the keys end, from the list's right
-        float bottom = 5;      ///< After the last row
-        std::string focused;   ///< Skin of a key box waiting for keys
+        f32 row_gap = 2; ///< Above each row
+        f32 row_height = 18;
+        f32 name_x = 5;
+        f32 name_width = 280;
+        f32 keys_x = 295;
+        f32 keys_right = 18; ///< Where the keys end, from the list's right
+        f32 bottom = 5;      ///< After the last row
+        std::string focused; ///< Skin of a key box waiting for keys
     };
 
     struct OptionsDialogStyle
@@ -99,29 +100,29 @@ namespace rct3::ui::screens::options
         OptionRowsStyle rows;
         KeyListStyle keys;
         widgets::ScrollBarStyle scroll;
-        float page_width = 460;
-        float page_height = 330;
-        float tab_size = 23;
-        float tab_step = 20; ///< The tabs overlap a little, as in the game
-        float tabs_x = 304;  ///< Where the tabs start, from the page's left
-        float tab_bar_height = 23;
-        float caption_x = 59; ///< Right of the window's icon, under the title
-        float caption_width = 160;
-        float caption_height = 20;
-        float scroll_height = 230; ///< Of the custom graphics settings
+        f32 page_width = 460;
+        f32 page_height = 330;
+        f32 tab_size = 23;
+        f32 tab_step = 20; ///< The tabs overlap a little, as in the game
+        f32 tabs_x = 304;  ///< Where the tabs start, from the page's left
+        f32 tab_bar_height = 23;
+        f32 caption_x = 59; ///< Right of the window's icon, under the title
+        f32 caption_width = 160;
+        f32 caption_height = 20;
+        f32 scroll_height = 230; ///< Of the custom graphics settings
         font::FontRole caption_font = font::FontRole::Small;
         Color caption_colour = hex("#2484be");
         std::string icon;   ///< In the window's corner
         std::string button; ///< Skin family of the text buttons
         Rect button_inset;  ///< Of their text; see Button::text_inset
-        float button_width = 110;
-        float button_height = 22;
+        f32 button_width = 110;
+        f32 button_height = 22;
         std::string auto_detect_icon; ///< On the graphics page, top right
-        float auto_detect_size = 40;
-        float auto_detect_right = 40; ///< From the page's right edge to the icon's
+        f32 auto_detect_size = 40;
+        f32 auto_detect_right = 40; ///< From the page's right edge to the icon's
     };
 
-    enum class OptionsPage : std::uint8_t
+    enum class OptionsPage : u8
     {
         General,
         Keys,
@@ -130,7 +131,7 @@ namespace rct3::ui::screens::options
         Camera,
         Count_,
     };
-    inline constexpr std::size_t kOptionsPageCount = static_cast<std::size_t>(OptionsPage::Count_);
+    inline constexpr usize kOptionsPageCount = static_cast<usize>(OptionsPage::Count_);
 
     class OptionsDialog : public widgets::Window
     {
@@ -149,7 +150,7 @@ namespace rct3::ui::screens::options
         /// The language the user picked, once.
         [[nodiscard]] std::optional<std::string> take_language();
         /// The index into OptionsChoices::screen_sizes the user picked, once.
-        [[nodiscard]] std::optional<std::size_t> take_screen_size();
+        [[nodiscard]] std::optional<usize> take_screen_size();
         /// The key map with the keys the user set, once after each change.
         [[nodiscard]] std::optional<KeyMap> take_keys();
         /// True while a key box waits for keys, which should then do nothing else.
@@ -157,7 +158,7 @@ namespace rct3::ui::screens::options
 
         [[nodiscard]] widgets::Button& tab(OptionsPage page) const
         {
-            return *tabs_.at(static_cast<std::size_t>(page));
+            return *tabs_.at(static_cast<usize>(page));
         }
         [[nodiscard]] widgets::ScrollArea& custom_graphics() const
         {
@@ -169,19 +170,19 @@ namespace rct3::ui::screens::options
         }
         [[nodiscard]] widgets::KeyBox& key_box(Command command) const
         {
-            return *key_boxes_.at(static_cast<std::size_t>(command));
+            return *key_boxes_.at(static_cast<usize>(command));
         }
         /// Nothing for a game command whose keys cannot be changed.
         [[nodiscard]] std::optional<widgets::KeyBox&> play_key_box(PlayCommand command) const
         {
-            return core::maybe(play_boxes_.at(static_cast<std::size_t>(command)));
+            return core::maybe(play_boxes_.at(static_cast<usize>(command)));
         }
         [[nodiscard]] std::optional<widgets::Dropdown&> background_music_list() const
         {
             return core::maybe(music_);
         }
         /// The lines saying what each mouse button does in the chosen camera mode.
-        [[nodiscard]] const widgets::Label& camera_help(std::size_t line) const
+        [[nodiscard]] const widgets::Label& camera_help(usize line) const
         {
             return *camera_help_.at(line);
         }
@@ -229,9 +230,9 @@ namespace rct3::ui::screens::options
         std::array<std::u16string, 5> camera_buttons_; // The help lines' starts
         std::vector<std::u16string> camera_actions_;   // Each CameraAction's words
         OptionsPage page_ = OptionsPage::General;
-        std::int32_t changes_ = 0;
+        i32 changes_ = 0;
         std::optional<std::string> picked_language_;
-        std::optional<std::size_t> picked_screen_size_;
+        std::optional<usize> picked_screen_size_;
         std::optional<KeyMap> picked_keys_;
     };
 

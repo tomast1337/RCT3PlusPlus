@@ -12,6 +12,7 @@
 // elsewhere in the game. The index remembers those names so the caller can find and add the files.
 #pragma once
 
+#include "core/types.hpp"
 #include "strings/ascii.hpp"
 
 #include <filesystem>
@@ -54,7 +55,7 @@ namespace rct3::park
         /// The file of overlay `path` on disk.
         [[nodiscard]] std::filesystem::path file(std::string_view path) const;
 
-        [[nodiscard]] std::size_t symbol_count() const
+        [[nodiscard]] usize symbol_count() const
         {
             return symbols_.size();
         }

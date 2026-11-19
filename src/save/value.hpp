@@ -20,6 +20,7 @@
 // bytes. Decoding never fails because of an attribute.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 
 #include <cstddef>
@@ -36,7 +37,7 @@
 namespace rct3::save
 {
 
-    enum class ValueKind : std::uint8_t
+    enum class ValueKind : u8
     {
         Raw, ///< Opaque bytes: unknown type, or a known type that did not fit its layout
         Bool,
@@ -82,18 +83,18 @@ namespace rct3::save
         {
             return bits_ != 0;
         }
-        [[nodiscard]] std::int64_t as_integer() const noexcept
+        [[nodiscard]] i64 as_integer() const noexcept
         {
-            return static_cast<std::int64_t>(bits_);
+            return static_cast<i64>(bits_);
         }
-        [[nodiscard]] float as_float() const noexcept;
-        [[nodiscard]] std::uint64_t as_reference() const noexcept
+        [[nodiscard]] f32 as_float() const noexcept;
+        [[nodiscard]] u64 as_reference() const noexcept
         {
             return bits_;
         }
 
         [[nodiscard]] std::string_view text() const noexcept;
-        [[nodiscard]] std::span<const float> floats() const noexcept;           ///< Vector3, Orientation, Matrix44, FloatArray
+        [[nodiscard]] std::span<const f32> floats() const noexcept;             ///< Vector3, Orientation, Matrix44, FloatArray
         [[nodiscard]] std::span<const Value> items() const noexcept;            ///< List elements or Struct field values
         [[nodiscard]] std::span<const std::string_view> names() const noexcept; ///< Struct field names
         [[nodiscard]] std::span<const std::byte> raw() const noexcept
@@ -106,18 +107,18 @@ namespace rct3::save
 
         // Construction, used by the decoder and by tests.
         static Value make_bool(bool v);
-        static Value make_integer(std::int64_t v);
-        static Value make_float(float v);
-        static Value make_reference(std::uint64_t id);
+        static Value make_integer(i64 v);
+        static Value make_float(f32 v);
+        static Value make_reference(u64 id);
         static Value make_raw(std::span<const std::byte> bytes);
         static Value make_string(std::string text);
-        static Value make_floats(ValueKind kind, std::vector<float> values);
+        static Value make_floats(ValueKind kind, std::vector<f32> values);
         static Value make_list(std::vector<Value> items);
         static Value make_struct(std::vector<std::string_view> names, std::vector<Value> items);
 
     private:
         ValueKind kind_ = ValueKind::Raw;
-        std::uint64_t bits_ = 0;
+        u64 bits_ = 0;
         std::span<const std::byte> raw_;
         std::unique_ptr<detail::ValueExtra> extra_;
     };
@@ -125,15 +126,15 @@ namespace rct3::save
     /// Counters describing how an object decoded.
     struct DecodeStats
     {
-        std::size_t values = 0;    ///< Values produced, counting nested ones
-        std::size_t opaque = 0;    ///< Attributes kept raw because their type is not understood
-        std::size_t fallbacks = 0; ///< Understood types whose bytes did not fit; kept raw
+        usize values = 0;    ///< Values produced, counting nested ones
+        usize opaque = 0;    ///< Attributes kept raw because their type is not understood
+        usize fallbacks = 0; ///< Understood types whose bytes did not fit; kept raw
     };
 
     struct DecodedObject
     {
-        std::uint32_t class_index = 0;
-        std::uint64_t id = 0;
+        u32 class_index = 0;
+        u64 id = 0;
         std::string_view class_name;
         Value fields; ///< A Struct with one field per class attribute, in schema order
         DecodeStats stats;
@@ -159,15 +160,15 @@ namespace rct3::save
     {
     public:
         explicit ObjectIndex(const SaveFile& file);
-        [[nodiscard]] std::optional<const Object&> find(std::uint64_t id) const noexcept;
-        [[nodiscard]] std::size_t size() const noexcept
+        [[nodiscard]] std::optional<const Object&> find(u64 id) const noexcept;
+        [[nodiscard]] usize size() const noexcept
         {
             return by_id_.size();
         }
 
     private:
         const SaveFile* file_;
-        std::unordered_map<std::uint64_t, std::uint32_t> by_id_;
+        std::unordered_map<u64, u32> by_id_;
     };
 
 } // namespace rct3::save

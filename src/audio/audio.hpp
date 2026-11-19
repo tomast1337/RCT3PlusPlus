@@ -31,6 +31,7 @@
 // device is open) never touches voice slots that the control thread is not done with.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/sound.hpp"
 
 #include <cstddef>
@@ -45,13 +46,13 @@
 namespace rct3::audio
 {
 
-    enum class SampleFormat : std::uint8_t
+    enum class SampleFormat : u8
     {
         Pcm16,   ///< Signed 16-bit integers, native endianness
         Float32, ///< 32-bit floats in [-1, 1]
     };
 
-    [[nodiscard]] constexpr std::size_t bytes_per_sample(SampleFormat format) noexcept
+    [[nodiscard]] constexpr usize bytes_per_sample(SampleFormat format) noexcept
     {
         return format == SampleFormat::Pcm16 ? 2 : 4;
     }
@@ -60,23 +61,23 @@ namespace rct3::audio
     struct SoundBuffer
     {
         SampleFormat format = SampleFormat::Pcm16;
-        std::uint16_t channels = 0;
-        std::uint32_t sample_rate = 0;
+        u16 channels = 0;
+        u32 sample_rate = 0;
         std::vector<std::byte> data; ///< Whole frames, `frame_count() * channels * bytes_per_sample(format)` bytes
 
-        [[nodiscard]] std::size_t frame_count() const noexcept;
-        [[nodiscard]] double duration_seconds() const noexcept;
+        [[nodiscard]] usize frame_count() const noexcept;
+        [[nodiscard]] f64 duration_seconds() const noexcept;
         /// True when channels and rate are in range, the data holds at least one frame and no partial frame.
         [[nodiscard]] bool valid() const noexcept;
     };
 
-    inline constexpr std::uint16_t kMaxChannels = 8;
-    inline constexpr std::uint32_t kMaxSampleRate = 384000;
+    inline constexpr u16 kMaxChannels = 8;
+    inline constexpr u32 kMaxSampleRate = 384000;
 
     /// Builds a 16-bit buffer from samples that are already in memory.
-    [[nodiscard]] SoundBuffer make_pcm16(std::span<const std::int16_t> samples, std::uint16_t channels, std::uint32_t sample_rate);
+    [[nodiscard]] SoundBuffer make_pcm16(std::span<const i16> samples, u16 channels, u32 sample_rate);
     /// Builds a float buffer from samples that are already in memory.
-    [[nodiscard]] SoundBuffer make_float(std::span<const float> samples, std::uint16_t channels, std::uint32_t sample_rate);
+    [[nodiscard]] SoundBuffer make_float(std::span<const f32> samples, u16 channels, u32 sample_rate);
 
     enum class ConvertError
     {
@@ -96,19 +97,19 @@ namespace rct3::audio
 
     struct PlayParams
     {
-        float volume = 1.0f; ///< Linear gain, 0 or more (1 leaves the sound unchanged)
-        float pan = 0.0f;    ///< -1 left, 0 centre, +1 right
-        float pitch = 1.0f;  ///< Playback speed factor, more than 0 and at most kMaxPitch
+        f32 volume = 1.0f; ///< Linear gain, 0 or more (1 leaves the sound unchanged)
+        f32 pan = 0.0f;    ///< -1 left, 0 centre, +1 right
+        f32 pitch = 1.0f;  ///< Playback speed factor, more than 0 and at most kMaxPitch
         /// Where the sound is in the world. The listener then pans it and fades it, evenly from full loud at `near`
         /// to silence at `far`, and a moving voice (set_voice_place) rises and falls in pitch as it passes.
         std::optional<glm::vec3> at = std::nullopt;
-        float near = 1.0f;
-        float far = 1000.0f;
+        f32 near = 1.0f;
+        f32 far = 1000.0f;
         bool loop = false; ///< Plays again from the start at its end, until stopped; buffers only
     };
 
-    inline constexpr float kMaxPitch = 16.0f;
-    inline constexpr float kMaxVolume = 16.0f;
+    inline constexpr f32 kMaxPitch = 16.0f;
+    inline constexpr f32 kMaxVolume = 16.0f;
 
     /// True when every field is finite and in range.
     [[nodiscard]] bool is_valid(const PlayParams& p) noexcept;
@@ -117,8 +118,8 @@ namespace rct3::audio
     /// simply not valid any more (`AudioEngine::is_playing` is false, the setters return false).
     struct VoiceHandle
     {
-        std::uint32_t slot = 0;
-        std::uint32_t generation = 0; ///< 0 is never issued
+        u32 slot = 0;
+        u32 generation = 0; ///< 0 is never issued
         [[nodiscard]] bool valid() const noexcept
         {
             return generation != 0;
@@ -126,7 +127,7 @@ namespace rct3::audio
         friend bool operator==(const VoiceHandle&, const VoiceHandle&) = default;
     };
 
-    enum class Backend : std::uint8_t
+    enum class Backend : u8
     {
         Default,
         Null,
@@ -136,14 +137,14 @@ namespace rct3::audio
     struct EngineConfig
     {
         Backend backend = Backend::Default;
-        bool fall_back_to_null = true;     ///< Only for Backend::Default
-        std::uint32_t sample_rate = 48000; ///< Mixing rate; the device is resampled to it as needed
-        std::uint16_t channels = 2;        ///< 1 or 2
-        std::uint32_t max_voices = 32;     ///< Hard cap, 1..kMaxVoices
-        float master_volume = 1.0f;
+        bool fall_back_to_null = true; ///< Only for Backend::Default
+        u32 sample_rate = 48000;       ///< Mixing rate; the device is resampled to it as needed
+        u16 channels = 2;              ///< 1 or 2
+        u32 max_voices = 32;           ///< Hard cap, 1..kMaxVoices
+        f32 master_volume = 1.0f;
     };
 
-    inline constexpr std::uint32_t kMaxVoices = 256;
+    inline constexpr u32 kMaxVoices = 256;
 
     enum class EngineError
     {
@@ -167,12 +168,12 @@ namespace rct3::audio
     /// A streamed voice's samples: float, interleaved.
     struct StreamFormat
     {
-        std::uint16_t channels = 2;
-        std::uint32_t sample_rate = 44100;
-        std::uint32_t buffer_frames = 44100; ///< How far ahead the owner may feed, 1..kMaxStreamFrames
+        u16 channels = 2;
+        u32 sample_rate = 44100;
+        u32 buffer_frames = 44100; ///< How far ahead the owner may feed, 1..kMaxStreamFrames
     };
 
-    inline constexpr std::uint32_t kMaxStreamFrames = 1u << 22;
+    inline constexpr u32 kMaxStreamFrames = 1u << 22;
 
     class AudioEngine
     {
@@ -194,9 +195,9 @@ namespace rct3::audio
         /// until end_stream and the frames fed before have played.
         [[nodiscard]] std::expected<VoiceHandle, PlayError> play_stream(const StreamFormat& format, const PlayParams& params = { });
         /// Frames `voice` can take now; 0 for a stale handle or a voice that is not a stream.
-        [[nodiscard]] std::size_t stream_space(VoiceHandle voice) const;
+        [[nodiscard]] usize stream_space(VoiceHandle voice) const;
         /// Adds whole frames, channels interleaved, and returns how many it took: at most stream_space().
-        std::size_t feed(VoiceHandle voice, std::span<const float> samples);
+        usize feed(VoiceHandle voice, std::span<const f32> samples);
         /// No more frames will come. Returns false for a stale handle or a voice that is not a stream.
         bool end_stream(VoiceHandle voice);
 
@@ -205,11 +206,11 @@ namespace rct3::audio
         void stop_all();
 
         /// Per-voice controls. They return false (and change nothing) for a stale handle or an out-of-range value.
-        bool set_voice_volume(VoiceHandle voice, float volume);
-        bool set_voice_pan(VoiceHandle voice, float pan);
-        bool set_voice_pitch(VoiceHandle voice, float pitch);
+        bool set_voice_volume(VoiceHandle voice, f32 volume);
+        bool set_voice_pan(VoiceHandle voice, f32 pan);
+        bool set_voice_pitch(VoiceHandle voice, f32 pitch);
         /// Takes a voice evenly from how loud its fade is now to `level` (0..1, on top of its volume) over `seconds`.
-        bool fade_voice(VoiceHandle voice, float level, float seconds);
+        bool fade_voice(VoiceHandle voice, f32 level, f32 seconds);
         /// Moves a voice started `at` a place, going at `velocity` (world units a second).
         bool set_voice_place(VoiceHandle voice, glm::vec3 at, glm::vec3 velocity = { });
 
@@ -220,20 +221,20 @@ namespace rct3::audio
 
         /// True while the voice has frames left to play.
         [[nodiscard]] bool is_playing(VoiceHandle voice) const;
-        [[nodiscard]] std::uint32_t active_voices() const;
-        [[nodiscard]] std::uint32_t max_voices() const noexcept;
+        [[nodiscard]] u32 active_voices() const;
+        [[nodiscard]] u32 max_voices() const noexcept;
 
         /// Out-of-range values are rejected (false) and leave the volume unchanged.
-        bool set_master_volume(float volume);
-        [[nodiscard]] float master_volume() const noexcept;
+        bool set_master_volume(f32 volume);
+        [[nodiscard]] f32 master_volume() const noexcept;
 
         [[nodiscard]] Backend backend() const noexcept; ///< What is really running (Null after a fall back)
-        [[nodiscard]] std::uint32_t sample_rate() const noexcept;
-        [[nodiscard]] std::uint16_t channels() const noexcept;
+        [[nodiscard]] u32 sample_rate() const noexcept;
+        [[nodiscard]] u16 channels() const noexcept;
 
         /// Offline backend only: mixes `out.size() / channels()` frames into `out` (interleaved float) and
         /// returns the number of frames written, 0 on any other backend.
-        std::size_t render(std::span<float> out);
+        usize render(std::span<f32> out);
 
     private:
         struct Impl;

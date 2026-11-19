@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path/furniture.hpp"
 
+#include "core/types.hpp"
+
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <vector>
@@ -11,28 +13,28 @@ using namespace rct3::park::path;
 
 namespace
 {
-    save::model::TerrainGrid flat_grid(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid flat_grid(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         return g;
     }
 
-    save::model::PathTile ground(std::int32_t col, std::int32_t row)
+    save::model::PathTile ground(i32 col, i32 row)
     {
         save::model::PathTile p;
         p.kind = save::model::PathKind::Ground;
-        p.col = static_cast<std::uint8_t>(col);
-        p.row = static_cast<std::uint8_t>(row);
+        p.col = static_cast<u8>(col);
+        p.row = static_cast<u8>(row);
         return p;
     }
 
     /// A queue on the ground at `col`, `row`, its line running along the columns.
-    save::model::PathTile queue(std::int32_t col, std::int32_t row)
+    save::model::PathTile queue(i32 col, i32 row)
     {
         save::model::PathTile p = ground(col, row);
         p.kind = save::model::PathKind::Queue;
@@ -43,7 +45,7 @@ namespace
     }
 
     /// The world point at column and row with fractions, `y` high.
-    glm::vec3 at(float col, float row, float y = 0)
+    glm::vec3 at(f32 col, f32 row, f32 y = 0)
     {
         return { col * 4, y, row * 4 };
     }
@@ -83,8 +85,8 @@ TEST_CASE("off the paths nothing goes, in a plaza only an edge tile's free side,
     CHECK_FALSE(furniture_spot(kLine, grid, at(-1, 1.5f), object::Positioning::PathSide, ModelTurn { 0 }));
 
     std::vector<save::model::PathTile> plaza;
-    for (std::int32_t col = 1; col <= 3; ++col)
-        for (std::int32_t row = 1; row <= 3; ++row)
+    for (i32 col = 1; col <= 3; ++col)
+        for (i32 row = 1; row <= 3; ++row)
             plaza.push_back(ground(col, row));
     // Every side of the middle tile is joined: refused. An edge tile keeps its outer side.
     CHECK(furniture_spot(plaza, grid, at(2.9f, 2.5f), object::Positioning::PathSide, ModelTurn { 0 })->refused);
@@ -112,7 +114,7 @@ TEST_CASE("one item stands against each side of a tile, and one in its middle")
     models["Style|Bench"].positioning = std::to_underlying(object::Positioning::PathSide);
     models["Style|Fountain"].positioning = std::to_underlying(object::Positioning::PathCentre);
     models["Style|Tree"].positioning = std::to_underlying(object::Positioning::Tile);
-    const auto placed = [](std::string symbol, std::int32_t rotation, std::int32_t height = 0) {
+    const auto placed = [](std::string symbol, i32 rotation, i32 height = 0) {
         save::model::PlacedObject o;
         o.overlay = "Style";
         o.symbol = std::move(symbol);
@@ -187,7 +189,7 @@ TEST_CASE("between a road and the next lane of a queue a bench finds no side")
     const save::model::TerrainGrid grid = flat_grid(8, 8);
     // A road along row 0, and two queue lanes along rows 1 and 2.
     std::vector<save::model::PathTile> paths;
-    for (std::int32_t col = 1; col <= 3; ++col)
+    for (i32 col = 1; col <= 3; ++col)
         paths.insert(paths.end(), { ground(col, 0), queue(col, 1), queue(col, 2) });
     CHECK(furniture_spot(paths, grid, at(2.5f, 1.9f), object::Positioning::PathSide, ModelTurn { 0 })->refused);
     const auto outer = furniture_spot(paths, grid, at(2.5f, 2.1f), object::Positioning::PathSide, ModelTurn { 0 });

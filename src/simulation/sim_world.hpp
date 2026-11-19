@@ -6,6 +6,7 @@
 // Includes EnTT, which is large: include this only where the registry is needed.
 #pragma once
 
+#include "core/types.hpp"
 #include "random/generator.hpp"
 #include "simulation/entt.hpp"
 #include "simulation/path_network.hpp"
@@ -30,7 +31,7 @@ namespace rct3::simulation
         /// A person walking the paths, in the grid cell they stand in, for keeping people apart.
         struct Body
         {
-            std::int64_t cell = 0;
+            i64 cell = 0;
             glm::vec3 at { 0.0f };
             entt::entity who = entt::null;
         };
@@ -42,11 +43,11 @@ namespace rct3::simulation
     {
         entt::registry registry;
         PathNetwork paths;
-        std::uint64_t tick = 0;                       ///< Simulation steps run so far
+        u64 tick = 0;                                 ///< Simulation steps run so far
         random::Seed seed;                            ///< Randomness of the whole run derives from it
         RatingModel ratings = builtin_rating_model(); ///< How rides untested in the park get rated
         StepBuffers buffers { };
-        float guest_slowdown = 1;          ///< Developer switch: guests live this many times slower than the park
+        f32 guest_slowdown = 1;            ///< Developer switch: guests live this many times slower than the park
         bool parties_huddle_often = false; ///< Developer switch: a wandering party stands together at every rest
     };
 

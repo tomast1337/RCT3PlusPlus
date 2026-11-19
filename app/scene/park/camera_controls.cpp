@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/camera_controls.hpp"
 
+#include "core/types.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/pool_tools.hpp"
 
@@ -15,33 +16,33 @@ namespace rct3::scene::park
     {
 
         // How far the controls move the camera.
-        constexpr float kDragPan = 0.0025f;            ///< Per pixel, times the distance
-        constexpr float kDragTurn = 0.006f;            ///< Radians per pixel
+        constexpr f32 kDragPan = 0.0025f;              ///< Per pixel, times the distance
+        constexpr f32 kDragTurn = 0.006f;              ///< Radians per pixel
         constexpr units::PerSecond kKeyPan { 0.8f };   ///< Of the distance
         constexpr units::Pixels kEdgeBand { 12 };      ///< In from a screen edge where the pointer pushes
-        constexpr float kWheelZoom = 0.85f;            ///< Distance times this per notch towards the screen
+        constexpr f32 kWheelZoom = 0.85f;              ///< Distance times this per notch towards the screen
         constexpr units::Seconds kWheelRoll { 0.25f }; ///< How long a notch takes to roll in, nearly all of it
-        constexpr float kKeyZoom = 2.5f;               ///< Times per second
+        constexpr f32 kKeyZoom = 2.5f;                 ///< Times per second
         constexpr units::TurnRate kKeyTurn { 1.5f };
         constexpr units::Pixels kIsoTurnDrag { 60 };      ///< Across, times the sensitivity option, that turn isometric a quarter
         constexpr units::TurnRate kIsoTurnSpeed { 3.5f }; ///< Isometric turns at
-        constexpr float kDragZoom = 1.006f;               ///< Distance times this per pixel down, advanced's right drag
+        constexpr f32 kDragZoom = 1.006f;                 ///< Distance times this per pixel down, advanced's right drag
         constexpr units::Radians kWheelTilt { 0.08f };    ///< Down per notch away, advanced's wheel in its first scheme
         constexpr units::Pace kFlySpeed { 80 };           ///< Free look flies at, times its speed option
-        constexpr float kFlyDrag = 0.004f;                ///< Seconds of flight per pixel a middle drag goes
+        constexpr f32 kFlyDrag = 0.004f;                  ///< Seconds of flight per pixel a middle drag goes
 
     } // namespace
 
     void move_camera(ParkScene& scene, const ParkInput& input, bool over_interface, const config::game::GameOptions& options, units::Seconds elapsed)
     {
-        const float dt = elapsed.value;
+        const f32 dt = elapsed.value;
         using rct3::park::ControlMode;
         const ui::Point p = input.pointer.position;
-        const float dx = p.x - scene.last_pointer.x;
-        const float dy = p.y - scene.last_pointer.y;
+        const f32 dx = p.x - scene.last_pointer.x;
+        const f32 dy = p.y - scene.last_pointer.y;
         scene.last_pointer = p;
         const auto mode = static_cast<ControlMode>(options.choice(config::game::GameOption::CameraMode));
-        const float scale = scene.scale.value_or(1);
+        const f32 scale = scene.scale.value_or(1);
 
         rct3::park::ParkCamera c = scene.camera;
         if (mode == ControlMode::Isometric && scene.control_mode != mode)
@@ -65,12 +66,12 @@ namespace rct3::scene::park
             const glm::vec2 size = glm::vec2 { screen.width(), screen.height() } * scale;
             const glm::vec2 at = options.flag(config::game::GameOption::CameraFocusOnMiddle) ? size / 2.0f : glm::vec2 { p.x, p.y };
             const rct3::park::Ray ray = rct3::park::view_ray(c, size.x / size.y, { 2 * at.x / size.x - 1, 1 - 2 * at.y / size.y });
-            std::optional<float> hit = rct3::park::object::ground_hit(ray, scene.grid);
+            std::optional<f32> hit = rct3::park::object::ground_hit(ray, scene.grid);
             if (!options.flag(config::game::GameOption::CameraIgnoresScenery) && scene.show_scenery)
             {
                 if (scene.pick_boxes_of != scene.objects.size())
                     place_objects(scene);
-                if (const auto object = rct3::park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](std::size_t i) { return !scene.objects[i].hidden; }))
+                if (const auto object = rct3::park::object::pick_object(ray, scene.pick_boxes, scene.grid, [&](usize i) { return !scene.objects[i].hidden; }))
                     hit = object->distance;
             }
             scene.pivot = hit ? std::optional(ray.origin + ray.direction * *hit) : std::nullopt;
@@ -80,16 +81,16 @@ namespace rct3::scene::park
         const bool free = scene.free_camera;
         scene.turning = false;
         scene.dragging = false;
-        const auto turn = [&](float yaw, float pitch) {
+        const auto turn = [&](f32 yaw, f32 pitch) {
             c = scene.pivot && !free ? rct3::park::orbited(c, *scene.pivot, yaw, pitch) : rct3::park::turned(c, yaw, pitch, free);
             scene.turning = true;
         };
-        const auto pan = [&](float right, float forward) {
+        const auto pan = [&](f32 right, f32 forward) {
             c = rct3::park::panned(c, right, forward);
             scene.dragging = true;
         };
         // Notches to zoom; free look has no zoom.
-        float wheel = over_interface || mode == ControlMode::Freelook ? 0 : input.pointer.wheel.y;
+        f32 wheel = over_interface || mode == ControlMode::Freelook ? 0 : input.pointer.wheel.y;
         const units::Pace fly { options.get(config::game::GameOption::FreeLookSpeed) * kFlySpeed.value };
 
         switch (mode)
@@ -101,7 +102,7 @@ namespace rct3::scene::park
                 {
                     // Far enough across, the view turns a quarter; then the drag counts afresh.
                     scene.iso_drag.value += dx;
-                    const float needed = options.get(config::game::GameOption::IsometricRotation) * kIsoTurnDrag.value * scale;
+                    const f32 needed = options.get(config::game::GameOption::IsometricRotation) * kIsoTurnDrag.value * scale;
                     if (std::abs(scene.iso_drag.value) >= needed)
                     {
                         scene.iso_step += scene.iso_drag.value > 0 ? 1 : -1;
@@ -129,7 +130,7 @@ namespace rct3::scene::park
             {
                 // Three ways to share the buttons out, as the camera controls option picks; the middle
                 // button always turns and tilts.
-                const std::int32_t scheme = options.choice(config::game::GameOption::CameraControls);
+                const i32 scheme = options.choice(config::game::GameOption::CameraControls);
                 const bool turns = held == DragButtons::Middle || (scheme == 1 && held == DragButtons::Both) || (scheme == 2 && held == DragButtons::Right);
                 const bool slides = (scheme == 1 && held == DragButtons::Right) || (scheme != 1 && held == DragButtons::Both);
                 if (turns)
@@ -162,7 +163,7 @@ namespace rct3::scene::park
         scene.zoom_pending += wheel;
         if (scene.zoom_pending != 0)
         {
-            const float notches = rct3::park::zoom_step(scene.zoom_pending, dt, kWheelRoll.value);
+            const f32 notches = rct3::park::zoom_step(scene.zoom_pending, dt, kWheelRoll.value);
             scene.zoom_pending -= notches;
             const rct3::park::ParkCamera before = c;
             c = rct3::park::zoomed(c, std::pow(kWheelZoom, notches), free);
@@ -176,12 +177,12 @@ namespace rct3::scene::park
             const ui::Rect screen = scene.desktop->root().rect();
             slide += rct3::park::edge_push({ p.x, p.y }, glm::vec2 { screen.width(), screen.height() } * scale, kEdgeBand.value * scale);
         }
-        const float yaw = (input.turn_right_key ? 1.0f : 0.0f) - (input.turn_left_key ? 1.0f : 0.0f);
-        const float pitch = (input.tilt_down_key ? 1.0f : 0.0f) - (input.tilt_up_key ? 1.0f : 0.0f);
+        const f32 yaw = (input.turn_right_key ? 1.0f : 0.0f) - (input.turn_left_key ? 1.0f : 0.0f);
+        const f32 pitch = (input.tilt_down_key ? 1.0f : 0.0f) - (input.tilt_up_key ? 1.0f : 0.0f);
         if (mode == ControlMode::Freelook)
         {
             // Free look flies the eye: the zoom keys take it up and down.
-            const float rise = (input.zoom_out_key ? 1.0f : 0.0f) - (input.zoom_in_key ? 1.0f : 0.0f);
+            const f32 rise = (input.zoom_out_key ? 1.0f : 0.0f) - (input.zoom_in_key ? 1.0f : 0.0f);
             if (slide != glm::vec2(0) || rise != 0)
                 c = rct3::park::flown(c, glm::vec3 { slide.x, rise, slide.y } * fly.value * dt);
             if (yaw != 0 || pitch != 0)
@@ -207,9 +208,9 @@ namespace rct3::scene::park
         if (mode == ControlMode::Isometric)
         {
             // The turn keys and the game's isometric turn commands step a quarter, once the last turn is done.
-            const float goal = rct3::park::isometric_yaw(scene.iso_step);
-            const bool settled = std::abs(std::remainder(c.yaw - goal, glm::two_pi<float>())) < 1e-3f;
-            std::int32_t keyed = settled ? static_cast<std::int32_t>(yaw) : 0;
+            const f32 goal = rct3::park::isometric_yaw(scene.iso_step);
+            const bool settled = std::abs(std::remainder(c.yaw - goal, glm::two_pi<f32>())) < 1e-3f;
+            i32 keyed = settled ? static_cast<i32>(yaw) : 0;
             for (const ui::PlayCommand command : input.commands)
                 if (command == ui::PlayCommand::RotateIsometric || command == ui::PlayCommand::ReverseIsometric)
                     keyed = command == ui::PlayCommand::ReverseIsometric ? -1 : 1;
@@ -226,9 +227,9 @@ namespace rct3::scene::park
         // Over a pool it settles on the surface, not on the ground dug out under it, so the view keeps still
         // while the pool tool shows its work there.
         const save::model::TerrainGrid& g = scene.grid;
-        const auto pool = free || g.empty() ? std::nullopt : scene.pools.at(static_cast<std::int32_t>(std::floor((scene.camera.target.x - g.origin_x) / g.tile_size_x)), static_cast<std::int32_t>(std::floor((scene.camera.target.z - g.origin_z) / g.tile_size_z)));
+        const auto pool = free || g.empty() ? std::nullopt : scene.pools.at(static_cast<i32>(std::floor((scene.camera.target.x - g.origin_x) / g.tile_size_x)), static_cast<i32>(std::floor((scene.camera.target.z - g.origin_z) / g.tile_size_z)));
         if (pool)
-            scene.camera.target.y = std::max(scene.camera.target.y, static_cast<float>(pool->surface));
+            scene.camera.target.y = std::max(scene.camera.target.y, static_cast<f32>(pool->surface));
         swap_pool_work(scene);
     }
 

@@ -8,6 +8,7 @@
 // stretch whose start the open end reaches is joined on after it.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/track/pieces.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
@@ -23,13 +24,13 @@ namespace rct3::park::track
     /// The pieces either side of a piece along its stretch, by place in the track's pieces.
     struct PieceNeighbours
     {
-        std::size_t before = 0;
-        std::size_t after = 0;
+        usize before = 0;
+        usize after = 0;
     };
 
     /// The pieces before and after the piece `piece` of `track` along its stretch, round the ends of a closed
     /// one; none for a piece at an open end, or past the track.
-    [[nodiscard]] std::optional<PieceNeighbours> piece_neighbours(const save::model::Track& track, std::size_t piece);
+    [[nodiscard]] std::optional<PieceNeighbours> piece_neighbours(const save::model::Track& track, usize piece);
 
     /// Of `pieces`, those laid after `tip`, past the piece `last`, that end where the piece `next` starts
     /// (`goal`, as start_of gives it), leaving the way it goes, and whose end meets its start.
@@ -38,16 +39,16 @@ namespace rct3::park::track
     /// Takes the piece `piece` out of `track`, which must have pieces either side of it (piece_neighbours),
     /// and returns it. The pieces up to it become the track's last stretch, open at the gap; the track is no
     /// longer a circuit.
-    save::model::TrackPiece take_out_piece(save::model::Track& track, std::size_t piece);
+    save::model::TrackPiece take_out_piece(save::model::Track& track, usize piece);
 
     /// Joins the stretch `stretch` of `track` on after its last one, as one open stretch.
-    void join_stretch(save::model::Track& track, std::size_t stretch);
+    void join_stretch(save::model::Track& track, usize stretch);
 
     /// Makes the stretch `stretch` of `track` its last, where building goes on.
-    void make_last(save::model::Track& track, std::size_t stretch);
+    void make_last(save::model::Track& track, usize stretch);
 
     /// Adds `piece` to `track` at the end of the stretch `stretch`, or as a stretch of its own just before the
     /// last when none, keeping the last where building goes on. Returns the stretch it is in.
-    std::size_t add_piece(save::model::Track& track, std::optional<std::size_t> stretch, save::model::TrackPiece piece);
+    usize add_piece(save::model::Track& track, std::optional<usize> stretch, save::model::TrackPiece piece);
 
 } // namespace rct3::park::track

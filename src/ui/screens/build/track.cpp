@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/track.hpp"
 
+#include "core/types.hpp"
 #include "ui/skin/library.hpp"
 
 #include <algorithm>
@@ -53,13 +54,13 @@ namespace rct3::ui::screens::build
         return kBankSpots;
     }
 
-    float dial_left(std::size_t toggles)
+    f32 dial_left(usize toggles)
     {
         // Toggles fill a column of two before the dial moves on by a step.
-        return cp::kToggleLeft + cp::kStep * static_cast<float>((toggles + 1) / 2);
+        return cp::kToggleLeft + cp::kStep * static_cast<f32>((toggles + 1) / 2);
     }
 
-    float specials_left(std::size_t toggles)
+    f32 specials_left(usize toggles)
     {
         return std::max(cp::kSpecialAt.x, dial_left(toggles) + cp::kDialSize + 4);
     }
@@ -70,19 +71,19 @@ namespace rct3::ui::screens::build
     {
         placement = top_left(0, 0, cp::kWidth, cp::kHeight);
         const auto picture = [&](std::string widget) { return &add<widgets::Button>(std::move(widget), std::string { }); };
-        for (std::size_t i = 0; i < cp::kCurves; ++i)
+        for (usize i = 0; i < cp::kCurves; ++i)
         {
             curves_.at(i) = picture(style.curves.at(i).empty() ? std::format("curve{}", i) : style.curves.at(i));
-            curves_.at(i)->placement = top_left(cp::kRowLeft + cp::kStep * static_cast<float>(i), cp::kCurveTop, cp::kCurveSize.x, cp::kCurveSize.y);
+            curves_.at(i)->placement = top_left(cp::kRowLeft + cp::kStep * static_cast<f32>(i), cp::kCurveTop, cp::kCurveSize.x, cp::kCurveSize.y);
         }
-        for (std::size_t i = 0; i < cp::kSlopes; ++i)
+        for (usize i = 0; i < cp::kSlopes; ++i)
         {
             slopes_.at(i) = picture(style.slopes.at(i).empty() ? std::format("slope{}", i) : style.slopes.at(i));
-            slopes_.at(i)->placement = top_left(cp::kRowLeft + cp::kStep * static_cast<float>(i), cp::kSlopeTop, cp::kSlopeSize.x, cp::kSlopeSize.y);
+            slopes_.at(i)->placement = top_left(cp::kRowLeft + cp::kStep * static_cast<f32>(i), cp::kSlopeTop, cp::kSlopeSize.x, cp::kSlopeSize.y);
         }
-        for (std::size_t i = 0; i < cp::kBanks; ++i)
+        for (usize i = 0; i < cp::kBanks; ++i)
             banks_.at(i) = picture(style.banks.at(i).empty() ? std::format("bank{}", i) : style.banks.at(i));
-        for (std::size_t i = 0; i < cp::kToggles; ++i)
+        for (usize i = 0; i < cp::kToggles; ++i)
         {
             toggles_.at(i) = picture(std::format("toggle{}", i));
             toggles_.at(i)->tooltip = std::move(toggle_helps.at(i));
@@ -103,7 +104,7 @@ namespace rct3::ui::screens::build
         heights_ = picture("heights");
         heights_->placement = top_left(cp::kHeightsAt.x, cp::kHeightsAt.y, cp::kHeightsSize.x, cp::kHeightsSize.y);
 
-        const auto label = [&](std::string widget, float top) {
+        const auto label = [&](std::string widget, f32 top) {
             widgets::Label& l = add<widgets::Label>(std::move(widget), std::u16string { }, style.font);
             l.style.colour = style.text_colour;
             l.style.vertical = Align::Centre;
@@ -114,14 +115,14 @@ namespace rct3::ui::screens::build
         cost_ = label("cost", cp::kCostTop);
 
         list_ = &add<widgets::ListBox>("list", style.list, style.list_bar);
-        for (std::size_t i = 0; i < cp::kSpecials; ++i)
+        for (usize i = 0; i < cp::kSpecials; ++i)
         {
             widgets::Button& b = *picture(std::format("special{}", i));
             b.toggle = true;
             specials_.at(i) = &b;
         }
         constexpr std::array<std::string_view, cp::kParams> kParamNames { "car_turn", "holding_time", "speed" };
-        for (std::size_t i = 0; i < cp::kParams; ++i)
+        for (usize i = 0; i < cp::kParams; ++i)
         {
             param_icons_.at(i) = picture(std::format("{}_icon", kParamNames.at(i)));
             param_icons_.at(i)->icon = style.param_icons.at(i);
@@ -138,13 +139,13 @@ namespace rct3::ui::screens::build
         // Pieces with a picture take the picture buttons while they last; the rest go in the list.
         listed_.clear();
         pictured_.clear();
-        for (std::size_t i = 0; i < view_.named.size(); ++i)
+        for (usize i = 0; i < view_.named.size(); ++i)
         {
             const bool pictured = !view_.named[i].icon.empty() && pictured_.size() < cp::kSpecials;
             (pictured ? pictured_ : listed_).push_back(i);
         }
         // The list as the game orders it: those that fit first, then by name, then by way.
-        std::ranges::stable_sort(listed_, [&](std::size_t a, std::size_t b) {
+        std::ranges::stable_sort(listed_, [&](usize a, usize b) {
             const NamedPiece& x = view_.named[a];
             const NamedPiece& y = view_.named[b];
             return std::tie(y.offered, x.name, x.marks[0]) < std::tie(x.offered, y.name, y.marks[0]);
@@ -156,67 +157,67 @@ namespace rct3::ui::screens::build
     void ConstructionPanel::lay_out()
     {
         // The toggles the track has fill two rows by columns, the slope row's first, then the curve row's.
-        std::size_t toggles = 0;
-        for (std::size_t i = 0; i < cp::kToggles; ++i)
+        usize toggles = 0;
+        for (usize i = 0; i < cp::kToggles; ++i)
         {
             if (!view_.toggles.at(i))
                 continue;
-            const float top = toggles % 2 == 0 ? cp::kSlopeTop + cp::kSlopeSize.y - cp::kToggleSize.y : cp::kCurveTop;
-            toggles_.at(i)->placement = top_left(cp::kToggleLeft + cp::kStep * static_cast<float>(toggles / 2), top, cp::kToggleSize.x, cp::kToggleSize.y);
+            const f32 top = toggles % 2 == 0 ? cp::kSlopeTop + cp::kSlopeSize.y - cp::kToggleSize.y : cp::kCurveTop;
+            toggles_.at(i)->placement = top_left(cp::kToggleLeft + cp::kStep * static_cast<f32>(toggles / 2), top, cp::kToggleSize.x, cp::kToggleSize.y);
             ++toggles;
         }
         // The cars' facing takes the next slot.
         if (view_.facing)
         {
-            const float top = toggles % 2 == 0 ? cp::kSlopeTop + cp::kSlopeSize.y - cp::kToggleSize.y : cp::kCurveTop;
-            facing_->placement = top_left(cp::kToggleLeft + cp::kStep * static_cast<float>(toggles / 2), top, cp::kToggleSize.x, cp::kToggleSize.y);
+            const f32 top = toggles % 2 == 0 ? cp::kSlopeTop + cp::kSlopeSize.y - cp::kToggleSize.y : cp::kCurveTop;
+            facing_->placement = top_left(cp::kToggleLeft + cp::kStep * static_cast<f32>(toggles / 2), top, cp::kToggleSize.x, cp::kToggleSize.y);
             ++toggles;
         }
         // The setting boxes stand right of the price, the last ending where the price's row does; the price
         // keeps what is left of the row.
-        float right = cp::kParamsRight;
-        for (std::size_t i = cp::kParams; i-- > 0;)
+        f32 right = cp::kParamsRight;
+        for (usize i = cp::kParams; i-- > 0;)
         {
             if (!view_.params.at(i))
                 continue;
-            const float left = right - cp::kParamWidths.at(i) - cp::kParamIconSize - 2;
+            const f32 left = right - cp::kParamWidths.at(i) - cp::kParamIconSize - 2;
             param_icons_.at(i)->placement = top_left(left, cp::kParamsTop, cp::kParamIconSize, cp::kParamIconSize);
             params_.at(i)->placement = top_left(left + cp::kParamIconSize + 2, cp::kParamsTop, cp::kParamWidths.at(i), cp::kParamHeight);
             right = left - cp::kParamGap;
         }
         cost_->placement = top_left(cp::kLabelLeft, cp::kCostTop, std::min(cp::kLabelWidth, right - cp::kLabelLeft), cp::kLabelHeight);
-        const float dial = dial_left(toggles);
-        for (std::size_t i = 0; i < cp::kBanks; ++i)
+        const f32 dial = dial_left(toggles);
+        for (usize i = 0; i < cp::kBanks; ++i)
             banks_.at(i)->placement = top_left(dial + kBankSpots.at(i).x, cp::kDialTop + kBankSpots.at(i).y, cp::kBankSize, cp::kBankSize);
-        const float specials = specials_left(toggles);
-        for (std::size_t i = 0; i < cp::kSpecials; ++i)
-            specials_.at(i)->placement = top_left(specials + cp::kSpecialStep * static_cast<float>(i / 2), cp::kSpecialAt.y + cp::kSpecialStep * static_cast<float>(i % 2), cp::kSpecialSize, cp::kSpecialSize);
-        const float split = view_.new_segment ? cp::kNewSegmentAt.x + cp::kNewSegmentSize.x + 4 : cp::kNewSegmentAt.x;
+        const f32 specials = specials_left(toggles);
+        for (usize i = 0; i < cp::kSpecials; ++i)
+            specials_.at(i)->placement = top_left(specials + cp::kSpecialStep * static_cast<f32>(i / 2), cp::kSpecialAt.y + cp::kSpecialStep * static_cast<f32>(i % 2), cp::kSpecialSize, cp::kSpecialSize);
+        const f32 split = view_.new_segment ? cp::kNewSegmentAt.x + cp::kNewSegmentSize.x + 4 : cp::kNewSegmentAt.x;
         split_->placement = top_left(split, cp::kNewSegmentAt.y, cp::kSplitSize.x, cp::kSplitSize.y);
-        const float buttons_right = view_.split ? split + cp::kSplitSize.x : view_.new_segment ? cp::kNewSegmentAt.x + cp::kNewSegmentSize.x : 0.0f;
+        const f32 buttons_right = view_.split ? split + cp::kSplitSize.x : view_.new_segment ? cp::kNewSegmentAt.x + cp::kNewSegmentSize.x : 0.0f;
         list_left_ = std::max({ cp::kListLeft, specials + 2 * cp::kSpecialStep + 6, buttons_right > 0 ? buttons_right + 6 : 0.0f });
         list_->placement = top_left(list_left_, cp::kListTop, cp::kListRight - list_left_, cp::kListHeight);
     }
 
     void ConstructionPanel::restyle()
     {
-        for (std::size_t i = 0; i < cp::kCurves; ++i)
+        for (usize i = 0; i < cp::kCurves; ++i)
         {
             curves_.at(i)->icon = icon_skin(style_.curves.at(i), view_.curves.at(i));
             curves_.at(i)->inert = view_.curves.at(i) == IconState::Dis;
         }
-        for (std::size_t i = 0; i < cp::kSlopes; ++i)
+        for (usize i = 0; i < cp::kSlopes; ++i)
         {
             slopes_.at(i)->icon = icon_skin(style_.slopes.at(i), view_.slopes.at(i));
             slopes_.at(i)->inert = view_.slopes.at(i) == IconState::Dis;
         }
-        for (std::size_t i = 0; i < cp::kBanks; ++i)
+        for (usize i = 0; i < cp::kBanks; ++i)
         {
             // The bank pictures have no greyed state: a bank not offered is left out.
             banks_.at(i)->icon = icon_skin(style_.banks.at(i), view_.banks.at(i) == IconState::On ? IconState::On : IconState::Off);
             banks_.at(i)->visible = view_.banks.at(i) != IconState::Dis;
         }
-        for (std::size_t i = 0; i < cp::kToggles; ++i)
+        for (usize i = 0; i < cp::kToggles; ++i)
         {
             const auto& state = view_.toggles.at(i);
             toggles_.at(i)->visible = state && *state != IconState::Dis;
@@ -238,8 +239,8 @@ namespace rct3::ui::screens::build
         list_->items.clear();
         list_->icons.clear();
         list_->greyed.clear();
-        std::optional<std::size_t> picked;
-        for (const std::size_t index : listed_)
+        std::optional<usize> picked;
+        for (const usize index : listed_)
         {
             const NamedPiece& piece = view_.named[index];
             if (view_.named_on == index)
@@ -251,7 +252,7 @@ namespace rct3::ui::screens::build
         // Selected only when it changes, so the player can scroll away from it.
         if (list_->selected() != picked)
             list_->select(picked);
-        for (std::size_t i = 0; i < cp::kSpecials; ++i)
+        for (usize i = 0; i < cp::kSpecials; ++i)
         {
             widgets::Button& b = *specials_.at(i);
             b.visible = i < pictured_.size();
@@ -265,7 +266,7 @@ namespace rct3::ui::screens::build
             // With no face to light, the picked one shows by the others fading.
             b.icon_colour = b.on || !view_.named_on ? kWhite : hex("#ffffff66");
         }
-        for (std::size_t i = 0; i < cp::kParams; ++i)
+        for (usize i = 0; i < cp::kParams; ++i)
         {
             const std::optional<ParamBox>& box = view_.params.at(i);
             widgets::Spinner& s = *params_.at(i);
@@ -299,7 +300,7 @@ namespace rct3::ui::screens::build
     {
         // A picture button clicked: picking what is picked already builds; what is not offered does nothing.
         const auto pictures = [&](const auto& buttons, const auto& states, ConstructionAction action) {
-            for (std::size_t i = 0; i < buttons.size(); ++i)
+            for (usize i = 0; i < buttons.size(); ++i)
             {
                 if (!buttons.at(i)->take_click())
                     continue;
@@ -312,7 +313,7 @@ namespace rct3::ui::screens::build
         pictures(curves_, view_.curves, ConstructionAction::Curve);
         pictures(slopes_, view_.slopes, ConstructionAction::Slope);
         pictures(banks_, view_.banks, ConstructionAction::Bank);
-        for (std::size_t i = 0; i < cp::kToggles; ++i)
+        for (usize i = 0; i < cp::kToggles; ++i)
         {
             if (toggles_.at(i)->take_click() && view_.toggles.at(i).value_or(IconState::Dis) != IconState::Dis)
                 events_.push_back({ ConstructionAction::Toggle, i });
@@ -328,7 +329,7 @@ namespace rct3::ui::screens::build
         if (heights_->take_click() && !view_.heights_locked)
             events_.push_back({ ConstructionAction::Heights, 0 });
         // A picture piece clicked: picked, or built when it is picked already.
-        for (std::size_t i = 0; i < cp::kSpecials; ++i)
+        for (usize i = 0; i < cp::kSpecials; ++i)
         {
             if (!specials_.at(i)->take_click())
                 continue;
@@ -341,7 +342,7 @@ namespace rct3::ui::screens::build
             events_.push_back({ ConstructionAction::Named, listed_[*list_->selected()] });
         if (list_->take_activate())
             events_.push_back({ ConstructionAction::Build, 0 });
-        for (std::size_t i = 0; i < cp::kParams; ++i)
+        for (usize i = 0; i < cp::kParams; ++i)
         {
             if (params_.at(i)->take_change() && view_.params.at(i))
                 events_.push_back({ ConstructionAction::Param, i, params_.at(i)->value() });
@@ -353,7 +354,7 @@ namespace rct3::ui::screens::build
     void ConstructionPanel::draw(DrawContext& context) const
     {
         const Rect r = rect();
-        const float dial = dial_left(static_cast<std::size_t>(std::ranges::count_if(view_.toggles, [](const auto& t) { return t.has_value(); })));
+        const f32 dial = dial_left(static_cast<usize>(std::ranges::count_if(view_.toggles, [](const auto& t) { return t.has_value(); })));
         skin::draw_skin(context.list, context.skins.find(style_.dial), { r.x0 + dial, r.y0 + cp::kDialTop, r.x0 + dial + cp::kDialSize, r.y0 + cp::kDialTop + cp::kDialSize });
         // The lines that part the buttons from the name below them, and both from the list.
         context.list.fill({ r.x0 + cp::kLabelLeft - 4, r.y0 + cp::kDividerTop, r.x0 + list_left_ - 3, r.y0 + cp::kDividerTop + 1 }, style_.divider);

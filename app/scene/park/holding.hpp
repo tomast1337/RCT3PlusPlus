@@ -6,6 +6,7 @@
 // the park does not own will not take them; a right click or Escape puts them back where they were picked up.
 #pragma once
 
+#include "core/types.hpp"
 #include "simulation/entt.hpp"
 #include "ui/widget.hpp"
 
@@ -29,7 +30,7 @@ namespace rct3::scene::park
 
     /// Picks up the shown person `shown` (of ParkScene::shown_people). False when they cannot be picked up now:
     /// not walking in the park, or on a ride.
-    bool pick_up_person(ParkScene& scene, std::size_t shown);
+    bool pick_up_person(ParkScene& scene, usize shown);
 
     /// What to do with the person held this frame.
     enum class Hold

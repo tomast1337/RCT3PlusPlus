@@ -7,6 +7,7 @@
 // The view controls are switches: each has a second icon for while what it controls is shown.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/screens/park_view/tool_row.hpp"
 
 #include <cstdint>
@@ -16,7 +17,7 @@
 namespace rct3::ui::screens::park_view
 {
 
-    enum class ToolItem : std::uint8_t
+    enum class ToolItem : u8
     {
         // Delete
         DeleteOne,

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "save/model/structure.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -17,30 +19,30 @@ namespace
     struct Bytes
     {
         std::vector<std::byte> v;
-        Bytes& put_u8(std::uint8_t x)
+        Bytes& put_u8(u8 x)
         {
             v.push_back(static_cast<std::byte>(x));
             return *this;
         }
-        Bytes& put(const void* p, std::size_t n)
+        Bytes& put(const void* p, usize n)
         {
             const auto* b = static_cast<const std::byte*>(p);
             v.insert(v.end(), b, b + n);
             return *this;
         }
-        Bytes& put_u16(std::uint16_t x)
+        Bytes& put_u16(u16 x)
         {
             return put(&x, 2);
         }
-        Bytes& put_u32(std::uint32_t x)
+        Bytes& put_u32(u32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put_i32(std::int32_t x)
+        Bytes& put_i32(i32 x)
         {
             return put(&x, 4);
         }
-        Bytes& put_u64(std::uint64_t x)
+        Bytes& put_u64(u64 x)
         {
             return put(&x, 8);
         }
@@ -51,14 +53,14 @@ namespace
         }
         Bytes& name(const std::string& s)
         {
-            put_u16(static_cast<std::uint16_t>(s.size()));
+            put_u16(static_cast<u16>(s.size()));
             for (const char c : s)
-                put_u8(static_cast<std::uint8_t>(c));
+                put_u8(static_cast<u8>(c));
             return *this;
         }
         Bytes& blob(const Bytes& payload)
         {
-            put_u32(static_cast<std::uint32_t>(payload.v.size()));
+            put_u32(static_cast<u32>(payload.v.size()));
             return cat(payload);
         }
         Bytes& text(const std::u16string& s)
@@ -74,13 +76,13 @@ namespace
     struct Attr
     {
         std::string name, type;
-        std::uint32_t size = 0;
+        u32 size = 0;
         std::vector<Attr> children;
     };
 
     void write_attr(Bytes& b, const Attr& a)
     {
-        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<std::uint32_t>(a.children.size()));
+        b.name(a.name).name(a.type).put_u32(a.size).put_u32(static_cast<u32>(a.children.size()));
         for (const auto& c : a.children)
             write_attr(b, c);
     }
@@ -92,12 +94,12 @@ namespace
 
     struct Piece
     {
-        std::int32_t col, row, height, dir, corner;
-        std::uint64_t sid;
+        i32 col, row, height, dir, corner;
+        u64 sid;
     };
 
     /// An invented structure of `cols` x `rows` tiles with the pieces given, and two scenery entries (ids 20, 21).
-    std::vector<std::byte> structure_file(std::int32_t cols, std::int32_t rows, const std::vector<bool>& selected, const std::vector<Piece>& pieces)
+    std::vector<std::byte> structure_file(i32 cols, i32 rows, const std::vector<bool>& selected, const std::vector<Piece>& pieces)
     {
         const std::vector<Attr> piece_fields = { i32a("Col"), i32a("Corner"), i32a("Dir"), i32a("FlexiPick0"), i32a("FlexiPick1"), i32a("FlexiPick2"), i32a("Height"), i32a("Row"), { "SID", "reference", 8, { } } };
         Bytes b;
@@ -116,12 +118,12 @@ namespace
         Bytes s;
         s.put_i32(cols).text(u"Gate house").put_i32(rows);
         Bytes list;
-        list.put_u32(static_cast<std::uint32_t>(pieces.size()));
+        list.put_u32(static_cast<u32>(pieces.size()));
         for (const Piece& p : pieces)
             list.put_i32(p.col).put_i32(p.corner).put_i32(p.dir).put_i32(4).put_i32(5).put_i32(6).put_i32(p.height).put_i32(p.row).put_u64(p.sid);
         s.blob(list);
         Bytes marks;
-        marks.put_u32(static_cast<std::uint32_t>(selected.size()));
+        marks.put_u32(static_cast<u32>(selected.size()));
         for (const bool m : selected)
             marks.put_u8(m ? 1 : 0);
         s.blob(marks);
@@ -152,7 +154,7 @@ TEST_CASE("a structure file gives its box, its tiles and its items, the lowest a
     CHECK(s->pieces[1].col == 1);
     CHECK(s->pieces[1].rotation == 1); // 5 turns are one
     CHECK(s->pieces[0].quadrant == 1);
-    CHECK(s->pieces[0].colours == std::array<std::int32_t, 3> { 4, 5, 6 });
+    CHECK(s->pieces[0].colours == std::array<i32, 3> { 4, 5, 6 });
 }
 
 TEST_CASE("a structure item whose entry names nothing is left out, and a short tile list counts as unmarked")
@@ -161,7 +163,7 @@ TEST_CASE("a structure item whose entry names nothing is left out, and a short t
     REQUIRE(s);
     REQUIRE(s->pieces.size() == 1);
     CHECK(s->pieces[0].height == 0);
-    CHECK(s->tiles == std::vector<std::uint8_t> { 1, 0, 0, 0 });
+    CHECK(s->tiles == std::vector<u8> { 1, 0, 0, 0 });
 }
 
 TEST_CASE("a file without a structure, or with an empty box, is refused")

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/skin/library.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3::ui;
@@ -8,7 +10,7 @@ using namespace rct3::ui::skin;
 
 namespace
 {
-    SkinRef skin_ref(TextureId texture, float w = 10, float h = 10)
+    SkinRef skin_ref(TextureId texture, f32 w = 10, f32 h = 10)
     {
         SkinRef s;
         s.layout.xs = { 0, w };
@@ -28,9 +30,9 @@ TEST_CASE("skins are found by name")
     skins.add("Frame", skin_ref(1, 30, 20));
     REQUIRE(skins.find("Frame"));
     CHECK(skins.find("Frame")->texture == 1);
-    CHECK(skins.find("Frame")->size() == std::array<float, 2> { 30, 20 });
+    CHECK(skins.find("Frame")->size() == std::array<f32, 2> { 30, 20 });
     CHECK_FALSE(skins.find("Missing"));
-    CHECK(SkinRef { }.size() == std::array<float, 2> { 0, 0 });
+    CHECK(SkinRef { }.size() == std::array<f32, 2> { 0, 0 });
 }
 
 TEST_CASE("skins are found whatever the case of their name")
@@ -86,7 +88,7 @@ TEST_CASE("a skin with a coded frame draws the frame instead of its picture")
     frame.layers.push_back({ inset_box(0, 0, 0, 0), Shape { }, { } });
     skins.set_coded("frame", frame); // Whatever the case
     REQUIRE(skins.find("Frame"));
-    CHECK(skins.find("Frame")->size() == std::array<float, 2> { 30, 20 });
+    CHECK(skins.find("Frame")->size() == std::array<f32, 2> { 30, 20 });
     DrawList list;
     draw_skin(list, skins.find("Frame"), { 0, 0, 30, 20 });
     CHECK(list.vertices().empty());

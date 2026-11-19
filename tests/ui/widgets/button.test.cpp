@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/button.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 
 #include <doctest/doctest.h>
@@ -26,7 +27,7 @@ namespace
         return s;
     }
 
-    PointerState at(float x, float y, bool down = false)
+    PointerState at(f32 x, f32 y, bool down = false)
     {
         return { { x, y }, down, true };
     }
@@ -40,7 +41,7 @@ namespace
             button.placement = top_left(0, 0, 20, 20);
             desktop.layout({ 0, 0, 100, 100 });
         }
-        void click(float x = 5)
+        void click(f32 x = 5)
         {
             desktop.update(at(5, 5, true));
             desktop.update(at(x, 5, false));
@@ -161,12 +162,12 @@ TEST_CASE("text is centred in the button, grey when disabled and cut to the butt
     DrawList list = draw();
     REQUIRE(list.vertices().size() == 8);
     CHECK(list.vertices()[0].x == 20); // 20 wide text in a 40 wide button at 10
-    CHECK(list.vertices()[0].color == std::array<std::uint8_t, 4> { 0, 0, 0, 255 });
+    CHECK(list.vertices()[0].color == std::array<u8, 4> { 0, 0, 0, 255 });
 
     b.enabled = false;
     list = draw();
     REQUIRE(list.vertices().size() == 8);
-    CHECK(list.vertices()[0].color == std::array<std::uint8_t, 4> { 127, 127, 127, 255 });
+    CHECK(list.vertices()[0].color == std::array<u8, 4> { 127, 127, 127, 255 });
 
     b.text_inset = { 10, 0, 0, 0 };
     list = draw();

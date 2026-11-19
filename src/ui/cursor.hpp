@@ -13,6 +13,8 @@
 // and switching only when the shape changes are done here, the same for every backend.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <array>
 #include <bitset>
 #include <concepts>
@@ -26,7 +28,7 @@ namespace rct3::ui
 {
 
     /// What the pointer means where it is.
-    enum class CursorKind : std::uint8_t
+    enum class CursorKind : u8
     {
         Arrow,              ///< Nothing special
         Hand,               ///< Over something that clicks
@@ -44,13 +46,13 @@ namespace rct3::ui
         ZoomOut,
         Hidden, ///< No pointer, held in place while the mouse moves, as for mouse look; it comes back where it was
     };
-    inline constexpr std::size_t kCursorKinds = 15;
+    inline constexpr usize kCursorKinds = 15;
 
     /// For logs.
     [[nodiscard]] std::string_view cursor_name(CursorKind kind);
 
     /// The standard cursors platforms share. A backend shows each one as its own system cursor.
-    enum class StandardCursor : std::uint8_t
+    enum class StandardCursor : u8
     {
         Arrow,        ///< Every backend has it
         PointingHand, ///< As over a link
@@ -64,7 +66,7 @@ namespace rct3::ui
         ResizeNESW, ///< Top-right and bottom-left
         Hidden,     ///< No cursor, the pointer held for relative motion; every backend has it
     };
-    inline constexpr std::size_t kStandardCursors = 11;
+    inline constexpr usize kStandardCursors = 11;
 
     /// For logs.
     [[nodiscard]] std::string_view standard_cursor_name(StandardCursor shape);

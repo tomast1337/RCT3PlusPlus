@@ -14,6 +14,7 @@
 #pragma once
 
 #include "config/text_file.hpp"
+#include "core/types.hpp"
 
 #include <array>
 #include <cstddef>
@@ -30,7 +31,7 @@
 namespace rct3::config::game
 {
 
-    enum class GameOption : std::uint8_t
+    enum class GameOption : u8
     {
         // General
         Fullscreen,
@@ -126,16 +127,16 @@ namespace rct3::config::game
         Count_, ///< Number of options; not an option
     };
 
-    inline constexpr std::size_t kGameOptionCount = static_cast<std::size_t>(GameOption::Count_);
+    inline constexpr usize kGameOptionCount = static_cast<usize>(GameOption::Count_);
 
     struct GameOptionInfo
     {
         GameOption option;
         std::string_view name;
-        float minimum = 0;
-        float maximum = 1;
-        float step = 1; ///< Values are whole steps from the minimum; 0 for any value
-        float default_value = 0;
+        f32 minimum = 0;
+        f32 maximum = 1;
+        f32 step = 1; ///< Values are whole steps from the minimum; 0 for any value
+        f32 default_value = 0;
     };
 
     /// Every option, in GameOption order.
@@ -161,7 +162,7 @@ namespace rct3::config::game
         { GameOption::RideDetail, GameOption::RideDistance },
     } };
 
-    inline constexpr std::int32_t kCustomQuality = 5;
+    inline constexpr i32 kCustomQuality = 5;
 
     class GameOptions
     {
@@ -173,17 +174,17 @@ namespace rct3::config::game
         /// Reads the file at `path`. A file that is not there gives the defaults.
         [[nodiscard]] static std::expected<GameOptions, std::string> load(const std::filesystem::path& path, std::optional<std::vector<FileProblem>&> problems = std::nullopt);
 
-        [[nodiscard]] float get(GameOption option) const;
+        [[nodiscard]] f32 get(GameOption option) const;
         [[nodiscard]] bool flag(GameOption option) const
         {
             return get(option) != 0;
         }
-        [[nodiscard]] std::int32_t choice(GameOption option) const
+        [[nodiscard]] i32 choice(GameOption option) const
         {
-            return static_cast<std::int32_t>(get(option));
+            return static_cast<i32>(get(option));
         }
         /// Sets the value, kept in range and snapped to a whole step.
-        void set(GameOption option, float value);
+        void set(GameOption option, f32 value);
 
         /// The park's music when zoomed out: a file of the game's music folder by name, empty for no music.
         /// Nothing until the player picks one. Ignored while ShuffleBackgroundMusic is on.
@@ -204,7 +205,7 @@ namespace rct3::config::game
         friend bool operator==(const GameOptions&, const GameOptions&) = default;
 
     private:
-        std::array<float, kGameOptionCount> values_ { };
+        std::array<f32, kGameOptionCount> values_ { };
         std::optional<std::string> background_music_;
     };
 

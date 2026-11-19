@@ -9,6 +9,7 @@
 // not known yet.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -26,8 +27,8 @@ namespace rct3::save::model
         std::string title;
         std::string text;
         std::vector<std::string> triggers; ///< Names of what ends the step; none waits for the player
-        std::int32_t window_position = 0;  ///< Where its window sits, as stored
-        std::int32_t window_width = 0;     ///< In interface units, 0 when not stored
+        i32 window_position = 0;           ///< Where its window sits, as stored
+        i32 window_width = 0;              ///< In interface units, 0 when not stored
     };
 
     struct TutorialScript

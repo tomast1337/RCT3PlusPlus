@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/track.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -37,10 +38,10 @@ namespace
         }
 
         /// Presses the middle of the list's row `row`, the list scrolled to its top.
-        void press_row(std::size_t row)
+        void press_row(usize row)
         {
             const Rect r = panel->list().rect();
-            const Point p { r.x0 + 20, r.y0 + (static_cast<float>(row) + 0.5f) * cp::kListRowHeight };
+            const Point p { r.x0 + 20, r.y0 + (static_cast<f32>(row) + 0.5f) * cp::kListRowHeight };
             desktop.update({ p, true });
             desktop.update({ p, false });
         }
@@ -106,7 +107,7 @@ TEST_CASE("the rows of curves and slopes sit side by side in the strip")
     const Rect panel = f.panel->rect();
     CHECK(panel.x0 == 0);
     CHECK(panel.y0 == 0); // Its owner places it
-    for (std::size_t i = 0; i + 1 < cp::kCurves; ++i)
+    for (usize i = 0; i + 1 < cp::kCurves; ++i)
     {
         CHECK(f.panel->curve_button(i + 1).rect().x0 - f.panel->curve_button(i).rect().x0 == cp::kStep);
         CHECK(f.panel->slope_button(i).rect().y0 > f.panel->curve_button(i).rect().y1 - 1);
@@ -135,7 +136,7 @@ TEST_CASE("a toggle shows only when the track has pieces with it, and moves the 
     f.panel->show(v);
     f.desktop.update({ });
     CHECK_FALSE(f.panel->toggle_button(0).visible);
-    const float without = f.panel->bank_button(3).rect().x0;
+    const f32 without = f.panel->bank_button(3).rect().x0;
     v.toggles[0] = IconState::Off;
     f.panel->show(v);
     f.desktop.update({ });
@@ -150,8 +151,8 @@ TEST_CASE("toggles fill two rows by columns, and three push the pictures and the
     v.named = { { .name = u"Station", .icon = "StationIcon" }, { .name = u"Loop" } };
     f.panel->show(v);
     f.desktop.update({ });
-    const float pictures = f.panel->find("special0")->rect().x0;
-    const float list = f.panel->list().rect().x0;
+    const f32 pictures = f.panel->find("special0")->rect().x0;
+    const f32 list = f.panel->list().rect().x0;
     v.toggles = { IconState::Off, IconState::On, std::nullopt, std::nullopt, IconState::Off };
     f.panel->show(v);
     f.desktop.update({ });
@@ -236,7 +237,7 @@ TEST_CASE("the list scrolls when its pieces do not all fit")
 {
     Fixture f;
     ConstructionView v = straight();
-    for (std::size_t i = 0; i < 12; ++i)
+    for (usize i = 0; i < 12; ++i)
         v.named.push_back({ .name = u"Piece " + std::u16string(1, static_cast<char16_t>(u'A' + i)) });
     f.panel->show(v);
     f.desktop.update({ });
@@ -245,7 +246,7 @@ TEST_CASE("the list scrolls when its pieces do not all fit")
     f.desktop.update({ });
     CHECK(f.panel->list().bar().position > 0);
     // Picking keeps the scroll: showing the same view again does not pull the list back.
-    const float scrolled = f.panel->list().bar().position;
+    const f32 scrolled = f.panel->list().bar().position;
     f.panel->show(v);
     f.desktop.update({ });
     CHECK(f.panel->list().bar().position == scrolled);
@@ -391,7 +392,7 @@ TEST_CASE("a new stretch button pushes the list right")
     Fixture f;
     ConstructionView v = straight();
     f.panel->show(v);
-    const float left = f.panel->list().rect().x0;
+    const f32 left = f.panel->list().rect().x0;
     v.new_segment = true;
     f.panel->show(v);
     f.desktop.update({ });

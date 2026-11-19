@@ -10,6 +10,7 @@
 // the focus stops it waiting. It shows its key as the game shows keys.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/key_combo.hpp"
 #include "ui/widget.hpp"
 
@@ -62,7 +63,7 @@ namespace rct3::ui::widgets
 
     private:
         bool waiting_ = false;
-        std::int32_t changes_ = 0;
+        i32 changes_ = 0;
     };
 
 } // namespace rct3::ui::widgets

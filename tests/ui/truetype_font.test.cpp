@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/truetype_font.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -13,21 +15,21 @@ using namespace rct3::ui::font;
 namespace
 {
 
-    using Bytes = std::vector<std::uint8_t>;
+    using Bytes = std::vector<u8>;
 
-    constexpr std::uint32_t kVersion1 = 1U << 16;         // 1.0 in the format's 16.16 fixed point
-    constexpr std::uint32_t kMaxpVersionShort = 5U << 12; // Version 0.5 (stored as 0x5000): glyph count only
+    constexpr u32 kVersion1 = 1U << 16;         // 1.0 in the format's 16.16 fixed point
+    constexpr u32 kMaxpVersionShort = 5U << 12; // Version 0.5 (stored as 0x5000): glyph count only
 
-    void put_u16(Bytes& b, std::int32_t v)
+    void put_u16(Bytes& b, i32 v)
     {
-        b.push_back(static_cast<std::uint8_t>((v >> 8) & 0xFF));
-        b.push_back(static_cast<std::uint8_t>(v & 0xFF));
+        b.push_back(static_cast<u8>((v >> 8) & 0xFF));
+        b.push_back(static_cast<u8>(v & 0xFF));
     }
 
-    void put_u32(Bytes& b, std::uint32_t v)
+    void put_u32(Bytes& b, u32 v)
     {
-        put_u16(b, static_cast<std::int32_t>(v >> 16));
-        put_u16(b, static_cast<std::int32_t>(v & 0xFFFF));
+        put_u16(b, static_cast<i32>(v >> 16));
+        put_u16(b, static_cast<i32>(v & 0xFFFF));
     }
 
     // A made-up font with an em of 1000 units, ascender 800, descender 200 and three glyphs: 0 (missing, empty),
@@ -50,7 +52,7 @@ namespace
         put_u16(maxp, 3);
 
         Bytes hmtx;
-        for (const std::int32_t advance : { 500, 600, 300 })
+        for (const i32 advance : { 500, 600, 300 })
         {
             put_u16(hmtx, advance);
             put_u16(hmtx, 0);
@@ -58,20 +60,20 @@ namespace
 
         Bytes glyf;
         put_u16(glyf, 1); // One contour
-        for (const std::int32_t v : { 0, 0, 500, 700 })
+        for (const i32 v : { 0, 0, 500, 700 })
             put_u16(glyf, v);
         put_u16(glyf, 3); // Last point of the contour
         put_u16(glyf, 0); // No instructions
-        for (std::int32_t i = 0; i < 4; ++i)
+        for (i32 i = 0; i < 4; ++i)
             glyf.push_back(1); // On the curve, coordinates as 16-bit deltas
-        for (const std::int32_t dx : { 0, 0, 500, 0 })
+        for (const i32 dx : { 0, 0, 500, 0 })
             put_u16(glyf, dx);
-        for (const std::int32_t dy : { 0, 700, 0, -700 })
+        for (const i32 dy : { 0, 700, 0, -700 })
             put_u16(glyf, dy);
 
         Bytes loca;
-        for (const auto offset : { std::size_t { 0 }, std::size_t { 0 }, glyf.size(), glyf.size() })
-            put_u16(loca, static_cast<std::int32_t>(offset / 2));
+        for (const auto offset : { usize { 0 }, usize { 0 }, glyf.size(), glyf.size() })
+            put_u16(loca, static_cast<i32>(offset / 2));
 
         // Format 4: 'A'..'B' to glyphs 1..2, 'H' to glyph 1, and the closing segment.
         Bytes cmap;
@@ -80,9 +82,9 @@ namespace
         put_u16(cmap, 3);
         put_u16(cmap, 1);
         put_u32(cmap, 12);
-        const std::array<std::int32_t, 3> starts = { 'A', 'H', 0xFFFF };
-        const std::array<std::int32_t, 3> ends = { 'B', 'H', 0xFFFF };
-        const std::array<std::int32_t, 3> deltas = { 1 - 'A', 1 - 'H', 1 };
+        const std::array<i32, 3> starts = { 'A', 'H', 0xFFFF };
+        const std::array<i32, 3> ends = { 'B', 'H', 0xFFFF };
+        const std::array<i32, 3> deltas = { 1 - 'A', 1 - 'H', 1 };
         put_u16(cmap, 4);
         put_u16(cmap, 16 + 8 * 3); // Length
         put_u16(cmap, 0);
@@ -90,14 +92,14 @@ namespace
         put_u16(cmap, 4); // Search range
         put_u16(cmap, 1); // Entry selector
         put_u16(cmap, 2); // Range shift
-        for (const std::int32_t e : ends)
+        for (const i32 e : ends)
             put_u16(cmap, e);
         put_u16(cmap, 0);
-        for (const std::int32_t s : starts)
+        for (const i32 s : starts)
             put_u16(cmap, s);
-        for (const std::int32_t d : deltas)
+        for (const i32 d : deltas)
             put_u16(cmap, d);
-        for (std::int32_t i = 0; i < 3; ++i)
+        for (i32 i = 0; i < 3; ++i)
             put_u16(cmap, 0);
 
         const std::array<std::pair<std::string_view, const Bytes*>, 7> tables = { {
@@ -111,23 +113,23 @@ namespace
         } };
         Bytes file;
         put_u32(file, kVersion1);
-        put_u16(file, static_cast<std::int32_t>(tables.size()));
+        put_u16(file, static_cast<i32>(tables.size()));
         put_u16(file, 64);
         put_u16(file, 2);
         put_u16(file, 48);
-        std::size_t offset = 12 + 16 * tables.size();
+        usize offset = 12 + 16 * tables.size();
         for (const auto& [tag, data] : tables)
         {
             file.insert(file.end(), tag.begin(), tag.end());
             put_u32(file, 0);
-            put_u32(file, static_cast<std::uint32_t>(offset));
-            put_u32(file, static_cast<std::uint32_t>(data->size()));
-            offset += (data->size() + 3) & ~std::size_t { 3 };
+            put_u32(file, static_cast<u32>(offset));
+            put_u32(file, static_cast<u32>(data->size()));
+            offset += (data->size() + 3) & ~usize { 3 };
         }
         for (const auto& [_, data] : tables)
         {
             file.insert(file.end(), data->begin(), data->end());
-            file.resize((file.size() + 3) & ~std::size_t { 3 }, 0);
+            file.resize((file.size() + 3) & ~usize { 3 }, 0);
         }
         return file;
     }
@@ -181,8 +183,8 @@ TEST_CASE("baking renders the asked codes the font has")
 
     // The middle of the box is covered.
     const auto& page = baked->pages[0];
-    const auto x = static_cast<std::uint32_t>(a->uv.x0 * 32) + 2;
-    const auto y = static_cast<std::uint32_t>(a->uv.y0 * 32) + 3;
+    const auto x = static_cast<u32>(a->uv.x0 * 32) + 2;
+    const auto y = static_cast<u32>(a->uv.y0 * 32) + 3;
     CHECK(page.pixels[((y * 32) + x) * 4 + 3] == 255);
 
     const BakedGlyph* b = find(*baked, u'B');

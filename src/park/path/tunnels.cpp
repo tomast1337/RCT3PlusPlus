@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/path/tunnels.hpp"
 
+#include "core/types.hpp"
 #include "park/ground/paths.hpp"
 #include "park/path/decks.hpp"
 #include "park/queue_fences.hpp"
@@ -21,8 +22,8 @@ namespace rct3::park::path
         {
             if (!p.elevation || !p.elevation->underground || !grid.contains(p.col, p.row))
                 continue;
-            const float rise = ground::path_rise(p.elevation->slope);
-            const float low = static_cast<float>(p.elevation->quantised_height) - (slope_falls(p.elevation->slope) ? rise : 0);
+            const f32 rise = ground::path_rise(p.elevation->slope);
+            const f32 low = static_cast<f32>(p.elevation->quantised_height) - (slope_falls(p.elevation->slope) ? rise : 0);
             const GroundOpening hollow { p.col, p.row, low - kTunnelFloor, low + rise + kTunnelHeight };
             if (grid.at(p.col, p.row).min_height() >= hollow.high)
                 hollows.push_back(hollow);
@@ -33,15 +34,15 @@ namespace rct3::park::path
     TerrainMesh tunnel_lining(std::span<const GroundOpening> hollows, const save::model::TerrainGrid& grid)
     {
         TerrainMesh mesh;
-        std::multimap<std::pair<std::int32_t, std::int32_t>, const GroundOpening*> by_tile;
+        std::multimap<std::pair<i32, i32>, const GroundOpening*> by_tile;
         for (const GroundOpening& h : hollows)
             by_tile.emplace(std::pair { h.col, h.row }, &h);
-        std::map<std::pair<GroundPaint, std::uint8_t>, std::vector<GroundVertex>> by_paint;
+        std::map<std::pair<GroundPaint, u8>, std::vector<GroundVertex>> by_paint;
         const glm::vec2 span { grid.tile_size_x, grid.tile_size_z };
-        const auto quad = [&](std::uint8_t cliff, const std::array<glm::vec3, 4>& q, glm::vec3 normal, bool along_x) {
+        const auto quad = [&](u8 cliff, const std::array<glm::vec3, 4>& q, glm::vec3 normal, bool along_x) {
             const GroundPaint paint = normal.y != 0 ? GroundPaint::TunnelCeiling : GroundPaint::TunnelWall;
             auto& out = by_paint[{ paint, cliff }];
-            for (const std::size_t i : { 0, 1, 2, 0, 2, 3 })
+            for (const usize i : { 0, 1, 2, 0, 2, 3 })
             {
                 const glm::vec3 p = q[i];
                 const glm::vec2 uv = normal.y != 0 ? glm::vec2 { p.x, p.z } / span : glm::vec2 { along_x ? p.x / span.x : p.z / span.y, -p.y / kTunnelHeight };
@@ -50,11 +51,11 @@ namespace rct3::park::path
         };
         for (const GroundOpening& h : hollows)
         {
-            const std::uint8_t cliff = grid.at(h.col, h.row).cliff_style;
-            const float x0 = grid.world_x(h.col);
-            const float x1 = grid.world_x(h.col + 1);
-            const float z0 = grid.world_z(h.row);
-            const float z1 = grid.world_z(h.row + 1);
+            const u8 cliff = grid.at(h.col, h.row).cliff_style;
+            const f32 x0 = grid.world_x(h.col);
+            const f32 x1 = grid.world_x(h.col + 1);
+            const f32 z0 = grid.world_z(h.row);
+            const f32 z1 = grid.world_z(h.row + 1);
             // Ceiling, facing down.
             quad(cliff, { glm::vec3 { x0, h.high, z0 }, { x1, h.high, z0 }, { x1, h.high, z1 }, { x0, h.high, z1 } }, { 0, -1, 0 }, true);
             // Floor, facing up, unless another hollow of the tile reaches under it: the ground below is not drawn
@@ -75,13 +76,13 @@ namespace rct3::park::path
                 }
                 // Walled where no hollow beyond meets it: a neighbouring hollow higher or lower, as on a slope,
                 // leaves the step between them walled.
-                std::vector<std::pair<float, float>> beyond;
+                std::vector<std::pair<f32, f32>> beyond;
                 const auto [first, last] = by_tile.equal_range({ col, row });
                 for (auto it = first; it != last; ++it)
                     beyond.emplace_back(it->second->low, it->second->high);
                 std::ranges::sort(beyond);
-                std::vector<std::pair<float, float>> bare;
-                float from = h.low;
+                std::vector<std::pair<f32, f32>> bare;
+                f32 from = h.low;
                 for (const auto& [low, high] : beyond)
                 {
                     if (low > from)
@@ -91,10 +92,10 @@ namespace rct3::park::path
                 if (from < h.high)
                     bare.emplace_back(from, h.high);
                 const bool along_x = !side.on_columns();
-                const float x = side == Side::kNextCol ? x1 : x0;
-                const float z = side == Side::kNextRow ? z1 : z0;
+                const f32 x = side == Side::kNextCol ? x1 : x0;
+                const f32 z = side == Side::kNextRow ? z1 : z0;
                 const auto [dc, dr] = side.step();
-                const glm::vec3 inward { -static_cast<float>(dc), 0, -static_cast<float>(dr) };
+                const glm::vec3 inward { -static_cast<f32>(dc), 0, -static_cast<f32>(dr) };
                 const glm::vec3 a = along_x ? glm::vec3 { x0, 0, z } : glm::vec3 { x, 0, z0 };
                 const glm::vec3 b = along_x ? glm::vec3 { x1, 0, z } : glm::vec3 { x, 0, z1 };
                 for (const auto& [low, high] : bare)
@@ -111,10 +112,10 @@ namespace rct3::park::path
         }
         for (auto& [paint, vertices] : by_paint)
         {
-            mesh.batches.push_back({ paint.first, paint.second, static_cast<std::uint32_t>(mesh.indices.size()), static_cast<std::uint32_t>(vertices.size()) });
+            mesh.batches.push_back({ paint.first, paint.second, static_cast<u32>(mesh.indices.size()), static_cast<u32>(vertices.size()) });
             for (GroundVertex& v : vertices)
             {
-                mesh.indices.push_back(static_cast<std::uint32_t>(mesh.vertices.size()));
+                mesh.indices.push_back(static_cast<u32>(mesh.vertices.size()));
                 mesh.low = mesh.vertices.empty() ? v.position : glm::min(mesh.low, v.position);
                 mesh.high = mesh.vertices.empty() ? v.position : glm::max(mesh.high, v.position);
                 mesh.vertices.push_back(v);

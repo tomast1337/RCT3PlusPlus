@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/led_signs.hpp"
 
+#include "core/types.hpp"
 #include "park/footpath_builder.hpp"
 #include "park/item_category.hpp"
 #include "park/queue_fences.hpp"
@@ -16,30 +17,30 @@ using namespace rct3::park;
 
 namespace
 {
-    save::model::TerrainGrid owned_grid(std::int32_t width, std::int32_t height)
+    save::model::TerrainGrid owned_grid(i32 width, i32 height)
     {
         save::model::TerrainGrid g;
         g.width = width;
         g.height = height;
         g.tile_size_x = 4;
         g.tile_size_z = 4;
-        g.cells.resize(static_cast<std::size_t>(width * height));
+        g.cells.resize(static_cast<usize>(width * height));
         for (save::model::TerrainCell& c : g.cells)
-            c.flags = static_cast<std::uint8_t>(save::model::TileFlag::Owned);
+            c.flags = static_cast<u8>(save::model::TileFlag::Owned);
         return g;
     }
 
     /// `count` ground queue tiles of line `line` laid from `from` heading `heading`: the line flows back
     /// towards the first, as a queue does until it reaches an entrance.
-    std::vector<save::model::PathTile> lay_line(const save::model::TerrainGrid& g, save::model::Tile from, std::uint8_t heading, std::int32_t count, std::uint64_t line)
+    std::vector<save::model::PathTile> lay_line(const save::model::TerrainGrid& g, save::model::Tile from, u8 heading, i32 count, u64 line)
     {
         FootpathBuilder b;
         b.queue = true;
         b.heading = Side::from(heading);
         start_at(b, from);
         std::vector<save::model::PathTile> paths;
-        for (std::int32_t i = 0; i < count; ++i)
-            (void)lay_path(b, paths, *next_piece(b, g), "QueueSet", line * 100 + static_cast<std::uint64_t>(i), 0);
+        for (i32 i = 0; i < count; ++i)
+            (void)lay_path(b, paths, *next_piece(b, g), "QueueSet", line * 100 + static_cast<u64>(i), 0);
         for (save::model::PathTile& p : paths)
             p.queue->queue_line_ref = line;
         return paths;
@@ -63,7 +64,7 @@ TEST_CASE("a line's sign stands on the tile no other leads into, facing the way 
     paths.front().queue->queue_line_ref = 0;
     CHECK(queue_sign_spots(paths, g).size() == 1);
     std::vector<save::model::PathTile> ring(2, paths[1]);
-    ring[1].row = static_cast<std::uint8_t>(ring[0].row + 1);
+    ring[1].row = static_cast<u8>(ring[0].row + 1);
     ring[0].queue->end_direction = 3;
     ring[1].queue->end_direction = 2;
     CHECK(queue_sign_spots(ring, g).empty());
@@ -96,7 +97,7 @@ TEST_CASE("the board's text loops and scrolls round in lamps")
     REQUIRE(kSignLamp == 3); // The places below count on it
     CHECK(loop.width == 27);
     CHECK(loop.height == 8);
-    const auto at = [&](const ovl::texture::RgbaImage& image, std::uint32_t x, std::uint32_t y, std::size_t k = 0) { return image.pixels[(y * image.width + x) * 4 + k]; };
+    const auto at = [&](const ovl::texture::RgbaImage& image, u32 x, u32 y, usize k = 0) { return image.pixels[(y * image.width + x) * 4 + k]; };
     // The glyph stands on the baseline, the line's middle on the board's.
     CHECK(at(loop, 0, 5) == 255);
     CHECK(at(loop, 4, 5) == 0);
@@ -108,15 +109,15 @@ TEST_CASE("the board's text loops and scrolls round in lamps")
     CHECK(board.width == 9);
     CHECK(at(board, 1, 4) == 255); // A lit lamp's middle
     CHECK(at(board, 1, 4, 1) == kSignDark);
-    CHECK(at(board, 4, 4) == static_cast<std::uint8_t>(255 * kSignLampOff)); // Between the glyphs: unlit
-    CHECK(at(board, 1, 1) == static_cast<std::uint8_t>(255 * kSignLampOff)); // Above them
-    CHECK(at(board, 0, 3) == static_cast<std::uint8_t>(255 * kSignGlow));    // Round a lit dot
+    CHECK(at(board, 4, 4) == static_cast<u8>(255 * kSignLampOff)); // Between the glyphs: unlit
+    CHECK(at(board, 1, 1) == static_cast<u8>(255 * kSignLampOff)); // Above them
+    CHECK(at(board, 0, 3) == static_cast<u8>(255 * kSignGlow));    // Round a lit dot
     const ovl::texture::RgbaImage moved = sign_window(loop, loop.width - kSignLamp, 9, red);
     CHECK(at(moved, 4, 4) == 255); // The first lamp's letters, one lamp on
     CHECK(at(moved, 1, 4) < 255);
 
     CHECK(sign_shift(0, 100) == 0);
-    CHECK(sign_shift(1, 1000) == static_cast<std::uint32_t>(kSignScroll.value) / kSignLamp * kSignLamp);
+    CHECK(sign_shift(1, 1000) == static_cast<u32>(kSignScroll.value) / kSignLamp * kSignLamp);
     CHECK(sign_shift(1, 1000) % kSignLamp == 0);
     CHECK(sign_shift(1, 12) < 12);
 }

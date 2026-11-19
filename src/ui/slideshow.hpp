@@ -13,6 +13,7 @@
 // This is the order and timing only; the owner loads the pictures shown() names.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/draw_list.hpp"
 #include "units/units.hpp"
 
@@ -33,10 +34,10 @@ namespace rct3::ui
     };
 
     /// The picture files in `folders`, the list shuffled with `seed` after each folder's are added.
-    [[nodiscard]] std::vector<std::filesystem::path> slideshow_pictures(std::span<const std::filesystem::path> folders, std::uint32_t seed);
+    [[nodiscard]] std::vector<std::filesystem::path> slideshow_pictures(std::span<const std::filesystem::path> folders, u32 seed);
 
     /// Where the pictures go on a screen `width` by `height`, in any unit, top-left origin.
-    [[nodiscard]] Rect slideshow_rect(float width, float height);
+    [[nodiscard]] Rect slideshow_rect(f32 width, f32 height);
 
     class Slideshow
     {
@@ -57,17 +58,17 @@ namespace rct3::ui
         /// What to draw: `under` whole, then `over` with `over_alpha`. Indices into pictures().
         struct Shown
         {
-            std::optional<std::size_t> under;
-            std::optional<std::size_t> over;
-            float over_alpha = 0;
+            std::optional<usize> under;
+            std::optional<usize> over;
+            f32 over_alpha = 0;
         };
         [[nodiscard]] Shown shown() const;
 
     private:
         std::vector<std::filesystem::path> pictures_;
         SlideshowTiming timing_;
-        std::size_t under_ = 0;
-        std::size_t over_ = 0;
+        usize under_ = 0;
+        usize over_ = 0;
         units::Seconds time_; ///< Since `over_` began to fade in
     };
 

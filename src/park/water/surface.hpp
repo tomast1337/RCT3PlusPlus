@@ -11,6 +11,7 @@
 // shaders.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/camera.hpp"
 #include "park/terrain_mesh.hpp"
 
@@ -26,9 +27,9 @@ namespace rct3::park::water
     /// The water at one height: a run of triangles of WaterSurface::vertices.
     struct WaterBatch
     {
-        float level = 0;
-        std::uint32_t first = 0; ///< Vertices, three per triangle
-        std::uint32_t count = 0;
+        f32 level = 0;
+        u32 first = 0; ///< Vertices, three per triangle
+        u32 count = 0;
         glm::vec3 low { 0.0f }; ///< Corners of the box round it
         glm::vec3 high { 0.0f };
     };
@@ -44,19 +45,19 @@ namespace rct3::park::water
 
     /// How far apart two heights of water may stand for one to show the other's reflection: the mirror image is
     /// then off by twice the difference, which reads as a reflection still.
-    inline constexpr float kReflectionReach = 0.6f;
+    inline constexpr f32 kReflectionReach = 0.6f;
     /// The mirrored draw keeps what is a little under the surface too, so the shore meets its reflection.
-    inline constexpr float kReflectionClipBias = 0.05f;
+    inline constexpr f32 kReflectionClipBias = 0.05f;
 
     /// The heights to draw reflections for, at most `count`: those of the water that covers most of the view
     /// `view_projection` gives, from `eye`. Water at or above the eye reflects nothing seen from it.
-    [[nodiscard]] std::vector<float> reflection_levels(const WaterSurface& surface, const glm::mat4& view_projection, glm::vec3 eye, std::size_t count);
+    [[nodiscard]] std::vector<f32> reflection_levels(const WaterSurface& surface, const glm::mat4& view_projection, glm::vec3 eye, usize count);
 
     /// Of `levels`, the one whose reflection water at `level` shows: the nearest within kReflectionReach.
-    [[nodiscard]] std::optional<std::size_t> reflection_for(float level, std::span<const float> levels);
+    [[nodiscard]] std::optional<usize> reflection_for(f32 level, std::span<const f32> levels);
 
     /// Mirrors world space in the level plane at height `level`.
-    [[nodiscard]] glm::mat4 mirror(float level);
+    [[nodiscard]] glm::mat4 mirror(f32 level);
 
     /// `transform` with its near plane moved onto `plane` (a, b, c, d: kept where a x + b y + c z + d > 0, in the
     /// space `transform` maps from), so that what lies on the other side is cut away. The far plane is tilted so
@@ -65,15 +66,15 @@ namespace rct3::park::water
 
     /// World to clip space for the scene mirrored in the water at `level`, as seen through `view_projection`,
     /// with what lies under the water cut away.
-    [[nodiscard]] glm::mat4 reflection_transform(const glm::mat4& view_projection, float level);
+    [[nodiscard]] glm::mat4 reflection_transform(const glm::mat4& view_projection, f32 level);
 
     /// How far along `ray` it first meets the water's surface, if it does.
-    [[nodiscard]] std::optional<float> water_hit(const Ray& ray, const WaterSurface& surface);
+    [[nodiscard]] std::optional<f32> water_hit(const Ray& ray, const WaterSurface& surface);
 
     /// The water a point is in: the height of the surface over it and the water's colour.
     struct WaterAbove
     {
-        float level = 0;
+        f32 level = 0;
         glm::vec4 colour { 1.0f };
     };
 

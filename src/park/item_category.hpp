@@ -4,13 +4,15 @@
 // values checked against the game's items have names here; the rest are kept as numbers.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstddef>
 #include <cstdint>
 
 namespace rct3::park
 {
 
-    enum class ItemCategory : std::uint32_t
+    enum class ItemCategory : u32
     {
         Tree = 0,
         Shrub = 2,
@@ -47,7 +49,7 @@ namespace rct3::park
     };
 
     /// What a path feature (ItemCategory::PathFeature) is for, by the setting its item's data names.
-    enum class PathFeature : std::uint8_t
+    enum class PathFeature : u8
     {
         None,
         Vista,        ///< A view point, a photo point or an information point
@@ -59,15 +61,15 @@ namespace rct3::park
 
     /// Whether an item of `category` is a prop the player clicks on to look at by itself, rather than part of
     /// a path, a ride, the supports under them, or something lying about.
-    [[nodiscard]] constexpr bool is_prop(std::uint32_t category) noexcept
+    [[nodiscard]] constexpr bool is_prop(u32 category) noexcept
     {
-        const auto in = [&](ItemCategory low, ItemCategory high) { return category >= static_cast<std::uint32_t>(low) && category <= static_cast<std::uint32_t>(high); };
-        return !in(ItemCategory::SupportColumn, ItemCategory::PathPiece) && !in(ItemCategory::Leftover, ItemCategory::Stall) && category != static_cast<std::uint32_t>(ItemCategory::Effect);
+        const auto in = [&](ItemCategory low, ItemCategory high) { return category >= static_cast<u32>(low) && category <= static_cast<u32>(high); };
+        return !in(ItemCategory::SupportColumn, ItemCategory::PathPiece) && !in(ItemCategory::Leftover, ItemCategory::Stall) && category != static_cast<u32>(ItemCategory::Effect);
     }
 
     /// The kinds of thing the graphics options give a detail level and a draw distance of their own, in the order
     /// the options list them.
-    enum class DetailKind : std::uint8_t
+    enum class DetailKind : u8
     {
         People,
         Animals,
@@ -80,14 +82,14 @@ namespace rct3::park
         Track,
         Rides, ///< Rides with their entrances and exits
     };
-    inline constexpr std::size_t kDetailKinds = 10;
+    inline constexpr usize kDetailKinds = 10;
 
     /// The kind an item of `category` counts as for its detail level and draw distance. Our own grouping, by what
     /// each category holds; anything not named is scenery.
-    [[nodiscard]] constexpr DetailKind detail_kind(std::uint32_t category) noexcept
+    [[nodiscard]] constexpr DetailKind detail_kind(u32 category) noexcept
     {
         using C = ItemCategory;
-        if (category <= static_cast<std::uint32_t>(C::Flowers)) // Trees to flowers, the unnamed one between too
+        if (category <= static_cast<u32>(C::Flowers)) // Trees to flowers, the unnamed one between too
             return DetailKind::Vegetation;
         switch (static_cast<C>(category))
         {
@@ -115,7 +117,7 @@ namespace rct3::park
             case C::RideEvent:
                 return DetailKind::Rides;
             default:
-                return category >= static_cast<std::uint32_t>(C::SupportColumn) && category <= static_cast<std::uint32_t>(C::SupportCap) ? DetailKind::Supports : DetailKind::Scenery;
+                return category >= static_cast<u32>(C::SupportColumn) && category <= static_cast<u32>(C::SupportCap) ? DetailKind::Supports : DetailKind::Scenery;
         }
     }
 

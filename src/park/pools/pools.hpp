@@ -36,6 +36,7 @@
 // column, and so on.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/footpath_builder.hpp"
 #include "park/turns.hpp"
 #include "save/model/world.hpp"
@@ -53,7 +54,7 @@
 namespace rct3::park::pools
 {
 
-    enum class PoolKind : std::uint8_t
+    enum class PoolKind : u8
     {
         Water,
         Tile,     ///< Paved
@@ -70,11 +71,11 @@ namespace rct3::park::pools
     {
         return kind == PoolKind::Path || kind == PoolKind::PathSlope || kind == PoolKind::PathStairs;
     }
-    inline constexpr std::int32_t kPathSlopeRise = 1;
-    inline constexpr std::int32_t kPathStairsRise = 2;
+    inline constexpr i32 kPathSlopeRise = 1;
+    inline constexpr i32 kPathStairsRise = 2;
 
     /// How a square's walls go round its corners, as the pool tool's edge buttons set it.
-    enum class PoolEdge : std::uint8_t
+    enum class PoolEdge : u8
     {
         Straight,
         Diagonal, ///< Cut across
@@ -84,28 +85,28 @@ namespace rct3::park::pools
 
     struct PoolSquare
     {
-        std::int32_t col = 0;
-        std::int32_t row = 0;
+        i32 col = 0;
+        i32 row = 0;
         PoolKind kind = PoolKind::Water;
-        std::int32_t surface = 0; ///< Whole units, as placed objects' heights
-        std::int32_t depth = 2;   ///< Whole units: 1 shallow, 2 normal, 3 deep
-        std::int32_t board = 0;   ///< A high diving board's or a staircase's height over the surface, whole units
-        Side side { };            ///< The side a high diving board faces, or a staircase's or a slope's foot
+        i32 surface = 0; ///< Whole units, as placed objects' heights
+        i32 depth = 2;   ///< Whole units: 1 shallow, 2 normal, 3 deep
+        i32 board = 0;   ///< A high diving board's or a staircase's height over the surface, whole units
+        Side side { };   ///< The side a high diving board faces, or a staircase's or a slope's foot
         PoolEdge edge = PoolEdge::Straight;
         /// The ground's corners, as the grid keeps them, before the square dug it down to its floor: put back when
         /// it goes. None where the ground was under its floor, as under a raised pool, which stands over it.
-        std::optional<std::array<float, 4>> ground { };
+        std::optional<std::array<f32, 4>> ground { };
     };
 
     /// A pool square stacked over another on one tile leaves at least this much between the lower one's top and
     /// the upper one's floor; one laid closer takes the other's place.
-    inline constexpr std::int32_t kPoolHeadroom = 3; ///< Chosen by eye: room for a person on the lower deck
+    inline constexpr i32 kPoolHeadroom = 3; ///< Chosen by eye: room for a person on the lower deck
 
     /// A pool path piece as a trail lays it, and the height it is left at.
     struct PoolPathPiece
     {
         PoolSquare square;
-        std::int32_t end = 0;
+        i32 end = 0;
     };
 
     /// The pool path piece `builder` (park/footpath_builder.hpp) lays next: on the square after its last step,
@@ -115,9 +116,9 @@ namespace rct3::park::pools
     [[nodiscard]] std::optional<PoolPathPiece> next_pool_path(const FootpathBuilder& builder);
 
     /// A high diving board climbs in levels of this many units: a stretch of ladder and a board at each.
-    inline constexpr std::int32_t kBoardLevel = 3;
+    inline constexpr i32 kBoardLevel = 3;
     /// A spiral staircase climbs at least this many units: its foot, its top, and a turn between.
-    inline constexpr std::int32_t kLowestStairs = 3;
+    inline constexpr i32 kLowestStairs = 3;
 
     /// What an extra takes of its square, from the words of its pool extra setting.
     struct PoolExtraFit
@@ -135,7 +136,7 @@ namespace rct3::park::pools
         bool ladder = false;       ///< "Ladder": out of the water up its wall; swimmers climb out by it
         bool light = false;        ///< "Light": a lamp, on the paving or in a wall under the water
         bool wave_machine = false; ///< "WaveMachine": it makes waves in the pool, out from its wall
-        std::int32_t step = 0;     ///< "HeightStep" and its number: a change of level at its side
+        i32 step = 0;              ///< "HeightStep" and its number: a change of level at its side
     };
 
     /// The fit the words of a pool extra setting name, in any case; words it does not know are left out.
@@ -148,42 +149,42 @@ namespace rct3::park::pools
     {
         std::string symbol { };  ///< Its scenery item
         std::string overlay { }; ///< The scenery item's overlay
-        std::int32_t col = 0;
-        std::int32_t row = 0;
+        i32 col = 0;
+        i32 row = 0;
         Side side { };           ///< The side it is against
         units::Money refund { }; ///< What taking it away costs; below zero, money back
         PoolExtraFit fit { };
     };
 
     /// A new pool complex's ticket price, hundredths: what parks saved with a pool just built show.
-    inline constexpr std::int64_t kPoolTicket = 100;
+    inline constexpr i64 kPoolTicket = 100;
 
     /// How a pool complex's wave machines run, the same in every changing room of it. The machines push the water
     /// up and down `frequency` times in 2 pi seconds, as high as `height` says, for `on` seconds of every `every`.
     struct PoolWaves
     {
-        float height = 8;                ///< Of the crests, in steps from kLeastWaveHeight to kMostWaveHeight
+        f32 height = 8;                  ///< Of the crests, in steps from kLeastWaveHeight to kMostWaveHeight
         units::TurnRate frequency { 6 }; ///< The fewer, the longer the waves
         units::Seconds on { 30 };        ///< The machines run for
         units::Seconds every { 60 };     ///< From one start of the machines to the next
     };
-    inline constexpr float kLeastWaveHeight = 2;    ///< Chosen by eye: the lowest the wave height setting goes
-    inline constexpr float kMostWaveHeight = 14;    ///< Chosen by eye: the highest
-    inline constexpr float kLeastWaveFrequency = 2; ///< Chosen by eye: the longest waves
-    inline constexpr float kMostWaveFrequency = 10; ///< Chosen by eye: the shortest
+    inline constexpr f32 kLeastWaveHeight = 2;    ///< Chosen by eye: the lowest the wave height setting goes
+    inline constexpr f32 kMostWaveHeight = 14;    ///< Chosen by eye: the highest
+    inline constexpr f32 kLeastWaveFrequency = 2; ///< Chosen by eye: the longest waves
+    inline constexpr f32 kMostWaveFrequency = 10; ///< Chosen by eye: the shortest
 
     /// A changing room the player has built beside a pool.
     struct PoolRoom
     {
         std::string symbol { };  ///< Its scenery item
         std::string overlay { }; ///< The scenery item's overlay
-        std::int32_t col = 0;
-        std::int32_t row = 0;
+        i32 col = 0;
+        i32 row = 0;
         Side side { }; ///< The side towards the paved square it opens on
-        std::int64_t ticket = kPoolTicket;
+        i64 ticket = kPoolTicket;
         bool open = false;
         std::string complex_name { }; ///< Its pool complex's name, the same in every room of it; empty for the default
-        std::uint8_t fluid = 0;       ///< The cleaning fluid it keeps its pool clean with, mildest 0 to harshest 2
+        u8 fluid = 0;                 ///< The cleaning fluid it keeps its pool clean with, mildest 0 to harshest 2
         PoolWaves waves { };
     };
 
@@ -197,27 +198,27 @@ namespace rct3::park::pools
 
         /// The square at (`col`, `row`) whose surface is nearest `level`; without one, the highest, as seen from
         /// above.
-        [[nodiscard]] std::optional<const PoolSquare&> at(std::int32_t col, std::int32_t row, std::int32_t level = std::numeric_limits<std::int32_t>::max()) const noexcept;
+        [[nodiscard]] std::optional<const PoolSquare&> at(i32 col, i32 row, i32 level = std::numeric_limits<i32>::max()) const noexcept;
     };
 
     /// The height a pool path trail starts at from side `side` of `square`, a square of `map`: its surface, or a
     /// slope's or steps' foot or top, which are the only sides they start from. None where a square beside already
     /// meets that side at that height, so trails start only at the complex's edges, water and paving alike.
-    [[nodiscard]] std::optional<std::int32_t> pool_path_start(const PoolMap& map, const PoolSquare& square, Side side);
+    [[nodiscard]] std::optional<i32> pool_path_start(const PoolMap& map, const PoolSquare& square, Side side);
 
     /// A square of a pool slide's station platform, where swimmers get on.
     struct SlidePlatform
     {
-        std::int32_t col = 0;
-        std::int32_t row = 0;
-        std::int32_t height = 0; ///< Of its deck, whole units
-        ModelTurn turn { };      ///< Its piece's turn: the side it brings the piece's side 0 to, and the opposite one, are off its track
+        i32 col = 0;
+        i32 row = 0;
+        i32 height = 0;     ///< Of its deck, whole units
+        ModelTurn turn { }; ///< Its piece's turn: the side it brings the piece's side 0 to, and the opposite one, are off its track
     };
 
     /// The height a pool path trail starts at from side `side` of `platform`: its deck's, from the two sides off its
     /// track, as saved parks join pool paths to their slides' stations. None where a square of `map` already meets
     /// that side there.
-    [[nodiscard]] std::optional<std::int32_t> slide_path_start(const PoolMap& map, const SlidePlatform& platform, Side side);
+    [[nodiscard]] std::optional<i32> slide_path_start(const PoolMap& map, const SlidePlatform& platform, Side side);
 
     /// Whether a square of `map` meets side `side` of `platform`, one of the two off its track, at its deck's
     /// height: the complex's paving joins the slide's station there, and its platform shows steps down that side.
@@ -225,10 +226,10 @@ namespace rct3::park::pools
 
     /// How many stations of a pool ride `map` joins. `platforms` holds each piece's platform square in track order,
     /// none off its stations; pieces with one, one after another, are a station, joined where any of its squares is.
-    [[nodiscard]] std::size_t joined_stations(const PoolMap& map, std::span<const std::optional<SlidePlatform>> platforms);
+    [[nodiscard]] usize joined_stations(const PoolMap& map, std::span<const std::optional<SlidePlatform>> platforms);
 
     /// The shapes of wall a water square takes, each a set of pieces of the pool type.
-    enum class PoolWall : std::uint8_t
+    enum class PoolWall : u8
     {
         Edge,        ///< Along one side
         OuterCorner, ///< Round two sides that meet
@@ -244,7 +245,7 @@ namespace rct3::park::pools
     };
 
     /// The sides and corners round a square, as bits of the mask pool_walls takes.
-    enum PoolSide : std::uint8_t
+    enum PoolSide : u8
     {
         kNextRow = 1u << 0,    ///< Side 0
         kNextCol = 1u << 1,    ///< Side 1
@@ -258,10 +259,10 @@ namespace rct3::park::pools
 
     /// The walls of a water square whose neighbours holding water are the bits `water` (PoolSide), whatever
     /// its edge setting.
-    [[nodiscard]] std::vector<PoolWallPiece> pool_walls(std::uint8_t water) noexcept;
+    [[nodiscard]] std::vector<PoolWallPiece> pool_walls(u8 water) noexcept;
 
     /// The neighbours of `square` that hold water, at its own surface, as pool_walls takes them.
-    [[nodiscard]] std::uint8_t water_around(const PoolMap& map, const PoolSquare& square) noexcept;
+    [[nodiscard]] u8 water_around(const PoolMap& map, const PoolSquare& square) noexcept;
 
     /// Whether the point (`x`, `z`) of the water square `square` of `map`, in tiles from its middle along the
     /// columns and the rows, lies over open water rather than the paving round it. Each wall's coping takes the
@@ -270,23 +271,23 @@ namespace rct3::park::pools
     /// or rounded: a tight curve as wide as the water reaches past it, a strip's end in a half circle and a lone
     /// square in a whole one. A loose curve that sweeps keeps its water inside a circle that runs through its
     /// corner square and the squares either side.
-    [[nodiscard]] bool pool_water_at(const PoolMap& map, const PoolSquare& square, float x, float z);
+    [[nodiscard]] bool pool_water_at(const PoolMap& map, const PoolSquare& square, f32 x, f32 z);
 
     /// A side of a tile where something built beside the pools joins them at `height`, as a slide's end does: a pool
     /// square across that side, its surface at that height, leaves its railing open there.
     struct PoolOpening
     {
-        std::int32_t col = 0;
-        std::int32_t row = 0;
-        std::int32_t height = 0; ///< Whole units
-        Side side { };           ///< Towards the pool square
+        i32 col = 0;
+        i32 row = 0;
+        i32 height = 0; ///< Whole units
+        Side side { };  ///< Towards the pool square
         friend bool operator==(const PoolOpening&, const PoolOpening&) = default;
     };
 
     struct PoolPiece
     {
         std::string_view symbol; ///< The scenery item in the pool type's overlay
-        std::int32_t height = 0; ///< Whole units
+        i32 height = 0;          ///< Whole units
         ModelTurn turn { };
     };
 
@@ -298,7 +299,7 @@ namespace rct3::park::pools
     /// on its square at its own height, then the extras, at their squares' surface, then the changing rooms,
     /// at the surface of the square they open on. New objects take ids
     /// after `last_id`. Railings are left open where `openings` join the squares.
-    [[nodiscard]] std::vector<save::model::PlacedObject> pool_objects(const PoolMap& map, std::string_view overlay, std::uint64_t last_id, std::span<const PoolOpening> openings = { });
+    [[nodiscard]] std::vector<save::model::PlacedObject> pool_objects(const PoolMap& map, std::string_view overlay, u64 last_id, std::span<const PoolOpening> openings = { });
 
     /// The water of every water square, as the park's water mesh takes it.
     [[nodiscard]] std::vector<save::model::PoolWater> pool_water(const PoolMap& map);
@@ -319,34 +320,34 @@ namespace rct3::park::pools
     void dig_under_pools(PoolMap& map, save::model::TerrainGrid& grid);
 
     /// What laying `square` costs, from the pool type's price list (ovl::PoolType::prices).
-    [[nodiscard]] units::Money pool_build_cost(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept;
+    [[nodiscard]] units::Money pool_build_cost(std::span<const i32, 18> prices, const PoolSquare& square) noexcept;
     /// What taking `square` up again costs: below zero, money back.
-    [[nodiscard]] units::Money pool_refund(std::span<const std::int32_t, 18> prices, const PoolSquare& square) noexcept;
+    [[nodiscard]] units::Money pool_refund(std::span<const i32, 18> prices, const PoolSquare& square) noexcept;
 
     /// Whether an extra that fits as `fit` may go in `map` on the square at (`col`, `row`), against its side
     /// `side`.
-    [[nodiscard]] bool pool_extra_fits(const PoolMap& map, std::int32_t col, std::int32_t row, const PoolExtraFit& fit, Side side);
+    [[nodiscard]] bool pool_extra_fits(const PoolMap& map, i32 col, i32 row, const PoolExtraFit& fit, Side side);
 
     /// Whether a changing room may stand at (`col`, `row`), off the pool, opening on the paved square at its
     /// side `side`, where no other room opens.
-    [[nodiscard]] bool pool_room_fits(const PoolMap& map, std::int32_t col, std::int32_t row, Side side);
+    [[nodiscard]] bool pool_room_fits(const PoolMap& map, i32 col, i32 row, Side side);
 
     /// The squares of the complex the room `room` (of map.rooms) opens on: every square joined to the one it
     /// opens on.
-    [[nodiscard]] std::vector<save::model::Tile> pool_complex(const PoolMap& map, std::size_t room);
+    [[nodiscard]] std::vector<save::model::Tile> pool_complex(const PoolMap& map, usize room);
 
     /// The changing rooms of the complex the room `room` (of map.rooms) opens on, itself among them.
-    [[nodiscard]] std::vector<std::size_t> pool_complex_rooms(const PoolMap& map, std::size_t room);
+    [[nodiscard]] std::vector<usize> pool_complex_rooms(const PoolMap& map, usize room);
 
     /// Lays `squares` in `map`, each over whatever square was where it goes, and returns what that costs:
     /// each new square's price and the refund of each it takes the place of, and of the extras on it. A square
     /// laid over one the same, but for its edge setting, costs nothing. A square laid above or below one on its tile,
     /// with kPoolHeadroom between, is stacked with it. Changing rooms whose square is no longer paved, or that now stand
     /// in the pool, go.
-    units::Money lay_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, std::span<const PoolSquare> squares);
+    units::Money lay_pool(PoolMap& map, std::span<const i32, 18> prices, std::span<const PoolSquare> squares);
 
     /// Takes up the squares of `map` from `a` to `b`, the extras on them and the changing rooms opening on
     /// them; returns the refund, below zero. Given a `level`, of squares stacked on a tile only the one nearest it.
-    units::Money take_up_pool(PoolMap& map, std::span<const std::int32_t, 18> prices, save::model::Tile a, save::model::Tile b, std::optional<std::int32_t> level = std::nullopt);
+    units::Money take_up_pool(PoolMap& map, std::span<const i32, 18> prices, save::model::Tile a, save::model::Tile b, std::optional<i32> level = std::nullopt);
 
 } // namespace rct3::park::pools

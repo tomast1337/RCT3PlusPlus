@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/string_format.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 
 namespace rct3::ui
@@ -10,7 +12,7 @@ namespace rct3::ui
     {
         std::u16string out;
         out.reserve(pattern.size());
-        for (std::size_t i = 0; i < pattern.size(); ++i)
+        for (usize i = 0; i < pattern.size(); ++i)
         {
             const char16_t c = pattern[i];
             if ((c == u'{' || c == u'}') && i + 1 < pattern.size() && pattern[i + 1] == c)
@@ -21,7 +23,7 @@ namespace rct3::ui
             }
             if (c == u'{')
             {
-                const std::size_t close = pattern.find(u'}', i + 1);
+                const usize close = pattern.find(u'}', i + 1);
                 if (close != std::u16string_view::npos)
                 {
                     const std::u16string_view name = pattern.substr(i + 1, close - i - 1);

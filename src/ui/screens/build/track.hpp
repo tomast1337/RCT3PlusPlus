@@ -25,6 +25,7 @@
 // owner hears that as a Build event. The round panel closes them.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/font/set.hpp"
 #include "ui/widget.hpp"
 #include "ui/widgets/button.hpp"
@@ -46,26 +47,26 @@ namespace rct3::ui::screens::build
 
     namespace construction_panel
     {
-        inline constexpr float kWidth = 652;
-        inline constexpr float kHeight = 100;
-        inline constexpr float kStripLeft = 32; ///< Where the strip starts; the ring panel covers the rest
-        inline constexpr float kStripRight = 648;
-        inline constexpr float kRowLeft = 40; ///< Of the first curve and slope button
-        inline constexpr float kStep = 30;    ///< Between buttons of a row
-        inline constexpr float kCurveTop = 7;
+        inline constexpr f32 kWidth = 652;
+        inline constexpr f32 kHeight = 100;
+        inline constexpr f32 kStripLeft = 32; ///< Where the strip starts; the ring panel covers the rest
+        inline constexpr f32 kStripRight = 648;
+        inline constexpr f32 kRowLeft = 40; ///< Of the first curve and slope button
+        inline constexpr f32 kStep = 30;    ///< Between buttons of a row
+        inline constexpr f32 kCurveTop = 7;
         inline constexpr Point kCurveSize { 28, 25 };
-        inline constexpr float kSlopeTop = 33;
+        inline constexpr f32 kSlopeTop = 33;
         inline constexpr Point kSlopeSize { 29, 30 };
-        inline constexpr float kToggleLeft = 250;
+        inline constexpr f32 kToggleLeft = 250;
         inline constexpr Point kToggleSize { 28, 25 };
-        inline constexpr float kDialTop = 3;
-        inline constexpr float kDialSize = 60;
-        inline constexpr float kBankSize = 17;
-        inline constexpr float kLabelLeft = 40;
-        inline constexpr float kNameTop = 66;
-        inline constexpr float kCostTop = 81;
-        inline constexpr float kLabelWidth = 220;
-        inline constexpr float kLabelHeight = 15;
+        inline constexpr f32 kDialTop = 3;
+        inline constexpr f32 kDialSize = 60;
+        inline constexpr f32 kBankSize = 17;
+        inline constexpr f32 kLabelLeft = 40;
+        inline constexpr f32 kNameTop = 66;
+        inline constexpr f32 kCostTop = 81;
+        inline constexpr f32 kLabelWidth = 220;
+        inline constexpr f32 kLabelHeight = 15;
         inline constexpr Point kDemolishAt { 322, 72 };
         inline constexpr Point kDemolishSize { 40, 26 };
         inline constexpr Point kCompleteAt { 278, 70 };
@@ -75,34 +76,34 @@ namespace rct3::ui::screens::build
         inline constexpr Point kNewSegmentAt { 410, 70 }; ///< The list starts right of it while it shows
         inline constexpr Point kNewSegmentSize { 40, 28 };
         inline constexpr Point kSplitSize { 40, 28 }; ///< At the new stretch button's place, or right of it while it shows
-        inline constexpr std::size_t kSplitPictures = 3;
-        inline constexpr float kListLeft = 410; ///< Of the list of the other named pieces
-        inline constexpr float kListTop = 2;
-        inline constexpr float kListRight = 640;
-        inline constexpr float kListHeight = 94;
-        inline constexpr float kListRowHeight = 16;
-        inline constexpr float kDividerTop = 63;      ///< Of the line over the piece's name, from the rows' left to the list
+        inline constexpr usize kSplitPictures = 3;
+        inline constexpr f32 kListLeft = 410; ///< Of the list of the other named pieces
+        inline constexpr f32 kListTop = 2;
+        inline constexpr f32 kListRight = 640;
+        inline constexpr f32 kListHeight = 94;
+        inline constexpr f32 kListRowHeight = 16;
+        inline constexpr f32 kDividerTop = 63;        ///< Of the line over the piece's name, from the rows' left to the list
         inline constexpr Point kSpecialAt { 344, 5 }; ///< The first picture piece; the rest go down, then right
-        inline constexpr float kSpecialSize = 28;
-        inline constexpr float kSpecialStep = 30;
-        inline constexpr std::size_t kSpecials = 4;
-        inline constexpr float kParamsRight = 272; ///< Where the last setting box ends, on the price's row
-        inline constexpr float kParamsTop = 80;
-        inline constexpr float kParamIconSize = 18; ///< Of the picture before each box
-        inline constexpr float kParamHeight = 18;
-        inline constexpr float kParamGap = 6;
-        inline constexpr std::size_t kParams = 3;                                 ///< Car turn, holding time, brake speed
-        inline constexpr std::array<float, kParams> kParamWidths { 60, 50, 118 }; ///< Of the boxes, past their pictures
+        inline constexpr f32 kSpecialSize = 28;
+        inline constexpr f32 kSpecialStep = 30;
+        inline constexpr usize kSpecials = 4;
+        inline constexpr f32 kParamsRight = 272; ///< Where the last setting box ends, on the price's row
+        inline constexpr f32 kParamsTop = 80;
+        inline constexpr f32 kParamIconSize = 18; ///< Of the picture before each box
+        inline constexpr f32 kParamHeight = 18;
+        inline constexpr f32 kParamGap = 6;
+        inline constexpr usize kParams = 3;                                     ///< Car turn, holding time, brake speed
+        inline constexpr std::array<f32, kParams> kParamWidths { 60, 50, 118 }; ///< Of the boxes, past their pictures
 
-        inline constexpr std::size_t kCurves = 7;
-        inline constexpr std::size_t kSlopes = 7;
-        inline constexpr std::size_t kBanks = 8;   ///< From hardest left to upside down
-        inline constexpr std::size_t kToggles = 5; ///< Lift chain, tube, water, wide, booster
-        inline constexpr std::size_t kFacings = 3; ///< Forwards, backwards, spinning freely
+        inline constexpr usize kCurves = 7;
+        inline constexpr usize kSlopes = 7;
+        inline constexpr usize kBanks = 8;   ///< From hardest left to upside down
+        inline constexpr usize kToggles = 5; ///< Lift chain, tube, water, wide, booster
+        inline constexpr usize kFacings = 3; ///< Forwards, backwards, spinning freely
     } // namespace construction_panel
 
     /// The settings a piece may have, as the boxes stand left to right.
-    enum class PieceParam : std::uint8_t
+    enum class PieceParam : u8
     {
         CarTurn,     ///< Degrees the cars turn to
         HoldingTime, ///< Seconds a train is held
@@ -112,16 +113,16 @@ namespace rct3::ui::screens::build
     /// One setting's box: its value and range, in units of `unit` shown with `decimals` places.
     struct ParamBox
     {
-        std::int32_t value = 0;
-        std::int32_t least = 0;
-        std::int32_t most = 0;
-        std::int32_t decimals = 0;
+        i32 value = 0;
+        i32 least = 0;
+        i32 most = 0;
+        i32 decimals = 0;
         std::u16string unit;
-        std::int32_t step = 1;
+        i32 step = 1;
     };
 
     /// What a picture button shows.
-    enum class IconState : std::uint8_t
+    enum class IconState : u8
     {
         On,  ///< Picked
         Off, ///< Offered
@@ -136,9 +137,9 @@ namespace rct3::ui::screens::build
     [[nodiscard]] std::array<Point, construction_panel::kBanks> bank_spots();
 
     /// Where the bank dial goes when `toggles` toggles stand before it.
-    [[nodiscard]] float dial_left(std::size_t toggles);
+    [[nodiscard]] f32 dial_left(usize toggles);
     /// Where the picture pieces start when `toggles` toggles stand before the dial; the list starts after them.
-    [[nodiscard]] float specials_left(std::size_t toggles);
+    [[nodiscard]] f32 specials_left(usize toggles);
 
     struct ConstructionPanelStyle
     {
@@ -184,22 +185,22 @@ namespace rct3::ui::screens::build
         /// One per toggle; none for a toggle the track has no pieces with at all.
         std::array<std::optional<IconState>, construction_panel::kToggles> toggles { };
         bool can_demolish = false;
-        bool can_complete = false;        ///< The track has an open end to finish from
-        bool complete_dim = false;        ///< Its button is dimmed: it flashes over a way found, waiting for a click
-        std::optional<bool> new_segment;  ///< None when the track is one stretch; else whether another can begin now
-        std::optional<std::size_t> split; ///< Of the split pictures, the one shown; none on a ride of one track
+        bool can_complete = false;       ///< The track has an open end to finish from
+        bool complete_dim = false;       ///< Its button is dimmed: it flashes over a way found, waiting for a click
+        std::optional<bool> new_segment; ///< None when the track is one stretch; else whether another can begin now
+        std::optional<usize> split;      ///< Of the split pictures, the one shown; none on a ride of one track
         bool heights_shown = false;
         bool heights_locked = false; ///< Shown for every ride, from the view menu, so the button cannot hide them
         std::u16string piece;        ///< Name of the piece picked, empty when nothing fits
         std::u16string cost;
         std::vector<NamedPiece> named;
-        std::optional<std::size_t> named_on; ///< The one picked
+        std::optional<usize> named_on; ///< The one picked
         /// The picked piece's settings, in PieceParam order, those it has.
         std::array<std::optional<ParamBox>, construction_panel::kParams> params { };
-        std::optional<std::size_t> facing; ///< Which way the cars face, of kFacings; none on rides where they cannot
+        std::optional<usize> facing; ///< Which way the cars face, of kFacings; none on rides where they cannot
     };
 
-    enum class ConstructionAction : std::uint8_t
+    enum class ConstructionAction : u8
     {
         Curve, ///< `index` of the curves
         Slope,
@@ -219,8 +220,8 @@ namespace rct3::ui::screens::build
     struct ConstructionEvent
     {
         ConstructionAction action = ConstructionAction::Build;
-        std::size_t index = 0;
-        std::int32_t value = 0;
+        usize index = 0;
+        i32 value = 0;
 
         friend bool operator==(const ConstructionEvent&, const ConstructionEvent&) = default;
     };
@@ -241,19 +242,19 @@ namespace rct3::ui::screens::build
         /// What the player did since the last call, oldest first, once.
         [[nodiscard]] std::optional<ConstructionEvent> take_event();
 
-        [[nodiscard]] widgets::Button& curve_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& curve_button(usize i) const
         {
             return *curves_.at(i);
         }
-        [[nodiscard]] widgets::Button& slope_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& slope_button(usize i) const
         {
             return *slopes_.at(i);
         }
-        [[nodiscard]] widgets::Button& bank_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& bank_button(usize i) const
         {
             return *banks_.at(i);
         }
-        [[nodiscard]] widgets::Button& toggle_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& toggle_button(usize i) const
         {
             return *toggles_.at(i);
         }
@@ -292,7 +293,7 @@ namespace rct3::ui::screens::build
         {
             return *cost_;
         }
-        [[nodiscard]] widgets::Button& special_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& special_button(usize i) const
         {
             return *specials_.at(i);
         }
@@ -323,7 +324,7 @@ namespace rct3::ui::screens::build
         std::array<widgets::Button*, construction_panel::kBanks> banks_ { };
         widgets::ListBox* list_ = nullptr;
         std::array<widgets::Button*, construction_panel::kToggles> toggles_ { };
-        float list_left_ = construction_panel::kListLeft;
+        f32 list_left_ = construction_panel::kListLeft;
         widgets::Button* demolish_ = nullptr;
         widgets::Button* complete_ = nullptr;
         widgets::Button* new_segment_ = nullptr;
@@ -333,8 +334,8 @@ namespace rct3::ui::screens::build
         std::array<widgets::Button*, construction_panel::kParams> param_icons_ { };
         std::array<widgets::Spinner*, construction_panel::kParams> params_ { };
         widgets::Button* facing_ = nullptr;
-        std::vector<std::size_t> listed_;   ///< The named pieces in the list, by index in the view
-        std::vector<std::size_t> pictured_; ///< Those with picture buttons, by index in the view
+        std::vector<usize> listed_;   ///< The named pieces in the list, by index in the view
+        std::vector<usize> pictured_; ///< Those with picture buttons, by index in the view
         widgets::Label* piece_ = nullptr;
         widgets::Label* cost_ = nullptr;
         std::vector<ConstructionEvent> events_;

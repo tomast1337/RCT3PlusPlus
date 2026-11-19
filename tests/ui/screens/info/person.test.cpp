@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/person.hpp"
 
+#include "core/types.hpp"
 #include "save/model/park.hpp"
 
 #include <algorithm>
@@ -37,7 +38,7 @@ namespace
         return s;
     }
 
-    save::model::Ride ride(std::uint64_t id, std::string name)
+    save::model::Ride ride(u64 id, std::string name)
     {
         save::model::Ride r;
         r.base.id = id;
@@ -245,7 +246,7 @@ TEST_CASE("each job has its own tabs, and its controls are written from the save
     CHECK(general.controls[1].label == person_doing(staff(p), s));
     CHECK(general.heading.empty());
     const std::array order { PersonControl::PickUp, PersonControl::ToConsole, PersonControl::Highlight, PersonControl::Warn, PersonControl::Sack, PersonControl::Train };
-    for (std::size_t i = 0; i < order.size(); ++i)
+    for (usize i = 0; i < order.size(); ++i)
         CHECK(general.controls[i + 2].id == person_control(order[i]));
     CHECK(general.controls[5].enabled);
     mechanic.warnings = kMostWarnings;

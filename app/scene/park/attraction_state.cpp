@@ -2,6 +2,7 @@
 #include "scene/park/attraction_state.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "park/pools/pools.hpp"
 #include "park/track/rules.hpp"
 #include "scene/park/scene.hpp"
@@ -38,7 +39,7 @@ namespace rct3::scene::park
                 return "CantOpenStallNoItems";
             return std::nullopt;
         }
-        const std::size_t ride = ref.index;
+        const usize ride = ref.index;
         const rct3::park::track::TrackRules rules = ride < scene.track_rules.size() ? scene.track_rules[ride] : rct3::park::track::TrackRules { };
         const auto course = ride < scene.courses.size() && scene.courses[ride] ? core::maybe(&*scene.courses[ride]) : std::nullopt;
         // A pool ride's doors are its stations joined to a pool complex. A slide's station joins where the paving, a
@@ -52,9 +53,9 @@ namespace rct3::scene::park
         if (rules.pool_ride && r.track)
             for (const save::model::TrackPiece& p : r.track->pieces)
                 platforms.push_back(p.platform ? std::optional(rct3::park::pools::SlidePlatform { .col = p.platform->tile_x, .row = p.platform->tile_z, .height = p.platform->height, .turn = rct3::park::ModelTurn::from(p.platform->direction) }) : std::nullopt);
-        std::size_t joined = rct3::park::pools::joined_stations(scene.pools, platforms);
+        usize joined = rct3::park::pools::joined_stations(scene.pools, platforms);
         if (rules.pool_ride && course && course->points.size() == course->kinds.size() && std::ranges::none_of(platforms, [](const auto& p) { return p.has_value(); }))
-            for (std::size_t k = 0; k + 1 < course->kinds.size(); ++k)
+            for (usize k = 0; k + 1 < course->kinds.size(); ++k)
             {
                 if (course->kinds[k] != rct3::park::track::CourseKind::Station)
                     continue;

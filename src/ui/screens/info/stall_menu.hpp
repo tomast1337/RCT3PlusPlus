@@ -14,6 +14,7 @@
 // dropping it on the bin; a click on a handle picks the item, and a click on the bin then takes it off.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/widgets/paint_button.hpp"
 #include "ui/widgets/row_bands.hpp"
 #include "ui/widgets/scroll_bar.hpp"
@@ -53,15 +54,15 @@ namespace rct3::ui::screens::info
         units::Money price { };
         /// The extras the item can take, in its own order, each by place in StallMenuView::extras; none where
         /// the stall does not offer it.
-        std::vector<std::optional<std::size_t>> extras;
-        std::uint32_t ticked = 0;              ///< Bit i: extras[i] goes on
-        std::vector<std::size_t> paints;       ///< The colours of its pots; none when it cannot be painted
+        std::vector<std::optional<usize>> extras;
+        u32 ticked = 0;                        ///< Bit i: extras[i] goes on
+        std::vector<usize> paints;             ///< The colours of its pots; none when it cannot be painted
         std::u16string help;                   ///< Shown when the pointer rests on its row, as the profit on it
         std::vector<std::u16string> tick_help; ///< Of each of its extras' ticks
     };
 
     /// What the player does to the menu.
-    enum class MenuAction : std::uint8_t
+    enum class MenuAction : u8
     {
         Add,    ///< Puts goods[index] on the menu at place `value`
         Remove, ///< Takes lines[index] off
@@ -72,13 +73,13 @@ namespace rct3::ui::screens::info
         Sync,   ///< Whether the stall's kind is kept alike, `value` 0 or 1
         Colour, ///< Of lines[index]: picked through its pots, as the page's other pots are
     };
-    inline constexpr std::size_t kMenuActions = 8;
+    inline constexpr usize kMenuActions = 8;
 
     struct MenuEvent
     {
         MenuAction action = MenuAction::Add;
-        std::size_t index = 0;
-        std::int32_t value = 0;
+        usize index = 0;
+        i32 value = 0;
         std::u16string text;
 
         bool operator==(const MenuEvent&) const = default;
@@ -94,10 +95,10 @@ namespace rct3::ui::screens::info
         std::u16string bin_help;
         std::u16string handle_help;
         /// The page's control id of each action, by MenuAction; a line's or good's is that and its place.
-        std::array<std::int32_t, kMenuActions> ids { };
-        std::int32_t most_price = 0;
-        std::int32_t price_step = 1;
-        std::size_t longest_name = 0; ///< In characters
+        std::array<i32, kMenuActions> ids { };
+        i32 most_price = 0;
+        i32 price_step = 1;
+        usize longest_name = 0; ///< In characters
     };
 
     struct StallMenuStyle
@@ -111,12 +112,12 @@ namespace rct3::ui::screens::info
         std::string bin;             ///< The bin's picture
         Color picked;                ///< Behind a line picked by a click on its handle
         Color drop = hex("#000000"); ///< The mark where a dragged item would drop
-        float strip_cell = 16;       ///< A good's square in the strip, and the bin's
-        float price_width = 96;      ///< Of a line's price, at its right
-        float extras_width = 96;     ///< Of a line's extras and pot, left of its price
-        float pot_width = 20;        ///< Of its pot, at the left of its extras
-        float tick_gap = 3;          ///< Between the tick and the pane over it
-        float drag_start = 4;        ///< How far the pointer goes before a press drags
+        f32 strip_cell = 16;         ///< A good's square in the strip, and the bin's
+        f32 price_width = 96;        ///< Of a line's price, at its right
+        f32 extras_width = 96;       ///< Of a line's extras and pot, left of its price
+        f32 pot_width = 20;          ///< Of its pot, at the left of its extras
+        f32 tick_gap = 3;            ///< Between the tick and the pane over it
+        f32 drag_start = 4;          ///< How far the pointer goes before a press drags
         Color text_colour = hex("#000000");
         Color help_colour = hex("#ffffff");
     };
@@ -124,8 +125,8 @@ namespace rct3::ui::screens::info
     /// A row of the menu: a band over a run of lines, or a line.
     struct MenuRow
     {
-        std::optional<std::size_t> line; ///< None for a band
-        std::vector<std::size_t> extras; ///< Of a band: the extras over its ticks, by place in the view's
+        std::optional<usize> line; ///< None for a band
+        std::vector<usize> extras; ///< Of a band: the extras over its ticks, by place in the view's
     };
 
     /// The rows `view`'s lines make: a band before each run of lines with the same extras on offer, when they
@@ -133,7 +134,7 @@ namespace rct3::ui::screens::info
     [[nodiscard]] std::vector<MenuRow> menu_rows(const StallMenuView& view);
 
     /// The place a line goes when one dragged from `from` (none for a new one) drops before line `before`.
-    [[nodiscard]] std::size_t drop_place(std::optional<std::size_t> from, std::size_t before);
+    [[nodiscard]] usize drop_place(std::optional<usize> from, usize before);
 
     class StallMenu : public Widget
     {
@@ -148,22 +149,22 @@ namespace rct3::ui::screens::info
         [[nodiscard]] std::optional<MenuEvent> take_event();
         struct LinePot
         {
-            std::size_t line = 0;
+            usize line = 0;
             widgets::PaintButton* pot = nullptr;
         };
         /// The pots of the lines that can be painted, each with its line.
         [[nodiscard]] std::vector<LinePot> pots() const;
         /// The pane's scroll position, to keep when the menu is shown anew.
-        [[nodiscard]] float scrolled() const;
-        void scroll_to(float position);
+        [[nodiscard]] f32 scrolled() const;
+        void scroll_to(f32 position);
 
         /// Where good `i` sits in the strip, and the bin, on the screen.
-        [[nodiscard]] Rect good_rect(std::size_t i) const;
+        [[nodiscard]] Rect good_rect(usize i) const;
         [[nodiscard]] Rect bin_rect() const;
         /// Where the handle of line `i` is on the screen, scrolled as it is.
-        [[nodiscard]] Rect handle_rect(std::size_t i) const;
+        [[nodiscard]] Rect handle_rect(usize i) const;
         [[nodiscard]] Rect pane_rect() const;
-        [[nodiscard]] std::optional<std::size_t> picked() const
+        [[nodiscard]] std::optional<usize> picked() const
         {
             return picked_;
         }
@@ -182,15 +183,15 @@ namespace rct3::ui::screens::info
         void draw(DrawContext& context) const override;
 
         // Used by the pane's rows, which take the presses on the handles.
-        void press_handle(std::size_t line, Point p);
+        void press_handle(usize line, Point p);
         void draw_rows(DrawContext& context, const Rect& content) const;
         void draw_drag(DrawContext& context) const;
 
     private:
         struct Drag
         {
-            std::optional<std::size_t> good; ///< Dragged from the strip
-            std::optional<std::size_t> line; ///< Dragged by its handle
+            std::optional<usize> good; ///< Dragged from the strip
+            std::optional<usize> line; ///< Dragged by its handle
             Point from;
             Point at;
             bool moving = false;
@@ -204,11 +205,11 @@ namespace rct3::ui::screens::info
         };
 
         /// Which strip cell `p` is on: a good, or the bin when none.
-        [[nodiscard]] std::optional<std::size_t> good_at(Point p) const;
+        [[nodiscard]] std::optional<usize> good_at(Point p) const;
         /// The line a drop at `p` goes before, when `p` is on the pane.
-        [[nodiscard]] std::optional<std::size_t> drop_before(Point p) const;
-        [[nodiscard]] std::size_t strip_rows() const;
-        [[nodiscard]] float strip_width() const;
+        [[nodiscard]] std::optional<usize> drop_before(Point p) const;
+        [[nodiscard]] usize strip_rows() const;
+        [[nodiscard]] f32 strip_width() const;
         void drop(Point p);
         void lay_out_rows();
 
@@ -221,7 +222,7 @@ namespace rct3::ui::screens::info
         Widget* over_ = nullptr; ///< Draws what is dragged over the rest
         std::vector<LineWidgets> lines_;
         std::optional<Drag> drag_;
-        std::optional<std::size_t> picked_;
+        std::optional<usize> picked_;
         bool bin_pressed_ = false;
         std::optional<MenuEvent> event_;
     };

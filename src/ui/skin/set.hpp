@@ -5,6 +5,7 @@
 // rows go top to bottom, as the renderer expects.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/texture/image.hpp"
 #include "ui/skin/skin.hpp"
 
@@ -29,7 +30,7 @@ namespace rct3::ui::skin
         std::map<std::string, NamedSkin, std::less<>> skins;
         /// Only images some skin uses.
         std::map<std::string, ovl::texture::RgbaImage, std::less<>> images;
-        std::size_t skipped = 0; ///< Skins whose layout or image could not be read
+        usize skipped = 0; ///< Skins whose layout or image could not be read
     };
 
     /// Reads every GUI skin of the overlay at `path` (either file of the pair, or the stem). Some textures are

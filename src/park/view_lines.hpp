@@ -5,6 +5,7 @@
 // follows slopes and stops at cliffs as the ground does.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/terrain_mesh.hpp"
 #include "save/model/world.hpp"
 
@@ -15,18 +16,18 @@ namespace rct3::park
 {
 
     /// Across a line, in world units.
-    inline constexpr float kViewLineWidth = 0.06f;
+    inline constexpr f32 kViewLineWidth = 0.06f;
     /// Height between contours, in world units.
-    inline constexpr float kContourStep = 1.0f;
+    inline constexpr f32 kContourStep = 1.0f;
 
     /// A strip `width` across from `a` to `b`, just over them, seen from above and below.
-    void ground_strip(TerrainMesh& mesh, glm::vec3 a, glm::vec3 b, glm::vec4 colour, float width);
+    void ground_strip(TerrainMesh& mesh, glm::vec3 a, glm::vec3 b, glm::vec4 colour, f32 width);
 
     /// A point of a track and how far it stands over the ground below it.
     struct HeightMark
     {
         glm::vec3 at { 0.0f };
-        float above = 0; ///< World units; 0 off the map
+        f32 above = 0; ///< World units; 0 off the map
     };
 
     /// The marks for `points`, a point within a hair of the one before it left out (a piece's end is the next
@@ -34,11 +35,11 @@ namespace rct3::park
     [[nodiscard]] std::vector<HeightMark> height_marks(std::span<const glm::vec3> points, const save::model::TerrainGrid& grid);
 
     /// A thin upright cross from the mark down to the ground, `width` across, seen from every side.
-    void height_tick(TerrainMesh& mesh, const HeightMark& mark, glm::vec4 colour, float width);
+    void height_tick(TerrainMesh& mesh, const HeightMark& mark, glm::vec4 colour, f32 width);
 
     /// A strip along every edge of every tile.
     [[nodiscard]] TerrainMesh grid_lines(const save::model::TerrainGrid& grid, glm::vec4 colour);
     /// A strip wherever the ground crosses a whole multiple of `step`, through each triangle of each tile.
-    [[nodiscard]] TerrainMesh contour_lines(const save::model::TerrainGrid& grid, float step, glm::vec4 colour);
+    [[nodiscard]] TerrainMesh contour_lines(const save::model::TerrainGrid& grid, f32 step, glm::vec4 colour);
 
 } // namespace rct3::park

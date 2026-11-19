@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/options/dialog.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -184,7 +185,7 @@ namespace
     std::vector<KeyBox*> key_boxes(const Fixture& f)
     {
         std::vector<KeyBox*> boxes;
-        for (std::size_t i = 0; i < kCommandCount; ++i)
+        for (usize i = 0; i < kCommandCount; ++i)
             boxes.push_back(&f.dialog->key_box(static_cast<Command>(i)));
         return boxes;
     }
@@ -203,7 +204,7 @@ TEST_CASE("the keys page sets each command's keys")
     f.dialog->show_page(OptionsPage::Keys);
     const auto boxes = key_boxes(f);
     REQUIRE(boxes.size() == kCommandCount);
-    KeyBox& developer = *boxes[static_cast<std::size_t>(Command::DeveloperWindows)];
+    KeyBox& developer = *boxes[static_cast<usize>(Command::DeveloperWindows)];
     CHECK(developer.combos == std::vector { KeyCombo { Key::F12 } });
 
     f.desktop.set_keyboard_focus(&developer);
@@ -217,12 +218,12 @@ TEST_CASE("the keys page sets each command's keys")
     CHECK_FALSE(f.dialog->take_keys());
 
     // Keys another command had are taken from it, and its box shows that.
-    KeyBox& cancel = *boxes[static_cast<std::size_t>(Command::Cancel)];
+    KeyBox& cancel = *boxes[static_cast<usize>(Command::Cancel)];
     f.desktop.set_keyboard_focus(&developer);
     press(f, { Key::Enter });
     press(f, { Key::Enter });
     CHECK(developer.combos == std::vector { KeyCombo { Key::Enter } });
-    CHECK(boxes[static_cast<std::size_t>(Command::DefaultButton)]->combos.empty());
+    CHECK(boxes[static_cast<usize>(Command::DefaultButton)]->combos.empty());
     CHECK(cancel.combos == std::vector { KeyCombo { Key::Escape } });
     CHECK(f.dialog->take_keys()->keys(Command::DefaultButton).empty());
 }
@@ -233,13 +234,13 @@ TEST_CASE("the usual keys button puts every command back")
     choices.keys.bind(Command::Copy, { Key::F3 });
     Fixture f(choices);
     f.dialog->show_page(OptionsPage::Keys);
-    CHECK(key_boxes(f)[static_cast<std::size_t>(Command::Copy)]->combos == std::vector { KeyCombo { Key::F3 } });
+    CHECK(key_boxes(f)[static_cast<usize>(Command::Copy)]->combos == std::vector { KeyCombo { Key::F3 } });
     auto usual = dynamic_cast<Button*>(rct3::core::as_pointer(f.dialog->find("content/GameOptionsDialog_KeyBindingsHelp/usual_keys")));
     REQUIRE(usual != nullptr);
     usual->click();
     f.desktop.update({ });
     CHECK(f.dialog->take_keys() == KeyMap { });
-    CHECK(key_boxes(f)[static_cast<std::size_t>(Command::Copy)]->combos.size() == 2);
+    CHECK(key_boxes(f)[static_cast<usize>(Command::Copy)]->combos.size() == 2);
 }
 
 TEST_CASE("the keys page lists the game's commands in groups, any key binding them")
@@ -275,14 +276,14 @@ TEST_CASE("the keys page lists the game's commands in groups, any key binding th
 TEST_CASE("rows of options nothing acts on show greyed and cannot be used")
 {
     OptionsChoices choices;
-    choices.inert.set(static_cast<std::size_t>(O::Sky));
+    choices.inert.set(static_cast<usize>(O::Sky));
     Fixture f(choices);
     f.dialog->show_page(OptionsPage::Scenic);
     f.desktop.update({ });
     auto page = f.dialog->find("content/GameOptionsDialog_ScenicSettingsTabHelp");
     REQUIRE(page);
-    std::int32_t usable = 0;
-    std::int32_t greyed = 0;
+    i32 usable = 0;
+    i32 greyed = 0;
     for (const auto& c : page->children())
     {
         if (auto* tick = dynamic_cast<Tickbox*>(c.get()); tick != nullptr && tick->visible)

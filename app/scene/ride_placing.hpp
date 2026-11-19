@@ -27,6 +27,7 @@
 // simulation takes it on once a path runs past the tile it faces.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/attraction_objects.hpp"
 #include "park/build_catalogue.hpp"
 #include "park/camera.hpp"
@@ -54,9 +55,9 @@ namespace rct3::scene
 
     /// The placing panel's round view: a whole turn every ten seconds, looking down a little, near enough for
     /// small items to fill it.
-    inline constexpr float kPreviewTurn = 2 * std::numbers::pi_v<float> / 10;
-    inline constexpr float kPreviewPitch = 0.5f;
-    inline constexpr float kPreviewClosest = 1.5f;
+    inline constexpr f32 kPreviewTurn = 2 * std::numbers::pi_v<f32> / 10;
+    inline constexpr f32 kPreviewPitch = 0.5f;
+    inline constexpr f32 kPreviewClosest = 1.5f;
 
     namespace park
     {
@@ -65,7 +66,7 @@ namespace rct3::scene
 
     struct RidePlacing
     {
-        enum class Step : std::uint8_t
+        enum class Step : u8
         {
             Ride,
             Entrance,
@@ -78,14 +79,14 @@ namespace rct3::scene
         std::optional<rct3::park::ride::RideSite> site;     ///< Pointed at, then where the ride was placed
         std::optional<rct3::park::ride::DoorSpot> door;     ///< The entrance or exit pointed at
         std::optional<rct3::park::ride::DoorSpot> entrance; ///< Placed; of a tracked ride getting a door, its other door
-        std::int32_t quadrant = 0;                          ///< Of the tile, for scenery that takes a quarter of one
-        std::int32_t ground = 0;                            ///< Height of the ground under the site, of scenery or a ride
+        i32 quadrant = 0;                                   ///< Of the tile, for scenery that takes a quarter of one
+        i32 ground = 0;                                     ///< Height of the ground under the site, of scenery or a ride
         bool absolute = false;                              ///< Scenery on a raised path, at the deck's height
         /// While Shift is held: where the pointer met the park when it went down, and the height then.
         struct Lift
         {
             glm::vec3 at { 0.0f };
-            std::int32_t height = 0;
+            i32 height = 0;
         };
         std::optional<Lift> lift;
         rct3::park::ride::SiteProblem problem = rct3::park::ride::SiteProblem::None;
@@ -95,22 +96,22 @@ namespace rct3::scene
         units::Money levelling_cost;
         rct3::park::AttractionRef placed { }; ///< Once placed
         rct3::park::object::ObjectMesh ghost_mesh;
-        std::array<std::int32_t, 3> colours { };     ///< Of the scenery: its own when picked, then those the player paints
+        std::array<i32, 3> colours { };              ///< Of the scenery: its own when picked, then those the player paints
         std::string panel_item;                      ///< The scenery the placing panel is set up for
         rct3::park::object::ObjectMesh preview_mesh; ///< The scenery alone, for the panel's round view
         /// Of scenery with bones, the same a piece per bone, moved as it moves; preview_bones gives each piece's bone.
         rct3::park::MovingMeshes preview_moving;
-        std::vector<std::int32_t> preview_bones;
+        std::vector<i32> preview_bones;
         rct3::park::ParkCamera preview_camera;
         render::TextureHandle preview_target;
-        std::uint32_t preview_pixels = 0;
+        u32 preview_pixels = 0;
         std::map<std::string, TrackModels, std::less<>> models;
         rct3::park::path::SolidTiles solids;
-        rct3::park::ground::GroundHolds holds;                                             ///< What keeps the ground still, worked out with the solids
-        std::optional<std::size_t> solids_of;                                              ///< The scene's object count when worked out
-        std::vector<save::model::RideIndex> unjoined;                                      ///< Rides placed here that the simulation does not run yet
-        std::vector<save::model::StallIndex> unjoined_stalls;                              ///< The same of the stalls placed here
-        std::vector<std::pair<save::model::RideIndex, std::uint32_t>> unjoined_facilities; ///< The same of the facilities placed here, with their kinds
+        rct3::park::ground::GroundHolds holds;                                   ///< What keeps the ground still, worked out with the solids
+        std::optional<usize> solids_of;                                          ///< The scene's object count when worked out
+        std::vector<save::model::RideIndex> unjoined;                            ///< Rides placed here that the simulation does not run yet
+        std::vector<save::model::StallIndex> unjoined_stalls;                    ///< The same of the stalls placed here
+        std::vector<std::pair<save::model::RideIndex, u32>> unjoined_facilities; ///< The same of the facilities placed here, with their kinds
         /// Every show trick the game names, read from its main file when the first show ride is placed.
         std::optional<std::vector<std::string>> trick_names;
         /// Of a tracked ride getting a door: its station pieces, which the door stands beside
@@ -122,14 +123,14 @@ namespace rct3::scene
     /// The point of the ground under `at`, in a view of `size`, in tile units: column and row with fractions.
     [[nodiscard]] std::optional<glm::vec2> ground_spot(const park::ParkScene& scene, ui::Point at, ui::Point size);
     /// The highest id the park's objects, rides and stalls use; a new one takes the next.
-    [[nodiscard]] std::uint64_t last_id(const park::ParkScene& scene);
+    [[nodiscard]] u64 last_id(const park::ParkScene& scene);
     /// The tile of the ground under `at`, in a view of `size`.
     [[nodiscard]] std::optional<save::model::Tile> ground_tile(const park::ParkScene& scene, ui::Point at, ui::Point size);
 
     /// The height of something raised or sunk with Shift, the pointer's ray now being `ray`: its `height` when
     /// Shift went down with the pointer meeting the park at `at`, moved as far as the ray has moved up or down an
     /// upright plane through `at`, square to the view. Nothing while the view looks straight down.
-    [[nodiscard]] std::optional<std::int32_t> lifted_height(const rct3::park::Ray& ray, glm::vec3 at, std::int32_t height);
+    [[nodiscard]] std::optional<i32> lifted_height(const rct3::park::Ray& ray, glm::vec3 at, i32 height);
 
     /// Starts placing `item`, in place of anything being placed before. Items other than rides placed
     /// whole, stalls and scenery are left alone; false for those.
@@ -143,7 +144,7 @@ namespace rct3::scene
     void take_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Ride& ride, const rct3::park::BuildItem& item);
     /// Adds `door`, whose model is loaded, as the entrance (or `exit`) of station `station` of the tracked ride
     /// `ride`, standing at `height`, in place of the one it had.
-    void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, std::size_t station, const save::model::PlacedObject& door, std::int32_t height, bool exit);
+    void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, usize station, const save::model::PlacedObject& door, i32 height, bool exit);
 
     void stop_ride_placing(park::ParkScene& scene);
 

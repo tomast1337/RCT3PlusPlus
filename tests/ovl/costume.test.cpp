@@ -2,6 +2,7 @@
 #include "ovl/costume.hpp"
 
 #include "builder.hpp"
+#include "core/types.hpp"
 
 #include <doctest/doctest.h>
 #include <string>
@@ -16,22 +17,22 @@ namespace
 
     constexpr char kNameData[] = "Bear:ent\0BearHead\0BearBody\0BearLegs\0Grizzly";
     const std::string kNames(kNameData, sizeof kNameData);
-    const std::uint32_t kBase = (static_cast<std::uint32_t>(sizeof kNameData) + 3) & ~3u;
+    const u32 kBase = (static_cast<u32>(sizeof kNameData) + 3) & ~3u;
 
-    std::uint32_t name_at(const std::string& needle)
+    u32 name_at(const std::string& needle)
     {
         const auto at = kNames.find(needle);
         REQUIRE(at != std::string::npos);
-        return static_cast<std::uint32_t>(at);
+        return static_cast<u32>(at);
     }
 
-    Overlay make(std::uint32_t count)
+    Overlay make(u32 count)
     {
         std::string text = kNames;
         text.resize(kBase, '\0');
         // The costume, then its five section slots: head, body, legs and two left empty.
         std::vector<std::byte> data;
-        for (const std::uint32_t v : { 0u, 0u, 0u, count, kBase + 0x18, name_at("Grizzly"), name_at("BearHead"), name_at("BearBody"), name_at("BearLegs"), 0u, 0u })
+        for (const u32 v : { 0u, 0u, 0u, count, kBase + 0x18, name_at("Grizzly"), name_at("BearHead"), name_at("BearBody"), name_at("BearLegs"), 0u, 0u })
             append_u32(data, v);
         std::vector<std::byte> symbol;
         append_u32(symbol, name_at("Bear:ent"));

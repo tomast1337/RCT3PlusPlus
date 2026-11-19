@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/startup_screen.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 #include "ui/image_set.hpp"
 #include "ui/scale.hpp"
@@ -20,12 +21,12 @@ namespace rct3::scene
     {
 
         // The window in logical units, after choosing the scale.
-        ui::Rect begin(render::Device& device, ui::DrawList& list, std::optional<float> chosen)
+        ui::Rect begin(render::Device& device, ui::DrawList& list, std::optional<f32> chosen)
         {
             const render::Extent extent = device.extent();
             list.clear();
-            list.set_scale(ui::interface_scale(static_cast<float>(extent.height), chosen, device.render_scale()));
-            return { 0, 0, static_cast<float>(extent.width) / list.scale(), static_cast<float>(extent.height) / list.scale() };
+            list.set_scale(ui::interface_scale(static_cast<f32>(extent.height), chosen, device.render_scale()));
+            return { 0, 0, static_cast<f32>(extent.width) / list.scale(), static_cast<f32>(extent.height) / list.scale() };
         }
 
         // The movies a logo may have, best first: only the first release has them.
@@ -56,14 +57,14 @@ namespace rct3::scene
                         logging::logger("startup").warning("startup movie: {}", movie.error());
                         continue;
                     }
-                    const std::vector<std::byte> white(static_cast<std::size_t>(movie->width()) * movie->height() * 4, std::byte { 255 });
+                    const std::vector<std::byte> white(static_cast<usize>(movie->width()) * movie->height() * 4, std::byte { 255 });
                     auto texture = device.create_texture({ movie->width(), movie->height(), render::TextureFormat::Rgba8, white, name });
                     if (!texture)
                     {
                         logging::logger("startup").warning("startup movie: {}: {}", name, texture.error());
                         continue;
                     }
-                    const ui::UiTexture picture { *texture, static_cast<float>(movie->width()), static_cast<float>(movie->height()) };
+                    const ui::UiTexture picture { *texture, static_cast<f32>(movie->width()), static_cast<f32>(movie->height()) };
                     screen.movies.emplace(std::string(choice.logo), StartupMovie { std::move(*movie), *file, picture, std::nullopt });
                     break;
                 }
@@ -109,7 +110,7 @@ namespace rct3::scene
         {
             if (const auto movie = screen.movies.find(step.image); movie != screen.movies.end())
             {
-                step.shown = std::max(units::Seconds { static_cast<float>(movie->second.movie.seconds()) } - ui::kStartupFade, units::Seconds { });
+                step.shown = std::max(units::Seconds { static_cast<f32>(movie->second.movie.seconds()) } - ui::kStartupFade, units::Seconds { });
                 steps.push_back(std::move(step));
             }
             else if (screen.logos.contains(step.image))
@@ -174,13 +175,13 @@ namespace rct3::scene
             const ui::UiTexture* shown = movie != screen.movies.end() ? &movie->second.picture : logo != screen.logos.end() ? &logo->second : nullptr;
             if (shown)
             {
-                const float fit = std::min(view.width() / shown->width, view.height() / shown->height);
-                const float w = shown->width * fit;
-                const float h = shown->height * fit;
-                const float x = std::round((view.width() - w) / 2);
-                const float y = std::round((view.height() - h) / 2);
-                const float opacity = movie != screen.movies.end() ? 1.0f : frame->opacity;
-                const auto alpha = static_cast<std::uint8_t>(std::lround(opacity * 255));
+                const f32 fit = std::min(view.width() / shown->width, view.height() / shown->height);
+                const f32 w = shown->width * fit;
+                const f32 h = shown->height * fit;
+                const f32 x = std::round((view.width() - w) / 2);
+                const f32 y = std::round((view.height() - h) / 2);
+                const f32 opacity = movie != screen.movies.end() ? 1.0f : frame->opacity;
+                const auto alpha = static_cast<u8>(std::lround(opacity * 255));
                 screen.list.image({ x, y, x + w, y + h }, ui::texture_id(shown->handle), { 0, 0, 1, 1 }, { 255, 255, 255, alpha });
             }
         }
@@ -197,7 +198,7 @@ namespace rct3::scene
         loading::Look look;
         if (const auto logo = screen.logos.find(loading::kLogo); logo != screen.logos.end())
             look.logo = loading::Picture { ui::texture_id(logo->second.handle), logo->second.width, logo->second.height };
-        loading::draw(screen.list, { 0, 0, static_cast<float>(extent.width), static_cast<float>(extent.height) }, look, { });
+        loading::draw(screen.list, { 0, 0, static_cast<f32>(extent.width), static_cast<f32>(extent.height) }, look, { });
         ui::render_draw_list(device, screen.renderer, screen.list);
     }
 

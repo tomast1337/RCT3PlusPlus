@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/design_placement.hpp"
 
+#include "core/types.hpp"
 #include "park/object/placement.hpp"
 
 #include <algorithm>
@@ -28,9 +29,9 @@ namespace rct3::park
         return { };
     }
 
-    bool stands_too_high(float lowest, std::span<const float> grounds) noexcept
+    bool stands_too_high(f32 lowest, std::span<const f32> grounds) noexcept
     {
-        return std::ranges::any_of(grounds, [&](float ground) { return lowest - ground > kDesignRaise; });
+        return std::ranges::any_of(grounds, [&](f32 ground) { return lowest - ground > kDesignRaise; });
     }
 
     std::vector<pools::PoolOpening> piece_pool_openings(const save::model::PlacedObject& object, const track::PieceRecord& record)

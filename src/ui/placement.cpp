@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/placement.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 
 namespace rct3::ui
@@ -18,37 +20,37 @@ namespace rct3::ui
         };
     }
 
-    Placement fill(float margin)
+    Placement fill(f32 margin)
     {
         return { { 0, 0, 1, 1 }, { margin, margin, -margin, -margin } };
     }
 
-    Placement top_left(float x, float y, float width, float height)
+    Placement top_left(f32 x, f32 y, f32 width, f32 height)
     {
         return { { 0, 0, 0, 0 }, { x, y, x + width, y + height } };
     }
 
-    Placement top_right(float right, float y, float width, float height)
+    Placement top_right(f32 right, f32 y, f32 width, f32 height)
     {
         return { { 1, 0, 1, 0 }, { -right - width, y, -right, y + height } };
     }
 
-    Placement bottom_left(float x, float bottom, float width, float height)
+    Placement bottom_left(f32 x, f32 bottom, f32 width, f32 height)
     {
         return { { 0, 1, 0, 1 }, { x, -bottom - height, x + width, -bottom } };
     }
 
-    Placement bottom_right(float right, float bottom, float width, float height)
+    Placement bottom_right(f32 right, f32 bottom, f32 width, f32 height)
     {
         return { { 1, 1, 1, 1 }, { -right - width, -bottom - height, -right, -bottom } };
     }
 
-    Placement centred(float width, float height, float dx, float dy)
+    Placement centred(f32 width, f32 height, f32 dx, f32 dy)
     {
         return { { 0.5f, 0.5f, 0.5f, 0.5f }, { dx - width / 2, dy - height / 2, dx + width / 2, dy + height / 2 } };
     }
 
-    Placement top_band(float y, float height, float margin)
+    Placement top_band(f32 y, f32 height, f32 margin)
     {
         return { { 0, 0, 1, 0 }, { margin, y, -margin, y + height } };
     }
@@ -56,8 +58,8 @@ namespace rct3::ui
     Rect moved_inside(const Rect& rect, const Rect& bounds)
     {
         // Right and bottom first, then left and top, so the top-left corner wins when it does not fit.
-        float dx = std::min(0.0f, bounds.x1 - rect.x1);
-        float dy = std::min(0.0f, bounds.y1 - rect.y1);
+        f32 dx = std::min(0.0f, bounds.x1 - rect.x1);
+        f32 dy = std::min(0.0f, bounds.y1 - rect.y1);
         dx = std::max(dx, bounds.x0 - rect.x0);
         dy = std::max(dy, bounds.y0 - rect.y0);
         return { rect.x0 + dx, rect.y0 + dy, rect.x1 + dx, rect.y1 + dy };

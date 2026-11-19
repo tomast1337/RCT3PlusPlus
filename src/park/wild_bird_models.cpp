@@ -2,6 +2,7 @@
 #include "park/wild_bird_models.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/texture/texture.hpp"
 #include "park/person/models.hpp"
@@ -31,14 +32,14 @@ namespace rct3::park
             return lower(name);
         }
 
-        constexpr std::array<std::string_view, static_cast<std::size_t>(BirdMotion::Count)> kMotionNames {
+        constexpr std::array<std::string_view, static_cast<usize>(BirdMotion::Count)> kMotionNames {
             "swim", "fly", "glide", "takeoff", "land", "standidle", "idlepeck", "takeoffground", "landground",
         };
 
         /// Where in the two by two picture the colouring `palette` starts, as a shift of texture coordinates.
-        glm::vec2 palette_shift(std::uint8_t palette)
+        glm::vec2 palette_shift(u8 palette)
         {
-            return { 0.5f * static_cast<float>(palette & 1), -0.5f * static_cast<float>(palette >> 1 & 1) };
+            return { 0.5f * static_cast<f32>(palette & 1), -0.5f * static_cast<f32>(palette >> 1 & 1) };
         }
     } // namespace
 
@@ -65,8 +66,8 @@ namespace rct3::park
         if (!found || model.mesh.animations.empty())
             return std::nullopt;
         model.motions.fill(BirdModel::kNone);
-        for (std::size_t m = 0; m < model.motions.size(); ++m)
-            for (std::size_t a = 0; a < model.mesh.animations.size(); ++a)
+        for (usize m = 0; m < model.motions.size(); ++m)
+            for (usize a = 0; a < model.mesh.animations.size(); ++a)
                 if (bare(model.mesh.animations[a].name) == kMotionNames[m])
                     model.motions[m] = a;
         for (ovl::FrameAnimation& a : model.mesh.animations)
@@ -91,9 +92,9 @@ namespace rct3::park
         return model;
     }
 
-    float motion_seconds(const BirdModel& model, BirdMotion motion)
+    f32 motion_seconds(const BirdModel& model, BirdMotion motion)
     {
-        const std::size_t index = model.motions[static_cast<std::size_t>(motion)];
+        const usize index = model.motions[static_cast<usize>(motion)];
         return index < model.mesh.animations.size() && !model.mesh.animations[index].times.empty() ? model.mesh.animations[index].times.back() : 0.0f;
     }
 
@@ -102,7 +103,7 @@ namespace rct3::park
         struct Run
         {
             std::vector<GroundVertex> vertices;
-            std::vector<std::uint32_t> indices;
+            std::vector<u32> indices;
         };
         std::map<std::string, Run> runs;
         object::ObjectMesh mesh;
@@ -111,7 +112,7 @@ namespace rct3::park
             if (bird.model == nullptr)
                 continue;
             const ovl::FrameMesh& frames = bird.model->mesh;
-            std::size_t index = bird.model->motions[static_cast<std::size_t>(bird.motion)];
+            usize index = bird.model->motions[static_cast<usize>(bird.motion)];
             if (index >= frames.animations.size())
                 index = 0;
             const ovl::FrameAnimation& motion = frames.animations[index];
@@ -123,10 +124,10 @@ namespace rct3::park
             if (from.points.size() != frames.points || to.points.size() != frames.points || from.normals.size() != frames.normals || to.normals.size() != frames.normals)
                 continue;
             Run& run = runs[bird.model->picture_key];
-            const auto base = static_cast<std::uint32_t>(run.vertices.size());
+            const auto base = static_cast<u32>(run.vertices.size());
             const glm::mat3 turn { bird.world };
             const glm::vec2 shift = palette_shift(bird.palette);
-            const auto mixed = [&](const std::array<float, 3>& a, const std::array<float, 3>& b) { return glm::mix(glm::vec3(a[0], a[1], a[2]), glm::vec3(b[0], b[1], b[2]), blend.along); };
+            const auto mixed = [&](const std::array<f32, 3>& a, const std::array<f32, 3>& b) { return glm::mix(glm::vec3(a[0], a[1], a[2]), glm::vec3(b[0], b[1], b[2]), blend.along); };
             for (const ovl::FrameCorner& corner : frames.corners)
             {
                 if (corner.point >= frames.points || corner.normal >= frames.normals)
@@ -138,16 +139,16 @@ namespace rct3::park
                 const glm::vec3 normal = mixed(from.normals[corner.normal], to.normals[corner.normal]);
                 run.vertices.push_back({ glm::vec3(bird.world * glm::vec4(at, 1.0f)), glm::vec4(1.0f), glm::vec2(corner.uv[0], corner.uv[1]) + shift, turn * normal });
             }
-            for (const std::uint16_t i : frames.indices)
+            for (const u16 i : frames.indices)
                 run.indices.push_back(base + (i < frames.corners.size() ? i : 0));
             ++mesh.drawn;
         }
         for (const auto& [picture, run] : runs)
         {
-            const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
-            mesh.batches.push_back({ .texture = picture, .picture = picture, .blend = object::PartBlend::Opaque, .first = static_cast<std::uint32_t>(mesh.indices.size()), .count = static_cast<std::uint32_t>(run.indices.size()), .one_sided = false });
+            const auto base = static_cast<u32>(mesh.vertices.size());
+            mesh.batches.push_back({ .texture = picture, .picture = picture, .blend = object::PartBlend::Opaque, .first = static_cast<u32>(mesh.indices.size()), .count = static_cast<u32>(run.indices.size()), .one_sided = false });
             mesh.vertices.insert(mesh.vertices.end(), run.vertices.begin(), run.vertices.end());
-            for (const std::uint32_t i : run.indices)
+            for (const u32 i : run.indices)
                 mesh.indices.push_back(base + i);
         }
         return mesh;

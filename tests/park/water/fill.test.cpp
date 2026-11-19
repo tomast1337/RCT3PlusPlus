@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/water/fill.hpp"
 
+#include "core/types.hpp"
+
 #include <array>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -22,7 +24,7 @@ namespace
         g.tile_size_x = 4;
         g.tile_size_z = 4;
         g.cells.resize(6);
-        for (std::int32_t c = 0; c < 6; ++c)
+        for (i32 c = 0; c < 6; ++c)
         {
             const bool low = c == 1 || c == 2 || c == 4;
             g.at(c, 0).corners = low ? std::array { 1.0f, 1.0f, 1.0f, 1.0f } : std::array { 4.0f, 4.0f, 4.0f, 4.0f };
@@ -142,7 +144,7 @@ TEST_CASE("a lake raised floods the waterfalls pouring from or into it, and no o
     CHECK(flooded_falls(water, water, falls, grid).empty());
     save::model::WaterLayer raised = water;
     raised.bodies[0].level = 3;
-    CHECK(flooded_falls(water, raised, falls, grid) == std::vector<std::size_t> { 0 });
+    CHECK(flooded_falls(water, raised, falls, grid) == std::vector<usize> { 0 });
 }
 
 TEST_CASE("a lake keeps the water the reshaped ground still holds")

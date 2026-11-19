@@ -14,6 +14,7 @@
 // lit where the letters cover its middle, in the board's colour, and glows a little round its dot.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/scenery_item.hpp"
 #include "ovl/texture/image.hpp"
 #include "park/turns.hpp"
@@ -34,11 +35,11 @@ namespace rct3::park
     /// Where a line's sign stands.
     struct QueueSignSpot
     {
-        std::uint64_t line = 0;
-        std::int32_t col = 0;
-        std::int32_t row = 0;
-        float height = 0; ///< Of the head's start edge, in world units
-        ModelTurn turn;   ///< Of the sign: as a railing on the head's start edge
+        u64 line = 0;
+        i32 col = 0;
+        i32 row = 0;
+        f32 height = 0; ///< Of the head's start edge, in world units
+        ModelTurn turn; ///< Of the sign: as a railing on the head's start edge
         friend bool operator==(const QueueSignSpot&, const QueueSignSpot&) = default;
     };
 
@@ -51,24 +52,24 @@ namespace rct3::park
     [[nodiscard]] std::string queue_sign_item(std::span<const ovl::SceneryItemEntry> items);
 
     /// A lamp colour, red, green and blue.
-    using LampColour = std::array<std::uint8_t, 3>;
+    using LampColour = std::array<u8, 3>;
 
     /// The board showing the `width` columns of `loop` from column `shift` on, wrapping round, in lamps of
     /// `colour`.
-    [[nodiscard]] ovl::texture::RgbaImage sign_window(const ovl::texture::RgbaImage& loop, std::uint32_t shift, std::uint32_t width, LampColour colour);
+    [[nodiscard]] ovl::texture::RgbaImage sign_window(const ovl::texture::RgbaImage& loop, u32 shift, u32 width, LampColour colour);
 
     /// How far the text has moved after `seconds`, in pixels of a loop `length` wide: whole lamps.
-    [[nodiscard]] std::uint32_t sign_shift(float seconds, std::uint32_t length);
+    [[nodiscard]] u32 sign_shift(f32 seconds, u32 length);
 
     /// The board's look.
-    inline constexpr std::uint32_t kSignTextHeight = 40; ///< Pixels, room for the large interface font
-    inline constexpr std::uint32_t kSignLamp = 3;        ///< Pixels a lamp takes each way
+    inline constexpr u32 kSignTextHeight = 40; ///< Pixels, room for the large interface font
+    inline constexpr u32 kSignLamp = 3;        ///< Pixels a lamp takes each way
     inline constexpr units::PixelPace kSignScroll { 24 };
-    inline constexpr std::uint8_t kSignDark = 6; ///< Of the board between the lamps, grey
-    inline constexpr std::uint8_t kSignLit = 96; ///< Cover of a lamp's middle that lights it
-    inline constexpr float kSignLampOff = 0.1f;  ///< An unlit lamp's share of the colour
-    inline constexpr float kSignGlow = 0.25f;    ///< A lit lamp's glow round its dot, share of the colour
-    inline constexpr std::uint32_t kSignGap = 2; ///< After the words, in heights
+    inline constexpr u8 kSignDark = 6;        ///< Of the board between the lamps, grey
+    inline constexpr u8 kSignLit = 96;        ///< Cover of a lamp's middle that lights it
+    inline constexpr f32 kSignLampOff = 0.1f; ///< An unlit lamp's share of the colour
+    inline constexpr f32 kSignGlow = 0.25f;   ///< A lit lamp's glow round its dot, share of the colour
+    inline constexpr u32 kSignGap = 2;        ///< After the words, in heights
     inline constexpr LampColour kSignWhite { 255, 255, 255 };
 
 } // namespace rct3::park

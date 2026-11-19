@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/game_speed.hpp"
 
+#include "core/types.hpp"
+
 namespace rct3::simulation
 {
 
     namespace
     {
 
-        constexpr float kFastFactor = 2;
-        constexpr float kFastestFactor = 5;
+        constexpr f32 kFastFactor = 2;
+        constexpr f32 kFastestFactor = 5;
 
     } // namespace
 
-    float time_factor(GameSpeed speed)
+    f32 time_factor(GameSpeed speed)
     {
         if (speed.paused)
             return 0;

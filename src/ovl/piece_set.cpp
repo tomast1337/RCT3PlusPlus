@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/piece_set.hpp"
 
+#include "core/types.hpp"
 #include "ovl/field_values.hpp"
 
 namespace rct3::ovl
@@ -18,18 +19,18 @@ namespace rct3::ovl
         constexpr std::string_view kGroundTag = "ftx";
         constexpr std::string_view kSplineTag = "spl";
 
-        constexpr std::size_t kResearchRowSize = 12;
+        constexpr usize kResearchRowSize = 12;
 
         // Sizes of the headers in bytes. The path header is the part before the research link rows.
-        constexpr std::size_t kPathNamesAt = 0x10;
-        constexpr std::size_t kPathBaseNames = 78;
-        constexpr std::size_t kPathLongNames = 147;
-        constexpr std::size_t kPathBaseHeader = 0x150; // names, research count, research pointer
-        constexpr std::size_t kPathLongHeader = 0x25c;
-        constexpr std::size_t kQueueHeader = 0x34;
-        constexpr std::size_t kPoolNames = 89;
-        constexpr std::size_t kPoolHeader = 0x258;
-        constexpr std::size_t kEnclosureHeader = 0x5c;
+        constexpr usize kPathNamesAt = 0x10;
+        constexpr usize kPathBaseNames = 78;
+        constexpr usize kPathLongNames = 147;
+        constexpr usize kPathBaseHeader = 0x150; // names, research count, research pointer
+        constexpr usize kPathLongHeader = 0x25c;
+        constexpr usize kQueueHeader = 0x34;
+        constexpr usize kPoolNames = 89;
+        constexpr usize kPoolHeader = 0x258;
+        constexpr usize kEnclosureHeader = 0x5c;
 
         /// Everything the four readers share: the item reader, which owns the address space and the tables.
         struct Context
@@ -40,40 +41,40 @@ namespace rct3::ovl
             {
             }
 
-            [[nodiscard]] std::string_view string_at(std::uint32_t location, std::uint32_t value) const noexcept
+            [[nodiscard]] std::string_view string_at(u32 location, u32 value) const noexcept
             {
                 return fields::string_field(reader.space(), reader.pointers(), location, value);
             }
-            [[nodiscard]] std::string_view reference(std::uint32_t location, std::string_view tag) const noexcept
+            [[nodiscard]] std::string_view reference(u32 location, std::string_view tag) const noexcept
             {
                 return reader.references().find(location, tag);
             }
         };
 
         /// `count` string pointer slots starting at `first` (an address), read out of `raw` at `offset`.
-        void read_names(const Context& ctx, std::span<const std::byte> raw, std::uint32_t address, std::size_t offset, std::size_t count, std::vector<std::string_view>& out)
+        void read_names(const Context& ctx, std::span<const std::byte> raw, u32 address, usize offset, usize count, std::vector<std::string_view>& out)
         {
             out.reserve(count);
-            for (std::size_t i = 0; i < count; ++i)
+            for (usize i = 0; i < count; ++i)
             {
-                const std::size_t at = offset + i * 4;
-                out.push_back(ctx.string_at(address + static_cast<std::uint32_t>(at), fields::read_u32(raw, at)));
+                const usize at = offset + i * 4;
+                out.push_back(ctx.string_at(address + static_cast<u32>(at), fields::read_u32(raw, at)));
             }
         }
 
         /// Research count and pointer at `offset`; the rows may follow the header right away, in which case the
         /// returned value is how many bytes of rows to skip.
-        std::optional<std::size_t> read_research(const Context& ctx, std::span<const std::byte> raw, std::uint32_t address, std::size_t offset, std::size_t header_size, std::vector<SceneryItemResearch>& out)
+        std::optional<usize> read_research(const Context& ctx, std::span<const std::byte> raw, u32 address, usize offset, usize header_size, std::vector<SceneryItemResearch>& out)
         {
-            const std::uint32_t count = fields::read_u32(raw, offset);
-            const std::uint32_t rows = fields::read_u32(raw, offset + 4);
+            const u32 count = fields::read_u32(raw, offset);
+            const u32 rows = fields::read_u32(raw, offset + 4);
             if (!ctx.reader.read_research(rows, count, out))
                 return std::nullopt;
             const bool inline_rows = count != 0 && rows == address + header_size;
-            return inline_rows ? std::size_t { count } * kResearchRowSize : 0;
+            return inline_rows ? usize { count } * kResearchRowSize : 0;
         }
 
-        std::optional<std::vector<SceneryItem>> read_items(const Context& ctx, std::uint32_t address, std::size_t offset)
+        std::optional<std::vector<SceneryItem>> read_items(const Context& ctx, u32 address, usize offset)
         {
             if (offset > UINT32_MAX - address)
                 return std::nullopt;
@@ -82,21 +83,21 @@ namespace rct3::ovl
                 return std::nullopt;
             if (address + offset == *end)
                 return std::vector<SceneryItem> { }; // header only
-            return ctx.reader.read_run(address + static_cast<std::uint32_t>(offset));
+            return ctx.reader.read_run(address + static_cast<u32>(offset));
         }
 
-        std::optional<PathType> read_path(const Context& ctx, std::uint32_t address)
+        std::optional<PathType> read_path(const Context& ctx, u32 address)
         {
             const auto head = ctx.reader.space().bytes_at(address, 4);
             if (!head)
                 return std::nullopt;
             PathType p;
             p.header_word = fields::read_u32(*head, 0);
-            const std::uint32_t expansion = p.header_word >> 24;
+            const u32 expansion = p.header_word >> 24;
             if (expansion > 1)
                 return std::nullopt;
 
-            const std::size_t header = expansion == 0 ? kPathBaseHeader : kPathLongHeader;
+            const usize header = expansion == 0 ? kPathBaseHeader : kPathLongHeader;
             const auto raw = ctx.reader.space().bytes_at(address, header);
             if (!raw)
                 return std::nullopt;
@@ -104,7 +105,7 @@ namespace rct3::ovl
             p.name_text = ctx.reference(address + 8, kTextTag);
             p.icon = ctx.reference(address + 0xc, kIconTag);
 
-            std::size_t items_at = header;
+            usize items_at = header;
             if (expansion == 0)
             {
                 read_names(ctx, *raw, address, kPathNamesAt, kPathBaseNames, p.piece_names);
@@ -124,7 +125,7 @@ namespace rct3::ovl
             return p;
         }
 
-        std::optional<QueueType> read_queue(const Context& ctx, std::uint32_t address)
+        std::optional<QueueType> read_queue(const Context& ctx, u32 address)
         {
             const auto raw = ctx.reader.space().bytes_at(address, kQueueHeader);
             if (!raw)
@@ -134,10 +135,10 @@ namespace rct3::ovl
             q.name_text = ctx.reference(address + 4, kTextTag);
             q.icon = ctx.reference(address + 8, kIconTag);
             q.ground = ctx.reference(address + 0xc, kGroundTag);
-            for (std::size_t i = 0; i < q.piece_names.size(); ++i)
+            for (usize i = 0; i < q.piece_names.size(); ++i)
             {
-                const std::size_t at = 0x10 + i * 4;
-                q.piece_names[i] = ctx.string_at(address + static_cast<std::uint32_t>(at), fields::read_u32(*raw, at));
+                const usize at = 0x10 + i * 4;
+                q.piece_names[i] = ctx.string_at(address + static_cast<u32>(at), fields::read_u32(*raw, at));
             }
             const auto skip = read_research(ctx, *raw, address, 0x2c, kQueueHeader, q.research);
             if (!skip)
@@ -149,7 +150,7 @@ namespace rct3::ovl
             return q;
         }
 
-        std::optional<PoolType> read_pool(const Context& ctx, std::uint32_t address)
+        std::optional<PoolType> read_pool(const Context& ctx, u32 address)
         {
             const auto raw = ctx.reader.space().bytes_at(address, kPoolHeader);
             if (!raw)
@@ -159,16 +160,16 @@ namespace rct3::ovl
             p.name_text = ctx.reference(address + 4, kTextTag);
             p.icon = ctx.reference(address + 8, kIconTag);
             read_names(ctx, *raw, address, 0xc, kPoolNames, p.piece_names);
-            std::size_t at = 0xc + kPoolNames * 4;
+            usize at = 0xc + kPoolNames * 4;
             for (auto& v : p.prices)
                 v = fields::read_i32(*raw, at), at += 4;
             for (auto& v : p.unknown_floats)
                 v = fields::read_f32(*raw, at), at += 4;
-            const std::size_t spline_count = (kPoolHeader - at) / 4;
+            const usize spline_count = (kPoolHeader - at) / 4;
             p.splines.reserve(spline_count);
-            for (std::size_t i = 0; i < spline_count; ++i)
+            for (usize i = 0; i < spline_count; ++i)
             {
-                p.splines.push_back(ctx.reference(address + static_cast<std::uint32_t>(at + i * 4), kSplineTag));
+                p.splines.push_back(ctx.reference(address + static_cast<u32>(at + i * 4), kSplineTag));
             }
             auto items = read_items(ctx, address, kPoolHeader);
             if (!items)
@@ -177,7 +178,7 @@ namespace rct3::ovl
             return p;
         }
 
-        std::optional<EnclosureType> read_enclosure(const Context& ctx, std::uint32_t address)
+        std::optional<EnclosureType> read_enclosure(const Context& ctx, u32 address)
         {
             const auto raw = ctx.reader.space().bytes_at(address, kEnclosureHeader);
             if (!raw)
@@ -186,18 +187,18 @@ namespace rct3::ovl
             e.name = ctx.string_at(address, fields::read_u32(*raw, 0));
             e.name_text = ctx.reference(address + 4, kTextTag);
             e.icon = ctx.reference(address + 8, kIconTag);
-            for (std::size_t i = 0; i < e.piece_names.size(); ++i)
+            for (usize i = 0; i < e.piece_names.size(); ++i)
             {
-                const std::size_t at = 0xc + i * 4;
-                e.piece_names[i] = ctx.string_at(address + static_cast<std::uint32_t>(at), fields::read_u32(*raw, at));
+                const usize at = 0xc + i * 4;
+                e.piece_names[i] = ctx.string_at(address + static_cast<u32>(at), fields::read_u32(*raw, at));
             }
-            for (std::size_t i = 0; i < e.unknown_values.size(); ++i)
+            for (usize i = 0; i < e.unknown_values.size(); ++i)
                 e.unknown_values[i] = fields::read_i32(*raw, 0x30 + i * 4);
-            for (std::size_t i = 0; i < e.splines.size(); ++i)
+            for (usize i = 0; i < e.splines.size(); ++i)
             {
-                e.splines[i] = ctx.reference(address + 0x40 + static_cast<std::uint32_t>(i * 4), kSplineTag);
+                e.splines[i] = ctx.reference(address + 0x40 + static_cast<u32>(i * 4), kSplineTag);
             }
-            for (std::size_t i = 0; i < e.unknown_floats.size(); ++i)
+            for (usize i = 0; i < e.unknown_floats.size(); ++i)
                 e.unknown_floats[i] = fields::read_f32(*raw, 0x50 + i * 4);
             auto items = read_items(ctx, address, kEnclosureHeader);
             if (!items)

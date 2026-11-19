@@ -4,6 +4,8 @@
 // the empty string, as in the game; there is no fallback to another language per key.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <expected>
 #include <filesystem>
 #include <map>
@@ -30,7 +32,7 @@ namespace rct3::ui
         /// differs from the table's here and there. Of keys that differ only in case, the first added wins.
         [[nodiscard]] std::u16string_view get_ignoring_case(std::string_view key) const;
         [[nodiscard]] bool contains(std::string_view key) const;
-        [[nodiscard]] std::size_t size() const
+        [[nodiscard]] usize size() const
         {
             return strings_.size();
         }

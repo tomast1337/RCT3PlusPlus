@@ -4,12 +4,14 @@
 // forgetting the speed, so playing again goes back to it.
 #pragma once
 
+#include "core/types.hpp"
+
 #include <cstdint>
 
 namespace rct3::simulation
 {
 
-    enum class Speed : std::uint8_t
+    enum class Speed : u8
     {
         Normal,
         Fast,
@@ -25,7 +27,7 @@ namespace rct3::simulation
     };
 
     /// Park time passed for each second of real time: none while paused.
-    [[nodiscard]] float time_factor(GameSpeed speed);
+    [[nodiscard]] f32 time_factor(GameSpeed speed);
 
     /// Plays at `speed`, unpaused.
     [[nodiscard]] GameSpeed playing(GameSpeed current, Speed speed);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scripting/script_engine.hpp"
 
+#include "core/types.hpp"
 #include "logging/log.hpp"
 
 #include <array>
@@ -17,7 +18,7 @@ namespace rct3::scripting
     namespace
     {
         // Limits: memory for a script's values, and how long one tick may run before it is stopped.
-        constexpr std::size_t kMemoryLimit = 64u << 20;
+        constexpr usize kMemoryLimit = 64u << 20;
         constexpr std::chrono::milliseconds kTickLimit { 2000 };
 
         std::string to_text(JSContext* ctx, JSValueConst value)
@@ -69,7 +70,7 @@ namespace rct3::scripting
     {
         struct Wait
         {
-            std::int32_t frames = 0;
+            i32 frames = 0;
             JSValue resolve = JS_UNDEFINED;
             JSValue reject = JS_UNDEFINED;
         };
@@ -91,14 +92,14 @@ namespace rct3::scripting
         static JSValue call_native(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv, int, JSValueConst* data) // c-api
         {
             Impl& self = of(ctx);
-            std::int32_t index = 0;
+            i32 index = 0;
             JS_ToInt32(ctx, &index, data[0]);
             Json arguments = Json::array();
-            for (std::int32_t i = 0; i < argc; ++i)
+            for (i32 i = 0; i < argc; ++i)
                 arguments.push_back(to_json(ctx, argv[i]));
             try
             {
-                const Json result = self.natives.at(static_cast<std::size_t>(index))(arguments);
+                const Json result = self.natives.at(static_cast<usize>(index))(arguments);
                 return result.is_null() ? JS_UNDEFINED : from_json(ctx, result);
             }
             catch (const std::exception& e)
@@ -109,21 +110,21 @@ namespace rct3::scripting
 
         static JSValue frames(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) // c-api
         {
-            double count = 1;
+            f64 count = 1;
             if (argc > 0 && JS_ToFloat64(ctx, &count, argv[0]) != 0)
                 return JS_EXCEPTION;
             std::array<JSValue, 2> resolving { };
             const JSValue promise = JS_NewPromiseCapability(ctx, resolving.data());
             if (JS_IsException(promise))
                 return promise;
-            of(ctx).waits.push_back({ std::max(0, static_cast<std::int32_t>(std::lround(count))), resolving[0], resolving[1] });
+            of(ctx).waits.push_back({ std::max(0, static_cast<i32>(std::lround(count))), resolving[0], resolving[1] });
             return promise;
         }
 
         static JSValue log(JSContext* ctx, JSValueConst, int argc, JSValueConst* argv) // c-api
         {
             std::string line;
-            for (std::int32_t i = 0; i < argc; ++i)
+            for (i32 i = 0; i < argc; ++i)
                 line += (i > 0 ? " " : "") + to_text(ctx, argv[i]);
             logging::logger("script").info("{}", line);
             return JS_UNDEFINED;
@@ -147,7 +148,7 @@ namespace rct3::scripting
             for (;;)
             {
                 JSContext* job_context = nullptr;
-                const std::int32_t ran = JS_ExecutePendingJob(runtime, &job_context);
+                const i32 ran = JS_ExecutePendingJob(runtime, &job_context);
                 if (ran == 0)
                     break;
                 if (ran < 0)
@@ -179,7 +180,7 @@ namespace rct3::scripting
         void set(std::string_view name, JSValue value)
         {
             JSValue owner = JS_GetGlobalObject(context);
-            for (std::size_t dot = name.find('.'); dot != std::string_view::npos; dot = name.find('.'))
+            for (usize dot = name.find('.'); dot != std::string_view::npos; dot = name.find('.'))
             {
                 const std::string part(name.substr(0, dot));
                 JSValue next = JS_GetPropertyStr(context, owner, part.c_str());
@@ -220,7 +221,7 @@ namespace rct3::scripting
 
     void ScriptEngine::define(std::string_view name, Native fn)
     {
-        JSValue index = JS_NewInt32(impl_->context, static_cast<std::int32_t>(impl_->natives.size()));
+        JSValue index = JS_NewInt32(impl_->context, static_cast<i32>(impl_->natives.size()));
         impl_->natives.push_back(std::move(fn));
         const std::string last(name.substr(name.rfind('.') == std::string_view::npos ? 0 : name.rfind('.') + 1));
         impl_->set(name, JS_NewCFunctionData2(impl_->context, &Impl::call_native, last.c_str(), 0, 0, 1, &index));

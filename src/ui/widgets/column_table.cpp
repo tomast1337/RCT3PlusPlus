@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/widgets/column_table.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -8,9 +10,9 @@
 namespace rct3::ui::widgets
 {
 
-    void sort_table_rows(std::vector<TableRow>& rows, std::size_t column, bool descending)
+    void sort_table_rows(std::vector<TableRow>& rows, usize column, bool descending)
     {
-        const auto key = [&](const TableRow& r) -> std::optional<double> { return column < r.keys.size() ? r.keys[column] : std::nullopt; };
+        const auto key = [&](const TableRow& r) -> std::optional<f64> { return column < r.keys.size() ? r.keys[column] : std::nullopt; };
         const auto text = [&](const TableRow& r) -> std::u16string_view { return column < r.cells.size() ? std::u16string_view(r.cells[column]) : std::u16string_view { }; };
         // -1 when a comes first in the lowest-first order, 1 when b does, 0 for a tie.
         const auto order = [&](const TableRow& a, const TableRow& b) {
@@ -25,7 +27,7 @@ namespace rct3::ui::widgets
         };
         std::ranges::stable_sort(rows, [&](const TableRow& a, const TableRow& b) {
             const bool both = key(a).has_value() == key(b).has_value();
-            const std::int32_t o = order(a, b);
+            const i32 o = order(a, b);
             return descending && both ? o > 0 : o < 0;
         });
     }
@@ -34,7 +36,7 @@ namespace rct3::ui::widgets
         : Widget(std::move(name))
         , style(std::move(style))
     {
-        const float across = bar.thickness;
+        const f32 across = bar.thickness;
         bar_ = &add<ScrollBar>("bar", std::move(bar), Orientation::Vertical);
         const Rect& pad = this->style.padding;
         bar_->placement = { { 1, 0, 1, 1 }, { -across - pad.x1, pad.y0 + this->style.heading_height, -pad.x1, -pad.y1 } };
@@ -55,49 +57,49 @@ namespace rct3::ui::widgets
 
     std::vector<ColumnTable::ColumnEdges> ColumnTable::column_edges() const
     {
-        const float width = rows_box().width();
-        float fixed = 0;
-        std::size_t shared = 0;
+        const f32 width = rows_box().width();
+        f32 fixed = 0;
+        usize shared = 0;
         for (const TableColumn& c : columns)
         {
             fixed += c.width.value;
             shared += c.width.value <= 0 ? 1 : 0;
         }
-        const float share = shared > 0 ? std::max(0.0f, width - fixed) / static_cast<float>(shared) : 0;
+        const f32 share = shared > 0 ? std::max(0.0f, width - fixed) / static_cast<f32>(shared) : 0;
         std::vector<ColumnEdges> edges;
-        float x = 0;
+        f32 x = 0;
         for (const TableColumn& c : columns)
         {
-            const float w = c.width.value > 0 ? c.width.value : share;
+            const f32 w = c.width.value > 0 ? c.width.value : share;
             edges.emplace_back(x, x + w);
             x += w;
         }
         return edges;
     }
 
-    void ColumnTable::select(std::optional<std::size_t> index)
+    void ColumnTable::select(std::optional<usize> index)
     {
         selected_ = index && *index < rows.size() ? index : std::nullopt;
     }
 
-    std::optional<std::size_t> ColumnTable::row_at(Point p) const
+    std::optional<usize> ColumnTable::row_at(Point p) const
     {
         const Rect box = rows_box();
         if (!contains(box, p) || style.row_height <= 0)
             return std::nullopt;
-        const auto row = static_cast<std::size_t>((p.y - box.y0 + bar_->position) / style.row_height);
+        const auto row = static_cast<usize>((p.y - box.y0 + bar_->position) / style.row_height);
         if (row >= rows.size())
             return std::nullopt;
         return row;
     }
 
-    std::optional<std::size_t> ColumnTable::heading_at(Point p) const
+    std::optional<usize> ColumnTable::heading_at(Point p) const
     {
         const Rect box = headings_box();
         if (!contains(box, p))
             return std::nullopt;
         const auto edges = column_edges();
-        for (std::size_t i = 0; i < edges.size(); ++i)
+        for (usize i = 0; i < edges.size(); ++i)
         {
             if (p.x >= box.x0 + edges[i].left && p.x < box.x0 + edges[i].right)
                 return i;
@@ -105,7 +107,7 @@ namespace rct3::ui::widgets
         return std::nullopt;
     }
 
-    std::optional<std::size_t> ColumnTable::take_sort()
+    std::optional<usize> ColumnTable::take_sort()
     {
         return std::exchange(sort_now_, std::nullopt);
     }
@@ -162,7 +164,7 @@ namespace rct3::ui::widgets
             selected_.reset();
         const Rect box = rows_box();
         bar_->visible = box.height();
-        bar_->content = std::max(box.height(), static_cast<float>(rows.size()) * style.row_height);
+        bar_->content = std::max(box.height(), static_cast<f32>(rows.size()) * style.row_height);
         bar_->clamp();
     }
 
@@ -173,27 +175,27 @@ namespace rct3::ui::widgets
         const auto heading_font = context.fonts.get(style.heading_font);
         const auto font = context.fonts.get(style.font);
         const auto edges = column_edges();
-        const auto cell = [&](const Rect& row, std::size_t c) { return Rect { row.x0 + edges[c].left + style.cell_indent, row.y0, row.x0 + edges[c].right - style.cell_indent, row.y1 }; };
+        const auto cell = [&](const Rect& row, usize c) { return Rect { row.x0 + edges[c].left + style.cell_indent, row.y0, row.x0 + edges[c].right - style.cell_indent, row.y1 }; };
 
         const Rect head = headings_box();
         context.list.fill(head, style.heading_colour);
         if (context.list.push_clip(head))
         {
-            for (std::size_t c = 0; c < columns.size(); ++c)
+            for (usize c = 0; c < columns.size(); ++c)
             {
                 Rect box = cell(head, c);
                 if (sorted_by == c)
                 {
                     // A small triangle at the end of the heading, its point the way the rows run from the top.
-                    const float mark = style.sort_mark;
-                    const float mid = std::round((head.y0 + head.y1) / 2);
-                    const float right = columns[c].align == Align::End ? box.x0 + mark : box.x1;
-                    const std::int32_t steps = static_cast<std::int32_t>(std::ceil(mark / 2));
-                    for (std::int32_t step = 0; step < steps; ++step)
+                    const f32 mark = style.sort_mark;
+                    const f32 mid = std::round((head.y0 + head.y1) / 2);
+                    const f32 right = columns[c].align == Align::End ? box.x0 + mark : box.x1;
+                    const i32 steps = static_cast<i32>(std::ceil(mark / 2));
+                    for (i32 step = 0; step < steps; ++step)
                     {
-                        const auto i = static_cast<float>(step);
-                        const float half = descending ? mark / 2 - i : i + 1;
-                        const float y = mid - std::floor(mark / 4) + i;
+                        const auto i = static_cast<f32>(step);
+                        const f32 half = descending ? mark / 2 - i : i + 1;
+                        const f32 y = mid - std::floor(mark / 4) + i;
                         context.list.fill({ right - mark / 2 - half, y, right - mark / 2 + half, y + 1 }, style.heading_text_colour);
                     }
                     if (columns[c].align == Align::End)
@@ -210,10 +212,10 @@ namespace rct3::ui::widgets
         const Rect box = rows_box();
         if (context.list.push_clip(box) && style.row_height > 0)
         {
-            const auto first = static_cast<std::size_t>(bar_->position / style.row_height);
-            for (std::size_t i = first; i < rows.size(); ++i)
+            const auto first = static_cast<usize>(bar_->position / style.row_height);
+            for (usize i = first; i < rows.size(); ++i)
             {
-                const float y = std::round(box.y0 + static_cast<float>(i) * style.row_height - bar_->position);
+                const f32 y = std::round(box.y0 + static_cast<f32>(i) * style.row_height - bar_->position);
                 if (y >= box.y1)
                     break;
                 const Rect row { box.x0, y, box.x1, y + style.row_height };
@@ -230,13 +232,13 @@ namespace rct3::ui::widgets
                 }
                 if (!font)
                     continue;
-                for (std::size_t c = 0; c < columns.size() && c < rows[i].cells.size(); ++c)
+                for (usize c = 0; c < columns.size() && c < rows[i].cells.size(); ++c)
                 {
                     Rect text = cell(row, c);
                     // The icon is a square the row's height less a margin, its text after it.
                     if (c == 0 && !rows[i].icon.empty())
                     {
-                        const float side = style.row_height - 4;
+                        const f32 side = style.row_height - 4;
                         skin::draw_skin(context.list, context.skins.find(rows[i].icon), { text.x0, row.y0 + 2, text.x0 + side, row.y0 + 2 + side });
                         text.x0 += side + style.cell_indent;
                     }

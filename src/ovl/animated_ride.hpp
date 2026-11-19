@@ -4,6 +4,7 @@
 // carousel or a ferris wheel.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/attraction.hpp"
 #include "ovl/overlay.hpp"
 
@@ -23,8 +24,8 @@ namespace rct3::ovl
         /// splines in a part of the item that is not read.
         std::array<std::string_view, 4> splines;
         /// Guests the ride makes room for in the park while it is open and working.
-        std::optional<std::uint32_t> guests;
-        std::optional<std::uint8_t> seating; ///< How its riders sit; nothing when the item does not say
+        std::optional<u32> guests;
+        std::optional<u8> seating; ///< How its riders sit; nothing when the item does not say
     };
 
     struct AnimatedRideItem

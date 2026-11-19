@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/track/top_view.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <vector>
 
@@ -8,13 +10,13 @@ using namespace rct3::park::track;
 
 namespace
 {
-    std::uint8_t alpha(const std::vector<std::uint8_t>& rgba, std::uint32_t size, std::uint32_t x, std::uint32_t y)
+    u8 alpha(const std::vector<u8>& rgba, u32 size, u32 x, u32 y)
     {
-        return rgba.at((std::size_t { y } * size + x) * 4 + 3);
+        return rgba.at((usize { y } * size + x) * 4 + 3);
     }
-    std::uint8_t level(const std::vector<std::uint8_t>& rgba, std::uint32_t size, std::uint32_t x, std::uint32_t y)
+    u8 level(const std::vector<u8>& rgba, u32 size, u32 x, u32 y)
     {
-        return rgba.at((std::size_t { y } * size + x) * 4);
+        return rgba.at((usize { y } * size + x) * 4);
     }
 } // namespace
 
@@ -22,7 +24,7 @@ TEST_CASE("a track's top view draws its line across the square, lighter where it
 {
     // An invented straight climb along x, 20 metres long and 5 high.
     const std::vector<glm::vec3> points { { 0, 0, 0 }, { 20, 5, 0 } };
-    constexpr std::uint32_t kSize = 64;
+    constexpr u32 kSize = 64;
     const auto rgba = top_view(points, kSize);
     REQUIRE(rgba.size() == kSize * kSize * 4);
     // Fitted between the margins, along the middle row.

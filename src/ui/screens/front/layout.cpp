@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/front/layout.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 
@@ -24,25 +26,25 @@ namespace rct3::ui::screens::front::front_screen
         return f;
     }
 
-    Point on_ring(float angle, float radius)
+    Point on_ring(f32 angle, f32 radius)
     {
         // Anticlockwise on the screen, where y grows downwards.
         return { kRingCentre.x + radius * std::cos(angle), kRingCentre.y - radius * std::sin(angle) };
     }
 
-    float menu_angle(std::size_t index)
+    f32 menu_angle(usize index)
     {
-        return kMenuFirstAngle + kMenuAngleStep * static_cast<float>(index);
+        return kMenuFirstAngle + kMenuAngleStep * static_cast<f32>(index);
     }
 
-    Rect button_rect(const Frame& frame, Point centre, float size)
+    Rect button_rect(const Frame& frame, Point centre, f32 size)
     {
         const Point c = frame.at(centre);
-        const float half = size * frame.round / 2;
+        const f32 half = size * frame.round / 2;
         return { c.x - half, c.y - half, c.x + half, c.y + half };
     }
 
-    LabelBox label_box(const Frame& frame, std::size_t index)
+    LabelBox label_box(const Frame& frame, usize index)
     {
         // The ring round the button is drawn at the round scale, so it stays a circle that hugs the button;
         // so is the box's height and where the band starts under the ring. Only the band's far end, and the
@@ -50,11 +52,11 @@ namespace rct3::ui::screens::front::front_screen
         const Point design = on_ring(menu_angle(index), kMenuRadius);
         const Point button = frame.at(design);
         const Point corner { button.x + kLabelBoxOffset.x * frame.round, button.y + kLabelBoxOffset.y * frame.round };
-        const float far = frame.at({ design.x + kLabelBoxOffset.x, 0 }).x; // The box's left edge, stretched
-        const auto round_x = [&](float x) { return corner.x + x * frame.round; };
-        const auto stretched_x = [&](float x) { return far + x * frame.sx; };
-        const auto y = [&](float v) { return corner.y + v * frame.round; };
-        const float reach = kLabelEndStep * static_cast<float>(index * index);
+        const f32 far = frame.at({ design.x + kLabelBoxOffset.x, 0 }).x; // The box's left edge, stretched
+        const auto round_x = [&](f32 x) { return corner.x + x * frame.round; };
+        const auto stretched_x = [&](f32 x) { return far + x * frame.sx; };
+        const auto y = [&](f32 v) { return corner.y + v * frame.round; };
+        const f32 reach = kLabelEndStep * static_cast<f32>(index * index);
         const Rect patch { round_x(kLabelPatch.x0), y(kLabelPatch.y0), round_x(kLabelPatch.x1), y(kLabelPatch.y1) };
         const Rect band { round_x(kLabelBand.x0), y(kLabelBand.y0), stretched_x(kLabelBand.x1), y(kLabelBand.y1) };
         const Rect end { band.x1, band.y0, stretched_x(kLabelBand.x1 + reach), band.y1 };
@@ -62,24 +64,24 @@ namespace rct3::ui::screens::front::front_screen
         return { patch, band, end, text };
     }
 
-    Rect badge_rect(const Frame& frame, std::size_t slot)
+    Rect badge_rect(const Frame& frame, usize slot)
     {
         // Turning by a positive angle with y down goes clockwise on the screen.
-        const float length = std::hypot(kBadgeFirstDirection.x, kBadgeFirstDirection.y);
-        const float x = kBadgeFirstDirection.x / length;
-        const float y = kBadgeFirstDirection.y / length;
-        const float turn = kBadgeStep * static_cast<float>(slot + 1);
+        const f32 length = std::hypot(kBadgeFirstDirection.x, kBadgeFirstDirection.y);
+        const f32 x = kBadgeFirstDirection.x / length;
+        const f32 y = kBadgeFirstDirection.y / length;
+        const f32 turn = kBadgeStep * static_cast<f32>(slot + 1);
         const Point corner { kRingCentre.x + kBadgeRadius * (x * std::cos(turn) - y * std::sin(turn)), kRingCentre.y + kBadgeRadius * (x * std::sin(turn) + y * std::cos(turn)) };
         const Point at = frame.at(corner);
-        const float x0 = std::floor(at.x);
-        const float y1 = std::floor(at.y);
+        const f32 x0 = std::floor(at.x);
+        const f32 y1 = std::floor(at.y);
         return { x0, y1 - kBadgeSize, x0 + kBadgeSize, y1 };
     }
 
     bool ease(Polar& current, const Polar& goal, units::Seconds elapsed)
     {
-        const float k = std::max(0.0f, elapsed.value) * kEaseRate.value;
-        const auto toward = [k](float from, float to) { return (from + to * k) / (1 + k); };
+        const f32 k = std::max(0.0f, elapsed.value) * kEaseRate.value;
+        const auto toward = [k](f32 from, f32 to) { return (from + to * k) / (1 + k); };
         if (std::abs(current.angle - goal.angle) > kAngleClose)
         {
             current.angle = toward(current.angle, goal.angle);

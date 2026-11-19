@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/rows.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 #include <format>
 #include <string_view>
@@ -18,7 +20,7 @@ using rct3::park::BuildOffer;
 
 namespace
 {
-    BuildItem scenery(std::string symbol, BuildList list, std::string name, std::int32_t price = 0)
+    BuildItem scenery(std::string symbol, BuildList list, std::string name, i32 price = 0)
     {
         BuildItem i;
         i.list = list;
@@ -122,7 +124,7 @@ TEST_CASE("an item still to be invented shows locked, and the one under way how 
         content.entries.push_back(r);
     }
     const std::vector items { scenery("Old", BuildList::Facilities, "A"), scenery("Next", BuildList::Facilities, "B"), scenery("Later", BuildList::Facilities, "C"), scenery("Secret", BuildList::Facilities, "D") };
-    const auto rows = picker_rows(BuildList::Facilities, items, BuildOffer(content), strings, kCoins, { }, std::pair { std::size_t { 1 }, 0.25f });
+    const auto rows = picker_rows(BuildList::Facilities, items, BuildOffer(content), strings, kCoins, { }, std::pair { usize { 1 }, 0.25f });
     REQUIRE(rows.size() == 3); // Never the hidden one; by name, which is the symbol here: Later, Next, Old
     CHECK(rows[0].locked);
     CHECK_FALSE(rows[0].progress.has_value());
@@ -158,7 +160,7 @@ TEST_CASE("the enclosure list shows fences by strength, then shelters and toys, 
     strings.add("EnclosureMaster_FenceTT", u"Fences");
     strings.add("EnclosureMaster_ShelterTT", u"Houses");
     strings.add("EnclosureMaster_ItemsTT", u"Toys");
-    const auto item = [](std::string symbol, BuildKind kind, EnclosurePart part, float strength) {
+    const auto item = [](std::string symbol, BuildKind kind, EnclosurePart part, f32 strength) {
         BuildItem i = scenery(std::move(symbol), BuildList::Enclosures, "");
         i.kind = kind;
         i.part = part;
@@ -266,7 +268,7 @@ TEST_CASE("a tracked ride's row tells how many saved designs its kind has, when 
     strings.add("RideSelectionWindow_DesignsAvailable", u"Designs available: %NUMBER%");
     std::vector<BuildItem> items { scenery("Giga", BuildList::Coasters, "GigaName"), scenery("Wild", BuildList::Coasters, "WildName") };
     items[0].kind = items[1].kind = rct3::park::BuildKind::TrackedRide;
-    const std::map<std::string, std::size_t, rct3::strings::LessIgnoringCase> counts { { "giga", 3 } };
+    const std::map<std::string, usize, rct3::strings::LessIgnoringCase> counts { { "giga", 3 } };
     const auto rows = picker_rows(BuildList::Coasters, items, BuildOffer(), strings, kCoins, counts);
     REQUIRE(rows.size() == 2);
     CHECK(rows[0].size == u"Designs available: 3");

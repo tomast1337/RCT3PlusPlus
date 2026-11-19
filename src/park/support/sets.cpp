@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/support/sets.hpp"
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/scenery_item.hpp"
 
@@ -32,7 +33,7 @@ namespace rct3::park::support
 
     } // namespace
 
-    void add_support_piece(SupportSets& sets, std::string_view group, std::uint32_t type, std::string_view symbol, std::int32_t levels, SupportKind kind, std::uint32_t flags)
+    void add_support_piece(SupportSets& sets, std::string_view group, u32 type, std::string_view symbol, i32 levels, SupportKind kind, u32 flags)
     {
         if (group.empty() || symbol.empty() || levels <= 0)
             return;
@@ -94,7 +95,7 @@ namespace rct3::park::support
                 if (!entry.item || entry.item->squares.empty())
                     continue;
                 const auto& squares = entry.item->squares;
-                const std::int32_t levels = std::ranges::max(squares, { }, &ovl::SceneryItemSquare::max_height).max_height - std::ranges::min(squares, { }, &ovl::SceneryItemSquare::min_height).min_height;
+                const i32 levels = std::ranges::max(squares, { }, &ovl::SceneryItemSquare::max_height).max_height - std::ranges::min(squares, { }, &ovl::SceneryItemSquare::min_height).min_height;
                 add_support_piece(sets, entry.item->group, entry.item->type, entry.name, levels, squares.front().support_kind, entry.item->flags);
             }
         }
@@ -113,7 +114,7 @@ namespace rct3::park::support
             if (s.kind == kind)
                 return { &s, { } };
             if (diagonal(s.kind) && diagonal(kind))
-                return { &s, ModelTurn::from(static_cast<std::int32_t>(kind - s.kind)) };
+                return { &s, ModelTurn::from(static_cast<i32>(kind - s.kind)) };
             if (along_axis(s.kind) && along_axis(kind))
                 return { &s, ModelTurn { 1 } };
             if (s.kind == kRoundSupport)

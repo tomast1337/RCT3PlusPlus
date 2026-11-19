@@ -17,6 +17,7 @@
 // with set_controls(), and hears through take_control() and take_style() what the player pressed.
 #pragma once
 
+#include "core/types.hpp"
 #include "ui/panel_look.hpp"
 #include "ui/screens/info/panel.hpp"
 #include "ui/string_table.hpp"
@@ -36,7 +37,7 @@ namespace rct3::ui::screens::build
 {
 
     /// The panel's controls, in the order of park::PathControl.
-    inline constexpr std::size_t kFootpathControls = 10;
+    inline constexpr usize kFootpathControls = 10;
 
     struct FootpathPanelStyle
     {
@@ -46,7 +47,7 @@ namespace rct3::ui::screens::build
         std::string close_icon; ///< On the close button
         std::string controls_icon;
         /// From the screen's bottom edge to the disc's: the tool row and its open menu stay clear below.
-        float bottom = info::info_panel::kDiscMargin;
+        f32 bottom = info::info_panel::kDiscMargin;
         std::string follow_icon;
         std::string route_icon;
         std::string remove_icon;
@@ -72,28 +73,28 @@ namespace rct3::ui::screens::build
     {
         /// Of the ring's slots, how far round each tab sits: the first is up and to the left of the disc's
         /// middle, the others follow clockwise.
-        inline constexpr float kFirstAngle = 128;
-        inline constexpr float kSlotAngle = -32;
-        inline constexpr std::int32_t kControlsSlot = 0;
-        inline constexpr std::int32_t kFollowSlot = 1;
-        inline constexpr std::int32_t kRouteSlot = 2;
-        inline constexpr std::int32_t kRemoveSlot = 3;
-        inline constexpr std::int32_t kPathsSlot = 4;
-        inline constexpr std::int32_t kQueuesSlot = 5;
-        inline constexpr std::int32_t kStraightSlot = 6;
-        inline constexpr float kCloseLeft = 9; ///< From the screen's left edge
-        inline constexpr float kCloseBottom = 9;
+        inline constexpr f32 kFirstAngle = 128;
+        inline constexpr f32 kSlotAngle = -32;
+        inline constexpr i32 kControlsSlot = 0;
+        inline constexpr i32 kFollowSlot = 1;
+        inline constexpr i32 kRouteSlot = 2;
+        inline constexpr i32 kRemoveSlot = 3;
+        inline constexpr i32 kPathsSlot = 4;
+        inline constexpr i32 kQueuesSlot = 5;
+        inline constexpr i32 kStraightSlot = 6;
+        inline constexpr f32 kCloseLeft = 9; ///< From the screen's left edge
+        inline constexpr f32 kCloseBottom = 9;
         /// From the strip's left edge to the page: the ring's tabs on the right of the disc stand over the room
         /// left before it, as they do in the game's own panel.
-        inline constexpr float kBodyLeft = 40;
-        inline constexpr float kBodyRight = 16; ///< After the page
-        inline constexpr float kPaperLeft = 12; ///< Of the paper, before the page
-        inline constexpr float kDividerY = 65;  ///< Of the line under the arrows, down the controls page
-        inline constexpr float kBodyTop = 22;   ///< From the strip's top edge, below its band
-        inline constexpr float kStatusGap = 8;  ///< Between the disc and the band's text
+        inline constexpr f32 kBodyLeft = 40;
+        inline constexpr f32 kBodyRight = 16; ///< After the page
+        inline constexpr f32 kPaperLeft = 12; ///< Of the paper, before the page
+        inline constexpr f32 kDividerY = 65;  ///< Of the line under the arrows, down the controls page
+        inline constexpr f32 kBodyTop = 22;   ///< From the strip's top edge, below its band
+        inline constexpr f32 kStatusGap = 8;  ///< Between the disc and the band's text
         /// The controls page and the rectangle of each control on it, in the order of the controls.
-        inline constexpr float kControlsWidth = 160;
-        inline constexpr float kControlsHeight = 100;
+        inline constexpr f32 kControlsWidth = 160;
+        inline constexpr f32 kControlsHeight = 100;
         inline constexpr std::array<Rect, kFootpathControls> kControlRects { {
             { 32, 4, 60, 30 },
             { 62, 4, 90, 30 },
@@ -107,17 +108,17 @@ namespace rct3::ui::screens::build
             { 82, 68, 118, 98 },
         } };
         inline constexpr Rect kTextRect { 0, 68, 80, 98 };
-        inline constexpr float kLargeIcon = 40; ///< Of the remove and cut pictures, drawn smaller to fit
-        inline constexpr std::size_t kStyleColumns = 5;
-        inline constexpr float kStyleCell = 36; ///< A style's picture and the room round it
-        inline constexpr float kStyleIcon = 40; ///< Of the styles' own pictures
-        inline constexpr float kLineHeight = 15;
-        inline constexpr float kDiscIcon = 56;           ///< The chosen style's picture on the disc
-        inline constexpr std::int32_t kLargestBrush = 5; ///< Tiles along each side of the widest stroke.
+        inline constexpr f32 kLargeIcon = 40; ///< Of the remove and cut pictures, drawn smaller to fit
+        inline constexpr usize kStyleColumns = 5;
+        inline constexpr f32 kStyleCell = 36; ///< A style's picture and the room round it
+        inline constexpr f32 kStyleIcon = 40; ///< Of the styles' own pictures
+        inline constexpr f32 kLineHeight = 15;
+        inline constexpr f32 kDiscIcon = 56;    ///< The chosen style's picture on the disc
+        inline constexpr i32 kLargestBrush = 5; ///< Tiles along each side of the widest stroke.
     } // namespace footpath_panel
 
     /// The middle of the tab at `slot`, from the middle of the disc, with y down.
-    [[nodiscard]] Point footpath_tab_offset(std::int32_t slot);
+    [[nodiscard]] Point footpath_tab_offset(i32 slot);
 
     /// A style the player can choose.
     struct FootpathStyle
@@ -128,7 +129,7 @@ namespace rct3::ui::screens::build
     };
 
     /// Which page the strip shows.
-    enum class FootpathPage : std::uint8_t
+    enum class FootpathPage : u8
     {
         None,
         Controls,
@@ -140,7 +141,7 @@ namespace rct3::ui::screens::build
     struct FootpathPick
     {
         bool queue = false;
-        std::size_t index = 0;
+        usize index = 0;
     };
 
     class FootpathPanel : public Widget
@@ -164,7 +165,7 @@ namespace rct3::ui::screens::build
             return chosen_;
         }
         /// Which controls can be used, which slope is picked and whether cutting into the ground is on.
-        void set_controls(const std::array<bool, kFootpathControls>& usable, std::size_t slope_control, bool cut);
+        void set_controls(const std::array<bool, kFootpathControls>& usable, usize slope_control, bool cut);
         /// What the band along the strip's top shows while the controls are out.
         void set_status(std::u16string text);
 
@@ -191,7 +192,7 @@ namespace rct3::ui::screens::build
             return straight_->on;
         }
         /// Tiles along each side of the square a stroke paints round the pointer's tile.
-        [[nodiscard]] std::int32_t brush() const
+        [[nodiscard]] i32 brush() const
         {
             return size_->value();
         }
@@ -202,7 +203,7 @@ namespace rct3::ui::screens::build
         }
 
         /// The control pressed since the last call, by its index.
-        [[nodiscard]] std::optional<std::size_t> take_control()
+        [[nodiscard]] std::optional<usize> take_control()
         {
             return std::exchange(control_now_, std::nullopt);
         }
@@ -219,7 +220,7 @@ namespace rct3::ui::screens::build
 
         [[nodiscard]] Rect disc() const;
         [[nodiscard]] Rect strip() const;
-        [[nodiscard]] widgets::Button& control(std::size_t i) const
+        [[nodiscard]] widgets::Button& control(usize i) const
         {
             return *controls_.at(i);
         }
@@ -240,11 +241,11 @@ namespace rct3::ui::screens::build
         {
             return *remove_;
         }
-        [[nodiscard]] std::size_t style_count() const
+        [[nodiscard]] usize style_count() const
         {
             return styles_.size();
         }
-        [[nodiscard]] widgets::Button& style_button(std::size_t i) const
+        [[nodiscard]] widgets::Button& style_button(usize i) const
         {
             return *styles_.at(i);
         }
@@ -293,10 +294,10 @@ namespace rct3::ui::screens::build
         std::vector<FootpathStyle> queues_;
         std::u16string status_;
         std::optional<FootpathPick> chosen_;
-        std::optional<std::size_t> control_now_;
+        std::optional<usize> control_now_;
         std::optional<FootpathPick> style_now_;
         FootpathPage page_ = FootpathPage::Controls;
-        std::size_t slope_ = 5; ///< The control of the picked slope
+        usize slope_ = 5; ///< The control of the picked slope
         bool cut_ = false;
         bool closed_ = false;
     };

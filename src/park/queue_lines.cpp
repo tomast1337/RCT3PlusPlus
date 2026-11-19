@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/queue_lines.hpp"
 
+#include "core/types.hpp"
 #include "park/footpath_builder.hpp"
 #include "park/ground/paths.hpp"
 #include "park/path/decks.hpp"
@@ -14,12 +15,12 @@
 namespace rct3::park
 {
 
-    std::optional<EntranceBeside> entrance_beside(const save::model::RideModel& rides, save::model::Tile tile, std::optional<std::int32_t> height)
+    std::optional<EntranceBeside> entrance_beside(const save::model::RideModel& rides, save::model::Tile tile, std::optional<i32> height)
     {
-        for (std::size_t r = 0; r < rides.rides.size(); ++r)
+        for (usize r = 0; r < rides.rides.size(); ++r)
         {
             const std::vector<save::model::Station>& stations = rides.rides[r].stations;
-            for (std::size_t s = 0; s < stations.size(); ++s)
+            for (usize s = 0; s < stations.size(); ++s)
             {
                 const auto& at = stations[s].entrance_spot;
                 if (!at || (height && std::abs(at->height - *height) > kEntranceReach))
@@ -32,10 +33,10 @@ namespace rct3::park
         return std::nullopt;
     }
 
-    std::vector<std::size_t> tiles_behind(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, std::size_t tile)
+    std::vector<usize> tiles_behind(std::span<const save::model::PathTile> paths, const save::model::TerrainGrid& grid, usize tile)
     {
-        std::vector<std::size_t> out;
-        std::size_t at = tile;
+        std::vector<usize> out;
+        usize at = tile;
         while (true)
         {
             const save::model::PathTile& here = paths[at];
@@ -52,7 +53,7 @@ namespace rct3::park
             });
             if (found == paths.end())
                 return out;
-            const auto index = static_cast<std::size_t>(found - paths.begin());
+            const auto index = static_cast<usize>(found - paths.begin());
             if (index == tile || std::ranges::contains(out, index))
                 return out; // A loop
             out.push_back(index);
@@ -60,7 +61,7 @@ namespace rct3::park
         }
     }
 
-    bool turn_to_path(std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t tile)
+    bool turn_to_path(std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, usize tile)
     {
         save::model::PathTile& here = paths[tile];
         if (!here.queue)
@@ -98,34 +99,34 @@ namespace rct3::park
     {
         /// Makes `paths[tile]` lead out by `side`, turning round the tiles behind it when they led the other way,
         /// and puts it and them on `line`.
-        void lead_out(std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t tile, Side side, std::uint64_t line)
+        void lead_out(std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, usize tile, Side side, u64 line)
         {
             save::model::PathQueueInfo& here = *paths[tile].queue;
-            const std::uint8_t toward = path::stored_direction(side);
-            std::vector<std::size_t> joined;
+            const u8 toward = path::stored_direction(side);
+            std::vector<usize> joined;
             if (here.end_direction != toward)
             {
                 // The queue so far flowed away from this tile: turn it round to lead here.
-                const std::vector<std::size_t> behind = tiles_behind(paths, grid, tile);
-                for (const std::size_t i : behind)
+                const std::vector<usize> behind = tiles_behind(paths, grid, tile);
+                for (const usize i : behind)
                     std::swap(paths[i].queue->start_direction, paths[i].queue->end_direction);
                 here.start_direction = here.end_direction;
                 here.end_direction = toward;
                 joined = behind;
             }
             // The tiles behind, now leading here, plus any that already did.
-            for (const std::size_t i : tiles_behind(paths, grid, tile))
+            for (const usize i : tiles_behind(paths, grid, tile))
             {
                 if (!std::ranges::contains(joined, i))
                     joined.push_back(i);
             }
             joined.push_back(tile);
-            for (const std::size_t i : joined)
+            for (const usize i : joined)
                 paths[i].queue->queue_line_ref = line;
         }
 
         /// Counts `line`'s tiles into the stations it leads to, and rails them with their ride's fence and colours.
-        void take_ride(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, std::uint64_t line)
+        void take_ride(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, u64 line)
         {
             const auto on_line = [&](const save::model::PathTile& p) { return p.queue && p.queue->queue_line_ref == line; };
             for (save::model::Ride& ride : rides.rides)
@@ -134,7 +135,7 @@ namespace rct3::park
                 {
                     if (station.queue_line != line)
                         continue;
-                    station.queue_tiles = static_cast<std::int32_t>(std::ranges::count_if(paths, on_line));
+                    station.queue_tiles = static_cast<i32>(std::ranges::count_if(paths, on_line));
                     if (ride.fence_symbol.empty())
                         continue;
                     for (save::model::PathTile& p : paths | std::views::filter(on_line))
@@ -148,18 +149,18 @@ namespace rct3::park
         }
     } // namespace
 
-    std::uint64_t join_entrance(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t tile, const EntranceBeside& entrance, std::uint64_t new_line)
+    u64 join_entrance(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, usize tile, const EntranceBeside& entrance, u64 new_line)
     {
         save::model::Station& station = rides.rides.at(entrance.ride.value).stations.at(entrance.station);
         if (station.queue_line == 0)
             station.queue_line = new_line;
-        const std::uint64_t line = station.queue_line;
+        const u64 line = station.queue_line;
         lead_out(paths, grid, tile, entrance.side, line);
         take_ride(rides, paths, line);
         return line;
     }
 
-    std::optional<std::uint64_t> join_line(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, std::size_t tile)
+    std::optional<u64> join_line(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, usize tile)
     {
         const save::model::PathTile& here = paths[tile];
         if (!here.queue)
@@ -178,7 +179,7 @@ namespace rct3::park
             });
             if (head == paths.end())
                 continue;
-            const std::uint64_t line = head->queue->queue_line_ref;
+            const u64 line = head->queue->queue_line_ref;
             lead_out(paths, grid, tile, side, line);
             take_ride(rides, paths, line);
             return line;
@@ -186,7 +187,7 @@ namespace rct3::park
         return std::nullopt;
     }
 
-    std::optional<std::uint64_t> join_queue_behind(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, save::model::RideIndex ride, std::size_t station, std::uint64_t new_line)
+    std::optional<u64> join_queue_behind(save::model::RideModel& rides, std::vector<save::model::PathTile>& paths, const save::model::TerrainGrid& grid, save::model::RideIndex ride, usize station, u64 new_line)
     {
         const std::optional<save::model::PlacementSpot> at = rides.rides.at(ride.value).stations.at(station).entrance_spot;
         if (!at)
@@ -201,23 +202,23 @@ namespace rct3::park
             save::model::PathTile turned = p;
             turned.queue->start_direction = path::stored_direction(toward);
             const auto edge = path::edge_height(turned, grid, toward);
-            return edge && std::abs(*edge - static_cast<float>(at->height)) <= static_cast<float>(kEntranceReach);
+            return edge && std::abs(*edge - static_cast<f32>(at->height)) <= static_cast<f32>(kEntranceReach);
         });
         if (found == paths.end())
             return std::nullopt;
-        auto head = static_cast<std::size_t>(found - paths.begin());
-        const std::uint64_t line = join_entrance(rides, paths, grid, head, EntranceBeside { ride, station, toward }, new_line);
+        auto head = static_cast<usize>(found - paths.begin());
+        const u64 line = join_entrance(rides, paths, grid, head, EntranceBeside { ride, station, toward }, new_line);
         // The tiles laid on away from the entrance join one by one, as they would have been laid after it.
-        for (std::size_t steps = 0; steps < paths.size(); ++steps)
+        for (usize steps = 0; steps < paths.size(); ++steps)
         {
             const auto side = path::stored_heading(paths[head].queue->start_direction);
             if (!side)
                 break;
             const save::model::Tile next = side->beyond({ paths[head].col, paths[head].row });
             const auto on = std::ranges::find_if(paths, [&](const save::model::PathTile& p) { return p.queue && p.queue->queue_line_ref == 0 && p.col == next.col && p.row == next.row; });
-            if (on == paths.end() || !join_line(rides, paths, grid, static_cast<std::size_t>(on - paths.begin())))
+            if (on == paths.end() || !join_line(rides, paths, grid, static_cast<usize>(on - paths.begin())))
                 break;
-            head = static_cast<std::size_t>(on - paths.begin());
+            head = static_cast<usize>(on - paths.begin());
         }
         return line;
     }

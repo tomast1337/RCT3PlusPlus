@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ovl/stall.hpp"
 
+#include "core/types.hpp"
 #include "record_file.hpp"
 
 #include <doctest/doctest.h>
@@ -16,7 +17,7 @@ TEST_CASE("version 1 stalls start with the attraction fields")
     pool.add("BurgersDescription:txt");
     pool.add("BurgersIcon:gsi");
     std::vector<std::byte> bytes;
-    put(bytes, { 8, 0, 0, 0, 10000, static_cast<std::uint32_t>(-7500) });
+    put(bytes, { 8, 0, 0, 0, 10000, static_cast<u32>(-7500) });
     bytes.resize(0x30, std::byte { 0 });
     const auto overlay = make_record_overlay(1, pool, "Burgers:sta", bytes, { { 4, "BurgersName:txt" }, { 8, "BurgersDescription:txt" }, { 0xC, "BurgersIcon:gsi" } });
     const auto items = read_stalls(overlay, overlay.common());
@@ -36,7 +37,7 @@ TEST_CASE("themed version 1 stalls follow their scenery item with their goods")
     pool.add("Pies:sid");
     pool.add("Pie:cid");
     pool.add("BigPie:cid");
-    const std::uint32_t at = pool.base();
+    const u32 at = pool.base();
     // The attraction fields, then the scenery item at 0x38, two goods and a pointer to them, the goods from 0x44.
     std::vector<std::byte> bytes;
     put(bytes, { 7, 0, 0, 0, 10000 });
@@ -62,7 +63,7 @@ TEST_CASE("later stalls point to their goods and attraction fields")
     pool.add("Burger:cid");
     pool.add("BigBurger:cid");
     pool.add("BurgersName:txt");
-    const std::uint32_t at = pool.base();
+    const u32 at = pool.base();
     // Two goods from 0x2C, then the attraction fields.
     std::vector<std::byte> bytes;
     put(bytes, { ~0u, 2, at + 0x2C, 0, 0, 0, 0, 0, 0, at + 0x3C, 0 });

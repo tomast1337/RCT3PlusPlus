@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/front/screen.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 
 #include <cstdint>
@@ -26,7 +27,7 @@ namespace
     // Updates until everything has arrived.
     void settle(Desktop& desktop)
     {
-        for (std::int32_t i = 0; i < 300; ++i)
+        for (i32 i = 0; i < 300; ++i)
             desktop.update({ }, { units::Seconds { 1.0f / 30 }, nullptr });
     }
 
@@ -52,7 +53,7 @@ namespace
 
 TEST_CASE("every menu entry is reachable and every sub-menu returns to its parent")
 {
-    for (std::size_t m = 0; m < kFrontMenuCount; ++m)
+    for (usize m = 0; m < kFrontMenuCount; ++m)
     {
         const FrontMenuInfo& info = front_menu(static_cast<FrontMenu>(m));
         CHECK_FALSE(info.entries.empty());

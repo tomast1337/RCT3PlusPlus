@@ -1,23 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "career/career.hpp"
 
+#include "core/types.hpp"
+
 #include <doctest/doctest.h>
 
 using namespace rct3::career;
 
 namespace
 {
-    std::vector<std::string> ids(std::size_t n, std::string_view prefix = "S")
+    std::vector<std::string> ids(usize n, std::string_view prefix = "S")
     {
         std::vector<std::string> out;
-        for (std::size_t i = 0; i < n; ++i)
+        for (usize i = 0; i < n; ++i)
             out.push_back(std::string(prefix) + std::to_string(i));
         return out;
     }
 
-    std::size_t open_count(const Career& c)
+    usize open_count(const Career& c)
     {
-        std::size_t n = 0;
+        usize n = 0;
         for (const auto& s : c.scenarios)
             n += is_open(s.status) ? 1 : 0;
         return n;
@@ -38,17 +40,17 @@ TEST_CASE("each completed scenario opens one more, short of the last two")
     complete(c, 0, ScenarioStatus::Apprentice, 1);
     CHECK(open_count(c) == 4);
     complete(c, 1, ScenarioStatus::Tycoon, 1);
-    for (std::size_t i = 2; i < 6; ++i)
+    for (usize i = 2; i < 6; ++i)
         complete(c, i, ScenarioStatus::Apprentice, 1);
     CHECK(open_count(c) == 7);
     complete(c, 6, ScenarioStatus::Apprentice, 1);
     CHECK(open_count(c) == 7); // The second to last waits for entrepreneur on all seven
 
-    for (std::size_t i = 0; i < 7; ++i)
+    for (usize i = 0; i < 7; ++i)
         complete(c, i, ScenarioStatus::Entrepreneur, 1);
     CHECK(open_count(c) == 8);
     CHECK(c.scenarios[8].status == ScenarioStatus::Locked);
-    for (std::size_t i = 0; i < 8; ++i)
+    for (usize i = 0; i < 8; ++i)
         complete(c, i, ScenarioStatus::Tycoon, 1);
     CHECK(open_count(c) == 9);
 }
@@ -57,11 +59,11 @@ TEST_CASE("completing never lowers a level, and dates each level first reached")
 {
     Career c = new_career("A", 0, ids(18));
     complete(c, 2, ScenarioStatus::Entrepreneur, 100);
-    CHECK(c.scenarios[2].reached == std::array<std::int64_t, 3> { 100, 100, 0 });
+    CHECK(c.scenarios[2].reached == std::array<i64, 3> { 100, 100, 0 });
     complete(c, 2, ScenarioStatus::Tycoon, 200);
     complete(c, 2, ScenarioStatus::Apprentice, 300);
     CHECK(c.scenarios[2].status == ScenarioStatus::Tycoon);
-    CHECK(c.scenarios[2].reached == std::array<std::int64_t, 3> { 100, 100, 200 });
+    CHECK(c.scenarios[2].reached == std::array<i64, 3> { 100, 100, 200 });
     complete(c, 40, ScenarioStatus::Tycoon, 1); // Out of the list: nothing
 }
 

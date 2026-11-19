@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "builder.hpp"
+#include "core/types.hpp"
 #include "ovl/ovl.hpp"
 
 #include <cstdint>
@@ -38,7 +39,7 @@ namespace
     }
 
     // v5 with one data stream and a stream block of `size` bytes holding `tag`, zero padded.
-    std::vector<std::byte> make_v5_streamed(std::uint32_t size, const std::string& tag)
+    std::vector<std::byte> make_v5_streamed(u32 size, const std::string& tag)
     {
         Builder b;
         b.raw("FGRK", 4);
@@ -63,7 +64,7 @@ namespace
 
     void check_every_prefix_fails(const std::vector<std::byte>& file)
     {
-        for (std::size_t n = 0; n < file.size(); ++n)
+        for (usize n = 0; n < file.size(); ++n)
         {
             INFO("prefix length " << n);
             CHECK_FALSE(parse_header(std::span<const std::byte>(file.data(), n)).has_value());
@@ -102,7 +103,7 @@ TEST_CASE("v5 stream block")
     // Both variants seen in real files: size 20 with a tag, size 16 with an empty tag.
     struct Variant
     {
-        std::uint32_t size;
+        u32 size;
         std::string tag;
     };
     for (const auto& v : { Variant { 20, "tg" }, Variant { 16, "" } })

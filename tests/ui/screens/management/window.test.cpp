@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/management/window.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -42,9 +43,9 @@ namespace
         return page;
     }
 
-    std::vector<std::size_t> shown_ids(const ManagementWindow& w)
+    std::vector<usize> shown_ids(const ManagementWindow& w)
     {
-        std::vector<std::size_t> out;
+        std::vector<usize> out;
         for (const TableRow& r : w.table()->rows)
             out.push_back(r.id);
         return out;
@@ -60,7 +61,7 @@ TEST_CASE("picking a tab opens it and reports it once")
     f.desktop.update({ });
     CHECK(f.window->tab() == 1);
     CHECK_FALSE(f.window->tab_button(0).on);
-    CHECK(f.window->take_tab() == std::optional<std::size_t>(1));
+    CHECK(f.window->take_tab() == std::optional<usize>(1));
     CHECK_FALSE(f.window->take_tab());
 }
 
@@ -82,14 +83,14 @@ TEST_CASE("the page's own sort holds until the player picks a column, which then
     page.sort = 1;
     f.window->show_page(page);
     f.desktop.layout({ 0, 0, 1024, 768 });
-    CHECK(shown_ids(*f.window) == std::vector<std::size_t> { 30, 10, 20 });
+    CHECK(shown_ids(*f.window) == std::vector<usize> { 30, 10, 20 });
 
     // Press the name heading: by name, lowest first.
     const Rect& r = f.window->table()->rect();
     f.click({ r.x0 + 10, r.y0 + 5 });
-    CHECK(shown_ids(*f.window) == std::vector<std::size_t> { 10, 30, 20 });
+    CHECK(shown_ids(*f.window) == std::vector<usize> { 10, 30, 20 });
     f.window->show_page(page);
-    CHECK(shown_ids(*f.window) == std::vector<std::size_t> { 10, 30, 20 });
+    CHECK(shown_ids(*f.window) == std::vector<usize> { 10, 30, 20 });
 }
 
 TEST_CASE("the selection follows its row into a new page")
@@ -118,7 +119,7 @@ TEST_CASE("an enabled button under the page reports its press; a stub does not")
     CHECK_FALSE(close->enabled);
     open->click();
     f.desktop.update({ });
-    CHECK(f.window->take_button() == std::optional<std::size_t>(0));
+    CHECK(f.window->take_button() == std::optional<usize>(0));
 }
 
 TEST_CASE("a button with choices fans them out and reports the one picked, not its press")
@@ -148,19 +149,19 @@ TEST_CASE("a graph's span is picked by its ranges or zoomed by the wheel, and re
 {
     Fixture f;
     ManagementPage page;
-    std::vector<float> values(64);
+    std::vector<f32> values(64);
     std::vector<std::u16string> readings(64);
-    for (std::size_t i = 0; i < values.size(); ++i)
+    for (usize i = 0; i < values.size(); ++i)
     {
-        values[i] = static_cast<float>(i);
+        values[i] = static_cast<f32>(i);
         readings[i] = std::u16string(1, static_cast<char16_t>(u'A' + i % 26));
     }
     page.graph = { { .name = u"Cash", .values = values, .key = "cash", .readings = readings } };
     page.graph_slots = 64;
     page.graph_ranges = { { u"Month", 4 }, { u"All", 0 } };
     page.graph_when = { u"Newest", u"Older" };
-    for (std::size_t back = 0; back < 64; back += 4)
-        page.graph_ticks.push_back({ static_cast<float>(back), u"M" });
+    for (usize back = 0; back < 64; back += 4)
+        page.graph_ticks.push_back({ static_cast<f32>(back), u"M" });
     f.window->show_page(page);
     f.desktop.layout({ 0, 0, 1024, 768 });
     auto plot = dynamic_cast<LinePlot*>(rct3::core::as_pointer(f.window->find("content/page/lines/graph")));
@@ -169,7 +170,7 @@ TEST_CASE("a graph's span is picked by its ranges or zoomed by the wheel, and re
     REQUIRE(month != nullptr);
     CHECK(plot->span() == 64);
     const auto marks = [&] {
-        std::size_t n = 0;
+        usize n = 0;
         for (const auto& w : plot->parent()->children())
             n += w->name().starts_with("mark") ? 1 : 0;
         return n;

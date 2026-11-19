@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "simulation/weather_cycle.hpp"
 
+#include "core/types.hpp"
 #include "simulation/park/state.hpp"
 
 #include <cstdint>
@@ -13,22 +14,22 @@ using namespace rct3::simulation::park;
 
 namespace
 {
-    constexpr float kHour = 24; // Calendar units in a game hour, about
+    constexpr f32 kHour = 24; // Calendar units in a game hour, about
 
     /// Kinds of weather seen over `months` months of `climate`, by save number.
-    std::array<std::int32_t, kRolledWeathers> season(Climate climate, std::int32_t months)
+    std::array<i32, kRolledWeathers> season(Climate climate, i32 months)
     {
         ParkState s;
-        s.climate = static_cast<std::int32_t>(climate);
+        s.climate = static_cast<i32>(climate);
         auto dice = random::seeded({ 7 });
-        std::array<std::int32_t, kRolledWeathers> seen { };
-        for (std::int32_t m = 0; m < months; ++m)
+        std::array<i32, kRolledWeathers> seen { };
+        for (i32 m = 0; m < months; ++m)
         {
             s.date.month = m % 8;
-            for (std::int32_t h = 0; h < 15 * 24; ++h) // About a month of game hours
+            for (i32 h = 0; h < 15 * 24; ++h) // About a month of game hours
             {
                 advance_weather(s, kHour, dice, false);
-                ++seen.at(static_cast<std::size_t>(s.weather));
+                ++seen.at(static_cast<usize>(s.weather));
             }
         }
         return seen;
@@ -37,8 +38,8 @@ namespace
 
 TEST_CASE("every climate's odds add up to one in every month")
 {
-    for (std::int32_t c = 0; c < static_cast<std::int32_t>(Climate::Count_); ++c)
-        for (std::int32_t m = 0; m < 8; ++m)
+    for (i32 c = 0; c < static_cast<i32>(Climate::Count_); ++c)
+        for (i32 m = 0; m < 8; ++m)
         {
             const auto odds = climate_month(c, m).odds;
             CHECK(std::accumulate(odds.begin(), odds.end(), 0.0) == doctest::Approx(1.0));
@@ -77,17 +78,17 @@ TEST_CASE("the forecast arrives when the weather's hold runs out, and a new one 
 TEST_CASE("the temperature eases towards what the weather and month bring")
 {
     ParkState s;
-    s.climate = static_cast<std::int32_t>(Climate::Desert);
+    s.climate = static_cast<i32>(Climate::Desert);
     s.weather = save::model::WeatherType::Sunny;
     s.forecast = save::model::WeatherType::Sunny;
     s.weather_hold = 1e6f;
     s.temperature = units::Degrees { 0 };
     auto dice = random::seeded({ 1 });
-    const float goal = weather_temperature(s.climate, 0, save::model::WeatherType::Sunny).value;
+    const f32 goal = weather_temperature(s.climate, 0, save::model::WeatherType::Sunny).value;
     advance_weather(s, 1, dice, false);
     CHECK(s.temperature->value > 0);
     CHECK(s.temperature->value < goal);
-    for (std::int32_t i = 0; i < 1000; ++i)
+    for (i32 i = 0; i < 1000; ++i)
         advance_weather(s, 1, dice, false);
     CHECK(s.temperature->value == doctest::Approx(goal));
     CHECK(s.wind >= 0);
@@ -112,8 +113,8 @@ TEST_CASE("frozen weather stays as it is")
 
 TEST_CASE("career scenarios are given a climate from their setting")
 {
-    CHECK(career_climate("ValleyofKings") == static_cast<std::int32_t>(Climate::Desert));
-    CHECK(career_climate("IslandHopping") == static_cast<std::int32_t>(Climate::TropicalIsland));
+    CHECK(career_climate("ValleyofKings") == static_cast<i32>(Climate::Desert));
+    CHECK(career_climate("IslandHopping") == static_cast<i32>(Climate::TropicalIsland));
     CHECK_FALSE(career_climate("NoSuchPark"));
     CHECK_FALSE(career_climate("Atlantis")); // An expansion's park names its own
 }

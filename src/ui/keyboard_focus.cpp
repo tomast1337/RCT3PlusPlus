@@ -2,6 +2,7 @@
 #include "ui/keyboard_focus.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 
 #include <algorithm>
 #include <vector>
@@ -43,8 +44,8 @@ namespace rct3::ui
         const auto it = std::ranges::find(order, core::as_pointer(current));
         if (it == order.end())
             return backwards ? *order.back() : *order.front();
-        const auto at = static_cast<std::size_t>(it - order.begin());
-        const std::size_t n = order.size();
+        const auto at = static_cast<usize>(it - order.begin());
+        const usize n = order.size();
         return *order[backwards ? (at + n - 1) % n : (at + 1) % n];
     }
 
@@ -63,15 +64,15 @@ namespace rct3::ui
         if (visible)
         {
             const Rect& r = w.rect();
-            const float o = style.outset;
-            const float t = style.thickness;
+            const f32 o = style.outset;
+            const f32 t = style.thickness;
             const Rect outer { r.x0 - o, r.y0 - o, r.x1 + o, r.y1 + o };
             list.fill({ outer.x0, outer.y0, outer.x1, outer.y0 + t }, style.colour);
             list.fill({ outer.x0, outer.y1 - t, outer.x1, outer.y1 }, style.colour);
             list.fill({ outer.x0, outer.y0 + t, outer.x0 + t, outer.y1 - t }, style.colour);
             list.fill({ outer.x1 - t, outer.y0 + t, outer.x1, outer.y1 - t }, style.colour);
         }
-        for (std::size_t i = 0; i < clipping.size(); ++i)
+        for (usize i = 0; i < clipping.size(); ++i)
             list.pop_clip();
     }
 

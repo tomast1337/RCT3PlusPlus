@@ -4,6 +4,7 @@
 // flexi textures.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 
 #include <array>
@@ -20,24 +21,24 @@ namespace rct3::ovl::texture
     {
         /// Where the node lives. A flic item has the same address: the node is the start of that flic's
         /// record, which is how a texture finds its pixels.
-        std::uint32_t address = 0;
-        std::uint32_t first = 0;  ///< 0 in all files seen
-        std::uint32_t second = 0; ///< 1 for nearly all textures, up to 32 for a few
-        float scale = 0;          ///< 1 for nearly all textures, 30 for one
+        u32 address = 0;
+        u32 first = 0;  ///< 0 in all files seen
+        u32 second = 0; ///< 1 for nearly all textures, up to 32 for a few
+        f32 scale = 0;  ///< 1 for nearly all textures, 30 for one
     };
 
     struct Texture
     {
         /// Sixteen 16-bit values at the start of the record, 7 in every file seen. Purpose not confirmed.
-        std::array<std::uint16_t, 16> table { };
+        std::array<u16, 16> table { };
         /// Three words after the table: {0 or 1 or 2, 4 or 8 or 12, 0 or 13 or 16}. The first equals `first`
         /// and the second is 4 + 4 * `first` in every file seen (so they hold no extra information). The
         /// third is 0 for plain textures, 13 for water and cube-map textures and 16 for most others; its use
         /// is not confirmed.
-        std::array<std::uint32_t, 3> parameters { };
+        std::array<u32, 3> parameters { };
         std::string_view style;          ///< Texture style name without the tag. Empty when not referenced.
-        std::uint16_t first = 0;         ///< 0, 1 or 2. Nonzero exactly when the texture has a `node`
-        std::uint16_t count = 0;         ///< 0, 1 or 2 in shipped files
+        u16 first = 0;                   ///< 0, 1 or 2. Nonzero exactly when the texture has a `node`
+        u16 count = 0;                   ///< 0, 1 or 2 in shipped files
         std::optional<TextureNode> node; ///< Absent in the few textures whose `parameters[1]` is 4
     };
 

@@ -3,6 +3,8 @@
 // Logging checks. The console is switched off in every test; output goes to the ring or to a temp directory.
 #include "logging/log.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -18,7 +20,7 @@ using namespace rct3::logging;
 namespace
 {
 
-    Config quiet(std::size_t capacity = 4)
+    Config quiet(usize capacity = 4)
     {
         Config c;
         c.console_enabled = false;
@@ -49,7 +51,7 @@ TEST_CASE("the ring keeps only the newest entries, oldest first")
 {
     Log log(quiet(3));
     const auto l = log.for_category("ring");
-    for (std::int32_t i = 1; i <= 7; ++i)
+    for (i32 i = 1; i <= 7; ++i)
         l.info("m{}", i);
     const auto entries = log.recent_entries();
     REQUIRE(entries.size() == 3);
@@ -82,7 +84,7 @@ TEST_CASE("a reader that falls behind the ring sees what is left")
     const auto l = log.for_category("slow");
     l.info("1");
     const auto cursor = log.latest_sequence();
-    for (std::int32_t i = 0; i < 5; ++i)
+    for (i32 i = 0; i < 5; ++i)
         l.info("x{}", i);
     const auto fresh = log.entries_since(cursor);
     CHECK(fresh.size() == 2);
@@ -191,7 +193,7 @@ TEST_CASE("a log file is written and write_recent dumps the ring")
         log.for_category("file").info("hello {}", 1);
         REQUIRE(log.write_recent(dir / "recent" / "ring.txt").has_value());
     }
-    std::size_t files = 0;
+    usize files = 0;
     std::string text;
     for (const auto& e : std::filesystem::directory_iterator(dir / "logs"))
     {
@@ -225,10 +227,10 @@ TEST_CASE("concurrent writers keep sequences unique")
     Log log(quiet(400));
     const auto l = log.for_category("mt");
     std::vector<std::thread> threads;
-    for (std::int32_t t = 0; t < 4; ++t)
+    for (i32 t = 0; t < 4; ++t)
     {
         threads.emplace_back([&l] {
-            for (std::int32_t i = 0; i < 100; ++i)
+            for (i32 i = 0; i < 100; ++i)
                 l.info("{}", i);
         });
     }
@@ -236,7 +238,7 @@ TEST_CASE("concurrent writers keep sequences unique")
         t.join();
     const auto entries = log.recent_entries();
     REQUIRE(entries.size() == 400);
-    for (std::size_t i = 0; i < entries.size(); ++i)
+    for (usize i = 0; i < entries.size(); ++i)
         CHECK(entries[i].sequence == i + 1);
 }
 

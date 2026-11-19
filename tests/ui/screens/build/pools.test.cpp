@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/build/pools.hpp"
 
+#include "core/types.hpp"
 #include "ui/desktop.hpp"
 #include "ui/game_style.hpp"
 
@@ -74,11 +75,11 @@ TEST_CASE("the paths tab puts paths out, its controls pressed one at a time, and
     CHECK(f.panel->editor().mode == PoolMode::Path);
     (void)f.panel->take_change();
     f.click("pools/body/paths/Path_UpwardSteps");
-    CHECK(f.panel->take_path_control() == std::size_t { 7 });
+    CHECK(f.panel->take_path_control() == usize { 7 });
     CHECK_FALSE(f.panel->take_path_control());
     CHECK(f.panel->take_change());
     f.click("pools/body/paths/Path_Straight");
-    CHECK(f.panel->take_path_control() == std::size_t { 1 });
+    CHECK(f.panel->take_path_control() == usize { 1 });
     CHECK_FALSE(f.panel->take_change());
     f.click("pools/Pool_PoolPanel");
     CHECK(f.panel->editor().mode == PoolMode::Water);

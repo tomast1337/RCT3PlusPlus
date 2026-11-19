@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/park_view/top_bar.hpp"
 
+#include "core/types.hpp"
 #include "strings/unicode.hpp"
 #include "ui/save_text.hpp"
 #include "ui/temperature_text.hpp"
@@ -28,40 +29,40 @@ namespace rct3::ui::screens::park_view
         constexpr std::array<std::string_view, 7> kWeatherHelp = { "WeatherType_Sunny_TT", "WeatherType_SunnyCloudy_TT", "WeatherType_Cloudy_TT", "WeatherType_LightRain_TT", "WeatherType_HeavyRain_TT", "WeatherType_Thunderstorm_TT", "WeatherType_Snowstorm_TT" };
 
         // Where things sit in the bar, left to right: each item's size and the room before it.
-        constexpr float kStart = 5;  ///< Before the first item of each part
-        constexpr float kWide = 5;   ///< Between buttons and groups
-        constexpr float kNarrow = 2; ///< Between readouts
-        constexpr float kSmallIcon = 16;
-        constexpr std::array<float, 4> kSpeedWidths = { 8, 8, 13, 17 };
-        constexpr float kSpeedHeight = 13;
-        constexpr float kMoneyWidth = 100;
-        constexpr float kNarrowMoneyWidth = 90; ///< While the day mode button shows
+        constexpr f32 kStart = 5;  ///< Before the first item of each part
+        constexpr f32 kWide = 5;   ///< Between buttons and groups
+        constexpr f32 kNarrow = 2; ///< Between readouts
+        constexpr f32 kSmallIcon = 16;
+        constexpr std::array<f32, 4> kSpeedWidths = { 8, 8, 13, 17 };
+        constexpr f32 kSpeedHeight = 13;
+        constexpr f32 kMoneyWidth = 100;
+        constexpr f32 kNarrowMoneyWidth = 90; ///< While the day mode button shows
         /// The arrow before the money, out of its width. Chosen by eye: square, as tall as the money's figures.
-        constexpr float kTrendWidth = 9;
-        constexpr float kTrendHeight = 9;
-        constexpr float kArcRadius = 24;                ///< From the day mode button's middle to each mode's
+        constexpr f32 kTrendWidth = 9;
+        constexpr f32 kTrendHeight = 9;
+        constexpr f32 kArcRadius = 24;                  ///< From the day mode button's middle to each mode's
         constexpr units::Radians kArcSpread { 0.8f };   ///< Between neighbouring modes in the arc
         constexpr units::Seconds kDoubleClick { 0.4f }; ///< A second click on the money this soon counts
-        constexpr float kGuestsWidth = 40;
-        constexpr float kThumbWidth = 12;
-        constexpr float kThumbHeight = 15;
-        constexpr float kRatingWidth = 25;
-        constexpr float kRatingHeight = 10;
-        constexpr float kTemperatureWidth = 35;
-        constexpr float kWeatherSize = 20;
-        constexpr float kArrowWidth = 9;
-        constexpr float kDateWidth = 210;
-        constexpr float kEndGap = 7; ///< After the highlights button, at the bar's right end
-        constexpr float kRightStart = park_bar::kLeftWidth + park_bar::kDividerWidth;
+        constexpr f32 kGuestsWidth = 40;
+        constexpr f32 kThumbWidth = 12;
+        constexpr f32 kThumbHeight = 15;
+        constexpr f32 kRatingWidth = 25;
+        constexpr f32 kRatingHeight = 10;
+        constexpr f32 kTemperatureWidth = 35;
+        constexpr f32 kWeatherSize = 20;
+        constexpr f32 kArrowWidth = 9;
+        constexpr f32 kDateWidth = 210;
+        constexpr f32 kEndGap = 7; ///< After the highlights button, at the bar's right end
+        constexpr f32 kRightStart = park_bar::kLeftWidth + park_bar::kDividerWidth;
 
         /// Top of an item `height` tall centred above the frame's lower edge.
-        float centred_top(float height)
+        f32 centred_top(f32 height)
         {
             return std::round((park_bar::kHeight - park_bar::kLowerEdge - height) / 2);
         }
 
         /// Places `w` at `x`, centred up and down, and returns where the next item may start.
-        float put(Widget& w, float x, float width, float height)
+        f32 put(Widget& w, f32 x, f32 width, f32 height)
         {
             w.placement = top_left(x, centred_top(height), width, height);
             return x + width;
@@ -72,21 +73,21 @@ namespace rct3::ui::screens::park_view
             return strings::to_utf16(s);
         }
 
-        std::size_t weather_index(save::model::WeatherType t)
+        usize weather_index(save::model::WeatherType t)
         {
-            const auto i = static_cast<std::int32_t>(t);
-            return i >= 0 && i < 7 ? static_cast<std::size_t>(i) : 0;
+            const auto i = static_cast<i32>(t);
+            return i >= 0 && i < 7 ? static_cast<usize>(i) : 0;
         }
 
-        Color mixed(Color a, Color b, float t)
+        Color mixed(Color a, Color b, f32 t)
         {
-            const auto mix = [t](std::uint8_t x, std::uint8_t y) { return static_cast<std::uint8_t>(std::lround(x + (y - x) * t)); };
+            const auto mix = [t](u8 x, u8 y) { return static_cast<u8>(std::lround(x + (y - x) * t)); };
             return { mix(a.r, b.r), mix(a.g, b.g), mix(a.b, b.b), mix(a.a, b.a) };
         }
 
     } // namespace
 
-    std::u16string park_bar_date(const StringTable& strings, std::int32_t month, std::int64_t year, std::int32_t minutes, bool twelve_hour)
+    std::u16string park_bar_date(const StringTable& strings, i32 month, i64 year, i32 minutes, bool twelve_hour)
     {
         std::u16string out(strings.get(std::format("{}{}", kMonth, month)));
         out += u", ";
@@ -96,7 +97,7 @@ namespace rct3::ui::screens::park_view
         return out;
     }
 
-    std::u16string park_rating_help(const StringTable& strings, float rating, const std::optional<simulation::park::RatingParts>& parts)
+    std::u16string park_rating_help(const StringTable& strings, f32 rating, const std::optional<simulation::park::RatingParts>& parts)
     {
         std::u16string out(strings.get(kRatingHelp));
         out += ascii(std::format(" {}", std::lround(rating * simulation::park::kMaxRating)));
@@ -104,7 +105,7 @@ namespace rct3::ui::screens::park_view
             return out;
         for (const RatingLine& line : kRatingLines)
         {
-            const std::int32_t value = (*parts).*line.part;
+            const i32 value = (*parts).*line.part;
             if (!line.always && value == 0)
                 continue;
             out += u'\n';
@@ -117,7 +118,7 @@ namespace rct3::ui::screens::park_view
         return out;
     }
 
-    ParkBarValues park_bar_values(const simulation::park::ParkState& state, float day_time, const StringTable& strings, const ParkBarUnits& units, std::optional<std::int64_t> last_month_profit)
+    ParkBarValues park_bar_values(const simulation::park::ParkState& state, f32 day_time, const StringTable& strings, const ParkBarUnits& units, std::optional<i64> last_month_profit)
     {
         ParkBarValues v;
         v.speed = state.speed;
@@ -136,7 +137,7 @@ namespace rct3::ui::screens::park_view
             v.temperature = temperature_text(state.temperature->value, units.fahrenheit);
         v.weather = state.weather;
         v.forecast = state.forecast;
-        const auto minutes = static_cast<std::int32_t>(std::lround(day_time * save::model::kMinutesPerDay));
+        const auto minutes = static_cast<i32>(std::lround(day_time * save::model::kMinutesPerDay));
         v.date = park_bar_date(strings, state.date.month, state.date.year + 1, minutes, units.twelve_hour);
         return v;
     }
@@ -162,22 +163,22 @@ namespace rct3::ui::screens::park_view
         day_mode_->visible = false;
         // The modes open in an arc below the button, from Day on the left round to Night on the right.
         constexpr std::array<std::string_view, 3> kChoiceNames = { "park_hours", "day", "night" };
-        constexpr std::array<float, 3> kChoiceAngles = { 0, -kArcSpread.value, kArcSpread.value };
-        for (std::size_t i = 0; i < day_choices_.size(); ++i)
+        constexpr std::array<f32, 3> kChoiceAngles = { 0, -kArcSpread.value, kArcSpread.value };
+        for (usize i = 0; i < day_choices_.size(); ++i)
         {
             day_choices_[i] = &day_mode_->add<widgets::Button>(std::string(kChoiceNames[i]), std::string { }, style_.day_mode_icons[i]);
             day_choices_[i]->visible = false;
-            const float middle = kSmallIcon / 2;
-            const float x = std::round(middle + kArcRadius * std::sin(kChoiceAngles[i]));
-            const float y = std::round(middle + kArcRadius * std::cos(kChoiceAngles[i]));
+            const f32 middle = kSmallIcon / 2;
+            const f32 x = std::round(middle + kArcRadius * std::sin(kChoiceAngles[i]));
+            const f32 y = std::round(middle + kArcRadius * std::cos(kChoiceAngles[i]));
             day_choices_[i]->placement = top_left(x - middle, y - middle, kSmallIcon, kSmallIcon);
         }
-        for (std::size_t i = 0; i < speeds_.size(); ++i)
+        for (usize i = 0; i < speeds_.size(); ++i)
         {
             speeds_[i] = &add<widgets::Button>(style_.speed_icons[i], std::string { }, style_.speed_icons[i]);
             speeds_[i]->tooltip = strings_.get(kSpeedHelp[i]);
         }
-        for (std::size_t i = 0; i < money_trend_.size(); ++i)
+        for (usize i = 0; i < money_trend_.size(); ++i)
         {
             money_trend_[i] = &add<widgets::Panel>(i == 0 ? "money_rose" : "money_fell", style_.money_trend_icons[i]);
             money_trend_[i]->visible = false;
@@ -191,7 +192,7 @@ namespace rct3::ui::screens::park_view
         thumb_up_ = &add<widgets::Panel>("thumb_up", style_.thumb_up);
         place_left();
 
-        float x = kRightStart;
+        f32 x = kRightStart;
         temperature_ = &label("temperature", Align::Centre);
         x = put(*temperature_, x, kTemperatureWidth, park_bar::kHeight - park_bar::kLowerEdge);
         weather_ = &add<widgets::Panel>("weather", std::string { });
@@ -216,10 +217,10 @@ namespace rct3::ui::screens::park_view
     void ParkBar::place_left()
     {
         const bool day = day_mode_->visible;
-        float x = put(*objective_, kStart, kSmallIcon, kSmallIcon);
+        f32 x = put(*objective_, kStart, kSmallIcon, kSmallIcon);
         // Hidden, the day mode button takes no room.
         x = put(*day_mode_, day ? x + kWide : x, day ? kSmallIcon : 0, kSmallIcon);
-        for (std::size_t i = 0; i < speeds_.size(); ++i)
+        for (usize i = 0; i < speeds_.size(); ++i)
             x = put(*speeds_[i], x + kWide, kSpeedWidths[i], kSpeedHeight);
         for (widgets::Panel* trend : money_trend_)
             put(*trend, x + kNarrow, kTrendWidth, kTrendHeight);
@@ -241,7 +242,7 @@ namespace rct3::ui::screens::park_view
             place_left();
         }
         if (day)
-            day_mode_->icon = style_.day_mode_icons[static_cast<std::size_t>(*values.day_mode)];
+            day_mode_->icon = style_.day_mode_icons[static_cast<usize>(*values.day_mode)];
         speed_ = values.speed;
         show_speed();
         money_->text = values.money;
@@ -275,8 +276,8 @@ namespace rct3::ui::screens::park_view
     void ParkBar::show_speed()
     {
         // The pause button shows picked while paused; otherwise the button of the speed playing does.
-        const std::size_t picked = speed_.paused ? 0 : 1 + static_cast<std::size_t>(speed_.speed);
-        for (std::size_t i = 0; i < speeds_.size(); ++i)
+        const usize picked = speed_.paused ? 0 : 1 + static_cast<usize>(speed_.speed);
+        for (usize i = 0; i < speeds_.size(); ++i)
         {
             const std::string& selected = style_.picked_speed_icons[i];
             speeds_[i]->icon = i == picked && !selected.empty() ? selected : style_.speed_icons[i];
@@ -286,8 +287,8 @@ namespace rct3::ui::screens::park_view
     bool ParkBar::covers(Point p) const
     {
         const Rect r = rect();
-        const float dx = p.x - (r.x0 + park_bar::kLeftWidth + park_bar::kDividerWidth / 2);
-        const float dy = p.y - r.y1;
+        const f32 dx = p.x - (r.x0 + park_bar::kLeftWidth + park_bar::kDividerWidth / 2);
+        const f32 dy = p.y - r.y1;
         return dx * dx + dy * dy > park_bar::kNotchRadius * park_bar::kNotchRadius;
     }
 
@@ -299,7 +300,7 @@ namespace rct3::ui::screens::park_view
             for (widgets::Button* b : day_choices_)
                 b->visible = open;
         }
-        for (std::size_t i = 0; i < day_choices_.size(); ++i)
+        for (usize i = 0; i < day_choices_.size(); ++i)
         {
             if (!day_choices_[i]->take_click())
                 continue;
@@ -323,7 +324,7 @@ namespace rct3::ui::screens::park_view
         const simulation::GameSpeed from = asked_.value_or(speed_);
         if (speeds_[0]->take_click())
             asked_ = simulation::pause_toggled(from);
-        for (std::size_t i = 1; i < speeds_.size(); ++i)
+        for (usize i = 1; i < speeds_.size(); ++i)
         {
             if (speeds_[i]->take_click())
                 asked_ = simulation::playing(from, static_cast<simulation::Speed>(i - 1));
@@ -333,7 +334,7 @@ namespace rct3::ui::screens::park_view
     void ParkBar::draw(DrawContext& context) const
     {
         const Rect r = rect();
-        const float divider_end = r.x0 + kRightStart;
+        const f32 divider_end = r.x0 + kRightStart;
         skin::draw_skin(context.list, context.skins.find(style_.left_frame), { r.x0, r.y0, r.x0 + park_bar::kLeftWidth, r.y1 });
         skin::draw_skin(context.list, context.skins.find(style_.divider), { r.x0 + park_bar::kLeftWidth, r.y0, divider_end, r.y1 });
         skin::draw_skin(context.list, context.skins.find(style_.right_frame), { divider_end, r.y0, r.x1, r.y1 });
@@ -341,7 +342,7 @@ namespace rct3::ui::screens::park_view
         if (!rating_)
             return;
         // The rating fills its bar from the left, its colour going from low to high with it.
-        const float t = std::clamp(*rating_, 0.0f, 1.0f);
+        const f32 t = std::clamp(*rating_, 0.0f, 1.0f);
         const Rect bar = rating_area_->rect();
         context.list.fill(bar, style_.rating_back);
         context.list.fill({ bar.x0, bar.y0, bar.x0 + std::round(bar.width() * t), bar.y1 }, mixed(style_.rating_low, style_.rating_high, t));

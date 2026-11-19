@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "park/mountain_mesh.hpp"
 
+#include "core/types.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <format>
@@ -8,10 +10,10 @@
 namespace rct3::park
 {
 
-    std::string_view background_theme(std::optional<std::int32_t> stored)
+    std::string_view background_theme(std::optional<i32> stored)
     {
-        if (stored && *stored >= 0 && static_cast<std::size_t>(*stored) < kBackgroundThemes.size())
-            return kBackgroundThemes[static_cast<std::size_t>(*stored)];
+        if (stored && *stored >= 0 && static_cast<usize>(*stored) < kBackgroundThemes.size())
+            return kBackgroundThemes[static_cast<usize>(*stored)];
         return kBackgroundThemes[kDefaultBackground];
     }
 
@@ -24,32 +26,32 @@ namespace rct3::park
     MountainPlace mountain_place(const save::model::TerrainGrid& grid, std::string_view theme)
     {
         const auto at = std::ranges::find(kBackgroundThemes, theme);
-        const float drop = at != kBackgroundThemes.end() ? kMountainDrop[static_cast<std::size_t>(at - kBackgroundThemes.begin())] : 0.0f;
+        const f32 drop = at != kBackgroundThemes.end() ? kMountainDrop[static_cast<usize>(at - kBackgroundThemes.begin())] : 0.0f;
         return { { (grid.world_x(0) + grid.world_x(grid.width)) / 2, -drop, (grid.world_z(0) + grid.world_z(grid.height)) / 2 }, kMountainScale };
     }
 
     object::ObjectMesh mountain_mesh(const MountainShapes& shapes, const MountainPlace& place)
     {
         object::ObjectMesh mesh;
-        const float scale = place.scale;
+        const f32 scale = place.scale;
         for (const sky::SkyShape& shape : shapes)
         {
             if (shape.vertices.empty() || shape.indices.empty())
                 continue;
-            const auto base = static_cast<std::uint32_t>(mesh.vertices.size());
+            const auto base = static_cast<u32>(mesh.vertices.size());
             for (const object::ModelVertex& v : shape.vertices)
                 mesh.vertices.push_back({ place.centre + v.position * scale, glm::vec4(1.0f), v.uv });
             object::ObjectBatch batch;
             batch.texture = shape.texture;
             batch.picture = shape.texture;
             batch.blend = object::PartBlend::Cutout;
-            batch.first = static_cast<std::uint32_t>(mesh.indices.size());
-            for (const std::uint32_t i : shape.indices)
+            batch.first = static_cast<u32>(mesh.indices.size());
+            for (const u32 i : shape.indices)
             {
                 if (i < shape.vertices.size())
                     mesh.indices.push_back(base + i);
             }
-            batch.count = static_cast<std::uint32_t>(mesh.indices.size()) - batch.first;
+            batch.count = static_cast<u32>(mesh.indices.size()) - batch.first;
             mesh.batches.push_back(std::move(batch));
         }
         mesh.drawn = mesh.batches.empty() ? 0 : 1;

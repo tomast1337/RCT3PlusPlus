@@ -2,6 +2,7 @@
 #include "park/track/pieces.hpp"
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/ovl.hpp"
 #include "ovl/scenery_item.hpp"
@@ -28,34 +29,34 @@ namespace rct3::park::track
 
     namespace
     {
-        constexpr float kDegrees = 180.0f / std::numbers::pi_v<float>;
-        constexpr float kStepDegrees = 45.0f; ///< Of a bank or heading step
+        constexpr f32 kDegrees = 180.0f / std::numbers::pi_v<f32>;
+        constexpr f32 kStepDegrees = 45.0f; ///< Of a bank or heading step
         /// Steepest pitch, in degrees, of each slope step: level pieces are built a little out of true, a
         /// gentle slope rises about 27 degrees (20 across a diagonal), a steep one about 63 (54 across).
-        constexpr std::array<float, kSlopeSteps> kSlopeLimits { 8, 40, 75 };
+        constexpr std::array<f32, kSlopeSteps> kSlopeLimits { 8, 40, 75 };
         /// Ends steeper than this point straight up or down; their heading comes from the rails instead.
-        constexpr float kUpright = 0.97f;
+        constexpr f32 kUpright = 0.97f;
         /// Ends meet when this close, in park units: the pieces' splines join to well within it.
-        constexpr float kMeet = 0.1f;
+        constexpr f32 kMeet = 0.1f;
 
         // The curve pair: 1 to 3 on one side and 4 to 6 on the other for curves of one of three sizes, 0 for
         // pieces that do not turn, 7 for the rest.
-        constexpr std::uint32_t kLastCurveJoin = 6;
+        constexpr u32 kLastCurveJoin = 6;
 
         /// `steps` wrapped to -3..4, upside down being 4.
-        std::int32_t wrap_bank(std::int32_t steps)
+        i32 wrap_bank(i32 steps)
         {
-            const std::int32_t wrapped = ((steps + kBankSteps) & 7) - kBankSteps; // Eight steps round a whole turn
+            const i32 wrapped = ((steps + kBankSteps) & 7) - kBankSteps; // Eight steps round a whole turn
             return wrapped == -kBankSteps ? kUpsideDown : wrapped;
         }
 
-        std::int32_t slope_steps(float pitch)
+        i32 slope_steps(f32 pitch)
         {
-            const float a = std::abs(pitch);
-            std::int32_t steps = kSlopeSteps;
-            for (std::int32_t i = 0; i < kSlopeSteps; ++i)
+            const f32 a = std::abs(pitch);
+            i32 steps = kSlopeSteps;
+            for (i32 i = 0; i < kSlopeSteps; ++i)
             {
-                if (a < kSlopeLimits.at(static_cast<std::size_t>(i)))
+                if (a < kSlopeLimits.at(static_cast<usize>(i)))
                 {
                     steps = i;
                     break;
@@ -66,7 +67,7 @@ namespace rct3::park::track
 
         Heading8 heading_steps(const glm::vec3& flat)
         {
-            return Heading8::from(static_cast<std::int32_t>(std::lround(std::atan2(flat.z, -flat.x) * kDegrees / kStepDegrees)));
+            return Heading8::from(static_cast<i32>(std::lround(std::atan2(flat.z, -flat.x) * kDegrees / kStepDegrees)));
         }
 
         /// How plain a piece is: fewer flags first, then the shorter name.
@@ -82,7 +83,7 @@ namespace rct3::park::track
             return { x.x * v.x + z.x * v.z, v.y, x.y * v.x + z.y * v.z };
         }
 
-        glm::vec3 vec(const std::array<float, 3>& a)
+        glm::vec3 vec(const std::array<f32, 3>& a)
         {
             return { a[0], a[1], a[2] };
         }
@@ -107,7 +108,7 @@ namespace rct3::park::track
         line.end = middle(l.back(), r.back());
         line.start_direction = vec(l.front().tangent_out) + vec(r.front().tangent_out);
         line.end_direction = -(vec(l.back().tangent_in) + vec(r.back().tangent_in));
-        constexpr float kNone = 1e-6f;
+        constexpr f32 kNone = 1e-6f;
         if (glm::length(line.start_direction) < kNone)
             line.start_direction = middle(l[1], r[1]) - line.start;
         if (glm::length(line.end_direction) < kNone)
@@ -126,45 +127,45 @@ namespace rct3::park::track
         struct Walked
         {
             std::vector<glm::vec3> points { };
-            std::vector<float> lengths { }; ///< From the rail's start to each point
+            std::vector<f32> lengths { }; ///< From the rail's start to each point
         };
         const auto marked = [](const ovl::Spline& rail) { return rail.length > 0 && rail.segment_parameters.size() == rail.nodes.size() - 1 && rail.segment_lengths.size() == rail.nodes.size() - 1; };
         const auto walk = [&](const ovl::Spline& rail) {
-            constexpr std::size_t kFine = 64; ///< Chords per part, so a chord's sag is a fraction of a millimetre
+            constexpr usize kFine = 64; ///< Chords per part, so a chord's sag is a fraction of a millimetre
             Walked w { .points = { vec(rail.nodes.front().position) }, .lengths = { 0 } };
-            for (std::size_t part = 0; !marked(rail) && part + 1 < rail.nodes.size(); ++part)
-                for (std::size_t i = 1; i <= kFine; ++i)
+            for (usize part = 0; !marked(rail) && part + 1 < rail.nodes.size(); ++part)
+                for (usize i = 1; i <= kFine; ++i)
                 {
-                    w.points.push_back(vec(ovl::spline_point(rail, part, static_cast<float>(i) / kFine)));
+                    w.points.push_back(vec(ovl::spline_point(rail, part, static_cast<f32>(i) / kFine)));
                     w.lengths.push_back(w.lengths.back() + glm::distance(w.points[w.points.size() - 2], w.points.back()));
                 }
             return w;
         };
-        const auto rail_at = [&](const ovl::Spline& rail, const Walked& walked, float share) {
+        const auto rail_at = [&](const ovl::Spline& rail, const Walked& walked, f32 share) {
             if (marked(rail))
             {
-                float along = share * rail.length;
-                std::size_t part = 0;
+                f32 along = share * rail.length;
+                usize part = 0;
                 while (part + 1 < rail.segment_lengths.size() && along > rail.segment_lengths[part])
                     along -= rail.segment_lengths[part++];
-                constexpr auto kSpans = static_cast<float>(ovl::kLengthMarks + 1); // Between the part's ends and its marks
-                const float mark = std::clamp(rail.segment_lengths[part] > 0 ? along / rail.segment_lengths[part] : 0.0f, 0.0f, 1.0f) * kSpans;
-                const auto parameter = [&](std::size_t m) { return m == 0 ? 0.0f : m > ovl::kLengthMarks ? 1.0f : static_cast<float>(rail.segment_parameters[part][m - 1]) / 255.0f; };
-                const std::size_t below = std::min(static_cast<std::size_t>(mark), ovl::kLengthMarks);
-                return vec(ovl::spline_point(rail, part, glm::mix(parameter(below), parameter(below + 1), mark - static_cast<float>(below))));
+                constexpr auto kSpans = static_cast<f32>(ovl::kLengthMarks + 1); // Between the part's ends and its marks
+                const f32 mark = std::clamp(rail.segment_lengths[part] > 0 ? along / rail.segment_lengths[part] : 0.0f, 0.0f, 1.0f) * kSpans;
+                const auto parameter = [&](usize m) { return m == 0 ? 0.0f : m > ovl::kLengthMarks ? 1.0f : static_cast<f32>(rail.segment_parameters[part][m - 1]) / 255.0f; };
+                const usize below = std::min(static_cast<usize>(mark), ovl::kLengthMarks);
+                return vec(ovl::spline_point(rail, part, glm::mix(parameter(below), parameter(below + 1), mark - static_cast<f32>(below))));
             }
-            const float along = share * walked.lengths.back();
-            const std::size_t i = std::clamp<std::size_t>(static_cast<std::size_t>(std::ranges::upper_bound(walked.lengths, along) - walked.lengths.begin()), 1, walked.lengths.size() - 1);
-            const float chord = walked.lengths[i] - walked.lengths[i - 1];
+            const f32 along = share * walked.lengths.back();
+            const usize i = std::clamp<usize>(static_cast<usize>(std::ranges::upper_bound(walked.lengths, along) - walked.lengths.begin()), 1, walked.lengths.size() - 1);
+            const f32 chord = walked.lengths[i] - walked.lengths[i - 1];
             return glm::mix(walked.points[i - 1], walked.points[i], chord > 0 ? (along - walked.lengths[i - 1]) / chord : 0.0f);
         };
         const Walked walked_left = walk(left);
         const Walked walked_right = walk(right);
-        constexpr std::size_t kPerPart = 8;
-        const std::size_t steps = (std::max(l.size(), r.size()) - 1) * kPerPart;
-        for (std::size_t k = 0; k < steps; ++k)
+        constexpr usize kPerPart = 8;
+        const usize steps = (std::max(l.size(), r.size()) - 1) * kPerPart;
+        for (usize k = 0; k < steps; ++k)
         {
-            const float share = static_cast<float>(k) / static_cast<float>(steps);
+            const f32 share = static_cast<f32>(k) / static_cast<f32>(steps);
             const glm::vec3 a = rail_at(left, walked_left, share);
             const glm::vec3 b = rail_at(right, walked_right, share);
             line.path.push_back((a + b) / 2.0f);
@@ -173,7 +174,7 @@ namespace rct3::park::track
         line.path.push_back(line.end);
         sides.push_back(line.end_side);
         // Up is square to the way the track runs and to the line across its rails.
-        for (std::size_t k = 0; k < line.path.size(); ++k)
+        for (usize k = 0; k < line.path.size(); ++k)
         {
             const glm::vec3 way = k == 0 ? line.start_direction : k + 1 == line.path.size() ? line.end_direction : line.path[k + 1] - line.path[k - 1];
             line.ups.push_back(glm::normalize(glm::cross(glm::normalize(way), glm::normalize(sides[k]))));
@@ -209,7 +210,7 @@ namespace rct3::park::track
     std::vector<std::filesystem::path> piece_files_beside(const std::filesystem::path& file)
     {
         constexpr std::string_view kCommon = ".common.ovl";
-        constexpr std::size_t kHeaderBytes = 64 * 1024; ///< Ample for an OVL header and its loader table
+        constexpr usize kHeaderBytes = 64 * 1024; ///< Ample for an OVL header and its loader table
         std::vector<std::filesystem::path> beside;
         std::error_code error;
         for (auto it = std::filesystem::directory_iterator(file.parent_path(), error); !error && it != std::filesystem::directory_iterator(); it.increment(error))
@@ -220,7 +221,7 @@ namespace rct3::park::track
             std::ifstream in(it->path(), std::ios::binary);
             std::vector<char> head(kHeaderBytes);
             in.read(head.data(), static_cast<std::streamsize>(head.size()));
-            head.resize(static_cast<std::size_t>(in.gcount()));
+            head.resize(static_cast<usize>(in.gcount()));
             const auto header = ovl::parse_header(std::as_bytes(std::span(head)));
             if (header && std::ranges::any_of(header->loaders, [](const ovl::Loader& l) { return l.tag == "tks"; }))
                 beside.push_back(it->path());
@@ -238,7 +239,7 @@ namespace rct3::park::track
         {
             if (slide.empty())
                 continue;
-            const auto stub = std::ranges::min_element(paths, { }, [&](const std::vector<glm::vec3>& p) { return p.empty() ? std::numeric_limits<float>::max() : glm::distance(p.back(), slide.front()); });
+            const auto stub = std::ranges::min_element(paths, { }, [&](const std::vector<glm::vec3>& p) { return p.empty() ? std::numeric_limits<f32>::max() : glm::distance(p.back(), slide.front()); });
             const bool by_path = stub != paths.end() && !stub->empty();
             const glm::vec3 off = by_path ? stub->front() : slide.front();
             const auto cut = std::ranges::min_element(loop, { }, [&](const glm::vec3& p) { return glm::distance(p, off); });
@@ -306,12 +307,12 @@ namespace rct3::park::track
             r.join_b = section.join_b;
             r.flags = section.flags[0];
             r.role = section.role;
-            r.squares = { static_cast<std::int32_t>(item->second.x_squares), static_cast<std::int32_t>(item->second.z_squares) };
+            r.squares = { static_cast<i32>(item->second.x_squares), static_cast<i32>(item->second.z_squares) };
             r.positioning = static_cast<object::Positioning>(item->second.positioning);
             r.cost = item->second.cost;
-            for (std::size_t k = 0; k < r.colours.size(); ++k)
-                r.colours[k] = static_cast<std::uint8_t>(item->second.default_colours[k]);
-            const auto join = [&](std::string_view name, const ovl::JoinTags& tags, std::uint32_t width) {
+            for (usize k = 0; k < r.colours.size(); ++k)
+                r.colours[k] = static_cast<u8>(item->second.default_colours[k]);
+            const auto join = [&](std::string_view name, const ovl::JoinTags& tags, u32 width) {
                 const auto copied = [](const std::vector<std::string_view>& names) { return std::vector<std::string>(names.begin(), names.end()); };
                 return PieceJoin { std::string(name), copied(tags.offers), copied(tags.needs), copied(tags.forbids), width };
             };
@@ -332,7 +333,7 @@ namespace rct3::park::track
                     r.join_line = middle_line(join_left->second, join_right->second);
             }
             // Unturned, a model's +X faces the column before (faced_side), its +Z the row before.
-            constexpr std::array<std::pair<std::uint32_t, Side>, 4> kDrawnSides { { { 0x1, Side::kColBefore }, { 0x2, Side::kNextRow }, { 0x4, Side::kNextCol }, { 0x8, Side::kRowBefore } } };
+            constexpr std::array<std::pair<u32, Side>, 4> kDrawnSides { { { 0x1, Side::kColBefore }, { 0x2, Side::kNextRow }, { 0x4, Side::kNextCol }, { 0x8, Side::kRowBefore } } };
             for (const ovl::TrackSquare& q : section.squares)
                 if ((q.flags & (ovl::TrackSquare::kJoinsPool | ovl::TrackSquare::kOverPool)) != 0)
                     for (const auto& [bit, side] : kDrawnSides)
@@ -342,17 +343,17 @@ namespace rct3::park::track
             if (const auto loop = splines.find(std::format("{}Loop", t.name)); loop != splines.end())
             {
                 const auto points = [](const ovl::Spline& spline) {
-                    constexpr std::int32_t kPerPart = 4;
+                    constexpr i32 kPerPart = 4;
                     std::vector<glm::vec3> out;
-                    for (std::size_t i = 0; i + 1 < spline.nodes.size(); ++i)
-                        for (std::int32_t k = 0; k < kPerPart; ++k)
-                            out.push_back(vec(ovl::spline_point(spline, i, static_cast<float>(k) / kPerPart)));
+                    for (usize i = 0; i + 1 < spline.nodes.size(); ++i)
+                        for (i32 k = 0; k < kPerPart; ++k)
+                            out.push_back(vec(ovl::spline_point(spline, i, static_cast<f32>(k) / kPerPart)));
                     if (!spline.nodes.empty())
                         out.push_back(vec(spline.nodes.back().position));
                     return out;
                 };
                 std::vector<std::vector<glm::vec3>> paths;
-                for (std::int32_t n = 1;; ++n)
+                for (i32 n = 1;; ++n)
                 {
                     const auto path = splines.find(std::format("{}Path{:02}", t.name, n));
                     if (path == splines.end())
@@ -367,7 +368,7 @@ namespace rct3::park::track
         return PieceCatalogue { std::move(overlay), shape_pieces(records, lines) };
     }
 
-    float bank_degrees(const glm::vec3& direction, const glm::vec3& side)
+    f32 bank_degrees(const glm::vec3& direction, const glm::vec3& side)
     {
         const glm::vec3 forward = glm::normalize(direction);
         if (std::abs(forward.y) > kUpright)
@@ -382,7 +383,7 @@ namespace rct3::park::track
         const glm::vec3 forward = glm::normalize(direction);
         PieceEnd end;
         end.slope = slope_steps(std::atan2(forward.y, std::hypot(forward.x, forward.z)) * kDegrees);
-        end.bank = wrap_bank(static_cast<std::int32_t>(std::lround(bank_degrees(direction, side) / kStepDegrees)));
+        end.bank = wrap_bank(static_cast<i32>(std::lround(bank_degrees(direction, side) / kStepDegrees)));
         // Straight up or down, the track's way across the ground is the rails' level line turned back.
         const glm::vec3 flat = std::abs(forward.y) > kUpright ? glm::cross(side, glm::vec3 { 0, 1, 0 }) : forward;
         end.heading = heading_steps(flat);
@@ -397,7 +398,7 @@ namespace rct3::park::track
         // Where a lift car's rails run straight up the tower, so does the track joining there, though some rides'
         // joining rails end a little off true.
         const auto meeting_end = [&](glm::vec3 direction, const glm::vec3& side, const glm::vec3& rails) {
-            constexpr float kClimbing = 0.5f; ///< Steeper than this, chosen by eye: past a gentle slope
+            constexpr f32 kClimbing = 0.5f; ///< Steeper than this, chosen by eye: past a gentle slope
             const auto steepness = [](const glm::vec3& d) { return glm::normalize(d).y; };
             if (record.join_line && std::abs(steepness(rails)) > kUpright && std::abs(steepness(direction)) > kClimbing)
                 direction = { 0, direction.y > 0 ? 1 : -1, 0 };
@@ -412,8 +413,8 @@ namespace rct3::park::track
         }
         if (record.joins[1].width != 0)
             shape.toggles |= toggle_bit(PieceToggle::Wide);
-        const std::int32_t turn = shape.exit.heading.eighths_from(shape.entry.heading);
-        const std::uint32_t join = record.join_a;
+        const i32 turn = shape.exit.heading.eighths_from(shape.entry.heading);
+        const u32 join = record.join_a;
         if ((record.flags & kPieceStation) != 0)
             shape.use = PieceUse::Station;
         // A lift tower's pieces go only one after the other, so they are picked by name.
@@ -423,7 +424,7 @@ namespace rct3::park::track
             shape.curve = 0;
         else if (join >= 1 && join <= kLastCurveJoin && turn != 0)
         {
-            const std::int32_t size = static_cast<std::int32_t>(join <= kCurveSizes ? join : join - kCurveSizes);
+            const i32 size = static_cast<i32>(join <= kCurveSizes ? join : join - kCurveSizes);
             shape.curve = turn < 0 ? -size : size;
         }
         else
@@ -435,19 +436,19 @@ namespace rct3::park::track
     std::vector<PieceShape> shape_pieces(std::span<const PieceRecord> records, std::span<const PieceLine> lines, std::function_ref<bool(const PieceRecord&)> listed)
     {
         std::vector<PieceShape> pieces;
-        for (std::size_t i = 0; i < records.size() && i < lines.size(); ++i)
+        for (usize i = 0; i < records.size() && i < lines.size(); ++i)
             pieces.push_back(shape_piece(records[i], lines[i]));
         const auto station = std::ranges::find_if(pieces, [&](const PieceShape& p) { return p.use == PieceUse::Station && listed(p.record); });
-        const std::int32_t level = station != pieces.end() ? station->entry.bank : 0;
+        const i32 level = station != pieces.end() ? station->entry.bank : 0;
         for (PieceShape& p : pieces)
         {
             p.entry.bank = wrap_bank(p.entry.bank - level);
             p.exit.bank = wrap_bank(p.exit.bank - level);
         }
         // One plain piece per shape: the plainest keeps it, the others are offered by name.
-        using Key = std::tuple<std::int32_t, std::int32_t, std::int32_t, std::int32_t, std::int32_t, std::int32_t, std::int32_t, std::uint8_t>;
-        std::map<Key, std::size_t> plainest;
-        for (std::size_t i = 0; i < pieces.size(); ++i)
+        using Key = std::tuple<i32, i32, i32, i32, i32, i32, i32, u8>;
+        std::map<Key, usize> plainest;
+        for (usize i = 0; i < pieces.size(); ++i)
         {
             const PieceShape& p = pieces[i];
             if (p.use != PieceUse::Plain || !listed(p.record))
@@ -481,7 +482,7 @@ namespace rct3::park::track
         return { -shape.entry.slope, wrap_bank(-shape.entry.bank), shape.entry.heading.reversed() };
     }
 
-    std::int32_t laid_curve(const PieceShape& shape, bool reversed)
+    i32 laid_curve(const PieceShape& shape, bool reversed)
     {
         return reversed ? -shape.curve : shape.curve;
     }
@@ -538,21 +539,21 @@ namespace rct3::park::track
         const PieceLine& meets = meeting_line(shape);
         const glm::vec3 start = turned(reversed ? meets.end : meets.start, *turn);
         const bool across = (turn->value & 1) != 0;
-        const auto span_x = static_cast<float>(shape.record.squares[across ? 1 : 0]);
-        const auto span_z = static_cast<float>(shape.record.squares[across ? 0 : 1]);
-        const float col = (tip.position.x - start.x - grid.world_x(0)) / grid.tile_size_x - span_x / 2;
-        const float row = (tip.position.z - start.z - grid.world_z(0)) / grid.tile_size_z - span_z / 2;
-        const float height = tip.position.y - start.y;
-        const auto whole = [](float v) { return std::abs(v - std::round(v)) < kMeet; };
+        const auto span_x = static_cast<f32>(shape.record.squares[across ? 1 : 0]);
+        const auto span_z = static_cast<f32>(shape.record.squares[across ? 0 : 1]);
+        const f32 col = (tip.position.x - start.x - grid.world_x(0)) / grid.tile_size_x - span_x / 2;
+        const f32 row = (tip.position.z - start.z - grid.world_z(0)) / grid.tile_size_z - span_z / 2;
+        const f32 height = tip.position.y - start.y;
+        const auto whole = [](f32 v) { return std::abs(v - std::round(v)) < kMeet; };
         if (!whole(col) || !whole(row) || !whole(height))
             return std::nullopt;
         PiecePlacement placed;
         save::model::PlacedObject& o = placed.object;
         o.symbol = shape.record.item;
-        o.col = static_cast<std::int32_t>(std::lround(col));
-        o.row = static_cast<std::int32_t>(std::lround(row));
+        o.col = static_cast<i32>(std::lround(col));
+        o.row = static_cast<i32>(std::lround(row));
         o.rotation = turn->value;
-        o.base_height = static_cast<std::int32_t>(std::lround(height));
+        o.base_height = static_cast<i32>(std::lround(height));
         o.force_absolute_height = true;
         // Checked against the transform the park draws it with, so what is placed is what shows.
         const glm::mat4 m = object::object_transform(o, shape.record.positioning, grid, shape.record.squares);
@@ -567,7 +568,7 @@ namespace rct3::park::track
     {
         const std::optional<const PieceShape&> before = last && last->index < pieces.size() ? core::maybe(&pieces[last->index]) : std::nullopt;
         std::vector<LaidPiece> fit;
-        for (std::size_t i = 0; i < pieces.size(); ++i)
+        for (usize i = 0; i < pieces.size(); ++i)
         {
             for (const bool reversed : { false, true })
             {
@@ -587,9 +588,9 @@ namespace rct3::park::track
     std::vector<LaidPiece> starting_pieces(std::span<const PieceShape> pieces)
     {
         std::vector<LaidPiece> out;
-        for (std::size_t i = 0; i < pieces.size(); ++i)
+        for (usize i = 0; i < pieces.size(); ++i)
         {
-            const std::uint32_t f = pieces[i].record.flags;
+            const u32 f = pieces[i].record.flags;
             if ((f & kPieceStarts) != 0)
                 out.push_back({ i, false });
             if ((f & kPieceStarts) != 0 && (f & kPieceStartsBackward) != 0)

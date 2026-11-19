@@ -20,6 +20,7 @@
 #pragma once
 
 #include "core/maybe.hpp"
+#include "core/types.hpp"
 #include "park/object/placement.hpp"
 #include "save/model/world.hpp"
 
@@ -45,68 +46,68 @@ namespace rct3::ovl
 namespace rct3::park::track
 {
 
-    inline constexpr std::int32_t kSlopeSteps = 3; ///< Up or down from level
-    inline constexpr std::int32_t kBankSteps = 4;  ///< Eighths of a turn to upside down
-    inline constexpr std::int32_t kCurveSizes = 3; ///< Loose, medium and tight
-    inline constexpr std::int32_t kUpsideDown = kBankSteps;
+    inline constexpr i32 kSlopeSteps = 3; ///< Up or down from level
+    inline constexpr i32 kBankSteps = 4;  ///< Eighths of a turn to upside down
+    inline constexpr i32 kCurveSizes = 3; ///< Loose, medium and tight
+    inline constexpr i32 kUpsideDown = kBankSteps;
 
     // Bits of a section's flags, as seen across the game's track overlays: lift chain pieces all have the
     // first, station pieces the second, and nearly every piece of later files the third.
-    inline constexpr std::uint32_t kRoleBrakes = 1;     ///< PieceRecord::role of brakes
-    inline constexpr std::uint32_t kRoleBlockBrake = 2; ///< PieceRecord::role of a block brake
-    inline constexpr std::uint32_t kRoleStation = 3;    ///< PieceRecord::role of a station piece, flagged one or not
+    inline constexpr u32 kRoleBrakes = 1;     ///< PieceRecord::role of brakes
+    inline constexpr u32 kRoleBlockBrake = 2; ///< PieceRecord::role of a block brake
+    inline constexpr u32 kRoleStation = 3;    ///< PieceRecord::role of a station piece, flagged one or not
     /// PieceRecord::role of a pool slide's open ends, where riders splash into the pool: a bowl and a funnel, which
     /// they drop out of the bottom of, and a plain end
-    inline constexpr std::uint32_t kRoleSlideBowl = 83;
-    inline constexpr std::uint32_t kRoleSlideFunnel = 84;
-    inline constexpr std::uint32_t kRoleSlideEnd = 85;
+    inline constexpr u32 kRoleSlideBowl = 83;
+    inline constexpr u32 kRoleSlideFunnel = 84;
+    inline constexpr u32 kRoleSlideEnd = 85;
     /// The pieces taking a slide's end round onto its lift, where the car's swing is not pushed by the turn.
-    inline constexpr std::uint32_t kRoleSlideToLiftFirst = 86;
-    inline constexpr std::uint32_t kRoleSlideToLiftLast = 87;
+    inline constexpr u32 kRoleSlideToLiftFirst = 86;
+    inline constexpr u32 kRoleSlideToLiftLast = 87;
     /// Roles of a transfer track's upper and lower piece, which carry the car between two levels of track
-    inline constexpr std::uint32_t kRoleTransferFirst = 30;
-    inline constexpr std::uint32_t kRoleTransferLast = 31;
+    inline constexpr u32 kRoleTransferFirst = 30;
+    inline constexpr u32 kRoleTransferLast = 31;
     /// Roles of a spiral lift hill's pieces (foot, middles, top): a lift, though not marked as chain
-    inline constexpr std::uint32_t kRoleSpiralLiftFirst = 74;
-    inline constexpr std::uint32_t kRoleSpiralLiftLast = 76;
+    inline constexpr u32 kRoleSpiralLiftFirst = 74;
+    inline constexpr u32 kRoleSpiralLiftLast = 76;
     /// Roles of a rotating tower's pieces (base, shaft, caps): marked as chain, though nothing pulls a train up them
-    inline constexpr std::uint32_t kRoleTowerFirst = 91;
-    inline constexpr std::uint32_t kRoleTowerLast = 95;
-    inline constexpr std::uint32_t kPieceChain = 0x2;
-    inline constexpr std::uint32_t kPieceEnclosed = 0x8;      ///< A tube or tunnel round the track
-    inline constexpr std::uint32_t kPieceWater = 0x1000;      ///< The track runs through water
-    inline constexpr std::uint32_t kPieceBooster = 0x1000000; ///< Speeds the cars up
-    inline constexpr std::uint32_t kPieceStation = 0x40;
-    inline constexpr std::uint32_t kPiecePlatformAlone = 0x80; ///< Its platform is capped at both ends, whatever stands beside it
-    inline constexpr std::uint32_t kPieceCableLift = 0x20;     ///< A cable pulls the cars up it
-    inline constexpr std::uint32_t kPieceLaunch = 0x4000;      ///< Pushes a launched train on, as launch sections do
-    inline constexpr std::uint32_t kPieceHolds = 0x100;        ///< A train may be held on it: holding brakes, tilt and reverser pieces, tower caps
+    inline constexpr u32 kRoleTowerFirst = 91;
+    inline constexpr u32 kRoleTowerLast = 95;
+    inline constexpr u32 kPieceChain = 0x2;
+    inline constexpr u32 kPieceEnclosed = 0x8;      ///< A tube or tunnel round the track
+    inline constexpr u32 kPieceWater = 0x1000;      ///< The track runs through water
+    inline constexpr u32 kPieceBooster = 0x1000000; ///< Speeds the cars up
+    inline constexpr u32 kPieceStation = 0x40;
+    inline constexpr u32 kPiecePlatformAlone = 0x80; ///< Its platform is capped at both ends, whatever stands beside it
+    inline constexpr u32 kPieceCableLift = 0x20;     ///< A cable pulls the cars up it
+    inline constexpr u32 kPieceLaunch = 0x4000;      ///< Pushes a launched train on, as launch sections do
+    inline constexpr u32 kPieceHolds = 0x100;        ///< A train may be held on it: holding brakes, tilt and reverser pieces, tower caps
     /// A lift tower's pieces: its foot, any number of middles and its top, up which a lift car carries a train on
     /// a length of track of its own. Each piece's first rails are the car's, up the tower.
-    inline constexpr std::uint32_t kPieceLiftBottom = 0x200;
-    inline constexpr std::uint32_t kPieceLiftMiddle = 0x400;
-    inline constexpr std::uint32_t kPieceLiftTop = 0x800;
-    inline constexpr std::uint32_t kPieceLift = kPieceLiftBottom | kPieceLiftMiddle | kPieceLiftTop;
-    inline constexpr std::uint32_t kPieceReverseLift = 0x800000; ///< The hill a reverse cable lift ride's train is pulled up backwards
-    inline constexpr std::uint32_t kPieceCommon = std::uint32_t { 1 } << 22;
+    inline constexpr u32 kPieceLiftBottom = 0x200;
+    inline constexpr u32 kPieceLiftMiddle = 0x400;
+    inline constexpr u32 kPieceLiftTop = 0x800;
+    inline constexpr u32 kPieceLift = kPieceLiftBottom | kPieceLiftMiddle | kPieceLiftTop;
+    inline constexpr u32 kPieceReverseLift = 0x800000; ///< The hill a reverse cable lift ride's train is pulled up backwards
+    inline constexpr u32 kPieceCommon = u32 { 1 } << 22;
     /// A track may start with the piece laid as drawn, and with the second bit also laid backwards.
-    inline constexpr std::uint32_t kPieceStarts = 0x1;
-    inline constexpr std::uint32_t kPieceStartsBackward = 0x2000;
+    inline constexpr u32 kPieceStarts = 0x1;
+    inline constexpr u32 kPieceStartsBackward = 0x2000;
     /// A piece pattern never lays the piece backwards.
-    inline constexpr std::uint32_t kPieceKeepsWay = 0x4;
+    inline constexpr u32 kPieceKeepsWay = 0x4;
 
     /// One end of a piece as a car passes it.
     struct PieceEnd
     {
-        std::int32_t slope = 0;
-        std::int32_t bank = 0;
+        i32 slope = 0;
+        i32 bank = 0;
         Heading8 heading;
 
         friend bool operator==(const PieceEnd&, const PieceEnd&) = default;
     };
 
     /// What a piece is for, beyond its shape.
-    enum class PieceUse : std::uint8_t
+    enum class PieceUse : u8
     {
         Plain,   ///< Picked by curve, slope and bank
         Station, ///< Where riders get on and off
@@ -115,7 +116,7 @@ namespace rct3::park::track
 
     /// What the player turns on or off for the next piece, beside its curve, slope and bank, in the order the
     /// game sets out their buttons.
-    enum class PieceToggle : std::uint8_t
+    enum class PieceToggle : u8
     {
         Chain,
         Enclosed,
@@ -123,11 +124,11 @@ namespace rct3::park::track
         Wide, ///< The piece ends as wide as the wide water rides' channel
         Booster,
     };
-    inline constexpr std::size_t kPieceToggles = 5;
+    inline constexpr usize kPieceToggles = 5;
     /// The bit of `toggle` in PieceShape::toggles.
-    [[nodiscard]] constexpr std::uint8_t toggle_bit(PieceToggle toggle)
+    [[nodiscard]] constexpr u8 toggle_bit(PieceToggle toggle)
     {
-        return static_cast<std::uint8_t>(1u << std::to_underlying(toggle));
+        return static_cast<u8>(1u << std::to_underlying(toggle));
     }
 
     /// The two ends of a piece's middle line, between its rails, and which way the track runs there, in the
@@ -148,7 +149,7 @@ namespace rct3::park::track
         std::vector<glm::vec3> ups { };
         /// How far cars go along it from start to end: the mean of its two rails' lengths, which is longer than
         /// `path` where the rails roll round the middle line. 0 where unknown, and `path`'s own length is used.
-        float length = 0;
+        f32 length = 0;
     };
 
     /// How one end of a piece meets the end of another, beyond their shape: by name, by the tags each offers
@@ -159,55 +160,55 @@ namespace rct3::park::track
         std::vector<std::string> offers;
         std::vector<std::string> needs;
         std::vector<std::string> forbids;
-        std::uint32_t width = 0;
+        u32 width = 0;
     };
 
     /// What a section stores about a piece besides its splines.
     /// A side of a square of a piece's footprint where the piece joins a pool square across it.
     struct PieceOpening
     {
-        std::int32_t x = 0; ///< Square of the footprint, counted as square_tile counts them
-        std::int32_t z = 0;
-        std::int32_t height = 0; ///< Whole units above the piece's own height
-        Side side { };           ///< As the piece stands unturned
+        i32 x = 0; ///< Square of the footprint, counted as square_tile counts them
+        i32 z = 0;
+        i32 height = 0; ///< Whole units above the piece's own height
+        Side side { };  ///< As the piece stands unturned
     };
 
     /// A push a piece gives each car on it while the train goes at a speed within a range, as
     /// ovl::SpeedPush: a water channel's flow carrying boats on, say.
     struct PiecePush
     {
-        float least = 0; ///< Metres a second, along the way the train goes
-        float most = 0;
-        float force = 0; ///< Newtons on each car, along the way the train goes
-        float from = 0;  ///< Metres along the piece the car is past, as drawn
-        float to = -1;   ///< Metres along the piece the car is short of, as drawn; below 0 for its end
+        f32 least = 0; ///< Metres a second, along the way the train goes
+        f32 most = 0;
+        f32 force = 0; ///< Newtons on each car, along the way the train goes
+        f32 from = 0;  ///< Metres along the piece the car is past, as drawn
+        f32 to = -1;   ///< Metres along the piece the car is short of, as drawn; below 0 for its end
         /// Of a water piece's flow, the push a standing car gets: the Newtons the water holds back a car going faster
         /// than the flow with. 0 for every other push.
-        float hold = 0;
+        f32 hold = 0;
     };
 
     struct PieceRecord
     {
         std::string name; ///< Of the section
         std::string item; ///< Of its scenery item, which the park's object names
-        std::uint32_t join_a = 0;
-        std::uint32_t join_b = 0;
-        std::uint32_t flags = 0;
-        std::uint32_t role = 0; ///< As ovl::TrackSection::role
-        std::array<std::int32_t, 2> squares { 1, 1 };
+        u32 join_a = 0;
+        u32 join_b = 0;
+        u32 flags = 0;
+        u32 role = 0; ///< As ovl::TrackSection::role
+        std::array<i32, 2> squares { 1, 1 };
         object::Positioning positioning = object::Positioning::Tile;
-        std::int32_t cost = 0;                   ///< As the scenery item stores it
-        std::array<std::uint8_t, 3> colours { }; ///< The scenery item's default colours
-        std::array<PieceJoin, 2> joins;          ///< Of its start and its end, laid as drawn
-        std::uint32_t side = 0;                  ///< Of side by side tracks; ends meet only ends of the same side
-        std::string partner;                     ///< Of side by side tracks: the other half of a joined piece, by name
-        std::string group;                       ///< For the ride's piece patterns
-        std::string platform_run;                ///< As ovl::TrackSection::platform_run
+        i32 cost = 0;                   ///< As the scenery item stores it
+        std::array<u8, 3> colours { };  ///< The scenery item's default colours
+        std::array<PieceJoin, 2> joins; ///< Of its start and its end, laid as drawn
+        u32 side = 0;                   ///< Of side by side tracks; ends meet only ends of the same side
+        std::string partner;            ///< Of side by side tracks: the other half of a joined piece, by name
+        std::string group;              ///< For the ride's piece patterns
+        std::string platform_run;       ///< As ovl::TrackSection::platform_run
         /// Of a slide with no cars, as on an inflatable ship: each way up on foot from its foot in the water and down
         /// one of its slides, laid as drawn. None on other pieces.
         std::vector<std::vector<glm::vec3>> climbs { };
         std::vector<PieceOpening> pool_sides { }; ///< Where it joins a pool beside: a slide's end, or its track out over the water
-        std::optional<float> drop_off { };        ///< As ovl::TrackSection::drop_off
+        std::optional<f32> drop_off { };          ///< As ovl::TrackSection::drop_off
         std::vector<PiecePush> pushes { };        ///< As ovl::TrackSection::pushes
         bool water = false;                       ///< Water runs along it: it has water edges, or runs through water
         /// Of a lift tower's pieces, whose line is its car's way up the tower: the middle line of its second pair of
@@ -222,9 +223,9 @@ namespace rct3::park::track
         PieceLine line; ///< The way its cars go along it
         PieceEnd entry; ///< Laid as drawn, where it meets the piece before
         PieceEnd exit;
-        std::int32_t curve = 0;
+        i32 curve = 0;
         PieceUse use = PieceUse::Plain;
-        std::uint8_t toggles = 0; ///< Bits of the PieceToggle values it has, laid as drawn
+        u8 toggles = 0; ///< Bits of the PieceToggle values it has, laid as drawn
     };
 
     /// The ways up and down a slide climbed on foot: for each slide, from the start of `loop` to the point of it
@@ -240,7 +241,7 @@ namespace rct3::park::track
     /// `line` measured in steps.
     [[nodiscard]] PieceEnd measure_end(const glm::vec3& direction, const glm::vec3& side);
     /// The lean of an end in degrees, positive to the left.
-    [[nodiscard]] float bank_degrees(const glm::vec3& direction, const glm::vec3& side);
+    [[nodiscard]] f32 bank_degrees(const glm::vec3& direction, const glm::vec3& side);
 
     /// A piece as its record and line make it.
     [[nodiscard]] PieceShape shape_piece(PieceRecord record, const PieceLine& line);
@@ -279,7 +280,7 @@ namespace rct3::park::track
     /// A piece laid one way or the other.
     struct LaidPiece
     {
-        std::size_t index = 0; ///< In the catalogue
+        usize index = 0; ///< In the catalogue
         bool reversed = false;
 
         friend bool operator==(const LaidPiece&, const LaidPiece&) = default;
@@ -288,7 +289,7 @@ namespace rct3::park::track
     /// The ends and curve of `shape` laid as `reversed` says.
     [[nodiscard]] PieceEnd laid_entry(const PieceShape& shape, bool reversed);
     [[nodiscard]] PieceEnd laid_exit(const PieceShape& shape, bool reversed);
-    [[nodiscard]] std::int32_t laid_curve(const PieceShape& shape, bool reversed);
+    [[nodiscard]] i32 laid_curve(const PieceShape& shape, bool reversed);
 
     /// Whether `end` points along a diagonal.
     [[nodiscard]] constexpr bool diagonal(const PieceEnd& end)

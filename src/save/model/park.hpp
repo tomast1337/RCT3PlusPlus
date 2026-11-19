@@ -16,6 +16,7 @@
 //  - Money is an integer count of hundredths of the currency unit.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
@@ -44,21 +45,21 @@ namespace rct3::save::model
     /// absent from the file is empty with capacity 0.
     struct Series
     {
-        std::vector<float> samples { };
-        std::uint32_t capacity = 0;
+        std::vector<f32> samples { };
+        u32 capacity = 0;
 
         [[nodiscard]] bool empty() const noexcept
         {
             return samples.empty();
         }
-        [[nodiscard]] std::optional<float> latest() const noexcept
+        [[nodiscard]] std::optional<f32> latest() const noexcept
         {
             if (samples.empty())
                 return std::nullopt;
             return samples.front();
         }
         /// Puts a sample in front, dropping the oldest ones so that at most `capacity` remain (capacity 0 keeps all).
-        void push(float v);
+        void push(f32 v);
     };
 
     // ---------------------------------------------------------------------------------------------------------
@@ -67,7 +68,7 @@ namespace rct3::save::model
 
     /// Named bits of Park::flags. Bits 4 and 6 are used by the game but their meaning is unresolved, so they
     /// have no name; they stay available through ParkFlags::raw.
-    enum class ParkFlag : std::uint32_t
+    enum class ParkFlag : u32
     {
         Open = 1u << 0,               ///< The park is open to guests
         ToolbarGate = 1u << 1,        ///< Enables a toolbar button (which one is not recorded here)
@@ -78,15 +79,15 @@ namespace rct3::save::model
 
     struct ParkFlags
     {
-        std::uint32_t raw = 0;
+        u32 raw = 0;
         [[nodiscard]] bool has(ParkFlag f) const noexcept
         {
-            return (raw & static_cast<std::uint32_t>(f)) != 0;
+            return (raw & static_cast<u32>(f)) != 0;
         }
     };
 
-    inline constexpr std::int32_t kMinutesPerDay = 1440;
-    inline constexpr float kMaxParkRating = 1000.0f;
+    inline constexpr i32 kMinutesPerDay = 1440;
+    inline constexpr f32 kMaxParkRating = 1000.0f;
 
     struct Park
     {
@@ -97,18 +98,18 @@ namespace rct3::save::model
         std::optional<std::string> rating_breakdown_text { }; ///< Cached breakdown, newer generations only
 
         ParkFlags flags { };
-        std::int32_t opening_minutes = 0;   ///< Minutes since midnight
-        std::int32_t closing_minutes = 0;   ///< Minutes since midnight
-        float guest_generation_rate = 1.0f; ///< Multiplier on the arrival rate
-        float ride_intensity_preference = 0.5f;
-        float initial_happiness = 0.5f; ///< 0..1, applied to newly arriving guests
-        float initial_hunger = 1.0f;
-        float initial_thirst = 1.0f;
-        std::int32_t rating_penalty = 0;              ///< Raw; seen as zero in every sample
-        std::int32_t guest_think_cycle = 0;           ///< Raw; seen as zero in every sample
-        std::optional<std::uint64_t> fence_entry { }; ///< Object id of the park fence database entry
-        std::string fence_symbol { };                 ///< Asset symbol of the fence round the park's land, empty when none
-        std::string fence_overlay { };                ///< Overlay holding it, as PlacedObject::overlay
+        i32 opening_minutes = 0;          ///< Minutes since midnight
+        i32 closing_minutes = 0;          ///< Minutes since midnight
+        f32 guest_generation_rate = 1.0f; ///< Multiplier on the arrival rate
+        f32 ride_intensity_preference = 0.5f;
+        f32 initial_happiness = 0.5f; ///< 0..1, applied to newly arriving guests
+        f32 initial_hunger = 1.0f;
+        f32 initial_thirst = 1.0f;
+        i32 rating_penalty = 0;             ///< Raw; seen as zero in every sample
+        i32 guest_think_cycle = 0;          ///< Raw; seen as zero in every sample
+        std::optional<u64> fence_entry { }; ///< Object id of the park fence database entry
+        std::string fence_symbol { };       ///< Asset symbol of the fence round the park's land, empty when none
+        std::string fence_overlay { };      ///< Overlay holding it, as PlacedObject::overlay
         bool pools_wanted = false;
         bool allow_adult_animals = false;
         bool allow_baby_animals = false;
@@ -122,7 +123,7 @@ namespace rct3::save::model
         Series publicity_level { };
 
         /// Newest park rating sample, if any.
-        [[nodiscard]] std::optional<float> rating() const noexcept
+        [[nodiscard]] std::optional<f32> rating() const noexcept
         {
             return park_rating.latest();
         }
@@ -137,61 +138,61 @@ namespace rct3::save::model
     /// animal counters of the newest generation are not loaded.
     struct LedgerPeriod
     {
-        std::int32_t food_drink_sales = 0;
-        std::int32_t food_drink_stock = 0;
-        std::int32_t land_purchase = 0;
-        std::int32_t landscaping = 0;
-        std::int32_t loan_interest = 0;
-        std::int32_t marketing = 0;
-        std::int32_t other = 0;
-        std::int32_t park_entrance_tickets = 0;
-        std::int32_t prize_money = 0;
-        std::int32_t research = 0;
-        std::int32_t ride_construction = 0;
-        std::int32_t ride_running_costs = 0;
-        std::int32_t ride_tickets = 0;
-        std::int32_t shop_sales = 0;
-        std::int32_t shop_stock = 0;
-        std::int32_t staff_training = 0;
-        std::int32_t staff_wages = 0;
+        i32 food_drink_sales = 0;
+        i32 food_drink_stock = 0;
+        i32 land_purchase = 0;
+        i32 landscaping = 0;
+        i32 loan_interest = 0;
+        i32 marketing = 0;
+        i32 other = 0;
+        i32 park_entrance_tickets = 0;
+        i32 prize_money = 0;
+        i32 research = 0;
+        i32 ride_construction = 0;
+        i32 ride_running_costs = 0;
+        i32 ride_tickets = 0;
+        i32 shop_sales = 0;
+        i32 shop_stock = 0;
+        i32 staff_training = 0;
+        i32 staff_wages = 0;
 
-        std::optional<std::int32_t> pool_tickets { };
-        std::optional<std::int32_t> billboards { };
-        std::optional<std::int32_t> viewing_gallery_tickets { };
-        std::optional<std::int32_t> other_animal_spending { };
+        std::optional<i32> pool_tickets { };
+        std::optional<i32> billboards { };
+        std::optional<i32> viewing_gallery_tickets { };
+        std::optional<i32> other_animal_spending { };
 
         /// Plain sum of every counter as stored (signs as in the file). For diagnostics, not accounting.
-        [[nodiscard]] std::int64_t raw_sum() const noexcept;
+        [[nodiscard]] i64 raw_sum() const noexcept;
     };
 
-    inline constexpr std::size_t kLedgerPeriods = 5;
+    inline constexpr usize kLedgerPeriods = 5;
 
     struct Finance
     {
-        std::int32_t cash = 0;
-        std::int32_t loan = 0;
-        std::int32_t max_loan = 0;
-        std::int32_t entrance_fee = 0;
-        float interest_rate_percent = 5.0f;
-        std::int32_t land_buy_cost = 0;
-        std::int32_t land_sell_cost = 0;   ///< Stored negative
-        std::int32_t rights_buy_cost = 0;  ///< Construction rights
-        std::int32_t rights_sell_cost = 0; ///< Stored negative
-        std::int32_t average_guest_cash = 0;
-        std::int32_t average_guest_bank_funds = 0;
-        std::uint32_t flags = 0; ///< Raw; the bits below are the known ones
+        i32 cash = 0;
+        i32 loan = 0;
+        i32 max_loan = 0;
+        i32 entrance_fee = 0;
+        f32 interest_rate_percent = 5.0f;
+        i32 land_buy_cost = 0;
+        i32 land_sell_cost = 0;   ///< Stored negative
+        i32 rights_buy_cost = 0;  ///< Construction rights
+        i32 rights_sell_cost = 0; ///< Stored negative
+        i32 average_guest_cash = 0;
+        i32 average_guest_bank_funds = 0;
+        u32 flags = 0; ///< Raw; the bits below are the known ones
 
         /// Set in parks where money never runs out. A setting of the park's own: a new sandbox has it, and any
         /// scenario may; it does not say how the park is played.
-        static constexpr std::uint32_t kUnlimitedCash = 1u << 0;
+        static constexpr u32 kUnlimitedCash = 1u << 0;
         [[nodiscard]] bool unlimited() const noexcept
         {
             return (flags & kUnlimitedCash) != 0;
         }
         /// Set where the player may not change the entrance fee.
-        static constexpr std::uint32_t kEntranceFeeFixed = 1u << 1;
+        static constexpr u32 kEntranceFeeFixed = 1u << 1;
         /// Set where rides charge nothing.
-        static constexpr std::uint32_t kFreeRides = 1u << 2;
+        static constexpr u32 kFreeRides = 1u << 2;
         [[nodiscard]] bool entrance_fee_fixed() const noexcept
         {
             return (flags & kEntranceFeeFixed) != 0;
@@ -216,32 +217,32 @@ namespace rct3::save::model
 
     struct CalendarDate
     {
-        std::int64_t year = 0;  ///< 0-based
-        std::int32_t month = 0; ///< 0..7
-        std::int32_t week = 0;  ///< 0..3
-        float into_week = 0.0f; ///< Units elapsed in the week, 0..90
-        std::int32_t day = 1;   ///< Of the month, from 1: the month's units spread over its days (kDaysInMonth)
+        i64 year = 0;         ///< 0-based
+        i32 month = 0;        ///< 0..7
+        i32 week = 0;         ///< 0..3
+        f32 into_week = 0.0f; ///< Units elapsed in the week, 0..90
+        i32 day = 1;          ///< Of the month, from 1: the month's units spread over its days (kDaysInMonth)
     };
 
     struct GameClock
     {
-        static constexpr float kUnitsPerWeek = 90.0f;
-        static constexpr float kUnitsPerMonth = 360.0f; ///< 4 weeks
-        static constexpr float kUnitsPerYear = 2880.0f; ///< 8 months
+        static constexpr f32 kUnitsPerWeek = 90.0f;
+        static constexpr f32 kUnitsPerMonth = 360.0f; ///< 4 weeks
+        static constexpr f32 kUnitsPerYear = 2880.0f; ///< 8 months
         /// Days in each of the calendar's months, March to October, as the real calendar has them.
-        static constexpr std::array<std::int32_t, 8> kDaysInMonth { 31, 30, 31, 30, 31, 31, 30, 31 };
+        static constexpr std::array<i32, 8> kDaysInMonth { 31, 30, 31, 30, 31, 31, 30, 31 };
 
-        float time = 0.0f;
-        float zero_time = 0.0f;
+        f32 time = 0.0f;
+        f32 zero_time = 0.0f;
         /// Fraction of the day. A negative stored value is the "not set yet" sentinel and gives nullopt.
-        std::optional<float> day_night_phase { };
-        std::optional<std::int32_t> day_night_mode { };    ///< Newer generations only
-        std::optional<float> day_night_rendered_phase { }; ///< Newest generation only, same sentinel rule
+        std::optional<f32> day_night_phase { };
+        std::optional<i32> day_night_mode { };           ///< Newer generations only
+        std::optional<f32> day_night_rendered_phase { }; ///< Newest generation only, same sentinel rule
 
         /// Splits a time in units into calendar parts. Negative and non-finite input is treated as zero.
-        [[nodiscard]] static CalendarDate split(float units) noexcept;
+        [[nodiscard]] static CalendarDate split(f32 units) noexcept;
         /// The date at `when`: the calendar counts its weeks, months and years from `zero_time`.
-        [[nodiscard]] static CalendarDate date_at(float when, float zero_time) noexcept
+        [[nodiscard]] static CalendarDate date_at(f32 when, f32 zero_time) noexcept
         {
             return split(when - zero_time);
         }
@@ -253,9 +254,9 @@ namespace rct3::save::model
 
     /// How far back a running park keeps its history: its ledger a period a month (Finance::ledger) and its weekly
     /// graphs a sample a week (Series). Chosen for a long career park; the park file keeps much less.
-    inline constexpr std::size_t kKeptYears = 20;
-    inline constexpr auto kKeptMonths = static_cast<std::size_t>(kKeptYears * GameClock::kUnitsPerYear / GameClock::kUnitsPerMonth);
-    inline constexpr auto kKeptWeeks = static_cast<std::size_t>(kKeptMonths * GameClock::kUnitsPerMonth / GameClock::kUnitsPerWeek);
+    inline constexpr usize kKeptYears = 20;
+    inline constexpr auto kKeptMonths = static_cast<usize>(kKeptYears * GameClock::kUnitsPerYear / GameClock::kUnitsPerMonth);
+    inline constexpr auto kKeptWeeks = static_cast<usize>(kKeptMonths * GameClock::kUnitsPerMonth / GameClock::kUnitsPerWeek);
 
     // ---------------------------------------------------------------------------------------------------------
     // Awards
@@ -263,12 +264,12 @@ namespace rct3::save::model
 
     struct Awards
     {
-        std::uint32_t available_mask = 0; ///< Bit per award type
-        std::int32_t months_before_start = 0;
-        std::vector<std::vector<std::int32_t>> earned { }; ///< A list a month, of the last six: the kinds of award given that month
-        std::vector<std::int32_t> prize_money { };         ///< Per award slot; negative for the penalty slots
-        std::optional<std::int32_t> dangerous_coaster_events { };
-        std::optional<std::int32_t> dangerous_pool_events { };
+        u32 available_mask = 0; ///< Bit per award type
+        i32 months_before_start = 0;
+        std::vector<std::vector<i32>> earned { }; ///< A list a month, of the last six: the kinds of award given that month
+        std::vector<i32> prize_money { };         ///< Per award slot; negative for the penalty slots
+        std::optional<i32> dangerous_coaster_events { };
+        std::optional<i32> dangerous_pool_events { };
     };
 
     // ---------------------------------------------------------------------------------------------------------
@@ -277,9 +278,9 @@ namespace rct3::save::model
 
     struct Objective
     {
-        std::int32_t difficulty = 0;   ///< 0, 1, 2 for the three levels
-        std::int32_t objective_id = 0; ///< 0 is the main one; other values are kept raw
-        std::int32_t prize_id = 0;     ///< Raw index into the game's prize list; 0..9 are valid, which kind is open
+        i32 difficulty = 0;   ///< 0, 1, 2 for the three levels
+        i32 objective_id = 0; ///< 0 is the main one; other values are kept raw
+        i32 prize_id = 0;     ///< Raw index into the game's prize list; 0..9 are valid, which kind is open
         bool success = false;
 
         [[nodiscard]] bool prize_in_range() const noexcept
@@ -289,7 +290,7 @@ namespace rct3::save::model
     };
 
     /// Condition families the loader recognises by class. Everything else is Other and keeps its class name.
-    enum class ConditionKind : std::uint8_t
+    enum class ConditionKind : u8
     {
         Other,
         ParkValue,
@@ -314,7 +315,7 @@ namespace rct3::save::model
     };
 
     /// Named bits of Condition::consistency_flags. Values beyond these bits are preserved in the raw word.
-    enum class ConditionFlag : std::uint32_t
+    enum class ConditionFlag : u32
     {
         TimerRunning = 1u << 0,
         Satisfied = 1u << 1,
@@ -326,18 +327,18 @@ namespace rct3::save::model
     /// What a coaster condition asks of the park's rides, as the file keeps it.
     struct CoasterTarget
     {
-        float value = 0; ///< The figure a ride must reach
+        f32 value = 0; ///< The figure a ride must reach
         /// The low four bits pick the figure: excitement, intensity, nausea, length, most negative and most
         /// positive vertical G, most lateral G, top speed, height span, air time, inversions, highest drop.
         /// kAtMost asks for at most the value rather than at least; kEveryRide that every ride of the group
         /// reaches it; kPoolSlides counts the pools' slides rather than the coasters.
-        std::uint32_t flags = 0;
-        std::int32_t rides = 0; ///< How many rides must reach it
+        u32 flags = 0;
+        i32 rides = 0; ///< How many rides must reach it
 
-        static constexpr std::uint32_t kFigure = 0xf;
-        static constexpr std::uint32_t kAtMost = 1u << 4;
-        static constexpr std::uint32_t kEveryRide = 1u << 5;
-        static constexpr std::uint32_t kPoolSlides = 1u << 6;
+        static constexpr u32 kFigure = 0xf;
+        static constexpr u32 kAtMost = 1u << 4;
+        static constexpr u32 kEveryRide = 1u << 5;
+        static constexpr u32 kPoolSlides = 1u << 6;
     };
 
     /// What a VIP goal asks: when the guest of honour comes, how long they stay, what they want to see and
@@ -346,33 +347,33 @@ namespace rct3::save::model
     {
         /// Bits of `wishes`. kLitter and kBreakdowns are things they put up with only so far; the others are
         /// things they want to do while in the park.
-        static constexpr std::uint32_t kLitter = 1u << 0;
-        static constexpr std::uint32_t kHappiness = 1u << 1; ///< Their happiness on average must reach target_happiness
-        static constexpr std::uint32_t kFireworks = 1u << 2;
-        static constexpr std::uint32_t kThemedArea = 1u << 3;
-        static constexpr std::uint32_t kCoasters = 1u << 4;
-        static constexpr std::uint32_t kBreakdowns = 1u << 5;
-        static constexpr std::uint32_t kAutographs = 1u << 6;
-        static constexpr std::uint32_t kPool = 1u << 7;
-        static constexpr std::uint32_t kDung = 1u << 8;
-        static constexpr std::uint32_t kAnimals = 1u << 9;
-        static constexpr std::uint32_t kGalleries = 1u << 10;
+        static constexpr u32 kLitter = 1u << 0;
+        static constexpr u32 kHappiness = 1u << 1; ///< Their happiness on average must reach target_happiness
+        static constexpr u32 kFireworks = 1u << 2;
+        static constexpr u32 kThemedArea = 1u << 3;
+        static constexpr u32 kCoasters = 1u << 4;
+        static constexpr u32 kBreakdowns = 1u << 5;
+        static constexpr u32 kAutographs = 1u << 6;
+        static constexpr u32 kPool = 1u << 7;
+        static constexpr u32 kDung = 1u << 8;
+        static constexpr u32 kAnimals = 1u << 9;
+        static constexpr u32 kGalleries = 1u << 10;
 
-        std::uint32_t wishes = 0;
-        std::uint8_t who = 0;  ///< Which celebrity comes, 1..6
-        float first_visit = 0; ///< The first visit's date; later years' visits fall on the same day
-        float next_visit = 0;
-        std::int32_t retry_months = 0; ///< After a visit that went badly, months until they come again
-        std::int32_t months_to_stay = 0;
-        std::int32_t guards = 0;                        ///< Bodyguards who come with them
-        std::int32_t coasters_needed = 0;               ///< kCoasters: how many different coasters they want to ride
-        float min_excitement = 0;                       ///< kCoasters: how exciting each must be, as rides are rated
-        std::int32_t theme = 0;                         ///< kThemedArea: the theme they want to see
-        std::int32_t scenery_needed = 0;                ///< kThemedArea: how many pieces of it
-        float litter_tolerance = 0;                     ///< Larger takes more litter
-        float breakdown_tolerance = 0;                  ///< Larger takes more time on broken rides
-        float autograph_tolerance = 0;                  ///< Larger takes more autograph hunters
-        float target_happiness = 0;                     ///< kHappiness, 0..1
+        u32 wishes = 0;
+        u8 who = 0;          ///< Which celebrity comes, 1..6
+        f32 first_visit = 0; ///< The first visit's date; later years' visits fall on the same day
+        f32 next_visit = 0;
+        i32 retry_months = 0; ///< After a visit that went badly, months until they come again
+        i32 months_to_stay = 0;
+        i32 guards = 0;                                 ///< Bodyguards who come with them
+        i32 coasters_needed = 0;                        ///< kCoasters: how many different coasters they want to ride
+        f32 min_excitement = 0;                         ///< kCoasters: how exciting each must be, as rides are rated
+        i32 theme = 0;                                  ///< kThemedArea: the theme they want to see
+        i32 scenery_needed = 0;                         ///< kThemedArea: how many pieces of it
+        f32 litter_tolerance = 0;                       ///< Larger takes more litter
+        f32 breakdown_tolerance = 0;                    ///< Larger takes more time on broken rides
+        f32 autograph_tolerance = 0;                    ///< Larger takes more autograph hunters
+        f32 target_happiness = 0;                       ///< kHappiness, 0..1
         bool met = false;                               ///< A visit went well; the goal stays met
         bool warned_month = false, warned_week = false; ///< The player was told the visit is near
     };
@@ -381,23 +382,23 @@ namespace rct3::save::model
     {
         ConditionKind kind = ConditionKind::Other;
         std::string class_name { }; ///< The file's class, always set
-        std::uint64_t id = 0;
-        std::int32_t difficulty = 0;
-        std::int32_t objective_id = 0;
-        std::int32_t slot = 0; ///< 0..7 within the objective
+        u64 id = 0;
+        i32 difficulty = 0;
+        i32 objective_id = 0;
+        i32 slot = 0; ///< 0..7 within the objective
         bool completed = false;
-        std::int32_t months_to_hold = 0;
-        float start_time = 0.0f;      ///< Game time units
-        float next_check_time = 0.0f; ///< Game time units; the deadline when HasDeadline is set
-        std::uint32_t consistency_flags = 0;
-        std::optional<std::int64_t> value { };    ///< Threshold, for the families that have one
+        i32 months_to_hold = 0;
+        f32 start_time = 0.0f;      ///< Game time units
+        f32 next_check_time = 0.0f; ///< Game time units; the deadline when HasDeadline is set
+        u32 consistency_flags = 0;
+        std::optional<i64> value { };             ///< Threshold, for the families that have one
         std::optional<bool> greater_than { };     ///< Comparison direction, newer generations only
         std::optional<CoasterTarget> coaster { }; ///< Coaster conditions only
         std::optional<VipTarget> vip { };         ///< VIP conditions only
 
         [[nodiscard]] bool has(ConditionFlag f) const noexcept
         {
-            return (consistency_flags & static_cast<std::uint32_t>(f)) != 0;
+            return (consistency_flags & static_cast<u32>(f)) != 0;
         }
     };
 
@@ -405,14 +406,14 @@ namespace rct3::save::model
     struct Challenge
     {
         std::string name_key { }, description_key { }, acceptance_key { }, completion_key { }; ///< Text keys
-        std::int32_t challenge_id = 0;
-        std::int32_t state = 0; ///< Raw; labels unknown
-        std::int32_t prize_cash = 0;
-        std::int32_t prize_publicity = 0;
-        std::int32_t prize_research_boost = 0;
-        float time_limit = 0.0f;
-        float time_remaining = 0.0f;
-        std::int32_t times_postponed = 0;
+        i32 challenge_id = 0;
+        i32 state = 0; ///< Raw; labels unknown
+        i32 prize_cash = 0;
+        i32 prize_publicity = 0;
+        i32 prize_research_boost = 0;
+        f32 time_limit = 0.0f;
+        f32 time_remaining = 0.0f;
+        i32 times_postponed = 0;
     };
 
     struct ObjectiveSet
@@ -422,7 +423,7 @@ namespace rct3::save::model
         std::vector<Challenge> challenges { };
 
         /// Conditions that belong to the given objective, in slot order.
-        [[nodiscard]] std::vector<const Condition*> conditions_for(std::int32_t difficulty, std::int32_t objective_id) const;
+        [[nodiscard]] std::vector<const Condition*> conditions_for(i32 difficulty, i32 objective_id) const;
     };
 
     // ---------------------------------------------------------------------------------------------------------
@@ -432,9 +433,9 @@ namespace rct3::save::model
     struct ResearchCategory
     {
         std::string name { };
-        float budget = 0.0f;
-        float current_level = 0.0f;
-        float develop_cost = 0.0f;
+        f32 budget = 0.0f;
+        f32 current_level = 0.0f;
+        f32 develop_cost = 0.0f;
         bool available = false;
         bool hidden = false;
         std::optional<bool> invented { }; ///< Missing in some older builds
@@ -444,12 +445,12 @@ namespace rct3::save::model
     {
         std::vector<ResearchCategory> categories { };
         bool has_simple_research = false;
-        std::optional<std::uint64_t> current_item { }; ///< Object id of the item being researched
-        std::optional<std::uint64_t> previous_item { };
-        std::int32_t money_spent_on_current = 0;
-        std::int32_t monthly_budget = 0;
-        std::vector<float> priorities { }; ///< Per category weight, order as in the file
-        float time_since_last_spend = 0.0f;
+        std::optional<u64> current_item { }; ///< Object id of the item being researched
+        std::optional<u64> previous_item { };
+        i32 money_spent_on_current = 0;
+        i32 monthly_budget = 0;
+        std::vector<f32> priorities { }; ///< Per category weight, order as in the file
+        f32 time_since_last_spend = 0.0f;
     };
 
     // ---------------------------------------------------------------------------------------------------------
@@ -458,24 +459,24 @@ namespace rct3::save::model
 
     struct Message
     {
-        std::uint64_t id = 0;
+        u64 id = 0;
         std::string class_name { };
         std::string text_key { };
-        float time = 0.0f;                       ///< Game time units
-        std::optional<std::uint64_t> object { }; ///< Subject object, when the entry kind has one
-        std::optional<std::int32_t> panel { };
-        std::string object_name { };           ///< The subject's name when the message was posted; may be empty
-        std::optional<std::int32_t> award { }; ///< Award messages: which award
+        f32 time = 0.0f;               ///< Game time units
+        std::optional<u64> object { }; ///< Subject object, when the entry kind has one
+        std::optional<i32> panel { };
+        std::string object_name { };  ///< The subject's name when the message was posted; may be empty
+        std::optional<i32> award { }; ///< Award messages: which award
     };
 
     /// Indices 0..count-1 of a ring buffer visited oldest to newest, given the index the next write will use.
     /// A `next_write` outside the ring is treated as 0.
-    [[nodiscard]] std::vector<std::size_t> ring_order(std::size_t count, std::int64_t next_write);
+    [[nodiscard]] std::vector<usize> ring_order(usize count, i64 next_write);
 
     struct MessageLog
     {
-        std::size_t ring_size = 0;        ///< Slots in the ring as stored
-        std::int32_t next_write = 0;      ///< As stored
+        usize ring_size = 0;              ///< Slots in the ring as stored
+        i32 next_write = 0;               ///< As stored
         std::vector<Message> ordered { }; ///< Oldest first; empty and dangling slots are skipped
     };
 
@@ -483,7 +484,7 @@ namespace rct3::save::model
     // Required content
     // ---------------------------------------------------------------------------------------------------------
 
-    enum class AssetKind : std::uint8_t
+    enum class AssetKind : u8
     {
         Other,
         Scenery,       ///< Scenery pieces and track sections
@@ -505,14 +506,14 @@ namespace rct3::save::model
         bool hidden = false;
         bool invented = false;
         bool unlocked = false; ///< Animal species only
-        std::uint64_t id = 0;
+        u64 id = 0;
     };
 
     struct RequiredContent
     {
         std::vector<AssetRequirement> entries { }; ///< Entries that name an overlay, and path and queue styles
-        std::size_t entries_without_overlay = 0;   ///< Database entries that carry only a symbol or a type name
-        [[nodiscard]] std::size_t invented_count() const noexcept;
+        usize entries_without_overlay = 0;         ///< Database entries that carry only a symbol or a type name
+        [[nodiscard]] usize invented_count() const noexcept;
     };
 
     /// Normalises an overlay stem as written in a save: backslashes become '/', empty and "." components and
@@ -567,11 +568,11 @@ namespace rct3::save::model
 
     struct ContentReport
     {
-        std::size_t entries = 0;
-        std::size_t resolved = 0;                   ///< Common half found
-        std::size_t exact_case = 0;                 ///< Of those, spelled exactly
-        std::size_t with_unique = 0;                ///< Of those, unique half found too
-        std::size_t missing = 0;                    ///< entries - resolved
+        usize entries = 0;
+        usize resolved = 0;                         ///< Common half found
+        usize exact_case = 0;                       ///< Of those, spelled exactly
+        usize with_unique = 0;                      ///< Of those, unique half found too
+        usize missing = 0;                          ///< entries - resolved
         std::vector<std::string> missing_stems { }; ///< Distinct stems with nothing installed, sorted
     };
 
@@ -588,8 +589,8 @@ namespace rct3::save::model
     /// them; parks saved after play keep the object without values.
     struct GroupMix
     {
-        std::array<float, 8> weights { };
-        float single_parent = 0; ///< Chance a family comes with one parent
+        std::array<f32, 8> weights { };
+        f32 single_parent = 0; ///< Chance a family comes with one parent
     };
 
     struct ParkModel
@@ -611,7 +612,7 @@ namespace rct3::save::model
         bool has_awards = false;
 
         /// Particle descriptor, emitter and source objects. They are effect runtime state and are only counted.
-        std::size_t particle_objects = 0;
+        usize particle_objects = 0;
     };
 
     /// Builds the model. Fails only when an object's framing cannot be decoded, which read_save already rules

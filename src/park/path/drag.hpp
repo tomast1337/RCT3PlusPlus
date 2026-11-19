@@ -16,6 +16,7 @@
 // in the air: the edge of the door's tile nearest the pointer gives the next piece's tile and heading.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/camera.hpp"
 #include "park/footpath_builder.hpp"
 #include "save/model/rides.hpp"
@@ -34,8 +35,8 @@ namespace rct3::park::path
     struct DragPlan
     {
         std::vector<save::model::Tile> lay; ///< Tiles that get a new path
-        std::size_t kept = 0;               ///< Tiles that already have one
-        std::size_t refused = 0;            ///< Tiles that cannot have one
+        usize kept = 0;                     ///< Tiles that already have one
+        usize refused = 0;                  ///< Tiles that cannot have one
     };
 
     /// The tiles on the straight line from `from` to `to`, both included, each sharing a side with the one
@@ -44,18 +45,18 @@ namespace rct3::park::path
 
     /// The tiles of the `size` by `size` square round `centre`; an even size reaches one tile further towards
     /// higher columns and rows than lower ones.
-    [[nodiscard]] std::vector<save::model::Tile> brush_square(save::model::Tile centre, std::int32_t size);
+    [[nodiscard]] std::vector<save::model::Tile> brush_square(save::model::Tile centre, i32 size);
 
     /// What a stroke over `area` would do among `paths` and, when given, what else fills the tiles.
     [[nodiscard]] DragPlan plan_drag(std::span<const save::model::Tile> area, const save::model::TerrainGrid& grid, std::span<const save::model::PathTile> paths, std::optional<const SolidTiles&> solids = std::nullopt);
 
     /// The side of a tile nearest a point on it `across` its width along columns and rows, each from 0 to 1.
-    [[nodiscard]] Side nearest_side(float across_col, float across_row) noexcept;
+    [[nodiscard]] Side nearest_side(f32 across_col, f32 across_row) noexcept;
 
     /// A path under the pointer, and the edge of it the pointer is nearest.
     struct PathEdge
     {
-        std::size_t path_index = 0;
+        usize path_index = 0;
         std::optional<Side> side; ///< None when the path does not reach that edge
     };
 
@@ -71,7 +72,7 @@ namespace rct3::park::path
 
     /// The index of the door of `doors` that `ray` meets first, met flat across its tile at its height, if it meets
     /// one before the ground (or at all, `through_ground`).
-    [[nodiscard]] std::optional<std::size_t> door_under(const Ray& ray, std::span<const save::model::PlacementSpot> doors, const save::model::TerrainGrid& grid, bool through_ground = false);
+    [[nodiscard]] std::optional<usize> door_under(const Ray& ray, std::span<const save::model::PlacementSpot> doors, const save::model::TerrainGrid& grid, bool through_ground = false);
 
     /// Has `builder` go on from `door`'s back, the side away from its ride, wherever on the door the pointer is:
     /// the next piece on the tile beyond, heading away, at the door's height.

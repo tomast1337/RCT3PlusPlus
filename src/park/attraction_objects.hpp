@@ -5,6 +5,7 @@
 // and facilities name the placement their objects hang from, and so do the entrances and exits of stations.
 #pragma once
 
+#include "core/types.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 
@@ -19,13 +20,13 @@ namespace rct3::park
 
     struct AttractionRef
     {
-        enum class Kind : std::uint8_t
+        enum class Kind : u8
         {
             Ride,  ///< Tracked, flat or a facility: an index into RideModel::rides
             Stall, ///< An index into RideModel::stalls
         };
         Kind kind = Kind::Ride;
-        std::size_t index = 0;
+        usize index = 0;
 
         [[nodiscard]] static constexpr AttractionRef of(save::model::RideIndex ride) noexcept
         {
@@ -50,13 +51,13 @@ namespace rct3::park
     };
 
     /// The attraction of each object that belongs to one, by object id.
-    using AttractionObjects = std::unordered_map<std::uint64_t, AttractionRef>;
+    using AttractionObjects = std::unordered_map<u64, AttractionRef>;
 
     [[nodiscard]] AttractionObjects attraction_objects(const save::model::RideModel& rides, std::span<const save::model::PlacedObject> objects);
 
     /// The objects that stand for the same thing as one of the objects at `of` (places in `objects`): of the same
     /// asset at the same place and turn, one hanging from the other. Saves may keep a ride's building, entrance and
     /// exit twice so; what draws one moving must leave out its twin.
-    [[nodiscard]] std::vector<std::size_t> twins(std::span<const save::model::PlacedObject> objects, std::span<const std::size_t> of);
+    [[nodiscard]] std::vector<usize> twins(std::span<const save::model::PlacedObject> objects, std::span<const usize> of);
 
 } // namespace rct3::park

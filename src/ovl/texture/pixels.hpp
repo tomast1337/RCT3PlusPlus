@@ -5,6 +5,7 @@
 // the same part. A flic of revision 2 carries its image itself.
 #pragma once
 
+#include "core/types.hpp"
 #include "ovl/bitmap_table.hpp"
 #include "ovl/flic.hpp"
 #include "ovl/texture/image.hpp"
@@ -33,16 +34,16 @@ namespace rct3::ovl::texture
         }
 
         /// Frames the texture's flic lists (1 for a flic that carries its own image, 0 without a flic).
-        [[nodiscard]] std::size_t frame_count(const Texture& texture) const;
+        [[nodiscard]] usize frame_count(const Texture& texture) const;
         /// The largest mip level of frame `index`, rows as stored. Nothing when the frame is out of range or
         /// cannot be decoded. Font pages are the frames of the font's texture.
-        [[nodiscard]] std::optional<RgbaImage> frame(const Texture& texture, std::size_t index) const;
+        [[nodiscard]] std::optional<RgbaImage> frame(const Texture& texture, usize index) const;
 
-        [[nodiscard]] std::size_t flic_count() const
+        [[nodiscard]] usize flic_count() const
         {
             return flics_.size();
         }
-        [[nodiscard]] std::size_t table_count() const
+        [[nodiscard]] usize table_count() const
         {
             return tables_.size();
         }
@@ -50,11 +51,11 @@ namespace rct3::ovl::texture
     private:
         struct Table
         {
-            std::uint32_t address = 0;
+            u32 address = 0;
             BitmapTable table;
         };
 
-        std::unordered_map<std::uint32_t, Flic> flics_;
+        std::unordered_map<u32, Flic> flics_;
         std::vector<Table> tables_; ///< By address
     };
 

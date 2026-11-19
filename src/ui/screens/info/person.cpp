@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "ui/screens/info/person.hpp"
 
+#include "core/types.hpp"
 #include "save/model/park.hpp"
 #include "strings/unicode.hpp"
 #include "ui/money_text.hpp"
@@ -41,13 +42,13 @@ namespace rct3::ui::screens::info
         /// The Train button's picture by the levels bought: a square filled for each.
         constexpr std::array<std::string_view, 4> kTrainingIcons { "Staff_Training0IconLarge", "Staff_Training1IconLarge", "Staff_Training2IconLarge", "Staff_Training3IconLarge" };
 
-        constexpr float kPatrolChoiceWidth = 56;  ///< Chosen by eye: a brush or zone list on the patrol row
-        constexpr float kPatrolButtonWidth = 150; ///< Chosen by eye: fill and copy, side by side under them
+        constexpr f32 kPatrolChoiceWidth = 56;  ///< Chosen by eye: a brush or zone list on the patrol row
+        constexpr f32 kPatrolButtonWidth = 150; ///< Chosen by eye: fill and copy, side by side under them
 
         /// A job's task: its flag bit and words.
         struct Task
         {
-            std::int32_t bit = 0;
+            i32 bit = 0;
             std::string_view label;
             std::string_view help;
             std::string_view icon; ///< The toggle's skin family, pressed in while the task is on
@@ -103,7 +104,7 @@ namespace rct3::ui::screens::info
         }
 
         /// How many clothes the uniform of `kind` has colours for; 0 for none.
-        std::size_t uniform_pots(save::model::StaffKind kind)
+        usize uniform_pots(save::model::StaffKind kind)
         {
             using enum save::model::StaffKind;
             switch (kind)
@@ -138,9 +139,9 @@ namespace rct3::ui::screens::info
         constexpr std::string_view kToleranceWord = "RideRating";
 
         /// Lines of rides gone on and of thoughts at most: as many as the page has room for.
-        constexpr std::size_t kListLines = 6;
+        constexpr usize kListLines = 6;
         using units::kPercent;
-        constexpr std::int32_t kMinutesPerHour = 60;
+        constexpr i32 kMinutesPerHour = 60;
 
         std::u16string ascii(std::string_view s)
         {
@@ -163,12 +164,12 @@ namespace rct3::ui::screens::info
             page.lines.push_back({ text(strings, label), std::move(value), true, std::string(label) });
         }
 
-        std::u16string percent(float fraction)
+        std::u16string percent(f32 fraction)
         {
             return ascii(std::format("{} %", std::lround(std::clamp(fraction, 0.0f, 1.0f) * kPercent)));
         }
 
-        std::u16string count(std::int32_t n)
+        std::u16string count(i32 n)
         {
             return ascii(std::to_string(n));
         }
@@ -202,7 +203,7 @@ namespace rct3::ui::screens::info
 
         std::u16string job(const save::model::Staff& s, const StringTable& strings)
         {
-            const auto kind = static_cast<std::size_t>(s.kind);
+            const auto kind = static_cast<usize>(s.kind);
             return kind < kJobNames.size() ? text(strings, kJobNames[kind]) : std::u16string { };
         }
 
@@ -278,9 +279,9 @@ namespace rct3::ui::screens::info
             return { };
         }
 
-        std::u16string time_in_park(std::int32_t minutes)
+        std::u16string time_in_park(i32 minutes)
         {
-            const std::int32_t m = std::max(minutes, 0);
+            const i32 m = std::max(minutes, 0);
             return ascii(std::format("{}:{:02}", m / kMinutesPerHour, m % kMinutesPerHour));
         }
 
@@ -368,20 +369,20 @@ namespace rct3::ui::screens::info
 
         void guest_general(InfoPage& page, const save::model::Guest& g, const StringTable& strings)
         {
-            const auto liking = static_cast<std::size_t>(g.ride_preference.intensity);
+            const auto liking = static_cast<usize>(g.ride_preference.intensity);
             if (liking < kIntensityWords.size())
                 add(page, strings, "Guest_PreferredRideIntensity", text(strings, kIntensityWords[liking]));
-            add(page, strings, "Guest_NauseaTolerance", text(strings, std::format("{}{}", kToleranceWord, static_cast<std::int32_t>(g.nausea_tolerance))));
+            add(page, strings, "Guest_NauseaTolerance", text(strings, std::format("{}{}", kToleranceWord, static_cast<i32>(g.nausea_tolerance))));
             add(page, strings, "Guest_TimeInPark", time_in_park(g.counters.minutes_in_park));
         }
 
         void staff_stats(InfoPage& page, const PersonFacts& f, const StringTable& strings, const InfoUnits& units)
         {
             const save::model::Staff& s = *f.staff;
-            const std::optional<std::uint32_t> items_mended = f.items_mended;
+            const std::optional<u32> items_mended = f.items_mended;
             // Staff a scenario starts with were hired before its calendar began: they show its first day.
             const save::model::CalendarDate hired = save::model::GameClock::date_at(s.person.start_time, f.zero_time);
-            add(page, strings, "Employee_DateHired", date_text(strings, hired.day, hired.month, static_cast<std::int32_t>(hired.year + 1)));
+            add(page, strings, "Employee_DateHired", date_text(strings, hired.day, hired.month, static_cast<i32>(hired.year + 1)));
             // The wage as money, stepped a level at a time by the arrows after it.
             InfoControl wage;
             wage.id = person_control(PersonControl::Wage);
@@ -407,7 +408,7 @@ namespace rct3::ui::screens::info
                 add(page, strings, "Handyman_BinsEmptied", count(w->bins_emptied));
                 add(page, strings, "Handyman_GrassMown", count(w->grass_mown));
                 if (items_mended)
-                    add(page, strings, "Rct3pp_ItemsMended", count(static_cast<std::int32_t>(*items_mended)));
+                    add(page, strings, "Rct3pp_ItemsMended", count(static_cast<i32>(*items_mended)));
             }
             else if (const auto* m = std::get_if<save::model::MechanicWork>(&s.work))
             {
@@ -470,7 +471,7 @@ namespace rct3::ui::screens::info
             brush.name = "Rct3pp_PatrolBrush";
             brush.kind = InfoControlKind::Choice;
             brush.label = text(strings, "Rct3pp_PatrolBrush");
-            for (const std::int32_t across : kPatrolBrushes)
+            for (const i32 across : kPatrolBrushes)
                 brush.items.push_back(ascii(std::format("{0} x {0}", across)));
             brush.value = facts.patrol_brush;
             brush.width = kPatrolChoiceWidth;
@@ -481,9 +482,9 @@ namespace rct3::ui::screens::info
             zone.kind = InfoControlKind::Choice;
             zone.label = text(strings, "Rct3pp_PatrolZone");
             zone.items.push_back(text(strings, "Rct3pp_PatrolNoZone"));
-            for (std::uint32_t z = 1; z <= kPatrolZones; ++z)
+            for (u32 z = 1; z <= kPatrolZones; ++z)
                 zone.items.push_back(ascii(std::to_string(z)));
-            zone.value = static_cast<std::int32_t>(facts.patrol_zone);
+            zone.value = static_cast<i32>(facts.patrol_zone);
             zone.width = kPatrolChoiceWidth;
             zone.beside = true;
             page.controls.push_back(std::move(zone));
@@ -519,8 +520,8 @@ namespace rct3::ui::screens::info
                 button(PersonControl::Sack, "Staff_SackIconLarge", "StaffWindow_SackHelp");
             }
             // Its squares fill a level at a time, as the training is bought.
-            const std::int32_t level = std::clamp(s.training, 0, kMostTraining);
-            InfoControl& train = button(PersonControl::Train, kTrainingIcons[static_cast<std::size_t>(level)], "StaffWindow_TrainHelp", level < kMostTraining);
+            const i32 level = std::clamp(s.training, 0, kMostTraining);
+            InfoControl& train = button(PersonControl::Train, kTrainingIcons[static_cast<usize>(level)], "StaffWindow_TrainHelp", level < kMostTraining);
             train.name = "StaffWindow_TrainHelp";
             if (level < kMostTraining)
             {
@@ -591,12 +592,12 @@ namespace rct3::ui::screens::info
             return { kGuestTabs.begin(), kGuestTabs.end() };
         std::vector<PersonTabInfo> tabs { kStaffTabs.begin(), kStaffTabs.end() };
         const save::model::StaffKind kind = facts.staff->kind;
-        std::int32_t slot = 3;
+        i32 slot = 3;
         if (!tasks(kind).empty())
             tabs.push_back({ PersonTab::Tasks, slot++, "Staff_Tools", "Staff_Tasks" });
         if (kind == save::model::StaffKind::Entertainer)
             tabs.push_back({ PersonTab::Costume, slot++, "Staff_InfoIcon", "Entertainer_Costume_Menu" });
-        if (const std::size_t pots = uniform_pots(kind); pots > 0)
+        if (const usize pots = uniform_pots(kind); pots > 0)
             tabs.push_back({ PersonTab::Uniform, slot++, kPaintIcon, uniform_help(kind), pots });
         return tabs;
     }
@@ -634,8 +635,8 @@ namespace rct3::ui::screens::info
 
     void cash_lines(InfoPage& page, std::span<const PersonFacts> who, const StringTable& strings, const InfoUnits& units)
     {
-        const auto money = [&](std::int32_t save::model::Cash::* field) {
-            std::int64_t sum = 0;
+        const auto money = [&](i32 save::model::Cash::* field) {
+            i64 sum = 0;
             for (const PersonFacts& f : who)
                 sum += f.guest->cash.*field;
             return money_text(units.currency, units::Money { sum });

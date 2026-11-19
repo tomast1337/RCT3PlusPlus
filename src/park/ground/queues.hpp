@@ -16,6 +16,7 @@
 // queue's ground surface picks the colours of the picture's three recolourable slots.
 #pragma once
 
+#include "core/types.hpp"
 #include "park/terrain_mesh.hpp"
 #include "park/turns.hpp"
 #include "save/model/world.hpp"
@@ -34,7 +35,7 @@ namespace rct3::park::ground
     /// which their objects' ids follow.
     inline constexpr std::array<Side, 4> kSidesFromRowBefore { Side::kRowBefore, Side::kNextCol, Side::kNextRow, Side::kColBefore };
 
-    enum class QueueCell : std::uint8_t
+    enum class QueueCell : u8
     {
         Straight,
         Closed,
@@ -47,18 +48,18 @@ namespace rct3::park::ground
     struct QueueShape
     {
         QueueCell cell = QueueCell::Closed;
-        std::uint8_t turns = 0;
+        u8 turns = 0;
     };
 
     /// The shape of a tile open on its stored start and end directions. A tile whose two sides are the same is drawn
     /// straight through on that axis; one without a usable side is closed.
-    [[nodiscard]] QueueShape queue_shape(std::uint8_t start, std::uint8_t end) noexcept;
+    [[nodiscard]] QueueShape queue_shape(u8 start, u8 end) noexcept;
 
     /// A queue style painted in its ground surface's colours.
     struct QueuePainting
     {
         std::string style;
-        std::array<std::int32_t, 3> colours { };
+        std::array<i32, 3> colours { };
         friend bool operator==(const QueuePainting&, const QueuePainting&) = default;
     };
 

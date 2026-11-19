@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/water.hpp"
 
+#include "core/types.hpp"
 #include "park/object/pick.hpp"
 
 #include <algorithm>
@@ -13,8 +14,8 @@ namespace rct3::scene::park
 
     namespace
     {
-        constexpr std::uint32_t kWaveSize = 128;
-        constexpr std::int32_t kWaveTrains = 14;
+        constexpr u32 kWaveSize = 128;
+        constexpr i32 kWaveTrains = 14;
 
         /// A height picture that tiles: a sum of waves each fitting a whole number of times across it, running in
         /// scattered directions, longer ones stronger, as on open water.
@@ -22,39 +23,39 @@ namespace rct3::scene::park
         {
             struct Train
             {
-                float kx, ky, phase, amplitude;
+                f32 kx, ky, phase, amplitude;
             };
             std::vector<Train> trains;
-            std::uint32_t state = 20261016u; // Any seed; fixed so every load looks the same
+            u32 state = 20261016u; // Any seed; fixed so every load looks the same
             const auto next = [&state] {
                 state = state * 1664525u + 1013904223u;
-                return static_cast<float>(state >> 8) / static_cast<float>(1u << 24);
+                return static_cast<f32>(state >> 8) / static_cast<f32>(1u << 24);
             };
-            const float tau = 2 * std::numbers::pi_v<float>;
-            for (std::int32_t i = 0; i < kWaveTrains; ++i)
+            const f32 tau = 2 * std::numbers::pi_v<f32>;
+            for (i32 i = 0; i < kWaveTrains; ++i)
             {
-                const float angle = next() * tau;
-                const float cycles = 1 + std::floor(next() * 7);
-                const float kx = std::round(std::cos(angle) * cycles);
-                const float ky = std::round(std::sin(angle) * cycles);
+                const f32 angle = next() * tau;
+                const f32 cycles = 1 + std::floor(next() * 7);
+                const f32 kx = std::round(std::cos(angle) * cycles);
+                const f32 ky = std::round(std::sin(angle) * cycles);
                 if (kx == 0 && ky == 0)
                     continue;
                 trains.push_back({ kx, ky, next() * tau, 1 / std::hypot(kx, ky) });
             }
-            std::vector<float> height(std::size_t { kWaveSize } * kWaveSize);
-            for (std::uint32_t y = 0; y < kWaveSize; ++y)
+            std::vector<f32> height(usize { kWaveSize } * kWaveSize);
+            for (u32 y = 0; y < kWaveSize; ++y)
             {
-                for (std::uint32_t x = 0; x < kWaveSize; ++x)
+                for (u32 x = 0; x < kWaveSize; ++x)
                 {
-                    float h = 0;
+                    f32 h = 0;
                     for (const Train& t : trains)
-                        h += t.amplitude * std::sin(tau * (t.kx * static_cast<float>(x) + t.ky * static_cast<float>(y)) / kWaveSize + t.phase);
+                        h += t.amplitude * std::sin(tau * (t.kx * static_cast<f32>(x) + t.ky * static_cast<f32>(y)) / kWaveSize + t.phase);
                     height[y * kWaveSize + x] = h;
                 }
             }
             const auto [low, high] = std::ranges::minmax(height);
             std::vector<std::byte> pixels(height.size() * 4);
-            for (std::size_t i = 0; i < height.size(); ++i)
+            for (usize i = 0; i < height.size(); ++i)
             {
                 const auto v = static_cast<std::byte>(std::lround(255 * (height[i] - low) / std::max(high - low, 1e-6f)));
                 pixels[i * 4] = pixels[i * 4 + 1] = pixels[i * 4 + 2] = v;
@@ -70,7 +71,7 @@ namespace rct3::scene::park
             const glm::mat4 back = glm::inverse(transform);
             std::array<rct3::park::GroundVertex, 6> quad;
             constexpr std::array<glm::vec2, 6> kCorners { glm::vec2 { -1, -1 }, { 1, -1 }, { 1, 1 }, { -1, -1 }, { 1, 1 }, { -1, 1 } };
-            for (std::size_t i = 0; i < quad.size(); ++i)
+            for (usize i = 0; i < quad.size(); ++i)
             {
                 const glm::vec4 near = back * glm::vec4(kCorners[i], 0.0f, 1.0f);
                 // Half again as far as the near plane, so the depth test keeps the quad in front of everything.
@@ -82,7 +83,7 @@ namespace rct3::scene::park
             render::DrawCommand draw;
             draw.pipeline = water.shaded;
             draw.vertices = *vertices;
-            draw.count = static_cast<std::uint32_t>(quad.size());
+            draw.count = static_cast<u32>(quad.size());
             draw.transform = transform;
             draw.texture = water.waves;
             draw.filter = render::Filter::Linear;
@@ -243,9 +244,9 @@ namespace rct3::scene::park
         if (water.look.reflection)
         {
             const render::Extent half { std::max(screen.width / 2, 1u), std::max(screen.height / 2, 1u) };
-            for (const float level : rct3::park::water::reflection_levels(water.surface, view_projection, eye, kWaterReflections))
+            for (const f32 level : rct3::park::water::reflection_levels(water.surface, view_projection, eye, kWaterReflections))
             {
-                const std::size_t i = water.levels.size();
+                const usize i = water.levels.size();
                 if (!fit_target(device, water.reflections[i], water.reflection_sizes[i], half, false, "water reflection"))
                     break;
                 water.levels.push_back(level);
@@ -262,7 +263,7 @@ namespace rct3::scene::park
         device.begin_pass(back);
     }
 
-    void draw_park_water(render::Device& device, ParkWater& water, const glm::mat4& transform, const render::SceneLight& light, glm::vec3 eye, float time, bool shaded)
+    void draw_park_water(render::Device& device, ParkWater& water, const glm::mat4& transform, const render::SceneLight& light, glm::vec3 eye, f32 time, bool shaded)
     {
         if (!water.vertices)
             return;

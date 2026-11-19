@@ -135,7 +135,7 @@ TEST_CASE("a train is pulled up the chain, runs down the drop faster and comes r
     CHECK(running.at == 10);
 }
 
-TEST_CASE("a train setting off onto level track past the platform is carried off by the station, not left standing")
+TEST_CASE("a train setting off onto level track past the platform is carried off by the station, then let go")
 {
     // A 100 m circuit: a 10 m station, 20 m level, a 30 m chain up 15 m, a 30 m drop and 10 m level back home.
     Coaster c;
@@ -152,6 +152,11 @@ TEST_CASE("a train setting off onto level track past the platform is carried off
         CHECK_FALSE(drive(c, 0.25f));
     CHECK(c.travelled > 1); // Under way within 2 s
     CHECK(c.speed <= c.station_speed);
+    // Wholly off the platform, it rolls on as the level track lets it, slowing: no longer pushed.
+    for (std::int32_t t = 0; t < 200 && c.travelled < c.train_length + 3; ++t)
+        drive(c, 0.05f);
+    CHECK(c.travelled >= c.train_length + 3);
+    CHECK(c.speed < c.station_speed - 0.5f);
 }
 
 TEST_CASE("a slide's car down in the pool on its way back is slowed in the water and carried on to the lift")

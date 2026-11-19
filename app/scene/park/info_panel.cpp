@@ -11,6 +11,7 @@
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
 #include "scene/track/trains.hpp"
+#include "simulation/crowds.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/parties.hpp"
@@ -101,6 +102,13 @@ namespace rct3::scene::park
                 f.uncovered_paths = simulation::staff::uncovered_paths(scene.sim, staff.role);
                 if (staff.role == simulation::StaffRole::Handyman)
                     f.items_mended = staff.mended;
+                const auto& r = scene.sim.registry;
+                const auto* show = r.try_get<simulation::Show>(e);
+                f.activity = ui::screens::info::StaffActivity {
+                    .job = staff.job,
+                    .ride_broken = staff.ride != entt::null && r.valid(staff.ride) && r.all_of<simulation::Upkeep>(staff.ride) ? std::optional(r.get<simulation::Upkeep>(staff.ride).broken) : std::nullopt,
+                    .showing = show != nullptr && !show->moves.empty(),
+                };
             }
             const auto& r = scene.sim.registry;
             if (const ShownPerson& p = scene.shown_people[shown]; !p.staff && p.guest != entt::null && r.valid(p.guest) && r.all_of<simulation::Vip>(p.guest))

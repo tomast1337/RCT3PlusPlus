@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Generic value decoding for the object records of a save file.
+// Generic value decoding and encoding for the object records of a save file.
 //
 // The class table of a save describes every attribute with a type string, a fixed size (or 0 for
 // variable) and nested child descriptors. This module turns an object's raw attribute bytes into a tree of
@@ -147,6 +147,12 @@ namespace rct3::save
     /// Decodes every attribute of `object` using its class layout. Fails only if the object does not belong to
     /// `file` or its framing is broken, which read_save already rules out for objects it returned.
     [[nodiscard]] std::expected<DecodedObject, Error> decode_object(const SaveFile& file, const Object& object);
+
+    /// The inverse of decode_object: `fields`, a Struct with one value per attribute of `cls` in schema order and
+    /// named as they are, as the attribute bytes of an object (see ObjectRecord). Raw values are written as they
+    /// are; strings with the four byte marker and UTF-16LE. Fails with ValueMismatch when a value's kind, size or
+    /// field count does not fit its attribute.
+    [[nodiscard]] std::expected<std::vector<std::byte>, Error> encode_object(const Class& cls, const Value& fields);
 
     /// Object lookup by id. Ids are unique in well-formed files; on duplicates the first object wins.
     class ObjectIndex

@@ -588,7 +588,164 @@ namespace rct3::save
             }
         };
 
+        // Writes values in the layouts the Decoder reads. Every function returns false on a value that does not fit.
+        class Encoder
+        {
+        public:
+            std::vector<std::byte> out;
+
+            bool attribute(const Attribute& a, const Value& v, std::size_t depth)
+            {
+                if (depth > kMaxDepth)
+                    return false;
+                if (a.size > 0)
+                {
+                    const std::size_t start = out.size();
+                    return fixed(a, v, depth) && out.size() - start == a.size;
+                }
+                // Its length goes in front once its bytes are known.
+                const std::size_t at = out.size();
+                put(std::uint32_t { 0 });
+                if (!variable(a, v, depth))
+                    return false;
+                const auto length = static_cast<std::uint32_t>(out.size() - at - 4);
+                std::memcpy(out.data() + at, &length, sizeof length);
+                return true;
+            }
+
+            // A Struct's items as `children`, one each in order, under the same names.
+            bool sequence(const std::vector<Attribute>& children, const Value& v, std::size_t depth)
+            {
+                if (v.kind() != ValueKind::Struct || v.items().size() != children.size())
+                    return false;
+                for (std::size_t i = 0; i < children.size(); ++i)
+                    if (v.names()[i] != children[i].name || !attribute(children[i], v.items()[i], depth + 1))
+                        return false;
+                return true;
+            }
+
+        private:
+            template<class T> void put(T v)
+            {
+                const std::size_t at = out.size();
+                out.resize(at + sizeof v);
+                std::memcpy(out.data() + at, &v, sizeof v);
+            }
+            void put_floats(std::span<const float> f)
+            {
+                for (const float x : f)
+                    put(x);
+            }
+
+            bool fixed(const Attribute& a, const Value& v, std::size_t depth)
+            {
+                if (v.kind() == ValueKind::Raw)
+                {
+                    out.insert(out.end(), v.raw().begin(), v.raw().end());
+                    return true;
+                }
+                for (const auto& t : kScalarTypes)
+                {
+                    if (t.size != a.size || !iequals(a.type, t.name))
+                        continue;
+                    switch (t.scalar)
+                    {
+                        case Scalar::Bool:
+                            put(static_cast<std::uint8_t>(v.as_bool()));
+                            return v.kind() == ValueKind::Bool;
+                        case Scalar::I8:
+                        case Scalar::U8:
+                            put(static_cast<std::uint8_t>(v.as_integer()));
+                            return v.kind() == ValueKind::Integer;
+                        case Scalar::U16:
+                            put(static_cast<std::uint16_t>(v.as_integer()));
+                            return v.kind() == ValueKind::Integer;
+                        case Scalar::I32:
+                        case Scalar::U32:
+                            put(static_cast<std::uint32_t>(v.as_integer()));
+                            return v.kind() == ValueKind::Integer;
+                        case Scalar::F32:
+                            put(v.as_float());
+                            return v.kind() == ValueKind::Float;
+                        case Scalar::Ref:
+                            put(v.as_reference());
+                            return v.kind() == ValueKind::Reference;
+                        case Scalar::Vec3:
+                        case Scalar::Orient:
+                        case Scalar::Mat44:
+                            put_floats(v.floats());
+                            return v.kind() == (t.scalar == Scalar::Vec3 ? ValueKind::Vector3 : t.scalar == Scalar::Orient ? ValueKind::Orientation : ValueKind::Matrix44);
+                    }
+                }
+                return iequals(a.type, kStructType) && !a.children.empty() && sequence(a.children, v, depth);
+            }
+
+            bool variable(const Attribute& a, const Value& v, std::size_t depth)
+            {
+                if (v.kind() == ValueKind::Raw)
+                {
+                    out.insert(out.end(), v.raw().begin(), v.raw().end());
+                    return true;
+                }
+                if (iequals(a.type, kStringType) && v.kind() == ValueKind::String)
+                {
+                    put(0xEFEFEFEFu);
+                    for (const char16_t u : strings::to_utf16(v.text()))
+                        put(static_cast<std::uint16_t>(u));
+                    return true;
+                }
+                if (iequals(a.type, kSymbolType) && v.kind() == ValueKind::String)
+                {
+                    out.insert(out.end(), reinterpret_cast<const std::byte*>(v.text().data()), reinterpret_cast<const std::byte*>(v.text().data() + v.text().size()));
+                    return true;
+                }
+                if ((iequals(a.type, kListType) || iequals(a.type, kArrayType)) && v.kind() == ValueKind::List && !a.children.empty())
+                {
+                    put(static_cast<std::uint32_t>(v.items().size()));
+                    for (const Value& item : v.items())
+                        if (a.children.size() == 1 ? !attribute(a.children[0], item, depth + 1) : !sequence(a.children, item, depth))
+                            return false;
+                    return true;
+                }
+                if (iequals(a.type, kStructType) && !a.children.empty())
+                    return sequence(a.children, v, depth);
+                // The two small layouts, as the Decoder names their parts.
+                if (iequals(a.type, kCurveType) && v.kind() == ValueKind::Struct && v.items().size() == 3)
+                {
+                    const std::span<const float> values = v.items()[2].floats();
+                    put(static_cast<std::int32_t>(v.items()[0].as_integer()));
+                    put(static_cast<std::uint32_t>(v.items()[1].as_integer()));
+                    put(static_cast<std::uint32_t>(values.size()));
+                    put_floats(values);
+                    return true;
+                }
+                if (iequals(a.type, kPathType) && v.kind() == ValueKind::Struct && v.items().size() == 5)
+                {
+                    for (std::size_t i = 0; i < 4; ++i)
+                        put(static_cast<std::uint16_t>(v.items()[i].as_integer()));
+                    const std::span<const Value> points = v.items()[4].items();
+                    if (points.size() != static_cast<std::size_t>(v.items()[0].as_integer()) || !std::ranges::all_of(points, [](const Value& p) { return p.floats().size() == 3; }))
+                        return false;
+                    for (const Value& point : points)
+                        put_floats(point.floats());
+                    return true;
+                }
+                return false;
+            }
+        };
+
     } // namespace
+
+    std::expected<std::vector<std::byte>, Error> encode_object(const Class& cls, const Value& fields)
+    {
+        Encoder e;
+        if (fields.kind() != ValueKind::Struct || fields.items().size() != cls.attributes.size())
+            return std::unexpected(Error::ValueMismatch);
+        for (std::size_t i = 0; i < cls.attributes.size(); ++i)
+            if (fields.names()[i] != cls.attributes[i].name || !e.attribute(cls.attributes[i], fields.items()[i], 0))
+                return std::unexpected(Error::ValueMismatch);
+        return std::move(e.out);
+    }
 
     std::expected<DecodedObject, Error> decode_object(const SaveFile& file, const Object& object)
     {

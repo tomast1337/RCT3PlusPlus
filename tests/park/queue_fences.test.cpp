@@ -78,6 +78,20 @@ TEST_CASE("a ground queue is fenced on every side but its two open ones, standin
     CHECK(fences[0].id != fences[1].id);
 }
 
+TEST_CASE("each tile's railings are listed under the tile")
+{
+    save::model::PathTile first = queue(0, 1, save::model::kSlopeOnGround);
+    first.id = 7;
+    save::model::PathTile second = first;
+    second.id = 8;
+    second.col = 5;
+    const QueueFences fences = queue_fences(std::vector<save::model::PathTile> { first, second }, flat_grid(), 0);
+    REQUIRE(fences.pieces.size() == 4);
+    REQUIRE(fences.of_tile.size() == 2);
+    CHECK(fences.of_tile.at(7) == std::vector<u64> { fences.pieces[0].id, fences.pieces[1].id });
+    CHECK(fences.of_tile.at(8) == std::vector<u64> { fences.pieces[2].id, fences.pieces[3].id });
+}
+
 TEST_CASE("a level raised queue is fenced at its height; queues without a fence are not")
 {
     const auto level = queue_fences(std::vector<save::model::PathTile> { queue(0, 2, 0) }, flat_grid(), 0).pieces;

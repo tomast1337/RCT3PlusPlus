@@ -16,6 +16,7 @@
 #include "save/model/world.hpp"
 
 #include <span>
+#include <unordered_map>
 #include <vector>
 
 namespace rct3::park
@@ -33,7 +34,8 @@ namespace rct3::park
     struct QueueFences
     {
         std::vector<save::model::PlacedObject> pieces;
-        object::Leans leans; ///< Of the pieces that do not stand level
+        object::Leans leans;                               ///< Of the pieces that do not stand level
+        std::unordered_map<u64, std::vector<u64>> of_tile; ///< The pieces along each queue tile, by the tile's id
     };
 
     /// Placed fence pieces along the queues among `paths`. New objects take ids after `last_id`.

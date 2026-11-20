@@ -1579,6 +1579,8 @@ namespace rct3::scene::park
             log.info("{} supports, {} queue railings", supports, fences.pieces.size());
             built.insert(built.end(), std::make_move_iterator(fences.pieces.begin()), std::make_move_iterator(fences.pieces.end()));
             scene.leans = std::move(fences.leans);
+            // Kept by tile, so a queue railed again (another fence, or the tile taken up) hides these first.
+            scene.footpaths.railings = std::move(fences.of_tile);
             std::unordered_map<u64, const rct3::park::object::ObjectModel*> object_models;
             for (const save::model::PlacedObject& o : scene.objects)
             {

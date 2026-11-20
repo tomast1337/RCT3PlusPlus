@@ -56,6 +56,21 @@ expect(
     "door looks too",
 );
 
+// The queue's railings before, which the new fence replaces.
+const queueBefore = (() => {
+    const d = now().entrance!;
+    const close = (o: { col: number; row: number }) => Math.abs(o.col - d.col) <= 1 && Math.abs(o.row - d.row) <= 1;
+    const ids = new Set(map.paths().flatMap((p) => (p.queue && p.line !== undefined && close(p) ? [p.line] : [])));
+    return map.paths().filter((p) => p.queue && p.line !== undefined && ids.has(p.line));
+})();
+const onQueue = () => map.objects().filter((o) => queueBefore.some((p) => p.col === o.col && p.row === o.row)).length;
+const standingBefore = onQueue();
+log(
+    "queue railings before",
+    JSON.stringify(queueBefore.map((p) => (p.queue ? p.railing : ""))),
+    "objects on it",
+    standingBefore,
+);
 const fence = await pickOther("fence_style", () => now().fence);
 const entrance = await pickOther("entrance_style", () => now().entranceItem);
 const exit = await pickOther("exit_style", () => now().exitItem);
@@ -91,6 +106,10 @@ expect(
                 o.symbol.toLowerCase() === fence.toLowerCase() && queue.some((p) => p.col === o.col && p.row === o.row),
         ),
     `${fence} railings on the queue`,
+);
+expect(
+    onQueue() === standingBefore,
+    `the old railings replaced, not kept: ${standingBefore} then ${onQueue()} on the queue`,
 );
 camera.look(
     { col: queue[0].col + 0.5, row: queue[0].row + 0.5 },

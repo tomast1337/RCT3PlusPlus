@@ -83,7 +83,7 @@ namespace rct3::simulation
         units::Share habitat_weight { 0.35f }; ///< Of health that a habitat of nothing keeps an animal from
         units::Share lonely_weight { 0.3f };   ///< Likewise being fully lonely
         units::Share annoyed_weight { 0.25f }; ///< Likewise being annoyed
-        i32 per_companion = 4;                 ///< Sociability for each other of its kind an animal wants about it
+        i32 per_companion = 6;                 ///< Sociability for each other of its kind an animal wants about it, so 3 at most
         i32 crowd = 3;                         ///< Other animals one wanting at most one companion puts up with
         units::Share lonely_told { 0.8f };     ///< Loneliness the inspector tells of
         units::Share neglect { 0.15f };        ///< Health below which an animal is neglected

@@ -357,6 +357,7 @@ namespace rct3::scene::park
             // The species that need this kind of house, each once though the catalogue lists four animals of each.
             f.house.emplace();
             const auto& r = scene.sim.registry;
+            f.house->schedule = r.get<simulation::AnimalHouse>(home).schedule;
             const bool listed = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
             for (const rct3::park::BuildItem& item : listed ? std::span<const rct3::park::BuildItem>(scene.build.items.get()) : std::span<const rct3::park::BuildItem> { })
                 if (item.kind == rct3::park::BuildKind::Animal && strings::equals_ignoring_case(item.needs, o.symbol) && !std::ranges::contains(f.house->species, std::string_view(item.group_text)))

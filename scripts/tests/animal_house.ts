@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // An animal house's window in a Wild! scenario: a click on a house opens it on its details, naming the species
-// that live in it; its keepers and thoughts pages open, and a click on its keeper's hut opens the same window.
-// Screenshots: each page.
+// that live in it; its feeding page shows the schedule the park kept and changes it; its keepers and thoughts
+// pages open, and a click on its keeper's hut opens the same window. Screenshots: each page.
 //
 //   ./nob script scripts/tests/animal_house.ts -- --headless --no-intro --no-audio --seed 1
 
@@ -33,6 +33,23 @@ log("details", JSON.stringify(ui.children("info/body")));
 expect(species.length > 0, "the species that live in it");
 expect(under("info", "CenterInViewIcon") !== undefined, "the button that turns the view to it");
 await screenshot("details");
+
+// The feeding page: the park keeps its houses fed often; the list takes them down to infrequent.
+await ui.click(`info/${must(info_tab("animalshelterfeedingicon"), "the feeding tab")}`);
+await until(() => animals.shownHouse()?.tab === "feeding", 60, "the feeding page");
+const schedule = () => animals.houses().find((h) => h.id === house.id)?.schedule;
+expect(schedule() === "often", `the park's own schedule, not ${schedule()}`);
+await screenshot("feeding");
+const list = must(under("info", "AnimalShelterFeedingListLabel"), "the feeding list");
+await ui.click(list);
+await frames(2);
+await ui.click(list);
+await frames(2);
+keys.press("Up");
+await frames(2);
+keys.press("Up");
+await until(() => schedule() === "infrequent", 60, "the house fed infrequently");
+await screenshot("feeding_infrequent");
 
 for (const [part, page] of [
     ["animalshelterkeepericon", "keepers"],

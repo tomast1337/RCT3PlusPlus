@@ -11,6 +11,7 @@
 #include "park/pools/pools.hpp"
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
+#include "simulation/animals.hpp"
 #include "ui/money_text.hpp"
 #include "ui/screens/info/panel.hpp"
 #include "ui/string_table.hpp"
@@ -36,6 +37,7 @@ namespace rct3::ui::screens::info
         Passport, ///< On a passport post: the park's passport gift and the stamps it takes
         // An animal house's:
         HouseDetails,  ///< The species that live in it, and a button that turns the view to it
+        HouseFeeding,  ///< How often its keepers fill its troughs
         HouseKeepers,  ///< The keepers who look after it
         HouseThoughts, ///< What guests think of its animals
         // A changing room's, laid out as an attraction's window about the room and its pool complex:
@@ -69,6 +71,7 @@ namespace rct3::ui::screens::info
     inline constexpr i32 kPassportGiftControl = 16;
     /// Turns the park's view to an animal house.
     inline constexpr i32 kHouseLocateControl = 17;
+    inline constexpr i32 kHouseScheduleControl = 18;
     inline constexpr i32 kMostWaveOn = 600;   ///< Chosen by eye
     inline constexpr i32 kWaveOnStep = 10;    ///< Chosen by eye
     inline constexpr i32 kMostWaveEvery = 30; ///< Chosen by eye: minutes
@@ -112,6 +115,7 @@ namespace rct3::ui::screens::info
     {
         std::vector<std::string_view> species { }; ///< String keys of the names of the species that live in it
         std::vector<std::u16string> keepers { };
+        simulation::FeedingSchedule schedule { simulation::FeedingSchedule::Normal };
     };
 
     struct SceneryTabInfo

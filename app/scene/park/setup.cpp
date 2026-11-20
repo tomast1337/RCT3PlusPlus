@@ -1219,6 +1219,10 @@ namespace rct3::scene::park
                             const auto hut = std::ranges::min_element(scene.objects, { }, [&](const save::model::PlacedObject& h) { return h.symbol == kHut ? std::abs(h.col - o.col) + std::abs(h.row - o.row) : std::numeric_limits<i32>::max(); });
                             if (hut != scene.objects.end() && hut->symbol == kHut && std::abs(hut->col - o.col) + std::abs(hut->row - o.row) <= span[0] + span[1])
                                 house.hut = hut->id;
+                            // The park keeps the house's feeding apart, by either of its two records.
+                            for (const save::model::AnimalHouseCare& care : scene.people.animal_houses)
+                                if (const auto kept_house = std::ranges::find(scene.objects, care.house.id, &save::model::PlacedObject::id); kept_house != scene.objects.end() && kept_house->symbol == o.symbol && kept_house->col == o.col && kept_house->row == o.row && care.feeding <= std::to_underlying(simulation::FeedingSchedule::Often))
+                                    house.schedule = static_cast<simulation::FeedingSchedule>(care.feeding);
                             houses.push_back(house);
                         }
                         // Each keeper keeps the enclosure the park gave them.

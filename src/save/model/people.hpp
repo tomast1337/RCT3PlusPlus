@@ -650,6 +650,13 @@ namespace rct3::save::model
         i32 stamps_for_gift = 0;
     };
 
+    /// An animal house's care, kept by an original park beside the house it stands for.
+    struct AnimalHouseCare
+    {
+        PeopleRef house { }; ///< The house as placed, among the park's placed objects
+        u8 feeding = 1;      ///< 0 infrequent, 1 normal, 2 often
+    };
+
     struct PeopleModel
     {
         std::vector<PartGroup> part_groups { };
@@ -663,6 +670,7 @@ namespace rct3::save::model
         std::vector<ShopItem> shop_items { };
         std::vector<ShopExtra> shop_extras { };
         std::vector<Litter> litter { };
+        std::vector<AnimalHouseCare> animal_houses { };
         std::optional<PassportRules> passport { }; ///< None when the file keeps none
     };
 
@@ -678,6 +686,7 @@ namespace rct3::save::model
     [[nodiscard]] std::optional<ShopItem> make_shop_item(const DecodedObject& o, const ObjectIndex& index);
     [[nodiscard]] std::optional<ShopExtra> make_shop_extra(const DecodedObject& o, const ObjectIndex& index);
     [[nodiscard]] std::optional<Litter> make_litter(const DecodedObject& o, const ObjectIndex& index);
+    [[nodiscard]] std::optional<AnimalHouseCare> make_animal_house_care(const DecodedObject& o, const ObjectIndex& index);
     [[nodiscard]] std::optional<PartGroup> make_part_group(const DecodedObject& o);
 
     /// Builds the model from every object of a people-related class. Fails only if an object cannot be decoded.

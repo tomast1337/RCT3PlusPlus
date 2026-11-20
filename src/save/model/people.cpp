@@ -39,6 +39,7 @@ namespace rct3::save::model
             constexpr std::string_view litter = "Litter";
             constexpr std::string_view part_group = "PPGDatabaseEntry";
             constexpr std::string_view passport = "GlobalPassportData";
+            constexpr std::string_view animal_house = "AnimalShelter";
         } // namespace cls
 
         namespace at
@@ -325,6 +326,9 @@ namespace rct3::save::model
             constexpr std::string_view l_create = "CreateTime";
             constexpr std::string_view l_tile = "PathTile";
             constexpr std::string_view l_flags = "Flags";
+            // animal house
+            constexpr std::string_view house_placed = "Shelter";
+            constexpr std::string_view feeding = "FeedingInterval";
             // part group
             constexpr std::string_view pg_symbol = "SymbolName";
             constexpr std::string_view entry_symbol = "SYMBOLNAME";
@@ -1200,6 +1204,13 @@ namespace rct3::save::model
         };
     }
 
+    std::optional<AnimalHouseCare> make_animal_house_care(const DecodedObject& o, const ObjectIndex& index)
+    {
+        if (o.class_name != cls::animal_house)
+            return std::nullopt;
+        return AnimalHouseCare { .house = ref(o.find(at::house_placed), index), .feeding = read_u8(o.find(at::feeding), 1) };
+    }
+
     std::optional<PartGroup> make_part_group(const DecodedObject& o)
     {
         if (o.class_name != cls::part_group)
@@ -1234,6 +1245,7 @@ namespace rct3::save::model
             Litter,
             PartGroup,
             Passport,
+            AnimalHouse,
         };
         std::vector<Slot> slot(file.classes.size(), Slot::None);
         for (usize i = 0; i < file.classes.size(); ++i)
@@ -1263,6 +1275,8 @@ namespace rct3::save::model
                 slot[i] = Slot::PartGroup;
             else if (n == cls::passport)
                 slot[i] = Slot::Passport;
+            else if (n == cls::animal_house)
+                slot[i] = Slot::AnimalHouse;
         }
         for (const auto& obj : file.objects)
         {
@@ -1335,6 +1349,10 @@ namespace rct3::save::model
                     break;
                 case Slot::Passport:
                     m.passport = PassportRules { .gift = ref(d.find(at::gift), index), .stamps_for_gift = read_i32(d.find(at::stamps_for_gift)) };
+                    break;
+                case Slot::AnimalHouse:
+                    if (auto h = make_animal_house_care(d, index))
+                        m.animal_houses.push_back(*h);
                     break;
                 case Slot::None:
                     break;

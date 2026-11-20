@@ -1190,9 +1190,11 @@ declare namespace animals {
             at: { col: Tiles; row: Tiles };
         }[];
         at: { col: Tiles; row: Tiles };
+        /** How often its keepers fill its troughs */
+        schedule: "infrequent" | "normal" | "often";
     }[];
     /** The animal house whose window is open, by its number in houses(), and its open page; undefined when none is. */
-    function shownHouse(): { id: number; tab: "details" | "keepers" | "thoughts" | "" } | undefined;
+    function shownHouse(): { id: number; tab: "details" | "feeding" | "keepers" | "thoughts" | "" } | undefined;
     /** The dung lying about, each piece with the enclosure it lies in (-1 for none), its size from 0 to 2, and the
      *  point of the map it lies on, in tiles. */
     function dung(): { enclosure: number; size: number; col: Tiles; row: Tiles }[];

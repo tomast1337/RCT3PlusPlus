@@ -26,6 +26,16 @@ namespace rct3::park
         return camera.target - forward * camera.distance;
     }
 
+    glm::vec3 eye_forward(const ParkCamera& camera, const Seat& seat)
+    {
+        return glm::normalize(seat ? glm::vec3((*seat)[2]) : camera.target - eye(camera));
+    }
+
+    glm::vec3 eye_up(const Seat& seat)
+    {
+        return seat ? glm::normalize(glm::vec3((*seat)[1])) : glm::vec3(0, 1, 0);
+    }
+
     ParkCamera looking(glm::vec3 from, glm::vec3 at)
     {
         const glm::vec3 d = at - from;
@@ -128,12 +138,8 @@ namespace rct3::park
 
     glm::mat4 view_projection(const ParkCamera& camera, f32 aspect, const Seat& seat, f32 across)
     {
-        if (seat)
-        {
-            const glm::vec3 from((*seat)[3]);
-            return projection(aspect, seat, across) * glm::lookAt(from, from + glm::normalize(glm::vec3((*seat)[2])), glm::normalize(glm::vec3((*seat)[1])));
-        }
-        return projection(aspect) * glm::lookAt(eye(camera), camera.target, glm::vec3(0, 1, 0));
+        const glm::vec3 from = eye(camera, seat);
+        return projection(aspect, seat, across) * glm::lookAt(from, from + eye_forward(camera, seat), eye_up(seat));
     }
 
     bool box_in_view(const glm::mat4& transform, const glm::vec3& low, const glm::vec3& high)

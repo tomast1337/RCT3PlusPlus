@@ -45,6 +45,10 @@ namespace rct3::park
     inline constexpr f32 kEyeAboveGround = 1.5f;
 
     [[nodiscard]] glm::vec3 eye(const ParkCamera& camera, const Seat& seat = std::nullopt);
+    /// The way the eye looks, of length 1: from the rider's seat while riding, at the target otherwise.
+    [[nodiscard]] glm::vec3 eye_forward(const ParkCamera& camera, const Seat& seat = std::nullopt);
+    /// The eye's up, of length 1: the seat's while riding, so it banks with the car; straight up otherwise.
+    [[nodiscard]] glm::vec3 eye_up(const Seat& seat = std::nullopt);
 
     /// What riding along keeps from frame to frame; started afresh in each car.
     struct RideView

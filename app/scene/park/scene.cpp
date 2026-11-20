@@ -836,8 +836,11 @@ namespace rct3::scene::park
             }
             else if (const entt::entity home = change && scene.shown_prop ? animal_house_of(scene, scene.objects[scene.shown_prop->value]) : entt::null; home != entt::null)
             {
+                auto& house = scene.sim.registry.get<simulation::AnimalHouse>(home);
                 if (change->id == ui::screens::info::kHouseLocateControl)
-                    scene.camera.target = scene.sim.registry.get<simulation::AnimalHouse>(home).troughs;
+                    scene.camera.target = house.troughs;
+                else if (change->id == ui::screens::info::kHouseScheduleControl && change->value >= 0 && change->value <= std::to_underlying(simulation::FeedingSchedule::Often))
+                    house.schedule = static_cast<simulation::FeedingSchedule>(change->value);
             }
             else if (const auto room = change && scene.shown_prop ? pool_room(scene, scene.objects[scene.shown_prop->value]) : std::nullopt)
             {

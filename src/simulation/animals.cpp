@@ -361,7 +361,7 @@ namespace rct3::simulation
 
         // The keepers. Each keeps to the enclosure of their house and fills the troughs of any house in it, as
         // their tasks and patrol allow.
-        const auto due = [&](const AnimalHouse& h) { return h.since_fed.value >= kRates.feeding.value || h.food.value <= kRates.refill.value || h.water.value <= kRates.refill.value; };
+        const auto due = [&](const AnimalHouse& h) { return h.since_fed.value >= kRates.feeding.at(std::to_underlying(h.schedule)).value || h.food.value <= kRates.refill.value || h.water.value <= kRates.refill.value; };
         const auto tasked = [&](entt::entity k, i32 task) {
             const auto* staff = r.try_get<Staff>(k);
             return staff == nullptr || (staff->tasks & task) != 0;

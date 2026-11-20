@@ -662,6 +662,18 @@ TEST_CASE("a zoo animal takes its species from its entry and its place from its 
     CHECK(a.world[14] == 6.0f);
 }
 
+TEST_CASE("an animal house's care names the placed house and how often it is fed")
+{
+    Obj h("AnimalShelter", 1);
+    h.ref("Shelter", 2).put_i32("FeedingInterval", 2);
+    const auto w = make_world({ h, blank("SceneryItem", 2) });
+    const auto model = load_people(w->file, *w->index);
+    REQUIRE(model);
+    REQUIRE(model->animal_houses.size() == 1);
+    CHECK(model->animal_houses[0].house.id == 2);
+    CHECK(model->animal_houses[0].feeding == 2);
+}
+
 TEST_CASE("guest groups, holders, items and litter")
 {
     Obj g("GuestGroup", 1);

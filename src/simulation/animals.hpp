@@ -26,6 +26,7 @@
 #include "simulation/sim_world.hpp"
 #include "units/units.hpp"
 
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -48,6 +49,15 @@ namespace rct3::simulation
     };
 
     /// An animal house, standing in an enclosure.
+    /// How often a house's keepers fill its troughs, whether or not they run low. In the order the house's window
+    /// lists them, which is also the number an original park keeps.
+    enum class FeedingSchedule : u8
+    {
+        Infrequent,
+        Normal,
+        Often,
+    };
+
     struct AnimalHouse
     {
         u64 object = 0;                   ///< The house as placed
@@ -60,6 +70,7 @@ namespace rct3::simulation
         units::Share food { 1 };      ///< Left in its food trough
         units::Share water { 1 };     ///< Left in its water trough
         units::Seconds since_fed { }; ///< Since its keeper last filled the troughs
+        FeedingSchedule schedule { FeedingSchedule::Normal };
     };
 
     enum class KeeperJob : u8
@@ -142,14 +153,15 @@ namespace rct3::simulation
         i32 dung_limit = 3;               ///< Dung in an enclosure for each animal in it, beyond which it wears their health down
         units::Seconds sickening { 300 }; ///< From well to dead, starving, parched or among too much dung
         units::Seconds mending { 600 };   ///< From dying to well again, while nothing ails it
-        units::Seconds feeding { 300 };   ///< Between the keeper's rounds filling the troughs
-        units::Share refill { 0.3f };     ///< Either trough this low calls the keeper at once
-        units::Seconds filling { 5 };     ///< The keeper at the troughs
-        units::Seconds clearing { 3 };    ///< The keeper at a dung
-        i32 stroll_tries = 8;             ///< Spots picked for a stroll before giving up till later
-        units::Distance roam { 4 };       ///< Farthest an escaped animal wanders at a time
-        units::Seconds catching { 4 };    ///< The keeper shutting an escaped animal in its crate
-        i32 empty_tries = 3;              ///< Times in a row an animal finds its food trough empty before the inspector tells
+        /// Between the keeper's rounds filling the troughs, by FeedingSchedule
+        std::array<units::Seconds, 3> feeding { units::Seconds { 600 }, units::Seconds { 300 }, units::Seconds { 150 } };
+        units::Share refill { 0.3f };  ///< Either trough this low calls the keeper at once
+        units::Seconds filling { 5 };  ///< The keeper at the troughs
+        units::Seconds clearing { 3 }; ///< The keeper at a dung
+        i32 stroll_tries = 8;          ///< Spots picked for a stroll before giving up till later
+        units::Distance roam { 4 };    ///< Farthest an escaped animal wanders at a time
+        units::Seconds catching { 4 }; ///< The keeper shutting an escaped animal in its crate
+        i32 empty_tries = 3;           ///< Times in a row an animal finds its food trough empty before the inspector tells
     };
 
     inline constexpr AnimalRates kAnimalRates { };

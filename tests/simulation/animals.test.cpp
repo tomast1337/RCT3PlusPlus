@@ -2,7 +2,10 @@
 #include "simulation/animals.hpp"
 
 #include "core/types.hpp"
+#include "save/model/park.hpp"
 #include "simulation/components.hpp"
+#include "simulation/day_clock.hpp"
+#include "simulation/park/state.hpp"
 #include "simulation/staff/patrol.hpp"
 
 #include <algorithm>
@@ -496,4 +499,17 @@ TEST_CASE("animals: a park's keepers each keep a house of their own in the enclo
     CHECK(r.get<AnimalHouse>(r.get<KeeperDuty>(a).house).object == 1);
     CHECK(r.get<AnimalHouse>(r.get<KeeperDuty>(b).house).object == 2);
     CHECK_FALSE(r.all_of<KeeperDuty>(c));
+}
+
+TEST_CASE("animals: over a game month a house fed often has its troughs filled more times than one fed infrequently")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    const entt::entity often = add_animal_house(world, { .enclosure = std::optional { 0 }, .troughs = { 2, 0, 2 }, .schedule = FeedingSchedule::Often }, { 2, 0, 2 });
+    const entt::entity seldom = add_animal_house(world, { .enclosure = std::optional { 1 }, .troughs = { 12, 0, 2 }, .schedule = FeedingSchedule::Infrequent }, { 12, 0, 2 });
+    constexpr f32 kSecondsPerMonth = kSecondsPerHour * save::model::GameClock::kUnitsPerMonth / kCalendarUnitsPerHour;
+    run(world, ground, kSecondsPerMonth);
+    const auto& r = world.registry;
+    CHECK(r.get<Staff>(often).filled > r.get<Staff>(seldom).filled);
+    CHECK(r.get<Staff>(often).filled >= 2);
 }

@@ -120,6 +120,7 @@ namespace rct3::ui::screens::info
         if (facts.house)
         {
             tabs.push_back({ SceneryTab::HouseDetails, slot++, "AnimalShelterViewIcon", "AnimalShelterViewTT", false, { } });
+            tabs.push_back({ SceneryTab::HouseFeeding, slot++, "AnimalShelterFeedingIcon", "AnimalShelterFeedingTimeTT", false, { } });
             tabs.push_back({ SceneryTab::HouseKeepers, slot++, "AnimalShelterKeeperIcon", "AnimalShelterKeeperTT", false, { } });
             tabs.push_back({ SceneryTab::HouseThoughts, slot++, "AnimalShelterPeepThoughtsIcon", "AnimalShelterPeepThoughtsTT", false, { } });
         }
@@ -175,6 +176,12 @@ namespace rct3::ui::screens::info
             for (const std::string_view kind : facts.house->species)
                 page.lines.push_back({ .label = std::u16string(strings.get_ignoring_case(kind)), .value = { }, .name = std::string(kind) });
             page.controls.push_back({ .id = kHouseLocateControl, .name = "CenterInViewIcon", .kind = InfoControlKind::Button, .icon = "CenterInViewIcon", .help = std::u16string(strings.get("AnimalShelterCameraTT")) });
+        }
+        else if (tab == SceneryTab::HouseFeeding && facts.house)
+        {
+            InfoControl& schedule = page.controls.emplace_back(InfoControl { .id = kHouseScheduleControl, .name = "AnimalShelterFeedingListLabel", .kind = InfoControlKind::Choice, .label = std::u16string(strings.get("AnimalShelterFeedingListLabel")), .value = std::to_underlying(facts.house->schedule), .help = std::u16string(strings.get("AnimalShelterFeedingIntervalTT")) });
+            for (const std::string_view often : { "AnimalShelterFeedingInterval_Infrequent", "AnimalShelterFeedingInterval_Normal", "AnimalShelterFeedingInterval_Often" })
+                schedule.items.push_back(std::u16string(strings.get(often)));
         }
         else if (tab == SceneryTab::HouseKeepers && facts.house)
         {

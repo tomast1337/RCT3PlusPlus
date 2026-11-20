@@ -56,6 +56,15 @@ ui.click = async (path) => {
     };
 }
 {
+    // The recording ends, and its file is joined, as the frame goes on.
+    const stop = record.stop;
+    record.stop = async () => {
+        stop();
+        await frames(1);
+        return record.result();
+    };
+}
+{
     // The park asked for loads as the frame ends.
     const open = park.open;
     park.open = async (path, settings) => {

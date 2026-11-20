@@ -300,6 +300,39 @@ namespace rct3::scene
             }
             return Json(nullptr);
         });
+        engine_.define("record.start", [this](const Json& a) {
+            const Json settings = a.empty() ? Json::object() : a[0];
+            if (!settings.is_object())
+                throw std::invalid_argument("record.start takes { path, fps, playbackFps, audio, size }");
+            if (recording_ || record_start_)
+                throw std::runtime_error("a recording already runs");
+            const auto rate = [&](const char* key, u32 otherwise) {
+                const u32 fps = settings.contains(key) ? settings[key].get<u32>() : otherwise;
+                if (fps < 1 || fps > video::kMaxCaptureFps)
+                    throw std::invalid_argument(std::format("record.start: {} goes from 1 to {}", key, video::kMaxCaptureFps));
+                return fps;
+            };
+            RecordRequest r;
+            r.settings.fps = rate("fps", r.settings.fps);
+            r.settings.playback_fps = rate("playbackFps", r.settings.fps);
+            r.settings.sound = settings.value("audio", r.settings.playback_fps == r.settings.fps);
+            // Only a plain file name, as for screenshots.
+            std::string name = settings.value("path", std::string("recording.mp4"));
+            std::ranges::replace_if(name, [](char c) { return !std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '_' && c != '.'; }, '_');
+            r.settings.path = report_ ? std::filesystem::absolute(*report_ / name) : std::filesystem::path(name);
+            if (settings.contains("size"))
+                r.size = render::Extent { settings["size"].at("width").get<u32>(), settings["size"].at("height").get<u32>() };
+            write(std::format("record {}", r.settings.path.filename().string()), false);
+            record_start_ = std::move(r);
+            recorded_ = nullptr;
+            return Json(nullptr);
+        });
+        engine_.define("record.stop", [this](const Json&) {
+            record_stop_ = true;
+            return Json(nullptr);
+        });
+        engine_.define("record.active", [this](const Json&) { return Json(recording_ || record_start_.has_value()); });
+        engine_.define("record.result", [this](const Json&) { return recorded_; });
         engine_.define("args", [this](const Json&) { return Json(args_); });
         engine_.define("report", [this](const Json& a) {
             if (a.size() < 2 || !a[0].is_string() || !a[1].is_string())
@@ -1771,6 +1804,14 @@ namespace rct3::scene
     std::optional<std::filesystem::path> ScriptHost::take_screenshot()
     {
         return std::exchange(screenshot_, std::nullopt);
+    }
+
+    void ScriptHost::recorded(const video::RecordResult& result)
+    {
+        recording_ = false;
+        recorded_ = { { "frames", result.frames }, { "samples", result.samples }, { "sampleRate", result.sample_rate }, { "seconds", result.length.value }, { "path", result.path.filename().string() } };
+        if (result.problem)
+            recorded_["problem"] = *result.problem;
     }
 
 } // namespace rct3::scene

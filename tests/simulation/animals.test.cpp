@@ -429,7 +429,7 @@ TEST_CASE("animals: a park's saved zoo animals come in where they stood, those i
     crated.in_crate = true;
     crated.world[12] = 11;
     const std::array saved { out, crated };
-    import_animals(world, saved, ground.enclosure, [](const save::model::ZooAnimal& z) { return z.first_names; });
+    import_animals(world, saved, ground.enclosure, [](const save::model::ZooAnimal& z) { return z.first_names; }, 0);
     auto& r = world.registry;
     const auto animals = r.view<const Animal, const Pose>();
     REQUIRE(std::ranges::distance(animals) == 2);
@@ -898,4 +898,40 @@ TEST_CASE("animals: a young animal strolls about near its mother")
     }
     CHECK(farthest > 0);
     CHECK(farthest <= kAnimalRates.following.value * 2); // Its mother strolls a little before she is put back
+}
+
+TEST_CASE("animals: a park's saved young come in at their age, growing up when the park says, and its mothers still carrying")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    save::model::ZooAnimal young { .first_names = "Zia", .generation_suffix = 2, .is_adult = false, .date_of_birth = 360 * 2, .species_life_expectancy = 5, .species = "zebu" };
+    young.world = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 0, 3, 1 };
+    save::model::ZooAnimal mother { .first_names = "Zoe", .generation_suffix = 1, .is_adult = true, .date_of_birth = -360 * 40, .species_life_expectancy = 30, .species = "zebu", .pregnancy_timer = 360 * 1.5f, .babies_in_womb = 2 };
+    mother.world = young.world;
+    const std::array saved { young, mother };
+    // Five months into the park's calendar.
+    import_animals(world, saved, ground.enclosure, [](const save::model::ZooAnimal& z) { return z.first_names; }, 360 * 5);
+    for (const auto [e, a] : world.registry.view<const Animal>().each())
+        if (a.name == "Zia")
+        {
+            CHECK_FALSE(a.adult);
+            CHECK(a.generation == 2);
+            CHECK(a.age.value == doctest::Approx(3 * kAnimalMonth.value));
+            REQUIRE(a.grows_up.has_value());
+            CHECK(a.grows_up->value == doctest::Approx(5 * kAnimalMonth.value));
+            CHECK_FALSE(a.due.has_value());
+        }
+        else
+        {
+            CHECK(a.age.value == doctest::Approx(45 * kAnimalMonth.value));
+            REQUIRE(a.due.has_value());
+            CHECK(a.due->value == doctest::Approx(1.5f * kAnimalMonth.value));
+            CHECK(a.litter == 2);
+        }
+    // Two months on, the young one grows up.
+    ParkMessages messages;
+    run(world, ground, 2 * kAnimalMonth.value + 1, messages);
+    for (const auto [e, a] : world.registry.view<const Animal>().each())
+        if (a.name == "Zia")
+            CHECK(a.adult);
 }

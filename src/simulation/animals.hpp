@@ -283,8 +283,9 @@ namespace rct3::simulation
     void import_animal_houses(SimWorld& world, std::span<const AnimalHouse> houses, std::span<const KeeperPost> keepers);
 
     /// The zoo animals a park was saved with, where they stood, each in the enclosure `enclosure` says its spot is in
-    /// and named as `name` makes its saved name in the player's language.
-    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::optional<i32>(glm::vec2)>& enclosure, const std::function<std::string(const save::model::ZooAnimal&)>& name);
+    /// and named as `name` makes its saved name in the player's language, with their ages as of the park's calendar
+    /// time `now` (in its units), the young's age at growing up, and the young the mothers carry.
+    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::optional<i32>(glm::vec2)>& enclosure, const std::function<std::string(const save::model::ZooAnimal&)>& name, f32 now);
 
     /// The dung among the litter a park was saved with, lying where it lay, each in the enclosure `enclosure` says
     /// its spot is in; returns how many pieces.

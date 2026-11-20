@@ -647,6 +647,43 @@ TEST_CASE("a save keeps the house a keeper is filling the troughs of")
     CHECK(l.get<AnimalHouse>(l.get<const KeeperDuty>(*filling).target).object == 8);
 }
 
+TEST_CASE("a save keeps the animals' families, ages and pregnancies")
+{
+    using namespace simulation;
+    SimWorld world;
+    auto& r = world.registry;
+    const entt::entity father = add_animal(world, { .species = "zebu", .name = "Zack", .male = true }, { 1, 0, 1 });
+    const entt::entity mother = add_animal(world, { .species = "zebu", .name = "Zoe", .due = units::Seconds { 30 }, .litter = 2, .mate = father, .rest = units::Seconds { 5 } }, { 2, 0, 1 });
+    (void)add_animal(world, { .species = "zebu", .name = "Zack Jr", .adult = false, .male = true, .mother = mother, .father = father, .generation = 2, .age = units::Seconds { 40 }, .grows_up = units::Seconds { 90 } }, { 3, 0, 1 });
+    r.destroy(father);
+    parkfile::SavedPark park = small_park();
+    park.animals = parkfile::keep_animals(world, { });
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    SimWorld loaded;
+    auto& l = loaded.registry;
+    parkfile::place_animals(loaded, *read->animals, { });
+    const auto named = [&](std::string_view name) {
+        const auto view = l.view<const Animal>();
+        const auto found = std::ranges::find_if(view, [&](entt::entity e) { return view.get<const Animal>(e).name == name; });
+        REQUIRE(found != view.end());
+        return *found;
+    };
+    const entt::entity zoe = named("Zoe");
+    const Animal& her = l.get<const Animal>(zoe);
+    REQUIRE(her.due.has_value());
+    CHECK(her.due->value == 30);
+    CHECK(her.litter == 2);
+    CHECK(her.rest.value == 5);
+    CHECK(her.mate == entt::null); // He has left the park
+    const Animal& young = l.get<const Animal>(named("Zack Jr"));
+    CHECK(young.mother == zoe);
+    CHECK(young.father == entt::null);
+    CHECK(young.generation == 2);
+    CHECK(young.age.value == 40);
+    CHECK(young.grows_up->value == 90);
+}
+
 TEST_CASE("a save keeps the pools, their extras and changing rooms")
 {
     parkfile::SavedPark park = small_park();

@@ -2,11 +2,12 @@
 //
 // sim-run: run the simulation headless on an original save and report what happened.
 //
-//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--awards] [--car-places] [--left-out]
+//   sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--hash TICKS] [--awards] [--car-places] [--left-out]
 //
 // Brings over the save's paths, stalls, rides and guests, runs N seconds of park time (default 600) and prints
 // what each shop and ride took and how the guests are doing, with how long the run took. --profile adds the
-// time each phase of a step took, as the profiler's table. --awards (with --game) adds how many rides and stalls
+// time each phase of a step took, as the profiler's table. --hash prints a fingerprint of the world every TICKS
+// ticks (0: only at the end) and when the run ends, to compare runs that should go the same way. --awards (with --game) adds how many rides and stalls
 // carry each theme, as the theme awards count them. --car-places (with --game) stands each car the save keeps at
 // its saved wheel distances on our track, prints how far that is from where the save has it, by track piece, with
 // each piece's length against the park's, and stops without running. Flat rides take their timing from their
@@ -14,6 +15,7 @@
 // what that left behind, one tab-separated line per class (class, objects, whether none of it was read, the fields
 // never looked up joined by commas), and stops without running.
 #include "config/game/install.hpp"
+#include "core/hash.hpp"
 #include "core/types.hpp"
 #include "logging/crash.hpp"
 #include "logging/log.hpp"
@@ -56,6 +58,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -112,6 +115,48 @@ namespace
             out += std::format(" {}:{}", kind, n);
         return out.empty() ? " none" : out;
     }
+
+    /// A fingerprint of the world, to tell whether two runs went the same way: which entities each component's
+    /// storage holds, in its order, and the values that move each tick (where people stand and go, their
+    /// needs, moods, money and dice, and how far each train has come). Floats count by their bits, so the
+    /// smallest difference shows.
+    u64 state_hash(const rct3::simulation::SimWorld& world)
+    {
+        using namespace rct3;
+        using namespace rct3::simulation;
+        u64 h = core::kFnv64Offset;
+        const auto mix = [&h](u64 v) { h = (h ^ v) * core::kFnv64Prime; };
+        const auto mix_f = [&mix](f32 v) { mix(std::bit_cast<u32>(v)); };
+        const auto mix_v = [&mix_f](glm::vec3 v) { mix_f(v.x), mix_f(v.y), mix_f(v.z); };
+        const entt::registry& r = world.registry;
+        mix(world.tick);
+        for (const auto [id, storage] : r.storage())
+        {
+            mix(id);
+            mix(storage.size());
+            for (const entt::entity e : storage)
+                mix(entt::to_integral(e));
+        }
+        for (const auto [e, pose] : r.view<const Pose>().each())
+            mix_v(pose.position), mix_f(pose.heading.value);
+        for (const auto [e, stride] : r.view<const Stride>().each())
+            mix(stride.from.value), mix(stride.to.value), mix_f(stride.progress.value), mix(stride.route.size());
+        for (const auto [e, errand] : r.view<const Errand>().each())
+            mix(std::to_underlying(errand.kind)), mix(entt::to_integral(errand.target));
+        for (const auto [e, needs] : r.view<const Needs>().each())
+            mix_f(needs.hunger.value), mix_f(needs.thirst.value), mix_f(needs.bladder.value), mix_f(needs.swim.value);
+        for (const auto [e, mood] : r.view<const Mood>().each())
+            mix_f(mood.happiness.value), mix_f(mood.energy.value), mix_f(mood.nausea.value);
+        for (const auto [e, wallet] : r.view<const Wallet>().each())
+            mix(static_cast<u64>(wallet.cash.value)), mix(static_cast<u64>(wallet.spent.value));
+        for (const auto [e, dice] : r.view<const Dice>().each())
+            for (const u64 w : dice.state.words)
+                mix(w);
+        for (const auto [e, trains] : r.view<const Trains>().each())
+            for (const Coaster& t : trains.trains)
+                mix_f(t.travelled), mix_f(t.speed);
+        return h;
+    }
 } // namespace
 
 int main(int argc, char** argv)
@@ -128,6 +173,7 @@ int main(int argc, char** argv)
     bool whole_day = false;                          // Run the clock through the night, whatever the park's day mode
     bool patrol = false;                             // Give each handyman and mechanic a patrol: the tiles round where they start
     bool profile = false;                            // Print the time each phase of a step took
+    std::optional<u32> hash_every;                   // Print the world's fingerprint this often in ticks, 0 only at the end
     bool awards = false;                             // Print what the theme awards count
     std::optional<std::vector<CarPlace>> car_places; // With --car-places: each saved car stood by our track, then stop
     bool left_out = false;                           // Print what loading the park left behind, then stop
@@ -147,6 +193,8 @@ int main(int argc, char** argv)
             patrol = true;
         else if (std::strcmp(argv[i], "--profile") == 0)
             profile = true;
+        else if (std::strcmp(argv[i], "--hash") == 0 && i + 1 < argc)
+            hash_every = static_cast<u32>(std::strtoul(argv[++i], nullptr, 10));
         else if (std::strcmp(argv[i], "--awards") == 0)
             awards = true;
         else if (std::strcmp(argv[i], "--car-places") == 0)
@@ -160,7 +208,7 @@ int main(int argc, char** argv)
     }
     if (!path || (car_places && !game))
     {
-        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--awards] [--car-places] [--left-out]");
+        out.error("usage: sim-run SAVE [--seconds N] [--threads N] [--seed N] [--game DIR] [--weather rain|storm|hot|cold] [--whole-day] [--patrol] [--profile] [--hash TICKS] [--awards] [--car-places] [--left-out]");
         return 2;
     }
     std::ifstream in(path, std::ios::binary);
@@ -674,6 +722,8 @@ int main(int argc, char** argv)
         }
         profiling::section("Step", [&] { simulation::step(world, core::maybe(workers.get())); });
         profiling::capture_frame();
+        if (hash_every > 0u && world.tick % *hash_every == 0)
+            out.info("hash tick {:d}: {:016x}", world.tick, state_hash(world));
         for (const auto [e, item] : world.registry.view<const simulation::PathItem>().each())
         {
             const auto* bin = world.registry.try_get<simulation::Bin>(e);
@@ -701,6 +751,8 @@ int main(int argc, char** argv)
         }
     }
     const f64 took = std::chrono::duration<f64>(std::chrono::steady_clock::now() - start).count();
+    if (hash_every)
+        out.info("hash end tick {:d}: {:016x}", world.tick, state_hash(world));
     out.info("ran {:d} ticks ({:.0f} s of park time) in {:.3f} s, {:.1f} us a tick", steps, seconds, took, took * 1e6 / std::max(steps, 1u));
     if (profile)
     {

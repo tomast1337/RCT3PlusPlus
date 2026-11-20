@@ -445,10 +445,10 @@ declare namespace debug {
     /** Brings the developer windows' Debug tab to the front, once they are shown (keys.press("F12")). */
     function open(): void;
     /** Uses the Debug tab's tool `tool` with `amount`: money to add in hundredths, how many guests, pieces of
-     *  litter or knocks to enclosure fences, game seconds till the females made pregnant give birth (0 for an hour),
-     *  how many times slower the guests live (1 for their own pace), which firework display to start, or 1 on and 0
-     *  off for the other switches. Returns how many things it changed, or 1 for a switch turned or a display started
-     *  or stopped. */
+     *  litter or knocks to enclosure fences, game seconds till the females made pregnant give birth (0 for an hour)
+     *  or how much older the animals get (0 for a year), how many times slower the guests live (1 for their own
+     *  pace), which firework display to start, or 1 on and 0 off for the other switches. Returns how many things it
+     *  changed, or 1 for a switch turned or a display started or stopped. */
     function use(
         tool:
             | "add_money"
@@ -466,6 +466,7 @@ declare namespace debug {
             | "remove_wild_birds"
             | "knock_fences"
             | "breed_animals"
+            | "age_animals"
             | "drop_litter"
             | "clear_litter"
             | "rebuild_waterfalls"

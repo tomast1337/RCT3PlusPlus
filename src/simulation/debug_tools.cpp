@@ -192,6 +192,17 @@ namespace rct3::simulation
         return count;
     }
 
+    usize age_animals(SimWorld& world, units::Seconds by)
+    {
+        usize count = 0;
+        for (auto [e, animal] : world.registry.view<Animal>().each())
+        {
+            animal.age.value += by.value;
+            ++count;
+        }
+        return count;
+    }
+
     usize scatter_litter(SimWorld& world, random::RandomState& dice, std::span<const NodeId> spots, usize count)
     {
         if (spots.empty())

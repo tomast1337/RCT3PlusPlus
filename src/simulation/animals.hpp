@@ -28,7 +28,9 @@
 // mate, and she carries a litter about the species' average size for the months its data says. Then the young
 // are born beside her, each a son or a daughter at even odds, and she rests before she breeds again. Her first son
 // by a father who has no other is named after him, with the next generation's suffix; the others get names of
-// their own. All the rates are our own.
+// their own. A young animal keeps near its mother while she lives in its enclosure, and grows up about two years
+// after it came to the park, or its parents' age at growing up give or take a tenth for one born here; its model
+// changes to the adult's. All the rates are our own.
 
 #include "core/types.hpp"
 #include "save/model/people.hpp"
@@ -165,7 +167,9 @@ namespace rct3::simulation
         units::Seconds rest { };               ///< Left before it breeds again
         entt::entity mother = entt::null;      ///< Born in the park: its parents
         entt::entity father = entt::null;
-        i32 generation = 1; ///< Named after its father: one more than his; else 1
+        i32 generation = 1;                         ///< Named after its father: one more than his; else 1
+        units::Seconds age { };                     ///< Since it came to the park, or was born in it
+        std::optional<units::Seconds> grows_up { }; ///< The age a young one grows up at
     };
 
     /// A meat-eater's hunting, beside its Animal.
@@ -214,20 +218,22 @@ namespace rct3::simulation
         units::Seconds mending { 600 };   ///< From dying to well again, while nothing ails it
         /// Between the keeper's rounds filling the troughs, by FeedingSchedule
         std::array<units::Seconds, 3> feeding { units::Seconds { 600 }, units::Seconds { 300 }, units::Seconds { 150 } };
-        units::Share refill { 0.3f };    ///< Either trough this low calls the keeper at once
-        units::Seconds filling { 5 };    ///< The keeper at the troughs
-        units::Money food { 2500 };      ///< Chosen by eye: charged on Animal food for each filling of the troughs
-        units::Seconds clearing { 3 };   ///< The keeper at a dung
-        i32 stroll_tries = 8;            ///< Spots picked for a stroll before giving up till later
-        units::Distance roam { 4 };      ///< Farthest an escaped animal wanders at a time
-        units::Seconds catching { 4 };   ///< The keeper shutting an escaped animal in its crate
-        i32 empty_tries = 3;             ///< Times in a row an animal finds its food trough empty before the inspector tells
-        units::Pace chase_pace { 3.5f }; ///< A predator runs after its prey at
-        units::Pace flee_pace { 2.5f };  ///< And its prey runs from it at
-        units::Distance pounce { 0.8f }; ///< A predator this near its prey has caught it
-        units::Seconds carcass { 240 };  ///< A killed animal's body lies this long
-        units::Distance seen { 20 };     ///< Guests this near a kill see it
-        units::Seconds courting { 60 };  ///< On average between a willing male's tries to breed
+        units::Share refill { 0.3f };                          ///< Either trough this low calls the keeper at once
+        units::Seconds filling { 5 };                          ///< The keeper at the troughs
+        units::Money food { 2500 };                            ///< Chosen by eye: charged on Animal food for each filling of the troughs
+        units::Seconds clearing { 3 };                         ///< The keeper at a dung
+        i32 stroll_tries = 8;                                  ///< Spots picked for a stroll before giving up till later
+        units::Distance roam { 4 };                            ///< Farthest an escaped animal wanders at a time
+        units::Seconds catching { 4 };                         ///< The keeper shutting an escaped animal in its crate
+        i32 empty_tries = 3;                                   ///< Times in a row an animal finds its food trough empty before the inspector tells
+        units::Pace chase_pace { 3.5f };                       ///< A predator runs after its prey at
+        units::Pace flee_pace { 2.5f };                        ///< And its prey runs from it at
+        units::Distance pounce { 0.8f };                       ///< A predator this near its prey has caught it
+        units::Seconds carcass { 240 };                        ///< A killed animal's body lies this long
+        units::Distance seen { 20 };                           ///< Guests this near a kill see it
+        units::Seconds courting { 60 };                        ///< On average between a willing male's tries to breed
+        units::Seconds growing_up { 24 * kAnimalMonth.value }; ///< A young one's age when it grows up, give or take a tenth
+        units::Distance following { 2 };                       ///< Farthest a young one strolls from its mother
     };
 
     inline constexpr AnimalRates kAnimalRates { };
@@ -257,6 +263,8 @@ namespace rct3::simulation
     inline constexpr std::string_view kAnimalPregnant = "WildAnimalMessage_Pregnant";
     /// Posted as a young one is born; its subject's name is the mother's, its other name the young one's.
     inline constexpr std::string_view kAnimalBorn = "WildAnimalMessage_GiveBirth";
+    /// Posted as a young one grows up; its subject's name is the animal's.
+    inline constexpr std::string_view kAnimalGrownUp = "WildAnimalMessage_GrownToAdult";
 
     /// A keeper, and the enclosure the park gave them.
     struct KeeperPost
@@ -282,9 +290,9 @@ namespace rct3::simulation
     /// its spot is in; returns how many pieces.
     usize import_dung(SimWorld& world, std::span<const save::model::Litter> litter, const std::function<std::optional<i32>(glm::vec2)>& enclosure);
 
-    /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape, are killed, breed and
-    /// are born, and leaving what the park's inspector finds among the Findings. Returns how many animals were born,
-    /// whose looks the park must take in.
+    /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape, are killed, breed, are
+    /// born and grow up, and leaving what the park's inspector finds among the Findings. Returns how many animals were
+    /// born or grew up, whose looks the park must take in.
     usize step_animals(SimWorld& world, const AnimalGround& ground, units::Seconds dt, park::ParkMessages& messages);
 
 } // namespace rct3::simulation

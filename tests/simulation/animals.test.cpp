@@ -830,3 +830,72 @@ TEST_CASE("animals: a son is named after a father who has a son already only if 
         if (animal.mother == mother)
             CHECK(animal.generation == 1);
 }
+
+TEST_CASE("animals: a young animal grows up at its age for it, with a message, and is an adult from then on")
+{
+    SimWorld world;
+    const AnimalGround ground = breeding_pens();
+    const entt::entity young = add_animal(world, { .species = "zebu", .name = "Zed", .adult = false, .enclosure = std::optional { 0 }, .grows_up = units::Seconds { 20 } }, { 2, 0, 2 });
+    const entt::entity bought = add_animal(world, { .species = "zebu", .adult = false, .enclosure = std::optional { 0 } }, { 2, 0, 2 });
+    ParkMessages messages;
+    usize changed = 0;
+    for (f32 t = 0; t < 19.5f; t += 0.25f)
+        changed += step_animals(world, ground, { 0.25f }, messages);
+    CHECK_FALSE(world.registry.get<Animal>(young).adult);
+    CHECK(changed == 0);
+    for (f32 t = 0; t < 1; t += 0.25f)
+        changed += step_animals(world, ground, { 0.25f }, messages);
+    CHECK(world.registry.get<Animal>(young).adult);
+    CHECK(changed == 1);
+    REQUIRE(messages.list.size() == 1);
+    CHECK(messages.list.front().text_key == kAnimalGrownUp);
+    CHECK(messages.list.front().subject_name == "Zed");
+    // One bought young grows up after the usual time.
+    REQUIRE(world.registry.get<Animal>(bought).grows_up.has_value());
+    CHECK(world.registry.get<Animal>(bought).grows_up->value == kAnimalRates.growing_up.value);
+    CHECK_FALSE(world.registry.get<Animal>(bought).adult);
+}
+
+TEST_CASE("animals: the young grow up at about a parent's age for it")
+{
+    SimWorld world;
+    const AnimalGround ground = naming_pens(world);
+    const entt::entity father = add_animal(world, { .species = "zebu", .male = true, .enclosure = std::optional { 0 }, .grows_up = units::Seconds { 1000 } }, { 2, 0, 2 });
+    const entt::entity mother = add_animal(world, { .species = "zebu", .enclosure = std::optional { 0 }, .due = units::Seconds { 1 }, .litter = 20, .mate = father, .grows_up = units::Seconds { 1000 } }, { 2, 0, 2 });
+    (void)open_crate(world, father);
+    (void)open_crate(world, mother);
+    ParkMessages messages;
+    run_cared_for(world, ground, 2, messages);
+    usize young = 0;
+    for (const auto [e, animal] : world.registry.view<const Animal>().each())
+        if (animal.mother == mother)
+        {
+            ++young;
+            REQUIRE(animal.grows_up.has_value());
+            CHECK(animal.grows_up->value >= 900);
+            CHECK(animal.grows_up->value <= 1100);
+        }
+    CHECK(young == 20);
+}
+
+TEST_CASE("animals: a young animal strolls about near its mother")
+{
+    SimWorld world;
+    AnimalGround ground = two_pens();
+    // A wide pen, so a stroll anywhere would take it far off.
+    ground.enclosure = [](glm::vec2) -> std::optional<i32> { return 0; };
+    ground.somewhere = [](std::optional<i32>, random::RandomState& dice) -> std::optional<glm::vec2> { return glm::vec2 { static_cast<f32>(random::between(dice, 0.0, 100.0)), static_cast<f32>(random::between(dice, 0.0, 100.0)) }; };
+    const entt::entity mother = add_animal(world, { .species = "zebu", .enclosure = std::optional { 0 } }, { 50, 0, 50 });
+    const entt::entity young = add_animal(world, { .species = "zebu", .adult = false, .enclosure = std::optional { 0 }, .mother = mother }, { 50, 0, 50 });
+    (void)open_crate(world, mother);
+    (void)open_crate(world, young);
+    f32 farthest = 0;
+    for (i32 i = 0; i < 300; ++i)
+    {
+        world.registry.get<Pose>(mother).position = { 50, 0, 50 };
+        run(world, ground, 1);
+        farthest = std::max(farthest, glm::distance(world.registry.get<Pose>(young).position, glm::vec3 { 50, 0, 50 }));
+    }
+    CHECK(farthest > 0);
+    CHECK(farthest <= kAnimalRates.following.value * 2); // Its mother strolls a little before she is put back
+}

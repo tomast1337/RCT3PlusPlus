@@ -524,6 +524,10 @@ namespace rct3::simulation
                 // over level water, faster than the flow, held back by it. A ride's own flow pushes and holds alike on
                 // all its water.
                 f32 pushed = 0;
+                // Of the pieces' own pushes: their sum, and the edge of the speeds they push in, the way they push.
+                f32 piece_pushed = 0;
+                f32 rise_to = -std::numeric_limits<f32>::infinity();
+                f32 fall_to = std::numeric_limits<f32>::infinity();
                 for (i32 k = 0; k < pressing && c.mass.value > 0; ++k)
                 {
                     const f32 x = wrap(c, c.at - (static_cast<f32>(k) + 0.5f) * c.train_length / static_cast<f32>(pressing));
@@ -543,11 +547,18 @@ namespace rct3::simulation
                         if (x < p.from || x > p.to)
                             continue;
                         if (c.speed >= p.least && c.speed <= p.most)
-                            pushed += p.force / c.mass.value;
+                        {
+                            piece_pushed += p.force / c.mass.value;
+                            if (p.force > 0)
+                                rise_to = std::max(rise_to, p.most);
+                            else
+                                fall_to = std::min(fall_to, p.least);
+                        }
                         if (p.hold > 0 && !flowing && std::abs(c.speed) > c.water_pace * p.most)
                             pushed -= std::copysign(c.water_hold * p.hold, c.speed) / c.mass.value;
                     }
                 }
+                pushed += piece_pushed;
                 const f32 downhill = -kGravity.value * slope + pushed;
                 // Launched off the platform, the launch outpulls its grip however small the step.
                 const bool held = std::abs(downhill) <= c.resting * grip && !launching;
@@ -556,6 +567,12 @@ namespace rct3::simulation
                 f32 sped = rolled - std::copysign(losses, c.speed != 0 ? c.speed : downhill) * dt;
                 if (const f32 least = std::min(std::abs(rolled), kCoast.value); rolled * c.speed > 0 && std::abs(sped) < least)
                     sped = std::copysign(least, rolled);
+                // A piece's push takes the train no further than the edge of the speeds it pushes in, however long the
+                // step, so a hard one does not throw it past that edge and back.
+                if (piece_pushed > 0)
+                    sped = std::min(sped, std::max(rise_to, sped - piece_pushed * dt));
+                else if (piece_pushed < 0)
+                    sped = std::max(sped, std::min(fall_to, sped - piece_pushed * dt));
                 c.speed = held && (std::abs(c.speed) < kAtRest.value || sped * c.speed < 0) ? 0 : sped;
                 // A slide's way back to its lift has a chain under the water too, which the water's pace overrides.
                 // shortcut: slowed so whether or not a pool is there; upgrade once a run in the original game with no

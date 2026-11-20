@@ -92,6 +92,7 @@ namespace rct3::park
                 }
                 if (lean != glm::vec2(0.0f))
                     out.leans.emplace(o.id, lean);
+                out.of_tile[p.id].push_back(o.id);
                 out.pieces.push_back(std::move(o));
             }
         }

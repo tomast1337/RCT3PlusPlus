@@ -28,6 +28,7 @@ namespace rct3::simulation
         constexpr units::Distance kRolledBack { 1 };       ///< Chosen by eye: a train rolled back this far from a rise has failed it, where a crest's creep is a few centimetres
         constexpr units::Seconds kStuck { 4 };             ///< All but stopped this long, the track's tyres take over
         constexpr units::Distance kLaunchLeast { 0.5f };   ///< Of platform left, that a launch is still sized over
+        constexpr f32 kLaunchHarder = 1.25f;               ///< A platform pushes this much harder than evenly to its speed by the tail. Fitted to the shipped launched designs' saved top speeds: one car leaves at 3/4 of its launch speed, four at 0.96
         constexpr f32 kBuildUp = 3;                        ///< Passes a swinging train's pushes take to build up to full, and to die down
         constexpr f32 kBounce = 0.8f;                      ///< Each push back up a tower is this much of the one before
         constexpr units::Seconds kTopHold { 3 };           ///< A drop tower's train is held at the top
@@ -703,7 +704,8 @@ namespace rct3::simulation
             // Launched: pushed just hard enough to reach the speed as its tail clears the platform it stood on,
             // and on a launch stretch past it as hard as the push from a standing start. A shuttle's push is sized
             // the same way, over a train's length from where it began. The platform pushes only cars whose middle is
-            // on it, so the push ends half a car early and a short train leaves short of the speed.
+            // on it, so the push ends half a car early and a short train leaves short of the speed; it pushes a
+            // little harder than evenly, which makes up some of that.
             const bool platform = !c.launched && c.travelled < c.train_length;
             const bool on_platform = platform && c.travelled < c.train_length - c.train_length / static_cast<f32>(2 * std::max(c.cars, 1));
             const bool assisted = under == Stretch::Launch || c.kinds[point_at(c, wrap(c, c.at - c.train_length))] == Stretch::Launch;
@@ -736,7 +738,8 @@ namespace rct3::simulation
             {
                 const f32 along = c.speed * way;
                 const f32 from = open || platform ? std::max(along, 0.0f) * std::max(along, 0.0f) : 0.0f;
-                c.speed = way * std::min(along + (target * target - from) / (2 * std::max(left, kLaunchLeast.value)) * dt, std::abs(target));
+                const f32 harder = !open && on_platform ? kLaunchHarder : 1.0f;
+                c.speed = way * std::min(along + harder * (target * target - from) / (2 * std::max(left, kLaunchLeast.value)) * dt, std::abs(target));
             }
             // shortcut: with other trains on the track a train never rolls back, as if held by anti-rollback
             // dogs everywhere, so it cannot run into the one behind; upgrade when the train behind gives room too.

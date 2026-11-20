@@ -25,6 +25,7 @@ namespace rct3::config
             { Setting::Language, "language", SettingKind::Text, "Interface language as the game names it (English, German, SChinese, ...). Unset: the locale's, else English. --language sets it too.", "" },
             { Setting::NoAudio, "no_audio", SettingKind::Flag, "Start without any sound (true/false). --no-audio sets it, --audio overrides it for one run.", "no" },
             { Setting::Renderer, "renderer", SettingKind::Text, "Render backend: vulkan, opengl or software (on the CPU, slower; null draws nothing). OpenGL falls back to Vulkan when it cannot start. --renderer sets it too.", "vulkan" },
+            { Setting::Ffmpeg, "ffmpeg", SettingKind::Text, "The ffmpeg program that encodes recordings, as a path or a name on the PATH. Without one that runs, a recording keeps its frames as PNG files.", "ffmpeg" },
         } };
 
         // The table is indexed by Setting, so its order must follow the enum.

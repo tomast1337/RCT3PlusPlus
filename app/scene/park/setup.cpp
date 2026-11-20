@@ -1740,6 +1740,7 @@ namespace rct3::scene::park
                 scene.park.weather_hold = p.weather_hold;
                 scene.park.wind = p.wind;
                 scene.park.wind_change = p.wind_change;
+                scene.park.cheats_used = saved->cheats_used;
                 scene.park_model.finance.max_loan = p.max_loan;
                 scene.park_model.finance.interest_rate_percent = p.interest_rate_percent;
                 if (!p.ledger.empty())

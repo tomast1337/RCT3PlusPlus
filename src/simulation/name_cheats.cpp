@@ -6,12 +6,22 @@
 #include "simulation/guests.hpp"
 #include "simulation/sim_world.hpp"
 #include "simulation/tuning.hpp"
+#include "strings/ascii.hpp"
 
+#include <algorithm>
 #include <ranges>
 #include <vector>
 
 namespace rct3::simulation
 {
+
+    std::optional<NameCheatKey> named_cheat(std::string_view typed, Cheats cheats, std::function_ref<std::string(std::string_view key)> name_of)
+    {
+        if (cheats == Cheats::Off)
+            return std::nullopt;
+        const auto found = std::ranges::find_if(kNameCheatKeys, [&](const NameCheatKey& k) { return strings::equals_ignoring_case(typed, name_of(k.key)); });
+        return found == kNameCheatKeys.end() ? std::nullopt : std::optional(*found);
+    }
 
     usize set_off(SimWorld& world, NameCheat cheat)
     {

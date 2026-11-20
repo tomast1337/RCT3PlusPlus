@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <doctest/doctest.h>
+#include <format>
 #include <glm/geometric.hpp>
 
 using namespace rct3::simulation;
@@ -160,5 +161,20 @@ TEST_CASE("name cheats: a name the game knows but rct3++ has no system for says 
         CHECK_FALSE((on.unbreakable || on.ride_all_flat || on.ride_all_tracked || on.big_blasts));
         CHECK(on.hurry.value == 0);
         CHECK_FALSE(park.world().registry.all_of<Gesture>(g));
+    }
+}
+
+TEST_CASE("name cheats: a cheat's name sets it off whatever its case, and with cheats off it is only a name")
+{
+    // Made-up names, one per key, in place of the language files'.
+    const auto name_of = [](std::string_view key) { return std::format("Name {}", key); };
+    const auto money = named_cheat("NAME CHEATPEEPNAME_ROCKEFELLER", Cheats::Allowed, name_of);
+    REQUIRE(money);
+    CHECK(money->cheat == NameCheat::Money);
+    CHECK_FALSE(named_cheat("Someone", Cheats::Allowed, name_of));
+    for (const NameCheatKey& k : kNameCheatKeys)
+    {
+        CHECK(named_cheat(name_of(k.key), Cheats::Allowed, name_of)->cheat == k.cheat);
+        CHECK_FALSE(named_cheat(name_of(k.key), Cheats::Off, name_of));
     }
 }

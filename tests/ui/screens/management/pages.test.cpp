@@ -103,6 +103,18 @@ TEST_CASE("without the park every value is a dash")
     CHECK(cash.columns.empty());
 }
 
+TEST_CASE("the park window says whether a cheat was ever used in the park")
+{
+    StringTable s = test_strings();
+    s.add("Rct3pp_CheatsUsed", u"Cheats used:");
+    s.add("Yes", u"Yes");
+    s.add("No", u"No");
+    simulation::park::ParkState state;
+    CHECK(value_of(management_page(ManagementTopic::ParkOperations, 0, { .state = &state }, s, kUnits), u"Cheats used:") == u"No");
+    state.cheats_used = true;
+    CHECK(value_of(management_page(ManagementTopic::ParkOperations, 0, { .state = &state }, s, kUnits), u"Cheats used:") == u"Yes");
+}
+
 TEST_CASE("the rating breakdown lists each part with its sign, leaving out penalties that take nothing, then the score")
 {
     StringTable s;

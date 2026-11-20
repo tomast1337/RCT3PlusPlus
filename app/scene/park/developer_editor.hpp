@@ -2,7 +2,8 @@
 //
 // The developer windows' editor (F12): a guest picked from a list and looked into, their feelings, needs and money
 // changed or held, and the guest sent somewhere; and the park's live values changed, groups of guests let in and
-// everyone treated at once. Every change goes to the simulation, so a park saved afterwards keeps it.
+// everyone treated at once. Every change goes to the simulation, so a park saved afterwards keeps it, and counts as a
+// cheat used in the park.
 #pragma once
 
 #include "core/types.hpp"

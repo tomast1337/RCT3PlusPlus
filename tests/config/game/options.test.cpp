@@ -52,6 +52,15 @@ TEST_CASE("the file holds what differs from the defaults and reads back the same
     CHECK(GameOptions::parse(R"({ "fullscreen": true })") == GameOptions::parse(R"({ "fullscreen": 1 })"));
 }
 
+TEST_CASE("cheats are allowed unless the player turns them off, which the file keeps")
+{
+    GameOptions options;
+    CHECK(options.flag(GameOption::Cheats));
+    options.set(GameOption::Cheats, 0);
+    CHECK(options.text() == "{\n    \"cheats\": 0\n}\n");
+    CHECK_FALSE(GameOptions::parse(options.text()).flag(GameOption::Cheats));
+}
+
 TEST_CASE("the park's music is kept by file name, empty for none")
 {
     GameOptions options;

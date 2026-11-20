@@ -36,6 +36,7 @@ namespace rct3::config::game
             { O::MenuTrack, "menu_track", 0, 50, 1, 0 },
             { O::DisableWeather, "disable_weather", 0, 1, 1, 0 },
             { O::OriginalFinances, "original_finances", 0, 1, 1, 0 },
+            { O::Cheats, "cheats", 0, 1, 1, 1 }, // On, as in the game
 
             { O::InvertRideCameraY, "invert_ride_camera_y", 0, 1, 1, 0 },
             { O::AllPhotos, "all_photos", 0, 1, 1, 1 },

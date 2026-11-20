@@ -66,23 +66,34 @@ namespace rct3::scene::park
             return true;
         }
 
-        /// A level's slider and its hold switch.
-        void level_row(entt::registry& r, entt::entity guest, simulation::GuestLevel level)
+        /// A change made here counts as a cheat used in the park; looking, renaming and picking a guest do not.
+        /// Passes `changed` on.
+        bool cheat(ParkScene& scene, bool changed)
+        {
+            scene.park.cheats_used |= changed;
+            return changed;
+        }
+
+        /// A level's slider and its hold switch; true when either changed.
+        bool level_row(entt::registry& r, entt::entity guest, simulation::GuestLevel level)
         {
             const auto now = simulation::level_of(r, guest, level);
             if (!now)
-                return;
+                return false;
             const std::string_view name = simulation::level_name(level);
             ImGui::PushID(static_cast<int>(level)); // c-api
             bool held = simulation::level_held(r, guest, level);
-            if (ImGui::Checkbox("hold", &held))
+            const bool hold_changed = ImGui::Checkbox("hold", &held);
+            if (hold_changed)
                 simulation::hold_level(r, guest, level, held);
             ImGui::SetItemTooltip("Kept at this level while the park runs on; not saved with the park");
             ImGui::SameLine();
             f32 value = now->value;
-            if (ImGui::SliderFloat(std::string(name).c_str(), &value, 0, 1, "%.2f"))
+            const bool level_changed = ImGui::SliderFloat(std::string(name).c_str(), &value, 0, 1, "%.2f");
+            if (level_changed)
                 (void)simulation::set_level(r, guest, level, { value });
             ImGui::PopID();
+            return hold_changed || level_changed;
         }
 
         void draw_guest_list(ParkScene& scene)
@@ -251,9 +262,9 @@ namespace rct3::scene::park
                 if (auto* wallet = r.try_get<simulation::Wallet>(guest))
                 {
                     ImGui::SetNextItemWidth(160);
-                    (void)money_input("Cash", wallet->cash);
+                    (void)cheat(scene, money_input("Cash", wallet->cash));
                     ImGui::SetNextItemWidth(160);
-                    (void)money_input("Bank", wallet->bank);
+                    (void)cheat(scene, money_input("Bank", wallet->bank));
                     const auto at = [](units::Money m) { return static_cast<f64>(m.value) / 100; };
                     ImGui::Text("Spent %.2f: entry %.2f, rides %.2f, food %.2f, drink %.2f, souvenirs %.2f", at(wallet->spent), at(wallet->spent_entry), at(wallet->spent_rides), at(wallet->spent_food), at(wallet->spent_drink), at(wallet->spent_souvenirs));
                 }
@@ -262,14 +273,14 @@ namespace rct3::scene::park
             {
                 for (usize k = 0; k < simulation::kGuestLevels; ++k)
                     if (static_cast<simulation::GuestLevel>(k) != simulation::GuestLevel::Tolerance)
-                        level_row(r, guest, static_cast<simulation::GuestLevel>(k));
+                        (void)cheat(scene, level_row(r, guest, static_cast<simulation::GuestLevel>(k)));
             }
             if (ImGui::CollapsingHeader("Preferences"))
             {
                 simulation::Taste& taste = r.get_or_emplace<simulation::Taste>(guest);
-                ImGui::DragFloatRange2("intensity", &taste.least.value, &taste.most.value, 0.01f, 0, 1, "%.2f");
-                ImGui::SliderFloat("pools", &taste.pools.value, 0, 1, "%.2f");
-                level_row(r, guest, simulation::GuestLevel::Tolerance);
+                (void)cheat(scene, ImGui::DragFloatRange2("intensity", &taste.least.value, &taste.most.value, 0.01f, 0, 1, "%.2f"));
+                (void)cheat(scene, ImGui::SliderFloat("pools", &taste.pools.value, 0, 1, "%.2f"));
+                (void)cheat(scene, level_row(r, guest, simulation::GuestLevel::Tolerance));
             }
             if (ImGui::CollapsingHeader("Route"))
             {
@@ -292,13 +303,13 @@ namespace rct3::scene::park
             }
             if (ImGui::CollapsingHeader("Actions", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                if (ImGui::Button("Make happy and healthy"))
+                if (cheat(scene, ImGui::Button("Make happy and healthy")))
                     simulation::make_happy_and_healthy(r, guest);
                 ImGui::SameLine();
-                if (ImGui::Button("Cure nausea"))
+                if (cheat(scene, ImGui::Button("Cure nausea")))
                     simulation::cure_nausea(r, guest);
                 ImGui::SameLine();
-                if (ImGui::Button("Send home"))
+                if (cheat(scene, ImGui::Button("Send home")))
                     (void)simulation::send_home(scene.sim, guest);
                 ImGui::SetItemTooltip("With their party; only while they walk the paths");
 
@@ -316,7 +327,7 @@ namespace rct3::scene::park
                     ImGui::EndCombo();
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("Give thought") && thought != ed.thoughts.end() && r.all_of<simulation::Dice>(guest))
+                if (cheat(scene, ImGui::Button("Give thought") && thought != ed.thoughts.end() && r.all_of<simulation::Dice>(guest)))
                     simulation::think(r, guest, static_cast<simulation::ThoughtKind>(ed.thought), entt::null, static_cast<f32>(scene.sim.tick) * simulation::kTickSeconds);
 
                 ImGui::SetNextItemWidth(260);
@@ -333,7 +344,7 @@ namespace rct3::scene::park
                     ImGui::EndCombo();
                 }
                 ImGui::SameLine();
-                if (ImGui::Button("Send there"))
+                if (cheat(scene, ImGui::Button("Send there")))
                     (void)simulation::send_to(scene.sim, guest, ed.send_to);
                 ImGui::SetItemTooltip("With their party; only while they walk the paths");
             }
@@ -347,15 +358,15 @@ namespace rct3::scene::park
 
             ImGui::SeparatorText("Live values");
             f32 rating = park.rating.value_or(0);
-            if (ImGui::SliderFloat("Rating", &rating, 0, 1, "%.3f"))
+            if (cheat(scene, ImGui::SliderFloat("Rating", &rating, 0, 1, "%.3f")))
                 park.rating = rating;
             ImGui::Text("Guests in the park: %d", park.guests);
             if (park.cash)
             {
                 ImGui::SetNextItemWidth(160);
-                (void)money_input("Cash", *park.cash);
+                (void)cheat(scene, money_input("Cash", *park.cash));
                 ImGui::SetNextItemWidth(160);
-                if (money_input("Loan", park.loan))
+                if (cheat(scene, money_input("Loan", park.loan)))
                     park.loan.value = std::max<i64>(park.loan.value, 0);
             }
             else
@@ -364,12 +375,12 @@ namespace rct3::scene::park
             {
                 units::Money fee { scene.park_model.finance.entrance_fee };
                 ImGui::SetNextItemWidth(160);
-                if (money_input("Entrance fee", fee))
+                if (cheat(scene, money_input("Entrance fee", fee)))
                     scene.park_model.finance.entrance_fee = static_cast<i32>(std::clamp<i64>(fee.value, 0, std::numeric_limits<i32>::max()));
             }
             std::array<i32, 2> hours { static_cast<i32>(std::lround(scene.day_clock.park_hours.open * kMinutesPerDay)), static_cast<i32>(std::lround(scene.day_clock.park_hours.close * kMinutesPerDay)) };
             ImGui::SetNextItemWidth(160);
-            if (ImGui::SliderInt2("Opening hours (minutes)", hours.data(), 0, kMinutesPerDay))
+            if (cheat(scene, ImGui::SliderInt2("Opening hours (minutes)", hours.data(), 0, kMinutesPerDay)))
             {
                 scene.day_clock.park_hours = simulation::opening_hours(hours[0], hours[1]);
                 simulation::change_mode(scene.day_clock, scene.day_clock.mode);
@@ -379,7 +390,7 @@ namespace rct3::scene::park
             for (auto [e, gate] : r.view<simulation::ParkGate>().each())
             {
                 ImGui::PushID(static_cast<int>(entt::to_integral(e))); // c-api
-                ImGui::Checkbox("Gate closed", &gate.closed);
+                (void)cheat(scene, ImGui::Checkbox("Gate closed", &gate.closed));
                 ImGui::PopID();
             }
 
@@ -389,7 +400,7 @@ namespace rct3::scene::park
             ed.groups = std::clamp(ed.groups, 1, 500);
             ImGui::SameLine();
             const auto gates = r.view<const simulation::ParkGate>();
-            if (ImGui::Button("Let groups in at the gate") && !gates.empty())
+            if (cheat(scene, ImGui::Button("Let groups in at the gate") && !gates.empty()))
                 for (i32 k = 0; k < ed.groups; ++k)
                     (void)simulation::admit_party(scene.sim, scene.looks, r.get<const simulation::ParkGate>(gates.front()).node);
             ImGui::SetItemTooltip("Free of the entrance fee");
@@ -398,10 +409,10 @@ namespace rct3::scene::park
             ImGui::SetNextItemWidth(100);
             ImGui::InputDouble("##cash", &ed.cash_for_all, 0, 0, "%.2f");
             ImGui::SameLine();
-            if (ImGui::Button("Give cash to everyone"))
+            if (cheat(scene, ImGui::Button("Give cash to everyone")))
                 for (auto [e, wallet] : r.view<simulation::Wallet>(entt::exclude<simulation::Left>).each())
                     wallet.cash.value += std::llround(ed.cash_for_all * 100);
-            if (ImGui::Button("Make everyone happy and healthy"))
+            if (cheat(scene, ImGui::Button("Make everyone happy and healthy")))
                 for (const entt::entity e : r.view<simulation::Mood, simulation::Needs>())
                     simulation::make_happy_and_healthy(r, e);
         }

@@ -198,6 +198,18 @@ TEST_CASE("a saved park keeps its day mode")
     CHECK(odd->day_mode == simulation::DayMode::ParkHours);
 }
 
+TEST_CASE("a park where a cheat was used still says so once saved and loaded")
+{
+    parkfile::SavedPark park = small_park();
+    const auto honest = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE(honest);
+    CHECK_FALSE(honest->cheats_used);
+    park.cheats_used = true;
+    const auto cheated = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE(cheated);
+    CHECK(cheated->cheats_used);
+}
+
 TEST_CASE("a cut or changed saved park is refused")
 {
     auto bytes = parkfile::write_saved_park(small_park());

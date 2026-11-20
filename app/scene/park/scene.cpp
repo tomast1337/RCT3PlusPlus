@@ -874,7 +874,7 @@ namespace rct3::scene::park
                 {
                     show_info_page(scene, *info, assets, options);
                     if (change->id == ui::screens::info::person_control(ui::screens::info::PersonControl::Name))
-                        name_cheats(scene, assets, *scene.shown_person, change->text);
+                        name_cheats(scene, assets, options, *scene.shown_person, change->text);
                 }
             }
             const auto paint = info->take_paint();
@@ -959,7 +959,7 @@ namespace rct3::scene::park
             }
         }
         if (const auto asked = std::exchange(scene.rename_requested, std::nullopt); asked && change_person(scene, asked->first, ui::screens::info::InfoChange { .id = ui::screens::info::person_control(ui::screens::info::PersonControl::Name), .text = asked->second }))
-            name_cheats(scene, assets, asked->first, asked->second);
+            name_cheats(scene, assets, options, asked->first, asked->second);
         if (const auto asked = std::exchange(scene.info_requested, std::nullopt); asked && info)
             open_info(scene, *info, *asked, assets, options);
         if (const auto asked = std::exchange(scene.person_requested, std::nullopt); asked && info && *asked < scene.shown_people.size())
@@ -2610,6 +2610,7 @@ namespace rct3::scene::park
         if (!scene.park_model.objectives.objectives.empty())
             saved.goals = parkfile::SavedGoals { .objectives = scene.park_model.objectives };
         saved.research = scene.research;
+        saved.cheats_used = scene.park.cheats_used;
         return parkfile::write_saved_park(saved);
     }
 

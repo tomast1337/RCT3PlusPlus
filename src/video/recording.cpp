@@ -152,7 +152,7 @@ namespace rct3::video
         // An encoder that quits would otherwise end the game on the next frame written to it.
         std::signal(SIGPIPE, SIG_IGN);
 #endif
-        logging::logger("record").info("recording {} at {} frames a game second, played at {}{}", r.settings_.path.string(), r.settings_.fps, r.settings_.playback_fps, r.settings_.sound ? ", with sound" : "");
+        logging::logger("record").info("recording {} at {} frames a game second, played at {}{}", r.settings_.path.filename().string(), r.settings_.fps, r.settings_.playback_fps, r.settings_.sound ? ", with sound" : "");
         return r;
     }
 
@@ -250,7 +250,7 @@ namespace rct3::video
         std::error_code ec;
         std::filesystem::remove(video_part(), ec);
         std::filesystem::remove(sound_part(), ec);
-        log.info("recorded {}: {} frames, {:.2f} s", settings_.path.string(), frames_, result.length.value);
+        log.info("recorded {}: {} frames, {:.2f} s", settings_.path.filename().string(), frames_, result.length.value);
         return result;
     }
 

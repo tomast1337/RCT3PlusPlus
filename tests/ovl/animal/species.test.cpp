@@ -13,6 +13,7 @@ TEST_CASE("an animal species points to its animals and names its shelter")
 {
     Pool pool;
     const u32 shelter = pool.add("burrow");
+    const u32 own = pool.add("Wombat");
     pool.add("wombat:was");
     pool.add("WombatName:txt");
     pool.add("WombatDesc:txt");
@@ -26,7 +27,7 @@ TEST_CASE("an animal species points to its animals and names its shelter")
     const u32 at = pool.base();
     // The species, then two animal blocks; the female slots are null.
     std::vector<std::byte> bytes;
-    put(bytes, { 0, 0, 0, 0, 0, 0, at + 0x40, 0, at + 0x74, 0, 0, 0, shelter, 0, bits(1.5f) });
+    put(bytes, { 0, own, 0, 0, 0, 0, at + 0x40, 0, at + 0x74, 0, 0, 0, shelter, 0, bits(1.5f) });
     bytes.resize(0x40, std::byte { 0 });
     for (const u32 price : { 12500u, 16000u })
     {
@@ -45,6 +46,7 @@ TEST_CASE("an animal species points to its animals and names its shelter")
     CHECK(s.name_text == "WombatName");
     CHECK(s.description_text == "WombatDesc");
     CHECK(s.icon == "WombatIcon");
+    CHECK(s.own_name == "Wombat");
     CHECK(s.shelter == "burrow");
     CHECK(s.fence_strength == doctest::Approx(1.5f));
     REQUIRE(s.variants[0].has_value());

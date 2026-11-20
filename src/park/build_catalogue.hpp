@@ -174,6 +174,8 @@ namespace rct3::park
         /// Enclosure fences: how strong they are. Animals: the least strength of fence that holds them.
         f32 strength = 0;
         f32 rarity = 0; ///< Animals: from 0, common, to 1, endangered
+        /// Animals: their species' own name as its data spells it, which the string keys of its facts start with.
+        std::string species_name;
         /// Shops: whether placed as a stall, as against a special attraction such as a toilet.
         bool stall = false;
         bool names_category = false; ///< Scenery: names a research category, which keeps it out of research

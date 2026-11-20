@@ -1100,12 +1100,15 @@ namespace rct3::scene
         });
         engine_.define("build.pick", [this](const Json& a) -> Json {
             if (a.size() < 2 || !a[0].is_string() || !a[1].is_string())
-                throw std::invalid_argument("build.pick takes an overlay, a symbol and, for a tracked ride, \"designs\" to offer its saved designs");
+                throw std::invalid_argument("build.pick takes an overlay, a symbol and, for a tracked ride, \"designs\" to offer its saved designs, or for an animal its age and sex (\"adult male\", \"young female\" and so on)");
             park::ParkScene& park = park_of(park_);
             const auto items = build_items(park);
             if (!items)
                 return false;
-            const auto found = std::ranges::find_if(*items, [&](const rct3::park::BuildItem& item) { return item.overlay == a[0].get<std::string>() && item.symbol == a[1].get<std::string>(); });
+            using ovl::animal::AnimalAge;
+            constexpr std::array<std::pair<std::string_view, AnimalAge>, 4> kAges { { { "adult male", AnimalAge::AdultMale }, { "adult female", AnimalAge::AdultFemale }, { "young male", AnimalAge::YoungMale }, { "young female", AnimalAge::YoungFemale } } };
+            const auto age = a.size() > 2 && a[2].is_string() ? std::ranges::find(kAges, a[2].get<std::string>(), &std::pair<std::string_view, AnimalAge>::first) : kAges.end();
+            const auto found = std::ranges::find_if(*items, [&](const rct3::park::BuildItem& item) { return item.overlay == a[0].get<std::string>() && item.symbol == a[1].get<std::string>() && (age == kAges.end() || item.age == age->second); });
             if (found == items->end())
                 return false;
             // A ride built piece by piece needs the interface's assets, which it gets as a pick from a list does.
@@ -1477,7 +1480,7 @@ namespace rct3::scene
             for (const auto [e, animal, pose] : park.sim.registry.view<const simulation::Animal, const simulation::Pose>().each())
             {
                 const Json tile { { "col", g.tile_size_x > 0 ? (pose.position.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (pose.position.z - g.origin_z) / g.tile_size_z : 0 } };
-                out.push_back({ { "id", entt::to_integral(e) }, { "species", animal.species }, { "name", animal.name }, { "enclosure", animal.enclosure.value_or(-1) }, { "crated", animal.job == simulation::AnimalJob::Crated }, { "escaped", animal.escaped }, { "health", animal.health.value }, { "at", tile }, { "height", pose.position.y } });
+                out.push_back({ { "id", entt::to_integral(e) }, { "species", animal.species }, { "name", animal.name }, { "enclosure", animal.enclosure.value_or(-1) }, { "adult", animal.adult }, { "male", animal.male }, { "rescued", animal.rescued }, { "crated", animal.job == simulation::AnimalJob::Crated }, { "flying", animal.flying.value > 0 }, { "escaped", animal.escaped }, { "health", animal.health.value }, { "at", tile }, { "height", pose.position.y } });
             }
             return out;
         });

@@ -49,6 +49,7 @@ namespace rct3::ui::screens::build
 
         constexpr std::string_view kRarity = "WildAnimalRarity";
         constexpr std::string_view kShelterNeeded = "WildAnimal_ShelterRequired";
+        constexpr std::string_view kRescued = "WildAnimal_Rescued";
         constexpr std::string_view kShelterName = "%SHELTERNAME%";
         /// Fences sort by strength; this keeps two places of it.
         constexpr f32 kStrengthRank = 100;
@@ -306,7 +307,7 @@ namespace rct3::ui::screens::build
         return strings::to_utf16(std::format("{} x {}", item.width, item.length));
     }
 
-    std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, usize, strings::LessIgnoringCase>& design_counts, std::optional<std::pair<usize, f32>> researching)
+    std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, usize, strings::LessIgnoringCase>& design_counts, std::optional<std::pair<usize, f32>> researching, park::AnimalRules animals)
     {
         std::vector<PickerRow> rows;
         std::map<std::pair<std::string, std::string>, usize> headings; // by set icon and name
@@ -314,7 +315,7 @@ namespace rct3::ui::screens::build
         {
             const park::BuildItem& item = items[i];
             const park::BuildOffer::State state = offer.state(item);
-            if (item.list != list || state == park::BuildOffer::State::Hidden)
+            if (item.list != list || state == park::BuildOffer::State::Hidden || !park::sold(item, animals))
                 continue;
             PickerRow row;
             row.name = name_of(strings, item.name_text, item.symbol);
@@ -352,7 +353,10 @@ namespace rct3::ui::screens::build
                     row.rank = item.price.value; // Taking up first, then tiles, then water from the shallowest
                     break;
                 case park::BuildKind::Animal:
+                    row.key = item.name_text; // Its species' four share the symbol
                     row.size = std::u16string(strings.get(kRarity)) + u' ' + std::u16string(strings.get(rarity_text(item.rarity)));
+                    if (animals.rescued)
+                        row.name += u' ' + std::u16string(strings.get(kRescued));
                     break;
             }
             if (item.price > units::Money { })

@@ -15,8 +15,12 @@
 #include "scene/zoo_animals.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
+#include "simulation/game_speed.hpp"
+#include "simulation/park/messages.hpp"
 #include "simulation/systems.hpp"
+#include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
+#include "ui/animal_names.hpp"
 
 #include <algorithm>
 #include <array>
@@ -33,6 +37,10 @@ namespace rct3::scene
     {
         constexpr glm::vec4 kMarkColour { 0.45f, 0.9f, 0.4f, 0.9f };
         constexpr glm::vec4 kRefusedColour { 1.0f, 0.35f, 0.3f, 0.9f };
+        /// What the park says as an animal is put into an enclosure whose fence is too weak for it, and into one
+        /// without the house its species needs; the subject's name is the animal's.
+        constexpr std::string_view kFenceTooWeak = "Thought_PI_FenceUnsuitable1";
+        constexpr std::string_view kNoAnimalHouse = "Thought_PI_AnimalNeedsHouse1";
 
         bool deleting(const park::EnclosureTool& t)
         {
@@ -141,17 +149,48 @@ namespace rct3::scene
             return scene.grid.contains(tile.col, tile.row) && rct3::park::owned_outright(scene.grid.at(tile.col, tile.row));
         }
 
-        /// The animal of `item` in its crate on `tile`, paid for.
+        /// The animal of `item` on `tile`, paid for: the helicopter lowers its crate, unless the game runs at its
+        /// fastest. The park says when the enclosure's fence is too weak for it or it has no house of its kind.
         void put_animal(render::Device& device, park::ParkScene& scene, const ui::InterfaceAssets& assets, const rct3::park::BuildItem& item, save::model::Tile tile)
         {
+            using ovl::animal::AnimalAge;
             const glm::vec3 at = park::tile_point(scene.grid, tile);
-            const std::string name = strings::to_utf8(assets.strings->get(item.name_text));
             if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, item.price, simulation::park::LedgerLine::AnimalPurchaseSale, simulation::park::Charge::IfAffordable, item.symbol))
                 return;
-            // shortcut: every animal bought is a grown one; offer young ones once the animal list shows them.
-            (void)simulation::add_animal(scene.sim, { .species = item.symbol, .overlay = item.overlay, .name = name, .male = random::below(scene.looks, 2) == 0, .enclosure = scene.enclosures.at(tile.col, tile.row) }, at);
+            const std::optional<i32> enclosure = scene.enclosures.at(tile.col, tile.row);
+            const bool rescued = scene.build.animals.rescued;
+            const simulation::Animal animal {
+                .species = item.symbol,
+                .overlay = item.overlay,
+                .name = ui::new_animal_name(*assets.strings, item.symbol, item.age, scene.looks),
+                .adult = item.age == AnimalAge::AdultMale || item.age == AnimalAge::AdultFemale,
+                .male = item.age == AnimalAge::AdultMale || item.age == AnimalAge::YoungMale,
+                .enclosure = enclosure,
+                .health = rescued ? simulation::kAnimalRates.rescued : units::Share { 1 },
+                .rescued = rescued,
+                .flying = scene.park.speed.speed == simulation::Speed::Fastest ? units::Seconds { } : simulation::kAnimalRates.delivery,
+            };
+            (void)simulation::add_animal(scene.sim, animal, at);
             park::float_money(scene, at, -item.price);
+            if (enclosure)
+            {
+                const auto& fences = scene.enclosures.fences;
+                const std::string_view fence = static_cast<usize>(*enclosure) < fences.size() ? std::string_view(fences[static_cast<usize>(*enclosure)]) : std::string_view { };
+                const auto& items = scene.build.items;
+                const bool weak = items.valid() && items.wait_for(std::chrono::seconds(0)) == std::future_status::ready && std::ranges::any_of(items.get(), [&](const rct3::park::BuildItem& f) { return f.kind == rct3::park::BuildKind::EnclosureFence && f.symbol == fence && f.strength < item.strength; });
+                if (weak)
+                    simulation::park::post(scene.park.messages, { .text_key = std::string(kFenceTooWeak), .subject_name = animal.name });
+                const auto houses = scene.sim.registry.view<const simulation::AnimalHouse>();
+                const bool housed = item.needs.empty() || std::ranges::any_of(houses, [&](entt::entity h) {
+                                        const simulation::AnimalHouse& house = houses.get<const simulation::AnimalHouse>(h);
+                                        const auto placed = std::ranges::find(scene.objects, house.object, &save::model::PlacedObject::id);
+                                        return house.enclosure == enclosure && placed != scene.objects.end() && strings::equals_ignoring_case(placed->symbol, item.needs);
+                                    });
+                if (!housed)
+                    simulation::park::post(scene.park.messages, { .text_key = std::string(kNoAnimalHouse), .subject_name = animal.name });
+            }
             (void)load_object_model(scene, scene.placing.models, assets, animal_crate());
+            (void)load_object_model(scene, scene.placing.models, assets, animal_helicopter());
             animals_changed(device, scene);
         }
     } // namespace

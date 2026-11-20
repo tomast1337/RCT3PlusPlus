@@ -111,8 +111,8 @@ namespace rct3::save::model
         std::string fence_symbol { };       ///< Asset symbol of the fence round the park's land, empty when none
         std::string fence_overlay { };      ///< Overlay holding it, as PlacedObject::overlay
         bool pools_wanted = false;
-        bool allow_adult_animals = false;
-        bool allow_baby_animals = false;
+        bool allow_adult_animals = true; ///< Parks saved before zoos came allow both ages
+        bool allow_baby_animals = true;
         bool rescued_animals = false;
 
         Series guests_in_park { }, adults_in_park { }, teenagers_in_park { }, children_in_park { };

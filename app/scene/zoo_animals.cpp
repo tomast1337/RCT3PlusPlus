@@ -19,6 +19,9 @@ namespace rct3::scene
     {
         /// Seconds one animal's motion runs ahead of the one before, so they do not move as one.
         constexpr f32 kMotionSpread = 0.37f;
+        /// How high the helicopter starts lowering a crate from, and how far above the crate it hangs.
+        constexpr units::Distance kDropHeight { 30 };
+        constexpr units::Distance kRopeLength { 12 };
 
         /// Uploads the pictures of the bodies read since the last upload.
         void upload_new_pictures(render::Device& device, park::ParkScene& scene)
@@ -83,12 +86,20 @@ namespace rct3::scene
         return crate;
     }
 
+    save::model::PlacedObject animal_helicopter()
+    {
+        save::model::PlacedObject helicopter;
+        helicopter.symbol = "Helicopter";
+        helicopter.overlay = "WildAnimals/Helicopter/Helicopter";
+        return helicopter;
+    }
+
     void animals_changed(render::Device& device, park::ParkScene& scene)
     {
         DrawnAnimals& drawn = scene.drawn_animals;
-        save::model::PlacedObject crate = animal_crate();
-        if (scene.models.contains(rct3::park::object::model_key(crate)))
-            park::add_textures(device, scene, rct3::park::moving_meshes(std::span(&crate, 1), scene.models, scene.grid).mesh.batches);
+        for (save::model::PlacedObject shape : { animal_crate(), animal_helicopter() })
+            if (scene.models.contains(rct3::park::object::model_key(shape)))
+                park::add_textures(device, scene, rct3::park::moving_meshes(std::span(&shape, 1), scene.models, scene.grid).mesh.batches);
         if (drawn.library)
         {
             for (const auto [e, animal] : scene.sim.registry.view<const simulation::Animal>().each())
@@ -109,6 +120,11 @@ namespace rct3::scene
         drawn.placed_animals.clear();
         std::vector<entt::entity> crated;
         std::vector<glm::mat4> crate_places;
+        std::vector<entt::entity> flown;
+        std::vector<glm::mat4> helicopter_places;
+        const save::model::PlacedObject crate = animal_crate();
+        const save::model::PlacedObject helicopter = animal_helicopter();
+        const bool helicopters = scene.models.contains(rct3::park::object::model_key(helicopter));
         for (const auto [e, animal, pose] : r.view<const simulation::Animal, const simulation::Pose>().each())
         {
             const simulation::Pose at = simulation::between_steps(pose, scene.sim_time / simulation::kTickSeconds);
@@ -116,23 +132,34 @@ namespace rct3::scene
             const auto body = animal.job == simulation::AnimalJob::Crated || !drawn.library ? std::nullopt : drawn.library->body(animal.species, age_of(animal));
             if (!body)
             {
+                // shortcut: the helicopter hangs still and draws no rope; animate its rotor and draw the rope once
+                // model animations play on moving meshes.
+                const f32 lift = animal.flying.value / simulation::kAnimalRates.delivery.value * kDropHeight.value;
+                const glm::mat4 lifted = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, lift, 0.0f)) * world;
                 crated.push_back(e);
-                crate_places.push_back(world);
+                crate_places.push_back(lifted);
+                if (animal.flying.value > 0 && helicopters)
+                {
+                    flown.push_back(e);
+                    helicopter_places.push_back(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, kRopeLength.value, 0.0f)) * lifted);
+                }
                 continue;
             }
             const f32 offset = static_cast<f32>(entt::to_entity(e)) * kMotionSpread;
             drawn.placed.push_back({ .body = &*body, .motion = motion_of(*body, animal, pose), .time = { scene.park_clock + offset }, .world = world });
             drawn.placed_animals.push_back(e);
         }
-        if (crated != drawn.crated)
+        if (crated != drawn.crated || flown != drawn.flown)
         {
-            const save::model::PlacedObject crate = animal_crate();
             std::vector<save::model::PlacedObject> shapes(crated.size(), crate);
+            shapes.insert(shapes.end(), flown.size(), helicopter);
             for (usize i = 0; i < shapes.size(); ++i)
                 shapes[i].id = i + 1;
             drawn.crates = scene.models.contains(rct3::park::object::model_key(crate)) ? rct3::park::moving_meshes(shapes, scene.models, scene.grid) : rct3::park::MovingMeshes { };
             drawn.crated = std::move(crated);
+            drawn.flown = std::move(flown);
         }
+        crate_places.insert(crate_places.end(), helicopter_places.begin(), helicopter_places.end());
         rct3::park::move_meshes(drawn.crates, crate_places);
         // shortcut: every animal is posed on the frame's thread at its finest level, every frame; fine for the
         // few dozen a zoo holds, move to a worker and pick levels by distance as people do once parks hold more.

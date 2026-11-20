@@ -118,7 +118,7 @@ namespace rct3::simulation
         auto& r = world.registry;
         Animal* a = r.try_get<Animal>(animal);
         const bool carried = std::ranges::any_of(r.view<const KeeperDuty>(), [&](entt::entity k) { return r.get<const KeeperDuty>(k).target == animal; });
-        if (a == nullptr || a->job != AnimalJob::Crated || carried)
+        if (a == nullptr || a->job != AnimalJob::Crated || carried || a->flying.value > 0)
             return false;
         a->job = AnimalJob::Idle;
         a->busy = { };
@@ -238,6 +238,11 @@ namespace rct3::simulation
         {
             pose.was = pose.position;
             pose.was_heading = pose.heading;
+            if (animal.job == AnimalJob::Crated && animal.flying.value > 0)
+            {
+                animal.flying.value = std::max(animal.flying.value - dt.value, 0.0f);
+                continue;
+            }
             if (animal.job == AnimalJob::Crated)
             {
                 animal.busy.value -= dt.value;

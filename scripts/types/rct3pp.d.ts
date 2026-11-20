@@ -635,8 +635,13 @@ declare namespace build {
     /** Starts placing a ride; false when there is no such ride. A ride built piece by piece opens its
      * construction panel on the next frame, for a custom track; with "designs" it also opens the window of its
      * kind's saved designs ("design_browser"), as picking it in its build list does when it has some. An
-     * enclosure fence, or the enclosure list's delete tool ("", "EnclosureDelete"), takes out the enclosure tool. */
-    function pick(overlay: string, symbol: string, offer?: "designs"): boolean;
+     * enclosure fence, or the enclosure list's delete tool ("", "EnclosureDelete"), takes out the enclosure tool,
+     * and so does an animal, of the age and sex given (the first of its species otherwise). */
+    function pick(
+        overlay: string,
+        symbol: string,
+        offer?: "designs" | "adult male" | "adult female" | "young male" | "young female",
+    ): boolean;
     /** The construction panel's ride (its place in rides.list()), how many pieces fit where the track goes on,
      * the one picked, whether it can be built there (and its arrows show), what laying it (or the design) where
      * its ghost shows costs as the panel shows it, in hundredths, whether it may not stand there (for a design,
@@ -1145,14 +1150,19 @@ declare namespace structures {
 
 declare namespace animals {
     /** The park's animals, each with a number of its own, its species, its name, the enclosure they live in (-1 for
-     *  none), whether they are in a crate or out of every enclosure, their health from 0 to 1, the point of the map
-     *  they stand on, in tiles, and the height of the ground under them. */
+     *  none), whether grown, male and bought rescued, whether they are in a crate, still lowered by the helicopter,
+     *  or out of every enclosure, their health from 0 to 1, the point of the map they stand on, in tiles, and the
+     *  height of the ground under them. */
     function list(): {
         id: number;
         species: string;
         name: string;
         enclosure: number;
+        adult: boolean;
+        male: boolean;
+        rescued: boolean;
         crated: boolean;
+        flying: boolean;
         escaped: boolean;
         health: number;
         at: { col: Tiles; row: Tiles };

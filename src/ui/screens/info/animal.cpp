@@ -67,6 +67,8 @@ namespace rct3::ui::screens::info
         void details(InfoPage& page, const AnimalFacts& f, const simulation::Animal& a, const StringTable& strings)
         {
             page.heading = text(strings, a.male ? "Male" : "Female") + u' ' + text(strings, a.adult ? "Adult" : "Baby");
+            if (a.rescued)
+                page.heading += u' ' + text(strings, "WildAnimal_Rescued");
             page.lines.push_back({ .label = text(strings, "WildAnimal_Species"), .value = std::u16string(strings.get_ignoring_case(f.species_text)), .name = "WildAnimal_Species" });
             page.controls.push_back({ .id = animal_control(AnimalControl::Name), .name = "AnimalName", .kind = InfoControlKind::Text, .maximum = kLongestName, .text = strings::to_utf16(a.name), .width = kNameWidth });
             page.controls.push_back({ .name = "AnimalDoing", .kind = InfoControlKind::Words, .label = text(strings, doing(a)) });

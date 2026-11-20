@@ -45,6 +45,7 @@ namespace rct3::scene
     {
         std::shared_future<std::vector<rct3::park::BuildItem>> items;
         rct3::park::BuildOffer offer;
+        rct3::park::AnimalRules animals { };
         std::optional<ui::Point> size;                       ///< Of the last list resized, for the next one opened
         std::set<std::string, std::less<>> kinds_off;        ///< Object filters turned off; the lists share them
         std::set<std::string, std::less<>> styles_off;       ///< Theme filters turned off

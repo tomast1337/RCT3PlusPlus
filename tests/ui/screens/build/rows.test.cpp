@@ -2,7 +2,9 @@
 #include "ui/screens/build/rows.hpp"
 
 #include "core/types.hpp"
+#include "strings/unicode.hpp"
 
+#include <algorithm>
 #include <doctest/doctest.h>
 #include <format>
 #include <string_view>
@@ -216,6 +218,43 @@ TEST_CASE("animals sit under their species, which names the fence and shelter it
     REQUIRE(rows[0].children.size() == 1);
     CHECK(rows[0].children[0].name == u"Big wombat");
     CHECK(rows[0].children[0].size == u"Rarity: Rare");
+}
+
+TEST_CASE("the animal list sells the ages the park allows, each marked when it comes rescued")
+{
+    using rct3::ovl::animal::AnimalAge;
+    StringTable strings;
+    strings.add("WildAnimal_Rescued", u"(saved)");
+    std::vector<BuildItem> items;
+    for (const auto& [age, name] : { std::pair { AnimalAge::AdultMale, "Bull" }, std::pair { AnimalAge::AdultFemale, "Cow" }, std::pair { AnimalAge::YoungMale, "Calf" }, std::pair { AnimalAge::YoungFemale, "Heifer" } })
+    {
+        BuildItem animal = scenery("wombat", BuildList::Animals, name, 100);
+        animal.kind = rct3::park::BuildKind::Animal;
+        animal.group_text = "Wombat";
+        animal.age = age;
+        items.push_back(animal);
+        strings.add(name, rct3::strings::to_utf16(name));
+    }
+    for (const bool adults : { false, true })
+        for (const bool young : { false, true })
+            for (const bool rescued : { false, true })
+            {
+                CAPTURE(adults);
+                CAPTURE(young);
+                CAPTURE(rescued);
+                const auto rows = picker_rows(BuildList::Animals, items, BuildOffer { }, strings, kCoins, { }, std::nullopt, { .adults = adults, .young = young, .rescued = rescued });
+                std::vector<std::u16string> names;
+                for (const PickerRow& heading : rows)
+                    for (const PickerRow& row : heading.children)
+                        names.push_back(row.name);
+                std::vector<std::u16string> sold;
+                for (const std::u16string name : { u"Bull", u"Cow", u"Calf", u"Heifer" })
+                    if (name == u"Bull" || name == u"Cow" ? adults : young)
+                        sold.push_back(rescued ? name + u" (saved)" : name);
+                std::ranges::sort(names);
+                std::ranges::sort(sold);
+                CHECK(names == sold);
+            }
 }
 
 TEST_CASE("items fall under the object filter of their kind of ride or category of scenery")

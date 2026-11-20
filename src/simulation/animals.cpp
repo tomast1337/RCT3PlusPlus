@@ -125,6 +125,28 @@ namespace rct3::simulation
         return true;
     }
 
+    entt::entity call_keeper(SimWorld& world, entt::entity house)
+    {
+        auto& r = world.registry;
+        const AnimalHouse* called = r.valid(house) ? r.try_get<AnimalHouse>(house) : nullptr;
+        if (called == nullptr)
+            return entt::null;
+        entt::entity nearest = entt::null;
+        for (const auto [k, duty, pose] : r.view<const KeeperDuty, const Pose>().each())
+        {
+            if (duty.job == KeeperJob::Filling && duty.target == house)
+                return k;
+            const AnimalHouse* own = r.valid(duty.house) ? r.try_get<AnimalHouse>(duty.house) : nullptr;
+            const auto* staff = r.try_get<Staff>(k);
+            const bool free = duty.job == KeeperJob::Idle || duty.job == KeeperJob::Strolling;
+            if (own != nullptr && own->enclosure == called->enclosure && free && (staff == nullptr || (staff->tasks & kFillTroughsTask) != 0) && (nearest == entt::null || glm::distance(pose.position, called->troughs) < glm::distance(r.get<Pose>(nearest).position, called->troughs)))
+                nearest = k;
+        }
+        if (nearest != entt::null)
+            r.get<KeeperDuty>(nearest) = { .house = r.get<KeeperDuty>(nearest).house, .job = KeeperJob::Filling, .goal = called->troughs, .target = house, .busy = kRates.filling };
+        return nearest;
+    }
+
     void import_animal_houses(SimWorld& world, std::span<const AnimalHouse> houses, std::span<const KeeperPost> keepers)
     {
         auto& r = world.registry;

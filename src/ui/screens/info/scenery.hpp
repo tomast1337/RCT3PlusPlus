@@ -37,7 +37,7 @@ namespace rct3::ui::screens::info
         Passport, ///< On a passport post: the park's passport gift and the stamps it takes
         // An animal house's:
         HouseDetails,  ///< The species that live in it, and a button that turns the view to it
-        HouseFeeding,  ///< How often its keepers fill its troughs
+        HouseFeeding,  ///< How often its keepers fill its troughs, what that costs, and calling a keeper to fill them
         HouseKeepers,  ///< The keepers who look after it
         HouseThoughts, ///< What guests think of its animals
         // A changing room's, laid out as an attraction's window about the room and its pool complex:
@@ -72,6 +72,7 @@ namespace rct3::ui::screens::info
     /// Turns the park's view to an animal house.
     inline constexpr i32 kHouseLocateControl = 17;
     inline constexpr i32 kHouseScheduleControl = 18;
+    inline constexpr i32 kHouseCallKeeperControl = 19;
     inline constexpr i32 kMostWaveOn = 600;   ///< Chosen by eye
     inline constexpr i32 kWaveOnStep = 10;    ///< Chosen by eye
     inline constexpr i32 kMostWaveEvery = 30; ///< Chosen by eye: minutes

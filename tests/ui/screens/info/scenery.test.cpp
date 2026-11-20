@@ -305,8 +305,9 @@ TEST_CASE("an animal house's window names the species living in it and its keepe
 
     f.house->schedule = simulation::FeedingSchedule::Often;
     const InfoPage feeding = scenery_page(SceneryTab::HouseFeeding, f, s);
-    REQUIRE(feeding.controls.size() == 1);
+    REQUIRE(feeding.controls.size() == 2);
     CHECK(feeding.controls[0].id == kHouseScheduleControl);
+    CHECK(feeding.controls[1].id == kHouseCallKeeperControl);
     CHECK(feeding.controls[0].kind == InfoControlKind::Choice);
     CHECK(feeding.controls[0].items.size() == 3);
     CHECK(feeding.controls[0].value == 2); // Infrequent, normal, often

@@ -194,6 +194,10 @@ namespace rct3::simulation
         i32 enclosure { };
     };
 
+    /// Sends the nearest keeper in `house`'s enclosure who is free (standing about or strolling) and fills troughs to
+    /// fill its troughs at once. Returns the keeper, or the one already on the way; entt::null when nobody is free.
+    entt::entity call_keeper(SimWorld& world, entt::entity house);
+
     /// A park's own animal houses, and its keepers: each keeper, with the enclosure the park gave them, keeps
     /// the nearest house in it that no other keeper has yet, else the nearest in it. A keeper with no house in
     /// their enclosure is left without work.

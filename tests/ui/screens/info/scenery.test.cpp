@@ -277,3 +277,34 @@ TEST_CASE("a passport post's tab sets the stamps the park's gift takes, and the 
     CHECK(page.controls[1].items == std::vector<std::u16string> { u"Hat", u"Badge" });
     CHECK(page.controls[1].value == 1);
 }
+
+TEST_CASE("an animal house's window names the species living in it and its keepers, with tabs of its own")
+{
+    StringTable s = table();
+    s.add("ZebraName", u"Zebra");
+    s.add("Rct3pp_HouseNoKeepers", u"Nobody");
+    SceneryFacts f;
+    f.colour_slots = 0b1;
+    f.house = AnimalHouseFacts { .species = { "zebraname" }, .keepers = { u"Ann", u"Bo" } };
+    const auto tabs = scenery_tabs(f);
+    REQUIRE(tabs.size() == 5);
+    CHECK(tabs[0].tab == SceneryTab::Destroy);
+    CHECK(tabs[0].help == "AnimalShelterDeleteTT");
+    CHECK(tabs[1].icon == "AnimalShelterColourSchemeIcon");
+    CHECK(tabs[2].tab == SceneryTab::HouseDetails);
+    CHECK(tabs[3].tab == SceneryTab::HouseKeepers);
+    CHECK(tabs[4].tab == SceneryTab::HouseThoughts);
+    CHECK(std::ranges::is_sorted(tabs, { }, &SceneryTabInfo::slot));
+
+    const InfoPage details = scenery_page(SceneryTab::HouseDetails, f, s);
+    REQUIRE(details.lines.size() == 1);
+    CHECK(details.lines[0].label == u"Zebra"); // The species' key in any case
+    REQUIRE(details.controls.size() == 1);
+    CHECK(details.controls[0].id == kHouseLocateControl);
+
+    const InfoPage keepers = scenery_page(SceneryTab::HouseKeepers, f, s);
+    REQUIRE(keepers.lines.size() == 2);
+    CHECK(keepers.lines[1].label == u"Bo");
+    f.house->keepers.clear();
+    CHECK(scenery_page(SceneryTab::HouseKeepers, f, s).note == u"Nobody");
+}

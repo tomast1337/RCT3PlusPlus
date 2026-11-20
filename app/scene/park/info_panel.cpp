@@ -309,7 +309,20 @@ namespace rct3::scene::park
         return entt::null;
     }
 
-    ui::screens::info::SceneryFacts prop_facts(const ParkScene& scene, save::model::PlacedObjectIndex index)
+    entt::entity animal_house_of(const ParkScene& scene, const save::model::PlacedObject& o)
+    {
+        // The park keeps two records of each house and hut, alike but for their ids, so either is known by its place.
+        const auto same = [&](u64 id) {
+            const auto placed = std::ranges::find(scene.objects, id, &save::model::PlacedObject::id);
+            return placed != scene.objects.end() && placed->symbol == o.symbol && placed->col == o.col && placed->row == o.row;
+        };
+        for (const auto [e, house] : scene.sim.registry.view<const simulation::AnimalHouse>().each())
+            if (same(house.object) || (house.hut != 0 && same(house.hut)))
+                return e;
+        return entt::null;
+    }
+
+    ui::screens::info::SceneryFacts prop_facts(const ParkScene& scene, save::model::PlacedObjectIndex index, const ui::StringTable& strings)
     {
         ui::screens::info::SceneryFacts f;
         if (index.value >= scene.objects.size())
@@ -338,6 +351,20 @@ namespace rct3::scene::park
                     f.passport->gift = static_cast<i32>(f.passport->gifts.size());
                 f.passport->gifts.push_back(gift->name_text);
             }
+        }
+        if (const entt::entity home = animal_house_of(scene, o); home != entt::null)
+        {
+            // The species that need this kind of house, each once though the catalogue lists four animals of each.
+            f.house.emplace();
+            const auto& r = scene.sim.registry;
+            const bool listed = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+            for (const rct3::park::BuildItem& item : listed ? std::span<const rct3::park::BuildItem>(scene.build.items.get()) : std::span<const rct3::park::BuildItem> { })
+                if (item.kind == rct3::park::BuildKind::Animal && strings::equals_ignoring_case(item.needs, o.symbol) && !std::ranges::contains(f.house->species, std::string_view(item.group_text)))
+                    f.house->species.push_back(item.group_text);
+            for (const auto [k, duty] : r.view<const simulation::KeeperDuty>().each())
+                if (duty.house == home)
+                    if (const auto shown = std::ranges::find(scene.shown_people, k, &ShownPerson::guest); shown != scene.shown_people.end() && shown->staff && shown->saved < scene.people.staff.size())
+                        f.house->keepers.push_back(ui::screens::info::person_name({ .staff = &scene.people.staff[shown->saved] }, strings));
         }
         if (const auto room = pool_room(scene, o))
         {
@@ -397,7 +424,7 @@ namespace rct3::scene::park
             panel.show_page(ui::screens::info::party_page(scene.party_tab, party_facts(scene), *assets.strings, info_units(assets, options)));
         else if (scene.shown_prop)
         {
-            ui::screens::info::SceneryFacts f = prop_facts(scene, *scene.shown_prop);
+            ui::screens::info::SceneryFacts f = prop_facts(scene, *scene.shown_prop, *assets.strings);
             if (f.pool)
                 f.pool->currency = info_units(assets, options).currency;
             panel.show_page(ui::screens::info::scenery_page(scene.prop_tab, f, *assets.strings));
@@ -628,9 +655,16 @@ namespace rct3::scene::park
     {
         if (index.value >= scene.objects.size())
             return;
+        if (const entt::entity home = animal_house_of(scene, scene.objects[index.value]); home != entt::null)
+        {
+            const u64 house = scene.sim.registry.get<simulation::AnimalHouse>(home).object;
+            if (const auto found = std::ranges::find(scene.objects, house, &save::model::PlacedObject::id); found != scene.objects.end())
+                index = save::model::PlacedObjectIndex { static_cast<usize>(found - scene.objects.begin()) };
+            open = open.value_or(ui::screens::info::SceneryTab::HouseDetails);
+        }
         std::vector<ui::screens::info::InfoTab> tabs;
         scene.prop_tabs.clear();
-        for (const ui::screens::info::SceneryTabInfo& t : ui::screens::info::scenery_tabs(prop_facts(scene, index)))
+        for (const ui::screens::info::SceneryTabInfo& t : ui::screens::info::scenery_tabs(prop_facts(scene, index, *assets.strings)))
         {
             ui::screens::info::InfoTab& tab = tabs.emplace_back();
             tab.icon = t.icon;

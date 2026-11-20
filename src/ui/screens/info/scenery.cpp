@@ -97,10 +97,11 @@ namespace rct3::ui::screens::info
                 { SceneryTab::RoomCustomers, 8, "Attraction_Customers", "AttractionDetails_CustomersHelp", false, { } },
                 { SceneryTab::RoomMaintenance, 10, "Attraction_Maintenance", "AttractionDetails_RideMaintenanceHelp", false, { } },
             };
-        std::vector<SceneryTabInfo> tabs { { SceneryTab::Destroy, 0, "Attraction_General_Delete", "ATE_TT_Demolish", true, { } } };
+        // An animal house's own tabs say so in their help, and its colours have an icon of their own.
+        std::vector<SceneryTabInfo> tabs { { SceneryTab::Destroy, 0, "Attraction_General_Delete", facts.house ? "AnimalShelterDeleteTT" : "ATE_TT_Demolish", true, { } } };
         if (const std::vector<usize> slots = scenery_paint_slots(facts); !slots.empty())
         {
-            tabs.push_back({ SceneryTab::Colour, kColourSlot, "Attraction_Colour", "Scenery_SetFlexiColours", false, { } });
+            tabs.push_back({ SceneryTab::Colour, kColourSlot, facts.house ? "AnimalShelterColourSchemeIcon" : "Attraction_Colour", facts.house ? "AnimalShelterColourSchemeTT" : "Scenery_SetFlexiColours", false, { } });
             SceneryTabInfo& colour = tabs.back();
             for (const usize s : slots)
             {
@@ -116,6 +117,12 @@ namespace rct3::ui::screens::info
             tabs.push_back({ SceneryTab::Sign, slot++, "Obj_Scenery", kSignOptions, false, { } });
         if (facts.passport)
             tabs.push_back({ SceneryTab::Passport, slot++, "Guest_Passport", kPassportSetup, false, { } });
+        if (facts.house)
+        {
+            tabs.push_back({ SceneryTab::HouseDetails, slot++, "AnimalShelterViewIcon", "AnimalShelterViewTT", false, { } });
+            tabs.push_back({ SceneryTab::HouseKeepers, slot++, "AnimalShelterKeeperIcon", "AnimalShelterKeeperTT", false, { } });
+            tabs.push_back({ SceneryTab::HouseThoughts, slot++, "AnimalShelterPeepThoughtsIcon", "AnimalShelterPeepThoughtsTT", false, { } });
+        }
         return tabs;
     }
 
@@ -161,6 +168,25 @@ namespace rct3::ui::screens::info
             InfoControl& gift = page.controls.emplace_back(InfoControl { .id = kPassportGiftControl, .name = std::string(kChooseGift), .kind = InfoControlKind::Choice, .label = std::u16string(strings.get(kChooseGift)), .value = passport.gift, .enabled = !passport.gifts.empty() });
             for (const std::string_view g : passport.gifts)
                 gift.items.push_back(std::u16string(strings.get(g)));
+        }
+        else if (tab == SceneryTab::HouseDetails && facts.house)
+        {
+            page.heading = strings.get("Rct3pp_HouseSpecies");
+            for (const std::string_view kind : facts.house->species)
+                page.lines.push_back({ .label = std::u16string(strings.get_ignoring_case(kind)), .value = { }, .name = std::string(kind) });
+            page.controls.push_back({ .id = kHouseLocateControl, .name = "CenterInViewIcon", .kind = InfoControlKind::Button, .icon = "CenterInViewIcon", .help = std::u16string(strings.get("AnimalShelterCameraTT")) });
+        }
+        else if (tab == SceneryTab::HouseKeepers && facts.house)
+        {
+            for (const std::u16string& keeper : facts.house->keepers)
+                page.lines.push_back({ .label = keeper, .value = { } });
+            if (facts.house->keepers.empty())
+                page.note = strings.get("Rct3pp_HouseNoKeepers");
+        }
+        else if (tab == SceneryTab::HouseThoughts && facts.house)
+        {
+            // shortcut: guests do not think about animals yet; list their thoughts once they do.
+            page.note = strings.get("Rct3pp_HouseNoThoughts");
         }
         else if (facts.pool)
         {

@@ -3,7 +3,8 @@
 // What the info panel shows about a prop placed in the park: a tab that pulls it down at once, one that picks
 // its colours when it takes any, and tabs for what some props do, such as a litter bin's state or a sign's
 // words. A plain prop has no page open; the strip then only names it. A changing room's window is laid out as
-// an attraction's instead, about the pool complex it lets guests into.
+// an attraction's instead, about the pool complex it lets guests into. An animal house's adds the animals that
+// live in it, its keepers and what guests think of its animals.
 #pragma once
 
 #include "core/types.hpp"
@@ -33,6 +34,10 @@ namespace rct3::ui::screens::info
         Bin,      ///< How full a litter bin is and when it was emptied
         Sign,     ///< What a sign says
         Passport, ///< On a passport post: the park's passport gift and the stamps it takes
+        // An animal house's:
+        HouseDetails,  ///< The species that live in it, and a button that turns the view to it
+        HouseKeepers,  ///< The keepers who look after it
+        HouseThoughts, ///< What guests think of its animals
         // A changing room's, laid out as an attraction's window about the room and its pool complex:
         RoomDetails,      ///< The room's and the complex's names, its state, pulling them down and finding the room
         RoomFinances,     ///< The ticket price and the room's takings
@@ -62,6 +67,8 @@ namespace rct3::ui::screens::info
     inline constexpr i32 kPassportStampsControl = 15;
     /// A choice: the gift, by its place in PassportFacts::gifts.
     inline constexpr i32 kPassportGiftControl = 16;
+    /// Turns the park's view to an animal house.
+    inline constexpr i32 kHouseLocateControl = 17;
     inline constexpr i32 kMostWaveOn = 600;   ///< Chosen by eye
     inline constexpr i32 kWaveOnStep = 10;    ///< Chosen by eye
     inline constexpr i32 kMostWaveEvery = 30; ///< Chosen by eye: minutes
@@ -100,6 +107,13 @@ namespace rct3::ui::screens::info
         i32 gift = 0;                            ///< Of `gifts`
     };
 
+    /// An animal house, and those who live in it and look after it.
+    struct AnimalHouseFacts
+    {
+        std::vector<std::string_view> species { }; ///< String keys of the names of the species that live in it
+        std::vector<std::u16string> keepers { };
+    };
+
     struct SceneryTabInfo
     {
         SceneryTab tab = SceneryTab::Destroy;
@@ -118,6 +132,7 @@ namespace rct3::ui::screens::info
         const save::model::SignState* sign = nullptr;
         std::optional<PoolComplexFacts> pool { };  ///< When it is a changing room
         std::optional<PassportFacts> passport { }; ///< When it is a passport post
+        std::optional<AnimalHouseFacts> house { }; ///< When it is an animal house
         u32 colour_slots = 0;                      ///< The colour slots its pictures take (bit k: slot k)
         std::array<i32, 3> colours { };            ///< The colour picked for each slot, of the 32
         f32 zero_time = 0;                         ///< Where the park's calendar starts, for the dates shown

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Places scenery as a player would, on the game's blank landscape, beside the road in from the entrance:
-// - a wall goes on the edge of its tile nearest the pointer, whichever way the player turned it;
+// - a wall goes on the edge of its tile nearest the pointer, whichever way the player turned it, its price over
+//   its ghost;
 // - one pointed at where a wall already stands is refused, and with Shift it climbs onto the wall's top;
 // - trees planted in a park with none grow woods beyond the map's edge too.
 //
@@ -55,12 +56,15 @@ for (const [turns, [dc, dr]] of edges.entries()) {
 }
 const first = await hover(col + 0.1, row + 0.5);
 const ground = first.placing.site!.height;
+expect(first.placing.price > 0, `the wall's price shown, not ${first.placing.price}`);
+await screenshot("ghost_fits");
 await pointer.click(first.x, first.y);
 const again = await hover(col + 0.1, row + 0.5);
 expect(
     again.placing.problem === "blocked",
     `a second wall refused where the first stands, not ${again.placing.problem}`,
 );
+await screenshot("ghost_refused");
 pointer.shift(true);
 await frames(3);
 const raised = await hover(col + 0.1, row + 0.5);

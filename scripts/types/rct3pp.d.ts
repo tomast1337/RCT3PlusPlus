@@ -731,6 +731,8 @@ declare namespace build {
               affordable: boolean;
               flatten: "off" | "sharp" | "smooth";
               levelling: Money;
+              /** What the item costs, which floats over a scenery item's ghost. */
+              price: Money;
               ghost: boolean;
               arrow: boolean;
               site?: { col: Tiles; row: Tiles; turns: number; height: number };

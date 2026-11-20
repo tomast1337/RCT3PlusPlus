@@ -359,7 +359,7 @@ namespace rct3::scene::park
             rct3::park::add_ground(mesh, rct3::park::path::tunnel_lining(inside, scene.grid));
             profiling::section("PathMesh", [&] { rct3::park::add_ground(mesh, rct3::park::ground::ground_path_mesh(paths, scene.grid, area)); });
             rct3::park::ground::GroundQueues queues = profiling::section("Queues", [&] { return rct3::park::ground::ground_queues(with, scene.grid, area); });
-            rct3::park::add_ground(mesh, std::move(queues.mesh));
+            rct3::park::add_ground(mesh, queues.mesh);
             paintings = std::move(queues.paintings);
             show(scene.ground_chunks[i], std::move(mesh));
         }

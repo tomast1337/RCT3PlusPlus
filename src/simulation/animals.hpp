@@ -80,6 +80,7 @@ namespace rct3::simulation
         Filling,   ///< On the way to the troughs, or filling them
         Clearing,  ///< On the way to dung, or clearing it
         Catching,  ///< After an escaped animal, or taking it home in its crate
+        Swapping,  ///< On the way to their house's hut, or changing tools there (animal_care.hpp)
     };
 
     /// A keeper's work, beside their Staff with the Keeper role.

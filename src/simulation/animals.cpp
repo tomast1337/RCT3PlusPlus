@@ -2,6 +2,7 @@
 #include "simulation/animals.hpp"
 
 #include "core/types.hpp"
+#include "simulation/animal_care.hpp"
 #include "simulation/components.hpp"
 #include "simulation/staff/care.hpp"
 #include "simulation/staff/patrol.hpp"
@@ -143,7 +144,7 @@ namespace rct3::simulation
                 nearest = k;
         }
         if (nearest != entt::null)
-            r.get<KeeperDuty>(nearest) = { .house = r.get<KeeperDuty>(nearest).house, .job = KeeperJob::Filling, .goal = called->troughs, .target = house, .busy = kRates.filling };
+            r.get<KeeperDuty>(nearest) = { .house = r.get<KeeperDuty>(nearest).house, .job = KeeperJob::Filling, .goal = called->troughs, .target = house, .busy = job_time(r, nearest, KeeperJob::Filling) };
         return nearest;
     }
 
@@ -224,14 +225,14 @@ namespace rct3::simulation
         const auto houses = r.view<AnimalHouse>();
         for (auto [e, house] : houses.each())
             house.since_fed.value += dt.value;
-        // The house in `enclosure` nearest `at`, null for none.
-        const auto house_for = [&](std::optional<i32> enclosure, glm::vec3 at) {
+        // The house in `enclosure` nearest `at` that the animal `animal` eats at, null for none.
+        const auto house_for = [&](entt::entity animal, std::optional<i32> enclosure, glm::vec3 at) {
             entt::entity best = entt::null;
             f32 nearest = 0;
             for (const auto [h, house] : houses.each())
             {
                 const f32 d = glm::distance(house.troughs, at);
-                if (house.enclosure == enclosure && (best == entt::null || d < nearest))
+                if (house.enclosure == enclosure && eats_at(r, animal, h) && (best == entt::null || d < nearest))
                 {
                     best = h;
                     nearest = d;
@@ -278,15 +279,15 @@ namespace rct3::simulation
                 park::post(messages, { .text_key = std::string(kAnimalEscaped), .subject_name = animal.name });
             animal.escaped = !standing;
             animal.enclosure = standing;
-            rise(animal.hunger, dt, kRates.hungry);
+            rise(animal.hunger, dt, hungry_after(r, e));
             rise(animal.thirst, dt, kRates.thirsty);
             if (animal.job != AnimalJob::Sleeping)
                 rise(animal.tiredness, dt, kRates.sleepy);
-            const bool company = std::ranges::any_of(animals, [&](entt::entity o) {
+            const auto company = std::ranges::count_if(animals, [&](entt::entity o) {
                 const Animal& other = animals.get<Animal>(o);
                 return o != e && other.enclosure == animal.enclosure && other.species == animal.species && other.job != AnimalJob::Crated;
             });
-            if (company)
+            if (company >= wanted_company(r, e))
                 animal.loneliness.value = std::max(0.0f, animal.loneliness.value - dt.value / kRates.lonely.value);
             else
                 rise(animal.loneliness, dt, kRates.lonely);
@@ -296,13 +297,15 @@ namespace rct3::simulation
                 animal.dung_in = kRates.dung;
                 dropped.emplace_back(pose.position, animal.enclosure);
             }
+            // Health sinks while something ails it, and otherwise mends as far as its habitat and company let it.
             const bool ailing = animal.hunger.value >= 1 || animal.thirst.value >= 1 || dung_over(animal.enclosure) > 0;
-            if (ailing)
-                animal.health.value = std::max(0.0f, animal.health.value - dt.value / kRates.sickening.value);
+            const f32 most = most_health(r, e).value;
+            if (ailing || animal.health.value > most)
+                animal.health.value = std::max(ailing ? 0.0f : most, animal.health.value - dt.value / kRates.sickening.value);
             else
-                animal.health.value = std::min(1.0f, animal.health.value + dt.value / kRates.mending.value);
+                animal.health.value = std::min(most, animal.health.value + dt.value / kRates.mending.value);
 
-            const entt::entity home = house_for(animal.enclosure, pose.position);
+            const entt::entity home = house_for(e, animal.enclosure, pose.position);
             AnimalHouse* house = home != entt::null ? &houses.get<AnimalHouse>(home) : nullptr;
             switch (animal.job)
             {
@@ -318,7 +321,7 @@ namespace rct3::simulation
                         if (inspector != entt::null)
                             tell(r, inspector, Finding::TroughsEmpty, e, now);
                     }
-                    if (house != nullptr && (animal.hunger.value >= kRates.wants.value || animal.thirst.value >= kRates.wants.value) && (house->food.value > 0 || house->water.value > 0))
+                    if (house != nullptr && (animal.hunger.value >= kRates.wants.value || animal.thirst.value >= kRates.wants.value) && (house->food.value > 0 || house->water.value > 0) && welcome_at(r, ground, e, home, inspector, now))
                     {
                         animal.job = AnimalJob::Feeding;
                         animal.goal = house->troughs;
@@ -393,7 +396,7 @@ namespace rct3::simulation
             return patrol == nullptr || patrol->tiles.empty() || std::ranges::contains(patrol->tiles, glm::ivec2(glm::floor((glm::vec2(at.x, at.z) - world.paths.origin) / world.paths.tile_size)));
         };
         const auto keepers = r.view<KeeperDuty>();
-        const auto being_filled = [&](entt::entity h) { return std::ranges::any_of(keepers, [&](entt::entity k) { return keepers.get<KeeperDuty>(k).job == KeeperJob::Filling && keepers.get<KeeperDuty>(k).target == h; }); };
+        const auto being_filled = [&](entt::entity h) { return std::ranges::any_of(keepers, [&](entt::entity k) { return (keepers.get<KeeperDuty>(k).job == KeeperJob::Filling || keepers.get<KeeperDuty>(k).job == KeeperJob::Swapping) && keepers.get<KeeperDuty>(k).target == h; }); };
         const auto enclosure_of = [&](const KeeperDuty& duty) { return r.valid(duty.house) && r.all_of<AnimalHouse>(duty.house) ? std::optional<i32> { r.get<AnimalHouse>(duty.house).enclosure } : std::nullopt; };
         for (auto [e, duty, pose, dice] : r.view<KeeperDuty, Pose, Dice>().each())
         {
@@ -438,7 +441,8 @@ namespace rct3::simulation
                         duty.job = KeeperJob::Filling;
                         duty.target = fill;
                         duty.goal = houses.get<AnimalHouse>(fill).troughs;
-                        duty.busy = kRates.filling;
+                        duty.busy = job_time(r, e, duty.job);
+                        fetch_tool(r, ground, e, inspector, now);
                         break;
                     }
                     entt::entity nearest = entt::null;
@@ -451,7 +455,8 @@ namespace rct3::simulation
                         duty.job = KeeperJob::Clearing;
                         duty.target = nearest;
                         duty.goal = r.get<Pose>(nearest).position;
-                        duty.busy = kRates.clearing;
+                        duty.busy = job_time(r, e, duty.job);
+                        fetch_tool(r, ground, e, inspector, now);
                     }
                     else if (const auto spot = stroll_spot(r, ground, house->enclosure, dice.state))
                     {
@@ -502,6 +507,13 @@ namespace rct3::simulation
                     duty.busy.value = idle_seconds(dice.state);
                     break;
                 }
+                case KeeperJob::Swapping:
+                    if (!walk_towards(pose, duty.goal, kRates.keeper_pace, dt, ground))
+                        break;
+                    duty.busy.value -= dt.value;
+                    if (duty.busy.value <= 0)
+                        tool_swapped(r, e);
+                    break;
                 case KeeperJob::Filling:
                 case KeeperJob::Clearing:
                 {

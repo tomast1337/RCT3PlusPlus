@@ -35,6 +35,8 @@ namespace rct3::ui::screens::info
         Bin,      ///< How full a litter bin is and when it was emptied
         Sign,     ///< What a sign says
         Passport, ///< On a passport post: the park's passport gift and the stamps it takes
+        Move,     ///< Has no page: picks the prop up, to set down elsewhere, turned or raised
+        Copy,     ///< Has no page: starts placing another of it, in its colours and turned as it is
         // An animal house's:
         HouseDetails,  ///< The species that live in it, and a button that turns the view to it
         HouseFeeding,  ///< How often its keepers fill its troughs, what that costs, and calling a keeper to fill them
@@ -141,7 +143,10 @@ namespace rct3::ui::screens::info
         std::optional<AnimalHouseFacts> house { }; ///< When it is an animal house
         u32 colour_slots = 0;                      ///< The colour slots its pictures take (bit k: slot k)
         std::array<i32, 3> colours { };            ///< The colour picked for each slot, of the 32
-        f32 zero_time = 0;                         ///< Where the park's calendar starts, for the dates shown
+        /// The skin of its item's button in the build lists; empty when the lists hold no such scenery, so it cannot
+        /// be moved or copied.
+        std::string_view list_icon { };
+        f32 zero_time = 0; ///< Where the park's calendar starts, for the dates shown
     };
 
     /// The colour slots the colour tab paints, in the order of its pots.

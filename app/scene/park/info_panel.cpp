@@ -333,6 +333,8 @@ namespace rct3::scene::park
         f.zero_time = scene.park.zero_time;
         if (const auto model = scene.models.find(rct3::park::object::model_ref(o)); model != scene.models.end())
             f.colour_slots = rct3::park::object::colour_slots(model->second);
+        if (const auto item = listed_scenery(scene, o))
+            f.list_icon = item->icon;
         if (const auto bin = std::ranges::find(scene.bins, o.id, &save::model::BinState::object_ref); bin != scene.bins.end())
             f.bin = &*bin;
         if (const auto sign = std::ranges::find(scene.signs, o.id, &save::model::SignState::object_ref); sign != scene.signs.end())

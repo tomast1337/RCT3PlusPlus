@@ -28,38 +28,37 @@ namespace rct3::scene::park
         constexpr std::string_view kEntranceStays = "YouMayNotSellParkEntrance";
         constexpr std::string_view kNoMoney = "PlaceObject_NotEnoughMoney";
 
-        /// Takes the prop `index` out of the park.
-        void destroy_prop(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, save::model::PlacedObjectIndex index)
-        {
-            if (index.value >= scene.objects.size())
-                return;
-            const auto wall = rct3::park::edge_wall(scene.objects[index.value], scene.models, scene.grid);
-            if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.objects[index.value])); model != scene.models.end())
-                simulation::add_scenery(scene.sim, scene.objects[index.value], -simulation::scenery_weight(model->second.category, model->second.feature));
-            change_object(device, scene, index, [](save::model::PlacedObject& o) { o.hidden = true; });
-            // Guests stop using what stood on the path, and the park keeps no bin or sign for it.
-            const u64 id = scene.objects[index.value].id;
-            auto& r = scene.sim.registry;
-            std::vector<entt::entity> gone;
-            const auto sign = std::ranges::find(scene.signs, id, &save::model::SignState::object_ref);
-            for (const auto [e, item] : r.view<const simulation::PathItem>().each())
-                if (item.object == id)
-                {
-                    gone.push_back(e);
-                    if (sign != scene.signs.end() && sign->kind == 1)
-                        scene.sim.paths.set_no_entry(item.node, simulation::no_entry_side(scene.objects[index.value]), false);
-                }
-            for (const auto [e, bed] : r.view<const simulation::FlowerBed>().each())
-                if (bed.object == id)
-                    gone.push_back(e);
-            r.destroy(gone.begin(), gone.end());
-            std::erase_if(scene.bins, [&](const save::model::BinState& b) { return b.object_ref == id; });
-            std::erase_if(scene.signs, [&](const save::model::SignState& s) { return s.object_ref == id; });
-            if (wall)
-                wall_changed(device, scene, assets, *wall, WallChange::TakenDown);
-        }
-
     } // namespace
+
+    void take_away_prop(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, save::model::PlacedObjectIndex index)
+    {
+        if (index.value >= scene.objects.size())
+            return;
+        const auto wall = rct3::park::edge_wall(scene.objects[index.value], scene.models, scene.grid);
+        if (const auto model = scene.models.find(rct3::park::object::model_ref(scene.objects[index.value])); model != scene.models.end())
+            simulation::add_scenery(scene.sim, scene.objects[index.value], -simulation::scenery_weight(model->second.category, model->second.feature));
+        change_object(device, scene, index, [](save::model::PlacedObject& o) { o.hidden = true; });
+        // Guests stop using what stood on the path, and the park keeps no bin or sign for it.
+        const u64 id = scene.objects[index.value].id;
+        auto& r = scene.sim.registry;
+        std::vector<entt::entity> gone;
+        const auto sign = std::ranges::find(scene.signs, id, &save::model::SignState::object_ref);
+        for (const auto [e, item] : r.view<const simulation::PathItem>().each())
+            if (item.object == id)
+            {
+                gone.push_back(e);
+                if (sign != scene.signs.end() && sign->kind == 1)
+                    scene.sim.paths.set_no_entry(item.node, simulation::no_entry_side(scene.objects[index.value]), false);
+            }
+        for (const auto [e, bed] : r.view<const simulation::FlowerBed>().each())
+            if (bed.object == id)
+                gone.push_back(e);
+        r.destroy(gone.begin(), gone.end());
+        std::erase_if(scene.bins, [&](const save::model::BinState& b) { return b.object_ref == id; });
+        std::erase_if(scene.signs, [&](const save::model::SignState& s) { return s.object_ref == id; });
+        if (wall)
+            wall_changed(device, scene, assets, *wall, WallChange::TakenDown);
+    }
 
     void stop_deleting(ParkScene& scene)
     {
@@ -100,7 +99,7 @@ namespace rct3::scene::park
         if (floated)
             float_money(scene, tile_point(scene.grid, { first.col, first.row }), -cost, true);
         for (const save::model::PlacedObjectIndex i : going)
-            destroy_prop(device, scene, assets, i);
+            take_away_prop(device, scene, assets, i);
         return cost;
     }
 

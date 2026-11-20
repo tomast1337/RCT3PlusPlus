@@ -767,6 +767,22 @@ namespace rct3::scene::park
                     info->hide();
                 }
             }
+            // Moving a prop or placing more of it puts the other tools away, as a pick from a list does, and the panel.
+            if (action && scene.shown_prop && *action < scene.prop_tabs.size() && (scene.prop_tabs[*action] == ui::screens::info::SceneryTab::Move || scene.prop_tabs[*action] == ui::screens::info::SceneryTab::Copy))
+            {
+                if (start_picked_placing(scene, *scene.shown_prop, scene.prop_tabs[*action] == ui::screens::info::SceneryTab::Move ? Pick::Move : Pick::Copy))
+                {
+                    stop_enclosing(scene);
+                    stop_pooling(scene);
+                    track::close_track_building(scene);
+                    close_footpath_panel(scene);
+                    stop_land_tools(scene);
+                    stop_deleting(scene);
+                    stop_structure_tools(scene);
+                    scene.shown_prop.reset();
+                    info->hide();
+                }
+            }
             // A changing room's construction tab opens the pool panel, to build on at its complex.
             if (action && scene.shown_prop && *action < scene.prop_tabs.size() && scene.prop_tabs[*action] == ui::screens::info::SceneryTab::RoomConstruction)
                 if (const auto pools = scene.desktop->root().find_as<ui::screens::build::PoolPanel>("pool_panel"); !pools || !pools->showing())

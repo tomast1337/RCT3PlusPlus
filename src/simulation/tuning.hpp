@@ -703,6 +703,9 @@ namespace rct3::simulation::tuning
         std::array<units::Money, 3> refill { units::Money { 2000 }, units::Money { 4000 }, units::Money { 8000 } }; ///< A full tank, by fluid
         units::Share good { 2.0f / 6 };                                                                             ///< Dirt under which swimmers think the pool clean
         units::Share bad { 3.0f / 6 };                                                                              ///< And from which dirty
+        /// Chosen by eye: dirt as the game's parks save it, for each square of water, in a pool that is a health hazard;
+        /// a pool saved with a few dozen swimmers' dirt in it reads clean.
+        f32 saved_dirt = 500;
     };
 
     /// Lazy rivers: swimmers float round them in rings, carried by the current.

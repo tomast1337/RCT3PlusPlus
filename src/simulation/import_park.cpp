@@ -853,6 +853,7 @@ namespace rct3::simulation
         for (const auto [e, door] : r.view<const PoolDoor>().each())
             rooms.emplace(std::pair { door.col, door.row }, e);
         std::vector<entt::entity> pool_entities(complexes.size(), entt::null);
+        std::vector<f32> saved_dirt(complexes.size(), 0.0f);
         std::vector<entt::entity> kept;
         for (const rct3::park::pools::PoolRoom& room : pools.rooms)
         {
@@ -865,6 +866,7 @@ namespace rct3::simulation
             const entt::entity e = was != rooms.end() ? was->second : r.create();
             kept.push_back(e);
             entt::entity& pool = pool_entities[complex];
+            saved_dirt[complex] = std::max(saved_dirt[complex], room.dirt);
             if (pool == entt::null && was != rooms.end() && r.valid(r.get<PoolDoor>(e).pool) && !std::ranges::contains(pool_entities, r.get<PoolDoor>(e).pool))
                 pool = r.get<PoolDoor>(e).pool;
             if (pool == entt::null)
@@ -882,12 +884,14 @@ namespace rct3::simulation
             r.get_or_emplace<PoolTank>(e).fluid = static_cast<PoolFluid>(std::min<u8>(room.fluid, 2));
             r.emplace_or_replace<PoolDoor>(e, PoolDoor { .pool = pool, .col = room.col, .row = room.row, .room = middle(room.col, room.row, surface), .poolside = middle(square->col, square->row, surface) + glm::vec3 { 0, kTuning.pools.deck.value, 0 } });
         }
-        // A complex kept keeps its dirt.
+        // A complex kept keeps its dirt; a new one takes what its rooms were saved with.
         for (usize c = 0; c < complexes.size(); ++c)
             if (pool_entities[c] != entt::null)
             {
                 if (const auto* was = r.try_get<SwimPool>(pool_entities[c]))
                     complexes[c].dirt = was->dirt;
+                else if (!complexes[c].water.empty())
+                    complexes[c].dirt = { std::clamp(saved_dirt[c] / (static_cast<f32>(complexes[c].water.size()) * kTuning.pools.saved_dirt), 0.0f, 1.0f) };
                 r.emplace_or_replace<SwimPool>(pool_entities[c], std::move(complexes[c]));
             }
         for (const auto& [tile, e] : rooms)

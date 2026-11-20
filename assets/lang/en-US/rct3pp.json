@@ -32,6 +32,8 @@
         "LeftOutGuests": "Guests and what they are doing",
         "LeftOutOther": "Other park details",
         "PhotoSaved": "Photo saved: %NAME%",
+        "RecordingSaved": "Recording saved: %NAME%",
+        "RecordingStopped": "Recording stopped: %NAME%",
         "PatrolBrush": "Brush:",
         "PatrolZone": "Shared zone:",
         "PatrolNoZone": "None",

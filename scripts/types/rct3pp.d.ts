@@ -143,6 +143,42 @@ declare namespace career {
     function map(): boolean;
 }
 
+/** What a finished recording wrote. */
+interface RecordResult {
+    frames: Frames;
+    /** Sound frames (one sample per channel) of game time, written or not. */
+    samples: number;
+    sampleRate: number;
+    /** How long the file plays. */
+    seconds: number;
+    /** The file's name, in the report folder; the frames' folder without ffmpeg. */
+    path: string;
+    /** Why it stopped early or was not joined. */
+    problem?: string;
+}
+
+declare namespace record {
+    /**
+     * Records a video with sound from the next frame. While it runs, each frame moves the game on by 1 / `fps` of
+     * a game second. `path` is a plain file name in the report folder (recording.mp4); `playbackFps` (as `fps`,
+     * 30) is how fast the file plays, fewer for slow motion; `audio` keeps the sound, slowed in slow motion (by
+     * default only at normal speed); `size` sets the window's first.
+     */
+    function start(settings?: {
+        path?: string;
+        fps?: number;
+        playbackFps?: number;
+        audio?: boolean;
+        size?: { width: number; height: number };
+    }): void;
+    /** Ends the recording; resolves once its file is written. */
+    function stop(): Promise<RecordResult>;
+    /** Whether a recording runs or is about to start. */
+    function active(): boolean;
+    /** What the last recording wrote; null before one ends. */
+    function result(): RecordResult | null;
+}
+
 declare namespace render {
     /** What is alive on the device as the last frame ended. */
     function live(): { buffers: number; pipelines: number; textures: number };

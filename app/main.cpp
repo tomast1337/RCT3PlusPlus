@@ -4,12 +4,12 @@
 // the game installed it first plays the startup logos and the loading screen, then shows the front screen
 // built from real skins, with the menu music and the buttons' clicks.
 //
-//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--left-out-box] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--version] [--help]
+//   rct3pp [--renderer NAME] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--left-out-box] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--record FILE] [--record-seconds N] [--record-fps N] [--record-playback-fps N] [--profile FILE] [--write-settings] [--version] [--help]
 //
 //   --renderer NAME   render backend: vulkan (default), opengl, software (on the CPU) or null; kept by
 //                     --write-settings
 //   --headless        no window and no display needed: drawn off screen (with --renderer null, not at all), no
-//                     sound, no vsync, no logos, 60 fps
+//                     vsync, no logos, 60 fps, and no sound unless --audio asks for it (mixed, but not played)
 //   --no-vsync        present as fast as possible
 //   --no-intro        skip the startup logos
 //   --scale auto|N    interface scale, instead of the one in the settings file
@@ -30,6 +30,12 @@
 //   --frames N        exit after N frames (smoke test)
 //   --seconds N       exit after N seconds of real time
 //   --max-fps N       wait between frames so no more than N are drawn a second; 0 for no limit
+//   --record FILE     record a video with sound into FILE (.mp4) from when the park shows, or from the start
+//                     without --park, until the game ends (video/recording.hpp)
+//   --record-seconds N  stop recording after N seconds of game time, and end the game
+//   --record-fps N    frames taken a second of game time (30); the game runs in step with them
+//   --record-playback-fps N  frames the file shows a second (as --record-fps); fewer is slow motion, with the
+//                     sound slowed along
 //   --write-settings  write the settings file, with any settings given here, and exit
 //   --version         the build's version (core/version.hpp)
 //   --help            this text, the user's data folder (config/user_data.hpp), the settings
@@ -77,6 +83,7 @@
 #include "ui/language.hpp"
 #include "ui/screens/park_view/tool_row.hpp"
 #include "units/units.hpp"
+#include "video/recording.hpp"
 
 #include <algorithm>
 #include <array>
@@ -107,7 +114,7 @@ namespace
     // Command-line help, not log messages.
     void print_usage(std::FILE* out)
     {
-        std::fprintf(out, "usage: rct3pp [--renderer vulkan|opengl|software|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--left-out-box] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--profile FILE] [--write-settings] [--version] [--help] [-- SCRIPT ARGS...]\n");
+        std::fprintf(out, "usage: rct3pp [--renderer vulkan|opengl|software|null] [--headless] [--no-vsync] [--no-intro] [--scale auto|N] [--language NAME] [--widget-demo] [--no-audio] [--audio] [--park FILE] [--no-simulate] [--script FILE] [--left-out-box] [--seed N] [--frames N] [--seconds N] [--max-fps N] [--record FILE] [--record-seconds N] [--record-fps N] [--record-playback-fps N] [--profile FILE] [--write-settings] [--version] [--help] [-- SCRIPT ARGS...]\n");
     }
 
     void print_help(const std::optional<rct3::config::UserData>& data)
@@ -565,8 +572,12 @@ int main(int argc, char** argv)
     std::vector<std::string> script_args;
     bool left_out_box = false; ///< A script still gets the box telling what loading an original park left out
     std::optional<rct3::random::Seed> seed;
-    bool simulate = true;                         ///< The park starts with the simulation running
-    std::optional<std::filesystem::path> profile; ///< Where to write the profiler's table on the way out
+    bool simulate = true;                                               ///< The park starts with the simulation running
+    std::optional<std::filesystem::path> profile;                       ///< Where to write the profiler's table on the way out
+    std::optional<rct3::scene::ScriptHost::RecordRequest> record_asked; ///< Started once the park shows and the window has its size
+    std::optional<f64> record_seconds;                                  ///< Of game time, after which the game ends
+    std::optional<u32> record_fps;
+    std::optional<u32> record_playback_fps;
     for (i32 i = 1; i < argc; ++i)
     {
         if (std::strcmp(argv[i], "--frames") == 0 && i + 1 < argc)
@@ -580,6 +591,25 @@ int main(int argc, char** argv)
         else if (std::strcmp(argv[i], "--max-fps") == 0 && i + 1 < argc)
         {
             max_fps = std::atof(argv[++i]);
+        }
+        else if (std::strcmp(argv[i], "--record") == 0 && i + 1 < argc)
+        {
+            record_asked.emplace().settings.path = std::filesystem::absolute(argv[++i]);
+        }
+        else if (std::strcmp(argv[i], "--record-seconds") == 0 && i + 1 < argc)
+        {
+            record_seconds = std::atof(argv[++i]);
+        }
+        else if ((std::strcmp(argv[i], "--record-fps") == 0 || std::strcmp(argv[i], "--record-playback-fps") == 0) && i + 1 < argc)
+        {
+            const bool playback = std::strcmp(argv[i], "--record-playback-fps") == 0;
+            const i32 fps = std::atoi(argv[++i]);
+            if (fps < 1 || fps > static_cast<i32>(rct3::video::kMaxCaptureFps))
+            {
+                std::fprintf(stderr, "frame rates go from 1 to %u\n", rct3::video::kMaxCaptureFps);
+                return 2;
+            }
+            (playback ? record_playback_fps : record_fps) = static_cast<u32>(fps);
         }
         else if (std::strcmp(argv[i], "--headless") == 0)
         {
@@ -708,7 +738,15 @@ int main(int argc, char** argv)
         vsync = false;
     // Without vsync or a window to show, a headless run would otherwise keep a core busy.
     const f64 frame_limit = max_fps.value_or(headless ? 60.0 : 0.0);
-    const bool sound = !headless && sound_this_run.value_or(!settings.flag(config::Setting::NoAudio));
+    const bool sound = headless ? sound_this_run.value_or(false) : sound_this_run.value_or(!settings.flag(config::Setting::NoAudio));
+    if (record_asked)
+    {
+        rct3::video::RecordSettings& r = record_asked->settings;
+        r.fps = record_fps.value_or(r.fps);
+        r.playback_fps = record_playback_fps.value_or(r.fps);
+        // Slow motion keeps its sound only when asked for it.
+        r.sound = r.playback_fps == r.fps || sound_this_run.value_or(false);
+    }
     const bool intro = !headless && !settings.flag(config::Setting::SkipIntro);
     std::optional<f32> scale;
     if (const auto parsed = config::parse_interface_scale(settings.get(config::Setting::InterfaceScale).value_or(std::string_view { })))
@@ -840,7 +878,8 @@ int main(int argc, char** argv)
     const auto create_audio = [&] {
         if (audio)
             return;
-        auto engine = rct3::audio::AudioEngine::create();
+        // Headless, the mix is made but no device plays it.
+        auto engine = rct3::audio::AudioEngine::create({ .backend = headless ? rct3::audio::Backend::Null : rct3::audio::Backend::Default });
         if (!engine)
         {
             log.warning("audio: {}", rct3::audio::to_string(engine.error()));
@@ -1076,6 +1115,68 @@ int main(int argc, char** argv)
         if (!script)
             return 1;
     }
+    // A recording: each frame drawn while it runs is read from the screen and goes to it with a frame's sound.
+    std::optional<rct3::video::Recorder> recorder;
+    std::optional<u64> record_frames_left; ///< Ends the game when it runs out
+    u32 record_resize_frames = 0;          ///< Waited so far for the window to take the size a recording asked for
+    render::ScreenPixels streamed;         ///< A frame read back, kept between frames
+    std::vector<f32> recorded_sound;       ///< Kept between frames
+    const auto start_recording = [&](rct3::video::RecordSettings wanted) {
+        if (recorder)
+            return;
+        wanted.ffmpeg = settings.get(config::Setting::Ffmpeg).value_or("ffmpeg");
+        if (!rct3::video::ffmpeg_runs(wanted.ffmpeg))
+        {
+            log.warning("recording: {} does not run; set the ffmpeg setting to where it is", wanted.ffmpeg.string());
+            wanted.ffmpeg.clear();
+        }
+        wanted.sound = wanted.sound && audio.has_value();
+        if (wanted.path.is_relative())
+        {
+            std::expected<std::filesystem::path, std::string> folder = std::unexpected(std::string("no folder for the user's data known"));
+            if (data)
+                folder = data->make_folder(config::UserFolder::Screenshots);
+            if (!folder)
+            {
+                log.warning("recording: {}", folder.error());
+                return;
+            }
+            wanted.path = *folder / wanted.path;
+        }
+        auto started = rct3::video::Recorder::start(std::move(wanted), audio ? audio->sample_rate() : rct3::audio::EngineConfig { }.sample_rate, audio ? audio->channels() : rct3::audio::EngineConfig { }.channels);
+        if (!started)
+        {
+            log.warning("{}", started.error());
+            return;
+        }
+        recorder = std::move(*started);
+        if (audio)
+            audio->set_captured(true);
+        // Raw frames are what the encoder has to keep up with; a long, fast or big recording takes a while.
+        const auto size = window->size();
+        const f64 raw_per_second = static_cast<f64>(recorder->settings().fps) * size.width * size.height * 4;
+        constexpr f64 kBigRecording = 64.0 * (1u << 30); ///< Raw bytes, past which the size is worth a warning
+        if (record_frames_left && raw_per_second * static_cast<f64>(*record_frames_left) / recorder->settings().fps > kBigRecording)
+            log.warning("recording: {:.0f} GB of raw frames to encode", raw_per_second * static_cast<f64>(*record_frames_left) / recorder->settings().fps / (1u << 30));
+    };
+    const auto stop_recording = [&](std::optional<std::string> problem) {
+        if (!recorder)
+            return;
+        // The frames still on their way from the GPU.
+        while (!problem && device->take_streamed(streamed, render::StreamWait::Always))
+        {
+            if (auto added = recorder->add_frame(streamed.size.width, streamed.size.height, streamed.rgba); !added)
+                problem = added.error();
+        }
+        const rct3::video::RecordResult result = recorder->finish(std::move(problem));
+        recorder.reset();
+        if (audio)
+            audio->set_captured(false);
+        if (park)
+            rct3::simulation::park::post(park->park.messages, { .text_key = result.problem ? "Rct3pp_RecordingStopped" : "Rct3pp_RecordingSaved", .subject_name = result.problem ? *result.problem : result.path.filename().string() });
+        if (script)
+            script->recorded(result);
+    };
     try
     {
         prof::register_thread("Main");
@@ -1117,7 +1218,8 @@ int main(int argc, char** argv)
         {
             if (max_seconds && window->time() - start_time >= *max_seconds)
                 break;
-            if (frame_limit > 0)
+            // A recording's frames take what they take; the game time between them is fixed.
+            if (frame_limit > 0 && !recorder)
             {
                 const f64 wait = last_time + 1 / frame_limit - window->time();
                 if (wait > 0)
@@ -1127,9 +1229,7 @@ int main(int argc, char** argv)
 
             const f64 now = window->time();
             prof::update(now - last_time);
-            // A script's frame is always a sixtieth of a second, so what it waits for in frames is the same game time
-            // however fast the machine draws them.
-            const rct3::units::Seconds elapsed { static_cast<f32>(script ? 1.0 / 60 : now - last_time) };
+            const rct3::units::Seconds elapsed = rct3::video::frame_step(recorder ? std::optional(recorder->settings().fps) : std::nullopt, script ? rct3::video::FramePace::Script : rct3::video::FramePace::Wall, { static_cast<f32>(now - last_time) });
             last_time = now;
 
             prof::section("Frame", [&] {
@@ -1154,6 +1254,30 @@ int main(int argc, char** argv)
                         {
                             quit = true;
                             status = *code;
+                        }
+                        if (script->take_record_stop())
+                            stop_recording(std::nullopt);
+                        if (auto wanted = script->take_record_start())
+                            record_asked = std::move(*wanted);
+                    }
+                    // Started once the window has the size asked for, as the first frame sets the video's.
+                    if (record_asked && phase == Phase::Running && (park || !park_file) && !recorder)
+                    {
+                        const auto size = record_asked->size.transform([](render::Extent e) { return rct3::platform::Window::Size { static_cast<i32>(e.width), static_cast<i32>(e.height) }; });
+                        constexpr u32 kMostResizeFrames = 60; ///< Frames to wait for the window to take the size asked for
+                        if (size && window->size() != *size && record_resize_frames < kMostResizeFrames)
+                        {
+                            if (record_resize_frames++ == 0)
+                                window->set_size(*size);
+                        }
+                        else
+                        {
+                            record_resize_frames = 0;
+                            if (const auto seconds = std::exchange(record_seconds, std::nullopt))
+                                record_frames_left = static_cast<u64>(std::max(1.0, std::round(*seconds * record_asked->settings.fps)));
+                            start_recording(std::move(std::exchange(record_asked, std::nullopt)->settings));
+                            if (script)
+                                script->recording(recorder.has_value());
                         }
                     }
                     device->ui_new_frame();
@@ -1391,12 +1515,37 @@ int main(int argc, char** argv)
                     prof::section("DeveloperUi", [&] { device->draw_ui(); });
                     // A photo drawn this frame takes the one read the device has; a screenshot waits a frame.
                     const bool photo = park && park->photo_reading;
+                    bool streaming = false;
                     prof::section("Submit", [&] {
                         device->end_pass();
                         if (!photo && std::exchange(screenshot, false) && !device->read_screen())
                             log.warning("screenshot: the device cannot read the screen");
+                        streaming = recorder && device->stream_screen();
                         device->end_frame();
                     });
+                    if (recorder)
+                    {
+                        const prof::Scope zone("Record");
+                        std::optional<std::string> problem;
+                        if (!streaming)
+                            problem = "recording: the device cannot read the screen";
+                        // The sound of the game time this frame moved on by, pulled from the mixer.
+                        recorded_sound.assign(recorder->take_sound_frames() * recorder->channels(), 0.0f);
+                        if (audio)
+                            audio->render(recorded_sound);
+                        recorder->add_sound(recorded_sound);
+                        while (!problem && device->take_streamed(streamed, render::StreamWait::IfDrawn))
+                        {
+                            if (auto added = recorder->add_frame(streamed.size.width, streamed.size.height, streamed.rgba); !added)
+                                problem = added.error();
+                        }
+                        const bool done = record_frames_left && --*record_frames_left == 0;
+                        if (problem || done)
+                        {
+                            stop_recording(std::move(problem));
+                            quit = quit || done;
+                        }
+                    }
                     if (auto pixels = device->take_screen())
                     {
                         if (photo)
@@ -1431,6 +1580,7 @@ int main(int argc, char** argv)
             });
             prof::capture_frame();
         }
+        stop_recording(std::nullopt);
         const f64 ran = window->time() - start_time;
         log.info("ran {} frames in {:.1f} s, {:.2f} ms a frame{}", frame, ran, frame > 0 ? 1000 * ran / frame : 0.0, g_stop_requested != 0 ? ", stopped by a signal" : "");
         if (device)

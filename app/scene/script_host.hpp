@@ -24,6 +24,15 @@
 //                       not shown
 //   screenshot(name)    saved to the screenshots folder, or as NN_name.png in the report folder when there is
 //                       one; resolves once it is written
+//   record.start({ path, fps, playbackFps, audio, size })  records a video with sound from the next frame
+//                       (video/recording.hpp): `path` a plain file name (recording.mp4) in the report folder, else
+//                       the screenshots folder; `fps` frames a game second (30), the game running in step with them;
+//                       `playbackFps` frames the file shows a second (as fps), fewer for slow motion; `audio` the
+//                       sound (slowed in slow motion; by default only at normal speed); `size` { width, height } of
+//                       the window, set first
+//   record.stop()       ends it and resolves with { frames, samples, sampleRate, seconds, path, problem? }: the
+//                       frames and sound frames written, how long the file plays and where it is
+//   record.active()     whether a recording runs or is about to start
 //   args()              the script's own arguments, those after `--` on the command line
 //   report(file, text)  writes `text` to `file` in the report folder; false when there is none
 //   quit(code)          leaves the game with `code` (also when the script ends: 0, or 1 when it failed)
@@ -97,6 +106,7 @@
 #include "scripting/script_engine.hpp"
 #include "ui/keyboard.hpp"
 #include "ui/widget.hpp"
+#include "video/recording.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -176,6 +186,28 @@ namespace rct3::scene
         /// Once for each screenshot asked for: the file to write it to, or an empty path for the user's
         /// screenshots folder.
         [[nodiscard]] std::optional<std::filesystem::path> take_screenshot();
+        struct RecordRequest
+        {
+            video::RecordSettings settings { };     ///< A relative path goes in the screenshots folder
+            std::optional<render::Extent> size { }; ///< The window's, set before the first frame
+        };
+        /// The recording the script asked to start, once.
+        [[nodiscard]] std::optional<RecordRequest> take_record_start()
+        {
+            return std::exchange(record_start_, std::nullopt);
+        }
+        /// Whether the script asked to stop the recording, once.
+        [[nodiscard]] bool take_record_stop()
+        {
+            return std::exchange(record_stop_, false);
+        }
+        /// Whether the recording asked for started.
+        void recording(bool started)
+        {
+            recording_ = started;
+        }
+        /// What the recording wrote, once it ended.
+        void recorded(const video::RecordResult& result);
         /// The exit code once the script asked to quit, finished or failed.
         [[nodiscard]] std::optional<i32> quit() const
         {
@@ -208,6 +240,10 @@ namespace rct3::scene
         std::optional<ParkRequest> open_;
         std::optional<CareerRequest> career_;
         std::optional<i32> quit_;
+        std::optional<RecordRequest> record_start_;
+        bool record_stop_ = false;
+        bool recording_ = false;
+        scripting::Json recorded_; ///< What the last recording wrote; null before one ends
         f32 advance_ = 0;
         render::Device* device_ = nullptr; ///< While a tick runs
         park::ParkScene* park_ = nullptr;

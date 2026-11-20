@@ -193,6 +193,11 @@ namespace rct3::save::model
             constexpr std::string_view kChallengeTimeLimit = "TimeLimit";
             constexpr std::string_view kChallengeTimeRemaining = "TimeRemaining";
             constexpr std::string_view kChallengePostponed = "NumTimesPostponed";
+            constexpr std::string_view kChallengeStartCondition = "StartCondition";
+            constexpr std::string_view kChallengeOfferIn = "StartTimerCurrentInSeconds";
+            constexpr std::string_view kChallengeOfferDaysFrom = "StartTimerDefaultInDays1";
+            constexpr std::string_view kChallengeOfferDaysTo = "StartTimerDefaultInDays2";
+            constexpr std::string_view kChallengePostponedFor = "PostponedTimer";
 
             // Research attributes
             constexpr std::string_view kCategoryName = "CategoryName";
@@ -644,6 +649,10 @@ namespace rct3::save::model
                     .time_limit = float_of(o.find(kChallengeTimeLimit), 0.0f),
                     .time_remaining = float_of(o.find(kChallengeTimeRemaining), 0.0f),
                     .times_postponed = i32_of(o.find(kChallengePostponed), 0),
+                    .start_condition = i32_of(o.find(kChallengeStartCondition), 0),
+                    .offer_in = float_of(o.find(kChallengeOfferIn), 0.0f),
+                    .offer_days = { i32_of(o.find(kChallengeOfferDaysFrom), 0), i32_of(o.find(kChallengeOfferDaysTo), 0) },
+                    .postponed_for = float_of(o.find(kChallengePostponedFor), 0.0f),
                 });
         }
 

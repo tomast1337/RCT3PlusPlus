@@ -210,6 +210,15 @@ namespace rct3::scene::park
                         continue;
                     placed.push_back({ .world = glm::rotate(glm::translate(glm::mat4(1.0f), at), static_cast<f32>(seed >> 16 & 0xffu) / 255.0f * 2.0f * std::numbers::pi_v<f32>, glm::vec3(0.0f, 1.0f, 0.0f)), .held = &*model });
                 }
+                // Dung where it lies, turned its own way.
+                for (const auto [e, dung, pose] : scene.sim.registry.view<const simulation::Dung, const simulation::Pose>().each())
+                {
+                    const auto& model = scene.litter_looks[2 + std::min<usize>(dung.size, 2)];
+                    if (!model || !maybe_in_view(view, pose.position))
+                        continue;
+                    const auto seed = static_cast<u32>(entt::to_integral(e)) * core::kGoldenSpread;
+                    placed.push_back({ .world = glm::rotate(glm::translate(glm::mat4(1.0f), pose.position), static_cast<f32>(seed >> 16 & 0xffu) / 255.0f * 2.0f * std::numbers::pi_v<f32>, glm::vec3(0.0f, 1.0f, 0.0f)), .held = &*model });
+                }
             }
             return placed;
         }

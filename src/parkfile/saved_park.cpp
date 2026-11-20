@@ -327,7 +327,7 @@ namespace rct3::parkfile
         for (const auto [e, dung, pose] : r.view<const Dung, const Pose>().each())
         {
             places.emplace(e, static_cast<i32>(out.dung.size()));
-            out.dung.push_back({ .enclosure = dung.enclosure, .position = pose.position });
+            out.dung.push_back({ .enclosure = dung.enclosure, .position = pose.position, .size = dung.size });
         }
         std::map<entt::entity, i32> house_at; // Of what a keeper fills
         for (const entt::entity e : r.view<const AnimalHouse>())
@@ -372,7 +372,7 @@ namespace rct3::parkfile
         for (const SavedDung& saved : animals.dung)
         {
             const entt::entity e = dropped.emplace_back(r.create());
-            r.emplace<Dung>(e, Dung { saved.enclosure });
+            r.emplace<Dung>(e, Dung { saved.enclosure, saved.size });
             r.emplace<Pose>(e, saved.position, 0.0f, saved.position, 0.0f);
         }
         for (usize i = 0; i < animals.houses.size(); ++i)
@@ -602,7 +602,7 @@ namespace rct3::parkfile
         if (park.day_mode)
             put_chunk(w, "DAYM", 1, *park.day_mode);
         if (park.animals)
-            put_chunk(w, "ANML", 1, *park.animals);
+            put_chunk(w, "ANML", 2, *park.animals);
         if (park.pools)
             put_chunk(w, "POOL", 9, *park.pools);
         if (park.litter)
@@ -686,7 +686,7 @@ namespace rct3::parkfile
             }
             if (tag == "ANML")
             {
-                if (park.animals || version != 1)
+                if (park.animals || version != 2) // 2 adds each dung's size
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.animals.emplace());
             }

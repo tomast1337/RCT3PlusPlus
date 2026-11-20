@@ -163,6 +163,22 @@ namespace rct3::simulation
         }
     }
 
+    usize import_dung(SimWorld& world, std::span<const save::model::Litter> litter, const std::function<std::optional<i32>(glm::vec2)>& enclosure)
+    {
+        usize added = 0;
+        for (const save::model::Litter& l : litter)
+        {
+            if (l.type < save::model::kFirstDungType || l.state != save::model::LitterState::OnGround)
+                continue;
+            const glm::vec3 at { l.position.x, l.position.y, l.position.z };
+            const entt::entity d = world.registry.create();
+            world.registry.emplace<Dung>(d, Dung { .enclosure = enclosure ? enclosure({ at.x, at.z }) : std::nullopt, .size = static_cast<u8>(std::min(l.type - save::model::kFirstDungType, 2)) });
+            world.registry.emplace<Pose>(d, Pose { .position = at, .was = at });
+            ++added;
+        }
+        return added;
+    }
+
     void step_animals(SimWorld& world, const AnimalGround& ground, units::Seconds dt, park::ParkMessages& messages)
     {
         auto& r = world.registry;

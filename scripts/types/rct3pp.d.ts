@@ -1116,4 +1116,7 @@ declare namespace animals {
         health: number;
         at: { col: Tiles; row: Tiles };
     }[];
+    /** The dung lying about, each piece with the enclosure it lies in (-1 for none), its size from 0 to 2, and the
+     *  point of the map it lies on, in tiles. */
+    function dung(): { enclosure: number; size: number; col: Tiles; row: Tiles }[];
 }

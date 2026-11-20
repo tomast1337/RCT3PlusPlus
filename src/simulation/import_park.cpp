@@ -1688,7 +1688,8 @@ namespace rct3::simulation
         usize added = 0;
         for (const save::model::Litter& l : people.litter)
         {
-            const auto at = l.state == save::model::LitterState::OnGround ? world.paths.nearest({ l.position.x, l.position.y, l.position.z }) : std::nullopt;
+            // Dung is the animals' (import_dung).
+            const auto at = l.state == save::model::LitterState::OnGround && l.type < save::model::kFirstDungType ? world.paths.nearest({ l.position.x, l.position.y, l.position.z }) : std::nullopt;
             if (!at)
                 continue;
             const f32 age = std::max(now - l.create_time, 0.0f) * kSecondsPerHour / park::kCalendarUnitsPerHour;

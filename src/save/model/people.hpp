@@ -616,12 +616,15 @@ namespace rct3::save::model
         i32 setting = 0;
     };
 
+    /// The first Litter::type that is dung an animal left, lying off the paths in its enclosure.
+    inline constexpr u8 kFirstDungType = 3;
+
     struct Litter
     {
         PeopleObjectId id = 0;
         PeopleVec3 position { };
         PeopleVec3 orientation { }; ///< Euler angles in radians; y is the heading
-        u8 type = 0;                ///< 0..5, names not modelled
+        u8 type = 0;                ///< 0..5: litter and sick below kFirstDungType, animal dung from it up, smallest first
         LitterState state = LitterState::OnGround;
         f32 create_time = 0;
         PeopleRef path_tile { };

@@ -116,6 +116,7 @@ namespace rct3::simulation
     struct Dung
     {
         std::optional<i32> enclosure { };
+        u8 size = 0; ///< Its look, smallest 0 to largest 2
     };
 
     /// Values for how animals and keepers live.
@@ -178,6 +179,10 @@ namespace rct3::simulation
 
     /// The zoo animals a park was saved with, where they stood, each in the enclosure `enclosure` says its spot is in.
     void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::optional<i32>(glm::vec2)>& enclosure);
+
+    /// The dung among the litter a park was saved with, lying where it lay, each in the enclosure `enclosure` says
+    /// its spot is in; returns how many pieces.
+    usize import_dung(SimWorld& world, std::span<const save::model::Litter> litter, const std::function<std::optional<i32>(glm::vec2)>& enclosure);
 
     /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape, and leaving what the
     /// park's inspector finds among the Findings.

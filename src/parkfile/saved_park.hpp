@@ -33,7 +33,7 @@
 //              Saves made before it lack it; their waterfalls are read again from the original park.
 //   "DAYM" v1  simulation::DayMode: which part of the day the park keeps. Saves made before it lack it; they keep
 //              the original park's mode.
-//   "ANML" v1  SavedAnimals: the enclosures, animal houses, animals and their dung. Saves made before it lack
+//   "ANML" v2  SavedAnimals: the enclosures, animal houses, animals and their dung. Saves made before it lack
 //              it; their enclosures are read again from the original park.
 //   "POOL" v9  park::pools::PoolMap: the swimming pools the player laid, their extras and changing rooms; their
 //              pieces are built again on loading. Only when there are any.
@@ -204,6 +204,7 @@ namespace rct3::parkfile
     {
         std::optional<i32> enclosure { };
         glm::vec3 position { 0.0f };
+        u8 size = 0; ///< As Dung's
     };
 
     struct SavedAnimals

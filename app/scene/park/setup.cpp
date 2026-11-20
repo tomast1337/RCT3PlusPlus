@@ -228,7 +228,8 @@ namespace rct3::scene::park
                     add_pictures(model);
                     scene.staff_tools.emplace(tool, std::move(*model));
                 }
-            constexpr std::array<std::string_view, 2> kLitterShapes { "Litter", "Puke" };
+            // Litter, sick, then the animals' dung from smallest to largest.
+            constexpr std::array<std::string_view, 5> kLitterShapes { "Litter", "Puke", "PooSmallWhippy", "PooMedium", "PooLarge" };
             for (usize i = 0; i < kLitterShapes.size(); ++i)
             {
                 scene.litter_looks[i] = loader.load_shape(kLitterShapes[i], std::format("{}/Litter", litter));
@@ -1226,6 +1227,7 @@ namespace rct3::scene::park
                                 keepers.emplace_back(staff[i], work->enclosure_id);
                         simulation::import_animal_houses(scene.sim, houses, keepers);
                         simulation::import_animals(scene.sim, scene.people.zoo_animals, enclosure_at);
+                        simulation::import_dung(scene.sim, scene.people.litter, enclosure_at);
                     }
                     if (!scene.sim.registry.view<const simulation::Animal>().empty())
                     {

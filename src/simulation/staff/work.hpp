@@ -6,6 +6,7 @@
 #pragma once
 
 #include "core/types.hpp"
+#include "save/model/world.hpp"
 #include "simulation/components.hpp"
 #include "simulation/entt.hpp"
 #include "units/units.hpp"
@@ -53,6 +54,21 @@ namespace rct3::simulation::staff
     struct Jobs
     {
         std::vector<entt::entity> rides { };
+    };
+
+    enum class MendingStep : u8
+    {
+        Walking,
+        Mending, ///< Busy at it; once done, the fence is as new (fence_wear.hpp)
+    };
+
+    /// A mechanic sent to mend an enclosure's fence. They work on it from a path near it, as paths do not run
+    /// into enclosures.
+    struct FenceMending
+    {
+        save::model::Tile tile { };
+        save::model::FenceWear wear { }; ///< As they were sent: broken to fix, damaged to look over
+        MendingStep step = MendingStep::Walking;
     };
 
     /// One tick of the staff's work, after the guests have walked and dropped their litter. Run as part of the

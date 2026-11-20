@@ -1796,6 +1796,21 @@ namespace rct3::simulation
             staff::set_wage_level(staff, saved.wage_level);
             staff::take_saved_work(staff, saved);
             r.emplace<Staff>(e, staff);
+            // A mechanic keeps the rides on their list, the one they were going to first; one they were to inspect
+            // is due its inspection.
+            if (const auto* work = std::get_if<save::model::MechanicWork>(&saved.work))
+            {
+                staff::Jobs jobs;
+                for (const save::model::MechanicJob& job : work->jobs)
+                    for (const auto [ride, attraction, upkeep] : r.view<const Attraction, Upkeep>().each())
+                        if (job.attraction && attraction.saved == job.attraction.id && !std::ranges::contains(jobs.rides, ride))
+                        {
+                            upkeep.called = upkeep.called || (!upkeep.broken && (job.tasks & kInspectRidesTask) != 0);
+                            jobs.rides.push_back(ride);
+                        }
+                if (!jobs.rides.empty())
+                    r.emplace<staff::Jobs>(e, std::move(jobs));
+            }
             if (const auto tiles = save::model::patrol_tiles(saved.patrol); !tiles)
                 logging::logger("simulation").warning("{} {}: patrol area left out, {}", save::model::to_string(saved.kind), p.name, save::model::to_string(tiles.error()));
             else if (!tiles->empty())

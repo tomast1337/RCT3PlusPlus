@@ -212,6 +212,17 @@ namespace
             payload.blob(p);
             return *this;
         }
+        /// A mechanic's job list: each an attraction and the tasks to do there.
+        Obj& jobs(const std::string& n, const std::vector<std::pair<u64, i32>>& js)
+        {
+            attrs.push_back({ n, "list", 0, { { "Attraction", "reference", 8, { } }, { "Tasks", "int32", 4, { } } } });
+            Bytes p;
+            p.put_u32(static_cast<u32>(js.size()));
+            for (const auto& [attraction, tasks] : js)
+                p.put_u64(attraction).put_u32(static_cast<u32>(tasks));
+            payload.blob(p);
+            return *this;
+        }
         /// Fixed-size struct of int32 and float32 children, written in order.
         struct Field
         {
@@ -486,7 +497,7 @@ TEST_CASE("staff roles carry their own data")
     Obj v("Vendor", 2);
     v.put_i32("PersonType", 8).ref("SceneryItem", 1).ref("AttractionInstance", 555).ref("Customer", 0);
     Obj m("Mechanic", 3);
-    m.put_i32("ObjectsFixed", 4).put_f32("StateTimer", 1.5f).ref("ObjectMechanicInfo", 1);
+    m.put_i32("ObjectsFixed", 4).put_f32("StateTimer", 1.5f).ref("ObjectMechanicInfo", 1).jobs("Jobs", { { 2, 2 }, { 1, 1 } });
     Obj k("AnimalKeeper", 4);
     k.put_i32("PersonType", 9).refs("SheltersToFill", { 1, 1, 777 }).put_i32("EnclosureID", 3);
     Obj l("LifeGuard", 5);
@@ -534,6 +545,11 @@ TEST_CASE("staff roles carry their own data")
     CHECK(mw->objects_fixed == 4);
     CHECK(mw->state_timer == 1.5f);
     CHECK(mw->info.id == 1);
+    REQUIRE(mw->jobs.size() == 2); // In turn, the one they are on first
+    CHECK(mw->jobs[0].attraction.id == 2);
+    CHECK(mw->jobs[0].tasks == 2);
+    CHECK(mw->jobs[1].attraction.id == 1);
+    CHECK(mw->jobs[1].tasks == 1);
 
     const auto ks = build(*w, 4, make_staff);
     REQUIRE(ks);

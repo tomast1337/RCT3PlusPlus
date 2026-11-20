@@ -126,7 +126,7 @@ namespace rct3::simulation::staff
         // What a mechanic could not be sent to is told by the park's inspector, if it has one.
         const auto inspectors = r.view<const Staff, const Rounds>();
         const auto inspector = std::ranges::find_if(inspectors, [&](entt::entity i) { return inspectors.get<const Staff>(i).role == StaffRole::Inspector; });
-        const auto send = [&](entt::entity ride, Upkeep& upkeep, i32 task) {
+        const auto send = [&](entt::entity ride, Upkeep& upkeep, i32 task, entt::entity only = entt::null) {
             // Those whose patrol takes the ride in, the nearest first, then the nearest without one; one with
             // a patrol keeps to it.
             const auto patrolled = [&](entt::entity m) {
@@ -142,8 +142,8 @@ namespace rct3::simulation::staff
             bool zoned_out = true; // Every one of them by their patrol
             for (auto m = free.begin(); m != free.end(); ++m)
             {
-                if ((r.get<Staff>(*m).tasks & task) == 0)
-                    continue; // Told not to
+                if ((r.get<Staff>(*m).tasks & task) == 0 || (only != entt::null && *m != only))
+                    continue; // Told not to, or not theirs
                 asked = true;
                 zoned_out = zoned_out && patrolled(*m) && std::ranges::none_of(at, [&](NodeId spot) { return ours(*m, spot); });
                 for (const NodeId spot : at)
@@ -169,13 +169,29 @@ namespace rct3::simulation::staff
             upkeep.mechanic = *who;
             free.erase(who);
         };
+        const auto due_inspection = [](const Upkeep& upkeep) { return upkeep.called || (upkeep.inspect_every && upkeep.since_inspection >= *upkeep.inspect_every); };
+        // A mechanic with a list goes, once free, to the next ride on it that still needs them.
+        for (const entt::entity m : sorted(r.view<Jobs>()))
+        {
+            auto& list = r.get<Jobs>(m).rides;
+            while (std::ranges::contains(free, m) && !list.empty())
+            {
+                const entt::entity ride = list.front();
+                list.erase(list.begin());
+                if (auto* upkeep = r.valid(ride) ? r.try_get<Upkeep>(ride) : nullptr; upkeep != nullptr && upkeep->mechanic == entt::null && (upkeep->broken || due_inspection(*upkeep)))
+                    send(ride, *upkeep, upkeep->broken ? kFixRidesTask : kInspectRidesTask, m);
+            }
+            if (list.empty())
+                r.remove<Jobs>(m);
+        }
+        const auto listed = [&](entt::entity ride) { return std::ranges::any_of(r.view<const Jobs>(), [&](entt::entity m) { return std::ranges::contains(r.get<const Jobs>(m).rides, ride); }); };
         const auto rides = sorted(r.view<const Upkeep, const Attraction>()); // Rides, and pools' changing rooms
         for (const bool broken : { true, false })
             for (const entt::entity ride : rides)
             {
                 auto& upkeep = r.get<Upkeep>(ride);
-                const bool due = broken ? upkeep.broken : upkeep.called || (upkeep.inspect_every && upkeep.since_inspection >= *upkeep.inspect_every);
-                if (!free.empty() && due && upkeep.mechanic == entt::null)
+                const bool due = broken ? upkeep.broken : due_inspection(upkeep);
+                if (!free.empty() && due && upkeep.mechanic == entt::null && !listed(ride))
                     send(ride, upkeep, broken ? kFixRidesTask : kInspectRidesTask);
             }
 

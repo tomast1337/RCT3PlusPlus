@@ -13,6 +13,7 @@
 #include "scene/park/view.hpp"
 #include "scene/ride_placing.hpp"
 #include "scene/zoo_animals.hpp"
+#include "simulation/animal_care.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/game_speed.hpp"
@@ -171,7 +172,8 @@ namespace rct3::scene
                 .rescued = rescued,
                 .flying = scene.park.speed.speed == simulation::Speed::Fastest ? units::Seconds { } : simulation::kAnimalRates.delivery,
             };
-            (void)simulation::add_animal(scene.sim, animal, at);
+            const entt::entity added = simulation::add_animal(scene.sim, animal, at);
+            scene.sim.registry.emplace<simulation::AnimalCare>(added, simulation::care_for(item.care, item.needs, scene.looks));
             park::float_money(scene, at, -item.price);
             if (enclosure)
             {
@@ -331,7 +333,9 @@ namespace rct3::scene
                 objects_changed(scene);
             }
         }
-        (void)simulation::add_animal_house(scene.sim, home, park::tile_point(scene.grid, spot.value_or(middle)));
+        const entt::entity keeper = simulation::add_animal_house(scene.sim, home, park::tile_point(scene.grid, spot.value_or(middle)));
+        const std::optional<glm::vec3> hut = home.hut != 0 ? std::optional(park::tile_point(scene.grid, *spot)) : std::nullopt;
+        scene.sim.registry.emplace<simulation::HouseCare>(scene.sim.registry.get<const simulation::KeeperDuty>(keeper).house, simulation::HouseCare { .kind = house.symbol, .hut = hut });
     }
 
     void enclosures_changed(park::ParkScene& scene, const ui::InterfaceAssets& assets)

@@ -79,9 +79,7 @@ namespace rct3::ui::screens::info
         {
             page.width = kWidePageWidth;
             page.lines.push_back(bar(strings, "WildAnimalStat_Health", a.health));
-            // shortcut: an animal's habitat is all there while it lives in an enclosure and nothing once out of it;
-            // upgrade with the enclosure's size, crowding and ground once animal care weighs them.
-            page.lines.push_back(bar(strings, "WildAnimalStat_Enclosure", units::Share { a.escaped ? 0.0f : 1.0f }));
+            page.lines.push_back(bar(strings, "WildAnimalStat_Enclosure", units::Share { a.escaped ? 0.0f : f.habitat.value }));
             page.lines.push_back(bar(strings, "WildAnimalStat_Hunger", a.hunger));
             page.lines.push_back(bar(strings, "WildAnimalStat_Thirst", a.thirst));
             page.lines.push_back(bar(strings, "WildAnimalStat_Social", units::Share { 1 - a.loneliness.value }));
@@ -103,8 +101,8 @@ namespace rct3::ui::screens::info
             fact("AnimalInfo_SizeLabel", std::format("{}Info_Size", f.species_own_name));
             fact("AnimalInfo_WeightLabel", std::format("{}Info_Weight", f.species_own_name));
             page.lines.push_back({ .label = text(strings, "AnimalInfo_Rarity"), .value = text(strings, build::rarity_text(f.rarity)), .name = "AnimalInfo_Rarity" });
-            // shortcut: the room a species needs is left out until its stats are read from the data; add it
-            // with "AnimalInfo_MinSpace" then.
+            if (f.space > 0)
+                page.lines.push_back({ .label = filled(strings, "AnimalInfo_MinSpace", "#MINSPACE#", strings::to_utf16(std::to_string(f.space))), .value = { }, .name = "AnimalInfo_MinSpace" });
             if (!f.house_text.empty())
                 page.lines.push_back({ .label = filled(strings, "AnimalInfo_House", "#SHELTERNAME#", std::u16string(strings.get_ignoring_case(f.house_text))), .value = { }, .name = "AnimalInfo_House" });
         }

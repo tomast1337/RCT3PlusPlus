@@ -3,6 +3,7 @@
 
 #include "core/types.hpp"
 #include "logging/log.hpp"
+#include "park/ride/styles.hpp"
 #include "scene/park/attraction_state.hpp"
 #include "scene/park/patrol.hpp"
 #include "scene/park/people.hpp"
@@ -10,6 +11,7 @@
 #include "scene/park/ride_camera.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
+#include "scene/ride_placing.hpp"
 #include "scene/track/trains.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/crowds.hpp"
@@ -29,6 +31,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <future>
 #include <span>
 #include <string>
 #include <utility>
@@ -275,6 +278,27 @@ namespace rct3::scene::park
                     for (const auto& aboard : fleet->riders)
                         f.flow->riding += aboard.size();
             }
+        }
+        // While its fence button is down, the looks its fence and doors may take, each theme's named after it.
+        if (f.ride != nullptr && scene.ride_styles_shown && f.station.value_or(false) && !f.pool_ride && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+        {
+            const rct3::park::ride::RideStyles styles = rct3::park::ride::ride_styles(scene.build.items.get());
+            const auto pick = [](std::span<const rct3::park::ride::ExtraStyle> list, std::optional<usize> picked) {
+                ui::screens::info::StylePick p { .picked = picked };
+                for (const rct3::park::ride::ExtraStyle& s : list)
+                    p.themes.push_back(strings::to_utf16(s.title.empty() ? s.symbol : s.title));
+                return p;
+            };
+            f.fence_style = pick(styles.fences, rct3::park::ride::style_of(styles.fences, f.ride->fence_symbol, f.ride->fence_overlay));
+            // Its doors' looks are those of its first station's.
+            const auto door = [&](u64 id, rct3::park::ride::DoorEnd end) {
+                const auto o = id == 0 ? scene.objects.end() : std::ranges::find(scene.objects, id, &save::model::PlacedObject::id);
+                return pick(styles.doors, o == scene.objects.end() ? std::nullopt : rct3::park::ride::style_of(styles.doors, o->symbol, o->overlay, end));
+            };
+            const save::model::Station no_station;
+            const save::model::Station& first = f.ride->stations.empty() ? no_station : f.ride->stations.front();
+            f.entrance_style = door(first.entrance, rct3::park::ride::DoorEnd::Entrance);
+            f.exit_style = door(first.exit, rct3::park::ride::DoorEnd::Exit);
         }
         if (const auto painted = painted_object(scene, ref))
         {
@@ -927,6 +951,22 @@ namespace rct3::scene::park
         }
         else if (change.id == ui::screens::info::control_id(Music))
             scene.ride_tunes[ride->base.id] = static_cast<usize>(std::max(change.value, 0));
+        else if (change.id == ui::screens::info::control_id(Fence))
+            scene.ride_styles_shown = !scene.ride_styles_shown;
+        else if (const bool fence = change.id == ui::screens::info::control_id(FenceStyle); fence || change.id == ui::screens::info::control_id(EntranceStyle) || change.id == ui::screens::info::control_id(ExitStyle))
+        {
+            if (!scene.build.items.valid() || scene.build.items.wait_for(std::chrono::seconds(0)) != std::future_status::ready || change.value < 0)
+                return;
+            const rct3::park::ride::RideStyles styles = rct3::park::ride::ride_styles(scene.build.items.get());
+            const std::vector<rct3::park::ride::ExtraStyle>& list = fence ? styles.fences : styles.doors;
+            if (std::cmp_greater_equal(change.value, list.size()))
+                return;
+            const rct3::park::ride::ExtraStyle& style = list[static_cast<usize>(change.value)];
+            if (fence)
+                restyle_fence(scene, assets, ref.ride(), style);
+            else
+                restyle_doors(scene, assets, ref.ride(), style, change.id == ui::screens::info::control_id(ExitStyle) ? rct3::park::ride::DoorEnd::Exit : rct3::park::ride::DoorEnd::Entrance);
+        }
         else if (change.id == ui::screens::info::control_id(QueueSigns))
         {
             // The button turns them round.

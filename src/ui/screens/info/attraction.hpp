@@ -145,6 +145,14 @@ namespace rct3::ui::screens::info
     /// The graph's series, as AttractionFacts::graph_series has them: speed alone at first.
     inline constexpr u8 kSpeedOnly = 1;
 
+    /// A look the player may give a ride's fence, entrance or exit: the themes that give one, by name, and which
+    /// it has; none when no theme gives the one it has.
+    struct StylePick
+    {
+        std::vector<std::u16string> themes { };
+        std::optional<usize> picked { };
+    };
+
     struct AttractionFacts
     {
         const save::model::AttractionCommon* common = nullptr;
@@ -176,6 +184,8 @@ namespace rct3::ui::screens::info
         /// Of a ride, the tunes it may play, and which it plays: 0 for none, k for music[k - 1].
         std::span<const std::u16string> music { };
         usize tune = 0;
+        /// Of a ride with doors, once its fence button is pressed: the looks of its fence, its entrance and its exit.
+        std::optional<StylePick> fence_style { }, entrance_style { }, exit_style { };
         /// Of a tracked ride whose trains can still be changed, whether its kind runs other kinds of train.
         bool other_cars = false;
         /// Of a tracked ride, whether its track is greased.
@@ -221,7 +231,7 @@ namespace rct3::ui::screens::info
         Music,          ///< The tune it plays, as AttractionFacts::tune
         Demolish,       ///< Pulls it down
         SaveDesign,     ///< Keeps a tracked ride's design
-        Fence,          ///< Picks its queues' fence
+        Fence,          ///< Shows the looks of its fence, entrance and exit to pick from, or hides them
         Locate,         ///< Brings the view round to it
         RideCam,        ///< Rides along in its cars
         Mode,           ///< The operating mode, its place in the list
@@ -241,6 +251,9 @@ namespace rct3::ui::screens::info
         SceneryClear,   ///< Forgets the scenery picked
         SyncStalls,     ///< Whether a stall's menu changes go to every stall of its kind
         JoinPool,       ///< Opens the pool complex's path tool, to join a pool ride's station to its paving
+        FenceStyle,     ///< The look of a ride's fence, its place in StylePick::themes
+        EntranceStyle,  ///< Of its entrances
+        ExitStyle,      ///< Of its exits
         /// Families of a stall's controls, one for each of its items, offers or extras: the first's id, the next's
         /// one more, and so on, up to kMostListed.
         ItemPrice = 64,   ///< An item's price

@@ -786,6 +786,7 @@ namespace rct3::scene::park
         /// with info_tab when the panel goes from one to the other.
         ui::screens::info::AttractionTab other_info_tab = ui::screens::info::AttractionTab::View;
         bool info_tracked = false;         ///< Whether info_tab is the tracked rides' one
+        bool ride_styles_shown = false;    ///< Whether a ride's window shows the looks of its fence and doors to pick from
         usize info_section = 0;            ///< Of the open tab's page
         std::vector<std::u16string> tunes; ///< The install's music, by name, for rides to play
         rct3::park::CarriedKinds carried;  ///< What stalls sell and its extras, read with the park's people

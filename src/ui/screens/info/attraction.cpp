@@ -1000,8 +1000,8 @@ namespace rct3::ui::screens::info
                     page.controls.push_back(std::move(c));
                 };
                 button(AttractionControl::Demolish, "Attraction_General_Delete", "TT_AttractionDialogIconDestroyButton");
-                // shortcut: keeping a design with its scenery, picking a fence and riding along are not built yet, so
-                // their buttons are greyed; enable each as it lands. A design is kept of its track only.
+                // shortcut: keeping a design with its scenery is not built yet, so its buttons are greyed; enable them
+                // as it lands. A design is kept of its track only.
                 if (f.ride && f.ride->kind == save::model::RideKind::Tracked)
                 {
                     button(AttractionControl::SceneryPick, "ParkInfoIcon_PlaceOwned", "SavedSelection_Coaster_Button_TT", false);
@@ -1014,7 +1014,8 @@ namespace rct3::ui::screens::info
                     button(AttractionControl::JoinPool, "Pool_PathPanel", "TT_AttractionDialogIconPoolPathButton");
                 else if (f.station)
                 {
-                    button(AttractionControl::Fence, "Attraction_General_PickFence", *f.station ? "TT_AttractionDialogIconSetFenceButton" : "CantChooseFenceAsRideIsNotPlaced", false);
+                    button(AttractionControl::Fence, "Attraction_General_PickFence", *f.station ? "TT_AttractionDialogIconSetFenceButton" : "CantChooseFenceAsRideIsNotPlaced", *f.station);
+                    page.controls.back().value = f.fence_style.has_value();
                     for (const bool exit : { false, true })
                     {
                         const std::string_view help = exit ? "TT_AttractionDialogIconSetExitButton" : "TT_AttractionDialogIconSetEntranceButton";
@@ -1029,6 +1030,20 @@ namespace rct3::ui::screens::info
                     // A ride's cars can be ridden along in once it has some, and a flat ride's seats looked out from.
                     const bool cars = (attraction_kind(*f.ride) == AttractionKind::Tracked && !f.ride->trains.empty()) || f.seats;
                     button(AttractionControl::RideCam, cars ? "RideCamGUI_Enabled" : "RideCamGUI_Disabled", cars ? "RideCamButton_Enabled" : "RideCamButton_Disabled", cars);
+                }
+                // The looks of its fence and doors, on rows of their own under the buttons.
+                for (const auto& [control, pick, name, label] : { std::tuple { AttractionControl::FenceStyle, &f.fence_style, "fence_style", "Rct3pp_RideFenceLook" }, std::tuple { AttractionControl::EntranceStyle, &f.entrance_style, "entrance_style", "Rct3pp_RideEntranceLook" }, std::tuple { AttractionControl::ExitStyle, &f.exit_style, "exit_style", "Rct3pp_RideExitLook" } })
+                {
+                    if (!*pick)
+                        continue;
+                    InfoControl c;
+                    c.id = control_id(control);
+                    c.name = name;
+                    c.kind = InfoControlKind::Choice;
+                    c.label = text(strings, label);
+                    c.items = (*pick)->themes;
+                    c.value = (*pick)->picked ? static_cast<i32>(*(*pick)->picked) : -1;
+                    page.controls.push_back(std::move(c));
                 }
                 // A ride is painted from its vehicles page, as in the game.
                 if (f.ride == nullptr || f.ride->kind == save::model::RideKind::Special)

@@ -437,6 +437,41 @@ TEST_CASE("values the save does not hold are shown as missing, and what it holds
     CHECK(attraction_page(AttractionTab::View, shop, s, { }).controls.size() == 5);
 }
 
+TEST_CASE("a placed ride's fence button shows the looks of its fence, entrance and exit to pick from")
+{
+    save::model::Ride ride;
+    ride.kind = save::model::RideKind::Flat;
+    AttractionFacts f { &ride.base, &ride, nullptr, { } };
+    f.station = true;
+    const StringTable s = table();
+    const auto find = [](const InfoPage& page, AttractionControl id) { return std::ranges::find(page.controls, control_id(id), &InfoControl::id); };
+
+    const InfoPage hidden = attraction_page(AttractionTab::View, f, s, { });
+    REQUIRE(find(hidden, AttractionControl::Fence) != hidden.controls.end());
+    CHECK(find(hidden, AttractionControl::Fence)->enabled);
+    CHECK(find(hidden, AttractionControl::Fence)->value == 0);
+    CHECK(find(hidden, AttractionControl::FenceStyle) == hidden.controls.end());
+
+    f.fence_style = StylePick { .themes = { u"Garden", u"Castle" }, .picked = 1 };
+    f.entrance_style = StylePick { .themes = { u"Garden" }, .picked = 0 };
+    f.exit_style = StylePick { .themes = { u"Garden" } }; // Its exit is no theme's
+    const InfoPage shown = attraction_page(AttractionTab::View, f, s, { });
+    CHECK(find(shown, AttractionControl::Fence)->value == 1);
+    const auto fence = find(shown, AttractionControl::FenceStyle);
+    REQUIRE(fence != shown.controls.end());
+    CHECK(fence->kind == InfoControlKind::Choice);
+    CHECK(fence->name == "fence_style");
+    CHECK(fence->items == std::vector<std::u16string> { u"Garden", u"Castle" });
+    CHECK(fence->value == 1);
+    REQUIRE(find(shown, AttractionControl::EntranceStyle) != shown.controls.end());
+    CHECK(find(shown, AttractionControl::EntranceStyle)->value == 0);
+    REQUIRE(find(shown, AttractionControl::ExitStyle) != shown.controls.end());
+    CHECK(find(shown, AttractionControl::ExitStyle)->value == -1);
+
+    f.station = false; // Not placed: greyed
+    CHECK_FALSE(find(attraction_page(AttractionTab::View, f, s, { }), AttractionControl::Fence)->enabled);
+}
+
 TEST_CASE("a stall's items page offers what its kind sells and is not yet on its menu")
 {
     save::model::Stall stall;

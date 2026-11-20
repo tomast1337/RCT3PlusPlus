@@ -17,6 +17,7 @@
 #include "park/path/furniture.hpp"
 #include "park/ride/fences.hpp"
 #include "park/ride/placement.hpp"
+#include "park/ride/styles.hpp"
 #include "park/scenery_fit.hpp"
 #include "park/scenery_runs.hpp"
 #include "park/support/columns.hpp"
@@ -914,16 +915,47 @@ namespace rct3::scene
         show_ghost();
     }
 
-    void take_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Ride& ride, const rct3::park::BuildItem& item)
+    void take_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Ride& ride, std::string_view fence, std::string_view overlay)
     {
-        ride.fence_symbol = item.fence;
-        ride.fence_overlay = item.fence_overlay;
-        const save::model::PlacedObject panel { .symbol = item.fence, .overlay = item.fence_overlay };
-        if (item.fence.empty() || !load_object_model(scene, scene.placing.models, assets, panel))
+        ride.fence_symbol = fence;
+        ride.fence_overlay = overlay;
+        const save::model::PlacedObject panel { .symbol = std::string(fence), .overlay = std::string(overlay) };
+        if (fence.empty() || !load_object_model(scene, scene.placing.models, assets, panel))
             return;
         const auto& colours = scene.models.at(rct3::park::object::model_key(panel)).default_colours;
         for (usize i = 0; i < ride.fence_colours.size(); ++i)
             ride.fence_colours[i] = static_cast<u8>(colours[i]);
+    }
+
+    void restyle_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, const rct3::park::ride::ExtraStyle& fence)
+    {
+        wait_for_build(scene);
+        save::model::Ride& r = scene.rides.rides.at(ride.value);
+        take_fence(scene, assets, r, fence.symbol, fence.overlay);
+        fence_ride(scene, assets, r);
+        park::rejoin_queues(scene, assets, ride);
+    }
+
+    void restyle_doors(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, const rct3::park::ride::ExtraStyle& doors, rct3::park::ride::DoorEnd end)
+    {
+        wait_for_build(scene);
+        save::model::Ride& r = scene.rides.rides.at(ride.value);
+        const std::string& symbol = end == rct3::park::ride::DoorEnd::Exit ? doors.exit_symbol : doors.symbol;
+        if (!load_object_model(scene, scene.placing.models, assets, { .symbol = symbol, .overlay = doors.overlay }))
+            return;
+        for (const save::model::Station& station : r.stations)
+        {
+            const u64 id = end == rct3::park::ride::DoorEnd::Exit ? station.exit : station.entrance;
+            if (const auto door = id == 0 ? scene.objects.end() : std::ranges::find(scene.objects, id, &save::model::PlacedObject::id); door != scene.objects.end())
+            {
+                door->definition_ref = 0; // The park file's entry names the old look
+                door->symbol = symbol;
+                door->overlay = doors.overlay;
+            }
+        }
+        objects_changed(scene);
+        // Painted as the fence is, which stands round the new doors.
+        fence_ride(scene, assets, r);
     }
 
     void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, usize station_index, const save::model::PlacedObject& door, i32 height, bool exit)
@@ -1164,7 +1196,7 @@ namespace rct3::scene
                 ride.options.max_wait = 120;
                 park::float_money(scene, site_point(scene, *p.site), -price);
                 logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, p.site->col, p.site->row, p.site->height);
-                take_fence(scene, assets, ride, *p.item);
+                take_fence(scene, assets, ride, p.item->fence, p.item->fence_overlay);
                 fence_ride(scene, assets, ride);
                 p.step = RidePlacing::Step::Entrance;
                 // Its window opens at once, on the tab last used, while its doors are placed.

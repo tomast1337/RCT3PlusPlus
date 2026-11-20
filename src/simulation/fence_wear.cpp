@@ -4,10 +4,15 @@
 #include "core/types.hpp"
 #include "park/enclosures.hpp"
 #include "simulation/animals.hpp"
+#include "simulation/components.hpp"
 #include "simulation/sim_world.hpp"
+#include "simulation/staff/patrol.hpp"
+#include "simulation/staff/work.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
+#include <cstdlib>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -20,6 +25,8 @@ namespace rct3::simulation
         constexpr const FenceWearRates& kRates = kFenceWearRates;
         /// Fences are looked at this often, not every step: the knocks are rare and the strengths are looked up by name.
         constexpr units::Seconds kWearCheck { 1 };
+        /// A mechanic mends a fence from a path at most this many tiles from it, across or along.
+        constexpr i32 kMendingReach = 3;
 
         FenceUpkeep& upkeep_of(SimWorld& world)
         {
@@ -52,12 +59,28 @@ namespace rct3::simulation
         auto& r = world.registry;
         if (map.fences.empty())
             return false;
+        bool changed = false;
+        // Mechanics done at a fence leave it as new; one whose fence was put up again meanwhile has nothing to do.
+        for (const auto [m, mending, worker] : r.view<staff::FenceMending, Staff>().each())
+        {
+            const save::model::FenceWear now = map.wear_at(mending.tile.col, mending.tile.row);
+            if (now == mending.wear && (mending.step == staff::MendingStep::Walking || worker.busy.value > 0))
+                continue;
+            if (now == mending.wear)
+            {
+                map.wear[static_cast<usize>(mending.tile.row * map.cols + mending.tile.col)] = save::model::FenceWear::Sound;
+                ++(now == save::model::FenceWear::Broken ? worker.fixed : worker.inspected);
+                changed = true;
+            }
+            else
+                r.get<Stride>(m).route.clear();
+            r.remove<staff::FenceMending>(m);
+        }
         auto& upkeep = upkeep_of(world);
         upkeep.since_check.value += dt.value;
         if (upkeep.since_check.value < kWearCheck.value)
-            return false;
+            return changed;
         const units::Seconds passed = std::exchange(upkeep.since_check, { });
-        bool changed = false;
         const auto animals = r.view<const Animal>();
         for (usize e = 0; e < map.fences.size(); ++e)
         {
@@ -75,6 +98,57 @@ namespace rct3::simulation
             const f32 knocks = 1 / kRates.ageing.value + push / kRates.pushing.value; // A second
             if (lived_in && random::chance(upkeep.dice, knocks * passed.value) && knock_fence(map, static_cast<i32>(e), upkeep.dice))
                 changed = true;
+        }
+
+        // Free mechanics are sent to worn fences, broken ones first, each fence the nearest by the paths, once the
+        // rides have taken those they need.
+        // shortcut: mended from the nearest path; send them by the viewing galleries into the enclosure once those exist.
+        std::vector<entt::entity> free;
+        for (const auto [m, worker, stride] : r.view<const Staff, const Stride>().each())
+            if (worker.role == StaffRole::Mechanic && worker.ride == entt::null && !r.all_of<staff::FenceMending>(m) && stride.to.value < world.paths.nodes().size())
+                free.push_back(m);
+        if (free.empty() || std::ranges::all_of(map.wear, [](save::model::FenceWear w) { return w == save::model::FenceWear::Sound; }))
+            return changed;
+        const auto& nodes = world.paths.nodes();
+        std::vector<NodeId> near;  // Path tiles in reach of the fence
+        std::vector<NodeId> spots; // Those a mechanic may go to
+        for (const save::model::FenceWear wear : { save::model::FenceWear::Broken, save::model::FenceWear::Damaged })
+        {
+            const i32 task = wear == save::model::FenceWear::Broken ? kFixRidesTask : kInspectRidesTask;
+            for (usize k = 0; k < map.wear.size() && !free.empty(); ++k)
+            {
+                const save::model::Tile tile { static_cast<i32>(k % static_cast<usize>(map.cols)), static_cast<i32>(k / static_cast<usize>(map.cols)) };
+                if (map.wear[k] != wear || std::ranges::any_of(r.view<const staff::FenceMending>(), [&](entt::entity m) { return r.get<const staff::FenceMending>(m).tile == tile; }))
+                    continue;
+                near.clear();
+                for (u32 n = 0; n < nodes.size(); ++n)
+                    if (!nodes[n].queue && !nodes[n].removed && std::max(std::abs(nodes[n].tile.col - tile.col), std::abs(nodes[n].tile.row - tile.row)) <= kMendingReach)
+                        near.push_back(NodeId { n });
+                if (near.empty())
+                    continue;
+                auto who = free.end();
+                std::optional<std::vector<NodeId>> best;
+                for (auto m = free.begin(); m != free.end(); ++m)
+                {
+                    if ((r.get<const Staff>(*m).tasks & task) == 0)
+                        continue;
+                    const auto* patrol = r.try_get<const staff::Patrol>(*m);
+                    spots.clear();
+                    for (const NodeId n : near)
+                        if (patrol == nullptr || patrol->tiles.empty() || patrol->covers(nodes[n.value].tile))
+                            spots.push_back(n);
+                    if (auto way = world.paths.route_nearest(r.get<const Stride>(*m).to, spots, Walker::Staff); way && (!best || way->walk.size() < best->size()))
+                    {
+                        best = std::move(way->walk);
+                        who = m;
+                    }
+                }
+                if (who == free.end())
+                    continue;
+                r.emplace<staff::FenceMending>(*who, staff::FenceMending { .tile = tile, .wear = wear });
+                r.get<Stride>(*who).route = std::move(*best);
+                free.erase(who);
+            }
         }
         return changed;
     }

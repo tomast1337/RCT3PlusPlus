@@ -120,7 +120,7 @@ namespace rct3::simulation::staff
         for (const entt::entity e : sorted(staff_view))
         {
             const auto [staff, stride] = staff_view.get<Staff, Stride>(e);
-            if (staff.role == StaffRole::Mechanic && staff.ride == entt::null && stride.to.value < paths.nodes().size())
+            if (staff.role == StaffRole::Mechanic && staff.ride == entt::null && !r.all_of<FenceMending>(e) && stride.to.value < paths.nodes().size())
                 free.push_back(e);
         }
         // What a mechanic could not be sent to is told by the park's inspector, if it has one.
@@ -547,9 +547,9 @@ namespace rct3::simulation::staff
                     stride.progress.value = 1;
                 }
             }
-            else if (staff.ride != entt::null)
+            else if (auto* mending = r.try_get<FenceMending>(e); staff.ride != entt::null || mending != nullptr)
             {
-                // On the way to a ride, or there and setting to work.
+                // On the way to a ride or a fence, or there and setting to work.
                 if (!stride.route.empty())
                 {
                     stride.to = stride.route.front();
@@ -559,9 +559,14 @@ namespace rct3::simulation::staff
                 }
                 else
                 {
-                    const bool broken = r.get<Upkeep>(staff.ride).broken;
-                    staff.busy.value = staff.job_length.value = (broken ? kTuning.wear.repair.value : kTuning.wear.inspect.value) * staff::work_slowdown(staff);
-                    staff.job = broken ? StaffJob::Fix : StaffJob::Inspect;
+                    if (mending == nullptr || mending->step == MendingStep::Walking)
+                    {
+                        const bool broken = mending != nullptr ? mending->wear == save::model::FenceWear::Broken : r.get<Upkeep>(staff.ride).broken;
+                        staff.busy.value = staff.job_length.value = (broken ? kTuning.wear.repair.value : kTuning.wear.inspect.value) * staff::work_slowdown(staff);
+                        staff.job = broken ? StaffJob::Fix : StaffJob::Inspect;
+                        if (mending != nullptr)
+                            mending->step = MendingStep::Mending;
+                    }
                     stride.to = at;
                     stride.progress.value = 1;
                 }

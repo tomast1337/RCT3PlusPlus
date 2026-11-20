@@ -9,6 +9,7 @@
 #include "simulation/ride_walks.hpp"
 #include "simulation/rides.hpp"
 #include "simulation/sim_world.hpp"
+#include "simulation/staff/work.hpp"
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "simulation/tuning.hpp"
@@ -64,6 +65,7 @@ namespace rct3::simulation
             if (auto* upkeep = r.valid(staff->ride) ? r.try_get<Upkeep>(staff->ride) : nullptr; upkeep != nullptr && upkeep->mechanic == person)
                 upkeep->mechanic = entt::null;
             staff->ride = entt::null;
+            r.remove<staff::FenceMending>(person);
             staff->busy = { };
             staff->job = StaffJob::None;
         }

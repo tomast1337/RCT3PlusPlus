@@ -4,14 +4,22 @@
 #include "core/types.hpp"
 #include "park/enclosures.hpp"
 #include "simulation/animals.hpp"
+#include "simulation/components.hpp"
+#include "simulation/sandbox.hpp"
 #include "simulation/sim_world.hpp"
+#include "simulation/staff/patrol.hpp"
+#include "simulation/staff/work.hpp"
+#include "simulation/systems.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cstdint>
 #include <doctest/doctest.h>
+#include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 using namespace rct3;
 using namespace rct3::simulation;
@@ -119,4 +127,76 @@ TEST_CASE("fence wear: knocking the fences by hand wears panels until none are l
     CHECK(knock_fences(world, map, 10) == 10);
     CHECK(knock_fences(world, map, 10) == 6); // Eight panelled tiles, two knocks each
     CHECK(std::ranges::count(map.wear, FenceWear::Broken) == 8);
+}
+
+namespace
+{
+    /// A park with a path along row 0 from column 0 to 9, and a wooden enclosure on columns 2 to 5, rows 2 to 5,
+    /// whose top panel at column 3 is broken and at column 4 dented.
+    struct MendingPark
+    {
+        Sandbox park;
+        save::model::EnclosureMap map;
+
+        MendingPark()
+        {
+            park.path({ 0, 0 }, { 9, 0 });
+            map = { .cols = 10, .rows = 10, .tiles = std::vector<std::optional<i32>>(100), .fences = { "Wood" } };
+            for (i32 row = 2; row <= 5; ++row)
+                for (i32 col = 2; col <= 5; ++col)
+                    map.tiles[static_cast<usize>(row * 10 + col)] = 0;
+            map.wear = std::vector<FenceWear>(100);
+            map.wear[3 + 20] = FenceWear::Broken;
+            map.wear[4 + 20] = FenceWear::Damaged;
+        }
+
+        bool run_until(const std::function<bool()>& done, f32 seconds)
+        {
+            for (f32 t = 0; t < seconds; t += kTickSeconds)
+            {
+                park.run(1);
+                step_fence_wear(park.world(), map, strength, { kTickSeconds });
+                if (done())
+                    return true;
+            }
+            return false;
+        }
+    };
+} // namespace
+
+TEST_CASE("fence wear: a free mechanic walks to the path nearest a broken fence and mends it, then the dented one")
+{
+    MendingPark p;
+    auto& r = p.park.world().registry;
+    const auto mechanic = p.park.staff(StaffRole::Mechanic, { 9, 0 });
+    CHECK(p.run_until([&] { return r.all_of<staff::FenceMending>(mechanic); }, 2));
+    CHECK(r.get<staff::FenceMending>(mechanic).tile == save::model::Tile { 3, 2 }); // Broken first
+    CHECK(p.run_until([&] { return p.map.wear_at(3, 2) == FenceWear::Sound; }, 120));
+    CHECK(r.get<Staff>(mechanic).fixed == 1);
+    CHECK(p.run_until([&] { return p.map.wear_at(4, 2) == FenceWear::Sound; }, 120));
+    CHECK(r.get<Staff>(mechanic).inspected == 1);
+    CHECK_FALSE(r.all_of<staff::FenceMending>(mechanic));
+}
+
+TEST_CASE("fence wear: a mechanic told not to fix, or kept to a patrol away from the fence, leaves it broken")
+{
+    MendingPark p;
+    auto& r = p.park.world().registry;
+    p.map.wear[4 + 20] = FenceWear::Sound;
+    const auto told = p.park.staff(StaffRole::Mechanic, { 9, 0 });
+    r.get<Staff>(told).tasks &= ~kFixRidesTask;
+    const auto kept = p.park.staff(StaffRole::Mechanic, { 9, 0 });
+    r.emplace<staff::Patrol>(kept).tiles = { { 9, 0 }, { 8, 0 } };
+    CHECK_FALSE(p.run_until([&] { return r.all_of<staff::FenceMending>(told) || r.all_of<staff::FenceMending>(kept); }, 30));
+    CHECK(p.map.wear_at(3, 2) == FenceWear::Broken);
+}
+
+TEST_CASE("fence wear: a fence far from every path is left as it is")
+{
+    MendingPark p;
+    auto& r = p.park.world().registry;
+    p.map.wear = std::vector<FenceWear>(100);
+    p.map.wear[3 + 50] = FenceWear::Broken; // The bottom side, five rows from the path
+    const auto mechanic = p.park.staff(StaffRole::Mechanic, { 9, 0 });
+    CHECK_FALSE(p.run_until([&] { return r.all_of<staff::FenceMending>(mechanic); }, 10));
 }

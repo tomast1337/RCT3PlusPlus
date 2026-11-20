@@ -3,7 +3,8 @@
 // Enclosure fences wearing out. The fence of an enclosure with animals in it takes a knock now and then, from age,
 // and far more often from animals of a species that needs a stronger fence than it is: the stronger they are
 // against it, and the more of them, the harder they push. A knock damages the panels of one of its tiles, or
-// breaks panels already damaged, leaving a gap. Only straight panels wear (park::panelled).
+// breaks panels already damaged, leaving a gap. Only straight panels wear (park::panelled). Free mechanics mend
+// them, broken ones first, from a path near the fence.
 #pragma once
 
 #include "core/types.hpp"
@@ -42,8 +43,8 @@ namespace rct3::simulation
         units::Seconds since_check { };
     };
 
-    /// Wears the fences of `map` by `dt`, the animals of `world` pushing on them. Returns whether the fence of any tile
-    /// changed.
+    /// Wears the fences of `map` by `dt`, the animals of `world` pushing on them, and sends its mechanics to mend them.
+    /// Returns whether the fence of any tile changed.
     bool step_fence_wear(SimWorld& world, save::model::EnclosureMap& map, Strengths strength, units::Seconds dt);
 
     /// Knocks the fence of a tile of enclosure `which` picked with `dice` one step worse: damaged, or broken once

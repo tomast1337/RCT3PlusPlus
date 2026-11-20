@@ -2,7 +2,8 @@
 //
 // Enclosure fences wearing out. In a park of the Wild! expansion, the Debug tab's knocks wear the straight panels
 // of the enclosures' fences: a knock dents a panel, a second breaks a gap in it, and each shows so; corners do not
-// wear. A park saved with a worn fence loads with it.
+// wear. A park saved with a worn fence loads with it. The park's mechanics mend them from the paths beside, broken
+// panels first.
 //
 //   RCT3PP_DATA=<an empty folder> ./nob script scripts/tests/fence_wear.ts -- --no-audio
 
@@ -41,3 +42,32 @@ const gap =
 camera.look({ col: gap.col + 0.5, row: gap.row + 0.5 }, { col: gap.col + 4.5, row: gap.row + 5.5, up: 5 });
 await frames(60);
 await screenshot("fence_worn");
+
+// The park's mechanics see to them, broken panels first, each from the path nearest it, and leave them as new.
+const mechanics = () => staff().filter((s) => s.role === "mechanic");
+log(`${mechanics().length} mechanics`);
+expect(mechanics().length > 0, "mechanics in the park");
+const broken_now = () => panels().filter((p) => wear(p) === "broken");
+const near_gap = (m: Person) =>
+    m.at !== null && broken_now().some((b) => Math.max(Math.abs(b.col - m.at!.col), Math.abs(b.row - m.at!.row)) <= 4);
+await park.advanceUntil(
+    () => mechanics().some((m) => m.job === "fix" && near_gap(m)),
+    600,
+    "a mechanic at work beside a broken fence",
+);
+const fixer = mechanics().find((m) => m.job === "fix" && near_gap(m))!;
+// From behind the mechanic, looking over them at the gap.
+const at = fixer.at!;
+const gap_at = broken_now().reduce((a, b) =>
+    Math.hypot(a.col - at.col, a.row - at.row) <= Math.hypot(b.col - at.col, b.row - at.row) ? a : b,
+);
+const away = { col: at.col - (gap_at.col + 0.5), row: at.row - (gap_at.row + 0.5) };
+const length = Math.max(Math.hypot(away.col, away.row), 0.1);
+camera.look(
+    { col: (at.col + gap_at.col + 0.5) / 2, row: (at.row + gap_at.row + 0.5) / 2 },
+    { col: at.col + (away.col / length) * 5, row: at.row + (away.row / length) * 5, up: 3 },
+);
+await frames(30);
+await screenshot("fence_mending");
+await park.advanceUntil(() => broken_now().length < broken.length, 600, "a broken panel mended");
+log(`${broken.length - broken_now().length} broken panels mended`);

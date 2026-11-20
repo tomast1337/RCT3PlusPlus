@@ -39,6 +39,7 @@ namespace rct3::config
         Language,       ///< language: the interface language, by the game's name for it; unset picks one
         NoAudio,        ///< no_audio: start without any sound
         Renderer,       ///< renderer: the render backend, by its command-line name
+        Ffmpeg,         ///< ffmpeg: the program recordings are encoded with
 
         Count_, ///< Number of settings; not a setting
     };

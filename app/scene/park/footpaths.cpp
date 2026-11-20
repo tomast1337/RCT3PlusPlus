@@ -1455,9 +1455,25 @@ namespace rct3::scene::park
         ParkFootpaths& f = scene.footpaths;
         save::model::Ride& r = scene.rides.rides.at(ride.value);
         std::vector<u64> railed;
+        std::vector<u64> repainted; ///< Tiles of lines already joined, whose railings take the ride's fence again
         for (usize s = 0; s < r.stations.size(); ++s)
         {
             save::model::Station& station = r.stations[s];
+            if (!r.base.demolished && station.queue_line != 0 && !r.fence_symbol.empty())
+            {
+                const std::array<i32, 3> colours { r.fence_colours[0], r.fence_colours[1], r.fence_colours[2] };
+                for (save::model::PathTile& p : f.paths)
+                {
+                    if (!p.queue || p.queue->queue_line_ref != station.queue_line)
+                        continue;
+                    if (p.queue->fence_symbol == r.fence_symbol && p.queue->fence_overlay == r.fence_overlay && p.queue->fence_colours == colours)
+                        continue;
+                    p.queue->fence_symbol = r.fence_symbol;
+                    p.queue->fence_overlay = r.fence_overlay;
+                    p.queue->fence_colours = colours;
+                    repainted.push_back(p.id);
+                }
+            }
             if (r.base.demolished)
             {
                 // Its lines go back to plain queues, free to join the next ride put in front of them.
@@ -1483,6 +1499,11 @@ namespace rct3::scene::park
                         railed.push_back(p.id);
                 }
             }
+        }
+        if (!repainted.empty())
+        {
+            rail(scene, assets, repainted);
+            objects_changed(scene);
         }
         if (railed.empty())
             return;

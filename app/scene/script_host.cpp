@@ -947,6 +947,8 @@ namespace rct3::scene
                     paths.back()["height"] = p.elevation->quantised_height;
                 if (p.kind == save::model::PathKind::Queue && p.queue && p.queue->queue_line_ref != 0)
                     paths.back()["line"] = p.queue->queue_line_ref;
+                if (p.kind == save::model::PathKind::Queue && p.queue)
+                    paths.back()["railing"] = p.queue->fence_symbol;
             }
             return paths;
         });

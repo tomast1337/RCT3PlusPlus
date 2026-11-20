@@ -805,6 +805,25 @@ TEST_CASE("those waiting for a ride stand in a ring beside its exit, and go on t
         CHECK(r.get<Errand>(g).kind == ErrandKind::Following);
 }
 
+TEST_CASE("a party waiting by a ride keeps off the ways out of the rides beside it")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    const auto ride = park.flat_ride("Spinner", { 8, 0 }, 100, { .capacity = 4, .cycle_seconds = 30, .exit = glm::ivec2 { 4, 0 } });
+    park.flat_ride("Swing", { 0, 0 }, 100, { .exit = glm::ivec2 { 3, 0 } });
+    park.flat_ride("Teacups", { 0, 0 }, 100, { .exit = glm::ivec2 { 5, 0 } });
+    const auto leader = park.guest({ 8, 0 });
+    const auto queasy = park.guest({ 8, 0 }, { .nausea = 0.9f });
+    park.party({ leader, queasy });
+    auto& r = park.world().registry;
+    r.get<Errand>(leader) = { ErrandKind::Heading, ride, 0 };
+    park.run_seconds(15);
+    REQUIRE(r.get<Errand>(queasy).kind == ErrandKind::Waiting);
+    const auto& paths = park.world().paths;
+    for (const f32 x : { 12.0f, 16.0f, 20.0f })
+        CHECK(r.get<Stride>(queasy).to != *paths.nearest({ x, 0, 0 }));
+}
+
 TEST_CASE("two parties waiting by one exit each stand on a tile of their own")
 {
     Sandbox park;

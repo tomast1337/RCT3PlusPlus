@@ -100,6 +100,17 @@ namespace rct3::simulation
         for (const auto [e, party] : r.view<const Party>().each())
             if (party.gather && party.gather->value < taken.size())
                 taken[party.gather->value] = true;
+        // Nor on any ride's way out, where its riders come off.
+        const auto keep_off = [&](std::optional<NodeId> out) {
+            if (out && out->value < taken.size())
+                taken[out->value] = true;
+        };
+        for (const auto [e, ride] : r.view<const CycleRide>().each())
+        {
+            keep_off(ride.exit);
+            for (const auto& stop : ride.stops)
+                keep_off(stop.exit);
+        }
         for (const entt::entity e : sorted(r.view<Party>()))
         {
             Party& party = r.get<Party>(e);

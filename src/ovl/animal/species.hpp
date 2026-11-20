@@ -44,6 +44,15 @@ namespace rct3::ovl::animal
         i32 sociability = 0; ///< How much it wants others of its kind about, from 0 to 20 at most; likewise
     };
 
+    /// How a species breeds, from its statistics block.
+    struct AnimalBreeding
+    {
+        i32 contentment = 0; ///< The least contentment, in percent, either parent needs to breed
+        i32 rest_months = 0; ///< After a birth, before the mother breeds again
+        i32 litter = 0;      ///< Young in an average litter
+        i32 pregnant_months = 0;
+    };
+
     struct AnimalSpecies
     {
         std::string_view own_name;         ///< As the data spells it; the keys of the species' facts start with it
@@ -55,6 +64,8 @@ namespace rct3::ovl::animal
         SpeciesCare care { };              ///< Zero where its blocks are missing or do not fit
         /// The own names of the species its animals hunt, in any case; empty for an animal that hunts none.
         std::vector<std::string_view> prey { };
+        /// How it breeds, from its statistics block; nothing where the block is missing or does not fit.
+        std::optional<AnimalBreeding> breeding;
         /// Nothing where the pointer is null or the record does not fit its block.
         std::array<std::optional<AnimalVariant>, 4> variants;
     };
@@ -70,7 +81,7 @@ namespace rct3::ovl::animal
     /// (each with its model, motion set, description, icon and price), a pointer to the name of its shelter and the fence strength it needs. Two more
     /// pointers lead to blocks of its care: at 0x28 the middle of its animals' nature (appetite at 0x00, sociability at 0x08, both i32) and at 0x2C its
     /// statistics (the number of species it preys on, i32 at 0x00, a pointer at 0x04 to as many pointers to their own names, and the
-    /// space each animal wants, i32 at 0x0C). Views in the result point into the overlay's bytes.
+    /// space each animal wants, i32 at 0x0C; further on, how it breeds). Views in the result point into the overlay's bytes.
     [[nodiscard]] std::vector<AnimalSpeciesItem> read_animal_species(const Overlay& overlay, const Part& part);
 
 } // namespace rct3::ovl::animal

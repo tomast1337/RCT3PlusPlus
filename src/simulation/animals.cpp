@@ -463,6 +463,46 @@ namespace rct3::simulation
         }
         r.destroy(cleared.begin(), cleared.end());
 
+        // Breeding. Now and then an adult male out of his crate tries for a mate in his enclosure.
+        const auto content = [](const Animal& a) { return std::min(a.health.value, 1 - std::max({ a.hunger.value, a.thirst.value, a.loneliness.value })); };
+        for (auto [e, animal, dice] : r.view<Animal, Dice>().each())
+        {
+            animal.rest.value = std::max(0.0f, animal.rest.value - dt.value);
+            if (animal.due)
+                animal.due->value = std::max(0.0f, animal.due->value - dt.value);
+            if (!animal.adult || !animal.male || animal.job == AnimalJob::Crated || !animal.enclosure || animal.rest.value > 0 || !ground.breeding || !random::chance(dice.state, dt.value / kRates.courting.value))
+                continue;
+            const std::optional<AnimalBreeding> facts = ground.breeding(animal.species);
+            if (!facts || content(animal) < facts->contentment.value)
+                continue;
+            if (ground.tiles)
+            {
+                i32 left = ground.tiles(*animal.enclosure);
+                for (const auto [o, other] : r.view<const Animal>().each())
+                    if (other.enclosure == animal.enclosure)
+                        left -= other.species == animal.species ? facts->room : ground.breeding(other.species).value_or(AnimalBreeding { }).room;
+                if (left < facts->room)
+                    continue;
+            }
+            const auto willing = [&](const Animal& her) { return her.adult && !her.male && her.species == animal.species && her.enclosure == animal.enclosure && her.job != AnimalJob::Crated && !her.due && her.rest.value <= 0 && content(her) >= facts->contentment.value; };
+            const auto females = r.view<Animal>();
+            const auto count = std::ranges::count_if(females, [&](entt::entity f) { return willing(females.get<Animal>(f)); });
+            if (count == 0)
+                continue;
+            for (auto pick = random::below(dice.state, static_cast<u64>(count)); const entt::entity f : females)
+            {
+                Animal& her = females.get<Animal>(f);
+                if (!willing(her) || pick-- > 0)
+                    continue;
+                // About the species' average: one fewer, as many or one more, and never none.
+                her.litter = std::max(1, facts->litter - 1 + static_cast<i32>(random::below(dice.state, 3)));
+                her.due = facts->pregnancy;
+                her.mate = e;
+                park::post(messages, { .text_key = std::string(kAnimalPregnant), .subject_name = her.name });
+                break;
+            }
+        }
+
         // The keepers. Each keeps to the enclosure of their house and fills the troughs of any house in it, as
         // their tasks and patrol allow.
         const auto due = [&](const AnimalHouse& h) { return h.since_fed.value >= kRates.feeding.at(std::to_underlying(h.schedule)).value || h.food.value <= kRates.refill.value || h.water.value <= kRates.refill.value; };

@@ -217,6 +217,7 @@ namespace rct3::park
                     item.group_text = s.name_text;
                     item.needs = s.shelter;
                     item.strength = s.fence_strength;
+                    item.breeding = s.breeding;
                     item.rarity = v->rarity;
                     item.species_name = s.own_name;
                     item.care = s.care;

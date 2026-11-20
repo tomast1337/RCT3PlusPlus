@@ -16,7 +16,9 @@
 // there deletes what is under the pointer, as the delete menu's tool does, and leaves the tool out): centred
 // on the tile pointed at, in the quarter of it pointed at for quarter-tile items, on the ground or on top of
 // the thing pointed at, which is how roofs go onto walls. While Shift is held the item stays on its tile and
-// rises and sinks with the pointer. An item may not take room another solid item or a path fills. A round
+// rises and sinks with the pointer. Its price floats over its ghost. An item may not take room another solid item or a path fills,
+// nor stand on land the park does not own; in a sandbox it may stand anywhere on the map and through rides, track
+// and paths, though not through other scenery (park/scenery_fit.hpp). A round
 // panel in the bottom-left corner shows the item alone, slowly turning, with a tab that turns it and, for
 // items that take colours, one that paints them; the colours start as the item's own each time it is picked.
 // A ride placed whole gets the same panel, without the colours, and rises with Shift the same way; raised, it
@@ -107,6 +109,7 @@ namespace rct3::scene
         u32 preview_pixels = 0;
         std::map<std::string, TrackModels, std::less<>> models;
         rct3::park::path::SolidTiles solids;
+        rct3::park::path::SolidTiles scenery_room;                               ///< The part of the solids scenery may not share, by the park's rules
         rct3::park::ground::GroundHolds holds;                                   ///< What keeps the ground still, worked out with the solids
         std::optional<usize> solids_of;                                          ///< The scene's object count when worked out
         std::vector<save::model::RideIndex> unjoined;                            ///< Rides placed here that the simulation does not run yet

@@ -445,9 +445,10 @@ declare namespace debug {
     /** Brings the developer windows' Debug tab to the front, once they are shown (keys.press("F12")). */
     function open(): void;
     /** Uses the Debug tab's tool `tool` with `amount`: money to add in hundredths, how many guests, pieces of
-     *  litter or knocks to enclosure fences, how many times slower the guests live (1 for their own pace), which
-     *  firework display to start, or 1 on and 0 off for the other switches. Returns how many things it changed, or 1
-     *  for a switch turned or a display started or stopped. */
+     *  litter or knocks to enclosure fences, game seconds till the females made pregnant give birth (0 for an hour),
+     *  how many times slower the guests live (1 for their own pace), which firework display to start, or 1 on and 0
+     *  off for the other switches. Returns how many things it changed, or 1 for a switch turned or a display started
+     *  or stopped. */
     function use(
         tool:
             | "add_money"
@@ -464,6 +465,7 @@ declare namespace debug {
             | "add_gulls"
             | "remove_wild_birds"
             | "knock_fences"
+            | "breed_animals"
             | "drop_litter"
             | "clear_litter"
             | "rebuild_waterfalls"
@@ -1236,7 +1238,8 @@ declare namespace animals {
     /** The park's animals, each with a number of its own, its species, its name, the enclosure they live in (-1 for
      *  none), whether grown, male and bought rescued, whether they are in a crate, still lowered by the helicopter,
      *  or out of every enclosure, their health and hunger from 0 to 1, the animal a predator is running after (-1
-     *  for none), the point of the map they stand on, in tiles, and the height of the ground under them. */
+     *  for none), the point of the map they stand on, in tiles, the height of the ground under them, whether
+     *  pregnant, the mother's id of one born in the park (-1 for none) and its generation (2 for a "Jr"). */
     function list(): {
         id: number;
         species: string;
@@ -1253,6 +1256,9 @@ declare namespace animals {
         hunting: number;
         at: { col: Tiles; row: Tiles };
         height: WorldUnits;
+        pregnant: boolean;
+        mother: number;
+        generation: number;
     }[];
     /** Opens the window of the animal `id` (as animals.list() gives it), as a click on it does. */
     function open(id: number): void;

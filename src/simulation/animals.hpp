@@ -25,7 +25,10 @@
 //
 // Now and then an adult male, content enough, looks for a mate: an adult female of his kind in his enclosure, as
 // content, not carrying young and rested since her last birth. With room left in the enclosure for the young they
-// mate, and she carries a litter about the species' average size for the months its data says. All the rates are our own.
+// mate, and she carries a litter about the species' average size for the months its data says. Then the young
+// are born beside her, each a son or a daughter at even odds, and she rests before she breeds again. Her first son
+// by a father who has no other is named after him, with the next generation's suffix; the others get names of
+// their own. All the rates are our own.
 
 #include "core/types.hpp"
 #include "save/model/people.hpp"
@@ -62,6 +65,8 @@ namespace rct3::simulation
         units::Seconds pregnancy { }; ///< From mating to the birth
     };
 
+    struct Animal;
+
     /// What the animals and their keepers walk over.
     struct AnimalGround
     {
@@ -73,6 +78,8 @@ namespace rct3::simulation
         /// How the animals of `species` breed; nothing for a species that does not.
         std::function<std::optional<AnimalBreeding>(std::string_view species)> breeding;
         std::function<i32(i32 which)> tiles; ///< Of enclosure `which`
+        /// A name for the newborn `young`, after its father when `father` is given.
+        std::function<std::string(const Animal& young, std::optional<const Animal&> father)> name;
     };
 
     /// An animal house, standing in an enclosure.
@@ -156,6 +163,9 @@ namespace rct3::simulation
         i32 litter = 0;                        ///< While pregnant: young still to be born
         entt::entity mate = entt::null;        ///< While pregnant: the father of its young
         units::Seconds rest { };               ///< Left before it breeds again
+        entt::entity mother = entt::null;      ///< Born in the park: its parents
+        entt::entity father = entt::null;
+        i32 generation = 1; ///< Named after its father: one more than his; else 1
     };
 
     /// A meat-eater's hunting, beside its Animal.
@@ -245,6 +255,8 @@ namespace rct3::simulation
     inline constexpr std::string_view kAnimalKilled = "WildAnimalMessage_Killed";
     /// Posted as a female falls pregnant; its subject's name is hers.
     inline constexpr std::string_view kAnimalPregnant = "WildAnimalMessage_Pregnant";
+    /// Posted as a young one is born; its subject's name is the mother's, its other name the young one's.
+    inline constexpr std::string_view kAnimalBorn = "WildAnimalMessage_GiveBirth";
 
     /// A keeper, and the enclosure the park gave them.
     struct KeeperPost
@@ -270,8 +282,9 @@ namespace rct3::simulation
     /// its spot is in; returns how many pieces.
     usize import_dung(SimWorld& world, std::span<const save::model::Litter> litter, const std::function<std::optional<i32>(glm::vec2)>& enclosure);
 
-    /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape or are killed, and leaving
-    /// what the park's inspector finds among the Findings.
-    void step_animals(SimWorld& world, const AnimalGround& ground, units::Seconds dt, park::ParkMessages& messages);
+    /// Moves the animals and their keepers on by `dt`, posting to `messages` as animals escape, are killed, breed and
+    /// are born, and leaving what the park's inspector finds among the Findings. Returns how many animals were born,
+    /// whose looks the park must take in.
+    usize step_animals(SimWorld& world, const AnimalGround& ground, units::Seconds dt, park::ParkMessages& messages);
 
 } // namespace rct3::simulation

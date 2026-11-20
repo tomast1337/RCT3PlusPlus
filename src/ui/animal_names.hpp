@@ -31,4 +31,8 @@ namespace rct3::ui
     /// "the" and the word.
     [[nodiscard]] std::string new_animal_name(const StringTable& strings, std::string_view species, ovl::animal::AnimalAge age, random::RandomState& dice);
 
+    /// The name of a son named after his father `father`, of generation `generation`: the father's name with his
+    /// own generation's suffix, if any, swapped for the next one's.
+    [[nodiscard]] std::string son_name(const StringTable& strings, std::string_view father, i32 generation);
+
 } // namespace rct3::ui

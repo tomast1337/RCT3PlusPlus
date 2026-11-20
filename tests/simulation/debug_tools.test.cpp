@@ -142,6 +142,25 @@ TEST_CASE("debug tools: animals are taken away, keepers after them go back to wo
     CHECK(world.registry.get<KeeperDuty>(keeper).target == entt::null);
 }
 
+TEST_CASE("debug tools: every adult female out of her crate falls pregnant, by a male of her kind beside her if any")
+{
+    SimWorld world;
+    const entt::entity male = add_animal(world, { .species = "Lion", .male = true, .enclosure = 0, .job = AnimalJob::Idle }, { 2, 0, 2 });
+    const entt::entity female = add_animal(world, { .species = "Lion", .enclosure = 0, .job = AnimalJob::Idle }, { 2, 0, 2 });
+    const entt::entity alone = add_animal(world, { .species = "Lion", .enclosure = 1, .job = AnimalJob::Idle }, { 2, 0, 2 });
+    const entt::entity young = add_animal(world, { .species = "Lion", .adult = false, .enclosure = 0, .job = AnimalJob::Idle }, { 2, 0, 2 });
+    for (const entt::entity e : { male, female, alone, young })
+        world.registry.get<Animal>(e).job = AnimalJob::Idle;
+    CHECK(make_animals_pregnant(world, units::Seconds { 30 }) == 2);
+    CHECK(world.registry.get<Animal>(female).due->value == 30);
+    CHECK(world.registry.get<Animal>(female).litter == 1);
+    CHECK(world.registry.get<Animal>(female).mate == male);
+    CHECK(world.registry.get<Animal>(alone).mate == entt::null);
+    CHECK_FALSE(world.registry.get<Animal>(young).due.has_value());
+    CHECK_FALSE(world.registry.get<Animal>(male).due.has_value());
+    CHECK(make_animals_pregnant(world, units::Seconds { 30 }) == 0);
+}
+
 TEST_CASE("debug tools: litter is dropped across the spots given and cleared again")
 {
     Sandbox park;

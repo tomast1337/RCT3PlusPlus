@@ -172,6 +172,26 @@ namespace rct3::simulation
         return count;
     }
 
+    usize make_animals_pregnant(SimWorld& world, units::Seconds due)
+    {
+        usize count = 0;
+        const auto animals = world.registry.view<Animal>();
+        for (auto [e, her] : animals.each())
+        {
+            if (!her.adult || her.male || her.due || her.job == AnimalJob::Crated)
+                continue;
+            const auto father = std::ranges::find_if(animals, [&](entt::entity m) {
+                const Animal& him = animals.get<Animal>(m);
+                return him.adult && him.male && him.species == her.species && him.enclosure == her.enclosure;
+            });
+            her.due = due;
+            her.litter = 1;
+            her.mate = father != animals.end() ? *father : entt::null;
+            ++count;
+        }
+        return count;
+    }
+
     usize scatter_litter(SimWorld& world, random::RandomState& dice, std::span<const NodeId> spots, usize count)
     {
         if (spots.empty())

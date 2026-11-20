@@ -18,6 +18,11 @@ namespace rct3::ui
         constexpr std::string_view kSuffixField = "%SUFFIX%";
         /// The generation that has no suffix: an animal not born in the park.
         constexpr i32 kFirstGeneration = 1;
+
+        std::string suffix(const StringTable& strings, i32 generation)
+        {
+            return strings::to_utf8(strings.get(std::format("AnimalDescendantSuffix{}", generation)));
+        }
     } // namespace
 
     std::u16string species_word(const StringTable& strings, std::string_view species)
@@ -34,7 +39,7 @@ namespace rct3::ui
         };
         put(kFirstNamesField, animal.first_names);
         put(kSpeciesField, strings::to_utf8(species_word(strings, animal.species)));
-        put(kSuffixField, animal.generation_suffix > kFirstGeneration ? strings::to_utf8(strings.get(std::format("AnimalDescendantSuffix{}", animal.generation_suffix))) : std::string { });
+        put(kSuffixField, animal.generation_suffix > kFirstGeneration ? suffix(strings, animal.generation_suffix) : std::string { });
         // A part left empty leaves its spaces behind.
         for (auto twice = name.find("  "); twice != std::string::npos; twice = name.find("  "))
             name.erase(twice, 1);
@@ -72,6 +77,18 @@ namespace rct3::ui
             if (!part.empty())
                 name += u' ' + std::u16string(part);
         return strings::to_utf8(name);
+    }
+
+    std::string son_name(const StringTable& strings, std::string_view father, i32 generation)
+    {
+        // Past the language's last suffix, he keeps his father's.
+        const std::string next = suffix(strings, generation + 1);
+        std::string name(father);
+        if (next.empty())
+            return name;
+        if (const std::string own = " " + suffix(strings, generation); generation > kFirstGeneration && name.ends_with(own))
+            name.resize(name.size() - own.size());
+        return name + " " + next;
     }
 
 } // namespace rct3::ui

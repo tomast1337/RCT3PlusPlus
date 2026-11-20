@@ -9,6 +9,7 @@
 #include "random/generator.hpp"
 #include "simulation/path_network.hpp"
 #include "simulation/research.hpp"
+#include "units/units.hpp"
 
 #include <cstddef>
 #include <span>
@@ -49,6 +50,10 @@ namespace rct3::simulation
 
     /// Meets every zoo animal's needs and makes it well again. Returns how many animals.
     usize refresh_animals(SimWorld& world);
+
+    /// Makes every adult female zoo animal out of her crate and not yet carrying young pregnant with one, born after
+    /// `due`, by an adult male of her kind in her enclosure if there is one. Returns how many.
+    usize make_animals_pregnant(SimWorld& world, units::Seconds due);
 
     /// Drops `count` pieces of litter, each on a tile of `spots` picked with `dice`. Returns how many; none without
     /// spots.

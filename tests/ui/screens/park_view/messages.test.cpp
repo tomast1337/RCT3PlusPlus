@@ -116,6 +116,14 @@ TEST_CASE("a message about a ride or stall with its default name names its kind 
         CHECK(message_text(m, strings).find(u'%') == std::u16string::npos);
 }
 
+TEST_CASE("a message's text fills in a second name")
+{
+    StringTable strings;
+    strings.add("Born", u"%NAME% has given birth to %NAME2%!");
+    simulation::park::ParkMessage m { .text_key = "Born", .subject_name = "Zoe the Zebu", .other_name = "Zack the Zebu Jr" };
+    CHECK(message_text(m, strings) == u"Zoe the Zebu has given birth to Zack the Zebu Jr!");
+}
+
 TEST_CASE("a message's other field is filled from its field key")
 {
     StringTable strings;

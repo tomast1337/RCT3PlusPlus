@@ -13,6 +13,7 @@
 #include "scene/park/fireworks.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/waterfalls.hpp"
+#include "simulation/day_clock.hpp"
 #include "simulation/debug_tools.hpp"
 #include "simulation/fence_wear.hpp"
 #include "simulation/guests.hpp"
@@ -112,6 +113,8 @@ namespace rct3::scene::park
                 return simulation::remove_animals(scene.sim);
             case DebugTool::RefreshAnimals:
                 return simulation::refresh_animals(scene.sim);
+            case DebugTool::BreedAnimals:
+                return simulation::make_animals_pregnant(scene.sim, units::Seconds { amount > 0 ? static_cast<f32>(amount) : simulation::kSecondsPerHour });
             case DebugTool::AddDucks:
                 return simulation::add_ducks(scene.sim, bird_ground(scene), kDebugFlock);
             case DebugTool::AddGulls:
@@ -321,6 +324,9 @@ namespace rct3::scene::park
             tool_button(device, scene, assets, "Reset animals' needs", DebugTool::RefreshAnimals);
             tool_button(device, scene, assets, "Wear enclosure fences", DebugTool::KnockFences, kDebugFenceKnocks);
             ImGui::SetItemTooltip("Knocks the fences of random enclosures; a panel breaks at its second knock");
+            ImGui::SameLine();
+            tool_button(device, scene, assets, "Make females pregnant", DebugTool::BreedAnimals);
+            ImGui::SetItemTooltip("Each adult female gives birth to one young an hour from now");
         }
 
         if (ImGui::CollapsingHeader("Wild birds", ImGuiTreeNodeFlags_DefaultOpen))

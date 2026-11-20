@@ -183,6 +183,9 @@ namespace rct3::save::model
             constexpr std::string_view objects_fixed = "ObjectsFixed";
             constexpr std::string_view objects_inspected = "ObjectsInspected";
             constexpr std::string_view state_timer = "StateTimer";
+            constexpr std::string_view mechanic_jobs = "Jobs";
+            constexpr std::string_view job_attraction = "Attraction";
+            constexpr std::string_view job_tasks = "Tasks";
             constexpr std::string_view anim_count = "AnimCount";
             constexpr std::string_view bad = "Bad";
             constexpr std::string_view facing = "Facing";
@@ -917,6 +920,9 @@ namespace rct3::save::model
                     .objects_inspected = read_i32(get(at::objects_inspected)),
                     .state_timer = read_f32(get(at::state_timer)),
                 };
+                if (const auto jobs = get(at::mechanic_jobs); jobs && jobs->kind() == ValueKind::List)
+                    for (usize j = 0; j < jobs->items().size() && j < kMaxVisited; ++j)
+                        std::get<MechanicWork>(s.work).jobs.push_back({ .attraction = ref(sub(jobs->items()[j], at::job_attraction), index), .tasks = read_i32(sub(jobs->items()[j], at::job_tasks)) });
                 break;
             }
             case StaffKind::Entertainer:

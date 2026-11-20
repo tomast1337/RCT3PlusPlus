@@ -48,6 +48,13 @@ namespace rct3::simulation::staff
         std::vector<Told> told { }; ///< Not told again for a while
     };
 
+    /// A mechanic's rides still to see to, in turn, as the park they were loaded from listed them: each is seen
+    /// to by them alone, as they come free, and taken off the list once they are sent or it needs them no more.
+    struct Jobs
+    {
+        std::vector<entt::entity> rides { };
+    };
+
     /// One tick of the staff's work, after the guests have walked and dropped their litter. Run as part of the
     /// "Tidy" phase.
     void step_work(SimWorld& world);

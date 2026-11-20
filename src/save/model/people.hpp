@@ -395,12 +395,20 @@ namespace rct3::save::model
         PeopleVec3 duty_waypoint { };
     };
 
+    /// A ride, stall or changing room a mechanic has on their list.
+    struct MechanicJob
+    {
+        PeopleRef attraction { };
+        i32 tasks = 0; ///< What to do there, as the staff's task flags number it: inspect, fix
+    };
+
     struct MechanicWork
     {
         PeopleRef info { }; ///< Per-object mechanic bookkeeping
         i32 objects_fixed = 0;
         i32 objects_inspected = 0;
         f32 state_timer = 0;
+        std::vector<MechanicJob> jobs { }; ///< In turn: the first the one they are on, the rest waiting for them
     };
 
     struct EntertainerWork

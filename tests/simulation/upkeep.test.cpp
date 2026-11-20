@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "core/types.hpp"
+#include "save/model/people.hpp"
 #include "save/model/rides.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
@@ -10,6 +11,7 @@
 #include "simulation/sandbox.hpp"
 #include "simulation/staff/care.hpp"
 #include "simulation/staff/patrol.hpp"
+#include "simulation/staff/work.hpp"
 #include "simulation/systems.hpp"
 
 #include <algorithm>
@@ -275,4 +277,34 @@ TEST_CASE("a breakdown goes to the mechanic whose patrol takes the ride in, befo
     r.emplace<Upkeep>(ride, Upkeep { .broken = true, .inspect_every = std::nullopt });
     park.run(1);
     CHECK(r.get<Upkeep>(ride).mechanic == far);
+}
+
+TEST_CASE("a mechanic the park was loaded with sees to the rides on their list in turn, and no other is sent to them")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 8, 0 });
+    const auto first = park.flat_ride("Twister", { 8, 0 }, 0);
+    const auto second = park.flat_ride("Twister", { 6, 0 }, 0);
+    auto& r = park.world().registry;
+    r.get<Attraction>(first).saved = 11;
+    r.get<Attraction>(second).saved = 12;
+    r.emplace<Upkeep>(first, Upkeep { .broken = true, .inspect_every = std::nullopt });
+    r.emplace<Upkeep>(second, Upkeep { .inspect_every = std::nullopt });
+    const auto near = park.staff(StaffRole::Mechanic, { 7, 0 });
+    rct3::save::model::PeopleModel people;
+    rct3::save::model::Staff& saved = people.staff.emplace_back();
+    saved.kind = rct3::save::model::StaffKind::Mechanic;
+    saved.task_flags = kInspectRidesTask | kFixRidesTask;
+    const glm::vec3 start = park.world().paths.centre(NodeId { 0 }); // The path's first tile, its far end
+    saved.person.position = { start.x, start.y, start.z };
+    saved.work = rct3::save::model::MechanicWork { .jobs = { { .attraction = { 11 }, .tasks = kFixRidesTask }, { .attraction = { 12 }, .tasks = kInspectRidesTask } } };
+    const entt::entity mechanic = import_staff(park.world(), people)[0];
+    CHECK(r.get<Upkeep>(second).called); // To be inspected, so due
+    park.run(1);
+    CHECK(r.get<Upkeep>(first).mechanic == mechanic);
+    CHECK(r.get<Upkeep>(second).mechanic == entt::null); // Waiting for them, the nearer mechanic free as it is
+    CHECK(park.run_until([&] { return r.get<Upkeep>(second).mechanic == mechanic; }, 600));
+    CHECK_FALSE(r.get<Upkeep>(first).broken);
+    CHECK(r.get<Staff>(near).ride == entt::null);
+    CHECK_FALSE(r.all_of<staff::Jobs>(mechanic)); // Done with the list
 }

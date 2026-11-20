@@ -153,7 +153,7 @@ namespace rct3::simulation
         }
     }
 
-    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::optional<i32>(glm::vec2)>& enclosure)
+    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::optional<i32>(glm::vec2)>& enclosure, const std::function<std::string(const save::model::ZooAnimal&)>& name)
     {
         for (const save::model::ZooAnimal& z : saved)
         {
@@ -162,7 +162,7 @@ namespace rct3::simulation
             const std::optional<i32> in = enclosure ? enclosure({ at.x, at.z }) : std::nullopt;
             // The park keeps how fed, watered and in company it is, where we keep how much it wants each.
             const auto share = [](f32 v) { return units::Share { std::clamp(v, 0.0f, 1.0f) }; };
-            const entt::entity e = add_animal(world, { .species = z.species, .name = z.first_names, .adult = z.is_adult, .male = z.is_male, .enclosure = in, .hunger = share(1 - z.food), .thirst = share(1 - z.drink), .tiredness = share(z.tiredness), .loneliness = share(1 - z.social), .health = share(z.health) }, at);
+            const entt::entity e = add_animal(world, { .species = z.species, .name = name(z), .adult = z.is_adult, .male = z.is_male, .enclosure = in, .hunger = share(1 - z.food), .thirst = share(1 - z.drink), .tiredness = share(z.tiredness), .loneliness = share(1 - z.social), .health = share(z.health) }, at);
             auto& r = world.registry;
             r.get<Pose>(e).heading.value = r.get<Pose>(e).was_heading.value = std::atan2(z.world[8], z.world[10]);
             Animal& animal = r.get<Animal>(e);

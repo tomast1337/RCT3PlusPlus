@@ -71,6 +71,7 @@
 #include "simulation/swimming.hpp"
 #include "simulation/systems.hpp"
 #include "strings/ascii.hpp"
+#include "ui/animal_names.hpp"
 #include "ui/game_style.hpp"
 #include "ui/screens/management/pages.hpp"
 #include "ui/screens/park_view/messages.hpp"
@@ -1000,7 +1001,7 @@ namespace rct3::scene::park
     namespace
     {
         /// The park's people read and handed to the simulation, with the rides, path items, animals and the rest it runs.
-        void start_simulation(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, const save::SaveFile& file, const save::ObjectIndex& index, const std::optional<parkfile::SavedPark>& saved, const save::model::WorldModel& world, const std::expected<save::model::ParkModel, save::Error>& park_model, random::Seed seed, const simulation::RatingModel& ratings)
+        void start_simulation(render::Device& device, ParkScene& scene, const config::game::GameInstall& install, const save::SaveFile& file, const save::ObjectIndex& index, const std::optional<parkfile::SavedPark>& saved, const save::model::WorldModel& world, const std::expected<save::model::ParkModel, save::Error>& park_model, const ui::StringTable& strings, random::Seed seed, const simulation::RatingModel& ratings)
         {
             const auto log = logging::logger("park");
             auto people = profiling::section("ReadPeople", [&] { return save::model::load_people(file, index); });
@@ -1226,7 +1227,7 @@ namespace rct3::scene::park
                             if (const auto* work = std::get_if<save::model::KeeperWork>(&scene.people.staff[i].work); work != nullptr && staff[i] != entt::null)
                                 keepers.emplace_back(staff[i], work->enclosure_id);
                         simulation::import_animal_houses(scene.sim, houses, keepers);
-                        simulation::import_animals(scene.sim, scene.people.zoo_animals, enclosure_at);
+                        simulation::import_animals(scene.sim, scene.people.zoo_animals, enclosure_at, [&](const save::model::ZooAnimal& z) { return ui::saved_animal_name(strings, z); });
                         simulation::import_dung(scene.sim, scene.people.litter, enclosure_at);
                     }
                     if (!scene.sim.registry.view<const simulation::Animal>().empty())
@@ -1810,7 +1811,7 @@ namespace rct3::scene::park
         scene.attractions = rct3::park::attraction_objects(scene.rides, scene.objects);
         for (usize k = 0; k < scene.objects.size(); ++k)
             animate_scenery(device, scene, save::model::PlacedObjectIndex { k });
-        start_simulation(device, scene, install, *file, index, saved, *world, park_model, seed, ratings);
+        start_simulation(device, scene, install, *file, index, saved, *world, park_model, strings, seed, ratings);
 
         // ── 10. Tutorial, map and summary ──
         {

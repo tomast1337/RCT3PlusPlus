@@ -1,6 +1,9 @@
 {
     "Rct3pp": {
         "LandShapeHelp": "Raise or lower terrain: drag up or down",
+        "ScatterOff": "Scatter: off. Press to scatter items close together round the pointer while the button is held",
+        "ScatterDense": "Scatter: close together. Press to scatter them far apart",
+        "ScatterSparse": "Scatter: far apart. Press to place one item a click again",
         "MoveSceneryHelp": "Pick this item up to place it somewhere else, turned or raised, at no cost",
         "CopySceneryHelp": "Place more of this item, in the same colours",
         "WaterRefused": "Water can only go on land the park owns, away from paths, and not under a higher lake.",

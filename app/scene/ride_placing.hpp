@@ -18,7 +18,9 @@
 // the thing pointed at, which is how roofs go onto walls. While Shift is held the item stays on its tile and
 // rises and sinks with the pointer. Its price floats over its ghost. An item may not take room another solid item or a path fills,
 // nor stand on land the park does not own; in a sandbox it may stand anywhere on the map and through rides, track
-// and paths, though not through other scenery (park/scenery_fit.hpp). A round
+// and paths, though not through other scenery (park/scenery_fit.hpp). A drag from where the button went down
+// places a run of the item, along its edge for a wall and over the area for others; and while the panel's scatter
+// tab is on, holding the button down sprinkles items round the pointer instead (park/scenery_runs.hpp). A round
 // panel in the bottom-left corner shows the item alone, slowly turning, with a tab that turns it and, for
 // items that take colours, one that paints them; the colours start as the item's own each time it is picked.
 // A ride placed whole gets the same panel, without the colours, and rises with Shift the same way; raised, it
@@ -37,6 +39,8 @@
 #include "park/object/mesh.hpp"
 #include "park/path/clearance.hpp"
 #include "park/ride/placement.hpp"
+#include "park/scenery_runs.hpp"
+#include "random/generator.hpp"
 #include "render/device.hpp"
 #include "scene/objects.hpp"
 #include "scene/tool_input.hpp"
@@ -111,8 +115,19 @@ namespace rct3::scene
         std::optional<std::array<i32, 3>> picked_colours;
         /// The prop picked up to move, which stands where it was until it is set down elsewhere, at no cost
         std::optional<save::model::PlacedObjectIndex> moving;
-        std::string panel_item;                      ///< The scenery the placing panel is set up for
-        rct3::park::object::ObjectMesh preview_mesh; ///< The scenery alone, for the panel's round view
+        /// A drag of scenery going on: the item where the button went down, and those of the run it spans now that fit
+        struct Drag
+        {
+            save::model::PlacedObject first;
+            std::vector<save::model::PlacedObject> fitting;
+        };
+        std::optional<Drag> drag;
+        bool held = false;                                      ///< The button was down last frame
+        rct3::park::Scatter scatter = rct3::park::Scatter::Off; ///< As the placing panel's scatter tab sets it
+        std::vector<glm::vec2> scattered;                       ///< Where the scatter stroke going on put items, in tiles
+        std::optional<random::RandomState> scatter_stream;      ///< Started from the park's seed at the first scatter
+        std::string panel_item;                                 ///< The scenery the placing panel is set up for
+        rct3::park::object::ObjectMesh preview_mesh;            ///< The scenery alone, for the panel's round view
         /// Of scenery with bones, the same a piece per bone, moved as it moves; preview_bones gives each piece's bone.
         rct3::park::MovingMeshes preview_moving;
         std::vector<i32> preview_bones;

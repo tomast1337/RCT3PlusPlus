@@ -1464,9 +1464,24 @@ namespace rct3::scene
             for (const auto [e, animal, pose] : park.sim.registry.view<const simulation::Animal, const simulation::Pose>().each())
             {
                 const Json tile { { "col", g.tile_size_x > 0 ? (pose.position.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (pose.position.z - g.origin_z) / g.tile_size_z : 0 } };
-                out.push_back({ { "id", entt::to_integral(e) }, { "species", animal.species }, { "enclosure", animal.enclosure.value_or(-1) }, { "crated", animal.job == simulation::AnimalJob::Crated }, { "escaped", animal.escaped }, { "health", animal.health.value }, { "at", tile } });
+                out.push_back({ { "id", entt::to_integral(e) }, { "species", animal.species }, { "name", animal.name }, { "enclosure", animal.enclosure.value_or(-1) }, { "crated", animal.job == simulation::AnimalJob::Crated }, { "escaped", animal.escaped }, { "health", animal.health.value }, { "at", tile }, { "height", pose.position.y } });
             }
             return out;
+        });
+        engine_.define("animals.open", [this](const Json& a) {
+            park::ParkScene& park = park_of(park_);
+            const entt::entity e = a.at(0).is_number_unsigned() ? entt::entity { a[0].get<entt::id_type>() } : entt::null;
+            if (!park.sim.registry.valid(e) || !park.sim.registry.all_of<simulation::Animal>(e))
+                throw std::invalid_argument("animals.open takes an animal's id from animals.list()");
+            park.animal_requested = e;
+            return Json(nullptr);
+        });
+        engine_.define("animals.shown", [this](const Json&) -> Json {
+            const park::ParkScene& park = park_of(park_);
+            if (!park.shown_animal)
+                return nullptr;
+            const auto t = std::ranges::find(ui::screens::info::kAnimalTabs, park.animal_tab, &ui::screens::info::AnimalTabInfo::tab);
+            return Json { { "id", entt::to_integral(*park.shown_animal) }, { "tab", t->help } };
         });
         engine_.define("animals.dung", [this](const Json&) {
             const park::ParkScene& park = park_of(park_);

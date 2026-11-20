@@ -1142,18 +1142,24 @@ declare namespace structures {
 }
 
 declare namespace animals {
-    /** The park's animals, each with a number of its own, its species, the enclosure they live in (-1 for none), whether they are in a
-     *  crate or out of every enclosure, their health from 0 to 1, and the point of the map they stand on, in
-     *  tiles. */
+    /** The park's animals, each with a number of its own, its species, its name, the enclosure they live in (-1 for
+     *  none), whether they are in a crate or out of every enclosure, their health from 0 to 1, the point of the map
+     *  they stand on, in tiles, and the height of the ground under them. */
     function list(): {
         id: number;
         species: string;
+        name: string;
         enclosure: number;
         crated: boolean;
         escaped: boolean;
         health: number;
         at: { col: Tiles; row: Tiles };
+        height: WorldUnits;
     }[];
+    /** Opens the window of the animal `id` (as animals.list() gives it), as a click on it does. */
+    function open(id: number): void;
+    /** The animal whose window is open, and its open tab by its help's string key; undefined when none is. */
+    function shown(): { id: number; tab: string } | undefined;
     /** The dung lying about, each piece with the enclosure it lies in (-1 for none), its size from 0 to 2, and the
      *  point of the map it lies on, in tiles. */
     function dung(): { enclosure: number; size: number; col: Tiles; row: Tiles }[];

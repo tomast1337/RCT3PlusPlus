@@ -74,6 +74,30 @@ expect(
     map.objects().some((o) => o.symbol === entrance && near(o)),
     `the entrance shown as ${entrance}`,
 );
+// Its queue is railed with the new fence too.
+const lines = new Set(map.paths().flatMap((p) => (p.queue && p.line !== undefined && near(p) ? [p.line] : [])));
+const queue = map.paths().filter((p) => p.queue && p.line !== undefined && lines.has(p.line));
+log("queue railings", JSON.stringify(queue.map((p) => (p.queue ? p.railing : ""))));
+expect(queue.length > 0, "a queue beside the entrance");
+expect(
+    queue.every((p) => p.queue && p.railing.toLowerCase() === fence.toLowerCase()),
+    `the queue railed with ${fence}`,
+);
+expect(
+    map
+        .objects()
+        .some(
+            (o) =>
+                o.symbol.toLowerCase() === fence.toLowerCase() && queue.some((p) => p.col === o.col && p.row === o.row),
+        ),
+    `${fence} railings on the queue`,
+);
+camera.look(
+    { col: queue[0].col + 0.5, row: queue[0].row + 0.5 },
+    { col: queue[0].col + 3.5, row: queue[0].row + 4.5, up: 3 },
+);
+await frames(10);
+await screenshot("queue_railed");
 
 // A tune, heard near the open ride.
 const tune = await pickOther("AttractionViewDialogMusicToolTip", () => now().music);
@@ -122,5 +146,11 @@ expect(back.music === tune, `the tune kept, not ${back.music}`);
 expect(
     map.objects().some((o) => o.symbol.toLowerCase() === fence.toLowerCase() && near(o)),
     `${fence} panels beside the entrance after loading`,
+);
+const queueBack = map.paths().filter((p) => p.queue && queue.some((q) => q.col === p.col && q.row === p.row));
+expect(
+    queueBack.length === queue.length &&
+        queueBack.every((p) => p.queue && p.railing.toLowerCase() === fence.toLowerCase()),
+    `the queue still railed with ${fence} after loading`,
 );
 quit(0);

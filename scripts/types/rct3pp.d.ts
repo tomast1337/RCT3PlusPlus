@@ -511,6 +511,8 @@ type PathPiece = {
               queue: true;
               /** The line's id, while the queue is on a ride's line. */
               line?: number;
+              /** The fence item along its sides: its ride's fence once on a ride's line. */
+              railing: string;
           }
         | { queue: false }
     );

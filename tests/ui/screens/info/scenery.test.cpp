@@ -310,6 +310,8 @@ TEST_CASE("an animal house's window names the species living in it and its keepe
     CHECK(feeding.controls[0].kind == InfoControlKind::Choice);
     CHECK(feeding.controls[0].items.size() == 3);
     CHECK(feeding.controls[0].value == 2); // Infrequent, normal, often
+    REQUIRE(feeding.lines.size() == 1);
+    CHECK(feeding.lines[0].name == "ASCFoodCostsLabel"); // What each filling costs
 
     const InfoPage keepers = scenery_page(SceneryTab::HouseKeepers, f, s);
     REQUIRE(keepers.lines.size() == 2);

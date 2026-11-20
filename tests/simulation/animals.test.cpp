@@ -501,7 +501,7 @@ TEST_CASE("animals: a park's keepers each keep a house of their own in the enclo
     CHECK_FALSE(r.all_of<KeeperDuty>(c));
 }
 
-TEST_CASE("animals: over a game month a house fed often has its troughs filled more times than one fed infrequently")
+TEST_CASE("animals: over a game month a house fed often has its troughs filled more times than one fed infrequently, each filling charged")
 {
     SimWorld world;
     const AnimalGround ground = two_pens();
@@ -510,6 +510,9 @@ TEST_CASE("animals: over a game month a house fed often has its troughs filled m
     constexpr f32 kSecondsPerMonth = kSecondsPerHour * save::model::GameClock::kUnitsPerMonth / kCalendarUnitsPerHour;
     run(world, ground, kSecondsPerMonth);
     const auto& r = world.registry;
+    const i32 fillings = r.get<Staff>(often).filled + r.get<Staff>(seldom).filled;
     CHECK(r.get<Staff>(often).filled > r.get<Staff>(seldom).filled);
     CHECK(r.get<Staff>(often).filled >= 2);
+    // Each filling is charged on Animal food.
+    CHECK(r.ctx().get<Supplies>().paid[std::to_underlying(LedgerLine::AnimalFood)].value == fillings * kAnimalRates.food.value);
 }

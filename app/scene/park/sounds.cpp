@@ -230,8 +230,11 @@ namespace rct3::scene::park
         const f32 seconds = elapsed.value;
         const auto& r = scene.sim.registry;
         const bool quiet = scene.park.speed.paused || !scene.simulate;
-        const glm::vec3 eye = rct3::park::eye(scene.camera);
-        engine.set_listener(eye, glm::normalize(scene.camera.target - eye), glm::vec3(0.0f, 1.0f, 0.0f));
+        // Heard from where the view is drawn from, the rider's seat while riding along.
+        const glm::vec3 eye = rct3::park::eye(scene.camera, scene.seat);
+        const glm::vec3 forward = rct3::park::eye_forward(scene.camera, scene.seat);
+        const glm::vec3 up = rct3::park::eye_up(scene.seat);
+        engine.set_listener(eye, forward, up);
         engine.set_muffled(scene.water.eye_in.has_value());
 
         // A firework display's music from its start, silent while the park is paused, and stopped with the display.
@@ -374,7 +377,7 @@ namespace rct3::scene::park
                 f32 pan = 0;
             };
             std::vector<Track> tracks;
-            const glm::vec3 right = glm::normalize(glm::cross(scene.camera.target - eye, glm::vec3(0.0f, 1.0f, 0.0f)));
+            const glm::vec3 right = glm::normalize(glm::cross(forward, up));
             for (usize i = 0; i < scene.rides.rides.size() && i < scene.ride_entities.size() && !sounds.music_folder.empty(); ++i)
             {
                 const std::string& file = scene.rides.rides[i].music;
@@ -553,7 +556,12 @@ namespace rct3::scene::park
 
         // The trains themselves, the nearest few: running loops crossing over with speed, the chain while on a
         // lift, and a sound as each sets off and comes in.
-        std::ranges::sort(heard_trains, { }, [&](const HeardTrain& t) { return glm::distance(t.at, eye); });
+        // The train ridden along in comes first: the first car it is placed by can lie farther than other trains.
+        std::optional<std::pair<entt::entity, usize>> ridden;
+        if (scene.riding && *scene.riding < scene.car_spots.size())
+            if (const rct3::park::ride::CarSpot spot = scene.car_spots[*scene.riding]; spot.ride.value < scene.ride_entities.size())
+                ridden = std::pair(scene.ride_entities[spot.ride.value], spot.train);
+        std::ranges::sort(heard_trains, { }, [&](const HeardTrain& t) { return std::pair(t.key != ridden, glm::distance(t.at, eye)); });
         std::map<std::pair<entt::entity, usize>, TrainSounds> kept;
         for (usize i = 0; i < heard_trains.size(); ++i)
         {

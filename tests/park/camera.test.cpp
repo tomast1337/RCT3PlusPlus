@@ -179,6 +179,11 @@ TEST_CASE("riding a car looks out ahead of it and leans as it banks")
     CHECK(ahead.y == doctest::Approx(0).epsilon(1e-4));
     CHECK(screen({ 4, 3, 10 }).y > 0.05f); // Over the rider's head is up the screen
     CHECK(screen({ 5, 3, -10 }).z > 1);    // Behind is not seen
+    // Heard from the seat too: facing ahead, its up banked with the car, unlike the park camera's.
+    CHECK(glm::length(eye_forward(c, seat) - glm::vec3(0, 0, 1)) < 1e-5f);
+    CHECK(glm::length(eye_up(seat) - glm::vec3(-1, 0, 0)) < 1e-5f);
+    CHECK(glm::length(eye_forward(c) - glm::normalize(c.target - eye(c))) < 1e-5f);
+    CHECK(eye_up() == glm::vec3(0, 1, 0));
 }
 
 TEST_CASE("riding, the view takes in the same width across any screen, and its height follows the screen's shape")

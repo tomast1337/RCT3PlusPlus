@@ -119,6 +119,34 @@ TEST_CASE("the ledger books into this month's period and starts a new one as eac
     CHECK(std::ranges::all_of(money.ledger, [](const save::model::LedgerPeriod& p) { return p.staff_wages == 0; }));
 }
 
+TEST_CASE("an animal bought books on the purchase line, for the park and for its species")
+{
+    ParkState park;
+    park.cash = units::Money { 100'000 };
+    save::model::Finance money;
+    money.ledger = { { .animal_spending = save::model::AnimalSpending { } } };
+    std::optional<i64> kept;
+    CHECK(book(park, money, kept, units::Money { 30'000 }, LedgerLine::AnimalPurchaseSale, Charge::IfAffordable, "zebra"));
+    CHECK(book(park, money, kept, units::Money { 20'000 }, LedgerLine::AnimalPurchaseSale, Charge::IfAffordable, "lion"));
+    CHECK(book(park, money, kept, units::Money { 5'000 }, LedgerLine::AnimalPurchaseSale, Charge::IfAffordable, "zebra"));
+    CHECK(park.cash == units::Money { 45'000 });
+    const save::model::LedgerPeriod& month = money.ledger[0];
+    CHECK(month.animal_spending->purchase_sale == 55'000);
+    CHECK(month.animal_spending->food == 0);
+    CHECK(month.ride_construction == 0);
+    CHECK(month.raw_sum() == 55'000);
+    REQUIRE(month.species_spending.size() == 2);
+    CHECK(month.species_spending[0].species == "zebra");
+    CHECK(month.species_spending[0].spending.purchase_sale == 35'000);
+    CHECK(month.species_spending[1].spending.purchase_sale == 20'000);
+    // The next month the park keeps its animal lines, at nought, and no species has spent yet.
+    ledger_month(money, kept, { .year = 0, .month = 1 }).staff_wages += 1;
+    CHECK(money.ledger[0].animal_spending.has_value());
+    CHECK(money.ledger[0].animal_spending->purchase_sale == 0);
+    CHECK(money.ledger[0].species_spending.empty());
+    CHECK(money.ledger[1].animal_spending->purchase_sale == 55'000);
+}
+
 TEST_CASE("a park whose file kept no ledger starts one at its first booking")
 {
     save::model::Finance money;

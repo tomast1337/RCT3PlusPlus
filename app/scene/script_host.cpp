@@ -42,6 +42,7 @@
 #include "ui/screens/info/attraction.hpp"
 #include "ui/screens/management/pages.hpp"
 #include "ui/widgets/button.hpp"
+#include "ui/widgets/column_table.hpp"
 #include "ui/widgets/edit_box.hpp"
 #include "ui/widgets/label.hpp"
 #include "ui/widgets/tickbox.hpp"
@@ -246,6 +247,18 @@ namespace rct3::scene
                 found["text"] = strings::to_utf8(e->text);
             if (const auto* l = dynamic_cast<const ui::widgets::Label*>(core::as_pointer(w)); l != nullptr)
                 found["text"] = strings::to_utf8(l->text);
+            if (const auto* t = dynamic_cast<const ui::widgets::ColumnTable*>(core::as_pointer(w)); t != nullptr)
+            {
+                Json rows = Json::array();
+                for (const ui::widgets::TableRow& row : t->rows)
+                {
+                    Json cells = Json::array();
+                    for (const std::u16string& cell : row.cells)
+                        cells.push_back(strings::to_utf8(cell));
+                    rows.push_back(std::move(cells));
+                }
+                found["rows"] = std::move(rows);
+            }
             if (!w->tooltip.empty())
                 found["tooltip"] = strings::to_utf8(w->tooltip);
             return found;

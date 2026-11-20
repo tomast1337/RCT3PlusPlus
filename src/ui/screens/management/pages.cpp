@@ -374,9 +374,10 @@ namespace rct3::ui::screens::management
             std::string_view key;
             std::optional<i32> save::model::LedgerPeriod::* optional = nullptr;
             i32 save::model::LedgerPeriod::* value = nullptr;
+            i32 save::model::AnimalSpending::* animal = nullptr; ///< Of LedgerPeriod::animal_spending
         };
 
-        constexpr std::array<LedgerRow, 22> kLedger = { {
+        constexpr std::array<LedgerRow, 25> kLedger = { {
             { "Money_RideConstruction", nullptr, &save::model::LedgerPeriod::ride_construction },
             { "Money_RideRunningCosts", nullptr, &save::model::LedgerPeriod::ride_running_costs },
             { "Money_LandPurchase", nullptr, &save::model::LedgerPeriod::land_purchase },
@@ -395,7 +396,10 @@ namespace rct3::ui::screens::management
             { "Money_Research", nullptr, &save::model::LedgerPeriod::research },
             { "Money_LoanInterest", nullptr, &save::model::LedgerPeriod::loan_interest },
             { "Money_Prizes", nullptr, &save::model::LedgerPeriod::prize_money },
-            { "Money_AnimalCosts", &save::model::LedgerPeriod::other_animal_spending, nullptr },
+            { "Money_AnimalBuyingSelling", nullptr, nullptr, &save::model::AnimalSpending::purchase_sale },
+            { "Money_AnimalFood", nullptr, nullptr, &save::model::AnimalSpending::food },
+            { "Money_AnimalAdoptions", nullptr, nullptr, &save::model::AnimalSpending::adoptions },
+            { "Money_AnimalCosts", nullptr, nullptr, &save::model::AnimalSpending::other },
             { "Money_Billboards", &save::model::LedgerPeriod::billboards, nullptr },
             { "Money_Other", nullptr, &save::model::LedgerPeriod::other },
             { "Money_Total", nullptr, nullptr },
@@ -409,6 +413,8 @@ namespace rct3::ui::screens::management
                 return period.*row.value;
             if (row.optional != nullptr)
                 return period.*row.optional;
+            if (row.animal != nullptr)
+                return period.animal_spending.transform([&](const save::model::AnimalSpending& a) { return i64 { a.*row.animal }; });
             return period.raw_sum();
         }
 
@@ -482,7 +488,7 @@ namespace rct3::ui::screens::management
             {
                 const LedgerRow& row = kLedger[r];
                 widgets::TableRow out { { text(strings, row.key) }, { std::nullopt }, r };
-                bool any = row.optional == nullptr;
+                bool any = row.optional == nullptr && row.animal == nullptr;
                 for (usize p = 0; p < periods; ++p)
                 {
                     const std::optional<i64> value = ledger_value(m->ledger.at(p), row);

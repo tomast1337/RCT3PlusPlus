@@ -34,6 +34,9 @@ namespace rct3::simulation::park
         PoolTickets,
         Billboards,
         ViewingGalleryTickets,
+        AnimalPurchaseSale, ///< The animal lines, kept for each species too
+        AnimalFood,
+        AnimalAdoptions,
         OtherAnimalSpending,
     };
 

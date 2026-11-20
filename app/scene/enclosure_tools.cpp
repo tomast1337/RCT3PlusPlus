@@ -146,7 +146,7 @@ namespace rct3::scene
         {
             const glm::vec3 at = park::tile_point(scene.grid, tile);
             const std::string name = strings::to_utf8(assets.strings->get(item.name_text));
-            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, item.price, simulation::park::LedgerLine::RideConstruction, simulation::park::Charge::IfAffordable))
+            if (!simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, item.price, simulation::park::LedgerLine::AnimalPurchaseSale, simulation::park::Charge::IfAffordable, item.symbol))
                 return;
             // shortcut: every animal bought is a grown one; offer young ones once the animal list shows them.
             (void)simulation::add_animal(scene.sim, { .species = item.symbol, .overlay = item.overlay, .name = name, .male = random::below(scene.looks, 2) == 0, .enclosure = scene.enclosures.at(tile.col, tile.row) }, at);

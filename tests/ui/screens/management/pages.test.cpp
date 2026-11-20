@@ -225,7 +225,7 @@ TEST_CASE("the ledger writes out as comma-separated values, every line, the olde
     REQUIRE(first != std::string::npos);
     const std::string heading = csv.substr(0, first);
     CHECK(heading.starts_with("\"Month\","));
-    CHECK(std::ranges::count(heading, ',') == 22);
+    CHECK(std::ranges::count(heading, ',') == 25);
     const std::string older = csv.substr(first + 1, csv.find('\n', first + 1) - first - 1);
     const std::string newer = csv.substr(csv.find('\n', first + 1) + 1);
     CHECK(older.starts_with("\"Mar, Year 1\","));

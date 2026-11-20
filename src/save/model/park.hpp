@@ -133,9 +133,25 @@ namespace rct3::save::model
     // Finance
     // ---------------------------------------------------------------------------------------------------------
 
+    /// What a period's zoo animals cost, on the lines the finances window shows for them.
+    struct AnimalSpending
+    {
+        i32 purchase_sale = 0; ///< Animals bought, less those sold
+        i32 food = 0;
+        i32 adoptions = 0; ///< Coming in from guests, so negative
+        i32 other = 0;
+    };
+
+    /// One species' share of a period's AnimalSpending.
+    struct SpeciesSpending
+    {
+        std::string species { }; ///< The symbol of the species
+        AnimalSpending spending { };
+    };
+
     /// Counters of one accounting period. All are integers in the money unit of the save. Members of the second
-    /// group exist only in newer generations and stay nullopt when the file has no such attribute. The per-species
-    /// animal counters of the newest generation are not loaded.
+    /// group exist only in newer generations and stay nullopt when the file has no such attribute. Of the animal
+    /// lines only that a park has them is loaded, not what they hold.
     struct LedgerPeriod
     {
         i32 food_drink_sales = 0;
@@ -159,7 +175,8 @@ namespace rct3::save::model
         std::optional<i32> pool_tickets { };
         std::optional<i32> billboards { };
         std::optional<i32> viewing_gallery_tickets { };
-        std::optional<i32> other_animal_spending { };
+        std::optional<AnimalSpending> animal_spending { }; ///< Parks of the zoo expansion only
+        std::vector<SpeciesSpending> species_spending { }; ///< The species whose lines moved, in the order they first did
 
         /// Plain sum of every counter as stored (signs as in the file). For diagnostics, not accounting.
         [[nodiscard]] i64 raw_sum() const noexcept;

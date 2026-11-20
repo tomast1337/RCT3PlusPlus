@@ -883,7 +883,7 @@ int main(int argc, char** argv)
         {
             // The park's cash over the run: what guests paid in, less the supplies, the staff's wages, the loan's interest and the
             // rides' running costs, each line of the ledger they went on.
-            constexpr std::array<std::string_view, simulation::park::kLedgerLines> kLines { "food and drink sales", "food and drink stock", "land purchase", "landscaping", "loan interest", "marketing", "other", "entry", "prize money", "research", "ride construction", "ride running costs", "ride tickets", "shop sales", "shop stock", "staff training", "staff wages", "pool tickets", "billboards", "viewing gallery tickets", "other animal spending" };
+            constexpr std::array<std::string_view, simulation::park::kLedgerLines> kLines { "food and drink sales", "food and drink stock", "land purchase", "landscaping", "loan interest", "marketing", "other", "entry", "prize money", "research", "ride construction", "ride running costs", "ride tickets", "shop sales", "shop stock", "staff training", "staff wages", "pool tickets", "billboards", "viewing gallery tickets", "animal purchase/sale", "animal food", "animal adoptions", "other animal spending" };
             const auto lines = [&](const auto* by_line) {
                 i64 sum = 0;
                 std::string listed;

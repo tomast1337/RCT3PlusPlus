@@ -29,7 +29,7 @@ namespace rct3::simulation::park
             // The counters only some parks have stay shown in the months that follow.
             const save::model::LedgerPeriod& before = ledger.front();
             const auto zero = [](i32) { return 0; };
-            const save::model::LedgerPeriod next { .pool_tickets = before.pool_tickets.transform(zero), .billboards = before.billboards.transform(zero), .viewing_gallery_tickets = before.viewing_gallery_tickets.transform(zero), .other_animal_spending = before.other_animal_spending.transform(zero) };
+            const save::model::LedgerPeriod next { .pool_tickets = before.pool_tickets.transform(zero), .billboards = before.billboards.transform(zero), .viewing_gallery_tickets = before.viewing_gallery_tickets.transform(zero), .animal_spending = before.animal_spending.transform([](const save::model::AnimalSpending&) { return save::model::AnimalSpending { }; }) };
             ledger.insert(ledger.begin(), next);
             if (ledger.size() > save::model::kKeptMonths)
                 ledger.pop_back();
@@ -44,7 +44,7 @@ namespace rct3::simulation::park
             post(park.messages, { .text_key = std::string(kCannotPayKey) });
     }
 
-    bool book(ParkState& park, save::model::Finance& finance, std::optional<i64>& kept, units::Money cost, LedgerLine line, Charge charge)
+    bool book(ParkState& park, save::model::Finance& finance, std::optional<i64>& kept, units::Money cost, LedgerLine line, Charge charge, std::string_view species)
     {
         if (!park.cash)
             return true;
@@ -118,9 +118,26 @@ namespace rct3::simulation::park
             case LedgerLine::ViewingGalleryTickets:
                 p.viewing_gallery_tickets = p.viewing_gallery_tickets.value_or(0) + c;
                 break;
+            case LedgerLine::AnimalPurchaseSale:
+            case LedgerLine::AnimalFood:
+            case LedgerLine::AnimalAdoptions:
             case LedgerLine::OtherAnimalSpending:
-                p.other_animal_spending = p.other_animal_spending.value_or(0) + c;
+            {
+                const auto add = [&](save::model::AnimalSpending& spending) {
+                    i32& counter = line == LedgerLine::AnimalPurchaseSale ? spending.purchase_sale : line == LedgerLine::AnimalFood ? spending.food : line == LedgerLine::AnimalAdoptions ? spending.adoptions : spending.other;
+                    counter += c;
+                };
+                if (!p.animal_spending)
+                    p.animal_spending.emplace();
+                add(*p.animal_spending);
+                if (species.empty())
+                    break;
+                auto kind = std::ranges::find(p.species_spending, species, &save::model::SpeciesSpending::species);
+                if (kind == p.species_spending.end())
+                    kind = p.species_spending.insert(kind, { .species = std::string(species) });
+                add(kind->spending);
                 break;
+            }
         }
         return true;
     }

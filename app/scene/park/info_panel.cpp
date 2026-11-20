@@ -11,6 +11,7 @@
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
 #include "scene/track/trains.hpp"
+#include "simulation/animal_care.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/crowds.hpp"
 #include "simulation/guests.hpp"
@@ -455,12 +456,15 @@ namespace rct3::scene::park
                         f.species_text = item.group_text;
                         f.species_own_name = item.species_name;
                         f.rarity = item.rarity;
+                        f.space = item.care.space;
                         const auto house = std::ranges::find_if(catalogue, [&](const rct3::park::BuildItem& s) { return s.kind == rct3::park::BuildKind::Shelter && strings::equals_ignoring_case(s.symbol, item.needs); });
                         f.house_text = house != catalogue.end() ? std::string_view(house->name_text) : std::string_view { };
                     }
                     if (its_own)
                         break;
                 }
+                if (const auto* care = r.try_get<simulation::AnimalCare>(*scene.shown_animal))
+                    f.habitat = care->habitat;
                 // Its enclosure is clean while the dung in it stays under what its animals put up with.
                 if (animal->enclosure)
                 {

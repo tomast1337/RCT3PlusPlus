@@ -70,6 +70,7 @@
 #include "scene/track/building.hpp"
 #include "scene/wild_birds.hpp"
 #include "scene/zoo_animals.hpp"
+#include "simulation/animal_care.hpp"
 #include "simulation/boat.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
@@ -807,6 +808,12 @@ namespace rct3::scene::park
         u32 vandalism_warnings_seen = 0; ///< Warnings already posted as messages
         bool chairs_changed = true;      ///< The placed objects changed since lifeguards were last seated in their chairs
         bool themes_judged = false;      ///< The attractions' fit with their scenery judged once since the park opened
+        /// The animals given their species' care once since the park opened.
+        bool animals_cared = false;
+        /// Each enclosure's ground as its animals' habitat, by enclosure, and the simulation step it is looked over
+        /// again at.
+        std::vector<simulation::EnclosureSite> enclosure_sites;
+        u64 sites_due = 0;
         i64 wages_seen = 0;              ///< Of the staff's pay, what has come out of the park's cash
         std::optional<i64> ledger_month; ///< Months into the calendar the newest ledger period is for (simulation::park::ledger_month)
         simulation::Research research;   ///< How far the park's research has got

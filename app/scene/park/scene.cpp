@@ -1515,12 +1515,32 @@ namespace rct3::scene::park
                     const auto found = std::ranges::find_if(items.get(), [&](const rct3::park::BuildItem& i) { return (i.kind == rct3::park::BuildKind::EnclosureFence || i.kind == rct3::park::BuildKind::Animal) && i.symbol == symbol; });
                     return found != items.get().end() ? found->strength : 0.0f;
                 };
+                // Each enclosure's tiles and plants, looked over every few seconds as plants come and go.
+                if (scene.sim.tick >= scene.sites_due)
+                {
+                    constexpr u64 kSitesEvery = 40;
+                    scene.sites_due = scene.sim.tick + kSitesEvery;
+                    scene.enclosure_sites.assign(scene.enclosures.fences.size(), { });
+                    for (const std::optional<i32>& t : scene.enclosures.tiles)
+                        if (t && static_cast<usize>(*t) < scene.enclosure_sites.size())
+                            ++scene.enclosure_sites[static_cast<usize>(*t)].tiles;
+                    for (const save::model::PlacedObject& o : scene.objects)
+                    {
+                        const std::optional<i32> in = o.hidden ? std::nullopt : scene.enclosures.at(o.col, o.row);
+                        if (!in || static_cast<usize>(*in) >= scene.enclosure_sites.size())
+                            continue;
+                        const auto model = scene.models.find(rct3::park::object::model_key(o));
+                        if (model != scene.models.end() && model->second.category <= std::to_underlying(rct3::park::ItemCategory::Flowers))
+                            ++scene.enclosure_sites[static_cast<usize>(*in)].plants;
+                    }
+                }
                 bool fences_worn = false;
                 profiling::section("Guests", [&] {
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                     {
                         simulation::step(scene.sim);
                         simulation::step_animals(scene.sim, animal_ground, { simulation::kTickSeconds }, scene.park.messages);
+                        simulation::step_animal_care(scene.sim, scene.enclosure_sites, { simulation::kTickSeconds }, scene.park.messages);
                         fences_worn = simulation::step_fence_wear(scene.sim, scene.enclosures, animal_ground, strength, { simulation::kTickSeconds }, scene.park.messages) || fences_worn;
                         simulation::step_wild_birds(scene.sim, birds, { simulation::kTickSeconds });
                     }
@@ -1569,12 +1589,29 @@ namespace rct3::scene::park
                 }
                 if (!scene.themes_judged && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
                     judge_themes(scene);
+                // The animals the park came with, given their species' care once the build lists say it; those kept
+                // in our save have theirs. shortcut: each animal's appetite and sociability are drawn afresh rather
+                // than read from the original park; read them if players see animals change on loading.
+                if (!scene.animals_cared && scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+                {
+                    auto& r = scene.sim.registry;
+                    for (const auto [e, animal] : r.view<const simulation::Animal>().each())
+                    {
+                        auto& care = r.get_or_emplace<simulation::AnimalCare>(e);
+                        if (!care.house.empty() || care.space != 0)
+                            continue;
+                        const auto item = std::ranges::find_if(scene.build.items.get(), [&](const rct3::park::BuildItem& i) { return i.kind == rct3::park::BuildKind::Animal && i.symbol == animal.species; });
+                        if (item != scene.build.items.get().end())
+                            care = simulation::care_for(item->care, item->needs, scene.looks);
+                    }
+                    scene.animals_cared = true;
+                }
                 // What the park's inspector found wrong, each told about the attraction or worker they found it at,
                 // or about the guests.
                 if (auto* findings = scene.sim.registry.ctx().find<simulation::Findings>())
                 {
                     using enum simulation::Finding;
-                    constexpr std::array<std::string_view, 26> kKeys { // By Finding
+                    constexpr std::array<std::string_view, 34> kKeys { // By Finding
                                                                        "Thought_PI_Stall_TooExpensive1",
                                                                        "Thought_PI_Stall_TooCheap1",
                                                                        "Thought_PI_Ride_LongQueueTime1",
@@ -1600,7 +1637,15 @@ namespace rct3::scene::park
                                                                        "Thought_PI_DangerousFlume1",
                                                                        "Thought_PI_DangerousDivingBoard1",
                                                                        "StaffMessage_WantsToResign",
-                                                                       "StaffMessage_Resigned"
+                                                                       "StaffMessage_Resigned",
+                                                                       "Thought_PI_AnimalNeedsHouse1",
+                                                                       "Thought_PI_HouseFullyOccupied1",
+                                                                       "Thought_PI_AnimalCannotReachHouse1",
+                                                                       "Thought_PI_AnimalLonely1",
+                                                                       "Thought_PI_AnimalAntiSocial1",
+                                                                       "Thought_PI_EnclosureTooSmall1",
+                                                                       "Thought_PI_EnclosureOvercrowded1",
+                                                                       "Thought_PI_AnimalKeeperCantReachHut1"
                     };
                     std::vector<entt::entity> quitting;
                     const auto& r = scene.sim.registry;

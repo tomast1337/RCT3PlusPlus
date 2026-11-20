@@ -61,6 +61,8 @@ namespace rct3::ui::screens::info
     {
         std::optional<const simulation::Animal&> animal { };
         units::Share cleanliness { 1 };    ///< Of its enclosure, by the dung in it against what its animals put up with
+        units::Share habitat { 1 };        ///< Its enclosure for it, room and plants; none while out of every enclosure
+        i32 space = 0;                     ///< Tiles of enclosure each animal of its kind wants; 0 when not known
         std::string_view species_text { }; ///< String key of its species' name
         /// The species' own name as its data spells it, which the string keys of its facts start with.
         std::string_view species_own_name { };

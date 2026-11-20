@@ -19,8 +19,11 @@
 #include "strings/unicode.hpp"
 
 #include <algorithm>
+#include <map>
+#include <ranges>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace rct3::scene::park
 {
@@ -77,8 +80,19 @@ namespace rct3::scene::park
         auto& r = scene.sim.registry;
         if (kind == AnimalKeeper)
         {
+            // The house with the fewest keepers, any of those.
             const auto houses = r.view<const simulation::AnimalHouse>();
-            std::vector<entt::entity> homes(houses.begin(), houses.end());
+            std::map<entt::entity, usize> kept;
+            for (const entt::entity h : houses)
+                kept[h] = 0;
+            for (const auto [k, duty] : r.view<const simulation::KeeperDuty>().each())
+                if (const auto at = kept.find(duty.house); at != kept.end())
+                    ++at->second;
+            const usize fewest = kept.empty() ? 0 : std::ranges::min(kept | std::views::values);
+            std::vector<entt::entity> homes;
+            for (const auto& [h, n] : kept)
+                if (n == fewest)
+                    homes.push_back(h);
             if (!homes.empty())
             {
                 const entt::entity home = homes[random::below(scene.looks, homes.size())];

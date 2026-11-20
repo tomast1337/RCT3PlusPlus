@@ -63,6 +63,7 @@
 #include "scene/park/water.hpp"
 #include "scene/pool_tools.hpp"
 #include "scene/track/trains.hpp"
+#include "simulation/animal_care.hpp"
 #include "simulation/components.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/import_people.hpp"
@@ -1231,6 +1232,16 @@ namespace rct3::scene::park
                             if (const auto* work = std::get_if<save::model::KeeperWork>(&scene.people.staff[i].work); work != nullptr && staff[i] != entt::null)
                                 keepers.emplace_back(staff[i], work->enclosure_id);
                         simulation::import_animal_houses(scene.sim, houses, keepers);
+                        // Each house's kind is its symbol, and its keepers fetch their tools from its hut.
+                        for (const auto [e, house] : scene.sim.registry.view<const simulation::AnimalHouse>().each())
+                        {
+                            const auto placed = std::ranges::find(scene.objects, house.object, &save::model::PlacedObject::id);
+                            const auto hut = std::ranges::find(scene.objects, house.hut, &save::model::PlacedObject::id);
+                            simulation::HouseCare care { .kind = placed != scene.objects.end() ? placed->symbol : std::string { } };
+                            if (house.hut != 0 && hut != scene.objects.end())
+                                care.hut = tile_point(g, { hut->col, hut->row });
+                            scene.sim.registry.emplace<simulation::HouseCare>(e, std::move(care));
+                        }
                         simulation::import_animals(scene.sim, scene.people.zoo_animals, enclosure_at, [&](const save::model::ZooAnimal& z) { return ui::saved_animal_name(strings, z); });
                         simulation::import_dung(scene.sim, scene.people.litter, enclosure_at);
                     }

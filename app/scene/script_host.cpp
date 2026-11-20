@@ -1666,6 +1666,10 @@ namespace rct3::scene
                             car["lift"] = true;
                         if (const auto boned = std::ranges::find(park.boned_cars, k, &park::ParkScene::BonedCar::car); boned != park.boned_cars.end() && boned->stroke)
                             car["stroke"] = std::array { "both", "left", "right" }[std::to_underlying(*boned->stroke)];
+                        // How steeply it climbs or falls, and how far from upright the part moving on it leans as drawn.
+                        car["pitch"] = std::asin(std::clamp(glm::normalize(glm::vec3(park.car_places[k][2])).y, -1.0f, 1.0f));
+                        if (const auto arm = std::ranges::find(park.arm_cars, k, &park::ParkScene::ArmCar::car); arm != park.arm_cars.end() && arm->part)
+                            car["partTilt"] = std::acos(std::clamp(glm::normalize(glm::mat3(park.car_places[k] * arm->seats * arm->part->pivot) * arm->part->up).y, -1.0f, 1.0f));
                         cars.push_back(std::move(car));
                     }
                     one["cars"] = std::move(cars);

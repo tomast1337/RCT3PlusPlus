@@ -430,6 +430,20 @@ TEST_CASE("a pool taken in again keeps its dirt")
     CHECK(r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).dirt.value == doctest::Approx(0.5f));
 }
 
+TEST_CASE("a pool from a saved park starts with the dirt its rooms were saved with, the more water the less it shows")
+{
+    Sandbox park;
+    rct3::park::pools::PoolMap pools = pool_by_path(park);
+    auto& r = park.world().registry;
+    const usize water = r.get<SwimPool>(r.get<PoolDoor>(room_of(r)).pool).water.size();
+    REQUIRE(water > 0);
+    Sandbox loaded;
+    pools.rooms.front().dirt = 0.5f * static_cast<f32>(water) * kTuning.pools.saved_dirt;
+    import_pools(loaded.world(), pools);
+    auto& lr = loaded.world().registry;
+    CHECK(lr.get<SwimPool>(lr.get<PoolDoor>(room_of(lr)).pool).dirt.value == doctest::Approx(0.5f));
+}
+
 TEST_CASE("a pool's dirt shows in six steps")
 {
     CHECK(dirt_step(SwimPool { .dirt = { 0 } }) == 0);

@@ -2596,6 +2596,12 @@ namespace rct3::scene::park
         saved.day_mode = scene.day_clock.mode;
         saved.animals = parkfile::keep_animals(scene.sim, scene.enclosures);
         saved.pools = scene.pooling.before ? *scene.pooling.before : scene.pools; // Even none, so the game's pools stay sold
+        // Each room keeps its complex's dirt, in the game's parks' measure.
+        for (const auto [e, door] : scene.sim.registry.view<const simulation::PoolDoor>().each())
+            if (const auto* pool = scene.sim.registry.valid(door.pool) ? scene.sim.registry.try_get<const simulation::SwimPool>(door.pool) : nullptr)
+                for (rct3::park::pools::PoolRoom& room : saved.pools->rooms)
+                    if (room.col == door.col && room.row == door.row)
+                        room.dirt = pool->dirt.value * static_cast<f32>(pool->water.size()) * simulation::kTuning.pools.saved_dirt;
         for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
             if (item.broken && item.object != 0)
                 saved.broken_items.push_back(item.object);

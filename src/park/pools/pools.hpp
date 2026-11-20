@@ -186,6 +186,7 @@ namespace rct3::park::pools
         std::string complex_name { }; ///< Its pool complex's name, the same in every room of it; empty for the default
         u8 fluid = 0;                 ///< The cleaning fluid it keeps its pool clean with, mildest 0 to harshest 2
         PoolWaves waves { };
+        f32 dirt = 0; ///< Its complex's dirt, the same in every room of it, as the game's parks save it
     };
 
     /// The pools the player has laid, the extras in them and their changing rooms. A tile holds a square, or several

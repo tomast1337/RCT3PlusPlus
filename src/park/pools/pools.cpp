@@ -879,7 +879,10 @@ namespace rct3::park::pools
             const bool named = complex != world.pool_complexes.end() && !complex->name.starts_with("%ME%");
             map.rooms.push_back({ .symbol = object->symbol, .overlay = object->overlay, .col = object->col, .row = object->row, .side = *side, .ticket = complex != world.pool_complexes.end() ? complex->ticket.value : kPoolTicket, .open = room.open, .complex_name = named ? complex->name : std::string(), .fluid = static_cast<u8>(std::clamp(room.fluid, 0, 2)) });
             if (complex != world.pool_complexes.end())
+            {
                 map.rooms.back().waves = { .height = complex->wave_height, .frequency = complex->wave_frequency, .on = complex->wave_on, .every = complex->wave_every };
+                map.rooms.back().dirt = complex->dirt;
+            }
         }
         return map;
     }

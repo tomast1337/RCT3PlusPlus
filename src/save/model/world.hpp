@@ -386,6 +386,7 @@ namespace rct3::save::model
         units::TurnRate wave_frequency { 6 };
         units::Seconds wave_on { 30 };
         units::Seconds wave_every { 60 };
+        f32 dirt = 0; ///< As stored: swimmers add to it, cleaning takes it away; the more water, the more it takes to show
     };
 
     /// A changing room: the placed object it is, the pool square it opens on, and its settings.

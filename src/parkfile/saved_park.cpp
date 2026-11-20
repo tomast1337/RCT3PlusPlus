@@ -604,7 +604,7 @@ namespace rct3::parkfile
         if (park.animals)
             put_chunk(w, "ANML", 2, *park.animals);
         if (park.pools)
-            put_chunk(w, "POOL", 9, *park.pools);
+            put_chunk(w, "POOL", 10, *park.pools);
         if (park.litter)
             put_chunk(w, "LITR", 1, *park.litter);
         if (!park.queues.empty())
@@ -692,7 +692,7 @@ namespace rct3::parkfile
             }
             if (tag == "POOL")
             {
-                if (park.pools || version != 9) // 9 adds the ground each square dug
+                if (park.pools || version != 10) // 9 adds the ground each square dug, 10 the rooms' dirt
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 return get_chunk(tag, body, park.pools.emplace());
             }

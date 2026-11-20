@@ -1306,6 +1306,31 @@ TEST_CASE("a water piece pushes a boat on up to its flow, and on the level holds
     CHECK(flowing.speed == doctest::Approx(8));
 }
 
+TEST_CASE("a piece pushing towards a pace either way carries a car over it at that pace, coming fast or slow")
+{
+    // As a transfer track's pieces push: hard down to 4 m/s from faster, gently up to it from slower.
+    Coaster c = level(16);
+    c.at = 45;
+    c.mass = { 500 };
+    c.piece_starts = { 0, 10, 40, 70 };
+    const std::vector<Push> towards {
+        { .from = 40, .to = 70, .least = -1e6f, .most = -4, .force = 50000 },
+        { .from = 40, .to = 70, .least = -4, .most = 0, .force = -10000 },
+        { .from = 40, .to = 70, .least = 0, .most = 4, .force = 10000 },
+        { .from = 40, .to = 70, .least = 4, .most = 1e6f, .force = -50000 },
+    };
+    c.pushes = { { }, { }, towards, { } };
+    drive(c, 1);
+    CHECK(c.speed == doctest::Approx(4).epsilon(0.1));
+    Coaster slow = level(0.5f);
+    slow.at = 45;
+    slow.mass = c.mass;
+    slow.piece_starts = c.piece_starts;
+    slow.pushes = c.pushes;
+    drive(slow, 1);
+    CHECK(slow.speed == doctest::Approx(4).epsilon(0.1));
+}
+
 TEST_CASE("a car off a slide's end flies on, comes down on its water ahead and floats till it is gone ten seconds on")
 {
     Flight f { .from = { 0, 3, 0 }, .way = { 0, 0, 1 }, .at = { 0, 3, 0 }, .velocity = { 0, 0, 8 }, .water = 1 };

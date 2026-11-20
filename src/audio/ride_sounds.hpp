@@ -14,6 +14,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
+#include <string>
 #include <string_view>
 
 namespace rct3::audio
@@ -87,5 +89,14 @@ namespace rct3::audio
     /// How loud a ride's music is heard `away` from it, 0..1: full near, then falling off steeply at first and ever
     /// more gently to nothing far, as the square of the share of the way still to go.
     [[nodiscard]] f32 ride_music_level(units::Distance away);
+
+    /// A ride keeps its tune as a file of the game's music folder; its window lists the folder's tunes by name.
+    inline constexpr std::string_view kTuneExtension = ".wma";
+
+    /// The place among `tunes` (the music folder's tunes by name) of `file`, a ride's tune as kept, from 1; 0 for
+    /// none or one not there. A folder before the name is passed over, and case does not count.
+    [[nodiscard]] usize tune_of(std::string_view file, std::span<const std::u16string> tunes);
+    /// The file a ride keeps for tune `tune` of `tunes`, from 1; empty for 0, none.
+    [[nodiscard]] std::string tune_file(usize tune, std::span<const std::u16string> tunes);
 
 } // namespace rct3::audio

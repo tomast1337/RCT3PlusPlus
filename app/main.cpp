@@ -1418,6 +1418,13 @@ int main(int argc, char** argv)
                             prof::section("Audio", [&] { rct3::scene::update_menu_audio(*audio, *menu_audio, front->live->options, sounds, true, music_level); });
                         if (audio && park_sounds)
                             prof::section("ParkSounds", [&] { rct3::scene::park::update_park_sounds(*audio, *park_sounds, *park, elapsed); });
+                        if (script && park_sounds)
+                        {
+                            std::vector<rct3::scene::ScriptHost::HeardMusic> heard;
+                            for (const auto& [file, music] : park_sounds->ride_music)
+                                heard.push_back({ .file = file, .volume = music.volume });
+                            script->hear_ride_music(std::move(heard));
+                        }
                         // Leaving, or loading another park in its place (asked for here or by a script): its loading
                         // screen shows next.
                         const bool leave = rct3::scene::park::take_park_leave(*park);

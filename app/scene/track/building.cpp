@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/track/building.hpp"
 
+#include "audio/ride_sounds.hpp"
 #include "career/career_file.hpp"
 #include "core/maybe.hpp"
 #include "core/types.hpp"
@@ -755,7 +756,7 @@ namespace rct3::scene::track
             // the entrance first, where the design brought none. A ride in a pool has none to place.
             if (b.design_title.find_first_not_of(u' ') != std::u16string::npos)
                 ride.base.name = strings::to_utf8(b.design_title);
-            scene.ride_tunes[ride.base.id] = b.design_tune;
+            ride.music = audio::tune_file(b.design_tune, scene.tunes);
             scene.info_requested = rct3::park::AttractionRef::of(*b.ride);
             // In the coaster designer a design is picked to be changed: its track opens for building on.
             if (scene.game.designer)

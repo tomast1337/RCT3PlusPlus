@@ -80,6 +80,13 @@ namespace rct3::scene::park
         bool loops = false;
     };
 
+    /// A ride tune playing, and how loud it was last set.
+    struct RideMusic
+    {
+        audio::MusicPlayer player;
+        f32 volume = 0;
+    };
+
     struct ParkSounds
     {
         std::vector<audio::SoundBuffer> chatter;
@@ -125,8 +132,8 @@ namespace rct3::scene::park
         std::vector<std::vector<ovl::SoundItem>> pack_sounds;                                        ///< By pack
         std::map<std::string, std::optional<PackSound>, strings::LessIgnoringCase> pack_sounds_made; ///< Nothing where no pack has it
         std::map<entt::entity, FlatRideSounds> flat_rides;
-        std::map<std::string, audio::MusicPlayer, strings::LessIgnoringCase> ride_music; ///< By track, one for all rides playing it
-        std::set<std::string, strings::LessIgnoringCase> broken_tracks;                  ///< That would not play, not tried again
+        std::map<std::string, RideMusic, strings::LessIgnoringCase> ride_music; ///< By track, one for all rides playing it
+        std::set<std::string, strings::LessIgnoringCase> broken_tracks;         ///< That would not play, not tried again
     };
 
     [[nodiscard]] ParkSounds load_park_sounds(const config::game::GameInstall& install, u32 seed);

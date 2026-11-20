@@ -3,10 +3,12 @@
 
 #include "core/types.hpp"
 #include "strings/ascii.hpp"
+#include "strings/unicode.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <format>
 #include <utility>
 
 namespace rct3::audio
@@ -87,6 +89,18 @@ namespace rct3::audio
     {
         const f32 left = std::clamp((kMusicFar.value - away.value) / (kMusicFar.value - kMusicNear.value), 0.0f, 1.0f);
         return left * left;
+    }
+
+    usize tune_of(std::string_view file, std::span<const std::u16string> tunes)
+    {
+        file = file.substr(file.find_last_of("/\\") == std::string_view::npos ? 0 : file.find_last_of("/\\") + 1);
+        const auto found = std::ranges::find_if(tunes, [&](const std::u16string& tune) { return strings::equals_ignoring_case(tune_file(1, std::span(&tune, 1)), file); });
+        return found == tunes.end() ? 0 : static_cast<usize>(found - tunes.begin()) + 1;
+    }
+
+    std::string tune_file(usize tune, std::span<const std::u16string> tunes)
+    {
+        return tune == 0 || tune > tunes.size() ? std::string { } : std::format("{}{}", strings::to_utf8(tunes[tune - 1]), kTuneExtension);
     }
 
     RunningMix running_mix(f32 speed, RunningLoops loops)

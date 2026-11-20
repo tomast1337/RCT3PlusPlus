@@ -57,8 +57,8 @@ namespace rct3::scene::track
 
     const rct3::park::track::PieceCatalogue* catalogue(const TrackBuilding& b)
     {
-        const auto found = b.catalogues.find(b.overlay);
-        return found != b.catalogues.end() ? &found->second : nullptr;
+        // Through at(): clang-tidy's analyzer takes an iterator's element address for one that may be null.
+        return b.catalogues.contains(b.overlay) ? &b.catalogues.at(b.overlay) : nullptr;
     }
 
     std::optional<const rct3::park::track::PieceCatalogue&> load_catalogue(TrackBuilding& b, const std::string& overlay, const ui::InterfaceAssets& assets)

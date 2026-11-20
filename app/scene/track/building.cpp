@@ -470,7 +470,7 @@ namespace rct3::scene::track
         // Built closed, as in the game: the player tests it and opens it from its window.
         ride.base.state = save::model::AttractionState::Closed;
         ride.base.flags = save::model::AttractionCommon::kNeverOpened;
-        take_fence(scene, assets, ride, item);
+        take_fence(scene, assets, ride, item.fence, item.fence_overlay);
         ride.track.emplace().segments.resize(1);
         // One train of the first the ride's file lists, seated as its car models are; its window changes them
         // until it opens.
@@ -1261,7 +1261,7 @@ namespace rct3::scene::track
             if (const auto found = rct3::park::track::search_on(*b.completing, kCompletionTriesPerFrame))
             {
                 if (*found)
-                    b.proposed = std::move(**found);
+                    b.proposed = **found;
                 else
                     b.complaint = "RideAutoCompleteNoSolution";
                 b.completing.reset();

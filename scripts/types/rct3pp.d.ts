@@ -832,6 +832,9 @@ type RideInfo = {
     name: string;
     /** The fence round it, without its tag; empty when it has none. */
     fence: string;
+    /** The scenery items its first station's entrance and exit are placed as; empty where it has none. */
+    entranceItem: string;
+    exitItem: string;
     /** With its tag, as "Twist:anr". */
     symbol: string;
     overlay: string;

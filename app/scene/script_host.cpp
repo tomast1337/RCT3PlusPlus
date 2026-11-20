@@ -1605,6 +1605,11 @@ namespace rct3::scene
                 const save::model::Station* station = ride.stations.empty() ? nullptr : &ride.stations.front();
                 Json one { { "index", i },      { "name", ride.base.name },     { "symbol", ride.base.symbol },         { "overlay", ride.base.overlay_path },       { "flat", ride.kind == save::model::RideKind::Flat }, { "kind", std::array { "tracked", "flat", "facility" }[std::to_underlying(ride.kind)] }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) },
                            { "joined", false }, { "fence", ride.fence_symbol }, { "demolished", ride.base.demolished }, { "graphSamples", ride.graphs.speed.size() } };
+                for (const auto& [field, id] : { std::pair { "entranceItem", station ? station->entrance : 0 }, std::pair { "exitItem", station ? station->exit : 0 } })
+                {
+                    const auto door = id == 0 ? park.objects.end() : std::ranges::find(park.objects, id, &save::model::PlacedObject::id);
+                    one[field] = door == park.objects.end() ? std::string { } : door->symbol;
+                }
                 Json stations = Json::array();
                 for (const save::model::Station& s : ride.stations)
                     stations.push_back({ { "entrance", spot_json(s.entrance_spot) }, { "exit", spot_json(s.exit_spot) } });

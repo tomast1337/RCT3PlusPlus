@@ -838,7 +838,7 @@ namespace rct3::scene::park
                 // Longer trains fit fewer times round the track, so the page shows the new limits; a new name and
                 // the graph's series show.
                 if (change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Trains) || change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Cars) || change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Name) || change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::CarKind)
-                    || (change->id >= ui::screens::info::control_id(ui::screens::info::AttractionControl::SpeedSeries) && change->id <= ui::screens::info::control_id(ui::screens::info::AttractionControl::LateralSeries)))
+                    || (change->id >= ui::screens::info::control_id(ui::screens::info::AttractionControl::SpeedSeries) && change->id <= ui::screens::info::control_id(ui::screens::info::AttractionControl::LateralSeries)) || (change->id >= ui::screens::info::control_id(ui::screens::info::AttractionControl::FenceStyle) && change->id <= ui::screens::info::control_id(ui::screens::info::AttractionControl::ExitStyle)) || change->id == ui::screens::info::control_id(ui::screens::info::AttractionControl::Fence))
                     show_info_page(scene, *info, assets, options);
             }
             else if (auto* rules = change && scene.shown_prop && (change->id == ui::screens::info::kPassportStampsControl || change->id == ui::screens::info::kPassportGiftControl) ? scene.sim.registry.ctx().find<simulation::PassportRules>() : nullptr)

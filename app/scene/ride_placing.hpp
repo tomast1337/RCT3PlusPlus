@@ -40,6 +40,7 @@
 #include "park/object/mesh.hpp"
 #include "park/path/clearance.hpp"
 #include "park/ride/placement.hpp"
+#include "park/ride/styles.hpp"
 #include "park/scenery_runs.hpp"
 #include "random/generator.hpp"
 #include "render/device.hpp"
@@ -55,6 +56,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace rct3::scene
@@ -179,8 +181,12 @@ namespace rct3::scene
     /// ride beside its `stations`, of a placed flat ride (no stations) round its ground; one placed before moves.
     /// False without stations on a tracked ride or a door in the item.
     bool start_door_placing(park::ParkScene& scene, save::model::RideIndex ride, const rct3::park::BuildItem& item, std::vector<save::model::TrackPiece> stations, bool exit);
-    /// Gives the new ride `ride` the fence of `item` (its theme's), in the fence's own colours.
-    void take_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Ride& ride, const rct3::park::BuildItem& item);
+    /// Gives the new ride `ride` the fence `fence` of `overlay` (its theme's), in the fence's own colours.
+    void take_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::Ride& ride, std::string_view fence, std::string_view overlay);
+    /// Gives the ride `ride` the fence `fence` in its own colours, in place of the one it had, round it and its queues.
+    void restyle_fence(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, const rct3::park::ride::ExtraStyle& fence);
+    /// Gives every entrance of the ride `ride`, or every exit, the look of `doors`, painted as its fence is.
+    void restyle_doors(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, const rct3::park::ride::ExtraStyle& doors, rct3::park::ride::DoorEnd end);
     /// Adds `door`, whose model is loaded, as the entrance (or `exit`) of station `station` of the tracked ride
     /// `ride`, standing at `height`, in place of the one it had.
     void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, usize station, const save::model::PlacedObject& door, i32 height, bool exit);

@@ -215,6 +215,7 @@ namespace rct3::park
                     item.needs = s.shelter;
                     item.strength = s.fence_strength;
                     item.rarity = v->rarity;
+                    item.species_name = s.own_name;
                     items.push_back(std::move(item));
                 }
             }

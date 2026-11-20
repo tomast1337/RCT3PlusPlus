@@ -12,6 +12,7 @@ namespace rct3::ovl::animal
 
         constexpr std::string_view kTag = "was";
         constexpr usize kSize = 0x3C; // up to and including the fence strength
+        constexpr usize kOwnName = 0x04;
         constexpr usize kName = 0x08;
         constexpr usize kDescription = 0x0C;
         constexpr usize kIcon = 0x10;
@@ -46,6 +47,7 @@ namespace rct3::ovl::animal
             if (const auto record = ItemRecord::open(space, refs, symbol.data, kSize))
             {
                 AnimalSpecies s;
+                s.own_name = record->text(kOwnName);
                 s.name_text = record->ref(kName, "txt");
                 s.description_text = record->ref(kDescription, "txt");
                 s.icon = record->ref(kIcon, "gsi");

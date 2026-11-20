@@ -38,6 +38,7 @@ namespace rct3::ovl::animal
 
     struct AnimalSpecies
     {
+        std::string_view own_name;         ///< As the data spells it; the keys of the species' facts start with it
         std::string_view name_text;        ///< "txt" item
         std::string_view description_text; ///< "txt" item
         std::string_view icon;             ///< "gsi" item
@@ -54,7 +55,7 @@ namespace rct3::ovl::animal
     };
 
     /// Animal species of one part of an overlay: pointer symbols tagged "was". Parks name a species by its
-    /// symbol name. The record holds its name, description and icon references from 0x08, four pointers to the animals
+    /// symbol name. The record holds a pointer to its own name at 0x04, its name, description and icon references from 0x08, four pointers to the animals
     /// (each with its model, motion set, description, icon and price), a pointer to the name of its shelter and the fence strength it needs. Views in the
     /// result point into the overlay's bytes.
     [[nodiscard]] std::vector<AnimalSpeciesItem> read_animal_species(const Overlay& overlay, const Part& part);

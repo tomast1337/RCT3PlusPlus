@@ -683,7 +683,7 @@ namespace rct3::simulation
                     }
                     else if (block && c.slowing && !held_back)
                         carried_at = c.brake_speeds[i];
-                    else if (block && !open && !braking)
+                    else if (block && !open && !braking && c.speed < c.brake_speeds[i])
                     {
                         push += c.boost_pull / static_cast<f32>(cars);
                         most = std::max(most, c.brake_speeds[i]);

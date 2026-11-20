@@ -285,24 +285,37 @@ namespace rct3::ui
                                                          { "AnimalPregnant", Happy },
                                                          { "PandaPregnant", Happy } } };
 
+        /// rct3++'s own thoughts, numbered on from the game's, each by the key of its one text.
+        constexpr std::array<Thought, 2> kOwnThoughts { { { "Rct3pp_Thought_WaitingForFriends", Neutral }, { "Rct3pp_Thought_RodeTogether", Happy } } };
+
     } // namespace
 
     std::string thought_key(i32 id)
     {
-        if (id <= 0 || static_cast<usize>(id) >= kThoughts.size())
+        if (id <= 0)
             return { };
-        return std::format("{}{}", kKeyPrefix, kThoughts[static_cast<usize>(id)].name);
+        const auto at = static_cast<usize>(id);
+        if (at < kThoughts.size())
+            return std::format("{}{}", kKeyPrefix, kThoughts[at].name);
+        if (at - kThoughts.size() < kOwnThoughts.size())
+            return std::string(kOwnThoughts[at - kThoughts.size()].name);
+        return { };
     }
 
     Mood thought_mood(i32 id)
     {
-        if (id <= 0 || static_cast<usize>(id) >= kThoughts.size())
+        if (id <= 0)
             return Mood::Neutral;
-        return kThoughts[static_cast<usize>(id)].mood;
+        const auto at = static_cast<usize>(id);
+        if (at < kThoughts.size())
+            return kThoughts[at].mood;
+        return at - kThoughts.size() < kOwnThoughts.size() ? kOwnThoughts[at - kThoughts.size()].mood : Mood::Neutral;
     }
 
     std::optional<Mood> key_mood(std::string_view key)
     {
+        if (const auto own = std::ranges::find(kOwnThoughts, key, &Thought::name); own != kOwnThoughts.end())
+            return own->mood;
         if (!key.starts_with(kKeyPrefix))
             return std::nullopt;
         key.remove_prefix(kKeyPrefix.size());
@@ -336,7 +349,7 @@ namespace rct3::ui
         while (count < kMostTexts && strings.contains(std::format("{}{}", key, count + 1)))
             ++count;
         if (count == 0)
-            return { };
+            return strings.contains(key) ? key : std::string { }; // A thought of one text has it under its key alone
         return std::format("{}{}", key, (variant % count + count) % count + 1);
     }
 

@@ -391,6 +391,11 @@ namespace rct3::simulation
                         think(r, guest, ThoughtKind::TooTame, e, now);
                         gesture = GestureKind::Grumble;
                     }
+                    if (const auto* member = r.try_get<Member>(guest); member != nullptr && std::ranges::any_of(riders, [&](entt::entity other) {
+                            const auto* with = other != guest && r.valid(other) ? r.try_get<Member>(other) : nullptr;
+                            return with != nullptr && with->party == member->party;
+                        }))
+                        think(r, guest, ThoughtKind::RodeTogether, e, now);
                     // Off the seat and out on foot where the ride has a way out; still riding till on the paths.
                     // shortcut: only the first station has ways off worked out, upgrade when the others' are
                     if (station == 0 && walks != nullptr && seat < walks->off.size() && !walks->off[seat].empty())

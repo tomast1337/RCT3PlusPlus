@@ -735,6 +735,8 @@ TEST_CASE("party members who stay off a ride wait by its exit, and all go on tog
     const NodeId exit = *park.world().paths.nearest({ 12, 0, 0 });
     CHECK(r.get<Stride>(queasy).to != exit);
     CHECK(std::ranges::contains(park.world().paths.nodes()[exit.value].next, r.get<Stride>(queasy).to));
+    REQUIRE(r.all_of<Thoughts>(queasy));
+    CHECK(std::ranges::contains(r.get<Thoughts>(queasy).recent, ThoughtKind::WaitingForFriends, &Thought::kind));
     CHECK(park.run_until([&] { return r.get<Errand>(queasy).kind == ErrandKind::Following; }, 30));
     CHECK(r.get<Errand>(leader).kind == ErrandKind::Wandering);
     CHECK(r.get<Attraction>(ride).customers == 1);
@@ -764,6 +766,11 @@ TEST_CASE("a party in line rides on one load, held back for the next rather than
     CHECK(r.ctx().get<PartyBoarding>().held >= 1);
     CHECK(park.run_until([&] { return r.get<Errand>(a).kind == ErrandKind::Riding; }, 60));
     CHECK(r.get<Errand>(b).kind == ErrandKind::Riding);
+    // Off together, glad of it; the strangers rode with none of theirs.
+    CHECK(park.run_until([&] { return r.get<Errand>(a).kind != ErrandKind::Riding; }, 60));
+    for (const auto g : { a, b })
+        CHECK((r.all_of<Thoughts>(g) && std::ranges::contains(r.get<Thoughts>(g).recent, ThoughtKind::RodeTogether, &Thought::kind)));
+    CHECK_FALSE((r.all_of<Thoughts>(strangers[0]) && std::ranges::contains(r.get<Thoughts>(strangers[0]).recent, ThoughtKind::RodeTogether, &Thought::kind)));
 }
 
 TEST_CASE("those waiting for a ride stand in a ring beside its exit, and go on together after")

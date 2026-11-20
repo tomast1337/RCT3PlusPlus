@@ -110,6 +110,7 @@ namespace rct3::scene
         constexpr i32 kSmoothSlot = 3;
         constexpr i32 kSharpSlot = 4;
         constexpr i32 kScatterSlot = 3;     ///< Scenery has no levelling tabs, so its scatter tab takes the first of their places
+        constexpr usize kUndoDepth = 32;    ///< How many placings back the undo key reaches
         constexpr f32 kScatterReach = 2.5f; ///< How far round the pointer, in tiles, a scatter brush puts items. Chosen by eye
         /// The scatter tab's help, by brush: what it does now and what a press makes it do.
         constexpr std::array<std::string_view, 3> kScatterHelp { "Rct3pp_ScatterOff", "Rct3pp_ScatterDense", "Rct3pp_ScatterSparse" };
@@ -449,6 +450,23 @@ namespace rct3::scene
                     p.turn = p.turn.turned(1);
                 else if (c == ui::PlayCommand::TurnItemLeft)
                     p.turn = p.turn.turned(-1);
+                else if (c == ui::PlayCommand::UndoPlacing && !p.placed_scenery.empty())
+                {
+                    // What was moved or pulled down since is left as it is.
+                    const RidePlacing::Placed last = std::move(p.placed_scenery.back());
+                    p.placed_scenery.pop_back();
+                    units::Money back;
+                    std::optional<glm::vec3> at;
+                    for (const u64 id : last.ids)
+                        if (const auto o = std::ranges::find(scene.objects, id, &save::model::PlacedObject::id); o != scene.objects.end() && !o->hidden)
+                        {
+                            at = site_point(scene, { o->col, o->row, 0, o->base_height.value_or(0), { 1, 1 } });
+                            park::take_away_prop(device, scene, assets, save::model::PlacedObjectIndex { static_cast<usize>(o - scene.objects.begin()) });
+                            back += last.each;
+                        }
+                    if (at && simulation::park::book(scene.park, scene.park_model.finance, scene.ledger_month, -back, simulation::park::LedgerLine::Landscaping, simulation::park::Charge::IfAffordable))
+                        park::float_money(scene, *at, back);
+                }
             }
         }
         if (whole)
@@ -625,8 +643,21 @@ namespace rct3::scene
         };
         if (p.step == RidePlacing::Step::Scenery)
         {
-            const bool pressed = input.down && !p.held;
-            p.held = input.down;
+            const bool was_held = std::exchange(p.held, input.down);
+            const bool pressed = input.down && !was_held;
+            // A run or a scatter stroke is taken back as one.
+            if (pressed)
+                p.stroke_from = p.placed_scenery.size();
+            const auto end_stroke = [&] {
+                if (p.stroke_from && *p.stroke_from < p.placed_scenery.size())
+                {
+                    RidePlacing::Placed& stroke = p.placed_scenery[*p.stroke_from];
+                    for (usize k = *p.stroke_from + 1; k < p.placed_scenery.size(); ++k)
+                        stroke.ids.append_range(p.placed_scenery[k].ids);
+                    p.placed_scenery.resize(*p.stroke_from + 1);
+                }
+                p.stroke_from.reset();
+            };
             // A drag let go places the run its ghost showed; a run of one is left to the click.
             if (!input.down && p.drag)
             {
@@ -635,9 +666,12 @@ namespace rct3::scene
                 if (run.size() >= 2)
                     for (const save::model::PlacedObject& o : run)
                         place_at(o);
+                end_stroke();
                 p.ghost_mesh = { };
                 return;
             }
+            if (!input.down && was_held)
+                end_stroke();
             // Scenery goes where the pointer meets the ground or, nearer, an object: then on top of it.
             std::optional<glm::vec3> hit;
             std::optional<f32> top;
@@ -965,6 +999,12 @@ namespace rct3::scene
             {
                 // The tool stays out for the next one, as in the game; a prop moved is set down once.
                 const u64 id = add_object(scene, *o);
+                if (!p.moving && p.item->kind == rct3::park::BuildKind::Scenery)
+                {
+                    p.placed_scenery.push_back({ .ids = { id }, .each = p.item->price });
+                    if (p.placed_scenery.size() > kUndoDepth && !p.stroke_from)
+                        p.placed_scenery.erase(p.placed_scenery.begin());
+                }
                 if (p.item->kind == rct3::park::BuildKind::Shelter)
                     house_placed(scene, assets, scene.objects.back(), *p.item, *p.site);
                 // What guests use on the paths is theirs at once.

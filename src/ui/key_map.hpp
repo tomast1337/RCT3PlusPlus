@@ -120,6 +120,7 @@ namespace rct3::ui
         CloseTopmostWindow,
         TurnItemLeft,  ///< Turns the item being placed a quarter anticlockwise; ours, the game has none
         TurnItemRight, ///< A quarter clockwise
+        UndoPlacing,   ///< Takes back the scenery the placing tool last put down, refunded; ours
 
         Count_, ///< Number of commands; not a command
     };

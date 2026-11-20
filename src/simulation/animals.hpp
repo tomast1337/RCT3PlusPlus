@@ -162,6 +162,10 @@ namespace rct3::simulation
     /// `animal` in its crate at `at`. Returns it.
     entt::entity add_animal(SimWorld& world, const Animal& animal, glm::vec3 at);
 
+    /// Lets `animal` out of its crate now, as the player opening it does, unless a keeper is carrying it home.
+    /// Returns whether it came out.
+    bool open_crate(SimWorld& world, entt::entity animal);
+
     /// The message posted as an animal escapes; its subject's name is the animal's.
     inline constexpr std::string_view kAnimalEscaped = "Thought_PI_AnimalEscaped1";
 

@@ -117,6 +117,18 @@ TEST_CASE("animals: an animal stays in its crate a while, then walks out about i
     CHECK(moved);
 }
 
+TEST_CASE("animals: a crate the helicopter is lowering stays shut, then waits as any crate does")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    const entt::entity e = add_animal(world, { .species = "zebu", .enclosure = std::optional { 0 }, .flying = kAnimalRates.delivery }, { 1, 0, 1 });
+    CHECK_FALSE(open_crate(world, e));
+    run(world, ground, kAnimalRates.delivery.value + kAnimalRates.crated.value - 1);
+    CHECK(world.registry.get<Animal>(e).job == AnimalJob::Crated);
+    CHECK(world.registry.get<Animal>(e).flying.value == 0);
+    CHECK(open_crate(world, e));
+}
+
 TEST_CASE("animals: a crate opened by hand lets its animal out at once, but not one a keeper carries")
 {
     SimWorld world;

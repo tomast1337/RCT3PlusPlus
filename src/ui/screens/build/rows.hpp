@@ -44,7 +44,7 @@ namespace rct3::ui::screens::build
     /// named after the set, each row in name order. A row's number is the item's index in `items`. A tracked
     /// ride's row tells how many saved designs `design_counts` gives its kind, by symbol, when it has any.
     /// Items still to be invented show locked; `researching` is the one under way, by its index, and how far
-    /// it has got.
-    [[nodiscard]] std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, usize, strings::LessIgnoringCase>& design_counts = { }, std::optional<std::pair<usize, f32>> researching = std::nullopt);
+    /// it has got. Of the animals, only the ages `animals` sells show, each marked when it comes rescued.
+    [[nodiscard]] std::vector<PickerRow> picker_rows(park::BuildList list, std::span<const park::BuildItem> items, const park::BuildOffer& offer, const StringTable& strings, const Currency& currency, const std::map<std::string, usize, strings::LessIgnoringCase>& design_counts = { }, std::optional<std::pair<usize, f32>> researching = std::nullopt, park::AnimalRules animals = { });
 
 } // namespace rct3::ui::screens::build

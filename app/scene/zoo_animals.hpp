@@ -2,7 +2,8 @@
 //
 // The park's animals, drawn. One out of its crate is drawn with its species' own model, posed every frame in
 // the motion that fits what it is doing: walking, eating or drinking at the troughs, asleep, or standing. One
-// still in its crate, or of a species whose model cannot be read, is drawn as the crate.
+// still in its crate, or of a species whose model cannot be read, is drawn as the crate, which a helicopter lowers
+// from the sky when the animal was just bought.
 #pragma once
 
 #include "config/game/install.hpp"
@@ -32,8 +33,9 @@ namespace rct3::scene
         rct3::park::AnimalRuns runs { };
         rct3::park::object::ObjectMesh mesh; ///< As last posed
         ui::UiTextures textures;
-        rct3::park::MovingMeshes crates;      ///< The animals still in their crates
+        rct3::park::MovingMeshes crates;      ///< The animals still in their crates, then the helicopters lowering them
         std::vector<entt::entity> crated { }; ///< By crate, its animal
+        std::vector<entt::entity> flown { };  ///< By helicopter, its animal; none while the helicopter's model is not loaded
     };
 
     /// Finds the animals' models in `install`, to read as animals come.
@@ -41,6 +43,9 @@ namespace rct3::scene
 
     /// The crate animals come in, as an object to load the model of.
     [[nodiscard]] save::model::PlacedObject animal_crate();
+
+    /// The helicopter that lowers a bought animal's crate, as an object to load the model of.
+    [[nodiscard]] save::model::PlacedObject animal_helicopter();
 
     /// Reads the models of animals that came since and uploads their pictures, and the crate's; the crate's
     /// model must be loaded.

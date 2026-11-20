@@ -276,6 +276,7 @@ expect(
     `the crate where it was put, not ${JSON.stringify(zebra().at)}`,
 );
 expect(park.cash()! < before, "the zebra paid for");
+await until(() => !zebra().flying, 3000, "the helicopter setting the crate down");
 camera.look({ col: c0 + 3.5, row: r0 + 2.5 }, { col: c0 + 5, row: r0 + 7, up: 4 });
 await frames(10);
 await screenshot("enclosure_crate");

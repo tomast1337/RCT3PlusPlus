@@ -17,6 +17,9 @@ namespace
         StringTable s;
         s.add("Male", u"Boy");
         s.add("Adult", u"Grown");
+        s.add("Female", u"Girl");
+        s.add("Baby", u"Little");
+        s.add("WildAnimal_Rescued", u"(saved)");
         s.add("WildAnimal_Species", u"Kind:");
         s.add("Name_Wombat", u"Wombat");
         s.add("WildAnimalState_Eat", u"Munching");
@@ -45,6 +48,8 @@ TEST_CASE("an animal's details name it, give its kind and say what it is doing")
     const InfoPage page = animal_page(AnimalTab::Details, { .animal = a, .species_text = "name_wombat" }, strings);
     CHECK(page.title == u"Digger");
     CHECK(page.heading == u"Boy Grown");
+    const simulation::Animal saved { .species = "wombat", .adult = false, .male = false, .rescued = true };
+    CHECK(animal_page(AnimalTab::Details, { .animal = saved, .species_text = "name_wombat" }, strings).heading == u"Girl Little (saved)");
     CHECK(line(page, "WildAnimal_Species").value == u"Wombat");
     const auto name = std::ranges::find(page.controls, "AnimalName", &InfoControl::name);
     REQUIRE(name != page.controls.end());

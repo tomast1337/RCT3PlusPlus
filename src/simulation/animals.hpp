@@ -110,6 +110,8 @@ namespace rct3::simulation
         units::Seconds dung_in { }; ///< Till it next leaves dung
         i32 empty_troughs = 0;      ///< Times in a row it went hungry to its house and found the food trough empty
         bool escaped = false;       ///< Out of every enclosure
+        bool rescued = false;       ///< Bought as a rescued animal, which came in poor health
+        units::Seconds flying { };  ///< Left of the helicopter lowering its crate; the crate's own wait starts after
     };
 
     /// Dung an animal left in its enclosure.
@@ -123,6 +125,8 @@ namespace rct3::simulation
     struct AnimalRates
     {
         units::Seconds crated { 8 };      ///< In the crate before it opens
+        units::Seconds delivery { 6 };    ///< The helicopter lowering a bought animal's crate
+        units::Share rescued { 0.3f };    ///< The health a rescued animal comes in with
         units::Pace animal_pace { 1.4f }; ///< An animal walks at
         units::Pace keeper_pace { 1.8f }; ///< And a keeper
         units::Seconds idle { 6 };        ///< Longest anybody stands about between strolls
@@ -162,7 +166,8 @@ namespace rct3::simulation
     /// `animal` in its crate at `at`. Returns it.
     entt::entity add_animal(SimWorld& world, const Animal& animal, glm::vec3 at);
 
-    /// Lets `animal` out of its crate now, as the player opening it does, unless a keeper is carrying it home.
+    /// Lets `animal` out of its crate now, as the player opening it does, unless a keeper is carrying it home or
+    /// the helicopter is still lowering it.
     /// Returns whether it came out.
     bool open_crate(SimWorld& world, entt::entity animal);
 

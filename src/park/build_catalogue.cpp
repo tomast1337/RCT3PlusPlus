@@ -201,11 +201,13 @@ namespace rct3::park
                 if (!e.species)
                     continue;
                 const ovl::animal::AnimalSpecies& s = *e.species;
-                for (const auto& v : s.variants)
+                for (usize a = 0; a < s.variants.size(); ++a)
                 {
+                    const auto& v = s.variants[a];
                     if (!v)
                         continue;
                     BuildItem item = item_of(BuildKind::Animal, e.name);
+                    item.age = static_cast<ovl::animal::AnimalAge>(a);
                     item.name_text = v->description_text;
                     item.description_text = s.description_text;
                     item.icon = v->icon.empty() ? s.icon : v->icon;
@@ -742,6 +744,15 @@ namespace rct3::park
                 // Parks saved before an expansion do not list its items, and offer them all.
                 return listed != listed_.end() ? listed->second : State::Offered;
         }
+    }
+
+    bool sold(const BuildItem& item, AnimalRules rules) noexcept
+    {
+        using ovl::animal::AnimalAge;
+        if (item.kind != BuildKind::Animal)
+            return true;
+        const bool young = item.age == AnimalAge::YoungMale || item.age == AnimalAge::YoungFemale;
+        return young ? rules.young : rules.adults;
     }
 
     bool BuildOffer::offers_path(std::string_view name, bool names_category) const

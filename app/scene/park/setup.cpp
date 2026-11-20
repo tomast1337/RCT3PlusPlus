@@ -1721,7 +1721,10 @@ namespace rct3::scene::park
             scene.park = simulation::park::park_state(model ? &*model : nullptr, *world);
             scene.build = start_build_menus(install, model ? &model->content : nullptr);
             if (model)
+            {
                 scene.park_model = *model;
+                scene.build.animals = { .adults = model->park.allow_adult_animals, .young = model->park.allow_baby_animals, .rescued = model->park.rescued_animals };
+            }
             if (saved && saved->goals)
                 scene.park_model.objectives = std::move(saved->goals->objectives);
             if (saved)

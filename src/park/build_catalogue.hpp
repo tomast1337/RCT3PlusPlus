@@ -22,6 +22,7 @@
 #pragma once
 
 #include "core/types.hpp"
+#include "ovl/animal/species.hpp"
 #include "ovl/overlay.hpp"
 #include "save/model/park.hpp"
 #include "units/units.hpp"
@@ -174,6 +175,8 @@ namespace rct3::park
         /// Enclosure fences: how strong they are. Animals: the least strength of fence that holds them.
         f32 strength = 0;
         f32 rarity = 0; ///< Animals: from 0, common, to 1, endangered
+        /// Animals: which of its species' four it is, by age and sex.
+        ovl::animal::AnimalAge age = ovl::animal::AnimalAge::AdultMale;
         /// Animals: their species' own name as its data spells it, which the string keys of its facts start with.
         std::string species_name;
         /// Shops: whether placed as a stall, as against a special attraction such as a toilet.
@@ -206,6 +209,18 @@ namespace rct3::park
     /// and exits, ride events, path extras, building parts and effects) that has a price and names no research
     /// category. In a sandbox park file every such item is marked invented and no other scenery is.
     [[nodiscard]] bool researchable(const BuildItem& item) noexcept;
+
+    /// Which animals a park sells, as its scenario sets: grown ones, young ones, and whether every one bought is
+    /// a rescued animal, which comes in poor health. A park saved before zoos came sells both ages.
+    struct AnimalRules
+    {
+        bool adults = true;
+        bool young = true;
+        bool rescued = false;
+    };
+
+    /// Whether a park under `rules` sells the animal `item`: an animal of an age it allows. Every other item it may.
+    [[nodiscard]] bool sold(const BuildItem& item, AnimalRules rules) noexcept;
 
     /// Which items a park lets the player build, by what it records of each: those it has made available
     /// and invented, and does not hide, and the animal species it has unlocked. Attractions it has made

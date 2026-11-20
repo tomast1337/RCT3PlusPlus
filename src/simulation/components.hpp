@@ -120,6 +120,7 @@ namespace rct3::simulation
         PhotoSpotGood = 85, ///< At a view with plenty of scenery round it
         Photographer = 88,  ///< Took a photo of the player's guest at a view
         Photographee = 89,  ///< The player's guest, photographed at one
+        Watched = 127,      ///< Sure someone is watching them, set on edge by a cheat
         Hungry = 4,
         Thirsty = 5,
         Toilet = 12,
@@ -388,6 +389,8 @@ namespace rct3::simulation
         Cry,         ///< A child crying after a poor show
         Horror,      ///< A child taking fright at a poor show
         LookMap,     ///< Looking at their park map, having picked a ride to go to
+        LookRound,   ///< Turning to look behind them, set on edge by a cheat
+        Photo,       ///< Taking a photo where they stand
     };
 
     struct Gesture

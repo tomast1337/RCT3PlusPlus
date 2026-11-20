@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Guests renamed with the game's cheat names, each name read from the language files by its key: the park gets
-// its money, the guests on the paths jump for joy, laugh or retch, and the rules' cheats say they are on;
+// its money, the guests on the paths jump for joy, laugh or retch, then for a while look round nervously or
+// take photos, and the rules' cheats say they are on;
 // a name the game knows that changes nothing leaves the groups be.
 //
 //   ./nob script scripts/tests/name_cheats.ts -- --no-audio
@@ -41,6 +42,31 @@ for (const [key, gesture] of [
     log(key, making);
     expect(making >= 5, `guests showing ${gesture}`);
     await park.advance(10);
+}
+
+// For a while guests now and then look round behind them, sure they are watched, or stop to take a photo.
+for (const [key, gesture] of [
+    ["CheatPeepName_Hitchcock", "turnlook"],
+    ["CheatPeepName_Photostory", "photo"],
+] as const) {
+    people.rename(guest(), name(key));
+    let most = 0;
+    for (let i = 0; i < 40 && most < 2; i++) {
+        await park.advance(0.5);
+        await frames(1);
+        const making = people
+            .list()
+            .filter((p): p is WalkedPerson => !p.staff && p.state !== undefined && p.gesture === gesture);
+        if (making.length > most) {
+            most = making.length;
+            camera.look(making[0], { col: making[0].col + 2, row: making[0].row + 2, up: making[0].up + 4 });
+        }
+    }
+    log(key, most);
+    expect(most >= 2, `guests showing ${gesture}`);
+    await frames(3);
+    await screenshot(gesture);
+    await park.advance(35);
 }
 
 // The rules' cheats say they are on.

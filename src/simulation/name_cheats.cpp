@@ -55,6 +55,12 @@ namespace rct3::simulation
             case NameCheat::Hurry:
                 on.hurry = kHurry;
                 return 0;
+            case NameCheat::Nervous:
+                on.nervous = kSpell;
+                return 0;
+            case NameCheat::Photos:
+                on.photos = kSpell;
+                return 0;
             case NameCheat::Money:
             case NameCheat::GuestCamera:
             case NameCheat::Nothing:
@@ -84,6 +90,8 @@ namespace rct3::simulation
             case NameCheat::Retch:
             case NameCheat::GuestCamera:
             case NameCheat::Hurry:
+            case NameCheat::Nervous:
+            case NameCheat::Photos:
             case NameCheat::Nothing:
                 return { };
         }

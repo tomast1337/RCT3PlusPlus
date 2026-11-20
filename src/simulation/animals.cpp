@@ -113,6 +113,18 @@ namespace rct3::simulation
         return e;
     }
 
+    bool open_crate(SimWorld& world, entt::entity animal)
+    {
+        auto& r = world.registry;
+        Animal* a = r.try_get<Animal>(animal);
+        const bool carried = std::ranges::any_of(r.view<const KeeperDuty>(), [&](entt::entity k) { return r.get<const KeeperDuty>(k).target == animal; });
+        if (a == nullptr || a->job != AnimalJob::Crated || carried)
+            return false;
+        a->job = AnimalJob::Idle;
+        a->busy = { };
+        return true;
+    }
+
     void import_animal_houses(SimWorld& world, std::span<const AnimalHouse> houses, std::span<const KeeperPost> keepers)
     {
         auto& r = world.registry;

@@ -117,6 +117,20 @@ TEST_CASE("animals: an animal stays in its crate a while, then walks out about i
     CHECK(moved);
 }
 
+TEST_CASE("animals: a crate opened by hand lets its animal out at once, but not one a keeper carries")
+{
+    SimWorld world;
+    const entt::entity e = add_animal(world, { .species = "zebu", .enclosure = std::optional { 0 } }, { 1, 0, 1 });
+    CHECK(open_crate(world, e));
+    CHECK(world.registry.get<Animal>(e).job == AnimalJob::Idle);
+    CHECK_FALSE(open_crate(world, e));
+    const entt::entity carried = add_animal(world, { .species = "zebu" }, { 1, 0, 1 });
+    const entt::entity keeper = world.registry.create();
+    world.registry.emplace<KeeperDuty>(keeper, KeeperDuty { .job = KeeperJob::Catching, .target = carried });
+    CHECK_FALSE(open_crate(world, carried));
+    CHECK(world.registry.get<Animal>(carried).job == AnimalJob::Crated);
+}
+
 TEST_CASE("animals: a hungry animal eats at its house's troughs, which empty as it does")
 {
     SimWorld world;

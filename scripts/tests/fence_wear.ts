@@ -3,7 +3,7 @@
 // Enclosure fences wearing out. In a park of the Wild! expansion, the Debug tab's knocks wear the straight panels
 // of the enclosures' fences: a knock dents a panel, a second breaks a gap in it, and each shows so; corners do not
 // wear. A park saved with a worn fence loads with it. The park's mechanics mend them from the paths beside, broken
-// panels first.
+// panels first. The player is told as a fence breaks and once an enclosure's is mended.
 //
 //   RCT3PP_DATA=<an empty folder> ./nob script scripts/tests/fence_wear.ts -- --no-audio
 
@@ -22,8 +22,11 @@ expect(
     `the dented panel the park was saved with, not ${loaded.length} worn`,
 );
 
+await park.advance(2); // The fences looked at once, as the park had them
+const told = (key: string) => park.messages().some((m) => m.key === key);
+expect(!told("EnclosureMaintenance_Broken"), "not told of fences as broken as they were loaded");
 expect(debug.use("knock_fences", 60) === 60, "60 knocks, each wearing a panel");
-await frames(30);
+await park.advanceUntil(() => told("EnclosureMaintenance_Broken"), 5, "the player told of a broken fence");
 const worn = panels().filter((p) => wear(p) !== "sound");
 const broken = worn.filter((p) => wear(p) === "broken");
 log(`${worn.length} panels worn, ${broken.length} of them broken`);
@@ -71,3 +74,5 @@ await frames(30);
 await screenshot("fence_mending");
 await park.advanceUntil(() => broken_now().length < broken.length, 600, "a broken panel mended");
 log(`${broken.length - broken_now().length} broken panels mended`);
+await park.advanceUntil(() => told("EnclosureMaintenance_Fixed"), 1200, "the player told of an enclosure mended");
+await screenshot("fence_mended_message");

@@ -10,10 +10,11 @@
 #include "simulation/staff/work.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
-#include <cstdlib>
+#include <limits>
 #include <optional>
+#include <ranges>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -25,7 +26,8 @@ namespace rct3::simulation
         constexpr const FenceWearRates& kRates = kFenceWearRates;
         /// Fences are looked at this often, not every step: the knocks are rare and the strengths are looked up by name.
         constexpr units::Seconds kWearCheck { 1 };
-        /// A mechanic mends a fence from a path at most this many tiles from it, across or along.
+        /// A mechanic mends a fence from any path at most this many tiles from it, as the crow flies; with none that
+        /// near, from the nearest.
         constexpr i32 kMendingReach = 3;
 
         FenceUpkeep& upkeep_of(SimWorld& world)
@@ -54,7 +56,15 @@ namespace rct3::simulation
         return picked;
     }
 
-    bool step_fence_wear(SimWorld& world, save::model::EnclosureMap& map, Strengths strength, units::Seconds dt)
+    std::optional<save::model::Tile> fence_gap(const save::model::EnclosureMap& map, i32 which)
+    {
+        for (usize k = 0; k < map.wear.size() && k < map.tiles.size(); ++k)
+            if (map.wear[k] == save::model::FenceWear::Broken && map.tiles[k] == which)
+                return save::model::Tile { static_cast<i32>(k % static_cast<usize>(map.cols)), static_cast<i32>(k / static_cast<usize>(map.cols)) };
+        return std::nullopt;
+    }
+
+    bool step_fence_wear(SimWorld& world, save::model::EnclosureMap& map, const AnimalGround& ground, Strengths strength, units::Seconds dt, park::ParkMessages& messages)
     {
         auto& r = world.registry;
         if (map.fences.empty())
@@ -100,6 +110,34 @@ namespace rct3::simulation
                 changed = true;
         }
 
+        // The player is told of each fence newly broken and of each mended, and reminded while any stays broken.
+        std::vector<std::optional<save::model::Tile>> gaps(map.fences.size());
+        for (usize k = 0; k < map.wear.size() && k < map.tiles.size(); ++k)
+            if (map.wear[k] == save::model::FenceWear::Broken && map.tiles[k] && static_cast<usize>(*map.tiles[k]) < gaps.size())
+                gaps[static_cast<usize>(*map.tiles[k])] = save::model::Tile { static_cast<i32>(k % static_cast<usize>(map.cols)), static_cast<i32>(k / static_cast<usize>(map.cols)) };
+        const auto place = [&](save::model::Tile tile) {
+            const glm::vec2 at = world.paths.origin + (glm::vec2(tile.col, tile.row) + 0.5f) * world.paths.tile_size;
+            return glm::vec3(at.x, ground.height(at), at.y);
+        };
+        upkeep.since_told.value += passed.value;
+        std::vector<bool> gapped(gaps.size());
+        for (usize e = 0; e < gaps.size(); ++e)
+        {
+            gapped[e] = gaps[e].has_value();
+            const bool was = upkeep.gapped && e < upkeep.gapped->size() && (*upkeep.gapped)[e];
+            if (!upkeep.gapped || gapped[e] == was)
+                continue;
+            park::post(messages, { .text_key = std::string(gapped[e] ? kFenceBroken : kFenceFixed), .place = gaps[e].transform(place) });
+            if (gapped[e])
+                upkeep.since_told = { };
+        }
+        upkeep.gapped = std::move(gapped);
+        if (const auto gap = std::ranges::find_if(gaps, [](const auto& g) { return g.has_value(); }); gap != gaps.end() && upkeep.since_told.value >= kRates.reminder.value)
+        {
+            park::post(messages, { .text_key = std::string(kFenceStillBroken), .place = place(**gap) });
+            upkeep.since_told = { };
+        }
+
         // Free mechanics are sent to worn fences, broken ones first, each fence the nearest by the paths, once the
         // rides have taken those they need.
         // shortcut: mended from the nearest path; send them by the viewing galleries into the enclosure once those exist.
@@ -120,9 +158,13 @@ namespace rct3::simulation
                 const save::model::Tile tile { static_cast<i32>(k % static_cast<usize>(map.cols)), static_cast<i32>(k / static_cast<usize>(map.cols)) };
                 if (map.wear[k] != wear || std::ranges::any_of(r.view<const staff::FenceMending>(), [&](entt::entity m) { return r.get<const staff::FenceMending>(m).tile == tile; }))
                     continue;
+                // Distances squared, in tiles.
+                constexpr i32 kOffPaths = std::numeric_limits<i32>::max(); // A queue, or a tile taken away
+                const auto off = [&](const PathNode& node) { return node.queue || node.removed ? kOffPaths : ((node.tile.col - tile.col) * (node.tile.col - tile.col)) + ((node.tile.row - tile.row) * (node.tile.row - tile.row)); };
+                const i32 reach = std::max(kMendingReach * kMendingReach, std::ranges::min(nodes | std::views::transform(off)));
                 near.clear();
                 for (u32 n = 0; n < nodes.size(); ++n)
-                    if (!nodes[n].queue && !nodes[n].removed && std::max(std::abs(nodes[n].tile.col - tile.col), std::abs(nodes[n].tile.row - tile.row)) <= kMendingReach)
+                    if (const i32 o = off(nodes[n]); o <= reach && o != kOffPaths)
                         near.push_back(NodeId { n });
                 if (near.empty())
                     continue;

@@ -1261,7 +1261,7 @@ namespace rct3::scene::track
             if (const auto found = rct3::park::track::search_on(*b.completing, kCompletionTriesPerFrame))
             {
                 if (*found)
-                    b.proposed = std::move(**found);
+                    b.proposed = **found;
                 else
                     b.complaint = "RideAutoCompleteNoSolution";
                 b.completing.reset();

@@ -221,6 +221,7 @@ namespace rct3::simulation
                     }
                     if (!way)
                         way = paths.way_out(at);
+                    const bool has_way = way.has_value();
                     stride.route = std::move(way).value_or(std::vector<NodeId> { });
                     stride.from = at;
                     stride.to = at;
@@ -229,7 +230,7 @@ namespace rct3::simulation
                     back = back && stride.route.empty() && over;
                     if (errand.kind != ErrandKind::Waiting)
                         errand = { .kind = ErrandKind::Waiting, .target = busy_at, .off = off_at };
-                    if (way && busy_at != entt::null && r.all_of<CycleRide>(busy_at))
+                    if (has_way && busy_at != entt::null && r.all_of<CycleRide>(busy_at))
                         think(r, m, ThoughtKind::WaitingForFriends, busy_at, now);
                     if (stride.route.empty() && at != spot)
                         errand.rest = ticks(kTuning.walking.retry_way.value);

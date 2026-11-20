@@ -408,7 +408,7 @@ TEST_CASE("animals: a park's saved zoo animals come in where they stood, those i
     crated.in_crate = true;
     crated.world[12] = 11;
     const std::array saved { out, crated };
-    import_animals(world, saved, ground.enclosure);
+    import_animals(world, saved, ground.enclosure, [](const save::model::ZooAnimal& z) { return z.first_names; });
     auto& r = world.registry;
     const auto animals = r.view<const Animal, const Pose>();
     REQUIRE(std::ranges::distance(animals) == 2);

@@ -15,6 +15,7 @@
 #include "scene/front_end_scene.hpp"
 #include "scene/park/attraction_state.hpp"
 #include "scene/park/debug_tab.hpp"
+#include "scene/park/info_panel.hpp"
 #include "scene/park/poses.hpp"
 #include "scene/park/refresh.hpp"
 #include "scene/park/scene.hpp"
@@ -1499,6 +1500,32 @@ namespace rct3::scene
                 return nullptr;
             const auto t = std::ranges::find(ui::screens::info::kAnimalTabs, park.animal_tab, &ui::screens::info::AnimalTabInfo::tab);
             return Json { { "id", entt::to_integral(*park.shown_animal) }, { "tab", t->help } };
+        });
+        engine_.define("animals.houses", [this](const Json&) {
+            const park::ParkScene& park = park_of(park_);
+            const save::model::TerrainGrid& g = park.grid;
+            const auto& r = park.sim.registry;
+            const auto tile = [&](glm::vec3 at) { return Json { { "col", g.tile_size_x > 0 ? (at.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (at.z - g.origin_z) / g.tile_size_z : 0 } }; };
+            constexpr std::array<std::string_view, 5> kJobs { "idle", "strolling", "filling", "clearing", "catching" };
+            Json out = Json::array();
+            for (const auto [e, house] : r.view<const simulation::AnimalHouse>().each())
+            {
+                Json keepers = Json::array();
+                for (const auto [k, duty, pose] : r.view<const simulation::KeeperDuty, const simulation::Pose>().each())
+                    if (duty.house == e)
+                        keepers.push_back({ { "id", entt::to_integral(k) }, { "job", kJobs.at(std::to_underlying(duty.job)) }, { "target", duty.target != entt::null ? static_cast<i64>(entt::to_integral(duty.target)) : -1 }, { "at", tile(pose.position) } });
+                out.push_back({ { "id", entt::to_integral(e) }, { "object", house.object }, { "hut", house.hut }, { "enclosure", house.enclosure.value_or(-1) }, { "keepers", std::move(keepers) }, { "at", tile(house.troughs) } });
+            }
+            return out;
+        });
+        engine_.define("animals.shownHouse", [this](const Json&) -> Json {
+            const park::ParkScene& park = park_of(park_);
+            const entt::entity home = park.shown_prop && park.shown_prop->value < park.objects.size() ? park::animal_house_of(park, park.objects[park.shown_prop->value]) : entt::null;
+            if (home == entt::null)
+                return nullptr;
+            using enum ui::screens::info::SceneryTab;
+            const auto tab = park.prop_tab.value_or(Destroy);
+            return Json { { "id", entt::to_integral(home) }, { "tab", tab == HouseDetails ? "details" : tab == HouseKeepers ? "keepers" : tab == HouseThoughts ? "thoughts" : "" } };
         });
         engine_.define("animals.dung", [this](const Json&) {
             const park::ParkScene& park = park_of(park_);

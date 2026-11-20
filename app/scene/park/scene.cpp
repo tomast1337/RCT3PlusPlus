@@ -834,6 +834,11 @@ namespace rct3::scene::park
                     simulation::set_passport_gift(*rules, gifts[static_cast<usize>(change->value)]->symbol, scene.carried);
                 open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
             }
+            else if (const entt::entity home = change && scene.shown_prop ? animal_house_of(scene, scene.objects[scene.shown_prop->value]) : entt::null; home != entt::null)
+            {
+                if (change->id == ui::screens::info::kHouseLocateControl)
+                    scene.camera.target = scene.sim.registry.get<simulation::AnimalHouse>(home).troughs;
+            }
             else if (const auto room = change && scene.shown_prop ? pool_room(scene, scene.objects[scene.shown_prop->value]) : std::nullopt)
             {
                 const save::model::PlacedObject& o = scene.objects[scene.shown_prop->value];
@@ -929,7 +934,7 @@ namespace rct3::scene::park
             if (paint && scene.shown_prop)
             {
                 // Pot k paints the k-th slot the prop takes; free, as in the game.
-                const std::vector<usize> slots = ui::screens::info::scenery_paint_slots(prop_facts(scene, *scene.shown_prop));
+                const std::vector<usize> slots = ui::screens::info::scenery_paint_slots(prop_facts(scene, *scene.shown_prop, *assets.strings));
                 if (paint->pot < slots.size())
                     paint_prop(device, scene, *scene.shown_prop, slots[paint->pot], static_cast<i32>(paint->colour));
             }

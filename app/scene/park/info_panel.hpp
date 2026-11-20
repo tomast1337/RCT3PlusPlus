@@ -39,8 +39,11 @@ namespace rct3::scene::park
     /// The simulated changing room of `room`, if the simulation has it.
     [[nodiscard]] entt::entity room_entity(const ParkScene& scene, usize room);
 
-    /// What the info panel shows of the prop `index`.
-    [[nodiscard]] ui::screens::info::SceneryFacts prop_facts(const ParkScene& scene, save::model::PlacedObjectIndex index);
+    /// The simulated animal house `o` draws, or the keeper's hut beside it does, if any.
+    [[nodiscard]] entt::entity animal_house_of(const ParkScene& scene, const save::model::PlacedObject& o);
+
+    /// What the info panel shows of the prop `index`, its words in `strings`.
+    [[nodiscard]] ui::screens::info::SceneryFacts prop_facts(const ParkScene& scene, save::model::PlacedObjectIndex index, const ui::StringTable& strings);
 
     /// Adds the pictures of what stalls sell, for their menus, to the interface's.
     void load_carried(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets);
@@ -68,7 +71,8 @@ namespace rct3::scene::park
     /// Opens the panel on the attraction `ref`, at `tab`, else the tab last opened, if it has one.
     void open_info(ParkScene& scene, ui::screens::info::InfoPanel& panel, rct3::park::AttractionRef ref, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, std::optional<ui::screens::info::AttractionTab> tab = std::nullopt);
 
-    /// Opens the panel on the prop `index`, with only its name showing, or on its tab `open`.
+    /// Opens the panel on the prop `index`, with only its name showing, or on its tab `open`. A keeper's hut opens
+    /// its animal house's, and a house opens on its details unless told otherwise.
     void open_prop(ParkScene& scene, ui::screens::info::InfoPanel& panel, save::model::PlacedObjectIndex index, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, std::optional<ui::screens::info::SceneryTab> open = std::nullopt);
 
     /// Paints colour slot `slot` of the prop `index` in colour `colour` of the 32.

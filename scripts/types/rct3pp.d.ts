@@ -1174,6 +1174,25 @@ declare namespace animals {
     function open(id: number): void;
     /** The animal whose window is open, and its open tab by its help's string key; undefined when none is. */
     function shown(): { id: number; tab: string } | undefined;
+    /** The animal houses, each with a number of its own, its placed object and its keeper's hut's (0 for none), the
+     *  enclosure it stands in (-1 for none), the keepers who look after it, and the point of the map its troughs
+     *  stand on, in tiles. Each keeper has a number of their own, the job in hand, what they are at it on (the
+     *  number of a house, dung or animal; -1 for nothing) and where they stand. */
+    function houses(): {
+        id: number;
+        object: PlacedObjectId;
+        hut: PlacedObjectId;
+        enclosure: number;
+        keepers: {
+            id: number;
+            job: "idle" | "strolling" | "filling" | "clearing" | "catching";
+            target: number;
+            at: { col: Tiles; row: Tiles };
+        }[];
+        at: { col: Tiles; row: Tiles };
+    }[];
+    /** The animal house whose window is open, by its number in houses(), and its open page; undefined when none is. */
+    function shownHouse(): { id: number; tab: "details" | "keepers" | "thoughts" | "" } | undefined;
     /** The dung lying about, each piece with the enclosure it lies in (-1 for none), its size from 0 to 2, and the
      *  point of the map it lies on, in tiles. */
     function dung(): { enclosure: number; size: number; col: Tiles; row: Tiles }[];

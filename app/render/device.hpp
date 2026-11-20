@@ -20,8 +20,10 @@
 //     device->end_pass();
 //     device->copy_screen(target);             // between passes
 //     device->read_screen();                   // between passes, for a screenshot
+//     device->stream_screen();                 // between passes, for a frame of a video
 //     device->end_frame();                     // submits and presents
 //   device->take_screen();                     // what read_screen asked for
+//   device->take_streamed(pixels, wait);       // what stream_screen asked for, a frame or two later
 //   device->shutdown();                        // also done by the destructor
 //
 // Calls out of this order are programming errors. Resources may be destroyed at any time, also while a frame
@@ -41,6 +43,12 @@ struct GLFWwindow;
 
 namespace rct3::render
 {
+
+    enum class StreamWait : u8
+    {
+        IfDrawn, ///< Only a screen the GPU has drawn, or one the next frame would wait for anyway
+        Always,  ///< Waits for the GPU; for the last screens of a video
+    };
 
     enum class Backend : u8
     {
@@ -180,6 +188,14 @@ namespace rct3::render
         virtual void end_frame() = 0;
         /// The pixels read_screen asked for, once their frame ended; then none until asked again.
         [[nodiscard]] virtual std::optional<ScreenPixels> take_screen() = 0;
+        /// For a video: asks for the whole screen as read_screen does, without making the frame wait for the
+        /// GPU to draw it. Only between passes of a frame. False when the device cannot.
+        virtual bool stream_screen() = 0;
+        /// Puts the oldest screen stream_screen asked for into `into`, keeping its memory, and returns true;
+        /// false when none is waiting, or, with StreamWait::IfDrawn, when the GPU has not drawn it yet and the
+        /// next frame would not wait for it anyway. Only between frames. Screens not taken before their frame's
+        /// slot comes round again are dropped.
+        [[nodiscard]] virtual bool take_streamed(ScreenPixels& into, StreamWait wait) = 0;
         /// For debugging: while on, draws of triangles outline them instead of filling them, where the device can.
         virtual void set_wireframe(bool on) = 0;
 

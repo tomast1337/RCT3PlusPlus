@@ -417,6 +417,25 @@ namespace rct3::render::software
         return std::exchange(read_, std::nullopt);
     }
 
+    bool SoftwareDevice::stream_screen()
+    {
+        assert(state_ == State::InFrame);
+        streaming_window_ = true;
+        return true;
+    }
+
+    bool SoftwareDevice::take_streamed(ScreenPixels& into, StreamWait)
+    {
+        assert(state_ == State::Idle);
+        // The window keeps the last frame until the next one is drawn.
+        if (!std::exchange(streamed_waiting_, false))
+            return false;
+        into.size = window_.extent;
+        into.rgba.resize(window_.texels.size() * 4);
+        std::memcpy(into.rgba.data(), window_.texels.data(), into.rgba.size());
+        return true;
+    }
+
     // The screen stretched over the window through the brightness curve (present.slang), opaque.
     void SoftwareDevice::compose_window()
     {
@@ -529,6 +548,7 @@ namespace rct3::render::software
             std::memcpy(pixels.rgba.data(), window_.texels.data(), pixels.rgba.size());
             reading_ = std::move(pixels);
         }
+        streamed_waiting_ = std::exchange(streaming_window_, false);
         if (reading_)
             read_ = std::exchange(reading_, std::nullopt);
         if (shown_)

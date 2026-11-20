@@ -337,6 +337,7 @@ namespace rct3::simulation
         for (const auto& [at, enclosure] : dropped)
         {
             const entt::entity d = r.create();
+            // shortcut: every animal leaves the smallest kind; upgrade when a species' data gives its size.
             r.emplace<Dung>(d, Dung { enclosure });
             r.emplace<Pose>(d, Pose { .position = at, .was = at });
         }

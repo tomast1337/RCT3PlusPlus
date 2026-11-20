@@ -733,6 +733,10 @@ declare namespace build {
               levelling: Money;
               /** What the item costs, which floats over a scenery item's ghost. */
               price: Money;
+              /** Of scenery dragged, how many items of the run it spans fit and show; 0 while not dragging. */
+              run: number;
+              /** The scatter brush of the placing panel: 0 off, 1 close together, 2 far apart. */
+              scatter: 0 | 1 | 2;
               ghost: boolean;
               arrow: boolean;
               site?: { col: Tiles; row: Tiles; turns: number; height: number };

@@ -192,7 +192,9 @@ namespace rct3::scene::park
         if (const RidePlacing& p = scene.placing; p.item && p.step == RidePlacing::Step::Scenery && p.site && !p.ghost_mesh.vertices.empty() && p.item->price != units::Money { })
         {
             const glm::vec3 ground = tile_point(scene.grid, { p.site->col, p.site->row });
-            show({ { ground.x, static_cast<f32>(p.site->height), ground.z }, -p.item->price, units::Seconds { } });
+            // A drag shows what its whole run costs.
+            const auto count = static_cast<i64>(p.drag ? std::max<usize>(1, p.drag->fitting.size()) : 1);
+            show({ { ground.x, static_cast<f32>(p.site->height), ground.z }, units::Money { -p.item->price.value * count }, units::Seconds { } });
         }
         if (const StructureTools& t = scene.structures; t.tool == StructureTools::Tool::Place && t.pointed_tile && !t.ghost_mesh.vertices.empty() && t.cost != units::Money { })
             show({ tile_point(scene.grid, *t.pointed_tile), -t.cost, units::Seconds { } });

@@ -4,7 +4,8 @@
 // - its ghost shows where it fits and is refused where one stands, and placing it costs its price;
 // - its window's move tab picks it up again, turned and raised on the way, and sets it down elsewhere for nothing;
 // - its window's copy tab takes out the tree tool, in the same colours;
-// - pulling it down pays what its item says that costs, and the park saved and loaded again keeps the moved tree where it went.
+// - pulling it down pays what its item says that costs, and the park saved and loaded again keeps the moved tree where it went;
+// - a drag places a run of trees, a tile apart, and the scatter brush sprinkles them round the pointer, each paid for.
 //
 //   ./nob script scripts/tests/scenery_tools.ts -- --no-audio
 
@@ -88,8 +89,8 @@ const turn = tree_at(col, row)!.turn;
 const height = tree_at(col, row)!.height ?? 0;
 
 // 2. Picked up with its window's move tab, turned and raised, and set down two tiles on for nothing.
-const open_window = async () => {
-    const [x, y] = on_view(col + 0.5, row + 0.5);
+const open_window = async (r = row) => {
+    const [x, y] = on_view(col + 0.5, r + 0.5);
     await pointer.click(x, y - 0.03);
     await until(() => ui.find("info/Staff_MovePincerLarge") !== undefined, 120, "the tree's window with its move tab");
 };
@@ -151,20 +152,36 @@ expect(tree_at(col + 2, row) === undefined, "the tree pulled down");
 await ui.click("info/close").catch(() => undefined);
 await screenshot("deleted");
 
-// 5. A tree moved, saved and loaded again stays where it went.
-expect(build.pick("Style/Vanilla/Style", kTree), "the tree again");
+// 5. A drag places a run of trees, one a tile, the ghost showing each and the price of all of them.
+expect(build.pick("Style/Vanilla/Style", kTree), "the tree for a run");
 await frames(2);
-const again = await hover(col + 0.5, row + 0.5);
-await pointer.click(again.x, again.y);
+const start = await hover(col + 0.5, row + 1.5);
+expect(start.placing.problem === "none", `the run's first tree placeable, not ${start.placing.problem}`);
+pointer.press();
+await frames(2);
+const [ex, ey] = on_view(col + 2.5, row + 1.5);
+pointer.move(ex, ey);
+await frames(3);
+const run = build.placing()!.run;
+expect(run === 3, `a run of three trees shown, not ${run}`);
+await screenshot("run_ghost");
+const before_run = park.cash()!;
+pointer.release();
+await frames(3);
+for (let c = col; c < col + 3; ++c) expect(tree_at(c, row + 1) !== undefined, `a tree of the run at ${c}`);
+expect(park.cash() === before_run - 3 * price, `the run paid for: ${before_run} then ${park.cash()}`);
 build.stop();
 await frames(2);
-await open_window();
+await screenshot("run");
+
+// 6. A tree of the run moved, saved and loaded again stays where it went.
+await open_window(row + 1);
 await ui.click("info/Staff_MovePincerLarge");
 await frames(2);
 const last = await hover(col + 0.5, row + 3.5);
 await pointer.click(last.x, last.y);
 await frames(3);
-expect(tree_at(col, row + 3) !== undefined, "the second tree moved");
+expect(tree_at(col, row + 3) !== undefined && tree_at(col, row + 1) === undefined, "the run's first tree moved");
 await files_menu("File_SaveGame");
 await until(() => ui.find("park_files") !== undefined, 120, "the save window");
 await ui.click("park_files/content/open");
@@ -177,6 +194,34 @@ await until(() => ui.find(first) !== undefined, 120, "the save in the load windo
 await ui.click(first);
 await ui.click("park_files/content/open");
 await until(() => park.loaded() && tree_at(col, row + 3) !== undefined, 1200, "the saved park with the moved tree");
-expect(tree_at(col, row) === undefined, "nothing left where the moved tree first stood");
+expect(tree_at(col, row + 1) === undefined, "nothing left where the moved tree first stood");
 await screenshot("loaded");
+
+// 7. With the scatter tab on, holding the button sprinkles trees round the pointer, each paid for, and a click
+// places nothing more.
+await until(() => build.flatRides() !== undefined, 1200, "the build lists again");
+expect(build.pick("Style/Vanilla/Style", kTree), "the tree to scatter");
+await until(() => ui.find("placing/Land_Brush_Height_Mode_Drag") !== undefined, 120, "the scatter tab");
+await ui.click("placing/Land_Brush_Height_Mode_Drag");
+await frames(2);
+expect(build.placing()!.scatter === 1, `the brush scattering close together, not ${build.placing()!.scatter}`);
+const count_before = trees().length;
+const before_scatter = park.cash()!;
+const [sx, sy] = on_view(col + 1.5, row + 2);
+pointer.move(sx, sy);
+await frames(2);
+pointer.press();
+await frames(30);
+pointer.release();
+await frames(3);
+const scattered = trees().length - count_before;
+log("scattered", scattered);
+expect(scattered >= 2, `trees scattered, not ${scattered}`);
+expect(
+    park.cash() === before_scatter - scattered * price,
+    `the scattered trees paid for: ${before_scatter} then ${park.cash()}`,
+);
+build.stop();
+await frames(2);
+await screenshot("scattered");
 quit(0);

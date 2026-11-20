@@ -53,8 +53,8 @@ camera.look(
 await frames(10);
 await screenshot("newborn");
 
-// Four years on, the young are grown, each drawn as an adult.
-debug.use("age_animals", 4 * 8 * 600);
+// Fifteen years on, past even a park's slowest growing up, the young are grown, each drawn as an adult.
+debug.use("age_animals", 15 * 8 * 600);
 park.advance(1);
 await frames(5);
 const grown = animals.list().filter((a) => a.mother >= 0);

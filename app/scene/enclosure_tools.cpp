@@ -28,6 +28,7 @@
 #include <cmath>
 #include <future>
 #include <glm/gtc/matrix_transform.hpp>
+#include <set>
 #include <utility>
 
 namespace rct3::scene
@@ -350,6 +351,7 @@ namespace rct3::scene
             scene.objects.push_back(std::move(panel));
         }
         scene.leans.merge(fence.leans);
+        (void)fence_wear_changed(scene);
         objects_changed(scene);
         // Enclosures joined or cut in two may have moved to other places in the map: the houses and dung take
         // the place of the ground under them now. The animals do so as they next move.
@@ -360,6 +362,31 @@ namespace rct3::scene
             house.enclosure = under((house.low.x + house.high.x) / 2, (house.low.y + house.high.y) / 2);
         for (const auto [e, dung, pose] : r.view<simulation::Dung, const simulation::Pose>().each())
             dung.enclosure = under(pose.position.x, pose.position.z);
+    }
+
+    bool fence_wear_changed(park::ParkScene& scene)
+    {
+        rct3::park::object::Broken broken;
+        rct3::park::object::Broken damaged;
+        const std::set<u64> panels(scene.enclosure_panels.begin(), scene.enclosure_panels.end());
+        for (const save::model::PlacedObject& o : scene.objects)
+            if (!o.hidden && panels.contains(o.id))
+                switch (rct3::park::piece_wear(scene.enclosures, o))
+                {
+                    case save::model::FenceWear::Damaged:
+                        damaged.insert(o.id);
+                        break;
+                    case save::model::FenceWear::Broken:
+                        broken.insert(o.id);
+                        break;
+                    case save::model::FenceWear::Sound:
+                        break;
+                }
+        if (broken == scene.broken_panels && damaged == scene.damaged_panels)
+            return false;
+        scene.broken_panels = std::move(broken);
+        scene.damaged_panels = std::move(damaged);
+        return true;
     }
 
 } // namespace rct3::scene

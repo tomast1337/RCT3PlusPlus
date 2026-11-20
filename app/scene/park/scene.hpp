@@ -495,6 +495,8 @@ namespace rct3::scene::park
         std::unordered_map<u64, std::vector<u64>> ride_fence_pieces;
         save::model::EnclosureMap enclosures;                          ///< The animal enclosures' tiles and fences
         std::vector<u64> enclosure_panels;                             ///< The objects of their fences, as last built
+        rct3::park::object::Broken broken_panels;                      ///< Those of `enclosure_panels` broken through
+        rct3::park::object::Broken damaged_panels;                     ///< Those worn but whole
         rct3::park::pools::PoolMap pools;                              ///< The swimming pools the player laid
         usize pools_seen = 0;                                          ///< A fingerprint of `pools` as the simulation last took them in
         std::vector<rct3::park::pools::PoolExtra> scenery_pool_extras; ///< Pool extras a park from the game placed as scenery, for its swimmers to use

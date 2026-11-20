@@ -60,7 +60,7 @@ namespace rct3::scene::park
     /// when `shown_chunks` is not the park's count), or nothing when none do; without the supports unless
     /// `supports`. Reads only what is set when the park loads besides its arguments, so it may run beside the
     /// frame.
-    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const rct3::park::object::LevelPlan& shown, usize shown_chunks, f32 band, const rct3::park::object::LevelScales& scales, bool supports, const rct3::park::object::Broken& broken = { }, const rct3::park::object::Chains& chains = { }, const rct3::park::object::FlowFades& fades = { });
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const rct3::park::object::LevelPlan& shown, usize shown_chunks, f32 band, const rct3::park::object::LevelScales& scales, bool supports, const rct3::park::object::Broken& broken = { }, const rct3::park::object::Chains& chains = { }, const rct3::park::object::FlowFades& fades = { }, const rct3::park::object::Broken& damaged = { });
 
     /// `vertices` with the bands of `bands` into `out`, for the crossing shaders.
     void crossing_vertices(std::vector<CrossingVertex>& out, std::span<const rct3::park::GroundVertex> vertices, std::span<const std::pair<glm::vec4, glm::vec2>> bands);

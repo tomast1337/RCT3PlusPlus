@@ -46,4 +46,8 @@ namespace rct3::scene
     /// shortcut: the old panels stay hidden among the objects; drop them when objects can be taken out.
     void enclosures_changed(park::ParkScene& scene, const ui::InterfaceAssets& assets);
 
+    /// Picks up the wear of the enclosures' fences, for their panels to be drawn as worn as they are. Returns whether
+    /// any panel looks different now.
+    bool fence_wear_changed(park::ParkScene& scene);
+
 } // namespace rct3::scene

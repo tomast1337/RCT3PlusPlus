@@ -576,10 +576,13 @@ namespace rct3::park::object
         const usize slash = near.rfind('/');
         const std::string own_folder = item->group.empty() || slash == std::string::npos ? std::string { } : std::format("{}/{}/", std::string_view(near).substr(0, slash), item->group);
 
-        // The visuals that can be read, with the file each is in; a broken look apart.
-        constexpr std::string_view kBroken = "_Broken";
+        // The visuals that can be read, with the file each is in; the worn and broken looks apart.
+        constexpr std::array<std::string_view, 2> kBroken { "_Broken", "Damage2" };
+        constexpr std::string_view kDamaged = "Damage1";
+        const auto ends_with = [](std::string_view name, std::string_view end) { return name.size() > end.size() && strings::equals_ignoring_case(name.substr(name.size() - end.size()), end); };
         std::vector<std::pair<const ovl::SceneryVisual*, std::string>> visuals;
         std::optional<std::pair<const ovl::SceneryVisual*, std::string>> broken;
+        std::optional<std::pair<const ovl::SceneryVisual*, std::string>> damaged;
         for (const std::string_view visual_name : item->visuals)
         {
             const auto visual_file = files_->holding(tagged(visual_name, kVisualTag), near, own_folder);
@@ -587,8 +590,10 @@ namespace rct3::park::object
                 continue;
             if (const ovl::SceneryVisual* visual = visual_in(*visual_file->second, visual_name))
             {
-                if (visual_name.size() > kBroken.size() && strings::equals_ignoring_case(visual_name.substr(visual_name.size() - kBroken.size()), kBroken))
+                if (std::ranges::any_of(kBroken, [&](std::string_view end) { return ends_with(visual_name, end); }))
                     broken.emplace(visual, visual_file->first);
+                else if (ends_with(visual_name, kDamaged))
+                    damaged.emplace(visual, visual_file->first);
                 else
                     visuals.emplace_back(visual, visual_file->first);
             }
@@ -652,12 +657,14 @@ namespace rct3::park::object
         add_levels(model, *visual, visual_path);
         if (model.levels.empty())
             return std::nullopt;
-        if (broken)
+        for (auto [look, levels] : { std::pair { &broken, &model.broken_levels }, std::pair { &damaged, &model.damaged_levels } })
         {
+            if (!*look)
+                continue;
             ObjectModel worn;
-            add_levels(worn, *broken->first, broken->second);
+            add_levels(worn, *(*look)->first, (*look)->second);
             if (worn.levels.size() == model.levels.size())
-                model.broken_levels = std::move(worn.levels);
+                *levels = std::move(worn.levels);
         }
         model.price = item->cost;
         model.removal_cost = item->removal_cost;

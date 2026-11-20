@@ -1316,7 +1316,7 @@ namespace rct3::scene::park
         return rct3::park::water::flow_fades(scene.rides, scene.objects, scene.models, [&](save::model::RideIndex ride) { return ride.value < scene.track_rules.size() && scene.track_rules[ride.value].pool_ride; });
     }
 
-    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const rct3::park::object::LevelPlan& shown, usize shown_chunks, f32 band, const rct3::park::object::LevelScales& scales, bool supports, const rct3::park::object::Broken& broken, const rct3::park::object::Chains& chains, const rct3::park::object::FlowFades& fades)
+    std::optional<ObjectBuild> build_objects(const ParkScene& scene, const glm::vec3& eye, const rct3::park::object::LevelPlan& shown, usize shown_chunks, f32 band, const rct3::park::object::LevelScales& scales, bool supports, const rct3::park::object::Broken& broken, const rct3::park::object::Chains& chains, const rct3::park::object::FlowFades& fades, const rct3::park::object::Broken& damaged)
     {
         ObjectBuild built;
         built.plan = profiling::section("Levels", [&] { return rct3::park::object::plan_levels(scene.objects, scene.models, scene.anchors, eye, band, scales); });
@@ -1356,7 +1356,7 @@ namespace rct3::scene::park
             {
                 for (const u32 i : members[c])
                     only[i] = (*levels)[i];
-                shapes->mesh = profiling::section("Mesh", [&] { return rct3::park::object::object_mesh(scene.objects, scene.models, scene.grid, only, { }, scene.leans, scene.fitted, broken, chains, fades); });
+                shapes->mesh = profiling::section("Mesh", [&] { return rct3::park::object::object_mesh(scene.objects, scene.models, scene.grid, only, { }, scene.leans, scene.fitted, broken, chains, fades, damaged); });
                 shapes->billboards = profiling::section("Gather", [&] { return rct3::park::object::gather_billboards(scene.objects, scene.models, scene.anchors, only); });
                 for (const u32 i : members[c])
                     only[i] = rct3::park::object::kNotDrawn;
@@ -1465,7 +1465,7 @@ namespace rct3::scene::park
                 if (std::ranges::contains(moving, i) || (!scene.show_supports && scene.objects[i].overlay == rct3::park::support::kSupportOverlay))
                     levels[i - from] = rct3::park::object::kNotDrawn;
             }
-            scene.fresh_objects = rct3::park::object::object_mesh(std::span(scene.objects).subspan(from), scene.models, scene.grid, levels, { }, scene.leans, scene.fitted, scene.broken_objects);
+            scene.fresh_objects = rct3::park::object::object_mesh(std::span(scene.objects).subspan(from), scene.models, scene.grid, levels, { }, scene.leans, scene.fitted, scene.broken_objects, { }, { }, scene.damaged_panels);
             add_textures(device, scene, scene.fresh_objects.batches);
             scene.fresh_for = now;
             ++scene.still_changes;
@@ -1474,9 +1474,9 @@ namespace rct3::scene::park
         if (scene.since_rebuild < kObjectRebuildInterval || scene.object_build.valid() || scene.objects_pending || scene.supports.stale)
             return; // Stale supports change the objects first (refresh_supports)
         scene.since_rebuild = { };
-        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, shown_chunks = scene.object_chunks.size(), band = scene.blend_band, scales = scene.level_scales, supports = scene.show_supports, broken = scene.broken_objects, chains = rct3::park::chain_runs(scene.rides, scene.objects, scene.models), fades = flow_fades(scene)] {
+        scene.object_build = std::async(std::launch::async, [&scene, eye, shown = scene.levels, shown_chunks = scene.object_chunks.size(), band = scene.blend_band, scales = scene.level_scales, supports = scene.show_supports, broken = scene.broken_objects, chains = rct3::park::chain_runs(scene.rides, scene.objects, scene.models), fades = flow_fades(scene), damaged = scene.damaged_panels] {
             profiling::register_thread("ObjectWorker");
-            auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, shown_chunks, band, scales, supports, broken, chains, fades); });
+            auto built = profiling::section("Objects", [&] { return build_objects(scene, eye, shown, shown_chunks, band, scales, supports, broken, chains, fades, damaged); });
             profiling::unregister_thread();
             return built;
         });

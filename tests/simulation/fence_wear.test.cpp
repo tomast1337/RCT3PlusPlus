@@ -111,3 +111,12 @@ TEST_CASE("fence wear: where the fence is put up again, as a tile is taken out o
     CHECK(map.wear_at(2, 1) == FenceWear::Sound);
     CHECK(map.wear_at(3, 4) == FenceWear::Broken);
 }
+
+TEST_CASE("fence wear: knocking the fences by hand wears panels until none are left to break")
+{
+    SimWorld world;
+    save::model::EnclosureMap map = pen("Wood");
+    CHECK(knock_fences(world, map, 10) == 10);
+    CHECK(knock_fences(world, map, 10) == 6); // Eight panelled tiles, two knocks each
+    CHECK(std::ranges::count(map.wear, FenceWear::Broken) == 8);
+}

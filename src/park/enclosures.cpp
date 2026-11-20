@@ -282,6 +282,11 @@ namespace rct3::park
         return std::popcount(out) == 1 || out == 0b0101 || out == 0b1010;
     }
 
+    save::model::FenceWear piece_wear(const save::model::EnclosureMap& map, const save::model::PlacedObject& piece)
+    {
+        return piece.symbol.ends_with("Edge") ? map.wear_at(piece.col, piece.row) : save::model::FenceWear::Sound;
+    }
+
     i32 enclosure_size(const save::model::EnclosureMap& map, std::optional<i32> region) noexcept
     {
         return static_cast<i32>(std::ranges::count(map.tiles, region));

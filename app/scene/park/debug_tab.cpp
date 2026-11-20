@@ -7,11 +7,14 @@
 #include "park/boundary_fence.hpp"
 #include "park/land_buying.hpp"
 #include "park/person/motions.hpp"
+#include "scene/enclosure_tools.hpp"
 #include "scene/land_tools.hpp"
+#include "scene/objects.hpp"
 #include "scene/park/fireworks.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/waterfalls.hpp"
 #include "simulation/debug_tools.hpp"
+#include "simulation/fence_wear.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/wild_birds.hpp"
 #include "strings/unicode.hpp"
@@ -31,6 +34,7 @@ namespace rct3::scene::park
         /// a few gulls to see them cross.
         constexpr usize kDebugFlock = 12;
         constexpr usize kDebugGulls = 3;
+        constexpr i64 kDebugFenceKnocks = 8;
 
         /// The park's own walkable tiles, not its queues nor the road out to the gate: where guests and litter are
         /// dropped.
@@ -112,6 +116,13 @@ namespace rct3::scene::park
                 return simulation::add_ducks(scene.sim, bird_ground(scene), kDebugFlock);
             case DebugTool::AddGulls:
                 return simulation::add_gulls(scene.sim, bird_ground(scene), kDebugGulls);
+            case DebugTool::KnockFences:
+            {
+                const usize knocked = simulation::knock_fences(scene.sim, scene.enclosures, count);
+                if (fence_wear_changed(scene))
+                    objects_changed(scene);
+                return knocked;
+            }
             case DebugTool::RemoveWildBirds:
                 return simulation::remove_wild_birds(scene.sim);
             case DebugTool::DropLitter:
@@ -308,6 +319,8 @@ namespace rct3::scene::park
             tool_button(device, scene, assets, "Remove all animals", DebugTool::RemoveAnimals);
             ImGui::SameLine();
             tool_button(device, scene, assets, "Reset animals' needs", DebugTool::RefreshAnimals);
+            tool_button(device, scene, assets, "Wear enclosure fences", DebugTool::KnockFences, kDebugFenceKnocks);
+            ImGui::SetItemTooltip("Knocks the fences of random enclosures; a panel breaks at its second knock");
         }
 
         if (ImGui::CollapsingHeader("Wild birds", ImGuiTreeNodeFlags_DefaultOpen))

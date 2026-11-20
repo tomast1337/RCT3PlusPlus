@@ -1630,6 +1630,7 @@ namespace rct3::scene::park
                     built[i].colours = found->second.default_colours;
             }
             scene.objects.insert(scene.objects.end(), std::make_move_iterator(built.begin()), std::make_move_iterator(built.end()));
+            (void)fence_wear_changed(scene);
             add_ride_cars(device, scene, install, save::model::RideIndex { 0 }, scene.rides.rides.size());
             log.info("{} ride cars, {} on arms, {} vertices{}", scene.cars.size(), scene.arm_cars.size(), scene.car_meshes.own.size(), scene.car_lamps ? ", some with lamps" : "");
             refresh_pavings(scene);
@@ -1712,7 +1713,7 @@ namespace rct3::scene::park
                 }
             }
             profiling::section("ObjectBuffers", [&] {
-                if (auto built = build_objects(scene, rct3::park::eye(scene.camera), { }, 0, scene.blend_band, scene.level_scales, scene.show_supports, { }, rct3::park::chain_runs(scene.rides, scene.objects, scene.models), flow_fades(scene)))
+                if (auto built = build_objects(scene, rct3::park::eye(scene.camera), { }, 0, scene.blend_band, scene.level_scales, scene.show_supports, scene.broken_panels, rct3::park::chain_runs(scene.rides, scene.objects, scene.models), flow_fades(scene), scene.damaged_panels))
                     show_objects(device, scene, std::move(*built));
             });
             if (auto sky = load_sky(device, install, options, rct3::park::background_theme(world->sky_background), scene); !sky)

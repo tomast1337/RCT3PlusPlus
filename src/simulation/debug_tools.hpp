@@ -55,6 +55,9 @@ namespace rct3::simulation
     /// `due`, by an adult male of her kind in her enclosure if there is one. Returns how many.
     usize make_animals_pregnant(SimWorld& world, units::Seconds due);
 
+    /// Makes every zoo animal `by` older, so the young grow up sooner. Returns how many animals.
+    usize age_animals(SimWorld& world, units::Seconds by);
+
     /// Drops `count` pieces of litter, each on a tile of `spots` picked with `dice`. Returns how many; none without
     /// spots.
     usize scatter_litter(SimWorld& world, random::RandomState& dice, std::span<const NodeId> spots, usize count);

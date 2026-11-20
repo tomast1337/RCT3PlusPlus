@@ -71,6 +71,20 @@ namespace rct3::simulation
             return { at.x + off(), 0.0f, at.z + off() };
         }
 
+        /// A spot near the mother of the young `animal`, in their enclosure; nothing for an adult, or for a young one
+        /// whose mother is gone or lives elsewhere.
+        std::optional<glm::vec3> beside_mother(const entt::registry& r, const AnimalGround& ground, const Animal& animal, random::RandomState& dice)
+        {
+            if (animal.adult || !r.valid(animal.mother) || !r.all_of<Animal, Pose>(animal.mother) || r.get<const Animal>(animal.mother).enclosure != animal.enclosure)
+                return std::nullopt;
+            const glm::vec3 at = r.get<const Pose>(animal.mother).position;
+            const auto off = [&] { return static_cast<f32>(random::between(dice, -static_cast<f64>(kRates.following.value), static_cast<f64>(kRates.following.value))); };
+            const glm::vec3 spot { at.x + off(), 0.0f, at.z + off() };
+            if (ground.enclosure && ground.enclosure({ spot.x, spot.z }) != animal.enclosure)
+                return std::nullopt;
+            return spot;
+        }
+
         void rise(units::Share& need, units::Seconds dt, units::Seconds full)
         {
             need.value = std::min(1.0f, need.value + dt.value / full.value);
@@ -111,6 +125,8 @@ namespace rct3::simulation
         a.job = AnimalJob::Crated;
         a.busy = kRates.crated;
         a.dung_in = kRates.dung;
+        if (!a.adult && !a.grows_up)
+            a.grows_up = kRates.growing_up;
         r.emplace<Animal>(e, std::move(a));
         r.emplace<Pose>(e, Pose { .position = at, .was = at });
         r.emplace<Dice>(e, dice_for(world, e));
@@ -391,7 +407,7 @@ namespace rct3::simulation
                         animal.goal = house->troughs;
                         animal.busy = kRates.sleeping;
                     }
-                    else if (const auto spot = animal.escaped ? std::optional(roam_spot(pose.position, dice.state)) : stroll_spot(r, ground, animal.enclosure, dice.state))
+                    else if (const auto spot = animal.escaped ? std::optional(roam_spot(pose.position, dice.state)) : beside_mother(r, ground, animal, dice.state).or_else([&] { return stroll_spot(r, ground, animal.enclosure, dice.state); }))
                     {
                         animal.job = AnimalJob::Strolling;
                         animal.goal = *spot;
@@ -466,9 +482,17 @@ namespace rct3::simulation
         // Breeding. Now and then an adult male out of his crate tries for a mate in his enclosure.
         const auto content = [](const Animal& a) { return std::min(a.health.value, 1 - std::max({ a.hunger.value, a.thirst.value, a.loneliness.value })); };
         std::vector<entt::entity> mothers; // Giving birth this step
+        usize changed = 0;
         for (auto [e, animal, dice] : r.view<Animal, Dice>().each())
         {
             animal.rest.value = std::max(0.0f, animal.rest.value - dt.value);
+            animal.age.value += dt.value;
+            if (!animal.adult && animal.grows_up && animal.age.value >= animal.grows_up->value)
+            {
+                animal.adult = true;
+                park::post(messages, { .text_key = std::string(kAnimalGrownUp), .subject_name = animal.name });
+                ++changed;
+            }
             if (animal.due)
             {
                 animal.due->value = std::max(0.0f, animal.due->value - dt.value);
@@ -507,7 +531,6 @@ namespace rct3::simulation
                 break;
             }
         }
-        usize born = 0;
         for (const entt::entity m : mothers)
         {
             const Animal mother = r.get<Animal>(m);
@@ -517,7 +540,10 @@ namespace rct3::simulation
             const entt::entity father = r.valid(mother.mate) && r.all_of<Animal>(mother.mate) ? mother.mate : entt::null;
             for (i32 i = 0; i < mother.litter; ++i)
             {
-                Animal young { .species = mother.species, .overlay = mother.overlay, .adult = false, .male = random::chance(dice, 0.5), .enclosure = mother.enclosure, .mother = m, .father = father };
+                // A parent's age at growing up, picked at random, give or take a tenth.
+                const std::optional<units::Seconds> parents = father != entt::null && random::chance(dice, 0.5) ? r.get<const Animal>(father).grows_up : mother.grows_up;
+                const units::Seconds grows_up { parents.value_or(kRates.growing_up).value * static_cast<f32>(random::between(dice, 0.9, 1.1)) };
+                Animal young { .species = mother.species, .overlay = mother.overlay, .adult = false, .male = random::chance(dice, 0.5), .enclosure = mother.enclosure, .mother = m, .father = father, .grows_up = grows_up };
                 const bool first_son = young.male && father != entt::null && std::ranges::none_of(r.view<const Animal>(), [&](entt::entity o) {
                                            const Animal& other = r.get<const Animal>(o);
                                            return other.male && other.father == father;
@@ -532,7 +558,7 @@ namespace rct3::simulation
                 out.job = AnimalJob::Idle;
                 out.busy = { };
                 park::post(messages, { .text_key = std::string(kAnimalBorn), .subject_name = mother.name, .other_name = out.name });
-                ++born;
+                ++changed;
             }
             r.get<Dice>(m).state = dice;
             Animal& her = r.get<Animal>(m);
@@ -716,7 +742,7 @@ namespace rct3::simulation
         // at its first house. shortcut: the game's inspector finds the dung at an enclosure's viewing gallery, which
         // parks here do not have yet; it is told of from afar while their task is on.
         if (inspector == entt::null)
-            return born;
+            return changed;
         std::vector<i32> dung_told;
         for (const auto [h, house] : houses.each())
         {
@@ -741,7 +767,7 @@ namespace rct3::simulation
                 tell(r, inspector, Finding::TooMuchDung, h, now);
             }
         }
-        return born;
+        return changed;
     }
 
 } // namespace rct3::simulation

@@ -175,3 +175,11 @@ TEST_CASE("debug tools: litter is dropped across the spots given and cleared aga
     CHECK(clear_litter(park.world()) == 23);
     CHECK(park.world().registry.view<Litter>().empty());
 }
+
+TEST_CASE("debug tools: aging the animals brings their growing up nearer")
+{
+    SimWorld world;
+    const entt::entity young = add_animal(world, { .species = "Lion", .adult = false, .enclosure = 0 }, { 2, 0, 2 });
+    CHECK(age_animals(world, units::Seconds { 300 }) == 1);
+    CHECK(world.registry.get<Animal>(young).age.value == 300);
+}

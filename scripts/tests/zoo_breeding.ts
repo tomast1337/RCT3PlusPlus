@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Zoo animals breeding in a Wild! scenario: the Debug tab makes the adult females pregnant, the clock runs on to
-// the births, and each mother's young stand beside her, named, with a message for each birth. Screenshots: a
-// mother and her young close up, with the birth messages at the top.
+// the births, and each mother's young stand beside her, named, with a message for each birth. Aged on, the young
+// grow up, each with a message. Screenshots: a mother and her young close up, with the birth messages at the top,
+// and the young one grown up.
 //
 //   ./nob script scripts/tests/zoo_breeding.ts -- --no-intro --no-audio --seed 1
 
@@ -45,8 +46,28 @@ expect(births.length === young.length, `a message for each birth, not ${births.l
 
 // A mother and her young, close up.
 const first = young[0];
-camera.look({ col: first.at.col, row: first.at.row, up: 1 }, { col: first.at.col + 2.4, row: first.at.row + 1.8, up: 2.5 });
+camera.look(
+    { col: first.at.col, row: first.at.row, up: 1 },
+    { col: first.at.col + 2.4, row: first.at.row + 1.8, up: 2.5 },
+);
 await frames(10);
 await screenshot("newborn");
+
+// Four years on, the young are grown, each drawn as an adult.
+debug.use("age_animals", 4 * 8 * 600);
+park.advance(1);
+await frames(5);
+const grown = animals.list().filter((a) => a.mother >= 0);
+log("grown", JSON.stringify(grown));
+expect(grown.length === young.length && grown.every((a) => a.adult), "every young one grown up");
+const grownUp = park.messages().filter((m) => m.key === "WildAnimalMessage_GrownToAdult");
+expect(grownUp.length === young.length, `a message for each grown up, not ${grownUp.length}`);
+const same = must(
+    grown.find((a) => a.id === first.id),
+    "the young one shown",
+);
+camera.look({ col: same.at.col, row: same.at.row, up: 1.5 }, { col: same.at.col + 3, row: same.at.row + 2.4, up: 3.5 });
+await frames(10);
+await screenshot("grown_up");
 
 quit();

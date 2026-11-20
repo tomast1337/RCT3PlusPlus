@@ -13,6 +13,7 @@
 #include "scene/park/fireworks.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/park/waterfalls.hpp"
+#include "simulation/animals.hpp"
 #include "simulation/day_clock.hpp"
 #include "simulation/debug_tools.hpp"
 #include "simulation/fence_wear.hpp"
@@ -34,6 +35,7 @@ namespace rct3::scene::park
         /// Ducks in a flock, and gulls, that the buttons add. Chosen by eye: a flock the size of a natural one, and
         /// a few gulls to see them cross.
         constexpr usize kDebugFlock = 12;
+        constexpr units::Seconds kDebugYear { save::model::GameClock::kUnitsPerYear / save::model::GameClock::kUnitsPerMonth * simulation::kAnimalMonth.value }; ///< The "Age animals" button's
         constexpr usize kDebugGulls = 3;
         constexpr i64 kDebugFenceKnocks = 8;
 
@@ -113,6 +115,8 @@ namespace rct3::scene::park
                 return simulation::remove_animals(scene.sim);
             case DebugTool::RefreshAnimals:
                 return simulation::refresh_animals(scene.sim);
+            case DebugTool::AgeAnimals:
+                return simulation::age_animals(scene.sim, units::Seconds { amount > 0 ? static_cast<f32>(amount) : kDebugYear.value });
             case DebugTool::BreedAnimals:
                 return simulation::make_animals_pregnant(scene.sim, units::Seconds { amount > 0 ? static_cast<f32>(amount) : simulation::kSecondsPerHour });
             case DebugTool::AddDucks:
@@ -327,6 +331,8 @@ namespace rct3::scene::park
             ImGui::SameLine();
             tool_button(device, scene, assets, "Make females pregnant", DebugTool::BreedAnimals);
             ImGui::SetItemTooltip("Each adult female gives birth to one young an hour from now");
+            ImGui::SameLine();
+            tool_button(device, scene, assets, "Age animals a year", DebugTool::AgeAnimals);
         }
 
         if (ImGui::CollapsingHeader("Wild birds", ImGuiTreeNodeFlags_DefaultOpen))

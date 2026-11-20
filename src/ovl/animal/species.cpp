@@ -17,8 +17,17 @@ namespace rct3::ovl::animal
         constexpr usize kDescription = 0x0C;
         constexpr usize kIcon = 0x10;
         constexpr usize kVariants = 0x18;
+        constexpr usize kNature = 0x28;
+        constexpr usize kStatistics = 0x2C;
         constexpr usize kShelter = 0x30;
         constexpr usize kFenceStrength = 0x38;
+
+        // The species' nature and statistics blocks, as far as read.
+        constexpr usize kNatureSize = 0x0C;
+        constexpr usize kAppetite = 0x00;
+        constexpr usize kSociability = 0x08;
+        constexpr usize kStatisticsSize = 0x10;
+        constexpr usize kSpace = 0x0C;
 
         // An animal's own block.
         constexpr usize kVariantSize = 0x34;
@@ -53,6 +62,15 @@ namespace rct3::ovl::animal
                 s.icon = record->ref(kIcon, "gsi");
                 s.shelter = record->text(kShelter);
                 s.fence_strength = record->real(kFenceStrength);
+                if (const u32 at = record->read_u32(kNature); at != 0)
+                    if (const auto nature = ItemRecord::open(space, refs, at, kNatureSize))
+                    {
+                        s.care.appetite = nature->read_i32(kAppetite);
+                        s.care.sociability = nature->read_i32(kSociability);
+                    }
+                if (const u32 at = record->read_u32(kStatistics); at != 0)
+                    if (const auto stats = ItemRecord::open(space, refs, at, kStatisticsSize))
+                        s.care.space = stats->read_i32(kSpace);
                 for (usize i = 0; i < s.variants.size(); ++i)
                 {
                     const u32 at = record->read_u32(kVariants + 4 * i);

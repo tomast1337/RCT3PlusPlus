@@ -77,3 +77,22 @@ TEST_CASE("an animal pointer outside the data leaves that animal out")
     CHECK_FALSE(items[0].species->variants[0].has_value());
     CHECK(items[0].species->shelter.empty());
 }
+
+TEST_CASE("an animal species gives the space, appetite and sociability its animals have, from its care blocks")
+{
+    Pool pool;
+    pool.add("wombat:was");
+    const u32 at = pool.base();
+    // The species with its nature block after it, then its statistics block.
+    std::vector<std::byte> bytes;
+    put(bytes, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, at + 0x3C, at + 0x48 });
+    bytes.resize(0x3C, std::byte { 0 });
+    put(bytes, { 7, 11, 16 });
+    put(bytes, { 0, 0, 95, 40 });
+    const auto overlay = make_record_overlay(5, pool, "wombat:was", bytes);
+    const auto items = read_animal_species(overlay, overlay.common());
+    REQUIRE(items[0].species.has_value());
+    CHECK(items[0].species->care.appetite == 7);
+    CHECK(items[0].species->care.sociability == 16);
+    CHECK(items[0].species->care.space == 40);
+}

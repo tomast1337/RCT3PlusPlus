@@ -1119,6 +1119,7 @@ int main(int argc, char** argv)
     std::optional<rct3::video::Recorder> recorder;
     std::optional<u64> record_frames_left; ///< Ends the game when it runs out
     u32 record_resize_frames = 0;          ///< Waited so far for the window to take the size a recording asked for
+    bool record_developer_windows = false; ///< Whether the recording running keeps the developer windows in
     render::ScreenPixels streamed;         ///< A frame read back, kept between frames
     std::vector<f32> recorded_sound;       ///< Kept between frames
     const auto start_recording = [&](rct3::video::RecordSettings wanted) {
@@ -1276,6 +1277,7 @@ int main(int argc, char** argv)
                             record_resize_frames = 0;
                             if (const auto seconds = std::exchange(record_seconds, std::nullopt))
                                 record_frames_left = static_cast<u64>(std::max(1.0, std::round(*seconds * record_asked->settings.fps)));
+                            record_developer_windows = record_asked->developer_windows;
                             start_recording(std::move(std::exchange(record_asked, std::nullopt)->settings));
                             if (script)
                                 script->recording(recorder.has_value());
@@ -1325,7 +1327,7 @@ int main(int argc, char** argv)
                     device->set_view(std::nullopt);
                     if (park)
                         park->editor.shown = false;
-                    if (phase == Phase::Running && developer_windows)
+                    if (phase == Phase::Running && developer_windows && (!recorder || record_developer_windows))
                     {
                         const prof::Scope zone("DeveloperWindows");
                         const render::ScreenView view = dock_developer_windows();

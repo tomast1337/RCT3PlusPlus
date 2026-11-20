@@ -303,7 +303,7 @@ namespace rct3::scene
         engine_.define("record.start", [this](const Json& a) {
             const Json settings = a.empty() ? Json::object() : a[0];
             if (!settings.is_object())
-                throw std::invalid_argument("record.start takes { path, fps, playbackFps, audio, size }");
+                throw std::invalid_argument("record.start takes { path, fps, playbackFps, audio, size, developerWindows }");
             if (recording_ || record_start_)
                 throw std::runtime_error("a recording already runs");
             const auto rate = [&](const char* key, u32 otherwise) {
@@ -320,6 +320,7 @@ namespace rct3::scene
             std::string name = settings.value("path", std::string("recording.mp4"));
             std::ranges::replace_if(name, [](char c) { return !std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '_' && c != '.'; }, '_');
             r.settings.path = report_ ? std::filesystem::absolute(*report_ / name) : std::filesystem::path(name);
+            r.developer_windows = settings.value("developerWindows", false);
             if (settings.contains("size"))
                 r.size = render::Extent { settings["size"].at("width").get<u32>(), settings["size"].at("height").get<u32>() };
             write(std::format("record {}", r.settings.path.filename().string()), false);

@@ -29,7 +29,7 @@ await ui.click("info/body/RideCamGUI_Enabled");
 await until(() => camera.riding()?.eye !== undefined, 120, "the view from a car");
 keys.press("F12");
 await frames(30);
-record.start({ path: "ride.mp4", fps: 30 });
+record.start({ path: "ride.mp4", fps: 30, developerWindows: true });
 await frames(30 * seconds);
 const r = await record.stop();
 log("recorded", JSON.stringify(r));

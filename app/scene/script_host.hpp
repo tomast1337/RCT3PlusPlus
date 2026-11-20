@@ -29,7 +29,8 @@
 //                       the screenshots folder; `fps` frames a game second (30), the game running in step with them;
 //                       `playbackFps` frames the file shows a second (as fps), fewer for slow motion; `audio` the
 //                       sound (slowed in slow motion; by default only at normal speed); `size` { width, height } of
-//                       the window, set first
+//                       the window, set first; `developerWindows` keeps the developer windows in the video, which
+//                       leaves them out by default
 //   record.stop()       ends it and resolves with { frames, samples, sampleRate, seconds, path, problem? }: the
 //                       frames and sound frames written, how long the file plays and where it is
 //   record.active()     whether a recording runs or is about to start
@@ -191,6 +192,7 @@ namespace rct3::scene
         {
             video::RecordSettings settings { };     ///< A relative path goes in the screenshots folder
             std::optional<render::Extent> size { }; ///< The window's, set before the first frame
+            bool developer_windows = false;         ///< Kept in the video when shown; otherwise left out
         };
         /// The recording the script asked to start, once.
         [[nodiscard]] std::optional<RecordRequest> take_record_start()

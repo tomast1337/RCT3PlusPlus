@@ -162,7 +162,8 @@ declare namespace record {
      * Records a video with sound from the next frame. While it runs, each frame moves the game on by 1 / `fps` of
      * a game second. `path` is a plain file name in the report folder (recording.mp4); `playbackFps` (as `fps`,
      * 30) is how fast the file plays, fewer for slow motion; `audio` keeps the sound, slowed in slow motion (by
-     * default only at normal speed); `size` sets the window's first.
+     * default only at normal speed); `size` sets the window's first; `developerWindows` keeps the developer
+     * windows in the video, which leaves them out by default.
      */
     function start(settings?: {
         path?: string;
@@ -170,6 +171,7 @@ declare namespace record {
         playbackFps?: number;
         audio?: boolean;
         size?: { width: number; height: number };
+        developerWindows?: boolean;
     }): void;
     /** Ends the recording; resolves once its file is written. */
     function stop(): Promise<RecordResult>;

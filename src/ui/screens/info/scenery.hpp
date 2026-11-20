@@ -116,6 +116,7 @@ namespace rct3::ui::screens::info
         std::vector<std::string_view> species { }; ///< String keys of the names of the species that live in it
         std::vector<std::u16string> keepers { };
         simulation::FeedingSchedule schedule { simulation::FeedingSchedule::Normal };
+        Currency currency { }; ///< Of its food's cost
     };
 
     struct SceneryTabInfo

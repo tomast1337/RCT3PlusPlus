@@ -2,11 +2,32 @@
 //
 // An animal house's window in a Wild! scenario: a click on a house opens it on its details, naming the species
 // that live in it; its feeding page shows the schedule the park kept and changes it; its keepers and thoughts
-// pages open, and a click on its keeper's hut opens the same window. Screenshots: each page.
+// pages open, and a click on its keeper's hut opens the same window. As the park runs, each filling of the
+// troughs is booked on Animal food. Screenshots: each page, and the finances with the food.
 //
 //   ./nob script scripts/tests/animal_house.ts -- --headless --no-intro --no-audio --seed 1
 
 export {};
+
+const kFinances = "FinancialManagement_Title";
+
+/** This month's Animal food cell of the finances summary, which it opens and closes. */
+async function animal_food(): Promise<string> {
+    if (ui.find("tools/Management/Man_Finances") === undefined)
+        await ui.click(`tools/Management/${must(ui.children("tools/Management"), "tools/Management shown")[0]}`);
+    await until(() => ui.find("tools/Management/Man_Finances") !== undefined, 120, "the management menu");
+    await ui.click("tools/Management/Man_Finances");
+    await until(() => under(kFinances, "FinancialSummaryTabIcon") !== undefined, 120, "the finances window");
+    await ui.click(must(under(kFinances, "FinancialSummaryTabIcon"), "the summary tab"));
+    await frames(10);
+    const table = must(ui.find(must(under(kFinances, "table"), "the summary's table")), "the table shown");
+    const label = must(ui.text("Money_AnimalFood"), "the text of Money_AnimalFood");
+    const cell = must(table.rows?.find((cells) => cells[0] === label)?.[1], "this month's Animal food");
+    await screenshot("finances");
+    await ui.click(must(under(kFinances, "close"), "the close button"));
+    await until(() => ui.find(kFinances) === undefined, 120, "the finances window to close");
+    return cell;
+}
 
 await park.open("Campaigns/Base/Wild/ScrubGardens.dat");
 await park.ready();
@@ -39,6 +60,10 @@ await ui.click(`info/${must(info_tab("animalshelterfeedingicon"), "the feeding t
 await until(() => animals.shownHouse()?.tab === "feeding", 60, "the feeding page");
 const schedule = () => animals.houses().find((h) => h.id === house.id)?.schedule;
 expect(schedule() === "often", `the park's own schedule, not ${schedule()}`);
+expect(
+    under("info", "ASCFoodCostsLabel_label") !== undefined || ui.children("info/body")?.some((n) => n.startsWith("ASCFoodCostsLabel")) === true,
+    "what each filling costs",
+);
 await screenshot("feeding");
 const list = must(under("info", "AnimalShelterFeedingListLabel"), "the feeding list");
 await ui.click(list);
@@ -72,5 +97,14 @@ if (house.hut !== 0) {
     park.showObject(house.hut);
     await until(() => animals.shownHouse()?.id === house.id, 120, "the house's window from its hut");
 }
+
+// The keepers fill the troughs as the park runs, each filling booked on Animal food.
+const food_before = await animal_food();
+await ui.click("bar/Top_Pause");
+await park.advance(400);
+await ui.click("bar/Top_Pause");
+const food_after = await animal_food();
+log("animal food", food_before, "then", food_after);
+expect(food_after !== food_before, "the troughs' food paid for");
 
 quit();

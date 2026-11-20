@@ -157,6 +157,7 @@ namespace rct3::simulation
         std::array<units::Seconds, 3> feeding { units::Seconds { 600 }, units::Seconds { 300 }, units::Seconds { 150 } };
         units::Share refill { 0.3f };  ///< Either trough this low calls the keeper at once
         units::Seconds filling { 5 };  ///< The keeper at the troughs
+        units::Money food { 2500 };    ///< Chosen by eye: charged on Animal food for each filling of the troughs
         units::Seconds clearing { 3 }; ///< The keeper at a dung
         i32 stroll_tries = 8;          ///< Spots picked for a stroll before giving up till later
         units::Distance roam { 4 };    ///< Farthest an escaped animal wanders at a time

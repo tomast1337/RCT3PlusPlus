@@ -428,6 +428,8 @@ namespace rct3::scene::park
             ui::screens::info::SceneryFacts f = prop_facts(scene, *scene.shown_prop, *assets.strings);
             if (f.pool)
                 f.pool->currency = info_units(assets, options).currency;
+            if (f.house)
+                f.house->currency = info_units(assets, options).currency;
             panel.show_page(ui::screens::info::scenery_page(scene.prop_tab, f, *assets.strings));
         }
         else if (scene.shown_animal)

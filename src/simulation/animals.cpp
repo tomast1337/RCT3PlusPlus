@@ -498,7 +498,7 @@ namespace rct3::simulation
                         break;
                     if (filled != nullptr)
                     {
-                        // shortcut: the food costs nothing; charge each filling once the house's window sets the food.
+                        r.ctx().emplace<Supplies>().paid[std::to_underlying(park::LedgerLine::AnimalFood)].value += kRates.food.value;
                         filled->food = { 1 };
                         filled->water = { 1 };
                         filled->since_fed = { };

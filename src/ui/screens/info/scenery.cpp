@@ -182,6 +182,10 @@ namespace rct3::ui::screens::info
             InfoControl& schedule = page.controls.emplace_back(InfoControl { .id = kHouseScheduleControl, .name = "AnimalShelterFeedingListLabel", .kind = InfoControlKind::Choice, .label = std::u16string(strings.get("AnimalShelterFeedingListLabel")), .value = std::to_underlying(facts.house->schedule), .help = std::u16string(strings.get("AnimalShelterFeedingIntervalTT")) });
             for (const std::string_view often : { "AnimalShelterFeedingInterval_Infrequent", "AnimalShelterFeedingInterval_Normal", "AnimalShelterFeedingInterval_Often" })
                 schedule.items.push_back(std::u16string(strings.get(often)));
+            std::u16string cost(strings.get("ASCFoodCostsLabel"));
+            if (const auto mark = cost.find(u'#'); mark != std::u16string::npos)
+                cost.replace(mark, 1, money_text(facts.house->currency, simulation::kAnimalRates.food));
+            page.lines.push_back({ .label = std::move(cost), .value = { }, .name = "ASCFoodCostsLabel" });
         }
         else if (tab == SceneryTab::HouseKeepers && facts.house)
         {

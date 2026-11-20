@@ -417,18 +417,33 @@ namespace rct3::save::model
         std::vector<CarvedTile> carved { };
     };
 
-    /// The park's animal enclosures: which enclosure each tile belongs to, and what fence each is built with.
-    /// The fence's panels are not kept; they are built again from the tiles.
+    /// How worn the fence on an enclosure's tile is, numbered as parks save it.
+    enum class FenceWear : u8
+    {
+        Sound = 0,
+        Damaged = 1,
+        Broken = 2, ///< A gap an animal could get through
+    };
+
+    /// The park's animal enclosures: which enclosure each tile belongs to, what fence each is built with, and how
+    /// worn the fence on each tile is. The fence's panels are not kept; they are built again from the tiles.
     struct EnclosureMap
     {
         i32 cols = 0;
         i32 rows = 0;
         std::vector<std::optional<i32>> tiles { }; ///< Row-major, the place in `fences` of the tile's enclosure; none outside one
         std::vector<std::string> fences { };       ///< Of each enclosure, the kind of fence it has; empty for a place unused
+        std::vector<FenceWear> wear { };           ///< Row-major as `tiles`; empty, or shorter, while the rest is sound
 
         [[nodiscard]] std::optional<i32> at(i32 col, i32 row) const noexcept
         {
             return col >= 0 && row >= 0 && col < cols && row < rows ? tiles[static_cast<usize>(row * cols + col)] : std::nullopt;
+        }
+
+        [[nodiscard]] FenceWear wear_at(i32 col, i32 row) const noexcept
+        {
+            const auto k = static_cast<usize>(row * cols + col);
+            return col >= 0 && row >= 0 && col < cols && row < rows && k < wear.size() ? wear[k] : FenceWear::Sound;
         }
     };
 

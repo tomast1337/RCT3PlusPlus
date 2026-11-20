@@ -51,6 +51,7 @@
 #include "simulation/awards.hpp"
 #include "simulation/components.hpp"
 #include "simulation/enjoyment.hpp"
+#include "simulation/fence_wear.hpp"
 #include "simulation/fireworks.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/holding.hpp"
@@ -1506,11 +1507,20 @@ namespace rct3::scene::park
                     },
                 };
                 const simulation::BirdGround birds = bird_ground(scene);
+                // How strong a species or a fence is, from the build lists once they are read.
+                const auto strength = [&scene](std::string_view symbol) {
+                    const auto& items = scene.build.items;
+                    if (!items.valid() || items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+                        return 0.0f;
+                    const auto found = std::ranges::find_if(items.get(), [&](const rct3::park::BuildItem& i) { return (i.kind == rct3::park::BuildKind::EnclosureFence || i.kind == rct3::park::BuildKind::Animal) && i.symbol == symbol; });
+                    return found != items.get().end() ? found->strength : 0.0f;
+                };
                 profiling::section("Guests", [&] {
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                     {
                         simulation::step(scene.sim);
                         simulation::step_animals(scene.sim, animal_ground, { simulation::kTickSeconds }, scene.park.messages);
+                        simulation::step_fence_wear(scene.sim, scene.enclosures, strength, { simulation::kTickSeconds });
                         simulation::step_wild_birds(scene.sim, birds, { simulation::kTickSeconds });
                     }
                 });

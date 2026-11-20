@@ -63,6 +63,10 @@ namespace rct3::park
     /// The enclosure all `span` tiles from `corner` are in; none when they are not all in the same one.
     [[nodiscard]] std::optional<i32> enclosure_under(const save::model::EnclosureMap& map, save::model::Tile corner, std::array<i32, 2> span) noexcept;
 
+    /// Whether the fence on `tile` is straight panels, along one side or two opposite: the pieces that wear and
+    /// break. Corners, ends and posts are sturdier.
+    [[nodiscard]] bool panelled(const save::model::EnclosureMap& map, save::model::Tile tile);
+
     /// How many tiles enclosure `region` has; with none, how many are in no enclosure.
     [[nodiscard]] i32 enclosure_size(const save::model::EnclosureMap& map, std::optional<i32> region) noexcept;
 

@@ -528,7 +528,7 @@ TEST_CASE("a loaded swimmer heads for no slide, the one they were saved heading 
     CHECK(swimmer.left.value == 42);
 }
 
-TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animals and dung")
+TEST_CASE("a save keeps the enclosures with their fences' wear, animal houses with their keepers, animals and dung")
 {
     using namespace simulation;
     SimWorld world;
@@ -543,7 +543,7 @@ TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animal
     r.emplace<Dung>(dung, Dung { 0 });
     r.emplace<Pose>(dung, Pose { .position = { 2, 0, 3 } });
     r.get<KeeperDuty>(keeper) = { .house = r.get<KeeperDuty>(keeper).house, .job = KeeperJob::Clearing, .goal = { 2, 0, 3 }, .target = dung, .busy = { 4 } };
-    save::model::EnclosureMap map { .cols = 2, .rows = 1, .tiles = { std::optional { 0 }, std::nullopt }, .fences = { "Wood" } };
+    save::model::EnclosureMap map { .cols = 2, .rows = 1, .tiles = { std::optional { 0 }, std::nullopt }, .fences = { "Wood" }, .wear = { save::model::FenceWear::Broken, save::model::FenceWear::Sound } };
 
     parkfile::SavedPark park = small_park();
     park.people = parkfile::keep_people(world, { }, { });
@@ -553,6 +553,7 @@ TEST_CASE("a save keeps the enclosures, animal houses with their keepers, animal
     REQUIRE(read->animals);
     CHECK(std::ranges::equal(read->animals->enclosures.tiles, std::vector<std::optional<i32>> { 0, std::nullopt }));
     CHECK(read->animals->enclosures.fences == std::vector<std::string> { "Wood" });
+    CHECK(read->animals->enclosures.wear_at(0, 0) == save::model::FenceWear::Broken);
 
     SimWorld loaded;
     auto& l = loaded.registry;

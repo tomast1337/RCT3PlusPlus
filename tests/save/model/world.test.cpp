@@ -5,6 +5,7 @@
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -998,15 +999,17 @@ TEST_CASE("load_world: waterfalls, from their lip down to where they land")
     CHECK(w.lip_right.z == 0);
 }
 
-TEST_CASE("load_world: enclosures, each tile naming its own and each its fence")
+TEST_CASE("load_world: enclosures, each tile naming its own, its fence's wear and each its fence")
 {
     // Three places, the middle one unused; a 3x2 grid with tiles of the first and the third, and one of the unused.
+    // One fence is damaged and one broken; the wear outside every enclosure, or of no kind known, counts for none.
     Bytes regions;
     regions.put_u32(3).put_u64(60).put_u8(1).put_u64(60).put_u8(0).put_u64(61).put_u8(1);
     Bytes tiles;
     tiles.put_u32(6);
-    for (const i32 region : { 0, 0, -1, 2, 1, 2 })
-        tiles.put_i32(0).put_i32(region);
+    constexpr std::array<std::array<i32, 2>, 6> kWearAndRegion { { { 0, 0 }, { 1, 0 }, { 2, -1 }, { 2, 2 }, { 1, 1 }, { 7, 2 } } };
+    for (const auto [wear, region] : kWearAndRegion)
+        tiles.put_i32(wear).put_i32(region);
     Bytes p;
     p.put_i32(3).blob(regions).put_i32(2).blob(tiles);
     Bytes wood, wire;
@@ -1021,6 +1024,9 @@ TEST_CASE("load_world: enclosures, each tile naming its own and each its fence")
     CHECK(std::ranges::equal(e.tiles, std::vector<std::optional<i32>> { 0, 0, std::nullopt, 2, std::nullopt, 2 }));
     CHECK(e.at(2, 1) == 2);
     CHECK_FALSE(e.at(3, 0));
+    CHECK(std::ranges::equal(e.wear, std::vector { FenceWear::Sound, FenceWear::Damaged, FenceWear::Sound, FenceWear::Broken, FenceWear::Sound, FenceWear::Sound }));
+    CHECK(e.wear_at(1, 0) == FenceWear::Damaged);
+    CHECK(e.wear_at(3, 0) == FenceWear::Sound);
 }
 
 TEST_CASE("load_world: an enclosure grid that does not fit its size is left empty")

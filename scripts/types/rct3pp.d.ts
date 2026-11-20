@@ -484,6 +484,8 @@ interface Tile {
     ownership: "owned" | "owned (rights)" | "unowned" | "for sale" | "for sale (rights)" | "locked";
     /** The animal enclosure it is in, by number; -1 when in none. */
     enclosure: number;
+    /** How worn the enclosure fence on it is; sound for a tile with none. */
+    fence: "sound" | "damaged" | "broken";
     /** The surface height of the water on it, when it holds any. */
     water?: number;
 }

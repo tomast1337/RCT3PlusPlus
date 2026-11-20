@@ -567,7 +567,7 @@ namespace rct3::scene::park
         {
             const HeardTrain& t = heard_trains[i];
             auto node = sounds.train_sounds.extract(t.key);
-            TrainSounds train = node ? std::move(node.mapped()) : TrainSounds { .set = t.ride.value < scene.rides.rides.size() ? audio::track_sound_set(scene.rides.rides[t.ride.value].base.overlay_path) : audio::TrackSoundSet::None, .was_running = t.train->running };
+            TrainSounds train = node ? node.mapped() : TrainSounds { .set = t.ride.value < scene.rides.rides.size() ? audio::track_sound_set(scene.rides.rides[t.ride.value].base.overlay_path) : audio::TrackSoundSet::None, .was_running = t.train->running };
             const auto& kit = sounds.track_sounds[static_cast<usize>(train.set)];
             const f32 level = i < audio::kHeardTrains ? kRideLevel : 0.0f;
             const auto params = [&](f32 gain) { return audio::PlayParams { .volume = gain, .at = t.at, .near = audio::kRideNear.value, .far = audio::kRideFar.value }; };
@@ -630,7 +630,7 @@ namespace rct3::scene::park
             }
             train.plume_left = std::max(units::Seconds { }, train.plume_left - elapsed);
             keep(train.plume, sound(WaterPlume), train.plume_left > units::Seconds { } ? level : 0.0f);
-            kept.emplace(t.key, std::move(train));
+            kept.emplace(t.key, train);
         }
         silence_trains(engine, sounds); // Trains no longer there
         sounds.train_sounds = std::move(kept);

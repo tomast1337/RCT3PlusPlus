@@ -299,7 +299,9 @@ namespace rct3::scene::track
         std::array<bool, 2> closed { }, open { };
         const rct3::park::track::PieceCatalogue* c = catalogue(b);
         const save::model::Ride& ride = scene.rides.rides.at(b.ride->value);
-        for (const save::model::TrackSegment& s : c != nullptr && ride.track ? ride.track->segments : std::vector<save::model::TrackSegment> { })
+        if (c == nullptr || !ride.track)
+            return { };
+        for (const save::model::TrackSegment& s : ride.track->segments)
         {
             const auto first = s.piece_count == 0 ? std::nullopt : rct3::park::track::shape_named(*c, ride.track->pieces.at(s.first_piece).symbol);
             if (first && (first->record.side == 1 || first->record.side == 2))
@@ -415,6 +417,7 @@ namespace rct3::scene::track
         std::optional<std::vector<rct3::park::track::LaidPiece>> between;
         if (const auto around = b.selected && c != nullptr && !starting ? rct3::park::track::piece_neighbours(*ride.track, *b.selected) : std::nullopt)
         {
+            // NOLINTNEXTLINE(clang-analyzer-core.NonNullParamChecker): `c` is checked in the condition above; the analyzer loses track of it
             const auto before = built_piece(scene, *c, ride.track->pieces[around->before]);
             const auto after = built_piece(scene, *c, ride.track->pieces[around->after]);
             b.tip.reset();
@@ -963,7 +966,7 @@ namespace rct3::scene::track
         {
             last = rct3::park::track::take_out_piece(*ride.track, *std::exchange(b.selected, std::nullopt));
             if (const auto laid = c != nullptr ? laid_piece(*c, last) : std::nullopt)
-                b.choice = rct3::park::track::choice_of(c->pieces, *laid);
+                b.choice = rct3::park::track::choice_of(c->pieces, *laid); // NOLINT(clang-analyzer-core.NonNullParamChecker): `c` is checked in the condition; the analyzer loses track of it
             use_split(scene, b, b.split);
         }
         else

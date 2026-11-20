@@ -4,15 +4,20 @@
 //
 //   - two or more of a party ride on one load together;
 //   - two of a party in a queue stand side by side across the line;
-//   - those of a party staying off a ride wait off its exit's tile.
+//   - those of a party staying off a ride wait together beside its exit, off the exit's own tile, and think so.
 //
-//   ./nob script scripts/tests/party_rides.ts -- --no-audio
+// Started on a saved park that has guests of its own (the viewer's `--park PATH`, and `-- --saved` for the
+// script), it runs there instead.
+//
+//   ./nob script scripts/tests/party_rides.ts -- --no-audio [--park PATH -- --saved]
 
 export {};
 
-await park.open("Campaigns/Base/VanillaHills.dat", { sandbox: false });
+const saved = args().includes("--saved");
+if (!saved) await park.open("Campaigns/Base/VanillaHills.dat", { sandbox: false });
+await until(() => park.loaded(), 1200, "the park");
 await park.ready();
-expect(debug.use("add_guests", 400) > 0, "guests added");
+if (!saved) expect(debug.use("add_guests", 400) > 0, "guests added");
 
 type Guest = WalkedPerson;
 /** The guests in `state`, by their party, for parties with two or more of them so. */
@@ -26,6 +31,7 @@ const byParty = (state: PersonState) => {
 const middle = (ps: Guest[]) => ({
     col: ps.reduce((n, p) => n + p.col, 0) / ps.length,
     row: ps.reduce((n, p) => n + p.row, 0) / ps.length,
+    up: ps.reduce((n, p) => n + p.up, 0) / ps.length,
 });
 
 // Riding together: two or more of one party on the same ride at once.
@@ -40,6 +46,10 @@ await park.advanceUntil(() => together() !== undefined, 900, "a party riding tog
 const riders = must(together(), "a party riding");
 const ride = (riders[0] as Guest & { state: "riding" }).ride!;
 log("riding together", riders.length, "of party", riders[0].party, "on", rides.list()[ride].symbol);
+const on = middle(riders);
+camera.look({ ...on, up: on.up + 1 }, { col: on.col + 5, row: on.row + 7, up: on.up + 14 });
+await frames(10);
+await screenshot("party_rides_riding_together");
 
 // Side by side in a queue: two of a party next to each other in the line.
 const pair = () => byParty("queueing").map((ps) => [ps[0], ps[1]])[0];
@@ -49,17 +59,34 @@ const apart = Math.hypot(a.col - b.col, a.row - b.row);
 log("queueing pair", a.party, "apart", apart.toFixed(2), "tiles");
 expect(apart < 1, "two of a party queue within a tile of each other");
 const q = middle([a, b]);
-camera.look({ ...q, up: 0.8 }, { col: q.col + 0.8, row: q.row + 1.6, up: 2.5 });
+camera.look({ ...q, up: q.up + 0.8 }, { col: q.col + 3, row: q.row + 5, up: q.up + 12 });
 await frames(10);
 await screenshot("party_rides_queue_pair");
 
-// Waiting by a ride's exit: off the exit's own tile.
-await park.advanceUntil(() => byParty("waiting").length > 0, 600, "a party waiting by a ride");
+// Waiting by a ride's exit: two or more of a party together beside it, off the exit's own tile. Those a saved
+// park left waiting stand where it put them, so after a while.
+await park.advance(120);
+const kWaitingForFriends = 256;
 const exits = rides.list().flatMap((r) => (r.exitAt ? [r.exitAt] : []));
-const onExit = people
-    .list()
-    .filter(
-        (p) => p.state === "waiting" && exits.some((e) => Math.floor(p.col) === e.col && Math.floor(p.row) === e.row),
-    );
-log("waiting", people.list().filter((p) => p.state === "waiting").length, "on exit tiles", onExit.length);
+const onExit = (p: Guest) => exits.some((e) => Math.floor(p.col) === e.col && Math.floor(p.row) === e.row);
+const byExit = (p: Guest) => exits.some((e) => Math.hypot(p.col - (e.col + 0.5), p.row - (e.row + 0.5)) < 2);
+const ring = () => {
+    const off = byParty("waiting").filter((ps) => ps.every((p) => byExit(p) && !onExit(p)));
+    return off.find((ps) => ps.length >= 3) ?? off[0];
+};
+await park.advanceUntil(() => ring() !== undefined, 600, "a party waiting beside a ride's exit, off it");
+const waiters = must(ring(), "a party waiting");
+// Riders just off step out over the exit's tile on their way to the others, so a few are on one at any time.
+const waiting = people.list().filter((p) => p.state === "waiting");
+const onExits = waiting.filter((p) => onExit(p as Guest)).length;
+log("waiting", waiting.length, "on exit tiles", onExits);
+log("party", waiters[0].party, "waits", waiters.length, "beside an exit");
+expect(onExits <= waiting.length / 10, "hardly any of those waiting on an exit's tile");
+const thinking = people.list().filter((p) => !p.staff && p.thoughts.includes(kWaitingForFriends)).length;
+log("guests thinking they wait for their friends", thinking);
+expect(thinking > 0, "a waiting guest thinks so");
+const w = middle(waiters);
+camera.look({ ...w, up: w.up + 0.8 }, { col: w.col + 1.6, row: w.row + 2.4, up: w.up + 3 });
+await frames(10);
+await screenshot("party_rides_waiting_ring");
 quit(0);

@@ -33,8 +33,8 @@
 //              Saves made before it lack it; their waterfalls are read again from the original park.
 //   "DAYM" v1  simulation::DayMode: which part of the day the park keeps. Saves made before it lack it; they keep
 //              the original park's mode.
-//   "ANML" v2  SavedAnimals: the enclosures, animal houses, animals and their dung. Saves made before it lack
-//              it; their enclosures are read again from the original park.
+//   "ANML" v3  SavedAnimals: the enclosures with their fences' wear, animal houses, animals and their dung. Saves
+//              made before it lack it, and v2 is skipped; their enclosures are read again from the original park.
 //   "POOL" v10 park::pools::PoolMap: the swimming pools the player laid, their extras and changing rooms; their
 //              pieces are built again on loading. Only when there are any.
 //   "BEDS" v1  std::vector<save::model::FlowerBedState>: how much water each flower bed holds. Only when there are any;

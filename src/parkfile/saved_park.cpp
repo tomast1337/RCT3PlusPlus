@@ -602,7 +602,7 @@ namespace rct3::parkfile
         if (park.day_mode)
             put_chunk(w, "DAYM", 1, *park.day_mode);
         if (park.animals)
-            put_chunk(w, "ANML", 2, *park.animals);
+            put_chunk(w, "ANML", 3, *park.animals);
         if (park.pools)
             put_chunk(w, "POOL", 10, *park.pools);
         if (park.litter)
@@ -688,8 +688,11 @@ namespace rct3::parkfile
             }
             if (tag == "ANML")
             {
-                if (park.animals || version != 2) // 2 adds each dung's size
+                if (park.animals || version < 2 || version > 3) // 2 adds each dung's size, 3 the wear of each tile's fence
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
+                // A park saved before is opened as one saved before the animals were kept.
+                if (version == 2)
+                    return { };
                 return get_chunk(tag, body, park.animals.emplace());
             }
             if (tag == "POOL")

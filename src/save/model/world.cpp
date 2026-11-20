@@ -12,6 +12,7 @@
 #include <cstring>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 
 namespace rct3::save::model
 {
@@ -149,6 +150,7 @@ namespace rct3::save::model
             constexpr std::string_view kEnclosureRows = "Rows";
             constexpr std::string_view kEnclosureTiles = "Tiles";
             constexpr std::string_view kEnclosureTileRegion = "Region";
+            constexpr std::string_view kEnclosureTileWear = "BrokenState";
             constexpr std::string_view kEnclosureRegions = "Regions";
             constexpr std::string_view kEnclosureValid = "Valid";
             constexpr std::string_view kEnclosureEntry = "Entry";
@@ -1152,11 +1154,14 @@ namespace rct3::save::model
                         break;
                     }
                     e.tiles.reserve(tiles->items().size());
+                    e.wear.reserve(tiles->items().size());
                     for (const Value& t : tiles->items())
                     {
                         const auto region = core::none_if_negative(int_or(t.field(names::kEnclosureTileRegion), -1));
                         // A tile of a place unused, or of none, is outside.
                         e.tiles.push_back(region && static_cast<usize>(*region) < e.fences.size() && !e.fences[static_cast<usize>(*region)].empty() ? region : std::nullopt);
+                        const i32 wear = int_or(t.field(names::kEnclosureTileWear));
+                        e.wear.push_back(e.tiles.back() && wear >= 0 && wear <= std::to_underlying(FenceWear::Broken) ? static_cast<FenceWear>(wear) : FenceWear::Sound);
                     }
                     break;
                 }

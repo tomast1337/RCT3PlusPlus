@@ -58,6 +58,7 @@
 #include <map>
 #include <span>
 #include <sstream>
+#include <utility>
 #include <variant>
 
 namespace rct3::scene
@@ -815,13 +816,14 @@ namespace rct3::scene
             return Json { { "width", g.width }, { "height", g.height } };
         });
         engine_.define("map.tile", [this](const Json& a) -> Json {
+            constexpr std::array<std::string_view, 3> kFenceWears { "sound", "damaged", "broken" }; // By save::model::FenceWear
             const save::model::TerrainGrid& g = grid_of(park_);
             const auto col = static_cast<i32>(number(a, 0));
             const auto row = static_cast<i32>(number(a, 1));
             if (!g.contains(col, row))
                 return nullptr;
             const save::model::TerrainCell& c = g.at(col, row);
-            Json tile { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff_style }, { "owned", rct3::park::owned_outright(c) }, { "ownership", save::model::to_string(c.ownership()) }, { "enclosure", park_->enclosures.at(col, row).value_or(-1) } };
+            Json tile { { "corners", c.corners }, { "surface", c.surface }, { "cliff", c.cliff_style }, { "owned", rct3::park::owned_outright(c) }, { "ownership", save::model::to_string(c.ownership()) }, { "enclosure", park_->enclosures.at(col, row).value_or(-1) }, { "fence", kFenceWears[std::to_underlying(park_->enclosures.wear_at(col, row))] } };
             for (const save::model::WaterBody& b : park_->footpaths.water.bodies)
                 if (rct3::park::water::holds(b, { col, row }))
                     tile["water"] = b.level;

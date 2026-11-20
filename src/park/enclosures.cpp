@@ -42,8 +42,19 @@ namespace rct3::park
             return map.fences[static_cast<usize>(*own)];
         }
 
+        /// Bit t: the side a piece turned t quarter turns fences faces out of the tile's enclosure.
+        u32 sides_out(const save::model::EnclosureMap& map, i32 col, i32 row)
+        {
+            u32 out = 0;
+            for (i32 t = 0; t < 4; ++t)
+                if (fenced(map, col, row, side_of(t)))
+                    out |= 1u << t;
+            return out;
+        }
+
         /// Makes each connected area of tiles with the same fence one enclosure. Each area keeps the place of
         /// the enclosure most of its tiles were in, the larger areas choosing first; the others take free places.
+        /// A tile whose fence is no longer straight panels, or that has none, has it as new: the pieces were put up again.
         void regroup(save::model::EnclosureMap& map)
         {
             struct Area
@@ -118,6 +129,9 @@ namespace rct3::park
                 if (area_of[k])
                     map.tiles[k] = place[static_cast<usize>(*area_of[k])];
             map.fences = std::move(fences);
+            for (usize k = 0; k < map.wear.size(); ++k)
+                if (map.wear[k] != save::model::FenceWear::Sound && !panelled(map, { static_cast<i32>(k % static_cast<usize>(map.cols)), static_cast<i32>(k / static_cast<usize>(map.cols)) }))
+                    map.wear[k] = save::model::FenceWear::Sound;
         }
 
         /// The least and greatest column and row from `a` to `b`, within `map`.
@@ -157,11 +171,7 @@ namespace rct3::park
                         if (const glm::vec2 lean = fence_piece_lean(grid, o); lean != glm::vec2(0.0f))
                             out.leans.emplace(o.id, lean);
                 };
-                // Bit t: the side a piece turned t quarter turns fences faces out of the enclosure.
-                u32 out_sides = 0;
-                for (i32 t = 0; t < 4; ++t)
-                    if (fenced(map, col, row, side_of(t)))
-                        out_sides |= 1u << t;
+                const u32 out_sides = sides_out(map, col, row);
                 const auto turns_of = [](u32 bit) { return static_cast<i32>(std::countr_zero(bit)); };
                 switch (std::popcount(out_sides))
                 {
@@ -264,6 +274,12 @@ namespace rct3::park
             }
         }
         return cost;
+    }
+
+    bool panelled(const save::model::EnclosureMap& map, save::model::Tile tile)
+    {
+        const u32 out = sides_out(map, tile.col, tile.row);
+        return std::popcount(out) == 1 || out == 0b0101 || out == 0b1010;
     }
 
     i32 enclosure_size(const save::model::EnclosureMap& map, std::optional<i32> region) noexcept

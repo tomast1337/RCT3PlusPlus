@@ -232,8 +232,13 @@ namespace rct3::audio
         [[nodiscard]] u32 sample_rate() const noexcept;
         [[nodiscard]] u16 channels() const noexcept;
 
-        /// Offline backend only: mixes `out.size() / channels()` frames into `out` (interleaved float) and
-        /// returns the number of frames written, 0 on any other backend.
+        /// While captured, the device stops playing the mix and render pulls it instead, as on the Offline backend:
+        /// a recording then gets every sample in step with its frames, and the player hears nothing. Let go, the
+        /// device plays on.
+        void set_captured(bool captured);
+
+        /// Offline backend, or while captured: mixes `out.size() / channels()` frames into `out` (interleaved
+        /// float) and returns the number of frames written; else 0.
         usize render(std::span<f32> out);
 
     private:

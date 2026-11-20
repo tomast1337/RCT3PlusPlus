@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <utility>
 
 namespace rct3::audio
 {
@@ -357,6 +358,7 @@ namespace rct3::audio
         ma_lpf_node muffle { }; // Placed voices play through it
         bool muffle_ready = false;
         bool muffled = false;
+        bool captured = false;           // render pulls the mix; the device is stopped
         std::unique_ptr<Voice[]> voices; // never moves: miniaudio keeps pointers into a started voice
         usize voice_count = 0;
 
@@ -802,9 +804,17 @@ namespace rct3::audio
         return impl_->config.channels;
     }
 
+    void AudioEngine::set_captured(bool captured)
+    {
+        if (std::exchange(impl_->captured, captured) == captured)
+            return;
+        if (ma_device* device = ma_engine_get_device(&impl_->engine))
+            captured ? ma_device_stop(device) : ma_device_start(device);
+    }
+
     usize AudioEngine::render(std::span<f32> out)
     {
-        if (impl_->active != Backend::Offline)
+        if (impl_->active != Backend::Offline && !impl_->captured)
             return 0;
         const usize frames = out.size() / impl_->config.channels;
         // The mixer reports fewer frames than asked for when nothing is playing (or the last voice ends

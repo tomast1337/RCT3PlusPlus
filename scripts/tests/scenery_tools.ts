@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Works a tree over as a player in a park with money would, on a park of the campaign:
+// Works a tree over as a player in a park with money would, on a park of the campaign, the simulation stopped so
+// only the tools move its money:
 // - its ghost shows where it fits and is refused where one stands, and placing it costs its price;
 // - its window's move tab picks it up again, turned and raised on the way, and sets it down elsewhere for nothing;
 // - its window's copy tab takes out the tree tool, in the same colours;
@@ -8,7 +9,7 @@
 // - a drag places a run of trees, a tile apart, and the scatter brush sprinkles them round the pointer, each paid for;
 // - the undo key takes a whole stroke back, refunded.
 //
-//   ./nob script scripts/tests/scenery_tools.ts -- --no-audio
+//   RCT3PP_DATA=<an empty folder> ./nob script scripts/tests/scenery_tools.ts -- --no-audio --no-simulate
 
 export {};
 

@@ -15,6 +15,10 @@
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <numbers>
+#include <optional>
+#include <string>
+#include <string_view>
+#include <vector>
 
 using namespace rct3;
 using namespace rct3::simulation;
@@ -616,4 +620,128 @@ TEST_CASE("animals: a predator that is not hungry, and plant-eaters, live with o
         run(world, ground, 30);
         CHECK(r.valid(zebra));
     }
+}
+
+namespace
+{
+    /// Two pens of 16 tiles each, where zebu breed at 60% content, taking 4 tiles each, two to a litter, after
+    /// a month and a half.
+    AnimalGround breeding_pens()
+    {
+        AnimalGround ground = two_pens();
+        ground.breeding = [](std::string_view species) -> std::optional<AnimalBreeding> {
+            if (species != "zebu")
+                return std::nullopt;
+            return AnimalBreeding { .contentment = { 0.6f }, .room = 4, .rest = { 900 }, .litter = 2, .pregnancy = { 900 } };
+        };
+        ground.tiles = [](i32) { return 16; };
+        return ground;
+    }
+
+    /// Runs `seconds` with every animal kept fed, watered and in company, and `health` well.
+    void run_cared_for(SimWorld& world, const AnimalGround& ground, f32 seconds, ParkMessages& messages, f32 health = 1)
+    {
+        for (f32 t = 0; t < seconds; t += 0.25f)
+        {
+            for (auto [e, animal] : world.registry.view<Animal>().each())
+            {
+                animal.hunger = animal.thirst = animal.loneliness = { };
+                animal.health = { health };
+            }
+            step_animals(world, ground, { 0.25f }, messages);
+        }
+    }
+
+    /// An adult of `species` out of its crate in enclosure 0.
+    entt::entity adult(SimWorld& world, bool male, std::string species = "zebu")
+    {
+        const entt::entity e = add_animal(world, { .species = std::move(species), .name = male ? "Zack" : "Zoe", .male = male, .enclosure = std::optional { 0 } }, { 2, 0, 2 });
+        (void)open_crate(world, e);
+        return e;
+    }
+} // namespace
+
+TEST_CASE("animals: a content adult pair in an enclosure with room breeds within the hour, the mother carrying a litter")
+{
+    SimWorld world;
+    const AnimalGround ground = breeding_pens();
+    const entt::entity father = adult(world, true);
+    const entt::entity mother = adult(world, false);
+    ParkMessages messages;
+    run_cared_for(world, ground, 600, messages);
+    const Animal& her = world.registry.get<Animal>(mother);
+    REQUIRE(her.due.has_value());
+    CHECK(her.due->value > 0);
+    CHECK(her.due->value <= 900);
+    CHECK(her.litter >= 1);
+    CHECK(her.litter <= 3);
+    CHECK(her.mate == father);
+    CHECK_FALSE(world.registry.get<Animal>(father).due.has_value());
+    CHECK(std::ranges::count(messages.list, std::string(kAnimalPregnant), &ParkMessage::text_key) == 1);
+    CHECK(std::ranges::find(messages.list, std::string(kAnimalPregnant), &ParkMessage::text_key)->subject_name == "Zoe");
+}
+
+TEST_CASE("animals: no young without a willing pair, content enough and with room for them")
+{
+    SimWorld world;
+    AnimalGround ground = breeding_pens();
+    ParkMessages messages;
+    std::vector<entt::entity> females;
+    SUBCASE("two females")
+    {
+        females = { adult(world, false), adult(world, false) };
+        run_cared_for(world, ground, 1200, messages);
+    }
+    SUBCASE("a sick pair")
+    {
+        (void)adult(world, true);
+        females = { adult(world, false) };
+        run_cared_for(world, ground, 1200, messages, 0.4f);
+    }
+    SUBCASE("a full enclosure")
+    {
+        (void)adult(world, true);
+        females = { adult(world, false) };
+        ground.tiles = [](i32) { return 11; };
+        run_cared_for(world, ground, 1200, messages);
+    }
+    SUBCASE("a pair of different species")
+    {
+        (void)adult(world, true, "okapi");
+        females = { adult(world, false) };
+        run_cared_for(world, ground, 1200, messages);
+    }
+    SUBCASE("a pair in different enclosures")
+    {
+        (void)add_animal(world, { .species = "zebu", .male = true, .enclosure = std::optional { 1 } }, { 11, 0, 2 });
+        females = { adult(world, false) };
+        run_cared_for(world, ground, 1200, messages);
+    }
+    SUBCASE("a male still young")
+    {
+        const entt::entity e = add_animal(world, { .species = "zebu", .adult = false, .male = true, .enclosure = std::optional { 0 } }, { 2, 0, 2 });
+        (void)open_crate(world, e);
+        females = { adult(world, false) };
+        run_cared_for(world, ground, 1200, messages);
+    }
+    for (const entt::entity f : females)
+        CHECK_FALSE(world.registry.get<Animal>(f).due.has_value());
+    CHECK(messages.list.empty());
+}
+
+TEST_CASE("animals: a female carrying young or resting from a birth does not breed again")
+{
+    SimWorld world;
+    const AnimalGround ground = breeding_pens();
+    (void)adult(world, true);
+    const entt::entity carrying = adult(world, false);
+    const entt::entity resting = adult(world, false);
+    world.registry.get<Animal>(carrying).due = units::Seconds { 5000 };
+    world.registry.get<Animal>(resting).rest = units::Seconds { 5000 };
+    ParkMessages messages;
+    run_cared_for(world, ground, 1200, messages);
+    CHECK(world.registry.get<Animal>(carrying).due->value == doctest::Approx(3800));
+    CHECK(world.registry.get<Animal>(carrying).litter == 0);
+    CHECK_FALSE(world.registry.get<Animal>(resting).due.has_value());
+    CHECK(world.registry.get<Animal>(resting).rest.value == doctest::Approx(3800));
 }

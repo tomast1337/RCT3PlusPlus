@@ -21,12 +21,17 @@
 //
 // A meat-eater hunts the species its species' data names as its prey. Hungry, it runs after the nearest of them in its
 // enclosure, which runs from it, and kills it once caught, which feeds it. The park posts a message, guests near enough
-// to see it are upset, and the body lies where it fell a while before it is cleared. All the rates are our own.
+// to see it are upset, and the body lies where it fell a while before it is cleared.
+//
+// Now and then an adult male, content enough, looks for a mate: an adult female of his kind in his enclosure, as
+// content, not carrying young and rested since her last birth. With room left in the enclosure for the young they
+// mate, and she carries a litter about the species' average size for the months its data says. All the rates are our own.
 
 #include "core/types.hpp"
 #include "save/model/people.hpp"
 #include "simulation/components.hpp"
 #include "simulation/park/messages.hpp"
+#include "simulation/park/state.hpp"
 #include "simulation/sim_world.hpp"
 #include "units/units.hpp"
 
@@ -43,6 +48,20 @@
 namespace rct3::simulation
 {
 
+    /// A calendar month of the park, in game time.
+    inline constexpr units::Seconds kAnimalMonth { save::model::GameClock::kUnitsPerMonth / park::kCalendarUnitsPerHour * kSecondsPerHour };
+
+    /// How the animals of a species breed.
+    struct AnimalBreeding
+    {
+        units::Share contentment { }; ///< The least either parent needs
+        /// Tiles each animal of the species takes up; a pair breeds only with this much of their enclosure left over.
+        i32 room = 0;
+        units::Seconds rest { };      ///< After a birth, before the mother breeds again
+        i32 litter = 0;               ///< Young in an average litter
+        units::Seconds pregnancy { }; ///< From mating to the birth
+    };
+
     /// What the animals and their keepers walk over.
     struct AnimalGround
     {
@@ -51,6 +70,9 @@ namespace rct3::simulation
         /// A point picked at random in enclosure `which`, or with none outside every enclosure; nothing when it
         /// has no ground.
         std::function<std::optional<glm::vec2>(std::optional<i32> which, random::RandomState&)> somewhere;
+        /// How the animals of `species` breed; nothing for a species that does not.
+        std::function<std::optional<AnimalBreeding>(std::string_view species)> breeding;
+        std::function<i32(i32 which)> tiles; ///< Of enclosure `which`
     };
 
     /// An animal house, standing in an enclosure.
@@ -129,6 +151,11 @@ namespace rct3::simulation
         bool escaped = false;       ///< Out of every enclosure
         bool rescued = false;       ///< Bought as a rescued animal, which came in poor health
         units::Seconds flying { };  ///< Left of the helicopter lowering its crate; the crate's own wait starts after
+
+        std::optional<units::Seconds> due { }; ///< While pregnant: left till it gives birth
+        i32 litter = 0;                        ///< While pregnant: young still to be born
+        entt::entity mate = entt::null;        ///< While pregnant: the father of its young
+        units::Seconds rest { };               ///< Left before it breeds again
     };
 
     /// A meat-eater's hunting, beside its Animal.
@@ -190,6 +217,7 @@ namespace rct3::simulation
         units::Distance pounce { 0.8f }; ///< A predator this near its prey has caught it
         units::Seconds carcass { 240 };  ///< A killed animal's body lies this long
         units::Distance seen { 20 };     ///< Guests this near a kill see it
+        units::Seconds courting { 60 };  ///< On average between a willing male's tries to breed
     };
 
     inline constexpr AnimalRates kAnimalRates { };
@@ -215,6 +243,8 @@ namespace rct3::simulation
     inline constexpr std::string_view kAnimalEscaped = "Thought_PI_AnimalEscaped1";
     /// The message posted as a predator kills an animal; its subject's name is the killed animal's.
     inline constexpr std::string_view kAnimalKilled = "WildAnimalMessage_Killed";
+    /// Posted as a female falls pregnant; its subject's name is hers.
+    inline constexpr std::string_view kAnimalPregnant = "WildAnimalMessage_Pregnant";
 
     /// A keeper, and the enclosure the park gave them.
     struct KeeperPost

@@ -174,6 +174,9 @@ namespace rct3::park
         std::string needs;
         /// Enclosure fences: how strong they are. Animals: the least strength of fence that holds them.
         f32 strength = 0;
+
+        std::optional<ovl::animal::AnimalBreeding> breeding; ///< Animals: how their species breeds
+
         f32 rarity = 0; ///< Animals: from 0, common, to 1, endangered
         /// Animals: which of its species' four it is, by age and sex.
         ovl::animal::AnimalAge age = ovl::animal::AnimalAge::AdultMale;

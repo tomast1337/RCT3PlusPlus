@@ -31,6 +31,12 @@ namespace rct3::ovl::animal
         constexpr usize kPreyList = 0x04;
         constexpr usize kSpace = 0x0C;
         constexpr i32 kMostPrey = 64; // Far over the dozen or so a meat-eater of the game hunts
+        // The statistics block's breeding facts, up to and including the months pregnant.
+        constexpr usize kBreedingSize = 0x24;
+        constexpr usize kContentment = 0x08;
+        constexpr usize kRestMonths = 0x18;
+        constexpr usize kLitter = 0x1C;
+        constexpr usize kPregnantMonths = 0x20;
 
         // An animal's own block.
         constexpr usize kVariantSize = 0x34;
@@ -83,6 +89,9 @@ namespace rct3::ovl::animal
                                     if (const auto name = space.cstring_at(list->read_u32(4 * i)))
                                         s.prey.push_back(*name);
                     }
+                if (const u32 at = record->read_u32(kStatistics); at != 0)
+                    if (const auto stats = ItemRecord::open(space, refs, at, kBreedingSize))
+                        s.breeding = AnimalBreeding { .contentment = stats->read_i32(kContentment), .rest_months = stats->read_i32(kRestMonths), .litter = stats->read_i32(kLitter), .pregnant_months = stats->read_i32(kPregnantMonths) };
                 for (usize i = 0; i < s.variants.size(); ++i)
                 {
                     const u32 at = record->read_u32(kVariants + 4 * i);

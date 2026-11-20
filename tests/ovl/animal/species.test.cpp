@@ -25,9 +25,9 @@ TEST_CASE("an animal species points to its animals and names its shelter")
     pool.add("BigWombat:mdl");
     pool.add("wombat:wad");
     const u32 at = pool.base();
-    // The species, then two animal blocks; the female slots are null.
+    // The species, then two animal blocks and the statistics; the female slots are null.
     std::vector<std::byte> bytes;
-    put(bytes, { 0, own, 0, 0, 0, 0, at + 0x40, 0, at + 0x74, 0, 0, 0, shelter, 0, bits(1.5f) });
+    put(bytes, { 0, own, 0, 0, 0, 0, at + 0x40, 0, at + 0x74, 0, 0, at + 0xA8, shelter, 0, bits(1.5f) });
     bytes.resize(0x40, std::byte { 0 });
     for (const u32 price : { 12500u, 16000u })
     {
@@ -37,6 +37,7 @@ TEST_CASE("an animal species points to its animals and names its shelter")
         put(p, { price, bits(0.7f) });
         std::copy(p.begin(), p.end(), bytes.begin() + static_cast<std::ptrdiff_t>(start + 0x14));
     }
+    put(bytes, { 0, 0, 70, 12, 0, 0, 3, 2, 5 });
     const auto overlay = make_record_overlay(5, pool, "wombat:was", bytes, { { 8, "WombatName:txt" }, { 0xC, "WombatDesc:txt" }, { 0x10, "WombatIcon:gsi" }, { 0x40, "BigWombat:mdl" }, { 0x40 + 0x04, "wombat:wad" }, { 0x40 + 0x1C, "BigWombat:txt" }, { 0x40 + 0x30, "WombatAdult:gsi" }, { 0x74 + 0x1C, "SmallWombat:txt" }, { 0x74 + 0x30, "WombatYoung:gsi" } });
     const auto items = read_animal_species(overlay, overlay.common());
     REQUIRE(items.size() == 1);
@@ -49,6 +50,12 @@ TEST_CASE("an animal species points to its animals and names its shelter")
     CHECK(s.own_name == "Wombat");
     CHECK(s.shelter == "burrow");
     CHECK(s.fence_strength == doctest::Approx(1.5f));
+    REQUIRE(s.breeding.has_value());
+    CHECK(s.breeding->contentment == 70);
+    CHECK(s.care.space == 12);
+    CHECK(s.breeding->rest_months == 3);
+    CHECK(s.breeding->litter == 2);
+    CHECK(s.breeding->pregnant_months == 5);
     REQUIRE(s.variants[0].has_value());
     CHECK(s.variants[0]->model == "BigWombat");
     CHECK(s.variants[0]->motions == "wombat");
@@ -76,6 +83,7 @@ TEST_CASE("an animal pointer outside the data leaves that animal out")
     REQUIRE(items[0].species.has_value());
     CHECK_FALSE(items[0].species->variants[0].has_value());
     CHECK(items[0].species->shelter.empty());
+    CHECK_FALSE(items[0].species->breeding.has_value());
 }
 
 TEST_CASE("an animal species gives the space, appetite and sociability its animals have, from its care blocks")

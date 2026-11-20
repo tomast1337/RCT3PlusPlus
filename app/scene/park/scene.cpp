@@ -1239,6 +1239,18 @@ namespace rct3::scene::park
                         }
                     return std::nullopt;
                 },
+                .breeding = [&](std::string_view species) -> std::optional<simulation::AnimalBreeding> {
+                    if (!scene.build.items.valid() || scene.build.items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+                        return std::nullopt;
+                    for (const rct3::park::BuildItem& item : scene.build.items.get())
+                        if (item.kind == rct3::park::BuildKind::Animal && item.breeding && strings::equals_ignoring_case(item.symbol, species))
+                        {
+                            const ovl::animal::AnimalBreeding& b = *item.breeding;
+                            return simulation::AnimalBreeding { .contentment = { static_cast<f32>(b.contentment) / units::kPercent }, .room = item.care.space, .rest = { static_cast<f32>(b.rest_months) * simulation::kAnimalMonth.value }, .litter = b.litter, .pregnancy = { static_cast<f32>(b.pregnant_months) * simulation::kAnimalMonth.value } };
+                        }
+                    return std::nullopt;
+                },
+                .tiles = [&](i32 which) { return rct3::park::enclosure_size(scene.enclosures, which); },
             };
             const simulation::BirdGround birds = bird_ground(scene);
             // How strong a species or a fence is, from the build lists once they are read.

@@ -5,6 +5,7 @@
 // built beside the frame, so a change drops that build first.
 #pragma once
 
+#include "config/game/options.hpp"
 #include "core/types.hpp"
 #include "save/model/people.hpp"
 #include "simulation/components.hpp"
@@ -28,9 +29,9 @@ namespace rct3::scene::park
     /// animal house picked at random instead, which dresses them with the other keepers.
     [[nodiscard]] std::optional<usize> hire(ParkScene& scene, save::model::StaffKind kind);
 
-    /// After a person of `shown_people` is renamed `name`: a cheat's name sets it off (simulation/name_cheats.hpp),
-    /// the guest camera's putting the view with them, from their eyes.
-    void name_cheats(ParkScene& scene, const ui::InterfaceAssets& assets, usize shown, std::u16string_view name);
+    /// After a person of `shown_people` is renamed `name`: a cheat's name sets it off while the player's
+    /// `options` allow cheats (simulation/name_cheats.hpp), the guest camera's putting the view with them, from their eyes.
+    void name_cheats(ParkScene& scene, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, usize shown, std::u16string_view name);
 
     /// Writes a change the player made on a person's page into the save. Returns whether the page is to be
     /// shown again for its new look.

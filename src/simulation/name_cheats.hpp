@@ -4,7 +4,8 @@
 // kNameCheatKeys sets that cheat off, whatever the case of its letters. Some act once on the spot (money, the
 // whole park cheering); others stay on in the park from then on, until it is loaded again, as they are not
 // saved; one lasts a short while. The guest camera and the money are the scene's to do (they need the view and
-// the ledger); the rest act on the simulated park here.
+// the ledger); the rest act on the simulated park here. While the player has cheats off, a cheat's name is only a
+// name.
 #pragma once
 
 #include "core/types.hpp"
@@ -12,6 +13,9 @@
 
 #include <array>
 #include <cstddef>
+#include <functional>
+#include <optional>
+#include <string>
 #include <string_view>
 
 namespace rct3::simulation
@@ -62,6 +66,17 @@ namespace rct3::simulation
         NameCheatKey { "CheatPeepName_FunnyDarts", NameCheat::NotYet },     ///< Safari darts drawn as a dinosaur
         NameCheatKey { "CheatPeepName_Photostory", NameCheat::NotYet },     ///< What it does is not known yet
     };
+
+    /// Whether the player may use cheats, as their options say.
+    enum class Cheats : u8
+    {
+        Allowed,
+        Off,
+    };
+
+    /// The cheat a guest renamed `typed` sets off: the one whose name, as `name_of` gives it for its key, matches
+    /// whatever the case of its letters. None for any other name, and for every name while cheats are off.
+    [[nodiscard]] std::optional<NameCheatKey> named_cheat(std::string_view typed, Cheats cheats, std::function_ref<std::string(std::string_view key)> name_of);
 
     /// The money the cheat gives: 10,000.00, as the game gives it.
     inline constexpr units::Money kCheatMoney { 1'000'000 };

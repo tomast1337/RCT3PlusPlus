@@ -276,6 +276,7 @@ namespace rct3::ui::screens::management
             if (f.state != nullptr && f.state->rating)
                 rating = whole(std::lround(*f.state->rating * save::model::kMaxParkRating));
             page.lines.push_back({ text(strings, "Graph_ParkRating"), rating, false, "Graph_ParkRating" });
+            page.lines.push_back({ text(strings, "Rct3pp_CheatsUsed"), f.state != nullptr ? text(strings, f.state->cheats_used ? "Yes" : "No") : std::u16string(kDash), false, "Rct3pp_CheatsUsed" });
             if (finance && f.park->finance.entrance_fee_fixed())
                 page.note = text(strings, "FinancialSummary_EntranceFee_CannotBeChanged_TT");
 

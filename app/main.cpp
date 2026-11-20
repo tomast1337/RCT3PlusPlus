@@ -1210,7 +1210,9 @@ int main(int argc, char** argv)
                         developer_window("Log", draw_log);
                         if (park)
                             developer_window("Park", [&] { draw_park_debug(*park); });
-                        if (park && front)
+                        // The editor and the Debug tab change the park, so they are cheats: shut while the player has
+                        // cheats off. The rest only look.
+                        if (park && front && front->live->options.flag(config::game::GameOption::Cheats))
                         {
                             // A guest picked from elsewhere (a script) brings the editor in front of the windows docked with it.
                             if (std::exchange(park->editor.focus, false))

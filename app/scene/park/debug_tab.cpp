@@ -60,6 +60,7 @@ namespace rct3::scene::park
     usize use_debug_tool(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, DebugTool tool, i64 amount)
     {
         const auto count = static_cast<usize>(std::max<i64>(amount, 0));
+        scene.park.cheats_used = true;
         switch (tool)
         {
             case DebugTool::AddMoney:
@@ -340,6 +341,7 @@ namespace rct3::scene::park
                     {
                         scene.park.weather = type;
                         scene.park.forecast = type;
+                        scene.park.cheats_used = true;
                     }
                 }
                 ImGui::EndCombo();
@@ -351,6 +353,7 @@ namespace rct3::scene::park
                 // Shown at once, without a blend; the clock runs on from there, into the park's hours if outside.
                 scene.day_clock.time = scene.day_clock.shown = hour / 24;
                 scene.day_clock.fade = 0;
+                scene.park.cheats_used = true;
             }
             bool rain = scene.rain_strength.has_value();
             if (ImGui::Checkbox("Set rain", &rain))

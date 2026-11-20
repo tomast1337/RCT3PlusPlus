@@ -340,6 +340,7 @@ namespace rct3::scene
                 throw std::runtime_error("no park is open");
             return park_->park.cash ? Json(park_->park.cash->value) : Json(nullptr);
         });
+        engine_.define("park.cheatsUsed", [this](const Json&) { return Json(park_of(park_).park.cheats_used); });
         engine_.define("park.ledger", [this](const Json&) -> Json {
             if (park_ == nullptr)
                 throw std::runtime_error("no park is open");

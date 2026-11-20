@@ -39,6 +39,7 @@
 //   park.loaded()       whether a park is open; park.ready() waits until one is
 //   render.live()       { buffers, pipelines, textures } alive on the device as the last frame ended
 //   park.cash()         hundredths of the currency, or undefined in a park without money
+//   park.cheatsUsed()   whether a cheat was ever used in the park, as its park window says
 //   camera.look(at, from)  looks at the map point `at` from `from`, or as now when `from` is left out; map
 //                       points are { col, row, up }: tiles, with fractions between, and world units above the
 //                       ground

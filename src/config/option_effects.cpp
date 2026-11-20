@@ -25,6 +25,7 @@ namespace rct3::config
             O::CycleMenuMusic,
             O::ShuffleBackgroundMusic,
             O::MenuTrack,
+            O::Cheats, // Guests' cheat names and the developer windows' editors
             O::PathCameraFollow,
             O::AutoScrollAtEdge, // The park's camera
             O::GraphicsQuality,  // Only which rows the window shows, for now

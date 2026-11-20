@@ -147,13 +147,15 @@ namespace rct3::scene::park
         return scene.shown_people.size() - 1;
     }
 
-    void name_cheats(ParkScene& scene, const ui::InterfaceAssets& assets, usize shown, std::u16string_view name)
+    void name_cheats(ParkScene& scene, const ui::InterfaceAssets& assets, const config::game::GameOptions& options, usize shown, std::u16string_view name)
     {
-        const std::string typed = strings::to_utf8(name);
-        const auto found = std::ranges::find_if(simulation::kNameCheatKeys, [&](const simulation::NameCheatKey& k) { return strings::equals_ignoring_case(typed, strings::to_utf8(assets.strings->get(k.key))); });
-        if (found == simulation::kNameCheatKeys.end())
+        const simulation::Cheats cheats = options.flag(config::game::GameOption::Cheats) ? simulation::Cheats::Allowed : simulation::Cheats::Off;
+        const auto found = simulation::named_cheat(strings::to_utf8(name), cheats, [&](std::string_view key) { return strings::to_utf8(assets.strings->get(key)); });
+        if (!found)
             return;
         using enum simulation::NameCheat;
+        if (found->cheat != Nothing && found->cheat != NotYet)
+            scene.park.cheats_used = true;
         switch (found->cheat)
         {
             case Money:

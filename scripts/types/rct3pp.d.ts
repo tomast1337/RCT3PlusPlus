@@ -171,6 +171,8 @@ declare namespace park {
     function ready(): Promise<void>;
     /** Hundredths of the currency; undefined in a park without money. */
     function cash(): Money | undefined;
+    /** Whether a cheat was ever used in the park, as its park window says; kept in its save. */
+    function cheatsUsed(): boolean;
     /** The loan, in hundredths of the currency. */
     function loan(): Money;
     /** Sets the cash, in hundredths of the currency, of a park with money. */

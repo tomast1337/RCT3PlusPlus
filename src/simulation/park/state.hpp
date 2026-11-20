@@ -49,6 +49,7 @@ namespace rct3::simulation::park
         f32 wind_wait = 0;    ///< Calendar units to the wind's next change; not saved
         GameSpeed speed;
         ParkMessages messages;
+        bool cheats_used = false; ///< A cheat was used in the park at some time; kept for good, cheats off or on
     };
 
     /// Calendar units a game hour moves the calendar on: a whole day of the clock is a month and three fifths

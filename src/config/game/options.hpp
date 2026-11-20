@@ -48,6 +48,7 @@ namespace rct3::config::game
         MenuTrack,              ///< Where the menu music's cycle stands; not in the dialog (menu_music.hpp)
         DisableWeather,         ///< The park's weather stays as it is
         OriginalFinances,       ///< The finances window keeps the original's two tabs, not our longer ledger and the rest
+        Cheats,                 ///< Cheats may be used: guests' cheat names, the developer windows' park editors, a cheats menu
 
         // Camera
         InvertRideCameraY,

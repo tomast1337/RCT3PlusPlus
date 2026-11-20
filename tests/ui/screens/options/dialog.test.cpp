@@ -180,6 +180,19 @@ TEST_CASE("the general page's first tick box freezes the weather")
     CHECK(f.options.flag(O::DisableWeather));
 }
 
+TEST_CASE("the general page's cheats box, ticked as cheats are allowed, turns them off")
+{
+    Fixture f;
+    const auto found = f.dialog->find("content/GameOptionsDialog_GameSettingsTabHelp/cheats");
+    REQUIRE(found);
+    auto* box = dynamic_cast<Tickbox*>(&*found);
+    REQUIRE(box != nullptr);
+    CHECK(box->ticked);
+    box->on_key({ Key::Space });
+    f.desktop.update({ });
+    CHECK_FALSE(f.options.flag(O::Cheats));
+}
+
 namespace
 {
     std::vector<KeyBox*> key_boxes(const Fixture& f)

@@ -1591,6 +1591,9 @@ namespace rct3::scene
                       { "health", animal.health.value },
                       { "hunger", animal.hunger.value },
                       { "hunting", hunter != nullptr && hunter->quarry != entt::null ? static_cast<i64>(entt::to_integral(hunter->quarry)) : -1 },
+                      { "pregnant", animal.due.has_value() },
+                      { "mother", animal.mother == entt::null ? -1 : static_cast<i64>(entt::to_integral(animal.mother)) },
+                      { "generation", animal.generation },
                       { "at", tile },
                       { "height", pose.position.y } });
             }

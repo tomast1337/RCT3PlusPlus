@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstdint>
 #include <doctest/doctest.h>
+#include <format>
 #include <numbers>
 #include <optional>
 #include <string>
@@ -744,4 +745,88 @@ TEST_CASE("animals: a female carrying young or resting from a birth does not bre
     CHECK(world.registry.get<Animal>(carrying).litter == 0);
     CHECK_FALSE(world.registry.get<Animal>(resting).due.has_value());
     CHECK(world.registry.get<Animal>(resting).rest.value == doctest::Approx(3800));
+}
+
+namespace
+{
+    /// Breeding pens whose newborns are named "son of" their father, or after how many animals there are.
+    AnimalGround naming_pens(const SimWorld& world)
+    {
+        AnimalGround ground = breeding_pens();
+        ground.name = [&world](const Animal& young, std::optional<const Animal&> father) {
+            if (father)
+                return father->name + " Jr";
+            return std::format("{} {}", young.male ? "Son" : "Daughter", world.registry.view<const Animal>().size());
+        };
+        return ground;
+    }
+} // namespace
+
+TEST_CASE("animals: at the end of her pregnancy a mother gives birth to her litter beside her, then rests")
+{
+    SimWorld world;
+    const AnimalGround ground = naming_pens(world);
+    const entt::entity father = adult(world, true);
+    const entt::entity mother = adult(world, false);
+    {
+        Animal& her = world.registry.get<Animal>(mother);
+        her.due = units::Seconds { 10 };
+        her.litter = 3;
+        her.mate = father;
+    }
+    ParkMessages messages;
+    usize born = 0;
+    for (f32 t = 0; t < 9.5f; t += 0.25f)
+        born += step_animals(world, ground, { 0.25f }, messages);
+    CHECK(born == 0);
+    for (f32 t = 0; t < 1; t += 0.25f)
+        born += step_animals(world, ground, { 0.25f }, messages);
+    CHECK(born == 3);
+    const Animal& her = world.registry.get<Animal>(mother);
+    CHECK_FALSE(her.due.has_value());
+    CHECK(her.litter == 0);
+    CHECK(her.rest.value == doctest::Approx(900).epsilon(0.01));
+    std::vector<const Animal*> young;
+    for (const auto [e, animal, pose] : world.registry.view<const Animal, const Pose>().each())
+        if (animal.mother == mother)
+        {
+            young.push_back(&animal);
+            CHECK_FALSE(animal.adult);
+            CHECK(animal.father == father);
+            CHECK(animal.species == "zebu");
+            CHECK(animal.enclosure == std::optional { 0 });
+            CHECK(animal.job != AnimalJob::Crated);
+            CHECK(glm::distance(pose.position, world.registry.get<Pose>(mother).position) < 1.5f);
+        }
+    REQUIRE(young.size() == 3);
+    CHECK(std::ranges::count(messages.list, std::string(kAnimalBorn), &ParkMessage::text_key) == 3);
+    for (const ParkMessage& m : messages.list)
+        if (m.text_key == kAnimalBorn)
+        {
+            CHECK(m.subject_name == "Zoe");
+            CHECK(std::ranges::any_of(young, [&](const Animal* y) { return y->name == m.other_name; }));
+        }
+    // Only the first son is named after his father.
+    const auto sons = std::ranges::count_if(young, [](const Animal* y) { return y->male; });
+    const auto juniors = std::ranges::count_if(young, [](const Animal* y) { return y->name == "Zack Jr"; });
+    CHECK(juniors == std::min<i64>(sons, 1));
+    for (const Animal* y : young)
+        CHECK(y->generation == (y->name == "Zack Jr" ? 2 : 1));
+}
+
+TEST_CASE("animals: a son is named after a father who has a son already only if he is the first")
+{
+    SimWorld world;
+    const AnimalGround ground = naming_pens(world);
+    const entt::entity father = adult(world, true);
+    (void)add_animal(world, { .species = "zebu", .name = "Zack Jr", .adult = false, .male = true, .enclosure = std::optional { 0 }, .father = father, .generation = 2 }, { 1, 0, 1 });
+    const entt::entity mother = adult(world, false);
+    world.registry.get<Animal>(mother).due = units::Seconds { 1 };
+    world.registry.get<Animal>(mother).litter = 8;
+    world.registry.get<Animal>(mother).mate = father;
+    ParkMessages messages;
+    run_cared_for(world, ground, 2, messages);
+    for (const auto [e, animal] : world.registry.view<const Animal>().each())
+        if (animal.mother == mother)
+            CHECK(animal.generation == 1);
 }

@@ -217,7 +217,7 @@ namespace rct3::simulation
         return added;
     }
 
-    void step_animals(SimWorld& world, const AnimalGround& ground, units::Seconds dt, park::ParkMessages& messages)
+    usize step_animals(SimWorld& world, const AnimalGround& ground, units::Seconds dt, park::ParkMessages& messages)
     {
         auto& r = world.registry;
         const f32 now = static_cast<f32>(world.tick) * kTickSeconds;
@@ -465,11 +465,16 @@ namespace rct3::simulation
 
         // Breeding. Now and then an adult male out of his crate tries for a mate in his enclosure.
         const auto content = [](const Animal& a) { return std::min(a.health.value, 1 - std::max({ a.hunger.value, a.thirst.value, a.loneliness.value })); };
+        std::vector<entt::entity> mothers; // Giving birth this step
         for (auto [e, animal, dice] : r.view<Animal, Dice>().each())
         {
             animal.rest.value = std::max(0.0f, animal.rest.value - dt.value);
             if (animal.due)
+            {
                 animal.due->value = std::max(0.0f, animal.due->value - dt.value);
+                if (animal.due->value <= 0 && animal.job != AnimalJob::Crated)
+                    mothers.push_back(e);
+            }
             if (!animal.adult || !animal.male || animal.job == AnimalJob::Crated || !animal.enclosure || animal.rest.value > 0 || !ground.breeding || !random::chance(dice.state, dt.value / kRates.courting.value))
                 continue;
             const std::optional<AnimalBreeding> facts = ground.breeding(animal.species);
@@ -501,6 +506,40 @@ namespace rct3::simulation
                 park::post(messages, { .text_key = std::string(kAnimalPregnant), .subject_name = her.name });
                 break;
             }
+        }
+        usize born = 0;
+        for (const entt::entity m : mothers)
+        {
+            const Animal mother = r.get<Animal>(m);
+            const glm::vec3 at = r.get<Pose>(m).position;
+            // A copy: adding the young may move the dice of the animals about.
+            random::RandomState dice = r.get<Dice>(m).state;
+            const entt::entity father = r.valid(mother.mate) && r.all_of<Animal>(mother.mate) ? mother.mate : entt::null;
+            for (i32 i = 0; i < mother.litter; ++i)
+            {
+                Animal young { .species = mother.species, .overlay = mother.overlay, .adult = false, .male = random::chance(dice, 0.5), .enclosure = mother.enclosure, .mother = m, .father = father };
+                const bool first_son = young.male && father != entt::null && std::ranges::none_of(r.view<const Animal>(), [&](entt::entity o) {
+                                           const Animal& other = r.get<const Animal>(o);
+                                           return other.male && other.father == father;
+                                       });
+                if (first_son)
+                    young.generation = r.get<const Animal>(father).generation + 1;
+                if (ground.name)
+                    young.name = ground.name(young, first_son ? std::optional<const Animal&>(r.get<const Animal>(father)) : std::nullopt);
+                const glm::vec3 beside = at + glm::vec3 { static_cast<f32>(random::between(dice, -0.5, 0.5)), 0, static_cast<f32>(random::between(dice, -0.5, 0.5)) };
+                const entt::entity y = add_animal(world, young, beside);
+                Animal& out = r.get<Animal>(y);
+                out.job = AnimalJob::Idle;
+                out.busy = { };
+                park::post(messages, { .text_key = std::string(kAnimalBorn), .subject_name = mother.name, .other_name = out.name });
+                ++born;
+            }
+            r.get<Dice>(m).state = dice;
+            Animal& her = r.get<Animal>(m);
+            her.due.reset();
+            her.litter = 0;
+            her.mate = entt::null;
+            her.rest = ground.breeding ? ground.breeding(her.species).value_or(AnimalBreeding { }).rest : units::Seconds { };
         }
 
         // The keepers. Each keeps to the enclosure of their house and fills the troughs of any house in it, as
@@ -677,7 +716,7 @@ namespace rct3::simulation
         // at its first house. shortcut: the game's inspector finds the dung at an enclosure's viewing gallery, which
         // parks here do not have yet; it is told of from afar while their task is on.
         if (inspector == entt::null)
-            return;
+            return born;
         std::vector<i32> dung_told;
         for (const auto [h, house] : houses.each())
         {
@@ -702,6 +741,7 @@ namespace rct3::simulation
                 tell(r, inspector, Finding::TooMuchDung, h, now);
             }
         }
+        return born;
     }
 
 } // namespace rct3::simulation

@@ -48,6 +48,7 @@
 #include "scene/pool_tools.hpp"
 #include "scene/track/building.hpp"
 #include "scene/track/trains.hpp"
+#include "scene/zoo_animals.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/awards.hpp"
 #include "simulation/challenges.hpp"
@@ -71,6 +72,7 @@
 #include "simulation/weather_cycle.hpp"
 #include "strings/ascii.hpp"
 #include "strings/unicode.hpp"
+#include "ui/animal_names.hpp"
 #include "ui/extra_skins.hpp"
 #include "ui/game_style.hpp"
 #include "ui/language.hpp"
@@ -1251,6 +1253,12 @@ namespace rct3::scene::park
                     return std::nullopt;
                 },
                 .tiles = [&](i32 which) { return rct3::park::enclosure_size(scene.enclosures, which); },
+                .name =
+                    [&](const simulation::Animal& young, std::optional<const simulation::Animal&> father) {
+                        if (father)
+                            return ui::son_name(*assets.strings, father->name, father->generation);
+                        return ui::new_animal_name(*assets.strings, young.species, young.male ? ovl::animal::AnimalAge::YoungMale : ovl::animal::AnimalAge::YoungFemale, scene.looks);
+                    },
             };
             const simulation::BirdGround birds = bird_ground(scene);
             // How strong a species or a fence is, from the build lists once they are read.
@@ -1262,6 +1270,7 @@ namespace rct3::scene::park
                 return found != items.get().end() ? found->strength : 0.0f;
             };
             bool fences_worn = false;
+            usize born = 0;
             if (scene.simulate)
             {
                 // The pools taken in again once built on, or their rooms opened, closed, priced or given another fluid or
@@ -1699,7 +1708,7 @@ namespace rct3::scene::park
                 }
                 profiling::section("Guests", [&] {
                     simulation::step(scene.sim);
-                    simulation::step_animals(scene.sim, animal_ground, { simulation::kTickSeconds }, scene.park.messages);
+                    born += simulation::step_animals(scene.sim, animal_ground, { simulation::kTickSeconds }, scene.park.messages);
                     simulation::step_animal_care(scene.sim, scene.enclosure_sites, { simulation::kTickSeconds }, scene.park.messages);
                     fences_worn = simulation::step_fence_wear(scene.sim, scene.enclosures, animal_ground, strength, { simulation::kTickSeconds }, scene.park.messages) || fences_worn;
                     simulation::step_wild_birds(scene.sim, birds, { simulation::kTickSeconds });
@@ -2044,6 +2053,8 @@ namespace rct3::scene::park
             }
             if (fences_worn && fence_wear_changed(scene))
                 objects_changed(scene);
+            if (born > 0)
+                animals_changed(device, scene);
             if (scene.simulate)
             {
                 // What is broken looks it, and looks whole again once mended.

@@ -34,6 +34,7 @@ namespace rct3::simulation::park
         units::Seconds age { };              ///< Game time since it was posted
         std::optional<u64> subject { };      ///< The object the message is about
         std::string subject_name { };        ///< Its name when the message was posted; may be empty
+        std::string other_name { };          ///< Fills %NAME2%, such as a newborn animal's name
         std::optional<i32> panel { };        ///< The info panel's tab its subject opens at, by number (ui::screens::info::kMessageTabs); none or negative keeps the last
         std::optional<i32> award { };        ///< Award messages: which award
         std::string field_key { };           ///< Text key filling its other field, such as a breakdown's kind; none drops the field

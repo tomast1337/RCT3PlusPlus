@@ -64,3 +64,11 @@ TEST_CASE("a saved animal's name is its pattern with its first names, species an
     a.name_template.clear();
     CHECK(ui::saved_animal_name(t, a) == "Kurt the Koala");
 }
+
+TEST_CASE("a son named after his father takes the next generation's suffix in place of his father's")
+{
+    const ui::StringTable t = names_language();
+    CHECK(ui::son_name(t, "Kurt the Koala", 1) == "Kurt the Koala Jr");
+    CHECK(ui::son_name(t, "Kurt the Koala Jr", 2) == "Kurt the Koala III");
+    CHECK(ui::son_name(t, "Kurt the Koala III", 3) == "Kurt the Koala III");
+}

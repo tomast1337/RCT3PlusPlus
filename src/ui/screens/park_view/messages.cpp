@@ -23,6 +23,7 @@ namespace rct3::ui::screens::park_view
         constexpr std::string_view kOlderHelp = "TT_GUI2_MessageConsolePrevoiusMessages"; // Misspelt in the game
         constexpr std::string_view kNewerHelp = "TT_GUI2_MessageConsoleNextMessages";
         constexpr std::u16string_view kNameField = u"NAME";
+        constexpr std::u16string_view kOtherNameField = u"NAME2";
         // The text keys of the scenario goals' messages and of the park inspector's reports start so.
         constexpr std::string_view kGoalKeys = "ObjectiveMessage_";
         constexpr std::string_view kInspectorKeys = "Thought_PI_";
@@ -101,6 +102,13 @@ namespace rct3::ui::screens::park_view
             {
                 text.replace(open, close - open + 1, name);
                 from = open + name.size();
+                continue;
+            }
+            if (field == kOtherNameField && !message.other_name.empty())
+            {
+                const std::u16string other = strings::to_utf16(message.other_name);
+                text.replace(open, close - open + 1, other);
+                from = open + other.size();
                 continue;
             }
             if (!message.field_key.empty())

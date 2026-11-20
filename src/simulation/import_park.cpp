@@ -1001,6 +1001,8 @@ namespace rct3::simulation
             if (c.shuttle != Shuttle::None && ride.mode != ReverseCableLiftHill && !launch_of(ride))
                 return std::nullopt;
         }
+        else
+            c.passes = std::max(ride.options.circuits, 1);
         c.distance = course.distance;
         c.drop_offs = course.drop_offs;
         c.wades = course.wades;

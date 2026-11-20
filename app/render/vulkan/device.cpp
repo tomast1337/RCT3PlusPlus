@@ -128,6 +128,8 @@ namespace rct3::render::vulkan
             for (auto& [_, b] : buffers_) // Includes the transient blocks
                 destroy(b);
             destroy(reading_);
+            for (Frame& f : frames_)
+                destroy(f.streamed);
             for (auto& [_, t] : textures_)
                 destroy(t);
             destroy_screen();
@@ -1184,6 +1186,80 @@ namespace rct3::render::vulkan
         return std::exchange(read_, std::nullopt);
     }
 
+    bool VulkanDevice::stream_screen()
+    {
+        assert(state_ == State::InFrame);
+        if (color_format_ != VK_FORMAT_B8G8R8A8_UNORM && color_format_ != VK_FORMAT_B8G8R8A8_SRGB && color_format_ != VK_FORMAT_R8G8B8A8_UNORM && color_format_ != VK_FORMAT_R8G8B8A8_SRGB)
+            return false;
+        // The slot's last frame is done (begin_frame waited for it), so its buffer can go when the window's size changed.
+        Frame& frame = frames_[frame_index_];
+        if (frame.streamed.buffer == VK_NULL_HANDLE || frame.streamed_extent.width != extent_.width || frame.streamed_extent.height != extent_.height)
+        {
+            destroy(frame.streamed);
+            frame.streamed = { };
+            frame.streamed_memory = nullptr;
+            frame.streamed_waiting = false;
+            try
+            {
+                const VkDeviceSize bytes = VkDeviceSize { extent_.width } * extent_.height * 4;
+                // Cached memory, where there is any, reads many times faster on the CPU.
+                constexpr VkMemoryPropertyFlags kReadable = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+                try
+                {
+                    frame.streamed = make_buffer(bytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, kReadable | VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+                }
+                catch (const std::exception&)
+                {
+                    frame.streamed = make_buffer(bytes, VK_BUFFER_USAGE_TRANSFER_DST_BIT, kReadable);
+                }
+                void* mapped = nullptr;
+                check(vkMapMemory(device_, frame.streamed.memory, 0, bytes, 0, &mapped), "vkMapMemory");
+                frame.streamed_memory = static_cast<const u8*>(mapped);
+            }
+            catch (const std::exception& e)
+            {
+                destroy(frame.streamed);
+                frame.streamed = { };
+                logging::logger("vulkan").warning("screen stream: {}", e.what());
+                return false;
+            }
+            frame.streamed_extent = extent_;
+        }
+        streaming_window_ = true;
+        return true;
+    }
+
+    bool VulkanDevice::take_streamed(ScreenPixels& into, StreamWait wait)
+    {
+        assert(state_ == State::Idle);
+        // Between frames, the slot the next frame takes is the oldest in flight, and the others follow in order.
+        for (u32 k = 0; k < kFramesInFlight; ++k)
+        {
+            Frame& frame = frames_[(frame_index_ + k) % kFramesInFlight];
+            if (!frame.streamed_waiting)
+                continue;
+            if (wait == StreamWait::IfDrawn && k > 0 && vkGetFenceStatus(device_, frame.in_flight) != VK_SUCCESS)
+                return false;
+            check(vkWaitForFences(device_, 1, &frame.in_flight, VK_TRUE, UINT64_MAX), "vkWaitForFences");
+            const usize bytes = usize { frame.streamed_extent.width } * frame.streamed_extent.height * 4;
+            into.size = { frame.streamed_extent.width, frame.streamed_extent.height };
+            into.rgba.resize(bytes);
+            const bool bgra = color_format_ == VK_FORMAT_B8G8R8A8_UNORM || color_format_ == VK_FORMAT_B8G8R8A8_SRGB;
+            const u8* from = frame.streamed_memory;
+            u8* to = into.rgba.data();
+            for (usize i = 0; i < bytes; i += 4)
+            {
+                to[i] = from[bgra ? i + 2 : i];
+                to[i + 1] = from[i + 1];
+                to[i + 2] = from[bgra ? i : i + 2];
+                to[i + 3] = 255;
+            }
+            frame.streamed_waiting = false;
+            return true;
+        }
+        return false;
+    }
+
     void VulkanDevice::end_frame()
     {
         assert(state_ == State::InFrame);
@@ -1221,13 +1297,23 @@ namespace rct3::render::vulkan
         VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
         VkAccessFlags2 access = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-        if (std::exchange(reading_window_, false))
+        const bool streaming = std::exchange(streaming_window_, false);
+        if (reading_window_ || streaming)
         {
             image_barrier(cmd, window, VK_IMAGE_ASPECT_COLOR_BIT, { layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, stage, access, VK_PIPELINE_STAGE_2_COPY_BIT, VK_ACCESS_2_TRANSFER_READ_BIT });
             VkBufferImageCopy region { };
             region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-            region.imageExtent = { reading_extent_.width, reading_extent_.height, 1 };
-            vkCmdCopyImageToBuffer(cmd, window, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, reading_.buffer, 1, &region);
+            if (std::exchange(reading_window_, false))
+            {
+                region.imageExtent = { reading_extent_.width, reading_extent_.height, 1 };
+                vkCmdCopyImageToBuffer(cmd, window, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, reading_.buffer, 1, &region);
+            }
+            if (streaming)
+            {
+                region.imageExtent = { frame.streamed_extent.width, frame.streamed_extent.height, 1 };
+                vkCmdCopyImageToBuffer(cmd, window, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, frame.streamed.buffer, 1, &region);
+                frame.streamed_waiting = true;
+            }
             layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
             stage = VK_PIPELINE_STAGE_2_COPY_BIT;
             access = 0;

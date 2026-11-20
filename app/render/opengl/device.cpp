@@ -187,8 +187,12 @@ namespace rct3::render::opengl
         gl.DeleteBuffers(1, &constants_);
         gl.DeleteVertexArrays(1, &empty_vertex_array_);
         for (Frame& f : frames_)
+        {
             if (f.done != nullptr)
                 gl.DeleteSync(f.done);
+            gl.DeleteBuffers(1, &f.streamed);
+            f = { };
+        }
 
         buffers_.clear();
         textures_.clear();
@@ -567,6 +571,67 @@ namespace rct3::render::opengl
         return std::exchange(read_, std::nullopt);
     }
 
+    bool OpenGlDevice::stream_screen()
+    {
+        assert(state_ == State::InFrame);
+        // The slot's last frame is done (begin_frame waited for it), so its buffer can go when the window's size changed.
+        Frame& frame = frames_[frame_index_];
+        if (frame.streamed == 0 || frame.streamed_extent.width != window_.width || frame.streamed_extent.height != window_.height)
+        {
+            gl.DeleteBuffers(1, &frame.streamed);
+            const auto bytes = static_cast<GLsizeiptr>(texture_bytes(window_.width, window_.height, TextureFormat::Rgba8));
+            constexpr GLbitfield kMapped = GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+            gl.CreateBuffers(1, &frame.streamed);
+            gl.NamedBufferStorage(frame.streamed, bytes, nullptr, kMapped | GL_CLIENT_STORAGE_BIT);
+            frame.streamed_memory = static_cast<const u8*>(gl.MapNamedBufferRange(frame.streamed, 0, bytes, kMapped));
+            frame.streamed_extent = window_;
+            frame.streamed_waiting = false;
+            if (frame.streamed_memory == nullptr)
+            {
+                gl.DeleteBuffers(1, &frame.streamed);
+                frame.streamed = 0;
+                return false;
+            }
+        }
+        streaming_window_ = true;
+        return true;
+    }
+
+    bool OpenGlDevice::take_streamed(ScreenPixels& into, StreamWait wait)
+    {
+        assert(state_ == State::Idle);
+        // Between frames, the slot the next frame takes is the oldest in flight, and the others follow in order.
+        for (u32 k = 0; k < kFramesInFlight; ++k)
+        {
+            Frame& frame = frames_[(frame_index_ + k) % kFramesInFlight];
+            if (!frame.streamed_waiting)
+                continue;
+            if (wait == StreamWait::IfDrawn && k > 0 && gl.ClientWaitSync(frame.done, GL_SYNC_FLUSH_COMMANDS_BIT, 0) == GL_TIMEOUT_EXPIRED)
+                return false;
+            while (gl.ClientWaitSync(frame.done, GL_SYNC_FLUSH_COMMANDS_BIT, 1'000'000'000) == GL_TIMEOUT_EXPIRED)
+            {
+            }
+            const Extent size = frame.streamed_extent;
+            const usize row = usize { size.width } * 4;
+            into.size = size;
+            into.rgba.resize(row * size.height);
+            // The window's first row is its bottom one.
+            for (usize y = 0; y < size.height; ++y)
+            {
+                const u8* from = frame.streamed_memory + (size.height - 1 - y) * row;
+                u8* to = into.rgba.data() + y * row;
+                for (usize i = 0; i < row; i += 4)
+                {
+                    std::memcpy(to + i, from + i, 3);
+                    to[i + 3] = 255;
+                }
+            }
+            frame.streamed_waiting = false;
+            return true;
+        }
+        return false;
+    }
+
     void OpenGlDevice::end_frame()
     {
         assert(state_ == State::InFrame);
@@ -603,6 +668,14 @@ namespace rct3::render::opengl
             for (usize i = 3; i < pixels.rgba.size(); i += 4)
                 pixels.rgba[i] = 255;
             reading_ = std::move(pixels);
+        }
+        if (std::exchange(streaming_window_, false))
+        {
+            Frame& frame = frames_[frame_index_];
+            gl.BindBuffer(GL_PIXEL_PACK_BUFFER, frame.streamed);
+            gl.ReadPixels(0, 0, static_cast<GLsizei>(frame.streamed_extent.width), static_cast<GLsizei>(frame.streamed_extent.height), GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+            gl.BindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+            frame.streamed_waiting = true;
         }
         if (reading_)
             read_ = std::exchange(reading_, std::nullopt);

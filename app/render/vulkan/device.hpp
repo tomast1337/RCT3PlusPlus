@@ -61,6 +61,8 @@ namespace rct3::render::vulkan
         bool copy_screen(TextureHandle target) override;
         bool read_screen(TextureHandle from) override;
         [[nodiscard]] std::optional<ScreenPixels> take_screen() override;
+        bool stream_screen() override;
+        [[nodiscard]] bool take_streamed(ScreenPixels& into, StreamWait wait) override;
         void set_wireframe(bool on) override
         {
             wireframe_ = on;
@@ -160,6 +162,11 @@ namespace rct3::render::vulkan
             /// keeps no time.
             VkQueryPool timings = VK_NULL_HANDLE;
             u32 stamps = 0; ///< Written this frame, two a pass
+            // The window as stream_screen asked for it, copied by the frame into memory mapped while it lives.
+            Buffer streamed;
+            const u8* streamed_memory = nullptr;
+            VkExtent2D streamed_extent { };
+            bool streamed_waiting = false; ///< Copied by the frame, not yet taken
         };
         static constexpr u32 kMostStamps = 64;
         f32 stamp_ms_ = 0; ///< Milliseconds a timestamp tick lasts
@@ -250,6 +257,7 @@ namespace rct3::render::vulkan
         // whole screen, the window is copied once the screen is stretched into it.
         Buffer reading_;
         bool reading_window_ = false;
+        bool streaming_window_ = false; ///< stream_screen asked for the window this frame
         VkExtent2D reading_extent_ { };
         std::optional<ScreenPixels> read_; ///< Until taken
 

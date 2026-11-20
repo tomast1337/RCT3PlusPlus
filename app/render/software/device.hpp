@@ -55,6 +55,8 @@ namespace rct3::render::software
         bool copy_screen(TextureHandle target) override;
         bool read_screen(TextureHandle from) override;
         [[nodiscard]] std::optional<ScreenPixels> take_screen() override;
+        bool stream_screen() override;
+        [[nodiscard]] bool take_streamed(ScreenPixels& into, StreamWait wait) override;
         void set_wireframe(bool /*on*/) override
         {
         }
@@ -133,6 +135,8 @@ namespace rct3::render::software
         bool ui_ready_ = false;
         bool ui_drawn_ = false;
         bool reading_window_ = false;
+        bool streaming_window_ = false; ///< stream_screen asked for the window this frame
+        bool streamed_waiting_ = false; ///< The window holds a streamed frame, not yet taken
         std::optional<ScreenPixels> reading_;
         std::optional<ScreenPixels> read_;
 

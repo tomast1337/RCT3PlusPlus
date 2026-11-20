@@ -149,6 +149,30 @@ namespace rct3::render::null
         return std::exchange(read_, std::nullopt);
     }
 
+    bool NullDevice::stream_screen()
+    {
+        assert(state_ == State::InFrame);
+        const Extent screen = screen_extent();
+        if (screen.width == 0 || screen.height == 0)
+            return false;
+        streamed_ = screen;
+        return true;
+    }
+
+    bool NullDevice::take_streamed(ScreenPixels& into, StreamWait)
+    {
+        assert(state_ == State::Idle);
+        const auto size = std::exchange(streamed_, std::nullopt);
+        if (!size)
+            return false;
+        // Nothing is drawn: black, opaque.
+        into.size = *size;
+        into.rgba.assign(usize { size->width } * size->height * 4, 0);
+        for (usize i = 3; i < into.rgba.size(); i += 4)
+            into.rgba[i] = 255;
+        return true;
+    }
+
     std::expected<BufferSlice, std::string> NullDevice::allocate_transient(std::span<const std::byte> data)
     {
         assert(state_ == State::InFrame || state_ == State::InPass);

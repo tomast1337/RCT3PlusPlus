@@ -58,6 +58,8 @@ namespace rct3::render::opengl
         bool copy_screen(TextureHandle target) override;
         bool read_screen(TextureHandle from) override;
         [[nodiscard]] std::optional<ScreenPixels> take_screen() override;
+        bool stream_screen() override;
+        [[nodiscard]] bool take_streamed(ScreenPixels& into, StreamWait wait) override;
         void set_wireframe(bool on) override
         {
             wireframe_ = on;
@@ -119,6 +121,11 @@ namespace rct3::render::opengl
             // merges them into one block big enough for the whole frame (as the Vulkan backend does).
             std::vector<u32> transient;
             usize transient_used = 0; ///< In the last block
+            // The window as stream_screen asked for it: a pixel buffer the frame reads into, mapped while it lives.
+            GLuint streamed = 0;
+            const u8* streamed_memory = nullptr;
+            Extent streamed_extent { };
+            bool streamed_waiting = false; ///< Read by the frame, not yet taken
         };
 
         enum class State : u8
@@ -189,6 +196,7 @@ namespace rct3::render::opengl
         bool ui_drawn_ = false;
         bool wireframe_ = false;
         bool reading_window_ = false;         ///< read_screen asked for the window, read as the frame ends
+        bool streaming_window_ = false;       ///< stream_screen asked for the window this frame
         std::optional<ScreenPixels> reading_; ///< Read this frame, handed over as it ends
         std::optional<ScreenPixels> read_;    ///< Until taken
 

@@ -1511,7 +1511,7 @@ namespace rct3::scene::park
                     {
                         simulation::step(scene.sim);
                         simulation::step_animals(scene.sim, animal_ground, { simulation::kTickSeconds }, scene.park.messages);
-                        fences_worn = simulation::step_fence_wear(scene.sim, scene.enclosures, strength, { simulation::kTickSeconds }) || fences_worn;
+                        fences_worn = simulation::step_fence_wear(scene.sim, scene.enclosures, animal_ground, strength, { simulation::kTickSeconds }, scene.park.messages) || fences_worn;
                         simulation::step_wild_birds(scene.sim, birds, { simulation::kTickSeconds });
                     }
                 });

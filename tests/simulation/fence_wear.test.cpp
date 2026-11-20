@@ -58,10 +58,13 @@ namespace
         return static_cast<usize>(std::ranges::count_if(map.wear, [](FenceWear w) { return w != FenceWear::Sound; }));
     }
 
+    const AnimalGround kFlat { .height = [](glm::vec2) { return 0.0f; } };
+
     void run(SimWorld& world, save::model::EnclosureMap& map, f32 seconds)
     {
+        rct3::simulation::park::ParkMessages messages;
         for (f32 t = 0; t < seconds; t += 0.25f)
-            step_fence_wear(world, map, strength, { 0.25f });
+            step_fence_wear(world, map, kFlat, strength, { 0.25f }, messages);
     }
 } // namespace
 
@@ -137,6 +140,7 @@ namespace
     {
         Sandbox park;
         save::model::EnclosureMap map;
+        rct3::simulation::park::ParkMessages messages;
 
         MendingPark()
         {
@@ -155,7 +159,7 @@ namespace
             for (f32 t = 0; t < seconds; t += kTickSeconds)
             {
                 park.run(1);
-                step_fence_wear(park.world(), map, strength, { kTickSeconds });
+                step_fence_wear(park.world(), map, kFlat, strength, { kTickSeconds }, messages);
                 if (done())
                     return true;
             }
@@ -191,12 +195,48 @@ TEST_CASE("fence wear: a mechanic told not to fix, or kept to a patrol away from
     CHECK(p.map.wear_at(3, 2) == FenceWear::Broken);
 }
 
-TEST_CASE("fence wear: a fence far from every path is left as it is")
+TEST_CASE("fence wear: a fence far from every path is mended from the nearest")
 {
     MendingPark p;
     auto& r = p.park.world().registry;
     p.map.wear = std::vector<FenceWear>(100);
     p.map.wear[3 + 50] = FenceWear::Broken; // The bottom side, five rows from the path
     const auto mechanic = p.park.staff(StaffRole::Mechanic, { 9, 0 });
-    CHECK_FALSE(p.run_until([&] { return r.all_of<staff::FenceMending>(mechanic); }, 10));
+    CHECK(p.run_until([&] { return r.all_of<staff::FenceMending>(mechanic) && r.get<Stride>(mechanic).route.empty(); }, 60));
+    CHECK(p.park.world().paths.nodes()[r.get<Stride>(mechanic).to.value].tile.col == 3);
+    CHECK(p.run_until([&] { return p.map.wear_at(3, 5) == FenceWear::Sound; }, 120));
+}
+
+TEST_CASE("fence wear: the player is told as a fence breaks, reminded while it stays broken, and told once it is mended")
+{
+    MendingPark p;
+    p.map.wear = std::vector<FenceWear>(100);
+    const auto keys = [&] {
+        std::vector<std::string> out;
+        for (const rct3::simulation::park::ParkMessage& m : p.messages.list)
+            out.push_back(m.text_key);
+        return out;
+    };
+    p.run_until([] { return false; }, 2);
+    CHECK(p.messages.list.empty());
+    p.map.wear[3 + 20] = FenceWear::Broken;
+    p.run_until([] { return false; }, 2);
+    REQUIRE(keys() == std::vector<std::string> { std::string(kFenceBroken) });
+    REQUIRE(p.messages.list.back().place);
+    CHECK(p.messages.list.back().place->x == doctest::Approx(3.5f * 4));
+    CHECK(p.messages.list.back().place->z == doctest::Approx(2.5f * 4));
+    p.run_until([] { return false; }, kFenceWearRates.reminder.value + 2);
+    CHECK(keys().back() == kFenceStillBroken);
+    // Mended by a mechanic hired now.
+    p.park.staff(StaffRole::Mechanic, { 9, 0 });
+    CHECK(p.run_until([&] { return keys().back() == kFenceFixed; }, 120));
+    CHECK(p.map.wear_at(3, 2) == FenceWear::Sound);
+}
+
+TEST_CASE("fence wear: a park loaded with a broken fence is not told of it as new")
+{
+    MendingPark p;
+    p.run_until([] { return false; }, 2);
+    CHECK(p.messages.list.empty());
+    CHECK(fence_gap(p.map, 0) == save::model::Tile { 3, 2 });
 }

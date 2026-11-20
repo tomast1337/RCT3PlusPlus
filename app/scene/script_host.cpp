@@ -20,6 +20,7 @@
 #include "scene/park/refresh.hpp"
 #include "scene/park/scene.hpp"
 #include "scene/pool_tools.hpp"
+#include "simulation/animal_care.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/crowds.hpp"
@@ -1509,7 +1510,7 @@ namespace rct3::scene
             const auto& r = park.sim.registry;
             const auto tile = [&](glm::vec3 at) { return Json { { "col", g.tile_size_x > 0 ? (at.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (at.z - g.origin_z) / g.tile_size_z : 0 } }; };
             constexpr std::array<std::string_view, 3> kSchedules { "infrequent", "normal", "often" };
-            constexpr std::array<std::string_view, 5> kJobs { "idle", "strolling", "filling", "clearing", "catching" };
+            constexpr std::array<std::string_view, 6> kJobs { "idle", "strolling", "filling", "clearing", "catching", "swapping" };
             Json out = Json::array();
             for (const auto [e, house] : r.view<const simulation::AnimalHouse>().each())
             {
@@ -1517,9 +1518,18 @@ namespace rct3::scene
                 for (const auto [k, duty, pose] : r.view<const simulation::KeeperDuty, const simulation::Pose>().each())
                     if (duty.house == e)
                         keepers.push_back({ { "id", entt::to_integral(k) }, { "job", kJobs.at(std::to_underlying(duty.job)) }, { "target", duty.target != entt::null ? static_cast<i64>(entt::to_integral(duty.target)) : -1 }, { "at", tile(pose.position) } });
-                out.push_back({ { "id", entt::to_integral(e) }, { "object", house.object }, { "hut", house.hut }, { "enclosure", house.enclosure.value_or(-1) }, { "keepers", std::move(keepers) }, { "at", tile(house.troughs) }, { "schedule", kSchedules.at(std::to_underlying(house.schedule)) } });
+                const auto* care = r.try_get<simulation::HouseCare>(e);
+                out.push_back({ { "id", entt::to_integral(e) }, { "object", house.object }, { "hut", house.hut }, { "enclosure", house.enclosure.value_or(-1) }, { "keepers", std::move(keepers) }, { "at", tile(house.troughs) }, { "schedule", kSchedules.at(std::to_underlying(house.schedule)) }, { "kind", care != nullptr ? care->kind : std::string { } } });
             }
             return out;
+        });
+        engine_.define("animals.care", [this](const Json& a) -> Json {
+            const auto& r = park_of(park_).sim.registry;
+            const entt::entity e = a.at(0).is_number_unsigned() ? entt::entity { a[0].get<entt::id_type>() } : entt::null;
+            const auto* care = r.valid(e) ? r.try_get<simulation::AnimalCare>(e) : nullptr;
+            if (care == nullptr)
+                return nullptr;
+            return Json { { "house", care->house }, { "space", care->space }, { "appetite", care->appetite }, { "sociability", care->sociability }, { "habitat", care->habitat.value }, { "mostHealth", care->most_health.value }, { "annoyed", care->annoyed }, { "warned", care->warned } };
         });
         engine_.define("animals.shownHouse", [this](const Json&) -> Json {
             const park::ParkScene& park = park_of(park_);

@@ -73,6 +73,7 @@ namespace rct3::park
         std::vector<std::vector<AnimalPiece>> levels { };       ///< Finest first; coarse ones may be empty
         /// By motion slot (ovl::animal::AnimalMotion), nothing where the animal has no such motion.
         std::vector<std::optional<AnimalClip>> motions { };
+        glm::vec3 low { 0.0f }, high { 0.0f }; ///< Box round the finest level at rest, model space, for clicks
     };
 
     /// How long motion `motion` of `body` lasts, 0 when it has none.

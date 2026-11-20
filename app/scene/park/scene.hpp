@@ -86,6 +86,7 @@
 #include "ui/interface_assets.hpp"
 #include "ui/key_map.hpp"
 #include "ui/park_cursor.hpp"
+#include "ui/screens/info/animal.hpp"
 #include "ui/screens/info/attraction.hpp"
 #include "ui/screens/info/party.hpp"
 #include "ui/screens/info/person.hpp"
@@ -638,6 +639,7 @@ namespace rct3::scene::park
         std::optional<usize> person_requested;                                       ///< Of a person in `shown_people`, their window asked by a script
         DeveloperEditor editor;                                                      ///< The developer windows' guest and park editor
         std::optional<u64> prop_requested;                                           ///< Of a placed object, by id, its window asked by a script
+        std::optional<entt::entity> animal_requested;                                ///< Of a zoo animal, its window asked by a script
         rct3::park::Seat seat;                                                       ///< Its rider's eyes, while riding
         f32 seat_across = rct3::park::kRideWideView;                                 ///< How far across the screen the rider's view takes in
         rct3::park::object::RideEye riding_eye = rct3::park::object::RideEye::Front; ///< The kind of camera ridden
@@ -840,6 +842,8 @@ namespace rct3::scene::park
         std::optional<save::model::PlacedObjectIndex> shown_prop;                        ///< The prop the info panel tells about instead
         std::vector<ui::screens::info::SceneryTab> prop_tabs;                            ///< Its tabs in the panel's order
         std::optional<ui::screens::info::SceneryTab> prop_tab;                           ///< Its open tab; none while only its name shows
+        std::optional<entt::entity> shown_animal;                                        ///< The zoo animal the info panel tells about instead
+        ui::screens::info::AnimalTab animal_tab = ui::screens::info::AnimalTab::Details; ///< The tab last opened on an animal
         bool show_people = true;                                                         ///< Switched in the view menu
         bool show_scenery = true;                                                        ///< Objects and rides, switched in the view menu
         bool see_through_ground = false;                                                 ///< Likewise the ground drawn faded

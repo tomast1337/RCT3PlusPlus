@@ -239,6 +239,9 @@ namespace rct3::park::object
         /// How it looks once vandals have broken it, level for level as `levels`: the visual the item lists
         /// named after it with "_Broken" (a bench has one, a bin or a lamp not). Empty when it has none.
         std::vector<ModelLevel> broken_levels;
+        /// How it looks worn but whole, level for level as `levels`: the visual it lists ending "Damage1" (an enclosure
+        /// fence's panel has one, then "Damage2" for broken through, taken as its broken look). Empty when it has none.
+        std::vector<ModelLevel> damaged_levels;
         i32 price = 0;        ///< To build one, hundredths of the currency unit
         i32 removal_cost = 0; ///< To pull one down, hundredths; below zero it pays back
         /// Of an animated model, the length in seconds of each animation its finest level lists, in the order

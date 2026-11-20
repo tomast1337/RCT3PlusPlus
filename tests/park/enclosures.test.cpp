@@ -190,3 +190,15 @@ TEST_CASE("enclosures: pieces round more than one side lean with both sides of t
     for (corner.rotation = 0; corner.rotation < 4; ++corner.rotation)
         CHECK(fence_piece_lean(g, corner) == glm::vec2(0.5f, 0.0f));
 }
+
+TEST_CASE("enclosures: a fence's panels look as worn as their tile; its end pieces never do")
+{
+    const save::model::TerrainGrid g = flat(5, 3);
+    save::model::EnclosureMap map;
+    REQUIRE(enclose(map, g, { 1, 1 }, { 3, 1 }, "Chain", any) == 0);
+    map.wear = std::vector<save::model::FenceWear>(map.tiles.size());
+    map.wear[static_cast<usize>(1 * 5 + 1)] = save::model::FenceWear::Damaged; // Under an end piece
+    map.wear[static_cast<usize>(1 * 5 + 2)] = save::model::FenceWear::Broken;
+    for (const save::model::PlacedObject& piece : enclosure_fences(map, g, 0).pieces)
+        CHECK(piece_wear(map, piece) == (piece.col == 2 ? save::model::FenceWear::Broken : save::model::FenceWear::Sound));
+}

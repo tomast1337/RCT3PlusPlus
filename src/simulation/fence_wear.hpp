@@ -50,4 +50,8 @@ namespace rct3::simulation
     /// damaged. Returns the tile; none when the enclosure has no straight panels left to wear.
     std::optional<save::model::Tile> knock_fence(save::model::EnclosureMap& map, i32 which, random::RandomState& dice);
 
+    /// Knocks the fences of `map` `count` times, each time those of an enclosure picked at random. Returns how many
+    /// knocks found a panel to wear.
+    usize knock_fences(SimWorld& world, save::model::EnclosureMap& map, usize count);
+
 } // namespace rct3::simulation

@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <optional>
 #include <utility>
+#include <vector>
 
 namespace rct3::simulation
 {
@@ -19,6 +20,14 @@ namespace rct3::simulation
         constexpr const FenceWearRates& kRates = kFenceWearRates;
         /// Fences are looked at this often, not every step: the knocks are rare and the strengths are looked up by name.
         constexpr units::Seconds kWearCheck { 1 };
+
+        FenceUpkeep& upkeep_of(SimWorld& world)
+        {
+            auto& ctx = world.registry.ctx();
+            if (!ctx.contains<FenceUpkeep>())
+                ctx.emplace<FenceUpkeep>(FenceUpkeep { .dice = dice_for(world, entt::null).state });
+            return ctx.get<FenceUpkeep>();
+        }
     } // namespace
 
     std::optional<save::model::Tile> knock_fence(save::model::EnclosureMap& map, i32 which, random::RandomState& dice)
@@ -43,9 +52,7 @@ namespace rct3::simulation
         auto& r = world.registry;
         if (map.fences.empty())
             return false;
-        if (!r.ctx().contains<FenceUpkeep>())
-            r.ctx().emplace<FenceUpkeep>(FenceUpkeep { .dice = dice_for(world, entt::null).state });
-        auto& upkeep = r.ctx().get<FenceUpkeep>();
+        auto& upkeep = upkeep_of(world);
         upkeep.since_check.value += dt.value;
         if (upkeep.since_check.value < kWearCheck.value)
             return false;
@@ -70,6 +77,20 @@ namespace rct3::simulation
                 changed = true;
         }
         return changed;
+    }
+
+    usize knock_fences(SimWorld& world, save::model::EnclosureMap& map, usize count)
+    {
+        auto& dice = upkeep_of(world).dice;
+        std::vector<i32> fenced;
+        for (usize e = 0; e < map.fences.size(); ++e)
+            if (!map.fences[e].empty())
+                fenced.push_back(static_cast<i32>(e));
+        usize knocked = 0;
+        for (usize i = 0; i < count && !fenced.empty(); ++i)
+            if (knock_fence(map, fenced[random::below(dice, fenced.size())], dice))
+                ++knocked;
+        return knocked;
     }
 
 } // namespace rct3::simulation

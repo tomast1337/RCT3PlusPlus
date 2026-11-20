@@ -96,7 +96,7 @@ namespace rct3::park::object
     };
     /// How some objects' flowing water fades along it, by object id (water/flow.hpp).
     using FlowFades = std::map<u64, FlowFade>;
-    /// The objects vandals have broken, by id; those with a broken look are drawn with it.
+    /// Objects by id, worn or broken (by vandals, or animals for a fence); those with such a look are drawn with it.
     using Broken = std::set<u64>;
 
     /// The level each object is drawn at, by its index; kNotDrawn for hidden objects, objects without a model
@@ -181,8 +181,8 @@ namespace rct3::park::object
     [[nodiscard]] LevelPlan plan_levels(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, std::span<const glm::vec3> anchors, const glm::vec3& eye, f32 band, const LevelScales& scales = { });
 
     /// The shapes of the objects at `levels` (by index; when it does not cover every object, each is drawn at
-    /// its finest level), leaning those in `leans`. Billboard levels are left out.
-    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, std::span<const i8> levels = { }, const ColourOverrides& overrides = { }, const Leans& leans = { }, const Fitted& fitted = { }, const Broken& broken = { }, const Chains& chains = { }, const FlowFades& fades = { });
+    /// its finest level), leaning those in `leans`, those in `broken` and `damaged` drawn so. Billboard levels are left out.
+    [[nodiscard]] ObjectMesh object_mesh(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, std::span<const i8> levels = { }, const ColourOverrides& overrides = { }, const Leans& leans = { }, const Fitted& fitted = { }, const Broken& broken = { }, const Chains& chains = { }, const FlowFades& fades = { }, const Broken& damaged = { });
 
     /// Where a billboard stands and how big it is. Its four corners are the next four vertices of the mesh.
     struct BillboardStand

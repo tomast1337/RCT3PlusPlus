@@ -35,7 +35,7 @@ namespace rct3::park
     /// shortcut: no gates; the gate piece goes where a ride's track crosses the fence, add it when tracks may
     /// run through enclosures.
     /// shortcut: always the plain look; the pieces also have a taller look for a step in the ground at the
-    /// fence and worn looks for fences that wear out, add them with fence wear.
+    /// fence, add it when fences follow steps.
     [[nodiscard]] BoundaryFence enclosure_fences(const save::model::EnclosureMap& map, const save::model::TerrainGrid& grid, u64 last_id);
 
     /// How enclosure fence piece `piece` leans with the ground under it as it is now.
@@ -66,6 +66,10 @@ namespace rct3::park
     /// Whether the fence on `tile` is straight panels, along one side or two opposite: the pieces that wear and
     /// break. Corners, ends and posts are sturdier.
     [[nodiscard]] bool panelled(const save::model::EnclosureMap& map, save::model::Tile tile);
+
+    /// How worn fence piece `piece` of `map` (one enclosure_fences built) looks: its tile's wear for a panel, sound for
+    /// the sturdier pieces.
+    [[nodiscard]] save::model::FenceWear piece_wear(const save::model::EnclosureMap& map, const save::model::PlacedObject& piece);
 
     /// How many tiles enclosure `region` has; with none, how many are in no enclosure.
     [[nodiscard]] i32 enclosure_size(const save::model::EnclosureMap& map, std::optional<i32> region) noexcept;

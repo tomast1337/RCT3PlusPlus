@@ -1505,15 +1505,18 @@ namespace rct3::scene::park
                     const auto found = std::ranges::find_if(items.get(), [&](const rct3::park::BuildItem& i) { return (i.kind == rct3::park::BuildKind::EnclosureFence || i.kind == rct3::park::BuildKind::Animal) && i.symbol == symbol; });
                     return found != items.get().end() ? found->strength : 0.0f;
                 };
+                bool fences_worn = false;
                 profiling::section("Guests", [&] {
                     for (; scene.sim_time >= simulation::kTickSeconds; scene.sim_time -= simulation::kTickSeconds)
                     {
                         simulation::step(scene.sim);
                         simulation::step_animals(scene.sim, animal_ground, { simulation::kTickSeconds }, scene.park.messages);
-                        simulation::step_fence_wear(scene.sim, scene.enclosures, strength, { simulation::kTickSeconds });
+                        fences_worn = simulation::step_fence_wear(scene.sim, scene.enclosures, strength, { simulation::kTickSeconds }) || fences_worn;
                         simulation::step_wild_birds(scene.sim, birds, { simulation::kTickSeconds });
                     }
                 });
+                if (fences_worn && fence_wear_changed(scene))
+                    objects_changed(scene);
                 // A coaster's lap just run becomes its graphs.
                 for (usize i = 0; i < scene.ride_entities.size() && i < scene.rides.rides.size(); ++i)
                     if (auto* fleet = scene.ride_entities[i] == entt::null ? nullptr : scene.sim.registry.try_get<simulation::Trains>(scene.ride_entities[i]); fleet != nullptr && fleet->lap_done)
@@ -1702,7 +1705,7 @@ namespace rct3::scene::park
                     }
                 }
                 // What is broken looks it, and looks whole again once mended.
-                rct3::park::object::Broken broken;
+                rct3::park::object::Broken broken = scene.broken_panels;
                 for (const auto [e, item] : scene.sim.registry.view<const simulation::PathItem>().each())
                     if (item.broken && item.object != 0)
                         broken.insert(item.object);

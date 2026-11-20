@@ -293,7 +293,7 @@ namespace rct3::park::object
         return levels;
     }
 
-    ObjectMesh object_mesh(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, std::span<const i8> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted, const Broken& broken, const Chains& chains, const FlowFades& fades)
+    ObjectMesh object_mesh(std::span<const save::model::PlacedObject> objects, const ObjectModels& models, const save::model::TerrainGrid& grid, std::span<const i8> levels, const ColourOverrides& overrides, const Leans& leans, const Fitted& fitted, const Broken& broken, const Chains& chains, const FlowFades& fades, const Broken& damaged)
     {
         const bool finest = levels.size() != objects.size();
         ObjectMesh mesh;
@@ -313,8 +313,9 @@ namespace rct3::park::object
             const i8 level = finest ? 0 : levels[index];
             if (level < 0 || static_cast<usize>(level) >= model->second.levels.size())
                 continue;
-            const bool worn = !model->second.broken_levels.empty() && broken.contains(object.id);
-            const ModelLevel& shown = (worn ? model->second.broken_levels : model->second.levels)[static_cast<usize>(level)];
+            const ObjectModel& m = model->second;
+            const std::vector<ModelLevel>& look = !m.broken_levels.empty() && broken.contains(object.id) ? m.broken_levels : !m.damaged_levels.empty() && damaged.contains(object.id) ? m.damaged_levels : m.levels;
+            const ModelLevel& shown = look[static_cast<usize>(level)];
             if (shown.parts.empty())
                 continue;
             ++mesh.drawn;

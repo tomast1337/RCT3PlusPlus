@@ -1234,7 +1234,8 @@ int main(int argc, char** argv)
 
             prof::section("Frame", [&] {
                 prof::section("Ui", [&] {
-                    if (script)
+                    // A script waits out the window taking the size its recording asked for, so the frames it counts are all recorded.
+                    if (script && record_resize_frames == 0)
                     {
                         script->tick(*device, phase == Phase::Running && park ? &*park : nullptr, phase == Phase::Running && front ? &*front : nullptr);
                         // Asked for before the front end is up, it waits for it.

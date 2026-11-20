@@ -17,6 +17,7 @@
 #include "park/path/furniture.hpp"
 #include "park/ride/fences.hpp"
 #include "park/ride/placement.hpp"
+#include "park/scenery_fit.hpp"
 #include "park/support/columns.hpp"
 #include "park/track/ground.hpp"
 #include "park/water/fill.hpp"
@@ -103,6 +104,12 @@ namespace rct3::scene
         constexpr i32 kColourSlot = 2;
         constexpr i32 kSmoothSlot = 3;
         constexpr i32 kSharpSlot = 4;
+
+        /// The rules scenery is placed by: a sandbox's or a park's.
+        rct3::park::FitRules fit_rules(const park::ParkScene& scene)
+        {
+            return scene.game.sandbox ? rct3::park::FitRules::Sandbox : rct3::park::FitRules::Park;
+        }
 
         /// The object the ghost shows: the ride, or the entrance or exit pointed at.
         std::optional<save::model::PlacedObject> ghost_object(const RidePlacing& p)
@@ -504,6 +511,7 @@ namespace rct3::scene
         if (p.solids_of != scene.objects.size())
         {
             p.solids = rct3::park::path::solid_tiles(scene.objects, scene.models, scene.grid);
+            p.scenery_room = rct3::park::scenery_room(scene.objects, scene.models, scene.grid, fit_rules(scene));
             p.holds = rct3::park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
             p.solids_of = scene.objects.size();
         }
@@ -586,7 +594,7 @@ namespace rct3::scene
                 p.ground = spot->raised ? rct3::park::ride::ride_site({ spot->tile.col, spot->tile.row }, squares, { }, scene.grid).height : spot->height;
                 p.absolute = spot->raised;
                 const save::model::PlacedObject o = *ghost_object(p);
-                p.problem = !rct3::park::object::on_owned_land(o, squares, scene.grid) ? rct3::park::ride::SiteProblem::NotOwned : spot->refused || rct3::park::path::furniture_taken(scene.objects, scene.models, o, positioning) ? rct3::park::ride::SiteProblem::Blocked : rct3::park::ride::SiteProblem::None;
+                p.problem = fit_rules(scene) == rct3::park::FitRules::Park && !rct3::park::object::on_owned_land(o, squares, scene.grid) ? rct3::park::ride::SiteProblem::NotOwned : spot->refused || rct3::park::path::furniture_taken(scene.objects, scene.models, o, positioning) ? rct3::park::ride::SiteProblem::Blocked : rct3::park::ride::SiteProblem::None;
                 p.affordable = !scene.park.cash || *scene.park.cash >= p.item->price;
                 show_ghost();
                 return;
@@ -619,15 +627,10 @@ namespace rct3::scene
             }
             const auto problem = [&] {
                 const save::model::PlacedObject o = *ghost_object(p);
-                if (!rct3::park::object::on_owned_land(o, squares, scene.grid))
-                    return rct3::park::ride::SiteProblem::NotOwned;
-                if (p.item->kind == rct3::park::BuildKind::Shelter && !rct3::park::enclosure_under(scene.enclosures, { p.site->col, p.site->row }, p.site->span))
+                const rct3::park::ride::SiteProblem fit = rct3::park::scenery_problem(std::span(&o, 1), scene.models, p.scenery_room, scene.footpaths.paths, scene.grid, fit_rules(scene));
+                if (fit != rct3::park::ride::SiteProblem::NotOwned && p.item->kind == rct3::park::BuildKind::Shelter && !rct3::park::enclosure_under(scene.enclosures, { p.site->col, p.site->row }, p.site->span))
                     return rct3::park::ride::SiteProblem::OffEnclosure;
-                if (!load_object_model(scene, p.models, assets, o))
-                    return rct3::park::ride::SiteProblem::None;
-                // The room the item's solid squares take may not be taken already, by a solid item or a path.
-                const rct3::park::path::Clash clash = rct3::park::path::clash(rct3::park::path::solid_tiles(std::span(&o, 1), scene.models, scene.grid), p.solids, scene.footpaths.paths, scene.grid);
-                return clash == rct3::park::path::Clash::None ? rct3::park::ride::SiteProblem::None : clash == rct3::park::path::Clash::Path ? rct3::park::ride::SiteProblem::Path : rct3::park::ride::SiteProblem::Blocked;
+                return fit;
             };
             p.problem = problem();
             // Raised with Shift into something, it climbs onto the top of what is there; with no room near, it

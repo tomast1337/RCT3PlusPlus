@@ -320,6 +320,34 @@ TEST_CASE("a save keeps the park's objects and those the player built, platforms
     CHECK(kept[8].id == 20);
 }
 
+TEST_CASE("a save keeps each ride's music, fence, and the styles of its entrance and exit")
+{
+    parkfile::SavedPark park = small_park();
+    save::model::Ride& ride = park.rides.rides.emplace_back();
+    ride.music = "Tea Party.wma";
+    ride.fence_symbol = "Picket";
+    ride.fence_overlay = "Style/Themed/Garden/Garden";
+    ride.stations.push_back({ .entrance = 50, .exit = 51, .entrance_spot = save::model::PlacementSpot { .object = 50 }, .exit_spot = save::model::PlacementSpot { .object = 51 } });
+    // Its doors' styles are those of the objects placed for them.
+    park.objects.push_back({ .id = 50, .symbol = "GardenEntrance", .overlay = "Style/Themed/Garden/Garden" });
+    park.objects.push_back({ .id = 51, .symbol = "CastleExit", .overlay = "Style/Themed/Castle/Castle" });
+    park.objects = parkfile::kept_objects(park.objects, 1, { }, park.paths, park.rides);
+
+    const auto read = parkfile::read_saved_park(parkfile::write_saved_park(park));
+    REQUIRE_MESSAGE(read, (read ? "" : read.error()));
+    REQUIRE(read->rides.rides.size() == 1);
+    const save::model::Ride& back = read->rides.rides.front();
+    CHECK(back.music == "Tea Party.wma");
+    CHECK(back.fence_symbol == "Picket");
+    CHECK(back.fence_overlay == "Style/Themed/Garden/Garden");
+    const auto door = [&](u64 id) { return std::ranges::find(read->objects, id, &save::model::PlacedObject::id); };
+    REQUIRE(door(back.stations.at(0).entrance) != read->objects.end());
+    REQUIRE(door(back.stations.at(0).exit) != read->objects.end());
+    CHECK(door(back.stations[0].entrance)->symbol == "GardenEntrance");
+    CHECK(door(back.stations[0].exit)->symbol == "CastleExit");
+    CHECK(door(back.stations[0].exit)->overlay == "Style/Themed/Castle/Castle");
+}
+
 TEST_CASE("a save keeps the guests and staff, and loading puts them back")
 {
     using namespace simulation;

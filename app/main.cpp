@@ -450,7 +450,8 @@ namespace
         if (in.outlined == nullptr)
             return;
         const ImVec2 to_ui = ImGui::GetIO().DisplayFramebufferScale;
-        const auto corner = [&](f32 cx, f32 cy) { return ImVec2 { (static_cast<f32>(view.x) + cx * in.scale) / to_ui.x, (static_cast<f32>(view.y) + cy * in.scale) / to_ui.y }; };
+        const f32 scale = in.scale;
+        const auto corner = [&](f32 cx, f32 cy) { return ImVec2 { (static_cast<f32>(view.x) + cx * scale) / to_ui.x, (static_cast<f32>(view.y) + cy * scale) / to_ui.y }; };
         ImDrawList& draw = *ImGui::GetForegroundDrawList();
         // The nearest holder smaller than the screen; full-screen frames and the desktop would only outline the game.
         // The widget itself is outlined where it stops the pointer, so panels spanning the screen show their parts.
@@ -1008,7 +1009,7 @@ int main(int argc, char** argv)
         }
         if (requests.keys)
         {
-            key_map = std::move(*requests.keys);
+            key_map = *requests.keys;
             if (keys_file)
             {
                 if (auto saved = key_map.save(*keys_file); !saved)
@@ -1021,7 +1022,7 @@ int main(int argc, char** argv)
         apply_requests(requests);
         if (requests.park)
         {
-            park_to_load = std::move(requests.park);
+            park_to_load = requests.park;
             park_game = requests.game;
         }
         if (requests.language)

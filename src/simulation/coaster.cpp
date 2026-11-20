@@ -635,7 +635,15 @@ namespace rct3::simulation
                 // go, or over them after its front is off, each pushes it on while it is slower.
                 const i32 cars = std::max(c.cars, 1);
                 const f32 car = c.train_length / static_cast<f32>(cars);
-                const bool held_back = std::isfinite(room);
+                // Held for the block ahead: its front on a run whose end its room does not reach past. Another train
+                // further on, beyond a clear block, holds nothing back.
+                bool held_back = false;
+                if (usize end = point_at(c, c.at); c.kinds[end] == Stretch::BlockBrake)
+                {
+                    while (end + 2 < c.distance.size() && c.kinds[end + 1] == Stretch::BlockBrake)
+                        ++end;
+                    held_back = room <= (end + 1 < c.distance.size() ? c.distance[end + 1] : c.length()) - c.at + kArrived;
+                }
                 f32 pull = 0;
                 f32 push = 0;
                 f32 least = 0;

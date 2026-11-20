@@ -397,6 +397,22 @@ TEST_CASE("a block brake pushes a slow train on up to its speed, and no faster")
     CHECK(c.speed == doctest::Approx(4).epsilon(0.05));
 }
 
+TEST_CASE("a block brake pushes a slow train on with another train beyond the clear block ahead")
+{
+    Coaster c = hill();
+    c.height = { 0, 0, 0, 0, 0 };
+    c.kinds = { Stretch::Station, Stretch::Plain, Stretch::Plain, Stretch::BlockBrake, Stretch::Plain };
+    c.brake_speeds = { -1, -1, -1, 4, -1 };
+    c.running = true;
+    c.launched = true;
+    c.travelled = 20;
+    c.at = 80; // Standing on it, let go: the run ends at 100
+    c.speed = 0;
+    for (i32 i = 0; i < 20; ++i)
+        drive(c, 0.1f, 200 - c.at); // Another train 200 m on, well past the run's end
+    CHECK(c.speed == doctest::Approx(4).epsilon(0.05));
+}
+
 TEST_CASE("a block brake lets a passing train go at exactly its speed, however fast it came on")
 {
     // Down the drop at about 17 m/s onto 4 m of block brake set to 4, far too short to brake it down.

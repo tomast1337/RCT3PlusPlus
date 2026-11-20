@@ -81,21 +81,22 @@ TEST_CASE("a train at fixed speed takes the track's length over that speed")
 TEST_CASE("a launched train reaches its launch speed as its tail leaves the platform")
 {
     Coaster c = hill();
-    c.kinds[1] = Stretch::Plain; // No chain: the launch alone takes it on
+    c.kinds[1] = Stretch::Plain;  // No chain: the launch alone takes it on
+    c.height = { 0, 0, 0, 0, 0 }; // Level, so no climb slows it as it leaves
     c.launch_speed = 20;
     c.cars = 5;
     c.running = true;
     Coaster one = c;
     one.cars = 1;
-    one.height = { 0, 0, 0, 0, 0 }; // Level, so the climb does not slow it as it leaves
     for (i32 i = 0; i < 10000 && c.travelled < c.train_length; ++i)
         drive(c, 0.01f);
-    // The push ends as the last car's middle leaves the platform: some 5 % short with five cars.
-    CHECK(c.speed == doctest::Approx(19).epsilon(0.03));
-    // One car is pushed over only half its length: about 0.7 of the speed.
+    // The push ends as the last car's middle leaves the platform, a little harder than even to make up for it:
+    // some 3 % short with five cars.
+    CHECK(c.speed == doctest::Approx(19.4).epsilon(0.02));
+    // One car is pushed over only half its length: 3/4 of the speed.
     for (i32 i = 0; i < 10000 && one.travelled < one.train_length; ++i)
         drive(one, 0.01f);
-    CHECK(one.speed == doctest::Approx(20 * std::numbers::sqrt2_v<f32> / 2).epsilon(0.05));
+    CHECK(one.speed == doctest::Approx(15).epsilon(0.02));
     // Unlaunched, it only creeps off.
     Coaster slow = hill();
     slow.running = true;

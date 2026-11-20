@@ -25,6 +25,7 @@
 #include "scene/ghosts.hpp"
 #include "scene/objects.hpp"
 #include "scene/park/attraction_state.hpp"
+#include "scene/park/deleting.hpp"
 #include "scene/park/footpaths.hpp"
 #include "scene/park/ground.hpp"
 #include "scene/park/scene.hpp"
@@ -35,12 +36,15 @@
 #include "scene/track/trains.hpp"
 #include "simulation/import_park.hpp"
 #include "simulation/systems.hpp"
+#include "strings/ascii.hpp"
 #include "ui/screens/info/scenery.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <format>
+#include <future>
 #include <numbers>
 #include <tuple>
 #include <unordered_map>
@@ -302,6 +306,9 @@ namespace rct3::scene
         RidePlacing& p = scene.placing;
         p.item = item;
         p.step = scenery ? RidePlacing::Step::Scenery : RidePlacing::Step::Ride;
+        p.picked_colours.reset();
+        p.moving.reset();
+        p.solids_of.reset();
         p.site.reset();
         p.door.reset();
         p.entrance.reset();
@@ -362,9 +369,42 @@ namespace rct3::scene
         return true;
     }
 
+    std::optional<const rct3::park::BuildItem&> listed_scenery(const park::ParkScene& scene, const save::model::PlacedObject& object)
+    {
+        if (!scene.build.items.valid() || scene.build.items.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+            return std::nullopt;
+        const std::string overlay = slashes(object.overlay);
+        for (const rct3::park::BuildItem& item : scene.build.items.get())
+            if (item.kind == rct3::park::BuildKind::Scenery && strings::equals_ignoring_case(item.symbol, object.symbol) && strings::equals_ignoring_case(item.overlay, overlay))
+                return item;
+        return std::nullopt;
+    }
+
+    bool start_picked_placing(park::ParkScene& scene, save::model::PlacedObjectIndex index, Pick pick)
+    {
+        if (index.value >= scene.objects.size() || scene.objects[index.value].hidden)
+            return false;
+        const save::model::PlacedObject& o = scene.objects[index.value];
+        const auto listed = listed_scenery(scene, o);
+        if (!listed)
+            return false;
+        rct3::park::BuildItem item = *listed;
+        if (pick == Pick::Move)
+            item.price = { };
+        if (!start_ride_placing(scene, item))
+            return false;
+        RidePlacing& p = scene.placing;
+        p.turn = rct3::park::ModelTurn::from(o.rotation);
+        p.picked_colours = o.colours;
+        if (pick == Pick::Move)
+            p.moving = index;
+        return true;
+    }
+
     void stop_ride_placing(park::ParkScene& scene)
     {
         scene.placing.item.reset();
+        scene.placing.moving.reset();
         scene.placing.ghost_mesh = { };
         scene.placing.preview_mesh = { };
         scene.placing.preview_bones.clear();
@@ -462,7 +502,7 @@ namespace rct3::scene
             {
                 // A new pick starts in the item's own colours.
                 p.panel_item = alone.symbol;
-                p.colours = scene.models.at(rct3::park::object::model_key(alone)).default_colours;
+                p.colours = std::exchange(p.picked_colours, std::nullopt).value_or(scene.models.at(rct3::park::object::model_key(alone)).default_colours);
                 show_alone();
                 if (panel)
                     panel->show(placing_tabs(), placing_tabs().size());
@@ -510,8 +550,16 @@ namespace rct3::scene
         // shortcut: worked out again only when objects come or go, as path building does.
         if (p.solids_of != scene.objects.size())
         {
-            p.solids = rct3::park::path::solid_tiles(scene.objects, scene.models, scene.grid);
-            p.scenery_room = rct3::park::scenery_room(scene.objects, scene.models, scene.grid, fit_rules(scene));
+            // A prop being moved leaves its room to its ghost.
+            std::vector<save::model::PlacedObject> without_moved;
+            if (p.moving)
+            {
+                without_moved = scene.objects;
+                without_moved.at(p.moving->value).hidden = true;
+            }
+            const std::span<const save::model::PlacedObject> standing = p.moving ? std::span<const save::model::PlacedObject>(without_moved) : std::span<const save::model::PlacedObject>(scene.objects);
+            p.solids = rct3::park::path::solid_tiles(standing, scene.models, scene.grid);
+            p.scenery_room = rct3::park::scenery_room(standing, scene.models, scene.grid, fit_rules(scene));
             p.holds = rct3::park::ground::ground_holds(scene.objects, scene.models, scene.footpaths.paths, scene.grid);
             p.solids_of = scene.objects.size();
         }
@@ -800,9 +848,27 @@ namespace rct3::scene
             return true;
         wait_for_build(scene);
         ++scene.built;
+        // A prop moved goes from where it stood first, keeping what a bin holds and a sign says; one pulled down
+        // meanwhile is not set down again.
+        std::optional<save::model::BinState> kept_bin;
+        std::optional<save::model::SignState> kept_sign;
+        if (p.step == RidePlacing::Step::Scenery && p.moving)
+        {
+            if (p.moving->value >= scene.objects.size() || scene.objects[p.moving->value].hidden)
+            {
+                stop_ride_placing(scene);
+                return true;
+            }
+            const u64 old = scene.objects[p.moving->value].id;
+            if (const auto bin = std::ranges::find(scene.bins, old, &save::model::BinState::object_ref); bin != scene.bins.end())
+                kept_bin = *bin;
+            if (const auto sign = std::ranges::find(scene.signs, old, &save::model::SignState::object_ref); sign != scene.signs.end())
+                kept_sign = *sign;
+            park::take_away_prop(device, scene, assets, *p.moving);
+        }
         if (p.step == RidePlacing::Step::Scenery)
         {
-            // The tool stays out for the next one, as in the game.
+            // The tool stays out for the next one, as in the game; a prop moved is set down once.
             const u64 id = add_object(scene, *o);
             if (p.item->kind == rct3::park::BuildKind::Shelter)
                 house_placed(scene, assets, scene.objects.back(), *p.item, *p.site);
@@ -818,16 +884,24 @@ namespace rct3::scene
                 if (*kind == simulation::PathItemKind::Bench && !model.seat_places.empty())
                     scene.sim.registry.get<simulation::PathItem>(item).seats = static_cast<u8>(std::min<usize>(model.seat_places.size(), 255));
                 if (*kind == simulation::PathItemKind::Bin)
-                    scene.bins.push_back({ .object_ref = id, .capacity = simulation::kNewBinPieces * simulation::kSavedBinPiece });
+                {
+                    scene.bins.push_back(kept_bin.value_or(save::model::BinState { .capacity = simulation::kNewBinPieces * simulation::kSavedBinPiece }));
+                    scene.bins.back().object_ref = id;
+                }
                 else if (*kind == simulation::PathItemKind::Sign)
-                    scene.signs.push_back({ .object_ref = id });
+                {
+                    scene.signs.push_back(kept_sign.value_or(save::model::SignState { }));
+                    scene.signs.back().object_ref = id;
+                    if (scene.signs.back().kind == 1)
+                        scene.sim.paths.set_no_entry(scene.sim.registry.get<simulation::PathItem>(item).node, simulation::no_entry_side(scene.objects.back()), true);
+                }
             }
             simulation::add_scenery(scene.sim, scene.objects.back(), simulation::scenery_weight(category, model.feature));
             if (model.water_capacity)
                 simulation::add_flower_bed(scene.sim, scene.objects.back(), *model.water_capacity, std::nullopt);
             park::animate_scenery(device, scene, save::model::PlacedObjectIndex { scene.objects.size() - 1 });
             // The woods beyond the edge grow with the park's: a tree planted near it seeds some there.
-            if (scene.off_map_stream && rct3::park::is_plant(scene.objects.back(), scene.models))
+            if (scene.off_map_stream && !p.moving && rct3::park::is_plant(scene.objects.back(), scene.models))
             {
                 std::vector<save::model::PlacedObject> trees = rct3::park::off_map_trees(scene.objects, scene.objects.size() - 1, scene.models, scene.grid, rct3::park::land_rings(scene.grid, scene.footpaths.water), *scene.off_map_stream);
                 if (!trees.empty())
@@ -838,8 +912,10 @@ namespace rct3::scene
                 }
             }
             park::float_money(scene, site_point(scene, *p.site), -p.item->price);
-            logging::logger("park").info("placed {} at {},{} height {}", p.item->symbol, o->col, o->row, p.site->height);
+            logging::logger("park").info("{} {} at {},{} height {}", p.moving ? "moved" : "placed", p.item->symbol, o->col, o->row, p.site->height);
             p.ghost_mesh = { };
+            if (p.moving)
+                stop_ride_placing(scene);
             return true;
         }
         if (p.step == RidePlacing::Step::Ride)

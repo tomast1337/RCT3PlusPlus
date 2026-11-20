@@ -66,6 +66,14 @@ namespace rct3::scene
         struct ParkScene;
     }
 
+    /// How a placed prop is taken up again from its panel: another of its item placed (an eyedropper), or the
+    /// prop itself moved.
+    enum class Pick : u8
+    {
+        Copy,
+        Move,
+    };
+
     struct RidePlacing
     {
         enum class Step : u8
@@ -98,7 +106,11 @@ namespace rct3::scene
         units::Money levelling_cost;
         rct3::park::AttractionRef placed { }; ///< Once placed
         rct3::park::object::ObjectMesh ghost_mesh;
-        std::array<i32, 3> colours { };              ///< Of the scenery: its own when picked, then those the player paints
+        std::array<i32, 3> colours { }; ///< Of the scenery: its own when picked, then those the player paints
+        /// Of a prop copied or picked up: its colours, which the scenery takes in place of its item's own
+        std::optional<std::array<i32, 3>> picked_colours;
+        /// The prop picked up to move, which stands where it was until it is set down elsewhere, at no cost
+        std::optional<save::model::PlacedObjectIndex> moving;
         std::string panel_item;                      ///< The scenery the placing panel is set up for
         rct3::park::object::ObjectMesh preview_mesh; ///< The scenery alone, for the panel's round view
         /// Of scenery with bones, the same a piece per bone, moved as it moves; preview_bones gives each piece's bone.
@@ -148,6 +160,15 @@ namespace rct3::scene
     /// Adds `door`, whose model is loaded, as the entrance (or `exit`) of station `station` of the tracked ride
     /// `ride`, standing at `height`, in place of the one it had.
     void place_station_door(park::ParkScene& scene, const ui::InterfaceAssets& assets, save::model::RideIndex ride, usize station, const save::model::PlacedObject& door, i32 height, bool exit);
+
+    /// The scenery of the build lists that `object` was placed from; none until the lists are read, or when they hold
+    /// no such item.
+    [[nodiscard]] std::optional<const rct3::park::BuildItem&> listed_scenery(const park::ParkScene& scene, const save::model::PlacedObject& object);
+
+    /// Starts placing another of the prop `index`'s item, turned as the prop is and in its colours; or, to
+    /// `Pick::Move`, the prop itself, which leaves where it stood once set down. False when the build lists hold no
+    /// such scenery.
+    bool start_picked_placing(park::ParkScene& scene, save::model::PlacedObjectIndex index, Pick pick);
 
     void stop_ride_placing(park::ParkScene& scene);
 

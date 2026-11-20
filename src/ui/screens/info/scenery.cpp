@@ -124,6 +124,11 @@ namespace rct3::ui::screens::info
             tabs.push_back({ SceneryTab::HouseKeepers, slot++, "AnimalShelterKeeperIcon", "AnimalShelterKeeperTT", false, { } });
             tabs.push_back({ SceneryTab::HouseThoughts, slot++, "AnimalShelterPeepThoughtsIcon", "AnimalShelterPeepThoughtsTT", false, { } });
         }
+        if (!facts.list_icon.empty())
+        {
+            tabs.push_back({ SceneryTab::Move, slot++, "Staff_MovePincerLarge", "Rct3pp_MoveSceneryHelp", true, { } });
+            tabs.push_back({ SceneryTab::Copy, slot++, facts.list_icon, "Rct3pp_CopySceneryHelp", true, { } });
+        }
         return tabs;
     }
 

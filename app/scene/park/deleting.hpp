@@ -56,6 +56,9 @@ namespace rct3::scene::park
     /// Puts the delete menu's tool away.
     void stop_deleting(ParkScene& scene);
 
+    /// Takes the prop `index` out of the park, as pulling it down does, at no cost.
+    void take_away_prop(render::Device& device, ParkScene& scene, const ui::InterfaceAssets& assets, save::model::PlacedObjectIndex index);
+
     /// Pulls props `indices` of the objects down with the delete tools or a prop's panel, paying what their kinds
     /// say pulling one down costs (or gets back), floated up even when nothing unless not `floated`. The park
     /// entrance stays, and nothing goes when the park cannot pay; either is told in a box. What was paid, when

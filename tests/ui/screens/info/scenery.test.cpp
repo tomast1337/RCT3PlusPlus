@@ -49,6 +49,21 @@ TEST_CASE("every prop can be pulled down at once, and bins and signs get a tab o
     CHECK_FALSE(both[1].action);
 }
 
+TEST_CASE("scenery from the build lists can be picked up to move, or copied, with its list's icon")
+{
+    CHECK_FALSE(std::ranges::contains(scenery_tabs({ }), SceneryTab::Move, &SceneryTabInfo::tab));
+    SceneryFacts facts;
+    facts.list_icon = "BenchIcon";
+    const auto tabs = scenery_tabs(facts);
+    REQUIRE(tabs.size() == 3);
+    CHECK(tabs[1].tab == SceneryTab::Move);
+    CHECK(tabs[2].tab == SceneryTab::Copy);
+    CHECK(tabs[2].icon == "BenchIcon");
+    CHECK(tabs[1].action);
+    CHECK(tabs[2].action);
+    CHECK(std::ranges::is_sorted(tabs, { }, &SceneryTabInfo::slot));
+}
+
 TEST_CASE("a prop that takes colours gets a tab with a pot for each slot it takes")
 {
     SceneryFacts facts;

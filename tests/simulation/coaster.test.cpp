@@ -141,6 +141,32 @@ TEST_CASE("a launch stretch past the platform goes on pushing the train up its s
     CHECK(pushed.speed <= 20);
 }
 
+TEST_CASE("a ride of two circuits goes round twice, through its station without stopping")
+{
+    Coaster twice = hill();
+    twice.passes = 2;
+    const auto one = lap_seconds(hill());
+    const auto two = lap_seconds(twice);
+    REQUIRE(one);
+    REQUIRE(two);
+    // Up the chain again is 10 s more; not stopped and set off again in between, it takes less than two laps.
+    CHECK(*two > *one + 10);
+    CHECK(*two < 2 * *one);
+
+    twice.running = true;
+    f32 slowest = 100;
+    bool round = false;
+    for (i32 t = 0; t < 2000 && !round; ++t)
+    {
+        round = drive(twice, 0.05f);
+        if (twice.passed == 1 && twice.travelled < 5)
+            slowest = std::min(slowest, twice.speed);
+    }
+    CHECK(round);
+    CHECK(slowest >= twice.station_speed);
+    CHECK(twice.passed == 0);
+}
+
 TEST_CASE("a train is pulled up the chain, runs down the drop faster and comes round to the station")
 {
     const Coaster c = hill();

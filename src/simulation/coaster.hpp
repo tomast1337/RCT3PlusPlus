@@ -203,7 +203,7 @@ namespace rct3::simulation
         std::vector<f32> stops { };
         /// Not a circuit: the track has two ends and the train runs back and forth, its speed negative going backwards
         Shuttle shuttle = Shuttle::None;
-        i32 passes = 1; ///< On a shuttle, the times the train comes into the station before it stops there
+        i32 passes = 1; ///< On a shuttle, the times the train comes into the station before it stops there; on a circuit, the times it goes round
         /// The track's end joins its start. When it does not, as on one left unfinished, a train going round
         /// runs off its end.
         bool closed = true;

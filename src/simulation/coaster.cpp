@@ -588,7 +588,9 @@ namespace rct3::simulation
                     // through by its tyres and, coming in, slowed with the room left to where they stop.
                     if (!open)
                     {
-                        const f32 stop = c.next_stop < c.stops.size() ? c.stops[c.next_stop] : c.length();
+                        // Round again after this, it is carried on through its own station without stopping.
+                        const bool again = c.next_stop >= c.stops.size() && c.passed + 1 < c.passes;
+                        const f32 stop = again ? std::numeric_limits<f32>::infinity() : c.next_stop < c.stops.size() ? c.stops[c.next_stop] : c.length();
                         const f32 most = std::max(std::sqrt(2 * kStationBrake.value * std::max(stop - c.travelled, 0.0f)), kStationCreep.value);
                         c.speed = std::clamp(c.speed, std::min(c.station_speed, most), most);
                     }
@@ -882,9 +884,17 @@ namespace rct3::simulation
                 c.travelled = 0;
                 c.speed = 0;
             }
-            // Rolled back past where it set off, it is back in the station and stops there, its run over.
-            if (c.travelled >= c.length() - kArrived || c.travelled < 0)
+            // Round the track and through its station again, while the ride has circuits left to run.
+            if (c.travelled >= c.length() - kArrived && c.passed + 1 < c.passes)
             {
+                ++c.passed;
+                c.travelled = std::max(c.travelled - c.length(), 0.0f);
+                c.next_stop = 0;
+            }
+            // Rolled back past where it set off, it is back in the station and stops there, its run over.
+            else if (c.travelled >= c.length() - kArrived || c.travelled < 0)
+            {
+                c.passed = 0;
                 c.at = c.start;
                 c.travelled = 0;
                 c.speed = 0;
@@ -948,6 +958,7 @@ namespace rct3::simulation
     {
         c.stops.clear();
         c.next_stop = 0;
+        c.passed = 0;
         c.running = true;
         c.at = c.start;
         c.travelled = 0;

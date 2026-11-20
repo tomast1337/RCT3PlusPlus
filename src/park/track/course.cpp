@@ -100,10 +100,7 @@ namespace rct3::park::track
                 const u32 role = shape->record.role;
                 if (kind == CourseKind::Chain && role >= kRoleTowerFirst && role <= kRoleTowerLast)
                     kind = CourseKind::Plain;
-                // shortcut: a transfer carries the car along its rails as a chain would, not stopping it to move the
-                // rails between levels; give it its own stretch kind when its motion is drawn
-                const bool transfer = role >= kRoleTransferFirst && role <= kRoleTransferLast;
-                if (kind == CourseKind::Plain && (transfer || (role >= kRoleSpiralLiftFirst && role <= kRoleSpiralLiftLast)))
+                if (kind == CourseKind::Plain && role >= kRoleSpiralLiftFirst && role <= kRoleSpiralLiftLast)
                     kind = CourseKind::Chain;
                 if ((shape->record.flags & kPieceCableLift) != 0)
                     kind = CourseKind::Cable;

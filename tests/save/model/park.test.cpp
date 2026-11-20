@@ -5,6 +5,7 @@
 #include "save/save_file.hpp"
 #include "save/value.hpp"
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <doctest/doctest.h>
@@ -593,6 +594,27 @@ TEST_CASE("park: a VIP goal keeps its visit, wishes and tolerances")
     CHECK(v.met);
     CHECK_FALSE(v.warned_week);
     CHECK_FALSE(c[1].vip.has_value());
+}
+
+TEST_CASE("park: a challenge keeps the wait before it is offered, and its postponement")
+{
+    const auto l = load(
+        {
+            { "Challenge", 1, { fstr("Name", "Made_Up_Title"), fint("ChallengeId", 1), fint("State", 0), fint("StartCondition", 2), ffloat("StartTimerCurrentInSeconds", 321.5f), fint("StartTimerDefaultInDays1", 15), fint("StartTimerDefaultInDays2", 45), ffloat("PostponedTimer", 200), fint("NumTimesPostponed", 1) } },
+            { "Challenge", 2, { fint("ChallengeId", 2) } },
+        });
+    const auto& list = l->model.objectives.challenges;
+    REQUIRE(list.size() == 2);
+    CHECK(list[0].name_key == "Made_Up_Title");
+    CHECK(list[0].start_condition == 2);
+    CHECK(list[0].offer_in == 321.5f);
+    CHECK(list[0].offer_days == std::array { 15, 45 });
+    CHECK(list[0].postponed_for == 200.0f);
+    CHECK(list[0].times_postponed == 1);
+    // Missing, the challenge may be offered at once.
+    CHECK(list[1].start_condition == 0);
+    CHECK(list[1].offer_in == 0.0f);
+    CHECK(list[1].offer_days == std::array { 0, 0 });
 }
 
 TEST_CASE("park: validation reports broken invariants")

@@ -414,6 +414,14 @@ namespace rct3::save::model
         f32 time_limit = 0.0f;
         f32 time_remaining = 0.0f;
         i32 times_postponed = 0;
+        /// When it may be offered: 0 at once, 1..3 once the scenario's goals of that level are met.
+        i32 start_condition = 0;
+        /// Game seconds still to wait, once the start condition holds, before it is offered.
+        f32 offer_in = 0.0f;
+        /// The wait before an offer is rolled between these, in days.
+        std::array<i32, 2> offer_days { };
+        /// Game seconds still to wait before a postponed offer comes again.
+        f32 postponed_for = 0.0f;
     };
 
     struct ObjectiveSet

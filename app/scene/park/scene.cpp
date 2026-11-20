@@ -258,12 +258,14 @@ namespace rct3::scene::park
             return std::nullopt;
         }
 
-        /// What the pointer is on: an attraction, a person of the shown people or a prop of the objects.
+        /// What the pointer is on: an attraction, a person of the shown people, a prop of the objects or a zoo
+        /// animal, in its crate or out.
         struct Picked
         {
             std::optional<rct3::park::AttractionRef> attraction;
             std::optional<usize> person;
             std::optional<save::model::PlacedObjectIndex> prop;
+            std::optional<entt::entity> animal;
         };
 
         /// What is under the pointer at `at`, in interface units on a screen of `size`: the nearest of an
@@ -289,6 +291,33 @@ namespace rct3::scene::park
                     placements.push_back(scene.simulate && p.guest != entt::null ? glm::translate(glm::mat4(1.0f), standing_at(scene, p)) : p.pose.world);
             }
             const auto person = rct3::park::object::pick_person(ray, placements, scene.grid);
+            // An animal is hit in the box round its body at rest, a crate in about the crate's.
+            std::optional<entt::entity> animal;
+            f32 animal_distance = rct3::park::object::ground_hit(ray, scene.grid).value_or(rct3::park::kFar);
+            const auto hit_animal = [&](entt::entity e, const glm::mat4& world, glm::vec3 low, glm::vec3 high) {
+                const glm::mat4 back = glm::inverse(world);
+                const rct3::park::Ray local { glm::vec3(back * glm::vec4(ray.origin, 1.0f)), glm::vec3(back * glm::vec4(ray.direction, 0.0f)) };
+                if (const auto t = rct3::park::object::box_hit(local, low, high); t && *t < animal_distance)
+                {
+                    animal_distance = *t;
+                    animal = e;
+                }
+            };
+            if (scene.show_scenery)
+            {
+                const DrawnAnimals& drawn = scene.drawn_animals;
+                for (usize i = 0; i < drawn.placed.size() && i < drawn.placed_animals.size(); ++i)
+                    hit_animal(drawn.placed_animals[i], drawn.placed[i].world, drawn.placed[i].body->low, drawn.placed[i].body->high);
+                constexpr glm::vec3 kCrateHalf { 0.8f, 1.6f, 0.8f };
+                for (const entt::entity e : drawn.crated)
+                    if (const auto* pose = scene.sim.registry.try_get<simulation::Pose>(e))
+                        hit_animal(e, glm::translate(glm::mat4(1.0f), pose->position), { -kCrateHalf.x, 0, -kCrateHalf.z }, kCrateHalf);
+            }
+            // Scenery's boxes are loose round its models, so an animal seen through one takes the click; only a
+            // nearer attraction or person keeps it.
+            const bool attraction_first = object && object->distance < animal_distance && scene.attractions.contains(scene.objects[object->index].id);
+            if (animal && (!person || animal_distance < person->distance) && !attraction_first)
+                return { .animal = animal };
             if (person && (!object || person->distance < object->distance))
                 return { .attraction = std::nullopt, .person = person->index, .prop = std::nullopt };
             // A fence the park built takes the click and does nothing with it, as in the game; a changing room
@@ -345,6 +374,7 @@ namespace rct3::scene::park
             scene.shown.reset();
             scene.shown_person.reset();
             scene.shown_prop.reset();
+            scene.shown_animal.reset();
             scene.shown_party.clear();
         }
 
@@ -525,7 +555,7 @@ namespace rct3::scene::park
             const profiling::Scope zone("HoverPick");
             const ui::Rect screen = desktop.root().rect();
             const Picked picked = picked_at(scene, pointer.position, { screen.width(), screen.height() });
-            scene.hover_pickable = picked.person || picked.attraction || picked.prop;
+            scene.hover_pickable = picked.person || picked.attraction || picked.prop || picked.animal;
             scene.since_hover_pick = { };
         }
         if (info)
@@ -658,7 +688,12 @@ namespace rct3::scene::park
                     // Not with the path panel or track building out: a click they did not take would open a window
                     // in their place and put them away.
                     const Picked picked = picked_at(scene, pointer.position, { screen.width(), screen.height() });
-                    if (picked.person)
+                    // A crate is opened by a click on it, with no window; an animal out of it opens its window.
+                    if (picked.animal && scene.sim.registry.get<simulation::Animal>(*picked.animal).job == simulation::AnimalJob::Crated)
+                        (void)simulation::open_crate(scene.sim, *picked.animal);
+                    else if (picked.animal)
+                        open_animal(scene, *info, *picked.animal, assets, options);
+                    else if (picked.person)
                         open_person(scene, *info, *picked.person, assets, options);
                     else if (picked.attraction)
                         open_info(scene, *info, *picked.attraction, assets, options);
@@ -851,6 +886,17 @@ namespace rct3::scene::park
                     open_prop(scene, *info, *scene.shown_prop, assets, options, scene.prop_tab);
                 }
             }
+            else if (auto* animal = change && scene.shown_animal ? scene.sim.registry.try_get<simulation::Animal>(*scene.shown_animal) : nullptr)
+            {
+                // A blank name keeps the old one, as a person's does.
+                if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Name) && change->text.find_first_not_of(u' ') != std::u16string::npos)
+                {
+                    animal->name = strings::to_utf8(change->text);
+                    show_info_page(scene, *info, assets, options);
+                }
+                else if (change->id == ui::screens::info::animal_control(ui::screens::info::AnimalControl::Locate))
+                    scene.camera.target = scene.sim.registry.get<simulation::Pose>(*scene.shown_animal).position;
+            }
             else if (change && !scene.shown_party.empty())
             {
                 if (const auto member = static_cast<usize>(change->id); member < scene.shown_party.size())
@@ -894,6 +940,14 @@ namespace rct3::scene::park
                     scene.prop_tab = scene.prop_tabs[*tab];
                     if (pool_room(scene, scene.objects[scene.shown_prop->value]))
                         scene.room_tab = scene.prop_tab;
+                    show_info_page(scene, *info, assets, options);
+                }
+            }
+            else if (tab && scene.shown_animal)
+            {
+                if (*tab < ui::screens::info::kAnimalTabs.size())
+                {
+                    scene.animal_tab = ui::screens::info::kAnimalTabs[*tab].tab;
                     show_info_page(scene, *info, assets, options);
                 }
             }
@@ -955,6 +1009,7 @@ namespace rct3::scene::park
                 scene.shown.reset();
                 scene.shown_person.reset();
                 scene.shown_prop.reset();
+                scene.shown_animal.reset();
                 scene.shown_party.clear();
             }
         }
@@ -964,6 +1019,8 @@ namespace rct3::scene::park
             open_info(scene, *info, *asked, assets, options);
         if (const auto asked = std::exchange(scene.person_requested, std::nullopt); asked && info && *asked < scene.shown_people.size())
             open_person(scene, *info, *asked, assets, options);
+        if (const auto asked = std::exchange(scene.animal_requested, std::nullopt); asked && info)
+            open_animal(scene, *info, *asked, assets, options);
         if (const auto asked = std::exchange(scene.prop_requested, std::nullopt); asked && info)
             if (const auto found = std::ranges::find(scene.objects, *asked, &save::model::PlacedObject::id); found != scene.objects.end())
                 open_prop(scene, *info, save::model::PlacedObjectIndex { static_cast<usize>(found - scene.objects.begin()) }, assets, options);
@@ -999,6 +1056,8 @@ namespace rct3::scene::park
         scene.view_camera.yaw += kViewTurn.value * elapsed.value;
         if (scene.shown_person && *scene.shown_person < scene.shown_people.size())
             scene.view_camera = person_view(scene, *scene.shown_person, scene.view_camera.yaw);
+        if (scene.shown_animal)
+            scene.view_camera = animal_view(scene, *scene.shown_animal, scene.view_camera.yaw);
         const glm::vec3 viewer = rct3::park::eye(scene.camera, scene.seat);
         profiling::section("Objects", [&] { refresh_objects(device, scene, viewer, elapsed); });
         if (scene.billboards_eye != viewer)

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// The park's info panel: opened on an attraction, a prop, a person or the party they go round with, its pages
+// The park's info panel: opened on an attraction, a prop, a zoo animal, a person or the party they go round with, its pages
 // written from the park as it stands, and the changes the player makes on an attraction's or a prop's page
 // written into the save. A person's page writes its changes through park/people.hpp.
 #pragma once
@@ -45,8 +45,8 @@ namespace rct3::scene::park
     /// Adds the pictures of what stalls sell, for their menus, to the interface's.
     void load_carried(render::Device& device, ParkScene& scene, ui::InterfaceAssets& assets);
 
-    /// Shows the page of what the panel is open on again, as it stands now: a party, a prop, a person or an
-    /// attraction.
+    /// Shows the page of what the panel is open on again, as it stands now: a party, a prop, an animal, a person
+    /// or an attraction.
     void show_info_page(ParkScene& scene, ui::screens::info::InfoPanel& panel, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);
 
     /// The round view of a person: looking at them from where the player looks from, turning from there.
@@ -55,6 +55,12 @@ namespace rct3::scene::park
     /// Opens the panel on the person `shown` (of the shown people), at the tab last opened on a person if
     /// they have it.
     void open_person(ParkScene& scene, ui::screens::info::InfoPanel& panel, usize shown, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);
+
+    /// The round view of the zoo animal `animal`: its whole body, from `yaw`.
+    [[nodiscard]] rct3::park::ParkCamera animal_view(const ParkScene& scene, entt::entity animal, f32 yaw);
+
+    /// Opens the panel on the zoo animal `animal`, at the tab last opened on an animal.
+    void open_animal(ParkScene& scene, ui::screens::info::InfoPanel& panel, entt::entity animal, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);
 
     /// Opens the panel on the party shown person `shown` goes round with, at the tab last opened on a party.
     void open_party(ParkScene& scene, ui::screens::info::InfoPanel& panel, usize shown, const ui::InterfaceAssets& assets, const config::game::GameOptions& options);

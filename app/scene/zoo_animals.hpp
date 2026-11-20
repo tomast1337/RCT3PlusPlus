@@ -28,6 +28,7 @@ namespace rct3::scene
     {
         std::optional<rct3::park::AnimalLibrary> library;
         std::vector<rct3::park::PlacedAnimal> placed; ///< Those drawn with their models, as last posed; bodies point into `library`
+        std::vector<entt::entity> placed_animals { }; ///< By placed, its animal
         rct3::park::AnimalRuns runs { };
         rct3::park::object::ObjectMesh mesh; ///< As last posed
         ui::UiTextures textures;

@@ -11,6 +11,7 @@
 #include "scene/park/scene.hpp"
 #include "scene/park/setup.hpp"
 #include "scene/track/trains.hpp"
+#include "simulation/animals.hpp"
 #include "simulation/crowds.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/import_park.hpp"
@@ -26,7 +27,9 @@
 #include "ui/game_style.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <utility>
 
@@ -399,6 +402,49 @@ namespace rct3::scene::park
                 f.pool->currency = info_units(assets, options).currency;
             panel.show_page(ui::screens::info::scenery_page(scene.prop_tab, f, *assets.strings));
         }
+        else if (scene.shown_animal)
+        {
+            const auto& r = scene.sim.registry;
+            ui::screens::info::AnimalFacts f;
+            const auto* animal = r.try_get<simulation::Animal>(*scene.shown_animal);
+            if (animal != nullptr)
+            {
+                f.animal = *animal;
+                // The kind's facts, from its own animal in the catalogue: each kind lists its adult male, adult
+                // female, young male and young female in turn.
+                const bool listed = scene.build.items.valid() && scene.build.items.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+                const std::span<const rct3::park::BuildItem> catalogue = listed ? std::span<const rct3::park::BuildItem>(scene.build.items.get()) : std::span<const rct3::park::BuildItem> { };
+                usize nth = (animal->adult ? 0 : 2) + (animal->male ? 0 : 1);
+                for (const rct3::park::BuildItem& item : catalogue)
+                {
+                    if (item.kind != rct3::park::BuildKind::Animal || !strings::equals_ignoring_case(item.symbol, animal->species))
+                        continue;
+                    const bool its_own = nth-- == 0;
+                    if (f.species_text.empty() || its_own)
+                    {
+                        f.species_text = item.group_text;
+                        f.species_own_name = item.species_name;
+                        f.rarity = item.rarity;
+                        const auto house = std::ranges::find_if(catalogue, [&](const rct3::park::BuildItem& s) { return s.kind == rct3::park::BuildKind::Shelter && strings::equals_ignoring_case(s.symbol, item.needs); });
+                        f.house_text = house != catalogue.end() ? std::string_view(house->name_text) : std::string_view { };
+                    }
+                    if (its_own)
+                        break;
+                }
+                // Its enclosure is clean while the dung in it stays under what its animals put up with.
+                if (animal->enclosure)
+                {
+                    i32 animals = 0;
+                    i32 dung = 0;
+                    for (const auto [e, other] : r.view<const simulation::Animal>().each())
+                        animals += other.enclosure == animal->enclosure;
+                    for (const auto [e, piece] : r.view<const simulation::Dung>().each())
+                        dung += piece.enclosure == animal->enclosure;
+                    f.cleanliness = units::Share { 1 - std::clamp(static_cast<f32>(dung) / static_cast<f32>(std::max(animals, 1) * simulation::kAnimalRates.dung_limit), 0.0f, 1.0f) };
+                }
+            }
+            panel.show_page(ui::screens::info::animal_page(scene.animal_tab, f, *assets.strings));
+        }
         else if (scene.shown_person)
             panel.show_page(ui::screens::info::person_page(scene.person_tab, person_facts(scene, *scene.shown_person), *assets.strings, info_units(assets, options)));
         else if (scene.shown)
@@ -418,6 +464,48 @@ namespace rct3::scene::park
         camera.pitch = kViewPitch.value;
         camera.distance = kPersonViewDistance;
         return camera;
+    }
+
+    rct3::park::ParkCamera animal_view(const ParkScene& scene, entt::entity animal, f32 yaw)
+    {
+        const DrawnAnimals& drawn = scene.drawn_animals;
+        std::vector<glm::vec3> corners;
+        if (const auto at = std::ranges::find(drawn.placed_animals, animal); at != drawn.placed_animals.end())
+        {
+            const rct3::park::PlacedAnimal& placed = drawn.placed[static_cast<usize>(at - drawn.placed_animals.begin())];
+            for (const glm::vec3 c : { placed.body->low, placed.body->high })
+                corners.emplace_back(placed.world * glm::vec4(c, 1.0f));
+        }
+        else if (const auto* pose = scene.sim.registry.try_get<simulation::Pose>(animal))
+        {
+            // In its crate: the crate's size, about.
+            constexpr glm::vec3 kCrate { 0.8f, 1.6f, 0.8f };
+            corners = { pose->position - glm::vec3(kCrate.x, 0, kCrate.z), pose->position + kCrate };
+        }
+        return rct3::park::framed(corners, yaw, kViewPitch.value, kPropViewClosest);
+    }
+
+    void open_animal(ParkScene& scene, ui::screens::info::InfoPanel& panel, entt::entity animal, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
+    {
+        if (!scene.sim.registry.all_of<simulation::Animal>(animal))
+            return;
+        std::vector<ui::screens::info::InfoTab> tabs;
+        usize picked = 0;
+        for (const ui::screens::info::AnimalTabInfo& t : ui::screens::info::kAnimalTabs)
+        {
+            if (t.tab == scene.animal_tab)
+                picked = tabs.size();
+            tabs.push_back({ .icon = std::string(t.icon), .help = std::u16string(assets.strings->get(t.help)), .slot = t.slot });
+        }
+        if (scene.shown_animal != animal)
+            scene.view_camera = animal_view(scene, animal, scene.camera.yaw);
+        scene.shown.reset();
+        scene.shown_person.reset();
+        scene.shown_prop.reset();
+        scene.shown_party.clear();
+        scene.shown_animal = animal;
+        panel.show(std::move(tabs), picked);
+        show_info_page(scene, panel, assets, options);
     }
 
     void open_person(ParkScene& scene, ui::screens::info::InfoPanel& panel, usize shown, const ui::InterfaceAssets& assets, const config::game::GameOptions& options)
@@ -452,6 +540,7 @@ namespace rct3::scene::park
             scene.view_camera = person_view(scene, shown, scene.camera.yaw);
             scene.painting_patrol = false;
         }
+        scene.shown_animal.reset();
         scene.shown.reset();
         scene.shown_prop.reset();
         scene.shown_party.clear();
@@ -470,6 +559,7 @@ namespace rct3::scene::park
                 picked = tabs.size();
             tabs.push_back({ .icon = std::string(t.icon), .help = std::u16string(assets.strings->get(t.help)), .slot = t.slot });
         }
+        scene.shown_animal.reset();
         scene.shown_party = party_of(scene, shown);
         scene.shown.reset();
         scene.shown_person.reset();
@@ -523,6 +613,7 @@ namespace rct3::scene::park
             }
             scene.view_camera = rct3::park::framed(points, scene.camera.yaw, kViewPitch.value);
         }
+        scene.shown_animal.reset();
         scene.shown_person.reset();
         scene.shown_prop.reset();
         scene.shown_party.clear();
@@ -555,6 +646,7 @@ namespace rct3::scene::park
         }
         if (scene.shown_prop != index)
             scene.view_camera = rct3::park::framed(rct3::park::object::object_corners(scene.objects[index.value], scene.models, scene.grid, scene.fitted), scene.camera.yaw, kViewPitch.value, kPropViewClosest);
+        scene.shown_animal.reset();
         scene.shown.reset();
         scene.shown_person.reset();
         scene.shown_party.clear();

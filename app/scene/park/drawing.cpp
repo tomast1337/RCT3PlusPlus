@@ -697,7 +697,7 @@ namespace rct3::scene::park
             });
         profiling::section("LedSigns", [&] { roll_led_signs(device, scene); });
         // A person shows alone on a light ground, turning as the build list's pieces do; the rest in the park.
-        if (auto info = scene.desktop->root().find_as<ui::screens::info::InfoPanel>(kInfoName); info && (scene.shown || scene.shown_person || scene.shown_prop || !scene.shown_party.empty()))
+        if (auto info = scene.desktop->root().find_as<ui::screens::info::InfoPanel>(kInfoName); info && (scene.shown || scene.shown_person || scene.shown_prop || scene.shown_animal || !scene.shown_party.empty()))
         {
             // A person, or a party, stands alone; anything else is seen where it is in the park.
             const std::array person { scene.shown_person.value_or(0) };

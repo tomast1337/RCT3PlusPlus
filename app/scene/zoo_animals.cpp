@@ -106,6 +106,7 @@ namespace rct3::scene
         DrawnAnimals& drawn = scene.drawn_animals;
         const auto& r = scene.sim.registry;
         drawn.placed.clear();
+        drawn.placed_animals.clear();
         std::vector<entt::entity> crated;
         std::vector<glm::mat4> crate_places;
         for (const auto [e, animal, pose] : r.view<const simulation::Animal, const simulation::Pose>().each())
@@ -121,6 +122,7 @@ namespace rct3::scene
             }
             const f32 offset = static_cast<f32>(entt::to_entity(e)) * kMotionSpread;
             drawn.placed.push_back({ .body = &*body, .motion = motion_of(*body, animal, pose), .time = { scene.park_clock + offset }, .world = world });
+            drawn.placed_animals.push_back(e);
         }
         if (crated != drawn.crated)
         {

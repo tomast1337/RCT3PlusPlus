@@ -262,6 +262,13 @@ namespace rct3::park
                 {
                     const ovl::BoneVertex b = mesh.vertex(v);
                     piece.vertices.push_back({ { b.position[0], b.position[1], b.position[2] }, { b.normal[0], b.normal[1], b.normal[2] }, b.bones, b.weights, { b.texcoord[0], b.texcoord[1] } });
+                    if (body.levels.size() == 1)
+                    {
+                        const glm::vec3 at = piece.vertices.back().position;
+                        const bool first = v == 0 && pieces.empty();
+                        body.low = first ? at : glm::min(body.low, at);
+                        body.high = first ? at : glm::max(body.high, at);
+                    }
                 }
                 for (u32 i = 0; i < mesh.index_count; ++i)
                     piece.indices.push_back(mesh.index(i));

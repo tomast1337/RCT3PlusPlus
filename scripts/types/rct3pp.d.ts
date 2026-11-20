@@ -1213,14 +1213,32 @@ declare namespace animals {
         enclosure: number;
         keepers: {
             id: number;
-            job: "idle" | "strolling" | "filling" | "clearing" | "catching";
+            job: "idle" | "strolling" | "filling" | "clearing" | "catching" | "swapping";
             target: number;
             at: { col: Tiles; row: Tiles };
         }[];
         at: { col: Tiles; row: Tiles };
         /** How often its keepers fill its troughs */
         schedule: "infrequent" | "normal" | "often";
+        /** Its kind, the symbol its species name as their house, in any case; empty for a house any animal eats at */
+        kind: string;
     }[];
+    /** The care of the animal `id` (as animals.list() gives it): the kind of house it eats at (empty for any), the
+     *  tiles of enclosure it wants, its appetite (1 to 20) and sociability (0 to 20), its habitat and the health it
+     *  mends to (0 to 1), whether a crowd of other animals annoys it, and whether the park was warned it will be
+     *  confiscated; undefined for no such animal. */
+    function care(id: number):
+        | {
+              house: string;
+              space: number;
+              appetite: number;
+              sociability: number;
+              habitat: number;
+              mostHealth: number;
+              annoyed: boolean;
+              warned: boolean;
+          }
+        | undefined;
     /** The animal house whose window is open, by its number in houses(), and its open page; undefined when none is. */
     function shownHouse(): { id: number; tab: "details" | "feeding" | "keepers" | "thoughts" | "" } | undefined;
     /** The dung lying about, each piece with the enclosure it lies in (-1 for none), its size from 0 to 2, and the

@@ -64,9 +64,6 @@ namespace rct3::park::track
     /// The pieces taking a slide's end round onto its lift, where the car's swing is not pushed by the turn.
     inline constexpr u32 kRoleSlideToLiftFirst = 86;
     inline constexpr u32 kRoleSlideToLiftLast = 87;
-    /// Roles of a transfer track's upper and lower piece, which carry the car between two levels of track
-    inline constexpr u32 kRoleTransferFirst = 30;
-    inline constexpr u32 kRoleTransferLast = 31;
     /// Roles of a spiral lift hill's pieces (foot, middles, top): a lift, though not marked as chain
     inline constexpr u32 kRoleSpiralLiftFirst = 74;
     inline constexpr u32 kRoleSpiralLiftLast = 76;

@@ -179,6 +179,7 @@ namespace rct3::park
         ovl::animal::AnimalAge age = ovl::animal::AnimalAge::AdultMale;
         /// Animals: their species' own name as its data spells it, which the string keys of its facts start with.
         std::string species_name;
+        ovl::animal::SpeciesCare care { }; ///< Animals: what keeps their species well
         /// Shops: whether placed as a stall, as against a special attraction such as a toilet.
         bool stall = false;
         bool names_category = false; ///< Scenery: names a research category, which keeps it out of research

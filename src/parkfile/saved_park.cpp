@@ -322,7 +322,8 @@ namespace rct3::parkfile
         for (const auto [e, animal, pose] : r.view<const Animal, const Pose>().each())
         {
             places.emplace(e, static_cast<i32>(out.animals.size()));
-            out.animals.push_back({ .animal = animal, .position = pose.position, .heading = pose.heading.value });
+            const auto* care = r.try_get<AnimalCare>(e);
+            out.animals.push_back({ .animal = animal, .position = pose.position, .heading = pose.heading.value, .care = care != nullptr ? *care : AnimalCare { } });
         }
         for (const auto [e, dung, pose] : r.view<const Dung, const Pose>().each())
         {
@@ -334,7 +335,8 @@ namespace rct3::parkfile
             house_at.emplace(e, static_cast<i32>(house_at.size()));
         for (const auto [e, house] : r.view<const AnimalHouse>().each())
         {
-            SavedAnimalHouse& saved = out.houses.emplace_back(SavedAnimalHouse { .house = house });
+            const auto* care = r.try_get<HouseCare>(e);
+            SavedAnimalHouse& saved = out.houses.emplace_back(SavedAnimalHouse { .house = house, .care = care != nullptr ? *care : HouseCare { } });
             const auto keeper = keepers.find(e);
             if (keeper == keepers.end())
                 continue;
@@ -359,12 +361,14 @@ namespace rct3::parkfile
         {
             homes.push_back(r.create());
             r.emplace<AnimalHouse>(homes.back(), saved.house);
+            r.emplace<HouseCare>(homes.back(), saved.care);
         }
         std::vector<entt::entity> placed;
         for (const SavedAnimal& saved : animals.animals)
         {
             const entt::entity e = placed.emplace_back(r.create());
             r.emplace<Animal>(e, saved.animal);
+            r.emplace<AnimalCare>(e, saved.care);
             r.emplace<Pose>(e, saved.position, saved.heading, saved.position, saved.heading);
             r.emplace<Dice>(e, dice_for(world, e));
         }
@@ -602,7 +606,7 @@ namespace rct3::parkfile
         if (park.day_mode)
             put_chunk(w, "DAYM", 1, *park.day_mode);
         if (park.animals)
-            put_chunk(w, "ANML", 3, *park.animals);
+            put_chunk(w, "ANML", 4, *park.animals);
         if (park.pools)
             put_chunk(w, "POOL", 10, *park.pools);
         if (park.litter)
@@ -688,10 +692,10 @@ namespace rct3::parkfile
             }
             if (tag == "ANML")
             {
-                if (park.animals || version < 2 || version > 3) // 2 adds each dung's size, 3 the wear of each tile's fence
+                if (park.animals || version < 2 || version > 4) // 2 adds each dung's size, 3 the wear of each tile's fence, 4 the care of each animal and house
                     return std::unexpected(std::format("{}: repeated, or a version this build does not read", tag));
                 // A park saved before is opened as one saved before the animals were kept.
-                if (version == 2)
+                if (version < 4)
                     return { };
                 return get_chunk(tag, body, park.animals.emplace());
             }

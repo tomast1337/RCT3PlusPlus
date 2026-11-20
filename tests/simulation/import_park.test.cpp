@@ -477,15 +477,16 @@ TEST_CASE("saved litter, bins, benches, signs and staff come over onto the path 
     const glm::vec3 middle = world.paths.centre(tile);
 
     save::model::PeopleModel people;
-    people.litter.push_back({ .position = { middle.x + 1, 0, middle.z }, .type = 3, .create_time = 100 });
+    people.litter.push_back({ .position = { middle.x + 1, 0, middle.z }, .type = 2, .create_time = 100 });
     people.litter.push_back({ .position = { middle.x, 0, middle.z }, .state = save::model::LitterState::Carried });
-    people.litter.push_back({ .position = { 50, 0, 50 } }); // Off the paths
+    people.litter.push_back({ .position = { middle.x, 0, middle.z }, .type = save::model::kFirstDungType }); // The animals'
+    people.litter.push_back({ .position = { 50, 0, 50 } });                                                  // Off the paths
     CHECK(simulation::import_litter(world, people, 124) == 1);
     const auto pieces = world.registry.view<simulation::Litter>();
     REQUIRE(pieces.size() == 1);
     const auto& piece = world.registry.get<simulation::Litter>(pieces.front());
     CHECK(piece.node == tile);
-    CHECK(piece.kind == 3);
+    CHECK(piece.kind == 2);
     CHECK(piece.age.value == doctest::Approx(40)); // A game hour of the calendar
 
     save::model::WorldModel w;

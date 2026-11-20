@@ -422,6 +422,32 @@ TEST_CASE("animals: a park's saved zoo animals come in where they stood, those i
     }
 }
 
+TEST_CASE("animals: a park's dung lies where it lay, in its enclosure, and its keeper clears it")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    (void)animal_at_home(world, ground);
+    auto& r = world.registry;
+    r.clear<Dung>();
+    const auto piece = [](u8 type, f32 x, save::model::LitterState state = save::model::LitterState::OnGround) { return save::model::Litter { .position = { x, 0, 2 }, .type = type, .state = state }; };
+    // A cup on a path, two pieces of dung in enclosure 0 and one in enclosure 1, and dung being carried.
+    const std::array saved { piece(1, 6), piece(save::model::kFirstDungType, 1), piece(save::model::kFirstDungType + 2, 2), piece(save::model::kFirstDungType + 1, 12), piece(save::model::kFirstDungType, 2, save::model::LitterState::Carried) };
+    CHECK(import_dung(world, saved, ground.enclosure) == 3);
+    const auto dung = r.view<const Dung, const Pose>();
+    REQUIRE(std::ranges::distance(dung) == 3);
+    for (const entt::entity e : dung)
+    {
+        const glm::vec3 at = dung.get<const Pose>(e).position;
+        CHECK(dung.get<const Dung>(e).enclosure == ground.enclosure({ at.x, at.z }));
+        CHECK(dung.get<const Dung>(e).size == (at.x == 1 ? 0 : at.x == 2 ? 2 : 1));
+    }
+    // The keeper of enclosure 0 clears its two; enclosure 1 has no keeper.
+    run(world, ground, 30);
+    const auto in = [&](i32 enclosure) { return std::ranges::count_if(r.view<const Dung>(), [&](entt::entity e) { return r.get<const Dung>(e).enclosure == enclosure; }); };
+    CHECK(in(0) == 0);
+    CHECK(in(1) == 1);
+}
+
 TEST_CASE("animals: a park's keepers each keep a house of their own in the enclosure the park gave them")
 {
     SimWorld world;

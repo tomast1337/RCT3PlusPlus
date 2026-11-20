@@ -739,8 +739,9 @@ namespace rct3::scene::park
         std::array<std::optional<rct3::park::object::ObjectModel>, 2> umbrellas;
         /// The tools handymen hold at work, by shape name (see simulation::WorkLook::tool); those missing are left out.
         std::map<std::string, rct3::park::object::ObjectModel, std::less<>> staff_tools;
-        /// How litter and sick look lying on the paths; either missing when its shape is.
-        std::array<std::optional<rct3::park::object::ObjectModel>, 2> litter_looks;
+        /// How litter and sick look lying on the paths, then the three sizes of the animals' dung; each missing when
+        /// its shape is.
+        std::array<std::optional<rct3::park::object::ObjectModel>, 5> litter_looks;
         /// The ring lazy river riders float in, about its middle; missing when its car is.
         std::optional<rct3::park::object::ObjectModel> swim_ring;
         /// What guests carry from stalls, by its carried item's symbol (as `Burger:cid`).

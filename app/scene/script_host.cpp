@@ -1434,6 +1434,14 @@ namespace rct3::scene
             }
             return out;
         });
+        engine_.define("animals.dung", [this](const Json&) {
+            const park::ParkScene& park = park_of(park_);
+            const save::model::TerrainGrid& g = park.grid;
+            Json out = Json::array();
+            for (const auto [e, dung, pose] : park.sim.registry.view<const simulation::Dung, const simulation::Pose>().each())
+                out.push_back({ { "enclosure", dung.enclosure.value_or(-1) }, { "size", dung.size }, { "col", g.tile_size_x > 0 ? (pose.position.x - g.origin_x) / g.tile_size_x : 0 }, { "row", g.tile_size_z > 0 ? (pose.position.z - g.origin_z) / g.tile_size_z : 0 } });
+            return out;
+        });
         engine_.define("rides.shown", [this](const Json&) -> Json {
             const park::ParkScene& park = park_of(park_);
             if (!park.shown || park.shown->kind != rct3::park::AttractionRef::Kind::Ride || park.shown->index >= park.rides.rides.size())

@@ -647,6 +647,15 @@ namespace rct3::simulation
         // Not the inspector's: a worker's own news (staff/care.hpp), with the worker
         WantsToQuit,
         Quit, ///< The park lets them go once told
+        // The inspector's again, about an animal (animal_care.hpp)
+        AnimalNeedsHouse,     ///< Hungry with no house of its kind in its enclosure
+        HouseFull,            ///< Finding every trough of its house taken, time and again
+        CannotReachHouse,     ///< Finding no way up to its house, time and again
+        AnimalLonely,         ///< Wanting more of its kind about it
+        AnimalAntiSocial,     ///< Annoyed by a crowd of other animals
+        EnclosureTooSmall,    ///< Its enclosure has less room than one of its species wants; told once an enclosure
+        EnclosureOvercrowded, ///< Its enclosure has less room than all its animals want; likewise
+        KeeperCantReachHut,   ///< About a keeper who found no way to their house's hut to swap tools
     };
 
     /// The inspectors' findings and the workers' own news, oldest first, in the registry's context, for the park

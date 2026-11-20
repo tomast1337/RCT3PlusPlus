@@ -133,6 +133,51 @@ TEST_CASE("name cheats: guests in a hurry walk faster for a while, then at their
     CHECK(current_guest_slowdown(SimWorld { }) == 1);
 }
 
+TEST_CASE("name cheats: nervous guests now and then look round behind them, sure they are watched, for a while")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 30, 0 });
+    const auto g = park.guest({ 0, 0 });
+    auto& r = park.world().registry;
+    set_off(park.world(), NameCheat::Nervous);
+    bool looked = false;
+    for (i32 i = 0; i < 120 && !looked; ++i)
+    {
+        park.run(1);
+        looked = r.all_of<Gesture>(g) && r.get<Gesture>(g).kind == GestureKind::LookRound;
+    }
+    CHECK(looked);
+    const auto& thoughts = r.get<Thoughts>(g).recent;
+    CHECK(std::ranges::contains(thoughts, ThoughtKind::Watched, &Thought::kind));
+    park.run_seconds(kSpell.value);
+    CHECK(park.world().cheats.nervous.value == 0);
+    park.run_seconds(kTuning.gestures.shown.value);
+    for (i32 i = 0; i < 40; ++i)
+    {
+        park.run(1);
+        CHECK_FALSE((r.all_of<Gesture>(g) && r.get<Gesture>(g).kind == GestureKind::LookRound));
+    }
+}
+
+TEST_CASE("name cheats: guests now and then stop to take a photo, for a while")
+{
+    Sandbox park;
+    park.path({ 0, 0 }, { 30, 0 });
+    const auto g = park.guest({ 0, 0 });
+    auto& r = park.world().registry;
+    set_off(park.world(), NameCheat::Photos);
+    bool snapped = false;
+    for (i32 i = 0; i < 120 && !snapped; ++i)
+    {
+        park.run(1);
+        snapped = r.all_of<Gesture>(g) && r.get<Gesture>(g).kind == GestureKind::Photo;
+    }
+    CHECK(snapped);
+    CHECK(park.world().cheats.photos.value > 0);
+    const auto* thoughts = r.try_get<Thoughts>(g);
+    CHECK((thoughts == nullptr || !std::ranges::contains(thoughts->recent, ThoughtKind::Watched, &Thought::kind)));
+}
+
 TEST_CASE("name cheats: the table has each of the game's cheat names once, and every kind of cheat is in it")
 {
     CHECK(kNameCheatKeys.size() == 19);
@@ -160,6 +205,8 @@ TEST_CASE("name cheats: a name the game knows but rct3++ has no system for says 
         const NameCheats& on = park.world().cheats;
         CHECK_FALSE((on.unbreakable || on.ride_all_flat || on.ride_all_tracked || on.big_blasts));
         CHECK(on.hurry.value == 0);
+        CHECK(on.nervous.value == 0);
+        CHECK(on.photos.value == 0);
         CHECK_FALSE(park.world().registry.all_of<Gesture>(g));
     }
 }

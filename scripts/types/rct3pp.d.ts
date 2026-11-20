@@ -1027,7 +1027,9 @@ type PersonOnPaths = {
         | "disapproval"
         | "cry"
         | "horror"
-        | "lookmap";
+        | "lookmap"
+        | "turnlook"
+        | "photo";
     /** Looking at something as they walk on past it. */
     glancing?: true;
     /** Stopped at a path item. */

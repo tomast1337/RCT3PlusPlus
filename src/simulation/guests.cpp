@@ -660,6 +660,24 @@ namespace rct3::simulation
         for (auto [g, gesture] : r.view<Gesture>().each())
             if ((gesture.left.value -= dt) <= 0)
                 r.remove<Gesture>(g);
+        // Set on edge by a cheat, guests on foot now and then stop to look round behind them, sure they are
+        // watched; or, in the other, to take a photo.
+        // shortcut: anyone takes photos, as guests carry no cameras yet; only those with one once they do.
+        world.cheats.nervous.value = std::max(world.cheats.nervous.value - kTickSeconds, 0.0f);
+        world.cheats.photos.value = std::max(world.cheats.photos.value - kTickSeconds, 0.0f);
+        if (world.cheats.nervous.value > 0 || world.cheats.photos.value > 0)
+        {
+            const auto on_foot = r.view<const Visitor, const Stride, Dice>(entt::exclude<Left, Gesture, Linger, Watching, Held>) | std::ranges::to<std::vector<entt::entity>>();
+            for (const entt::entity g : on_foot)
+            {
+                if (!random::chance(r.get<Dice>(g).state, dt / kSpellGap.value))
+                    continue;
+                const bool nervous = world.cheats.nervous.value > 0 && (world.cheats.photos.value <= 0 || random::chance(r.get<Dice>(g).state, 0.5));
+                r.emplace<Gesture>(g, nervous ? GestureKind::LookRound : GestureKind::Photo, kTuning.gestures.shown.value);
+                if (nervous)
+                    think(r, g, ThoughtKind::Watched, entt::null, now);
+            }
+        }
         for (auto [g, glance] : r.view<Glance>().each())
             if ((glance.left.value -= dt) <= 0)
                 r.remove<Glance>(g);

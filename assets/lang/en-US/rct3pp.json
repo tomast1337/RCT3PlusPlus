@@ -110,6 +110,7 @@
         },
         "TurnItemLeft": "Turn the item being placed counterclockwise",
         "TurnItemRight": "Turn the item being placed clockwise",
+        "UndoPlacing": "Take back the scenery last placed, refunded",
         "Paths": {
             "PickStart": "Click to start a path",
             "NotOwned": "The park does not own this",

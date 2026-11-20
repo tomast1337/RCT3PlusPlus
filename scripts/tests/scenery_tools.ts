@@ -5,7 +5,8 @@
 // - its window's move tab picks it up again, turned and raised on the way, and sets it down elsewhere for nothing;
 // - its window's copy tab takes out the tree tool, in the same colours;
 // - pulling it down pays what its item says that costs, and the park saved and loaded again keeps the moved tree where it went;
-// - a drag places a run of trees, a tile apart, and the scatter brush sprinkles them round the pointer, each paid for.
+// - a drag places a run of trees, a tile apart, and the scatter brush sprinkles them round the pointer, each paid for;
+// - the undo key takes a whole stroke back, refunded.
 //
 //   ./nob script scripts/tests/scenery_tools.ts -- --no-audio
 
@@ -221,7 +222,14 @@ expect(
     park.cash() === before_scatter - scattered * price,
     `the scattered trees paid for: ${before_scatter} then ${park.cash()}`,
 );
+await screenshot("scattered");
+
+// 8. The undo key takes the whole stroke back, refunded.
+keys.press("Ctrl+Z");
+await frames(3);
+expect(trees().length === count_before, `the scattered trees taken back, ${trees().length} left of ${count_before}`);
+expect(park.cash() === before_scatter, `the stroke refunded: ${before_scatter} then ${park.cash()}`);
+await screenshot("undone");
 build.stop();
 await frames(2);
-await screenshot("scattered");
 quit(0);

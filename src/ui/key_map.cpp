@@ -82,6 +82,7 @@ namespace rct3::ui
             { P::CloseTopmostWindow, G::DuringPlay, "close_topmost_window", "KeySetting_CloseTopmostWindow", key(K::Backspace) },
             { P::TurnItemLeft, G::DuringPlay, "turn_item_left", "Rct3pp_TurnItemLeft", letter(U',') },
             { P::TurnItemRight, G::DuringPlay, "turn_item_right", "Rct3pp_TurnItemRight", letter(U'.') },
+            { P::UndoPlacing, G::DuringPlay, "undo_placing", "Rct3pp_UndoPlacing", KeyCombo { .key = K::Letter, .character = U'z', .control = true } },
         } };
 
         usize index(Command c)

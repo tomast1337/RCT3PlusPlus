@@ -750,11 +750,11 @@ TEST_CASE("a save without any rides loads an empty model")
     CHECK(w->model.stalls.empty());
 }
 
-TEST_CASE("placement records give where an attraction's parts stand, and fence entries their assets")
+TEST_CASE("placement records give where an attraction's parts stand, fence entries their assets, and the music its file")
 {
     Schema s;
     const Attr stations = { "RideStations", "list", 0, { ref("Entrance"), ref("Exit") } };
-    s.classes["AnimatedRideInstance"] = { ref("Scenery"), ref("Fence"), ref("OverrideFence"), stations };
+    s.classes["AnimatedRideInstance"] = { ref("Scenery"), ref("Fence"), ref("OverrideFence"), stations, str("RideMusicSelection") };
     s.classes["Placement"] = { ref("SceneryItem"), structure("SceneryItemDataField", { attr_i32("POSX"), attr_i32("POSZ"), attr_i32("HEIGHT"), attr_i32("DIRECTION"), attr_i32("CORNER") }) };
     s.classes["SceneryItem"] = { attr_i32("Unused") };
     s.classes["SIDDatabaseEntry"] = { str("SYMBOLNAME"), str("OVERLAYFILENAME") };
@@ -765,7 +765,7 @@ TEST_CASE("placement records give where an attraction's parts stand, and fence e
         return p;
     };
     Obj ride { "AnimatedRideInstance", 5, { } };
-    ride.r("Scenery", 30).r("Fence", 40).r("OverrideFence", kStale);
+    ride.r("Scenery", 30).r("Fence", 40).r("OverrideFence", kStale).s("RideMusicSelection", u"Tea Party.wma");
     Bytes list;
     list.put_u32(1).put_u64(31).put_u64(kStale);
     ride.raw("RideStations", Bytes().blob(list));
@@ -791,6 +791,7 @@ TEST_CASE("placement records give where an attraction's parts stand, and fence e
     CHECK(r.fence_symbol == "Picket:sid");
     CHECK(r.fence_overlay == "Fences\\Picket");
     CHECK(r.override_fence_symbol.empty());
+    CHECK(r.music == "Tea Party.wma");
 }
 
 TEST_CASE("a show ride's show loads its known tricks and the order they are put on in")

@@ -33,8 +33,9 @@
 //              Saves made before it lack it; their waterfalls are read again from the original park.
 //   "DAYM" v1  simulation::DayMode: which part of the day the park keeps. Saves made before it lack it; they keep
 //              the original park's mode.
-//   "ANML" v3  SavedAnimals: the enclosures with their fences' wear, animal houses, animals and their dung. Saves
-//              made before it lack it, and v2 is skipped; their enclosures are read again from the original park.
+//   "ANML" v4  SavedAnimals: the enclosures with their fences' wear, animal houses, animals and their dung, with
+//              their care. Saves made before it lack it, and v2 and v3 are skipped; their enclosures are read again
+//              from the original park.
 //   "POOL" v10 park::pools::PoolMap: the swimming pools the player laid, their extras and changing rooms; their
 //              pieces are built again on loading. Only when there are any.
 //   "BEDS" v1  std::vector<save::model::FlowerBedState>: how much water each flower bed holds. Only when there are any;
@@ -57,6 +58,7 @@
 #include "save/model/rides.hpp"
 #include "save/model/world.hpp"
 #include "save/summary.hpp"
+#include "simulation/animal_care.hpp"
 #include "simulation/animals.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
@@ -185,6 +187,9 @@ namespace rct3::parkfile
     struct SavedAnimalHouse
     {
         simulation::AnimalHouse house { };
+        simulation::HouseCare care { };
+        /// shortcut: a keeper's tool is not kept, so one comes back holding the trough filler; keep it if the
+        /// hut walks after loading show.
         std::optional<i32> keeper { };
         simulation::KeeperJob job = simulation::KeeperJob::Idle;
         glm::vec3 goal { 0.0f };
@@ -198,6 +203,7 @@ namespace rct3::parkfile
         simulation::Animal animal { };
         glm::vec3 position { 0.0f };
         f32 heading = 0;
+        simulation::AnimalCare care { };
     };
 
     /// Dung left lying.

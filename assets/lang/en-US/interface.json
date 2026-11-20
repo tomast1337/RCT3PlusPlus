@@ -72,6 +72,7 @@
     "AnimalShelterCameraTT": "Click to aim the main camera at this animal house.",
     "AnimalShelterColourSchemeTT": "Set Colour Scheme",
     "AnimalShelterDeleteTT": "Click to remove this animal house.",
+    "AnimalShelterFeedingCallKeeperTT": "Send a keeper to restock this shelter's food",
     "AnimalShelterFeedingIntervalTT": "How often the animals get fed",
     "AnimalShelterFeedingInterval_Infrequent": "Infrequent",
     "AnimalShelterFeedingInterval_Normal": "Normal",

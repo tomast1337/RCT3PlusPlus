@@ -186,6 +186,7 @@ namespace rct3::ui::screens::info
             if (const auto mark = cost.find(u'#'); mark != std::u16string::npos)
                 cost.replace(mark, 1, money_text(facts.house->currency, simulation::kAnimalRates.food));
             page.lines.push_back({ .label = std::move(cost), .value = { }, .name = "ASCFoodCostsLabel" });
+            page.controls.push_back({ .id = kHouseCallKeeperControl, .name = "Staff_JobIsAnimalKeeperIcon", .kind = InfoControlKind::Button, .icon = "Staff_JobIsAnimalKeeperIcon", .help = std::u16string(strings.get("AnimalShelterFeedingCallKeeperTT")) });
         }
         else if (tab == SceneryTab::HouseKeepers && facts.house)
         {

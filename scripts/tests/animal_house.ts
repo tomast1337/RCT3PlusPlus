@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // An animal house's window in a Wild! scenario: a click on a house opens it on its details, naming the species
-// that live in it; its feeding page shows the schedule the park kept and changes it; its keepers and thoughts
-// pages open, and a click on its keeper's hut opens the same window. As the park runs, each filling of the
-// troughs is booked on Animal food. Screenshots: each page, and the finances with the food.
+// that live in it; its feeding page shows the schedule the park kept and changes it, and calls a keeper, who
+// walks to the house; its keepers and thoughts pages open, and a click on its keeper's hut opens the same
+// window. As the park runs, each filling of the troughs is booked on Animal food. Screenshots: each page, the
+// called keeper, and the finances with the food.
 //
 //   ./nob script scripts/tests/animal_house.ts -- --headless --no-intro --no-audio --seed 1
 
@@ -61,7 +62,8 @@ await until(() => animals.shownHouse()?.tab === "feeding", 60, "the feeding page
 const schedule = () => animals.houses().find((h) => h.id === house.id)?.schedule;
 expect(schedule() === "often", `the park's own schedule, not ${schedule()}`);
 expect(
-    under("info", "ASCFoodCostsLabel_label") !== undefined || ui.children("info/body")?.some((n) => n.startsWith("ASCFoodCostsLabel")) === true,
+    under("info", "ASCFoodCostsLabel_label") !== undefined ||
+        ui.children("info/body")?.some((n) => n.startsWith("ASCFoodCostsLabel")) === true,
     "what each filling costs",
 );
 await screenshot("feeding");
@@ -75,6 +77,41 @@ await frames(2);
 keys.press("Up");
 await until(() => schedule() === "infrequent", 60, "the house fed infrequently");
 await screenshot("feeding_infrequent");
+
+// Called, a keeper of its enclosure sets off to fill its troughs, and walks there.
+await ui.click(must(under("info", "Staff_JobIsAnimalKeeperIcon"), "the call-keeper button"));
+await frames(2);
+const sent = () =>
+    animals
+        .houses()
+        .flatMap((h) => h.keepers)
+        .find((k) => k.job === "filling" && k.target === house.id);
+const keeper = must(sent(), "a keeper sent to the house");
+const away = (k: { at: { col: number; row: number } }) => Math.hypot(k.at.col - house.at.col, k.at.row - house.at.row);
+log("keeper", keeper.id, "sent from", away(keeper), "tiles away");
+await ui.click("bar/Top_Pause");
+await park.advanceUntil(
+    () => {
+        const now = animals
+            .houses()
+            .flatMap((h) => h.keepers)
+            .find((k) => k.id === keeper.id);
+        return now !== undefined && (now.job !== "filling" || away(now) < 1.5);
+    },
+    120,
+    "the keeper at the troughs",
+);
+await ui.click("bar/Top_Pause");
+const there = must(
+    animals
+        .houses()
+        .flatMap((h) => h.keepers)
+        .find((k) => k.id === keeper.id),
+    "the keeper",
+);
+log("keeper now", there.job, away(there), "tiles away");
+expect(away(there) < away(keeper), "the keeper walked to the house");
+await screenshot("keeper_called");
 
 for (const [part, page] of [
     ["animalshelterkeepericon", "keepers"],

@@ -516,3 +516,26 @@ TEST_CASE("animals: over a game month a house fed often has its troughs filled m
     // Each filling is charged on Animal food.
     CHECK(r.ctx().get<Supplies>().paid[std::to_underlying(LedgerLine::AnimalFood)].value == fillings * kAnimalRates.food.value);
 }
+
+TEST_CASE("animals: a called keeper is the nearest free one of the house's enclosure, and fills its troughs at once")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    const entt::entity near = add_animal_house(world, { .enclosure = std::optional { 0 }, .troughs = { 1, 0, 1 } }, { 1, 0, 1 });
+    const entt::entity far = add_animal_house(world, { .enclosure = std::optional { 0 }, .troughs = { 3, 0, 3 } }, { 3, 0, 3 });
+    const entt::entity beyond = add_animal_house(world, { .enclosure = std::optional { 1 }, .troughs = { 10, 0, 1 } }, { 10, 0, 1 });
+    auto& r = world.registry;
+    const entt::entity house = r.get<KeeperDuty>(near).house;
+    CHECK(call_keeper(world, house) == near);
+    CHECK(r.get<KeeperDuty>(near).job == KeeperJob::Filling);
+    CHECK(call_keeper(world, house) == near); // Already on the way
+
+    // The other keeper only clears dung, so nobody is free for the far house but the one beyond its enclosure.
+    r.get<Staff>(far).tasks = kClearDungTask;
+    CHECK(call_keeper(world, r.get<KeeperDuty>(far).house) == entt::null);
+    CHECK(r.get<KeeperDuty>(beyond).job != KeeperJob::Filling);
+
+    run(world, ground, 20);
+    CHECK(r.get<Staff>(near).filled == 1);
+    CHECK(r.get<AnimalHouse>(house).since_fed.value < 20);
+}

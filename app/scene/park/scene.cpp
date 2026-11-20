@@ -839,6 +839,8 @@ namespace rct3::scene::park
                 auto& house = scene.sim.registry.get<simulation::AnimalHouse>(home);
                 if (change->id == ui::screens::info::kHouseLocateControl)
                     scene.camera.target = house.troughs;
+                else if (change->id == ui::screens::info::kHouseCallKeeperControl)
+                    (void)simulation::call_keeper(scene.sim, home);
                 else if (change->id == ui::screens::info::kHouseScheduleControl && change->value >= 0 && change->value <= std::to_underlying(simulation::FeedingSchedule::Often))
                     house.schedule = static_cast<simulation::FeedingSchedule>(change->value);
             }

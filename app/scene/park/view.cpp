@@ -188,6 +188,14 @@ namespace rct3::scene::park
         // So does what the pool tool's work costs, or pays back.
         if (const PoolTool& t = scene.pooling; t.item && t.working && t.ok && t.cost != units::Money { })
             show({ tile_point(scene.grid, t.working->second), -t.cost, units::Seconds { } });
+        // And what the scenery or structure whose ghost shows would cost, over the ghost.
+        if (const RidePlacing& p = scene.placing; p.item && p.step == RidePlacing::Step::Scenery && p.site && !p.ghost_mesh.vertices.empty() && p.item->price != units::Money { })
+        {
+            const glm::vec3 ground = tile_point(scene.grid, { p.site->col, p.site->row });
+            show({ { ground.x, static_cast<f32>(p.site->height), ground.z }, -p.item->price, units::Seconds { } });
+        }
+        if (const StructureTools& t = scene.structures; t.tool == StructureTools::Tool::Place && t.pointed_tile && !t.ghost_mesh.vertices.empty() && t.cost != units::Money { })
+            show({ tile_point(scene.grid, *t.pointed_tile), -t.cost, units::Seconds { } });
         return shown;
     }
 

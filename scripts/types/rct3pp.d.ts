@@ -108,7 +108,8 @@ declare namespace clipboard {
 
 declare namespace ui {
     /** The middle of the widget at `path` (such as "tools/Land/Land") and its edges, or undefined when it is not shown;
-     * `on` for a toggle button or a tick box, `text` for an edit box, a label or a button with words, `tooltip` for one with help.
+     * `on` for a toggle button or a tick box, `text` for an edit box, a label or a button with words, `rows` for a
+     * table (each row's cells as shown), `tooltip` for one with help.
      * These stay optional: they follow the widget's kind, which no field gives. */
     function find(path: string):
         | {
@@ -120,6 +121,7 @@ declare namespace ui {
               bottom: number;
               on?: boolean;
               text?: string;
+              rows?: string[][];
               tooltip?: string;
           }
         | undefined;

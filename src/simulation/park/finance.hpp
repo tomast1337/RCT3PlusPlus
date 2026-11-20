@@ -48,8 +48,9 @@ namespace rct3::simulation::park
     /// Takes `cost` (negative for money coming in) from `park`'s cash and books it on `line` of the
     /// month's ledger in `finance` (see ledger_month). A park whose money never runs out books nothing. A spend
     /// the park cannot afford is refused when `charge` is IfAffordable: the money and ledger stay as they were,
-    /// the player is told (see cannot_pay) and false comes back.
-    bool book(ParkState& park, save::model::Finance& finance, std::optional<i64>& kept, units::Money cost, LedgerLine line, Charge charge);
+    /// the player is told (see cannot_pay) and false comes back. An animal line also books it on `species`'
+    /// share of the line, when one is named.
+    bool book(ParkState& park, save::model::Finance& finance, std::optional<i64>& kept, units::Money cost, LedgerLine line, Charge charge, std::string_view species = { });
 
     /// How much the loan moves at a time: 1,000.00. Chosen by eye: a few presses buy a ride.
     inline constexpr units::Money kLoanStep { 100'000 };

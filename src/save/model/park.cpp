@@ -91,6 +91,7 @@ namespace rct3::save::model
             constexpr std::string_view kAdultAnimals = "AllowAdultAnimals";
             constexpr std::string_view kBabyAnimals = "AllowBabyAnimals";
             constexpr std::string_view kRescued = "RescuedAnimals";
+            constexpr std::string_view kAnimalSpending = "OtherAnimalSpending"; ///< A ledger period's animal lines
             constexpr std::string_view kGuestsInPark = "GuestsInPark";
             constexpr std::string_view kAdultsInPark = "AdultsInPark";
             constexpr std::string_view kTeenagersInPark = "TeenagersInPark";
@@ -448,7 +449,6 @@ namespace rct3::save::model
             OptionalCounter { "PoolTickets", &LedgerPeriod::pool_tickets },
             OptionalCounter { "Billboards", &LedgerPeriod::billboards },
             OptionalCounter { "ViewingGalleryTickets", &LedgerPeriod::viewing_gallery_tickets },
-            OptionalCounter { "OtherAnimalSpending", &LedgerPeriod::other_animal_spending },
         };
 
         [[nodiscard]] LedgerPeriod ledger_of(const Value& v)
@@ -463,6 +463,9 @@ namespace rct3::save::model
                 if (const auto f = v.field(c.name); is_numeric(f))
                     p.*c.member = static_cast<i32>(f->as_integer());
             }
+            // shortcut: the animal lines' saved amounts are left at nought; read them with the rest of the history (#356).
+            if (const auto f = v.field(names::kAnimalSpending); f && f->kind() == ValueKind::Struct)
+                p.animal_spending = AnimalSpending { };
             return p;
         }
 
@@ -875,6 +878,8 @@ namespace rct3::save::model
             sum += this->*c.member;
         for (const auto& c : kOptionalCounters)
             sum += (this->*c.member).value_or(0);
+        if (animal_spending)
+            sum += i64 { animal_spending->purchase_sale } + animal_spending->food + animal_spending->adoptions + animal_spending->other;
         return sum;
     }
 

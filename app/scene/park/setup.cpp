@@ -1247,7 +1247,7 @@ namespace rct3::scene::park
                                 care.hut = tile_point(g, { hut->col, hut->row });
                             scene.sim.registry.emplace<simulation::HouseCare>(e, std::move(care));
                         }
-                        simulation::import_animals(scene.sim, scene.people.zoo_animals, enclosure_at, [&](const save::model::ZooAnimal& z) { return ui::saved_animal_name(strings, z); });
+                        simulation::import_animals(scene.sim, scene.people.zoo_animals, enclosure_at, [&](const save::model::ZooAnimal& z) { return ui::saved_animal_name(strings, z); }, park_model ? park_model->clock.time : 0.0f);
                         simulation::import_dung(scene.sim, scene.people.litter, enclosure_at);
                     }
                     if (!scene.sim.registry.view<const simulation::Animal>().empty())

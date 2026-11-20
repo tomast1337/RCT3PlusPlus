@@ -33,9 +33,9 @@
 //              Saves made before it lack it; their waterfalls are read again from the original park.
 //   "DAYM" v1  simulation::DayMode: which part of the day the park keeps. Saves made before it lack it; they keep
 //              the original park's mode.
-//   "ANML" v5  SavedAnimals: the enclosures with their fences' wear, animal houses, animals and their dung, with
-//              their care, and each animal's entity and dice. Saves made before it lack it, and v2 to v4 are skipped;
-//              their enclosures are read again from the original park.
+//   "ANML" v6  SavedAnimals: the enclosures with their fences' wear, animal houses, animals and their dung, with
+//              their care, and each animal's entity, dice, family, age and pregnancy. Saves made before it lack it,
+//              and v2 to v5 are skipped; their enclosures are read again from the original park.
 //   "POOL" v10 park::pools::PoolMap: the swimming pools the player laid, their extras and changing rooms; their
 //              pieces are built again on loading. Only when there are any.
 //   "BEDS" v1  std::vector<save::model::FlowerBedState>: how much water each flower bed holds. Only when there are any;
@@ -213,12 +213,14 @@ namespace rct3::parkfile
     /// An animal, standing where it stood.
     struct SavedAnimal
     {
-        simulation::Animal animal { };
+        simulation::Animal animal { }; ///< Its mother, father and mate as none; they are kept below
         glm::vec3 position { 0.0f };
         f32 heading = 0;
         simulation::AnimalCare care { };
         u32 entity = 0; ///< Its entity in the run saved, which it gets back when it is free
         std::optional<random::RandomState> dice { };
+        /// Of SavedAnimals::animals: its parents, and the father of the young it carries.
+        std::optional<i32> mother { }, father { }, mate { };
     };
 
     /// Dung left lying.

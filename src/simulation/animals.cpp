@@ -195,8 +195,10 @@ namespace rct3::simulation
         }
     }
 
-    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::optional<i32>(glm::vec2)>& enclosure, const std::function<std::string(const save::model::ZooAnimal&)>& name)
+    void import_animals(SimWorld& world, std::span<const save::model::ZooAnimal> saved, const std::function<std::optional<i32>(glm::vec2)>& enclosure, const std::function<std::string(const save::model::ZooAnimal&)>& name, f32 now)
     {
+        // The park keeps times in calendar units.
+        const auto months = [](f32 units) { return units::Seconds { units / save::model::GameClock::kUnitsPerMonth * kAnimalMonth.value }; };
         for (const save::model::ZooAnimal& z : saved)
         {
             // Its model's place: rows of the x, y and z axes, then the position.
@@ -214,6 +216,16 @@ namespace rct3::simulation
                 animal.busy = { };
             }
             animal.escaped = !in && !z.in_crate;
+            animal.age = months(std::max(0.0f, now - z.date_of_birth));
+            // The park keeps a young one's age at growing up in whole months.
+            if (z.species_life_expectancy > 0)
+                animal.grows_up = units::Seconds { static_cast<f32>(z.species_life_expectancy) * kAnimalMonth.value };
+            if (z.pregnancy_timer)
+            {
+                animal.due = months(std::max(0.0f, *z.pregnancy_timer));
+                animal.litter = std::max(1, z.babies_in_womb);
+            }
+            animal.generation = std::max(1, z.generation_suffix);
         }
     }
 

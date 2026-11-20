@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // A ride's extras, changed from its window in the game's Vanilla Hills: its fence button shows the looks its fence,
-// entrance and exit may take, and each one picked shows in the park at once. All of it is still there once the park
-// is saved and loaded again.
+// entrance and exit may take, and each one picked shows in the park at once. A tune picked plays near the ride
+// while it is open, and all of it is still there once the park is saved and loaded again.
 //
-//   ./nob script scripts/tests/ride_extras.ts
+//   ./nob script scripts/tests/ride_extras.ts -- --audio
 
 export {};
 
@@ -22,7 +22,7 @@ const ride = must(
     "a ride with a fence and both doors",
 ).index;
 const now = () => rides.list()[ride];
-log("ride", now().name, "fence", now().fence, "doors", now().entranceItem, now().exitItem);
+log("ride", now().name, "fence", now().fence, "doors", now().entranceItem, now().exitItem, "music", now().music);
 
 /** Picks the first item of the list `name` on the ride's window, or the last when the first is what it has. */
 async function pickOther(name: string, has: () => string): Promise<string> {
@@ -75,8 +75,19 @@ expect(
     `the entrance shown as ${entrance}`,
 );
 
+// A tune, heard near the open ride.
+const tune = await pickOther("AttractionViewDialogMusicToolTip", () => now().music);
+log("tune", tune);
+expect(rides.setState(ride, "open") === null || now().joined, "the ride open");
 camera.look({ col: door.col + 0.5, row: door.row + 0.5 }, { col: door.col + 6.5, row: door.row + 8.5, up: 8 });
-await frames(10);
+await ui.click("bar/Top_Pause");
+await until(
+    () => rides.music().some((m) => m.file.toLowerCase() === tune.toLowerCase() && m.volume > 0),
+    300,
+    `${tune} heard near the ride, not ${JSON.stringify(rides.music())}`,
+);
+log("heard", JSON.stringify(rides.music()));
+await ui.click("bar/Top_Pause");
 await screenshot("ride_restyled");
 
 // Saved and loaded again.
@@ -101,12 +112,13 @@ await until(
 );
 await frames(30);
 const back = now();
-log("after loading", back.fence, back.entranceItem, back.exitItem);
+log("after loading", back.fence, back.entranceItem, back.exitItem, back.music);
 expect(back.fence === fence, `the fence kept, not ${back.fence}`);
 expect(
     back.entranceItem === entrance && back.exitItem === exit,
     `the doors' looks kept, not ${back.entranceItem}, ${back.exitItem}`,
 );
+expect(back.music === tune, `the tune kept, not ${back.music}`);
 expect(
     map.objects().some((o) => o.symbol.toLowerCase() === fence.toLowerCase() && near(o)),
     `${fence} panels beside the entrance after loading`,

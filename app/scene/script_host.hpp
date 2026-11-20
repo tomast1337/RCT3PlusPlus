@@ -85,6 +85,8 @@
 //   rides.setState(i, state)  puts ride `i` of rides.list() "closed", "testing" or "open", as its window does;
 //                       null once changed, else the string key of why it stays (a track without a station...)
 //   rides.show(i)       opens ride `i`'s window, as clicking the ride does
+//   rides.music()       the ride tunes heard: { file, volume }, volume 0..1 as last set, a tune once however many
+//                       rides play it (with --audio)
 //   people.list()       each person shown in the park: { index, name, staff, post? } (post: a seller's object)
 //   people.rename(i, name)  renames person `i` of people.list(), as their window's name box does
 //   editor.shown()      whether the developer windows' editor (F12) was drawn on the last frame
@@ -204,6 +206,17 @@ namespace rct3::scene
         {
             return std::exchange(record_stop_, false);
         }
+        /// A ride tune heard, as the park's sounds last set it.
+        struct HeardMusic
+        {
+            std::string file;
+            f32 volume = 0;
+        };
+        /// The ride tunes heard on the last frame.
+        void hear_ride_music(std::vector<HeardMusic> playing)
+        {
+            ride_music_ = std::move(playing);
+        }
         /// Whether the recording asked for started.
         void recording(bool started)
         {
@@ -248,6 +261,7 @@ namespace rct3::scene
         bool recording_ = false;
         scripting::Json recorded_; ///< What the last recording wrote; null before one ends
         f32 advance_ = 0;
+        std::vector<HeardMusic> ride_music_;
         render::Device* device_ = nullptr; ///< While a tick runs
         park::ParkScene* park_ = nullptr;
         FrontEndScene* front_ = nullptr;

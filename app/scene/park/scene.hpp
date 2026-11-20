@@ -791,10 +791,6 @@ namespace rct3::scene::park
         std::vector<std::u16string> tunes; ///< The install's music, by name, for rides to play
         rct3::park::CarriedKinds carried;  ///< What stalls sell and its extras, read with the park's people
         bool carried_read = false;         ///< Whether their pictures are read, once a stall's window first opens
-        /// The tune each ride plays, by ride id, as ui::screens::info::AttractionFacts::tune; none for no music.
-        /// shortcut: rides keep their tune only while the park is open and play nothing; save it and play it once
-        /// ride music is read from and written to saves.
-        std::unordered_map<u32, usize> ride_tunes;
         /// The tracked rides, by id, whose track is greased.
         /// shortcut: kept only while the park is open and the trains run as before; save it and lower the
         /// trains' losses once friction is part of the train model.

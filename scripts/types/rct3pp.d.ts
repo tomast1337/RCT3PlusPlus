@@ -832,6 +832,8 @@ type RideInfo = {
     name: string;
     /** The fence round it, without its tag; empty when it has none. */
     fence: string;
+    /** The tune it plays, a file of the game's music folder; empty for none. */
+    music: string;
     /** The scenery items its first station's entrance and exit are placed as; empty where it has none. */
     entranceItem: string;
     exitItem: string;
@@ -921,6 +923,9 @@ declare namespace rides {
     function show(i: RideIndex): void;
     /** The ride the info panel shows and its tab, by the tab's help key; undefined when it shows no ride. */
     function shown(): { ride: RideIndex; tab?: string } | undefined;
+    /** The ride tunes heard, each once however many rides play it, and how loud as last set, 0..1. Empty without
+     *  --audio. */
+    function music(): { file: string; volume: number }[];
 }
 
 type StallInfo = {

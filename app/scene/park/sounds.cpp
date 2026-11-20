@@ -91,7 +91,7 @@ namespace rct3::scene::park
         void stop_ride_music(audio::AudioEngine& engine, ParkSounds& sounds)
         {
             for (auto& [_, music] : sounds.ride_music)
-                music.stop(engine);
+                music.player.stop(engine);
             sounds.ride_music.clear();
         }
 
@@ -400,7 +400,7 @@ namespace rct3::scene::park
             std::erase_if(sounds.ride_music, [&](auto& playing) {
                 if (std::ranges::any_of(tracks, [&](const Track& t) { return strings::equals_ignoring_case(t.file, playing.first); }))
                     return false;
-                playing.second.stop(engine);
+                playing.second.player.stop(engine);
                 return true;
             });
             for (const Track& track : tracks)
@@ -415,11 +415,12 @@ namespace rct3::scene::park
                         sounds.broken_tracks.emplace(track.file);
                         continue;
                     }
-                    music = sounds.ride_music.emplace(std::string(track.file), std::move(*started)).first;
+                    music = sounds.ride_music.emplace(std::string(track.file), RideMusic { .player = std::move(*started) }).first;
                 }
-                music->second.set_volume(engine, kRideMusicLevel * track.level);
-                music->second.set_pan(engine, track.pan);
-                if (const auto read = music->second.update(engine); !read)
+                music->second.volume = kRideMusicLevel * track.level;
+                music->second.player.set_volume(engine, music->second.volume);
+                music->second.player.set_pan(engine, track.pan);
+                if (const auto read = music->second.player.update(engine); !read)
                 {
                     logging::logger("audio").warning("ride music {} stopped: {}", track.file, read.error());
                     sounds.broken_tracks.emplace(track.file);

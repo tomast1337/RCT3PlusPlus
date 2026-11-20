@@ -2,6 +2,8 @@
 #include "audio/ride_sounds.hpp"
 
 #include <doctest/doctest.h>
+#include <string>
+#include <vector>
 
 using namespace rct3::audio;
 
@@ -62,4 +64,16 @@ TEST_CASE("a ride's music is full near its entrance and falls off by the square 
     CHECK(ride_music_level(halfway) == doctest::Approx(0.25f));
     CHECK(ride_music_level(kMusicFar) == 0);
     CHECK(ride_music_level(rct3::units::Distance { kMusicFar.value * 2 }) == 0);
+}
+
+TEST_CASE("a ride's tune is kept as its music file and listed by its place among the tunes")
+{
+    const std::vector<std::u16string> tunes { u"Calm Lake", u"Tea Party" };
+    CHECK(tune_file(2, tunes) == "Tea Party.wma");
+    CHECK(tune_file(0, tunes).empty());
+    CHECK(tune_file(3, tunes).empty());
+    CHECK(tune_of("Tea Party.wma", tunes) == 2);
+    CHECK(tune_of("\\calm lake.WMA", tunes) == 1);
+    CHECK(tune_of("", tunes) == 0);
+    CHECK(tune_of("Marching Band.wma", tunes) == 0);
 }

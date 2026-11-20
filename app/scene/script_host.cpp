@@ -1596,6 +1596,12 @@ namespace rct3::scene
             const StructureTools& t = park_of(park_).structures;
             return std::ranges::count(t.marks, u8 { 1 });
         });
+        engine_.define("rides.music", [this](const Json&) {
+            Json playing = Json::array();
+            for (const HeardMusic& m : ride_music_)
+                playing.push_back({ { "file", m.file }, { "volume", m.volume } });
+            return playing;
+        });
         engine_.define("rides.list", [this](const Json&) {
             const park::ParkScene& park = park_of(park_);
             Json rides = Json::array();
@@ -1603,8 +1609,8 @@ namespace rct3::scene
             {
                 const save::model::Ride& ride = park.rides.rides[i];
                 const save::model::Station* station = ride.stations.empty() ? nullptr : &ride.stations.front();
-                Json one { { "index", i },      { "name", ride.base.name },     { "symbol", ride.base.symbol },         { "overlay", ride.base.overlay_path },       { "flat", ride.kind == save::model::RideKind::Flat }, { "kind", std::array { "tracked", "flat", "facility" }[std::to_underlying(ride.kind)] }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) },
-                           { "joined", false }, { "fence", ride.fence_symbol }, { "demolished", ride.base.demolished }, { "graphSamples", ride.graphs.speed.size() } };
+                Json one { { "index", i },      { "name", ride.base.name },     { "symbol", ride.base.symbol }, { "overlay", ride.base.overlay_path },  { "flat", ride.kind == save::model::RideKind::Flat }, { "kind", std::array { "tracked", "flat", "facility" }[std::to_underlying(ride.kind)] }, { "site", spot_json(ride.base.spot) }, { "entrance", spot_json(station ? station->entrance_spot : std::nullopt) }, { "exit", spot_json(station ? station->exit_spot : std::nullopt) },
+                           { "joined", false }, { "fence", ride.fence_symbol }, { "music", ride.music },        { "demolished", ride.base.demolished }, { "graphSamples", ride.graphs.speed.size() } };
                 for (const auto& [field, id] : { std::pair { "entranceItem", station ? station->entrance : 0 }, std::pair { "exitItem", station ? station->exit : 0 } })
                 {
                     const auto door = id == 0 ? park.objects.end() : std::ranges::find(park.objects, id, &save::model::PlacedObject::id);

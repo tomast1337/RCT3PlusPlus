@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "scene/park/info_panel.hpp"
 
+#include "audio/ride_sounds.hpp"
 #include "core/types.hpp"
 #include "logging/log.hpp"
 #include "park/ride/styles.hpp"
@@ -227,8 +228,7 @@ namespace rct3::scene::park
             f.queue_signs = !scene.led_signs.hidden.contains(f.ride->base.id);
             f.seats = flat_view(scene, ref.ride(), FlatEye::Seat, 0) || flat_view(scene, ref.ride(), FlatEye::Fixed, 0);
             f.music = scene.tunes;
-            if (const auto tune = scene.ride_tunes.find(f.ride->base.id); tune != scene.ride_tunes.end())
-                f.tune = tune->second;
+            f.tune = audio::tune_of(f.ride->music, scene.tunes);
             f.low_friction = scene.low_friction.contains(f.ride->base.id);
             if (const auto series = scene.graph_series.find(f.ride->base.id); series != scene.graph_series.end())
                 f.graph_series = series->second;
@@ -950,7 +950,7 @@ namespace rct3::scene::park
             shown = static_cast<u8>(change.value != 0 ? shown | bit : shown & ~bit);
         }
         else if (change.id == ui::screens::info::control_id(Music))
-            scene.ride_tunes[ride->base.id] = static_cast<usize>(std::max(change.value, 0));
+            ride->music = audio::tune_file(static_cast<usize>(std::max(change.value, 0)), scene.tunes);
         else if (change.id == ui::screens::info::control_id(Fence))
             scene.ride_styles_shown = !scene.ride_styles_shown;
         else if (const bool fence = change.id == ui::screens::info::control_id(FenceStyle); fence || change.id == ui::screens::info::control_id(EntranceStyle) || change.id == ui::screens::info::control_id(ExitStyle))

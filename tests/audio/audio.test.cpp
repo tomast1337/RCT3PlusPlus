@@ -508,6 +508,21 @@ TEST_CASE("the null backend runs without a device and cannot be rendered by hand
     CHECK(e->render(scratch) == 0);
 }
 
+TEST_CASE("a captured engine's device stops and the mix is rendered by hand, until let go")
+{
+    EngineConfig c;
+    c.backend = Backend::Null;
+    auto e = AudioEngine::create(c);
+    REQUIRE(e.has_value());
+    e->set_captured(true);
+    REQUIRE(e->play(constant_mono(16384, 48000)).has_value());
+    std::vector<f32> out(2 * 100);
+    CHECK(e->render(out) == 100);
+    CHECK(count_nonzero_frames(out) >= 90); // The pitch stage delays the sound a frame
+    e->set_captured(false);
+    CHECK(e->render(out) == 0);
+}
+
 TEST_CASE("the default backend falls back to the null backend when there is no device")
 {
     EngineConfig c;

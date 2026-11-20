@@ -187,6 +187,10 @@
             "Year": "Year",
             "All": "All"
         },
+        "Thought": {
+            "WaitingForFriends": "I'm waiting for my friends to come off %NAME%",
+            "RodeTogether": "I'm glad we rode %NAME% together"
+        },
         "Cheat": {
             "Unbreakable": "Cheat on: rides no longer break down",
             "RideAllFlat": "Cheat on: guests try any ride, however wild or tame",

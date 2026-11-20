@@ -10,7 +10,9 @@ TEST_CASE("a thought's number names its texts, none for no thought")
     CHECK(thought_key(1) == "Thought_ImLost");
     CHECK(thought_key(0).empty());
     CHECK(thought_key(-3).empty());
-    CHECK(thought_key(256).empty());
+    CHECK(thought_key(256) == "Rct3pp_Thought_WaitingForFriends"); // rct3++'s own, past the game's
+    CHECK(thought_key(257) == "Rct3pp_Thought_RodeTogether");
+    CHECK(thought_key(258).empty());
 }
 
 TEST_CASE("the random number picks one of a thought's texts and the name goes in")
@@ -25,6 +27,9 @@ TEST_CASE("the random number picks one of a thought's texts and the name goes in
     // A name holding the mark is put in once.
     CHECK(thought_text(s, 1, 0, u"%NAME%") == u"Where is %NAME%?");
     CHECK(thought_text(s, 2, 0, u"Park").empty());
+    // One of only one text has it under its key alone.
+    s.add("Rct3pp_Thought_RodeTogether", u"Glad we rode %NAME%");
+    CHECK(thought_text(s, 257, 7, u"Park") == u"Glad we rode Park");
 }
 
 TEST_CASE("each thought has a mood: glad ones happy, complaints sad, the rest neutral")
@@ -33,7 +38,8 @@ TEST_CASE("each thought has a mood: glad ones happy, complaints sad, the rest ne
     CHECK(thought_mood(26) == Mood::Happy);   // Good value
     CHECK(thought_mood(30) == Mood::Neutral); // The music is fine
     CHECK(thought_mood(0) == Mood::Neutral);
-    CHECK(thought_mood(256) == Mood::Neutral);
+    CHECK(thought_mood(257) == Mood::Happy); // Rode with the others
+    CHECK(thought_mood(258) == Mood::Neutral);
 }
 
 TEST_CASE("a thought's text key has its mood; other keys have none")
@@ -42,6 +48,8 @@ TEST_CASE("a thought's text key has its mood; other keys have none")
     CHECK(key_mood("Thought_PI_Stall_TooExpensive1") == Mood::Sad);
     CHECK(key_mood("Thought_PI_Attraction_Evaluated1") == Mood::Neutral);
     CHECK(key_mood("Thought_Themed1Good3") == Mood::Happy);
+    CHECK(key_mood("Rct3pp_Thought_RodeTogether") == Mood::Happy);
+    CHECK_FALSE(key_mood("Rct3pp_Thought_NoSuchThought"));
     CHECK_FALSE(key_mood("RideFixedMessage"));
     CHECK_FALSE(key_mood("Thought_None1"));
     CHECK_FALSE(key_mood("Thought_NoSuchThought1"));

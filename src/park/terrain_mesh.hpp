@@ -17,13 +17,13 @@
 // World units throughout: X along the columns, Z along the rows, Y up.
 #pragma once
 
+#include "core/function_ref.hpp"
 #include "core/types.hpp"
 #include "math/glm.hpp"
 #include "math/hex_colour.hpp"
 #include "save/model/world.hpp"
 
 #include <cstdint>
-#include <functional>
 #include <optional>
 #include <span>
 #include <vector>

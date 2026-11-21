@@ -61,7 +61,8 @@ TEST_CASE("paths inside the install resolve without regard to case or separator"
 
     const auto found = install->find("gui\\sub/example.common.OVL");
     REQUIRE(found.has_value());
-    CHECK(*found == fake.root / "GUI" / "Sub" / "Example.Common.ovl");
+    // The same file: Windows, where names match in any case, answers in the case asked for.
+    CHECK(fs::equivalent(*found, fake.root / "GUI" / "Sub" / "Example.Common.ovl"));
     CHECK(install->find("") == fake.root);
     CHECK(install->find("./GUI//Sub") == fake.root / "GUI" / "Sub");
     CHECK_FALSE(install->find("gui/missing.ovl").has_value());

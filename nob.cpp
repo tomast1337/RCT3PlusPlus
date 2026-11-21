@@ -21,8 +21,8 @@
 // only. It needs no audio device or system audio package.
 //
 // Platform files: a source whose name (up to its first dot) ends in _windows is built only when nob itself is
-// built for Windows, one ending in _linux only on Linux, and one ending in _ffmpeg only when not on Windows;
-// Windows skips the FFmpeg cut too.
+// built for Windows (Media Foundation), one ending in _linux only on Linux, and one ending in _ffmpeg only when not
+// on Windows; Windows skips the FFmpeg cut and needs no FFmpeg download.
 //
 // -j N (or --jobs N) limits how many compilers run at once, to keep a build from taking the whole machine;
 // without it, NOB_JOBS does the same, and by default there is one per core, fewer when memory is short.
@@ -101,14 +101,24 @@ namespace
         return jobs;
     }
 
+    // What sets Windows apart for the paths nob builds: programs end in .exe (the linker adds it to the name it is
+    // given), and PATH is split by semicolons, as its folders hold a drive's colon.
+#ifdef _WIN32
+    constexpr std::string_view kExe = ".exe";
+    constexpr char kPathSeparator = ';';
+#else
+    constexpr std::string_view kExe = "";
+    constexpr char kPathSeparator = ':';
+#endif
+
     // Whether `program` is on PATH.
     bool on_path(std::string_view program)
     {
         const char* path = std::getenv("PATH");
-        for (const auto dir : std::views::split(std::string_view(path ? path : ""), ':'))
+        for (const auto dir : std::views::split(std::string_view(path ? path : ""), kPathSeparator))
         {
             std::error_code error;
-            if (fs::exists(fs::path(std::string_view(dir)) / program, error))
+            if (fs::exists(fs::path(std::string_view(dir)) / std::format("{}{}", program, kExe), error))
                 return true;
         }
         return false;
@@ -234,6 +244,41 @@ namespace
         return procs.wait_all() && ok;
     }
 
+#ifdef _WIN32
+    // An object that makes UTF-8 the code page of the program it is linked into (Windows 10 1903 and later), from
+    // an application manifest windres compiles. std::filesystem takes narrow text as UTF-8 on Windows, while
+    // main's arguments, getenv and fopen use the code page; with the two alike, a path outside ASCII (a user
+    // folder with an accent in its name) goes between them unchanged.
+    std::optional<fs::path> utf8_code_page_object(const Config& cfg)
+    {
+        const fs::path object = cfg.obj_dir() / "utf8_code_page.o";
+        if (fs::exists(object))
+            return object;
+        const fs::path gen_dir = cfg.out_dir() / "gen";
+        if (!mkdir_p(gen_dir) || !mkdir_p(cfg.obj_dir()))
+            return std::nullopt;
+        const fs::path manifest = gen_dir / "utf8_code_page.manifest";
+        const fs::path script = gen_dir / "utf8_code_page.rc";
+        std::ofstream(manifest) << R"(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity type="win32" name="rct3pp" version="1.0.0.0"/>
+  <application>
+    <windowsSettings>
+      <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
+    </windowsSettings>
+  </application>
+</assembly>
+)";
+        // Resource 1 of type 24: the manifest Windows reads when it starts a program.
+        std::ofstream(script) << std::format("1 24 \"{}\"\n", fs::absolute(manifest).generic_string());
+        Cmd cmd;
+        cmd << "windres" << "-i" << script.string() << "-O" << "coff" << "-o" << object.string();
+        if (!run(cmd))
+            return std::nullopt;
+        return object;
+    }
+#endif
+
     // Links `objects` into `output`. The object list is remembered next to the output so that removing a
     // source file (which leaves every remaining object older than the binary) still triggers a relink.
     bool link(const Config& cfg, const fs::path& output, const std::vector<fs::path>& objects)
@@ -251,7 +296,7 @@ namespace
         if (std::ifstream in(list_file); in)
             previous.assign(std::istreambuf_iterator<char>(in), { });
 
-        if (previous == list && !needs_rebuild(output, objects))
+        if (previous == list && !needs_rebuild(std::format("{}{}", output.string(), kExe), objects))
             return true;
 
         Cmd cmd;
@@ -259,8 +304,16 @@ namespace
         cmd << "-o" << output.string();
         for (const auto& o : objects)
             cmd << o.string();
+#ifdef _WIN32
+        const std::optional<fs::path> code_page = utf8_code_page_object(cfg);
+        if (!code_page)
+            return false;
+        cmd << code_page->string();
+#endif
         cmd.append(cfg.link_flags); // After the objects: an import or static library only serves what comes before it
-        cmd << "-lstdc++exp";       // std::stacktrace; a static library, so after the objects
+#ifndef _WIN32
+        cmd << "-lstdc++exp"; // std::stacktrace; a static library, so after the objects
+#endif
         if (!run(cmd))
             return false;
 
@@ -393,8 +446,8 @@ namespace
         return output;
     }
 
-    // find_files without the other platform's files (see the top of this file). Every source list goes through it.
-    std::vector<fs::path> find_sources(const fs::path& dir, std::string_view ext)
+    // Whether `source` is another platform's file (see the top of this file).
+    bool other_platforms_source(const fs::path& source)
     {
 #if defined(_WIN32)
         constexpr std::array<std::string_view, 2> kOtherPlatforms = { "_ffmpeg", "_linux" };
@@ -403,12 +456,16 @@ namespace
 #else
         constexpr std::array<std::string_view, 2> kOtherPlatforms = { "_windows", "_linux" };
 #endif
+        const std::string name = source.filename().string();
+        const std::string_view stem = std::string_view(name).substr(0, name.find('.'));
+        return std::ranges::any_of(kOtherPlatforms, [&](std::string_view other) { return stem.ends_with(other); });
+    }
+
+    // find_files without the other platforms' files. Every source list goes through it.
+    std::vector<fs::path> find_sources(const fs::path& dir, std::string_view ext)
+    {
         auto out = find_files(dir, ext);
-        std::erase_if(out, [&](const fs::path& p) {
-            const std::string name = p.filename().string();
-            const std::string_view stem = std::string_view(name).substr(0, name.find('.'));
-            return std::ranges::any_of(kOtherPlatforms, [&](std::string_view other) { return stem.ends_with(other); });
-        });
+        std::erase_if(out, other_platforms_source);
         return out;
     }
 
@@ -464,6 +521,55 @@ namespace
         return c;
     }
 
+    // Files the project does not track: too big for the repository, or under their own licence.
+    // Each is pinned to a release and checked against its SHA-256 after download.
+    struct Download
+    {
+        std::string_view url;
+        std::string_view sha256;
+        std::string_view file; ///< Under kDownloadDir
+    };
+
+    const fs::path kDownloadDir = "downloads";
+
+    // Downloads `d` into kDownloadDir unless it is there (needs curl and sha256sum). A file that fails the check is
+    // removed.
+    bool fetch_one(const Download& d)
+    {
+        if (!mkdir_p(kDownloadDir))
+            return false;
+        const fs::path target = kDownloadDir / d.file;
+        if (fs::exists(target))
+        {
+            log(Level::Info, "{} is already there", target.string());
+            return true;
+        }
+        const fs::path partial = std::format("{}.part", target.string());
+        Cmd get;
+        get << "curl" << "-fL" << "--retry" << "2" << "-o" << partial.string() << std::string(d.url);
+        if (!run(get))
+            return false;
+        const fs::path sums = kDownloadDir / "sha256.txt";
+        {
+            // Binary, so Windows does not end the line with a carriage return that sha256sum reads as part of the name.
+            std::ofstream out(sums, std::ios::binary);
+            out << d.sha256 << "  " << partial.generic_string() << "\n";
+        }
+        Cmd check;
+        check << "sha256sum" << "--check" << "--quiet" << sums.string();
+        const bool ok = run(check);
+        std::error_code ec;
+        fs::remove(sums, ec);
+        if (!ok)
+        {
+            log(Level::Error, "{} does not match its checksum", d.url);
+            fs::remove(partial, ec);
+            return false;
+        }
+        fs::rename(partial, target, ec);
+        return !ec;
+    }
+
     bool compile_audio(const Config& cfg, std::vector<fs::path>& objects, std::vector<CompileEntry>& database)
     {
         std::vector<fs::path> sources;
@@ -513,7 +619,13 @@ namespace
 
     Config with_audio_link(Config cfg)
     {
+#ifdef _WIN32
+        // No libdl on Windows; miniaudio loads its backends with LoadLibrary there. The WMA and WMV decoders
+        // are Media Foundation's.
+        cfg.link_flags.insert(cfg.link_flags.end(), { "-lpthread", "-lm", "-lmfplat", "-lmfuuid", "-lwmcodecdspuuid", "-lole32" });
+#else
         cfg.link_flags.insert(cfg.link_flags.end(), { "-ldl", "-lpthread", "-lm" });
+#endif
         return cfg;
     }
 
@@ -941,6 +1053,9 @@ namespace
                 files.insert(files.end(), found.begin(), found.end());
             }
         }
+        // A file named on the command line may be another platform's (CI passes what a pull request changed); it
+        // is not in the compile database, so clang-tidy could not read it.
+        std::erase_if(files, other_platforms_source);
         if (!fs::exists(kBuildDir / "compile_commands.json"))
         {
             log(Level::Error, "no {}: run ./nob build first", (kBuildDir / "compile_commands.json").string());
@@ -966,17 +1081,6 @@ namespace
         return ok;
     }
 
-    // Optional assets the project does not track: too big for the repository, or under their own licence.
-    // Each is pinned to a release and checked against its SHA-256 after download.
-    struct Download
-    {
-        std::string_view url;
-        std::string_view sha256;
-        std::string_view file; ///< Under kDownloadDir
-    };
-
-    const fs::path kDownloadDir = "downloads";
-
     constexpr std::array kDownloads = {
         // GNU Unifont, the fallback for characters the game fonts lack. SIL OFL 1.1, or GPL-2.0-or-later with
         // the font embedding exception.
@@ -995,10 +1099,8 @@ namespace
 #ifdef _WIN32
         // shortcut: x86-64 only; upgrade when another architecture is built.
         constexpr std::string_view kPlatform = "windows-x86_64";
-        constexpr std::string_view kExe = ".exe";
 #else
         constexpr std::string_view kPlatform = "linux-x86_64";
-        constexpr std::string_view kExe = "";
 #endif
         const std::string version = build_version();
         const fs::path packages = kBuildDir / "package";
@@ -1057,39 +1159,9 @@ namespace
     // Downloads what is missing (needs curl and sha256sum). A file that fails the check is removed.
     bool run_fetch()
     {
-        if (!mkdir_p(kDownloadDir))
-            return false;
         for (const Download& d : kDownloads)
         {
-            const fs::path target = kDownloadDir / d.file;
-            if (fs::exists(target))
-            {
-                log(Level::Info, "{} is already there", target.string());
-                continue;
-            }
-            const fs::path partial = std::format("{}.part", target.string());
-            Cmd get;
-            get << "curl" << "-fL" << "--retry" << "2" << "-o" << partial.string() << std::string(d.url);
-            if (!run(get))
-                return false;
-            const fs::path sums = kDownloadDir / "sha256.txt";
-            {
-                std::ofstream out(sums);
-                out << d.sha256 << "  " << partial.string() << "\n";
-            }
-            Cmd check;
-            check << "sha256sum" << "--check" << "--quiet" << sums.string();
-            const bool ok = run(check);
-            std::error_code ec;
-            fs::remove(sums, ec);
-            if (!ok)
-            {
-                log(Level::Error, "{} does not match its checksum", d.url);
-                fs::remove(partial, ec);
-                return false;
-            }
-            fs::rename(partial, target, ec);
-            if (ec)
+            if (!fetch_one(d))
                 return false;
         }
         return true;
@@ -1279,7 +1351,11 @@ int main(int argc, char** argv)
                     fs::create_directories(data / "new_scenarios");
                     fs::copy_file(start_park, data / "new_scenarios" / start_park.filename());
                 }
+#ifdef _WIN32
+                _putenv_s("RCT3PP_DATA", fs::absolute(data).string().c_str());
+#else
                 setenv("RCT3PP_DATA", fs::absolute(data).c_str(), 1);
+#endif
                 Cmd one;
                 // Headless: no window pops up, the frames still draw for the screenshots, and no vsync stops them
                 // while the screen sleeps. Uncapped, so the script runs as fast as the machine draws.

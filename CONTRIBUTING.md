@@ -34,15 +34,15 @@ build/debug/sound-play --null --tone 440                       # same path witho
 ```
 
 `./nob` rebuilds itself when `nob.cpp` or `nob.hpp` change. `CXX` selects the compiler (default `clang++`; nob passes Clang flags), `CC` the C compiler for vendored C code.
-`build/compile_commands.json` is written for clangd. Needs Clang 23+ with GCC 16+'s libstdc++ (`std::optional<T&>`); GCC itself is not used as a compiler. POSIX
-only for now.
+`build/compile_commands.json` is written for clangd. Needs Clang 23+ with GCC 16+'s libstdc++ (`std::optional<T&>`); GCC itself is not used as a compiler. Linux,
+or Windows with MSYS2 CLANG64 (Clang 23+ with libc++): see [Windows](docs/windows.md).
 
 Audio (`src/audio/`) uses the vendored [miniaudio](third_party/miniaudio/) and is linked into the tests and
 the tools that use it only. It needs no audio package and no device to build or test: on Linux miniaudio
 loads ALSA, PulseAudio or JACK at run time, and falls back to its null backend when there is none.
 The game's music is Windows Media Audio, and the first release's startup movies Windows Media Video 9, both
 decoded by [a cut of FFmpeg](third_party/ffmpeg/) (LGPL-2.1-or-later) holding only those decoders, vendored
-and built into the binary.
+and built into the binary. On Windows the decoders are Media Foundation's, and FFmpeg is not built.
 
 The viewer's window comes from [GLFW](third_party/glfw/), vendored and built into the binary too. On Linux it
 has both the X11 and the Wayland back end and opens their libraries at run time; building needs only their

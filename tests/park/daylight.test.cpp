@@ -25,7 +25,7 @@ namespace
 
 TEST_CASE("by day the sun and the open sky light the park")
 {
-    const Daylight noon = daylight(hours(12));
+    const Daylight noon = park::daylight(hours(12));
     CHECK(noon.sun_direction == sun_direction(hours(12)));
     CHECK(noon.sun.r == doctest::Approx(kHighSun.r));
     CHECK(noon.sky.b == doctest::Approx(kDaySky.b));
@@ -39,7 +39,7 @@ TEST_CASE("by day the sun and the open sky light the park")
 
 TEST_CASE("by night only a dim blue sky is left")
 {
-    const Daylight night = daylight(hours(0));
+    const Daylight night = park::daylight(hours(0));
     CHECK(night.sun == glm::vec3(0.0f));
     CHECK(night.sky.b == doctest::Approx(kNightSky.b));
     CHECK(night.sky.b > night.sky.r);
@@ -47,20 +47,20 @@ TEST_CASE("by night only a dim blue sky is left")
 
 TEST_CASE("the sun goes orange and fades as it sets, and the sky darkens after it")
 {
-    const Daylight afternoon = daylight(hours(16));
-    const Daylight low = daylight(hours(18.6f));
+    const Daylight afternoon = park::daylight(hours(16));
+    const Daylight low = park::daylight(hours(18.6f));
     CHECK(low.sun.b / low.sun.r < afternoon.sun.b / afternoon.sun.r);
     CHECK(brightness(low.sun) < brightness(afternoon.sun));
-    const Daylight set = daylight(hours(19.2f));
+    const Daylight set = park::daylight(hours(19.2f));
     CHECK(brightness(set.sun) < brightness(low.sun));
-    CHECK(brightness(set.sky) > brightness(daylight(hours(0)).sky));
+    CHECK(brightness(set.sky) > brightness(park::daylight(hours(0)).sky));
     CHECK(brightness(set.sky) < brightness(afternoon.sky));
 }
 
 TEST_CASE("two lights mix, the sun's direction turning between them")
 {
-    const Daylight a = daylight(hours(9));
-    const Daylight b = daylight(hours(15));
+    const Daylight a = park::daylight(hours(9));
+    const Daylight b = park::daylight(hours(15));
     CHECK(mixed(a, b, 0).sun == a.sun);
     CHECK(mixed(a, b, 1).sky == b.sky);
     const Daylight half = mixed(a, b, 0.5f);

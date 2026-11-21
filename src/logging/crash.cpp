@@ -11,8 +11,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstring> // sigabbrev_np
-#include <stacktrace>
 #include <string>
+
+// libc++ (the Windows build) has no <stacktrace> yet.
+#if __has_include(<stacktrace>)
+    #include <stacktrace>
+#endif
 
 namespace rct3::logging
 {
@@ -21,19 +25,46 @@ namespace rct3::logging
     {
         std::string g_file; ///< Where the report is appended too; empty for none
 
+        // strsignal and SIGBUS are POSIX only; UCRT has neither.
+        const char* signal_name(int signal) // c-api
+        {
+#ifdef _WIN32
+            switch (signal)
+            {
+                case SIGABRT:
+                    return "SIGABRT";
+                case SIGSEGV:
+                    return "SIGSEGV";
+                case SIGFPE:
+                    return "SIGFPE";
+                case SIGILL:
+                    return "SIGILL";
+                default:
+                    return "unknown";
+            }
+#else
+            return strsignal(signal);
+#endif
+        }
+
         void report(int signal) // c-api
         {
             // shortcut: formats and allocates inside the handler, which is not async-signal-safe; it may hang
             // instead of reporting when the heap itself is broken. Upgrade to a pre-allocated writer if it does.
             std::signal(signal, SIG_DFL);
+#if __has_include(<stacktrace>)
             const std::string stack = std::to_string(std::stacktrace::current(1));
+#else
+            // shortcut: no stack where the standard library has no std::stacktrace; upgrade when libc++ gets it.
+            const std::string stack = "(not available in this build)";
+#endif
             const std::string_view version = core::version();
-            std::fprintf(stderr, "\nrct3++ %.*s: fatal signal %d (%s); stack:\n%s\n", static_cast<int>(version.size()), version.data(), signal, strsignal(signal), stack.c_str()); // c-api
+            std::fprintf(stderr, "\nrct3++ %.*s: fatal signal %d (%s); stack:\n%s\n", static_cast<int>(version.size()), version.data(), signal, signal_name(signal), stack.c_str()); // c-api
             if (!g_file.empty())
             {
                 if (std::FILE* out = std::fopen(g_file.c_str(), "a"))
                 {
-                    std::fprintf(out, "\nrct3++ %.*s: fatal signal %d (%s); stack:\n%s\n", static_cast<int>(version.size()), version.data(), signal, strsignal(signal), stack.c_str()); // c-api
+                    std::fprintf(out, "\nrct3++ %.*s: fatal signal %d (%s); stack:\n%s\n", static_cast<int>(version.size()), version.data(), signal, signal_name(signal), stack.c_str()); // c-api
                     std::fclose(out);
                 }
                 std::fprintf(stderr, "report appended to %s\n", g_file.c_str());
@@ -46,8 +77,11 @@ namespace rct3::logging
     void install_crash_report(const std::filesystem::path& file)
     {
         g_file = file.string();
-        for (const i32 signal : { SIGABRT, SIGSEGV, SIGBUS, SIGFPE, SIGILL })
+        for (const i32 signal : { SIGABRT, SIGSEGV, SIGFPE, SIGILL })
             std::signal(signal, report);
+#ifdef SIGBUS
+        std::signal(SIGBUS, report);
+#endif
     }
 
     void check_failed(std::string_view condition, std::string_view message, std::source_location where)

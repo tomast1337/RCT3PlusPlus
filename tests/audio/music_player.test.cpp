@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <doctest/doctest.h>
 #include <filesystem>
-#include <fstream>
 #include <vector>
 
 using namespace rct3::audio;
@@ -16,8 +15,8 @@ namespace fs = std::filesystem;
 
 TEST_CASE("music plays round and round from its file")
 {
-    const fs::path path = fs::temp_directory_path() / "rct3pp_music.wma";
-    std::ofstream(path, std::ios::binary).write(reinterpret_cast<const char*>(rct3::test::kSineWma.data()), static_cast<std::streamsize>(rct3::test::kSineWma.size()));
+    const rct3::test::SineWmaFile file("rct3pp_music.wma");
+    const fs::path& path = file.path;
 
     auto engine = AudioEngine::create({ .backend = Backend::Offline, .sample_rate = 48000, .channels = 2 });
     REQUIRE(engine);
@@ -54,5 +53,4 @@ TEST_CASE("music plays round and round from its file")
         (void)engine->render(frame);
     }
     CHECK_FALSE(once->playing(*engine));
-    fs::remove(path);
 }

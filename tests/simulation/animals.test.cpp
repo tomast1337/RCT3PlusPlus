@@ -5,6 +5,7 @@
 #include "save/model/park.hpp"
 #include "simulation/components.hpp"
 #include "simulation/day_clock.hpp"
+#include "simulation/guests.hpp"
 #include "simulation/park/state.hpp"
 #include "simulation/staff/patrol.hpp"
 
@@ -538,4 +539,81 @@ TEST_CASE("animals: a called keeper is the nearest free one of the house's enclo
     run(world, ground, 20);
     CHECK(r.get<Staff>(near).filled == 1);
     CHECK(r.get<AnimalHouse>(house).since_fed.value < 20);
+}
+
+namespace
+{
+    /// A lion and a zebra let out of their crates in enclosure 0, the lion as hungry as `hunger`; returns them.
+    struct LionAndZebra
+    {
+        entt::entity lion = entt::null;
+        entt::entity zebra = entt::null;
+    };
+    LionAndZebra lion_and_zebra(SimWorld& world, units::Share hunger)
+    {
+        auto& r = world.registry;
+        const entt::entity lion = add_animal(world, { .species = "lion", .name = "Leo", .enclosure = std::optional { 0 }, .hunger = hunger }, { 0.5f, 0, 0.5f });
+        r.emplace<Hunter>(lion, Hunter { .prey = { "zebra", "horse" } });
+        const entt::entity zebra = add_animal(world, { .species = "Zebra", .name = "Stripes", .enclosure = std::optional { 0 } }, { 3.5f, 0, 3.5f });
+        open_crate(world, lion);
+        open_crate(world, zebra);
+        return { lion, zebra };
+    }
+} // namespace
+
+TEST_CASE("animals: a hungry predator runs down its prey in its enclosure, and its body lies a while")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    auto& r = world.registry;
+    const auto [lion, zebra] = lion_and_zebra(world, { 0.9f });
+    const entt::entity guest = r.create();
+    r.emplace<Visitor>(guest);
+    r.emplace<Pose>(guest, Pose { .position = { 6, 0, 2 } });
+    r.emplace<Dice>(guest, dice_for(world, guest));
+    ParkMessages messages;
+    step_animals(world, ground, { 0.25f }, messages);
+    REQUIRE(r.valid(zebra));
+    CHECK(r.get<Hunter>(lion).quarry == zebra);
+    // The zebra runs from the lion, which runs faster.
+    run(world, ground, 10, messages);
+    CHECK_FALSE(r.valid(zebra));
+    CHECK(r.view<const Animal>().size() == 1);
+    CHECK(r.get<Animal>(lion).hunger.value < 0.1f);
+    CHECK(std::ranges::any_of(messages.list, [](const ParkMessage& m) { return m.text_key == kAnimalKilled && m.subject_name == "Stripes"; }));
+    CHECK(std::ranges::any_of(r.get<Thoughts>(guest).recent, [](const Thought& t) { return t.kind == ThoughtKind::AnimalKilled; }));
+    REQUIRE(r.view<const Carcass>().size() == 1);
+    CHECK(r.get<Carcass>(r.view<const Carcass>().front()).species == "Zebra");
+    run(world, ground, kAnimalRates.carcass.value, messages);
+    CHECK(r.view<const Carcass>().empty());
+}
+
+TEST_CASE("animals: a predator that is not hungry, and plant-eaters, live with others in peace")
+{
+    SimWorld world;
+    const AnimalGround ground = two_pens();
+    auto& r = world.registry;
+    SUBCASE("a lion fed a moment ago")
+    {
+        const auto [lion, zebra] = lion_and_zebra(world, { 0 });
+        run(world, ground, 30);
+        CHECK(r.valid(zebra));
+        CHECK(r.get<Hunter>(lion).quarry == entt::null);
+    }
+    SUBCASE("a zebra and a horse, hungry as they get")
+    {
+        const entt::entity zebra = add_animal(world, { .species = "zebra", .enclosure = std::optional { 0 }, .hunger = { 1 } }, { 1, 0, 1 });
+        const entt::entity horse = add_animal(world, { .species = "horse", .enclosure = std::optional { 0 }, .hunger = { 1 } }, { 2, 0, 2 });
+        run(world, ground, 300);
+        CHECK(r.valid(zebra));
+        CHECK(r.valid(horse));
+    }
+    SUBCASE("a lion in another enclosure")
+    {
+        const auto [lion, zebra] = lion_and_zebra(world, { 0.9f });
+        r.get<Pose>(zebra).position = { 12, 0, 2 };
+        r.get<Animal>(zebra).enclosure = 1;
+        run(world, ground, 30);
+        CHECK(r.valid(zebra));
+    }
 }

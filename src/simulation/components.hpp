@@ -179,6 +179,7 @@ namespace rct3::simulation
         BoringEntertainer = 39, ///< After watching a poor one
         StaffHappy = 56,
         StaffMotivated = 57,
+        AnimalKilled = 250, ///< Saw a predator kill an animal
         // rct3++'s own, numbered on past the game's, with texts of rct3++'s (ui/thought_text.hpp)
         WaitingForFriends = 256, ///< Waiting by a ride for the rest of their party
         RodeTogether = 257,      ///< Rode in one load with others of their party

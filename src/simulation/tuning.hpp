@@ -168,11 +168,12 @@ namespace rct3::simulation::tuning
     /// Cash machines, benches and sights.
     struct Facilities
     {
-        units::Money low_cash { 500 };     ///< A guest with less goes to a cash machine
-        units::Money withdraw { 5000 };    ///< A guest draws from one, up to what their bank has left
-        units::Money toilet_worth { 300 }; ///< Chosen by eye: most a guest bursting to go pays for a toilet; less as the need is less
-        units::Share tired { 0.45f };      ///< Energy below which a guest sits down on a bench they pass
-        units::Chance sit_chance { 0.5 };
+        units::Money low_cash { 500 };                          ///< A guest with less goes to a cash machine
+        units::Money withdraw { 5000 };                         ///< A guest draws from one, up to what their bank has left
+        units::Money toilet_worth { 300 };                      ///< Chosen by eye: most a guest bursting to go pays for a toilet; less as the need is less
+        units::Share tired { 0.45f };                           ///< Energy below which a guest sits down on a bench they pass
+        units::Chance sit_chance { 0.5 };                       ///< Of sitting on a bench passed while sick or eating; worn out, they always do
+        units::Tiles bench_reach { 8 };                         ///< Chosen by eye: how far a worn-out guest with nowhere to go walks to a free bench
         units::Seconds sit { 30 };                              ///< Least a guest sits before they think of getting up
         units::PerSecond rest = units::PerSecond::over({ 60 }); ///< Energy back while sitting
         /// Chosen by eye: once rested, a guest of full energy gets up in about this long; the more worn out, the longer.

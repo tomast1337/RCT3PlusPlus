@@ -142,6 +142,32 @@ TEST_CASE("tired guests sit on the benches they pass, as many as there are seats
     CHECK(std::ranges::any_of(guests, [&](entt::entity g) { return r.get<Mood>(g).energy.value > 0.2f; }));
 }
 
+TEST_CASE("a worn-out guest with nowhere to go walks to a free bench not far off, but not to a far one")
+{
+    for (const i32 far : { 5, 20 })
+    {
+        Sandbox park;
+        // A side path off the main one, the bench at its end, so wandering alone seldom finds it.
+        park.path({ 0, 0 }, { 24, 0 }).path({ 2, 1 }, { 2, far });
+        const auto bench = park.item(PathItemKind::Bench, { 2, far });
+        const auto g = park.guest({ 0, 0 }, { .energy = 0.1f });
+        auto& r = park.world().registry;
+        const NodeId bench_node = r.get<PathItem>(bench).node;
+        const bool headed = park.run_until(
+            [&] {
+                const auto& route = r.get<Stride>(g).route;
+                return !route.empty() && route.back() == bench_node;
+            },
+            10);
+        CHECK(headed == (far == 5));
+        if (far == 5)
+        {
+            CHECK(park.run_until([&] { return r.all_of<Linger>(g); }, 60));
+            CHECK(r.get<Linger>(g).bench == bench);
+        }
+    }
+}
+
 TEST_CASE("guests stop at a view, cheered by it, and vandals leave it be")
 {
     Sandbox park;

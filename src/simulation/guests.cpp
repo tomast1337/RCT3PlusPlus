@@ -32,6 +32,7 @@
 #include <ranges>
 #include <span>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -762,6 +763,17 @@ namespace rct3::simulation
             if (node.shaded)
                 shades.push_back(NodeId { k });
         }
+        // Tiles with a whole bench that has a seat free, where worn-out guests go to sit.
+        std::vector<NodeId> free_benches;
+        {
+            std::unordered_map<entt::entity, usize> sitting;
+            for (const auto [g, linger] : r.view<const Linger>().each())
+                if (linger.at == PathItemKind::Bench)
+                    ++sitting[linger.bench];
+            for (const auto [e, item] : r.view<const PathItem>().each())
+                if (const auto taken = sitting.find(e); item.kind == PathItemKind::Bench && !item.broken && (taken == sitting.end() || taken->second < item.seats))
+                    free_benches.push_back(item.node);
+        }
         const auto movers_view = r.view<Errand, Stride, Pose, Dice, const Needs, const Mood, const Wallet>();
         const auto movers = sorted(movers_view);
         std::vector<entt::entity> arrived(movers.size(), entt::null);
@@ -874,6 +886,7 @@ namespace rct3::simulation
                                     feel.tolerance.value = std::min(feel.tolerance.value, r.get<Mood>(m).tolerance.value);
                                     feel.wet.value = std::max(feel.wet.value, r.get<Mood>(m).wet.value);
                                     feel.heat.value = std::max(feel.heat.value, r.get<Mood>(m).heat.value);
+                                    feel.energy.value = std::min(feel.energy.value, r.get<Mood>(m).energy.value);
                                 }
                             }
                             // Not more to eat or drink while still at what they have.
@@ -898,6 +911,10 @@ namespace rct3::simulation
                             if (!goal && (rained_on ? !paths.nodes()[at.value].covered : sweltering && !paths.nodes()[at.value].shaded))
                                 if (auto refuge = paths.route_nearest(at, rained_on ? covers : shades); refuge && !refuge->walk.empty())
                                     stride.route = std::move(refuge->walk);
+                            // Nowhere to go and worn out: to a free bench not far off, to sit down on.
+                            if (!goal && stride.route.empty() && !rained_on && !sweltering && !free_benches.empty() && feel.energy.value < kTuning.facilities.tired.value)
+                                if (auto bench = paths.route_nearest(at, free_benches); bench && !bench->walk.empty() && static_cast<f32>(bench->walk.size()) <= kTuning.facilities.bench_reach.value)
+                                    stride.route = std::move(bench->walk);
                             if (goal)
                             {
                                 errand = { ErrandKind::Heading, goal->first, 0 };

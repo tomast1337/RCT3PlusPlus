@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <ranges>
+#include <utility>
 
 namespace rct3::simulation
 {
@@ -116,11 +117,13 @@ namespace rct3::simulation
             case Vip:
             case AnimalHealth:
             case Dung:
+            case ItemsBought:
+            case ThemedAttractions:
                 return true;
             default:
-                // shortcut: goals about things the simulation does not have yet (items bought, pools, animals of a
-                // species, galleries, animal sales and releases) are never met, so a level that sets one cannot be won;
-                // judge them as those parts arrive.
+                // shortcut: goals about things the simulation does not have yet (pools, animals of a species, galleries,
+                // animal sales and releases, scenery of a kind, escaped animals) are never met, so a level that sets one
+                // cannot be won; judge them as those parts arrive.
                 return false;
         }
     }
@@ -155,6 +158,10 @@ namespace rct3::simulation
             }
             case save::model::ConditionKind::Vip:
                 return { std::nullopt, c.vip && c.vip->met }; // Judged as the VIP leaves (vip.hpp)
+            case save::model::ConditionKind::ItemsBought:
+                return c.items ? compare(c.items->bought) : GoalReading { };
+            case save::model::ConditionKind::ThemedAttractions:
+                return c.theme && *c.theme >= 0 ? compare(std::cmp_less(*c.theme, f.themed.size()) ? f.themed[static_cast<usize>(*c.theme)] : 0) : GoalReading { };
             default:
                 return { };
         }
@@ -311,6 +318,12 @@ namespace rct3::simulation
                 return "ObjectiveCondition_DungTarget";
             case ViewingGalleries:
                 return "ObjectiveCondition_ViewingGalleries";
+            case ThemedAttractions:
+                return "ObjectiveCondition_NumWellThemedAttractions";
+            case SceneryItems:
+                return "ObjectiveCondition_NumSceneryItemsOfClassification";
+            case EscapedAnimals:
+                return "ObjectiveCondition_EscapedAnimals";
             case Other:
                 break;
         }

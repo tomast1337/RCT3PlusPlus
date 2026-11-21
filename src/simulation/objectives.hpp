@@ -62,6 +62,8 @@ namespace rct3::simulation
         i32 animal_health = 0; ///< The animals' average, 0 to 100; 0 with no animals
         i32 dung = 0;          ///< Piles of dung lying in the park
         std::span<const GoalRide> rides { };
+        /// Rides and stalls carrying each theme, by the theme's number in the build catalogue; empty when not counted.
+        std::span<const i32> themed { };
     };
 
     /// How a goal stands against the park's figures.

@@ -483,6 +483,7 @@ namespace rct3::simulation::tuning
         units::RatingPoints rating_bonus { 80 };     ///< Chosen by eye: added to the park's rating at once, and to each week's score
         units::RatingPoints rating_bonus_fade { 4 }; ///< Chosen by eye: taken off that bonus each week, so it is gone in five months
         units::Money research_boost { 50'000 };      ///< Free research progress: about two tracked rides' worth
+        units::Seconds publicity { 180 };            ///< Chosen by eye: two weeks a challenge's publicity draws more parties, for each step of its size
     };
 
     /// What a park is worth, for its graphs and the goals on it. Tuned against the park value series of saved

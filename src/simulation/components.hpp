@@ -612,6 +612,18 @@ namespace rct3::simulation
         std::array<units::Money, park::kLedgerLines> paid { };
     };
 
+    /// What guests bought at stalls since the park last counted it, kept in the registry's context while it is
+    /// there: the stall, and the place of the ware on its shop's menu (the menu's size for a stall without one).
+    struct Sales
+    {
+        struct Sale
+        {
+            entt::entity stall = entt::null;
+            usize ware = 0;
+        };
+        std::vector<Sale> sold { };
+    };
+
     /// What guests have paid the park for rides, shops and entry, by the ledger line it goes on (an index of
     /// park::LedgerLine), kept in the registry's context.
     struct Receipts

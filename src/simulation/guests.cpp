@@ -1178,6 +1178,8 @@ namespace rct3::simulation
                 r.emplace<ParkMap>(guest);
                 attraction.income.value += map->price.value;
                 ++attraction.customers;
+                if (auto* sales = r.ctx().find<Sales>())
+                    sales->sold.push_back({ at, static_cast<usize>(map - shop.menu.begin()) });
                 r.ctx().emplace<Supplies>().paid[std::to_underlying(park::LedgerLine::ShopStock)].value += map->cost.value;
                 if (!umbrella || !weather.rain || r.all_of<Umbrella>(guest))
                     return true;
@@ -1259,6 +1261,8 @@ namespace rct3::simulation
                 think(r, guest, ThoughtKind::GoodValue, at, now);
             attraction.income.value += price.value;
             ++attraction.customers;
+            if (auto* sales = r.ctx().find<Sales>())
+                sales->sold.push_back({ at, ware });
             // The park pays for the stock each one sold took, its extras with it.
             if (ware < shop.menu.size())
                 r.ctx().emplace<Supplies>().paid[std::to_underlying(meal ? park::LedgerLine::FoodDrinkStock : park::LedgerLine::ShopStock)].value += shop.menu[ware].cost.value;

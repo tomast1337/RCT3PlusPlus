@@ -2,6 +2,7 @@
 #include "park/ground/shapes.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "random/generator.hpp"
 
 #include <algorithm>
@@ -25,7 +26,7 @@ namespace rct3::park::ground
         /// 1 at 0, easing down to 0 at 1.
         f32 bump(f32 d)
         {
-            return d >= 1 ? 0 : 0.5f * (1 + std::cos(std::numbers::pi_v<f32> * std::max(d, 0.0f)));
+            return d >= 1 ? 0 : 0.5f * (1 + math::cos(std::numbers::pi_v<f32> * std::max(d, 0.0f)));
         }
 
         /// 1 up to `top`, easing down to 0 at 1.

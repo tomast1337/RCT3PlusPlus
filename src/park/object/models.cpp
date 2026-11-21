@@ -2,6 +2,7 @@
 #include "park/object/models.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "ovl/bone_anim.hpp"
 #include "ovl/bone_shape.hpp"
 #include "ovl/flexi_texture.hpp"
@@ -1136,7 +1137,7 @@ namespace rct3::park::object
                 if (const auto end = bone_of(car->axles[i / 2], kAxleEnds[i % 2]))
                     place = *axles[i / 2] * *end;
             if (place)
-                add(car->wheels[i], car->wheels_turned[i] ? glm::rotate(at(*place), glm::pi<f32>(), { 0, 1, 0 }) : at(*place));
+                add(car->wheels[i], car->wheels_turned[i] ? at(*place) * math::rotation(glm::pi<f32>(), { 0, 1, 0 }) : at(*place));
         }
         const auto car_front = bone_of(car->visual, "carfront"), car_rear = bone_of(car->visual, "carrear");
         if (car_front && car_rear)

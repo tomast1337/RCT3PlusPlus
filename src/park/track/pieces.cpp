@@ -3,6 +3,7 @@
 
 #include "core/maybe.hpp"
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "ovl/overlay.hpp"
 #include "ovl/ovl.hpp"
 #include "ovl/scenery_item.hpp"
@@ -67,7 +68,7 @@ namespace rct3::park::track
 
         Heading8 heading_steps(const glm::vec3& flat)
         {
-            return Heading8::from(static_cast<i32>(std::lround(std::atan2(flat.z, -flat.x) * kDegrees / kStepDegrees)));
+            return Heading8::from(static_cast<i32>(std::lround(math::atan2(flat.z, -flat.x) * kDegrees / kStepDegrees)));
         }
 
         /// How plain a piece is: fewer flags first, then the shorter name.
@@ -375,14 +376,14 @@ namespace rct3::park::track
             return 0;
         const glm::vec3 level = glm::normalize(glm::cross(glm::vec3 { 0, 1, 0 }, forward));
         const glm::vec3 up = glm::cross(forward, level);
-        return std::atan2(glm::dot(side, up), glm::dot(side, level)) * kDegrees;
+        return math::atan2(glm::dot(side, up), glm::dot(side, level)) * kDegrees;
     }
 
     PieceEnd measure_end(const glm::vec3& direction, const glm::vec3& side)
     {
         const glm::vec3 forward = glm::normalize(direction);
         PieceEnd end;
-        end.slope = slope_steps(std::atan2(forward.y, std::hypot(forward.x, forward.z)) * kDegrees);
+        end.slope = slope_steps(math::atan2(forward.y, std::sqrt(forward.x * forward.x + forward.z * forward.z)) * kDegrees);
         end.bank = wrap_bank(static_cast<i32>(std::lround(bank_degrees(direction, side) / kStepDegrees)));
         // Straight up or down, the track's way across the ground is the rails' level line turned back.
         const glm::vec3 flat = std::abs(forward.y) > kUpright ? glm::cross(side, glm::vec3 { 0, 1, 0 }) : forward;

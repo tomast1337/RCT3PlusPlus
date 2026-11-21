@@ -2,6 +2,7 @@
 #include "park/track/course.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "park/design_placement.hpp"
 
 #include <algorithm>
@@ -353,7 +354,7 @@ namespace rct3::park::track
         const f32 climb = std::max(run.to - run.from, 1e-3f);
         const auto place_at = [&](f32 d, bool turned) {
             const f32 front = run.from + span + (std::clamp(d, run.from, run.to) - run.from) * std::max(run.to - run.from - span, 0.0f) / climb;
-            const glm::mat4 half = turned ? glm::rotate(glm::mat4(1.0f), glm::pi<f32>(), glm::vec3(0, 0, 1)) : glm::mat4(1.0f);
+            const glm::mat4 half = turned ? math::rotation(glm::pi<f32>(), glm::vec3(0, 0, 1)) : glm::mat4(1.0f);
             return frame_at(course, { front, front - span }) * half * glm::translate(glm::mat4(1.0f), -fit.on_track);
         };
         if (model.carried.empty())

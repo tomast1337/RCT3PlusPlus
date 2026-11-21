@@ -3,11 +3,13 @@
 
 #include "core/hash.hpp"
 #include "simulation/coaster.hpp"
+#include "simulation/component_tags.hpp"
 #include "simulation/components.hpp"
 #include "simulation/guests.hpp"
 #include "simulation/rides.hpp"
 
 #include <bit>
+#include <tuple>
 #include <utility>
 
 namespace rct3::simulation
@@ -24,13 +26,16 @@ namespace rct3::simulation
         mix(world.seed.value);
         for (const u64 w : world.gameplay.words)
             mix(w);
-        for (const auto [id, storage] : r.storage())
-        {
+        const auto storage = [&mix](u32 id, const entt::sparse_set* set) {
             mix(id);
-            mix(storage.size());
-            for (const entt::entity e : storage)
-                mix(entt::to_integral(e));
-        }
+            mix(set != nullptr ? set->size() : 0);
+            if (set != nullptr)
+                for (const entt::entity e : *set)
+                    mix(entt::to_integral(e));
+        };
+        storage(0, r.storage<entt::entity>());
+        mix(r.storage<entt::entity>()->free_list());
+        std::apply([&](auto... t) { (storage(t.id(), r.storage<typename decltype(t)::Type>()), ...); }, kComponents);
         for (const auto [e, pose] : r.view<const Pose>().each())
             mix_v(pose.position), mix_f(pose.heading.value);
         for (const auto [e, stride] : r.view<const Stride>().each())

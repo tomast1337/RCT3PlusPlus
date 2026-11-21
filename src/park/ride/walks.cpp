@@ -2,6 +2,7 @@
 #include "park/ride/walks.hpp"
 
 #include "core/types.hpp"
+#include "math/portable.hpp"
 #include "ovl/float_value.hpp"
 #include "ovl/integer_value.hpp"
 #include "ovl/overlay.hpp"
@@ -108,7 +109,7 @@ namespace rct3::park::ride
     {
         const glm::mat4 world = entrance * spot;
         ways.ticket = glm::vec3(world[3]);
-        ways.ticket_heading = std::atan2(world[2].x, world[2].z);
+        ways.ticket_heading = math::atan2(world[2].x, world[2].z);
     }
 
     RideWays flat_ride_ways(const Walkways& walkways, std::span<const glm::vec3> seats, const glm::mat4& entrance, const glm::mat4& exit)
